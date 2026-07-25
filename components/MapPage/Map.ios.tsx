@@ -118,6 +118,16 @@ interface TravelProps {
 const DEFAULT_LAT = 53.8828449;
 const DEFAULT_LNG = 27.7273595;
 
+/**
+ * Отступ снизу для FAB «Скачать область» (сам контрол добавляет ещё +16).
+ *
+ * Кнопка стоит в том же правом нижнем углу, что и extended-FAB «Маршрут» из
+ * мобильного overlay (bottom 96/104 + высота 48), а overlay рисуется ПОВЕРХ
+ * карты — при прежних 90dp «Маршрут» полностью накрывал круглую кнопку
+ * скачивания. Поэтому офлайн-FAB встаёт над ним: 144 + 16 = 160dp.
+ */
+const OFFLINE_FAB_BOTTOM_INSET = 144;
+
 const withAlpha = (color: string, alpha: number) => {
   if (!color || color.startsWith('rgba') || color.startsWith('rgb')) {
     return color;
@@ -672,9 +682,7 @@ const Map: React.FC<TravelProps> = ({
         scrollEnabled={true}
       />
       {enableOfflineDownload && !pointsOnly && (
-        // bottomInset поднимает FAB над нижним доком навигации (иначе тап уходит в
-        // «Ещё»/«Профиль», а сам FAB не виден). ~90dp клирит док+safe-area на телефоне.
-        <MapOfflineDownloadControl bbox={offlineBBox} bottomInset={90} />
+        <MapOfflineDownloadControl bbox={offlineBBox} bottomInset={OFFLINE_FAB_BOTTOM_INSET} />
       )}
     </View>
   );

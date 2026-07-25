@@ -186,16 +186,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   ytStubText: {
     color: colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.sm
-  },
-  instagramEmbedWrapper: {
-    marginVertical: 14,
-    width: '100%',
-    maxWidth: 360,
-    alignSelf: 'flex-start',
-    overflow: 'hidden'
-  },
-  instagramEmbedWrapperWeb: {
-    width: '100%',
-    maxWidth: 360,
   }
 })

@@ -50,6 +50,21 @@ const LAYERS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
 const TRANSPORT_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
 const LAYERS_POPOVER_MIN_WIDTH = 272
 const TRANSPORT_POPOVER_WIDTH = 204
+/** Совпадает с `minWidth` карточки радиуса (см. MapMobileRadiusPopover). */
+const RADIUS_POPOVER_WIDTH = 176
+
+/**
+ * Поповер висит под своей иконкой (`anchorRight`), но карточка фиксированной
+ * ширины при дальнем якоре вылезает за ЛЕВЫЙ край экрана. Сдвигаем правый край
+ * вправо ровно настолько, чтобы карточка поместилась целиком.
+ */
+function clampPopoverRight(anchorRight: number, width: number, viewportWidth: number) {
+  if (!(viewportWidth > 0)) return anchorRight
+  const maxRight = viewportWidth - width - TOOLBAR_EDGE_OFFSET
+  if (!Number.isFinite(maxRight)) return anchorRight
+  return Math.max(TOOLBAR_EDGE_OFFSET, Math.min(anchorRight, maxRight))
+}
+
 /** How long the «tap to build» hint stays visible after entering route mode. */
 const ROUTE_HINT_TIMEOUT_MS = 6000
 const ROUTE_SUMMARY_POPOVER_OFFSET = 88
@@ -285,15 +300,36 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const popoverTop =
     basePopoverTop + routeStartSelectorOffset + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
   const routePopoverTop = popoverTop
-  const layersPopoverRight = isRouteMode
+  // В route-режиме иконка «Слои» уезжает на 4 шага влево (появляется ряд
+  // маршрута), поэтому якорь у неё далеко от правого края — карточка шириной
+  // 272+ вылезала за ЛЕВЫЙ край экрана и обрезалась. Ширину считаем от якоря, но
+  // сам якорь прижимаем так, чтобы карточка целиком помещалась в экран.
+  const layersPopoverAnchorRight = isRouteMode
     ? TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 4
     : LAYERS_POPOVER_RIGHT
   const layersPopoverWidth = Math.min(
     360,
+    // viewportWidth === 0 (SSR/первый кадр) не должен схлопывать карточку в 0.
+    viewportWidth > 0 ? viewportWidth - TOOLBAR_EDGE_OFFSET * 2 : Number.POSITIVE_INFINITY,
     Math.max(
       LAYERS_POPOVER_MIN_WIDTH,
-      viewportWidth - layersPopoverRight - TOOLBAR_EDGE_OFFSET,
+      viewportWidth - layersPopoverAnchorRight - TOOLBAR_EDGE_OFFSET,
     ),
+  )
+  const layersPopoverRight = clampPopoverRight(
+    layersPopoverAnchorRight,
+    layersPopoverWidth,
+    viewportWidth,
+  )
+  const radiusPopoverRight = clampPopoverRight(
+    RADIUS_POPOVER_RIGHT,
+    RADIUS_POPOVER_WIDTH,
+    viewportWidth,
+  )
+  const transportPopoverRight = clampPopoverRight(
+    TRANSPORT_POPOVER_RIGHT,
+    TRANSPORT_POPOVER_WIDTH,
+    viewportWidth,
   )
 
   return (
@@ -609,7 +645,8 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         <MapMobileRadiusPopover
           colors={colors}
           top={basePopoverTop}
-          right={RADIUS_POPOVER_RIGHT}
+          right={radiusPopoverRight}
+          minWidth={RADIUS_POPOVER_WIDTH}
           options={radiusOptions}
           currentValue={radiusValue}
           onSelect={onRadiusSelect}
@@ -637,7 +674,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         <MapMobileTransportPopover
           colors={colors}
           top={routePopoverTop}
-          right={TRANSPORT_POPOVER_RIGHT}
+          right={transportPopoverRight}
           minWidth={TRANSPORT_POPOVER_WIDTH}
           maxWidth={TRANSPORT_POPOVER_WIDTH}
           currentValue={transportMode}

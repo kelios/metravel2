@@ -10,7 +10,7 @@ import TextInputComponent from '@/components/forms/TextInputComponent';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
-import Button from '@/components/ui/Button';
+import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import { appendPlainTextToHtml, plainTextToHtml } from '@/utils/htmlUtils';
 import { uploadImage } from '@/api/misc';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
@@ -51,7 +51,6 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
     const scrollRef = useRef<ScrollView>(null);
     const [isDescriptionFullscreen, setIsDescriptionFullscreen] = useState(false);
-    const [areDescriptionToolsVisible, setAreDescriptionToolsVisible] = useState(false);
     const [isImportingDescriptionText, setIsImportingDescriptionText] = useState(false);
     const [isPastingDescriptionText, setIsPastingDescriptionText] = useState(false);
 
@@ -354,6 +353,69 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         [formData?.id]
     );
 
+    // Второстепенные инструменты описания живут в одном шаблоне ряда:
+    // desktop — иконка + подпись, mobile web и Android — icon-only одной строкой
+    // (раньше это были три полноразмерные кнопки «лестницей» под свёрткой).
+    const descriptionToolActions = useMemo<ToolAction[]>(() => {
+        const actions: ToolAction[] = [];
+
+        // Web Speech API есть только в браузере. В приложении диктовка идёт
+        // микрофоном системной клавиатуры, поэтому мёртвую disabled-кнопку там
+        // не рисуем вообще — вместо неё остаётся подсказка ниже.
+        if (Platform.OS === 'web' && dictation.isSupported) {
+            actions.push({
+                key: 'dictate',
+                label: dictation.isListening
+                    ? i18nT('travel:components.travel.ContentUpsertSection.stop_b7ef349a')
+                    : i18nT('travel:components.travel.ContentUpsertSection.nadiktovat_9eaa89e4'),
+                variant: dictation.isListening ? 'danger' : 'outline',
+                icon: (
+                    <Feather
+                        name={dictation.isListening ? 'square' : 'mic'}
+                        size={16}
+                        color={dictation.isListening ? colors.textOnPrimary : colors.text}
+                    />
+                ),
+                onPress: () => (dictation.isListening ? dictation.stop() : dictation.start()),
+                testID: 'travel-wizard.basic.description.dictate',
+            });
+        }
+
+        actions.push({
+            key: 'import',
+            label: isImportingDescriptionText
+                ? i18nT('travel:components.travel.ContentUpsertSection.import_e9e80ad6')
+                : i18nT('travel:components.travel.ContentUpsertSection.import_teksta_f9185f51'),
+            icon: <Feather name="upload" size={16} color={colors.text} />,
+            loading: isImportingDescriptionText,
+            disabled: isImportingDescriptionText,
+            onPress: importDescriptionText,
+            testID: 'travel-wizard.basic.description.import',
+        });
+
+        actions.push({
+            key: 'paste',
+            label: isPastingDescriptionText
+                ? i18nT('travel:components.travel.ContentUpsertSection.vstavka_d9165414')
+                : i18nT('travel:components.travel.ContentUpsertSection.vstavit_d3c07b2b'),
+            icon: <Feather name="clipboard" size={16} color={colors.text} />,
+            loading: isPastingDescriptionText,
+            disabled: isPastingDescriptionText,
+            onPress: pasteDescriptionText,
+            testID: 'travel-wizard.basic.description.paste',
+        });
+
+        return actions;
+    }, [
+        colors.text,
+        colors.textOnPrimary,
+        dictation,
+        importDescriptionText,
+        isImportingDescriptionText,
+        isPastingDescriptionText,
+        pasteDescriptionText,
+    ]);
+
     const renderEditorSection = useCallback(
         (
             title: string, 
@@ -411,78 +473,18 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     <Text style={styles.descriptionCounterText}>{descriptionPlainLength} {i18nT('travel:components.travel.ContentUpsertSection.simvolov_d0f4cacb')}</Text>
                                 </View>
 
-                                {isMobile ? (
-                                    <TouchableOpacity
-                                        style={styles.descriptionToolsToggle}
-                                        onPress={() => setAreDescriptionToolsVisible(value => !value)}
-                                        accessibilityRole="button"
-                                        accessibilityState={{ expanded: areDescriptionToolsVisible }}
-                                        accessibilityLabel={areDescriptionToolsVisible ? i18nT('travel:components.travel.ContentUpsertSection.skryt_instrumenty_opisaniya_511ee840') : i18nT('travel:components.travel.ContentUpsertSection.pokazat_instrumenty_opisaniya_1671a933')}
-                                    >
-                                        <Text style={styles.descriptionToolsToggleText}>
-                                            {areDescriptionToolsVisible ? i18nT('travel:components.travel.ContentUpsertSection.skryt_instrumenty_29c91146') : i18nT('travel:components.travel.ContentUpsertSection.instrumenty_diktovka_import_vstavka_9ac3d594')}
-                                        </Text>
-                                        <Feather
-                                            name={areDescriptionToolsVisible ? 'chevron-up' : 'chevron-down'}
-                                            size={16}
-                                            color={colors.primaryText}
-                                        />
-                                    </TouchableOpacity>
-                                ) : null}
+                                <ToolActionsRow
+                                    actions={descriptionToolActions}
+                                    style={styles.descriptionActionsRow}
+                                />
 
-                                {(!isMobile || areDescriptionToolsVisible) && (
-                                <View style={styles.descriptionActionsRow}>
-                                    {Platform.OS === 'web' && dictation.isSupported ? (
-                                        <Button
-                                            size="sm"
-                                            variant={dictation.isListening ? 'danger' : 'outline'}
-                                            label={dictation.isListening ? i18nT('travel:components.travel.ContentUpsertSection.stop_b7ef349a') : i18nT('travel:components.travel.ContentUpsertSection.nadiktovat_9eaa89e4')}
-                                            icon={<Feather name={dictation.isListening ? 'square' : 'mic'} size={16} color={dictation.isListening ? colors.textOnPrimary : colors.text} />}
-                                            onPress={() => (dictation.isListening ? dictation.stop() : dictation.start())}
-                                            style={styles.descriptionActionButton}
-                                        />
-                                    ) : (
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            label={i18nT('travel:components.travel.ContentUpsertSection.diktovka_fc4af390')}
-                                            icon={<Feather name="mic" size={16} color={colors.text} />}
-                                            disabled
-                                            style={styles.descriptionActionButton}
-                                        />
-                                    )}
-
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        label={isImportingDescriptionText ? i18nT('travel:components.travel.ContentUpsertSection.import_e9e80ad6') : i18nT('travel:components.travel.ContentUpsertSection.import_teksta_f9185f51')}
-                                        icon={<Feather name="upload" size={16} color={colors.text} />}
-                                        loading={isImportingDescriptionText}
-                                        disabled={isImportingDescriptionText}
-                                        onPress={importDescriptionText}
-                                        style={styles.descriptionActionButton}
-                                    />
-
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        label={isPastingDescriptionText ? i18nT('travel:components.travel.ContentUpsertSection.vstavka_d9165414') : i18nT('travel:components.travel.ContentUpsertSection.vstavit_d3c07b2b')}
-                                        icon={<Feather name="clipboard" size={16} color={colors.text} />}
-                                        loading={isPastingDescriptionText}
-                                        disabled={isPastingDescriptionText}
-                                        onPress={pasteDescriptionText}
-                                        style={styles.descriptionActionButton}
-                                    />
-                                </View>
-                                )}
-
-                                {(!isMobile || areDescriptionToolsVisible) && Platform.OS === 'web' && dictation.isSupported && dictation.isListening && dictation.interimText ? (
+                                {Platform.OS === 'web' && dictation.isSupported && dictation.isListening && dictation.interimText ? (
                                     <Text style={styles.dictationInterimText}>
                                         {dictation.interimText}
                                     </Text>
                                 ) : null}
 
-                                {(!isMobile || areDescriptionToolsVisible) && Platform.OS !== 'web' ? (
+                                {Platform.OS !== 'web' ? (
                                     <Text style={styles.dictationHint}>
                                         {i18nT('travel:components.travel.ContentUpsertSection.podskazka_na_telefone_mozhno_ispolzovat_mikr_27251d78')}</Text>
                                 ) : null}
@@ -724,19 +726,15 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             descriptionProgress,
             descriptionProgressColor,
             descriptionStatusText,
+            descriptionToolActions,
             dictation,
             handleChange,
             idTravelStr,
-            importDescriptionText,
             isDescriptionFullscreen,
-            isImportingDescriptionText,
             isMobile,
             isRichDescription,
             mobileDescriptionDraft,
-            isPastingDescriptionText,
             isCompactFullscreenHeader,
-            pasteDescriptionText,
-            areDescriptionToolsVisible,
             formData,
             onManualSave,
             styles,

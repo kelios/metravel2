@@ -65,6 +65,62 @@ Decision:
   sits on a dark surface where the themed runtime color already provides enough
   contrast.
 
+## Mobile pattern: secondary tool actions (`ui/ToolActionsRow`)
+
+Status: accepted, 2026-07-25.
+
+Вспомогательные инструменты рядом с полем или секцией (диктовка, импорт текста,
+вставка из буфера, копирование, экспорт) на телефоне не должны быть рядом
+полноразмерных кнопок с подписями: три таких кнопки переносятся «лестницей» и
+съедают больше экрана, чем само поле.
+
+Канонический шаблон — `components/ui/ToolActionsRow.tsx`:
+
+| Поверхность | Вид |
+| --- | --- |
+| desktop web | иконка + подпись (`ui/Button` c `icon` + `label`) |
+| mobile web и Android | icon-only 44/48dp в ОДНУ строку, подпись уходит в `accessibilityLabel` |
+
+Правила:
+
+- Режим берётся из вьюпорта (`useResponsive`), а не из `Platform.OS`: mobile web и
+  Android обязаны получить один и тот же ряд (mobile parity в `docs/RULES.md`).
+- `label` обязателен всегда и должен быть осмысленным: на телефоне он остаётся
+  единственным доступным именем кнопки для screen reader.
+- Иконка обязана быть «говорящей» из набора Feather (`mic`, `upload`,
+  `clipboard`, `download`, `copy`), иначе действию нужна подпись и оно не
+  подходит для этого ряда.
+- Первичное действие шага/экрана (Сохранить, Далее, Опубликовать) в этот ряд не
+  кладём: у него подпись обязательна на любой ширине.
+- Недоступное на платформе действие не рендерим как навсегда `disabled`-кнопку:
+  такой контрол занимает место и выглядит как баг. Пример — диктовка через Web
+  Speech API: она есть только в браузере, поэтому в приложении кнопки нет, а
+  вместо неё остаётся подсказка про микрофон системной клавиатуры
+  (`components/travel/ContentUpsertSection.tsx`).
+
+## Mobile pattern: rich-text toolbar docked below the editor
+
+Status: accepted, 2026-07-25.
+
+Панель форматирования rich-text редактора на телефоне пристёгнута СНИЗУ
+(док-бар над клавиатурой), а не над текстом.
+
+Причина: системное меню выделения Android и iOS («Вырезать / Копировать / …»)
+рисуется поверх выделенного текста и перекрывало верхнюю панель — в момент, когда
+пользователь выделил слово, чтобы поставить ссылку или вставить картинку, кнопки
+оказывались недоступны.
+
+Контракт держат обе поверхности:
+
+- Android/native: `components/article/articleEditorNativeHtml.ts` — `#toolbar`
+  идёт после `#editor`, `border-top`, у `.ql-editor` нижний запас 72px.
+- mobile web: `components/article/QuillEditor.web.tsx`, блок
+  `@media (max-width: 767px)` — `order: 2` у `.ql-toolbar`, `order: 1` у
+  `.ql-container`, тот же нижний запас.
+
+Desktop web оставляет панель сверху: там нет системного меню выделения поверх
+контента.
+
 ## Intentional exceptions to the canonical `ui/Button`
 
 Status: accepted, 2026-07-19.

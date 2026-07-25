@@ -3,8 +3,8 @@
 // ✅ УЛУЧШЕНИЕ: Добавлена адаптивная навигация с breadcrumbs
 // ✅ ДОСТУПНОСТЬ: Улучшены ARIA атрибуты и keyboard navigation
 
-import React, { useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname, useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -88,6 +88,14 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const { isPhone, isLargePhone, width } = useResponsive();
   const isMobile = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone });
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
+  const consumeOpen = useTravelSectionsStore((s) => s.consumeOpen);
+
+  // Смена экрана гасит невостребованный запрос «Разделы»: иначе тап на статье
+  // без секций (шит там не монтируется и запрос никто не забирает) открыл бы
+  // меню сам на следующей статье.
+  useEffect(() => {
+    consumeOpen();
+  }, [consumeOpen, pathname]);
 
   const model = useBreadcrumbModelSafe();
 
@@ -151,11 +159,11 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
             accessibilityLabel={i18nT('navigation:components.layout.HeaderContextBar.breadcrumb_a3361b51')}
             {...breadcrumbNavigationProps}
           >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.mobileCrumbRow}
-              style={styles.mobileCrumbScroll}
+            {/* Ряд НЕ скроллится по горизонтали: раньше трейл был шире экрана и
+                последняя крошка (текущая страница) обрезалась краем экрана.
+                Теперь крошки ужимаются с ellipsis и всегда влезают целиком. */}
+            <View
+              style={styles.mobileCrumbRow}
               testID="travel-upsert-breadcrumbs"
             >
               <Pressable
@@ -211,7 +219,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
                   </React.Fragment>
                 );
               })}
-            </ScrollView>
+            </View>
           </View>
         </>
       );
@@ -417,9 +425,6 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     width: 40,
     height: 40,
   },
-  mobileCrumbScroll: {
-    flexGrow: 0,
-  },
   mobileCrumbRow: {
     minHeight: 44,
     flexDirection: 'row',
@@ -438,7 +443,9 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   mobileCrumbItem: {
     minHeight: 44,
-    maxWidth: 240,
+    // Промежуточные крошки ужимаются вдвое быстрее последней: при нехватке
+    // ширины первым сокращается путь, а текущая страница остаётся читаемой.
+    flexShrink: 2,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -447,6 +454,7 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     borderColor: 'transparent',
   },
   mobileCrumbItemLast: {
+    flexShrink: 1,
     backgroundColor: colors.backgroundSecondary,
     borderColor: colors.borderLight,
   },

@@ -1,9 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
-import ImageCardMedia, {
-  isIOSSafariUserAgent,
-  prefetchImage,
-} from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { getMediaLqipUrl } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
@@ -209,10 +206,10 @@ const Slide = memo(function Slide({
     loadedStateRef.current = isLoaded;
   }, [isLoaded]);
 
-  useEffect(() => {
-    if (Platform.OS === 'web' || !nativeBlurSrc || !shouldEagerLoad) return;
-    void prefetchImage(nativeBlurSrc).catch(() => undefined);
-  }, [nativeBlurSrc, shouldEagerLoad]);
+  // Подложку блюра НЕ префетчим: этот же слайд рендерит её слоем `blurSrc`, а
+  // Glide не склеивает prefetch-запрос с загрузкой смонтированной картинки —
+  // в access-логе прода каждый URL подложки приходил ровно дважды. На медленном
+  // канале это лишняя копия перед фото тела статьи.
 
   // When skipImage is true and firstImagePreloaded is true, immediately report load
   // This ensures the slider upgrade happens even though we skip rendering the image

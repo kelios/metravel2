@@ -1,10 +1,20 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import PublicTripDetail from '@/components/trips/PublicTripDetail';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LAYOUT } from '@/constants/layout';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+
+// Мобильный BottomDock — fixed-оверлей, поэтому скролл резервирует его высоту
+// (`--mt-dock-h` = 0px на desktop). Иначе кнопка «Отправить заявку» формы
+// «Хочу поехать» прячется под доком.
+const SCROLL_BOTTOM_RESERVE = Platform.select({
+  web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
+  default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
+});
 
 export default function TripDetailScreen() {
   const colors = useThemedColors();
@@ -31,7 +41,11 @@ export default function TripDetailScreen() {
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 16, alignItems: 'center' },
+    content: {
+      padding: 16,
+      paddingBottom: SCROLL_BOTTOM_RESERVE,
+      alignItems: 'center',
+    },
     inner: { width: '100%', maxWidth: 760 },
     center: { paddingVertical: 48, alignItems: 'center' },
   });

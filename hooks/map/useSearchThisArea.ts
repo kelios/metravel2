@@ -1,9 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 
+import type { MapClusterBBox } from '@/api/map';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 
 // F-49 — "Search this area" (Google/Organic-Maps style). Извлечено из
-// useMapScreenController без изменения поведения (формула/пороги идентичны).
+// useMapScreenController. Порог появления кнопки считается от радиуса поиска И
+// от размера видимой области (см. canSearchThisArea), базовая точка отсчёта
+// заводится с первого же отчёта карты.
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -21,6 +24,26 @@ export const distanceKm = (a: LatLng, b: LatLng): number => {
   const h =
     Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+// Диагональ видимой области в км. Нужна, чтобы порог «значимого сдвига» знал не
+// только про радиус поиска, но и про то, сколько на экране вообще помещается.
+export const bboxSpanKm = (bbox: MapClusterBBox | null | undefined): number | null => {
+  if (!bbox) return null;
+  const { south, west, north, east } = bbox;
+  if (
+    !Number.isFinite(south) ||
+    !Number.isFinite(west) ||
+    !Number.isFinite(north) ||
+    !Number.isFinite(east)
+  ) {
+    return null;
+  }
+  const span = distanceKm(
+    { latitude: south, longitude: west },
+    { latitude: north, longitude: east },
+  );
+  return Number.isFinite(span) && span > 0 ? span : null;
 };
 
 interface UseSearchThisAreaParams {
@@ -60,36 +83,57 @@ export function useSearchThisArea({
   // tap dragged the search area south of what the user was actually looking at.
   // The baseline is the resting view, so drift now means "the user panned away".
   const [settledCenter, setSettledCenter] = useState<LatLng | null>(null);
+  // Диагональ последнего известного вьюпорта: карта присылает bbox вместе с
+  // центром (web — Leaflet getBounds, native — мост).
+  const [viewportSpanKm, setViewportSpanKm] = useState<number | null>(null);
 
   const handleMapMove = useCallback((center: MapMovePayload) => {
     if (!Number.isFinite(center.latitude) || !Number.isFinite(center.longitude)) return;
-    setMapCenter({ latitude: center.latitude, longitude: center.longitude });
+    const next = { latitude: center.latitude, longitude: center.longitude };
+    setMapCenter(next);
+    const span = bboxSpanKm(center.bbox);
+    if (span != null) setViewportSpanKm(span);
     if (center.userInitiated) {
       onUserInitiatedMove?.();
+      // Базовая точка обязана существовать, иначе дрейф не с чем сравнивать и
+      // кнопка не появится НИКОГДА. Программный settle бывает не всегда: если
+      // геолокация запрещена и авто-fit не отработал, первым же событием
+      // приходит жест пользователя. Тогда он и становится точкой отсчёта.
+      setSettledCenter((prev) => prev ?? next);
       return;
     }
     // Programmatic settle (Map.web/native only flag gestures as userInitiated):
     // this is the new reference view for the drift check.
-    setSettledCenter({ latitude: center.latitude, longitude: center.longitude });
+    setSettledCenter(next);
   }, [onUserInitiatedMove]);
 
   // F-49 — threshold for "significant move": the map center must drift away from
-  // the resting view by more than ~30% of the active search radius (clamped to a
-  // 1.5–25 km sane band so tiny/huge radii still feel right). Below that the
-  // existing results already cover the viewport, so we hide the button.
+  // the resting view by more than ~30% of the active search radius OR ~25% of the
+  // visible viewport diagonal, whichever is smaller (clamped to a 1.5–25 km sane
+  // band so tiny/huge radii still feel right). Below that the existing results
+  // already cover the viewport, so we hide the button.
   //
   // The reference is settledCenter (where our own auto-fit/flyTo left the map),
   // NOT the query anchor: fitBounds intentionally offsets the resting center from
   // the anchor to keep the radius circle clear of the bottom sheet, and that
-  // offset is not a user pan. Until the map reports its first settle we have no
-  // baseline, so there is nothing to have drifted from.
+  // offset is not a user pan.
   const canSearchThisArea = useMemo(() => {
     if (mode !== 'radius') return false;
     if (!mapCenter || !settledCenter) return false;
     const radiusKm = Number(radius) || 30;
-    const thresholdKm = Math.min(25, Math.max(1.5, radiusKm * 0.3));
+    // Один радиус задавал порог плохо: при r=50км это 15км, а на городском зуме
+    // весь экран шириной ~11км — сдвинуть карту на целый вид и всё равно не
+    // добрать до порога. Кнопки «Искать в этой области» просто не было. Поэтому
+    // порог — минимум из «доли радиуса» и «доли видимой области»: как только
+    // вид уехал примерно на четверть диагонали экрана, предложение появляется.
+    const viewportThresholdKm =
+      viewportSpanKm != null ? viewportSpanKm * 0.25 : Number.POSITIVE_INFINITY;
+    const thresholdKm = Math.min(
+      25,
+      Math.max(1.5, Math.min(radiusKm * 0.3, viewportThresholdKm)),
+    );
     return distanceKm(settledCenter, mapCenter) > thresholdKm;
-  }, [mode, mapCenter, settledCenter, radius]);
+  }, [mode, mapCenter, settledCenter, radius, viewportSpanKm]);
 
   const handleSearchThisArea = useCallback(() => {
     setMapCenter((center) => {

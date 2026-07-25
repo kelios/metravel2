@@ -2,6 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Quests QA 8101",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8101"
+      ],
+      "port": 8101,
+      "autoPort": false
+    },
+    {
       "name": "Api Proxy Dev 4630",
       "runtimeExecutable": "node",
       "runtimeArgs": [
@@ -53,6 +63,16 @@
         "https://metravel.by"
       ],
       "port": 8079,
+      "autoPort": false
+    },
+    {
+      "name": "Map Sheet Verify 8103",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8103"
+      ],
+      "port": 8103,
       "autoPort": false
     },
     {

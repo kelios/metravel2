@@ -77,4 +77,21 @@ describe('buildArticleEditorNativeHtml', () => {
     expect(build('compact')).toContain('.ql-toolbar button { width: 32px; height: 32px; }')
     expect(build('default')).not.toContain('.ql-toolbar button { width: 32px; height: 32px; }')
   })
+
+  // Регрессия: панель форматирования стояла НАД текстом, а системное меню
+  // выделения ("Вырезать / Копировать / …") рисуется поверх выделения — кнопки
+  // ссылки и картинки оказывались под ним и вставить их было нечем.
+  it('docks the format toolbar below the editor so the selection menu cannot cover it', () => {
+    const html = build('compact')
+
+    const editorIndex = html.indexOf('<div id="editor"></div>')
+    const toolbarIndex = html.indexOf('<div id="toolbar">')
+
+    expect(editorIndex).toBeGreaterThan(-1)
+    expect(toolbarIndex).toBeGreaterThan(editorIndex)
+    expect(html).toContain('border-top: 1px solid #e0e0e0')
+    expect(html).not.toContain('border-bottom: 1px solid #e0e0e0')
+    // Нижний запас редактора: последняя строка не прилипает к панели.
+    expect(html).toContain('padding: 16px 16px 72px')
+  })
 })

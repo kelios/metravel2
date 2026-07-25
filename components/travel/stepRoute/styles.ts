@@ -232,6 +232,9 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     fontWeight: '600',
   },
   countrySummaryEmpty: {
+    // Android усекает Text внутри row-контейнера без flex: «Пока не определены»
+    // превращалось в «Пока не». См. countrySummaryChips (flexDirection: 'row').
+    flex: 1,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
   },

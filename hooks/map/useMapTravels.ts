@@ -12,6 +12,18 @@ import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 
 const MAP_TRAVELS_PER_PAGE = 30;
 
+/**
+ * Ширина коридора вдоль построенного маршрута (км в каждую сторону).
+ *
+ * Раньше коридор считался из фильтра «радиус мест рядом» с clamp 5..20 км: при
+ * дефолтном радиусе 50 км это давало коридор 20 км, и вокруг короткого
+ * городского маршрута (9 км) выдача покрывала весь экран — визуально это был
+ * обычный радиус, а не «места по маршруту». Радиус в режиме маршрута вообще не
+ * редактируется (кнопка радиуса в тулбаре скрыта), поэтому коридор фиксирован и
+ * узкий: точки должны читаться как «по пути».
+ */
+const ROUTE_CORRIDOR_KM = 3;
+
 interface UseMapTravelsParams {
   coordinates: Coordinates | null;
   filterValues: MapFilterValues;
@@ -403,14 +415,7 @@ export function useMapTravels({
 
       if (coords.length < 2) return [];
 
-      const corridorKmRaw = parseInt(String(queryParams.radius || '10'), 10);
-      // Corridor must be narrow enough to be meaningful, but not too narrow.
-      // Use a conservative clamp to avoid accidental "worldwide" queries.
-      const corridorKm = Number.isFinite(corridorKmRaw)
-        ? Math.min(20, Math.max(5, corridorKmRaw))
-        : 10;
-
-      const result = await fetchTravelsNearRoute(coords, corridorKm, { signal });
+      const result = await fetchTravelsNearRoute(coords, ROUTE_CORRIDOR_KM, { signal });
       if (result && typeof result === 'object') {
         return (Array.isArray(result) ? result : Object.values(result)) as TravelCoords[];
       }

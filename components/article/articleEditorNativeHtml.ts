@@ -52,9 +52,14 @@ export function buildArticleEditorNativeHtml({
       display: flex;
       flex-direction: column;
     }
+    /* Панель форматирования пристёгнута СНИЗУ (см. порядок в разметке).
+       Системное меню выделения ("Вырезать / Копировать / …") Android и iOS рисуют
+       НАД выделенным текстом, поэтому верхняя панель оказывалась под ним и вставить
+       ссылку/картинку в выделение было нечем. */
     #toolbar {
       background: ${surfaceElevatedColor};
-      border-bottom: 1px solid ${borderColor};
+      border: 0;
+      border-top: 1px solid ${borderColor};
       padding: 8px;
       flex-shrink: 0;
     }
@@ -66,7 +71,9 @@ export function buildArticleEditorNativeHtml({
       border: none;
     }
     .ql-editor {
-      padding: 16px;
+      /* Нижний запас, чтобы последняя строка не прилипала к панели: системное
+         меню выделения рисуется в этом зазоре, а не поверх кнопок. */
+      padding: 16px 16px 72px;
       min-height: 100%;
       color: ${textColor};
     }
@@ -85,10 +92,12 @@ export function buildArticleEditorNativeHtml({
 </head>
 <body>
   <div id="editor-container">
+    <div id="editor"></div>
+    <!-- Панель форматирования идёт ПОСЛЕ редактора: на телефоне она док-бар над
+         клавиатурой, который не перекрывается системным меню выделения. -->
     <div id="toolbar">
       ${toolbarMarkup}
     </div>
-    <div id="editor"></div>
   </div>
 
   <script>${QUILL_JS}</script>

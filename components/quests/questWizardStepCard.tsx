@@ -55,6 +55,9 @@ type StepCardProps = {
   showMap: boolean
   onToggleMap: () => void
   showLocationControls?: boolean
+  /** Поле ответа получило фокус — родитель доматывает его над клавиатурой. */
+  onAnswerFocus?: (node: TextInput | null) => void
+  onAnswerBlur?: () => void
 }
 
 const normalizeVisitorWebsiteUrl = (value: string | undefined): string | undefined => {
@@ -133,6 +136,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     showMap,
     onToggleMap,
     showLocationControls = true,
+    onAnswerFocus,
+    onAnswerBlur,
   } = props
 
   const [value, setValue] = useState('')
@@ -140,6 +145,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   const [imageModalVisible, setImageModalVisible] = useState(false)
   const [navExpanded, setNavExpanded] = useState(false)
   const shakeAnim = useRef(new Animated.Value(0)).current
+  const answerInputRef = useRef<TextInput>(null)
+
+  const handleAnswerFocus = useCallback(() => {
+    onAnswerFocus?.(answerInputRef.current)
+  }, [onAnswerFocus])
 
   const flip = useRef(new Animated.Value(0)).current
   const [isFlipping, setIsFlipping] = useState(false)
@@ -333,11 +343,14 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                 <View style={styles.inputRow}>
                   <Animated.View style={[{ flex: 1 }, { transform: [{ translateX: shakeAnim }] }]}>
                     <TextInput
+                      ref={answerInputRef}
                       style={[styles.input, error ? styles.inputError : null, globalFocusStyles.focusable]}
                       placeholder={i18nT('quests:components.quests.questWizardStepCard.vash_otvet_21a01dd5')}
                       placeholderTextColor={colors.textMuted}
                       value={value}
                       onChangeText={setValue}
+                      onFocus={handleAnswerFocus}
+                      onBlur={onAnswerBlur}
                       onSubmitEditing={handleCheck}
                       returnKeyType="done"
                       keyboardType={step.inputType === 'number' ? (Platform.OS === 'ios' ? 'number-pad' : 'numeric') : 'default'}

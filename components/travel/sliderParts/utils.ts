@@ -1,8 +1,7 @@
-import { Platform } from 'react-native';
+import { PixelRatio, Platform } from 'react-native';
 import { METRICS } from '@/constants/layout';
 import {
   buildVersionedImageUrl,
-  getOptimalImageSize,
   getPreferredImageFormat,
   optimizeImageUrl,
 } from '@/utils/imageOptimization';
@@ -114,17 +113,33 @@ export const getSliderViewportFlags = (width: number): SliderViewportFlags => {
 
 /* ---- Native buildUri (used by Slider.tsx) ---- */
 
+// Ступени ширины для нативного hero. Активный слайд занимает всю ширину экрана,
+// но следующая ступень «лестницы» (1280) для телефона — это уже почти вес
+// оригинала, поэтому потолок 1024. Соседи капятся ниже: их всё равно смотрят
+// после свайпа, а на медленном канале они конкурируют с фото тела статьи.
+export const NATIVE_SLIDER_ACTIVE_MAX_WIDTH = 1024;
+export const NATIVE_SLIDER_NEIGHBOUR_MAX_WIDTH = 800;
+// Оригиналы галереи хранятся почти без сжатия (1080×1080 ≈ 325 КБ). q75 на прокси
+// экономит меньше 20%, поэтому качество опущено до уровня, который заметно легче,
+// но всё ещё выше того, что уже отдаётся mobile web (там q45/q35).
+// Прокси квантует `q` шагом 10 (`snapQuality`), поэтому промежуточные значения
+// вроде 55 всё равно превращаются в 60 — держим ступень явно. Соседей режем
+// шириной, а не качеством: после свайпа сосед становится активным без
+// перезапроса URL (800@q60 ≈ 111 КБ против 325 КБ у оригинала).
+const NATIVE_SLIDER_ACTIVE_QUALITY = 60;
+const NATIVE_SLIDER_NEIGHBOUR_QUALITY = 60;
+
 export const buildUriNative = (
   img: SliderImage,
   containerWidth?: number,
-  containerHeight?: number,
+  _containerHeight?: number,
   isFirst: boolean = false,
 ) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
   const isWeb = Platform.OS === 'web';
 
-  if (containerWidth && img.width && img.height) {
-    if (isWeb) {
+  if (isWeb) {
+    if (containerWidth && img.width && img.height) {
       const cappedWidth = Math.min(containerWidth, SLIDER_MAX_WIDTH.tablet);
       const quality = isFirst ? 45 : 35;
       return (
@@ -135,29 +150,29 @@ export const buildUriNative = (
         }) || versionedUrl
       );
     }
-    const aspectRatio = img.width / img.height;
-    const optimalSize = getOptimalImageSize(
-      containerWidth,
-      containerHeight,
-      aspectRatio,
-    );
-    const quality = isFirst ? 75 : 70;
-    // getOptimalImageSize uses full device DPR on native, so a DPR-3 phone
-    // requests a ~1280px neighbour and decodes it on-device, stalling swipe
-    // 1→2. Cap neighbours to dpr 2; the active/first slide keeps full DPR.
-    const width = isFirst
-      ? optimalSize.width
-      : Math.min(optimalSize.width, Math.round(containerWidth * 2));
-    return (
-      optimizeImageUrl(versionedUrl, {
-        width,
-        quality,
-        fit: 'contain',
-      }) || versionedUrl
-    );
+    return versionedUrl;
   }
 
-  return versionedUrl;
+  if (!containerWidth) return versionedUrl;
+
+  // Размер запрашиваем от реального DPR устройства (`PixelRatio`), а не от
+  // `window.devicePixelRatio`: в RN его нет, и `getOptimalImageSize` на девайсе
+  // молча считает DPR = 1. Раньше ветка вообще требовала `img.width/height`, но
+  // gallery-пейлоад их не отдаёт — и слайдер тянул НЕсжатый оригинал (325 КБ
+  // против 111 КБ у w=800). На статье с 64 фото тела это съедало канал первым.
+  const dpr = Math.min(PixelRatio.get() || 1, 3);
+  const width = Math.min(
+    Math.round(containerWidth * dpr),
+    isFirst ? NATIVE_SLIDER_ACTIVE_MAX_WIDTH : NATIVE_SLIDER_NEIGHBOUR_MAX_WIDTH,
+  );
+
+  return (
+    optimizeImageUrl(versionedUrl, {
+      width,
+      quality: isFirst ? NATIVE_SLIDER_ACTIVE_QUALITY : NATIVE_SLIDER_NEIGHBOUR_QUALITY,
+      fit: 'contain',
+    }) || versionedUrl
+  );
 };
 
 /* ---- Web buildUri (used by Slider.web.tsx) ---- */

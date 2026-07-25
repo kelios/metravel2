@@ -1,4 +1,4 @@
-# Google Play Closed Testing — журнал кампании 2026-07-09 → 2026-07-22
+# Google Play Closed Testing — журнал кампании 2026-07-09 → 2026-07-24
 
 Цель: 14 дней подряд ежедневная активность тестера по всем приложениям из `config.json`,
 чтобы наши приложения прошли закрытое тестирование Google Play. Пропуск дня = риск провала кампании.
@@ -23,6 +23,7 @@
 | 13   | 2026-07-21 | ✅          | snapshot refreshed: `com.kitchenmatch.game` 2→3, `com.kolorino.kolorino` 2→6, `com.unnoyashiro` 2→3, `by.metravel.app` 8→15; Priority dz Play listing checked: no Update button | Pack Boneclaw IV: 11/11 done (100%); TCT: visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-21/`; 3+ minute interactive testing used for each TC task app; chat note: Priority dz developer asked to update, but Play showed only `Играть`; no crash-buffer hits |
 | 14   | 2026-07-22 | ✅          | snapshot refreshed: `com.baremacros.app` 1→10, `com.kitchenmatch.game` 3→6, `com.kolorino.kolorino` 6→7, `com.ja.callofpoker` 69000→71000 | Pack Boneclaw IV: 11/11 done (100%); TCT: one partner MeTravel proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-22/`; linked 30+ second task sessions recovered the stale `0/11` mission state; all target versionCodes match snapshot; no target-package crash-buffer hits |
 | 15   | 2026-07-23 | ✅          | none; installed versionCodes match snapshot for today's 10 assigned packages | Pack Boneclaw IV: Day 13/16, 10/10 done (100%); TCT visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-23/`; each TC task had real 3+ minute app usage plus linked 30+ second TestersCommunity completion where needed; final proof shows `ALL DONE`; no target-package crash-buffer hits |
+| 16   | 2026-07-24 | ✅          | snapshot refreshed: `com.ballsort.zen` 2→5, `com.unnoyashiro` 3→4 | Pack Boneclaw IV: live app showed Day 14/16, 10/10 done (100%); TCT Damas Go Day 10 partner proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-24/`; linked task flow recovered after two script attempts that used Android Back too aggressively; final proof shows `ALL DONE`; no target-package crash-buffer hits |
 
 ## Найденные задания / инциденты
 
@@ -210,3 +211,57 @@
   - No Play reviews/ratings, purchases, messages, account changes, uninstall/reinstall, or ad actions were performed.
 - Version audit: today's assigned packages matched `.claude/play-testing/versions.json`: BareMacros 10, Kitchen 6, Kolorino 7, Denkleşelim 11, Priority dz 4, Ball Sort 2, Call Of Poker 71000, First Time Daddy 1, `運の社` 3, PraEx 4.
 - Crash check: `adb logcat -d -b crash` filtered for the 10 tested packages and `com.testerscommunity` returned no target-package crash entries.
+
+### 2026-07-24 — Daily pass
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- TestersCommunity Pack Boneclaw IV: live app showed `Day 14 of 16` despite the older config/table chronology. Completed all 10 current tasks through the linked TestersCommunity flow. Final Pack Details showed `100%`, `ALL DONE`, `Open & test apps today (10/10 done)`, `Daily Progress Complete!`, and `All tasks complete!`.
+- Assigned apps tested with exact foreground verification, screenshot proof, and linked feedback/completion:
+  - PraEx: opened from `Start Testing`, entered the quiz flow and answered/advanced through question screens.
+  - Denkleşelim: first linked attempt was not counted after an overly aggressive Android Back interaction; retested without Back, kept the room/expense UI in foreground, then submitted feedback successfully.
+  - Call Of Poker: opened and interacted with game/card screens before completion.
+  - Ball Sort - Zen: performed tube-move taps in the puzzle board. Version snapshot refreshed from `2` to installed `5`.
+  - `運の社`: opened and interacted with fortune/oracle screens. Version snapshot refreshed from `3` to installed `4`.
+  - Kolorino: opened coloring/canvas flow and completed without foreground escape.
+  - First Time Daddy: first linked attempt was not counted after Android Back escaped the linked flow; retested without Back using scroll/tap navigation and completed.
+  - Kitchen Match & Merge: opened game board/start flow and performed board gestures.
+  - BareMacros: tested quick macro/tabs/scroll interactions.
+  - Priority dz: tested road-priority gameplay taps/progression.
+- Community audit:
+  - The Closed Test: found `Attention Needed` for Damas Go Day 10. Partner proof showed genuine MeTravel usage on the home/routes UI, so it was accepted; TCT home then showed `You're all caught up!`.
+  - App Testers `com.nadeemgs.apptesters` and NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: both showed `Rate Our App`; no Play Store review/rating was performed.
+  - MeTravel `by.metravel.app`: opened production UI and performed read-only menu smoke; no data changes.
+  - No Play reviews/ratings, purchases, messages, account changes, uninstall/reinstall, or ad actions were performed.
+- Evidence: `.claude/play-testing/evidence/2026-07-24/`; final proof `final_verify.png`.
+- Crash check: `adb logcat -d -b crash` filtered for the 10 tested packages and `com.testerscommunity` returned no target-package crash entries.
+
+### 2026-07-25 — Partial single-task pass
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- Per user instruction, only the already opened TestersCommunity task was completed; the second task was not started.
+- TestersCommunity Pack Boneclaw IV live state: Day 15 of 16, mission started at `0/10`.
+- Completed Task 1 of 10: `Kolorino: раскраска по номерам` (`com.kolorino.kolorino`) through the linked TestersCommunity flow.
+  - Foreground verified as `com.kolorino.kolorino/.MainActivity`, not Play Store or TestersCommunity.
+  - Tested the main category screen, opened `По номерам`, selected a drawing, and interacted with the number-coloring canvas.
+  - Proof screen showed the coloring canvas with `8%` progress; feedback submitted: stable number-coloring flow, suggestion to strengthen selected-number zone highlighting.
+- Final TestersCommunity pack screen showed `Open & test apps today (1/10 done)`, `Daily Progress 1 of 10`, and `Your Tasks 9`; `PraEx` remained the next unstarted task.
+- Evidence: `.claude/play-testing/evidence/2026-07-25/kolorino_day15_canvas_8pct.png`, `.claude/play-testing/evidence/2026-07-25/tc_day15_1_of_10.png`.
+- Crash check: `adb logcat -d -b crash` filtered for `com.kolorino.kolorino` and `com.testerscommunity` returned no relevant crash entries. Ordinary logcat contained AppOps/audio-focus noise for Kolorino but no app crash.
+
+### 2026-07-25 — Daily pass completed
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- Resumed Pack Boneclaw IV Day 15 from `1/10` and completed all nine remaining linked TestersCommunity tasks. Final live state showed `100%`, `ALL DONE`, `Open & test apps today (10/10 done)`, `Daily Progress Complete!`, and `All tasks complete!`.
+- Remaining assigned apps tested with exact foreground verification, meaningful in-app interaction, and linked feedback/completion:
+  - PraEx: opened the driving quiz and answered several questions.
+  - Denkleşelim: inspected the existing room, expense summary, and settlement plan.
+  - BareMacros: checked the daily macro dashboard, Meals tab, and scrolling.
+  - Kitchen Match & Merge: opened Level 1 and performed several tile swaps; the ad banner was not touched.
+  - `運の社`: drew and inspected an omikuji fortune result.
+  - Call Of Poker: entered the Memory Game and flipped multiple card pairs.
+  - Ball Sort - Zen: kept all advertising-consent toggles off, confirmed those choices, entered Calm mode, and moved balls between tubes.
+  - Priority dz: opened Level 7 and selected vehicles in the road-priority scenario; the ad banner was not touched.
+  - First Time Daddy: inspected Weekly content, scrolled, and opened the Guide tips view.
+- No Play reviews/ratings, purchases, messages, account changes, uninstall/reinstall, ad actions, or personal-data consent were performed.
+- Evidence: `.claude/play-testing/evidence/2026-07-25/`; final proof `tc_day15_10_of_10.png`.
+- Crash check: `adb logcat -d -b crash` filtered for all ten tested packages and `com.testerscommunity` returned no relevant crash entries.

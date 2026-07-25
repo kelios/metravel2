@@ -310,6 +310,7 @@ export const mapGenerated1 = {
   "components.MapPage.MapMobileLayout.zagruzhaem_filtry_6233db2b": "Ładowanie filtrów",
   "components.MapPage.MapMobileLayout.zakryt_d55e477b": "Zamknij",
   "components.MapPage.MapOfflineDownloadControl.0_mb_29612170": "0MB",
+  "components.MapPage.MapOfflineDownloadControl.krupnaya_oblast_sohranim_obzornuyu_detalizac_fcfbffdc": "Duży obszar — zapiszemy poglądowy poziom szczegółów. Powiększ mapę, aby zapisać małe ulice.",
   "components.MapPage.MapOfflineDownloadControl.ne_udalos_skachat_oblast_proverte_set_7d6c909b": "Nie udało się pobrać obszaru. Sprawdź sieć.",
   "components.MapPage.MapOfflineDownloadControl.oblast_nedostupna_b5e1348d": "Teren niedostępny",
   "components.MapPage.MapOfflineDownloadControl.oblast_slishkom_bolshaya_priblizte_kartu_i_p_38e406f5": "Obszar jest za duży. Powiększ mapę i spróbuj ponownie.",

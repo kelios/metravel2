@@ -211,6 +211,11 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
       if (isWeb && !prefetchEnabled) return;
       for (let d = -preloadCount; d <= preloadCount; d++) {
         if (d === 0) continue;
+        // Native: FlatList и так держит смонтированными текущий ±1, и такой слайд
+        // грузит свой URL сам. Префетч поверх этого не склеивается с загрузкой
+        // смонтированной картинки — файл уезжает по сети дважды (видно в
+        // access-логе прода). Греем только то, что ещё не смонтировано.
+        if (!isWeb && Math.abs(d) < 2) continue;
         const t = idx + d;
         if (t < 0 || t >= images.length) continue;
         const u = getUri(t);

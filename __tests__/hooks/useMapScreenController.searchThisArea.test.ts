@@ -259,4 +259,78 @@ describe('useMapScreenController — «Искать в этой области»
     })
     expect(result.current.canSearchThisArea).toBe(true)
   })
+
+  // Регрессия: программного settle может не быть вообще (геолокация запрещена,
+  // авто-fit не отработал) — тогда первым событием приходит жест пользователя.
+  // Без базовой точки дрейф не с чем сравнивать, и кнопка не появлялась НИКОГДА.
+  it('заводит точку отсчёта, даже если первым пришёл жест пользователя', () => {
+    const { result } = renderHook(() => useMapScreenController())
+
+    act(() => {
+      result.current.mapPanelProps.onMapMove({ ...ANCHOR, userInitiated: true })
+    })
+    expect(result.current.canSearchThisArea).toBe(false)
+
+    act(() => {
+      result.current.mapPanelProps.onMapMove({ ...USER_PANNED, userInitiated: true })
+    })
+    expect(result.current.canSearchThisArea).toBe(true)
+  })
+
+  // Регрессия: порог, посчитанный только от радиуса (60км → 18км), больше всего
+  // видимого экрана на городском зуме — карту можно увести на целый вид, а
+  // предложения «Искать в этой области» так и не будет.
+  it('учитывает размер видимой области, а не только радиус', () => {
+    const { result } = renderHook(() => useMapScreenController())
+
+    // Вьюпорт городского зума: ~14×8 км вокруг якоря.
+    const cityBbox = {
+      south: ANCHOR.latitude - 0.038,
+      north: ANCHOR.latitude + 0.038,
+      west: ANCHOR.longitude - 0.108,
+      east: ANCHOR.longitude + 0.108,
+    }
+
+    act(() => {
+      result.current.mapPanelProps.onMapMove({ ...ANCHOR, bbox: cityBbox })
+    })
+    act(() => {
+      // ~5.6км — меньше радиусного порога 18км, но больше четверти диагонали
+      // экрана (~16.5км → 4.1км): вид уже не тот, что искали.
+      result.current.mapPanelProps.onMapMove({
+        latitude: ANCHOR.latitude - 0.05,
+        longitude: ANCHOR.longitude,
+        bbox: cityBbox,
+        userInitiated: true,
+      })
+    })
+
+    expect(result.current.canSearchThisArea).toBe(true)
+  })
+
+  it('не срабатывает на микро-пан внутри экрана', () => {
+    const { result } = renderHook(() => useMapScreenController())
+
+    const cityBbox = {
+      south: ANCHOR.latitude - 0.038,
+      north: ANCHOR.latitude + 0.038,
+      west: ANCHOR.longitude - 0.108,
+      east: ANCHOR.longitude + 0.108,
+    }
+
+    act(() => {
+      result.current.mapPanelProps.onMapMove({ ...ANCHOR, bbox: cityBbox })
+    })
+    act(() => {
+      // ~1.1км — нижний порог 1.5км держит кнопку скрытой.
+      result.current.mapPanelProps.onMapMove({
+        latitude: ANCHOR.latitude - 0.01,
+        longitude: ANCHOR.longitude,
+        bbox: cityBbox,
+        userInitiated: true,
+      })
+    })
+
+    expect(result.current.canSearchThisArea).toBe(false)
+  })
 })

@@ -556,8 +556,11 @@ export default function PlacesScreen() {
                 </Text>
               </View>
               <View style={styles.resultsHeaderControls}>
-                {mobileCompact ? null : renderSortMenu(sortMode !== 'default')}
-                {selectedCategories.length > 0 ? (
+                {/* Sorting belongs next to the result count on every width. On
+                    compact it also keeps the sticky bar to two flexible pills,
+                    which is what stops that row from wrapping at ~390px. */}
+                {renderSortMenu(sortMode !== 'default')}
+                {!mobileCompact && selectedCategories.length > 0 ? (
                   <Button
                     label={i18nT('map:screens.tabs.PlacesScreen.vse_mesta_e8f3c355')}
                     variant="outline"
@@ -579,94 +582,114 @@ export default function PlacesScreen() {
   // scrollable pageChrome). Shared by web + native for parity.
   const compactFixedBar = mobileCompact ? (
     <View style={styles.compactBar}>
-      <View style={styles.compactSearchBox}>
-        <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
-        <TextInput
-          value={query}
-          onChangeText={handleQueryChange}
-          placeholder={i18nT('map:screens.tabs.PlacesScreen.poisk_mesta_642f16e6')}
-          placeholderTextColor={colors.textMuted}
-          style={styles.searchInput}
-          returnKeyType="search"
-          accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.nayti_mesto_c5e8b835')}
-        />
-        {query ? (
+      <View style={styles.compactSearchRow}>
+        <View style={styles.compactSearchBox}>
+          <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
+          <TextInput
+            value={query}
+            onChangeText={handleQueryChange}
+            placeholder={i18nT('map:screens.tabs.PlacesScreen.poisk_mesta_642f16e6')}
+            placeholderTextColor={colors.textMuted}
+            style={styles.searchInput}
+            returnKeyType="search"
+            accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.nayti_mesto_c5e8b835')}
+          />
+          {query ? (
+            <Pressable
+              onPress={() => handleQueryChange('')}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.ochistit_poisk_4f31e8e9')}
+              hitSlop={10}
+              style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
+            >
+              <Feather name="x" size={16} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+        {hasActiveFilters ? (
           <Pressable
-            onPress={() => handleQueryChange('')}
+            onPress={resetAll}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.ochistit_poisk_4f31e8e9')}
-            hitSlop={10}
-            style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
+            accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}
+            style={({ pressed }) => [styles.compactResetBtn, pressed && PRESSED_OPACITY]}
           >
-            <Feather name="x" size={16} color={colors.textMuted} />
+            <Feather name="refresh-ccw" size={16} color={colors.textMuted} />
           </Pressable>
         ) : null}
       </View>
       <View style={styles.compactBarRow}>
-        <Menu
-          visible={countryMenuVisible}
-          onDismiss={() => setCountryMenuVisible(false)}
-          contentStyle={styles.countryMenuContent}
-          anchor={
-            <Pressable
-              onPress={() => setCountryMenuVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_stranu_a7b66c0c')}
-              accessibilityState={{ expanded: countryMenuVisible, disabled: facetsQuery.isLoading }}
-              disabled={facetsQuery.isLoading}
-              style={({ pressed }) => [
-                styles.compactCountrySelect,
-                !!selectedCountry && styles.compactCountrySelectActive,
-                pressed && !facetsQuery.isLoading && PRESSED_OPACITY,
-                facetsQuery.isLoading && styles.countrySelectDisabled,
-              ]}
-            >
-              <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
-              <Text
-                style={[
-                  styles.compactCountrySelectValue,
-                  !!selectedCountry && styles.compactCountrySelectValueActive,
+        {/* Paper's `Menu` wraps the anchor in its own unstyled View, so the row
+            sizing MUST live on this outer wrapper: a `flex` on the anchor itself
+            lands inside that content-height column wrapper, where native Yoga
+            resolves it against an undefined main size — the pill inflated into a
+            giant oval and the country label collapsed to zero width (Android). */}
+        <View style={styles.compactCountryAnchor}>
+          <Menu
+            visible={countryMenuVisible}
+            onDismiss={() => setCountryMenuVisible(false)}
+            contentStyle={styles.countryMenuContent}
+            anchor={
+              <Pressable
+                onPress={() => setCountryMenuVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_stranu_a7b66c0c')}
+                accessibilityState={{ expanded: countryMenuVisible, disabled: facetsQuery.isLoading }}
+                disabled={facetsQuery.isLoading}
+                style={({ pressed }) => [
+                  styles.compactCountrySelect,
+                  !!selectedCountry && styles.compactCountrySelectActive,
+                  pressed && !facetsQuery.isLoading && PRESSED_OPACITY,
+                  facetsQuery.isLoading && styles.countrySelectDisabled,
                 ]}
-                numberOfLines={1}
               >
-                {selectedCountry ?? i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
-              </Text>
-              <Feather name="chevron-down" size={16} color={colors.textMuted} />
-            </Pressable>
-          }
-        >
-          <Menu.Item
-            title={showLoadedCounts ? i18nT('map:screens.tabs.PlacesScreen.vse_strany_value1_7f58288c', { value1: catalogTotal }) : i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
-            onPress={() => handleSelectCountry(null)}
-            leadingIcon={({ size }) => (
-              <Feather
-                name={selectedCountry ? 'circle' : 'check-circle'}
-                size={size}
-                color={selectedCountry ? colors.textMuted : colors.primary}
-              />
-            )}
-            titleStyle={selectedCountry ? styles.countryMenuItemText : styles.countryMenuItemTextActive}
-          />
-          {countryFacets.map((group) => (
+                <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
+                <Text
+                  style={[
+                    styles.compactCountrySelectValue,
+                    !!selectedCountry && styles.compactCountrySelectValueActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {selectedCountry ?? i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
+                </Text>
+                <Feather name="chevron-down" size={16} color={colors.textMuted} />
+              </Pressable>
+            }
+          >
             <Menu.Item
-              key={group.name}
-              title={`${group.name} (${group.count})`}
-              onPress={() => handleSelectCountry(group.name)}
+              title={showLoadedCounts ? i18nT('map:screens.tabs.PlacesScreen.vse_strany_value1_7f58288c', { value1: catalogTotal }) : i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
+              onPress={() => handleSelectCountry(null)}
               leadingIcon={({ size }) => (
                 <Feather
-                  name={selectedCountry === group.name ? 'check-circle' : 'circle'}
+                  name={selectedCountry ? 'circle' : 'check-circle'}
                   size={size}
-                  color={selectedCountry === group.name ? colors.primary : colors.textMuted}
+                  color={selectedCountry ? colors.textMuted : colors.primary}
                 />
               )}
-              titleStyle={selectedCountry === group.name ? styles.countryMenuItemTextActive : styles.countryMenuItemText}
+              titleStyle={selectedCountry ? styles.countryMenuItemText : styles.countryMenuItemTextActive}
             />
-          ))}
-        </Menu>
+            {countryFacets.map((group) => (
+              <Menu.Item
+                key={group.name}
+                title={`${group.name} (${group.count})`}
+                onPress={() => handleSelectCountry(group.name)}
+                leadingIcon={({ size }) => (
+                  <Feather
+                    name={selectedCountry === group.name ? 'check-circle' : 'circle'}
+                    size={size}
+                    color={selectedCountry === group.name ? colors.primary : colors.textMuted}
+                  />
+                )}
+                titleStyle={selectedCountry === group.name ? styles.countryMenuItemTextActive : styles.countryMenuItemText}
+              />
+            ))}
+          </Menu>
+        </View>
 
         <Pressable
           onPress={() => setFiltersOpen((v) => !v)}
           accessibilityRole="button"
+          accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.kategorii_7e54cc5b')}
           accessibilityState={{ expanded: filtersOpen }}
           style={({ pressed }) => [
             styles.compactFilterToggle,
@@ -691,19 +714,6 @@ export default function PlacesScreen() {
             color={colors.textMuted}
           />
         </Pressable>
-
-        {renderSortMenu(sortMode !== 'default')}
-
-        {hasActiveFilters ? (
-          <Pressable
-            onPress={resetAll}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}
-            style={({ pressed }) => [styles.resetBtn, pressed && PRESSED_OPACITY]}
-          >
-            <Text style={styles.resetBtnText}>{i18nT('map:screens.tabs.PlacesScreen.sbrosit_10b66035')}</Text>
-          </Pressable>
-        ) : null}
       </View>
     </View>
   ) : null

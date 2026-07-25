@@ -104,6 +104,39 @@ export const estimateTiles = (bbox: OfflineBBox, minZ: number, maxZ: number): nu
   return total;
 };
 
+export interface OfflineZoomPlan {
+  minZ: number;
+  maxZ: number;
+  tileCount: number;
+}
+
+/**
+ * Подбирает максимальный зум, при котором область влезает в бюджет тайлов.
+ *
+ * Фиксированный потолок зума не работает на реальных областях: каждый уровень
+ * зума даёт ×4 тайлов, поэтому один только z16 — это ~75% объёма, и обзорная
+ * область города (~40 км) выходит за любой разумный бюджет (~25 000 тайлов при
+ * лимите 4000). Раньше это просто гасило кнопку «Скачать эту область» на всех
+ * масштабах крупнее пары кварталов. Теперь вместо отказа срезаем детализацию:
+ * область сохраняется целиком, но до того зума, который влезает.
+ *
+ * @returns план или `null`, если даже базовый `minZ` не помещается в бюджет.
+ */
+export const planOfflineZoomRange = (
+  bbox: OfflineBBox,
+  minZ: number,
+  maxZ: number,
+  maxTiles: number,
+): OfflineZoomPlan | null => {
+  const lo = Math.max(0, Math.min(minZ, maxZ));
+  const hi = Math.max(minZ, maxZ);
+  for (let z = hi; z >= lo; z -= 1) {
+    const tileCount = estimateTiles(bbox, lo, z);
+    if (tileCount <= maxTiles) return { minZ: lo, maxZ: z, tileCount };
+  }
+  return null;
+};
+
 // ───────────────────────── Файловые операции ─────────────────────────
 const tileDir = (z: number): string => `${TILE_ROOT}${z}/`;
 const tilePath = (z: number, x: number, y: number): string => `${tileDir(z)}${x}_${y}.png`;

@@ -2,6 +2,7 @@ import { Platform, StyleSheet } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
+import { webStyle } from '@/utils/webProps'
 
 export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean) => {
   // Compact "app" layout applies to every mobile width (web + native) so /places
@@ -116,14 +117,22 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
       transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
     } as any) : null),
   },
+  // Search + reset live on one row so the pill row below stays exactly two
+  // controls; a third pill there truncated «Категории» down to «К» at 375px.
+  compactSearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
   // Standalone (NOT merged with `searchBox`): the shared `searchBox` carries
   // `flex: 1` for the desktop topBar row, and inside the compact column that
   // shorthand resolves its basis against the vertical main axis and collapses the
-  // field to 0 on native — and it survives a sub-property override in a merged
-  // array. This copy owns its own visual props with no flex, so it keeps its 46px
-  // height and full width in the compact bar.
+  // field to 0 on native. This copy owns its own visual props; its `flex: 1` is
+  // safe because it always sits in the horizontal `compactSearchRow`, where the
+  // main axis is width.
   compactSearchBox: {
-    width: '100%',
+    flex: 1,
+    minWidth: 0,
     height: 46,
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1.5,
@@ -378,7 +387,9 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   // Pinned above the scroll list so search + category filter never scroll away.
   // Tight vertical paddings keep it ≤~20% of a phone viewport.
   compactBar: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    // Same horizontal gutter as `main`/`sidebar` so the search field lines up with
+    // the results title and cards instead of sitting 8px further out.
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     paddingTop: DESIGN_TOKENS.spacing.xs,
     paddingBottom: DESIGN_TOKENS.spacing.xs,
     gap: DESIGN_TOKENS.spacing.xs,
@@ -386,19 +397,30 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderLight,
   },
+  // Strictly single-line. `flexWrap: 'wrap'` here used to break at ~390px: the
+  // reset button dropped to a second line that the bar's height never accounted
+  // for, so it overlapped the «Категории» panel underneath, while the country
+  // anchor was stretched to span both lines and squeezed its label to zero width.
+  // Two flexible pills + an optional fixed-size reset always fit one row.
   compactBarRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     alignItems: 'center',
     justifyContent: 'flex-start',
     gap: DESIGN_TOKENS.spacing.xs,
   },
+  // Content-sized, NOT an equal half of the row: once a category is picked the
+  // count badge adds ~28px and an even 50/50 split clipped «Категории» to
+  // «Категор…» at 360-375dp. Zero grow/shrink keeps this label whole and lets the
+  // country pill (grow 1, basis 0) absorb the leftover — «Все страны» is the
+  // cheaper label to shorten.
   compactFilterToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
-    flexGrow: 1,
-    flexShrink: 1,
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
     minWidth: 0,
     minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
@@ -411,13 +433,26 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     borderColor: colors.primaryAlpha30,
     backgroundColor: colors.primarySoft,
   },
+  // Paper's `Menu` renders its anchor inside an unstyled wrapper View, so THIS —
+  // not the anchor — is the flex child of `compactBarRow` and must carry the row
+  // sizing. Putting `flex: 1` on the anchor instead left it in that wrapper's
+  // content-height COLUMN, where native Yoga resolved the basis against an
+  // undefined main size: the pill grew into a ~90dp oval and its label lost all
+  // width (the row never gave the wrapper any). Web is unaffected — CSS falls
+  // back to the content size — so this only ever showed up on Android.
+  compactCountryAnchor: {
+    flex: 1,
+    minWidth: 0,
+  },
   // Compact country chip — second anchor for the same country Menu, sized to sit
   // beside the Категории toggle in the native sticky bar without overflowing.
   compactCountrySelect: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
-    flex: 1,
+    // Width comes from `compactCountryAnchor` above; `alignSelf` only stretches
+    // across the wrapper's cross axis, so it can never re-introduce the bug.
+    alignSelf: 'stretch',
     minWidth: 0,
     minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
@@ -465,21 +500,21 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '800',
   },
-  resetBtn: {
-    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+  // Icon-only, pinned at the end of the search row: a «Сбросить» text button needs
+  // ~90px, which is exactly what pushed the filter row over one line at 375px.
+  compactResetBtn: {
+    width: 46,
+    height: 46,
+    flexGrow: 0,
     flexShrink: 0,
-    borderRadius: DESIGN_TOKENS.radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: DESIGN_TOKENS.radii.pill,
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.borderLight,
-  },
-  resetBtnText: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '600',
+    // RN-Web: `cursor` нет в ViewStyle — типизированный мостик вместо `as any`.
+    ...(Platform.OS === 'web' ? webStyle({ cursor: 'pointer' }) : null),
   },
 
   // ─── Sidebar ───
@@ -573,16 +608,21 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
-    flexShrink: 0,
+    flexShrink: mobileCompact ? 1 : 0,
+    minWidth: 0,
   },
 
   // ─── Sort control (shared desktop header + compact bar) ───
   sortSelect: {
-    minHeight: 40,
+    minHeight: mobileCompact ? DESIGN_TOKENS.touchTarget.minHeight : 40,
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 0,
     gap: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: mobileCompact
+      ? DESIGN_TOKENS.spacing.sm
+      : DESIGN_TOKENS.spacing.md,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,
@@ -600,7 +640,9 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 18,
     fontWeight: '600',
-    maxWidth: 150,
+    // Compact: let the label shrink with the header row instead of forcing the
+    // pill past the viewport; desktop keeps the fixed cap.
+    ...(mobileCompact ? { flexShrink: 1, minWidth: 0 } : { maxWidth: 150 }),
   },
   sortSelectValueActive: {
     color: colors.primary,

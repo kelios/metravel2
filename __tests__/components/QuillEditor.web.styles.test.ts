@@ -18,6 +18,25 @@ describe('QuillEditor.web styles', () => {
     expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('overflow: hidden;')
   })
 
+  // Регрессия: на телефоне системное меню выделения ("Вырезать / Копировать / …")
+  // рисуется над выделением и закрывало верхнюю панель форматирования — ссылку и
+  // картинку было нечем вставить. Панель док-бар снизу, как и в Android-редакторе.
+  it('docks the mobile toolbar below the editor body', () => {
+    const mobileBlock = ARTICLE_EDITOR_QUILL_WEB_CSS.slice(
+      ARTICLE_EDITOR_QUILL_WEB_CSS.indexOf('@media (max-width: 767px)'),
+      ARTICLE_EDITOR_QUILL_WEB_CSS.indexOf('@media (max-width: 479px)'),
+    )
+
+    expect(mobileBlock).toContain('order: 2;')
+    expect(mobileBlock).toContain('order: 1;')
+    expect(mobileBlock).toContain('border-top: 1px solid var(--color-border);')
+    expect(mobileBlock).toContain('padding-bottom: 72px;')
+    // Десктопная панель остаётся сверху.
+    expect(ARTICLE_EDITOR_QUILL_WEB_CSS.slice(0, ARTICLE_EDITOR_QUILL_WEB_CSS.indexOf('@media'))).toContain(
+      'border-bottom: 1px solid var(--color-border);',
+    )
+  })
+
   it('keeps inactive toolbar controls visible in dark editor surfaces', () => {
     expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-stroke')
     expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('stroke: var(--color-textMuted);')

@@ -55,7 +55,7 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
     progress,
     estimateBytes,
     estimateTileCount,
-    maxTiles,
+    planZoomRange,
     downloadCurrentRegion,
     cancel,
     reset,
@@ -73,20 +73,31 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
     if (state === 'done') refreshRegions();
   }, [state, refreshRegions]);
 
+  // Диапазон зумов подбираем под область, а не берём фиксированный z10–16:
+  // на обзорных масштабах z16 один давал десятки тысяч тайлов и кнопка гасла.
+  const plan = useMemo(
+    () => (bbox ? planZoomRange(bbox, MIN_Z, MAX_Z) : null),
+    [bbox, planZoomRange],
+  );
+  // Без плана показываем цену минимального запроса (только базовый зум) — иначе
+  // рядом с «область слишком большая» висели бы нули.
   const tileCount = useMemo(
-    () => (bbox ? estimateTileCount(bbox, MIN_Z, MAX_Z) : 0),
-    [bbox, estimateTileCount],
+    () => (bbox ? plan?.tileCount ?? estimateTileCount(bbox, MIN_Z, MIN_Z) : 0),
+    [bbox, estimateTileCount, plan],
   );
   const sizeLabel = useMemo(
-    () => (bbox ? formatBytes(estimateBytes(bbox, MIN_Z, MAX_Z)) : '—'),
-    [bbox, estimateBytes],
+    () => (bbox ? formatBytes(estimateBytes(bbox, MIN_Z, plan?.maxZ ?? MIN_Z)) : '—'),
+    [bbox, estimateBytes, plan],
   );
-  const tooLarge = tileCount > maxTiles;
+  // Область не влезает даже на базовом зуме — тут приближение действительно нужно.
+  const tooLarge = Boolean(bbox) && plan == null;
+  // Влезла, но пришлось срезать детализацию — предупреждаем, что мелких улиц не будет.
+  const reducedDetail = plan != null && plan.maxZ < MAX_Z;
 
   const handleDownload = useCallback(() => {
-    if (!bbox || tooLarge) return;
-    void downloadCurrentRegion(bbox, { minZ: MIN_Z, maxZ: MAX_Z });
-  }, [bbox, tooLarge, downloadCurrentRegion]);
+    if (!bbox || !plan) return;
+    void downloadCurrentRegion(bbox, { minZ: plan.minZ, maxZ: plan.maxZ });
+  }, [bbox, plan, downloadCurrentRegion]);
 
   const handleDelete = useCallback(
     (id: string) => {
@@ -139,13 +150,17 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
             <Text style={styles.subtitle}>{i18nT('map:components.MapPage.MapOfflineDownloadControl.tekuschaya_oblast_23bbcebd')}</Text>
             <View style={styles.estimateRow}>
               <Feather name="layers" size={15} color={colors.textMuted} />
-              <Text style={styles.estimateText}>
+              <Text style={styles.estimateText} testID="map-offline-estimate">
                 {bbox ? i18nT('map:components.MapPage.MapOfflineDownloadControl.value1_taylov_value2_4fa1ad44', { value1: tileCount, value2: sizeLabel }) : i18nT('map:components.MapPage.MapOfflineDownloadControl.oblast_nedostupna_b5e1348d')}
               </Text>
             </View>
             {tooLarge && (
-              <Text style={styles.warn}>
+              <Text style={styles.warn} testID="map-offline-too-large">
                 {i18nT('map:components.MapPage.MapOfflineDownloadControl.oblast_slishkom_bolshaya_priblizte_kartu_i_p_38e406f5')}</Text>
+            )}
+            {reducedDetail && (
+              <Text style={styles.hint} testID="map-offline-reduced-detail">
+                {i18nT('map:components.MapPage.MapOfflineDownloadControl.krupnaya_oblast_sohranim_obzornuyu_detalizac_fcfbffdc')}</Text>
             )}
 
             {isBusy ? (
@@ -161,6 +176,7 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
                 <Pressable
                   style={[styles.actionBtn, styles.cancelBtn]}
                   onPress={cancel}
+                  testID="map-offline-cancel"
                   accessibilityRole="button"
                   accessibilityLabel={i18nT('map:components.MapPage.MapOfflineDownloadControl.otmenit_zagruzku_118163e4')}
                 >
@@ -170,9 +186,10 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
               </>
             ) : (
               <Pressable
-                style={[styles.actionBtn, styles.primaryBtn, (!bbox || tooLarge) && styles.disabledBtn]}
+                style={[styles.actionBtn, styles.primaryBtn, !plan && styles.disabledBtn]}
                 onPress={handleDownload}
-                disabled={!bbox || tooLarge}
+                disabled={!plan}
+                testID="map-offline-download-submit"
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('map:components.MapPage.MapOfflineDownloadControl.skachat_etu_oblast_ef068bfc')}
               >
@@ -284,6 +301,11 @@ const getStyles = (colors: ThemedColors) =>
     warn: {
       fontSize: 13,
       color: colors.danger,
+      marginBottom: 10,
+    },
+    hint: {
+      fontSize: 13,
+      color: colors.textMuted,
       marginBottom: 10,
     },
     actionBtn: {

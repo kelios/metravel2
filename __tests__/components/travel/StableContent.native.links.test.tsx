@@ -94,6 +94,19 @@ describe('StableContent (native) links', () => {
     expect(props.enableExperimentalGhostLinesPrevention).toBe(true);
   });
 
+  it('android: маркер-точка <ul> прижат к верху пункта, а не к его низу', () => {
+    setPlatformOs('android');
+    renderNative('<ul><li>Первый пункт в две строки</li><li>Второй</li></ul>');
+
+    // Символьный маркер (disc) RNRH рендерит в собственной строке
+    // (`flexDirection: 'row'` + `justifyContent: 'flex-end'`), поэтому alignItems
+    // из markerBoxStyle — это вертикальная ось. `flex-end` уводил точку в низ
+    // пункта: у многострочных пунктов маркеры сползали к следующему пункту,
+    // а маркер последнего пункта оказывался под списком.
+    const props = renderHTMLProps[renderHTMLProps.length - 1];
+    expect(props.renderersProps?.ul?.markerBoxStyle?.alignItems).toBe('flex-start');
+  });
+
   it('android: длинный пункт списка ограничен доступной шириной и переносится после маркера', () => {
     setPlatformOs('android');
     renderNative([

@@ -488,7 +488,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!map || typeof map.on !== 'function') return
 
     let timer: ReturnType<typeof setTimeout> | null = null
-    let lastSent: { lat: number; lng: number } | null = null
+    let lastSent: { lat: number; lng: number; zoom: number } | null = null
     let userGesturePending = false
 
     const emit = () => {
@@ -501,14 +501,20 @@ const MapPageComponent: React.FC<Props> = (props) => {
         const southWest = bounds?.getSouthWest?.()
         const northEast = bounds?.getNorthEast?.()
         const zoom = Number(map.getZoom?.())
+        // Зум входит в сравнение: кнопки +/- меняют масштаб вокруг центра, центр
+        // остаётся тем же, и вьюпорт-событие терялось целиком. Флаг жеста при
+        // этом сбрасывается ДО выхода — иначе он протекал на следующее движение
+        // и программный settle читался как пан пользователя.
         if (
           lastSent &&
           Math.abs(lastSent.lat - lat) < COORD_EPSILON &&
-          Math.abs(lastSent.lng - lng) < COORD_EPSILON
+          Math.abs(lastSent.lng - lng) < COORD_EPSILON &&
+          lastSent.zoom === zoom
         ) {
+          userGesturePending = false
           return
         }
-        lastSent = { lat, lng }
+        lastSent = { lat, lng, zoom }
         const payload: MapMovePayload = { latitude: lat, longitude: lng }
         if (
           southWest &&

@@ -96,6 +96,20 @@ describe('useMapTravels — data source while a route is being built', () => {
     expect(mockFetchTravelsNearRoute).toHaveBeenCalled()
   })
 
+  // Регрессия: коридор считался из фильтра «радиус мест рядом» (здесь 50 км) с
+  // clamp 5..20 — вокруг короткого маршрута приходили точки в полосе 20 км, и
+  // выдача выглядела как обычный радиус, а не как «места по маршруту».
+  it('uses a narrow fixed corridor that does not scale with the nearby radius', async () => {
+    const { result } = renderTravels('route', [
+      [27.56, 53.9],
+      [27.1, 53.5],
+    ])
+
+    await waitFor(() => expect(result.current.allTravelsData).toHaveLength(1))
+    const [, corridorKm] = mockFetchTravelsNearRoute.mock.calls[0]
+    expect(corridorKm).toBe(3)
+  })
+
   it('still uses the radius query in plain radius mode', async () => {
     const { result } = renderTravels('radius', [])
 

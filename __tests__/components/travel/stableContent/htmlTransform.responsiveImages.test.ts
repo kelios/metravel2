@@ -1,8 +1,4 @@
-jest.mock('react-native', () => ({
-  Platform: {
-    OS: 'web',
-  },
-}))
+import { Platform } from 'react-native'
 
 jest.mock('@/utils/sanitizeRichText', () => ({
   sanitizeRichText: jest.fn((html: string) => html),
@@ -23,17 +19,39 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       '<p><img src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315&amp;w=1600" /></p>'
     const out = prepareStableContentHtml(html)
 
-    // src падает на 720px, а не отдаёт оригинал
-    expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=720${AMP}q=72${AMP}fit=contain"`)
-    // полная лестница присутствует в srcset
-    for (const w of [320, 480, 640, 720]) {
-      expect(out).toContain(`w=${w}${AMP}q=72${AMP}fit=contain ${w}w`)
+    // src падает на fallback-ступень, а не отдаёт оригинал
+    expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=78${AMP}fit=contain"`)
+    // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768)
+    for (const w of [480, 640, 800, 1024]) {
+      expect(out).toContain(`w=${w}${AMP}q=78${AMP}fit=contain ${w}w`)
     }
-    expect(out).toContain('sizes="(max-width: 768px) 100vw, 720px"')
+    expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
     // cache-buster сохранён
     expect(out).toContain(`v=3315`)
     // ниже сгиба всё ещё lazy
     expect(out).toContain('loading="lazy"')
+  })
+
+  it('keeps the mobile viewport on a lower ladder so body images do not blow the network budget', () => {
+    // Лестница выбирается по вьюпорту только на web: Platform.OS в jest — 'ios',
+    // поэтому подменяем и его (как в htmlTransform.lazyGate.test.ts), и innerWidth.
+    const originalOs = Platform.OS
+    const originalWidth = window.innerWidth
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true })
+    try {
+      const html = '<p><img src="https://metravel.by/travel-description-image/540/description/abc.JPG" /></p>'
+      const out = prepareStableContentHtml(html)
+
+      for (const w of [320, 480, 640, 800]) {
+        expect(out).toContain(`w=${w}${AMP}q=78${AMP}fit=contain ${w}w`)
+      }
+      // 1024 — только для desktop; на мобиле верхняя ступень 800w
+      expect(out).not.toContain(`w=1024${AMP}q=78${AMP}fit=contain 1024w`)
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+      Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+    }
   })
 
   it('caps to the supported width ladder and drops any pre-existing size params', () => {
@@ -41,7 +59,9 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     const out = prepareStableContentHtml(html)
     expect(out).not.toContain('w=4000')
     expect(out).not.toContain('dpr=3')
-    expect(out).toContain(`q=72`)
+    expect(out).toContain(`q=78`)
+    // 1024 — потолок хранилища бэкенда, выше ступеней не выдаём
+    expect(out).not.toContain('w=1280')
   })
 
   it('leaves third-party images on the weserv proxy path (no first-party srcset)', () => {
@@ -49,7 +69,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     const out = prepareStableContentHtml(html)
     expect(out).toContain('images.weserv.nl')
     // третьесторонним не навешиваем нашу лестницу sizes
-    expect(out).not.toContain('sizes="(max-width: 768px) 100vw, 720px"')
+    expect(out).not.toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
   })
 
   it('reserves a stable aspect ratio for images that arrive without dimensions', () => {

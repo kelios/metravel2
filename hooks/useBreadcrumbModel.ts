@@ -662,12 +662,17 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       computed.push({ label, path });
     });
 
-    const isTravelDetails = p.startsWith('/travels/') && !!travelData?.name;
+    // Заголовок статьи в шапке — только реальное название. Пока данных нет
+    // (загрузка) или путешествие не найдено, слаг-сегмент показывать нельзя:
+    // на 404-ветке в шапке оставалась транслитерация вида «Gde Kupatsia Pod...».
+    const isTravelDetails = p.startsWith('/travels/');
     if (isTravelDetails && computed.length > 0) {
       const lastIdx = computed.length - 1;
       computed[lastIdx] = {
         ...computed[lastIdx],
-        label: truncateLabel(String(travelData?.name || computed[lastIdx].label)),
+        label: travelData?.name
+          ? truncateLabel(String(travelData.name))
+          : i18nT('sharedStatic:breadcrumb.travelFallback'),
       };
     }
 

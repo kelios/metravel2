@@ -310,6 +310,7 @@ export const mapGenerated1 = {
   "components.MapPage.MapMobileLayout.zagruzhaem_filtry_6233db2b": "Загружаем фильтры",
   "components.MapPage.MapMobileLayout.zakryt_d55e477b": "Закрыть",
   "components.MapPage.MapOfflineDownloadControl.0_mb_29612170": "0 МБ",
+  "components.MapPage.MapOfflineDownloadControl.krupnaya_oblast_sohranim_obzornuyu_detalizac_fcfbffdc": "Крупная область — сохраним обзорную детализацию. Приблизьте карту, чтобы сохранить мелкие улицы.",
   "components.MapPage.MapOfflineDownloadControl.ne_udalos_skachat_oblast_proverte_set_7d6c909b": "Не удалось скачать область. Проверьте сеть.",
   "components.MapPage.MapOfflineDownloadControl.oblast_nedostupna_b5e1348d": "Область недоступна",
   "components.MapPage.MapOfflineDownloadControl.oblast_slishkom_bolshaya_priblizte_kartu_i_p_38e406f5": "Область слишком большая. Приблизьте карту и попробуйте снова.",

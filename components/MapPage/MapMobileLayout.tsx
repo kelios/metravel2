@@ -193,8 +193,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const openList = useCallback(() => {
     clearSelectedPlace?.()
     setSheetContent('list')
+    // Состояние фиксируем синхронно, как в openFiltersSheet: native `onChange`
+    // приходит только после анимации снапа, и всё это время FAB «Маршрут» и
+    // «Искать в этой области» остаются на экране — то есть ложатся поверх
+    // открывающейся шторки.
+    handleSheetStateChange('seventy')
     bottomSheetRef.current?.snapToSeventy()
-  }, [clearSelectedPlace])
+  }, [clearSelectedPlace, handleSheetStateChange])
 
   // Иконки верхнего overlay (радиус/слои/фильтры) открывают шит фильтров на ~70%
   // высоты экрана — единый предсказуемый размер окна; пользователь тянет вверх до
@@ -232,8 +237,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     clearSelectedPlace?.()
     setFiltersMode?.('route')
     setSheetContent('route')
+    handleSheetStateChange('half')
     bottomSheetRef.current?.snapToHalf()
-  }, [setFiltersMode, clearSelectedPlace])
+  }, [setFiltersMode, clearSelectedPlace, handleSheetStateChange])
 
   const handleCloseSheet = useCallback(() => {
     bottomSheetRef.current?.snapToCollapsed()
@@ -688,10 +694,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             style={styles.sheetListHeaderContent}
             testID="travel-list-mobile-summary"
           >
-            <RNText style={styles.sheetListTitle} numberOfLines={1}>
-              {i18nT('map:components.MapPage.MapMobileLayout.mesta_ryadom_ef2216b7')}</RNText>
-            <View style={styles.sheetListCountChip}>
-              <RNText style={styles.sheetListCountChipText} numberOfLines={1}>
+            {/* Заголовок и счётчик стоят в столбик, а не в один ряд: чип
+                «553 места · 100 км» занимал до 148dp и на 411dp с fontScale
+                1.15 обрезал сам заголовок до «Места ряд…». Вторая строка
+                отдаёт заголовку всю ширину ряда при любом масштабе шрифта. */}
+            <View style={styles.sheetListTitleBlock}>
+              <RNText style={styles.sheetListTitle} numberOfLines={1}>
+                {i18nT('map:components.MapPage.MapMobileLayout.mesta_ryadom_ef2216b7')}
+              </RNText>
+              <RNText style={styles.sheetListSummaryText} numberOfLines={1}>
                 {listHeaderSummaryText}
               </RNText>
             </View>

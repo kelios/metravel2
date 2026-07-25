@@ -28,10 +28,10 @@ describe('normalizeImgTags native lazy loading for body images', () => {
 
     for (let i = 0; i < 5; i += 1) {
       expect(out).toContain(
-        `src="https://metravel.by/gallery/540/gallery/pic${i}.JPG?w=720`,
+        `src="https://metravel.by/gallery/540/gallery/pic${i}.JPG?w=800`,
       )
     }
-    expect(out).toContain('pic4.JPG?w=320&amp;q=72&amp;fit=contain 320w')
+    expect(out).toContain('pic4.JPG?w=1024&amp;q=78&amp;fit=contain 1024w')
     expect(out).not.toContain('data-lazy-src')
     expect(out).not.toContain('rich-lazy-img')
     expect(out).not.toContain('data:image/gif;base64')
@@ -51,6 +51,6 @@ describe('normalizeImgTags native lazy loading for body images', () => {
     const out = prepareStableContentHtml(html)
     expect(out).not.toContain('data-lazy-src')
     expect(out).not.toContain('rich-lazy-img')
-    expect(out).toContain('pic4.JPG?w=720')
+    expect(out).toContain('pic4.JPG?w=800')
   })
 })

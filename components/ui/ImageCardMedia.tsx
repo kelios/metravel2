@@ -24,6 +24,9 @@ import {
 
 const isRootRelativeUrl = (value: string): boolean => /^\/(?!\/)/.test(value);
 
+/** Native: размер подложки блюра по умолчанию (Glide `override`) — ступень «лестницы» прокси. */
+const NATIVE_BLUR_BACKDROP_SIZE = 96;
+
 type Props = {
   src?: string | null;
   source?: { uri: string } | number | null;
@@ -159,6 +162,32 @@ function ImageCardMedia({
   const [webLoaded, setWebLoaded] = useState(() => {
     return !!(currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey));
   });
+
+  // Native: подложка блюра, для которой вызывающий код не дал отдельный `blurSrc`,
+  // раньше уходила в expo-image с ТЕМ ЖЕ источником, что и резкий слой. Glide видит
+  // два разных ключа (свой contentFit + blurRadius) и качает файл дважды: в
+  // access-логе прода каждая картинка карточки точки приходила ровно 2 раза.
+  // Берём тот же URL, но уменьшенный прокси до 96px — вторая копия становится
+  // ~3 КБ вместо полного веса, а размытие визуально то же.
+  const nativeBlurSource = useMemo(() => {
+    if (Platform.OS === 'web' || !blurBackground) return undefined;
+    const decodeSize = blurDecodeSize && blurDecodeSize > 0 ? blurDecodeSize : undefined;
+    const explicit = typeof blurSrc === 'string' ? blurSrc.trim() : '';
+    if (explicit) {
+      return decodeSize
+        ? { uri: explicit, width: decodeSize, height: decodeSize }
+        : { uri: explicit };
+    }
+    if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
+    const uri = resolvedSource.uri.trim();
+    if (!uri) return undefined;
+    const size = decodeSize ?? NATIVE_BLUR_BACKDROP_SIZE;
+    return {
+      uri: optimizeImageUrl(uri, { width: size, quality: 30, fit: 'cover' }) || uri,
+      width: size,
+      height: size,
+    };
+  }, [blurBackground, blurDecodeSize, blurSrc, resolvedSource]);
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -648,13 +677,7 @@ function ImageCardMedia({
             height={typeof height === 'number' ? height : undefined}
             contentFit={contentFit}
             blurBackground={Platform.OS === 'web' ? false : blurBackground}
-            blurSource={
-              Platform.OS !== 'web' && blurSrc
-                ? blurDecodeSize && blurDecodeSize > 0
-                  ? { uri: blurSrc, width: blurDecodeSize, height: blurDecodeSize }
-                  : { uri: blurSrc }
-                : undefined
-            }
+            blurSource={nativeBlurSource}
             synchronizeBlurReveal={synchronizeNativeBlurReveal}
             blurBackgroundRadius={blurRadius}
             blurOnly={blurOnly}

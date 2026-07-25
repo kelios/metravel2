@@ -582,32 +582,24 @@ export const getMapMobileLayoutStyles = (
       alignItems: 'center' as const,
       gap: 6,
     },
-    sheetListTitle: {
-      flexShrink: 1,
+    // Заголовок + счётчик в столбик: заголовку достаётся вся ширина ряда,
+    // поэтому «Места рядом» не режется ни на 360dp, ни при крупном fontScale.
+    sheetListTitleBlock: {
+      flex: 1,
       minWidth: 0,
+    },
+    sheetListTitle: {
       fontSize: options.isNarrow ? 16 : 18,
       lineHeight: options.isNarrow ? 21 : 23,
       fontWeight: '800' as const,
       color: colors.text,
     },
-    sheetListCountChip: {
-      flexShrink: 0,
-      minWidth: 0,
-      maxWidth: options.isNarrow ? 148 : 164,
-      minHeight: 30,
-      paddingHorizontal: 9,
-      borderRadius: 999,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
-    },
-    sheetListCountChipText: {
+    sheetListSummaryText: {
+      marginTop: 1,
       fontSize: 12,
       lineHeight: 16,
-      fontWeight: '800' as const,
-      color: colors.text,
+      fontWeight: '600' as const,
+      color: colors.textMuted,
     },
     sheetListFiltersButton: {
       width: 40,

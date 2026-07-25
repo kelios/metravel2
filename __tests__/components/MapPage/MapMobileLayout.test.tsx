@@ -854,6 +854,46 @@ describe('MapMobileLayout', () => {
       expect(transportCardStyle.width).toBe(204)
     })
 
+    // Регрессия (Android, телефон 412dp): в route-режиме иконка «Слои» уезжает
+    // на 4 шага влево, и карточка 272dp с якорем right=186 вылезала за ЛЕВЫЙ
+    // край — «Слои карты» были обрезаны.
+    it('keeps the layers popover fully on screen in route mode on a phone', () => {
+      const PHONE_WIDTH = 412
+      // `useWindowDimensions` глобально подменён в __tests__/setup.ts на jest.fn
+      // (desktop 1024). Меняем только реализацию и возвращаем прежнюю: spyOn +
+      // mockRestore обнулил бы сам мок и сломал соседние тесты.
+      const dimensionsMock = require('react-native').useWindowDimensions as jest.Mock
+      const previousDimensionsImpl = dimensionsMock.getMockImplementation()
+      dimensionsMock.mockImplementation(() => ({ width: PHONE_WIDTH, height: 892 }))
+
+      try {
+        useRouteStore.getState().setMode('route')
+        const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
+        const screen = render(
+          <MapMobileLayout
+            mapComponent={<View testID="mock-map" />}
+            travelsData={[]}
+            coordinates={{ latitude: 53.9, longitude: 27.56 }}
+            transportMode="car"
+            buildRouteTo={jest.fn()}
+            onCenterOnUser={jest.fn()}
+            onOpenFilters={jest.fn()}
+            filtersPanelProps={filtersPanelProps}
+          />,
+        )
+
+        fireEvent.press(screen.getByTestId('map-mobile-layers-button'))
+        const layersCardStyle = StyleSheet.flatten(
+          screen.getByTestId('map-mobile-layers-popover-card').props.style,
+        )
+
+        expect(layersCardStyle.right).toBeGreaterThanOrEqual(10)
+        expect(layersCardStyle.right + layersCardStyle.width).toBeLessThanOrEqual(PHONE_WIDTH)
+      } finally {
+        dimensionsMock.mockImplementation(previousDimensionsImpl)
+      }
+    })
+
     it('clears the route and returns to radius mode (contextual icons hidden)', () => {
       useRouteStore.getState().setMode('route')
       const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })

@@ -46,6 +46,7 @@ import { queueAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
 import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
+import { useQuestKeyboardReveal } from './hooks/useQuestKeyboardReveal';
 import { createQuestWizardStyles } from './questWizardStyles';
 import { useTranslation } from '@/i18n/LocaleProvider';
 
@@ -185,6 +186,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     // Каждый шаг (и финал) открываем сверху — иначе на Android контент-ScrollView
     // сохраняет прошлый offset и новый шаг открывается прокрученным вниз.
     const contentScrollRef = useRef<ScrollView>(null);
+
+    // Клавиатура не ужимает окно (edge-to-edge Android / visual viewport на mobile
+    // web), поэтому поле ответа надо и подпереть отступом, и домотать до него.
+    const {
+        keyboardInset,
+        handleContentScroll,
+        handleInputFocus,
+        handleInputBlur,
+    } = useQuestKeyboardReveal(contentScrollRef);
 
     useEffect(() => {
         setDesktopNavExpanded(false);
@@ -444,6 +454,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 showMap={showMap}
                                 onToggleMap={toggleMap}
                                 showLocationControls={!useWideInlineLayout}
+                                onAnswerFocus={handleInputFocus}
+                                onAnswerBlur={handleInputBlur}
                             />
                         </View>
 
@@ -567,7 +579,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 showsVerticalScrollIndicator={false}
                                 keyboardShouldPersistTaps="handled"
                                 onScrollBeginDrag={Keyboard.dismiss}
-                                contentContainerStyle={{ paddingBottom: SPACING.xl + 96 }}
+                                onScroll={handleContentScroll}
+                                scrollEventThrottle={16}
+                                contentContainerStyle={{ paddingBottom: SPACING.xl + 96 + keyboardInset }}
                             >
                                 {mainContent}
                                 <View style={{ height: SPACING.xl }} />
@@ -611,7 +625,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 showsVerticalScrollIndicator={false}
                                 keyboardShouldPersistTaps="handled"
                                 onScrollBeginDrag={Keyboard.dismiss}
-                                contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 }, useWideExcursionsSidebar && styles.contentInner]}
+                                onScroll={handleContentScroll}
+                                scrollEventThrottle={16}
+                                contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
                             >
                                 {mainContent}
                                 <View style={{ height: SPACING.xl }} />

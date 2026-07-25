@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback, useMemo } from 'react'
-import { Platform, Pressable, Text, View } from 'react-native'
+import { Platform, Pressable, Text } from 'react-native'
 import type { TDefaultRendererProps } from 'react-native-render-html'
 
 import CustomImageRenderer from '@/components/ui/CustomImageRenderer'
@@ -60,15 +60,12 @@ export function useStableContentRenderConfig({
         }
 
         if (isInstagramEmbedUrl(src)) {
-          const url = src.replace('/embed/captioned/', '/').split('?')[0]
-          const wrapperStyle =
-            Platform.OS === 'web' ? [styles.instagramEmbedWrapper, styles.instagramEmbedWrapperWeb] : styles.instagramEmbedWrapper
+          // src отдаём как есть: компонент сам приводит его к каноническому
+          // embed-URL (те же параметры, что у web-facade).
           return (
-            <View style={wrapperStyle}>
-              <Suspense fallback={<Text>{i18nT('travel:components.travel.stableContent.useRenderConfig.instagram_d03ce4fd')}</Text>}>
-                <LazyInstagram url={url} />
-              </Suspense>
-            </View>
+            <Suspense fallback={<Text>{i18nT('travel:components.travel.stableContent.useRenderConfig.instagram_d03ce4fd')}</Text>}>
+              <LazyInstagram url={src} />
+            </Suspense>
           )
         }
 
@@ -91,7 +88,7 @@ export function useStableContentRenderConfig({
         return DefaultRenderer ? <DefaultRenderer {...props} /> : null
       },
     }
-  }, [contentWidth, setLightboxImage, styles.instagramEmbedWrapper, styles.instagramEmbedWrapperWeb, styles.ytStub, styles.ytStubText])
+  }, [contentWidth, setLightboxImage, styles.ytStub, styles.ytStubText])
 
   const baseStyle = useMemo(
     () => ({
@@ -244,7 +241,13 @@ export function useStableContentRenderConfig({
         markerBoxStyle: {
           paddingRight: DESIGN_TOKENS.spacing.sm,
           minWidth: DESIGN_TOKENS.spacing.lg,
-          alignItems: 'flex-end',
+          // У маркера-точки (disc) RNRH сам оборачивает символ в строку
+          // (`flexDirection: 'row'` + `justifyContent: 'flex-end'`), поэтому
+          // здесь `alignItems` — это вертикальная ось. `flex-end` прижимал точку
+          // к низу пункта, и на многострочных пунктах маркеры сползали к
+          // следующему пункту, а последний уезжал под список. Нужен верх:
+          // символ сам центрируется по первой строке через `top: (lineHeight - size)/2`.
+          alignItems: 'flex-start',
         },
         markerTextStyle: {
           color: colors.primary,

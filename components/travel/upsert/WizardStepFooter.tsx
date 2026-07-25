@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -40,6 +40,20 @@ export const WizardStepFooter = React.memo(function WizardStepFooter({
   const colors = useThemedColors()
   const insets = useSafeAreaInsetsSafe()
 
+  // #1038 перенёс основное действие из шапки в футер, но потерял компактную
+  // подпись: «К публикации (шаг 6 из 6)» не влезает рядом с «Назад» и обрезается.
+  // Счётчик шага уже показан в шапке чипом «Шаг 6/6 · 100%», поэтому в кнопке он
+  // лишний. Полный текст остаётся в accessibilityLabel.
+  const compactPrimaryLabel = useMemo(() => {
+    if (!primaryLabel) return ''
+    const pattern = i18nT('travel:components.travel.TravelWizardHeader.compactStepSuffixPattern')
+    try {
+      return primaryLabel.replace(new RegExp(pattern, 'i'), '').trim() || primaryLabel
+    } catch {
+      return primaryLabel
+    }
+  }, [primaryLabel])
+
   if (!isMobile) return null
   if (!onPrimary && !onBack) return null
 
@@ -70,7 +84,7 @@ export const WizardStepFooter = React.memo(function WizardStepFooter({
       {onPrimary && primaryLabel ? (
         <Button
           variant="primary"
-          label={primaryLabel}
+          label={compactPrimaryLabel}
           trailingIcon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
           onPress={onPrimary}
           disabled={primaryDisabled}

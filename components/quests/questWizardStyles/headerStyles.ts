@@ -25,9 +25,14 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         marginBottom: SPACING.xs,
         gap: SPACING.sm,
     },
+    // На мобильном шапка складывается в две строки: мета-чипы (рейтинг/«пройден»)
+    // сверху, ряд действий снизу. Без `flexWrap` обе строки (`flexBasis: 100%` +
+    // `width: 100%`) дерутся за одну линию: мета схлопывается в нулевую ширину и
+    // её чипы наезжают на кнопки, а хвост ряда уезжает за край экрана.
     headerRowMobile: {
         alignItems: 'center',
         marginBottom: 0,
+        flexWrap: 'wrap',
     },
     headerIdentity: {
         flex: 1,
@@ -36,12 +41,13 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         alignItems: 'center',
         gap: SPACING.sm,
     },
+    // Отдельная (первая) строка шапки: `flexBasis: 100%` занимает её целиком,
+    // вертикальный отступ до ряда действий даёт `gap` родителя.
     headerIdentityMobile: {
         flexBasis: '100%',
         flexGrow: 0,
         flexShrink: 1,
         justifyContent: 'flex-end',
-        marginBottom: SPACING.xs,
     },
     title: {
         fontSize: isMobile ? 17 : 20,
@@ -172,8 +178,12 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         justifyContent: 'flex-end',
         gap: SPACING.xs,
     },
+    // Вторая строка шапки. `flexBasis: 100%` обязателен: без него базовый размер
+    // берётся из `flex: 1` (basis 0), ряд остаётся на одной линии с мета-чипами,
+    // схлопывается в нулевую ширину и его кнопки вылезают за край экрана.
     headerActionRowMobile: {
         width: '100%',
+        flexBasis: '100%',
         flexGrow: 1,
         flexShrink: 0,
         flexWrap: 'nowrap',

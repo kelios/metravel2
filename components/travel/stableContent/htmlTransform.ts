@@ -67,6 +67,9 @@ const normalizeMetravelOwnImageUrl = (urlStr: string): string => {
   }
 }
 
+const isMobileWebViewport = (): boolean =>
+  Platform.OS === 'web' && typeof window !== 'undefined' && (window.innerWidth || 0) <= 768
+
 export const buildWeservProxyUrl = (src: string) => {
   try {
     const trimmed = String(src || '').trim()
@@ -74,11 +77,7 @@ export const buildWeservProxyUrl = (src: string) => {
     if (trimmed.startsWith('data:')) return trimmed
 
     const normalized = trimmed.replace(/&amp;/g, '&')
-    const isMobileViewport =
-      Platform.OS === 'web' &&
-      typeof window !== 'undefined' &&
-      (window.innerWidth || 0) <= 768
-    const targetW = isMobileViewport ? 600 : 800
+    const targetW = isMobileWebViewport() ? 600 : 800
 
     if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) {
       try {
@@ -128,13 +127,24 @@ export const buildWeservProxyUrl = (src: string) => {
   }
 }
 
-// Первопартийные metravel-картинки описания сервер режет по «лестнице» ширин 320/480/640/720
-// (те же ступени, что у hero/gallery). Раньше normalizeImgTags отдавал оригинал (params
-// стриплись) — description-картинки грузились по 200-360KiB. Строим srcset по лестнице, чтобы
-// браузер тянул под свой вьюпорт (#815).
-const RESPONSIVE_WIDTHS = [320, 480, 640, 720]
-const RESPONSIVE_SIZES = '(max-width: 768px) 100vw, 720px'
-const RESPONSIVE_QUALITY = 72
+// Первопартийные metravel-картинки описания сервер режет по «лестнице» ширин.
+// Раньше normalizeImgTags отдавал оригинал (params стриплись) — description-картинки
+// грузились по 200-360KiB. Строим srcset по лестнице, чтобы браузер тянул под свой
+// вьюпорт (#815).
+//
+// Лестница упиралась в 720w при `sizes: 720px`, а слот тела на desktop реально ~680px
+// (vw 1280) — ~905px (vw 1920). На Retina браузеру нужно 1354-1810 device px, он получал
+// 720 → апскейл ×1.9-2.5, картинки визуально мыльные. Потолок ресурса — 1024×768
+// (бэкенд хранит медиа только в этом размере и игнорирует `f`, отдавая JPEG даже для
+// `.webp`-имён), поэтому 1024 — самая большая осмысленная ступень: выше прокси всё равно
+// вернёт 1024. Hero/галерея уже просят w=1280&q=78, тело статьи было единственным местом
+// с урезанной лестницей.
+const RESPONSIVE_WIDTHS_MOBILE = [320, 480, 640, 800]
+const RESPONSIVE_WIDTHS_DESKTOP = [480, 640, 800, 1024]
+const RESPONSIVE_FALLBACK_WIDTH = 800
+// Реальные слоты тела статьи: 100vw на мобиле, ~680px на 1280, ~905px на 1920.
+const RESPONSIVE_SIZES = '(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px'
+const RESPONSIVE_QUALITY = 78
 
 const isFirstPartyMetravelHost = (host: string): boolean => {
   const value = String(host || '').toLowerCase()
@@ -160,8 +170,13 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
     if (parsed.protocol === 'http:') parsed.protocol = 'https:'
     // сбрасываем ранее заданные размеры, сохраняя cache-buster `v`
     for (const param of OPTIMIZATION_PARAMS) parsed.searchParams.delete(param)
-    const srcSet = RESPONSIVE_WIDTHS.map((w) => `${buildMetravelSizedUrl(parsed, w)} ${w}w`).join(', ')
-    return { src: buildMetravelSizedUrl(parsed, 720), srcSet, sizes: RESPONSIVE_SIZES }
+    const widths = isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
+    const srcSet = widths.map((w) => `${buildMetravelSizedUrl(parsed, w)} ${w}w`).join(', ')
+    return {
+      src: buildMetravelSizedUrl(parsed, RESPONSIVE_FALLBACK_WIDTH),
+      srcSet,
+      sizes: RESPONSIVE_SIZES,
+    }
   } catch {
     return null
   }
@@ -373,16 +388,6 @@ const truncateInstagramCaptions = (html: string) => {
   })
 }
 
-const replaceStandaloneInstagramLinks = (html: string) =>
-  html.replace(
-    /<p([^>]*)>\s*<a\b[^>]*href=(["'])(https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel)\/[A-Za-z0-9_-]+\/?)\2[^>]*>\s*\3\s*<\/a>\s*<\/p>/gi,
-    (_match, attrs = '', _quote = '', url = '') => {
-      const cleanUrl = String(url).replace(/\/+$/, '')
-      const embedUrl = `${cleanUrl}/embed/captioned/`
-      return `<p${attrs}><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="${embedUrl}" height="640"></iframe></p>`
-    }
-  )
-
 const decorateRichImageFrames = (html: string) => {
   if (!html) return html
 
@@ -422,15 +427,14 @@ export const prepareStableContentHtml = (html: string, options?: PrepareStableCo
   const isWeb = Platform.OS === 'web' || typeof document !== 'undefined'
   // На web: вместо живого iframe (каждый тянет ~целый Instagram-рантайм, ~900KB/десятки
   // запросов на статью) — лёгкий facade, настоящий iframe монтируется лениво при подходе
-  // к вьюпорту (useStableContentWebEffects). На native — статическая карточка-ссылка.
+  // к вьюпорту (useStableContentWebEffects). На native iframe остаётся в HTML и попадает
+  // в `InstagramEmbed` (WebView) через рендерер RNRH, который так же монтирует его лениво
+  // и с окном — посты обязаны выглядеть одинаково на mobile web и Android.
   const instagramSafeHtml = replaceInstagramEmbedsWithCards(normalizedEmbeds, {
-    iframeStrategy: isWeb ? 'facade' : 'card',
+    iframeStrategy: isWeb ? 'facade' : 'embed',
   })
   const safe = serverSanitized ? instagramSafeHtml : sanitizeRichText(instagramSafeHtml)
-  const normalizedBase = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
-  const normalized = Platform.OS === 'web'
-    ? normalizedBase
-    : replaceStandaloneInstagramLinks(normalizedBase)
+  const normalized = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
   const demoted = normalized
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
     .replace(/<\s*\/\s*h1\s*>/gi, '</h2>')

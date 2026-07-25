@@ -238,9 +238,21 @@ export const ARTICLE_EDITOR_QUILL_WEB_CSS = `
   margin-bottom: 0 !important;
 }
 @media (max-width: 767px) {
+  /* Keep formatting controls below the selection menu on narrow viewports.
+     Match the Android editor contract in articleEditorNativeHtml.ts. */
   [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow {
+    order: 2;
+    border-bottom: 0;
+    border-top: 1px solid var(--color-border);
     gap: 6px 8px;
     padding: 10px;
+  }
+  [data-editor-chrome="article-editor"] .ql-container.ql-snow {
+    order: 1;
+  }
+  /* Keep the last line clear of the toolbar and native selection menu. */
+  [data-editor-chrome="article-editor"] .ql-editor {
+    padding-bottom: 72px;
   }
   [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-formats {
     gap: 2px;

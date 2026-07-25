@@ -10,8 +10,10 @@ import {
   downloadTileToDisk,
   enumerateTiles,
   estimateTiles,
+  planOfflineZoomRange,
   registerRegion,
   type OfflineBBox,
+  type OfflineZoomPlan,
 } from '@/utils/mapTileCache';
 
 export type OfflineTileDownloadState = 'idle' | 'estimating' | 'downloading' | 'done' | 'error';
@@ -48,6 +50,11 @@ export interface UseOfflineTileDownload {
   /** Оценка размера региона в байтах (tiles × средний вес тайла). */
   estimateBytes: (bbox: OfflineBBox, minZ: number, maxZ: number) => number;
   estimateTileCount: (bbox: OfflineBBox, minZ: number, maxZ: number) => number;
+  /**
+   * Подбирает диапазон зумов под бюджет `MAX_TILES`: срезает детализацию вместо
+   * отказа. `null` — область не влезает даже на базовом зуме.
+   */
+  planZoomRange: (bbox: OfflineBBox, minZ: number, maxZ: number) => OfflineZoomPlan | null;
   maxTiles: number;
   downloadCurrentRegion: (bbox: OfflineBBox, options?: DownloadRegionOptions) => Promise<void>;
   cancel: () => void;
@@ -77,6 +84,12 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
 
   const estimateTileCount = useCallback(
     (bbox: OfflineBBox, minZ: number, maxZ: number): number => estimateTiles(bbox, minZ, maxZ),
+    [],
+  );
+
+  const planZoomRange = useCallback(
+    (bbox: OfflineBBox, minZ: number, maxZ: number): OfflineZoomPlan | null =>
+      planOfflineZoomRange(bbox, minZ, maxZ, MAX_TILES),
     [],
   );
 
@@ -171,6 +184,7 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
     progress,
     estimateBytes,
     estimateTileCount,
+    planZoomRange,
     maxTiles: MAX_TILES,
     downloadCurrentRegion,
     cancel,

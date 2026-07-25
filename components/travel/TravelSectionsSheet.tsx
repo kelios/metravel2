@@ -63,20 +63,25 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
   const { isMobile } = useResponsive()
   const isMobileWeb = Platform.OS === "web" && isMobile
   const [open, setOpen] = useState(false)
-  const openNonce = useTravelSectionsStore((s) => s.openNonce)
+  const pendingOpen = useTravelSectionsStore((s) => s.pendingOpen)
+  const consumeOpen = useTravelSectionsStore((s) => s.consumeOpen)
   const triggerRef = useRef<any>(null)
   const closeRef = useRef<any>(null)
   const wasOpenRef = useRef(false)
   const openedAtRef = useRef(0)
 
+  // Открываемся только по живому запросу из шапки и сразу его гасим: шит
+  // монтируется post-LCP, и раньше свежий инстанс на новой статье принимал
+  // старое значение счётчика за команду и открывал меню сам.
   useEffect(() => {
-    if (openNonce <= 0) return
+    if (!pendingOpen) return
+    consumeOpen()
     if (Platform.OS === "web" && typeof document !== "undefined") {
       ;(document.activeElement as HTMLElement | null)?.blur?.()
     }
     openedAtRef.current = Date.now()
     setOpen(true)
-  }, [openNonce])
+  }, [consumeOpen, pendingOpen])
 
 
   const grouped = useMemo(() => {

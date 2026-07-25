@@ -23,7 +23,10 @@ type InstagramTarget = {
   subtitle: string
 }
 
-type InstagramIframeStrategy = 'card' | 'facade'
+// card   — статическая карточка-ссылка (fallback: stories/profile, неподдержанный контекст)
+// facade — web: лёгкий div.ig-lite, настоящий iframe монтирует useStableContentWebEffects
+// embed  — native: iframe остаётся в HTML, RNRH отдаёт его в InstagramEmbed (WebView)
+type InstagramIframeStrategy = 'card' | 'facade' | 'embed'
 
 type ReplaceInstagramEmbedsOptions = {
   iframeStrategy?: InstagramIframeStrategy
@@ -143,8 +146,22 @@ export function buildInstagramCardHtml(rawUrl: string): string | null {
   ].join('')
 }
 
-function buildInstagramEmbedSrc(canonicalUrl: string): string {
+export function buildInstagramEmbedSrc(canonicalUrl: string): string {
   return `${canonicalUrl.replace(/\/$/, '')}/embed/?omitscript=true&hidecaption=1`
+}
+
+// Native: RNRH не умеет iframe сам по себе, но `useStableContentRenderConfig`
+// отдаёт его в `InstagramEmbed` (WebView). Поэтому на native эмбед не сворачиваем
+// в карточку, а нормализуем в один и тот же embed-URL, что и web-facade — иначе
+// mobile web и Android показывали бы разный контент (см. AGENTS.md 3.3).
+export function buildInstagramEmbedIframeHtml(rawUrl: string): string | null {
+  const target = resolveInstagramTarget(rawUrl)
+  if (!target) return null
+  // У stories нет /embed/-endpoint'а — WebView показал бы страницу ошибки.
+  if (target.kind === 'story') return buildInstagramCardHtml(rawUrl)
+
+  const embedSrc = buildInstagramEmbedSrc(target.canonicalUrl)
+  return `<iframe src="${encodeHtml(embedSrc)}" title="${encodeHtml(target.title)}" frameborder="0" allowfullscreen="true"></iframe>`
 }
 
 export function buildInstagramFacadeHtml(rawUrl: string): string | null {
@@ -217,18 +234,20 @@ export function replaceInstagramEmbedsWithCards(
   if (!initial.trim()) return initial
 
   const strategy: InstagramIframeStrategy = options.iframeStrategy ?? 'card'
+  const build =
+    strategy === 'facade'
+      ? buildInstagramFacadeHtml
+      : strategy === 'embed'
+        ? buildInstagramEmbedIframeHtml
+        : buildInstagramCardHtml
 
-  let next = replaceInstagramIframes(
-    initial,
-    strategy === 'facade' ? buildInstagramFacadeHtml : buildInstagramCardHtml,
-  )
-  const build = strategy === 'facade' ? buildInstagramFacadeHtml : buildInstagramCardHtml
+  let next = replaceInstagramIframes(initial, build)
   next = replaceInstagramBlockquotes(next, build)
   next = replaceStandaloneInstagramBlocks(next, build)
 
   const trimmed = decodeEntities(next.trim())
   if (!/<[a-z][\s\S]*>/i.test(trimmed) && INSTAGRAM_URL_RE.test(trimmed)) {
-    return buildInstagramCardHtml(trimmed) ?? next
+    return build(trimmed) ?? next
   }
 
   return next
