@@ -192,6 +192,16 @@
       "autoPort": false
     },
     {
+      "name": "Expo Native Metro 8081",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 npx expo start --port 8081"
+      ],
+      "port": 8081,
+      "autoPort": false
+    },
+    {
       "name": "Expo Native 8084 NoLazy",
       "runtimeExecutable": "cmd",
       "runtimeArgs": [
