@@ -342,6 +342,9 @@ npx serve dist/prod -l 3000 -s
 - Before creating new UI components or styles, check `components/ui` and existing feature components and reuse them.
 - Add new components only when no existing component can be reasonably extended or composed.
 - When adding buttons, icons, or small UI primitives, prefer existing `components/ui` primitives (`Button`, `IconButton`, `Chip`) over custom one-offs.
+- Rows of **secondary tool actions** (dictate, import, paste, copy, download, export) must use `components/ui/ToolActionsRow.tsx`: icon + label on desktop web, icon-only 44/48dp in a single row on mobile web and Android. Do not ship two or three full-size labeled buttons that wrap into a stack on a phone. Primary step/screen actions (Save, Next, Publish) keep their labels on every width. Details and exceptions: `docs/DESIGN_SYSTEM.md`.
+- Never ship a control that is permanently `disabled` because the platform lacks the API (example: Web Speech dictation on native). Render it only where it works and explain the alternative with a hint.
+- Rich-text editor toolbars are docked **below** the editor on mobile web and Android: the OS text-selection menu ("Cut / Copy / …") draws over the selection and would cover a top toolbar exactly when the user needs the link/image buttons.
 - Mobile layout parity is mandatory: mobile web and Android must use the same
   visual and interaction contract for the same user-facing flow. A change on
   either surface must be checked on both. Platform files may adapt technical map
