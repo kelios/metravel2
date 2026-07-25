@@ -179,7 +179,7 @@ function ImageCardMedia({
         : { uri: explicit };
     }
     if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
-    const uri = resolvedSource.uri.trim();
+    const uri = typeof resolvedSource.uri === 'string' ? resolvedSource.uri.trim() : '';
     if (!uri) return undefined;
     const size = decodeSize ?? NATIVE_BLUR_BACKDROP_SIZE;
     return {

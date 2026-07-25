@@ -37,7 +37,7 @@ describe('useSliderCore native prefetch', () => {
     ;(Platform as any).OS = originalOS
   })
 
-  it('prefetches neighboring native slides on initial slider warmup', async () => {
+  it('does not duplicate the mounted native neighbor request on initial warmup', async () => {
     const { result } = renderHook(() =>
       useSliderCore({
         images,
@@ -51,14 +51,10 @@ describe('useSliderCore native prefetch', () => {
       result.current.setContainerWidth(360)
     })
 
-    await waitFor(() => {
-      expect(prefetchImage).toHaveBeenCalledWith(
-        expect.stringContaining('second.jpg?w=360'),
-      )
-    })
+    await waitFor(() => expect(prefetchImage).not.toHaveBeenCalled())
   })
 
-  it('prefetches the second neighbor when native slider asks for wider warmup', async () => {
+  it('prefetches only the unmounted second neighbor during wider native warmup', async () => {
     const { result } = renderHook(() =>
       useSliderCore({
         images,
@@ -73,9 +69,6 @@ describe('useSliderCore native prefetch', () => {
     })
 
     await waitFor(() => {
-      expect(prefetchImage).toHaveBeenCalledWith(
-        expect.stringContaining('second.jpg?w=360'),
-      )
       expect(prefetchImage).toHaveBeenCalledWith(
         expect.stringContaining('third.jpg?w=360'),
       )

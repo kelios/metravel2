@@ -1131,6 +1131,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
   test('mobile: compact preview opens list panel', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
+    await installMobileFiltersPanelMocks(
+      page,
+      buildMockMapPoints({ center: { lat: 53.9, lng: 27.56 }, count: 1 }),
+    );
 
     await gotoMapWithRecovery(page);
 
@@ -1149,6 +1153,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
   test('mobile: panel close button is topmost and FAB does not overlay panel', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
+    await installMobileFiltersPanelMocks(
+      page,
+      buildMockMapPoints({ center: { lat: 53.9, lng: 27.56 }, count: 1 }),
+    );
 
     await gotoMapWithRecovery(page);
 
@@ -1199,6 +1207,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
   test('mobile: double click on compact preview entry does not cause panel flicker (stays open)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
+    await installMobileFiltersPanelMocks(
+      page,
+      buildMockMapPoints({ center: { lat: 53.9, lng: 27.56 }, count: 1 }),
+    );
 
     await gotoMapWithRecovery(page);
 

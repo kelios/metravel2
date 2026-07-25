@@ -33,6 +33,13 @@ const modernReplacement = `${modernNeedle}
                 incr = 1;
             }`
 
+const commonJsCompatibilityPaths = [
+  'node_modules/brace-expansion/dist/commonjs/index.js',
+]
+
+const commonJsCompatibilityMarker =
+  'module.exports = Object.assign(exports.expand, exports);'
+
 let patchedCount = 0
 
 for (const relativePath of candidatePaths) {
@@ -59,6 +66,28 @@ for (const relativePath of candidatePaths) {
     fs.writeFileSync(absolutePath, next, 'utf8')
     patchedCount += 1
   }
+}
+
+for (const relativePath of commonJsCompatibilityPaths) {
+  const absolutePath = path.join(projectRoot, relativePath)
+  if (!fs.existsSync(absolutePath)) {
+    continue
+  }
+
+  const source = fs.readFileSync(absolutePath, 'utf8')
+  if (source.includes(commonJsCompatibilityMarker)) {
+    continue
+  }
+  if (!source.includes('exports.expand = expand;')) {
+    throw new Error(`Unsupported brace-expansion CommonJS export at ${relativePath}`)
+  }
+
+  fs.writeFileSync(
+    absolutePath,
+    `${source}\n// Preserve the callable CommonJS API expected by legacy minimatch consumers.\n${commonJsCompatibilityMarker}\n`,
+    'utf8',
+  )
+  patchedCount += 1
 }
 
 if (patchedCount > 0) {

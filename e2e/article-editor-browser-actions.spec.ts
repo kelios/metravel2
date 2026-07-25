@@ -223,8 +223,11 @@ test.describe('ArticleEditor browser actions', () => {
     }
     await expect(linkInput).toBeVisible({ timeout: 10_000 });
     await linkInput.fill('https://example.com/editor-link');
-    await page.getByRole('button', { name: 'Сохранить', exact: true }).first().click({ force: true });
-    await expect(linkInput).not.toBeVisible({ timeout: 10_000 });
+    const linkDialog = linkInput.locator(
+      'xpath=ancestor::*[.//*[normalize-space()="Ссылка"]][1]'
+    );
+    await linkDialog.getByRole('button', { name: 'Сохранить', exact: true }).first().click({ force: true });
+    await expect(linkDialog).toBeHidden({ timeout: 10_000 });
     await expect(page.locator('.ql-editor').first()).toBeVisible({ timeout: 10_000 });
   });
 
