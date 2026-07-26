@@ -76,10 +76,10 @@ const HEIGHT_PROBE_JS = `(function () {
     var frameHeight = readHeight(frame);
     var docHeight = readHeight(doc);
     var leafBottom = readContentBottom();
-    // Instagram не задаёт meta viewport: layout viewport остаётся около 980 CSS px,
-    // хотя RN-рамка на телефоне около 390 dp. Поэтому сырые CSS px нельзя напрямую
-    // назначать высотой View. Низ листового контента включает footer/caption, которые
-    // находятся ниже квадратной .EmbedFrame, но не включает раздутую высоту viewport.
+    // Instagram omits the viewport meta tag, so its layout viewport remains near
+    // 980 CSS px while the RN frame is about 390 dp wide. Raw CSS px therefore
+    // cannot be assigned directly as the View height. The lowest leaf includes
+    // footer/caption content below the square frame without the inflated viewport.
     var contentHeight = leafBottom || bodyHeight || frameHeight || 0;
     var height = contentHeight || docHeight;
     if (!height || Math.abs(height - last) < 8) return;

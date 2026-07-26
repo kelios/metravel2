@@ -11,12 +11,6 @@ const buildDir = process.env.E2E_BUILD_DIR
   ? path.resolve(process.env.E2E_BUILD_DIR)
   : path.join(__dirname, '..', 'dist')
 
-if (!fs.existsSync(buildDir)) {
-  console.error(`❌ Build directory not found: ${buildDir}`)
-  console.error('Run `npm run build:web` first to generate the web export.')
-  process.exit(1)
-}
-
 const host = process.env.E2E_HOST || '127.0.0.1'
 const port = Number(process.env.E2E_WEB_PORT || process.env.PORT || '8085')
 
@@ -521,6 +515,12 @@ const shutdown = () => {
 }
 
 if (require.main === module) {
+  if (!fs.existsSync(buildDir)) {
+    console.error(`❌ Build directory not found: ${buildDir}`)
+    console.error('Run `npm run build:web` first to generate the web export.')
+    process.exit(1)
+  }
+
   server.on('error', (error) => {
     console.error('❌ Failed to start web server:', error)
     process.exit(1)
