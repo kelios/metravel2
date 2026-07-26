@@ -27,6 +27,11 @@ const DEFAULT_THRESHOLD_METERS = 60;
 // (into already-covered territory) is flagged as backtracking. Small side-steps
 // (e.g. a church one corner north of the start) stay under it.
 const DEFAULT_BACKTRACK_METERS = 150;
+// Adult walking-quest length budget: straight-line sum of consecutive legs.
+// Streets add ~15–25% on top, so 4000 m straight ≈ 4.5–5 km actually walked —
+// the ceiling a family covers on foot. Kids quests need a lower --max-route-m.
+const DEFAULT_MAX_ROUTE_METERS = 4000;
+const DEFAULT_MAX_LEG_METERS = 1200;
 const USER_AGENT = 'metravel-quest-geocheck/1.0';
 
 // Reverse-geocode categories that mean "you placed the point on infrastructure,
@@ -278,7 +283,7 @@ function stripStreetPrefix(value) {
 // principal axis (PCA) and flags any hop that jumps back into already-covered
 // territory — the "1→2→3, back to 1, then 4" mistake. Small detours (a point a
 // corner behind the start) stay under DEFAULT_BACKTRACK_METERS.
-function analyzeRouteOrder(steps, backtrackMeters) {
+function analyzeRouteOrder(steps, backtrackMeters, limits) {
   const pts = steps
     .map((s, i) => ({
       i,
@@ -291,7 +296,26 @@ function analyzeRouteOrder(steps, backtrackMeters) {
     .filter((p) => p.lat != null && p.lng != null && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180)
     .sort((a, b) => a.order - b.order || a.i - b.i);
 
-  if (pts.length < 3) return { analyzed: false, backtracks: [] };
+  // Straight-line route budget (sum of consecutive legs + longest leg).
+  let totalM = 0;
+  let maxLeg = null;
+  for (let k = 1; k < pts.length; k += 1) {
+    const d = haversineMeters(pts[k - 1].lat, pts[k - 1].lng, pts[k].lat, pts[k].lng);
+    totalM += d;
+    if (!maxLeg || d > maxLeg.m) {
+      maxLeg = { m: d, from: `${pts[k - 1].order} ${pts[k - 1].id}`, to: `${pts[k].order} ${pts[k].id}` };
+    }
+  }
+  const length = {
+    total_m: Math.round(totalM),
+    max_leg: maxLeg ? { ...maxLeg, m: Math.round(maxLeg.m) } : null,
+    max_route_m: limits ? limits.maxRouteMeters : DEFAULT_MAX_ROUTE_METERS,
+    max_leg_m: limits ? limits.maxLegMeters : DEFAULT_MAX_LEG_METERS,
+  };
+  length.over_route = length.max_route_m > 0 && length.total_m > length.max_route_m;
+  length.over_leg = length.max_leg_m > 0 && !!maxLeg && maxLeg.m > length.max_leg_m;
+
+  if (pts.length < 3) return { analyzed: false, backtracks: [], length };
 
   const lat0 = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
   const lng0 = pts.reduce((s, p) => s + p.lng, 0) / pts.length;
@@ -346,7 +370,7 @@ function analyzeRouteOrder(steps, backtrackMeters) {
     if (xy[k].t > runMax) runMax = xy[k].t;
   }
 
-  return { analyzed: true, axis_dir: dir, backtracks };
+  return { analyzed: true, axis_dir: dir, backtracks, length };
 }
 
 async function geocheckQuest(bundle, options) {
@@ -354,7 +378,10 @@ async function geocheckQuest(bundle, options) {
   const steps = parseSteps(bundle);
   const stepReports = [];
 
-  for (const step of steps) {
+  // --route-only: pure-geometry mode (length/order), no Nominatim calls.
+  const stepsToGeocode = options.routeOnly ? [] : steps;
+
+  for (const step of stepsToGeocode) {
     const label = `${step.order || '?'} ${step.step_id || step.id}`;
     const lat = toNumber(step.lat);
     const lng = toNumber(step.lng);
@@ -549,12 +576,33 @@ async function geocheckQuest(bundle, options) {
     });
   }
 
-  const route = analyzeRouteOrder(steps, options.backtrackMeters);
+  const route = analyzeRouteOrder(steps, options.backtrackMeters, {
+    maxRouteMeters: options.maxRouteMeters,
+    maxLegMeters: options.maxLegMeters,
+  });
 
-  return { quest_id: bundle.quest_id || bundle.title, city: cityName, steps: stepReports, route };
+  return {
+    quest_id: bundle.quest_id || bundle.title,
+    city: cityName,
+    step_count: steps.length,
+    steps: stepReports,
+    route,
+  };
+}
+
+function printRouteLength(route) {
+  const len = route && route.length;
+  if (!len || !len.total_m) return;
+  const routeMark = len.over_route ? ` ⚠ БОЛЬШЕ лимита ${len.max_route_m}м — маршрут разбросан, ужимай зону` : '';
+  const legMark = len.over_leg ? ` ⚠ перегон больше ${len.max_leg_m}м` : '';
+  console.log(`        route length: ${len.total_m}м по прямым${routeMark}`);
+  if (len.max_leg) {
+    console.log(`        max leg: ${len.max_leg.m}м [${len.max_leg.from} → ${len.max_leg.to}]${legMark}`);
+  }
 }
 
 function printRouteOrder(route) {
+  printRouteLength(route);
   if (!route || !route.analyzed) return;
   if (route.backtracks.length === 0) {
     console.log(`        route order: OK — последователен (ось ${route.axis_dir}), возвратов нет`);
@@ -572,7 +620,7 @@ function printHuman(report) {
   const issues = report.steps.filter((s) => s.verdict === 'FAIL' || s.verdict === 'WARN');
   const backtracks = report.route && report.route.analyzed ? report.route.backtracks.length : 0;
   console.log(
-    `\n${report.quest_id} (${report.city}): ${report.steps.length} steps, ${issues.length} to review${backtracks ? `, ${backtracks} backtrack(s)` : ''}`,
+    `\n${report.quest_id} (${report.city}): ${report.step_count ?? report.steps.length} steps, ${issues.length} to review${backtracks ? `, ${backtracks} backtrack(s)` : ''}`,
   );
   for (const s of report.steps) {
     if (s.stored == null) {
@@ -617,8 +665,11 @@ async function main() {
         '  --api-url=<url>         API base (default https://metravel.by); ignored with --source-file',
         '  --threshold=<m>        FAIL distance in meters (default 60)',
         '  --backtrack-m=<m>      route backtrack distance to flag (default 150; 0 disables)',
+        '  --max-route-m=<m>      warn when straight-line route total exceeds this (default 4000; 0 disables)',
+        '  --max-leg-m=<m>        warn when a single leg exceeds this (default 1200; 0 disables)',
         '  --limit=<n>            Nominatim candidates per step (default 3)',
         '  --delay-ms=<ms>        pause between Nominatim calls (default 1100, keep >=1100)',
+        '  --route-only           pure geometry (length + order), no Nominatim — fast, safe for all quests',
         '  --json                 emit machine-readable JSON instead of the human report',
       ].join('\n'),
     );
@@ -630,8 +681,11 @@ async function main() {
   const sourceFile = getArg('source-file', '');
   const thresholdMeters = Number(getArg('threshold', DEFAULT_THRESHOLD_METERS));
   const backtrackMeters = Math.max(0, Number(getArg('backtrack-m', DEFAULT_BACKTRACK_METERS)));
+  const maxRouteMeters = Math.max(0, Number(getArg('max-route-m', DEFAULT_MAX_ROUTE_METERS)));
+  const maxLegMeters = Math.max(0, Number(getArg('max-leg-m', DEFAULT_MAX_LEG_METERS)));
   const limit = Number(getArg('limit', 3));
   const delayMs = Math.max(1100, Number(getArg('delay-ms', 1100)));
+  const routeOnly = hasArg('route-only');
   const asJson = hasArg('json');
 
   const bundles = sourceFile
@@ -640,7 +694,15 @@ async function main() {
 
   const reports = [];
   for (const bundle of bundles) {
-    const report = await geocheckQuest(bundle, { thresholdMeters, backtrackMeters, limit, delayMs });
+    const report = await geocheckQuest(bundle, {
+      thresholdMeters,
+      backtrackMeters,
+      maxRouteMeters,
+      maxLegMeters,
+      limit,
+      delayMs,
+      routeOnly,
+    });
     reports.push(report);
     if (!asJson) printHuman(report);
   }
@@ -653,17 +715,32 @@ async function main() {
     (sum, r) => sum + (r.route && r.route.analyzed ? r.route.backtracks.length : 0),
     0,
   );
+  const totalOverBudget = reports.reduce(
+    (sum, r) => sum + (r.route && r.route.length && (r.route.length.over_route || r.route.length.over_leg) ? 1 : 0),
+    0,
+  );
 
   if (asJson) {
     console.log(
       JSON.stringify(
-        { threshold_m: thresholdMeters, backtrack_m: backtrackMeters, reports, fail_count: totalIssues, backtrack_count: totalBacktracks },
+        {
+          threshold_m: thresholdMeters,
+          backtrack_m: backtrackMeters,
+          max_route_m: maxRouteMeters,
+          max_leg_m: maxLegMeters,
+          reports,
+          fail_count: totalIssues,
+          backtrack_count: totalBacktracks,
+          over_budget_count: totalOverBudget,
+        },
         null,
         2,
       ),
     );
   } else {
-    console.log(`\nGeo-check FAIL points: ${totalIssues} · route backtracks: ${totalBacktracks}`);
+    console.log(
+      `\nGeo-check FAIL points: ${totalIssues} · route backtracks: ${totalBacktracks} · over length budget: ${totalOverBudget}`,
+    );
   }
   if (totalIssues > 0 || totalBacktracks > 0) process.exitCode = 1;
 }
