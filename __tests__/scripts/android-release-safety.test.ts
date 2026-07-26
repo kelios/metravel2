@@ -13,6 +13,7 @@ const {
 const {
   createBuildEnvironment,
   getFacebookBuildConfig,
+  readAndroidManifestMetaData,
   readAndroidResource,
 } = require('../../scripts/android-gradle-build');
 const {
@@ -272,5 +273,25 @@ describe('Android release safety contract', () => {
     expect(readAndroidResource(xml, 'string', 'facebook_app_id')).toBe('123456789');
     expect(readAndroidResource(xml, 'bool', 'facebook_auto_init_enabled')).toBe('true');
     expect(readAndroidResource(xml, 'string', 'missing')).toBe('');
+  });
+
+  it('reads Facebook auto-init from the merged Android manifest', () => {
+    const manifest = `
+      <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+        <application>
+          <meta-data
+            android:name="com.facebook.sdk.AutoInitEnabled"
+            android:value="true" />
+        </application>
+      </manifest>
+    `;
+
+    expect(
+      readAndroidManifestMetaData(
+        manifest,
+        'com.facebook.sdk.AutoInitEnabled'
+      )
+    ).toBe('true');
+    expect(readAndroidManifestMetaData(manifest, 'missing')).toBe('');
   });
 });

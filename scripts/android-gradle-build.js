@@ -96,30 +96,56 @@ function readAndroidResource(xml, type, name) {
   return xml.match(pattern)?.[1]?.trim() || ''
 }
 
+function readAndroidManifestMetaData(xml, name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const tag = xml.match(
+    new RegExp(
+      `<meta-data\\b(?=[^>]*\\bandroid:name=["']${escapedName}["'])[^>]*>`,
+    ),
+  )?.[0]
+  if (!tag) return ''
+  return tag.match(/\bandroid:value=["']([^"']*)["']/)?.[1]?.trim() || ''
+}
+
 function verifyFacebookAndroidResources(mode, environment) {
   const facebook = getFacebookBuildConfig(environment)
   const variant = mode === 'production' ? 'release' : 'debug'
+  const variantTitle = variant[0].toUpperCase() + variant.slice(1)
   const valuesPath = path.join(
     ANDROID_DIR,
     'app',
     'build',
-    'generated',
-    'res',
-    'resValues',
+    'intermediates',
+    'packaged_res',
     variant,
+    `package${variantTitle}Resources`,
     'values',
-    'gradleResValues.xml',
+    'values.xml',
   )
-  if (!fs.existsSync(valuesPath)) {
-    throw new Error('compiled Android resource values are missing')
+  const manifestPath = path.join(
+    ANDROID_DIR,
+    'app',
+    'build',
+    'intermediates',
+    'merged_manifest',
+    variant,
+    `process${variantTitle}MainManifest`,
+    'AndroidManifest.xml',
+  )
+  if (!fs.existsSync(valuesPath) || !fs.existsSync(manifestPath)) {
+    throw new Error('compiled Android Facebook configuration is missing')
   }
 
   const xml = fs.readFileSync(valuesPath, 'utf8')
+  const manifest = fs.readFileSync(manifestPath, 'utf8')
   const actual = {
     appId: readAndroidResource(xml, 'string', 'facebook_app_id'),
     clientToken: readAndroidResource(xml, 'string', 'facebook_client_token'),
     scheme: readAndroidResource(xml, 'string', 'fb_login_protocol_scheme'),
-    autoInit: readAndroidResource(xml, 'bool', 'facebook_auto_init_enabled'),
+    autoInit: readAndroidManifestMetaData(
+      manifest,
+      'com.facebook.sdk.AutoInitEnabled',
+    ),
   }
   const expected = facebook.enabled
     ? {
@@ -198,6 +224,7 @@ module.exports = {
   createBuildEnvironment,
   getFacebookBuildConfig,
   parseEnvFile,
+  readAndroidManifestMetaData,
   readAndroidResource,
   verifyFacebookAndroidResources,
 }
