@@ -8,7 +8,7 @@
     "locale-en"
   ],
   "total": {
-    "maxRawKB": 11886.5,
+    "maxRawKB": 11893.9,
     "maxGzipKB": 3040.2
   },
   "chunks": {
@@ -17,7 +17,7 @@
       "maxGzipKB": 276.6
     },
     "__common": {
-      "maxRawKB": 4632.6,
+      "maxRawKB": 4674.1,
       "maxGzipKB": 1198.6
     },
     "index": {
