@@ -133,14 +133,17 @@ export const typographyStyles = (
   display: none;
 }
 .${cls} summary::after {
-  content: "⌄";
+  content: "";
   flex: 0 0 auto;
-  color: ${colors.primary};
-  font-size: 20px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid ${colors.primary};
+  border-bottom: 2px solid ${colors.primary};
+  transform: rotate(45deg);
   transition: transform 0.18s ease;
 }
 .${cls} details[open] summary::after {
-  transform: rotate(180deg);
+  transform: rotate(225deg);
 }
 .${cls} summary:focus-visible {
   outline: 2px solid ${colors.focusStrong};

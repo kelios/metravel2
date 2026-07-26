@@ -64,9 +64,17 @@ export const resolveServerRichTextHtml = (
   // the canonical safe_html keeps the FAQ text but drops <details>/<summary>.
   // Prefer the legacy source only for this observable semantic loss; the caller
   // will run it through the full client sanitizer before rendering.
-  const legacyHasDisclosure = /<details\b/i.test(legacyHtml) && /<summary\b/i.test(legacyHtml)
-  const canonicalHasDisclosure = /<details\b/i.test(safeHtml) && /<summary\b/i.test(safeHtml)
-  if (legacyHasDisclosure && !canonicalHasDisclosure) {
+  const countDisclosureTags = (html: string, tag: 'details' | 'summary') =>
+    (html.match(new RegExp(`<${tag}\\b`, 'gi')) ?? []).length
+  const legacyDisclosureCount = Math.min(
+    countDisclosureTags(legacyHtml, 'details'),
+    countDisclosureTags(legacyHtml, 'summary'),
+  )
+  const canonicalDisclosureCount = Math.min(
+    countDisclosureTags(safeHtml, 'details'),
+    countDisclosureTags(safeHtml, 'summary'),
+  )
+  if (legacyDisclosureCount > canonicalDisclosureCount) {
     return { html: legacyHtml, serverSanitized: false }
   }
 

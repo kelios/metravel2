@@ -49,6 +49,7 @@ eslint-report.json
 # Playwright artifacts
 /test-results/
 /playwright-report/
+.playwright-cli/
 .playwright-report-extracted/
 /e2e/.auth/
 /e2e/_flicker-shots/

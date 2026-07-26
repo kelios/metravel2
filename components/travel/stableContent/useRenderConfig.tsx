@@ -1,5 +1,6 @@
 import React, { Suspense, useCallback, useMemo, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 import {
   HTMLContentModel,
   HTMLElementModel,
@@ -72,16 +73,13 @@ const NativeDetailsRenderer = (props: TDefaultRendererProps<any>) => {
         <View style={{ flex: 1 }}>
           {summaryNode ? <TChildrenRenderer tchildren={summaryNode.children} /> : null}
         </View>
-        <Text
-          aria-hidden
-          style={{
-            color: colors.primary,
-            fontSize: DESIGN_TOKENS.typography.sizes.lg,
-            transform: [{ rotate: expanded ? '180deg' : '0deg' }],
-          }}
-        >
-          ⌄
-        </Text>
+        <Feather
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={colors.primary}
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+        />
       </Pressable>
       {expanded ? (
         <View

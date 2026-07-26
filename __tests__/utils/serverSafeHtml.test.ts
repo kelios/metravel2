@@ -116,6 +116,22 @@ describe('resolveServerRichTextHtml', () => {
     })
   })
 
+  it('falls back when canonical html preserved only part of the disclosure list', () => {
+    const legacy = [
+      '<details><summary>Первый?</summary><p>Первый ответ.</p></details>',
+      '<details><summary>Второй?</summary><p>Второй ответ.</p></details>',
+    ].join('')
+    const partialCanonical =
+      '<details><summary>Первый?</summary><p>Первый ответ.</p></details><p><strong>Второй?</strong></p><p>Второй ответ.</p>'
+
+    expect(
+      resolveServerRichTextHtml(
+        { safe_html: partialCanonical, plain_text: 'Первый? Первый ответ. Второй? Второй ответ.' },
+        legacy,
+      ),
+    ).toEqual({ html: legacy, serverSanitized: false })
+  })
+
   it('normalizes nullish legacy html to empty string', () => {
     expect(resolveServerRichTextHtml(undefined, null)).toEqual({ html: '', serverSanitized: false })
     expect(resolveServerRichTextHtml(undefined, undefined)).toEqual({ html: '', serverSanitized: false })
