@@ -47,6 +47,7 @@ test-output.txt
 eslint-report.json
 
 # Playwright artifacts
+/.playwright-mcp/
 /test-results/
 /playwright-report/
 .playwright-cli/
