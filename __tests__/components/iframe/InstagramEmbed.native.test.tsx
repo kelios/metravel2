@@ -146,7 +146,7 @@ describe('InstagramEmbed (native)', () => {
     expect(tree.root.findAllByProps({ accessibilityRole: 'link' }, { deep: false })).not.toHaveLength(0)
   })
 
-  it('берёт реальную высоту поста из body/frame, а не из раздутого docHeight', () => {
+  it('переводит реальные CSS-метрики Instagram в RN dp и игнорирует раздутый viewport', () => {
     const tree = renderEmbeds([POST])
     const props = webViews(tree)[0].props
 
@@ -155,19 +155,21 @@ describe('InstagramEmbed (native)', () => {
         nativeEvent: {
           data: JSON.stringify({
             type: 'ig-height',
-            height: 1400,
-            contentHeight: 1400,
-            bodyHeight: 1400,
-            frameHeight: 494,
-            docHeight: 1400,
-            viewportHeight: 1400,
+            height: 1203,
+            contentHeight: 1203,
+            bodyHeight: 1190,
+            frameHeight: 980,
+            docHeight: 2992,
+            viewportHeight: 2992,
+            viewportWidth: 980,
+            displayWidth: 390,
           }),
         },
       })
     })
 
     expect(embedFrame(tree).props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ height: 494 })])
+      expect.arrayContaining([expect.objectContaining({ height: 479 })])
     )
   })
 

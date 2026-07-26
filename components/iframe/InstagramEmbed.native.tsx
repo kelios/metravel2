@@ -24,6 +24,8 @@ type InstagramHeightPayload = {
   bodyHeight?: unknown
   docHeight?: unknown
   viewportHeight?: unknown
+  viewportWidth?: unknown
+  displayWidth?: unknown
 }
 
 const MAX_WIDTH = 430
@@ -53,6 +55,19 @@ const HEIGHT_PROBE_JS = `(function () {
     var scroll = node.scrollHeight || 0;
     return Math.max(rect, scroll);
   };
+  var readContentBottom = function () {
+    if (!document.body) return 0;
+    var nodes = document.body.querySelectorAll('*');
+    var bottom = 0;
+    for (var i = 0; i < nodes.length; i += 1) {
+      if (nodes[i].children && nodes[i].children.length > 0) continue;
+      if (typeof nodes[i].getBoundingClientRect !== 'function') continue;
+      var rect = nodes[i].getBoundingClientRect();
+      var next = Math.ceil((rect.bottom || 0) + (window.scrollY || 0));
+      if (isFinite(next)) bottom = Math.max(bottom, next);
+    }
+    return bottom;
+  };
   var post = function () {
     var doc = document.documentElement;
     var body = document.body;
@@ -60,10 +75,12 @@ const HEIGHT_PROBE_JS = `(function () {
     var bodyHeight = readHeight(body);
     var frameHeight = readHeight(frame);
     var docHeight = readHeight(doc);
-    // Приоритет — intrinsic высота самого iframe-контента (.EmbedFrame). На Android
-    // body/documentElement могут отражать уже раздутый viewport контейнера WebView.
-    // Их используем только когда frame ещё не доступен/неизмерим.
-    var contentHeight = frameHeight || bodyHeight || 0;
+    var leafBottom = readContentBottom();
+    // Instagram не задаёт meta viewport: layout viewport остаётся около 980 CSS px,
+    // хотя RN-рамка на телефоне около 390 dp. Поэтому сырые CSS px нельзя напрямую
+    // назначать высотой View. Низ листового контента включает footer/caption, которые
+    // находятся ниже квадратной .EmbedFrame, но не включает раздутую высоту viewport.
+    var contentHeight = leafBottom || bodyHeight || frameHeight || 0;
     var height = contentHeight || docHeight;
     if (!height || Math.abs(height - last) < 8) return;
     last = height;
@@ -74,7 +91,9 @@ const HEIGHT_PROBE_JS = `(function () {
       bodyHeight: bodyHeight,
       frameHeight: frameHeight,
       docHeight: docHeight,
-      viewportHeight: window.innerHeight || 0
+      viewportHeight: window.innerHeight || 0,
+      viewportWidth: window.innerWidth || 0,
+      displayWidth: window.outerWidth || (window.screen && window.screen.width) || 0
     }));
   };
   post();
@@ -100,20 +119,31 @@ const asPositiveNumber = (value: unknown): number | null => {
 }
 
 const resolveMeasuredHeight = (payload: InstagramHeightPayload): number | null => {
-  const frameHeight = asPositiveNumber(payload.frameHeight)
-  if (frameHeight !== null) return clampHeight(frameHeight)
+  const viewportWidth = asPositiveNumber(payload.viewportWidth)
+  const displayWidth = asPositiveNumber(payload.displayWidth)
+  const cssToLayoutScale =
+    viewportWidth !== null && displayWidth !== null
+      ? Math.min(1, displayWidth / viewportWidth)
+      : 1
 
-  const bodyHeight = asPositiveNumber(payload.bodyHeight)
-  if (bodyHeight !== null) return clampHeight(bodyHeight)
+  const scaleAndClamp = (value: unknown): number | null => {
+    const next = asPositiveNumber(value)
+    return next !== null ? clampHeight(next * cssToLayoutScale) : null
+  }
 
-  const contentHeight = asPositiveNumber(payload.contentHeight)
-  if (contentHeight !== null) return clampHeight(contentHeight)
+  const contentHeight = scaleAndClamp(payload.contentHeight)
+  if (contentHeight !== null) return contentHeight
 
-  const docHeight = asPositiveNumber(payload.docHeight)
-  if (docHeight !== null) return clampHeight(docHeight)
+  const bodyHeight = scaleAndClamp(payload.bodyHeight)
+  if (bodyHeight !== null) return bodyHeight
 
-  const legacyHeight = asPositiveNumber(payload.height)
-  return legacyHeight !== null ? clampHeight(legacyHeight) : null
+  const frameHeight = scaleAndClamp(payload.frameHeight)
+  if (frameHeight !== null) return frameHeight
+
+  const docHeight = scaleAndClamp(payload.docHeight)
+  if (docHeight !== null) return docHeight
+
+  return scaleAndClamp(payload.height)
 }
 
 /**
