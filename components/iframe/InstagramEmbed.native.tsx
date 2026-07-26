@@ -24,6 +24,12 @@ const MAX_HEIGHT = 1400
 // Meta в ряде регионов режется: без потолка пользователь остаётся с пустой рамкой.
 const LOAD_TIMEOUT_MS = 15000
 
+// Android WebView по умолчанию представляется как `... wv) Chrome/...`, и Instagram
+// отдаёт такому клиенту пустую страницу embed (проверено на Pixel: тот же URL в Chrome
+// рисует пост, в WebView — белая рамка). Подставляем обычный мобильный Chrome.
+const EMBED_USER_AGENT =
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36'
+
 // Instagram отдаёт /embed/ без своего resize-скрипта (omitscript=1), поэтому высоту
 // меряем сами и присылаем в RN. Пост дорисовывает картинку после загрузки, отсюда
 // несколько проб + ResizeObserver, а не одна замерка на DOMContentLoaded.
@@ -155,6 +161,7 @@ const InstagramEmbed: React.FC<InstagramEmbedProps> = ({ url }) => {
           <WebView
             testID="travel-instagram-webview"
             source={{ uri: embedSrc as string }}
+            userAgent={EMBED_USER_AGENT}
             style={styles.webview}
             containerStyle={styles.webviewContainer}
             originWhitelist={['https://*']}
