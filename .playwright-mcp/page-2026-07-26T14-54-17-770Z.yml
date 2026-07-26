@@ -1,0 +1,12 @@
+- generic [ref=f30e3]:
+  - generic:
+    - link "Перейти к основному содержимому"
+    - link "Перейти к навигации"
+  - generic [ref=f30e13]:
+    - generic [ref=f30e17]:
+      - link [ref=f30e18] [cursor=pointer]:
+        - generic "MeTravel логотип" [ref=f30e19]:
+          - img "MeTravel логотип" [ref=f30e21]
+      - 'button "Изменить язык: Русский" [ref=f30e24] [cursor=pointer]':
+        - generic [ref=f30e25]: RU
+    - progressbar [ref=f30e28]

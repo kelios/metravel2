@@ -1,0 +1,113 @@
+- generic [ref=f30e3]:
+  - generic:
+    - link "Перейти к основному содержимому"
+    - link "Перейти к навигации"
+  - generic [ref=f30e4]:
+    - generic [ref=f30e11]:
+      - generic [ref=f30e13]:
+        - generic [ref=f30e16]:
+          - generic [ref=f30e17]:
+            - link [ref=f30e138] [cursor=pointer]
+            - button [ref=f30e141] [cursor=pointer]:
+              - generic [ref=f30e33]: 
+              - generic [ref=f30e25]: RU
+            - generic [ref=f30e34]:
+              - button [ref=f30e142] [cursor=pointer]:
+                - generic [ref=f30e38]: Юля
+              - button [ref=f30e143] [cursor=pointer]:
+                - generic [ref=f30e40]: 
+          - generic [ref=f30e145]:
+            - button [ref=f30e146] [cursor=pointer]:
+              - generic [ref=f30e147]: 
+            - generic [ref=f30e148]: Codex cover upload fixture
+        - generic [ref=f30e44]:
+          - generic [ref=f30e45]:
+            - button [ref=f30e151] [cursor=pointer]:
+              - generic [ref=f30e47]: 
+              - generic [ref=f30e48]: Назад
+            - generic [ref=f30e49]:
+              - button [ref=f30e152] [cursor=pointer]:
+                - generic [ref=f30e51]: 
+                - generic [ref=f30e52]: Главная
+              - generic [ref=f30e53]: 
+              - generic [ref=f30e54]: Поехали со мной
+          - generic [ref=f30e55]:
+            - generic [ref=f30e56]: Поехали со мной
+            - button [ref=f30e153] [cursor=pointer]:
+              - generic [ref=f30e58]: 
+          - alert [ref=f30e154]:
+            - generic [ref=f30e61]: 
+            - generic [ref=f30e62]: MeTravel не организует поездки — это площадка для поиска попутчиков. Будьте внимательны при договорённостях и обмене контактами.
+          - button [ref=f30e155] [cursor=pointer]:
+            - generic [ref=f30e64]: 
+            - generic [ref=f30e65]: О поездках
+          - generic [ref=f30e67]:
+            - generic [ref=f30e68]:
+              - generic [ref=f30e69]: 
+              - textbox [ref=f30e156]:
+                - /placeholder: Поиск по поездкам
+            - generic [ref=f30e72]:
+              - combobox [ref=f30e157] [cursor=pointer]
+              - combobox [ref=f30e158] [cursor=pointer]
+              - combobox [ref=f30e159] [cursor=pointer]
+          - generic [ref=f30e82]:
+            - link
+            - generic [ref=f30e83]: Открыта
+            - generic [ref=f30e90]:
+              - generic [ref=f30e91]: Codex cover upload fixture
+              - generic [ref=f30e92]:
+                - generic [ref=f30e93]: 
+                - generic [ref=f30e94]: "2026-08-20T08:00:00Z · мест: 4 из 4"
+      - generic [ref=f30e163]:
+        - generic [ref=f30e166]:
+          - generic [ref=f30e167]:
+            - link [ref=f30e168] [cursor=pointer]:
+              - generic "MeTravel логотип" [ref=f30e169]:
+                - img "MeTravel логотип" [ref=f30e171]
+            - 'button "Изменить язык: Русский" [ref=f30e174] [cursor=pointer]':
+              - generic [ref=f30e175]: 
+              - generic [ref=f30e176]: RU
+            - generic [ref=f30e177]:
+              - button "Открыть профиль Юля" [ref=f30e178] [cursor=pointer]:
+                - generic [ref=f30e181]: Юля
+              - button "Открыть меню" [ref=f30e182] [cursor=pointer]:
+                - generic [ref=f30e183]: 
+          - generic [ref=f30e186]:
+            - button "Назад" [ref=f30e187] [cursor=pointer]:
+              - generic [ref=f30e188]: 
+            - generic [ref=f30e189]: Codex cover upload fixture
+        - generic [ref=f30e196]:
+          - img "Codex cover upload fixture" [ref=f30e199]
+          - generic [ref=f30e200]:
+            - generic [ref=f30e201]: Codex cover upload fixture
+            - 'generic "Статус: Открыта" [ref=f30e202]': Открыта
+          - generic [ref=f30e205]:
+            - generic [ref=f30e206]: 
+            - generic [ref=f30e208]:
+              - generic [ref=f30e209]: 
+              - generic [ref=f30e210]: 2026-08-20T08:00:00Z
+            - generic [ref=f30e211]:
+              - generic [ref=f30e212]: 
+              - generic [ref=f30e213]: "мест: 4 из 4"
+            - generic [ref=f30e214]:
+              - generic [ref=f30e215]: 
+              - generic [ref=f30e216]: car
+          - 'link " Организатор: Юля" [ref=f30e217] [cursor=pointer]':
+            - generic [ref=f30e218]: 
+            - generic [ref=f30e220]: "Организатор: Юля"
+          - generic [ref=f30e221]: Temporary reversible browser acceptance fixture.
+          - generic [ref=f30e222]:
+            - generic [ref=f30e223]: Заявки на участие (0)
+            - generic [ref=f30e224]: Заявок пока нет. Поделитесь поездкой, чтобы её увидели.
+    - tablist "Навигация" [ref=f30e99]:
+      - tab "Маршруты" [ref=f30e101] [cursor=pointer]
+      - tab "Карта" [ref=f30e111] [cursor=pointer]
+      - tab "Квесты" [ref=f30e120] [cursor=pointer]
+      - tab "Профиль" [ref=f30e127] [cursor=pointer]:
+        - generic [ref=f30e128]:
+          - generic [ref=f30e129]: 
+          - generic [ref=f30e131]: Профиль
+      - tab "Ещё" [ref=f30e133] [cursor=pointer]:
+        - generic [ref=f30e134]:
+          - generic [ref=f30e135]: 
+          - generic [ref=f30e137]: Ещё

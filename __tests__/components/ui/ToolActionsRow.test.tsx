@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native'
-import { Text } from 'react-native'
+import { StyleSheet, Text } from 'react-native'
 
 import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow'
 
@@ -45,6 +45,9 @@ describe('ui/ToolActionsRow', () => {
     expect(getByLabelText('Вставить')).toBeTruthy()
     // Иконка остаётся единственным видимым содержимым кнопки.
     expect(getByText('mic')).toBeTruthy()
+
+    const compactStyle = StyleSheet.flatten(getByLabelText('Надиктовать').props.style)
+    expect(compactStyle).toMatchObject({ minWidth: 44, minHeight: 44 })
   })
 
   it('keeps labels until the web viewport is hydrated', () => {

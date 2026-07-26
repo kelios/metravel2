@@ -1,0 +1,834 @@
+- generic [ref=f7e3]:
+  - generic:
+    - link "Перейти к основному содержимому"
+    - link "Перейти к навигации"
+  - generic [ref=f7e4]:
+    - generic [ref=f7e13]:
+      - generic [ref=f7e17]:
+        - link "MeTravel логотип MeTravel" [ref=f7e18] [cursor=pointer]:
+          - generic "MeTravel логотип" [ref=f7e19]:
+            - img "MeTravel логотип" [ref=f7e21]
+          - generic [ref=f7e22]: MeTravel
+        - generic [ref=f7e37]:
+          - link "Маршруты" [ref=f7e38] [cursor=pointer]
+          - link "Беларусь" [ref=f7e46] [cursor=pointer]
+          - link "Карта" [ref=f7e52] [cursor=pointer]
+          - link "Места" [ref=f7e59] [cursor=pointer]:
+            - generic [ref=f7e60]: 
+          - link "Случайный маршрут" [ref=f7e63] [cursor=pointer]
+          - link "Квесты" [ref=f7e73] [cursor=pointer]
+        - 'button "Изменить язык: Русский" [ref=f7e26] [cursor=pointer]':
+          - generic [ref=f7e27]: 
+          - generic [ref=f7e28]: RU
+          - generic [ref=f7e29]: 
+        - button "Открыть меню аккаунта Юля" [ref=f7e80] [cursor=pointer]:
+          - generic [ref=f7e83]: Юля
+          - generic [ref=f7e84]: 
+      - 'main "Детали путешествия: Тропа ведьм (Harzer Hexenstieg): как пройти маршрут и как это выглядит на самом деле" [ref=f7e86]':
+        - generic [ref=f7e89]:
+          - generic [ref=f7e95]:
+            - generic [ref=f7e97]:
+              - img "Юля" [ref=f7e100]
+              - generic [ref=f7e101]:
+                - generic [ref=f7e102]:
+                  - button "Открыть профиль автора Юля" [ref=f7e103] [cursor=pointer]:
+                    - generic [ref=f7e104]: Юля
+                    - generic [ref=f7e105]: 
+                  - generic [ref=f7e106]:
+                    - button "Редактировать путешествие" [ref=f7e107] [cursor=pointer]:
+                      - generic [ref=f7e108]: 
+                    - button "Экспорт в PDF" [ref=f7e109] [cursor=pointer]:
+                      - generic [ref=f7e110]: 
+                - generic [ref=f7e111]:
+                  - generic [ref=f7e112]:
+                    - generic [ref=f7e113]: 
+                    - generic [ref=f7e114]: Октябрь 2025
+                  - generic "900 просмотров" [ref=f7e115]:
+                    - generic [ref=f7e116]: 
+                    - generic [ref=f7e117]: "900"
+            - button "Галерея" [pressed] [ref=f7e118] [cursor=pointer]:
+              - generic [ref=f7e119]:
+                - generic [ref=f7e120]: 
+                - generic [ref=f7e121]: Галерея
+            - button "Описание" [ref=f7e122] [cursor=pointer]:
+              - generic [ref=f7e123]:
+                - generic [ref=f7e124]: 
+                - generic [ref=f7e125]: Описание
+            - button "Видео" [ref=f7e126] [cursor=pointer]:
+              - generic [ref=f7e127]:
+                - generic [ref=f7e128]: 
+                - generic [ref=f7e129]: Видео
+            - button "Рекомендации" [ref=f7e131] [cursor=pointer]:
+              - generic [ref=f7e132]:
+                - generic [ref=f7e133]: 
+                - generic [ref=f7e134]: Рекомендации
+            - button "Плюсы" [ref=f7e135] [cursor=pointer]:
+              - generic [ref=f7e136]:
+                - generic [ref=f7e137]: 
+                - generic [ref=f7e138]: Плюсы
+            - button "Минусы" [ref=f7e139] [cursor=pointer]:
+              - generic [ref=f7e140]:
+                - generic [ref=f7e141]: 
+                - generic [ref=f7e142]: Минусы
+            - button "Экскурсии" [ref=f7e143] [cursor=pointer]:
+              - generic [ref=f7e144]:
+                - generic [ref=f7e145]: 
+                - generic [ref=f7e146]: Экскурсии
+            - button "Карта маршрута" [ref=f7e148] [cursor=pointer]:
+              - generic [ref=f7e149]:
+                - generic [ref=f7e150]: 
+                - generic [ref=f7e151]: Карта маршрута
+            - button "Координаты мест" [ref=f7e152] [cursor=pointer]:
+              - generic [ref=f7e153]:
+                - generic [ref=f7e154]: 
+                - generic [ref=f7e155]: Координаты мест
+            - button "Рядом можно посмотреть" [ref=f7e156] [cursor=pointer]:
+              - generic [ref=f7e157]:
+                - generic [ref=f7e158]: 
+                - generic [ref=f7e159]: Рядом можно посмотреть
+            - button "Популярные маршруты" [ref=f7e161] [cursor=pointer]:
+              - generic [ref=f7e162]:
+                - generic [ref=f7e163]: 
+                - generic [ref=f7e164]: Популярные маршруты
+            - button "Комментарии" [ref=f7e165] [cursor=pointer]:
+              - generic [ref=f7e166]:
+                - generic [ref=f7e167]: 
+                - generic [ref=f7e168]: Комментарии
+            - progressbar "Загрузка виджета" [ref=f7e171]
+          - generic [ref=f7e176]:
+            - 'heading "Тропа ведьм (Harzer Hexenstieg): как пройти маршрут и как это выглядит на самом деле" [level=1] [ref=f7e177]'
+            - generic "Геройский блок с изображением и кнопкой «Хочу поехать»" [ref=f7e178]:
+              - generic [ref=f7e179]:
+                - generic [ref=f7e183]:
+                  - group "Галерея изображений" [ref=f7e185]:
+                    - generic [ref=f7e186]:
+                      - generic [ref=f7e187]:
+                        - generic:
+                          - generic:
+                            - img "Вечерний Остероде-ам-Гарц — город старта маршрута. Фотография путешествия 1 из 10"
+                          - generic: Вечерний Остероде-ам-Гарц — город старта маршрута
+                      - generic [ref=f7e188]:
+                        - generic:
+                          - generic:
+                            - img "Водохранилище Зёзе (Sösetalsperre) в тумане. Фотография путешествия 2 из 10"
+                          - generic: Водохранилище Зёзе (Sösetalsperre) в тумане
+                      - generic [ref=f7e189]:
+                        - generic:
+                          - generic:
+                            - img "Фахверковые улочки городков Гарца. Фотография путешествия 3 из 10"
+                          - generic: Фахверковые улочки городков Гарца
+                  - button "Previous slide" [ref=f7e190] [cursor=pointer]:
+                    - generic [ref=f7e191]: 
+                  - button "Next slide" [ref=f7e193] [cursor=pointer]:
+                    - generic [ref=f7e194]: 
+                  - generic: 1/10
+                - button "Добавить в «Хочу поехать»" [ref=f7e196] [cursor=pointer]:
+                  - generic [ref=f7e197]: 
+            - group "Краткие факты" [ref=f7e198]:
+              - generic "Ключевая информация о путешествии" [ref=f7e199]:
+                - generic [ref=f7e200]:
+                  - generic [ref=f7e201]:
+                    - generic [ref=f7e202]: 
+                    - generic [ref=f7e203]: Октябрь 2025
+                  - generic [ref=f7e204]:
+                    - generic [ref=f7e205]: 
+                    - generic [ref=f7e206]: 6 дней
+                  - generic [ref=f7e207]:
+                    - generic [ref=f7e208]: 
+                    - generic [ref=f7e209]: Германия
+                - generic [ref=f7e210]:
+                  - generic [ref=f7e211]:
+                    - generic [ref=f7e212]: 
+                    - generic [ref=f7e213]: Категории
+                  - generic [ref=f7e214]:
+                    - 'button "Категория: Ресторан" [ref=f7e215] [cursor=pointer]':
+                      - generic [ref=f7e216]: Ресторан
+                    - 'button "Категория: Вокзал" [ref=f7e217] [cursor=pointer]':
+                      - generic [ref=f7e218]: Вокзал
+                    - 'button "Категория: Отель" [ref=f7e219] [cursor=pointer]':
+                      - generic [ref=f7e220]: Отель
+                    - 'button "Категория: Руины" [ref=f7e221] [cursor=pointer]':
+                      - generic [ref=f7e222]: Руины
+                    - 'button "Категория: Руины замка" [ref=f7e223] [cursor=pointer]':
+                      - generic [ref=f7e224]: Руины замка
+              - button "Добавить в план" [ref=f7e225] [cursor=pointer]:
+                - generic [ref=f7e226]: 
+            - generic [ref=f7e228]:
+              - button "Перейти к разделу Карта маршрута" [ref=f7e229] [cursor=pointer]:
+                - generic [ref=f7e230]: 
+                - generic [ref=f7e231]: Карта маршрута
+              - button "Перейти к разделу Описание" [ref=f7e232] [cursor=pointer]:
+                - generic [ref=f7e233]: 
+                - generic [ref=f7e234]: Описание
+              - button "Перейти к разделу Координаты мест" [ref=f7e235] [cursor=pointer]:
+                - generic [ref=f7e236]: 
+                - generic [ref=f7e237]: Точки маршрута
+              - button "Перейти к разделу Комментарии" [ref=f7e238] [cursor=pointer]:
+                - generic [ref=f7e239]: 
+                - generic [ref=f7e240]: Комментарии
+              - button "Перейти к разделу Видео" [ref=f7e241] [cursor=pointer]:
+                - generic [ref=f7e242]: 
+                - generic [ref=f7e243]: Видео
+            - generic "Описание маршрута" [ref=f7e244]:
+              - generic [ref=f7e245]:
+                - 'button "Тропа ведьм (Harzer Hexenstieg): как пройти маршрут и как это выглядит на самом деле, развёрнуто" [expanded] [ref=f7e246] [cursor=pointer]':
+                  - generic [ref=f7e247]:
+                    - 'img "Тропа ведьм (Harzer Hexenstieg): как пройти маршрут и как это выглядит на самом деле" [ref=f7e250]'
+                    - generic [ref=f7e251]: "Тропа ведьм (Harzer Hexenstieg): как пройти маршрут и как это выглядит на самом деле"
+                - generic [ref=f7e256]:
+                  - generic [ref=f7e257]: "лучший сезон: октябрь · ~15 мин чтения"
+                  - heading "Содержание маршрута" [level=2] [ref=f7e259]
+                  - generic [ref=f7e263]:
+                    - heading "Что такое Harzer Hexenstieg" [level=3] [ref=f7e264]
+                    - paragraph [ref=f7e265]:
+                      - text: Горы
+                      - strong [ref=f7e266]: Harz Mountains
+                      - text: — один из самых атмосферных регионов Германии. Здесь нет альпийских высот, но есть густые хвойные леса, мшистые болота, старые шахтёрские дороги и долины рек, где легко поверить в легенды.
+                    - paragraph [ref=f7e267]:
+                      - text: Через этот ландшафт проходит
+                      - strong [ref=f7e268]: Harzer Hexenstieg
+                      - text: — один из самых известных пеших маршрутов страны. Его название переводится как
+                      - strong [ref=f7e269]: «Тропа ведьм Гарца»
+                      - text: ", и оно связано с давними легендами о шабашах на вершине горы Броккен."
+                    - paragraph [ref=f7e270]:
+                      - text: Маршрут соединяет запад и восток региона — от
+                      - strong [ref=f7e271]: Osterode am Harz
+                      - text: до
+                      - strong [ref=f7e272]: Thale
+                      - text: ", проходя через национальный парк, старые плотины и горные перевалы."
+                    - list [ref=f7e273]:
+                      - listitem [ref=f7e274]:
+                        - strong [ref=f7e275]: "Длина маршрута:"
+                        - text: около 100 км
+                      - listitem [ref=f7e276]:
+                        - strong [ref=f7e277]: "Высшая точка:"
+                        - text: гора
+                        - strong [ref=f7e278]: Броккен
+                        - text: (1 142 м)
+                      - listitem [ref=f7e279]:
+                        - strong [ref=f7e280]: "Набор высоты:"
+                        - text: примерно 2 000 м
+                      - listitem [ref=f7e281]:
+                        - strong [ref=f7e282]: "Продолжительность:"
+                        - text: 3–6 дней
+                      - listitem [ref=f7e283]:
+                        - strong [ref=f7e284]: "Лучшее время для прохождения:"
+                        - text: май–октябрь
+                    - paragraph [ref=f7e285]:
+                      - text: Современная версия маршрута была создана в
+                      - strong [ref=f7e286]: 2003 году
+                      - text: ", когда туристические организации региона объединили исторические тропы и шахтёрские дороги в единый дальний маршрут."
+                    - paragraph [ref=f7e287]:
+                      - text: "Название связано с культурной традицией: именно здесь, на Броккене, согласно легендам, ведьмы собирались на"
+                      - strong [ref=f7e288]: Walpurgis Night
+                      - text: ", событие, которое описал"
+                      - strong [ref=f7e289]: Johann Wolfgang von Goethe
+                      - text: в «Фаусте».
+                    - paragraph [ref=f7e290]:
+                      - text: "Указатели на маршруте узнаваемы издалека: белая ведьма на метле в зелёном круге. Такой же знак с надписью"
+                      - strong [ref=f7e291]: START / ZIEL
+                      - text: стоит и в начале, и в конце тропы — в Остероде и в Тале.
+                    - paragraph [ref=f7e293]:
+                      - img "Указатель START / ZIEL Harzer-Hexen-Stieg с ведьмой на метле" [ref=f7e294]
+                    - paragraph [ref=f7e295]:
+                      - text: Скачать офлайн-карту можно на
+                      - link "harzinfo.de" [ref=f7e296] [cursor=pointer]:
+                        - /url: https://touren.harzinfo.de/de/tour/fernwanderweg/harzer-hexen-stieg-gesamtstrecke/1516797/
+                      - text: .
+                    - paragraph [ref=f7e298]:
+                      - img "Схема маршрута Harzer Hexenstieg от Остероде до Тале" [ref=f7e299]
+                    - heading "Официальные этапы маршрута" [level=3] [ref=f7e300]
+                    - paragraph [ref=f7e301]:
+                      - text: Маршрут делится на
+                      - strong [ref=f7e302]: пять основных отрезков
+                      - text: ", которые рекомендованы для классического прохождения:"
+                    - list [ref=f7e303]:
+                      - listitem [ref=f7e304]:
+                        - strong [ref=f7e305]: Остероде – Бунтенбок (около 14 км)
+                        - text: — лесные подъёмы, первые участки старых шахтёрских дорог.
+                      - listitem [ref=f7e306]:
+                        - strong [ref=f7e307]: Бунтенбок – Торфхаус (около 27 км)
+                        - text: — болота, озёра, канал, начало настоящих гор.
+                      - listitem [ref=f7e308]:
+                        - strong [ref=f7e309]: Торфхаус – Рюбеланд через Броккен (около 35 км)
+                        - text: — главная вершина маршрута, виды и туман.
+                      - listitem [ref=f7e310]:
+                        - strong [ref=f7e311]: Рюбеланд – Трезебург (около 23 км)
+                        - text: — скалы, ущелья и мшистые леса вдоль реки.
+                      - listitem [ref=f7e312]:
+                        - strong [ref=f7e313]: Трезебург – Тале (около 10 км)
+                        - text: "— короткий живописный финал: тропа спускается по долине Боде к городу Тале."
+                    - paragraph [ref=f7e314]: Маршрут постепенно поднимается к центральному хребту, проходит через вершину Броккен и затем спускается в долину реки Боде.
+                    - paragraph [ref=f7e315]: "Разбивка условная: почти в каждой точке маршрута есть жильё и транспорт, поэтому этапы легко перекроить под себя. Я, например, шла шесть дней и делила дорогу по-своему — так получались более длинные переходы, но каждый вечер был город или деревня с гостиницей."
+                    - paragraph [ref=f7e316]:
+                      - text: Официальный GPX-трек и детальные карты можно найти на сайте
+                      - link "harz-hexenstieg.de" [ref=f7e317] [cursor=pointer]:
+                        - /url: https://www.harz-hexenstieg.de/
+                    - heading "Как прошла маршрут я" [level=3] [ref=f7e318]
+                    - paragraph [ref=f7e319]:
+                      - text: Я шла
+                      - strong [ref=f7e320]: шесть дней в начале октября
+                      - text: ", с запада на восток: Остероде — Альтенау — Ширке — Броккен — Рюбеланд — Трезебург — Тале."
+                    - paragraph [ref=f7e321]:
+                      - text: Всего вышло около
+                      - strong [ref=f7e322]: 114 км
+                      - text: (с обходами и поисками троп), а общий набор высоты —
+                      - strong [ref=f7e323]: около 2 500 м
+                      - text: .
+                    - paragraph [ref=f7e324]: Первые четыре дня были туман и дождь, солнце появилось только на спуске с Броккена — и сразу вместе с осенними красками долины Боде.
+                    - paragraph [ref=f7e325]:
+                      - text: Старт —
+                      - strong [ref=f7e326]: Osterode am Harz
+                      - text: ", тихий городок с фахверковой ратушей и брусчаткой, где вечером на площади нет никого."
+                    - paragraph [ref=f7e328]:
+                      - img "Фахверковая ратуша и рыночная площадь Остероде-ам-Харц" [ref=f7e329]
+                    - heading "День 1. Остероде — Альтенау (25 км)" [level=3] [ref=f7e330]
+                    - paragraph [ref=f7e331]:
+                      - text: Маршрут начинается в историческом городе
+                      - strong [ref=f7e332]: Osterode
+                      - text: ", постепенно уходя в густые хвойные леса Верхнего Гарца. Путь проходит по старым горным дорогам, которые когда-то использовались шахтёрами. Ландшафт здесь мягкий: лесные подъёмы, небольшие плотины и каналы."
+                    - paragraph [ref=f7e333]:
+                      - text: Почти сразу за городом тропа выходит к водохранилищу
+                      - strong [ref=f7e334]: Sösetalsperre
+                      - text: . Плотина построена в 1928–1931 годах и до сих пор снабжает водой города Нижней Саксонии. В октябре уровень воды низкий, берега обнажены, а над водой висит серая пелена.
+                    - generic [ref=f7e335]:
+                      - paragraph [ref=f7e336]:
+                        - img "Водохранилище Sösetalsperre в тумане в начале маршрута" [ref=f7e337]
+                      - paragraph [ref=f7e338]:
+                        - img "Земляная дамба горного пруда с тропой по гребню" [ref=f7e339]
+                    - paragraph [ref=f7e340]:
+                      - text: Гарц был одним из крупнейших центров добычи серебра и меди в Европе. В XVII–XIX веках здесь работала сложная система гидротехнических сооружений —
+                      - strong [ref=f7e341]: Upper Harz Water Management System
+                      - text: (Oberharzer Wasserregal).
+                    - paragraph [ref=f7e342]: Она включала сотни каналов и искусственных озёр, снабжавших шахты энергией водяных колёс. С 2010 года эта система входит в список Всемирного наследия ЮНЕСКО вместе с рудником Раммельсберг и историческим центром Гослара.
+                    - paragraph [ref=f7e343]: "Идти вдоль неё странно и здорово одновременно: рядом с тропой тянется ровная канава с тёмной водой, а под насыпями прячутся каменные тоннели, которым по триста лет."
+                    - paragraph [ref=f7e345]:
+                      - img "Каменный тоннель старинной водоотводной канавы Oberharzer Wasserregal" [ref=f7e346]
+                    - paragraph [ref=f7e347]: Типичные фахверковые дома Нижней Саксонии с деревянными балками и белыми фасадами.
+                    - paragraph [ref=f7e349]:
+                      - img "Фахверковый дом Нижней Саксонии с тёмными балками и белым фасадом" [ref=f7e350]
+                    - paragraph [ref=f7e351]:
+                      - text: По дороге то и дело попадаются
+                      - strong [ref=f7e352]: кёте
+                      - text: "(Köte) — конусовидные хижины углежогов. Это реконструкции: столетиями лес Гарца шёл на древесный уголь для плавильных печей, и такие шалаши стояли прямо у костров. Сейчас в них можно спрятаться от дождя."
+                    - paragraph [ref=f7e353]: А на перекрёстках стоят резные деревянные ведьмы — самодельные, разные, у каждой свой характер. В тумане они выглядят убедительно.
+                    - generic [ref=f7e354]:
+                      - paragraph [ref=f7e355]:
+                        - img "Кёте — конусовидная хижина углежогов в тумане у тропы" [ref=f7e356]
+                      - paragraph [ref=f7e357]:
+                        - img "Резная деревянная ведьма на столбе в тумане на тропе" [ref=f7e358]
+                    - paragraph [ref=f7e359]: "Мои ощущения от первого дня:"
+                    - paragraph [ref=f7e360]:
+                      - emphasis [ref=f7e361]: Туманы, болота, первые подъёмы и мокрые ботинки.
+                    - generic [ref=f7e362]:
+                      - paragraph [ref=f7e363]:
+                        - img "Гравийная дорога, уходящая в туман, Верхний Гарц" [ref=f7e364]
+                      - paragraph [ref=f7e365]:
+                        - img "Туман над лесной тропой в первый день маршрута" [ref=f7e366]
+                    - paragraph [ref=f7e367]:
+                      - emphasis [ref=f7e368]: Завтрак в булочной, где никто не говорит по-английски, и гостиница,
+                    - paragraph [ref=f7e369]:
+                      - emphasis [ref=f7e370]: "где меня ждал конверт с ключом и надписью: «Выберите номер, который вам больше нравится»."
+                    - generic [ref=f7e371]:
+                      - paragraph [ref=f7e372]:
+                        - img "Рукописная записка от хозяев гостиницы с номером комнаты" [ref=f7e373]
+                      - paragraph [ref=f7e374]:
+                        - img "Завтрак в немецкой булочной по дороге" [ref=f7e375]
+                    - paragraph [ref=f7e376]:
+                      - text: Финиш дня —
+                      - strong [ref=f7e377]: Altenau
+                      - text: ", крошечный горный городок с деревянными домами, выкрашенными в жёлтый и зелёный. Когда-то это был Bergstadt — «горный город» серебряных рудников, сейчас это точка отдыха на маршруте."
+                    - paragraph [ref=f7e379]:
+                      - img "Жёлтый деревянный дом в Альтенау под осенним каштаном" [ref=f7e380]
+                    - paragraph [ref=f7e381]:
+                      - iframe [ref=f7e382]
+                    - heading "День 2. Альтенау — Ширке (25 км)" [level=3] [ref=f7e383]
+                    - paragraph [ref=f7e384]: Это один из самых атмосферных дней маршрута.
+                    - paragraph [ref=f7e385]:
+                      - text: Тропа проходит через
+                      - strong [ref=f7e386]: болота, хвойные леса и водохранилища
+                      - text: . Часто встречаются деревянные настилы через торфяники.
+                    - paragraph [ref=f7e388]:
+                      - img "Болота и хвойный лес на участке Альтенау — Ширке" [ref=f7e389]
+                    - paragraph [ref=f7e390]:
+                      - text: Большая часть дня идёт вдоль
+                      - strong [ref=f7e391]: Dammgraben
+                      - text: "— главного канала системы Wasserregal. Он был прорыт в XVII–XVIII веках, чтобы перебрасывать воду с восточных склонов к рудникам, и до сих пор наполнен. Тропа буквально повторяет его изгибы: слева стена леса, справа — ровная полоса тёмной воды."
+                    - paragraph [ref=f7e392]:
+                      - text: Рядом находится озеро
+                      - strong [ref=f7e393]: Oderteich
+                      - text: — одно из старейших водохранилищ Германии.
+                    - paragraph [ref=f7e394]:
+                      - text: Оно было построено в
+                      - strong [ref=f7e395]: 1715–1722 годах
+                      - text: для снабжения шахт водой.
+                    - paragraph [ref=f7e396]: Болота Гарца образовались после ледникового периода. Торф здесь накапливался тысячи лет.
+                    - paragraph [ref=f7e397]: Осенью на обочинах — целые семьи мухоморов. Красный на буром мху, и сразу понятно, почему в этих лесах поселили ведьм.
+                    - paragraph [ref=f7e399]:
+                      - img "Мухоморы во мху на обочине тропы" [ref=f7e400]
+                    - list [ref=f7e401]:
+                      - listitem [ref=f7e402]: водохранилище Oderteich
+                      - listitem [ref=f7e403]: высокогорные болота
+                      - listitem [ref=f7e404]: панорамы центрального Гарца
+                    - paragraph [ref=f7e405]:
+                      - text: Посёлок
+                      - strong [ref=f7e406]: Torfhaus
+                      - text: — важная точка для туристов. Отсюда впервые открывается вид на Броккен (я же видела только туман и дождь)
+                    - paragraph [ref=f7e407]:
+                      - text: Здесь стоит смотровая башня
+                      - strong [ref=f7e408]: Harzturm
+                      - text: — спиральная конструкция высотой около 65 метров, с которой в ясную погоду видно вершину. В моём случае башня просто растворялась в облаке.
+                    - paragraph [ref=f7e410]:
+                      - img "Смотровая башня Harzturm в Торфхаусе, скрытая туманом" [ref=f7e411]
+                    - paragraph [ref=f7e412]:
+                      - text: Сразу за Торфхаусом начинается
+                      - strong [ref=f7e413]: Goetheweg
+                      - text: "— тропа, названная в честь Гёте: он поднялся на Броккен 10 декабря 1777 года, зимой, с местным лесником, и позже перенёс эти впечатления в «Фауста»."
+                    - paragraph [ref=f7e415]:
+                      - 'img "Указатель Goetheweg: Altenau — Torfhaus — Brocken" [ref=f7e416]'
+                    - paragraph [ref=f7e417]:
+                      - text: Самая красивая часть этого участка — деревянные настилы
+                      - strong [ref=f7e418]: Moorsteg
+                      - text: через верховое болото. Дорожка петляет между кочками пушицы и низкими соснами, под ногами хлюпает торф, а вокруг ни одного звука.
+                    - paragraph [ref=f7e420]:
+                      - img "Деревянный настил Moorsteg через верховое болото у Торфхауса" [ref=f7e421]
+                    - paragraph [ref=f7e422]:
+                      - text: Дальше тропа выходит на бывшую
+                      - strong [ref=f7e423]: внутригерманскую границу
+                      - text: . Сегодня это «Зелёный пояс» (Grünes Band) — полоса заповедной природы на месте бывшей полосы отчуждения. Прямо у тропы стоит чёрно-красно-жёлтый пограничный столб ГДР.
+                    - paragraph [ref=f7e425]:
+                      - img "Чёрно-красно-жёлтый пограничный столб ГДР у тропы" [ref=f7e426]
+                    - paragraph [ref=f7e427]:
+                      - text: А потом рядом появляется узкоколейка
+                      - strong [ref=f7e428]: Brockenbahn
+                      - text: ": сначала слышно, потом из тумана выходит поезд."
+                    - paragraph [ref=f7e430]:
+                      - img "Вагоны узкоколейки Brockenbahn в тумане" [ref=f7e431]
+                    - paragraph [ref=f7e432]:
+                      - text: Вечером —
+                      - strong [ref=f7e433]: Schierke
+                      - text: ", деревня у подножия Броккена. На въезде гостей встречают резные ведьмы в человеческий рост: здесь на этом зарабатывают всерьёз, вплоть до местного ликёра Schierker Feuerstein."
+                    - paragraph [ref=f7e435]:
+                      - img "Резные деревянные ведьмы на въезде в Ширке" [ref=f7e436]
+                    - paragraph [ref=f7e437]:
+                      - emphasis [ref=f7e438]: Путь вдоль канала, дождь и болота.
+                    - paragraph [ref=f7e439]:
+                      - emphasis [ref=f7e440]: Обед у Торфхауса, ночёвка в отеле с тайским рестораном внизу.
+                    - paragraph [ref=f7e441]:
+                      - iframe [ref=f7e442]
+                    - heading "День 3. Ширке — гора Броккен (12 км, +572 м)" [level=3] [ref=f7e443]
+                    - paragraph
+                    - generic [ref=f7e445]:
+                      - generic [ref=f7e446]: Instagram
+                      - link "Публикация в Instagram" [ref=f7e447] [cursor=pointer]:
+                        - /url: https://www.instagram.com/p/DPmOG1IDW06/
+                      - generic [ref=f7e448]: Открыть пост в Instagram
+                    - text: Это центральный и самый известный этап маршрута.
+                    - paragraph
+                    - paragraph [ref=f7e449]:
+                      - text: Тропа поднимается на вершину
+                      - strong [ref=f7e450]: Brocken
+                      - text: ", затем спускается к деревне"
+                      - strong [ref=f7e451]: Schierke
+                      - text: .
+                    - paragraph [ref=f7e452]: "Сама Ширке стоит того, чтобы пройти её пешком: тёмные деревянные виллы конца XIX века, каменная кирха на пригорке, осенние клёны."
+                    - paragraph [ref=f7e454]:
+                      - img "Каменная неоготическая кирха в Ширке" [ref=f7e455]
+                    - paragraph [ref=f7e456]: Броккен всегда считался мистическим местом.
+                    - paragraph [ref=f7e457]: В Средние века жители верили, что именно здесь собираются ведьмы.
+                    - paragraph [ref=f7e458]:
+                      - text: Это связано с природным феноменом
+                      - strong [ref=f7e459]: Brocken Spectre
+                      - text: — оптическим эффектом, когда тень человека проецируется на облака и окружена радужным ореолом.
+                    - paragraph [ref=f7e460]: "Легенду закрепил Гёте: сцена Вальпургиевой ночи в «Фаусте» происходит именно на Броккене. Сегодня по этой сцене здесь ставят спектакли — афиши висят прямо на вокзале узкоколейки."
+                    - paragraph [ref=f7e462]:
+                      - img "Афиша спектакля FAUST auf dem Brocken на вокзале узкоколейки" [ref=f7e463]
+                    - paragraph [ref=f7e464]:
+                      - text: Подъём идёт вдоль путей
+                      - strong [ref=f7e465]: Brockenbahn
+                      - text: ". Узкоколейка работает с 1899 года, паровозы ходят по расписанию круглый год, и примерно раз в час мимо проходит состав: сначала гудок, потом столб пара над мёртвым лесом."
+                    - paragraph [ref=f7e467]:
+                      - img "Паровоз Brockenbahn поднимается через мёртвый лес" [ref=f7e468]
+                    - paragraph [ref=f7e469]:
+                      - text: Во времена
+                      - strong [ref=f7e470]: Cold War
+                      - text: вершина находилась в закрытой зоне ГДР.
+                    - paragraph [ref=f7e471]: Здесь располагались советские и восточногерманские радиолокационные станции.
+                    - paragraph [ref=f7e472]: После объединения Германии в 1990 году Броккен снова стал доступен туристам.
+                    - paragraph [ref=f7e473]:
+                      - text: "Точнее, открыли его чуть раньше: 3 декабря 1989 года несколько тысяч человек прошли к вершине маршем, и закрытую зону пришлось распустить. В музее"
+                      - strong [ref=f7e474]: Brockenhaus
+                      - text: ", устроенном в бывшем куполе радиоразведки, до сих пор висит растяжка тех дней — «Brockengipfel wieder frei!»."
+                    - paragraph [ref=f7e476]:
+                      - img "Растяжка «Brockengipfel wieder frei!» в музее Brockenhaus" [ref=f7e477]
+                    - list [ref=f7e478]:
+                      - listitem [ref=f7e479]: метеостанцию на вершине
+                      - listitem [ref=f7e480]: обзорные площадки
+                      - listitem [ref=f7e481]:
+                        - text: историческую железную дорогу
+                        - strong [ref=f7e482]: Brocken Railway
+                    - paragraph [ref=f7e483]:
+                      - text: "Наверху всё выглядит одинаково в любую погоду: гранитные глыбы, низкая трава и башня, которая то появляется, то исчезает в облаке. Гранитный камень с надписью"
+                      - strong [ref=f7e484]: BROCKEN 1142 m
+                      - text: — единственное доказательство, что ты действительно дошёл.
+                    - generic [ref=f7e485]:
+                      - paragraph [ref=f7e486]:
+                        - img "Башня на вершине Броккена, растворяющаяся в облаке" [ref=f7e487]
+                      - paragraph [ref=f7e488]:
+                        - img "Гранитный камень с надписью BROCKEN 1142 m на вершине" [ref=f7e489]
+                    - paragraph [ref=f7e490]: И да, здесь есть кафе с названием «Hexenklause» — «Ведьмина каморка».
+                    - paragraph [ref=f7e492]:
+                      - img "Вывеска Turmcafé «Hexenklause» на Броккене" [ref=f7e493]
+                    - paragraph [ref=f7e494]:
+                      - emphasis [ref=f7e495]: Подъём вдоль железной дороги, туман, поезд, редкие туристы.
+                    - paragraph [ref=f7e496]:
+                      - emphasis [ref=f7e497]: Ночёвка прямо на вершине — 1142 метра, ветер и облака.
+                    - paragraph [ref=f7e498]:
+                      - iframe [ref=f7e499]
+                    - heading "День 4. Броккен — Рюбеланд (≈29 км)" [level=3] [ref=f7e500]
+                    - paragraph
+                    - generic [ref=f7e502]:
+                      - generic [ref=f7e503]: Instagram
+                      - link "Публикация в Instagram" [ref=f7e504] [cursor=pointer]:
+                        - /url: https://www.instagram.com/p/DPo8zdQjRu-/
+                      - generic [ref=f7e505]: Открыть пост в Instagram
+                    - text: После спуска с Броккена ландшафт резко меняется.
+                    - paragraph
+                    - paragraph [ref=f7e506]: Появляются известняковые скалы, ущелья и долины.
+                    - paragraph [ref=f7e507]:
+                      - text: Здесь можно увидеть
+                      - strong [ref=f7e508]: «мёртвый лес»
+                      - text: — участок погибших елей.
+                    - paragraph [ref=f7e509]: Деревья погибли из-за загрязнения воздуха и короеда в конце XX века.
+                    - paragraph [ref=f7e510]: Сегодня это важный символ восстановления экосистемы национального парка.
+                    - paragraph [ref=f7e511]: "Национальный парк принципиально не убирает сухостой: серые стволы стоят, падают, перегнивают, а между ними уже поднимается молодой подрост — рябина, берёза, ель. Выглядит апокалиптично, но это и есть план."
+                    - paragraph [ref=f7e512]: В это утро впервые за четыре дня вышло солнце — и мёртвый лес превратился в самое красивое место маршрута.
+                    - paragraph [ref=f7e514]:
+                      - img "Солнце сквозь стволы мёртвого леса на спуске с Броккена" [ref=f7e515]
+                    - paragraph [ref=f7e516]:
+                      - text: Спуск идёт по
+                      - strong [ref=f7e517]: Harzer Grenzweg
+                      - text: вдоль «Зелёного пояса», мимо гранитных клипп — округлых глыб, вылезающих прямо из склона. С них открывается первый нормальный вид за весь поход.
+                    - generic [ref=f7e518]:
+                      - paragraph [ref=f7e519]:
+                        - img "Гранитные глыбы и вид на долину со склона Броккена" [ref=f7e520]
+                      - paragraph [ref=f7e521]:
+                        - img "Осенние холмы Гарца под низкими облаками" [ref=f7e522]
+                    - paragraph [ref=f7e523]:
+                      - text: "Ниже начинаются руины:"
+                      - strong [ref=f7e524]: Königsburg
+                      - text: у Кёнигсхютте — остатки средневекового замка XII века, от которого сохранились фрагменты стен и башни в осеннем лесу.
+                    - paragraph [ref=f7e526]:
+                      - img "Руины замка Königsburg у Кёнигсхютте в осеннем лесу" [ref=f7e527]
+                    - paragraph [ref=f7e528]:
+                      - text: Посёлок
+                      - strong [ref=f7e529]: Rübeland
+                      - text: известен своими пещерами.
+                    - paragraph [ref=f7e530]: "Самые известные:"
+                    - list [ref=f7e531]:
+                      - listitem [ref=f7e532]:
+                        - strong [ref=f7e533]: Baumann's Cave
+                      - listitem [ref=f7e534]:
+                        - strong [ref=f7e535]: Hermann's Cave
+                    - paragraph [ref=f7e536]: Они были открыты для посетителей ещё в XVIII веке.
+                    - paragraph [ref=f7e537]: "Баумановская пещера — одна из старейших туристических пещер Германии: её показывают посетителям с XVII века. Германову нашли позже, в 1866 году, при строительстве дороги."
+                    - paragraph [ref=f7e538]: "Сам Рюбеланд зажат между известняковыми скалами и заводом: над деревней висят транспортёры карьера, а внизу — фахверк, красная деревянная кирха и река."
+                    - generic [ref=f7e539]:
+                      - paragraph [ref=f7e540]:
+                        - img "Улица Рюбеланда под известняковыми скалами в осенних красках" [ref=f7e541]
+                      - paragraph [ref=f7e542]:
+                        - img "Красная деревянная кирха Рюбеланда" [ref=f7e543]
+                    - paragraph [ref=f7e544]:
+                      - emphasis [ref=f7e545]: Спуск через «мёртвый лес», руины замков и долину.
+                    - paragraph [ref=f7e546]:
+                      - emphasis [ref=f7e547]: Солнце впервые за несколько дней,
+                    - paragraph [ref=f7e548]:
+                      - emphasis [ref=f7e549]: гостиница снаружи похожа на заброшку, внутри — уют.
+                    - paragraph [ref=f7e550]:
+                      - iframe [ref=f7e551]
+                    - heading "День 5. Рюбеланд — Трезебург (23 км)" [level=3] [ref=f7e552]
+                    - paragraph [ref=f7e553]:
+                      - text: Этот этап проходит через долину реки
+                      - strong [ref=f7e554]: Bode River
+                      - text: .
+                    - paragraph [ref=f7e555]: "Пейзаж становится более драматичным: скалы, ущелья и глубокие леса."
+                    - paragraph [ref=f7e556]: "Начинается день с подъёма на смотровую площадку над Рюбеландом: посёлок с красными крышами лежит внизу, а склоны вокруг в октябре горят рыжим и жёлтым."
+                    - paragraph [ref=f7e558]:
+                      - img "Вид сверху на Рюбеланд с красными крышами и осенним лесом" [ref=f7e559]
+                    - paragraph [ref=f7e560]:
+                      - text: Дальше тропа выводит к
+                      - strong [ref=f7e561]: плотине Wendefurth
+                      - text: — бетонной стене высотой около 40 метров, построенной в 1950-х как часть каскада на Боде. По гребню плотины можно пройти пешком, и это единственное открытое место за весь день.
+                    - paragraph [ref=f7e563]:
+                      - img "Бетонная плотина водохранилища Wendefurth на реке Боде" [ref=f7e564]
+                    - paragraph [ref=f7e565]: У воды работает пристань с маленьким рестораном. Копчёная форель здесь — местная классика, и после двадцати километров это лучшее, что может случиться.
+                    - paragraph [ref=f7e567]:
+                      - img "Копчёная форель на террасе у водохранилища" [ref=f7e568]
+                    - paragraph [ref=f7e569]: "Ведьмы по дороге не заканчиваются: то кованая фигура на метле в лесу, то целый двор с резными деревянными персонажами у частного дома."
+                    - generic [ref=f7e570]:
+                      - paragraph [ref=f7e571]:
+                        - img "Кованая фигура ведьмы на метле в лесу у тропы" [ref=f7e572]
+                      - paragraph [ref=f7e573]:
+                        - img "Двор с резными деревянными фигурами — «ведьмин домик» у тропы" [ref=f7e574]
+                    - paragraph [ref=f7e575]:
+                      - strong [ref=f7e576]: Долина Боде
+                      - text: вдохновляла немецких романтиков XIX века.
+                    - paragraph [ref=f7e577]: Художники и писатели считали её одной из самых красивых природных долин Германии.
+                    - paragraph [ref=f7e578]:
+                      - strong [ref=f7e579]: "Что посмотреть в долине Боде:"
+                    - list [ref=f7e580]:
+                      - listitem [ref=f7e581]: скалы вдоль реки
+                      - listitem [ref=f7e582]: мосты через ущелья
+                      - listitem [ref=f7e583]: панорамные точки над долиной
+                    - paragraph [ref=f7e585]:
+                      - img "Река Боде среди осеннего леса" [ref=f7e586]
+                    - paragraph [ref=f7e587]:
+                      - text: Финиш дня —
+                      - strong [ref=f7e588]: Treseburg
+                      - text: ", деревня из двух десятков домов на дне долины, куда ведёт одна-единственная дорога."
+                    - paragraph [ref=f7e590]:
+                      - img "Деревня Трезебург на дне долины Боде" [ref=f7e591]
+                    - paragraph [ref=f7e592]:
+                      - emphasis [ref=f7e593]: Лес, ущелья и мшистые скалы.
+                    - paragraph [ref=f7e594]:
+                      - emphasis [ref=f7e595]: Телефон падает в овраг, забытые палки, потерянная ветровка —
+                    - paragraph [ref=f7e596]:
+                      - emphasis [ref=f7e597]: день, когда ведьмы явно решили пройти со мной вместе.
+                    - heading "День 6. Трезебург — Тале (10 км)" [level=3] [ref=f7e598]
+                    - paragraph [ref=f7e599]: Финальный этап — короткий, но очень живописный.
+                    - paragraph [ref=f7e600]:
+                      - text: Тропа выходит к городу
+                      - strong [ref=f7e601]: Thale
+                      - text: ", расположенному в долине Боде."
+                    - paragraph [ref=f7e602]:
+                      - text: Эти десять километров — самый эффектный отрезок всего маршрута.
+                      - strong [ref=f7e603]: Bodetal
+                      - text: "считается самым глубоким скальным ущельем к северу от Альп: стены поднимаются на две-три сотни метров, река шумит внизу, а тропа местами превращается в металлические мостки, прибитые прямо к скале."
+                    - generic [ref=f7e604]:
+                      - paragraph [ref=f7e605]:
+                        - img "Металлические мостки тропы, закреплённые прямо на скале в ущелье" [ref=f7e606]
+                      - paragraph [ref=f7e607]:
+                        - img "Отвесные скалы ущелья Bodetal" [ref=f7e608]
+                    - paragraph [ref=f7e609]:
+                      - text: Примерно посередине пути стоит
+                      - strong [ref=f7e610]: Teufelsbrücke
+                      - text: — «Чёртов мост» с кованой аркой и чёртовой мордой над входом. Отсюда лучшие кадры ущелья.
+                    - generic [ref=f7e611]:
+                      - paragraph [ref=f7e612]:
+                        - img "Кованая арка «Teufelsbrücke» — Чёртов мост в долине Боде" [ref=f7e613]
+                      - paragraph [ref=f7e614]:
+                        - img "Сухое дерево на скале над долиной Боде" [ref=f7e615]
+                    - paragraph [ref=f7e616]:
+                      - strong [ref=f7e617]: Легенды.
+                      - text: Рядом находится плато
+                      - strong [ref=f7e618]: Hexentanzplatz
+                      - text: — «Площадка ведьминого танца».
+                    - paragraph [ref=f7e619]: По легенде, здесь ведьмы собирались перед полётом на Броккен.
+                    - paragraph [ref=f7e620]:
+                      - text: Напротив, на другом борту ущелья, — скала
+                      - strong [ref=f7e621]: Rosstrappe
+                      - text: "со «следом копыта»: по преданию, принцесса Брунгильда перепрыгнула ущелье на коне, спасаясь от великана. Обе точки связаны с Тале канатной дорогой."
+                    - paragraph [ref=f7e622]:
+                      - strong [ref=f7e623]: "Что посмотреть в Тале:"
+                    - list [ref=f7e624]:
+                      - listitem [ref=f7e625]:
+                        - text: скалу
+                        - strong [ref=f7e626]: Rosstrappe
+                      - listitem [ref=f7e627]: канатную дорогу
+                      - listitem [ref=f7e628]: смотровые площадки над долиной
+                    - paragraph [ref=f7e629]:
+                      - text: Сам Тале — обычный небольшой город с металлургическим прошлым, но с очень красивой неоготической кирхой
+                      - strong [ref=f7e630]: St. Petri
+                      - text: на холме.
+                    - paragraph [ref=f7e632]:
+                      - img "Неоготическая кирха St. Petri в Тале" [ref=f7e633]
+                    - paragraph [ref=f7e634]:
+                      - text: "И финал: в туринформации ставят последний штамп и выдают значки"
+                      - strong [ref=f7e635]: Harzer Wandernadel
+                      - text: — за Броккен, за долину Боде и за весь Hexenstieg. Их вешают на рюкзак, и это единственная награда, которая тут нужна.
+                    - paragraph [ref=f7e637]:
+                      - img "Значки Harzer Wandernadel, полученные на финише маршрута" [ref=f7e638]
+                    - paragraph [ref=f7e639]:
+                      - iframe [ref=f7e640]
+                    - heading "Навигация" [level=3] [ref=f7e641]
+                    - paragraph [ref=f7e642]: "Разметка на маршруте отличная: символ ведьмы встречается на каждом перекрёстке."
+                    - paragraph [ref=f7e643]:
+                      - text: Для надёжности я использовала GPX-трек (можно скачать
+                      - link "здесь" [ref=f7e644] [cursor=pointer]:
+                        - /url: https://www.harz-hexenstieg.de/
+                      - text: ).
+                    - paragraph [ref=f7e645]:
+                      - text: Вдоль дороги стоят
+                      - strong [ref=f7e646]: информационные таблички и печати
+                      - text: — можно купить
+                    - paragraph [ref=f7e647]:
+                      - text: «
+                      - strong [ref=f7e648]: паспорт ведьмы
+                      - text: » за 4 евро и собирать штампы на всех контрольных точках.
+                    - paragraph [ref=f7e649]:
+                      - text: Формально это
+                      - strong [ref=f7e650]: Harzer Wandernadel
+                      - text: — региональная система из 222 контрольных точек с ящиками-штемпелями. Ящик всегда стоит у тропы, внутри штемпель и подушечка; проштампованный буклет потом меняют на значок.
+                    - paragraph [ref=f7e652]:
+                      - img "Wanderpass Harzer Wandernadel и буклет Harzer-Hexen-Stieg со штампами" [ref=f7e653]
+                    - heading "Проживание и еда" [level=3] [ref=f7e654]
+                    - list [ref=f7e655]:
+                      - listitem [ref=f7e656]:
+                        - strong [ref=f7e657]: "Средняя цена гостиниц:"
+                        - text: 60–90 € за ночь, завтрак — отдельно (10–20 €).
+                      - listitem [ref=f7e658]:
+                        - strong [ref=f7e659]: "Совет:"
+                        - text: бронировать заранее — особенно на выходные.
+                      - listitem [ref=f7e660]: В некоторых местах по вечерам никого нет — оставляют конверт с ключом и запиской, как в старом фильме.
+                      - listitem [ref=f7e661]: Почти никто не говорит по-английски, поэтому фраза «Ich habe ein Zimmer reserviert» может выручить не раз.
+                      - listitem [ref=f7e662]:
+                        - text: Ночёвка на самой вершине, в
+                        - strong [ref=f7e663]: Brockenhotel
+                        - text: (1142 м), бронируется отдельно и заранее — мест там немного.
+                      - listitem [ref=f7e664]: "Горячая еда на маршруте есть далеко не везде: между Альтенау и Ширке единственная надёжная точка — гаштет у Торфхауса."
+                    - heading "Что взять с собой" [level=3] [ref=f7e665]
+                    - list [ref=f7e666]:
+                      - listitem [ref=f7e667]: Треккинговые ботинки с мембраной (мокро почти всегда).
+                      - listitem [ref=f7e668]: Лёгкая куртка от дождя, запасные носки.
+                      - listitem [ref=f7e669]: Бумажная карта или офлайн-приложение (Komoot, Maps.me).
+                      - listitem [ref=f7e670]: Термокружка, перекусы, немного наличных.
+                      - listitem [ref=f7e671]: "И — терпение: туман, дождь и солнце меняются каждые полчаса."
+                    - heading "Что ждёт на маршруте" [level=3] [ref=f7e672]
+                    - paragraph [ref=f7e673]:
+                      - text: Гарц — это не высокие горы, а
+                      - strong [ref=f7e674]: атмосфера
+                      - text: .
+                    - paragraph [ref=f7e675]: Туман, сосны, болота и чувство, что ты идёшь внутри старой легенды.
+                    - paragraph [ref=f7e676]: Здесь легко поверить, что ведьмы действительно собирались на Броккен.
+                    - paragraph [ref=f7e677]: Иногда солнце появляется на минуту — и это кажется чудом.
+                    - paragraph [ref=f7e678]: А когда видишь радужное сияние вокруг своей тени,
+                    - paragraph [ref=f7e679]:
+                      - text: понимаешь, почему это явление зовут
+                      - strong [ref=f7e680]: Призраком Броккена
+                      - text: .
+                    - heading "Вывод" [level=3] [ref=f7e681]
+                    - paragraph [ref=f7e682]:
+                      - strong [ref=f7e683]: Harzer Hexenstieg
+                      - text: — идеальный маршрут, если хочется уйти от суеты,
+                    - paragraph [ref=f7e684]: побыть в одиночестве и пройти легенду пешком.
+                    - paragraph [ref=f7e685]: Он несложный, но переменчивый — как сама погода в Гарце.
+                    - paragraph [ref=f7e686]: "Каждый день открывает новую историю:"
+                    - paragraph [ref=f7e687]: то болото, то плотина, то гора, где ведьмы встречают весну.
+                    - paragraph [ref=f7e688]:
+                      - strong [ref=f7e689]: "Полезные ссылки:"
+                    - list [ref=f7e690]:
+                      - listitem [ref=f7e691]:
+                        - text: "Официальный сайт:"
+                        - link "harz-hexenstieg.de" [ref=f7e692] [cursor=pointer]:
+                          - /url: https://www.harz-hexenstieg.de/
+                      - listitem [ref=f7e693]:
+                        - text: "Этапы и GPX:"
+                        - link "Harzer Tourismusverband" [ref=f7e694] [cursor=pointer]:
+                          - /url: https://en.harzinfo.de/things-to-see-do/hiking/harzer-hexen-stieg/harzer-hexen-stieg-sections
+                      - listitem [ref=f7e695]:
+                        - text: "Штампы и значки:"
+                        - link "harzer-wandernadel.de" [ref=f7e696] [cursor=pointer]:
+                          - /url: https://www.harzer-wandernadel.de/
+                    - heading "Что рядом" [level=2] [ref=f7e697]
+                    - list [ref=f7e698]:
+                      - listitem [ref=f7e699]:
+                        - 'link "Зимний Дрезден и Бастай: архитектура, музеи и виды" [ref=f7e700] [cursor=pointer]':
+                          - /url: https://metravel.by/travels/zimnii-drezden-i-bashtai-arkhitektura-muzei-i-vidy-bez-turistov
+                      - listitem [ref=f7e701]:
+                        - 'link "Аггштейн: средневековый замок пиратов на берегу Дуная" [ref=f7e702] [cursor=pointer]':
+                          - /url: https://metravel.by/travels/aggshtein-srednevekovyi-zamok-piratov-na-beregu-dunaia
+                      - listitem [ref=f7e703]:
+                        - 'link "Tour du Mont Blanc: вокруг Монблана — 170 км за 10 дней" [ref=f7e704] [cursor=pointer]':
+                          - /url: https://metravel.by/travels/tour-du-mont-blanc-vokrug-monblana-za-10-dney
+                        - text: — наш самый большой многодневный трек, если Гарц захочется «увеличить» до Альп.
+                    - generic [ref=f7e705]:
+                      - 'heading "Частые вопросы: Harzer Hexenstieg от Osterode до Thale" [level=2] [ref=f7e706]'
+                      - group [ref=f7e707]:
+                        - strong [ref=f7e709] [cursor=pointer]: За сколько дней реально пройти Harzer Hexenstieg от Osterode am Harz до Thale?
+                      - group [ref=f7e710]:
+                        - strong [ref=f7e712] [cursor=pointer]: Почему маршрут называется «Тропа ведьм» и при чём тут Брокен?
+                      - group [ref=f7e713]:
+                        - strong [ref=f7e715] [cursor=pointer]: Как добраться до старта и финиша маршрута на общественном транспорте?
+                      - group [ref=f7e716]:
+                        - strong [ref=f7e718] [cursor=pointer]: Что обязательно посмотреть рядом с маршрутом помимо Brocken?
+                      - group [ref=f7e719]:
+                        - strong [ref=f7e721] [cursor=pointer]: Сколько стоит пройти Harzer Hexenstieg и нужна ли подготовка?
+                    - heading "Видео по теме" [level=2] [ref=f7e722]
+                    - list [ref=f7e723]:
+                      - listitem [ref=f7e724]:
+                        - 'link "День 1: Остероде - Альтенау" [ref=f7e725] [cursor=pointer]':
+                          - /url: https://www.youtube.com/watch?v=lDj3numep0Y
+                      - listitem [ref=f7e726]:
+                        - 'link "День 2: Altenau - Schierke" [ref=f7e727] [cursor=pointer]':
+                          - /url: https://www.youtube.com/watch?v=eNWTRBwcYJE
+                      - listitem [ref=f7e728]:
+                        - 'link "День 3: Ширке - Брокен" [ref=f7e729] [cursor=pointer]':
+                          - /url: https://www.youtube.com/watch?v=bHogDu13qok
+                      - listitem [ref=f7e730]:
+                        - 'link "День 4: Брокен - Rübeland" [ref=f7e731] [cursor=pointer]':
+                          - /url: https://www.youtube.com/watch?v=TfdzUA5znms
+                      - listitem [ref=f7e732]:
+                        - 'link "День 5: Рюбеланд - Трезебург - Тале" [ref=f7e733] [cursor=pointer]':
+                          - /url: https://www.youtube.com/watch?v=cC6y-fl4Bk0
+                      - listitem [ref=f7e734]:
+                        - 'link "Обзор маршрута: как пройти и как добраться" [ref=f7e735] [cursor=pointer]':
+                          - /url: https://www.youtube.com/watch?v=_WP_c9Srvkw
+            - generic "Видео маршрута" [ref=f7e736]:
+              - heading "Видео" [level=2] [ref=f7e737]
+              - generic [ref=f7e738]: Одно нажатие — и ролик начнёт проигрываться
+            - generic [ref=f7e741]:
+              - generic "Рекомендации" [ref=f7e742]:
+                - generic [ref=f7e743]:
+                  - button "Рекомендации, развёрнуто" [expanded] [ref=f7e744] [cursor=pointer]:
+                    - generic [ref=f7e745]: Рекомендации
+                    - generic [ref=f7e750]: Опыт автора
+                  - list [ref=f7e760]:
+                    - listitem [ref=f7e761]: "Закладывайте 5–6 дней: запас пригодится из-за погоды на Броккене."
+                    - listitem [ref=f7e762]: Лучшее окно — май–октябрь; в марте–апреле на вершине ещё лежит снег.
+                    - listitem [ref=f7e763]: Скачайте GPX-трек и офлайн-карту заранее, возьмите немного наличных для горных гаштетов.
+                    - listitem [ref=f7e764]: Ботинки с мембраной, запасные носки и дождевик — обязательный минимум.
+                    - listitem [ref=f7e765]: Если погода портится — поднимитесь на Броккен паровозом, а пешую часть перенесите.
+                    - listitem [ref=f7e766]: На Вальпургиеву ночь (30 апреля – 1 мая) в Тале и Ширке проходят фестивали — сверяйте расписание на harzinfo.de.
+              - generic "Плюсы" [ref=f7e767]:
+                - generic [ref=f7e768]:
+                  - button "Плюсы, развёрнуто" [expanded] [ref=f7e769] [cursor=pointer]:
+                    - generic [ref=f7e770]: Плюсы
+                    - generic [ref=f7e775]: Что понравилось
+                  - list [ref=f7e785]:
+                    - listitem [ref=f7e786]: "Атмосфера: туманы, мшистые болота и легенды о ведьмах — маршрут с характером."
+                    - listitem [ref=f7e787]: "Отличная разметка: символ ведьмы на каждом перекрёстке, заблудиться сложно."
+                    - listitem [ref=f7e788]: Несложный профиль — подходит как первый многодневный трек.
+                    - listitem [ref=f7e789]: "Инфраструктура по пути: городки, отели, булочные и рестораны на каждом этапе."
+                    - listitem [ref=f7e790]: Узкоколейка Harzer Schmalspurbahnen с паровозом — запасной план на плохую погоду.
+                    - listitem [ref=f7e791]: «Паспорт ведьмы» со штампами на контрольных точках — милая механика на память.
+              - generic "Минусы" [ref=f7e792]:
+                - generic [ref=f7e793]:
+                  - button "Минусы, развёрнуто" [expanded] [ref=f7e794] [cursor=pointer]:
+                    - generic [ref=f7e795]: Минусы
+                    - generic [ref=f7e800]: Что смутило
+                  - list [ref=f7e810]:
+                    - listitem [ref=f7e811]: "Погода переменчива: туман, дождь и ветер, Броккен часто закрыт облаком даже летом."
+                    - listitem [ref=f7e812]: Мокро почти всегда — без мембранной обуви будет тяжело.
+                    - listitem [ref=f7e813]: Почти никто не говорит по-английски.
+                    - listitem [ref=f7e814]: Жильё 60–90 € за ночь, завтрак отдельно; на выходные всё бронируется заранее.
+    - generic [ref=f7e820]:
+      - generic [ref=f7e821]:
+        - link "Facebook" [ref=f7e822] [cursor=pointer]:
+          - generic [ref=f7e823]: 
+        - link "TikTok" [ref=f7e826] [cursor=pointer]:
+          - generic [ref=f7e827]: 
+        - link "Instagram" [ref=f7e830] [cursor=pointer]:
+          - generic [ref=f7e831]: 
+        - link "YouTube" [ref=f7e834] [cursor=pointer]:
+          - generic [ref=f7e835]: 
+      - generic [ref=f7e838]:
+        - link "Квесты" [ref=f7e839] [cursor=pointer]
+        - link "Приложение" [ref=f7e842] [cursor=pointer]
+        - link "О сайте" [ref=f7e845] [cursor=pointer]
+        - link "Политика" [ref=f7e848] [cursor=pointer]
+        - link "Cookies" [ref=f7e851] [cursor=pointer]
+        - link "Соглашение" [ref=f7e854] [cursor=pointer]
+        - link "Отказ от ответственности" [ref=f7e857] [cursor=pointer]
+        - link "Правила сообщества" [ref=f7e860] [cursor=pointer]
+        - link "Правила поездок" [ref=f7e863] [cursor=pointer]
+      - generic [ref=f7e866]: © MeTravel 2020–2026

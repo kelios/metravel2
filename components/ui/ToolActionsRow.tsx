@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import Button, { type ButtonProps } from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -89,6 +89,8 @@ const styles = StyleSheet.create({
   compactButton: {
     flexGrow: 0,
     flexShrink: 0,
+    minWidth: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minWidth,
+    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
   },
 });
 
