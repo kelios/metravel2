@@ -263,6 +263,13 @@ URL приходит по `http://` и БЕЗ сегмента `/<id>/descriptio
         width="1600" height="1200" alt="осмысленное описание" /></p>
 ```
 
+**В тело — ТОЛЬКО `travel-description-image/…`.** Ссылки вида
+`address-image/<pointId>/conversions/<hash>.webp` (фото точки маршрута) в описании
+умирают дважды: при пересоздании точек (`pointId` исчезает) и при перезаливке фото
+точки (меняется `<hash>`). Скан 26.07 нашёл 7 таких мёртвых картинок в 4 статьях —
+[[project_address_image_rot]]. Если встретил `address-image` в теле, перезалей это
+фото в `collection=description` и замени ссылку.
+
 Хранимые `<div class="img-jrow">` из старых сохранений можно смело выбрасывать:
 рендер всё равно снимает их (`removeImageLayoutClasses`) и заново собирает ряды
 (`applySmartImageLayout` в `components/travel/stableContent/htmlTransform.ts`).
