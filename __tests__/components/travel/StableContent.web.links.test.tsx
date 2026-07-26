@@ -99,6 +99,30 @@ describe('StableContent (web) link styles', () => {
     }
   });
 
+  it('preserves accessible FAQ disclosure markup and native toggle behavior', async () => {
+    const { container } = render(
+      <StableContent
+        html="<details><summary>Когда ехать?</summary><p>Весной.</p></details>"
+        contentWidth={700}
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('.travel-rich-text details')).toBeTruthy();
+    });
+
+    const details = container.querySelector('.travel-rich-text details') as HTMLDetailsElement;
+    const summary = details.querySelector('summary') as HTMLElement;
+    expect(details.open).toBe(false);
+    expect(summary.textContent).toContain('Когда ехать?');
+
+    fireEvent.click(summary);
+    expect(details.open).toBe(true);
+
+    fireEvent.click(summary);
+    expect(details.open).toBe(false);
+  });
+
   it('restores direct travel hash navigation with returnTo query on first render', async () => {
     const scrollIntoView = jest.fn();
     const originalScrollIntoView = Element.prototype.scrollIntoView;

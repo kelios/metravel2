@@ -67,6 +67,17 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('id="day-3"')
   })
 
+  it('preserves accessible details/summary disclosure markup', () => {
+    const sanitized = sanitizeRichText(
+      '<details open onclick="alert(1)"><summary>Вопрос?</summary><p>Ответ.</p></details>',
+    )
+
+    expect(sanitized).toContain('<details open>')
+    expect(sanitized).toContain('<summary>Вопрос?</summary>')
+    expect(sanitized).toContain('<p>Ответ.</p>')
+    expect(sanitized).not.toContain('onclick')
+  })
+
   it('assigns numbered heading ids from existing hash links in the table of contents', () => {
     const html = [
       '<ul>',

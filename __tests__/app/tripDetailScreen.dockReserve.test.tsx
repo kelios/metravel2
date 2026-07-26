@@ -5,6 +5,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { LAYOUT } from '@/constants/layout';
 
 const SAFE_AREA_BOTTOM = 24;
+let mockRootBottomOverlap = 0;
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: '42' }),
@@ -16,6 +17,13 @@ jest.mock('react-native-safe-area-context', () => ({
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({ background: 'white' }),
+}));
+
+jest.mock('@/hooks/useSoftKeyboardInset', () => ({
+  useSoftKeyboardInset: () => ({
+    contentViewportInset: 0,
+    rootBottomOverlap: mockRootBottomOverlap,
+  }),
 }));
 
 jest.mock('@/components/trips/PublicTripDetail', () => {
@@ -32,12 +40,24 @@ describe('TripDetailScreen (native) bottom dock reserve', () => {
     const TripDetailScreen = require('@/app/(tabs)/trips/[id].native').default;
     const { getByTestId } = render(<TripDetailScreen />);
 
-    const scroll = getByTestId('trip-detail-scroll');
-    const contentStyle = StyleSheet.flatten(scroll.props.contentContainerStyle);
+    const reserve = getByTestId('trip-detail-bottom-reserve');
+    const reserveStyle = StyleSheet.flatten(reserve.props.style);
 
-    expect(contentStyle.paddingBottom).toBe(
+    expect(reserveStyle.height).toBe(
       LAYOUT.tabBarHeight + SAFE_AREA_BOTTOM + DESIGN_TOKENS.spacing.xl,
     );
-    expect(contentStyle.paddingBottom).toBeGreaterThan(LAYOUT.tabBarHeight + SAFE_AREA_BOTTOM);
+    expect(reserveStyle.height).toBeGreaterThan(LAYOUT.tabBarHeight + SAFE_AREA_BOTTOM);
+  });
+
+  it('uses the real IME overlap as the reachable footer while the keyboard is open', () => {
+    mockRootBottomOverlap = 320;
+
+    const TripDetailScreen = require('@/app/(tabs)/trips/[id].native').default;
+    const { getByTestId } = render(<TripDetailScreen />);
+
+    const reserveStyle = StyleSheet.flatten(getByTestId('trip-detail-bottom-reserve').props.style);
+    expect(reserveStyle.height).toBe(320 + DESIGN_TOKENS.spacing.xl);
+
+    mockRootBottomOverlap = 0;
   });
 });

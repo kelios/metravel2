@@ -107,6 +107,54 @@ export const typographyStyles = (
   line-height: 1.5;
 }
 
+/* ===== FAQ / DISCLOSURE ===== */
+.${cls} details {
+  margin: 0.8em 0;
+  border: 1px solid ${colors.border};
+  border-radius: ${DESIGN_TOKENS.radii.md}px;
+  background: ${colors.surface};
+  overflow: hidden;
+  clear: both;
+}
+.${cls} summary {
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: ${DESIGN_TOKENS.spacing.sm}px ${DESIGN_TOKENS.spacing.md}px;
+  color: ${colors.text};
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${DESIGN_TOKENS.spacing.sm}px;
+  list-style: none;
+}
+.${cls} summary::-webkit-details-marker {
+  display: none;
+}
+.${cls} summary::after {
+  content: "⌄";
+  flex: 0 0 auto;
+  color: ${colors.primary};
+  font-size: 20px;
+  transition: transform 0.18s ease;
+}
+.${cls} details[open] summary::after {
+  transform: rotate(180deg);
+}
+.${cls} summary:focus-visible {
+  outline: 2px solid ${colors.focusStrong};
+  outline-offset: -2px;
+}
+.${cls} details > :not(summary) {
+  margin-left: ${DESIGN_TOKENS.spacing.md}px;
+  margin-right: ${DESIGN_TOKENS.spacing.md}px;
+}
+.${cls} details > summary + * {
+  border-top: 1px solid ${colors.borderLight};
+  padding-top: ${DESIGN_TOKENS.spacing.sm}px;
+}
+
 /* ===== IMAGE STRIPS ===== */
 .${cls} .image-strip {
   display: grid;

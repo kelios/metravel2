@@ -1,6 +1,11 @@
-import React, { Suspense, useCallback, useMemo } from 'react'
-import { Platform, Pressable, Text } from 'react-native'
-import type { TDefaultRendererProps } from 'react-native-render-html'
+import React, { Suspense, useCallback, useMemo, useState } from 'react'
+import { Platform, Pressable, Text, View } from 'react-native'
+import {
+  HTMLContentModel,
+  HTMLElementModel,
+  TChildrenRenderer,
+  type TDefaultRendererProps,
+} from 'react-native-render-html'
 
 import CustomImageRenderer from '@/components/ui/CustomImageRenderer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -19,6 +24,80 @@ type IframeModelType = typeof import('@native-html/iframe-plugin')['iframeModel'
 const LazyInstagram = React.lazy<React.ComponentType<LazyInstagramProps>>(() =>
   Promise.resolve(import('@/components/iframe/InstagramEmbed')).then((m: any) => ({ default: m.default }))
 )
+
+const detailsModel = HTMLElementModel.fromCustomModel({
+  tagName: 'details',
+  contentModel: HTMLContentModel.block,
+})
+
+const summaryModel = HTMLElementModel.fromCustomModel({
+  tagName: 'summary',
+  contentModel: HTMLContentModel.mixed,
+})
+
+const NativeDetailsRenderer = (props: TDefaultRendererProps<any>) => {
+  const colors = useThemedColors()
+  const initiallyExpanded = Object.prototype.hasOwnProperty.call(props.tnode?.attributes ?? {}, 'open')
+  const [expanded, setExpanded] = useState(initiallyExpanded)
+  const children = props.tnode?.children ?? []
+  const summaryNode = children.find((child: any) => child?.tagName === 'summary')
+  const answerNodes = children.filter((child: any) => child !== summaryNode)
+
+  return (
+    <View
+      style={{
+        marginVertical: DESIGN_TOKENS.spacing.xs,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        overflow: 'hidden',
+        backgroundColor: colors.surface,
+      }}
+      testID={`rich-text-details-${props.tnode?.nodeIndex ?? 'item'}`}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        onPress={() => setExpanded((value) => !value)}
+        style={{
+          minHeight: 48,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          paddingVertical: DESIGN_TOKENS.spacing.sm,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: DESIGN_TOKENS.spacing.sm,
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          {summaryNode ? <TChildrenRenderer tchildren={summaryNode.children} /> : null}
+        </View>
+        <Text
+          aria-hidden
+          style={{
+            color: colors.primary,
+            fontSize: DESIGN_TOKENS.typography.sizes.lg,
+            transform: [{ rotate: expanded ? '180deg' : '0deg' }],
+          }}
+        >
+          ⌄
+        </Text>
+      </Pressable>
+      {expanded ? (
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: colors.borderLight,
+            paddingHorizontal: DESIGN_TOKENS.spacing.md,
+            paddingTop: DESIGN_TOKENS.spacing.sm,
+          }}
+        >
+          <TChildrenRenderer tchildren={answerNodes} />
+        </View>
+      ) : null}
+    </View>
+  )
+}
 
 type UseStableContentRenderConfigInput = {
   colors: ReturnType<typeof useThemedColors>
@@ -87,6 +166,7 @@ export function useStableContentRenderConfig({
         const DefaultRenderer = (props as any).TDefaultRenderer
         return DefaultRenderer ? <DefaultRenderer {...props} /> : null
       },
+      details: NativeDetailsRenderer,
     }
   }, [contentWidth, setLightboxImage, styles.ytStub, styles.ytStubText])
 
@@ -210,7 +290,14 @@ export function useStableContentRenderConfig({
     []
   )
 
-  const customHTMLElementModels = useMemo(() => (iframeModel ? { iframe: iframeModel } : undefined), [iframeModel])
+  const customHTMLElementModels = useMemo(
+    () => ({
+      details: detailsModel,
+      summary: summaryModel,
+      ...(iframeModel ? { iframe: iframeModel } : {}),
+    }),
+    [iframeModel]
+  )
 
   // Внутренние ссылки (metravel.by / относительные) открываем внутри приложения,
   // внешние — во внешнем браузере (см. handleRichTextLinkPress).

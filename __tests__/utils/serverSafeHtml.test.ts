@@ -95,6 +95,27 @@ describe('resolveServerRichTextHtml', () => {
     })
   })
 
+  it('falls back to legacy html when canonical markup flattened an FAQ disclosure', () => {
+    const legacy =
+      '<details><summary>Когда ехать?</summary><p>Весной.</p></details>'
+    const resolved = resolveServerRichTextHtml(
+      { safe_html: '<p><strong>Когда ехать?</strong></p><p>Весной.</p>', plain_text: 'Когда ехать? Весной.' },
+      legacy,
+    )
+
+    expect(resolved).toEqual({ html: legacy, serverSanitized: false })
+  })
+
+  it('keeps canonical html when both sources preserve disclosure markup', () => {
+    const canonical =
+      '<details><summary>Когда ехать?</summary><p>Весной.</p></details>'
+
+    expect(resolveServerRichTextHtml({ safe_html: canonical, plain_text: 'Когда ехать? Весной.' }, canonical)).toEqual({
+      html: canonical,
+      serverSanitized: true,
+    })
+  })
+
   it('normalizes nullish legacy html to empty string', () => {
     expect(resolveServerRichTextHtml(undefined, null)).toEqual({ html: '', serverSanitized: false })
     expect(resolveServerRichTextHtml(undefined, undefined)).toEqual({ html: '', serverSanitized: false })

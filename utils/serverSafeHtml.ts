@@ -58,6 +58,18 @@ export const resolveServerRichTextHtml = (
   fallbackHtml: string | null | undefined,
 ): ResolvedRichTextHtml => {
   const safeHtml = typeof block?.safe_html === 'string' ? block.safe_html : ''
+  const legacyHtml = typeof fallbackHtml === 'string' ? fallbackHtml : ''
+
+  // Older backend sanitizer versions flatten native disclosure markup:
+  // the canonical safe_html keeps the FAQ text but drops <details>/<summary>.
+  // Prefer the legacy source only for this observable semantic loss; the caller
+  // will run it through the full client sanitizer before rendering.
+  const legacyHasDisclosure = /<details\b/i.test(legacyHtml) && /<summary\b/i.test(legacyHtml)
+  const canonicalHasDisclosure = /<details\b/i.test(safeHtml) && /<summary\b/i.test(safeHtml)
+  if (legacyHasDisclosure && !canonicalHasDisclosure) {
+    return { html: legacyHtml, serverSanitized: false }
+  }
+
   if (safeHtml.trim()) {
     return { html: safeHtml, serverSanitized: true }
   }

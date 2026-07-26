@@ -37,6 +37,8 @@ const allowedTags = Array.from(
     'iframe',
     'video',
     'audio',
+    'details',
+    'summary',
   ]),
 )
 
@@ -79,6 +81,7 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
   iframe: ['src', 'title', 'allow', 'allowfullscreen', 'frameborder', 'width', 'height', 'loading'],
   video: ['src', 'poster', 'controls', 'loop', 'autoplay', 'muted', 'playsinline', 'preload'],
   source: ['src', 'srcset', 'type', 'media'],
+  details: ['open'],
 }
 
 function isSafeDataImage(value: string) {

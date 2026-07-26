@@ -1,5 +1,6 @@
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 
 // Make React.lazy render synchronously: instead of suspending on the dynamic
 // import, eagerly require the (mocked) module and render its default export.
@@ -20,6 +21,7 @@ import ContentUpsertSection from '@/components/travel/ContentUpsertSection'
 import type { TravelFormData } from '@/types/types'
 
 let mockArticleEditorInstanceSequence = 0
+let mockContentViewportInset = 0
 
 // Stub the lazy ArticleEditor so the derived UI around it renders synchronously.
 jest.mock('@/components/article/ArticleEditor', () => {
@@ -89,6 +91,13 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: jest.fn(() => ({ isHydrated: true, isMobile: false })),
 }))
 
+jest.mock('@/hooks/useSoftKeyboardInset', () => ({
+  useSoftKeyboardInset: () => ({
+    contentViewportInset: mockContentViewportInset,
+    rootBottomOverlap: mockContentViewportInset,
+  }),
+}))
+
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => children,
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
@@ -148,6 +157,7 @@ describe('ContentUpsertSection — derived display logic', () => {
   afterEach(() => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
     useResponsive.mockReturnValue({ isHydrated: true, isMobile: false })
+    mockContentViewportInset = 0
   })
 
   it('prompts for a minimum description when empty', () => {
@@ -308,5 +318,19 @@ describe('ContentUpsertSection — derived display logic', () => {
     )
 
     expect(getByTestId('editor-Описание').props.accessibilityHint).toBe(firstInstance)
+  })
+
+  it('shrinks the fullscreen editor by the real Android IME height', () => {
+    const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
+    useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
+    mockContentViewportInset = 320
+
+    const { getByLabelText, getByTestId } = renderSection({ description: '<p>test link</p>' })
+    fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
+
+    const keyboardFrameStyle = StyleSheet.flatten(
+      getByTestId('description-fullscreen-keyboard-frame').props.style,
+    )
+    expect(keyboardFrameStyle.paddingBottom).toBe(320)
   })
 })

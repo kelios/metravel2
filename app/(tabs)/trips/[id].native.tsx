@@ -6,33 +6,33 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import PublicTripDetail from '@/components/trips/PublicTripDetail'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
+import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 export default function TripDetailScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const insets = useSafeAreaInsets()
+  const { rootBottomOverlap } = useSoftKeyboardInset()
   const params = useLocalSearchParams<{ id?: string }>()
   const tripId = Number(params.id)
 
-  // BottomDock на native — absolute-оверлей высотой tabBarHeight + safe-area,
-  // поэтому скролл обязан зарезервировать её снизу. Без резерва кнопка
-  // «Отправить заявку» формы «Хочу поехать» остаётся под доком и недоступна.
-  const contentStyle = useMemo(
-    () => [
-      styles.content,
-      {
-        paddingBottom:
-          (LAYOUT?.tabBarHeight ?? 56) + insets.bottom + DESIGN_TOKENS.spacing.xl,
-      },
-    ],
-    [styles.content, insets.bottom],
+  // Пустой footer — намеренно отдельный layout-node, а не padding ScrollView:
+  // Android на реальном устройстве не оставлял contentContainer padding
+  // достижимым после последней CTA. При открытой IME root не resize-ится, поэтому
+  // footer переключается с dock reserve на фактическое keyboard overlap.
+  const bottomReserve = useMemo(
+    () =>
+      (rootBottomOverlap > 0
+        ? rootBottomOverlap
+        : (LAYOUT?.tabBarHeight ?? 56) + insets.bottom) + DESIGN_TOKENS.spacing.xl,
+    [insets.bottom, rootBottomOverlap],
   )
 
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={contentStyle}
+      contentContainerStyle={styles.content}
       // На экране живёт форма «Хочу поехать»: без `handled` первый тап по кнопке
       // сабмита при открытой клавиатуре только прячет клавиатуру и теряется.
       keyboardShouldPersistTaps="handled"
@@ -41,6 +41,12 @@ export default function TripDetailScreen() {
       <View style={styles.inner}>
         {Number.isFinite(tripId) ? <PublicTripDetail tripId={tripId} /> : null}
       </View>
+      <View
+        accessible={false}
+        pointerEvents="none"
+        style={{ height: bottomReserve }}
+        testID="trip-detail-bottom-reserve"
+      />
     </ScrollView>
   )
 }

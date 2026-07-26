@@ -14,6 +14,7 @@ import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow'
 import { appendPlainTextToHtml, plainTextToHtml } from '@/utils/htmlUtils';
 import { uploadImage } from '@/api/misc';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
+import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset';
 import { showToast } from '@/utils/toast';
 import { createContentUpsertStyles } from './contentUpsertStyles';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
@@ -64,6 +65,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     const isMobile = isHydrated && isMobileViewport;
     const { width: viewportWidth } = useWindowDimensions();
     const isCompactFullscreenHeader = viewportWidth < 390;
+    const { contentViewportInset } = useSoftKeyboardInset();
 
     // Производное значение — считаем через useMemo, без лишнего state + effect.
     const validationErrors = useMemo<ValidationError[]>(
@@ -574,7 +576,15 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         behavior={WIZARD_KEYBOARD_BEHAVIOR}
                                         enabled={Platform.OS !== 'web'}
                                     >
-                                    <View style={styles.modalShell}>
+                                    <View
+                                        style={[
+                                            styles.modalShell,
+                                            contentViewportInset > 0
+                                                ? { paddingBottom: contentViewportInset }
+                                                : null,
+                                        ]}
+                                        testID="description-fullscreen-keyboard-frame"
+                                    >
                                         <View style={styles.modalHeader}>
                                             <View style={styles.modalHeaderSide}>
                                                 <TouchableOpacity
@@ -720,6 +730,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             colors.text,
             colors.textOnPrimary,
             colors.textMuted,
+            contentViewportInset,
             descriptionAnchorHint,
             descriptionPlainLength,
             descriptionPlainText,

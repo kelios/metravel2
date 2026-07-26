@@ -10,6 +10,14 @@ const renderHTMLProps: any[] = [];
 
 jest.mock('react-native-render-html', () => ({
   __esModule: true,
+  HTMLContentModel: {
+    block: 'block',
+    mixed: 'mixed',
+  },
+  HTMLElementModel: {
+    fromCustomModel: (model: unknown) => model,
+  },
+  TChildrenRenderer: () => null,
   default: (props: any) => {
     renderHTMLProps.push(props);
     return null;
@@ -125,6 +133,24 @@ describe('StableContent (native) links', () => {
       maxWidth: '100%',
     });
     expect(props.renderersProps?.ol?.enableDynamicMarkerBoxWidth).toBe(true);
+  });
+
+  it('android: FAQ details/summary регистрируются как раскрываемый native renderer', () => {
+    setPlatformOs('android');
+    renderNative('<details><summary>Вопрос?</summary><p>Ответ.</p></details>');
+
+    const props = renderHTMLProps[renderHTMLProps.length - 1];
+    expect(props.source.html).toContain('<details>')
+    expect(props.source.html).toContain('<summary>Вопрос?</summary>')
+    expect(props.customHTMLElementModels?.details).toMatchObject({
+      tagName: 'details',
+      contentModel: 'block',
+    })
+    expect(props.customHTMLElementModels?.summary).toMatchObject({
+      tagName: 'summary',
+      contentModel: 'mixed',
+    })
+    expect(typeof props.renderers?.details).toBe('function')
   });
 
   it('android: onPress внутренней ссылки ведёт через router.push внутри приложения', () => {

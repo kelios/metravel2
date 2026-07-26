@@ -35,6 +35,7 @@ export const baseStyles = (
 .${cls}.${fullCls} ul,
 .${cls}.${fullCls} ol,
 .${cls}.${fullCls} blockquote,
+.${cls}.${fullCls} details,
 .${cls}.${fullCls} h2,
 .${cls}.${fullCls} h3 {
   max-width: 720px;

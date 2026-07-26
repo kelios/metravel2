@@ -1,20 +1,17 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import PublicTripDetail from '@/components/trips/PublicTripDetail';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { LAYOUT } from '@/constants/layout';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
+import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 // Мобильный BottomDock — fixed-оверлей, поэтому скролл резервирует его высоту
 // (`--mt-dock-h` = 0px на desktop). Иначе кнопка «Отправить заявку» формы
 // «Хочу поехать» прячется под доком.
-const SCROLL_BOTTOM_RESERVE = Platform.select({
-  web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
-  default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
-});
+export const TRIP_DETAIL_WEB_BOTTOM_RESERVE =
+  'calc(max(var(--mt-dock-h, 0px), var(--mt-keyboard-inset, 0px)) + 24px)' as unknown as number;
 
 export default function TripDetailScreen() {
   const colors = useThemedColors();
@@ -22,6 +19,8 @@ export default function TripDetailScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const hydrationReady = useHydrationReady();
   const tripId = hydrationReady ? Number(params.id) : Number.NaN;
+  // Поддерживает --mt-keyboard-inset через visualViewport на mobile web.
+  useSoftKeyboardInset();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -43,7 +42,7 @@ const createStyles = (colors: ThemedColors) =>
     screen: { flex: 1, backgroundColor: colors.background },
     content: {
       padding: 16,
-      paddingBottom: SCROLL_BOTTOM_RESERVE,
+      paddingBottom: TRIP_DETAIL_WEB_BOTTOM_RESERVE,
       alignItems: 'center',
     },
     inner: { width: '100%', maxWidth: 760 },
