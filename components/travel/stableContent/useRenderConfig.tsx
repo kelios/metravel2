@@ -36,13 +36,50 @@ const summaryModel = HTMLElementModel.fromCustomModel({
   contentModel: HTMLContentModel.mixed,
 })
 
+const getNodeText = (node: any): string => {
+  if (!node) return ''
+  if (node.type === 'text') return typeof node.data === 'string' ? node.data : ''
+  if (!Array.isArray(node.children)) return ''
+  return node.children.map(getNodeText).join('')
+}
+
+const getDetailsSummaryText = (node: any, detailsDomNode?: any): string => {
+  const transientText = getNodeText(node)
+  if (transientText.trim()) return transientText
+
+  const summaryDomNode =
+    node?.domNode ??
+    detailsDomNode?.children?.find(
+      (child: any) => child?.name === 'summary' || child?.tagName === 'summary'
+    )
+  return getNodeText(summaryDomNode)
+}
+
+const normalizeDetailsText = (value: string) => value.replace(/\s+/g, ' ').trim()
+
+const getDetailsAnswerNodes = (
+  children: ReadonlyArray<any>,
+  summaryNode: any,
+  summaryText: string
+) => {
+  const summaryIndex = summaryNode
+    ? children.indexOf(summaryNode)
+    : children.findIndex(
+        (child) => normalizeDetailsText(getNodeText(child)) === summaryText
+      )
+  return children.filter((_, index) => index !== summaryIndex)
+}
+
 const NativeDetailsRenderer = (props: TDefaultRendererProps<any>) => {
   const colors = useThemedColors()
   const initiallyExpanded = Object.prototype.hasOwnProperty.call(props.tnode?.attributes ?? {}, 'open')
   const [expanded, setExpanded] = useState(initiallyExpanded)
   const children = props.tnode?.children ?? []
   const summaryNode = children.find((child: any) => child?.tagName === 'summary')
-  const answerNodes = children.filter((child: any) => child !== summaryNode)
+  const summaryText = normalizeDetailsText(
+    getDetailsSummaryText(summaryNode, props.tnode?.domNode)
+  )
+  const answerNodes = getDetailsAnswerNodes(children, summaryNode, summaryText)
 
   return (
     <View
@@ -58,6 +95,7 @@ const NativeDetailsRenderer = (props: TDefaultRendererProps<any>) => {
     >
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={summaryText}
         accessibilityState={{ expanded }}
         onPress={() => setExpanded((value) => !value)}
         style={{
@@ -71,7 +109,16 @@ const NativeDetailsRenderer = (props: TDefaultRendererProps<any>) => {
         }}
       >
         <View style={{ flex: 1 }}>
-          {summaryNode ? <TChildrenRenderer tchildren={summaryNode.children} /> : null}
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 16,
+              fontWeight: '700',
+              lineHeight: 22,
+            }}
+          >
+            {summaryText}
+          </Text>
         </View>
         <Feather
           name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -95,6 +142,11 @@ const NativeDetailsRenderer = (props: TDefaultRendererProps<any>) => {
       ) : null}
     </View>
   )
+}
+
+export const __testables = {
+  getDetailsAnswerNodes,
+  getDetailsSummaryText,
 }
 
 type UseStableContentRenderConfigInput = {

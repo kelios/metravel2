@@ -153,6 +153,69 @@ describe('StableContent (native) links', () => {
     expect(typeof props.renderers?.details).toBe('function')
   });
 
+  it('android: заголовок FAQ извлекается из исходного details DOM после hoisting', () => {
+    const { __testables } = require('@/components/travel/stableContent/useRenderConfig');
+    const detailsDomNode = {
+      type: 'tag',
+      children: [
+        {
+          type: 'tag',
+          name: 'summary',
+          children: [
+            {
+              type: 'tag',
+              children: [{ type: 'text', data: '  Сколько времени ' }],
+            },
+            { type: 'text', data: 'нужно?  ' },
+          ],
+        },
+        {
+          type: 'tag',
+          name: 'p',
+          children: [{ type: 'text', data: 'Ответ.' }],
+        },
+      ],
+    };
+
+    expect(__testables.getDetailsSummaryText(undefined, detailsDomNode).replace(/\s+/g, ' ').trim())
+      .toBe('Сколько времени нужно?');
+  });
+
+  it('android: заголовок FAQ извлекается из transient summary, когда он доступен', () => {
+    const { __testables } = require('@/components/travel/stableContent/useRenderConfig');
+    const summaryNode = {
+      type: 'phrasing',
+      children: [
+        {
+          type: 'tag',
+          children: [{ type: 'text', data: 'Когда ехать?' }],
+        },
+      ],
+    };
+
+    expect(__testables.getDetailsSummaryText(summaryNode)).toBe('Когда ехать?');
+  });
+
+  it('android: hoisted summary не дублируется в раскрытом ответе', () => {
+    const { __testables } = require('@/components/travel/stableContent/useRenderConfig');
+    const questionNode = {
+      type: 'phrasing',
+      children: [{ type: 'text', data: 'Когда ехать?' }],
+    };
+    const answerNode = {
+      type: 'block',
+      children: [{ type: 'text', data: 'Весной.' }],
+    };
+
+    expect(
+      __testables.getDetailsAnswerNodes(
+        [questionNode, answerNode],
+        undefined,
+        'Когда ехать?'
+      )
+    ).toEqual([answerNode]);
+  });
+
   it('android: onPress внутренней ссылки ведёт через router.push внутри приложения', () => {
     setPlatformOs('android');
     renderNative();
