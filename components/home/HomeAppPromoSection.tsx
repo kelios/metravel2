@@ -1,12 +1,13 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { ResponsiveContainer } from '@/components/layout'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 import { sendAnalyticsEvent } from '@/utils/analytics'
+import { openExternalUrl } from '@/utils/externalLinks'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -21,7 +22,6 @@ const HIGHLIGHTS: { icon: 'map-pin' | 'flag' | 'download'; text: string }[] = [
 
 // Промо установки Android-приложения — только на web (в самом приложении не показываем).
 function HomeAppPromoSection() {
-  const router = useRouter()
   const colors = useThemedColors()
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
@@ -31,8 +31,12 @@ function HomeAppPromoSection() {
 
   const handleInstall = useCallback(() => {
     sendAnalyticsEvent('HomeClick_InstallApp', { platform: 'android' })
-    router.push('/app' as any)
-  }, [router])
+    void openExternalUrl(GOOGLE_PLAY_APP_URL, {
+      onError: (error) => {
+        if (__DEV__) console.warn('[home] Ошибка открытия Google Play:', error)
+      },
+    })
+  }, [])
 
   if (!IS_WEB) return null
 

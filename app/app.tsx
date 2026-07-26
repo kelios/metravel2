@@ -9,16 +9,11 @@ import { Heading, Body, Caption, Eyebrow } from '@/components/ui/Typography'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
-
-
-// Android-приложение MeTravel сейчас доступно через закрытый Alpha-тест.
-// Open testing в Play Console заблокирован до получения production access.
-// Поменять при переходе на прод-релиз на: https://play.google.com/store/apps/details?id=by.metravel.app
-export const PLAY_TESTING_URL = 'https://play.google.com/apps/testing/by.metravel.app'
 
 const APP_ICON = require('@/assets/images/icon.png')
 
@@ -51,7 +46,7 @@ function AppDownloadScreen() {
   const canonical = buildCanonicalUrl('/app')
 
   const handleDownload = useCallback(() => {
-    void openExternalUrl(PLAY_TESTING_URL, {
+    void openExternalUrl(GOOGLE_PLAY_APP_URL, {
       onError: (error) => {
         if (__DEV__) console.warn('[app] Ошибка открытия Google Play:', error)
       },
