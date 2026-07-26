@@ -47,6 +47,13 @@ const renderEmbeds = (urls: string[]) => {
 const webViews = (tree: renderer.ReactTestRenderer) =>
   tree.root.findAllByProps({ testID: 'travel-instagram-webview' }, { deep: false })
 
+const embedFrame = (tree: renderer.ReactTestRenderer) =>
+  tree.root.find(
+    (node) =>
+      Array.isArray(node.props.style) &&
+      node.props.style.some((style: unknown) => Boolean(style) && typeof (style as { height?: unknown }).height === 'number')
+  )
+
 describe('InstagramEmbed (native)', () => {
   beforeEach(() => {
     __resetInstagramEmbedSlots()
@@ -137,6 +144,53 @@ describe('InstagramEmbed (native)', () => {
 
     expect(webViews(tree)).toHaveLength(0)
     expect(tree.root.findAllByProps({ accessibilityRole: 'link' }, { deep: false })).not.toHaveLength(0)
+  })
+
+  it('берёт реальную высоту поста из body/frame, а не из раздутого docHeight', () => {
+    const tree = renderEmbeds([POST])
+    const props = webViews(tree)[0].props
+
+    act(() => {
+      props.onMessage({
+        nativeEvent: {
+          data: JSON.stringify({
+            type: 'ig-height',
+            height: 1400,
+            contentHeight: 1400,
+            bodyHeight: 1400,
+            frameHeight: 494,
+            docHeight: 1400,
+            viewportHeight: 1400,
+          }),
+        },
+      })
+    })
+
+    expect(embedFrame(tree).props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ height: 494 })])
+    )
+  })
+
+  it('падает обратно на body/doc только если frame ещё не измерен', () => {
+    const tree = renderEmbeds([POST])
+    const props = webViews(tree)[0].props
+
+    act(() => {
+      props.onMessage({
+        nativeEvent: {
+          data: JSON.stringify({
+            type: 'ig-height',
+            bodyHeight: 620,
+            docHeight: 1400,
+            viewportHeight: 1400,
+          }),
+        },
+      })
+    })
+
+    expect(embedFrame(tree).props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ height: 620 })])
+    )
   })
 
   it('невалидный Instagram URL не рендерит ничего', () => {

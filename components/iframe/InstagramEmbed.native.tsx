@@ -16,6 +16,16 @@ interface InstagramEmbedProps {
   url: string
 }
 
+type InstagramHeightPayload = {
+  type?: string
+  height?: unknown
+  contentHeight?: unknown
+  frameHeight?: unknown
+  bodyHeight?: unknown
+  docHeight?: unknown
+  viewportHeight?: unknown
+}
+
 const MAX_WIDTH = 430
 // Пока пост не измерил себя сам — рамка примерно с квадратное фото + шапка аккаунта.
 const ESTIMATED_HEIGHT = 560
@@ -35,18 +45,37 @@ const EMBED_USER_AGENT =
 // несколько проб + ResizeObserver, а не одна замерка на DOMContentLoaded.
 const HEIGHT_PROBE_JS = `(function () {
   var last = 0;
+  var readHeight = function (node) {
+    if (!node) return 0;
+    var rect = typeof node.getBoundingClientRect === 'function'
+      ? Math.ceil(node.getBoundingClientRect().height || 0)
+      : 0;
+    var scroll = node.scrollHeight || 0;
+    return Math.max(rect, scroll);
+  };
   var post = function () {
     var doc = document.documentElement;
     var body = document.body;
     var frame = document.querySelector('.EmbedFrame, .Embed, ._aa4a');
-    var height = Math.max(
-      body ? body.scrollHeight : 0,
-      doc ? doc.scrollHeight : 0,
-      frame ? frame.scrollHeight : 0
-    );
+    var bodyHeight = readHeight(body);
+    var frameHeight = readHeight(frame);
+    var docHeight = readHeight(doc);
+    // Приоритет — intrinsic высота самого iframe-контента (.EmbedFrame). На Android
+    // body/documentElement могут отражать уже раздутый viewport контейнера WebView.
+    // Их используем только когда frame ещё не доступен/неизмерим.
+    var contentHeight = frameHeight || bodyHeight || 0;
+    var height = contentHeight || docHeight;
     if (!height || Math.abs(height - last) < 8) return;
     last = height;
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ig-height', height: height }));
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: 'ig-height',
+      height: height,
+      contentHeight: contentHeight,
+      bodyHeight: bodyHeight,
+      frameHeight: frameHeight,
+      docHeight: docHeight,
+      viewportHeight: window.innerHeight || 0
+    }));
   };
   post();
   window.addEventListener('load', post);
@@ -64,6 +93,28 @@ true;`
 
 const clampHeight = (value: number) =>
   Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(value)))
+
+const asPositiveNumber = (value: unknown): number | null => {
+  const next = Number(value)
+  return Number.isFinite(next) && next > 0 ? next : null
+}
+
+const resolveMeasuredHeight = (payload: InstagramHeightPayload): number | null => {
+  const frameHeight = asPositiveNumber(payload.frameHeight)
+  if (frameHeight !== null) return clampHeight(frameHeight)
+
+  const bodyHeight = asPositiveNumber(payload.bodyHeight)
+  if (bodyHeight !== null) return clampHeight(bodyHeight)
+
+  const contentHeight = asPositiveNumber(payload.contentHeight)
+  if (contentHeight !== null) return clampHeight(contentHeight)
+
+  const docHeight = asPositiveNumber(payload.docHeight)
+  if (docHeight !== null) return clampHeight(docHeight)
+
+  const legacyHeight = asPositiveNumber(payload.height)
+  return legacyHeight !== null ? clampHeight(legacyHeight) : null
+}
 
 /**
  * Instagram-пост внутри native rich-text.
@@ -119,15 +170,14 @@ const InstagramEmbed: React.FC<InstagramEmbedProps> = ({ url }) => {
 
   const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
     try {
-      const payload = JSON.parse(String(event?.nativeEvent?.data || ''))
+      const payload = JSON.parse(String(event?.nativeEvent?.data || '')) as InstagramHeightPayload
       if (payload?.type !== 'ig-height') return
-      const next = Number(payload.height)
-      if (!Number.isFinite(next) || next <= 0) return
+      const next = resolveMeasuredHeight(payload)
+      if (next === null) return
       loadedRef.current = true
       setLoaded(true)
       setHeight((current) => {
-        const clamped = clampHeight(next)
-        return Math.abs(clamped - current) < 8 ? current : clamped
+        return Math.abs(next - current) < 8 ? current : next
       })
     } catch {
       // чужой postMessage со страницы эмбеда — игнорируем
