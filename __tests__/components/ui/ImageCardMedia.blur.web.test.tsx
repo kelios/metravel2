@@ -124,7 +124,7 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage.props.sizes).toBe('320px')
   })
 
-  it('keeps catalog media lazy on iPhone Safari when explicitly bounded', () => {
+  it('forces catalog media eager on iPhone Safari so the sharp layer always reveals', () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -147,7 +147,7 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="lazy"
           optimizeWeb={false}
           allowCriticalWebBlur
-          allowSafariWebLazy
+          preserveOptimizedWebSrc
         />
       )
     })
@@ -159,7 +159,8 @@ describe('ImageCardMedia blur background (web)', () => {
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.loading).toBe('lazy')
+    expect(mainImage.props.loading).toBe('eager')
+    expect(mainImage.props.style?.opacity).toBe(1)
     expect(mainImage.props.src).toContain('w=480')
     expect(mainImage.props.srcSet).toBeUndefined()
 
@@ -170,10 +171,9 @@ describe('ImageCardMedia blur background (web)', () => {
       return node?.type === 'div' && node?.props?.['data-blur-backdrop'] === 'true'
     })[0]
 
-    expect(blurImage).toBeTruthy()
-    expect(blurImage.props.loading).toBe('lazy')
-    expect(blurImage.props.src).toBe(mainImage.props.src)
-    expect(cssBlurLayer).toBeUndefined()
+    expect(blurImage).toBeUndefined()
+    expect(cssBlurLayer).toBeTruthy()
+    expect(String(cssBlurLayer.props.style?.backgroundImage || '')).toContain(mainImage.props.src)
   })
 
   it('uses a full-width sizes fallback for iPhone Safari auto-width cards', () => {
@@ -472,7 +472,6 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="lazy"
           priority="normal"
           allowCriticalWebBlur
-          allowSafariWebLazy
           optimizeWeb={false}
         />
       )
@@ -493,10 +492,9 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.src).toBe(src)
     expect(mainImage.props.srcSet).toBeUndefined()
-    expect(blurImage).toBeTruthy()
-    expect(blurImage.props.loading).toBe('lazy')
-    expect(blurImage.props.src).toBe(src)
-    expect(cssBlurLayer).toBeUndefined()
+    expect(blurImage).toBeUndefined()
+    expect(cssBlurLayer).toBeTruthy()
+    expect(String(cssBlurLayer.props.style?.backgroundImage || '')).toContain(src)
   })
 
   it('uses an image blur backdrop for quest covers in the mobile Safari reveal-on-load path', () => {

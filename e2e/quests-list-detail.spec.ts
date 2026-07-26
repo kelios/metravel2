@@ -7,6 +7,12 @@ import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
 const WAIT_MS = 30_000
 const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/
 const QUEST_ID = 'e2e-minsk-quest'
+const IPHONE_SAFARI_USER_AGENT =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+)
 
 const questCity = {
   id: 1,
@@ -88,7 +94,7 @@ const fulfillJson = (route: Route, value: unknown) =>
     body: JSON.stringify(value),
   })
 
-const mockQuestApis = async (page: Page) => {
+const mockQuestApis = async (page: Page, questItems: unknown = [questMeta]) => {
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname
 
@@ -96,7 +102,7 @@ const mockQuestApis = async (page: Page) => {
     if (pathname.includes(`/quests/by-quest-id/${QUEST_ID}/`)) return fulfillJson(route, questBundle)
     if (pathname.includes(`/quests/quest${QUEST_ID}/reviews/`)) return fulfillJson(route, [])
     if (pathname.endsWith('/quests/near-location/')) return fulfillJson(route, { results: [], count: 0 })
-    if (pathname.endsWith('/quests/')) return fulfillJson(route, [questMeta])
+    if (pathname.endsWith('/quests/')) return fulfillJson(route, questItems)
 
     return fulfillJson(route, {})
   })
@@ -132,6 +138,52 @@ const getFirstQuestCard = async (page: Page) => {
 }
 
 test.describe('Quests list -> detail', () => {
+  test('iPhone Safari reveals sharp quest covers above and below the fold', async ({ page }) => {
+    const questItems = Array.from({ length: 3 }, (_, index) => ({
+      ...questMeta,
+      id: questMeta.id + index,
+      quest_id: `${QUEST_ID}-${index}`,
+      title: `E2E iPhone cover ${index + 1}`,
+      cover_url: `https://metravel.by/quest-cover/e2e-${index + 1}.png`,
+    }))
+
+    await page.addInitScript((userAgent) => {
+      Object.defineProperty(window.navigator, 'userAgent', {
+        configurable: true,
+        get: () => userAgent,
+      })
+      Object.defineProperty(window.navigator, 'maxTouchPoints', {
+        configurable: true,
+        get: () => 5,
+      })
+    }, IPHONE_SAFARI_USER_AGENT)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await preacceptCookies(page)
+    await mockQuestApis(page, questItems)
+    await page.route('**/quest-cover/e2e-*.png*', (route) =>
+      route.fulfill({ status: 200, contentType: 'image/png', body: TINY_PNG }),
+    )
+
+    await gotoWithRetry(page, '/quests')
+    await waitForQuestCatalogReady(page)
+
+    const sharpCovers = page.locator('[data-testid^="quest-card-"] img:not([aria-hidden="true"])')
+    await expect(sharpCovers).toHaveCount(3)
+
+    for (const index of [0, 2]) {
+      const cover = sharpCovers.nth(index)
+      await cover.scrollIntoViewIfNeeded()
+      await expect(cover).toHaveAttribute('loading', 'eager')
+      await expect.poll(async () =>
+        cover.evaluate((image) => ({
+          complete: (image as HTMLImageElement).complete,
+          naturalWidth: (image as HTMLImageElement).naturalWidth,
+          opacity: window.getComputedStyle(image).opacity,
+        })),
+      ).toEqual({ complete: true, naturalWidth: 1, opacity: '1' })
+    }
+  })
+
   test('guest can browse the quest catalog and open a quest detail', async ({ page }) => {
     const consoleErrors: string[] = []
     const pageErrors: string[] = []

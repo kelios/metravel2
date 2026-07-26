@@ -178,7 +178,7 @@ export default function QuestCard({
                         priority={isAboveTheFold ? 'high' : 'low'}
                         optimizeWeb={false}
                         allowCriticalWebBlur
-                        allowSafariWebLazy={!isAboveTheFold}
+                        preserveOptimizedWebSrc
                         onLoad={handleImageLoad}
                         showImmediately={imageLoaded}
                     />

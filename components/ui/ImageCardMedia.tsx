@@ -82,8 +82,6 @@ type Props = {
   preserveOptimizedWebSrc?: boolean;
   /** Skip web URL resizing when the upstream optimizer returns padded contain canvases. */
   optimizeWeb?: boolean;
-  /** Preserve browser-native lazy loading on iOS Safari for bounded catalog media. */
-  allowSafariWebLazy?: boolean;
   /**
    * Web-only responsive source prepared by a caller that already owns the image
    * variant contract, for example backend media manifest entries.
@@ -131,7 +129,6 @@ function ImageCardMedia({
   contentAspectRatio,
   preserveOptimizedWebSrc = false,
   optimizeWeb = true,
-  allowSafariWebLazy = false,
   webResponsiveSource,
 }: Props) {
   const isJest =
@@ -208,8 +205,12 @@ function ImageCardMedia({
   const resolvedLoading = useMemo(() => {
     if (Platform.OS !== 'web') return loading;
     if (loading !== 'lazy') return loading;
-    return isSafariWeb && !allowSafariWebLazy ? 'eager' : loading;
-  }, [allowSafariWebLazy, isSafariWeb, loading]);
+    // iOS Safari can leave a lazy <img> below the blurred backdrop without
+    // dispatching the load event after scroll/restoration. Because the sharp
+    // layer is revealed by that event, lazy loading is unsafe on every card
+    // media surface, including bounded catalogs.
+    return isSafariWeb ? 'eager' : loading;
+  }, [isSafariWeb, loading]);
 
   // Stabilize width/height for image optimization to prevent URL changes on scroll
   // Only update when change is significant (>50px) to avoid re-fetching images

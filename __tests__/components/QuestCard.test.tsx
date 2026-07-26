@@ -118,7 +118,7 @@ describe('QuestCard', () => {
                 priority: 'low',
                 optimizeWeb: false,
                 allowCriticalWebBlur: true,
-                allowSafariWebLazy: true,
+                preserveOptimizedWebSrc: true,
             }),
         );
         expect(getByTestId('quest-card-pioneer-krakow-dragon')).toBeTruthy();
@@ -200,7 +200,7 @@ describe('QuestCard', () => {
         }
     });
 
-    it('keeps only the first two covers eager and high-priority', () => {
+    it('keeps only the first two covers eager and high-priority without bypassing Safari media safety', () => {
         for (const index of [0, 1, 2]) {
             mockImageCardMedia.mockClear();
             renderWithQueryClient(
@@ -217,9 +217,10 @@ describe('QuestCard', () => {
                 expect.objectContaining({
                     loading: index < 2 ? 'eager' : 'lazy',
                     priority: index < 2 ? 'high' : 'low',
-                    allowSafariWebLazy: index >= 2,
+                    preserveOptimizedWebSrc: true,
                 }),
             );
+            expect(mockImageCardMedia.mock.calls[0]?.[0]).not.toHaveProperty('allowSafariWebLazy');
         }
     });
 

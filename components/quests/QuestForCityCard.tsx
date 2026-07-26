@@ -123,7 +123,7 @@ export function QuestForCityCard({
           fit="contain"
           blurBackground
           allowCriticalWebBlur
-          revealOnLoadOnly
+          preserveOptimizedWebSrc
           blurRadius={16}
           loading={imageLoading === 'lazy' ? 'lazy' : 'eager'}
           optimizeWeb={false}
