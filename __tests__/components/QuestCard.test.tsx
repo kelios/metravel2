@@ -95,7 +95,7 @@ describe('QuestCard', () => {
         (Platform as { OS: string }).OS = 'web';
     });
 
-    it('renders mobile quest media with stable contain geometry and pioneer badge', () => {
+    it('renders mobile quest media with a sharp cover and pioneer badge', () => {
         const { getByTestId } = renderWithQueryClient(
             <QuestCard
                 styles={styles}
@@ -112,15 +112,15 @@ describe('QuestCard', () => {
                 src: 'https://cdn.example.com/quest.jpg',
                 width: 340,
                 height: 238,
-                fit: 'contain',
-                blurBackground: true,
+                fit: 'cover',
+                blurBackground: false,
                 loading: 'lazy',
                 priority: 'low',
                 optimizeWeb: false,
-                allowCriticalWebBlur: true,
-                preserveOptimizedWebSrc: true,
             }),
         );
+        expect(mockImageCardMedia.mock.calls[0]?.[0]).not.toHaveProperty('allowCriticalWebBlur');
+        expect(mockImageCardMedia.mock.calls[0]?.[0]).not.toHaveProperty('preserveOptimizedWebSrc');
         expect(getByTestId('quest-card-pioneer-krakow-dragon')).toBeTruthy();
     });
 
@@ -194,13 +194,13 @@ describe('QuestCard', () => {
             expect(src).toContain('https://metravel.by/quest-cover/quests/1/main/abc.png?');
             expect(src).toContain('w=');
             expect(src).toContain('q=60');
-            expect(src).toContain('fit=contain');
+            expect(src).toContain('fit=cover');
         } finally {
             process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
         }
     });
 
-    it('keeps only the first two covers eager and high-priority without bypassing Safari media safety', () => {
+    it('keeps only the first two covers eager and high-priority', () => {
         for (const index of [0, 1, 2]) {
             mockImageCardMedia.mockClear();
             renderWithQueryClient(
@@ -217,10 +217,8 @@ describe('QuestCard', () => {
                 expect.objectContaining({
                     loading: index < 2 ? 'eager' : 'lazy',
                     priority: index < 2 ? 'high' : 'low',
-                    preserveOptimizedWebSrc: true,
                 }),
             );
-            expect(mockImageCardMedia.mock.calls[0]?.[0]).not.toHaveProperty('allowSafariWebLazy');
         }
     });
 
@@ -251,7 +249,7 @@ describe('QuestCard', () => {
         }
     });
 
-    it('regression: never undersizes the sharp cover for a 345px DPR3 iPhone card', () => {
+    it('regression: never renders only the blurred backdrop on a DPR3 iPhone card', () => {
         const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(3);
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
         process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
@@ -270,12 +268,16 @@ describe('QuestCard', () => {
             );
 
             const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
-            const selectedWidth = Number(new URL(src).searchParams.get('w'));
+            const mediaProps = mockImageCardMedia.mock.calls[0]?.[0];
 
-            // Safari renders 345 CSS px at 1035 physical px on DPR3. Loading
-            // the former 800px candidate permanently reproduced the blur.
-            expect(selectedWidth).toBeGreaterThanOrEqual(345 * 3);
-            expect(selectedWidth).toBe(1280);
+            // This regression is not an undersized-source problem: Safari kept
+            // the CSS blur backdrop painted while the sharp <img> was absent.
+            expect(new URL(src).searchParams.get('w')).toBe('800');
+            expect(mediaProps).toEqual(expect.objectContaining({
+                fit: 'cover',
+                blurBackground: false,
+            }));
+            expect(mediaProps).not.toHaveProperty('allowCriticalWebBlur');
         } finally {
             process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
             pixelRatioSpy.mockRestore();

@@ -103,18 +103,10 @@ export default function QuestCard({
     const cardHeight = isPhone ? 238 : Math.round((cardWidth / 380) * 260);
     const showOverlayMeta = !isPhone;
 
-    // Pick one bounded proxy variant for both the sharp image and the shared blur.
-    // This avoids a second backdrop request and prevents a ~420px DPR1 card from
-    // falling through to the old 1024px candidate.
+    // Pick one bounded proxy variant for the card cover.
     const coverSrc = useMemo(() => {
         if (!imageUrl) return imageUrl;
-        // Regression guard: iPhones use DPR 3. Capping web at 2 left a 345px
-        // card with an 800px source that Safari had to upscale to roughly 1035
-        // physical pixels, making the sharp layer look like the blur backdrop.
-        // Keep web at DPR3; QuestCard.test.tsx locks this physical-pixel contract.
-        // Native keeps the existing 2x decode/network ceiling.
-        const maxDpr = Platform.OS === 'web' ? 3 : 2;
-        const dpr = Math.min(PixelRatio.get() || (Platform.OS === 'web' ? 1 : 2), maxDpr);
+        const dpr = Math.min(PixelRatio.get() || (Platform.OS === 'web' ? 1 : 2), 2);
         const requestedWidth = Math.max(1, Math.round(cardWidth * dpr));
         const responsiveWidths = [320, 480, 640, 800, 1024, 1280];
         const targetWidth =
@@ -124,7 +116,7 @@ export default function QuestCard({
             width: targetWidth,
             quality: 60,
             format: 'auto',
-            fit: 'contain',
+            fit: 'cover',
         }) ?? imageUrl;
     }, [imageUrl, cardWidth]);
 
@@ -172,19 +164,21 @@ export default function QuestCard({
                 )}
 
                 {imageUrl ? (
+                    // iPhone Safari regression guard: do not add the filtered
+                    // blur backdrop here. WebKit can keep that composited layer
+                    // visible while failing to paint the sharp img, leaving the
+                    // card permanently blurred. QuestCard.test.tsx locks this.
                     <ImageCardMedia
                         src={coverSrc}
                         alt={quest.title}
                         width={cardWidth}
                         height={cardHeight}
-                        fit="contain"
-                        blurBackground
+                        fit="cover"
+                        blurBackground={false}
                         style={StyleSheet.absoluteFill}
                         loading={isAboveTheFold ? 'eager' : 'lazy'}
                         priority={isAboveTheFold ? 'high' : 'low'}
                         optimizeWeb={false}
-                        allowCriticalWebBlur
-                        preserveOptimizedWebSrc
                         onLoad={handleImageLoad}
                         showImmediately={imageLoaded}
                     />
