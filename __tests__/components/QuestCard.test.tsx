@@ -251,6 +251,66 @@ describe('QuestCard', () => {
         }
     });
 
+    it('regression: never undersizes the sharp cover for a 345px DPR3 iPhone card', () => {
+        const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(3);
+        const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
+        process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
+
+        try {
+            renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={345}
+                    cityId="krakow"
+                    quest={makeQuest({
+                        cover: 'https://metravel.by/quest-cover/quests/125/main/abc.png',
+                    })}
+                    index={0}
+                />,
+            );
+
+            const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
+            const selectedWidth = Number(new URL(src).searchParams.get('w'));
+
+            // Safari renders 345 CSS px at 1035 physical px on DPR3. Loading
+            // the former 800px candidate permanently reproduced the blur.
+            expect(selectedWidth).toBeGreaterThanOrEqual(345 * 3);
+            expect(selectedWidth).toBe(1280);
+        } finally {
+            process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
+            pixelRatioSpy.mockRestore();
+        }
+    });
+
+    it('keeps the existing 2x cover cap on Android devices with DPR3 screens', () => {
+        (Platform as { OS: string }).OS = 'android';
+        const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(3);
+        const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
+        process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
+
+        try {
+            renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={345}
+                    cityId="krakow"
+                    quest={makeQuest({
+                        cover: 'https://metravel.by/quest-cover/quests/125/main/abc.png',
+                    })}
+                    index={0}
+                />,
+            );
+
+            const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
+            const selectedWidth = Number(new URL(src).searchParams.get('w'));
+
+            expect(selectedWidth).toBe(800);
+        } finally {
+            process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
+            pixelRatioSpy.mockRestore();
+        }
+    });
+
     it('opens the quest reviews modal from the mobile reviews CTA', () => {
         const { getByTestId } = renderWithQueryClient(
             <QuestCard

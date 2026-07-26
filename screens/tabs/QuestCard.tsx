@@ -108,7 +108,13 @@ export default function QuestCard({
     // falling through to the old 1024px candidate.
     const coverSrc = useMemo(() => {
         if (!imageUrl) return imageUrl;
-        const dpr = Math.min(PixelRatio.get() || (Platform.OS === 'web' ? 1 : 2), 2);
+        // Regression guard: iPhones use DPR 3. Capping web at 2 left a 345px
+        // card with an 800px source that Safari had to upscale to roughly 1035
+        // physical pixels, making the sharp layer look like the blur backdrop.
+        // Keep web at DPR3; QuestCard.test.tsx locks this physical-pixel contract.
+        // Native keeps the existing 2x decode/network ceiling.
+        const maxDpr = Platform.OS === 'web' ? 3 : 2;
+        const dpr = Math.min(PixelRatio.get() || (Platform.OS === 'web' ? 1 : 2), maxDpr);
         const requestedWidth = Math.max(1, Math.round(cardWidth * dpr));
         const responsiveWidths = [320, 480, 640, 800, 1024, 1280];
         const targetWidth =
