@@ -290,7 +290,11 @@ const normalizeImgTags = (html: string): string => {
 const replaceYouTubeIframes = (html: string): string =>
   html.replace(/<iframe\b[^>]*src="([^"]+)"[^>]*><\/iframe>/gi, (full, src: string) => {
     if (!isYouTubeEmbedUrl(src)) return full
+    // Канонический вид, в который `buildYoutubeEmbedHtmlFromUrl` приводит ЛЮБОЙ
+    // ролик, — `/embed/<id>` без query. Без этой ветки id не извлекался ни разу,
+    // и вместо лёгкого фасада на страницу вставал живой плеер (по одному на видео).
     const id =
+      src.match(/\/embed\/([a-z0-9_-]{6,})/i)?.[1] ||
       src.match(/[?&]v=([a-z0-9_-]{6,})/i)?.[1] ||
       src.match(/youtu\.be\/([a-z0-9_-]{6,})/i)?.[1]
     if (!id) return full

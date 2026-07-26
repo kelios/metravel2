@@ -196,7 +196,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "NODE_OPTIONS=--max-old-space-size=8192 npx expo start --port 8081"
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_NO_METRO_LAZY=1 npx expo start --port 8081"
       ],
       "port": 8081,
       "autoPort": false

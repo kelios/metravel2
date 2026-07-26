@@ -1,4 +1,4 @@
-# Google Play Closed Testing — журнал кампании 2026-07-09 → 2026-07-24
+# Google Play Closed Testing — журнал кампании 2026-07-09 → 2026-07-26
 
 Цель: 14 дней подряд ежедневная активность тестера по всем приложениям из `config.json`,
 чтобы наши приложения прошли закрытое тестирование Google Play. Пропуск дня = риск провала кампании.
@@ -24,6 +24,8 @@
 | 14   | 2026-07-22 | ✅          | snapshot refreshed: `com.baremacros.app` 1→10, `com.kitchenmatch.game` 3→6, `com.kolorino.kolorino` 6→7, `com.ja.callofpoker` 69000→71000 | Pack Boneclaw IV: 11/11 done (100%); TCT: one partner MeTravel proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-22/`; linked 30+ second task sessions recovered the stale `0/11` mission state; all target versionCodes match snapshot; no target-package crash-buffer hits |
 | 15   | 2026-07-23 | ✅          | none; installed versionCodes match snapshot for today's 10 assigned packages | Pack Boneclaw IV: Day 13/16, 10/10 done (100%); TCT visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-23/`; each TC task had real 3+ minute app usage plus linked 30+ second TestersCommunity completion where needed; final proof shows `ALL DONE`; no target-package crash-buffer hits |
 | 16   | 2026-07-24 | ✅          | snapshot refreshed: `com.ballsort.zen` 2→5, `com.unnoyashiro` 3→4 | Pack Boneclaw IV: live app showed Day 14/16, 10/10 done (100%); TCT Damas Go Day 10 partner proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-24/`; linked task flow recovered after two script attempts that used Android Back too aggressively; final proof shows `ALL DONE`; no target-package crash-buffer hits |
+| 17   | 2026-07-25 | ✅          | none checked | Pack Boneclaw IV: Day 15/16, 10/10 done (100%) | Evidence: `.claude/play-testing/evidence/2026-07-25/`; completed from the existing open task; no target-package crash-buffer hits |
+| 18   | 2026-07-26 | ✅          | snapshot refreshed: PraEx 4→6, Call Of Poker 71000→76000, Kitchen Match & Merge 6→8 | Pack Boneclaw IV: final Day 16/16, 10/10 done (100%); TCT all caught up; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-26/`; final proof shows `ALL DONE`; Call Of Poker blank-board bug logged; installed MeTravel opens dev launcher; no target-package crash-buffer hits |
 
 ## Найденные задания / инциденты
 
@@ -265,3 +267,27 @@
 - No Play reviews/ratings, purchases, messages, account changes, uninstall/reinstall, ad actions, or personal-data consent were performed.
 - Evidence: `.claude/play-testing/evidence/2026-07-25/`; final proof `tc_day15_10_of_10.png`.
 - Crash check: `adb logcat -d -b crash` filtered for all ten tested packages and `com.testerscommunity` returned no relevant crash entries.
+
+### 2026-07-26 — Final Day 16/16 completed
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- TestersCommunity Pack Boneclaw IV: completed the live final Day 16/16 from `0/10` through the linked task flow. Final Pack Details showed `100%`, `ALL DONE`, `Open & test apps today (10/10 done)`, `Daily Progress Complete!`, and `All tasks complete!`.
+- Assigned apps were opened from `Start Testing`, verified as the exact foreground package, exercised through a meaningful core flow, and completed only after linked Feedback unlocked:
+  - `運の社`: opened the shrine flow and drew a visible fortune result.
+  - Denkleşelim: opened the existing room, expense summary, and settlement plan.
+  - PraEx: entered the driving quiz and advanced to question 2/25.
+  - Priority dz: played and completed level 7, which unlocked level 8; the ad banner was not touched.
+  - Ball Sort - Zen: entered Calm mode and performed a sequence of legal tube moves with visible board-state progress.
+  - First Time Daddy: inspected Home, Weekly, Journal, and Guide content.
+  - BareMacros: used the three quick-macro actions, checked Meals, and verified the dashboard changed to 375 kcal / 30 g protein / 30 g carbs / 15 g fat.
+  - Call Of Poker: played the Memory Game and flipped multiple cards. Bug: after the interactions, the card board became blank while Memory/Hero points changed to `-22/-20`; submitted the task with `Buggy` feedback.
+  - Kolorino: opened the by-number landscape and increased progress from 8% to 10%.
+  - Kitchen Match & Merge: opened Level 1 and made a valid board merge; moves changed from 32 to 31 and the combo meter advanced. The install ad was not touched.
+- Community audit:
+  - The Closed Test home showed `You're all caught up!`; no pending proof action was required.
+  - App Testers and NadeemGS TestersCommunity showed catalog/profile state only; no mandatory proof/review action was found.
+  - No Play reviews/ratings, purchases, messages, account changes, uninstall/reinstall, or ad actions were performed.
+- Own app blocker: installed `by.metravel.app` resolves to `by.metravel.app/.MainActivity` but opens Expo `Development Build` (`DevLauncherActivity`) instead of the production MeTravel UI, so the final read-only MeTravel smoke could not be completed against this installed build.
+- Version snapshot refreshed to installed final state: PraEx `4 -> 6`, Call Of Poker `71000 -> 76000`, Kitchen Match & Merge `6 -> 8`; the other seven assigned packages matched the snapshot.
+- Evidence: `.claude/play-testing/evidence/2026-07-26/`; final mission proof `final_verify.png`.
+- Crash check: `adb logcat -d -b crash` filtered for all ten assigned packages, `com.testerscommunity`, and `by.metravel.app` returned no relevant crash entries.
