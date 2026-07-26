@@ -78,7 +78,7 @@ export const homeGenerated1 = {
   "components.about.VideoCard.video_instruktsiya_c8181ac5": "Video instructions",
   "components.about.VideoCard.youtube_video_o_metravel_42216f54": "YouTube video about MeTravel",
   "components.home.HomeAppPromoSection.ikonka_prilozheniya_metravel_99bf95cf": "MeTravel app icon",
-  "components.home.HomeAppPromoSection.karta_kvesty_i_putevoditeli_oflayn_s_sohrane_a9ae3b9e": "Map, quests and guides - offline, with saving your favorites. Free, open testing in progress.",
+  "components.home.HomeAppPromoSection.karta_kvesty_i_putevoditeli_oflayn_s_sohrane_a9ae3b9e": "Map, quests and guides - offline, with saving your favorites. Free and available on Google Play.",
   "components.home.HomeAppPromoSection.prilozhenie_metravel_v_karmane_f8221845": "MeTravel app in your pocket",
   "components.home.HomeAppPromoSection.skachat_4cce0fbd": "Download",
   "components.home.HomeAppPromoSection.skachat_prilozhenie_metravel_dlya_android_25ce3837": "Download MeTravel app for Android",

@@ -78,7 +78,7 @@ export const homeGenerated1 = {
   "components.about.VideoCard.video_instruktsiya_c8181ac5": "Instrukcje wideo",
   "components.about.VideoCard.youtube_video_o_metravel_42216f54": "Film na YouTube o MeTravel",
   "components.home.HomeAppPromoSection.ikonka_prilozheniya_metravel_99bf95cf": "Ikona aplikacji MeTravel",
-  "components.home.HomeAppPromoSection.karta_kvesty_i_putevoditeli_oflayn_s_sohrane_a9ae3b9e": "Mapa, zadania i przewodniki – offline, z możliwością zapisywania ulubionych. Trwają bezpłatne, otwarte testy.",
+  "components.home.HomeAppPromoSection.karta_kvesty_i_putevoditeli_oflayn_s_sohrane_a9ae3b9e": "Mapa, zadania i przewodniki – offline, z możliwością zapisywania ulubionych. Bezpłatnie i dostępne w Google Play.",
   "components.home.HomeAppPromoSection.prilozhenie_metravel_v_karmane_f8221845": "Aplikacja MeTravel w Twojej kieszeni",
   "components.home.HomeAppPromoSection.skachat_4cce0fbd": "Pobierz",
   "components.home.HomeAppPromoSection.skachat_prilozhenie_metravel_dlya_android_25ce3837": "Pobierz aplikację MeTravel na Androida",

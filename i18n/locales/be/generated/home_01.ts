@@ -78,7 +78,7 @@ export const homeGenerated1 = {
   "components.about.VideoCard.video_instruktsiya_c8181ac5": "Відэа-інструкцыя",
   "components.about.VideoCard.youtube_video_o_metravel_42216f54": "YouTube відэа пра MeTravel",
   "components.home.HomeAppPromoSection.ikonka_prilozheniya_metravel_99bf95cf": "Іконка прыкладання MeTravel",
-  "components.home.HomeAppPromoSection.karta_kvesty_i_putevoditeli_oflayn_s_sohrane_a9ae3b9e": "Карта, квэсты і даведнікі — афлайн, з захаваннем абранага. Бясплатна, ідзе адкрытае тэсціраванне.",
+  "components.home.HomeAppPromoSection.karta_kvesty_i_putevoditeli_oflayn_s_sohrane_a9ae3b9e": "Карта, квэсты і даведнікі — афлайн, з захаваннем абранага. Бясплатна і даступна ў Google Play.",
   "components.home.HomeAppPromoSection.prilozhenie_metravel_v_karmane_f8221845": "Дадатак MeTravel у кішэні",
   "components.home.HomeAppPromoSection.skachat_4cce0fbd": "Спампаваць",
   "components.home.HomeAppPromoSection.skachat_prilozhenie_metravel_dlya_android_25ce3837": "Скачать прыкладанне MeTravel для Android",
