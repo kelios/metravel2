@@ -19,11 +19,7 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import { translate as i18nT } from '@/i18n'
 
 
-const ListTravel = lazy(async () => {
-    const mod: any = await import('@/components/listTravel/ListTravelBase');
-    const Comp = mod?.default ?? mod;
-    return { default: Comp };
-});
+const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
 export default function ExportScreen() {
     const isFocused = useIsFocused();
@@ -150,7 +146,7 @@ export default function ExportScreen() {
                         </View>
                     }
                 >
-                    <ListTravel />
+                    <ListTravel enabled={isFocused} />
                 </Suspense>
             )}
             </View>

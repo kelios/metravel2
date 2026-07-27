@@ -77,7 +77,11 @@ const fallbackTravelPayload = {
   user_rating: null,
 };
 
-export async function mockFallbackTravelDetails(page: Page): Promise<void> {
+export async function mockFallbackTravelDetails(
+  page: Page,
+  overrides: Partial<typeof fallbackTravelPayload> = {},
+): Promise<void> {
+  const travelPayload = { ...fallbackTravelPayload, ...overrides };
   const routeHandler = async (route: any) => {
     const request = route.request();
     if (request.method() !== 'GET') {
@@ -120,7 +124,7 @@ export async function mockFallbackTravelDetails(page: Page): Promise<void> {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(fallbackTravelPayload),
+        body: JSON.stringify(travelPayload),
       });
       return;
     }

@@ -161,6 +161,13 @@ describe('useTravelDeferredSectionsModel', () => {
     })
 
     expect(addListenerSpy).not.toHaveBeenCalled()
+    expect(result.current.shouldLoadMap).toBe(false)
+
+    act(() => {
+      rerender({ settledScrollOffsetY: 1000 })
+    })
+
+    expect(addListenerSpy).not.toHaveBeenCalled()
     expect(result.current.shouldLoadMap).toBe(true)
     interactionSpy.mockRestore()
   })

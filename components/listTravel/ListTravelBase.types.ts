@@ -2,6 +2,7 @@ import type Feather from '@expo/vector-icons/Feather';
 import type { ReactNode } from 'react';
 
 export type ListTravelBaseProps = {
+  enabled?: boolean;
   catalogIntro?: ReactNode;
   initialViewportWidth?: number;
   primaryAction?: {

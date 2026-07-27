@@ -7,7 +7,7 @@ import { translate as i18nT } from '@/i18n'
 const fetchHomePopularTravels = (options?: { signal?: AbortSignal }) =>
   fetchTravelsPopular({ ...options, limit: 10 })
 
-export default function HomePopularRoutesSection() {
+export default function HomePopularRoutesSection({ enabled = true }: { enabled?: boolean }) {
   return (
     <HomeInspirationSection
       title={i18nT('home:components.home.HomePopularRoutesSection.populyarnoe_u_puteshestvennikov_77627476')}
@@ -15,6 +15,7 @@ export default function HomePopularRoutesSection() {
       queryKey="home-popular-travels"
       fetchFn={fetchHomePopularTravels}
       layout="rail"
+      enabled={enabled}
     />
   )
 }

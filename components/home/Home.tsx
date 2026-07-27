@@ -265,11 +265,11 @@ function Home() {
       )}
 
       <DeferredSection marginTop={gap.hero} container={{}} fallback={<SectionSkeleton />}>
-        <HomeWeekendRoutesSection />
+        <HomeWeekendRoutesSection enabled={isFocused} />
       </DeferredSection>
 
       <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
-        <HomePopularRoutesSection />
+        <HomePopularRoutesSection enabled={isFocused} />
       </DeferredSection>
 
       {IS_WEB && (
@@ -279,11 +279,11 @@ function Home() {
       )}
 
       <DeferredSection marginTop={gap.sections} fallback={null}>
-        <HomeQuestsPromoSection />
+        <HomeQuestsPromoSection enabled={isFocused} />
       </DeferredSection>
 
       <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
-        <HomeNewRoutesSection />
+        <HomeNewRoutesSection enabled={isFocused} />
       </DeferredSection>
 
       <DeferredSection marginTop={gap.sections} fallback={<SectionSkeleton />}>

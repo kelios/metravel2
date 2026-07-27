@@ -7,7 +7,7 @@ import { translate as i18nT } from '@/i18n'
 const fetchHomeNewTravels = (options?: { signal?: AbortSignal }) =>
   fetchTravels(0, 10, '', { sort: 'newest' }, { signal: options?.signal })
 
-export default function HomeNewRoutesSection() {
+export default function HomeNewRoutesSection({ enabled = true }: { enabled?: boolean }) {
   return (
     <HomeInspirationSection
       title={i18nT('home:components.home.HomeNewRoutesSection.novye_marshruty_04e175d7')}
@@ -15,6 +15,7 @@ export default function HomeNewRoutesSection() {
       queryKey="home-new-travels"
       fetchFn={fetchHomeNewTravels}
       layout="rail"
+      enabled={enabled}
     />
   )
 }

@@ -15,12 +15,12 @@ import { translate as i18nT } from '@/i18n'
 const IS_WEB = Platform.OS === 'web'
 const MAX_QUESTS = 2
 
-function HomeQuestsPromoSection() {
+function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   const router = useRouter()
   const colors = useThemedColors()
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
-  const { quests, loading } = useQuestsList()
+  const { quests, loading } = useQuestsList({ enabled })
   const [hovered, setHovered] = useState(false)
 
   const visibleQuests = useMemo(() => quests.slice(0, MAX_QUESTS), [quests])

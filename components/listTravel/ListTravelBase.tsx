@@ -52,7 +52,7 @@ import type { ListTravelBaseProps } from './ListTravelBase.types'
 
 const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
 
-function ListTravelBase({ catalogIntro, initialViewportWidth, primaryAction }: ListTravelBaseProps = {}) {
+function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, primaryAction }: ListTravelBaseProps = {}) {
     const colors = useThemedColors();
     const hydrationReady = useHydrationReady();
     const { viewportState, width } = useListTravelViewportState(initialViewportWidth);
@@ -138,8 +138,8 @@ function ListTravelBase({ catalogIntro, initialViewportWidth, primaryAction }: L
     // which would leave chips unresolved — so fetch eagerly whenever a deep link is active.
     const hasInitialFilter = !!initialFilter;
     const shouldFetchFilterOptions = useMemo(() => {
-      return !usesOverlaySidebar || showFilters || hasInitialFilter;
-    }, [usesOverlaySidebar, showFilters, hasInitialFilter]);
+      return enabled && (!usesOverlaySidebar || showFilters || hasInitialFilter);
+    }, [enabled, usesOverlaySidebar, showFilters, hasInitialFilter]);
 
     /* Filters options - оптимизированный запрос с кэшированием */
     const {
@@ -208,8 +208,8 @@ function ListTravelBase({ catalogIntro, initialViewportWidth, primaryAction }: L
     });
 
     const isQueryEnabled = useMemo(
-      () => (isMeTravel || isExport ? !!userId : true),
-      [isMeTravel, isExport, userId]
+      () => enabled && (isMeTravel || isExport ? !!userId : true),
+      [enabled, isMeTravel, isExport, userId]
     );
 
     // Если для страницы требуется конкретный пользователь ("Мои путешествия" или экспорт),

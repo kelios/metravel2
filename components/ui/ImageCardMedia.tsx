@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { PixelRatio, Platform, StyleSheet, View } from 'react-native';
 import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
 
@@ -26,6 +26,43 @@ const isRootRelativeUrl = (value: string): boolean => /^\/(?!\/)/.test(value);
 
 /** Native: размер подложки блюра по умолчанию (Glide `override`) — ступень «лестницы» прокси. */
 const NATIVE_BLUR_BACKDROP_SIZE = 96;
+
+type NativeSharpSourceArgs = {
+  uri: string;
+  width?: number;
+  height?: number;
+  quality: number;
+  fit: 'contain' | 'cover';
+  pixelRatio: number;
+};
+
+export function buildNativeSharpImageSource({
+  uri,
+  width,
+  height,
+  quality,
+  fit,
+  pixelRatio,
+}: NativeSharpSourceArgs): { uri: string } | null {
+  const normalizedUri = uri.trim();
+  if (!normalizedUri || /^(data:|blob:|file:)/i.test(normalizedUri)) return null;
+  if (hasOptimizationParams(normalizedUri)) return null;
+  const baseWidth = width ?? height;
+  if (!baseWidth || baseWidth <= 0) return null;
+  const dpr = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
+  const targetWidth = Math.min(1024, Math.round(baseWidth * dpr));
+  const targetHeight =
+    height && height > 0
+      ? Math.min(1024, Math.round(height * dpr))
+      : undefined;
+  const optimized = optimizeImageUrl(normalizedUri, {
+    width: targetWidth,
+    height: targetHeight,
+    quality,
+    fit,
+  });
+  return optimized && optimized !== normalizedUri ? { uri: optimized } : null;
+}
 
 type Props = {
   src?: string | null;
@@ -256,6 +293,23 @@ function ImageCardMedia({
     }
     return stableHeightRef.current;
   }, [height, currentImageIdentityKey]);
+
+  // Native: sharp-слой уходил в Glide исходным URL даже при известных width/height —
+  // прокси-сайзинг жил только у hero (buildUriNative) и у 96px-блюра выше. Карточка
+  // 132dp платила полный вес оригинала (quest-обложки ~290 КБ, #1103). Сайзим URL от
+  // стабильной геометрии × физический DPR с потолком 1024 (потолок бэка, #1074).
+  // Уже оптимизированные и локальные URL не трогаем.
+  const nativeSharpSource = useMemo(() => {
+    if (Platform.OS === 'web' || !resolvedSource || typeof resolvedSource === 'number') return null;
+    return buildNativeSharpImageSource({
+      uri: resolvedSource.uri,
+      width: stableWidth,
+      height: stableHeight,
+      quality,
+      fit: contentFit === 'contain' ? 'contain' : 'cover',
+      pixelRatio: PixelRatio.get(),
+    });
+  }, [contentFit, quality, resolvedSource, stableHeight, stableWidth]);
 
   const shouldPreserveProvidedOptimizedUrl = useCallback((uri: string): boolean => {
     if (!hasOptimizationParams(uri)) return false;
@@ -672,7 +726,7 @@ function ImageCardMedia({
             source={
               Platform.OS === 'web' && webOptimizedSource
                 ? { uri: webOptimizedSource }
-                : resolvedSource
+                : nativeSharpSource ?? resolvedSource
             }
             recyclingKey={recyclingKey}
             height={typeof height === 'number' ? height : undefined}

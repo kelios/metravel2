@@ -55,7 +55,7 @@ export function useQuestsList(opts?: { enabled?: boolean }) {
     const enabled = opts?.enabled ?? true;
     const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
         queryKey: queryKeys.quests(),
-        queryFn: fetchQuestsList,
+        queryFn: ({ signal }) => fetchQuestsList({ signal }),
         enabled,
         staleTime: QUESTS_LIST_STALE_TIME,
         gcTime: QUESTS_LIST_GC_TIME,

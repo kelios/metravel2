@@ -354,12 +354,14 @@ type PaginatedEnvelope<T> = {
 };
 
 /** Бэкенд перевёл списочные эндпоинты на пагинацию ({data/results, next}) — разворачиваем конверт и дочитываем все страницы. */
-async function fetchAllPages<T>(path: string, maxPages = 20): Promise<T[]> {
+async function fetchAllPages<T>(path: string, maxPages = 20, options?: { signal?: AbortSignal }): Promise<T[]> {
     const out: T[] = [];
     let page = 1;
     for (let i = 0; i < maxPages; i++) {
         const url = page === 1 ? path : `${path}${path.includes('?') ? '&' : '?'}page=${page}`;
-        const res = await apiClient.get<T[] | PaginatedEnvelope<T>>(url);
+        const res = await apiClient.get<T[] | PaginatedEnvelope<T>>(url, undefined, {
+            signal: options?.signal,
+        });
         if (Array.isArray(res)) {
             out.push(...res);
             break;
@@ -378,9 +380,9 @@ async function fetchAllPages<T>(path: string, maxPages = 20): Promise<T[]> {
  * При успехе кэширует сырой список в AsyncStorage (fire-and-forget) для офлайна.
  * При сетевом фейле возвращает кэш, если он есть, — иначе пробрасывает ошибку.
  */
-export async function fetchQuestsList(): Promise<ApiQuestMeta[]> {
+export async function fetchQuestsList(options?: { signal?: AbortSignal }): Promise<ApiQuestMeta[]> {
     try {
-        const list = await fetchAllPages<ApiQuestMeta>('/quests/');
+        const list = await fetchAllPages<ApiQuestMeta>('/quests/', 20, options);
         const withDefaults = list.map(withQuestMetaDefaults);
         void writeCachedQuestsList(withDefaults);
         return withDefaults;

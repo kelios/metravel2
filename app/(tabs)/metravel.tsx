@@ -31,7 +31,7 @@ export default function MeTravelScreen() {
             />
             )}
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-                <ListTravel />
+                <ListTravel enabled={isFocused} />
             </SafeAreaView>
         </>
     );

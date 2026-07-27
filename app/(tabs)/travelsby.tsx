@@ -68,7 +68,7 @@ export default function TravelsByScreen() {
                             </>
                         }
                     >
-                        <ListTravel catalogIntro={catalogIntro} />
+                        <ListTravel catalogIntro={catalogIntro} enabled={isFocused} />
                     </Suspense>
                 ) : (
                     <>

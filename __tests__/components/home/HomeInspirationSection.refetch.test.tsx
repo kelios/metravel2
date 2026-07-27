@@ -44,4 +44,18 @@ describe('HomeInspirationSection query config (#738)', () => {
     // section must override it to false (scoped fix — see #738).
     expect(options.refetchOnMount).toBe(false)
   })
+
+  it('does not fetch while the home tab is blurred', () => {
+    render(
+      <HomeInspirationSection
+        title="Популярное"
+        queryKey="home-popular-travels"
+        fetchFn={async () => ({ items: [] })}
+        enabled={false}
+      />
+    )
+
+    const options = mockUseQuery.mock.calls[0][0] as { enabled?: boolean }
+    expect(options.enabled).toBe(false)
+  })
 })

@@ -96,5 +96,5 @@ export default function ExportScreen() {
     )
   }
 
-  return <ListTravel />
+  return <ListTravel enabled={isFocused} />
 }

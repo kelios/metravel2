@@ -110,6 +110,7 @@ function SearchScreen() {
           {canRenderList ? (
             <Suspense fallback={<SearchPageSkeleton />}>
               <ListTravel
+                enabled={isFocused}
                 initialViewportWidth={Platform.OS === 'web' ? viewportWidth : undefined}
                 primaryAction={createTravelAction}
               />

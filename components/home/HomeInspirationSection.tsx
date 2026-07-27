@@ -30,6 +30,7 @@ interface HomeSectionProps {
   hideAuthor?: boolean
   fixedCount?: number
   layout?: 'editorial' | 'rail'
+  enabled?: boolean
 }
 
 const IS_WEB = Platform.OS === 'web'
@@ -139,6 +140,7 @@ export function HomeInspirationSection({
   hideAuthor = false,
   fixedCount,
   layout = 'editorial',
+  enabled = true,
 }: HomeSectionProps) {
   const router = useRouter()
   const colors = useThemedColors()
@@ -166,6 +168,7 @@ export function HomeInspirationSection({
     // здесь даёт лишний запрос на нав-туда-обратно; scoped-override, чтобы не
     // ломать других потребителей dynamic (профиль country-progress).
     refetchOnMount: false,
+    enabled,
   })
 
   const travelsList = useMemo(() => {

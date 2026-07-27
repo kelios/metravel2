@@ -153,7 +153,8 @@ const NATIVE_SCROLL_GATED_SECTIONS: TravelDeferredSectionKey[] = [
 // Reveal the first heavy section once the user scrolls a little; each subsequent
 // section unlocks after roughly another viewport of scrolling (lookahead so a
 // section is mounted before it reaches the fold).
-const NATIVE_SCROLL_GATE_INITIAL = 240
+const NATIVE_SCROLL_GATE_INITIAL_MIN = 720
+const NATIVE_SCROLL_GATE_VIEWPORT_MULTIPLIER = 1.25
 const NATIVE_SCROLL_GATE_STEP_MIN = 480
 
 type UseTravelDeferredSectionsModelArgs = {
@@ -255,10 +256,14 @@ export function useTravelDeferredSectionsModel({
   useEffect(() => {
     if (Platform.OS === 'web') return
     if (!canRenderHeavy) return
+    const initialThreshold = Math.max(
+      NATIVE_SCROLL_GATE_INITIAL_MIN,
+      viewportHeight * NATIVE_SCROLL_GATE_VIEWPORT_MULTIPLIER,
+    )
     const step = Math.max(NATIVE_SCROLL_GATE_STEP_MIN, viewportHeight * 0.75)
     const evaluate = (offsetY: number) => {
       NATIVE_SCROLL_GATED_SECTIONS.forEach((sectionKey, index) => {
-        const threshold = NATIVE_SCROLL_GATE_INITIAL + index * step
+        const threshold = initialThreshold + index * step
         if (offsetY >= threshold) markSectionLoaded(sectionKey)
       })
     }

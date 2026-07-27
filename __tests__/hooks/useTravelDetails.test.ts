@@ -151,7 +151,7 @@ describe('useTravelDetails', () => {
     });
   });
 
-  it('refreshes a static web preload by id after hydration and updates the query cache', async () => {
+  it('does not refetch a fresh static web preload in the background', async () => {
     (Platform.OS as any) = 'web';
     const requestIdleCallback = jest.fn((callback: () => void) => {
       callback();
@@ -177,16 +177,6 @@ describe('useTravelDetails', () => {
       },
     };
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
-    const freshTravel = {
-      id: 498,
-      slug: 'awesome-trip',
-      name: 'Trip',
-      description: '<p>Static text</p>',
-      gallery: [{ id: 7, url: '/gallery/7.webp', caption: 'Fresh caption' }],
-      travelAddress: [],
-      coordsMeTravel: [],
-    };
-    (fetchTravel as jest.Mock).mockResolvedValue(freshTravel);
     (useQuery as jest.Mock).mockImplementation(({ queryFn, initialData }: any) => {
       capturedQueryFn = queryFn;
       return {
@@ -200,16 +190,9 @@ describe('useTravelDetails', () => {
 
     renderHook(() => useTravelDetails());
 
-    await waitFor(() => {
-      expect(fetchTravel).toHaveBeenCalledWith(498, {
-        signal: expect.any(AbortSignal),
-        forceRefresh: true,
-      });
-    });
-    expect(setQueryData).toHaveBeenCalledWith(
-      ['travel', 'awesome-trip'],
-      freshTravel,
-    );
+    expect(requestIdleCallback).not.toHaveBeenCalled();
+    expect(fetchTravel).not.toHaveBeenCalled();
+    expect(setQueryData).not.toHaveBeenCalled();
   });
 
   it('skips preload polling in queryFn once initialData has consumed the preload', async () => {
