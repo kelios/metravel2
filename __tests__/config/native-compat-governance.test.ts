@@ -155,6 +155,9 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
       "'android.enableShrinkResourcesInReleaseBuilds': 'true'",
     );
     expect(releaseSafetyPlugin).toContain("'android.r8.optimizedResourceShrinking': 'true'");
+    expect(androidProperties).toMatch(
+      /^org\.gradle\.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=1024m$/m,
+    );
     expect(androidProperties).toMatch(/^android\.enableMinifyInReleaseBuilds=true$/m);
     expect(androidProperties).toMatch(/^android\.enableShrinkResourcesInReleaseBuilds=true$/m);
     expect(androidProperties).toMatch(/^android\.r8\.optimizedResourceShrinking=true$/m);
