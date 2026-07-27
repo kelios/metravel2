@@ -173,7 +173,7 @@ describe('Android Configuration Tests', () => {
       });
     });
 
-    it('should block unused microphone and advertising ID permissions', () => {
+    it('should block unused microphone, advertising ID, and broad media permissions', () => {
       const appConfig = readAppConfig();
       const blockedPermissions = appConfig.expo.android.blockedPermissions;
 
@@ -181,6 +181,11 @@ describe('Android Configuration Tests', () => {
         'android.permission.RECORD_AUDIO',
         'com.google.android.gms.permission.AD_ID',
         'android.permission.ACCESS_ADSERVICES_AD_ID',
+        'android.permission.READ_MEDIA_IMAGES',
+        'android.permission.READ_MEDIA_VIDEO',
+        'android.permission.READ_MEDIA_VISUAL_USER_SELECTED',
+        'android.permission.READ_EXTERNAL_STORAGE',
+        'android.permission.WRITE_EXTERNAL_STORAGE',
       ]));
     });
   });

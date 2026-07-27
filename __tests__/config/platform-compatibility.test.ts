@@ -188,13 +188,13 @@ describe('Platform Compatibility Tests', () => {
       expect(appConfig.expo.ios.infoPlist.NSPhotoLibraryUsageDescription).toBeDefined();
     });
 
-    it('Android should have storage permissions', () => {
+    it('Android should use the system photo picker without broad storage permissions', () => {
       const appConfig = readAppConfig();
       const permissions = appConfig.expo.android.permissions;
-      const hasStoragePermission = 
-        permissions.includes('READ_EXTERNAL_STORAGE') ||
-        permissions.includes('READ_MEDIA_IMAGES');
-      expect(hasStoragePermission).toBe(true);
+      expect(permissions).not.toContain('READ_EXTERNAL_STORAGE');
+      expect(permissions).not.toContain('WRITE_EXTERNAL_STORAGE');
+      expect(permissions).not.toContain('READ_MEDIA_IMAGES');
+      expect(permissions).not.toContain('READ_MEDIA_VIDEO');
     });
   });
 

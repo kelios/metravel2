@@ -259,10 +259,14 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     if (Platform.OS === 'web') return;
     try {
       setPickerError(null);
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        setPickerError(i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'));
-        return;
+      // Android uses the system Photo Picker and must not request broad
+      // READ_MEDIA_IMAGES/VIDEO access. iOS still requires library permission.
+      if (Platform.OS === 'ios') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          setPickerError(i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'));
+          return;
+        }
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],

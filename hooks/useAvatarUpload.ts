@@ -81,10 +81,14 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
                 return;
             }
 
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-                showToast({ type: 'warning', text1: i18nT('shared:hooks.useAvatarUpload.razreshenie_9b80cbe2'), text2: i18nT('shared:hooks.useAvatarUpload.nuzhen_dostup_k_galeree_1a8e0c34'), visibilityTime: 3000 });
-                return;
+            // Android uses the system Photo Picker and must not request broad
+            // READ_MEDIA_IMAGES/VIDEO access. iOS still requires library permission.
+            if (Platform.OS === 'ios') {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                    showToast({ type: 'warning', text1: i18nT('shared:hooks.useAvatarUpload.razreshenie_9b80cbe2'), text2: i18nT('shared:hooks.useAvatarUpload.nuzhen_dostup_k_galeree_1a8e0c34'), visibilityTime: 3000 });
+                    return;
+                }
             }
 
             const result = await ImagePicker.launchImageLibraryAsync({

@@ -127,6 +127,25 @@ describe('PhotoUploadWithPreview', () => {
             expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
         });
 
+        it('android: opens the system photo picker without requesting broad media permission', async () => {
+            Object.defineProperty(Platform, 'OS', { value: 'android' });
+            (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValueOnce({
+                canceled: true,
+                assets: [],
+            });
+
+            const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
+            await act(async () => {
+                screen.getByTestId('photo-upload-gallery-button').props.onPress();
+                await Promise.resolve();
+            });
+
+            expect(ImagePicker.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
+            expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalledWith(
+                expect.objectContaining({ mediaTypes: ['images'] }),
+            );
+        });
+
         it('should display placeholder text when provided', () => {
             const customPlaceholder = 'Перетащите фото точки маршрута';
             Object.defineProperty(Platform, 'OS', { value: 'web' });
