@@ -143,7 +143,16 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
     expect(manifest).toContain('android:resizeableActivity="true"');
     expect(androidProperties).toMatch(/^edgeToEdgeEnabled=true$/m);
     expect(appGradle).toContain('com.google.android.material:material:1.14.0');
+    expect(appGradle).toContain('getDefaultProguardFile("proguard-android-optimize.txt")');
     expect(releaseSafetyPlugin).toContain('com.google.android.material:material:1.14.0');
+    expect(releaseSafetyPlugin).toContain("'android.enableMinifyInReleaseBuilds': 'true'");
+    expect(releaseSafetyPlugin).toContain(
+      "'android.enableShrinkResourcesInReleaseBuilds': 'true'",
+    );
+    expect(releaseSafetyPlugin).toContain("'android.r8.optimizedResourceShrinking': 'true'");
+    expect(androidProperties).toMatch(/^android\.enableMinifyInReleaseBuilds=true$/m);
+    expect(androidProperties).toMatch(/^android\.enableShrinkResourcesInReleaseBuilds=true$/m);
+    expect(androidProperties).toMatch(/^android\.r8\.optimizedResourceShrinking=true$/m);
     expect(releaseSafetyPlugin).toContain("name: 'android:statusBarColor'");
     expect(releaseSafetyPlugin).toContain("name: 'android:navigationBarColor'");
     expect(androidStyles).not.toContain('android:statusBarColor');
