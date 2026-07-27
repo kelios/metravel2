@@ -20,7 +20,7 @@ module.exports = [
             lng: 25.343633,
             duration_min: 120,
             difficulty: 'easy',
-            tags: ['legend', 'history', 'monastery', 'pilgrimage'],
+            tags: ['legend', 'history', 'monastery', 'pilgrimage', 'roadtrip'],
             pet_friendly: false,
         },
         storage_key: 'quest_zhirovichi_icon_pear_v1',

@@ -19,7 +19,7 @@ module.exports = [
             lng: 26.9399442,
             duration_min: 180,
             difficulty: 'easy',
-            tags: ['legend', 'history', 'citywalk', 'lake', 'pilgrimage'],
+            tags: ['legend', 'history', 'citywalk', 'lake', 'pilgrimage', 'roadtrip'],
             pet_friendly: true,
         },
         storage_key: 'quest_myadel_obet_i_ozernicy_v1',
