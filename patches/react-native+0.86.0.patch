@@ -1,0 +1,139 @@
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
+index 97725bf..7ea8643 100644
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
+@@ -9,6 +9,7 @@ package com.facebook.react.modules.statusbar
+ 
+ import android.animation.ArgbEvaluator
+ import android.animation.ValueAnimator
++import android.os.Build
+ import android.view.Window
+ import android.view.WindowManager
+ import androidx.core.view.ViewCompat
+@@ -25,6 +26,7 @@ import com.facebook.react.interfaces.ExtraWindowEventListener
+ import com.facebook.react.module.annotations.ReactModule
+ import com.facebook.react.uimanager.DisplayMetricsHolder.getStatusBarHeightPx
+ import com.facebook.react.uimanager.PixelUtil
++import com.facebook.react.util.AndroidVersion
+ import com.facebook.react.views.view.isEdgeToEdgeFeatureFlagOn
+ import com.facebook.react.views.view.setStatusBarStyle
+ import com.facebook.react.views.view.setStatusBarTranslucency
+@@ -68,9 +70,13 @@ internal class StatusBarModule(reactContext: ReactApplicationContext?) :
+   override fun getTypedExportedConstants(): Map<String, Any> {
+     val currentActivity = reactApplicationContext.currentActivity
+     val statusBarColor =
+-        currentActivity?.window?.statusBarColor?.let { color ->
+-          String.format("#%06X", 0xFFFFFF and color)
+-        } ?: "black"
++        if (Build.VERSION.SDK_INT >= AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM) {
++          "#000000"
++        } else {
++          currentActivity?.window?.statusBarColor?.let { color ->
++            String.format("#%06X", 0xFFFFFF and color)
++          } ?: "black"
++        }
+     return mapOf(
+         HEIGHT_KEY to PixelUtil.toDIPFromPixel(getStatusBarHeightPx(currentActivity).toFloat()),
+         DEFAULT_BACKGROUND_COLOR_KEY to statusBarColor,
+@@ -88,7 +94,10 @@ internal class StatusBarModule(reactContext: ReactApplicationContext?) :
+       )
+       return
+     }
+-    if (isEdgeToEdgeFeatureFlagOn) {
++    if (
++        isEdgeToEdgeFeatureFlagOn ||
++            Build.VERSION.SDK_INT >= AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM
++    ) {
+       FLog.w(
+           ReactConstants.TAG,
+           "StatusBarModule: Ignored status bar change, current activity is edge-to-edge.",
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
+index 400860c..832d10e 100644
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
+@@ -125,7 +125,10 @@ internal fun Window.setStatusBarStyle(style: String?) {
+ 
+ @Suppress("DEPRECATION")
+ private fun Window.statusBarHide() {
+-  if (isEdgeToEdgeFeatureFlagOn) {
++  if (
++      isEdgeToEdgeFeatureFlagOn ||
++          Build.VERSION.SDK_INT >= AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM
++  ) {
+     WindowInsetsControllerCompat(this, decorView).run {
+       systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+       hide(WindowInsetsCompat.Type.statusBars())
+@@ -144,7 +147,10 @@ private fun Window.statusBarHide() {
+ 
+ @Suppress("DEPRECATION")
+ private fun Window.statusBarShow() {
+-  if (isEdgeToEdgeFeatureFlagOn) {
++  if (
++      isEdgeToEdgeFeatureFlagOn ||
++          Build.VERSION.SDK_INT >= AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM
++  ) {
+     WindowInsetsControllerCompat(this, decorView).run {
+       systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+       show(WindowInsetsCompat.Type.statusBars())
+@@ -167,34 +173,40 @@ internal fun Window.enableEdgeToEdge() {
+   val insetsController = WindowInsetsControllerCompat(this, decorView)
+   val isDarkMode = UiModeUtils.isDarkMode(context)
+ 
+-  statusBarColor = Color.TRANSPARENT
++  if (Build.VERSION.SDK_INT < AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM) {
++    statusBarColor = Color.TRANSPARENT
+ 
+-  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+-    navigationBarColor = Color.TRANSPARENT
++    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
++      navigationBarColor = Color.TRANSPARENT
+ 
+-    val attributes = intArrayOf(android.R.attr.enforceNavigationBarContrast)
+-    val typedArray = context.theme.obtainStyledAttributes(attributes)
++      val attributes = intArrayOf(android.R.attr.enforceNavigationBarContrast)
++      val typedArray = context.theme.obtainStyledAttributes(attributes)
+ 
+-    val enforceNavigationBarContrast =
+-        try {
+-          typedArray.getBoolean(0, true)
+-        } finally {
+-          typedArray.recycle()
+-        }
++      val enforceNavigationBarContrast =
++          try {
++            typedArray.getBoolean(0, true)
++          } finally {
++            typedArray.recycle()
++          }
+ 
+-    isStatusBarContrastEnforced = false
+-    isNavigationBarContrastEnforced = enforceNavigationBarContrast
++      isStatusBarContrastEnforced = false
++      isNavigationBarContrastEnforced = enforceNavigationBarContrast
+ 
+-    if (enforceNavigationBarContrast) {
+-      insetsController.isAppearanceLightNavigationBars = !isDarkMode
++      if (enforceNavigationBarContrast) {
++        insetsController.isAppearanceLightNavigationBars = !isDarkMode
++      }
++    } else {
++      val isAppearanceLightNavigationBars =
++          Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isDarkMode
++
++      navigationBarColor =
++          if (isAppearanceLightNavigationBars) LightNavigationBarColor else DarkNavigationBarColor
++      insetsController.isAppearanceLightNavigationBars = isAppearanceLightNavigationBars
+     }
+   } else {
+-    val isAppearanceLightNavigationBars =
+-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isDarkMode
+-
+-    navigationBarColor =
+-        if (isAppearanceLightNavigationBars) LightNavigationBarColor else DarkNavigationBarColor
+-    insetsController.isAppearanceLightNavigationBars = isAppearanceLightNavigationBars
++    // Android 15+ enforces transparent edge-to-edge system bars. Calling the legacy color APIs
++    // is deprecated and is reported by Google Play even though the platform ignores them.
++    insetsController.isAppearanceLightNavigationBars = !isDarkMode
+   }
+ 
+   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

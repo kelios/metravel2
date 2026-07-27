@@ -120,6 +120,7 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
       'utf8',
     );
     const appGradle = fs.readFileSync(path.join(ROOT, 'android', 'app', 'build.gradle'), 'utf8');
+    const settingsGradle = fs.readFileSync(path.join(ROOT, 'android', 'settings.gradle'), 'utf8');
     const releaseSafetyPlugin = fs.readFileSync(
       path.join(ROOT, 'plugins', 'withAndroidReleaseSafety.js'),
       'utf8',
@@ -130,6 +131,10 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
     );
     const androidStyles = fs.readFileSync(
       path.join(ROOT, 'android', 'app', 'src', 'main', 'res', 'values', 'styles.xml'),
+      'utf8',
+    );
+    const reactNativePatch = fs.readFileSync(
+      path.join(ROOT, 'patches', 'react-native+0.86.0.patch'),
       'utf8',
     );
     const layout = fs.readFileSync(path.join(ROOT, 'app', '_layout.tsx'), 'utf8');
@@ -153,6 +158,17 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
     expect(androidProperties).toMatch(/^android\.enableMinifyInReleaseBuilds=true$/m);
     expect(androidProperties).toMatch(/^android\.enableShrinkResourcesInReleaseBuilds=true$/m);
     expect(androidProperties).toMatch(/^android\.r8\.optimizedResourceShrinking=true$/m);
+    expect(settingsGradle).toContain("includeBuild('../node_modules/react-native')");
+    expect(settingsGradle).toContain(
+      "substitute(module('com.facebook.react:react-android'))",
+    );
+    expect(releaseSafetyPlugin).toContain('withSettingsGradle');
+    expect(reactNativePatch).toContain(
+      'Build.VERSION.SDK_INT < AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM',
+    );
+    expect(reactNativePatch).toContain(
+      'Build.VERSION.SDK_INT >= AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM',
+    );
     expect(releaseSafetyPlugin).toContain("name: 'android:statusBarColor'");
     expect(releaseSafetyPlugin).toContain("name: 'android:navigationBarColor'");
     expect(androidStyles).not.toContain('android:statusBarColor');
