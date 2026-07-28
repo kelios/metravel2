@@ -216,14 +216,32 @@ export const buildUriWeb = (
       : isMobileWidth
         ? 78
         : 78;
+    const format = isFirst ? undefined : PREFERRED_FORMAT;
+
     const fromMedia = buildResponsiveImagePropsFromMedia(img.media, {
       maxWidth: targetWidth,
       widths: [320, 640, 720, 960, 1280],
       sizes: isMobileWidth ? '100vw' : '(max-width: 1280px) 100vw, 1280px',
     });
-    if (fromMedia?.src) return fromMedia.src;
-
-    const format = isFirst ? undefined : PREFERRED_FORMAT;
+    // #1119: `fromMedia.src` — это готовый ФАЙЛ-вариант из media-манифеста
+    // (например `-detail_hd.jpg`), без параметров прокси. Возвращать его как есть
+    // нельзя: этот URL уходит в префетч соседних слайдов
+    // (`useSliderCore.warmNeighbors` → `prefetchImage`), и сосед приезжает
+    // полноразмерным. Замер прода 2026-07-28 в чистой вкладке: две загрузки на
+    // статью — 507+569 КБ на `rodniki-yuckovskie`, 444+451 КБ на `lysaya-gora-342m`,
+    // при том что смонтированный слайд отдельно берёт вариант из `srcSet`.
+    // Прогоняем вариант манифеста через прокси-параметры той же ширины, что и
+    // остальные слайды: префетч и выбор браузера сходятся на одном адресе.
+    if (fromMedia?.src) {
+      return (
+        optimizeImageUrl(fromMedia.src, {
+          width: targetWidth,
+          format,
+          quality,
+          fit: fitForUrl,
+        }) || fromMedia.src
+      );
+    }
     // #1113: здесь считался `dpr` для соседних слайдов («кап до dpr 2, чтобы свайп
     // 1→2 не стопорился о декод»). Прокси параметр игнорирует — замер прода
     // 2026-07-28 даёт байт-в-байт одинаковый ответ для dpr отсутствующего / 2 / 3, —
