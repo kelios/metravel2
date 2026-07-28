@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { translate as i18nT } from '@/i18n';
@@ -82,6 +83,7 @@ export default function FacebookSignInButton({
 }: FacebookSignInButtonProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const hydrationReady = useHydrationReady();
     const { locale } = useLocale();
     const [ready, setReady] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -146,6 +148,7 @@ export default function FacebookSignInButton({
     }, [apiVersion, appId, enabled, locale]);
 
     if (!enabled) return null;
+    if (!hydrationReady) return <View style={styles.hydrationPlaceholder} />;
 
     const unavailable = !appId;
     const handlePress = () => {
@@ -212,6 +215,11 @@ export default function FacebookSignInButton({
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    hydrationPlaceholder: {
+        width: '100%',
+        minHeight: 48,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+    },
     button: {
         width: '100%',
         minHeight: 48,
