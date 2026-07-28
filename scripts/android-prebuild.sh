@@ -57,8 +57,14 @@ rm -rf android/app/build 2>/dev/null || true
 log_success "Кэш очищен"
 
 # 3. Установка зависимостей
+# Проект на yarn ("packageManager": "yarn@1.22.22"): `npm install` здесь
+# перезаписывал yarn.lock и создавал лишний package-lock.json.
 log_info "Шаг 3: Установка зависимостей..."
-npm install
+if [ -f "yarn.lock" ] && command -v yarn &> /dev/null; then
+    yarn install --frozen-lockfile
+else
+    npm ci
+fi
 log_success "Зависимости установлены"
 
 # 4. Проверка конфигурации
@@ -90,6 +96,37 @@ if [ ! -f "google-services.json" ]; then
 else
     log_success "google-services.json найден"
 fi
+
+# 6.5 Генерация native-проекта (это и есть prebuild)
+# Вся release-конфигурация (R8, shrinkResources, proguard-android-optimize,
+# material 1.14.0) живёт в plugins/withAndroidReleaseSafety.js и попадает в
+# android/ ТОЛЬКО отсюда. Без этого шага релиз собирается без R8 и Gradle всё
+# равно отчитывается BUILD SUCCESSFUL.
+# Prod-переменные подаются потому, что app.config.js включает Facebook-плагин по
+# EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED/META_*: без них сгенерированные ресурсы
+# разойдутся с production-сборкой.
+log_info "Шаг 6.5: Генерация native-проекта (expo prebuild)..."
+
+PROD_ENV_FILE=""
+if [ -f ".secrets/metravel-android-prod.env" ]; then
+    PROD_ENV_FILE=".secrets/metravel-android-prod.env"
+elif [ -f ".env.prod" ]; then
+    PROD_ENV_FILE=".env.prod"
+fi
+
+if [ -n "$PROD_ENV_FILE" ]; then
+    log_info "Окружение для prebuild: $PROD_ENV_FILE"
+    set -a
+    # shellcheck disable=SC1090
+    . "$PROD_ENV_FILE"
+    set +a
+else
+    log_warning "Production env не найден — prebuild пойдёт без него;"
+    log_warning "Facebook-ресурсы могут разойтись с production-сборкой"
+fi
+
+npx expo prebuild -p android --no-install
+log_success "Native-проект сгенерирован, config-плагины применены"
 
 # 7. Запуск expo-doctor
 log_info "Шаг 7: Проверка проекта с expo-doctor..."

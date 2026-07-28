@@ -13,6 +13,31 @@ const PORTABLE_PROD_ENV_PATH = path.join(
   '.secrets',
   'metravel-android-prod.env',
 )
+const GRADLE_PROPERTIES_PATH = path.join(ANDROID_DIR, 'gradle.properties')
+const APP_BUILD_GRADLE_PATH = path.join(ANDROID_DIR, 'app', 'build.gradle')
+const RELEASE_MAPPING_PATH = path.join(
+  ANDROID_DIR,
+  'app',
+  'build',
+  'outputs',
+  'mapping',
+  'release',
+  'mapping.txt',
+)
+
+// The release optimisation contract (R8, resource shrinking, optimised ProGuard
+// rules) lives in plugins/withAndroidReleaseSafety.js and reaches android/ only
+// through `expo prebuild`. Nothing in the build path runs prebuild, so a stale
+// android/ produces a "successful" release with R8 silently disabled. Fail loudly
+// instead of shipping an unminified bundle.
+const REQUIRED_GRADLE_PROPERTIES = [
+  'android.enableMinifyInReleaseBuilds=true',
+  'android.enableShrinkResourcesInReleaseBuilds=true',
+  'android.r8.optimizedResourceShrinking=true',
+]
+const REQUIRED_APP_GRADLE_SNIPPETS = [
+  'getDefaultProguardFile("proguard-android-optimize.txt")',
+]
 
 function parseEnvFile(filePath) {
   const variables = {}
@@ -172,6 +197,54 @@ function verifyFacebookAndroidResources(mode, environment) {
   )
 }
 
+/** Release optimisations that prebuild should have written into android/. */
+function findMissingReleaseOptimizations({ gradleProperties, appBuildGradle }) {
+  const missing = []
+  for (const property of REQUIRED_GRADLE_PROPERTIES) {
+    const pattern = new RegExp(
+      `^${property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`,
+      'm',
+    )
+    if (!pattern.test(gradleProperties)) missing.push(property)
+  }
+  for (const snippet of REQUIRED_APP_GRADLE_SNIPPETS) {
+    if (!appBuildGradle.includes(snippet)) missing.push(snippet)
+  }
+  return missing
+}
+
+function assertReleaseConfigApplied() {
+  const gradleProperties = fs.existsSync(GRADLE_PROPERTIES_PATH)
+    ? fs.readFileSync(GRADLE_PROPERTIES_PATH, 'utf8')
+    : ''
+  const appBuildGradle = fs.existsSync(APP_BUILD_GRADLE_PATH)
+    ? fs.readFileSync(APP_BUILD_GRADLE_PATH, 'utf8')
+    : ''
+  const missing = findMissingReleaseOptimizations({
+    gradleProperties,
+    appBuildGradle,
+  })
+  if (missing.length === 0) return
+
+  throw new Error(
+    'release optimisations are missing from android/ — the config plugin was ' +
+      'never applied, so this build would ship without R8.\n' +
+      missing.map((entry) => `  missing: ${entry}`).join('\n') +
+      '\nRun `npx expo prebuild -p android` first (it applies ' +
+      'plugins/withAndroidReleaseSafety.js), then rebuild.',
+  )
+}
+
+// R8 writes mapping.txt for every minified release. A missing mapping means the
+// minify task never ran, which Gradle still reports as BUILD SUCCESSFUL.
+function assertR8Ran() {
+  if (fs.existsSync(RELEASE_MAPPING_PATH)) return
+  throw new Error(
+    `R8 did not run: ${path.relative(ROOT_DIR, RELEASE_MAPPING_PATH)} was not ` +
+      'created. The release bundle is unminified — do not submit it.',
+  )
+}
+
 function main() {
   const mode = process.argv[2]
   if (!['debug', 'production'].includes(mode)) {
@@ -183,6 +256,7 @@ function main() {
   try {
     buildEnvironment = createBuildEnvironment(mode)
     getFacebookBuildConfig(buildEnvironment)
+    if (mode === 'production') assertReleaseConfigApplied()
   } catch (error) {
     process.stderr.write(`[android-gradle] ${error.message}\n`)
     process.exit(1)
@@ -212,6 +286,7 @@ function main() {
 
   try {
     verifyFacebookAndroidResources(mode, buildEnvironment)
+    if (mode === 'production') assertR8Ran()
   } catch (error) {
     process.stderr.write(`[android-gradle] ${error.message}\n`)
     process.exit(1)
@@ -221,7 +296,12 @@ function main() {
 if (require.main === module) main()
 
 module.exports = {
+  REQUIRED_APP_GRADLE_SNIPPETS,
+  REQUIRED_GRADLE_PROPERTIES,
+  assertR8Ran,
+  assertReleaseConfigApplied,
   createBuildEnvironment,
+  findMissingReleaseOptimizations,
   getFacebookBuildConfig,
   parseEnvFile,
   readAndroidManifestMetaData,

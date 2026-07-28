@@ -189,6 +189,32 @@ npm run lighthouse:travel:desktop
   - avoid legacy or deprecated approaches when a modern project-approved alternative exists;
   - if compatibility constraints force an older pattern, keep it local and document the reason in code or the relevant doc.
 
+### Nginx config ownership (mandatory)
+
+- `nginx/nginx.conf` в этом репозитории **не является активной конфигурацией прода
+  целиком**. Он описывает только фронтовую раздачу статики; часть публичных
+  маршрутов перехватывает backend, и для них действует
+  `deploy/prod/nginx/nginx.conf` из backend-репозитория.
+- Практический пример (инцидент #1090, 2026-07-26): `/travels/<slug>` обслуживает
+  Django-вью `public_travel_slug_view`, которая отвечает заголовком
+  `X-Accel-Redirect: /__internal/travel-shell`; внутренний URI резолвится правилами
+  backend-конфига. Поэтому блок `location ~ ^/travels/.+` из `nginx/nginx.conf` на
+  поведение прода по этому маршруту не влияет, и «починка» SEO-выдачи правкой
+  фронтового конфига невозможна.
+- Диагностический признак принадлежности маршрута: сравни заголовки ответа с
+  `add_header`, объявленными во фронтовом `location`. Если прод не вернул их
+  (`Cache-Control`, `Pragma`, `Expires`, `Access-Control-Allow-Origin`), запрос
+  обслужен не этим блоком — маршрут backend-owned.
+
+```bash
+curl -sI -A Googlebot https://metravel.by/travels/<slug> | grep -iE 'cache-control|pragma|expires|access-control'
+```
+
+- Вывод для работы: расхождение прод-поведения с `nginx/nginx.conf` — это не баг
+  фронтового конфига. Диагноз оформляется задачей `area=back`; фронтовый
+  `nginx/nginx.conf` не правится «на всякий случай» (см. также protected paths в
+  Project scope).
+
 ### Production Git-tracked file immutability (mandatory)
 
 - AI agents working from this frontend workspace must never mutate a Git-tracked

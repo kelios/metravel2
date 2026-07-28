@@ -11,7 +11,9 @@ const {
   parseArgs,
 } = require('../../scripts/android-play-release');
 const {
+  REQUIRED_GRADLE_PROPERTIES,
   createBuildEnvironment,
+  findMissingReleaseOptimizations,
   getFacebookBuildConfig,
   readAndroidManifestMetaData,
   readAndroidResource,
@@ -293,5 +295,60 @@ describe('Android release safety contract', () => {
       )
     ).toBe('true');
     expect(readAndroidManifestMetaData(manifest, 'missing')).toBe('');
+  });
+});
+
+// Regression guard for #1110: a stale android/ used to build a release with R8
+// silently disabled, and Gradle still reported BUILD SUCCESSFUL.
+describe('release optimisations reach android/ (#1110)', () => {
+  const APPLIED_GRADLE_PROPERTIES = REQUIRED_GRADLE_PROPERTIES.join('\n');
+  const APPLIED_APP_GRADLE =
+    'proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"';
+
+  it('reports nothing missing once the config plugin has been applied', () => {
+    expect(
+      findMissingReleaseOptimizations({
+        gradleProperties: APPLIED_GRADLE_PROPERTIES,
+        appBuildGradle: APPLIED_APP_GRADLE,
+      })
+    ).toEqual([]);
+  });
+
+  it('flags a native project generated without the release plugin', () => {
+    const missing = findMissingReleaseOptimizations({
+      gradleProperties: 'org.gradle.jvmargs=-Xmx2048m',
+      appBuildGradle:
+        'proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"',
+    });
+
+    expect(missing).toContain('android.enableMinifyInReleaseBuilds=true');
+    expect(missing).toContain('android.enableShrinkResourcesInReleaseBuilds=true');
+    expect(missing).toContain('android.r8.optimizedResourceShrinking=true');
+    expect(missing).toContain(
+      'getDefaultProguardFile("proguard-android-optimize.txt")'
+    );
+  });
+
+  it('does not accept a property that is commented out or set to false', () => {
+    const missing = findMissingReleaseOptimizations({
+      gradleProperties: [
+        '#android.enableMinifyInReleaseBuilds=true',
+        'android.enableShrinkResourcesInReleaseBuilds=false',
+        'android.r8.optimizedResourceShrinking=true',
+      ].join('\n'),
+      appBuildGradle: APPLIED_APP_GRADLE,
+    });
+
+    expect(missing).toContain('android.enableMinifyInReleaseBuilds=true');
+    expect(missing).toContain('android.enableShrinkResourcesInReleaseBuilds=true');
+    expect(missing).not.toContain('android.r8.optimizedResourceShrinking=true');
+  });
+
+  it('keeps the prebuild script executable and actually running prebuild', () => {
+    const scriptPath = path.join(ROOT, 'scripts/android-prebuild.sh');
+    // package.json invokes it as ./scripts/android-prebuild.sh, so a non-executable
+    // mode makes `npm run android:prebuild` fail with "Permission denied".
+    expect(fs.statSync(scriptPath).mode & 0o111).not.toBe(0);
+    expect(fs.readFileSync(scriptPath, 'utf8')).toMatch(/npx expo prebuild -p android/);
   });
 });

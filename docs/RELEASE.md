@@ -239,6 +239,26 @@ npm run android:submit:production   # commit production edit
 npm run android:play:status         # temporary read-only edit, then delete
 ```
 
+`android:prebuild` is not optional. The whole release optimisation contract — R8,
+resource shrinking, `proguard-android-optimize.txt`, `material:material:1.14.0`,
+Gradle metaspace — lives in `plugins/withAndroidReleaseSafety.js` and reaches
+`android/` only through `expo prebuild`, which that script runs. Building on a
+stale `android/` used to produce a release with R8 silently disabled while Gradle
+still reported `BUILD SUCCESSFUL` (#1110). `android:build:prod` now refuses to
+start in that state and fails afterwards if `mapping.txt` was not produced.
+
+SDK requirement: the generated project builds Hermes from source, so
+`$ANDROID_HOME` must contain `cmdline-tools` (`sdkmanager`). A plain
+`~/Library/Android/sdk` without them fails with
+`Could not find sdkmanager executable`. If the tools live in a separate SDK (for
+example the Homebrew `android-commandlinetools` cask), point the build at it:
+
+```bash
+ANDROID_SDK_ROOT=/opt/homebrew/share/android-commandlinetools \
+ANDROID_HOME=/opt/homebrew/share/android-commandlinetools \
+npm run android:build:prod
+```
+
 ## Secrets / credentials
 
 See `PRODUCTION_CHECKLIST.md`.
