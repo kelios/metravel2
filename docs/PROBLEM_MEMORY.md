@@ -240,6 +240,41 @@ guard, падающий в CI на попытке обойти этот конт
   machine — `reopen #1043`; different backend upsert contract — `create-linked`.
 - **Последняя проверка:** `#1043 done`, 2026-07-23.
 
+### OFFLINE-001 — fragmented caches do not form an offline application
+
+- **Инвариант:** Android app shell, tabs and Back remain usable without network;
+  a user-selected package opens after force-stop/cold start; recent public data
+  may degrade to a marked stale view instead of a full-screen network error.
+- **Surface/owner:** shared query/network/source policy + Android durable content
+  storage; mobile-web uses the same UX without Service Worker cold-start claims.
+- **Цепочка:** refinement `#479`, public stale-cache implementation `#603`,
+  related map/offline work `#107/#908/#909/#1076/#1079`, persistence
+  foundation `#1015/#994`.
+- **Observed recurrence 2026-07-28:** owner reports that an installed Android app
+  opened without network presents offline errors across tab navigation even
+  after using an offline download flow.
+- **Подтверждённые structural causes:** persisted React Query restore starts
+  asynchronously after screens mount; React Query `onlineManager` is not wired
+  to native NetInfo; `#603` intentionally recovers public travel only from
+  unauthenticated request paths, so signed-in public screens can hard-fail;
+  `useOfflineTravelCache` writes travel snapshots but production detail reads do
+  not consume them; quest bundles, map tiles, recent history and public stale
+  payloads use separate manifests and cannot populate one offline library.
+- **Previous Done-gate gap:** `#603` was closed with unit/type/check evidence and
+  an explicit note that Android device smoke was not run. Its contract covered
+  last-success travel list/detail, not cold-start hydration, signed-in public
+  reads, tab-shell behavior or user-selected packages.
+- **Permanent control:** one `OfflineCatalog`/package contract, atomic package
+  writes, NetInfo→onlineManager bridge, hydration-before-offline-query test,
+  guard/tests preventing direct parallel offline stores, and an Android
+  online-save → force-stop → offline cold-launch matrix with measured package
+  count/bytes/assets/source. Design contract: `docs/features/offline.md`.
+- **Решение для новой жалобы:** hard error within the public list/detail/shell
+  promise reopens `#603`; new content-package adapters are linked children of
+  this family, not competing generic «offline fallback» fixes.
+- **Последняя проверка:** 2026-07-28; recurrence confirmed, structural sprint
+  planned.
+
 ### TRAVEL-SAVE-001 — destructive full-replace autosave
 
 - **Инвариант:** частично hydrated или устаревший frontend snapshot не удаляет

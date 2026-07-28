@@ -2,7 +2,10 @@ import { Dispatch, SetStateAction, useEffect, useInsertionEffect, useLayoutEffec
 import type { RefObject } from 'react'
 import { Platform } from 'react-native'
 
-import { buildWeservProxyUrl, extractFirstImgSrc } from '@/components/travel/stableContent/htmlTransform'
+import {
+  buildStableContentPrefetchUrl,
+  extractFirstImgSrc,
+} from '@/components/travel/stableContent/htmlTransform'
 import { translate as i18nT } from '@/i18n'
 
 import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
@@ -74,7 +77,7 @@ export function useStableContentWebEffects({
 
     const first = extractFirstImgSrc(prepared)
     if (!first) return
-    const safeHref = buildWeservProxyUrl(first) || first
+    const safeHref = buildStableContentPrefetchUrl(first)
     try {
       const resolved = new URL(safeHref, window.location.origin)
       if (resolved.origin !== window.location.origin) return

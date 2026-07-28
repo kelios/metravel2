@@ -1,3 +1,8 @@
+/**
+ * @jest-environment jsdom
+ * @jest-environment-options {"url":"https://metravel.by/"}
+ */
+
 import { Platform } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 
@@ -189,6 +194,35 @@ describe('StableContent (web) link styles', () => {
       /href="https:\/\/example\.com\/?"/
     );
     expect(richText?.innerHTML).toContain('>Example<');
+  });
+
+  it('prefetches the first first-party body image through the responsive fallback', async () => {
+    const raw = 'https://metravel.by/gallery/540/conversions/abc-detail_hd.jpg';
+    const originalRequestIdleCallback = (window as any).requestIdleCallback;
+    const prefetchSelector = 'link[rel="prefetch"][as="image"][href*="abc-detail_hd.jpg"]';
+    (window as any).requestIdleCallback = (callback: () => void) => {
+      callback();
+      return 1;
+    };
+
+    const { unmount } = render(
+      <StableContent
+        html={`<p><img src="${raw}" alt="Замок" /></p>`}
+        contentWidth={700}
+      />
+    );
+
+    try {
+      window.dispatchEvent(new Event('load'));
+      await waitFor(() => {
+        const prefetch = document.querySelector(prefetchSelector) as HTMLLinkElement | null;
+        expect(prefetch?.href).toBe(`${raw}?w=800&q=78&fit=contain`);
+      });
+    } finally {
+      unmount();
+      document.querySelectorAll(prefetchSelector).forEach((node) => node.remove());
+      (window as any).requestIdleCallback = originalRequestIdleCallback;
+    }
   });
 
   it('renders standalone instagram post links as embeds in travel content on web', async () => {

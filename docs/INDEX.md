@@ -32,6 +32,8 @@
 - `docs/features/places.md` — places catalog;
 - `docs/features/user.md` — profile, collections и author stats;
 - `docs/features/calendar.md` — travel status calendar;
+- `docs/features/offline.md` — offline-first shell, package storage, UX states
+  and paired mobile-web/Android validation contract;
 - `docs/features/social-trips-gamification-roadmap.md` — current social
   trips/gamification feature map, не backlog;
 - `docs/features/map-current-location-route-mobile-mock.svg` — mobile map state

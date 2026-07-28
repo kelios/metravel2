@@ -21,6 +21,7 @@
 - [x] [places](./places.md) — каталог отдельных точек, фильтры, карта, связь с путешествиями
 - [x] [user](./user.md) — профиль, collections, calendar statuses, author stats
 - [x] [calendar](./calendar.md) — календарь travel-статусов и day details
+- [x] [offline](./offline.md) — offline shell, управляемые content packages и Android cold-start access
 - [x] [social-trips-gamification-roadmap](./social-trips-gamification-roadmap.md) — текущая карта совместных поездок, trust/privacy и геймификации; runtime остаётся backend-dependent
 - [ ] quests — мастер квестов, печать
 - [ ] article — редактор статей

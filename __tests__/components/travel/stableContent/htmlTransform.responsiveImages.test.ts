@@ -8,7 +8,11 @@ jest.mock('@/components/article/articleEditorConfig', () => ({
   normalizeArticleEditorHtmlForInput: jest.fn((html: string) => html),
 }))
 
-import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform'
+import {
+  buildStableContentPrefetchUrl,
+  extractFirstImgSrc,
+  prepareStableContentHtml,
+} from '@/components/travel/stableContent/htmlTransform'
 
 // srcset/sizes атрибуты HTML-экранируют `&` -> `&amp;`; сравниваем в этой форме.
 const AMP = '&amp;'
@@ -34,6 +38,18 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).toContain(`v=3315`)
     // ниже сгиба всё ещё lazy
     expect(out).toContain('loading="lazy"')
+  })
+
+  it('keeps the first-image prefetch on the responsive fallback instead of the raw origin', () => {
+    const raw = 'https://metravel.by/gallery/540/conversions/abc-detail_hd.jpg'
+    const prepared = prepareStableContentHtml(`<p><img src="${raw}" /></p>`)
+    const first = extractFirstImgSrc(prepared)
+
+    expect(first).not.toBeNull()
+    expect(buildStableContentPrefetchUrl(first!)).toBe(
+      `${raw}?w=800&q=78&fit=contain`,
+    )
+    expect(buildStableContentPrefetchUrl(first!)).not.toBe(raw)
   })
 
   it('keeps the mobile viewport on a lower ladder so body images do not blow the network budget', () => {

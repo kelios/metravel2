@@ -189,6 +189,9 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
   }
 }
 
+export const buildStableContentPrefetchUrl = (src: string): string =>
+  buildMetravelResponsiveImage(src)?.src ?? buildWeservProxyUrl(src) ?? src
+
 const stripDangerousTags = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '')
 
