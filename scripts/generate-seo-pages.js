@@ -17,8 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
-const http = require('http');
+const { fetchJson } = require('./lib/fetchJson');
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
 const {
@@ -68,32 +67,9 @@ const API_ORIGIN = (() => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Fetch JSON from a URL (follows redirects). */
-function fetchJson(url) {
-  return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http;
-    const opts = { timeout: 30000 };
-    // Allow self-signed certs in CI/local environments
-    if (mod === https) opts.rejectUnauthorized = false;
-    const req = mod.get(url, opts, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchJson(res.headers.location).then(resolve, reject);
-      }
-      if (res.statusCode !== 200) {
-        return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-      }
-      let body = '';
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => (body += chunk));
-      res.on('end', () => {
-        try { resolve(JSON.parse(body)); }
-        catch (e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
-  });
-}
+// fetchJson (with retries on transient 5xx/429/timeout/socket failures) comes
+// from ./lib/fetchJson — one flaky response must not silently drop a whole
+// content surface from the build.
 
 /** Strip HTML tags and collapse whitespace → plain text description. */
 function stripHtml(html, maxLength = 160) {
@@ -701,6 +677,10 @@ async function fetchTravelDetail(id, slug) {
     const detail = await fetchJson(url);
     return {
       description: detail.description || '',
+      // #1116: media-манифест обязателен здесь — из него hero preload берёт тот же
+      // вариант, что запросит клиент. Без него preload уходил в клиентскую сборку
+      // (`?v=…&q=82`), расходился с LCP-`<img>` и грел лишний файл.
+      media: detail.media || null,
       gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
       travelAddress: Array.isArray(detail.travelAddress) ? detail.travelAddress : [],
       coordsMeTravel: Array.isArray(detail.coordsMeTravel) ? detail.coordsMeTravel : [],
@@ -716,6 +696,7 @@ async function fetchTravelDetail(id, slug) {
         const detail = await fetchJson(slugUrl);
         return {
           description: detail.description || '',
+          media: detail.media || null,
           gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
           travelAddress: Array.isArray(detail.travelAddress) ? detail.travelAddress : [],
           coordsMeTravel: Array.isArray(detail.coordsMeTravel) ? detail.coordsMeTravel : [],
@@ -2400,6 +2381,7 @@ async function main() {
 
     if (quests.length > 0) {
       console.log(`  📥 Fetching quest details for location matching (concurrency: 8)...`);
+      let bundleFailures = 0;
       const bundles = await batchAsync(quests, 8, async (quest, i) => {
         const route = questRouteKey(quest);
         if (!route) return null;
@@ -2409,6 +2391,7 @@ async function main() {
         try {
           return await fetchJson(`${API_BASE}/api/quests/by-quest-id/${encodeURIComponent(route.questId)}/`);
         } catch (err) {
+          bundleFailures++;
           console.warn(`  ⚠️  Quest bundle not available for ${route.questId}: ${err.message}`);
           return null;
         }
@@ -2417,11 +2400,26 @@ async function main() {
         const route = questRouteKey(quest);
         if (route && bundles[i]) questBundleMap.set(route.questId, bundles[i]);
       });
+      // A single missing bundle only costs one quest its rich intro; zero
+      // bundles means the by-quest-id endpoint is gone and every quest page
+      // would ship degraded.
+      if (questBundleMap.size === 0) {
+        throw new Error(
+          `no quest detail bundle resolved for ${quests.length} quests (${bundleFailures} request errors) — /api/quests/by-quest-id/ is unavailable`
+        );
+      }
+      if (bundleFailures > 0) {
+        console.warn(`  ⚠️  ${bundleFailures}/${quests.length} quest bundles missing — those quests ship without rich intro data`);
+      }
       questPromoCatalog = buildQuestPromoCatalog(quests, questBundleMap);
     }
   } catch (err) {
+    // Silently skipping quests used to ship a release without any quest page,
+    // city landing or travel quest promo. Fail the build instead: build-prod.sh
+    // aborts before the deploy step.
     console.error('❌ Failed to fetch quests:', err.message);
-    console.error('   Quest pages and travel quest promos will not be generated.');
+    console.error('   Quest pages, city landings and travel quest promos would be missing from this build.');
+    throw new Error(`Quest catalog unavailable: ${err.message}`);
   }
 
   // --- 2. Travel pages ---
@@ -2466,8 +2464,12 @@ async function main() {
       page++;
     }
   } catch (err) {
+    // A mid-pagination failure leaves a partial catalog, and a partial catalog
+    // silently drops every travel past the failing page from static SEO — the
+    // travel-body gate in build-prod.sh cannot see that. All-or-nothing.
     console.error('❌ Failed to fetch travels:', err.message);
-    console.error('   Travel pages will not be generated.');
+    console.error(`   Travel catalog is incomplete (${travels.length} fetched) — refusing to generate a partial static tree.`);
+    throw new Error(`Travel catalog unavailable: ${err.message}`);
   }
 
   if (travels.length > 0) {

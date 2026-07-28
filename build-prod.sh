@@ -260,6 +260,12 @@ echo "✅ Ровно один <h1> на странице"
 echo "Проверка SEO-артефактов..."
 node scripts/verify-static-travel-seo.js --dist "dist/$ENV" --api https://metravel.by
 
+# Квесты — отдельный контент-слой со своими страницами и city-лендингами.
+# Транзиентный сбой API однажды молча выкинул их все из билда, а гварды выше
+# смотрят только на travel-страницы. Сверяем живой каталог с тем, что собрано.
+echo "Проверка: quest-страницы и city-лендинги в статике..."
+node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by
+
 echo "Постобработка билда..."
 node scripts/copy-public-files.js "dist/$ENV"
 
