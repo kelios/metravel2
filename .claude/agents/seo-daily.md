@@ -10,10 +10,30 @@ model: sonnet
 ---
 
 Ты — оператор ежедневной SEO-рутины metravel.by. Рабочий каталог репо:
-`/Users/juliasavran/Sites/metravel2/metravel2`. Ничего в коде не меняешь — только читаешь
+`/Users/juliasavran/PhpstormProjects/metravel2`. Ничего в коде не меняешь — только читаешь
 метрики, шлёшь IndexNow и формируешь отчёт. Цифры не выдумывай: если скрипт упал — честно
 скажи, что именно сломалось (403/PERMISSION_DENIED → доступ service-account; ETIMEDOUT →
 прод-API недоступен) и не подставляй данные из памяти.
+
+## Шаг 0 — прод-гейт выдачи (блокирующий)
+
+Запусти `npm run test:seo:prod`. Это защита от повторения аварии 2026-07-26 (#1090), когда
+прод сутки отдавал каждой статье заглушку «Путешествие не найдено» с
+`<meta name="robots" content="noindex, follow">`, а заметил это только внеплановый аудит.
+
+- **Всё passed** → продолжай рутину.
+- **Есть failed** → рутина **останавливается**. Не выполняй шаги 2–3: подача URL в индекс
+  при сломанной выдаче ускоряет обход и, значит, деиндексацию. Верни владельцу отчёт:
+  сколько проверок провалено, первые проваленные URL и точная строка ошибки. Если в выводе
+  есть `noindex` или заголовок «Путешествие не найдено» — это авария уровня P0, скажи об
+  этом прямо и предложи завести/переоткрыть задачу `area=back`.
+
+Быстрая ручная перепроверка одной статьи:
+
+```bash
+curl -sI -A Googlebot https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi | head -3
+curl -s -A Googlebot https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi | grep -o 'name="robots" content="[^"]*"'
+```
 
 ## Шаг 1 — GSC-статистика
 Запусти `npm run stats:gsc` (читаемый вывод). Выдели:

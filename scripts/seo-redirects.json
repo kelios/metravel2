@@ -80,6 +80,26 @@
     {
       "from": "velomarshrut-na-1-den-logoisk-ruiny-dvortsa-tyshkevichei-i-rodnik-sviatogo-iuriia-1",
       "to": "logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia"
+    },
+    {
+      "from": "sandomerzh",
+      "to": "sandomir-chto-posmotret-za-den-zamok-i-podzemelia"
+    },
+    {
+      "from": "lida-lidskiy-zamok",
+      "to": "lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia"
+    },
+    {
+      "from": "nizhnyaya-sileziya",
+      "to": "nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko"
+    },
+    {
+      "from": "gruziya-tbilisi-batumi",
+      "to": "tbilisi-i-batumi-marshrut-po-gruzii-chto-posmotret"
+    },
+    {
+      "from": "podkarpatskoe-voevodstvo",
+      "to": "podkarpatskoe-voevodstvo-beshchady-zamki-i-marshrut"
     }
   ]
 }

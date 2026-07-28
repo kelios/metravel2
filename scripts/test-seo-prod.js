@@ -102,6 +102,16 @@ function countTag(html, pattern) {
   return (html.match(pattern) || []).length;
 }
 
+/**
+ * A page is indexable unless the robots meta carries a blocking directive.
+ * "No robots meta at all" is NOT the requirement: production legitimately serves
+ * max-image-preview:large, which only widens SERP previews. Treating that as a
+ * failure made this gate permanently red and therefore useless as a daily alarm.
+ */
+function isBlockedFromIndexing(robots) {
+  return /\b(noindex|none)\b/i.test(String(robots || ''));
+}
+
 // ---------------------------------------------------------------------------
 // Test runner
 // ---------------------------------------------------------------------------
@@ -243,8 +253,8 @@ async function testPage(path, expectations) {
       `got: "${robots}"`
     );
   }
-  if (expectations.noRobots) {
-    assert(robots === '', 'no robots meta (indexable)', `got: "${robots}"`);
+  if (expectations.indexable) {
+    assert(!isBlockedFromIndexing(robots), 'indexable (no noindex directive)', `got: "${robots}"`);
   }
 
   // --- No duplicate OG tags ---
@@ -272,7 +282,7 @@ async function main() {
     descNotFallback: true,
     canonicalPath: '/',
     ogType: 'website',
-    noRobots: true,
+    indexable: true,
   });
 
   // --- 2. Search page ---
@@ -281,7 +291,7 @@ async function main() {
     descNotFallback: true,
     canonicalPath: '/search',
     ogType: 'website',
-    noRobots: true,
+    indexable: true,
   });
 
   // --- 3. Map page ---
@@ -290,7 +300,7 @@ async function main() {
     descNotFallback: true,
     canonicalPath: '/map',
     ogType: 'website',
-    noRobots: true,
+    indexable: true,
   });
 
   // --- 4. Travelsby page ---
@@ -299,7 +309,7 @@ async function main() {
     descNotFallback: true,
     canonicalPath: '/travelsby',
     ogType: 'website',
-    noRobots: true,
+    indexable: true,
   });
 
   // --- 5. About page ---
@@ -308,7 +318,7 @@ async function main() {
     descNotFallback: true,
     canonicalPath: '/about',
     ogType: 'website',
-    noRobots: true,
+    indexable: true,
   });
 
   // --- 6. Travel detail pages (the main issue) ---
@@ -385,7 +395,11 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('❌ Fatal:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('❌ Fatal:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { isBlockedFromIndexing };
