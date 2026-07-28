@@ -687,6 +687,62 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
       });
     }
   });
+
+  // #1111: инвариант "один визуальный слот — один сетевой URL". Правило требует
+  // именно URL-cardinality evidence: grep-гейт ловит только явный blurSrc, а второй
+  // адрес рождался внутри рендерера (подложка строила свой URL, CSS-фон грузил
+  // неоптимизированный оригинал). Замер прода 2026-07-28: один файл галереи
+  // приезжал 6 раз (167 КБ), обложка квеста — двумя вариантами по 2.5 МБ.
+  test('One image file is fetched once (no duplicate variants per slot)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await preacceptCookies(page);
+
+    await openTravelDetailsForPerf(page);
+    await page.waitForLoadState('networkidle').catch(() => null);
+
+    const duplicates = await page.evaluate(() => {
+      const media = /\/(gallery|travel-image|quest-cover|address-image|avatar)\//;
+      const byFile: Record<string, string[]> = {};
+
+      for (const entry of performance.getEntriesByType('resource')) {
+        const url = entry.name;
+        if (!media.test(url)) continue;
+        const file = url.split('?')[0];
+        const query = url.split('?')[1] || '(no params)';
+        (byFile[file] = byFile[file] || []).push(query);
+      }
+
+      return Object.entries(byFile)
+        .filter(([, variants]) => new Set(variants).size > 1)
+        .map(([file, variants]) => ({
+          file: file.split('/').slice(-1)[0].slice(0, 40),
+          variants: Array.from(new Set(variants)),
+        }));
+    });
+
+    if (duplicates.length > 0) {
+      console.log('\n🖼️  DUPLICATE IMAGE VARIANTS');
+      console.log(JSON.stringify(duplicates, null, 2));
+    }
+
+    // Порог, а не ноль: hero осознанно держит preload-адрес отдельно от srcSet
+    // (preserveOptimizedWebSrc), и пока подложка не перешла на blurhash (#1127),
+    // один лишний вариант на слот остаётся ожидаемым. Гейт ловит возврат к
+    // множественным вариантам, из-за которых страница весила 23.7 МБ.
+    const MAX_DUPLICATED_FILES = envNum('PERF_MAX_DUPLICATED_IMAGE_FILES', 4);
+    const worst = Math.max(0, ...duplicates.map((d) => d.variants.length));
+
+    expect(
+      duplicates.length,
+      `${duplicates.length} image files fetched in multiple variants: ${JSON.stringify(duplicates)}`
+    ).toBeLessThanOrEqual(MAX_DUPLICATED_FILES);
+
+    expect(
+      worst,
+      `one file was fetched in ${worst} different variants — a slot must not spawn a family of URLs`
+    ).toBeLessThanOrEqual(3);
+  });
+
 });
 
 test.describe('@perf Travel Details — Performance Budget (prod build, mobile)', () => {
