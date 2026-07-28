@@ -209,7 +209,10 @@ describe('ImageCardMedia blur background (web)', () => {
 
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.sizes).toBe('(min-width: 768px) 50vw, 100vw')
-    expect(String(mainImage.props.srcSet)).toContain('1200w')
+    // #1113: верхний кандидат снэпится к реальной ступени прокси (1200 → 1280) и
+    // капится WEB_SRCSET_MAX_WIDTH — обещать 1200w нельзя, такого варианта нет.
+    expect(String(mainImage.props.srcSet)).toContain('1280w')
+    expect(String(mainImage.props.srcSet)).not.toContain('1200w')
   })
 
   it('keeps iPhone Safari shared-blur cards hidden until the main image finishes loading', () => {
@@ -445,7 +448,10 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.srcSet).toBeTruthy()
     expect(String(mainImage.props.srcSet)).toContain('640w')
-    expect(String(mainImage.props.srcSet)).toContain('960w')
+    // #1113: 960 снэпится к 1280 — ступени 960 нет в клиентской лестнице,
+    // а дескриптор обязан совпадать с фактически отдаваемым вариантом.
+    expect(String(mainImage.props.srcSet)).toContain('1280w')
+    expect(String(mainImage.props.srcSet)).not.toContain('960w')
   })
 
   it('keeps one effective source for shared-blur quest covers when web optimization is disabled', () => {

@@ -131,21 +131,29 @@ describe('Image Optimization', () => {
     });
   });
 
+  // #1113: дескриптор в srcSet равен ФАКТИЧЕСКОЙ ступени прокси, а не запрошенной
+  // ширине. Иначе браузер выбирает кандидата по обещанным 1024w, а получает файл
+  // другого размера — и либо мылит, либо тянет лишние байты. Запрошенные значения
+  // снэпятся по DIMENSION_LADDER: 1024 → 1280, 1440 → 1600, 200 → 320, 400 → 480.
   describe('generateSrcSet', () => {
-    it('should generate responsive src set', () => {
+    it('should generate responsive src set with real proxy widths', () => {
       const srcSet = generateSrcSet(baseUrl, [320, 640, 1024, 1440]);
       expect(srcSet).toContain('320w');
       expect(srcSet).toContain('640w');
-      expect(srcSet).toContain('1024w');
-      expect(srcSet).toContain('1440w');
+      expect(srcSet).toContain('1280w');
+      expect(srcSet).toContain('1600w');
+      // 1024 и 1440 прокси не ресайзит — такие дескрипторы обещали бы несуществующий вариант
+      expect(srcSet).not.toContain('1024w');
+      expect(srcSet).not.toContain('1440w');
     });
 
-    it('should include custom widths', () => {
+    it('should snap custom widths up to the nearest supported rung', () => {
       const srcSet = generateSrcSet(baseUrl, [200, 400, 800]);
-      expect(srcSet).toContain('200w');
-      expect(srcSet).toContain('400w');
+      expect(srcSet).toContain('320w');
+      expect(srcSet).toContain('480w');
       expect(srcSet).toContain('800w');
-      expect(srcSet).not.toContain('320w');
+      expect(srcSet).not.toContain('200w');
+      expect(srcSet).not.toContain('400w');
     });
 
     it('should set format parameter', () => {

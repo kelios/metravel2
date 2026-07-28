@@ -5,6 +5,13 @@ export type QuestPoiInfo = {
   website?: string;
 };
 
+export type QuestAnswerChecker = ((input: string) => boolean) & {
+  /** Шаг без проверяемого ответа: карточка может пройти его автоматически. */
+  _isAny?: boolean;
+  /** Минимальная длина свободного ответа для понятной подсказки в UI. */
+  _freeTextMinLength?: number;
+};
+
 export type QuestStep = {
   id: string;
   title: string;
@@ -12,7 +19,7 @@ export type QuestStep = {
   story: string;
   task: string;
   hint?: string;
-  answer: (input: string) => boolean;
+  answer: QuestAnswerChecker;
   /** Человекочитаемый ожидаемый ответ — для «страницы ведущего» в печатной версии. */
   answerDisplay?: string;
   lat: number;
