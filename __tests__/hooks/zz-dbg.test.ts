@@ -34,12 +34,15 @@ it('A: fake timers + explicit unmount', async () => {
   act(() => { jest.advanceTimersByTime(2000); });
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
   expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
+  jest.useRealTimers();
   unmount();
 });
 
 it('B: real timers after', async () => {
   mockFetchOrCreateProgress.mockResolvedValueOnce(API_PROGRESS);
   const { result } = renderHook(() => useQuestProgressSync('q', true));
+  await new Promise((r) => setTimeout(r, 50));
+  console.log('CALLS', mockFetchOrCreateProgress.mock.calls.length, 'loading', result.current.progressLoading, 'progress', JSON.stringify(result.current.progress));
   await waitFor(() => expect(result.current.progressLoading).toBe(false));
   expect(result.current.progress).toEqual(API_PROGRESS);
 });
