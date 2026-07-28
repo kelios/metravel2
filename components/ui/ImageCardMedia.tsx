@@ -638,6 +638,10 @@ function ImageCardMedia({
             <WebBlurBackdrop
               key={`blur-${webMediaInstanceKey}`}
               src={webBlurSrc}
+              // Подложка обязана выбирать того же кандидата, что и резкий слой:
+              // одинакового `src` мало, решает `srcSet` + `sizes` (#1111).
+              srcSet={webBlurSrc === webMainSrc ? webSrcSet : undefined}
+              sizes={webBlurSrc === webMainSrc ? webSizes : undefined}
               alt={alt || ''}
               width={typeof width === 'number' ? width : 400}
               height={typeof height === 'number' ? height : 300}

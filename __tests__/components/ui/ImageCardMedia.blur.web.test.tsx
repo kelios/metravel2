@@ -882,3 +882,55 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(secondMainImage.props.style?.opacity).toBe(1)
   })
 })
+
+// #1111: одинакового `src` мало. Резкий слой выбирает кандидата из `srcSet` по
+// `sizes`, поэтому подложка без тех же атрибутов грузит другой файл. Замер прода
+// 2026-07-28 на карточке квеста: у обоих слоёв src был `?w=160`, но main с
+// `sizes: 132px` при DPR 2 брал `?w=320` — один файл в две загрузки.
+describe('ImageCardMedia web backdrop shares the srcSet of the sharp layer (#1111)', () => {
+  const originalPlatform = Platform.OS
+  const originalJestWorkerId = process.env.JEST_WORKER_ID
+
+  beforeEach(() => {
+    Platform.OS = 'web'
+    delete process.env.JEST_WORKER_ID
+  })
+
+  afterEach(() => {
+    Platform.OS = originalPlatform
+    if (originalJestWorkerId) process.env.JEST_WORKER_ID = originalJestWorkerId
+  })
+
+  it('gives the backdrop the same srcSet and sizes as the main image', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/quest-cover/quests/44/main/cover.png"
+          width={132}
+          height={132}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+        />
+      )
+    })
+
+    const backdrop = tree!.root.findAll(
+      (n: any) => n?.type === 'img' && n?.props?.['data-blur-backdrop'] === 'true'
+    )[0]
+    const main = tree!.root.findAll(
+      (n: any) =>
+        n?.type === 'img' &&
+        n?.props?.['data-blur-backdrop'] !== 'true' &&
+        n?.props?.['aria-hidden'] !== true
+    )[0]
+
+    expect(backdrop).toBeTruthy()
+    expect(main).toBeTruthy()
+    // Ровно один набор кандидатов на оба слоя — браузер выберет один и тот же файл.
+    expect(backdrop.props.src).toBe(main.props.src)
+    expect(backdrop.props.srcSet).toBe(main.props.srcSet)
+    expect(backdrop.props.sizes).toBe(main.props.sizes)
+  })
+})
