@@ -18,13 +18,10 @@ export function ExternalLink(
 
   return (
     <Link
-      hrefAttrs={{
-        // ✅ УЛУЧШЕНИЕ: На web открываем в новой вкладке
-        target: '_blank',
-        rel: 'noopener noreferrer', // ✅ БЕЗОПАСНОСТЬ: Защита от tabnabbing
-      }}
+      // Expo Router forwards these web anchor props through hrefAttrs internally.
+      target="_blank"
+      rel="noopener noreferrer"
       {...props}
-      // @ts-expect-error: External URLs are not typed.
       href={props.href}
       style={[
         {

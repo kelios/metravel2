@@ -1,4 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native'
+import { TouchableOpacity } from 'react-native'
 import { ExternalLink } from '@/components/ui/ExternalLink'
 
 // Mock expo-web-browser
@@ -14,10 +15,15 @@ describe('ExternalLink', () => {
   })
 
   it('renders correctly', () => {
-    const { getByText } = render(
+    const { getByText, UNSAFE_getByType } = render(
       <ExternalLink href="https://example.com">Test Link</ExternalLink>
     )
+    const link = UNSAFE_getByType(TouchableOpacity)
+
     expect(getByText('Test Link')).toBeTruthy()
+    expect(link).toBeTruthy()
+    expect(link.props.target).toBe('_blank')
+    expect(link.props.rel).toBe('noopener noreferrer')
   })
 
   it('opens browser on native platforms', () => {
@@ -29,4 +35,3 @@ describe('ExternalLink', () => {
     expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://example.com')
   })
 })
-
