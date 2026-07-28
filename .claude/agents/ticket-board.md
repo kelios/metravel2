@@ -57,9 +57,15 @@ model: sonnet
   созданием, переводом в `todo` или закрытием в `done` проверь, что `description` содержит:
   `Problem key`, `Historical matches`, `Verdict`, `Canonical task`, `Root-cause delta`,
   `Scope`, `User-visible result`, `Data/API contract`, `Dependencies`, `Fallback/mock policy`,
-  `Validation`, `Done gate`. Если блока нет, поля пустые или это плейсхолдеры (не архитекторский
-  уровень: нет точных shape'ов/полей, реальных board id зависимостей, конкретных проверок) — не
-  двигай задачу дальше refinement; верни на проработку (`task-author` / `$metravel-system-architect`).
+  `Validation`, `Regression control`, `Done gate`. Если блока нет, поля пустые или это плейсхолдеры
+  (не архитекторский уровень: нет точных shape'ов/полей, реальных board id зависимостей, конкретных
+  проверок) — не двигай задачу дальше refinement; верни на проработку
+  (`task-author` / `$metravel-system-architect`).
+- **`Regression control` для `kind=bug` и для консолидаций не может быть пустым или `none`.**
+  Он обязан называть постоянный контроль: guard в lint/CI, тест на слое, где сломался инвариант,
+  повторяющуюся прод-пробу или бюджет в committed config. Разовая ручная проверка не считается.
+  `none` допустим только для контента, разовых операций и исследований. Правило и его обоснование —
+  `docs/TASK_BOARD_MCP.md` → `#### Качество evidence`.
 
 ## Категория задачи (`kind`) — обязательна при заведении
 

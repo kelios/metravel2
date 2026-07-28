@@ -29,10 +29,22 @@ Read first:
 2. For each candidate in `review` or `testing`, read the full description, dependencies, blockers, and Task Contract.
 3. Reject refinement gaps before runtime work:
    - missing `Scope`, `User-visible result`, `Data/API contract`, `Platform impact`,
-     `Localization impact`, `Dependencies`, `Fallback/mock policy`, `Validation`, or `Done gate`
+     `Localization impact`, `Dependencies`, `Fallback/mock policy`, `Validation`,
+     `Regression control`, or `Done gate`
+   - `Regression control` empty or `none` on a `kind=bug` or consolidation task
    - unresolved blocking dependency
    - `needs_human=true` without the human step completed
-4. Run or inspect the exact validation required by the Done gate:
+4. Run or inspect the exact validation required by the Done gate. Reject evidence that
+   violates `docs/TASK_BOARD_MCP.md` → `#### Качество evidence`:
+   - a `200`/no-crash result offered for a task about size, count, duration or order,
+     with no before/after number
+   - no negative probe where an unsupported input exists: it must be observably
+     distinguishable from a valid one, never a silent heavy/generic fallback
+   - a build-time or deploy-time check offered for a user/crawler-visible production
+     surface instead of a recurring production probe
+   - a test that mocks the very primitive under investigation offered as contract evidence
+   - a consolidation closed without naming the CI guard that fails when the new single
+     contract is bypassed
    - targeted tests or governance checks
    - browser/API probes against the target environment
    - device/mobile evidence when the contract requires it

@@ -42,7 +42,7 @@ model: sonnet
    - **Gherkin Tests** — `Feature/Scenario` с `Given/When/Then` о поведении.
    - **Task Contract** — обязательный контракт FE/BE задачи: `Scope`, `User-visible result`,
      `Data/API contract`, `Platform impact`, `Localization impact`, `Dependencies`,
-     `Fallback/mock policy`, `Validation`, `Done gate`
+     `Fallback/mock policy`, `Validation`, `Regression control`, `Done gate`
      по правилу `docs/TASK_BOARD_MCP.md`. **Уровень детализации — архитекторский:** заполняй
      конкретикой, а не плейсхолдерами. `Data/API contract` для BE — endpoint, method, auth,
      точные request/response shape (поля + типы), миграции/seed; для FE — какие endpoints/
@@ -56,6 +56,13 @@ model: sonnet
    - **Likely Files Or Areas** — файлы/модули/эндпоинты (для бэкенда — логические области).
    - **Plan** — нумерованные шаги.
    - **Validation** — конкретные команды/проверки (`npm run …`, `curl …`, шаги в браузере).
+     Для задач про величину (размер, число запросов, длительность, порядок) указывай
+     измеряемую величину и ожидаемое значение, а не только команду; там, где есть
+     неподдерживаемый вход, добавляй негативную пробу.
+   - **Regression control** — что постоянно не даст проблеме вернуться: guard в lint/CI, тест
+     на слое, где сломался инвариант, повторяющаяся прод-проба, бюджет в committed config.
+     Разовая ручная проверка не годится. `none` допустим только для контента, разовых операций
+     и исследований; для `kind=bug` и для консолидаций — запрещён.
    - **Release Checklist** — оставь шаблонные пункты как `- [ ]`.
    - **Progress Log** — первая строка `- YYYY-MM-DD: Created.`.
    - **Results** — пустые поля-заголовки (`Changed files:` и т.д.).
