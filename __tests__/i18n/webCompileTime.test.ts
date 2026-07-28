@@ -48,6 +48,23 @@ describe('web compile-time localization', () => {
     expect(result?.code).toContain('v:')
   })
 
+  it('inlines hand-written feature namespaces', () => {
+    const result = transformSync(
+      `
+        import { translate as i18nT } from '@/i18n'
+        export const offlineTitle = i18nT('offline:title')
+      `,
+      {
+        caller: { name: 'metro', platform: 'web' },
+        filename: path.resolve(process.cwd(), 'components/__offline_i18n_compile_probe__.tsx'),
+      },
+    )
+
+    expect(result?.code).not.toContain('offline:title')
+    expect(result?.code).toContain('h:')
+    expect(result?.code).toContain('v:')
+  })
+
   it('keeps interpolation and Russian plural rules in the eager runtime', () => {
     const fixedRu = getFixedTranslator('ru')
     const compiledNoun = {

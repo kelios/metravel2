@@ -95,7 +95,11 @@ export function useStableContentWebEffects({
       if (document.getElementById(linkId)) return
       link = document.createElement('link')
       link.rel = 'prefetch'
-      link.as = 'image'
+      // `as` ставим атрибутом, а не свойством: для `rel=prefetch` он обязателен, иначе
+      // браузер кэширует ресурс без правильного destination. Присваивание `link.as`
+      // вдобавок не отражается в атрибут в jsdom, из-за чего селектор
+      // `link[rel="prefetch"][as="image"]` не находил узел в тестах.
+      link.setAttribute('as', 'image')
       link.href = safeHref
       link.id = linkId
       document.head.appendChild(link)

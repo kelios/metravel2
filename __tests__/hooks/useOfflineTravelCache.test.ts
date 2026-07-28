@@ -4,10 +4,28 @@
 import { renderHook, act } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+
+const mockOfflinePackages = new Map<string, unknown>();
+
+jest.mock('@/services/offline/packageStore', () => ({
+  __esModule: true,
+  default: {
+    read: jest.fn(async (key: string) => mockOfflinePackages.get(key) ?? null),
+    write: jest.fn(async (key: string, payload: unknown) => {
+      mockOfflinePackages.set(key, payload);
+      return { bytes: JSON.stringify(payload).length, includesAssetBytes: true };
+    }),
+    remove: jest.fn(async (key: string) => {
+      mockOfflinePackages.delete(key);
+    }),
+  },
+}));
+
 import { useOfflineTravelCache } from '@/hooks/useOfflineTravelCache';
 
 describe('useOfflineTravelCache', () => {
   beforeEach(async () => {
+    mockOfflinePackages.clear();
     await AsyncStorage.clear();
     // @ts-ignore -- override Platform.OS for native test scenario
     Platform.OS = 'android';
@@ -87,14 +105,14 @@ describe('useOfflineTravelCache', () => {
     expect(cached?.name).toBe('First Updated');
   });
 
-  it('is a no-op on web', async () => {
+  it('uses the same catalog contract on mobile web', async () => {
     // @ts-ignore -- override Platform.OS to test web no-op behavior
     Platform.OS = 'web';
 
     const { result } = renderHook(() => useOfflineTravelCache());
 
     await act(async () => {
-      await result.current.cacheTravel(1, { id: 1 });
+      await result.current.cacheTravel(1, { id: 1, name: 'Web travel' });
     });
 
     let cached: unknown = null;
@@ -102,14 +120,13 @@ describe('useOfflineTravelCache', () => {
       cached = await result.current.getCachedTravel(1);
     });
 
-    expect(cached).toBeNull();
+    expect(cached).toEqual({ id: 1, name: 'Web travel' });
 
     let ids: string[] = [];
     await act(async () => {
       ids = await result.current.getCachedIds();
     });
 
-    expect(ids).toEqual([]);
+    expect(ids).toEqual(['1']);
   });
 });
-

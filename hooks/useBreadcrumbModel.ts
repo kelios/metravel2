@@ -93,6 +93,7 @@ const pageTranslations: Record<string, string> = {
   get plan() { return i18nT('navigationStatic:breadcrumb.plan') },
   get create() { return i18nT('navigationStatic:breadcrumb.create') },
   get app() { return i18nT('navigationStatic:breadcrumb.app') },
+  get offline() { return i18nT('offline:title') },
 };
 
 const PROFILE_CRUMB: BreadcrumbModelItem = { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.profil_6d96d80b') }, path: '/profile' };

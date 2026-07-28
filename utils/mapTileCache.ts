@@ -13,8 +13,9 @@ const TILE_ROOT = `${FileSystem.documentDirectory ?? ''}map-tiles/`;
 const REGIONS_KEY = 'map-offline-regions';
 const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
 
-// Суммарный лимит дискового кэша регионов. При превышении удаляем старейший
-// регион (FIFO по savedAt), пока не влезем — как в hooks/useOfflineTravelCache.ts.
+// Суммарный лимит дискового кэша регионов. Скачанные пользователем регионы
+// считаются pinned: при превышении лимита новая загрузка отклоняется, старые
+// регионы никогда не удаляются без явного действия пользователя.
 export const MAX_OFFLINE_BYTES = 500 * 1024 * 1024; // 500 MB
 // Средний вес тайла OSM-подложки для оценки размера ДО скачивания.
 export const AVG_TILE_BYTES = 15 * 1024;
@@ -249,11 +250,7 @@ export const listRegions = async (): Promise<OfflineRegion[]> => {
 };
 
 const writeRegions = async (regions: OfflineRegion[]): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(REGIONS_KEY, JSON.stringify(regions));
-  } catch {
-    // noop
-  }
+  await AsyncStorage.setItem(REGIONS_KEY, JSON.stringify(regions));
 };
 
 export const getTotalOfflineBytes = async (): Promise<number> => {
@@ -286,6 +283,28 @@ const deleteRegionTiles = async (
   }
 };
 
+/**
+ * Чистит тайлы незавершённой загрузки, но сохраняет каждый тайл, на который
+ * ссылается уже зарегистрированный регион.
+ */
+export const deleteDownloadedTiles = async (tiles: TileCoord[]): Promise<void> => {
+  const regions = await listRegions();
+  const keep = new Set<string>();
+  regions.forEach((region) => {
+    enumerateTiles(region.bbox, region.minZ, region.maxZ).forEach((tile) => {
+      keep.add(`${tile.z}/${tile.x}/${tile.y}`);
+    });
+  });
+  for (const tile of tiles) {
+    if (keep.has(`${tile.z}/${tile.x}/${tile.y}`)) continue;
+    try {
+      await FileSystem.deleteAsync(tilePath(tile.z, tile.x, tile.y), { idempotent: true });
+    } catch {
+      // Best effort cleanup after a cancelled or failed download.
+    }
+  }
+};
+
 export const deleteRegion = async (id: string): Promise<void> => {
   const regions = await listRegions();
   const target = regions.find((r) => r.id === id);
@@ -296,20 +315,15 @@ export const deleteRegion = async (id: string): Promise<void> => {
 };
 
 /**
- * Регистрирует скачанный регион и обеспечивает суммарный лимит: пока суммарный
- * размер > MAX_OFFLINE_BYTES — удаляем старейший регион (FIFO по savedAt).
+ * Регистрирует полностью скачанный регион. Пользовательские регионы не
+ * вытесняют друг друга автоматически: при превышении лимита операция падает.
  */
 export const registerRegion = async (region: OfflineRegion): Promise<void> => {
   const regions = await listRegions();
   const next = regions.filter((r) => r.id !== region.id);
   next.push(region);
   next.sort((a, b) => a.savedAt - b.savedAt);
-  let total = next.reduce((sum, r) => sum + (Number.isFinite(r.bytes) ? r.bytes : 0), 0);
-  while (total > MAX_OFFLINE_BYTES && next.length > 1) {
-    const oldest = next.shift();
-    if (!oldest) break;
-    await deleteRegionTiles(oldest, next);
-    total -= Number.isFinite(oldest.bytes) ? oldest.bytes : 0;
-  }
+  const total = next.reduce((sum, r) => sum + (Number.isFinite(r.bytes) ? r.bytes : 0), 0);
+  if (total > MAX_OFFLINE_BYTES) throw new Error('OFFLINE_MAP_STORAGE_LIMIT_EXCEEDED');
   await writeRegions(next);
 };

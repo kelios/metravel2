@@ -4,6 +4,7 @@
 
 import { QueryClient, DefaultOptions } from '@tanstack/react-query';
 import { Platform } from 'react-native';
+import { setupQueryOnlineManager } from '@/utils/queryOnlineManager';
 
 interface QueryClientRuntimeOptions {
   enableStaticPrefetch?: boolean;
@@ -14,8 +15,9 @@ interface QueryClientRuntimeOptions {
  */
 const defaultQueryOptions: DefaultOptions = {
   queries: {
-    // AND-10: Offline-first — используем кэш при потере сети, перезапрашиваем при восстановлении
-    networkMode: 'offlineFirst',
+    // Offline-first: cached data remains readable, while a first doomed request
+    // is paused until the platform onlineManager reports connectivity.
+    networkMode: 'online',
 
     // Время, в течение которого данные считаются свежими
     staleTime: 5 * 60 * 1000, // 5 минут
@@ -74,6 +76,8 @@ export function createOptimizedQueryClient(
   customOptions?: Partial<DefaultOptions>,
   runtimeOptions?: QueryClientRuntimeOptions
 ): QueryClient {
+  setupQueryOnlineManager();
+
   const client = new QueryClient({
     defaultOptions: {
       ...defaultQueryOptions,

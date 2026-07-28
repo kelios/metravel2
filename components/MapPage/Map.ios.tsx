@@ -173,6 +173,7 @@ const Map: React.FC<TravelProps> = ({
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
+  const { isConnected } = useNetworkStatus();
   const { getSiteBaseUrl } = require('@/utils/seo');
 
   useEffect(() => {
@@ -214,7 +215,7 @@ const Map: React.FC<TravelProps> = ({
     bbox: viewportSnapshot?.bbox ?? null,
     zoom: viewportSnapshot?.zoom ?? 10,
     filters: mapClusterFilters,
-    enabled: mode === 'radius' && !pointsOnly,
+    enabled: isConnected && mode === 'radius' && !pointsOnly,
   });
   const serverClusterRenderData = useMemo(
     () => buildServerClusterRenderData(serverClusterQuery.data),
@@ -245,6 +246,7 @@ const Map: React.FC<TravelProps> = ({
   // отфильтрованный по имени `travelAddress`, иначе снятие категории не убирает
   // маркеры.
   const shouldUseServerClusterData =
+    isConnected &&
     mode === 'radius' &&
     !serverClusterQuery.isError &&
     radiusFilteredServerClusterRenderData.hasServerData &&
@@ -286,7 +288,6 @@ const Map: React.FC<TravelProps> = ({
   // ─────────────── Офлайн-кэш тайлов (Фаза 0: прозрачный кэш) ───────────────
   // Онлайн-статус для TILE_REQ: держим в ref, чтобы async-обработчик не читал
   // устаревшее замыкание. Default true до первого ответа NetInfo — онлайн-путь.
-  const { isConnected } = useNetworkStatus();
   const isOnlineRef = useRef(true);
   isOnlineRef.current = isConnected;
 

@@ -127,6 +127,17 @@ const loadCatalogs = (projectRoot) => {
       }
     }
 
+    // Hand-written feature namespaces (for example `offline.ts`) live next to
+    // common.ts. They are part of runtime resources too and therefore must be
+    // available to the web compile-time inliner just like generated chunks.
+    for (const fileName of fs.readdirSync(localeRoot)) {
+      if (!fileName.endsWith('.ts') || fileName === 'index.ts' || fileName === 'common.ts') continue
+      const namespace = fileName.slice(0, -3)
+      for (const [key, value] of readObjectEntries(path.join(localeRoot, fileName))) {
+        catalog.set(`${namespace}:${key}`, value)
+      }
+    }
+
     for (const [key, value] of readObjectEntries(
       path.join(localeRoot, 'common.ts'),
     )) {

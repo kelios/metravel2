@@ -47,6 +47,7 @@ jest.mock('@/hooks/useTdTrace', () => ({
 
 jest.mock('@/hooks/useOfflineTravelCache', () => ({
   useOfflineTravelCache: () => ({ cacheTravel: jest.fn() }),
+  cacheTravelOffline: jest.fn(),
 }))
 
 jest.mock('@/hooks/travel-details', () => ({

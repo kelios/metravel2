@@ -416,6 +416,19 @@ describe('useBreadcrumbModel', () => {
     expect(result.current.currentTitle).toBe('Карта');
   });
 
+  it('localizes the offline library route instead of titleizing the URL segment', async () => {
+    usePathname.mockReturnValue('/offline');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.currentTitle).toBe('Офлайн');
+    });
+
+    expect(result.current.currentTitle).not.toBe('Offline');
+  });
+
   it('exports default hook alias for module interop stability', () => {
     const mod = require('@/hooks/useBreadcrumbModel');
     expect(mod.default).toBe(mod.useBreadcrumbModel);

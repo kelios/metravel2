@@ -16,7 +16,10 @@
 //  - gamification — session-scoped, дешевле перезапросить.
 // Персистим ровно офлайн-домены серверного стейта из #994.
 
-import { persistQueryClient } from '@tanstack/react-query-persist-client';
+import {
+  persistQueryClient,
+  type PersistQueryClientOptions,
+} from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { QueryClient, Query } from '@tanstack/react-query';
@@ -49,6 +52,26 @@ export const shouldPersistQuery = (query: Query): boolean => {
   return typeof root === 'string' && PERSISTED_KEY_PREFIXES.has(root);
 };
 
+const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: PERSIST_STORAGE_KEY,
+  throttleTime: PERSIST_THROTTLE,
+});
+
+/**
+ * Общие options для PersistQueryClientProvider и legacy imperative wiring.
+ * Provider выставляет restoring-контекст до монтирования запросов, поэтому
+ * cold start не успевает затереть восстановленные данные сетевой ошибкой.
+ */
+export const queryPersistenceOptions: Omit<PersistQueryClientOptions, 'queryClient'> = {
+  persister,
+  maxAge: PERSIST_MAX_AGE,
+  buster: PERSIST_BUSTER,
+  dehydrateOptions: {
+    shouldDehydrateQuery: shouldPersistQuery,
+  },
+};
+
 // Идемпотентность: один смонтированный QueryClient на жизнь приложения, но
 // AppProviders может ре-рендериться и React StrictMode дважды вызывает эффекты.
 // WeakSet не даёт повторно подписать один и тот же клиент (двойная подписка =
@@ -58,26 +81,15 @@ const wiredClients = new WeakSet<QueryClient>();
 /**
  * Подключает persistQueryClient к переданному QueryClient. Безопасно вызывать
  * многократно — повторные вызовы для того же клиента игнорируются.
- * Restore выполняется асинхронно в фоне и НЕ блокирует boot: whitelist-домены
- * не нужны на первом кадре, а auth-профиль не персистится вовсе.
+ * Legacy imperative API оставлен для узких интеграционных тестов; приложение
+ * использует PersistQueryClientProvider, который координирует restore с boot.
  */
 export function setupQueryPersistence(queryClient: QueryClient): void {
   if (wiredClients.has(queryClient)) return;
   wiredClients.add(queryClient);
 
-  const persister = createAsyncStoragePersister({
-    storage: AsyncStorage,
-    key: PERSIST_STORAGE_KEY,
-    throttleTime: PERSIST_THROTTLE,
-  });
-
   persistQueryClient({
     queryClient,
-    persister,
-    maxAge: PERSIST_MAX_AGE,
-    buster: PERSIST_BUSTER,
-    dehydrateOptions: {
-      shouldDehydrateQuery: shouldPersistQuery,
-    },
+    ...queryPersistenceOptions,
   });
 }

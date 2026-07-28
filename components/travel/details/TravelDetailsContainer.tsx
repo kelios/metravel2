@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
-import { Platform } from 'react-native'
+import { Platform, View } from 'react-native'
 import { useIsFocused, useNavigation } from 'expo-router'
 import { useRouter } from 'expo-router'
 
@@ -25,12 +25,14 @@ import { LoadError, MissingParamError } from '@/components/travel/details/Travel
 import TravelDetailsLoadingFallback from '@/components/travel/details/TravelDetailsLoadingFallback'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
 import StaleContentBanner from '@/components/ui/StaleContentBanner'
+import OfflineSaveControl from '@/components/offline/OfflineSaveControl'
 import { RichMediaViewportProvider } from '@/components/ui/richMediaViewport'
 import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel'
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
 import { translate as i18nT } from '@/i18n'
+import { saveTravelOffline } from '@/services/offline/travelOfflineAdapter'
 
 
 const SKELETON_FALLBACK = <TravelDetailsLoadingFallback />
@@ -60,17 +62,17 @@ function useSkipToContentLinkVisibility() {
   return isSkipLinkVisible
 }
 
-function useNativeOfflineTravelCache(
+function useOfflineTravelRecentCache(
   travel: Travel | undefined,
   isLoading: boolean,
   isError: boolean,
 ) {
   useEffect(() => {
-    if (Platform.OS === 'web' || !travel?.id || isLoading || isError) return undefined
+    if (!travel?.id || isLoading || isError) return undefined
 
     let isCancelled = false
 
-    if (!isCancelled) void cacheTravelOffline(travel.id, travel, true)
+    if (!isCancelled) void cacheTravelOffline(travel.id, travel, Platform.OS !== 'web')
 
     return () => {
       isCancelled = true
@@ -145,7 +147,7 @@ export default function TravelDetailsContainer() {
   const { contentHeight, handleContentSizeChange, handleLayout, scrollY, viewportHeight } =
     scroll
 
-  useNativeOfflineTravelCache(travel, isLoading, isError)
+  useOfflineTravelRecentCache(travel, isLoading, isError)
 
   useEffect(() => {
     const travelId = travel?.id ?? travel?.slug
@@ -264,6 +266,10 @@ export default function TravelDetailsContainer() {
     router.replace('/')
   }, [router])
 
+  const openSavedOffline = useCallback(() => {
+    router.push('/offline')
+  }, [router])
+
   // #565: the heavy deferred slot depends only on stable data/flags. Scroll-derived
   // state is consumed by a separate scroll-runtime sibling below, so scroll-spy and
   // reading-progress updates do not reconcile map/comments/deferred sections.
@@ -332,9 +338,24 @@ export default function TravelDetailsContainer() {
   ])
 
   const mainAriaLabel = i18nT('travel:components.travel.details.TravelDetailsContainer.detali_puteshestviya_value1_80d67fb7', { value1: travel?.name || i18nT('travel:common.travelLower') })
+  const handleSaveOffline = useCallback(async (includePhotos: boolean) => {
+    if (!travel) return;
+    await saveTravelOffline(travel, { pinned: true, includePhotos });
+  }, [travel]);
   const topNotice = useMemo(
-    () => <StaleContentBanner meta={staleContentMeta} testID="travel-details-stale-content-banner" />,
-    [staleContentMeta],
+    () => (
+      <View>
+        <StaleContentBanner meta={staleContentMeta} testID="travel-details-stale-content-banner" />
+        {travel?.id ? (
+          <OfflineSaveControl
+            type="travel"
+            sourceId={travel.id}
+            onSave={handleSaveOffline}
+          />
+        ) : null}
+      </View>
+    ),
+    [handleSaveOffline, staleContentMeta, travel?.id],
   )
 
   if (isMissingParam) {
@@ -349,6 +370,7 @@ export default function TravelDetailsContainer() {
         errorMessage={error?.message}
         onRetry={retryLoad}
         onGoHome={goHome}
+        onOpenSaved={openSavedOffline}
       />
     )
   }

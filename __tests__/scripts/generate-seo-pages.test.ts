@@ -629,6 +629,49 @@ describe('travel hero preload helpers', () => {
     expect(preload.desktop.sizes).toBe('(max-width: 1024px) 92vw, 720px');
   });
 
+  // #1116: клиент (`TravelDetailsOptimizedLCPHero` и `sliderParts/buildUriWeb`) начинает с
+  // backend-манифеста. Пока SSG строил собственный URL с `v=` и `q=82`, preload грел один
+  // файл, а LCP-`<img>` запрашивал другой — hero приезжал дважды по ~92 КБ, и preload не
+  // ускорял LCP. Descriptors обязаны совпадать с тем, что реально просит клиент.
+  it('buildTravelHeroPreloadData reuses backend manifest variants so preload matches the LCP image', () => {
+    const variants = {
+      thumb_160: '/gallery/abc.webp?w=160&q=70&fit=cover',
+      thumb_320: '/gallery/abc.webp?w=320&q=72&fit=cover',
+      card_640: '/gallery/abc.webp?w=640&q=75&fit=cover',
+      hero_1280: '/gallery/abc.webp?w=1280&q=78&fit=contain',
+      hero_1920: '/gallery/abc.webp?w=1920&q=80&fit=contain',
+      original: '/gallery/abc.webp',
+    };
+
+    const preload = buildTravelHeroPreloadData(
+      { id: 682, updated_at: '2026-07-11T14:19:29.000Z' },
+      {
+        gallery: [{ id: 5051, url: 'https://metravel.by/gallery/abc.webp', updated_at: '2026-07-11T14:19:29.000Z' }],
+        media: { gallery: [{ id: 5051, variants }] },
+      }
+    );
+
+    // ровно тот вариант, который вернёт buildResponsiveImagePropsFromMedia на клиенте
+    expect(preload.desktop.href).toBe('https://metravel.by/gallery/abc.webp?w=1280&q=78&fit=contain');
+    expect(preload.mobile.href).toBe('https://metravel.by/gallery/abc.webp?w=1280&q=78&fit=contain');
+    // никакого клиентского `v=`/`q=82` поверх канонического manifest-URL
+    expect(preload.desktop.href).not.toMatch(/[?&]v=/);
+    expect(preload.desktop.href).not.toContain('q=82');
+    expect(preload.mobile.srcSet).toContain('w=320&q=72&fit=cover 320w');
+    expect(preload.mobile.srcSet).toContain('w=1280&q=78&fit=contain 1280w');
+  });
+
+  it('buildTravelHeroPreloadData falls back to the client-side builder without a manifest', () => {
+    const preload = buildTravelHeroPreloadData(
+      { id: 77 },
+      { gallery: [{ id: 991, url: 'https://metravel.by/gallery/77/gallery/photo.JPG' }] }
+    );
+
+    expect(preload.desktop.href).toContain('w=1280');
+    expect(preload.desktop.href).toContain('q=82');
+    expect(preload.desktop.href).toContain('v=991');
+  });
+
   it('injectTravelHeroPreload inserts and replaces viewport-specific travel preload tags', () => {
     const preload = {
       mobile: {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, StyleSheet, Platform, ActivityIndicator, View } from 'react-native';
+import { Text, StyleSheet, Platform, ActivityIndicator, Pressable, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -22,6 +23,7 @@ export function SyncIndicator() {
 }
 
 function SyncIndicatorNative() {
+  const router = useRouter();
   const colors = useThemedColors();
   const { isConnected } = useNetworkStatus();
   const [visible, setVisible] = useState(false);
@@ -31,6 +33,8 @@ function SyncIndicatorNative() {
   useEffect((): (() => void) | void => {
     if (!isConnected) {
       wasOfflineRef.current = true;
+      setVisible(true);
+      translateY.value = withTiming(0, { duration: 200 });
       return;
     }
 
@@ -62,12 +66,27 @@ function SyncIndicatorNative() {
         { backgroundColor: colors.info },
       ]}
       accessibilityRole="alert"
-      accessibilityLabel={i18nT('shared:components.ui.SyncIndicator.sinhronizatsiya_dannyh_b1e3ca28')}
+      accessibilityLabel={isConnected
+        ? i18nT('shared:components.ui.SyncIndicator.sinhronizatsiya_dannyh_b1e3ca28')
+        : i18nT('offline:offlineBanner')}
     >
       <View style={styles.content}>
-        <ActivityIndicator size="small" color={colors.textInverse} />
+        {isConnected ? <ActivityIndicator size="small" color={colors.textInverse} /> : null}
         <Text style={[styles.text, { color: colors.textInverse }]}>
-          {i18nT('shared:components.ui.SyncIndicator.sinhronizatsiya_dannyh_80179835')}</Text>
+          {isConnected
+            ? i18nT('shared:components.ui.SyncIndicator.sinhronizatsiya_dannyh_80179835')
+            : i18nT('offline:offlineBanner')}
+        </Text>
+        {!isConnected ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('offline:openSaved')}
+            onPress={() => router.push('/offline')}
+            style={[styles.action, { borderColor: colors.textInverse }]}
+          >
+            <Text style={[styles.actionText, { color: colors.textInverse }]}>{i18nT('offline:openSaved')}</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Animated.View>
   );
@@ -87,6 +106,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 8,
   },
   text: {
@@ -94,5 +114,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
+  action: {
+    minHeight: 44,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });
-

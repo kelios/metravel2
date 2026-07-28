@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -17,6 +18,7 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   showWhenOnline = false,
   position = 'top',
 }) => {
+  const router = useRouter()
   const colors = useThemedColors()
   const { isConnected } = useNetworkStatus()
   const [wasOffline, setWasOffline] = useState(false)
@@ -59,7 +61,19 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
         { backgroundColor, transform: [{ translateY }] },
       ]}
     >
-      <Text style={[styles.text, { color: colors.textInverse }]}>{message}</Text>
+      <View style={styles.content}>
+        <Text style={[styles.text, { color: colors.textInverse }]}>{message}</Text>
+        {!isConnected ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('offline:openSaved')}
+            onPress={() => router.push('/offline')}
+            style={[styles.action, { borderColor: colors.textInverse }]}
+          >
+            <Text style={[styles.actionText, { color: colors.textInverse }]}>{i18nT('offline:openSaved')}</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   )
 }
@@ -92,5 +106,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  action: {
+    minHeight: 44,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 })

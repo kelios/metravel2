@@ -607,7 +607,9 @@ function ImageCardMedia({
     const link = document.createElement('link');
     link.id = id;
     link.rel = rel;
-    link.as = 'image';
+    // Атрибутом, а не свойством: для `rel=prefetch` `as` обязателен, иначе браузер
+    // кладёт ресурс в кэш без нужного destination и повторно скачивает его при показе.
+    link.setAttribute('as', 'image');
     link.href = prefetchHref;
     document.head.appendChild(link);
 

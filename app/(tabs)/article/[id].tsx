@@ -12,6 +12,7 @@ import ArticleRatingSection from '@/components/article/ArticleRatingSection'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
 import ArticleNextStepSection from '@/components/article/ArticleNextStepSection'
 import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
+import OfflineSaveControl from '@/components/offline/OfflineSaveControl'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { Card, Title } from '@/ui/paper'
@@ -23,6 +24,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { translate as i18nT } from '@/i18n'
+import { saveArticleOffline } from '@/services/offline/articleOfflineAdapter'
 
 
 export default function ArticleDetails() {
@@ -159,6 +161,11 @@ export default function ArticleDetails() {
                   {/* Заголовок даёт навигационный header (headerTitle) — в теле не дублируем (F-4). */}
                   <ArticleAuthorBanner article={article} />
                   <ArticleNextStepSection articleId={article.id ?? article.slug} />
+                  <OfflineSaveControl
+                    type="article"
+                    sourceId={article.id ?? article.slug ?? normalizedSlug}
+                    onSave={(includePhotos) => saveArticleOffline(article, { pinned: true, includePhotos, routeParam: normalizedSlug })}
+                  />
                   {Platform.select({
                     web: (
                       <SafeHtml

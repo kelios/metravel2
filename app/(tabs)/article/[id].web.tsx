@@ -11,6 +11,7 @@ import { Card, Title } from '@/ui/paper'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
 import ArticleNextStepSection from '@/components/article/ArticleNextStepSection'
 import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
+import OfflineSaveControl from '@/components/offline/OfflineSaveControl'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useFavorites } from '@/context/FavoritesContext'
@@ -22,6 +23,7 @@ import { stripToDescription } from '@/components/travel/utils/travelHelpers'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
+import { saveArticleOffline } from '@/services/offline/articleOfflineAdapter'
 
 
 export default function ArticleDetails() {
@@ -213,6 +215,11 @@ export default function ArticleDetails() {
                 <h1 style={{ fontSize: 18, fontWeight: '700', margin: 0 } as any}>{article.name}</h1>
                 <ArticleAuthorBanner article={article} />
                 <ArticleNextStepSection articleId={article.id ?? article.slug} />
+                <OfflineSaveControl
+                  type="article"
+                  sourceId={article.id ?? article.slug ?? routeKey}
+                  onSave={(includePhotos) => saveArticleOffline(article, { pinned: true, includePhotos, routeParam: routeKey })}
+                />
                 <SafeHtml
                   html={articleContent.html}
                   serverSanitized={articleContent.serverSanitized}

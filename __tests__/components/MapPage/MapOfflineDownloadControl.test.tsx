@@ -23,6 +23,15 @@ jest.mock('@/utils/mapTileCache', () => {
   }
 })
 
+jest.mock('@/api/mapOffline', () => ({
+  fetchOfflineMapPoints: jest.fn().mockResolvedValue({ points: [], etag: null }),
+}))
+
+jest.mock('@/services/offline/mapOfflineAdapter', () => ({
+  saveMapRegionOffline: jest.fn().mockResolvedValue(undefined),
+  deleteMapRegionOffline: jest.fn().mockResolvedValue(undefined),
+}))
+
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
 import React from 'react'
 

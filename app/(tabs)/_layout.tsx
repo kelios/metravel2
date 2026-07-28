@@ -191,6 +191,7 @@ export default function TabLayout() {
                 <Tabs.Screen name="history" options={HIDDEN} />
                 <Tabs.Screen name="calendar" options={HIDDEN} />
                 <Tabs.Screen name="settings" options={HIDDEN} />
+                <Tabs.Screen name="offline" options={HIDDEN} />
                 <Tabs.Screen name="userpoints" options={HIDDEN} />
                 <Tabs.Screen name="messages" options={HIDDEN} />
                 <Tabs.Screen name="subscriptions" options={HIDDEN} />

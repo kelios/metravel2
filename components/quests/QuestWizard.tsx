@@ -41,7 +41,8 @@ import {
 import { exportQuestOfflineMap, getQuestOfflineMapPoints, openQuestOfflineMapInApp } from './questOfflineMapExport';
 
 import { fetchQuestByQuestId } from '@/api/quests';
-import { prefetchQuestImages } from '@/utils/questImagePrefetch';
+import { saveQuestOffline } from '@/services/offline/questOfflineAdapter';
+import { useOfflineCatalog } from '@/hooks/useOfflineCatalog';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
@@ -387,25 +388,32 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     // дисковый кэш фото (шаги + обложка + постер финала), чтобы квест открывался
     // без сети. Частичные фейлы фото не считаем провалом.
     const [offlineQuestState, setOfflineQuestState] = useState<'idle' | 'downloading' | 'done'>('idle');
+    const { items: offlineItems } = useOfflineCatalog();
+    const questSavedOffline = offlineItems.some(
+        (item) => item.type === 'quest' && item.sourceId === String(questId ?? '') && item.pinned,
+    );
+
+    useEffect(() => {
+        if (questSavedOffline) setOfflineQuestState('done');
+    }, [questSavedOffline]);
 
     const handleOfflineQuestDownload = useCallback(() => {
         if (offlineQuestState === 'downloading') return;
         void (async () => {
             setOfflineQuestState('downloading');
             try {
-                if (questId) {
-                    // Перезапрашиваем бандл — fetchQuestByQuestId кэширует сырой JSON.
-                    await fetchQuestByQuestId(questId).catch(() => undefined);
-                }
-                const { total, ok } = await prefetchQuestImages([
-                    coverUrl,
-                    finale.poster,
-                    ...steps.map((step) => step.image),
-                ]);
+                if (!questId) throw new Error('OFFLINE_QUEST_ID_MISSING');
+                const bundle = await fetchQuestByQuestId(questId);
+                const manifest = await saveQuestOffline(bundle, {
+                    pinned: true,
+                    includePhotos: true,
+                    cityId,
+                });
+                if (!manifest) throw new Error('OFFLINE_QUEST_SAVE_FAILED');
                 setOfflineQuestState('done');
                 notifyQuest(
-                    total > 0
-                        ? i18nT('quests:components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_foto_value1_valu_b0544e7a', { value1: ok, value2: total })
+                    manifest.assetCount > 0
+                        ? i18nT('quests:components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_foto_value1_valu_b0544e7a', { value1: manifest.assetCount, value2: manifest.assetCount })
                         : i18nT('quests:components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_da201f00'),
                 );
             } catch {
@@ -413,7 +421,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_sohranit_kvest_dlya_oflayna_21108b88'));
             }
         })();
-    }, [coverUrl, finale.poster, offlineQuestState, questId, steps]);
+    }, [cityId, offlineQuestState, questId]);
 
     const mainContent = (
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>

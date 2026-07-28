@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthContext, createAuthFallbackValue } from '@/context/authContextBase';
 import { FavoritesContext, createFavoritesFallbackValue } from '@/context/FavoritesContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import ThemedPaperProvider from '@/components/ui/ThemedPaperProvider';
 import { LocaleProvider } from '@/i18n/LocaleProvider';
-import { setupQueryPersistence } from '@/utils/queryPersist';
+import { queryPersistenceOptions } from '@/utils/queryPersist';
 
 interface AppProvidersProps {
   queryClient: any;
@@ -55,11 +55,6 @@ export default function AppProviders({
   const fallbackAuth = useMemo(() => createAuthFallbackValue(), []);
   const fallbackFavorites = useMemo(() => createFavoritesFallbackValue(), []);
 
-  // #1015: подключаем persist офлайн-доменов RQ поверх смонтированного клиента.
-  // Идемпотентно (WeakSet-гвард внутри), restore асинхронный и не блокирует boot.
-  useEffect(() => {
-    if (queryClient) setupQueryPersistence(queryClient);
-  }, [queryClient]);
   const shouldLoadDeferredRuntime =
     Platform.OS === 'web' && (deferAuthProvider || deferFavoritesProvider);
 
@@ -138,7 +133,10 @@ export default function AppProviders({
   }, [authDeferMode, favoritesDeferMode, shouldLoadDeferredRuntime]);
 
   const content = (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={queryPersistenceOptions}
+    >
       {shouldLoadDeferredRuntime && deferredRuntimeReady && (
         <React.Suspense fallback={null}>
           <AppProvidersDeferredRuntimeLazy
@@ -153,7 +151,7 @@ export default function AppProviders({
         </React.Suspense>
       )}
       {children}
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 
   const favoritesContent = favoritesReady ? (

@@ -1,6 +1,6 @@
 // api/client.ts
 
-import { devError } from '@/utils/logger';
+import { devError, devWarn } from '@/utils/logger';
 import { Platform } from 'react-native';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getCsrfHeader } from '@/utils/csrf';
@@ -412,13 +412,21 @@ class ApiClient {
                 throw error;
             }
             
-            // ✅ ИСПРАВЛЕНИЕ: Улучшенная обработка сетевых ошибок
+            const offlineLike = isOfflineLikeError(error);
+
+            // Ожидаемая потеря сети — рабочее состояние приложения, а не runtime
+            // exception. На native console.error открывает LogBox и перекрывает
+            // офлайн-UI, поэтому оставляем диагностический warn без красного экрана.
             if (hasLoggableRequestError(error)) {
-                devError('API request error:', error);
+                if (offlineLike) {
+                    devWarn('API request offline:', error);
+                } else {
+                    devError('API request error:', error);
+                }
             }
             
             // Проверяем, является ли это сетевой ошибкой
-            if (isOfflineLikeError(error)) {
+            if (offlineLike) {
                 throw new ApiError(
                     0,
                     i18nT('errorsStatic:api.client.offline'),

@@ -5,8 +5,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getThemedNativeBaseTileUrl } from '@/config/mapWebLayers';
 import { translate as i18nT } from '@/i18n';
+import { fetchOfflineMapPoints } from '@/api/mapOffline';
+import { saveMapRegionOffline } from '@/services/offline/mapOfflineAdapter';
 import {
   AVG_TILE_BYTES,
+  deleteDownloadedTiles,
+  deleteRegion,
   downloadTileToDisk,
   enumerateTiles,
   estimateTiles,
@@ -65,6 +69,7 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
   const [state, setState] = useState<OfflineTileDownloadState>('idle');
   const [progress, setProgress] = useState<OfflineTileProgress>({ done: 0, total: 0 });
   const cancelRef = useRef(false);
+  const activeAbortRef = useRef<AbortController | null>(null);
   const runningRef = useRef(false);
   const mountedRef = useRef(true);
 
@@ -73,6 +78,7 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
     return () => {
       mountedRef.current = false;
       cancelRef.current = true;
+      activeAbortRef.current?.abort();
     };
   }, []);
 
@@ -95,6 +101,7 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
 
   const cancel = useCallback(() => {
     cancelRef.current = true;
+    activeAbortRef.current?.abort();
   }, []);
 
   const reset = useCallback(() => {
@@ -121,44 +128,59 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
         return;
       }
 
-      if (mountedRef.current) {
-        setState('downloading');
-        setProgress({ done: 0, total: tiles.length });
-      }
-
-      const template = getThemedNativeBaseTileUrl();
-      let bytes = 0;
-      let doneCount = 0;
-      let cursor = 0;
-
-      const worker = async (): Promise<void> => {
-        for (;;) {
-          if (cancelRef.current) return;
-          const index = cursor;
-          cursor += 1;
-          if (index >= tiles.length) return;
-          const t = tiles[index];
-          const url = buildTileUrl(template, t.z, t.x, t.y);
-          const written = await downloadTileToDisk(t.z, t.x, t.y, url);
-          if (written != null) bytes += written;
-          doneCount += 1;
-          if (mountedRef.current) {
-            setProgress({ done: doneCount, total: tiles.length });
-          }
-          await sleep(THROTTLE_MS);
-        }
-      };
-
+      const downloadedTiles: typeof tiles = [];
       try {
+        const abortController = new AbortController();
+        activeAbortRef.current = abortController;
+        // Точки — часть того же пакета. Если индекс не получен, регион нельзя
+        // объявлять готовым даже при полностью скачанной подложке.
+        const pointIndex = await fetchOfflineMapPoints(bbox, { signal: abortController.signal });
+        if (cancelRef.current) throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
+
+        if (mountedRef.current) {
+          setState('downloading');
+          setProgress({ done: 0, total: tiles.length });
+        }
+
+        const template = getThemedNativeBaseTileUrl();
+        let bytes = 0;
+        let doneCount = 0;
+        let failedCount = 0;
+        let cursor = 0;
+
+        const worker = async (): Promise<void> => {
+          for (;;) {
+            if (cancelRef.current || failedCount > 0) return;
+            const index = cursor;
+            cursor += 1;
+            if (index >= tiles.length) return;
+            const tile = tiles[index];
+            const url = buildTileUrl(template, tile.z, tile.x, tile.y);
+            const written = await downloadTileToDisk(tile.z, tile.x, tile.y, url);
+            if (written == null) {
+              failedCount += 1;
+              return;
+            }
+            bytes += written;
+            downloadedTiles.push(tile);
+            doneCount += 1;
+            if (mountedRef.current) setProgress({ done: doneCount, total: tiles.length });
+            await sleep(THROTTLE_MS);
+          }
+        };
+
         await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
 
         if (cancelRef.current) {
-          runningRef.current = false;
+          await deleteDownloadedTiles(downloadedTiles);
           if (mountedRef.current) setState('idle');
           return;
         }
+        if (failedCount > 0 || doneCount !== tiles.length) {
+          throw new Error('OFFLINE_MAP_TILE_DOWNLOAD_INCOMPLETE');
+        }
 
-        await registerRegion({
+        const region = {
           id: `region-${Date.now()}`,
           name: options?.name ?? i18nT('map:hooks.map.useOfflineTileDownload.oblast_karty_72ba6f3a'),
           bbox,
@@ -167,13 +189,23 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
           tileCount: tiles.length,
           bytes,
           savedAt: Date.now(),
-        });
+        };
+        await registerRegion(region);
+        try {
+          await saveMapRegionOffline(region, pointIndex.points, pointIndex.etag);
+        } catch (error) {
+          await deleteRegion(region.id);
+          throw error;
+        }
 
-        runningRef.current = false;
         if (mountedRef.current) setState('done');
-      } catch {
+      } catch (error) {
+        await deleteDownloadedTiles(downloadedTiles);
+        const aborted = cancelRef.current || (error as { name?: string })?.name === 'AbortError';
+        if (mountedRef.current) setState(aborted ? 'idle' : 'error');
+      } finally {
+        activeAbortRef.current = null;
         runningRef.current = false;
-        if (mountedRef.current) setState('error');
       }
     },
     [],

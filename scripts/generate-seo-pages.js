@@ -352,6 +352,63 @@ function pickTravelSeoImage(travel, detail) {
   return OG_IMAGE;
 }
 
+// #1116: backend отдаёт готовые варианты в `detail.media.gallery[].variants`, и клиент
+// (`TravelDetailsOptimizedLCPHero` → buildResponsiveImagePropsPreferringMedia,
+// `sliderParts/utils.ts` → buildResponsiveImagePropsFromMedia) с них и начинает.
+// SSG про манифест не знал и строил собственный URL с `v=` и `q=82`, поэтому preload
+// грел ОДИН файл, а LCP-`<img>` запрашивал ДРУГОЙ — hero приезжал дважды по ~92 КБ,
+// и preload не ускорял LCP вовсе (ровно то, от чего предостерегает комментарий ниже).
+// Здесь повторяется отбор варианта из `utils/travelMediaVariants.ts`, чтобы SSG и
+// клиент сходились на одном URL.
+const VARIANT_NAME_WIDTH = /_(\d{2,4})$/;
+
+function resolveManifestVariants(entry) {
+  const variants = entry?.variants;
+  if (!variants || typeof variants !== 'object') return [];
+  const resolved = [];
+  for (const [name, rawUrl] of Object.entries(variants)) {
+    const m = VARIANT_NAME_WIDTH.exec(name);
+    if (!m) continue;
+    const width = Number(m[1]);
+    if (!Number.isFinite(width) || width <= 0) continue;
+    const url = toAbsoluteUrl(String(rawUrl || '').trim());
+    if (!url) continue;
+    resolved.push({ width, url });
+  }
+  return resolved.sort((a, b) => a.width - b.width);
+}
+
+function pickManifestVariantForWidth(variants, targetWidth) {
+  if (!variants.length) return null;
+  for (const v of variants) if (v.width >= targetWidth) return v;
+  return variants[variants.length - 1];
+}
+
+/** { href, srcSet } из манифеста или null, если манифеста нет. */
+function buildManifestResponsive(entry, widths, maxWidth) {
+  const variants = resolveManifestVariants(entry);
+  if (!variants.length) return null;
+  const target = pickManifestVariantForWidth(variants, maxWidth);
+  if (!target) return null;
+  const candidates = new Map();
+  for (const w of widths) {
+    const v = pickManifestVariantForWidth(variants, w);
+    if (v) candidates.set(v.width, v.url);
+  }
+  const srcSet = [...candidates.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([w, url]) => `${url} ${w}w`)
+    .join(', ');
+  return { href: target.url, srcSet: srcSet || '' };
+}
+
+function findGalleryManifestEntry(detail, imageId) {
+  const gallery = detail?.media?.gallery;
+  if (!Array.isArray(gallery) || imageId == null) return null;
+  const target = String(imageId);
+  return gallery.find((item) => String(item?.id) === target) || null;
+}
+
 function pickTravelHeroImageSource(travel, detail) {
   const galleryFirst = detail?.gallery?.[0];
   if (galleryFirst) {
@@ -359,7 +416,12 @@ function pickTravelHeroImageSource(travel, detail) {
     const galleryUpdatedAt = typeof galleryFirst === 'string' ? null : galleryFirst.updated_at;
     const galleryId = typeof galleryFirst === 'string' ? null : galleryFirst.id;
     if (galleryUrl) {
-      return { url: galleryUrl, updatedAt: galleryUpdatedAt, id: galleryId };
+      return {
+        url: galleryUrl,
+        updatedAt: galleryUpdatedAt,
+        id: galleryId,
+        media: findGalleryManifestEntry(detail, galleryId),
+      };
     }
   }
 
@@ -385,18 +447,30 @@ function buildTravelHeroPreloadData(travel, detail) {
   // Source of truth: TravelDetailsOptimizedLCPHero.tsx (q72 mobile / q82 desktop,
   // widths [320,480,640,720] mobile / [720,960,1280] desktop) and
   // sliderParts/utils.ts buildUriWeb (same q72/q82 for the first slide).
-  const mobileHref = buildOptimizedTravelImageUrl(source.url, {
-    width: 720,
-    quality: 72,
-    updatedAt: source.updatedAt,
-    id: source.id,
-  });
-  const desktopHref = buildOptimizedTravelImageUrl(source.url, {
-    width: 1280,
-    quality: 82,
-    updatedAt: source.updatedAt,
-    id: source.id,
-  });
+  //
+  // #1116: клиент начинает с backend-манифеста, поэтому при его наличии preload обязан
+  // брать те же варианты — иначе descriptors расходятся и preload греет чужой файл.
+  // Клиентские ширины/`maxWidth` совпадают со значениями ниже, поэтому отбор варианта
+  // даёт тот же URL, что вернёт buildResponsiveImagePropsFromMedia.
+  const manifestMobile = buildManifestResponsive(source.media, [320, 480, 640, 720], 720);
+  const manifestDesktop = buildManifestResponsive(source.media, [720, 960, 1280], 1280);
+
+  const mobileHref =
+    manifestMobile?.href ||
+    buildOptimizedTravelImageUrl(source.url, {
+      width: 720,
+      quality: 72,
+      updatedAt: source.updatedAt,
+      id: source.id,
+    });
+  const desktopHref =
+    manifestDesktop?.href ||
+    buildOptimizedTravelImageUrl(source.url, {
+      width: 1280,
+      quality: 82,
+      updatedAt: source.updatedAt,
+      id: source.id,
+    });
 
   if (!mobileHref && !desktopHref) return null;
 
@@ -404,22 +478,26 @@ function buildTravelHeroPreloadData(travel, detail) {
     mobile: mobileHref
       ? {
           href: mobileHref,
-          srcSet: buildTravelHeroSrcSet(source.url, [320, 480, 640, 720], {
-            quality: 72,
-            updatedAt: source.updatedAt,
-            id: source.id,
-          }),
+          srcSet:
+            manifestMobile?.srcSet ||
+            buildTravelHeroSrcSet(source.url, [320, 480, 640, 720], {
+              quality: 72,
+              updatedAt: source.updatedAt,
+              id: source.id,
+            }),
           sizes: '100vw',
         }
       : null,
     desktop: desktopHref
       ? {
           href: desktopHref,
-          srcSet: buildTravelHeroSrcSet(source.url, [720, 960, 1280], {
-            quality: 82,
-            updatedAt: source.updatedAt,
-            id: source.id,
-          }),
+          srcSet:
+            manifestDesktop?.srcSet ||
+            buildTravelHeroSrcSet(source.url, [720, 960, 1280], {
+              quality: 82,
+              updatedAt: source.updatedAt,
+              id: source.id,
+            }),
           sizes: '(max-width: 1024px) 92vw, 720px',
         }
       : null,

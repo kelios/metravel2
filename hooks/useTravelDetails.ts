@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { onlineManager, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { normalizeTravelItem } from '@/api/travelsNormalize';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
@@ -17,6 +17,7 @@ import {
   getPublicStalePayloadMeta,
   type PublicStalePayloadMeta,
 } from '@/utils/publicStaleCache';
+import { readTravelOffline } from '@/services/offline/travelOfflineAdapter';
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
@@ -331,6 +332,11 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     initialDataUpdatedAt: initialPreloadedTravel ? Date.now() : undefined,
     queryFn: async (context?: { signal?: AbortSignal }) => {
       const signal = context?.signal;
+      if (!onlineManager.isOnline()) {
+        const cached = await readTravelOffline(cacheKey);
+        if (cached) return cached;
+        throw new Error('OFFLINE_CONTENT_NOT_SAVED');
+      }
       // Try to reuse preload from +html.tsx and wait shortly for its in-flight request.
       // This avoids duplicate travel-details fetches on first paint (critical for LCP).
       // When a sufficient preload was already available synchronously (initialData),
@@ -352,7 +358,9 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     // sticky error (staleTime kept it from refetching) that only a full reload
     // could clear. Retry transient (non-404) failures a couple of times so the
     // SPA path self-heals; genuine 404s fail fast (slug fallback already ran).
-    retry: Platform.OS === 'web'
+    retry: !onlineManager.isOnline()
+      ? false
+      : Platform.OS === 'web'
       ? (failureCount: number, err: unknown) => {
           if (failureCount >= 2) return false;
           const status = Number(
@@ -368,6 +376,9 @@ export function useTravelDetails(): UseTravelDetailsReturn {
           return true;
         }
       : undefined,
+    // This query owns a durable local source and must run its queryFn while
+    // offline; the function above never touches the network in that state.
+    networkMode: 'always',
     retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 4000),
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,

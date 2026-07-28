@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/api/map';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQuery';
@@ -9,6 +9,9 @@ import { queryKeys } from '@/api/queryKeys';
 import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { offlineCatalog } from '@/services/offline/offlineCatalog';
+import { readAllMapPointsOffline } from '@/services/offline/mapOfflineAdapter';
 
 const MAP_TRAVELS_PER_PAGE = 30;
 
@@ -230,6 +233,27 @@ export function useMapTravels({
   fullRouteCoords,
   isFocused,
 }: UseMapTravelsParams) {
+  const { isConnected } = useNetworkStatus();
+  const [offlineMapPoints, setOfflineMapPoints] = useState<TravelCoords[] | null>(null);
+
+  useEffect(() => {
+    if (isConnected) {
+      setOfflineMapPoints(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const refreshOfflinePoints = async () => {
+      const points = await readAllMapPointsOffline();
+      if (!cancelled) setOfflineMapPoints(points);
+    };
+    void refreshOfflinePoints();
+    const unsubscribe = offlineCatalog.subscribe(() => void refreshOfflinePoints());
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [isConnected]);
+
   /**
    * Пока маршрут НЕ построен (меньше 2 точек), корридорный запрос
    * `travels/near-route` физически невозможен — раньше это означало пустой
@@ -467,14 +491,16 @@ export function useMapTravels({
 
   // Нормализуем данные
   const allTravelsData = useMemo(() => {
-    if (!Array.isArray(rawTravelsData)) return [];
-    return dedupeMapTravels(rawTravelsData);
-  }, [rawTravelsData]);
+    const source = !isConnected && offlineMapPoints != null ? offlineMapPoints : rawTravelsData;
+    if (!Array.isArray(source)) return [];
+    return dedupeMapTravels(source);
+  }, [isConnected, offlineMapPoints, rawTravelsData]);
 
   // Общее число мест по бэкенду (а не длина загруженной страницы). Бэкенд отдаёт
   // total в первой странице — счётчик в UI должен показывать его, иначе при
   // смене радиуса (50/100/200) число залипает на размере страницы (30).
   const total = useMemo(() => {
+    if (!isConnected && offlineMapPoints != null) return allTravelsData.length;
     if (queryParams.mode === 'radius') {
       if (!enabledRadius) return 0;
       const t = radiusQuery.data?.pages?.[0]?.total;
@@ -482,13 +508,33 @@ export function useMapTravels({
     }
     if (!enabledRoute) return 0;
     return allTravelsData.length;
-  }, [queryParams.mode, enabledRadius, enabledRoute, radiusQuery.data?.pages, allTravelsData]);
+  }, [
+    queryParams.mode,
+    enabledRadius,
+    enabledRoute,
+    radiusQuery.data?.pages,
+    allTravelsData,
+    isConnected,
+    offlineMapPoints,
+  ]);
 
   // Текстовый поиск теперь серверный (where.query, BE #695) — выдача и total уже
   // отфильтрованы бэкендом. Клиентского text-фильтра в render-path НЕТ: он резал бы
   // валидные FTS-совпадения (сервер матчит по полному тексту, а не по видимому
   // address) и искажал бы счётчик «На карте подходит».
   const filteredTravelsData = useMemo(() => {
+    if (!isConnected && offlineMapPoints != null) {
+      const query = searchQuery.toLocaleLowerCase();
+      const searched = !query
+        ? allTravelsData
+        : allTravelsData.filter((travel) => [
+            travel.address,
+            (travel as TravelCoords & { name?: string }).name,
+            (travel as TravelCoords & { fullAddress?: string }).fullAddress,
+            travel.categoryName,
+          ].some((value) => String(value ?? '').toLocaleLowerCase().includes(query)));
+      return filterTravelsByCategories(searched, filterValues.categoryTravelAddress);
+    }
     // Категории уже отфильтрованы бэкендом по ID (queryKey включает их) —
     // повторный клиентский фильтр по точному имени резал бы валидные точки при
     // расхождении формулировок. Клиентский фильтр — только fallback, когда
@@ -500,21 +546,26 @@ export function useMapTravels({
     allTravelsData,
     normalizedCategoryTravelAddressIds.length,
     filterValues.categoryTravelAddress,
+    isConnected,
+    offlineMapPoints,
+    searchQuery,
   ]);
+
+  const usesOfflineIndex = !isConnected && offlineMapPoints != null;
 
   return useMemo(() => ({
     allTravelsData,
     filteredTravelsData,
     total,
-    isLoading,
-    isFetching,
-    isPlaceholderData,
-    isError,
-    error,
+    isLoading: usesOfflineIndex ? false : isLoading,
+    isFetching: usesOfflineIndex ? false : isFetching,
+    isPlaceholderData: usesOfflineIndex ? false : isPlaceholderData,
+    isError: usesOfflineIndex ? false : isError,
+    error: usesOfflineIndex ? null : error,
     refetch,
-    hasMore,
+    hasMore: usesOfflineIndex ? false : hasMore,
     loadMore,
-    isFetchingNextPage,
+    isFetchingNextPage: usesOfflineIndex ? false : isFetchingNextPage,
   }), [
     allTravelsData,
     filteredTravelsData,
@@ -528,5 +579,6 @@ export function useMapTravels({
     hasMore,
     loadMore,
     isFetchingNextPage,
+    usesOfflineIndex,
   ]);
 }

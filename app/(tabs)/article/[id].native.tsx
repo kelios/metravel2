@@ -14,6 +14,7 @@ import { Article } from '@/types/types'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
 import ArticleNextStepSection from '@/components/article/ArticleNextStepSection'
 import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
+import OfflineSaveControl from '@/components/offline/OfflineSaveControl'
 import StableContent from '@/components/travel/StableContent'
 import { Card, Title } from '@/ui/paper'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
@@ -26,6 +27,7 @@ import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { normalizeArticleReturnHref } from '@/utils/articleNavigation'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { translate as i18nT } from '@/i18n'
+import { saveArticleOffline } from '@/services/offline/articleOfflineAdapter'
 
 
 export default function ArticleDetails() {
@@ -198,6 +200,11 @@ export default function ArticleDetails() {
               <Title>{article.name}</Title>
               <ArticleAuthorBanner article={article} />
               <ArticleNextStepSection articleId={article.id ?? article.slug} />
+              <OfflineSaveControl
+                type="article"
+                sourceId={article.id ?? article.slug ?? normalizedSlug}
+                onSave={(includePhotos) => saveArticleOffline(article, { pinned: true, includePhotos, routeParam: normalizedSlug })}
+              />
               <View style={styles.richTextWrap}>
                 <StableContent
                   html={articleContent.html}

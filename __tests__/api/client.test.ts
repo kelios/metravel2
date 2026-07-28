@@ -1,7 +1,7 @@
 import { apiClient, ApiError } from '@/api/client';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
-import { devError } from '@/utils/logger';
+import { devError, devWarn } from '@/utils/logger';
 import { Platform } from 'react-native';
 
 jest.mock('@/utils/fetchWithTimeout', () => ({
@@ -16,6 +16,7 @@ jest.mock('@/utils/secureStorage', () => ({
 
 jest.mock('@/utils/logger', () => ({
   devError: jest.fn(),
+  devWarn: jest.fn(),
 }));
 
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
@@ -78,14 +79,15 @@ describe('src/api/client.ts apiClient', () => {
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
   });
 
-  it('переводит сетевую ошибку в ApiError с offline=true и логирует devError', async () => {
+  it('переводит сетевую ошибку в ApiError с offline=true без error-level LogBox', async () => {
     mockedGetSecureItem.mockResolvedValueOnce('token');
     mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network failed'));
 
     await expect(apiClient.get('/network'))
       .rejects.toBeInstanceOf(ApiError);
 
-    expect(devError).toHaveBeenCalled();
+    expect(devWarn).toHaveBeenCalledWith('API request offline:', expect.any(Error));
+    expect(devError).not.toHaveBeenCalled();
   });
 
   it('показывает HTTP-код, когда сервер не прислал текст статуса и тело ошибки', async () => {

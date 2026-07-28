@@ -37,4 +37,12 @@ describe('createOptimizedQueryClient', () => {
 
     expect(requestIdleCallback).not.toHaveBeenCalled();
   });
+
+  it('pauses first requests while the platform is offline', () => {
+    const client = createOptimizedQueryClient(undefined, {
+      enableStaticPrefetch: false,
+    });
+
+    expect(client.getDefaultOptions().queries?.networkMode).toBe('online');
+  });
 });

@@ -36,6 +36,7 @@ import DataManagementSection from '@/components/settings/DataManagementSection';
 import NavCardSection from '@/components/settings/NavCardSection';
 import AppVersionSection from '@/components/settings/AppVersionSection';
 import LanguageSection from '@/components/settings/LanguageSection';
+import OfflineSettingsSection from '@/components/settings/OfflineSettingsSection';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -370,6 +371,10 @@ export default function SettingsScreen() {
                     <Text style={styles.sectionTitle}>{i18nT('common:language.settingTitle')}</Text>
 
                     <LanguageSection styles={styles} colors={colors} />
+
+                    <Text style={styles.sectionTitle}>{i18nT('offline:title')}</Text>
+
+                    <OfflineSettingsSection styles={styles} colors={colors} userId={userId} />
 
                     <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.tema_920e1112')}</Text>
 

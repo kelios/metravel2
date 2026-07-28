@@ -6,6 +6,9 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { translate as i18nT } from '@/i18n';
+import { onlineManager } from '@tanstack/react-query';
+import { isRecoverablePublicStaleError } from '@/utils/publicStaleCache';
+import { readArticleOffline, saveArticleOffline } from '@/services/offline/articleOfflineAdapter';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -297,6 +300,13 @@ export const fetchArticle = async (
   id: number,
   options?: { signal?: AbortSignal; throwOnError?: boolean }
 ): Promise<Article> => {
+  if (!onlineManager.isOnline()) {
+    const cached = await readArticleOffline(id);
+    if (cached) return cached;
+    if (options?.throwOnError) throw new Error('OFFLINE_CONTENT_NOT_SAVED');
+    return {} as Article;
+  }
+
   try {
     const res = await fetchWithTimeout(`${GET_ARTICLES}/${id}`, { signal: options?.signal }, 10000);
     if (!res.ok) {
@@ -304,12 +314,18 @@ export const fetchArticle = async (
       if (options?.throwOnError) throw err;
       return {} as Article;
     }
-    return await safeJsonParse<Article>(res, {} as Article);
+    const article = await safeJsonParse<Article>(res, {} as Article);
+    if (article?.id) await saveArticleOffline(article, { routeParam: id });
+    return article;
   } catch (e: unknown) {
     devError('Error fetching Article:', e);
     if (e instanceof Error && e.name === 'AbortError') {
       if (options?.throwOnError) throw e;
       return {} as Article;
+    }
+    if (isRecoverablePublicStaleError(e)) {
+      const cached = await readArticleOffline(id);
+      if (cached) return cached;
     }
     if (options?.throwOnError) {
       throw new Error(i18nT('errorsStatic:api.articles.loadOneFailed'));
@@ -327,6 +343,13 @@ export const fetchArticleBySlug = async (
     throw new Error(i18nT('errorsStatic:api.articles.emptySlug'));
   }
 
+  if (!onlineManager.isOnline()) {
+    const cached = await readArticleOffline(normalizedSlug);
+    if (cached) return cached;
+    if (options?.throwOnError) throw new Error('OFFLINE_CONTENT_NOT_SAVED');
+    return {} as Article;
+  }
+
   const safeSlug = encodeURIComponent(normalizedSlug);
   let canonicalNotFound = false;
 
@@ -340,7 +363,11 @@ export const fetchArticleBySlug = async (
     if (resolverRes.ok) {
       const resolved = await safeJsonParse<ArticleSlugResolverResponse>(resolverRes, {});
       const item = asRecord(resolved?.item);
-      if (Object.keys(item).length > 0) return item as Article;
+      if (Object.keys(item).length > 0) {
+        const article = item as Article;
+        if (article.id) await saveArticleOffline(article, { routeParam: normalizedSlug });
+        return article;
+      }
 
       const resolvedId = Number(resolved?.id);
       if (Number.isFinite(resolvedId) && resolvedId > 0) {
@@ -356,7 +383,9 @@ export const fetchArticleBySlug = async (
       );
 
       if (directRes.ok) {
-        return await safeJsonParse<Article>(directRes, {} as Article);
+        const article = await safeJsonParse<Article>(directRes, {} as Article);
+        if (article.id) await saveArticleOffline(article, { routeParam: normalizedSlug });
+        return article;
       }
 
       const notFoundError = new Error(i18nT('errorsStatic:api.articles.notFoundBySlug', { slug: normalizedSlug }));
@@ -376,11 +405,16 @@ export const fetchArticleBySlug = async (
       if (options?.throwOnError) throw e;
       return {} as Article;
     }
+    if (isRecoverablePublicStaleError(e)) {
+      const cached = await readArticleOffline(normalizedSlug);
+      if (cached) return cached;
+    }
   }
 
   try {
     const fallbackArticle = await findArticleBySlugFallback(normalizedSlug, options);
     if (fallbackArticle && fallbackArticle.id) {
+      await saveArticleOffline(fallbackArticle, { routeParam: normalizedSlug });
       return fallbackArticle;
     }
   } catch (e: unknown) {

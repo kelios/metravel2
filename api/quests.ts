@@ -359,9 +359,9 @@ async function fetchAllPages<T>(path: string, maxPages = 20, options?: { signal?
     let page = 1;
     for (let i = 0; i < maxPages; i++) {
         const url = page === 1 ? path : `${path}${path.includes('?') ? '&' : '?'}page=${page}`;
-        const res = await apiClient.get<T[] | PaginatedEnvelope<T>>(url, undefined, {
-            signal: options?.signal,
-        });
+        const res = options?.signal
+            ? await apiClient.get<T[] | PaginatedEnvelope<T>>(url, undefined, { signal: options.signal })
+            : await apiClient.get<T[] | PaginatedEnvelope<T>>(url);
         if (Array.isArray(res)) {
             out.push(...res);
             break;

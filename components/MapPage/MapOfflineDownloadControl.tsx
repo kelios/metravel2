@@ -18,11 +18,11 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useOfflineTileDownload } from '@/hooks/map/useOfflineTileDownload';
 import {
-  deleteRegion,
   listRegions,
   type OfflineBBox,
   type OfflineRegion,
 } from '@/utils/mapTileCache';
+import { deleteMapRegionOffline } from '@/services/offline/mapOfflineAdapter';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -101,7 +101,7 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
 
   const handleDelete = useCallback(
     (id: string) => {
-      void deleteRegion(id).then(refreshRegions);
+      void deleteMapRegionOffline(id).then(refreshRegions);
     },
     [refreshRegions],
   );

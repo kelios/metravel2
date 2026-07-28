@@ -10,9 +10,12 @@ Android-приложение сохраняет выбранные пользо�
 доступными без сети. Последние открытые публичные материалы служат ограниченным
 автоматическим fallback, но не подменяют явное действие «Сохранить офлайн».
 
+**Статус:** MVP реализован локально 2026-07-28; задачи спринта переданы в
+`review/testing` до независимой приёмки и релиза.
+
 ## Проблема и продуктовый контракт
 
-Сейчас offline-поддержка разбита на независимые механизмы:
+Исходный baseline, который устраняет эта реализация:
 
 - `utils/queryPersist.ts` сохраняет только favorites, recommendations,
   view-history и travel-status, причём restore стартует из `useEffect` и не
@@ -101,7 +104,7 @@ touch-targets 44/48dp и одинаковая иерархия на mobile web/A
 │         Доступно офлайн              │
 ├─────────────────────────────────────┤
 │ Недавно открывали                   │
-│ [thumb] Название   хранится 5 дней  │
+│ [thumb] Название   временная копия  │
 │         [Сохранить офлайн]           │
 └─────────────────────────────────────┘
 ```
@@ -109,10 +112,10 @@ touch-targets 44/48dp и одинаковая иерархия на mobile web/A
 Save sheet:
 
 ```text
-Сохранить офлайн
-● Текст, точки и маршрут       3 МБ
-○ Добавить фото               +18 МБ
-[Отмена]             [Скачать]
+Что сохранить офлайн?
+[Текст, точки и маршрут]
+[Текст, маршрут и фото]
+[Отмена]
 ```
 
 Обязательные состояния:
@@ -172,8 +175,9 @@ type OfflinePackageManifest = {
 }
 ```
 
-Manifest остаётся маленьким и хранится в AsyncStorage. Snapshot JSON и durable
-assets Android хранит в `documentDirectory/offline-content/v1/<key>/`; map tiles
+Manifest остаётся маленьким и хранится в AsyncStorage. Android хранит snapshot
+JSON в `documentDirectory/offline-content/v1/<key>.json`, а durable assets — в
+`documentDirectory/offline-content/v1/assets/<key>/<version>/`; map tiles
 продолжают использовать существующий `map-tiles/`. Web adapter использует
 IndexedDB и не кэширует JS/HTML shell.
 
@@ -256,8 +260,29 @@ Runtime matrix:
 - evidence records package count, bytes, assets, cache source and recovery time;
   «страница открылась» без этих values не закрывает Done gate.
 
+Evidence 2026-07-28:
+
+- полный Jest: 900 suites / 7 247 tests, затем scoped regression и
+  `npm run check:fast` после финальных Android/browser fixes;
+- browser: desktop 1280×800 и mobile 390×844, `/offline`, фильтры, локализация,
+  без horizontal overflow;
+- Pixel 10 Pro USB: `:app:installDebug`, online save travel `91 КБ` → отключение
+  сети → force-stop/cold launch → banner/library → local travel → map/quests/
+  guest profile → reconnect; runtime/fatal crash отсутствует;
+- ожидаемые native network failures пишутся как warning и больше не открывают
+  debug LogBox поверх рабочего offline UI.
+
 ## Связанные текущие контракты
 
+- active sprint `#23` — `Offline-first MVP — Android & mobile web`,
+  2026-07-28 → 2026-08-10;
+- epic `#2` — shell, library and content packages;
+- board `#1122` — OfflineCatalog/package storage core;
+- board `#1123` — `/offline` library and storage-management UI;
+- board `#1124` — travel/article packages and recent fallback;
+- board `#1125` — quest package migration and durable images;
+- board `#1126` — map tiles + points_bulk + local search;
+- board `#1121` — final cold-start/reconnect acceptance matrix;
 - board `#603` — public last-success cache; recurrence owner для hard offline
   errors;
 - board `#1015/#994` — React Query persistence foundation;
@@ -267,4 +292,3 @@ Runtime matrix:
 - `api/questBundleCache.ts`, `hooks/useOfflineTravelCache.ts`;
 - `hooks/map/useOfflineTileDownload.ts`, `utils/mapTileCache.ts`;
 - `docs/NATIVE_COMPAT_RULES.md` and `docs/MANUAL_TEST_CASES.md`.
-

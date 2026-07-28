@@ -5,6 +5,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests';
+import { readQuestOffline, saveQuestOffline } from '@/services/offline/questOfflineAdapter';
 
 export const QUEST_BUNDLE_CACHE_PREFIX = 'quest-bundle:';
 export const QUEST_BUNDLE_CACHE_VERSION = 1;
@@ -24,11 +25,14 @@ const cacheKey = (questId: string): string => `${QUEST_BUNDLE_CACHE_PREFIX}${que
 export async function readCachedQuestBundle(questId: string): Promise<ApiQuestBundle | null> {
     const id = String(questId || '').trim();
     if (!id) return null;
+    const catalogBundle = await readQuestOffline(id);
+    if (catalogBundle) return catalogBundle;
     try {
         const raw = await AsyncStorage.getItem(cacheKey(id));
         if (!raw) return null;
         const parsed = JSON.parse(raw) as Partial<CachedQuestBundleEnvelope>;
         if (!parsed || parsed.version !== QUEST_BUNDLE_CACHE_VERSION || !parsed.bundle) return null;
+        void saveQuestOffline(parsed.bundle, { pinned: false, includePhotos: false });
         return parsed.bundle;
     } catch {
         // Приватный режим / повреждённый JSON — ведём себя как без кэша.
@@ -51,6 +55,7 @@ export async function writeCachedQuestBundle(
     };
     try {
         await AsyncStorage.setItem(cacheKey(id), JSON.stringify(envelope));
+        await saveQuestOffline(bundle, { pinned: false, includePhotos: false });
     } catch (err) {
         console.warn('Failed to cache quest bundle for offline:', err);
     }

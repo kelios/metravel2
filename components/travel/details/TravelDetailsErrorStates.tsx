@@ -46,6 +46,7 @@ interface LoadErrorProps {
   errorMessage?: string
   onRetry: () => void
   onGoHome: () => void
+  onOpenSaved: () => void
 }
 
 function isNotFoundError(message?: string): boolean {
@@ -58,13 +59,17 @@ function isRateLimitedError(message?: string): boolean {
   return new RegExp(i18nT('travel:components.travel.details.TravelDetailsErrorStates.rateLimitedPattern'), 'i').test(message)
 }
 
-export function LoadError({ styles, seoBlock, errorMessage, onRetry, onGoHome }: LoadErrorProps) {
+export function LoadError({ styles, seoBlock, errorMessage, onRetry, onGoHome, onOpenSaved }: LoadErrorProps) {
   const notFound = isNotFoundError(errorMessage)
   const rateLimited = !notFound && isRateLimitedError(errorMessage)
+  const offlineMissing = errorMessage === 'OFFLINE_CONTENT_NOT_SAVED'
 
   let title = i18nT('travel:components.travel.details.TravelDetailsErrorStates.ne_udalos_zagruzit_puteshestvie_6ea4cf0c')
   let text = i18nT('travel:components.travel.details.TravelDetailsErrorStates.proverte_podklyuchenie_k_internetu_i_poprobu_be33bf61')
-  if (notFound) {
+  if (offlineMissing) {
+    title = i18nT('offline:missingTitle')
+    text = i18nT('offline:missingDescription')
+  } else if (notFound) {
     title = i18nT('travel:components.travel.details.TravelDetailsErrorStates.notFoundTitle')
     text = i18nT('travel:components.travel.details.TravelDetailsErrorStates.notFoundText')
   } else if (rateLimited) {
@@ -79,7 +84,14 @@ export function LoadError({ styles, seoBlock, errorMessage, onRetry, onGoHome }:
         <View style={styles.errorContainer} role="alert">
           <Text style={styles.errorTitle}>{title}</Text>
           <Text style={styles.errorText}>{text}</Text>
-          {!notFound && (
+          {offlineMissing ? (
+            <Button
+              onPress={onOpenSaved}
+              variant="primary"
+              label={i18nT('offline:openSaved')}
+              accessibilityLabel={i18nT('offline:openSaved')}
+            />
+          ) : !notFound && (
             <Button
               onPress={onRetry}
               variant="primary"
