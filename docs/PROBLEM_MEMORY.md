@@ -321,8 +321,13 @@ guard, падающий в CI на попытке обойти этот конт
 - **Surface/owner:** frontend build pipeline (`scripts/generate-seo-pages.js`,
   `build-prod.sh`, `scripts/build-web-prod.js`) + доступность production API в
   момент сборки.
-- **Цепочка:** инцидент 2026-07-28 при прод-деплое; отдельная board-карточка не
-  заводилась, исправлено в той же сессии.
+- **Цепочка:** инцидент 2026-07-28 при прод-деплое; problem-memory verdict
+  `create-new`. Board-карточку завести не удалось — MCP task board в той сессии
+  не поднимался (`.mcp.json` ведёт на несуществующий
+  `/Users/juliasavran/Sites/metravel2/...`, локального checkout бэкенда нет), а
+  write через прямой `curl` запрещён. Временный fallback-черновик с полным Task
+  Contract и board payload: `tasks/1137-quest-seo-build-catalog-guard.md` —
+  после подъёма борда создать карточку, вписать сюда её id и удалить черновик.
 - **Подтверждённая причина:** транзиентный `HTTP 502` на `/api/quests/?page=7`
   ронял весь quest-блок генератора (`catch` → `console.error` → exit 0), а
   Done gate проверял только travel-страницы. Билд без 137 quest-страниц, 137
