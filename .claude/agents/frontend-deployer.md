@@ -17,6 +17,8 @@ model: sonnet
    - FE-IDX-1: тело статьи реально инжектировано в статику (`ssg-travel-article`) — иначе Googlebot видит пустой скелетон.
    - Ровно один `<h1>` на travel-странице (выборка).
    - `verify-static-travel-seo.js` — проверка SEO-артефактов.
+   - `verify-static-quest-seo.js` — quest-страницы, city-алиасы и city-лендинги сверяются с живым
+     каталогом квестов (транзиентный сбой API однажды выкинул весь этот слой из билда).
 5. Постобработка: `copy-public-files`, иконки, `add-cache-bust-meta`.
 6. Деплой: `rsync ./dist/ → sx3@178.172.137.129:/home/sx3/metravel/dist/`, **атомарный свап** `static/dist`
    (старые Expo-ассеты накладываются как missing-file overlap, чтобы открытые вкладки со старым

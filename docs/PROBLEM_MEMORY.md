@@ -313,6 +313,32 @@ guard, падающий в CI на попытке обойти этот конт
   #1090`; different page family — `create-linked`.
 - **Последняя проверка:** `#1090 done`, 2026-07-27.
 
+### BUILD-CATALOG-001 — build-time catalog fetch must fail loudly
+
+- **Инвариант:** production build либо содержит полный статический слой каждого
+  контент-типа (travels, quests, city landings, travel quest promos), либо
+  падает до rsync; частичный или пустой слой на прод не уезжает.
+- **Surface/owner:** frontend build pipeline (`scripts/generate-seo-pages.js`,
+  `build-prod.sh`, `scripts/build-web-prod.js`) + доступность production API в
+  момент сборки.
+- **Цепочка:** инцидент 2026-07-28 при прод-деплое; отдельная board-карточка не
+  заводилась, исправлено в той же сессии.
+- **Подтверждённая причина:** транзиентный `HTTP 502` на `/api/quests/?page=7`
+  ронял весь quest-блок генератора (`catch` → `console.error` → exit 0), а
+  Done gate проверял только travel-страницы. Билд без 137 quest-страниц, 137
+  alias-копий и 190 city-лендингов считался успешным.
+- **Controls:** retry с backoff на транзиентные ответы
+  (`scripts/lib/fetchJson.js`), фатальный выход генератора при недоступном
+  quest/travel каталоге и при нулевом числе quest-бандлов,
+  `scripts/verify-static-quest-seo.js` в обоих build-флоу (страницы, алиасы,
+  лендинги с crawlable-секцией, ненулевое travel promo coverage).
+- **Решение для новой жалобы:** целый статический слой отсутствует после
+  «успешного» билда — `reopen`; тот же паттерн на другом слое (например
+  `article`) — `create-linked`.
+- **Последняя проверка:** 2026-07-28, smoke против прод-API: retry
+  восстанавливает каталог, гейт валит пустой/битый dist, генератор выходит с
+  кодом 1 при недоступном каталоге.
+
 ### MOBILE-INSETS-001 — dock, keyboard and safe-area geometry
 
 - **Инвариант:** primary CTA/content remains visible and tappable above app dock,

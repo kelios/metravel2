@@ -6,10 +6,18 @@
  * every guard and reached production.
  */
 
+import path from 'path'
+
+import { makeTempDir, removeDir, writeTextFile } from './cli-test-utils'
+
 const {
+  TRAVEL_QUEST_PROMO_MARKER,
+  countTravelQuestPromoPages,
   expectedCityLandingFiles,
   expectedQuestFiles,
   extractItems,
+  hasQuestCityLandingSection,
+  listTravelPageFiles,
   verifyQuestHtml,
 } = require('@/scripts/verify-static-quest-seo')
 
@@ -127,6 +135,107 @@ describe('verifyQuestHtml', () => {
     expect(verifyQuestHtml(buildQuestPageHtml({ jsonLd: '' }), CANONICAL)).toEqual([
       'missing TouristTrip JSON-LD',
     ])
+  })
+})
+
+describe('hasQuestCityLandingSection', () => {
+  it('accepts a landing that kept its crawlable quest list', () => {
+    const html =
+      '<body><section data-ssg-quest-city="true" aria-label="Городские квесты: Краков"><h1>Городские квесты: Краков</h1><ul><li><a href="/quests/12/krakow-wawel-dragon">Вавельский дракон</a></li></ul></section></body>'
+
+    expect(hasQuestCityLandingSection(html)).toBe(true)
+  })
+
+  it('rejects the untouched SPA shell a skipped quest block leaves on disk', () => {
+    expect(hasQuestCityLandingSection('<body><div id="root"></div></body>')).toBe(false)
+  })
+})
+
+describe('listTravelPageFiles', () => {
+  let distDir = ''
+
+  beforeEach(() => {
+    distDir = makeTempDir('verify-static-quest-seo-')
+  })
+
+  afterEach(() => {
+    removeDir(distDir)
+  })
+
+  it('collects generated travel pages and ignores the route template', () => {
+    writeTextFile(path.join(distDir, 'travels', 'minsk-za-vykhodnye', 'index.html'), '<html></html>')
+    writeTextFile(path.join(distDir, 'travels', 'brest-putevoditel', 'index.html'), '<html></html>')
+    // Expo writes the unresolved route template as a flat file next to them.
+    writeTextFile(path.join(distDir, 'travels', '[param].html'), '<html></html>')
+
+    expect(listTravelPageFiles(distDir).sort()).toEqual(
+      [
+        path.join(distDir, 'travels', 'brest-putevoditel', 'index.html'),
+        path.join(distDir, 'travels', 'minsk-za-vykhodnye', 'index.html'),
+      ].sort(),
+    )
+  })
+
+  it('returns nothing when the build produced no travels directory', () => {
+    expect(listTravelPageFiles(distDir)).toEqual([])
+  })
+})
+
+describe('countTravelQuestPromoPages', () => {
+  const withPromo = `<body><section ${TRAVEL_QUEST_PROMO_MARKER} aria-label="Квест по этому городу"></section></body>`
+  const withoutPromo = '<body><article class="ssg-travel-article"></article></body>'
+
+  it('counts only the travel pages that carry the promo block', () => {
+    const pages: Record<string, string> = {
+      'travels/minsk/index.html': withPromo,
+      'travels/brest/index.html': withPromo,
+      'travels/karkonosze/index.html': withoutPromo,
+    }
+
+    expect(countTravelQuestPromoPages(Object.keys(pages), (file: string) => pages[file])).toBe(2)
+  })
+
+  it('returns 0 when an empty quest catalog stripped the promo from every travel page', () => {
+    const pages: Record<string, string> = {
+      'travels/minsk/index.html': withoutPromo,
+      'travels/brest/index.html': withoutPromo,
+    }
+
+    expect(countTravelQuestPromoPages(Object.keys(pages), (file: string) => pages[file])).toBe(0)
+  })
+
+  it('handles a dist with no travel pages at all', () => {
+    expect(countTravelQuestPromoPages([], () => '')).toBe(0)
+  })
+})
+
+describe('hasQuestCityLandingSection', () => {
+  it('accepts a landing that kept its crawlable city section', () => {
+    const landing =
+      '<html><body><section data-ssg-quest-city="true" aria-label="Городские квесты: Краков"><h1>Квесты</h1></section></body></html>'
+
+    expect(hasQuestCityLandingSection(landing)).toBe(true)
+  })
+
+  it('rejects a landing that fell back to the bare SPA shell', () => {
+    expect(hasQuestCityLandingSection('<html><body><div id="root"></div></body></html>')).toBe(false)
+  })
+})
+
+describe('countTravelQuestPromoPages', () => {
+  it('counts only travel pages that carry the promo block', () => {
+    const pages: Record<string, string> = {
+      '/dist/travels/krakow/index.html': `<section ${TRAVEL_QUEST_PROMO_MARKER} aria-label="Квест по этому городу"></section>`,
+      '/dist/travels/bled/index.html': '<html><body>Озеро Блед</body></html>',
+      '/dist/travels/minsk/index.html': `<section ${TRAVEL_QUEST_PROMO_MARKER} aria-label="Квесты рядом"></section>`,
+    }
+
+    expect(countTravelQuestPromoPages(Object.keys(pages), (filePath: string) => pages[filePath])).toBe(2)
+  })
+
+  it('returns zero when the promo catalog produced nothing', () => {
+    expect(countTravelQuestPromoPages(['/dist/travels/a/index.html'], () => '<html></html>')).toBe(0)
+    expect(countTravelQuestPromoPages([], () => '')).toBe(0)
   })
 })
 

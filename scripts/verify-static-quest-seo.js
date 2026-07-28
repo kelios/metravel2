@@ -58,6 +58,10 @@ function hasQuestIntroSection(html) {
   return /<section[^>]*data-ssg-quest-intro="true"[^>]*>[\s\S]*?<\/section>/i.test(html)
 }
 
+function hasQuestCityLandingSection(html) {
+  return /<section[^>]*data-ssg-quest-city="true"[^>]*>[\s\S]*?<\/section>/i.test(html)
+}
+
 function hasQuestJsonLd(html) {
   return /<script[^>]*application\/ld\+json[^>]*>[\s\S]*?"@type"\s*:\s*"TouristTrip"[\s\S]*?<\/script>/i.test(html)
 }
@@ -68,6 +72,31 @@ function expectedQuestFiles(quest, cityAliasMap) {
     path.join('quests', variant.cityId, `${variant.questId}.html`),
     path.join('quests', variant.cityId, variant.questId, 'index.html'),
   ])
+}
+
+/**
+ * The travel↔quest cross-link block. It is written onto travel pages, but it is
+ * built from the quest catalog — so an empty catalog strips it from every travel
+ * page while verify-static-travel-seo.js stays green.
+ */
+const TRAVEL_QUEST_PROMO_MARKER = 'data-ssg-travel-quest-promo="true"'
+
+/** Travel pages on disk, as generate-seo-pages.js writes them */
+function listTravelPageFiles(distDir) {
+  const travelsDir = path.join(distDir, 'travels')
+  if (!fs.existsSync(travelsDir)) return []
+
+  return fs
+    .readdirSync(travelsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(travelsDir, entry.name, 'index.html'))
+    .filter((filePath) => fs.existsSync(filePath))
+}
+
+/** How many travel pages actually carry a quest promo block */
+function countTravelQuestPromoPages(files, readFile) {
+  const read = readFile || ((filePath) => fs.readFileSync(filePath, 'utf8'))
+  return files.filter((filePath) => read(filePath).includes(TRAVEL_QUEST_PROMO_MARKER)).length
 }
 
 /** Every city landing (numeric id + alias) implied by the quest catalog */
@@ -138,10 +167,17 @@ async function main() {
     }
   }
 
-  // 2. Every city landing exists on disk.
-  for (const relativePath of expectedCityLandingFiles(quests, cityAliasMap)) {
-    if (!fs.existsSync(path.join(DIST_DIR, relativePath))) {
+  // 2. Every city landing exists on disk and carries its crawlable body — an
+  // existing file can still be the untouched SPA shell.
+  const cityLandingFiles = expectedCityLandingFiles(quests, cityAliasMap)
+  for (const relativePath of cityLandingFiles) {
+    const filePath = path.join(DIST_DIR, relativePath)
+    if (!fs.existsSync(filePath)) {
       failures.push(`city landing: missing file ${relativePath}`)
+      continue
+    }
+    if (!hasQuestCityLandingSection(fs.readFileSync(filePath, 'utf8'))) {
+      failures.push(`city landing: ${relativePath} has no crawlable quest-city section`)
     }
   }
 
@@ -158,6 +194,17 @@ async function main() {
     }
   }
 
+  // 4. Travel quest promos. Coverage is geo/city scored, so most-but-not-all
+  // travels legitimately have one; zero across the whole tree means the promo
+  // catalog was empty, which is the same silent degradation as missing pages.
+  const travelPageFiles = listTravelPageFiles(DIST_DIR)
+  const travelPromoPages = countTravelQuestPromoPages(travelPageFiles)
+  if (travelPageFiles.length > 0 && travelPromoPages === 0) {
+    failures.push(
+      `travel quest promo: 0 of ${travelPageFiles.length} travel pages carry a quest promo while the API lists ${quests.length} quests`
+    )
+  }
+
   if (failures.length > 0) {
     const message = failures.slice(0, 20).map((failure) => ` - ${failure}`).join('\n')
     const overflow = failures.length > 20 ? `\n ... and ${failures.length - 20} more` : ''
@@ -167,20 +214,25 @@ async function main() {
   const scopeLabel = SAMPLE_SIZE === null ? `all ${sampled.length}` : `${sampled.length} sampled`
   console.log(
     `[verify-static-quest-seo] Verified ${quests.length} quest pages` +
-      ` + ${expectedCityLandingFiles(quests, cityAliasMap).length} city landings` +
+      ` + ${cityLandingFiles.length} city landings` +
+      ` + quest promos on ${travelPromoPages}/${travelPageFiles.length} travel pages` +
       ` (metadata: ${scopeLabel}) in ${DIST_DIR}`
   )
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    TRAVEL_QUEST_PROMO_MARKER,
+    countTravelQuestPromoPages,
     expectedCityLandingFiles,
     expectedQuestFiles,
     extractItems,
     getMetaContent,
     getTitle,
+    hasQuestCityLandingSection,
     hasQuestIntroSection,
     hasQuestJsonLd,
+    listTravelPageFiles,
     verifyQuestHtml,
   }
 }
