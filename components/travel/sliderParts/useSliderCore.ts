@@ -12,6 +12,12 @@ import {
   MOBILE_HEIGHT_PERCENT,
 } from './utils';
 
+/**
+ * Признак того, что URL уже прошёл через прокси-сайзинг. Без ширины `buildUri*`
+ * отдаёт полноразмерный оригинал — такой адрес нельзя греть префетчем (#1119).
+ */
+const HAS_PROXY_SIZING = /[?&]w=\d+/;
+
 export interface UseSliderCoreOptions {
   images: SliderImage[];
   aspectRatio?: number;
@@ -219,7 +225,18 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
         const t = idx + d;
         if (t < 0 || t >= images.length) continue;
         const u = getUri(t);
-        if (u) prefetchImage(u).catch(() => undefined);
+        if (!u) continue;
+        // #1119: `buildUri*` отдаёт URL БЕЗ прокси-параметров, когда ширина
+        // контейнера ещё не измерена (`containerWidth` = 0 на первом рендере) —
+        // это полноразмерный оригинал. Смонтированный слайд такой адрес не
+        // использует: он берёт кандидата из `srcSet`. А префетч использовал, и
+        // сосед приезжал целиком: замер прода 2026-07-28 в чистой вкладке —
+        // 305+423 КБ на `dolina-pyati-ozer`, 507+569 КБ на `rodniki-yuckovskie`.
+        // Такой URL греть бессмысленно вдвойне: он и тяжёлый, и не тот, что
+        // потом понадобится. Пропускаем — на следующем проходе, после измерения,
+        // `getUri` вернёт уже нормальный адрес.
+        if (!HAS_PROXY_SIZING.test(u)) continue;
+        prefetchImage(u).catch(() => undefined);
       }
     },
     [preloadCount, isWeb, prefetchEnabled, images.length, getUri]
