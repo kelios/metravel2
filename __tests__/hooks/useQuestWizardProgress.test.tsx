@@ -62,6 +62,102 @@ describe('useQuestWizardProgress', () => {
     expect(onProgressChange).not.toHaveBeenCalled()
   })
 
+  it('keeps richer local progress instead of letting a poorer backend one overwrite it', async () => {
+    // Баг sasino-stilo 2026-07-28: ответы, данные без сети, оставались только
+    // локально, а бэкенд знал лишь про intro. Сидирование безусловно затирало
+    // локальный прогресс серверным — час прохождения пропадал.
+    const storageKey = 'quest_progress_offline_richer'
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
+      index: 2,
+      unlocked: 2,
+      answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+      attempts: { 'step-2': 2 },
+      hints: { 'step-2': true },
+      showMap: false,
+    }))
+
+    const onProgressChange = jest.fn()
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        // На сервере остался только intro.
+        initialProgress: {
+          currentIndex: 0,
+          unlockedIndex: 0,
+          answers: { intro: 'start' },
+          attempts: {},
+          hints: {},
+          showMap: true,
+        },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => {
+      expect(result.current.answers['step-2']).toBe('castle')
+    })
+
+    // Локальное состояние не откатано к серверному.
+    expect(result.current.currentIndex).toBe(2)
+    expect(result.current.answers).toEqual({ intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' })
+    expect(result.current.attempts).toEqual({ 'step-2': 2 })
+    expect(result.current.showMap).toBe(false)
+    expect(result.current.allCompleted).toBe(true)
+
+    // И доливается на сервер, а не остаётся только локально.
+    await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      currentIndex: 2,
+      answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+      completed: true,
+    }))
+
+    const saved = await AsyncStorage.getItem(storageKey)
+    expect(JSON.parse(saved!).answers).toEqual({ intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' })
+  })
+
+  it('still lets a richer backend progress overwrite a poorer local copy', async () => {
+    const storageKey = 'quest_progress_server_richer'
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
+      index: 0,
+      unlocked: 0,
+      answers: { intro: 'start' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    }))
+
+    const onProgressChange = jest.fn()
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        initialProgress: {
+          currentIndex: 2,
+          unlockedIndex: 2,
+          answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+          attempts: { 'step-1': 1 },
+          hints: {},
+          showMap: true,
+        },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => {
+      expect(result.current.answers['step-2']).toBe('castle')
+    })
+
+    expect(result.current.currentIndex).toBe(2)
+    const saved = await AsyncStorage.getItem(storageKey)
+    expect(JSON.parse(saved!).answers).toEqual({ intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' })
+    // Серверный прогресс — источник правды, лишнего эхо-сейва нет.
+    expect(onProgressChange).not.toHaveBeenCalled()
+  })
+
   it('exposes completedSteps and derived progress for answered quest steps', async () => {
     const initialProgress = {
       currentIndex: 1,
