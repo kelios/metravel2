@@ -934,3 +934,34 @@ describe('ImageCardMedia web backdrop shares the srcSet of the sharp layer (#111
     expect(backdrop.props.sizes).toBe(main.props.sizes)
   })
 })
+
+// #1111: CSS-фон не выбирает кандидата из srcSet — он грузит ровно URL из url().
+// У hero src намеренно не оптимизирован (совпадает с preload-адресом), поэтому фон
+// тянул оригинал: замер прода 2026-07-28 — `?v=2051` без ресайза, 121 КБ.
+describe('pickNarrowestSrcSetCandidate (#1111)', () => {
+  const { pickNarrowestSrcSetCandidate } = require('@/components/ui/ImageCardMediaWebHelpers')
+
+  it('picks the narrowest candidate so the blurred background stays cheap', () => {
+    const srcSet = [
+      'https://metravel.by/gallery/1/photo.jpg?w=320&q=72 320w',
+      'https://metravel.by/gallery/1/photo.jpg?w=720&q=72 720w',
+      'https://metravel.by/gallery/1/photo.jpg?w=1280&q=82 1280w',
+    ].join(', ')
+
+    expect(pickNarrowestSrcSetCandidate(srcSet)).toBe(
+      'https://metravel.by/gallery/1/photo.jpg?w=320&q=72'
+    )
+  })
+
+  it('falls back to null on empty or malformed input so the caller keeps src', () => {
+    expect(pickNarrowestSrcSetCandidate('')).toBeNull()
+    expect(pickNarrowestSrcSetCandidate(undefined)).toBeNull()
+    expect(pickNarrowestSrcSetCandidate('https://example.com/a.jpg')).toBeNull()
+    expect(pickNarrowestSrcSetCandidate('https://example.com/a.jpg 0w')).toBeNull()
+  })
+
+  it('ignores descriptor noise and still returns the smallest width', () => {
+    const srcSet = 'https://x/b.jpg 640w,   https://x/a.jpg   160w , https://x/c.jpg 1280w'
+    expect(pickNarrowestSrcSetCandidate(srcSet)).toBe('https://x/a.jpg')
+  })
+})

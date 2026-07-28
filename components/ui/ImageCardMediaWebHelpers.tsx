@@ -186,6 +186,25 @@ export const WebMainImage = memo(function WebMainImage({
   );
 });
 
+/**
+ * Самый узкий кандидат из `srcSet` — для размытого CSS-фона, где деталь всё равно
+ * теряется. Возвращает null, если набора нет или он невалиден, чтобы вызывающий
+ * откатился на обычный `src`.
+ */
+export function pickNarrowestSrcSetCandidate(srcSet?: string): string | null {
+  const raw = String(srcSet || '').trim();
+  if (!raw) return null;
+  let best: { url: string; width: number } | null = null;
+  for (const part of raw.split(',')) {
+    const [url, descriptor] = part.trim().split(/\s+/);
+    if (!url) continue;
+    const width = Number.parseInt(String(descriptor || ''), 10);
+    if (!Number.isFinite(width) || width <= 0) continue;
+    if (!best || width < best.width) best = { url, width };
+  }
+  return best ? best.url : null;
+}
+
 type WebBlurBackdropProps = {
   src: string;
   /**
@@ -227,6 +246,17 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
     : fit === 'contain'
       ? 'blur(20px) saturate(1.08) brightness(0.86)'
       : 'blur(24px) saturate(1.15) brightness(0.9)';
+  // #1111: CSS-фон не умеет выбирать кандидата из `srcSet` — он грузит ровно тот
+  // URL, что стоит в `url()`. У hero `src` намеренно не оптимизирован
+  // (`preserveOptimizedWebSrc` держит его равным preload-адресу), поэтому фон
+  // тянул полноразмерный файл: замер прода 2026-07-28 — `?v=2051` без ресайза,
+  // 121 КБ, только чтобы размыть его в CSS.
+  //
+  // Размытие уничтожает детали, поэтому фону достаточно самого узкого кандидата
+  // из того же `srcSet` — те же 7 КБ вместо 121 КБ. Отдельным файлом это остаётся,
+  // но крошечным; полностью убрать вторую загрузку можно только подставляя фону
+  // `currentSrc` main-слоя уже после его onLoad.
+  const backdropUrl = useMemo(() => pickNarrowestSrcSetCandidate(srcSet) ?? src, [srcSet, src]);
   const backdropSegments = useMemo(
     () =>
       useCssBackdrop && fit === 'contain'
@@ -252,7 +282,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
             inset: 0,
             zIndex: 0,
             borderRadius,
-            backgroundImage: `url("${src.replace(/"/g, '\\"')}")`,
+            backgroundImage: `url("${backdropUrl.replace(/"/g, '\\"')}")`,
             backgroundSize: backdropFit,
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
@@ -282,7 +312,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
               height: segment.height,
               zIndex: 0,
               borderRadius,
-              backgroundImage: `url("${src.replace(/"/g, '\\"')}")`,
+              backgroundImage: `url("${backdropUrl.replace(/"/g, '\\"')}")`,
               backgroundSize: backdropFit,
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -333,7 +363,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
           zIndex: 0,
           borderRadius,
           transform: `translate(-50%, -50%) scale(${backdropScale})`,
-          backgroundImage: `url("${src.replace(/"/g, '\\"')}")`,
+          backgroundImage: `url("${backdropUrl.replace(/"/g, '\\"')}")`,
           backgroundSize: backdropFit,
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
