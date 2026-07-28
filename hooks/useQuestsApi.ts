@@ -2,6 +2,7 @@
 // Хуки для работы с квестами через бэкенд API.
 // Чистые адаптеры и типы вынесены в utils/questAdapters.ts.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import type { ApiQuestMeta, ApiQuestProgress, QuestReview } from '@/api/quests';
 import {
@@ -19,6 +20,7 @@ import {
     adaptBundle,
     normalizeQuestCountryCode,
 } from '@/utils/questAdapters';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { devWarn } from '@/utils/logger';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
 import { translate as i18nT } from '@/i18n'
@@ -225,6 +227,21 @@ export function useQuestReviews(questId: string | undefined, enabled = true) {
 }
 
 const PROGRESS_SYNC_DEBOUNCE_MS = 2000;
+// Ретрай отложенного прогресса при офлайне: первый повтор через 2 сек, дальше
+// удвоение до минуты. Число попыток не ограничено, пока экран квеста открыт —
+// потерять часовое прохождение дороже нескольких лишних запросов.
+const PROGRESS_RETRY_BASE_MS = 2000;
+const PROGRESS_RETRY_MAX_MS = 60 * 1000;
+
+const toProgressPayload = (data: PendingQuestProgressData) => ({
+    current_index: data.currentIndex,
+    unlocked_index: data.unlockedIndex,
+    answers: data.answers,
+    attempts: data.attempts,
+    hints: data.hints,
+    show_map: data.showMap,
+    completed: data.completed,
+});
 
 /** Хук для синхронизации прогресса квеста с бэкендом (для авторизованных) */
 export function useQuestProgressSync(questId: string | undefined, isAuthenticated: boolean) {
@@ -233,9 +250,33 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const [progressLoading, setProgressLoading] = useState(isAuthenticated && !!questId);
     const progressIdRef = useRef<number | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const retryAttemptRef = useRef(0);
+    const inFlightRef = useRef(false);
+    const flushQueuedRef = useRef(false);
+    const mountedRef = useRef(true);
     const pendingDataRef = useRef<PendingQuestProgressData | null>(null);
     const isAuthenticatedRef = useRef(isAuthenticated);
     isAuthenticatedRef.current = isAuthenticated;
+    // flushSync и планировщик ретраев ссылаются друг на друга: держим актуальный
+    // флаш в ref, чтобы таймеры и слушатели не вызывали стейл-замыкание.
+    const flushSyncRef = useRef<(() => Promise<void>) | null>(null);
+    const { isConnected } = useNetworkStatus();
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
+
+    // Немедленный флаш отложенного прогресса (возврат сети/приложения, появление
+    // progress id). Сбрасывает бэкофф, чтобы не ждать следующий шаг ретрая.
+    const flushPendingNow = useCallback(() => {
+        if (!pendingDataRef.current) return;
+        retryAttemptRef.current = 0;
+        void flushSyncRef.current?.();
+    }, []);
 
     // Загрузка прогресса при маунте
     useEffect(() => {
@@ -251,6 +292,8 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                 if (!cancelled) {
                     setProgress(data);
                     progressIdRef.current = data.id;
+                    // Ответы, сделанные пока запрос был в полёте, ждут id — дожимаем.
+                    flushPendingNow();
                 }
             })
             .catch((err) => {
@@ -261,68 +304,124 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             });
 
         return () => { cancelled = true; };
-    }, [questId, isAuthenticated]);
+    }, [flushPendingNow, questId, isAuthenticated]);
 
-    // Flush pending debounced save
+    const clearRetryTimer = useCallback(() => {
+        if (retryTimerRef.current) {
+            clearTimeout(retryTimerRef.current);
+            retryTimerRef.current = null;
+        }
+    }, []);
+
+    const scheduleRetry = useCallback(() => {
+        clearRetryTimer();
+        const attempt = retryAttemptRef.current;
+        retryAttemptRef.current = attempt + 1;
+        const delay = Math.min(PROGRESS_RETRY_BASE_MS * 2 ** attempt, PROGRESS_RETRY_MAX_MS);
+        retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            void flushSyncRef.current?.();
+        }, delay);
+    }, [clearRetryTimer]);
+
+    // Flush pending debounced save.
+    // Отложенные данные НЕ выбрасываются до успешного ответа: раньше
+    // pendingDataRef обнулялся до запроса, и при офлайне ответы игрока пропадали
+    // навсегда (баг: после полного прохождения без сети на сервере оставался
+    // только intro). Теперь падение запроса оставляет данные в очереди и
+    // планирует ретрай с бэкоффом.
     const flushSync = useCallback(async () => {
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
             debounceTimerRef.current = null;
         }
-        const data = pendingDataRef.current;
-        if (!data || !isAuthenticated || !progressIdRef.current) return;
-        pendingDataRef.current = null;
+        clearRetryTimer();
 
-        setSyncing(true);
-        try {
-            const updated = await apiUpdateProgress(progressIdRef.current, {
-                current_index: data.currentIndex,
-                unlocked_index: data.unlockedIndex,
-                answers: data.answers,
-                attempts: data.attempts,
-                hints: data.hints,
-                show_map: data.showMap,
-                completed: data.completed,
-            });
-            setProgress(updated);
-        } catch (err) {
-            console.warn('Could not save quest progress to server:', err);
-        } finally {
-            setSyncing(false);
+        const data = pendingDataRef.current;
+        const progressId = progressIdRef.current;
+        if (!data || !isAuthenticatedRef.current || !progressId) return;
+
+        // Параллельный флаш (дебаунс + ретрай/AppState) не должен слать дубль:
+        // дожмём очередь после текущего запроса.
+        if (inFlightRef.current) {
+            flushQueuedRef.current = true;
+            return;
         }
-    }, [isAuthenticated]);
+
+        inFlightRef.current = true;
+        setSyncing(true);
+        let saved = false;
+        try {
+            const updated = await apiUpdateProgress(progressId, toProgressPayload(data));
+            saved = true;
+            // Снимаем с очереди только то, что реально отправили: изменения,
+            // сделанные во время запроса, остаются pending и уйдут своим флашем.
+            if (pendingDataRef.current === data) pendingDataRef.current = null;
+            retryAttemptRef.current = 0;
+            if (mountedRef.current) setProgress(updated);
+        } catch (err) {
+            if (!pendingDataRef.current) pendingDataRef.current = data;
+            devWarn('Could not save quest progress to server, will retry:', err);
+            scheduleRetry();
+        } finally {
+            inFlightRef.current = false;
+            if (mountedRef.current) setSyncing(false);
+            const shouldFlushAgain = saved && flushQueuedRef.current && !!pendingDataRef.current;
+            flushQueuedRef.current = false;
+            if (shouldFlushAgain) void flushSyncRef.current?.();
+        }
+    }, [clearRetryTimer, scheduleRetry]);
+    flushSyncRef.current = flushSync;
+
+    // Возврат в приложение и восстановление сети — сразу дожимаем отложенный
+    // прогресс, не дожидаясь следующего шага бэкоффа.
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (nextState) => {
+            if (nextState === 'active') flushPendingNow();
+        });
+        return () => subscription?.remove?.();
+    }, [flushPendingNow]);
+
+    const wasConnectedRef = useRef(isConnected);
+    useEffect(() => {
+        const wasOffline = !wasConnectedRef.current;
+        wasConnectedRef.current = isConnected;
+        if (isConnected && wasOffline) flushPendingNow();
+    }, [flushPendingNow, isConnected]);
 
     // Flush pending save on unmount — иначе изменение, сделанное за <2 сек до ухода
     // со страницы, теряется (debounce-таймер просто очищался). Делаем state-free
-    // запрос, чтобы не дёргать setState на размонтированном компоненте.
+    // запрос, чтобы не дёргать setState на размонтированном компоненте. Если он
+    // упадёт (офлайн), прогресс всё равно не теряется: локальная копия в
+    // AsyncStorage дольёт его на сервер при следующем открытии квеста
+    // (см. useQuestWizardProgress).
     useEffect(() => {
         return () => {
             if (debounceTimerRef.current) {
                 clearTimeout(debounceTimerRef.current);
                 debounceTimerRef.current = null;
             }
+            if (retryTimerRef.current) {
+                clearTimeout(retryTimerRef.current);
+                retryTimerRef.current = null;
+            }
             const data = pendingDataRef.current;
             if (!data || !isAuthenticatedRef.current || !progressIdRef.current) return;
-            pendingDataRef.current = null;
-            void apiUpdateProgress(progressIdRef.current, {
-                current_index: data.currentIndex,
-                unlocked_index: data.unlockedIndex,
-                answers: data.answers,
-                attempts: data.attempts,
-                hints: data.hints,
-                show_map: data.showMap,
-                completed: data.completed,
-            }).catch((err) => {
-                console.warn('Could not flush quest progress on unmount:', err);
+            void apiUpdateProgress(progressIdRef.current, toProgressPayload(data)).catch((err) => {
+                devWarn('Could not flush quest progress on unmount:', err);
             });
         };
     }, []);
 
     // Сохранение прогресса на сервер (с дебаунсом 2 сек)
     const saveProgress = useCallback((data: PendingQuestProgressData) => {
-        if (!isAuthenticated || !progressIdRef.current) return;
+        if (!isAuthenticated) return;
 
+        // Ставим в очередь даже до получения progress id: если fetchOrCreateProgress
+        // ещё в полёте, ответ игрока не должен пропасть — флаш уйдёт, как только
+        // id появится (см. загрузку прогресса выше).
         pendingDataRef.current = data;
+        if (!progressIdRef.current) return;
 
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = setTimeout(() => {
@@ -336,6 +435,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             clearTimeout(debounceTimerRef.current);
             debounceTimerRef.current = null;
         }
+        clearRetryTimer();
+        retryAttemptRef.current = 0;
+        flushQueuedRef.current = false;
         pendingDataRef.current = null;
 
         if (!isAuthenticated || !progressIdRef.current) return;

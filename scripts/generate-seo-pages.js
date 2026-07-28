@@ -1265,6 +1265,34 @@ function formatQuestPromoPoints(points) {
   return total > 0 ? `${total} ${pluralizeRu(total, 'точка', 'точки', 'точек')}` : '';
 }
 
+// #1115: обложка квеста в SSG уходила в `background-image` БЕЗ параметров прокси, то есть
+// оригиналом — на плитку 88×88. Замер прода 2026-07-28: шесть обложек рельса весили
+// 216 КБ – 3 003 КБ (всего ~4.5 МБ) и грузились браузером ДО гидратации, поэтому
+// клиентский фикс `QuestForCityCard` их не догонял: байты уже потрачены.
+//   /quest-cover/…png                     -> 372 218 B, TTFB 2.95 с
+//   /quest-cover/…png?w=320&q=70&fit=cover ->  12 376 B
+// 320 — ступень whitelist прокси, покрывающая плитку 88 CSS при DPR 2–3.
+// Ширины вне whitelist (16/24/48/240/1024/2048) прокси молча отдаёт оригиналом — см.
+// DIMENSION_LADDER в utils/imageProxy.ts.
+const SSG_QUEST_COVER_WIDTH = 320;
+const SSG_QUEST_COVER_QUALITY = 70;
+
+function buildSsgQuestCoverUrl(absoluteUrl) {
+  const trimmed = String(absoluteUrl || '').trim();
+  if (!trimmed || /^data:/i.test(trimmed)) return trimmed;
+  try {
+    const url = new URL(trimmed);
+    // Если вызывающий уже задал размер — не переопределяем.
+    if (url.searchParams.has('w')) return url.toString();
+    url.searchParams.set('w', String(SSG_QUEST_COVER_WIDTH));
+    url.searchParams.set('q', String(SSG_QUEST_COVER_QUALITY));
+    url.searchParams.set('fit', 'cover');
+    return url.toString();
+  } catch {
+    return trimmed;
+  }
+}
+
 function buildQuestPromoCardHtml(match) {
   const quest = match.quest;
   const duration = formatQuestDuration(quest.durationMin);
@@ -1273,7 +1301,7 @@ function buildQuestPromoCardHtml(match) {
     .filter(Boolean)
     .map((item) => `<span style="display:inline-flex;align-items:center;min-width:0">${escapeAttr(item)}</span>`)
     .join('<span aria-hidden="true" style="opacity:.55">·</span>');
-  const cover = quest.cover ? toAbsoluteUrl(quest.cover) : '';
+  const cover = quest.cover ? buildSsgQuestCoverUrl(toAbsoluteUrl(quest.cover)) : '';
   const image = cover
     ? `<span role="img" aria-label="${escapeAttr(`Обложка квеста ${quest.title}`)}" style="width:88px;height:88px;border-radius:8px;background-color:var(--color-surface-muted,rgba(0,0,0,.06));background-image:url('${escapeAttr(cover)}');background-size:cover;background-position:center;flex:0 0 auto"></span>`
     : '';

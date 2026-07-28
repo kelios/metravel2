@@ -768,7 +768,17 @@ describe('travel SSR SEO helpers', () => {
     expect(second).toContain('Квест по этому городу')
     expect(second).toContain('href="/quests/1/krakow-dragon"')
     expect(second).toContain('Тайна Краковского дракона')
-    expect(second).toContain('https://metravel.by/media/quests/krakow/cover.png')
+    // #1115: обложка обязана уйти в SSG уменьшенным вариантом. Раньше в
+    // `background-image` подставлялся голый URL, и плитка 88×88 качала оригинал ДО
+    // гидратации — шесть обложек рельса весили 216 КБ – 3 003 КБ (замер прода
+    // 2026-07-28), клиентский фикс `QuestForCityCard` их уже не догонял.
+    // 320 — проверенная ступень прокси: 372 218 B → 12 376 B.
+    // `&` внутри inline-style экранируется через escapeAttr — браузер декодирует его при
+    // разборе атрибута, так что запрос уходит с реальными w/q/fit.
+    expect(second).toContain(
+      "background-image:url('https://metravel.by/media/quests/krakow/cover.png?w=320&amp;q=70&amp;fit=cover')",
+    )
+    expect(second).not.toContain("url('https://metravel.by/media/quests/krakow/cover.png')")
     expect(second).toContain('9 точек')
     expect(second).toContain('примерно 2 ч')
     expect(second).toContain('html.rnw-styles-ready [data-ssg-travel-quest-promo="true"]')

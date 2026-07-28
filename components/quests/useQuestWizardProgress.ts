@@ -41,6 +41,27 @@ const DEFAULT_PROGRESS_STATE = {
   showMap: true,
 }
 
+type StoredProgressState = {
+  index?: number
+  unlocked?: number
+  answers?: Record<string, string>
+  attempts?: Record<string, number>
+  hints?: Record<string, boolean>
+  showMap?: boolean
+}
+
+const readStoredProgress = async (storageKey: string): Promise<StoredProgressState | null> => {
+  const saved = await AsyncStorage.getItem(storageKey)
+  if (!saved) return null
+  const { safeJsonParseString } = require('@/utils/safeJsonParse')
+  return safeJsonParseString(saved, null) as StoredProgressState | null
+}
+
+// Сколько шагов реально отвечено — тем же критерием, что и completedSteps
+// (пустая строка ответом не считается).
+const countAnsweredSteps = (answers: Record<string, string> | undefined): number =>
+  answers ? Object.values(answers).filter(Boolean).length : 0
+
 type UseQuestWizardProgressParams = {
   allSteps: QuestProgressStep[]
   steps: QuestProgressStep[]
@@ -84,6 +105,28 @@ export function useQuestWizardProgress({
             return
           }
           backendSeededKey.current = storageKey
+
+          // Серверный прогресс мог отстать: ответы, данные без сети, до сервера
+          // не долетают (баг 2026-07-28 — на сервере остался только intro после
+          // полного прохождения офлайн). Сравниваем, где ответов больше, и
+          // безусловно серверным прогрессом локальный больше не затираем.
+          const localState = await readStoredProgress(storageKey)
+          const localAnswered = countAnsweredSteps(localState?.answers)
+          const serverAnswered = countAnsweredSteps(initialProgress.answers)
+
+          if (localState && localAnswered > serverAnswered) {
+            setCurrentIndex(localState.index ?? 0)
+            setUnlockedIndex(localState.unlocked ?? 0)
+            setAnswers(localState.answers ?? {})
+            setAttempts(localState.attempts ?? {})
+            setHints(localState.hints ?? {})
+            setShowMap(localState.showMap !== undefined ? localState.showMap : true)
+            // Локальный прогресс полнее — не гасим save-эффект, он сразу дольёт
+            // недостающее на сервер (как гостевая миграция в useGuestQuestFlow).
+            suppressSave.current = false
+            return
+          }
+
           setCurrentIndex(initialProgress.currentIndex ?? 0)
           setUnlockedIndex(initialProgress.unlockedIndex ?? 0)
           setAnswers(initialProgress.answers ?? {})
@@ -102,10 +145,8 @@ export function useQuestWizardProgress({
         } else {
           // Бэкенд-прогресс ещё не загружен — даём ему засеять состояние, когда придёт.
           backendSeededKey.current = null
-          const saved = await AsyncStorage.getItem(storageKey)
-          if (saved) {
-            const { safeJsonParseString } = require('@/utils/safeJsonParse')
-            const data = safeJsonParseString(saved, DEFAULT_PROGRESS_STATE)
+          const data = await readStoredProgress(storageKey)
+          if (data) {
             setCurrentIndex(data.index ?? 0)
             setUnlockedIndex(data.unlocked ?? 0)
             setAnswers(data.answers ?? {})
