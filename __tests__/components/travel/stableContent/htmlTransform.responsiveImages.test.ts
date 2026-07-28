@@ -22,9 +22,13 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     // src падает на fallback-ступень, а не отдаёт оригинал
     expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=78${AMP}fit=contain"`)
     // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768)
-    for (const w of [480, 640, 800, 1024]) {
+    for (const w of [480, 640, 800]) {
       expect(out).toContain(`w=${w}${AMP}q=78${AMP}fit=contain ${w}w`)
     }
+    // #1113: 1024 не входит в whitelist ширин прокси — на такой запрос он отдаёт
+    // исходный файл целиком и игнорирует `q` (замер прода 2026-07-28: w=800 → 53 104 B,
+    // w=1024 → 132 344 B = оригинал). Именно этот кандидат выбирал retina-десктоп.
+    expect(out).not.toContain(`w=1024${AMP}q=78${AMP}fit=contain 1024w`)
     expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
     // cache-buster сохранён
     expect(out).toContain(`v=3315`)
@@ -46,7 +50,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       for (const w of [320, 480, 640, 800]) {
         expect(out).toContain(`w=${w}${AMP}q=78${AMP}fit=contain ${w}w`)
       }
-      // 1024 — только для desktop; на мобиле верхняя ступень 800w
+      // 800 — верхняя ступень на обоих вьюпортах (см. #1113 выше).
       expect(out).not.toContain(`w=1024${AMP}q=78${AMP}fit=contain 1024w`)
     } finally {
       Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
@@ -60,8 +64,9 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('w=4000')
     expect(out).not.toContain('dpr=3')
     expect(out).toContain(`q=78`)
-    // 1024 — потолок хранилища бэкенда, выше ступеней не выдаём
+    // 800 — последняя ширина, которую прокси реально ресайзит; выше ступеней не выдаём
     expect(out).not.toContain('w=1280')
+    expect(out).not.toContain('w=1024')
   })
 
   it('leaves third-party images on the weserv proxy path (no first-party srcset)', () => {

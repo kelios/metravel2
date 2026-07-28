@@ -241,11 +241,52 @@ describe('utils/imageOptimization', () => {
       }
     }
 
-    it('snaps fractional device DPR to integer 1/2/3', () => {
-      expect(onMediaPath({ width: 480, dpr: 2.75 }).searchParams.get('dpr')).toBe('3')
-      expect(onMediaPath({ width: 480, dpr: 2.8125 }).searchParams.get('dpr')).toBe('3')
-      expect(onMediaPath({ width: 480, dpr: 1.25 }).searchParams.get('dpr')).toBe('1')
-      expect(onMediaPath({ width: 480, dpr: 2 }).searchParams.get('dpr')).toBe('2')
+    // #1113: `dpr` прокси игнорирует (замер прода 2026-07-28 — байт-в-байт одинаковый
+    // ответ 36 094 B для dpr отсутствующего / 2 / 3), но каждое значение создавало
+    // отдельный URL, отдельную запись кэша и отдельную синхронную конверсию.
+    it('never emits dpr: the proxy ignores it and it only fragments the cache', () => {
+      expect(onMediaPath({ width: 480, dpr: 2.75 }).searchParams.get('dpr')).toBeNull()
+      expect(onMediaPath({ width: 480, dpr: 2 }).searchParams.get('dpr')).toBeNull()
+    })
+
+    // #1113: `h` тоже игнорируется прокси, а запрос с ОДНИМ лишь `h` он не отвергает —
+    // молча отдаёт оригинал (`?h=240&q=60&fit=contain` → 132 344 B при исходнике
+    // 1024×576). Поэтому высота в URL не участвует вовсе.
+    it('never emits h, and without a width emits no sizing params at all', () => {
+      expect(onMediaPath({ width: 480, height: 320 }).searchParams.get('h')).toBeNull()
+
+      const heightOnly = onMediaPath({ height: 240, quality: 60, fit: 'contain' })
+      expect(heightOnly.searchParams.get('h')).toBeNull()
+      expect(heightOnly.searchParams.get('w')).toBeNull()
+      expect(heightOnly.searchParams.get('q')).toBeNull()
+      expect(heightOnly.searchParams.get('fit')).toBeNull()
+    })
+
+    // #1113: `/quest-cover/**` и `/avatar/**` обслуживает тот же image-proxy
+    // (`?w=320&q=70&fit=cover` → 7 884 B при оригинале 209 КБ), но их пути не подходят
+    // под MEDIA_FILE_PATH и уходили в ветку «свой домен». Там оптимизация включается
+    // только при совпадении origin с EXPO_PUBLIC_API_URL, поэтому в конфигурации с
+    // проксированным API (dev/preprod) параметры молча не добавлялись и `srcSet`
+    // собирался из одинаковых URL без `w` — браузер брал оригинал на плитку 132×132.
+    it('optimizes quest covers and avatars regardless of the configured api origin', () => {
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'http://localhost:4622'
+      try {
+        const cover = optimizeImageUrl(
+          'https://metravel.by/quest-cover/quests/16/main/85f9edf327a9455ea2369a883cd2daa6.png',
+          { width: 132, quality: 60, fit: 'contain' },
+        )!
+        expect(cover).toContain('w=160')
+        expect(cover).toContain('q=60')
+
+        const avatar = optimizeImageUrl(
+          'https://metravel.by/avatar/profile/82/avatar/f9b9811452104523b2088f840a77a6ee.webp',
+          { width: 48, quality: 70, fit: 'cover' },
+        )!
+        expect(avatar).toContain('w=96')
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
     })
 
     it('snaps per-pixel widths up to the dimension ladder', () => {
@@ -256,6 +297,35 @@ describe('utils/imageOptimization', () => {
       expect(onMediaPath({ width: 56 }).searchParams.get('w')).toBe('96')
       expect(onMediaPath({ width: 720 }).searchParams.get('w')).toBe('800')
       expect(onMediaPath({ width: 1280 }).searchParams.get('w')).toBe('1280')
+    })
+
+    // Guard #1113: лестница обязана состоять ТОЛЬКО из ширин, которые прокси реально
+    // ресайзит. Ширину вне whitelist он не снэпит и не отвергает — отдаёт исходный файл
+    // целиком, и вместо превью в 3 КБ прилетают сотни килобайт. Whitelist снят с прода
+    // 2026-07-28 на /gallery/, /travel-image/, /address-image/, /avatar/, /quest-cover/.
+    it('only ever emits widths the backend proxy actually resizes', () => {
+      const PROXY_SUPPORTED_WIDTHS = new Set([32, 96, 160, 320, 480, 640, 800, 1280, 1600, 1920])
+
+      const requested = [
+        1, 8, 15, 16, 20, 24, 31, 32, 40, 47, 48, 49, 56, 64, 88, 96, 100, 132, 159, 160,
+        161, 200, 239, 240, 241, 264, 320, 361, 393, 400, 480, 512, 640, 720, 800, 899,
+        960, 1000, 1023, 1024, 1025, 1080, 1200, 1280, 1440, 1600, 1800, 1920, 2048, 2500, 4000,
+      ]
+
+      const emitted = requested.map((width) => {
+        const raw = onMediaPath({ width }).searchParams.get('w')
+        return { width, w: raw == null ? null : Number(raw) }
+      })
+
+      const unsupported = emitted.filter((entry) => entry.w != null && !PROXY_SUPPORTED_WIDTHS.has(entry.w))
+      expect(unsupported).toEqual([])
+
+      // И лестница не должна округлять ВНИЗ: превью не может быть мельче запрошенного,
+      // иначе картинка мылится. Единственное исключение — потолок whitelist.
+      const downscaled = emitted.filter(
+        (entry) => entry.w != null && entry.w < entry.width && entry.w !== 1920,
+      )
+      expect(downscaled).toEqual([])
     })
 
     it('collapses near-identical quality values to a step of 10', () => {
@@ -278,7 +348,7 @@ describe('utils/imageOptimization', () => {
         })
       )
       expect(variants.size).toBe(1)
-      expect([...variants][0]).toBe('480|3|80')
+      expect([...variants][0]).toBe('480|null|80')
     })
   })
 })

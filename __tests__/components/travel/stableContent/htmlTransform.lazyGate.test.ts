@@ -31,7 +31,10 @@ describe('normalizeImgTags native lazy loading for body images', () => {
         `src="https://metravel.by/gallery/540/gallery/pic${i}.JPG?w=800`,
       )
     }
-    expect(out).toContain('pic4.JPG?w=1024&amp;q=78&amp;fit=contain 1024w')
+    // #1113: верхняя ступень desktop-лестницы теперь 800 — 1024 прокси не ресайзит,
+    // а отдаёт исходный файл целиком (132 344 B против 53 104 B на w=800).
+    expect(out).toContain('pic4.JPG?w=800&amp;q=78&amp;fit=contain 800w')
+    expect(out).not.toContain('w=1024')
     expect(out).not.toContain('data-lazy-src')
     expect(out).not.toContain('rich-lazy-img')
     expect(out).not.toContain('data:image/gif;base64')

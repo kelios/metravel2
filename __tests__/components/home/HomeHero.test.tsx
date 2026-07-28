@@ -311,9 +311,13 @@ describe('HomeHero Component', () => {
 
       expect(preloadUrl).toBeTruthy()
       expect(preloadUrl).toContain('w=480')
-      expect(preloadUrl).toContain('h=480')
       expect(preloadUrl).toContain('q=80')
       expect(preloadUrl).toContain('fit=contain')
+      // #1113: `h` в URL больше нет — прокси ресайзит только по ширине, а высота
+      // делала ссылку зависимой от геометрии контейнера. Важно, что preload и сам
+      // <img> строятся одним `optimizeImageUrl`, поэтому форма URL у них по-прежнему
+      // совпадает и preload не приводит ко второй загрузке того же фото.
+      expect(preloadUrl).not.toMatch(/[?&]h=/)
     })
 
     it('disables home slider blur only for iPhone Safari', () => {

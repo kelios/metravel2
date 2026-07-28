@@ -24,8 +24,56 @@ import {
 
 const isRootRelativeUrl = (value: string): boolean => /^\/(?!\/)/.test(value);
 
-/** Native: размер подложки блюра по умолчанию (Glide `override`) — ступень «лестницы» прокси. */
+/** Native: размер декодирования подложки блюра по умолчанию (Glide `override`). */
 const NATIVE_BLUR_BACKDROP_SIZE = 96;
+
+/**
+ * Потолок ширины sharp-слоя на native — верхняя ступень whitelist прокси, которая
+ * никогда не даёт апскейла. См. `buildNativeSharpImageSource` и #1113.
+ */
+const NATIVE_SHARP_MAX_WIDTH = 800;
+
+/** Web: верхний кандидат в `srcSet` карточки. См. `webSrcSet` и #1113. */
+const WEB_SRCSET_MAX_WIDTH = 1280;
+
+type NativeBlurSourceArgs = {
+  blurBackground?: boolean;
+  blurDecodeSize?: number;
+  blurSrc?: string | null;
+  source?: { uri?: string } | number | null;
+};
+
+/**
+ * Native blur backdrop source.
+ *
+ * Contract: the backdrop is a derivative of the sharp layer, so it reuses the SAME
+ * URI — one network fetch per image, the second layer comes from the loader's disk
+ * cache. Cheapness comes from the decode override (`width`/`height` → Glide
+ * `override`), not from requesting a separate downscaled variant.
+ *
+ * An explicit `blurSrc` is honoured only when the caller deliberately supplies a
+ * different source (e.g. a ready LQIP from the API).
+ */
+export function buildNativeBlurSource({
+  blurBackground,
+  blurDecodeSize,
+  blurSrc,
+  source,
+}: NativeBlurSourceArgs) {
+  if (!blurBackground) return undefined;
+  const decodeSize = blurDecodeSize && blurDecodeSize > 0 ? blurDecodeSize : undefined;
+  const explicit = typeof blurSrc === 'string' ? blurSrc.trim() : '';
+  if (explicit) {
+    return decodeSize
+      ? { uri: explicit, width: decodeSize, height: decodeSize }
+      : { uri: explicit };
+  }
+  if (!source || typeof source === 'number') return undefined;
+  const uri = typeof source.uri === 'string' ? source.uri.trim() : '';
+  if (!uri) return undefined;
+  const size = decodeSize ?? NATIVE_BLUR_BACKDROP_SIZE;
+  return { uri, width: size, height: size };
+}
 
 type NativeSharpSourceArgs = {
   uri: string;
@@ -44,20 +92,27 @@ export function buildNativeSharpImageSource({
   fit,
   pixelRatio,
 }: NativeSharpSourceArgs): { uri: string } | null {
-  const normalizedUri = uri.trim();
+  // `source` может прийти объектом без `uri` (например `{ uri: undefined }` из
+  // нормализаторов профиля) — на native это роняло весь рендер карточки на
+  // `uri.trim()`. Падение живёт в main с момента появления функции: 11 кейсов
+  // `__tests__/components/profile.test.tsx` красные и на чистом HEAD 627d7f4d.
+  const normalizedUri = typeof uri === 'string' ? uri.trim() : '';
   if (!normalizedUri || /^(data:|blob:|file:)/i.test(normalizedUri)) return null;
   if (hasOptimizationParams(normalizedUri)) return null;
   const baseWidth = width ?? height;
   if (!baseWidth || baseWidth <= 0) return null;
   const dpr = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
-  const targetWidth = Math.min(1024, Math.round(baseWidth * dpr));
-  const targetHeight =
-    height && height > 0
-      ? Math.min(1024, Math.round(height * dpr))
-      : undefined;
+  // #1113: потолок был ровно 1024 — ширина, которой у прокси НЕТ. На такой запрос
+  // сервер молча отдаёт оригинал, поэтому «сайзинг» sharp-слоя из #1103 для крупных
+  // карточек не работал вовсе. Замер прода 2026-07-28 (исходник 1024×576, 132 344 B):
+  // w=1024 → 132 344 B (оригинал), w=800 → 53 104 B. Берём 800 — верхнюю ступень
+  // whitelist, которая гарантированно ≤ оригинала (1280 на квадратных 1080×1080
+  // оригиналах галереи означал бы апскейл тяжелее исходника).
+  const targetWidth = Math.min(NATIVE_SHARP_MAX_WIDTH, Math.round(baseWidth * dpr));
+  // Высота в URL не участвует: прокси ресайзит только по `w`, а `h` делал ссылку
+  // зависимой от геометрии контейнера и плодил дубликаты вариантов.
   const optimized = optimizeImageUrl(normalizedUri, {
     width: targetWidth,
-    height: targetHeight,
     quality,
     fit,
   });
@@ -197,31 +252,30 @@ function ImageCardMedia({
     return !!(currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey));
   });
 
-  // Native: подложка блюра, для которой вызывающий код не дал отдельный `blurSrc`,
-  // раньше уходила в expo-image с ТЕМ ЖЕ источником, что и резкий слой. Glide видит
-  // два разных ключа (свой contentFit + blurRadius) и качает файл дважды: в
-  // access-логе прода каждая картинка карточки точки приходила ровно 2 раза.
-  // Берём тот же URL, но уменьшенный прокси до 96px — вторая копия становится
-  // ~3 КБ вместо полного веса, а размытие визуально то же.
-  const nativeBlurSource = useMemo(() => {
-    if (Platform.OS === 'web' || !blurBackground) return undefined;
-    const decodeSize = blurDecodeSize && blurDecodeSize > 0 ? blurDecodeSize : undefined;
-    const explicit = typeof blurSrc === 'string' ? blurSrc.trim() : '';
-    if (explicit) {
-      return decodeSize
-        ? { uri: explicit, width: decodeSize, height: decodeSize }
-        : { uri: explicit };
-    }
-    if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
-    const uri = typeof resolvedSource.uri === 'string' ? resolvedSource.uri.trim() : '';
-    if (!uri) return undefined;
-    const size = decodeSize ?? NATIVE_BLUR_BACKDROP_SIZE;
-    return {
-      uri: optimizeImageUrl(uri, { width: size, quality: 30, fit: 'cover' }) || uri,
-      width: size,
-      height: size,
-    };
-  }, [blurBackground, blurDecodeSize, blurSrc, resolvedSource]);
+  // Native: подложка блюра — производная от уже загруженной картинки, а не отдельный
+  // ресурс. Поэтому она использует ТОТ ЖЕ URI, что и резкий слой: сеть дёргается один
+  // раз, второй слой берёт файл из дискового кэша загрузчика. Дешевизну даёт не второй
+  // запрос, а decode-override (`width`/`height` в source → Glide `override`): блюр
+  // считается по маленькому битмапу вместо полноразмерной копии.
+  //
+  // Раньше здесь строился ВТОРОЙ URL (`?w=96&q=30`), чтобы обойти двойную загрузку
+  // Glide. Это оказалось дороже задуманного: прокси не уменьшал часть путей, и «дешёвая
+  // копия» приходила по 70–117 КБ. Web всегда делал правильно — тот же src + CSS-фильтр.
+  //
+  // `blurSrc` остаётся для случаев, когда вызывающий код осознанно даёт другой источник
+  // (например уже готовый LQIP из API), но по умолчанию второго адреса не появляется.
+  const nativeBlurSource = useMemo(
+    () =>
+      Platform.OS === 'web'
+        ? undefined
+        : buildNativeBlurSource({
+            blurBackground,
+            blurDecodeSize,
+            blurSrc,
+            source: resolvedSource,
+          }),
+    [blurBackground, blurDecodeSize, blurSrc, resolvedSource]
+  );
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -428,7 +482,14 @@ function ImageCardMedia({
         ? [Math.max(720, Math.round(baseWidth * maxResponsiveMultiplier))]
         : []),
     ];
-    const uniqueSortedWidths = Array.from(new Set(srcSetWidths)).sort((a, b) => a - b);
+    // #1113: верхние кандидаты (baseWidth × 2…3) уходили в 1024/2048 — ступени, которых
+    // у прокси нет, поэтому retina-браузер выбирал ровно тот вариант, на который сервер
+    // отвечал ОРИГИНАЛОМ. Лестница это уже чинит, но кандидаты крупнее 1280 всё равно
+    // бессмысленны для карточек: исходники галереи редко шире, а прокси на такой запрос
+    // отдаёт апскейл тяжелее оригинала (w=1920 из 1024×576 → 378 418 B против 132 344 B).
+    const uniqueSortedWidths = Array.from(
+      new Set(srcSetWidths.map((value) => Math.min(WEB_SRCSET_MAX_WIDTH, value))),
+    ).sort((a, b) => a - b);
     return (
       generateSrcSet(uri, uniqueSortedWidths, {
         quality,

@@ -58,7 +58,12 @@ type Props = {
 export function QuestForCityCard({
   quest,
   eyebrow = i18nT('quests:components.quests.QuestForCityCard.gorodskoy_kvest_marshrut_90737ec7'),
-  imageLoading = 'eager',
+  // #1115: дефолт был `eager`. `QuestForCitySection` на travel details рисует
+  // рельс из шести таких карточек и ничего не передаёт — все шесть обложек
+  // стартовали немедленно и конкурировали с LCP-фото статьи, находясь при этом
+  // далеко ниже вьюпорта. Ленивая загрузка — правильный дефолт для рельса;
+  // eager остаётся осознанным выбором вызывающего.
+  imageLoading = 'lazy',
   style,
   analyticsSource = 'quest_card',
   analyticsContextId,
@@ -123,10 +128,14 @@ export function QuestForCityCard({
           fit="contain"
           blurBackground
           allowCriticalWebBlur
-          preserveOptimizedWebSrc
           blurRadius={16}
-          loading={imageLoading === 'lazy' ? 'lazy' : 'eager'}
-          optimizeWeb={false}
+          loading={imageLoading === 'eager' ? 'eager' : 'lazy'}
+          // #1115: здесь стояли `optimizeWeb={false}` + `preserveOptimizedWebSrc`,
+          // которые запрещали ImageCardMedia и ресайзить URL, и строить srcSet.
+          // Плитка 132×132 из-за этого качала обложку ОРИГИНАЛОМ: замер DOM прода
+          // 2026-07-28 — `naturalWidth` 1536 при CSS 132, вес 216–3003 КБ на файл.
+          // Путь `/quest-cover/**` ресайз поддерживает (перепроверено после #1104):
+          //   `?w=160&q=70&fit=cover` → 2 КБ, `?w=320` → 7.9 КБ, `?w=640` → 53 КБ.
           alt={i18nT('quests:components.quests.QuestForCityCard.oblozhka_kvesta_value1_28d57a5f', { value1: quest.title })}
           style={styles.image}
         />

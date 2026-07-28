@@ -3,18 +3,13 @@
 
 import { Platform } from 'react-native';
 import type { ImageOptimizationOptions } from './imageProxy';
-import { optimizeImageUrl, getPreferredImageFormat } from './imageProxy';
+import { optimizeImageUrl } from './imageProxy';
 
 export interface ResponsiveImageSource {
   src: string;
   srcSet?: string;
   sizes?: string;
   format: string;
-}
-
-function resolveImageFormat(format: ImageOptimizationOptions['format']): string {
-  if (format === 'auto') return getPreferredImageFormat();
-  return format ?? 'jpg';
 }
 
 export function generateSrcSet(
@@ -47,15 +42,6 @@ export function generateSrcSet(
     .join(', ');
 
   return srcset || baseUrl;
-}
-
-export function generateSizes(
-  breakpoints: { desktop?: number; tablet?: number; mobile?: number } = {}
-): string {
-  const desktop = breakpoints.desktop || 1200;
-  const tablet = breakpoints.tablet || 768;
-  const mobile = breakpoints.mobile || 375;
-  return `(min-width: ${desktop}px) ${desktop}px, (min-width: ${tablet}px) ${tablet}px, ${mobile}px`;
 }
 
 export function getResponsiveSizes(maxWidth: number = 1920): number[] {
@@ -113,78 +99,10 @@ export function buildResponsiveImageProps(
   return { src, srcSet, sizes: options.sizes ?? '100vw' };
 }
 
-export function buildResponsiveImage(
-  imageUrl: string,
-  options: ImageOptimizationOptions & { sizes?: string } = {}
-): ResponsiveImageSource {
-  if (!imageUrl) return { src: '', format: 'unknown' };
-
-  const format = resolveImageFormat(options.format ?? 'auto') || 'jpg';
-  const { src, srcSet, sizes } = buildResponsiveImageProps(imageUrl, {
-    maxWidth: typeof window !== 'undefined' ? window.innerWidth || 1440 : 1440,
-    sizes: options.sizes,
-    quality: options.quality,
-    format: options.format,
-    fit: options.fit,
-    dpr: options.dpr,
-  });
-
-  return { src, srcSet, sizes, format };
-}
-
-export function buildLqipUrl(
-  baseUrl: string,
-  options: { width?: number; quality?: number; blur?: number } = {}
-): string {
-  if (!baseUrl) return baseUrl;
-  return optimizeImageUrl(baseUrl, {
-    width: options.width ?? 24,
-    quality: options.quality ?? 35,
-    format: 'jpg',
-    fit: 'contain',
-    blur: options.blur ?? 30,
-  }) || baseUrl;
-}
-
-export function generateLQIP(imageUrl: string, width: number = 15): string | undefined {
-  if (!imageUrl) return undefined;
-  return optimizeImageUrl(imageUrl, { width, quality: 50, format: 'jpg', fit: 'contain', blur: 5 });
-}
-
-export function calculateImageDimensions(
-  originalWidth: number,
-  originalHeight: number,
-  constraints: { maxWidth?: number; maxHeight?: number }
-): { width: number; height: number } {
-  const maxWidth = constraints.maxWidth || originalWidth;
-  const maxHeight = constraints.maxHeight || originalHeight;
-  const widthRatio = maxWidth / originalWidth;
-  const heightRatio = maxHeight / originalHeight;
-  const ratio = Math.min(widthRatio, heightRatio, 1);
-  return { width: Math.round(originalWidth * ratio), height: Math.round(originalHeight * ratio) };
-}
-
-export function createLazyImageProps(
-  src: string,
-  options: ImageOptimizationOptions = {}
-): {
-  src: string;
-  loading: 'lazy' | 'eager';
-  decoding: 'async' | 'sync' | 'auto';
-  fetchpriority?: 'high' | 'low' | 'auto';
-} {
-  const requestedFormat = options.format ?? 'auto';
-  const optimizedSrc = optimizeImageUrl(src, { format: requestedFormat, quality: 85, ...options });
-  return {
-    src: optimizedSrc || src,
-    loading: options.width && options.width > 400 ? 'lazy' : 'eager',
-    decoding: 'async',
-    fetchpriority: options.width && options.width > 800 ? 'low' : 'auto',
-  };
-}
-
-export function shouldLoadEager(index: number, containerWidth?: number): boolean {
-  if (index === 0) return true;
-  if (containerWidth && containerWidth < 300) return false;
-  return index < 3;
-}
+// #1118: здесь жили `buildResponsiveImage`, `buildLqipUrl`, `generateLQIP`,
+// `calculateImageDimensions`, `createLazyImageProps`, `shouldLoadEager` и
+// `generateSizes` — ни одна из них не вызывалась в приложении. Часть при этом
+// строила заведомо нерабочие URL: `buildLqipUrl` просил `w=24`, `generateLQIP` —
+// `w=15`, а таких ступеней у прокси нет, и он отдаёт исходный файл целиком
+// (см. DIMENSION_LADDER в `utils/imageProxy.ts`). Живой LQIP приходит из
+// backend-манифеста через `getMediaLqipUrl`.

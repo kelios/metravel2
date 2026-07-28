@@ -113,11 +113,19 @@ export const getSliderViewportFlags = (width: number): SliderViewportFlags => {
 
 /* ---- Native buildUri (used by Slider.tsx) ---- */
 
-// Ступени ширины для нативного hero. Активный слайд занимает всю ширину экрана,
-// но следующая ступень «лестницы» (1280) для телефона — это уже почти вес
-// оригинала, поэтому потолок 1024. Соседи капятся ниже: их всё равно смотрят
-// после свайпа, а на медленном канале они конкурируют с фото тела статьи.
-export const NATIVE_SLIDER_ACTIVE_MAX_WIDTH = 1024;
+// Ступени ширины для нативного hero.
+//
+// #1113: раньше активный слайд капился на 1024 в расчёте «дешевле, чем 1280».
+// По факту 1024 вообще НЕ входит в whitelist прокси — на такой запрос сервер
+// молча отдаёт оригинал, то есть главное фото статьи на Android всегда
+// приходило несжатым. Замер прода 2026-07-28 (исходник 1024×576, 132 344 B):
+//   w=1024 → 132 344 B (оригинал)   w=1280 → 118 046 B   w=800 → 53 104 B
+//
+// Активный слайд переведён на ту же ступень 800, что и соседи: это гарантированно
+// ≤ оригинала (в отличие от 1280, который на квадратных 1080×1080 оригиналах
+// галереи означал бы апскейл), и вдобавок соседний слайд после свайпа становится
+// активным БЕЗ перезапроса URL — один вариант вместо двух.
+export const NATIVE_SLIDER_ACTIVE_MAX_WIDTH = 800;
 export const NATIVE_SLIDER_NEIGHBOUR_MAX_WIDTH = 800;
 // Оригиналы галереи хранятся почти без сжатия (1080×1080 ≈ 325 КБ). q75 на прокси
 // экономит меньше 20%, поэтому качество опущено до уровня, который заметно легче,
@@ -190,8 +198,6 @@ export const buildUriWeb = (
 ) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
   const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit;
-  const effectiveDevicePixelRatio =
-    typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 3) : 1;
 
   if (containerWidth) {
     const isMobileWidth = containerWidth <= SLIDER_MAX_WIDTH.mobile;
@@ -218,19 +224,15 @@ export const buildUriWeb = (
     if (fromMedia?.src) return fromMedia.src;
 
     const format = isFirst ? undefined : PREFERRED_FORMAT;
-    // Neighbour slides don't need full device DPR — a contain+blur photo that's
-    // only the swipe-target reveals imperceptibly sharper at dpr 3, but the
-    // decode cost of the ~1.5× larger image stalls swipe 1→2 on mobile CPUs.
-    // Cap mobile neighbours to dpr 2; first slide + desktop keep full DPR.
-    const dpr = isFirst
-      ? undefined
-      : isMobileWidth
-        ? Math.min(effectiveDevicePixelRatio, 2)
-        : effectiveDevicePixelRatio;
+    // #1113: здесь считался `dpr` для соседних слайдов («кап до dpr 2, чтобы свайп
+    // 1→2 не стопорился о декод»). Прокси параметр игнорирует — замер прода
+    // 2026-07-28 даёт байт-в-байт одинаковый ответ для dpr отсутствующего / 2 / 3, —
+    // так что кап никогда не действовал, а значение лишь плодило варианты URL.
+    // Ширина слайдов уже задана `targetWidth`; если понадобится retina-вариант,
+    // умножать нужно её, а не полагаться на серверный `dpr`.
     return (
       optimizeImageUrl(versionedUrl, {
         width: targetWidth,
-        dpr,
         format,
         quality,
         fit: fitForUrl,

@@ -19,6 +19,16 @@ const MAX_CACHE_SIZE = 400;
 const OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'dpr', 'blur'];
 const MEDIA_FILE_PATH = /^\/(gallery|travel-image|travel-description-image|address-image)\/(?:[^?#]*\/conversions\/|\d+\/(gallery|travel-image|travel-description-image|address-image)\/|[^/?#]+$)/i;
 
+// #1113: `/quest-cover/**` и `/avatar/**` тоже обслуживает image-proxy (проверено на
+// проде 2026-07-28: `/quest-cover/...png?w=320&q=70&fit=cover` → 7 884 B при оригинале
+// 209 КБ; `/avatar/...webp?w=160` → 1 362 B при оригинале 86 КБ), но их структура пути
+// (`quests/16/main/file.png`, `profile/82/avatar/file.webp`) не подходит под
+// MEDIA_FILE_PATH. Из-за этого они уходили в ветку «свой домен», где оптимизация
+// зависит от совпадения origin с EXPO_PUBLIC_API_URL — и в любой конфигурации с
+// проксированным API (dev/preprod) параметры молча не добавлялись: `srcSet` собирался
+// из одинаковых URL без `w`, а браузер грузил оригинал на плитку 132×132.
+const PROXY_MEDIA_PREFIX = /^\/(quest-cover|avatar)\//i;
+
 const getPublicApiOrigin = (): string | null => {
   try {
     const raw = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
@@ -42,7 +52,20 @@ const isTestEnv = () =>
 // (w,h,q,dpr,f,fit) = отдельная СИНХРОННАЯ конвертация на проде (1 vCPU / 1.8 ГБ):
 // схлопывание почти одинаковых вариантов поднимает попадание кэша и режет
 // CPU/память/диск на конвертациях (см. тикет #628 — своп-штормы от переподписки).
-const DIMENSION_LADDER = [16, 24, 32, 48, 96, 160, 240, 320, 480, 640, 800, 1024, 1280, 1600, 2048];
+//
+// #1113: лестница обязана совпадать с whitelist прокси. Ширину вне whitelist прокси
+// не снэпит и не отвергает — он МОЛЧА отдаёт исходный файл целиком. Замер прода
+// 2026-07-28 на `travel-image/682/...webp` (исходник 1024×576, 132 344 B):
+//   w=32 → 322 B (32×18)   w=96 → 1 650 B (96×54)   w=320 → 11 562 B
+//   w=47/48/49    → 132 344 B, реальные пиксели 1024×576 (ОРИГИНАЛ)
+//   w=239/240/241 → 132 344 B (ОРИГИНАЛ)
+//   w=1024        → 132 344 B (ОРИГИНАЛ)
+// Подтверждено на /gallery/, /travel-image/, /address-image/, /avatar/, /quest-cover/.
+// Поэтому 16, 24, 48, 240, 1024 и 2048 из лестницы убраны: каждая такая ступень
+// означала полноразмерный оригинал вместо превью.
+const DIMENSION_LADDER = [32, 96, 160, 320, 480, 640, 800, 1280, 1600, 1920];
+
+const MAX_LADDER_WIDTH = DIMENSION_LADDER[DIMENSION_LADDER.length - 1];
 
 const snapDimensionUp = (value: number): number => {
   const v = Math.round(value);
@@ -50,12 +73,30 @@ const snapDimensionUp = (value: number): number => {
   for (const rung of DIMENSION_LADDER) {
     if (v <= rung) return rung;
   }
-  return DIMENSION_LADDER[DIMENSION_LADDER.length - 1];
+  return MAX_LADDER_WIDTH;
 };
 
-// Дробный DPR (2.75, 2.8125, 1.25) из window.devicePixelRatio множит варианты —
-// привязываем к целому 1/2/3.
-const snapDpr = (value: number): number => Math.min(3, Math.max(1, Math.round(value)));
+// #1113/#1116: `dpr` и `h` больше не отправляются — прокси игнорирует оба, но каждое
+// уникальное значение создаёт отдельный URL, отдельную запись в nginx-кэше и отдельную
+// СИНХРОННУЮ конверсию. Замеры прода 2026-07-28:
+//   `?w=640&q=70&fit=contain`             → 36 094 B
+//   `?w=640&q=70&fit=contain&dpr=2` / `dpr=3` → 36 094 B (байт-в-байт то же)
+//   `?w=320&h=240&q=70&fit=cover`         → 11 562 B (ресайз по одному лишь `w`)
+//   `?h=240&q=60&fit=contain`             → 132 344 B — ОРИГИНАЛ: запрос без `w`
+//                                            прокси не отвергает, а молча отдаёт исходник
+//
+// Побочный (и важный) эффект отказа от `h`: URL перестаёт зависеть от высоты
+// контейнера, поэтому изменение измеренных пропорций больше не порождает второй
+// запрос того же фото. Клиентам, которым нужен retina-вариант, следует умножать саму
+// `width` на DPR (так делают слайдер и buildNativeSharpImageSource).
+//
+// Если `width` не задана, размерных параметров не будет вовсе: лучше честно получить
+// оригинал, чем отправить `h`, который гарантированно даёт оригинал плюс лишний
+// cache-key. Вызывающий код обязан передавать ширину — см. #1113.
+const resolveProxyWidth = (options: ImageOptimizationOptions): number | null => {
+  if (!options.width || options.width <= 0) return null;
+  return snapDimensionUp(options.width);
+};
 
 // Quality к шагу 10 (72/78/82 → 70/80/80) — меньше вариантов при незаметной разнице.
 const snapQuality = (value: number): number => {
@@ -96,7 +137,7 @@ export function optimizeImageUrl(
 
     if (isPrivateOrLocalHost(parsedUrl.hostname)) return originalUrl;
 
-    if (MEDIA_FILE_PATH.test(parsedUrl.pathname)) {
+    if (MEDIA_FILE_PATH.test(parsedUrl.pathname) || PROXY_MEDIA_PREFIX.test(parsedUrl.pathname)) {
       // Media file paths are served by the backend image proxy which understands
       // the same w/h/q/f/fit/blur query params.  Strip stale optimization params
       // and append fresh ones so that the browser fetches a properly-sized variant
@@ -106,13 +147,17 @@ export function optimizeImageUrl(
       });
 
       const proxyParams = new URLSearchParams();
-      if (options.width) proxyParams.set('w', String(snapDimensionUp(options.width)));
-      if (options.height) proxyParams.set('h', String(snapDimensionUp(options.height)));
-      if (options.quality != null) proxyParams.set('q', String(snapQuality(options.quality)));
-      if (options.format && options.format !== 'auto') proxyParams.set('f', options.format);
-      if (options.fit) proxyParams.set('fit', options.fit);
-      if (options.dpr != null) proxyParams.set('dpr', String(snapDpr(options.dpr)));
-      if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
+      const mediaWidth = resolveProxyWidth(options);
+      // Без `w` прокси всё равно отдаст оригинал, поэтому одни только q/fit/blur —
+      // это лишний cache-key на тот же байтовый результат. Оставляем голый URL:
+      // он самый «горячий» в кэше и не запускает новую конверсию.
+      if (mediaWidth) {
+        proxyParams.set('w', String(mediaWidth));
+        if (options.quality != null) proxyParams.set('q', String(snapQuality(options.quality)));
+        if (options.format && options.format !== 'auto') proxyParams.set('f', options.format);
+        if (options.fit) proxyParams.set('fit', options.fit);
+        if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
+      }
 
       const paramStr = proxyParams.toString();
       const base = parsedUrl.toString();
@@ -153,16 +198,22 @@ export function optimizeImageUrl(
     const fit = options.fit || 'cover';
 
     const proxyParams = new URLSearchParams();
-    if (options.width) proxyParams.set('w', String(snapDimensionUp(options.width)));
-    if (options.height) proxyParams.set('h', String(snapDimensionUp(options.height)));
-    proxyParams.set('q', String(quality));
-    if (format !== 'auto') proxyParams.set('f', format);
-    proxyParams.set('fit', fit);
-    if (options.dpr != null) proxyParams.set('dpr', String(snapDpr(options.dpr)));
-    if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
+    const ownDomainWidth = resolveProxyWidth(options);
+    // Как и в media-ветке выше: без `w` параметры не дают другого файла,
+    // только лишнюю запись в кэше прокси.
+    if (ownDomainWidth) {
+      proxyParams.set('w', String(ownDomainWidth));
+      proxyParams.set('q', String(quality));
+      if (format !== 'auto') proxyParams.set('f', format);
+      proxyParams.set('fit', fit);
+      if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
+    }
 
     const imagePath = parsedUrl.pathname + parsedUrl.search;
-    const optimizedUrl = `${publicOrigin}${imagePath}${imagePath.includes('?') ? '&' : '?'}${proxyParams.toString()}`;
+    const paramStr = proxyParams.toString();
+    const optimizedUrl = paramStr
+      ? `${publicOrigin}${imagePath}${imagePath.includes('?') ? '&' : '?'}${paramStr}`
+      : `${publicOrigin}${imagePath}`;
 
     if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
       const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 50);

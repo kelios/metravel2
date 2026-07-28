@@ -26,6 +26,51 @@ const MAX_WIDTH = 800;
 const MAX_IMAGE_HEIGHT = 480;
 const H_PADDING = 16;
 
+/**
+ * Web-гейт для измерительного запроса (#1114).
+ *
+ * `useRichMediaVisibility` намеренно выключен на web (там ленивость даёт сам
+ * `<img loading="lazy">`), поэтому для web нужен собственный признак «рамка близко
+ * к вьюпорту». Гейт НИЧЕГО не скрывает: рамка и `<img>` рендерятся как прежде, с
+ * зарезервированной высотой — под гейтом только measure-запрос, который иначе
+ * стартовал бы немедленно для всех фото статьи и обходил браузерную ленивость.
+ *
+ * Без IntersectionObserver (SSR, старые движки) возвращает `true` — поведение
+ * прежнее.
+ */
+const WEB_MEASURE_ROOT_MARGIN = '150% 0px';
+
+function useWebMeasureGate(frameRef: React.RefObject<any>, enabled: boolean): boolean {
+  const [near, setNear] = useState(() => Platform.OS !== 'web');
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !enabled) return undefined;
+    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') {
+      setNear(true);
+      return undefined;
+    }
+    const node = frameRef.current as unknown as Element | null;
+    if (!node || typeof node !== 'object' || !('nodeType' in node)) {
+      setNear(true);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setNear(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: WEB_MEASURE_ROOT_MARGIN },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [enabled, frameRef]);
+
+  return near;
+}
+
 /* ─ helpers ─ */
 const pickSrc = (tnode: any) => {
   const a = tnode?.attributes || {};
@@ -85,55 +130,6 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
   const [err, setErr] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-
-    if (!src || isSmallIcon) {
-      return () => {
-        mounted = false;
-      };
-    }
-
-    if (attrAR) {
-      setAr(attrAR);
-      return () => {
-        mounted = false;
-      };
-    }
-
-    if (Platform.OS === "web") {
-      const img = new (window as any).Image();
-      (img as any).decoding = "async";
-      (img as any).loading = "lazy";
-      img.onload = () => {
-        if (mounted && img.naturalWidth && img.naturalHeight) {
-          setAr(img.naturalWidth / img.naturalHeight);
-        }
-      };
-      img.onerror = () => {
-        if (mounted) setAr(null);
-      };
-      img.src = src;
-      return () => {
-        mounted = false;
-      };
-    }
-
-    RNImage.getSize(
-      src,
-      (w, h) => {
-        if (mounted && h > 0) setAr(w / h);
-      },
-      () => {
-        if (mounted) setAr(null);
-      }
-    );
-
-    return () => {
-      mounted = false;
-    };
-  }, [src, attrAR, isSmallIcon]);
-
   const aspect = ar && ar > 0 ? ar : 16 / 9;
 
   const { boxWidth, boxHeight } = useMemo(() => {
@@ -146,23 +142,33 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
     };
   }, [maxFrameWidth, aspect, maxImageHeight]);
 
-  // На web ImageCardMedia сам ресайзит URL под размер (+srcSet по DPR); на native
-  // этого не происходит — expo-image тянет оригинал (напр. 2048px) в контейнер ~360px
-  // и Glide долго декодит тяжёлый файл, залипая на blur. Отдаём заранее уменьшенный
-  // под boxWidth×DPR URL (contain, без кропа — фото остаётся доминантой).
+  // Уменьшенный вариант фото тела статьи — на ОБЕИХ платформах.
+  //
+  // #1114: на web этой ветки не было вовсе (`Platform.OS === 'web'` возвращал сырой
+  // `src`), а ImageCardMedia ниже получает только `style`, без числовых width/height,
+  // поэтому и он оставлял URL как есть. Итог: каждое фото статьи приезжало
+  // ОРИГИНАЛОМ. Замер прода 2026-07-28 на `-detail_hd.jpg`:
+  //   без параметров        → 219 996 B, TTFB 2.33 с
+  //   `?w=800&q=75&fit=contain` →  77 346 B, TTFB 1.15 с
+  // На статье с 37 фото это 8.1 МБ против 2.8 МБ.
+  //
+  // Ширину капим на MAX_WIDTH (800) — это и рамка компонента, и ступень whitelist
+  // прокси. Просить boxWidth × DPR смысла нет: 1600 прокси отдаёт апскейлом тяжелее
+  // оригинала, а 800 на мобильной рамке ~361dp — это и так DPR ≈ 2.2.
+  // Высоту не передаём: прокси её игнорирует, а её попадание в URL делало ссылку
+  // зависимой от измеренных пропорций (см. AR-эффект ниже) и давало второй запрос.
   const displaySrc = useMemo(() => {
-    if (Platform.OS === 'web' || !src) return src;
-    const dpr = PixelRatio.get();
+    if (!src) return src;
+    const dpr = Platform.OS === 'web' ? 2 : PixelRatio.get();
     return (
       optimizeImageUrl(src, {
-        width: Math.round(boxWidth * dpr),
-        height: Math.round(boxHeight * dpr),
+        width: Math.min(MAX_WIDTH, Math.round(boxWidth * dpr)),
         quality: 70,
         fit: 'contain',
         format: 'auto',
       }) ?? src
     );
-  }, [src, boxWidth, boxHeight]);
+  }, [src, boxWidth]);
 
   // Дальние от вьюпорта фото тела статьи не монтируем: на native у expo-image нет
   // lazy-загрузки по вьюпорту, поэтому все 90+ картинок статьи декодируются сразу,
@@ -171,6 +177,74 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
   const { ref: frameRef, visible: isNearViewport, onLayout: handleFrameLayout } =
     useRichMediaVisibility(boxHeight);
   const shouldRenderMedia = Platform.OS === 'web' || isNearViewport;
+
+  const needsMeasure = Boolean(src) && !isSmallIcon && !attrAR;
+  const isWebFrameNearViewport = useWebMeasureGate(frameRef, needsMeasure);
+  const canMeasure = Platform.OS === 'web' ? isWebFrameNearViewport : isNearViewport;
+
+  // Пропорции измеряем по ТОМУ ЖЕ файлу, который покажет ImageCardMedia, и только
+  // когда фото уже рядом с вьюпортом.
+  //
+  // #1114: раньше здесь безусловно создавался `new Image()` с сырым `src` и грузился
+  // полноразмерный `-detail_hd.jpg`. `loading = 'lazy'` на detached-объекте браузер
+  // игнорирует, поэтому проба обходила ленивость `<img>` внутри ImageCardMedia и
+  // стартовала для ВСЕХ фото статьи сразу — 37 оригиналов одним залпом. Теперь
+  // измеряется уже уменьшенный `displaySrc`, и только для фото у вьюпорта.
+  useEffect(() => {
+    let mounted = true;
+
+    if (!displaySrc || isSmallIcon) {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    if (attrAR) {
+      setAr(attrAR);
+      return () => {
+        mounted = false;
+      };
+    }
+
+    // Измерение — это сетевой запрос, поэтому оно ждёт приближения к вьюпорту:
+    // на native — общий гейт #1035, на web — локальный IntersectionObserver.
+    if (!canMeasure) {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    if (Platform.OS === "web") {
+      const img = new (window as any).Image();
+      (img as any).decoding = "async";
+      img.onload = () => {
+        if (mounted && img.naturalWidth && img.naturalHeight) {
+          setAr(img.naturalWidth / img.naturalHeight);
+        }
+      };
+      img.onerror = () => {
+        if (mounted) setAr(null);
+      };
+      img.src = displaySrc;
+      return () => {
+        mounted = false;
+      };
+    }
+
+    RNImage.getSize(
+      displaySrc,
+      (w, h) => {
+        if (mounted && h > 0) setAr(w / h);
+      },
+      () => {
+        if (mounted) setAr(null);
+      }
+    );
+
+    return () => {
+      mounted = false;
+    };
+  }, [displaySrc, attrAR, isSmallIcon, canMeasure]);
 
   if (!raw || isSmallIcon) return null;
 
@@ -204,6 +278,10 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
           fit="contain"
           blurBackground
           allowCriticalWebBlur
+          // `displaySrc` — уже финальный вариант (w=800). Без этого флага
+          // ImageCardMedia на iOS Safari пересобрал бы из него собственный srcSet
+          // и браузер скачал бы вторую, иначе нарезанную копию того же фото.
+          preserveOptimizedWebSrc
           blurRadius={16}
           // Native: подложка блюра берёт тот же файл (лишнего запроса нет), но
           // декодируется в 128px — FastBlur крутится по 16 тыс. пикселей вместо

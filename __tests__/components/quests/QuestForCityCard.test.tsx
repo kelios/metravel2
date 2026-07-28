@@ -87,10 +87,38 @@ describe('QuestForCityCard', () => {
     expect(props.fit).toBe('contain')
     expect(props.blurBackground).toBe(true)
     expect(props.allowCriticalWebBlur).toBe(true)
-    expect(props.preserveOptimizedWebSrc).toBe(true)
     expect(props.revealOnLoadOnly).toBeUndefined()
-    expect(props.optimizeWeb).toBe(false)
-    expect(props.loading).toBe('eager')
+
+    // #1115: `optimizeWeb={false}` + `preserveOptimizedWebSrc` запрещали ImageCardMedia
+    // и ресайзить URL, и строить srcSet — плитка 132×132 качала обложку ОРИГИНАЛОМ
+    // (замер DOM прода 2026-07-28: naturalWidth 1536 при CSS 132, 216–3003 КБ на файл).
+    // Путь /quest-cover/** ресайз поддерживает: ?w=160 → 2 КБ, ?w=320 → 7.9 КБ.
+    expect(props.optimizeWeb).toBeUndefined()
+    expect(props.preserveOptimizedWebSrc).toBeUndefined()
+
+    // #1115: дефолт был `eager`, и рельс из шести карточек далеко под вьюпортом
+    // стартовал одновременно с LCP-фото статьи.
+    expect(props.loading).toBe('lazy')
+  })
+
+  it('lets a caller opt into an eager cover explicitly', () => {
+    render(
+      <QuestForCityCard
+        imageLoading="eager"
+        quest={{
+          id: 'krakow-dragon',
+          title: 'Тайна Краковского дракона',
+          points: 7,
+          cityId: '1',
+          cityName: 'Краков',
+          lat: 50.06,
+          lng: 19.94,
+          cover: 'https://metravelprod.s3.amazonaws.com/quests/1/main/cover.png?sig=1',
+        }}
+      />,
+    )
+
+    expect(mockImageCardMedia.mock.calls[0]?.[0].loading).toBe('eager')
   })
 
   it('allows callers to defer non-critical quest covers', () => {

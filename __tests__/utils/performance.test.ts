@@ -8,10 +8,6 @@ import { Platform } from 'react-native';
 import {
   optimizeImageUrl,
   generateSrcSet,
-  generateSizes,
-  generateLQIP,
-  calculateImageDimensions,
-  buildResponsiveImage,
   clearImageOptimizationCache,
   getImageCacheStats,
   ImageOptimizationOptions,
@@ -55,16 +51,24 @@ describe('Image Optimization', () => {
       expect(result).toContain('w=800');
     });
 
-    it('should add height parameter', () => {
-      const result = optimizeImageUrl(baseUrl, {
-        height: 600,
-      });
-      // h квантуется вверх к лесенке вариантов (600 -> 640), см. imageProxy DIMENSION_LADDER
-      expect(result).toContain('h=640');
+    // #1113: `h` больше не отправляется — прокси ресайзит только по `w`, а запрос
+    // с одним лишь `h` он не отвергает, а молча отдаёт оригинал. Раз размерных
+    // параметров нет, остальные (q/f/fit) тоже не добавляются: они не меняют
+    // байтовый результат, а только плодят записи в кэше прокси.
+    it('should not send height, and should send nothing sizing-related without a width', () => {
+      const heightOnly = optimizeImageUrl(baseUrl, { height: 600 });
+      expect(heightOnly).not.toMatch(/[?&]h=/);
+      expect(heightOnly).not.toMatch(/[?&]w=/);
+      expect(heightOnly).not.toMatch(/[?&]q=/);
+
+      const withWidth = optimizeImageUrl(baseUrl, { width: 800, height: 600 });
+      expect(withWidth).toContain('w=800');
+      expect(withWidth).not.toMatch(/[?&]h=/);
     });
 
     it('should add format parameter', () => {
       const result = optimizeImageUrl(baseUrl, {
+        width: 800,
         format: 'webp',
       });
       expect(result).toContain('f=webp');
@@ -72,31 +76,34 @@ describe('Image Optimization', () => {
 
     it('should add quality parameter', () => {
       const result = optimizeImageUrl(baseUrl, {
+        width: 800,
         quality: 80,
       });
       expect(result).toContain('q=80');
     });
 
     it('should default to auto format', () => {
-      const result = optimizeImageUrl(baseUrl, {});
+      const result = optimizeImageUrl(baseUrl, { width: 800 });
       // With format='auto', no 'f=' parameter is added (server decides format)
       expect(result).not.toContain('f=auto');
     });
 
     it('should default to quality 75', () => {
-      const result = optimizeImageUrl(baseUrl, {});
+      const result = optimizeImageUrl(baseUrl, { width: 800 });
       // On web platform, default quality is 80; on native it's 75
       expect(result).toMatch(/q=(75|80)/);
     });
 
     it('should clamp quality to valid range', () => {
       const tooHigh = optimizeImageUrl(baseUrl, {
+        width: 800,
         quality: 150,
       });
       expect(tooHigh).not.toContain('q=150');
       expect(tooHigh).toContain('q=100'); // clamped to 100
 
       const tooLow = optimizeImageUrl(baseUrl, {
+        width: 800,
         quality: 0,
       });
       expect(tooLow).toContain('q=1'); // clamped to 1
@@ -162,80 +169,11 @@ describe('Image Optimization', () => {
     });
   });
 
-  describe('generateSizes', () => {
-    it('should generate default sizes string', () => {
-      const sizes = generateSizes();
-      expect(sizes).toContain('1200px');
-      expect(sizes).toContain('768px');
-      expect(sizes).toContain('375px');
-    });
-
-    it('should use custom breakpoints', () => {
-      const sizes = generateSizes({
-        desktop: 1600,
-        tablet: 800,
-        mobile: 400,
-      });
-      expect(sizes).toContain('1600px');
-      expect(sizes).toContain('800px');
-      expect(sizes).toContain('400px');
-    });
-  });
-
-  describe('generateLQIP', () => {
-    it('should generate low-quality placeholder', () => {
-      const lqip = generateLQIP(baseUrl)!;
-      // w квантуется вверх к ближайшему rung лесенки (15 -> 16)
-      expect(lqip).toContain('w=16');
-      expect(lqip).toContain('q=50');
-      expect(lqip).toContain('blur=5');
-    });
-
-    it('should use custom width', () => {
-      const lqip = generateLQIP(baseUrl, 20)!;
-      // 20 -> 24 (ближайший rung)
-      expect(lqip).toContain('w=24');
-    });
-  });
-
-  describe('calculateImageDimensions', () => {
-    it('should calculate scaled dimensions', () => {
-      const dims = calculateImageDimensions(1200, 800, { maxWidth: 600 });
-      expect(dims.width).toBe(600);
-      expect(dims.height).toBe(400);
-    });
-
-    it('should maintain aspect ratio', () => {
-      const dims = calculateImageDimensions(1600, 900, {
-        maxWidth: 800,
-        maxHeight: 600,
-      });
-      const aspectRatio = dims.width / dims.height;
-      const originalRatio = 1600 / 900;
-      expect(Math.abs(aspectRatio - originalRatio)).toBeLessThan(0.01);
-    });
-
-    it('should not upscale', () => {
-      const dims = calculateImageDimensions(400, 300, { maxWidth: 600 });
-      expect(dims.width).toBe(400);
-      expect(dims.height).toBe(300);
-    });
-  });
-
-  describe('buildResponsiveImage', () => {
-    it('should build complete responsive image config', () => {
-      const config = buildResponsiveImage(baseUrl);
-      expect(config.src).toBeDefined();
-      expect(config.srcSet).toBeDefined();
-      expect(config.sizes).toBeDefined();
-      expect(config.format).toBeDefined();
-    });
-
-    it('should return empty for missing URL', () => {
-      const config = buildResponsiveImage('');
-      expect(config.src).toBe('');
-    });
-  });
+  // #1118: тесты `generateSizes`, `generateLQIP`, `calculateImageDimensions` и
+  // `buildResponsiveImage` удалены вместе с самими функциями — ни одна из них не
+  // вызывалась в приложении, а LQIP-хелперы вдобавок просили ширины (15/24),
+  // которых нет в whitelist прокси, то есть вернули бы оригинал. Живой LQIP
+  // приходит из backend-манифеста через `getMediaLqipUrl`.
 });
 
 describe('Web Vitals Monitoring', () => {

@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { getMediaLqipUrl } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
 import { injectSliderGlobalStyles } from './globalStyles';
@@ -171,25 +170,16 @@ const Slide = memo(function Slide({
 
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
-  // Native-only: feed the blurred backdrop a small (~360px) variant so Glide
-  // decodes a downscaled bitmap and runs the blur transform on far fewer pixels
-  // than the full-resolution photo, instead of decoding the large 70%-height
-  // image a second time. The result is blurred anyway, so detail is irrelevant.
-  const nativeBlurSrc = useMemo(() => {
-    if (Platform.OS === 'web') return null;
-    if (!shouldBlur || !resolvedUri) return null;
-    return optimizeImageUrl(resolvedUri, {
-      width: 360,
-      quality: 35,
-      fit: 'cover',
-      // No `blur` param here: the image proxy silently ignores it (verified —
-      // identical bytes for blur absent / 8 / 40), so asking for a server blur
-      // only produced an unblurred upscaled copy. The backdrop is blurred on
-      // device in OptimizedImage; keeping the variant small (~360px) is what
-      // keeps that cheap. If the proxy ever learns `blur`, re-add it here AND
-      // drop the device-side radius, otherwise the backdrop is blurred twice.
-    }) ?? resolvedUri;
-  }, [shouldBlur, resolvedUri]);
+  // Native-only: подложка блюра берёт ТОТ ЖЕ URI, что и резкий слой — сеть дёргается
+  // один раз, второй слой приходит из дискового кэша загрузчика. Дешевизна достигается
+  // decode-размером (~360px, Glide `override`), а не отдельным вариантом с прокси:
+  // блюр считается по маленькому битмапу, деталь всё равно не видна.
+  //
+  // Раньше здесь строился второй URL (`?w=360&q=35`). Он не только удваивал запросы, но
+  // и не всегда был дешевле: на части путей прокси игнорирует малые ширины и отдаёт
+  // почти полный вес. Серверный `blur` тоже не применяется (проверено — одинаковые
+  // байты для blur absent / 8 / 40), поэтому размытие всегда делается на устройстве.
+  const nativeBlurDecodeSize = Platform.OS === 'web' || !shouldBlur ? undefined : 360;
   const mediaLqipUrl = useMemo(() => getMediaLqipUrl(item.media), [item.media]);
   const effectiveBlurBackground = shouldBlur;
   const effectiveAllowCriticalWebBlur = shouldBlur && Platform.OS === 'web';
@@ -378,7 +368,7 @@ const Slide = memo(function Slide({
             height={slideHeightPx}
             fit={mainFit}
             blurBackground={effectiveBlurBackground}
-            blurSrc={nativeBlurSrc}
+            blurDecodeSize={nativeBlurDecodeSize}
             blurRadius={12}
             synchronizeNativeBlurReveal={shouldBlur && Platform.OS !== 'web'}
             placeholderSrc={mediaLqipUrl}

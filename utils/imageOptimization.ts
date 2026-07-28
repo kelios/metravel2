@@ -19,16 +19,9 @@ export {
   getImageCacheStats,
 } from './imageProxy';
 
-// Responsive srcSet / sizes / LQIP / lazy
+// Responsive srcSet / sizes
 export {
   generateSrcSet,
-  generateSizes,
   getResponsiveSizes,
   buildResponsiveImageProps,
-  buildResponsiveImage,
-  buildLqipUrl,
-  generateLQIP,
-  calculateImageDimensions,
-  createLazyImageProps,
-  shouldLoadEager,
 } from './imageSrcSet';

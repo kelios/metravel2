@@ -93,16 +93,19 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       false,
     )
 
-    // 390 snaps up to the 480 ladder rung; q 78 → 80. A DPR-3 phone would
-    // otherwise decode a ~1440px neighbour and stall swipe 1→2, so the neighbour
-    // is capped to dpr 2 (first slide + desktop keep full DPR).
+    // 390 snaps up to the 480 ladder rung; q 78 → 80.
+    //
+    // #1113: раньше сюда добавлялся `dpr` («кап соседей до dpr 2, чтобы свайп 1→2 не
+    // стопорился о декод»). Прокси его игнорирует — замер прода 2026-07-28 даёт
+    // байт-в-байт одинаковый ответ для dpr отсутствующего / 2 / 3, — то есть кап
+    // никогда не действовал, а значение лишь плодило варианты URL одного файла.
     expect(src).toContain('w=480')
     expect(src).toContain('q=80')
-    expect(src).toContain('dpr=2')
     expect(src).toContain('fit=contain')
+    expect(src).not.toMatch(/[?&]dpr=/)
   })
 
-  it('keeps full DPR on non-mobile-width neighbour slides', () => {
+  it('never emits dpr on non-mobile-width neighbour slides either', () => {
     ;(window as any).devicePixelRatio = 3
 
     const src = buildUriWeb(
@@ -116,7 +119,8 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       false,
     )
 
-    expect(src).toContain('dpr=3')
+    expect(src).not.toMatch(/[?&]dpr=/)
+    expect(src).toContain('w=1280')
   })
 
   it('prefers backend media manifest variants for gallery slider images', () => {

@@ -29,11 +29,16 @@ function UserAvatar({ uri, size = 'md', onError }: UserAvatarProps) {
   );
 
   const px = SIZES[size];
+  // #1113: `px * 2` даёт 40/48/64. На старой лестнице 40 и 48 снэпились в ступень
+  // 48, которой у прокси нет, — и он молча отдавал ОРИГИНАЛ аватара (замер прода
+  // 2026-07-28: 88 492 B на плитку 24 CSS-пикселя, `naturalWidth` 1024 в DOM).
+  // Теперь лестница совпадает с whitelist, и все три размера берут ступень 96
+  // (642 B). Высоту не передаём: прокси её игнорирует, а в URL она добавляла
+  // лишний cache-key.
   const optimizedUri = useMemo(
     () =>
       optimizeImageUrl(uri, {
         width: px * 2,
-        height: px * 2,
         quality: 70,
         format: 'auto',
         fit: 'cover',
