@@ -734,7 +734,12 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(String(blurLayer.props.style?.transform || '')).toContain('scale(1.08)')
   })
 
-  it('does not apply extra css blur when backdrop source is already server-blurred', () => {
+  // #1111: подложка больше не заказывает собственный серверный вариант с `blur=`.
+  // Она переиспользует main-URL (одна сетевая загрузка на картинку), а размытие
+  // делает CSS-фильтр. Прежний контракт стоил второго запроса за тем же файлом:
+  // замер прода 2026-07-28 — подложка карточки квеста просила `?w=160`, резкий
+  // слой `?w=320`, и на путях из #1120 это было 2.5 МБ вместо килобайтов, дважды.
+  it('reuses the main image URL for the backdrop instead of a second request', () => {
     let tree: any
     renderer.act(() => {
       tree = renderer.create(
@@ -764,8 +769,14 @@ describe('ImageCardMedia blur background (web)', () => {
     })
 
     expect(blurLayers.length).toBeGreaterThan(0)
-    expect(String(blurLayers[0].props.src || '')).toContain('blur=')
-    expect(blurLayers[0].props.style?.filter).toBe('saturate(1.08)')
+    const backdropSrc = String(blurLayers[0].props.src || '')
+    const mainSrc = String(mainImage.props.src || '')
+
+    // Тот же самый ресурс, что и резкий слой — второй адрес не появляется.
+    expect(backdropSrc).toBe(mainSrc)
+    expect(backdropSrc).not.toContain('blur=')
+    // Раз серверного размытия нет, его обязан дать CSS-фильтр.
+    expect(String(blurLayers[0].props.style?.filter || '')).toContain('blur(')
   })
 
   it('still reports onLoad on a cache-hit mount so the LCP gate releases', () => {

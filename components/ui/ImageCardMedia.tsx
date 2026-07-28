@@ -434,30 +434,21 @@ function ImageCardMedia({
   const webBlurSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
-    // For critical web media (hero/slider), reuse the already selected main image URL
-    // so the blurred surround appears from the same fetched resource instead of a
-    // second optimized background request that can arrive later.
-    if (allowCriticalWebBlur && webMainSrc) return webMainSrc;
+    // Одна картинка — одна сетевая загрузка (#1111). Размытая подложка это производная
+    // от того же изображения, поэтому она ВСЕГДА переиспользует уже выбранный main-URL:
+    // браузер берёт файл из кэша, а размытие делает CSS-фильтр в WebBlurBackdrop.
+    //
+    // Раньше собственный URL строился здесь из своей ширины (`stableWidth * 0.42`), и
+    // подложка расходилась с основным слоем: замер прода 2026-07-28 на карточке квеста
+    // — подложка просила `?w=160`, резкий слой `?w=320`, то есть один файл качался
+    // дважды. На путях, где прокси срывается в отдачу оригинала (#1120), это стоило
+    // 2.5 МБ вместо килобайтов, причём дважды.
+    if (webMainSrc) return webMainSrc;
     if (typeof resolvedSource === 'string') return resolvedSource;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
-    if (isRootRelativeUrl(uri)) return uri;
-
-    // Use stable dimensions to prevent URL changes on scroll
-    const numericWidth = stableWidth ?? 160;
-    const numericHeight = stableHeight ?? 160;
-    const blurWidth = Math.max(96, Math.min(320, Math.round(numericWidth * 0.42)));
-    const blurHeight = Math.max(96, Math.min(320, Math.round(numericHeight * 0.42)));
-
-    return optimizeImageUrl(uri, {
-      width: blurWidth,
-      height: blurHeight,
-      quality: 32,
-      format: 'jpg',
-      fit: 'cover',
-      blur: Math.max(3, Math.round(blurRadius / 2.6)),
-    }) ?? uri;
-  }, [allowCriticalWebBlur, resolvedSource, stableWidth, stableHeight, blurRadius, webMainSrc]);
+    return uri;
+  }, [resolvedSource, webMainSrc]);
 
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
