@@ -29,6 +29,8 @@ async function mockTravelError(
     contentType: 'application/json',
     body: JSON.stringify({ detail }),
   });
+  await page.route(`**/api/travels/resolve-slug/${slug}/**`, handler);
+  await page.route(`**/travels/resolve-slug/${slug}/**`, handler);
   await page.route(`**/api/travels/by-slug/${slug}/**`, handler);
   await page.route(`**/travels/by-slug/${slug}/**`, handler);
 }

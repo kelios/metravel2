@@ -100,7 +100,7 @@ test.describe('Quest finale video', () => {
 
     await page.getByRole('button', { name: 'Начать квест', exact: true }).click()
 
-    const answer = page.getByPlaceholder('Ваш ответ')
+    const answer = page.getByRole('textbox')
     await expect(answer).toBeVisible({ timeout: 30_000 })
     await answer.fill('готово')
     await page.getByRole('button', { name: 'Проверить ответ' }).click()
