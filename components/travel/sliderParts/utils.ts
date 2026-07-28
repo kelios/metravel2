@@ -189,6 +189,9 @@ export const buildUriNative = (
 const PREFERRED_FORMAT =
   Platform.OS === 'web' ? getPreferredImageFormat() : undefined;
 
+/** Вариант из media-манифеста уже прошёл через прокси, если несёт ширину. См. #1116. */
+const MANIFEST_URL_HAS_PROXY_PARAMS = /[?&]w=\d+/;
+
 export const buildUriWeb = (
   img: SliderImage,
   containerWidth?: number,
@@ -233,6 +236,13 @@ export const buildUriWeb = (
     // Прогоняем вариант манифеста через прокси-параметры той же ширины, что и
     // остальные слайды: префетч и выбор браузера сходятся на одном адресе.
     if (fromMedia?.src) {
+      // #1116: но если вариант УЖЕ несёт параметры прокси (`…?w=1280&q=78&fit=contain` —
+      // так выглядят `card_640`/`hero_1280` в манифесте), пересобирать его нельзя.
+      // `snapQuality` округляет 78 → 80, получается второй адрес того же файла: лишняя
+      // конверсия на сервере и расхождение с SSG hero preload, который берёт
+      // канонический manifest-URL. Прогоняем через прокси только «голые» файловые
+      // варианты вроде `-detail_hd.jpg`, ради которых ветка и добавлялась.
+      if (MANIFEST_URL_HAS_PROXY_PARAMS.test(fromMedia.src)) return fromMedia.src;
       return (
         optimizeImageUrl(fromMedia.src, {
           width: targetWidth,
