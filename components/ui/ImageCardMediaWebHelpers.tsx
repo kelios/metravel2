@@ -188,6 +188,14 @@ export const WebMainImage = memo(function WebMainImage({
 
 type WebBlurBackdropProps = {
   src: string;
+  /**
+   * #1111: тот же `srcSet`/`sizes`, что у резкого слоя. Без них подложка грузит
+   * ровно `src`, а main через `srcSet` выбирает другого кандидата — один файл
+   * уезжает в две загрузки. Замер прода 2026-07-28 на карточке квеста: у обоих
+   * слоёв `src` был `?w=160`, но main с `sizes: 132px` при DPR 2 брал `?w=320`.
+   */
+  srcSet?: string;
+  sizes?: string;
   alt?: string;
   width: number;
   height: number;
@@ -200,6 +208,8 @@ type WebBlurBackdropProps = {
 
 export const WebBlurBackdrop = memo(function WebBlurBackdrop({
   src,
+  srcSet,
+  sizes,
   alt = '',
   width,
   height,
@@ -354,6 +364,10 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
       aria-hidden="true"
       data-blur-backdrop="true"
       src={src}
+      // Кандидаты те же, что у резкого слоя, иначе браузер выберет другой вариант
+      // и один файл превратится в две загрузки (#1111).
+      srcSet={srcSet}
+      sizes={sizes}
       alt={alt}
       width={width}
       height={height}
