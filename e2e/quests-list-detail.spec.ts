@@ -7,6 +7,7 @@ import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
 const WAIT_MS = 30_000
 const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/
 const QUEST_ID = 'e2e-minsk-quest'
+const FAR_QUEST_ID = 'e2e-warsaw-quest'
 const IPHONE_SAFARI_USER_AGENT =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 const TINY_PNG = Buffer.from(
@@ -45,6 +46,20 @@ const questMeta = {
   completions_count: 0,
   is_completed_by_me: false,
   first_completer: null,
+}
+
+const farQuestMeta = {
+  ...questMeta,
+  id: questMeta.id + 1,
+  quest_id: FAR_QUEST_ID,
+  title: 'E2E-квест по Варшаве',
+  city_id: '2',
+  city_name: 'Варшава',
+  country_id: '2',
+  country_name: 'Польша',
+  country_code: 'PL',
+  lat: 52.2297,
+  lng: 21.0122,
 }
 
 const questBundle = {
@@ -138,9 +153,46 @@ const getFirstQuestCard = async (page: Page) => {
 }
 
 test.describe('Quests list -> detail', () => {
+  test('nearby is opt-in and filters the full catalog by current location', async ({ page }) => {
+    await page.context().grantPermissions(['geolocation'], { origin: 'http://127.0.0.1:8085' })
+    await page.context().setGeolocation({ latitude: questCity.lat, longitude: questCity.lng })
+    await preacceptCookies(page)
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await mockQuestApis(page, [questMeta, farQuestMeta])
+
+    await gotoWithRetry(page, '/quests')
+
+    const nearbyButton = page.getByTestId('quests-sidebar-nearby-button')
+    const nearbyQuestCard = page.getByTestId(`quest-card-${QUEST_ID}`)
+    const farQuestCard = page.getByTestId(`quest-card-${FAR_QUEST_ID}`)
+
+    await expect(nearbyButton).toBeVisible({ timeout: WAIT_MS })
+    await expect(nearbyButton).not.toHaveAttribute('aria-selected', 'true')
+    await expect(nearbyQuestCard).toBeVisible({ timeout: WAIT_MS })
+    await expect(farQuestCard).toBeVisible({ timeout: WAIT_MS })
+
+    await nearbyButton.click()
+
+    await expect(nearbyButton).toHaveAttribute('aria-label', 'Рядом со мной, 1 квест')
+    await expect(page.getByText('Квесты поблизости', { exact: true })).toBeVisible({ timeout: WAIT_MS })
+    await expect(nearbyQuestCard).toBeVisible({ timeout: WAIT_MS })
+    await expect(farQuestCard).toHaveCount(0)
+  })
+
   test('iPhone Safari reveals sharp quest covers above and below the fold', async ({ page }) => {
     const questItems = Array.from({ length: 3 }, (_, index) => ({
       ...questMeta,
+      ...(index === 2
+        ? {
+            city_id: farQuestMeta.city_id,
+            city_name: farQuestMeta.city_name,
+            country_id: farQuestMeta.country_id,
+            country_name: farQuestMeta.country_name,
+            country_code: farQuestMeta.country_code,
+            lat: farQuestMeta.lat,
+            lng: farQuestMeta.lng,
+          }
+        : {}),
       id: questMeta.id + index,
       quest_id: `${QUEST_ID}-${index}`,
       title: `E2E iPhone cover ${index + 1}`,
@@ -157,6 +209,8 @@ test.describe('Quests list -> detail', () => {
         get: () => 5,
       })
     }, IPHONE_SAFARI_USER_AGENT)
+    await page.context().grantPermissions(['geolocation'], { origin: 'http://127.0.0.1:8085' })
+    await page.context().setGeolocation({ latitude: questCity.lat, longitude: questCity.lng })
     await page.setViewportSize({ width: 390, height: 844 })
     await preacceptCookies(page)
     await mockQuestApis(page, questItems)
@@ -182,6 +236,19 @@ test.describe('Quests list -> detail', () => {
         })),
       ).toEqual({ complete: true, naturalWidth: 1, opacity: '1' })
     }
+
+    await expectNoHorizontalScroll(page)
+
+    const mobileNearbyButton = page.getByTestId('quests-show-nearby')
+    const touchTarget = await mobileNearbyButton.boundingBox()
+    expect(touchTarget?.height ?? 0).toBeGreaterThanOrEqual(44)
+
+    await mobileNearbyButton.click()
+
+    await expect(page.getByText('Квесты поблизости', { exact: true })).toBeVisible({ timeout: WAIT_MS })
+    await expect(page.getByTestId(`quest-card-${QUEST_ID}-0`)).toBeVisible({ timeout: WAIT_MS })
+    await expect(page.getByTestId(`quest-card-${QUEST_ID}-2`)).toHaveCount(0)
+    await expectNoHorizontalScroll(page)
   })
 
   test('guest can browse the quest catalog and open a quest detail', async ({ page }) => {
@@ -215,7 +282,11 @@ test.describe('Quests list -> detail', () => {
     await expect(page.getByRole('heading', { name: /Квесты/i }).first()).toBeVisible({ timeout: WAIT_MS })
 
     // Country grouping: the "Рядом со мной" location filter is always present in the sidebar.
-    await expect(page.getByTestId('quests-sidebar-nearby-button')).toBeVisible({ timeout: WAIT_MS })
+    const nearbyButton = page.getByTestId('quests-sidebar-nearby-button')
+    await expect(nearbyButton).toBeVisible({ timeout: WAIT_MS })
+    // Default catalog state is «Все квесты» and must not masquerade as an
+    // active geolocation filter before the user explicitly requests it.
+    await expect(nearbyButton).not.toHaveAttribute('aria-selected', 'true')
 
     // Map toggle control exists ("Показать квесты на карте" / "на карте").
     await expect(

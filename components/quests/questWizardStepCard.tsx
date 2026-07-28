@@ -19,7 +19,7 @@ import { hapticNotification } from '@/utils/haptics'
 
 import QuestPointNavigator from './QuestPointNavigator'
 import { copyQuestCoords, openQuestMap, type QuestMapApp } from './questWizardHelpers'
-import type { QuestPoiInfo } from './types'
+import type { QuestAnswerChecker, QuestPoiInfo } from './types'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -32,7 +32,7 @@ type QuestStepLike = {
   story: string
   task: string
   hint?: string
-  answer: (input: string) => boolean
+  answer: QuestAnswerChecker
   lat: number
   lng: number
   image?: any
@@ -206,7 +206,14 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   }, [shakeAnim])
 
   const isAutoPassStep = useMemo(
-    () => (step.answer as any)._isAny === true || /\(\)\s*=>\s*true/.test(step.answer.toString()),
+    () => step.answer._isAny === true || /\(\)\s*=>\s*true/.test(step.answer.toString()),
+    [step.answer],
+  )
+  // Шаг со свободным ответом (`any_text`): правильного варианта нет, проверяется
+  // только длина. Порог кладёт `buildAnswerChecker`, чтобы карточка могла
+  // объяснить это игроку, а не отвечать «Неверный ответ» на короткий текст.
+  const freeTextMinLength = useMemo(
+    () => step.answer._freeTextMinLength,
     [step.answer],
   )
   const isPassed = !!savedAnswer && step.id !== 'intro'
@@ -265,12 +272,17 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         Keyboard.dismiss()
       }, 200)
     } else {
-      setError(i18nT('quests:components.quests.questWizardStepCard.nevernyy_otvet_22371740'))
+      // У свободного ответа проверяется ТОЛЬКО длина, поэтому единственная
+      // причина отказа — слишком короткий текст. Говорим об этом прямо:
+      // «Неверный ответ» здесь врёт, правильного варианта не существует.
+      setError(freeTextMinLength
+        ? i18nT('quests:components.quests.questWizardStepCard.slishkom_korotko_value1_3c7f91ab', { value1: freeTextMinLength })
+        : i18nT('quests:components.quests.questWizardStepCard.nevernyy_otvet_22371740'))
       onWrongAttempt()
       shake()
       hapticNotification('error')
     }
-  }, [onSubmit, onWrongAttempt, shake, step, triggerFlip, value])
+  }, [freeTextMinLength, onSubmit, onWrongAttempt, shake, step, triggerFlip, value])
 
   return (
     <Animated.View style={[styles.card, isFlipping && { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>
@@ -345,7 +357,9 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                     <TextInput
                       ref={answerInputRef}
                       style={[styles.input, error ? styles.inputError : null, globalFocusStyles.focusable]}
-                      placeholder={i18nT('quests:components.quests.questWizardStepCard.vash_otvet_21a01dd5')}
+                      placeholder={freeTextMinLength
+                        ? i18nT('quests:components.quests.questWizardStepCard.opishi_svoimi_slovami_5b1e07d2')
+                        : i18nT('quests:components.quests.questWizardStepCard.vash_otvet_21a01dd5')}
                       placeholderTextColor={colors.textMuted}
                       value={value}
                       onChangeText={setValue}
@@ -362,6 +376,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                     <Feather name="arrow-right" size={24} color={colors.textOnPrimary} />
                   </Pressable>
                 </View>
+                {!!freeTextMinLength && !error && (
+                  <Text style={styles.freeTextNote}>
+                    {i18nT('quests:components.quests.questWizardStepCard.svobodnyy_otvet_value1_9d4a2f10', { value1: freeTextMinLength })}
+                  </Text>
+                )}
                 {!!error && (
                   <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{error}</Text>

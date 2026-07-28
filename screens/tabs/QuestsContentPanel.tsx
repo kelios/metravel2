@@ -105,7 +105,7 @@ export default function QuestsContentPanel({
     radiiLg,
     LazyQuestMap,
     isMobile,
-    filtersActive,
+    filtersActive = false,
     onResetFilters,
     onShowKids = () => {},
     onShowBike = () => {},
@@ -121,7 +121,7 @@ export default function QuestsContentPanel({
     // SEO intro + FAQ describe the whole /quests catalog. Show them on the default
     // list view (not in map mode, not while searching) so the visible copy matches
     // the crawlable static block generated for /quests.
-    const showSeoContent = viewMode === 'list' && !searchActive;
+    const showSeoContent = viewMode === 'list' && !searchActive && !filtersActive;
     const seoIntroSlot = showSeoContent ? (
         <View style={styles.seoContentBlock}>
             <QuestsSeoIntroFaq variant="intro" />
@@ -150,12 +150,12 @@ export default function QuestsContentPanel({
                 styles={styles}
                 cityId={getQuestCityId(quest)}
                 quest={quest}
-                nearby={selectedCityId === nearbyId}
+                nearby={selectedCityId === nearbyId && !!userLoc && !isMapAreaActive}
                 cardWidth={questCardWidth}
                 index={index}
             />
         </View>
-    ), [getQuestCityId, nearbyId, questCardWidth, selectedCityId, styles]);
+    ), [getQuestCityId, isMapAreaActive, nearbyId, questCardWidth, selectedCityId, styles, userLoc]);
 
     const questKeyExtractor = useCallback((quest: QuestListItem) => String(quest.id), []);
 
@@ -166,13 +166,15 @@ export default function QuestsContentPanel({
                     <Text style={styles.contentTitle} numberOfLines={2}>
                         {searchActive
                             ? i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
-                            : selectedCityId === nearbyId
-                                ? (isMapAreaActive ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da') : userLoc ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_poblizosti_02dcd1cf') : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd'))
-                                : selectedCityId === kidsFilterId
-                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
-                                    : selectedCityId === bikeFilterId
-                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
-                                        : selectedCityName || i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
+                            : isMapAreaActive
+                                ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da')
+                                : selectedCityId === nearbyId
+                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_poblizosti_02dcd1cf')
+                                    : selectedCityId === kidsFilterId
+                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
+                                        : selectedCityId === bikeFilterId
+                                            ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
+                                            : selectedCityName || i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
                     </Text>
                     <View style={styles.contentCountRow}>
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
@@ -243,14 +245,23 @@ export default function QuestsContentPanel({
                             />
                         </Pressable>
                         <Pressable
-                            style={[styles.headerIconBtn, geoRequesting && styles.headerIconBtnDisabled]}
+                            style={[
+                                styles.headerIconBtn,
+                                selectedCityId === nearbyId && styles.headerIconBtnActive,
+                                geoRequesting && styles.headerIconBtnDisabled,
+                            ]}
                             onPress={onShowNearby}
                             disabled={geoRequesting}
                             accessibilityRole="button"
                             accessibilityLabel={geoRequesting ? i18nT('quests:screens.tabs.QuestsContentPanel.ischem_kvesty_ryadom_so_mnoy_f5a72f30') : i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_ryadom_so_mnoy_d7a7ee55')}
+                            accessibilityState={{ selected: selectedCityId === nearbyId, disabled: geoRequesting }}
                             testID="quests-show-nearby"
                         >
-                            <Feather name="navigation" size={17} color={colors.text} />
+                            <Feather
+                                name="navigation"
+                                size={17}
+                                color={selectedCityId === nearbyId ? colors.textOnPrimary : colors.text}
+                            />
                         </Pressable>
                     </View>
                 )}
@@ -286,7 +297,7 @@ export default function QuestsContentPanel({
         </View>
     );
 
-    const geoMessageBlock = isMobile && geoMessage ? (
+    const geoMessageBlock = geoMessage ? (
         <View style={styles.nearbyCtaBlock}>
             <Text style={styles.geoMessageText} testID="quests-geo-message">
                 {geoMessage}
@@ -401,7 +412,7 @@ export default function QuestsContentPanel({
                             />
                         )}
 
-                        {!searchActive && selectedCityId === nearbyId && userLoc && questsAll.length === 0 && dataLoaded && (
+                        {!searchActive && isMapAreaActive && questsAll.length === 0 && dataLoaded && (
                             <EmptyState
                                 icon="map-pin"
                                 title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
@@ -409,6 +420,22 @@ export default function QuestsContentPanel({
                                 variant="empty"
                                 iconSize={48}
                             />
+                        )}
+
+                        {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && userLoc && questsAll.length === 0 && dataLoaded && (
+                            <EmptyState
+                                icon="map-pin"
+                                title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
+                                description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
+                                variant="empty"
+                                iconSize={48}
+                            />
+                        )}
+
+                        {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && !userLoc && geoRequesting && dataLoaded && (
+                            <View style={styles.mapLoading} testID="quests-nearby-loading">
+                                <ActivityIndicator color={colors.primary} />
+                            </View>
                         )}
 
                         {!searchActive && !selectedCityId && dataLoaded && (
@@ -439,7 +466,7 @@ export default function QuestsContentPanel({
                                         styles={styles}
                                         cityId={getQuestCityId(quest)}
                                         quest={quest}
-                                        nearby={selectedCityId === nearbyId}
+                                        nearby={selectedCityId === nearbyId && !!userLoc && !isMapAreaActive}
                                         cardWidth={questCardWidth}
                                         index={index}
                                     />
@@ -470,7 +497,7 @@ export default function QuestsContentPanel({
                 />
             )}
 
-            {!searchActive && selectedCityId === nearbyId && userLoc && dataLoaded && (
+            {!searchActive && isMapAreaActive && dataLoaded && (
                 <EmptyState
                     icon="map-pin"
                     title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
@@ -478,6 +505,22 @@ export default function QuestsContentPanel({
                     variant="empty"
                     iconSize={48}
                 />
+            )}
+
+            {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && userLoc && dataLoaded && (
+                <EmptyState
+                    icon="map-pin"
+                    title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
+                    description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
+                    variant="empty"
+                    iconSize={48}
+                />
+            )}
+
+            {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && !userLoc && geoRequesting && dataLoaded && (
+                <View style={styles.mapLoading} testID="quests-nearby-loading">
+                    <ActivityIndicator color={colors.primary} />
+                </View>
             )}
 
             {!searchActive && !selectedCityId && dataLoaded && (

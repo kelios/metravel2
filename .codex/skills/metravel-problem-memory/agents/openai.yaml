@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Problem Memory"
+  short_description: "Stops duplicate tickets and tracks recurring faults"
+  default_prompt: "Use $metravel-problem-memory to check prior tasks and recurring problem records before creating or reopening a MeTravel ticket."

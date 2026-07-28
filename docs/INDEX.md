@@ -1,6 +1,6 @@
 # Docs index
 
-Актуализировано: 2026-07-15.
+Актуализировано: 2026-07-28.
 
 `docs/RULES.md` определяет обязательные правила. Не каждый файл в `docs/`
 является source of truth: dated snapshots и legacy adapters классифицированы
@@ -21,6 +21,8 @@
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist;
 - `docs/NATIVE_COMPAT_RULES.md` — web/native compatibility contract;
 - `docs/TASK_BOARD_MCP.md` — единый task board и Task Contract workflow.
+- `docs/PROBLEM_MEMORY.md` — recurring problem families, root causes,
+  canonical task chains и duplicate/reopen preflight; не является backlog.
 
 ## Feature maps и load-bearing contracts
 

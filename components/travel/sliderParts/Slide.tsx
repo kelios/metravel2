@@ -170,16 +170,6 @@ const Slide = memo(function Slide({
 
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
-  // Native-only: подложка блюра берёт ТОТ ЖЕ URI, что и резкий слой — сеть дёргается
-  // один раз, второй слой приходит из дискового кэша загрузчика. Дешевизна достигается
-  // decode-размером (~360px, Glide `override`), а не отдельным вариантом с прокси:
-  // блюр считается по маленькому битмапу, деталь всё равно не видна.
-  //
-  // Раньше здесь строился второй URL (`?w=360&q=35`). Он не только удваивал запросы, но
-  // и не всегда был дешевле: на части путей прокси игнорирует малые ширины и отдаёт
-  // почти полный вес. Серверный `blur` тоже не применяется (проверено — одинаковые
-  // байты для blur absent / 8 / 40), поэтому размытие всегда делается на устройстве.
-  const nativeBlurDecodeSize = Platform.OS === 'web' || !shouldBlur ? undefined : 360;
   const mediaLqipUrl = useMemo(() => getMediaLqipUrl(item.media), [item.media]);
   const effectiveBlurBackground = shouldBlur;
   const effectiveAllowCriticalWebBlur = shouldBlur && Platform.OS === 'web';
@@ -196,10 +186,8 @@ const Slide = memo(function Slide({
     loadedStateRef.current = isLoaded;
   }, [isLoaded]);
 
-  // Подложку блюра НЕ префетчим: этот же слайд рендерит её слоем `blurSrc`, а
-  // Glide не склеивает prefetch-запрос с загрузкой смонтированной картинки —
-  // в access-логе прода каждый URL подложки приходил ровно дважды. На медленном
-  // канале это лишняя копия перед фото тела статьи.
+  // Подложку блюра отдельно не префетчим: оба слоя получают один source/recyclingKey,
+  // а отдельный prefetch снова создал бы лишнюю работу до загрузки слайда (#1111).
 
   // When skipImage is true and firstImagePreloaded is true, immediately report load
   // This ensures the slider upgrade happens even though we skip rendering the image
@@ -368,7 +356,6 @@ const Slide = memo(function Slide({
             height={slideHeightPx}
             fit={mainFit}
             blurBackground={effectiveBlurBackground}
-            blurDecodeSize={nativeBlurDecodeSize}
             blurRadius={12}
             synchronizeNativeBlurReveal={shouldBlur && Platform.OS !== 'web'}
             placeholderSrc={mediaLqipUrl}

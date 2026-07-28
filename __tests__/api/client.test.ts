@@ -271,6 +271,75 @@ describe('src/api/client.ts apiClient', () => {
     expect((options as any).headers.Authorization).toBeUndefined();
   });
 
+  it('web: endpoint-specific 401 не инвалидирует живую cookie-сессию', async () => {
+    Platform.OS = 'web' as typeof Platform.OS;
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => 'endpoint-specific unauthorized',
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+      } as any);
+
+    await expect(apiClient.get('/endpoint-specific-401')).rejects.toEqual(
+      expect.objectContaining({ status: 401 }),
+    );
+
+    expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+    const [probeUrl, probeOptions] = mockedFetchWithTimeout.mock.calls[1];
+    expect(String(probeUrl)).toContain('/user/me/verifications/');
+    expect((probeOptions as any).credentials).toBe('include');
+    expect((probeOptions as any).headers.Authorization).toBeUndefined();
+  });
+
+  it('web: инвалидирует cookie-сессию только когда контрольная проба тоже вернула 401', async () => {
+    Platform.OS = 'web' as typeof Platform.OS;
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => 'unauthorized',
+      } as any)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+      } as any);
+
+    await expect(apiClient.get('/expired-cookie-session')).rejects.toEqual(
+      expect.objectContaining({ status: 401 }),
+    );
+
+    expect(mockedRemoveSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
+  });
+
+  it('web download: единичный 401 не инвалидирует живую cookie-сессию', async () => {
+    Platform.OS = 'web' as typeof Platform.OS;
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => 'download unauthorized',
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+      } as any);
+
+    await expect(apiClient.download('/protected-export')).rejects.toEqual(
+      expect.objectContaining({ status: 401 }),
+    );
+
+    expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+    expect(String(mockedFetchWithTimeout.mock.calls[1][0])).toContain(
+      '/user/me/verifications/',
+    );
+  });
+
   // #810: спонтанный логаут — единичный 401 не должен необратимо стирать токены.
   it('401 с токеном: при живом токене (проба 200) токены НЕ стираются, ответ берётся из fallback', async () => {
     mockedGetSecureItem

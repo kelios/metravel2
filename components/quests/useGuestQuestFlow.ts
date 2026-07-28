@@ -12,6 +12,13 @@ import {
   type GuestQuestProgress,
 } from '@/utils/guestQuestProgress'
 import { fetchOrCreateProgress, updateProgress } from '@/api/quests'
+import {
+  countAnsweredSteps,
+  mergeQuestProgress,
+  normalizeQuestProgressSnapshot,
+  snapshotFromServerProgress,
+  toQuestProgressServerPayload,
+} from '@/utils/questProgressMerge'
 
 type GuestProgressPayload = {
   currentIndex: number
@@ -21,6 +28,8 @@ type GuestProgressPayload = {
   hints: Record<string, boolean>
   showMap: boolean
   completed?: boolean
+  updatedAt?: number
+  answeredAt?: Record<string, number>
 }
 
 type UseGuestQuestFlowParams = {
@@ -70,6 +79,8 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
         hints: data.hints,
         showMap: data.showMap,
         completed: data.completed,
+        updatedAt: data.updatedAt,
+        answeredAt: data.answeredAt,
       })
     },
     [questId],
@@ -94,25 +105,21 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
 
     void (async () => {
       const guestProgress = await loadGuestQuestProgress(questId)
-      if (!guestProgress || Object.keys(guestProgress.answers).length === 0) return
+      if (!guestProgress || countAnsweredSteps(guestProgress.answers) === 0) return
       try {
         const serverProgress = await fetchOrCreateProgress(questId)
-        // Не затираем более полный серверный прогресс, если он уже есть.
-        const serverAnswered = Object.keys(serverProgress.answers ?? {}).length
-        const guestAnswered = Object.keys(guestProgress.answers).length
-        if (serverAnswered < guestAnswered) {
-          await updateProgress(serverProgress.id, {
-            current_index: guestProgress.currentIndex,
-            unlocked_index: guestProgress.unlockedIndex,
-            answers: guestProgress.answers,
-            attempts: guestProgress.attempts,
-            hints: guestProgress.hints,
-            show_map: guestProgress.showMap,
-            completed: guestProgress.completed,
-          })
+        // Тот же путь слияния, что и у авторизованной синхронизации: аккаунт мог
+        // уже пройти часть квеста на другом устройстве — ни гостевые, ни
+        // серверные ответы не теряем.
+        const { merged, serverNeedsPush } = mergeQuestProgress(
+          normalizeQuestProgressSnapshot(guestProgress),
+          snapshotFromServerProgress(serverProgress),
+        )
+        if (serverNeedsPush) {
+          await updateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
           queueAnalyticsEvent('quest_guest_progress_migrated', {
             quest_id: questId,
-            answered: guestAnswered,
+            answered: countAnsweredSteps(merged.answers),
           })
         }
       } finally {

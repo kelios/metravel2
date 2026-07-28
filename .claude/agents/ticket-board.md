@@ -35,7 +35,8 @@ model: sonnet
 
 - **Task**: `title`, `description`, `kind` (`task` | `feature` | `bug`, дефолт `task`), `status`
   (`backlog → todo → in_progress → review → testing → done`; плюс `blocked_by` и `wont_do`), `area`
-  (`front` | `back` | `android` | `ios`), `urgency` (`highest` | `high` | `medium` | `low` | `lowest`),
+  (`front` | `back`; legacy `android`/`ios` только читать), `urgency`
+  (`highest` | `high` | `medium` | `low` | `lowest`),
   `reporter`, `assignee`, `sprint_id`, `position`, `needs_human` (bool), `blocked_by_id`,
   `depends_on_ids[]` (жёсткие зависимости), `related_to_ids[]` (мягкие связи).
 - **Sprint**: `title`, `goal`, `status` (`planned` | `active` | `closed`), `starts_at`, `ends_at`.
@@ -46,11 +47,15 @@ model: sonnet
   `depends_on_ids` — пока не закрыты, тикет не стартует; `related_to_ids` — контекст без блокировки.
   `needs_human=true` — есть ручной шаг человека, агент такую задачу не закрывает сам.
 - **Конвенция заголовка:** префикс источника — `[BE-NNN] …`, `[FE-NNN] …` или
-  `[TASK-YYYYMMDD-NNN] …`. Перед созданием дедуплицируй: `metravel_tasks_list(query="<источник>")`.
+  `[TASK-YYYYMMDD-NNN] …`. До create/reopen/split обязательно вызови
+  `problem-memory`: title query не заменяет поиск по problem key, invariant,
+  endpoint/files и полным descriptions во всех статусах.
 - **Доказательства** дописывай в `description` (changed files, validation, ответы probe,
   reviewer-вердикт) — это журнал, не перезаписывай прошлое.
-- **Task Contract обязателен** для каждой задачи `area=front` или `area=back`. Перед
+- **Problem History + Task Contract обязательны** для каждой задачи `area=front`
+  или `area=back`. Перед
   созданием, переводом в `todo` или закрытием в `done` проверь, что `description` содержит:
+  `Problem key`, `Historical matches`, `Verdict`, `Canonical task`, `Root-cause delta`,
   `Scope`, `User-visible result`, `Data/API contract`, `Dependencies`, `Fallback/mock policy`,
   `Validation`, `Done gate`. Если блока нет, поля пустые или это плейсхолдеры (не архитекторский
   уровень: нет точных shape'ов/полей, реальных board id зависимостей, конкретных проверок) — не
@@ -73,24 +78,19 @@ model: sonnet
 Разрешение спорных: перф-предложение/оптимизация = `task`, перф-ЖАЛОБА на конкретную поломку =
 `bug`; «эндпоинт медленный, нет кэша» = `bug`; авторинг контента = `task`.
 
-**⚠️ MCP `metravel_task_create`/`metravel_task_update` НЕ умеют писать `kind`** (поля нет в их
-схеме). DRF-модель его поддерживает (`choices: task | feature | bug`, `read_only:false`). Поэтому:
-сначала создай задачу через MCP, затем выставь `kind` прямым PATCH в DRF API (токен из
-`.secrets/metravel-task-board.env`, не печатать):
-
-```bash
-. .secrets/metravel-task-board.env
-curl -s -X PATCH "$METRAVEL_TASK_BOARD_BASE_URL/api/tasks/<ID>/" \
-  -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" \
-  -H "Content-Type: application/json" -d '{"kind":"bug"}' >/dev/null
-```
-
-Проверить распределение по борду: `GET /api/tasks/?limit=1000` → группировка по `kind`.
+Текущий MCP принимает `kind` в `metravel_task_create` и
+`metravel_task_update`: передавай его в той же атомарной операции. Не дописывай
+поле отдельным raw API PATCH.
 
 ## Приёмка и закрытие в `done`
 
 - Перевод в `done` после приёмки — через агента `board-reviewer` / skill `/sprint-review`: статус
   меняется только с evidence, закрывающим `Done gate` (тесты + браузер/API-проба против target env).
+- Для code/deploy task проверь, что implementation commit достижим из canonical
+  `main`/`origin/main`; hash из временного checkout не является integration evidence.
+- Для recurring lifecycle/ops problem требуй несколько контрактных циклов
+  (например restart + последовательные deploy swaps), если один smoke не
+  воспроизводит корневую причину.
 - Сам по себе ты статус в `done` по запросу обновляешь, но без evidence в `description` — не двигай;
   если доказательства нет, оставь `review` и сообщи, что нужна приёмка.
 
@@ -104,17 +104,21 @@ curl -s -X PATCH "$METRAVEL_TASK_BOARD_BASE_URL/api/tasks/<ID>/" \
 ## Сценарии
 
 - **Показать борд:** `metravel_task_board` → краткая сводка по колонкам (front/back раздельно).
-- **Завести тикет:** дедуп → `metravel_task_create` с `area` (front/back/android/ios), `urgency`,
+- **Завести тикет:** `problem-memory` → `Problem Memory Verdict`. При `reuse`
+  обнови canonical task и не создавай новую; при `reopen` переоткрой canonical
+  task с `Recurrence Log`; только `create-linked|create-new` разрешают
+  `metravel_task_create` с `area` (`front`/`back`), `kind`, `urgency`,
   `reporter`, нужным `sprint_id`, заголовком-префиксом и заполненным `description` (Goal/Context/AC
-  + обязательный `Task Contract` из `docs/TASK_BOARD_MCP.md`). **Сразу после создания выставь
-  `kind`** (`bug`/`feature`/`task`) прямым PATCH — см. «Категория задачи (`kind`)» (MCP его не
-  пишет). Если задача зависит от другой — проставь `depends_on_ids`/`blocked_by_id`; смежные по
+  + обязательные `Problem History` и `Task Contract` из
+  `docs/TASK_BOARD_MCP.md`). Если задача зависит от другой — проставь
+  `depends_on_ids`/`blocked_by_id`; смежные по
   контексту — `related_to_ids`; требует ручного шага человека — `needs_human=true`. Верни id.
 - **Обновить статус:** `metravel_task_update(id, status=…, assignee=…)` + дописать evidence.
   В `done` двигай только если evidence закрывает `Done gate`; для FE/BE зависимостей проверь
   runtime endpoint/field/event на целевом окружении, а не только статус соседней задачи.
-- **Импорт локальных TASK-файлов** (`tasks/NNN-*.md`): для каждого открытого файла дедуп по
-  заголовку → создать задачу на борде с `area` (back для бэкенд-репо, front для этого репо),
+- **Импорт локальных TASK-файлов** (`tasks/NNN-*.md`): для каждого открытого
+  файла сначала получи Problem Memory Verdict. При `create-linked|create-new`
+  создай задачу на борде с `area` (back для бэкенд-репо, front для этого репо),
   перенести Goal/Context/AC в `description`, проставить `reporter=frontend`. Отчитайся
   таблицей «файл → task id». Файлы НЕ удаляй сам (это делает оркестратор после подтверждения).
 - **Активный спринт:** если нет ни одного `status=active`, предложи создать

@@ -19,6 +19,7 @@ import { useActionConsent } from '@/hooks/useActionConsent';
 import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
+import { snapshotFromServerProgress } from '@/utils/questProgressMerge';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { buildQuestSeoMetadata } from '@/utils/questSeo';
@@ -370,17 +371,15 @@ export default function QuestByIdScreen() {
         attempts: guest.attempts,
         hints: guest.hints,
         showMap: guest.showMap,
+        completed: guest.completed,
+        updatedAt: guest.updatedAt,
+        answeredAt: guest.answeredAt,
       };
     }
     if (!backendProgress) return undefined;
-    return {
-      currentIndex: backendProgress.current_index,
-      unlockedIndex: backendProgress.unlocked_index,
-      answers: backendProgress.answers ?? {},
-      attempts: backendProgress.attempts ?? {},
-      hints: backendProgress.hints ?? {},
-      showMap: backendProgress.show_map ?? true,
-    };
+    // Полный снапшот (включая updated_at) — визард сливает его с локальным, а не
+    // перезаписывает: прогресс мог идти параллельно на другом устройстве.
+    return snapshotFromServerProgress(backendProgress);
   }, [backendProgress, guestFlow.guestInitial, isAuthenticated]);
   const structuredDataTags = useMemo(() => {
     if (!bundle || !questId) return null;

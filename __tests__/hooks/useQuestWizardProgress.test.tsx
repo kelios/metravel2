@@ -50,7 +50,7 @@ describe('useQuestWizardProgress', () => {
 
     const saved = await AsyncStorage.getItem('quest_progress_test')
     expect(saved).not.toBeNull()
-    expect(JSON.parse(saved!)).toEqual({
+    expect(JSON.parse(saved!)).toMatchObject({
       index: 1,
       unlocked: 2,
       answers: { 'step-1': 'dragon' },
@@ -116,6 +116,106 @@ describe('useQuestWizardProgress', () => {
 
     const saved = await AsyncStorage.getItem(storageKey)
     expect(JSON.parse(saved!).answers).toEqual({ intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' })
+  })
+
+  it('сливает ответы двух устройств вместо выбора победителя', async () => {
+    // Телефон A прошёл офлайн step-1, телефон B онлайн записал step-2 на сервер.
+    const storageKey = 'quest_progress_two_devices'
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
+      index: 1,
+      unlocked: 1,
+      answers: { intro: 'start', 'step-1': 'dragon' },
+      attempts: { 'step-1': 2 },
+      hints: {},
+      showMap: true,
+      updatedAt: 1_785_000_100_000,
+      answeredAt: { intro: 1_785_000_000_000, 'step-1': 1_785_000_100_000 },
+    }))
+
+    const onProgressChange = jest.fn()
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        initialProgress: {
+          currentIndex: 2,
+          unlockedIndex: 2,
+          answers: { intro: 'start', 'step-2': 'castle' },
+          attempts: { 'step-2': 1 },
+          hints: { 'step-2': true },
+          showMap: true,
+          updatedAt: 1_785_000_050_000,
+        },
+        onProgressChange,
+      })
+    )
+
+    // Ни один ответ не потерян — ни локальный, ни серверный.
+    await waitFor(() => {
+      expect(result.current.answers).toEqual({
+        intro: 'start',
+        'step-1': 'dragon',
+        'step-2': 'castle',
+      })
+    })
+    expect(result.current.attempts).toEqual({ 'step-1': 2, 'step-2': 1 })
+    expect(result.current.hints).toEqual({ 'step-2': true })
+    expect(result.current.unlockedIndex).toBe(2)
+    expect(result.current.allCompleted).toBe(true)
+
+    // Слитое уходит на сервер: серверу не хватало step-1.
+    await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+      completed: true,
+    }))
+
+    const saved = JSON.parse((await AsyncStorage.getItem(storageKey))!)
+    expect(saved.answers).toEqual({ intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' })
+  })
+
+  it('доливает ответы другого устройства, пришедшие во время сессии, не двигая курсор', async () => {
+    const storageKey = 'quest_progress_live_merge'
+    const makeInitial = (answers: Record<string, string>, updatedAt: number) => ({
+      currentIndex: 1,
+      unlockedIndex: 1,
+      answers,
+      attempts: {},
+      hints: {},
+      showMap: true,
+      updatedAt,
+    })
+
+    const { result, rerender } = renderHook(
+      ({ initialProgress }) =>
+        useQuestWizardProgress({
+          allSteps,
+          steps: questSteps,
+          storageKey,
+          initialProgress,
+        }),
+      { initialProps: { initialProgress: makeInitial({ 'step-1': 'dragon' }, 1_785_000_000_000) } }
+    )
+
+    await waitFor(() => expect(result.current.answers['step-1']).toBe('dragon'))
+
+    // Игрок на шаге 2 этого устройства.
+    act(() => {
+      result.current.setCurrentIndex(2)
+    })
+
+    // Ответ второго устройства прилетел в ответе сервера.
+    rerender({
+      initialProgress: makeInitial(
+        { 'step-1': 'dragon', 'step-2': 'castle' },
+        1_785_000_900_000,
+      ),
+    })
+
+    await waitFor(() => expect(result.current.answers['step-2']).toBe('castle'))
+    // Курсор игрока на месте: шаг под ним не двигаем.
+    expect(result.current.currentIndex).toBe(2)
   })
 
   it('still lets a richer backend progress overwrite a poorer local copy', async () => {
@@ -316,7 +416,7 @@ describe('useQuestWizardProgress', () => {
     expect(onProgressReset).toHaveBeenCalled()
 
     const saved = await AsyncStorage.getItem('quest_progress_reset')
-    expect(JSON.parse(saved!)).toEqual({
+    expect(JSON.parse(saved!)).toMatchObject({
       index: 0,
       unlocked: 0,
       answers: {},

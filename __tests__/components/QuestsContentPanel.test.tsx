@@ -15,11 +15,12 @@ jest.mock('@/screens/tabs/QuestCard', () => {
     const React = require('react');
     const { Text } = require('react-native');
 
-    return function MockQuestCard({ cityId, quest, index }: { cityId: string; quest: { id: string; title: string }; index?: number }) {
+    return function MockQuestCard({ cityId, quest, index, nearby }: { cityId: string; quest: { id: string; title: string }; index?: number; nearby?: boolean }) {
         return React.createElement(Text, {
             testID: `quest-card-${quest.id}`,
             accessibilityLabel: cityId,
             accessibilityHint: String(index),
+            accessibilityState: { selected: Boolean(nearby) },
         }, quest.title);
     };
 });
@@ -473,7 +474,9 @@ describe('QuestsContentPanel', () => {
             />
         );
 
-        fireEvent.press(getByTestId('quests-show-nearby'));
+        const nearbyButton = getByTestId('quests-show-nearby');
+        expect(nearbyButton.props.accessibilityState).toEqual({ selected: true, disabled: false });
+        fireEvent.press(nearbyButton);
 
         expect(onShowNearby).toHaveBeenCalledTimes(1);
         expect(getByText('Разрешите доступ к геолокации.')).toBeTruthy();
@@ -612,6 +615,100 @@ describe('QuestsContentPanel', () => {
             <QuestsContentPanel {...baseProps} selectedCityId="__nearby__" selectedCityName="Рядом" filtersActive={false} />
         );
         expect(queryByTestId('quests-reset-filters')).toBeNull();
+    });
+
+    it('keeps the default full catalog distinct from nearby and map-area filters', () => {
+        (Platform as { OS: string }).OS = 'web';
+        const baseProps = {
+            styles,
+            colors,
+            dataLoaded: true,
+            viewMode: 'list' as const,
+            selectedCityName: null,
+            nearbyId: '__nearby__',
+            questsAll: [makeQuest(0)],
+            questCardWidth: 320,
+            mapPoints: [],
+            mapCenter: { latitude: 52.23, longitude: 21.01 },
+            userLoc: { lat: 52.23, lng: 21.01 },
+            geoMessage: null,
+            geoRequesting: false,
+            showMapAreaSearch: false,
+            radiiLg: 24,
+            LazyQuestMap: () => null,
+            isMobile: false,
+            onResetFilters: () => {},
+            onShowNearby: () => {},
+            onOpenFilterDrawer: () => {},
+            onToggleViewMode: () => {},
+            onMapUserLocationChange: () => {},
+            onMapMove: () => {},
+            onSearchMapArea: () => {},
+        };
+
+        const { getByText, getByTestId, queryAllByTestId, rerender } = render(
+            <QuestsContentPanel
+                {...baseProps}
+                selectedCityId="__all__"
+                isMapAreaActive={false}
+                filtersActive={false}
+            />,
+        );
+
+        expect(getByText('Все квесты')).toBeTruthy();
+        expect(getByTestId('quest-card-quest-0').props.accessibilityState?.selected).toBe(false);
+        expect(queryAllByTestId('quests-seo-intro-faq')).toHaveLength(2);
+
+        rerender(
+            <QuestsContentPanel
+                {...baseProps}
+                selectedCityId="__all__"
+                isMapAreaActive
+                filtersActive
+            />,
+        );
+
+        expect(getByText('Квесты в этой области')).toBeTruthy();
+        expect(getByTestId('quest-card-quest-0').props.accessibilityState?.selected).toBe(false);
+        expect(queryAllByTestId('quests-seo-intro-faq')).toHaveLength(0);
+    });
+
+    it('shows a geolocation failure message on desktop while falling back to all quests', () => {
+        (Platform as { OS: string }).OS = 'web';
+
+        const { getByText } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="__all__"
+                selectedCityName={null}
+                nearbyId="__nearby__"
+                questsAll={[makeQuest(0)]}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage="Геолокация запрещена. Показываем весь каталог."
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={() => null}
+                isMobile={false}
+                filtersActive={false}
+                onResetFilters={() => {}}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />,
+        );
+
+        expect(getByText('Геолокация запрещена. Показываем весь каталог.')).toBeTruthy();
     });
 
     it('shows the search-this-area action on the quest map and forwards map moves', () => {

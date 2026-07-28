@@ -159,6 +159,51 @@ describe('OptimizedImage', () => {
     expect((getByTestId('expo-image') as any).props.fetchPriority).toBe('high')
   })
 
+  it('gives native blur and sharp layers one source contract', () => {
+    const previousPlatform = Platform.OS
+    ;(Platform as any).OS = 'android'
+    let unmount: (() => void) | undefined
+
+    try {
+      const rendered = render(
+        <OptimizedImage
+          source={{ uri: 'https://metravel.by/travel-image/1436/photo.jpg?w=480&q=60' }}
+          blurBackground
+          cachePolicy="none"
+          recyclingKey="travel-1436-photo"
+          imageProps={{ testID: 'shared-photo' }}
+        />
+      )
+      unmount = rendered.unmount
+
+      const sharp = rendered.getByTestId('shared-photo') as any
+      expect(rendered.queryByTestId('shared-photo-blur-background')).toBeNull()
+
+      // The sharp request must finish before the transformed backdrop mounts;
+      // otherwise two cold Glide targets can still race to the network.
+      act(() => {
+        fireEvent(sharp, 'onLoad')
+      })
+
+      const backdrop = rendered.getByTestId('shared-photo-blur-background') as any
+
+      // #1111: object identity matters in addition to URI equality. Adding an
+      // alternate URL or width/height override makes Glide build another request.
+      expect(backdrop.props.source).toBe(sharp.props.source)
+      expect(backdrop.props.source).toEqual({
+        uri: 'https://metravel.by/travel-image/1436/photo.jpg?w=480&q=60',
+      })
+      expect(backdrop.props.recyclingKey).toBe(sharp.props.recyclingKey)
+      expect(backdrop.props.cachePolicy).toBe(sharp.props.cachePolicy)
+      expect(backdrop.props.cachePolicy).toBe('memory-disk')
+      expect(backdrop.props.source).not.toHaveProperty('width')
+      expect(backdrop.props.source).not.toHaveProperty('height')
+    } finally {
+      unmount?.()
+      ;(Platform as any).OS = previousPlatform
+    }
+  })
+
   it('generateSizes uses defaults and allows overriding breakpoints', () => {
     const value = generateSizes()
     expect(value).toContain('100vw')

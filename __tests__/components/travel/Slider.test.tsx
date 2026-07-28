@@ -397,7 +397,6 @@ describe('Slider', () => {
     )
 
     const adjacentImage = getByTestId('slider-image-1')
-    const adjacentBackdrop = getByTestId('slider-image-1-blur-background')
     const readOpacity = (style: unknown) => {
       const entries = (Array.isArray(style) ? style.flat(Infinity) : [style])
         .filter((entry): entry is Record<string, unknown> => !!entry && typeof entry === 'object')
@@ -405,14 +404,26 @@ describe('Slider', () => {
     }
 
     expect(adjacentImage.props.priority).toBe('high')
+    expect(() => getByTestId('slider-image-1-blur-background')).toThrow()
+    expect(readOpacity(adjacentImage.props.style)).toBe(0)
+
+    act(() => {
+      adjacentImage.props.onLoad?.()
+    })
+
+    const adjacentBackdrop = getByTestId('slider-image-1-blur-background')
     expect(adjacentBackdrop.props.priority).toBe('high')
+    expect(adjacentBackdrop.props.source).toBe(adjacentImage.props.source)
+    expect(adjacentBackdrop.props.recyclingKey).toBe(adjacentImage.props.recyclingKey)
+    expect(adjacentBackdrop.props.source).not.toHaveProperty('width')
+    expect(adjacentBackdrop.props.source).not.toHaveProperty('height')
     // The backdrop must be blurred ON DEVICE. It used to be 0 here on the
     // assumption that the image proxy pre-blurred the small variant, but the
     // proxy silently ignores the `blur` query param (identical bytes for blur
     // absent / 8 / 40), so the Android hero showed an unblurred upscaled copy
     // of the photo with readable detail instead of a frosted backdrop.
     expect(adjacentBackdrop.props.blurRadius).toBeGreaterThan(0)
-    expect(readOpacity(adjacentImage.props.style)).toBe(0)
+    expect(readOpacity(getByTestId('slider-image-1').props.style)).toBe(0)
 
     act(() => {
       adjacentBackdrop.props.onLoad?.()

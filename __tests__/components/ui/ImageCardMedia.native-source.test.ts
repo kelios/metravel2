@@ -1,4 +1,4 @@
-import { buildNativeBlurSource, buildNativeSharpImageSource } from '@/components/ui/ImageCardMedia'
+import { buildNativeSharpImageSource } from '@/components/ui/ImageCardMedia'
 
 describe('ImageCardMedia native sharp source', () => {
   const originalApiUrl = process.env.EXPO_PUBLIC_API_URL
@@ -62,52 +62,5 @@ describe('ImageCardMedia native sharp source', () => {
     expect(source?.uri).toContain('w=800')
     expect(source?.uri).not.toMatch(/w=(1024|2048)\b/)
     expect(source?.uri).not.toMatch(/[?&]h=/)
-  })
-})
-
-// Regression guard for #1111: the blur backdrop must never introduce a second
-// network address. A separate downscaled URL used to be requested per card, and
-// on paths where the proxy ignored small widths it cost as much as the photo.
-describe('ImageCardMedia native blur backdrop reuses one fetch', () => {
-  const sharpUri = 'https://metravel.by/travel-image/1436/conversions/photo-thumb_200.jpg?w=480&q=60'
-
-  it('reuses the sharp URI verbatim and only overrides decode size', () => {
-    const blur = buildNativeBlurSource({
-      blurBackground: true,
-      source: { uri: sharpUri },
-      blurDecodeSize: 360,
-    })
-
-    expect(blur?.uri).toBe(sharpUri)
-    expect(blur?.width).toBe(360)
-    expect(blur?.height).toBe(360)
-  })
-
-  it('never rewrites the URL to a smaller proxy variant', () => {
-    const blur = buildNativeBlurSource({
-      blurBackground: true,
-      source: { uri: 'https://metravel.by/quest-cover/quests/68/main/cover.png' },
-    })
-
-    expect(blur?.uri).toBe('https://metravel.by/quest-cover/quests/68/main/cover.png')
-    expect(blur?.uri).not.toMatch(/w=96|q=30/)
-  })
-
-  it('honours an explicit blurSrc when the caller supplies a real alternative', () => {
-    const lqip = 'https://metravel.by/travel-image/1436/conversions/photo-lqip.jpg'
-    const blur = buildNativeBlurSource({
-      blurBackground: true,
-      source: { uri: sharpUri },
-      blurSrc: lqip,
-      blurDecodeSize: 128,
-    })
-
-    expect(blur?.uri).toBe(lqip)
-  })
-
-  it('produces nothing when the backdrop is disabled or the source is unusable', () => {
-    expect(buildNativeBlurSource({ blurBackground: false, source: { uri: sharpUri } })).toBeUndefined()
-    expect(buildNativeBlurSource({ blurBackground: true, source: null })).toBeUndefined()
-    expect(buildNativeBlurSource({ blurBackground: true, source: { uri: '   ' } })).toBeUndefined()
   })
 })

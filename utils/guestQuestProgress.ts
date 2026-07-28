@@ -18,6 +18,9 @@ export type GuestQuestProgress = {
   hints: Record<string, boolean>
   showMap: boolean
   completed?: boolean
+  /** Времена для слияния с аккаунтом при логине (см. utils/questProgressMerge) */
+  updatedAt?: number
+  answeredAt?: Record<string, number>
 }
 
 const guestQuestKey = (questId: string): string => `${GUEST_QUEST_PROGRESS_PREFIX}${questId}`
@@ -38,6 +41,8 @@ export async function loadGuestQuestProgress(questId: string): Promise<GuestQues
       hints: parsed.hints && typeof parsed.hints === 'object' ? parsed.hints : {},
       showMap: parsed.showMap !== false,
       completed: Boolean(parsed.completed),
+      updatedAt: Number(parsed.updatedAt) || 0,
+      answeredAt: parsed.answeredAt && typeof parsed.answeredAt === 'object' ? parsed.answeredAt : {},
     }
   } catch {
     // Приватный режим браузера / повреждённый JSON — ведём себя как без прогресса.

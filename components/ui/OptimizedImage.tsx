@@ -109,13 +109,6 @@ interface OptimizedImageProps {
   source: { uri: string } | number;
   contentFit?: ImageContentFit;
   blurBackground?: boolean;
-  /**
-   * Native-only: smaller image variant used for the blurred backdrop layer so
-   * Glide decodes a downscaled bitmap (and applies the blur transform on far
-   * fewer pixels) instead of re-decoding the full-resolution photo a second
-   * time. Falls back to the main source when omitted.
-   */
-  blurSource?: { uri: string; width?: number; height?: number };
   /** Keep the native sharp layer hidden until the blur backdrop has decoded. */
   synchronizeBlurReveal?: boolean;
   blurBackgroundRadius?: number;
@@ -177,7 +170,6 @@ function OptimizedImage({
   source,
   contentFit = 'cover',
   blurBackground = false,
-  blurSource,
   synchronizeBlurReveal = false,
   blurBackgroundRadius = 16,
   blurOnly = false,
@@ -291,13 +283,17 @@ function OptimizedImage({
     validSource &&
     !webBlobOrDataUri &&
     !shouldDisableNetwork;
+  const effectiveCachePolicy = shouldRenderBlurBackground ? 'memory-disk' : cachePolicy;
 
-  const blurUriKey = useMemo(() => {
-    if (!blurSource?.uri) return uriKey;
-    return String(blurSource.uri).trim();
-  }, [blurSource, uriKey]);
-  const blurLoadKey = `${resetKey}|${blurUriKey}`;
+  const blurLoadKey = `${resetKey}|blur`;
+  const [loadedSharpKey, setLoadedSharpKey] = useState<string | null>(null);
   const [loadedBlurKey, setLoadedBlurKey] = useState<string | null>(null);
+  // #1111: do not start two sibling Glide requests on a cold cache. Even with
+  // an identical URI, parallel transformed targets can miss request coalescing.
+  // Mount the backdrop only after the sharp layer has completed, so its second
+  // decode reuses the already populated memory/disk data cache.
+  const shouldMountBlurBackground =
+    shouldRenderBlurBackground && loadedSharpKey === resetKey;
   const shouldSynchronizeBlurReveal =
     synchronizeBlurReveal && shouldRenderBlurBackground;
   const isBlurRevealReady =
@@ -305,6 +301,7 @@ function OptimizedImage({
 
   const handleLoad = () => {
     if (!mountedRef.current) return;
+    setLoadedSharpKey(resetKey);
     setIsLoading(false);
     setHasError(false);
     onLoad?.();
@@ -430,22 +427,19 @@ function OptimizedImage({
         />
       )}
 
-      {shouldRenderBlurBackground && (
+      {shouldMountBlurBackground && (
         <>
           <ExpoImage
-            source={(blurSource ?? activeSource) as any}
+            source={activeSource as any}
+            recyclingKey={recyclingKey}
             contentFit="cover"
             transition={0}
             style={StyleSheet.absoluteFill}
-            cachePolicy={cachePolicy}
-            // A caller-provided blurSource is a small downscaled variant, but it is
-            // NOT pre-blurred: the image proxy silently ignores the `blur` query
-            // param (verified — identical bytes for blur absent / 8 / 40). Zeroing
-            // the radius here left the Android hero backdrop as a plain upscaled
-            // copy of the photo with fully readable detail instead of a blur.
-            // Blur it on device instead. The radius stays the caller's value —
-            // if it reads too weak/strong on a real device, tune it at the call
-            // site (slider hero passes blurRadius={12}), not here.
+            cachePolicy={effectiveCachePolicy}
+            // #1111: backdrop and sharp layer intentionally receive the exact same
+            // source object and recycling key. A second optimized/LQIP URI (or a
+            // width/height override on this source) creates a distinct Glide request
+            // and can download the same photo twice. Blur stays an on-device transform.
             blurRadius={blurBackgroundRadius}
             placeholder={resolvedPlaceholder}
             priority={priority}
@@ -500,7 +494,7 @@ function OptimizedImage({
             crossOrigin: webCrossOrigin,
           })}
           // Кэширование
-          cachePolicy={cachePolicy}
+          cachePolicy={effectiveCachePolicy}
         />
       )}
 

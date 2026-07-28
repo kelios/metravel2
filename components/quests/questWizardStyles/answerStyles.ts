@@ -104,6 +104,9 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
     linkSeparator: { color: colors.borderStrong, fontSize: 13 },
 
     hintPrompt: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: SPACING.xs },
+    // Пояснение под полем для шагов со свободным ответом: снимает вопрос
+    // «что от меня хотят» до первой попытки, а не после отказа.
+    freeTextNote: { fontSize: 12, color: colors.textMuted, marginTop: SPACING.xs, lineHeight: 17 },
     hintContainer: {
         backgroundColor: colors.successSoft,
         paddingHorizontal: SPACING.md,

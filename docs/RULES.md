@@ -142,6 +142,17 @@ npm run test:run
   - use ignored locations like `tmp/`, `artifacts/`, `test-results/`, `playwright-report/` or keep them outside the repository;
   - if a temporary debug file already appeared in the root or in git, remove it in the same task instead of leaving it behind.
 - Task board tracking (mandatory):
+  - before creating, reopening, or splitting a task, run the problem-history
+    preflight from `docs/PROBLEM_MEMORY.md` through
+    `$metravel-problem-memory`; search all board statuses, including `done` and
+    `wont_do`, and record `reuse | reopen | create-linked | create-new`;
+  - reuse an existing open task for the same work; reopen the canonical task
+    when the same confirmed root cause/invariant failed again; create a linked
+    task only when the confirmed cause or corrective owner differs;
+  - recurring problems must append a dated `Recurrence Log` with the prior task,
+    failed invariant, cause comparison, previous Done-gate gap, corrective layer
+    and new regression control. Do not infer reopen counts from
+    `created_at`/`updated_at` when immutable status history is unavailable;
   - frontend, backend, and cross-functional work items must be created on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`;
   - task `area` is only `front` or `back` for active workflow: Android/native app
     bugs are `area=front` with `[AND-...]` context and paired mobile-web/Android
@@ -152,6 +163,25 @@ npm run test:run
   - every new board task, including Android/native QA bugs filed as `area=front`, must be assigned to the current active sprint unless `docs/TASK_BOARD_MCP.md` defines a more specific active sprint rule;
   - do not create new local `tasks/*.md` task files as the normal workflow; local task files are only a temporary fallback/migration draft when the board is unavailable, and must be imported/synced to the board before handoff;
   - do not create ad-hoc backend task notes outside the board workflow.
+- Validation evidence quality (mandatory) — full rationale and the incident behind
+  each rule is in `docs/TASK_BOARD_MCP.md` → `#### Качество evidence`:
+  - measure a quantity, not the absence of an error: `200 OK`, "page opened" or "no
+    crash" is not evidence. A task about a transform, size, count or order must record
+    the before/after number (bytes, request count, rendered width, duration);
+  - fail-open is forbidden both as behaviour and as validation: an unsupported input
+    must be observably distinguishable from a valid one, never silently degraded to a
+    heavy or generic result. `Validation` must include that negative probe;
+  - a build-time or deploy-time check does not satisfy the Done gate for a
+    user/crawler-visible production surface; a recurring production probe that fails on
+    regression is required;
+  - a test that mocks the primitive under investigation is not contract evidence: when
+    the defect is in how a value is constructed (URL, payload, cache key), at least one
+    test must exercise the real construction path;
+  - a consolidation task does not close without naming the CI guard that fails when the
+    new single contract is bypassed;
+  - from the third recurrence in one problem family, a further point fix is only
+    acceptable as a temporary mitigation with an owner and a removal condition, and the
+    structural task must exist and be linked.
 - For performance checks (Lighthouse), run against a production web export:
 
 ```bash
@@ -415,6 +445,11 @@ npx serve dist/prod -l 3000 -s
 - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
 - Images must preserve original aspect ratio (use `contain`) and any unused area should be filled by a blurred version of the same image.
+- One visual image slot must use one effective network URI across sharp and blurred layers on web and native.
+  - Derive the backdrop from the same loaded source/bitmap (or from backend-provided `blurhash`/`dominant_color` without another photo request).
+  - Do not build or pass a second blur-only URL, `blurSrc`, `blurSource`, or source-level `width`/`height` override for the backdrop.
+  - On native, both Expo Image layers must share `source`, `cachePolicy="memory-disk"`, and `recyclingKey`; on web, the backdrop reuses the main `src` and applies CSS blur.
+  - Validate this invariant with URL-cardinality/network-byte evidence in addition to renderer tests and `npm run check:image-architecture`.
 - Published travel/article media (covers, rich-text description images, gallery images, and map-point photos) must be real photos, user-approved licensed photos, or photorealistic generated images saved as local raster files before upload.
   - Do not use flat SVG, Playwright screenshot, vector, icon-like, schematic, cartoon, generic illustration, or "photo-like" placeholder generation for these surfaces.
   - If a suitable photorealistic image cannot be generated or sourced, leave the media unchanged and report the blocker instead of uploading a stylized substitute.

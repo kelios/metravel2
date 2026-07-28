@@ -117,6 +117,7 @@ type QuestsSidebarProps = {
     colors: ThemedColors;
     viewMode: 'list' | 'map';
     selectedCityId: string | null;
+    nearbyRequesting: boolean;
     nearbyId: string;
     kidsFilterId: string;
     bikeFilterId: string;
@@ -137,6 +138,7 @@ export default function QuestsSidebar({
     colors,
     viewMode,
     selectedCityId,
+    nearbyRequesting,
     nearbyId,
     kidsFilterId,
     bikeFilterId,
@@ -160,6 +162,10 @@ export default function QuestsSidebar({
     const mapActionActive = viewMode === 'map';
     const mapActionLabel = viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_spiskom_0029a3b3') : i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_na_karte_d06a6df4');
     const toggleAllLabel = areAllCountryGroupsCollapsed ? i18nT('quests:screens.tabs.QuestsSidebar.razvernut_vse_strany_58a7fc2c') : i18nT('quests:screens.tabs.QuestsSidebar.svernut_vse_strany_ee35b08d');
+    const nearbyQuestCount = cityQuestCountById[nearbyId];
+    const nearbyAccessibilityLabel = typeof nearbyQuestCount === 'number'
+        ? i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_value1_3b987cd8', { value1: pluralizeQuest(nearbyQuestCount) })
+        : i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_28d9b150');
 
     return (
         <View style={styles.sidebar}>
@@ -200,9 +206,10 @@ export default function QuestsSidebar({
                         icon="navigation"
                         label={i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_28d9b150')}
                         active={isNearbySelected}
+                        disabled={nearbyRequesting}
                         onPress={() => onSelectCity(nearbyId)}
-                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_value1_3b987cd8', { value1: pluralizeQuest(cityQuestCountById[nearbyId] || 0) })}
-                        accessibilityState={{ selected: isNearbySelected }}
+                        accessibilityLabel={nearbyAccessibilityLabel}
+                        accessibilityState={{ selected: isNearbySelected, disabled: nearbyRequesting }}
                         testID="quests-sidebar-nearby-button"
                     />
                     <SidebarActionButton

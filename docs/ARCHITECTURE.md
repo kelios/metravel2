@@ -347,6 +347,10 @@ React Query отвечает за server state. Zustand/context отвечают
   `utils/jsonLd.ts` - canonical URLs, OG images, JSON-LD, page SEO.
 - `utils/mediaUrl.ts`, `utils/imageOptimization.ts`, `utils/imageProxy.ts`,
   `utils/imageSrcSet.ts`, `utils/richTextImageLayout.ts` - media normalization.
+  `ImageCardMedia` централизует renderer, но не разрешает feature callers
+  самостоятельно изобретать proxy variants: backend `media.variants` имеет
+  приоритет, а fallback URL строится только через shared proxy contract. См.
+  `docs/adr/0002-images-via-image-card-media.md` и problem family `MEDIA-001`.
 - `utils/routeFileParser.ts`, `utils/routeExport/*`, `utils/routingHelpers.ts`
   - GPX/KML/navigator export и route parsing.
 - `utils/mapWebLayers.ts`, `utils/mapWebOverlays/*`, `utils/overpass/*` -
@@ -388,11 +392,14 @@ React Query defaults в `utils/reactQueryConfig.ts`:
 Login form
   -> authStore.login()
   -> api/auth.ts loginApi()
-  -> secure token storage
-  -> authStore state update
-  -> apiClient adds Authorization: Token <token>
-  -> refresh flow on recoverable auth failures
+  -> web: HttpOnly cookie + credentials: include + CSRF, no JS auth token
+  -> Android: SecureStore token + Authorization: Token <token>
+  -> authStore state update / platform-appropriate bootstrap
 ```
+
+Direct feature fetch wrappers must preserve the same platform split. A readable
+web auth token or web `Authorization: Token` path is recurrence of problem family
+`AUTH-001`, not an acceptable fallback.
 
 Токены и секреты нельзя выводить. `.env.e2e` используется только для local/e2e
 auth automation и не должен попадать в логи, screenshots или commits.

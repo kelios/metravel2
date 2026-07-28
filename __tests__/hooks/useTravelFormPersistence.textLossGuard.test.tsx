@@ -37,10 +37,13 @@ jest.mock('@/utils/toast', () => ({
 
 import { confirmAction } from '@/utils/confirmAction';
 import { saveFormData } from '@/api/misc';
+import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
 import { useTravelFormPersistence } from '@/hooks/useTravelFormPersistence';
 
 const mockConfirmAction = confirmAction as jest.MockedFunction<typeof confirmAction>;
 const mockSaveFormData = saveFormData as jest.MockedFunction<typeof saveFormData>;
+const mockUseImprovedAutoSave =
+  useImprovedAutoSave as jest.MockedFunction<typeof useImprovedAutoSave>;
 
 const LONG_TEXT =
   '<p>Это длинное реальное описание путешествия по Беларуси с массой полезных деталей и наблюдений автора.</p>';
@@ -109,6 +112,7 @@ describe('confirmRichTextLossIfNeeded', () => {
 function setupPersistence(opts: {
   initialFormData: any;
   baselineText: any;
+  isFormHydrated?: boolean;
 }) {
   const formData = { ...opts.initialFormData };
   const formState: any = {
@@ -126,7 +130,7 @@ function setupPersistence(opts: {
     userId: '1',
     isAuthenticated: true,
     hasAccess: true,
-    isFormHydrated: true,
+    isFormHydrated: opts.isFormHydrated ?? true,
     isOnline: true,
     isManualSaveInFlight: false,
     setIsManualSaveInFlight: jest.fn(),
@@ -149,6 +153,29 @@ function setupPersistence(opts: {
   const { result } = renderHook(() => useTravelFormPersistence(params));
   return { result, params };
 }
+
+describe('autosave hydration gate', () => {
+  it('keeps autosave disabled until existing server data has hydrated the form', () => {
+    mockUseImprovedAutoSave.mockClear();
+    mockSaveFormData.mockClear();
+
+    setupPersistence({
+      initialFormData: {
+        id: 641,
+        name: '',
+        description: '',
+        coordsMeTravel: [],
+        gallery: [],
+      },
+      baselineText: null,
+      isFormHydrated: false,
+    });
+
+    const options = mockUseImprovedAutoSave.mock.calls.at(-1)?.[2];
+    expect(options).toEqual(expect.objectContaining({ enabled: false }));
+    expect(mockSaveFormData).not.toHaveBeenCalled();
+  });
+});
 
 describe('handleManualSave — guard «анти-потеря текста»', () => {
   const baseTravel = {
@@ -237,5 +264,48 @@ describe('handleManualSave — guard «анти-потеря текста»', ()
 
     expect(mockConfirmAction).not.toHaveBeenCalled();
     expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+  });
+
+  it('частичный route-override сохраняет текст, фильтры и галерею из живой формы', async () => {
+    const galleryItem = {
+      id: 901,
+      url: 'https://metravel.by/gallery/901/gallery/photo.jpg',
+    };
+    const currentTravel = {
+      ...baseTravel,
+      categories: [7],
+      gallery: [galleryItem],
+    };
+    const { result } = setupPersistence({
+      initialFormData: currentTravel,
+      baselineText: {
+        description: LONG_TEXT,
+        plus: '',
+        minus: LONG_TEXT,
+        recommendation: '',
+      },
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave({
+        countries: ['1'],
+        coordsMeTravel: [
+          { id: null, lat: 53.9, lng: 27.56, address: 'Минск', categories: [1] },
+        ],
+      } as any);
+    });
+
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+    expect(mockSaveFormData.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        id: 225,
+        description: LONG_TEXT,
+        categories: [7],
+        gallery: [galleryItem],
+        coordsMeTravel: [
+          expect.objectContaining({ lat: 53.9, lng: 27.56, address: 'Минск' }),
+        ],
+      }),
+    );
   });
 });

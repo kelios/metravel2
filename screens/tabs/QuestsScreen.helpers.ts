@@ -74,8 +74,20 @@ export const STORAGE_SELECTED_CITY = 'quests_selected_city_v2';
 // Кракова было видно 6 квестов из 9 городских), поэтому берём радиус
 // агломерации + ближней вылазки на день.
 export const DEFAULT_NEARBY_RADIUS_KM = 30;
+export const ALL_QUESTS_ID = '__all__';
 export const NEARBY_ID = '__nearby__';
 export const KIDS_FILTER_ID = '__kids__';
+
+/**
+ * «Рядом» требует свежей геолокации и поэтому не восстанавливается между
+ * сессиями. Старое значение `__nearby__` могло означать как настоящий
+ * геофильтр, так и прежний «мягкий» дефолт всего каталога, поэтому безопасно
+ * мигрируем его в явное состояние «Все квесты».
+ */
+export function resolveStoredQuestCatalogSelection(savedId: string | null): string {
+    if (!savedId || savedId === NEARBY_ID) return ALL_QUESTS_ID;
+    return savedId;
+}
 
 let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null;
 
@@ -260,6 +272,31 @@ export function filterQuestsByMapSearchArea<T extends { lat: number; lng: number
         : withDistance.filter((quest) => quest._distanceKm <= fallbackRadiusKm);
 
     return filtered.sort((a, b) => a._distanceKm - b._distanceKm);
+}
+
+export function filterNearbyQuests<T extends { lat: number; lng: number }>(
+    quests: T[],
+    userLocation: { lat: number; lng: number } | null,
+    radiusKm: number,
+): Array<T & { _distanceKm: number }> {
+    if (
+        !userLocation
+        || !Number.isFinite(userLocation.lat)
+        || !Number.isFinite(userLocation.lng)
+        || !Number.isFinite(radiusKm)
+        || radiusKm < 0
+    ) {
+        return [];
+    }
+
+    return quests
+        .filter((quest) => Number.isFinite(quest.lat) && Number.isFinite(quest.lng))
+        .map((quest) => ({
+            ...quest,
+            _distanceKm: haversineKm(userLocation.lat, userLocation.lng, quest.lat, quest.lng),
+        }))
+        .filter((quest) => quest._distanceKm <= radiusKm)
+        .sort((a, b) => a._distanceKm - b._distanceKm);
 }
 
 export function getAverageQuestMapPointCenter(mapPoints: Pick<MapPoint, 'coord'>[]): QuestMapCenter | null {

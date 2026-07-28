@@ -3,15 +3,18 @@ import { resolve } from 'path';
 
 import {
   COUNTRY_NAME_KEYS,
+  ALL_QUESTS_ID,
   DEFAULT_NEARBY_RADIUS_KM,
   buildQuestCityCatalog,
   filterKidsQuests,
+  filterNearbyQuests,
   filterQuestsByMapSearchArea,
   getQuestCountryName,
   isCoordinateInMapViewport,
   isKidsQuest,
   isBikeQuest,
   resolveQuestMapCenter,
+  resolveStoredQuestCatalogSelection,
 } from '@/screens/tabs/QuestsScreen.helpers';
 
 describe('QuestsScreen helpers', () => {
@@ -90,6 +93,27 @@ describe('QuestsScreen helpers', () => {
 
   it('uses a single nearby distance threshold', () => {
     expect(DEFAULT_NEARBY_RADIUS_KM).toBe(30);
+  });
+
+  it('restores the full catalog instead of presenting a stale nearby selection', () => {
+    expect(resolveStoredQuestCatalogSelection(null)).toBe(ALL_QUESTS_ID);
+    expect(resolveStoredQuestCatalogSelection('__nearby__')).toBe(ALL_QUESTS_ID);
+    expect(resolveStoredQuestCatalogSelection('minsk')).toBe('minsk');
+  });
+
+  it('filters nearby quests by finite coordinates and sorts them by distance', () => {
+    const quests = [
+      { id: 'far', lat: 53.98, lng: 27.56 },
+      { id: 'invalid', lat: Number.NaN, lng: 27.56 },
+      { id: 'near', lat: 53.905, lng: 27.56 },
+      { id: 'outside', lat: 55.9, lng: 30.5 },
+    ];
+
+    const result = filterNearbyQuests(quests, { lat: 53.9, lng: 27.56 }, 30);
+
+    expect(result.map((quest) => quest.id)).toEqual(['near', 'far']);
+    expect(result.every((quest) => Number.isFinite(quest._distanceKm))).toBe(true);
+    expect(filterNearbyQuests(quests, null, 30)).toEqual([]);
   });
 
   describe('isKidsQuest', () => {

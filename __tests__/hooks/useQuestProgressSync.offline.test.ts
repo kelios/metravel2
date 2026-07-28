@@ -50,6 +50,8 @@ const API_PROGRESS = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
+const SERVER_UPDATED_AT = Date.parse(API_PROGRESS.updated_at);
+
 const OFFLINE_ANSWER = {
   currentIndex: 4,
   unlockedIndex: 5,
@@ -57,6 +59,20 @@ const OFFLINE_ANSWER = {
   attempts: { 'step-2': 2 },
   hints: {},
   showMap: true,
+  updatedAt: SERVER_UPDATED_AT + 60_000,
+  answeredAt: { 'step-2': SERVER_UPDATED_AT + 60_000 },
+};
+
+// Что реально уходит на сервер: слияние отложенного ответа с серверной записью
+// (у сервера свои attempts по step-1 — они не должны потеряться).
+const MERGED_PAYLOAD = {
+  current_index: 4,
+  unlocked_index: 5,
+  answers: { intro: 'start', 'step-1': 'дракон', 'step-2': 'костёл' },
+  attempts: { 'step-1': 1, 'step-2': 2 },
+  hints: {},
+  show_map: true,
+  completed: false,
 };
 
 const OFFLINE_ERROR = () => new Error('Network request failed');
@@ -79,7 +95,6 @@ const advance = async (ms: number) => {
 
 /** Маунт с уже загруженным серверным прогрессом (id=42). */
 const mountLoadedSync = async () => {
-  mockFetchOrCreateProgress.mockResolvedValueOnce(API_PROGRESS);
   const rendered = renderHook(() => useQuestProgressSync('krakow-dragon', true));
   await flushMicrotasks();
   return rendered;
@@ -90,6 +105,9 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
     jest.useFakeTimers();
     mockFetchOrCreateProgress.mockReset();
     mockUpdateProgress.mockReset();
+    // Перед каждым PATCH хук забирает актуальное серверное состояние (защита от
+    // затирания параллельного устройства) — GET должен отвечать на любом флаше.
+    mockFetchOrCreateProgress.mockResolvedValue(API_PROGRESS);
     // Отложенный прогресс переживает неудачное сохранение и дожимается флашем на
     // размонтировании, поэтому мок обязан оставаться thenable и без Once-значений.
     mockUpdateProgress.mockResolvedValue(API_PROGRESS);
@@ -121,12 +139,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
     // Бэкофф — ответ уходит повторно с теми же данными, а не теряется.
     await advance(2000);
     expect(mockUpdateProgress).toHaveBeenCalledTimes(2);
-    expect(mockUpdateProgress).toHaveBeenLastCalledWith(42, expect.objectContaining({
-      current_index: 4,
-      unlocked_index: 5,
-      answers: OFFLINE_ANSWER.answers,
-      attempts: OFFLINE_ANSWER.attempts,
-    }));
+    expect(mockUpdateProgress).toHaveBeenLastCalledWith(42, MERGED_PAYLOAD);
 
     // Очередь пуста — лишних запросов больше нет.
     await advance(120000);
@@ -194,6 +207,66 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
     } finally {
       addEventListenerSpy.mockRestore();
     }
+  });
+
+  it('не затирает ответы параллельного устройства: PATCH уходит слитым', async () => {
+    // Телефон A был офлайн со своими шагами, телефон B за это время записал свои.
+    const serverFromOtherDevice = {
+      ...API_PROGRESS,
+      current_index: 6,
+      unlocked_index: 6,
+      answers: { intro: 'start', 'step-4': 'ратуша', 'step-5': 'мост' },
+      attempts: { 'step-4': 3 },
+      hints: { 'step-4': true },
+      updated_at: new Date(SERVER_UPDATED_AT).toISOString(),
+    };
+    mockFetchOrCreateProgress.mockResolvedValue(serverFromOtherDevice);
+
+    const { result } = await mountLoadedSync();
+
+    act(() => {
+      result.current.saveProgress(OFFLINE_ANSWER);
+    });
+    await advance(2000);
+
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
+    const [, payload] = mockUpdateProgress.mock.calls[0];
+    // Ни один ответ не потерян: {1,2,3} устройства A + {4,5} устройства B.
+    expect(payload.answers).toEqual({
+      intro: 'start',
+      'step-1': 'дракон',
+      'step-2': 'костёл',
+      'step-4': 'ратуша',
+      'step-5': 'мост',
+    });
+    expect(payload.attempts).toEqual({ 'step-2': 2, 'step-4': 3 });
+    expect(payload.hints).toEqual({ 'step-4': true });
+    expect(payload.unlocked_index).toBe(6);
+    // Курсор — за более свежей стороной (A вернулся из офлайна позже).
+    expect(payload.current_index).toBe(4);
+  });
+
+  it('не шлёт PATCH, если сервер уже знает всё из очереди', async () => {
+    mockFetchOrCreateProgress.mockResolvedValue({
+      ...API_PROGRESS,
+      current_index: OFFLINE_ANSWER.currentIndex,
+      unlocked_index: OFFLINE_ANSWER.unlockedIndex,
+      answers: OFFLINE_ANSWER.answers,
+      attempts: OFFLINE_ANSWER.attempts,
+      hints: {},
+      show_map: true,
+      updated_at: new Date(OFFLINE_ANSWER.updatedAt).toISOString(),
+    });
+
+    const { result } = await mountLoadedSync();
+
+    act(() => {
+      result.current.saveProgress(OFFLINE_ANSWER);
+    });
+    await advance(2000);
+
+    expect(mockUpdateProgress).not.toHaveBeenCalled();
+    expect(result.current.progress?.answers).toEqual(OFFLINE_ANSWER.answers);
   });
 
   it('keeps a newer answer pending when it lands during an in-flight save', async () => {

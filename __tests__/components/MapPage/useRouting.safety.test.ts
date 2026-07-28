@@ -470,6 +470,45 @@ describe('useRouting - Safety Tests', () => {
   });
 
   describe('Caching behavior', () => {
+    it.each([400, 500])(
+      'does not cache a direct-line fallback after provider status %s',
+      async (status) => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+          ok: false,
+          status,
+          text: jest.fn().mockResolvedValue(`routing failed: ${status}`),
+        });
+
+        const points: [number, number][] = [
+          [27.56, 53.9],
+          [27.6, 53.95],
+        ];
+
+        const first = renderHook(() => useRouting(points, 'car', undefined));
+
+        await waitFor(() => {
+          expect(first.result.current.loading).toBe(false);
+          expect(first.result.current.error).toBeTruthy();
+          expect(first.result.current.coords).toEqual(points);
+        });
+
+        expect(routeCache.get(points, 'car')).toBeNull();
+        const callsAfterFirstFailure = (global.fetch as jest.Mock).mock.calls.length;
+        first.unmount();
+
+        const second = renderHook(() => useRouting(points, 'car', undefined));
+
+        await waitFor(() => {
+          expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(
+            callsAfterFirstFailure
+          );
+          expect(second.result.current.error).toBeTruthy();
+        });
+
+        second.unmount();
+      }
+    );
+
     it('does not refetch when the same route is rendered again and cached', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,

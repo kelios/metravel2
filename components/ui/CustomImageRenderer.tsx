@@ -283,11 +283,6 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
           // и браузер скачал бы вторую, иначе нарезанную копию того же фото.
           preserveOptimizedWebSrc
           blurRadius={16}
-          // Native: подложка блюра берёт тот же файл (лишнего запроса нет), но
-          // декодируется в 128px — FastBlur крутится по 16 тыс. пикселей вместо
-          // 0.8 млн, и вторая полноразмерная битмапа на каждое фото не создаётся.
-          blurSrc={Platform.OS === 'web' ? undefined : displaySrc}
-          blurDecodeSize={128}
           priority={Platform.OS === 'web' ? 'low' : 'normal'}
           loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
           transition={Platform.OS === 'web' ? undefined : 120}

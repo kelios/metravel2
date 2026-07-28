@@ -25,8 +25,9 @@ export function generateSrcSet(
   // a format. This avoids generating `f=webp`/`f=avif` URLs for media
   // conversions that may only exist in the original format.
   const resolvedFormat = options.format ?? 'auto';
+  const seenProxyCandidates = new Set<string>();
   const srcset = sizes
-    .map((size) => {
+    .flatMap((size) => {
       const optimizedOptions: ImageOptimizationOptions = {
         width: size,
         format: resolvedFormat,
@@ -36,8 +37,30 @@ export function generateSrcSet(
       if (options.dpr !== undefined) {
         optimizedOptions.dpr = options.dpr;
       }
-      const optimizedUrl = optimizeImageUrl(baseUrl, optimizedOptions);
-      return `${optimizedUrl} ${size}w`;
+      const optimizedUrl = optimizeImageUrl(baseUrl, optimizedOptions) || baseUrl;
+
+      // The backend proxy supports a fixed width ladder. Several requested
+      // widths can therefore resolve to the same canonical `w` URL (for
+      // example 239/240/241 -> 320). Advertising that single file under
+      // several descriptors makes the browser treat it as distinct candidates
+      // and fragments request/cache accounting. Use the actual proxy width and
+      // emit each canonical candidate once. Third-party URLs without `w` keep
+      // their caller-provided descriptors.
+      try {
+        const proxyWidth = Number(
+          new URL(optimizedUrl, 'https://placeholder.invalid').searchParams.get('w')
+        );
+        if (Number.isFinite(proxyWidth) && proxyWidth > 0) {
+          const candidateKey = `${optimizedUrl}|${proxyWidth}`;
+          if (seenProxyCandidates.has(candidateKey)) return [];
+          seenProxyCandidates.add(candidateKey);
+          return [`${optimizedUrl} ${proxyWidth}w`];
+        }
+      } catch {
+        // Keep the original descriptor for opaque/non-URL sources.
+      }
+
+      return [`${optimizedUrl} ${size}w`];
     })
     .join(', ');
 

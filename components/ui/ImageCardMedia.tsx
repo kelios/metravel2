@@ -24,9 +24,6 @@ import {
 
 const isRootRelativeUrl = (value: string): boolean => /^\/(?!\/)/.test(value);
 
-/** Native: размер декодирования подложки блюра по умолчанию (Glide `override`). */
-const NATIVE_BLUR_BACKDROP_SIZE = 96;
-
 /**
  * Потолок ширины sharp-слоя на native — верхняя ступень whitelist прокси, которая
  * никогда не даёт апскейла. См. `buildNativeSharpImageSource` и #1113.
@@ -35,45 +32,6 @@ const NATIVE_SHARP_MAX_WIDTH = 800;
 
 /** Web: верхний кандидат в `srcSet` карточки. См. `webSrcSet` и #1113. */
 const WEB_SRCSET_MAX_WIDTH = 1280;
-
-type NativeBlurSourceArgs = {
-  blurBackground?: boolean;
-  blurDecodeSize?: number;
-  blurSrc?: string | null;
-  source?: { uri?: string } | number | null;
-};
-
-/**
- * Native blur backdrop source.
- *
- * Contract: the backdrop is a derivative of the sharp layer, so it reuses the SAME
- * URI — one network fetch per image, the second layer comes from the loader's disk
- * cache. Cheapness comes from the decode override (`width`/`height` → Glide
- * `override`), not from requesting a separate downscaled variant.
- *
- * An explicit `blurSrc` is honoured only when the caller deliberately supplies a
- * different source (e.g. a ready LQIP from the API).
- */
-export function buildNativeBlurSource({
-  blurBackground,
-  blurDecodeSize,
-  blurSrc,
-  source,
-}: NativeBlurSourceArgs) {
-  if (!blurBackground) return undefined;
-  const decodeSize = blurDecodeSize && blurDecodeSize > 0 ? blurDecodeSize : undefined;
-  const explicit = typeof blurSrc === 'string' ? blurSrc.trim() : '';
-  if (explicit) {
-    return decodeSize
-      ? { uri: explicit, width: decodeSize, height: decodeSize }
-      : { uri: explicit };
-  }
-  if (!source || typeof source === 'number') return undefined;
-  const uri = typeof source.uri === 'string' ? source.uri.trim() : '';
-  if (!uri) return undefined;
-  const size = decodeSize ?? NATIVE_BLUR_BACKDROP_SIZE;
-  return { uri, width: size, height: size };
-}
 
 type NativeSharpSourceArgs = {
   uri: string;
@@ -128,14 +86,6 @@ type Props = {
   borderRadius?: number;
   fit?: 'contain' | 'cover';
   blurBackground?: boolean;
-  /** Native-only: downscaled source for the blurred backdrop layer (cheaper decode). */
-  blurSrc?: string | null;
-  /**
-   * Native-only: decode the blur backdrop at this pixel size (Glide `override`).
-   * Lets a backdrop reuse the sharp photo's URL — no extra request — while still
-   * blurring a tiny bitmap instead of a second full-resolution copy.
-   */
-  blurDecodeSize?: number;
   /** Native-only: keep the sharp layer hidden until its blur backdrop is ready. */
   synchronizeNativeBlurReveal?: boolean;
   blurRadius?: number;
@@ -194,8 +144,6 @@ function ImageCardMedia({
   borderRadius = 12,
   fit = 'contain',
   blurBackground = true,
-  blurSrc,
-  blurDecodeSize,
   synchronizeNativeBlurReveal = false,
   blurRadius = 16,
   blurOnly = false,
@@ -251,31 +199,6 @@ function ImageCardMedia({
   const [webLoaded, setWebLoaded] = useState(() => {
     return !!(currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey));
   });
-
-  // Native: подложка блюра — производная от уже загруженной картинки, а не отдельный
-  // ресурс. Поэтому она использует ТОТ ЖЕ URI, что и резкий слой: сеть дёргается один
-  // раз, второй слой берёт файл из дискового кэша загрузчика. Дешевизну даёт не второй
-  // запрос, а decode-override (`width`/`height` в source → Glide `override`): блюр
-  // считается по маленькому битмапу вместо полноразмерной копии.
-  //
-  // Раньше здесь строился ВТОРОЙ URL (`?w=96&q=30`), чтобы обойти двойную загрузку
-  // Glide. Это оказалось дороже задуманного: прокси не уменьшал часть путей, и «дешёвая
-  // копия» приходила по 70–117 КБ. Web всегда делал правильно — тот же src + CSS-фильтр.
-  //
-  // `blurSrc` остаётся для случаев, когда вызывающий код осознанно даёт другой источник
-  // (например уже готовый LQIP из API), но по умолчанию второго адреса не появляется.
-  const nativeBlurSource = useMemo(
-    () =>
-      Platform.OS === 'web'
-        ? undefined
-        : buildNativeBlurSource({
-            blurBackground,
-            blurDecodeSize,
-            blurSrc,
-            source: resolvedSource,
-          }),
-    [blurBackground, blurDecodeSize, blurSrc, resolvedSource]
-  );
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -784,7 +707,6 @@ function ImageCardMedia({
             height={typeof height === 'number' ? height : undefined}
             contentFit={contentFit}
             blurBackground={Platform.OS === 'web' ? false : blurBackground}
-            blurSource={nativeBlurSource}
             synchronizeBlurReveal={synchronizeNativeBlurReveal}
             blurBackgroundRadius={blurRadius}
             blurOnly={blurOnly}

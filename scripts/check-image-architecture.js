@@ -57,6 +57,7 @@ function reportError(errors) {
   console.error('- No direct imports of "expo-image" inside components/** except ui/OptimizedImage.tsx and ui/ImageCardMedia.tsx');
   console.error('- No direct imports of ui/OptimizedImage from feature components; use ui/ImageCardMedia instead');
   console.error('- Do not disable blurred same-image backdrops with blurBackground={false}; use the shared image primitives');
+  console.error('- Do not pass blurSrc/blurSource: blur and sharp layers must share one effective source');
   process.exit(1);
 }
 
@@ -93,6 +94,13 @@ function main() {
     // 3) forbid disabling the shared blur backdrop in feature components
     if (content.includes('blurBackground={false}') && !ALLOW_BLUR_DISABLED_FILES.has(file)) {
       errors.push(`${path.relative(ROOT, file)} disables blurBackground explicitly`);
+    }
+
+    // 4) #1111: a blur-only prop makes it possible to create a second URL or a
+    // distinct Glide source (for example through width/height decode overrides).
+    // The low-level renderer derives both layers from the same active source.
+    if (/\b(?:blurSrc|blurSource)\s*=/.test(content)) {
+      errors.push(`${path.relative(ROOT, file)} supplies a separate blur source`);
     }
   }
 

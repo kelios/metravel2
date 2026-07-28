@@ -116,7 +116,57 @@ describe('useGuestQuestFlow migration after login', () => {
     })
   })
 
-  it('does not overwrite a richer server progress', async () => {
+  it('сливает гостевые и серверные ответы, ничего не теряя', async () => {
+    // Аккаунт уже проходил квест на другом устройстве, гость — свои шаги.
+    await saveGuestQuestProgress('krakow-dragon', {
+      currentIndex: 2,
+      unlockedIndex: 2,
+      answers: { 'step-1': 'дракон', 'step-2': '7' },
+      attempts: { 'step-2': 2 },
+      hints: {},
+      showMap: true,
+    })
+
+    mockedApi.fetchOrCreateProgress.mockResolvedValue({
+      id: 42,
+      current_index: 3,
+      unlocked_index: 3,
+      answers: { 'step-1': 'дракон', 'step-3': 'z' },
+      attempts: { 'step-1': 1 },
+      hints: {},
+      show_map: true,
+      completed: false,
+      updated_at: '2026-01-01T00:00:00Z',
+    } as never)
+    mockedApi.updateProgress.mockResolvedValue({ id: 42 } as never)
+
+    renderHook(() =>
+      useGuestQuestFlow({
+        questId: 'krakow-dragon',
+        cityId: 'krakow',
+        isAuthenticated: true,
+        enabled: true,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockedApi.updateProgress).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({
+          answers: { 'step-1': 'дракон', 'step-2': '7', 'step-3': 'z' },
+          attempts: { 'step-1': 1, 'step-2': 2 },
+          unlocked_index: 3,
+        }),
+      )
+    })
+
+    await waitFor(async () => {
+      const leftover = await loadGuestQuestProgress('krakow-dragon')
+      expect(leftover).toBeNull()
+    })
+  })
+
+  it('does not push when the server already knows every guest answer', async () => {
     await saveGuestQuestProgress('krakow-dragon', {
       currentIndex: 1,
       unlockedIndex: 1,
@@ -128,7 +178,14 @@ describe('useGuestQuestFlow migration after login', () => {
 
     mockedApi.fetchOrCreateProgress.mockResolvedValue({
       id: 42,
-      answers: { 'step-1': 'x', 'step-2': 'y', 'step-3': 'z' },
+      current_index: 3,
+      unlocked_index: 3,
+      answers: { 'step-1': 'дракон', 'step-2': 'y', 'step-3': 'z' },
+      attempts: {},
+      hints: {},
+      show_map: true,
+      completed: false,
+      updated_at: '2026-01-01T00:00:00Z',
     } as never)
 
     renderHook(() =>

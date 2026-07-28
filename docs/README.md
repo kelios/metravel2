@@ -80,9 +80,11 @@ API origin задаётся `EXPO_PUBLIC_API_URL`; API clients нормализ�
 OpenAPI/Redoc URL строится от текущего configured origin. Не закрепляйте в
 документации частный LAN host.
 
-Auth contract использует backend session/token semantics через общий API client.
-Credentials и tokens берутся только из gitignored env/secret files и никогда не
-копируются в docs или логи.
+Auth contract разделён по платформам: web использует HttpOnly cookie,
+`credentials: include` и CSRF без читаемого JavaScript token; Android использует
+SecureStore и `Authorization: Token`. Все fetch/upload/download adapters должны
+сохранять этот split. Credentials и tokens берутся только из gitignored
+env/secret files и никогда не копируются в docs или логи.
 
 ## API family map
 
@@ -123,6 +125,12 @@ active sprint, `area=front|back`, Task Contract, dependencies, validation и Don
 gate. При `401` сначала обновляется staff token по `TASK_BOARD_MCP.md` через
 `.env.e2e`; локальный `tasks/000-template.md` допустим только как временный
 fallback.
+
+Перед create/reopen/split обязателен historical preflight через
+`$metravel-problem-memory`: `docs/PROBLEM_MEMORY.md` хранит системные problem
+families, root causes, canonical board chains и правило
+`reuse | reopen | create-linked | create-new`. Документ не является вторым
+backlog и не дублирует progress log.
 
 ## Governance templates
 

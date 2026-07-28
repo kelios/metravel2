@@ -77,6 +77,10 @@
 - `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
 - `$metravel-prompt-maintainer` - аудит и поддержка `docs/*PROMPTS.md`, `assets/**/PROMPT.md`, skill metadata/default prompts, воспроизводимости и prompt-governance без написания самого article/quest content.
 - `$metravel-task-contract` - обязательный контракт FE/BE задач на борде: scope, user-visible result, Data/API contract, platform/localization impact, dependencies, fallback/mock policy, validation и Done gate перед стартом/review/done.
+- `$metravel-problem-memory` - обязательная проверка истории перед созданием,
+  переоткрытием или дроблением задачи: ищет прежние `done`/`wont_do`/open
+  карточки и реестр `docs/PROBLEM_MEMORY.md`, затем выбирает
+  `reuse | reopen | create-linked | create-new`.
 - `$metravel-ticket-board` - оператор общего MCP task board: list/create/update/sync задач и спринтов без правки feature-кода.
 - `$metravel-sprint-reviewer` - приёмка тикетов активного спринта на MCP task board по Task Contract/Done gate с реальными тестами/browser/API evidence.
 - `$metravel-backend-diagnostician` - read-only диагностика backend/API проблем, 5xx/contract mismatch, backend status sync и создание/обновление back-задач с evidence.
@@ -103,25 +107,28 @@
    impact, localization impact и план проверки по `docs/CODEX.md`.
 3. Для сложных, неясных или многошаговых задач используй `$metravel-codex-orchestrator` как верхний self-check: triage → skills → промты ролей → validation → handoff.
 4. Проверь текущую ветку и `git status --short`; если ветка не `main`, остановись и уточни дальнейшие действия.
-5. Внеси минимально достаточные изменения.
-6. Временную отладочную информацию складывай только в ignored-папки (`.codex-temp/`, `.codex-debug/`) и перед завершением удаляй всё ненужное:
+5. Перед созданием/переоткрытием board-задачи используй
+   `$metravel-problem-memory`: проверь реестр и полный board, зафиксируй verdict и
+   не создавай competing ticket для уже открытой или той же recurring problem.
+6. Внеси минимально достаточные изменения.
+7. Временную отладочную информацию складывай только в ignored-папки (`.codex-temp/`, `.codex-debug/`) и перед завершением удаляй всё ненужное:
    - скриншоты, trace, временные JSON/лог-файлы и QA-вывод не должны попадать в tracked-папки;
    - оставляй только актуальные артефакты, которые нужны для текущей передачи результата.
-7. Чини все реальные проблемы, найденные в ходе задачи:
+8. Чини все реальные проблемы, найденные в ходе задачи:
    - исправляй ошибки из затронутого кода, проверок, браузерной валидации и сборки до передачи результата;
    - если проблема вне scope, требует доступа к серверу/секретам или рискованной миграции, явно зафиксируй блокер, риск и что нужно проверить дальше;
    - не оставляй известные падающие проверки, runtime-ошибки, broken UI states, direct external-link нарушения или dead code в зоне задачи.
-8. После каждого логического шага запускай проверки по scope изменений:
+9. После каждого логического шага запускай проверки по scope изменений:
    - точечные изменения: только релевантные тесты/чеки, которые покрывают затронутую область;
    - законченный малый блок кода: `npm run check:fast`;
    - средние изменения перед PR/передачей задачи: `npm run check:preflight`;
    - крупные изменения: полный прогон:
      - `npm run lint`
      - `npm run test:run`
-9. По завершению задачи:
+10. По завершению задачи:
    - для точечных изменений обязательно запусти релевантные проверки по затронутому scope;
    - для крупных изменений обязательно запусти полный прогон.
-10. Тестирование выполняет AI-агент самостоятельно: человек ничего не тестирует за агента.
+11. Тестирование выполняет AI-агент самостоятельно: человек ничего не тестирует за агента.
     - Используй доступные средства проверки: браузер/Playwright, Android-устройство с локально установленной сборкой, unit/integration/e2e тесты, production web build/smoke по scope задачи.
     - Сам находи надежный маршрут проверки для конкретной задачи; просьба к пользователю проверить вручную не считается validation.
 

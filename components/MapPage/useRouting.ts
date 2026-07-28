@@ -23,7 +23,6 @@ import {
     ORS_RADIUSES_TO_TRY,
     createRoutingError,
     getRoutingErrorCode,
-    isPermanentRoutingError,
     type RoutingErrorCode,
 } from '@/utils/routingHelpers'
 import { translate as i18nT } from '@/i18n'
@@ -628,16 +627,10 @@ export const useRouting = (
                     })
                 })
                 if (isStale()) return
-
-                // Кэшируем direct-line fallback только при ПЕРМАНЕНТНЫХ ошибках
-                // (невалидные координаты / ключ / 400 / 403 / 404).
-                // Временные сбои (сеть, 429, 5xx) НЕ кэшируем, чтобы следующий
-                // заход в пределах TTL перестроил реальный маршрут.
-                // Кэшируем только ошибки со стабильным permanent-кодом/HTTP-статусом.
-                if (isPermanentRoutingError(primaryError)) {
-                    resolvedRouteKeys.add(routeKey)
-                    routeCache.set(currentPoints, transportMode, currentPoints, directDistance, duration)
-                }
+                // Direct-line geometry is a degraded visual fallback, never a
+                // successful route. Do not put it into the healthy route cache:
+                // otherwise the next mount clears the error and hides provider
+                // recovery behind an hour-long cached straight line.
             } finally {
                 // Prevent older in-flight requests from clearing the "processing" flag for newer ones.
                 if (activeRequestIdRef.current === requestId) {

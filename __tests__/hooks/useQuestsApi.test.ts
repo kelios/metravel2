@@ -384,8 +384,10 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('flushes a pending debounced save on unmount instead of dropping it', async () => {
-      mockFetchOrCreateProgress.mockResolvedValueOnce(API_PROGRESS);
-      mockUpdateProgress.mockResolvedValueOnce(API_PROGRESS);
+      // Флаш на размонтировании тоже идёт через слияние (GET → merge → PATCH),
+      // поэтому он асинхронный и серверная запись нужна обоим вызовам.
+      mockFetchOrCreateProgress.mockResolvedValue(API_PROGRESS);
+      mockUpdateProgress.mockResolvedValue(API_PROGRESS);
 
       const { result, unmount } = renderHook(() =>
         useQuestProgressSync('krakow-dragon', true),
@@ -408,10 +410,12 @@ describe('useQuestsApi hooks', () => {
       expect(mockUpdateProgress).not.toHaveBeenCalled();
       unmount();
 
+      await waitFor(() => expect(mockUpdateProgress).toHaveBeenCalled());
       expect(mockUpdateProgress).toHaveBeenCalledWith(42, expect.objectContaining({
         current_index: 3,
         unlocked_index: 4,
-        answers: { 'step-2': 'ответ' },
+        // Слитое с серверной записью: ответ step-1 другого сеанса не потерян.
+        answers: { 'step-1': 'дракон', 'step-2': 'ответ' },
         show_map: false,
       }));
     });

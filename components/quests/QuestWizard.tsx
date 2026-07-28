@@ -66,14 +66,17 @@ export type QuestWizardProps = {
         currentIndex: number; unlockedIndex: number;
         answers: Record<string, string>; attempts: Record<string, number>;
         hints: Record<string, boolean>; showMap: boolean; completed?: boolean;
+        /** Клиентские времена для слияния между устройствами (на сервер не уходят) */
+        updatedAt?: number; answeredAt?: Record<string, number>;
     }) => void;
     /** Callback при сбросе прогресса */
     onProgressReset?: () => void;
-    /** Начальный прогресс, загруженный с бэкенда (приоритет над AsyncStorage) */
+    /** Начальный прогресс с бэкенда/гостевого хранилища — сливается с локальным */
     initialProgress?: {
         currentIndex: number; unlockedIndex: number;
         answers: Record<string, string>; attempts: Record<string, number>;
-        hints: Record<string, boolean>; showMap: boolean;
+        hints: Record<string, boolean>; showMap: boolean; completed?: boolean;
+        updatedAt?: number; answeredAt?: Record<string, number>;
     };
     /** Web: обновить бандл (и signed video URL) перед повторной попыткой проигрывания */
     onFinaleVideoRetry?: () => void;

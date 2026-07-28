@@ -10,7 +10,9 @@ Use this skill whenever a task is created or reviewed on the shared task board.
 Board-first rule:
 
 - Create all new FE/BE/backend tasks on the shared MCP task board through `ticket-board`; do not create local `tasks/*.md` files as the normal workflow.
-- Every board task must include `area`, active sprint, owner/status when known, dependencies, blockers, Task Contract, validation, and Done gate.
+- Every board task must include `area`, active sprint, owner/status when known,
+  dependencies, blockers, Problem History, Task Contract, validation, and Done
+  gate.
 - If the task-board MCP or API returns `HTTP 401`, refresh the staff token through `.env.e2e` using `docs/TASK_BOARD_MCP.md`, update `.secrets/metravel-task-board.env` without printing secrets, and retry before creating any local fallback.
 - If the task-board MCP is unavailable after token refresh, prepare a ready-to-paste board task with the same contract fields and mark any local `tasks/*.md` draft as temporary fallback only. Sync/import it to the board before handoff and remove the local draft when possible.
 
@@ -19,6 +21,7 @@ Read first:
 - `AGENTS.md`
 - `docs/RULES.md`
 - `docs/TASK_BOARD_MCP.md`
+- `docs/PROBLEM_MEMORY.md`
 - `docs/CODEX.md`
 - Relevant feature docs from `docs/features/` only when needed.
 
@@ -27,6 +30,14 @@ Read first:
 Every `area=front` or `area=back` board task must include:
 
 ```md
+## Problem History
+
+Problem key:
+Historical matches:
+Verdict: reuse | reopen | create-linked | create-new
+Canonical task:
+Root-cause delta:
+
 ## Task Contract
 
 Scope:
@@ -43,6 +54,10 @@ Done gate:
 ## Rules
 
 - Do not create a FE/BE task without the contract block.
+- Do not create, reopen, or split a task without a Problem Memory Verdict. A
+  recurring family must name its problem key, canonical prior task and decision
+  (`reuse | reopen | create-linked | create-new`); reuse/reopen is preferred over
+  a competing card.
 - Architect-level detail is mandatory: concrete request/response shapes (fields +
   types), desktop-web/mobile-web/Android impact, RU/BE/UK/PL/EN impact, real
   board ids for dependencies, and concrete validation commands/URLs. Placeholder
@@ -71,6 +86,9 @@ Done gate:
   Use `blocked_by` only when the missing contract prevents remaining FE implementation work from
   starting or continuing.
 - Keep secrets out of contract text and logs.
+- A recurring task's Done gate must cover why the prior control failed and name
+  the new regression control; append the dated Recurrence Log from
+  `docs/PROBLEM_MEMORY.md`.
 - For visible UI/UX work, add `Design evidence` next to the contract: a tracked `docs/` mock path or stable Figma URL, the normative states/platforms, parity expectations, and runtime comparison in `Validation`/`Done gate`. Do not use `.codex-temp/` as a board attachment.
 
 ## Output

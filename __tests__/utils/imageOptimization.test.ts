@@ -163,6 +163,26 @@ describe('utils/imageOptimization', () => {
         }
       })
     })
+
+    it('deduplicates proxy widths and advertises the actual supported width', () => {
+      withPlatform('web', () => {
+        const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+        process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+
+        try {
+          const base = 'https://metravel.by/gallery/544/gallery/photo.jpg'
+          const result = generateSrcSet(base, [239, 240, 241, 320])
+          const parts = result.split(',').map(part => part.trim())
+
+          expect(parts).toHaveLength(1)
+          const [urlString, descriptor] = parts[0].split(' ')
+          expect(new URL(urlString).searchParams.get('w')).toBe('320')
+          expect(descriptor).toBe('320w')
+        } finally {
+          process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+        }
+      })
+    })
   })
 
   describe('getResponsiveSizes', () => {

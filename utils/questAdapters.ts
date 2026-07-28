@@ -127,11 +127,11 @@ export function normalize(s: string): string {
 }
 
 /** Создаёт функцию проверки ответа из бэкенд-конфига */
-export function buildAnswerChecker(answerType: string, answerValue: string): (input: string) => boolean {
+export function buildAnswerChecker(answerType: string, answerValue: string): QuestStep['answer'] {
     switch (answerType) {
         case 'any': {
-            const fn = () => true;
-            (fn as any)._isAny = true;
+            const fn: QuestStep['answer'] = () => true;
+            fn._isAny = true;
             return fn;
         }
 
@@ -171,12 +171,20 @@ export function buildAnswerChecker(answerType: string, answerValue: string): (in
         }
 
         case 'any_text': {
+            // У свободного ответа единственное условие — длина, поэтому порог
+            // вешаем на саму функцию: карточка шага по нему объясняет игроку,
+            // что ответ свободный и сколько символов нужно. Без этого короткий
+            // ответ получал «Неверный ответ» и выглядел как непроходимый вопрос.
+            let minLength = 1;
             try {
-                const { min_length } = JSON.parse(answerValue);
-                return (input: string) => normalize(input).length >= (min_length || 1);
-            } catch {
-                return (input: string) => normalize(input).length > 0;
-            }
+                const parsed = JSON.parse(answerValue);
+                const raw = Number(parsed?.min_length);
+                if (Number.isFinite(raw) && raw > 0) minLength = raw;
+            } catch { /* повреждённый value — остаётся порог 1 символ */ }
+
+            const fn: QuestStep['answer'] = (input: string) => normalize(input).length >= minLength;
+            fn._freeTextMinLength = minLength;
+            return fn;
         }
 
         case 'any_number':

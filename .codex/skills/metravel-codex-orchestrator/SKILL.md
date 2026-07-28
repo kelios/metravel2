@@ -67,6 +67,8 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-release-checks` for validation planning and `$metravel-devops-agent` for deploy execution, rollback, approved deploy-command selection, Windows/Codex wrapper use, and emergency frontend recovery.
 - Use `$metravel-production-smoke` for read-only production health checks and route failures to the right owner.
 - Use `$metravel-docs-maintainer` for docs, AGENTS, CODEX, or skill changes.
+- Use `$metravel-problem-memory` before creating, reopening, or splitting any
+  task and whenever a symptom may be a recurrence.
 - Use `$metravel-prompt-maintainer` for prompt specs, asset prompt instances, `agents/openai.yaml`, stale model-specific wording, and prompt reproducibility audits.
 - Use `$metravel-backend-diagnostician` for read-only backend/API diagnosis and backend board follow-up.
 - Use `$metravel-sprint-reviewer` for task-board acceptance and Done-gate verification.
@@ -102,6 +104,9 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - When a board task is in scope, enforce `todo → in_progress → review → testing → done`.
   Reserve `blocked_by` for a concrete hard dependency that prevents implementation work; waiting
   for review or validation remains `review`/`testing`.
+- Before any board mutation, require the registry+board history verdict. Do not
+  let roles create competing tasks for an open canonical problem; append a
+  Recurrence Log when a previously accepted invariant fails again.
 - Fix real issues found in the touched scope before handoff.
 - Keep temporary screenshots, logs, traces, and JSON output only in ignored folders such as `.codex-temp/`, `.codex-debug/`, `test-results/`, or `playwright-report/`.
 - Never print secrets from `.env*`, `.env.e2e`, EAS, SSH, Google Play, or server configs.

@@ -21,6 +21,12 @@ import {
     normalizeQuestCountryCode,
 } from '@/utils/questAdapters';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import {
+    mergeQuestProgress,
+    normalizeQuestProgressSnapshot,
+    snapshotFromServerProgress,
+    toQuestProgressServerPayload,
+} from '@/utils/questProgressMerge';
 import { devWarn } from '@/utils/logger';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
 import { translate as i18nT } from '@/i18n'
@@ -38,6 +44,9 @@ type PendingQuestProgressData = {
     hints: Record<string, boolean>;
     showMap: boolean;
     completed?: boolean;
+    /** Клиентские времена для слияния с параллельным устройством (на сервер не уходят) */
+    updatedAt?: number;
+    answeredAt?: Record<string, number>;
 };
 
 const getErrorMessage = (error: unknown, fallback: string): string =>
@@ -233,15 +242,26 @@ const PROGRESS_SYNC_DEBOUNCE_MS = 2000;
 const PROGRESS_RETRY_BASE_MS = 2000;
 const PROGRESS_RETRY_MAX_MS = 60 * 1000;
 
-const toProgressPayload = (data: PendingQuestProgressData) => ({
-    current_index: data.currentIndex,
-    unlocked_index: data.unlockedIndex,
-    answers: data.answers,
-    attempts: data.attempts,
-    hints: data.hints,
-    show_map: data.showMap,
-    completed: data.completed,
-});
+/**
+ * Отправка отложенного прогресса с защитой от затирания параллельного устройства:
+ * перед PATCH забираем текущее серверное состояние и шлём слитое. Иначе телефон,
+ * вернувшийся из офлайна, стёр бы ответы, записанные другим устройством.
+ * Возвращает актуальную серверную запись (PATCH пропускается, если серверу
+ * добавлять нечего).
+ */
+const pushMergedProgress = async (
+    questId: string,
+    data: PendingQuestProgressData,
+): Promise<ApiQuestProgress> => {
+    const serverProgress = await fetchOrCreateProgress(questId);
+    const { merged, serverNeedsPush } = mergeQuestProgress(
+        normalizeQuestProgressSnapshot(data),
+        snapshotFromServerProgress(serverProgress),
+    );
+
+    if (!serverNeedsPush) return serverProgress;
+    return apiUpdateProgress(serverProgress.id, toQuestProgressServerPayload(merged));
+};
 
 /** Хук для синхронизации прогресса квеста с бэкендом (для авторизованных) */
 export function useQuestProgressSync(questId: string | undefined, isAuthenticated: boolean) {
@@ -258,6 +278,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const pendingDataRef = useRef<PendingQuestProgressData | null>(null);
     const isAuthenticatedRef = useRef(isAuthenticated);
     isAuthenticatedRef.current = isAuthenticated;
+    // questId нужен флашу на размонтировании (эффект с пустыми deps) — держим в ref.
+    const questIdRef = useRef(questId);
+    questIdRef.current = questId;
     // flushSync и планировщик ретраев ссылаются друг на друга: держим актуальный
     // флаш в ref, чтобы таймеры и слушатели не вызывали стейл-замыкание.
     const flushSyncRef = useRef<(() => Promise<void>) | null>(null);
@@ -338,8 +361,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         clearRetryTimer();
 
         const data = pendingDataRef.current;
-        const progressId = progressIdRef.current;
-        if (!data || !isAuthenticatedRef.current || !progressId) return;
+        if (!data || !isAuthenticatedRef.current || !progressIdRef.current || !questId) return;
 
         // Параллельный флаш (дебаунс + ретрай/AppState) не должен слать дубль:
         // дожмём очередь после текущего запроса.
@@ -352,12 +374,13 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         setSyncing(true);
         let saved = false;
         try {
-            const updated = await apiUpdateProgress(progressId, toProgressPayload(data));
+            const updated = await pushMergedProgress(questId, data);
             saved = true;
             // Снимаем с очереди только то, что реально отправили: изменения,
             // сделанные во время запроса, остаются pending и уйдут своим флашем.
             if (pendingDataRef.current === data) pendingDataRef.current = null;
             retryAttemptRef.current = 0;
+            progressIdRef.current = updated.id;
             if (mountedRef.current) setProgress(updated);
         } catch (err) {
             if (!pendingDataRef.current) pendingDataRef.current = data;
@@ -370,7 +393,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             flushQueuedRef.current = false;
             if (shouldFlushAgain) void flushSyncRef.current?.();
         }
-    }, [clearRetryTimer, scheduleRetry]);
+    }, [clearRetryTimer, questId, scheduleRetry]);
     flushSyncRef.current = flushSync;
 
     // Возврат в приложение и восстановление сети — сразу дожимаем отложенный
@@ -406,8 +429,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                 retryTimerRef.current = null;
             }
             const data = pendingDataRef.current;
-            if (!data || !isAuthenticatedRef.current || !progressIdRef.current) return;
-            void apiUpdateProgress(progressIdRef.current, toProgressPayload(data)).catch((err) => {
+            const pendingQuestId = questIdRef.current;
+            if (!data || !isAuthenticatedRef.current || !progressIdRef.current || !pendingQuestId) return;
+            void pushMergedProgress(pendingQuestId, data).catch((err) => {
                 devWarn('Could not flush quest progress on unmount:', err);
             });
         };
@@ -448,7 +472,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         } catch (err) {
             console.warn('Could not delete quest progress from server:', err);
         }
-    }, [isAuthenticated]);
+    }, [clearRetryTimer, isAuthenticated]);
 
     return { progress, progressLoading, syncing, saveProgress, resetProgress };
 }

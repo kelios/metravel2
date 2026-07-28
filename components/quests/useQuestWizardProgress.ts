@@ -1,5 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
+import {
+  mergeQuestProgress,
+  normalizeQuestProgressSnapshot,
+  type QuestProgressSnapshot,
+} from '@/utils/questProgressMerge'
 
 type QuestProgressStep = {
   id: string
@@ -21,6 +27,9 @@ type QuestWizardProgressPayload = {
   hints: Record<string, boolean>
   showMap: boolean
   completed?: boolean
+  /** Время снапшота и ответов по шагам — нужно для слияния между устройствами */
+  updatedAt?: number
+  answeredAt?: Record<string, number>
 }
 
 type InitialQuestProgress = {
@@ -30,49 +39,76 @@ type InitialQuestProgress = {
   attempts: Record<string, number>
   hints: Record<string, boolean>
   showMap: boolean
+  completed?: boolean
+  updatedAt?: number
+  answeredAt?: Record<string, number>
 }
 
-type StoredProgressState = {
+// AsyncStorage-запись прогресса. Ключи index/unlocked исторические; completed,
+// updatedAt и answeredAt добавлены для слияния между устройствами и отсутствуют
+// в записях, созданных до этого — такие читаются как «время неизвестно».
+type StoredProgressRecord = {
   index: number
   unlocked: number
   answers: Record<string, string>
   attempts: Record<string, number>
   hints: Record<string, boolean>
   showMap: boolean
+  completed?: boolean
+  updatedAt?: number
+  answeredAt?: Record<string, number>
 }
 
-const normalizeStoredProgress = (raw: Partial<StoredProgressState> | null | undefined): StoredProgressState => ({
-  index: raw?.index ?? 0,
-  unlocked: raw?.unlocked ?? 0,
-  answers: raw?.answers ?? {},
-  attempts: raw?.attempts ?? {},
-  hints: raw?.hints ?? {},
-  showMap: raw?.showMap !== undefined ? raw.showMap : true,
+const snapshotFromRecord = (record: Partial<StoredProgressRecord> | null | undefined): QuestProgressSnapshot =>
+  normalizeQuestProgressSnapshot({
+    currentIndex: record?.index,
+    unlockedIndex: record?.unlocked,
+    answers: record?.answers,
+    attempts: record?.attempts,
+    hints: record?.hints,
+    showMap: record?.showMap,
+    completed: record?.completed,
+    updatedAt: record?.updatedAt,
+    answeredAt: record?.answeredAt,
+  })
+
+const serializeRecord = (snapshot: QuestProgressSnapshot): string => JSON.stringify({
+  index: snapshot.currentIndex,
+  unlocked: snapshot.unlockedIndex,
+  answers: snapshot.answers,
+  attempts: snapshot.attempts,
+  hints: snapshot.hints,
+  showMap: snapshot.showMap,
+  completed: snapshot.completed,
+  updatedAt: snapshot.updatedAt,
+  answeredAt: snapshot.answeredAt,
 })
 
-// Единый вид снимка прогресса: и то, что уходит в AsyncStorage, и ключ, по
-// которому save-эффект узнаёт собственный сид.
-const buildProgressSnapshot = (state: StoredProgressState): string => JSON.stringify({
-  index: state.index,
-  unlocked: state.unlocked,
+// Ключ, по которому save-эффект узнаёт состояние, засеянное самим хуком. Только
+// поля, живущие в React-state: времена в state не хранятся.
+const stateFingerprint = (state: {
+  currentIndex: number
+  unlockedIndex: number
+  answers: Record<string, string>
+  attempts: Record<string, number>
+  hints: Record<string, boolean>
+  showMap: boolean
+}): string => JSON.stringify({
+  index: state.currentIndex,
+  unlocked: state.unlockedIndex,
   answers: state.answers,
   attempts: state.attempts,
   hints: state.hints,
   showMap: state.showMap,
 })
 
-const readStoredProgress = async (storageKey: string): Promise<StoredProgressState | null> => {
+const readStoredProgress = async (storageKey: string): Promise<QuestProgressSnapshot> => {
   const saved = await AsyncStorage.getItem(storageKey)
-  if (!saved) return null
+  if (!saved) return snapshotFromRecord(null)
   const { safeJsonParseString } = require('@/utils/safeJsonParse')
-  const parsed = safeJsonParseString(saved, null) as Partial<StoredProgressState> | null
-  return parsed ? normalizeStoredProgress(parsed) : null
+  const parsed = safeJsonParseString(saved, null) as Partial<StoredProgressRecord> | null
+  return snapshotFromRecord(parsed)
 }
-
-// Сколько шагов реально отвечено — тем же критерием, что и completedSteps
-// (пустая строка ответом не считается).
-const countAnsweredSteps = (answers: Record<string, string> | undefined): number =>
-  answers ? Object.values(answers).filter(Boolean).length : 0
 
 type UseQuestWizardProgressParams = {
   allSteps: QuestProgressStep[]
@@ -97,70 +133,90 @@ export function useQuestWizardProgress({
   const [attempts, setAttempts] = useState<Record<string, number>>({})
   const [hints, setHints] = useState<Record<string, boolean>>({})
   const [showMap, setShowMap] = useState(true)
-  // Снимок состояния, которое хук засеял сам (бэкенд, AsyncStorage, сброс).
+  // Отпечаток состояния, которое хук засеял сам (слияние, AsyncStorage, сброс).
   // Save-эффект пропускает ровно его — без прежней гонки `suppressSave` с
   // `setTimeout(0)`, где лишний await в load-эффекте решал, сработает гейт или
   // нет. Стартовое значение гасит сейв дефолтов на первом рендере.
-  const seededSnapshotRef = useRef<string | null>(buildProgressSnapshot(normalizeStoredProgress(null)))
+  const seededSnapshotRef = useRef<string | null>(stateFingerprint({
+    currentIndex: 0,
+    unlockedIndex: 0,
+    answers: {},
+    attempts: {},
+    hints: {},
+    showMap: true,
+  }))
   // Какой storageKey уже засеян бэкенд-прогрессом. initialProgress пересоздаётся
   // в роуте через useMemo на каждое setProgress (эхо нашего же debounced-сейва),
   // поэтому без этого гейта load-эффект перезапускался на каждое эхо и откатывал
   // currentIndex/answers к серверным значениям — отсюда «тап по ответу иногда
   // игнорируется и возвращает на тот же шаг».
   const backendSeededKey = useRef<string | null>(null)
+  // Времена живут вне React-state: на рендер не влияют, а нужны только слиянию.
+  const answeredAtRef = useRef<Record<string, number>>({})
+  const lastAnswersRef = useRef<Record<string, string>>({})
+  const updatedAtRef = useRef(0)
+  // Живое состояние для слияния серверных обновлений, пришедших во время сессии:
+  // load-эффект асинхронный, замыкание успевает устареть.
+  const liveSnapshotRef = useRef<QuestProgressSnapshot>(normalizeQuestProgressSnapshot(null))
 
-  const applyProgressState = (state: StoredProgressState) => {
-    setCurrentIndex(state.index)
-    setUnlockedIndex(state.unlocked)
-    setAnswers(state.answers)
-    setAttempts(state.attempts)
-    setHints(state.hints)
-    setShowMap(state.showMap)
+  const applyProgressState = (snapshot: QuestProgressSnapshot) => {
+    setCurrentIndex(snapshot.currentIndex)
+    setUnlockedIndex(snapshot.unlockedIndex)
+    setAnswers(snapshot.answers)
+    setAttempts(snapshot.attempts)
+    setHints(snapshot.hints)
+    setShowMap(snapshot.showMap)
   }
+
+  /**
+   * Применить снапшот как собственный сид хука.
+   * `markSeeded` = данные уже согласованы с источником (сервером/хранилищем) и
+   * их не надо гнать обратно; иначе save-эффект отправит слитое на сервер.
+   */
+  const seedProgressState = useCallback((snapshot: QuestProgressSnapshot, markSeeded: boolean): Promise<void> => {
+    answeredAtRef.current = snapshot.answeredAt
+    lastAnswersRef.current = snapshot.answers
+    updatedAtRef.current = snapshot.updatedAt
+    seededSnapshotRef.current = markSeeded ? stateFingerprint(snapshot) : null
+    applyProgressState(snapshot)
+    return AsyncStorage.setItem(storageKey, serializeRecord(snapshot)).catch(() => {})
+  }, [storageKey])
 
   useEffect(() => {
     const loadProgress = async () => {
       try {
-        if (initialProgress) {
-          // Применяем бэкенд-прогресс один раз на квест. Последующие изменения
-          // identity initialProgress — это эхо собственных сейвов, не новые данные.
-          if (backendSeededKey.current === storageKey) return
-          backendSeededKey.current = storageKey
-
-          // Серверный прогресс мог отстать: ответы, данные без сети, до сервера
-          // не долетают (баг 2026-07-28 — после полного прохождения офлайн на
-          // сервере остался только intro). Сравниваем, где ответов больше, и
-          // локальный прогресс серверным больше безусловно не затираем.
-          const localState = await readStoredProgress(storageKey)
-          const serverState = normalizeStoredProgress({
-            index: initialProgress.currentIndex,
-            unlocked: initialProgress.unlockedIndex,
-            answers: initialProgress.answers,
-            attempts: initialProgress.attempts,
-            hints: initialProgress.hints,
-            showMap: initialProgress.showMap,
-          })
-
-          if (localState && countAnsweredSteps(localState.answers) > countAnsweredSteps(serverState.answers)) {
-            // Локальный прогресс полнее — сеем его и НЕ помечаем как свой сид:
-            // save-эффект сразу дольёт разницу на сервер (как гостевая миграция
-            // в useGuestQuestFlow).
-            seededSnapshotRef.current = null
-            applyProgressState(localState)
-            return
-          }
-
-          const snapshot = buildProgressSnapshot(serverState)
-          seededSnapshotRef.current = snapshot
-          applyProgressState(serverState)
-          await AsyncStorage.setItem(storageKey, snapshot).catch(() => {})
-        } else {
+        if (!initialProgress) {
           // Бэкенд-прогресс ещё не загружен — даём ему засеять состояние, когда придёт.
           backendSeededKey.current = null
-          const stored = (await readStoredProgress(storageKey)) ?? normalizeStoredProgress(null)
-          seededSnapshotRef.current = buildProgressSnapshot(stored)
-          applyProgressState(stored)
+          seedProgressState(await readStoredProgress(storageKey), true)
+          return
         }
+
+        const server = normalizeQuestProgressSnapshot(initialProgress)
+
+        if (backendSeededKey.current === storageKey) {
+          // Квест уже засеян: это либо эхо собственного сейва, либо ответы
+          // другого устройства, прилетевшие в ответе сервера. Сливаем аддитивно,
+          // но курсор и карту не двигаем — игрок смотрит на этот экран.
+          const live = liveSnapshotRef.current
+          const { merged, localChanged } = mergeQuestProgress(live, server)
+          if (!localChanged) return
+          seedProgressState(
+            { ...merged, currentIndex: live.currentIndex, showMap: live.showMap },
+            true,
+          )
+          return
+        }
+
+        backendSeededKey.current = storageKey
+
+        // Серверный прогресс мог отстать (ответы без сети до него не долетают,
+        // баг 2026-07-28), а локальный — не знать про другое устройство. Поэтому
+        // не выбираем победителя, а сливаем: ни один ответ не теряется.
+        const local = await readStoredProgress(storageKey)
+        const { merged, serverNeedsPush } = mergeQuestProgress(local, server)
+        // Если серверу чего-то не хватает — не гасим save-эффект, он дольёт.
+        seedProgressState(merged, !serverNeedsPush)
       } catch (error) {
         const { devError } = require('@/utils/logger')
         devError('Error loading quest progress:', error)
@@ -168,32 +224,48 @@ export function useQuestWizardProgress({
     }
 
     loadProgress()
-  }, [initialProgress, storageKey])
+  }, [initialProgress, seedProgressState, storageKey])
 
   // Только обязательные (проверяемые) шаги гейтят финал и считаются в прогрессе.
   const requiredSteps = useMemo(() => steps.filter((step) => !isOptionalStep(step)), [steps])
 
   useEffect(() => {
-    const snapshot = buildProgressSnapshot({
-      index: currentIndex,
-      unlocked: unlockedIndex,
-      answers,
-      attempts,
-      hints,
-      showMap,
-    })
+    const fingerprint = stateFingerprint({ currentIndex, unlockedIndex, answers, attempts, hints, showMap })
     // Наш собственный сид уже лежит и в состоянии, и в хранилище — не гоняем
     // его обратно на сервер эхом.
-    if (seededSnapshotRef.current === snapshot) {
+    if (seededSnapshotRef.current === fingerprint) {
       seededSnapshotRef.current = null
       return
     }
     seededSnapshotRef.current = null
 
-    AsyncStorage.setItem(storageKey, snapshot)
-      .catch((error) => console.error('Error saving progress:', error))
+    // Штампуем время ответа по каждому новому/изменившемуся шагу: без него
+    // слияние с другим устройством не сможет разрешить коллизию одного шага.
+    const now = Date.now()
+    const answeredAt: Record<string, number> = { ...answeredAtRef.current }
+    for (const [stepId, value] of Object.entries(answers)) {
+      if (value && lastAnswersRef.current[stepId] !== value) answeredAt[stepId] = now
+    }
+    for (const stepId of Object.keys(answeredAt)) {
+      if (!answers[stepId]) delete answeredAt[stepId]
+    }
+    answeredAtRef.current = answeredAt
+    lastAnswersRef.current = answers
+    updatedAtRef.current = now
 
     const completed = requiredSteps.length > 0 && requiredSteps.every((step) => !!answers[step.id])
+    AsyncStorage.setItem(storageKey, serializeRecord({
+      currentIndex,
+      unlockedIndex,
+      answers,
+      attempts,
+      hints,
+      showMap,
+      completed,
+      updatedAt: now,
+      answeredAt,
+    })).catch((error) => console.error('Error saving progress:', error))
+
     onProgressChange?.({
       currentIndex,
       unlockedIndex,
@@ -202,6 +274,8 @@ export function useQuestWizardProgress({
       hints,
       showMap,
       completed,
+      updatedAt: now,
+      answeredAt,
     })
   }, [answers, attempts, currentIndex, hints, onProgressChange, requiredSteps, showMap, storageKey, unlockedIndex])
 
@@ -209,6 +283,19 @@ export function useQuestWizardProgress({
   const requiredCount = requiredSteps.length
   const progress = requiredCount > 0 ? completedSteps.length / requiredCount : 0
   const allCompleted = requiredCount > 0 && completedSteps.length === requiredCount
+
+  // Живой снимок для слияния серверных обновлений, прилетевших во время сессии.
+  liveSnapshotRef.current = normalizeQuestProgressSnapshot({
+    currentIndex,
+    unlockedIndex,
+    answers,
+    attempts,
+    hints,
+    showMap,
+    completed: allCompleted,
+    updatedAt: updatedAtRef.current,
+    answeredAt: answeredAtRef.current,
+  })
 
   const maxAnsweredIndex = useMemo(() => {
     let maxIdx = -1
@@ -226,10 +313,10 @@ export function useQuestWizardProgress({
 
   const resetProgress = async () => {
     await AsyncStorage.removeItem(storageKey)
-    const emptyState = normalizeStoredProgress(null)
-    seededSnapshotRef.current = buildProgressSnapshot(emptyState)
-    applyProgressState(emptyState)
-    await AsyncStorage.setItem(storageKey, buildProgressSnapshot(emptyState))
+    // Сброс — единственная немонотонная операция: слияние её бы отменило,
+    // поэтому чистим и локальные времена, чтобы старые ответы не «воскресли».
+    const emptyState = normalizeQuestProgressSnapshot({ updatedAt: Date.now() })
+    await seedProgressState(emptyState, true)
     onProgressReset?.()
   }
 

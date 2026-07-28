@@ -17,6 +17,21 @@
 
 Фичевые компоненты используют только `components/ui/ImageCardMedia.tsx`. `expo-image` импортируется исключительно внутри `components/ui/` (и немногих изолированных исключений — см. allowlist в `scripts/check-image-architecture.js`).
 
+Централизация renderer недостаточна без единого source contract:
+
+- если backend прислал `media.variants`, feature использует канонический variant
+  URL без дополнительного `v/q/fit/dpr`;
+- если manifest отсутствует, proxy URL строится только shared helper'ом по
+  опубликованному backend contract, а не локальными ladders в component;
+- unsupported transform не может молча считаться preview, если фактически вернул
+  original;
+- blur и sharp для одного slot не должны создавать две загрузки одного identity;
+- на native sharp загружается первым, затем blur монтируется с тем же `source`,
+  `recyclingKey` и `memory-disk` cache policy, чтобы два transformed target не
+  стартовали параллельные cold-cache запросы;
+- browser/device performance evidence проверяет URL cardinality и bytes, а не
+  только факт использования `ImageCardMedia`.
+
 Соблюдение: ESLint-правило + `npm run check:image-architecture` в CI и pre-commit.
 
 ## Последствия
@@ -31,6 +46,8 @@
 ### Отрицательные / риски
 
 - Добавление нового флага `expo-image` требует расширения API `ImageCardMedia`.
+- Import guard не доказывает соблюдение source/proxy contract; его нужно
+  дополнять manifest/URL/network regression controls из `MEDIA-001`.
 
 ## Связанные
 
@@ -38,3 +55,4 @@
 - `components/ui/UnifiedTravelCard.tsx`
 - `scripts/check-image-architecture.js`
 - `docs/RULES.md`, `docs/TRAVEL_PERFORMANCE_REFACTOR.md`
+- `docs/PROBLEM_MEMORY.md` (`MEDIA-001`)

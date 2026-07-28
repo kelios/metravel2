@@ -134,7 +134,7 @@ class ApiClient {
 
                 if (!response.ok) {
                     // Решение об очистке токенов принимает вызывающий код по
-                    // подтверждённому 401 (см. isTokenRejectedByServer) — сам по себе
+                    // подтверждённому 401 (см. isSessionRejectedByServer) — сам по себе
                     // неудачный refresh не доказывает невалидность access-токена (#810).
                     throw new ApiError(response.status, i18nT('errorsStatic:api.client.refreshFailed'));
                 }
@@ -171,14 +171,14 @@ class ApiClient {
     }
 
     /**
-     * Подтверждает невалидность токена контрольной пробой дешёвого
-     * авторизованного эндпоинта. Стирание secure-store необратимо (#810:
-     * спонтанный логаут на устройстве), поэтому единичный 401 бизнес-эндпоинта
-     * (прокси-сбой, endpoint-specific ответ) — не основание: чистим только
-     * когда сервер отверг токен и на контрольной пробе. Сеть/таймаут/5xx —
-     * неубедительно, токен не трогаем.
+     * Подтверждает невалидность native-токена или web cookie-сессии контрольной
+     * пробой дешёвого авторизованного эндпоинта. Стирание secure-store и
+     * auth-invalidation необратимы (#810: спонтанный логаут), поэтому единичный
+     * 401 бизнес-эндпоинта (прокси-сбой, endpoint-specific ответ) — не
+     * основание: чистим только когда контрольная проба тоже отвергла сессию.
+     * Сеть/таймаут/5xx неубедительны — auth state не трогаем.
      */
-    private async isTokenRejectedByServer(token: string): Promise<boolean> {
+    private async isSessionRejectedByServer(token: string | null): Promise<boolean> {
         try {
             const probe = await fetchWithTimeout(
                 `${this.baseURL}/user/me/verifications/`,
@@ -299,12 +299,21 @@ class ApiClient {
                 // auth (skipAuth) — the endpoint is public and the token may still be
                 // valid elsewhere. Only clear when we actually sent no token.
                 if (!skipAuth) {
-                    // Чтение secure-store могло сглючить транзиентно (Android keystore):
-                    // перечитываем; чистим и оповещаем UI только если хранилище
-                    // действительно пусто — иначе глюк чтения уничтожает живую сессию (#810).
-                    const storedToken = await this.getAccessToken();
-                    if (!storedToken) {
-                        await this.clearTokens();
+                    if (usesWebCookieAuth()) {
+                        // На web отсутствие JS-токена — норма: сессия живёт в HttpOnly
+                        // cookie. Endpoint-specific 401 не должен разлогинивать весь UI;
+                        // инвалидируем сессию только после 401 контрольной cookie-пробы.
+                        if (await this.isSessionRejectedByServer(null)) {
+                            await this.clearTokens();
+                        }
+                    } else {
+                        // Чтение secure-store могло сглючить транзиентно (Android keystore):
+                        // перечитываем; чистим и оповещаем UI только если хранилище
+                        // действительно пусто — иначе глюк чтения уничтожает живую сессию (#810).
+                        const storedToken = await this.getAccessToken();
+                        if (!storedToken) {
+                            await this.clearTokens();
+                        }
                     }
                 }
                 throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
@@ -352,7 +361,7 @@ class ApiClient {
                 // попадает ЛЮБОЙ 401 при живом access-токене. Токены стираем только по
                 // подтверждённому 401 контрольной пробы — единичный транзиентный 401 не
                 // должен необратимо разлогинивать устройство (#810).
-                if (await this.isTokenRejectedByServer(token)) {
+                if (await this.isSessionRejectedByServer(token)) {
                     await this.clearTokens();
                 }
 
@@ -461,10 +470,18 @@ class ApiClient {
             );
 
             if (resp.status === 401 && !token) {
-                // См. request(): чистим только если secure-store реально пуст (#810).
-                const storedToken = await this.getAccessToken();
-                if (!storedToken) {
-                    await this.clearTokens();
+                if (usesWebCookieAuth()) {
+                    // См. request(): единичный 401 download-эндпоинта не доказывает,
+                    // что HttpOnly-cookie сессия целиком умерла.
+                    if (await this.isSessionRejectedByServer(null)) {
+                        await this.clearTokens();
+                    }
+                } else {
+                    // См. request(): чистим только если secure-store реально пуст (#810).
+                    const storedToken = await this.getAccessToken();
+                    if (!storedToken) {
+                        await this.clearTokens();
+                    }
                 }
                 throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
             }
@@ -497,7 +514,7 @@ class ApiClient {
                 }
 
                 // См. request(): токены стираем только по подтверждённому 401 пробы (#810).
-                if (await this.isTokenRejectedByServer(token)) {
+                if (await this.isSessionRejectedByServer(token)) {
                     await this.clearTokens();
                 }
                 const fallbackHeaders = this.authHeaders(null, { extra: options.headers });

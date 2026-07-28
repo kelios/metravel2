@@ -85,6 +85,24 @@ describe('questAdapters', () => {
       expect(check('  ')).toBe(false);
     });
 
+    // Карточка шага по этому маркеру объясняет, что ответ свободный и сколько
+    // символов нужно. Без него короткий текст получал «Неверный ответ», хотя
+    // правильного варианта у шага нет вовсе.
+    it('any_text: exposes the minimum length for the UI', () => {
+      const check = buildAnswerChecker('any_text', '{"min_length":10}');
+      expect(check._freeTextMinLength).toBe(10);
+    });
+
+    it('any_text: falls back to a 1 char minimum on broken value', () => {
+      const check = buildAnswerChecker('any_text', 'bad json');
+      expect(check._freeTextMinLength).toBe(1);
+    });
+
+    it('other answer types are not marked as free text', () => {
+      expect(buildAnswerChecker('exact', '2014')._freeTextMinLength).toBeUndefined();
+      expect(buildAnswerChecker('any', '')._freeTextMinLength).toBeUndefined();
+    });
+
     it('any_number: checks if input is a number', () => {
       const check = buildAnswerChecker('any_number', '');
       expect(check('42')).toBe(true);
