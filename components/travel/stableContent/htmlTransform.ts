@@ -6,6 +6,7 @@ import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
+import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -77,34 +78,13 @@ export const buildWeservProxyUrl = (src: string) => {
     if (trimmed.startsWith('data:')) return trimmed
 
     const normalized = trimmed.replace(/&amp;/g, '&')
+    const unwrapped = unwrapWeservImageUrl(normalized)
+    if (isWeservImageUrl(normalized) && unwrapped === normalized) return normalized
     const targetW = isMobileWebViewport() ? 600 : 800
-
-    if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) {
-      try {
-        const url = new URL(normalized)
-        const innerUrl = url.searchParams.get('url')
-        if (innerUrl) {
-          const cleanInner = stripOptimizationParams(
-            innerUrl.startsWith('//')
-              ? `https:${innerUrl}`
-              : innerUrl.includes('://')
-                ? innerUrl
-                : `https://${innerUrl}`
-          ).replace(/^https?:\/\//i, '')
-          url.searchParams.set('url', cleanInner)
-        }
-        url.searchParams.set('w', String(targetW))
-        url.searchParams.set('q', '60')
-        if (!url.searchParams.has('output')) url.searchParams.set('output', 'webp')
-        return url.toString()
-      } catch {
-        return normalized
-      }
-    }
 
     let parsedUrl: URL | null = null
     try {
-      parsedUrl = new URL(normalized, 'https://metravel.by')
+      parsedUrl = new URL(unwrapped, 'https://metravel.by')
     } catch {
       parsedUrl = null
     }
@@ -119,7 +99,7 @@ export const buildWeservProxyUrl = (src: string) => {
       }
     }
 
-    const cleaned = stripOptimizationParams(normalized)
+    const cleaned = stripOptimizationParams(unwrapped)
     const withoutScheme = cleaned.replace(/^https?:\/\//i, '')
     return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=${targetW}&q=60&output=webp&fit=inside`
   } catch {

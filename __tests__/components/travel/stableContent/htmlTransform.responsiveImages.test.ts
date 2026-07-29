@@ -93,6 +93,35 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
   })
 
+  it('collapses a deeply nested legacy weserv chain to one canonical proxy URL', () => {
+    const origin = 'metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy-photo.jpg'
+    const nested = [0, 1, 2, 3, 4, 5].reduce(
+      (current) => `https://images.weserv.nl/?url=${encodeURIComponent(current)}&w=1600&fit=inside`,
+      origin,
+    )
+
+    const out = prepareStableContentHtml(`<p><img src="${nested}" /></p>`, {
+      serverSanitized: true,
+    })
+
+    expect((out.match(/images\.weserv\.nl/g) ?? [])).toHaveLength(1)
+    expect(out).toContain('url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2Flegacy-photo.jpg')
+    expect(out).toContain('w=800')
+    expect(out).toContain('q=60')
+    expect(out).toContain('output=webp')
+  })
+
+  it('does not wrap a malformed weserv URL again when its source is missing', () => {
+    const malformed = 'https://images.weserv.nl/?w=800&q=60'
+
+    const out = prepareStableContentHtml(`<p><img src="${malformed}" /></p>`, {
+      serverSanitized: true,
+    })
+
+    expect((out.match(/images\.weserv\.nl/g) ?? [])).toHaveLength(1)
+    expect(out).toContain('src="https://images.weserv.nl/?w=800&amp;q=60"')
+  })
+
   it('reserves a stable aspect ratio for images that arrive without dimensions', () => {
     const html = '<p><img src="https://metravel.by/gallery/540/gallery/unknown.webp" /></p>'
     const out = prepareStableContentHtml(html)

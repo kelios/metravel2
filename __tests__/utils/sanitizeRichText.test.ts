@@ -131,6 +131,26 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('https://images.weserv.nl/?url=example.com%2Fplain-http.jpg')
   })
 
+  it('keeps third-party image proxying idempotent across repeated sanitization', () => {
+    const original = '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/photo.jpg"></p>'
+
+    const once = sanitizeRichText(original)
+    const twice = sanitizeRichText(once)
+
+    expect(twice).toBe(once)
+    expect((twice.match(/images\.weserv\.nl/g) ?? [])).toHaveLength(1)
+    expect(twice).toContain('metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2Fphoto.jpg')
+  })
+
+  it('does not turn a malformed weserv URL into another proxy layer', () => {
+    const malformed = '<p><img src="https://images.weserv.nl/?w=800&amp;q=60"></p>'
+
+    const sanitized = sanitizeRichText(malformed)
+
+    expect((sanitized.match(/images\.weserv\.nl/g) ?? [])).toHaveLength(1)
+    expect(sanitized).toContain('src="https://images.weserv.nl/?w=800&amp;q=60"')
+  })
+
   it('rewrites private rich-text media urls to configured first-party origin', () => {
     process.env.EXPO_PUBLIC_API_URL = 'http://192.168.50.36/api'
 

@@ -1,5 +1,7 @@
 import sanitizeHtml, { Attributes } from 'sanitize-html'
 
+import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
+
 const ALLOWED_IFRAME_HOSTS = [
   'youtube.com',
   'youtube-nocookie.com',
@@ -178,7 +180,11 @@ function normalizeRichImageSrc(value?: string, options?: { preferConfiguredFirst
   const normalized = normalizeUrl(trimmed)
   if (!normalized) return undefined
   try {
-    const rewritten = rewriteLocalImageUrl(normalized, { preferConfiguredFirstPartyOrigin })
+    const normalizedSource = rewriteLocalImageUrl(normalized, { preferConfiguredFirstPartyOrigin })
+    const rewritten = unwrapWeservImageUrl(normalizedSource)
+    if (isWeservImageUrl(normalizedSource) && rewritten === normalizedSource) {
+      return normalizedSource
+    }
     // Strip backend optimization params the origin server doesn't understand
     // (e.g. ?w=1200&h=675&q=75&f=webp&fit=cover&auto=compress on /travel-description-image/ paths).
     const rewrittenUrl = new URL(rewritten)

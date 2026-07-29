@@ -7,6 +7,7 @@ import {
   extractFirstImgSrc,
 } from '@/components/travel/stableContent/htmlTransform'
 import { translate as i18nT } from '@/i18n'
+import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
 import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
 
@@ -23,15 +24,9 @@ const escapeCssUrl = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/
 const WESERV_FALLBACK_TIMEOUT_MS = 3500
 
 const originFromWeservSrc = (src: string): string | null => {
-  const match = /images\.weserv\.nl\/\?url=([^&]+)/i.exec(String(src || ''))
-  if (!match) return null
-  try {
-    let decoded = decodeURIComponent(match[1])
-    if (!/^https?:\/\//i.test(decoded)) decoded = `https://${decoded}`
-    return decoded
-  } catch {
-    return null
-  }
+  if (!isWeservImageUrl(src)) return null
+  const origin = unwrapWeservImageUrl(src)
+  return origin && origin !== src ? origin : null
 }
 
 const isWeservImage = (img: HTMLImageElement) =>
