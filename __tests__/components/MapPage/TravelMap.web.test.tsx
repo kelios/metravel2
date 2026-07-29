@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 import { TravelMap } from '@/components/MapPage/TravelMap.web';
 
 jest.mock('@tanstack/react-query', () => ({
@@ -239,6 +239,38 @@ describe('TravelMap (web)', () => {
         autoPanPaddingTopLeft: [8, 56],
         autoPanPaddingBottomRight: [8, 104],
       })
+    );
+  });
+
+  it('applies a pending point highlight when its marker registers later', () => {
+    const coord = '53.9, 27.56';
+    render(
+      <TravelMap
+        travelData={[{ coord }]}
+        highlightedPoint={{ coord, key: 'point-card-click' }}
+        compact
+        height={400}
+      />
+    );
+
+    const props = mockMapMarkers.mock.calls.at(-1)?.[0];
+    const markerElement = {
+      classList: { add: jest.fn(), remove: jest.fn() },
+      style: {} as Record<string, string>,
+    };
+    const marker = {
+      getElement: () => markerElement,
+      getLatLng: () => ({ lat: 53.9, lng: 27.56 }),
+      setZIndexOffset: jest.fn(),
+    };
+
+    act(() => {
+      props.onMarkerInstance(coord, marker);
+    });
+
+    expect(marker.setZIndexOffset).toHaveBeenCalledWith(1000);
+    expect(markerElement.classList.add).toHaveBeenCalledWith(
+      'metravel-travel-highlighted-marker'
     );
   });
 });

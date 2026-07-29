@@ -91,6 +91,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const highlightedMarkerRef = useRef<any>(null)
   const mountedRef = useRef(true)
   const [mapReady, setMapReady] = useState(false)
+  const [markerRegistryVersion, setMarkerRegistryVersion] = useState(0)
   const overlayControllersRef = useRef<Map<string, any>>(new Map())
   const popupCleanupsRef = useRef<Set<() => void>>(new Set())
 
@@ -337,7 +338,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     } catch (err) {
       console.warn('[TravelMap] Failed to highlight point:', err)
     }
-  }, [clearHighlightedMarker, highlightedPoint])
+  }, [clearHighlightedMarker, highlightedPoint, markerRegistryVersion])
 
   useEffect(() => {
     if (!IS_WEB || !mapRef.current || resizeTrigger === undefined) return
@@ -462,7 +463,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const handleMarkerInstance = useCallback((coord: any, marker: any) => {
     try {
       const key = String(coord ?? '').trim()
-      if (key) markerByCoordRef.current.set(key, marker)
+      if (!key) return
+      const previousMarker = markerByCoordRef.current.get(key)
+      if (marker) {
+        if (previousMarker === marker) return
+        markerByCoordRef.current.set(key, marker)
+      } else {
+        if (!previousMarker) return
+        markerByCoordRef.current.delete(key)
+      }
+      if (mountedRef.current) setMarkerRegistryVersion((version) => version + 1)
     } catch {
       ignoreTravelMapRuntimeError()
     }
