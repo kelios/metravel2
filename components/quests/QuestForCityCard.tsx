@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import { useRichMediaVisibility } from '@/components/ui/richMediaViewport'
 import NavigationIcon from '@/components/layout/NavigationIcon'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -72,6 +73,7 @@ export function QuestForCityCard({
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const difficultyLabels = createDifficultyLabels()
+  const mediaVisibility = useRichMediaVisibility(CARD_MEDIA_SIZE)
 
   const href = `/quests/${quest.cityId}/${quest.id}`
   const analyticsParams = useMemo(() => ({
@@ -120,9 +122,15 @@ export function QuestForCityCard({
       accessibilityRole="link"
       accessibilityLabel={i18nT('quests:components.quests.QuestForCityCard.proyti_kvest_value1_value2_54986608', { value1: cityLabel, value2: quest.title })}
     >
-      <View style={styles.media}>
+      <View
+        ref={mediaVisibility.ref}
+        onLayout={mediaVisibility.onLayout}
+        collapsable={false}
+        style={styles.media}
+        testID={`quest-card-media-viewport-${quest.id}`}
+      >
         <ImageCardMedia
-          source={coverUri ? { uri: coverUri } : null}
+          source={mediaVisibility.visible && coverUri ? { uri: coverUri } : null}
           width={CARD_MEDIA_SIZE}
           height={CARD_MEDIA_SIZE}
           fit="contain"
