@@ -11,7 +11,16 @@ import { readTravelOffline, saveTravelOffline } from '@/services/offline/travelO
 export async function cacheTravelOffline(id: number | string, data: unknown, isNative: boolean) {
   void isNative;
   if (!id || !data || typeof data !== 'object') return;
-  await saveTravelOffline(data as Travel, { routeParam: id });
+  const travel = data as Travel;
+  const sourceId = travel.id ?? travel.slug ?? id;
+  const existing = await offlineCatalog.get(`travel:${String(sourceId).trim()}`);
+
+  // Opening a detail screen refreshes the lightweight "recent" fallback in
+  // the background. It must never replace a user-pinned package (and its
+  // downloaded photos) with the text-only recent snapshot.
+  if (existing?.pinned && existing.status === 'ready') return;
+
+  await saveTravelOffline(travel, { routeParam: id });
 }
 
 export async function getOfflineTravelCached(id: number | string, isNative: boolean): Promise<unknown | null> {

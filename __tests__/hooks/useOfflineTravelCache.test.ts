@@ -21,7 +21,14 @@ jest.mock('@/services/offline/packageStore', () => ({
   },
 }));
 
-import { useOfflineTravelCache } from '@/hooks/useOfflineTravelCache';
+import {
+  cacheTravelOffline,
+  getOfflineTravelCached,
+  useOfflineTravelCache,
+} from '@/hooks/useOfflineTravelCache';
+import { offlineCatalog } from '@/services/offline/offlineCatalog';
+import { saveTravelOffline } from '@/services/offline/travelOfflineAdapter';
+import type { Travel } from '@/types/types';
 
 describe('useOfflineTravelCache', () => {
   beforeEach(async () => {
@@ -50,7 +57,11 @@ describe('useOfflineTravelCache', () => {
       cached = await result.current.getCachedTravel(42);
     });
 
-    expect(cached).toEqual(mockTravel);
+    expect(cached).toEqual(expect.objectContaining({
+      ...mockTravel,
+      schemaVersion: 1,
+      descriptionHtml: 'A test',
+    }));
   });
 
   it('returns null for non-cached travel', async () => {
@@ -62,6 +73,32 @@ describe('useOfflineTravelCache', () => {
     });
 
     expect(cached).toBeNull();
+  });
+
+  it('does not downgrade a pinned package during background recent caching', async () => {
+    const pinnedTravel = {
+      id: 77,
+      name: 'Pinned travel',
+      description: 'Pinned snapshot',
+    } as Travel;
+    await saveTravelOffline(pinnedTravel, { pinned: true, includePhotos: false });
+
+    await cacheTravelOffline(77, {
+      ...pinnedTravel,
+      name: 'Background refresh',
+      description: 'Lightweight recent snapshot',
+    }, true);
+
+    const cached = await getOfflineTravelCached(77, true);
+    const manifest = await offlineCatalog.get('travel:77');
+    expect(cached).toEqual(expect.objectContaining({
+      name: 'Pinned travel',
+      description: 'Pinned snapshot',
+    }));
+    expect(manifest).toEqual(expect.objectContaining({
+      pinned: true,
+      includePhotos: false,
+    }));
   });
 
   it('maintains index of cached IDs', async () => {
@@ -120,7 +157,11 @@ describe('useOfflineTravelCache', () => {
       cached = await result.current.getCachedTravel(1);
     });
 
-    expect(cached).toEqual({ id: 1, name: 'Web travel' });
+    expect(cached).toEqual(expect.objectContaining({
+      id: 1,
+      name: 'Web travel',
+      schemaVersion: 1,
+    }));
 
     let ids: string[] = [];
     await act(async () => {

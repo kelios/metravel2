@@ -42,6 +42,15 @@ Read first:
      distinguishable from a valid one, never a silent heavy/generic fallback
    - a build-time or deploy-time check offered for a user/crawler-visible production
      surface instead of a recurring production probe
+   - `production-backed preview`, local production build, production API behind a
+     local bundle, or deploy logs offered as evidence that the live production URL
+     is fixed
+   - a production optimization without the same before/after URL, viewport/browser/DPR,
+     auth/cache state, request/API count, bytes, response codes, and relevant
+     scroll/lazy-loading probe
+   - a page-level performance task whose evidence proves one component or URL but
+     does not remeasure the whole page budget and adjacent consumers touched by
+     shared media/source/pagination code
    - a test that mocks the very primitive under investigation offered as contract evidence
    - a consolidation closed without naming the CI guard that fails when the new single
      contract is bypassed
@@ -58,6 +67,11 @@ Read first:
    start or continue the remaining work; waiting for review, tests, production/API/device checks,
    or an incomplete Done gate is never such a blocker. The active gate owner must reopen a
    delegated task or record a blocker if it cannot fix a discovered failure.
+
+For a production incident, no deploy authorization is not a reason to lower the
+Done gate: accept the implementation into `review`/`testing` with `local fix
+ready; production verification pending`, but do not move it to `done` and do not
+describe production as fixed until the live target is remeasured.
 
 ## Output
 

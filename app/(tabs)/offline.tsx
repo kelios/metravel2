@@ -33,12 +33,28 @@ export default function OfflineLibraryScreen() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { userId } = useAuth();
-  const { items, summary, isLoading, remove, setPinned } = useOfflineCatalog(userId);
+  const {
+    items,
+    summary,
+    operations,
+    isLoading,
+    remove,
+    setPinned,
+    cancelOperation,
+    retryOperation,
+    clearOperation,
+  } = useOfflineCatalog(userId);
   const [filter, setFilter] = useState<Filter>('all');
 
+  const operationKeys = useMemo(() => new Set(operations.map((item) => item.key)), [operations]);
   const filtered = useMemo(
-    () => items.filter((item) => filter === 'all' || item.type === filter),
-    [filter, items],
+    () => items.filter(
+      (item) => !operationKeys.has(item.key) && (filter === 'all' || item.type === filter),
+    ),
+    [filter, items, operationKeys],
+  );
+  const filteredOperations = operations.filter(
+    (item) => filter === 'all' || item.type === filter,
   );
   const pinned = filtered.filter((item) => item.pinned);
   const recent = filtered.filter((item) => !item.pinned);
@@ -97,35 +113,119 @@ export default function OfflineLibraryScreen() {
             </View>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-              <Text style={styles.cardMeta}>
-                {item.pinned ? t('offline:availableOffline') : t('offline:recentAvailable')}
-                {' · '}{formatBytes(item.bytes)}
-              </Text>
+              {item.status === 'ready' ? (
+                <Text style={styles.cardMeta}>
+                  {item.pinned ? t('offline:availableOffline') : t('offline:recentAvailable')}
+                  {' · '}{formatBytes(item.bytes)}
+                </Text>
+              ) : (
+                <Text style={[styles.cardMeta, item.status === 'failed' && { color: colors.danger }]}>
+                  {item.status === 'failed' ? t('offline:saveFailed') : t('offline:saving')}
+                </Text>
+              )}
               <Text style={styles.cardMeta}>
                 {t('offline:updated', {
                   date: formatDate(item.updatedAt ?? item.savedAt, { day: 'numeric', month: 'short' }),
                 })}
               </Text>
               <View style={styles.actions}>
-                <Button
-                  label={t('offline:open')}
-                  variant="secondary"
-                  size="sm"
-                  onPress={() => router.push(item.route as Href)}
-                  icon={<Feather name="arrow-right" size={16} color={colors.primaryDark} />}
-                />
-                <Button
-                  label={item.pinned ? t('offline:unpin') : t('offline:pin')}
-                  variant="ghost"
-                  size="sm"
-                  onPress={() => setPinned(item.key, !item.pinned)}
-                />
+                {item.status === 'ready' ? (
+                  <>
+                    <Button
+                      label={t('offline:open')}
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => router.push(item.route as Href)}
+                      icon={<Feather name="arrow-right" size={16} color={colors.primaryDark} />}
+                    />
+                    <Button
+                      label={t('offline:update')}
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => router.push(item.route as Href)}
+                    />
+                    <Button
+                      label={item.pinned ? t('offline:unpin') : t('offline:pin')}
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => setPinned(item.key, !item.pinned)}
+                    />
+                  </>
+                ) : (
+                  <Button
+                    label={t('offline:retry')}
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => router.push(item.route as Href)}
+                    icon={<Feather name="refresh-cw" size={16} color={colors.primaryDark} />}
+                  />
+                )}
                 <Button
                   label={t('offline:remove')}
                   variant="danger-outline"
                   size="sm"
                   onPress={() => handleRemove(item)}
                 />
+              </View>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderOperations = () => {
+    if (!filteredOperations.length) return null;
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('offline:downloads')}</Text>
+        {filteredOperations.map((operation) => (
+          <View key={operation.key} style={styles.card} testID={`offline-operation-${operation.key}`}>
+            <View style={styles.cardIcon}>
+              <Feather
+                name={operation.status === 'failed' ? 'alert-circle' : 'download-cloud'}
+                size={20}
+                color={operation.status === 'failed' ? colors.danger : colors.primaryDark}
+              />
+            </View>
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle} numberOfLines={2}>{operation.title}</Text>
+              <Text style={[styles.cardMeta, operation.status === 'failed' && { color: colors.danger }]}>
+                {operation.status === 'failed'
+                  ? operation.errorCode === 'OFFLINE_STORAGE_FULL'
+                    ? t('offline:storageFull')
+                    : t('offline:saveFailed')
+                  : t('offline:progress', {
+                    done: formatInteger(operation.done),
+                    total: formatInteger(operation.total),
+                  })}
+              </Text>
+              <View style={styles.actions}>
+                {operation.status === 'failed' ? (
+                  <>
+                    <Button
+                      label={t('offline:retry')}
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => {
+                        void retryOperation(operation.key).catch(() => undefined);
+                      }}
+                    />
+                    <Button
+                      label={t('offline:remove')}
+                      variant="danger-outline"
+                      size="sm"
+                      onPress={() => clearOperation(operation.key)}
+                    />
+                  </>
+                ) : (
+                  <Button
+                    label={t('offline:cancel')}
+                    variant="ghost"
+                    size="sm"
+                    onPress={() => cancelOperation(operation.key)}
+                  />
+                )}
               </View>
             </View>
           </View>
@@ -171,7 +271,7 @@ export default function OfflineLibraryScreen() {
             <ActivityIndicator color={colors.primaryDark} />
             <Text style={styles.cardMeta}>{t('offline:loading')}</Text>
           </View>
-        ) : filtered.length === 0 ? (
+        ) : filtered.length === 0 && filteredOperations.length === 0 ? (
           <EmptyState
             icon="download-cloud"
             title={t('offline:emptyTitle')}
@@ -180,6 +280,7 @@ export default function OfflineLibraryScreen() {
           />
         ) : (
           <>
+            {renderOperations()}
             {renderSection(t('offline:saved'), pinned)}
             {renderSection(t('offline:recent'), recent)}
           </>

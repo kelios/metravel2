@@ -479,7 +479,10 @@ export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBund
             },
         );
         const normalized = normalizeQuestBundle(bundle);
-        void writeCachedQuestBundle(questId, normalized);
+        // The catalog commit is the single durable quest-package write. Await
+        // its best-effort wrapper so a successful online response cannot race a
+        // force-stop before the offline snapshot is committed.
+        await writeCachedQuestBundle(questId, normalized);
         return normalized;
     } catch (err) {
         const cached = await readCachedQuestBundle(questId);

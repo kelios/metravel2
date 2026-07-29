@@ -1,20 +1,53 @@
+import { Platform } from 'react-native';
 import type { OfflineMapPoint } from '@/api/mapOffline';
 import type { TravelCoords } from '@/types/types';
-import { deleteRegion, type OfflineRegion } from '@/utils/mapTileCache';
+import type { OfflineBBox, OfflineRegion } from '@/utils/mapTileCache';
 import { offlineCatalog } from './offlineCatalog';
 
 export interface OfflineMapRegionSnapshot {
   region: OfflineRegion;
   points: OfflineMapPoint[];
+  plannedTiles: number;
+  readyTiles: number;
+  failedTiles: number;
+  tileBytes: number;
+  pointCount: number;
+  etag: string | null;
 }
 
 const keyForRegion = (regionId: string): string => `map-region:${regionId}`;
+
+export const buildMapRegionId = (
+  bbox: OfflineBBox,
+  minZ: number,
+  maxZ: number,
+): string => {
+  const coordinates = [bbox.west, bbox.south, bbox.east, bbox.north]
+    .map((value) => Number(value).toFixed(5))
+    .join(':');
+  let hash = 2166136261;
+  for (let index = 0; index < coordinates.length; index += 1) {
+    hash ^= coordinates.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `region-${minZ}-${maxZ}-${(hash >>> 0).toString(36)}`;
+};
 
 export async function saveMapRegionOffline(
   region: OfflineRegion,
   points: OfflineMapPoint[],
   etag: string | null,
 ) {
+  const snapshot: OfflineMapRegionSnapshot = {
+    region,
+    points,
+    plannedTiles: region.tileCount,
+    readyTiles: region.tileCount,
+    failedTiles: 0,
+    tileBytes: region.bytes,
+    pointCount: points.length,
+    etag,
+  };
   return offlineCatalog.save({
     key: keyForRegion(region.id),
     type: 'map-region',
@@ -24,7 +57,7 @@ export async function saveMapRegionOffline(
     title: region.name,
     pinned: true,
     includePhotos: false,
-    snapshot: { region, points } satisfies OfflineMapRegionSnapshot,
+    snapshot,
     etag,
     additionalBytes: region.bytes,
   });
@@ -73,6 +106,9 @@ export async function readAllMapPointsOffline(): Promise<TravelCoords[]> {
 }
 
 export async function deleteMapRegionOffline(regionId: string): Promise<void> {
-  await deleteRegion(regionId);
+  if (Platform.OS !== 'web') {
+    const { deleteRegion } = await import('@/utils/mapTileCache');
+    await deleteRegion(regionId);
+  }
   await offlineCatalog.remove(keyForRegion(regionId));
 }

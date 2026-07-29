@@ -58,3 +58,18 @@ export interface OfflineStorageSummary {
   recentCount: number;
   bytes: number;
 }
+
+export type OfflineOperationStatus = 'downloading' | 'failed';
+
+export interface OfflinePackageOperation {
+  key: string;
+  type: OfflineContentType;
+  sourceId: string;
+  route: string;
+  title: string;
+  status: OfflineOperationStatus;
+  done: number;
+  total: number;
+  errorCode: string | null;
+  startedAt: number;
+}

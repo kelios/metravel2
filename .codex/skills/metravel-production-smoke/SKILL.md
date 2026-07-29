@@ -37,12 +37,32 @@ Check only what is safe to read:
 5. If a new production regression is found, compare with open board tasks when available to avoid duplicate reports.
 6. Route confirmed frontend regressions to `$metravel-feature-builder` or `$metravel-browser-reviewer`; backend/API regressions to `$metravel-backend-diagnostician` or a board task.
 
+## Performance/request audit mode
+
+When the smoke is used for a production performance, media, or request-fan-out
+incident, add a bounded route matrix rather than stopping at `200`/visible:
+
+- record exact URL, viewport/browser/DPR, auth state, cache state, and timestamp;
+- count page requests and API calls by endpoint family, including pagination and
+  duplicate query variants;
+- inventory images started before scroll, eager/lazy split, unsized same-origin
+  media, rendered versus intrinsic/selected dimensions, response codes, and
+  transfer bytes for suspicious samples;
+- repeat after scroll when lazy/progressive loading is part of the contract;
+- compare with open and closed problem-family tasks before creating or reopening
+  a ticket, and attach the numeric evidence to the canonical chain.
+
+A smoke can discover or verify a regression, but it cannot mark a production
+optimization `done` unless it reruns the same post-deploy live-URL probe required
+by that task's Done gate.
+
 ## Output
 
 Return a `Production Smoke` report:
 
 - checked URLs/endpoints
 - status codes and visible/browser result
+- request/API counts and media-byte evidence when performance is in scope
 - console or static asset failures
 - pass/fail verdict
 - linked existing blocker or new recommended owner

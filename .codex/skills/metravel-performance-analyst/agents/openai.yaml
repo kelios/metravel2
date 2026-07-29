@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Performance Analyst"
   short_description: "Measure Lighthouse, bundles, and performance budgets"
-  default_prompt: "Use $metravel-performance-analyst to measure metravel from a production build or real URL, compare budgets, and when travel hero code is touched verify both swipe behavior and performance before passing it."
+  default_prompt: "Use $metravel-performance-analyst to measure page-wide requests, API fan-out, bytes, media variants and budgets on the same live production URL before and after deploy; distinguish preview from production, include a negative probe, and keep unverified fixes in review/testing."

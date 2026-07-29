@@ -1,14 +1,14 @@
 import { Platform } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from '@/constants/layout'
-import type { TravelMedia } from '@/types/types'
+import type { GalleryItem, TravelMedia } from '@/types/types'
 import {
   findGalleryMediaImage,
   getMediaPlaceholderData,
 } from '@/utils/travelMediaVariants'
 
 type TravelSkeletonReadyCandidate = {
-  gallery?: Array<{ id?: number | string | null }> | null
+  gallery?: GalleryItem[] | null
   media?: TravelMedia | null
 } | null | undefined
 
@@ -31,7 +31,10 @@ export function isTravelDetailsFirstScreenReady(
   if (!hasHeroMedia) return true
 
   const firstGalleryImage = travel.gallery?.[0]
-  const heroMedia = findGalleryMediaImage(travel.media, firstGalleryImage?.id)
+  const firstGalleryId = typeof firstGalleryImage === 'object'
+    ? firstGalleryImage?.id
+    : null
+  const heroMedia = findGalleryMediaImage(travel.media, firstGalleryId)
   const placeholder = getMediaPlaceholderData(heroMedia)
   const hasLocalDataPlaceholder = Boolean(
     placeholder.blurhash || placeholder.dominantColor,

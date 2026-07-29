@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -21,17 +21,26 @@ export default function OfflineSaveControl({
 }) {
   const { t } = useTranslation();
   const colors = useThemedColors();
-  const { items } = useOfflineCatalog();
+  const {
+    items,
+    operations,
+    cancelOperation,
+    retryOperation,
+  } = useOfflineCatalog();
   const [visible, setVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const manifest = items.find((item) => item.type === type && item.sourceId === String(sourceId));
+  const operationKey = `${type}:${String(sourceId)}`;
+  const operation = operations.find((item) => item.key === operationKey);
 
   const save = useCallback(async (includePhotos: boolean) => {
     setSaving(true);
     try {
       await onSave(includePhotos);
-    } catch {
-      showToast({ type: 'error', text1: t('offline:saveFailed') });
+    } catch (error) {
+      if ((error as { name?: string } | null)?.name !== 'AbortError') {
+        showToast({ type: 'error', text1: t('offline:saveFailed') });
+      }
     } finally {
       setSaving(false);
     }
@@ -55,17 +64,46 @@ export default function OfflineSaveControl({
   return (
     <View style={styles.root}>
       <Button
-        label={saving
+        label={operation?.status === 'downloading'
+          ? t('offline:progress', { done: operation.done, total: operation.total })
+          : operation?.status === 'failed'
+            ? t('offline:retry')
+            : saving
           ? t('offline:saving')
           : manifest?.pinned
             ? t('offline:savedOffline')
             : t('offline:saveOffline')}
-        variant={manifest?.pinned ? 'soft' : 'secondary'}
+        variant={operation?.status === 'failed' ? 'danger-outline' : manifest?.pinned ? 'soft' : 'secondary'}
         size="sm"
-        loading={saving}
-        onPress={() => setVisible(true)}
-        icon={<Feather name={manifest?.pinned ? 'check-circle' : 'download-cloud'} size={16} color={colors.primaryDark} />}
+        loading={operation?.status === 'downloading' || saving}
+        onPress={() => {
+          if (operation?.status === 'failed') {
+            void retryOperation(operation.key).catch(() => undefined);
+          } else if (!operation) {
+            setVisible(true);
+          }
+        }}
+        icon={<Feather
+          name={operation?.status === 'failed' ? 'refresh-cw' : manifest?.pinned ? 'check-circle' : 'download-cloud'}
+          size={16}
+          color={colors.primaryDark}
+        />}
       />
+      {operation?.status === 'downloading' ? (
+        <Button
+          label={t('offline:cancel')}
+          variant="ghost"
+          size="sm"
+          onPress={() => cancelOperation(operation.key)}
+        />
+      ) : null}
+      {operation?.status === 'failed' ? (
+        <Text style={[styles.errorText, { color: colors.danger }]}>
+          {operation.errorCode === 'OFFLINE_STORAGE_FULL'
+            ? t('offline:storageFull')
+            : t('offline:saveFailed')}
+        </Text>
+      ) : null}
       <ActionListSheet
         visible={visible}
         onClose={() => setVisible(false)}
@@ -80,5 +118,7 @@ const styles = StyleSheet.create({
   root: {
     alignSelf: 'flex-start',
     marginVertical: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
+  errorText: { fontSize: 12 },
 });

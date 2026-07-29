@@ -8,13 +8,19 @@ const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, rej
 });
 
 const offlineAssets: OfflineAssetStore = {
-  async download(_packageKey, sources) {
+  async download(_packageKey, sources, options = {}) {
     const assets = [];
-    for (const source of sources) {
-      const response = await fetch(source.url, { credentials: 'omit' });
+    options.onProgress?.(0, sources.length);
+    for (let index = 0; index < sources.length; index += 1) {
+      const source = sources[index];
+      const response = await fetch(source.url, {
+        credentials: 'omit',
+        signal: options.signal,
+      });
       if (!response.ok) throw new Error('OFFLINE_ASSET_DOWNLOAD_FAILED');
       const blob = await response.blob();
       assets.push({ id: source.id, uri: await blobToDataUrl(blob), bytes: blob.size });
+      options.onProgress?.(index + 1, sources.length);
     }
     return assets;
   },

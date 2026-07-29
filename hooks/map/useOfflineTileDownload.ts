@@ -6,7 +6,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getThemedNativeBaseTileUrl } from '@/config/mapWebLayers';
 import { translate as i18nT } from '@/i18n';
 import { fetchOfflineMapPoints } from '@/api/mapOffline';
-import { saveMapRegionOffline } from '@/services/offline/mapOfflineAdapter';
+import {
+  buildMapRegionId,
+  readMapRegionOffline,
+  saveMapRegionOffline,
+} from '@/services/offline/mapOfflineAdapter';
 import {
   AVG_TILE_BYTES,
   deleteDownloadedTiles,
@@ -134,7 +138,13 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
         activeAbortRef.current = abortController;
         // Точки — часть того же пакета. Если индекс не получен, регион нельзя
         // объявлять готовым даже при полностью скачанной подложке.
-        const pointIndex = await fetchOfflineMapPoints(bbox, { signal: abortController.signal });
+        const regionId = buildMapRegionId(bbox, minZ, maxZ);
+        const previousRegion = await readMapRegionOffline(regionId);
+        const pointIndex = await fetchOfflineMapPoints(bbox, {
+          signal: abortController.signal,
+          etag: previousRegion?.etag,
+          cachedPoints: previousRegion?.points,
+        });
         if (cancelRef.current) throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
 
         if (mountedRef.current) {
@@ -181,7 +191,7 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
         }
 
         const region = {
-          id: `region-${Date.now()}`,
+          id: regionId,
           name: options?.name ?? i18nT('map:hooks.map.useOfflineTileDownload.oblast_karty_72ba6f3a'),
           bbox,
           minZ,

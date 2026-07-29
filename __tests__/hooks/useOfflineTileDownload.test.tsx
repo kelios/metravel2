@@ -6,6 +6,7 @@ const mockDeleteRegion = jest.fn();
 const mockDeleteDownloadedTiles = jest.fn();
 const mockFetchOfflineMapPoints = jest.fn();
 const mockSaveMapRegionOffline = jest.fn();
+const mockReadMapRegionOffline = jest.fn();
 
 jest.mock('@/config/mapWebLayers', () => ({
   getThemedNativeBaseTileUrl: () => 'https://tiles.test/{z}/{x}/{y}.png',
@@ -15,7 +16,9 @@ jest.mock('@/api/mapOffline', () => ({
   fetchOfflineMapPoints: (...args: unknown[]) => mockFetchOfflineMapPoints(...args),
 }));
 jest.mock('@/services/offline/mapOfflineAdapter', () => ({
+  buildMapRegionId: () => 'region-10-10-test',
   saveMapRegionOffline: (...args: unknown[]) => mockSaveMapRegionOffline(...args),
+  readMapRegionOffline: (...args: unknown[]) => mockReadMapRegionOffline(...args),
 }));
 jest.mock('@/utils/mapTileCache', () => ({
   AVG_TILE_BYTES: 1024,
@@ -35,7 +38,8 @@ const bbox = { west: 27.4, south: 53.8, east: 27.7, north: 54 };
 describe('useOfflineTileDownload atomic package', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetchOfflineMapPoints.mockResolvedValue({ points: [{ id: 1 }], etag: 'v1' });
+    mockReadMapRegionOffline.mockResolvedValue(null);
+    mockFetchOfflineMapPoints.mockResolvedValue({ points: [{ id: 1 }], etag: 'v1', notModified: false });
     mockRegisterRegion.mockResolvedValue(undefined);
     mockDeleteRegion.mockResolvedValue(undefined);
     mockDeleteDownloadedTiles.mockResolvedValue(undefined);
@@ -83,5 +87,27 @@ describe('useOfflineTileDownload atomic package', () => {
     expect(result.current.state).toBe('error');
     expect(mockDeleteRegion).toHaveBeenCalled();
     expect(mockDeleteDownloadedTiles).toHaveBeenCalled();
+  });
+
+  it('reuses a stable region identity and its ETag on refresh', async () => {
+    mockDownloadTileToDisk.mockResolvedValue(120);
+    mockReadMapRegionOffline.mockResolvedValue({
+      etag: '"v1"',
+      points: [{ id: 7 }],
+    });
+    const { result } = renderHook(() => useOfflineTileDownload());
+
+    await act(async () => result.current.downloadCurrentRegion(bbox, { minZ: 10, maxZ: 10 }));
+
+    const registeredRegion = mockRegisterRegion.mock.calls[0][0];
+    expect(registeredRegion.id).toBe('region-10-10-test');
+    expect(mockReadMapRegionOffline).toHaveBeenCalledWith(registeredRegion.id);
+    expect(mockFetchOfflineMapPoints).toHaveBeenCalledWith(
+      bbox,
+      expect.objectContaining({
+        etag: '"v1"',
+        cachedPoints: [{ id: 7 }],
+      }),
+    );
   });
 });

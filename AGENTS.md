@@ -175,6 +175,32 @@
   Допустимы только технические отличия движка, системных permissions/insets и
   OS API; они не должны создавать другой UX.
 
+### 3.3.1 Production-target validation and task closure
+
+- Если проблема воспроизводится на production, Task Contract называет production
+  target или задача оптимизирует запросы, изображения, LCP, bundle, cache либо
+  API fan-out, до правки сними baseline на живом production URL. Минимальный
+  evidence: точный URL, viewport/browser/DPR, auth/cache state, число запросов,
+  байты, коды ответов и фактический размер выбранного media-варианта; для
+  Android — тот же flow и сетевой/byte замер на устройстве, когда Android в scope.
+- После явным образом разрешённого deploy повтори тот же сценарий на живом URL и
+  сравни before/after. Локальная production-сборка, preview с production API,
+  unit/e2e с mock media primitive, успешный deploy log и post-build guard не
+  являются post-deploy production evidence.
+- Если deploy не входил в разрешённый scope или production ещё не обновлён,
+  сообщай `local fix ready; production verification pending` и оставляй board
+  task в `review`/`testing`. Нельзя писать «исправлено на проде» и нельзя двигать
+  задачу в `done`.
+- Performance/media/network задача закрывается только когда повторный production
+  probe подтверждает целевой budget всей страницы, а не одного элемента:
+  request/API cardinality, total/transfer bytes, oversized/unsized media,
+  duplicate URL variants, 4xx/5xx и progressive/lazy behavior до и после scroll.
+  Обязателен negative probe для прежнего fail-open/unsupported режима.
+- Shared media, pagination, source-builder и caching изменения должны проверять
+  соседние consumer routes. Третий рецидив одного problem key требует общего
+  regression guard и structural task; ещё один локальный point fix сам по себе
+  не закрывает семейство проблемы.
+
 ### 3.4 Координация долгих операций
 
 - Деплой, release/build, production web build, Android local/EAS build or install, server rebuild/restart, full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции с общими артефактами считаются эксклюзивными.

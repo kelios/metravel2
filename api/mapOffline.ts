@@ -19,6 +19,7 @@ export interface OfflineMapPoint {
 export interface OfflineMapPointsResponse {
   points: OfflineMapPoint[];
   etag: string | null;
+  notModified: boolean;
 }
 
 const rawApiUrl = resolveApiBaseUrl({
@@ -66,16 +67,30 @@ export const serializeOfflineMapBBox = (bbox: OfflineBBox): string =>
 
 export async function fetchOfflineMapPoints(
   bbox: OfflineBBox,
-  options: { signal?: AbortSignal } = {},
+  options: {
+    signal?: AbortSignal;
+    etag?: string | null;
+    cachedPoints?: OfflineMapPoint[];
+  } = {},
 ): Promise<OfflineMapPointsResponse> {
   if (!rawApiUrl) throw new Error('EXPO_PUBLIC_API_URL is not defined.');
   const url = `${rawApiUrl}/map/points_bulk/?bbox=${encodeURIComponent(serializeOfflineMapBBox(bbox))}`;
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (options.etag) headers['If-None-Match'] = options.etag;
   const response = await fetchWithTimeout(url, {
     method: 'GET',
-    headers: { Accept: 'application/json' },
+    headers,
     credentials: 'omit',
     signal: options.signal,
   }, 30_000);
+  if (response.status === 304) {
+    if (!options.cachedPoints) throw new Error('OFFLINE_MAP_POINTS_304_WITHOUT_CACHE');
+    return {
+      points: options.cachedPoints,
+      etag: options.etag ?? response.headers.get('etag'),
+      notModified: true,
+    };
+  }
   if (!response.ok) throw new Error(`OFFLINE_MAP_POINTS_HTTP_${response.status}`);
 
   const payload = await safeJsonParse<unknown>(response, []);
@@ -87,5 +102,6 @@ export async function fetchOfflineMapPoints(
   return {
     points: values.map(normalizePoint).filter((point): point is OfflineMapPoint => point != null),
     etag: response.headers.get('etag'),
+    notModified: false,
   };
 }

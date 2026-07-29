@@ -15,6 +15,26 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/RELEASE.md`, and `do
 - Do not suggest service-worker caching, forced reloads, or user-facing cache-clearing workarounds.
 - Treat travel hero swipe and travel-details performance as one bilateral contract: a change that touches either side is not complete until both sides pass.
 
+## Production evidence contract
+
+- For a production regression, measure the live URL before the fix and repeat the
+  identical probe only after the changed build is deployed. Record URL,
+  viewport/browser/DPR, auth/cache state, cold or warm run, and timestamp.
+- Report page-wide request/API cardinality, transfer bytes, response codes,
+  duplicate media identities/URL variants, unsized same-origin media, rendered
+  CSS size versus selected intrinsic/variant size, and what starts before versus
+  after scroll. A single optimized image is not a page pass.
+- Use the real construction path. Component tests that mock the media renderer,
+  URL builder, transport, pagination helper, or cache primitive cannot prove the
+  runtime contract they replace.
+- Include a negative probe for unsupported transforms or former fail-open paths;
+  a heavy original returned as `200` is a failure, not a fallback success.
+- Distinguish `production build`, `preview with production data`, and `live
+  production URL` explicitly. Only the last can close a production Done gate.
+- If the change is not deployed, report `local fix ready; production verification
+  pending` and keep the task in `review`/`testing`. Never infer production success
+  from source code, tests, build logs, or deploy completion alone.
+
 ## What to analyze
 
 - Lighthouse mobile and desktop scores
@@ -50,8 +70,10 @@ For changes in `components/travel/sliderParts/**`, `components/travel/details/**
 Report:
 
 - exact URL or build target
+- viewport/browser/DPR, auth/cache state, and cold/warm state
 - command(s) used
-- score/budget result
+- before/after request, byte, response-code, and score/budget result
 - key regression or improvement
 - likely files or layers involved
-- next validation step
+- negative probe and adjacent consumer routes checked
+- next validation step and board status (`in_progress | review | testing | done`)

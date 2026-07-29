@@ -32,7 +32,13 @@ export async function readCachedQuestBundle(questId: string): Promise<ApiQuestBu
         if (!raw) return null;
         const parsed = JSON.parse(raw) as Partial<CachedQuestBundleEnvelope>;
         if (!parsed || parsed.version !== QUEST_BUNDLE_CACHE_VERSION || !parsed.bundle) return null;
-        void saveQuestOffline(parsed.bundle, { pinned: false, includePhotos: false });
+        // One-way migration: keep the legacy value readable until the catalog
+        // commit succeeds, then remove it so it cannot remain a second writable
+        // quest-package source.
+        const migrated = await saveQuestOffline(parsed.bundle, { pinned: false, includePhotos: false });
+        if (migrated) {
+            await AsyncStorage.removeItem(cacheKey(id));
+        }
         return parsed.bundle;
     } catch {
         // Приватный режим / повреждённый JSON — ведём себя как без кэша.
@@ -40,21 +46,15 @@ export async function readCachedQuestBundle(questId: string): Promise<ApiQuestBu
     }
 }
 
-/** Пишет сырой бандл квеста в офлайн-кэш (best-effort, ошибки записи глушим). */
+/** Пишет сырой бандл квеста в единый OfflineCatalog (best-effort). */
 export async function writeCachedQuestBundle(
     questId: string,
     bundle: ApiQuestBundle,
-    savedAt: number = Date.now(),
+    _savedAt: number = Date.now(),
 ): Promise<void> {
     const id = String(questId || '').trim();
     if (!id) return;
-    const envelope: CachedQuestBundleEnvelope = {
-        version: QUEST_BUNDLE_CACHE_VERSION,
-        savedAt,
-        bundle,
-    };
     try {
-        await AsyncStorage.setItem(cacheKey(id), JSON.stringify(envelope));
         await saveQuestOffline(bundle, { pinned: false, includePhotos: false });
     } catch (err) {
         console.warn('Failed to cache quest bundle for offline:', err);

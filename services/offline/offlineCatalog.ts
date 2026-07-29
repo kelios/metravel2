@@ -150,13 +150,16 @@ class OfflineCatalog {
         await this.writeManifest([...current.filter((item) => item.key !== input.key), downloading]);
       }
 
+      const payload: OfflinePackagePayload<T> = {
+        schemaVersion: 1,
+        snapshot: input.snapshot,
+        assets: input.assets ?? [],
+      };
+      let payloadWasReplaced = false;
+
       try {
-        const payload: OfflinePackagePayload<T> = {
-          schemaVersion: 1,
-          snapshot: input.snapshot,
-          assets: input.assets ?? [],
-        };
         const stored = await packageStore.write(input.key, payload);
+        payloadWasReplaced = true;
         const assetBytes = payload.assets.reduce((sum, asset) => sum + Math.max(0, asset.bytes), 0);
         const ready: OfflinePackageManifest = {
           ...downloading,
@@ -168,12 +171,25 @@ class OfflineCatalog {
         };
         const latest = await this.readManifest();
         await this.writeManifest([...latest.filter((item) => item.key !== input.key), ready]);
+
+        // Cleanup happens only after payload and manifest are both committed.
+        // A best-effort cleanup failure must not roll a visible package back to
+        // a manifest whose payload has already been replaced.
         if (previousPayload?.assets?.length) {
-          await offlineAssets.remove(previousPayload.assets);
+          await offlineAssets.remove(previousPayload.assets).catch(() => undefined);
         }
-        await this.evictRecent(now);
+        await this.evictRecent(now).catch(() => undefined);
         return ready;
       } catch (error) {
+        // packageStore commits before the small AsyncStorage manifest. Restore
+        // both halves of the old ready package if the manifest commit fails.
+        if (payloadWasReplaced) {
+          if (previous?.status === 'ready' && previousPayload) {
+            await packageStore.write(input.key, previousPayload).catch(() => undefined);
+          } else {
+            await packageStore.remove(input.key).catch(() => undefined);
+          }
+        }
         const latest = await this.readManifest();
         const failed: OfflinePackageManifest = { ...downloading, status: 'failed' };
         await this.writeManifest([

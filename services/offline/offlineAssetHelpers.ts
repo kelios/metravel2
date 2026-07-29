@@ -1,6 +1,9 @@
 import { resolveMediaVariantUrl } from '@/utils/travelMediaVariants';
 import offlineAssets from './offlineAssets';
-import type { OfflineAssetSource } from './offlineAssets.types';
+import type {
+  OfflineAssetDownloadOptions,
+  OfflineAssetSource,
+} from './offlineAssets.types';
 import type { OfflineStoredAsset } from './types';
 
 const IMAGE_URL_PATTERN = /https?:\/\/[^\s"'<>]+|\/(?:[^\s"'<>]+\.(?:jpe?g|png|webp|gif|avif))(?:\?[^\s"'<>]*)?/gi;
@@ -52,9 +55,19 @@ export async function downloadAndRewriteOfflineAssets<T>(
   packageKey: string,
   snapshot: T,
   maxAssets = 12,
+  options: OfflineAssetDownloadOptions = {},
 ): Promise<{ snapshot: T; assets: OfflineStoredAsset[] }> {
   const sources = collectOfflineAssetSources(snapshot, maxAssets);
-  const assets = await offlineAssets.download(packageKey, sources);
+  return downloadAndRewriteOfflineAssetSources(packageKey, snapshot, sources, options);
+}
+
+export async function downloadAndRewriteOfflineAssetSources<T>(
+  packageKey: string,
+  snapshot: T,
+  sources: OfflineAssetSource[],
+  options: OfflineAssetDownloadOptions = {},
+): Promise<{ snapshot: T; assets: OfflineStoredAsset[] }> {
+  const assets = await offlineAssets.download(packageKey, sources, options);
   if (sources.length > 0 && assets.length !== sources.length) {
     await offlineAssets.remove(assets);
     throw new Error('OFFLINE_ASSET_SET_INCOMPLETE');

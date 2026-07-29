@@ -44,6 +44,55 @@ describe('map offline bulk index', () => {
     expect(result).toEqual({
       etag: '"map-v1"',
       points: [expect.objectContaining({ id: 7, title: 'Замок', lat: 53.9, lng: 27.5 })],
+      notModified: false,
     });
+  });
+
+  it('reuses the persisted point index on ETag 304', async () => {
+    const cachedPoints = [{
+      id: 7,
+      title: 'Saved point',
+      lat: 53.9,
+      lng: 27.56,
+      address: 'Saved address',
+      categoryName: 'museum',
+      thumb: '',
+      urlTravel: '',
+      slug: '',
+    }];
+    mockFetchWithTimeout.mockResolvedValue({
+      ok: false,
+      status: 304,
+      headers: { get: () => '"map-v1"' },
+    });
+
+    await expect(fetchOfflineMapPoints(
+      { west: 23, south: 52, east: 33, north: 56 },
+      { etag: '"map-v1"', cachedPoints },
+    )).resolves.toEqual({
+      points: cachedPoints,
+      etag: '"map-v1"',
+      notModified: true,
+    });
+    expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'If-None-Match': '"map-v1"' }),
+      }),
+      30_000,
+    );
+  });
+
+  it('rejects 304 without a persisted point index', async () => {
+    mockFetchWithTimeout.mockResolvedValue({
+      ok: false,
+      status: 304,
+      headers: { get: () => '"map-v1"' },
+    });
+
+    await expect(fetchOfflineMapPoints(
+      { west: 23, south: 52, east: 33, north: 56 },
+      { etag: '"map-v1"' },
+    )).rejects.toThrow('OFFLINE_MAP_POINTS_304_WITHOUT_CACHE');
   });
 });

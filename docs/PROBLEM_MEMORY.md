@@ -107,7 +107,7 @@ guard, падающий в CI на попытке обойти этот конт
 - **Симптомы:** мыльные/долго появляющиеся фото, 6–30 MB при открытии статьи,
   один файл в нескольких URL-вариантах, cold 502/504, LCP/jank.
 - **Цепочка:** `#815`, `#828`, `#890`, `#1035`, `#1052`, `#1053`, `#1064`,
-  `#1068`, `#1074`, `#1101`, `#1103`, `#1104`, текущие `#1111–#1118`.
+  `#1068`, `#1074`, `#1101`, `#1103`, `#1104`, `#1111–#1120`, `#1137`.
 - **Подтверждённые причины:** `ImageCardMedia` централизовал renderer, но не
   source construction; URL собирают несколько helpers/consumers с разными
   `w/q/fit/v`; backend раньше принимал unsupported параметры и возвращал
@@ -118,11 +118,30 @@ guard, падающий в CI на попытке обойти этот конт
 - **Controls:** ADR `0002`, `check:image-architecture`, bilateral
   `verify:slider` + `verify:slider-perf`, browser Network и Android rx evidence.
 - **Пробел:** import guard не проверяет manifest-first source, supported transform
-  contract, unsized same-origin URL или URL cardinality.
-- **Решение для новой жалобы:** пока `#1111–#1118` открыты — `reuse` подходящую
-  карточку. После их закрытия переоткрывай каноническую карточку того слоя, где
-  снова нарушен инвариант; новый linked task допустим только для другой причины.
-- **Последняя проверка:** 2026-07-28; семейство активно.
+  contract, unsized same-origin URL или URL cardinality; route budgets не ловят
+  catalog-wide DPR/Safari eager fan-out и количество страниц API.
+- **Решение для новой жалобы:** если в цепочке есть открытая подходящая карточка —
+  `reuse` её. Если каноническая карточка нужного слоя закрыта, переоткрывай её;
+  новый linked task допустим только для другой подтверждённой причины/owner.
+- **Recurrence Log — 2026-07-29 (`/quests` production):** закрытый `#1053`
+  снова нарушен. В desktop Chrome на живом URL 137 quest covers имеют
+  `currentSrc ...w=1280` в CSS-слоте около 420 px; первые 10 стартовавших
+  вариантов `w=1280` весят существенно больше bounded `w=480`. Отдельный
+  shared Safari change `29418f3f` превращал все 135 `loading=lazy` cover cards
+  в eager. Первичная реализация `266a43bf` выбрала DPR до 2 и ladder до 1280,
+  а тест `#1053` доказывал только 420 px при DPR 1. Production catalogue также
+  делает 7 запросов `/api/quests/` и 5 `/api/quests/cities/`; read-only probe
+  подтвердил, что `perPage=100` сокращает эту часть с 12 запросов до 3.
+  Предыдущий Done gate не включал одинаковый live-URL Safari/DPR2 probe и
+  page-wide request/byte budget. Verdict: `reopen #1053` для media/eager
+  recurrence; API pagination fan-out — `create-linked`, потому что причина и
+  corrective layer другие.
+- **Linked finding — 2026-07-29 (`/places` production):** две карточки получили
+  unsized 1024 px `address-image` из-за `PlaceListCard optimizeWeb=false`; в
+  слотах около 300 px файлы весят 287902 B и 222750 B, тогда как `w=480`
+  варианты — 41572 B и 33810 B. Verdict: `create-linked` к `#1113/#152/#725`,
+  не переоткрывать их как тот же root cause.
+- **Последняя проверка:** 2026-07-29; семейство активно.
 
 ### BOARD-001 — task history and duplicate prevention
 

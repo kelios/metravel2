@@ -9,15 +9,22 @@ const extensionForUrl = (url: string): string => {
   return match ? `.${match[1].toLowerCase()}` : '.img';
 };
 
+const throwIfAborted = (signal?: AbortSignal): void => {
+  if (!signal?.aborted) return;
+  throw Object.assign(new Error('OFFLINE_OPERATION_ABORTED'), { name: 'AbortError' });
+};
+
 const offlineAssets: OfflineAssetStore = {
-  async download(packageKey, sources) {
+  async download(packageKey, sources, options = {}) {
     if (!sources.length) return [];
     const directory = `${ROOT}${encodeURIComponent(packageKey)}/${Date.now()}-${Math.random().toString(36).slice(2)}/`;
     await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
 
     try {
       const assets = [];
+      options.onProgress?.(0, sources.length);
       for (let index = 0; index < sources.length; index += 1) {
+        throwIfAborted(options.signal);
         const source = sources[index];
         const destination = `${directory}${index}${extensionForUrl(source.url)}`;
         const result = await FileSystem.downloadAsync(source.url, destination);
@@ -31,7 +38,9 @@ const offlineAssets: OfflineAssetStore = {
           uri: destination,
           bytes: typeof info.size === 'number' ? info.size : 0,
         });
+        options.onProgress?.(index + 1, sources.length);
       }
+      throwIfAborted(options.signal);
       return assets;
     } catch (error) {
       await FileSystem.deleteAsync(directory, { idempotent: true }).catch(() => undefined);

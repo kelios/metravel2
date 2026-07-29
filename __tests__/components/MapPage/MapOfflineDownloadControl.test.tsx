@@ -28,6 +28,8 @@ jest.mock('@/api/mapOffline', () => ({
 }))
 
 jest.mock('@/services/offline/mapOfflineAdapter', () => ({
+  buildMapRegionId: () => 'region-test',
+  readMapRegionOffline: jest.fn().mockResolvedValue(null),
   saveMapRegionOffline: jest.fn().mockResolvedValue(undefined),
   deleteMapRegionOffline: jest.fn().mockResolvedValue(undefined),
 }))

@@ -34,6 +34,27 @@ shared Expo/React Native code as cross-platform until the platform boundary prov
 - For FE depending on BE, do not call the task done from mocks or unit tests alone; verify the runtime endpoint/field/event from the task contract on the target environment or leave a blocker.
 - Do not change server paths, SSL paths, or deployment targets unless they were explicitly verified on the server.
 
+For a production incident or any optimization of requests, images, LCP, bundle,
+cache, pagination, or API fan-out:
+
+- Capture the real production baseline before editing: exact URL,
+  viewport/browser/DPR, auth/cache state, request and API counts, transfer bytes,
+  response codes, and rendered versus selected media dimensions.
+- Define a numeric page-wide target in the Task Contract. An assertion about one
+  component or URL is insufficient when the page can still fan out elsewhere.
+- Exercise the real value-construction path in tests; mocking `ImageCardMedia`,
+  the URL builder, transport, cache key, or pagination primitive under
+  investigation is not contract evidence.
+- After an authorized deploy, repeat the same production probe and compare
+  before/after, including initial viewport, scroll/lazy behavior, duplicate URL
+  variants, oversized/unsized media, and 4xx/5xx.
+- Without a deployed live-URL rerun, report `local fix ready; production
+  verification pending`, keep the board task in `review`/`testing`, and never
+  claim the production problem is fixed.
+- When shared media/source/pagination code changes, audit adjacent consumers and
+  add or link a regression guard for the problem family instead of accepting a
+  consumer-only point fix as the durable solution.
+
 Follow these repo-specific rules while building features:
 
 - Use repo-root commands from the folder with `package.json`.

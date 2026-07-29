@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Feature Builder"
   short_description: "Build metravel features with docs-first workflow."
-  default_prompt: "Use $metravel-feature-builder to implement the smallest safe metravel change after recording desktop-web/mobile-web/Android and RU/BE/UK/PL/EN impact, requiring paired mobile-web/Android validation and reusing project architecture."
+  default_prompt: "Use $metravel-feature-builder to implement the smallest safe metravel change after recording desktop-web/mobile-web/Android and RU/BE/UK/PL/EN impact, requiring paired mobile-web/Android validation, and for production performance work measuring the same live URL before and after deploy without closing the task from preview or mocks."

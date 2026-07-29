@@ -3,6 +3,10 @@ import { OfflineCatalog, assertPublicSnapshotSafe } from '@/services/offline/off
 
 const mockPackages = new Map<string, unknown>();
 const mockRemoveAssets = jest.fn();
+const mockPackageWrite = jest.fn(async (key: string, payload: unknown) => {
+  mockPackages.set(key, payload);
+  return { bytes: JSON.stringify(payload).length, includesAssetBytes: true };
+});
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -12,10 +16,7 @@ jest.mock('@/services/offline/packageStore', () => ({
   __esModule: true,
   default: {
     read: jest.fn(async (key: string) => mockPackages.get(key) ?? null),
-    write: jest.fn(async (key: string, payload: unknown) => {
-      mockPackages.set(key, payload);
-      return { bytes: JSON.stringify(payload).length, includesAssetBytes: true };
-    }),
+    write: (...args: [string, unknown]) => mockPackageWrite(...args),
     remove: jest.fn(async (key: string) => {
       mockPackages.delete(key);
     }),
@@ -42,6 +43,7 @@ describe('OfflineCatalog', () => {
   beforeEach(() => {
     mockPackages.clear();
     mockRemoveAssets.mockClear();
+    mockPackageWrite.mockClear();
     return AsyncStorage.clear();
   });
 
@@ -106,5 +108,25 @@ describe('OfflineCatalog', () => {
       recentCount: 0,
       bytes: 0,
     });
+  });
+
+  it('restores the previous payload when the final manifest commit fails', async () => {
+    const catalog = new OfflineCatalog();
+    await catalog.save(input('atomic', { snapshot: { version: 1 } }));
+    const setItem = jest.spyOn(AsyncStorage, 'setItem');
+    setItem.mockRejectedValueOnce(new Error('manifest write failed'));
+
+    await expect(catalog.save(input('atomic', {
+      now: 2_000,
+      snapshot: { version: 2 },
+    }))).rejects.toThrow('manifest write failed');
+
+    await expect(catalog.read('atomic', undefined, { markOpened: false }))
+      .resolves.toEqual({ version: 1 });
+    expect(mockPackageWrite).toHaveBeenLastCalledWith(
+      'atomic',
+      expect.objectContaining({ snapshot: { version: 1 } }),
+    );
+    setItem.mockRestore();
   });
 });

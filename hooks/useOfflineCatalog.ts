@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { offlineCatalog } from '@/services/offline/offlineCatalog';
-import type { OfflinePackageManifest, OfflineStorageSummary } from '@/services/offline/types';
+import { offlineOperations } from '@/services/offline/offlineOperations';
+import type {
+  OfflinePackageManifest,
+  OfflinePackageOperation,
+  OfflineStorageSummary,
+} from '@/services/offline/types';
 
 const EMPTY_SUMMARY: OfflineStorageSummary = {
   packageCount: 0,
@@ -12,6 +17,7 @@ const EMPTY_SUMMARY: OfflineStorageSummary = {
 export function useOfflineCatalog(currentUserId?: string | number | null) {
   const [items, setItems] = useState<OfflinePackageManifest[]>([]);
   const [summary, setSummary] = useState<OfflineStorageSummary>(EMPTY_SUMMARY);
+  const [operations, setOperations] = useState<OfflinePackageOperation[]>(() => offlineOperations.list());
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -26,17 +32,28 @@ export function useOfflineCatalog(currentUserId?: string | number | null) {
 
   useEffect(() => {
     void refresh();
-    return offlineCatalog.subscribe(() => {
+    const unsubscribeCatalog = offlineCatalog.subscribe(() => {
       void refresh();
     });
+    const unsubscribeOperations = offlineOperations.subscribe(() => {
+      setOperations(offlineOperations.list());
+    });
+    return () => {
+      unsubscribeCatalog();
+      unsubscribeOperations();
+    };
   }, [refresh]);
 
   return {
     items,
     summary,
+    operations,
     isLoading,
     refresh,
     remove: offlineCatalog.remove.bind(offlineCatalog),
     setPinned: offlineCatalog.setPinned.bind(offlineCatalog),
+    cancelOperation: offlineOperations.cancel.bind(offlineOperations),
+    retryOperation: offlineOperations.retry.bind(offlineOperations),
+    clearOperation: offlineOperations.clear.bind(offlineOperations),
   };
 }

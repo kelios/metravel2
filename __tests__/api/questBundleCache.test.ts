@@ -1,6 +1,22 @@
 // Round-trip офлайн-кэша сырого бандла квеста:
 // пишем сырой JSON → при «офлайн» фейле fetch читаем из кэша → adaptBundle
 // на клиенте даёт рабочий квест с работающим чекером ответа.
+const mockOfflinePackages = new Map<string, unknown>()
+
+jest.mock('@/services/offline/packageStore', () => ({
+  __esModule: true,
+  default: {
+    read: jest.fn(async (key: string) => mockOfflinePackages.get(key) ?? null),
+    write: jest.fn(async (key: string, payload: unknown) => {
+      mockOfflinePackages.set(key, payload)
+      return { bytes: JSON.stringify(payload).length, includesAssetBytes: true }
+    }),
+    remove: jest.fn(async (key: string) => {
+      mockOfflinePackages.delete(key)
+    }),
+  },
+}))
+
 import { apiClient } from '@/api/client'
 import { fetchQuestByQuestId, fetchQuestsList } from '@/api/quests'
 import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests'
@@ -62,6 +78,7 @@ describe('questBundleCache offline round-trip', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     AsyncStorage.__reset?.()
+    mockOfflinePackages.clear()
   })
 
   it('writes and reads back the raw bundle unchanged', async () => {
@@ -69,10 +86,24 @@ describe('questBundleCache offline round-trip', () => {
     await writeCachedQuestBundle(QUEST_ID, bundle, 1_700_000_000_000)
 
     const stored = await AsyncStorage.getItem(`${QUEST_BUNDLE_CACHE_PREFIX}${QUEST_ID}`)
-    expect(stored).toContain('"version":1')
+    expect(stored).toBeNull()
+    expect(mockOfflinePackages.has(`quest:${QUEST_ID}`)).toBe(true)
 
     const read = await readCachedQuestBundle(QUEST_ID)
     expect(read).toEqual(bundle)
+  })
+
+  it('migrates a legacy bundle once and removes its old writable key', async () => {
+    const bundle = makeRawBundle()
+    await AsyncStorage.setItem(`${QUEST_BUNDLE_CACHE_PREFIX}${QUEST_ID}`, JSON.stringify({
+      version: 1,
+      savedAt: 1_700_000_000_000,
+      bundle,
+    }))
+
+    await expect(readCachedQuestBundle(QUEST_ID)).resolves.toEqual(bundle)
+    await expect(AsyncStorage.getItem(`${QUEST_BUNDLE_CACHE_PREFIX}${QUEST_ID}`)).resolves.toBeNull()
+    await expect(readCachedQuestBundle(QUEST_ID)).resolves.toEqual(bundle)
   })
 
   it('returns null for a missing quest', async () => {
@@ -142,6 +173,7 @@ describe('questsList offline round-trip', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     AsyncStorage.__reset?.()
+    mockOfflinePackages.clear()
   })
 
   it('writes and reads back the raw list unchanged', async () => {
