@@ -1,5 +1,12 @@
-import React, { useEffect, useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type GestureResponderEvent,
+} from 'react-native'
 import { useRouter } from 'expo-router'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -7,6 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { translate as i18nT } from '@/i18n'
 import { webViewStyle } from '@/utils/webProps'
+import { preloadOfflineRoute } from '@/utils/offlineRoutePreload.web'
 
 
 interface NetworkStatusProps {
@@ -23,6 +31,21 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   const { isConnected } = useNetworkStatus()
   const [wasOffline, setWasOffline] = useState(false)
   const [visible, setVisible] = useState(!isConnected)
+  const [offlineRouteReady, setOfflineRouteReady] = useState(false)
+  const openingOfflineRouteRef = useRef(false)
+
+  useEffect(() => {
+    if (!isConnected) return undefined
+    let active = true
+    void preloadOfflineRoute()
+      .then(() => {
+        if (active) setOfflineRouteReady(true)
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [isConnected])
 
   useEffect(() => {
     if (!isConnected) {
@@ -44,6 +67,14 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
     return () => undefined
   }, [isConnected, wasOffline])
 
+  const handleOpenSaved = useCallback((event: GestureResponderEvent) => {
+    event.preventDefault?.()
+    event.stopPropagation()
+    if (!offlineRouteReady || openingOfflineRouteRef.current) return
+    openingOfflineRouteRef.current = true
+    router.push('/offline')
+  }, [offlineRouteReady, router])
+
   const translateY = visible ? 0 : -100
 
   if (isConnected && !wasOffline && !showWhenOnline) {
@@ -55,22 +86,40 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
 
   return (
     <View
+      pointerEvents="box-none"
+      testID="network-status-banner"
       style={[
         styles.container,
         position === 'top' ? styles.top : styles.bottom,
         { backgroundColor, transform: [{ translateY }] },
       ]}
     >
-      <View style={styles.content}>
-        <Text style={[styles.text, { color: colors.textInverse }]}>{message}</Text>
+      <View pointerEvents="box-none" style={styles.content}>
+        <Text
+          numberOfLines={2}
+          style={[styles.text, { color: colors.textInverse }]}
+        >
+          {message}
+        </Text>
         {!isConnected ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={i18nT('offline:openSaved')}
-            onPress={() => router.push('/offline')}
-            style={[styles.action, { borderColor: colors.textInverse }]}
+            accessibilityState={{ busy: !offlineRouteReady, disabled: !offlineRouteReady }}
+            disabled={!offlineRouteReady}
+            onPress={handleOpenSaved}
+            style={[
+              styles.action,
+              { borderColor: colors.textInverse },
+              !offlineRouteReady && styles.actionDisabled,
+            ]}
           >
-            <Text style={[styles.actionText, { color: colors.textInverse }]}>{i18nT('offline:openSaved')}</Text>
+            <Text
+              numberOfLines={1}
+              style={[styles.actionText, { color: colors.textInverse }]}
+            >
+              {i18nT('offline:openSaved')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -83,7 +132,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     zIndex: 9999,
     ...Platform.select({
@@ -103,26 +152,32 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   text: {
-    fontSize: 14,
+    flex: 1,
+    flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 16,
     fontWeight: '600',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: DESIGN_TOKENS.spacing.sm,
   },
   action: {
     minHeight: 44,
+    flexShrink: 0,
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: DESIGN_TOKENS.radii.pill,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
   },
   actionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
+  },
+  actionDisabled: {
+    opacity: 0.62,
   },
 })

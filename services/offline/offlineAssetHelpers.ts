@@ -24,7 +24,10 @@ export function collectOfflineAssetSources(value: unknown, maxAssets = 12): Offl
         : [];
       const matches = [...directMediaUrl, ...(current.value.match(IMAGE_URL_PATTERN) ?? [])];
       for (const match of matches) {
-        if (!MEDIA_KEY_PATTERN.test(current.key) && !/\.(?:jpe?g|png|webp|gif|avif)(?:\?|$)/i.test(match)) continue;
+        if (
+          !MEDIA_KEY_PATTERN.test(current.key)
+          && !/\.(?:jpe?g|png|webp|gif|avif)(?:[?#&]|$)/i.test(match)
+        ) continue;
         const resolved = resolveMediaVariantUrl(match);
         if (resolved) sources.set(match, resolved);
         if (sources.size >= maxAssets) break;

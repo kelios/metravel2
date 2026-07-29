@@ -99,6 +99,29 @@ describe('typed public offline content snapshots', () => {
     ]);
   });
 
+  it('keeps an inline article image downloadable when no separate cover exists', () => {
+    const inlineOnlyArticle = {
+      id: 9,
+      slug: 'inline-only',
+      name: 'Inline only',
+      description: '',
+      rich_text: {
+        description: {
+          safe_html: '<p>Body</p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/photo.JPG">',
+        },
+      },
+      article_image_thumb_url: null,
+      article_image_thumb_small_url: null,
+    } as unknown as Article;
+
+    const snapshot = buildArticleOfflineSnapshot(inlineOnlyArticle);
+    const assets = buildArticleAssetSources(snapshot);
+
+    expect(assets).toHaveLength(1);
+    expect(assets[0].id).toContain('photo.JPG');
+    expect(assets[0].url).toContain('photo.JPG');
+  });
+
   it('selects every quest-owned cover, intro, step and finale image only', () => {
     const bundle = {
       quest_id: 'quest',

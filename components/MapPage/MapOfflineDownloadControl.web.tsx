@@ -100,6 +100,7 @@ function MapOfflineDownloadControlWeb({
                 accessibilityLabel={t('offline:close')}
                 onPress={() => setVisible(false)}
                 style={styles.close}
+                testID="map-offline-close"
               >
                 <Feather name="x" size={22} color={colors.text} />
               </Pressable>

@@ -939,7 +939,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
           alignLeft
         />
       )}
-      <MapOfflineDownloadControl bbox={offlineBBox} />
+      <MapOfflineDownloadControl
+        bbox={offlineBBox}
+        bottomInset={useCompactPopupLayout ? 144 : 0}
+      />
     </View>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, StyleSheet, Platform, ActivityIndicator, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -24,6 +25,7 @@ export function SyncIndicator() {
 
 function SyncIndicatorNative() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const colors = useThemedColors();
   const { isConnected } = useNetworkStatus();
   const [visible, setVisible] = useState(false);
@@ -60,19 +62,23 @@ function SyncIndicatorNative() {
 
   return (
     <Animated.View
+      pointerEvents="box-none"
       style={[
         styles.container,
         animatedStyle,
-        { backgroundColor: colors.info },
+        { backgroundColor: colors.info, top: insets.top },
       ]}
       accessibilityRole="alert"
       accessibilityLabel={isConnected
         ? i18nT('shared:components.ui.SyncIndicator.sinhronizatsiya_dannyh_b1e3ca28')
         : i18nT('offline:offlineBanner')}
     >
-      <View style={styles.content}>
+      <View pointerEvents="box-none" style={styles.content}>
         {isConnected ? <ActivityIndicator size="small" color={colors.textInverse} /> : null}
-        <Text style={[styles.text, { color: colors.textInverse }]}>
+        <Text
+          numberOfLines={2}
+          style={[styles.text, { color: colors.textInverse }]}
+        >
           {isConnected
             ? i18nT('shared:components.ui.SyncIndicator.sinhronizatsiya_dannyh_80179835')
             : i18nT('offline:offlineBanner')}
@@ -84,7 +90,12 @@ function SyncIndicatorNative() {
             onPress={() => router.push('/offline')}
             style={[styles.action, { borderColor: colors.textInverse }]}
           >
-            <Text style={[styles.actionText, { color: colors.textInverse }]}>{i18nT('offline:openSaved')}</Text>
+            <Text
+              numberOfLines={1}
+              style={[styles.actionText, { color: colors.textInverse }]}
+            >
+              {i18nT('offline:openSaved')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -98,31 +109,34 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     zIndex: 9998, // Чуть ниже NetworkStatus (9999)
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: 8,
   },
   text: {
-    fontSize: 14,
+    flex: 1,
+    flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 16,
     fontWeight: '500',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   action: {
     minHeight: 44,
+    flexShrink: 0,
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: DESIGN_TOKENS.radii.pill,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
   },
   actionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
 });

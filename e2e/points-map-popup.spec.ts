@@ -98,13 +98,13 @@ test.describe('Travel points -> map marker', () => {
     await expect(pointsSection).toBeVisible({ timeout: 20_000 });
     await pointsSection.scrollIntoViewIfNeeded();
 
-    const pointCards = pointsSection.locator('[data-testid^="travel-point-card-"]');
-    await expect(pointCards).toHaveCount(1, { timeout: 20_000 });
+    const pointCard = pointsSection.getByTestId('travel-point-card-1');
+    await expect(pointCard).toHaveCount(1, { timeout: 20_000 });
 
     const currentUrl = page.url();
     const popupPromise = page.waitForEvent('popup', { timeout: 1500 }).catch(() => null);
 
-    await pointCards.first().getByText('Гомель', { exact: true }).click();
+    await pointCard.getByText('Гомель', { exact: true }).click();
 
     const openedPopup = await popupPromise;
     expect(openedPopup).toBeNull();
