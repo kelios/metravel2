@@ -20,6 +20,7 @@ import type { OfflineContentType } from '@/services/offline/types';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/utils/confirmAction';
 import { showToast } from '@/utils/toast';
+import { webViewStyle } from '@/utils/webProps';
 
 const IS_WEB = Platform.OS === 'web';
 const ICON_SIZE = 16;
@@ -335,10 +336,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     ...Platform.select({
-      web: {
+      web: webViewStyle({
         cursor: 'pointer',
         transition: 'background-color 0.2s ease, border-color 0.2s ease',
-      } as any,
+      }),
     }),
   },
   chipPressed: {
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
   },
   label: {
     flexShrink: 1,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    fontWeight: '600',
     minWidth: 0,
   },
   cancel: {
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,
     ...Platform.select({
-      web: { cursor: 'pointer' } as any,
+      web: webViewStyle({ cursor: 'pointer' }),
     }),
   },
   errorText: {

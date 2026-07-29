@@ -109,6 +109,7 @@ const QUEST_COVERS = [
   { quest_id: 'krakow-bike-tyniec', assetsDir: 'krakowBikeTyniec', cover: 'cover.png' },
   { quest_id: 'krakow-bike-pradnik', assetsDir: 'krakowBikePradnik', cover: 'cover.png' },
   { quest_id: 'krakow-bike-wanda', assetsDir: 'krakowBikeWanda', cover: 'cover.png' },
+  { quest_id: 'hel-jurata-amber', assetsDir: 'helJurataAmber', cover: 'cover.jpg' },
 ];
 
 function getMime(filePath) {

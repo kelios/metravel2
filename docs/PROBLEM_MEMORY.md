@@ -141,6 +141,23 @@ guard, падающий в CI на попытке обойти этот конт
   слотах около 300 px файлы весят 287902 B и 222750 B, тогда как `w=480`
   варианты — 41572 B и 33810 B. Verdict: `create-linked` к `#1113/#152/#725`,
   не переоткрывать их как тот же root cause.
+- **Recurrence Log — 2026-07-29 (travel rich text + hero contention):** на
+  production travel detail persisted rich-text URLs повторно проходили через
+  sanitizer/HTML transform и накапливали до семи вложенных
+  `images.weserv.nl`-слоёв. Изображения описания почти не загружались, а их
+  конкурирующие запросы задерживали соседние hero-слайды 2–4. Full-board audit
+  (1134 карточки) не нашёл открытого владельца точной причины. `#1114` закрывал
+  другой rich-text failure mode (raw `detail_hd` double-fetch/aspect probing),
+  `#890` — backend resize/availability legacy uploads, `#1116` — hero URL
+  cardinality/manifest variants. Verdict: `create-linked` к `#1114`, related
+  `#890/#1116`; подтверждённая новая причина — неидемпотентная FE-нормализация
+  proxy URL и односоставный timeout fallback. Corrective layer: общий
+  `unwrapWeservImageUrl`, один канонический proxy URL и recursive origin
+  fallback в sanitizer/web transform/effects. Regression control: helper unit,
+  repeated-sanitization idempotency, 6-layer real transform и malformed-input
+  negative probes, bilateral slider/performance gates. Local browser evidence
+  подтверждает один proxy layer и загрузку 600×400 mobile / 800 px desktop;
+  production post-deploy и Android device evidence остаются обязательными.
 - **Последняя проверка:** 2026-07-29; семейство активно.
 
 ### BOARD-001 — task history and duplicate prevention
