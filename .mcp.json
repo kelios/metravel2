@@ -4,11 +4,8 @@
       "command": "sh",
       "args": [
         "-c",
-        "set -a; . /Users/juliasavran/Sites/metravel2/metravel2/.secrets/metravel-task-board.env; set +a; exec python3 -m tools.mcp_server"
-      ],
-      "env": {
-        "PYTHONPATH": "/Users/juliasavran/Sites/metravel2/metravel-backend"
-      }
+        "set -a; . ${HOME}/PhpstormProjects/metravel2/.secrets/metravel-task-board.env; PYTHONPATH=${HOME}/PhpstormProjects/metravel-backend; set +a; exec python3 -m tools.mcp_server"
+      ]
     }
   }
 }

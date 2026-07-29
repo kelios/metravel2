@@ -99,6 +99,32 @@ function countTravelQuestPromoPages(files, readFile) {
   return files.filter((filePath) => read(filePath).includes(TRAVEL_QUEST_PROMO_MARKER)).length
 }
 
+/**
+ * Quest routes each alias landing must link to. Several city_id values can map
+ * to one alias (the same city duplicated in the catalog), and the alias landing
+ * addresses the city — so it has to list all of their quests, not just the ones
+ * that survived the last write.
+ */
+function expectedAliasLandingQuests(quests, cityAliasMap) {
+  const byAlias = new Map()
+
+  for (const quest of Array.isArray(quests) ? quests : []) {
+    const route = questRouteKey(quest)
+    if (!route) continue
+    const alias = cityAliasMap?.get(route.cityId)
+    if (!alias || alias === route.cityId) continue
+    if (!byAlias.has(alias)) byAlias.set(alias, new Set())
+    byAlias.get(alias).add(route.path)
+  }
+
+  return byAlias
+}
+
+/** Quest routes an already-rendered landing links to */
+function missingLandingQuestLinks(html, questPaths) {
+  return [...questPaths].filter((questPath) => !html.includes(`href="${questPath}"`))
+}
+
 /** Every city landing (numeric id + alias) implied by the quest catalog */
 function expectedCityLandingFiles(quests, cityAliasMap) {
   const files = new Set()
@@ -181,7 +207,26 @@ async function main() {
     }
   }
 
-  // 3. Sampled quest pages carry real metadata, not the bare SPA shell.
+  // 3. An alias landing lists the quests of every city_id sharing that alias.
+  // Duplicated city records used to make one landing silently overwrite the
+  // other, dropping half a city's quests off the page both of them canonicalise
+  // to.
+  for (const [alias, questPaths] of expectedAliasLandingQuests(quests, cityAliasMap)) {
+    const relativePath = path.join('quests', alias, 'index.html')
+    const filePath = path.join(DIST_DIR, relativePath)
+    if (!fs.existsSync(filePath)) continue // already reported as missing above
+
+    const missing = missingLandingQuestLinks(fs.readFileSync(filePath, 'utf8'), questPaths)
+    if (missing.length > 0) {
+      const shown = missing.slice(0, 5).join(', ')
+      const overflow = missing.length > 5 ? ` (+${missing.length - 5} more)` : ''
+      failures.push(
+        `city landing ${relativePath}: missing ${missing.length}/${questPaths.size} quest links — ${shown}${overflow}`
+      )
+    }
+  }
+
+  // 4. Sampled quest pages carry real metadata, not the bare SPA shell.
   const sampled = SAMPLE_SIZE === null ? quests : quests.slice(0, SAMPLE_SIZE)
   for (const quest of sampled) {
     const route = questRouteKey(quest)
@@ -194,7 +239,7 @@ async function main() {
     }
   }
 
-  // 4. Travel quest promos. Coverage is geo/city scored, so most-but-not-all
+  // 5. Travel quest promos. Coverage is geo/city scored, so most-but-not-all
   // travels legitimately have one; zero across the whole tree means the promo
   // catalog was empty, which is the same silent degradation as missing pages.
   const travelPageFiles = listTravelPageFiles(DIST_DIR)
@@ -224,9 +269,11 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     TRAVEL_QUEST_PROMO_MARKER,
     countTravelQuestPromoPages,
+    expectedAliasLandingQuests,
     expectedCityLandingFiles,
     expectedQuestFiles,
     extractItems,
+    missingLandingQuestLinks,
     getMetaContent,
     getTitle,
     hasQuestCityLandingSection,

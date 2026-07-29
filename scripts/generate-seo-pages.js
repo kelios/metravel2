@@ -1696,6 +1696,40 @@ function buildQuestsListingModel(quests, cityAliasMap) {
   return cities;
 }
 
+/**
+ * Свести города, делящие один alias, в одну модель лендинга.
+ * Alias-сегмент адресует город, а не city_id, поэтому /quests/gomel обязан
+ * перечислять квесты всех city_id этого города, а не только последнего.
+ */
+function mergeQuestCityLandingsByAlias(cities) {
+  const byAlias = new Map();
+
+  for (const city of Array.isArray(cities) ? cities : []) {
+    if (!city?.alias || city.alias === city.cityId) continue;
+    const group = byAlias.get(city.alias) || {
+      cityId: city.cityId,
+      name: '',
+      cover: '',
+      alias: city.alias,
+      landingPath: `/quests/${city.alias}`,
+      quests: [],
+    };
+    if (!group.name && city.name) group.name = city.name;
+    if (!group.cover && city.cover) group.cover = city.cover;
+    group.quests.push(...(Array.isArray(city.quests) ? city.quests : []));
+    byAlias.set(city.alias, group);
+  }
+
+  for (const group of byAlias.values()) {
+    const seen = new Set();
+    group.quests = group.quests
+      .filter((quest) => !seen.has(quest.path) && seen.add(quest.path))
+      .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+  }
+
+  return [...byAlias.values()];
+}
+
 function buildQuestsFaqJsonLd() {
   return {
     '@context': 'https://schema.org',
@@ -2723,10 +2757,16 @@ async function main() {
       const cityHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, city);
       writeFileSafe(path.join(DIST_DIR, 'quests', city.cityId, 'index.html'), cityHtml);
       cityLandingsGenerated++;
-      if (city.alias && city.alias !== city.cityId) {
-        writeFileSafe(path.join(DIST_DIR, 'quests', city.alias, 'index.html'), cityHtml);
-        cityLandingsGenerated++;
-      }
+    }
+    // Один и тот же город может прийти из каталога под несколькими city_id
+    // (например Гомель = 19 и 92) — тогда оба претендуют на /quests/gomel.
+    // Раньше лендинг писался в цикле по городам, вторая запись молча затирала
+    // первую, и половина квестов города исчезала со своей посадочной, хотя
+    // numeric-лендинги обоих city_id канонизируются именно на неё.
+    for (const aliasCity of mergeQuestCityLandingsByAlias(cityLandingModel)) {
+      const aliasHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, aliasCity);
+      writeFileSafe(path.join(DIST_DIR, 'quests', aliasCity.alias, 'index.html'), aliasHtml);
+      cityLandingsGenerated++;
     }
 
     totalPages += questGenerated + cityLandingsGenerated;
@@ -2919,6 +2959,7 @@ if (typeof module !== 'undefined' && module.exports) {
     injectQuestIntroSection,
     injectQuestLinksIndex,
     buildQuestsListingModel,
+    mergeQuestCityLandingsByAlias,
     buildQuestsFaqJsonLd,
     buildQuestsListItemListJsonLd,
     injectQuestsListingContent,

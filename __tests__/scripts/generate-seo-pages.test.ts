@@ -34,6 +34,7 @@ const {
   loadRedirectManifest,
   buildRedirectStubHtml,
   patchNoindexFallbackTemplate,
+  mergeQuestCityLandingsByAlias,
 } = require('@/scripts/generate-seo-pages');
 
 const fs = require('fs');
@@ -1245,5 +1246,85 @@ describe('patchNoindexFallbackTemplate', () => {
 
     expect((html.match(/name="robots"/g) || []).length).toBe(1);
     expect(html).toContain('content="noindex, follow"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mergeQuestCityLandingsByAlias
+//
+// The catalog ships the same city under several city_id values (Гомель is both
+// 19 and 92). Both claim /quests/gomel, and the landing loop used to write that
+// path once per city — last write won and half the city's quests vanished from
+// the page both numeric landings canonicalise to.
+// ---------------------------------------------------------------------------
+
+describe('mergeQuestCityLandingsByAlias', () => {
+  const gomel19 = {
+    cityId: '19',
+    name: 'Гомель',
+    cover: '',
+    alias: 'gomel',
+    landingPath: '/quests/gomel',
+    quests: [
+      { path: '/quests/19/gomel-park', title: 'Парк' },
+      { path: '/quests/19/gomel-center', title: 'Центр' },
+    ],
+  };
+  const gomel92 = {
+    cityId: '92',
+    name: 'Гомель',
+    cover: 'https://metravel.by/gomel.jpg',
+    alias: 'gomel',
+    landingPath: '/quests/gomel',
+    quests: [{ path: '/quests/92/gomel-river', title: 'Набережная' }],
+  };
+  const minsk = {
+    cityId: '4',
+    name: 'Минск',
+    cover: '',
+    alias: 'minsk',
+    landingPath: '/quests/minsk',
+    quests: [{ path: '/quests/4/minsk-svisloch', title: 'Свислочь' }],
+  };
+
+  it('unions the quests of every city sharing one alias', () => {
+    const merged = mergeQuestCityLandingsByAlias([gomel19, gomel92, minsk]);
+    const gomel = merged.find((city: { alias: string }) => city.alias === 'gomel');
+
+    expect(merged).toHaveLength(2);
+    expect(gomel.quests.map((q: { path: string }) => q.path).sort()).toEqual([
+      '/quests/19/gomel-center',
+      '/quests/19/gomel-park',
+      '/quests/92/gomel-river',
+    ]);
+  });
+
+  it('produces exactly one landing per alias, so no write silently overwrites another', () => {
+    const merged = mergeQuestCityLandingsByAlias([gomel19, gomel92, minsk]);
+    const aliases = merged.map((city: { alias: string }) => city.alias);
+
+    expect(new Set(aliases).size).toBe(aliases.length);
+  });
+
+  it('keeps the first non-empty name and cover across the merged cities', () => {
+    const merged = mergeQuestCityLandingsByAlias([gomel19, gomel92]);
+
+    expect(merged[0].name).toBe('Гомель');
+    expect(merged[0].cover).toBe('https://metravel.by/gomel.jpg');
+  });
+
+  it('sorts merged quests by title and drops duplicate routes', () => {
+    const merged = mergeQuestCityLandingsByAlias([
+      gomel19,
+      { ...gomel92, quests: [...gomel92.quests, { path: '/quests/19/gomel-park', title: 'Парк' }] },
+    ]);
+
+    expect(merged[0].quests.map((q: { title: string }) => q.title)).toEqual(['Набережная', 'Парк', 'Центр']);
+  });
+
+  it('skips cities that have no alias of their own', () => {
+    expect(mergeQuestCityLandingsByAlias([{ ...minsk, alias: null }])).toEqual([]);
+    expect(mergeQuestCityLandingsByAlias([{ ...minsk, alias: '4' }])).toEqual([]);
+    expect(mergeQuestCityLandingsByAlias([])).toEqual([]);
   });
 });

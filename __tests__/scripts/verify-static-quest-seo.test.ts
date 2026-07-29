@@ -13,11 +13,13 @@ import { makeTempDir, removeDir, writeTextFile } from './cli-test-utils'
 const {
   TRAVEL_QUEST_PROMO_MARKER,
   countTravelQuestPromoPages,
+  expectedAliasLandingQuests,
   expectedCityLandingFiles,
   expectedQuestFiles,
   extractItems,
   hasQuestCityLandingSection,
   listTravelPageFiles,
+  missingLandingQuestLinks,
   verifyQuestHtml,
 } = require('@/scripts/verify-static-quest-seo')
 
@@ -209,33 +211,50 @@ describe('countTravelQuestPromoPages', () => {
   })
 })
 
-describe('hasQuestCityLandingSection', () => {
-  it('accepts a landing that kept its crawlable city section', () => {
-    const landing =
-      '<html><body><section data-ssg-quest-city="true" aria-label="Городские квесты: Краков"><h1>Квесты</h1></section></body></html>'
+describe('expectedAliasLandingQuests', () => {
+  // Гомель ships as both city_id 19 and 92; both map to the alias "gomel".
+  const GOMEL_19 = { quest_id: 'gomel-park', city_id: '19' }
+  const GOMEL_19B = { quest_id: 'gomel-center', city_id: '19' }
+  const GOMEL_92 = { quest_id: 'gomel-river', city_id: '92' }
 
-    expect(hasQuestCityLandingSection(landing)).toBe(true)
+  it('collects the quests of every city_id sharing an alias', () => {
+    const quests = [GOMEL_19, GOMEL_19B, GOMEL_92]
+    const aliasMap = buildQuestCityAliasMap(quests)
+
+    expect([...expectedAliasLandingQuests(quests, aliasMap).get('gomel')].sort()).toEqual([
+      '/quests/19/gomel-center',
+      '/quests/19/gomel-park',
+      '/quests/92/gomel-river',
+    ])
   })
 
-  it('rejects a landing that fell back to the bare SPA shell', () => {
-    expect(hasQuestCityLandingSection('<html><body><div id="root"></div></body></html>')).toBe(false)
+  it('ignores quests whose city has no distinct alias', () => {
+    expect(expectedAliasLandingQuests([{ quest_id: '4-only', city_id: '4' }], new Map()).size).toBe(0)
   })
 })
 
-describe('countTravelQuestPromoPages', () => {
-  it('counts only travel pages that carry the promo block', () => {
-    const pages: Record<string, string> = {
-      '/dist/travels/krakow/index.html': `<section ${TRAVEL_QUEST_PROMO_MARKER} aria-label="Квест по этому городу"></section>`,
-      '/dist/travels/bled/index.html': '<html><body>Озеро Блед</body></html>',
-      '/dist/travels/minsk/index.html': `<section ${TRAVEL_QUEST_PROMO_MARKER} aria-label="Квесты рядом"></section>`,
-    }
+describe('missingLandingQuestLinks', () => {
+  const ALL = new Set(['/quests/19/gomel-park', '/quests/92/gomel-river'])
 
-    expect(countTravelQuestPromoPages(Object.keys(pages), (filePath: string) => pages[filePath])).toBe(2)
+  it('accepts a landing that links every quest of the alias', () => {
+    const html =
+      '<ul><li><a href="/quests/19/gomel-park">Парк</a></li><li><a href="/quests/92/gomel-river">Набережная</a></li></ul>'
+
+    expect(missingLandingQuestLinks(html, ALL)).toEqual([])
   })
 
-  it('returns zero when the promo catalog produced nothing', () => {
-    expect(countTravelQuestPromoPages(['/dist/travels/a/index.html'], () => '<html></html>')).toBe(0)
-    expect(countTravelQuestPromoPages([], () => '')).toBe(0)
+  it('reports the quests dropped when one city overwrote the other landing', () => {
+    const lastWriteWins = '<ul><li><a href="/quests/92/gomel-river">Набережная</a></li></ul>'
+
+    expect(missingLandingQuestLinks(lastWriteWins, ALL)).toEqual(['/quests/19/gomel-park'])
+  })
+
+  it('does not let a longer path stand in for a shorter one', () => {
+    const html = '<a href="/quests/19/gomel-park-extended">Другой</a>'
+
+    expect(missingLandingQuestLinks(html, new Set(['/quests/19/gomel-park']))).toEqual([
+      '/quests/19/gomel-park',
+    ])
   })
 })
 
