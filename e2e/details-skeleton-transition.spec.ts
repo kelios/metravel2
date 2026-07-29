@@ -8,7 +8,7 @@ test.describe('@perf Travel details skeleton transition (no layout shift)', () =
 
     // Deterministic: delay and mock the travel-by-slug request.
     let requestCount = 0;
-    await page.route('**/api/travels/by-slug/**', async (route: any, request: any) => {
+    const travelHandler = async (route: any, request: any) => {
       if (request.method() !== 'GET') {
         await route.continue();
         return;
@@ -58,7 +58,9 @@ test.describe('@perf Travel details skeleton transition (no layout shift)', () =
         contentType: 'application/json',
         body: JSON.stringify(mocked),
       });
-    });
+    };
+    await page.route('**/api/travels/resolve-slug/**', travelHandler);
+    await page.route('**/api/travels/by-slug/**', travelHandler);
 
     await page.goto('/travels/e2e-details-skeleton', { waitUntil: 'domcontentloaded' });
 
