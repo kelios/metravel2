@@ -30,6 +30,8 @@ const {
   injectTravelQuestPromoSection,
   injectJsonLd,
   buildTravelArticleJsonLd,
+  extractFaqEntries,
+  buildTravelFaqJsonLd,
   normalizeSlug,
   loadRedirectManifest,
   buildRedirectStubHtml,
@@ -757,6 +759,95 @@ describe('travel SSR SEO helpers', () => {
     expect(payload.headline).toBe('Тропа ведьм | Metravel')
     expect(payload.author.name).toBe('Julia')
     expect(payload.image).toEqual(['https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg'])
+  })
+
+  // The SSG body sanitizer keeps a small tag allowlist and drops every
+  // attribute, so the editor's FAQ microdata never reaches the crawler-visible
+  // HTML — 291 of 306 published articles shipped FAQ text with no FAQPage at
+  // all. These pairs must be recovered from the stored body and emitted as
+  // JSON-LD instead.
+  describe('FAQ structured data', () => {
+    const FAQ_BODY = `
+      <p>Вступление автора.</p>
+      <section class="seo-faq" data-faq="metravel-seo" itemscope itemtype="https://schema.org/FAQPage">
+      <h2>Частые вопросы: Замок</h2>
+      <details itemprop="mainEntity" itemscope itemtype="https://schema.org/Question">
+      <summary itemprop="name"><strong>Можно ли попасть внутрь?</strong></summary>
+      <div itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><div itemprop="text">
+      <p>Пока нет: идёт реставрация, замок осматривают <strong>снаружи</strong>.</p>
+      </div></div>
+      </details>
+      <details itemprop="mainEntity" itemscope itemtype="https://schema.org/Question">
+      <summary itemprop="name"><strong>Сколько стоит вход?</strong></summary>
+      <div itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><div itemprop="text">
+      <p>Билет&nbsp;— 17&nbsp;злотых, парковка отдельно.</p>
+      </div></div>
+      </details>
+      </section>`
+
+    it('extracts every question and answer, decoding entities and inner tags', () => {
+      const entries = extractFaqEntries(FAQ_BODY)
+
+      expect(entries).toHaveLength(2)
+      expect(entries[0].question).toBe('Можно ли попасть внутрь?')
+      expect(entries[0].answer).toBe('Пока нет: идёт реставрация, замок осматривают снаружи.')
+      expect(entries[1].answer).toBe('Билет — 17 злотых, парковка отдельно.')
+    })
+
+    it('reads the older markup that has no itemprop attributes', () => {
+      const entries = extractFaqEntries(
+        '<section class="seo-faq"><details><summary>Как добраться?</summary><p>Автобусом из Новогрудка.</p></details></section>',
+      )
+
+      expect(entries).toEqual([{ question: 'Как добраться?', answer: 'Автобусом из Новогрудка.' }])
+    })
+
+    it('ignores a <details> that is not part of an FAQ block', () => {
+      expect(extractFaqEntries('<details><summary>Спойлер</summary><p>Просто текст</p></details>')).toEqual([])
+    })
+
+    it('skips entries with an empty question or answer', () => {
+      const entries = extractFaqEntries(
+        '<section class="seo-faq"><details><summary>Вопрос?</summary></details>' +
+          '<details><summary>   </summary><p>Ответ</p></details></section>',
+      )
+
+      expect(entries).toEqual([])
+    })
+
+    it('builds FAQPage JSON-LD from the recovered pairs', () => {
+      const payload = buildTravelFaqJsonLd(FAQ_BODY)
+
+      expect(payload['@context']).toBe('https://schema.org')
+      expect(payload['@type']).toBe('FAQPage')
+      expect(payload.mainEntity).toHaveLength(2)
+      expect(payload.mainEntity[0]).toEqual({
+        '@type': 'Question',
+        name: 'Можно ли попасть внутрь?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Пока нет: идёт реставрация, замок осматривают снаружи.' },
+      })
+    })
+
+    it('emits nothing for a body without an FAQ so no empty FAQPage ships', () => {
+      expect(buildTravelFaqJsonLd('<p>Обычная статья без FAQ.</p>')).toBeNull()
+      expect(buildTravelFaqJsonLd('')).toBeNull()
+      expect(buildTravelFaqJsonLd(null)).toBeNull()
+    })
+
+    it('injects the FAQ payload under its own marker, next to the Article one', () => {
+      const withArticle = injectJsonLd(MINIMAL_BASE, { '@context': 'https://schema.org', '@type': 'Article' }, 'travel-article')
+      const withFaq = injectJsonLd(withArticle, buildTravelFaqJsonLd(FAQ_BODY), 'travel-faq')
+
+      expect(withFaq).toContain('data-seo-jsonld="travel-article"')
+      expect(withFaq).toContain('data-seo-jsonld="travel-faq"')
+      expect(withFaq).toContain('"@type":"FAQPage"')
+    })
+
+    it('leaves the page untouched when there is no FAQ payload to inject', () => {
+      const withArticle = injectJsonLd(MINIMAL_BASE, { '@context': 'https://schema.org', '@type': 'Article' }, 'travel-article')
+
+      expect(injectJsonLd(withArticle, buildTravelFaqJsonLd('<p>Нет FAQ.</p>'), 'travel-faq')).toBe(withArticle)
+    })
   })
 
   it('injectJsonLd inserts a marked JSON-LD block and replaces it on the next pass', () => {

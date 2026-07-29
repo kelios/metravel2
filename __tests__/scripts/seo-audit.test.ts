@@ -10,6 +10,7 @@ const {
   analyzeTitle,
   titleKeywords,
   analyzeLead,
+  analyzeLeadNoise,
   analyzeContent,
   auditTravel,
   summarizeAudit,
@@ -71,6 +72,68 @@ describe('analyzeTitle', () => {
 describe('titleKeywords', () => {
   it('keeps words >= 4 letters, drops short ones', () => {
     expect(titleKeywords('Озеро Глубокое в Беларуси')).toEqual(['озеро', 'глубокое', 'беларуси']);
+  });
+});
+
+/**
+ * Travel 443 shipped for months with its body starting at
+ * "DUP found at: 3238 / Removed dup, new len: 50274" — stdout of a
+ * de-duplication script written straight into the article. The SERP snippet led
+ * with that line. `weak-lead` never fired, because the real title words still
+ * appeared further inside the 160-char window, so the audit reported the page
+ * as clean. Machine output in the body needs its own signal.
+ */
+describe('analyzeLeadNoise (script output leaked into the body)', () => {
+  it('flags the exact leak found on travel 443', () => {
+    const r = analyzeLeadNoise('DUP found at: 3238\nRemoved dup, new len: 50274\n<h2>Красивейшие долины рядом с Краковом</h2>');
+    expect(r.noisy).toBe(true);
+  });
+
+  it('flags other machine output that has no place in an article', () => {
+    for (const body of [
+      '<p>undefined</p><p>Дальше нормальный текст.</p>',
+      '<p>[object Object]</p>',
+      '<p>Error: ENOENT no such file</p>',
+      '<p>Traceback (most recent call last):</p>',
+      '<p>{"id": 443, "slug": "krakovskie-dolinki"}</p>',
+    ]) {
+      expect(analyzeLeadNoise(body).noisy).toBe(true);
+    }
+  });
+
+  it('leaves normal prose alone, including leads that merely contain digits', () => {
+    for (const body of [
+      '<p>На своем длинном и ветвистом пути через Беларусь Неман делает крутой поворот.</p>',
+      '<p>1) Олюдениз (Ölüdeniz). В этот отпуск мы решили отправиться в Турцию.</p>',
+      '<p>Краков - Скальное место (106 км ~2 часа). Одно из самых запоминающихся путешествий.</p>',
+      '<p>Где находится: Варшава, Польша. Что это: дворцово-парковый комплекс.</p>',
+    ]) {
+      expect(analyzeLeadNoise(body).noisy).toBe(false);
+    }
+  });
+
+  it('does not flag an empty body — that is weak-lead territory, not noise', () => {
+    expect(analyzeLeadNoise('').noisy).toBe(false);
+    expect(analyzeLeadNoise(null).noisy).toBe(false);
+  });
+
+  it('only looks at the start, so the word "error" mid-article is not noise', () => {
+    expect(
+      analyzeLeadNoise('<p>Мы долго искали дорогу и поняли, что error в навигаторе был наш.</p>').noisy,
+    ).toBe(false);
+  });
+
+  it('surfaces as its own issue and counter, separate from weak-lead', () => {
+    const rows = [
+      auditTravel(
+        { id: 443, name: 'Краковские долинки: что посмотреть рядом с Краковом', slug: 'krakovskie-dolinki' },
+        { description: 'DUP found at: 3238 Removed dup, new len: 50274 <h2>Краковские долинки рядом с Краковом</h2>' + '<p>текст</p>'.repeat(250) + '<a href="/travels/other">ещё</a>' },
+      ),
+    ];
+
+    expect(rows[0].issues).toContain('lead-noise');
+    expect(rows[0].leadNoise).toBe(true);
+    expect(summarizeAudit(rows).counts.leadNoise).toBe(1);
   });
 });
 

@@ -1145,6 +1145,63 @@ function buildTravelArticleJsonLd({ title, description, canonical, image, travel
   return payload;
 }
 
+/**
+ * Pull the Q/A pairs out of an article body's FAQ block.
+ *
+ * The editor stores them as microdata (`<section class="seo-faq">` with
+ * `<details itemprop="mainEntity">`), but `sanitizeArticleBodyHtml` keeps only
+ * a small tag allowlist and drops every attribute, so none of that markup
+ * survives into the crawler-visible HTML — the questions arrive as bare
+ * `<strong>`/`<p>` text. Rather than widening the sanitizer (which would put
+ * attributes back into the body for the sake of a format Google reads less
+ * reliably), we re-read the pairs here and emit them as JSON-LD.
+ */
+function extractFaqEntries(descriptionHtml) {
+  const html = String(descriptionHtml || '');
+  if (!html.includes('<details')) return [];
+
+  // Prefer the FAQ section when present so an unrelated <details> elsewhere in
+  // the body is not advertised as an FAQ answer.
+  const faqSections = html.match(/<section[^>]*(?:class="[^"]*seo-faq[^"]*"|data-faq="metravel-seo")[^>]*>[\s\S]*?<\/section>/gi);
+  const scopes = faqSections && faqSections.length ? faqSections : [html];
+
+  const entries = [];
+  for (const scope of scopes) {
+    const blocks = scope.match(/<details[\s\S]*?<\/details>/gi) || [];
+    for (const block of blocks) {
+      const isFaqBlock = faqSections?.length || /itemprop\s*=\s*["']mainEntity["']/i.test(block);
+      if (!isFaqBlock) continue;
+
+      const summaryMatch = block.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i);
+      if (!summaryMatch) continue;
+
+      const question = stripHtml(summaryMatch[1], Number.MAX_SAFE_INTEGER);
+      const answer = stripHtml(block.slice(summaryMatch.index + summaryMatch[0].length), Number.MAX_SAFE_INTEGER);
+      if (!question || !answer) continue;
+
+      entries.push({ question, answer });
+    }
+  }
+
+  return entries;
+}
+
+/** FAQPage JSON-LD for an article body, or null when it has no usable FAQ. */
+function buildTravelFaqJsonLd(descriptionHtml) {
+  const entries = extractFaqEntries(descriptionHtml);
+  if (!entries.length) return null;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: entries.map((entry) => ({
+      '@type': 'Question',
+      name: entry.question,
+      acceptedAnswer: { '@type': 'Answer', text: entry.answer },
+    })),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Quests (городские квест-маршруты): prerender detail pages + crawlable index.
 // Sitemap самих квестов отдаёт бэкенд (BE-017); здесь даём индексируемую мету,
@@ -2597,8 +2654,14 @@ async function main() {
         'travel-article'
       );
 
+      const htmlWithFaqJsonLd = injectJsonLd(
+        htmlWithArticleJsonLd,
+        buildTravelFaqJsonLd(detail?.description || travel?.description),
+        'travel-faq'
+      );
+
       const travelHeroPreload = buildTravelHeroPreloadData(travel, detail);
-      const htmlWithTravelPreload = injectTravelHeroPreload(htmlWithArticleJsonLd, travelHeroPreload);
+      const htmlWithTravelPreload = injectTravelHeroPreload(htmlWithFaqJsonLd, travelHeroPreload);
       const bootstrapTravel = {
         ...travel,
         ...detail,
@@ -2942,6 +3005,8 @@ if (typeof module !== 'undefined' && module.exports) {
     disableExpoRouterHydration,
     injectJsonLd,
     buildTravelArticleJsonLd,
+    extractFaqEntries,
+    buildTravelFaqJsonLd,
     injectBreadcrumbJsonLd,
     normalizeSlug,
     loadRedirectManifest,

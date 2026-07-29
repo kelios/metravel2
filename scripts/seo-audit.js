@@ -111,6 +111,25 @@ function analyzeLead(name, descriptionHtml) {
   };
 }
 
+/**
+ * Signatures of machine output that has no business being in an article body:
+ * stdout of a maintenance script, a stringified object, a stack trace.
+ *
+ * `weak-lead` does not catch these. Travel 443 shipped with the body starting
+ * at "DUP found at: 3238 / Removed dup, new len: 50274" — leftover logging from
+ * a de-duplication pass — and the audit stayed silent for months because the
+ * real title words still appeared later inside the 160-char snippet window.
+ * The snippet in search results led with that line.
+ */
+const LEAD_NOISE_PATTERN =
+  /^\s*(dup found\b|removed dup\b|new len\b|undefined\b|null\b|nan\b|\[object object\]|error:|traceback\b|warning:|\{"|\[\{|<\?php)/i;
+
+/** True when the body starts with script output rather than prose. */
+function analyzeLeadNoise(descriptionHtml) {
+  const lead = stripHtmlToText(descriptionHtml).slice(0, LEAD_CHARS);
+  return { lead, noisy: LEAD_NOISE_PATTERN.test(lead) };
+}
+
 function analyzeContent(descriptionHtml, minWords = THIN_WORDS) {
   const html = String(descriptionHtml || '');
   const words = countWords(html);
@@ -140,6 +159,7 @@ function auditTravel(listItem, detail = {}, opts = {}) {
   const detailUnavailable = !detail || detail.__fetchFailed === true;
   const titleA = analyzeTitle(listItem.name);
   const leadA = analyzeLead(listItem.name, detail.description);
+  const leadNoiseA = analyzeLeadNoise(detail.description);
   const contentA = analyzeContent(detail.description, minWords);
 
   const issues = [];
@@ -150,6 +170,7 @@ function auditTravel(listItem, detail = {}, opts = {}) {
   // false positive, so skip them (title checks come from the list payload).
   if (!detailUnavailable) {
     if (leadA.weak) issues.push('weak-lead');
+    if (leadNoiseA.noisy) issues.push('lead-noise');
     if (contentA.thin) issues.push('thin-content');
     if (contentA.noHeadings) issues.push('no-headings');
     if (contentA.noInternalLinks) issues.push('no-internal-links');
@@ -173,6 +194,7 @@ function auditTravel(listItem, detail = {}, opts = {}) {
     headings: detailUnavailable ? null : contentA.headings,
     internalLinks: detailUnavailable ? null : contentA.internalLinks,
     weakLead: detailUnavailable ? null : leadA.weak,
+    leadNoise: detailUnavailable ? null : leadNoiseA.noisy,
     detailFetchFailed: detailUnavailable,
     issues,
     priority,
@@ -186,6 +208,7 @@ function summarizeAudit(rows) {
     titleTooLong: 0,
     titleTooShort: 0,
     weakLead: 0,
+    leadNoise: 0,
     thinContent: 0,
     noHeadings: 0,
     noInternalLinks: 0,
@@ -196,6 +219,7 @@ function summarizeAudit(rows) {
     if (r.issues.includes('title-too-long')) counts.titleTooLong++;
     if (r.issues.includes('title-too-short')) counts.titleTooShort++;
     if (r.issues.includes('weak-lead')) counts.weakLead++;
+    if (r.issues.includes('lead-noise')) counts.leadNoise++;
     if (r.issues.includes('thin-content')) counts.thinContent++;
     if (r.issues.includes('no-headings')) counts.noHeadings++;
     if (r.issues.includes('no-internal-links')) counts.noInternalLinks++;
@@ -323,6 +347,7 @@ async function main() {
   console.log(`  total: ${counts.total} | clean: ${counts.clean}`);
   console.log(`  title>60: ${counts.titleTooLong} | title<25: ${counts.titleTooShort}`);
   console.log(`  weak lead (snippet off-topic): ${counts.weakLead}`);
+  console.log(`  lead noise (script output in body): ${counts.leadNoise}`);
   console.log(`  thin (<${minWords} words): ${counts.thinContent}`);
   console.log(`  no headings: ${counts.noHeadings} | no internal links: ${counts.noInternalLinks}`);
 
@@ -352,6 +377,7 @@ if (typeof module !== 'undefined' && module.exports) {
     titleKeywords,
     keywordStem,
     analyzeLead,
+    analyzeLeadNoise,
     analyzeContent,
     auditTravel,
     summarizeAudit,
