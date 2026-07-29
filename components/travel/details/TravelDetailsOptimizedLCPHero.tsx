@@ -362,6 +362,11 @@ function OptimizedLCPHeroInner({
               display: 'block',
               objectFit: 'contain',
               objectPosition: 'center',
+              // Critical HTML CSS paints an opaque neutral background on
+              // img[data-lcp]. Keep it for legacy payloads, but make the sharp
+              // layer transparent when a local data placeholder exists so the
+              // blurhash/color below remains visible until decode completes.
+              ...(hasDataPlaceholder ? { backgroundColor: 'transparent' } : null),
             }}
             loading="eager"
             decoding="async"

@@ -56,6 +56,7 @@ export function buildCriticalCSS(): string {
     '[data-testid="travel-details-page"]{min-height:100vh;contain:layout style}',
     '[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,' + BSL + ')}',
     '[data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:720px;object-fit:contain}',
+    '[data-hero-data-placeholder="true"] img{width:100%;height:100%;max-width:none;aspect-ratio:auto;object-fit:cover}',
     '[data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}',
     '[data-testid="home-hero"]{contain:layout style}',
     '[data-testid="home-trust-block"]{content-visibility:auto;contain-intrinsic-size:auto 220px}',

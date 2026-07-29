@@ -1,9 +1,15 @@
 import { Platform } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from '@/constants/layout'
+import type { TravelMedia } from '@/types/types'
+import {
+  findGalleryMediaImage,
+  getMediaPlaceholderData,
+} from '@/utils/travelMediaVariants'
 
 type TravelSkeletonReadyCandidate = {
-  gallery?: unknown[] | null
+  gallery?: Array<{ id?: number | string | null }> | null
+  media?: TravelMedia | null
 } | null | undefined
 
 export function shouldShowTravelDetailsDesktopSidebar(isMobile: boolean, screenWidth: number) {
@@ -22,8 +28,20 @@ export function isTravelDetailsFirstScreenReady(
   if (!travel) return false
 
   const hasHeroMedia = Array.isArray(travel.gallery) && travel.gallery.length > 0
+  if (!hasHeroMedia) return true
 
-  return !hasHeroMedia || lcpLoaded
+  const firstGalleryImage = travel.gallery?.[0]
+  const heroMedia = findGalleryMediaImage(travel.media, firstGalleryImage?.id)
+  const placeholder = getMediaPlaceholderData(heroMedia)
+  const hasLocalDataPlaceholder = Boolean(
+    placeholder.blurhash || placeholder.dominantColor,
+  )
+
+  // A locally painted blurhash/dominant color is already a stable visual first
+  // frame. Lift the page skeleton immediately so it cannot mask that frame while
+  // the sharp hero is still downloading. URL-backed LQIP and legacy payloads
+  // keep waiting for the real hero (with the existing timeout backstop).
+  return lcpLoaded || hasLocalDataPlaceholder
 }
 
 export function getTravelDetailsDesktopLayoutStyle() {

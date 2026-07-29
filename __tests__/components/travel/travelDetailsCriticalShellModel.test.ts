@@ -24,6 +24,37 @@ describe('travelDetailsCriticalShellModel', () => {
       ).toBe(true)
     })
 
+    it.each([
+      ['blurhash', { blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }],
+      ['dominant color', { dominant_color: '#345678' }],
+    ])('allows hiding skeleton for a local %s hero placeholder', (_label, media) => {
+      expect(
+        isTravelDetailsFirstScreenReady(
+          {
+            gallery: [{ id: 1 }],
+            media: {
+              gallery: [{ id: 1, ...media }],
+            },
+          },
+          false,
+        ),
+      ).toBe(true)
+    })
+
+    it('keeps skeleton visible for a URL-backed LQIP placeholder', () => {
+      expect(
+        isTravelDetailsFirstScreenReady(
+          {
+            gallery: [{ id: 1 }],
+            media: {
+              gallery: [{ id: 1, lqip_url: 'https://example.com/lqip.jpg' }],
+            },
+          },
+          false,
+        ),
+      ).toBe(false)
+    })
+
     it('does not wait for LCP when the page has no hero media', () => {
       expect(
         isTravelDetailsFirstScreenReady(
@@ -40,4 +71,3 @@ describe('travelDetailsCriticalShellModel', () => {
     })
   })
 })
-
