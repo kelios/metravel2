@@ -321,6 +321,28 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(loadedMainImage.props.style?.opacity).toBe(1)
   })
 
+  it('maps low-priority web media to fetchPriority=low', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/near-viewport-card.jpg"
+          width={320}
+          height={200}
+          loading="eager"
+          priority="low"
+          revealOnLoadOnly
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
+    })[0]
+
+    expect(mainImage.props.fetchPriority).toBe('low')
+  })
+
   it('keeps the main image visible on first frame for eager critical web media', () => {
     let tree: any
     renderer.act(() => {
@@ -881,6 +903,79 @@ describe('ImageCardMedia blur background (web)', () => {
 
     expect(secondMainImage.props.style?.opacity).toBe(1)
   })
+
+  it('does not let a cached thumbnail bypass an explicit decode gate', () => {
+    const src = 'https://example.com/photo-candidate-gate.jpg'
+    let thumbnailTree: any
+    renderer.act(() => {
+      thumbnailTree = renderer.create(
+        <ImageCardMedia src={`${src}?w=160&q=70`} height={120} blurBackground fit="contain" />
+      )
+    })
+    const thumbnail = thumbnailTree!.root.findAll((node: any) => {
+      return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
+    })[0]
+    renderer.act(() => thumbnail.props.onLoad())
+    renderer.act(() => thumbnailTree!.unmount())
+
+    let sharpTree: any
+    renderer.act(() => {
+      sharpTree = renderer.create(
+        <ImageCardMedia
+          src={`${src}?w=1280&q=80`}
+          height={240}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          revealOnLoadOnly
+        />
+      )
+    })
+
+    const sharp = sharpTree!.root.findAll((node: any) => {
+      return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
+    })[0]
+    expect(sharp.props.style?.opacity).toBe(0)
+  })
+
+  it('does not paint a recycled card with the previous image loaded state', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/recycled-a.jpg"
+          height={240}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          revealOnLoadOnly
+        />
+      )
+    })
+    const firstImage = tree!.root.findAll((node: any) => {
+      return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
+    })[0]
+    renderer.act(() => firstImage.props.onLoad())
+
+    renderer.act(() => {
+      tree!.update(
+        <ImageCardMedia
+          src="https://example.com/recycled-b.jpg"
+          height={240}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          revealOnLoadOnly
+        />
+      )
+    })
+
+    const recycledImage = tree!.root.findAll((node: any) => {
+      return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
+    })[0]
+    expect(recycledImage.props.src).toContain('recycled-b.jpg')
+    expect(recycledImage.props.style?.opacity).toBe(0)
+  })
 })
 
 // #1111: одинакового `src` мало. Резкий слой выбирает кандидата из `srcSet` по
@@ -932,6 +1027,54 @@ describe('ImageCardMedia web backdrop shares the srcSet of the sharp layer (#111
     expect(backdrop.props.src).toBe(main.props.src)
     expect(backdrop.props.srcSet).toBe(main.props.srcSet)
     expect(backdrop.props.sizes).toBe(main.props.sizes)
+  })
+
+  it('keeps eager decode-gated catalog cards on one responsive candidate', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/gallery/1/photo.jpg?w=1280&q=80&fit=contain"
+          width={360}
+          height={240}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="low"
+          allowCriticalWebBlur
+          revealOnLoadOnly
+          webResponsiveSource={{
+            src: 'https://metravel.by/gallery/1/photo.jpg?w=1280&q=80&fit=contain',
+            srcSet: [
+              'https://metravel.by/gallery/1/photo.jpg?w=320&q=70&fit=cover 320w',
+              'https://metravel.by/gallery/1/photo.jpg?w=640&q=80&fit=cover 640w',
+              'https://metravel.by/gallery/1/photo.jpg?w=1280&q=80&fit=contain 1280w',
+            ].join(', '),
+            sizes: '360px',
+          }}
+        />
+      )
+    })
+
+    const backdrop = tree!.root.findAll(
+      (node: any) => node?.type === 'img' && node?.props?.['data-blur-backdrop'] === 'true'
+    )[0]
+    const cssBackdrop = tree!.root.findAll(
+      (node: any) => node?.type === 'div' && node?.props?.['data-blur-backdrop'] === 'true'
+    )[0]
+    const main = tree!.root.findAll(
+      (node: any) =>
+        node?.type === 'img' &&
+        node?.props?.['data-blur-backdrop'] !== 'true' &&
+        node?.props?.['aria-hidden'] !== true
+    )[0]
+
+    expect(cssBackdrop).toBeUndefined()
+    expect(backdrop.props.src).toBe(main.props.src)
+    expect(backdrop.props.srcSet).toBe(main.props.srcSet)
+    expect(backdrop.props.sizes).toBe(main.props.sizes)
+    expect(main.props.fetchPriority).toBe('low')
+    expect(main.props.style?.opacity).toBe(0)
   })
 })
 

@@ -197,8 +197,23 @@ function ImageCardMedia({
     return resolveImageIdentityKey(uri);
   }, [resolvedSource]);
   const [webLoaded, setWebLoaded] = useState(() => {
-    return !!(currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey));
+    // revealOnLoadOnly is an exact decode gate. The shared cache is keyed by
+    // image identity (optimization params removed), so a previously loaded 160px
+    // thumbnail must not make a new 1280px candidate visible before it decodes.
+    return !revealOnLoadOnly && !!(
+      currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey)
+    );
   });
+  const baseUriRef = useRef<string | null>(currentImageIdentityKey);
+  const revealOnLoadOnlyRef = useRef(revealOnLoadOnly);
+  // FlashList recycles a mounted card synchronously. Do not let the previous
+  // item's `webLoaded=true` leak into the first paint of the next identity while
+  // the reset effect is still pending.
+  const effectiveWebLoaded =
+    baseUriRef.current === currentImageIdentityKey &&
+    revealOnLoadOnlyRef.current === revealOnLoadOnly
+      ? webLoaded
+      : false;
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -482,8 +497,8 @@ function ImageCardMedia({
 
   const shouldRevealWebMedia = useMemo(() => {
     if (Platform.OS !== 'web') return true;
-    return shouldShowWebImageImmediately || webLoaded;
-  }, [shouldShowWebImageImmediately, webLoaded]);
+    return shouldShowWebImageImmediately || effectiveWebLoaded;
+  }, [effectiveWebLoaded, shouldShowWebImageImmediately]);
 
   const shouldShowWebBlurBackdrop = useMemo(() => {
     if (Platform.OS !== 'web') return true;
@@ -539,16 +554,22 @@ function ImageCardMedia({
 
   // Track the base URI (without optimization params) to avoid resetting loaded state
   // when only width/quality changes but the source image is the same
-  const baseUriRef = useRef<string | null>(currentImageIdentityKey);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     // Reset loaded state when the underlying image identity changes (different
     // signature/version), but stay stable across optimization-param changes.
-    if (currentImageIdentityKey !== baseUriRef.current) {
+    const identityChanged = currentImageIdentityKey !== baseUriRef.current;
+    const revealModeChanged = revealOnLoadOnly !== revealOnLoadOnlyRef.current;
+    if (identityChanged || revealModeChanged) {
       baseUriRef.current = currentImageIdentityKey;
-      setWebLoaded(Boolean(currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey)));
+      revealOnLoadOnlyRef.current = revealOnLoadOnly;
+      setWebLoaded(
+        !revealOnLoadOnly && Boolean(
+          currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey)
+        )
+      );
     }
-  }, [currentImageIdentityKey]);
+  }, [currentImageIdentityKey, revealOnLoadOnly]);
 
   const handleWebLoad = useCallback((_resolvedSrc: string) => {
     if (currentImageIdentityKey) {
@@ -697,7 +718,7 @@ function ImageCardMedia({
               loading={resolvedLoading}
               priority={priority}
               hasBlurBehind={shouldRenderWebBlurBackground}
-              loaded={webLoaded}
+              loaded={effectiveWebLoaded}
               onLoad={handleWebLoad}
               onError={onError}
               showImmediately={shouldShowWebImageImmediately}

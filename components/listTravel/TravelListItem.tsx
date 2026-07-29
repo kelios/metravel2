@@ -9,7 +9,6 @@ import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
 import { routes } from '@/utils/routes'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
-import { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia'
 import CardActionPressable from '@/components/ui/CardActionPressable'
 import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
@@ -19,7 +18,6 @@ import { appendReturnToParam } from '@/utils/navigationReturnPath'
 import { isTravelDraft } from '@/utils/travelPublicationStatus'
 import {
   buildResponsiveImagePropsFromMedia,
-  getMediaLqipUrl,
 } from '@/utils/travelMediaVariants'
 
 import { getResponsiveCardValues } from './enhancedCardResponsiveValues'
@@ -129,7 +127,6 @@ function TravelListItem({
     id,
     slug,
     travel_image_thumb_url: thumbUrl,
-    travel_image_thumb_small_url: thumbSmallUrl,
     name,
     countryName = '',
     userName,
@@ -188,16 +185,6 @@ function TravelListItem({
     onToggle,
   })
 
-  const isMobileSafariFirstCard = useMemo(() => {
-    if (!IS_WEB || !isMobile || !isFirst || typeof navigator === 'undefined') {
-      return false
-    }
-    return isIOSSafariUserAgent(
-      String(navigator.userAgent || ''),
-      navigator.maxTouchPoints,
-    )
-  }, [isFirst, isMobile])
-
   const countries = useMemo(
     () =>
       countryName
@@ -225,7 +212,6 @@ function TravelListItem({
   )
 
   const coverMedia = travel.media?.cover ?? null
-  const coverMediaLqip = useMemo(() => getMediaLqipUrl(coverMedia), [coverMedia])
   const coverMediaResponsiveSource = useMemo(() => {
     if (!IS_WEB || !coverMedia) return null
     const targetWidth =
@@ -623,23 +609,22 @@ function TravelListItem({
       nativePressScaleEnabled={Platform.OS !== 'android'}
       mediaProps={{
         placeholderBlurhash: PLACEHOLDER_BLURHASH,
-        placeholderSrc:
-          coverMediaLqip ??
-          (thumbSmallUrl && !isLikelyWatermarked(thumbSmallUrl) ? thumbSmallUrl : null),
+        // The web backdrop and the sharp layer must resolve to one effective URL.
+        // A thumbnail/LQIP URL here created a second request per card even though
+        // the card is activated ahead of the viewport and can reveal after decode.
         blurBackground: true,
         allowCriticalWebBlur: IS_WEB,
-        revealOnLoadOnly: isMobileSafariFirstCard,
+        // Keep the stable media box visible until the sharp candidate has decoded.
+        // This removes the blur -> progressive image flash during fast scrolling
+        // and also forces the web backdrop onto the shared <img srcSet> path.
+        revealOnLoadOnly: IS_WEB,
         recyclingKey: travelKey,
         priority: IS_WEB ? (isFirst ? 'high' : 'low') : 'normal',
-        // Eager on web so FlashList's mounted-ahead cells (~700px before the
-        // viewport) start fetching before they scroll in — otherwise lazy <img>
-        // defers until visible and the card shows the blurred placeholder first,
-        // then snaps to the sharp photo (the "фон, потом картинка" flash on scroll).
-        // priority stays 'low' for non-first cards, so fetchPriority is 'auto' and
-        // these don't compete with the LCP image; the Safari decode-gated reveal
-        // is unaffected (it never keyed off loading).
+        // FlashList now mounts only the visible rows plus a short draw-distance.
+        // Eager is therefore bounded to that small window and starts the request
+        // early enough to finish decoding before the user reaches the row.
         loading: IS_WEB ? 'eager' : 'lazy',
-        prefetch: IS_WEB ? isFirst : false,
+        prefetch: false,
         transition: Platform.OS === 'android' ? 0 : undefined,
         imageProps: ANDROID_LIST_IMAGE_PROPS,
         showLoadingIndicator: Platform.OS !== 'android',

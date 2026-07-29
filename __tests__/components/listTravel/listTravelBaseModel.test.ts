@@ -2,6 +2,7 @@ import {
   applyListDensity,
   buildListTravelFallbackSteps,
 } from '@/components/listTravel/listTravelBaseModel'
+import { getRightColumnVirtualizationConfig } from '@/components/listTravel/rightColumnModel'
 
 describe('applyListDensity', () => {
   const base = { gridColumns: 3, isCardsSingleColumn: false, imageHeight: 300 }
@@ -24,6 +25,20 @@ describe('applyListDensity', () => {
     expect(applyListDensity(base, 'compact').gridColumns).toBe(4)
     expect(applyListDensity({ ...base, gridColumns: 4 }, 'compact').gridColumns).toBe(4)
     expect(applyListDensity(base, 'compact').imageHeight).toBeLessThan(base.imageHeight)
+  })
+})
+
+describe('search result virtualization budget', () => {
+  it('keeps desktop lookahead below one additional viewport', () => {
+    expect(getRightColumnVirtualizationConfig(true, false)).toEqual({
+      drawDistance: 180,
+    })
+  })
+
+  it('uses a smaller lookahead for the shorter mobile rows', () => {
+    expect(getRightColumnVirtualizationConfig(true, true)).toEqual({
+      drawDistance: 160,
+    })
   })
 })
 

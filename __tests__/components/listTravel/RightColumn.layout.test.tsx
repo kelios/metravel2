@@ -4,12 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/hooks/useTheme';
 import RightColumn from '@/components/listTravel/RightColumn';
 
+const mockFlashListProps = jest.fn();
+
 jest.mock('@shopify/flash-list', () => {
   const React = require('react');
   const { View } = require('react-native');
 
   return {
     FlashList: React.forwardRef((props: any, ref: any) => {
+      mockFlashListProps(props);
       const existingRefValue = ref && typeof ref === 'object' ? ref.current : null;
       React.useImperativeHandle(ref, () => ({
         ...existingRefValue,
@@ -118,6 +121,41 @@ describe('RightColumn layout invariants', () => {
     const { Text } = require('react-native');
     return React.createElement(Text, { testID: `travel-card-${String(t.id)}` }, t.name);
   };
+
+  beforeEach(() => {
+    mockFlashListProps.mockClear();
+  });
+
+  it('passes the bounded FlashList v2 draw distance without legacy no-op tuning props', () => {
+    renderWithProviders(
+      <RightColumn
+        search=""
+        setSearch={jest.fn()}
+        isRecommendationsVisible={false}
+        handleRecommendationsVisibilityChange={jest.fn()}
+        activeFiltersCount={0}
+        total={travels.length}
+        contentPadding={16}
+        showInitialLoading={false}
+        isError={false}
+        showEmptyState={false}
+        getEmptyStateMessage={null}
+        travels={travels as any}
+        gridColumns={3}
+        isMobile={false}
+        showNextPageLoading={false}
+        refetch={jest.fn()}
+        renderItem={renderItem as any}
+      />
+    );
+
+    const props = mockFlashListProps.mock.calls.at(-1)?.[0] as any;
+    expect(props.drawDistance).toBe(180);
+    expect(props.initialNumToRender).toBeUndefined();
+    expect(props.maxToRenderPerBatch).toBeUndefined();
+    expect(props.windowSize).toBeUndefined();
+    expect(props.estimatedItemSize).toBeUndefined();
+  });
 
   it('forces 1 column on mobile regardless of gridColumns prop', () => {
     renderWithProviders(

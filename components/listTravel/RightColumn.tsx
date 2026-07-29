@@ -24,6 +24,7 @@ import {
   areRightColumnPropsEqual,
   buildTravelRows,
   getRightColumnHeaderMinHeight,
+  getRightColumnVirtualizationConfig,
   RECOMMENDATIONS_TOTAL_HEIGHT,
   TOP_SCROLL_PADDING,
 } from '@/components/listTravel/rightColumnModel'
@@ -303,6 +304,10 @@ const RightColumn: React.FC<RightColumnProps> = (
     })
 
     const rows = useMemo(() => buildTravelRows(travels, gridColumns, isMobile), [travels, gridColumns, isMobile])
+    const virtualizationConfig = useMemo(
+      () => getRightColumnVirtualizationConfig(isWeb, isMobile),
+      [isMobile],
+    )
 
     const rowSeparatorStyle = useMemo(() => ({ height: cardSpacing }), [cardSpacing])
     const RowSeparator = useCallback(() => {
@@ -480,7 +485,6 @@ const RightColumn: React.FC<RightColumnProps> = (
           renderItem={renderRow as any}
           extraData={gridColumns}
           keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
-          {...({ estimatedItemSize: 320 } as any)}
           ListHeaderComponent={ListHeader}
           ListFooterComponent={listFooter}
           ItemSeparatorComponent={isWeb ? RowSeparator : undefined}
@@ -497,7 +501,7 @@ const RightColumn: React.FC<RightColumnProps> = (
               />
             )
           }
-          drawDistance={isWeb ? 1600 : 800}
+          drawDistance={virtualizationConfig.drawDistance}
           contentContainerStyle={isWeb ? webContentContainerStyle : nativeContentContainerStyle}
           style={
             isWeb
@@ -513,10 +517,6 @@ const RightColumn: React.FC<RightColumnProps> = (
           testID={isWeb ? 'right-column-scrollview' : 'right-column-flashlist'}
           scrollEventThrottle={isWeb ? 32 : 16}
           removeClippedSubviews={!isWeb}
-          maxToRenderPerBatch={10}
-          updateCellsBatchingPeriod={50}
-          initialNumToRender={8}
-          windowSize={5}
         />
       )
     }, [
@@ -539,6 +539,7 @@ const RightColumn: React.FC<RightColumnProps> = (
       showEmptyState,
       showInitialLoading,
       travels.length,
+      virtualizationConfig,
       webContentContainerStyle,
       webScrollHandler,
     ])

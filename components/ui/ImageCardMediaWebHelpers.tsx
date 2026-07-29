@@ -179,7 +179,7 @@ export const WebMainImage = memo(function WebMainImage({
       loading={loading}
       decoding="auto"
       // @ts-ignore -- fetchPriority is a valid img attribute in browsers and not in React DOM typings yet
-      fetchPriority={priority === 'high' ? 'high' : 'auto'}
+      fetchPriority={priority === 'high' ? 'high' : priority === 'low' ? 'low' : 'auto'}
       onLoad={handleLoad}
       onError={onError}
     />

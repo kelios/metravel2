@@ -7,6 +7,18 @@ export const TOP_SCROLL_PADDING = 8
 export const WEB_ROW_INTRINSIC_SIZE_MOBILE = 'auto 340px'
 export const WEB_ROW_INTRINSIC_SIZE_DESKTOP = 'auto 420px'
 
+export function getRightColumnVirtualizationConfig(isWeb: boolean, isMobile: boolean) {
+  // FlashList v2 progressively mounts the visible rows in small batches itself.
+  // Keep only a short lookahead so the next row decodes before it scrolls in,
+  // without mounting/requesting the whole 20-card page.
+  return {
+    // FlashList v2 applies drawDistance on both sides of the viewport. At the top
+    // the unused "before" half moves after it, so 180 means a real 360px lookahead:
+    // enough for the next row, but still bounded when compact density has four columns.
+    drawDistance: isWeb ? (isMobile ? 160 : 180) : 180,
+  }
+}
+
 export function getRightColumnColumns(gridColumns: number, isMobile: boolean) {
   return Math.max(1, (isMobile ? 1 : gridColumns) || 1)
 }

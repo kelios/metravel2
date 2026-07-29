@@ -131,7 +131,7 @@ describe('TravelListItem media props on web', () => {
     expect(props.width).toBeUndefined();
   });
 
-  it('keeps the first mobile web card hidden until onLoad only on iPhone Safari', () => {
+  it('keeps search-card media hidden until decode on iPhone Safari', () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -149,12 +149,25 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.revealOnLoadOnly).toBe(true);
   });
 
-  it('keeps non-Safari or non-first cards on the existing path', () => {
-    renderItem({ isFirst: true, isMobile: true });
+  it('decode-gates every web search card and keeps non-critical requests low priority', () => {
+    renderItem({ isFirst: false, isMobile: false });
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
-    expect(props.mediaProps?.revealOnLoadOnly).toBe(false);
+    expect(props.mediaProps?.revealOnLoadOnly).toBe(true);
+    expect(props.mediaProps?.priority).toBe('low');
+    expect(props.mediaProps?.loading).toBe('eager');
+    expect(props.mediaProps?.prefetch).toBe(false);
+    expect(props.mediaProps?.placeholderSrc).toBeUndefined();
+  });
+
+  it('keeps only the first row high priority', () => {
+    renderItem({ isFirst: true });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.mediaProps?.priority).toBe('high');
+    expect(props.mediaProps?.loading).toBe('eager');
+    expect(props.mediaProps?.prefetch).toBe(false);
   });
 
   it('uses compact owner controls on mobile web cards', () => {
@@ -170,7 +183,7 @@ describe('TravelListItem media props on web', () => {
     expect(adminStyle.paddingHorizontal).toBe(5);
   });
 
-  it('passes backend media variants and lqip to UnifiedTravelCard when cover manifest exists', () => {
+  it('passes backend media variants without requesting a separate lqip on web', () => {
     renderItem({
       travel: {
         ...baseTravel,
@@ -194,9 +207,7 @@ describe('TravelListItem media props on web', () => {
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
-    expect(props.mediaProps?.placeholderSrc).toBe(
-      'https://metravel.by/gallery/11/cover.webp?w=32&q=35&fit=cover',
-    );
+    expect(props.mediaProps?.placeholderSrc).toBeUndefined();
     expect(props.mediaProps?.webResponsiveSource?.src).toBe(
       'https://metravel.by/gallery/11/cover.webp?w=640&q=75&fit=cover',
     );
