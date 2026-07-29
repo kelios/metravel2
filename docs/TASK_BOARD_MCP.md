@@ -33,6 +33,11 @@ subprocess), без Django/GDAL/сторонних пакетов. Поэтом�
    ```
    Если module отсутствует или backend checkout требует обновления, это отдельное
    owner action вне frontend/docs-задачи; не уничтожай локальные изменения.
+
+   Состояние на 2026-07-29: checkout уже есть — `~/PhpstormProjects/metravel-backend`,
+   клон приватного репо `sergey-savran/metravel` (branch `master`). SSH-ключ к GitHub
+   не привязан: клонировать/фетчить только по HTTPS (`gh` + osxkeychain, аккаунт
+   `kelios`). Сервер зависимостей не требует и работает на системном python 3.9.6.
 2. **Выпустить staff-токен** — предпочтительно программно залогиниться staff/admin-пользователем
    из `.env.e2e` через `POST /api/user/login/` на `METRAVEL_TASK_BOARD_BASE_URL` и взять
    `token` из JSON-ответа. Ручной вариант через `authtoken_token` допустим только если login API
@@ -45,17 +50,23 @@ subprocess), без Django/GDAL/сторонних пакетов. Поэтом�
    из `.mcp.json`. Проверка: `metravel_tasks_list` или попросить агента `ticket-board`
    показать борд (`metravel_task_board`).
 
-Рабочий `.mcp.json` (macOS, абсолютные пути — поправить под свою машину):
+Рабочий `.mcp.json` (текущий в репо; пути через `${HOME}`, раскрывает сам `sh`, поэтому
+конфиг не зависит от того, раскрывает ли `${...}` MCP-клиент — под другую раскладку
+каталогов поправить хвост путей):
 ```json
 {
   "mcpServers": {
     "metravel-task-board": {
       "command": "sh",
-      "args": ["-c", "set -a; . /ABS/PATH/metravel2/.secrets/metravel-task-board.env; set +a; exec python3 -m tools.mcp_server"],
-      "env": { "PYTHONPATH": "/ABS/PATH/metravel-backend" }
+      "args": ["-c", "set -a; . ${HOME}/PhpstormProjects/metravel2/.secrets/metravel-task-board.env; PYTHONPATH=${HOME}/PhpstormProjects/metravel-backend; set +a; exec python3 -m tools.mcp_server"]
     }
   }
 }
+```
+
+Проверить сервер, не перезапуская клиент (stdio, newline-delimited JSON; токен не печатать):
+```bash
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | sh -c "$(python3 -c 'import json;print(json.load(open(".mcp.json"))["mcpServers"]["metravel-task-board"]["args"][1])')"
 ```
 
 Рабочий Codex Desktop config (macOS, пользовательский файл `~/.codex/config.toml`):

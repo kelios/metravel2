@@ -15,7 +15,11 @@
   запущена в авто-worktree (`.claude/worktrees/*`), результат обязателен к
   переносу и коммиту в основной checkout на `main` — работа не остаётся в
   worktree-ветке;
-- backend/Django/server в этом workspace не редактировать;
+- backend/Django/server в этом workspace не редактировать. Бэкенд-checkout уже
+  есть на машине: `../metravel-backend` (клон приватного репо
+  `sergey-savran/metravel`, branch `master`) — путь известен, спрашивать его у
+  пользователя не нужно; читать read-only, изменения оформлять `area=back`
+  задачей на борде;
 - секреты не выводить и не просить вставлять в чат;
 - EAS build/submit и production deploy выполнять только по явному точному запросу;
 - проверять собственные изменения, не перекладывая QA на пользователя;
