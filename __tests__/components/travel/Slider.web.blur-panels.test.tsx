@@ -441,4 +441,34 @@ describe('Slider (web) blur background', () => {
 
     expect(onFirstImageLoad).toHaveBeenCalledTimes(1)
   })
+
+  it('forwards backend data placeholder and suppresses its LQIP URL', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={[{
+            id: 'img-1',
+            url: 'https://example.com/img.jpg',
+            media: {
+              id: 1,
+              blurhash: 'LEHL6nWB2yk8pyo0adR*.7kCMdnj',
+              dominant_color: '#123456',
+              lqip_url: 'https://example.com/img-lqip.jpg',
+            },
+          }] as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+        />,
+      )
+    })
+
+    const image = tree!.root.findByProps({ testID: 'slider-image-0' })
+    expect(image.props.placeholderBlurhash).toBe('LEHL6nWB2yk8pyo0adR*.7kCMdnj')
+    expect(image.props.placeholderColor).toBeNull()
+    expect(image.props.placeholderSrc).toBeNull()
+  })
 })

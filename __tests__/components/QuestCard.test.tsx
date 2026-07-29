@@ -222,8 +222,8 @@ describe('QuestCard', () => {
         }
     });
 
-    it('uses a 480px web cover candidate for a 420px DPR1 card', () => {
-        const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(1);
+    it('caps a 420px web catalog cover at 480px even on a DPR2 display', () => {
+        const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(2);
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
         process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
 
@@ -242,7 +242,7 @@ describe('QuestCard', () => {
 
             const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
             expect(src).toContain('w=480');
-            expect(src).not.toContain('w=1024');
+            expect(src).not.toContain('w=1280');
         } finally {
             process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
             pixelRatioSpy.mockRestore();
@@ -272,7 +272,7 @@ describe('QuestCard', () => {
 
             // This regression is not an undersized-source problem: Safari kept
             // the CSS blur backdrop painted while the sharp <img> was absent.
-            expect(new URL(src).searchParams.get('w')).toBe('800');
+            expect(new URL(src).searchParams.get('w')).toBe('480');
             expect(mediaProps).toEqual(expect.objectContaining({
                 fit: 'cover',
                 blurBackground: false,

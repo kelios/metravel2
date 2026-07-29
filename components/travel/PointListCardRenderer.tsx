@@ -3,6 +3,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { Platform, View } from 'react-native'
 
 import PlaceListCard from '@/components/places/PlaceListCard'
+import { useRichMediaVisibility } from '@/components/ui/richMediaViewport'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -90,9 +91,14 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
         ? POINT_CARD_MARGIN_STYLE
         : undefined
   const cardImageHeight = isWebGrid ? 220 : isMobileWeb ? 164 : isMobile ? 320 : 180
+  const mediaVisibility = useRichMediaVisibility(cardImageHeight)
 
   return (
     <View
+      testID={`travel-point-card-viewport-${item.id}`}
+      ref={mediaVisibility.ref}
+      onLayout={mediaVisibility.onLayout}
+      collapsable={false}
       style={[
         styles.col,
         Platform.OS === 'web'
@@ -106,7 +112,7 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
     >
       <PlaceListCard
         title={item.address}
-        imageUrl={itemModel.imageUrl}
+        imageUrl={mediaVisibility.visible ? itemModel.imageUrl : undefined}
         categoryLabel={itemModel.categoryLabel}
         coord={item.coord}
         onCardPress={itemModel.onCardPress}

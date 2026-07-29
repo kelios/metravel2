@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
-import { getMediaLqipUrl } from '@/utils/travelMediaVariants';
+import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
 import { injectSliderGlobalStyles } from './globalStyles';
 
@@ -170,12 +170,22 @@ const Slide = memo(function Slide({
 
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
-  const mediaLqipUrl = useMemo(() => getMediaLqipUrl(item.media), [item.media]);
+  const mediaPlaceholder = useMemo(
+    () => getMediaPlaceholderData(item.media),
+    [item.media],
+  );
   const effectiveBlurBackground = shouldBlur;
   const effectiveAllowCriticalWebBlur = shouldBlur && Platform.OS === 'web';
   const shouldRevealOnLoadOnly = isSliderSafari && effectiveAllowCriticalWebBlur;
   const shouldRenderLoadingPlaceholder =
-    !isLoaded && (isFirstSlide || isActive || !!preloadPriority);
+    !mediaPlaceholder.blurhash &&
+    !mediaPlaceholder.dominantColor &&
+    !isLoaded &&
+    (isFirstSlide || isActive || !!preloadPriority);
+  // Native `loading="lazy"` does not defer expo-image network work. FlatList's
+  // window is only a hint, so a nested travel screen can attach every cell at
+  // once. Keep a hard media mount window even when distant cell geometry exists.
+  const shouldMountImage = Platform.OS === 'web' || shouldEagerLoad;
 
   useEffect(() => {
     setResolvedUri(uri);
@@ -321,9 +331,12 @@ const Slide = memo(function Slide({
       ]}
     >
       {/* Main image with integrated blur background */}
-      {skipImage || !hasRenderableUri ? (
+      {skipImage || !hasRenderableUri || !shouldMountImage ? (
         // Empty placeholder while another layer owns the visible image or layout is not measured yet.
-        <View style={{ width: '100%', height: '100%' }} />
+        <View
+          style={{ width: '100%', height: '100%' }}
+          testID={!shouldMountImage ? `slider-deferred-placeholder-${index}` : undefined}
+        />
       ) : hasError ? (
         <View
           style={styles.neutralPlaceholder}
@@ -358,7 +371,9 @@ const Slide = memo(function Slide({
             blurBackground={effectiveBlurBackground}
             blurRadius={12}
             synchronizeNativeBlurReveal={shouldBlur && Platform.OS !== 'web'}
-            placeholderSrc={mediaLqipUrl}
+            placeholderBlurhash={mediaPlaceholder.blurhash ?? undefined}
+            placeholderColor={mediaPlaceholder.dominantColor}
+            placeholderSrc={mediaPlaceholder.lqipUrl}
             priority={mainPriority as any}
             prefetch={Platform.OS === 'web' ? shouldPreloadAhead : false}
             loading={

@@ -77,6 +77,43 @@ export function getMediaLqipUrl(entry: TravelMediaImage | null | undefined): str
   return resolveMediaVariantUrl(entry?.lqip_url)
 }
 
+const DOMINANT_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
+
+export type MediaPlaceholderData = {
+  blurhash: string | null
+  dominantColor: string | null
+  lqipUrl: string | null
+}
+
+/**
+ * Canonical media-placeholder precedence (#1127).
+ *
+ * Blurhash and dominant color are decoded/painted locally, so neither adds a
+ * request before the sharp image. The legacy LQIP URL remains the compatibility
+ * fallback only for payloads where both data fields are absent.
+ */
+export function getMediaPlaceholderData(
+  entry: TravelMediaImage | null | undefined,
+): MediaPlaceholderData {
+  const blurhash = typeof entry?.blurhash === 'string' ? entry.blurhash.trim() : ''
+  if (blurhash) {
+    return { blurhash, dominantColor: null, lqipUrl: null }
+  }
+
+  const rawColor =
+    typeof entry?.dominant_color === 'string' ? entry.dominant_color.trim() : ''
+  const dominantColor = DOMINANT_COLOR_PATTERN.test(rawColor) ? rawColor : null
+  if (dominantColor) {
+    return { blurhash: null, dominantColor, lqipUrl: null }
+  }
+
+  return {
+    blurhash: null,
+    dominantColor: null,
+    lqipUrl: getMediaLqipUrl(entry),
+  }
+}
+
 export interface MediaResponsiveOptions {
   widths?: number[]
   maxWidth?: number

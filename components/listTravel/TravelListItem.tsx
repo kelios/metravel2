@@ -18,6 +18,7 @@ import { appendReturnToParam } from '@/utils/navigationReturnPath'
 import { isTravelDraft } from '@/utils/travelPublicationStatus'
 import {
   buildResponsiveImagePropsFromMedia,
+  getMediaPlaceholderData,
 } from '@/utils/travelMediaVariants'
 
 import { getResponsiveCardValues } from './enhancedCardResponsiveValues'
@@ -212,6 +213,10 @@ function TravelListItem({
   )
 
   const coverMedia = travel.media?.cover ?? null
+  const coverPlaceholder = useMemo(
+    () => getMediaPlaceholderData(coverMedia),
+    [coverMedia],
+  )
   const coverMediaResponsiveSource = useMemo(() => {
     if (!IS_WEB || !coverMedia) return null
     const targetWidth =
@@ -608,10 +613,12 @@ function TravelListItem({
       webTouchAction={webTouchAction ?? (selectable ? 'manipulation' : undefined)}
       nativePressScaleEnabled={Platform.OS !== 'android'}
       mediaProps={{
-        placeholderBlurhash: PLACEHOLDER_BLURHASH,
-        // The web backdrop and the sharp layer must resolve to one effective URL.
-        // A thumbnail/LQIP URL here created a second request per card even though
-        // the card is activated ahead of the viewport and can reveal after decode.
+        placeholderBlurhash:
+          coverPlaceholder.blurhash ??
+          (coverPlaceholder.dominantColor ? undefined : PLACEHOLDER_BLURHASH),
+        placeholderColor: coverPlaceholder.dominantColor,
+        // Backend data placeholders add no request. Old payloads keep the shared
+        // local fallback instead of reviving a second per-card LQIP URL (#1111).
         blurBackground: true,
         allowCriticalWebBlur: IS_WEB,
         // Keep the stable media box visible until the sharp candidate has decoded.

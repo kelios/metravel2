@@ -369,6 +369,10 @@ describe('Slider', () => {
     expect(list.props.maxToRenderPerBatch).toBe(images.length)
     expect(NATIVE_SLIDER_MOBILE_RENDER_WINDOW).toBe(3)
     expect(list.props.updateCellsBatchingPeriod).toBeLessThanOrEqual(16)
+    // Even though Jest attaches every FlatList cell, native media has a hard
+    // current±2 mount budget. The opposite/distant slide keeps geometry only.
+    expect(getByTestId('slider-deferred-placeholder-3')).toBeTruthy()
+    expect(() => getByTestId('slider-image-3')).toThrow()
 
     act(() => {
       list.props.onTouchStart({ nativeEvent: { changedTouches: [{ pageX: 300 }] } })

@@ -1,5 +1,16 @@
 import { fireEvent, render } from '@testing-library/react'
 
+jest.mock('expo-image', () => {
+  const React = require('react')
+  return {
+    Image: ({ source }: { source?: { blurhash?: string } }) =>
+      React.createElement('img', {
+        'aria-hidden': 'true',
+        'data-local-blurhash': source?.blurhash || '',
+      }),
+  }
+})
+
 describe('TravelDetailsContainer performance (web)', () => {
   let __testables: any
 
@@ -105,6 +116,34 @@ describe('TravelDetailsContainer performance (web)', () => {
     }
 
     expect(container.querySelector('[data-hero-backdrop="true"]')).toBeTruthy()
+  })
+
+  it('uses backend blurhash as a local hero backdrop without a placeholder URL', () => {
+    const { container } = render(
+      <__testables.OptimizedLCPHero
+        img={{
+          url: 'https://metravel.by/gallery/540/gallery/photo.jpg',
+          width: 1200,
+          height: 800,
+          id: 7,
+        }}
+        media={{
+          id: 7,
+          blurhash: 'LEHL6nWB2yk8pyo0adR*.7kCMdnj',
+          dominant_color: '#123456',
+          lqip_url: 'https://metravel.by/gallery/540/gallery/photo-lqip.jpg',
+        }}
+        alt="Hero image"
+        isMobile={false}
+        height={600}
+        containerWidth={720}
+      />,
+    )
+
+    expect(container.querySelector('[data-hero-data-placeholder="true"]')).toBeTruthy()
+    expect(container.querySelectorAll('[data-hero-backdrop-segment="true"]')).toHaveLength(0)
+    expect(container.innerHTML).not.toContain('photo-lqip.jpg')
+    expect(container.querySelectorAll('img[data-lcp]')).toHaveLength(1)
   })
 
   it('keeps mobile hero URL preload-friendly on high-DPR web devices', () => {

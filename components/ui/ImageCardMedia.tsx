@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelRatio, Platform, StyleSheet, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
 
@@ -93,6 +94,8 @@ type Props = {
   quality?: number;
   overlayColor?: string;
   placeholderBlurhash?: string;
+  /** Backend dominant color used when a blurhash is unavailable. */
+  placeholderColor?: string | null;
   /**
    * Low-quality preview URL (e.g. a small thumbnail) shown immediately, blurred,
    * while the main image is still loading. Gives catalog cards a colored preview
@@ -150,6 +153,7 @@ function ImageCardMedia({
   quality = 60,
   overlayColor,
   placeholderBlurhash,
+  placeholderColor,
   placeholderSrc,
   priority = 'normal',
   loading = 'lazy',
@@ -179,6 +183,16 @@ function ImageCardMedia({
   const styles = useMemo(() => getStyles(colors), [colors]);
   const isSafariWeb = useMemo(() => isIOSSafariWeb(), []);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
+  const normalizedPlaceholderBlurhash =
+    typeof placeholderBlurhash === 'string' ? placeholderBlurhash.trim() : '';
+  const normalizedPlaceholderColor =
+    typeof placeholderColor === 'string' &&
+    /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(placeholderColor.trim())
+      ? placeholderColor.trim()
+      : '';
+  const hasDataPlaceholder = Boolean(
+    normalizedPlaceholderBlurhash || normalizedPlaceholderColor,
+  );
   const resolvedSource = useMemo(() => {
     if (source) return source;
     if (src) return { uri: src };
@@ -236,10 +250,11 @@ function ImageCardMedia({
     if (loading !== 'lazy') return loading;
     // iOS Safari can leave a lazy <img> below the blurred backdrop without
     // dispatching the load event after scroll/restoration. Because the sharp
-    // layer is revealed by that event, lazy loading is unsafe on every card
-    // media surface, including bounded catalogs.
-    return isSafariWeb ? 'eager' : loading;
-  }, [isSafariWeb, loading]);
+    // layer is revealed by that event, shared-blur media stays eager there.
+    // A no-blur catalog cover has no competing composited layer, so preserve
+    // browser-native lazy loading instead of firing every image in the list.
+    return isSafariWeb && blurBackground ? 'eager' : loading;
+  }, [blurBackground, isSafariWeb, loading]);
 
   // Stabilize width/height for image optimization to prevent URL changes on scroll
   // Only update when change is significant (>50px) to avoid re-fetching images
@@ -441,13 +456,14 @@ function ImageCardMedia({
 
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
+    if (hasDataPlaceholder) return false;
     if (!blurBackground || !webMainSrc) return false;
     if (allowCriticalWebBlur) return true;
     if (isSafariWeb) return true;
     // Avoid promoting the oversized blur backdrop to LCP on eager/critical images
     // unless the caller explicitly opts in for layout fidelity.
     return !(loading === 'eager' || priority === 'high');
-  }, [allowCriticalWebBlur, blurBackground, isSafariWeb, loading, priority, webMainSrc]);
+  }, [allowCriticalWebBlur, blurBackground, hasDataPlaceholder, isSafariWeb, loading, priority, webMainSrc]);
   const webBackdropContentBox = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (fit !== 'contain') return null;
@@ -510,14 +526,15 @@ function ImageCardMedia({
     if (Platform.OS !== 'web') return false;
     if (blurOnly) return false;
     if (!webMainSrc) return false;
-    return !shouldRevealWebMedia;
-  }, [blurOnly, shouldRevealWebMedia, webMainSrc]);
+    return !hasDataPlaceholder && !shouldRevealWebMedia;
+  }, [blurOnly, hasDataPlaceholder, shouldRevealWebMedia, webMainSrc]);
 
   // Low-quality preview shown immediately (blurred) while the main image loads,
   // so a catalog card reads as "loading" with the photo's colors instead of an
   // empty grey block. Independent of the sharp reveal gate.
   const webPlaceholderSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
+    if (hasDataPlaceholder) return null;
     const raw = typeof placeholderSrc === 'string' ? placeholderSrc.trim() : '';
     if (!raw) return null;
     if (raw === webMainSrc) return null;
@@ -531,7 +548,7 @@ function ImageCardMedia({
         fit: 'cover',
       }) ?? raw
     );
-  }, [placeholderSrc, webMainSrc]);
+  }, [hasDataPlaceholder, placeholderSrc, webMainSrc]);
 
   const shouldRenderWebPlaceholder = useMemo(() => {
     if (Platform.OS !== 'web') return false;
@@ -657,6 +674,14 @@ function ImageCardMedia({
     >
       {resolvedSource && !shouldDisableNetwork ? (
         <>
+          {hasDataPlaceholder ? (
+            <ImageDataPlaceholder
+              blurhash={normalizedPlaceholderBlurhash || null}
+              color={normalizedPlaceholderColor || null}
+              borderRadius={resolvedBorderRadius}
+              testID={testID ? `${testID}-data-placeholder` : undefined}
+            />
+          ) : null}
           {Platform.OS === 'web' && shouldRenderWebBlurBackground && webBlurSrc ? (
             <WebBlurBackdrop
               key={`blur-${webMediaInstanceKey}`}
@@ -733,27 +758,35 @@ function ImageCardMedia({
             recyclingKey={recyclingKey}
             height={typeof height === 'number' ? height : undefined}
             contentFit={contentFit}
-            blurBackground={Platform.OS === 'web' ? false : blurBackground}
-            synchronizeBlurReveal={synchronizeNativeBlurReveal}
+            blurBackground={
+              Platform.OS === 'web' || hasDataPlaceholder ? false : blurBackground
+            }
+            // A backend blurhash/color is already a local background layer. Do
+            // not mount the sharp URL again as a native blur sibling.
+            synchronizeBlurReveal={hasDataPlaceholder ? false : synchronizeNativeBlurReveal}
             blurBackgroundRadius={blurRadius}
             blurOnly={blurOnly}
-              borderRadius={borderRadius}
-              placeholder={placeholderBlurhash || DESIGN_TOKENS.defaultBlurhash}
-              priority={priority}
-              loading={resolvedLoading}
-              alt={alt}
-              transition={transition}
-              cachePolicy={cachePolicy}
-              imageProps={{ ...(imageProps || {}), ...(webImageProps || {}) }}
-              showLoadingIndicator={showLoadingIndicator}
-              style={
-                Platform.OS === 'web' && shouldRenderWebBlurBackground
-                  ? ({ backgroundColor: 'transparent', position: 'relative', zIndex: 1 } as any)
-                  : undefined
-              }
-              onLoad={onLoad}
-              onError={onError}
-            />
+            borderRadius={borderRadius}
+            placeholder={
+              hasDataPlaceholder
+                ? undefined
+                : DESIGN_TOKENS.defaultBlurhash
+            }
+            priority={priority}
+            loading={resolvedLoading}
+            alt={alt}
+            transition={transition}
+            cachePolicy={cachePolicy}
+            imageProps={{ ...(imageProps || {}), ...(webImageProps || {}) }}
+            showLoadingIndicator={hasDataPlaceholder ? false : showLoadingIndicator}
+            style={
+              hasDataPlaceholder || (Platform.OS === 'web' && shouldRenderWebBlurBackground)
+                ? ({ backgroundColor: 'transparent', position: 'relative', zIndex: 1 } as any)
+                : undefined
+            }
+            onLoad={onLoad}
+            onError={onError}
+          />
           )}
           {!!overlayColor && (
             <View
@@ -774,6 +807,68 @@ function ImageCardMedia({
           aria-hidden={true}
         />
       )}
+    </View>
+  );
+}
+
+type ImageDataPlaceholderProps = {
+  blurhash?: string | null;
+  color?: string | null;
+  borderRadius?: number;
+  style?: any;
+  testID?: string;
+};
+
+/** Local-only preview layer: blurhash is decoded by expo-image, color by RN/CSS. */
+export function ImageDataPlaceholder({
+  blurhash,
+  color,
+  borderRadius = 0,
+  style,
+  testID,
+}: ImageDataPlaceholderProps) {
+  const normalizedBlurhash = typeof blurhash === 'string' ? blurhash.trim() : '';
+  const normalizedColor =
+    typeof color === 'string' &&
+    /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color.trim())
+      ? color.trim()
+      : '';
+
+  if (!normalizedBlurhash && !normalizedColor) return null;
+
+  return (
+    <View
+      testID={testID}
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: normalizedColor || 'transparent',
+          borderRadius,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: 0,
+        },
+        style,
+      ]}
+      aria-hidden={Platform.OS === 'web' ? true : undefined}
+      accessibilityElementsHidden={Platform.OS !== 'web' ? true : undefined}
+      importantForAccessibility={
+        Platform.OS !== 'web' ? 'no-hide-descendants' : undefined
+      }
+    >
+      {normalizedBlurhash ? (
+        <ExpoImage
+          source={{ blurhash: normalizedBlurhash, width: 32, height: 32 }}
+          contentFit="cover"
+          transition={0}
+          style={StyleSheet.absoluteFill}
+          aria-hidden={Platform.OS === 'web' ? true : undefined}
+          accessibilityElementsHidden={Platform.OS !== 'web' ? true : undefined}
+          importantForAccessibility={
+            Platform.OS !== 'web' ? 'no-hide-descendants' : undefined
+          }
+        />
+      ) : null}
     </View>
   );
 }

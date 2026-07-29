@@ -10,8 +10,9 @@ import {
 } from '@/utils/imageOptimization';
 import {
   buildResponsiveImagePropsPreferringMedia,
-  getMediaLqipUrl,
+  getMediaPlaceholderData,
 } from '@/utils/travelMediaVariants';
+import { ImageDataPlaceholder } from '@/components/ui/ImageCardMedia';
 import { markUriLoaded } from '@/components/travel/sliderParts/imageLoadCache';
 import { translate as i18nT } from '@/i18n';
 import {
@@ -158,14 +159,21 @@ function OptimizedLCPHeroInner({
   }, [baseSrc]);
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc;
-  const mediaLqip = getMediaLqipUrl(media ?? null);
+  const mediaPlaceholder = useMemo(
+    () => getMediaPlaceholderData(media ?? null),
+    [media],
+  );
+  const hasDataPlaceholder = Boolean(
+    mediaPlaceholder.blurhash || mediaPlaceholder.dominantColor,
+  );
   // Blur-«фрост» позади contain-картинки лежит под filter:blur(18px)+background-size:cover
   // (см. .travel-lcp-hero-backdrop-segment), поэтому full-res источник там не виден —
   // браузеру незачем растеризовать большое изображение второй раз в LCP-окне. Просим у
   // CDN крошечную ширину (тот же base, поэтому api-prefix fallback тоже учтён). Если CDN
   // не вернул вариант — падаем обратно на srcWithRetry, blur не теряем.
   const backdropSrc = useMemo(() => {
-    if (!overrideSrc && mediaLqip) return mediaLqip;
+    if (hasDataPlaceholder) return null;
+    if (!overrideSrc && mediaPlaceholder.lqipUrl) return mediaPlaceholder.lqipUrl;
     return (
       optimizeImageUrl(srcWithRetry, {
         width: 64,
@@ -174,7 +182,7 @@ function OptimizedLCPHeroInner({
         fit: 'cover',
       }) || srcWithRetry
     );
-  }, [srcWithRetry, mediaLqip, overrideSrc]);
+  }, [hasDataPlaceholder, mediaPlaceholder.lqipUrl, overrideSrc, srcWithRetry]);
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
   const backdropBox = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -285,7 +293,21 @@ function OptimizedLCPHeroInner({
             backgroundColor: colors.backgroundSecondary,
           }}
         >
-          {backdropSegments.length > 0 ? (
+          {hasDataPlaceholder ? (
+            <div
+              aria-hidden="true"
+              data-hero-backdrop="true"
+              data-hero-data-placeholder="true"
+              style={{ position: 'absolute', inset: 0, zIndex: 0 }}
+            >
+              <ImageDataPlaceholder
+                blurhash={mediaPlaceholder.blurhash}
+                color={mediaPlaceholder.dominantColor}
+                borderRadius={12}
+                testID="travel-hero-data-placeholder"
+              />
+            </div>
+          ) : backdropSegments.length > 0 && backdropSrc ? (
             <>
               {backdropSegments.map((segment, index) => (
                 <div

@@ -103,12 +103,15 @@ export default function QuestCard({
     const cardHeight = isPhone ? 238 : Math.round((cardWidth / 380) * 260);
     const showOverlayMeta = !isPhone;
 
-    // Pick one bounded proxy variant for the card cover.
+    // Pick one bounded proxy variant for the card cover. Web catalog cards use
+    // their CSS width: asking the proxy for a retina 1280px cover for a 420px
+    // tile multiplies bytes and cold conversions without a useful visual gain.
+    // Native keeps the existing 2x cap for dense Android screens.
     const coverSrc = useMemo(() => {
         if (!imageUrl) return imageUrl;
-        const dpr = Math.min(PixelRatio.get() || (Platform.OS === 'web' ? 1 : 2), 2);
+        const dpr = Platform.OS === 'web' ? 1 : Math.min(PixelRatio.get() || 2, 2);
         const requestedWidth = Math.max(1, Math.round(cardWidth * dpr));
-        const responsiveWidths = [320, 480, 640, 800, 1024, 1280];
+        const responsiveWidths = [320, 480, 640, 800];
         const targetWidth =
             responsiveWidths.find((candidate) => candidate >= requestedWidth) ??
             responsiveWidths[responsiveWidths.length - 1];

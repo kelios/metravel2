@@ -215,4 +215,38 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('320w');
     expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('640w');
   });
+
+  it('forwards backend blurhash instead of the generic card placeholder', () => {
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: {
+          cover: {
+            id: 11,
+            blurhash: 'LEHL6nWB2yk8pyo0adR*.7kCMdnj',
+            dominant_color: '#123456',
+            lqip_url: '/gallery/11/cover-lqip.webp',
+          },
+        },
+      } as any,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.mediaProps?.placeholderBlurhash).toBe('LEHL6nWB2yk8pyo0adR*.7kCMdnj');
+    expect(props.mediaProps?.placeholderColor).toBeNull();
+    expect(props.mediaProps?.placeholderSrc).toBeUndefined();
+  });
+
+  it('uses dominant color when the cover has no blurhash', () => {
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: { cover: { id: 11, blurhash: null, dominant_color: '#234567' } },
+      } as any,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.mediaProps?.placeholderBlurhash).toBeUndefined();
+    expect(props.mediaProps?.placeholderColor).toBe('#234567');
+  });
 });

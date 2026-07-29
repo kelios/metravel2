@@ -7,6 +7,7 @@ import {
   buildResponsiveImagePropsPreferringMedia,
   findGalleryMediaImage,
   getMediaLqipUrl,
+  getMediaPlaceholderData,
   resolveMediaVariantUrl,
 } from '@/utils/travelMediaVariants'
 import { buildResponsiveImageProps } from '@/utils/imageSrcSet'
@@ -177,6 +178,49 @@ describe('utils/travelMediaVariants', () => {
     it('без lqip_url → null', () => {
       expect(getMediaLqipUrl({ ...mediaEntry, lqip_url: null })).toBeNull()
       expect(getMediaLqipUrl(null)).toBeNull()
+    })
+  })
+
+  describe('getMediaPlaceholderData', () => {
+    it('prefers trimmed blurhash and suppresses color/LQIP network fallback', () => {
+      expect(
+        getMediaPlaceholderData({
+          ...mediaEntry,
+          blurhash: '  LEHL6nWB2yk8pyo0adR*.7kCMdnj  ',
+          dominant_color: '#123456',
+        }),
+      ).toEqual({
+        blurhash: 'LEHL6nWB2yk8pyo0adR*.7kCMdnj',
+        dominantColor: null,
+        lqipUrl: null,
+      })
+    })
+
+    it('uses a valid dominant color when blurhash is empty', () => {
+      expect(
+        getMediaPlaceholderData({
+          ...mediaEntry,
+          blurhash: ' ',
+          dominant_color: '#aBc123',
+        }),
+      ).toEqual({ blurhash: null, dominantColor: '#aBc123', lqipUrl: null })
+    })
+
+    it('preserves resolved LQIP fallback when both data fields are unavailable', () => {
+      expect(getMediaPlaceholderData(mediaEntry)).toEqual({
+        blurhash: null,
+        dominantColor: null,
+        lqipUrl: 'https://metravel.by/gallery/563/gallery/abc.webp?w=32&q=35&fit=cover',
+      })
+    })
+
+    it('rejects malformed dominant colors before they reach RN/CSS styles', () => {
+      expect(
+        getMediaPlaceholderData({
+          ...mediaEntry,
+          dominant_color: 'url(https://example.com/tracker)',
+        }).dominantColor,
+      ).toBeNull()
     })
   })
 

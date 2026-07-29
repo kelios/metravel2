@@ -67,6 +67,7 @@ type Props = {
   contentPosition?: 'belowMedia' | 'aboveMedia';
   mediaProps?: {
     placeholderBlurhash?: string;
+    placeholderColor?: string | null;
     placeholderSrc?: string | null;
     blurRadius?: number;
     blurBackground?: boolean;
@@ -585,6 +586,7 @@ function UnifiedTravelCard({
             revealOnLoadOnly={mediaProps?.revealOnLoadOnly ?? false}
             blurRadius={mediaProps?.blurRadius ?? 16}
             placeholderBlurhash={mediaProps?.placeholderBlurhash}
+            placeholderColor={mediaProps?.placeholderColor}
             placeholderSrc={mediaProps?.placeholderSrc}
             recyclingKey={mediaProps?.recyclingKey}
             style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
