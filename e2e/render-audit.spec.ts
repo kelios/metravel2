@@ -222,6 +222,17 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       // Ensure the page is scrollable and stable.
       await assertNoHorizontalScroll(page);
 
+      // Measure stability after the initial details render, before the test itself
+      // scrolls to and mounts below-the-fold deferred sections.
+      await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
+      await startClsAfterRenderPhase(page);
+      await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
+      const cls = await finalizeClsAfterRender(page);
+      expect(
+        cls.value,
+        `CLS after render too high on travel details (${vp.name}); entries=${JSON.stringify(cls.entries)}`,
+      ).toBeLessThanOrEqual(0.05);
+
       // Trigger deferred sections and assert an actual engagement block renders.
       // Mobile owns a separate share block; tablet/desktop load the footer variants.
       const engagementSelector =
@@ -237,15 +248,6 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
         shareCount + ctaCount,
         `Expected share or CTA block to render (share=${shareCount}, cta=${ctaCount})`
       ).toBeGreaterThanOrEqual(1);
-
-      await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
-      await startClsAfterRenderPhase(page);
-      await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
-      const cls = await finalizeClsAfterRender(page);
-      expect(
-        cls.value,
-        `CLS after render too high on travel details (${vp.name}); entries=${JSON.stringify(cls.entries)}`,
-      ).toBeLessThanOrEqual(0.05);
 
       // Performance smoke: first meaningful interaction should be possible.
       // There is a FAB on mobile labeled "Открыть меню разделов".
