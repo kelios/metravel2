@@ -6,6 +6,8 @@ import { TravelHeroExtras } from '@/components/travel/details/TravelHeroExtras'
 const mockQuickFacts = jest.fn((_props: any) => null)
 const mockTravelHeroQuickJumps = jest.fn((_props: any) => null)
 const mockTravelStatusButton = jest.fn((_props: any) => null)
+const mockOfflineSaveControl = jest.fn((_props: any) => null)
+const mockSaveTravelOffline = jest.fn(() => Promise.resolve())
 
 jest.mock('@/components/travel/details/TravelDetailsHeroStyles', () => ({
   useTravelDetailsHeroStyles: () => ({
@@ -31,6 +33,15 @@ jest.mock('@/components/travel/TravelStatusButton', () => ({
   default: (props: any) => mockTravelStatusButton(props),
 }))
 
+jest.mock('@/components/offline/OfflineSaveControl', () => ({
+  __esModule: true,
+  default: (props: any) => mockOfflineSaveControl(props),
+}))
+
+jest.mock('@/services/offline/travelOfflineAdapter', () => ({
+  saveTravelOffline: (...args: unknown[]) => mockSaveTravelOffline(...(args as [])),
+}))
+
 describe('TravelHeroExtras', () => {
   const originalPlatformOS = Platform.OS
 
@@ -39,6 +50,8 @@ describe('TravelHeroExtras', () => {
     mockQuickFacts.mockClear()
     mockTravelHeroQuickJumps.mockClear()
     mockTravelStatusButton.mockClear()
+    mockOfflineSaveControl.mockClear()
+    mockSaveTravelOffline.mockClear()
   })
 
   afterAll(() => {
@@ -135,6 +148,41 @@ describe('TravelHeroExtras', () => {
         travelCountry: 'Italy',
       })
     )
+  })
+
+  // Контракт переноса: «Сохранить офлайн» живёт в ряду действий под галереей, а не
+  // отдельной плашкой над страницей, и сохраняет именно этот маршрут.
+  it('рендерит «Сохранить офлайн» рядом со статусом под галереей', async () => {
+    const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
+    render(
+      <TravelHeroExtras
+        travel={travel}
+        isMobile
+        sectionLinks={[]}
+        onQuickJump={jest.fn()}
+      />
+    )
+
+    expect(mockOfflineSaveControl).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'travel', sourceId: 7 })
+    )
+
+    const { onSave } = mockOfflineSaveControl.mock.calls[0][0]
+    await onSave(true)
+    expect(mockSaveTravelOffline).toHaveBeenCalledWith(travel, { pinned: true, includePhotos: true })
+  })
+
+  it('не рендерит «Сохранить офлайн» без id маршрута', () => {
+    render(
+      <TravelHeroExtras
+        travel={{ slug: 'draft', name: 'Черновик' } as any}
+        isMobile={false}
+        sectionLinks={[]}
+        onQuickJump={jest.fn()}
+      />
+    )
+
+    expect(mockOfflineSaveControl).not.toHaveBeenCalled()
   })
 
   it('использует id как fallback в URL при отсутствии slug', () => {

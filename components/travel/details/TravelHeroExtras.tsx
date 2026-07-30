@@ -1,11 +1,14 @@
 import React, { useCallback } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { Travel } from '@/types/types'
+import OfflineSaveControl from '@/components/offline/OfflineSaveControl'
 import QuickFacts from '@/components/travel/QuickFacts'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { saveTravelOffline } from '@/services/offline/travelOfflineAdapter'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import TravelHeroQuickJumps from './TravelHeroQuickJumps'
@@ -29,6 +32,12 @@ export const TravelHeroExtras: React.FC<{
   const handleCategoryPress = useCallback((category: string) => {
     router.push({ pathname: '/travelsby', params: { categoryTravelAddress: category } })
   }, [router])
+  // Офлайн-копия — такое же действие уровня страницы, как «Добавить в план», поэтому
+  // живёт с ним в одном ряду под галереей, а не отдельной плашкой над всей страницей.
+  const handleSaveOffline = useCallback(
+    (includePhotos: boolean) => saveTravelOffline(travel, { pinned: true, includePhotos }),
+    [travel],
+  )
 
   return (
     <>
@@ -43,15 +52,28 @@ export const TravelHeroExtras: React.FC<{
         ]}
       >
         <QuickFacts travel={travel} onCategoryPress={handleCategoryPress} />
-        <TravelStatusButton
-          travelId={travel.id}
-          travelTitle={travel.name}
-          travelUrl={`/travels/${travel.slug || travel.id}`}
-          travelImageUrl={travel.travel_image_thumb_url}
-          travelCountry={travel.countryName}
-          travelYear={travel.year}
-          travelMonthName={travel.monthName}
-        />
+        {/* Ряд действий: статус растягивается остатком строки, чип встаёт справа, а на
+            узком экране переносится под него — без отдельной mobile-верстки. */}
+        <View style={actionStyles.row}>
+          <TravelStatusButton
+            travelId={travel.id}
+            travelTitle={travel.name}
+            travelUrl={`/travels/${travel.slug || travel.id}`}
+            travelImageUrl={travel.travel_image_thumb_url}
+            travelCountry={travel.countryName}
+            travelYear={travel.year}
+            travelMonthName={travel.monthName}
+            style={actionStyles.status}
+          />
+          {travel.id ? (
+            <OfflineSaveControl
+              type="travel"
+              sourceId={travel.id}
+              onSave={handleSaveOffline}
+              style={actionStyles.offline}
+            />
+          ) : null}
+        </View>
       </View>
 
       {!suppressQuickJumps && showQuickJumps && quickJumpLinks.length > 0 && (
@@ -74,5 +96,24 @@ export const TravelHeroExtras: React.FC<{
     </>
   )
 }
+
+const actionStyles = StyleSheet.create({
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  status: {
+    // Растёт остатком строки, но не ужимается ниже читаемой ширины — при нехватке
+    // места строка переносится, и статус снова занимает всю ширину.
+    flexBasis: 240,
+    flexGrow: 1,
+  },
+  offline: {
+    alignSelf: 'center',
+    marginBottom: 0,
+  },
+})
 
 export default React.memo(TravelHeroExtras)

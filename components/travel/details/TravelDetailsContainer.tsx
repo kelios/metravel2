@@ -25,14 +25,12 @@ import { LoadError, MissingParamError } from '@/components/travel/details/Travel
 import TravelDetailsLoadingFallback from '@/components/travel/details/TravelDetailsLoadingFallback'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
 import StaleContentBanner from '@/components/ui/StaleContentBanner'
-import OfflineSaveControl from '@/components/offline/OfflineSaveControl'
 import { RichMediaViewportProvider } from '@/components/ui/richMediaViewport'
 import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel'
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
 import { translate as i18nT } from '@/i18n'
-import { saveTravelOffline } from '@/services/offline/travelOfflineAdapter'
 
 
 const SKELETON_FALLBACK = <TravelDetailsLoadingFallback />
@@ -338,24 +336,13 @@ export default function TravelDetailsContainer() {
   ])
 
   const mainAriaLabel = i18nT('travel:components.travel.details.TravelDetailsContainer.detali_puteshestviya_value1_80d67fb7', { value1: travel?.name || i18nT('travel:common.travelLower') })
-  const handleSaveOffline = useCallback(async (includePhotos: boolean) => {
-    if (!travel) return;
-    await saveTravelOffline(travel, { pinned: true, includePhotos });
-  }, [travel]);
+  // «Сохранить офлайн» переехал в ряд действий под галереей (TravelHeroExtras) — над
+  // страницей остаётся только баннер устаревших данных.
   const topNotice = useMemo(
     () => (
-      <View>
-        <StaleContentBanner meta={staleContentMeta} testID="travel-details-stale-content-banner" />
-        {travel?.id ? (
-          <OfflineSaveControl
-            type="travel"
-            sourceId={travel.id}
-            onSave={handleSaveOffline}
-          />
-        ) : null}
-      </View>
+      <StaleContentBanner meta={staleContentMeta} testID="travel-details-stale-content-banner" />
     ),
-    [handleSaveOffline, staleContentMeta, travel?.id],
+    [staleContentMeta],
   )
 
   if (isMissingParam) {
