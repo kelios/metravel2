@@ -50,7 +50,7 @@ const MEDIA_ENTRY = {
     thumb_160: `${GALLERY_PATH}?w=160&q=70&fit=cover`,
     thumb_320: `${GALLERY_PATH}?w=320&q=72&fit=cover`,
     card_640: `${GALLERY_PATH}?w=640&q=75&fit=cover`,
-    hero_1280: `${GALLERY_PATH}?w=1280&q=78&fit=contain`,
+    hero_1280: `${GALLERY_PATH}?w=1280&q=80&fit=contain`,
     hero_1920: `${GALLERY_PATH}?w=1920&q=80&fit=contain`,
     print_2500: `${GALLERY_PATH}?w=2500&q=88&fit=contain`,
     original: GALLERY_PATH,
@@ -153,9 +153,15 @@ describe('#1143: размытая подложка скелета не тяне�
     expect(blurUrls()).toHaveLength(2);
   });
 
-  it('подложка использует LQIP, а не hero-вариант', () => {
+  // #1167: подложка больше не берёт `lqip_url` из манифеста — это был отдельный файл
+  // и отдельный вариант на каждую картинку. Берётся самая дешёвая ступень лестницы
+  // того же изображения, и параметры обязаны совпадать с рантаймом
+  // (`IMAGE_WIDTHS.heroBackdrop` / `IMAGE_QUALITY.heroBackdrop`), иначе SSG греет один
+  // файл, а гидратация просит другой — инвариант #1146.
+  it('подложка берёт дешёвую ступень лестницы, а не hero-вариант', () => {
     for (const url of blurUrls()) {
-      expect(url).toMatch(/[?&]w=32\b/);
+      expect(url).toMatch(/[?&]w=96\b/);
+      expect(url).toMatch(/[?&]q=40\b/);
       expect(url).not.toMatch(/[?&]w=(480|640|800|1280|1920|2500)\b/);
     }
     expect(blurUrls()).not.toContain(preload.mobile.href);

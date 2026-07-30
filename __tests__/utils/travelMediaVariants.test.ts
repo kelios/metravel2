@@ -33,7 +33,7 @@ const mediaEntry: TravelMediaImage = {
     thumb_160: '/gallery/563/gallery/abc.webp?w=160&q=70&fit=cover',
     thumb_320: '/gallery/563/gallery/abc.webp?w=320&q=72&fit=cover',
     card_640: '/gallery/563/gallery/abc.webp?w=640&q=75&fit=cover',
-    hero_1280: '/gallery/563/gallery/abc.webp?w=1280&q=78&fit=contain',
+    hero_1280: '/gallery/563/gallery/abc.webp?w=1280&q=80&fit=contain',
     hero_1920: '/gallery/563/gallery/abc.webp?w=1920&q=80&fit=contain',
     print_2500: '/gallery/563/gallery/abc.webp?w=2500&q=88&fit=contain',
     original: '/gallery/563/gallery/abc.webp',
@@ -84,10 +84,10 @@ describe('utils/travelMediaVariants', () => {
         })
 
         expect(result).not.toBeNull()
-        expect(result?.src).toBe('https://metravel.by/gallery/563/gallery/abc.webp?w=1280&q=78&fit=contain')
+        expect(result?.src).toBe('https://metravel.by/gallery/563/gallery/abc.webp?w=1280&q=80&fit=contain')
         // 720→hero_1280, 960→hero_1280, 1280→hero_1280 → один кандидат 1280w
         expect(result?.srcSet).toBe(
-          'https://metravel.by/gallery/563/gallery/abc.webp?w=1280&q=78&fit=contain 1280w',
+          'https://metravel.by/gallery/563/gallery/abc.webp?w=1280&q=80&fit=contain 1280w',
         )
         expect(result?.sizes).toBe('(max-width: 1024px) 92vw, 720px')
       })
@@ -104,7 +104,7 @@ describe('utils/travelMediaVariants', () => {
           [
             'https://metravel.by/gallery/563/gallery/abc.webp?w=320&q=72&fit=cover 320w',
             'https://metravel.by/gallery/563/gallery/abc.webp?w=640&q=75&fit=cover 640w',
-            'https://metravel.by/gallery/563/gallery/abc.webp?w=1280&q=78&fit=contain 1280w',
+            'https://metravel.by/gallery/563/gallery/abc.webp?w=1280&q=80&fit=contain 1280w',
           ].join(', '),
         )
         // sizes по умолчанию берётся из sizes_hint манифеста
@@ -142,7 +142,7 @@ describe('utils/travelMediaVariants', () => {
     it('media присутствует → backend-варианты', () => {
       withPlatform('web', () => {
         const result = buildResponsiveImagePropsPreferringMedia(mediaEntry, baseUrl, options)
-        expect(result.src).toContain('w=1280&q=78&fit=contain')
+        expect(result.src).toContain('w=1280&q=80&fit=contain')
         expect(result.srcSet).toContain('1280w')
       })
     })
@@ -192,7 +192,6 @@ describe('utils/travelMediaVariants', () => {
       ).toEqual({
         blurhash: 'LEHL6nWB2yk8pyo0adR*.7kCMdnj',
         dominantColor: null,
-        lqipUrl: null,
       })
     })
 
@@ -203,14 +202,16 @@ describe('utils/travelMediaVariants', () => {
           blurhash: ' ',
           dominant_color: '#aBc123',
         }),
-      ).toEqual({ blurhash: null, dominantColor: '#aBc123', lqipUrl: null })
+      ).toEqual({ blurhash: null, dominantColor: '#aBc123' })
     })
 
-    it('preserves resolved LQIP fallback when both data fields are unavailable', () => {
+    // #1167: ветка `lqip_url` убрана — она была единственной, которая порождала
+    // ВТОРОЙ сетевой запрос на тот же слот. Без blurhash и dominant_color подложки
+    // просто нет; это дешевле, чем тянуть ради неё отдельный файл.
+    it('без blurhash и dominant_color не подставляет LQIP и не создаёт второй запрос', () => {
       expect(getMediaPlaceholderData(mediaEntry)).toEqual({
         blurhash: null,
         dominantColor: null,
-        lqipUrl: 'https://metravel.by/gallery/563/gallery/abc.webp?w=32&q=35&fit=cover',
       })
     })
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, View } from 'react-native';
 
 import type { TravelMediaImage } from '@/types/types';
+import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createSafeImageUrl } from '@/utils/travelMedia';
 import {
@@ -114,7 +115,8 @@ function OptimizedLCPHeroInner({
   );
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
   const lcpMaxWidth = isMobile ? 720 : 1280;
-  const lcpWidths = isMobile ? [320, 480, 640, 720] : [720, 960, 1280];
+  // #1167: набор — из общего контракта (`constants/imageContract.ts`).
+  const lcpWidths = isMobile ? IMAGE_WIDTHS.travelHeroMobile : IMAGE_WIDTHS.travelHeroDesktop;
   const targetWidth = lcpMaxWidth;
 
   const responsive = buildResponsiveImagePropsPreferringMedia(media ?? null, baseSrc, {
@@ -172,15 +174,17 @@ function OptimizedLCPHeroInner({
   // не вернул вариант — падаем обратно на srcWithRetry, blur не теряем.
   const backdropSrc = useMemo(() => {
     if (hasDataPlaceholder) return null;
-    if (!overrideSrc && mediaPlaceholder.lqipUrl) return mediaPlaceholder.lqipUrl;
+    // #1167: ветка `mediaPlaceholder.lqipUrl` убрана — отдельный LQIP-файл был вторым
+    // сетевым запросом на тот же слот. Крошечный вариант того же изображения берётся
+    // с нашей же лестницы и делит с ней кэш.
     return (
       optimizeImageUrl(srcWithRetry, {
-        width: 64,
-        quality: 40,
+        width: IMAGE_WIDTHS.heroBackdrop,
+        quality: IMAGE_QUALITY.heroBackdrop,
         fit: 'cover',
       }) || srcWithRetry
     );
-  }, [hasDataPlaceholder, mediaPlaceholder.lqipUrl, overrideSrc, srcWithRetry]);
+  }, [hasDataPlaceholder, srcWithRetry]);
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
   const backdropBox = useMemo(() => {
     if (Platform.OS !== 'web') return null;

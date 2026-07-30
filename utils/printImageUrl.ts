@@ -7,6 +7,7 @@
 // Теперь наоборот: свои картинки идут через собственный прокси на явной ступени
 // лестницы, а чужие отдаются как есть. Сторонний ресайзер из пути печати убран.
 
+import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract'
 import { PROXY_QUERY_PARAMS, snapProxyQuality, snapProxyWidth } from '@/utils/imageProxy'
 
 /**
@@ -16,14 +17,14 @@ import { PROXY_QUERY_PARAMS, snapProxyQuality, snapProxyWidth } from '@/utils/im
  *   полностраничных фото;
  * - 1600 — фото в потоке текста, где 2500 не даёт видимой разницы на 300 DPI.
  */
-export const PRINT_IMAGE_FULL_WIDTH = 2500
-export const PRINT_IMAGE_INLINE_WIDTH = 1600
+export const PRINT_IMAGE_FULL_WIDTH = IMAGE_WIDTHS.printFull
+export const PRINT_IMAGE_INLINE_WIDTH = IMAGE_WIDTHS.printInline
 
 /**
  * Качество печати. `optimizeImageUrl` квантует quality шагом 10, поэтому значение
  * выбрано на сетке: иначе каждый PDF плодил бы отдельный вариант в кэше прокси.
  */
-export const PRINT_IMAGE_QUALITY = 90
+export const PRINT_IMAGE_QUALITY = IMAGE_QUALITY.print
 
 const FIRST_PARTY_HOSTS = new Set(['metravel.by', 'cdn.metravel.by', 'api.metravel.by'])
 

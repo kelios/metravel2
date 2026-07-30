@@ -651,7 +651,7 @@ describe('travel hero preload helpers', () => {
       thumb_160: '/gallery/abc.webp?w=160&q=70&fit=cover',
       thumb_320: '/gallery/abc.webp?w=320&q=72&fit=cover',
       card_640: '/gallery/abc.webp?w=640&q=75&fit=cover',
-      hero_1280: '/gallery/abc.webp?w=1280&q=78&fit=contain',
+      hero_1280: '/gallery/abc.webp?w=1280&q=80&fit=contain',
       hero_1920: '/gallery/abc.webp?w=1920&q=80&fit=contain',
       original: '/gallery/abc.webp',
     };
@@ -665,11 +665,11 @@ describe('travel hero preload helpers', () => {
     );
 
     // Desktop-слот (1280) манифест закрывает точно — берём канонический вариант.
-    expect(preload.desktop.href).toBe('https://metravel.by/gallery/abc.webp?w=1280&q=78&fit=contain');
+    expect(preload.desktop.href).toBe('https://metravel.by/gallery/abc.webp?w=1280&q=80&fit=contain');
     // никакого клиентского `v=`/`q=82` поверх канонического manifest-URL
     expect(preload.desktop.href).not.toMatch(/[?&]v=/);
     expect(preload.desktop.href).not.toContain('q=82');
-    expect(preload.desktop.srcSet).toContain('w=1280&q=78&fit=contain 1280w');
+    expect(preload.desktop.srcSet).toContain('w=1280&q=80&fit=contain 1280w');
 
     // #1146: мобильный слот — 720. Contain-вариантов уже 1280 в манифесте нет, а
     // подставлять cover-варианты 320/640 нельзя: они кадрируют фото иначе, и браузер,

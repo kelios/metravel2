@@ -89,6 +89,19 @@ function pickVariantForWidth(
   return variants[variants.length - 1]
 }
 
+/**
+ * #1167: фронт больше НЕ запрашивает `lqip_url`.
+ *
+ * Смысл LQIP — показать что-то до прихода основной картинки. С #1127 в манифесте
+ * есть `blurhash` и `dominant_color`: подложка рисуется из данных, без сетевого
+ * запроса вообще. `lqip_url` при этом оставался фолбэком и был реальным файлом,
+ * который реально качался — то есть на слот приходилось ДВА запроса вместо одного,
+ * и на каждую картинку в библиотеке приходился лишний вариант (`?w=32&q=35`).
+ *
+ * Хелпер оставлен только для чтения поля из манифеста в тестах/скриптах; в
+ * рендер-путь он не входит. Прекращение выдачи `lqip_url` на бэкенде — отдельная
+ * задача, до неё поле просто игнорируется.
+ */
 export function getMediaLqipUrl(entry: TravelMediaImage | null | undefined): string | null {
   return resolveMediaVariantUrl(entry?.lqip_url)
 }
@@ -98,36 +111,29 @@ const DOMINANT_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
 export type MediaPlaceholderData = {
   blurhash: string | null
   dominantColor: string | null
-  lqipUrl: string | null
 }
 
 /**
- * Canonical media-placeholder precedence (#1127).
+ * Canonical media-placeholder precedence (#1127, сужено в #1167).
  *
- * Blurhash and dominant color are decoded/painted locally, so neither adds a
- * request before the sharp image. The legacy LQIP URL remains the compatibility
- * fallback only for payloads where both data fields are absent.
+ * Blurhash и dominant color рисуются локально и не добавляют ни одного запроса
+ * перед основной картинкой. Ветка `lqip_url` убрана: она была единственной, которая
+ * порождала второй сетевой запрос на слот. Если данных нет — подложки просто нет,
+ * и слот остаётся нейтральным до прихода основного изображения; это дешевле, чем
+ * тянуть ради него отдельный файл.
  */
 export function getMediaPlaceholderData(
   entry: TravelMediaImage | null | undefined,
 ): MediaPlaceholderData {
   const blurhash = typeof entry?.blurhash === 'string' ? entry.blurhash.trim() : ''
   if (blurhash) {
-    return { blurhash, dominantColor: null, lqipUrl: null }
+    return { blurhash, dominantColor: null }
   }
 
   const rawColor =
     typeof entry?.dominant_color === 'string' ? entry.dominant_color.trim() : ''
   const dominantColor = DOMINANT_COLOR_PATTERN.test(rawColor) ? rawColor : null
-  if (dominantColor) {
-    return { blurhash: null, dominantColor, lqipUrl: null }
-  }
-
-  return {
-    blurhash: null,
-    dominantColor: null,
-    lqipUrl: getMediaLqipUrl(entry),
-  }
+  return { blurhash: null, dominantColor }
 }
 
 export interface MediaResponsiveOptions {

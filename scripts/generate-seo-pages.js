@@ -513,14 +513,18 @@ function buildTravelHeroPreloadData(travel, detail) {
   // Берём LQIP из манифеста (`?w=32&q=35&fit=cover` = 354 B) плюс dominant_color
   // как мгновенную заливку. Крошечная картинка под blur(18px) визуально не
   // отличается, но перестаёт быть узким местом первого экрана.
-  const blurHref =
-    toAbsoluteUrl(String(source.media?.lqip_url || '').trim()) ||
-    buildOptimizedTravelImageUrl(source.url, {
-      width: 96,
-      quality: 30,
-      updatedAt: source.updatedAt,
-      id: source.id,
-    });
+  // #1167: `lqip_url` больше не используется — это был отдельный файл и отдельный
+  // сетевой запрос там, где хватает крошечного варианта того же изображения.
+  // ЗЕРКАЛО: `width`/`quality` обязаны совпадать с `IMAGE_WIDTHS.heroBackdrop` и
+  // `IMAGE_QUALITY.heroBackdrop` (`constants/imageContract.ts`) — иначе SSG греет
+  // один вариант, а рантайм просит другой, и подложка приезжает двумя файлами
+  // (инвариант #1146). Сверяется тестом travelHeroPreloadParity.
+  const blurHref = buildOptimizedTravelImageUrl(source.url, {
+    width: 96,
+    quality: 40,
+    updatedAt: source.updatedAt,
+    id: source.id,
+  });
   const rawDominant = String(source.media?.dominant_color || '').trim();
   const blurColor = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(rawDominant) ? rawDominant : '';
 

@@ -161,7 +161,7 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
           variants: {
             thumb_320: '/gallery/123/photo.webp?w=320&q=72&fit=cover',
             card_640: '/gallery/123/photo.webp?w=640&q=75&fit=cover',
-            hero_1280: '/gallery/123/photo.webp?w=1280&q=78&fit=contain',
+            hero_1280: '/gallery/123/photo.webp?w=1280&q=80&fit=contain',
           },
         },
       } as any,
@@ -171,7 +171,7 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       false,
     )
 
-    expect(src).toBe('https://metravel.by/gallery/123/photo.webp?w=1280&q=78&fit=contain')
+    expect(src).toBe('https://metravel.by/gallery/123/photo.webp?w=1280&q=80&fit=contain')
   })
 })
 
@@ -189,7 +189,7 @@ describe('#1146: первый слайд не расходится с hero по 
     variants: {
       thumb_320: `${GALLERY}?w=320&q=72&fit=cover`,
       card_640: `${GALLERY}?w=640&q=75&fit=cover`,
-      hero_1280: `${GALLERY}?w=1280&q=78&fit=contain`,
+      hero_1280: `${GALLERY}?w=1280&q=80&fit=contain`,
       hero_1920: `${GALLERY}?w=1920&q=80&fit=contain`,
     },
   }
@@ -222,7 +222,7 @@ describe('#1146: первый слайд не расходится с hero по 
     expect(src).toContain('w=720')
     expect(src).toContain('q=70')
     expect(src).toContain('fit=contain')
-    // было: `?w=1280&q=78&fit=contain` — второй файл той же обложки (211 158 B)
+    // было: `?w=1280&q=80&fit=contain` — второй файл той же обложки (211 158 B)
     expect(src).not.toContain('w=1280')
   })
 

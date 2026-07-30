@@ -12,6 +12,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
 
 import { pluralizeRu } from '@/utils/pluralize';
 import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience';
@@ -111,13 +112,14 @@ export default function QuestCard({
         if (!imageUrl) return imageUrl;
         const dpr = Platform.OS === 'web' ? 1 : Math.min(PixelRatio.get() || 2, 2);
         const requestedWidth = Math.max(1, Math.round(cardWidth * dpr));
-        const responsiveWidths = [320, 480, 640, 800];
+        // #1167: набор — из общего контракта, а не литералом на месте.
+        const responsiveWidths = IMAGE_WIDTHS.questCover;
         const targetWidth =
             responsiveWidths.find((candidate) => candidate >= requestedWidth) ??
             responsiveWidths[responsiveWidths.length - 1];
         return optimizeImageUrl(imageUrl, {
             width: targetWidth,
-            quality: 60,
+            quality: IMAGE_QUALITY.questCover,
             fit: 'cover',
         }) ?? imageUrl;
     }, [imageUrl, cardWidth]);

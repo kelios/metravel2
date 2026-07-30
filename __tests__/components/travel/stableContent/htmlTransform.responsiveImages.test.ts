@@ -24,10 +24,10 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     const out = prepareStableContentHtml(html)
 
     // src падает на fallback-ступень, а не отдаёт оригинал
-    expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=78${AMP}fit=contain"`)
+    expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=80${AMP}fit=contain"`)
     // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768)
     for (const w of [480, 640, 800, 960, 1920]) {
-      expect(out).toContain(`w=${w}${AMP}q=78${AMP}fit=contain ${w}w`)
+      expect(out).toContain(`w=${w}${AMP}q=80${AMP}fit=contain ${w}w`)
     }
     // #1160: потолок поднят с 800 до 1920. Прежнее обоснование «выше 800 прокси
     // отдаёт оригинал и игнорирует q» устарело — после #1112/#1130 он округляет
@@ -47,7 +47,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
 
     expect(first).not.toBeNull()
     expect(buildStableContentPrefetchUrl(first!)).toBe(
-      `${raw}?w=800&q=78&fit=contain`,
+      `${raw}?w=800&q=80&fit=contain`,
     )
     expect(buildStableContentPrefetchUrl(first!)).not.toBe(raw)
   })
@@ -64,13 +64,13 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       const out = prepareStableContentHtml(html)
 
       for (const w of [320, 480, 640, 800]) {
-        expect(out).toContain(`w=${w}${AMP}q=78${AMP}fit=contain ${w}w`)
+        expect(out).toContain(`w=${w}${AMP}q=80${AMP}fit=contain ${w}w`)
       }
       // #1160: потолок подняли только на desktop. На мобиле слот 100vw и картинки
       // тела ленивые — лишние ступени здесь платятся мобильным трафиком, а прирост
       // резкости на 390 CSS не виден.
-      expect(out).not.toContain(`w=960${AMP}q=78${AMP}fit=contain 960w`)
-      expect(out).not.toContain(`w=1920${AMP}q=78${AMP}fit=contain 1920w`)
+      expect(out).not.toContain(`w=960${AMP}q=80${AMP}fit=contain 960w`)
+      expect(out).not.toContain(`w=1920${AMP}q=80${AMP}fit=contain 1920w`)
     } finally {
       Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
       Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
@@ -82,7 +82,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     const out = prepareStableContentHtml(html)
     expect(out).not.toContain('w=4000')
     expect(out).not.toContain('dpr=3')
-    expect(out).toContain(`q=78`)
+    expect(out).toContain(`q=80`)
     // 1920 — потолок мастера, выше него прокси не апскейлит (#1160)
     expect(out).not.toContain('w=2500')
   })

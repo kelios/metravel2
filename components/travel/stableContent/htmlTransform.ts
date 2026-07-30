@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
+import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract'
 import { replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText'
 import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
@@ -158,12 +159,15 @@ export const buildExternalImageUrl = (src: string) => {
 // Мобильный набор намеренно оставлен с потолком 800: там слот 100vw, картинки тела
 // ленивые, и поднятие потолка бьёт по мобильному трафику ради невидимой на 390 CSS
 // резкости.
-const RESPONSIVE_WIDTHS_MOBILE = [320, 480, 640, 800]
-const RESPONSIVE_WIDTHS_DESKTOP = [480, 640, 800, 960, 1920]
+// #1167: сами числа живут в `constants/imageContract.ts` — единственном месте, где
+// перечислено, что фронт вообще имеет право запросить.
+const RESPONSIVE_WIDTHS_MOBILE = IMAGE_WIDTHS.articleBodyMobile
+const RESPONSIVE_WIDTHS_DESKTOP = IMAGE_WIDTHS.articleBodyDesktop
 const RESPONSIVE_FALLBACK_WIDTH = 800
 // Реальные слоты тела статьи: 100vw на мобиле, ~720px на 1280, ~920px на 1920.
 const RESPONSIVE_SIZES = '(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px'
-const RESPONSIVE_QUALITY = 78
+// #1167: quality — на класс размера, а не на вызов. Тело статьи — крупный класс.
+const RESPONSIVE_QUALITY = IMAGE_QUALITY.large
 
 const isFirstPartyMetravelHost = (host: string): boolean => {
   const value = String(host || '').toLowerCase()

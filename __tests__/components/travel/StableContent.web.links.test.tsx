@@ -216,7 +216,7 @@ describe('StableContent (web) link styles', () => {
       window.dispatchEvent(new Event('load'));
       await waitFor(() => {
         const prefetch = document.querySelector(prefetchSelector) as HTMLLinkElement | null;
-        expect(prefetch?.href).toBe(`${raw}?w=800&q=78&fit=contain`);
+        expect(prefetch?.href).toBe(`${raw}?w=800&q=80&fit=contain`);
       });
     } finally {
       unmount();
