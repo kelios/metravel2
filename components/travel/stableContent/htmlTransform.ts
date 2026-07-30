@@ -71,7 +71,23 @@ const normalizeMetravelOwnImageUrl = (urlStr: string): string => {
 const isMobileWebViewport = (): boolean =>
   Platform.OS === 'web' && typeof window !== 'undefined' && (window.innerWidth || 0) <= 768
 
-export const buildWeservProxyUrl = (src: string) => {
+/**
+ * #1163: раньше эта функция называлась `buildWeservProxyUrl` и заворачивала любую
+ * непервопартийную картинку тела статьи в `images.weserv.nl`. Сторонний ресайзер
+ * стоял в критическом пути отрисовки статьи, регулярно отваливался под холодным
+ * кэшем (из-за чего рядом жил костыль `data-weserv-fallback`) и добавлял третий
+ * домен в CSP и preconnect.
+ *
+ * Теперь внешняя картинка отдаётся как есть, без ресайза: это дороже по байтам на
+ * легаси-статьях с чужими фото, но убирает зависимость показа статьи от доступности
+ * чужого сервиса. Правильное решение — забирать внешнюю картинку в наше хранилище в
+ * момент вставки в редакторе; оно требует backend-эндпоинта ingest-by-URL (браузер
+ * не может прочитать байты чужой картинки из-за CORS), поэтому вынесено отдельно.
+ *
+ * Легаси-URL, уже завёрнутые в weserv, разворачиваются до оригинала —
+ * `unwrapWeservImageUrl` остаётся нужен, пока такие URL лежат в БД.
+ */
+export const buildExternalImageUrl = (src: string) => {
   try {
     const trimmed = String(src || '').trim()
     if (!trimmed) return null
@@ -79,8 +95,8 @@ export const buildWeservProxyUrl = (src: string) => {
 
     const normalized = trimmed.replace(/&amp;/g, '&')
     const unwrapped = unwrapWeservImageUrl(normalized)
+    // Битый weserv-URL без разбираемого `url=`: разворачивать нечего, отдаём как есть.
     if (isWeservImageUrl(normalized) && unwrapped === normalized) return normalized
-    const targetW = isMobileWebViewport() ? 600 : 800
 
     let parsedUrl: URL | null = null
     try {
@@ -97,11 +113,16 @@ export const buildWeservProxyUrl = (src: string) => {
       if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
         return normalizeMetravelOwnImageUrl(stripOptimizationParams(normalized))
       }
+      // Протокол апгрейдим: раньше https появлялся сам собой, потому что обёртка
+      // weserv была https. Оставить `http://` нельзя — страница отдаётся по https,
+      // и браузер заблокирует такую картинку как mixed content.
+      if (parsedUrl.protocol === 'http:') {
+        parsedUrl.protocol = 'https:'
+        return stripOptimizationParams(parsedUrl.toString())
+      }
     }
 
-    const cleaned = stripOptimizationParams(unwrapped)
-    const withoutScheme = cleaned.replace(/^https?:\/\//i, '')
-    return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=${targetW}&q=60&output=webp&fit=inside`
+    return stripOptimizationParams(unwrapped)
   } catch {
     return null
   }
@@ -116,8 +137,8 @@ export const buildWeservProxyUrl = (src: string) => {
 // `utils/imageProxy.ts` и зеркала в `scripts/generate-seo-pages.js`) — она
 // существует, потому что тело статьи ветвится по вьюпорту ещё на этапе трансформации
 // HTML, а не через один общий srcset. Каждое значение здесь обязано быть ступенью
-// лестницы; соответствие закреплено тестом
-// `__tests__/components/travel/stableContent/htmlTransform.widths.test.ts`.
+// лестницы; соответствие закреплено тестом «emits only widths that exist on the proxy
+// ladder» в `__tests__/components/travel/stableContent/htmlTransform.responsiveImages.test.ts`.
 // Контракт целиком — `docs/features/images.md`.
 //
 // #1160: до этого здесь стоял потолок 800 с обоснованием «1024 не входит в whitelist
@@ -181,7 +202,7 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
 }
 
 export const buildStableContentPrefetchUrl = (src: string): string =>
-  buildMetravelResponsiveImage(src)?.src ?? buildWeservProxyUrl(src) ?? src
+  buildMetravelResponsiveImage(src)?.src ?? buildExternalImageUrl(src) ?? src
 
 const stripDangerousTags = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -231,7 +252,7 @@ const normalizeImgTags = (html: string): string => {
   return html.replace(/<img\b[^>]*?>/gi, (tag) => {
     const src = tag.match(/\bsrc="([^"]+)"/i)?.[1] ?? ''
     const responsive = src ? buildMetravelResponsiveImage(src) : null
-    const optimizedSrc = responsive?.src ?? (src ? buildWeservProxyUrl(src) || src : src)
+    const optimizedSrc = responsive?.src ?? (src ? buildExternalImageUrl(src) || src : src)
     let width = tag.match(/\bwidth="(\d+)"/i)?.[1]
     let height = tag.match(/\bheight="(\d+)"/i)?.[1]
 

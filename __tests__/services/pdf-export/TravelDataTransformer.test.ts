@@ -126,10 +126,10 @@ describe('TravelDataTransformer', () => {
 
       expect(result[0].gallery).toHaveLength(2);
       expect(result[0].gallery?.[0]).toMatchObject({
-        url: 'https://images.weserv.nl/?url=example.com%2Fimg1.jpg&w=1600&fit=inside',
+        url: 'https://example.com/img1.jpg',
       });
       expect(result[0].gallery?.[1]).toMatchObject({
-        url: 'https://images.weserv.nl/?url=example.com%2Fimg2.jpg&w=1600&fit=inside',
+        url: 'https://example.com/img2.jpg',
       });
     });
 
@@ -169,7 +169,7 @@ describe('TravelDataTransformer', () => {
 
       expect(result[0].gallery).toHaveLength(2);
       expect(result[0].gallery?.[0]).toMatchObject({
-        url: 'https://images.weserv.nl/?url=example.com%2Fimg1.jpg&w=1600&fit=inside',
+        url: 'https://example.com/img1.jpg',
         id: 1,
       });
     });
@@ -500,8 +500,10 @@ describe('TravelDataTransformer', () => {
 
       expect(result[0].description).toContain('<img');
       expect(result[0].description).toContain('alt="cat"');
-      // src должен быть переписан через безопасный прокси
-      expect(result[0].description).toContain('https://images.weserv.nl/?url=');
+      // #1163: чужая картинка в richText остаётся на своём origin — сторонний
+      // ресайзер убран из пути печати.
+      expect(result[0].description).toContain('src="https://example.com/cat.jpg"');
+      expect(result[0].description).not.toContain('images.weserv.nl');
     });
 
     it('должен переписывать локальные IP в richText <img src> на prod домен', () => {
@@ -579,7 +581,11 @@ describe('TravelDataTransformer', () => {
       const result = transformer.transform(travels);
       const thumb = result[0].travelAddress?.[0]?.travelImageThumbUrl;
       expect(thumb).toBeTruthy();
-      expect(String(thumb)).toBe('https://metravel.by/gallery/5076/conversions/a-thumb.jpg');
+      // #1163: первопартийная миниатюра идёт через наш прокси на ступени 1600 —
+      // раньше она возвращалась без параметров, то есть мастером целиком.
+      expect(String(thumb)).toBe(
+        'https://metravel.by/gallery/5076/conversions/a-thumb.jpg?w=1600&q=90&fit=contain',
+      );
       expect(String(thumb)).not.toContain('192.168.50.36');
     });
 

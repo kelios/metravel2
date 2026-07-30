@@ -482,7 +482,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
 
       {/* Resource hints - only the origins used in the initial render.
-          images.weserv.nl preconnect deferred to when content images actually load. */}
+          #1163: сторонний ресайзер `images.weserv.nl` убран из рендер-пути статьи и из
+          PDF-экспорта, поэтому упоминания в hints больше нет. Из CSP
+          (`nginx/nginx.conf`, `connect-src`) домен пока НЕ убран: в БД остаются
+          легаси-URL, у которых внутри нет разбираемого `url=` — развернуть их
+          невозможно, и они по-прежнему запрашиваются с weserv. Снимать запись из CSP
+          можно только вместе с миграцией контента, задачей на стороне бэкенда. */}
       <link rel="preconnect" href="https://metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />

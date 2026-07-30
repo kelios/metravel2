@@ -117,6 +117,17 @@ const snapDimensionUp = (value: number): number => {
   return MAX_LADDER_WIDTH;
 };
 
+/**
+ * Ступень лестницы для произвольной ширины. Экспортируется для кода, который строит
+ * медиа-URL сам, а не через `optimizeImageUrl` — например печать
+ * (`utils/printImageUrl.ts`): лестница обязана остаться в одном месте, иначе она
+ * разъедется, как уже было с копией в `scripts/generate-seo-pages.js` (#1170).
+ */
+export const snapProxyWidth = (value: number): number => snapDimensionUp(value);
+
+/** Список параметров прокси — снимается с входящего URL перед пересборкой. */
+export const PROXY_QUERY_PARAMS = OPTIMIZATION_QUERY_PARAMS;
+
 // #1113/#1116: `dpr` и `h` больше не отправляются — прокси игнорирует оба, но каждое
 // уникальное значение создаёт отдельный URL, отдельную запись в nginx-кэше и отдельную
 // СИНХРОННУЮ конверсию. Замеры прода 2026-07-28:
@@ -144,6 +155,9 @@ const snapQuality = (value: number): number => {
   const q = Math.min(100, Math.max(1, Math.round(value)));
   return Math.min(100, Math.max(10, Math.round(q / 10) * 10));
 };
+
+/** См. `snapProxyWidth`: та же причина — квантование quality живёт в одном месте. */
+export const snapProxyQuality = (value: number): number => snapQuality(value);
 
 // #1171: здесь жили `clearImageOptimizationCache` и `getImageCacheStats` — ни одна
 // из них не вызывалась в приложении, только в собственных тестах. Кэш живёт весь

@@ -1,12 +1,21 @@
 import { RuntimeGalleryRenderer } from '@/services/pdf-export/generators/v2/runtime/renderers/GalleryPageRenderer'
 import { getThemeConfig } from '@/services/pdf-export/themes/PdfThemeConfig'
+import { buildSafeImageUrl } from '@/services/pdf-export/utils/htmlUtils'
 
 const URL1 = 'https://metravel.by/gallery/photo-1.jpg'
 const URL2 = 'https://metravel.by/gallery/photo-2.jpg'
 
 function makeRenderer(aspects?: Record<string, number>, settings?: any) {
   const renderer = new RuntimeGalleryRenderer({ theme: getThemeConfig('minimal'), settings })
-  if (aspects) renderer.setImageAspects(new Map(Object.entries(aspects)))
+  // Карта пропорций в проде заполняется по УЖЕ преобразованному URL
+  // (`EnhancedPdfGeneratorBase.preloadGalleryImageAspects`), и рендерер ищет по нему же.
+  // Ключуем так же, иначе тест молча свалится на fallback-пропорцию 4/3.
+  // #1163 это и вскрыл: первопартийный URL перестал совпадать сам с собой, получив `?w=`.
+  if (aspects) {
+    renderer.setImageAspects(
+      new Map(Object.entries(aspects).map(([url, aspect]) => [buildSafeImageUrl(url) ?? url, aspect])),
+    )
+  }
   return renderer
 }
 

@@ -3,6 +3,8 @@
  * Единая реализация вместо дублирования в каждом генераторе.
  */
 
+import { buildPrintImageUrl, PRINT_IMAGE_FULL_WIDTH } from '@/utils/printImageUrl';
+
 export function escapeHtml(value: string | null | undefined): string {
   if (value == null) return '';
   return String(value)
@@ -14,8 +16,13 @@ export function escapeHtml(value: string | null | undefined): string {
 }
 
 /**
- * Строит безопасный URL изображения с проксированием через weserv.nl.
+ * Строит безопасный URL изображения для печати.
  * Обрабатывает: data:, blob:, относительные пути, localhost, приватные IP.
+ *
+ * #1163: сторонний ресайзер `images.weserv.nl` (`w=2400&q=90&il&fit=inside`) убран.
+ * Свои картинки идут через собственный прокси на печатной ступени 2500 — раньше они
+ * возвращались вообще без параметров, то есть в PDF уезжал мастер целиком. Чужие
+ * отдаются как есть.
  */
 export function buildSafeImageUrl(url?: string | null): string | undefined {
   if (!url) return undefined;
@@ -23,6 +30,8 @@ export function buildSafeImageUrl(url?: string | null): string | undefined {
   if (!trimmed) return undefined;
   if (trimmed.startsWith('data:')) return trimmed;
   if (isLocalResource(trimmed)) return trimmed;
+  // Легаси-URL из БД, уже завёрнутый в weserv: своим прокси его не обслужить,
+  // поэтому оставляем как есть до миграции контента (#1163).
   if (/^https?:\/\/images\.weserv\.nl\//i.test(trimmed)) return trimmed;
   if (trimmed.startsWith('//')) return buildSafeImageUrl(`https:${trimmed}`);
 
@@ -56,20 +65,14 @@ export function buildSafeImageUrl(url?: string | null): string | undefined {
 
     if (isFirstPartyMetravelHost(host, hostWithPort)) {
       parsed.protocol = 'https:';
-      return parsed.toString();
+      return buildPrintImageUrl(parsed.toString(), PRINT_IMAGE_FULL_WIDTH);
     }
   } catch {
     // ignore URL parse errors
   }
 
-  try {
-    const normalized = trimmed.replace(/^https?:\/\//i, '');
-    const delimiter = encodeURIComponent(normalized);
-    // Разрешение 2400px для печати 300 DPI; q=90, il — прогрессивная загрузка
-    return `https://images.weserv.nl/?url=${delimiter}&w=2400&q=90&il&fit=inside`;
-  } catch {
-    return trimmed;
-  }
+  // Чужая картинка — как есть, без ресайза (#1163).
+  return trimmed;
 }
 
 function isLocalResource(url: string): boolean {

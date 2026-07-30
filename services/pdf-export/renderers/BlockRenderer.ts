@@ -5,6 +5,7 @@ import type { PdfThemeConfig } from '../themes/PdfThemeConfig';
 import type { ParsedContentBlock } from '../parsers/ContentParser';
 import { ContentParser } from '../parsers/ContentParser';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
+import { buildPrintImageUrl, PRINT_IMAGE_INLINE_WIDTH } from '@/utils/printImageUrl';
 import { renderImageGallery } from './blockRenderer/galleryRenderer';
 
 /**
@@ -684,15 +685,11 @@ export class BlockRenderer {
       return this.buildSafeImageUrl(`https://metravel.by${trimmed}`);
     }
 
-    // Absolute URLs
+    // Absolute URLs.
+    // #1163: свои картинки идут через собственный прокси на печатной ступени 1600,
+    // чужие отдаются как есть — сторонний ресайзер `images.weserv.nl` из пути печати убран.
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      // Используем прокси для внешних изображений
-      try {
-        const encoded = encodeURIComponent(trimmed);
-        return `https://images.weserv.nl/?url=${encoded}&w=1600&fit=inside`;
-      } catch {
-        return trimmed;
-      }
+      return buildPrintImageUrl(trimmed, PRINT_IMAGE_INLINE_WIDTH);
     }
 
     // Other relative paths: try to make absolute using prod domain

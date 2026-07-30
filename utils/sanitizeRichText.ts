@@ -1,5 +1,6 @@
 import sanitizeHtml, { Attributes } from 'sanitize-html'
 
+import { buildPrintImageUrl, PRINT_IMAGE_INLINE_WIDTH } from '@/utils/printImageUrl'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
 const ALLOWED_IFRAME_HOSTS = [
@@ -22,8 +23,6 @@ const LENGTH_OR_AUTO_RE = new RegExp(`^(?:${LENGTH_TOKEN}|auto)$`, 'i')
 const LENGTH_ONLY_RE = new RegExp(`^${LENGTH_TOKEN}$`, 'i')
 const SAFE_DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|avif);base64,/i
 
-const PDF_IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url='
-const PDF_IMAGE_DEFAULT_PARAMS = 'w=1600&fit=inside'
 const IMAGE_OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr']
 const FIRST_PARTY_MEDIA_ROUTE_RE = /^\/(gallery|travel-image|travel-description-image|address-image)(\/|$)/i
 
@@ -218,8 +217,10 @@ function normalizeRichImageSrc(value?: string, options?: { preferConfiguredFirst
     for (const p of IMAGE_OPTIMIZATION_PARAMS) rewrittenUrl.searchParams.delete(p)
     const cleanRewritten = rewrittenUrl.toString().replace(/\?$/, '')
 
-    // Don't proxy metravel.by's own images through weserv.nl — they are dynamic
-    // backend routes (e.g. /travel-description-image/) that weserv.nl can't reach.
+    // Первопартийные картинки — через собственный прокси на печатной ступени.
+    // Раньше они возвращались без параметров, то есть в PDF уезжал мастер целиком:
+    // weserv до динамических роутов вроде `/travel-description-image/` не дотягивался,
+    // и вместо ресайза не делалось ничего.
     const host = rewrittenUrl.hostname.toLowerCase()
     const hostWithPort = rewrittenUrl.host.toLowerCase()
     const configuredFirstPartyHost = getConfiguredFirstPartyHost()
@@ -229,11 +230,21 @@ function normalizeRichImageSrc(value?: string, options?: { preferConfiguredFirst
       host === 'api.metravel.by' ||
       (configuredFirstPartyHost && hostWithPort === configuredFirstPartyHost)
     ) {
-      return cleanRewritten
+      return buildPrintImageUrl(cleanRewritten, PRINT_IMAGE_INLINE_WIDTH)
     }
 
-    const withoutScheme = cleanRewritten.replace(/^https?:\/\//i, '')
-    return `${PDF_IMAGE_PROXY_BASE}${encodeURIComponent(withoutScheme)}&${PDF_IMAGE_DEFAULT_PARAMS}`
+    // #1163: чужая картинка отдаётся как есть. Ресайз через `images.weserv.nl` убран:
+    // сторонний сервис стоял в пути сборки PDF и регулярно отваливался под холодным
+    // кэшем. Легаси-URL, уже завёрнутые в weserv, разворачиваются выше.
+    //
+    // Протокол при этом обязателен к апгрейду: раньше https появлялся сам собой,
+    // потому что обёртка weserv была https. Оставить `http://` нельзя — страница
+    // отдаётся по https, и браузер заблокирует такую картинку как mixed content.
+    if (rewrittenUrl.protocol === 'http:') {
+      rewrittenUrl.protocol = 'https:'
+      return rewrittenUrl.toString().replace(/\?$/, '')
+    }
+    return cleanRewritten
   } catch {
     return normalized
   }

@@ -16,32 +16,22 @@ type LightboxGallery = { images: LightboxImage[]; initialIndex: number }
 
 const escapeCssUrl = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 
-// weserv.nl is a third-party resize proxy: under cold-cache bursts it drops/hangs a large
-// share of requests, leaving body images broken (the alt-text placeholder). Body photos on
-// legacy articles live on the project's own S3 bucket, which serves the un-resized original
-// reliably. On weserv failure/timeout we fall back to that origin URL — heavier, but a shown
-// image beats a broken one. Durable fix (server-side resize of S3 uploads) is a backend task.
-const WESERV_FALLBACK_TIMEOUT_MS = 3500
-
+// #1163: здесь жил механизм `data-weserv-fallback` — таймер на 3.5 с и обработчик
+// ошибки, которые подменяли отвалившуюся картинку `images.weserv.nl` на её origin.
+// Костыль существовал ровно потому, что сторонний ресайзер стоял в критическом пути
+// отрисовки статьи и под холодным кэшем терял часть запросов. Теперь новых weserv-URL
+// не создаётся, а легаси-цепочки разворачиваются до origin ещё в `htmlTransform`,
+// поэтому подменять в рантайме нечего.
+//
+// `originFromWeservSrc` оставлен: лайтбокс открывает картинку по её текущему `src`, и
+// в кэше браузера/в старом серверном HTML weserv-URL ещё может встретиться.
 const originFromWeservSrc = (src: string): string | null => {
   if (!isWeservImageUrl(src)) return null
   const origin = unwrapWeservImageUrl(src)
   return origin && origin !== src ? origin : null
 }
 
-const isWeservImage = (img: HTMLImageElement) =>
-  /images\.weserv\.nl/i.test(img.currentSrc || img.getAttribute('src') || '')
-
 const imageLoadedOk = (img: HTMLImageElement) => img.complete && img.naturalWidth > 0
-
-const swapWeservImageToOrigin = (img: HTMLImageElement) => {
-  if (img.dataset.weservFallback === '1') return
-  const origin = originFromWeservSrc(img.currentSrc || img.getAttribute('src') || '')
-  if (!origin) return
-  img.dataset.weservFallback = '1'
-  img.removeAttribute('srcset')
-  img.setAttribute('src', origin)
-}
 
 type UseStableContentWebEffectsInput = {
   prepared: string
@@ -149,67 +139,6 @@ export function useStableContentWebEffects({
 
     return () => {
       cleanups.forEach((cleanup) => cleanup())
-    }
-  }, [prepared, rootRef])
-
-  // Keep the reliable-origin fallback for legacy S3 photos, but arm its timeout only
-  // near the viewport. Starting 3.5s timers for all native-lazy images would otherwise
-  // replace every optimized URL with a heavy origin image before the browser needs it.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (typeof window === 'undefined') return
-    const candidates = Array.from(rootRef.current?.querySelectorAll<HTMLImageElement>('img') ?? [])
-      .filter((img) => isWeservImage(img) && !imageLoadedOk(img))
-    if (!candidates.length) return
-
-    const timers = new Map<HTMLImageElement, ReturnType<typeof setTimeout>>()
-    const clearTimer = (img: HTMLImageElement) => {
-      const timer = timers.get(img)
-      if (timer !== undefined) clearTimeout(timer)
-      timers.delete(img)
-    }
-    const armTimeout = (img: HTMLImageElement) => {
-      if (timers.has(img) || imageLoadedOk(img)) return
-      timers.set(img, setTimeout(() => {
-        timers.delete(img)
-        if (!imageLoadedOk(img)) swapWeservImageToOrigin(img)
-      }, WESERV_FALLBACK_TIMEOUT_MS))
-    }
-    const listeners = candidates.map((img) => {
-      const onLoad = () => clearTimer(img)
-      const onError = () => {
-        clearTimer(img)
-        swapWeservImageToOrigin(img)
-      }
-      img.addEventListener('load', onLoad)
-      img.addEventListener('error', onError, { once: true })
-      return () => {
-        img.removeEventListener('load', onLoad)
-        img.removeEventListener('error', onError)
-      }
-    })
-
-    let observer: IntersectionObserver | null = null
-    if ('IntersectionObserver' in window) {
-      const scrollRoot = rootRef.current?.closest('[data-testid="travel-details-scroll"]') ?? null
-      observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          const img = entry.target as HTMLImageElement
-          observer?.unobserve(img)
-          armTimeout(img)
-        })
-      }, { root: scrollRoot, rootMargin: '1200px 0px' })
-      candidates.forEach((img) => observer?.observe(img))
-    } else {
-      candidates.forEach(armTimeout)
-    }
-
-    return () => {
-      observer?.disconnect()
-      timers.forEach((timer) => clearTimeout(timer))
-      timers.clear()
-      listeners.forEach((cleanup) => cleanup())
     }
   }, [prepared, rootRef])
 

@@ -8,9 +8,11 @@ import type { ImageProcessorConfig } from '../types';
  */
 export const defaultConfig = {
   imageProcessor: {
+    // #1163: адреса стороннего ресайзера в конфиге больше нет. `proxyEnabled`
+    // по-прежнему решает, проксировать ли вообще, а `maxWidth` теперь обязан быть
+    // ступенью лестницы прокси — 1600 — иначе запрос округлится вверх.
     proxyEnabled: true,
-    proxyUrl: 'https://images.weserv.nl/?url=',
-    maxWidth: 1200,
+    maxWidth: 1600,
     cacheEnabled: true,
     cacheTTL: 3600000, // 1 час
   } as ImageProcessorConfig,

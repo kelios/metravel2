@@ -1,6 +1,8 @@
 // src/services/pdf-export/generators/v2/processors/ImageProcessor.ts
 // ✅ ПРОЦЕССОР: Обработка изображений с кэшированием
 
+import { buildPrintImageUrl, PRINT_IMAGE_INLINE_WIDTH } from '@/utils/printImageUrl';
+
 import type { ImageProcessorConfig, CachedImage } from '../types';
 
 /**
@@ -46,15 +48,11 @@ export class ImageProcessor {
       return url;
     }
 
-    // Внешние URL - проксируем если включено
+    // #1163: раньше здесь любой абсолютный URL заворачивался в сторонний ресайзер
+    // (`proxyUrl` = `https://images.weserv.nl/?url=`). Теперь через прокси идут только
+    // свои картинки, чужие отдаются как есть.
     if (this.config.proxyEnabled && (url.startsWith('http://') || url.startsWith('https://'))) {
-      try {
-        const encoded = encodeURIComponent(url);
-        return `${this.config.proxyUrl}/?url=${encoded}&w=${this.config.maxWidth}&output=webp`;
-      } catch (e) {
-        console.warn('Failed to proxy image URL:', url, e);
-        return url;
-      }
+      return buildPrintImageUrl(url, this.config.maxWidth || PRINT_IMAGE_INLINE_WIDTH);
     }
 
     return url;

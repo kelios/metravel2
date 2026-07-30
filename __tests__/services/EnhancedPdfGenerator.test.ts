@@ -108,7 +108,8 @@ describe('EnhancedPdfGenerator helpers', () => {
     const galleryHtml = generator.renderGalleryPage(travelA, 2)
     expect(galleryHtml).toContain('gallery-page')
     expect(galleryHtml).toContain('gallery-photo-frame')
-    expect(galleryHtml).toContain('images.weserv.nl')
+    // #1163: сторонний ресайзер убран из пути печати.
+    expect(galleryHtml).not.toContain('images.weserv.nl')
     expect(galleryHtml).not.toContain('crossorigin="anonymous"')
     expect(galleryHtml).toContain('height: 285mm')
     expect(galleryHtml).not.toContain('flex: 1; min-height: 170mm')
@@ -208,9 +209,13 @@ describe('EnhancedPdfGenerator helpers', () => {
     const html = generator.buildInlineGallerySection(travelA, generator.theme.colors, generator.theme.typography, generator.theme.spacing)
     expect(html).toContain('grid-template-columns')
 
+    // #1163: чужая картинка — как есть; своя — через наш прокси на печатной ступени
+    // 2500 (раньше первопартийная возвращалась без параметров, то есть мастером).
     const safe = generator.buildSafeImageUrl('http://cdn.test/image.jpg')
-    expect(safe).toContain('images.weserv.nl')
-    expect(generator.buildSafeImageUrl('https://metravel.by/gallery/42/photo.jpg')).toBe('https://metravel.by/gallery/42/photo.jpg')
+    expect(safe).toBe('http://cdn.test/image.jpg')
+    expect(generator.buildSafeImageUrl('https://metravel.by/gallery/42/photo.jpg')).toBe(
+      'https://metravel.by/gallery/42/photo.jpg?w=2500&q=90&fit=contain',
+    )
     expect(generator.buildSafeImageUrl('data:image/png;base64,abc')).toContain('data:image/png')
     expect(generator.buildSafeImageUrl('blob:local-image')).toBe('blob:local-image')
 

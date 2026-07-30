@@ -12,9 +12,20 @@ describe('prepareStableContentHtml XSS hardening', () => {
       '<p><img src="https://example.com/a.jpg&quot; onerror=&quot;alert(1)" alt="x"></p>',
     )
 
-    expect(result).not.toContain('onerror=')
-    // any surviving quote in the value must be entity-encoded, never a raw breakout
+    // Проверяемое свойство — невозможность выйти из значения `src` и открыть новый
+    // атрибут; сам текст `onerror=` внутри percent-encoded URL безопасен и браузером
+    // трактуется как часть пути.
+    //
+    // #1163: раньше здесь стояло `not.toContain('onerror=')`, и это проходило по
+    // случайности: внешний URL заворачивался в `images.weserv.nl` через
+    // `encodeURIComponent`, который кодировал в том числе `=`. Сторонний ресайзер
+    // убран, и проверка приведена к тому, что действительно является защитой:
+    // кавычка кодируется (`%22`), а `escapeHtmlAttr` не даёт ей стать разделителем.
+    const src = result.match(/<img\b[^>]*\bsrc="([^"]*)"/i)?.[1] ?? ''
+    expect(src).not.toContain('"')
+    expect(src).toContain('%22')
     expect(result).not.toMatch(/src="[^"]*"\s*onerror/i)
+    expect(result.toLowerCase()).not.toMatch(/"\s+onerror=/)
   })
 
   it('does not let a crafted src break out into a raw event-handler attribute', () => {

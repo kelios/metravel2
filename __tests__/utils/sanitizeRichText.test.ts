@@ -128,18 +128,38 @@ describe('sanitizeRichText', () => {
 
     expect(sanitized).toContain('https://metravel.by/travel-description-image/548/description/a06feb1a8ba0433db10535734e618ebc.PNG.webp')
     expect(sanitized).toContain('href="https://metravel.by/gallery/123/conversions/cover.webp"')
-    expect(sanitized).toContain('https://images.weserv.nl/?url=example.com%2Fplain-http.jpg')
+    // #1163: чужая картинка больше не заворачивается в `images.weserv.nl`, но апгрейд
+    // протокола обязан сохраниться — раньше https приходил вместе с обёрткой. Страница
+    // отдаётся по https, и `http://` был бы заблокирован как mixed content.
+    expect(sanitized).toContain('src="https://example.com/plain-http.jpg"')
+    expect(sanitized).not.toContain('http://example.com')
   })
 
-  it('keeps third-party image proxying idempotent across repeated sanitization', () => {
+  it('keeps third-party image urls stable and idempotent across repeated sanitization', () => {
     const original = '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/photo.jpg"></p>'
 
     const once = sanitizeRichText(original)
     const twice = sanitizeRichText(once)
 
     expect(twice).toBe(once)
-    expect((twice.match(/images\.weserv\.nl/g) ?? [])).toHaveLength(1)
-    expect(twice).toContain('metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2Fphoto.jpg')
+    // #1163: ни одного нового weserv-URL — чужая картинка отдаётся со своего origin.
+    expect(twice).not.toContain('images.weserv.nl')
+    expect(twice).toContain('src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/photo.jpg"')
+  })
+
+  // Легаси-контент из БД, где картинка уже завёрнута в weserv: цепочка обязана
+  // разворачиваться до оригинала, а не превращаться в ещё один слой.
+  it('unwraps a legacy weserv url down to its origin instead of re-wrapping it', () => {
+    const origin = 'metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy.jpg'
+    const nested = [0, 1, 2].reduce(
+      (current) => `https://images.weserv.nl/?url=${encodeURIComponent(current)}&w=1600&fit=inside`,
+      origin,
+    )
+
+    const sanitized = sanitizeRichText(`<p><img src="${nested}"></p>`)
+
+    expect(sanitized).not.toContain('images.weserv.nl')
+    expect(sanitized).toContain('src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy.jpg"')
   })
 
   it('does not turn a malformed weserv URL into another proxy layer', () => {
@@ -183,7 +203,9 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('<ul>')
     expect(sanitized).toContain('<figure>')
     expect(sanitized).toContain('<img')
-    expect(sanitized).toContain('images.weserv.nl')
+    // #1163: в PDF чужая картинка идёт со своего origin, без стороннего ресайзера.
+    expect(sanitized).not.toContain('images.weserv.nl')
+    expect(sanitized).toContain('src="https://example.com/img.jpg"')
     expect(sanitized).toContain('<figcaption>')
     expect(sanitized).toContain('<a href="https://example.com/"')
     expect(sanitized).toContain('rel="noopener noreferrer"')

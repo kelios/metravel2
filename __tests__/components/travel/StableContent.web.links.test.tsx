@@ -432,7 +432,9 @@ describe('StableContent (web) link styles', () => {
     const firstFrame = firstImage.closest('.rich-image-frame') as HTMLElement;
     fireEvent.load(firstImage);
     await waitFor(() => {
-      expect(firstFrame.style.getPropertyValue('--travel-rich-image')).toContain('images.weserv.nl');
+      // #1163: фон блюра берётся из фактического `src` картинки, а он теперь ведёт на
+      // origin внешнего хоста, а не на `images.weserv.nl`.
+      expect(firstFrame.style.getPropertyValue('--travel-rich-image')).toContain('https://example.com/one.jpg');
     });
 
     const styleEl = document.getElementById('travel-rich-text-styles') as HTMLStyleElement | null;

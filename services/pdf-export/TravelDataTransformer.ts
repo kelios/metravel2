@@ -4,12 +4,15 @@
 import type { Travel } from '@/types/types';
 import { TravelForBook } from '@/types/pdf-export';
 import { ExportError, ExportErrorType } from '@/types/pdf-export';
+import {
+  buildPrintImageUrl,
+  PRINT_IMAGE_FULL_WIDTH,
+  PRINT_IMAGE_INLINE_WIDTH,
+} from '@/utils/printImageUrl';
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText';
 import { translate as i18nT } from '@/i18n'
 
 
-const IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url=';
-const DEFAULT_IMAGE_PARAMS = 'w=1600&fit=inside';
 const SAFE_COLOR_FALLBACK = 'rgb(31, 41, 55)';
 const PLACEHOLDER_IMAGE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
@@ -61,7 +64,10 @@ export class TravelDataTransformer {
         // PDF — печать: предпочитаем print-grade обложку (≥2500px), fallback на обычную (BE #307)
         travel_image_url:
           travel.travel_image_print_url || travel.travel_image_url
-            ? this.buildSafeImageUrl(travel.travel_image_print_url || travel.travel_image_url)
+            ? this.buildSafeImageUrl(
+                travel.travel_image_print_url || travel.travel_image_url,
+                PRINT_IMAGE_FULL_WIDTH,
+              )
             : undefined,
         gallery: this.transformGallery(travel.gallery),
         travelAddress: this.transformAddresses(travel.travelAddress),
@@ -369,7 +375,12 @@ export class TravelDataTransformer {
     }
   }
 
-  private buildSafeImageUrl(url?: string | null): string {
+  /**
+   * #1163: `width` — ступень лестницы прокси для первопартийных картинок. Обложка и
+   * полностраничное фото идут на 2500, всё остальное (галерея, миниатюры точек) — на
+   * 1600, как и раньше через weserv. Чужие URL параметров не получают.
+   */
+  private buildSafeImageUrl(url?: string | null, width: number = PRINT_IMAGE_INLINE_WIDTH): string {
     if (!url) return PLACEHOLDER_IMAGE;
     const trimmed = String(url).trim();
     if (!trimmed) return PLACEHOLDER_IMAGE;
@@ -380,7 +391,7 @@ export class TravelDataTransformer {
     }
     // Протокол-относительные URL
     if (trimmed.startsWith('//')) {
-      return this.buildSafeImageUrl(`https:${trimmed}`);
+      return this.buildSafeImageUrl(`https:${trimmed}`, width);
     }
     // Относительные пути ("/storage/...") и ресурсы текущего домена считаем безопасными
     if (trimmed.startsWith('/')) {
@@ -395,7 +406,7 @@ export class TravelDataTransformer {
     // считаем его путём на нашем домене (часто приходит из CMS как `uploads/...` или `storage/...`).
     // Пример: `uploads/photo.jpg` -> `https://metravel.by/uploads/photo.jpg`
     if (!/^https?:\/\//i.test(trimmed) && !trimmed.includes('://')) {
-      return this.buildSafeImageUrl(`https://metravel.by/${trimmed.replace(/^\/+/, '')}`);
+      return this.buildSafeImageUrl(`https://metravel.by/${trimmed.replace(/^\/+/, '')}`, width);
     }
 
     // Если URL указывает на локальную сеть (dev backend), он будет недоступен в печати/PDF.
@@ -414,27 +425,20 @@ export class TravelDataTransformer {
         const rewritten = new URL(trimmed);
         rewritten.protocol = 'https:';
         rewritten.host = 'metravel.by';
-        return this.buildSafeImageUrl(rewritten.toString());
+        return this.buildSafeImageUrl(rewritten.toString(), width);
       }
 
       if (this.isFirstPartyMetravelHost(host, hostWithPort)) {
         parsed.protocol = 'https:';
-        return parsed.toString();
+        return buildPrintImageUrl(parsed.toString(), width);
       }
     } catch {
       // ignore URL parse errors
     }
 
-    try {
-      const absolute = /^https?:\/\//i.test(trimmed)
-        ? trimmed
-        : `https://${trimmed.replace(/^\/+/, '')}`;
-      const normalized = absolute.replace(/^https?:\/\//i, '');
-      const delimiter = encodeURIComponent(normalized);
-      return `${IMAGE_PROXY_BASE}${delimiter}&${DEFAULT_IMAGE_PARAMS}`;
-    } catch {
-      return PLACEHOLDER_IMAGE;
-    }
+    // #1163: чужая картинка отдаётся как есть — сторонний ресайзер `images.weserv.nl`
+    // из пути печати убран. Своя уже вернулась выше через собственный прокси.
+    return /^https?:\/\//i.test(trimmed) ? trimmed : PLACEHOLDER_IMAGE;
   }
 
   private isLocalUrl(url: string): boolean {

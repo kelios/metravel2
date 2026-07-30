@@ -113,15 +113,19 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     }
   })
 
-  it('leaves third-party images on the weserv proxy path (no first-party srcset)', () => {
+  // #1163: внешняя картинка отдаётся со своего origin, без стороннего ресайзера.
+  // Прежний путь через `images.weserv.nl` стоял в критическом пути отрисовки статьи и
+  // отваливался под холодным кэшем; нашу лестницу к чужому хосту применить нельзя —
+  // прокси до него не дотягивается.
+  it('leaves a third-party image on its own origin, unproxied and without our srcset', () => {
     const html = '<p><img src="https://example.com/remote/pic.jpg" /></p>'
     const out = prepareStableContentHtml(html)
-    expect(out).toContain('images.weserv.nl')
-    // третьесторонним не навешиваем нашу лестницу sizes
+    expect(out).not.toContain('images.weserv.nl')
+    expect(out).toContain('src="https://example.com/remote/pic.jpg"')
     expect(out).not.toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
   })
 
-  it('collapses a deeply nested legacy weserv chain to one canonical proxy URL', () => {
+  it('unwraps a deeply nested legacy weserv chain down to its origin', () => {
     const origin = 'metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy-photo.jpg'
     const nested = [0, 1, 2, 3, 4, 5].reduce(
       (current) => `https://images.weserv.nl/?url=${encodeURIComponent(current)}&w=1600&fit=inside`,
@@ -132,11 +136,10 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       serverSanitized: true,
     })
 
-    expect((out.match(/images\.weserv\.nl/g) ?? [])).toHaveLength(1)
-    expect(out).toContain('url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2Flegacy-photo.jpg')
-    expect(out).toContain('w=800')
-    expect(out).toContain('q=60')
-    expect(out).toContain('output=webp')
+    // #1163: `unwrapWeservImageUrl` остаётся нужен, пока такие URL лежат в БД, но
+    // новый слой обёртки больше не создаётся — цепочка схлопывается до оригинала.
+    expect(out).not.toContain('images.weserv.nl')
+    expect(out).toContain('src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy-photo.jpg"')
   })
 
   it('does not wrap a malformed weserv URL again when its source is missing', () => {

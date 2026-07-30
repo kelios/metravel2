@@ -1,7 +1,8 @@
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+
+import { runCli } from './cli-test-utils'
+
 const { collectMissingWidthCalls } = require('../../scripts/check-image-architecture.js')
 
 /**
@@ -100,28 +101,21 @@ describe('check-image-architecture — правило обязательной �
   // иначе он не остановит CI.
   it('падает ненулевым кодом на искусственно внесённом регрессе', () => {
     const root = resolve(__dirname, '..', '..')
-    const dir = mkdtempSync(join(tmpdir(), 'image-arch-guard-'))
+    // Проба обязана лежать внутри сканируемого дерева, поэтому временный каталог тут
+    // не подходит — файл кладётся в `components/` и удаляется в finally.
     const probe = join(root, 'components', '__image_width_guard_probe__.tsx')
 
     try {
-      writeFileSync(probe, `import { optimizeImageUrl } from '@/utils/imageOptimization'\nexport const bad = (u: string) => optimizeImageUrl(u, { quality: 70 })\n`)
-      let code = 0
-      let output = ''
-      try {
-        output = execFileSync('node', ['scripts/check-image-architecture.js'], {
-          cwd: root,
-          encoding: 'utf8',
-          stdio: ['ignore', 'pipe', 'pipe'],
-        })
-      } catch (error: any) {
-        code = error.status
-        output = `${error.stdout ?? ''}${error.stderr ?? ''}`
-      }
-      expect(code).not.toBe(0)
-      expect(output).toContain('__image_width_guard_probe__')
+      writeFileSync(
+        probe,
+        `import { optimizeImageUrl } from '@/utils/imageOptimization'\nexport const bad = (u: string) => optimizeImageUrl(u, { quality: 70 })\n`,
+      )
+      const result = runCli(process.execPath, ['scripts/check-image-architecture.js'], { cwd: root })
+
+      expect(result.status).not.toBe(0)
+      expect(`${result.stdout}${result.stderr}`).toContain('__image_width_guard_probe__')
     } finally {
       rmSync(probe, { force: true })
-      rmSync(dir, { recursive: true, force: true })
     }
   })
 })

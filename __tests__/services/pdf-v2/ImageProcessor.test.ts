@@ -11,7 +11,6 @@ describe('ImageProcessor', () => {
   beforeEach(() => {
     config = {
       proxyEnabled: true,
-      proxyUrl: 'https://images.weserv.nl',
       maxWidth: 1600,
       cacheEnabled: true,
       cacheTTL: 3600000,
@@ -41,11 +40,18 @@ describe('ImageProcessor', () => {
       expect(result).toBe(url);
     });
 
-    it('проксирует внешние URL когда включено', async () => {
+    // #1163: чужой URL больше не заворачивается в сторонний ресайзер — он уходит в
+    // PDF как есть. Проксируются только первопартийные картинки.
+    it('оставляет чужой URL без стороннего прокси', async () => {
       const url = 'https://example.com/image.jpg';
       const result = await processor.processUrl(url);
-      expect(result).toContain('images.weserv.nl');
-      expect(result).toContain(encodeURIComponent(url));
+      expect(result).toBe(url);
+    });
+
+    it('проксирует первопартийный URL на печатной ступени лестницы', async () => {
+      const result = await processor.processUrl('https://metravel.by/gallery/42/photo.jpg');
+      expect(result).toContain('w=1600');
+      expect(result).not.toContain('images.weserv.nl');
     });
 
     it('кэширует обработанные URL', async () => {
@@ -66,18 +72,20 @@ describe('ImageProcessor', () => {
       expect(processor.buildSafeUrl(url)).toBe(url);
     });
 
-    it('проксирует http URL', () => {
+    it('не трогает чужой http URL', () => {
       const url = 'http://example.com/image.jpg';
-      const result = processor.buildSafeUrl(url);
-      expect(result).toContain('images.weserv.nl');
+      expect(processor.buildSafeUrl(url)).toBe(url);
     });
 
-    it('проксирует https URL', () => {
+    it('не трогает чужой https URL', () => {
       const url = 'https://example.com/image.jpg';
-      const result = processor.buildSafeUrl(url);
-      expect(result).toContain('images.weserv.nl');
+      expect(processor.buildSafeUrl(url)).toBe(url);
+    });
+
+    it('первопартийный URL получает ширину из maxWidth конфига', () => {
+      const result = processor.buildSafeUrl('https://cdn.metravel.by/gallery/42/photo.jpg');
       expect(result).toContain('w=1600');
-      expect(result).toContain('output=webp');
+      expect(result).not.toContain('images.weserv.nl');
     });
   });
 

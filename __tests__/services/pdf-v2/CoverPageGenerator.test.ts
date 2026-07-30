@@ -14,7 +14,6 @@ describe('CoverPageGenerator', () => {
   beforeEach(() => {
     imageProcessor = new ImageProcessor({
       proxyEnabled: true,
-      proxyUrl: 'https://images.weserv.nl',
       maxWidth: 1600,
       cacheEnabled: false,
       cacheTTL: 3600000,

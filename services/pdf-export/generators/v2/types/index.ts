@@ -25,7 +25,8 @@ export interface PageContext {
  */
 export interface ImageProcessorConfig {
   proxyEnabled: boolean;
-  proxyUrl: string;
+  // #1163: `proxyUrl` удалён — адреса стороннего ресайзера больше нет. Свои картинки
+  // идут через собственный прокси (`utils/printImageUrl.ts`), чужие — как есть.
   maxWidth: number;
   cacheEnabled: boolean;
   cacheTTL: number;

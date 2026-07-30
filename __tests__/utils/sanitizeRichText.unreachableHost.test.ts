@@ -44,6 +44,9 @@ describe('sanitizeRichText: недостижимые хосты картинок
 
     expect(out).not.toContain('travel.vm');
     expect(out).toContain('текст');
-    expect(out).toContain('uploads%2Fb.jpg');
+    // #1163: соседняя S3-картинка остаётся на своём origin (раньше здесь был
+    // percent-encoded `url=` внутри обёртки `images.weserv.nl`).
+    expect(out).toContain('src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/b.jpg"');
+    expect(out).not.toContain('images.weserv.nl');
   });
 });
