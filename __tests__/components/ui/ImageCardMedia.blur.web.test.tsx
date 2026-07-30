@@ -110,6 +110,35 @@ describe('ImageCardMedia blur background (web)', () => {
     ).toBeGreaterThan(0)
   })
 
+  // Стили <img> внутри blurhash-слоя задаёт expo-image, поэтому обойти внешнее
+  // правило `… img{max-width:…}` инлайном (как делают резкий слой и blur-подложка)
+  // он не может. Маркер включает критическое правило, которое возвращает слою
+  // полную ширину контейнера — без него слой зажимался в 720px и оставлял справа
+  // от кадра пустую полосу.
+  it('marks the data placeholder so critical CSS cannot clamp its width', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/photo.jpg"
+          placeholderBlurhash="LEHL6nWB2yk8pyo0adR*.7kCMdnj"
+          testID="media"
+          height={200}
+          blurBackground
+          fit="contain"
+        />
+      )
+    })
+
+    const marked = tree!.root.findAll(
+      (node: any) =>
+        node?.props?.testID === 'media-data-placeholder' &&
+        node?.props?.dataSet?.heroDataPlaceholder === 'true',
+    )
+
+    expect(marked.length).toBeGreaterThan(0)
+  })
+
   it('recognizes iPhone Safari user agents for the lazy-to-eager fallback', () => {
     expect(
       isIOSSafariUserAgent(

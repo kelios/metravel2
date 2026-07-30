@@ -855,6 +855,13 @@ export function ImageDataPlaceholder({
       importantForAccessibility={
         Platform.OS !== 'web' ? 'no-hide-descendants' : undefined
       }
+      // Стили <img> внутри задаёт expo-image, а не мы, поэтому слой не может
+      // сам обойти внешние правила вроде `… img{max-width:…}`. Маркер включает
+      // критическое правило `[data-hero-data-placeholder="true"] img`, которое
+      // возвращает слою полную ширину контейнера.
+      {...(Platform.OS === 'web'
+        ? ({ dataSet: { heroDataPlaceholder: 'true' } } as any)
+        : null)}
     >
       {normalizedBlurhash ? (
         <ExpoImage

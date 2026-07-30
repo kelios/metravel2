@@ -55,7 +55,15 @@ export function buildCriticalCSS(): string {
     '#root,#root>div,#root>div>div{min-height:100vh;width:100%}',
     '[data-testid="travel-details-page"]{min-height:100vh;contain:layout style}',
     '[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,' + BSL + ')}',
-    '[data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:720px;object-fit:contain}',
+    // Селектор прицелен в LCP-картинку, а НЕ во все `img` внутри hero. Широкий
+    // вариант (`… hero img{max-width:720px}`) ловил каждый слой галереи: резкий
+    // слой и blur-подложка обходят его инлайновым `max-width:none`, а blurhash
+    // от expo-image своих стилей не задаёт — на desktop он зажимался в 720px,
+    // прижимался к левому краю и вместо кадра оставлял пустую полосу справа.
+    // Hero здесь рендерится только после гидрации (в статическом HTML его нет —
+    // до неё виден `.ssg-travel-hero` со своими стилями), поэтому ограничивать
+    // ширину до-гидрационно тут нечего.
+    '[data-testid="travel-details-hero"] img[data-lcp]{aspect-ratio:16/9;width:100%;max-width:100%;object-fit:contain}',
     '[data-hero-data-placeholder="true"] img{width:100%;height:100%;max-width:none;aspect-ratio:auto;object-fit:cover}',
     '[data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}',
     '[data-testid="home-hero"]{contain:layout style}',
