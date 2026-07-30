@@ -177,6 +177,10 @@ scripts/.tmp-*
 
 # Ad-hoc tmp dumps at repo root
 /tmp_*.json
+
+# Локальные бэкапы медиа-хранилища (scripts/backup_media_storage.py — ~11 ГиБ)
+# и оригиналы, снятые перед перезаливкой (scripts/normalize_quest_covers_prod.py)
+.backup/
 /tmp_*.txt
 
 # Index-status кэш (не коммитим)
