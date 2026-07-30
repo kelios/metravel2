@@ -54,8 +54,13 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       true,
     )
 
-    // 720 snaps up to the 800 ladder rung; q 72 → 70. Hero stays dpr-/format-free.
-    expect(src).toContain('w=800')
+    // #1170: в лестницу вернули ступени 720/960/1024/1200, которых у прокси всё это
+    // время не было только на фронте. Теперь 720 остаётся 720 и не округляется до 800.
+    // Инвариант #1146 при этом сохранён: SSG-зеркало лестницы обновлено тем же
+    // коммитом и снэпит 720 → 720, то есть preload и слайдер по-прежнему просят
+    // побайтово один URL. Парность закреплена тестом `imageProxy.ladder.test.ts`.
+    // q 72 → 70. Hero stays dpr-/format-free.
+    expect(src).toContain('w=720')
     expect(src).toContain('q=70')
     expect(src).toContain('fit=contain')
     expect(src).not.toContain('dpr=')
@@ -74,8 +79,10 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       false,
     )
 
-    // 1180 snaps up to the 1280 ladder rung; q 78 → 80.
-    expect(src).toContain('w=1280')
+    // #1170: 1180 теперь округляется до 1200, а не до 1280 — ступень 1200 вернули
+    // в лестницу, она есть в контракте прокси и даёт файл легче при том же слоте.
+    // q 78 → 80.
+    expect(src).toContain('w=1200')
     expect(src).toContain('q=80')
   })
 
@@ -207,8 +214,12 @@ describe('#1146: первый слайд не расходится с hero по 
       true,
     )
 
-    // hero после #1146 просит `?v=100&w=800&q=70&fit=contain`
-    expect(src).toContain('w=800')
+    // hero после #1146 просит тот же вариант, что и слайдер. После #1170 это
+    // `?v=100&w=720&q=70&fit=contain`: ступень 720 вернули в лестницу, и SSG-зеркало
+    // (`scripts/generate-seo-pages.js`) обновлено тем же коммитом — обе стороны
+    // снэпят 720 → 720. Суть теста не в конкретном числе, а в том, что число ОДНО;
+    // расхождение зеркал ловит `imageProxy.ladder.test.ts`.
+    expect(src).toContain('w=720')
     expect(src).toContain('q=70')
     expect(src).toContain('fit=contain')
     // было: `?w=1280&q=78&fit=contain` — второй файл той же обложки (211 158 B)

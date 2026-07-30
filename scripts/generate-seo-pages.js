@@ -167,7 +167,13 @@ function buildVersionedTravelImageUrl(rawUrl, updatedAt, id) {
 // обязан делать то же самое: иначе preload греет `?w=720&q=72`, а `<img>` просит
 // `?w=800&q=70`, и hero приезжает вторым файлом (ровно та проблема, из-за которой
 // preload был бесполезен до #1116).
-const PROXY_DIMENSION_LADDER = [32, 96, 160, 320, 480, 640, 800, 1280, 1600, 1920];
+// Расхождение этих двух копий ловится тестом
+// `__tests__/utils/imageProxy.ladder.test.ts` («SSG-зеркало лестницы») — он и есть
+// причина, по которой их можно держать раздельно: скрипт исполняется Node'ом без
+// TS-резолва, поэтому импортировать константу напрямую нельзя.
+const PROXY_DIMENSION_LADDER = [
+  32, 96, 160, 320, 480, 640, 720, 800, 960, 1024, 1200, 1280, 1600, 1920, 2500,
+];
 
 function snapProxyWidth(value) {
   const v = Math.round(value);
