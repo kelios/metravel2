@@ -91,11 +91,13 @@ describe('CustomImageRenderer body photos (web)', () => {
     )
 
     const src: string = mockImageCardMedia.mock.calls[0]?.[0]?.src
-    expect(src).toContain('w=800')
+    // #1170: слот 358 CSS × DPR 2 = 716 → ступень 720, которую вернули в лестницу.
+    // Раньше округлялось вверх до 800: лишние пиксели на тот же слот.
+    expect(src).toContain('w=720')
     expect(src).toContain('q=70')
     expect(src).toContain('fit=contain')
-    // 800 — и рамка компонента, и ступень whitelist прокси. Ширины вне whitelist
-    // (1024/2048) прокси отдаёт оригиналом, поэтому их быть не должно.
+    // Ширина обязана быть ступенью контракта прокси; сверка лестницы с контрактом —
+    // `__tests__/utils/imageProxy.ladder.test.ts`.
     expect(src).not.toMatch(/w=(1024|1600|2048)\b/)
     // Высота в URL делала ссылку зависимой от измеренных пропорций → второй запрос.
     expect(src).not.toMatch(/[?&]h=/)

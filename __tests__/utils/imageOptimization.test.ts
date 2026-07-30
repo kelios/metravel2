@@ -315,17 +315,24 @@ describe('utils/imageOptimization', () => {
       expect(onMediaPath({ width: 379 }).searchParams.get('w')).toBe('480')
       expect(onMediaPath({ width: 393 }).searchParams.get('w')).toBe('480')
       expect(onMediaPath({ width: 56 }).searchParams.get('w')).toBe('96')
-      expect(onMediaPath({ width: 720 }).searchParams.get('w')).toBe('800')
+      // #1170: ступень 720 вернули в лестницу, она есть в контракте прокси
+      expect(onMediaPath({ width: 720 }).searchParams.get('w')).toBe('720')
       expect(onMediaPath({ width: 1280 }).searchParams.get('w')).toBe('1280')
     })
 
     // Guard #1113: лестница обязана состоять ТОЛЬКО из ширин, которые прокси реально
-    // ресайзит. Неподдержанную ширину он не снэпит и не отвергает — отдаёт исходный файл
-    // целиком, и вместо превью в 3 КБ прилетают сотни килобайт. Ступени ниже проверены
-    // curl'ом на проде 2026-07-28 (/gallery/, /travel-image/, /address-image/, /avatar/,
-    // /quest-cover/); подтверждённо сломаны 16, 24, 48, 240, 1024, 1440, 2048, 2500.
+    // ресайзит. Набор ниже — `widths` из `GET /api/media/proxy-contract` (version 2),
+    // сверено 2026-07-30.
+    //
+    // #1170: прежний комментарий утверждал, что 1024/2500 и др. «подтверждённо сломаны».
+    // Это было верно до #1112 — тогда прокси неподдержанную ширину молча отдавал
+    // оригиналом. Сейчас он округляет вверх (`bisect_left`) и не апскейлит: замеры
+    // прода 2026-07-30 дают w=47 → 2 582 B (= w=96) и w=240 → 17 738 B (= w=320).
+    // Полная сверка лестницы с контрактом — `__tests__/utils/imageProxy.ladder.test.ts`.
     it('only ever emits widths the backend proxy actually resizes', () => {
-      const PROXY_SUPPORTED_WIDTHS = new Set([32, 96, 160, 320, 480, 640, 800, 1280, 1600, 1920])
+      const PROXY_SUPPORTED_WIDTHS = new Set([
+        32, 96, 160, 320, 480, 640, 720, 800, 960, 1024, 1200, 1280, 1600, 1920, 2500,
+      ])
 
       const requested = [
         1, 8, 15, 16, 20, 24, 31, 32, 40, 47, 48, 49, 56, 64, 88, 96, 100, 132, 159, 160,
@@ -342,9 +349,12 @@ describe('utils/imageOptimization', () => {
       expect(unsupported).toEqual([])
 
       // И лестница не должна округлять ВНИЗ: превью не может быть мельче запрошенного,
-      // иначе картинка мылится. Единственное исключение — потолок whitelist.
+      // иначе картинка мылится. Единственное исключение — потолок whitelist, выше
+      // которого запрос клампится (#1170: потолок поднят с 1920 до 2500 — верхняя
+      // ступень контракта прокси, нужная для print-варианта PDF).
+      const MAX_RUNG = Math.max(...PROXY_SUPPORTED_WIDTHS)
       const downscaled = emitted.filter(
-        (entry) => entry.w != null && entry.w < entry.width && entry.w !== 1920,
+        (entry) => entry.w != null && entry.w < entry.width && entry.w !== MAX_RUNG,
       )
       expect(downscaled).toEqual([])
     })

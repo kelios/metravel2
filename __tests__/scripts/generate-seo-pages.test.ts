@@ -616,23 +616,27 @@ describe('travel hero preload helpers', () => {
     );
 
     expect(preload).toBeTruthy();
-    // #1146: значения снэпятся по лестнице прокси, ровно как на клиенте
-    // (720 → 800, 960 → 1280, q72 → 70, q82 → 80). Совпадение с клиентом
-    // проверяется отдельно в __tests__/scripts/travelHeroPreloadParity.test.ts.
+    // #1146: значения снэпятся по лестнице прокси, ровно как на клиенте.
+    // #1170: ступени 720/960 вернули в лестницу, поэтому 720 → 720 и 960 → 960 —
+    // округления вверх больше нет. Клиентская лестница и это зеркало обновлены одним
+    // коммитом; расхождение ловит __tests__/utils/imageProxy.ladder.test.ts, а
+    // совпадение с клиентом — __tests__/scripts/travelHeroPreloadParity.test.ts.
+    // Качество по-прежнему снэпится к десятку: q72 → 70, q82 → 80.
     expect(preload.mobile.href).toContain('https://metravel.by/gallery/77/gallery/photo.JPG');
-    expect(preload.mobile.href).toContain('w=800');
+    expect(preload.mobile.href).toContain('w=720');
     expect(preload.mobile.href).toContain('q=70');
     expect(preload.mobile.href).toContain('v=991');
     expect(preload.mobile.href).not.toContain('dpr=');
     expect(preload.mobile.srcSet).toContain('w=320');
     expect(preload.mobile.srcSet).toContain('w=640');
-    expect(preload.mobile.srcSet).toContain('w=800');
+    expect(preload.mobile.srcSet).toContain('w=720');
     expect(preload.mobile.srcSet).toContain('q=70');
     expect(preload.mobile.sizes).toBe('100vw');
     expect(preload.desktop.href).toContain('w=1280');
     expect(preload.desktop.href).toContain('q=80');
     expect(preload.desktop.href).not.toContain('dpr=');
-    expect(preload.desktop.srcSet).toContain('w=800');
+    expect(preload.desktop.srcSet).toContain('w=720');
+    expect(preload.desktop.srcSet).toContain('w=960');
     expect(preload.desktop.srcSet).toContain('w=1280');
     expect(preload.desktop.srcSet).toContain('q=80');
     expect(preload.desktop.sizes).toBe('(max-width: 1024px) 92vw, 720px');
@@ -672,7 +676,7 @@ describe('travel hero preload helpers', () => {
     // выбирая кандидата по DPR, показывал бы разную композицию. Поэтому мобильный hero
     // строится через прокси нужной ширины (210 858 B → 95 182 B на реальной обложке).
     expect(preload.mobile.href).not.toContain('w=1280');
-    expect(preload.mobile.href).toContain('w=800');
+    expect(preload.mobile.href).toContain('w=720');
     expect(preload.mobile.href).toContain('fit=contain');
     expect(preload.mobile.srcSet).not.toContain('fit=cover');
   });

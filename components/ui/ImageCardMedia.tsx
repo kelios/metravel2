@@ -471,14 +471,20 @@ function ImageCardMedia({
 
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
-    if (hasDataPlaceholder) return false;
+    // #1174: плейсхолдер из данных заменяет сетевую подложку только там, где фон
+    // не виден в готовом кадре. В `contain` подложка — это и есть постоянная
+    // заливка полей letterbox, а blurhash-слой на web живёт лишь до появления
+    // фото (#1145): после раскрытия поля оставались пустыми. Замер прода
+    // 2026-07-30 `/travels/ourvietnam`: слот 353×453, фото 800×800 — 50 px белой
+    // полосы сверху и снизу, `[data-blur-backdrop]` в слайде 0.
+    if (hasDataPlaceholder && fit !== 'contain') return false;
     if (!blurBackground || !webMainSrc) return false;
     if (allowCriticalWebBlur) return true;
     if (isIOSWebKitWeb) return true;
     // Avoid promoting the oversized blur backdrop to LCP on eager/critical images
     // unless the caller explicitly opts in for layout fidelity.
     return !(loading === 'eager' || priority === 'high');
-  }, [allowCriticalWebBlur, blurBackground, hasDataPlaceholder, isIOSWebKitWeb, loading, priority, webMainSrc]);
+  }, [allowCriticalWebBlur, blurBackground, fit, hasDataPlaceholder, isIOSWebKitWeb, loading, priority, webMainSrc]);
   const webBackdropContentBox = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (fit !== 'contain') return null;

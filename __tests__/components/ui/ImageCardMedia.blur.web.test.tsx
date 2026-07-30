@@ -75,7 +75,7 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainLayers[0].props.style?.opacity).toBe(0)
   })
 
-  it('uses a local data placeholder without rendering backdrop/LQIP network URLs', () => {
+  it('uses a local data placeholder without rendering a separate LQIP network URL', () => {
     let tree: any
     renderer.act(() => {
       tree = renderer.create(
@@ -95,11 +95,6 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(tree!.root.findByProps({ testID: 'media-data-placeholder' })).toBeTruthy()
     expect(
       tree!.root.findAll(
-        (node: any) => node?.props?.['data-blur-backdrop'] === 'true',
-      ),
-    ).toHaveLength(0)
-    expect(
-      tree!.root.findAll(
         (node: any) => String(node?.props?.src || '').includes('photo-lqip.jpg'),
       ),
     ).toHaveLength(0)
@@ -108,6 +103,83 @@ describe('ImageCardMedia blur background (web)', () => {
         (node: any) => node?.props?.source?.blurhash === 'LEHL6nWB2yk8pyo0adR*.7kCMdnj',
       ).length,
     ).toBeGreaterThan(0)
+  })
+
+  // #1174: в `cover` готовый кадр закрывает плитку целиком, подложка под ним не
+  // видна — там плейсхолдер из данных остаётся единственным слоем (контракт #1127).
+  it('keeps the data placeholder as the only layer for cover media', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/photo-cover.jpg"
+          placeholderBlurhash="LEHL6nWB2yk8pyo0adR*.7kCMdnj"
+          testID="media"
+          width={320}
+          height={200}
+          blurBackground
+          fit="cover"
+        />
+      )
+    })
+
+    expect(tree!.root.findByProps({ testID: 'media-data-placeholder' })).toBeTruthy()
+    expect(
+      tree!.root.findAll(
+        (node: any) => node?.props?.['data-blur-backdrop'] === 'true',
+      ),
+    ).toHaveLength(0)
+  })
+
+  // #1174: blurhash-слой на web снимается сразу после раскрытия фото (#1145), поэтому
+  // в `contain` он не может быть фоном полей letterbox. Замер прода 2026-07-30
+  // `/travels/ourvietnam`: слот 353×453, фото 800×800, 50 px белой полосы сверху и
+  // снизу, `[data-blur-backdrop]` в слайде — 0. Подложка обязана пережить раскрытие.
+  it('keeps a contain backdrop under the photo even when a blurhash placeholder exists', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/gallery/38/slide.webp?v=100&w=800&q=70&fit=contain"
+          placeholderBlurhash="LSF=~=I_-o-;5^xuRPR:yGs,M{WZ"
+          testID="media"
+          height={453}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="high"
+          allowCriticalWebBlur
+          preserveOptimizedWebSrc
+        />
+      )
+    })
+
+    const findBackdrops = () =>
+      tree!.root.findAll((node: any) => node?.props?.['data-blur-backdrop'] === 'true')
+    const findMain = () =>
+      tree!.root.findAll((node: any) => {
+        if (node?.type !== 'img') return false
+        if (node?.props?.['aria-hidden'] === true) return false
+        return String(node?.props?.style?.objectFit || '') === 'contain'
+      })[0]
+
+    expect(findBackdrops().length).toBeGreaterThan(0)
+
+    renderer.act(() => {
+      findMain().props.onLoad()
+    })
+
+    // Фото показано — blurhash-слой снят по #1145, а подложка осталась и видима.
+    expect(
+      tree!.root.findAll((node: any) => node?.props?.testID === 'media-data-placeholder'),
+    ).toHaveLength(0)
+    const backdropsAfterLoad = findBackdrops()
+    expect(backdropsAfterLoad.length).toBeGreaterThan(0)
+    expect(backdropsAfterLoad[0].props.style?.opacity).toBeGreaterThan(0)
+    // Та же картинка, что и у резкого слоя: подложка не заказывает второй файл (#1111).
+    expect(String(backdropsAfterLoad[0].props.style?.backgroundImage || '')).toContain(
+      findMain().props.src,
+    )
   })
 
   // Стили <img> внутри blurhash-слоя задаёт expo-image, поэтому обойти внешнее
@@ -213,7 +285,8 @@ describe('ImageCardMedia blur background (web)', () => {
 
     expect(mainImage.props.loading).toBe('eager')
     expect(mainImage.props.style?.opacity).toBe(0)
-    expect(String(mainImage.props.srcSet)).toContain('1280w')
+    // #1170: верхний кандидат теперь 1200w — ступень 1200 вернули в лестницу
+    expect(String(mainImage.props.srcSet)).toContain('1200w')
 
     renderer.act(() => mainImage.props.onLoad())
     const loadedMainImage = tree!.root.findAll((node: any) => {
@@ -575,10 +648,12 @@ describe('ImageCardMedia blur background (web)', () => {
 
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.sizes).toBe('(min-width: 768px) 50vw, 100vw')
-    // #1113: верхний кандидат снэпится к реальной ступени прокси (1200 → 1280) и
-    // капится WEB_SRCSET_MAX_WIDTH — обещать 1200w нельзя, такого варианта нет.
-    expect(String(mainImage.props.srcSet)).toContain('1280w')
-    expect(String(mainImage.props.srcSet)).not.toContain('1200w')
+    // #1170: ступень 1200 есть в контракте прокси и вернулась в клиентскую лестницу,
+    // поэтому верхний кандидат — ровно 1200w. Прежнее ожидание (1280w) фиксировало
+    // ограничение урезанной лестницы: 1200 округлялось вверх, и браузер тянул более
+    // тяжёлый вариант на тот же слот.
+    expect(String(mainImage.props.srcSet)).toContain('1200w')
+    expect(String(mainImage.props.srcSet)).not.toContain('1280w')
   })
 
   it('keeps iPhone Safari shared-blur cards hidden until the main image finishes loading', () => {
@@ -836,10 +911,11 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.srcSet).toBeTruthy()
     expect(String(mainImage.props.srcSet)).toContain('640w')
-    // #1113: 960 снэпится к 1280 — ступени 960 нет в клиентской лестнице,
-    // а дескриптор обязан совпадать с фактически отдаваемым вариантом.
-    expect(String(mainImage.props.srcSet)).toContain('1280w')
-    expect(String(mainImage.props.srcSet)).not.toContain('960w')
+    // #1170: ступень 960 вернули в лестницу, дескриптор совпадает с фактически
+    // отдаваемым вариантом без округления вверх. Замер прода 2026-07-30 на обложке
+    // квеста: w=960 → 10 430 B против w=1280 → 45 978 B (мастер целиком).
+    expect(String(mainImage.props.srcSet)).toContain('960w')
+    expect(String(mainImage.props.srcSet)).not.toContain('1280w')
   })
 
   it('keeps one effective source for shared-blur quest covers when web optimization is disabled', () => {

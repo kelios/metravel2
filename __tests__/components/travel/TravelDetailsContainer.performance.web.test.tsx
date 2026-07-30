@@ -168,10 +168,17 @@ describe('TravelDetailsContainer performance (web)', () => {
 
     const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
     expect(lcpImg).toBeTruthy()
-    expect(lcpImg?.getAttribute('src')).toContain('w=800')
+    // #1170: слот 390 CSS на высоком DPR даёт запрос 720 — ступень 720 вернули в
+    // лестницу, и она больше не округляется вверх до 800. SSG-зеркало лестницы
+    // (`scripts/generate-seo-pages.js`) обновлено тем же коммитом, поэтому preload и
+    // `<img>` по-прежнему просят один URL (инвариант #1146).
+    expect(lcpImg?.getAttribute('src')).toContain('w=720')
     expect(lcpImg?.getAttribute('src')).not.toContain('dpr=')
     expect(lcpImg?.getAttribute('srcset')).toContain('w=640')
-    expect(lcpImg?.getAttribute('srcset')).toContain('w=800')
+    // #1170: верхний кандидат мобильного hero — 720. SSG объявляет мобильные ширины
+    // ровно [320,480,640,720] (`scripts/generate-seo-pages.js`), и теперь они
+    // отображаются один-в-один вместо прежнего округления 720 → 800.
+    expect(lcpImg?.getAttribute('srcset')).toContain('w=720')
     expect(lcpImg?.getAttribute('srcset')).not.toContain('dpr=')
   })
 
