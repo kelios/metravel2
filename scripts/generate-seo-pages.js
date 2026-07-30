@@ -162,6 +162,27 @@ function buildVersionedTravelImageUrl(rawUrl, updatedAt, id) {
   }
 }
 
+// Зеркало DIMENSION_LADDER / snapQuality из utils/imageProxy.ts. Клиент округляет
+// запрошенную ширину вверх до ступени прокси, а качество — до десятка, поэтому SSG
+// обязан делать то же самое: иначе preload греет `?w=720&q=72`, а `<img>` просит
+// `?w=800&q=70`, и hero приезжает вторым файлом (ровно та проблема, из-за которой
+// preload был бесполезен до #1116).
+const PROXY_DIMENSION_LADDER = [32, 96, 160, 320, 480, 640, 800, 1280, 1600, 1920];
+
+function snapProxyWidth(value) {
+  const v = Math.round(value);
+  if (!Number.isFinite(v) || v <= 0) return v;
+  for (const rung of PROXY_DIMENSION_LADDER) {
+    if (v <= rung) return rung;
+  }
+  return PROXY_DIMENSION_LADDER[PROXY_DIMENSION_LADDER.length - 1];
+}
+
+function snapProxyQuality(value) {
+  const q = Math.min(100, Math.max(1, Math.round(value)));
+  return Math.min(100, Math.max(10, Math.round(q / 10) * 10));
+}
+
 function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
   const versioned = buildVersionedTravelImageUrl(rawUrl, updatedAt, id);
   if (!versioned) return '';
@@ -180,8 +201,8 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } 
       }
     });
 
-    if (width) parsed.searchParams.set('w', String(Math.round(width)));
-    if (quality) parsed.searchParams.set('q', String(Math.round(quality)));
+    if (width) parsed.searchParams.set('w', String(snapProxyWidth(width)));
+    if (quality) parsed.searchParams.set('q', String(snapProxyQuality(quality)));
     parsed.searchParams.set('fit', 'contain');
 
     return parsed.toString();
@@ -193,6 +214,10 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } 
 function buildTravelHeroSrcSet(rawUrl, widths, { quality, updatedAt, id } = {}) {
   if (!rawUrl || !Array.isArray(widths) || widths.length === 0) return '';
 
+  // Несколько запрошенных ширин могут схлопнуться в одну ступень прокси (720 → 800).
+  // Дескриптор берём по фактической ширине файла и выдаём каждый вариант один раз —
+  // так же, как generateSrcSet на клиенте.
+  const seen = new Set();
   return widths
     .map((width) => {
       const href = buildOptimizedTravelImageUrl(rawUrl, {
@@ -201,7 +226,12 @@ function buildTravelHeroSrcSet(rawUrl, widths, { quality, updatedAt, id } = {}) 
         updatedAt,
         id,
       });
-      return href ? `${href} ${width}w` : '';
+      if (!href) return '';
+      const snapped = snapProxyWidth(width);
+      const key = `${href}|${snapped}`;
+      if (seen.has(key)) return '';
+      seen.add(key);
+      return `${href} ${snapped}w`;
     })
     .filter(Boolean)
     .join(', ');
@@ -337,6 +367,10 @@ function pickTravelSeoImage(travel, detail) {
 // Здесь повторяется отбор варианта из `utils/travelMediaVariants.ts`, чтобы SSG и
 // клиент сходились на одном URL.
 const VARIANT_NAME_WIDTH = /_(\d{2,4})$/;
+// Режим кадрирования в имени варианта не закодирован, но есть в самом URL.
+const VARIANT_FIT_PARAM = /[?&]fit=([a-z]+)/i;
+// Зеркало MAX_VARIANT_OVERSIZE_RATIO из utils/travelMediaVariants.ts.
+const MAX_VARIANT_OVERSIZE_RATIO = 1.25;
 
 function resolveManifestVariants(entry) {
   const variants = entry?.variants;
@@ -349,7 +383,8 @@ function resolveManifestVariants(entry) {
     if (!Number.isFinite(width) || width <= 0) continue;
     const url = toAbsoluteUrl(String(rawUrl || '').trim());
     if (!url) continue;
-    resolved.push({ width, url });
+    const fitMatch = VARIANT_FIT_PARAM.exec(url);
+    resolved.push({ width, url, fit: fitMatch ? fitMatch[1].toLowerCase() : null });
   }
   return resolved.sort((a, b) => a.width - b.width);
 }
@@ -360,12 +395,26 @@ function pickManifestVariantForWidth(variants, targetWidth) {
   return variants[variants.length - 1];
 }
 
-/** { href, srcSet } из манифеста или null, если манифеста нет. */
-function buildManifestResponsive(entry, widths, maxWidth) {
-  const variants = resolveManifestVariants(entry);
+/**
+ * { href, srcSet } из манифеста или null, если манифест не покрывает слот.
+ *
+ * `fit` обязателен для hero: манифест обложки содержит `thumb_320`/`card_640` с
+ * `fit=cover` и `hero_1280` с `fit=contain`. Смешивать их в одном `srcset` нельзя —
+ * браузер выбирает кандидата по DPR, и на разных телефонах получался разный кадр
+ * (обрезанный против вписанного). Плюс отсутствие contain-варианта уже 1280 схлопывало
+ * мобильный слот 720 в 1280: 210 858 B вместо 104 946 B (замер прода 2026-07-30).
+ * `null` возвращается сознательно — вызывающий код соберёт точные URL через прокси.
+ */
+function buildManifestResponsive(entry, widths, maxWidth, fit) {
+  const allVariants = resolveManifestVariants(entry);
+  if (!allVariants.length) return null;
+  const variants = fit
+    ? allVariants.filter((v) => v.fit === null || v.fit === fit)
+    : allVariants;
   if (!variants.length) return null;
   const target = pickManifestVariantForWidth(variants, maxWidth);
   if (!target) return null;
+  if (fit && target.width > maxWidth * MAX_VARIANT_OVERSIZE_RATIO) return null;
   const candidates = new Map();
   for (const w of widths) {
     const v = pickManifestVariantForWidth(variants, w);
@@ -428,8 +477,9 @@ function buildTravelHeroPreloadData(travel, detail) {
   // брать те же варианты — иначе descriptors расходятся и preload греет чужой файл.
   // Клиентские ширины/`maxWidth` совпадают со значениями ниже, поэтому отбор варианта
   // даёт тот же URL, что вернёт buildResponsiveImagePropsFromMedia.
-  const manifestMobile = buildManifestResponsive(source.media, [320, 480, 640, 720], 720);
-  const manifestDesktop = buildManifestResponsive(source.media, [720, 960, 1280], 1280);
+  // `fit: 'contain'` — тот же режим, что просит TravelDetailsOptimizedLCPHero.
+  const manifestMobile = buildManifestResponsive(source.media, [320, 480, 640, 720], 720, 'contain');
+  const manifestDesktop = buildManifestResponsive(source.media, [720, 960, 1280], 1280, 'contain');
 
   const mobileHref =
     manifestMobile?.href ||
@@ -450,7 +500,26 @@ function buildTravelHeroPreloadData(travel, detail) {
 
   if (!mobileHref && !desktopHref) return null;
 
+  // #1143: размытая подложка скелета раньше рисовалась ТЕМ ЖЕ hero-вариантом.
+  // Слой лежит под contain-фото с `filter: blur(18px)` и `background-size: cover`,
+  // то есть он крупнее самого фото — и именно он становился LCP-элементом, а его
+  // 206 КБ давали 81 % времени LCP (замер прода 2026-07-30: LCP 4 836 мс).
+  // Берём LQIP из манифеста (`?w=32&q=35&fit=cover` = 354 B) плюс dominant_color
+  // как мгновенную заливку. Крошечная картинка под blur(18px) визуально не
+  // отличается, но перестаёт быть узким местом первого экрана.
+  const blurHref =
+    toAbsoluteUrl(String(source.media?.lqip_url || '').trim()) ||
+    buildOptimizedTravelImageUrl(source.url, {
+      width: 96,
+      quality: 30,
+      updatedAt: source.updatedAt,
+      id: source.id,
+    });
+  const rawDominant = String(source.media?.dominant_color || '').trim();
+  const blurColor = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(rawDominant) ? rawDominant : '';
+
   return {
+    blur: blurHref || blurColor ? { href: blurHref || '', color: blurColor } : null,
     mobile: mobileHref
       ? {
           href: mobileHref,

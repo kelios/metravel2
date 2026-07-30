@@ -280,6 +280,55 @@ describe('ImageCardMedia blur background (web)', () => {
     renderer.act(() => tree.unmount())
   })
 
+  // Родитель имеет право заново закрыть уже показанное медиа (смена decode-режима,
+  // recycle). `<img>` при этом не перезапрашивает неизменный `src` и не выдаёт
+  // второе событие `load`, поэтому единственный, кто может подтвердить готовность
+  // повторно, — сам слой: `complete && naturalWidth > 0` это факт из DOM.
+  it('re-reports load when the parent resets loaded for an already complete image', async () => {
+    const src = 'https://metravel.by/gallery/38/slide-recover.webp?w=640'
+    const imageNode = {
+      complete: true,
+      naturalWidth: 640,
+      currentSrc: src,
+      decode: jest.fn(() => Promise.resolve()),
+    }
+    const onLoad = jest.fn()
+    const props = {
+      src,
+      alt: 'Slide',
+      width: 390,
+      height: 560,
+      fit: 'contain' as const,
+      borderRadius: 12,
+      loading: 'eager' as const,
+      priority: 'high' as const,
+      hasBlurBehind: true,
+      onLoad,
+    }
+    let tree: any
+
+    await renderer.act(async () => {
+      tree = renderer.create(<WebMainImage {...props} loaded={false} />, {
+        createNodeMock: (element: any) => (element.type === 'img' ? imageNode : null),
+      })
+    })
+    expect(onLoad).toHaveBeenCalledTimes(1)
+
+    // Родитель принял загрузку...
+    await renderer.act(async () => {
+      tree.update(<WebMainImage {...props} loaded />)
+    })
+    expect(onLoad).toHaveBeenCalledTimes(1)
+
+    // ...а затем снова закрыл слой (слайд стал активным и включил decode-гейт).
+    await renderer.act(async () => {
+      tree.update(<WebMainImage {...props} loaded={false} />)
+    })
+    expect(onLoad).toHaveBeenCalledTimes(2)
+
+    renderer.act(() => tree.unmount())
+  })
+
   it('starts iOS lazy-image recovery only when the image approaches the viewport', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
@@ -1250,6 +1299,66 @@ describe('ImageCardMedia blur background (web)', () => {
       return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
     })[0]
     expect(sharp.props.style?.opacity).toBe(0)
+  })
+
+  // Регрессия галереи на iPhone: сосед грузится ДО того, как становится активным,
+  // и только в активном состоянии `Slide` включает decode-гейт (`revealOnLoadOnly`
+  // + `allowCriticalWebBlur`). Сброс «загружено» в этот момент гасил уже показанное
+  // фото, а `<img>` не повторяет событие `load` для неизменного `src` — слайд
+  // оставался блюром навсегда: первый кадр видно, все следующие — только подложка.
+  it('keeps an already decoded image visible when the decode gate turns on later', () => {
+    const src = 'https://metravel.by/gallery/544/gallery/slide-gate.JPG?v=91&w=390&q=52&fit=contain'
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src={src}
+          width={390}
+          height={560}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="normal"
+          preserveOptimizedWebSrc
+        />
+      )
+    })
+
+    const findMain = () =>
+      tree!.root.findAll((node: any) => {
+        if (node?.type !== 'img') return false
+        if (node?.props?.['aria-hidden'] === true) return false
+        return String(node?.props?.style?.objectFit || '') === 'contain'
+      })[0]
+
+    renderer.act(() => {
+      findMain().props.onLoad()
+    })
+    expect(findMain().props.style?.opacity).toBe(1)
+
+    // Свайп: слайд стал активным, Slide включает iOS decode-гейт на том же URL.
+    renderer.act(() => {
+      tree!.update(
+        <ImageCardMedia
+          src={src}
+          width={390}
+          height={560}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="high"
+          preserveOptimizedWebSrc
+          allowCriticalWebBlur
+          revealOnLoadOnly
+        />
+      )
+    })
+
+    expect(findMain().props.style?.opacity).toBe(1)
+
+    renderer.act(() => {
+      tree!.unmount()
+    })
   })
 
   it('does not paint a recycled card with the previous image loaded state', () => {

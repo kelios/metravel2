@@ -224,6 +224,16 @@ curl с staff token в command arguments.
 любого ожидания/выполнения validation используется `testing`. Приёмочная очередь
 (`board-reviewer` / `/sprint-review`) = `review` + `testing`.
 
+**Гейт `review → testing` (обязателен, принудительный).** Перевод в `testing` выполняет только
+агент `code-review-gate` (`/review-gate <id>`) после код-ревью diff'а: дубли существующих
+компонентов/хуков, неоптимальный код, противоречия правилам проекта и собственным контрактам,
+регрессии. Любой P1/P2 → задача возвращается в `in_progress` с findings в `description`; чистый
+diff → вердикт `pass` и переход в `testing`. Гейт enforced хуком `.claude/hooks/review-gate.mjs`
+(PreToolUse на `metravel_task_update`): без свежего вердикта `pass` MCP-вызов со `status=testing`
+отклоняется, а вердикт становится невалидным, если код доправили после ревью. Проверить состояние —
+`node .claude/hooks/review-gate.mjs show --task <id>`; аварийный обход `REVIEW_GATE_BYPASS=1` — только
+по явной просьбе пользователя и с пометкой в `description`.
+
 ### Правило: `needs_human` = только человеческие действия, отдельной задачей (обязательно)
 
 `needs_human=true` — маркер задачи, состоящей **исключительно из действий человека**: того,

@@ -43,7 +43,16 @@ export function resolveMediaVariantUrl(url: string | null | undefined): string |
   }
 }
 
-type ResolvedVariant = { width: number; url: string }
+type ResolvedVariant = { width: number; url: string; fit: string | null }
+
+// В именах вариантов режим кадрирования не закодирован (`thumb_320`, `hero_1280`),
+// зато он есть в самом URL: `?w=320&q=72&fit=cover` против `?w=1280&q=78&fit=contain`.
+const VARIANT_FIT_PARAM = /[?&]fit=([a-z]+)/i
+
+function readVariantFit(url: string): string | null {
+  const match = VARIANT_FIT_PARAM.exec(url)
+  return match ? match[1].toLowerCase() : null
+}
 
 function resolveVariants(entry: TravelMediaImage | null | undefined): ResolvedVariant[] {
   const variants = entry?.variants
@@ -57,10 +66,17 @@ function resolveVariants(entry: TravelMediaImage | null | undefined): ResolvedVa
     if (!Number.isFinite(width) || width <= 0) continue
     const url = resolveMediaVariantUrl(rawUrl)
     if (!url) continue
-    resolved.push({ width, url })
+    resolved.push({ width, url, fit: readVariantFit(url) })
   }
   return resolved.sort((a, b) => a.width - b.width)
 }
+
+// Вариант шире запрошенного максимума больше чем на четверть — это уже не
+// «ближайший подходящий», а лишние байты. Замер прода 2026-07-30 на обложке
+// 1080×1080: `w=720&q=72&fit=contain` = 104 946 B против `w=1280&q=78&fit=contain`
+// = 210 858 B. Манифест этой обложки не содержит contain-варианта уже 1280, поэтому
+// слот 720 схлопывался в 1280 и мобильный hero весил вдвое больше нужного.
+const MAX_VARIANT_OVERSIZE_RATIO = 1.25
 
 function pickVariantForWidth(
   variants: ResolvedVariant[],
@@ -118,6 +134,13 @@ export interface MediaResponsiveOptions {
   widths?: number[]
   maxWidth?: number
   sizes?: string
+  /**
+   * Режим кадрирования, который нужен вызывающему слоту. Если задан — варианты
+   * манифеста с другим `fit` в один `srcset` не попадают: `cover` обрезает кадр,
+   * `contain` вписывает его, и браузер, выбирая кандидата по DPR, показывал бы
+   * на разных телефонах разную композицию одного фото.
+   */
+  fit?: 'cover' | 'contain' | 'fill'
 }
 
 // Собирает { src, srcSet, sizes } из backend-вариантов; null = манифест непригоден,
@@ -126,11 +149,21 @@ export function buildResponsiveImagePropsFromMedia(
   entry: TravelMediaImage | null | undefined,
   options: MediaResponsiveOptions = {},
 ): { src: string; srcSet?: string; sizes?: string } | null {
-  const variants = resolveVariants(entry)
+  const allVariants = resolveVariants(entry)
+  if (!allVariants.length) return null
+
+  // Вариант без `fit` в URL считаем нейтральным — он подходит любому слоту.
+  const variants = options.fit
+    ? allVariants.filter((variant) => variant.fit === null || variant.fit === options.fit)
+    : allVariants
   if (!variants.length) return null
 
-  const target = pickVariantForWidth(variants, options.maxWidth ?? 1920)
+  const maxWidth = options.maxWidth ?? 1920
+  const target = pickVariantForWidth(variants, maxWidth)
   if (!target) return null
+  // Манифест не покрывает этот слот подходящей шириной — пусть вызывающий код
+  // соберёт точные URL через прокси, вместо того чтобы тянуть oversize-вариант.
+  if (options.fit && target.width > maxWidth * MAX_VARIANT_OVERSIZE_RATIO) return null
 
   if (Platform.OS !== 'web') return { src: target.url }
 
@@ -164,6 +197,7 @@ export function buildResponsiveImagePropsPreferringMedia(
     widths: options.widths,
     maxWidth: options.maxWidth,
     sizes: options.sizes,
+    fit: options.fit,
   })
   if (fromMedia) return fromMedia
   return buildResponsiveImageProps(baseUrl, options)

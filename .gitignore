@@ -110,6 +110,9 @@ nginx/ssl/
 
 # Claude Code AI session artifacts
 .claude/settings.local.json
+# Общий project-конфиг с хуками (код-ревью гейт) должен быть в репозитории,
+# несмотря на глобальное правило `settings.json` выше.
+!.claude/settings.json
 .claude/worktrees/
 .claude/sessions/
 .claude/tmp/

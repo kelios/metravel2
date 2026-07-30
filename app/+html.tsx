@@ -500,11 +500,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Icon fonts (Feather, etc.) are loaded by expo-font at runtime.
           Avoid hard-coding Metro's dev asset URLs here: they are not stable and can 404. */}
       
-      {/* Icons */}
+      {/* Icons.
+          #1151: PWA-иконки 192/512 здесь не объявляем. Как `rel="icon"` браузер
+          считал их кандидатами на вкладку и тянул `logo_yellow_192x192.png` (23 КБ)
+          с приоритетом High прямо в окне LCP (замер прода 2026-07-30: старт 2 250 мс,
+          вместе с favicon 83 КБ иконок). Для установки приложения те же иконки уже
+          объявлены в `manifest.json`, и оттуда браузер берёт их только при установке. */}
       <link rel="icon" href="/favicon.ico" sizes="any" type="image/x-icon" />
       <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
-      <link rel="icon" href="/assets/icons/logo_yellow_512x512.png" sizes="512x512" type="image/png" />
-      <link rel="icon" href="/assets/icons/logo_yellow_192x192.png" sizes="192x192" type="image/png" />
       <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png" />
       <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png" />
       <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />

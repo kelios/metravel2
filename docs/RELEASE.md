@@ -188,6 +188,15 @@ npm run lighthouse:produrl:travel:mobile -- --url https://metravel.by/travels/<s
 npm run guard:lighthouse:mobile:fail   # reads ./lighthouse-report.produrl.mobile.json
 ```
 
+- The report MUST come from a live `https://metravel.by/...` URL. A local production
+  build, a preview pointed at the production API or an `e2e/web-vitals-*` run against
+  a local server is **not** post-deploy evidence: #556 was closed on local numbers
+  (`LCP ~880 ms`) while production served 10–11 s on the same scenario (#1147).
+- `scripts/lighthouse-produrl.js` now defaults to `--throttling-method=devtools`,
+  the mode the budget requires. `--throttlingMethod simulate` stays available as a
+  tripwire for the late-LCP-candidate regression (a post-hydration element taking
+  over LCP), but its numbers do not satisfy the budget check.
+
 - Produce the report with the throttling method required by
   `config/lighthouse-budget-mobile.json`; the config, not historical measurements in
   documentation, owns metric thresholds and method.

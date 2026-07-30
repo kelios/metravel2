@@ -21,9 +21,12 @@ function getNumberEnv(name: string, fallback: number): number {
 }
 
 const CLS_MAX = getNumberEnv('E2E_CLS_MAX', 0.02);
-const LCP_MAX_MS = process.env.CI
-  ? getNumberEnv('E2E_LCP_MAX_MS', 3500)
-  : getNumberEnv('E2E_LCP_MAX_MS', 45_000);
+// #1147: раньше вне CI порог был 45 000 мс — то есть локальный прогон (а это
+// единственный способ, которым гейт реально запускается в проекте) не мог
+// провалиться ни при каком регрессе. Прод при этом держал LCP 10–11 с.
+// Единый порог берём из бюджета `config/lighthouse-budget-mobile.json`
+// (maxLcpMs = 4000); ослабить его можно только явной переменной окружения.
+const LCP_MAX_MS = getNumberEnv('E2E_LCP_MAX_MS', 4000);
 const INP_MAX_MS = process.env.CI
   ? getNumberEnv('E2E_INP_MAX_MS', 200)
   : getNumberEnv('E2E_INP_MAX_MS', 500);

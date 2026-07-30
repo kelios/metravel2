@@ -156,6 +156,32 @@ function rewriteLocalImageUrl(value: string, options?: { preferConfiguredFirstPa
   return value
 }
 
+/**
+ * #1150: адрес картинки указывает на хост, недостижимый из интернета.
+ *
+ * В теле статьи `/travels/ourvietnam` осталось четыре ссылки на внутренний dev-хост
+ * `http://travel.vm:8012/uploads/...` (наследие переноса контента). Resize-прокси на
+ * такой адрес отвечает 404, а фолбэк на исходный URL тоже недостижим — читатель видит
+ * пустую рамку навсегда. Оригиналы в S3 не сохранились (проверено 2026-07-30: 404).
+ *
+ * Такие ссылки лучше не рендерить вовсе: пустая рамка хуже отсутствия картинки, и
+ * каждая из них — это ещё и лишний запрос к стороннему прокси.
+ *
+ * `isPrivateOrLocalHost` намеренно не трогаем: он используется для локальной разработки,
+ * где `192.168.*` и `localhost` — легальные адреса. Здесь проверяется только явно
+ * непубличный TLD-less хост из production-контента.
+ */
+const UNREACHABLE_IMAGE_HOSTS = /^(?:travel\.vm|[^.]+\.vm)$/i
+
+function isUnreachableRichImageHost(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return UNREACHABLE_IMAGE_HOSTS.test(parsed.hostname.toLowerCase())
+  } catch {
+    return false
+  }
+}
+
 function normalizeRichImageSrc(value?: string, options?: { preferConfiguredFirstPartyOrigin?: boolean }) {
   if (!value) return undefined
   const preferConfiguredFirstPartyOrigin = options?.preferConfiguredFirstPartyOrigin !== false
@@ -179,6 +205,7 @@ function normalizeRichImageSrc(value?: string, options?: { preferConfiguredFirst
 
   const normalized = normalizeUrl(trimmed)
   if (!normalized) return undefined
+  if (isUnreachableRichImageHost(normalized)) return undefined
   try {
     const normalizedSource = rewriteLocalImageUrl(normalized, { preferConfiguredFirstPartyOrigin })
     const rewritten = unwrapWeservImageUrl(normalizedSource)

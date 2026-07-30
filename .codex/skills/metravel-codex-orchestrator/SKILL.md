@@ -72,7 +72,11 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-prompt-maintainer` for prompt specs, asset prompt instances, `agents/openai.yaml`, stale model-specific wording, and prompt reproducibility audits.
 - Use `$metravel-backend-diagnostician` for read-only backend/API diagnosis and backend board follow-up.
 - Use `$metravel-sprint-reviewer` for task-board acceptance and Done-gate verification.
-- Use `$metravel-code-reviewer` before handoff when review findings, residual risk, or rule compliance matter.
+- Use `$metravel-code-reviewer` after every code-changing task and before handoff.
+  It must review the complete task diff, fix confirmed in-scope findings, then
+  re-review and revalidate. Prefer the dedicated `review-auditor` agent for an
+  independent pass; fall back to the same skill in the current agent when
+  delegation is unavailable. Use read-only mode only when explicitly requested.
 - Use `$metravel-security-reviewer` for XSS, sanitizer, URL, secret/token, WebView/deep-link, or dependency security review.
 - Use `$metravel-google-play-operator` only for explicit Android store build/submit/track work; use `$metravel-play-campaign-tester` only for the configured closed-testing reciprocity campaign.
 - Use `$metravel-quality-fixer` when the task is explicitly to run/fix the full quality gate.
@@ -107,6 +111,11 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - Before any board mutation, require the registry+board history verdict. Do not
   let roles create competing tasks for an open canonical problem; append a
   Recurrence Log when a previously accepted invariant fails again.
+- After any code changes, pass the original task, task-owned paths, complete
+  resulting diff, and validation evidence to a dedicated `review-auditor` using
+  `$metravel-code-reviewer` when available. Require the review-and-fix loop to
+  finish before handoff; the reviewer re-reviews its own fixes without spawning
+  another reviewer.
 - Fix real issues found in the touched scope before handoff.
 - Keep temporary screenshots, logs, traces, and JSON output only in ignored folders such as `.codex-temp/`, `.codex-debug/`, `test-results/`, or `playwright-report/`.
 - Never print secrets from `.env*`, `.env.e2e`, EAS, SSH, Google Play, or server configs.
@@ -133,4 +142,6 @@ Before final response, verify:
   mobile-web/Android evidence, or an exact active-platform blocker; localization
   impact and affected locales were verified. No iOS evidence was required.
 - Any known real issue in touched scope is fixed or documented as blocked.
+- Every code-changing task completed the `$metravel-code-reviewer` review-and-fix
+  loop over the full resulting diff.
 - Final answer lists changed files, validation, and residual risks without dumping secrets or noisy logs.

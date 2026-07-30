@@ -206,6 +206,19 @@ npm run lighthouse:travel:desktop
 ### Code quality and simplicity (mandatory)
 
 - Do not overcomplicate solutions. Prefer the simplest clear implementation that solves the task.
+- Every code-changing task must finish with `$metravel-code-reviewer` in
+  review-and-fix mode over the complete task-owned diff. The reviewer fixes
+  confirmed correctness, duplication, unnecessary-complexity, reuse,
+  efficiency, and contract problems, then re-reviews the full resulting diff
+  and reruns relevant validation. A findings-only pass is insufficient unless
+  the user explicitly requested a read-only review.
+- Prefer a dedicated `review-auditor` agent for independence; if agent
+  delegation is unavailable, apply the same skill in the current agent. The
+  reviewer re-reviews its own fixes and must not recursively launch another
+  reviewer.
+- Reviewer fixes stay inside the authorized task scope and preserve unrelated
+  dirty worktree changes. Do not use this gate for taste-driven rewrites or as
+  authority for an unrelated redesign, backend mutation, or broad migration.
 - Write code to be easy to read and maintain:
   - clear naming
   - small focused functions/components

@@ -57,7 +57,12 @@ iOS/iPadOS-приложения пока нет; iOS не входит в QA/Don
 - `$metravel-performance-analyst`: используй для Lighthouse, bundle/perf budget analysis, baseline comparison и performance validation только по production build или реальному URL.
 - `$metravel-growth-analyst`: используй для анализа GA4/GSC/Yandex/affiliate-цифр, SEO/organic роста, пользовательского поведения, drop-off, регистрации, auth и создания маршрутов/статей.
 - `$metravel-seo-index-operator`: используй для ежедневной SEO/index рутины, GSC digest, URL Inspection/index status, IndexNow backup, SEO-аудита статей и списка URL для ручной индексации.
-- `$metravel-code-reviewer`: используй для focused review diff'а, поиска рисков, rule violations, validation gaps и остаточных проблем перед handoff или approve.
+- `$metravel-code-reviewer`: обязательно используй после любых изменений кода
+  перед handoff. Он review'ит полный task diff, исправляет подтверждённые баги,
+  избыточность, дублирование, плохой reuse, неоптимальную логику и нарушения
+  правил, затем повторяет review и validation. По возможности запускай его как
+  отдельного `review-auditor` agent; fallback — тот же skill в текущем агенте.
+  Read-only — только по явному запросу.
 - `$metravel-security-reviewer`: используй для frontend security review по XSS/sanitization, URLs/redirects, secrets/tokens, WebView/deep links и production dependencies; review остаётся read-only без явного запроса на fix.
 - `$metravel-devops-agent`: используй для подготовки, запуска и проверки deploy на `dev`, `preprod` или `prod`, включая preflight, secret hygiene, server-path safety, approved deploy-command selection, rollback/recovery и post-deploy validation.
 - `$metravel-android-portable-builder`: используй для build-only Android APK/AAB
@@ -113,7 +118,14 @@ iOS/iPadOS-приложения пока нет; iOS не входит в QA/Don
 | SEO/index operations | `$metravel-seo-index-operator` | Добавь `$metravel-growth-analyst` для месячной стратегии; `$metravel-article-editor-agent` или `$metravel-feature-builder` только когда из аудита следует content/code change. |
 | Production smoke | `$metravel-production-smoke` | `$metravel-devops-agent` нужен только для deploy/rollback; `$metravel-backend-diagnostician` — для подтвержденных API/backend failures. |
 
-Не запускай "всех агентов" для обычной задачи. BA, Project Analyst, Growth Analyst, QA, Mobile Tester и reviewer по умолчанию read-only и должны возвращать компактный артефакт, а не менять код. Для docs-only изменений достаточно структурно перечитать Markdown/YAML; для простой автоматизации запускай самый узкий надежный command и сначала проверь operation gate, если команда относится к долгим эксклюзивным операциям.
+Не запускай "всех агентов" для обычной задачи. BA, Project Analyst, Growth
+Analyst, QA, Mobile Tester и audit-only reviewers по умолчанию read-only и должны
+возвращать компактный артефакт. Обязательный `$metravel-code-reviewer` — явное
+исключение: после code changes он исправляет подтверждённые in-scope findings и
+повторно валидирует diff. Для docs-only изменений достаточно структурно
+перечитать Markdown/YAML; для простой автоматизации запускай самый узкий
+надежный command и сначала проверь operation gate, если команда относится к
+долгим эксклюзивным операциям.
 
 ## Совместимость Claude → Codex
 
@@ -149,7 +161,7 @@ Claude slash-команды переносятся как skill-routes, а не 
 | Claude command | Codex route |
 | --- | --- |
 | `/auto-dev`, `/bugfix` | `$metravel-codex-orchestrator`/`$metravel-agent-workflow` + domain skill + `$metravel-feature-builder` + QA/review |
-| `/changed-summary` | `$metravel-code-reviewer` или обычный read-only `git status`/`git diff` summary |
+| `/changed-summary` | обычный read-only `git status`/`git diff` summary или `$metravel-code-reviewer` только в явно заданном read-only режиме |
 | `/check-fast`, `/guard-all`, `/preflight` | `$metravel-test-runner` / `$metravel-release-checks`; запускать repository scripts через quality-gate lock, а при `SKIPPED` из-за живого владельца завершать собственный запуск без ожидания/ретрая и выбирать `validation delegated` или `validation skipped` по scope и оставшемуся Done gate |
 | `/growth-review` | `$metravel-growth-analyst` |
 | `/seo-daily` | `$metravel-seo-index-operator` |
@@ -198,13 +210,13 @@ Claude slash-команды переносятся как skill-routes, а не 
 | SEO / indexing operations | `AGENTS.md`, `docs/RULES.md`, `docs/GROWTH_PLAN.md`, `$metravel-seo-index-operator` | GSC/index data только из scripts/API/manual user metrics; не выдумывать цифры; owner URL list отдельно от code/content tasks |
 | Backend/API diagnosis | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-backend-diagnostician` | backend read-only, production GET/HEAD probes only, back-задачи через board с Task Contract/evidence |
 | Production smoke | `AGENTS.md`, `docs/RULES.md`, `docs/RELEASE.md`, `$metravel-production-smoke` | read-only GET/browser probes по real URL; для perf/media считать API/request fan-out, bytes, oversized/unsized sources и before/after scroll; no deploy/rollback; route confirmed failures to canonical frontend/backend task |
-| Code review | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, профильный feature-doc, diff validation logs | lead with findings, проверять project-rule compliance, known failures, missing tests и residual risks |
+| Code review | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, `$metravel-code-reviewer`, профильный feature-doc, полный task diff и validation logs | обязательный review-and-fix после code changes: проверять correctness, избыточность, duplication/reuse, efficiency, project contracts и tests; исправлять in-scope findings, re-review'ить весь итоговый diff и rerun'ить validation |
 | SEO / route pages | `docs/DEVELOPMENT.md` SEO-раздел | `buildCanonicalUrl`, `buildOgImageUrl`, `LazyInstantSEO` |
 | Release / deploy / performance | `docs/RELEASE.md`, `docs/PRODUCTION_CHECKLIST.md`, `$metravel-release-checks`, `$metravel-devops-agent` | operation gate перед build/deploy/rebuild/test gate, production build/export, explicit deploy target, secret hygiene, реальные URL для post-deploy проверок |
 | Docs / skills | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл | обновляй существующие canonical docs, не создавай одноразовые отчеты |
 | Codex self-orchestration | `AGENTS.md`, `docs/CODEX.md`, `docs/RULES.md`, `docs/README.md` | task triage, smallest skill set, role prompt pattern, validation plan, final self-check |
 | Project analysis / onboarding | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл, `package.json`, `docs/INDEX.md` при необходимости | read-only карта структуры, активных фич, validation surface, risk hotspots и recommended agents; не создавай отчет без запроса |
-| Multi-agent workflow | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл, нужные role skills | роли работают по контрактам; QA и BA не меняют код; programmer чинит подтвержденные баги; reviewer проверяет diff и validation; DevOps деплоит только при явном target env |
+| Multi-agent workflow | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл, нужные role skills | роли работают по контрактам; QA и BA не меняют код; programmer реализует задачу; обязательный code reviewer исправляет подтверждённые in-scope findings и повторяет review/validation; DevOps деплоит только при явном target env |
 
 Если задача затрагивает несколько строк таблицы, бери объединение контекста, но не загружай справки, которые не помогают текущему решению.
 
@@ -252,10 +264,15 @@ Validation: <expected checks/evidence>.
     и спринты, а `$metravel-task-contract` проверяет обязательный контракт FE/BE
     задачи перед стартом, review и `done`, особенно когда FE зависит от BE
     endpoints/fields/events.
-17. `$metravel-code-reviewer` делает focused review pass, если нужен отдельный reviewer без расширенного architecture-design шага.
-18. `$metravel-browser-reviewer` делает browser review/fix pass для видимых web-изменений.
-19. `$metravel-mobile-tester` проверяет mobile web или Android/native сценарии и создает `Mobile QA Pass` или `Bug Report`.
-20. `$metravel-qa-agent` тестирует общий сценарий read-only и создает `Bug Report` или `QA Pass`.
+17. `$metravel-browser-reviewer` делает browser review/fix pass для видимых web-изменений.
+18. `$metravel-mobile-tester` проверяет mobile web или Android/native сценарии и создает `Mobile QA Pass` или `Bug Report`.
+19. `$metravel-qa-agent` тестирует общий сценарий read-only и создает `Bug Report` или `QA Pass`.
+20. `$metravel-code-reviewer` обязательно review'ит полный итоговый diff после
+    любых code changes, сам исправляет подтверждённые in-scope findings и
+    повторяет review/validation; отдельный architecture review добавляется для
+    high-risk design, но не заменяет этот pass. По возможности этот этап
+    выполняет отдельный `review-auditor`; после своих fixes он re-review'ит diff
+    сам, без рекурсивного запуска ещё одного reviewer.
 21. `$metravel-sprint-reviewer` принимает тикеты активного спринта по Done gate и двигает только evidence-backed задачи в `done`.
     Неполная проверка остаётся в `review`/`testing`; `blocked_by` используется только когда новая hard dependency не позволяет начать или продолжить работу.
 22. `$metravel-production-smoke` выполняет read-only smoke `metravel.by` после deploy или при аварийной проверке.
@@ -272,11 +289,15 @@ Validation: <expected checks/evidence>.
 2. `$metravel-feature-builder` чинит один подтвержденный bug report за раз.
 3. `$metravel-hook-builder` подключай, если bugfix в основном упирается в неудачную hook-архитектуру или дублирующуюся hook-логику.
 4. `$metravel-qa-agent` re-test'ит фикс.
-5. `$metravel-code-reviewer` review'ит итоговый diff и validation; `$metravel-system-architect` подключай дополнительно для high-risk design review.
+5. `$metravel-code-reviewer` review'ит полный итоговый diff, исправляет findings
+   и повторяет validation; `$metravel-system-architect` подключай дополнительно
+   для high-risk design review.
 
 Ролевые ограничения:
 
-- BA, QA и reviewer по умолчанию не меняют код.
+- BA, QA и audit-only reviewers не меняют код. Обязательный
+  `$metravel-code-reviewer` работает в review-and-fix режиме и вправе менять
+  task-owned frontend/app/docs files для устранения подтверждённых findings.
 - Codex Orchestrator не подменяет профильные роли; он выбирает маршрут, проверяет правила и держит handoff компактным.
 - В этом frontend workspace ни одна роль не редактирует backend/Django/API/server working tree. Backend blockers фиксируются через read-only diagnosis и `area=back` board tasks.
 - Перед передачей роли на deploy, release/build, Android local/EAS build/install, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`. Для занятого test/quality gate новый агент не ждёт, не poll'ит и не перезапускает проверку: если gate покрывает нужный scope и тесты — единственный оставшийся Done-gate шаг, фиксирует `validation delegated: active gate pid/name` и может завершить задачу; иначе фиксирует `validation skipped: active gate pid/name` и оставляет её открытой. Падения исправляет владелец активного gate. Для остальных операций применяется их обычный blocker/wait contract.

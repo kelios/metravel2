@@ -81,6 +81,12 @@ Choose validation by scope after each finished logical block and before wrapping
   locales on every affected active platform; mobile-web and Android evidence do
   not replace each other.
 
+After validation and before handoff, use `$metravel-code-reviewer` on the
+complete task-owned diff. Pass the original task, changed paths, and validation
+evidence to a dedicated `review-auditor` agent when available. Let the reviewer
+patch confirmed findings, re-read the complete resulting diff, and rerun affected
+checks. Do not include or rewrite unrelated dirty worktree changes.
+
 Avoid dev-environment false positives:
 
 - Missing production-hosted media in local dev is not automatically a frontend bug.

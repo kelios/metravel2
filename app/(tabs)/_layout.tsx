@@ -1,6 +1,6 @@
 // TabLayout.tsx — кастомный header + полный офф таббара
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
 import { isQuestDetailHeaderPath, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
@@ -125,13 +125,36 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
     if (hideForMap) return null;
 
     if (Platform.OS === 'web') {
-        return (
-            <View style={{ height: measuredHeight }}>
-                <CustomHeader
-                    onHeightChange={handleHeaderHeight}
-                    isNavigationTarget={isNavigationTarget}
-                />
-            </View>
+        // #1144: до гидрации вариант шапки приходится считать «десктопным» — статический
+        // HTML один на все вьюпорты, и любое чтение window здесь дало бы hydration mismatch
+        // (#418). Из-за этого мобильный первый экран резервировал 78 px вместо 116 px, а
+        // после гидрации весь `main` уезжал вниз на 38 px: замер прода 2026-07-30 —
+        // одна запись layout-shift 0.1508 при бюджете 0.1 на всю страницу.
+        //
+        // Высоту-заглушку задаём медиазапросом (`[data-header-slot]` в app/global.css):
+        // разметка одинакова на сервере и клиенте, а нужный размер выбирает CSS ещё до
+        // первого кадра. Инлайновую высоту ставим только после гидрации — тогда она уже
+        // основана на реальном измерении и совпадает с зарезервированной.
+        const mobileHeight =
+            HEADER_HEIGHT_FALLBACK[
+                shouldShowHeaderContextBar(pathname || '/', true) ? 'mobile-bar' : 'mobile-nobar'
+            ];
+        const desktopHeight = HEADER_HEIGHT_FALLBACK[getStaticHeaderVariant(pathname)];
+
+        return React.createElement(
+            'div',
+            {
+                'data-header-slot': '',
+                style: {
+                    ['--mt-header-slot-mobile' as any]: `${mobileHeight}px`,
+                    ['--mt-header-slot-desktop' as any]: `${desktopHeight}px`,
+                    ...(hydrationReady ? { height: measuredHeight } : null),
+                },
+            },
+            <CustomHeader
+                onHeightChange={handleHeaderHeight}
+                isNavigationTarget={isNavigationTarget}
+            />,
         );
     }
 

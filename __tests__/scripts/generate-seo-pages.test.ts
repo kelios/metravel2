@@ -589,8 +589,11 @@ describe('travel hero preload helpers', () => {
     });
 
     expect(url).toContain('https://metravel.by/travel-image/123/conversions/pic-thumb_200.jpg');
-    expect(url).toContain('w=400');
-    expect(url).toContain('q=35');
+    // #1146: ширина и качество округляются по той же лестнице, что и на клиенте
+    // (utils/imageProxy.ts: DIMENSION_LADDER + snapQuality). Иначе preload грел бы
+    // `?w=400&q=35`, а `<img>` просил `?w=480&q=40` — тот же файл вторым запросом.
+    expect(url).toContain('w=480');
+    expect(url).toContain('q=40');
     expect(url).toContain('fit=contain');
     expect(url).toContain('v=1735689600000');
   });
@@ -613,22 +616,25 @@ describe('travel hero preload helpers', () => {
     );
 
     expect(preload).toBeTruthy();
+    // #1146: значения снэпятся по лестнице прокси, ровно как на клиенте
+    // (720 → 800, 960 → 1280, q72 → 70, q82 → 80). Совпадение с клиентом
+    // проверяется отдельно в __tests__/scripts/travelHeroPreloadParity.test.ts.
     expect(preload.mobile.href).toContain('https://metravel.by/gallery/77/gallery/photo.JPG');
-    expect(preload.mobile.href).toContain('w=720');
-    expect(preload.mobile.href).toContain('q=72');
+    expect(preload.mobile.href).toContain('w=800');
+    expect(preload.mobile.href).toContain('q=70');
     expect(preload.mobile.href).toContain('v=991');
     expect(preload.mobile.href).not.toContain('dpr=');
     expect(preload.mobile.srcSet).toContain('w=320');
     expect(preload.mobile.srcSet).toContain('w=640');
-    expect(preload.mobile.srcSet).toContain('w=720');
-    expect(preload.mobile.srcSet).toContain('q=72');
+    expect(preload.mobile.srcSet).toContain('w=800');
+    expect(preload.mobile.srcSet).toContain('q=70');
     expect(preload.mobile.sizes).toBe('100vw');
     expect(preload.desktop.href).toContain('w=1280');
-    expect(preload.desktop.href).toContain('q=82');
+    expect(preload.desktop.href).toContain('q=80');
     expect(preload.desktop.href).not.toContain('dpr=');
-    expect(preload.desktop.srcSet).toContain('w=960');
+    expect(preload.desktop.srcSet).toContain('w=800');
     expect(preload.desktop.srcSet).toContain('w=1280');
-    expect(preload.desktop.srcSet).toContain('q=82');
+    expect(preload.desktop.srcSet).toContain('q=80');
     expect(preload.desktop.sizes).toBe('(max-width: 1024px) 92vw, 720px');
   });
 
@@ -654,14 +660,21 @@ describe('travel hero preload helpers', () => {
       }
     );
 
-    // ровно тот вариант, который вернёт buildResponsiveImagePropsFromMedia на клиенте
+    // Desktop-слот (1280) манифест закрывает точно — берём канонический вариант.
     expect(preload.desktop.href).toBe('https://metravel.by/gallery/abc.webp?w=1280&q=78&fit=contain');
-    expect(preload.mobile.href).toBe('https://metravel.by/gallery/abc.webp?w=1280&q=78&fit=contain');
     // никакого клиентского `v=`/`q=82` поверх канонического manifest-URL
     expect(preload.desktop.href).not.toMatch(/[?&]v=/);
     expect(preload.desktop.href).not.toContain('q=82');
-    expect(preload.mobile.srcSet).toContain('w=320&q=72&fit=cover 320w');
-    expect(preload.mobile.srcSet).toContain('w=1280&q=78&fit=contain 1280w');
+    expect(preload.desktop.srcSet).toContain('w=1280&q=78&fit=contain 1280w');
+
+    // #1146: мобильный слот — 720. Contain-вариантов уже 1280 в манифесте нет, а
+    // подставлять cover-варианты 320/640 нельзя: они кадрируют фото иначе, и браузер,
+    // выбирая кандидата по DPR, показывал бы разную композицию. Поэтому мобильный hero
+    // строится через прокси нужной ширины (210 858 B → 95 182 B на реальной обложке).
+    expect(preload.mobile.href).not.toContain('w=1280');
+    expect(preload.mobile.href).toContain('w=800');
+    expect(preload.mobile.href).toContain('fit=contain');
+    expect(preload.mobile.srcSet).not.toContain('fit=cover');
   });
 
   it('buildTravelHeroPreloadData falls back to the client-side builder without a manifest', () => {
@@ -671,7 +684,7 @@ describe('travel hero preload helpers', () => {
     );
 
     expect(preload.desktop.href).toContain('w=1280');
-    expect(preload.desktop.href).toContain('q=82');
+    expect(preload.desktop.href).toContain('q=80'); // #1146: q82 снэпится к шагу 10
     expect(preload.desktop.href).toContain('v=991');
   });
 

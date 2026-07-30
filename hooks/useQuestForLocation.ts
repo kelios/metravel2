@@ -9,6 +9,7 @@ import { adaptMeta } from '@/utils/questAdapters'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import {
   findQuestsNearLocation,
+  isWithinQuestCoverage,
   type LocationQuery,
   type QuestForLocationMatch,
 } from '@/utils/questForLocation'
@@ -61,7 +62,9 @@ type NearLocationState = {
  * Возвращает флаг serverUnavailable для graceful fallback на клиентский расчёт.
  */
 function useServerQuestsNearLocation(query: LocationQuery, limit?: number): NearLocationState {
-  const enabled = hasLocation(query)
+  // Вне зоны покрытия квестов ответ гарантированно пустой, а запрос стоит до 1.9 с
+  // серверного времени на каждый просмотр статьи (`no-store`, замер прода 2026-07-30).
+  const enabled = hasLocation(query) && isWithinQuestCoverage(query)
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.questsNearLocation(nearLocationKey(query, limit)),

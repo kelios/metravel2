@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__metravel-task-board__metravel_task_update",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/review-gate.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Код-ревью гейт перед testing"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(node .claude/hooks/review-gate.mjs *)"
+    ]
+  }
+}

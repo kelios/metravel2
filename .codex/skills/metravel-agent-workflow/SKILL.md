@@ -5,7 +5,10 @@ description: Orchestrate a role-based metravel AI workflow across project analys
 
 # Metravel Agent Workflow
 
-Use this skill to coordinate multiple role prompts or subagents for metravel work. Keep the workflow controlled: each role has a narrow output contract, code changes happen only in the implementation stage, and deploys happen only through the DevOps stage after explicit environment gating.
+Use this skill to coordinate multiple role prompts or subagents for metravel
+work. Keep the workflow controlled: each role has a narrow output contract, code
+changes happen in implementation and in the mandatory review-and-fix stage, and
+deploys happen only through the DevOps stage after explicit environment gating.
 
 Do not use this skill for docs-only changes, simple automated checks, one isolated bugfix/refactor, one board-contract update, or read-only analysis that does not need handoff to implementation/QA/review. Use the single matching specialist skill instead.
 
@@ -40,9 +43,13 @@ Default feature flow:
 13. Browser Reviewer: use `$metravel-browser-reviewer` for visible web diff review, fixes, and re-verification.
 14. Mobile Tester: use `$metravel-mobile-tester` for paired mobile-web/Android QA evidence and retest.
 15. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
-16. Sprint Reviewer: use `$metravel-sprint-reviewer` to accept task-board tickets only with Done-gate evidence.
-17. Production Smoke: use `$metravel-production-smoke` for read-only production health checks.
-18. Reviewer: use `$metravel-system-architect` in review mode, `$metravel-code-reviewer` for focused diffs, or `$metravel-security-reviewer` for security-sensitive scope.
+16. Reviewer/Fixer: always use `$metravel-code-reviewer` after code changes to
+    review the complete task diff, fix confirmed in-scope findings, and repeat
+    validation. Prefer a dedicated `review-auditor` agent for independence; add
+    `$metravel-system-architect` for high-risk design review or
+    `$metravel-security-reviewer` for security-sensitive scope.
+17. Sprint Reviewer: use `$metravel-sprint-reviewer` to accept task-board tickets only with Done-gate evidence.
+18. Production Smoke: use `$metravel-production-smoke` for read-only production health checks.
 19. Store Operator: use `$metravel-google-play-operator` only for an explicit Google Play build, submit, promotion, or status request; use `$metravel-play-campaign-tester` only for the configured reciprocity campaign.
 20. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a deployment.
 
@@ -52,12 +59,17 @@ Default bug loop:
 2. Mobile Tester handles paired mobile-web/Android reproduction, USB-device evidence, and retest when the bug is mobile web or Android/native.
 3. Android Developer fixes confirmed platform-native bugs; Programmer fixes shared feature bugs.
 4. QA Agent or Mobile Tester re-tests the fixed scenario.
-5. Reviewer checks the diff and validation.
+5. Reviewer/Fixer checks the complete diff, fixes confirmed in-scope findings,
+   re-reviews the result, and repeats relevant validation.
 6. DevOps Agent deploys/builds/releases only if the fix is approved and the user explicitly requested a target environment or mobile build. Android production/EAS builds require an explicit Android build/submit request in the current task.
 
 ## Control Rules
 
 - Do not let exploratory QA or analyst roles edit code.
+- Require `$metravel-code-reviewer` after every code-changing implementation.
+  Prefer a dedicated `review-auditor` agent. It may edit only task-owned
+  frontend/app/docs files to fix confirmed findings, must preserve unrelated worktree
+  changes, and re-reviews its fixes without recursively spawning a reviewer.
 - Use Codex Orchestrator only to choose and sequence work; route implementation to the relevant specialist skill.
 - Use Project Analyst only for read-only discovery unless the user explicitly asks to update docs or code after the analysis.
 - Use Backend Diagnostician only for read-only backend/API diagnosis and board evidence; do not let it edit backend or frontend code.
@@ -87,7 +99,9 @@ Default bug loop:
   RU/BE/UK/PL/EN where affected; mobile-web and Android evidence is always
   paired, and unavailable active-platform evidence is `verify pending`.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.
-- If a role finds a real issue in the touched scope, route it to implementation before handoff unless it is explicitly blocked.
+- If an audit-only role finds a real issue, route it to implementation. The
+  mandatory Code Reviewer/Fixer repairs its own confirmed in-scope findings
+  directly, then re-reviews and revalidates before handoff.
 
 ## Handoff Format
 
@@ -113,7 +127,7 @@ Each role should return one compact artifact:
 - QA Agent: `Bug Report` or `QA Pass`
 - Sprint Reviewer: `Sprint Review`
 - Production Smoke: `Production Smoke`
-- Reviewer: `Review Findings`
+- Reviewer/Fixer: `Code Review and Repair`
 - Security Reviewer: `Security Findings`
 - Design Auditor: `Design Audit`
 - Google Play Operator: `Google Play Release Report`

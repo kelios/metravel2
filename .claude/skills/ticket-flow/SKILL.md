@@ -37,7 +37,8 @@ description: >-
 | developer (FE) | `travel-expert`, `map-expert`, `metravel-seo-expert`, `refactor-surgeon`, `dev-loop` |
 | content / SEO | `travel-writer`, `metravel-seo-expert`, `index-doctor` |
 | tester | `test-author` (Jest unit + Playwright e2e) |
-| reviewer | `/code-review` или агент `review-auditor` |
+| reviewer (гейт `review → testing`) | агент `code-review-gate` — ОБЯЗАТЕЛЕН, без его вердикта борд не пустит задачу в `testing` |
+| reviewer (доп. фокус) | `/code-review`, `review-auditor` (углублённый аудит), `browser-reviewer` (видимые web-изменения) |
 | acceptance (приёмка спринта) | агент `board-reviewer` / skill `/sprint-review` — Done gate → `done` |
 | releaser | preflight (`/preflight`) + `frontend-deployer` по явному target env |
 
@@ -59,11 +60,22 @@ description: >-
 3. **In progress.** `ticket-board`: `status=in_progress`, `assignee=<агент-исполнитель>`.
    Делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты CLAUDE.md
    (ImageCardMedia, UnifiedTravelCard, externalLinks, React Query/Zustand, TS strict).
-4. **Review.** `/code-review` или `review-auditor` по diff. Подтверждённые находки —
-   чинит исполнитель, цикл повторяется. На борде — `status=review`, evidence = вердикт ревью.
-5. **Test / QA.** Делегируй `test-author`: unit/e2e на новое поведение. Видимые/web-изменения —
-   ОБЯЗАТЕЛЬНО браузерная проверка (Playwright/preview), как требует CLAUDE.md. На борде —
-   `status=testing` (QA-колонка перед приёмкой); приёмку закрывает `board-reviewer`/`/sprint-review`.
+4. **Review — обязательный гейт.** Как только реализация готова (`status=review`), вызови агента
+   `code-review-gate` (или `/review-gate <id>`). Он читает diff и ищет дубли существующих
+   компонентов/хуков, неоптимальный код, противоречия правилам проекта и собственным контрактам,
+   регрессии. Вердикт:
+   - `changes_requested` (любой P1/P2) → агент сам возвращает тикет в `in_progress` с findings в
+     `description`; чинит исполнитель, затем ревью прогоняется заново;
+   - `pass` (чисто или только P3) → агент записывает вердикт и сам переводит тикет в `testing`.
+
+   Гейт принудительный: PreToolUse hook `.claude/hooks/review-gate.mjs` блокирует
+   `metravel_task_update(status="testing")`, пока для тикета нет свежего вердикта `pass`; вердикт
+   протухает, если код доправили после ревью. Углублённый аудит (`review-auditor`,
+   `browser-reviewer`, `/review-security`) подключай дополнительно по фокусу задачи, он гейт не заменяет.
+5. **Test / QA.** Только после `pass`: делегируй `test-author` unit/e2e на новое поведение.
+   Видимые/web-изменения — ОБЯЗАТЕЛЬНО браузерная проверка (Playwright/preview), как требует
+   CLAUDE.md. На борде — `status=testing` (QA-колонка перед приёмкой, ставит гейт-агент); приёмку
+   закрывает `board-reviewer`/`/sprint-review`.
 6. **Release.** Только по явному запросу и target env: `/preflight` → `frontend-deployer`
    (деплой строго через `scripts/fix-prod.sh`). На борде — `status=done` с changed files +
    validation evidence + (если деплой) прод-health. Без деплоя — `done` после зелёного
@@ -85,6 +97,10 @@ description: >-
   переведи раздаваемые тикеты в `in_progress` (одним вызовом `ticket-board`), затем дай работу —
   чтобы WIP был виден, даже если агент не успел сам. Создание/структура новых тикетов и
   спринтов — по-прежнему ТОЛЬКО через `ticket-board`.
+- **`review → testing` только через `code-review-gate`.** Ни оркестратор, ни исполнитель, ни
+  `ticket-board` не ставят `testing` руками: хук `.claude/hooks/review-gate.mjs` откажет, и это
+  правильно — сначала вердикт ревью. Аварийный обход `REVIEW_GATE_BYPASS=1` применим только по
+  явной просьбе пользователя и фиксируется в `description` тикета.
 - «Готово» только с доказательством (changed files + тест/браузер + review). До этого максимум
   `review`/`in_progress` с пометкой «verification pending».
 - Статус другой задачи на борде не является доказательством сам по себе. Если BE помечен `done`,

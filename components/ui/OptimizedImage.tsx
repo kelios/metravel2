@@ -28,18 +28,26 @@ const isPrivateOrLocalHost = (host: string): boolean => {
   return false;
 };
 
-const getSameOriginWebCrossOrigin = (uri: string): 'anonymous' | undefined => {
-  if (Platform.OS !== 'web') return undefined;
-  if (!/^https?:\/\//i.test(uri)) return undefined;
-  if (typeof window === 'undefined' || !window.location?.origin) return undefined;
-
-  try {
-    const parsed = new URL(uri);
-    return parsed.origin === window.location.origin ? 'anonymous' : undefined;
-  } catch {
-    return undefined;
-  }
-};
+/**
+ * CORS-режим для web-<img>. Всегда `undefined`.
+ *
+ * Раньше same-origin картинки помечались `crossOrigin="anonymous"`. Для
+ * same-origin это ничего не даёт (тейнта нет и без CORS), зато меняет ключ
+ * HTTP-кэша: image-proxy отдаёт ответы с `Vary: Accept, origin`, и запрос в
+ * CORS-режиме шлёт `Origin:` → отдельная запись в кэше. В итоге один и тот же
+ * файл уезжал по сети дважды: `prefetchImage()` грел его в CORS-режиме, а
+ * смонтированный `<img>` (ImageCardMedia) шёл без `crossorigin`.
+ *
+ * Замер прода 2026-07-30 (`/travels/ourvietnam`): одно фото слайдера = 2–3
+ * запроса по 66–89 КБ, +277 КБ на первый экран и +162 КБ на три свайпа.
+ * Контрольный эксперимент в живой вкладке: один URL, загруженный без
+ * `crossOrigin` и с `crossOrigin='anonymous'`, дал 2 сетевых запроса по
+ * 74 724 B при `cache-control: public, max-age=31536000, immutable`.
+ *
+ * Инвариант: prefetch и рендер обязаны использовать ОДИН CORS-режим.
+ * Единственный режим, в котором это гарантировано, — «без crossOrigin».
+ */
+const getSameOriginWebCrossOrigin = (_uri: string): 'anonymous' | undefined => undefined;
 
 const normalizeRemoteImageUri = (uri: string): string => {
   const raw = String(uri || '').trim();

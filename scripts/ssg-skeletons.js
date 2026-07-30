@@ -405,13 +405,20 @@ function buildTravelSkeletonHtml({ heroPreload, name, descriptionHtml, related }
   }
   let blurLayers = '';
   if (heroPreload?.mobile?.href || heroPreload?.desktop?.href) {
-    const mobileBlurHref = heroPreload.mobile?.href || heroPreload.desktop?.href;
-    const desktopBlurHref = heroPreload.desktop?.href || heroPreload.mobile?.href;
-    // Backdrop image URLs match the preloaded hero variants exactly, so the
-    // browser serves them from cache — no extra network request.
-    blurLayers =
-      `<div class="ssg-travel-hero-blur ssg-blur-mobile" style="background-image:url(&quot;${escapeHtmlAttr(mobileBlurHref)}&quot;)" aria-hidden="true"></div>` +
-      `<div class="ssg-travel-hero-blur ssg-blur-desktop" style="background-image:url(&quot;${escapeHtmlAttr(desktopBlurHref)}&quot;)" aria-hidden="true"></div>`;
+    // #1143: подложка размывается на 18 px и растягивается `background-size: cover`,
+    // поэтому детализация в ней не видна — но раньше сюда шёл полноразмерный hero.
+    // Слой крупнее contain-фото, значит он и становился LCP-элементом: 206 КБ давали
+    // 81 % времени LCP (прод, 2026-07-30). Теперь берём LQIP (~350 B) и заливку
+    // dominant_color, а полный hero остаётся только у самого `<img>`.
+    // Фолбэк на hero-вариант сохранён для пейлоадов без манифеста: там подложка
+    // делит один запрос с `<img>`, как и было.
+    const heroFallback = heroPreload.mobile?.href || heroPreload.desktop?.href;
+    const blurHref = heroPreload.blur?.href || heroFallback;
+    const blurColor = heroPreload.blur?.color || '';
+    const colorStyle = blurColor ? `background-color:${escapeHtmlAttr(blurColor)};` : '';
+    const layer = (variantClass) =>
+      `<div class="ssg-travel-hero-blur ${variantClass}" style="${colorStyle}background-image:url(&quot;${escapeHtmlAttr(blurHref)}&quot;)" aria-hidden="true"></div>`;
+    blurLayers = layer('ssg-blur-mobile') + layer('ssg-blur-desktop');
   }
   const heroBlock = heroImg
     ? `<div class="ssg-travel-hero">${blurLayers}${heroImg}<div class="ssg-travel-hero-bg"></div></div>`

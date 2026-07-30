@@ -37,6 +37,29 @@ if (formFactor !== 'mobile' && formFactor !== 'desktop') {
 
 const runs = Math.max(1, Number(runsRaw || process.env.LIGHTHOUSE_RUNS || 1) || 1)
 
+// #1147: раньше режим троттлинга был зашит в `simulate`, хотя
+// `config/lighthouse-budget-mobile.json` требует `devtools` (applied) и
+// guard-скрипт печатал предупреждение на каждом отчёте. Режимы дают разную
+// картину на одном URL (замер прода 2026-07-30, /travels/ourvietnam):
+//   simulate → score 47, LCP 10 925 мс, CLS 0.011, TBT 784 мс
+//   devtools → score 64, LCP  4 836 мс, CLS 0.161, TBT 230 мс
+// `simulate` прячет реальный CLS, `devtools` — поздний LCP-swap; гейтовым
+// считается `devtools`, второй режим остаётся доступен явным флагом.
+const throttlingRaw = String(
+  getArg('--throttlingMethod') || process.env.LIGHTHOUSE_THROTTLING_METHOD || 'devtools',
+).toLowerCase()
+if (!['devtools', 'simulate', 'provided'].includes(throttlingRaw)) {
+  console.error('❌ Invalid --throttlingMethod. Use devtools | simulate | provided')
+  process.exit(1)
+}
+const throttlingMethod = throttlingRaw
+if (throttlingMethod !== 'devtools') {
+  console.warn(
+    `⚠ throttling-method=${throttlingMethod} — это НЕ гейтовый режим. ` +
+      'Бюджет config/lighthouse-budget-mobile.json проверяется по devtools (applied).',
+  )
+}
+
 const ensureDir = (filePath) => {
   const dir = path.dirname(path.resolve(filePath))
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
@@ -94,7 +117,7 @@ const runOnce = (runOutputPath) =>
       url,
       '--only-categories=performance',
       `--emulated-form-factor=${formFactor}`,
-      '--throttling-method=simulate',
+      `--throttling-method=${throttlingMethod}`,
       '--output=json',
       `--output-path=${runOutputPath}`,
       '--quiet',
@@ -136,6 +159,7 @@ const runOnce = (runOutputPath) =>
   console.log('\n================ Lighthouse prod-url summary ================')
   console.log(`URL: ${url}`)
   console.log(`Form factor: ${formFactor}`)
+  console.log(`Throttling: ${throttlingMethod}${throttlingMethod === 'devtools' ? ' (gate mode)' : ' (NOT gate mode)'}`)
   console.log(`Runs: ${runs}`)
   console.log(`Performance: min=${minPerf} median=${medPerf == null ? 'n/a' : Math.round(medPerf)} max=${maxPerf}`)
   console.log(`Median LCP: ${formatMs(medLcp)} | Median TBT: ${formatMs(medTbt)} | Median CLS: ${formatCls(medCls)}`)

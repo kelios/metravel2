@@ -65,7 +65,9 @@
 - `$metravel-performance-analyst` - Lighthouse, bundle/perf budget analysis, сравнение baseline и проверка performance только по production build или real URL.
 - `$metravel-growth-analyst` - анализ GA4/GSC/Yandex/affiliate-цифр, SEO/organic роста, поведения пользователей, воронок регистрации и добавления маршрутов/статей.
 - `$metravel-seo-index-operator` - ежедневная SEO/index рутина, GSC/index diagnostics, IndexNow backup, список URL для ручной индексации и SEO task routing.
-- `$metravel-code-reviewer` - focused code review diff'а, поиск рисков, rule violations, validation gaps и остаточных проблем перед handoff.
+- `$metravel-code-reviewer` - обязательный review/fix pass после любых изменений
+  кода: проверка полного task diff на баги, избыточность, дублирование, плохой
+  reuse и неоптимальную логику, исправление findings, повторный review и validation.
 - `$metravel-security-reviewer` - evidence-backed frontend security review: XSS/sanitization, unsafe URLs/redirects, secrets/tokens, WebView/deep links и production dependencies; read-only без явного запроса на fixes.
 - `$metravel-devops-agent` - подготовка, запуск и проверка deploy на dev/preprod/prod с preflight, secret hygiene и post-deploy validation.
 - `$metravel-android-portable-builder` - переносимая локальная Android-сборка на
@@ -129,7 +131,20 @@
 10. По завершению задачи:
    - для точечных изменений обязательно запусти релевантные проверки по затронутому scope;
    - для крупных изменений обязательно запусти полный прогон.
-11. Тестирование выполняет AI-агент самостоятельно: человек ничего не тестирует за агента.
+11. После любых изменений кода и до handoff обязательно используй
+    `$metravel-code-reviewer` в режиме review-and-fix:
+    - по возможности передай review отдельному агенту `review-auditor`, чтобы
+      реализация получила независимую проверку; если отдельные агенты недоступны,
+      выполни тот же skill в текущем агенте;
+    - передай ему исходную задачу, task-owned paths, полный итоговый diff и результаты проверок;
+    - исправь подтвержденные баги, избыточность, дублирование, плохой reuse,
+      неоптимальную логику и ненужные абстракции в затронутом scope;
+    - после исправлений заново проверь весь task diff и повтори релевантные тесты;
+    - несвязанные пользовательские изменения не переписывай и не откатывай;
+    - read-only review допустим только по явному запросу пользователя.
+    Reviewer, который внес исправления, сам повторно проверяет итоговый diff и не
+    запускает рекурсивно ещё одного reviewer.
+12. Тестирование выполняет AI-агент самостоятельно: человек ничего не тестирует за агента.
     - Используй доступные средства проверки: браузер/Playwright, Android-устройство с локально установленной сборкой, unit/integration/e2e тесты, production web build/smoke по scope задачи.
     - Сам находи надежный маршрут проверки для конкретной задачи; просьба к пользователю проверить вручную не считается validation.
 
@@ -305,6 +320,11 @@
 ## 6. Правила качества кода
 
 - Делай маленькие, читаемые, локальные изменения.
+- Любой code diff до handoff проходит обязательный `$metravel-code-reviewer`
+  review-and-fix loop; найденные in-scope проблемы исправляются и проверяются
+  повторно, а не только перечисляются.
+- Для независимости используй отдельного `review-auditor` agent, когда
+  multi-agent execution доступен; fallback — тот же skill в текущем агенте.
 - Удаляй мертвый/неиспользуемый код, если он явно обнаружен в зоне задачи.
 - Если в ходе работы найдена реальная ошибка, исправь ее в рамках текущей задачи; исключение только для проблем вне scope или без доступной проверки, тогда явно зафиксируй блокер и не маскируй проблему.
 - Не создавай новые отчеты без необходимости: обновляй существующую документацию в `docs/`.
@@ -319,6 +339,8 @@
 ## 7. Мини-чеклист перед завершением задачи
 
 - Изменения ограничены scope задачи.
+- Полный task diff прошёл `$metravel-code-reviewer`; исправления ревьюера вошли в
+  повторный review и validation.
 - Запущены проверки по масштабу задачи.
 - Не нарушены правила external links и governance.
 - UI-поведение не сломано на desktop web/mobile web/Android.

@@ -522,6 +522,25 @@ function ImageCardMedia({
     return shouldRevealWebMedia;
   }, [blurSharesMainUrl, shouldRevealWebMedia]);
 
+  /**
+   * #1145: blurhash-подложка на web — это `<ExpoImage source={{blurhash}}>`, то есть
+   * настоящий `<img>` с `blob:`-адресом, `loading="lazy"` и `fetchpriority="auto"`.
+   * Она рисуется в режиме `cover` на всю плитку, поэтому по площади перекрывает
+   * `contain`-фото и Chrome берёт LCP по ней. На travel-детали слайдер монтируется
+   * уже после гидрации, и в прод-замере 2026-07-30 именно такая подложка стала
+   * финальным LCP-кандидатом: mobile 10 925 мс / desktop 11 283 мс, Load Delay 83–91 %.
+   *
+   * Смысл подложки — закрыть паузу ДО появления резкого слоя. Когда картинка уже
+   * показана (первый слайд приходит из кэша hero), подложка не нужна: она невидима
+   * под непрозрачным фото, но остаётся LCP-кандидатом и лишним DOM-узлом.
+   * На native поведение не меняем — там переходом управляет сама expo-image.
+   */
+  const shouldRenderDataPlaceholder = useMemo(() => {
+    if (!hasDataPlaceholder) return false;
+    if (Platform.OS !== 'web') return true;
+    return !shouldRevealWebMedia;
+  }, [hasDataPlaceholder, shouldRevealWebMedia]);
+
   const shouldRenderWebSkeleton = useMemo(() => {
     if (Platform.OS !== 'web') return false;
     if (blurOnly) return false;
@@ -674,7 +693,7 @@ function ImageCardMedia({
     >
       {resolvedSource && !shouldDisableNetwork ? (
         <>
-          {hasDataPlaceholder ? (
+          {shouldRenderDataPlaceholder ? (
             <ImageDataPlaceholder
               blurhash={normalizedPlaceholderBlurhash || null}
               color={normalizedPlaceholderColor || null}
