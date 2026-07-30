@@ -901,12 +901,12 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       // ignore screenshot errors
     }
 
-    // Diagnostics: ensure the route line is actually created.
-    const anyRouteLineCount = await page.locator('.metravel-route-line').count();
+    // Diagnostics: use the same strict SVG-path selector as the visibility checks.
+    // Leaflet can replace its path nodes during a redraw, so two back-to-back counts
+    // with different selectors can observe opposite sides of that replacement.
     const pathRouteLineCount = await page.locator('svg path.metravel-route-line').count();
     // Keep visible in CI output to debug mismatches with local manual checks.
     console.info('[e2e] route line diagnostics', {
-      anyRouteLineCount,
       pathRouteLineCount,
     });
 
@@ -925,7 +925,6 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       .catch(() => 0);
 
     console.info('[e2e] route line total length', { totalLen });
-    expect(anyRouteLineCount, 'route line element must exist in DOM').toBeGreaterThan(0);
     expect(pathRouteLineCount, 'route line must be an SVG path on web').toBeGreaterThan(0);
     expect(totalLen, 'route line SVG path must have non-zero length').toBeGreaterThan(10);
 

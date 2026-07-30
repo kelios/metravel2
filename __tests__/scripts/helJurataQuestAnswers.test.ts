@@ -1,6 +1,8 @@
-// Временная проверка контента квеста hel-jurata-amber: каждый answer_pattern
-// прогоняется через реальный buildAnswerChecker — ожидаемый ответ принимается,
-// заведомо неверный отклоняется, а ответ не утекает в story/hint.
+// Регресс контента квеста hel-jurata-amber: каждый answer_pattern прогоняется
+// через реальный buildAnswerChecker — ожидаемый ответ принимается, заведомо
+// неверный отклоняется, а ответ не утекает в story/hint своего шага.
+// Ловит две реальные ошибки, найденные при создании квеста: «2» без словесного
+// варианта «два» и hint, который сам называл ответ.
 import { buildAnswerChecker } from '@/utils/questAdapters';
 
 const quests = require('../../scripts/hel-jurata-quest-data.js');

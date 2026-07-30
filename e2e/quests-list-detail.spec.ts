@@ -179,7 +179,7 @@ test.describe('Quests list -> detail', () => {
     await expect(farQuestCard).toHaveCount(0)
   })
 
-  test('iPhone Safari reveals sharp quest covers above and below the fold', async ({ page }) => {
+  test('iPhone Safari reveals eager and lazy sharp quest covers', async ({ page }) => {
     const questItems = Array.from({ length: 3 }, (_, index) => ({
       ...questMeta,
       ...(index === 2
@@ -226,8 +226,10 @@ test.describe('Quests list -> detail', () => {
 
     for (const index of [0, 2]) {
       const cover = sharpCovers.nth(index)
+      const expectedLoading = index === 0 ? 'eager' : 'lazy'
+      await expect(cover).toHaveAttribute('loading', expectedLoading)
       await cover.scrollIntoViewIfNeeded()
-      await expect(cover).toHaveAttribute('loading', 'eager')
+      await expect(cover).toHaveAttribute('loading', expectedLoading)
       await expect.poll(async () =>
         cover.evaluate((image) => ({
           complete: (image as HTMLImageElement).complete,

@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
-import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { isIOSWebKitUserAgent } from '@/components/ui/ImageCardMedia';
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
 import { injectSliderGlobalStyles } from './globalStyles';
@@ -121,10 +121,10 @@ const Slide = memo(function Slide({
   prepareBlur = false,
   skipImage = false,
 }: SlideProps) {
-  const isSliderSafari =
+  const isSliderIOSWebKit =
     Platform.OS === 'web' &&
     typeof navigator !== 'undefined' &&
-    isIOSSafariUserAgent(
+    isIOSWebKitUserAgent(
       String(navigator.userAgent || ''),
       typeof navigator.maxTouchPoints === 'number'
         ? navigator.maxTouchPoints
@@ -176,7 +176,7 @@ const Slide = memo(function Slide({
   );
   const effectiveBlurBackground = shouldBlur;
   const effectiveAllowCriticalWebBlur = shouldBlur && Platform.OS === 'web';
-  const shouldRevealOnLoadOnly = isSliderSafari && effectiveAllowCriticalWebBlur;
+  const shouldRevealOnLoadOnly = isSliderIOSWebKit && effectiveAllowCriticalWebBlur;
   const shouldRenderLoadingPlaceholder =
     !mediaPlaceholder.blurhash &&
     !mediaPlaceholder.dominantColor &&

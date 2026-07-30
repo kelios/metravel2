@@ -16,8 +16,9 @@ import {
   WebBlurBackdrop,
   WebMainImage,
   hasOptimizationParams,
-  isIOSSafariWeb,
   isIOSSafariUserAgent,
+  isIOSWebKit,
+  isIOSWebKitUserAgent,
   loadedWebImageBaseCache,
   resolveImageIdentityKey,
   type Priority,
@@ -181,7 +182,7 @@ function ImageCardMedia({
     __DEV__ && process.env.EXPO_PUBLIC_DISABLE_REMOTE_IMAGES === 'true';
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const isSafariWeb = useMemo(() => isIOSSafariWeb(), []);
+  const isIOSWebKitWeb = useMemo(() => isIOSWebKit(), []);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
   const normalizedPlaceholderBlurhash =
     typeof placeholderBlurhash === 'string' ? placeholderBlurhash.trim() : '';
@@ -248,13 +249,13 @@ function ImageCardMedia({
   const resolvedLoading = useMemo(() => {
     if (Platform.OS !== 'web') return loading;
     if (loading !== 'lazy') return loading;
-    // iOS Safari can leave a lazy <img> below the blurred backdrop without
+    // iOS WebKit can leave a lazy <img> below the blurred backdrop without
     // dispatching the load event after scroll/restoration. Because the sharp
     // layer is revealed by that event, shared-blur media stays eager there.
     // A no-blur catalog cover has no competing composited layer, so preserve
     // browser-native lazy loading instead of firing every image in the list.
-    return isSafariWeb && blurBackground ? 'eager' : loading;
-  }, [blurBackground, isSafariWeb, loading]);
+    return isIOSWebKitWeb && blurBackground ? 'eager' : loading;
+  }, [blurBackground, isIOSWebKitWeb, loading]);
 
   // Stabilize width/height for image optimization to prevent URL changes on scroll
   // Only update when change is significant (>50px) to avoid re-fetching images
@@ -327,10 +328,9 @@ function ImageCardMedia({
     // (the gallery double-fetch).
     if (preserveOptimizedWebSrc) return true;
     if (!allowCriticalWebBlur) return false;
-    // Keep all non-Safari browsers on the previous behavior.
-    // iPhone Safari is the only browser where we need responsive srcSet restored.
-    return !isSafariWeb;
-  }, [allowCriticalWebBlur, isSafariWeb, preserveOptimizedWebSrc]);
+    // All iPhone browsers use WebKit and need the responsive Retina ladder.
+    return !isIOSWebKitWeb;
+  }, [allowCriticalWebBlur, isIOSWebKitWeb, preserveOptimizedWebSrc]);
 
   const providedWebResponsiveSource = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -415,8 +415,8 @@ function ImageCardMedia({
     if (!optimizeWeb) return undefined;
     if (shouldPreserveProvidedOptimizedUrl(uri)) return undefined;
     // Use stable width to prevent srcset changes on scroll
-    const baseWidth = stableWidth ?? (isSafariWeb ? 400 : 320);
-    const maxResponsiveMultiplier = isSafariWeb ? 3 : 2;
+    const baseWidth = stableWidth ?? (isIOSWebKitWeb ? 400 : 320);
+    const maxResponsiveMultiplier = isIOSWebKitWeb ? 3 : 2;
     const srcSetWidths = [
       Math.max(160, Math.round(baseWidth * 0.5)),
       Math.max(320, Math.round(baseWidth)),
@@ -440,7 +440,7 @@ function ImageCardMedia({
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined
     );
-  }, [providedWebResponsiveSource, resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth, isSafariWeb]);
+  }, [providedWebResponsiveSource, resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth, isIOSWebKitWeb]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -448,22 +448,22 @@ function ImageCardMedia({
     if (typeof width === 'number' && Number.isFinite(width) && width > 0) {
       return `${Math.round(width)}px`;
     }
-    if (isSafariWeb) {
+    if (isIOSWebKitWeb) {
       return '(min-width: 768px) 50vw, 100vw';
     }
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
-  }, [providedWebResponsiveSource, width, isSafariWeb]);
+  }, [providedWebResponsiveSource, width, isIOSWebKitWeb]);
 
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
     if (hasDataPlaceholder) return false;
     if (!blurBackground || !webMainSrc) return false;
     if (allowCriticalWebBlur) return true;
-    if (isSafariWeb) return true;
+    if (isIOSWebKitWeb) return true;
     // Avoid promoting the oversized blur backdrop to LCP on eager/critical images
     // unless the caller explicitly opts in for layout fidelity.
     return !(loading === 'eager' || priority === 'high');
-  }, [allowCriticalWebBlur, blurBackground, hasDataPlaceholder, isSafariWeb, loading, priority, webMainSrc]);
+  }, [allowCriticalWebBlur, blurBackground, hasDataPlaceholder, isIOSWebKitWeb, loading, priority, webMainSrc]);
   const webBackdropContentBox = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (fit !== 'contain') return null;
@@ -490,8 +490,8 @@ function ImageCardMedia({
   const shouldShowWebImageImmediately = useMemo(() => {
     if (Platform.OS !== 'web') return showImmediately;
     if (revealOnLoadOnly) return showImmediately;
-    if (isSafariWeb && allowCriticalWebBlur && !preserveOptimizedWebSrc) {
-      // iPhone Safari tends to paint a visibly blurry progressive frame when
+    if (isIOSWebKitWeb && allowCriticalWebBlur && !preserveOptimizedWebSrc) {
+      // iPhone WebKit tends to paint a visibly blurry progressive frame when
       // contain-mode shared-blur cards reveal the main image before onLoad.
       // This hits the large high-priority "Маршрут недели" card hardest, so the
       // wait MUST apply regardless of priority — `priority="high"` was the only
@@ -503,7 +503,7 @@ function ImageCardMedia({
     return showImmediately || resolvedLoading === 'eager' || priority === 'high';
   }, [
     allowCriticalWebBlur,
-    isSafariWeb,
+    isIOSWebKitWeb,
     preserveOptimizedWebSrc,
     priority,
     revealOnLoadOnly,
@@ -889,4 +889,4 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
 export default memo(ImageCardMedia);
 
 export { prefetchImage } from '@/components/ui/OptimizedImage';
-export { isIOSSafariUserAgent };
+export { isIOSSafariUserAgent, isIOSWebKitUserAgent };

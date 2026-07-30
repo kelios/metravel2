@@ -4,7 +4,12 @@
 
 const renderer = require('react-test-renderer')
 const { Platform } = require('react-native')
-const { default: ImageCardMedia, isIOSSafariUserAgent } = require('@/components/ui/ImageCardMedia')
+const {
+  default: ImageCardMedia,
+  isIOSSafariUserAgent,
+  isIOSWebKitUserAgent,
+} = require('@/components/ui/ImageCardMedia')
+const { WebMainImage } = require('@/components/ui/ImageCardMediaWebHelpers')
 
 describe('ImageCardMedia blur background (web)', () => {
   const originalPlatform = Platform.OS
@@ -119,6 +124,212 @@ describe('ImageCardMedia blur background (web)', () => {
         0
       )
     ).toBe(false)
+  })
+
+  it('recognizes Chrome on iPhone as iOS WebKit without misclassifying desktop Chrome', () => {
+    expect(
+      isIOSWebKitUserAgent(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/138.0.7204.119 Mobile/15E148 Safari/604.1',
+        5,
+      ),
+    ).toBe(true)
+
+    expect(
+      isIOSSafariUserAgent(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/138.0.7204.119 Mobile/15E148 Safari/604.1',
+        5,
+      ),
+    ).toBe(false)
+
+    expect(
+      isIOSWebKitUserAgent(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+        0,
+      ),
+    ).toBe(false)
+  })
+
+  it('applies the iOS WebKit sharp-reveal path in Chrome on iPhone', () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/138.0.7204.119 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/gallery/38/gallery/photo.JPG?w=400&q=52&fit=contain"
+          width={390}
+          height={560}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+          priority="high"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage.props.loading).toBe('eager')
+    expect(mainImage.props.style?.opacity).toBe(0)
+    expect(String(mainImage.props.srcSet)).toContain('1280w')
+
+    renderer.act(() => mainImage.props.onLoad())
+    const loadedMainImage = tree!.root.findAll((node: any) => {
+      return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
+    })[0]
+    expect(loadedMainImage.props.style?.opacity).toBe(1)
+  })
+
+  it('reports a decoded eager image when Chromium misses the native load event', async () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 0,
+      configurable: true,
+    })
+
+    let resolveDecode: (() => void) | undefined
+    const imageNode = {
+      complete: false,
+      naturalWidth: 0,
+      currentSrc: '',
+      decode: jest.fn(
+        () => new Promise<void>((resolve) => {
+          resolveDecode = resolve
+        }),
+      ),
+    }
+    const onLoad = jest.fn()
+    let tree: any
+
+    await renderer.act(async () => {
+      tree = renderer.create(
+        <WebMainImage
+          src="https://metravel.by/travel-image/38/photo.webp?w=640"
+          alt="Travel cover"
+          width={390}
+          height={260}
+          fit="cover"
+          borderRadius={12}
+          loading="eager"
+          priority="high"
+          hasBlurBehind
+          loaded={false}
+          onLoad={onLoad}
+        />,
+        {
+          createNodeMock: (element: any) => (element.type === 'img' ? imageNode : null),
+        },
+      )
+    })
+
+    imageNode.complete = true
+    imageNode.naturalWidth = 640
+    imageNode.currentSrc = 'https://metravel.by/travel-image/38/photo.webp?w=640'
+    await renderer.act(async () => {
+      resolveDecode?.()
+      await Promise.resolve()
+    })
+
+    expect(onLoad).toHaveBeenCalledWith(imageNode.currentSrc)
+    renderer.act(() => tree.unmount())
+  })
+
+  it('starts iOS lazy-image recovery only when the image approaches the viewport', async () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/138.0.7204.119 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let intersectionCallback: ((entries: Array<{ isIntersecting: boolean }>) => void) | undefined
+    const observe = jest.fn()
+    const disconnect = jest.fn()
+    const originalIntersectionObserver = (window as any).IntersectionObserver
+    ;(window as any).IntersectionObserver = class {
+      constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+        intersectionCallback = callback
+      }
+      observe = observe
+      disconnect = disconnect
+    }
+
+    let resolveDecode: (() => void) | undefined
+    const imageNode = {
+      complete: false,
+      naturalWidth: 0,
+      currentSrc: '',
+      decode: jest.fn(
+        () => new Promise<void>((resolve) => {
+          resolveDecode = resolve
+        }),
+      ),
+    }
+    const onLoad = jest.fn()
+    let tree: any
+
+    await renderer.act(async () => {
+      tree = renderer.create(
+        <WebMainImage
+          src="https://metravel.by/gallery/38/photo.webp?w=480"
+          alt="Description image"
+          width={390}
+          height={390}
+          fit="contain"
+          borderRadius={12}
+          loading="lazy"
+          priority="normal"
+          hasBlurBehind
+          loaded={false}
+          onLoad={onLoad}
+        />,
+        {
+          createNodeMock: (element: any) => (element.type === 'img' ? imageNode : null),
+        },
+      )
+    })
+
+    expect(observe).toHaveBeenCalledWith(imageNode)
+    expect(imageNode.decode).not.toHaveBeenCalled()
+
+    await renderer.act(async () => {
+      intersectionCallback?.([{ isIntersecting: true }])
+      await Promise.resolve()
+    })
+    expect(imageNode.decode).toHaveBeenCalledTimes(1)
+
+    imageNode.complete = true
+    imageNode.naturalWidth = 480
+    imageNode.currentSrc = 'https://metravel.by/gallery/38/photo.webp?w=480'
+    await renderer.act(async () => {
+      resolveDecode?.()
+      await Promise.resolve()
+    })
+
+    expect(onLoad).toHaveBeenCalledWith(imageNode.currentSrc)
+    renderer.act(() => tree.unmount())
+    expect(disconnect).toHaveBeenCalled()
+    ;(window as any).IntersectionObserver = originalIntersectionObserver
   })
 
   it('keeps responsive srcSet enabled on iPhone Safari while still forcing eager load', () => {

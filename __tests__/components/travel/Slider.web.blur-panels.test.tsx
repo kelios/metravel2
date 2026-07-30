@@ -36,13 +36,11 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 
   return {
     __esModule: true,
-    isIOSSafariUserAgent: (userAgent: string, maxTouchPoints = 0) => {
+    isIOSWebKitUserAgent: (userAgent: string, maxTouchPoints = 0) => {
       const normalizedUserAgent = String(userAgent || '')
-      const isIOSDevice = /iPad|iPhone|iPod/i.test(normalizedUserAgent) || (
+      return /iPad|iPhone|iPod/i.test(normalizedUserAgent) || (
         /Macintosh/i.test(normalizedUserAgent) && maxTouchPoints > 1
       )
-      const isSafari = /Safari/i.test(normalizedUserAgent) && !/(Chrome|CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Chromium|Firefox)/i.test(normalizedUserAgent)
-      return isIOSDevice && isSafari
     },
     prefetchImage: jest.fn(() => Promise.resolve()),
     default: (props: any) =>
@@ -344,6 +342,39 @@ describe('Slider (web) blur background', () => {
     expect(firstImage.props.allowCriticalWebBlur).toBe(true)
     expect(firstImage.props.revealOnLoadOnly).toBe(true)
     expect(firstImage.props.showImmediately).toBe(false)
+  })
+
+  it('waits for the sharp slide in Chrome on iPhone too', async () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/138.0.7204.119 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+        />,
+      )
+    })
+    await measureSliderLayout(tree!)
+
+    const firstImage = tree!.root.findByProps({ testID: 'slider-image-0' })
+    expect(firstImage.props.revealOnLoadOnly).toBe(true)
+    expect(firstImage.props.showImmediately).toBe(false)
+    expect(firstImage.props.loading).toBe('eager')
+    expect(firstImage.props.fetchPriority).toBe('high')
   })
 
   it('keeps only the in-track previous frame after navigating without duplicating overlay media', async () => {

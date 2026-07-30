@@ -175,6 +175,7 @@ const QUESTS = [
     { questId: 'lodz-murals', dir: 'lodzMurals', city: 'Лодзь', mood: 'city', finaleId: 135 },
     { questId: 'gniezno-white-eagle', dir: 'gnieznoWhiteEagle', city: 'Гнезно', mood: 'epic', finaleId: 136 },
     { questId: 'sasino-stilo', dir: 'sasinoStilo', city: 'Сашино', mood: 'epic', finaleId: 137 },
+    { questId: 'hel-jurata-amber', dir: 'helJurataAmber', city: 'Хель', mood: 'epic', finaleId: 138 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

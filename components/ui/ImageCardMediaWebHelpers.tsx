@@ -53,11 +53,17 @@ export const hasOptimizationParams = (value: string | null | undefined): boolean
   }
 };
 
+export const isIOSWebKitUserAgent = (userAgent: string, maxTouchPoints = 0): boolean => {
+  const normalizedUserAgent = String(userAgent || '');
+  return (
+    /iPad|iPhone|iPod/i.test(normalizedUserAgent) ||
+    (/Macintosh/i.test(normalizedUserAgent) && maxTouchPoints > 1)
+  );
+};
+
 export const isIOSSafariUserAgent = (userAgent: string, maxTouchPoints = 0): boolean => {
   const normalizedUserAgent = String(userAgent || '');
-  const isIOSDevice = /iPad|iPhone|iPod/i.test(normalizedUserAgent) || (
-    /Macintosh/i.test(normalizedUserAgent) && maxTouchPoints > 1
-  );
+  const isIOSDevice = isIOSWebKitUserAgent(normalizedUserAgent, maxTouchPoints);
   const isSafari = /Safari/i.test(normalizedUserAgent) &&
     !/(Chrome|CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Chromium|Firefox)/i.test(normalizedUserAgent);
 
@@ -81,10 +87,7 @@ export const isIOSWebKit = (): boolean => {
 
   const userAgent = String(navigator.userAgent || '');
   const maxTouchPoints = typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0;
-  return (
-    /iPad|iPhone|iPod/i.test(userAgent) ||
-    (/Macintosh/i.test(userAgent) && maxTouchPoints > 1)
-  );
+  return isIOSWebKitUserAgent(userAgent, maxTouchPoints);
 };
 
 type WebMainImageProps = {
@@ -136,19 +139,76 @@ export const WebMainImage = memo(function WebMainImage({
     loadReportedRef.current = false;
   }, [src]);
 
-  // Synthesize onLoad for images that are already done at mount. The browser does
-  // NOT fire a real <img> onLoad for a cache-hit image that completed before React
-  // attached the handler. This must ALSO run when `loaded` was initialised true
-  // from the module cache (the same image was rendered on the previous screen):
-  // otherwise the parent's onLoad — which drives the first-image / LCP callback
-  // chain — never fires, and the travel-details skeleton overlay covers the page
-  // until a 6s safety timeout, an intermittent blank screen on client navigation.
+  // Synthesize onLoad for cache hits and for iOS WebKit images whose real load event
+  // is lost after a responsive-source swap or scroll restoration. Chrome, Firefox,
+  // and Safari on iOS all use WebKit, so relying only on the DOM event can leave the
+  // sharp layer at opacity:0 forever while its blurhash remains visible. `decode()`
+  // follows the selected srcSet candidate until it is ready; bounded polling covers
+  // WebKit builds where decode rejects even though the image later completes.
   useEffect(() => {
     const img = imgRef.current;
     if (loaded || (img && img.complete && img.naturalWidth > 0)) {
       handleLoad();
+      return;
     }
-  }, [src, loaded, handleLoad]);
+
+    // Eager list/hero media can miss the event during a very fast cache hit in
+    // Chromium too (observed on production after the iOS fix: complete=true,
+    // naturalWidth>0, opacity remained 0). Lazy completion polling stays
+    // iOS-WebKit-only so desktop article media does not keep background timers.
+    if (!img || (loading !== 'eager' && !isIOSWebKit())) return;
+
+    let cancelled = false;
+    let recoveryStarted = false;
+    let attempts = 0;
+    let intersectionObserver: IntersectionObserver | undefined;
+    let pollTimer: ReturnType<typeof setInterval> | undefined;
+    const reportIfReady = (): boolean => {
+      if (cancelled || !img.complete || img.naturalWidth <= 0) return false;
+      handleLoad();
+      return true;
+    };
+
+    const startRecovery = () => {
+      if (cancelled || recoveryStarted) return;
+      recoveryStarted = true;
+      intersectionObserver?.disconnect();
+
+      // For lazy article media this runs only once IntersectionObserver reports
+      // that the image is close to the viewport, so decode() does not turn all
+      // description photos into eager requests.
+      if (typeof img.decode === 'function') {
+        void img.decode().then(reportIfReady).catch(() => {
+          // Keep the bounded completion poll alive; the native onLoad handler is
+          // still the primary path and will report immediately if it does fire.
+        });
+      }
+
+      pollTimer = setInterval(() => {
+        attempts += 1;
+        if (reportIfReady() || attempts >= 120) {
+          if (pollTimer !== undefined) clearInterval(pollTimer);
+        }
+      }, 250);
+    };
+
+    if (loading === 'eager') {
+      startRecovery();
+    } else if (typeof IntersectionObserver !== 'undefined') {
+      intersectionObserver = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) startRecovery();
+      }, {
+        rootMargin: '300px 0px',
+      });
+      intersectionObserver.observe(img);
+    }
+
+    return () => {
+      cancelled = true;
+      intersectionObserver?.disconnect();
+      if (pollTimer !== undefined) clearInterval(pollTimer);
+    };
+  }, [src, loaded, loading, handleLoad]);
 
   return (
     <img
