@@ -31,6 +31,7 @@ import {
   mockFallbackTravelDetails,
   preacceptCookies,
 } from './helpers/navigation';
+import { isMediaRequestWithoutWidth } from './helpers/mediaRequestWidth';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -236,6 +237,8 @@ type NetworkStats = {
   jsRequests: number;
   imgRequests: number;
   largestResources: Array<{ url: string; sizeKB: number; type: string }>;
+  /** #1161: медиа-запросы без `w` — прокси на них отдаёт мастер целиком. */
+  mediaRequestsWithoutWidth: string[];
 };
 
 function hostFromUrl(url: string): string | null {
@@ -266,6 +269,7 @@ function shouldCountForRequestBudget(url: string): boolean {
 
 function createNetworkTracker(page: any): { getStats: () => NetworkStats } {
   const resources: Array<{ url: string; size: number; type: string }> = [];
+  const mediaRequestsWithoutWidth = new Set<string>();
   let allRequestCount = 0;
   let requestCount = 0;
   let ignoredThirdPartyRequestCount = 0;
@@ -281,6 +285,10 @@ function createNetworkTracker(page: any): { getStats: () => NetworkStats } {
         requestCount++;
       } else {
         ignoredThirdPartyRequestCount++;
+      }
+
+      if (isMediaRequestWithoutWidth(url)) {
+        mediaRequestsWithoutWidth.add(url);
       }
 
       const contentLength = response.headers()['content-length'];
@@ -329,6 +337,7 @@ function createNetworkTracker(page: any): { getStats: () => NetworkStats } {
         jsRequests,
         imgRequests,
         largestResources,
+        mediaRequestsWithoutWidth: [...mediaRequestsWithoutWidth],
       };
     },
   };
@@ -525,12 +534,20 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
         ignoredThirdParty: stats.ignoredThirdPartyRequestCount,
       },
       largestResources: stats.largestResources,
+      mediaRequestsWithoutWidth: stats.mediaRequestsWithoutWidth,
     }, null, 2));
 
     test.info().annotations.push({
       type: 'network-budget',
       description: JSON.stringify(stats),
     });
+
+    // #1161: без `w` прокси отдаёт мастер целиком — 132 344 B вместо 2 582 B на
+    // плитке 132×132 (замер прода 2026-07-30). Проверяем трафиком, а не кодом.
+    expect(
+      stats.mediaRequestsWithoutWidth,
+      `${stats.mediaRequestsWithoutWidth.length} медиа-запрос(ов) без w — прокси отдаёт мастер целиком`
+    ).toEqual([]);
 
     // JS bundle size (gzip transfer)
     expect(

@@ -64,11 +64,9 @@ const getOptimizedImageUrl = (url?: string, updatedAt?: string) => {
   
   return optimizeImageUrl(versionedUrl, {
     width: 480,
-    height: 320,
     format: 'webp',
     quality: 60,
     fit: 'contain',
-    dpr: 1,
   }) || versionedUrl;
 };
 

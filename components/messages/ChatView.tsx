@@ -389,7 +389,7 @@ function ChatHeader({
       >
         <View style={styles.headerAvatar}>
           {otherUserAvatar ? (
-            <Image source={{ uri: optimizeImageUrl(otherUserAvatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? otherUserAvatar }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: optimizeImageUrl(otherUserAvatar, { width: 72, quality: 70, fit: 'cover' }) ?? otherUserAvatar }} style={styles.headerAvatarImage} />
           ) : (
             <Feather name="user" size={18} color={colors.primaryDark} />
           )}

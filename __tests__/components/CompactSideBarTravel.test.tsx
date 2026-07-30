@@ -65,7 +65,7 @@ jest.mock('@/components/ui/SubscribeButton', () => {
 jest.mock('@/utils/imageOptimization', () => ({
   optimizeImageUrl: (url: string) => url,
   buildVersionedImageUrl: (url: string) => url,
-  getOptimalImageSize: (width: number, height: number) => ({ width, height }),
+  getOptimalImageWidth: (width: number) => width,
   generateSrcSet: (url: string) => url,
 }));
 

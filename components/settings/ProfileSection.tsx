@@ -124,7 +124,7 @@ export default function ProfileSection({
             <View style={styles.profileHeaderRow}>
                 <View style={styles.profileAvatar}>
                     {profile?.avatar && !settingsAvatarError ? (
-                        <Image source={{ uri: optimizeImageUrl(profile.avatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }} style={styles.profileAvatarImage} resizeMode="cover" onError={() => setSettingsAvatarError(true)} />
+                        <Image source={{ uri: optimizeImageUrl(profile.avatar, { width: 72, quality: 70, fit: 'cover' }) ?? profile.avatar }} style={styles.profileAvatarImage} resizeMode="cover" onError={() => setSettingsAvatarError(true)} />
                     ) : (
                         <Feather name="user" size={18} color={colors.primaryDark} />
                     )}

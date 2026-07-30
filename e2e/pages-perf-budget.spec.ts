@@ -79,6 +79,15 @@ const PAGES: PageTarget[] = [
     readySelector: 'h1',
     lcpMaxMs: envNum('PERF_LCP_MAX_MS_PLACES', envNum('PERF_LCP_MAX_MS', IS_CI ? 5000 : 11_000)),
   },
+  // #1161: каталог квестов держит обложки на `/quest-cover/**` — путь, который до
+  // #1113 вообще не распознавался как медийный и уходил без `w`.
+  {
+    key: 'QUESTS',
+    name: 'Quests',
+    path: '/quests',
+    readySelector: 'h1',
+    lcpMaxMs: envNum('PERF_LCP_MAX_MS_QUESTS', envNum('PERF_LCP_MAX_MS', IS_CI ? 5000 : 11_000)),
+  },
 ]
 
 function shouldIgnoreBudgetRequest(target: PageTarget, url: string) {
@@ -232,12 +241,22 @@ for (const target of PAGES) {
               ignoredBudget: stats.ignoredBudgetRequestCount,
             },
             largestResources: stats.largestResources,
+            mediaRequestsWithoutWidth: stats.mediaRequestsWithoutWidth,
           },
           null,
           2,
         ),
       )
       test.info().annotations.push({ type: 'network-budget', description: JSON.stringify(stats) })
+
+      // #1161: медиа-запрос без `w` возвращает мастер целиком — 132 344 B вместо
+      // 2 582 B на плитке 132×132 (замер прода 2026-07-30). Раньше это правило жило
+      // комментарием в `utils/imageProxy.ts` и трижды нарушалось незаметно
+      // (#1103, #1113, #1104), поэтому здесь оно проверяется трафиком, а не кодом.
+      expect(
+        stats.mediaRequestsWithoutWidth,
+        `${target.name}: ${stats.mediaRequestsWithoutWidth.length} медиа-запрос(ов) без w — прокси отдаёт мастер целиком`,
+      ).toEqual([])
 
       expect(stats.jsKB, `${target.name} JS ${stats.jsKB}KB > ${MAX_JS_TRANSFER_KB}KB`).toBeLessThanOrEqual(
         MAX_JS_TRANSFER_KB,

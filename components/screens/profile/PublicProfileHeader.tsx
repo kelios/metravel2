@@ -83,9 +83,7 @@ export function PublicProfileHeader({
   const coverPhoto = profile.cover_photo
     ? optimizeImageUrl(profile.cover_photo, {
         width: 1024,
-        height: COVER_HEIGHT * 2,
         quality: 70,
-        format: 'auto',
         fit: 'cover',
       }) ?? profile.cover_photo
     : null;
@@ -145,9 +143,7 @@ export function PublicProfileHeader({
                   uri:
                     optimizeImageUrl(profile.avatar, {
                       width: 224,
-                      height: 224,
                       quality: 72,
-                      format: 'auto',
                       fit: 'cover',
                     }) ?? profile.avatar,
                 }}

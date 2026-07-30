@@ -4,18 +4,23 @@
 import { Platform } from 'react-native';
 import { normalizeAbsoluteMediaUrl, isPrivateOrLocalHost } from '@/utils/mediaUrl';
 
+// #1171: здесь были ещё `height`, `dpr` и `blur`. Прокси не принимает ни один из
+// них (ресайз идёт только по `w`), поэтому их значения никогда не доезжали до
+// запроса — но 13 мест в приложении их вычисляли и передавали, создавая ложное
+// впечатление, что высота влияет на вес картинки. Не возвращать: retina-вариант
+// получается умножением самой `width` на DPR, см. комментарий у `resolveProxyWidth`.
 export interface ImageOptimizationOptions {
   width?: number;
-  height?: number;
   quality?: number;
   format?: 'avif' | 'webp' | 'jpg' | 'png' | 'auto';
-  dpr?: number;
   fit?: 'cover' | 'contain' | 'fill';
-  blur?: number;
 }
 
 const optimizedUrlCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 400;
+// Список того, что вычищается из входящего URL. Он ШИРЕ, чем набор отправляемых
+// параметров: в базе и в легаси-разметке лежат URL с `h`/`dpr`/`blur`, и их нужно
+// снять, даже если сами мы такие параметры больше не строим.
 const OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'dpr', 'blur'];
 const MEDIA_FILE_PATH = /^\/(gallery|travel-image|travel-description-image|address-image)\/(?:[^?#]*\/conversions\/|\d+\/(gallery|travel-image|travel-description-image|address-image)\/|[^/?#]+$)/i;
 
@@ -45,6 +50,32 @@ const getPublicApiOrigin = (): string | null => {
 const isTestEnv = () =>
   typeof process !== 'undefined' &&
   (process.env as Record<string, unknown>)?.NODE_ENV === 'test';
+
+// #1161: статический гейт (`scripts/check-image-architecture.js`) ловит вызов без
+// ширины в исходниках, но ширина может обнулиться и в рантайме — например слот ещё
+// не измерен и приходит 0. Такой запрос уходит без `w`, и прокси отдаёт мастер
+// целиком (132 344 B против 2 582 B на плитке 132×132, замер прода 2026-07-30).
+// В DEV показываем виновника один раз на URL, чтобы не залить консоль на списке.
+const warnedWidthlessUrls = new Set<string>();
+
+const warnMissingProxyWidth = (url: string): void => {
+  if (!__DEV__ || isTestEnv()) return;
+  if (warnedWidthlessUrls.has(url)) return;
+  warnedWidthlessUrls.add(url);
+
+  // Первый кадр стека вне этого модуля — вызывающий компонент.
+  const caller = String(new Error().stack || '')
+    .split('\n')
+    .slice(1)
+    .find((frame) => !frame.includes('imageProxy'))
+    ?.trim();
+
+  console.warn(
+    `[images] медиа-URL строится без ширины — прокси отдаст мастер целиком: ${url}` +
+      (caller ? `\n  вызов: ${caller}` : '') +
+      '\n  ширину надо считать от измеренного слота, см. docs/features/images.md (#1161)'
+  );
+};
 
 // Квантование запрашиваемого варианта в фиксированный набор, чтобы бэкенд-прокси
 // отдавал небольшое кэш-дружелюбное число конверсий, а не уникальный файл на
@@ -114,14 +145,10 @@ const snapQuality = (value: number): number => {
   return Math.min(100, Math.max(10, Math.round(q / 10) * 10));
 };
 
-export function clearImageOptimizationCache(): void {
-  optimizedUrlCache.clear();
-}
-
-export function getImageCacheStats(): { size: number; entries: number } {
-  return { size: optimizedUrlCache.size, entries: optimizedUrlCache.size };
-}
-
+// #1171: здесь жили `clearImageOptimizationCache` и `getImageCacheStats` — ни одна
+// из них не вызывалась в приложении, только в собственных тестах. Кэш живёт весь
+// сеанс и очищается вытеснением; изоляция тестов держится на том, что публичный
+// origin входит в ключ (см. `cacheKey` ниже), а не на внешнем сбросе.
 export function optimizeImageUrl(
   originalUrl: string | null | undefined,
   options: ImageOptimizationOptions = {}
@@ -137,12 +164,15 @@ export function optimizeImageUrl(
   // бандлером — префикс публичного origin ломает их в dev/preview.
   if (trimmedUrl.includes('unstable_path=')) return originalUrl;
 
-  const cacheKey = `${trimmedUrl}|${options.width ?? ''}|${options.height ?? ''}|${options.quality ?? ''}|${options.format ?? ''}|${options.dpr ?? ''}|${options.fit ?? ''}|${options.blur ?? ''}`;
+  // Публичный origin входит в ключ, потому что влияет на результат: от него зависит
+  // и ветка «свой домен», и префикс абсолютного URL. Без него смена
+  // `EXPO_PUBLIC_API_URL` отдавала бы URL, собранный для прежнего хоста.
+  const publicOrigin = getPublicApiOrigin();
+  const cacheKey = `${publicOrigin ?? ''}|${trimmedUrl}|${options.width ?? ''}|${options.quality ?? ''}|${options.format ?? ''}|${options.fit ?? ''}`;
   const cached = optimizedUrlCache.get(cacheKey);
   if (cached) return cached;
 
   try {
-    const publicOrigin = getPublicApiOrigin();
     const parsedUrl = new URL(trimmedUrl, publicOrigin || 'https://placeholder.invalid');
 
     if (isPrivateOrLocalHost(parsedUrl.hostname)) return originalUrl;
@@ -158,7 +188,7 @@ export function optimizeImageUrl(
 
       const proxyParams = new URLSearchParams();
       const mediaWidth = resolveProxyWidth(options);
-      // Без `w` прокси всё равно отдаст оригинал, поэтому одни только q/fit/blur —
+      // Без `w` прокси всё равно отдаст оригинал, поэтому одни только q/fit —
       // это лишний cache-key на тот же байтовый результат. Оставляем голый URL:
       // он самый «горячий» в кэше и не запускает новую конверсию.
       if (mediaWidth) {
@@ -166,7 +196,8 @@ export function optimizeImageUrl(
         if (options.quality != null) proxyParams.set('q', String(snapQuality(options.quality)));
         if (options.format && options.format !== 'auto') proxyParams.set('f', options.format);
         if (options.fit) proxyParams.set('fit', options.fit);
-        if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
+      } else {
+        warnMissingProxyWidth(parsedUrl.toString());
       }
 
       const paramStr = proxyParams.toString();
@@ -216,7 +247,8 @@ export function optimizeImageUrl(
       proxyParams.set('q', String(quality));
       if (format !== 'auto') proxyParams.set('f', format);
       proxyParams.set('fit', fit);
-      if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
+    } else {
+      warnMissingProxyWidth(`${publicOrigin}${parsedUrl.pathname}`);
     }
 
     const imagePath = parsedUrl.pathname + parsedUrl.search;
@@ -287,22 +319,14 @@ export function getPreferredImageFormat(): 'avif' | 'webp' | 'jpg' {
   return 'jpg';
 }
 
-export function getOptimalImageSize(
-  containerWidth: number,
-  containerHeight?: number,
-  aspectRatio?: number
-): { width: number; height: number } {
+// #1171: раньше это был `getOptimalImageSize`, возвращавший `{ width, height }` и
+// умевший считать высоту тремя способами (по контейнеру, по aspect ratio, 16/9).
+// Ни одна из трёх веток ни на что не влияла: высота уходила в `optimizeImageUrl`,
+// который её не отправляет. Осталась единственная реальная задача — перевести
+// CSS-ширину в device-пиксели с потолком DPR 2 на web (выше него прирост резкости
+// не виден, а байты растут квадратично).
+export function getOptimalImageWidth(containerWidth: number): number {
   const rawDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const dpr = Platform.OS === 'web' ? Math.min(rawDpr, 2) : rawDpr;
-  const baseWidth = containerWidth * dpr;
-
-  if (containerHeight && !aspectRatio) {
-    return { width: Math.round(baseWidth), height: Math.round(containerHeight * dpr) };
-  }
-
-  if (aspectRatio) {
-    return { width: Math.round(baseWidth), height: Math.round(baseWidth / aspectRatio) };
-  }
-
-  return { width: Math.round(baseWidth), height: Math.round(baseWidth * (16 / 9)) };
+  return Math.round(containerWidth * dpr);
 }

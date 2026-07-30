@@ -185,7 +185,7 @@ function ThreadList({
                     <View style={[styles.avatar, { backgroundColor: hasUnread ? colors.primary : colors.primarySoft }]}>
                         {avatarUrl ? (
                             <Image
-                                source={{ uri: optimizeImageUrl(avatarUrl, { width: 88, height: 88, quality: 70, format: 'auto', fit: 'cover' }) ?? avatarUrl }}
+                                source={{ uri: optimizeImageUrl(avatarUrl, { width: 88, quality: 70, fit: 'cover' }) ?? avatarUrl }}
                                 style={styles.avatarImage}
                             />
                         ) : (

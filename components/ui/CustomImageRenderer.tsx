@@ -182,7 +182,6 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
         width: Math.min(MAX_WIDTH, Math.round(boxWidth * dpr)),
         quality: 70,
         fit: 'contain',
-        format: 'auto',
       }) ?? src
     );
   }, [src, boxWidth]);

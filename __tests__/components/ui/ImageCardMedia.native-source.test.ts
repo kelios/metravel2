@@ -63,4 +63,33 @@ describe('ImageCardMedia native sharp source', () => {
     expect(source?.uri).not.toMatch(/w=(1024|2048)\b/)
     expect(source?.uri).not.toMatch(/[?&]h=/)
   })
+
+  // #1161: правило «без ширины медиа-запрос не строим» обязано действовать и на
+  // native — именно здесь оно нарушалось в #1103, где sharp-слой уходил в Glide
+  // исходным URL и карточка 132dp платила полный вес оригинала.
+  describe('без известной ширины запрос не строится (#1161)', () => {
+    const base = {
+      uri: 'https://metravel.by/quest-cover/quests/68/main/cover.png',
+      quality: 60,
+      fit: 'cover' as const,
+      pixelRatio: 3,
+    }
+
+    it('возвращает null, когда ни width, ни height ещё не измерены', () => {
+      expect(buildNativeSharpImageSource({ ...base })).toBeNull()
+    })
+
+    it('возвращает null на нулевой и отрицательной ширине', () => {
+      expect(buildNativeSharpImageSource({ ...base, width: 0 })).toBeNull()
+      expect(buildNativeSharpImageSource({ ...base, width: -10 })).toBeNull()
+    })
+
+    // Любой построенный native-URL обязан нести `w`: без него прокси отдаёт мастер.
+    it('всякий раз, когда URL всё-таки построен, в нём есть w', () => {
+      for (const width of [1, 24, 132, 320, 4000]) {
+        const source = buildNativeSharpImageSource({ ...base, width })
+        expect({ width, hasW: /[?&]w=\d+/.test(source?.uri ?? '') }).toEqual({ width, hasW: true })
+      }
+    })
+  })
 })

@@ -73,9 +73,7 @@ export default function SelectedTravelOrderCard({
     return (
       optimizeImageUrl(raw, {
         width: MEDIA_WIDTH * 2,
-        height: MEDIA_HEIGHT * 2,
         quality: 65,
-        format: 'auto',
         fit: 'cover',
       }) ?? raw
     );

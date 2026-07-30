@@ -379,10 +379,8 @@ function ImageCardMedia({
     return (
       optimizeImageUrl(uri, {
         width: stableWidth,
-        height: stableHeight,
         quality,
         fit: contentFit === 'contain' ? 'contain' : 'cover',
-        format: 'auto',
       }) ?? uri
     );
   }, [providedWebResponsiveSource, resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, stableWidth, stableHeight, contentFit, quality]);
@@ -582,7 +580,6 @@ function ImageCardMedia({
     return (
       optimizeImageUrl(raw, {
         width: 64,
-        height: 64,
         quality: 28,
         format: 'jpg',
         fit: 'cover',

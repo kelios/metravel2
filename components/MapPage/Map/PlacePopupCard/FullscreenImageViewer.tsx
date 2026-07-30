@@ -83,13 +83,10 @@ const FullscreenImageViewer: React.FC<{
     if (!imageUrl) return imageUrl;
     return optimizeImageUrl(imageUrl, {
       width: maxW,
-      height: maxH,
       quality: 90,
-      format: 'auto',
       fit: 'contain',
-      dpr: typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1,
     }) ?? imageUrl;
-  }, [imageUrl, maxW, maxH]);
+  }, [imageUrl, maxW]);
 
   // Map-point photos are often only available as small thumbnails (e.g. the
   // backend's 400px `-thumb_400_wp` conversion). Measure the real pixel size of

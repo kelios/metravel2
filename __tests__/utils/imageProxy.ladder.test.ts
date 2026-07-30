@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { clearImageOptimizationCache, optimizeImageUrl } from '@/utils/imageProxy'
+import { optimizeImageUrl } from '@/utils/imageProxy'
 
 /**
  * Лестница ширин фронта обязана совпадать с `ALLOWED_IMAGE_WIDTHS` бэкенда.
@@ -32,7 +32,6 @@ describe('utils/imageProxy — лестница ширин против конт
 
   beforeEach(() => {
     process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
-    clearImageOptimizationCache()
   })
 
   afterAll(() => {

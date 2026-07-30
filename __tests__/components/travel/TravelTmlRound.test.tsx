@@ -35,7 +35,7 @@ jest.mock('@/hooks/useTheme', () => ({
 
 jest.mock('@/utils/imageOptimization', () => ({
   buildVersionedImageUrl: (url: string) => url,
-  getOptimalImageSize: (width: number, height: number) => ({ width, height }),
+  getOptimalImageWidth: (width: number) => width,
   optimizeImageUrl: (url: string) => url,
 }));
 

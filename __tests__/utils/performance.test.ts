@@ -8,9 +8,6 @@ import { Platform } from 'react-native';
 import {
   optimizeImageUrl,
   generateSrcSet,
-  clearImageOptimizationCache,
-  getImageCacheStats,
-  ImageOptimizationOptions,
 } from '@/utils/imageOptimization';
 
 import {
@@ -29,8 +26,10 @@ describe('Image Optimization', () => {
 
   beforeEach(() => {
     Platform.OS = 'web'
+    // #1171: сброса кэша больше нет и он не нужен — публичный origin входит в
+    // ключ кэша, поэтому смена `EXPO_PUBLIC_API_URL` между блоками не может
+    // отдать URL, собранный для прежнего хоста.
     process.env.EXPO_PUBLIC_API_URL = 'https://cdn.metravel.by/api'
-    clearImageOptimizationCache();
   });
 
   afterEach(() => {
@@ -51,19 +50,26 @@ describe('Image Optimization', () => {
       expect(result).toContain('w=800');
     });
 
-    // #1113: `h` больше не отправляется — прокси ресайзит только по `w`, а запрос
-    // с одним лишь `h` он не отвергает, а молча отдаёт оригинал. Раз размерных
-    // параметров нет, остальные (q/f/fit) тоже не добавляются: они не меняют
-    // байтовый результат, а только плодят записи в кэше прокси.
-    it('should not send height, and should send nothing sizing-related without a width', () => {
-      const heightOnly = optimizeImageUrl(baseUrl, { height: 600 });
-      expect(heightOnly).not.toMatch(/[?&]h=/);
-      expect(heightOnly).not.toMatch(/[?&]w=/);
-      expect(heightOnly).not.toMatch(/[?&]q=/);
+    // #1113/#1171: `h` не отправляется и больше не принимается на входе — прокси
+    // ресайзит только по `w`, а запрос с одним лишь `h` он не отвергает, а молча
+    // отдаёт оригинал. Без ширины не добавляются и остальные параметры (q/f/fit):
+    // они не меняют байтовый результат, только плодят записи в кэше прокси.
+    it('should send nothing sizing-related without a width', () => {
+      const noWidth = optimizeImageUrl(baseUrl, { quality: 80, fit: 'cover' });
+      expect(noWidth).not.toMatch(/[?&]h=/);
+      expect(noWidth).not.toMatch(/[?&]w=/);
+      expect(noWidth).not.toMatch(/[?&]q=/);
+    });
 
-      const withWidth = optimizeImageUrl(baseUrl, { width: 800, height: 600 });
-      expect(withWidth).toContain('w=800');
-      expect(withWidth).not.toMatch(/[?&]h=/);
+    // Легаси-URL из БД и из старой разметки приходят с `h`/`dpr`/`blur`. Их нужно
+    // снять, иначе прокси получит запрос, который сам себе противоречит.
+    it('strips legacy sizing params carried by the incoming url', () => {
+      const legacy = `${baseUrl}?w=1920&h=1080&dpr=3&blur=12`;
+      const result = optimizeImageUrl(legacy, { width: 800 });
+      expect(result).toContain('w=800');
+      expect(result).not.toMatch(/[?&]h=/);
+      expect(result).not.toMatch(/[?&]dpr=/);
+      expect(result).not.toMatch(/[?&]blur=/);
     });
 
     it('should add format parameter', () => {
@@ -111,15 +117,12 @@ describe('Image Optimization', () => {
 
     it('should cache optimized URLs', () => {
       const url = baseUrl;
-      const options: ImageOptimizationOptions = { width: 800, quality: 80 };
+      const options = { width: 800, quality: 80 } as const;
 
       const result1 = optimizeImageUrl(url, options);
       const result2 = optimizeImageUrl(url, options);
 
       expect(result1).toBe(result2);
-
-      const stats = getImageCacheStats();
-      expect(stats.size).toBeGreaterThan(0);
     });
 
     it('should handle existing query parameters', () => {
@@ -298,28 +301,20 @@ describe('Web Vitals Monitoring', () => {
 });
 
 describe('Cache Management', () => {
-  it('should clear cache', () => {
-    optimizeImageUrl('https://example.com/image1.jpg', { width: 800 });
-    optimizeImageUrl('https://example.com/image2.jpg', { width: 800 });
+  // #1171: `clearImageOptimizationCache`/`getImageCacheStats` удалены — они
+  // существовали только ради этих тестов. Наблюдаемое свойство кэша, которое имеет
+  // значение снаружи, одно: он не искажает результат при переполнении. Вытеснение
+  // происходит на 400 записях, поэтому 600 разных URL гарантированно его вызывают,
+  // и первый URL после этого должен оптимизироваться так же, как до заполнения.
+  it('keeps producing correct URLs after the cache overflows', () => {
+    const first = 'https://example.com/image0.jpg';
+    const before = optimizeImageUrl(first, { width: 800 });
 
-    let stats = getImageCacheStats();
-    expect(stats.size).toBeGreaterThan(0);
-
-    clearImageOptimizationCache();
-
-    stats = getImageCacheStats();
-    expect(stats.size).toBe(0);
-  });
-
-  it('should limit cache size', () => {
-    // Add many items
-    for (let i = 0; i < 600; i++) {
+    for (let i = 1; i < 600; i++) {
       optimizeImageUrl(`https://example.com/image${i}.jpg`, { width: 800 });
     }
 
-    const stats = getImageCacheStats();
-    // Cache should be limited to prevent memory leaks
-    expect(stats.size).toBeLessThan(600);
+    expect(optimizeImageUrl(first, { width: 800 })).toBe(before);
   });
 });
 

@@ -40,7 +40,6 @@ function UserAvatar({ uri, size = 'md', onError }: UserAvatarProps) {
       optimizeImageUrl(uri, {
         width: px * 2,
         quality: 70,
-        format: 'auto',
         fit: 'cover',
       }) ?? uri,
     [uri, px],

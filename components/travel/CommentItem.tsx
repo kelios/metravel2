@@ -81,7 +81,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
           <View style={styles.avatar}>
             {comment.user_avatar && !avatarError ? (
               <Image
-                source={{ uri: optimizeImageUrl(comment.user_avatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? comment.user_avatar }}
+                source={{ uri: optimizeImageUrl(comment.user_avatar, { width: 72, quality: 70, fit: 'cover' }) ?? comment.user_avatar }}
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
                 accessibilityIgnoresInvertColors

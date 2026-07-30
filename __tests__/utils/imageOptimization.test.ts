@@ -2,11 +2,13 @@ import { Platform } from 'react-native'
 
 import {
   optimizeImageUrl,
-  getOptimalImageSize,
+  getOptimalImageWidth,
   generateSrcSet,
-  getResponsiveSizes,
   buildVersionedImageUrl,
 } from '@/utils/imageOptimization'
+// #1171: не входит в публичный баррель — это внутренний дефолт
+// `buildResponsiveImageProps`, но набор ступеней в нём проверять нужно.
+import { getResponsiveSizes } from '@/utils/imageSrcSet'
 
 // В этом файле проверяем только чистую логику трансформации URL и размеров,
 // не трогая реальные сети/DOM. JSDOM и polyfills уже настраиваются в __tests__/setup.ts.
@@ -111,30 +113,31 @@ describe('utils/imageOptimization', () => {
     })
   })
 
-  describe('getOptimalImageSize', () => {
-    it('uses dpr from window for basic case without aspectRatio', () => {
+  // #1171: раньше это был `getOptimalImageSize` с тремя способами посчитать высоту.
+  // Высота никуда не уходила (прокси ресайзит только по `w`), осталась единственная
+  // реальная работа — перевод CSS-ширины в device-пиксели.
+  describe('getOptimalImageWidth', () => {
+    it('multiplies the css width by the device pixel ratio', () => {
       ;(window as any).devicePixelRatio = 2
-
-      const { width, height } = getOptimalImageSize(100)
-      // 16:9 по умолчанию, умножено на dpr=2
-      expect(width).toBe(200)
-      expect(height).toBe(Math.round(200 * (16 / 9)))
+      expect(getOptimalImageWidth(100)).toBe(200)
     })
 
-    it('respects explicit containerHeight when aspectRatio is not provided', () => {
+    it('rounds fractional ratios instead of emitting a fractional width', () => {
       ;(window as any).devicePixelRatio = 1.5
-
-      const { width, height } = getOptimalImageSize(100, 80)
-      expect(width).toBe(Math.round(100 * 1.5))
-      expect(height).toBe(Math.round(80 * 1.5))
+      expect(getOptimalImageWidth(101)).toBe(152)
     })
 
-    it('uses aspectRatio when provided (height = width / aspectRatio)', () => {
-      ;(window as any).devicePixelRatio = 1
-
-      const { width, height } = getOptimalImageSize(120, undefined, 4 / 3)
-      expect(width).toBe(120)
-      expect(height).toBe(Math.round(120 / (4 / 3)))
+    // Потолок DPR 2 действует только на web: выше него прирост резкости не виден, а
+    // байты растут квадратично (карточка на DPR 3 просила бы 1440 вместо 960).
+    // На native потолка нет — там плотность экрана реальная и кадрируется системой.
+    it('caps the device pixel ratio at 2 on web only', () => {
+      ;(window as any).devicePixelRatio = 3
+      withPlatform('web', () => {
+        expect(getOptimalImageWidth(480)).toBe(960)
+      })
+      withPlatform('android', () => {
+        expect(getOptimalImageWidth(480)).toBe(1440)
+      })
     })
   })
 
@@ -185,21 +188,30 @@ describe('utils/imageOptimization', () => {
     })
   })
 
+  // #1160: брейкпоинты обновлены с CSS-сетки (768/1536) на ступени лестницы прокси
+  // (800/1600) — именно в них они снэпились и раньше, но теперь это видно в коде.
   describe('getResponsiveSizes', () => {
     it('returns default breakpoints limited by maxWidth', () => {
       const sizes = getResponsiveSizes(1000)
       // maxWidth не добавляется, если он не входит в стандартные breakpoints
-      expect(sizes).toEqual([320, 640, 768])
+      expect(sizes).toEqual([320, 640, 800])
     })
 
     it('includes all default breakpoints up to 1920 when maxWidth is large', () => {
       const sizes = getResponsiveSizes(1920)
-      expect(sizes).toEqual([320, 640, 768, 1024, 1280, 1536, 1920])
+      expect(sizes).toEqual([320, 640, 800, 1024, 1280, 1600, 1920])
     })
 
     it('appends custom maxWidth greater than 1920', () => {
       const sizes = getResponsiveSizes(2560)
-      expect(sizes).toEqual([320, 640, 768, 1024, 1280, 1536, 1920, 2560])
+      expect(sizes).toEqual([320, 640, 800, 1024, 1280, 1600, 1920, 2560])
+    })
+
+    // Каждый брейкпоинт обязан быть ступенью прокси: иначе список ширин в коде
+    // расходится с тем, что реально уедет в запрос после `snapDimensionUp`.
+    it('emits only widths that exist on the proxy ladder', () => {
+      const ladder = [32, 96, 160, 320, 480, 640, 720, 800, 960, 1024, 1200, 1280, 1600, 1920, 2500]
+      expect(getResponsiveSizes(1920).filter((w) => !ladder.includes(w))).toEqual([])
     })
   })
 

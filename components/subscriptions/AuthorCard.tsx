@@ -86,7 +86,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
           <View style={styles.avatar}>
             {profile.avatar && !avatarError ? (
               <Image
-                source={{ uri: optimizeImageUrl(profile.avatar, { width: 96, height: 96, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }}
+                source={{ uri: optimizeImageUrl(profile.avatar, { width: 96, quality: 70, fit: 'cover' }) ?? profile.avatar }}
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
               />

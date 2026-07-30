@@ -9,7 +9,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useBreakpoints } from '@/hooks/useResponsive';
-import { optimizeImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
+import { optimizeImageUrl, getOptimalImageWidth } from '@/utils/imageOptimization';
 import { hapticImpact } from '@/utils/haptics';
 // AND-16: Native spring animation on press
 import Animated, {
@@ -173,7 +173,6 @@ function UnifiedTravelCard({
     if (!imageUrl || !isWeb) return imageUrl ?? null;
     if (mediaProps?.optimizeWeb === false) return imageUrl;
 
-    const targetHeight = typeof imageHeight === 'number' ? imageHeight : 200;
     const targetWidth =
       typeof width === 'number'
         ? width
@@ -181,25 +180,20 @@ function UnifiedTravelCard({
           ? 480
           : 320;
 
-    // Bake devicePixelRatio (capped at 2 on web) into the requested dimensions so
+    // Bake devicePixelRatio (capped at 2 on web) into the requested width so
     // retina screens receive a sharp variant instead of an upscaled low-res image.
     // Without this the proxy returned a CSS-pixel-sized image (e.g. 320px) that the
     // browser then stretched ~2x on retina, producing the visible blur.
-    const { width: requestWidth, height: requestHeight } = getOptimalImageSize(
-      targetWidth,
-      targetHeight
-    );
+    const requestWidth = getOptimalImageWidth(targetWidth);
 
     return (
       optimizeImageUrl(imageUrl, {
         width: requestWidth,
-        height: requestHeight,
         quality: isFeatured ? 66 : 60,
-        format: 'auto',
         fit: mediaFit === 'contain' ? 'contain' : 'cover',
       }) ?? imageUrl
     );
-  }, [imageUrl, imageHeight, isFeatured, isWeb, mediaFit, mediaProps?.optimizeWeb, width]);
+  }, [imageUrl, isFeatured, isWeb, mediaFit, mediaProps?.optimizeWeb, width]);
   const [imageFailed, setImageFailed] = useState(false);
   // A transient hiccup from the on-the-fly resize proxy (502/timeout under load)
   // would otherwise blank the cover permanently, because imageFailed only clears

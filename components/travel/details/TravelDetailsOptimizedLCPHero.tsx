@@ -121,7 +121,6 @@ function OptimizedLCPHeroInner({
     maxWidth: targetWidth,
     widths: lcpWidths,
     quality: isMobile ? 72 : 82,
-    format: 'auto',
     fit: 'contain',
     sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px',
   });
@@ -178,7 +177,6 @@ function OptimizedLCPHeroInner({
       optimizeImageUrl(srcWithRetry, {
         width: 64,
         quality: 40,
-        format: 'auto',
         fit: 'cover',
       }) || srcWithRetry
     );

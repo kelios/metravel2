@@ -15,7 +15,7 @@ export interface ResponsiveImageSource {
 export function generateSrcSet(
   baseUrl: string,
   sizes: number[],
-  options: Omit<ImageOptimizationOptions, 'width' | 'height'> = {}
+  options: Omit<ImageOptimizationOptions, 'width'> = {}
 ): string {
   if (!baseUrl) return '';
   if (Platform.OS !== 'web') return baseUrl;
@@ -34,9 +34,6 @@ export function generateSrcSet(
         quality: options.quality ?? 75,
         fit: options.fit,
       };
-      if (options.dpr !== undefined) {
-        optimizedOptions.dpr = options.dpr;
-      }
       const optimizedUrl = optimizeImageUrl(baseUrl, optimizedOptions) || baseUrl;
 
       // The backend proxy supports a fixed width ladder. Several requested
@@ -67,9 +64,19 @@ export function generateSrcSet(
   return srcset || baseUrl;
 }
 
+// #1160: брейкпоинты — это значения, которые сразу после этого уйдут в
+// `snapDimensionUp`, поэтому они обязаны быть ступенями лестницы прокси. Раньше
+// здесь стояли CSS-брейкпоинты вёрстки (768, 1536), которые снэпились в 800 и 1600:
+// набор кандидатов от этого не менялся, но читающий код видел ширины, которых у
+// прокси нет, и делал из этого неверные выводы (ровно так появился потолок 800 в
+// `htmlTransform.ts`). Источник правды по ступеням — `DIMENSION_LADDER`
+// в `utils/imageProxy.ts` и `docs/features/images.md`.
+//
+// #1171: не в публичном экспорте — используется только как дефолт
+// `buildResponsiveImageProps` ниже.
 export function getResponsiveSizes(maxWidth: number = 1920): number[] {
   const sizes: number[] = [];
-  const breakpoints = [320, 640, 768, 1024, 1280, 1536, 1920];
+  const breakpoints = [320, 640, 800, 1024, 1280, 1600, 1920];
 
   for (const bp of breakpoints) {
     if (bp <= maxWidth) sizes.push(bp);
@@ -88,7 +95,6 @@ export function buildResponsiveImageProps(
     quality?: number;
     format?: ImageOptimizationOptions['format'];
     fit?: ImageOptimizationOptions['fit'];
-    dpr?: number;
   } = {}
 ): { src: string; srcSet?: string; sizes?: string } {
   if (!baseUrl) return { src: '' };
@@ -104,19 +110,15 @@ export function buildResponsiveImageProps(
     fit: options.fit,
   };
 
-  if (options.dpr !== undefined) optimizeOptions.dpr = options.dpr;
-
   const src = optimizeImageUrl(baseUrl, optimizeOptions) || baseUrl;
 
   if (Platform.OS !== 'web') return { src };
 
-  const srcSetOptions: Omit<ImageOptimizationOptions, 'width' | 'height'> = {
+  const srcSetOptions: Omit<ImageOptimizationOptions, 'width'> = {
     format,
     quality: options.quality ?? 75,
     fit: options.fit,
   };
-
-  if (options.dpr !== undefined) srcSetOptions.dpr = options.dpr;
 
   const srcSet = generateSrcSet(baseUrl, widths, srcSetOptions);
   return { src, srcSet, sizes: options.sizes ?? '100vw' };

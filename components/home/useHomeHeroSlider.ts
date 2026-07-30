@@ -30,10 +30,11 @@ const getSlideRemoteUri = (source: SlideSource): string | null => {
   return null
 }
 
+// #1171: высоту слайдера сюда больше не передаём — прокси ресайзит только по `w`,
+// и второй аргумент лишь делал URL зависимым от измеренной высоты контейнера.
 export const buildHomeHeroSlidePreloadUrl = (
   source: SlideSource,
   width: number,
-  height: number,
 ): string | null => {
   const remoteUri = getSlideRemoteUri(source)
   if (!remoteUri) return null
@@ -41,10 +42,8 @@ export const buildHomeHeroSlidePreloadUrl = (
   return (
     optimizeImageUrl(remoteUri, {
       width,
-      height,
       quality: 75,
       fit: 'contain',
-      format: 'auto',
     }) ?? remoteUri
   )
 }
@@ -172,7 +171,6 @@ export const useHomeHeroSlider = <TSlide>({
       const remoteUri = buildHomeHeroSlidePreloadUrl(
         getSlideSource(slides[slideIndex]),
         sliderMediaWidth,
-        sliderHeight,
       )
 
       if (!remoteUri) {

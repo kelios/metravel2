@@ -56,7 +56,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
           <View style={styles.avatar}>
             {profile.avatar && !avatarError ? (
               <Image
-                source={{ uri: optimizeImageUrl(profile.avatar, { width: 80, height: 80, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }}
+                source={{ uri: optimizeImageUrl(profile.avatar, { width: 80, quality: 70, fit: 'cover' }) ?? profile.avatar }}
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
               />

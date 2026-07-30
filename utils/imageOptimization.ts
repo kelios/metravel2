@@ -14,14 +14,15 @@ export {
   optimizeImageUrl,
   buildVersionedImageUrl,
   getPreferredImageFormat,
-  getOptimalImageSize,
-  clearImageOptimizationCache,
-  getImageCacheStats,
+  getOptimalImageWidth,
 } from './imageProxy';
 
 // Responsive srcSet / sizes
+// #1171: `getResponsiveSizes` отсюда убран — он вызывается только внутри
+// `imageSrcSet.ts` как дефолт для `buildResponsiveImageProps`. Публичной точкой
+// входа остаётся сам `buildResponsiveImageProps`, чтобы список ширин не начали
+// собирать в вызывающем коде в обход лестницы прокси.
 export {
   generateSrcSet,
-  getResponsiveSizes,
   buildResponsiveImageProps,
 } from './imageSrcSet';

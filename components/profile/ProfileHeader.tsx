@@ -91,9 +91,7 @@ export function ProfileHeader({
       profile?.cover_photo
         ? optimizeImageUrl(profile.cover_photo, {
             width: 1024,
-            height: COVER_HEIGHT * 2,
             quality: 70,
-            format: 'auto',
             fit: 'cover',
           }) ?? profile.cover_photo
         : null,
@@ -388,7 +386,7 @@ export function ProfileHeader({
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               {user.avatar ? (
-                <Image source={{ uri: optimizeImageUrl(user.avatar, { width: 168, height: 168, quality: 72, format: 'auto', fit: 'cover' }) ?? user.avatar }} style={styles.avatarImage} />
+                <Image source={{ uri: optimizeImageUrl(user.avatar, { width: 168, quality: 72, fit: 'cover' }) ?? user.avatar }} style={styles.avatarImage} />
               ) : (
                 <Text style={styles.avatarPlaceholder}>{getInitials(user.name || '?')}</Text>
               )}

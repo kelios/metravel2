@@ -10,7 +10,7 @@ import { router } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import type { Travel } from "@/types/types";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { buildVersionedImageUrl, getOptimalImageSize, optimizeImageUrl } from "@/utils/imageOptimization";
+import { buildVersionedImageUrl, getOptimalImageWidth, optimizeImageUrl } from "@/utils/imageOptimization";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
@@ -97,11 +97,10 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         travel.id
       );
       
-      const optimalSize = getOptimalImageSize(Math.round(imageHeight * 1.8), imageHeight);
-      
+      const optimalWidth = getOptimalImageWidth(Math.round(imageHeight * 1.8));
+
       return optimizeImageUrl(versionedUrl, {
-        width: optimalSize.width,
-        height: optimalSize.height,
+        width: optimalWidth,
         format: 'webp',
         quality: 85,
         fit: 'contain',

@@ -118,7 +118,6 @@ export default function QuestCard({
         return optimizeImageUrl(imageUrl, {
             width: targetWidth,
             quality: 60,
-            format: 'auto',
             fit: 'cover',
         }) ?? imageUrl;
     }, [imageUrl, cardWidth]);

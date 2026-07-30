@@ -88,7 +88,7 @@ export function ContactRequestsInbox() {
 
   const renderAvatar = (party: ContactRequestParty) => {
     const uri = party.avatarUrl
-      ? optimizeImageUrl(party.avatarUrl, { width: 80, height: 80, quality: 70, format: 'auto', fit: 'cover' }) ??
+      ? optimizeImageUrl(party.avatarUrl, { width: 80, quality: 70, fit: 'cover' }) ??
         party.avatarUrl
       : null
     return (

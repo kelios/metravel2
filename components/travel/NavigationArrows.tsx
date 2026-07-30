@@ -10,7 +10,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/types/types';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
+import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageWidth } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -97,11 +97,9 @@ function NavigationArrows({
     
     // Оптимизация размера для миниатюры навигации (60x60)
     const thumbSize = 60;
-    const optimalSize = getOptimalImageSize(thumbSize, thumbSize);
-    
+
     return optimizeImageUrl(versionedUrl, {
-      width: optimalSize.width,
-      height: optimalSize.height,
+      width: getOptimalImageWidth(thumbSize),
       format: 'webp',
       quality: 80,
       fit: 'contain',

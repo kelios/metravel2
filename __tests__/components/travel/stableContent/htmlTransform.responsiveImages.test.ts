@@ -26,13 +26,13 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     // src падает на fallback-ступень, а не отдаёт оригинал
     expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=78${AMP}fit=contain"`)
     // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768)
-    for (const w of [480, 640, 800]) {
+    for (const w of [480, 640, 800, 960, 1920]) {
       expect(out).toContain(`w=${w}${AMP}q=78${AMP}fit=contain ${w}w`)
     }
-    // #1113: 1024 не входит в whitelist ширин прокси — на такой запрос он отдаёт
-    // исходный файл целиком и игнорирует `q` (замер прода 2026-07-28: w=800 → 53 104 B,
-    // w=1024 → 132 344 B = оригинал). Именно этот кандидат выбирал retina-десктоп.
-    expect(out).not.toContain(`w=1024${AMP}q=78${AMP}fit=contain 1024w`)
+    // #1160: потолок поднят с 800 до 1920. Прежнее обоснование «выше 800 прокси
+    // отдаёт оригинал и игнорирует q» устарело — после #1112/#1130 он округляет
+    // вверх по whitelist и не апскейлит. Слот тела ~920 CSS на 1920vw: DPR 1 берёт
+    // 960, DPR 2 — 1920, вместо апскейла 800 → 1840.
     expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
     // cache-buster сохранён
     expect(out).toContain(`v=3315`)
@@ -66,8 +66,11 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       for (const w of [320, 480, 640, 800]) {
         expect(out).toContain(`w=${w}${AMP}q=78${AMP}fit=contain ${w}w`)
       }
-      // 800 — верхняя ступень на обоих вьюпортах (см. #1113 выше).
-      expect(out).not.toContain(`w=1024${AMP}q=78${AMP}fit=contain 1024w`)
+      // #1160: потолок подняли только на desktop. На мобиле слот 100vw и картинки
+      // тела ленивые — лишние ступени здесь платятся мобильным трафиком, а прирост
+      // резкости на 390 CSS не виден.
+      expect(out).not.toContain(`w=960${AMP}q=78${AMP}fit=contain 960w`)
+      expect(out).not.toContain(`w=1920${AMP}q=78${AMP}fit=contain 1920w`)
     } finally {
       Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
       Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
@@ -80,9 +83,34 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('w=4000')
     expect(out).not.toContain('dpr=3')
     expect(out).toContain(`q=78`)
-    // 800 — последняя ширина, которую прокси реально ресайзит; выше ступеней не выдаём
-    expect(out).not.toContain('w=1280')
-    expect(out).not.toContain('w=1024')
+    // 1920 — потолок мастера, выше него прокси не апскейлит (#1160)
+    expect(out).not.toContain('w=2500')
+  })
+
+  // #1160: набор ширин тела статьи — третья копия лестницы в проекте. Расхождение с
+  // прокси стоило шести тикетов подряд, поэтому здесь оно ловится тестом, а не
+  // комментарием. Источник ступеней — `DIMENSION_LADDER` в `utils/imageProxy.ts`,
+  // сверенный с `GET /api/media/proxy-contract` в `imageProxy.ladder.test.ts`.
+  it('emits only widths that exist on the proxy ladder, on both viewports', () => {
+    const PROXY_LADDER = [32, 96, 160, 320, 480, 640, 720, 800, 960, 1024, 1200, 1280, 1600, 1920, 2500]
+    const originalOs = Platform.OS
+    const originalWidth = window.innerWidth
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    try {
+      for (const viewport of [390, 1920]) {
+        Object.defineProperty(window, 'innerWidth', { value: viewport, configurable: true })
+        const out = prepareStableContentHtml(
+          '<p><img src="https://metravel.by/travel-description-image/540/description/abc.JPG" /></p>',
+        )
+        const emitted = Array.from(out.matchAll(/w=(\d+)/g), (m) => Number(m[1]))
+        expect(emitted.length).toBeGreaterThan(0)
+        expect({ viewport, offLadder: emitted.filter((w) => !PROXY_LADDER.includes(w)) })
+          .toEqual({ viewport, offLadder: [] })
+      }
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+      Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+    }
   })
 
   it('leaves third-party images on the weserv proxy path (no first-party srcset)', () => {

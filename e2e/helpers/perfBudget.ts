@@ -12,7 +12,10 @@
  *   - TBT proxy (sum of long-task time over 50ms)
  */
 
+import { isMediaRequestWithoutWidth } from './mediaRequestWidth'
 import { preacceptCookies } from './navigation'
+
+export { isMediaRequestWithoutWidth }
 
 export function envNum(name: string, fallback: number): number {
   const raw = process.env[name]
@@ -170,6 +173,13 @@ export type NetworkStats = {
   jsRequests: number
   imgRequests: number
   largestResources: Array<{ url: string; sizeKB: number; type: string }>
+  /**
+   * #1161: медиа-запросы, ушедшие без параметра `w`. Прокси на такой запрос отдаёт
+   * мастер целиком — замер прода 2026-07-30 на
+   * `travel-image/682/conversions/10f0a8f2….webp`: 132 344 B без параметров против
+   * 2 582 B на `?w=96`. Должно быть пусто на всех страницах.
+   */
+  mediaRequestsWithoutWidth: string[]
 }
 
 export type NetworkTrackerOptions = {
@@ -212,6 +222,7 @@ function shouldCountForRequestBudget(url: string): boolean {
 
 export function createNetworkTracker(page: any, options: NetworkTrackerOptions = {}): { getStats: () => NetworkStats } {
   const resources: Array<{ url: string; size: number; type: string }> = []
+  const mediaRequestsWithoutWidth = new Set<string>()
   let allRequestCount = 0
   let requestCount = 0
   let ignoredThirdPartyRequestCount = 0
@@ -229,6 +240,10 @@ export function createNetworkTracker(page: any, options: NetworkTrackerOptions =
         requestCount++
       } else {
         ignoredThirdPartyRequestCount++
+      }
+
+      if (isMediaRequestWithoutWidth(url)) {
+        mediaRequestsWithoutWidth.add(url)
       }
 
       const contentLength = response.headers()['content-length']
@@ -295,6 +310,7 @@ export function createNetworkTracker(page: any, options: NetworkTrackerOptions =
         jsRequests,
         imgRequests,
         largestResources,
+        mediaRequestsWithoutWidth: [...mediaRequestsWithoutWidth],
       }
     },
   }
