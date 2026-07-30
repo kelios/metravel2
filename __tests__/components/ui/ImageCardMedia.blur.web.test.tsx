@@ -238,6 +238,9 @@ describe('ImageCardMedia blur background (web)', () => {
       complete: false,
       naturalWidth: 0,
       currentSrc: '',
+      // Резкий слой раскрывается мутацией `style.opacity`, поэтому node-mock обязан
+      // иметь `style` — иначе тест проверяет не тот контракт, что живёт в браузере.
+      style: {} as Record<string, string>,
       decode: jest.fn(
         () => new Promise<void>((resolve) => {
           resolveDecode = resolve
@@ -290,6 +293,7 @@ describe('ImageCardMedia blur background (web)', () => {
       complete: true,
       naturalWidth: 640,
       currentSrc: src,
+      style: {} as Record<string, string>,
       decode: jest.fn(() => Promise.resolve()),
     }
     const onLoad = jest.fn()
@@ -357,6 +361,9 @@ describe('ImageCardMedia blur background (web)', () => {
       complete: false,
       naturalWidth: 0,
       currentSrc: '',
+      // Резкий слой раскрывается мутацией `style.opacity`, поэтому node-mock обязан
+      // иметь `style` — иначе тест проверяет не тот контракт, что живёт в браузере.
+      style: {} as Record<string, string>,
       decode: jest.fn(
         () => new Promise<void>((resolve) => {
           resolveDecode = resolve

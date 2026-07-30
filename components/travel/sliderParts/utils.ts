@@ -192,6 +192,37 @@ const PREFERRED_FORMAT =
 /** Вариант из media-манифеста уже прошёл через прокси, если несёт ширину. См. #1116. */
 const MANIFEST_URL_HAS_PROXY_PARAMS = /[?&]w=\d+/;
 
+/**
+ * Плотность, на которую умножается ширина слота НЕпервых слайдов. Кап 2: на 2×
+ * апскейла уже не видно, а 3× стоило бы ещё +60% байт при том же результате.
+ */
+const WEB_SLIDE_MAX_DENSITY = 2;
+
+/**
+ * #1113 убрал из URL параметр `dpr` — прокси его игнорирует, — но саму ширину
+ * умножать на плотность не стал, хотя там же и указано, что retina-вариант
+ * получается умножением ширины. В итоге слот считался в CSS-пикселях: слайд 390
+ * CSS на iPhone (DPR 3) — это 1170 физических точек, а файл приезжал на 390–480,
+ * то есть апскейл ×2.4–3. Выглядит это ровно как «размытая картинка», причём
+ * только со второго слайда: у первого ширина фиксирована hero-контрактом
+ * (`maxWidth`) и от измерения контейнера не зависит. Замер прода 2026-07-30,
+ * `/travels/ourvietnam`, viewport 390: слайд 0 — `w=1280`, `naturalWidth` 1080;
+ * слайды 1–2 — `w=640&q=75&fit=cover`, `naturalWidth` 640 на слот 368 CSS.
+ *
+ * На native та же проблема уже решена (см. `NATIVE_SLIDER_*_MAX_WIDTH`): ширина
+ * там считается как `containerWidth * PixelRatio.get()` со ступенью 800 для всех
+ * слайдов, поэтому свайп не меняет вариант. Web приводим к тому же принципу.
+ *
+ * Читаем `window.devicePixelRatio` (как `getOptimalImageSize` в `utils/imageProxy`),
+ * а не `PixelRatio`: на web это одно и то же значение, зато при SSG/SSR (нет
+ * `window`) плотность честно равна 1 и разметка не расходится с гидрацией.
+ */
+const getWebSlideDensity = (): number => {
+  const raw = typeof window !== 'undefined' ? Number(window.devicePixelRatio) : 1;
+  if (!Number.isFinite(raw) || raw <= 1) return 1;
+  return Math.min(raw, WEB_SLIDE_MAX_DENSITY);
+};
+
 export const buildUriWeb = (
   img: SliderImage,
   containerWidth?: number,
@@ -211,13 +242,21 @@ export const buildUriWeb = (
       : isMobileWidth
         ? SLIDER_MAX_WIDTH.mobile
         : SLIDER_MAX_WIDTH.desktop;
-    const targetWidth = isFirst ? maxWidth : Math.min(containerWidth, maxWidth);
+    // Первый слайд не трогаем: его ширина/качество завязаны на SSG-preload hero
+    // (#1146), и любое расхождение снова превращает обложку в два файла.
+    const density = isFirst ? 1 : getWebSlideDensity();
+    const targetWidth = isFirst
+      ? maxWidth
+      : Math.min(Math.round(containerWidth * density), maxWidth);
+    // На retina плотность уже даёт вдвое больше точек, поэтому качество можно
+    // опустить: q65 снапится к 70 — той же ступени, на которой стоит мобильный
+    // hero, так что все слайды мобильной галереи просят один профиль варианта.
     const quality = isFirst
       ? isMobileWidth
         ? 72
         : 82
-      : isMobileWidth
-        ? 78
+      : density > 1
+        ? 65
         : 78;
     const format = isFirst ? undefined : PREFERRED_FORMAT;
 
@@ -225,6 +264,14 @@ export const buildUriWeb = (
       maxWidth: targetWidth,
       widths: [320, 640, 720, 960, 1280],
       sizes: isMobileWidth ? '100vw' : '(max-width: 1280px) 100vw, 1280px',
+      // #1146: без `fit` отбор из манифеста игнорировал режим кадрирования и брал
+      // `hero_1280` даже под мобильный слот 720. После того как hero (SSG-preload +
+      // TravelDetailsOptimizedLCPHero) перешёл на `w=800&q=70&fit=contain`, первый
+      // слайд остался на `w=1280&q=78&fit=contain` — и одна и та же обложка приезжала
+      // ДВУМЯ файлами: замер прода 2026-07-30 после деплоя, 95 482 B + 211 158 B,
+      // суммарные байты галереи выросли 353 622 → 449 758. Передаём тот же `fit`,
+      // что и hero: отбор идёт по одному правилу, адрес совпадает, файл один.
+      fit: fitForUrl,
     });
     // #1119: `fromMedia.src` — это готовый ФАЙЛ-вариант из media-манифеста
     // (например `-detail_hd.jpg`), без параметров прокси. Возвращать его как есть

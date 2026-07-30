@@ -53,8 +53,11 @@ describe('резервирование высоты шапки', () => {
     expect(layout).toMatch(/shouldShowHeaderContextBar\(pathname \|\| '\/', true\)/);
   });
 
-  it('инлайновая высота ставится только после гидрации', () => {
-    // Иначе первый кадр снова получил бы «десктопные» 78 px на мобильном.
-    expect(layout).toMatch(/hydrationReady \? \{ height: measuredHeight \} : null/);
+  it('инлайновая высота ставится только после реального измерения', () => {
+    // `useHydrationReady` переключается ещё ДО первого кадра, поэтому гидрации мало:
+    // инлайн с «десктопной» догадкой снова успел бы отрисоваться на мобильном.
+    expect(layout).toMatch(/hasMeasuredHeight \? \{ height: measuredHeight \} : null/);
+    expect(layout).not.toMatch(/hydrationReady \? \{ height: measuredHeight \}/);
+    expect(layout).toContain('setHasMeasuredHeight(true)');
   });
 });

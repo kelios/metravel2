@@ -221,12 +221,27 @@ function ImageCardMedia({
   });
   const baseUriRef = useRef<string | null>(currentImageIdentityKey);
   const revealOnLoadOnlyRef = useRef(revealOnLoadOnly);
+  /**
+   * Identity, для которой пришло НАСТОЯЩЕЕ событие `load` (а не догадка по
+   * `loadedWebImageBaseCache`). `revealOnLoadOnly` — это гейт ДО первого
+   * подтверждённого decode; после него закрывать уже показанные пиксели нельзя.
+   *
+   * Слайд галереи грузится соседом (гейта нет, фото раскрыто), а активным
+   * состоянием `Slide` включает `revealOnLoadOnly` на том же URL. Сброс
+   * «загружено» в этот момент гасил фото, а `<img>` не повторяет `load` для
+   * неизменного `src` — на iPhone был виден только первый кадр, а все следующие
+   * оставались размытой подложкой.
+   */
+  const decodedIdentityRef = useRef<string | null>(null);
+  const hasConfirmedDecode =
+    decodedIdentityRef.current !== null &&
+    decodedIdentityRef.current === currentImageIdentityKey;
   // FlashList recycles a mounted card synchronously. Do not let the previous
   // item's `webLoaded=true` leak into the first paint of the next identity while
   // the reset effect is still pending.
   const effectiveWebLoaded =
     baseUriRef.current === currentImageIdentityKey &&
-    revealOnLoadOnlyRef.current === revealOnLoadOnly
+    (revealOnLoadOnlyRef.current === revealOnLoadOnly || hasConfirmedDecode)
       ? webLoaded
       : false;
 
@@ -599,17 +614,28 @@ function ImageCardMedia({
     if (identityChanged || revealModeChanged) {
       baseUriRef.current = currentImageIdentityKey;
       revealOnLoadOnlyRef.current = revealOnLoadOnly;
-      setWebLoaded(
-        !revealOnLoadOnly && Boolean(
-          currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey)
-        )
-      );
+      if (identityChanged) decodedIdentityRef.current = null;
+      // Смена только режима раскрытия у картинки, чей decode уже подтверждён
+      // событием `load`, ничего не сбрасывает: гасить показанные пиксели нечем,
+      // а вернуть их обратно уже некому.
+      const keepConfirmedDecode =
+        !identityChanged &&
+        decodedIdentityRef.current !== null &&
+        decodedIdentityRef.current === currentImageIdentityKey;
+      if (!keepConfirmedDecode) {
+        setWebLoaded(
+          !revealOnLoadOnly && Boolean(
+            currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey)
+          )
+        );
+      }
     }
   }, [currentImageIdentityKey, revealOnLoadOnly]);
 
   const handleWebLoad = useCallback((_resolvedSrc: string) => {
     if (currentImageIdentityKey) {
       loadedWebImageBaseCache.add(currentImageIdentityKey);
+      decodedIdentityRef.current = currentImageIdentityKey;
     }
     setWebLoaded(true);
     onLoad?.();

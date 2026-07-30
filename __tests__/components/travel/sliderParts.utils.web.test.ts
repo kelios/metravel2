@@ -79,7 +79,12 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     expect(src).toContain('q=80')
   })
 
-  it('caps mobile neighbour slides at dpr 2 on retina devices to cut swipe decode cost', () => {
+  // Слот НЕпервых слайдов считается в физических точках, а не в CSS-пикселях.
+  // Раньше здесь ожидалось `w=480` для слота 390 CSS: на iPhone (DPR 3) это 1170
+  // физических точек, то есть апскейл ×2.4 — «размытая картинка» на всех слайдах,
+  // кроме первого. `dpr=` в URL по-прежнему не отправляем: прокси его игнорирует
+  // (#1113), плотность применяется к самой ширине, как там и предписано.
+  it('sizes retina mobile neighbour slides in physical pixels, not CSS pixels', () => {
     ;(window as any).devicePixelRatio = 3
 
     const src = buildUriWeb(
@@ -93,16 +98,31 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       false,
     )
 
-    // 390 snaps up to the 480 ladder rung; q 78 → 80.
-    //
-    // #1113: раньше сюда добавлялся `dpr` («кап соседей до dpr 2, чтобы свайп 1→2 не
-    // стопорился о декод»). Прокси его игнорирует — замер прода 2026-07-28 даёт
-    // байт-в-байт одинаковый ответ для dpr отсутствующего / 2 / 3, — то есть кап
-    // никогда не действовал, а значение лишь плодило варианты URL одного файла.
-    expect(src).toContain('w=480')
-    expect(src).toContain('q=80')
+    // 390 × density 2 = 780, кап `SLIDER_MAX_WIDTH.mobile` 768 → ступень 800;
+    // q65 снапится к 70 — тот же профиль, что у мобильного hero (#1146).
+    expect(src).toContain('w=800')
+    expect(src).toContain('q=70')
     expect(src).toContain('fit=contain')
     expect(src).not.toMatch(/[?&]dpr=/)
+  })
+
+  it('keeps non-retina neighbour slides on the CSS-pixel slot', () => {
+    ;(window as any).devicePixelRatio = 1
+
+    const src = buildUriWeb(
+      {
+        id: 'hero-3-dpr1',
+        url: 'https://metravel.by/gallery/123/hero-3-dpr1.jpg',
+      } as any,
+      390,
+      undefined,
+      'contain',
+      false,
+    )
+
+    // 390 снапится к 480, q 78 → 80: на DPR 1 апскейла нет, байты не растут.
+    expect(src).toContain('w=480')
+    expect(src).toContain('q=80')
   })
 
   it('never emits dpr on non-mobile-width neighbour slides either', () => {
@@ -145,5 +165,66 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     )
 
     expect(src).toBe('https://metravel.by/gallery/123/photo.webp?w=1280&q=78&fit=contain')
+  })
+})
+
+describe('#1146: первый слайд не расходится с hero по варианту', () => {
+  const originalPlatform = Platform.OS
+  const originalApiUrl = process.env.EXPO_PUBLIC_API_URL
+
+  const GALLERY = 'https://metravel.by/gallery/3994/conversions/one-detail_hd.jpg'
+  // Реальный манифест обложки travel #129 (прод, 2026-07-30): contain-вариантов
+  // уже 1280 в нём нет, поэтому мобильный слот 720 схлопывался в hero_1280.
+  const MEDIA = {
+    id: 100,
+    width: 1080,
+    height: 1080,
+    variants: {
+      thumb_320: `${GALLERY}?w=320&q=72&fit=cover`,
+      card_640: `${GALLERY}?w=640&q=75&fit=cover`,
+      hero_1280: `${GALLERY}?w=1280&q=78&fit=contain`,
+      hero_1920: `${GALLERY}?w=1920&q=80&fit=contain`,
+    },
+  }
+
+  beforeEach(() => {
+    ;(Platform as any).OS = 'web'
+    process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+    ;(window as any).devicePixelRatio = 1
+  })
+
+  afterEach(() => {
+    ;(Platform as any).OS = originalPlatform
+    process.env.EXPO_PUBLIC_API_URL = originalApiUrl
+  })
+
+  it('мобильный первый слайд берёт тот же вариант, что SSG-preload hero', () => {
+    const src = buildUriWeb(
+      { id: 100, url: GALLERY, media: MEDIA } as any,
+      390,
+      undefined,
+      'contain',
+      true,
+    )
+
+    // hero после #1146 просит `?v=100&w=800&q=70&fit=contain`
+    expect(src).toContain('w=800')
+    expect(src).toContain('q=70')
+    expect(src).toContain('fit=contain')
+    // было: `?w=1280&q=78&fit=contain` — второй файл той же обложки (211 158 B)
+    expect(src).not.toContain('w=1280')
+  })
+
+  it('cover-слот по-прежнему может использовать cover-варианты манифеста', () => {
+    const src = buildUriWeb(
+      { id: 100, url: GALLERY, media: MEDIA } as any,
+      390,
+      undefined,
+      'cover',
+      false,
+    )
+
+    expect(src).toContain('fit=contain') // buildUriWeb нормализует cover → contain для слайда
+    expect(src).not.toContain('w=1280')
   })
 })

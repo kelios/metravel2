@@ -117,6 +117,54 @@ describe('CustomImageRenderer body photos (web)', () => {
     expect(ImmediateImage.requested).not.toContain(DETAIL_HD)
   })
 
+  // iPhone WebKit дорисовывает прогрессивный JPEG поэтапно: фото статьи появлялось
+  // мутным кадром и «дорезкивалось» уже на экране. Список путешествий закрывает это
+  // тем же decode-гейтом (`TravelListItem`: `revealOnLoadOnly: IS_WEB`).
+  it('waits for the sharp decode on iOS WebKit so no progressive frame is shown', () => {
+    const originalUserAgent = window.navigator.userAgent
+    const originalMaxTouchPoints = window.navigator.maxTouchPoints
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    try {
+      render(
+        <CustomImageRenderer
+          tnode={makeTnode({ src: DETAIL_HD, alt: 'Замок' }) as any}
+          contentWidth={358}
+        />,
+      )
+
+      expect(mockImageCardMedia.mock.calls[0]?.[0]?.revealOnLoadOnly).toBe(true)
+    } finally {
+      Object.defineProperty(window.navigator, 'userAgent', {
+        value: originalUserAgent,
+        configurable: true,
+      })
+      Object.defineProperty(window.navigator, 'maxTouchPoints', {
+        value: originalMaxTouchPoints,
+        configurable: true,
+      })
+    }
+  })
+
+  it('does not delay body photos on engines without the progressive frame', () => {
+    render(
+      <CustomImageRenderer
+        tnode={makeTnode({ src: DETAIL_HD, alt: 'Замок' }) as any}
+        contentWidth={358}
+      />,
+    )
+
+    expect(mockImageCardMedia.mock.calls[0]?.[0]?.revealOnLoadOnly).toBe(false)
+  })
+
   it('skips the measuring request entirely when the HTML already carries dimensions', () => {
     render(
       <CustomImageRenderer

@@ -10,6 +10,7 @@ import {
 import { CustomRendererProps } from "react-native-render-html";
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers';
 import { useRichMediaVisibility } from '@/components/ui/richMediaViewport';
 import { optimizeImageUrl } from '@/utils/imageProxy';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -129,6 +130,22 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
   const [ar, setAr] = useState<number | null>(attrAR ?? null);
   const [err, setErr] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  /**
+   * iPhone WebKit рисует прогрессивный JPEG поэтапно, поэтому фото статьи сначала
+   * появлялось мутным кадром и лишь потом «дорезкивалось» — читается это как
+   * «сначала блюр, потом картинка». Тот же гейт стоит в списке путешествий
+   * (`TravelListItem`: `revealOnLoadOnly: IS_WEB`) ровно с этой формулировкой.
+   *
+   * Здесь он включён только на iOS WebKit: на остальных движках промежуточного
+   * кадра нет, а ожидание decode лишь отложило бы показ. Своя нейтральная рамка
+   * (skeleton выше) уже держит геометрию до `imageLoaded`, так что пустоты не
+   * появляется — меняется лишь то, ЧТО видно до готовности пикселей.
+   */
+  const shouldRevealOnLoadOnly = useMemo(
+    () => Platform.OS === 'web' && isIOSWebKit(),
+    [],
+  );
 
   const aspect = ar && ar > 0 ? ar : 16 / 9;
 
@@ -282,6 +299,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
           // ImageCardMedia на iOS Safari пересобрал бы из него собственный srcSet
           // и браузер скачал бы вторую, иначе нарезанную копию того же фото.
           preserveOptimizedWebSrc
+          revealOnLoadOnly={shouldRevealOnLoadOnly}
           blurRadius={16}
           priority={Platform.OS === 'web' ? 'low' : 'normal'}
           loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}

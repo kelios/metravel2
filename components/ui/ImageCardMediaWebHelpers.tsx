@@ -128,9 +128,16 @@ export const WebMainImage = memo(function WebMainImage({
   const imgRef = useRef<HTMLImageElement>(null);
   const loadReportedRef = useRef(false);
   const handleLoad = useCallback(() => {
+    // Раскрываем резкий слой прямо здесь, а не следующим React-рендером. Блюр-подложка
+    // ставит свою `opacity` в DOM из собственного `load`, поэтому ожидание `setState`
+    // давало видимую двухфазность: сначала кадр «только блюр», затем фото поверх.
+    // Событие `load` означает, что пиксели выбранного кандидата готовы, так что
+    // раскрытие тут не обходит decode-гейт, а лишь не опаздывает на кадр.
+    const img = imgRef.current;
+    if (img) img.style.opacity = '1';
     if (loadReportedRef.current) return;
     loadReportedRef.current = true;
-    const resolvedSrc = imgRef.current?.currentSrc || src;
+    const resolvedSrc = img?.currentSrc || src;
     onLoad?.(resolvedSrc);
   }, [onLoad, src]);
 
@@ -138,6 +145,27 @@ export const WebMainImage = memo(function WebMainImage({
   useEffect(() => {
     loadReportedRef.current = false;
   }, [src]);
+
+  // Стабильная функция: инлайновая пересоздавалась бы каждый рендер, и React на
+  // каждом коммите отвязывал бы ref (`null`), а в этом окне `handleLoad` потерял бы
+  // доступ к `currentSrc`.
+  const attachImgRef = useCallback((node: HTMLImageElement | null) => {
+    imgRef.current = node;
+    // Кэш-хит: у файла из памяти браузера пиксели есть уже к моменту вставки узла.
+    // Ставим `opacity` до первого paint, иначе кадр «только блюр» видно даже там,
+    // где ждать нечего — на возврате назад, повторном открытии и соседних слайдах.
+    if (node && node.complete && node.naturalWidth > 0) {
+      node.style.opacity = '1';
+    }
+  }, []);
+
+  // То же самое, когда родитель СНОВА закрыл уже показанный слой: активный слайд
+  // включает decode-гейт, ячейка списка переиспользуется. `<img>` с неизменным `src`
+  // второго события `load` не выдаёт, поэтому без сброса единственный, кто мог бы
+  // подтвердить готовность, молчит — и слой навсегда остаётся под блюром.
+  useEffect(() => {
+    if (!loaded) loadReportedRef.current = false;
+  }, [loaded]);
 
   // Synthesize onLoad for cache hits and for iOS WebKit images whose real load event
   // is lost after a responsive-source swap or scroll restoration. Chrome, Firefox,
@@ -212,7 +240,7 @@ export const WebMainImage = memo(function WebMainImage({
 
   return (
     <img
-      ref={imgRef}
+      ref={attachImgRef}
       src={src}
       srcSet={srcSet}
       sizes={sizes}

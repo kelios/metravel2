@@ -80,6 +80,15 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
     const [measuredHeight, setMeasuredHeight] = useState<number>(
         () => HEADER_HEIGHT_FALLBACK[getStaticHeaderVariant(pathname)],
     );
+    // #1144: `measuredHeight` до первого `onLayout` — это «десктопная» догадка
+    // (`getStaticHeaderVariant` обязан совпасть со статическим HTML, иначе hydration
+    // mismatch, #418). Ставить её инлайном нельзя: `useHydrationReady` переключается
+    // сразу после первого коммита, то есть ещё ДО первого кадра, и мобильный первый
+    // экран успевал отрисоваться с 78 px вместо 116 px. Пользователь скачка не видел
+    // (сверху лежал SSG-скелет), но Chrome фиксировал позицию `main` и при снятии
+    // скелета записывал сдвиг: замер прода 2026-07-30 — одна запись 0.1508 из 0.1665.
+    // До реального измерения высоту держит медиазапрос `[data-header-slot]`.
+    const [hasMeasuredHeight, setHasMeasuredHeight] = useState(false);
 
     useEffect(() => {
         if (!hydrationReady) return;
@@ -109,6 +118,7 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
 
     const handleHeaderHeight = useCallback((h: number) => {
         if (h <= 0) return;
+        setHasMeasuredHeight(true);
         setMeasuredHeight((prev) => (prev === h ? prev : h));
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
             try {
@@ -148,7 +158,7 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
                 style: {
                     ['--mt-header-slot-mobile' as any]: `${mobileHeight}px`,
                     ['--mt-header-slot-desktop' as any]: `${desktopHeight}px`,
-                    ...(hydrationReady ? { height: measuredHeight } : null),
+                    ...(hasMeasuredHeight ? { height: measuredHeight } : null),
                 },
             },
             <CustomHeader
