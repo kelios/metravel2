@@ -462,10 +462,21 @@ config.resolver.resolveRequest = ((orig) => {
 
 // PERF-014: non-invasive bundle composition probe. Gated by ANALYZE_BUNDLE=1.
 // experimentalSerializerHook does NOT change emitted output; it only reads the
-// module graph and dumps per-module transformed sizes to /tmp for offline
-// aggregation by package. Zero-cost unless the env var is set.
+// module graph and dumps per-module transformed sizes for offline aggregation by
+// package. Zero-cost unless the env var is set.
+//
+// #1178: раньше дампы писались в `os.tmpdir()`, и в прод-сборке они не доживали до
+// гейта. `build-web-prod.js` вызывает `build-web-safe.js` с `-c`, а тот на clear-флаг
+// подменяет дочернему процессу `TMPDIR`/`TMP`/`TEMP` на
+// `<repo>/.tmp/expo-export/run-*` и удаляет этот каталог по завершении сборки. То
+// есть `os.tmpdir()` внутри Metro указывал в изолированный каталог, дампы туда
+// исправно писались — и стирались вместе с ним. Снаружи
+// `guard-eager-web-bundle.js` смотрел в обычный tmpdir и не находил ничего.
+//
+// Поэтому каталог теперь задаётся явно и не зависит от изоляции TMPDIR. Тот же
+// дефолт продублирован в гейте; переопределяется `METRO_DUMP_DIR`.
 if (process.env.ANALYZE_BUNDLE === '1') {
-  const os = require('os')
+  const dumpDir = process.env.METRO_DUMP_DIR || path.join(__dirname, '.codex-temp', 'metro-analyze')
   config.serializer = {
     ...config.serializer,
     experimentalSerializerHook: (graph) => {
@@ -494,7 +505,8 @@ if (process.env.ANALYZE_BUNDLE === '1') {
           mods.push([p, size, syncDeps])
         })
         const entry = graph.entryPoints ? Array.from(graph.entryPoints).join(',') : 'unknown'
-        const fname = path.join(os.tmpdir(), `metro-analyze-${process.pid}-${mods.length}.json`)
+        fs.mkdirSync(dumpDir, { recursive: true })
+        const fname = path.join(dumpDir, `metro-analyze-${process.pid}-${mods.length}.json`)
         fs.writeFileSync(fname, JSON.stringify({ entry, count: mods.length, mods }))
       } catch (e) {
         console.error('[ANALYZE_BUNDLE] hook error:', e && e.message)

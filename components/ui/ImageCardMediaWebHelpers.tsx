@@ -112,6 +112,16 @@ type WebMainImageProps = {
    * и LCP-кандидат фиксируется по ней.
    */
   onLoad?: (resolvedSrc: string, naturalSize?: { width: number; height: number }) => void;
+  /**
+   * #1177: пропорции отдельно от события загрузки.
+   *
+   * Первый слайд приходит из кэша hero-preload: узел вставляется уже `complete`, и
+   * родитель считает его загруженным ещё до маунта, поэтому отчёт через `onLoad`
+   * до него не доходит. Проверено в браузере на прод-сборке: соседние слайды уходили
+   * в сегменты, а слайд 0 — самый крупный и единственный видимый — оставался с
+   * подложкой на всю плитку. Здесь пропорции сообщаются в момент привязки узла.
+   */
+  onNaturalSize?: (naturalSize: { width: number; height: number }) => void;
   onError?: () => void;
   showImmediately?: boolean;
 };
@@ -140,6 +150,7 @@ export const WebMainImage = memo(function WebMainImage({
   srcSet,
   sizes,
   onLoad,
+  onNaturalSize,
   onError,
   showImmediately = false,
 }: WebMainImageProps) {
@@ -153,11 +164,24 @@ export const WebMainImage = memo(function WebMainImage({
     // раскрытие тут не обходит decode-гейт, а лишь не опаздывает на кадр.
     const img = imgRef.current;
     if (img) img.style.opacity = '1';
+
+    // #1177: пропорции сообщаем ДО once-гарда.
+    //
+    // Родитель имеет право считать слой загруженным ещё до маунта — так работает
+    // первый слайд, чей файл уже лежит в кэше от hero-preload. Тогда эффект ниже
+    // вызывает `handleLoad()` немедленно, пикселей ещё нет, `naturalSizeOf` отдаёт
+    // undefined, а `loadReportedRef` уже взведён — и настоящее событие `load`
+    // возвращалось на строке ниже, так и не сообщив пропорции. В браузере это
+    // выглядело так: соседние слайды уходили в сегменты, а слайд 0 — единственный
+    // видимый — оставался с подложкой на всю плитку.
+    const natural = naturalSizeOf(img);
+    if (natural) onNaturalSize?.(natural);
+
     if (loadReportedRef.current) return;
     loadReportedRef.current = true;
     const resolvedSrc = img?.currentSrc || src;
-    onLoad?.(resolvedSrc, naturalSizeOf(img));
-  }, [onLoad, src]);
+    onLoad?.(resolvedSrc, natural);
+  }, [onLoad, onNaturalSize, src]);
 
   // A new source must be able to report its own load again.
   useEffect(() => {
@@ -174,8 +198,13 @@ export const WebMainImage = memo(function WebMainImage({
     // где ждать нечего — на возврате назад, повторном открытии и соседних слайдах.
     if (node && node.complete && node.naturalWidth > 0) {
       node.style.opacity = '1';
+      // #1177: и сразу отдаём пропорции. Родитель мог посчитать этот слой уже
+      // загруженным до маунта (кэш hero-preload у первого слайда) — тогда `onLoad`
+      // не сработает, и без этого вызова подложка навсегда осталась бы на всю плитку.
+      const natural = naturalSizeOf(node);
+      if (natural) onNaturalSize?.(natural);
     }
-  }, []);
+  }, [onNaturalSize]);
 
   // То же самое, когда родитель СНОВА закрыл уже показанный слой: активный слайд
   // включает decode-гейт, ячейка списка переиспользуется. `<img>` с неизменным `src`

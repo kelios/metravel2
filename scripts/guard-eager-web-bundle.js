@@ -24,9 +24,15 @@
  *
  *   2. ANALYZE (`--from-analyze`, run on a production export) — reconstructs the
  *      eager module set from the `ANALYZE_BUNDLE=1` metro serializer dumps
- *      (`/tmp/metro-analyze-*.json`) and fails if any forbidden vendor package has
- *      eager bytes, or the eager total exceeds the documented budget.
- *      Produce the dumps with: `ANALYZE_BUNDLE=1 npm run build:web`.
+ *      (`.codex-temp/metro-analyze/metro-analyze-*.json`) and fails if any forbidden
+ *      vendor package has eager bytes, or the eager total exceeds the documented budget.
+ *      Produce the dumps with: `ANALYZE_BUNDLE=1 npm run build:web:prod`.
+ *
+ *      #1178: каталог дампов задан явно и НЕ равен `os.tmpdir()`. Прод-сборка
+ *      подменяет дочернему процессу `TMPDIR` на `<repo>/.tmp/expo-export/run-*` и
+ *      удаляет его в конце, поэтому дампы, записанные во временный каталог, до гейта
+ *      не доживали. Старый tmpdir остаётся вторым местом поиска — ради дампов,
+ *      снятых до этой правки.
  *
  * Usage:
  *   node scripts/guard-eager-web-bundle.js                 # static report (exit 0)
@@ -36,7 +42,8 @@
  *
  * Env overrides:
  *   EAGER_BUDGET_KB   eager transformed-byte ceiling (default 1200; baseline ~1008)
- *   METRO_DUMP_DIR    directory holding metro-analyze-*.json (default: os.tmpdir())
+ *   METRO_DUMP_DIR    directory holding metro-analyze-*.json
+ *                     (default: <repo>/.codex-temp/metro-analyze, затем os.tmpdir())
  */
 
 const fs = require('fs')
@@ -154,24 +161,39 @@ function bucketOf(p) {
   return '(app)'
 }
 
-function runAnalyze(result) {
-  const dumpDir = process.env.METRO_DUMP_DIR || os.tmpdir()
-  let files = []
-  try {
-    files = fs
-      .readdirSync(dumpDir)
-      .filter((f) => /^metro-analyze-\d+-\d+\.json$/.test(f))
-      .map((f) => path.join(dumpDir, f))
-  } catch {
-    /* dir unreadable */
+// #1178: дефолт совпадает с тем, куда пишет `metro.config.js`; `os.tmpdir()` остаётся
+// вторым кандидатом для дампов, снятых до правки. `METRO_DUMP_DIR` переопределяет оба.
+function analyzeDumpDirs() {
+  if (process.env.METRO_DUMP_DIR) return [process.env.METRO_DUMP_DIR]
+  return [path.join(repoRoot, ".codex-temp", "metro-analyze"), os.tmpdir()]
+}
+
+function collectAnalyzeDumps() {
+  for (const dir of analyzeDumpDirs()) {
+    let found = []
+    try {
+      found = fs
+        .readdirSync(dir)
+        .filter((f) => /^metro-analyze-\d+-\d+\.json$/.test(f))
+        .map((f) => path.join(dir, f))
+    } catch {
+      /* dir unreadable */
+    }
+    if (found.length) return { dir, files: found }
   }
+  return { dir: analyzeDumpDirs()[0], files: [] }
+}
+
+function runAnalyze(result) {
+  const { dir: dumpDir, files } = collectAnalyzeDumps()
   if (!files.length) {
     problems.push(
-      `--from-analyze: no metro-analyze-*.json dumps in ${dumpDir}. ` +
-        'Run `ANALYZE_BUNDLE=1 npm run build:web` first (or set METRO_DUMP_DIR).',
+      `--from-analyze: no metro-analyze-*.json dumps in ${analyzeDumpDirs().join(' or ')}. ` +
+        'Run `ANALYZE_BUNDLE=1 npm run build:web:prod` first (or set METRO_DUMP_DIR).',
     )
     return
   }
+  notes.push(`analyze dumps: ${files.length} in ${dumpDir}`)
 
   // Prefer the client web graph. Static export also emits a router-server SSR
   // graph, and that dump can contain slightly more modules than the client graph.

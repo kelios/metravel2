@@ -709,6 +709,15 @@ function ImageCardMedia({
     onLoad?.();
   }, [currentImageIdentityKey, onLoad]);
 
+  // #1177: пропорции могут прийти раньше или вовсе без события загрузки (кэш-хит),
+  // поэтому канал отдельный. Значение меняем только при реальном отличии — иначе
+  // повторный отчёт того же кадра дал бы лишний рендер на каждом слайде.
+  const handleWebNaturalSize = useCallback((naturalSize: { width: number; height: number }) => {
+    const ratio = naturalSize.width / naturalSize.height;
+    if (!Number.isFinite(ratio) || ratio <= 0) return;
+    setNaturalAspectRatio((prev) => (prev != null && Math.abs(prev - ratio) < 0.001 ? prev : ratio));
+  }, []);
+
   const prefetchHref = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (webOptimizedSource) return webOptimizedSource;
@@ -860,6 +869,7 @@ function ImageCardMedia({
               hasBlurBehind={shouldRenderWebBlurBackground}
               loaded={effectiveWebLoaded}
               onLoad={handleWebLoad}
+              onNaturalSize={handleWebNaturalSize}
               onError={onError}
               showImmediately={shouldShowWebImageImmediately}
             />
