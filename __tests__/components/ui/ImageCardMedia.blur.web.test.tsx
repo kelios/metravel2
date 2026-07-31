@@ -1635,6 +1635,7 @@ describe('pickNarrowestSrcSetCandidate (#1111)', () => {
  */
 describe('WebBlurBackdrop: сегментный режим и площадь слоёв (#1177)', () => {
   const { WebBlurBackdrop } = require('@/components/ui/ImageCardMediaWebHelpers')
+  const { getContainedMediaBox } = require('@/components/ui/webBlurBackdropLayout')
   const SLOT = { width: 360, height: 480 }
   // Квадратное фото в слоте 360×480 → контент 360×360, поля 360×60 сверху и снизу.
   const CONTENT_BOX = { left: 0, top: 60, width: 360, height: 360 }
@@ -1671,6 +1672,33 @@ describe('WebBlurBackdrop: сегментный режим и площадь с�
     const tree = renderBackdrop({ contentBox: CONTENT_BOX })
 
     expect(findLayers(tree, 'data-blur-backdrop-segment').length).toBeGreaterThan(0)
+  })
+
+  it.each([
+    ['фото уже слота', 0.5],
+    ['фото шире слота', 1.5],
+    ['квадрат в портретном слоте', 1],
+  ])('%s получает два сегмента полей', (_label, contentAspectRatio) => {
+    const contentBox = getContainedMediaBox({
+      containerWidth: SLOT.width,
+      containerHeight: SLOT.height,
+      contentAspectRatio,
+    })
+    const tree = renderBackdrop({ contentBox, contentRevealed: true })
+
+    expect(findLayers(tree, 'data-blur-backdrop-segment')).toHaveLength(2)
+    expect(findLayers(tree, 'data-blur-backdrop-base')).toHaveLength(0)
+  })
+
+  it('фото ровно по пропорциям слота снимает base после раскрытия', () => {
+    const contentBox = getContainedMediaBox({
+      containerWidth: SLOT.width,
+      containerHeight: SLOT.height,
+      contentAspectRatio: SLOT.width / SLOT.height,
+    })
+    const tree = renderBackdrop({ contentBox, contentRevealed: true })
+
+    expect(findLayers(tree, 'data-blur-backdrop')).toHaveLength(0)
   })
 
   it('до прихода пикселей база закрывает плитку целиком', () => {

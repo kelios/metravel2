@@ -176,6 +176,30 @@ const Slide = memo(function Slide({
   );
   const effectiveBlurBackground = shouldBlur;
   const effectiveAllowCriticalWebBlur = shouldBlur && Platform.OS === 'web';
+  const itemAspectRatio =
+    typeof item.width === 'number' &&
+    typeof item.height === 'number' &&
+    item.width > 0 &&
+    item.height > 0
+      ? item.width / item.height
+      : undefined;
+  const mediaAspectRatio =
+    typeof item.media?.aspect_ratio === 'number' &&
+    Number.isFinite(item.media.aspect_ratio) &&
+    item.media.aspect_ratio > 0
+      ? item.media.aspect_ratio
+      : typeof item.media?.width === 'number' &&
+          typeof item.media?.height === 'number' &&
+          item.media.width > 0 &&
+          item.media.height > 0
+        ? item.media.width / item.media.height
+        : undefined;
+  // A slider-level ratio describes the container/first frame, not necessarily
+  // this gallery item. Leave an unknown per-item ratio unset so ImageCardMedia
+  // can replace it with naturalWidth/naturalHeight after decode; otherwise a
+  // square legacy image would keep the shared 16:9 fallback and lose its real
+  // letterbox backdrop.
+  const resolvedContentAspectRatio = itemAspectRatio ?? mediaAspectRatio;
   const shouldRevealOnLoadOnly = isSliderIOSWebKit && effectiveAllowCriticalWebBlur;
   const shouldRenderLoadingPlaceholder =
     !mediaPlaceholder.blurhash &&
@@ -403,14 +427,7 @@ const Slide = memo(function Slide({
             allowCriticalWebBlur={effectiveAllowCriticalWebBlur}
             revealOnLoadOnly={shouldRevealOnLoadOnly}
             preserveOptimizedWebSrc={Platform.OS === 'web'}
-            contentAspectRatio={
-              typeof item?.width === 'number' &&
-              typeof item?.height === 'number' &&
-              item.width > 0 &&
-              item.height > 0
-                ? item.width / item.height
-                : undefined
-            }
+            contentAspectRatio={resolvedContentAspectRatio}
           />
         </>
       )}

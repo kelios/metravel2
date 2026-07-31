@@ -418,6 +418,11 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
     [contentBox, fit, height, useCssBackdrop, width]
   );
   const shouldSplitBackdrop = useCssBackdrop && backdropSegments.length > 0;
+  const contentFillsContainer =
+    useCssBackdrop &&
+    fit === 'contain' &&
+    contentBox != null &&
+    backdropSegments.length === 0;
 
   if (shouldSplitBackdrop) {
     return (
@@ -496,6 +501,12 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
   }
 
   if (useCssBackdrop) {
+    // A known content box with no segments means the image exactly fills the
+    // container. Keep the pre-decode base, then remove it once sharp pixels are
+    // visible. A missing content box is different: proportions are still
+    // unknown, so the full-tile fallback must remain to avoid empty letterbox
+    // fields (#1177/#1188).
+    if (contentFillsContainer && contentRevealed) return null;
     return (
       <div
         aria-hidden="true"

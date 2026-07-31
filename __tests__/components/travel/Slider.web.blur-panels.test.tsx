@@ -235,6 +235,99 @@ describe('Slider (web) blur background', () => {
     expect(secondImage.props.fetchPriority).toBe('high')
   })
 
+  it('uses manifest aspect ratio and prepares a square slide before it becomes active', async () => {
+    const imagesWithManifestRatio = [
+      {
+        id: 5051,
+        url: 'https://example.com/portrait-1.jpg',
+        media: { id: 5051, width: 768, height: 1024, aspect_ratio: 0.75 },
+      },
+      {
+        id: 5056,
+        url: 'https://example.com/portrait-2.jpg',
+        media: { id: 5056, width: 768, height: 1024, aspect_ratio: 0.75 },
+      },
+      {
+        id: 5059,
+        url: 'https://example.com/square.jpg',
+        media: { id: 5059, width: 1024, height: 1024, aspect_ratio: 1 },
+      },
+    ]
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={imagesWithManifestRatio}
+          showArrows
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+          contentAspectRatio={16 / 9}
+        />,
+      )
+    })
+    await measureSliderLayout(tree!, 390)
+
+    const squareWhileDistant = tree!.root.findByProps({ testID: 'slider-image-2' })
+    expect(squareWhileDistant.props.contentAspectRatio).toBe(1)
+    expect(squareWhileDistant.props.allowCriticalWebBlur).toBe(false)
+
+    const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    const squareWhileAdjacent = tree!.root.findByProps({ testID: 'slider-image-2' })
+    expect(squareWhileAdjacent.props.contentAspectRatio).toBe(1)
+    expect(squareWhileAdjacent.props.allowCriticalWebBlur).toBe(true)
+    expect(squareWhileAdjacent.props.loading).toBe('eager')
+
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    const squareWhileActive = tree!.root.findByProps({ testID: 'slider-image-2' })
+    expect(squareWhileActive.props.contentAspectRatio).toBe(1)
+    expect(squareWhileActive.props.allowCriticalWebBlur).toBe(true)
+  })
+
+  it('leaves an unknown slide ratio unset so natural image dimensions can resolve its gutters', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={[
+            { id: 'known', url: 'https://example.com/known.jpg', width: 1600, height: 900 },
+            { id: 'unknown', url: 'https://example.com/unknown.jpg' },
+          ]}
+          showArrows
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+          contentAspectRatio={16 / 9}
+        />,
+      )
+    })
+    await measureSliderLayout(tree!, 390)
+
+    const unknownWhileAdjacent = tree!.root.findByProps({ testID: 'slider-image-1' })
+    expect(unknownWhileAdjacent.props.contentAspectRatio).toBeUndefined()
+    expect(unknownWhileAdjacent.props.allowCriticalWebBlur).toBe(true)
+    expect(unknownWhileAdjacent.props.loading).toBe('eager')
+
+    const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    const unknownWhileActive = tree!.root.findByProps({ testID: 'slider-image-1' })
+    expect(unknownWhileActive.props.contentAspectRatio).toBeUndefined()
+    expect(unknownWhileActive.props.allowCriticalWebBlur).toBe(true)
+  })
+
   it('raises preload count on mobile viewport widths for faster swipe response', async () => {
     useWindowDimensionsMock.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 })
 

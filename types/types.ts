@@ -43,6 +43,9 @@ export type TravelAddressItem = string | {
 export type TravelMediaImage = {
     id: number
     alt?: string | null
+    width?: number | null
+    height?: number | null
+    aspect_ratio?: number | null
     dominant_color?: string | null
     blurhash?: string | null
     lqip_url?: string | null
