@@ -45,7 +45,7 @@ describe('StableContent (web) inline image priority', () => {
   });
 
   it('keeps inline rich-text images lazy and low priority', async () => {
-    const StableContent = (await import('@/components/travel/StableContent')).default;
+    const StableContent = (await import('@/components/travel/StableContent.web')).default;
 
     const html = [
       '<p>First paragraph</p>',

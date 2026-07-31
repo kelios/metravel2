@@ -268,6 +268,12 @@ const normalizeImgTags = (html: string): string => {
       }
     }
 
+    // #1188: 800×450 — это РЕЗЕРВ места до загрузки, а не пропорции кадра. Редакторская
+    // разметка почти никогда не несёт width/height, и без пометки оба рендерера считали
+    // выдуманные 16:9 настоящими: на web фото вставало в чужой слот (портрет 374×499 в
+    // 354×195 — 59% площади пусто), а на native `attrAR` вообще отменял измерение файла.
+    // Маркер отличает резерв от объявленных редактором размеров: их трогать нельзя.
+    const hasDeclaredSize = Boolean(width && height)
     const finalW = width || 800
     const finalH = height || 450
 
@@ -293,7 +299,11 @@ const normalizeImgTags = (html: string): string => {
       )
     }
 
-    out = out.replace(/>$/, ` width="${finalW}" height="${finalH}">`)
+    out = out.replace(/\bdata-aspect-fallback="[^"]*"/i, '')
+    out = out.replace(
+      />$/,
+      ` width="${finalW}" height="${finalH}"${hasDeclaredSize ? '' : ' data-aspect-fallback="1"'}>`
+    )
     out = out
       .replace(/\bdecoding="[^"]*"/i, '')
       .replace(/\bfetchpriority="[^"]*"/i, '')
@@ -418,6 +428,48 @@ const truncateInstagramCaptions = (html: string) => {
   })
 }
 
+/** Теги без закрывающей пары — они не меняют глубину вложенности при обходе. */
+const VOID_HTML_TAGS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr',
+])
+
+/**
+ * Диапазоны `<img>`, лежащих в КОРНЕ описания, а не внутри `<p>`/`<figure>`/строки
+ * галереи.
+ *
+ * #1188: `decorateRichImageFrames` умел оборачивать только картинку внутри абзаца
+ * или `<figure>`, а редакторская разметка сплошь и рядом кладёт `<img>` прямо между
+ * заголовками — соседями `H2`/`H3`/`P`. Замер прода 2026-07-31 на статье о
+ * заброшенных дворцах: 37 картинок тела, 0 в `.rich-image-frame`, то есть блюр-фона
+ * не было ни у одной, и портрет 374×499 в зарезервированном слоте 16:9 оставлял
+ * 59% площади пустой белой.
+ *
+ * Глубину считаем обходом тегов: обёртки (в том числе `.img-jrow` и instagram-карточки)
+ * поднимают её выше нуля, поэтому их содержимое сюда не попадает и раскладка не меняется.
+ */
+const collectRootLevelImageRanges = (html: string): Array<[number, number]> => {
+  const ranges: Array<[number, number]> = []
+  const tagPattern = /<(\/?)([a-z][a-z0-9]*)\b[^>]*?(\/?)>/gi
+  let depth = 0
+  let match: RegExpExecArray | null
+
+  while ((match = tagPattern.exec(html)) !== null) {
+    const [tag, closing, rawName, selfClosing] = match
+    const name = rawName.toLowerCase()
+
+    if (name === 'img') {
+      if (!closing && depth === 0) ranges.push([match.index, match.index + tag.length])
+      continue
+    }
+    if (VOID_HTML_TAGS.has(name) || selfClosing === '/') continue
+
+    if (closing) depth = Math.max(0, depth - 1)
+    else depth += 1
+  }
+
+  return ranges
+}
+
 const decorateRichImageFrames = (html: string) => {
   if (!html) return html
 
@@ -432,15 +484,31 @@ const decorateRichImageFrames = (html: string) => {
       : nextClassAttrs
   }
 
-  return html
-    .replace(
-      /<p([^>]*)>(\s*<img\b[^>]*\bsrc="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*)?)<\/p>/gi,
-      (match, attrs = '', inner = '') => `<p${decorateAttrs(attrs, inner)}>${inner}</p>`
-    )
-    .replace(
-      /<figure([^>]*)>([\s\S]*?<img\b[^>]*\bsrc="([^"]+)"[^>]*>[\s\S]*?)<\/figure>/gi,
-      (match, attrs = '', inner = '') => `<figure${decorateAttrs(attrs, inner)}>${inner}</figure>`
-    )
+  const wrapRootLevelImages = (input: string) => {
+    const ranges = collectRootLevelImageRanges(input)
+    if (ranges.length === 0) return input
+
+    let out = ''
+    let cursor = 0
+    for (const [start, end] of ranges) {
+      const imgMarkup = input.slice(start, end)
+      out += `${input.slice(cursor, start)}<p${decorateAttrs('', imgMarkup)}>${imgMarkup}</p>`
+      cursor = end
+    }
+    return out + input.slice(cursor)
+  }
+
+  return wrapRootLevelImages(
+    html
+      .replace(
+        /<p([^>]*)>(\s*<img\b[^>]*\bsrc="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*)?)<\/p>/gi,
+        (match, attrs = '', inner = '') => `<p${decorateAttrs(attrs, inner)}>${inner}</p>`
+      )
+      .replace(
+        /<figure([^>]*)>([\s\S]*?<img\b[^>]*\bsrc="([^"]+)"[^>]*>[\s\S]*?)<\/figure>/gi,
+        (match, attrs = '', inner = '') => `<figure${decorateAttrs(attrs, inner)}>${inner}</figure>`
+      )
+  )
 }
 
 export type PrepareStableContentHtmlOptions = {

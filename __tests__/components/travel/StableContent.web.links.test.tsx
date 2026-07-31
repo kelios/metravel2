@@ -6,7 +6,7 @@
 import { Platform } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 
-let StableContent: (typeof import('@/components/travel/StableContent'))['default'];
+let StableContent: (typeof import('@/components/travel/StableContent.web'))['default'];
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
@@ -62,7 +62,7 @@ describe('StableContent (web) link styles', () => {
   });
 
   beforeAll(async () => {
-    StableContent = (await import('@/components/travel/StableContent')).default;
+    StableContent = (await import('@/components/travel/StableContent.web')).default;
   });
 
   afterEach(() => {

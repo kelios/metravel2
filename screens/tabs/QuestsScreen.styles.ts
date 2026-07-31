@@ -58,6 +58,15 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             // minHeight:0 заполняют родителя ровно по высоте → скролл доходит
             // до конца. На мобильном вебе скроллит сама страница (body).
         },
+        desktopSidebarSlot: {
+            display: isMobileW ? 'none' : 'flex',
+            flexGrow: 0,
+            flexShrink: 0,
+            flexBasis: isMobileW ? 0 : SIDEBAR_WIDTH,
+            width: isMobileW ? 0 : SIDEBAR_WIDTH,
+            minHeight: 0,
+            flexDirection: 'row',
+        },
 
         /* ---- Left Sidebar (Premium, atmospheric) ---- */
         sidebar: {
@@ -595,6 +604,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             alignItems: 'center',
             gap: spacing.sm,
             flexWrap: 'wrap',
+            // Keep the header height stable while the quest count is loading.
+            minHeight: 20,
         },
         resetFiltersChip: {
             flexDirection: 'row',
@@ -828,10 +839,10 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             ...Platform.select({
                 web: {
                     position: 'fixed',
-                    top: 0,
+                    top: LAYOUT.headerHeight + spacing.sm,
                     left: 0,
                     right: 0,
-                    bottom: 0,
+                    bottom: LAYOUT.tabBarHeight,
                     backgroundColor: colors.overlay,
                     backdropFilter: 'blur(4px)',
                     WebkitBackdropFilter: 'blur(4px)',
@@ -857,13 +868,13 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             ...Platform.select({
                 web: {
                     position: 'fixed',
-                    top: 0,
+                    top: LAYOUT.headerHeight + spacing.sm,
                     left: 0,
-                    bottom: 0,
+                    bottom: LAYOUT.tabBarHeight,
                     width: 340,
                     maxWidth: '88vw',
-                    height: '100dvh',
-                    maxHeight: '100dvh',
+                    height: 'auto',
+                    maxHeight: `calc(100dvh - ${LAYOUT.headerHeight + spacing.sm + LAYOUT.tabBarHeight}px)`,
                     paddingTop: 'env(safe-area-inset-top, 0px)',
                     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                     zIndex: 1000,

@@ -33,6 +33,32 @@ const originFromWeservSrc = (src: string): string | null => {
 
 const imageLoadedOk = (img: HTMLImageElement) => img.complete && img.naturalWidth > 0
 
+/**
+ * #1188: слот картинки описания резервируется под 16:9 (`normalizeImgTags`), потому что
+ * редакторская разметка почти никогда не несёт `width`/`height`. Для кадра других
+ * пропорций это оставляет пустые поля: замер прода 2026-07-31 на статье о заброшенных
+ * дворцах — портрет 374×499 в слоте 354×195 занимал 146 px из 354, то есть 59% площади
+ * пустовало.
+ *
+ * Как только пиксели пришли, настоящие пропорции известны, и слот принимает их —
+ * заполнять больше нечего. Блюр-подложка остаётся страховкой: она закрывает поля до
+ * загрузки и там, где кадр упирается в `max-height`.
+ *
+ * Ячейки `.img-jrow` не трогаем: их геометрию задаёт бакет строки целиком, а не
+ * отдельное фото, и подложка кадра там гасит остаток по проекту.
+ */
+const adoptNaturalImageAspect = (img: HTMLImageElement, frame: HTMLElement | null) => {
+  if (!imageLoadedOk(img)) return
+  // Размеры, объявленные редактором, — не наше дело: подменять их значит двигать
+  // вёрстку там, где автор задал её осознанно. Трогаем только резерв 800×450.
+  if (img.getAttribute('data-aspect-fallback') !== '1') return
+  if (img.closest('.img-jrow')) return
+  const ratio = `${img.naturalWidth} / ${img.naturalHeight}`
+  if (img.style.aspectRatio === ratio) return
+  img.style.aspectRatio = ratio
+  frame?.style.setProperty('--travel-rich-image-aspect', ratio)
+}
+
 type UseStableContentWebEffectsInput = {
   prepared: string
   lightboxGallery: LightboxGallery | null
@@ -131,6 +157,7 @@ export function useStableContentWebEffects({
         if (!src || src.startsWith('data:')) return
         const frame = img.closest('.rich-image-frame') as HTMLElement | null
         frame?.style.setProperty('--travel-rich-image', `url('${escapeCssUrl(src)}')`)
+        adoptNaturalImageAspect(img, frame)
       }
       img.addEventListener('load', applyBackdrop)
       if (imageLoadedOk(img)) applyBackdrop()

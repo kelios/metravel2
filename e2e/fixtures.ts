@@ -12,21 +12,20 @@ export const test = base.extend<{
       } finally {
         tracker.dispose();
 
-        const ctxFromEnv = await apiContextFromEnv().catch(() => null);
-        const ctx =
-          ctxFromEnv ??
-          apiContextFromTracker({
-            apiBase: tracker.getApiBase?.() ?? null,
-            token: tracker.getToken?.() ?? null,
-          });
-        if (ctx) {
-          const cleanupTimeoutMs = Number(process.env.E2E_API_CLEANUP_TIMEOUT_MS || 20_000);
-          const cleanupBudgetMs = Number(process.env.E2E_API_CLEANUP_BUDGET_MS || 60_000);
-          const concurrency = Math.max(1, Math.min(3, Number(process.env.E2E_API_CLEANUP_CONCURRENCY || 2)));
-
-          const deadline = Date.now() + cleanupBudgetMs;
-          const ids = Array.from(tracker.ids);
-          if (ids.length > 0) {
+        const ids = Array.from(tracker.ids);
+        if (ids.length > 0) {
+          const ctxFromEnv = await apiContextFromEnv().catch(() => null);
+          const ctx =
+            ctxFromEnv ??
+            apiContextFromTracker({
+              apiBase: tracker.getApiBase?.() ?? null,
+              token: tracker.getToken?.() ?? null,
+            });
+          if (ctx) {
+            const cleanupTimeoutMs = Number(process.env.E2E_API_CLEANUP_TIMEOUT_MS || 20_000);
+            const cleanupBudgetMs = Number(process.env.E2E_API_CLEANUP_BUDGET_MS || 60_000);
+            const concurrency = Math.max(1, Math.min(3, Number(process.env.E2E_API_CLEANUP_CONCURRENCY || 2)));
+            const deadline = Date.now() + cleanupBudgetMs;
             const api = await request
               .newContext({
                 baseURL: ctx.apiBase,
@@ -70,10 +69,11 @@ export const test = base.extend<{
                   }
                 });
 
-                await Promise.race([
-                  Promise.all(workers),
-                  new Promise<void>((resolve) => setTimeout(resolve, cleanupBudgetMs)),
-                ]);
+                // deleteOne already caps every request by the shared deadline,
+                // so waiting for the workers cannot exceed the cleanup budget.
+                // Keeping a second race timer would leave a live timer after a
+                // fast cleanup and could dispose the API context mid-request.
+                await Promise.all(workers);
               } finally {
                 await api.dispose().catch(() => undefined);
               }

@@ -115,6 +115,7 @@ type CountryGroup = {
 type QuestsSidebarProps = {
     styles: any;
     colors: ThemedColors;
+    testID?: string;
     viewMode: 'list' | 'map';
     selectedCityId: string | null;
     nearbyRequesting: boolean;
@@ -136,6 +137,7 @@ type QuestsSidebarProps = {
 export default function QuestsSidebar({
     styles,
     colors,
+    testID,
     viewMode,
     selectedCityId,
     nearbyRequesting,
@@ -168,7 +170,7 @@ export default function QuestsSidebar({
         : i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_28d9b150');
 
     return (
-        <View style={styles.sidebar}>
+        <View style={styles.sidebar} testID={testID}>
             <View style={styles.sidebarHeader}>
                 <View style={styles.sidebarTitleRow}>
                     <Text style={styles.sidebarTitle}>{i18nT('quests:screens.tabs.QuestsSidebar.priklyucheniya_32619ed3')}</Text>

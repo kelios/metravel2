@@ -149,7 +149,7 @@ function QuestsSeoIntroFaq({
   return (
     <View style={styles.wrap} testID={testID}>
       {variant !== 'faq' && (
-        <View style={styles.intro}>
+        <View style={styles.intro} testID="quests-seo-intro">
           <View style={styles.eyebrow}>
             <Feather
               name="compass"
@@ -161,16 +161,19 @@ function QuestsSeoIntroFaq({
               {eyebrow ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.eyebrow')}
             </Text>
           </View>
-          <Text style={styles.lead}>{lead ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.lead')}</Text>
+          <Text style={styles.lead} testID="quests-seo-lead">
+            {lead ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.lead')}
+          </Text>
           {/* Entry point into the DIY landing — also keeps it off the orphan list. */}
           <Link href="/quests/scenario" asChild>
             <Pressable
               accessibilityRole="link"
               accessibilityLabel={i18nT('quests:screens.tabs.QuestsSeoIntroFaq.scenarioLink')}
               style={styles.scenarioLink}
+              testID="quests-seo-scenario-link"
             >
               <Feather name="printer" size={14} color={colors.primary} aria-hidden />
-              <Text style={styles.scenarioLinkText}>
+              <Text style={styles.scenarioLinkText} testID="quests-seo-scenario-link-text">
                 {i18nT('quests:screens.tabs.QuestsSeoIntroFaq.scenarioLink')}
               </Text>
               <Feather name="arrow-right" size={14} color={colors.primary} aria-hidden />
@@ -180,15 +183,16 @@ function QuestsSeoIntroFaq({
       )}
 
       {variant !== 'intro' && (
-        <View style={styles.faq}>
+        <View style={styles.faq} testID="quests-seo-faq">
           <Text
             style={styles.faqTitle}
             accessibilityRole="header"
             {...({ 'aria-level': 2 } as Record<string, unknown>)}
+            testID="quests-seo-faq-title"
           >
             {faqTitle ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.faqTitle')}
           </Text>
-          <View style={styles.list}>
+          <View style={styles.list} testID="quests-seo-faq-list">
             {items.map((item, idx) => (
               <FaqCard
                 key={item.q}

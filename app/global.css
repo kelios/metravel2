@@ -663,3 +663,89 @@ select:focus-visible {
     height: var(--mt-header-slot-mobile, 116px);
   }
 }
+
+/*
+ * Quests catalog hydration layout.
+ *
+ * The responsive store must expose width=0 during SSR and the hydration render,
+ * so React initially produces the mobile variant. Reserve the desktop sidebar
+ * and apply the desktop spacing through CSS media queries before first paint;
+ * React can then reveal live breakpoint state without moving existing content.
+ */
+@media (max-width: 767px) {
+  [data-testid="quests-root"] {
+    flex-direction: column !important;
+  }
+
+  [data-testid="quests-desktop-sidebar-slot"] {
+    display: none !important;
+    flex-basis: 0 !important;
+    width: 0 !important;
+  }
+}
+
+@media (min-width: 768px) {
+  [data-testid="quests-root"] {
+    flex-direction: row !important;
+  }
+
+  [data-testid="quests-desktop-sidebar-slot"] {
+    display: flex !important;
+    flex: 0 0 340px !important;
+    flex-direction: row !important;
+    width: 340px !important;
+    min-height: 0 !important;
+  }
+
+  [data-testid="quests-content-header"] {
+    gap: 16px !important;
+    padding: 32px 24px 16px !important;
+  }
+
+  [data-testid="quests-content-title"] {
+    font-size: 28px !important;
+    line-height: 34px !important;
+  }
+
+  [data-testid="quests-mobile-controls"] {
+    display: none !important;
+  }
+
+  [data-testid="quests-content-body"] {
+    padding: 16px 24px 24px !important;
+  }
+
+  [data-testid="quests-seo-intro"] {
+    gap: 10px !important;
+    padding: 16px 0 !important;
+  }
+
+  [data-testid="quests-seo-lead"] {
+    font-size: 16px !important;
+    line-height: 26px !important;
+  }
+
+  [data-testid="quests-seo-scenario-link-text"] {
+    font-size: 15px !important;
+  }
+
+  [data-testid="quests-seo-faq"] {
+    gap: 16px !important;
+    padding-bottom: 12px !important;
+  }
+
+  [data-testid="quests-seo-faq-title"] {
+    font-size: 24px !important;
+  }
+
+  [data-testid="quests-seo-faq-list"] {
+    gap: 10px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  [data-testid="quests-desktop-sidebar-slot"] {
+    flex-basis: 260px !important;
+    width: 260px !important;
+  }
+}

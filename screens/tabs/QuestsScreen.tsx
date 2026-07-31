@@ -107,17 +107,13 @@ export default function QuestsScreen() {
     // высоту вьюпорта покадрово; подписка на высоту (useResponsive) дёргала бы
     // ре-рендер всего экрана во время набора и рвала ввод в поле поиска.
     const { width: bpWidth, isMobile: bpIsMobile } = useBreakpoints();
-    const [layoutHydrated, setLayoutHydrated] = useState(Platform.OS !== 'web');
-    useEffect(() => {
-        setLayoutHydrated(true);
-    }, []);
-    const width = layoutHydrated ? bpWidth : 0;
-    const isMobile = layoutHydrated ? bpIsMobile : true;
+    const width = bpWidth;
+    const isMobile = bpIsMobile;
     // Высота нужна только для размеров карты на native/desktop и берётся
     // НЕреактивным снапшотом: в стилях мобильного веба она не используется
     // (карта = 100dvh через CSS), поэтому отсутствие подписки на высоту ничего
     // не ломает, но убирает keyboard/address-bar-джиттер при вводе.
-    const height = layoutHydrated ? Dimensions.get('window').height : 0;
+    const height = width > 0 ? Dimensions.get('window').height : 0;
     const s = useMemo(() => getStyles(colors, width, height), [colors, width, height]);
 
     // ── Persistent city selection ──
@@ -625,7 +621,7 @@ export default function QuestsScreen() {
 
     // ── Render (Two-column layout) ──
     return (
-        <View style={s.root as ViewStyle}>
+        <View style={s.root as ViewStyle} testID="quests-root">
             {isFocused && (
                 <InstantSEO
                     headKey="quests-index"
@@ -680,28 +676,33 @@ export default function QuestsScreen() {
                 </>
             )}
 
-            {/* Desktop: Sidebar always visible */}
-            {!isMobile && (
-                <QuestsSidebar
-                    styles={s}
-                    colors={colors}
-                    viewMode={viewMode}
-                    selectedCityId={selectedCityId}
-                    nearbyRequesting={geoRequesting}
-                    nearbyId={NEARBY_ID}
-                    kidsFilterId={KIDS_FILTER_ID}
-                    bikeFilterId={BIKE_FILTER_ID}
-                    areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
-                    collapsedCountryCodes={collapsedCountryCodes}
-                    citiesByCountry={citiesByCountry}
-                    cityQuestCountById={cityQuestCountById}
-                    spacingMd={spacing.md}
-                    onSelectCity={handleSelectCity}
-                    onSetViewMode={handleSetViewMode}
-                    onToggleCountryGroup={handleToggleCountryGroup}
-                    onToggleAllCountryGroups={handleToggleAllCountryGroups}
-                />
-            )}
+            {/* Reserve the desktop sidebar before hydration. The server snapshot
+                intentionally uses the mobile breakpoint; the CSS media query on
+                this slot still allocates its final width before the first paint. */}
+            <View style={s.desktopSidebarSlot as ViewStyle} testID="quests-desktop-sidebar-slot">
+                {!isMobile && (
+                    <QuestsSidebar
+                        styles={s}
+                        colors={colors}
+                        testID="quests-desktop-sidebar"
+                        viewMode={viewMode}
+                        selectedCityId={selectedCityId}
+                        nearbyRequesting={geoRequesting}
+                        nearbyId={NEARBY_ID}
+                        kidsFilterId={KIDS_FILTER_ID}
+                        bikeFilterId={BIKE_FILTER_ID}
+                        areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
+                        collapsedCountryCodes={collapsedCountryCodes}
+                        citiesByCountry={citiesByCountry}
+                        cityQuestCountById={cityQuestCountById}
+                        spacingMd={spacing.md}
+                        onSelectCity={handleSelectCity}
+                        onSetViewMode={handleSetViewMode}
+                        onToggleCountryGroup={handleToggleCountryGroup}
+                        onToggleAllCountryGroups={handleToggleAllCountryGroups}
+                    />
+                )}
+            </View>
 
             <QuestsContentPanel
                 styles={s}

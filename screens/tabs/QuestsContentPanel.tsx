@@ -160,10 +160,10 @@ export default function QuestsContentPanel({
     const questKeyExtractor = useCallback((quest: QuestListItem) => String(quest.id), []);
 
     const contentHeader = (
-        <View style={styles.contentHeader}>
+        <View style={styles.contentHeader} testID="quests-content-header">
             <View style={styles.contentHeaderTopRow}>
                 <View style={styles.contentTitleBlock}>
-                    <Text style={styles.contentTitle} numberOfLines={2}>
+                    <Text style={styles.contentTitle} numberOfLines={2} testID="quests-content-title">
                         {searchActive
                             ? i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
                             : isMapAreaActive
@@ -194,7 +194,7 @@ export default function QuestsContentPanel({
                     </View>
                 </View>
                 {isMobile && (
-                    <View style={styles.headerToggleRow}>
+                    <View style={styles.headerToggleRow} testID="quests-mobile-controls">
                         <Pressable
                             style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
                             onPress={onToggleViewMode}
@@ -309,7 +309,10 @@ export default function QuestsContentPanel({
         <>
             {contentHeader}
 
-            <View style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}>
+            <View
+                style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}
+                testID="quests-content-body"
+            >
                 {geoMessageBlock}
 
                 {viewMode === 'map' ? (
@@ -547,7 +550,7 @@ export default function QuestsContentPanel({
 
     if (Platform.OS !== 'web' && isMobile && viewMode === 'list') {
         return (
-            <View style={styles.content}>
+            <View style={styles.content} testID="quests-content">
                 {contentHeader}
                 <FlatList
                     data={dataLoaded ? questsAll : []}
@@ -582,7 +585,7 @@ export default function QuestsContentPanel({
     // обратно на список не срабатывало (F-10). Карта живёт фиксированным блоком,
     // шапка с тоглом всегда сверху и кликабельна.
     if (Platform.OS !== 'web' && isMobile && viewMode === 'map') {
-        return <View style={[styles.content, { flex: 1 }]}>{inner}</View>;
+        return <View style={[styles.content, { flex: 1 }]} testID="quests-content">{inner}</View>;
     }
 
     return (
@@ -591,6 +594,7 @@ export default function QuestsContentPanel({
             contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            testID="quests-content"
         >
             {inner}
         </ScrollView>

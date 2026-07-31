@@ -7,7 +7,9 @@ import {
   Image as RNImage,
   Pressable,
 } from "react-native";
-import { CustomRendererProps } from "react-native-render-html";
+// #1181: только тип. Обычный `import` из RNRH держал бы весь куст библиотеки
+// (`entities`, `ramda`, `htmlparser2`) в web-графе, где рендерер не исполняется.
+import type { CustomRendererProps } from "react-native-render-html";
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers';
@@ -112,7 +114,13 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
   const attW = tnode.attributes?.width ? Number(tnode.attributes.width) : undefined;
   const attH = tnode.attributes?.height ? Number(tnode.attributes.height) : undefined;
   const isSmallIcon = (attW && attW <= 32) || (attH && attH <= 32);
-  const attrAR = attW && attH && attH > 0 ? attW / attH : null;
+  // #1188: `data-aspect-fallback` означает, что width/height в разметке — это резерв
+  // места (800×450 из `normalizeImgTags`), а не размеры файла. Такие пропорции держим
+  // только как стартовые: раньше `attrAR` из них считался известным и ОТМЕНЯЛ замер,
+  // поэтому кадр любых пропорций навсегда оставался в чужом слоте 16:9 с полями.
+  const hasFallbackAspect = tnode.attributes?.['data-aspect-fallback'] === '1';
+  const declaredAR = attW && attH && attH > 0 ? attW / attH : null;
+  const attrAR = hasFallbackAspect ? null : declaredAR;
   const { width: screenWidth, height: screenHeight } = useResponsive();
   const src = useMemo(() => (raw ? normalizeUrl(raw) : ''), [raw]);
   const maxImageHeight = useMemo(
@@ -127,7 +135,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
     [contentWidth, screenWidth]
   );
 
-  const [ar, setAr] = useState<number | null>(attrAR ?? null);
+  const [ar, setAr] = useState<number | null>(attrAR ?? declaredAR ?? null);
   const [err, setErr] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 

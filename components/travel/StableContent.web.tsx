@@ -1,0 +1,107 @@
+// components/travel/StableContent.web.tsx
+//
+// #1181: web-ветка описания путешествия.
+//
+// Раньше web и native жили в одном файле: web возвращал `dangerouslySetInnerHTML`, но
+// выше по коду стояли `import RenderHTMLDirect from "react-native-render-html"` и вызов
+// `useStableContentRenderConfig`, который импортирует значения RNRH. Одного синхронного
+// импорта достаточно, чтобы Metro поднял в `__common` весь куст библиотеки: замер
+// прод-сборки 2026-07-31 — `entities` 246.2 КБ, `ramda` 136.4 КБ, сам RNRH 66.5 КБ,
+// `htmlparser2` 47.7 КБ, то есть ~496 КБ на КАЖДОЙ странице, где не исполняется ни
+// строки. Стоявший рядом `React.lazy(() => import(...))` границы не создавал: модуль
+// уже был в графе.
+//
+// Platform-сплит выбран по образцу `NativeRoutePickerMap` (#1148): native сохраняет
+// синхронный импорт и прежнее поведение, а web этот код просто не видит.
+import React, { memo, Suspense, useMemo, useRef, useState } from 'react';
+
+import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform';
+import { useStableContentWebEffects } from '@/components/travel/stableContent/useWebEffects';
+import {
+  getWebRichTextStyles,
+  WEB_RICH_TEXT_CLASS,
+  WEB_RICH_TEXT_FULL_WIDTH_CLASS,
+} from '@/components/travel/stableContent/webStyles';
+import { useThemedColors } from '@/hooks/useTheme';
+
+type LightboxImage = { src: string; alt: string };
+type LightboxGallery = { images: LightboxImage[]; initialIndex: number };
+type FullscreenGalleryProps = {
+  visible: boolean;
+  images: { url: string; thumbUrl?: string; alt?: string }[];
+  initialIndex?: number;
+  onClose: () => void;
+};
+
+const LazyFullscreenGallery = React.lazy<React.ComponentType<FullscreenGalleryProps>>(() =>
+  Promise.resolve(import("@/components/travel/FullscreenGallery")).then((m: any) => ({ default: m.default }))
+);
+
+interface StableContentProps {
+  html: string;
+  contentWidth: number;
+  fullWidth?: boolean;
+  // html — серверный canonical safe_html (#709): без полного sanitize, только дешёвый guard
+  serverSanitized?: boolean;
+}
+
+const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = false, serverSanitized = false }) => {
+  const colors = useThemedColors();
+  const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
+  const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
+  const webRootRef = useRef<HTMLDivElement | null>(null);
+  const prepared = useMemo(() => prepareStableContentHtml(html, { serverSanitized }), [html, serverSanitized]);
+
+  const scrollToHashTarget = (hash: string) => {
+    try {
+      if (typeof document === "undefined") return false;
+      const raw = String(hash || "");
+      if (!raw.startsWith("#")) return false;
+      const id = decodeURIComponent(raw.slice(1));
+      if (!id) return false;
+      const el =
+        document.getElementById(id) ||
+        (document.querySelector(`[name="${CSS?.escape ? CSS.escape(id) : id}"]`) as HTMLElement | null);
+      if (!el) return false;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  useStableContentWebEffects({
+    prepared,
+    lightboxGallery,
+    setLightboxGallery,
+    webRichTextStyles,
+    scrollToHashTarget,
+    rootRef: webRootRef,
+  });
+
+  const webRichTextClassName = fullWidth
+    ? `${WEB_RICH_TEXT_CLASS} ${WEB_RICH_TEXT_FULL_WIDTH_CLASS}`
+    : WEB_RICH_TEXT_CLASS;
+
+  return (
+    <>
+      <div
+        ref={webRootRef}
+        className={webRichTextClassName}
+        dangerouslySetInnerHTML={{ __html: prepared }}
+      />
+      {lightboxGallery ? (
+        <Suspense fallback={null}>
+          <LazyFullscreenGallery
+            visible
+            images={lightboxGallery.images.map((image) => ({ url: image.src, alt: image.alt }))}
+            initialIndex={lightboxGallery.initialIndex}
+            onClose={() => setLightboxGallery(null)}
+          />
+        </Suspense>
+      ) : null}
+    </>
+  )
+});
+
+export default StableContent

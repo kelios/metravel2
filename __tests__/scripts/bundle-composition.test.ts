@@ -37,6 +37,24 @@ const LAZY_ONLY_VENDORS: Array<{ pkg: string; allowedSyncImporters: string[]; ti
     allowedSyncImporters: ['utils/leafletVendor.ts'],
     ticket: '#765',
   },
+  // #1181: RNRH исполняется только на native, но синхронный импорт из общего
+  // `StableContent.tsx` и из мёртвого `app/(tabs)/article/[id].tsx` держал в web-`__common`
+  // весь его куст: `entities` 246.2 КБ + `ramda` 136.4 КБ + RNRH 66.5 КБ + `htmlparser2`
+  // 47.7 КБ ≈ 496 КБ на каждой странице. Импортировать разрешено только из `.native`-файлов,
+  // которых web-бандл не видит.
+  {
+    pkg: 'react-native-render-html',
+    allowedSyncImporters: [
+      'components/travel/StableContent.native.tsx',
+      'components/travel/stableContent/useRenderConfig.native.tsx',
+    ],
+    ticket: '#1181',
+  },
+  {
+    pkg: '@native-html/iframe-plugin',
+    allowedSyncImporters: [],
+    ticket: '#1181',
+  },
 ]
 
 /**

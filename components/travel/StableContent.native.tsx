@@ -1,36 +1,23 @@
-// components/travel/StableContent.tsx
-import React, { memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
+// components/travel/StableContent.native.tsx
+//
+// #1181: native-ветка описания путешествия — единственное место, где реально
+// исполняется `react-native-render-html`. Импорт остаётся синхронным: на native
+// кадра-заглушки быть не должно, а весь куст RNRH (`entities`, `ramda`,
+// `htmlparser2`) в native-бандле нужен по делу.
+//
+// Web-вариант лежит в `StableContent.web.tsx` и этот файл не видит.
+import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Platform } from "react-native";
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
+import RenderHTML from "react-native-render-html";
+
+import FullscreenGallery from "@/components/travel/FullscreenGallery";
 import { hasIframe, prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform';
 import { useStableContentRenderConfig } from '@/components/travel/stableContent/useRenderConfig';
-import { useStableContentWebEffects } from '@/components/travel/stableContent/useWebEffects';
-import RenderHTMLDirect from "react-native-render-html";
-import FullscreenGalleryDirect from "@/components/travel/FullscreenGallery";
-import {
-  getWebRichTextStyles,
-  WEB_RICH_TEXT_CLASS,
-  WEB_RICH_TEXT_FULL_WIDTH_CLASS,
-} from '@/components/travel/stableContent/webStyles';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type LightboxImage = { src: string; alt: string };
 type LightboxGallery = { images: LightboxImage[]; initialIndex: number };
-type FullscreenGalleryProps = {
-  visible: boolean;
-  images: { url: string; thumbUrl?: string; alt?: string }[];
-  initialIndex?: number;
-  onClose: () => void;
-};
-
-const LazyRenderHTML = React.lazy(() =>
-  Promise.resolve(import("react-native-render-html")).then((m: any) => ({ default: m.default as React.ComponentType<any> }))
-);
-const LazyFullscreenGallery = React.lazy<React.ComponentType<FullscreenGalleryProps>>(() =>
-  Promise.resolve(import("@/components/travel/FullscreenGallery")).then((m: any) => ({ default: m.default }))
-);
-const RenderHTMLComponent = Platform.OS === 'web' ? LazyRenderHTML : RenderHTMLDirect;
-const FullscreenGalleryComponent = Platform.OS === 'web' ? LazyFullscreenGallery : FullscreenGalleryDirect;
 
 interface StableContentProps {
   html: string;
@@ -42,33 +29,12 @@ interface StableContentProps {
 
 type IframeModelType = typeof import("@native-html/iframe-plugin")["iframeModel"];
 
-const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, fullWidth = false, serverSanitized = false }) => {
+const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, serverSanitized = false }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
-  const webRootRef = useRef<HTMLDivElement | null>(null);
   const prepared = useMemo(() => prepareStableContentHtml(html, { serverSanitized }), [html, serverSanitized]);
-
-  const scrollToHashTarget = (hash: string) => {
-    try {
-      if (Platform.OS !== "web") return false;
-      if (typeof document === "undefined") return false;
-      const raw = String(hash || "");
-      if (!raw.startsWith("#")) return false;
-      const id = decodeURIComponent(raw.slice(1));
-      if (!id) return false;
-      const el =
-        document.getElementById(id) ||
-        (document.querySelector(`[name="${CSS?.escape ? CSS.escape(id) : id}"]`) as HTMLElement | null);
-      if (!el) return false;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      return true;
-    } catch {
-      return false;
-    }
-  };
 
   // базовая типографика — ПИКСЕЛИ, не коэффициент!
   const BASE_FONT_SIZE = Platform.select({ ios: 16, android: 16, default: 17 })!;
@@ -86,15 +52,6 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     };
   }, [prepared]);
 
-  useStableContentWebEffects({
-    prepared,
-    lightboxGallery,
-    setLightboxGallery,
-    webRichTextStyles,
-    scrollToHashTarget,
-    rootRef: webRootRef,
-  });
-
   const { renderers, baseStyle, tagsStyles, classesStyles, customHTMLElementModels, renderersProps } = useStableContentRenderConfig({
     colors,
     styles,
@@ -107,39 +64,11 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     },
   });
 
-  const isWeb = (Platform.OS as string) === 'web';
-  const lightbox = lightboxGallery ? (
-    <Suspense fallback={null}>
-      <FullscreenGalleryComponent
-        visible
-        images={lightboxGallery.images.map((image) => ({ url: image.src, alt: image.alt }))}
-        initialIndex={lightboxGallery.initialIndex}
-        onClose={() => setLightboxGallery(null)}
-      />
-    </Suspense>
-  ) : null;
-
-  if (isWeb) {
-    const webRichTextClassName = fullWidth
-      ? `${WEB_RICH_TEXT_CLASS} ${WEB_RICH_TEXT_FULL_WIDTH_CLASS}`
-      : WEB_RICH_TEXT_CLASS;
-    return (
-      <>
-        <div
-          ref={webRootRef}
-          className={webRichTextClassName}
-          dangerouslySetInnerHTML={{ __html: prepared }}
-        />
-        {lightbox}
-      </>
-    )
-  }
-
   return (
     <>
-      <View style={isWeb ? [styles.htmlWrapper, styles.htmlWrapperWeb] : styles.htmlWrapper}>
+      <View style={styles.htmlWrapper}>
         <Suspense fallback={null}>
-          <RenderHTMLComponent
+          <RenderHTML
             key={prepared.length}
             source={{ html: prepared }}
             contentWidth={contentWidth}
@@ -158,7 +87,14 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
           />
         </Suspense>
       </View>
-      {lightbox}
+      {lightboxGallery ? (
+        <FullscreenGallery
+          visible
+          images={lightboxGallery.images.map((image) => ({ url: image.src, alt: image.alt }))}
+          initialIndex={lightboxGallery.initialIndex}
+          onClose={() => setLightboxGallery(null)}
+        />
+      ) : null}
     </>
   )
 });
@@ -170,10 +106,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'column',
     width: '100%',
     alignSelf: 'center'
-  },
-  htmlWrapperWeb: {
-    width: '100%',
-    minHeight: 320,
   },
   ytStub: {
     marginVertical: DESIGN_TOKENS.spacing.sm,
