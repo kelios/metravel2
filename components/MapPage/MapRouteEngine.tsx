@@ -6,7 +6,11 @@
 // маршрута через общий useMapRouting и прокидывает её в стор теми же сеттерами,
 // что и web-ветка. Ничего не рендерит.
 import { useCallback, useEffect, useRef } from 'react';
-import { useMapRouting, type UseMapRoutingResult } from '@/components/map-core';
+// #1148: точечный импорт вместо барреля. `components/map-core/index.ts` ре-экспортирует
+// `leafletWebViewHtml`, а тот тянет `utils/leafletInlineAsset.ts` — 163 КБ инлайн-Leaflet
+// для native WebView, которые на web не исполняются. Через баррель они попадали в web-граф
+// и оседали в `__common`.
+import { useMapRouting, type UseMapRoutingResult } from '@/components/map-core/useMapRouting';
 import type { TransportMode } from '@/components/map-core/types';
 
 interface MapRouteEngineProps {

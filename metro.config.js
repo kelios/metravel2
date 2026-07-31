@@ -494,15 +494,23 @@ if (process.env.ANALYZE_BUNDLE === '1') {
           // Sync (non-dynamic-import) dependency edges, to reconstruct the eager
           // (entry + __common) set via BFS offline.
           const syncDeps = []
+          // #1148: и async-рёбра — точки, с которых Metro начинает отдельный чанк.
+          // Без них по дампу нельзя посчитать, что попало в `__common`: туда уходит
+          // код, достижимый из ДВУХ и более async-корней, а eager-набор (только
+          // синхронные рёбра от entry) — это лишь ~1 МБ из 5 МБ чанка. Четвёртым
+          // элементом кортежа, чтобы старые читатели дампа (`[p, s, sd]`) не сломались.
+          const asyncDeps = []
           if (m && m.dependencies && typeof m.dependencies.forEach === 'function') {
             m.dependencies.forEach((dep) => {
               const asyncType =
                 dep && dep.data && dep.data.data ? dep.data.data.asyncType : undefined
               const abs = dep && dep.absolutePath
-              if (!asyncType && abs) syncDeps.push(abs)
+              if (!abs) return
+              if (asyncType) asyncDeps.push(abs)
+              else syncDeps.push(abs)
             })
           }
-          mods.push([p, size, syncDeps])
+          mods.push([p, size, syncDeps, asyncDeps])
         })
         const entry = graph.entryPoints ? Array.from(graph.entryPoints).join(',') : 'unknown'
         fs.mkdirSync(dumpDir, { recursive: true })

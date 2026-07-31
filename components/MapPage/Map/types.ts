@@ -3,8 +3,8 @@ import type { MapUiApi } from '@/types/mapUi';
 import type { MapClusterBBox, MapClustersFilters } from '@/api/map';
 
 // Re-export shared types from map-core for backward compatibility
-export type { Point, Coordinates, TransportMode, MapMode } from '@/components/map-core';
-import type { Point, TransportMode, MapMode, Coordinates } from '@/components/map-core';
+export type { Point, Coordinates, TransportMode, MapMode } from '@/components/map-core/types';
+import type { Point, TransportMode, MapMode, Coordinates } from '@/components/map-core/types';
 
 export interface MapProps {
   travel?: { data?: Point[] };
