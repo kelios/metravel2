@@ -52,7 +52,7 @@ test.describe('@smoke Public regressions', () => {
     const robots = await waitForMetaContent(page, 'meta[name="robots"]')
     expect(robots).toContain('noindex')
 
-    await page.getByRole('link', { name: 'На главную' }).click()
+    await page.getByRole('button', { name: 'На главную' }).click()
     await expect(page).toHaveURL(/\/$/)
   })
 
