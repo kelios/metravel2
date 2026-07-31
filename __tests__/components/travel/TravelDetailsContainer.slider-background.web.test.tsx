@@ -337,13 +337,21 @@ describe('TravelHeroSection slider background regression (web)', () => {
 
     const visibleSliderWrapper = tree!.root.findAll(
       (node: any) =>
-        Array.isArray(node.props?.style) &&
-        node.props.style.some((style: any) => style?.pointerEvents === 'auto'),
+        node.props?.dataSet?.travelHeroSliderUnder === 'true',
     )[0]
     expect(visibleSliderWrapper.props.style).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ opacity: 1, pointerEvents: 'auto' }),
+        expect.objectContaining({ opacity: 1, pointerEvents: 'auto', zIndex: 6 }),
       ]),
+    )
+
+    const adoptedHeroHost = tree!.root.findAll(
+      (node: any) =>
+        node.props?.dataSet?.travelHeroOverlay === 'true',
+    )[0]
+    expect(adoptedHeroHost).toBeTruthy()
+    expect(adoptedHeroHost.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ zIndex: 5 })]),
     )
 
     sliderProps.onInteractionStart()

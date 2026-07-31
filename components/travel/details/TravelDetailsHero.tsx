@@ -139,6 +139,12 @@ function TravelHeroSectionInner({
       ABSOLUTE_FILL,
       {
         opacity: ssgHeroHandoffActive || overlayUnmounted ? 1 : 0,
+        // The adopted SSG image stays as the already-painted LCP foreground,
+        // while the transparent first slider slide owns the gallery chrome.
+        // Keep the regular React slider below its LCP overlay, but raise it
+        // above the adopted SSG node so counter, arrows and dots are available
+        // immediately instead of looking like the gallery disappeared.
+        ...(ssgHeroHandoffActive ? { zIndex: 6 } : null),
         // pointerEvents всегда 'auto': под-оверлейный слайдер должен принимать
         // touch/свайп даже до снятия оверлея (оверлей сверху сам pointerEvents:'none').
         // Без этого pointer-events:none на дереве слайдера убивает свайп пальцем.
