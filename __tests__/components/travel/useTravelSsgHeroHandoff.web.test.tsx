@@ -57,6 +57,7 @@ describe('useTravelSsgHeroHandoff (web)', () => {
     expect(adoptedImage.style.position).toBe('absolute')
     expect(adoptedImage.style.inset).toBe('0')
     expect(adoptedImage.style.objectFit).toBe('contain')
+    expect(adoptedImage.style.backgroundColor).toBe('transparent')
     expect(adoptedBlurLayers).toHaveLength(2)
     expect(adoptedBlurLayers[0].style.display).toBe('block')
     expect(adoptedBlurLayers[0].style.left).toBe('0px')

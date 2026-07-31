@@ -159,6 +159,7 @@ export function useTravelSsgHeroHandoff(
         height: '100%',
         objectFit: 'contain',
         objectPosition: 'center',
+        backgroundColor: 'transparent',
         display: 'block',
       })
     }
