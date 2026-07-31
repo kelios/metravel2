@@ -150,16 +150,20 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
                 shouldShowHeaderContextBar(pathname || '/', true) ? 'mobile-bar' : 'mobile-nobar'
             ];
         const desktopHeight = HEADER_HEIGHT_FALLBACK[getStaticHeaderVariant(pathname)];
+        const headerSlotStyle: React.CSSProperties & {
+            '--mt-header-slot-mobile': string;
+            '--mt-header-slot-desktop': string;
+        } = {
+            '--mt-header-slot-mobile': `${mobileHeight}px`,
+            '--mt-header-slot-desktop': `${desktopHeight}px`,
+            ...(hasMeasuredHeight ? { height: measuredHeight } : null),
+        };
 
         return React.createElement(
             'div',
             {
                 'data-header-slot': '',
-                style: {
-                    ['--mt-header-slot-mobile' as any]: `${mobileHeight}px`,
-                    ['--mt-header-slot-desktop' as any]: `${desktopHeight}px`,
-                    ...(hasMeasuredHeight ? { height: measuredHeight } : null),
-                },
+                style: headerSlotStyle,
             },
             <CustomHeader
                 onHeightChange={handleHeaderHeight}

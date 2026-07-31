@@ -177,7 +177,7 @@ function ImageCardMedia({
   webResponsiveSource,
 }: Props) {
   const isJest =
-    typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
+    typeof process !== 'undefined' && !!process.env.JEST_WORKER_ID;
   const disableRemoteImages =
     __DEV__ && process.env.EXPO_PUBLIC_DISABLE_REMOTE_IMAGES === 'true';
   const colors = useThemedColors();
@@ -985,7 +985,7 @@ export function ImageDataPlaceholder({
       // критическое правило `[data-hero-data-placeholder="true"] img`, которое
       // возвращает слою полную ширину контейнера.
       {...(Platform.OS === 'web'
-        ? ({ dataSet: { heroDataPlaceholder: 'true' } } as any)
+        ? { 'data-hero-data-placeholder': 'true' }
         : null)}
     >
       {normalizedBlurhash ? (

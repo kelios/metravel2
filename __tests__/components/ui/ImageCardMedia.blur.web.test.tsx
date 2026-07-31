@@ -205,7 +205,7 @@ describe('ImageCardMedia blur background (web)', () => {
     const marked = tree!.root.findAll(
       (node: any) =>
         node?.props?.testID === 'media-data-placeholder' &&
-        node?.props?.dataSet?.heroDataPlaceholder === 'true',
+        node?.props?.['data-hero-data-placeholder'] === 'true',
     )
 
     expect(marked.length).toBeGreaterThan(0)

@@ -1321,6 +1321,43 @@ describe('slug redirects', () => {
       expect(loadRedirectManifest(p)).toEqual([{ from: 'x', to: 'y' }]);
     });
   });
+
+  // #1186: манифест разросся до нескольких десятков пар, и цена ошибки в нём
+  // высокая — stub кладётся по пути `dist/prod/travels/{from}.html`, поэтому
+  // живой slug в поле `from` затрёт настоящую страницу статьи.
+  describe('shipped manifest scripts/seo-redirects.json', () => {
+    const shipped = loadRedirectManifest(
+      path.resolve(process.cwd(), 'scripts/seo-redirects.json'),
+    ) as { from: string; to: string }[];
+
+    it('is non-empty and survives the loader unchanged', () => {
+      const raw = JSON.parse(
+        fs.readFileSync(path.resolve(process.cwd(), 'scripts/seo-redirects.json'), 'utf8'),
+      );
+      expect(shipped.length).toBeGreaterThan(0);
+      // Loader молча выбрасывает мусорные записи — расхождение означает, что в
+      // файле есть пара, которая никогда не станет stub-страницей.
+      expect(shipped.length).toBe(raw.redirects.length);
+    });
+
+    it('holds bare slugs only', () => {
+      for (const { from, to } of shipped) {
+        expect(from).toMatch(/^[a-z0-9][a-z0-9-]*$/);
+        expect(to).toMatch(/^[a-z0-9][a-z0-9-]*$/);
+      }
+    });
+
+    it('never redirects a slug onto itself and never chains', () => {
+      const sources = new Set(shipped.map((r) => r.from));
+      expect(sources.size).toBe(shipped.length);
+      for (const { from, to } of shipped) {
+        expect(to).not.toBe(from);
+        // `to` в роли `from` дал бы редирект на редирект: пользователь и краулер
+        // прошли бы два прыжка, а канонический адрес размылся бы.
+        expect(sources.has(to)).toBe(false);
+      }
+    });
+  });
 });
 
 describe('patchNoindexFallbackTemplate', () => {

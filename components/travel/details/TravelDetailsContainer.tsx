@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
-import { Platform, View } from 'react-native'
+import { Platform } from 'react-native'
 import { useIsFocused, useNavigation } from 'expo-router'
 import { useRouter } from 'expo-router'
 
