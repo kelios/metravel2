@@ -483,17 +483,73 @@ function ImageCardMedia({
     // unless the caller explicitly opts in for layout fidelity.
     return !(loading === 'eager' || priority === 'high');
   }, [allowCriticalWebBlur, blurBackground, fit, hasDataPlaceholder, isIOSWebKitWeb, loading, priority, webMainSrc]);
+  /**
+   * #1177: геометрия для сегментного режима подложки.
+   *
+   * Раньше требовались ЧИСЛОВЫЕ `width`/`height` и проп `contentAspectRatio`, и в
+   * галерее травела не было ни того, ни другого: слайдер отдаёт `containerW` строкой
+   * (`'100%'`), а `contentAspectRatio` приходит только когда в gallery-пейлоаде есть
+   * `width`/`height` — а их там нет. В итоге подложка всегда рисовалась одним `div`
+   * на всю плитку и по площади перекрывала само фото.
+   *
+   * Оба недостающих числа берём из DOM: размер — из контейнера, пропорции — из
+   * `naturalWidth/naturalHeight` уже загруженного резкого слоя.
+   */
+  const [measuredBox, setMeasuredBox] = useState<{ width: number; height: number } | null>(null);
+  const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(null);
+
+  const needsMeasuredBox =
+    Platform.OS === 'web' && fit === 'contain' && (typeof width !== 'number' || typeof height !== 'number');
+
+  const containerRef = useRef<any>(null);
+  const attachContainerRef = useCallback((node: any) => {
+    containerRef.current = node;
+  }, []);
+
+  useEffect(() => {
+    if (!needsMeasuredBox) {
+      setMeasuredBox(null);
+      return;
+    }
+    const node = containerRef.current as HTMLElement | null;
+    if (!node || typeof node.getBoundingClientRect !== 'function') return;
+
+    const apply = () => {
+      const rect = node.getBoundingClientRect();
+      if (!(rect.width > 0) || !(rect.height > 0)) return;
+      setMeasuredBox((prev) =>
+        prev && Math.abs(prev.width - rect.width) < 1 && Math.abs(prev.height - rect.height) < 1
+          ? prev
+          : { width: rect.width, height: rect.height },
+      );
+    };
+
+    apply();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(apply);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [needsMeasuredBox, currentImageIdentityKey]);
+
+  // Смена картинки — смена пропорций: старое значение дало бы поля не от того кадра.
+  useEffect(() => {
+    setNaturalAspectRatio(null);
+  }, [currentImageIdentityKey]);
+
   const webBackdropContentBox = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (fit !== 'contain') return null;
-    if (typeof width !== 'number' || typeof height !== 'number') return null;
+
+    const containerWidth = typeof width === 'number' ? width : measuredBox?.width;
+    const containerHeight = typeof height === 'number' ? height : measuredBox?.height;
+    if (typeof containerWidth !== 'number' || typeof containerHeight !== 'number') return null;
 
     return getContainedMediaBox({
-      containerWidth: width,
-      containerHeight: height,
-      contentAspectRatio: contentAspectRatio ?? null,
+      containerWidth,
+      containerHeight,
+      contentAspectRatio: contentAspectRatio ?? naturalAspectRatio,
     });
-  }, [contentAspectRatio, fit, height, width]);
+  }, [contentAspectRatio, fit, height, measuredBox, naturalAspectRatio, width]);
 
   // When blur backdrop reuses the main image URL, both the CSS background-image
   // and the <img> share one browser cache entry. The sharp image appears as soon
@@ -635,10 +691,19 @@ function ImageCardMedia({
     }
   }, [currentImageIdentityKey, revealOnLoadOnly]);
 
-  const handleWebLoad = useCallback((_resolvedSrc: string) => {
+  const handleWebLoad = useCallback((
+    _resolvedSrc: string,
+    naturalSize?: { width: number; height: number },
+  ) => {
     if (currentImageIdentityKey) {
       loadedWebImageBaseCache.add(currentImageIdentityKey);
       decodedIdentityRef.current = currentImageIdentityKey;
+    }
+    // #1177: пропорции ставим здесь же, а не отдельным колбэком. React батчит оба
+    // setState в один коммит, поэтому кадр «фото показано, но подложка ещё во всю
+    // плитку» не успевает отрисоваться — иначе LCP-кандидат зафиксировался бы по ней.
+    if (naturalSize) {
+      setNaturalAspectRatio(naturalSize.width / naturalSize.height);
     }
     setWebLoaded(true);
     onLoad?.();
@@ -708,6 +773,7 @@ function ImageCardMedia({
 
   return (
     <View
+      ref={attachContainerRef}
       style={[
         styles.container,
         {
@@ -739,8 +805,8 @@ function ImageCardMedia({
               srcSet={webBlurSrc === webMainSrc ? webSrcSet : undefined}
               sizes={webBlurSrc === webMainSrc ? webSizes : undefined}
               alt={alt || ''}
-              width={typeof width === 'number' ? width : 400}
-              height={typeof height === 'number' ? height : 300}
+              width={typeof width === 'number' ? width : measuredBox?.width ?? 400}
+              height={typeof height === 'number' ? height : measuredBox?.height ?? 300}
               borderRadius={resolvedBorderRadius}
               fit={fit}
               useCssBackdrop={
@@ -750,6 +816,7 @@ function ImageCardMedia({
               }
               visible={shouldShowWebBlurBackdrop}
               contentBox={webBackdropContentBox}
+              contentRevealed={effectiveWebLoaded}
             />
           ) : null}
           {shouldRenderWebPlaceholder && webPlaceholderSrc ? (

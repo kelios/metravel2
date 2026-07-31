@@ -103,9 +103,27 @@ type WebMainImageProps = {
   loaded: boolean;
   srcSet?: string;
   sizes?: string;
-  onLoad?: (resolvedSrc: string) => void;
+  /**
+   * #1177: вторым аргументом — фактические пропорции выбранного кандидата.
+   * Пропорции нужны, чтобы посчитать поля letterbox и нарисовать подложку
+   * сегментами, а не одним `div` на всю плитку. Отдельным колбэком делать нельзя:
+   * состояние «показан» и «известны пропорции» обязаны попасть в ОДИН React-коммит,
+   * иначе между ними успевает встать кадр, где самый крупный элемент — подложка,
+   * и LCP-кандидат фиксируется по ней.
+   */
+  onLoad?: (resolvedSrc: string, naturalSize?: { width: number; height: number }) => void;
   onError?: () => void;
   showImmediately?: boolean;
+};
+
+const naturalSizeOf = (img: HTMLImageElement | null): { width: number; height: number } | undefined => {
+  if (!img) return undefined;
+  const width = Number(img.naturalWidth);
+  const height = Number(img.naturalHeight);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return undefined;
+  }
+  return { width, height };
 };
 
 export const WebMainImage = memo(function WebMainImage({
@@ -138,7 +156,7 @@ export const WebMainImage = memo(function WebMainImage({
     if (loadReportedRef.current) return;
     loadReportedRef.current = true;
     const resolvedSrc = img?.currentSrc || src;
-    onLoad?.(resolvedSrc);
+    onLoad?.(resolvedSrc, naturalSizeOf(img));
   }, [onLoad, src]);
 
   // A new source must be able to report its own load again.
@@ -311,6 +329,19 @@ type WebBlurBackdropProps = {
   useCssBackdrop?: boolean;
   visible?: boolean;
   contentBox?: ContainedMediaBox | null;
+  /**
+   * #1177: у резкого слоя УЖЕ есть пиксели (подтверждённый decode, а не просто
+   * `showImmediately`). В сегментном режиме это снимает base-слой на всю плитку:
+   * поля letterbox закрыты сегментами, центр — самим фото, и подложке больше нечего
+   * закрывать. После раскрытия база — невидимый прямоугольник, который по площади
+   * больше кадра и потому перетягивает на себя LCP-кандидата (замер прода
+   * 2026-07-31: base 381×489 = 159 909 px² против фото 353×353 = 124 609 px²).
+   *
+   * Именно decode, а не «разрешено показать»: у eager/high-priority медиа показ
+   * разрешён с первого кадра, и снятие базы по нему оставило бы пустой центр до
+   * прихода пикселей.
+   */
+  contentRevealed?: boolean;
 };
 
 export const WebBlurBackdrop = memo(function WebBlurBackdrop({
@@ -325,6 +356,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
   useCssBackdrop = false,
   visible = true,
   contentBox = null,
+  contentRevealed = false,
 }: WebBlurBackdropProps) {
   const hasPreBlurredSource = /(?:\?|&)blur=\d+(?:&|$)/i.test(src);
   const backdropFit = 'cover';
@@ -361,6 +393,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
   if (shouldSplitBackdrop) {
     return (
       <>
+        {contentRevealed ? null : (
         <div
           aria-hidden="true"
           data-blur-backdrop="true"
@@ -385,6 +418,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
             transition: 'opacity 0.15s ease-in',
           }}
         />
+        )}
         {backdropSegments.map((segment, index) => (
           <div
             key={`${index}-${segment.left}-${segment.top}-${segment.width}-${segment.height}`}
