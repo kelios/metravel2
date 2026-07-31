@@ -5,6 +5,7 @@ const mockRefreshLocation = jest.fn()
 const mockBuildRouteTo = jest.fn()
 const mockUseRouteController = jest.fn()
 const mockSearchParams: Record<string, string> = {}
+let mockIsMobile = false
 const mockMapCoordinatesState: Record<string, any> = {
   coordinates: { latitude: 53.9, longitude: 27.5667 },
   coordinatesSource: 'default',
@@ -45,7 +46,7 @@ jest.mock('@/hooks/map/useMapFilters', () => ({
 }))
 
 jest.mock('@/hooks/map/useMapPanelState', () => ({
-  useMapResponsive: () => ({ isMobile: false, width: 1280 }),
+  useMapResponsive: () => ({ isMobile: mockIsMobile, width: mockIsMobile ? 390 : 1280 }),
   useMapPanelState: () => ({
     isFocused: true,
     mapReady: true,
@@ -143,6 +144,7 @@ import { useMapScreenController } from '@/hooks/useMapScreenController'
 
 describe('useMapScreenController.buildRouteTo', () => {
   beforeEach(() => {
+    mockIsMobile = false
     mockUpdateCoordinates.mockClear()
     mockRefreshLocation.mockClear()
     Object.keys(mockSearchParams).forEach((key) => delete mockSearchParams[key])
@@ -276,7 +278,9 @@ describe('useMapScreenController.buildRouteTo', () => {
         userInitiated: true,
       })
       Object.assign(mockMapCoordinatesState, {
-        coordinates: { latitude: 52.202, longitude: 20.982 },
+        // Live watch ticks move only the trusted marker. The viewport/search
+        // anchor must remain at the explicit/initial fix.
+        coordinates: { latitude: 52.2, longitude: 20.98 },
         currentLocation: { latitude: 52.202, longitude: 20.982 },
         locationState: {
           status: 'current',
@@ -289,6 +293,76 @@ describe('useMapScreenController.buildRouteTo', () => {
       rerender()
     })
     expect(centerOnUser).toHaveBeenCalledTimes(1)
+    expect(result.current.mapPanelProps.coordinates).toEqual({
+      latitude: 52.2,
+      longitude: 20.98,
+    })
+  })
+
+  it('stops following live location when a mobile marker is selected', () => {
+    mockIsMobile = true
+    const centerOnUser = jest.fn()
+    const { result, rerender } = renderHook(() => useMapScreenController())
+
+    act(() => {
+      result.current.mapPanelProps.onMapUiApiReady?.({
+        centerOnUser,
+        zoomIn: jest.fn(),
+        zoomOut: jest.fn(),
+        fitToResults: jest.fn(),
+        exportGpx: jest.fn(),
+        exportKml: jest.fn(),
+        setBaseLayer: jest.fn(),
+        setOverlayEnabled: jest.fn(),
+        capabilities: {
+          canCenterOnUser: true,
+          canFitToResults: true,
+          canExportRoute: false,
+        },
+      })
+      result.current.centerOnUser()
+    })
+
+    act(() => {
+      Object.assign(mockMapCoordinatesState, {
+        coordinates: { latitude: 52.2, longitude: 20.98 },
+        coordinatesSource: 'geolocation',
+        coordinatesAreFallback: false,
+        currentLocation: { latitude: 52.2, longitude: 20.98 },
+        locationState: {
+          status: 'current',
+          coordinates: { latitude: 52.2, longitude: 20.98 },
+          accuracy: 8,
+          timestamp: 1000,
+          canAskAgain: true,
+        },
+      })
+      rerender()
+    })
+    expect(centerOnUser).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      result.current.mapPanelProps.onMarkerSelect?.({
+        id: 7,
+        coord: '52.21,20.99',
+        address: 'Selected point',
+      } as any)
+      Object.assign(mockMapCoordinatesState, {
+        coordinates: { latitude: 52.2, longitude: 20.98 },
+        currentLocation: { latitude: 52.202, longitude: 20.982 },
+        locationState: {
+          status: 'current',
+          coordinates: { latitude: 52.202, longitude: 20.982 },
+          accuracy: 7,
+          timestamp: 2000,
+          canAskAgain: true,
+        },
+      })
+      rerender()
+    })
+
+    expect(centerOnUser).toHaveBeenCalledTimes(1)
+    expect(result.current.selectedPlace).toEqual(expect.objectContaining({ id: 7 }))
   })
 
   it('keeps URL coordinates as viewport-only while routing from the trusted current fix', () => {

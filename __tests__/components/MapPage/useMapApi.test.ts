@@ -23,6 +23,7 @@ describe('useMapApi', () => {
     const map = {
       setView: jest.fn(),
       panBy: jest.fn(),
+      getZoom: jest.fn(() => 16),
       getContainer: jest.fn(() => ({ clientWidth: 390 })),
       closePopup: jest.fn(),
     };
@@ -52,7 +53,7 @@ describe('useMapApi', () => {
       api.centerOnUser();
     });
 
-    expect(map.setView).toHaveBeenCalledWith([53.9, 27.5667], 13, expect.any(Object));
+    expect(map.setView).toHaveBeenCalledWith([53.9, 27.5667], 16, expect.any(Object));
     expect(map.panBy).toHaveBeenCalledWith([84, -92], expect.any(Object));
 
     unmount();

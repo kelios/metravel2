@@ -13,7 +13,7 @@ import type { LeafletControlRef } from './leafletBridgeTypes';
 
 const MOBILE_WEB_USER_FOCUS_MAX_WIDTH = 768;
 const MOBILE_WEB_USER_FOCUS_OFFSET: [number, number] = [84, -92];
-const USER_LOCATION_FOCUS_ZOOM = 14;
+const USER_LOCATION_FOCUS_ZOOM = 13;
 
 interface Point {
   id?: string | number;
@@ -53,12 +53,19 @@ export function useMapApi({
   // дёргает openPopup/setZIndexOffset на снятом маркере уже размонтированной карты).
   const popupTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
-  const centerMapOnUser = useCallback((targetLocation: LatLng, zoom = USER_LOCATION_FOCUS_ZOOM) => {
+  const centerMapOnUser = useCallback((targetLocation: LatLng) => {
     if (!map) return;
     try {
       const target = CoordinateConverter.toLeaflet(targetLocation);
+      const currentZoom = Number(map?.getZoom?.());
+      // Recenter must never zoom the user out. This method is also called on each
+      // live GPS tick while follow mode is active; keeping the current zoom matches
+      // the native WebView map and prevents the iPhone web map from snapping to 13.
+      const targetZoom = Number.isFinite(currentZoom)
+        ? Math.max(currentZoom, USER_LOCATION_FOCUS_ZOOM)
+        : USER_LOCATION_FOCUS_ZOOM;
       beginProgrammaticMapMove();
-      map.setView(target, zoom, { animate: true });
+      map.setView(target, targetZoom, { animate: true });
 
       const containerWidth = Number(map?.getContainer?.()?.clientWidth ?? 0);
       const shouldOffsetForCompactWeb =
@@ -80,7 +87,7 @@ export function useMapApi({
   const centerOnUserLocation = useCallback(() => {
     if (!map) return;
     if (userLocation) {
-      centerMapOnUser(userLocation, 13);
+      centerMapOnUser(userLocation);
       return;
     }
     if (onRequestUserLocationFocus) {

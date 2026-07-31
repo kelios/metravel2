@@ -142,6 +142,23 @@ function assertSupportedNode(currentVersion = process.version, options = {}) {
 }
 
 if (require.main === module) {
+  // `--print-bin-dir` печатает каталог подходящего Node и молчит обо всём
+  // остальном, чтобы шелл-скрипты могли подставить его в PATH:
+  //
+  //     export PATH="$(node scripts/ensure-node-version.js --print-bin-dir):$PATH"
+  //
+  // Нужен, потому что сообщение об ошибке рассчитано на человека, а
+  // `scripts/use-node.sh` должен получить один путь без лишнего текста.
+  // Поиск при этом тот же самый — версия проверяется реальным `node -v`.
+  if (process.argv.includes('--print-bin-dir')) {
+    const hint = isSupportedVersion(process.version)
+      ? { binDir: path.dirname(process.execPath) }
+      : findSupportedNodeHint()
+    if (!hint) process.exit(1)
+    process.stdout.write(hint.binDir)
+    process.exit(0)
+  }
+
   try {
     assertSupportedNode()
   } catch (error) {

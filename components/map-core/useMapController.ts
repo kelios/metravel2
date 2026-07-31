@@ -172,6 +172,10 @@ export function useMapController({
         handlePlaceSelect(null);
         return;
       }
+      // A marker tap is an explicit request to inspect that place. Release GPS
+      // follow before the renderer flies to it, otherwise the next live-location
+      // tick immediately pulls the map back to the user and hides the card/point.
+      setIsFollowingUser(false);
       // Capture the tap into the route ONLY while the route is still being built
       // (fewer than 2 points). Once a 2-point route exists — e.g. one built from a
       // popup's «Маршрут» button — tapping another marker must OPEN its popup, not
@@ -196,6 +200,9 @@ export function useMapController({
   const isMobileRef = useRef(isMobile);
   isMobileRef.current = isMobile;
   const focusPlaceStable = useCallback((item: TravelCoords) => {
+    // List/card focus is the same explicit inspection intent as a marker tap.
+    // Keep the selected point in view until the user asks to follow GPS again.
+    setIsFollowingUser(false);
     if (isMobileRef.current && item?.coord) {
       // Mirror handleMarkerSelect (#FIX-2): only feed the route while it is still
       // incomplete; a fully-built 2-point route releases the tap so the place card opens.
@@ -228,11 +235,13 @@ export function useMapController({
   // Data Controller
   // F-49 — an explicit "Search this area" pick (searchAreaCenter) wins over every
   // implicit anchor, including the initial URL coordinates: tapping the button is a
-  // deliberate "search HERE now" intent. With no explicit pick we keep the prior
-  // precedence (URL deep-link → real user location → resolved/default center).
+  // deliberate "search HERE now" intent. With no explicit pick we use the stable
+  // viewport anchor owned by useMapCoordinates. Live watch ticks update only the
+  // trusted user marker; feeding them back into the radius/search anchor would
+  // retrigger fitBounds and reset a manual zoom while the user is moving.
   const queryCoordinates = useMemo(() => {
-    return searchAreaCenter ?? urlCoordinates ?? userLocation ?? coordinates;
-  }, [searchAreaCenter, urlCoordinates, userLocation, coordinates]);
+    return searchAreaCenter ?? urlCoordinates ?? coordinates;
+  }, [searchAreaCenter, urlCoordinates, coordinates]);
 
   const dataController = useMapDataController({
     coordinates: queryCoordinates,
@@ -420,13 +429,12 @@ export function useMapController({
   // only trusted branch is currentLocation from useMapCoordinates. Numeric
   // equality with Minsk (or any other coordinate) is deliberately irrelevant.
   const mapPanelCoordinatesAreFallback = useMemo(() => {
-    // Query precedence is search-area → URL → current location → viewport.
-    // Only the explicit current-location branch is trusted. URL/search anchors
-    // remain viewport positions even when their numeric values happen to match GPS.
+    // Query precedence is search-area → URL → stable viewport anchor.
+    // URL/search anchors remain viewport-only even when their numeric values happen
+    // to match GPS; otherwise trust follows the source owned by useMapCoordinates.
     if (searchAreaCenter || urlCoordinates) return true;
-    if (userLocation) return false;
     return coordinatesAreFallback;
-  }, [searchAreaCenter, urlCoordinates, userLocation, coordinatesAreFallback]);
+  }, [searchAreaCenter, urlCoordinates, coordinatesAreFallback]);
 
   // Map panel props — единый поведенческий контракт для ОБОИХ рендер-адаптеров
   // (Map.web и Map.ios): web и native получают идентичный набор данных/колбеков.
