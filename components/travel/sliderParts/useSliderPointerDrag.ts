@@ -120,11 +120,13 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
   const onWrapperKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (imagesLen < 2) return;
+      const key = event.key;
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+
       onInteractionStart?.();
       dismissSwipeHint();
       enablePrefetch();
 
-      const key = event.key;
       if (key === 'ArrowLeft') {
         event.preventDefault();
         scrollTo(Math.max(0, indexRef.current - 1));

@@ -79,10 +79,10 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
             // Quill safe_html may contain empty inline spans. Without this RNRH
             // can paint a ghost first line and leave only marker `1.` on it.
             enableExperimentalGhostLinesPrevention
-            renderersProps={renderersProps as any}
-            baseStyle={baseStyle as any}
-            tagsStyles={tagsStyles as any}
-            classesStyles={classesStyles as any}
+            renderersProps={renderersProps}
+            baseStyle={baseStyle}
+            tagsStyles={tagsStyles}
+            classesStyles={classesStyles}
             ignoredDomTags={['script', 'style']}
           />
         </Suspense>

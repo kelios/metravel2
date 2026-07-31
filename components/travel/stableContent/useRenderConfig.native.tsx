@@ -5,7 +5,12 @@ import {
   HTMLContentModel,
   HTMLElementModel,
   TChildrenRenderer,
+  type CustomRendererProps,
+  type RenderHTMLProps,
+  type TBlock,
   type TDefaultRendererProps,
+  type TPhrasing,
+  type TText,
 } from 'react-native-render-html'
 
 import CustomImageRenderer from '@/components/ui/CustomImageRenderer'
@@ -21,6 +26,7 @@ import { translate as i18nT } from '@/i18n'
 type LazyInstagramProps = { url: string }
 type LightboxImage = { src: string; alt: string }
 type IframeModelType = typeof import('@native-html/iframe-plugin')['iframeModel']
+type RichContentNode = TBlock | TPhrasing | TText
 
 const LazyInstagram = React.lazy<React.ComponentType<LazyInstagramProps>>(() =>
   Promise.resolve(import('@/components/iframe/InstagramEmbed')).then((m: any) => ({ default: m.default }))
@@ -168,23 +174,22 @@ export function useStableContentRenderConfig({
   baseLineHeight,
   setLightboxImage,
 }: UseStableContentRenderConfigInput) {
-  const renderers = useMemo(() => {
+  const renderers = useMemo<NonNullable<RenderHTMLProps['renderers']>>(() => {
     return {
-      img: (props: TDefaultRendererProps<any>) => {
+      img: (props: CustomRendererProps<RichContentNode>) => {
         try {
-          // @ts-expect-error CustomImageRenderer accepts extended props beyond TDefaultRendererProps
           return <CustomImageRenderer {...props} contentWidth={contentWidth} onPressImage={setLightboxImage} />
         } catch {
-          const DefaultRenderer = (props as any).TDefaultRenderer
+          const DefaultRenderer = props.TDefaultRenderer
           return DefaultRenderer ? <DefaultRenderer {...props} /> : null
         }
       },
-      iframe: (props: TDefaultRendererProps<any>) => {
-        const attrs = (props.tnode?.attributes || {}) as any
+      iframe: (props: CustomRendererProps<RichContentNode>) => {
+        const attrs = props.tnode?.attributes ?? {}
         const src: string = attrs.src || ''
 
         if (!src) {
-          const DefaultRenderer = (props as any).TDefaultRenderer
+          const DefaultRenderer = props.TDefaultRenderer
           return DefaultRenderer ? <DefaultRenderer {...props} /> : null
         }
 
@@ -209,18 +214,18 @@ export function useStableContentRenderConfig({
               </Pressable>
             )
           }
-          const DefaultRenderer = (props as any).TDefaultRenderer
+          const DefaultRenderer = props.TDefaultRenderer
           return DefaultRenderer ? <DefaultRenderer {...props} /> : null
         }
 
-        const DefaultRenderer = (props as any).TDefaultRenderer
+        const DefaultRenderer = props.TDefaultRenderer
         return DefaultRenderer ? <DefaultRenderer {...props} /> : null
       },
       details: NativeDetailsRenderer,
     }
   }, [contentWidth, setLightboxImage, styles.ytStub, styles.ytStubText])
 
-  const baseStyle = useMemo(
+  const baseStyle = useMemo<NonNullable<RenderHTMLProps['baseStyle']>>(
     () => ({
       color: colors.text,
       fontSize: baseFontSize,
@@ -229,7 +234,7 @@ export function useStableContentRenderConfig({
     [baseFontSize, baseLineHeight, colors.text]
   )
 
-  const tagsStyles = useMemo(
+  const tagsStyles = useMemo<NonNullable<RenderHTMLProps['tagsStyles']>>(
     () => ({
       p: {
         marginTop: 12,
@@ -310,13 +315,11 @@ export function useStableContentRenderConfig({
         height: 'auto',
         borderRadius: DESIGN_TOKENS.radii.md,
         marginVertical: 12,
-        display: 'block',
         alignSelf: 'stretch',
       },
       iframe: {
         width: '100%',
         height: Math.round(contentWidth * 0.5625),
-        display: 'block',
         borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
         marginVertical: 14,
@@ -325,7 +328,7 @@ export function useStableContentRenderConfig({
     [baseFontSize, contentWidth, colors]
   )
 
-  const classesStyles = useMemo(
+  const classesStyles = useMemo<NonNullable<RenderHTMLProps['classesStyles']>>(
     () => ({
       'ql-indent-1': {
         marginLeft: DESIGN_TOKENS.spacing.lg,
@@ -355,7 +358,7 @@ export function useStableContentRenderConfig({
     handleRichTextLinkPress(href)
   }, [])
 
-  const renderersProps = useMemo(
+  const renderersProps = useMemo<NonNullable<RenderHTMLProps['renderersProps']>>(
     () => ({
       a: {
         onPress: handleLinkPress,

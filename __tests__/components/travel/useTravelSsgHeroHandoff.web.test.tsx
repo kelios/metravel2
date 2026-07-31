@@ -28,6 +28,7 @@ describe('useTravelSsgHeroHandoff (web)', () => {
     expect(adopted).not.toBeNull()
     expect(document.querySelector('[data-testid="handoff-host"]')?.contains(adopted)).toBe(true)
     expect(document.getElementById('ssg-skeleton')?.getAttribute('data-ssg-hero-adopted')).toBe('true')
+    expect(document.querySelector('#ssg-skeleton .ssg-travel-hero-placeholder')).not.toBeNull()
     expect(onAdopted).toHaveBeenCalledTimes(1)
 
     document.getElementById('ssg-skeleton')?.remove()

@@ -164,6 +164,30 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
     })
   })
 
+  it('releases the handoff only for slider navigation keys', async () => {
+    const { Harness, wrapperNode, scrollTo, onInteractionStart } = createHarness()
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(<Harness />)
+    })
+
+    await act(async () => {
+      wrapperNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    })
+    expect(onInteractionStart).not.toHaveBeenCalled()
+
+    await act(async () => {
+      wrapperNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+    })
+    expect(onInteractionStart).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledWith(1)
+
+    await act(async () => {
+      tree!.unmount()
+    })
+  })
+
   it('still snaps back via lostpointercapture for mouse-driven drags', async () => {
     const { Harness, viewportNode, applyOffset, scrollTo } = createHarness()
 
