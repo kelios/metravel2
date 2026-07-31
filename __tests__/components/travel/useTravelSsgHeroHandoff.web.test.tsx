@@ -12,7 +12,7 @@ describe('useTravelSsgHeroHandoff (web)', () => {
   it('adopts the painted hero node and releases it after the SSG shell is gone', () => {
     document.head.innerHTML = '<style id="ssg-skeleton-css"></style>'
     document.body.innerHTML =
-      '<div id="ssg-skeleton"><div class="ssg-travel-hero"><img data-lcp src="/hero.jpg"></div></div>' +
+      '<div id="ssg-skeleton"><div class="ssg-travel-hero"><picture><img class="ssg-travel-hero-img" data-lcp src="/hero.jpg"></picture></div></div>' +
       '<div id="mount"></div>'
     const onAdopted = jest.fn()
     let handoff: ReturnType<typeof useTravelSsgHeroHandoff> | null = null
@@ -25,17 +25,28 @@ describe('useTravelSsgHeroHandoff (web)', () => {
     render(<Harness />, { container: document.getElementById('mount') as HTMLElement })
 
     const adopted = document.querySelector('[data-ssg-travel-hero-adopted="true"]')
+    const adoptedPicture = adopted?.querySelector('picture') as HTMLElement
+    const adoptedImage = adopted?.querySelector('.ssg-travel-hero-img') as HTMLElement
     expect(adopted).not.toBeNull()
     expect(document.querySelector('[data-testid="handoff-host"]')?.contains(adopted)).toBe(true)
     expect(document.getElementById('ssg-skeleton')?.getAttribute('data-ssg-hero-adopted')).toBe('true')
     expect(document.querySelector('#ssg-skeleton .ssg-travel-hero-placeholder')).not.toBeNull()
     expect(onAdopted).toHaveBeenCalledTimes(1)
+    expect(adoptedPicture.style.position).toBe('absolute')
+    expect(adoptedPicture.style.inset).toBe('0')
+    expect(adoptedPicture.style.width).toBe('100%')
+    expect(adoptedPicture.style.height).toBe('100%')
+    expect(adoptedImage.style.position).toBe('absolute')
+    expect(adoptedImage.style.inset).toBe('0')
+    expect(adoptedImage.style.objectFit).toBe('contain')
 
     document.getElementById('ssg-skeleton')?.remove()
     act(() => handoff!.release())
 
     expect(document.querySelector('[data-ssg-travel-hero-adopted="true"]')).toBeNull()
     expect(document.getElementById('ssg-skeleton-css')).toBeNull()
+    expect(adoptedPicture.getAttribute('style')).toBeNull()
+    expect(adoptedImage.getAttribute('style')).toBeNull()
   })
 
   it('keeps the normal React hero path when there is no SSG shell', () => {

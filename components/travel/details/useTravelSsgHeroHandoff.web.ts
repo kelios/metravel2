@@ -13,6 +13,15 @@ const removeOrphanedSsgCss = () => {
   document.getElementById('ssg-skeleton-css')?.remove()
 }
 
+const restoreInlineStyle = (element: HTMLElement | null, previousStyle: string | null) => {
+  if (!element) return
+  if (previousStyle == null) {
+    element.removeAttribute('style')
+    return
+  }
+  element.setAttribute('style', previousStyle)
+}
+
 /**
  * Moves the already-painted SSG hero into React's hero slot.
  *
@@ -52,6 +61,38 @@ export function useTravelSsgHeroHandoff(
     placeholder.className = `ssg-travel-hero ${PLACEHOLDER_CLASS}`
     placeholder.setAttribute('aria-hidden', 'true')
 
+    const picture = hero.querySelector<HTMLElement>('picture')
+    const image = hero.querySelector<HTMLElement>('.ssg-travel-hero-img')
+    const previousPictureStyle = picture?.getAttribute('style') ?? null
+    const previousImageStyle = image?.getAttribute('style') ?? null
+
+    // `<picture>` is inline by default. Once the SSG hero is adopted into the
+    // taller React slot, its intrinsic box otherwise keeps the foreground at a
+    // smaller square and leaves a large blur-only strip below it. Stretch the
+    // existing, already-painted node to the slot; no replacement image request
+    // is introduced and the original LCP element remains the foreground owner.
+    if (picture) {
+      Object.assign(picture.style, {
+        position: 'absolute',
+        inset: '0',
+        width: '100%',
+        height: '100%',
+        display: 'block',
+        zIndex: '1',
+      })
+    }
+    if (image) {
+      Object.assign(image.style, {
+        position: 'absolute',
+        inset: '0',
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain',
+        objectPosition: 'center',
+        display: 'block',
+      })
+    }
+
     skeleton.setAttribute('data-ssg-hero-adopted', 'true')
     hero.setAttribute('data-ssg-travel-hero-adopted', 'true')
     hero.parentNode.replaceChild(placeholder, hero)
@@ -67,6 +108,8 @@ export function useTravelSsgHeroHandoff(
         placeholder.remove()
       }
       hero.removeAttribute('data-ssg-travel-hero-adopted')
+      restoreInlineStyle(picture, previousPictureStyle)
+      restoreInlineStyle(image, previousImageStyle)
       removeOrphanedSsgCss()
     }
   }, [active])
