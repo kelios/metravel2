@@ -36,6 +36,7 @@ function createHarness() {
   const applyOffset = jest.fn()
   const scrollTo = jest.fn()
   const onSlideTap = jest.fn()
+  const onInteractionStart = jest.fn()
   const snapOffsetForIndex = jest.fn((idx: number) => -idx * SLIDE_WIDTH)
 
   function Harness() {
@@ -57,11 +58,12 @@ function createHarness() {
       dismissSwipeHint: jest.fn(),
       enablePrefetch: jest.fn(),
       onSlideTap,
+      onInteractionStart,
     })
     return null
   }
 
-  return { Harness, viewportNode, wrapperNode, applyOffset, scrollTo, onSlideTap, indexRef }
+  return { Harness, viewportNode, wrapperNode, applyOffset, scrollTo, onSlideTap, onInteractionStart, indexRef }
 }
 
 describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', () => {
@@ -106,7 +108,7 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
   })
 
   it('fires onSlideTap for a touch without movement past the axis threshold', async () => {
-    const { Harness, viewportNode, scrollTo, onSlideTap, indexRef } = createHarness()
+    const { Harness, viewportNode, scrollTo, onSlideTap, onInteractionStart, indexRef } = createHarness()
     indexRef.current = 1
 
     let tree: renderer.ReactTestRenderer
@@ -123,6 +125,7 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
 
     expect(onSlideTap).toHaveBeenCalledTimes(1)
     expect(onSlideTap).toHaveBeenCalledWith(1)
+    expect(onInteractionStart).toHaveBeenCalledTimes(1)
     expect(scrollTo).not.toHaveBeenCalled()
 
     await act(async () => {

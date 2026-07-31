@@ -12,6 +12,14 @@ if [[ -d "$HOME/.local/bin" ]]; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
+# Node 22 и GNU rsync в PATH. Без этого деплой падает на `yarn install` через
+# минуту после старта: на рабочей машине `/opt/homebrew/bin/node` — симлинк на
+# node@20, нужный node@22 стоит keg-only, а менеджера версий нет, поэтому
+# `.nvmrc`/`.node-version` в репозитории никто не читает. Раньше PATH правили
+# руками перед каждым запуском и регулярно забывали.
+# shellcheck source=scripts/use-node.sh
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/use-node.sh"
+
 # Адрес прод-сервера не зашит в скрипт: репозиторий публичный. Реквизиты
 # приходят из .env.deploy или окружения — см. scripts/deploy-target.sh.
 # shellcheck source=scripts/deploy-target.sh

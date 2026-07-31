@@ -3,7 +3,7 @@
  * Контрактные инварианты, которые обязаны пережить любой рефактор:
  *  - mapPanelProps несёт единый набор ключей для обоих рендер-адаптеров;
  *  - #207-гейты (onMarkerSelect/suppressLeafletPopupOnSelect) зависят от isMobile;
- *  - precedence координат запроса: searchArea → URL → user → resolved (F-49);
+ *  - precedence координат запроса: searchArea → URL → stable viewport (F-49);
  *  - маркер-тап кормит маршрут ТОЛЬКО пока в нём <2 точек (#FIX-2);
  *  - resetCoreForFilters сбрасывает search-area якорь и маршрут атомарно.
  */
@@ -12,6 +12,16 @@ import { renderHook, act } from '@testing-library/react-native'
 const mockSetSearchAreaCenter = jest.fn()
 const mockClearRouteAndSetMode = jest.fn()
 const mockAddRoutePointFromTravel = jest.fn()
+const mockMapCoordinatesResult: Record<string, any> = {
+  coordinates: { latitude: 53.9, longitude: 27.5667 },
+  coordinatesSource: 'default',
+  coordinatesAreFallback: true,
+  locationState: { status: 'unavailable' },
+  currentLocation: null,
+  error: null,
+  refreshLocation: jest.fn(),
+  openLocationSettings: jest.fn(),
+}
 
 let mockRouteStoreState = { mode: 'radius', points: [] as unknown[] }
 
@@ -25,16 +35,7 @@ jest.mock('@/stores/routeStore', () => ({
 }))
 
 jest.mock('@/hooks/map/useMapCoordinates', () => ({
-  useMapCoordinates: () => ({
-    coordinates: { latitude: 53.9, longitude: 27.5667 },
-    coordinatesSource: 'default',
-    coordinatesAreFallback: true,
-    locationState: { status: 'unavailable' },
-    currentLocation: null,
-    error: null,
-    refreshLocation: jest.fn(),
-    openLocationSettings: jest.fn(),
-  }),
+  useMapCoordinates: () => mockMapCoordinatesResult,
 }))
 
 jest.mock('@/hooks/map/useRouteController', () => ({
@@ -126,6 +127,13 @@ describe('useMapController (#991 smoke)', () => {
     mockClearRouteAndSetMode.mockClear()
     mockAddRoutePointFromTravel.mockClear()
     mockRouteStoreState = { mode: 'radius', points: [] }
+    Object.assign(mockMapCoordinatesResult, {
+      coordinates: { latitude: 53.9, longitude: 27.5667 },
+      coordinatesSource: 'default',
+      coordinatesAreFallback: true,
+      locationState: { status: 'unavailable' },
+      currentLocation: null,
+    })
   })
 
   it('mapPanelProps несёт единый контракт рендер-адаптеров', () => {
@@ -169,6 +177,33 @@ describe('useMapController (#991 smoke)', () => {
     expect(result.current.mapPanelProps.coordinates).toEqual({
       latitude: 53.9,
       longitude: 27.5667,
+    })
+  })
+
+  it('не подменяет stable viewport anchor движущимся live GPS marker', () => {
+    Object.assign(mockMapCoordinatesResult, {
+      coordinates: { latitude: 52.2, longitude: 20.98 },
+      coordinatesSource: 'geolocation',
+      coordinatesAreFallback: false,
+      currentLocation: { latitude: 52.205, longitude: 20.985 },
+      locationState: {
+        status: 'current',
+        coordinates: { latitude: 52.205, longitude: 20.985 },
+        accuracy: 7,
+        timestamp: 2000,
+        canAskAgain: true,
+      },
+    })
+
+    const { result } = renderHook(() => useMapController(baseParams))
+
+    expect(result.current.mapPanelProps.coordinates).toEqual({
+      latitude: 52.2,
+      longitude: 20.98,
+    })
+    expect(result.current.mapPanelProps.userLocation).toEqual({
+      latitude: 52.205,
+      longitude: 20.985,
     })
   })
 

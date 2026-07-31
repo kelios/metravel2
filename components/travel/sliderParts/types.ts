@@ -30,6 +30,8 @@ export interface SliderProps {
   onFirstImageLoad?: () => void;
   mobileHeightPercent?: number;
   onImagePress?: (index: number) => void;
+  /** Web: called before a pointer, touch, keyboard, or arrow interaction starts. */
+  onInteractionStart?: () => void;
   /** When true, the first slide is treated as already loaded (for cached hero handoff). */
   firstImagePreloaded?: boolean;
   /** When true, slider fills parent container height instead of computing from aspect ratio */

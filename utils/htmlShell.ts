@@ -14,7 +14,8 @@ export function getRootVisibilityGateCss(): string {
        React shell pinned while the fixed SSG shell owns the first screen.
        Once that shell is torn down, the preceding SEO blocks are already
        hidden and #root can return to normal flow without a full-page CLS. */
-    html.travel-route:has(#ssg-skeleton .ssg-travel-hero) #root {
+    html.travel-route:has(#ssg-skeleton .ssg-travel-hero) #root,
+    html.travel-route:has(#ssg-skeleton[data-ssg-hero-adopted="true"]) #root {
       position: fixed;
       inset: 0;
     }

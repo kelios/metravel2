@@ -267,6 +267,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     onFirstImageLoad,
     mobileHeightPercent = MOBILE_HEIGHT_PERCENT,
     onImagePress,
+    onInteractionStart,
     firstImagePreloaded,
     fillContainer = false,
     skipFirstSlideImage = false,
@@ -396,6 +397,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     // На web слайды под pointerEvents:'none' — тап (touch без движения) ловит
     // сам drag-хук и пробрасывает как onImagePress текущего слайда.
     onSlideTap: onImagePress,
+    onInteractionStart,
   })
 
   const scrollToDom = useCallback(
@@ -423,22 +425,24 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   )
 
   const onPrev = useCallback(() => {
+    onInteractionStart?.()
     enablePrefetch()
     const target = Math.max(0, indexRef.current - 1)
     if (target !== indexRef.current) {
       warmNeighbors(target)
       scrollTo(target)
     }
-  }, [enablePrefetch, indexRef, scrollTo, warmNeighbors])
+  }, [enablePrefetch, indexRef, onInteractionStart, scrollTo, warmNeighbors])
 
   const onNext = useCallback(() => {
+    onInteractionStart?.()
     enablePrefetch()
     const target = Math.min(maxIndex, indexRef.current + 1)
     if (target !== indexRef.current) {
       warmNeighbors(target)
       scrollTo(target)
     }
-  }, [enablePrefetch, indexRef, maxIndex, scrollTo, warmNeighbors])
+  }, [enablePrefetch, indexRef, maxIndex, onInteractionStart, scrollTo, warmNeighbors])
 
   const wrapperMaxStyle = useMemo(() => {
     if (fullBleed) return null

@@ -24,6 +24,7 @@ export default function TravelHeroInteractiveSlider({
   firstImagePreloaded,
   onFirstImageLoad,
   onImagePress,
+  onInteractionStart,
   visible = true,
   skipFirstSlideImage = false,
   fullscreenVisible = false,
@@ -38,6 +39,7 @@ export default function TravelHeroInteractiveSlider({
   firstImagePreloaded: boolean;
   onFirstImageLoad: () => void;
   onImagePress: (index: number) => void;
+  onInteractionStart?: () => void;
   visible?: boolean;
   skipFirstSlideImage?: boolean;
   fullscreenVisible?: boolean;
@@ -66,6 +68,7 @@ export default function TravelHeroInteractiveSlider({
         onFirstImageLoad={onFirstImageLoad}
         firstImagePreloaded={firstImagePreloaded}
         onImagePress={onImagePress}
+        onInteractionStart={onInteractionStart}
         skipFirstSlideImage={skipFirstSlideImage}
       />
     </View>

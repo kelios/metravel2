@@ -9,6 +9,12 @@ set -euo pipefail
 # Адрес сервера не зашит в скрипт: репозиторий публичный. Реквизиты приходят
 # из .env.deploy или окружения — см. scripts/deploy-target.sh.
 # shellcheck source=scripts/deploy-target.sh
+# Node 22 и GNU rsync в PATH — см. scripts/use-node.sh. На рабочей машине
+# `/opt/homebrew/bin/node` симлинкован на node@20, а нужный node@22 стоит
+# keg-only и в PATH сам не попадает.
+# shellcheck source=scripts/use-node.sh
+source "$(dirname "${BASH_SOURCE[0]}")/use-node.sh"
+
 source "$(dirname "${BASH_SOURCE[0]}")/deploy-target.sh"
 require_deploy_target
 

@@ -21,6 +21,7 @@ import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
 import TravelHeroExtras from './TravelHeroExtras'
 import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
 import TravelAuthorQuickLink from './TravelAuthorQuickLink'
+import { useTravelSsgHeroHandoff } from './useTravelSsgHeroHandoff'
 import { translate as i18nT } from '@/i18n'
 
 const FavoriteToggleLazy = React.lazy(() =>
@@ -93,6 +94,12 @@ function TravelHeroSectionInner({
   } = useTravelHeroState(travel, isMobile, onFirstImageLoad, deferExtras)
 
   const {
+    active: ssgHeroHandoffActive,
+    hostRef: ssgHeroHostRef,
+    release: releaseSsgHero,
+  } = useTravelSsgHeroHandoff(handleWebHeroLoad)
+
+  const {
     fullscreenIndex,
     fullscreenVisible,
     handleCloseFullscreen,
@@ -109,7 +116,7 @@ function TravelHeroSectionInner({
     renderSlider,
     setHeroContainerWidth,
     sliderUpgradeAllowed,
-    webHeroLoaded,
+    webHeroLoaded: webHeroLoaded || ssgHeroHandoffActive,
   })
 
   const { quickJumpLinks, showQuickJumps } = useTravelHeroExtrasModel(sectionLinks)
@@ -131,7 +138,7 @@ function TravelHeroSectionInner({
     () => [
       ABSOLUTE_FILL,
       {
-        opacity: overlayUnmounted ? 1 : 0,
+        opacity: ssgHeroHandoffActive || overlayUnmounted ? 1 : 0,
         // pointerEvents всегда 'auto': под-оверлейный слайдер должен принимать
         // touch/свайп даже до снятия оверлея (оверлей сверху сам pointerEvents:'none').
         // Без этого pointer-events:none на дереве слайдера убивает свайп пальцем.
@@ -139,7 +146,7 @@ function TravelHeroSectionInner({
         ...(isWeb ? null : { transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease` }),
       },
     ],
-    [overlayUnmounted, isWeb],
+    [overlayUnmounted, isWeb, ssgHeroHandoffActive],
   )
 
   const lcpOverlayStyle = useMemo(
@@ -218,8 +225,10 @@ function TravelHeroSectionInner({
                       preloadCount={sliderPreloadCount}
                       controlsVisible
                       onFirstImageLoad={handleSliderImageLoad}
-                      firstImagePreloaded={webHeroLoaded}
+                      firstImagePreloaded={webHeroLoaded || ssgHeroHandoffActive}
                       onImagePress={handleImagePress}
+                      onInteractionStart={releaseSsgHero}
+                      skipFirstSlideImage={ssgHeroHandoffActive}
                       fullscreenVisible={fullscreenVisible}
                       fullscreenIndex={fullscreenIndex}
                       onCloseFullscreen={handleCloseFullscreen}
@@ -227,7 +236,14 @@ function TravelHeroSectionInner({
                   </Suspense>
                 </View>
               )}
-              {!overlayUnmounted && (
+              {ssgHeroHandoffActive ? (
+                <View
+                  ref={ssgHeroHostRef}
+                  style={lcpOverlayStyle}
+                  collapsable={false}
+                  {...(lcpOverlayWebProps || {})}
+                />
+              ) : !overlayUnmounted ? (
                 <View style={lcpOverlayStyle} collapsable={false} {...(lcpOverlayWebProps || {})}>
                   <OptimizedLCPHero
                     img={firstImg}
@@ -240,7 +256,7 @@ function TravelHeroSectionInner({
                     onLoad={handleWebHeroLoad}
                   />
                 </View>
-              )}
+              ) : null}
             </>
           ) : (
             <Suspense fallback={null}>

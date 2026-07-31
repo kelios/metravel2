@@ -10,6 +10,12 @@ const mockHeroExtrasSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
 const mockHeroFavoriteToggleSpy: jest.Mock<any, any> = jest.fn(
   (_props: any) => null,
 )
+const mockReleaseSsgHero = jest.fn()
+const mockUseTravelSsgHeroHandoff = jest.fn(() => ({
+  active: false,
+  hostRef: { current: null },
+  release: mockReleaseSsgHero,
+}))
 
 jest.mock('@/components/travel/Slider.web', () => ({
   __esModule: true,
@@ -57,6 +63,10 @@ jest.mock('@/hooks/useTravelHeroState', () => ({
   useTravelHeroState: jest.fn(),
 }))
 
+jest.mock('@/components/travel/details/useTravelSsgHeroHandoff', () => ({
+  useTravelSsgHeroHandoff: (...args: any[]) => mockUseTravelSsgHeroHandoff(...args),
+}))
+
 const mockUseTravelHeroState = useTravelHeroState as jest.MockedFunction<typeof useTravelHeroState>
 
 describe('TravelHeroSection slider background regression (web)', () => {
@@ -69,6 +79,13 @@ describe('TravelHeroSection slider background regression (web)', () => {
     mockSliderSpy.mockClear()
     mockHeroExtrasSpy.mockClear()
     mockHeroFavoriteToggleSpy.mockClear()
+    mockReleaseSsgHero.mockClear()
+    mockUseTravelSsgHeroHandoff.mockReset()
+    mockUseTravelSsgHeroHandoff.mockReturnValue({
+      active: false,
+      hostRef: { current: null },
+      release: mockReleaseSsgHero,
+    })
     mockUseTravelHeroState.mockReset()
     mockUseTravelHeroState.mockReturnValue({
       firstImg: {
@@ -274,6 +291,63 @@ describe('TravelHeroSection slider background regression (web)', () => {
     const lastProps = (lastArgs as any)?.[0]
     expect(lastProps.controlsVisible).toBe(true)
     expect(lastProps.skipFirstSlideImage).not.toBe(true)
+  })
+
+  it('reuses the adopted SSG hero and releases it on the first slider interaction', async () => {
+    mockUseTravelSsgHeroHandoff.mockReturnValue({
+      active: true,
+      hostRef: { current: null },
+      release: mockReleaseSsgHero,
+    })
+
+    const travel: any = {
+      id: 8,
+      name: 'Adopted SSG hero travel',
+      gallery: [
+        { id: 1, url: 'https://cdn.example.com/img.jpg', width: 1200, height: 800 },
+        { id: 2, url: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800 },
+      ],
+      travelAddress: [],
+    }
+    const anchors: any = { gallery: { current: null } }
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+      jest.runAllTimers()
+      await Promise.resolve()
+    })
+
+    const sliderProps = mockSliderSpy.mock.calls.at(-1)?.[0]
+    expect(sliderProps.skipFirstSlideImage).toBe(true)
+    expect(sliderProps.firstImagePreloaded).toBe(true)
+    expect(sliderProps.onInteractionStart).toBe(mockReleaseSsgHero)
+
+    const visibleSliderWrapper = tree!.root.findAll(
+      (node: any) =>
+        Array.isArray(node.props?.style) &&
+        node.props.style.some((style: any) => style?.pointerEvents === 'auto'),
+    )[0]
+    expect(visibleSliderWrapper.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ opacity: 1, pointerEvents: 'auto' }),
+      ]),
+    )
+
+    sliderProps.onInteractionStart()
+    expect(mockReleaseSsgHero).toHaveBeenCalledTimes(1)
   })
 
   it('updates hero container width from web layout events', async () => {

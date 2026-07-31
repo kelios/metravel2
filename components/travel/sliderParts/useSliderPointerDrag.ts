@@ -74,6 +74,8 @@ export interface UseSliderPointerDragOptions {
    * Receives the current slide index.
    */
   onSlideTap?: (index: number) => void;
+  /** Fired synchronously before the first user-driven gallery interaction. */
+  onInteractionStart?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +101,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
     dismissSwipeHint,
     enablePrefetch,
     onSlideTap,
+    onInteractionStart,
   } = options;
 
   const dragStateRef = useRef<DragState>(initialDragState());
@@ -117,6 +120,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
   const onWrapperKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (imagesLen < 2) return;
+      onInteractionStart?.();
       dismissSwipeHint();
       enablePrefetch();
 
@@ -135,7 +139,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
         scrollTo(maxIndex);
       }
     },
-    [dismissSwipeHint, enablePrefetch, imagesLen, indexRef, maxIndex, scrollTo],
+    [dismissSwipeHint, enablePrefetch, imagesLen, indexRef, maxIndex, onInteractionStart, scrollTo],
   );
 
   // Pointer events effect
@@ -171,6 +175,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       if (!shouldHandlePointerDragStart(event.pointerType, isMobile, useTouchPath)) return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
 
+      onInteractionStart?.();
       stopAnimation();
       pauseAutoplay();
       dismissSwipeHint();
@@ -300,6 +305,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       if (event.touches.length !== 1) return;
       const touch = event.touches[0];
 
+      onInteractionStart?.();
       stopAnimation();
       pauseAutoplay();
       dismissSwipeHint();
@@ -467,6 +473,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
     isMobile,
     maxIndex,
     onSlideTap,
+    onInteractionStart,
     onWrapperKeyDown,
     pauseAutoplay,
     renderedSlideWidth,

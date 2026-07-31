@@ -211,6 +211,23 @@ describe('ssg-skeletons', () => {
       expect(document.getElementById('ssg-skeleton-css')).toBeNull();
     });
 
+    it('keeps SSG CSS while the painted hero node is adopted by React', () => {
+      setupDom();
+      runScript();
+
+      const root = document.getElementById('root') as HTMLElement;
+      const hero = document.querySelector('.ssg-travel-hero') as HTMLElement;
+      hero.setAttribute('data-ssg-travel-hero-adopted', 'true');
+      root.appendChild(hero);
+      root.setAttribute('data-travel-details-ready', 'true');
+
+      jest.advanceTimersByTime(500);
+
+      expect(skeleton()).toBeNull();
+      expect(root.contains(hero)).toBe(true);
+      expect(document.getElementById('ssg-skeleton-css')).not.toBeNull();
+    });
+
     it('removes travel skeleton after 20s once app-hydrated is set', () => {
       setupDom();
       runScript();

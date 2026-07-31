@@ -2,6 +2,12 @@
 
 # Строгий режим
 set -Eeuo pipefail
+# Node 22 и GNU rsync в PATH — см. scripts/use-node.sh. На рабочей машине
+# `/opt/homebrew/bin/node` симлинкован на node@20, а нужный node@22 стоит
+# keg-only и в PATH сам не попадает.
+# shellcheck source=scripts/use-node.sh
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/use-node.sh"
+
 IFS=$'\n\t'
 
 function apply_env() {
