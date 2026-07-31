@@ -5,6 +5,7 @@ import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { unwrapList } from '@/api/clientResponse';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { retry } from '@/utils/retry';
+import { isUsableRouteSegment } from '@/utils/routePaths';
 import {
     readCachedQuestBundle,
     writeCachedQuestBundle,
@@ -453,6 +454,18 @@ export async function fetchQuestsNearLocation(
     }));
 }
 
+/**
+ * #1185: экран квеста берёт `questId` из сегмента маршрута. Если пользователь
+ * пришёл по битой ссылке `/quests/undefined/undefined`, роутер отдаёт строку
+ * `"undefined"`, и запрос уходил на `/api/quests/by-quest-id/undefined/` — в
+ * проде это подтверждённые 404. Отбиваем такой идентификатор до сети: ошибка
+ * сразу, вместо бессмысленного запроса и записи мусора в офлайн-кэш.
+ */
+function assertUsableQuestId(questId: string, caller: string): void {
+    if (isUsableRouteSegment(questId)) return;
+    throw new ApiError(400, `${caller}: quest id is missing or invalid`);
+}
+
 /** Получить квесты по городу */
 export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle> {
     const bundle = await apiClient.get<ApiQuestBundle>(`/quests/by-city/${cityId}/`);
@@ -465,6 +478,7 @@ export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle>
  * При сетевом фейле возвращает кэш, если он есть, — иначе пробрасывает ошибку.
  */
 export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBundle> {
+    assertUsableQuestId(questId, 'fetchQuestByQuestId');
     try {
         const bundle = await retry(
             // Quest bundles include the intro, all steps and finale media. Do not
@@ -511,6 +525,7 @@ export async function fetchAllProgress(): Promise<ApiQuestProgress[]> {
 
 /** Получить или создать прогресс по quest_id */
 export async function fetchOrCreateProgress(questId: string): Promise<ApiQuestProgress> {
+    assertUsableQuestId(questId, 'fetchOrCreateProgress');
     try {
         return await apiClient.get<ApiQuestProgress>(`/quest-progress/quest/${questId}/`);
     } catch (err: unknown) {

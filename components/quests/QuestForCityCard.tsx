@@ -10,6 +10,7 @@ import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { getQuestAgeBadgeLabel, getQuestAgeCategory, isBikeQuest } from '@/utils/questAudience'
+import { buildQuestPath } from '@/utils/routePaths'
 import type { QuestMeta } from '@/utils/questAdapters'
 import {
   trackQuestCardClicked,
@@ -75,7 +76,9 @@ export function QuestForCityCard({
   const difficultyLabels = createDifficultyLabels()
   const mediaVisibility = useRichMediaVisibility(CARD_MEDIA_SIZE)
 
-  const href = `/quests/${quest.cityId}/${quest.id}`
+  // #1185: карточка приходила и с пустым cityId/id, и шаблонная строка давала
+  // `/quests/undefined/undefined` — клик уводил пользователя на 404.
+  const href = buildQuestPath(quest.cityId, quest.id)
   const analyticsParams = useMemo(() => ({
     source: analyticsSource,
     questId: quest.id,
@@ -87,6 +90,7 @@ export function QuestForCityCard({
     useCallback(() => trackQuestCardImpression(analyticsParams), [analyticsParams]),
   )
   const handlePress = useCallback(() => {
+    if (!href) return
     trackQuestCardClicked(analyticsParams)
     router.push(href as any)
   }, [analyticsParams, href, router])
@@ -119,7 +123,8 @@ export function QuestForCityCard({
         style,
         (pressed || hovered) && styles.cardHover,
       ]}
-      accessibilityRole="link"
+      accessibilityRole={href ? 'link' : undefined}
+      accessibilityState={href ? undefined : { disabled: true }}
       accessibilityLabel={i18nT('quests:components.quests.QuestForCityCard.proyti_kvest_value1_value2_54986608', { value1: cityLabel, value2: quest.title })}
     >
       <View

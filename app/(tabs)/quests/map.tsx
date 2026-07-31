@@ -17,6 +17,7 @@ import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { createMapStructuredData } from '@/utils/discoverySeo';
+import { buildQuestPath } from '@/utils/routePaths';
 import Map from '@/components/MapPage/Map';
 import { translate as i18nT } from '@/i18n'
 
@@ -75,7 +76,7 @@ export default function QuestsMapScreen() {
                     address: m.title,
                     travelImageThumbUrl: coverUri,
                     categoryName: i18nT('quests:app.tabs.quests.map.kvest_c79877a6'),
-                    urlTravel: `/quests/${m.cityId}/${m.id}`,
+                    urlTravel: buildQuestPath(m.cityId, m.id) ?? undefined,
                     articleUrl: undefined,
                     questMeta: {
                         id: m.id,
@@ -153,7 +154,7 @@ export default function QuestsMapScreen() {
                         const url =
                             point?.urlTravel ||
                             (point?.questMeta
-                                ? `/quests/${point.questMeta.cityId}/${point.questMeta.id}`
+                                ? buildQuestPath(point.questMeta.cityId, point.questMeta.id)
                                 : null);
                         if (url) router.push(url as any);
                     }}

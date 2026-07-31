@@ -104,13 +104,23 @@ export default function QuestCard({
     const cardHeight = isPhone ? 238 : Math.round((cardWidth / 380) * 260);
     const showOverlayMeta = !isPhone;
 
-    // Pick one bounded proxy variant for the card cover. Web catalog cards use
-    // their CSS width: asking the proxy for a retina 1280px cover for a 420px
-    // tile multiplies bytes and cold conversions without a useful visual gain.
-    // Native keeps the existing 2x cap for dense Android screens.
+    // Ширина обложки = CSS-слот × плотность экрана, с потолком DPR 2.
+    //
+    // Здесь долго стоял `dpr = 1` на web с обоснованием «retina-вариант умножает
+    // байты и холодные конверсии без полезного выигрыша». Обоснование было верным,
+    // когда мастером лежал PNG на 2.4 МБ и каждая конверсия стоила секунды. После
+    // нормализации обложек (#1166) мастер — WebP на 46 КБ, и цена ступени изменилась
+    // до незначительной. А вот визуальная плата осталась и была видна на проде:
+    // слот 280×192 CSS при DPR 2 требует 560 device px, запрашивалось 320 —
+    // браузер растягивал в 1.75×, обложки выглядели мыльными.
+    //
+    // Замер 2026-07-31 на нормализованной обложке (`?q=60&fit=cover`):
+    //   w=320 → 1 918 B, апскейл 1.75×   ← было
+    //   w=640 → 5 390 B, апскейл 0.88×   ← стало
+    // Плата за резкость — 3.5 КБ на карточку.
     const coverSrc = useMemo(() => {
         if (!imageUrl) return imageUrl;
-        const dpr = Platform.OS === 'web' ? 1 : Math.min(PixelRatio.get() || 2, 2);
+        const dpr = Math.min(PixelRatio.get() || 2, 2);
         const requestedWidth = Math.max(1, Math.round(cardWidth * dpr));
         // #1167: набор — из общего контракта, а не литералом на месте.
         const responsiveWidths = IMAGE_WIDTHS.questCover;

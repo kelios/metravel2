@@ -15,6 +15,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
 import { resolveQuestCitySegment } from '@/utils/questCityAlias'
+import { buildQuestPath } from '@/utils/routePaths'
 import { stringifyJsonLd } from '@/utils/jsonLd'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
@@ -85,16 +86,22 @@ export default function QuestsByCityScreen() {
 
   const structuredData = useMemo(() => {
     if (!resolved || cityQuests.length === 0) return null
+    // #1185: квест без cityId/id давал в разметке ссылку `/quests/undefined/undefined`
+    // — поисковик получал заведомо битый URL. Такие позиции в список не попадают.
+    const listedQuests = cityQuests
+      .map((quest) => ({ quest, path: buildQuestPath(quest.cityId, quest.id) }))
+      .filter((entry): entry is { quest: typeof entry.quest; path: string } => Boolean(entry.path))
+    if (listedQuests.length === 0) return null
     const itemList = {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
       name: i18nT('quests:app.tabs.quests.city.index.title', { value1: cityName || cityParam }),
       url: canonical,
-      numberOfItems: cityQuests.length,
-      itemListElement: cityQuests.map((quest, index) => ({
+      numberOfItems: listedQuests.length,
+      itemListElement: listedQuests.map(({ quest, path }, index) => ({
         '@type': 'ListItem',
         position: index + 1,
-        url: buildCanonicalUrl(`/quests/${quest.cityId}/${quest.id}`),
+        url: buildCanonicalUrl(path),
         name: quest.title,
       })),
     }

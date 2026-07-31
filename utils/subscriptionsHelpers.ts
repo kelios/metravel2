@@ -1,3 +1,5 @@
+import { buildTravelPath } from '@/utils/routePaths';
+
 export type TravelPreview = {
   id: number;
   slug?: string;
@@ -43,10 +45,18 @@ export const normalizeTravelPreview = (value: unknown): TravelPreview => {
   };
 };
 
+/**
+ * Адрес страницы путешествия. Пустая строка означает «ссылки нет» — вызывающий
+ * не должен ни рисовать её, ни выполнять переход.
+ *
+ * #1185: раньше последней веткой был безусловный `/travels/${travel.id}`. Поле
+ * объявлено как `number`, но с бэкенда приходит и `null`, и шаблон отдавал
+ * строку `/travels/null` — в проде это 5 переходов на 404 за двое суток.
+ */
 export const resolveTravelUrl = (travel: TravelPreview): string => {
   const slug = String(travel.slug ?? '').trim();
   if (slug) return `/travels/${slug}`;
   const explicitUrl = String(travel.url ?? '').trim();
   if (explicitUrl) return explicitUrl.split('?')[0].split('#')[0];
-  return `/travels/${travel.id}`;
+  return buildTravelPath(travel.id) ?? '';
 };

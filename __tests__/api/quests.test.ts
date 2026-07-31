@@ -94,6 +94,16 @@ describe('api/quests', () => {
       expect(mockedGet).toHaveBeenCalledTimes(1);
       expect(mockedGet).toHaveBeenCalledWith('/quests/by-quest-id/missing-quest/', 30000);
     });
+
+    // #1185: попав на битую ссылку /quests/undefined/undefined, экран отдавал
+    // сюда строку "undefined", и запрос уходил на /api/quests/by-quest-id/undefined/.
+    it.each(['undefined', 'null', '', '   '])(
+      'does not hit the network for an unusable quest id (%p)',
+      async (questId) => {
+        await expect(fetchQuestByQuestId(questId as string)).rejects.toThrow(/quest id is missing or invalid/);
+        expect(mockedGet).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('fetchQuestCities', () => {
@@ -172,6 +182,14 @@ describe('api/quests', () => {
       mockedPost.mockRejectedValueOnce(postError);
 
       await expect(fetchOrCreateProgress('krakow-dragon')).rejects.toThrow('Bad request');
+    });
+
+    // #1185: тот же битый сегмент маршрута попадал и в прогресс — прод видел
+    // GET /api/quest-progress/quest/undefined/.
+    it('does not hit the network for an unusable quest id', async () => {
+      await expect(fetchOrCreateProgress('undefined')).rejects.toThrow(/quest id is missing or invalid/);
+      expect(mockedGet).not.toHaveBeenCalled();
+      expect(mockedPost).not.toHaveBeenCalled();
     });
   });
 

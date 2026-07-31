@@ -40,6 +40,15 @@ describe('subscriptions.helpers', () => {
     it('falls back to id when both url and slug are missing', () => {
       expect(resolveTravelUrl({ id: 77 })).toBe('/travels/77');
     });
+
+    // #1185: поле объявлено как number, но с бэкенда приходит и null — шаблон
+    // отдавал строку `/travels/null`, и карточка вела на 404.
+    it('returns an empty string when there is no usable identity', () => {
+      expect(resolveTravelUrl({ id: null } as any)).toBe('');
+      expect(resolveTravelUrl({ id: undefined } as any)).toBe('');
+      expect(resolveTravelUrl({ id: 0 })).toBe('');
+      expect(resolveTravelUrl({ id: Number.NaN })).toBe('');
+    });
   });
 });
 

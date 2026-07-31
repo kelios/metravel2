@@ -127,6 +127,9 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
 
     // ВАЖНО: все хуки должны быть вызваны до условных возвратов
     const handleItemPress = useCallback((url: string) => {
+        // #1185: у карточки без пригодного slug/id адреса нет — переход по
+        // пустой строке уводил в никуда вместо статьи.
+        if (!url) return;
         router.push(url as any);
     }, [router]);
 

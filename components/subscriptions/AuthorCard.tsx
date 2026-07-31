@@ -154,7 +154,9 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
                     city: travel.cityName || travel.city || null,
                     country: travel.countryName || travel.country || null,
                   }}
-                  onPress={() => onOpenTravel(travelUrl)}
+                  // #1185: без пригодного slug/id `resolveTravelUrl` отдаёт
+                  // пустую строку — переход по ней открывал 404.
+                  onPress={() => { if (travelUrl) onOpenTravel(travelUrl) }}
                   layout="grid"
                   style={styles.travelCard}
                   contentMinHeight={isCompact ? 58 : undefined}

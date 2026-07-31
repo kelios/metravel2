@@ -222,7 +222,7 @@ describe('QuestCard', () => {
         }
     });
 
-    it('caps a 420px web catalog cover at 480px even on a DPR2 display', () => {
+    it('запрашивает retina-ширину под слот 420 на DPR2: 840 → ступень 960', () => {
         const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(2);
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
         process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
@@ -240,8 +240,14 @@ describe('QuestCard', () => {
                 />,
             );
 
+            // Раньше здесь ожидалось `w=480`: на web плотность экрана намеренно
+            // игнорировалась (`dpr = 1`), потому что мастером лежал PNG на 2.4 МБ и
+            // каждая холодная конверсия стоила секунды. После #1166 мастер — WebP на
+            // 46 КБ, и эта плата исчезла, а визуальная осталась: слот 420 CSS при
+            // DPR 2 требует 840 device px, и на 480 браузер растягивал в 1.75×.
+            // Замер 2026-07-31: w=320 → 1 918 B (апскейл 1.75×), w=640 → 5 390 B (0.88×).
             const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
-            expect(src).toContain('w=480');
+            expect(new URL(src).searchParams.get('w')).toBe('960');
             expect(src).not.toContain('w=1280');
         } finally {
             process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
@@ -272,7 +278,8 @@ describe('QuestCard', () => {
 
             // This regression is not an undersized-source problem: Safari kept
             // the CSS blur backdrop painted while the sharp <img> was absent.
-            expect(new URL(src).searchParams.get('w')).toBe('480');
+            // Ширина: слот 345 CSS × min(DPR 3, 2) = 690 → ступень 800.
+            expect(new URL(src).searchParams.get('w')).toBe('800');
             expect(mediaProps).toEqual(expect.objectContaining({
                 fit: 'cover',
                 blurBackground: false,
