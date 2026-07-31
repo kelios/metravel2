@@ -59,6 +59,31 @@ describe('QuestForCityCard', () => {
     expect(mockPush).toHaveBeenCalledWith('/quests/3/gomel-palace')
   })
 
+  // #1185: карточка приходила и без cityId — шаблонная строка давала
+  // `/quests/undefined/gomel-palace`, и клик уводил пользователя на 404.
+  it.each([
+    ['city', { id: 'gomel-palace', cityId: undefined }],
+    ['quest', { id: undefined, cityId: '3' }],
+  ])('does not navigate when %s id is missing', (_case, ids) => {
+    const { getByLabelText } = render(
+      <QuestForCityCard
+        quest={{
+          title: 'Тайны дворца',
+          points: 8,
+          cityName: 'Гомель',
+          lat: 52.43,
+          lng: 30.99,
+          ...(ids as any),
+        }}
+      />,
+    )
+
+    fireEvent.press(getByLabelText('Пройти квест по городу Гомель: Тайны дворца'))
+
+    expect(mockPush).not.toHaveBeenCalled()
+    expect(queueAnalyticsEvent).not.toHaveBeenCalledWith('quest_card_click', expect.anything())
+  })
+
   it('passes quest cover with stable web media geometry', () => {
     render(
       <QuestForCityCard

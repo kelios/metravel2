@@ -222,7 +222,7 @@ describe('QuestCard', () => {
         }
     });
 
-    it('запрашивает retina-ширину под слот 420 на DPR2: 840 → ступень 960', () => {
+    it('запрашивает retina-ширину под слот 420 на DPR2: 840 → потолок набора 800', () => {
         const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(2);
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
         process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
@@ -247,7 +247,10 @@ describe('QuestCard', () => {
             // DPR 2 требует 840 device px, и на 480 браузер растягивал в 1.75×.
             // Замер 2026-07-31: w=320 → 1 918 B (апскейл 1.75×), w=640 → 5 390 B (0.88×).
             const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
-            expect(new URL(src).searchParams.get('w')).toBe('960');
+            // 840 упирается в потолок набора `IMAGE_WIDTHS.questCover` (800).
+            // Апскейл 1.05× — незаметен; расширять контракт ради него не нужно,
+            // это был бы двусторонний релиз (#1167).
+            expect(new URL(src).searchParams.get('w')).toBe('800');
             expect(src).not.toContain('w=1280');
         } finally {
             process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
