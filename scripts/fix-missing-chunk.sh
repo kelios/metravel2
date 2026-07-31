@@ -4,13 +4,19 @@
 
 set -e
 
+# Адрес сервера не зашит в скрипт: репозиторий публичный. Реквизиты приходят
+# из .env.deploy или окружения — см. scripts/deploy-target.sh.
+# shellcheck source=scripts/deploy-target.sh
+source "$(dirname "${BASH_SOURCE[0]}")/deploy-target.sh"
+require_deploy_target
+
 OLD_CHUNK="CustomHeader-35c08b6fda505a901ff6d2adcd502571.js"
 NEW_CHUNK="CustomHeader-c172213d0a07765fd9eee66b10d66ebf.js"
-CHUNK_DIR="/home/sx3/metravel/static/dist/_expo/static/js/web"
+CHUNK_DIR="$PROD_REMOTE_DIR/static/dist/_expo/static/js/web"
 
 echo "Копирую $NEW_CHUNK как $OLD_CHUNK..."
 
-ssh sx3@178.172.137.129 "
+ssh "$PROD_SSH_TARGET" "
   cd $CHUNK_DIR
   if [ -f '$NEW_CHUNK' ]; then
     cp '$NEW_CHUNK' '$OLD_CHUNK'

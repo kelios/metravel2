@@ -6,8 +6,14 @@
 
 set -euo pipefail
 
-SERVER="${SERVER:-sx3@178.172.137.129}"
-REMOTE_DIR="${REMOTE_DIR:-/home/sx3/metravel}"
+# Адрес сервера не зашит в скрипт: репозиторий публичный. Реквизиты приходят
+# из .env.deploy или окружения — см. scripts/deploy-target.sh.
+# shellcheck source=scripts/deploy-target.sh
+source "$(dirname "${BASH_SOURCE[0]}")/deploy-target.sh"
+require_deploy_target
+
+SERVER="${SERVER:-$PROD_SSH_TARGET}"
+REMOTE_DIR="${REMOTE_DIR:-$PROD_REMOTE_DIR}"
 SITE_URL="${SITE_URL:-https://metravel.by}"
 ENV="${ENV:-prod}"
 FORCE_REBUILD="${FORCE_REBUILD:-1}"
@@ -103,7 +109,7 @@ rsync -avzhe "ssh" --delete ./assets/icons/ "$SERVER:$REMOTE_DIR/icons/"
 rsync -avzhe "ssh" --delete ./assets/images/ "$SERVER:$REMOTE_DIR/images/"
 
 echo "Applying release atomically on server..."
-# static/ is owned by uid 1984 (the container user); the host login (sx3) is in
+# static/ is owned by uid 1984 (the container user); the host login is in
 # "other" and cannot write into it, so a host-side `mv` into static/ fails with
 # Permission denied. The swap therefore runs INSIDE the app container
 # (metravel-app-1, uid 1984), which owns static/ and mounts the whole repo at

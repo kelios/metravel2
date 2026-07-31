@@ -393,9 +393,10 @@ Operation gate:
   — a wrapper that ran the canonical build/guards via `DEPLOY=0 bash ./build-prod.sh prod`, deployed
   with `tar+ssh`, swapped atomically, verified health, and rolled back on failure. That wrapper does
   not exist on macOS; do not invoke it here.
-- SSH access is `sx3@178.172.137.129` (the scripts' built-in default). The `metravel-prod` alias is
-  not defined on every machine — probe by direct host, and do not mistake a missing alias for missing
-  access. See `docs/RELEASE.md`.
+- SSH access comes from `.env.deploy` (git-ignored, template `.env.deploy.example`), loaded by
+  `scripts/deploy-target.sh` as `$PROD_SSH_TARGET` / `$PROD_REMOTE_DIR`. The host is deliberately not
+  in the repo — it is public. The `metravel-prod` alias is not defined on every machine — probe by
+  direct host, and do not mistake a missing alias for missing access. See `docs/RELEASE.md`.
 - `scripts/fix-prod.sh` is an emergency production frontend recovery path only. It has its own remote
   deploy lock, prod artifact config gate, in-container atomic swap, old Expo chunk overlap, nginx restart,
   and live chunk/config verification. Use it through `$metravel-devops-agent` only when normal deploy is

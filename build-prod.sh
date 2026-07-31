@@ -12,6 +12,11 @@ if [[ -d "$HOME/.local/bin" ]]; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
+# Адрес прод-сервера не зашит в скрипт: репозиторий публичный. Реквизиты
+# приходят из .env.deploy или окружения — см. scripts/deploy-target.sh.
+# shellcheck source=scripts/deploy-target.sh
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/deploy-target.sh"
+
 apply_env() {
   local ENV="$1"
 
@@ -103,28 +108,34 @@ deploy_prod() {
   fi
   EXPO_OVERLAY_HELPER_B64="$(base64 < "$EXPO_OVERLAY_HELPER" | tr -d '\n')"
 
+  require_deploy_target || return 1
+
   rsync -avzhe "ssh" --delete \
     ./dist/ \
-    "sx3@178.172.137.129:/home/sx3/metravel/dist/"
+    "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/"
 
   # Send the remote program as literal stdin. Embedding it in a local
   # double-quoted argument strips nested quotes and turns punctuation inside
   # diagnostics into remote shell syntax before bash can parse the program.
-  ssh sx3@178.172.137.129 bash -s -- \
+  # The remote directory travels as an argument for the same reason: the
+  # heredoc is quoted, so nothing local expands inside it.
+  ssh "$PROD_SSH_TARGET" bash -s -- \
     "$ENV" \
     "$EXPO_OVERLAY_RETENTION_DAYS" \
-    "$EXPO_OVERLAY_HELPER_B64" <<'REMOTE_DEPLOY_SCRIPT'
+    "$EXPO_OVERLAY_HELPER_B64" \
+    "$PROD_REMOTE_DIR" <<'REMOTE_DEPLOY_SCRIPT'
 set -e
 
 ENV="$1"
 EXPO_OVERLAY_RETENTION_DAYS="$2"
 EXPO_OVERLAY_HELPER_B64="$3"
+REMOTE_DIR="$4"
 
-cd /home/sx3/metravel
+cd "$REMOTE_DIR"
 mkdir -p static
 # static/ is bind-mounted into the app container at /app/static. Swap dirs
 # (dist.new/dist.old) get created by the container user (uid 1984) or an
-# out-of-band op, so they end up owned by a uid the host user (sx3) cannot
+# out-of-band op, so they end up owned by a uid the host login cannot
 # unlink — a plain host 'rm -rf' silently fails and stale dist.old(.stale-*)
 # dirs pile up (past manual-recovery need). Route every destructive removal
 # through root inside the container; mv/rename still works on the host

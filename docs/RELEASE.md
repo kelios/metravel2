@@ -115,13 +115,23 @@ target, and do not kill another session's process to make room.
 Manual rollback command if a deploy reports broken production:
 
 ```bash
-ssh sx3@178.172.137.129 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'
+source scripts/deploy-target.sh && require_deploy_target
+ssh "$PROD_SSH_TARGET" "cd '$PROD_REMOTE_DIR' && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx"
 ```
 
 ### SSH access to prod
 
-The server is `sx3@178.172.137.129` (`/home/sx3/metravel`) — the default already baked into the
-deploy scripts (`SERVER="${SERVER:-sx3@178.172.137.129}"`), so leave it unset and it just works.
+The host and login are **not** stored in this repository — it is public, and a server address with a
+username is free reconnaissance. They live in `.env.deploy` (git-ignored), which every deploy script
+loads through `scripts/deploy-target.sh`. Create it once from the template and the scripts just work:
+
+```bash
+cp .env.deploy.example .env.deploy   # fill PROD_SSH_USER / PROD_SSH_HOST / PROD_REMOTE_DIR
+```
+
+Environment variables win over the file, so a one-off run against another host needs no edits:
+`PROD_SSH_HOST=… ./build-prod.sh prod`. Ask the prod owner for the values; never paste them into
+chat, into a script, or into a doc.
 
 The `metravel-prod` host alias exists only on machines whose `~/.ssh/config` defines it; the macOS
 checkout has an entry for `github.com` only. **A missing alias does not mean missing access** — the
@@ -129,7 +139,7 @@ key is served from ssh-agent (`~/.ssh/id_ed25519` on macOS, accepted by the serv
 direct host, not by alias:
 
 ```bash
-ssh sx3@178.172.137.129 "echo ok"
+source scripts/deploy-target.sh && require_deploy_target && ssh "$PROD_SSH_TARGET" "echo ok"
 ```
 
 ### Emergency frontend redeploy

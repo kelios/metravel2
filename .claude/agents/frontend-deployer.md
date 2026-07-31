@@ -20,7 +20,7 @@ model: sonnet
    - `verify-static-quest-seo.js` — quest-страницы, city-алиасы и city-лендинги сверяются с живым
      каталогом квестов (транзиентный сбой API однажды выкинул весь этот слой из билда).
 5. Постобработка: `copy-public-files`, иконки, `add-cache-bust-meta`.
-6. Деплой: `rsync ./dist/ → sx3@178.172.137.129:/home/sx3/metravel/dist/`, **атомарный свап** `static/dist`
+6. Деплой: `rsync ./dist/ → "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/"`, **атомарный свап** `static/dist`
    (старые Expo-ассеты накладываются как missing-file overlap, чтобы открытые вкладки со старым
    рантаймом не падали), затем `docker compose -f docker-compose-prod.app.yaml restart app nginx`.
 7. Пост-деплой: `post-deploy-seo-check.js` против `https://metravel.by` (не валит билд, только сигналит).
@@ -60,17 +60,20 @@ rsync --version | head -1   # нужен GNU rsync, protocol >= 30
 Свои rsync/scp-команды в обход не изобретать.
 
 Откат вручную:
-`ssh sx3@178.172.137.129 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'`.
+`source scripts/deploy-target.sh && require_deploy_target && ssh "$PROD_SSH_TARGET" "cd '$PROD_REMOTE_DIR' && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx"`.
 
 ## Доступ (SSH)
 
-- Сервер: `sx3@178.172.137.129`, каталог `/home/sx3/metravel`. Это дефолт, зашитый в сами скрипты
-  (`SERVER="${SERVER:-sx3@178.172.137.129}"`), — просто не переопределяй его, и всё сойдётся.
+- Хост и логин в репозитории НЕ хранятся: он публичный. Реквизиты лежат в `.env.deploy`
+  (под `.gitignore`, шаблон — `.env.deploy.example`), скрипты подхватывают их через
+  `scripts/deploy-target.sh` как `$PROD_SSH_TARGET` и `$PROD_REMOTE_DIR`. Если файла нет —
+  `cp .env.deploy.example .env.deploy` и заполнить; значения спрашивай у владельца прода
+  и никуда не выводи.
 - **Алиас `metravel-prod` есть не на каждой машине** (на macOS-чекауте `~/.ssh/config` содержит
   только `github.com`). Отсутствие алиаса ≠ отсутствие доступа: ключ подхватывается из ssh-agent
   (на macOS это `~/.ssh/id_ed25519`, сервер его принимает). Проверяй доступ **прямым хостом**,
-  а не алиасом: `ssh sx3@178.172.137.129 "echo ok"`.
-- Секреты не печатать и не коммитить. Если прямой `ssh sx3@178.172.137.129 "echo ok"` не отвечает —
+  а не алиасом: `ssh "$PROD_SSH_TARGET" "echo ok"`.
+- Секреты не печатать и не коммитить. Если прямой `ssh "$PROD_SSH_TARGET" "echo ok"` не отвечает —
   останавливайся и сообщи (ключи вручную не подбирать, `~/.ssh/config` не править).
 
 ## Зона ответственности
@@ -85,8 +88,8 @@ rsync --version | head -1   # нужен GNU rsync, protocol >= 30
 1. **Pre-flight (не деплоить на красном):**
    - `git status` — рабочее дерево чистое, ветка `main`, синхронизирована с origin.
    - Быстрая валидация изменений: `npm run typecheck` и `npm run lint` (или `npm run check:fast` на изменённом scope). При падении — НЕ деплоить, вернуть отчёт.
-   - Проверить, что нет параллельного деплоя: `ssh sx3@178.172.137.129 "ls -la /home/sx3/metravel/.deploy.lock"` (лока быть не должно).
-   - Зафиксировать текущий прод-commit как точку отката: `ssh sx3@178.172.137.129 "cd /home/sx3/metravel && git rev-parse --short HEAD"` (если фронт-артефакты привязаны к коммиту) и/или запомнить, что свап обратим только пере-сборкой предыдущего коммита.
+   - Проверить, что нет параллельного деплоя: `ssh "$PROD_SSH_TARGET" "ls -la $PROD_REMOTE_DIR/.deploy.lock"` (лока быть не должно).
+   - Зафиксировать текущий прод-commit как точку отката: `ssh "$PROD_SSH_TARGET" "cd $PROD_REMOTE_DIR && git rev-parse --short HEAD"` (если фронт-артефакты привязаны к коммиту) и/или запомнить, что свап обратим только пере-сборкой предыдущего коммита.
 2. **Снять baseline здоровья** до деплоя: коды `/` и `/api/travels/` (curl), чтобы было с чем сравнить.
    Полезно прогнать `DEPLOY=0 bash ./build-prod.sh prod` — собрать и пройти guard'ы, НЕ трогая прод;
    если сборка/guard упали — деплой не начинать.

@@ -119,7 +119,8 @@ That script acquires a remote deploy lock, can rebuild `dist/prod`, verifies the
 Manual rollback if needed:
 
 ```bash
-ssh metravel-prod 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'
+source scripts/deploy-target.sh && require_deploy_target
+ssh "$PROD_SSH_TARGET" "cd '$PROD_REMOTE_DIR' && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx"
 ```
 
 ## Post-Deploy
