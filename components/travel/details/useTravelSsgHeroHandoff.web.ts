@@ -128,6 +128,7 @@ export function useTravelSsgHeroHandoff(
     const backdropOverlay = hero.querySelector<HTMLElement>('.ssg-travel-hero-bg')
     const previousPictureStyle = picture?.getAttribute('style') ?? null
     const previousImageStyle = image?.getAttribute('style') ?? null
+    const previousHeroStyle = hero.getAttribute('style')
     const previousBlurStyles = blurLayers.map((layer) => layer.getAttribute('style'))
     const previousBackdropOverlayStyle = backdropOverlay?.getAttribute('style') ?? null
 
@@ -136,6 +137,10 @@ export function useTravelSsgHeroHandoff(
     // smaller square and leaves a large blur-only strip below it. Stretch the
     // existing, already-painted node to the slot; no replacement image request
     // is introduced and the original LCP element remains the foreground owner.
+    // The adopted hero is absolutely positioned but has no z-index of its own.
+    // Without a stacking context its z=0 backdrop children can be painted below
+    // the hero's opaque background, leaving apparently empty letterbox fields.
+    hero.style.isolation = 'isolate'
     if (picture) {
       Object.assign(picture.style, {
         position: 'absolute',
@@ -183,6 +188,7 @@ export function useTravelSsgHeroHandoff(
         placeholder.remove()
       }
       hero.removeAttribute('data-ssg-travel-hero-adopted')
+      restoreInlineStyle(hero, previousHeroStyle)
       restoreInlineStyle(picture, previousPictureStyle)
       restoreInlineStyle(image, previousImageStyle)
       blurLayers.forEach((layer, index) => restoreInlineStyle(layer, previousBlurStyles[index] ?? null))

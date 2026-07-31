@@ -49,6 +49,7 @@ describe('useTravelSsgHeroHandoff (web)', () => {
     expect(document.getElementById('ssg-skeleton')?.getAttribute('data-ssg-hero-adopted')).toBe('true')
     expect(document.querySelector('#ssg-skeleton .ssg-travel-hero-placeholder')).not.toBeNull()
     expect(onAdopted).toHaveBeenCalledTimes(1)
+    expect((adopted as HTMLElement).style.isolation).toBe('isolate')
     expect(adoptedPicture.style.position).toBe('absolute')
     expect(adoptedPicture.style.inset).toBe('0')
     expect(adoptedPicture.style.width).toBe('100%')
@@ -71,6 +72,7 @@ describe('useTravelSsgHeroHandoff (web)', () => {
 
     expect(document.querySelector('[data-ssg-travel-hero-adopted="true"]')).toBeNull()
     expect(document.getElementById('ssg-skeleton-css')).toBeNull()
+    expect((adopted as HTMLElement).getAttribute('style')).toBeNull()
     expect(adoptedPicture.getAttribute('style')).toBeNull()
     expect(adoptedImage.getAttribute('style')).toBeNull()
     expect(adoptedBlurLayers[0].getAttribute('style')).toBeNull()
