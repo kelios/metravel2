@@ -22,6 +22,7 @@ import { useWebHydrationGate } from '@/hooks/useWebHydrationGate';
 import { translate as i18nT } from '@/i18n';
 import { styles } from '@/components/screens/messages/messagesScreen.styles';
 import { useThreadResolution } from '@/components/screens/messages/useThreadResolution';
+import { useMessagesViewportHeight } from '@/components/screens/messages/useMessagesViewportHeight';
 
 
 const InstantSEO = React.lazy(() => import('@/components/seo/LazyInstantSEO'));
@@ -51,9 +52,9 @@ function MessagesScreenContent() {
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady, userId } = useAuth();
     const colors = useThemedColors();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { isMobile } = useResponsive();
     const isDesktop = Platform.OS === 'web' && !isMobile;
+    const { screenRef, viewportHeight } = useMessagesViewportHeight(Platform.OS === 'web' && isFocused);
     const params = useLocalSearchParams<{ userId?: string | string[]; user_id?: string | string[]; threadId?: string | string[] }>();
 
     const [selectedThread, setSelectedThread] = useState<MessageThread | null>(null);
@@ -467,8 +468,14 @@ function MessagesScreenContent() {
     if (isDesktop) {
         return (
             <View
-                testID="messages-page-background"
-                style={[styles.desktopPage, { backgroundColor: colors.background }]}
+                ref={screenRef}
+                testID={isFocused ? 'messages-screen' : undefined}
+                style={[
+                    styles.desktopPage,
+                    styles.webViewportBounded,
+                    viewportHeight != null ? { height: viewportHeight, maxHeight: viewportHeight } : null,
+                    { backgroundColor: colors.background },
+                ]}
             >
                 <View testID="messages-desktop-shell" style={styles.desktopContainer}>
                     {seoBlock}
@@ -492,7 +499,16 @@ function MessagesScreenContent() {
 
     // Mobile: стековая компоновка
     return (
-        <View style={[styles.mobileContainer, { backgroundColor: colors.background }]}>
+        <View
+            ref={screenRef}
+            testID={isFocused ? 'messages-screen' : undefined}
+            style={[
+                styles.mobileContainer,
+                Platform.OS === 'web' ? styles.webViewportBounded : null,
+                viewportHeight != null ? { height: viewportHeight, maxHeight: viewportHeight } : null,
+                { backgroundColor: colors.background },
+            ]}
+        >
             {seoBlock}
             {showPicker ? (
                 <NewConversationPicker

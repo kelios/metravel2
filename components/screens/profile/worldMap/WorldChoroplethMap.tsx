@@ -357,14 +357,20 @@ function WorldChoroplethMapComponent({
   const pointersRef = React.useRef<Map<number, { x: number; y: number }>>(new Map())
   const pinchDistRef = React.useRef(0)
 
-  // Web-only: колесо. React вешает `wheel` как passive-listener на корень,
+  // Web-only: колесо + touch. React вешает `wheel` как passive-listener на корень,
   // поэтому preventDefault() в React-onWheel игнорируется → страница скроллится
-  // ПОВЕРХ зума. Вешаем нативный listener с { passive: false } прямо на DOM-узел.
+  // ПОВЕРХ зума. На iOS WebKit touch-derived Pointer Events могут отмениться до
+  // первого move, поэтому палец ведём через raw touch events с passive:false.
   const containerRef = React.useRef<View | null>(null)
   const zoomRef = React.useRef(zoom)
   zoomRef.current = zoom
+  const isWebZoomEnabled = Platform.OS === 'web' && Boolean(zoom)
+  const setCursor = useCallback((value: 'grab' | 'grabbing') => {
+    const node = containerRef.current as unknown as HTMLElement | null
+    if (node?.style) node.style.cursor = value
+  }, [])
   React.useEffect(() => {
-    if (Platform.OS !== 'web' || !zoom) return
+    if (!isWebZoomEnabled) return
     const node = containerRef.current as unknown as HTMLElement | null
     if (!node || typeof node.addEventListener !== 'function') return
     // Отдаём браузеру знать, что жесты (пан/пинч) обрабатываем сами — иначе
@@ -384,14 +390,103 @@ function WorldChoroplethMapComponent({
       const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15
       z.zoomAtPoint(factor, fx, fy, false)
     }
+    const syncTouchPoints = (touches: TouchList) => {
+      const points = pointersRef.current
+      points.clear()
+      for (const touch of Array.from(touches)) {
+        points.set(touch.identifier, { x: touch.clientX, y: touch.clientY })
+      }
+      return points
+    }
+    const getPinchDistance = (points: Map<number, { x: number; y: number }>) => {
+      const [a, b] = [...points.values()]
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0
+    }
+    const onTouchStart = (event: TouchEvent) => {
+      const points = syncTouchPoints(event.touches)
+      if (points.size === 0) return
+      setCursor('grabbing')
+      if (points.size === 1) {
+        const point = points.values().next().value
+        if (point) dragRef.current = { ...point, moved: false }
+        pinchDistRef.current = 0
+      } else {
+        pinchDistRef.current = getPinchDistance(points)
+      }
+    }
+    const onTouchMove = (event: TouchEvent) => {
+      const z = zoomRef.current
+      if (!z) return
+      const points = syncTouchPoints(event.touches)
+      if (points.size === 0) return
+
+      // WebKit принимает решение о системном scroll/zoom синхронно на touchmove.
+      // Listener обязан быть non-passive, иначе дальнейшие move могут не дойти.
+      if (event.cancelable) event.preventDefault()
+
+      const layout = layoutRef.current
+      const k = 1 / Math.max(0.0001, layout.scale)
+      if (points.size >= 2) {
+        const [a, b] = [...points.values()]
+        const distance = getPinchDistance(points)
+        const previousDistance = pinchDistRef.current
+        pinchDistRef.current = distance
+        if (a && b && previousDistance > 0 && distance > 0) {
+          const rect = node.getBoundingClientRect()
+          const midX = (a.x + b.x) / 2
+          const midY = (a.y + b.y) / 2
+          const fx = (
+            (midX - rect.left - layout.offsetX) * k - z.translateX.value
+          ) / z.scale.value
+          const fy = (
+            (midY - rect.top - layout.offsetY) * k - z.translateY.value
+          ) / z.scale.value
+          z.zoomAtPoint(distance / previousDistance, fx, fy, false)
+        }
+        dragRef.current.moved = true
+        return
+      }
+
+      const point = points.values().next().value
+      if (!point) return
+      const drag = dragRef.current
+      const dx = point.x - drag.x
+      const dy = point.y - drag.y
+      if (!drag.moved && Math.abs(dx) < 5 && Math.abs(dy) < 5) return
+      drag.moved = true
+      z.panBy(dx * k, dy * k)
+      drag.x = point.x
+      drag.y = point.y
+    }
+    const onTouchEnd = (event: TouchEvent) => {
+      const points = syncTouchPoints(event.touches)
+      if (points.size < 2) pinchDistRef.current = 0
+      if (points.size === 1) {
+        const point = points.values().next().value
+        if (point) dragRef.current = { ...point, moved: true }
+      } else if (points.size === 0) {
+        setCursor('grab')
+      }
+    }
     node.addEventListener('wheel', onWheel, { passive: false })
-    return () => node.removeEventListener('wheel', onWheel)
-  }, [zoom, fillParent])
+    node.addEventListener('touchstart', onTouchStart, { passive: true })
+    node.addEventListener('touchmove', onTouchMove, { passive: false })
+    node.addEventListener('touchend', onTouchEnd, { passive: true })
+    node.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    return () => {
+      node.removeEventListener('wheel', onWheel)
+      node.removeEventListener('touchstart', onTouchStart)
+      node.removeEventListener('touchmove', onTouchMove)
+      node.removeEventListener('touchend', onTouchEnd)
+      node.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [isWebZoomEnabled, fillParent, setCursor])
 
   type WebPointerEvent = {
     clientX: number
     clientY: number
     pointerId: number
+    pointerType?: string
     currentTarget: unknown
   }
   type WebClickEvent = {
@@ -400,10 +495,6 @@ function WorldChoroplethMapComponent({
     target: unknown
     currentTarget: unknown
   }
-  const setCursor = useCallback((value: 'grab' | 'grabbing') => {
-    const node = containerRef.current as unknown as HTMLElement | null
-    if (node?.style) node.style.cursor = value
-  }, [])
   const selectCountryAtClientPoint = useCallback(
     (clientX: number, clientY: number, currentTarget: unknown) => {
       if (!onCountryPress) return
@@ -459,6 +550,8 @@ function WorldChoroplethMapComponent({
     Platform.OS === 'web' && zoom
       ? {
           onPointerDown: (e: WebPointerEvent) => {
+            // Touch uses the raw non-passive path above for iOS/Android web.
+            if (e.pointerType === 'touch') return
             const pts = pointersRef.current
             pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
             const target = e.currentTarget as {
@@ -480,6 +573,7 @@ function WorldChoroplethMapComponent({
             }
           },
           onPointerMove: (e: WebPointerEvent) => {
+            if (e.pointerType === 'touch') return
             const pts = pointersRef.current
             if (!pts.has(e.pointerId)) return
             pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -516,9 +610,15 @@ function WorldChoroplethMapComponent({
             d.x = e.clientX
             d.y = e.clientY
           },
-          onPointerUp: (e: WebPointerEvent) => endPointer(e.pointerId),
-          onPointerCancel: (e: WebPointerEvent) => endPointer(e.pointerId),
-          onPointerLeave: (e: WebPointerEvent) => endPointer(e.pointerId),
+          onPointerUp: (e: WebPointerEvent) => {
+            if (e.pointerType !== 'touch') endPointer(e.pointerId)
+          },
+          onPointerCancel: (e: WebPointerEvent) => {
+            if (e.pointerType !== 'touch') endPointer(e.pointerId)
+          },
+          onPointerLeave: (e: WebPointerEvent) => {
+            if (e.pointerType !== 'touch') endPointer(e.pointerId)
+          },
           onClick: (e: WebClickEvent) => {
             if (dragRef.current.moved) return
             const target = e.target as Element | null
@@ -536,7 +636,9 @@ function WorldChoroplethMapComponent({
         fillParent
           ? { width: '100%', height: '100%', flex: 1 }
           : { width: '100%', aspectRatio: WORLD_MAP_WIDTH / WORLD_MAP_HEIGHT },
-        Platform.OS === 'web' && zoom ? ({ cursor: 'grab' } as object) : null,
+        Platform.OS === 'web' && zoom
+          ? ({ cursor: 'grab', touchAction: 'none', userSelect: 'none' } as object)
+          : null,
         style,
       ]}
       onLayout={onLayout}

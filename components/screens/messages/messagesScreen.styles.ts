@@ -4,6 +4,14 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 export const styles = StyleSheet.create({
     mobileContainer: {
         flex: 1,
+        minHeight: 0,
+    },
+    webViewportBounded: {
+        flexBasis: 'auto',
+        flexGrow: 0,
+        flexShrink: 0,
+        minHeight: 0,
+        overflow: 'hidden',
     },
     hydrationFallback: {
         alignItems: 'center',

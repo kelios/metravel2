@@ -152,6 +152,26 @@ export const SelectedDateFilter = memo(function SelectedDateFilter({
   )
 })
 
+const getRemovalActionLabel = (entry: CalendarEntry, includeTitle: boolean): string | null => {
+  const title = cleanTravelTitle(entry.title, entry.country)
+  if (!entry.isAuthoredTravel) {
+    return includeTitle
+      ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_kalendarya_98ed1985', { value1: title })
+      : i18nT('calendar:components.screens.calendar.calendarScreen_parts.udalit_iz_kalendarya_0cdea23e')
+  }
+  if (entry.status === 'planned') {
+    return includeTitle
+      ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_planov_d4f20adb', { value1: title })
+      : i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_iz_planov_8388e107')
+  }
+  if (entry.status === 'wishlist') {
+    return includeTitle
+      ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_hochu_ef3ab915', { value1: title })
+      : i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_iz_hochu_6185bb2e')
+  }
+  return null
+}
+
 export const CalendarTravelCard = memo(function CalendarTravelCard({
   entry,
   colors,
@@ -177,6 +197,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
   const travelPeriod = getTravelPeriodLabel(entry)
   const explicitDate = getExplicitTravelStatusDate(entry)
   const isWishlist = entry.status === 'wishlist'
+  const removalLabel = getRemovalActionLabel(entry, true)
   const dateMetaLabel = explicitDate
     ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.data_value1_c4a5ab0c', { value1: explicitDate })
     : isWishlist
@@ -228,15 +249,21 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
         }}
       />
 
-      <Pressable
-        style={[styles.removeBadge, globalFocusStyles.focusable]}
-        onPress={(event) => onRemove(entry, event)}
-        accessibilityRole="button"
-        accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_kalendarya_98ed1985', { value1: cleanTravelTitle(entry.title, entry.country) })}
-        {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
-      >
-        <Feather name="trash-2" size={15} color={colors.danger} />
-      </Pressable>
+      {removalLabel ? (
+        <Pressable
+          style={[styles.removeBadge, globalFocusStyles.focusable]}
+          onPress={(event) => onRemove(entry, event)}
+          accessibilityRole="button"
+          accessibilityLabel={removalLabel}
+          {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
+        >
+          <Feather
+            name={entry.isAuthoredTravel ? 'x' : 'trash-2'}
+            size={15}
+            color={entry.isAuthoredTravel ? colors.primaryDark : colors.danger}
+          />
+        </Pressable>
+      ) : null}
 
       {moderationBadge && (
         <View
@@ -308,7 +335,8 @@ export function DateEditorModal({
   const item = editor?.item
   const selectedStatus = editor?.status ?? item?.status
   const canClearDate = item ? Boolean(getExplicitTravelStatusDate(item)) : false
-  const canRemoveStatus = Boolean(item)
+  const removalLabel = item ? getRemovalActionLabel(item, false) : null
+  const isAuthoredReset = Boolean(item?.isAuthoredTravel)
   const subtitle = getDateEditorSubtitle(selectedStatus)
   const needsDateInput = selectedStatus !== 'wishlist'
 
@@ -403,15 +431,19 @@ export function DateEditorModal({
               </Pressable>
             </View>
 
-            {canRemoveStatus && (
+            {removalLabel && (
               <Pressable
-                style={[styles.dateDangerButton, globalFocusStyles.focusable]}
+                style={[
+                  styles.dateDangerButton,
+                  isAuthoredReset && { backgroundColor: colors.primaryLight, borderColor: colors.primaryAlpha30 },
+                  globalFocusStyles.focusable,
+                ]}
                 onPress={onRemove}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.udalit_iz_kalendarya_0cdea23e')}
+                accessibilityLabel={removalLabel}
               >
-                <Feather name="trash-2" size={15} color={colors.danger} />
-                <Text style={styles.dateDangerText}>{i18nT('calendar:components.screens.calendar.calendarScreen_parts.udalit_iz_kalendarya_0cdea23e')}</Text>
+                <Feather name={isAuthoredReset ? 'x' : 'trash-2'} size={15} color={isAuthoredReset ? colors.primaryDark : colors.danger} />
+                <Text style={[styles.dateDangerText, isAuthoredReset && { color: colors.primaryDark }]}>{removalLabel}</Text>
               </Pressable>
             )}
           </Pressable>

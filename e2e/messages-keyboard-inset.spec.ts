@@ -3,21 +3,21 @@ import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
 import { simpleEncrypt, mockFakeAuthApis } from './helpers/auth';
 
 // ---------------------------------------------------------------------------
-// Mobile web: экранная клавиатура НЕ сжимает layout viewport, поэтому композер
-// чата остаётся под ней. Настоящее перекрытие видно только через visualViewport
-// (см. hooks/useWebKeyboardInset). Playwright не умеет открывать системную
-// клавиатуру, поэтому подменяем visualViewport управляемой заглушкой и проверяем
-// главное: поле ввода и кнопка «Отправить» уезжают выше кромки клавиатуры.
+// Mobile web: экранная клавиатура НЕ сжимает layout viewport. MessagesScreen
+// теперь следует за реальной высотой visualViewport. Playwright не умеет открыть
+// системную клавиатуру, поэтому подменяем viewport управляемой заглушкой и
+// проверяем геометрию экрана, списка и композера напрямую.
 // ---------------------------------------------------------------------------
 
 const USER = { id: 1, name: 'Юлия' };
 const OTHER = { id: 2, name: 'Алексей Петров' };
 const THREAD_ID = 10;
 const KEYBOARD_HEIGHT = 320;
+const BROWSER_CHROME_HEIGHT = 96;
 
 declare global {
     interface Window {
-        __setKeyboardHeight?: (height: number) => void;
+        __setVisualViewportInset?: (height: number) => void;
     }
 }
 
@@ -59,7 +59,7 @@ async function installVisualViewportStub(page: Page) {
             },
         };
         Object.defineProperty(window, 'visualViewport', { value: fake, configurable: true });
-        window.__setKeyboardHeight = (height: number) => {
+        window.__setVisualViewportInset = (height: number) => {
             fake.height = window.innerHeight - height;
             (listeners.resize || []).forEach((cb) => cb(new Event('resize')));
         };
@@ -86,11 +86,19 @@ async function installMocks(page: Page) {
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([thread]) });
     });
 
+    const messages = Array.from({ length: 40 }, (_, index) => ({
+        id: 100 + index,
+        thread: THREAD_ID,
+        sender: index % 2 === 0 ? USER.id : OTHER.id,
+        text: `Тестовое сообщение ${index + 1}`,
+        created_at: new Date(Date.UTC(2026, 7, 1, 12, index)).toISOString(),
+    }));
+
     await page.route('**/api/messages/**', (route) =>
         route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify({ count: 0, next: null, previous: null, results: [] }),
+            body: JSON.stringify({ count: messages.length, next: null, previous: null, results: messages }),
         }),
     );
 }
@@ -99,7 +107,7 @@ base.describe('Messages — composer vs mobile web keyboard', () => {
     let context: BrowserContext;
     let page: Page;
 
-    base.beforeAll(async ({ browser }) => {
+    base.beforeEach(async ({ browser }) => {
         context = await browser.newContext({
             storageState: undefined,
             viewport: { width: 390, height: 844 },
@@ -114,7 +122,7 @@ base.describe('Messages — composer vs mobile web keyboard', () => {
         await preacceptCookies(page);
     });
 
-    base.afterAll(async () => {
+    base.afterEach(async () => {
         await context?.close();
     });
 
@@ -130,7 +138,7 @@ base.describe('Messages — composer vs mobile web keyboard', () => {
         expect(restingInput).not.toBeNull();
         expect(restingInput!.y + restingInput!.height).toBeGreaterThan(viewportHeight - KEYBOARD_HEIGHT);
 
-        await page.evaluate((height) => window.__setKeyboardHeight?.(height), KEYBOARD_HEIGHT);
+        await page.evaluate((height) => window.__setVisualViewportInset?.(height), KEYBOARD_HEIGHT);
         await page.waitForTimeout(300);
 
         const keyboardTop = viewportHeight - KEYBOARD_HEIGHT;
@@ -142,9 +150,99 @@ base.describe('Messages — composer vs mobile web keyboard', () => {
         expect(liftedSend!.y + liftedSend!.height).toBeLessThanOrEqual(keyboardTop);
 
         // Клавиатура закрылась — композер возвращается на место.
-        await page.evaluate(() => window.__setKeyboardHeight?.(0));
+        await page.evaluate(() => window.__setVisualViewportInset?.(0));
         await page.waitForTimeout(300);
         const restoredInput = await input.boundingBox();
         expect(restoredInput!.y + restoredInput!.height).toBeGreaterThan(keyboardTop);
     });
+
+    base('keeps the document fixed and scrolls only the message list under browser chrome', async () => {
+        await gotoWithRetry(page, `/messages?userId=${OTHER.id}`);
+        await page.getByTestId('messages-scroll-list').waitFor({ state: 'visible', timeout: 30_000 });
+        await page.evaluate(
+            (height) => window.__setVisualViewportInset?.(height),
+            BROWSER_CHROME_HEIGHT,
+        );
+
+        await expect.poll(() => page.getByTestId('messages-screen').evaluate((element) => {
+            const viewport = window.visualViewport;
+            const viewportBottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight);
+            return Math.abs(Math.round(element.getBoundingClientRect().bottom - viewportBottom));
+        })).toBeLessThanOrEqual(1);
+        await expect.poll(() => page.evaluate(() => ({
+            overflowY: getComputedStyle(document.body).overflowY,
+            overscrollBehaviorY: getComputedStyle(document.body).overscrollBehaviorY,
+        }))).toEqual({ overflowY: 'hidden', overscrollBehaviorY: 'none' });
+
+        const list = page.getByTestId('messages-scroll-list');
+        const chatHeader = page.getByText(OTHER.name, { exact: true }).first();
+        const composer = page.getByTestId('message-composer');
+        const before = await Promise.all([chatHeader.boundingBox(), composer.boundingBox()]);
+
+        const scrollState = await list.evaluate((element) => {
+            const beforeScrollTop = element.scrollTop;
+            element.scrollTop = beforeScrollTop + 160;
+            return {
+                beforeScrollTop,
+                afterScrollTop: element.scrollTop,
+                clientHeight: element.clientHeight,
+                scrollHeight: element.scrollHeight,
+                pageScrollY: window.scrollY,
+            };
+        });
+
+        const listBox = await list.boundingBox();
+        expect(listBox).not.toBeNull();
+        await list.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+        });
+        await page.mouse.move(
+            listBox!.x + listBox!.width / 2,
+            listBox!.y + listBox!.height / 2,
+        );
+        await page.mouse.wheel(0, 400);
+
+        const after = await Promise.all([chatHeader.boundingBox(), composer.boundingBox()]);
+        expect(scrollState.scrollHeight).toBeGreaterThan(scrollState.clientHeight);
+        expect(scrollState.afterScrollTop).not.toBe(scrollState.beforeScrollTop);
+        expect(scrollState.pageScrollY).toBe(0);
+        await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+        expect(after).toEqual(before);
+
+        await page.evaluate(() => window.__setVisualViewportInset?.(0));
+        await page.getByRole('link', { name: 'MeTravel логотип' }).click();
+        await expect(page).toHaveURL(/\/$/);
+        await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).overflowY))
+            .not.toBe('hidden');
+    });
+
+    for (const scenario of [
+        { label: 'small phone', width: 320, height: 700, keyboardHeight: 240 },
+        { label: 'tablet', width: 820, height: 1180, keyboardHeight: 360 },
+        { label: 'desktop', width: 1280, height: 800, keyboardHeight: 96 },
+    ]) {
+        base(`tracks the visible viewport on ${scenario.label} width`, async () => {
+            await page.setViewportSize({ width: scenario.width, height: scenario.height });
+            await gotoWithRetry(page, `/messages?userId=${OTHER.id}`);
+
+            const screen = page.getByTestId('messages-screen');
+            const input = page.getByLabel('Поле ввода сообщения');
+            await input.waitFor({ state: 'visible', timeout: 30_000 });
+            await page.evaluate(
+                (height) => window.__setVisualViewportInset?.(height),
+                scenario.keyboardHeight,
+            );
+
+            const visibleBottom = scenario.height - scenario.keyboardHeight;
+            await expect.poll(() => screen.evaluate((element) => {
+                const viewport = window.visualViewport;
+                const viewportBottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight);
+                return Math.abs(Math.round(element.getBoundingClientRect().bottom - viewportBottom));
+            })).toBeLessThanOrEqual(1);
+            await expect.poll(async () => {
+                const box = await input.boundingBox();
+                return box ? Math.round(box.y + box.height) : Number.POSITIVE_INFINITY;
+            }).toBeLessThanOrEqual(visibleBottom);
+        });
+    }
 });

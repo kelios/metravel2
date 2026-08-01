@@ -122,7 +122,7 @@ function OptimizedLCPHeroInner({
   const responsive = buildResponsiveImagePropsPreferringMedia(media ?? null, baseSrc, {
     maxWidth: targetWidth,
     widths: lcpWidths,
-    quality: isMobile ? 72 : 82,
+    quality: isMobile ? IMAGE_QUALITY.small : IMAGE_QUALITY.large,
     fit: 'contain',
     sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px',
   });

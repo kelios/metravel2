@@ -448,22 +448,23 @@ select:focus-visible {
 }
 
 /* Messages chat composer (mobile web): the global dock is hidden on /messages, so
-   the composer sits at the very viewport bottom. Reserve safe-area + extra space
-   so the input and send button stay above browser bottom chrome / gesture bars
-   (in-app browsers overlay the bottom edge of the page).
-   `--mt-keyboard-inset` is the measured soft-keyboard overlap (hooks/useWebKeyboardInset):
-   the keyboard does not shrink the layout viewport, so without it the composer
-   stays pinned underneath the keyboard. This rule is `!important`, so the inline
-   padding React Native Web writes cannot lift the composer on its own. */
+   the composer sits at the visible viewport bottom. MessagesScreen follows
+   visualViewport for browser chrome and keyboard changes; this rule only keeps
+   the input above the safe-area / gesture bar. */
 :root {
   --mt-keyboard-inset: 0px;
 }
 @media (max-width: 1023px) {
+  /* /messages owns a viewport-bounded FlatList. Keep Safari's document itself
+     fixed so swipes move only the conversation, never the global header/composer. */
+  body:has([data-testid="messages-screen"]) {
+    overflow-y: hidden !important;
+    overscroll-behavior-y: none;
+  }
+
   [data-testid="message-composer"],
   [data-testid="message-composer-disabled"] {
-    padding-bottom: calc(
-      16px + env(safe-area-inset-bottom, 0px) + var(--mt-keyboard-inset, 0px)
-    ) !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 

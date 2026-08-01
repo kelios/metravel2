@@ -137,7 +137,7 @@ export function getMediaPlaceholderData(
 }
 
 export interface MediaResponsiveOptions {
-  widths?: number[]
+  widths?: readonly number[]
   maxWidth?: number
   sizes?: string
   /**

@@ -146,7 +146,7 @@ describe('PhotoUploadWithPreview', () => {
             );
         });
 
-        it('should display placeholder text when provided', () => {
+        it('should display placeholder text when provided', async () => {
             const customPlaceholder = 'Перетащите фото точки маршрута';
             Object.defineProperty(Platform, 'OS', { value: 'web' });
             const dimensionsSpy = jest
@@ -159,13 +159,14 @@ describe('PhotoUploadWithPreview', () => {
                         placeholder={customPlaceholder}
                     />
                 );
-                expect(screen.getByText(customPlaceholder)).toBeTruthy();
+                // #1148: web-вью грузится через React.lazy — ждём резолва чанка.
+                expect(await screen.findByText(customPlaceholder)).toBeTruthy();
             } finally {
                 dimensionsSpy.mockRestore();
             }
         });
 
-        it('web mobile: replaces the dropzone with gallery and camera actions', () => {
+        it('web mobile: replaces the dropzone with gallery and camera actions', async () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
             const dimensionsSpy = jest
                 .spyOn(require('@/hooks/useResponsive'), 'useResponsiveWidth')
@@ -174,7 +175,8 @@ describe('PhotoUploadWithPreview', () => {
             try {
                 const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
 
-                expect(screen.getByText('Выбрать из галереи')).toBeTruthy();
+                // #1148: кнопки рендерит ленивый WebDropzoneView — ждём его маунта.
+                expect(await screen.findByText('Выбрать из галереи')).toBeTruthy();
                 expect(screen.getByText('Сделать фото')).toBeTruthy();
                 expect(screen.queryByText('Перетащите сюда изображение')).toBeNull();
                 expect(lastDropzoneOptions).toEqual(expect.objectContaining({

@@ -621,7 +621,7 @@ describe('travel hero preload helpers', () => {
     // округления вверх больше нет. Клиентская лестница и это зеркало обновлены одним
     // коммитом; расхождение ловит __tests__/utils/imageProxy.ladder.test.ts, а
     // совпадение с клиентом — __tests__/scripts/travelHeroPreloadParity.test.ts.
-    // Качество по-прежнему снэпится к десятку: q72 → 70, q82 → 80.
+    // Hero сразу использует канонические q70/q80 из storage-policy.
     expect(preload.mobile.href).toContain('https://metravel.by/gallery/77/gallery/photo.JPG');
     expect(preload.mobile.href).toContain('w=720');
     expect(preload.mobile.href).toContain('q=70');
@@ -688,7 +688,7 @@ describe('travel hero preload helpers', () => {
     );
 
     expect(preload.desktop.href).toContain('w=1280');
-    expect(preload.desktop.href).toContain('q=80'); // #1146: q82 снэпится к шагу 10
+    expect(preload.desktop.href).toContain('q=80'); // #1146: канонический desktop hero profile
     expect(preload.desktop.href).toContain('v=991');
   });
 

@@ -1,5 +1,11 @@
 import type { GalleryItem } from './types'
 
+// Общий список web-расширений загрузки: валидация в ImageGallery и accept-карта
+// dropzone в WebGalleryDropzoneControls должны совпадать.
+export const WEB_SUPPORTED_UPLOAD_EXTENSIONS = [
+  '.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif', '.heics', '.heifs',
+]
+
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '')
 

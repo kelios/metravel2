@@ -1,8 +1,21 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { ALL_CONTRACT_WIDTHS, IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract'
-import { optimizeImageUrl, snapProxyQuality, snapProxyWidth } from '@/utils/imageProxy'
+import {
+  ALL_CONTRACT_WIDTHS,
+  ALL_STORED_IMAGE_WIDTHS,
+  IMAGE_QUALITY,
+  IMAGE_STORAGE_FORMAT,
+  IMAGE_STORAGE_POLICY_V1,
+  IMAGE_STORAGE_POLICY_VERSION,
+  IMAGE_WIDTHS,
+} from '@/constants/imageContract'
+import {
+  optimizeImageUrl,
+  PROXY_QUALITY_LADDER,
+  snapProxyQuality,
+  snapProxyWidth,
+} from '@/utils/imageProxy'
 
 /**
  * #1167: контракт размеров обязан быть исполняемым, а не только текстовым.
@@ -13,7 +26,7 @@ import { optimizeImageUrl, snapProxyQuality, snapProxyWidth } from '@/utils/imag
  * устаревал. Здесь то же самое проверяется прогоном.
  *
  * Снимок ступеней — ответ `GET https://metravel.by/api/media/proxy-contract`
- * (`version: 2`) на 2026-07-30; он же зафиксирован в
+ * (`version: 3`) на 2026-08-02; он же зафиксирован в
  * `__tests__/utils/imageProxy.ladder.test.ts`, который сверяет с ним рантайм-лестницу.
  */
 const BACKEND_CONTRACT_WIDTHS = [
@@ -21,8 +34,10 @@ const BACKEND_CONTRACT_WIDTHS = [
 ]
 
 describe('constants/imageContract — набор размеров исполняем (#1167)', () => {
-  it('каждая ширина контракта — ступень лестницы прокси', () => {
-    const offLadder = ALL_CONTRACT_WIDTHS.filter((w) => !BACKEND_CONTRACT_WIDTHS.includes(w))
+  it('каждая frontend- и storage-ширина — ступень лестницы прокси', () => {
+    const offLadder = [...ALL_CONTRACT_WIDTHS, ...ALL_STORED_IMAGE_WIDTHS].filter(
+      (w) => !BACKEND_CONTRACT_WIDTHS.includes(w),
+    )
     expect(offLadder).toEqual([])
   })
 
@@ -35,9 +50,92 @@ describe('constants/imageContract — набор размеров исполня
     }
   })
 
-  it('каждое quality контракта лежит на сетке шага 10 и не квантуется', () => {
+  it('каждое quality контракта — явная ступень proxy-contract и не квантуется', () => {
     for (const [name, quality] of Object.entries(IMAGE_QUALITY)) {
+      expect(PROXY_QUALITY_LADDER).toContain(quality)
       expect({ name, snapped: snapProxyQuality(quality) }).toEqual({ name, snapped: quality })
+    }
+  })
+
+  it('разделяет target S3 policy и переходный proxy-contract', () => {
+    expect({ version: IMAGE_STORAGE_POLICY_VERSION, format: IMAGE_STORAGE_FORMAT }).toEqual({
+      version: 1,
+      format: 'webp',
+    })
+
+    expect(IMAGE_STORAGE_POLICY_V1.travelMedia.master).toEqual({ width: 2500, quality: 85 })
+    expect(IMAGE_STORAGE_POLICY_V1.articleBody.master).toEqual({ width: 1920, quality: 85 })
+    expect(IMAGE_STORAGE_POLICY_V1.questCover).toMatchObject({
+      master: { width: 1200, quality: 85 },
+      derivatives: [
+        { width: 320, quality: 60 },
+        { width: 480, quality: 60 },
+        { width: 640, quality: 60 },
+        { width: 800, quality: 60 },
+      ],
+    })
+    expect(IMAGE_QUALITY.print).toBe(85)
+    expect(IMAGE_QUALITY.heroBackdrop).toBe(40)
+    expect(IMAGE_STORAGE_POLICY_V1.travelMedia.derivatives).toContainEqual({
+      width: IMAGE_WIDTHS.heroBackdrop,
+      quality: IMAGE_QUALITY.small,
+    })
+  })
+
+  it('в каждом storage-profile мастер один, а производные уникальны и отсортированы', () => {
+    for (const [name, profile] of Object.entries(IMAGE_STORAGE_POLICY_V1)) {
+      const derivativeWidths = profile.derivatives.map((variant) => variant.width)
+      expect({ name, derivativeWidths }).toEqual({
+        name,
+        derivativeWidths: [...new Set(derivativeWidths)].sort((a, b) => a - b),
+      })
+      expect({ name, includesMaster: derivativeWidths.includes(profile.master.width) }).toEqual({
+        name,
+        includesMaster: false,
+      })
+      for (const variant of [profile.master, ...profile.derivatives]) {
+        expect(PROXY_QUALITY_LADDER).toContain(variant.quality)
+      }
+    }
+  })
+
+  it('ключевые frontend-наборы покрыты своими storage-profile', () => {
+    const widthsOf = (profile: (typeof IMAGE_STORAGE_POLICY_V1)[keyof typeof IMAGE_STORAGE_POLICY_V1]) =>
+      new Set([profile.master.width, ...profile.derivatives.map((variant) => variant.width)])
+
+    const article = widthsOf(IMAGE_STORAGE_POLICY_V1.articleBody)
+    const travel = widthsOf(IMAGE_STORAGE_POLICY_V1.travelMedia)
+    const quest = widthsOf(IMAGE_STORAGE_POLICY_V1.questCover)
+
+    for (const width of [
+      ...IMAGE_WIDTHS.articleBodyMobile,
+      ...IMAGE_WIDTHS.articleBodyDesktop,
+    ]) {
+      expect({ surface: 'articleBody', width, stored: article.has(width) }).toEqual({
+        surface: 'articleBody',
+        width,
+        stored: true,
+      })
+    }
+    for (const width of [
+      ...IMAGE_WIDTHS.travelHeroMobile,
+      ...IMAGE_WIDTHS.travelHeroDesktop,
+      IMAGE_WIDTHS.heroBackdrop,
+      IMAGE_WIDTHS.printFull,
+      IMAGE_WIDTHS.printInline,
+    ]) {
+      expect({ surface: 'travelMedia', width, stored: travel.has(width) }).toEqual({
+        surface: 'travelMedia',
+        width,
+        stored: true,
+      })
+    }
+    for (const width of IMAGE_WIDTHS.questCover) {
+      expect({ surface: 'questCover', width, stored: quest.has(width) }).toEqual({
+        surface: 'questCover',
+        width,
+        stored: true,
+      })
     }
   })
 

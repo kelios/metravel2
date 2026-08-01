@@ -52,7 +52,7 @@ test.describe('Messages — deterministic user flows', () => {
     await openAuthenticatedMessages(page);
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    const pageBackground = page.getByTestId('messages-page-background');
+    const pageBackground = page.getByTestId('messages-screen');
     const desktopShell = page.getByTestId('messages-desktop-shell');
     const card = page.getByTestId('thread-item-10');
     const deleteButton = page.getByLabel('Удалить диалог с Алексей Петров');
@@ -158,7 +158,7 @@ test.describe('Messages — deterministic user flows', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await openAuthenticatedMessages(page);
 
-    const lightThemeBackgrounds = await page.getByTestId('messages-page-background').evaluate((element) => ({
+    const lightThemeBackgrounds = await page.getByTestId('messages-screen').evaluate((element) => ({
       page: getComputedStyle(element).backgroundColor,
       html: getComputedStyle(document.documentElement).backgroundColor,
     }));

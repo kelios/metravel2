@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, useContext } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo, useContext, Suspense } from 'react'
 import {
   View,
   Platform,
 } from 'react-native'
-import { useDropzone, type FileRejection } from 'react-dropzone'
+import type { FileRejection } from 'react-dropzone'
 import { QueryClientContext } from '@tanstack/react-query'
 
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -28,6 +28,7 @@ import {
   extractBackendImageIdFromUrl,
   isBackendImageId,
   normalizeDisplayUrl,
+  WEB_SUPPORTED_UPLOAD_EXTENSIONS,
 } from './utils'
 import { translate as i18nT } from '@/i18n'
 
@@ -54,15 +55,18 @@ const WEB_SUPPORTED_UPLOAD_TYPES = new Set([
   'image/heif-sequence',
 ])
 
-const WEB_SUPPORTED_UPLOAD_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif', '.heics', '.heifs']
-
-const WEB_GALLERY_DROPZONE_ACCEPT = {
-  'image/*': WEB_SUPPORTED_UPLOAD_EXTENSIONS,
-  'image/heic': ['.heic', '.heics'],
-  'image/heif': ['.heif', '.heifs'],
-  'image/heic-sequence': ['.heics'],
-  'image/heif-sequence': ['.heifs'],
-}
+// #1148: dropzone-хук и accept-карта живут в WebGalleryDropzoneControls,
+// который грузится через React.lazy. Вендор приходит из dropzoneVendor —
+// единственной точки sync-импорта react-dropzone (канон #765/leafletVendor):
+// прямой sync-импорт здесь или в WebDropzoneView делал вендора достижимым из
+// двух async-чанков, и Metro хойстил его обратно в web-__common.
+const WebGalleryDropzoneControls = React.lazy(async () => {
+  const [vendor, mod] = await Promise.all([
+    import('@/utils/dropzoneVendor'),
+    import('./WebGalleryDropzoneControls'),
+  ])
+  return { default: mod.createWebGalleryDropzoneControls(vendor.useDropzone) }
+})
 
 const createRejectedGalleryItem = (
   file: File,
@@ -486,28 +490,19 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     [collection, idTravel, maxImages, validateUploadFile],
   )
 
-  const { getRootProps, getInputProps, isDragActive, open: openFilePicker } = useDropzone({
-    accept: WEB_GALLERY_DROPZONE_ACCEPT,
-    multiple: true,
-    disabled: Platform.OS !== 'web',
-    noClick: isMobileWeb,
-    noKeyboard: isMobileWeb,
-    noDrag: isMobileWeb,
-    onDrop: (acceptedFiles, fileRejections) => {
-      const rejections = Array.isArray(fileRejections) ? fileRejections : []
-
-      if (rejections.length > 0) {
-        const rejectedItems = rejections.map((rejection, index) =>
-          createRejectedGalleryItem(rejection.file, index, getDropRejectionError(rejection)),
-        )
-        setImages((prev) => dedupeGalleryItems([...prev, ...rejectedItems]))
-      }
-
-      if (acceptedFiles.length > 0) {
-        void handleUploadImages(acceptedFiles)
-      }
+  const handleFilesAccepted = useCallback(
+    (files: File[]) => {
+      void handleUploadImages(files)
     },
-  })
+    [handleUploadImages],
+  )
+
+  const handleFilesRejected = useCallback((rejections: FileRejection[]) => {
+    const rejectedItems = rejections.map((rejection, index) =>
+      createRejectedGalleryItem(rejection.file, index, getDropRejectionError(rejection)),
+    )
+    setImages((prev) => dedupeGalleryItems([...prev, ...rejectedItems]))
+  }, [])
 
   const handleCameraInputChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -519,15 +514,6 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     },
     [handleUploadImages],
   )
-
-  const dropzoneRootProps = useCallback(() => {
-    const props = getRootProps()
-    const { tabIndex, ...rest } = props as any
-    return {
-      rootProps: rest,
-      tabIndex: tabIndex as 0 | -1 | undefined,
-    }
-  }, [getRootProps])
 
   const deleteByStableKey = useCallback(async (stableKey: string) => {
     const snapshot = imagesRef.current
@@ -733,8 +719,6 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     setBatchDeleteVisible(false)
   }, [deleteByStableKey])
 
-  const dropzoneProps = dropzoneRootProps()
-
   return (
     <View style={styles.container}>
       {Platform.OS === 'web' ? (
@@ -751,26 +735,51 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
               style={{ display: 'none' }}
             />
           ) : null}
-          <GalleryControls
-            styles={styles}
-            colors={colors}
-            imagesCount={images.length}
-            maxImages={maxImages}
-            isMobileWeb={isMobileWeb}
-            isDragActive={isDragActive}
-            isUploading={batchUploadProgress !== null}
-            dropzone={dropzoneProps}
-            inputProps={getInputProps()}
-            batchUploadProgress={batchUploadProgress}
-            hasErrors={hasErrors}
-            selectableCount={selectableKeys.length}
-            selectedCount={selectedKeys.size}
-            allSelected={allSelected}
-            onSelectFromGallery={openFilePicker}
-            onTakePhoto={() => cameraInputRef.current?.click()}
-            onToggleSelectAll={handleToggleSelectAll}
-            onDeleteSelected={handleDeleteSelected}
-          />
+          <Suspense
+            // Пока dropzone-чанк грузится, показываем те же контролы той же
+            // геометрии без DnD-привязки: кнопки видимы, съёмка работает сразу.
+            fallback={
+              <GalleryControls
+                styles={styles}
+                colors={colors}
+                imagesCount={images.length}
+                maxImages={maxImages}
+                isMobileWeb={isMobileWeb}
+                isDragActive={false}
+                isUploading={batchUploadProgress !== null}
+                dropzone={{ rootProps: {} }}
+                inputProps={{ type: 'file', style: { display: 'none' }, tabIndex: -1 }}
+                batchUploadProgress={batchUploadProgress}
+                hasErrors={hasErrors}
+                selectableCount={selectableKeys.length}
+                selectedCount={selectedKeys.size}
+                allSelected={allSelected}
+                onSelectFromGallery={() => {}}
+                onTakePhoto={() => cameraInputRef.current?.click()}
+                onToggleSelectAll={handleToggleSelectAll}
+                onDeleteSelected={handleDeleteSelected}
+              />
+            }
+          >
+            <WebGalleryDropzoneControls
+              styles={styles}
+              colors={colors}
+              imagesCount={images.length}
+              maxImages={maxImages}
+              isMobileWeb={isMobileWeb}
+              isUploading={batchUploadProgress !== null}
+              batchUploadProgress={batchUploadProgress}
+              hasErrors={hasErrors}
+              selectableCount={selectableKeys.length}
+              selectedCount={selectedKeys.size}
+              allSelected={allSelected}
+              onFilesAccepted={handleFilesAccepted}
+              onFilesRejected={handleFilesRejected}
+              onTakePhoto={() => cameraInputRef.current?.click()}
+              onToggleSelectAll={handleToggleSelectAll}
+              onDeleteSelected={handleDeleteSelected}
+            />
+          </Suspense>
         </>
       ) : null}
 

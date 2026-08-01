@@ -584,7 +584,7 @@ describe('TravelDataTransformer', () => {
       // #1163: первопартийная миниатюра идёт через наш прокси на ступени 1600 —
       // раньше она возвращалась без параметров, то есть мастером целиком.
       expect(String(thumb)).toBe(
-        'https://metravel.by/gallery/5076/conversions/a-thumb.jpg?w=1600&q=90&fit=contain',
+        'https://metravel.by/gallery/5076/conversions/a-thumb.jpg?w=1600&q=85&fit=contain',
       );
       expect(String(thumb)).not.toContain('192.168.50.36');
     });

@@ -162,9 +162,10 @@ function buildVersionedTravelImageUrl(rawUrl, updatedAt, id) {
   }
 }
 
-// Зеркало DIMENSION_LADDER / snapQuality из utils/imageProxy.ts. Клиент округляет
-// запрошенную ширину вверх до ступени прокси, а качество — до десятка, поэтому SSG
-// обязан делать то же самое: иначе preload греет `?w=720&q=72`, а `<img>` просит
+// Зеркало DIMENSION_LADDER / PROXY_QUALITY_LADDER из utils/imageProxy.ts.
+// Клиент округляет ширину и quality вверх до опубликованной ступени proxy
+// (включая отдельную q85), поэтому SSG
+// обязан делать то же самое: иначе preload греет неканонический URL, а `<img>` просит
 // `?w=800&q=70`, и hero приезжает вторым файлом (ровно та проблема, из-за которой
 // preload был бесполезен до #1116).
 // Расхождение этих двух копий ловится тестом
@@ -184,9 +185,15 @@ function snapProxyWidth(value) {
   return PROXY_DIMENSION_LADDER[PROXY_DIMENSION_LADDER.length - 1];
 }
 
+const PROXY_QUALITY_LADDER = [20, 30, 40, 50, 60, 70, 80, 85, 90];
+
 function snapProxyQuality(value) {
-  const q = Math.min(100, Math.max(1, Math.round(value)));
-  return Math.min(100, Math.max(10, Math.round(q / 10) * 10));
+  const q = Math.round(value);
+  const min = PROXY_QUALITY_LADDER[0];
+  const max = PROXY_QUALITY_LADDER[PROXY_QUALITY_LADDER.length - 1];
+  if (!Number.isFinite(q) || q < min || q > max) return 85;
+
+  return PROXY_QUALITY_LADDER.find((candidate) => candidate >= q) || 85;
 }
 
 function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
@@ -475,9 +482,9 @@ function buildTravelHeroPreloadData(travel, detail) {
   // IMPORTANT: these descriptors MUST match the image the LCP <img> actually
   // requests, otherwise the preload downloads a different file and is wasted
   // (the real LCP image then only starts after hydration → slow LCP).
-  // Source of truth: TravelDetailsOptimizedLCPHero.tsx (q72 mobile / q82 desktop,
+  // Source of truth: TravelDetailsOptimizedLCPHero.tsx (q70 mobile / q80 desktop,
   // widths [320,480,640,720] mobile / [720,960,1280] desktop) and
-  // sliderParts/utils.ts buildUriWeb (same q72/q82 for the first slide).
+  // sliderParts/utils.ts buildUriWeb (same q70/q80 for the first slide).
   //
   // #1116: клиент начинает с backend-манифеста, поэтому при его наличии preload обязан
   // брать те же варианты — иначе descriptors расходятся и preload греет чужой файл.
@@ -491,7 +498,7 @@ function buildTravelHeroPreloadData(travel, detail) {
     manifestMobile?.href ||
     buildOptimizedTravelImageUrl(source.url, {
       width: 720,
-      quality: 72,
+      quality: 70,
       updatedAt: source.updatedAt,
       id: source.id,
     });
@@ -499,7 +506,7 @@ function buildTravelHeroPreloadData(travel, detail) {
     manifestDesktop?.href ||
     buildOptimizedTravelImageUrl(source.url, {
       width: 1280,
-      quality: 82,
+      quality: 80,
       updatedAt: source.updatedAt,
       id: source.id,
     });
@@ -536,7 +543,7 @@ function buildTravelHeroPreloadData(travel, detail) {
           srcSet:
             manifestMobile?.srcSet ||
             buildTravelHeroSrcSet(source.url, [320, 480, 640, 720], {
-              quality: 72,
+              quality: 70,
               updatedAt: source.updatedAt,
               id: source.id,
             }),
@@ -549,7 +556,7 @@ function buildTravelHeroPreloadData(travel, detail) {
           srcSet:
             manifestDesktop?.srcSet ||
             buildTravelHeroSrcSet(source.url, [720, 960, 1280], {
-              quality: 82,
+              quality: 80,
               updatedAt: source.updatedAt,
               id: source.id,
             }),

@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures'
+import { devices } from '@playwright/test'
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 
@@ -186,8 +187,8 @@ test('пинч двумя пальцами зумит карту (mobile web)', 
 
   const before = await getScale()
 
-  // Симуляция двух пальцев: два pointerdown с разными pointerId на контейнере
-  // карты (div c нашими onPointerDown/Move), затем «разведение» → пинч-зум.
+  // Raw touch-последовательность повторяет mobile Safari path: два пальца на
+  // контейнере карты, затем «разведение» → пинч-зум.
   const res = await page.evaluate(() => {
     const svg = document.getElementById('wc-BY')?.closest('svg') as SVGSVGElement | null
     const node = svg?.parentElement as HTMLElement | null
@@ -195,29 +196,51 @@ test('пинч двумя пальцами зумит карту (mobile web)', 
     const r = node.getBoundingClientRect()
     const cx = r.left + r.width / 2
     const cy = r.top + r.height / 2
-    const fire = (type: string, id: number, x: number, y: number) =>
-      node.dispatchEvent(
-        new PointerEvent(type, {
-          bubbles: true,
-          cancelable: true,
-          pointerId: id,
-          pointerType: 'touch',
-          clientX: x,
-          clientY: y,
-        })
-      )
+    type TouchPoint = { identifier: number; clientX: number; clientY: number }
+    let previousTouchList: Array<Record<string, unknown>> = []
+    const fire = (type: 'touchstart' | 'touchmove' | 'touchend', points: TouchPoint[]) => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      const touchList = points.map((touch) => ({
+        ...touch,
+        target: node,
+        force: 1,
+        radiusX: 1,
+        radiusY: 1,
+        rotationAngle: 0,
+        pageX: touch.clientX,
+        pageY: touch.clientY,
+        screenX: touch.clientX,
+        screenY: touch.clientY,
+      }))
+      Object.defineProperties(event, {
+        touches: { value: touchList },
+        targetTouches: { value: touchList },
+        changedTouches: { value: type === 'touchend' ? previousTouchList : touchList },
+      })
+      const dispatched = node.dispatchEvent(event)
+      previousTouchList = touchList
+      return { dispatched, defaultPrevented: event.defaultPrevented }
+    }
     // Два пальца на расстоянии 80px.
-    fire('pointerdown', 1, cx - 40, cy)
-    fire('pointerdown', 2, cx + 40, cy)
+    fire('touchstart', [
+      { identifier: 1, clientX: cx - 40, clientY: cy },
+      { identifier: 2, clientX: cx + 40, clientY: cy },
+    ])
     // Разводим до 200px (factor ≈ 2.5) в два шага.
-    fire('pointermove', 2, cx + 90, cy)
-    fire('pointermove', 2, cx + 160, cy)
-    fire('pointerup', 1, cx - 40, cy)
-    fire('pointerup', 2, cx + 160, cy)
-    return { rectW: r.width }
+    fire('touchmove', [
+      { identifier: 1, clientX: cx - 40, clientY: cy },
+      { identifier: 2, clientX: cx + 90, clientY: cy },
+    ])
+    const lastMove = fire('touchmove', [
+      { identifier: 1, clientX: cx - 40, clientY: cy },
+      { identifier: 2, clientX: cx + 160, clientY: cy },
+    ])
+    fire('touchend', [])
+    return { rectW: r.width, defaultPrevented: lastMove.defaultPrevented }
   })
   console.log('PINCH res', JSON.stringify(res))
 
+  expect(res.defaultPrevented).toBe(true)
   await page.waitForTimeout(300)
   const after = await getScale()
   console.log('PINCH scale', before, '->', after)
@@ -315,4 +338,139 @@ test('fullscreen mobile map fills viewport and keeps flag overlay anchored', asy
   expect(metrics.mapHeight).toBeGreaterThan(metrics.innerHeight * 0.65)
   expect(metrics.flagDx).toBeLessThan(90)
   expect(metrics.flagDy).toBeLessThan(90)
+})
+
+test('fullscreen mobile map pans with a one-finger touch drag', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openMapTab(page)
+
+  await page.locator('[aria-label="Открыть карту во весь экран"]').first().click()
+  await expect(page.getByLabel('Закрыть полноэкранную карту')).toBeVisible({ timeout: 5000 })
+  await page.waitForTimeout(700)
+
+  const before = await page.evaluate(() => {
+    const maps = Array.from(document.querySelectorAll<SVGSVGElement>('svg')).filter(
+      (svg) => svg.querySelectorAll('path[id^="wc-"]').length >= 150,
+    )
+    const svg = maps.sort(
+      (left, right) => right.getBoundingClientRect().height - left.getBoundingClientRect().height,
+    )[0]
+    const node = svg?.parentElement
+    if (!svg || !node) return { error: 'missing-fullscreen-map', transform: '' }
+
+    const getTransform = () =>
+      Array.from(svg.querySelectorAll('g'))
+        .map((group) => group.getAttribute('transform') || '')
+        .find((transform) => /scale\([0-9.]+\)\s*$/.test(transform)) || ''
+    let previousTouchList: Array<Record<string, unknown>> = []
+    const fireTouch = (
+      type: 'touchstart' | 'touchmove' | 'touchend',
+      touches: Array<{ identifier: number; clientX: number; clientY: number }>,
+    ) => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      const touchList = touches.map((touch) => ({
+        ...touch,
+        target: node,
+        force: 1,
+        radiusX: 1,
+        radiusY: 1,
+        rotationAngle: 0,
+        pageX: touch.clientX,
+        pageY: touch.clientY,
+        screenX: touch.clientX,
+        screenY: touch.clientY,
+      }))
+      const changedTouches = type === 'touchend' ? previousTouchList : touchList
+      Object.defineProperties(event, {
+        touches: { value: touchList },
+        targetTouches: { value: touchList },
+        changedTouches: { value: changedTouches },
+      })
+      node.dispatchEvent(event)
+      previousTouchList = touchList
+    }
+
+    const rect = node.getBoundingClientRect()
+    const startX = rect.left + rect.width * 0.7
+    const y = rect.top + rect.height * 0.45
+    const transform = getTransform()
+    fireTouch('touchstart', [{ identifier: 1, clientX: startX, clientY: y }])
+    fireTouch('touchmove', [{ identifier: 1, clientX: startX - 70, clientY: y }])
+    fireTouch('touchmove', [{ identifier: 1, clientX: startX - 140, clientY: y }])
+    fireTouch('touchend', [])
+    return { transform }
+  })
+
+  expect(before.error).toBeUndefined()
+  await page.waitForTimeout(300)
+  const after = await page.evaluate(() => {
+    const maps = Array.from(document.querySelectorAll<SVGSVGElement>('svg')).filter(
+      (svg) => svg.querySelectorAll('path[id^="wc-"]').length >= 150,
+    )
+    const svg = maps.sort(
+      (left, right) => right.getBoundingClientRect().height - left.getBoundingClientRect().height,
+    )[0]
+    return Array.from(svg?.querySelectorAll('g') ?? [])
+      .map((group) => group.getAttribute('transform') || '')
+      .find((transform) => /scale\([0-9.]+\)\s*$/.test(transform)) || ''
+  })
+  expect(after).not.toBe(before.transform)
+})
+
+test.describe('fullscreen map on a touch phone', () => {
+  const iphone = devices['iPhone 13']
+  test.use({
+    viewport: iphone.viewport,
+    userAgent: iphone.userAgent,
+    hasTouch: true,
+    isMobile: true,
+    deviceScaleFactor: iphone.deviceScaleFactor,
+  })
+
+  test('trusted finger swipe pans the map instead of being cancelled by the browser', async ({ page, context }) => {
+    await openMapTab(page)
+    await page.locator('[aria-label="Открыть карту во весь экран"]').first().click()
+    await expect(page.getByLabel('Закрыть полноэкранную карту')).toBeVisible({ timeout: 5000 })
+    await page.waitForTimeout(700)
+
+    const readMap = () =>
+      page.evaluate(() => {
+        const maps = Array.from(document.querySelectorAll<SVGSVGElement>('svg')).filter(
+          (svg) => svg.querySelectorAll('path[id^="wc-"]').length >= 150,
+        )
+        const svg = maps.sort(
+          (left, right) => right.getBoundingClientRect().height - left.getBoundingClientRect().height,
+        )[0]
+        const node = svg?.parentElement
+        const rect = node?.getBoundingClientRect()
+        const transform = Array.from(svg?.querySelectorAll('g') ?? [])
+          .map((group) => group.getAttribute('transform') || '')
+          .find((value) => /scale\([0-9.]+\)\s*$/.test(value)) || ''
+        return rect
+          ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height, transform }
+          : null
+      })
+
+    const before = await readMap()
+    expect(before).toBeTruthy()
+    const startX = before!.x + before!.width * 0.72
+    const endX = before!.x + before!.width * 0.28
+    const y = before!.y + before!.height * 0.45
+    const cdp = await context.newCDPSession(page)
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: startX, y, id: 1 }],
+    })
+    for (let step = 1; step <= 8; step += 1) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: startX + ((endX - startX) * step) / 8, y, id: 1 }],
+      })
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await page.waitForTimeout(300)
+
+    const after = await readMap()
+    expect(after?.transform).not.toBe(before!.transform)
+  })
 })

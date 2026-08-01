@@ -36,6 +36,8 @@ export type TravelStatusEntry = {
   travelYear?: string
   travelMonth?: string | string[]
   travelMonthName?: string
+  /** Маршрут входит в календарь ещё и как авторский, даже без explicit status. */
+  isAuthoredTravel?: boolean
   moderationState?: TravelModerationState // черновик / на модерации; опубликованные — undefined
   addedAt: number       // timestamp
 }
@@ -173,6 +175,7 @@ const normalizeAuthoredTravelEntry = (item: unknown): TravelStatusEntry | null =
     travelYear,
     travelMonth,
     travelMonthName,
+    isAuthoredTravel: true,
     moderationState: resolveModerationState(item),
   })
 }
@@ -279,6 +282,7 @@ const normalizeServerStatusEntry = (item: unknown): TravelStatusEntry | null => 
     travelYear: normalizeOptionalString(travel.year),
     travelMonth: normalizeTravelMonth(travel.month),
     travelMonthName: normalizeOptionalString(travel.monthName ?? travel.month_name),
+    isAuthoredTravel: false,
     moderationState: resolveModerationState(travel),
   })
 }
@@ -306,6 +310,7 @@ const mergeStatusAndAuthoredEntries = (
       travelYear: entry.travelYear ?? authored.travelYear,
       travelMonth: entry.travelMonth ?? authored.travelMonth,
       travelMonthName: entry.travelMonthName ?? authored.travelMonthName,
+      isAuthoredTravel: true,
       moderationState: entry.moderationState ?? authored.moderationState,
     } : entry)
   })
@@ -405,6 +410,7 @@ export async function setTravelStatus(
   const existing = previous.find((e) => String(e.id) === String(entry.id))
   const newEntry: TravelStatusEntry = normalizeStatusDates({
     ...entry,
+    isAuthoredTravel: entry.isAuthoredTravel ?? existing?.isAuthoredTravel,
     addedAt: existing?.addedAt ?? Date.now(),
   })
   writeEntries(userId, [

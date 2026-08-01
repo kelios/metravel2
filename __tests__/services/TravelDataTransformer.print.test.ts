@@ -41,14 +41,14 @@ describe('TravelDataTransformer print-grade preference (BE #307)', () => {
     ])
     // #1163: обложка книги идёт через наш прокси на печатной ступени 2500 — раньше
     // первопартийный URL возвращался без параметров, то есть мастером целиком.
-    expect(result.travel_image_url).toBe('https://metravel.by/cover-print.webp?w=2500&q=90&fit=contain')
+    expect(result.travel_image_url).toBe('https://metravel.by/cover-print.webp?w=2500&q=85&fit=contain')
   })
 
   it('обложка падает на thumb, когда print отсутствует', () => {
     const [result] = transformer.transform([baseTravel({})])
     // travel_image_url не задаётся, рендер cover использует thumb как fallback
     expect(result.travel_image_url).toBeUndefined()
-    expect(result.travel_image_thumb_url).toBe('https://metravel.by/thumb.webp?w=1600&q=90&fit=contain')
+    expect(result.travel_image_thumb_url).toBe('https://metravel.by/thumb.webp?w=1600&q=85&fit=contain')
   })
 
   it('галерея берёт print_url, когда он есть', () => {
@@ -63,7 +63,7 @@ describe('TravelDataTransformer print-grade preference (BE #307)', () => {
         ],
       }),
     ])
-    expect(result.gallery?.[0]?.url).toBe('https://metravel.by/photo-print.webp?w=1600&q=90&fit=contain')
+    expect(result.gallery?.[0]?.url).toBe('https://metravel.by/photo-print.webp?w=1600&q=85&fit=contain')
   })
 
   it('галерея падает на url, когда print_url отсутствует', () => {
@@ -74,6 +74,6 @@ describe('TravelDataTransformer print-grade preference (BE #307)', () => {
         ],
       }),
     ])
-    expect(result.gallery?.[0]?.url).toBe('https://metravel.by/photo2.webp?w=1600&q=90&fit=contain')
+    expect(result.gallery?.[0]?.url).toBe('https://metravel.by/photo2.webp?w=1600&q=85&fit=contain')
   })
 })

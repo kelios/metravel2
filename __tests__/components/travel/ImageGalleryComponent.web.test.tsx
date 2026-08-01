@@ -209,14 +209,26 @@ describe('ImageGalleryComponent.web', () => {
     __dropMock.open.mockClear();
   });
 
-  it('uses touch-first gallery and camera actions on mobile web', () => {
+  it('uses touch-first gallery and camera actions on mobile web', async () => {
     const dimensionsSpy = jest
       .spyOn(require('@/hooks/useResponsive'), 'useResponsiveWidth')
       .mockReturnValue(390);
 
     try {
+      // #1148: dropzone-контролы монтируются через React.lazy, а React 18
+      // троттлит подмену фолбэк→контент (~300 мс). Ждём КОММИТ реального
+      // контента — кнопка начинает держать open из useDropzone; проверка по
+      // options срабатывала раньше коммита, и press попадал в inert-фолбэк.
+      const { __dropMock } = jest.requireMock('react-dropzone') as any;
+      __dropMock.options = undefined;
+
       const screen = renderSafe(
         <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
+      );
+
+      await waitFor(
+        () => expect(screen.getByTestId('gallery-mobile-pick').props.onPress).toBe(__dropMock.open),
+        { timeout: 2000 },
       );
 
       expect(screen.getByText('Выбрать из галереи')).toBeTruthy();
@@ -226,7 +238,6 @@ describe('ImageGalleryComponent.web', () => {
       expect(screen.getByText('Используйте кнопки выше, чтобы выбрать или сделать фото')).toBeTruthy();
 
       fireEvent.press(screen.getByTestId('gallery-mobile-pick'));
-      const { __dropMock } = jest.requireMock('react-dropzone') as any;
       expect(__dropMock.open).toHaveBeenCalledTimes(1);
       expect(__dropMock.options).toEqual(expect.objectContaining({
         noClick: true,

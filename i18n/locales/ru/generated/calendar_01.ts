@@ -43,6 +43,10 @@ export const calendarGenerated1 = {
   "components.screens.calendar.calendarScreen_parts.status_v_kalendare_909c44a4": "Статус в календаре",
   "components.screens.calendar.calendarScreen_parts.tochnaya_data_ne_ukazana_68022bfe": "Точная дата не указана",
   "components.screens.calendar.calendarScreen_parts.ubrat_datu_974ef33b": "Убрать дату",
+  "components.screens.calendar.calendarScreen_parts.ubrat_iz_hochu_6185bb2e": "Убрать из «Хочу»",
+  "components.screens.calendar.calendarScreen_parts.ubrat_iz_planov_8388e107": "Убрать из планов",
+  "components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_hochu_ef3ab915": "Убрать «{{value1}}» из «Хочу»",
   "components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_kalendarya_98ed1985": "Убрать «{{value1}}» из календаря",
+  "components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_planov_d4f20adb": "Убрать «{{value1}}» из планов",
   "components.screens.calendar.calendarScreen_parts.udalit_iz_kalendarya_0cdea23e": "Удалить из календаря",
 } as const

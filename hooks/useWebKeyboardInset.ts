@@ -16,10 +16,8 @@ import { Platform } from 'react-native'
 const MIN_KEYBOARD_OVERLAP = 120
 
 /**
- * CSS-переменная с тем же значением. Нужна, потому что на mobile web композер
- * чата получает `padding-bottom` из `!important`-правила в app/global.css
- * (резерв под safe-area и нижний хром браузера) — inline-стиль React Native Web
- * его не перебивает, поэтому клавиатурный отступ приезжает через переменную.
+ * CSS-переменная с тем же значением для mobile-web экранов, которым нужен
+ * корневой отступ от клавиатуры (например, trip details).
  */
 export const KEYBOARD_INSET_CSS_VAR = '--mt-keyboard-inset'
 

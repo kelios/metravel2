@@ -214,7 +214,7 @@ describe('EnhancedPdfGenerator helpers', () => {
     const safe = generator.buildSafeImageUrl('http://cdn.test/image.jpg')
     expect(safe).toBe('http://cdn.test/image.jpg')
     expect(generator.buildSafeImageUrl('https://metravel.by/gallery/42/photo.jpg')).toBe(
-      'https://metravel.by/gallery/42/photo.jpg?w=2500&q=90&fit=contain',
+      'https://metravel.by/gallery/42/photo.jpg?w=2500&q=85&fit=contain',
     )
     expect(generator.buildSafeImageUrl('data:image/png;base64,abc')).toContain('data:image/png')
     expect(generator.buildSafeImageUrl('blob:local-image')).toBe('blob:local-image')

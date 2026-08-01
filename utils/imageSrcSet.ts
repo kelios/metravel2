@@ -14,7 +14,7 @@ export interface ResponsiveImageSource {
 
 export function generateSrcSet(
   baseUrl: string,
-  sizes: number[],
+  sizes: readonly number[],
   options: Omit<ImageOptimizationOptions, 'width'> = {}
 ): string {
   if (!baseUrl) return '';
@@ -90,7 +90,7 @@ export function buildResponsiveImageProps(
   baseUrl: string,
   options: {
     maxWidth?: number;
-    widths?: number[];
+    widths?: readonly number[];
     sizes?: string;
     quality?: number;
     format?: ImageOptimizationOptions['format'];

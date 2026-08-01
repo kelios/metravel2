@@ -1,16 +1,17 @@
 # Travel-status calendar feature map
 
-Актуализировано: 2026-07-15.
+Актуализировано: 2026-08-01.
 
-`/calendar` объединяет explicit статусы пользователя и его опубликованные
-авторские travels:
+`/calendar` объединяет explicit статусы пользователя и его авторские
+travels, включая доступные черновики:
 
 - `visited` — «Был»;
 - `planned` — «Планирую», с датой;
 - `wishlist` — «Хочу».
 
-Опубликованный authored travel без explicit статуса считается default
-`visited`. Explicit status всегда имеет приоритет.
+Authored travel без explicit статуса получает derived-статус по календарной
+дате: прошедшая дата — `visited`, текущая/будущая или неопределённая —
+`planned`. Explicit status всегда имеет приоритет.
 
 ## Ownership
 
@@ -35,10 +36,10 @@ Store:
 
 - загружает user-scoped local cache;
 - получает explicit server statuses;
-- получает authored published travels для default `visited`;
+- получает авторские travels и выводит их derived-статус из даты;
 - нормализует id/date/media metadata;
 - дедуплицирует travel;
-- применяет правило explicit status > authored default;
+- применяет правило explicit status > authored derived status;
 - синхронизирует create/update/delete с API;
 - очищает user-scoped state при смене auth identity.
 
@@ -80,6 +81,10 @@ recoverable state; fake-success запрещён.
 - Empty/loading/error/auth states видимы.
 - Personal route имеет `noindex,nofollow`.
 - Status action требует auth и не сообщает success до завершения mutation.
+- Авторский маршрут остаётся источником календарной записи даже без
+  explicit server status. Поэтому «Убрать из планов/Хочу» создаёт explicit
+  `visited`, а полное удаление из календаря доступно только для неавторской
+  explicit status-записи.
 - Mobile web и Android сохраняют один UX и проверяются парно; platform date input может
   отличаться технической реализацией.
 

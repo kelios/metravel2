@@ -143,7 +143,7 @@ export function PublicProfileHeader({
                   uri:
                     optimizeImageUrl(profile.avatar, {
                       width: 224,
-                      quality: 72,
+                      quality: 70,
                       fit: 'cover',
                     }) ?? profile.avatar,
                 }}

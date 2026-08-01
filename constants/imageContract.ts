@@ -1,118 +1,197 @@
 // constants/imageContract.ts
 //
-// #1167: единственное место, где перечислены ширины и quality, которые фронт вообще
-// имеет право запросить. До этого наборы жили россыпью литералов в четырёх файлах
-// (`htmlTransform.ts`, `QuestCard.tsx`, `TravelDetailsOptimizedLCPHero.tsx`,
-// PDF-экспорт), и именно так лестница разъезжалась шесть тикетов подряд — #1104,
-// #1112, #1113, #1120, #1103, #1170.
+// Здесь живут ДВА разных, но связанных контракта:
 //
-// Здесь не «сколько получилось из измеренного слота», а перечисленный набор,
-// одинаково известный фронту и бэкенду. Каждое число обязано быть ступенью
-// `ALLOWED_IMAGE_WIDTHS` прокси; это проверяется тестом
-// `__tests__/constants/imageContract.test.ts`, который сверяет набор с
-// `DIMENSION_LADDER` (та, в свою очередь, сверена с `GET /api/media/proxy-contract`
-// в `__tests__/utils/imageProxy.ladder.test.ts`).
+// 1. `IMAGE_STORAGE_POLICY_V1` — целевой набор файлов, которые backend хранит в
+//    S3 после upload/backfill. Это не вся capability-лестница resize-proxy.
+// 2. `IMAGE_WIDTHS` — наборы кандидатов текущих ключевых frontend-consumers на
+//    время двусторонней миграции. Пока backend ещё умеет динамический resize,
+//    отдельные legacy-consumers могут проходить через более широкую proxy-лестницу.
 //
-// Смена набора — ДВУСТОРОННИЙ релиз, а не односторонняя правка фронта. В #1137
-// бэкенд прогрел 137 обложек под `w=1280`, фронт в это же время перешёл на `w=480`,
-// и прогрев оказался бесполезен. Полное описание — `docs/features/images.md` §3.
+// Смешение этих двух уровней породило противоречие «2–3 файла на изображение»,
+// хотя реальные responsive-наборы требуют до десяти производных. Полное описание
+// и порядок двустороннего релиза — `docs/features/images.md` §3–4.
 
-/**
- * Quality на КЛАСС размера, а не на вызов. Двенадцать значений в кодовой базе
- * (28, 40, 60, 65, 66, 70, 72, 75, 78, 80, 85, 90) появились из локальных решений,
- * а не из замеров, и после квантования всё равно схлопывались в шесть. Значения
- * ниже уже лежат на сетке шага 10, поэтому `snapProxyQuality` их не двигает —
- * иначе каждый вызов плодил бы отдельный вариант в кэше прокси.
- */
+/** Каноническое качество одного сохраняемого WebP-варианта. */
 export const IMAGE_QUALITY = {
-  /** Мелкие производные: аватары, миниатюры, плитки каталога (96–480). */
+  /** Мелкие производные: аватары, миниатюры, плитки каталога. */
   small: 70,
-  /**
-   * Крупные производные: hero, галерея, тело статьи (800–1920).
-   *
-   * До #1167 тело статьи отправляло `q=78` — значение вне сетки шага 10, из-за
-   * чего КАЖДАЯ картинка статьи была отдельным вариантом в кэше прокси, не
-   * совпадающим ни с чем другим. 80 — ближайшая ступень сетки.
-   */
+  /** Крупные web-производные: hero, галерея, тело статьи. */
   large: 80,
+  /** Мастер и print-производная: upload encoder уже сохраняет мастер с q85. */
+  master: 85,
+  print: 85,
   /**
-   * Обложка квеста. Отдельное значение, а не `small`, намеренно: 60 уже лежит на
-   * сетке, а смена quality меняет cache-identity КАЖДОЙ обложки — это двусторонний
-   * релиз с прогревом, ровно та ошибка, что стоила #1137. Схлопывание в `small`
-   * делается вместе с бэкендом, а не попутной правкой фронта.
+   * Обложка квеста — отдельный storage-profile. q60 сохраняется намеренно:
+   * production-замер 2026-07-31 дал 1 918 B для w320 и 5 390 B для w640 при
+   * достаточной резкости на DPR2. Это не правило для всех файлов шириной 480.
    */
   questCover: 60,
   /**
-   * Blur-подложка hero. Значение обязано совпадать с зеркалом в
-   * `scripts/generate-seo-pages.js`: SSG рисует подложку в статической оболочке, а
-   * рантайм её гидрирует — расхождение по `q` означает ДВА файла на один и тот же
-   * невидимый под блюром слой (инвариант #1146).
+   * Только переходный proxy-fallback hero при отсутствии blurhash/dominant color.
+   * В S3 отдельный q40-файл не хранится: целевой w-only URL имеет один вариант
+   * `travelMedia/96` с q70, а штатная подложка вообще рисуется из метаданных.
    */
   heroBackdrop: 40,
-  /** Печать: обложка книги и полностраничные фото. */
-  print: 90,
 } as const;
 
+export const IMAGE_STORAGE_POLICY_VERSION = 1 as const;
+export const IMAGE_STORAGE_FORMAT = 'webp' as const;
+
+export type StoredImageVariant = Readonly<{
+  width: number;
+  quality: number;
+}>;
+
+export type ImageStorageProfile = Readonly<{
+  /** Публичные family-роуты, которые используют этот профиль. */
+  routes: readonly string[];
+  master: StoredImageVariant;
+  derivatives: readonly StoredImageVariant[];
+}>;
+
 /**
- * Ширины по типу изображения — ровно то, что уходит в `w`.
+ * Целевая S3 policy v1: один q85-мастер плюс все реально нужные производные.
  *
- * Наборы намеренно разные по вьюпортам там, где слот разный: платить мобильным
- * трафиком за резкость, невидимую на 390 CSS, смысла нет.
+ * Quality определяется парой `(storage profile, width)`, а не одной шириной:
+ * `questCover/480` хранится с q60, тогда как `travelMedia/480` — с q70. Один
+ * source принадлежит ровно одному профилю, поэтому ключ
+ * `d/v1/<source-key>/<width>.webp` остаётся однозначным.
  */
-export const IMAGE_WIDTHS: {
-  articleBodyMobile: number[]
-  articleBodyDesktop: number[]
-  travelHeroMobile: number[]
-  travelHeroDesktop: number[]
-  questCover: number[]
-  heroBackdrop: number
-  printFull: number
-  printInline: number
-} = {
-  /**
-   * Тело статьи. Слот: 100vw на мобиле, ~720 CSS на 1280vw, ~920 CSS на 1920vw.
-   * 960 и 1920 — desktop-only: DPR 1 на широком экране берёт 960, DPR 2 — 1920.
-   * До #1160 потолок был 800, и Retina-десктоп апскейлил картинку ×2.3.
-   */
+export const IMAGE_STORAGE_POLICY_V1 = {
+  avatar: {
+    routes: ['avatar'],
+    master: { width: 320, quality: IMAGE_QUALITY.master },
+    derivatives: [
+      { width: 96, quality: IMAGE_QUALITY.small },
+      { width: 160, quality: IMAGE_QUALITY.small },
+    ],
+  },
+  badge: {
+    routes: ['badge-image'],
+    master: { width: 320, quality: IMAGE_QUALITY.master },
+    derivatives: [
+      { width: 96, quality: IMAGE_QUALITY.small },
+      { width: 160, quality: IMAGE_QUALITY.small },
+    ],
+  },
+  questCover: {
+    routes: ['quest-cover'],
+    master: { width: 1200, quality: IMAGE_QUALITY.master },
+    derivatives: [320, 480, 640, 800].map((width) => ({
+      width,
+      quality: IMAGE_QUALITY.questCover,
+    })),
+  },
+  routePoint: {
+    routes: ['address-image'],
+    master: { width: 1200, quality: IMAGE_QUALITY.master },
+    derivatives: [
+      { width: 320, quality: IMAGE_QUALITY.small },
+      { width: 480, quality: IMAGE_QUALITY.small },
+      { width: 640, quality: IMAGE_QUALITY.small },
+      { width: 800, quality: IMAGE_QUALITY.large },
+      { width: 960, quality: IMAGE_QUALITY.large },
+    ],
+  },
+  questSupplement: {
+    routes: ['quest-step-image', 'quest-poster'],
+    master: { width: 1200, quality: IMAGE_QUALITY.master },
+    derivatives: [
+      { width: 320, quality: IMAGE_QUALITY.small },
+      { width: 480, quality: IMAGE_QUALITY.small },
+      { width: 640, quality: IMAGE_QUALITY.small },
+      { width: 800, quality: IMAGE_QUALITY.large },
+    ],
+  },
+  tripCover: {
+    routes: ['trip-cover'],
+    master: { width: 1200, quality: IMAGE_QUALITY.master },
+    derivatives: [
+      { width: 320, quality: IMAGE_QUALITY.small },
+      { width: 480, quality: IMAGE_QUALITY.small },
+      { width: 640, quality: IMAGE_QUALITY.small },
+      { width: 800, quality: IMAGE_QUALITY.large },
+      { width: 960, quality: IMAGE_QUALITY.large },
+    ],
+  },
+  travelMedia: {
+    routes: ['travel-image', 'gallery'],
+    master: { width: 2500, quality: IMAGE_QUALITY.master },
+    derivatives: [
+      { width: 96, quality: IMAGE_QUALITY.small },
+      { width: 160, quality: IMAGE_QUALITY.small },
+      { width: 320, quality: IMAGE_QUALITY.small },
+      { width: 480, quality: IMAGE_QUALITY.small },
+      { width: 640, quality: IMAGE_QUALITY.small },
+      { width: 720, quality: IMAGE_QUALITY.large },
+      { width: 800, quality: IMAGE_QUALITY.large },
+      { width: 960, quality: IMAGE_QUALITY.large },
+      { width: 1280, quality: IMAGE_QUALITY.large },
+      { width: 1600, quality: IMAGE_QUALITY.print },
+    ],
+  },
+  articleBody: {
+    routes: ['travel-description-image'],
+    master: { width: 1920, quality: IMAGE_QUALITY.master },
+    derivatives: [
+      { width: 320, quality: IMAGE_QUALITY.small },
+      { width: 480, quality: IMAGE_QUALITY.small },
+      { width: 640, quality: IMAGE_QUALITY.small },
+      { width: 800, quality: IMAGE_QUALITY.large },
+      { width: 960, quality: IMAGE_QUALITY.large },
+      { width: 1600, quality: IMAGE_QUALITY.print },
+    ],
+  },
+} as const satisfies Record<string, ImageStorageProfile>;
+
+/**
+ * Ширины ключевых frontend-слотов в переходном runtime.
+ *
+ * Это subsets целевых storage-профилей, а не обещание «столько файлов всего».
+ * Legacy-consumers переводятся на w-only family policy двусторонним релизом с
+ * backend; до него `utils/imageProxy.ts` продолжает знать полную capability-
+ * лестницу текущего resize-proxy.
+ */
+export const IMAGE_WIDTHS = {
+  /** 100vw mobile; ~720 CSS при 1280vw; ~920 CSS при 1920vw. */
   articleBodyMobile: [320, 480, 640, 800],
   articleBodyDesktop: [480, 640, 800, 960, 1920],
 
-  /**
-   * Hero травела. Мобильный потолок 720 — слот 100vw при DPR 2 на 360 CSS;
-   * desktop 1280 — самый широкий контейнер hero.
-   */
+  /** Hero travel: mobile DPR2 до 720, desktop-контейнер до 1280. */
   travelHeroMobile: [320, 480, 640, 720],
   travelHeroDesktop: [720, 960, 1280],
 
-  /**
-   * Обложка квеста в каталоге. Плитка 320–420 CSS; на web DPR намеренно
-   * зафиксирован в 1 (`screens/tabs/QuestCard.tsx`), поэтому потолок 800.
-   */
+  /** Quest card 320–420 CSS × DPR до 2. */
   questCover: [320, 480, 640, 800],
 
-  /**
-   * Blur-подложка hero, когда в манифесте нет ни blurhash, ни dominant_color.
-   * Лежит под `filter: blur(18px)`, поэтому детали не видны — нужен самый дешёвый
-   * вариант того же изображения. 96 — ступень лестницы; раньше код просил 64 и
-   * молча получал те же 96, из-за чего число в коде не совпадало с запросом.
-   */
+  /** Переходный q40 proxy-fallback; в S3 переиспользуется travelMedia/96 q70. */
   heroBackdrop: 96,
 
-  /**
-   * Печать. Обе ступени — из лестницы прокси: 2500 для обложки книги и
-   * полностраничных фото, 1600 для галереи и миниатюр точек в потоке.
-   */
+  /** Travel master и print-производная для inline/PDF content. */
   printFull: 2500,
   printInline: 1600,
-};
+} as const;
 
-/** Каждая ширина, которую фронт вообще может запросить, — для проверок и отчётов. */
+/** Ширины ключевых frontend-consumers — для transition-проверок. */
 export const ALL_CONTRACT_WIDTHS: readonly number[] = Object.freeze(
   Array.from(
     new Set(
       Object.values(IMAGE_WIDTHS).flatMap((value) =>
         typeof value === 'number' ? [value] : [...value],
       ),
+    ),
+  ).sort((a, b) => a - b),
+);
+
+/** Все ширины, которые policy v1 действительно хранит в S3, включая мастера. */
+export const ALL_STORED_IMAGE_WIDTHS: readonly number[] = Object.freeze(
+  Array.from(
+    new Set(
+      Object.values(IMAGE_STORAGE_POLICY_V1).flatMap((profile) => [
+        profile.master.width,
+        ...profile.derivatives.map((variant) => variant.width),
+      ]),
     ),
   ).sort((a, b) => a - b),
 );

@@ -43,6 +43,10 @@ export const calendarGenerated1 = {
   "components.screens.calendar.calendarScreen_parts.status_v_kalendare_909c44a4": "Calendar status",
   "components.screens.calendar.calendarScreen_parts.tochnaya_data_ne_ukazana_68022bfe": "The exact date is not specified",
   "components.screens.calendar.calendarScreen_parts.ubrat_datu_974ef33b": "Remove date",
+  "components.screens.calendar.calendarScreen_parts.ubrat_iz_hochu_6185bb2e": "Remove from wishlist",
+  "components.screens.calendar.calendarScreen_parts.ubrat_iz_planov_8388e107": "Remove from plans",
+  "components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_hochu_ef3ab915": "Remove \"{{value1}}\" from wishlist",
   "components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_kalendarya_98ed1985": "Remove \"{{value1}}\" from calendar",
+  "components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_planov_d4f20adb": "Remove \"{{value1}}\" from plans",
   "components.screens.calendar.calendarScreen_parts.udalit_iz_kalendarya_0cdea23e": "Remove from calendar",
 } as const

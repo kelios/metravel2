@@ -133,10 +133,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       alignItems: 'center',
       justifyContent: 'center',
     },
+    metricPrimaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xxs,
+      minHeight: 30,
+    },
     metricValue: {
       ...DESIGN_TOKENS.typography.scale.h2,
       ...(isCompact ? { fontSize: 24, lineHeight: 28 } : null),
       color: colors.text,
+    },
+    metricChevron: {
+      marginLeft: 'auto',
     },
     metricLabel: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
@@ -272,14 +281,27 @@ export function ProfileTravelEngagementSummary({
               accessibilityHint={onMetricPress ? i18nT('profile:components.profile.ProfileTravelEngagementSection.pokazat_sootvetstvuyuschie_kartochki_188d300c') : undefined}
               accessibilityState={onMetricPress ? { selected: activeMetric === metric.key } : undefined}
             >
-              <View style={styles.metricIconWrap}>
-                <Feather
-                  name={metric.icon}
-                  size={15}
-                  color={activeMetric === metric.key ? colors.primary : colors.primary}
-                />
+              <View
+                testID={`profile-engagement-metric-primary-${metric.key}`}
+                style={styles.metricPrimaryRow}
+              >
+                <View style={styles.metricIconWrap}>
+                  <Feather
+                    name={metric.icon}
+                    size={18}
+                    color={colors.primary}
+                  />
+                </View>
+                <Text style={styles.metricValue}>{formatMetricValue(summary?.[metric.key])}</Text>
+                {onMetricPress ? (
+                  <Feather
+                    name="chevron-right"
+                    size={17}
+                    color={colors.textMuted}
+                    style={styles.metricChevron}
+                  />
+                ) : null}
               </View>
-              <Text style={styles.metricValue}>{formatMetricValue(summary?.[metric.key])}</Text>
               <Text style={styles.metricLabel}>{metric.label}</Text>
               {!isCompact ? <Text style={styles.metricHelper}>{metric.helper}</Text> : null}
             </Pressable>

@@ -317,6 +317,8 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
 
     // Let the programmatic follow animation settle before a genuine user drag.
     await page.waitForTimeout(800)
+    const markerBoxBeforePan = await userMarker.boundingBox()
+    expect(markerBoxBeforePan).toBeTruthy()
     const mapBox = await map.boundingBox()
     expect(mapBox).toBeTruthy()
     if (mapBox) {
@@ -328,8 +330,8 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     await page.waitForTimeout(300)
     const pannedMarkerBox = await userMarker.boundingBox()
     expect(pannedMarkerBox).toBeTruthy()
-    if (pannedMarkerBox && followedMarkerBox) {
-      expect(Math.abs(pannedMarkerBox.x - followedMarkerBox.x)).toBeGreaterThan(50)
+    if (pannedMarkerBox && markerBoxBeforePan) {
+      expect(Math.abs(pannedMarkerBox.x - markerBoxBeforePan.x)).toBeGreaterThan(50)
     }
     await page.context().setGeolocation({ latitude: 53.9111, longitude: 27.5695, accuracy: 7 })
     await expect.poll(async () => {

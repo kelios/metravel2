@@ -60,6 +60,38 @@ describe('utils/imageOptimization', () => {
       }
     })
 
+    it('optimizes first-party media on a configured local API origin', () => {
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'http://127.0.0.1:8085/api'
+
+      try {
+        const result = optimizeImageUrl(
+          'http://127.0.0.1:8085/quest-cover/quests/5/main/cover.png',
+          { width: 320, quality: 60, fit: 'cover' },
+        )!
+        const url = new URL(result)
+
+        expect(url.origin).toBe('http://127.0.0.1:8085')
+        expect(url.searchParams.get('w')).toBe('320')
+        expect(url.searchParams.get('q')).toBe('60')
+        expect(url.searchParams.get('fit')).toBe('cover')
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
+    })
+
+    it('keeps same-host private media from a different origin unchanged', () => {
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'http://127.0.0.1:8085/api'
+      const privateUrl = 'http://127.0.0.1:8086/quest-cover/private.png'
+
+      try {
+        expect(optimizeImageUrl(privateUrl, { width: 320, quality: 60 })).toBe(privateUrl)
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
+    })
+
     it('adds width/height/quality/format/fit params and respects dpr on web', () => {
       withPlatform('web', () => {
         ;(window as any).devicePixelRatio = 2
@@ -259,7 +291,8 @@ describe('utils/imageOptimization', () => {
 
   // Квантование вариантов: дробный DPR и попиксельные ширины из window.devicePixelRatio /
   // onLayout раньше плодили уникальный файл-конверсию на каждую комбинацию (тикет #628 —
-  // своп-штормы на проде 1 vCPU / 1.8 ГБ). Теперь w/h к лесенке, dpr к 1/2/3, q к шагу 10.
+  // своп-штормы на проде 1 vCPU / 1.8 ГБ). Теперь w и q округляются вверх
+  // по лестницам proxy-contract.
   describe('optimizeImageUrl variant quantization', () => {
     const onMediaPath = (opts: Parameters<typeof optimizeImageUrl>[1]) => {
       const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
@@ -300,7 +333,7 @@ describe('utils/imageOptimization', () => {
     // только при совпадении origin с EXPO_PUBLIC_API_URL, поэтому в конфигурации с
     // проксированным API (dev/preprod) параметры молча не добавлялись и `srcSet`
     // собирался из одинаковых URL без `w` — браузер брал оригинал на плитку 132×132.
-    it('optimizes quest covers and avatars regardless of the configured api origin', () => {
+    it('optimizes every model-owned proxy family regardless of the configured api origin', () => {
       const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
       process.env.EXPO_PUBLIC_API_URL = 'http://localhost:4622'
       try {
@@ -316,6 +349,23 @@ describe('utils/imageOptimization', () => {
           { width: 48, quality: 70, fit: 'cover' },
         )!
         expect(avatar).toContain('w=96')
+
+        for (const path of [
+          '/trip-cover/trips/7/cover/sample.webp',
+          '/quest-step-image/quests/16/step/2/sample.webp',
+          '/quest-poster/quests/16/poster/sample.webp',
+          '/badge-image/achievements/badges/sample.webp',
+        ]) {
+          const optimized = optimizeImageUrl(`https://metravel.by${path}`, {
+            width: 132,
+            quality: 70,
+            fit: 'cover',
+          })!
+          expect({ path, width: new URL(optimized).searchParams.get('w') }).toEqual({
+            path,
+            width: '160',
+          })
+        }
       } finally {
         process.env.EXPO_PUBLIC_API_URL = previousApiUrl
       }
@@ -333,8 +383,8 @@ describe('utils/imageOptimization', () => {
     })
 
     // Guard #1113: лестница обязана состоять ТОЛЬКО из ширин, которые прокси реально
-    // ресайзит. Набор ниже — `widths` из `GET /api/media/proxy-contract` (version 2),
-    // сверено 2026-07-30.
+    // ресайзит. Набор ниже — `widths` из `GET /api/media/proxy-contract` (version 3),
+    // сверено 2026-08-02.
     //
     // #1170: прежний комментарий утверждал, что 1024/2500 и др. «подтверждённо сломаны».
     // Это было верно до #1112 — тогда прокси неподдержанную ширину молча отдавал
@@ -371,17 +421,19 @@ describe('utils/imageOptimization', () => {
       expect(downscaled).toEqual([])
     })
 
-    it('collapses near-identical quality values to a step of 10', () => {
-      expect(onMediaPath({ width: 480, quality: 72 }).searchParams.get('q')).toBe('70')
+    it('ceil-snaps quality exactly like proxy-contract v3', () => {
+      expect(onMediaPath({ width: 480, quality: 72 }).searchParams.get('q')).toBe('80')
       expect(onMediaPath({ width: 480, quality: 78 }).searchParams.get('q')).toBe('80')
-      expect(onMediaPath({ width: 480, quality: 82 }).searchParams.get('q')).toBe('80')
+      expect(onMediaPath({ width: 480, quality: 82 }).searchParams.get('q')).toBe('85')
+      expect(onMediaPath({ width: 480, quality: 0 }).searchParams.get('q')).toBe('85')
+      expect(onMediaPath({ width: 480, quality: 150 }).searchParams.get('q')).toBe('85')
     })
 
     it('collapses many real per-pixel variants of one file to a single cacheable one', () => {
       const inputs = [
         { width: 371, dpr: 2.75, quality: 78 },
         { width: 379, dpr: 2.8125, quality: 78 },
-        { width: 393, dpr: 2.75, quality: 82 },
+        { width: 393, dpr: 2.75, quality: 80 },
         { width: 388, dpr: 2.8, quality: 80 },
       ]
       const variants = new Set(

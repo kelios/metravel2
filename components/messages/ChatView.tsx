@@ -18,7 +18,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { useWebKeyboardInset } from '@/hooks/useWebKeyboardInset'
 import MessageBubble from '@/components/messages/MessageBubble'
 import IconButton from '@/components/ui/IconButton'
 import SafetyNotice from '@/components/ui/SafetyNotice'
@@ -159,14 +158,12 @@ function ChatView({
       hide.remove()
     }
   }, [])
-  // Mobile web: the soft keyboard does NOT shrink the layout viewport, so the
-  // composer stays pinned under it — the real overlap comes from visualViewport.
-  const webKeyboardInset = useWebKeyboardInset()
   // At rest the global tab bar (BottomDock, an absolute overlay) covers the bottom,
   // so reserve its height + home-indicator inset. On Android (no working KAV here)
   // lift the composer above the keyboard by its real height while it is open; iOS
   // uses KeyboardAvoidingView behavior='padding' so it must NOT add that height.
-  // Web has no dock reserve here → only the keyboard overlap, if any.
+  // On web, MessagesScreen itself follows visualViewport, so the list shrinks and
+  // the composer remains above both browser chrome and the soft keyboard.
   //
   // Android caveat: RN reports the keyboard height as `imeInsets.bottom -
   // systemBars.bottom` (ReactRootView.checkForKeyboardEvents), i.e. WITHOUT the
@@ -174,7 +171,7 @@ function ChatView({
   // bar. Lifting by the reported height alone leaves the composer overlapped by
   // exactly the nav-bar height, so add insets.bottom back.
   const composerBottomInset = IS_WEB
-    ? (webKeyboardInset > 0 ? webKeyboardInset + DESIGN_TOKENS.spacing.xs : 0)
+    ? 0
     : !IS_IOS && keyboardHeight > 0
       ? keyboardHeight + insets.bottom + DESIGN_TOKENS.spacing.xs
       : (reserveBottomDock ? DOCK_CONTENT_HEIGHT : 0) + insets.bottom + DESIGN_TOKENS.spacing.sm
@@ -275,6 +272,8 @@ function ChatView({
         </View>
       ) : (
         <FlatList
+          testID="messages-scroll-list"
+          style={styles.messagesScroller}
           data={listItems}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
@@ -483,7 +482,7 @@ function ChatComposer({
 
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    container: { flex: 1 },
+    container: { flex: 1, minHeight: 0, overflow: 'hidden' },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -526,6 +525,7 @@ const createStyles = (colors: ThemedColors) =>
       marginTop: DESIGN_TOKENS.spacing.sm,
     },
     messagesList: { paddingVertical: DESIGN_TOKENS.spacing.sm },
+    messagesScroller: { flex: 1, minHeight: 0 },
     emptyChat: {
       alignItems: 'center',
       justifyContent: 'center',

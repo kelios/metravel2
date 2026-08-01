@@ -386,7 +386,7 @@ export function ProfileHeader({
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               {user.avatar ? (
-                <Image source={{ uri: optimizeImageUrl(user.avatar, { width: 168, quality: 72, fit: 'cover' }) ?? user.avatar }} style={styles.avatarImage} />
+                <Image source={{ uri: optimizeImageUrl(user.avatar, { width: 168, quality: 70, fit: 'cover' }) ?? user.avatar }} style={styles.avatarImage} />
               ) : (
                 <Text style={styles.avatarPlaceholder}>{getInitials(user.name || '?')}</Text>
               )}

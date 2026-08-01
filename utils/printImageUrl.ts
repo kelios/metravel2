@@ -21,8 +21,9 @@ export const PRINT_IMAGE_FULL_WIDTH = IMAGE_WIDTHS.printFull
 export const PRINT_IMAGE_INLINE_WIDTH = IMAGE_WIDTHS.printInline
 
 /**
- * Качество печати. `optimizeImageUrl` квантует quality шагом 10, поэтому значение
- * выбрано на сетке: иначе каждый PDF плодил бы отдельный вариант в кэше прокси.
+ * Качество печати. q85 — явная ступень backend proxy-contract и
+ * quality upload/master encoder. Это позволяет PDF переиспользовать
+ * канонический q85-вариант, а не порождать отдельный q90.
  */
 export const PRINT_IMAGE_QUALITY = IMAGE_QUALITY.print
 

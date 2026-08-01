@@ -7,7 +7,10 @@ import {
   View,
 } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
-import { BottomSheetFlatList } from '@gorhom/bottom-sheet'
+// #1148: платформ-адаптер вместо прямого импорта — @gorhom/bottom-sheet и его
+// reanimated-вендоры (~165 КБ transformed) не должны попадать в web-__common;
+// web-резолюция отдаёт FlashList (см. TravelListPanel/nativeSheetList.web.ts).
+import { BottomSheetFlatList } from './TravelListPanel/nativeSheetList'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 

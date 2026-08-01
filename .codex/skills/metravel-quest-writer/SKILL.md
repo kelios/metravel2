@@ -65,6 +65,13 @@ Prefer tasks that ask the player to:
 
 Avoid unstable counting, obscure architectural terminology, subjective shapes or levels, internet trivia, and facts invisible on site. If no reliable observation question exists, use one purposeful `any_text` reflection instead of a brittle quiz. One or two reflective steps per quest are acceptable.
 
+Owner rules on tone and memorial content (hel-fishermen case, 2026-07-31):
+
+- Never build a task on death arithmetic: no "how many people are buried/died/were executed", "what year did he die", "how long did he live", "how old was he" at a grave or memorial. A memorial point itself is acceptable, but its task must target a symbol, meaning, or stable non-funerary detail. Dates unrelated to death are fine.
+- Keep the quest tone uplifting overall: tragedy may be part of one point's story, but at most 1–2 memorial points per quest, never at the start or finale, and the through-line must be legends, local culture and peoples (language, traditions — e.g. the Kashubians), living personalities, records, and food. A memorial next to the start becomes an optional "prologue" step (`answer_pattern.type='any'`). Re-read all stories before publishing: if death dominates most steps, rewrite the tone.
+- Ask for an object's name (villa, house) only when photo evidence confirms the inscription physically exists on site; otherwise the step becomes unanswerable and blocks quest completion (willa Jeannette case).
+- When recommending food, check Google Maps reviews as the mandatory source (TripAdvisor is supplementary); a local spot with a 4.8–5.0 Google rating and hundreds of reviews beats a closer average venue, and food trucks/seasonal spots are acceptable with honest `poi_info`.
+
 Hints direct attention but never contain the answer, a synonym, a partial phrase, an exact count, or an answer range. Check answer tokens against `title`, `location`, `story`, and `hint` before handoff.
 
 ## Answer patterns

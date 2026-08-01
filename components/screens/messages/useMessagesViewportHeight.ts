@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, type View } from 'react-native';
 
-const MIN_CHAT_HEIGHT = 240;
-
 /**
  * Bounds the mobile web chat to the actually visible browser viewport.
  *
@@ -22,22 +20,19 @@ export function useMessagesViewportHeight(enabled: boolean) {
 
         const node = screenRef.current as unknown as HTMLElement | null;
         const top = node?.getBoundingClientRect?.().top;
-        if (!Number.isFinite(top)) return;
+        if (typeof top !== 'number' || !Number.isFinite(top)) return;
 
         const visualViewport = window.visualViewport;
         const visibleBottom = visualViewport
             ? visualViewport.offsetTop + visualViewport.height
             : window.innerHeight;
-        const nextHeight = Math.max(MIN_CHAT_HEIGHT, Math.floor(visibleBottom - Number(top)));
+        const nextHeight = Math.max(0, Math.floor(visibleBottom - top));
 
         setViewportHeight((current) => (current === nextHeight ? current : nextHeight));
     }, [enabled]);
 
     useEffect(() => {
-        if (!enabled || Platform.OS !== 'web' || typeof window === 'undefined') {
-            setViewportHeight(null);
-            return;
-        }
+        if (!enabled || Platform.OS !== 'web' || typeof window === 'undefined') return;
 
         let frameId: number | null = null;
         let settleFrameId: number | null = null;
@@ -45,24 +40,41 @@ export function useMessagesViewportHeight(enabled: boolean) {
 
         const schedule = () => {
             if (frameId != null) window.cancelAnimationFrame(frameId);
-            frameId = window.requestAnimationFrame(measure);
+            if (settleFrameId != null) window.cancelAnimationFrame(settleFrameId);
+            frameId = window.requestAnimationFrame(() => {
+                frameId = null;
+                measure();
+                // Applying the first height can move the screen's top edge in a
+                // flex layout (notably the tablet/desktop messages shell).
+                // Re-measure after that layout commits so the bottom converges
+                // on the visible viewport instead of stopping a few pixels short.
+                settleFrameId = window.requestAnimationFrame(() => {
+                    settleFrameId = null;
+                    measure();
+                });
+            });
         };
 
         schedule();
-        // The responsive header finishes measuring immediately after hydration.
-        // Re-measure on the following paint so its final height is reflected too.
-        settleFrameId = window.requestAnimationFrame(schedule);
 
-        visualViewport?.addEventListener('resize', schedule);
-        visualViewport?.addEventListener('scroll', schedule);
+        try {
+            visualViewport?.addEventListener('resize', schedule);
+            visualViewport?.addEventListener('scroll', schedule);
+        } catch {
+            // Older in-app WebViews can expose visualViewport without EventTarget methods.
+        }
         window.addEventListener('resize', schedule);
         window.addEventListener('orientationchange', schedule);
 
         return () => {
             if (frameId != null) window.cancelAnimationFrame(frameId);
             if (settleFrameId != null) window.cancelAnimationFrame(settleFrameId);
-            visualViewport?.removeEventListener('resize', schedule);
-            visualViewport?.removeEventListener('scroll', schedule);
+            try {
+                visualViewport?.removeEventListener('resize', schedule);
+                visualViewport?.removeEventListener('scroll', schedule);
+            } catch {
+                // noop
+            }
             window.removeEventListener('resize', schedule);
             window.removeEventListener('orientationchange', schedule);
         };

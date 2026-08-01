@@ -5,15 +5,18 @@ import CalendarScreen from '@/app/(tabs)/calendar'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 
 const mockPush = jest.fn()
+const mockReplace = jest.fn()
+const mockBack = jest.fn()
 const mockLoadLocal = jest.fn(() => Promise.resolve())
 const mockSetStatus = jest.fn(() => Promise.resolve())
 const mockRemoveStatus = jest.fn(() => Promise.resolve())
+const mockShowToast = jest.fn(() => Promise.resolve())
 
 let mockEntries: TravelStatusEntry[] = []
 let mockParams: Record<string, string | undefined> = {}
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush, back: jest.fn(), canGoBack: jest.fn(() => true) }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack, canGoBack: jest.fn(() => true) }),
   usePathname: jest.fn(() => '/calendar'),
   useLocalSearchParams: () => mockParams,
 }))
@@ -40,11 +43,22 @@ jest.mock('@/stores/travelStatusStore', () => {
 })
 
 jest.mock('@/components/profile/ProfileCollectionHeader', () => {
-  return function MockProfileCollectionHeader({ title }: { title: string }) {
-    const { Text } = require('react-native')
-    return <Text>{title}</Text>
+  return function MockProfileCollectionHeader({ title, onBackPress }: { title: string; onBackPress: () => void }) {
+    const { Pressable, Text, View } = require('react-native')
+    return (
+      <View>
+        <Text>{title}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Назад" onPress={onBackPress}>
+          <Text>Назад</Text>
+        </Pressable>
+      </View>
+    )
   }
 })
+
+jest.mock('@/utils/toast', () => ({
+  showToast: (...args: unknown[]) => mockShowToast(...args),
+}))
 
 jest.mock('@/components/calendar/MiniCalendar', () => {
   return function MockMiniCalendar() {
@@ -154,6 +168,49 @@ describe('CalendarScreen status editor', () => {
     })
 
     expect(mockRemoveStatus).toHaveBeenCalledWith(123, '42')
+  })
+
+  it('removes an authored future route from plans by moving it to visited', async () => {
+    mockEntries = [makeEntry({ isAuthoredTravel: true })]
+    render(<CalendarScreen />)
+
+    await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Убрать «Test Travel» из планов' }))
+    })
+
+    expect(mockSetStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 123, status: 'visited', isAuthoredTravel: true }),
+      '42'
+    )
+    expect(mockRemoveStatus).not.toHaveBeenCalled()
+    expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'info' }))
+  })
+
+  it('keeps an authored route actionable when the status mutation fails', async () => {
+    mockEntries = [makeEntry({ isAuthoredTravel: true })]
+    mockSetStatus.mockRejectedValueOnce(new Error('network'))
+    render(<CalendarScreen />)
+
+    await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Убрать «Test Travel» из планов' }))
+    })
+
+    expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }))
+    expect(mockRemoveStatus).not.toHaveBeenCalled()
+  })
+
+  it('returns to profile even when calendar has no useful history entry', async () => {
+    render(<CalendarScreen />)
+
+    await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
+    fireEvent.press(screen.getByRole('button', { name: 'Назад' }))
+
+    expect(mockReplace).toHaveBeenCalledWith('/profile')
+    expect(mockBack).not.toHaveBeenCalled()
   })
 
   it('shows empty state when the user has no explicit travel statuses', async () => {

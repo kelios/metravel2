@@ -176,6 +176,20 @@ describe('setTravelStatus', () => {
     expect(entriesOf('42')).toHaveLength(1)
     expect(entriesOf('42')[0].status).toBe('planned')
   })
+
+  it('сохраняет признак авторского маршрута при явной смене статуса', async () => {
+    qc.setQueryData(queryKeys.travelStatus('42'), [
+      { ...makeEntry(8, 'planned', { isAuthoredTravel: true }), addedAt: 1 },
+    ])
+
+    await setTravelStatus(makeEntry(8, 'visited'), '42')
+
+    expect(entriesOf('42')[0]).toEqual(expect.objectContaining({
+      id: 8,
+      status: 'visited',
+      isAuthoredTravel: true,
+    }))
+  })
 })
 
 describe('removeTravelStatus', () => {
@@ -241,7 +255,7 @@ describe('loadTravelStatus', () => {
 
     expect(fetchUserTravelStatuses).toHaveBeenCalledWith('77', { perPage: 9999 })
     expect(entriesOf('77')).toEqual([
-      expect.objectContaining({ id: 123, title: 'Alps hike', status: 'planned', plannedDate: '2026-07-15', url: '/travels/alps-hike' }),
+      expect.objectContaining({ id: 123, title: 'Alps hike', status: 'planned', plannedDate: '2026-07-15', url: '/travels/alps-hike', isAuthoredTravel: false }),
     ])
   })
 
@@ -269,7 +283,7 @@ describe('loadTravelStatus', () => {
     expect([0, 6]).toContain(getIsoDayOfWeek(date))
   })
 
-  it('добавляет авторские путешествия как default visited и не дублирует explicit status', async () => {
+  it('добавляет авторские путешествия с derived-статусом и не дублирует explicit status', async () => {
     fetchUserTravelStatuses.mockResolvedValueOnce([
       {
         travel_id: 202, status: 'planned', planned_date: '2026-05-21', visited_date: null,
@@ -298,11 +312,11 @@ describe('loadTravelStatus', () => {
     expect(entries).toHaveLength(2)
     const byId = Object.fromEntries(entries.map((entry) => [String(entry.id), entry]))
     expect(byId['101']).toEqual(expect.objectContaining({
-      status: 'visited', title: 'Authored visited', url: '/travels/authored-visited', travelYear: '2024', travelMonth: ['7'], travelMonthName: 'Июль',
+      status: 'visited', title: 'Authored visited', url: '/travels/authored-visited', travelYear: '2024', travelMonth: ['7'], travelMonthName: 'Июль', isAuthoredTravel: true,
     }))
     expect(getTravelStatusCalendarDate(byId['101'])).toMatch(/^2024-07-/)
     expect(byId['202']).toEqual(expect.objectContaining({
-      status: 'planned', plannedDate: '2026-05-21', title: 'Explicit planned', travelYear: '2026', travelMonth: ['5'], travelMonthName: 'Май',
+      status: 'planned', plannedDate: '2026-05-21', title: 'Explicit planned', travelYear: '2026', travelMonth: ['5'], travelMonthName: 'Май', isAuthoredTravel: true,
     }))
   })
 
@@ -314,6 +328,7 @@ describe('loadTravelStatus', () => {
     await loadTravelStatus('77')
     const entry = entriesOf('77')[0]
     expect(entry.status).toBe('planned')
+    expect(entry.isAuthoredTravel).toBe(true)
     expect(getTravelStatusCalendarDate(entry)).toMatch(/^2100-06-/)
   })
 

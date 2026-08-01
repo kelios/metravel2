@@ -36,6 +36,8 @@ Read first:
 - Do not deeply validate coordinates; route that to `$metravel-quest-geo-verifier`.
 - Never print tokens or secrets.
 - Keep answers observable and fair; hints must not leak the final answer unless intentionally designed.
+- Owner rule (hel-fishermen, 2026-07-31): never keep tasks built on death arithmetic — "how many are buried/died/were executed", "what year did he die", "how long did he live", "how old was he" at graves/memorials. Replace them with symbol/meaning/stable-detail tasks. Audit overall tone: at most 1–2 memorial points per quest, uplifting start and finale; if loss dominates most steps, hand the quest back for a writer-led rewrite instead of spot fixes.
+- Owner rule: an object-name task (villa/house name) is valid only when the inscription is photo-confirmed on site; otherwise the step is unanswerable and blocks completion (willa Jeannette case).
 - Take a rollback snapshot before any content write.
 - Verify written content via API and, when visible, the quest page.
 

@@ -1,5 +1,6 @@
 import { PixelRatio, Platform } from 'react-native';
 import { METRICS } from '@/constants/layout';
+import { IMAGE_QUALITY } from '@/constants/imageContract';
 import {
   buildVersionedImageUrl,
   getPreferredImageFormat,
@@ -130,8 +131,9 @@ export const NATIVE_SLIDER_NEIGHBOUR_MAX_WIDTH = 800;
 // Оригиналы галереи хранятся почти без сжатия (1080×1080 ≈ 325 КБ). q75 на прокси
 // экономит меньше 20%, поэтому качество опущено до уровня, который заметно легче,
 // но всё ещё выше того, что уже отдаётся mobile web (там q45/q35).
-// Прокси квантует `q` шагом 10 (`snapQuality`), поэтому промежуточные значения
-// вроде 55 всё равно превращаются в 60 — держим ступень явно. Соседей режем
+// Прокси квантует `q` вверх к ступени опубликованного набора
+// (`20…90`, включая отдельную q85). Значение 55 всё равно превращается в 60,
+// поэтому держим ступень явно. Соседей режем
 // шириной, а не качеством: после свайпа сосед становится активным без
 // перезапроса URL (800@q60 ≈ 111 КБ против 325 КБ у оригинала).
 const NATIVE_SLIDER_ACTIVE_QUALITY = 60;
@@ -242,22 +244,22 @@ export const buildUriWeb = (
       : isMobileWidth
         ? SLIDER_MAX_WIDTH.mobile
         : SLIDER_MAX_WIDTH.desktop;
-    // Первый слайд не трогаем: его ширина/качество завязаны на SSG-preload hero
-    // (#1146), и любое расхождение снова превращает обложку в два файла.
+    // Первый слайд синхронизирован с SSG-preload hero через канонические q70/q80
+    // (#1146): любое расхождение снова превращает обложку в два файла.
     const density = isFirst ? 1 : getWebSlideDensity();
     const targetWidth = isFirst
       ? maxWidth
       : Math.min(Math.round(containerWidth * density), maxWidth);
     // На retina плотность уже даёт вдвое больше точек, поэтому качество можно
-    // опустить: q65 снапится к 70 — той же ступени, на которой стоит мобильный
+    // опустить до q70 — той же ступени, на которой стоит мобильный
     // hero, так что все слайды мобильной галереи просят один профиль варианта.
     const quality = isFirst
       ? isMobileWidth
-        ? 72
-        : 82
+        ? IMAGE_QUALITY.small
+        : IMAGE_QUALITY.large
       : density > 1
-        ? 65
-        : 78;
+        ? IMAGE_QUALITY.small
+        : IMAGE_QUALITY.large;
     const format = isFirst ? undefined : PREFERRED_FORMAT;
 
     const fromMedia = buildResponsiveImagePropsFromMedia(img.media, {

@@ -33,6 +33,7 @@ import { buildCanonicalUrl } from '@/utils/seo'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { getDateFieldForTravelStatus } from '@/utils/travelStatusCalendarDisplay'
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
+import { showToast } from '@/utils/toast'
 
 import { createCalendarStyles } from '@/components/screens/calendar/calendarScreen.styles'
 import {
@@ -171,7 +172,8 @@ export default function CalendarScreen() {
   const activeAccentSoftColor = activeTab === 'planned' ? colors.warningLight : colors.primaryLight
 
   const handleBackToProfile = useCallback(() => {
-    router.back()
+    router.replace('/profile')
+    return true
   }, [router])
 
   const handleBreadcrumbPress = useCallback((path: string) => {
@@ -238,6 +240,7 @@ export default function CalendarScreen() {
         travelYear: item.travelYear,
         travelMonth: item.travelMonth,
         travelMonthName: item.travelMonthName,
+        isAuthoredTravel: item.isAuthoredTravel,
         status,
         ...(value ? { [dateField]: value } : {}),
       },
@@ -274,14 +277,56 @@ export default function CalendarScreen() {
     handleCloseDateEditor()
   }, [dateEditor, handleCloseDateEditor, saveItemStatus])
 
+  const removeCalendarEntry = useCallback(async (item: CalendarEntry): Promise<boolean> => {
+    try {
+      if (item.isAuthoredTravel) {
+        // Авторский маршрут всегда остаётся в календаре. Явный/derived статус
+        // «Планирую» или «Хочу» снимаем переводом в базовый «Был».
+        await saveItemStatus(item, 'visited', null)
+      } else {
+        await removeTravelStatus(item.id, userId)
+      }
+
+      if (item.status === 'planned') {
+        await showToast({
+          type: 'info',
+          text1: i18nT('travel:components.travel.TravelStatusButton.udaleno_iz_plana_91e9ba44'),
+          position: 'bottom',
+          visibilityTime: 2000,
+        })
+      } else if (item.status === 'wishlist') {
+        await showToast({
+          type: 'info',
+          text1: i18nT('travel:components.travel.details.TravelStickyActions.udaleno_iz_hochu_poehat_e7b482b5'),
+          position: 'bottom',
+          visibilityTime: 2000,
+        })
+      }
+      return true
+    } catch {
+      await showToast({
+        type: 'error',
+        text1: i18nT('travel:components.travel.TravelStatusButton.oshibka_1066f04c'),
+        text2: i18nT('travel:components.travel.TravelStatusButton.ne_udalos_sohranit_status_4cf7d143'),
+        position: 'bottom',
+      })
+      return false
+    }
+  }, [saveItemStatus, userId])
+
   const handleRemoveFromCalendar = useCallback(() => {
     if (!dateEditor) return
     const item = dateEditor.item
-    confirmRemoveFromCalendar(item.title, () => {
-      void removeTravelStatus(item.id, userId)
-      handleCloseDateEditor()
-    })
-  }, [dateEditor, handleCloseDateEditor, userId])
+    const remove = async () => {
+      if (await removeCalendarEntry(item)) handleCloseDateEditor()
+    }
+
+    if (item.isAuthoredTravel) {
+      void remove()
+      return
+    }
+    confirmRemoveFromCalendar(item.title, () => void remove())
+  }, [dateEditor, handleCloseDateEditor, removeCalendarEntry])
 
   const handleRemoveEntry = useCallback((item: CalendarEntry, event?: GestureResponderEvent) => {
     if (Platform.OS === 'web') {
@@ -290,10 +335,12 @@ export default function CalendarScreen() {
       const nativeEvent = event?.nativeEvent as { stopPropagation?: () => void } | undefined
       nativeEvent?.stopPropagation?.()
     }
-    confirmRemoveFromCalendar(item.title, () => {
-      void removeTravelStatus(item.id, userId)
-    })
-  }, [userId])
+    if (item.isAuthoredTravel) {
+      void removeCalendarEntry(item)
+      return
+    }
+    confirmRemoveFromCalendar(item.title, () => void removeCalendarEntry(item))
+  }, [removeCalendarEntry])
 
   // Android: при открытом редакторе даты Back сначала закрывает его; иначе
   // возвращает на предыдущий экран (Профиль), а не сбрасывает Tab-навигатор.
@@ -304,7 +351,8 @@ export default function CalendarScreen() {
         return true
       }
       return false
-    }, [dateEditor, handleCloseDateEditor])
+    }, [dateEditor, handleCloseDateEditor]),
+    { resolveBack: handleBackToProfile }
   )
 
   const handleLogin = useCallback(() => {

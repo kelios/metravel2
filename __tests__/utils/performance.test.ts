@@ -100,19 +100,19 @@ describe('Image Optimization', () => {
       expect(result).toMatch(/q=(75|80)/);
     });
 
-    it('should clamp quality to valid range', () => {
+    it('should fall back to backend default quality outside the supported ladder', () => {
       const tooHigh = optimizeImageUrl(baseUrl, {
         width: 800,
         quality: 150,
       });
       expect(tooHigh).not.toContain('q=150');
-      expect(tooHigh).toContain('q=100'); // clamped to 100
+      expect(tooHigh).toContain('q=85');
 
       const tooLow = optimizeImageUrl(baseUrl, {
         width: 800,
         quality: 0,
       });
-      expect(tooLow).toContain('q=1'); // clamped to 1
+      expect(tooLow).toContain('q=85');
     });
 
     it('should cache optimized URLs', () => {
@@ -172,7 +172,7 @@ describe('Image Optimization', () => {
       const srcSet = generateSrcSet(baseUrl, [320, 640], {
         quality: 75,
       });
-      // q квантуется к шагу 10 (75 -> 80), см. imageProxy snapQuality
+      // q квантуется вверх по лестнице proxy-contract (75 -> 80)
       expect(srcSet).toContain('q=80');
     });
 
@@ -317,4 +317,3 @@ describe('Cache Management', () => {
     expect(optimizeImageUrl(first, { width: 800 })).toBe(before);
   });
 });
-

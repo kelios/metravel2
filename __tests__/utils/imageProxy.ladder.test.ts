@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { optimizeImageUrl } from '@/utils/imageProxy'
+import {
+  optimizeImageUrl,
+  PROXY_QUALITY_LADDER,
+  snapProxyQuality,
+} from '@/utils/imageProxy'
 
 /**
  * Лестница ширин фронта обязана совпадать с `ALLOWED_IMAGE_WIDTHS` бэкенда.
@@ -11,12 +15,14 @@ import { optimizeImageUrl } from '@/utils/imageProxy'
  * либо оригинал целиком, либо ближайшую ступень сильно выше нужной.
  *
  * Снимок ниже — ответ `GET https://metravel.by/api/media/proxy-contract`
- * (`version: 2`) на 2026-07-30. Обновлять его следует только вместе с бэкендом:
+ * (`version: 3`) на 2026-08-02. Обновлять его следует только вместе с бэкендом:
  * смена набора ступеней — двусторонний релиз, см. `docs/features/images.md` §6.
  */
 const BACKEND_CONTRACT_WIDTHS = [
   32, 96, 160, 320, 480, 640, 720, 800, 960, 1024, 1200, 1280, 1600, 1920, 2500,
 ] as const
+
+const BACKEND_CONTRACT_QUALITIES = [20, 30, 40, 50, 60, 70, 80, 85, 90] as const
 
 const MEDIA_URL = 'https://metravel.by/gallery/682/gallery/sample.webp'
 
@@ -99,6 +105,30 @@ describe('utils/imageProxy — лестница ширин против конт
       .filter((chunk) => chunk.length > 0)
       .map(Number)
     expect(mirrored).toEqual([...BACKEND_CONTRACT_WIDTHS])
+  })
+
+  it('quality-лестница включает q85 и совпадает с backend-contract', () => {
+    expect(PROXY_QUALITY_LADDER).toEqual(BACKEND_CONTRACT_QUALITIES)
+    expect(snapProxyQuality(72)).toBe(80)
+    expect(snapProxyQuality(78)).toBe(80)
+    expect(snapProxyQuality(82)).toBe(85)
+    expect(snapProxyQuality(85)).toBe(85)
+    expect(snapProxyQuality(88)).toBe(90)
+    expect(snapProxyQuality(0)).toBe(85)
+    expect(snapProxyQuality(150)).toBe(85)
+
+    const source = readFileSync(
+      resolve(__dirname, '..', '..', 'scripts', 'generate-seo-pages.js'),
+      'utf8',
+    )
+    const match = source.match(/const PROXY_QUALITY_LADDER = \[([\s\S]*?)\]/)
+    expect(match).not.toBeNull()
+    const mirrored = match![1]
+      .split(',')
+      .map((chunk) => chunk.trim())
+      .filter((chunk) => chunk.length > 0)
+      .map(Number)
+    expect(mirrored).toEqual([...BACKEND_CONTRACT_QUALITIES])
   })
 
   it('ступени 720/960/1024/1200 обслуживаются — без них ×1.5-кандидат srcSet схлопывался в 1280', () => {

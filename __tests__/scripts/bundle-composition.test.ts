@@ -55,6 +55,32 @@ const LAZY_ONLY_VENDORS: Array<{ pkg: string; allowedSyncImporters: string[]; ti
     allowedSyncImporters: [],
     ticket: '#1181',
   },
+  // #1148: Gorhom исполняется только на native (web-ветка TravelListPanel выходит
+  // раньше sheet-списка, MapBottomSheet имеет .web-пару, BottomDock гейтит require
+  // через Platform.OS !== 'web'). Прямой импорт из общего TravelListPanel держал в
+  // web-__common весь куст bottom-sheet (94 модуля, ~165 КБ transformed); теперь
+  // общий код обязан идти через платформ-адаптер TravelListPanel/nativeSheetList.
+  {
+    pkg: '@gorhom/bottom-sheet',
+    allowedSyncImporters: [
+      'components/MapPage/MapBottomSheet.tsx',
+      'components/MapPage/TravelListPanel/nativeSheetList.ts',
+      'components/layout/BottomDock.tsx',
+    ],
+    ticket: '#1148',
+  },
+  // #1148: react-dropzone (+file-selector, ~100 КБ transformed) нужен только
+  // зонам загрузки на upsert/редакторах, но синхронные импорты из ImageGallery
+  // и PhotoUploadWithPreview, расшаренных между несколькими async-чанками
+  // (мастер, карта, план поездки), хойстили его в web-__common. Даже два
+  // sync-импортёра в РАЗНЫХ async-чанках возвращают вендора в __common,
+  // поэтому единственная легальная точка — dropzoneVendor, который lazy-фабрики
+  // обоих вью грузят через await import (канон #765/leafletVendor).
+  {
+    pkg: 'react-dropzone',
+    allowedSyncImporters: ['utils/dropzoneVendor.ts'],
+    ticket: '#1148',
+  },
 ]
 
 /**
@@ -98,8 +124,12 @@ const stripComments = (content: string): string =>
 const hasSyncImport = (rawContent: string, specifier: string): boolean => {
   const content = stripComments(rawContent)
   const escaped = specifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // (?:(?!^\s*import\s)[^;])*? вместо [^;]*?: в файлах без точек с запятой
+  // ленивый [^;] пересекал границы стейтментов и склеивал `import React ...`
+  // с `from 'pkg'` из СОСЕДНЕГО type-импорта ниже. Многострочный одиночный
+  // импорт по-прежнему матчится — внутри него нет строк на `import`.
   const staticImport = new RegExp(
-    `^\\s*import\\s+(?!type\\b)[^;]*?from\\s+['"]${escaped}['"]|^\\s*import\\s+['"]${escaped}['"]`,
+    `^\\s*import\\s+(?!type\\b)(?:(?!^\\s*import\\s)[^;])*?from\\s+['"]${escaped}['"]|^\\s*import\\s+['"]${escaped}['"]`,
     'm',
   )
   const cjsRequire = new RegExp(`(?<!typeof\\s)require\\(\\s*['"]${escaped}['"]\\s*\\)`)
@@ -141,5 +171,12 @@ describe('состав eager-бандла (#1148)', () => {
     expect(hasSyncImport(`type RL = typeof import('react-leaflet')`, 'react-leaflet')).toBe(false)
     expect(hasSyncImport(`const m = await import('react-leaflet')`, 'react-leaflet')).toBe(false)
     expect(hasSyncImport(`import type { X } from 'react-leaflet'`, 'react-leaflet')).toBe(false)
+
+    // Файлы без точек с запятой: value-импорт другого модуля строкой выше не
+    // должен «доклеиваться» до from соседнего type-импорта искомого пакета.
+    expect(
+      hasSyncImport(`import React from 'react'\nimport type { X } from 'react-leaflet'`, 'react-leaflet'),
+    ).toBe(false)
+    expect(hasSyncImport(`import {\n  MapContainer,\n} from 'react-leaflet'`, 'react-leaflet')).toBe(true)
   })
 })

@@ -57,7 +57,7 @@ describe('sliderParts/utils buildUriNative (native)', () => {
     // становится активным без перезапроса URL.
     expect(widthOf(first)).toBe(800)
     expect(widthOf(neighbour)).toBe(800)
-    // q квантуется прокси шагом 10; было 75/70 — на оригинале 1080×1080 это
+    // q квантуется вверх по ступеням proxy-contract; было 75/70 — на оригинале 1080×1080 это
     // экономило меньше 20% веса.
     expect(qualityOf(first)).toBe(60)
     expect(qualityOf(neighbour)).toBe(60)

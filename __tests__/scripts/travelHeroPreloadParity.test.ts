@@ -67,7 +67,7 @@ const DETAIL = {
 const MOBILE_OPTIONS = {
   maxWidth: 720,
   widths: [320, 480, 640, 720],
-  quality: 72,
+  quality: 70,
   format: 'auto' as const,
   fit: 'contain' as const,
   sizes: '100vw',
@@ -75,7 +75,7 @@ const MOBILE_OPTIONS = {
 const DESKTOP_OPTIONS = {
   maxWidth: 1280,
   widths: [720, 960, 1280],
-  quality: 82,
+  quality: 80,
   format: 'auto' as const,
   fit: 'contain' as const,
   sizes: '(max-width: 1024px) 92vw, 720px',

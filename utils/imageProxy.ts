@@ -24,15 +24,13 @@ const MAX_CACHE_SIZE = 400;
 const OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'dpr', 'blur'];
 const MEDIA_FILE_PATH = /^\/(gallery|travel-image|travel-description-image|address-image)\/(?:[^?#]*\/conversions\/|\d+\/(gallery|travel-image|travel-description-image|address-image)\/|[^/?#]+$)/i;
 
-// #1113: `/quest-cover/**` и `/avatar/**` тоже обслуживает image-proxy (проверено на
-// проде 2026-07-28: `/quest-cover/...png?w=320&q=70&fit=cover` → 7 884 B при оригинале
-// 209 КБ; `/avatar/...webp?w=160` → 1 362 B при оригинале 86 КБ), но их структура пути
-// (`quests/16/main/file.png`, `profile/82/avatar/file.webp`) не подходит под
-// MEDIA_FILE_PATH. Из-за этого они уходили в ветку «свой домен», где оптимизация
-// зависит от совпадения origin с EXPO_PUBLIC_API_URL — и в любой конфигурации с
-// проксированным API (dev/preprod) параметры молча не добавлялись: `srcSet` собирался
-// из одинаковых URL без `w`, а браузер грузил оригинал на плитку 132×132.
-const PROXY_MEDIA_PREFIX = /^\/(quest-cover|avatar)\//i;
+// Model-owned family routes имеют другую структуру пути, чем legacy travel
+// media, и не попадают под MEDIA_FILE_PATH. Без явного prefix-contract они
+// уходят в ветку «свой домен», где оптимизация зависит от совпадения origin с
+// EXPO_PUBLIC_API_URL. В dev/preprod с проксированным API это молча снимало `w`.
+// Список зеркалит `route_behavior.model_owned.routes` proxy-contract v3.
+const PROXY_MEDIA_PREFIX =
+  /^\/(quest-cover|avatar|trip-cover|quest-step-image|quest-poster|badge-image)\//i;
 
 const getPublicApiOrigin = (): string | null => {
   try {
@@ -154,10 +152,19 @@ const resolveProxyWidth = (options: ImageOptimizationOptions): number | null => 
   return snapDimensionUp(options.width);
 };
 
-// Quality к шагу 10 (72/78/82 → 70/80/80) — меньше вариантов при незаметной разнице.
+// Quality следует опубликованному proxy-contract буквально: допустимое значение
+// остаётся как есть, промежуточное округляется ВВЕРХ, а invalid/out-of-range
+// возвращает backend default q85. Это не просто «шаг 10»: q85 — отдельная
+// ступень upload/master/print.
+export const PROXY_QUALITY_LADDER = [20, 30, 40, 50, 60, 70, 80, 85, 90] as const;
+
 const snapQuality = (value: number): number => {
-  const q = Math.min(100, Math.max(1, Math.round(value)));
-  return Math.min(100, Math.max(10, Math.round(q / 10) * 10));
+  const q = Math.round(value);
+  const min = PROXY_QUALITY_LADDER[0];
+  const max = PROXY_QUALITY_LADDER[PROXY_QUALITY_LADDER.length - 1];
+  if (!Number.isFinite(q) || q < min || q > max) return 85;
+
+  return PROXY_QUALITY_LADDER.find((candidate) => candidate >= q) ?? 85;
 };
 
 /** См. `snapProxyWidth`: та же причина — квантование quality живёт в одном месте. */
@@ -193,7 +200,11 @@ export function optimizeImageUrl(
   try {
     const parsedUrl = new URL(trimmedUrl, publicOrigin || 'https://placeholder.invalid');
 
-    if (isPrivateOrLocalHost(parsedUrl.hostname)) return originalUrl;
+    // Local dev/E2E still serves first-party media through the configured API
+    // origin, so it must exercise the same proxy parameters as production.
+    // Unrelated LAN/private URLs remain untouched.
+    const isConfiguredPublicOrigin = publicOrigin != null && parsedUrl.origin === publicOrigin;
+    if (isPrivateOrLocalHost(parsedUrl.hostname) && !isConfiguredPublicOrigin) return originalUrl;
 
     if (MEDIA_FILE_PATH.test(parsedUrl.pathname) || PROXY_MEDIA_PREFIX.test(parsedUrl.pathname)) {
       // Media file paths are served by the backend image proxy which understands
