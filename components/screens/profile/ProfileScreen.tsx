@@ -17,6 +17,9 @@ import { type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import {
   type ProfileTravelEngagementMetricKey,
 } from '@/components/profile/ProfileTravelEngagementSection'
+import { ProfileEngagementDetailList } from '@/components/profile/ProfileEngagementDetailList';
+import { resolveAuthorEngagementMetric } from '@/api/authorEngagement';
+import { useAuthorEngagementDetails } from '@/hooks/useAuthorEngagementDetails';
 import EmptyState from '@/components/ui/EmptyState';
 import { useMyTravels } from '@/hooks/useMyTravels';
 import type { Travel } from '@/types/types';
@@ -312,6 +315,23 @@ export default function ProfileScreen() {
     setActiveTravelMetric((current) => (current === metric ? null : metric));
   }, []);
 
+  // #1192: рядом с фильтрацией маршрутов по метрике показываем author-only
+  // детализацию «кто и какой маршрут» из /travels/author-engagement/.
+  const engagementMetric = useMemo(
+    () => resolveAuthorEngagementMetric(activeTravelMetric),
+    [activeTravelMetric],
+  );
+  const engagementDetails = useAuthorEngagementDetails(engagementMetric);
+  // Обёртки обязательны: Pressable передаёт в onPress событие, а React Query
+  // трактовал бы его как options-объект fetchNextPage/refetch.
+  const { fetchNextPage: fetchMoreEngagement, refetch: refetchEngagement } = engagementDetails;
+  const handleEngagementLoadMore = useCallback(() => {
+    void fetchMoreEngagement();
+  }, [fetchMoreEngagement]);
+  const handleEngagementRetry = useCallback(() => {
+    void refetchEngagement();
+  }, [refetchEngagement]);
+
   const handleProfileTabChange = useCallback((tab: ProfileTabKey) => {
     setActiveTravelMetric(null);
     setWorldMapGestureActive(false);
@@ -545,6 +565,33 @@ export default function ProfileScreen() {
     ]
   );
 
+  const engagementDetailContent = useMemo(() => {
+    if (!engagementMetric) return null;
+
+    return (
+      <ProfileEngagementDetailList
+        metric={engagementMetric}
+        items={engagementDetails.items}
+        total={engagementDetails.total}
+        isLoading={engagementDetails.isLoading}
+        isError={engagementDetails.isError}
+        hasNextPage={engagementDetails.hasNextPage}
+        isFetchingNextPage={engagementDetails.isFetchingNextPage}
+        onLoadMore={handleEngagementLoadMore}
+        onRetry={handleEngagementRetry}
+        onOpenProfile={handleOpenSubscribedProfile}
+        onOpenTravel={handleOpenSubscribedTravel}
+      />
+    );
+  }, [
+    engagementMetric,
+    engagementDetails,
+    handleEngagementLoadMore,
+    handleEngagementRetry,
+    handleOpenSubscribedProfile,
+    handleOpenSubscribedTravel,
+  ]);
+
   const countriesContent = useMemo(
     () => (
       <ProfileCountriesTab
@@ -638,14 +685,17 @@ export default function ProfileScreen() {
         {isStats ? statsContent : null}
         {isCountries ? countriesContent : null}
         {isWorldmap ? worldmapContent : null}
+        {!isSectionTab ? engagementDetailContent : null}
         {subscriptionsContent}
       </>
     ),
     [
       Header,
       countriesContent,
+      engagementDetailContent,
       worldmapContent,
       isCountries,
+      isSectionTab,
       isWorldmap,
       isOverview,
       isStats,
