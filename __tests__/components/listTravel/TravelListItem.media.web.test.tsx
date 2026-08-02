@@ -233,7 +233,8 @@ describe('TravelListItem media props on web', () => {
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.mediaProps?.placeholderBlurhash).toBe('LEHL6nWB2yk8pyo0adR*.7kCMdnj');
-    expect(props.mediaProps?.placeholderColor).toBeNull();
+    // Оба поля прокидываются вместе: web заливает поля цветом, native рисует blurhash.
+    expect(props.mediaProps?.placeholderColor).toBe('#123456');
     expect(props.mediaProps?.placeholderSrc).toBeUndefined();
   });
 

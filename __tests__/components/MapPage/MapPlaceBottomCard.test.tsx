@@ -119,7 +119,7 @@ describe('MapPlaceBottomCard', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('closes on raw touch end and suppresses the delayed Safari ghost click', () => {
+  it('closes on pointerup before WebKit drops touchend and suppresses the ghost click', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
     const onClose = jest.fn()
 
@@ -142,14 +142,17 @@ describe('MapPlaceBottomCard', () => {
     }
 
     renderer.act(() => {
-      close.props.onTouchEnd(event)
-      // The same physical tap may still emit pointerup/onPress through RN-Web.
+      close.props.onPointerDown(event)
       close.props.onPointerUp(event)
+      // Some WebKit versions still deliver these after pointerup. They must be
+      // harmless when the same physical tap has already closed the card.
+      close.props.onTouchEnd(event)
       close.props.onPress()
     })
 
-    expect(event.preventDefault).toHaveBeenCalledTimes(1)
-    expect(event.nativeEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1)
+    expect(event.preventDefault).toHaveBeenCalledTimes(3)
+    expect(event.nativeEvent.preventDefault).toHaveBeenCalledTimes(3)
+    expect(event.nativeEvent.stopImmediatePropagation).toHaveBeenCalledTimes(3)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 

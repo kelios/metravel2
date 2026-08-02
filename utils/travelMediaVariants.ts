@@ -144,15 +144,17 @@ export type MediaPlaceholderData = {
 export function getMediaPlaceholderData(
   entry: TravelMediaImage | null | undefined,
 ): MediaPlaceholderData {
+  // Оба поля отдаются вместе, а выбор делает потребитель. Раньше здесь стояло
+  // «либо-либо» с приоритетом blurhash, и web-слой из-за этого оставался без
+  // `dominantColor`: у карточки с blurhash поля letterbox нечем было залить,
+  // приходилось поднимать сетевую blur-подложку. На web blurhash дорог —
+  // expo-image декодирует его в canvas 32×32, апскейлит ×10 и делает PNG-blob
+  // (320×320, ~48 КБ на карточку), поэтому там нужен именно цвет.
   const blurhash = typeof entry?.blurhash === 'string' ? entry.blurhash.trim() : ''
-  if (blurhash) {
-    return { blurhash, dominantColor: null }
-  }
-
   const rawColor =
     typeof entry?.dominant_color === 'string' ? entry.dominant_color.trim() : ''
   const dominantColor = DOMINANT_COLOR_PATTERN.test(rawColor) ? rawColor : null
-  return { blurhash: null, dominantColor }
+  return { blurhash: blurhash || null, dominantColor }
 }
 
 export interface MediaResponsiveOptions {

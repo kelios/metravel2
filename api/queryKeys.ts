@@ -58,6 +58,10 @@ export const queryKeys = {
   travelStatus: (userId: string | null) => ['travel-status', userId] as const,
   travelStatusAuthored: (userId: string | null) =>
     ['travel-status', userId, 'authored'] as const,
+  // Детализация «кто и какой маршрут» по метрике автора (#1192). Автор всегда —
+  // текущий пользователь, поэтому ключ scoped по userId, как остальные личные коллекции.
+  authorEngagementDetails: (userId: string | null, metric: string) =>
+    ['author-engagement', userId, metric] as const,
   questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
   quests: () => ['quests'] as const,
   questDetail: (questId: number | undefined) => ['quest', questId] as const,

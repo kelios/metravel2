@@ -23,6 +23,44 @@ import { translate as i18nT } from '@/i18n'
 
 const IS_WEB = Platform.OS === 'web'
 const SWIPE_CLOSE_THRESHOLD_PX = 64
+const WEB_COMPAT_CLICK_GUARD_MS = 700
+const WEB_COMPAT_CLICK_RADIUS_PX = 24
+const cancelWebCloseContinuation = (event: any) => {
+  event?.preventDefault?.()
+  event?.stopPropagation?.()
+  event?.nativeEvent?.preventDefault?.()
+  event?.nativeEvent?.stopPropagation?.()
+  event?.nativeEvent?.stopImmediatePropagation?.()
+}
+const guardWebCompatibilityClick = (event: any) => {
+  if (!IS_WEB || typeof document === 'undefined') return
+
+  const nativeEvent = event?.nativeEvent ?? event
+  const changedTouch = nativeEvent?.changedTouches?.[0]
+  const clientX = Number(changedTouch?.clientX ?? nativeEvent?.clientX)
+  const clientY = Number(changedTouch?.clientY ?? nativeEvent?.clientY)
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return
+
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  const cleanup = () => {
+    document.removeEventListener('click', stopCompatibilityClick, true)
+    if (timeoutId != null) clearTimeout(timeoutId)
+  }
+  const stopCompatibilityClick = (clickEvent: MouseEvent) => {
+    const isSameTouchPoint =
+      Math.abs(clickEvent.clientX - clientX) <= WEB_COMPAT_CLICK_RADIUS_PX &&
+      Math.abs(clickEvent.clientY - clientY) <= WEB_COMPAT_CLICK_RADIUS_PX
+    if (!isSameTouchPoint) return
+
+    clickEvent.preventDefault()
+    clickEvent.stopPropagation()
+    clickEvent.stopImmediatePropagation()
+    cleanup()
+  }
+
+  document.addEventListener('click', stopCompatibilityClick, true)
+  timeoutId = setTimeout(cleanup, WEB_COMPAT_CLICK_GUARD_MS)
+}
 // Android renders elevated descendants (map FABs / WebView controls) above a
 // later sibling unless the sibling establishes its own native Z plane.  The
 // place-card root must own that plane so its backdrop receives taps and every
@@ -212,28 +250,26 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const bottomContentInset = IS_WEB ? bottomChromeInset + 12 : 12
   const visibleViewportHeight = 'var(--metravel-map-vh, 100svh)'
 
-  // On web, close from the low-level pointer/touch stream instead of relying solely
-  // on RN-Web's synthetic `onPress`. iPhone Safari can delay/swallow `pointerup`
-  // around a touch-action:none swipe target. `touchend` is the earliest reliable
-  // completion signal there; preventDefault also suppresses the delayed ghost click
-  // that could otherwise land on Leaflet after this sheet unmounts.
+  // On web, close from the low-level pointer stream instead of relying solely on
+  // RN-Web's synthetic `onPress`. WebKit dispatches pointerup before touchend; the
+  // close unmount then drops touchend and can retarget the compatibility click to a
+  // map control underneath. Cancel both pointer phases before dismissing the card.
   const webCloseHandlers = IS_WEB
     ? ({
         onPointerDown: (e: any) => {
-          e?.stopPropagation?.()
-          e?.nativeEvent?.stopPropagation?.()
+          cancelWebCloseContinuation(e)
         },
         onPointerUp: (e: any) => {
-          e?.stopPropagation?.()
-          e?.nativeEvent?.stopPropagation?.()
+          // WebKit dispatches pointerup before touchend. Closing here unmounts the
+          // target, so touchend may never reach it; cancel the compatibility click
+          // now, before it can be retargeted to a Leaflet control underneath.
+          cancelWebCloseContinuation(e)
+          guardWebCompatibilityClick(e)
           handleClose()
         },
         onTouchEnd: (e: any) => {
-          e?.preventDefault?.()
-          e?.stopPropagation?.()
-          e?.nativeEvent?.preventDefault?.()
-          e?.nativeEvent?.stopPropagation?.()
-          e?.nativeEvent?.stopImmediatePropagation?.()
+          cancelWebCloseContinuation(e)
+          guardWebCompatibilityClick(e)
           handleClose()
         },
       } as any)
@@ -433,8 +469,12 @@ const getStyles = (colors: ThemedColors) =>
     // off the parent leaves the adjacent close Pressable on Safari's direct tap
     // path while preserving swipe-down-to-close on the centered grabber.
     webSwipeZone: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: '50%',
+      marginLeft: -48,
       width: 96,
-      height: 40,
       alignItems: 'center',
       justifyContent: 'center',
       ...(IS_WEB ? ({ cursor: 'grab', touchAction: 'none' } as any) : null),
@@ -451,7 +491,7 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      ...(IS_WEB ? ({ cursor: 'pointer', zIndex: 6 } as any) : null),
+      ...(IS_WEB ? ({ cursor: 'pointer', touchAction: 'manipulation', zIndex: 6 } as any) : null),
     },
     nativeScroll: {
       flexGrow: 0,

@@ -10,10 +10,6 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl, generateSrcSet } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
-  getContainedMediaBox,
-} from '@/components/ui/webBlurBackdropLayout';
-import {
-  WebBlurBackdrop,
   WebMainImage,
   hasOptimizationParams,
   isIOSSafariUserAgent,
@@ -122,7 +118,11 @@ type Props = {
   allowCriticalWebBlur?: boolean;
   /** On web, keep main image hidden until onLoad even for eager/high-priority media. */
   revealOnLoadOnly?: boolean;
-  /** Source image aspect ratio, used to keep critical blur confined to letterbox gutters. */
+  /**
+   * Принимается для совместимости с вызывающими (слайдеры передают его для native).
+   * На web не используется: сегментной blur-подложки, ради которой считалась
+   * геометрия полей, больше нет — поля заливает `placeholderColor`.
+   */
   contentAspectRatio?: number;
   /** Preserve the exact pre-optimized URL for critical web media that must match preload. */
   preserveOptimizedWebSrc?: boolean;
@@ -171,7 +171,6 @@ function ImageCardMedia({
   showImmediately = false,
   allowCriticalWebBlur = false,
   revealOnLoadOnly = false,
-  contentAspectRatio,
   preserveOptimizedWebSrc = false,
   optimizeWeb = true,
   webResponsiveSource,
@@ -191,8 +190,18 @@ function ImageCardMedia({
     /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(placeholderColor.trim())
       ? placeholderColor.trim()
       : '';
+  /**
+   * На web blurhash в слой не идёт: `expo-image` декодирует его в canvas 32×32,
+   * апскейлит ×10 и отдаёт `blob:`-PNG 320×320 (~48 КБ и отдельная строка в
+   * Network на каждую плитку — см. `expo-image/src/utils/blurhash/useBlurhash.tsx`,
+   * `scaleRatio = 10`). Для заливки полей под размытием этого не нужно: там
+   * достаточно `dominant_color`, который приходит тем же манифестом и стоит ноль
+   * ресурсов. На native blurhash остаётся — там его рисует сама expo-image.
+   */
+  const useBlurhashPlaceholder =
+    Platform.OS !== 'web' && Boolean(normalizedPlaceholderBlurhash);
   const hasDataPlaceholder = Boolean(
-    normalizedPlaceholderBlurhash || normalizedPlaceholderColor,
+    useBlurhashPlaceholder || normalizedPlaceholderColor,
   );
   const resolvedSource = useMemo(() => {
     if (source) return source;
@@ -397,25 +406,6 @@ function ImageCardMedia({
     return uri || null;
   }, [resolvedSource, shouldDisableNetwork, webOptimizedSource]);
 
-  const webBlurSrc = useMemo(() => {
-    if (Platform.OS !== 'web') return null;
-    if (!resolvedSource || typeof resolvedSource === 'number') return null;
-    // Одна картинка — одна сетевая загрузка (#1111). Размытая подложка это производная
-    // от того же изображения, поэтому она ВСЕГДА переиспользует уже выбранный main-URL:
-    // браузер берёт файл из кэша, а размытие делает CSS-фильтр в WebBlurBackdrop.
-    //
-    // Раньше собственный URL строился здесь из своей ширины (`stableWidth * 0.42`), и
-    // подложка расходилась с основным слоем: замер прода 2026-07-28 на карточке квеста
-    // — подложка просила `?w=160`, резкий слой `?w=320`, то есть один файл качался
-    // дважды. На путях, где прокси срывается в отдачу оригинала (#1120), это стоило
-    // 2.5 МБ вместо килобайтов, причём дважды.
-    if (webMainSrc) return webMainSrc;
-    if (typeof resolvedSource === 'string') return resolvedSource;
-    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
-    if (!uri) return null;
-    return uri;
-  }, [resolvedSource, webMainSrc]);
-
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
     if (providedWebResponsiveSource) return providedWebResponsiveSource.srcSet;
@@ -467,22 +457,18 @@ function ImageCardMedia({
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
   }, [providedWebResponsiveSource, width, isIOSWebKitWeb]);
 
-  const shouldRenderWebBlurBackground = useMemo(() => {
-    if (Platform.OS !== 'web') return false;
-    // #1174: плейсхолдер из данных заменяет сетевую подложку только там, где фон
-    // не виден в готовом кадре. В `contain` подложка — это и есть постоянная
-    // заливка полей letterbox, а blurhash-слой на web живёт лишь до появления
-    // фото (#1145): после раскрытия поля оставались пустыми. Замер прода
-    // 2026-07-30 `/travels/ourvietnam`: слот 353×453, фото 800×800 — 50 px белой
-    // полосы сверху и снизу, `[data-blur-backdrop]` в слайде 0.
-    if (hasDataPlaceholder && fit !== 'contain') return false;
-    if (!blurBackground || !webMainSrc) return false;
-    if (allowCriticalWebBlur) return true;
-    if (isIOSWebKitWeb) return true;
-    // Avoid promoting the oversized blur backdrop to LCP on eager/critical images
-    // unless the caller explicitly opts in for layout fidelity.
-    return !(loading === 'eager' || priority === 'high');
-  }, [allowCriticalWebBlur, blurBackground, fit, hasDataPlaceholder, isIOSWebKitWeb, loading, priority, webMainSrc]);
+  /**
+   * Решение владельца 2026-08-02: на web одна картинка — один растр.
+   *
+   * Раньше размытые поля рисовались ВТОРЫМ `<img>` с тем же URL. Сетевой запрос
+   * при этом был один (файл брался из кэша), но декодов и растровых буферов —
+   * два на каждую плитку, плюс лишний DOM-узел в каждой ячейке списка. Поля
+   * letterbox всё равно размыты на 20 px, поэтому источник для них берётся из
+   * данных манифеста (`dominant_color`), а не из полноразмерного фото.
+   *
+   * Native не трогаем: там переходом управляет сама expo-image.
+   */
+  const shouldRenderWebBlurBackground = false;
   /**
    * #1177: геометрия для сегментного режима подложки.
    *
@@ -495,107 +481,28 @@ function ImageCardMedia({
    * Оба недостающих числа берём из DOM: размер — из контейнера, пропорции — из
    * `naturalWidth/naturalHeight` уже загруженного резкого слоя.
    */
-  const [measuredBox, setMeasuredBox] = useState<{ width: number; height: number } | null>(null);
-  const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(null);
-
-  const needsMeasuredBox =
-    Platform.OS === 'web' && fit === 'contain' && (typeof width !== 'number' || typeof height !== 'number');
-
-  const containerRef = useRef<any>(null);
-  const attachContainerRef = useCallback((node: any) => {
-    containerRef.current = node;
-  }, []);
-
-  useEffect(() => {
-    if (!needsMeasuredBox) {
-      setMeasuredBox(null);
-      return;
-    }
-    const node = containerRef.current as HTMLElement | null;
-    if (!node || typeof node.getBoundingClientRect !== 'function') return;
-
-    const apply = () => {
-      const rect = node.getBoundingClientRect();
-      if (!(rect.width > 0) || !(rect.height > 0)) return;
-      setMeasuredBox((prev) =>
-        prev && Math.abs(prev.width - rect.width) < 1 && Math.abs(prev.height - rect.height) < 1
-          ? prev
-          : { width: rect.width, height: rect.height },
-      );
-    };
-
-    apply();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(apply);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [needsMeasuredBox, currentImageIdentityKey]);
-
-  // Смена картинки — смена пропорций: старое значение дало бы поля не от того кадра.
-  useEffect(() => {
-    setNaturalAspectRatio(null);
-  }, [currentImageIdentityKey]);
-
-  const webBackdropContentBox = useMemo(() => {
-    if (Platform.OS !== 'web') return null;
-    if (fit !== 'contain') return null;
-
-    const containerWidth = typeof width === 'number' ? width : measuredBox?.width;
-    const containerHeight = typeof height === 'number' ? height : measuredBox?.height;
-    if (typeof containerWidth !== 'number' || typeof containerHeight !== 'number') return null;
-
-    return getContainedMediaBox({
-      containerWidth,
-      containerHeight,
-      contentAspectRatio: contentAspectRatio ?? naturalAspectRatio,
-    });
-  }, [contentAspectRatio, fit, height, measuredBox, naturalAspectRatio, width]);
-
   // When blur backdrop reuses the main image URL, both the CSS background-image
   // and the <img> share one browser cache entry. The sharp image appears as soon
   // as data arrives — no need for an opacity fade that creates a "blur first,
   // image second" flash during scroll.
-  const blurSharesMainUrl = useMemo(() => {
-    if (Platform.OS !== 'web') return false;
-    // allowCriticalWebBlur forces webBlurSrc = webMainSrc (line above), so both
-    // elements share one browser cache entry and render simultaneously.
-    return allowCriticalWebBlur && shouldRenderWebBlurBackground && webMainSrc != null;
-  }, [allowCriticalWebBlur, shouldRenderWebBlurBackground, webMainSrc]);
-
-  const shouldShowWebImageImmediately = useMemo(() => {
-    if (Platform.OS !== 'web') return showImmediately;
-    if (revealOnLoadOnly) return showImmediately;
-    if (isIOSWebKitWeb && allowCriticalWebBlur && !preserveOptimizedWebSrc) {
-      // iPhone WebKit tends to paint a visibly blurry progressive frame when
-      // contain-mode shared-blur cards reveal the main image before onLoad.
-      // This hits the large high-priority "Маршрут недели" card hardest, so the
-      // wait MUST apply regardless of priority — `priority="high"` was the only
-      // prop that set this card apart from the popular cards and it was the thing
-      // defeating the protection. fetchPriority="high" still requests the image
-      // eagerly; we only defer the *reveal* until the sharp decode finishes.
-      return showImmediately;
-    }
-    return showImmediately || resolvedLoading === 'eager' || priority === 'high';
-  }, [
-    allowCriticalWebBlur,
-    isIOSWebKitWeb,
-    preserveOptimizedWebSrc,
-    priority,
-    revealOnLoadOnly,
-    resolvedLoading,
-    showImmediately,
-  ]);
+  /**
+   * Решение владельца 2026-08-02: гейта раскрытия на web больше нет.
+   *
+   * Гейт держал `<img>` в `opacity: 0` до события `load` и показывал вместо фото
+   * подложку. Он и был причиной «сначала виден только размытый фон», а на
+   * квестах фото иногда так и не раскрывалось: событие `load` не приходило
+   * (кэш-хит по неизменному `src`), и слайд оставался размытым навсегда.
+   *
+   * Браузер и так рисует прогрессивно и не показывает пустой `<img>`, у которого
+   * есть предыдущий декодированный кадр, — то есть гейт не защищал ни от чего,
+   * что браузер не умеет сам.
+   */
+  const shouldShowWebImageImmediately = Platform.OS !== 'web' ? showImmediately : true;
 
   const shouldRevealWebMedia = useMemo(() => {
     if (Platform.OS !== 'web') return true;
     return shouldShowWebImageImmediately || effectiveWebLoaded;
   }, [effectiveWebLoaded, shouldShowWebImageImmediately]);
-
-  const shouldShowWebBlurBackdrop = useMemo(() => {
-    if (Platform.OS !== 'web') return true;
-    if (!blurSharesMainUrl) return true;
-    return shouldRevealWebMedia;
-  }, [blurSharesMainUrl, shouldRevealWebMedia]);
 
   /**
    * #1145: blurhash-подложка на web — это `<ExpoImage source={{blurhash}}>`, то есть
@@ -610,18 +517,17 @@ function ImageCardMedia({
    * под непрозрачным фото, но остаётся LCP-кандидатом и лишним DOM-узлом.
    * На native поведение не меняем — там переходом управляет сама expo-image.
    */
-  const shouldRenderDataPlaceholder = useMemo(() => {
-    if (!hasDataPlaceholder) return false;
-    if (Platform.OS !== 'web') return true;
-    return !shouldRevealWebMedia;
-  }, [hasDataPlaceholder, shouldRevealWebMedia]);
+  /**
+   * На web слой из данных остаётся видимым ВСЕГДА: он и есть заливка полей
+   * letterbox под `contain`-фото. Раньше он снимался после раскрытия картинки,
+   * и в `contain` поля становились пустыми — ради них и поднимали сетевую
+   * blur-подложку. Слой стоит под фото (`zIndex: 0`), поэтому на кадре его видно
+   * ровно там, где фото нет.
+   */
+  const shouldRenderDataPlaceholder = hasDataPlaceholder;
 
-  const shouldRenderWebSkeleton = useMemo(() => {
-    if (Platform.OS !== 'web') return false;
-    if (blurOnly) return false;
-    if (!webMainSrc) return false;
-    return !hasDataPlaceholder && !shouldRevealWebMedia;
-  }, [blurOnly, hasDataPlaceholder, shouldRevealWebMedia, webMainSrc]);
+  // Скелет ждал раскрытия фото; раскрытия больше нет, а под фото лежит заливка.
+  const shouldRenderWebSkeleton = false;
 
   // Low-quality preview shown immediately (blurred) while the main image loads,
   // so a catalog card reads as "loading" with the photo's colors instead of an
@@ -649,13 +555,21 @@ function ImageCardMedia({
     if (!webPlaceholderSrc) return false;
     return !shouldRevealWebMedia;
   }, [blurOnly, shouldRevealWebMedia, webPlaceholderSrc]);
-  const webMediaInstanceKey = useMemo(() => {
-    if (recyclingKey) return recyclingKey;
-    if (currentImageIdentityKey) return currentImageIdentityKey;
-    if (webMainSrc) return webMainSrc;
-    if (webBlurSrc) return webBlurSrc;
-    return 'web-media';
-  }, [currentImageIdentityKey, recyclingKey, webBlurSrc, webMainSrc]);
+  /**
+   * Ключ web-узлов ПОЗИЦИОННЫЙ, а не по идентичности картинки.
+   *
+   * FlashList рециклит ряды: ячейка переиспользуется (`slot-${index}` в
+   * `RightColumn`), но если `<img>` внутри ключевать по URL/`recyclingKey`,
+   * React уничтожает узел и монтирует новый. Свежий `<img>` до декода пуст,
+   * поэтому при скролле кадр моргал, а браузер заводил новый запрос вместо
+   * смены `src`. Со стабильным ключом узел переиспользуется, меняется только
+   * `src`, и предыдущий декодированный кадр держится до появления нового.
+   *
+   * Так уже было сделано (`key="main-web-media"`), но `5dccae12` вернул ключ по
+   * идентичности, чтобы форсировать `load` на iPhone. Это больше не нужно: гейта
+   * раскрытия нет, ждать событие `load` некому.
+   */
+  const webMediaInstanceKey = 'web-media';
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -691,32 +605,14 @@ function ImageCardMedia({
     }
   }, [currentImageIdentityKey, revealOnLoadOnly]);
 
-  const handleWebLoad = useCallback((
-    _resolvedSrc: string,
-    naturalSize?: { width: number; height: number },
-  ) => {
+  const handleWebLoad = useCallback((_resolvedSrc: string) => {
     if (currentImageIdentityKey) {
       loadedWebImageBaseCache.add(currentImageIdentityKey);
       decodedIdentityRef.current = currentImageIdentityKey;
     }
-    // #1177: пропорции ставим здесь же, а не отдельным колбэком. React батчит оба
-    // setState в один коммит, поэтому кадр «фото показано, но подложка ещё во всю
-    // плитку» не успевает отрисоваться — иначе LCP-кандидат зафиксировался бы по ней.
-    if (naturalSize) {
-      setNaturalAspectRatio(naturalSize.width / naturalSize.height);
-    }
     setWebLoaded(true);
     onLoad?.();
   }, [currentImageIdentityKey, onLoad]);
-
-  // #1177: пропорции могут прийти раньше или вовсе без события загрузки (кэш-хит),
-  // поэтому канал отдельный. Значение меняем только при реальном отличии — иначе
-  // повторный отчёт того же кадра дал бы лишний рендер на каждом слайде.
-  const handleWebNaturalSize = useCallback((naturalSize: { width: number; height: number }) => {
-    const ratio = naturalSize.width / naturalSize.height;
-    if (!Number.isFinite(ratio) || ratio <= 0) return;
-    setNaturalAspectRatio((prev) => (prev != null && Math.abs(prev - ratio) < 0.001 ? prev : ratio));
-  }, []);
 
   const prefetchHref = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -782,7 +678,6 @@ function ImageCardMedia({
 
   return (
     <View
-      ref={attachContainerRef}
       style={[
         styles.container,
         {
@@ -799,33 +694,10 @@ function ImageCardMedia({
         <>
           {shouldRenderDataPlaceholder ? (
             <ImageDataPlaceholder
-              blurhash={normalizedPlaceholderBlurhash || null}
+              blurhash={useBlurhashPlaceholder ? normalizedPlaceholderBlurhash : null}
               color={normalizedPlaceholderColor || null}
               borderRadius={resolvedBorderRadius}
               testID={testID ? `${testID}-data-placeholder` : undefined}
-            />
-          ) : null}
-          {Platform.OS === 'web' && shouldRenderWebBlurBackground && webBlurSrc ? (
-            <WebBlurBackdrop
-              key={`blur-${webMediaInstanceKey}`}
-              src={webBlurSrc}
-              // Подложка обязана выбирать того же кандидата, что и резкий слой:
-              // одинакового `src` мало, решает `srcSet` + `sizes` (#1111).
-              srcSet={webBlurSrc === webMainSrc ? webSrcSet : undefined}
-              sizes={webBlurSrc === webMainSrc ? webSizes : undefined}
-              alt={alt || ''}
-              width={typeof width === 'number' ? width : measuredBox?.width ?? 400}
-              height={typeof height === 'number' ? height : measuredBox?.height ?? 300}
-              borderRadius={resolvedBorderRadius}
-              fit={fit}
-              useCssBackdrop={
-                allowCriticalWebBlur &&
-                !revealOnLoadOnly &&
-                resolvedLoading !== 'lazy'
-              }
-              visible={shouldShowWebBlurBackdrop}
-              contentBox={webBackdropContentBox}
-              contentRevealed={effectiveWebLoaded}
             />
           ) : null}
           {shouldRenderWebPlaceholder && webPlaceholderSrc ? (
@@ -869,7 +741,6 @@ function ImageCardMedia({
               hasBlurBehind={shouldRenderWebBlurBackground}
               loaded={effectiveWebLoaded}
               onLoad={handleWebLoad}
-              onNaturalSize={handleWebNaturalSize}
               onError={onError}
               showImmediately={shouldShowWebImageImmediately}
             />

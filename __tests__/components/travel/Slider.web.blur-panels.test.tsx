@@ -592,7 +592,8 @@ describe('Slider (web) blur background', () => {
 
     const image = tree!.root.findByProps({ testID: 'slider-image-0' })
     expect(image.props.placeholderBlurhash).toBe('LEHL6nWB2yk8pyo0adR*.7kCMdnj')
-    expect(image.props.placeholderColor).toBeNull()
+    // Оба поля прокидываются вместе: web заливает поля цветом, native рисует blurhash.
+    expect(image.props.placeholderColor).toBe('#123456')
     // #1167: `placeholderSrc` больше не прокидывается вовсе — LQIP-файл был вторым
     // сетевым запросом на тот же слот.
     expect(image.props.placeholderSrc).toBeUndefined()

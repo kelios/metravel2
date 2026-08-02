@@ -196,7 +196,9 @@ describe('utils/travelMediaVariants', () => {
   })
 
   describe('getMediaPlaceholderData', () => {
-    it('prefers trimmed blurhash and suppresses color/LQIP network fallback', () => {
+    // Оба поля отдаются вместе: web берёт цвет (blurhash там стоит blob-PNG
+    // 320×320 на плитку), native — blurhash. Выбор делает потребитель.
+    it('returns trimmed blurhash together with the dominant color', () => {
       expect(
         getMediaPlaceholderData({
           ...mediaEntry,
@@ -205,7 +207,7 @@ describe('utils/travelMediaVariants', () => {
         }),
       ).toEqual({
         blurhash: 'LEHL6nWB2yk8pyo0adR*.7kCMdnj',
-        dominantColor: null,
+        dominantColor: '#123456',
       })
     })
 
