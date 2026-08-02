@@ -54,6 +54,63 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(buildStableContentPrefetchUrl(first!)).not.toBe(raw)
   })
 
+  // #1213: префетч первой картинки тела и `<img>` обязаны попасть в ОДИН URL.
+  // На проде 2026-08-02 они расходились: браузер брал по srcset w=1920, а
+  // `<link rel=prefetch>` тянул фиксированный w=800 — 29 252 B и 96 912 B лишних
+  // на двух статьях. Ступень проверяем через реальную сборку URL, а не мок.
+  describe('first-image prefetch lands on the rung the browser will pick (#1213)', () => {
+    const RAW = 'https://metravel.by/travel-description-image/540/description/abc.JPG'
+
+    const withWebViewport = <T,>(width: number, dpr: number, run: () => T): T => {
+      const originalOs = Platform.OS
+      const originalWidth = window.innerWidth
+      const originalDpr = window.devicePixelRatio
+      Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+      Object.defineProperty(window, 'innerWidth', { value: width, configurable: true })
+      Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true })
+      try {
+        return run()
+      } finally {
+        Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+        Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+        Object.defineProperty(window, 'devicePixelRatio', { value: originalDpr, configurable: true })
+      }
+    }
+
+    /** Кандидаты из реально отрендеренного `srcset`, в неэкранированном виде. */
+    const srcSetCandidates = (html: string): string[] =>
+      (html.match(/srcset="([^"]+)"/i)?.[1] ?? '')
+        .split(',')
+        .map((entry) => entry.trim().split(/\s+/)[0]?.replace(/&amp;/g, '&') ?? '')
+        .filter(Boolean)
+
+    it.each([
+      { label: 'desktop 1280 @2x', width: 1280, dpr: 2, expected: 1920 },
+      { label: 'desktop 1280 @1x', width: 1280, dpr: 1, expected: 800 },
+      { label: 'desktop 1920 @1x', width: 1920, dpr: 1, expected: 960 },
+      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1920 },
+      { label: 'mobile 390 @3x', width: 390, dpr: 3, expected: 800 },
+    ])('$label prefetches w=$expected, and that URL is a real srcset candidate', ({ width, dpr, expected }) => {
+      const { prefetch, candidates } = withWebViewport(width, dpr, () => {
+        const prepared = prepareStableContentHtml(`<p><img src="${RAW}" /></p>`)
+        const first = extractFirstImgSrc(prepared)!
+        return { prefetch: buildStableContentPrefetchUrl(first), candidates: srcSetCandidates(prepared) }
+      })
+
+      expect(prefetch).toBe(`${RAW}?w=${expected}&q=80&fit=contain`)
+      // Главное условие тикета: греется ровно та ступень, что есть в лестнице
+      // этого вьюпорта, — иначе слот скачивается двумя разными URL.
+      expect(candidates).toContain(prefetch)
+    })
+
+    it('falls back to the fixed rung outside web, where there is no prefetch at all', () => {
+      const prepared = prepareStableContentHtml(`<p><img src="${RAW}" /></p>`)
+      expect(buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!)).toBe(
+        `${RAW}?w=800&q=80&fit=contain`,
+      )
+    })
+  })
+
   it('keeps the mobile viewport on a lower ladder so body images do not blow the network budget', () => {
     // Лестница выбирается по вьюпорту только на web: Platform.OS в jest — 'ios',
     // поэтому подменяем и его (как в htmlTransform.lazyGate.test.ts), и innerWidth.

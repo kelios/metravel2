@@ -318,6 +318,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
         : DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textMuted,
       lineHeight: isCompact ? 18 : 20,
+      // `header` выравнивает детей по `flex-start`, поэтому на native Text
+      // получает hug-ширину и длинный подзаголовок обрезается без многоточия
+      // (на Android хвост «отметки» не отрисовывался). Растягиваем по ширине
+      // шапки — тогда текст переносится, как на web.
+      alignSelf: 'stretch',
     },
     totalChip: {
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,

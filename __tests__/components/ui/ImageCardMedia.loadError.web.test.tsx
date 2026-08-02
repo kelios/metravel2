@@ -62,11 +62,25 @@ const fireImageError = (tree: any) => {
   });
 };
 
-const fireImageLoad = (tree: any) => {
+/**
+ * Настоящая загрузка приходит с размерами кадра. Догадка по общему кэшу
+ * (`loadedWebImageBaseCache`) размеров не несёт — на этом и держится защита от
+ * бесконечного ретрая, поэтому фейковая загрузка эмулируется отдельно.
+ */
+const fireImageLoad = (tree: any, naturalSize: any = { width: 800, height: 533 }) => {
   const [img] = mainImages(tree);
   expect(img).toBeDefined();
   renderer.act(() => {
-    img.props.onLoad();
+    img.props.onLoad('', naturalSize);
+  });
+};
+
+const fireCacheGuessLoad = (tree: any) => fireImageLoad(tree, undefined);
+
+/** Пропускает паузу перед ретраем (600–1200 мс) на фейковых таймерах. */
+const runRetryDelay = () => {
+  renderer.act(() => {
+    jest.advanceTimersByTime(1500);
   });
 };
 
@@ -98,9 +112,11 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
     Platform.OS = 'web';
     // Разметку web-слоёв компонент рисует только вне jest-ветки.
     delete process.env.JEST_WORKER_ID;
+    jest.useFakeTimers();
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     Platform.OS = originalPlatform;
     if (originalJestWorkerId) process.env.JEST_WORKER_ID = originalJestWorkerId;
   });
@@ -110,23 +126,34 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
     expect(mainImages(tree)).toHaveLength(1);
   });
 
-  it('первый сбой не сдаётся: узел перемонтируется тем же URL', () => {
+  /**
+   * Замер прода 2026-08-02 `/quests`: 8 обложек одной пачкой → 6 × HTTP 503, те
+   * же 8 URL через 900 мс последовательно → 8 × 200. Мгновенный ретрай попадает
+   * в то же окно rate-limit'а, поэтому между попытками обязана быть пауза, а
+   * узел на это время снят — иначе в кадре снова alt-текст.
+   */
+  it('первый сбой снимает узел и ждёт паузу, а не бьёт повторно сразу', () => {
     const onError = jest.fn();
     const tree = renderMedia({ onError });
-    const before = mainImages(tree)[0];
-    // Читаем ДО сбоя: после ремоунта прежний узел размонтирован и его `props`
-    // уже не прочитать.
-    const srcBefore = before.props.src;
 
     fireImageError(tree);
+
+    expect(mainImages(tree)).toHaveLength(0);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('после паузы повторяет запрос ТЕМ ЖЕ URL новым узлом', () => {
+    const onError = jest.fn();
+    const tree = renderMedia({ onError });
+    const srcBefore = mainImages(tree)[0].props.src;
+
+    fireImageError(tree);
+    runRetryDelay();
 
     const after = mainImages(tree)[0];
     expect(after).toBeDefined();
     // Тот же URL — второй сетевой вариант на один слот запрещён (#1208).
     expect(after.props.src).toBe(srcBefore);
-    // Узел именно новый: React пересоздаёт его по смене ключа, иначе браузер
-    // не повторит запрос по неизменному `src`.
-    expect(after).not.toBe(before);
     // Ретрай ещё не исчерпан — вызывающему рано говорить «картинки нет».
     expect(onError).not.toHaveBeenCalled();
   });
@@ -136,6 +163,7 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
     const tree = renderMedia({ onError });
 
     fireImageError(tree);
+    runRetryDelay();
     fireImageLoad(tree);
 
     expect(mainImages(tree)).toHaveLength(1);
@@ -146,6 +174,7 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
     const tree = renderMedia();
 
     fireImageError(tree);
+    runRetryDelay();
     fireImageError(tree);
 
     // Ни одного узла с видимым alt: именно его рисовал браузер вместо фото.
@@ -159,6 +188,7 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
     const geometryBefore = flatStyle(container(tree));
 
     fireImageError(tree);
+    runRetryDelay();
     fireImageError(tree);
 
     const geometryAfter = flatStyle(container(tree));
@@ -174,6 +204,7 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
     const tree = renderMedia({ onError });
 
     fireImageError(tree);
+    runRetryDelay();
     fireImageError(tree);
 
     expect(onError).toHaveBeenCalledTimes(1);
@@ -196,7 +227,12 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
     });
 
     const tree = renderMedia({ src: CACHED_SRC, onError });
+    // Догадка по общему кэшу: «загрузка» без размеров кадра приходит РАНЬШЕ
+    // реальной ошибки и не должна возвращать бюджет попыток.
+    fireCacheGuessLoad(tree);
     fireImageError(tree);
+    runRetryDelay();
+    fireCacheGuessLoad(tree);
     fireImageError(tree);
 
     expect(mainImages(tree)).toHaveLength(0);
@@ -206,6 +242,7 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
   it('смена картинки сбрасывает состояние сбоя', () => {
     const tree = renderMedia();
     fireImageError(tree);
+    runRetryDelay();
     fireImageError(tree);
     expect(mainImages(tree)).toHaveLength(0);
 

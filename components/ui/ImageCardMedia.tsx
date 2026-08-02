@@ -31,6 +31,36 @@ const NATIVE_SHARP_MAX_WIDTH = 800;
 /** Web: верхний кандидат в `srcSet` карточки. См. `webSrcSet` и #1113. */
 const WEB_SRCSET_MAX_WIDTH = 1280;
 
+/**
+ * #1212: состояние сбоя загрузки web-картинки.
+ *
+ * - `waiting`  — сбой был, запроса в полёте нет, ждём паузу перед ретраем;
+ * - `retrying` — единственная повторная попытка смонтирована;
+ * - `failed`   — и она не удалась: нейтральный плейсхолдер до смены картинки.
+ */
+type WebLoadFailure = {
+  identity: string;
+  phase: 'waiting' | 'retrying' | 'failed';
+};
+
+/**
+ * Пауза перед ретраем и её разброс.
+ *
+ * Замер прода 2026-08-02 на `/quests`: 8 обложек, запрошенных ОДНОВРЕМЕННО, дали
+ * 6 × HTTP 503, а те же 8 URL через 900 мс последовательно — 8 × 200 (0,28–0,4 с).
+ * Сервер режет пачку, а не файлы. Мгновенный ретрай попадает в то же окно и
+ * гарантированно получает второй 503, поэтому пауза здесь несущая, а не
+ * косметическая.
+ *
+ * Разброс обязателен: без него все карточки страницы повторяют запрос синхронно
+ * и собирают новую пачку — ровно ту, из-за которой пришёл 503.
+ *
+ * Это retry-логика, а не таймер раскрытия контента: всё это время уже показан
+ * финальный нейтральный плейсхолдер (docs/RULES.md → Timeout policy).
+ */
+const WEB_RETRY_BASE_DELAY_MS = 600;
+const WEB_RETRY_JITTER_MS = 600;
+
 type NativeSharpSourceArgs = {
   uri: string;
   width?: number;
@@ -272,12 +302,18 @@ function ImageCardMedia({
    * Только web: тот же класс сбоя на native закрыт в `OptimizedImage` — там свой
    * ретрай (#802) и свой нейтральный `errorContainer`, дублировать их нечем.
    */
-  const [failedIdentity, setFailedIdentity] = useState<string | null>(null);
-  const [retriedIdentity, setRetriedIdentity] = useState<string | null>(null);
+  const [webFailure, setWebFailure] = useState<WebLoadFailure | null>(null);
+  /** Идентичность, о терминальном сбое которой уже сообщили наружу. */
+  const reportedFailureRef = useRef<string | null>(null);
+  const activeWebFailure =
+    webFailure && currentImageIdentityKey && webFailure.identity === currentImageIdentityKey
+      ? webFailure
+      : null;
+  // `waiting` — запроса в полёте нет, показываем плейсхолдер; `failed` — то же,
+  // но уже окончательно. `retrying` рисуется как обычная картинка.
   const hasWebLoadError =
-    failedIdentity !== null && failedIdentity === currentImageIdentityKey;
-  const hasRetriedWebLoad =
-    retriedIdentity !== null && retriedIdentity === currentImageIdentityKey;
+    activeWebFailure?.phase === 'waiting' || activeWebFailure?.phase === 'failed';
+  const hasRetriedWebLoad = activeWebFailure?.phase === 'retrying';
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -610,8 +646,8 @@ function ImageCardMedia({
         // сбоя привязано к идентичности и на чужую картинку не действует, но
         // рециклируемая ячейка может вернуться к прежнему URL (X → Y → X), и
         // без сброса она отрисовала бы плейсхолдер, даже не попробовав.
-        setFailedIdentity(null);
-        setRetriedIdentity(null);
+        setWebFailure(null);
+        reportedFailureRef.current = null;
       }
       // Смена только режима раскрытия у картинки, чей decode уже подтверждён
       // событием `load`, ничего не сбрасывает: гасить показанные пиксели нечем,
@@ -630,30 +666,32 @@ function ImageCardMedia({
     }
   }, [currentImageIdentityKey, revealOnLoadOnly]);
 
-  const handleWebLoad = useCallback((_resolvedSrc: string) => {
+  const handleWebLoad = useCallback((
+    _resolvedSrc: string,
+    naturalSize?: { width: number; height: number },
+  ) => {
     if (currentImageIdentityKey) {
       loadedWebImageBaseCache.add(currentImageIdentityKey);
       decodedIdentityRef.current = currentImageIdentityKey;
     }
     setWebLoaded(true);
-    // Появившиеся пиксели снимают плейсхолдер. А вот израсходованный ретрай
-    // сбрасывать здесь НЕЛЬЗЯ: `handleWebLoad` вызывается и по догадке
-    // `loadedWebImageBaseCache` (тот же файл уже грузился в другой карточке) —
-    // тогда «загрузка» приходит РАНЬШЕ реального события `error`, возвращает
-    // бюджет попыток, и сбойная картинка уходит в бесконечный цикл
-    // ремоунт → запрос → ошибка. Ретрай снимается только сменой картинки.
-    setFailedIdentity(null);
+    // Состояние сбоя снимают только НАСТОЯЩИЕ пиксели.
+    //
+    // `WebMainImage` рапортует загрузку и по догадке `loadedWebImageBaseCache`
+    // (тот же файл уже грузился в другой карточке): тогда «загрузка» приходит
+    // РАНЬШЕ реального события `error` и у неё нет `naturalSize`. Пока такая
+    // догадка возвращала бюджет попыток, сбойная картинка уходила в бесконечный
+    // цикл ремоунт → запрос → ошибка.
+    if (naturalSize) setWebFailure(null);
     onLoad?.();
   }, [currentImageIdentityKey, onLoad]);
 
   /**
-   * Первый сбой — одна повторная попытка ТЕМ ЖЕ URL: ключ узла получает суффикс
-   * `-retry`, React выбрасывает битый `<img>` и монтирует новый, браузер
-   * повторяет запрос. Cache-busting-параметра здесь быть не может: второй URL на
-   * тот же visual slot ломает инвариант #1208 и `check:image-architecture`.
-   *
-   * Ретрай без задержки: типичная причина — мгновенный сетевой сбой, а таймер
-   * лишь оттягивал бы либо фото, либо плейсхолдер (docs/RULES.md → Timeout policy).
+   * Первый сбой — одна повторная попытка ТЕМ ЖЕ URL после паузы: ключ узла
+   * получает суффикс `-retry`, React выбрасывает битый `<img>` и монтирует
+   * новый, браузер повторяет запрос. Cache-busting-параметра здесь быть не
+   * может: второй URL на тот же visual slot ломает инвариант #1208 и
+   * `check:image-architecture`.
    *
    * `onError` наружу вызывается на терминальном сбое, а не на первой попытке:
    * потребители (`ArticleListItem`, `UnifiedTravelCard`) держат на нём своё
@@ -661,13 +699,38 @@ function ImageCardMedia({
    */
   const handleWebError = useCallback(() => {
     if (!currentImageIdentityKey) return;
-    if (retriedIdentity !== currentImageIdentityKey) {
-      setRetriedIdentity(currentImageIdentityKey);
-      return;
-    }
-    setFailedIdentity(currentImageIdentityKey);
+    setWebFailure((previous) => {
+      const active =
+        previous && previous.identity === currentImageIdentityKey ? previous : null;
+      // Ошибка может прийти только от смонтированного узла, то есть в фазах
+      // «первый показ» (записи нет) и `retrying`.
+      if (!active) return { identity: currentImageIdentityKey, phase: 'waiting' };
+      if (active.phase === 'retrying') return { identity: currentImageIdentityKey, phase: 'failed' };
+      return active;
+    });
+  }, [currentImageIdentityKey]);
+
+  // Терминальный сбой сообщаем вызывающему из эффекта, а не из сеттера: вызов
+  // чужого колбэка внутри updater'а состояния запрещён (React зовёт его в фазе
+  // рендера и может повторить).
+  useEffect(() => {
+    if (activeWebFailure?.phase !== 'failed') return;
+    if (reportedFailureRef.current === activeWebFailure.identity) return;
+    reportedFailureRef.current = activeWebFailure.identity;
     onError?.();
-  }, [currentImageIdentityKey, onError, retriedIdentity]);
+  }, [activeWebFailure, onError]);
+
+  // Пауза перед единственным ретраем. Разброс не даёт всем карточкам страницы
+  // повторить запрос синхронно и собрать новую пачку (см. замер выше).
+  useEffect(() => {
+    if (activeWebFailure?.phase !== 'waiting') return;
+    const identity = activeWebFailure.identity;
+    const timer = setTimeout(
+      () => setWebFailure({ identity, phase: 'retrying' }),
+      WEB_RETRY_BASE_DELAY_MS + Math.random() * WEB_RETRY_JITTER_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [activeWebFailure]);
 
   const prefetchHref = useMemo(() => {
     if (Platform.OS !== 'web') return null;

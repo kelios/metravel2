@@ -60,9 +60,6 @@ const normalizeMetravelOwnImageUrl = (urlStr: string): string => {
   }
 }
 
-const isMobileWebViewport = (): boolean =>
-  Platform.OS === 'web' && typeof window !== 'undefined' && (window.innerWidth || 0) <= 768
-
 /**
  * #1176: тела легаси-статей до сих пор ссылаются прямо на бакет
  * (`metravelprod.s3….amazonaws.com/uploads/**`). S3 не понимает `w` и отдаёт
@@ -174,10 +171,59 @@ export const buildExternalImageUrl = (src: string) => {
 const RESPONSIVE_WIDTHS_MOBILE = IMAGE_WIDTHS.articleBodyMobile
 const RESPONSIVE_WIDTHS_DESKTOP = IMAGE_WIDTHS.articleBodyDesktop
 const RESPONSIVE_FALLBACK_WIDTH = 800
+
 // Реальные слоты тела статьи: 100vw на мобиле, ~720px на 1280, ~920px на 1920.
-const RESPONSIVE_SIZES = '(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px'
+//
+// #1213: это ЕДИНСТВЕННЫЙ источник и для атрибута `sizes`, и для выбора ступени
+// префетча первой картинки. Раньше `sizes` был литералом, а префетч брал
+// фиксированный `RESPONSIVE_FALLBACK_WIDTH`: на десктопе браузер грузил по srcset
+// w=1920, а `<link rel=prefetch>` следом тянул w=800 — один слот двумя ступенями.
+// Замер прода 2026-08-02: 29 252 B и 96 912 B выброшены на двух статьях.
+const ARTICLE_BODY_SLOTS = [
+  { maxViewport: 768, cssSize: '100vw', slotWidth: (viewportWidth: number) => viewportWidth },
+  { maxViewport: 1439, cssSize: '720px', slotWidth: () => 720 },
+  { maxViewport: Number.POSITIVE_INFINITY, cssSize: '920px', slotWidth: () => 920 },
+] as const
+
+const MOBILE_VIEWPORT_MAX = ARTICLE_BODY_SLOTS[0].maxViewport
+
+const RESPONSIVE_SIZES = ARTICLE_BODY_SLOTS.map(({ maxViewport, cssSize }) =>
+  Number.isFinite(maxViewport) ? `(max-width: ${maxViewport}px) ${cssSize}` : cssSize,
+).join(', ')
 // #1167: quality — на класс размера, а не на вызов. Тело статьи — крупный класс.
 const RESPONSIVE_QUALITY = IMAGE_QUALITY.large
+
+const isMobileWebViewport = (): boolean =>
+  Platform.OS === 'web' &&
+  typeof window !== 'undefined' &&
+  (window.innerWidth || 0) <= MOBILE_VIEWPORT_MAX
+
+const getWebViewportWidth = (): number =>
+  Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth || 0 : 0
+
+const getWebDevicePixelRatio = (): number => {
+  const raw = Platform.OS === 'web' && typeof window !== 'undefined' ? window.devicePixelRatio : 1
+  return Number.isFinite(raw) && raw > 0 ? raw : 1
+}
+
+/**
+ * Ступень, которую браузер возьмёт из нашего `srcset` для текущего вьюпорта:
+ * минимальный кандидат, покрывающий слот × DPR, иначе самый широкий. Правило то
+ * же, что в HTML-спеке, поэтому префетч попадает ровно в тот URL, который потом
+ * запросит `<img>`, и слот остаётся с одной сетевой загрузкой (#1213).
+ *
+ * Без вьюпорта (SSR/native) остаётся прежняя fallback-ступень — там префетча нет.
+ */
+export const pickArticleBodyWidth = (viewportWidth: number, dpr: number): number => {
+  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return RESPONSIVE_FALLBACK_WIDTH
+  const widths =
+    viewportWidth <= MOBILE_VIEWPORT_MAX ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
+  const slot =
+    ARTICLE_BODY_SLOTS.find((entry) => viewportWidth <= entry.maxViewport) ??
+    ARTICLE_BODY_SLOTS[ARTICLE_BODY_SLOTS.length - 1]
+  const needed = slot.slotWidth(viewportWidth) * (Number.isFinite(dpr) && dpr > 0 ? dpr : 1)
+  return widths.find((width) => width >= needed) ?? widths[widths.length - 1]
+}
 
 const isFirstPartyMetravelHost = (host: string): boolean => {
   const value = String(host || '').toLowerCase()
@@ -194,7 +240,8 @@ const buildMetravelSizedUrl = (base: URL, width: number): string => {
 
 type ResponsiveImage = { src: string; srcSet: string; sizes: string }
 
-const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
+/** База первопартийной картинки тела без параметров размера, либо `null`. */
+const parseFirstPartyArticleImage = (src: string): URL | null => {
   try {
     const trimmed = String(src || '').trim()
     if (!trimmed || trimmed.startsWith('data:')) return null
@@ -208,20 +255,39 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
     if (parsed.protocol === 'http:') parsed.protocol = 'https:'
     // сбрасываем ранее заданные размеры, сохраняя cache-buster `v`
     for (const param of OPTIMIZATION_PARAMS) parsed.searchParams.delete(param)
-    const widths = isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
-    const srcSet = widths.map((w) => `${buildMetravelSizedUrl(parsed, w)} ${w}w`).join(', ')
-    return {
-      src: buildMetravelSizedUrl(parsed, RESPONSIVE_FALLBACK_WIDTH),
-      srcSet,
-      sizes: RESPONSIVE_SIZES,
-    }
+    return parsed
   } catch {
     return null
   }
 }
 
-export const buildStableContentPrefetchUrl = (src: string): string =>
-  buildMetravelResponsiveImage(src)?.src ?? buildExternalImageUrl(src) ?? src
+const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
+  const parsed = parseFirstPartyArticleImage(src)
+  if (!parsed) return null
+  const widths = isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
+  const srcSet = widths.map((w) => `${buildMetravelSizedUrl(parsed, w)} ${w}w`).join(', ')
+  return {
+    src: buildMetravelSizedUrl(parsed, RESPONSIVE_FALLBACK_WIDTH),
+    srcSet,
+    sizes: RESPONSIVE_SIZES,
+  }
+}
+
+/**
+ * URL первой картинки тела для `<link rel=prefetch>`.
+ *
+ * #1213: это НЕ `src` из разметки. `src` — запасная ступень для движков без
+ * `srcset`, а греть надо ровно ту ступень, которую браузер выберет по
+ * `srcset`/`sizes`, иначе тот же слот скачивается дважды.
+ */
+export const buildStableContentPrefetchUrl = (src: string): string => {
+  const parsed = parseFirstPartyArticleImage(src)
+  if (!parsed) return buildExternalImageUrl(src) ?? src
+  return buildMetravelSizedUrl(
+    parsed,
+    pickArticleBodyWidth(getWebViewportWidth(), getWebDevicePixelRatio()),
+  )
+}
 
 const stripDangerousTags = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '')
