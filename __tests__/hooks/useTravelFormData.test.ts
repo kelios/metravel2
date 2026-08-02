@@ -9,7 +9,6 @@ import { ApiError } from '@/api/client';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
 import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
-import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
 jest.mock('@/api/travelsApi', () => ({
   fetchTravel: jest.fn(),
@@ -1037,7 +1036,12 @@ describe('useTravelFormData', () => {
     expect(saveFormData).toHaveBeenCalledTimes(1);
     const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
     expect(sentPayload.coordsMeTravel[0].id).toBeNull();
-    expect(sentPayload.coordsMeTravel[0].image).toBe(normalizeMediaUrl('/og-default.png'));
+    // #1182: пока локальное превью не догрузилось, ключ image не отправляется
+    // вовсе. Подставлять сюда og-default.png / обложку маршрута нельзя: бэк
+    // сохраняет такой URL как ключ хранилища и отдаёт `/address-image/<URL>`
+    // — вечный 404 на каждую отрисовку точки.
+    expect(sentPayload.coordsMeTravel[0]).not.toHaveProperty('image');
+    expect(JSON.stringify(sentPayload.coordsMeTravel)).not.toContain('og-default');
   });
 
   it('uploads pending point photo after save response assigns marker id', async () => {

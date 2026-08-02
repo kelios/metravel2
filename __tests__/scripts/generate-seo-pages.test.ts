@@ -604,7 +604,12 @@ describe('travel hero preload helpers', () => {
       id: 123,
     });
 
-    expect(url).toContain('https://metravel.by/travel-image/123/conversions/pic-thumb_200.jpg');
+    // #1195: family-роут стал `source_passthrough`, поэтому conversion-ключ
+    // адресуется transform-роутом. Клиент делает ровно тот же rewrite
+    // (`toLegacyResizePath`), паритет закреплён travelHeroPreloadParity.
+    expect(url).toContain(
+      'https://metravel.by/media-resize/legacy/123/conversions/pic-thumb_200.jpg',
+    );
     // #1146: ширина и качество округляются по той же лестнице, что и на клиенте
     // (utils/imageProxy.ts: DIMENSION_LADDER + snapQuality). Иначе preload грел бы
     // `?w=400&q=35`, а `<img>` просил `?w=480&q=40` — тот же файл вторым запросом.

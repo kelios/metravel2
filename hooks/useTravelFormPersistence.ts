@@ -26,7 +26,6 @@ import {
   filterAllowedKeys,
   mergeOverridePreservingUserInput,
 } from '@/utils/travelFormNormalization';
-import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 import { showToastMessage } from '@/utils/toast';
 import {
@@ -48,7 +47,6 @@ import { translate as i18nT } from '@/i18n'
 
 
 type ToastAwareError = Error & { toastShown?: boolean };
-const DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE = '/og-default.png';
 
 type MonitoringWindow = Window & {
   Sentry?: {
@@ -196,13 +194,12 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
       const normalizedGallery = normalizeGalleryForSave(mergedData.gallery);
       const normalizedGalleryIds = normalizeGalleryImageIdsForSave(normalizedGallery);
-      const markerFallbackImage =
-        sanitizeCoverUrl(mergedData.travel_image_thumb_url) ??
-        ((normalizedGallery?.[0] as Record<string, unknown> | undefined)?.url as string | undefined) ??
-        normalizeMediaUrl(DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE);
+      // #1182: точке без своего фото раньше подставлялась обложка маршрута /
+      // первое фото галереи / og-default.png. Бэк сохраняет такой URL как ключ
+      // хранилища и отдаёт `/address-image/<URL>` → вечный 404 (записи 15904,
+      // 15905, 15934 на проде). Подстановки больше нет.
       const normalizedMarkers = normalizeMarkersForSave(
         mergedData.coordsMeTravel as Record<string, unknown>[],
-        markerFallbackImage,
       );
       const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
 

@@ -1245,13 +1245,13 @@ test.describe('Создание путешествия - Полный flow', () 
         const firstMarkerImage = payload?.coordsMeTravel?.[0]?.image;
         const hasBlobImage = typeof firstMarkerImage === 'string' && /^blob:/i.test(firstMarkerImage);
 
-        const pointImageValidationError =
-          typeof firstMarkerImage !== 'string' || firstMarkerImage.trim().length === 0
-            ? 'image is required'
-            : null;
-
+        // #1182: `image` у точки опционален — бэк (`_normalize_coordinate_image`)
+        // на отсутствующем ключе просто не трогает поле, на пустом пишет ''.
+        // Раньше мок требовал непустую строку, и это закрепляло подстановку
+        // чужой картинки (обложка/og-default), которая на проде оседала в БД
+        // как ключ хранилища и давала вечный 404.
         await route.fulfill({
-          status: hasBlobImage || pointImageValidationError ? 400 : 200,
+          status: hasBlobImage ? 400 : 200,
           contentType: 'application/json',
           body: JSON.stringify({
             ...payload,
@@ -1263,7 +1263,7 @@ test.describe('Создание путешествия - Полный flow', () 
                   image: fallbackPointImage,
                 }))
               : [],
-            detail: hasBlobImage ? 'blob image is not allowed' : pointImageValidationError ?? undefined,
+            detail: hasBlobImage ? 'blob image is not allowed' : undefined,
           }),
         });
       });
@@ -1292,7 +1292,10 @@ test.describe('Создание путешествия - Полный flow', () 
     await ensureOnStep2(page);
     await maybeDismissRouteCoachmark(page);
 
-    const photoInput = page.locator('input[type="file"]').first();
+    // Именно фото-дропзона «точки из EXIF», а не первый попавшийся file input:
+    // у сохранённого маршрута выше по DOM появляется загрузчик GPX/KML, и
+    // `.first()` уводил JPEG туда — точка не создавалась.
+    const photoInput = page.locator('input[type="file"][accept*="image"]').first();
     await expect(photoInput).toBeAttached({ timeout: 10_000 });
     await photoInput.setInputFiles({
       name: 'gps-photo.jpg',
@@ -1327,9 +1330,13 @@ test.describe('Создание путешествия - Полный flow', () 
     expect(uploadedPointId).toBeTruthy();
     expect(capturedUpsertPayload).toBeTruthy();
     expect(capturedUpsertPayload?.coordsMeTravel?.length).toBeGreaterThan(0);
-    expect(typeof capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBe('string');
-    expect(capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBeTruthy();
-    expect(String(capturedUpsertPayload?.coordsMeTravel?.[0]?.image)).not.toMatch(/^blob:/i);
+    // Локальное превью на сервер не уходит...
+    expect(String(capturedUpsertPayload?.coordsMeTravel?.[0]?.image ?? '')).not.toMatch(/^blob:/i);
+    // ...и на его место НЕ подставляется чужая картинка: ни обложка маршрута,
+    // ни og-default (#1182 — именно так в БД попадали вечные 404).
+    const sentPoints = JSON.stringify(capturedUpsertPayload?.coordsMeTravel ?? []);
+    expect(sentPoints).not.toContain(fallbackPointImage);
+    expect(sentPoints).not.toContain('og-default');
 
     await expect(page.getByText('Есть фото').first()).toBeVisible({ timeout: 15_000 });
   });

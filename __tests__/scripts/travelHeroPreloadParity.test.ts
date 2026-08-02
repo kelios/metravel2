@@ -37,6 +37,11 @@ afterAll(() => {
 const GALLERY_PATH =
   'https://metravel.by/gallery/3994/conversions/HcQK2WZBkjkvHnupzbuIPA9ulGbifqOiIvgmkOlG-detail_hd.jpg';
 
+// Тот же ключ на transform-роуте: с #1195 обе стороны (SSG и клиент) обязаны
+// адресовать conversion именно так, иначе preload греет файл, который никто не просит.
+const LEGACY_GALLERY_PATH =
+  'https://metravel.by/media-resize/legacy/3994/conversions/HcQK2WZBkjkvHnupzbuIPA9ulGbifqOiIvgmkOlG-detail_hd.jpg';
+
 // Реальный манифест первой картинки галереи travel #129 (прод, 2026-07-30).
 const MEDIA_ENTRY = {
   id: 100,
@@ -197,13 +202,16 @@ describe('buildResponsiveImagePropsFromMedia: фильтр по fit', () => {
     expect(new Set(fitsOf(cover.srcSet))).toEqual(new Set(['cover']));
   });
 
-  it('без явного fit поведение не меняется (карточки списка)', () => {
+  it('без явного fit отбор варианта не меняется, но conversion уходит на legacy-роут', () => {
     const legacy = buildResponsiveImagePropsPreferringMedia(MEDIA_ENTRY as any, GALLERY_PATH, {
       maxWidth: 640,
       widths: [160, 320, 640],
       quality: 75,
       sizes: '100vw',
     });
-    expect(legacy.src).toBe(`${GALLERY_PATH}?w=640&q=75&fit=cover`);
+    // Отбор варианта прежний (`card_640`, `fit=cover`) — меняется только адрес:
+    // family-роут в proxy-contract v4 это `source_passthrough` и отдал бы мастер
+    // с `no-store`, а `legacy_conversion` режет по лестнице и кэширует (#1195).
+    expect(legacy.src).toBe(`${LEGACY_GALLERY_PATH}?w=640&q=75&fit=cover`);
   });
 });

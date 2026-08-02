@@ -205,6 +205,57 @@ function snapProxyQuality(value) {
   return PROXY_QUALITY_LADDER.find((candidate) => candidate >= q) || 85;
 }
 
+// Зеркало `toLegacyResizePath` из `utils/mediaUrl.ts` для класса ключей
+// `**/conversions/**`. Family-роуты в proxy-contract v4 — `source_passthrough`
+// (#1195): отдают мастер на любой ширине и с `no-store`. Публичный путь это алиас
+// бакета, поэтому ключ адресуется своим transform-роутом `/media-resize/legacy/`.
+// Расхождение с клиентом ловит `__tests__/scripts/travelHeroPreloadParity.test.ts`:
+// preload обязан греть ровно тот файл, который затем запросит `<img>`.
+const FIRST_PARTY_MEDIA_ROUTE =
+  /^\/(?:gallery|travel-image|travel-description-image|address-image)\/(.+)$/i;
+const LEGACY_IMAGE_EXTENSIONS = new Set(['gif', 'heic', 'heif', 'jpeg', 'jpg', 'png', 'webp']);
+
+function toLegacyConversionPathname(pathname) {
+  const match = FIRST_PARTY_MEDIA_ROUTE.exec(pathname);
+  if (!match) return null;
+
+  let key;
+  try {
+    key = decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+  if (!key || key.includes('\\') || key.includes('\0')) return null;
+
+  const parts = key.split('/');
+  if (parts.some((part) => !part || part === '.' || part === '..')) return null;
+
+  const extension = (parts[parts.length - 1].split('.').pop() || '').toLowerCase();
+  if (!LEGACY_IMAGE_EXTENSIONS.has(extension)) return null;
+
+  const conversionIndex = parts.indexOf('conversions');
+  if (conversionIndex <= 0 || conversionIndex !== parts.lastIndexOf('conversions')) return null;
+  if (conversionIndex >= parts.length - 1) return null;
+  if (parts.includes('responsive-images') || parts[0].includes(':')) return null;
+
+  // Ключ берётся из pathname как есть: клиент тоже не перекодирует его.
+  return `/media-resize/legacy/${match[1]}`;
+}
+
+/** Тот же rewrite для готового абсолютного URL; чужой origin не трогаем. */
+function toLegacyConversionUrl(absoluteUrl) {
+  try {
+    const parsed = new URL(absoluteUrl);
+    if (parsed.origin !== API_ORIGIN) return absoluteUrl;
+    const legacyPathname = toLegacyConversionPathname(parsed.pathname);
+    if (!legacyPathname) return absoluteUrl;
+    parsed.pathname = legacyPathname;
+    return parsed.toString();
+  } catch {
+    return absoluteUrl;
+  }
+}
+
 function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
   const versioned = buildVersionedTravelImageUrl(rawUrl, updatedAt, id);
   if (!versioned) return '';
@@ -214,6 +265,9 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } 
     if (parsed.origin !== API_ORIGIN) {
       return parsed.toString();
     }
+
+    const legacyPathname = toLegacyConversionPathname(parsed.pathname);
+    if (legacyPathname) parsed.pathname = legacyPathname;
 
     IMAGE_OPTIMIZATION_QUERY_PARAMS.forEach((key) => {
       try {
@@ -383,8 +437,11 @@ function resolveManifestVariants(entry) {
     if (!m) continue;
     const width = Number(m[1]);
     if (!Number.isFinite(width) || width <= 0) continue;
-    const url = toAbsoluteUrl(String(rawUrl || '').trim());
-    if (!url) continue;
+    const absolute = toAbsoluteUrl(String(rawUrl || '').trim());
+    if (!absolute) continue;
+    // Зеркало `resolveMediaVariantUrl`: URL манифеста идут в preload/`srcSet` как
+    // есть, поэтому conversion-ключ уводится на transform-роут здесь же (#1195).
+    const url = toLegacyConversionUrl(absolute);
     const fitMatch = VARIANT_FIT_PARAM.exec(url);
     resolved.push({ width, url, fit: fitMatch ? fitMatch[1].toLowerCase() : null });
   }

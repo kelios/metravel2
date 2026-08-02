@@ -2,7 +2,12 @@
 // J4: Image URL proxy/optimization (extracted from imageOptimization.ts)
 
 import { Platform } from 'react-native';
-import { normalizeAbsoluteMediaUrl, isPrivateOrLocalHost, toLegacyResizePath } from '@/utils/mediaUrl';
+import {
+  normalizeAbsoluteMediaUrl,
+  isPrivateOrLocalHost,
+  toLegacyResizePath,
+  resolveLegacyResizeOrigin,
+} from '@/utils/mediaUrl';
 
 // #1171: здесь были ещё `height`, `dpr` и `blur`. Прокси не принимает ни один из
 // них (ресайз идёт только по `w`), поэтому их значения никогда не доезжали до
@@ -205,7 +210,7 @@ export function optimizeImageUrl(
   // сработала обычная media-ветка (#1176).
   const legacyResizePath = toLegacyResizePath(trimmedUrl);
   const sourceUrl = legacyResizePath
-    ? `${publicOrigin || 'https://metravel.by'}${legacyResizePath}`
+    ? `${resolveLegacyResizeOrigin(trimmedUrl) || publicOrigin || 'https://metravel.by'}${legacyResizePath}`
     : trimmedUrl;
 
   const cacheKey = `${publicOrigin ?? ''}|${sourceUrl}|${options.width ?? ''}|${options.quality ?? ''}|${options.format ?? ''}|${options.fit ?? ''}`;

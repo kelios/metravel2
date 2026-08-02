@@ -65,8 +65,16 @@ describe('e2e perf budget — детектор медиа-запроса без 
       const sized = optimizeImageUrl(raw, { width: 320 })
       expect({ path, sized: isMediaRequestWithoutWidth(sized) }).toEqual({ path, sized: false })
 
+      // #1195: ключ класса `**/conversions/**` уводится на `/media-resize/legacy/`,
+      // а тот widthless URL запрещает и подставляет канонический w=800. Мастер
+      // такой запрос уже не тянет, поэтому ловить тут нечего — детектор остаётся
+      // гейтом для остальных family-путей, где голый URL по-прежнему = мастер.
+      const expectUnsizedCaught = !path.includes('/conversions/')
       const unsized = optimizeImageUrl(raw, {})
-      expect({ path, unsized: isMediaRequestWithoutWidth(unsized) }).toEqual({ path, unsized: true })
+      expect({ path, unsized: isMediaRequestWithoutWidth(unsized) }).toEqual({
+        path,
+        unsized: expectUnsizedCaught,
+      })
     })
   })
 })

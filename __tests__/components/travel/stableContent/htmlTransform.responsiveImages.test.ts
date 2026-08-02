@@ -46,8 +46,10 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     const first = extractFirstImgSrc(prepared)
 
     expect(first).not.toBeNull()
+    // #1195: family-роут отдаёт мастер с `no-store`, поэтому conversion-ключ тела
+    // статьи греется через `legacy_conversion` — тот же файл, но по лестнице.
     expect(buildStableContentPrefetchUrl(first!)).toBe(
-      `${raw}?w=800&q=80&fit=contain`,
+      'https://metravel.by/media-resize/legacy/540/conversions/abc-detail_hd.jpg?w=800&q=80&fit=contain',
     )
     expect(buildStableContentPrefetchUrl(first!)).not.toBe(raw)
   })

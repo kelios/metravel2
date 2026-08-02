@@ -317,14 +317,36 @@ describe('utils/imageOptimization', () => {
     // #1113: `h` тоже игнорируется прокси, а запрос с ОДНИМ лишь `h` он не отвергает —
     // молча отдаёт оригинал (`?h=240&q=60&fit=contain` → 132 344 B при исходнике
     // 1024×576). Поэтому высота в URL не участвует вовсе.
-    it('never emits h, and without a width emits no sizing params at all', () => {
+    it('never emits h, and a widthless family path emits no sizing params at all', () => {
       expect(onMediaPath({ width: 480, height: 320 }).searchParams.get('h')).toBeNull()
 
-      const heightOnly = onMediaPath({ height: 240, quality: 60, fit: 'contain' })
-      expect(heightOnly.searchParams.get('h')).toBeNull()
-      expect(heightOnly.searchParams.get('w')).toBeNull()
-      expect(heightOnly.searchParams.get('q')).toBeNull()
-      expect(heightOnly.searchParams.get('fit')).toBeNull()
+      // #1195: conversion-ключ теперь адресуется `/media-resize/legacy/`, а тот
+      // widthless URL не принимает и подставляет канонический w=800 — это дешевле
+      // мастера, который family-роут отдал бы на голый запрос.
+      const conversionHeightOnly = onMediaPath({ height: 240, quality: 60, fit: 'contain' })
+      expect(conversionHeightOnly.pathname.startsWith('/media-resize/legacy/')).toBe(true)
+      expect(conversionHeightOnly.searchParams.get('h')).toBeNull()
+      expect(conversionHeightOnly.searchParams.get('w')).toBe('800')
+
+      // Пути без legacy-роута остаются голыми: лишние q/fit только плодят cache-key
+      // на тот же мастер.
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+      try {
+        const heightOnly = new URL(
+          optimizeImageUrl('https://metravel.by/gallery/540/gallery/x.webp', {
+            height: 240,
+            quality: 60,
+            fit: 'contain',
+          })!
+        )
+        expect(heightOnly.searchParams.get('h')).toBeNull()
+        expect(heightOnly.searchParams.get('w')).toBeNull()
+        expect(heightOnly.searchParams.get('q')).toBeNull()
+        expect(heightOnly.searchParams.get('fit')).toBeNull()
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
     })
 
     // #1113: `/quest-cover/**` и `/avatar/**` обслуживает тот же image-proxy

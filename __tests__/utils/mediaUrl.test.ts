@@ -223,4 +223,28 @@ describe('toLegacyResizePath', () => {
     expect(toLegacyResizePath('https://example.com/uploads/photo.jpg')).toBeNull();
     expect(toLegacyResizePath('')).toBeNull();
   });
+
+  // #1195: family-роут отдаёт мастер с `no-store`, а тот же ключ через
+  // `legacy_conversion` режется по лестнице и кэшируется. Публичный путь — алиас
+  // бакета, поэтому storage key это всё, что идёт после имени роута.
+  it('routes a first-party family conversion url to the legacy resize route', () => {
+    expect(
+      toLegacyResizePath('/travel-image/682/conversions/10f0a8f2.webp?w=960'),
+    ).toBe('/media-resize/legacy/682/conversions/10f0a8f2.webp?w=960');
+    expect(
+      toLegacyResizePath('https://metravel.by/address-image/15862/conversions/5723e78a.webp?w=320'),
+    ).toBe('/media-resize/legacy/15862/conversions/5723e78a.webp?w=320');
+  });
+
+  it('does not rewrite first-party family urls outside the conversions class', () => {
+    // Плоский корень бакета своего legacy-роута не имеет: переписывание дало бы 404.
+    expect(toLegacyResizePath('/gallery/cd701fc3.webp?w=320')).toBeNull();
+    expect(toLegacyResizePath('https://metravel.by/quest-cover/12/cover.webp?w=320')).toBeNull();
+  });
+
+  it('does not rewrite a foreign host that mimics the family route', () => {
+    expect(
+      toLegacyResizePath('https://example.com/travel-image/1/conversions/x.webp?w=320'),
+    ).toBeNull();
+  });
 });

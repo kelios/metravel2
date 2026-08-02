@@ -378,20 +378,17 @@ export function normalizeNullableStrings(data: TravelFormData): TravelFormData {
 /**
  * Нормализует маркеры для отправки на сервер:
  * - числовые categories
- * - image: отправляем только валидный серверный URL
+ * - image: отправляем только валидный серверный URL самой точки; чужую картинку
+ *   вместо отсутствующей НЕ подставляем (#1182)
  * - id: сохраняем ключ id, потому что некоторые backend-сериализаторы
  *   требуют его даже для новых точек внутри существующего маршрута
  */
-export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: string | null): any[] {
+export function normalizeMarkersForSave(markers: any[]): any[] {
     if (!Array.isArray(markers)) return [];
-    const trimmedFallbackImage = typeof fallbackImageUrl === 'string' ? fallbackImageUrl.trim() : '';
-    const normalizedFallbackImage =
-        trimmedFallbackImage.length > 0 && !isLocalPreviewUrl(trimmedFallbackImage)
-            ? trimmedFallbackImage
-            : '';
 
     return markers.map((m: any) => {
         const { image, id, address, ...rest } = m ?? {};
+        const hasImageKey = m != null && typeof m === 'object' && 'image' in m;
         const imageValue = typeof image === 'string' ? image.trim() : '';
         const categories = Array.isArray(m?.categories)
             ? m.categories.map((c: any) => Number(c)).filter((n: number) => Number.isFinite(n))
@@ -426,13 +423,21 @@ export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: strin
             isStorablePointImage(imageValue)
         ) {
             normalized.image = imageValue;
-        } else if (normalizedFallbackImage && isStorablePointImage(normalizedFallbackImage)) {
-            // image is optional in the upsert serializer; we still pass a
-            // serializer-compatible fallback when it fits the column. Merge logic
-            // must preserve the local blob preview after save until the actual
-            // point-photo upload succeeds.
-            normalized.image = normalizedFallbackImage;
+        } else if (hasImageKey && !isLocalPreviewUrl(imageValue) && isEmptyImageValue(image)) {
+            // #1182: у точки НЕТ своего фото. Раньше сюда подставлялась чужая
+            // картинка (обложка маршрута / первое фото галереи / og-default.png).
+            // Бэк кладёт такой абсолютный URL в поле-ключ как есть
+            // (`_normalize_coordinate_image` снимает только префикс
+            // `/address-image/`) и потом отдаёт `/address-image/<весь URL>` —
+            // гарантированный 404 на каждую отрисовку и запись в images_missing.
+            // Пустая строка = явная очистка: точка без фото и остаётся без фото,
+            // клиент рисует нейтральный плейсхолдер.
+            normalized.image = '';
         }
+        // Локальное превью (blob:/file:/content:) и переполняющий колонку URL
+        // ключ `image` не отправляют вовсе: на апдейте бэк трогает поле только
+        // при `'image' in coord`, поэтому уже загруженное фото точки уцелеет,
+        // пока догружается новое.
 
         return normalized;
     });

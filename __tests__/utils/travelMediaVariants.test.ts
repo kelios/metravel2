@@ -72,6 +72,20 @@ describe('utils/travelMediaVariants', () => {
       expect(resolveMediaVariantUrl(null)).toBeNull()
       expect(resolveMediaVariantUrl('  ')).toBeNull()
     })
+
+    // #1195: URL манифеста идут прямо в src/srcSet мимо `optimizeImageUrl`, поэтому
+    // без переписывания здесь карточка каталога тянет мастер с `no-store`.
+    it('уводит conversion-вариант на legacy-роут, сохраняя ширину', () => {
+      expect(resolveMediaVariantUrl('/travel-image/682/conversions/10f0a8f2.webp?w=960')).toBe(
+        'https://metravel.by/media-resize/legacy/682/conversions/10f0a8f2.webp?w=960',
+      )
+    })
+
+    it('варианты без conversions-ключа оставляет на family-роуте', () => {
+      expect(resolveMediaVariantUrl('/gallery/cd701fc3.webp?w=320')).toBe(
+        'https://metravel.by/gallery/cd701fc3.webp?w=320',
+      )
+    })
   })
 
   describe('buildResponsiveImagePropsFromMedia (web)', () => {

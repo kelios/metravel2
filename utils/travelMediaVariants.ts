@@ -7,6 +7,7 @@ import { Platform } from 'react-native'
 
 import type { TravelMedia, TravelMediaImage } from '@/types/types'
 import { buildResponsiveImageProps } from '@/utils/imageSrcSet'
+import { resolveLegacyResizeOrigin, toLegacyResizePath } from '@/utils/mediaUrl'
 
 // Ширина варианта зашита в его имя (thumb_160, card_640, hero_1920, print_2500);
 // original без ширины в srcset не попадает.
@@ -25,17 +26,35 @@ const getPublicApiOrigin = (): string | null => {
 
 // Манифест отдаёт относительные пути (`/travel-image/...?w=640&q=75&fit=cover`) —
 // резолвим против API-origin (fallback: origin страницы → прод), абсолютные оставляем.
+//
+// URL манифеста уходят прямо в `src`/`srcSet` мимо `optimizeImageUrl`, поэтому
+// переписывание legacy-конверсии на её собственный роут нужно и здесь. Без него
+// карточка каталога адресует model-owned роут, который в proxy-contract v4 объявлен
+// `source_passthrough`: ширина игнорируется, приезжает мастер, ответ помечен
+// `no-store` — то есть заново качается на каждый показ. См. `toLegacyResizePath`.
 export function resolveMediaVariantUrl(url: string | null | undefined): string | null {
   if (!url) return null
   const trimmed = url.trim()
   if (!trimmed) return null
-  if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed
+  if (/^(data:|blob:)/i.test(trimmed)) return trimmed
 
   const origin =
     getPublicApiOrigin() ||
     (typeof window !== 'undefined' && window.location?.origin
       ? window.location.origin
       : 'https://metravel.by')
+
+  const legacyResizePath = toLegacyResizePath(trimmed)
+  if (legacyResizePath) {
+    try {
+      return new URL(legacyResizePath, resolveLegacyResizeOrigin(trimmed) || origin).toString()
+    } catch {
+      return null
+    }
+  }
+
+  if (/^https?:/i.test(trimmed)) return trimmed
+
   try {
     return new URL(trimmed, origin).toString()
   } catch {

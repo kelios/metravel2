@@ -137,18 +137,19 @@ describe('travelFormNormalization', () => {
     });
 
     it('round-trips: blob omitted from save payload but kept in local display list', () => {
-      // 1) Payload to server must NOT contain the blob (fallback used instead).
+      // 1) Payload to server must NOT contain the blob — и НЕ должен подменять
+      // его чужой картинкой: ключ image просто не отправляется, пока идёт
+      // догрузка настоящего фото точки (#1182).
       const localMarkers = [
         { id: null, lat: 53.123456, lng: 27.654321, image: 'blob:http://localhost/from-photo', categories: [] },
       ];
-      const payload = normalizeMarkersForSave(localMarkers, 'https://cdn.com/fallback.jpg');
-      expect(payload[0].image).toBe('https://cdn.com/fallback.jpg');
-      expect(payload[0].image).not.toMatch(/^blob:/);
+      const payload = normalizeMarkersForSave(localMarkers);
+      expect(payload[0]).not.toHaveProperty('image');
 
-      // 2) Server echoes the saved marker (with id + fallback image); local display
-      // list must keep the blob preview after merge.
+      // 2) Server echoes the saved marker; local display list must keep the blob
+      // preview after merge.
       const serverMarkers = [
-        { id: 42, lat: 53.123456, lng: 27.654321, image: 'https://cdn.com/fallback.jpg' },
+        { id: 42, lat: 53.123456, lng: 27.654321, image: '' },
       ];
       const merged = mergeMarkersPreserveImages(serverMarkers, localMarkers);
       expect(merged[0].id).toBe(42);
@@ -333,22 +334,32 @@ describe('travelFormNormalization', () => {
       expect(result[0].id).toBeNull();
     });
 
-    it('uses fallback image when marker image is missing', () => {
-      const markers = [{ lat: 50, lng: 30, image: '' }];
-      const result = normalizeMarkersForSave([{ ...markers[0], id: 7 }], 'https://cdn.com/fallback.jpg');
-      expect(result[0].image).toBe('https://cdn.com/fallback.jpg');
+    // #1182: точка без своего фото уходит с пустым image — раньше сюда
+    // подставлялась обложка маршрута / первое фото галереи / og-default.png,
+    // и бэк сохранял этот URL как ключ хранилища (вечный 404).
+    it('clears the image instead of substituting a foreign one', () => {
+      const result = normalizeMarkersForSave([{ id: 7, lat: 50, lng: 30, image: '' }]);
+      expect(result[0].image).toBe('');
     });
 
-    it('does not use local-preview fallback image', () => {
-      const markers = [{ lat: 50, lng: 30, image: '' }];
-      const result = normalizeMarkersForSave(markers, 'blob:http://localhost/fallback');
-      expect(result[0].image).toBeUndefined();
+    it('never sends the travel cover or og-default as a point image', () => {
+      const result = normalizeMarkersForSave([{ id: 7, lat: 50, lng: 30, image: null }]);
+      expect(result[0].image).toBe('');
+      expect(JSON.stringify(result)).not.toContain('og-default');
     });
 
-    it('uses fallback image for new marker when backend requires image field', () => {
-      const markers = [{ id: null, lat: 50, lng: 30, image: 'blob:http://localhost/point-preview' }];
-      const result = normalizeMarkersForSave(markers, 'https://cdn.com/fallback.jpg');
-      expect(result[0].image).toBe('https://cdn.com/fallback.jpg');
+    it('omits the image key entirely while a local preview is still uploading', () => {
+      // Ключ не отправляем: на апдейте бэк трогает поле только при `'image' in coord`,
+      // поэтому уже загруженное фото точки не будет стёрто догрузкой.
+      const result = normalizeMarkersForSave([
+        { id: null, lat: 50, lng: 30, image: 'blob:http://localhost/point-preview' },
+      ]);
+      expect(result[0]).not.toHaveProperty('image');
+    });
+
+    it('omits the image key when the marker never carried one', () => {
+      const result = normalizeMarkersForSave([{ id: 7, lat: 50, lng: 30 }]);
+      expect(result[0]).not.toHaveProperty('image');
     });
 
     it('drops a long /travel-image/ cover URL that would overflow the image column', () => {

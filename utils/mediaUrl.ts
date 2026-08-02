@@ -181,6 +181,58 @@ const LEGACY_IMAGE_EXTENSIONS = new Set(['gif', 'heic', 'heif', 'jpeg', 'jpg', '
 const LEGACY_SIGNATURE_QUERY_PARAM =
   /^(?:x-amz-.+|awsaccesskeyid|signature|expires|policy|key-pair-id)$/i;
 
+/**
+ * Первопартийные media-роуты — публичные алиасы того же бакета: путь после имени
+ * роута и есть storage key (`/travel-image/682/conversions/x.webp` →
+ * `682/conversions/x.webp`).
+ *
+ * Это важно после proxy-contract v4: сами эти роуты стали
+ * `default_mode: source_passthrough`, то есть `?w=` там больше не режет, ответ
+ * приходит мастером и помечается `no-store`. Legacy-конверсию нужно спрашивать
+ * её собственным роутом `/media-resize/legacy/<key>` (`default_mode: transform`).
+ * Замер прода 2026-08-02, `travel-image/682/conversions/10f0a8f2….webp?w=320`:
+ * 132 344 B `no-store` против 14 742 B `immutable` на legacy-роуте; на выборке
+ * из 30 обложек каталога — 5 705 100 B против 589 160 B.
+ */
+const FIRST_PARTY_MEDIA_ROUTE =
+  /^\/(?:gallery|travel-image|travel-description-image|address-image)\/(.+)$/i;
+
+/**
+ * База для разбора корне-относительных путей. Реального запроса по ней не бывает:
+ * `toLegacyResizePath` возвращает путь, а origin приклеивает вызывающий код.
+ */
+const RELATIVE_URL_SENTINEL_HOST = 'relative.first-party.invalid';
+const RELATIVE_URL_BASE = `https://${RELATIVE_URL_SENTINEL_HOST}`;
+
+/** Хост, за которым стоит наш backend: прод, настроенный API-origin, страница, dev-LAN. */
+const isFirstPartyMediaHost = (hostname: string): boolean => {
+  const host = String(hostname || '').trim().toLowerCase();
+  if (!host) return true;
+  if (host === RELATIVE_URL_SENTINEL_HOST) return true;
+  if (host === 'metravel.by' || host.endsWith('.metravel.by')) return true;
+  if (isPrivateOrLocalHost(host)) return true;
+
+  try {
+    if (
+      typeof window !== 'undefined' &&
+      window.location?.hostname &&
+      host === String(window.location.hostname).trim().toLowerCase()
+    ) {
+      return true;
+    }
+  } catch {
+    // noop
+  }
+
+  try {
+    const apiBase = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
+    if (!apiBase) return false;
+    return host === String(new URL(apiBase).hostname || '').trim().toLowerCase();
+  } catch {
+    return false;
+  }
+};
+
 /** Ключ объекта в нашем бакете, если URL ведёт именно туда. */
 const extractLegacyStorageKey = (parsed: URL): string | null => {
   const host = parsed.hostname.toLowerCase();
@@ -194,6 +246,9 @@ const extractLegacyStorageKey = (parsed: URL): string | null => {
     const [bucket, ...rest] = path.split('/');
     if (bucket.toLowerCase() === LEGACY_STORAGE_BUCKET && rest.length) return rest.join('/');
   }
+
+  const firstParty = FIRST_PARTY_MEDIA_ROUTE.exec(parsed.pathname);
+  if (firstParty && isFirstPartyMediaHost(host)) return firstParty[1];
 
   return null;
 };
@@ -244,7 +299,13 @@ export const toLegacyResizePath = (url: string): string | null => {
     const htmlDecoded = value.replace(/&amp;/gi, '&');
     const absoluteValue = htmlDecoded.startsWith('//') ? `https:${htmlDecoded}` : htmlDecoded;
     const unwrapped = unwrapWeservImageUrl(normalizeAbsoluteMediaUrl(absoluteValue));
-    parsed = new URL(normalizeAbsoluteMediaUrl(unwrapped));
+    const normalized = normalizeAbsoluteMediaUrl(unwrapped);
+    // Манифест и разметка отдают медиа и корне-относительным путём. Возвращаем мы
+    // тоже путь, поэтому base нужен только для разбора и в результат не течёт; его
+    // хост — sentinel, который `isFirstPartyMediaHost` знает как «наш».
+    parsed = normalized.startsWith('/')
+      ? new URL(normalized, RELATIVE_URL_BASE)
+      : new URL(normalized);
   } catch {
     return null;
   }
@@ -267,6 +328,27 @@ export const toLegacyResizePath = (url: string): string | null => {
   if (isLegacyConversionKey(keyParts)) return `/media-resize/legacy/${key}${suffix}`;
 
   return null;
+};
+
+/**
+ * Origin, к которому вызывающий код должен приклеить путь из `toLegacyResizePath`.
+ *
+ * Ссылку на бакет обслуживает наш backend, поэтому для неё origin берётся из
+ * конфигурации (возвращаем `null` — решает caller). А первопартийный URL уже
+ * адресует нужный хост: подмена его на `EXPO_PUBLIC_API_URL` увела бы картинки
+ * на другой хост, чем остальная страница, и разошлась бы с SSG-разметкой.
+ */
+export const resolveLegacyResizeOrigin = (url: string): string | null => {
+  const value = String(url || '').trim();
+  if (!/^https?:\/\//i.test(value)) return null;
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    if (S3_VIRTUAL_HOST.test(host) || S3_PATH_STYLE_HOST.test(host)) return null;
+    return isFirstPartyMediaHost(host) ? parsed.origin : null;
+  } catch {
+    return null;
+  }
 };
 
 export const normalizeAvatarUrl = (url?: string | null): string => {
