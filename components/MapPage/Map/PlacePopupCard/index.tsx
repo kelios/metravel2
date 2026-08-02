@@ -198,6 +198,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const {
     revealPopupImageOnLoadOnly,
+    avoidIOSSafariBottomCardBlur,
     bp,
     compactLabel,
     useFullscreenMobileOverlay,
@@ -973,8 +974,8 @@ const PlacePopupCard: React.FC<Props> = ({
             src={imageUrl}
             alt={title}
             fit="contain"
-            blurBackground
-            allowCriticalWebBlur
+            blurBackground={!avoidIOSSafariBottomCardBlur}
+            allowCriticalWebBlur={!avoidIOSSafariBottomCardBlur}
             revealOnLoadOnly={revealPopupImageOnLoadOnly}
             priority="high"
             loading="eager"

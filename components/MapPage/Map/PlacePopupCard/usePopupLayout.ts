@@ -66,6 +66,11 @@ export function usePopupLayout({
   // to the narrow Leaflet-popup width. Detected here so the desktop popup (which
   // pairs compactLayout with fullscreenOnMobile) keeps its narrow cap untouched.
   const isBottomCardLayout = compactLayout && !fullscreenOnMobile;
+  // A full-card blurred <img> creates a large composited layer above Leaflet.
+  // Removing that layer on close can stall iPhone Safari's renderer long after
+  // React has already cleared the card. Keep contain+blur everywhere else, but
+  // use the neutral media background for this one WebKit-sensitive surface.
+  const avoidIOSSafariBottomCardBlur = revealPopupImageOnLoadOnly && isBottomCardLayout;
   const useCompactLayout = compactLayout || (viewportWidth <= 420 && !useFullscreenMobileOverlay);
   const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
   const popupWidthCap = useFullscreenMobileOverlay
@@ -124,6 +129,7 @@ export function usePopupLayout({
 
   return {
     revealPopupImageOnLoadOnly,
+    avoidIOSSafariBottomCardBlur,
     bp,
     compactLabel,
     useFullscreenMobileOverlay,

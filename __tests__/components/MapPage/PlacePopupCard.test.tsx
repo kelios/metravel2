@@ -151,7 +151,8 @@ describe('PlacePopupCard', () => {
     expect(props.style).toEqual(StyleSheet.absoluteFill);
   });
 
-  it('reveals popup hero only after onLoad on iPhone Safari', () => {
+  it('reveals the bottom-card hero after load without a composited blur on iPhone Safari', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -169,6 +170,7 @@ describe('PlacePopupCard', () => {
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
+          compactLayout
         />
       );
     });
@@ -176,6 +178,8 @@ describe('PlacePopupCard', () => {
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
     expect(props.revealOnLoadOnly).toBe(true);
+    expect(props.blurBackground).toBe(false);
+    expect(props.allowCriticalWebBlur).toBe(false);
   });
 
   it('keeps popup hero on the existing immediate path outside iPhone Safari', () => {

@@ -212,19 +212,28 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const bottomContentInset = IS_WEB ? bottomChromeInset + 12 : 12
   const visibleViewportHeight = 'var(--metravel-map-vh, 100svh)'
 
-  // On web, close via a NATIVE DOM handler instead of relying solely on RN-Web's
-  // `onPress`. RN-Web synthesises `onPress` through its responder system over
-  // pointer events; on the mobile bottom sheet the grabber hosts a swipe
-  // responder and the hero popup is a separate responder subtree underneath, and
-  // the responder hand-off can swallow the button's `pointerup` so `onPress`
-  // never fires — the card stays mounted and freezes the lower ~82% of the map.
+  // On web, close from the low-level pointer/touch stream instead of relying solely
+  // on RN-Web's synthetic `onPress`. iPhone Safari can delay/swallow `pointerup`
+  // around a touch-action:none swipe target. `touchend` is the earliest reliable
+  // completion signal there; preventDefault also suppresses the delayed ghost click
+  // that could otherwise land on Leaflet after this sheet unmounts.
   const webCloseHandlers = IS_WEB
     ? ({
         onPointerDown: (e: any) => {
           e?.stopPropagation?.()
+          e?.nativeEvent?.stopPropagation?.()
         },
         onPointerUp: (e: any) => {
           e?.stopPropagation?.()
+          e?.nativeEvent?.stopPropagation?.()
+          handleClose()
+        },
+        onTouchEnd: (e: any) => {
+          e?.preventDefault?.()
+          e?.stopPropagation?.()
+          e?.nativeEvent?.preventDefault?.()
+          e?.nativeEvent?.stopPropagation?.()
+          e?.nativeEvent?.stopImmediatePropagation?.()
           handleClose()
         },
       } as any)
@@ -293,8 +302,13 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
           ]}
           {...({ pointerEvents: 'auto' } as any)}
         >
-          <View style={styles.handleRow} {...(webSwipeHandlers ?? {})}>
-            <View style={styles.grabber} />
+          <View style={styles.handleRow}>
+            {/* Keep the swipe responder on its own target. The close button used
+                to be its child, so iOS Safari handed the same touch between the
+                swipe target and Pressable and occasionally delayed dismissal. */}
+            <View style={styles.webSwipeZone} {...(webSwipeHandlers ?? {})}>
+              <View style={styles.grabber} />
+            </View>
             {headerCloseButton}
           </View>
           <PopupComponent point={point} closePopup={handleClose} />
@@ -412,6 +426,15 @@ const getStyles = (colors: ThemedColors) =>
       minHeight: 40,
       paddingTop: 8,
       paddingBottom: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    // Web-only drag target inside the shared header. Keeping touch-action:none
+    // off the parent leaves the adjacent close Pressable on Safari's direct tap
+    // path while preserving swipe-down-to-close on the centered grabber.
+    webSwipeZone: {
+      width: 96,
+      height: 40,
       alignItems: 'center',
       justifyContent: 'center',
       ...(IS_WEB ? ({ cursor: 'grab', touchAction: 'none' } as any) : null),

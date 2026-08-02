@@ -119,6 +119,40 @@ describe('MapPlaceBottomCard', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('closes on raw touch end and suppresses the delayed Safari ghost click', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
+    const onClose = jest.fn()
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <MapPlaceBottomCard point={point} userLocation={null} onClose={onClose} />,
+      )
+    })
+
+    const close = tree.root.findByProps({ testID: 'map-place-bottom-card-close' })
+    const event = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      nativeEvent: {
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+        stopImmediatePropagation: jest.fn(),
+      },
+    }
+
+    renderer.act(() => {
+      close.props.onTouchEnd(event)
+      // The same physical tap may still emit pointerup/onPress through RN-Web.
+      close.props.onPointerUp(event)
+      close.props.onPress()
+    })
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1)
+    expect(event.nativeEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps the compact bottom-sheet (no extra ScrollView) on wider viewports', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 900, height: 800, scale: 1, fontScale: 1 }))
 
