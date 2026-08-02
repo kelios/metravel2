@@ -75,9 +75,6 @@ function buildSkeletonCSS() {
 .ssg-travel-hero{position:relative;width:100%;height:70vh;min-height:360px;max-height:750px;border-radius:12px;overflow:hidden;background:${COLORS.light.bgSecondary};margin:8px 0 16px}
 @media(max-width:767px){.ssg-travel-hero{height:min(56vh,520px);min-height:260px;max-height:520px;border-radius:0;margin:0 -6px 16px;width:calc(100% + 12px)}}
 .ssg-travel-hero[data-ssg-travel-hero-adopted="true"]{position:absolute;inset:0;width:100%;height:100%;min-height:0;max-height:none;margin:0;border-radius:inherit}
-.ssg-travel-hero-blur{position:absolute;inset:0;background-position:center;background-repeat:no-repeat;background-size:cover;filter:blur(18px) saturate(1.08) brightness(0.82);transform:scale(1.08);transform-origin:center;pointer-events:none;z-index:0}
-.ssg-blur-mobile{display:block}.ssg-blur-desktop{display:none}
-@media(min-width:768px){.ssg-blur-mobile{display:none}.ssg-blur-desktop{display:block}}
 .ssg-travel-hero-img{position:relative;width:100%;height:100%;object-fit:contain;object-position:center;display:block;z-index:1}
 .ssg-travel-hero-bg{position:absolute;inset:0;background:rgba(7,12,19,0.24);pointer-events:none;z-index:1}
 .ssg-travel-title{height:32px;width:70%;border-radius:8px;margin:0 0 12px}
@@ -132,8 +129,21 @@ html[data-theme="dark"] .ssg-travel-related h2{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-travel-related a{color:#5aa7ff}
 html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
 @keyframes ssg-shimmer-dark{0%,100%{background:${COLORS.dark.shimmerFrom}}50%{background:${COLORS.dark.shimmerTo}}}
-#ssg-skeleton{transition:opacity .2s ease-out}
-#ssg-skeleton.ssg-hiding{opacity:0;pointer-events:none}
+/*
+ * #1207: снятие шелла БЕЗ полупрозрачной фазы.
+ *
+ * Раньше здесь был \`transition:opacity .2s\`, и класс \`ssg-hiding\` гасил шелл
+ * плавно. Пока идёт этот переход, на экране одновременно видны статический
+ * SEO-текст и уже отрисованный интерфейс — они накладываются и нечитаемы.
+ * Заявленные 200 мс держатся только на свободном main-thread: замер прода
+ * 2026-08-02, /search, iPhone-профиль 375×812, CPU throttle 6× — полупрозрачная
+ * фаза длилась 384 мс (7 952 → 8 336 мс), и чем медленнее устройство, тем она
+ * длиннее, потому что кадры анимации конкурируют с гидрацией.
+ *
+ * Теперь шелл скрывается в один кадр и тут же удаляется. Класс остаётся
+ * страховкой на случай, если удаление узла не прошло.
+ */
+#ssg-skeleton.ssg-hiding{opacity:0;visibility:hidden;pointer-events:none}
 </style>`;
 }
 
@@ -188,7 +198,7 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
  * remove as an orphan if #root is still absent after the DOM is fully parsed.
  */
 function buildRemovalScript() {
-  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var done=false;var late=false;function killCss(){if(document.querySelector('[data-ssg-travel-hero-adopted="true"]'))return;var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}setTimeout(function(){try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()},300)}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function travelReady(){return travelSkel&&r.getAttribute('data-travel-details-ready')==='true'}function appReady(){return (!travelSkel||late)&&document.documentElement.classList.contains('app-hydrated')}function lateHero(){return late&&!!r.querySelector('img[data-lcp]')}function check(){if(done)return false;if(heroReady()||travelReady()||appReady()||lateHero()){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true,attributes:true,attributeFilter:['data-travel-details-ready']});var iv=setInterval(function(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}},120);setTimeout(function(){late=true;check()},20000);setTimeout(function(){if(done)return;var t=(r.textContent||'').replace(/\\s+/g,' ').trim();if(t.length>200){teardown()}},45000)}begin()}catch(e){}})();</script>`;
+  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var done=false;var late=false;function killCss(){if(document.querySelector('[data-ssg-travel-hero-adopted="true"]'))return;var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function travelReady(){return travelSkel&&r.getAttribute('data-travel-details-ready')==='true'}function appReady(){return (!travelSkel||late)&&document.documentElement.classList.contains('app-hydrated')}function lateHero(){return late&&!!r.querySelector('img[data-lcp]')}function check(){if(done)return false;if(heroReady()||travelReady()||appReady()||lateHero()){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true,attributes:true,attributeFilter:['data-travel-details-ready']});var iv=setInterval(function(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}},120);setTimeout(function(){late=true;check()},20000);setTimeout(function(){if(done)return;var t=(r.textContent||'').replace(/\\s+/g,' ').trim();if(t.length>200){teardown()}},45000)}begin()}catch(e){}})();</script>`;
 }
 
 function buildCards(count) {
@@ -404,25 +414,17 @@ function buildTravelSkeletonHtml({ heroPreload, name, descriptionHtml, related }
       `<picture>${sources.join('')}` +
       `<img class="ssg-travel-hero-img" src="${escapeHtmlAttr(fallback)}" alt="${escapeHtmlAttr(name || 'Фотография маршрута')}" decoding="async" fetchpriority="high" data-lcp data-ssg-lcp="true"/></picture>`;
   }
-  let blurLayers = '';
-  if (heroPreload?.mobile?.href || heroPreload?.desktop?.href) {
-    // #1143: подложка размывается на 18 px и растягивается `background-size: cover`,
-    // поэтому детализация в ней не видна — но раньше сюда шёл полноразмерный hero.
-    // Слой крупнее contain-фото, значит он и становился LCP-элементом: 206 КБ давали
-    // 81 % времени LCP (прод, 2026-07-30). Теперь берём LQIP (~350 B) и заливку
-    // dominant_color, а полный hero остаётся только у самого `<img>`.
-    // Фолбэк на hero-вариант сохранён для пейлоадов без манифеста: там подложка
-    // делит один запрос с `<img>`, как и было.
-    const heroFallback = heroPreload.mobile?.href || heroPreload.desktop?.href;
-    const blurHref = heroPreload.blur?.href || heroFallback;
-    const blurColor = heroPreload.blur?.color || '';
-    const colorStyle = blurColor ? `background-color:${escapeHtmlAttr(blurColor)};` : '';
-    const layer = (variantClass) =>
-      `<div class="ssg-travel-hero-blur ${variantClass}" style="${colorStyle}background-image:url(&quot;${escapeHtmlAttr(blurHref)}&quot;)" aria-hidden="true"></div>`;
-    blurLayers = layer('ssg-blur-mobile') + layer('ssg-blur-desktop');
-  }
+  // #1208: один растр на hero. Раньше поля letterbox заливали два `<div>` с
+  // размытым LQIP того же фото (#1143) — отдельный сетевой запрос и отдельный
+  // декод ради полосок по краям. Теперь поля заливает `dominant_color` прямо на
+  // контейнере hero: он приходит манифестом, рисуется первым же кадром и не
+  // может стать LCP-кандидатом. Рантайм-hero делает ровно то же самое.
+  const heroFillColor = heroPreload?.fill?.color || '';
+  const heroFillStyle = heroFillColor
+    ? ` style="background-color:${escapeHtmlAttr(heroFillColor)}"`
+    : '';
   const heroBlock = heroImg
-    ? `<div class="ssg-travel-hero">${blurLayers}${heroImg}<div class="ssg-travel-hero-bg"></div></div>`
+    ? `<div class="ssg-travel-hero"${heroFillStyle}>${heroImg}<div class="ssg-travel-hero-bg"></div></div>`
     : `<div class="ssg-travel-hero ssg-pulse"></div>`;
 
   // FE-IDX-1: render the REAL article text into the pre-hydration shell so

@@ -75,9 +75,11 @@ describe('constants/imageContract — набор размеров исполня
       ],
     })
     expect(IMAGE_QUALITY.print).toBe(85)
-    expect(IMAGE_QUALITY.heroBackdrop).toBe(40)
+    // Ступень 96 остаётся в policy как обычный thumb травела. Отдельного
+    // `heroBackdrop` (w=96 q40) больше нет — подложку, ради которой он
+    // существовал, сняли в #1208/#1209.
     expect(IMAGE_STORAGE_POLICY_V1.travelMedia.derivatives).toContainEqual({
-      width: IMAGE_WIDTHS.heroBackdrop,
+      width: 96,
       quality: IMAGE_QUALITY.small,
     })
   })
@@ -120,7 +122,6 @@ describe('constants/imageContract — набор размеров исполня
     for (const width of [
       ...IMAGE_WIDTHS.travelHeroMobile,
       ...IMAGE_WIDTHS.travelHeroDesktop,
-      IMAGE_WIDTHS.heroBackdrop,
       IMAGE_WIDTHS.printFull,
       IMAGE_WIDTHS.printInline,
     ]) {

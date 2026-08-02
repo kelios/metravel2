@@ -130,7 +130,6 @@ describe('ImageCardMedia blur background (web)', () => {
           borderRadius={12}
           loading="eager"
           priority="high"
-          hasBlurBehind
           loaded={false}
           onLoad={onLoad}
         />,
@@ -178,7 +177,6 @@ describe('ImageCardMedia blur background (web)', () => {
       borderRadius: 12,
       loading: 'eager' as const,
       priority: 'high' as const,
-      hasBlurBehind: true,
       onLoad,
     }
     let tree: any
@@ -256,7 +254,6 @@ describe('ImageCardMedia blur background (web)', () => {
           borderRadius={12}
           loading="lazy"
           priority="normal"
-          hasBlurBehind
           loaded={false}
           onLoad={onLoad}
         />,
@@ -751,146 +748,4 @@ describe('ImageCardMedia blur background (web)', () => {
     })
   })
 
-})
-
-
-// #1111: CSS-фон не выбирает кандидата из srcSet — он грузит ровно URL из url().
-// У hero src намеренно не оптимизирован (совпадает с preload-адресом), поэтому фон
-// тянул оригинал: замер прода 2026-07-28 — `?v=2051` без ресайза, 121 КБ.
-describe('pickNarrowestSrcSetCandidate (#1111)', () => {
-  const { pickNarrowestSrcSetCandidate } = require('@/components/ui/ImageCardMediaWebHelpers')
-
-  it('picks the narrowest candidate so the blurred background stays cheap', () => {
-    const srcSet = [
-      'https://metravel.by/gallery/1/photo.jpg?w=320&q=72 320w',
-      'https://metravel.by/gallery/1/photo.jpg?w=720&q=72 720w',
-      'https://metravel.by/gallery/1/photo.jpg?w=1280&q=82 1280w',
-    ].join(', ')
-
-    expect(pickNarrowestSrcSetCandidate(srcSet)).toBe(
-      'https://metravel.by/gallery/1/photo.jpg?w=320&q=72'
-    )
-  })
-
-  it('falls back to null on empty or malformed input so the caller keeps src', () => {
-    expect(pickNarrowestSrcSetCandidate('')).toBeNull()
-    expect(pickNarrowestSrcSetCandidate(undefined)).toBeNull()
-    expect(pickNarrowestSrcSetCandidate('https://example.com/a.jpg')).toBeNull()
-    expect(pickNarrowestSrcSetCandidate('https://example.com/a.jpg 0w')).toBeNull()
-  })
-
-  it('ignores descriptor noise and still returns the smallest width', () => {
-    const srcSet = 'https://x/b.jpg 640w,   https://x/a.jpg   160w , https://x/c.jpg 1280w'
-    expect(pickNarrowestSrcSetCandidate(srcSet)).toBe('https://x/a.jpg')
-  })
-})
-
-/**
- * #1177: подложка не должна быть самым крупным элементом кадра.
- *
- * Замер прода 2026-07-31, `/travels/ourvietnam`, Chrome mobile 375@DPR2: base-div
- * подложки 381×489 = 159 909 px² против contain-фото 353×353 = 124 609 px², и
- * `largest-contentful-paint` указывал на DIV `data-blur-backdrop`. По времени это
- * не было регрессией (оба слоя берут один файл и приходят одним кадром), но любой
- * инструмент, выбирающий кандидата по площади, показывал на декоративный слой.
- *
- * Проверяем сам `WebBlurBackdrop`: в jest `ImageCardMedia` не рендерит `WebMainImage`
- * (ветка `isJest`), поэтому прогнать через него реальный `load` нельзя. Отчёт о
- * пропорциях покрыт отдельно — тестами `WebMainImage` выше.
- */
-describe('WebBlurBackdrop: сегментный режим и площадь слоёв (#1177)', () => {
-  const { WebBlurBackdrop } = require('@/components/ui/ImageCardMediaWebHelpers')
-  const { getContainedMediaBox } = require('@/components/ui/webBlurBackdropLayout')
-  const SLOT = { width: 360, height: 480 }
-  // Квадратное фото в слоте 360×480 → контент 360×360, поля 360×60 сверху и снизу.
-  const CONTENT_BOX = { left: 0, top: 60, width: 360, height: 360 }
-
-  const renderBackdrop = (props: Record<string, unknown>) => {
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <WebBlurBackdrop
-          src="https://example.com/photo.jpg"
-          width={SLOT.width}
-          height={SLOT.height}
-          borderRadius={12}
-          fit="contain"
-          useCssBackdrop
-          {...(props as any)}
-        />
-      )
-    })
-    return tree
-  }
-
-  const findLayers = (tree: any, attr: string) =>
-    tree.root.findAll((node: any) => node?.props?.[attr] === 'true')
-
-  it('без известных пропорций остаётся один слой на всю плитку — допустимый фолбэк', () => {
-    const tree = renderBackdrop({ contentBox: null })
-
-    expect(findLayers(tree, 'data-blur-backdrop-segment')).toHaveLength(0)
-    expect(findLayers(tree, 'data-blur-backdrop')).toHaveLength(1)
-  })
-
-  it('с известными пропорциями рисует поля letterbox сегментами', () => {
-    const tree = renderBackdrop({ contentBox: CONTENT_BOX })
-
-    expect(findLayers(tree, 'data-blur-backdrop-segment').length).toBeGreaterThan(0)
-  })
-
-  it.each([
-    ['фото уже слота', 0.5],
-    ['фото шире слота', 1.5],
-    ['квадрат в портретном слоте', 1],
-  ])('%s получает два сегмента полей', (_label, contentAspectRatio) => {
-    const contentBox = getContainedMediaBox({
-      containerWidth: SLOT.width,
-      containerHeight: SLOT.height,
-      contentAspectRatio,
-    })
-    const tree = renderBackdrop({ contentBox, contentRevealed: true })
-
-    expect(findLayers(tree, 'data-blur-backdrop-segment')).toHaveLength(2)
-    expect(findLayers(tree, 'data-blur-backdrop-base')).toHaveLength(0)
-  })
-
-  it('фото ровно по пропорциям слота снимает base после раскрытия', () => {
-    const contentBox = getContainedMediaBox({
-      containerWidth: SLOT.width,
-      containerHeight: SLOT.height,
-      contentAspectRatio: SLOT.width / SLOT.height,
-    })
-    const tree = renderBackdrop({ contentBox, contentRevealed: true })
-
-    expect(findLayers(tree, 'data-blur-backdrop')).toHaveLength(0)
-  })
-
-  it('до прихода пикселей база закрывает плитку целиком', () => {
-    const tree = renderBackdrop({ contentBox: CONTENT_BOX, contentRevealed: false })
-
-    expect(findLayers(tree, 'data-blur-backdrop-base')).toHaveLength(1)
-  })
-
-  it('после раскрытия фото base-слой на всю плитку не рендерится', () => {
-    const tree = renderBackdrop({ contentBox: CONTENT_BOX, contentRevealed: true })
-
-    expect(findLayers(tree, 'data-blur-backdrop-base')).toHaveLength(0)
-    expect(findLayers(tree, 'data-blur-backdrop-segment').length).toBeGreaterThan(0)
-  })
-
-  // Регрессия на сам инвариант тикета: ни один слой подложки не должен быть крупнее
-  // фото, иначе LCP-кандидат снова уедет на декорацию.
-  it('после раскрытия площадь любого слоя подложки меньше площади фото', () => {
-    const tree = renderBackdrop({ contentBox: CONTENT_BOX, contentRevealed: true })
-
-    const photoArea = CONTENT_BOX.width * CONTENT_BOX.height
-    const layerAreas = findLayers(tree, 'data-blur-backdrop').map(
-      (node: any) => Number(node.props.style?.width) * Number(node.props.style?.height),
-    )
-
-    expect(layerAreas.length).toBeGreaterThan(0)
-    expect(layerAreas.every((area: number) => Number.isFinite(area) && area < photoArea)).toBe(true)
-    expect(layerAreas.reduce((sum: number, area: number) => sum + area, 0)).toBeLessThan(photoArea)
-  })
 })

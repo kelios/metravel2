@@ -42,7 +42,6 @@ describe('TravelDetailsContainer performance (web)', () => {
         alt='Hero image'
         isMobile={false}
         height={600}
-        containerWidth={720}
       />,
     )
 
@@ -67,7 +66,6 @@ describe('TravelDetailsContainer performance (web)', () => {
         alt="Закат над Браславскими озёрами"
         isMobile={false}
         height={600}
-        containerWidth={720}
       />,
     )
 
@@ -75,7 +73,10 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(getByText('Закат над Браславскими озёрами')).toBeTruthy()
   })
 
-  it('renders segmented blur surround immediately with a tiny backdrop URL instead of the full LCP source', () => {
+  // #1208: hero на web рисует ОДИН растр. Второго изображения (размытой копии
+  // того же фото в полях letterbox) быть не должно ни в каком виде: ни вторым
+  // `<img>`, ни CSS `background-image`.
+  it('renders exactly one raster: no blur backdrop layers and no second image URL', () => {
     const { container } = render(
       <__testables.OptimizedLCPHero
         img={{
@@ -88,37 +89,33 @@ describe('TravelDetailsContainer performance (web)', () => {
         alt='Hero image'
         isMobile={false}
         height={600}
-        containerWidth={720}
       />,
     )
 
     const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
-    const heroBackdrop = container.querySelector('[data-hero-backdrop="true"]') as HTMLDivElement | null
-    const heroBackdropBase = container.querySelector('[data-hero-backdrop-base="true"]') as HTMLDivElement | null
-    const heroBackdropSegments = container.querySelectorAll('[data-hero-backdrop-segment="true"]')
-    const heroBackdropLayer = container.querySelector('[data-hero-backdrop-layer="true"]') as HTMLDivElement | null
-    const backdropUrl = heroBackdropLayer?.style.backgroundImage || ''
 
-    expect(heroBackdrop).toBeTruthy()
     expect(lcpImg).toBeTruthy()
-    expect(heroBackdropBase).toBeNull()
-    expect(heroBackdrop?.tagName).toBe('DIV')
-    expect(heroBackdropSegments.length).toBeGreaterThan(1)
     expect(lcpImg?.getAttribute('src')).toContain('w=1280')
-    expect(backdropUrl).toContain('w=96')
-    expect(backdropUrl).toContain('q=40')
-    expect(backdropUrl).not.toContain(lcpImg?.getAttribute('src') || '')
-    expect(heroBackdropLayer?.style.opacity).toBe('1')
-    expect(heroBackdropLayer?.style.animation).toBe('')
+    expect(container.querySelectorAll('img')).toHaveLength(1)
+    expect(container.querySelectorAll('[data-hero-backdrop-segment="true"]')).toHaveLength(0)
+    expect(container.querySelectorAll('[data-hero-backdrop-layer="true"]')).toHaveLength(0)
+    // Ни один элемент не тянет картинку фоном — прежняя подложка жила именно так.
+    expect(container.innerHTML).not.toContain('background-image')
+    // Прежняя подложка просила отдельную ступень `w=96` — её быть не должно
+    // (`w=960` из srcSet под это не попадает).
+    expect(container.innerHTML).not.toMatch(/w=96(?!\d)/)
 
     if (lcpImg) {
       fireEvent.load(lcpImg)
     }
 
-    expect(container.querySelector('[data-hero-backdrop="true"]')).toBeTruthy()
+    expect(container.querySelectorAll('img')).toHaveLength(1)
   })
 
-  it('uses backend blurhash as a local hero backdrop without a placeholder URL', () => {
+  // #1208: поля letterbox заливает `dominant_color` из манифеста. Blurhash на web
+  // в слой не идёт — expo-image декодирует его в `blob:`-PNG, то есть это снова
+  // второй растр (то же решение, что в `ImageCardMedia`).
+  it('fills hero letterbox from dominant_color and never rasterizes blurhash on web', () => {
     const { container } = render(
       <__testables.OptimizedLCPHero
         img={{
@@ -136,14 +133,17 @@ describe('TravelDetailsContainer performance (web)', () => {
         alt="Hero image"
         isMobile={false}
         height={600}
-        containerWidth={720}
       />,
     )
 
-    expect(container.querySelector('[data-hero-data-placeholder="true"]')).toBeTruthy()
+    const fillLayer = container.querySelector('[data-hero-data-placeholder="true"]')
+
+    expect(fillLayer).toBeTruthy()
+    expect(fillLayer?.innerHTML).not.toContain('data-local-blurhash')
     expect(container.querySelectorAll('[data-hero-backdrop-segment="true"]')).toHaveLength(0)
     expect(container.innerHTML).not.toContain('photo-lqip.jpg')
     expect(container.querySelectorAll('img[data-lcp]')).toHaveLength(1)
+    expect(container.querySelectorAll('img')).toHaveLength(1)
   })
 
   it('keeps mobile hero URL preload-friendly on high-DPR web devices', () => {
@@ -162,7 +162,6 @@ describe('TravelDetailsContainer performance (web)', () => {
         alt='Hero image'
         isMobile
         height={520}
-        containerWidth={390}
       />,
     )
 
@@ -195,7 +194,6 @@ describe('TravelDetailsContainer performance (web)', () => {
         alt='Hero image'
         isMobile={false}
         height={600}
-        containerWidth={720}
       />,
     )
 

@@ -559,30 +559,19 @@ function buildTravelHeroPreloadData(travel, detail) {
 
   if (!mobileHref && !desktopHref) return null;
 
-  // #1143: размытая подложка скелета раньше рисовалась ТЕМ ЖЕ hero-вариантом.
-  // Слой лежит под contain-фото с `filter: blur(18px)` и `background-size: cover`,
-  // то есть он крупнее самого фото — и именно он становился LCP-элементом, а его
-  // 206 КБ давали 81 % времени LCP (замер прода 2026-07-30: LCP 4 836 мс).
-  // Берём LQIP из манифеста (`?w=32&q=35&fit=cover` = 354 B) плюс dominant_color
-  // как мгновенную заливку. Крошечная картинка под blur(18px) визуально не
-  // отличается, но перестаёт быть узким местом первого экрана.
-  // #1167: `lqip_url` больше не используется — это был отдельный файл и отдельный
-  // сетевой запрос там, где хватает крошечного варианта того же изображения.
-  // ЗЕРКАЛО: `width`/`quality` обязаны совпадать с `IMAGE_WIDTHS.heroBackdrop` и
-  // `IMAGE_QUALITY.heroBackdrop` (`constants/imageContract.ts`) — иначе SSG греет
-  // один вариант, а рантайм просит другой, и подложка приезжает двумя файлами
-  // (инвариант #1146). Сверяется тестом travelHeroPreloadParity.
-  const blurHref = buildOptimizedTravelImageUrl(source.url, {
-    width: 96,
-    quality: 40,
-    updatedAt: source.updatedAt,
-    id: source.id,
-  });
+  // #1208: у hero остаётся ровно один растр — сам `<img>`.
+  //
+  // История: сначала поля letterbox заливались тем же полноразмерным hero
+  // (#1143, слой крупнее фото и становился LCP-элементом — 206 КБ, 81 % времени
+  // LCP), потом крошечным LQIP-вариантом того же изображения. LQIP дешевле, но
+  // это всё равно отдельный запрос, отдельный декод и вторая ширина, которую
+  // приходилось держать в зеркале с рантаймом. Заливку полей делает
+  // `dominant_color` из манифеста: ноль запросов, виден первым же кадром.
   const rawDominant = String(source.media?.dominant_color || '').trim();
-  const blurColor = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(rawDominant) ? rawDominant : '';
+  const fillColor = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(rawDominant) ? rawDominant : '';
 
   return {
-    blur: blurHref || blurColor ? { href: blurHref || '', color: blurColor } : null,
+    fill: fillColor ? { color: fillColor } : null,
     mobile: mobileHref
       ? {
           href: mobileHref,

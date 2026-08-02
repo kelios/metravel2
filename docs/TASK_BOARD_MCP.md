@@ -34,10 +34,14 @@ subprocess), без Django/GDAL/сторонних пакетов. Поэтом�
    Если module отсутствует или backend checkout требует обновления, это отдельное
    owner action вне frontend/docs-задачи; не уничтожай локальные изменения.
 
-   Состояние на 2026-07-29: checkout уже есть — `~/PhpstormProjects/metravel-backend`,
-   клон приватного репо `sergey-savran/metravel` (branch `master`). SSH-ключ к GitHub
-   не привязан: клонировать/фетчить только по HTTPS (`gh` + osxkeychain, аккаунт
-   `kelios`). Сервер зависимостей не требует и работает на системном python 3.9.6.
+   Состояние на 2026-08-02: checkout уже есть — `../metravel-backend` относительно этого
+   репо. Раскладка каталогов зависит от машины: на текущем Mac это
+   `~/Sites/metravel2/metravel-backend` (симлинк на `~/Sites/metravel/metravel`), на
+   машине с PhpStorm-раскладкой — `~/PhpstormProjects/metravel-backend`. **Абсолютный путь
+   в конфиг не зашивать** — см. resolve-обёртку ниже. Клон приватного репо
+   `sergey-savran/metravel` (branch `master`). SSH-ключ к GitHub не привязан:
+   клонировать/фетчить только по HTTPS (`gh` + osxkeychain, аккаунт `kelios`).
+   Сервер зависимостей не требует и работает на системном python 3.9.6.
 2. **Выпустить staff-токен** — предпочтительно программно залогиниться staff/admin-пользователем
    из `.env.e2e` через `POST /api/user/login/` на `METRAVEL_TASK_BOARD_BASE_URL` и взять
    `token` из JSON-ответа. Ручной вариант через `authtoken_token` допустим только если login API
@@ -50,19 +54,30 @@ subprocess), без Django/GDAL/сторонних пакетов. Поэтом�
    из `.mcp.json`. Проверка: `metravel_tasks_list` или попросить агента `ticket-board`
    показать борд (`metravel_task_board`).
 
-Рабочий `.mcp.json` (текущий в репо; пути через `${HOME}`, раскрывает сам `sh`, поэтому
-конфиг не зависит от того, раскрывает ли `${...}` MCP-клиент — под другую раскладку
-каталогов поправить хвост путей):
+Рабочий `.mcp.json` (текущий в репо). Обёртка `sh -c` **сама ищет** env-файл и бэк-checkout
+по списку кандидатов и берёт первый существующий, поэтому один и тот же конфиг работает на
+любой раскладке каталогов (Sites / PhpstormProjects), из worktree и из подкаталога. Если не
+нашлось ничего — печатает в stderr, что именно не найдено и где искали, вместо молчаливого
+`Connection closed`.
+
+**Правило: абсолютные пути одной машины в `.mcp.json` не зашивать** — именно так борд
+ломался 2026-07-29 (коммит `28d35807`).
+
 ```json
 {
   "mcpServers": {
     "metravel-task-board": {
       "command": "sh",
-      "args": ["-c", "set -a; . ${HOME}/PhpstormProjects/metravel2/.secrets/metravel-task-board.env; PYTHONPATH=${HOME}/PhpstormProjects/metravel-backend; set +a; exec python3 -m tools.mcp_server"]
+      "args": ["-c", "for d in \"$CLAUDE_PROJECT_DIR\" \"$PWD\" \"$HOME/Sites/metravel2/metravel2\" \"$HOME/PhpstormProjects/metravel2\"; do if [ -n \"$d\" ] && [ -f \"$d/.secrets/metravel-task-board.env\" ]; then P=\"$d\"; break; fi; done; if [ -z \"$P\" ]; then echo 'metravel-task-board: .secrets/metravel-task-board.env not found (...)' >&2; exit 1; fi; for b in \"$P/../metravel-backend\" \"$HOME/Sites/metravel2/metravel-backend\" \"$HOME/PhpstormProjects/metravel-backend\"; do if [ -d \"$b/tools/mcp_server\" ]; then B=\"$b\"; break; fi; done; if [ -z \"$B\" ]; then echo 'metravel-task-board: backend checkout with tools/mcp_server not found (...)' >&2; exit 1; fi; set -a; . \"$P/.secrets/metravel-task-board.env\"; set +a; export PYTHONPATH=\"$B\"; exec python3 -m tools.mcp_server"]
     }
   }
 }
 ```
+(в файле строка одна и с полными текстами ошибок — здесь они сокращены до `(...)`;
+источник правды — сам `.mcp.json`, не эта врезка)
+
+Новая машина = добавить свой корень репо в первый список и свой бэк-checkout во второй,
+существующие кандидаты не удалять.
 
 Проверить сервер, не перезапуская клиент (stdio, newline-delimited JSON; токен не печатать):
 ```bash
@@ -100,6 +115,18 @@ PYTHONPATH = "/ABS/PATH/metravel-backend"
   тогда фиксируй blocker с конкретными endpoint/status и оставляй временный fallback.
 - Инструменты `mcp__metravel-task-board__*` не появились → MCP-конфиг читается при старте:
   перезапустить Claude Code или Codex Desktop из каталога репо.
+- `MCP error -32000: Connection closed` сразу после старта (борд отвалился целиком, ни одного
+  инструмента) → сервер упал до MCP-хендшейка, почти всегда из-за путей в `.mcp.json`.
+  Диагностика — лог клиента, там дословный stderr процесса:
+  ```bash
+  tail -2 "$(ls -t ~/Library/Caches/claude-cli-nodejs/-Users-juliasavran-Sites-metravel2-metravel2/mcp-logs-metravel-task-board/* | head -1)"
+  ```
+  Типичное: `sh: <путь>/.secrets/metravel-task-board.env: No such file or directory` —
+  конфиг указывает на раскладку каталогов другой машины. Чинится resolve-обёрткой выше,
+  а не подстановкой своего абсолютного пути.
+- Проверить сервер, не перезапуская клиент, — smoke-командой ниже: `tools/list` должен
+  вернуть 12 инструментов. Если smoke зелёный, а инструментов в сессии нет — проблема на
+  стороне клиента (нужен реконнект/рестарт), сервер и токен целы.
 
 Проверка без MCP (read-only, токен из окружения; токен не печатать):
 ```bash

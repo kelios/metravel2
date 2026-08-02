@@ -123,6 +123,17 @@ testers и countries защищены.
   ```
 
 - [ ] Raw HTML содержит ожидаемые title/description/canonical/robots/OG/JSON-LD.
+- [ ] Media contract smoke (вес и кэш медиа-ответов, чего SEO-check не видит):
+
+  ```bash
+  npm run test:media:postdeploy:verbose
+  ```
+
+  Гейт берёт по одному URL на семейство из публичного API и падает, если ответ
+  приходит с `x-metravel-image-transform: source-pass-through`, `no-store` или
+  одинаковым весом на `w=96` и `w=1920` — в любой из двух Accept-веток
+  (браузерной и generic). Так тихая деградация вроде #1195 не доезжает до
+  пользователя. Против дева — `--url http://<host>`.
 - [ ] Analytics запускается только после consent.
 - [ ] Console/network не содержат новых критических ошибок.
 - [ ] Fresh performance измеряется по реальному URL; budget и throttling method

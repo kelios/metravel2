@@ -211,6 +211,28 @@ describe('ssg-skeletons', () => {
       expect(document.getElementById('ssg-skeleton-css')).toBeNull();
     });
 
+    // #1207: наложение SSG-текста на интерфейс — это и есть кадры плавного
+    // угасания шелла. Пока идёт fade, обе картинки видны одновременно; на
+    // мобильном фаза растягивается (замер прода: 384 мс при CPU throttle 6×).
+    // Поэтому шелл обязан исчезать в том же тике, без ожидания анимации.
+    it('removes the skeleton in the same tick — no translucent fade frames', () => {
+      setupDom({ travel: false });
+      runScript();
+
+      document.documentElement.classList.add('app-hydrated');
+      jest.advanceTimersByTime(200); // тик интервала проверки
+
+      expect(skeleton()).toBeNull();
+      expect(document.getElementById('ssg-skeleton-css')).toBeNull();
+    });
+
+    it('does not rely on a CSS transition to hide the shell', () => {
+      const css = buildSkeletonCSS();
+      expect(css).not.toMatch(/#ssg-skeleton\{[^}]*transition/);
+      // Класс остаётся страховкой на случай, если узел не удалился.
+      expect(css).toContain('#ssg-skeleton.ssg-hiding{opacity:0;visibility:hidden;pointer-events:none}');
+    });
+
     it('keeps SSG CSS while the painted hero node is adopted by React', () => {
       setupDom();
       runScript();

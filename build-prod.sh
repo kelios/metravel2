@@ -309,6 +309,12 @@ if [[ "$DEPLOY" == "1" ]]; then
     # Не валит билд (деплой уже выполнен) — только сигнализирует о замечаниях.
     node scripts/post-deploy-seo-check.js --url https://metravel.by --limit 30 \
       || echo "⚠️  Пост-деплой SEO-проверка нашла замечания — посмотри: npm run test:seo:postdeploy:verbose"
+
+    echo "Пост-деплой проверка медиа-контракта на проде..."
+    # SEO-check смотрит на HTML и не видит вес/кэш картинок: именно поэтому #1195
+    # (мастер вместо ступени, 50× перерасхода) прожил дни незамеченным.
+    node scripts/post-deploy-media-check.js --url https://metravel.by \
+      || echo "⚠️  Пост-деплой проверка медиа нашла замечания — посмотри: npm run test:media:postdeploy:verbose"
   fi
 fi
 

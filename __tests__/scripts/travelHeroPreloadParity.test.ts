@@ -145,47 +145,32 @@ describe('hero preload: SSG и клиент сходятся на одном ф�
   });
 });
 
-describe('#1143: размытая подложка скелета не тянет полноразмерный hero', () => {
+describe('#1208: у SSG-hero ровно один растр', () => {
   const preload = buildTravelHeroPreloadData(TRAVEL, DETAIL);
   const html: string = buildTravelSkeletonHtml({ heroPreload: preload, name: 'Наш Вьетнам' });
 
-  const blurUrls = (): string[] =>
-    Array.from(
-      html.matchAll(/class="ssg-travel-hero-blur[^"]*"[^>]*background-image:url\(&quot;(.*?)&quot;\)/g),
-    ).map((m) => m[1].replace(/&amp;/g, '&'));
-
-  it('обе подложки (mobile + desktop) отрисованы', () => {
-    expect(blurUrls()).toHaveLength(2);
+  it('в скелете нет ни одного blur-слоя и ни одного фонового изображения', () => {
+    // Раньше поля letterbox заливали два `<div class="ssg-travel-hero-blur">` с
+    // `background-image` — второй запрос и второй декод на самой тяжёлой странице.
+    expect(html).not.toContain('ssg-travel-hero-blur');
+    expect(html).not.toContain('background-image');
   });
 
-  // #1167: подложка больше не берёт `lqip_url` из манифеста — это был отдельный файл
-  // и отдельный вариант на каждую картинку. Берётся самая дешёвая ступень лестницы
-  // того же изображения, и параметры обязаны совпадать с рантаймом
-  // (`IMAGE_WIDTHS.heroBackdrop` / `IMAGE_QUALITY.heroBackdrop`), иначе SSG греет один
-  // файл, а гидратация просит другой — инвариант #1146.
-  it('подложка берёт дешёвую ступень лестницы, а не hero-вариант', () => {
-    for (const url of blurUrls()) {
-      expect(url).toMatch(/[?&]w=96\b/);
-      expect(url).toMatch(/[?&]q=40\b/);
-      expect(url).not.toMatch(/[?&]w=(480|640|800|1280|1920|2500)\b/);
-    }
-    expect(blurUrls()).not.toContain(preload.mobile.href);
-    expect(blurUrls()).not.toContain(preload.desktop.href);
+  it('в скелете ровно одна картинка hero — сам <img>', () => {
+    expect(Array.from(html.matchAll(/<img\b/g))).toHaveLength(1);
+    expect(html).toContain('class="ssg-travel-hero-img"');
   });
 
-  it('подложка заливается dominant_color до прихода картинки', () => {
-    expect(html).toContain('background-color:#7b7e78');
+  it('поля заливает dominant_color прямо на контейнере hero', () => {
+    expect(html).toMatch(/class="ssg-travel-hero" style="background-color:#7b7e78"/);
   });
 
-  it('без манифеста подложка делит запрос с hero (старое поведение)', () => {
+  it('без dominant_color заливка не выдумывается', () => {
     const bare = buildTravelHeroPreloadData(TRAVEL, { gallery: [{ id: 100, url: GALLERY_PATH }] });
     const bareHtml: string = buildTravelSkeletonHtml({ heroPreload: bare, name: 'x' });
-    // Фолбэк строит подложку через прокси малой ширины, а не полноразмерным файлом.
-    const urls = Array.from(
-      bareHtml.matchAll(/class="ssg-travel-hero-blur[^"]*"[^>]*background-image:url\(&quot;(.*?)&quot;\)/g),
-    ).map((m) => m[1].replace(/&amp;/g, '&'));
-    expect(urls).toHaveLength(2);
-    for (const url of urls) expect(url).toMatch(/[?&]w=96\b/);
+    expect(bareHtml).not.toContain('ssg-travel-hero-blur');
+    expect(bareHtml).not.toContain('background-color:');
+    expect(Array.from(bareHtml.matchAll(/<img\b/g))).toHaveLength(1);
   });
 });
 

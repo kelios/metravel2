@@ -54,6 +54,22 @@ const ANDROID_LIST_IMAGE_PROPS =
       }
     : undefined
 
+// Ступени `variants` бэкенд-манифеста обложки. `maxWidth` в
+// `buildResponsiveImagePropsFromMedia` влияет только на fallback `src`, а
+// кандидаты srcSet берутся из `widths` как есть — обрезать лестницу под слот
+// приходится здесь.
+const COVER_WIDTH_LADDER = [160, 320, 480, 640, 720, 960] as const
+
+// Лестница обязана покрывать слот (последняя ступень >= maxWidth), но не уходить
+// выше первой покрывающей: всё, что дальше, браузер на DPR 2 выберет «пожирнее»,
+// хотя в бокс карточки это уже не нужно.
+function buildCoverWidths(maxWidth: number): number[] {
+  const widths = COVER_WIDTH_LADDER.filter((width) => width <= maxWidth)
+  const covering = COVER_WIDTH_LADDER.find((width) => width >= maxWidth)
+  if (covering != null && !widths.includes(covering)) widths.push(covering)
+  return widths.length ? widths : [...COVER_WIDTH_LADDER]
+}
+
 const POINTER_EVENTS_BOX_NONE = { pointerEvents: 'box-none' } as any
 const ANCHOR_FILL_STYLE = {
   display: 'block',
@@ -226,9 +242,15 @@ function TravelListItem({
           ? 480
           : Math.min(effectiveWidth, isMobile ? 640 : 720)
 
+    const maxCoverWidth = Math.max(targetWidth, isFirst ? 720 : 640)
+
     return buildResponsiveImagePropsFromMedia(coverMedia, {
-      maxWidth: Math.max(targetWidth, isFirst ? 720 : 640),
-      widths: [160, 320, 480, 640, 720, 960],
+      maxWidth: maxCoverWidth,
+      // Хвост 720/960 оставался в лестнице независимо от `maxWidth`, поэтому на
+      // DPR 2 браузер тянул в бокс ~390 px кандидата 960w — 2.95 МБ обложек на
+      // страницу выдачи. Столько байт на низкоприоритетных картинках душат
+      // fetch следующей страницы, и «Загружаем ещё» висит секундами.
+      widths: buildCoverWidths(maxCoverWidth),
       sizes:
         typeof cardWidth === 'number'
           ? `${Math.round(cardWidth)}px`

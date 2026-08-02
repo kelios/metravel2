@@ -189,6 +189,7 @@ const RightColumn: React.FC<RightColumnProps> = (
     const scheduledTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const lastEndReachedAtRef = useRef(0)
     const lastEndReachedHeightRef = useRef(0)
+    const scrollNodeRef = useRef<any>(null)
 
     const cancelScheduledAfterLayout = useCallback(() => {
       if (scheduledRafRef.current != null && typeof cancelAnimationFrame === 'function') {
@@ -315,23 +316,46 @@ const RightColumn: React.FC<RightColumnProps> = (
     }, [rowSeparatorStyle])
 
     // Web: infinite scroll via onScroll instead of FlashList's onEndReached
-    const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const evaluateEndReached = useCallback((contentHeight: number, viewportHeight: number, offsetY: number) => {
       if (!onEndReached) return
-      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent
-      const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y
-      const threshold = (onEndReachedThreshold ?? 0.5) * layoutMeasurement.height
+      if (!viewportHeight) return
+      const distanceFromEnd = contentHeight - viewportHeight - offsetY
+      const threshold = (onEndReachedThreshold ?? 0.5) * viewportHeight
       if (distanceFromEnd >= threshold) return
 
       // Guard against firing onEndReached on every scroll event: skip if a
       // request was made for the same scroll height, or more often than ~800ms.
       const now = Date.now()
-      const sameHeight = contentSize.height === lastEndReachedHeightRef.current
+      const sameHeight = contentHeight === lastEndReachedHeightRef.current
       if (sameHeight && now - lastEndReachedAtRef.current < 800) return
 
       lastEndReachedAtRef.current = now
-      lastEndReachedHeightRef.current = contentSize.height
+      lastEndReachedHeightRef.current = contentHeight
       onEndReached()
     }, [onEndReached, onEndReachedThreshold])
+
+    const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent
+      const node = (e as any)?.target
+      if (node && typeof node.scrollHeight === 'number') scrollNodeRef.current = node
+      evaluateEndReached(contentSize.height, layoutMeasurement.height, contentOffset.y)
+    }, [evaluateEndReached])
+
+    // Подгрузка на web висела только на событии `scroll`. Пока новая страница
+    // едет, пользователь стоит внизу и не скроллит — событий нет, и если высота
+    // выдачи выросла меньше порога (последняя короткая страница, широкий
+    // экран, перестроение сетки), следующий onEndReached уже никто не позовёт:
+    // «Загружаем ещё» висит до нового жеста. Перепроверяем геометрию после
+    // каждого прихода данных.
+    useEffect(() => {
+      if (!isWeb || !onEndReached) return
+      const node = scrollNodeRef.current
+      if (!node) return
+      const raf = requestAnimationFrame(() => {
+        evaluateEndReached(node.scrollHeight, node.offsetHeight, node.scrollTop)
+      })
+      return () => cancelAnimationFrame(raf)
+    }, [evaluateEndReached, onEndReached, travels.length])
 
     const topContentNodes = useMemo(() => {
       if (!topContent) return null

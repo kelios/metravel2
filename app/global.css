@@ -628,17 +628,6 @@ select:focus-visible {
   border-radius: inherit;
 }
 
-.travel-lcp-hero-backdrop-segment {
-  filter: blur(18px) saturate(1.08) brightness(0.82);
-  transform: scale(1.08);
-  transform-origin: center;
-  will-change: transform;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  pointer-events: none;
-}
-
 /*
  * #1144: высота-заглушка под фиксированной шапкой.
  *

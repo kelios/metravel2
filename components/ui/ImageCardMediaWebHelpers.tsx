@@ -1,6 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import type { ContainedMediaBox } from '@/components/ui/webBlurBackdropLayout';
-import { getBackdropSegments } from '@/components/ui/webBlurBackdropLayout';
+import { memo, useCallback, useEffect, useRef } from 'react';
 
 export type Priority = 'low' | 'normal' | 'high';
 
@@ -99,7 +97,6 @@ type WebMainImageProps = {
   borderRadius: number;
   loading: 'lazy' | 'eager';
   priority: Priority;
-  hasBlurBehind: boolean;
   loaded: boolean;
   srcSet?: string;
   sizes?: string;
@@ -145,7 +142,6 @@ export const WebMainImage = memo(function WebMainImage({
   borderRadius,
   loading,
   priority,
-  hasBlurBehind,
   loaded,
   srcSet,
   sizes,
@@ -307,8 +303,11 @@ export const WebMainImage = memo(function WebMainImage({
         borderRadius,
         display: 'block',
         opacity: showImmediately || loaded ? 1 : 0,
-        transition: hasBlurBehind && !showImmediately ? 'opacity 0.15s ease-in' : 'none',
-        willChange: hasBlurBehind && !showImmediately ? 'opacity' : 'auto',
+        // Плавное появление имело смысл, только когда под фото лежала размытая
+        // подложка и было во что «проявляться». Подложки на web больше нет
+        // (#1208), поэтому переход убран — иначе это просто задержка кадра.
+        transition: 'none',
+        willChange: 'auto',
         contain: 'layout',
       }}
       loading={loading}
@@ -317,284 +316,6 @@ export const WebMainImage = memo(function WebMainImage({
       fetchPriority={priority === 'high' ? 'high' : priority === 'low' ? 'low' : 'auto'}
       onLoad={handleLoad}
       onError={onError}
-    />
-  );
-});
-
-/**
- * Самый узкий кандидат из `srcSet` — для размытого CSS-фона, где деталь всё равно
- * теряется. Возвращает null, если набора нет или он невалиден, чтобы вызывающий
- * откатился на обычный `src`.
- */
-export function pickNarrowestSrcSetCandidate(srcSet?: string): string | null {
-  const raw = String(srcSet || '').trim();
-  if (!raw) return null;
-  let best: { url: string; width: number } | null = null;
-  for (const part of raw.split(',')) {
-    const [url, descriptor] = part.trim().split(/\s+/);
-    if (!url) continue;
-    const width = Number.parseInt(String(descriptor || ''), 10);
-    if (!Number.isFinite(width) || width <= 0) continue;
-    if (!best || width < best.width) best = { url, width };
-  }
-  return best ? best.url : null;
-}
-
-type WebBlurBackdropProps = {
-  src: string;
-  /**
-   * #1111: тот же `srcSet`/`sizes`, что у резкого слоя. Без них подложка грузит
-   * ровно `src`, а main через `srcSet` выбирает другого кандидата — один файл
-   * уезжает в две загрузки. Замер прода 2026-07-28 на карточке квеста: у обоих
-   * слоёв `src` был `?w=160`, но main с `sizes: 132px` при DPR 2 брал `?w=320`.
-   */
-  srcSet?: string;
-  sizes?: string;
-  alt?: string;
-  width: number;
-  height: number;
-  borderRadius: number;
-  fit: 'contain' | 'cover';
-  useCssBackdrop?: boolean;
-  visible?: boolean;
-  contentBox?: ContainedMediaBox | null;
-  /**
-   * #1177: у резкого слоя УЖЕ есть пиксели (подтверждённый decode, а не просто
-   * `showImmediately`). В сегментном режиме это снимает base-слой на всю плитку:
-   * поля letterbox закрыты сегментами, центр — самим фото, и подложке больше нечего
-   * закрывать. После раскрытия база — невидимый прямоугольник, который по площади
-   * больше кадра и потому перетягивает на себя LCP-кандидата (замер прода
-   * 2026-07-31: base 381×489 = 159 909 px² против фото 353×353 = 124 609 px²).
-   *
-   * Именно decode, а не «разрешено показать»: у eager/high-priority медиа показ
-   * разрешён с первого кадра, и снятие базы по нему оставило бы пустой центр до
-   * прихода пикселей.
-   */
-  contentRevealed?: boolean;
-};
-
-export const WebBlurBackdrop = memo(function WebBlurBackdrop({
-  src,
-  srcSet,
-  sizes,
-  alt = '',
-  width,
-  height,
-  borderRadius,
-  fit,
-  useCssBackdrop = false,
-  visible = true,
-  contentBox = null,
-  contentRevealed = false,
-}: WebBlurBackdropProps) {
-  const hasPreBlurredSource = /(?:\?|&)blur=\d+(?:&|$)/i.test(src);
-  const backdropFit = 'cover';
-  const backdropScale = fit === 'contain' ? 1.08 : 1.12;
-  const backdropFilter = hasPreBlurredSource
-    ? 'saturate(1.08)'
-    : fit === 'contain'
-      ? 'blur(20px) saturate(1.08) brightness(0.86)'
-      : 'blur(24px) saturate(1.15) brightness(0.9)';
-  // #1111: CSS-фон не умеет выбирать кандидата из `srcSet` — он грузит ровно тот
-  // URL, что стоит в `url()`. У hero `src` намеренно не оптимизирован
-  // (`preserveOptimizedWebSrc` держит его равным preload-адресу), поэтому фон
-  // тянул полноразмерный файл: замер прода 2026-07-28 — `?v=2051` без ресайза,
-  // 121 КБ, только чтобы размыть его в CSS.
-  //
-  // Размытие уничтожает детали, поэтому фону достаточно самого узкого кандидата
-  // из того же `srcSet` — те же 7 КБ вместо 121 КБ. Отдельным файлом это остаётся,
-  // но крошечным; полностью убрать вторую загрузку можно только подставляя фону
-  // `currentSrc` main-слоя уже после его onLoad.
-  const backdropUrl = useMemo(() => pickNarrowestSrcSetCandidate(srcSet) ?? src, [srcSet, src]);
-  const backdropSegments = useMemo(
-    () =>
-      useCssBackdrop && fit === 'contain'
-        ? getBackdropSegments({
-            containerWidth: width,
-            containerHeight: height,
-            contentBox,
-          })
-        : [],
-    [contentBox, fit, height, useCssBackdrop, width]
-  );
-  const shouldSplitBackdrop = useCssBackdrop && backdropSegments.length > 0;
-  const contentFillsContainer =
-    useCssBackdrop &&
-    fit === 'contain' &&
-    contentBox != null &&
-    backdropSegments.length === 0;
-
-  if (shouldSplitBackdrop) {
-    return (
-      <>
-        {contentRevealed ? null : (
-        <div
-          aria-hidden="true"
-          data-blur-backdrop="true"
-          data-blur-backdrop-base="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 0,
-            borderRadius,
-            backgroundImage: `url("${backdropUrl.replace(/"/g, '\\"')}")`,
-            backgroundSize: backdropFit,
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            filter: backdropFilter,
-            transform: `scale(${backdropScale})`,
-            transformOrigin: 'center',
-            opacity: visible ? 1 : 0,
-            contain: 'paint',
-            willChange: 'transform, opacity',
-            backfaceVisibility: 'hidden',
-            pointerEvents: 'none',
-            transition: 'opacity 0.15s ease-in',
-          }}
-        />
-        )}
-        {backdropSegments.map((segment, index) => (
-          <div
-            key={`${index}-${segment.left}-${segment.top}-${segment.width}-${segment.height}`}
-            aria-hidden="true"
-            data-blur-backdrop="true"
-            data-blur-backdrop-segment="true"
-            data-blur-backdrop-layer="true"
-            style={{
-              position: 'absolute',
-              top: segment.top,
-              left: segment.left,
-              width: segment.width,
-              height: segment.height,
-              zIndex: 0,
-              borderRadius,
-              backgroundImage: `url("${backdropUrl.replace(/"/g, '\\"')}")`,
-              backgroundSize: backdropFit,
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              filter: backdropFilter,
-              transform: `scale(${backdropScale})`,
-              transformOrigin: 'center',
-              opacity: visible ? 0.95 : 0,
-              contain: 'paint',
-              willChange: 'transform, opacity',
-              backfaceVisibility: 'hidden',
-              pointerEvents: 'none',
-              transition: 'opacity 0.15s ease-in',
-            }}
-          />
-        ))}
-        <div
-          aria-hidden="true"
-          data-blur-backdrop-overlay="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 0,
-            borderRadius,
-            backgroundColor: 'rgba(7,12,19,0.22)',
-            pointerEvents: 'none',
-          }}
-        />
-      </>
-    );
-  }
-
-  if (useCssBackdrop) {
-    // A known content box with no segments means the image exactly fills the
-    // container. Keep the pre-decode base, then remove it once sharp pixels are
-    // visible. A missing content box is different: proportions are still
-    // unknown, so the full-tile fallback must remain to avoid empty letterbox
-    // fields (#1177/#1188).
-    if (contentFillsContainer && contentRevealed) return null;
-    return (
-      <div
-        aria-hidden="true"
-        data-blur-backdrop="true"
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          width: '100%',
-          height: '100%',
-          minWidth: '100%',
-          minHeight: '100%',
-          maxWidth: 'none',
-          maxHeight: 'none',
-          display: 'block',
-          zIndex: 0,
-          borderRadius,
-          transform: `translate(-50%, -50%) scale(${backdropScale})`,
-          backgroundImage: `url("${backdropUrl.replace(/"/g, '\\"')}")`,
-          backgroundSize: backdropFit,
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          filter: backdropFilter,
-          opacity: visible ? 0.95 : 0,
-          contain: 'paint',
-          willChange: 'transform, opacity',
-          backfaceVisibility: 'hidden',
-          pointerEvents: 'none',
-          transition: 'opacity 0.15s ease-in',
-        }}
-      />
-    );
-  }
-
-  const loading = fit === 'contain' ? 'lazy' : 'eager';
-  const fetchPriority = fit === 'contain' ? 'low' : 'auto';
-
-  const targetOpacity = visible ? '0.95' : '0';
-
-  return (
-    <img
-      ref={(img) => {
-        if (img && img.complete && img.naturalWidth > 0) {
-          img.style.opacity = targetOpacity;
-        }
-      }}
-      aria-hidden="true"
-      data-blur-backdrop="true"
-      src={src}
-      // Кандидаты те же, что у резкого слоя, иначе браузер выберет другой вариант
-      // и один файл превратится в две загрузки (#1111).
-      srcSet={srcSet}
-      sizes={sizes}
-      alt={alt}
-      width={width}
-      height={height}
-      style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        width: '100%',
-        height: '100%',
-        minWidth: '100%',
-        minHeight: '100%',
-        maxWidth: 'none',
-        maxHeight: 'none',
-        display: 'block',
-        objectFit: backdropFit,
-        objectPosition: 'center',
-        zIndex: 0,
-        borderRadius,
-        transform: `translate(-50%, -50%) scale(${backdropScale})`,
-        filter: backdropFilter,
-        opacity: visible ? 0.95 : 0,
-        contain: 'paint',
-        willChange: 'transform, opacity',
-        backfaceVisibility: 'hidden',
-        pointerEvents: 'none',
-        transition: 'opacity 0.15s ease-in',
-      }}
-      loading={loading}
-      decoding="async"
-      // @ts-ignore -- fetchPriority is a valid img attribute in browsers and not in React DOM typings yet
-      fetchPriority={fetchPriority}
-      onLoad={(e) => {
-        const img = e.currentTarget;
-        img.style.opacity = targetOpacity;
-      }}
     />
   );
 });

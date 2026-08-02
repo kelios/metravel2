@@ -15,6 +15,9 @@
       }
     ]
   },
+  "enabledMcpjsonServers": [
+    "metravel-task-board"
+  ],
   "permissions": {
     "allow": [
       "Bash(node .claude/hooks/review-gate.mjs *)"

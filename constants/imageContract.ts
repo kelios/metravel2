@@ -27,12 +27,6 @@ export const IMAGE_QUALITY = {
    * достаточной резкости на DPR2. Это не правило для всех файлов шириной 480.
    */
   questCover: 60,
-  /**
-   * Только переходный proxy-fallback hero при отсутствии blurhash/dominant color.
-   * В S3 отдельный q40-файл не хранится: целевой w-only URL имеет один вариант
-   * `travelMedia/96` с q70, а штатная подложка вообще рисуется из метаданных.
-   */
-  heroBackdrop: 40,
 } as const;
 
 export const IMAGE_STORAGE_POLICY_VERSION = 1 as const;
@@ -164,9 +158,6 @@ export const IMAGE_WIDTHS = {
 
   /** Quest card 320–420 CSS × DPR до 2. */
   questCover: [320, 480, 640, 800],
-
-  /** Переходный q40 proxy-fallback; в S3 переиспользуется travelMedia/96 q70. */
-  heroBackdrop: 96,
 
   /** Travel master и print-производная для inline/PDF content. */
   printFull: 2500,

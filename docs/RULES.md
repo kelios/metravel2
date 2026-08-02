@@ -396,9 +396,10 @@ npx serve dist/prod -l 3000 -s
   - No fallback timers, no IntersectionObserver gating — content starts loading right away.
 - On travel pages, the web hero slider/background must appear immediately with the hero once runtime is ready.
   - Do not gate the slider/background on explicit click, pointer interaction, keyboard interaction, or scroll.
-  - Keep the first rendered web hero visually complete from the start: main image, blurred side background, and slider chrome must arrive together.
+  - Keep the first rendered web hero visually complete from the start: photo, letterbox fill, and slider chrome must arrive together.
   - This is the canonical behavior, not a temporary optimization.
-  - Do not remove, downgrade, or defer the hero/slider blur backdrop just to improve Lighthouse or LCP metrics.
+  - Owner decision 2026-08-02 (#1208, applied to catalog cards and gallery in the same wave): on web one photo means one raster. The letterbox fill is `dominant_color` from the manifest — not a blurred copy of the photo, not a `blob:` decoded from blurhash. Native keeps the Expo Image blur layer.
+  - Do not re-introduce a web blur backdrop (second `<img>`, CSS `background-image`, or blurhash raster) to "improve" LCP or to restore the old look; that layer was the LCP candidate and hid the real photo cost.
   - If a test expects the web hero slider/background to appear only after user interaction, the test is wrong and must be updated to assert the immediate-mount contract instead.
   - Do not re-introduce interaction-gated hero slider activation on web.
 - Travel hero swipe and travel-details performance are one bilateral release contract. Any change in `components/travel/sliderParts/**`, `components/travel/details/**`, `ImageCardMedia`, hero overlays/decode gates, travel-details lazy/content-visibility behavior, or responsive image layout must pass both `npm run verify:slider` and `npm run verify:slider-perf`, each started through `scripts/run-with-quality-gate-lock.js`; one green side is not enough for handoff.
@@ -457,11 +458,11 @@ npx serve dist/prod -l 3000 -s
   - no emoji
 - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
-- Images must preserve original aspect ratio (use `contain`) and any unused area should be filled by a blurred version of the same image.
-- One visual image slot must use one effective network URI across sharp and blurred layers on web and native.
-  - Derive the backdrop from the same loaded source/bitmap (or from backend-provided `blurhash`/`dominant_color` without another photo request).
+- Images must preserve original aspect ratio (use `contain`); the unused letterbox area is filled by `dominant_color` on web and by the Expo Image blur layer on native.
+- One visual image slot must use one effective network URI across sharp and blurred layers on web and native, and on web exactly one raster (#1208).
+  - Derive any backdrop from the same loaded source/bitmap (or from backend-provided `blurhash`/`dominant_color` without another photo request).
   - Do not build or pass a second blur-only URL, `blurSrc`, `blurSource`, or source-level `width`/`height` override for the backdrop.
-  - On native, both Expo Image layers must share `source`, `cachePolicy="memory-disk"`, and `recyclingKey`; on web, the backdrop reuses the main `src` and applies CSS blur.
+  - On native, both Expo Image layers must share `source`, `cachePolicy="memory-disk"`, and `recyclingKey`; on web there is no second layer at all — no blur `<img>`, no CSS `background-image`, no blurhash `blob:`.
   - Validate this invariant with URL-cardinality/network-byte evidence in addition to renderer tests and `npm run check:image-architecture`.
 - Published travel/article media (covers, rich-text description images, gallery images, and map-point photos) must be real photos, user-approved licensed photos, or photorealistic generated images saved as local raster files before upload.
   - Do not use flat SVG, Playwright screenshot, vector, icon-like, schematic, cartoon, generic illustration, or "photo-like" placeholder generation for these surfaces.
@@ -470,20 +471,16 @@ npx serve dist/prod -l 3000 -s
   - Codex may independently add, generate, upload, and insert images/media for articles, route points, and quests when requested.
   - Codex must not independently write, expand, rewrite, or creatively improve article/quest prose, tasks, hints, titles, SEO text, or other authored text.
   - If a requested article/quest task appears to require new or changed authored text, ask the user for explicit confirmation before doing the text work, even when the original request sounds direct.
-- For web content images that intentionally use `contain + blurBackground` in cards, popups, inline rich-text media, map previews, and similar surfaces, enable the shared-source blur mode (`allowCriticalWebBlur` in `ImageCardMedia`, or `mediaProps.allowCriticalWebBlur` in `UnifiedTravelCard`).
-  - The visible image and the blur backdrop must use the same effective image source whenever possible.
-  - Sibling sections that use the same card/media pattern must not render different backdrop strength or timing.
-  - Quest cover cards on `/quests` and quest CTA cards must keep a single effective web source for the visible image and blur backdrop (`optimizeWeb={false}` with `allowCriticalWebBlur`) unless a real iPhone Safari browser check proves the new source-selection path cannot show blur-only cards.
+- Superseded 2026-08-02 (#1208): web surfaces no longer render a blur backdrop, so `allowCriticalWebBlur` no longer turns one on. `contain` slots in cards, popups, inline rich-text media, map previews, quest covers and hero fill their letterbox with `dominant_color`.
+  - Sibling sections that use the same card/media pattern must still look identical to each other — same fill source, same timing.
 - On web, travel hero/gallery media and description images must use the canonical `70vh` height contract.
   - The travel hero slider container on web must resolve to `70vh` and keep that height stable across the first paint and slider handoff.
   - Apply the limit at the authoritative container/layout level, not via ad-hoc per-page overrides.
-  - Keep `contain` rendering and blurred surround inside that bounded area.
-- For critical web hero/slider media, the blurred surround must reuse the same effective image source as the visible image whenever possible.
-  - Do not create a second “blur-only” URL for first-paint hero/slider backdrops if the same source image can be reused.
-  - The goal is to avoid a separate background request arriving after the main image and causing a visible second-stage backdrop reveal.
-- Blur backdrops must be present in the DOM from the first relevant frame.
-  - Fix missing backdrop rendering by correcting source selection or component structure, not by delaying the main image or adding reveal timers.
-  - Do not disable slider/hero blur backdrops as a performance optimization; preserve the visual contract and optimize requests/structure instead.
+  - Keep `contain` rendering and the letterbox fill inside that bounded area.
+- For critical web hero/slider media there is no separate backdrop request at all (#1208): the photo is the only raster, the fill is `dominant_color`.
+  - Never create a “blur-only” URL for first-paint hero/slider backdrops — neither a second variant nor a reuse of the main `src` as a CSS background.
+  - The letterbox fill must be present in the DOM from the first relevant frame and must not disappear once the photo decodes; in `contain` it stays visible in the gutters.
+  - Fix a missing fill by correcting the manifest field or component structure, not by delaying the photo or adding reveal timers.
 - Keep image geometry stable across skeleton, static hero, and slider handoff.
   - Do not let the slider/background path introduce a different aspect-ratio box or a late background mount.
 

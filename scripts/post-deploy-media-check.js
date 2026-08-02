@@ -1,0 +1,521 @@
+#!/usr/bin/env node
+/**
+ * Post-deploy media contract checker (#1205).
+ *
+ * Регрессия #1195 была тихой: код 200, тело — валидная картинка, страница
+ * выглядит нормально. Пост-деплой SEO-check, guard'ы, unit-тесты и e2e её
+ * пропустили, потому что ни один из них не смотрит на ВЕС и заголовки кэша
+ * медиа-ответа. Этот гейт смотрит ровно на них:
+ *
+ *   x-metravel-image-transform: source-pass-through   ← ресайз не применён
+ *   cache-control: no-store                           ← кэша нет
+ *   разные `w` дают одинаковый вес                    ← ресайз не применён
+ *
+ * URL берутся из публичного API (`/api/travels/`, `/api/quests/`), а не
+ * хардкодятся: гейт не должен протухать вместе с id конкретной записи.
+ *
+ * Usage:
+ *   node scripts/post-deploy-media-check.js [--url https://metravel.by]
+ *     [--allow-known-broken] [--json] [--verbose] [--insecure]
+ */
+
+const https = require('https')
+const http = require('http')
+
+const args = process.argv.slice(2)
+
+function hasFlag(name) {
+  return args.includes(`--${name}`)
+}
+
+function getArg(name, fallback) {
+  const idx = args.indexOf(`--${name}`)
+  return idx !== -1 && args[idx + 1] ? args[idx + 1] : fallback
+}
+
+const SITE = getArg('url', 'https://metravel.by').replace(/\/+$/, '')
+const VERBOSE = hasFlag('verbose')
+const JSON_OUTPUT = hasFlag('json')
+const ALLOW_KNOWN_BROKEN = hasFlag('allow-known-broken')
+const INSECURE_TLS =
+  hasFlag('insecure') || String(process.env.MEDIA_CHECK_INSECURE || '0') === '1'
+
+/** Ступени, на которых меряем инвариант ресайза. Обе есть в `proxy-contract.widths`. */
+const SMALL_WIDTH = 96
+const LARGE_WIDTH = 1920
+
+/**
+ * Семейства, про которые уже известно, что они сломаны, — с задачей-владельцем.
+ * Список ЯВНЫЙ и сокращается по мере закрытия #1195; пустой список = гейт строгий
+ * ко всем семействам. С `--allow-known-broken` ошибки этих семейств понижаются до
+ * предупреждений, чтобы деплой не блокировался уже известной поломкой, но новая
+ * регрессия в любом другом семействе валила гейт.
+ */
+const KNOWN_BROKEN_FAMILIES = new Map([
+  // Пусто = гейт строгий ко всем семействам. Так и должно быть по умолчанию.
+  //
+  // Запись сюда добавляется ТОЛЬКО когда семейство сломано подтверждённо и у
+  // поломки есть задача-владелец на борде, например:
+  //   ['quest-cover', '#1195 — model-owned роут отдаёт мастер'],
+  // Замер 2026-08-02: все пять семейств отдают dynamic-transform-cache и
+  // корректные ступени в обеих Accept-ветках, поэтому исключений нет.
+])
+
+/** Family-роуты proxy-contract: из них достаётся storage-key для legacy-цели. */
+const FIRST_PARTY_MEDIA_ROUTE =
+  /^\/(gallery|travel-image|travel-description-image|address-image|avatar|quest-cover|trip-cover|quest-step-image|quest-poster|badge-image)\/(.+)$/i
+
+/**
+ * Accept ровно как у Chrome. Без него бэк уходит в jpeg-ветку
+ * (`explicit_format_overrides: {jpeg: transform}` в proxy-contract), которая
+ * ресайзится даже когда дефолтный webp-путь отдаёт мастер. Гейт с дефолтным
+ * `Accept` зеленел бы на формате, который живой браузер не запрашивает, — то
+ * есть проверял бы не ту ветку, что видит пользователь.
+ */
+const BROWSER_IMAGE_ACCEPT = 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+
+/**
+ * Ветки клиентов, которые обязаны получать ресайз одинаково хорошо: браузер и
+ * generic-клиент (краулер, соцсеть, превью-бот). Проверяются обе, потому что
+ * бэкенд ветвится по `Accept` и деградировать может только одна из них.
+ */
+const ACCEPT_VARIANTS = [
+  { id: 'browser', header: BROWSER_IMAGE_ACCEPT },
+  { id: 'any', header: '*/*' },
+]
+
+function fetchMedia(url, accept = BROWSER_IMAGE_ACCEPT, redirectDepth = 0, originalUrl = url) {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https') ? https : http
+    const opts = {
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'MeTravelPostDeployMediaCheck/1.0',
+        Accept: accept,
+      },
+    }
+    if (mod === https) opts.rejectUnauthorized = !INSECURE_TLS
+
+    const req = mod.get(url, opts, (res) => {
+      const status = Number(res.statusCode || 0)
+      if (status >= 300 && status < 400 && res.headers.location) {
+        if (redirectDepth > 5) {
+          reject(new Error(`Too many redirects for ${url}`))
+          return
+        }
+        const nextUrl = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : new URL(res.headers.location, url).toString()
+        res.resume()
+        fetchMedia(nextUrl, accept, redirectDepth + 1, originalUrl).then(resolve, reject)
+        return
+      }
+
+      // Вес считаем по фактически прочитанным байтам: `content-length` на
+      // chunked-ответе отсутствует, а именно вес и есть предмет проверки.
+      let bytes = 0
+      res.on('data', (chunk) => { bytes += chunk.length })
+      res.on('end', () => {
+        resolve({
+          url: originalUrl,
+          finalUrl: url,
+          status,
+          bytes,
+          contentType: String(res.headers['content-type'] || ''),
+          transform: String(res.headers['x-metravel-image-transform'] || ''),
+          headers: res.headers,
+        })
+      })
+    })
+
+    req.on('error', reject)
+    req.on('timeout', () => {
+      req.destroy()
+      reject(new Error(`Timeout: ${url}`))
+    })
+  })
+}
+
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https') ? https : http
+    const opts = {
+      timeout: 30000,
+      headers: { 'User-Agent': 'MeTravelPostDeployMediaCheck/1.0', Accept: 'application/json' },
+    }
+    if (mod === https) opts.rejectUnauthorized = !INSECURE_TLS
+
+    const req = mod.get(url, opts, (res) => {
+      let body = ''
+      res.setEncoding('utf8')
+      res.on('data', (chunk) => { body += chunk })
+      res.on('end', () => {
+        if (Number(res.statusCode || 0) !== 200) {
+          reject(new Error(`HTTP ${res.statusCode} for ${url}`))
+          return
+        }
+        try {
+          resolve(JSON.parse(body))
+        } catch (error) {
+          reject(new Error(`Invalid JSON from ${url}: ${error instanceof Error ? error.message : error}`))
+        }
+      })
+    })
+
+    req.on('error', reject)
+    req.on('timeout', () => {
+      req.destroy()
+      reject(new Error(`Timeout: ${url}`))
+    })
+  })
+}
+
+function getHeaderValue(headers, name) {
+  const raw = headers?.[String(name || '').toLowerCase()]
+  if (Array.isArray(raw)) return raw.join(', ')
+  return typeof raw === 'string' ? raw : ''
+}
+
+/** Список элементов из ответа DRF/легаси-конверта: `data`, `results` или голый массив. */
+function unwrapList(payload) {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.results)) return payload.results
+  if (payload?.data && typeof payload.data === 'object') return [payload.data]
+  return []
+}
+
+function unwrapItem(payload) {
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data
+  }
+  return payload && typeof payload === 'object' ? payload : null
+}
+
+/** Путь+query медиа-URL, перенесённые на проверяемый origin. */
+function toTargetUrl(site, rawUrl) {
+  const value = String(rawUrl || '').trim()
+  if (!value) return null
+  try {
+    const parsed = value.startsWith('/') ? new URL(value, site) : new URL(value)
+    return `${site}${parsed.pathname}`
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Legacy-роут того же изображения: `/media-resize/legacy/<storage-key>`.
+ *
+ * Ключ в бакете — это путь без family-префикса, ровно как его достаёт
+ * `FIRST_PARTY_MEDIA_ROUTE` в `utils/mediaUrl.ts`. Legacy обслуживает только
+ * conversion-ключи, поэтому URL без `/conversions/` сюда не годится.
+ */
+function toLegacyTarget(site, familyUrl) {
+  const value = String(familyUrl || '').trim()
+  if (!value) return null
+  let pathname
+  try {
+    pathname = (value.startsWith('/') ? new URL(value, site) : new URL(value)).pathname
+  } catch {
+    return null
+  }
+  const match = FIRST_PARTY_MEDIA_ROUTE.exec(pathname)
+  if (!match) return null
+  const key = match[2]
+  if (!/\/conversions\//i.test(key)) return null
+  return `${site}/media-resize/legacy/${key}`
+}
+
+/**
+ * Цели проверки из уже загруженных payload'ов публичного API — по одному URL на
+ * семейство. Вынесено из сетевой части, чтобы тесты гоняли реальный разбор
+ * контракта, а не мок примитива (правило evidence №4 в docs/TASK_BOARD_MCP.md).
+ */
+function extractTargetsFromPayloads(site, { travels, travelDetail, quests } = {}) {
+  const targets = []
+  const seenFamilies = new Set()
+
+  const push = (family, url, source) => {
+    if (!url || !family || seenFamilies.has(family)) return
+    seenFamilies.add(family)
+    targets.push({ family, url, source })
+  }
+
+  const firstTravel = unwrapList(travels).find((item) => item?.media?.cover?.variants || item?.travel_image_thumb_url)
+  const travelCover =
+    firstTravel?.media?.cover?.variants?.original ||
+    firstTravel?.media?.cover?.variants?.card_480 ||
+    firstTravel?.travel_image_thumb_url
+  push('travel-image', toTargetUrl(site, travelCover), '/api/travels/')
+
+  const detail = unwrapItem(travelDetail)
+  const galleryItem = (detail?.gallery || []).find((item) => item?.url || item?.thumb_url)
+  push('gallery', toTargetUrl(site, galleryItem?.url || galleryItem?.thumb_url), '/api/travels/<id>/')
+
+  const addressItem = (detail?.travelAddress || []).find(
+    (item) => item?.travelImageThumbUrl || item?.travelImageUrl
+  )
+  push(
+    'address-image',
+    toTargetUrl(site, addressItem?.travelImageThumbUrl || addressItem?.travelImageUrl),
+    '/api/travels/<id>/'
+  )
+
+  const firstQuest = unwrapList(quests).find((item) => item?.media?.cover?.variants || item?.cover_url)
+  const questCover =
+    firstQuest?.media?.cover?.variants?.original ||
+    firstQuest?.media?.cover?.variants?.card_480 ||
+    firstQuest?.cover_url
+  push('quest-cover', toTargetUrl(site, questCover), '/api/quests/')
+
+  // Legacy-роут держим в наборе всегда: без него гейт не отличит «все семейства
+  // сломаны» от «проверять нечего». Обслуживает он только conversion-ключи,
+  // поэтому берём первый кандидат, из которого путь реально строится, а не
+  // первый непустой URL.
+  const legacyUrl = [travelCover, addressItem?.travelImageThumbUrl, galleryItem?.url]
+    .map((candidate) => toLegacyTarget(site, candidate))
+    .find(Boolean)
+  push('media-resize-legacy', legacyUrl, 'derived from family URL')
+
+  return targets
+}
+
+/**
+ * Проверка одной цели по двум ступеням ширины в каждой Accept-ветке.
+ *
+ * `probes` — массив `{ accept, small, large }`, где `small`/`large` это ответы
+ * `fetchMedia` на SMALL_WIDTH и LARGE_WIDTH. Веток две, и обе обязательны:
+ * браузерная (`image/webp`) — то, что видит пользователь; generic — то, что
+ * видят краулеры, соцсети и превью-боты. Бэкенд ветвится по `Accept`, поэтому
+ * деградировать может ровно одна ветка, и проверять только браузерную нельзя.
+ */
+function validateTarget(target, probes, options = {}) {
+  const allowKnownBroken = Boolean(options.allowKnownBroken)
+  const knownBroken = KNOWN_BROKEN_FAMILIES.get(target.family)
+  const issues = []
+
+  const add = (code, message) => {
+    const downgraded = Boolean(knownBroken) && allowKnownBroken
+    issues.push({
+      severity: downgraded ? 'warning' : 'error',
+      code,
+      message: downgraded ? `${message} (известная поломка: ${knownBroken})` : message,
+    })
+  }
+
+  for (const probe of probes) {
+    const scope = `[accept=${probe.accept}]`
+
+    for (const [width, response] of [[SMALL_WIDTH, probe.small], [LARGE_WIDTH, probe.large]]) {
+      if (response.status !== 200) {
+        add('media.status', `${scope} w=${width}: ожидался HTTP 200, получен ${response.status}`)
+      }
+      const contentType = getHeaderValue(response.headers, 'content-type')
+      if (contentType && !/^image\//i.test(contentType)) {
+        add('media.content_type', `${scope} w=${width}: ответ не изображение (content-type "${contentType}")`)
+      }
+      const transform = getHeaderValue(response.headers, 'x-metravel-image-transform')
+      if (/source-pass-through/i.test(transform)) {
+        add(
+          'media.source_pass_through',
+          `${scope} w=${width}: x-metravel-image-transform="${transform}" — ресайз не применён, отдан мастер (${response.bytes} B)`
+        )
+      }
+      const cacheControl = getHeaderValue(response.headers, 'cache-control')
+      if (/no-store/i.test(cacheControl)) {
+        add(
+          'media.cache_control.no_store',
+          `${scope} w=${width}: cache-control="${cacheControl}" — раздача не кэшируется`
+        )
+      } else if (!/public/i.test(cacheControl) || !/max-age/i.test(cacheControl)) {
+        add(
+          'media.cache_control.missing',
+          `${scope} w=${width}: cache-control="${cacheControl || '(нет)'}" — ожидались public и max-age`
+        )
+      }
+    }
+
+    // Главный инвариант: разные `w` обязаны давать разный вес. Именно он ловит
+    // тихую подмену ступени мастером, при которой все заголовки могут быть в норме.
+    if (probe.small.status === 200 && probe.large.status === 200) {
+      if (probe.small.bytes === probe.large.bytes) {
+        add(
+          'media.width_invariant',
+          `${scope} w=${SMALL_WIDTH} и w=${LARGE_WIDTH} весят одинаково (${probe.small.bytes} B) — ресайз не применяется`
+        )
+      } else if (probe.small.bytes > probe.large.bytes) {
+        add(
+          'media.width_invariant',
+          `${scope} w=${SMALL_WIDTH} тяжелее w=${LARGE_WIDTH} (${probe.small.bytes} B > ${probe.large.bytes} B) — ступени перепутаны`
+        )
+      }
+    }
+  }
+
+  const primary = probes[0]
+
+  return {
+    family: target.family,
+    url: target.url,
+    source: target.source,
+    knownBroken: knownBroken || null,
+    probes: probes.map((probe) => ({
+      accept: probe.accept,
+      smallBytes: probe.small.bytes,
+      largeBytes: probe.large.bytes,
+      contentType: getHeaderValue(probe.small.headers, 'content-type'),
+      transform: getHeaderValue(probe.small.headers, 'x-metravel-image-transform') || '(нет)',
+    })),
+    smallBytes: primary?.small.bytes ?? 0,
+    largeBytes: primary?.large.bytes ?? 0,
+    issues,
+  }
+}
+
+async function collectTargets() {
+  // Молчаливый catch тут опасен: пустой список целей выглядит как «нечего
+  // проверять», хотя причина — недоступный API. Причину всегда печатаем.
+  const softFetch = (url) =>
+    fetchJson(url).catch((error) => {
+      console.error(`⚠️  Источник целей недоступен: ${url} — ${error instanceof Error ? error.message : error}`)
+      return null
+    })
+
+  const [travels, quests] = await Promise.all([
+    softFetch(`${SITE}/api/travels/?limit=5`),
+    softFetch(`${SITE}/api/quests/?limit=5`),
+  ])
+
+  const firstTravel = unwrapList(travels).find((item) => item?.id)
+  const travelDetail = firstTravel?.id
+    ? await softFetch(`${SITE}/api/travels/${firstTravel.id}/`)
+    : null
+
+  return extractTargetsFromPayloads(SITE, { travels, travelDetail, quests })
+}
+
+function withWidth(url, width) {
+  const parsed = new URL(url)
+  parsed.searchParams.set('w', String(width))
+  return parsed.toString()
+}
+
+function printSummary(summary) {
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(summary, null, 2))
+    return
+  }
+
+  console.log(`\n📊 Проверено семейств: ${summary.totalTargets}`)
+  console.log(`❌ Ошибок: ${summary.errorCount}`)
+  console.log(`⚠️  Предупреждений: ${summary.warningCount}`)
+
+  for (const target of summary.targets) {
+    const worst = target.issues.some((issue) => issue.severity === 'error')
+      ? '✗'
+      : target.issues.length > 0
+        ? '!'
+        : '✅'
+    if (worst === '✅' && !VERBOSE) continue
+    console.log(`\n${worst} ${target.family} — ${target.url}\n   источник: ${target.source}`)
+    for (const probe of target.probes || []) {
+      console.log(
+        `   accept=${probe.accept}: w=${SMALL_WIDTH} ${probe.smallBytes} B · w=${LARGE_WIDTH} ${probe.largeBytes} B` +
+          ` · ${probe.contentType || '(нет)'} · transform: ${probe.transform}`
+      )
+    }
+    for (const issue of target.issues) {
+      console.log(`   ${issue.severity === 'error' ? '✗' : '!'} ${issue.code}: ${issue.message}`)
+    }
+  }
+}
+
+async function main() {
+  if (!JSON_OUTPUT) {
+    console.log(`🖼  Пост-деплой проверка медиа-контракта на ${SITE}`)
+    if (ALLOW_KNOWN_BROKEN && KNOWN_BROKEN_FAMILIES.size > 0) {
+      console.log(
+        `ℹ️  Известные поломки понижены до предупреждений: ${[...KNOWN_BROKEN_FAMILIES.keys()].join(', ')}`
+      )
+    }
+  }
+
+  const targets = await collectTargets()
+  if (targets.length === 0) {
+    console.error('❌ Публичный API не отдал ни одного медиа-URL — проверять нечего, гейт считается упавшим')
+    process.exit(1)
+  }
+
+  const checked = []
+  for (const target of targets) {
+    try {
+      const probes = []
+      for (const variant of ACCEPT_VARIANTS) {
+        const [small, large] = await Promise.all([
+          fetchMedia(withWidth(target.url, SMALL_WIDTH), variant.header),
+          fetchMedia(withWidth(target.url, LARGE_WIDTH), variant.header),
+        ])
+        probes.push({ accept: variant.id, small, large })
+      }
+      checked.push(validateTarget(target, probes, { allowKnownBroken: ALLOW_KNOWN_BROKEN }))
+    } catch (error) {
+      checked.push({
+        family: target.family,
+        url: target.url,
+        source: target.source,
+        knownBroken: KNOWN_BROKEN_FAMILIES.get(target.family) || null,
+        probes: [],
+        smallBytes: 0,
+        largeBytes: 0,
+        issues: [{
+          severity: 'error',
+          code: 'media.fetch_failed',
+          message: error instanceof Error ? error.message : String(error),
+        }],
+      })
+    }
+  }
+
+  const summary = {
+    site: SITE,
+    allowKnownBroken: ALLOW_KNOWN_BROKEN,
+    totalTargets: checked.length,
+    errorCount: checked.reduce(
+      (acc, target) => acc + target.issues.filter((issue) => issue.severity === 'error').length,
+      0
+    ),
+    warningCount: checked.reduce(
+      (acc, target) => acc + target.issues.filter((issue) => issue.severity === 'warning').length,
+      0
+    ),
+    targets: checked,
+  }
+
+  printSummary(summary)
+  process.exit(summary.errorCount > 0 ? 1 : 0)
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    ACCEPT_VARIANTS,
+    BROWSER_IMAGE_ACCEPT,
+    KNOWN_BROKEN_FAMILIES,
+    LARGE_WIDTH,
+    SMALL_WIDTH,
+    extractTargetsFromPayloads,
+    toLegacyTarget,
+    toTargetUrl,
+    unwrapItem,
+    unwrapList,
+    validateTarget,
+    withWidth,
+  }
+}
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('❌ Пост-деплой проверка медиа-контракта упала:', error)
+    process.exit(1)
+  })
+}

@@ -5,10 +5,7 @@ import type { TravelMediaImage } from '@/types/types';
 import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createSafeImageUrl } from '@/utils/travelMedia';
-import {
-  buildVersionedImageUrl,
-  optimizeImageUrl,
-} from '@/utils/imageOptimization';
+import { buildVersionedImageUrl } from '@/utils/imageOptimization';
 import {
   buildResponsiveImagePropsPreferringMedia,
   getMediaPlaceholderData,
@@ -16,10 +13,6 @@ import {
 import { ImageDataPlaceholder } from '@/components/ui/ImageCardMedia';
 import { markUriLoaded } from '@/components/travel/sliderParts/imageLoadCache';
 import { translate as i18nT } from '@/i18n';
-import {
-  getBackdropSegments,
-  getContainedMediaBox,
-} from '@/components/ui/webBlurBackdropLayout';
 
 type ImgLike = {
   url: string;
@@ -88,7 +81,6 @@ function OptimizedLCPHeroInner({
   onLoad,
   height,
   isMobile,
-  containerWidth,
   media,
 }: {
   img: ImgLike;
@@ -97,7 +89,6 @@ function OptimizedLCPHeroInner({
   onLoad?: () => void;
   height?: number;
   isMobile?: boolean;
-  containerWidth?: number | null;
   media?: TravelMediaImage | null;
 }) {
   const [loadError, setLoadError] = useState(false);
@@ -164,58 +155,22 @@ function OptimizedLCPHeroInner({
     () => getMediaPlaceholderData(media ?? null),
     [media],
   );
-  const hasDataPlaceholder = Boolean(
-    mediaPlaceholder.blurhash || mediaPlaceholder.dominantColor,
-  );
-  // Blur-«фрост» позади contain-картинки лежит под filter:blur(18px)+background-size:cover
-  // (см. .travel-lcp-hero-backdrop-segment), поэтому full-res источник там не виден —
-  // браузеру незачем растеризовать большое изображение второй раз в LCP-окне. Просим у
-  // CDN крошечную ширину (тот же base, поэтому api-prefix fallback тоже учтён). Если CDN
-  // не вернул вариант — падаем обратно на srcWithRetry, blur не теряем.
-  const backdropSrc = useMemo(() => {
-    if (hasDataPlaceholder) return null;
-    // #1167: ветка `mediaPlaceholder.lqipUrl` убрана — отдельный LQIP-файл был вторым
-    // сетевым запросом на тот же слот. Крошечный вариант того же изображения берётся
-    // с нашей же лестницы и делит с ней кэш.
-    return (
-      optimizeImageUrl(srcWithRetry, {
-        width: IMAGE_WIDTHS.heroBackdrop,
-        quality: IMAGE_QUALITY.heroBackdrop,
-        fit: 'cover',
-      }) || srcWithRetry
-    );
-  }, [hasDataPlaceholder, srcWithRetry]);
+  // #1208: hero переведён на ту же модель, что карточки каталога и галерея
+  // (решение владельца «один слой», 2026-08-02): одна фотография — один растр.
+  //
+  // Раньше поля letterbox заливал ВТОРОЙ растр — крошечный вариант того же фото
+  // под `filter: blur(18px)`, разложенный сегментами по полям. Он стоил лишнего
+  // сетевого запроса, отдельного декода и целой геометрии (`getContainedMediaBox`
+  // + `getBackdropSegments`) на самой тяжёлой странице сайта.
+  //
+  // Поля заливает `dominant_color` из манифеста: он приходит тем же ответом API,
+  // стоит ноль запросов и виден ровно там, где фотографии нет. Blurhash на web
+  // не берём — `expo-image` декодирует его в canvas и отдаёт `blob:`-PNG, то есть
+  // это снова второй растр (см. `useBlurhashPlaceholder` в `ImageCardMedia`).
+  const placeholderColor = mediaPlaceholder.dominantColor || '';
+  const placeholderBlurhash = Platform.OS === 'web' ? null : mediaPlaceholder.blurhash;
+  const hasDataPlaceholder = Boolean(placeholderBlurhash || placeholderColor);
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
-  const backdropBox = useMemo(() => {
-    if (Platform.OS !== 'web') return null;
-    if (typeof height !== 'number' || height <= 0) return null;
-
-    const resolvedWidth =
-      typeof containerWidth === 'number' && containerWidth > 0
-        ? containerWidth
-        : targetWidth;
-
-    return getContainedMediaBox({
-      containerWidth: resolvedWidth,
-      containerHeight: height,
-      contentAspectRatio: ratio,
-    });
-  }, [containerWidth, height, ratio, targetWidth]);
-  const backdropSegments = useMemo(() => {
-    if (Platform.OS !== 'web') return [];
-    if (typeof height !== 'number' || height <= 0) return [];
-
-    const resolvedWidth =
-      typeof containerWidth === 'number' && containerWidth > 0
-        ? containerWidth
-        : targetWidth;
-
-    return getBackdropSegments({
-      containerWidth: resolvedWidth,
-      containerHeight: height,
-      contentBox: backdropBox,
-    });
-  }, [backdropBox, containerWidth, height, targetWidth]);
 
   const notifyReady = useCallback(async () => {
     if (didNotifyLoadRef.current) return;
@@ -303,35 +258,12 @@ function OptimizedLCPHeroInner({
               style={{ position: 'absolute', inset: 0, zIndex: 0 }}
             >
               <ImageDataPlaceholder
-                blurhash={mediaPlaceholder.blurhash}
-                color={mediaPlaceholder.dominantColor}
+                blurhash={placeholderBlurhash}
+                color={placeholderColor}
                 borderRadius={12}
                 testID="travel-hero-data-placeholder"
               />
             </div>
-          ) : backdropSegments.length > 0 && backdropSrc ? (
-            <>
-              {backdropSegments.map((segment, index) => (
-                <div
-                  key={`${index}-${segment.left}-${segment.top}-${segment.width}-${segment.height}`}
-                  aria-hidden="true"
-                  data-hero-backdrop="true"
-                  data-hero-backdrop-segment="true"
-                  data-hero-backdrop-layer="true"
-                  className="travel-lcp-hero-backdrop-segment"
-                  style={{
-                    position: 'absolute',
-                    top: segment.top,
-                    left: segment.left,
-                    width: segment.width,
-                    height: segment.height,
-                    zIndex: 0,
-                    backgroundImage: `url("${backdropSrc.replace(/"/g, '\\"')}")`,
-                    opacity: 1,
-                  }}
-                />
-              ))}
-            </>
           ) : null}
           <div
             aria-hidden="true"

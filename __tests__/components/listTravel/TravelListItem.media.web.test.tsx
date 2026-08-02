@@ -216,6 +216,71 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('640w');
   });
 
+  it('does not advertise cover candidates wider than the card needs', () => {
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: {
+          cover: {
+            id: 12,
+            variants: {
+              thumb_160: '/gallery/12/cover.webp?w=160',
+              thumb_320: '/gallery/12/cover.webp?w=320',
+              card_480: '/gallery/12/cover.webp?w=480',
+              card_640: '/gallery/12/cover.webp?w=640',
+              card_720: '/gallery/12/cover.webp?w=720',
+              card_960: '/gallery/12/cover.webp?w=960',
+            },
+          },
+          gallery: null,
+          address_images: null,
+        },
+      } as any,
+      cardWidth: 408,
+      viewportWidth: 1280,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    const srcSet: string = props.mediaProps?.webResponsiveSource?.srcSet ?? '';
+    // На DPR 2 браузер берёт самого широкого кандидата, который влезает в `sizes`.
+    // Лестница выше 640w тянула в бокс ~390 px почти оригинал (≈3 МБ обложек на
+    // страницу выдачи) и душила fetch следующей страницы.
+    expect(srcSet).toContain('640w');
+    expect(srcSet).not.toContain('720w');
+    expect(srcSet).not.toContain('960w');
+  });
+
+  it('keeps a candidate that covers cards wider than the default ladder cap', () => {
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: {
+          cover: {
+            id: 13,
+            variants: {
+              thumb_320: '/gallery/13/cover.webp?w=320',
+              card_480: '/gallery/13/cover.webp?w=480',
+              card_640: '/gallery/13/cover.webp?w=640',
+              card_720: '/gallery/13/cover.webp?w=720',
+              card_960: '/gallery/13/cover.webp?w=960',
+            },
+          },
+          gallery: null,
+          address_images: null,
+        },
+      } as any,
+      cardWidth: 700,
+      viewportWidth: 1600,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    const srcSet: string = props.mediaProps?.webResponsiveSource?.srcSet ?? '';
+    // Обрезать лестницу строго по `<= maxWidth` нельзя: карточке 700 px достался
+    // бы 640w, то есть картинка мельче собственного бокса.
+    expect(srcSet).toContain('720w');
+    expect(srcSet).not.toContain('960w');
+  });
+
   it('forwards backend blurhash instead of the generic card placeholder', () => {
     renderItem({
       travel: {

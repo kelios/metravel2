@@ -457,18 +457,10 @@ function ImageCardMedia({
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
   }, [providedWebResponsiveSource, width, isIOSWebKitWeb]);
 
-  /**
-   * Решение владельца 2026-08-02: на web одна картинка — один растр.
-   *
-   * Раньше размытые поля рисовались ВТОРЫМ `<img>` с тем же URL. Сетевой запрос
-   * при этом был один (файл брался из кэша), но декодов и растровых буферов —
-   * два на каждую плитку, плюс лишний DOM-узел в каждой ячейке списка. Поля
-   * letterbox всё равно размыты на 20 px, поэтому источник для них берётся из
-   * данных манифеста (`dominant_color`), а не из полноразмерного фото.
-   *
-   * Native не трогаем: там переходом управляет сама expo-image.
-   */
-  const shouldRenderWebBlurBackground = false;
+  // Решение владельца 2026-08-02: на web одна картинка — один растр. Размытой
+  // подложки нет ни здесь, ни в hero travel-детали (#1208); поля letterbox
+  // заливает `dominant_color` из манифеста. Native не трогаем — там переходом
+  // управляет сама expo-image.
   /**
    * #1177: геометрия для сегментного режима подложки.
    *
@@ -738,7 +730,6 @@ function ImageCardMedia({
               borderRadius={resolvedBorderRadius}
               loading={resolvedLoading}
               priority={priority}
-              hasBlurBehind={shouldRenderWebBlurBackground}
               loaded={effectiveWebLoaded}
               onLoad={handleWebLoad}
               onError={onError}
@@ -776,7 +767,7 @@ function ImageCardMedia({
             imageProps={{ ...(imageProps || {}), ...(webImageProps || {}) }}
             showLoadingIndicator={hasDataPlaceholder ? false : showLoadingIndicator}
             style={
-              hasDataPlaceholder || (Platform.OS === 'web' && shouldRenderWebBlurBackground)
+              hasDataPlaceholder
                 ? ({ backgroundColor: 'transparent', position: 'relative', zIndex: 1 } as any)
                 : undefined
             }
