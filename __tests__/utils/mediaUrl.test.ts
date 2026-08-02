@@ -168,6 +168,24 @@ describe('toLegacyResizePath', () => {
     ).toBe('/media-resize/uploads/photo.jpg?v=42');
   });
 
+  it('unwraps weserv and strips v2 signatures without changing the encoded object key', () => {
+    const origin =
+      'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/%D0%98%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%201.jpg?v=42&AWSAccessKeyId=key&Signature=sig&Expires=60';
+    const wrapped = `https://images.weserv.nl/?url=${encodeURIComponent(origin)}&w=1600`;
+
+    expect(toLegacyResizePath(wrapped)).toBe(
+      '/media-resize/uploads/%D0%98%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%201.jpg?v=42',
+    );
+  });
+
+  it('decodes html query separators before removing signature params', () => {
+    expect(
+      toLegacyResizePath(
+        'https://metravelprod.s3.amazonaws.com/uploads/photo.jpg?v=42&amp;X-Amz-Signature=abc&amp;X-Amz-Expires=60',
+      ),
+    ).toBe('/media-resize/uploads/photo.jpg?v=42');
+  });
+
   it('does not invent a route for bucket classes that have none', () => {
     // `**/responsive-images/**` удалён целиком в #1157, плоский корень живёт под
     // family-роутами: переписывать их некуда, и молча ломать ссылку нельзя.
@@ -178,6 +196,22 @@ describe('toLegacyResizePath', () => {
     ).toBeNull();
     expect(
       toLegacyResizePath('https://metravelprod.s3.eu-north-1.amazonaws.com/abc123.webp'),
+    ).toBeNull();
+    expect(
+      toLegacyResizePath(
+        'https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/conversions/x.jpg',
+      ),
+    ).toBeNull();
+    expect(
+      toLegacyResizePath(
+        'https://metravelprod.s3.eu-north-1.amazonaws.com/1/conversions/2/conversions/x.jpg',
+      ),
+    ).toBeNull();
+    expect(
+      toLegacyResizePath('https://metravelprod.s3.eu-north-1.amazonaws.com/Uploads/x.jpg'),
+    ).toBeNull();
+    expect(
+      toLegacyResizePath('https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/video.mp4'),
     ).toBeNull();
   });
 

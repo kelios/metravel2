@@ -192,6 +192,22 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     )
   })
 
+  it('preserves an encoded legacy key while stripping weserv and S3 signatures', () => {
+    const origin =
+      'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/%D0%98%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%201.jpg?v=42&X-Amz-Signature=secret'
+    const wrapped = `https://images.weserv.nl/?url=${encodeURIComponent(origin)}&w=1600`
+    const out = prepareStableContentHtml(`<p><img src="${wrapped}" /></p>`, {
+      serverSanitized: true,
+    })
+
+    expect(out).not.toContain('images.weserv.nl')
+    expect(out).not.toContain('metravelprod.s3')
+    expect(out).not.toContain('X-Amz-')
+    expect(out).toContain(
+      `src="https://metravel.by/media-resize/uploads/%D0%98%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%201.jpg?v=42${AMP}w=800${AMP}q=80${AMP}fit=contain"`,
+    )
+  })
+
   it('leaves a bucket class without a legacy route on its original url', () => {
     // Выдумать роут под `**/responsive-images/**` нельзя: префикс удалён в #1157,
     // и переписывание превратило бы мёртвую ссылку в мёртвую ссылку на наш хост.
@@ -203,6 +219,16 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       'src="https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/x.jpg"',
     )
     expect(out).not.toContain('media-resize')
+  })
+
+  it('does not rewrite a responsive-images key even when conversions is nested below it', () => {
+    const raw =
+      'https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/conversions/x.jpg'
+    const out = prepareStableContentHtml(`<p><img src="${raw}" /></p>`)
+
+    expect(out).toContain(`src="${raw}"`)
+    expect(out).not.toContain('media-resize')
+    expect(out).not.toContain('srcset=')
   })
 
   it('reserves a stable aspect ratio for images that arrive without dimensions', () => {

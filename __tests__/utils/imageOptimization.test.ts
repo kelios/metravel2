@@ -395,6 +395,19 @@ describe('utils/imageOptimization', () => {
           'https://metravel.by/media-resize/legacy/3994/conversions/HcQK-detail_hd.jpg?w=800',
         )
 
+        const wrappedOrigin =
+          'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/wrapped.jpg?X-Amz-Signature=secret'
+        const wrapped = `https://images.weserv.nl/?url=${encodeURIComponent(wrappedOrigin)}&w=1600`
+        expect(optimizeImageUrl(wrapped, { width: 300 })).toBe(
+          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=320',
+        )
+
+        // `/media-resize` never leaves the frontend without an explicit canonical
+        // width, even if a dynamic caller has not measured its slot yet.
+        expect(optimizeImageUrl(wrapped, {})).toBe(
+          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=800',
+        )
+
         // Класса без legacy-роута быть переписанным не должно: `responsive-images`
         // удалён в #1157, и подмена хоста только спрятала бы мёртвую ссылку.
         const orphan = 'https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/x.jpg'

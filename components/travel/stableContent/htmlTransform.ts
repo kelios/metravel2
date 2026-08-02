@@ -7,7 +7,7 @@ import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
-import { toLegacyResizePath } from '@/utils/mediaUrl'
+import { isPrivateOrLocalHost, toLegacyResizePath } from '@/utils/mediaUrl'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { translate as i18nT } from '@/i18n'
 
@@ -41,16 +41,6 @@ const stripOptimizationParams = (urlStr: string): string => {
   } catch {
     return urlStr
   }
-}
-
-const isPrivateOrLocalHost = (host: string): boolean => {
-  const value = String(host || '').trim().toLowerCase()
-  if (!value) return false
-  if (value === 'localhost' || value === '127.0.0.1') return true
-  if (/^10\./.test(value)) return true
-  if (/^192\.168\./.test(value)) return true
-  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(value)) return true
-  return false
 }
 
 const normalizeMetravelOwnImageUrl = (urlStr: string): string => {
@@ -111,16 +101,17 @@ export const buildExternalImageUrl = (src: string) => {
     if (!trimmed) return null
     if (trimmed.startsWith('data:')) return trimmed
 
-    const normalized = toFirstPartyArticleImageUrl(trimmed.replace(/&amp;/g, '&'))
+    const decoded = trimmed.replace(/&amp;/g, '&')
+    const unwrapped = unwrapWeservImageUrl(decoded)
+    // Битый weserv-URL без разбираемого `url=`: разворачивать нечего, отдаём как есть.
+    if (isWeservImageUrl(decoded) && unwrapped === decoded) return decoded
     // Легаси-цепочка weserv → S3 разворачивается до бакета, а он уже переписывается
     // на свой роут: иначе после разворота осталась бы прямая ссылка на S3.
-    const unwrapped = toFirstPartyArticleImageUrl(unwrapWeservImageUrl(normalized))
-    // Битый weserv-URL без разбираемого `url=`: разворачивать нечего, отдаём как есть.
-    if (isWeservImageUrl(normalized) && unwrapped === normalized) return normalized
+    const normalized = toFirstPartyArticleImageUrl(unwrapped)
 
     let parsedUrl: URL | null = null
     try {
-      parsedUrl = new URL(unwrapped, 'https://metravel.by')
+      parsedUrl = new URL(normalized, 'https://metravel.by')
     } catch {
       parsedUrl = null
     }
@@ -128,12 +119,10 @@ export const buildExternalImageUrl = (src: string) => {
     if (parsedUrl) {
       const host = parsedUrl.hostname.toLowerCase()
       if (isPrivateOrLocalHost(host)) {
-        return normalized
+        return decoded
       }
       if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
-        // Именно `unwrapped`: у развёрнутой weserv-цепочки и у переписанного
-        // legacy-ключа первопартийным является он, а не исходный `normalized`.
-        return normalizeMetravelOwnImageUrl(stripOptimizationParams(unwrapped))
+        return normalizeMetravelOwnImageUrl(stripOptimizationParams(normalized))
       }
       // Протокол апгрейдим: раньше https появлялся сам собой, потому что обёртка
       // weserv была https. Оставить `http://` нельзя — страница отдаётся по https,
@@ -144,7 +133,7 @@ export const buildExternalImageUrl = (src: string) => {
       }
     }
 
-    return stripOptimizationParams(unwrapped)
+    return stripOptimizationParams(normalized)
   } catch {
     return null
   }
@@ -214,10 +203,7 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
     // вариант по исходному внешнему URL раньше, чем buildExternalImageUrl успевает
     // его нормализовать, и итоговый <img> остаётся без w/srcset (#1176).
     const normalized = buildExternalImageUrl(trimmed) ?? trimmed
-    const parsed = new URL(
-      toFirstPartyArticleImageUrl(normalized.replace(/&amp;/g, '&')),
-      'https://metravel.by'
-    )
+    const parsed = new URL(normalized.replace(/&amp;/g, '&'), 'https://metravel.by')
     if (!isFirstPartyMetravelHost(parsed.hostname)) return null
     if (parsed.protocol === 'http:') parsed.protocol = 'https:'
     // сбрасываем ранее заданные размеры, сохраняя cache-buster `v`

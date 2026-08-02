@@ -36,6 +36,7 @@ const PROXY_MEDIA_PREFIX =
 // `legacy_conversion` в proxy-contract v4. Ширину они понимают так же, поэтому
 // им нужна та же ветка построения параметров, что и family-роутам (#1176).
 const LEGACY_RESIZE_PREFIX = /^\/media-resize\/(uploads|legacy)\//i;
+const LEGACY_RESIZE_FALLBACK_WIDTH = 800;
 
 const getPublicApiOrigin = (): string | null => {
   try {
@@ -234,16 +235,22 @@ export function optimizeImageUrl(
       });
 
       const proxyParams = new URLSearchParams();
-      const mediaWidth = resolveProxyWidth(options);
-      // Без `w` прокси всё равно отдаст оригинал, поэтому одни только q/fit —
-      // это лишний cache-key на тот же байтовый результат. Оставляем голый URL:
-      // он самый «горячий» в кэше и не запускает новую конверсию.
+      const requestedWidth = resolveProxyWidth(options);
+      const isLegacyResizeRoute = LEGACY_RESIZE_PREFIX.test(parsedUrl.pathname);
+      // Legacy routes do not have the family-route `w` gate, so always make the
+      // resize choice explicit. 800 is both a canonical rung and the backend's
+      // documented legacy default; dynamic callers should still pass slot width.
+      const mediaWidth = requestedWidth ?? (isLegacyResizeRoute ? LEGACY_RESIZE_FALLBACK_WIDTH : null);
+      // Family-роут без `w` остаётся голым: одни q/fit лишь плодят
+      // cache-key на тот же мастер. Legacy-роуту выше явно ставим w800,
+      // потому что его контракт запрещает widthless URL.
       if (mediaWidth) {
         proxyParams.set('w', String(mediaWidth));
         if (options.quality != null) proxyParams.set('q', String(snapQuality(options.quality)));
         if (options.format && options.format !== 'auto') proxyParams.set('f', options.format);
         if (options.fit) proxyParams.set('fit', options.fit);
-      } else {
+      }
+      if (!requestedWidth && !isLegacyResizeRoute) {
         warnMissingProxyWidth(parsedUrl.toString());
       }
 

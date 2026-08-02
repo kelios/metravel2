@@ -1,3 +1,5 @@
+import { unwrapWeservImageUrl } from '@/utils/weservImageUrl';
+
 export const isPrivateOrLocalHost = (host: string): boolean => {
   const normalized = String(host || '').trim().toLowerCase();
   if (!normalized) return false;
@@ -175,6 +177,9 @@ export const normalizeMediaUrl = (url?: string | null): string => {
 const LEGACY_STORAGE_BUCKET = 'metravelprod';
 const S3_VIRTUAL_HOST = /^([a-z0-9.-]+)\.s3(?:[.-][a-z0-9-]+)*\.amazonaws\.com$/i;
 const S3_PATH_STYLE_HOST = /^s3(?:[.-][a-z0-9-]+)*\.amazonaws\.com$/i;
+const LEGACY_IMAGE_EXTENSIONS = new Set(['gif', 'heic', 'heif', 'jpeg', 'jpg', 'png', 'webp']);
+const LEGACY_SIGNATURE_QUERY_PARAM =
+  /^(?:x-amz-.+|awsaccesskeyid|signature|expires|policy|key-pair-id)$/i;
 
 /** Ключ объекта в нашем бакете, если URL ведёт именно туда. */
 const extractLegacyStorageKey = (parsed: URL): string | null => {
@@ -193,6 +198,35 @@ const extractLegacyStorageKey = (parsed: URL): string | null => {
   return null;
 };
 
+const parseSupportedLegacyImageKey = (key: string): string[] | null => {
+  let decodedKey: string;
+  try {
+    decodedKey = decodeURIComponent(key);
+  } catch {
+    return null;
+  }
+  if (!decodedKey || decodedKey.includes('\\') || decodedKey.includes('\0')) return null;
+
+  const parts = decodedKey.split('/');
+  if (parts.some((part) => !part || part === '.' || part === '..')) return null;
+
+  const extension = parts[parts.length - 1].split('.').pop()?.toLowerCase() ?? '';
+  return LEGACY_IMAGE_EXTENSIONS.has(extension) ? parts : null;
+};
+
+const isLegacyUploadKey = (parts: string[]): boolean => parts[0] === 'uploads' && parts.length > 1;
+
+const isLegacyConversionKey = (parts: string[]): boolean => {
+  const conversionIndex = parts.indexOf('conversions');
+  return (
+    conversionIndex > 0 &&
+    conversionIndex === parts.lastIndexOf('conversions') &&
+    conversionIndex < parts.length - 1 &&
+    !parts.includes('responsive-images') &&
+    !parts[0].includes(':')
+  );
+};
+
 /**
  * Путь нашего legacy-роута для прямой ссылки на бакет, иначе `null`.
  *
@@ -207,25 +241,30 @@ export const toLegacyResizePath = (url: string): string | null => {
 
   let parsed: URL;
   try {
-    parsed = new URL(normalizeAbsoluteMediaUrl(value));
+    const htmlDecoded = value.replace(/&amp;/gi, '&');
+    const absoluteValue = htmlDecoded.startsWith('//') ? `https:${htmlDecoded}` : htmlDecoded;
+    const unwrapped = unwrapWeservImageUrl(normalizeAbsoluteMediaUrl(absoluteValue));
+    parsed = new URL(normalizeAbsoluteMediaUrl(unwrapped));
   } catch {
     return null;
   }
 
   const key = extractLegacyStorageKey(parsed);
   if (!key) return null;
+  const keyParts = parseSupportedLegacyImageKey(key);
+  if (!keyParts) return null;
 
   // Подписанные ссылки адресуют S3, а не наш роут: подпись после переписывания
   // бессмысленна и только плодит cache-key.
   const search = new URLSearchParams(parsed.search);
   Array.from(search.keys())
-    .filter((param) => /^x-amz-/i.test(param))
+    .filter((param) => LEGACY_SIGNATURE_QUERY_PARAM.test(param))
     .forEach((param) => search.delete(param));
   const query = search.toString();
   const suffix = query ? `?${query}` : '';
 
-  if (/^uploads\//i.test(key)) return `/media-resize/${key}${suffix}`;
-  if (/(^|\/)conversions\//i.test(key)) return `/media-resize/legacy/${key}${suffix}`;
+  if (isLegacyUploadKey(keyParts)) return `/media-resize/${key}${suffix}`;
+  if (isLegacyConversionKey(keyParts)) return `/media-resize/legacy/${key}${suffix}`;
 
   return null;
 };
