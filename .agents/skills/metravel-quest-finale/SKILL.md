@@ -14,8 +14,8 @@ description: >-
 - **`text`** — тёплый человеческий вывод о городе/маршруте (создаётся в
   миграции квеста, см. скилл `metravel-quest`). Есть у **всех** квестов.
 - **`video_url`** + **`poster_url`** — короткое финальное видео (Ken Burns по
-  обложке квеста, ~17с, 1280×720, «Квест пройден!» + название города,
-  CC0-музыка) и его постер. Это отдельный пост-шаг, его легко забыть для новых
+  обложке квеста, ~17с, 1280×720, «Квест пройден!» + название города, **без
+  звука**) и его постер. Это отдельный пост-шаг, его легко забыть для новых
   квестов.
 
 «Квест без финала» на практике = **есть текст, но нет `video_url`** (новый квест
@@ -51,15 +51,12 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
 
 1. **Найди пробелы** командой выше — выпиши `id` + `quest_id` квестов без видео.
 2. **Внеси квест в список** `scripts/generate-quest-finale-videos.js` → массив
-   `QUESTS`: `{ questId, dir (camelCase), city (подпись на видео), mood, finaleId
-   = числовой id квеста }`. `mood` ∈ `castle` / `city` / `epic` — подбирает
-   CC0-музыку (см. `MOODS`). Обложка скачивается с прода автоматически.
-3. **Сгенерируй видео + постер** (нужны `ffmpeg` и `MUSIC_DIR` с тремя CC0-mp3:
-   `Ancient Rite.mp3`, `City Sunshine.mp3`, `Inspiration.mp3` — public domain,
-   FreePD/Kevin MacLeod):
+   `QUESTS`: `{ questId, dir (camelCase), city (подпись на видео), finaleId
+   = числовой id квеста }`. Обложка скачивается с прода автоматически.
+3. **Сгенерируй видео + постер** (нужен только `ffmpeg`, музыка не нужна —
+   backend-профиль запрещает аудиодорожку):
    ```bash
-   FFMPEG_PATH=ffmpeg MUSIC_DIR=<путь_к_музыке> \
-     node scripts/generate-quest-finale-videos.js --quest-id=<quest_id>
+   FFMPEG_PATH=ffmpeg node scripts/generate-quest-finale-videos.js --quest-id=<quest_id>
    ```
    Выход: `assets/quests/<dir>/finale.mp4` + `poster.jpg` (каталог в .gitignore).
    Без `--quest-id` генерит все из `QUESTS`.
@@ -96,14 +93,23 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
   накладывается `overlay`-ом с `fade=in:st=12.44:d=0.8` поверх той же
   zoompan/xfade-анимации. PNG подавать как `-loop 1 -framerate 25 -t 16.96 -i`,
   иначе overlay виден только в кадре 0.
-- **Музыку** можно извлечь из уже готового прод-видео того же `mood` (для `city`
-  бери ПОЛНОЕ 16.96с-видео, напр. `gdansk-amber`, а не 9.56с-обрезки
-  warsaw/prague/vilnius): `ffmpeg -i <video.mp4> -vn -c:a libmp3lame -q:a 2
-  "<MUSIC_DIR>/City Sunshine.mp3"`. Музыка CC0/public domain — переиспользование ок.
+- **Звука в новых финалах нет.** Backend отклоняет upload с аудиодорожкой
+  (`quests/video_policy.py`, документ `docs/QUEST_FINALE_VIDEO_POLICY.md` в
+  бэк-репо). Профиль ролика на фронте один —
+  `scripts/quest-finale-video-profile.js`: H.264/yuv420p, CRF 28, `+faststart`,
+  без аудио, ≤1280 px, ≤30 c, ≤2.5 Мбит/с, ≤8 MiB. Второй набор констант в
+  скриптах заводить нельзя; правки — только вслед за backend-документом.
+- **Проверить готовый файл** тем же набором правил, что и команда бэка
+  `audit_quest_finale_videos`:
+  `node scripts/quest-finale-video-profile.js assets/quests/<dir>/finale.mp4`
+  (пустой `policy_violations` = ролик примет upload-валидатор). Генераторы
+  вызывают эту проверку сами и падают, если ролик вне профиля.
+- **Старые прод-ролики со звуком** перекодирует backend-задача #1169 — не
+  переливай их вручную.
 
 ## Owner-controlled
 
-Генерация требует локального `ffmpeg` + CC0-музыки, заливка — прод-токена в
+Генерация требует локального `ffmpeg`, заливка — прод-токена в
 `.secrets/metravel-token.json` (gitignored, в чат не вставлять). Это прод-запись —
 запускает владелец. Агент готовит код (список `QUESTS`) и команды, не пишет на
 прод без явного запроса.

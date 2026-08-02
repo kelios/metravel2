@@ -128,6 +128,77 @@ export const normalizeMediaUrl = (url?: string | null): string => {
   return safeUrl;
 };
 
+// Legacy-ключи бакета обслуживает первопартийный `/media-resize/…`: в
+// `GET /api/media/proxy-contract` (v4) это `route_behavior.legacy_upload`
+// (`/media-resize/uploads/`, класс `uploads/**`) и `legacy_conversion`
+// (`/media-resize/legacy/`, класс `**/conversions/**`). Оба объявлены
+// `default_mode: transform`, то есть режут по той же лестнице ширин.
+//
+// Пока в телах статей лежат прямые ссылки на бакет, картинка приезжает мастером
+// мимо лестницы (замер 2026-08-02: `uploads/1591620319350_original.jpg` — 141 354 B
+// с S3 против 7 820 B на `?w=320`) и держит открытым анонимный `s3:GetObject`
+// (#1176, #1172, #1187).
+//
+// Классы без legacy-роута сюда не попадают намеренно: `**/responsive-images/**`
+// удалён целиком в #1157, а плоский корень бакета живёт под family-роутами.
+const LEGACY_STORAGE_BUCKET = 'metravelprod';
+const S3_VIRTUAL_HOST = /^([a-z0-9.-]+)\.s3(?:[.-][a-z0-9-]+)*\.amazonaws\.com$/i;
+const S3_PATH_STYLE_HOST = /^s3(?:[.-][a-z0-9-]+)*\.amazonaws\.com$/i;
+
+/** Ключ объекта в нашем бакете, если URL ведёт именно туда. */
+const extractLegacyStorageKey = (parsed: URL): string | null => {
+  const host = parsed.hostname.toLowerCase();
+  const path = parsed.pathname.replace(/^\/+/, '');
+  if (!path) return null;
+
+  const virtualHost = host.match(S3_VIRTUAL_HOST);
+  if (virtualHost && virtualHost[1].toLowerCase() === LEGACY_STORAGE_BUCKET) return path;
+
+  if (S3_PATH_STYLE_HOST.test(host)) {
+    const [bucket, ...rest] = path.split('/');
+    if (bucket.toLowerCase() === LEGACY_STORAGE_BUCKET && rest.length) return rest.join('/');
+  }
+
+  return null;
+};
+
+/**
+ * Путь нашего legacy-роута для прямой ссылки на бакет, иначе `null`.
+ *
+ * Возвращается именно путь, а не абсолютный URL: origin у вызывающих модулей
+ * разный (`imageProxy` берёт его из `EXPO_PUBLIC_API_URL`, трансформация тела
+ * статьи — из первопартийного хоста), и склеивание origin в одном месте
+ * ломало бы одну из двух веток.
+ */
+export const toLegacyResizePath = (url: string): string | null => {
+  const value = String(url || '').trim();
+  if (!value || /^(data:|blob:)/i.test(value)) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(normalizeAbsoluteMediaUrl(value));
+  } catch {
+    return null;
+  }
+
+  const key = extractLegacyStorageKey(parsed);
+  if (!key) return null;
+
+  // Подписанные ссылки адресуют S3, а не наш роут: подпись после переписывания
+  // бессмысленна и только плодит cache-key.
+  const search = new URLSearchParams(parsed.search);
+  Array.from(search.keys())
+    .filter((param) => /^x-amz-/i.test(param))
+    .forEach((param) => search.delete(param));
+  const query = search.toString();
+  const suffix = query ? `?${query}` : '';
+
+  if (/^uploads\//i.test(key)) return `/media-resize/${key}${suffix}`;
+  if (/(^|\/)conversions\//i.test(key)) return `/media-resize/legacy/${key}${suffix}`;
+
+  return null;
+};
+
 export const normalizeAvatarUrl = (url?: string | null): string => {
   const value = String(url ?? '').trim();
   if (!value) return '';

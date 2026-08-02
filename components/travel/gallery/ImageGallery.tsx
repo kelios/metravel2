@@ -17,7 +17,8 @@ import { validateImageFile } from '@/utils/aiValidation'
 import { HeicConversionError, prepareWebImageFileForUpload } from '@/utils/webImageUpload'
 
 import type { GalleryItem, ImageGalleryComponentProps } from './types'
-import { GalleryControls } from './GalleryControls'
+import safeLazy from '@/components/layout/safeLazy'
+import { GalleryControlsFallback } from './GalleryControlsFallback'
 import { GalleryGrid } from './GalleryGrid'
 import { DeleteAction } from './DeleteAction'
 import { createGalleryStyles } from './styles'
@@ -60,13 +61,15 @@ const WEB_SUPPORTED_UPLOAD_TYPES = new Set([
 // единственной точки sync-импорта react-dropzone (канон #765/leafletVendor):
 // прямой sync-импорт здесь или в WebDropzoneView делал вендора достижимым из
 // двух async-чанков, и Metro хойстил его обратно в web-__common.
-const WebGalleryDropzoneControls = React.lazy(async () => {
+// safeLazy вместо сырого React.lazy: переживает транзиентный отказ Metro
+// async-require при гидратации, иначе контролы остались бы пустыми.
+const WebGalleryDropzoneControls = safeLazy(async () => {
   const [vendor, mod] = await Promise.all([
     import('@/utils/dropzoneVendor'),
     import('./WebGalleryDropzoneControls'),
   ])
   return { default: mod.createWebGalleryDropzoneControls(vendor.useDropzone) }
-})
+}, 'WebGalleryDropzoneControls', { retries: 2 })
 
 const createRejectedGalleryItem = (
   file: File,
@@ -736,25 +739,18 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
             />
           ) : null}
           <Suspense
-            // Пока dropzone-чанк грузится, показываем те же контролы той же
-            // геометрии без DnD-привязки: кнопки видимы, съёмка работает сразу.
             fallback={
-              <GalleryControls
+              <GalleryControlsFallback
                 styles={styles}
                 colors={colors}
                 imagesCount={images.length}
                 maxImages={maxImages}
                 isMobileWeb={isMobileWeb}
-                isDragActive={false}
-                isUploading={batchUploadProgress !== null}
-                dropzone={{ rootProps: {} }}
-                inputProps={{ type: 'file', style: { display: 'none' }, tabIndex: -1 }}
                 batchUploadProgress={batchUploadProgress}
                 hasErrors={hasErrors}
                 selectableCount={selectableKeys.length}
                 selectedCount={selectedKeys.size}
                 allSelected={allSelected}
-                onSelectFromGallery={() => {}}
                 onTakePhoto={() => cameraInputRef.current?.click()}
                 onToggleSelectAll={handleToggleSelectAll}
                 onDeleteSelected={handleDeleteSelected}

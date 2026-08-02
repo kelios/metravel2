@@ -132,8 +132,16 @@ const hasSyncImport = (rawContent: string, specifier: string): boolean => {
     `^\\s*import\\s+(?!type\\b)(?:(?!^\\s*import\\s)[^;])*?from\\s+['"]${escaped}['"]|^\\s*import\\s+['"]${escaped}['"]`,
     'm',
   )
+  // Ре-экспорт — такое же синхронное ребро графа, как import: `utils/dropzoneVendor.ts`
+  // и `TravelListPanel/nativeSheetList.ts` написаны именно так, и без этой ветки их
+  // allowlist-записи были мертвы — копия паттерна вернула бы вендора в `__common`
+  // при зелёном guard. `export type { … } from` не в счёт: типы стираются.
+  const staticReExport = new RegExp(
+    `^\\s*export\\s+(?!type\\b)(?:(?!^\\s*export\\s)[^;])*?from\\s+['"]${escaped}['"]`,
+    'm',
+  )
   const cjsRequire = new RegExp(`(?<!typeof\\s)require\\(\\s*['"]${escaped}['"]\\s*\\)`)
-  return staticImport.test(content) || cjsRequire.test(content)
+  return staticImport.test(content) || staticReExport.test(content) || cjsRequire.test(content)
 }
 
 describe('состав eager-бандла (#1148)', () => {
@@ -178,5 +186,13 @@ describe('состав eager-бандла (#1148)', () => {
       hasSyncImport(`import React from 'react'\nimport type { X } from 'react-leaflet'`, 'react-leaflet'),
     ).toBe(false)
     expect(hasSyncImport(`import {\n  MapContainer,\n} from 'react-leaflet'`, 'react-leaflet')).toBe(true)
+
+    // Ре-экспорт — тоже синхронное ребро: именно так написаны vendor-точки
+    // (utils/dropzoneVendor.ts, TravelListPanel/nativeSheetList.ts).
+    expect(hasSyncImport(`export { useDropzone } from 'react-dropzone'`, 'react-dropzone')).toBe(true)
+    expect(hasSyncImport(`export * from 'react-dropzone'`, 'react-dropzone')).toBe(true)
+    expect(hasSyncImport(`export {\n  BottomSheetFlatList,\n} from '@gorhom/bottom-sheet'`, '@gorhom/bottom-sheet')).toBe(true)
+    // Типовой ре-экспорт стирается компилятором — не ребро графа.
+    expect(hasSyncImport(`export type { FileRejection } from 'react-dropzone'`, 'react-dropzone')).toBe(false)
   })
 })

@@ -9,6 +9,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { usePhotoUpload, chooseFallbackUrl, type NativeUploadFile } from '@/hooks/usePhotoUpload';
+import safeLazy from '@/components/layout/safeLazy';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -28,16 +29,17 @@ interface PhotoUploadWithPreviewProps {
 export { chooseFallbackUrl };
 
 // #1148: web-вью с dropzone-зоной вынесен в ./WebDropzoneView и грузится
-// через React.lazy-фабрику; вендор приходит из dropzoneVendor — единственной
-// точки sync-импорта react-dropzone (канон #765/leafletVendor). На native эта
-// ветка не рендерится вовсе.
-const WebDropzoneView = React.lazy(async () => {
+// лениво; вендор приходит из dropzoneVendor — единственной точки sync-импорта
+// react-dropzone (канон #765/leafletVendor). На native эта ветка не рендерится
+// вовсе. safeLazy вместо сырого React.lazy: он переживает транзиентный отказ
+// Metro async-require при гидратации, иначе зона осталась бы пустой.
+const WebDropzoneView = safeLazy(async () => {
   const [vendor, mod] = await Promise.all([
     import('@/utils/dropzoneVendor'),
     import('./WebDropzoneView'),
   ]);
   return { default: mod.createWebDropzoneView(vendor.useDropzone) };
-});
+}, 'WebDropzoneView', { retries: 2 });
 
 const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove,
@@ -125,10 +127,24 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   };
 
   if (Platform.OS === 'web') {
+    // Фолбэк держит ту же высоту, что и реальный вью, пока грузится dropzone-чанк:
+    // на десктопе это зона minHeight 180, на mobile web — два full-width действия
+    // (44/48 dp + gap). Пустой контейнер здесь давал скачок макета на ~180 px.
+    const dropzoneFallback = isMobileWeb ? (
+      <View style={styles.container}>
+        <View style={styles.nativeActions}>
+          <View style={[styles.nativeAction, styles.actionSkeleton]} />
+          <View style={[styles.nativeAction, styles.actionSkeleton]} />
+        </View>
+      </View>
+    ) : (
+      <View style={styles.container}>
+        <View style={[styles.dropzone, styles.dropzoneSkeleton]} />
+      </View>
+    );
+
     return (
-      // Фолбэк — контейнер той же геометрии: зона появляется без сдвига макета,
-      // когда dropzone-чанк догружается.
-      <React.Suspense fallback={<View style={styles.container} />}>
+      <React.Suspense fallback={dropzoneFallback}>
       <WebDropzoneView
         disabled={disabled}
         isMobileWeb={isMobileWeb}
@@ -213,6 +229,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
   },
   dropzoneActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   dropzoneDisabled: { opacity: 0.5, cursor: 'not-allowed' },
+  // Скелеты Suspense-фолбэка: держат высоту реального вью, пока грузится
+  // dropzone-чанк. Курсор не «pointer» — кликать пока нечего.
+  dropzoneSkeleton: { cursor: 'default' },
+  actionSkeleton: {
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.backgroundSecondary,
+  },
   loadingContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: DESIGN_TOKENS.spacing.md },
   progressContainer: {
     width: '100%', maxWidth: 200, height: 24, backgroundColor: colors.backgroundSecondary,

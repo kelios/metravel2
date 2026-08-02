@@ -7,6 +7,7 @@ import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
+import { toLegacyResizePath } from '@/utils/mediaUrl'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { translate as i18nT } from '@/i18n'
 
@@ -73,6 +74,22 @@ const isMobileWebViewport = (): boolean =>
   Platform.OS === 'web' && typeof window !== 'undefined' && (window.innerWidth || 0) <= 768
 
 /**
+ * #1176: тела легаси-статей до сих пор ссылаются прямо на бакет
+ * (`metravelprod.s3….amazonaws.com/uploads/**`). S3 не понимает `w` и отдаёт
+ * мастер: замер прода 2026-08-02 на `/travels/ourvietnam` — 59 таких ссылок,
+ * первая из них 141 354 B против 7 820 B на `?w=320` через свой роут.
+ *
+ * Переписываем на первопартийный `/media-resize/…` ДО проверки хоста, чтобы
+ * дальше отработала обычная ветка srcset по лестнице ширин — отдельного
+ * построителя для легаси не заводим, иначе наборы ширин разъедутся, как это
+ * уже было с копией лестницы в SSG (#1170).
+ */
+const toFirstPartyArticleImageUrl = (src: string): string => {
+  const legacyPath = toLegacyResizePath(src)
+  return legacyPath ? `https://metravel.by${legacyPath}` : src
+}
+
+/**
  * #1163: раньше эта функция называлась `buildWeservProxyUrl` и заворачивала любую
  * непервопартийную картинку тела статьи в `images.weserv.nl`. Сторонний ресайзер
  * стоял в критическом пути отрисовки статьи, регулярно отваливался под холодным
@@ -94,8 +111,10 @@ export const buildExternalImageUrl = (src: string) => {
     if (!trimmed) return null
     if (trimmed.startsWith('data:')) return trimmed
 
-    const normalized = trimmed.replace(/&amp;/g, '&')
-    const unwrapped = unwrapWeservImageUrl(normalized)
+    const normalized = toFirstPartyArticleImageUrl(trimmed.replace(/&amp;/g, '&'))
+    // Легаси-цепочка weserv → S3 разворачивается до бакета, а он уже переписывается
+    // на свой роут: иначе после разворота осталась бы прямая ссылка на S3.
+    const unwrapped = toFirstPartyArticleImageUrl(unwrapWeservImageUrl(normalized))
     // Битый weserv-URL без разбираемого `url=`: разворачивать нечего, отдаём как есть.
     if (isWeservImageUrl(normalized) && unwrapped === normalized) return normalized
 
@@ -112,7 +131,9 @@ export const buildExternalImageUrl = (src: string) => {
         return normalized
       }
       if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
-        return normalizeMetravelOwnImageUrl(stripOptimizationParams(normalized))
+        // Именно `unwrapped`: у развёрнутой weserv-цепочки и у переписанного
+        // legacy-ключа первопартийным является он, а не исходный `normalized`.
+        return normalizeMetravelOwnImageUrl(stripOptimizationParams(unwrapped))
       }
       // Протокол апгрейдим: раньше https появлялся сам собой, потому что обёртка
       // weserv была https. Оставить `http://` нельзя — страница отдаётся по https,
@@ -188,7 +209,10 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
   try {
     const trimmed = String(src || '').trim()
     if (!trimmed || trimmed.startsWith('data:')) return null
-    const parsed = new URL(trimmed.replace(/&amp;/g, '&'), 'https://metravel.by')
+    const parsed = new URL(
+      toFirstPartyArticleImageUrl(trimmed.replace(/&amp;/g, '&')),
+      'https://metravel.by'
+    )
     if (!isFirstPartyMetravelHost(parsed.hostname)) return null
     if (parsed.protocol === 'http:') parsed.protocol = 'https:'
     // сбрасываем ранее заданные размеры, сохраняя cache-buster `v`

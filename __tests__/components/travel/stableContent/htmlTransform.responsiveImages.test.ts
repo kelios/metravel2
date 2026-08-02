@@ -125,7 +125,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
   })
 
-  it('unwraps a deeply nested legacy weserv chain down to its origin', () => {
+  it('unwraps a deeply nested legacy weserv chain and lands it on our resize route', () => {
     const origin = 'metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy-photo.jpg'
     const nested = [0, 1, 2, 3, 4, 5].reduce(
       (current) => `https://images.weserv.nl/?url=${encodeURIComponent(current)}&w=1600&fit=inside`,
@@ -138,8 +138,13 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
 
     // #1163: `unwrapWeservImageUrl` остаётся нужен, пока такие URL лежат в БД, но
     // новый слой обёртки больше не создаётся — цепочка схлопывается до оригинала.
+    // #1176: развёрнутый оригинал — ключ нашего бакета, поэтому он не остаётся
+    // прямой ссылкой на S3, а уходит на первопартийный роут с лестницей ширин.
     expect(out).not.toContain('images.weserv.nl')
-    expect(out).toContain('src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy-photo.jpg"')
+    expect(out).not.toContain('metravelprod.s3')
+    expect(out).toContain(
+      `src="https://metravel.by/media-resize/uploads/legacy-photo.jpg?w=800${AMP}q=80${AMP}fit=contain"`,
+    )
   })
 
   it('does not wrap a malformed weserv URL again when its source is missing', () => {
@@ -151,6 +156,53 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
 
     expect((out.match(/images\.weserv\.nl/g) ?? [])).toHaveLength(1)
     expect(out).toContain('src="https://images.weserv.nl/?w=800&amp;q=60"')
+  })
+
+  // #1176: тела легаси-статей ссылаются прямо на бакет. S3 не понимает `w` и отдаёт
+  // мастер (замер прода 2026-08-02: 141 354 B против 7 820 B на `?w=320` через свой
+  // роут), и пока такие ссылки живы, анонимное чтение бакета нельзя закрыть.
+  it('rewrites a legacy bucket link onto the first-party resize route with the full ladder', () => {
+    const html =
+      '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1591620319350_original.jpg" /></p>'
+    const out = prepareStableContentHtml(html)
+
+    expect(out).not.toContain('metravelprod.s3')
+    expect(out).not.toContain('images.weserv.nl')
+    expect(out).toContain(
+      `src="https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=800${AMP}q=80${AMP}fit=contain"`,
+    )
+    // Лестница та же, что у первопартийных картинок тела: отдельного набора
+    // ширин для легаси не заводим — именно так уже разъезжались копии (#1170).
+    for (const w of [480, 640, 800, 960, 1920]) {
+      expect(out).toContain(
+        `https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=${w}${AMP}q=80${AMP}fit=contain ${w}w`,
+      )
+    }
+    expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
+  })
+
+  it('routes a legacy conversions key through the legacy resize route', () => {
+    const html =
+      '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/3994/conversions/HcQK-detail_hd.jpg" /></p>'
+    const out = prepareStableContentHtml(html)
+
+    expect(out).not.toContain('metravelprod.s3')
+    expect(out).toContain(
+      `src="https://metravel.by/media-resize/legacy/3994/conversions/HcQK-detail_hd.jpg?w=800${AMP}q=80${AMP}fit=contain"`,
+    )
+  })
+
+  it('leaves a bucket class without a legacy route on its original url', () => {
+    // Выдумать роут под `**/responsive-images/**` нельзя: префикс удалён в #1157,
+    // и переписывание превратило бы мёртвую ссылку в мёртвую ссылку на наш хост.
+    const html =
+      '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/x.jpg" /></p>'
+    const out = prepareStableContentHtml(html)
+
+    expect(out).toContain(
+      'src="https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/x.jpg"',
+    )
+    expect(out).not.toContain('media-resize')
   })
 
   it('reserves a stable aspect ratio for images that arrive without dimensions', () => {

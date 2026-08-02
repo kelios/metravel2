@@ -37,6 +37,12 @@ export const GalleryControls: React.FC<{
   isMobileWeb: boolean
   isDragActive: boolean
   isUploading: boolean
+  /**
+   * Занят только выбор файлов, тогда как съёмка доступна. Нужен состоянию, где
+   * dropzone-чанк ещё грузится: его input не готов, а камера работает — её
+   * input принадлежит ImageGallery. По умолчанию повторяет isUploading.
+   */
+  isSelectBusy?: boolean
   dropzone: { rootProps: any; tabIndex?: 0 | -1 }
   inputProps: any
   batchUploadProgress: { current: number; total: number } | null
@@ -56,6 +62,7 @@ export const GalleryControls: React.FC<{
   isMobileWeb,
   isDragActive,
   isUploading,
+  isSelectBusy,
   dropzone,
   inputProps,
   batchUploadProgress,
@@ -128,8 +135,8 @@ export const GalleryControls: React.FC<{
                   variant="primary"
                   fullWidth
                   onPress={onSelectFromGallery}
-                  disabled={isUploading}
-                  loading={isUploading}
+                  disabled={isSelectBusy ?? isUploading}
+                  loading={isSelectBusy ?? isUploading}
                   icon={<Feather name="image" size={18} color={colors.textOnPrimary} />}
                   label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
                   labelNumberOfLines={2}

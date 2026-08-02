@@ -2,7 +2,7 @@
 // J4: Image URL proxy/optimization (extracted from imageOptimization.ts)
 
 import { Platform } from 'react-native';
-import { normalizeAbsoluteMediaUrl, isPrivateOrLocalHost } from '@/utils/mediaUrl';
+import { normalizeAbsoluteMediaUrl, isPrivateOrLocalHost, toLegacyResizePath } from '@/utils/mediaUrl';
 
 // #1171: здесь были ещё `height`, `dpr` и `blur`. Прокси не принимает ни один из
 // них (ресайз идёт только по `w`), поэтому их значения никогда не доезжали до
@@ -31,6 +31,11 @@ const MEDIA_FILE_PATH = /^\/(gallery|travel-image|travel-description-image|addre
 // Список зеркалит `route_behavior.model_owned.routes` proxy-contract v3.
 const PROXY_MEDIA_PREFIX =
   /^\/(quest-cover|avatar|trip-cover|quest-step-image|quest-poster|badge-image)\//i;
+
+// Legacy-роуты того же прокси: `route_behavior.legacy_upload` и
+// `legacy_conversion` в proxy-contract v4. Ширину они понимают так же, поэтому
+// им нужна та же ветка построения параметров, что и family-роутам (#1176).
+const LEGACY_RESIZE_PREFIX = /^\/media-resize\/(uploads|legacy)\//i;
 
 const getPublicApiOrigin = (): string | null => {
   try {
@@ -193,12 +198,21 @@ export function optimizeImageUrl(
   // и ветка «свой домен», и префикс абсолютного URL. Без него смена
   // `EXPO_PUBLIC_API_URL` отдавала бы URL, собранный для прежнего хоста.
   const publicOrigin = getPublicApiOrigin();
-  const cacheKey = `${publicOrigin ?? ''}|${trimmedUrl}|${options.width ?? ''}|${options.quality ?? ''}|${options.format ?? ''}|${options.fit ?? ''}`;
+
+  // Прямая ссылка на бакет уходит мимо лестницы ширин: S3 отдаёт мастер и не
+  // понимает `w`. Переписываем на свой legacy-роут ДО разбора, чтобы дальше
+  // сработала обычная media-ветка (#1176).
+  const legacyResizePath = toLegacyResizePath(trimmedUrl);
+  const sourceUrl = legacyResizePath
+    ? `${publicOrigin || 'https://metravel.by'}${legacyResizePath}`
+    : trimmedUrl;
+
+  const cacheKey = `${publicOrigin ?? ''}|${sourceUrl}|${options.width ?? ''}|${options.quality ?? ''}|${options.format ?? ''}|${options.fit ?? ''}`;
   const cached = optimizedUrlCache.get(cacheKey);
   if (cached) return cached;
 
   try {
-    const parsedUrl = new URL(trimmedUrl, publicOrigin || 'https://placeholder.invalid');
+    const parsedUrl = new URL(sourceUrl, publicOrigin || 'https://placeholder.invalid');
 
     // Local dev/E2E still serves first-party media through the configured API
     // origin, so it must exercise the same proxy parameters as production.
@@ -206,7 +220,11 @@ export function optimizeImageUrl(
     const isConfiguredPublicOrigin = publicOrigin != null && parsedUrl.origin === publicOrigin;
     if (isPrivateOrLocalHost(parsedUrl.hostname) && !isConfiguredPublicOrigin) return originalUrl;
 
-    if (MEDIA_FILE_PATH.test(parsedUrl.pathname) || PROXY_MEDIA_PREFIX.test(parsedUrl.pathname)) {
+    if (
+      MEDIA_FILE_PATH.test(parsedUrl.pathname) ||
+      PROXY_MEDIA_PREFIX.test(parsedUrl.pathname) ||
+      LEGACY_RESIZE_PREFIX.test(parsedUrl.pathname)
+    ) {
       // Media file paths are served by the backend image proxy which understands
       // the same w/h/q/f/fit/blur query params.  Strip stale optimization params
       // and append fresh ones so that the browser fetches a properly-sized variant
@@ -250,8 +268,8 @@ export function optimizeImageUrl(
         const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 50);
         keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
       }
-      optimizedUrlCache.set(cacheKey, trimmedUrl);
-      return trimmedUrl;
+      optimizedUrlCache.set(cacheKey, sourceUrl);
+      return sourceUrl;
     }
 
     OPTIMIZATION_QUERY_PARAMS.forEach((key) => {

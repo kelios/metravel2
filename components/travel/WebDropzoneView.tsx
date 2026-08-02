@@ -4,6 +4,7 @@ import type { useDropzone as UseDropzoneHook } from 'react-dropzone';
 import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
 import type { useThemedColors } from '@/hooks/useTheme';
+import { WEB_SUPPORTED_UPLOAD_EXTENSIONS } from '@/components/travel/gallery/utils';
 import { translate as i18nT } from '@/i18n';
 
 // #1148: web-вью загрузчика фото с dropzone-зоной, вынесен из
@@ -63,7 +64,9 @@ export const createWebDropzoneView = (
       }
       await uploadWebFile(acceptedFiles[0]);
     },
-    accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif'] },
+    // Тот же список расширений, что у галереи: обложка отклоняла .heics/.heifs,
+    // которые галерея принимает — расхождение без причины (см. gallery/utils.ts).
+    accept: { 'image/*': WEB_SUPPORTED_UPLOAD_EXTENSIONS },
     maxSize: maxSizeMB * 1024 * 1024,
     multiple: false,
     disabled,

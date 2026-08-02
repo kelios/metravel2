@@ -1,4 +1,4 @@
-import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { normalizeMediaUrl, toLegacyResizePath } from '@/utils/mediaUrl';
 
 describe('normalizeMediaUrl', () => {
   it('returns empty string for null/undefined/empty', () => {
@@ -96,5 +96,65 @@ describe('normalizeMediaUrl', () => {
     expect(normalizeMediaUrl('http://cdn.metravel.by/travel-image/1/photo.jpg')).toBe(
       'https://cdn.metravel.by/travel-image/1/photo.jpg',
     );
+  });
+});
+
+// #1176: прямая ссылка на бакет не понимает `w` и отдаёт мастер. Маршруты берутся
+// из `route_behavior` в `GET /api/media/proxy-contract` (v4): `legacy_upload`
+// обслуживает `uploads/**`, `legacy_conversion` — `**/conversions/**`.
+describe('toLegacyResizePath', () => {
+  it('routes a legacy uploads key to the first-party resize route', () => {
+    expect(
+      toLegacyResizePath(
+        'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1591620319350_original.jpg',
+      ),
+    ).toBe('/media-resize/uploads/1591620319350_original.jpg');
+  });
+
+  it('routes a legacy conversions key to the legacy resize route', () => {
+    expect(
+      toLegacyResizePath(
+        'https://metravelprod.s3.eu-north-1.amazonaws.com/3994/conversions/HcQK-detail_hd.jpg',
+      ),
+    ).toBe('/media-resize/legacy/3994/conversions/HcQK-detail_hd.jpg');
+  });
+
+  it('accepts path-style and region-less bucket hosts', () => {
+    expect(
+      toLegacyResizePath('https://s3.eu-north-1.amazonaws.com/metravelprod/uploads/photo.jpg'),
+    ).toBe('/media-resize/uploads/photo.jpg');
+    expect(
+      toLegacyResizePath('https://metravelprod.s3.amazonaws.com/uploads/photo.jpg'),
+    ).toBe('/media-resize/uploads/photo.jpg');
+  });
+
+  it('drops S3 signature params but keeps the cache buster', () => {
+    expect(
+      toLegacyResizePath(
+        'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/photo.jpg?v=42&X-Amz-Signature=abc&X-Amz-Expires=60',
+      ),
+    ).toBe('/media-resize/uploads/photo.jpg?v=42');
+  });
+
+  it('does not invent a route for bucket classes that have none', () => {
+    // `**/responsive-images/**` удалён целиком в #1157, плоский корень живёт под
+    // family-роутами: переписывать их некуда, и молча ломать ссылку нельзя.
+    expect(
+      toLegacyResizePath(
+        'https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/x.jpg',
+      ),
+    ).toBeNull();
+    expect(
+      toLegacyResizePath('https://metravelprod.s3.eu-north-1.amazonaws.com/abc123.webp'),
+    ).toBeNull();
+  });
+
+  it('leaves foreign buckets and non-storage urls alone', () => {
+    expect(
+      toLegacyResizePath('https://other-bucket.s3.eu-north-1.amazonaws.com/uploads/photo.jpg'),
+    ).toBeNull();
+    expect(toLegacyResizePath('https://metravel.by/gallery/1/photo.webp')).toBeNull();
+    expect(toLegacyResizePath('https://example.com/uploads/photo.jpg')).toBeNull();
+    expect(toLegacyResizePath('')).toBeNull();
   });
 });

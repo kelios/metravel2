@@ -5,4 +5,3 @@
 // (react-dropzone + file-selector, ~100 КБ transformed) в web-__common,
 // который грузится на каждой странице.
 export { useDropzone } from 'react-dropzone'
-export type { FileRejection } from 'react-dropzone'

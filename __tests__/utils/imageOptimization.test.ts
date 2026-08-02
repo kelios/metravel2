@@ -371,6 +371,39 @@ describe('utils/imageOptimization', () => {
       }
     })
 
+    // #1176: прямая ссылка на бакет не понимает `w` — S3 отдаёт мастер (замер прода
+    // 2026-08-02: `uploads/1591620319350_original.jpg` = 141 354 B против 7 820 B на
+    // `?w=320` через свой роут). Роуты объявлены в `route_behavior` proxy-contract v4.
+    it('routes legacy bucket links through our resize route instead of leaving them on S3', () => {
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+      try {
+        const uploads = optimizeImageUrl(
+          'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1591620319350_original.jpg',
+          { width: 300, quality: 80 },
+        )!
+        expect(uploads).not.toContain('metravelprod.s3')
+        expect(uploads).toBe(
+          'https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=320&q=80',
+        )
+
+        const conversions = optimizeImageUrl(
+          'https://metravelprod.s3.eu-north-1.amazonaws.com/3994/conversions/HcQK-detail_hd.jpg',
+          { width: 800 },
+        )!
+        expect(conversions).toBe(
+          'https://metravel.by/media-resize/legacy/3994/conversions/HcQK-detail_hd.jpg?w=800',
+        )
+
+        // Класса без legacy-роута быть переписанным не должно: `responsive-images`
+        // удалён в #1157, и подмена хоста только спрятала бы мёртвую ссылку.
+        const orphan = 'https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/x.jpg'
+        expect(optimizeImageUrl(orphan, { width: 320 })).toBe(orphan)
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
+    })
+
     it('snaps per-pixel widths up to the dimension ladder', () => {
       // 371/379/393 — реальные onLayout-замеры → один rung 480
       expect(onMediaPath({ width: 371 }).searchParams.get('w')).toBe('480')
