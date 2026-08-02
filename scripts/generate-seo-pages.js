@@ -1122,6 +1122,41 @@ function injectTravelHeroPreload(baseHtml, preloadData) {
   );
 }
 
+/**
+ * Разрешить content-hashed путь к первому слайду hero главной страницы.
+ *
+ * `BOOK_IMAGES[0]` (`assets/images/cover_sorapiso.jpg`) — детерминированный
+ * первый кадр: его же берёт `HomePageSkeleton`. Metro переименовывает файл в
+ * `cover_sorapiso.<hash>.jpg`, поэтому имя резолвится по dist, а не хардкодится.
+ * Возвращает null, если файла нет — вызывающий код тогда просто не ставит
+ * preload (fail-open, деплой не ломается).
+ */
+function resolveHomeHeroAssetHref(distDir) {
+  const pattern = /^cover_sorapiso\.[a-f0-9]+\.(jpe?g|png|webp)$/i;
+  const imagesDir = path.join(distDir, 'assets', 'assets', 'images');
+  try {
+    const match = fs.readdirSync(imagesDir).find((name) => pattern.test(name));
+    if (match) return `/assets/assets/images/${match}`;
+  } catch {
+    // Каталога нет — падаем в fail-open ниже.
+  }
+  return null;
+}
+
+/**
+ * Preload hero-картинки главной.
+ *
+ * Без него URL картинки известен только из JS-бандла, поэтому запрос стартует
+ * после гидрации. Замер прода 2026-08-02, 412×823, slow-4G + CPU 4×: LCP-кадр
+ * `cover_sorapiso` начинался на 9 292 мс. Preload переносит загрузку в самое
+ * начало документа, параллельно бандлу.
+ */
+function injectHomeHeroPreload(baseHtml, href) {
+  if (!href) return baseHtml;
+  const tag = `<link data-home-hero-preload="true" rel="preload" as="image" href="${escapeAttr(href)}" fetchpriority="high"/>`;
+  return replaceOrInsert(baseHtml, /<link[^>]*data-home-hero-preload="true"[^>]*\/?>/i, tag);
+}
+
 function injectTravelBootstrapData(baseHtml, travel, routeKey) {
   if (!travel || typeof travel !== 'object') return baseHtml;
 
@@ -2537,6 +2572,11 @@ async function main() {
   let totalPages = 0;
   const liveSlugs = new Set();
 
+  const homeHeroHref = resolveHomeHeroAssetHref(DIST_DIR);
+  if (!homeHeroHref) {
+    console.warn('  ⚠️  home hero asset (cover_sorapiso.*) not found in dist — LCP preload skipped');
+  }
+
   // --- 1. Static pages ---
   console.log('📄 Generating static pages...');
   for (const page of STATIC_PAGES) {
@@ -2553,6 +2593,10 @@ async function main() {
 
     // P3.5: Inject SSG skeleton shell for key pages (improves FCP/LCP)
     html = injectSkeletonShell(html, page.route);
+
+    if (page.route === '/') {
+      html = injectHomeHeroPreload(html, homeHeroHref);
+    }
 
     // SSG BreadcrumbList for indexable overview/landing pages so Googlebot
     // detects crumbs without executing the runtime <BreadcrumbsJsonLd/>.
@@ -3121,6 +3165,8 @@ if (typeof module !== 'undefined' && module.exports) {
     buildOptimizedTravelImageUrl,
     buildTravelHeroPreloadData,
     injectTravelHeroPreload,
+    injectHomeHeroPreload,
+    resolveHomeHeroAssetHref,
     injectTravelBootstrapData,
     injectHiddenH1,
     disableExpoRouterHydration,

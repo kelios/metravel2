@@ -17,6 +17,8 @@ const {
   buildOptimizedTravelImageUrl,
   buildTravelHeroPreloadData,
   injectTravelHeroPreload,
+  injectHomeHeroPreload,
+  resolveHomeHeroAssetHref,
   injectTravelBootstrapData,
   injectHiddenH1,
   disableExpoRouterHydration,
@@ -1502,5 +1504,77 @@ describe('mergeQuestCityLandingsByAlias', () => {
     expect(mergeQuestCityLandingsByAlias([{ ...minsk, alias: null }])).toEqual([]);
     expect(mergeQuestCityLandingsByAlias([{ ...minsk, alias: '4' }])).toEqual([]);
     expect(mergeQuestCityLandingsByAlias([])).toEqual([]);
+  });
+});
+
+// Регресс: URL hero-картинки главной известен только из JS-бандла, поэтому запрос
+// стартовал после гидрации. Замер прода 2026-08-02, 412×823, slow-4G + CPU 4×:
+// LCP-кадр `cover_sorapiso` начинался на 9 292 мс. Preload в HTML переносит
+// загрузку в начало документа, параллельно бандлу.
+describe('home hero LCP preload', () => {
+  const HEAD_HTML = '<html><head><title>t</title></head><body></body></html>';
+
+  describe('resolveHomeHeroAssetHref', () => {
+    it('находит content-hashed файл первого слайда в dist', () => {
+      const dist = makeTempDir('seo-home-hero-');
+      const imagesDir = path.join(dist, 'assets', 'assets', 'images');
+      fs.mkdirSync(imagesDir, { recursive: true });
+      fs.writeFileSync(path.join(imagesDir, 'cover_trecime.aaaaaaaa.jpg'), 'x');
+      fs.writeFileSync(path.join(imagesDir, 'cover_sorapiso.b3cc246bbe4c02d2783aa25055fedf54.jpg'), 'x');
+
+      expect(resolveHomeHeroAssetHref(dist)).toBe(
+        '/assets/assets/images/cover_sorapiso.b3cc246bbe4c02d2783aa25055fedf54.jpg',
+      );
+    });
+
+    it('возвращает null, когда каталога или файла нет (fail-open, деплой не падает)', () => {
+      const emptyDist = makeTempDir('seo-home-hero-empty-');
+      expect(resolveHomeHeroAssetHref(emptyDist)).toBeNull();
+      expect(resolveHomeHeroAssetHref(path.join(emptyDist, 'nope'))).toBeNull();
+    });
+
+    it('не принимает файл без content-hash: такой путь не кешируется immutable', () => {
+      const dist = makeTempDir('seo-home-hero-nohash-');
+      const imagesDir = path.join(dist, 'assets', 'assets', 'images');
+      fs.mkdirSync(imagesDir, { recursive: true });
+      fs.writeFileSync(path.join(imagesDir, 'cover_sorapiso.jpg'), 'x');
+
+      expect(resolveHomeHeroAssetHref(dist)).toBeNull();
+    });
+  });
+
+  describe('injectHomeHeroPreload', () => {
+    it('ставит preload с высоким приоритетом в <head>', () => {
+      const html = injectHomeHeroPreload(HEAD_HTML, '/assets/assets/images/cover_sorapiso.abc123.jpg');
+
+      expect(html).toContain('rel="preload"');
+      expect(html).toContain('as="image"');
+      expect(html).toContain('fetchpriority="high"');
+      expect(html).toContain('href="/assets/assets/images/cover_sorapiso.abc123.jpg"');
+      expect(html.indexOf('data-home-hero-preload')).toBeLessThan(html.indexOf('</head>'));
+    });
+
+    it('оставляет HTML нетронутым без href', () => {
+      expect(injectHomeHeroPreload(HEAD_HTML, null)).toBe(HEAD_HTML);
+      expect(injectHomeHeroPreload(HEAD_HTML, '')).toBe(HEAD_HTML);
+    });
+
+    it('идемпотентен: повторный прогон не плодит дубли preload', () => {
+      const href = '/assets/assets/images/cover_sorapiso.abc123.jpg';
+      const once = injectHomeHeroPreload(HEAD_HTML, href);
+      const twice = injectHomeHeroPreload(once, href);
+      const thrice = injectHomeHeroPreload(twice, href);
+
+      // `replaceOrInsert` вырезает прежний тег и вставляет канонический, поэтому
+      // между прогонами меняются только переводы строк — важно, что тег ровно один.
+      expect(once.match(/data-home-hero-preload/g)).toHaveLength(1);
+      expect(twice.match(/data-home-hero-preload/g)).toHaveLength(1);
+      expect(thrice.match(/data-home-hero-preload/g)).toHaveLength(1);
+    });
+
+    it('экранирует href в атрибуте', () => {
+      const html = injectHomeHeroPreload(HEAD_HTML, '/a"onload="alert(1)');
+      expect(html).not.toContain('"onload="');
+    });
   });
 });
