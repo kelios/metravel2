@@ -1,11 +1,10 @@
 import type { Travel } from '@/types/types';
 import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
+import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, normalizeSeoLead } from '@/utils/seoText'
 
 
 const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');
 const getTravelFallbackDescription = () => i18nT('travel:utils.travelSeo.descriptionFallback');
-const SEO_TITLE_MAX_LENGTH = 60;
-const SEO_TITLE_SUFFIX = ' | Metravel';
 const SITE_URL = 'https://metravel.by';
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 const TRAVEL_SLUG_STOP_WORDS = new Set(['i', 'k', 'ko', 'na', 'o', 'ot', 'po', 's', 'so', 'v', 'vo', 'za']);
@@ -74,20 +73,7 @@ function getFirstValidGalleryUrl(gallery: any[] | undefined): string | null {
 }
 
 export function buildTravelSeoTitle(base?: string | null): string {
-  const normalized = String(base || '').replace(/\s+/g, ' ').trim();
-  if (!normalized) return 'Metravel';
-
-  const maxBaseLength = Math.max(10, SEO_TITLE_MAX_LENGTH - SEO_TITLE_SUFFIX.length);
-  let clippedBase = normalized;
-  if (normalized.length > maxBaseLength) {
-    const sliceLen = Math.max(1, maxBaseLength - 1); // -1 for the ellipsis char "…"
-    const cut = normalized.slice(0, sliceLen);
-    const lastSpace = cut.lastIndexOf(' ');
-    const wordSafe = lastSpace > sliceLen * 0.6 ? cut.slice(0, lastSpace) : cut;
-    clippedBase = `${wordSafe.trimEnd()}…`;
-  }
-
-  return `${clippedBase}${SEO_TITLE_SUFFIX}`;
+  return buildSeoTitle(base, SEO_TITLE_MAX_LENGTH);
 }
 
 export function humanizeTravelRouteKey(value?: string | number | null): string | null {
@@ -138,7 +124,10 @@ export function buildTravelSeoFallbackDescription(routeKey?: string | number | n
 }
 
 export function getTravelSeoDescription(html?: string | null, maxLen = 160): string {
-  const stripped = stripHtmlForSeo(html);
+  // Декор чистим только на пути описания: названия и FAQ проходят через
+  // stripHtmlForSeo как есть, иначе правило служебной строки могло бы срезать
+  // осмысленный заголовок вида «Маршрут Краков - Закопане (107 км) за день».
+  const stripped = normalizeSeoLead(stripHtmlForSeo(html));
   if (!stripped) return getTravelFallbackDescription();
   if (stripped.length <= maxLen) return stripped;
 
@@ -177,7 +166,7 @@ export function createTravelArticleJsonLd(
   }
 
   if (travel.description) {
-    const cleanDesc = stripHtmlForSeo(travel.description).slice(0, 500);
+    const cleanDesc = normalizeSeoLead(stripHtmlForSeo(travel.description)).slice(0, 500);
     if (cleanDesc) safeData.description = cleanDesc;
   }
 

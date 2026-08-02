@@ -180,10 +180,10 @@ describe('Quest screen title sync', () => {
       await Promise.resolve()
     })
 
-    expect(document.title).toBe('Минск: что посмотреть — Тайна Свислочского… | Metravel')
+    expect(document.title).toBe('Минск: что посмотреть — Тайна Свислочского Цмока: Легенда…')
     expect(
       document.querySelector('meta[property="og:title"]')?.getAttribute('content')
-    ).toBe('Минск: что посмотреть — Тайна Свислочского… | Metravel')
+    ).toBe('Минск: что посмотреть — Тайна Свислочского Цмока: Легенда…')
     expect(
       document.querySelector('meta[name="description"]')?.getAttribute('content')
     ).toContain('Город Минск: бесплатный пеший маршрут')
@@ -251,7 +251,7 @@ describe('Quest screen title sync', () => {
     expect(wizardProps.storageKey).toBe('guest_minsk-cmok')
     expect(typeof wizardProps.onGuestLogin).toBe('function')
     expect(typeof wizardProps.onGuestRegister).toBe('function')
-    expect(document.title).toBe('Минск: что посмотреть — Тайна Свислочского… | Metravel')
+    expect(document.title).toBe('Минск: что посмотреть — Тайна Свислочского Цмока: Легенда…')
     expect(document.querySelector('meta[name="robots"]')).toBeNull()
   })
 })

@@ -15,10 +15,31 @@ describe('travelSeo', () => {
   });
 
   it('builds stable travel seo title and description fallbacks', () => {
-    expect(buildTravelSeoTitle('  Очень длинный   заголовок маршрута   '.repeat(4))).toMatch(/ \| Metravel$/);
+    // Длинный заголовок держится в бюджете SERP за счёт бренд-суффикса, а не ключевых слов.
+    const long = buildTravelSeoTitle('  Очень длинный   заголовок маршрута   '.repeat(4));
+    expect(long).toMatch(/…$/);
+    expect(long).not.toContain(' | Metravel');
+    expect(long.length).toBeLessThanOrEqual(60);
+    expect(buildTravelSeoTitle('Смолевуд: натурная площадка Беларусьфильма под Минском')).toBe(
+      'Смолевуд: натурная площадка Беларусьфильма под Минском',
+    );
     expect(buildTravelSeoTitle('')).toBe('Metravel');
     expect(getTravelSeoDescription('<p>Hello <strong>world</strong></p>')).toBe('Hello world');
     expect(getTravelSeoDescription('')).toBe('Найди место для путешествия и поделись своим опытом.');
+  });
+
+  // Сниппет чистится от декора, а название — нет: правило служебной строки
+  // не должно резать осмысленный заголовок.
+  it('cleans the snippet lead but leaves names untouched', () => {
+    expect(getTravelSeoDescription('<p>🏰 Форты Первой мировой 📍 Местоположение</p>')).toBe(
+      'Форты Первой мировой Местоположение',
+    );
+    expect(getTravelSeoDescription('<p>Краков - Каспровый Верх (107км 1 час 40 минут) Каспровый Верх (1987 м)</p>')).toBe(
+      'Каспровый Верх (1987 м)',
+    );
+    expect(stripHtmlForSeo('Маршрут Краков - Закопане (107 км) за день')).toBe(
+      'Маршрут Краков - Закопане (107 км) за день',
+    );
   });
 
   it('builds unique slug/id fallbacks for incomplete travel SEO data', () => {

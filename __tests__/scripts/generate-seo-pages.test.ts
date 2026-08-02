@@ -542,6 +542,22 @@ describe('travel SEO fallback helpers', () => {
     expect(result.length).toBeLessThanOrEqual(160);
   });
 
+  // Сниппет собирается из тела статьи, поэтому декоративный мусор в начале
+  // (эмодзи-иконки, служебная строка «откуда — куда») съедал бюджет 160 символов
+  // и выталкивал за границу то, ради чего страницу открывают.
+  it('buildTravelSeoDescription cleans decorative lead noise before clamping', () => {
+    const result = buildTravelSeoDescription(
+      { name: 'Каспровый Верх', countryName: 'Польша' },
+      '<p>Краков - Каспровый Верх (107км 1 час 40 минут) 🏔 Каспровый Верх (Kasprowy Wierch, 1987 м): '
+        + 'маршрут, парковка и советы по подъёму на канатной дороге из Кузниц.</p>'
+    );
+
+    expect(result.startsWith('Каспровый Верх (Kasprowy Wierch, 1987 м)')).toBe(true);
+    expect(result).not.toMatch(/107км/);
+    expect(result).not.toMatch(/\p{Extended_Pictographic}/u);
+    expect(result.length).toBeLessThanOrEqual(160);
+  });
+
   it('buildTravelSeoDescription uses contextual fallback from travel name/country instead of generic text', () => {
     const result = buildTravelSeoDescription(
       {
@@ -1217,19 +1233,30 @@ describe('buildSeoTitle', () => {
     expect(out).not.toContain('…');
   });
 
-  it('clips an over-long title to <= 60 chars', () => {
+  // Бренд-суффикс не участвует в ранжировании, ключевые слова — участвуют.
+  // Поэтому при нехватке бюджета отбрасывается он, а не хвост заголовка.
+  it('drops the brand suffix instead of clipping a title that fits in 60 chars', () => {
+    const name = 'Смолевуд: натурная площадка Беларусьфильма под Минском'; // 53 chars
+    const out = buildSeoTitle(name);
+    expect(out).toBe(name);
+    expect(out.length).toBeLessThanOrEqual(60);
+    expect(out).not.toContain('…');
+    expect(out).not.toContain(SUFFIX);
+  });
+
+  it('clips an over-long title to <= 60 chars without the suffix', () => {
     const name = 'Маршрут на 1 день: экотропа Ельня и усадьбы Нитославичи и Бенюличи';
     const out = buildSeoTitle(name);
     expect(out.length).toBeLessThanOrEqual(60);
-    expect(out.endsWith(SUFFIX)).toBe(true);
+    expect(out.endsWith('…')).toBe(true);
+    expect(out).not.toContain(SUFFIX);
   });
 
   it('clips on a word boundary, not mid-word', () => {
     const name = 'Маршрут на 1 день: экотропа Ельня и усадьбы Нитославичи и Бенюличи';
     const out = buildSeoTitle(name);
-    const visible = out.slice(0, out.length - SUFFIX.length); // drop suffix
-    expect(visible.endsWith('…')).toBe(true);
-    const beforeEllipsis = visible.slice(0, -1);
+    expect(out.endsWith('…')).toBe(true);
+    const beforeEllipsis = out.slice(0, -1);
     // The clipped stem is a prefix of the source words — no half-word fragment.
     expect(name.startsWith(beforeEllipsis)).toBe(true);
     expect(beforeEllipsis.endsWith(' ')).toBe(false);
@@ -1241,15 +1268,14 @@ describe('buildSeoTitle', () => {
   it('strips trailing punctuation before the ellipsis', () => {
     const name = 'Что посмотреть в Ошмянах: Костел францисканцев, ратуша и старый центр';
     const out = buildSeoTitle(name);
-    const visible = out.slice(0, out.length - SUFFIX.length);
-    expect(visible).not.toMatch(/[\s.,;:!?–—-]…$/u);
+    expect(out).not.toMatch(/[\s.,;:!?–—-]…$/u);
   });
 
   it('hard-clips when the leading word alone exceeds the budget', () => {
     const name = `${'a'.repeat(80)} bcd`;
     const out = buildSeoTitle(name);
     expect(out.length).toBeLessThanOrEqual(60);
-    expect(out.endsWith(`…${SUFFIX}`)).toBe(true);
+    expect(out.endsWith('…')).toBe(true);
   });
 });
 

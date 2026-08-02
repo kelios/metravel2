@@ -20,6 +20,7 @@ const path = require('path');
 const { fetchJson } = require('./lib/fetchJson');
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
+const { buildSeoTitle: buildSharedSeoTitle, normalizeSeoLead } = require('../utils/seoText');
 const {
   questRouteKey,
   buildQuestCityAliasMap,
@@ -51,8 +52,6 @@ const API_BASE = getArg('api', 'https://metravel.by').replace(/\/+$/, '');
 const SITE_URL = 'https://metravel.by';
 const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
-const SEO_TITLE_MAX_LENGTH = 60;
-const SEO_TITLE_SUFFIX = ' | Metravel';
 const IMAGE_OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
 
 const API_ORIGIN = (() => {
@@ -70,6 +69,16 @@ const API_ORIGIN = (() => {
 // fetchJson (with retries on transient 5xx/429/timeout/socket failures) comes
 // from ./lib/fetchJson — one flaky response must not silently drop a whole
 // content surface from the build.
+
+/**
+ * Лид для сниппета: сначала чистим декор (эмодзи, служебная строка маршрута),
+ * потом режем. В обратном порядке декор съедал бы бюджет 160 символов, а суть
+ * уезжала за границу. Только для описаний — названия и FAQ идут через stripHtml.
+ */
+function stripHtmlToSnippet(html, maxLength = 160) {
+  const plain = normalizeSeoLead(stripHtml(html, Number.MAX_SAFE_INTEGER));
+  return stripHtml(plain, maxLength);
+}
 
 /** Strip HTML tags and collapse whitespace → plain text description. */
 function stripHtml(html, maxLength = 160) {
@@ -250,29 +259,9 @@ function buildTravelHeroSrcSet(rawUrl, widths, { quality, updatedAt, id } = {}) 
     .join(', ');
 }
 
-function buildSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
-  const normalized = String(base || '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!normalized) return 'Metravel';
-
-  const maxBaseLength = Math.max(10, maxLength - SEO_TITLE_SUFFIX.length);
-  if (normalized.length <= maxBaseLength) {
-    return `${normalized}${SEO_TITLE_SUFFIX}`;
-  }
-
-  // Clip on a word boundary so the SERP title doesn't end mid-word
-  // ("…Нитосл…"). Reserve one char for the ellipsis, then back off to the last
-  // space — but only when that boundary keeps most of the budget; a long leading
-  // word would otherwise collapse the title, so below 60 % we hard-clip instead.
-  const hardLimit = maxBaseLength - 1;
-  const slice = normalized.slice(0, hardLimit);
-  const lastSpace = slice.lastIndexOf(' ');
-  const base2 = lastSpace >= Math.floor(hardLimit * 0.6) ? slice.slice(0, lastSpace) : slice;
-  const clippedBase = `${base2.replace(/[\s.,;:!?·–—-]+$/u, '')}…`;
-
-  return `${clippedBase}${SEO_TITLE_SUFFIX}`;
-}
+// Правило заголовка живёт в utils/seoTitle.js — тот же код собирает <title> в
+// рантайме, иначе статический и гидрированный заголовки разъехались бы.
+const buildSeoTitle = buildSharedSeoTitle;
 
 function isBareMediaEndpointUrl(input) {
   const value = String(input || '').trim();
@@ -327,7 +316,7 @@ function clampDescriptionForAttr(plain, maxEncoded = 160) {
 }
 
 function buildTravelSeoDescription(travel, detailDescription) {
-  const primary = stripHtml(detailDescription || travel?.description || '', 160);
+  const primary = stripHtmlToSnippet(detailDescription || travel?.description || '', 160);
   const travelName = String(travel?.name || '').trim();
   const countryName = String(travel?.countryName || '').trim();
   const fallbackParts = [travelName, countryName].filter(Boolean);
@@ -2965,7 +2954,7 @@ async function main() {
       const name = article.name || '';
       const title = buildSeoTitle(name || 'Статья о путешествии');
       const rawDesc = article.description || '';
-      const description = clampDescriptionForAttr(stripHtml(rawDesc, 160), 160) || FALLBACK_DESC;
+      const description = clampDescriptionForAttr(stripHtmlToSnippet(rawDesc, 160), 160) || FALLBACK_DESC;
       const canonical = `${SITE_URL}/article/${id}`;
 
       let image = OG_IMAGE;

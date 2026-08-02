@@ -2,6 +2,7 @@
 
 const questSeoRu = require('../i18n/locales/ru/questSeo.json');
 const { selectPluralCategory } = require('../i18n/pluralRules');
+const { SEO_TITLE_MAX_LENGTH, buildSeoTitle } = require('./seoText');
 
 const DEFAULT_QUEST_SEO_LOCALE = 'ru-RU';
 
@@ -20,8 +21,6 @@ function selectPlural(count, forms, locale) {
   return forms[category] || forms.other;
 }
 
-const SEO_TITLE_MAX_LENGTH = 60;
-const SEO_TITLE_SUFFIX = ' | Metravel';
 const SEO_DESCRIPTION_MAX_ENCODED_LENGTH = 160;
 
 function normalizeText(value, fallback = '') {
@@ -40,18 +39,7 @@ function stripRepeatedCityPrefix(title, cityName) {
 }
 
 function buildBrandedSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
-  const normalized = normalizeText(base);
-  if (!normalized) return 'Metravel';
-
-  const maxBaseLength = Math.max(10, maxLength - SEO_TITLE_SUFFIX.length);
-  if (normalized.length <= maxBaseLength) return `${normalized}${SEO_TITLE_SUFFIX}`;
-
-  const hardLimit = maxBaseLength - 1;
-  const slice = normalized.slice(0, hardLimit);
-  const lastSpace = slice.lastIndexOf(' ');
-  const clippedAtWord = lastSpace >= Math.floor(hardLimit * 0.6) ? slice.slice(0, lastSpace) : slice;
-  const clippedBase = `${clippedAtWord.replace(/[\s.,;:!?·–—-]+$/u, '')}…`;
-  return `${clippedBase}${SEO_TITLE_SUFFIX}`;
+  return buildSeoTitle(normalizeText(base), maxLength);
 }
 
 function encodedAttributeLength(value) {

@@ -25,7 +25,7 @@ describe('quest SEO metadata', () => {
       points: 12,
     })
 
-    expect(seo.title).toBe('Минск: что посмотреть — Тайна Свислочского… | Metravel')
+    expect(seo.title).toBe('Минск: что посмотреть — Тайна Свислочского Цмока: Легенда…')
     expect(seo.title.length).toBeLessThanOrEqual(60)
     expect(seo.title).not.toContain('Минск: Минск')
   })
