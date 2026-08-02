@@ -184,6 +184,16 @@ export const WebMainImage = memo(function WebMainImage({
     loadReportedRef.current = false;
   }, [src]);
 
+  // #1212: битый `<img>` браузер рисует alt-текстом со значком сломанной
+  // картинки — именно это видно в карточке квеста. Гасим узел прямо в
+  // обработчике, тем же приёмом, что и раскрытие в `handleLoad`: родитель снимет
+  // его следующим коммитом, но ни одного кадра с alt-текстом быть не должно.
+  const handleError = useCallback(() => {
+    const img = imgRef.current;
+    if (img) img.style.opacity = '0';
+    onError?.();
+  }, [onError]);
+
   // Стабильная функция: инлайновая пересоздавалась бы каждый рендер, и React на
   // каждом коммите отвязывал бы ref (`null`), а в этом окне `handleLoad` потерял бы
   // доступ к `currentSrc`.
@@ -315,7 +325,7 @@ export const WebMainImage = memo(function WebMainImage({
       // @ts-ignore -- fetchPriority is a valid img attribute in browsers and not in React DOM typings yet
       fetchPriority={priority === 'high' ? 'high' : priority === 'low' ? 'low' : 'auto'}
       onLoad={handleLoad}
-      onError={onError}
+      onError={handleError}
     />
   );
 });

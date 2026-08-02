@@ -254,6 +254,31 @@ function ImageCardMedia({
       ? webLoaded
       : false;
 
+  /**
+   * #1212: сбой загрузки на web не должен становиться вечным.
+   *
+   * Компонент только пробрасывал `onError` наружу и своего состояния ошибки не
+   * имел. Потребитель, который проп не передаёт (`QuestForCityCard`), оставался
+   * с битым `<img>` навсегда: браузер рисует в кадре `alt` («Обложка квеста …»
+   * на проде 2026-08-02), нового запроса никто не делает. Одного оборванного
+   * ответа — например при рестарте app/nginx на деплое — хватало, чтобы карточка
+   * осталась сломанной до перезагрузки страницы.
+   *
+   * Хранится ИДЕНТИЧНОСТЬ картинки, а не булев флаг: тогда смена картинки
+   * (recycle ячейки FlashList, следующий слайд) сбрасывает состояние сама, без
+   * отдельного эффекта. `null`-ключ (источника нет) не считается совпадением —
+   * иначе пустая карточка стартовала бы «сломанной».
+   *
+   * Только web: тот же класс сбоя на native закрыт в `OptimizedImage` — там свой
+   * ретрай (#802) и свой нейтральный `errorContainer`, дублировать их нечем.
+   */
+  const [failedIdentity, setFailedIdentity] = useState<string | null>(null);
+  const [retriedIdentity, setRetriedIdentity] = useState<string | null>(null);
+  const hasWebLoadError =
+    failedIdentity !== null && failedIdentity === currentImageIdentityKey;
+  const hasRetriedWebLoad =
+    retriedIdentity !== null && retriedIdentity === currentImageIdentityKey;
+
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
     const override = flattened?.borderRadius;
@@ -579,7 +604,15 @@ function ImageCardMedia({
     if (identityChanged || revealModeChanged) {
       baseUriRef.current = currentImageIdentityKey;
       revealOnLoadOnlyRef.current = revealOnLoadOnly;
-      if (identityChanged) decodedIdentityRef.current = null;
+      if (identityChanged) {
+        decodedIdentityRef.current = null;
+        // #1212: новой картинке — новый бюджет попыток. Само по себе состояние
+        // сбоя привязано к идентичности и на чужую картинку не действует, но
+        // рециклируемая ячейка может вернуться к прежнему URL (X → Y → X), и
+        // без сброса она отрисовала бы плейсхолдер, даже не попробовав.
+        setFailedIdentity(null);
+        setRetriedIdentity(null);
+      }
       // Смена только режима раскрытия у картинки, чей decode уже подтверждён
       // событием `load`, ничего не сбрасывает: гасить показанные пиксели нечем,
       // а вернуть их обратно уже некому.
@@ -603,8 +636,38 @@ function ImageCardMedia({
       decodedIdentityRef.current = currentImageIdentityKey;
     }
     setWebLoaded(true);
+    // Появившиеся пиксели снимают плейсхолдер. А вот израсходованный ретрай
+    // сбрасывать здесь НЕЛЬЗЯ: `handleWebLoad` вызывается и по догадке
+    // `loadedWebImageBaseCache` (тот же файл уже грузился в другой карточке) —
+    // тогда «загрузка» приходит РАНЬШЕ реального события `error`, возвращает
+    // бюджет попыток, и сбойная картинка уходит в бесконечный цикл
+    // ремоунт → запрос → ошибка. Ретрай снимается только сменой картинки.
+    setFailedIdentity(null);
     onLoad?.();
   }, [currentImageIdentityKey, onLoad]);
+
+  /**
+   * Первый сбой — одна повторная попытка ТЕМ ЖЕ URL: ключ узла получает суффикс
+   * `-retry`, React выбрасывает битый `<img>` и монтирует новый, браузер
+   * повторяет запрос. Cache-busting-параметра здесь быть не может: второй URL на
+   * тот же visual slot ломает инвариант #1208 и `check:image-architecture`.
+   *
+   * Ретрай без задержки: типичная причина — мгновенный сетевой сбой, а таймер
+   * лишь оттягивал бы либо фото, либо плейсхолдер (docs/RULES.md → Timeout policy).
+   *
+   * `onError` наружу вызывается на терминальном сбое, а не на первой попытке:
+   * потребители (`ArticleListItem`, `UnifiedTravelCard`) держат на нём своё
+   * состояние «картинки нет», и поднимать его до исчерпания ретрая рано.
+   */
+  const handleWebError = useCallback(() => {
+    if (!currentImageIdentityKey) return;
+    if (retriedIdentity !== currentImageIdentityKey) {
+      setRetriedIdentity(currentImageIdentityKey);
+      return;
+    }
+    setFailedIdentity(currentImageIdentityKey);
+    onError?.();
+  }, [currentImageIdentityKey, onError, retriedIdentity]);
 
   const prefetchHref = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -682,7 +745,7 @@ function ImageCardMedia({
       {...(Platform.OS === 'web' && testID ? ({ 'data-testid': testID } as any) : {})}
       testID={Platform.OS === 'web' ? undefined : testID}
     >
-      {resolvedSource && !shouldDisableNetwork ? (
+      {resolvedSource && !shouldDisableNetwork && !hasWebLoadError ? (
         <>
           {shouldRenderDataPlaceholder ? (
             <ImageDataPlaceholder
@@ -719,7 +782,7 @@ function ImageCardMedia({
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
             <WebMainImage
-              key={`main-${webMediaInstanceKey}`}
+              key={`main-${webMediaInstanceKey}${hasRetriedWebLoad ? '-retry' : ''}`}
               src={webMainSrc}
               srcSet={webSrcSet}
               sizes={webSizes}
@@ -732,7 +795,7 @@ function ImageCardMedia({
               priority={priority}
               loaded={effectiveWebLoaded}
               onLoad={handleWebLoad}
-              onError={onError}
+              onError={handleWebError}
               showImmediately={shouldShowWebImageImmediately}
             />
           ) : !blurOnly && (
@@ -772,6 +835,11 @@ function ImageCardMedia({
                 : undefined
             }
             onLoad={onLoad}
+            // Не заводить сюда `handleWebError` (#1212): `OptimizedImage` зовёт
+            // `onError` на КАЖДОЙ попытке, включая те, которые сам собирается
+            // ретраить (`MAX_RETRY_ATTEMPTS`), и рисует свой нейтральный
+            // `errorContainer`. Собственное состояние ошибки сняло бы его с
+            // экрана раньше ретрая — ровно тот исход, который закрывал #802.
             onError={onError}
           />
           )}
@@ -788,8 +856,12 @@ function ImageCardMedia({
           ) : null}
         </>
       ) : (
+        // Нейтральный плейсхолдер (AGENTS.md 4.2): без текста, иконок и
+        // акцентных цветов. Сюда же падает web-сбой загрузки (#1212) — бокс
+        // держит ту же геометрию и радиус, что и медиа, поэтому layout не
+        // прыгает, а alt-текста в кадре не остаётся.
         <View
-          style={[styles.placeholder, { borderRadius }]}
+          style={[styles.placeholder, { borderRadius: resolvedBorderRadius }]}
           accessibilityElementsHidden={true}
           aria-hidden={true}
         />
