@@ -37,6 +37,7 @@ export function useMessagesViewportHeight(enabled: boolean) {
         let frameId: number | null = null;
         let settleFrameId: number | null = null;
         const visualViewport = window.visualViewport;
+        let layoutObserver: ResizeObserver | null = null;
 
         const schedule = () => {
             if (frameId != null) window.cancelAnimationFrame(frameId);
@@ -66,6 +67,19 @@ export function useMessagesViewportHeight(enabled: boolean) {
         window.addEventListener('resize', schedule);
         window.addEventListener('orientationchange', schedule);
 
+        // At tablet widths the responsive header can settle after the route has
+        // already measured itself (for example, its height changes by one spacing
+        // token when deferred chrome mounts). That moves the screen's top without
+        // emitting a viewport event, leaving the composer the same distance above
+        // the visible bottom. Observe the route parent so any late layout change
+        // schedules the same geometry measurement.
+        const node = screenRef.current as unknown as HTMLElement | null;
+        const layoutParent = node?.parentElement;
+        if (typeof ResizeObserver !== 'undefined' && layoutParent) {
+            layoutObserver = new ResizeObserver(schedule);
+            layoutObserver.observe(layoutParent);
+        }
+
         return () => {
             if (frameId != null) window.cancelAnimationFrame(frameId);
             if (settleFrameId != null) window.cancelAnimationFrame(settleFrameId);
@@ -77,6 +91,7 @@ export function useMessagesViewportHeight(enabled: boolean) {
             }
             window.removeEventListener('resize', schedule);
             window.removeEventListener('orientationchange', schedule);
+            layoutObserver?.disconnect();
         };
     }, [enabled, measure]);
 

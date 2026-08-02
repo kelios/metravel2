@@ -23,6 +23,7 @@ import {
   FALLBACK_TRAVEL_SLUG,
   preacceptCookies,
   gotoWithRetry,
+  mockUnavailableApi,
   mockFallbackTravelDetails,
   openFallbackTravelDetails,
 } from './helpers/navigation';
@@ -72,6 +73,7 @@ async function installEmptyTravelListMock(page: import('@playwright/test').Page)
 test.describe('@mobile BUG-CLASS-1: active tab-bar state', () => {
   test('home / root route does not highlight "Маршруты" tab as active', async ({ page }) => {
     await setMobileViewport(page);
+    await mockUnavailableApi(page);
     await gotoWithRetry(page, '/');
 
     const dock = page.getByTestId('footer-dock-wrapper');

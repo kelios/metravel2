@@ -209,8 +209,13 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
   try {
     const trimmed = String(src || '').trim()
     if (!trimmed || trimmed.startsWith('data:')) return null
+    // Сначала разворачиваем legacy weserv-цепочки и переводим ключи нашего S3
+    // на первопартийный resize route. Иначе normalizeImgTags строит responsive
+    // вариант по исходному внешнему URL раньше, чем buildExternalImageUrl успевает
+    // его нормализовать, и итоговый <img> остаётся без w/srcset (#1176).
+    const normalized = buildExternalImageUrl(trimmed) ?? trimmed
     const parsed = new URL(
-      toFirstPartyArticleImageUrl(trimmed.replace(/&amp;/g, '&')),
+      toFirstPartyArticleImageUrl(normalized.replace(/&amp;/g, '&')),
       'https://metravel.by'
     )
     if (!isFirstPartyMetravelHost(parsed.hostname)) return null

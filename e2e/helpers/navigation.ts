@@ -8,6 +8,29 @@ const FALLBACK_IMAGE =
 const FALLBACK_TRAVEL_ID = 990081;
 export const FALLBACK_TRAVEL_SLUG = 'e2e-stable-travel-details';
 
+/**
+ * Keep UI-only shell/hydration scenarios independent from a slow or unavailable
+ * dev API. A hanging same-origin `/api/*` request consumes the browser connection
+ * pool and can block lazy JS chunks, turning an upstream outage into a false UI
+ * failure. The application still exercises its real error state via a fast 503.
+ */
+export async function mockUnavailableApi(page: Page): Promise<void> {
+  await page.route('**/api/**', async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const pageUrl = new URL(page.url());
+    if (requestUrl.origin !== pageUrl.origin || !requestUrl.pathname.startsWith('/api/')) {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ detail: 'E2E API unavailable' }),
+    });
+  });
+}
+
 const fallbackTravelPayload = {
   id: FALLBACK_TRAVEL_ID,
   slug: FALLBACK_TRAVEL_SLUG,

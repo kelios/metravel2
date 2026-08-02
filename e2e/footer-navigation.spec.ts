@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { mockUnavailableApi } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
 const waitForConsentBanner = async (page: any) => {
@@ -25,6 +26,7 @@ test.describe('@smoke Footer navigation', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test.beforeEach(async ({ page }) => {
+    await mockUnavailableApi(page);
     await page.addInitScript(() => {
       window.localStorage.removeItem('metravel_consent_v1');
     });

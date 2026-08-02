@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures'
 import {
+  mockUnavailableApi,
   preacceptCookies,
   gotoWithRetry,
 } from './helpers/navigation'
@@ -21,6 +22,9 @@ const TIMEOUT = 30_000
 test.describe('@smoke Touch targets (D-010)', () => {
   test('cookie consent buttons have ≥44px height', async ({ page }) => {
     // Do NOT pre-accept cookies — we need the ConsentBanner rendered.
+    // Keep the UI-only assertion independent from a slow local API: hanging
+    // requests can occupy the connection pool and delay the lazy banner chunk.
+    await mockUnavailableApi(page)
     await page.addInitScript(() => window.localStorage.removeItem('metravel_consent_v1'))
     await gotoWithRetry(page, '/')
 

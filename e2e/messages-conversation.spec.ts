@@ -1,5 +1,5 @@
 import { test as base, expect, type Page, type BrowserContext } from '@playwright/test';
-import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
+import { gotoWithRetry, mockUnavailableApi, preacceptCookies } from './helpers/navigation';
 import { simpleEncrypt, mockFakeAuthApis } from './helpers/auth';
 
 // ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ async function installMocks(page: Page, currentUser: { id: number; name: string 
 
   // GET /api/message-threads/
   await page.route('**/api/message-threads/', (route) => {
-    if (route.request().method() !== 'GET') return route.continue();
+    if (route.request().method() !== 'GET') return route.fallback();
     const url = route.request().url();
     if (url.includes('thread-by-user')) {
       return route.fulfill({
@@ -150,7 +150,7 @@ async function installMocks(page: Page, currentUser: { id: number; name: string 
       return route.fulfill({ status: 204, body: '' });
     }
 
-    return route.continue();
+    return route.fallback();
   });
 }
 
@@ -174,6 +174,12 @@ base.describe.serial('Messages — Two-user conversation', () => {
     context2 = await browser.newContext({ storageState: undefined });
     page1 = await context1.newPage();
     page2 = await context2.newPage();
+
+    // Keep unrelated shell requests from reaching a slow/unavailable dev API.
+    // Register this broad fallback first so the messaging/auth mocks below take
+    // precedence and still exercise the complete two-user conversation flow.
+    await mockUnavailableApi(page1);
+    await mockUnavailableApi(page2);
 
     // Seed auth and install mocks for each user
     await seedAuth(page1, USER1);

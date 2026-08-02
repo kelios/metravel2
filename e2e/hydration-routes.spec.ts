@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
+import { gotoWithRetry, mockUnavailableApi, preacceptCookies } from './helpers/navigation';
 
 const HYDRATION_ERROR = /Minified React error #418\b|Hydration failed because the server rendered/i;
 
@@ -7,6 +7,7 @@ test.describe('SSR route hydration', () => {
   test('responsive lazy routes hydrate without replacing their server HTML', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await preacceptCookies(page);
+    await mockUnavailableApi(page);
 
     const hydrationErrors: string[] = [];
     page.on('pageerror', (error) => {

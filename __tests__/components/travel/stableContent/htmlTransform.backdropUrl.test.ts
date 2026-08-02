@@ -23,10 +23,13 @@ describe('rich-image-frame markup preserves native image lazy loading', () => {
   it('keeps the foreground source without an eager background source', () => {
     const out = prepareStableContentHtml(`<p><img src="${S3}" /></p>`)
     const imgSrc = out.match(/<img\b[^>]*\bsrc="([^"]+)"/i)?.[1] ?? ''
-    // #1163: внешняя картинка больше не заворачивается в `images.weserv.nl` — она
-    // отдаётся со своего origin. Проверяемое здесь свойство от этого не зависит:
-    // фон не должен появляться в разметке, иначе он ломает нативный lazy.
-    expect(imgSrc).toBe(S3)
+    // #1176: ключ нашего legacy-бакета переводится на первопартийный resize route.
+    // Проверяемое здесь свойство от этого не зависит: фон не должен появляться в
+    // разметке, иначе он ломает нативный lazy.
+    expect(imgSrc).toBe(
+      'https://metravel.by/media-resize/uploads/1607344305DSC01553.JPG?w=800&amp;q=80&amp;fit=contain',
+    )
+    expect(imgSrc).not.toContain('metravelprod.s3')
     expect(imgSrc).not.toContain('images.weserv.nl')
     expect(out).toContain('loading="lazy"')
     expect(out).toContain('--travel-rich-image-aspect:800/450')

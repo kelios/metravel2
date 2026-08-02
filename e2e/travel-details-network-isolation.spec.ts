@@ -53,6 +53,8 @@ function isForbiddenBackgroundRequest(request: Request): boolean {
   const url = new URL(request.url())
   const path = url.pathname
 
+  // `/getFiltersTravel/` is intentionally allowed: the root QueryClient
+  // prefetches that static dictionary at browser idle, independently of routes.
   return (
     path === '/api/travels/' ||
     path === '/travels/' ||
@@ -60,7 +62,6 @@ function isForbiddenBackgroundRequest(request: Request): boolean {
     path === '/quests/' ||
     path.includes('/travels/popular/') ||
     path.includes('/travels/of-month/') ||
-    path.includes('/getFiltersTravel/') ||
     path.includes('/user-points/') ||
     path.includes(`/travels/resolve-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
     path.includes(`/travels/by-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
