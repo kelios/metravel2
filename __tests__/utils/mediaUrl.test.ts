@@ -1,4 +1,4 @@
-import { normalizeMediaUrl, toLegacyResizePath } from '@/utils/mediaUrl';
+import { isBareMediaEndpointUrl, normalizeMediaUrl, toLegacyResizePath } from '@/utils/mediaUrl';
 
 describe('normalizeMediaUrl', () => {
   it('returns empty string for null/undefined/empty', () => {
@@ -96,6 +96,38 @@ describe('normalizeMediaUrl', () => {
     expect(normalizeMediaUrl('http://cdn.metravel.by/travel-image/1/photo.jpg')).toBe(
       'https://cdn.metravel.by/travel-image/1/photo.jpg',
     );
+  });
+
+  // #1182: у точки без картинки сериализатор отдаёт `base_url + ''`, и каждая
+  // отрисовка уходила в гарантированный 404 вместо плейсхолдера.
+  it('drops a bare media endpoint root instead of requesting it', () => {
+    expect(normalizeMediaUrl('https://metravel.by/address-image/')).toBe('');
+    expect(normalizeMediaUrl('https://metravel.by/address-image')).toBe('');
+    expect(normalizeMediaUrl('/gallery/')).toBe('');
+  });
+});
+
+// #1182: голый корень медиа-роута приходит из API вместо `null`.
+describe('isBareMediaEndpointUrl', () => {
+  it('flags empty values and media endpoint roots', () => {
+    expect(isBareMediaEndpointUrl(null)).toBe(true);
+    expect(isBareMediaEndpointUrl('   ')).toBe(true);
+    expect(isBareMediaEndpointUrl('https://metravel.by/address-image/')).toBe(true);
+    expect(isBareMediaEndpointUrl('https://metravel.by/travel-image')).toBe(true);
+    expect(isBareMediaEndpointUrl('/travel-description-image/')).toBe(true);
+    expect(isBareMediaEndpointUrl('/gallery/?w=320')).toBe(true);
+  });
+
+  it('keeps real files under the same routes', () => {
+    expect(isBareMediaEndpointUrl('https://metravel.by/address-image/123/file.jpg')).toBe(false);
+    expect(
+      isBareMediaEndpointUrl('https://metravel.by/gallery/3664/conversions/x-detail_hd.jpg'),
+    ).toBe(false);
+    expect(isBareMediaEndpointUrl('/travel-image/1/photo.webp?w=480')).toBe(false);
+  });
+
+  it('does not confuse a route name inside a query with a bare root', () => {
+    expect(isBareMediaEndpointUrl('https://metravel.by/x.jpg?src=/gallery/')).toBe(false);
   });
 });
 

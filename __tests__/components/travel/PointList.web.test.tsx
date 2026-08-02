@@ -16,6 +16,13 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => ({
   default: (props: any) => mockUnifiedCard(props),
 }));
 
+const mockImageCardMedia = jest.fn((_props: any) => <View testID="row-thumb-image" />);
+
+jest.mock('@/components/ui/ImageCardMedia', () => ({
+  __esModule: true,
+  default: (props: any) => mockImageCardMedia(props),
+}));
+
 jest.mock('@/context/AuthContext', () => ({
   __esModule: true,
   useAuth: () => ({
@@ -115,6 +122,32 @@ describe('PointList (web coordinates list uses popup template)', () => {
     fireEvent.press(getByLabelText(/Скрыть карточки точек/));
     expect(getByText('+ ещё 1')).toBeTruthy();
     expect(getByText('Открыть список: 4 точки')).toBeTruthy();
+
+    (Platform as any).OS = prevOs;
+  });
+
+  // #1182: сериализатор отдаёт голый `https://metravel.by/address-image/` для
+  // точки без фото. Раньше строка считалась картинкой, и каждая отрисовка ряда
+  // уходила в гарантированный 404 перед показом плейсхолдера.
+  it('renders the placeholder instead of requesting a bare media endpoint thumb', () => {
+    const prevOs = Platform.OS;
+    (Platform as any).OS = 'web';
+    mockImageCardMedia.mockClear();
+
+    const points = [
+      { ...basePoint, id: '1', address: 'Без фото', travelImageThumbUrl: 'https://metravel.by/address-image/' },
+      { ...basePoint, id: '2', address: 'С фото', travelImageThumbUrl: 'https://metravel.by/address-image/7/x.jpg' },
+    ];
+
+    const { getByLabelText, queryAllByTestId } = render(
+      <PointList points={points as any} baseUrl="https://example.com/travel-page" />
+    );
+    fireEvent.press(getByLabelText('Список'));
+
+    const requested = mockImageCardMedia.mock.calls.map(([props]: any[]) => String(props.src));
+    expect(requested.some((src) => src.includes('/address-image/7/x.jpg'))).toBe(true);
+    expect(requested.some((src) => /\/address-image\/(\?|$)/.test(src))).toBe(false);
+    expect(queryAllByTestId('row-thumb-image')).toHaveLength(1);
 
     (Platform as any).OS = prevOs;
   });

@@ -39,12 +39,22 @@ export function useMapViewportHeightVar(): void {
     if (!root) return
 
     let rafId: number | null = null
+    let lastApplied: string | null = null
 
     const apply = () => {
+      rafId = null
       const height = readViewportHeight()
-      if (height > 0) {
-        root.style.setProperty(MAP_VIEWPORT_HEIGHT_CSS_VAR, `${Math.round(height)}px`)
-      }
+      if (height <= 0) return
+      const next = `${Math.round(height)}px`
+      // iOS Safari fires `visualViewport` scroll/resize on every frame while the
+      // dynamic toolbar collapses or the user pans a pinch-zoomed page, and the
+      // measured height is usually unchanged. Writing a custom property on <html>
+      // anyway invalidates style for the WHOLE document — with the place card
+      // open that is a full recalc + layout of the map screen per frame, which is
+      // what makes the screen feel stuck. Only write when the value really moves.
+      if (next === lastApplied) return
+      lastApplied = next
+      root.style.setProperty(MAP_VIEWPORT_HEIGHT_CSS_VAR, next)
     }
 
     const schedule = () => {

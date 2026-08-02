@@ -84,8 +84,39 @@ export const normalizeAbsoluteMediaUrl = (url: string): string => {
   return result;
 };
 
+const MEDIA_ROUTE_ROOT = /(?:^|\/)(address-image|travel-image|travel-description-image|gallery|uploads|media)\/?$/i;
+
+/**
+ * `true` для значения, которое указывает на корень медиа-роута без ключа
+ * (`https://metravel.by/address-image/`).
+ *
+ * Сериализатор бэка склеивает `base_url + ''`, когда у точки/записи картинки
+ * нет вовсе, поэтому клиент получает строку, считает её изображением и
+ * гарантированно ловит 404 на каждую отрисовку (#1182: 6 точек маршрута).
+ * Пустое значение здесь тоже «невалидно» — вызывающий код в обоих случаях
+ * показывает штатный плейсхолдер.
+ */
+export const isBareMediaEndpointUrl = (value?: string | null): boolean => {
+  const candidate = String(value ?? '').trim();
+  if (!candidate) return true;
+
+  // Дешёвый отсев: вызывается на каждую медиа-ссылку списка, поэтому реальные
+  // файлы уходят одним regex, без построения `URL`.
+  const rawPath = candidate.split('?')[0].split('#')[0];
+  if (!MEDIA_ROUTE_ROOT.test(rawPath)) return false;
+
+  // Подтверждаем по pathname: так `https://host/x.jpg?src=/gallery/` и хост,
+  // совпавший с именем роута, не превращаются в ложное срабатывание.
+  try {
+    return MEDIA_ROUTE_ROOT.test(new URL(candidate).pathname);
+  } catch {
+    // Относительный путь или не-URL: строка выше и есть pathname.
+    return true;
+  }
+};
+
 export const normalizeMediaUrl = (url?: string | null): string => {
-  if (!url || !String(url).trim()) return '';
+  if (isBareMediaEndpointUrl(url)) return '';
   const safeUrl = normalizeAbsoluteMediaUrl(String(url).trim());
 
   // Data/blob stay as-is

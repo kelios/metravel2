@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl } from '@/utils/imageOptimization';
+import { isBareMediaEndpointUrl } from '@/utils/mediaUrl';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
 import {
@@ -58,7 +59,12 @@ type PointListProps = {
 // ✅ УЛУЧШЕНИЕ: Используем новые утилиты для оптимизации изображений
 const getOptimizedImageUrl = (url?: string, updatedAt?: string) => {
   if (!url) return undefined;
-  
+
+  // У точки без картинки сериализатор отдаёт голый корень медиа-роута
+  // (`https://metravel.by/address-image/`). Грузить его бессмысленно: ответ
+  // всегда 404, а строка мешает показать штатный плейсхолдер сразу (#1182).
+  if (isBareMediaEndpointUrl(url)) return undefined;
+
   // Создаем версионированный URL
   const versionedUrl = buildVersionedImageUrl(url, updatedAt);
   

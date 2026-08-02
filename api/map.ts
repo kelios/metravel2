@@ -6,7 +6,7 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
-import { isPrivateOrLocalHost } from '@/utils/mediaUrl';
+import { isBareMediaEndpointUrl, isPrivateOrLocalHost } from '@/utils/mediaUrl';
 
 const normalizeCoordString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -23,29 +23,14 @@ const normalizeString = (value: unknown, fallback = ''): string => {
   return String(value);
 };
 
-const isInvalidMediaEndpointUrl = (value: string): boolean => {
-  const candidate = String(value || '').trim();
-  if (!candidate) return true;
-
-  let pathname = candidate;
-  try {
-    pathname = new URL(candidate).pathname || candidate;
-  } catch {
-    // Relative path or non-URL value; keep raw string.
-  }
-
-  const cleanPath = pathname.split('?')[0].split('#')[0];
-  return /(?:^|\/)(address-image|travel-image|travel-description-image|gallery|uploads|media)\/?$/i.test(cleanPath);
-};
-
 const normalizeImageUrl = (value: unknown): string => {
   const url = normalizeString(value, '');
   if (!url) return '';
 
   // Backend occasionally returns only media endpoint roots (e.g. /address-image/)
   // instead of real files. Treat such values as missing image to avoid 404 noise.
-  if (isInvalidMediaEndpointUrl(url)) return '';
-  
+  if (isBareMediaEndpointUrl(url)) return '';
+
   // Upgrade absolute http URLs to https for non-local hosts (production CSP requires https images).
   if (/^http:\/\//i.test(url)) {
     try {
