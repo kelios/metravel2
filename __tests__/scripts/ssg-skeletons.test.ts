@@ -11,6 +11,7 @@ const {
   sanitizeArticleBodyHtml,
   COLORS,
 } = require('../../scripts/ssg-skeletons');
+const { buildCriticalCSS } = require('../../utils/criticalCSSBuilder');
 
 describe('ssg-skeletons', () => {
   describe('buildSkeletonCSS', () => {
@@ -45,6 +46,79 @@ describe('ssg-skeletons', () => {
       expect(css).toContain('aspect-ratio:16/9');
       expect(css).toContain('.ssg-travel-article .img-row-2 img,.ssg-travel-article .img-grid img,.ssg-travel-article .img-jrow img{width:100%;height:100%;max-width:none');
       expect(css).toContain('.ssg-travel-article p>img:only-child{width:100%;aspect-ratio:16/9');
+    });
+  });
+
+  // #1206. Критический CSS (`utils/criticalCSSBuilder.ts`) содержит безусловное
+  // `img[data-lcp]{aspect-ratio:16/9;min-height:…}` — оно резервирует место под
+  // React-hero. Но `data-lcp` висит и на hero-картинке SSG-шелла, а селектор
+  // `img[data-lcp]` (0,1,1) специфичнее одиночного класса (0,1,0). Пока шелл
+  // полагался на `.ssg-travel-hero-img{height:100%}`, побеждал критический CSS:
+  // фото рисовалось 412×240 в боксе 412×461 (43 226 px² — меньше заголовка
+  // 51 888 px²), не попадало в LCP-кандидаты и получало полный размер только на
+  // handoff. LCP травела равнялся времени гидрации: 7 820 мс вместо 1 908 мс.
+  describe('travel hero geometry vs critical CSS (#1206)', () => {
+    const heroImgRule = () => {
+      const css = buildSkeletonCSS();
+      const match = css.match(/\.ssg-travel-hero img\.ssg-travel-hero-img\{([^}]*)\}/);
+      expect(match).not.toBeNull();
+      return (match as RegExpMatchArray)[1];
+    };
+
+    it('critical CSS still sizes img[data-lcp] unconditionally (hazard is real)', () => {
+      const critical = buildCriticalCSS();
+      const unscoped = critical
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => /^img\[data-lcp\]\{/.test(line));
+
+      expect(unscoped.length).toBeGreaterThan(0);
+      expect(unscoped.join(' ')).toMatch(/aspect-ratio/);
+    });
+
+    it('shell hero image wins over img[data-lcp] by specificity', () => {
+      const css = buildSkeletonCSS();
+      // `.ssg-travel-hero img.ssg-travel-hero-img` = (0,2,1) > `img[data-lcp]` = (0,1,1).
+      expect(css).toContain('.ssg-travel-hero img.ssg-travel-hero-img{');
+      // Слабая форма (0,1,0) проигрывает критическому CSS — вернуть её нельзя.
+      expect(css).not.toMatch(/(?:^|[\n,}])\s*\.ssg-travel-hero-img\{/);
+    });
+
+    it('shell hero image fills the hero box and neutralizes inherited sizing', () => {
+      const rule = heroImgRule();
+      // Абсолютный бокс по вставкам: высота определена, поэтому `aspect-ratio`
+      // и `min-height` из критического CSS не могут её переопределить.
+      expect(rule).toContain('position:absolute');
+      expect(rule).toContain('inset:0');
+      expect(rule).toContain('width:100%');
+      expect(rule).toContain('height:100%');
+      expect(rule).toContain('aspect-ratio:auto');
+      expect(rule).toContain('min-height:0');
+      expect(rule).toContain('max-height:none');
+      // Кадр целиком, как в React-hero.
+      expect(rule).toContain('object-fit:contain');
+    });
+
+    it('picture is a sized box so the image has a definite containing block', () => {
+      const css = buildSkeletonCSS();
+      // Критический CSS делает `picture` `display:block;height:auto` — бокс
+      // неопределённой высоты, в котором процентная высота не разрешается.
+      const match = css.match(/\.ssg-travel-hero picture\{([^}]*)\}/);
+      expect(match).not.toBeNull();
+      const rule = (match as RegExpMatchArray)[1];
+      expect(rule).toContain('position:absolute');
+      expect(rule).toContain('inset:0');
+      expect(rule).toContain('height:100%');
+    });
+
+    it('keeps the scrim under the photo, as in the React hero', () => {
+      const css = buildSkeletonCSS();
+      // React-hero: `data-hero-backdrop-overlay` c zIndex 0 под картинкой —
+      // тонируются только поля letterbox. При z-index:1 затемнение лежало
+      // поверх кадра и фотография светлела на handoff.
+      expect(css).toContain(
+        '.ssg-travel-hero-bg{position:absolute;inset:0;background:rgba(7,12,19,0.24);pointer-events:none;z-index:0}',
+      );
     });
   });
 

@@ -1,11 +1,7 @@
 import { PixelRatio, Platform } from 'react-native';
 import { METRICS } from '@/constants/layout';
 import { IMAGE_QUALITY } from '@/constants/imageContract';
-import {
-  buildVersionedImageUrl,
-  getPreferredImageFormat,
-  optimizeImageUrl,
-} from '@/utils/imageOptimization';
+import { buildVersionedImageUrl, optimizeImageUrl } from '@/utils/imageOptimization';
 import { buildResponsiveImagePropsFromMedia } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
 
@@ -187,80 +183,57 @@ export const buildUriNative = (
 
 /* ---- Web buildUri (used by Slider.web.tsx) ---- */
 
-// Compute preferred format once at module level (never changes at runtime)
-const PREFERRED_FORMAT =
-  Platform.OS === 'web' ? getPreferredImageFormat() : undefined;
-
 /** Вариант из media-манифеста уже прошёл через прокси, если несёт ширину. См. #1116. */
 const MANIFEST_URL_HAS_PROXY_PARAMS = /[?&]w=\d+/;
 
 /**
- * Плотность, на которую умножается ширина слота НЕпервых слайдов. Кап 2: на 2×
- * апскейла уже не видно, а 3× стоило бы ещё +60% байт при том же результате.
+ * Ступень мобильного слайда. Совпадает с верхней ступенью `IMAGE_WIDTHS.travelHeroMobile`
+ * и с тем, что просит SSG-preload hero, — инвариант #1146.
  */
-const WEB_SLIDE_MAX_DENSITY = 2;
+const WEB_SLIDE_MOBILE_WIDTH = 720;
 
 /**
- * #1113 убрал из URL параметр `dpr` — прокси его игнорирует, — но саму ширину
- * умножать на плотность не стал, хотя там же и указано, что retina-вариант
- * получается умножением ширины. В итоге слот считался в CSS-пикселях: слайд 390
- * CSS на iPhone (DPR 3) — это 1170 физических точек, а файл приезжал на 390–480,
- * то есть апскейл ×2.4–3. Выглядит это ровно как «размытая картинка», причём
- * только со второго слайда: у первого ширина фиксирована hero-контрактом
- * (`maxWidth`) и от измерения контейнера не зависит. Замер прода 2026-07-30,
- * `/travels/ourvietnam`, viewport 390: слайд 0 — `w=1280`, `naturalWidth` 1080;
- * слайды 1–2 — `w=640&q=75&fit=cover`, `naturalWidth` 640 на слот 368 CSS.
+ * #1210: ширина слайда — функция БРЕЙКПОИНТА, а не измеренного контейнера.
  *
- * На native та же проблема уже решена (см. `NATIVE_SLIDER_*_MAX_WIDTH`): ширина
- * там считается как `containerWidth * PixelRatio.get()` со ступенью 800 для всех
- * слайдов, поэтому свайп не меняет вариант. Web приводим к тому же принципу.
+ * Раньше НЕпервые слайды считали ширину как `containerWidth × devicePixelRatio`.
+ * `useSliderCore` стартует с `containerW = winW` и подменяет её измеренной шириной
+ * слайда, поэтому один и тот же слот успевал попросить ДВЕ разные ступени: замер
+ * прода 2026-08-02 (Pixel-эмуляция 412×823, DPR 1.75, CPU 4×, throttling) на
+ * `/travels/tropa-vedm-harzer-hexenstieg-…`:
+ *   412 × 1.75 = 721 → вариант манифеста `w=800`   (7741 мс)
+ *   390 × 1.75 = 683 → вариант манифеста `w=720`   (7861 мс, +120 мс)
+ * и так по каждому соседнему слайду. Вес лишней ступени, `content-length` с прода
+ * того же дня: `gallery/544/gallery/952c9b15….JPG` w=800 — 152 640 B (нужный w=720
+ * весит 126 194 B), `90d52510….JPG` w=800 — 92 757 B (w=720 — 76 100 B). То есть
+ * страница тянула четверть мегабайта, которую тут же выбрасывала.
  *
- * Читаем `window.devicePixelRatio` (как `getOptimalImageSize` в `utils/imageProxy`),
- * а не `PixelRatio`: на web это одно и то же значение, зато при SSG/SSR (нет
- * `window`) плотность честно равна 1 и разметка не расходится с гидрацией.
+ * Плотность и `format` убраны вместе с этим: обе величины делали адрес соседа
+ * отличным от адреса первого слайда (`f=webp`, q80 против q70), то есть фото,
+ * сменившее индекс, скачивалось заново. Теперь весь слайдер на одной ступени —
+ * ровно так, как это уже сделано на native (`NATIVE_SLIDER_*_MAX_WIDTH`, где
+ * активный и соседний слайды намеренно равны, чтобы свайп не перезапрашивал файл).
+ *
+ * Расплата за это — соседний слайд на DPR 1 просит 720 вместо 480. Ступень
+ * покрывает слот 390 CSS на любом реальном телефоне (DPR ≥ 2), и это тот же файл,
+ * который слайдеру уже понадобился под первый слайд, поэтому на кэш он ложится
+ * бесплатно.
  */
-const getWebSlideDensity = (): number => {
-  const raw = typeof window !== 'undefined' ? Number(window.devicePixelRatio) : 1;
-  if (!Number.isFinite(raw) || raw <= 1) return 1;
-  return Math.min(raw, WEB_SLIDE_MAX_DENSITY);
-};
-
 export const buildUriWeb = (
   img: SliderImage,
   containerWidth?: number,
   _containerHeight?: number,
   fit: 'contain' | 'cover' = 'contain',
-  isFirst: boolean = false,
 ) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
   const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit;
 
   if (containerWidth) {
     const isMobileWidth = containerWidth <= SLIDER_MAX_WIDTH.mobile;
-    const maxWidth = isFirst
-      ? isMobileWidth
-        ? 720
-        : SLIDER_MAX_WIDTH.desktop
-      : isMobileWidth
-        ? SLIDER_MAX_WIDTH.mobile
-        : SLIDER_MAX_WIDTH.desktop;
-    // Первый слайд синхронизирован с SSG-preload hero через канонические q70/q80
-    // (#1146): любое расхождение снова превращает обложку в два файла.
-    const density = isFirst ? 1 : getWebSlideDensity();
-    const targetWidth = isFirst
-      ? maxWidth
-      : Math.min(Math.round(containerWidth * density), maxWidth);
-    // На retina плотность уже даёт вдвое больше точек, поэтому качество можно
-    // опустить до q70 — той же ступени, на которой стоит мобильный
-    // hero, так что все слайды мобильной галереи просят один профиль варианта.
-    const quality = isFirst
-      ? isMobileWidth
-        ? IMAGE_QUALITY.small
-        : IMAGE_QUALITY.large
-      : density > 1
-        ? IMAGE_QUALITY.small
-        : IMAGE_QUALITY.large;
-    const format = isFirst ? undefined : PREFERRED_FORMAT;
+    // Один слайдер — одна ступень. Значение и качество берутся от первого слайда,
+    // который синхронизирован с SSG-preload hero каноническими q70/q80 (#1146):
+    // любое расхождение снова превращает обложку в два файла.
+    const targetWidth = isMobileWidth ? WEB_SLIDE_MOBILE_WIDTH : SLIDER_MAX_WIDTH.desktop;
+    const quality = isMobileWidth ? IMAGE_QUALITY.small : IMAGE_QUALITY.large;
 
     const fromMedia = buildResponsiveImagePropsFromMedia(img.media, {
       maxWidth: targetWidth,
@@ -295,7 +268,6 @@ export const buildUriWeb = (
       return (
         optimizeImageUrl(fromMedia.src, {
           width: targetWidth,
-          format,
           quality,
           fit: fitForUrl,
         }) || fromMedia.src
@@ -310,7 +282,6 @@ export const buildUriWeb = (
     return (
       optimizeImageUrl(versionedUrl, {
         width: targetWidth,
-        format,
         quality,
         fit: fitForUrl,
       }) || versionedUrl

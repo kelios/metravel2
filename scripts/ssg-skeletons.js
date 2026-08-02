@@ -75,8 +75,30 @@ function buildSkeletonCSS() {
 .ssg-travel-hero{position:relative;width:100%;height:70vh;min-height:360px;max-height:750px;border-radius:12px;overflow:hidden;background:${COLORS.light.bgSecondary};margin:8px 0 16px}
 @media(max-width:767px){.ssg-travel-hero{height:min(56vh,520px);min-height:260px;max-height:520px;border-radius:0;margin:0 -6px 16px;width:calc(100% + 12px)}}
 .ssg-travel-hero[data-ssg-travel-hero-adopted="true"]{position:absolute;inset:0;width:100%;height:100%;min-height:0;max-height:none;margin:0;border-radius:inherit}
-.ssg-travel-hero-img{position:relative;width:100%;height:100%;object-fit:contain;object-position:center;display:block;z-index:1}
-.ssg-travel-hero-bg{position:absolute;inset:0;background:rgba(7,12,19,0.24);pointer-events:none;z-index:1}
+/* #1206: hero-фотография обязана заполнить бокс hero ещё ДО гидрации.
+   ВНИМАНИЕ: этот CSS живёт внутри JS-шаблона, поэтому обратные кавычки здесь
+   недопустимы — они закрывают литерал и ломают весь скрипт.
+   Раньше здесь стояло ".ssg-travel-hero-img{height:100%}" — и это не работало
+   дважды. Во-первых, <picture> (критический CSS делает его display:block;
+   height:auto) — бокс неопределённой высоты, поэтому процент не разрешался и
+   height схлопывался в auto. Во-вторых, критический CSS содержит
+   безусловное img[data-lcp]{aspect-ratio:16/9;min-height:240px} — селектор
+   специфичнее одиночного класса (0,1,1 против 0,1,0), и он же задавал размер.
+   Итог на mobile 412×823: фото рисовалось 412×240 внутри бокса 412×461, то
+   есть 43 226 px² — МЕНЬШЕ, чем текстовый .ssg-travel-h1 (51 888 px²), и
+   Chrome не брал фотографию в LCP-кандидаты вообще. Полный размер она получала
+   только в момент handoff (инлайновые стили в useTravelSsgHeroHandoff), и
+   ровно там записывался LCP: 158 107 px² на 7.7 с при готовой к 2.1 с картинке.
+   Поэтому геометрию задаём здесь, с приоритетом над img[data-lcp]:
+   <picture> — абсолютный бокс hero, <img> — абсолютный бокс picture. При
+   position:absolute + inset:0 высота определена вставками, так что
+   aspect-ratio и min-height из критического CSS больше не участвуют. */
+.ssg-travel-hero picture{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;z-index:1}
+.ssg-travel-hero img.ssg-travel-hero-img{position:absolute;inset:0;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;object-fit:contain;object-position:center;display:block;z-index:1}
+/* Затемнение — ПОД фотографией, как в React-hero (data-hero-backdrop-overlay
+   с zIndex 0): оно тонирует только поля letterbox. При z-index:1 оно лежало
+   поверх кадра, и на handoff фотография заметно светлела. */
+.ssg-travel-hero-bg{position:absolute;inset:0;background:rgba(7,12,19,0.24);pointer-events:none;z-index:0}
 .ssg-travel-title{height:32px;width:70%;border-radius:8px;margin:0 0 12px}
 .ssg-travel-meta{height:16px;width:40%;border-radius:6px;margin:0 0 24px}
 .ssg-travel-line{height:14px;border-radius:4px;margin-bottom:10px}

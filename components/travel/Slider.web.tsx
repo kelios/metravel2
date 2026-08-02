@@ -288,8 +288,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     ? Math.max(preloadCountProp, 1)
     : preloadCountProp
 
+  // #1210: индекс слайда больше не влияет на адрес — одна ступень на весь слайдер.
   const buildUri = useCallback(
-    (img: any, w: number, h: number, isFirst: boolean) => buildUriWeb(img, w, h, fit, isFirst),
+    (img: any, w: number, h: number) => buildUriWeb(img, w, h, fit),
     [fit],
   )
 

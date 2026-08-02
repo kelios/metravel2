@@ -94,8 +94,10 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     mobileHeightPercent,
     onIndexChanged,
     buildUri: (img, w, h, isFirst) => {
+      // #1210: web-слайдер не различает первый и соседний слайд — весь слайдер
+      // просит одну ступень, иначе фото, сменившее индекс, качается второй раз.
       if (isWeb) {
-        return buildUriWeb(img, w, h, fit, isFirst);
+        return buildUriWeb(img, w, h, fit);
       }
       return buildUriNative(img, w, h, isFirst);
     },

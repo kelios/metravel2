@@ -30,7 +30,6 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       1180,
       undefined,
       'contain',
-      true,
     )
 
     // q quantized to the nearest 10 (82 → 80) by imageProxy DIMENSION/quality ladder;
@@ -51,7 +50,6 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       390,
       undefined,
       'contain',
-      true,
     )
 
     // #1170: в лестницу вернули ступени 720/960/1024/1200, которых у прокси всё это
@@ -67,7 +65,10 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     expect(src).not.toContain('f=')
   })
 
-  it('still allows non-first desktop slides to use the larger slider variant', () => {
+  // #1210: соседний слайд просит РОВНО тот же вариант, что и первый. Раньше здесь
+  // ожидалось `w=1200` — ступень, посчитанная от измеренного контейнера 1180; она
+  // отличалась от `w=1280` первого слайда, и фото, сменившее индекс, качалось второй раз.
+  it('gives non-first desktop slides the same variant as the first slide', () => {
     const src = buildUriWeb(
       {
         id: 'hero-2',
@@ -76,23 +77,18 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       1180,
       undefined,
       'contain',
-      false,
     )
 
-    // #1170: 1180 теперь округляется до 1200, а не до 1280 — ступень 1200 вернули
-    // в лестницу, она есть в контракте прокси и даёт файл легче при том же слоте.
-    // q 78 → 80.
-    expect(src).toContain('w=1200')
+    expect(src).toContain('w=1280')
     expect(src).toContain('q=80')
   })
 
-  // Слот НЕпервых слайдов считается в физических точках, а не в CSS-пикселях.
-  // Раньше здесь ожидалось `w=480` для слота 390 CSS: на iPhone (DPR 3) это 1170
-  // физических точек, то есть апскейл ×2.4 — «размытая картинка» на всех слайдах,
-  // кроме первого. `dpr=` в URL по-прежнему не отправляем: прокси его игнорирует
-  // (#1113), плотность применяется к самой ширине, как там и предписано.
-  it('sizes retina mobile neighbour slides in physical pixels, not CSS pixels', () => {
-    ;(window as any).devicePixelRatio = 3
+  // #1210: ступень мобильного слайда не зависит ни от DPR, ни от того, успел ли
+  // слайдер измерить контейнер. Раньше DPR 3 давал `w=800` (390 × 2, кап 768), а
+  // DPR 1 — `w=480`; вместе с первым слайдом на 720 это давало до трёх адресов
+  // одного файла. `dpr=` в URL по-прежнему не отправляем: прокси его игнорирует (#1113).
+  it.each([1, 1.75, 3])('pins the mobile slide rung at DPR %s', (dpr) => {
+    ;(window as any).devicePixelRatio = dpr
 
     const src = buildUriWeb(
       {
@@ -102,34 +98,13 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       390,
       undefined,
       'contain',
-      false,
     )
 
-    // 390 × density 2 = 780, кап `SLIDER_MAX_WIDTH.mobile` 768 → ступень 800;
-    // q65 снапится к 70 — тот же профиль, что у мобильного hero (#1146).
-    expect(src).toContain('w=800')
+    expect(src).toContain('w=720')
     expect(src).toContain('q=70')
     expect(src).toContain('fit=contain')
     expect(src).not.toMatch(/[?&]dpr=/)
-  })
-
-  it('keeps non-retina neighbour slides on the CSS-pixel slot', () => {
-    ;(window as any).devicePixelRatio = 1
-
-    const src = buildUriWeb(
-      {
-        id: 'hero-3-dpr1',
-        url: 'https://metravel.by/gallery/123/hero-3-dpr1.jpg',
-      } as any,
-      390,
-      undefined,
-      'contain',
-      false,
-    )
-
-    // 390 снапится к 480, q 78 → 80: на DPR 1 апскейла нет, байты не растут.
-    expect(src).toContain('w=480')
-    expect(src).toContain('q=80')
+    expect(src).not.toMatch(/[?&]f=/)
   })
 
   it('never emits dpr on non-mobile-width neighbour slides either', () => {
@@ -143,11 +118,65 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       1180,
       undefined,
       'contain',
-      false,
     )
 
     expect(src).not.toMatch(/[?&]dpr=/)
     expect(src).toContain('w=1280')
+  })
+
+  /**
+   * #1210, корень дефекта. `useSliderCore` стартует с `containerW = winW` и после
+   * измерения подменяет её реальной шириной слайда. Пока ступень считалась от этой
+   * величины, две фазы рендера давали два адреса одного файла:
+   *   412 × 1.75 = 721 → `w=800`,  390 × 1.75 = 683 → `w=720`
+   * — замер прода 2026-08-02, около 180 КБ мимо пользы на travel-детали.
+   */
+  it('keeps one URL per photo across the container-measurement pass', () => {
+    ;(window as any).devicePixelRatio = 1.75
+
+    const img = {
+      id: 'gallery-shift',
+      url: 'https://metravel.by/gallery/544/gallery/952c9b15.JPG',
+    } as any
+
+    const beforeMeasure = buildUriWeb(img, 412, undefined, 'contain')
+    const afterMeasure = buildUriWeb(img, 390, undefined, 'contain')
+
+    expect(afterMeasure).toBe(beforeMeasure)
+    expect(beforeMeasure).toContain('w=720')
+  })
+
+  // Тот же инвариант на РЕАЛЬНОМ манифесте: `GET /api/travels/544/`, галерея 3569,
+  // прод 2026-08-02. Именно из-за него дефект и был виден в трейсе — в манифесте
+  // есть и `card_720`, и `card_800`, поэтому ступень выбиралась той шириной, которую
+  // передал слайдер, и две фазы рендера уносили с прода два файла:
+  // `?w=800` 152 640 B и `?w=720` 126 194 B (content-length, прод 2026-08-02).
+  it('picks one manifest variant for the real production gallery entry', () => {
+    ;(window as any).devicePixelRatio = 1.75
+
+    const key = '/gallery/544/gallery/952c9b15a955444ba3d7b1374d3a9f6e.JPG'
+    const img = {
+      id: 3569,
+      url: `https://metravel.by${key}`,
+      media: {
+        id: 3569,
+        sizes_hint_contain: '(max-width: 768px) 100vw, 1280px',
+        variants: {
+          thumb_320: `${key}?w=320`,
+          card_640: `${key}?w=640`,
+          card_720: `${key}?w=720`,
+          card_800: `${key}?w=800`,
+          card_960: `${key}?w=960`,
+          hero_1280: `${key}?w=1280`,
+        },
+      },
+    } as any
+
+    const beforeMeasure = buildUriWeb(img, 412, undefined, 'contain')
+    const afterMeasure = buildUriWeb(img, 390, undefined, 'contain')
+
+    expect(beforeMeasure).toBe(`https://metravel.by${key}?w=720`)
+    expect(afterMeasure).toBe(beforeMeasure)
   })
 
   it('prefers backend media manifest variants for gallery slider images', () => {
@@ -168,7 +197,6 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       1180,
       undefined,
       'contain',
-      false,
     )
 
     expect(src).toBe('https://metravel.by/gallery/123/photo.webp?w=1280&q=80&fit=contain')
@@ -211,7 +239,6 @@ describe('#1146: первый слайд не расходится с hero по 
       390,
       undefined,
       'contain',
-      true,
     )
 
     // hero после #1146 просит тот же вариант, что и слайдер. После #1170 это
@@ -232,7 +259,6 @@ describe('#1146: первый слайд не расходится с hero по 
       390,
       undefined,
       'cover',
-      false,
     )
 
     expect(src).toContain('fit=contain') // buildUriWeb нормализует cover → contain для слайда

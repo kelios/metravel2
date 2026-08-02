@@ -717,7 +717,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
     await openTravelDetailsForPerf(page);
     await page.waitForLoadState('networkidle').catch(() => null);
 
-    const duplicates = await page.evaluate(() => {
+    const { duplicates, multiRung } = await page.evaluate(() => {
       const media = /\/(gallery|travel-image|quest-cover|address-image|avatar)\//;
       const byFile: Record<string, string[]> = {};
 
@@ -729,17 +729,38 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
         (byFile[file] = byFile[file] || []).push(query);
       }
 
-      return Object.entries(byFile)
-        .filter(([, variants]) => new Set(variants).size > 1)
-        .map(([file, variants]) => ({
-          file: file.split('/').slice(-1)[0].slice(0, 40),
-          variants: Array.from(new Set(variants)),
-        }));
+      const readWidth = (query: string): string => {
+        const match = /(?:^|&)w=(\d+)/.exec(query);
+        return match ? match[1] : '(no w)';
+      };
+
+      return {
+        duplicates: Object.entries(byFile)
+          .filter(([, variants]) => new Set(variants).size > 1)
+          .map(([file, variants]) => ({
+            file: file.split('/').slice(-1)[0].slice(0, 40),
+            variants: Array.from(new Set(variants)),
+          })),
+        // #1210: отдельный, более узкий срез того же трейса — РАЗНЫЕ СТУПЕНИ одного
+        // storage-ключа. Проверка выше считает варианты целиком и порог у неё 4 файла /
+        // 3 варианта, поэтому дефект «одно фото приезжает на w=800 и на w=720» проходил
+        // мимо неё зелёным (замер прода 2026-08-02, mobile 390×844).
+        multiRung: Object.entries(byFile)
+          .map(([file, variants]) => ({
+            file: file.split('/').slice(-1)[0].slice(0, 40),
+            widths: Array.from(new Set(variants.map(readWidth))).sort(),
+          }))
+          .filter((item) => item.widths.length > 1),
+      };
     });
 
     if (duplicates.length > 0) {
       console.log('\n🖼️  DUPLICATE IMAGE VARIANTS');
       console.log(JSON.stringify(duplicates, null, 2));
+    }
+    if (multiRung.length > 0) {
+      console.log('\n🪜  SAME FILE AT MULTIPLE WIDTH RUNGS');
+      console.log(JSON.stringify(multiRung, null, 2));
     }
 
     // Порог, а не ноль: hero осознанно держит preload-адрес отдельно от srcSet
@@ -758,6 +779,16 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
       worst,
       `one file was fetched in ${worst} different variants — a slot must not spawn a family of URLs`
     ).toBeLessThanOrEqual(3);
+
+    // #1210: ступень — это отдельный файл на диске прокси и отдельная синхронная
+    // конверсия, поэтому две ступени одного ключа порога не имеют. Замер прода
+    // 2026-08-02: `952c9b15….JPG` приезжал на w=800 (152 640 B) и через 120 мс на
+    // w=720 (126 194 B), потому что ширина слайда считалась от контейнера, который
+    // между двумя рендерами успевал измениться с 412 на 390.
+    expect(
+      multiRung,
+      `same image file fetched at different width rungs: ${JSON.stringify(multiRung)}`
+    ).toEqual([]);
   });
 
 });
