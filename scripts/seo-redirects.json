@@ -187,7 +187,7 @@
     },
     {
       "from": "rakov-ivenec-zaslavl",
-      "to": "odnodnevnoe-puteshestvie-po-belarusi-rakov-ivenets-iarshevichi-i-zaslavl-marshrut-istoriia-i-chto-posmotret"
+      "to": "rakov-ivenets-i-zaslavl-marshrut-na-den"
     },
     {
       "from": "berlin-poznan-minsk",
@@ -203,7 +203,7 @@
     },
     {
       "from": "smilovichi-dvorec-monyushko-vankovichey",
-      "to": "dvorets-moniushko-vankovichei-v-smilovichakh-istoriia-legendy-i-kak-dobratsia"
+      "to": "dvorets-moniushko-vankovichei-v-smilovichakh-kak-doekhat"
     },
     {
       "from": "narovlya-dvorcovo-parkovyy-kompleks-gorvattov",
@@ -243,7 +243,7 @@
     },
     {
       "from": "pripiat-v-doroshevichakh-gde-naiti-tsar-dub-luchshie-mesta-u-reki-i-otdykh-s-palatkami-v-brestskoi-oblasti",
-      "to": "pripiat-v-doroshevichakh-tsar-dub-luchshie-mesta-u-reki-i-otdykh-s-palatkami-v-gomelskoi-oblasti"
+      "to": "pripiat-v-doroshevichakh-tsar-dub-i-palatki"
     },
     {
       "from": "zhemyslavl-i-dvorets-umiastovskikh-progulka-vo-vremeni",
@@ -287,7 +287,7 @@
     },
     {
       "from": "stankovo-otlichnyy-variant-dlya-progulki-na-vyhodnye-starinnyy-park-s-vekovymi-derevyami",
-      "to": "park-stankovo-pod-minskom-istoriia-usadby-chapskikh-chto-posmotret-legendy-i-kak-dobratsia"
+      "to": "park-stankovo-chto-posmotret-i-kak-doekhat"
     },
     {
       "from": "tserkov-vsekh-sviatykh-begoml",
@@ -380,6 +380,86 @@
     {
       "from": "zamok-ogrodzenec-skalnyy-gorod-podzamche",
       "to": "zamok-ogrodzenets-i-skalnyi-gorod-podzamche"
+    },
+    {
+      "from": "dvorets-moniushko-vankovichei-v-smilovichakh-istoriia-legendy-i-kak-dobratsia",
+      "to": "dvorets-moniushko-vankovichei-v-smilovichakh-kak-doekhat"
+    },
+    {
+      "from": "usadba-trabutishki-i-golubye-ozera-marshrut-zhile-vpechatleniia",
+      "to": "usadba-trabutishki-i-golubye-ozera-marshrut"
+    },
+    {
+      "from": "reka-isloch-otdykh-s-sobakoi-progulki-i-krasivye-mesta-belarusi",
+      "to": "reka-isloch-gde-guliat-i-otdykhat-s-sobakoi"
+    },
+    {
+      "from": "park-stankovo-pod-minskom-istoriia-usadby-chapskikh-chto-posmotret-legendy-i-kak-dobratsia",
+      "to": "park-stankovo-chto-posmotret-i-kak-doekhat"
+    },
+    {
+      "from": "chto-posmotret-riadom-s-krakovom-zamok-tenchin-shakhta-velichka-i-solianoi-zamok-za-odin-den",
+      "to": "chto-posmotret-riadom-s-krakovom-za-odin-den"
+    },
+    {
+      "from": "novaia-zhizn-rodnik-duby-i-zapovednik-elenka-peshii-marshrut-vdol-reki-bobr-pod-krupkami",
+      "to": "peshii-marshrut-vdol-reki-bobr-pod-krupkami"
+    },
+    {
+      "from": "benitsa-zabroshennye-podzemelia-starinnyi-khram-i-mesto-kotoroe-slozhno-zabyt",
+      "to": "benitsa-zabroshennye-podzemelia-i-staryi-khram"
+    },
+    {
+      "from": "3-dnya-v-shklyarska-porembe-zamok-shviny-zamok-v-roztoke-pohod-na-goru-snezhka-i-mnogo-drugoe",
+      "to": "shkliarska-poremba-za-3-dnia-zamki-i-snezhka"
+    },
+    {
+      "from": "den-rozhdeniia-u-istoka-nemana-dendropark-usadba-narkevicha-iodko-i-mesto-sliianiia-chetyrekh-rek",
+      "to": "istok-nemana-dendropark-i-usadba-iodko"
+    },
+    {
+      "from": "tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele",
+      "to": "tropa-vedm-v-gartse-kak-proiti-hexenstieg"
+    },
+    {
+      "from": "pripiat-v-doroshevichakh-tsar-dub-luchshie-mesta-u-reki-i-otdykh-s-palatkami-v-gomelskoi-oblasti",
+      "to": "pripiat-v-doroshevichakh-tsar-dub-i-palatki"
+    },
+    {
+      "from": "vitebsk-za-1-den-chto-posmotret-kuda-skhodit-i-pochemu-etot-gorod-khochetsia-pokazat-druziam-snova-i-snova",
+      "to": "vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit"
+    },
+    {
+      "from": "marshrut-vykhodnogo-dnia-iz-minska-osipovichskaia-ges-svisloch-i-svislochsko-berezinskii-zapovednik",
+      "to": "osipovichskaia-ges-i-svisloch-marshrut-na-den"
+    },
+    {
+      "from": "kostel-vozneseniia-devy-marii-i-khram-sviatogo-mikhaila-zabroshennye-sviatyni-istoriia-legendy-i-marshrut-puteshestviia",
+      "to": "kostel-vozneseniia-i-khram-mikhaila-marshrut"
+    },
+    {
+      "from": "odnodnevnoe-puteshestvie-po-belarusi-rakov-ivenets-iarshevichi-i-zaslavl-marshrut-istoriia-i-chto-posmotret",
+      "to": "rakov-ivenets-i-zaslavl-marshrut-na-den"
+    },
+    {
+      "from": "usadba-reitana-v-grushevke-istoriia-kak-doekhat-chto-posmotret-i-kakie-legendy-khranit-starinnoe-pomeste-belarusi",
+      "to": "usadba-reitana-v-grushevke-kak-doekhat"
+    },
+    {
+      "from": "pochtovaia-stantsiia-1840-goda-v-vitebskoi-oblasti-zabroshennoe-mesto-s-istoriei-legendami-i-atmosferoi-proshlogo",
+      "to": "pochtovaia-stantsiia-1840-goda-pod-vitebskom"
+    },
+    {
+      "from": "park-invald-park-dinozavrov-luna-park-park-miniatyur-zoopark-i-dazhe-svoy-zamok",
+      "to": "park-invald-dinozavry-miniatiury-luna-park"
+    },
+    {
+      "from": "dvorec-adama-hmary-cerkov-svyatogo-nikolaya-cerkov-rozhdestva-presvyatoy-bogorodicy-grebnoy-slalomnyy-kanal",
+      "to": "dvorets-adama-khmary-i-grebnoi-kanal"
+    },
+    {
+      "from": "poezdka-vykhodnogo-dnia-iz-minska-zabroshennyi-lager-zorka-rodnik-na-dnepre-i-kupel-panteleimona",
+      "to": "lager-zorka-i-kupel-poezdka-iz-minska"
     }
   ]
 }

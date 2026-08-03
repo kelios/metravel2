@@ -132,6 +132,28 @@ function readManifest() {
   }
 }
 
+/**
+ * Схлопывает цепочки `A → B → C` в `A → C`.
+ *
+ * Статью, которую уже переименовывали, следующая волна переименовывает снова, и
+ * её прежний редирект начинает указывать на промежуточный slug: пользователь и
+ * краулер проходят два прыжка, а канонический адрес размывается. Одна волна
+ * (#1228) дала две такие пары, следующая (#1229) — ещё четыре, поэтому чистка
+ * встроена в сам добавляющий шаг, а не делается руками после каждого прогона.
+ * Инвариант проверяет тест «never redirects a slug onto itself and never chains».
+ */
+function collapseRedirectChains(redirects) {
+  const byFrom = new Map(redirects.map((r) => [r.from, r]));
+  for (const entry of redirects) {
+    const visited = new Set([entry.from]);
+    while (byFrom.has(entry.to) && !visited.has(entry.to)) {
+      visited.add(entry.to);
+      entry.to = byFrom.get(entry.to).to;
+    }
+  }
+  return redirects;
+}
+
 function appendRedirects(pairs) {
   const manifest = readManifest();
   if (!Array.isArray(manifest.redirects)) manifest.redirects = [];
@@ -141,6 +163,7 @@ function appendRedirects(pairs) {
     manifest.redirects.push({ from, to });
     seen.add(from);
   }
+  manifest.redirects = collapseRedirectChains(manifest.redirects).filter((r) => r.from !== r.to);
   fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
 }
 
