@@ -977,6 +977,32 @@ type ImageDataPlaceholderProps = {
   testID?: string;
 };
 
+/**
+ * Поля letterbox под `contain`-фото заливает `dominant_color` из манифеста
+ * (размытой подложки на web больше нет, см. решение владельца 2026-08-02).
+ * Сплошной цвет читается как второй фон и спорит с поверхностью карточки,
+ * поэтому кладём его полупрозрачным: под ним остаётся сама карточка.
+ */
+const LETTERBOX_FILL_ALPHA = 0.75;
+
+const withLetterboxAlpha = (hexColor: string): string => {
+  const value = hexColor.replace('#', '');
+  // Источник уже задал собственную альфу (#rrggbbaa) — не переопределяем.
+  if (value.length === 8) return hexColor;
+  const full =
+    value.length === 3
+      ? value
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : value;
+  const r = Number.parseInt(full.slice(0, 2), 16);
+  const g = Number.parseInt(full.slice(2, 4), 16);
+  const b = Number.parseInt(full.slice(4, 6), 16);
+  if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return hexColor;
+  return `rgba(${r}, ${g}, ${b}, ${LETTERBOX_FILL_ALPHA})`;
+};
+
 /** Local-only preview layer: blurhash is decoded by expo-image, color by RN/CSS. */
 export function ImageDataPlaceholder({
   blurhash,
@@ -1000,7 +1026,7 @@ export function ImageDataPlaceholder({
       style={[
         StyleSheet.absoluteFill,
         {
-          backgroundColor: normalizedColor || 'transparent',
+          backgroundColor: normalizedColor ? withLetterboxAlpha(normalizedColor) : 'transparent',
           borderRadius,
           overflow: 'hidden',
           pointerEvents: 'none',
