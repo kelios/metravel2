@@ -1,7 +1,7 @@
 import { Article } from '@/types/types';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
-import { unwrapList } from '@/api/clientResponse';
+import { unwrapList, unwrapPaginated } from '@/api/clientResponse';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
@@ -271,18 +271,11 @@ export const fetchArticles = async (
     }
     const result = await safeJsonParse<unknown>(res, []);
 
-    if (Array.isArray(result)) {
-      return { data: result as Article[], total: result.length };
-    }
-
-    if (result && typeof result === 'object') {
-      const rec = result as Record<string, unknown>;
-      const data = Array.isArray(rec.data) ? (rec.data as Article[]) : [];
-      const total = typeof rec.total === 'number' ? rec.total : data.length;
-      return { data, total };
-    }
-
-    return { data: [], total: 0 };
+    // Единый разбор конверта: bare array | `{items|results|data}` со счётчиком
+    // `total`→`count`. Раньше здесь читались только Laravel-ключи `data`/`total`,
+    // и это была последняя точка FE, блокировавшая канонизацию пагинации на бэке.
+    const { items, total } = unwrapPaginated<Article>(result);
+    return { data: items, total };
   } catch (e: unknown) {
     devError('Error fetching Articles:', e);
     if (e instanceof Error && e.name === 'AbortError') {

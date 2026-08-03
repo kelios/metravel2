@@ -34,6 +34,42 @@ describe('fetchArticles', () => {
     );
   });
 
+  // Регресс-страховка для канонизации пагинации на бэке: как только бэк перестанет
+  // дублировать список в legacy-ключ `data`, разбор обязан работать по DRF-конверту.
+  it('parses the canonical DRF envelope without legacy data/total keys', async () => {
+    fetchWithTimeout.mockResolvedValue({ ok: true, status: 200 });
+    safeJsonParse.mockResolvedValue({
+      count: 397,
+      next: 'https://metravel.by/api/articles/?page=2&perPage=20',
+      previous: null,
+      results: [{ id: 1, title: 'A' }],
+    });
+
+    const result = await fetchArticles(0, 20, {});
+    expect(result).toEqual({ data: [{ id: 1, title: 'A' }], total: 397 });
+  });
+
+  it('parses the current dual-shape envelope identically to the DRF one', async () => {
+    fetchWithTimeout.mockResolvedValue({ ok: true, status: 200 });
+    safeJsonParse.mockResolvedValue({
+      total: 397,
+      next_page_url: 'https://metravel.by/api/articles/?page=2&perPage=20',
+      prev_page_url: null,
+      data: [{ id: 1, title: 'A' }],
+      per_page: 20,
+      to: 20,
+      current_page: 1,
+      path: 'https://metravel.by/api/articles/?page=1&perPage=20',
+      count: 397,
+      next: 'https://metravel.by/api/articles/?page=2&perPage=20',
+      previous: null,
+      results: [{ id: 1, title: 'A' }],
+    });
+
+    const result = await fetchArticles(0, 20, {});
+    expect(result).toEqual({ data: [{ id: 1, title: 'A' }], total: 397 });
+  });
+
   it('returns parsed data on success (array response)', async () => {
     fetchWithTimeout.mockResolvedValue({ ok: true, status: 200 });
     safeJsonParse.mockResolvedValue([{ id: 1 }, { id: 2 }]);
