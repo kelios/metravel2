@@ -1,15 +1,17 @@
 const {
   KNOWN_BROKEN_FAMILIES,
-  LARGE_WIDTH,
-  SMALL_WIDTH,
   extractTargetsFromPayloads,
   toLegacyTarget,
   toTargetUrl,
   validateTarget,
+  widthsFor,
   withWidth,
 } = require('@/scripts/post-deploy-media-check')
 
 const SITE = 'https://metravel.by'
+
+/** Ступени теперь свои у каждого семейства; тесты идут по `travel-image`. */
+const { small: SMALL_WIDTH, large: LARGE_WIDTH } = widthsFor('travel-image')
 
 type ProbeOverrides = {
   status?: number

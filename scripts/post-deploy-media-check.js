@@ -40,9 +40,39 @@ const ALLOW_KNOWN_BROKEN = hasFlag('allow-known-broken')
 const INSECURE_TLS =
   hasFlag('insecure') || String(process.env.MEDIA_CHECK_INSECURE || '0') === '1'
 
-/** Ступени, на которых меряем инвариант ресайза. Обе есть в `proxy-contract.widths`. */
-const SMALL_WIDTH = 96
-const LARGE_WIDTH = 1920
+/**
+ * Ступени, на которых меряем инвариант ресайза, — СВОИ у каждого семейства.
+ *
+ * Одной пары на всех быть не может: лестницы в `IMAGE_STORAGE_POLICY_V1`
+ * (`constants/imageContract.ts`) разные, и общей верхней ступени у них нет.
+ * Прежняя фиксированная `LARGE_WIDTH = 1920` после включения
+ * `MEDIA_IMAGE_DERIVATIVE_READ_ENABLED` (#1180) стала спрашивать ширину,
+ * которой нет НИ В ОДНОМ профиле: бэкенд честно отвечает 400 + `text/plain`
+ * (fail-closed вместо тихой подмены мастером, #1201), а гейт считал это тремя
+ * ошибками на ветку и валил каждый деплой — 30 ложных ошибок на прогон.
+ *
+ * `small` — минимальная производная профиля, `large` — максимальная. Мастер
+ * сюда не берём: он раздаётся `no-store` by design, и проверка кэша на нём
+ * даёт ложную ошибку. Таблицу сверяет с контрактом
+ * `__tests__/scripts/postDeployMediaWidths.test.ts` — руками её править нельзя,
+ * только вслед за `IMAGE_STORAGE_POLICY_V1`.
+ */
+const WIDTHS_BY_FAMILY = new Map([
+  ['travel-image', { small: 96, large: 1600 }],
+  ['gallery', { small: 96, large: 1600 }],
+  ['travel-description-image', { small: 320, large: 1600 }],
+  ['address-image', { small: 320, large: 960 }],
+  ['quest-cover', { small: 320, large: 800 }],
+  // Legacy-роут обслуживает conversion-ключи travel-медиа, лестница у него та же.
+  ['media-resize-legacy', { small: 96, large: 1600 }],
+])
+
+/** Ступени по умолчанию — для семейства, которого ещё нет в таблице. */
+const DEFAULT_WIDTHS = { small: 96, large: 800 }
+
+function widthsFor(family) {
+  return WIDTHS_BY_FAMILY.get(family) || DEFAULT_WIDTHS
+}
 
 /**
  * Семейства, про которые уже известно, что они сломаны, — с задачей-владельцем.
@@ -293,6 +323,7 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, quests } = {}
 function validateTarget(target, probes, options = {}) {
   const allowKnownBroken = Boolean(options.allowKnownBroken)
   const knownBroken = KNOWN_BROKEN_FAMILIES.get(target.family)
+  const { small: smallWidth, large: largeWidth } = widthsFor(target.family)
   const issues = []
 
   const add = (code, message) => {
@@ -307,7 +338,7 @@ function validateTarget(target, probes, options = {}) {
   for (const probe of probes) {
     const scope = `[accept=${probe.accept}]`
 
-    for (const [width, response] of [[SMALL_WIDTH, probe.small], [LARGE_WIDTH, probe.large]]) {
+    for (const [width, response] of [[smallWidth, probe.small], [largeWidth, probe.large]]) {
       if (response.status !== 200) {
         add('media.status', `${scope} w=${width}: ожидался HTTP 200, получен ${response.status}`)
       }
@@ -342,12 +373,12 @@ function validateTarget(target, probes, options = {}) {
       if (probe.small.bytes === probe.large.bytes) {
         add(
           'media.width_invariant',
-          `${scope} w=${SMALL_WIDTH} и w=${LARGE_WIDTH} весят одинаково (${probe.small.bytes} B) — ресайз не применяется`
+          `${scope} w=${smallWidth} и w=${largeWidth} весят одинаково (${probe.small.bytes} B) — ресайз не применяется`
         )
       } else if (probe.small.bytes > probe.large.bytes) {
         add(
           'media.width_invariant',
-          `${scope} w=${SMALL_WIDTH} тяжелее w=${LARGE_WIDTH} (${probe.small.bytes} B > ${probe.large.bytes} B) — ступени перепутаны`
+          `${scope} w=${smallWidth} тяжелее w=${largeWidth} (${probe.small.bytes} B > ${probe.large.bytes} B) — ступени перепутаны`
         )
       }
     }
@@ -419,9 +450,10 @@ function printSummary(summary) {
         : '✅'
     if (worst === '✅' && !VERBOSE) continue
     console.log(`\n${worst} ${target.family} — ${target.url}\n   источник: ${target.source}`)
+    const { small: smallWidth, large: largeWidth } = widthsFor(target.family)
     for (const probe of target.probes || []) {
       console.log(
-        `   accept=${probe.accept}: w=${SMALL_WIDTH} ${probe.smallBytes} B · w=${LARGE_WIDTH} ${probe.largeBytes} B` +
+        `   accept=${probe.accept}: w=${smallWidth} ${probe.smallBytes} B · w=${largeWidth} ${probe.largeBytes} B` +
           ` · ${probe.contentType || '(нет)'} · transform: ${probe.transform}`
       )
     }
@@ -452,9 +484,10 @@ async function main() {
     try {
       const probes = []
       for (const variant of ACCEPT_VARIANTS) {
+        const { small: smallWidth, large: largeWidth } = widthsFor(target.family)
         const [small, large] = await Promise.all([
-          fetchMedia(withWidth(target.url, SMALL_WIDTH), variant.header),
-          fetchMedia(withWidth(target.url, LARGE_WIDTH), variant.header),
+          fetchMedia(withWidth(target.url, smallWidth), variant.header),
+          fetchMedia(withWidth(target.url, largeWidth), variant.header),
         ])
         probes.push({ accept: variant.id, small, large })
       }
@@ -500,9 +533,10 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     ACCEPT_VARIANTS,
     BROWSER_IMAGE_ACCEPT,
+    DEFAULT_WIDTHS,
     KNOWN_BROKEN_FAMILIES,
-    LARGE_WIDTH,
-    SMALL_WIDTH,
+    WIDTHS_BY_FAMILY,
+    widthsFor,
     extractTargetsFromPayloads,
     toLegacyTarget,
     toTargetUrl,
