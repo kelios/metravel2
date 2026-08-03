@@ -163,7 +163,7 @@
     },
     {
       "from": "katovice",
-      "to": "katovitse-i-nikishovets-industrialnoe-serdtse-silezii-kotoroe-udivliaet-s-pervogo-vzgliada"
+      "to": "katovitse-i-nikishovets-chto-posmotret-v-silezii"
     },
     {
       "from": "holopenichi",
@@ -207,7 +207,7 @@
     },
     {
       "from": "narovlya-dvorcovo-parkovyy-kompleks-gorvattov",
-      "to": "usadba-gorvattov-v-narovle-istoriia-legendy-foto-i-marshrut-poezdki"
+      "to": "usadba-gorvattov-v-narovle-kak-doekhat"
     },
     {
       "from": "grishany-pochtovaya-stanciya",
@@ -227,7 +227,7 @@
     },
     {
       "from": "zamok-dunaec-i-smotrovaya-bashnya-na-gore-lyuban",
-      "to": "zamok-dunaets-i-smotrovaia-bashnia-na-gore-liuban-marshrut-na-odin-den-iz-krakova"
+      "to": "zamok-dunaets-i-gora-liuban-den-iz-krakova"
     },
     {
       "from": "ruiny-storozhevoy-bashni-v-rychuve-i",
@@ -247,11 +247,11 @@
     },
     {
       "from": "zhemyslavl-i-dvorets-umiastovskikh-progulka-vo-vremeni",
-      "to": "zhemyslavl-i-dvorets-umiastovskikh-zabroshennaia-usadba-belarusi-istoriia-legendy-i-marshrut-iz-minska"
+      "to": "zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska"
     },
     {
       "from": "zhemyslavl-i-dvorets-umiastovskikh-progulka-vo-vremeni-1",
-      "to": "zhemyslavl-i-dvorets-umiastovskikh-zabroshennaia-usadba-belarusi-istoriia-legendy-i-marshrut-iz-minska"
+      "to": "zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska"
     },
     {
       "from": "ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh",
@@ -291,7 +291,7 @@
     },
     {
       "from": "tserkov-vsekh-sviatykh-begoml",
-      "to": "zabroshennaia-pravoslavnaia-tserkov-v-begomle-istoriia-legendy-i-marshrut-dlia-puteshestviia"
+      "to": "zabroshennaia-tserkov-v-begomle-kak-doekhat"
     },
     {
       "from": "dvorec-puslovskih-v-kossovo-i-dvorcovyy-kompleks-v-ruzhanah",
@@ -460,6 +460,86 @@
     {
       "from": "poezdka-vykhodnogo-dnia-iz-minska-zabroshennyi-lager-zorka-rodnik-na-dnepre-i-kupel-panteleimona",
       "to": "lager-zorka-i-kupel-poezdka-iz-minska"
+    },
+    {
+      "from": "kholopenichi-ruiny-sviato-uspenskoi-tserkvi-pamiatnik-otmene-krepostnogo-prava-i-tikhie-ulitsy-zabroshennoi-derevni",
+      "to": "kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia"
+    },
+    {
+      "from": "zamki-nizhney-silezii-zamok-choha-dvorec-v-kostelnikah-gurne-zamok-grodzec",
+      "to": "zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki"
+    },
+    {
+      "from": "zhemyslavl-i-dvorets-umiastovskikh-zabroshennaia-usadba-belarusi-istoriia-legendy-i-marshrut-iz-minska",
+      "to": "zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska"
+    },
+    {
+      "from": "zamok-v-dobchice-i-smotrovaya-bashnya-v-gorce",
+      "to": "dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut"
+    },
+    {
+      "from": "zamok-dunaets-i-smotrovaia-bashnia-na-gore-liuban-marshrut-na-odin-den-iz-krakova",
+      "to": "zamok-dunaets-i-gora-liuban-den-iz-krakova"
+    },
+    {
+      "from": "usadba-gorvattov-v-narovle-istoriia-legendy-foto-i-marshrut-poezdki",
+      "to": "usadba-gorvattov-v-narovle-kak-doekhat"
+    },
+    {
+      "from": "park-sverklanets-progulka-po-ruinam-zamka-dvortsam-i-bunkeram",
+      "to": "park-sverklanets-ruiny-zamka-dvortsy-i-bunkery"
+    },
+    {
+      "from": "svadebnoe-puteshestvie-po-belarusi-baranovichi-kossovo-i-ruzhany-za-2-dnia",
+      "to": "baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia"
+    },
+    {
+      "from": "dvorec-dembinskih-rycarskiy-zamok-v-sobkove-hencinskiy-zamok-dvorec-tarlov",
+      "to": "khentsinskii-zamok-i-dvorets-dembinskikh-marshrut"
+    },
+    {
+      "from": "30-let-vmeste-semeinyi-uikend-v-usadbe-asavy-i-progulka-po-sledam-domeiko",
+      "to": "usadba-asavy-i-sledy-domeiko-uikend-v-belarusi"
+    },
+    {
+      "from": "kostel-v-selishche-i-memorial-proryv-atmosfernoe-puteshestvie-po-vitebskoi-oblasti",
+      "to": "kostel-v-selishche-i-memorial-proryv-marshrut"
+    },
+    {
+      "from": "zamki-polshi-dvorec-v-chervencicah",
+      "to": "dvortsy-silezii-cherventsitse-slavikov-tvorkuv"
+    },
+    {
+      "from": "rodnik-v-derevne-chernaia-i-otdykh-u-dnepra-atmosfernoe-puteshestvie-po-rechitskomu-raionu",
+      "to": "rodnik-v-chernoi-i-otdykh-u-dnepra-pod-rechitsei"
+    },
+    {
+      "from": "zabroshennaia-pravoslavnaia-tserkov-v-begomle-istoriia-legendy-i-marshrut-dlia-puteshestviia",
+      "to": "zabroshennaia-tserkov-v-begomle-kak-doekhat"
+    },
+    {
+      "from": "katovitse-i-nikishovets-industrialnoe-serdtse-silezii-kotoroe-udivliaet-s-pervogo-vzgliada",
+      "to": "katovitse-i-nikishovets-chto-posmotret-v-silezii"
+    },
+    {
+      "from": "dvorec-moesa-v-verbke-zamok-pilcha-i-smolenskiy-zapovednik",
+      "to": "dvorets-moesa-v-verbke-i-zamok-pilcha-marshrut"
+    },
+    {
+      "from": "zamok-chhuv-zamok-tropshtyn-zamok-v-novy-sonche-vezha-v-krynicezdroy",
+      "to": "zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch"
+    },
+    {
+      "from": "liniia-stalina-istoriia-kak-doekhat-chto-posmotret-i-kakie-tainy-khranit-muzei",
+      "to": "liniia-stalina-chto-posmotret-i-kak-doekhat"
+    },
+    {
+      "from": "zimnee-puteshestvie-po-polshe-germanii-chekhii-i-avstrii-nash-marshrut",
+      "to": "zimnii-marshrut-polsha-germaniia-chekhiia-avstriia"
+    },
+    {
+      "from": "barselona-i-park-razvlecheniy-port-aventura-v-mae",
+      "to": "barselona-portaventura-i-ferrari-land-v-mae"
     }
   ]
 }
