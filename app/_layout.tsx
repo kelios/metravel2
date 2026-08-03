@@ -564,7 +564,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         height: '100%',
         // Единая подложка всех экранов: текстура должна читаться как бумага,
         // а не как картинка — поэтому сильно ослаблена.
-        opacity: 0.12,
+        opacity: 0.6,
         pointerEvents: 'none',
         ...(Platform.OS === 'web'
           ? ({
