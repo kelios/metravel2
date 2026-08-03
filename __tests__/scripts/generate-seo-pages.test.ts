@@ -86,6 +86,14 @@ const SAMPLE_META = {
   ogType: 'article',
 };
 
+/**
+ * #1221: `injectMeta` сам добивает ширину ownership-URL. «Голый» адрес отдаёт мастер
+ * с `no-store` — ownership-роуты идут мимо кэша nginx, и кэшируемым ответ делает
+ * только ширина. Для семейства `gallery` ступень превью — 1280
+ * (`socialPreviewWidthForRoute`, сверяется `socialPreviewWidthParity.test.ts`).
+ */
+const SAMPLE_META_IMAGE_RENDERED = `${SAMPLE_META.image}?w=1280`;
+
 // ---------------------------------------------------------------------------
 // replaceOrInsert
 // ---------------------------------------------------------------------------
@@ -257,8 +265,10 @@ describe('injectMeta (insert mode — tags missing from base HTML)', () => {
     expect(result).toMatch(/<meta[^>]*property="og:url"[^>]*content="https:\/\/metravel\.by\/travels\/albaniya"/);
   });
 
-  it('inserts og:image with HD URL', () => {
-    expect(result).toMatch(/<meta[^>]*property="og:image"[^>]*content="https:\/\/metravel\.by\/gallery\/123\/photo-detail_hd\.jpg"/);
+  // #1221: ширина обязательна. Без неё ownership-роут отдаёт мастер с `no-store`
+  // (ownership-роуты идут мимо кэша nginx), и каждый обход краулера стоит 0.4–1 МБ.
+  it('inserts og:image with HD URL pinned to a stored-derivative width', () => {
+    expect(result).toMatch(/<meta[^>]*property="og:image"[^>]*content="https:\/\/metravel\.by\/gallery\/123\/photo-detail_hd\.jpg\?w=1280"/);
   });
 
   it('inserts og:site_name', () => {
@@ -330,7 +340,7 @@ describe('injectMeta (replace mode — tags exist in base HTML)', () => {
   });
 
   it('replaces og:image with new image', () => {
-    expect(result).toContain(`content="${SAMPLE_META.image}"`);
+    expect(result).toContain(`content="${SAMPLE_META_IMAGE_RENDERED}"`);
     expect(result).not.toContain('content="https://metravel.by/old.jpg"');
   });
 
@@ -348,7 +358,7 @@ describe('injectMeta (replace mode — tags exist in base HTML)', () => {
 
   it('syncs og:image:secure_url with the per-page image (not the shell logo)', () => {
     expect(result).toContain(
-      `property="og:image:secure_url" content="${SAMPLE_META.image}"`
+      `property="og:image:secure_url" content="${SAMPLE_META_IMAGE_RENDERED}"`
     );
     expect(result).not.toMatch(
       /property="og:image:secure_url" content="[^"]*logo_yellow/
@@ -384,7 +394,7 @@ describe('injectMeta edge cases', () => {
     const ogImageCount = (result.match(/property="og:image"/g) || []).length;
 
     expect(ogImageCount).toBe(1);
-    expect(result).toContain(`property="og:image" content="${SAMPLE_META.image}"`);
+    expect(result).toContain(`property="og:image" content="${SAMPLE_META_IMAGE_RENDERED}"`);
     expect(result).not.toContain('old-duplicate.jpg');
   });
 

@@ -1,6 +1,7 @@
 import type { Travel } from '@/types/types';
 import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
 import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, normalizeSeoLead } from '@/utils/seoText'
+import { normalizeOgImageUrl } from '@/utils/seo'
 
 
 const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');

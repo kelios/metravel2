@@ -242,6 +242,47 @@ function toLegacyConversionPathname(pathname) {
   return `/media-resize/legacy/${match[1]}`;
 }
 
+/**
+ * Зеркало `socialPreviewWidthForRoute` из `constants/imageContract.ts`: ступень
+ * производной для og:image по семейству. Сверяется тестом
+ * `__tests__/scripts/socialPreviewWidthParity.test.ts` — руками не править, только
+ * вслед за `IMAGE_STORAGE_POLICY_V1`.
+ */
+const SOCIAL_PREVIEW_WIDTH_BY_ROUTE = new Map([
+  ['avatar', 160],
+  ['badge-image', 160],
+  ['quest-cover', 800],
+  ['address-image', 960],
+  ['quest-step-image', 800],
+  ['quest-poster', 800],
+  ['trip-cover', 960],
+  ['travel-image', 1280],
+  ['gallery', 1280],
+  ['travel-description-image', 960],
+]);
+
+/**
+ * #1221: соцпревью просили картинку «голым» адресом, без `?w=`, и получали МАСТЕР
+ * с `no-store` — по 0.4–1 МБ на каждый обход краулера и каждый шеринг. Ownership-роуты
+ * идут мимо кэша nginx (`X-Cache-Status: BYPASS`), поэтому кэшируемым такой ответ
+ * делает только ширина в URL. Ступень берётся из контракта семейства: ширину вне
+ * `derivatives` спрашивать нельзя — чтение fail-closed и отвечает 400 (#1224).
+ */
+function withSocialPreviewWidth(absoluteUrl) {
+  if (!absoluteUrl) return absoluteUrl;
+  try {
+    const url = new URL(absoluteUrl);
+    if (url.searchParams.has('w')) return absoluteUrl;
+    const route = /^\/([a-z-]+)\//i.exec(url.pathname)?.[1];
+    const width = route ? SOCIAL_PREVIEW_WIDTH_BY_ROUTE.get(route) : null;
+    if (!width) return absoluteUrl;
+    url.searchParams.set('w', String(width));
+    return url.toString();
+  } catch {
+    return absoluteUrl;
+  }
+}
+
 /** Тот же rewrite для готового абсолютного URL; чужой origin не трогаем. */
 function toLegacyConversionUrl(absoluteUrl) {
   try {
@@ -1008,6 +1049,9 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
   );
 
   // --- og:image ---
+  // #1221: ширину ставим здесь, в единственной точке вставки, чтобы её нельзя было
+  // забыть ни на одном из пяти вызовов injectMeta (город, маршрут, travel, квест, статья).
+  image = withSocialPreviewWidth(image);
   if (image) {
     html = replaceOrInsert(
       html,

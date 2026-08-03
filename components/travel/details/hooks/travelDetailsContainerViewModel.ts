@@ -1,5 +1,5 @@
 import { Platform } from 'react-native'
-import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
+import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, normalizeOgImageUrl } from '@/utils/seo'
 import {
   buildTravelSeoFallbackDescription,
   buildTravelSeoTitle,
@@ -43,11 +43,12 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
       ? rawFirst
       : rawFirst.url
     : undefined
-  const absImage = firstUrl
-    ? firstUrl.startsWith('http')
-      ? firstUrl.replace(/^http:\/\//, 'https://')
-      : buildOgImageUrl(firstUrl)
-    : buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)
+  // #1221: своя нормализация здесь делала ровно половину работы — поднимала до https,
+  // но оставляла ownership-URL без `?w=`, и рантайм-патч головы (`useTravelDetailsHeadSync`)
+  // перебивал шириной снабжённый SSG-тег «голым» адресом, то есть мастером с `no-store`.
+  // Общая `normalizeOgImageUrl` делает и абсолютный https, и ступень производной.
+  const absImage =
+    normalizeOgImageUrl(firstUrl) ?? (normalizeOgImageUrl(DEFAULT_OG_IMAGE_PATH) as string)
 
   return {
     canonicalUrl: canonical,
