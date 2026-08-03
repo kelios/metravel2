@@ -21,7 +21,7 @@ const viewports = [
 ] as const
 
 for (const viewport of viewports) {
-  test(`#1127 ${viewport.name}: blurhash placeholder is local and suppresses LQIP fetch`, async ({
+  test(`#1127 ${viewport.name}: local hero placeholder is data-only and suppresses LQIP fetch`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
@@ -92,19 +92,17 @@ for (const viewport of viewports) {
       })
 
       const details = page.locator('[data-testid="travel-details-page"]')
-      const localPlaceholder = page.locator('[data-hero-data-placeholder="true"]')
+      const localPlaceholder = page.locator('[data-hero-data-placeholder="true"]').first()
+      const placeholderLayer = page.getByTestId('travel-hero-data-placeholder')
       await expect(details).toBeVisible()
       await expect(localPlaceholder).toBeVisible()
-      await expect
-        .poll(
-          () =>
-            localPlaceholder.evaluate((placeholder) => {
-              const image = placeholder.querySelector('img')
-              return Boolean(image?.complete && image.naturalWidth > 0)
-            }),
-          { timeout: 15_000 },
-        )
-        .toBe(true)
+      // Owner decision 2026-08-02 (#1208, docs/RULES.md): на web один снимок —
+      // один растр. Подложка letterbox — это `dominant_color` из манифеста, а не
+      // декодированный blurhash и не сетевой LQIP; blur-слой остался только на
+      // native. Поэтому локальность подложки проверяем по заливке цветом и по
+      // отсутствию второго растра, а не по загрузившемуся <img>.
+      await expect(placeholderLayer).toHaveCSS('background-color', 'rgba(52, 86, 120, 0.75)')
+      await expect(localPlaceholder.locator('img')).toHaveCount(0)
       await expect(page.getByTestId('travel-details-skeleton-overlay')).toHaveCSS(
         'opacity',
         '0',
@@ -113,14 +111,16 @@ for (const viewport of viewports) {
       await expect(sharpImage).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
       await expect
         .poll(() =>
-          localPlaceholder.evaluate((placeholder) => {
-            const image = placeholder.querySelector('img')
-            if (!image) return false
-            const placeholderBounds = placeholder.getBoundingClientRect()
-            const imageBounds = image.getBoundingClientRect()
+          placeholderLayer.evaluate((layer) => {
+            const host = layer.parentElement
+            if (!host) return false
+            const hostBounds = host.getBoundingClientRect()
+            const layerBounds = layer.getBoundingClientRect()
             return (
-              Math.abs(placeholderBounds.width - imageBounds.width) < 1 &&
-              Math.abs(placeholderBounds.height - imageBounds.height) < 1
+              hostBounds.width > 0 &&
+              hostBounds.height > 0 &&
+              Math.abs(hostBounds.width - layerBounds.width) < 1 &&
+              Math.abs(hostBounds.height - layerBounds.height) < 1
             )
           }),
         )

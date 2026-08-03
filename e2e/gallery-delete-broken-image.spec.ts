@@ -71,10 +71,13 @@ test.describe('Gallery: delete broken image (404)', () => {
     );
 
     // Ensure the image request fails fast with 404.
-    await page.route('**/gallery/3796/conversions/404.jpg**', async (route) => {
+    // Legacy-ключ `<id>/conversions/<file>` переписывается в первопартийный
+    // `/media-resize/legacy/<key>?w=…` (utils/mediaUrl.ts), поэтому мокаем по
+    // хвосту ключа — он одинаков до и после переписывания.
+    await page.route('**/3796/conversions/404.jpg**', async (route) => {
       await route.fulfill({ status: 404, body: '' });
     });
-    await page.route('**/gallery/3797/conversions/ok.svg**', async (route) => {
+    await page.route('**/3797/conversions/ok.svg**', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'image/svg+xml',

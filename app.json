@@ -3,7 +3,7 @@
     "owner": "savran.juli",
     "name": "metravel",
     "slug": "metravel",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "metravel",
@@ -42,7 +42,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "by.metravel.app",
-      "versionCode": 19,
+      "versionCode": 20,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
