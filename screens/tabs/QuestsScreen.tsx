@@ -17,11 +17,11 @@ import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
+import { useQuestsList } from '@/hooks/useQuestsApi';
 import QuestsContentPanel from './QuestsContentPanel';
 import QuestsSidebar from './QuestsSidebar';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
-import type { City, NearbyCity, QuestMeta } from './questsShared';
+import type { QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 import { getStyles } from './QuestsScreen.styles';
 import {
@@ -41,6 +41,7 @@ import {
     loadExpoLocation,
     resolveQuestMapCenter,
     resolveStoredQuestCatalogSelection,
+    type QuestCatalogCity,
     type QuestMapArea,
     type MapPoint,
 } from './QuestsScreen.helpers';
@@ -73,29 +74,10 @@ export default function QuestsScreen() {
 
     // API data
     const { quests: ALL_QUESTS, loading: questsLoading } = useQuestsList();
-    const { cities: apiCities, loading: citiesLoading } = useQuestCities();
-    const dataLoaded = !questsLoading && !citiesLoading;
-    const cityCountryMetaById = useMemo(() => {
-        const meta: Record<string, { countryCode?: string }> = {};
-        for (const quest of ALL_QUESTS) {
-            if (!quest.cityId || meta[quest.cityId]?.countryCode) continue;
-            meta[quest.cityId] = {
-                countryCode: quest.countryCode,
-            };
-        }
-        return meta;
-    }, [ALL_QUESTS]);
-
-    const rawCities = useMemo<City[]>(() => apiCities.map(c => ({
-        id: c.id,
-        name: c.name,
-        lat: c.lat,
-        lng: c.lng,
-        countryCode: cityCountryMetaById[c.id]?.countryCode || c.countryCode,
-    })), [apiCities, cityCountryMetaById]);
+    const dataLoaded = !questsLoading;
     const cityCatalog = useMemo(
-        () => buildQuestCityCatalog<City, QuestMeta>(rawCities, ALL_QUESTS),
-        [ALL_QUESTS, rawCities],
+        () => buildQuestCityCatalog<QuestMeta>(ALL_QUESTS),
+        [ALL_QUESTS],
     );
     const CITIES = cityCatalog.cities;
     const cityQuests = cityCatalog.questsByCityId;
@@ -293,46 +275,30 @@ export default function QuestsScreen() {
     // Велоквесты (тег `bike`) — такой же дополнительный срез каталога.
     const bikeQuests = useMemo(() => filterBikeQuests(ALL_QUESTS), [ALL_QUESTS]);
 
-    const citiesWithNearby: (City | NearbyCity)[] = useMemo(
-        () => [{ id: NEARBY_ID, name: i18nT('quests:screens.tabs.QuestsScreen.ryadom_a27f6fda'), country: 'BY', isNearby: true } as NearbyCity, ...CITIES],
-        [CITIES],
-    );
-
-    const filteredCities = useMemo(() => {
-        return citiesWithNearby;
-    }, [citiesWithNearby]);
-
     const nearbyCount = useMemo(() => {
         if (!userLoc || !ALL_QUESTS.length) return null;
         return filterNearbyQuests(ALL_QUESTS, userLoc, nearbyRadiusKm).length;
     }, [userLoc, nearbyRadiusKm, ALL_QUESTS]);
 
+    // Каталог собран из самих квестов, поэтому у каждого города счётчик заведомо
+    // больше нуля — отдельный отсев «городов без квестов» больше не нужен.
     const cityQuestCountById = useMemo(() => {
         const counts: Record<string, number> = {};
-        for (const city of citiesWithNearby) {
-            if (city.id === NEARBY_ID) {
-                if (nearbyCount != null) counts[city.id] = nearbyCount;
-            } else {
-                counts[city.id] = cityQuests[city.id]?.length || 0;
-            }
+        for (const city of CITIES) {
+            counts[city.id] = cityQuests[city.id]?.length || 0;
         }
+        if (nearbyCount != null) counts[NEARBY_ID] = nearbyCount;
         counts[KIDS_FILTER_ID] = kidsQuests.length;
         counts[BIKE_FILTER_ID] = bikeQuests.length;
         return counts;
-    }, [citiesWithNearby, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length]);
-
-    // Filter to show only cities with quests (plus Nearby always visible)
-    const visibleCities = useMemo(() => {
-        return filteredCities.filter((c) => c.id === NEARBY_ID || cityQuestCountById[c.id] > 0);
-    }, [filteredCities, cityQuestCountById]);
+    }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length]);
 
     // Group cities by country
     const citiesByCountry = useMemo(() => {
         const collator = createCollator();
-        const groups: Record<string, (City | NearbyCity)[]> = {};
-        for (const city of visibleCities) {
-            if (city.id === NEARBY_ID) continue; // Nearby handled separately
-            const code = (city as City).countryCode || 'OTHER';
+        const groups: Record<string, QuestCatalogCity[]> = {};
+        for (const city of CITIES) {
+            const code = city.countryCode || 'OTHER';
             (groups[code] ||= []).push(city);
         }
         // Sort countries: BY first, then alphabetically, OTHER last
@@ -348,7 +314,7 @@ export default function QuestsScreen() {
             name: code === 'OTHER' ? '' : getQuestCountryName(code),
             cities: groups[code].slice().sort((a, b) => collator.compare(a.name, b.name)),
         }));
-    }, [visibleCities]);
+    }, [CITIES]);
 
     useEffect(() => {
         setCollapsedCountryCodes((prev) => {

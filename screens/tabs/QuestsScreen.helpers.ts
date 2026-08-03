@@ -122,51 +122,96 @@ export function filterBikeQuests<T extends { tags?: string[] | null }>(quests: T
     return quests.filter((quest) => isBikeQuest(quest.tags));
 }
 
-export function buildQuestCityCatalog<
-    TCity extends { id: string; name: string; countryCode?: string },
-    TQuest extends { cityId?: string | null; cityName?: string | null; countryCode?: string | null },
->(cities: TCity[], quests: TQuest[]): {
-    cities: TCity[];
+export type QuestCatalogCity = {
+    id: string;
+    name: string;
+    countryCode?: string;
+    lat?: number;
+    lng?: number;
+};
+
+type QuestCatalogQuest = {
+    cityId?: string | null;
+    cityName?: string | null;
+    countryCode?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+};
+
+/**
+ * \u041a\u0430\u0442\u0430\u043b\u043e\u0433 \u0433\u043e\u0440\u043e\u0434\u043e\u0432 \u0441\u0442\u0440\u043e\u0438\u0442\u0441\u044f \u0438\u0437 \u0443\u0436\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d\u043d\u043e\u0433\u043e \u0441\u043f\u0438\u0441\u043a\u0430 \u043a\u0432\u0435\u0441\u0442\u043e\u0432 (#1241): \u043c\u0435\u0442\u0430
+ * \u043a\u0430\u0436\u0434\u043e\u0433\u043e \u043a\u0432\u0435\u0441\u0442\u0430 \u043d\u0435\u0441\u0451\u0442 city_id/city_name/country_code \u0438 \u043a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442\u044b \u0441\u0442\u0430\u0440\u0442\u0430, \u0430
+ * \u0433\u043e\u0440\u043e\u0434\u0430 \u0431\u0435\u0437 \u043a\u0432\u0435\u0441\u0442\u043e\u0432 \u044d\u043a\u0440\u0430\u043d \u0432\u0441\u0451 \u0440\u0430\u0432\u043d\u043e \u0441\u043a\u0440\u044b\u0432\u0430\u043b \u2014 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u0439 \u0437\u0430\u043f\u0440\u043e\u0441
+ * `/quests/cities/` \u043d\u0438\u0447\u0435\u0433\u043e \u043a \u0432\u044b\u0434\u0430\u0447\u0435 \u043d\u0435 \u0434\u043e\u0431\u0430\u0432\u043b\u044f\u043b.
+ *
+ * \u0414\u0443\u0431\u043b\u0438 \u0433\u043e\u0440\u043e\u0434\u0430 (\u043e\u0434\u043d\u043e \u0438 \u0442\u043e \u0436\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043f\u043e\u0434 \u0440\u0430\u0437\u043d\u044b\u043c\u0438 id \u0431\u044d\u043a\u0435\u043d\u0434\u0430, \u043d\u0430\u043f\u0440. \u00ab\u0413\u043e\u043c\u0435\u043b\u044c\u00bb
+ * 92 \u0438 19) \u0441\u043a\u043b\u0435\u0438\u0432\u0430\u044e\u0442\u0441\u044f \u0432 \u043a\u0430\u043d\u043e\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 id, \u0447\u0442\u043e\u0431\u044b \u0432 \u0441\u043f\u0438\u0441\u043a\u0435 \u043d\u0435 \u0431\u044b\u043b\u043e \u0434\u0432\u0443\u0445 \u0447\u0438\u043f\u043e\u0432
+ * \u043e\u0434\u043d\u043e\u0433\u043e \u0433\u043e\u0440\u043e\u0434\u0430. \u041a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442\u0430 \u0433\u043e\u0440\u043e\u0434\u0430 \u2014 \u0446\u0435\u043d\u0442\u0440\u043e\u0438\u0434 \u0441\u0442\u0430\u0440\u0442\u043e\u0432 \u0435\u0433\u043e \u043a\u0432\u0435\u0441\u0442\u043e\u0432: \u043a\u0430\u0440\u0442\u0430
+ * \u0446\u0435\u043d\u0442\u0440\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u043f\u043e \u0442\u043e\u043c\u0443, \u0447\u0442\u043e \u0440\u0435\u0430\u043b\u044c\u043d\u043e \u043f\u043e\u043a\u0430\u0437\u0430\u043d\u043e, \u0430 \u043d\u0435 \u043f\u043e \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u0438\u0432\u043d\u043e\u043c\u0443 \u0446\u0435\u043d\u0442\u0440\u0443.
+ */
+export function buildQuestCityCatalog<TQuest extends QuestCatalogQuest>(quests: TQuest[]): {
+    cities: QuestCatalogCity[];
     questsByCityId: Record<string, TQuest[]>;
     canonicalCityIdById: Record<string, string>;
 } {
-    const questByCityId = new Map<string, TQuest>();
-    for (const quest of quests) {
-        if (quest.cityId && !questByCityId.has(quest.cityId)) {
-            questByCityId.set(quest.cityId, quest);
-        }
-    }
-
     const canonicalCityIdByGroup = new Map<string, string>();
     const canonicalCityIdById: Record<string, string> = {};
-    const mergedCities: TCity[] = [];
+    const questsByCityId: Record<string, TQuest[]> = {};
+    const cities: QuestCatalogCity[] = [];
+    const cityByCanonicalId = new Map<string, QuestCatalogCity>();
+    const coordSumByCanonicalId = new Map<string, { lat: number; lng: number; count: number }>();
 
-    for (const city of cities) {
-        const questMeta = questByCityId.get(city.id);
-        const normalizedName = (city.name || questMeta?.cityName || '')
-            .trim()
-            .toLowerCase()
-            .replace(/\u0451/g, String.fromCodePoint(0x435))
-            .replace(/\s+/g, ' ');
-        const countryCode = (city.countryCode || questMeta?.countryCode || '').trim().toUpperCase();
-        const groupKey = normalizedName ? `${countryCode}:${normalizedName}` : `id:${city.id}`;
-        const canonicalId = canonicalCityIdByGroup.get(groupKey) || city.id;
+    for (const quest of quests) {
+        if (!quest.cityId) continue;
+        const cityId = quest.cityId;
+        const name = (quest.cityName || '').trim();
+        const countryCode = (quest.countryCode || '').trim().toUpperCase();
 
-        canonicalCityIdById[city.id] = canonicalId;
-        if (!canonicalCityIdByGroup.has(groupKey)) {
+        let canonicalId = canonicalCityIdById[cityId];
+        if (!canonicalId) {
+            const normalizedName = name
+                .toLowerCase()
+                .replace(/\u0451/g, String.fromCodePoint(0x435))
+                .replace(/\s+/g, ' ');
+            const groupKey = normalizedName ? `${countryCode}:${normalizedName}` : `id:${cityId}`;
+            canonicalId = canonicalCityIdByGroup.get(groupKey) || cityId;
             canonicalCityIdByGroup.set(groupKey, canonicalId);
-            mergedCities.push(city);
+            canonicalCityIdById[cityId] = canonicalId;
+        }
+
+        const city = cityByCanonicalId.get(canonicalId);
+        if (!city) {
+            const created: QuestCatalogCity = { id: canonicalId, name, countryCode: countryCode || undefined };
+            cityByCanonicalId.set(canonicalId, created);
+            cities.push(created);
+        } else {
+            // \u041f\u0435\u0440\u0432\u044b\u0439 \u043d\u0435\u043f\u0443\u0441\u0442\u043e\u0439 \u0430\u0442\u0440\u0438\u0431\u0443\u0442 \u0432\u044b\u0438\u0433\u0440\u044b\u0432\u0430\u0435\u0442: \u0447\u0430\u0441\u0442\u044c \u043a\u0432\u0435\u0441\u0442\u043e\u0432 \u043c\u043e\u0436\u0435\u0442 \u043f\u0440\u0438\u0439\u0442\u0438 \u0431\u0435\u0437
+            // \u0438\u043c\u0435\u043d\u0438 \u0433\u043e\u0440\u043e\u0434\u0430 \u0438\u043b\u0438 \u043a\u043e\u0434\u0430 \u0441\u0442\u0440\u0430\u043d\u044b, \u0438 \u0447\u0438\u043f \u043d\u0435 \u0434\u043e\u043b\u0436\u0435\u043d \u0438\u0437-\u0437\u0430 \u044d\u0442\u043e\u0433\u043e \u043e\u043f\u0443\u0441\u0442\u0435\u0442\u044c.
+            if (!city.name && name) city.name = name;
+            if (!city.countryCode && countryCode) city.countryCode = countryCode;
+        }
+
+        (questsByCityId[canonicalId] ||= []).push(quest);
+
+        const lat = Number(quest.lat);
+        const lng = Number(quest.lng);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            const sum = coordSumByCanonicalId.get(canonicalId) || { lat: 0, lng: 0, count: 0 };
+            sum.lat += lat;
+            sum.lng += lng;
+            sum.count += 1;
+            coordSumByCanonicalId.set(canonicalId, sum);
         }
     }
 
-    const questsByCityId: Record<string, TQuest[]> = {};
-    for (const quest of quests) {
-        if (!quest.cityId) continue;
-        const canonicalId = canonicalCityIdById[quest.cityId] || quest.cityId;
-        (questsByCityId[canonicalId] ||= []).push(quest);
+    for (const city of cities) {
+        const sum = coordSumByCanonicalId.get(city.id);
+        if (!sum) continue;
+        city.lat = sum.lat / sum.count;
+        city.lng = sum.lng / sum.count;
     }
 
-    return { cities: mergedCities, questsByCityId, canonicalCityIdById };
+    return { cities, questsByCityId, canonicalCityIdById };
 }
 
 export type MapPoint = {

@@ -23,6 +23,7 @@ const isWeb = Platform.OS === "web";
 const RootContainerView: React.ComponentType<any> = View;
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
+import { shouldPrefetchTravelStatics } from "@/utils/staticPrefetchRoutes";
 import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
@@ -215,22 +216,17 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       },
       [effectivePathname]
     );
-    const isTravelPerformanceRoute = useMemo(
-      () => typeof effectivePathname === 'string' && effectivePathname.startsWith('/travels/'),
-      [effectivePathname]
-    );
-
     // ✅ FIX: Создаем queryClient внутри компонента для избежания проблем с SSR/гидрацией
     //
     // NOTE: enableStaticPrefetch is a one-shot flag — createOptimizedQueryClient()
     // consumes it synchronously at creation time and schedules a single idle-time
     // static prefetch (filters/countries) for the QueryClient's whole lifetime.
-    // It is NOT a per-route toggle, so freezing it under the initial route here is
-    // harmless: it only decides whether that single startup prefetch runs, and on a
-    // travel-detail entry route we (correctly) skip the static prefetch once.
-    // Reading isTravelPerformanceRoute dynamically would not change behavior unless
-    // the util were refactored to re-evaluate prefetch per navigation (a getter/ref
-    // contract change), which is out of scope for this bootstrap fix.
+    // It is NOT a per-route toggle, so it is decided once, under the entry route:
+    // only the routes that actually read those two query keys warm them up (see
+    // shouldPrefetchTravelStatics). Everything else — /quests, /map, articles,
+    // profile — used to pay ~25 KB for dictionaries it never reads. On a client-side
+    // navigation INTO the wizard or the roulette the data is not pre-warmed; those
+    // screens request it on demand through the very same query keys.
     const [queryClient] = useState(() => {
       const client = createOptimizedQueryClient(
         {
@@ -239,7 +235,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
           },
         },
         {
-          enableStaticPrefetch: !isTravelPerformanceRoute,
+          enableStaticPrefetch: shouldPrefetchTravelStatics(effectivePathname),
         }
       );
       // Expose the mounted client to non-hook code (authStore boot) so the

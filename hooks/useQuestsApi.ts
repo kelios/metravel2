@@ -9,7 +9,6 @@ import {
     fetchQuestsList,
     fetchQuestsPreview,
     fetchQuestByQuestId,
-    fetchQuestCities,
     fetchOrCreateProgress,
     fetchQuestReviews,
     updateProgress as apiUpdateProgress,
@@ -19,7 +18,6 @@ import { queryKeys } from '@/api/queryKeys';
 import {
     adaptMeta,
     adaptBundle,
-    normalizeQuestCountryCode,
 } from '@/utils/questAdapters';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import {
@@ -132,49 +130,6 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
     if (error) devWarn('Failed to load quests preview:', errorMessage);
 
     return { quests, loading: enabled && isPending, error: errorMessage };
-}
-
-/** Хук для загрузки городов с квестами */
-export function useQuestCities() {
-    const [cities, setCities] = useState<Array<{ id: string; name: string; lat: number; lng: number; countryCode?: string }>>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let cancelled = false;
-        const loadCities = async () => {
-            setLoading(true);
-            try {
-                const data = await fetchQuestCities();
-                if (cancelled) return;
-
-                const safeCities = Array.isArray(data) ? data : [];
-                setCities(safeCities.map(c => {
-                    const lat = parseFloat(String(c.lat));
-                    const lng = parseFloat(String(c.lng));
-                    const countryCode = normalizeQuestCountryCode(c.country_code, lat, lng);
-
-                    return {
-                        id: String(c.id),
-                        name: c.name || '',
-                        lat,
-                        lng,
-                        countryCode,
-                    };
-                }));
-            } catch (err: unknown) {
-                if (cancelled) return;
-                const message = err instanceof Error ? err.message : String(err);
-                devWarn('Failed to load quest cities:', message);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        };
-
-        void loadCities();
-        return () => { cancelled = true; };
-    }, []);
-
-    return { cities, loading };
 }
 
 // Сессионный памятник списка квестов для фонового дообогащения бандла тегами:

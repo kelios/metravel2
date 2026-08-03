@@ -38,6 +38,19 @@ describe('createOptimizedQueryClient', () => {
     expect(requestIdleCallback).not.toHaveBeenCalled();
   });
 
+  // Синглтон для не-хукового кода (geoQueries) не привязан к маршруту: раньше
+  // его загрузка давала второй, дублирующий префетч фильтров и стран.
+  it('does not schedule a prefetch for the shared module-level client', () => {
+    const requestIdleCallback = jest.fn(() => 1);
+    (window as any).requestIdleCallback = requestIdleCallback;
+
+    jest.isolateModules(() => {
+      require('@/api/queryClient');
+    });
+
+    expect(requestIdleCallback).not.toHaveBeenCalled();
+  });
+
   it('pauses first requests while the platform is offline', () => {
     const client = createOptimizedQueryClient(undefined, {
       enableStaticPrefetch: false,
