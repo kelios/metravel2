@@ -65,6 +65,8 @@ const WIDTHS_BY_FAMILY = new Map([
   ['quest-cover', { small: 320, large: 800 }],
   // Legacy-роут обслуживает conversion-ключи travel-медиа, лестница у него та же.
   ['media-resize-legacy', { small: 96, large: 1600 }],
+  // Ключи `uploads/**` — это фото тела старых статей, лестница профиля `articleBody`.
+  ['media-resize-uploads', { small: 320, large: 1600 }],
 ])
 
 /** Ступени по умолчанию — для семейства, которого ещё нет в таблице. */
@@ -94,6 +96,9 @@ const KNOWN_BROKEN_FAMILIES = new Map([
 /** Family-роуты proxy-contract: из них достаётся storage-key для legacy-цели. */
 const FIRST_PARTY_MEDIA_ROUTE =
   /^\/(gallery|travel-image|travel-description-image|address-image|avatar|quest-cover|trip-cover|quest-step-image|quest-poster|badge-image)\/(.+)$/i
+
+/** Расширения, которые legacy-роут вообще обслуживает (`LEGACY_IMAGE_EXTENSIONS` в `utils/mediaUrl.ts`). */
+const LEGACY_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp'])
 
 /**
  * Accept ровно как у Chrome. Без него бэк уходит в jpeg-ветку
@@ -258,11 +263,54 @@ function toLegacyTarget(site, familyUrl) {
 }
 
 /**
+ * Роут фото тела старой статьи: `/media-resize/uploads/<key>`.
+ *
+ * Манифест для legacy-ключа отдаёт голую ссылку на бакет
+ * (`https://<bucket>.s3.<region>.amazonaws.com/uploads/<key>`), а фронт
+ * переписывает её на наш прокси по правилу `isLegacyUploadKey` из
+ * `utils/mediaUrl.ts`: класс `uploads/**` идёт БЕЗ префикса `legacy/`. Здесь то
+ * же правило продублировано, потому что гейт — CommonJS и TS-утилиту не
+ * импортирует; расхождение ловит `__tests__/scripts/post-deploy-media-check.test.ts`.
+ *
+ * Path-style ссылки на бакет (`s3.<region>.amazonaws.com/<bucket>/uploads/...`)
+ * сюда намеренно не попадают: манифест их не отдаёт, а угадывать имя бакета в
+ * гейте — способ получить цель, которой нет на проверяемом origin.
+ */
+function toUploadsTarget(site, rawUrl) {
+  const value = String(rawUrl || '').trim()
+  if (!value) return null
+  let key
+  try {
+    const pathname = (value.startsWith('/') ? new URL(value, site) : new URL(value)).pathname
+    key = decodeURIComponent(pathname).replace(/^\/+/, '')
+  } catch {
+    return null
+  }
+  const parts = key.split('/')
+  if (parts[0] !== 'uploads' || parts.length < 2) return null
+  if (parts.some((part) => !part || part === '.' || part === '..')) return null
+  const extension = String(parts[parts.length - 1].split('.').pop() || '').toLowerCase()
+  if (!LEGACY_IMAGE_EXTENSIONS.has(extension)) return null
+  return `${site}/media-resize/${key}`
+}
+
+/** URL'ы медиа тела статьи из BE-манифеста: обложка + галерея. */
+function collectArticleBodyMediaUrls(detail) {
+  const body = detail?.media?.article_body
+  if (!body) return []
+  const items = [body.cover, ...(Array.isArray(body.gallery) ? body.gallery : [])]
+  return items
+    .filter(Boolean)
+    .flatMap((item) => [item.src, item.variants?.original, item.src_contain, item.src_cover])
+    .filter(Boolean)
+}
+
+/**
  * Цели проверки из уже загруженных payload'ов публичного API — по одному URL на
  * семейство. Вынесено из сетевой части, чтобы тесты гоняли реальный разбор
  * контракта, а не мок примитива (правило evidence №4 в docs/TASK_BOARD_MCP.md).
  */
-function extractTargetsFromPayloads(site, { travels, travelDetail, quests } = {}) {
+function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails, quests } = {}) {
   const targets = []
   const seenFamilies = new Set()
 
@@ -272,6 +320,12 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, quests } = {}
     targets.push({ family, url, source })
   }
 
+  // Первая деталь даёт цели галереи и точки; остальные нужны только для поиска
+  // legacy-ключа `uploads/**`, которого у конкретной статьи может не быть вовсе.
+  const details = [travelDetail, ...(Array.isArray(travelDetails) ? travelDetails : [])]
+    .map(unwrapItem)
+    .filter(Boolean)
+
   const firstTravel = unwrapList(travels).find((item) => item?.media?.cover?.variants || item?.travel_image_thumb_url)
   const travelCover =
     firstTravel?.media?.cover?.variants?.original ||
@@ -279,7 +333,7 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, quests } = {}
     firstTravel?.travel_image_thumb_url
   push('travel-image', toTargetUrl(site, travelCover), '/api/travels/')
 
-  const detail = unwrapItem(travelDetail)
+  const detail = details[0] || null
   const galleryItem = (detail?.gallery || []).find((item) => item?.url || item?.thumb_url)
   push('gallery', toTargetUrl(site, galleryItem?.url || galleryItem?.thumb_url), '/api/travels/<id>/')
 
@@ -308,6 +362,15 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, quests } = {}
     .find(Boolean)
   push('media-resize-legacy', legacyUrl, 'derived from family URL')
 
+  // Фото тела старых статей. Именно этой цели не хватало, когда fail-closed
+  // чтение производных включили без покрытия `uploads/**` (#1222): гейт был
+  // зелёным, а 4381 фото в 215 из 397 опубликованных статей отдавало 404.
+  const uploadsUrl = details
+    .flatMap(collectArticleBodyMediaUrls)
+    .map((candidate) => toUploadsTarget(site, candidate))
+    .find(Boolean)
+  push('media-resize-uploads', uploadsUrl, 'media.article_body опубликованных travel')
+
   return targets
 }
 
@@ -326,10 +389,10 @@ function validateTarget(target, probes, options = {}) {
   const { small: smallWidth, large: largeWidth } = widthsFor(target.family)
   const issues = []
 
-  const add = (code, message) => {
+  const add = (code, message, severity = 'error') => {
     const downgraded = Boolean(knownBroken) && allowKnownBroken
     issues.push({
-      severity: downgraded ? 'warning' : 'error',
+      severity: downgraded ? 'warning' : severity,
       code,
       message: downgraded ? `${message} (известная поломка: ${knownBroken})` : message,
     })
@@ -404,6 +467,50 @@ function validateTarget(target, probes, options = {}) {
   }
 }
 
+/** Сколько деталей забираем с одной страницы каталога в поиске ключа `uploads/**`. */
+const UPLOADS_SCAN_DETAILS_PER_PAGE = 4
+
+/**
+ * Страницы каталога, в которых стоит искать legacy-ключ.
+ *
+ * «Первые N» тут не работают: у свежих статей `uploads/**` нет вообще (новый
+ * пайплайн), у самых старых — тоже. Замер 2026-08-03 по всем 397
+ * опубликованным travel: страницы 1–4 и 20 дают 0–2 попадания из 20, а 5–19 —
+ * от 50% до 95%. Поэтому берём сечения каталога, а не его край.
+ */
+function uploadsScanPages(travels) {
+  const count = Number(travels?.count ?? travels?.total ?? 0)
+  const pageSize = unwrapList(travels).length
+  if (!count || !pageSize) return [1]
+  const lastPage = Math.max(1, Math.ceil(count / pageSize))
+  const candidates = [
+    Math.ceil(lastPage / 2),
+    Math.ceil(lastPage * 0.75),
+    Math.ceil(lastPage * 0.25),
+  ]
+  return [...new Set(candidates)].filter((page) => page >= 1 && page <= lastPage)
+}
+
+/** Детали travel до первой, в теле которой действительно есть ключ `uploads/**`. */
+async function collectUploadsScanDetails(softFetch, travels) {
+  const details = []
+  for (const page of uploadsScanPages(travels)) {
+    const list = await softFetch(`${SITE}/api/travels/?page=${page}`)
+    const ids = unwrapList(list)
+      .map((item) => item?.id)
+      .filter(Boolean)
+      .slice(0, UPLOADS_SCAN_DETAILS_PER_PAGE)
+    const fetched = await Promise.all(ids.map((id) => softFetch(`${SITE}/api/travels/${id}/`)))
+    details.push(...fetched.filter(Boolean))
+
+    const found = details.some((item) =>
+      collectArticleBodyMediaUrls(unwrapItem(item)).some((url) => toUploadsTarget(SITE, url))
+    )
+    if (found) break
+  }
+  return details
+}
+
 async function collectTargets() {
   // Молчаливый catch тут опасен: пустой список целей выглядит как «нечего
   // проверять», хотя причина — недоступный API. Причину всегда печатаем.
@@ -423,7 +530,19 @@ async function collectTargets() {
     ? await softFetch(`${SITE}/api/travels/${firstTravel.id}/`)
     : null
 
-  return extractTargetsFromPayloads(SITE, { travels, travelDetail, quests })
+  const travelDetails = await collectUploadsScanDetails(softFetch, travels)
+
+  const targets = extractTargetsFromPayloads(SITE, { travels, travelDetail, travelDetails, quests })
+
+  if (!targets.some((target) => target.family === 'media-resize-uploads')) {
+    // Не ошибка: когда legacy-фото уйдут из тел статей, цели не станет по-честному.
+    // Но молчать нельзя — иначе потеря покрытия неотличима от «всё хорошо».
+    console.error(
+      'ℹ️  Ключей uploads/** в просмотренных статьях нет — цель media-resize-uploads пропущена'
+    )
+  }
+
+  return targets
 }
 
 function withWidth(url, width) {

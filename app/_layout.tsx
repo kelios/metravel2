@@ -580,6 +580,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     content: {
         flex: 1,
         flexBasis: 0,
+        backgroundColor: 'lime',
         ...(Platform.OS === 'web'
           ? ({
               flexGrow: 1,
