@@ -550,7 +550,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         position: 'relative',
         flexDirection: 'column',
         // Динамический фон для поддержки тем
-        backgroundColor: colors.background,
+        backgroundColor: 'red',
         ...(Platform.OS === 'web'
           ? ({
               minHeight: '100vh',
