@@ -112,7 +112,7 @@ const createStyles = (colors: Colors) =>
   StyleSheet.create({
     page: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     content: {
       paddingHorizontal: 16,

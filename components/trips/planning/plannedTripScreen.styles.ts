@@ -10,7 +10,7 @@ const SCROLL_BOTTOM_RESERVE = Platform.select({
 });
 export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.background },
+    screen: { flex: 1, backgroundColor: 'transparent' },
     content: {
       paddingHorizontal: 16,
       paddingTop: 16,

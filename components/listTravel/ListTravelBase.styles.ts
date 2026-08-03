@@ -7,7 +7,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
   StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       display: 'flex',
       flexDirection: 'row',
       overflowX: 'hidden',

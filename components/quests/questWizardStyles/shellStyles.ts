@@ -4,13 +4,13 @@ import { type QuestColors, SPACING } from './shared';
 export const createShellStyles = (colors: QuestColors, isMobile: boolean, _screenW: number) => ({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: 'transparent',
     },
 
     compactShell: {
         flex: 1,
         flexDirection: 'row',
-        backgroundColor: colors.background,
+        backgroundColor: 'transparent',
         ...Platform.select({
             web: {
                 maxWidth: 1400,

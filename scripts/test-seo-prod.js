@@ -20,6 +20,7 @@
 
 const https = require('https');
 const http = require('http');
+const { SEO_TITLE_MAX_LENGTH, SEO_TITLE_SUFFIX } = require('../utils/seoText');
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -112,6 +113,51 @@ function isBlockedFromIndexing(robots) {
   return /\b(noindex|none)\b/i.test(String(robots || ''));
 }
 
+/**
+ * Мирроринг контракта `buildSeoTitle` (`utils/seoText.js`) вместо прямой
+ * проверки «в заголовке есть слово Metravel».
+ *
+ * Бренд-суффикс намеренно необязателен: при нехватке бюджета SERP жертвуем
+ * брендом, а не ключевыми словами. Старый ассершен `titleContains: 'Metravel'`
+ * падал именно на длинных заголовках, то есть ровно там, где правило
+ * отработало верно, — и держал блокирующий гейт красным, из-за чего дневная
+ * SEO-рутина каждый раз останавливалась на шаге 0.
+ *
+ * `buildSeoTitle` возвращает ровно три формы, их и проверяем:
+ *   1. `base | Metravel` — суффикс влез в бюджет;
+ *   2. `base`            — без суффикса он влезает, с суффиксом уже нет;
+ *   3. `clipped…`        — не влез даже без бренда, срез по границе слова.
+ */
+function checkSeoTitleContract(title) {
+  const value = String(title == null ? '' : title);
+  const checks = [
+    {
+      ok: value.length <= SEO_TITLE_MAX_LENGTH,
+      label: `title fits SERP budget (≤${SEO_TITLE_MAX_LENGTH} chars)`,
+      detail: `got ${value.length}: "${value}"`,
+    },
+  ];
+
+  // Формы 1 и 3 контракта самодостаточны: суффикс на месте либо заголовок был
+  // срезан по бюджету. Осталась форма 2 — бренд отброшен, и это законно только
+  // когда он действительно не влезал.
+  if (!value.endsWith(SEO_TITLE_SUFFIX) && !value.endsWith('…')) {
+    checks.push({
+      ok: value.length + SEO_TITLE_SUFFIX.length > SEO_TITLE_MAX_LENGTH,
+      label: `brand suffix "${SEO_TITLE_SUFFIX.trim()}" dropped only when it does not fit`,
+      detail: `got ${value.length} chars: "${value}" — suffix still fits the budget`,
+    });
+  }
+
+  return checks;
+}
+
+function assertSeoTitleContract(title) {
+  for (const check of checkSeoTitleContract(title)) {
+    assert(check.ok, check.label, check.detail);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Test runner
 // ---------------------------------------------------------------------------
@@ -179,6 +225,9 @@ async function testPage(path, expectations) {
   }
   if (expectations.titleNotGeneric) {
     assert(title !== 'MeTravel', 'title is not generic "MeTravel"', `got: "${title}"`);
+  }
+  if (expectations.titleFollowsBrandPolicy) {
+    assertSeoTitleContract(title);
   }
 
   // --- Description ---
@@ -345,7 +394,7 @@ async function main() {
   for (const slug of travelSlugs) {
     await testPage(`/travels/${slug}`, {
       titleNotGeneric: true,
-      titleContains: 'Metravel',
+      titleFollowsBrandPolicy: true,
       descNotFallback: true,
       canonicalPath: `/travels/${slug}`,
       ogType: 'article',
@@ -402,4 +451,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { isBlockedFromIndexing };
+module.exports = { isBlockedFromIndexing, checkSeoTitleContract };

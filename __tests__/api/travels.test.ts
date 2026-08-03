@@ -725,6 +725,61 @@ describe('src/api/travelsApi.ts', () => {
       expect(urlObj.searchParams.get('perPage')).toBe('9999');
     });
 
+    it('на 5xx с HTML-страницей отдаёт статус в message, а тело — отдельным полем', async () => {
+      const { fetchMyTravels } = loadTravelsApi();
+      const nginxErrorPage = `<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>${'x'.repeat(500)}</body>\r\n</html>`;
+      mockedFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+        text: async () => nginxErrorPage,
+      } as any);
+
+      const error = await fetchMyTravels({ user_id: 42, throwOnError: true }).catch((e) => e);
+
+      expect(error).toMatchObject({
+        message: 'Не удалось загрузить ваши маршруты: 502 Bad Gateway',
+        status: 502,
+      });
+      // Регресс #1214-adjacent: раньше вся HTML-простыня становилась message и в
+      // DEV уезжала в тост как «Error fetching MyTravels: Error: <html>…».
+      expect(error.message).not.toContain('<html>');
+      expect(error.responseBody).toHaveLength(300);
+      expect(error.responseBody.startsWith('<html>')).toBe(true);
+    });
+
+    it('без throwOnError по-прежнему возвращает пустой список, не бросая наружу', async () => {
+      const { fetchMyTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+        text: async () => '<html></html>',
+      } as any);
+
+      await expect(fetchMyTravels({ user_id: 42 })).resolves.toEqual([]);
+    });
+
+    it('переживает ответ без читаемого тела и всё равно сохраняет статус', async () => {
+      const { fetchMyTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        statusText: '',
+        text: async () => {
+          throw new Error('stream already consumed');
+        },
+      } as any);
+
+      const error = await fetchMyTravels({ user_id: 1, throwOnError: true }).catch((e) => e);
+
+      expect(error).toMatchObject({
+        message: 'Не удалось загрузить ваши маршруты: 503 Unknown error',
+        status: 503,
+      });
+      expect(error.responseBody).toBeUndefined();
+    });
+
     it('unwrapMyTravelsPayload нормализует total/count и списки', () => {
       const { unwrapMyTravelsPayload } = loadTravelsApi();
 

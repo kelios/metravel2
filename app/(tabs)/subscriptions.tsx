@@ -142,7 +142,7 @@ export default function SubscriptionsScreen() {
 
 const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, backgroundColor: 'transparent' },
     scrollContent: {
       paddingTop: 8,
       paddingBottom: Platform.OS === 'web' ? 120 : 32,

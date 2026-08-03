@@ -15,7 +15,7 @@ export const createTravelDetailsLayoutStyles = (colors: ThemedColors) => ({
   // ✅ РЕДИЗАЙН: Светлый современный фон
   wrapper: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   safeArea: { flex: 1 },
   mainContainer: {

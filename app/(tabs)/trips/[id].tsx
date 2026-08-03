@@ -5,7 +5,6 @@ import { useLocalSearchParams } from 'expo-router';
 import PublicTripDetail from '@/components/trips/PublicTripDetail';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 // Мобильный BottomDock — fixed-оверлей, поэтому скролл резервирует его высоту
 // (`--mt-dock-h` = 0px на desktop). Иначе кнопка «Отправить заявку» формы
@@ -14,8 +13,7 @@ export const TRIP_DETAIL_WEB_BOTTOM_RESERVE =
   'calc(max(var(--mt-dock-h, 0px), var(--mt-keyboard-inset, 0px)) + 24px)' as unknown as number;
 
 export default function TripDetailScreen() {
-  const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(), []);
   const params = useLocalSearchParams<{ id?: string }>();
   const hydrationReady = useHydrationReady();
   const tripId = hydrationReady ? Number(params.id) : Number.NaN;
@@ -37,9 +35,9 @@ export default function TripDetailScreen() {
   );
 }
 
-const createStyles = (colors: ThemedColors) =>
+const createStyles = () =>
   StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.background },
+    screen: { flex: 1, backgroundColor: 'transparent' },
     content: {
       padding: 16,
       paddingBottom: TRIP_DETAIL_WEB_BOTTOM_RESERVE,

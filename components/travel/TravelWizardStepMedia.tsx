@@ -645,7 +645,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
 const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile = false) => StyleSheet.create({
     safeContainer: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: 'transparent',
     },
     keyboardAvoid: {
         flex: 1,

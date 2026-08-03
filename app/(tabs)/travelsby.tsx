@@ -93,7 +93,7 @@ export default function TravelsByScreen() {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: 'transparent',
     },
     loading: {
         padding: 16,

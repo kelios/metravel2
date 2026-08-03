@@ -291,7 +291,7 @@ export default function OfflineLibraryScreen() {
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.mutedBackground },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
   content: {
     width: '100%',
     maxWidth: 840,

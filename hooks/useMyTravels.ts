@@ -23,6 +23,8 @@ export interface UseMyTravelsResult {
   isLoadingMore: boolean;
   removingTravelId: number | null;
   hasMore: boolean;
+  /** Текст ошибки первой страницы. null — данные актуальны либо ещё грузятся. */
+  error: string | null;
   load: () => Promise<void>;
   loadMore: () => Promise<void>;
   remove: (travelId: number) => Promise<void>;
@@ -97,6 +99,20 @@ const getDeleteErrorCopy = (error: unknown) => {
   }
 }
 
+// Пустой список и недоступный сервер — разные вещи. Без этого 5xx на
+// /api/travels/ показывал пользователю «маршрутов нет» вместо ошибки: fetchMyTravels
+// без throwOnError глотал сбой и возвращал [], а состояния ошибки у хука не было.
+const getLoadErrorMessage = (error: unknown) => {
+  if (isTimeoutError(error)) {
+    return i18nT('shared:hooks.useMyTravels.prevysheno_vremya_ozhidaniya_e93ccac1')
+  }
+  if (isOfflineLikeError(error)) {
+    return i18nT('errorsStatic:api.client.offline')
+  }
+  if (error instanceof Error && error.message) return error.message
+  return i18nT('errorsStatic:api.common.unknownError')
+}
+
 export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
   const [myTravels, setMyTravels] = useState<Travel[]>([]);
   const [engagementSummary, setEngagementSummary] = useState<TravelEngagementStats | null>(null)
@@ -106,6 +122,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0)
   const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const deleteInFlightRef = useRef<number | null>(null)
   const mountedRef = useRef(true)
   // Монотонный счётчик: и load, и loadMore инкрементят его. После await коммитит
@@ -128,13 +145,15 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
       setHasMore(false);
       setMyTravels([]);
       setEngagementSummary(null)
+      setError(null);
       return;
     }
     const seq = ++requestSeqRef.current;
     setIsLoading(true);
     setIsLoadingMore(false);
+    setError(null);
     try {
-      const payload = await fetchMyTravels({ user_id: uid, page: 1, perPage, includeDrafts });
+      const payload = await fetchMyTravels({ user_id: uid, page: 1, perPage, includeDrafts, throwOnError: true });
       // Запрос вытеснен более новым load/loadMore или хук размонтирован — не коммитим.
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
       const { items, total, engagementSummary: nextEngagementSummary } = unwrapMyTravelsPayload(payload);
@@ -146,14 +165,16 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
       setPage(1);
       setTotalCount(effectiveTotal)
       setHasMore(normalized.length < effectiveTotal && items.length > 0);
+      setError(null);
       onTotalChange?.(effectiveTotal);
-    } catch {
+    } catch (loadError) {
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
       setMyTravels([]);
       setEngagementSummary(null)
       setPage(1);
       setTotalCount(0)
       setHasMore(false);
+      setError(getLoadErrorMessage(loadError));
       onTotalChange?.(0);
     } finally {
       if (mountedRef.current && seq === requestSeqRef.current) setIsLoading(false);
@@ -170,7 +191,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
     const seq = ++requestSeqRef.current;
     setIsLoadingMore(true);
     try {
-      const payload = await fetchMyTravels({ user_id: uid, page: nextPage, perPage, includeDrafts });
+      const payload = await fetchMyTravels({ user_id: uid, page: nextPage, perPage, includeDrafts, throwOnError: true });
       // Вытеснен более новым load (onRefresh) / loadMore или unmount — не коммитим,
       // иначе устаревший merged затрёт свежую страницу 1.
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
@@ -188,9 +209,17 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
       setTotalCount(effectiveTotal)
       setHasMore(merged.length < effectiveTotal && items.length > 0);
       onTotalChange?.(effectiveTotal);
-    } catch {
+    } catch (loadMoreError) {
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
+      // Уже загруженные страницы оставляем, но автоподгрузку глушим, иначе каждый
+      // скролл к концу списка бьётся о тот же сбой. Возврат — через pull-to-refresh.
       setHasMore(false);
+      void showToastMessage({
+        type: 'error',
+        text1: i18nT('sharedStatic:myTravels.loadFailedTitle'),
+        text2: getLoadErrorMessage(loadMoreError),
+        visibilityTime: 4000,
+      })
     } finally {
       if (mountedRef.current && seq === requestSeqRef.current) setIsLoadingMore(false);
     }
@@ -262,5 +291,5 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
     [engagementSummary, load, myTravels, onTotalChange, totalCount],
   );
 
-  return { myTravels, engagementSummary, isLoading, isLoadingMore, removingTravelId, hasMore, load, loadMore, remove };
+  return { myTravels, engagementSummary, isLoading, isLoadingMore, removingTravelId, hasMore, error, load, loadMore, remove };
 }

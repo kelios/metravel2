@@ -7,7 +7,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 export const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     safeContainer: {
         flex: 1,
-        backgroundColor: colors.background
+        backgroundColor: 'transparent'
     },
     keyboardAvoid: {
         flex: 1

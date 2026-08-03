@@ -182,7 +182,7 @@ const createStyles = (colors: ThemedColors, isWide: boolean) => {
   return StyleSheet.create({
     scrollContent: {
       flexGrow: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       alignItems: 'center' as const,
       paddingHorizontal: spacing.lg,
       paddingBottom: spacing.xxxl,

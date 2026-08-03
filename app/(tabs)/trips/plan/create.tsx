@@ -78,7 +78,7 @@ export default function CreateTripScreen() {
 
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.background },
+    screen: { flex: 1, backgroundColor: 'transparent' },
     content: {
       paddingHorizontal: 16,
       paddingTop: 16,

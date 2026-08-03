@@ -206,6 +206,9 @@ export default function TabLayout() {
                 backBehavior="history"
                 screenOptions={{
                     tabBarStyle: tabBarHiddenStyle,
+                    // Сцены табов по умолчанию непрозрачные (#f2f2f2) и перекрывают
+                    // общую фон-текстуру приложения из app/_layout.tsx.
+                    sceneStyle: { backgroundColor: 'transparent' },
                     // React Navigation keeps the previous screen header mounted during
                     // transitions. Only the focused header may own the skip-link target;
                     // otherwise redirect routes briefly duplicate `main-navigation`.

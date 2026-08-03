@@ -4,12 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useIsFocused } from 'expo-router'
 
 import ListTravel from '@/components/listTravel/ListTravelBase'
-import { useThemedColors } from '@/hooks/useTheme'
 
 export default function MeTravelScreen() {
   const isFocused = useIsFocused()
-  const colors = useThemedColors()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useMemo(() => createStyles(), [])
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -18,10 +16,10 @@ export default function MeTravelScreen() {
   )
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+const createStyles = () =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.mutedBackground,
+      backgroundColor: 'transparent',
     },
   })

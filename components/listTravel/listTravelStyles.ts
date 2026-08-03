@@ -7,7 +7,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       display: 'flex',
       flexDirection: 'row',
       overflowX: 'hidden',

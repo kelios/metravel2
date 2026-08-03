@@ -49,7 +49,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             // внутренний скролл-контейнер «думает», что прокручивать нечего
             // (scrollTop застревает на 0), хотя scrollHeight в разы больше.
             minHeight: 0,
-            backgroundColor: colors.background,
+            backgroundColor: 'transparent',
             flexDirection: isMobileW ? 'column' : 'row',
             // На десктоп-вебе НЕ ставим minHeight:100vh: root живёт во flex-
             // родителе высотой (вьюпорт − navbar), а 100vh перекрывает клип
@@ -468,7 +468,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             // minHeight:0 нужен, чтобы flex-ребёнок мог сжаться ниже своей
             // контентной высоты и отдать прокрутку внутреннему overflow:auto.
             minHeight: 0,
-            backgroundColor: colors.background,
+            backgroundColor: 'transparent',
             ...Platform.select({
                 web: ({
                     // Оболочка приложения на вебе — это контейнер фикс. высоты с
@@ -491,7 +491,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             paddingBottom: isMobileW ? spacing.sm : spacing.md,
             borderBottomWidth: 0,
             borderBottomColor: colors.borderLight,
-            backgroundColor: colors.background,
+            // На мобильном шапка липкая и обязана быть непрозрачной (см. web-ветку
+            // ниже); на десктопе она обычная — пропускаем общую фон-текстуру.
+            backgroundColor: isMobileW ? colors.background : 'transparent',
             ...Platform.select({
                 web: isMobileW
                     ? ({

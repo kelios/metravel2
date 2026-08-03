@@ -25,9 +25,17 @@ type UseProfileTravelSectionsInput = {
   travelsLoading: boolean
   travelsLoadingMore: boolean
   travelsHasMore: boolean
+  travelsError: string | null
+  onRetryTravels: () => void
   loadMoreTravels: () => Promise<void>
   personalTravelStatusEntries: TravelStatusEntry[]
 }
+
+const TRAVEL_BACKED_TABS: ReadonlySet<ProfileTabKey> = new Set<ProfileTabKey>([
+  'travels',
+  'publishedTravels',
+  'draftTravels',
+])
 
 export function useProfileTravelSections({
   activeTab,
@@ -42,6 +50,8 @@ export function useProfileTravelSections({
   travelsLoading,
   travelsLoadingMore,
   travelsHasMore,
+  travelsError,
+  onRetryTravels,
   loadMoreTravels,
   personalTravelStatusEntries,
 }: UseProfileTravelSectionsInput) {
@@ -141,6 +151,18 @@ export function useProfileTravelSections({
     publishedTravels,
   ])
   const emptyStateProps = useMemo(() => {
+    // Сбой загрузки не должен выглядеть как «маршрутов нет»: у пустого списка
+    // и недоступного сервера разные причины и разные действия пользователя.
+    if (travelsError && TRAVEL_BACKED_TABS.has(activeTab)) {
+      return {
+        icon: 'alert-triangle',
+        title: i18nT('sharedStatic:myTravels.loadFailedTitle'),
+        description: travelsError,
+        variant: 'error' as const,
+        action: { label: i18nT('sharedStatic:errors.retry'), onPress: onRetryTravels },
+      }
+    }
+
     if (activeTravelMetric) {
       return {
         icon: activeTravelMetric === 'visitedCount'
@@ -209,7 +231,7 @@ export function useProfileTravelSections({
       default:
         return { icon: 'layers', title: i18nT('profile:app.tabs.profile.pusto_7e81f6e3'), description: '' }
     }
-  }, [activeTab, activeTravelMetric, draftTravels.length, publishedTravels.length, router, setActiveTab, setActiveTravelMetric])
+  }, [activeTab, activeTravelMetric, draftTravels.length, onRetryTravels, publishedTravels.length, router, setActiveTab, setActiveTravelMetric, travelsError])
   const formatTripsCount = useCallback((count: number) => count === 0
     ? i18nT('profile:app.tabs.profile.poka_pusto_bfb75bfd')
     : selectPlural(count, {

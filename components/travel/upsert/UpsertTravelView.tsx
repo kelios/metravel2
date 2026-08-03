@@ -596,7 +596,7 @@ const createStyles = (colors: Colors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     // Экраны пустых/ошибочных состояний (LoadError/AccessDenied/AuthRequired) и
     // fallback WizardStepRouter. maxWidth 480 + alignSelf center корректны и на

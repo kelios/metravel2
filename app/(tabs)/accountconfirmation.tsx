@@ -108,7 +108,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.background,
+        backgroundColor: 'transparent',
     },
     backgroundImage: {
         width: '100%',

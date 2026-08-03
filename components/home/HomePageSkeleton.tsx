@@ -369,7 +369,7 @@ export const HomePageSkeleton = memo(() => {
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
         },
         scrollContent: {
           paddingBottom: isMobile ? 88 : 112,

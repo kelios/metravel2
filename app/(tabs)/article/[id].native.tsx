@@ -249,7 +249,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     loader: {
       flex: 1,
@@ -282,7 +282,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     contentContainer: {
       flexGrow: 1,

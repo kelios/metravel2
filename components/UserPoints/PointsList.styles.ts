@@ -8,7 +8,8 @@ const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm
 export const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    // Прозрачный холст: под ним общая фон-текстура из app/_layout.tsx
+    backgroundColor: 'transparent',
   },
   header: {
     padding: 0,

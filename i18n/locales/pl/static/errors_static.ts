@@ -106,6 +106,7 @@ export const errorsStaticResources = {
   "api.travelList.invalidShape": "Interfejs Travel API zwrócił nieoczekiwany format danych.",
   "api.travelList.randomLoadFailed": "Nie udało się załadować losowych podróży: {{details}}",
   "api.travelList.randomInvalidJson": "Interfejs API Random Travel zwrócił odpowiedź, której nie można przeanalizować.",
+  "api.myTravels.loadFailed": "Nie udało się załadować Twoich tras: {{details}}",
   "api.travelList.randomInvalidShape": "Interfejs API Random Travel zwrócił nieoczekiwany format danych.",
   "api.userPoints.untitled": "Bez tytułu",
   "stores.travelStatus.titleFallback": "Podróże {{id}}",

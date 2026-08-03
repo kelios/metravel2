@@ -107,6 +107,7 @@ export const errorsStaticResources = {
   "api.travelList.randomLoadFailed": "Не удалось загрузить случайные путешествия: {{details}}",
   "api.travelList.randomInvalidJson": "API случайных путешествий вернул непарсируемый ответ.",
   "api.travelList.randomInvalidShape": "API случайных путешествий вернул неожиданный формат данных.",
+  "api.myTravels.loadFailed": "Не удалось загрузить ваши маршруты: {{details}}",
   "api.userPoints.untitled": "Без названия",
   "stores.travelStatus.titleFallback": "Путешествие {{id}}",
   "stores.content.untitled": "Без названия",

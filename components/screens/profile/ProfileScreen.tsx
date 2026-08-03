@@ -150,6 +150,7 @@ export default function ProfileScreen() {
     isLoadingMore: travelsLoadingMore,
     removingTravelId,
     hasMore: travelsHasMore,
+    error: travelsError,
     load: loadTravels,
     loadMore: loadMoreTravelsHook,
     remove: removeMyTravel,
@@ -171,6 +172,12 @@ export default function ProfileScreen() {
     travelsRequestedRef.current = true;
     void loadTravels();
   }, [loadTravels, userId]);
+
+  // Ретрай после сбоя идёт мимо one-shot guard: сам guard уже сожжён неудачной
+  // попыткой, и без этого кнопка «Повторить» была бы декоративной.
+  const handleRetryTravels = useCallback(() => {
+    void loadTravels();
+  }, [loadTravels]);
 
   const loadMoreTravels = useCallback(async () => {
     if (!isProfileTravelTab(activeTab)) return;
@@ -306,6 +313,8 @@ export default function ProfileScreen() {
     travelsLoading,
     travelsLoadingMore,
     travelsHasMore,
+    travelsError,
+    onRetryTravels: handleRetryTravels,
     loadMoreTravels: loadMoreTravelsHook,
     personalTravelStatusEntries,
   });
@@ -396,8 +405,8 @@ export default function ProfileScreen() {
   }, [activeTab, clearFavorites, clearHistory]);
 
   const styles = useMemo(
-    () => createProfileScreenStyles({ colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth }),
-    [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth],
+    () => createProfileScreenStyles({ contentPadding, gapSize, isDesktopWeb, maxContentWidth }),
+    [contentPadding, gapSize, isDesktopWeb, maxContentWidth],
   );
   const profileLoginActionStyle = useMemo(
     () => ({

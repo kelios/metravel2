@@ -14,7 +14,8 @@ export const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) =>
   mapRightPanel: {
     width: 440,
     borderLeftWidth: 0,
-    backgroundColor: colors.background,
+    // Прозрачный холст: под ним общая фон-текстура из app/_layout.tsx
+    backgroundColor: 'transparent',
     ...(Platform.OS === 'web'
       ? webViewStyle({
           boxShadow: colors.boxShadows.card,
@@ -24,7 +25,7 @@ export const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) =>
   },
   mobilePanelContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   mobileTabsBar: {
     paddingHorizontal: 12,

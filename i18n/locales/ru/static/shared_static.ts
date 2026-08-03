@@ -45,6 +45,8 @@ export const sharedStaticResources = {
   "contact.mailBody": "Добрый день!",
   "contact.sendFailed": "Не удалось отправить сообщение.",
   "errors.tryLater": "Попробуйте позже",
+  "errors.retry": "Повторить",
+  "myTravels.loadFailedTitle": "Не удалось загрузить маршруты",
   "article.loadFailed": "Не удалось загрузить статью",
   "article.checkLink": "Проверьте ссылку на статью.",
   "article.authorFallback": "Автор путешествия",

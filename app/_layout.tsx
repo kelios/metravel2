@@ -1,6 +1,13 @@
 import React, { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
-import { SplashScreen, Stack, usePathname } from "expo-router";
+import {
+  DarkTheme as NavigationDarkTheme,
+  DefaultTheme as NavigationDefaultTheme,
+  SplashScreen,
+  Stack,
+  ThemeProvider as NavigationThemeProvider,
+  usePathname,
+} from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -358,18 +365,10 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     }
 
 
-    // Показываем фон-карту только на экранах рулетки, на остальных страницах сохраняем чистый белый фон
-    // На мобильном web фон мешает доку/контенту — отключаем.
-    const showMapBackground =
-      Platform.OS === 'web' &&
-      !isMobile &&
-      (pathname?.includes('roulette') || pathname?.includes('random'));
-
     return (
       <ThemeProvider>
         <ErrorBoundary>
           <ThemedContent
-            showMapBackground={showMapBackground}
             showFooter={showFooter}
             isMobile={isMobile}
             pathname={effectivePathname}
@@ -385,7 +384,6 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
 
 // Компонент с доступом к ThemeProvider
 function ThemedContent({
-  showMapBackground,
   showFooter,
   isMobile,
   pathname,
@@ -394,7 +392,6 @@ function ThemedContent({
   isMounted,
   queryClient,
 }: {
-  showMapBackground: boolean;
   showFooter: boolean;
   isMobile: boolean;
   pathname?: string;
@@ -406,7 +403,19 @@ function ThemedContent({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
+  // Фон-карта — общая подложка всего приложения: desktop web, mobile web и native.
+  // Раньше он жил только на рулетке; теперь это единый холст для всех экранов,
+  // поэтому текстура ослаблена (styles.backgroundImage) до едва заметной.
+  const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
+
+  // Навигационная тема заливает сцены своим `colors.background` (по умолчанию
+  // непрозрачный #f2f2f2) — он ложится поверх общей фон-текстуры. Делаем сцену
+  // прозрачной: фон страницы задаёт корневой контейнер + текстура.
+  const navigationTheme = useMemo(() => {
+    const base = currentColorScheme === 'dark' ? NavigationDarkTheme : NavigationDefaultTheme;
+    return { ...base, colors: { ...base.colors, background: 'transparent' } };
+  }, [currentColorScheme]);
+
   const WEB_FOOTER_RESERVE_HEIGHT = 56;
   const isTravelRoute =
     Platform.OS === 'web' &&
@@ -458,13 +467,19 @@ function ThemedContent({
                             />
                           )}
                           <RootContainerView style={styles.container}>
-                              {showMapBackground && (
-                                <Image
-                                  source={mapBackground}
-                                  style={styles.backgroundImage}
-                                  resizeMode="cover"
-                                />
-                              )}
+                              <Image
+                                source={mapBackground}
+                                style={[
+                                  styles.backgroundImage,
+                                  // В тёмной теме светлая карта отдаёт в коричневый —
+                                  // держим её ещё тише.
+                                  currentColorScheme === 'dark' ? { opacity: 0.07 } : null,
+                                ]}
+                                resizeMode="cover"
+                                accessibilityElementsHidden
+                                importantForAccessibility="no-hide-descendants"
+                                {...(Platform.OS === 'web' ? ({ alt: '' } as any) : null)}
+                              />
 
                               {/* AND-10: Индикатор синхронизации при восстановлении сети (native only) */}
                               {!isWeb && SyncIndicatorComponent && (
@@ -476,9 +491,18 @@ function ThemedContent({
                                 nativeID="main-content"
                                 {...(Platform.OS === 'web' ? ({ tabIndex: -1 } as any) : null)}
                               >
-                                  <Stack screenOptions={{ headerShown: false }}>
-                                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                                  </Stack>
+                                  {/* Прозрачные сцены навигации: иначе непрозрачный фон
+                                      темы навигатора закрывает общую фон-текстуру. */}
+                                  <NavigationThemeProvider value={navigationTheme}>
+                                    <Stack
+                                      screenOptions={{
+                                        headerShown: false,
+                                        contentStyle: { backgroundColor: 'transparent' },
+                                      }}
+                                    >
+                                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                                    </Stack>
+                                  </NavigationThemeProvider>
 
                                   {/* Прокладка: только высота док-строки футера */}
                                   {bottomGutter}
@@ -538,8 +562,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...StyleSheet.absoluteFillObject,
         width: '100%',
         height: '100%',
-        // Мягкая текстура: заметна, но не кричащая
-        opacity: 0.45,
+        // Единая подложка всех экранов: текстура должна читаться как бумага,
+        // а не как картинка — поэтому сильно ослаблена.
+        opacity: 0.12,
+        pointerEvents: 'none',
+        ...(Platform.OS === 'web'
+          ? ({
+              // Фиксируем текстуру во вьюпорте: на длинных страницах она иначе
+              // растягивается на всю высоту документа и «плывёт» при скролле.
+              position: 'fixed',
+              inset: 0,
+              width: '100vw',
+              height: '100vh',
+            } as any)
+          : null),
     },
     content: {
         flex: 1,

@@ -44,7 +44,7 @@ function normalizePath(raw: string | null | undefined) {
 function HomeScreen() {
   const pathname = usePathname()
   const colors = useThemedColors()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useMemo(() => createStyles(), [])
 
   // On web, start as false so SSR and first client render produce the same
   // neutral output. Prevents hydration mismatch when URL is /travels/* but
@@ -246,9 +246,9 @@ const HomeWithReadyCallback = React.memo<{ onReady: () => void }>(({ onReady }) 
 })
 HomeWithReadyCallback.displayName = 'HomeWithReadyCallback'
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+const createStyles = () =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, backgroundColor: 'transparent' },
     srOnly: Platform.select({
       web: {
         position: 'absolute' as const,

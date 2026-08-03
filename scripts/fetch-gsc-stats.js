@@ -79,6 +79,30 @@ async function main() {
     .sort((a, b) => b.impressions - a.impressions)
     .slice(0, 20)
 
+  // Целевая страница каждого запроса. Без этого измерения дневная рутина
+  // угадывала URL по смыслу slug — и на запросах чужих авторов (они попадают
+  // в те же кластеры) уводила работу не на ту статью.
+  const byQueryPage = await query(accessToken, args.site, {
+    startDate,
+    endDate,
+    dimensions: ['query', 'page'],
+    rowLimit: 1000,
+    dataState: 'all',
+  })
+  const landingByQuery = new Map()
+  for (const r of byQueryPage.rows || []) {
+    const [q, page] = r.keys
+    const best = landingByQuery.get(q)
+    // Один запрос может приводить на несколько URL; каноничным считаем тот,
+    // который собрал больше показов.
+    if (!best || r.impressions > best.impressions) {
+      landingByQuery.set(q, { page, impressions: r.impressions, clicks: r.clicks })
+    }
+  }
+  for (const o of opportunities) {
+    o.page = landingByQuery.get(o.query)?.page || null
+  }
+
   // Top pages by clicks.
   const byPage = await query(accessToken, args.site, {
     startDate,
@@ -127,6 +151,7 @@ async function main() {
         5
       )} | клики ${String(o.clicks).padStart(3)} | CTR ${String(o.ctr).padStart(5)}% | ${o.query}`
     )
+    console.log(`                 → ${o.page || '(целевая страница не определена)'}`)
   }
   console.log(`\n📄 Топ страниц по кликам:`)
   for (const p of topPages.slice(0, 10)) {

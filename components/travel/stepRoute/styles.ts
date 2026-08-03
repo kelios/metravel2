@@ -6,7 +6,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 export const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     ...(Platform.OS === 'web'
       ? ({ height: '100dvh', overflow: 'hidden' } as any)
       : null),

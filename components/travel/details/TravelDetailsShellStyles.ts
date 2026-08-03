@@ -13,7 +13,7 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     wrapper: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     safeArea: {
       flex: 1,

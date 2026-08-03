@@ -106,6 +106,7 @@ export const errorsStaticResources = {
   "api.travelList.invalidShape": "API падарожжаў вярнуў нечаканы фармат дадзеных.",
   "api.travelList.randomLoadFailed": "Не атрымалася загрузіць выпадковыя вандраванні: {{details}}",
   "api.travelList.randomInvalidJson": "API выпадковых падарожжаў вярнуў непарсіруемы адказ.",
+  "api.myTravels.loadFailed": "Не атрымалася загрузіць вашы маршруты: {{details}}",
   "api.travelList.randomInvalidShape": "API выпадковых падарожжаў вярнуў нечаканы фармат дадзеных.",
   "api.userPoints.untitled": "Без назвы",
   "stores.travelStatus.titleFallback": "Падарожжа {{id}}",

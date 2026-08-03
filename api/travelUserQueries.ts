@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { translate as i18nT } from '@/i18n';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getSecureItem } from '@/utils/secureStorage';
@@ -14,6 +15,22 @@ import {
     GET_TRAVELS,
     coerceTotal,
 } from './travelQueryShared';
+
+// Тело ответа кладём в отдельное поле, а не в message: nginx на 5xx отдаёт
+// HTML-страницу целиком, и раньше она становилась текстом ошибки — статус
+// терялся, а в DEV в тост уезжала многокилобайтная простыня «Error: <html>…».
+const ERROR_BODY_LIMIT = 300;
+
+const createMyTravelsError = (status: number, statusText: string, body: string) => {
+    const details = `${status} ${statusText || 'Unknown error'}`.trim();
+    const error = new Error(
+        i18nT('errorsStatic:api.myTravels.loadFailed', { details })
+    ) as Error & { status?: number; responseBody?: string };
+    error.status = status;
+    const trimmedBody = body.trim();
+    if (trimmedBody) error.responseBody = trimmedBody.slice(0, ERROR_BODY_LIMIT);
+    return error;
+};
 
 export const unwrapMyTravelsPayload = (
     payload: MyTravelsPayload | null | undefined
@@ -130,13 +147,14 @@ export const fetchMyTravels = async (params: {
         };
         const res = await fetchWithTimeout(url, init, LONG_TIMEOUT);
         if (!res.ok) {
-            const errorText = await res.text().catch(() => 'Unknown error');
-            throw new Error(errorText);
+            const errorText = await res.text().catch(() => '');
+            throw createMyTravelsError(res.status, res.statusText, errorText);
         }
         return await safeJsonParse<MyTravelsPayload>(res, {});
     } catch (e) {
         if (__DEV__) {
-            devError('Error fetching MyTravels:', e);
+            const responseBody = (e as { responseBody?: string } | null)?.responseBody;
+            devError('Error fetching MyTravels:', e, ...(responseBody ? [responseBody] : []));
         }
         if (params.throwOnError) throw e;
         return [];

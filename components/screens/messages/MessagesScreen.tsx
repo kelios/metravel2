@@ -366,7 +366,7 @@ function MessagesScreenContent() {
     // Пользователь не авторизован
     if (authReady && !isAuthenticated) {
         return (
-            <View style={[styles.mobileContainer, { backgroundColor: colors.background }]}>
+            <View style={[styles.mobileContainer, { backgroundColor: 'transparent' }]}>
                 {isFocused && (
                     <React.Suspense fallback={null}>
                         <InstantSEO
@@ -474,7 +474,7 @@ function MessagesScreenContent() {
                     styles.desktopPage,
                     styles.webViewportBounded,
                     viewportHeight != null ? { height: viewportHeight, maxHeight: viewportHeight } : null,
-                    { backgroundColor: colors.background },
+                    { backgroundColor: 'transparent' },
                 ]}
             >
                 <View testID="messages-desktop-shell" style={styles.desktopContainer}>
@@ -506,7 +506,7 @@ function MessagesScreenContent() {
                 styles.mobileContainer,
                 Platform.OS === 'web' ? styles.webViewportBounded : null,
                 viewportHeight != null ? { height: viewportHeight, maxHeight: viewportHeight } : null,
-                { backgroundColor: colors.background },
+                { backgroundColor: 'transparent' },
             ]}
         >
             {seoBlock}

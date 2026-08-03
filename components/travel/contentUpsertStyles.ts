@@ -8,9 +8,9 @@ import type { useThemedColors } from '@/hooks/useTheme';
 type Colors = ReturnType<typeof useThemedColors>;
 
 export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: colors.background },
+    safeArea: { flex: 1, backgroundColor: 'transparent' },
     container: { padding: DESIGN_TOKENS.spacing.xs, paddingBottom: 40 },
-    modalSafeArea: { flex: 1, backgroundColor: colors.background },
+    modalSafeArea: { flex: 1, backgroundColor: 'transparent' },
     modalKeyboardAvoiding: { flex: 1 },
     modalShell: { flex: 1, width: '100%', maxWidth: 1200, alignSelf: 'center' },
     modalHeader: {

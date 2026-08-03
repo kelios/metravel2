@@ -9,7 +9,6 @@ import {
     Text,
     TextInput,
     View,
-    Image,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
@@ -26,7 +25,6 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import { webTouchScrollStyle } from '@/utils';
@@ -74,7 +72,6 @@ export default function Login() {
     const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
     const canonical = buildCanonicalUrl(pathname || '/login');
     const colors = useThemedColors();
-    const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const showMsg = (text: string, error = false) => {
@@ -233,13 +230,8 @@ export default function Login() {
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                {Platform.OS === 'web' && !isMobile && (
-                    <Image
-                        source={require('../../assets/travel/roulette-map-bg.jpg')}
-                        style={styles.mapBackground}
-                        resizeMode="cover"
-                    />
-                )}
+                {/* Свой фон-карта убран: теперь единая полупрозрачная текстура
+                    лежит в app/_layout.tsx на всех экранах. */}
                 <ScrollView
                     style={webTouchScrollStyle}
                     contentContainerStyle={styles.scrollViewContent}
@@ -423,12 +415,8 @@ export default function Login() {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.backgroundSecondary,
-    },
-    mapBackground: {
-        ...StyleSheet.absoluteFillObject,
-        width: '100%',
-        height: '100%',
+        // Прозрачный холст: под ним общая фон-текстура из app/_layout.tsx
+        backgroundColor: 'transparent',
     },
     scrollViewContent: {
         flexGrow: 1,

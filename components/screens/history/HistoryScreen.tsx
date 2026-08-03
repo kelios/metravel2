@@ -74,7 +74,7 @@ export default function HistoryScreen() {
     const styles = useMemo(() => StyleSheet.create({
         container: {
             flex: 1,
-            backgroundColor: colors.background,
+            backgroundColor: 'transparent',
         },
         gridContent: {
             paddingHorizontal: 16,

@@ -5,7 +5,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
   container: { flex: 1, width: '100%' },
-  backgroundImage: { flex: 1, width: '100%', height: '100%', backgroundColor: colors.background },
+  // Прозрачный холст: под ним общая фон-текстура из app/_layout.tsx
+  backgroundImage: { flex: 1, width: '100%', height: '100%', backgroundColor: 'transparent' },
   content: {
     width: '100%',
     maxWidth: 1180,

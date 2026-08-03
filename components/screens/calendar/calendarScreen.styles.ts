@@ -9,7 +9,7 @@ export function createCalendarStyles(colors: ReturnType<typeof useThemedColors>,
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     tabBar: {
       flexDirection: 'row',

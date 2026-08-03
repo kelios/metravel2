@@ -1,7 +1,6 @@
 import { StyleSheet, Platform } from 'react-native';
 
 interface CreateProfileScreenStylesArgs {
-  colors: { background: string };
   contentPadding: number;
   gapSize: number;
   isDesktopWeb: boolean;
@@ -9,7 +8,6 @@ interface CreateProfileScreenStylesArgs {
 }
 
 export const createProfileScreenStyles = ({
-  colors,
   contentPadding,
   gapSize,
   isDesktopWeb,
@@ -18,7 +16,7 @@ export const createProfileScreenStyles = ({
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     centered: {
       flex: 1,
@@ -35,7 +33,7 @@ export const createProfileScreenStyles = ({
       width: Platform.OS === 'web' ? '100%' : undefined,
     },
     headerComponent: {
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     fullRow: {
       width: '100%',
