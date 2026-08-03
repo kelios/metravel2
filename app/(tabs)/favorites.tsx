@@ -59,7 +59,7 @@ export default function FavoritesScreen() {
     const styles = useMemo(() => StyleSheet.create({
         container: {
             flex: 1,
-            backgroundColor: 'transparent',
+            backgroundColor: colors.background,
         },
         listContent: {
             paddingHorizontal: 16,

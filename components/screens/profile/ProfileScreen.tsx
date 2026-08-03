@@ -405,8 +405,8 @@ export default function ProfileScreen() {
   }, [activeTab, clearFavorites, clearHistory]);
 
   const styles = useMemo(
-    () => createProfileScreenStyles({ contentPadding, gapSize, isDesktopWeb, maxContentWidth }),
-    [contentPadding, gapSize, isDesktopWeb, maxContentWidth],
+    () => createProfileScreenStyles({ colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth }),
+    [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth],
   );
   const profileLoginActionStyle = useMemo(
     () => ({

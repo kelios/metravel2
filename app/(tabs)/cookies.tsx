@@ -195,7 +195,7 @@ export default function CookieSettingsScreen() {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background,
   },
   container: {
     paddingHorizontal: 16,

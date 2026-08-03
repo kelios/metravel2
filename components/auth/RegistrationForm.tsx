@@ -9,6 +9,7 @@ import {
     Text,
     TextInput,
     View,
+    Image,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
@@ -31,6 +32,7 @@ import {
     trackRegistrationViewed,
 } from '@/utils/growthFunnelAnalytics';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
@@ -62,6 +64,7 @@ export default function RegisterForm() {
     const router = useRouter();
     const { loginWithGoogle } = useAuth();
     const colors = useThemedColors();
+    const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const pathname = usePathname();
@@ -243,11 +246,16 @@ export default function RegisterForm() {
             ) : null}
 
             <KeyboardAvoidingView
-                style={{ flex: 1, backgroundColor: 'transparent' }}
+                style={{ flex: 1, backgroundColor: colors.backgroundSecondary }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                {/* Свой фон-карта убран: теперь единая полупрозрачная текстура
-                    лежит в app/_layout.tsx на всех экранах. */}
+                {Platform.OS === 'web' && !isMobile && (
+                    <Image
+                        source={require('../../assets/travel/roulette-map-bg.jpg')}
+                        style={styles.mapBackground}
+                        resizeMode="cover"
+                    />
+                )}
                 <ScrollView style={webTouchScrollStyle} contentContainerStyle={{ flexGrow: 1 }}>
                     <View style={styles.bg}>
                                 <View style={styles.center}>
@@ -541,6 +549,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    mapBackground: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
     },
     center: {
         width: '100%',

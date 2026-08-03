@@ -310,8 +310,7 @@ function Home() {
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) =>
   StyleSheet.create({
-    // Прозрачный холст: под ним общая фон-текстура из app/_layout.tsx
-    container: { flex: 1, backgroundColor: 'transparent' },
+    container: { flex: 1, backgroundColor: colors.background },
     quickActions: { marginTop: isMobile ? 16 : 20 },
     contentContainer: {
       flexGrow: 1,

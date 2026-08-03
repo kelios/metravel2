@@ -177,6 +177,7 @@ const SearchCardsSkeleton = memo(
 SearchCardsSkeleton.displayName = 'SearchCardsSkeleton'
 
 export const SearchPageSkeleton = memo(() => {
+  const colors = useThemedColors()
   // Берём ширину из useResponsive (hydration-safe: SSR и первый клиентский
   // рендер дают width=0, после гидрации — реальную). Прямое чтение window.innerWidth
   // здесь ломало бы первый рендер и давало React #418 на /search.
@@ -194,7 +195,7 @@ export const SearchPageSkeleton = memo(() => {
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: 'transparent',
+          backgroundColor: colors.background,
           flexDirection: isDesktop ? 'row' : 'column',
         },
         main: {
@@ -202,7 +203,7 @@ export const SearchPageSkeleton = memo(() => {
           minWidth: 0,
         },
       }),
-    [isDesktop],
+    [colors, isDesktop],
   )
 
   return (

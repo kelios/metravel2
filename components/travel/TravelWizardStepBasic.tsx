@@ -11,6 +11,7 @@ import { CollapsibleValidationSummary, ValidationSummary } from '@/components/tr
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useStepTransition } from '@/hooks/useStepTransition';
+import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelFormData } from '@/types/types';
 import { getContextualTips } from '@/utils/contextualTips';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
@@ -110,6 +111,7 @@ function TravelWizardStepBasic({
   onOpenPublic,
   onExit,
 }: TravelWizardStepBasicProps) {
+  const colors = useThemedColors();
   const router = useRouter();
   const { isHydrated, isMobile } = useResponsive();
   const { hasEditedForm, markFormEdited } = useFirstEditFlag();
@@ -119,7 +121,7 @@ function TravelWizardStepBasic({
     slideIn: true,
   });
 
-  const styles = useMemo(() => createStyles(), []);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isCompactLayout = isHydrated && isMobile;
   const progressPercent = getProgressPercent(progress);
 
@@ -290,10 +292,10 @@ function TravelWizardStepBasic({
   );
 }
 
-const createStyles = () => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background,
   },
   keyboardAvoid: {
     flex: 1,

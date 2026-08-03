@@ -223,20 +223,20 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => {
   return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     container: {
       flex: 1,
       flexDirection: 'row',
       width: '100%',
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     content: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       width: '100%',
-      backgroundColor: 'transparent',
+      backgroundColor: colors.surface,
     },
     centerContent: {
       justifyContent: 'center',

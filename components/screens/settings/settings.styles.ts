@@ -12,8 +12,7 @@ export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>)
   StyleSheet.create({
     container: {
       flex: 1,
-      // Прозрачный холст: под ним общая фон-текстура из app/_layout.tsx
-      backgroundColor: 'transparent',
+      backgroundColor: colors.mutedBackground,
     },
     scrollContent: {
       paddingBottom: Platform.select({

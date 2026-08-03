@@ -269,7 +269,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     safeContainer: {
         flex: 1,
-        backgroundColor: 'transparent'
+        backgroundColor: colors.background
     },
     keyboardAvoid: {
         flex: 1

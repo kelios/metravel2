@@ -24,7 +24,7 @@ const nativeShadow = (
 export const createStyles = (colors: ThemedColors) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background,
   },
   rootBackgroundImage: {
     ...StyleSheet.absoluteFillObject,

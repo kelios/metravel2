@@ -7,6 +7,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import SearchPageSkeleton from '@/components/listTravel/SearchPageSkeleton'
@@ -20,6 +21,7 @@ function SearchScreen() {
   const pathname = usePathname()
   const router = useRouter()
   const isFocused = useIsFocused()
+  const colors = useThemedColors()
   const { isAuthenticated } = useAuth()
   const viewportWidth = useResponsiveWidth()
   const pageHeading = i18nT('seoStatic:search.heading')
@@ -53,7 +55,7 @@ function SearchScreen() {
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: 'transparent',
+          backgroundColor: colors.background,
         },
         errorContainer: {
           flex: 1,
@@ -77,7 +79,7 @@ function SearchScreen() {
           default: { display: 'none' as const },
         }) as any,
       }),
-    [],
+    [colors],
   )
 
   return (

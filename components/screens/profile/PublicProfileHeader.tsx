@@ -234,7 +234,7 @@ export function PublicProfileHeader({
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     wrapper: {
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     cover: {
       height: COVER_HEIGHT,

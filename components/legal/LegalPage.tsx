@@ -108,7 +108,7 @@ const createStyles = (colors: Colors) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     container: {
       paddingHorizontal: 16,

@@ -7,9 +7,11 @@ import PublicTripDetail from '@/components/trips/PublicTripDetail'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
 import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset'
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 export default function TripDetailScreen() {
-  const styles = useMemo(() => createStyles(), [])
+  const colors = useThemedColors()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const { rootBottomOverlap } = useSoftKeyboardInset()
   const params = useLocalSearchParams<{ id?: string }>()
@@ -49,9 +51,9 @@ export default function TripDetailScreen() {
   )
 }
 
-const createStyles = () =>
+const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    screen: { flex: 1, backgroundColor: 'transparent' },
+    screen: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, alignItems: 'center' },
     inner: { width: '100%', maxWidth: 760 },
   })

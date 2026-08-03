@@ -132,7 +132,7 @@ export default function MyTripsDashboard() {
 
 const createStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
-    screen: { flex: 1, backgroundColor: 'transparent' },
+    screen: { flex: 1, backgroundColor: colors.background },
     content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 96, alignItems: 'center' },
     inner: { width: '100%', maxWidth: 1180, gap: 18 },
     header: {

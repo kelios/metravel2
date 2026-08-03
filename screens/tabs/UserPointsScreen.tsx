@@ -16,7 +16,7 @@ export default function UserPointsScreen() {
   const { isAuthenticated, authReady } = useAuth();
   const colors = useThemedColors();
 
-  const styles = createStyles();
+  const styles = createStyles(colors);
 
   if (!authReady) {
     return (
@@ -62,17 +62,16 @@ export default function UserPointsScreen() {
   );
 }
 
-const createStyles = () => StyleSheet.create({
-  // Прозрачный холст: под ним общая фон-текстура из app/_layout.tsx
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background,
   },
   authContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background,
   },
 });

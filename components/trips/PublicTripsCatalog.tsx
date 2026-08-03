@@ -275,7 +275,7 @@ function PublicTripsCatalog() {
 
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    screen: { flex: 1, backgroundColor: 'transparent' },
+    screen: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, alignItems: 'center' },
     inner: { width: '100%', maxWidth: MAX_WIDTH, gap: 12 },
     breadcrumbBar: {

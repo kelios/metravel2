@@ -10,6 +10,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { ResponsiveContainer } from '@/components/layout';
 import { useAuth } from '@/context/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import { queryKeys } from '@/api/queryKeys';
 import { sendAnalyticsEvent } from '@/utils/analytics';
@@ -26,6 +27,7 @@ export default function ExportScreen() {
     const router = useRouter();
     const { isAuthenticated, userId } = useAuth();
     const { isMobile, isHydrated } = useResponsive();
+    const colors = useThemedColors();
     // PDF‑книга собирается только на десктопе. На мобильной версии сайта показываем
     // заглушку вместо контролов экспорта. Гейт по isHydrated — чтобы на десктопе
     // не мигала заглушка и не было hydration mismatch (до гидрации isMobile=true).
@@ -88,7 +90,7 @@ export default function ExportScreen() {
                 />
             )}
 
-            <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+            <View style={{ flex: 1, backgroundColor: colors.background }}>
             {isMobileWebExport ? (
                 <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState

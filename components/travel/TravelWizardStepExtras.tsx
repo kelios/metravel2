@@ -288,7 +288,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     safeContainer: {
         flex: 1,
-        backgroundColor: 'transparent', // ✅ ДИЗАЙН: Динамический цвет фона
+        backgroundColor: colors.background, // ✅ ДИЗАЙН: Динамический цвет фона
     },
     keyboardAvoid: { flex: 1 },
     validationSummaryWrapper: {

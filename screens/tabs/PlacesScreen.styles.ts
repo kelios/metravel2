@@ -11,7 +11,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   return StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background,
   },
   srOnly: Platform.select({
     web: {

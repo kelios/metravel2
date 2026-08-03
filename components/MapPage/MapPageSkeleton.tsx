@@ -21,7 +21,7 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
       ...(Platform.OS === 'web' && !isMobile
         ? ({ flexDirection: 'row-reverse' } as any)
         : null),
