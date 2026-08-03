@@ -101,9 +101,21 @@ describe('constants/imageContract — набор размеров исполня
     }
   })
 
-  it('ключевые frontend-наборы покрыты своими storage-profile', () => {
+  /**
+   * Раньше здесь допускалась и ширина мастера — и ровно этим просочился дефект
+   * 2026-08-03: `articleBodyDesktop` заканчивался на 1920, то есть на мастере
+   * профиля `articleBody`. Пока backend умел динамический resize, такой запрос
+   * обслуживался; после включения `MEDIA_IMAGE_DERIVATIVE_READ_ENABLED` чтение
+   * стало fail-closed и мастер через `?w=` отвечает 400 — на desktop @DPR2
+   * браузер брал из srcset именно 1920, и фото тела статьи не грузились совсем.
+   *
+   * Поэтому запрашивать разрешено только ПРОИЗВОДНЫЕ. Единственное исключение —
+   * `printFull`: печать намеренно берёт мастер травела (2500), и прод отдаёт его
+   * `stored-master` 200.
+   */
+  it('ключевые frontend-наборы покрыты производными своего storage-profile, а не мастером', () => {
     const widthsOf = (profile: (typeof IMAGE_STORAGE_POLICY_V1)[keyof typeof IMAGE_STORAGE_POLICY_V1]) =>
-      new Set([profile.master.width, ...profile.derivatives.map((variant) => variant.width)])
+      new Set(profile.derivatives.map((variant) => variant.width))
 
     const article = widthsOf(IMAGE_STORAGE_POLICY_V1.articleBody)
     const travel = widthsOf(IMAGE_STORAGE_POLICY_V1.travelMedia)
@@ -122,7 +134,6 @@ describe('constants/imageContract — набор размеров исполня
     for (const width of [
       ...IMAGE_WIDTHS.travelHeroMobile,
       ...IMAGE_WIDTHS.travelHeroDesktop,
-      IMAGE_WIDTHS.printFull,
       IMAGE_WIDTHS.printInline,
     ]) {
       expect({ surface: 'travelMedia', width, stored: travel.has(width) }).toEqual({
@@ -131,6 +142,11 @@ describe('constants/imageContract — набор размеров исполня
         stored: true,
       })
     }
+
+    // Единственный осознанный запрос мастера: печать берёт травел целиком.
+    expect({ printFull: IMAGE_WIDTHS.printFull }).toEqual({
+      printFull: IMAGE_STORAGE_POLICY_V1.travelMedia.master.width,
+    })
     for (const width of IMAGE_WIDTHS.questCover) {
       expect({ surface: 'questCover', width, stored: quest.has(width) }).toEqual({
         surface: 'questCover',
@@ -194,7 +210,6 @@ describe('constants/imageContract — набор размеров исполня
       ['тело статьи, 720 CSS @DPR1 (vw 1280)', 720, 1, IMAGE_WIDTHS.articleBodyDesktop],
       ['тело статьи, 720 CSS @DPR2 (vw 1280)', 720, 2, IMAGE_WIDTHS.articleBodyDesktop],
       ['тело статьи, 920 CSS @DPR1 (vw 1920)', 920, 1, IMAGE_WIDTHS.articleBodyDesktop],
-      ['тело статьи, 920 CSS @DPR2 (vw 1920)', 920, 2, IMAGE_WIDTHS.articleBodyDesktop],
       ['hero травела, 360 CSS @DPR2', 360, 2, IMAGE_WIDTHS.travelHeroMobile],
       ['hero травела, 1280 CSS @DPR1', 1280, 1, IMAGE_WIDTHS.travelHeroDesktop],
       ['обложка квеста, 380 CSS @DPR2', 380, 2, IMAGE_WIDTHS.questCover],
@@ -212,6 +227,34 @@ describe('constants/imageContract — набор размеров исполня
         candidate,
         overshoot: true,
       })
+    })
+
+    /**
+     * Единственный слот, который упирается в потолок семейства: 920 CSS на вьюпорте
+     * 1920 при DPR2 просит 1840, а самая широкая ПРОИЗВОДНАЯ `articleBody` — 1600.
+     *
+     * Раньше набор закрывал этот слот мастером 1920, и после перехода backend на
+     * fail-closed чтение производных такой запрос стал отвечать 400 (замер прода
+     * 2026-08-03: `w=1600` → 200 stored-derivative, `w=1920` → 400) — фото тела
+     * статьи не отрисовывались на desktop @DPR2 вовсе. Управляемый апскейл ×1.2
+     * лучше битой картинки; вернуть 1:1 можно только производной 1920 на backend
+     * (#1215), но не запросом мастера.
+     */
+    it('тело статьи, 920 CSS @DPR2 (vw 1920) упирается в потолок производных, а не в мастер', () => {
+      const set = IMAGE_WIDTHS.articleBodyDesktop
+      const needed = requestedWidth(920, 2)
+      const candidate = [...set].sort((a, b) => a - b).find((w) => w >= needed) ?? Math.max(...set)
+      const widestDerivative = Math.max(
+        ...IMAGE_STORAGE_POLICY_V1.articleBody.derivatives.map((variant) => variant.width),
+      )
+
+      expect({ needed, candidate, widestDerivative }).toEqual({
+        needed: 1920,
+        candidate: 1600,
+        widestDerivative: 1600,
+      })
+      expect({ upscale: needed / candidate <= 1.2 }).toEqual({ upscale: true })
+      expect(set).not.toContain(IMAGE_STORAGE_POLICY_V1.articleBody.master.width)
     })
   })
 })

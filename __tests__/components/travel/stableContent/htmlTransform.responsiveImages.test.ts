@@ -26,13 +26,16 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     // src падает на fallback-ступень, а не отдаёт оригинал
     expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=80${AMP}fit=contain"`)
     // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768)
-    for (const w of [480, 640, 800, 960, 1920]) {
+    for (const w of [480, 640, 800, 960, 1600]) {
       expect(out).toContain(`w=${w}${AMP}q=80${AMP}fit=contain ${w}w`)
     }
-    // #1160: потолок поднят с 800 до 1920. Прежнее обоснование «выше 800 прокси
-    // отдаёт оригинал и игнорирует q» устарело — после #1112/#1130 он округляет
-    // вверх по whitelist и не апскейлит. Слот тела ~920 CSS на 1920vw: DPR 1 берёт
-    // 960, DPR 2 — 1920, вместо апскейла 800 → 1840.
+    // #1160 поднял потолок с 800 до 1920, но 1920 — это МАСТЕР профиля `articleBody`.
+    // Замер прода 2026-08-03: на legacy-роуте (`media-resize/legacy/…/conversions/…`,
+    // по нему идёт тело большинства статей) `w=1920` отвечает 400 и картинка не
+    // отрисовывается вовсе, а на каноническом `travel-description-image` отдаётся
+    // мастер 387 411 B с `no-store` — то есть качается заново на каждого потребителя
+    // слота (#1215). Потолок опущен до 1600 — последней ПРОИЗВОДНОЙ семейства.
+    expect(out).not.toContain(`w=1920${AMP}q=80${AMP}fit=contain 1920w`)
     expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
     // cache-buster сохранён
     expect(out).toContain(`v=3315`)
@@ -85,10 +88,12 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
         .filter(Boolean)
 
     it.each([
-      { label: 'desktop 1280 @2x', width: 1280, dpr: 2, expected: 1920 },
+      { label: 'desktop 1280 @2x', width: 1280, dpr: 2, expected: 1600 },
       { label: 'desktop 1280 @1x', width: 1280, dpr: 1, expected: 800 },
       { label: 'desktop 1920 @1x', width: 1920, dpr: 1, expected: 960 },
-      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1920 },
+      // 1840 не покрыт: производных выше 1600 у семейства нет, мастер 1920 просить
+      // нельзя (400 на legacy-роуте, no-store на каноническом).
+      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1600 },
       { label: 'mobile 390 @3x', width: 390, dpr: 3, expected: 800 },
     ])('$label prefetches w=$expected, and that URL is a real srcset candidate', ({ width, dpr, expected }) => {
       const { prefetch, candidates } = withWebViewport(width, dpr, () => {
@@ -232,7 +237,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     )
     // Лестница та же, что у первопартийных картинок тела: отдельного набора
     // ширин для легаси не заводим — именно так уже разъезжались копии (#1170).
-    for (const w of [480, 640, 800, 960, 1920]) {
+    for (const w of [480, 640, 800, 960, 1600]) {
       expect(out).toContain(
         `https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=${w}${AMP}q=80${AMP}fit=contain ${w}w`,
       )
