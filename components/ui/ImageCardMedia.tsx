@@ -303,6 +303,17 @@ function ImageCardMedia({
    * ретрай (#802) и свой нейтральный `errorContainer`, дублировать их нечем.
    */
   const [webFailure, setWebFailure] = useState<WebLoadFailure | null>(null);
+  /**
+   * Идентичность, для которой ремоунт-ретрай уже сделан.
+   *
+   * Суффикс ключа обязан пережить УСПЕХ ретрая: если считать его прямо из фазы
+   * `retrying`, удачная загрузка снимает состояние сбоя, ключ возвращается к
+   * базовому, React выбрасывает только что загруженный `<img>` и монтирует
+   * новый — браузер уходит за тем же URL третий раз. Замер прода 2026-08-03,
+   * transient-режим: `ABORT → PASS(3899 мс) → PASS(4524 мс)`, оба PASS одним
+   * `?w=320&q=60&fit=contain`.
+   */
+  const [retriedIdentity, setRetriedIdentity] = useState<string | null>(null);
   /** Идентичность, о терминальном сбое которой уже сообщили наружу. */
   const reportedFailureRef = useRef<string | null>(null);
   const activeWebFailure =
@@ -313,7 +324,8 @@ function ImageCardMedia({
   // но уже окончательно. `retrying` рисуется как обычная картинка.
   const hasWebLoadError =
     activeWebFailure?.phase === 'waiting' || activeWebFailure?.phase === 'failed';
-  const hasRetriedWebLoad = activeWebFailure?.phase === 'retrying';
+  const hasRetriedWebLoad =
+    Boolean(currentImageIdentityKey) && retriedIdentity === currentImageIdentityKey;
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -647,6 +659,7 @@ function ImageCardMedia({
         // рециклируемая ячейка может вернуться к прежнему URL (X → Y → X), и
         // без сброса она отрисовала бы плейсхолдер, даже не попробовав.
         setWebFailure(null);
+        setRetriedIdentity(null);
         reportedFailureRef.current = null;
       }
       // Смена только режима раскрытия у картинки, чей decode уже подтверждён
@@ -726,7 +739,10 @@ function ImageCardMedia({
     if (activeWebFailure?.phase !== 'waiting') return;
     const identity = activeWebFailure.identity;
     const timer = setTimeout(
-      () => setWebFailure({ identity, phase: 'retrying' }),
+      () => {
+        setRetriedIdentity(identity);
+        setWebFailure({ identity, phase: 'retrying' });
+      },
       WEB_RETRY_BASE_DELAY_MS + Math.random() * WEB_RETRY_JITTER_MS,
     );
     return () => clearTimeout(timer);
