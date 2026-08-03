@@ -23,6 +23,7 @@ import { Platform } from 'react-native';
 import { buildResponsiveImagePropsPreferringMedia } from '@/utils/travelMediaVariants';
 import { buildVersionedImageUrl } from '@/utils/imageOptimization';
 import { createSafeImageUrl } from '@/utils/travelMedia';
+import { PROD_GALLERY_ITEM } from '../fixtures/prodMediaManifest';
 
 // SSG собирает разметку для браузера, поэтому клиентскую сторону сравниваем в web-режиме
 // (на native srcSet не строится вовсе).
@@ -198,5 +199,74 @@ describe('buildResponsiveImagePropsFromMedia: фильтр по fit', () => {
     // family-роут в proxy-contract v4 это `source_passthrough` и отдал бы мастер
     // с `no-store`, а `legacy_conversion` режет по лестнице и кэширует (#1195).
     expect(legacy.src).toBe(`${LEGACY_GALLERY_PATH}?w=640&q=75&fit=cover`);
+  });
+});
+
+/**
+ * #1203: тот же инвариант «preload == запрос `<img>`», но на манифесте, который
+ * прод отдаёт СЕЙЧАС — с готовыми `src`/`srcset*` и адресами без `q=`/`fit=`.
+ *
+ * Блок выше проверяет legacy-формат `variants`, оставшийся фолбэком. Если бы
+ * SSG и клиент разошлись именно на новом формате, hero снова качался бы дважды,
+ * а старые фикстуры этого не заметили бы.
+ */
+describe('#1203 hero preload на готовых источниках манифеста', () => {
+  const PROD_DETAIL = {
+    gallery: [{ id: PROD_GALLERY_ITEM.id, url: String(PROD_GALLERY_ITEM.variants?.original ?? '') }],
+    media: { gallery: [PROD_GALLERY_ITEM] },
+  };
+
+  const preload = buildTravelHeroPreloadData({ id: 544, updated_at: null }, PROD_DETAIL);
+
+  const clientProps = (options: typeof MOBILE_OPTIONS | typeof DESKTOP_OPTIONS) =>
+    buildResponsiveImagePropsPreferringMedia(
+      PROD_GALLERY_ITEM as any,
+      String(PROD_DETAIL.gallery[0].url),
+      options,
+    );
+
+  // Манифест отдаёт относительные пути, и каждая сторона резолвит их против
+  // своего origin: SSG — против API-хоста сборки, клиент — против рантайм-origin.
+  // В одном окружении это один и тот же хост, а в тестовой среде — нет, поэтому
+  // сравнивается адрес файла со ступенью. Именно его совпадение решает, приедет
+  // hero одним запросом или двумя.
+  const addressOf = (url: string | undefined): string => {
+    const parsed = new URL(String(url ?? ''));
+    return `${parsed.pathname}${parsed.search}`;
+  };
+  const addressesOf = (srcSet: string | undefined): string[] =>
+    String(srcSet ?? '')
+      .split(',')
+      .map((candidate) => candidate.trim())
+      .filter(Boolean)
+      .map((candidate) => {
+        const [url, descriptor] = candidate.split(/\s+/);
+        return `${addressOf(url)} ${descriptor}`;
+      });
+
+  it('mobile: href и srcSet совпадают с клиентскими', () => {
+    const client = clientProps(MOBILE_OPTIONS);
+    expect(addressOf(preload.mobile.href)).toBe(addressOf(client.src));
+    expect(addressesOf(preload.mobile.srcSet)).toEqual(addressesOf(client.srcSet));
+  });
+
+  it('desktop: href и srcSet совпадают с клиентскими', () => {
+    const client = clientProps(DESKTOP_OPTIONS);
+    expect(addressOf(preload.desktop.href)).toBe(addressOf(client.src));
+    expect(addressesOf(preload.desktop.srcSet)).toEqual(addressesOf(client.srcSet));
+  });
+
+  it('мобильный hero остаётся на ступени слота, а не уезжает на contain-набор', () => {
+    // `srcset_contain` этой картинки начинается с 720: если бы источником стал
+    // набор одного слота, мобильный preload прыгнул бы на 960.
+    expect(widthsOf(preload.mobile.srcSet)).toEqual([320, 480, 640, 720]);
+    expect(preload.mobile.href).toMatch(/[?&]w=720\b/);
+  });
+
+  it('адреса идут w-only — ни q=, ни fit= в них не появляется', () => {
+    for (const srcSet of [preload.mobile.srcSet, preload.desktop.srcSet]) {
+      expect(srcSet).not.toMatch(/[?&]q=/);
+      expect(srcSet).not.toMatch(/[?&]fit=/);
+    }
   });
 });

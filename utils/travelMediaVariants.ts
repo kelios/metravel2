@@ -66,6 +66,9 @@ type ResolvedVariant = { width: number; url: string; fit: string | null }
 
 // В именах вариантов режим кадрирования не закодирован (`thumb_320`, `hero_1280`),
 // зато он есть в самом URL: `?w=320&q=72&fit=cover` против `?w=1280&q=78&fit=contain`.
+//
+// Это верно только для legacy-формата `variants`. В готовых `srcset*` (#1202)
+// URL идут w-only, `fit=` там нет вовсе — см. `resolveManifestSources`.
 const VARIANT_FIT_PARAM = /[?&]fit=([a-z]+)/i
 
 function readVariantFit(url: string): string | null {
@@ -73,6 +76,61 @@ function readVariantFit(url: string): string | null {
   return match ? match[1].toLowerCase() : null
 }
 
+/** Дескриптор ширины в srcset: `<url> 640w`. */
+const SRCSET_WIDTH_DESCRIPTOR = /^(\S+)\s+(\d+)w$/
+
+/**
+ * Готовые источники манифеста (#1202/#1203) — канонический источник кандидатов.
+ *
+ * Берём ОБЪЕДИНЕНИЕ всех `srcset*`, а не набор одного слота. Причина в том, что
+ * `fit` перестал влиять на адрес: проба прода 2026-08-03 на одной ширине даёт
+ * байт-в-байт один ответ для `?w=640`, `?w=640&fit=cover`, `?w=640&fit=contain`
+ * и `?w=640&q=70` (46 212 B во всех четырёх). Сервер хранит один файл на ширину,
+ * кадрирует CSS, поэтому `srcset_cover` и `srcset_contain` — это подсказка о том,
+ * какие ступени уместны слоту, а не разные картинки.
+ *
+ * Брать только набор своего `fit` нельзя: у обложки `srcset_contain` начинается
+ * с 720, и мобильный hero (слот 390 CSS, DPR 2 → 780) выбрал бы 960 вместо
+ * нынешних 720 — то есть переход «на готовые URL» сам по себе утяжелил бы
+ * страницу. Какие ступени предлагать слоту, по-прежнему решает `widths`.
+ *
+ * Объединение даёт ровно лестницу производных БЕЗ мастера: у точки маршрута в
+ * `variants` лежит ещё и мастер 1200, которого в `srcset*` нет, и попадать в
+ * кандидаты он не должен (#1112 — «тихая отдача оригинала»).
+ */
+function resolveManifestSources(entry: TravelMediaImage | null | undefined): ResolvedVariant[] {
+  if (!entry) return []
+
+  const byWidth = new Map<number, string>()
+  const sources = [entry.srcset, entry.srcset_cover, entry.srcset_contain, entry.srcset_print]
+  for (const srcset of sources) {
+    if (typeof srcset !== 'string' || !srcset.trim()) continue
+    for (const rawCandidate of srcset.split(',')) {
+      const candidate = rawCandidate.trim()
+      if (!candidate) continue
+      const match = SRCSET_WIDTH_DESCRIPTOR.exec(candidate)
+      if (!match) continue
+      const width = Number(match[2])
+      if (!Number.isFinite(width) || width <= 0) continue
+      if (byWidth.has(width)) continue
+      const url = resolveMediaVariantUrl(match[1])
+      if (!url) continue
+      byWidth.set(width, url)
+    }
+  }
+
+  return Array.from(byWidth.entries())
+    .map(([width, url]) => ({ width, url, fit: null }))
+    .sort((a, b) => a.width - b.width)
+}
+
+/**
+ * Legacy-разбор `variants` — единственный фолбэк, когда готовых `srcset*` нет.
+ *
+ * Держится ровно до тех пор, пока манифест не покроет оставшиеся семейства
+ * (тело статьи, аватары — остаток #1202). Расширять его нельзя: это ровно тот
+ * путь, ради устранения которого заведена #1203.
+ */
 function resolveVariants(entry: TravelMediaImage | null | undefined): ResolvedVariant[] {
   const variants = entry?.variants
   if (!variants) return []
@@ -170,16 +228,48 @@ export interface MediaResponsiveOptions {
   fit?: 'cover' | 'contain' | 'fill'
 }
 
+/**
+ * `sizes` слота: значение вызывающего кода → подсказка манифеста для этого же
+ * режима кадрирования → общая подсказка → `100vw`.
+ *
+ * Подсказка слота берётся только вместе с его набором ступеней. Манифест может
+ * их рассогласовать: у точки маршрута `sizes_hint_contain` обещает `1280px`,
+ * хотя `srcset_contain` пуст, а самая широкая производная точки — 960. Такая
+ * подсказка заставила бы браузер всегда брать верхнюю ступень вместо нужной,
+ * поэтому при пустом наборе слота остаётся общая подсказка.
+ */
+function resolveSizesHint(
+  entry: TravelMediaImage | null | undefined,
+  fit: MediaResponsiveOptions['fit'],
+): string | null {
+  if (!entry) return null
+  const hasSlotSources = (srcset: string | null | undefined): boolean =>
+    typeof srcset === 'string' && srcset.trim().length > 0
+  const bySlot =
+    fit === 'contain' && hasSlotSources(entry.srcset_contain)
+      ? entry.sizes_hint_contain
+      : fit === 'cover' && hasSlotSources(entry.srcset_cover)
+        ? entry.sizes_hint_cover
+        : null
+  const hint = bySlot ?? entry.sizes_hint
+  return typeof hint === 'string' && hint.trim() ? hint : null
+}
+
 // Собирает { src, srcSet, sizes } из backend-вариантов; null = манифест непригоден,
 // вызывающий код обязан использовать клиентскую сборку URL.
 export function buildResponsiveImagePropsFromMedia(
   entry: TravelMediaImage | null | undefined,
   options: MediaResponsiveOptions = {},
 ): { src: string; srcSet?: string; sizes?: string } | null {
-  const allVariants = resolveVariants(entry)
+  // Готовые источники бэкенда — канонический путь; разбор `variants` остаётся
+  // единственным фолбэком для семейств, которые манифест ещё не покрывает.
+  const fromManifest = resolveManifestSources(entry)
+  const allVariants = fromManifest.length ? fromManifest : resolveVariants(entry)
   if (!allVariants.length) return null
 
   // Вариант без `fit` в URL считаем нейтральным — он подходит любому слоту.
+  // У готовых источников `fit` всегда null (адреса w-only), так что фильтр
+  // работает только на legacy-`variants`, где режим закодирован в самом URL.
   const variants = options.fit
     ? allVariants.filter((variant) => variant.fit === null || variant.fit === options.fit)
     : allVariants
@@ -210,7 +300,7 @@ export function buildResponsiveImagePropsFromMedia(
   return {
     src: target.url,
     srcSet: srcSet || undefined,
-    sizes: options.sizes ?? entry?.sizes_hint ?? '100vw',
+    sizes: options.sizes ?? resolveSizesHint(entry, options.fit) ?? '100vw',
   }
 }
 

@@ -424,11 +424,48 @@ function pickTravelSeoImage(travel, detail) {
 // клиент сходились на одном URL.
 const VARIANT_NAME_WIDTH = /_(\d{2,4})$/;
 // Режим кадрирования в имени варианта не закодирован, но есть в самом URL.
+// Актуально только для legacy-`variants`: в готовых `srcset*` адреса w-only.
 const VARIANT_FIT_PARAM = /[?&]fit=([a-z]+)/i;
 // Зеркало MAX_VARIANT_OVERSIZE_RATIO из utils/travelMediaVariants.ts.
 const MAX_VARIANT_OVERSIZE_RATIO = 1.25;
+// Дескриптор ширины в srcset: `<url> 640w`.
+const SRCSET_WIDTH_DESCRIPTOR = /^(\S+)\s+(\d+)w$/;
 
+// #1203: зеркало `resolveManifestSources` из utils/travelMediaVariants.ts —
+// объединение всех `srcset*` манифеста. Набор одного слота брать нельзя: `fit`
+// больше не влияет на адрес (сервер отдаёт один файл на ширину), а `srcset_contain`
+// обложки начинается с 720, из-за чего мобильный preload уехал бы на 960.
+function resolveManifestSources(entry) {
+  if (!entry) return [];
+  const byWidth = new Map();
+  const sources = [entry.srcset, entry.srcset_cover, entry.srcset_contain, entry.srcset_print];
+  for (const srcset of sources) {
+    if (typeof srcset !== 'string' || !srcset.trim()) continue;
+    for (const rawCandidate of srcset.split(',')) {
+      const candidate = rawCandidate.trim();
+      if (!candidate) continue;
+      const m = SRCSET_WIDTH_DESCRIPTOR.exec(candidate);
+      if (!m) continue;
+      const width = Number(m[2]);
+      if (!Number.isFinite(width) || width <= 0) continue;
+      if (byWidth.has(width)) continue;
+      const absolute = toAbsoluteUrl(m[1]);
+      if (!absolute) continue;
+      // Зеркало `resolveMediaVariantUrl`: URL манифеста идут в preload/`srcSet` как
+      // есть, поэтому conversion-ключ уводится на transform-роут здесь же (#1195).
+      byWidth.set(width, toLegacyConversionUrl(absolute));
+    }
+  }
+  return [...byWidth.entries()]
+    .map(([width, url]) => ({ width, url, fit: null }))
+    .sort((a, b) => a.width - b.width);
+}
+
+// Фолбэк для семейств, которые манифест ещё не покрывает готовыми источниками.
 function resolveManifestVariants(entry) {
+  const fromManifest = resolveManifestSources(entry);
+  if (fromManifest.length) return fromManifest;
+
   const variants = entry?.variants;
   if (!variants || typeof variants !== 'object') return [];
   const resolved = [];
@@ -439,8 +476,6 @@ function resolveManifestVariants(entry) {
     if (!Number.isFinite(width) || width <= 0) continue;
     const absolute = toAbsoluteUrl(String(rawUrl || '').trim());
     if (!absolute) continue;
-    // Зеркало `resolveMediaVariantUrl`: URL манифеста идут в preload/`srcSet` как
-    // есть, поэтому conversion-ключ уводится на transform-роут здесь же (#1195).
     const url = toLegacyConversionUrl(absolute);
     const fitMatch = VARIANT_FIT_PARAM.exec(url);
     resolved.push({ width, url, fit: fitMatch ? fitMatch[1].toLowerCase() : null });

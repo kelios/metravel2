@@ -53,6 +53,24 @@ const toStatusFlag = (value: unknown): boolean | number | null | undefined => {
   return undefined;
 };
 
+/**
+ * Манифест `media` (#715) приходит тем же ответом `/api/travels/`, что и список
+ * профиля, но белый список полей ниже его терял. Без `media.cover` карточка
+ * остаётся без `dominant_color`, а с ним — без заливки полей letterbox: web
+ * рисует подложку `contain`-фото исключительно этим цветом (см.
+ * `ImageCardMedia` → `ImageDataPlaceholder`, сетевой blur-подложки на web
+ * больше нет). На каталоге манифест сохраняется, поэтому фон был везде, кроме
+ * профиля: фото висело на голом `backgroundSecondary` карточки.
+ *
+ * Заодно возвращается лестница backend-вариантов обложки
+ * (`buildResponsiveImagePropsFromMedia` в `TravelListItem`) — до этого профиль
+ * собирал proxy-URL на клиенте из одного thumb.
+ */
+const toTravelMedia = (value: unknown): Travel['media'] =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Travel['media'])
+    : undefined;
+
 export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
   const idRaw = item?.id ?? item?._id ?? 0;
   const id = typeof idRaw === 'number' ? idRaw : Number(idRaw) || 0;
@@ -94,6 +112,7 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
     countUnicIpView,
     gallery: Array.isArray(item?.gallery) ? item.gallery : [],
     travelAddress: Array.isArray(item?.travelAddress) ? item.travelAddress : [],
+    media: toTravelMedia(item?.media),
     userIds: String(item?.userIds ?? item?.userId ?? (item?.user as Record<string, unknown> | undefined)?.id ?? ''),
     year: String(item?.year ?? ''),
     monthName: getMonthName(item),

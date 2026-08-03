@@ -510,8 +510,28 @@ function ImageCardMedia({
     const uniqueSortedWidths = Array.from(
       new Set(srcSetWidths.map((value) => Math.min(WEB_SRCSET_MAX_WIDTH, value))),
     ).sort((a, b) => a - b);
+    /**
+     * Полы 160/320/480/640 выше не зависят от размера слота, поэтому мелкие слоты
+     * получали кандидатов заведомо крупнее, чем им нужно даже на retina. Для
+     * аватара это оплачивалось мастером: слот 96 CSS px на DPR 2 требует 192, в
+     * наборе ближайшим оказывался 320 — а 320 у storage-профиля `avatar` и есть
+     * МАСТЕР. Замер прода 2026-08-03,
+     * `/avatar/profile/82/avatar/f9b9811452104523b2088f840a77a6ee.webp`:
+     *
+     *   w=96  →     738 B  stored-derivative
+     *   w=160 →   1 572 B  stored-derivative
+     *   w=320 →  88 492 B  stored-master
+     *
+     * То есть ~87 КБ лишних на каждый такой аватар (на travel-детали их минимум
+     * два). Отсекаем кандидатов крупнее того, что слот способен показать на своём
+     * DPR-множителе; если так не остаётся ни одного — держим самую мелкую ступень,
+     * чтобы `srcSet` не исчез вовсе.
+     */
+    const slotPixelCap = Math.round(baseWidth * maxResponsiveMultiplier);
+    const withinSlot = uniqueSortedWidths.filter((value) => value <= slotPixelCap);
+    const effectiveWidths = withinSlot.length ? withinSlot : uniqueSortedWidths.slice(0, 1);
     return (
-      generateSrcSet(uri, uniqueSortedWidths, {
+      generateSrcSet(uri, effectiveWidths, {
         quality,
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined

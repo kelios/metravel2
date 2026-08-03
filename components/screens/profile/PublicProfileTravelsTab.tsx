@@ -5,6 +5,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Button from '@/components/ui/Button';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
 import type { Travel } from '@/types/types';
 import { translate as i18nT } from '@/i18n'
 
@@ -57,6 +58,12 @@ export function PublicProfileTravelsTab({
             .map((v) => String(v ?? '').trim())
             .filter(Boolean)
             .join(' · ');
+          // Карточка кадрирует фото в `contain`, а на web поля letterbox заливает
+          // только `dominant_color` из манифеста: blurhash туда не идёт (см.
+          // `ImageCardMedia`). Пока сюда уходил один хардкоженый blurhash, фото
+          // на web висело на голом фоне карточки. Тот же контракт, что и в
+          // `TravelListItem`: цвет — вебу, blurhash — native.
+          const coverPlaceholder = getMediaPlaceholderData(travel.media?.cover);
           return (
             <View key={String(travel.id ?? travel.slug ?? index)} style={styles.cardWrap}>
               <UnifiedTravelCard
@@ -70,7 +77,10 @@ export function PublicProfileTravelsTab({
                 imageHeight={180}
                 webHoverScale={!isMobile}
                 mediaProps={{
-                  placeholderBlurhash: AUTHOR_CARD_BLURHASH,
+                  placeholderBlurhash:
+                    coverPlaceholder.blurhash ??
+                    (coverPlaceholder.dominantColor ? undefined : AUTHOR_CARD_BLURHASH),
+                  placeholderColor: coverPlaceholder.dominantColor,
                   blurBackground: true,
                   allowCriticalWebBlur: Platform.OS === 'web',
                   recyclingKey: String(travel.slug || travel.id || index),

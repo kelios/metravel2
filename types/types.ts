@@ -49,10 +49,30 @@ export type TravelMediaImage = {
     dominant_color?: string | null
     blurhash?: string | null
     lqip_url?: string | null
-    // Имена вида thumb_160 / card_640 / hero_1920 / print_2500 / original
+    // Имена вида thumb_160 / card_640 / hero_1920 / print_2500 / original.
+    // Legacy-источник кандидатов: используется только когда готовых `srcset*`
+    // в манифесте нет (#1203). Бэкенд планирует свернуть поле отдельным тикетом.
     variants?: Record<string, string> | null
+    /**
+     * Готовые источники из манифеста (#1202). URL идут w-only: ни `q=`, ни `fit=`
+     * в них нет — сервер отдаёт один файл на ширину, кадрирование делает CSS.
+     * Поэтому `*_cover` и `*_contain` различаются НАБОРОМ ступеней, а не
+     * содержимым файлов, и объединение всех `srcset*` даёт полную лестницу
+     * производных без мастера.
+     */
+    src?: string | null
+    src_cover?: string | null
+    src_contain?: string | null
+    src_print?: string | null
     srcset?: string | null
+    srcset_cover?: string | null
+    srcset_contain?: string | null
+    srcset_print?: string | null
     sizes_hint?: string | null
+    sizes_hint_cover?: string | null
+    sizes_hint_contain?: string | null
+    sizes_hint_print?: string | null
+    storage_policy?: string | null
     updated_at?: string | null
 }
 

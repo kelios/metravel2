@@ -8,9 +8,18 @@ jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => new Proxy({}, { get: () => '#334455' }),
 }));
 
-jest.mock('@/components/ui/UnifiedTravelCard', () => () => null);
+const mockUnifiedTravelCard = jest.fn<any, [any]>(() => null);
+
+jest.mock('@/components/ui/UnifiedTravelCard', () => ({
+  __esModule: true,
+  default: (props: any) => mockUnifiedTravelCard(props),
+}));
 
 describe('PublicProfileTravelsTab', () => {
+  beforeEach(() => {
+    mockUnifiedTravelCard.mockClear();
+  });
+
   it('loads more routes inside the profile instead of navigating away', () => {
     const onLoadMore = jest.fn();
     const travel = { id: 1, name: 'Маршрут' } as Travel;
@@ -30,5 +39,51 @@ describe('PublicProfileTravelsTab', () => {
 
     expect(onLoadMore).toHaveBeenCalledTimes(1);
     expect(queryByText('Смотреть все (13)')).toBeNull();
+  });
+
+  it('заливает поля letterbox доминирующим цветом обложки, а не общим blurhash', () => {
+    // На web blurhash в подложку не идёт вовсе, поэтому один хардкоженый хеш
+    // оставлял `contain`-фото автора без фона.
+    const travel = {
+      id: 2,
+      name: 'Адршпашские скалы',
+      media: { cover: { id: 2, blurhash: 'LKO2:N%2Tw=w]~RBVZRi};RPxuwH', dominant_color: '#4d5a52' } },
+    } as unknown as Travel;
+
+    render(
+      <PublicProfileTravelsTab
+        travels={[travel]}
+        total={1}
+        isLoading={false}
+        isError={false}
+        isMobile
+        onOpenTravel={jest.fn()}
+        onLoadMore={jest.fn()}
+      />
+    );
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.mediaProps?.placeholderColor).toBe('#4d5a52');
+    expect(props.mediaProps?.placeholderBlurhash).toBe('LKO2:N%2Tw=w]~RBVZRi};RPxuwH');
+  });
+
+  it('оставляет общий blurhash только когда у обложки нет ни хеша, ни цвета', () => {
+    const travel = { id: 3, name: 'Старый payload' } as Travel;
+
+    render(
+      <PublicProfileTravelsTab
+        travels={[travel]}
+        total={1}
+        isLoading={false}
+        isError={false}
+        isMobile
+        onOpenTravel={jest.fn()}
+        onLoadMore={jest.fn()}
+      />
+    );
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.mediaProps?.placeholderBlurhash).toBe('LEHL6nWB2yk8pyo0adR*.7kCMdnj');
+    expect(props.mediaProps?.placeholderColor).toBeNull();
   });
 });

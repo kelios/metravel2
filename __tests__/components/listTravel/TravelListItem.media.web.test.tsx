@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/AuthContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import TravelListItem from '@/components/listTravel/TravelListItem';
+import { normalizeToTravel } from '@/components/profile/travelNormalize';
 import type { Travel } from '@/types/types';
 
 const mockUnifiedTravelCard = jest.fn<any, [any]>(() => null);
@@ -301,6 +302,34 @@ describe('TravelListItem media props on web', () => {
     // Оба поля прокидываются вместе: web заливает поля цветом, native рисует blurhash.
     expect(props.mediaProps?.placeholderColor).toBe('#123456');
     expect(props.mediaProps?.placeholderSrc).toBeUndefined();
+  });
+
+  it('keeps the letterbox fill for a card built from the profile payload', () => {
+    // Профиль не отдаёт `Travel` напрямую: список проходит через
+    // `normalizeToTravel`, и раньше тот терял `media`. Карточка оставалась без
+    // `placeholderColor`, то есть без единственной web-подложки под
+    // `contain`-фото — на телефоне фото висело на голом фоне карточки.
+    const travel = normalizeToTravel({
+      id: 21,
+      name: 'Озеро Букувка',
+      url: '/travels/ozero-bukuvka',
+      travel_image_thumb_url: 'https://metravel.by/travel-image/21/thumb.webp',
+      media: {
+        cover: {
+          id: 21,
+          dominant_color: '#666b6d',
+          variants: { card_640: '/travel-image/21/cover.webp?w=640' },
+        },
+      },
+    });
+
+    renderItem({ travel, isMobile: true, viewportWidth: 390 });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.mediaProps?.placeholderColor).toBe('#666b6d');
+    expect(props.mediaProps?.webResponsiveSource?.src).toBe(
+      'https://metravel.by/travel-image/21/cover.webp?w=640',
+    );
   });
 
   it('uses dominant color when the cover has no blurhash', () => {
