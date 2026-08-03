@@ -112,6 +112,35 @@ describe('PlacePopupCard', () => {
     expect(props.allowCriticalWebBlur).toBe(true);
   });
 
+  /**
+   * #1221: попап отдавал в `<img>` conversion-URL точки как есть. Ownership-роуты идут
+   * мимо кэша nginx (`X-Cache-Status: BYPASS`), поэтому без `?w=` бэкенд отвечает
+   * МАСТЕРОМ с `no-store` — заново на каждое открытие точки. Замер прода 2026-08-03:
+   * `address-image/355/conversions/…webp` — 288 202 B на слот 299 CSS.
+   *
+   * URL строится настоящим `optimizeImageUrl` (не моком): дефект был именно в том,
+   * КАК собирается адрес, поэтому проверять это на подменённом билдере бессмысленно.
+   */
+  it('requests a stored derivative width for the popup hero instead of the bare conversion URL', () => {
+    renderer.act(() => {
+      renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://metravel.by/address-image/355/conversions/462e31db74f043c5884fa3f3803132f7.webp"
+          width={560}
+        />
+      );
+    });
+
+    const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src ?? '');
+    const width = Number(new URL(src).searchParams.get('w'));
+
+    expect({ hasWidth: Number.isFinite(width) && width > 0 }).toEqual({ hasWidth: true });
+    // Потолок производных семейства `address-image`: `w=960` → 200, `w=1280` → 400.
+    expect({ width, withinFamilyCeiling: width <= 960 }).toEqual({ width, withinFamilyCeiling: true });
+  });
+
   it('switches popup hero to compact layout on narrow viewport to keep it inside the screen', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 360, height: 740, scale: 1, fontScale: 1 }));
 

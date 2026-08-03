@@ -479,12 +479,15 @@ describe('utils/imageOptimization', () => {
       expect(unsupported).toEqual([])
 
       // И лестница не должна округлять ВНИЗ: превью не может быть мельче запрошенного,
-      // иначе картинка мылится. Единственное исключение — потолок whitelist, выше
-      // которого запрос клампится (#1170: потолок поднят с 1920 до 2500 — верхняя
-      // ступень контракта прокси, нужная для print-варианта PDF).
-      const MAX_RUNG = Math.max(...PROXY_SUPPORTED_WIDTHS)
+      // иначе картинка мылится. Исключение — потолок, выше которого запрос клампится.
+      // Для `gallery` (профиль `travelMedia`) это 1600: самая широкая ПРОИЗВОДНАЯ
+      // семейства. Запрос выше неё бэкенд не обслуживает вовсе — замер прода
+      // 2026-08-03 на `gallery/3994/conversions/…-detail_hd.jpg`: `w=1600` → 200
+      // stored-derivative, `w=1920` → 400 (#1221). Клэмп вниз здесь — единственный
+      // способ не отдать пользователю битую картинку.
+      const FAMILY_DERIVATIVE_CEILING = 1600
       const downscaled = emitted.filter(
-        (entry) => entry.w != null && entry.w < entry.width && entry.w !== MAX_RUNG,
+        (entry) => entry.w != null && entry.w < entry.width && entry.w !== FAMILY_DERIVATIVE_CEILING,
       )
       expect(downscaled).toEqual([])
     })

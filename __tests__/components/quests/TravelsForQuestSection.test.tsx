@@ -61,10 +61,11 @@ describe('TravelsForQuestSection', () => {
       'https://metravel.by/travel-image/958/conversions/photo-thumb_200.jpg',
     )
     expect(props.mediaFit).toBe('contain')
+    // #1221: `optimizeWeb` здесь больше нет — иначе карточка просит conversion-URL
+    // без `?w=`, и ownership-роут отвечает мастером с `no-store`.
     expect(props.mediaProps).toEqual({
       blurBackground: true,
       allowCriticalWebBlur: true,
-      optimizeWeb: false,
     })
   })
 })

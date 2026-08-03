@@ -491,7 +491,12 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
         blurRadius: 16,
         loading: eagerImage ? 'eager' : 'lazy',
         priority: eagerImage ? 'high' : 'low',
-        optimizeWeb: false,
+        // #1221: здесь стоял `optimizeWeb: false` — карточка отдавала в `<img>`
+        // адрес из API как есть, без `?w=`, а ownership-роут на запрос без ширины
+        // отвечает МАСТЕРОМ с `no-store` (мимо кэша nginx и браузера). Замер прода
+        // 2026-08-03 на `/places`: 12 из 12 медиа-запросов уходили голыми, 619 КБ,
+        // при слоте 299×280 CSS — `address-image/355/…webp` приезжал 1024×768.
+        // Ширину теперь считает `UnifiedTravelCard` от своего `width`.
       }}
       contentContainerStyle={styles.contentContainer}
     />

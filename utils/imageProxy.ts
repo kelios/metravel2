@@ -2,6 +2,7 @@
 // J4: Image URL proxy/optimization (extracted from imageOptimization.ts)
 
 import { Platform } from 'react-native';
+import { DERIVATIVE_WIDTHS_BY_ROUTE } from '@/constants/imageContract';
 import {
   normalizeAbsoluteMediaUrl,
   isPrivateOrLocalHost,
@@ -163,6 +164,48 @@ const resolveProxyWidth = (options: ImageOptimizationOptions): number | null => 
   return snapDimensionUp(options.width);
 };
 
+/** Первый сегмент пути — имя ownership-семейства (`/address-image/…`). */
+const FAMILY_ROUTE_SEGMENT = /^\/([a-z-]+)\//i;
+
+/**
+ * Семейство исходного URL. Считается по адресу ДО rewrite на legacy-роут: после
+ * него путь выглядит как `/media-resize/legacy/355/conversions/…`, где первый
+ * сегмент ключа — id записи, а не роут, и профиль определить уже нельзя.
+ * Ограничения профиля при этом никуда не деваются — замер прода 2026-08-03,
+ * `media-resize/legacy/355/conversions/…webp`: `w=960` → 200, `w=1280` → 400.
+ */
+const familyRouteOf = (value: string): string | undefined => {
+  const raw = String(value || '').trim();
+  if (!raw) return undefined;
+  try {
+    const pathname = raw.startsWith('/') ? raw : new URL(raw).pathname;
+    return FAMILY_ROUTE_SEGMENT.exec(pathname)?.[1]?.toLowerCase();
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * Потолок ширины для family-роута: его САМАЯ КРУПНАЯ производная.
+ *
+ * После включения fail-closed чтения ступень вне `derivatives` — это не «отдадим
+ * что поближе», а 400 и битая картинка. Замеры прода 2026-08-03:
+ *   `quest-cover/…`   w=800 → 200 (7 798 B), w=960  → 400
+ *   `address-image/…` w=960 → 200 (211 082 B), w=1280 → 400
+ *   `travel-image/…`  w=1600 → 200 (162 748 B), w=1920 → 400
+ * Промежуточные ширины безопасны — бэк округляет их вверх до своей ступени
+ * (`w=720` и `w=800` у address-image весят байт в байт), опасно только выйти за
+ * верхнюю. Поэтому здесь ровно клэмп сверху, а не снэп в набор семейства.
+ *
+ * Legacy-роуты (`/media-resize/**`) семейства не имеют — их ширину продолжает
+ * определять общая лестница прокси.
+ */
+const clampWidthToFamilyCeiling = (route: string | undefined, width: number): number => {
+  const familyWidths = route ? DERIVATIVE_WIDTHS_BY_ROUTE.get(route) : undefined;
+  if (!familyWidths?.length) return width;
+  return Math.min(width, familyWidths[familyWidths.length - 1]);
+};
+
 // Quality следует опубликованному proxy-contract буквально: допустимое значение
 // остаётся как есть, промежуточное округляется ВВЕРХ, а invalid/out-of-range
 // возвращает backend default q85. Это не просто «шаг 10»: q85 — отдельная
@@ -245,7 +288,13 @@ export function optimizeImageUrl(
       // Legacy routes do not have the family-route `w` gate, so always make the
       // resize choice explicit. 800 is both a canonical rung and the backend's
       // documented legacy default; dynamic callers should still pass slot width.
-      const mediaWidth = requestedWidth ?? (isLegacyResizeRoute ? LEGACY_RESIZE_FALLBACK_WIDTH : null);
+      const familyRoute = familyRouteOf(trimmedUrl) ?? familyRouteOf(parsedUrl.pathname);
+      const mediaWidth =
+        requestedWidth != null
+          ? clampWidthToFamilyCeiling(familyRoute, requestedWidth)
+          : isLegacyResizeRoute
+            ? LEGACY_RESIZE_FALLBACK_WIDTH
+            : null;
       // Family-роут без `w` остаётся голым: одни q/fit лишь плодят
       // cache-key на тот же мастер. Legacy-роуту выше явно ставим w800,
       // потому что его контракт запрещает widthless URL.

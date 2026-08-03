@@ -5,6 +5,7 @@ import {
   optimizeImageUrl,
   PROXY_QUALITY_LADDER,
   snapProxyQuality,
+  snapProxyWidth,
 } from '@/utils/imageProxy'
 
 /**
@@ -46,10 +47,38 @@ describe('utils/imageProxy — лестница ширин против конт
     process.env.EXPO_PUBLIC_API_URL = previousApiUrl
   })
 
+  /**
+   * Потолок производных семейства `gallery`/`travel-image` (профиль `travelMedia`).
+   * Ступени выше него прокси знает, но у этого семейства их не существует, и с #1221
+   * `optimizeImageUrl` не даёт их запросить — см. отдельный тест ниже.
+   */
+  const FAMILY_DERIVATIVE_CEILING = 1600
+
   it('каждая ступень контракта запрашивается как есть, без снэпа вверх', () => {
-    for (const width of BACKEND_CONTRACT_WIDTHS) {
+    for (const width of BACKEND_CONTRACT_WIDTHS.filter((w) => w <= FAMILY_DERIVATIVE_CEILING)) {
       expect({ width, got: widthOf(width) }).toEqual({ width, got: width })
     }
+  })
+
+  /**
+   * #1221: ступень вне `derivatives` семейства — это не «ближайшее похожее», а 400 и
+   * битая картинка (чтение производных fail-closed). Замер прода 2026-08-03 на
+   * `gallery/3994/conversions/…-detail_hd.jpg`: `w=1600` → 200 stored-derivative
+   * (263 066 B), `w=1920` → **400** (47 B). Поэтому family-URL клэмпится потолком
+   * своего профиля, а не верхом общей лестницы.
+   */
+  it('ширина выше потолка производных семейства клэмпится, а не уходит в 400', () => {
+    for (const width of BACKEND_CONTRACT_WIDTHS.filter((w) => w > FAMILY_DERIVATIVE_CEILING)) {
+      expect({ width, got: widthOf(width) }).toEqual({ width, got: FAMILY_DERIVATIVE_CEILING })
+    }
+
+    // У `quest-cover` потолок производных ниже — 800 (профиль `questCover`);
+    // прод на `w=960` отвечает 400, замер 2026-08-03.
+    const questCover = optimizeImageUrl(
+      'https://metravel.by/quest-cover/quests/1/main/cover.webp',
+      { width: 1280 },
+    )
+    expect(new URL(questCover!).searchParams.get('w')).toBe('800')
   })
 
   it('промежуточное значение округляется вверх до ближайшей ступени контракта', () => {
@@ -71,8 +100,12 @@ describe('utils/imageProxy — лестница ширин против конт
 
   it('выше верхней ступени клампится, а не растёт бесконечно', () => {
     const max = BACKEND_CONTRACT_WIDTHS[BACKEND_CONTRACT_WIDTHS.length - 1]
-    expect(widthOf(max + 1)).toBe(max)
-    expect(widthOf(9999)).toBe(max)
+    // Лестница прокси клэмпится своим верхом, а family-URL — ещё и потолком
+    // производных семейства (#1221), поэтому здесь виден именно он.
+    expect(snapProxyWidth(max + 1)).toBe(max)
+    expect(snapProxyWidth(9999)).toBe(max)
+    expect(widthOf(max + 1)).toBe(FAMILY_DERIVATIVE_CEILING)
+    expect(widthOf(9999)).toBe(FAMILY_DERIVATIVE_CEILING)
   })
 
   it('не появляется ступеней, которых нет в контракте', () => {

@@ -137,6 +137,9 @@ export function usePopupLayout({
     isBottomCardLayout,
     maxPopupWidth,
     useSplitLayout,
+    // #1221: фактическая CSS-ширина фото-слота. Нужна вызывающему коду, чтобы
+    // просить у прокси ступень под слот: без `?w=` ownership-роут отдаёт мастер.
+    heroWidth,
     styles,
   };
 }

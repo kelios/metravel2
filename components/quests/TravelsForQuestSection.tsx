@@ -71,7 +71,9 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
                 mediaProps={{
                   blurBackground: true,
                   allowCriticalWebBlur: true,
-                  optimizeWeb: false,
+                  // #1221: без `optimizeWeb: false` карточка просит ступень под свой
+                  // слот. С ним `travel_image_thumb_url` уходил голым, и ownership-роут
+                  // отдавал мастер с `no-store` вместо `immutable`-производной.
                 }}
                 style={styles.card}
               />

@@ -242,7 +242,10 @@ describe('constants/imageContract — набор размеров исполня
      */
     it('тело статьи, 920 CSS @DPR2 (vw 1920) упирается в потолок производных, а не в мастер', () => {
       const set = IMAGE_WIDTHS.articleBodyDesktop
-      const needed = requestedWidth(920, 2)
+      // Ступень лестницы прокси, а не итоговый `w` из URL: с #1221 `optimizeImageUrl`
+      // клэмпит family-роут потолком его производных, и голая лестница видна только
+      // через `snapProxyWidth`. Проверяемое свойство — набор ширин класса, а не клэмп.
+      const needed = snapProxyWidth(920 * 2)
       const candidate = [...set].sort((a, b) => a - b).find((w) => w >= needed) ?? Math.max(...set)
       const widestDerivative = Math.max(
         ...IMAGE_STORAGE_POLICY_V1.articleBody.derivatives.map((variant) => variant.width),

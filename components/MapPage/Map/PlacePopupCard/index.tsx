@@ -9,6 +9,7 @@ import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/Actio
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
 import PlaceRatingSection from '@/components/places/PlaceRatingSection';
 import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
+import { getOptimalImageWidth, optimizeImageUrl } from '@/utils/imageOptimization';
 import { getPopupTooltips } from './constants';
 import FullscreenImageViewer from './FullscreenImageViewer';
 import FullscreenPopupOverlay from './FullscreenPopupOverlay';
@@ -206,6 +207,7 @@ const PlacePopupCard: React.FC<Props> = ({
     isBottomCardLayout,
     maxPopupWidth,
     useSplitLayout,
+    heroWidth,
     styles,
   } = usePopupLayout({
     colors,
@@ -262,6 +264,29 @@ const PlacePopupCard: React.FC<Props> = ({
     () => getPlacePopupCoordinate(coord, isBottomCardLayout),
     [coord, isBottomCardLayout],
   );
+
+  /**
+   * #1221: попап отдавал в `<img>` адрес точки как есть. Ownership-роут на запрос
+   * без `?w=` возвращает МАСТЕР с `no-store` — мимо кэша nginx (эти роуты идут
+   * `X-Cache-Status: BYPASS`) и мимо кэша браузера, то есть заново на каждое
+   * открытие точки. Замер прода 2026-08-03: `address-image/355/…webp` — 288 КБ
+   * на слот 299 CSS против ~26 КБ у ступени под слот.
+   *
+   * Ширину считаем от фактического слота (`heroWidth` из `usePopupLayout`), а
+   * ступень выбирает лестница `optimizeImageUrl`; `ImageCardMedia` ниже оставлен
+   * с `optimizeWeb={false}`, потому что геометрию слота он не знает (фото
+   * растянуто `absoluteFill`) и построил бы srcSet от дефолтных 320.
+   */
+  const heroSrc = useMemo(() => {
+    if (!imageUrl) return imageUrl;
+    return (
+      optimizeImageUrl(imageUrl, {
+        width: getOptimalImageWidth(heroWidth),
+        quality: 60,
+        fit: 'contain',
+      }) ?? imageUrl
+    );
+  }, [imageUrl, heroWidth]);
 
   const handleOpenFullscreen = useCallback((event?: any) => {
     stopWebPopupEvent(event);
@@ -971,7 +996,7 @@ const PlacePopupCard: React.FC<Props> = ({
       {({ pressed, hovered }: any) => (
         <>
           <ImageCardMedia
-            src={imageUrl}
+            src={heroSrc}
             alt={title}
             fit="contain"
             blurBackground={!avoidIOSSafariBottomCardBlur}
