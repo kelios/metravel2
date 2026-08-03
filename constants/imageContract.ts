@@ -178,6 +178,43 @@ export const IMAGE_WIDTHS = {
   printInline: 1600,
 } as const;
 
+/**
+ * Публичный роут семейства → его ПРОИЗВОДНЫЕ (по возрастанию, без мастера).
+ *
+ * Выводится из `IMAGE_STORAGE_POLICY_V1`, а не перечисляется руками: ровно на
+ * ручной копии такой таблицы уже ловились расхождения (#1170, #1220).
+ */
+export const DERIVATIVE_WIDTHS_BY_ROUTE: ReadonlyMap<string, readonly number[]> = new Map(
+  Object.values(IMAGE_STORAGE_POLICY_V1).flatMap((profile) => {
+    const widths = Object.freeze(
+      profile.derivatives.map((variant) => variant.width).sort((a, b) => a - b),
+    );
+    return profile.routes.map((route) => [route, widths] as const);
+  }),
+);
+
+/**
+ * Ширина картинки для соцпревью (og:image / twitter:image / JSON-LD).
+ *
+ * Facebook и Twitter под `summary_large_image` просят от 1200 px, поэтому целимся
+ * в 1280 — но берём только ту ступень, которая у семейства реально есть: спрашивать
+ * ширину вне `derivatives` больше нельзя, чтение fail-closed и отвечает 400 (#1224).
+ * У `articleBody` ступени 1280 нет вовсе, там выбирается 960.
+ */
+export const SOCIAL_PREVIEW_TARGET_WIDTH = 1280;
+
+/**
+ * Ступень семейства для соцпревью: самая крупная производная не шире целевой,
+ * иначе — самая мелкая (у семейства просто нет ступени такого размера).
+ * `null` — путь не принадлежит ни одному family-роуту, ширину добавлять нельзя.
+ */
+export function socialPreviewWidthForRoute(route: string): number | null {
+  const widths = DERIVATIVE_WIDTHS_BY_ROUTE.get(route);
+  if (!widths?.length) return null;
+  const withinTarget = widths.filter((width) => width <= SOCIAL_PREVIEW_TARGET_WIDTH);
+  return withinTarget.length ? withinTarget[withinTarget.length - 1] : widths[0];
+}
+
 /** Ширины ключевых frontend-consumers — для transition-проверок. */
 export const ALL_CONTRACT_WIDTHS: readonly number[] = Object.freeze(
   Array.from(

@@ -170,7 +170,10 @@ export function createTravelArticleJsonLd(
     if (cleanDesc) safeData.description = cleanDesc;
   }
 
-  const imageUrl = getTravelSeoImage(travel);
+  // #1221: в JSON-LD уходил «голый» ownership-URL без `?w=`, а такой адрес отдаёт
+  // мастер с `no-store` — краулеры и превью тянули по 0.4–1 МБ на каждый обход.
+  // Та же нормализация, что у og:image: абсолютный HTTPS + ступень производной.
+  const imageUrl = normalizeOgImageUrl(getTravelSeoImage(travel));
   if (imageUrl) safeData.image = [imageUrl];
 
   const canonicalUrl = getTravelCanonicalUrl(travel);

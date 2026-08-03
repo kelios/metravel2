@@ -2,6 +2,8 @@
  * SEO utilities for canonical URLs and site base URL normalization
  */
 
+import { socialPreviewWidthForRoute } from '@/constants/imageContract';
+
 export const DEFAULT_OG_IMAGE_PATH = '/assets/icons/logo_yellow_512x512.png';
 
 /** Thematic 1200×630 cover for the /quests catalog (Open Graph). */
@@ -57,7 +59,42 @@ export function buildOgImageUrl(imagePath: string): string {
 }
 
 /**
- * Ensures any image URL is absolute and HTTPS for use in og:image / twitter:image.
+ * Ownership-роут в начале пути: `/gallery/…`, `/address-image/…` и т.д.
+ * По нему определяется семейство, а значит и доступные ступени ширины.
+ */
+const OWNERSHIP_ROUTE_PATTERN = /^\/([a-z-]+)\//i;
+
+/**
+ * Соцпревью просят картинку по «голому» адресу, без `?w=` — и получают МАСТЕР.
+ *
+ * Ownership-роуты объявлены `X-Cache-Status: BYPASS` в nginx, поэтому дешёвым и
+ * кэшируемым такой запрос делает только ширина в URL: производная приходит с
+ * `public, max-age=31536000, immutable`, мастер — с `no-store`. Замер прода
+ * 2026-08-03 (#1221): 6% медиа-запросов уходили без `w=` и стоили 44 МБ за
+ * 4 ч 43 мин, в среднем ~370 КБ на запрос, а самые медленные ответы сайта —
+ * это именно они (avg 18 с, max 58 с на `-thumb_200.jpg`).
+ *
+ * Ширину берём из контракта семейства, а не константой: спрашивать ступень вне
+ * `derivatives` нельзя — чтение fail-closed и отвечает 400 (#1224).
+ */
+function withSocialPreviewWidth(absoluteUrl: string): string {
+  try {
+    const url = new URL(absoluteUrl);
+    if (url.searchParams.has('w')) return absoluteUrl;
+    const route = OWNERSHIP_ROUTE_PATTERN.exec(url.pathname)?.[1];
+    if (!route) return absoluteUrl;
+    const width = socialPreviewWidthForRoute(route);
+    if (!width) return absoluteUrl;
+    url.searchParams.set('w', String(width));
+    return url.toString();
+  } catch {
+    return absoluteUrl;
+  }
+}
+
+/**
+ * Ensures any image URL is absolute and HTTPS for use in og:image / twitter:image,
+ * and pins a stored-derivative width for first-party media (see `withSocialPreviewWidth`).
  * Returns null for empty/invalid input.
  */
 export function normalizeOgImageUrl(image?: string | null): string | null {
@@ -65,11 +102,12 @@ export function normalizeOgImageUrl(image?: string | null): string | null {
   const trimmed = String(image).trim();
   if (!trimmed) return null;
 
-  if (trimmed.startsWith('//')) return `https:${trimmed}`;
-  if (trimmed.startsWith('http://')) return trimmed.replace(/^http:\/\//i, 'https://');
-  if (trimmed.startsWith('https://')) return trimmed;
-  if (trimmed.startsWith('/')) return buildOgImageUrl(trimmed);
-  return buildOgImageUrl(`/${trimmed}`);
+  if (trimmed.startsWith('//')) return withSocialPreviewWidth(`https:${trimmed}`);
+  if (trimmed.startsWith('http://'))
+    return withSocialPreviewWidth(trimmed.replace(/^http:\/\//i, 'https://'));
+  if (trimmed.startsWith('https://')) return withSocialPreviewWidth(trimmed);
+  if (trimmed.startsWith('/')) return withSocialPreviewWidth(buildOgImageUrl(trimmed));
+  return withSocialPreviewWidth(buildOgImageUrl(`/${trimmed}`));
 }
 
 export function ensureSingleTitleTag(title: string): HTMLTitleElement | null {
