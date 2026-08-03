@@ -12,6 +12,26 @@ const ALLOW_OPTIMIZED_IMAGE_IMPORT_FILES = new Set([
   path.join(ROOT, 'components', 'ui', 'ImageCardMedia.tsx'),
 ]);
 
+/**
+ * #1221: `optimizeWeb={false}` запрещает `ImageCardMedia` и ресайзить URL, и строить
+ * srcSet, поэтому в `<img>` уходит адрес из API как есть. Ownership-роуты идут мимо
+ * кэша nginx (`X-Cache-Status: BYPASS`), и на запрос без `?w=` бэкенд отвечает
+ * МАСТЕРОМ с `no-store`: замер прода 2026-08-03 на `/places` — 12 из 12 запросов
+ * голыми, 615 714 B, все `stored-master`; те же ключи со ступенью под слот —
+ * 468 260 B и `immutable`. Это уже третий эпизод одного семейства (#1115, #1221),
+ * поэтому правило переехало из ревью в гейт.
+ *
+ * Исключение возможно ровно одно: вызывающий код САМ построил URL через
+ * `optimizeImageUrl` и передаёт готовый вариант, а `optimizeWeb={false}` мешает
+ * `ImageCardMedia` пересобрать его от неизвестной ему геометрии слота.
+ */
+const ALLOW_OPTIMIZE_WEB_FALSE_FILES = new Set([
+  // `coverSrc` = optimizeImageUrl(cover, { width: cardWidth * dpr }).
+  path.join(ROOT, 'screens', 'tabs', 'QuestCard.tsx'),
+  // `heroSrc` = optimizeImageUrl(imageUrl, { width: heroWidth из usePopupLayout }).
+  path.join(ROOT, 'components', 'MapPage', 'Map', 'PlacePopupCard', 'index.tsx'),
+]);
+
 const ALLOW_BLUR_DISABLED_FILES = new Set([
   // Full-bleed profile covers (fit="cover", borderRadius=0): the image fills the
   // whole area so there is no visible blur backdrop, and it must stay sharp
@@ -79,6 +99,40 @@ function identifierCarriesWidth(content, identifier, keys) {
   ).exec(content);
   if (!declaration) return false;
   return keys.some((key) => optionsCarryKey(declaration[0], key));
+}
+
+/** `optimizeWeb={false}` в JSX и `optimizeWeb: false` в объекте `mediaProps`. */
+const OPTIMIZE_WEB_DISABLED = /optimizeWeb\s*[=:]\s*\{?\s*false\s*\}?/;
+
+/**
+ * Номер строки с реальным `optimizeWeb={false}`, иначе `null`.
+ *
+ * Комментарии пропускаются: в местах, где проп сняли, о нём осталось объяснение
+ * («здесь стоял `optimizeWeb: false`»), и гейт ловил бы собственную историю.
+ */
+function findOptimizeWebDisabledLine(content) {
+  let insideBlockComment = false;
+
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (insideBlockComment) {
+      if (trimmed.includes('*/')) insideBlockComment = false;
+      continue;
+    }
+    if (trimmed.startsWith('//')) continue;
+    if (trimmed.startsWith('/*')) {
+      if (!trimmed.includes('*/')) insideBlockComment = true;
+      continue;
+    }
+
+    const code = line.split('//')[0];
+    if (OPTIMIZE_WEB_DISABLED.test(code)) return i + 1;
+  }
+
+  return null;
 }
 
 function collectMissingWidthCalls(file, content) {
@@ -199,9 +253,22 @@ function main() {
   });
 
   for (const file of widthRuleFiles) {
-    for (const miss of collectMissingWidthCalls(file, read(file))) {
+    const content = read(file);
+
+    for (const miss of collectMissingWidthCalls(file, content)) {
       errors.push(
         `${path.relative(ROOT, miss.file)}:${miss.line} ${miss.name} ${miss.reason} — без ширины прокси отдаёт мастер целиком (#1161)`
+      );
+    }
+
+    // #1221: правило проверяется по тем же директориям, что и ширина, — сам дефект
+    // жил и в `components/**`, и в `screens/**`.
+    const optimizeWebLine = ALLOW_OPTIMIZE_WEB_FALSE_FILES.has(file)
+      ? null
+      : findOptimizeWebDisabledLine(content);
+    if (optimizeWebLine) {
+      errors.push(
+        `${path.relative(ROOT, file)}:${optimizeWebLine} отключает optimizeWeb — media-URL уйдёт без \`?w=\`, ownership-роут ответит мастером с no-store (#1221)`
       );
     }
   }
@@ -250,7 +317,7 @@ function main() {
 // #1161: правило ширины покрыто негативными тестами
 // (`__tests__/scripts/image-architecture-width-rule.test.ts`), поэтому коллектор
 // экспортируется, а `main()` запускается только при прямом вызове скрипта.
-module.exports = { collectMissingWidthCalls };
+module.exports = { collectMissingWidthCalls, findOptimizeWebDisabledLine };
 
 if (require.main === module) {
   main();

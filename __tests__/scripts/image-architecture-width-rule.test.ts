@@ -3,7 +3,10 @@ import { join, resolve } from 'node:path'
 
 import { runCli } from './cli-test-utils'
 
-const { collectMissingWidthCalls } = require('../../scripts/check-image-architecture.js')
+const {
+  collectMissingWidthCalls,
+  findOptimizeWebDisabledLine,
+} = require('../../scripts/check-image-architecture.js')
 
 /**
  * #1161: правило «медиа-запрос обязан нести `w`» раньше держалось на комментарии в
@@ -94,6 +97,38 @@ describe('check-image-architecture — правило обязательной �
           }
         `),
       ).toEqual([])
+    })
+  })
+
+  /**
+   * #1221: `optimizeWeb={false}` — вторая форма того же дефекта. Проп запрещает
+   * `ImageCardMedia` и ресайзить URL, и строить srcSet, поэтому в `<img>` уходит
+   * адрес из API как есть, а ownership-роут на запрос без `?w=` отвечает мастером
+   * с `no-store`. Замер прода 2026-08-03 на `/places`: 12 из 12 запросов голыми,
+   * 615 714 B `stored-master`; те же ключи со ступенью под слот — 468 260 B
+   * `immutable`. Эпизод третий (#1115, #1221), поэтому правило в гейте.
+   */
+  describe('optimizeWeb={false} (#1221)', () => {
+    it('ловит проп в JSX и в объекте mediaProps', () => {
+      expect(findOptimizeWebDisabledLine('<ImageCardMedia optimizeWeb={false} />')).toBe(1)
+      expect(
+        findOptimizeWebDisabledLine('const p = {\n  blurBackground: true,\n  optimizeWeb: false,\n}'),
+      ).toBe(3)
+    })
+
+    it('не срабатывает на объяснении в комментарии — там, где проп как раз сняли', () => {
+      expect(
+        findOptimizeWebDisabledLine('// #1221: здесь стоял `optimizeWeb: false`\nconst a = 1'),
+      ).toBeNull()
+      expect(
+        findOptimizeWebDisabledLine('/**\n * было `optimizeWeb={false}`\n */\nconst a = 1'),
+      ).toBeNull()
+      expect(findOptimizeWebDisabledLine('const a = 1 // optimizeWeb: false когда-то')).toBeNull()
+    })
+
+    it('не трогает вычисляемое значение — там ширина зависит от типа обложки', () => {
+      expect(findOptimizeWebDisabledLine('<Card optimizeWeb={!usesFallbackCover} />')).toBeNull()
+      expect(findOptimizeWebDisabledLine('mediaProps={{ optimizeWeb: isRemote }}')).toBeNull()
     })
   })
 
