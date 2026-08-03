@@ -92,25 +92,16 @@ export const baseStyles = (
   margin-top: 1.6em;
 }
 
+/* #1208/#1213: на web у слота ровно один растр. Поля кадра закрывает нейтральная
+   заливка рамки, а не размытая копия фотографии: прежний ::before с background-image
+   тянул тот же файл вторым сетевым запросом (замер прода 2026-08-03: +29 681 B и
+   +174 748 B на фото). Блюр-слой остаётся только на native, в ImageCardMedia. */
 .${cls} .rich-image-frame {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   background: ${colors.backgroundSecondary};
   --travel-rich-image-aspect: 16 / 9;
-}
-
-.${cls} .rich-image-frame::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: var(--travel-rich-image);
-  background-size: cover;
-  background-position: center;
-  filter: blur(18px) saturate(1.06);
-  transform: scale(1.08);
-  opacity: 0.9;
-  z-index: 0;
 }
 
 .${cls} .rich-image-frame > img,

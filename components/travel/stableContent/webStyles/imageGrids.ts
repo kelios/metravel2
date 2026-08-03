@@ -18,7 +18,7 @@ export const imageGridStyles = (
    (aspect-ratio on the row), so every row spans the full content width.
    Cells take their aspect from --travel-rich-image-aspect set by
    decorateRichImageFrames, so contain-fit fills the frame without bars;
-   the .rich-image-frame blur backdrop absorbs bucket rounding slivers. */
+   the neutral .rich-image-frame fill absorbs bucket rounding slivers (#1208). */
 .${cls} .img-jrow {
   display: flex;
   align-items: stretch;

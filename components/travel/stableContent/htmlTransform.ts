@@ -556,9 +556,8 @@ const decorateRichImageFrames = (html: string) => {
 
   const decorateAttrs = (attrs: string, imgMarkup: string) => {
     const nextClassAttrs = appendClass(attrs, 'rich-image-frame')
-    // Keep the source URL out of inline CSS. A background-image reference would make
-    // the browser fetch every description photo eagerly even when the foreground <img>
-    // uses loading="lazy". useWebEffects arms the blur backdrop after the image loads.
+    // Рамка несёт только геометрию: URL фотографии в inline-CSS сделал бы из неё
+    // второй растр слота и обошёл бы `loading="lazy"` у самого `<img>` (#1208/#1213).
     const frameDeclaration = buildRichImageAspectDeclaration(imgMarkup)
     return frameDeclaration
       ? appendInlineStyle(nextClassAttrs, frameDeclaration)

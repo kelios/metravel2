@@ -14,8 +14,6 @@ import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
 type LightboxImage = { src: string; alt: string }
 type LightboxGallery = { images: LightboxImage[]; initialIndex: number }
 
-const escapeCssUrl = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
-
 // #1163: здесь жил механизм `data-weserv-fallback` — таймер на 3.5 с и обработчик
 // ошибки, которые подменяли отвалившуюся картинку `images.weserv.nl` на её origin.
 // Костыль существовал ровно потому, что сторонний ресайзер стоял в критическом пути
@@ -41,11 +39,11 @@ const imageLoadedOk = (img: HTMLImageElement) => img.complete && img.naturalWidt
  * пустовало.
  *
  * Как только пиксели пришли, настоящие пропорции известны, и слот принимает их —
- * заполнять больше нечего. Блюр-подложка остаётся страховкой: она закрывает поля до
- * загрузки и там, где кадр упирается в `max-height`.
+ * заполнять больше нечего. Остаток полей закрывает нейтральная заливка рамки: на web
+ * второго растра у слота нет (#1208).
  *
  * Ячейки `.img-jrow` не трогаем: их геометрию задаёт бакет строки целиком, а не
- * отдельное фото, и подложка кадра там гасит остаток по проекту.
+ * отдельное фото, и заливка кадра там гасит остаток по проекту.
  */
 const adoptNaturalImageAspect = (img: HTMLImageElement, frame: HTMLElement | null) => {
   if (!imageLoadedOk(img)) return
@@ -145,23 +143,22 @@ export function useStableContentWebEffects({
     }
   }, [prepared, rootRef])
 
-  // Arm the decorative blur backdrop only after the foreground image has loaded.
-  // Keeping the URL out of markup preserves native loading="lazy": a CSS background
-  // would otherwise start a second eager request for every photo in the description.
+  // Как только пиксели пришли, слот принимает настоящие пропорции кадра.
+  //
+  // #1213: раньше этот же обработчик ставил `--travel-rich-image` — URL фотографии
+  // уходил в CSS-фон рамки и браузер качал тот же файл ВТОРОЙ раз (замер прода
+  // 2026-08-03: +29 681 B и +174 748 B на фото). Второго растра на web больше нет
+  // (#1208), поэтому от загрузки остаётся только геометрия.
   useEffect(() => {
     if (Platform.OS !== 'web') return
     const images = Array.from(rootRef.current?.querySelectorAll<HTMLImageElement>('img') ?? [])
     const cleanups = images.map((img) => {
-      const applyBackdrop = () => {
-        const src = img.currentSrc || img.getAttribute('src') || ''
-        if (!src || src.startsWith('data:')) return
-        const frame = img.closest('.rich-image-frame') as HTMLElement | null
-        frame?.style.setProperty('--travel-rich-image', `url('${escapeCssUrl(src)}')`)
-        adoptNaturalImageAspect(img, frame)
+      const adoptAspect = () => {
+        adoptNaturalImageAspect(img, img.closest('.rich-image-frame') as HTMLElement | null)
       }
-      img.addEventListener('load', applyBackdrop)
-      if (imageLoadedOk(img)) applyBackdrop()
-      return () => img.removeEventListener('load', applyBackdrop)
+      img.addEventListener('load', adoptAspect)
+      if (imageLoadedOk(img)) adoptAspect()
+      return () => img.removeEventListener('load', adoptAspect)
     })
 
     return () => {

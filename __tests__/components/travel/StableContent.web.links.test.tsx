@@ -413,11 +413,20 @@ describe('StableContent (web) link styles', () => {
     });
   });
 
-  it('adds the blur backdrop only after a description image loads', async () => {
+  // #1213: на web слот тела статьи держит РОВНО один растр. Прежняя версия этого
+  // теста требовала обратного — что после загрузки появляется CSS-фон с той же
+  // фотографией; именно он качал файл вторым запросом (замер прода 2026-08-03:
+  // +29 681 B и +174 748 B на фото) вопреки контракту #1208.
+  it('takes only geometry from a loaded description image, never a second raster', async () => {
     const { container } = render(
       <StableContent
         html={[
-          '<p><img src="https://example.com/one.jpg" width="800" height="600" alt="One" /></p>',
+          // Без объявленных размеров: слот резервируется под 800×450, а реальные
+          // пропорции кадра приходят с загрузкой (#1188).
+          '<p><img src="https://example.com/one.jpg" alt="One" /></p>',
+          // Абзац между фото: иначе соседние картинки собираются в общую строку
+          // `.img-jrow`, где геометрию задаёт бакет строки, а не отдельный кадр.
+          '<p>Текст между фотографиями.</p>',
           '<p><img src="https://example.com/two.jpg" width="600" height="900" alt="Two" /></p>',
         ].join('')}
         contentWidth={700}
@@ -429,22 +438,28 @@ describe('StableContent (web) link styles', () => {
       expect(richText).toBeTruthy();
       expect(richText?.innerHTML).toContain('class="rich-image-frame');
       expect(richText?.innerHTML).not.toContain('--travel-rich-image:url');
-      expect(richText?.innerHTML).toContain('--travel-rich-image-aspect:800/600');
+      expect(richText?.innerHTML).toContain('--travel-rich-image-aspect:800/450');
     });
 
     const firstImage = container.querySelector('.travel-rich-text img') as HTMLImageElement;
     const firstFrame = firstImage.closest('.rich-image-frame') as HTMLElement;
+    Object.defineProperty(firstImage, 'naturalWidth', { value: 374, configurable: true });
+    Object.defineProperty(firstImage, 'naturalHeight', { value: 499, configurable: true });
+    Object.defineProperty(firstImage, 'complete', { value: true, configurable: true });
     fireEvent.load(firstImage);
+
+    // Загрузка фотографии не имеет права породить второй растр того же слота:
+    // ни CSS-переменной с URL, ни любого другого упоминания файла в стиле рамки.
     await waitFor(() => {
-      // #1163: фон блюра берётся из фактического `src` картинки, а он теперь ведёт на
-      // origin внешнего хоста, а не на `images.weserv.nl`.
-      expect(firstFrame.style.getPropertyValue('--travel-rich-image')).toContain('https://example.com/one.jpg');
+      expect(firstFrame.style.getPropertyValue('--travel-rich-image')).toBe('');
     });
+    expect(firstFrame.getAttribute('style') || '').not.toContain('example.com/one.jpg');
 
     const styleEl = document.getElementById('travel-rich-text-styles') as HTMLStyleElement | null;
     expect(styleEl).toBeTruthy();
     const css = String(styleEl?.textContent || '');
-    expect(css).toContain('.travel-rich-text .rich-image-frame::before');
+    expect(css).not.toContain('background-image: var(--travel-rich-image)');
+    expect(css).not.toContain('.rich-image-frame::before');
     expect(css).toContain('aspect-ratio: var(--travel-rich-image-aspect, 16 / 9);');
     expect(css).toContain('object-fit: contain;');
     expect(css).toContain('min-width: min(60vw, 100%) !important;');
