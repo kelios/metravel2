@@ -808,7 +808,11 @@ describe('travel SSR SEO helpers', () => {
     expect(payload['@type']).toBe('Article')
     expect(payload.headline).toBe('Тропа ведьм | Metravel')
     expect(payload.author.name).toBe('Julia')
-    expect(payload.image).toEqual(['https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg'])
+    // #1221: JSON-LD тоже читают краулеры (в том числе Google Images), поэтому ширина
+    // производной обязательна и здесь — «голый» адрес отдаёт мастер с `no-store`.
+    expect(payload.image).toEqual([
+      'https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg?w=1280',
+    ])
   })
 
   // The SSG body sanitizer keeps a small tag allowlist and drops every

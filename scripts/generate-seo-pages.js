@@ -1370,7 +1370,10 @@ function buildTravelArticleJsonLd({ title, description, canonical, image, travel
     },
   };
 
-  if (image) payload.image = [image];
+  // #1221: JSON-LD строится мимо injectMeta, поэтому ширину добиваем и здесь —
+  // иначе Google Images и краулеры schema.org тянут мастер с `no-store`.
+  const previewImage = withSocialPreviewWidth(image);
+  if (previewImage) payload.image = [previewImage];
 
   const publishedAt = travel?.created_at || travel?.date_create || travel?.datePublished || null;
   const modifiedAt = travel?.updated_at || travel?.date_update || travel?.dateModified || null;
@@ -1903,7 +1906,10 @@ function buildQuestJsonLd({ title, description, canonical, image, quest }) {
       url: SITE_URL,
     },
   };
-  if (image) payload.image = [image];
+  // #1221: JSON-LD строится мимо injectMeta, поэтому ширину добиваем и здесь —
+  // иначе Google Images и краулеры schema.org тянут мастер с `no-store`.
+  const previewImage = withSocialPreviewWidth(image);
+  if (previewImage) payload.image = [previewImage];
   const city = String(quest?.city_name || quest?.cityName || quest?.city?.name || '').trim();
   if (city) {
     payload.location = { '@type': 'City', name: city };
