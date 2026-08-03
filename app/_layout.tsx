@@ -550,7 +550,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         position: 'relative',
         flexDirection: 'column',
         // Динамический фон для поддержки тем
-        backgroundColor: 'red',
+        backgroundColor: colors.background,
         ...(Platform.OS === 'web'
           ? ({
               minHeight: '100vh',
@@ -564,7 +564,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         height: '100%',
         // Единая подложка всех экранов: текстура должна читаться как бумага,
         // а не как картинка — поэтому сильно ослаблена.
-        opacity: 0.6,
+        opacity: 0.12,
         pointerEvents: 'none',
         ...(Platform.OS === 'web'
           ? ({
@@ -580,7 +580,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     content: {
         flex: 1,
         flexBasis: 0,
-        backgroundColor: 'lime',
         ...(Platform.OS === 'web'
           ? ({
               flexGrow: 1,

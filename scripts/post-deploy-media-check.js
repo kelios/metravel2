@@ -416,6 +416,24 @@ function validateTarget(target, probes, options = {}) {
           `${scope} w=${width}: x-metravel-image-transform="${transform}" — ресайз не применён, отдан мастер (${response.bytes} B)`
         )
       }
+      // Fail-closed чтение производных (#1201) превращает пробел в покрытии d/v1
+      // в 404 — то есть в битую картинку у читателя. Именно так уехал #1222.
+      if (/derivative-missing/i.test(transform)) {
+        add(
+          'media.derivative_missing',
+          `${scope} w=${width}: x-metravel-image-transform="${transform}" — производной нет, читатель видит битое фото`
+        )
+      }
+      // Мастер вместо производной. На минимальной ступени профиля это всегда
+      // провал бюджета (#1195, #1219). На верхней — пока допустимо: производной
+      // в ширину мастера может не быть by design (#1215), поэтому предупреждение.
+      if (/stored-master/i.test(transform)) {
+        add(
+          'media.master_instead_of_derivative',
+          `${scope} w=${width}: отдан мастер (transform="${transform}", ${response.bytes} B) вместо производной`,
+          width === smallWidth ? 'error' : 'warning'
+        )
+      }
       const cacheControl = getHeaderValue(response.headers, 'cache-control')
       if (/no-store/i.test(cacheControl)) {
         add(
@@ -656,9 +674,12 @@ if (typeof module !== 'undefined' && module.exports) {
     KNOWN_BROKEN_FAMILIES,
     WIDTHS_BY_FAMILY,
     widthsFor,
+    collectArticleBodyMediaUrls,
     extractTargetsFromPayloads,
     toLegacyTarget,
     toTargetUrl,
+    toUploadsTarget,
+    uploadsScanPages,
     unwrapItem,
     unwrapList,
     validateTarget,

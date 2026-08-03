@@ -1,8 +1,11 @@
 const {
   KNOWN_BROKEN_FAMILIES,
+  collectArticleBodyMediaUrls,
   extractTargetsFromPayloads,
   toLegacyTarget,
   toTargetUrl,
+  toUploadsTarget,
+  uploadsScanPages,
   validateTarget,
   widthsFor,
   withWidth,
@@ -129,6 +132,87 @@ describe('post-deploy media check: разбор контракта', () => {
   })
 })
 
+describe('post-deploy media check: цель uploads/** (фото тела старых статей)', () => {
+  const S3 = 'https://metravelprod.s3.eu-north-1.amazonaws.com'
+
+  it('строит цель из ссылки манифеста на бакет — без префикса legacy/', () => {
+    // Правило `isLegacyUploadKey` из `utils/mediaUrl.ts`: класс `uploads/**`
+    // обслуживает `/media-resize/<key>`, а не `/media-resize/legacy/<key>`.
+    expect(toUploadsTarget(SITE, `${S3}/uploads/1593619453IMG_6420.JPG`)).toBe(
+      `${SITE}/media-resize/uploads/1593619453IMG_6420.JPG`
+    )
+    expect(toUploadsTarget(SITE, '/uploads/articles/legacy.jpg')).toBe(
+      `${SITE}/media-resize/uploads/articles/legacy.jpg`
+    )
+  })
+
+  it('отказывается от всего, что не является legacy-ключом картинки', () => {
+    expect(toUploadsTarget(SITE, `${SITE}/gallery/photo.webp`)).toBeNull()
+    expect(toUploadsTarget(SITE, `${S3}/uploads/`)).toBeNull()
+    expect(toUploadsTarget(SITE, `${S3}/uploads/notes.pdf`)).toBeNull()
+    expect(toUploadsTarget(SITE, `${S3}/uploads/../secrets/key.jpg`)).toBeNull()
+    expect(toUploadsTarget(SITE, '')).toBeNull()
+  })
+
+  it('достаёт медиа тела статьи из манифеста: обложка и галерея', () => {
+    const urls = collectArticleBodyMediaUrls({
+      media: {
+        article_body: {
+          cover: { src: `${S3}/uploads/cover.jpg` },
+          gallery: [
+            { src: `${S3}/uploads/a.JPG`, variants: { original: `${S3}/uploads/a.JPG` } },
+            null,
+            { variants: { original: `${S3}/uploads/b.jpg` } },
+          ],
+        },
+      },
+    })
+
+    expect(urls).toEqual([
+      `${S3}/uploads/cover.jpg`,
+      `${S3}/uploads/a.JPG`,
+      `${S3}/uploads/a.JPG`,
+      `${S3}/uploads/b.jpg`,
+    ])
+    expect(collectArticleBodyMediaUrls({ media: {} })).toEqual([])
+    expect(collectArticleBodyMediaUrls(null)).toEqual([])
+  })
+
+  it('берёт ключ из любой просмотренной статьи, а не только из первой', () => {
+    // У свежих статей `uploads/**` нет вообще — цель обязана прийти из той
+    // статьи каталога, где legacy-фото действительно есть (#1222).
+    const targets = extractTargetsFromPayloads(SITE, {
+      travels: { results: [{ id: 682, travel_image_thumb_url: `${SITE}/travel-image/682/conversions/c.webp` }] },
+      travelDetail: { data: { media: { article_body: { gallery: [{ src: `${SITE}/travel-description-image/9/x.webp` }] } } } },
+      travelDetails: [
+        { data: { media: { article_body: { gallery: [] } } } },
+        { data: { media: { article_body: { gallery: [{ src: `${S3}/uploads/1591977314DSC_0375.JPG` }] } } } },
+      ],
+    })
+
+    expect(targets.find((item: { family: string }) => item.family === 'media-resize-uploads')?.url).toBe(
+      `${SITE}/media-resize/uploads/1591977314DSC_0375.JPG`
+    )
+  })
+
+  it('без legacy-ключей цели просто нет — гейт не выдумывает URL', () => {
+    const targets = extractTargetsFromPayloads(SITE, {
+      travels: { results: [{ id: 682, travel_image_thumb_url: `${SITE}/travel-image/682/conversions/c.webp` }] },
+      travelDetails: [{ data: { media: { article_body: { gallery: [{ src: `${SITE}/travel-description-image/9/x.webp` }] } } } }],
+    })
+
+    expect(targets.some((item: { family: string }) => item.family === 'media-resize-uploads')).toBe(false)
+  })
+
+  it('ищет legacy-ключ в сечениях каталога, а не на его краю', () => {
+    // Замер 2026-08-03: страницы 1–4 и 20 из 20 почти пустые, 5–19 — 50–95%.
+    const pages = uploadsScanPages({ count: 397, results: new Array(20).fill({ id: 1 }) })
+
+    expect(pages).toEqual([10, 15, 5])
+    expect(uploadsScanPages({})).toEqual([1])
+  })
+})
+
 describe('post-deploy media check: проверки ответа', () => {
   it('позитивный кейс: разные ступени и кэшируемый ответ — гейт чист', () => {
     const result = validateTarget(target(), probes())
@@ -158,6 +242,48 @@ describe('post-deploy media check: проверки ответа', () => {
 
     const noPublic = validateTarget(target(), probes({ cacheControl: 'max-age=60' }))
     expect(noPublic.issues.map((issue: { code: string }) => issue.code)).toContain('media.cache_control.missing')
+  })
+
+  it('НЕГАТИВНАЯ ПРОБА: 404 derivative-missing валит гейт — это битое фото у читателя', () => {
+    // Ровно тот ответ, который прод отдавал по #1222: производной нет, мастер
+    // при этом на месте, страница показывает пустой прямоугольник.
+    const result = validateTarget(
+      target('media-resize-uploads'),
+      probes(
+        { status: 404, bytes: 0, contentType: 'text/html; charset=utf-8', transform: 'derivative-missing', cacheControl: 'no-store' },
+        { status: 404, bytes: 0, contentType: 'text/html; charset=utf-8', transform: 'derivative-missing', cacheControl: 'no-store' }
+      )
+    )
+
+    const codes = result.issues.map((issue: { code: string }) => issue.code)
+    expect(codes).toContain('media.derivative_missing')
+    expect(codes).toContain('media.status')
+    expect(
+      result.issues
+        .filter((issue: { code: string }) => issue.code === 'media.derivative_missing')
+        .every((issue: { severity: string }) => issue.severity === 'error')
+    ).toBe(true)
+  })
+
+  it('мастер вместо производной: на минимальной ступени — ошибка, на верхней — предупреждение', () => {
+    const { small, large } = widthsFor('media-resize-uploads')
+    const result = validateTarget(
+      target('media-resize-uploads'),
+      probes({ transform: 'stored-master' }, { transform: 'stored-master' })
+    )
+
+    const master = result.issues.filter(
+      (issue: { code: string }) => issue.code === 'media.master_instead_of_derivative'
+    )
+    expect(master).toHaveLength(2)
+    expect(master.find((issue: { message: string }) => issue.message.includes(`w=${small}`))?.severity).toBe('error')
+    expect(master.find((issue: { message: string }) => issue.message.includes(`w=${large}`))?.severity).toBe('warning')
+  })
+
+  it('штатный stored-derivative тревогу не поднимает', () => {
+    const result = validateTarget(target('media-resize-uploads'), probes({ transform: 'stored-derivative' }, { transform: 'stored-derivative' }))
+
+    expect(result.issues).toEqual([])
   })
 
   it('ловит не-200 и не-изображение', () => {

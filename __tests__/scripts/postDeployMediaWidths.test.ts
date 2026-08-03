@@ -23,10 +23,22 @@ const derivativeRange = (profile: Profile) => {
   return { small: Math.min(...widths), large: Math.max(...widths) };
 };
 
+/**
+ * Семейства без собственного `routes` в контракте: это не отдельные профили
+ * хранения, а legacy-роуты поверх чужих ключей. Каждому — свой профиль-эталон.
+ */
+const SYNTHETIC_FAMILY_PROFILES: Record<string, Profile> = {
+  // Legacy обслуживает conversion-ключи travel-медиа.
+  'media-resize-legacy': IMAGE_STORAGE_POLICY_V1.travelMedia,
+  // `uploads/**` — фото тела старых статей, лестница та же, что у articleBody.
+  'media-resize-uploads': IMAGE_STORAGE_POLICY_V1.articleBody,
+};
+
 describe('пост-деплой медиа-гейт: ступени сверены с IMAGE_STORAGE_POLICY_V1', () => {
   const families = [...WIDTHS_BY_FAMILY.keys()] as string[];
+  const syntheticFamilies = Object.keys(SYNTHETIC_FAMILY_PROFILES);
 
-  it.each(families.filter((family) => family !== 'media-resize-legacy'))(
+  it.each(families.filter((family) => !syntheticFamilies.includes(family)))(
     '%s: small/large — крайние производные своего профиля',
     (family) => {
       const entry = profileForRoute(family);
@@ -35,16 +47,18 @@ describe('пост-деплой медиа-гейт: ступени сверен
     },
   );
 
-  it('legacy-роут меряется лестницей travel-медиа: он обслуживает её conversion-ключи', () => {
-    expect(widthsFor('media-resize-legacy')).toEqual(derivativeRange(IMAGE_STORAGE_POLICY_V1.travelMedia));
+  it.each(syntheticFamilies)('%s: меряется лестницей профиля, чьи ключи обслуживает', (family) => {
+    expect(widthsFor(family)).toEqual(derivativeRange(SYNTHETIC_FAMILY_PROFILES[family]));
   });
 
   it('ни одна ступень гейта не равна мастеру: мастер раздаётся no-store by design', () => {
     const masters = new Set(profiles.map(([, profile]) => (profile as any).master.width));
     for (const family of families) {
       const { small, large } = widthsFor(family);
-      const entry = family === 'media-resize-legacy' ? null : profileForRoute(family);
-      const master = entry ? (entry[1] as any).master.width : IMAGE_STORAGE_POLICY_V1.travelMedia.master.width;
+      const entry = syntheticFamilies.includes(family) ? null : profileForRoute(family);
+      const master = entry
+        ? (entry[1] as any).master.width
+        : (SYNTHETIC_FAMILY_PROFILES[family] as any).master.width;
       expect(large).not.toBe(master);
       expect(small).not.toBe(master);
       expect(masters.has(large) && large > master).toBe(false);
@@ -58,7 +72,14 @@ describe('пост-деплой медиа-гейт: ступени сверен
   it('каждое семейство, которое гейт реально собирает, есть в таблице', () => {
     // Список — из `extractTargetsFromPayloads`; расхождение означает, что цель
     // добавили, а ступени для неё забыли, и она молча меряется дефолтом.
-    for (const family of ['travel-image', 'gallery', 'address-image', 'quest-cover', 'media-resize-legacy']) {
+    for (const family of [
+      'travel-image',
+      'gallery',
+      'address-image',
+      'quest-cover',
+      'media-resize-legacy',
+      'media-resize-uploads',
+    ]) {
       expect(WIDTHS_BY_FAMILY.has(family)).toBe(true);
     }
   });
