@@ -5,7 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { ResponsiveContainer } from '@/components/layout'
 import QuestForCityCard from '@/components/quests/QuestForCityCard'
-import { useQuestsList } from '@/hooks/useQuestsApi'
+import { useQuestsPreview } from '@/hooks/useQuestsApi'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
@@ -13,6 +13,8 @@ import { translate as i18nT } from '@/i18n'
 
 
 const IS_WEB = Platform.OS === 'web'
+// Ровно столько карточек и запрашиваем: через полный useQuestsList блок тянул
+// весь каталог квестов (139 записей, ~405 КБ семью запросами) ради этой пары.
 const MAX_QUESTS = 2
 
 function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
@@ -20,10 +22,9 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   const colors = useThemedColors()
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
-  const { quests, loading } = useQuestsList({ enabled })
+  const { quests: visibleQuests, loading } = useQuestsPreview(MAX_QUESTS, { enabled })
   const [hovered, setHovered] = useState(false)
 
-  const visibleQuests = useMemo(() => quests.slice(0, MAX_QUESTS), [quests])
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
 
   const handleViewAll = useCallback(() => {

@@ -64,6 +64,10 @@ export const queryKeys = {
     ['author-engagement', userId, metric] as const,
   questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
   quests: () => ['quests'] as const,
+  // Срез каталога для промо-блоков (главная): отдельный ключ, чтобы пара
+  // карточек не тянула весь список квестов. Префикс общий с quests(), поэтому
+  // инвалидация каталога подхватывает и его.
+  questsPreview: (limit: number) => ['quests', 'preview', limit] as const,
   questDetail: (questId: number | undefined) => ['quest', questId] as const,
   questRating: (questId: number | undefined) => ['quest', questId, 'rating'] as const,
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,

@@ -15,6 +15,7 @@ jest.mock('@/hooks/useNetworkStatus', () => ({
 
 // Mock the API module
 const mockFetchQuestsList = jest.fn();
+const mockFetchQuestsPreview = jest.fn();
 const mockFetchQuestByQuestId = jest.fn();
 const mockFetchQuestCities = jest.fn();
 const mockFetchOrCreateProgress = jest.fn();
@@ -23,6 +24,7 @@ const mockDeleteProgress = jest.fn();
 
 jest.mock('@/api/quests', () => ({
   fetchQuestsList: (...args: any[]) => mockFetchQuestsList(...args),
+  fetchQuestsPreview: (...args: any[]) => mockFetchQuestsPreview(...args),
   fetchQuestByQuestId: (...args: any[]) => mockFetchQuestByQuestId(...args),
   fetchQuestCities: (...args: any[]) => mockFetchQuestCities(...args),
   fetchOrCreateProgress: (...args: any[]) => mockFetchOrCreateProgress(...args),
@@ -58,10 +60,12 @@ jest.mock('@/utils/questAdapters', () => ({
 
 import {
   useQuestsList,
+  useQuestsPreview,
   useQuestCities,
   useQuestBundle,
   useQuestProgressSync,
 } from '@/hooks/useQuestsApi';
+import { queryKeys } from '@/api/queryKeys';
 
 // ---- Fixtures ----
 
@@ -114,6 +118,7 @@ describe('useQuestsApi hooks', () => {
   beforeEach(() => {
     [
       mockFetchQuestsList,
+      mockFetchQuestsPreview,
       mockFetchQuestByQuestId,
       mockFetchQuestCities,
       mockFetchOrCreateProgress,
@@ -177,6 +182,67 @@ describe('useQuestsApi hooks', () => {
 
       expect(result.current.cityQuestsIndex['krakow']).toHaveLength(1);
       expect(result.current.cityQuestsIndex['minsk']).toHaveLength(1);
+    });
+  });
+
+  // ===================== useQuestsPreview =====================
+
+  describe('useQuestsPreview', () => {
+    let queryClient: QueryClient;
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+
+    beforeEach(() => {
+      queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+    });
+
+    // Промо-блок главной показывает две карточки; через полный список он тянул
+    // весь каталог квестов семью запросами.
+    it('asks for the slice instead of the whole catalog', async () => {
+      mockFetchQuestsPreview.mockResolvedValueOnce([API_META]);
+
+      const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(mockFetchQuestsPreview).toHaveBeenCalledTimes(1);
+      expect(mockFetchQuestsPreview.mock.calls[0][0]).toBe(2);
+      expect(mockFetchQuestsList).not.toHaveBeenCalled();
+      expect(result.current.quests[0].id).toBe('krakow-dragon');
+    });
+
+    it('reuses an already loaded catalog without a network call', async () => {
+      const meta2 = { ...API_META, quest_id: 'minsk-cmok' };
+      const meta3 = { ...API_META, quest_id: 'gomel-palace' };
+      queryClient.setQueryData(queryKeys.quests(), [API_META, meta2, meta3]);
+
+      const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.quests.map((quest) => quest.id)).toEqual([
+        'krakow-dragon',
+        'minsk-cmok',
+      ]);
+      expect(mockFetchQuestsPreview).not.toHaveBeenCalled();
+    });
+
+    it('does not fetch while disabled', async () => {
+      renderHook(() => useQuestsPreview(2, { enabled: false }), { wrapper });
+
+      await waitFor(() => expect(mockFetchQuestsPreview).not.toHaveBeenCalled());
+    });
+
+    it('reports an error message when the request fails', async () => {
+      mockFetchQuestsPreview.mockRejectedValueOnce(new Error('Network error'));
+
+      const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.quests).toEqual([]);
+      expect(result.current.error).toBe('Network error');
     });
   });
 

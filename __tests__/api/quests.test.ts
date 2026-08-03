@@ -1,6 +1,7 @@
 import { apiClient, ApiError } from '@/api/client';
 import {
   fetchQuestsList,
+  fetchQuestsPreview,
   fetchQuestByQuestId,
   fetchQuestCities,
   fetchOrCreateProgress,
@@ -56,11 +57,74 @@ describe('api/quests', () => {
   });
 
   describe('fetchQuestsList', () => {
-    it('calls GET /quests/', async () => {
+    it('calls GET /quests/ with the maximum page size', async () => {
       mockedGet.mockResolvedValueOnce([]);
       const result = await fetchQuestsList();
-      expect(mockedGet).toHaveBeenCalledWith('/quests/');
+      expect(mockedGet).toHaveBeenCalledWith('/quests/?page_size=100');
       expect(result).toEqual([]);
+    });
+
+    // Каталог из 139 квестов при дефолтных 20 записях уходил семью
+    // последовательными запросами на каждый экран со списком.
+    it('keeps the page size while following the next page', async () => {
+      mockedGet
+        .mockResolvedValueOnce({
+          results: [{ id: 1, quest_id: 'krakow-dragon' }],
+          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+        })
+        .mockResolvedValueOnce({ results: [{ id: 2, quest_id: 'pakocim-voices' }], next: null });
+
+      const result = await fetchQuestsList();
+
+      expect(mockedGet).toHaveBeenCalledTimes(2);
+      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/?page_size=100');
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?page_size=100&page=2');
+      expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon', 'pakocim-voices']);
+    });
+  });
+
+  describe('fetchQuestsPreview', () => {
+    // Промо-блок главной показывает две карточки — весь каталог ему не нужен.
+    it('asks for exactly the requested slice in a single request', async () => {
+      mockedGet.mockResolvedValueOnce({
+        results: [
+          { id: 1, quest_id: 'krakow-dragon' },
+          { id: 2, quest_id: 'pakocim-voices' },
+        ],
+        next: 'https://metravel.by/api/quests/?page=2&page_size=2',
+      });
+
+      const result = await fetchQuestsPreview(2);
+
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+      expect(mockedGet).toHaveBeenCalledWith('/quests/?page_size=2', undefined, undefined);
+      expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon', 'pakocim-voices']);
+    });
+
+    it('never returns more than the requested limit', async () => {
+      mockedGet.mockResolvedValueOnce([
+        { id: 1, quest_id: 'krakow-dragon' },
+        { id: 2, quest_id: 'pakocim-voices' },
+        { id: 3, quest_id: 'minsk-cmok' },
+      ]);
+
+      const result = await fetchQuestsPreview(2);
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('fills rating and completion defaults like the full list does', async () => {
+      mockedGet.mockResolvedValueOnce({ results: [{ id: 1, quest_id: 'krakow-dragon' }], next: null });
+
+      const [quest] = await fetchQuestsPreview(1);
+
+      expect(quest).toMatchObject({
+        rating_avg: null,
+        rating_count: 0,
+        completions_count: 0,
+        is_completed_by_me: false,
+        first_completer: null,
+      });
     });
   });
 
@@ -107,10 +171,10 @@ describe('api/quests', () => {
   });
 
   describe('fetchQuestCities', () => {
-    it('calls GET /quests/cities/', async () => {
+    it('calls GET /quests/cities/ with the maximum page size', async () => {
       mockedGet.mockResolvedValueOnce([]);
       const result = await fetchQuestCities();
-      expect(mockedGet).toHaveBeenCalledWith('/quests/cities/');
+      expect(mockedGet).toHaveBeenCalledWith('/quests/cities/?page_size=100');
       expect(result).toEqual([]);
     });
   });

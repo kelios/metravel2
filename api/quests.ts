@@ -354,12 +354,27 @@ type PaginatedEnvelope<T> = {
     next?: string | null;
 };
 
+/**
+ * Списочные эндпоинты отдают по 20 записей на страницу, а `fetchAllPages`
+ * дочитывает их до конца: каталог из 139 квестов уходил семью последовательными
+ * запросами (~405 КБ) на каждый экран, которому нужен список. Просим максимум,
+ * который разрешает пагинация бэкенда (max_page_size = 100, проверено на проде):
+ * каталог схлопывается до двух запросов, города (96 штук) — до одного.
+ */
+const LIST_PAGE_SIZE = 100;
+
+function buildListPageUrl(path: string, page: number): string {
+    const separator = path.includes('?') ? '&' : '?';
+    const pageParam = page > 1 ? `&page=${page}` : '';
+    return `${path}${separator}page_size=${LIST_PAGE_SIZE}${pageParam}`;
+}
+
 /** Бэкенд перевёл списочные эндпоинты на пагинацию ({data/results, next}) — разворачиваем конверт и дочитываем все страницы. */
 async function fetchAllPages<T>(path: string, maxPages = 20, options?: { signal?: AbortSignal }): Promise<T[]> {
     const out: T[] = [];
     let page = 1;
     for (let i = 0; i < maxPages; i++) {
-        const url = page === 1 ? path : `${path}${path.includes('?') ? '&' : '?'}page=${page}`;
+        const url = buildListPageUrl(path, page);
         const res = options?.signal
             ? await apiClient.get<T[] | PaginatedEnvelope<T>>(url, undefined, { signal: options.signal })
             : await apiClient.get<T[] | PaginatedEnvelope<T>>(url);
@@ -390,6 +405,36 @@ export async function fetchQuestsList(options?: { signal?: AbortSignal }): Promi
     } catch (err) {
         const cached = await readCachedQuestsList();
         if (cached) return cached;
+        throw err;
+    }
+}
+
+/**
+ * Первые N квестов каталога ОДНИМ запросом — для промо-блоков, которым нужна
+ * пара карточек (главная показывает две). Через полный `fetchQuestsList` такой
+ * блок вытягивал весь каталог: 139 квестов и ~405 КБ на страницу, где видно два.
+ * Порядок совпадает с первой страницей полного списка.
+ *
+ * Ответ намеренно НЕ пишется в офлайн-кэш каталога: это срез, и он затёр бы
+ * полный список, на который опираются экран квестов и офлайн-режим.
+ */
+export async function fetchQuestsPreview(
+    limit: number,
+    options?: { signal?: AbortSignal },
+): Promise<ApiQuestMeta[]> {
+    try {
+        const res = await apiClient.get<ApiQuestMeta[] | PaginatedEnvelope<ApiQuestMeta>>(
+            `/quests/?page_size=${limit}`,
+            undefined,
+            options?.signal ? { signal: options.signal } : undefined,
+        );
+        const list = Array.isArray(res) ? res : unwrapList<ApiQuestMeta>(res);
+        return list.slice(0, limit).map(withQuestMetaDefaults);
+    } catch (err) {
+        // Офлайн-контракт тот же, что у полного списка: лучше показать кэш
+        // каталога, чем пустой промо-блок.
+        const cached = await readCachedQuestsList();
+        if (cached) return cached.slice(0, limit);
         throw err;
     }
 }

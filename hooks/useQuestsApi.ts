@@ -3,10 +3,11 @@
 // Чистые адаптеры и типы вынесены в utils/questAdapters.ts.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ApiQuestMeta, ApiQuestProgress, QuestReview } from '@/api/quests';
 import {
     fetchQuestsList,
+    fetchQuestsPreview,
     fetchQuestByQuestId,
     fetchQuestCities,
     fetchOrCreateProgress,
@@ -92,6 +93,45 @@ export function useQuestsList(opts?: { enabled?: boolean }) {
     if (error) devWarn('Failed to load quests list:', errorMessage);
 
     return { quests, cityQuestsIndex, loading: enabled && isPending, error: errorMessage };
+}
+
+/**
+ * Первые N квестов каталога для промо-блоков (главная показывает два).
+ * Ключ отдельный от queryKeys.quests(): полный каталог грузится страницами и
+ * весит сотни килобайт, а промо-блоку хватает одного лёгкого запроса. Если
+ * полный список уже в кеше (пришли с экрана квестов) — берём срез из него и в
+ * сеть не идём.
+ */
+export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
+    const enabled = opts?.enabled ?? true;
+    const queryClient = useQueryClient();
+
+    const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
+        queryKey: queryKeys.questsPreview(limit),
+        queryFn: ({ signal }) => fetchQuestsPreview(limit, { signal }),
+        enabled,
+        staleTime: QUESTS_LIST_STALE_TIME,
+        gcTime: QUESTS_LIST_GC_TIME,
+        initialData: () => {
+            const fullList = queryClient.getQueryData<ApiQuestMeta[]>(queryKeys.quests());
+            return fullList?.length ? fullList.slice(0, limit) : undefined;
+        },
+        // Возраст среза = возраст каталога, из которого он взят: иначе свежий
+        // initialData вечно считался бы актуальным и промо-блок не обновлялся.
+        initialDataUpdatedAt: () => queryClient.getQueryState(queryKeys.quests())?.dataUpdatedAt,
+    });
+
+    const quests = useMemo<QuestMeta[]>(
+        () => (data ?? []).map(adaptMeta),
+        [data],
+    );
+
+    const errorMessage = error
+        ? getErrorMessage(error, i18nT('quests:hooks.useQuestsApi.oshibka_zagruzki_kvestov_cdefd63b'))
+        : null;
+    if (error) devWarn('Failed to load quests preview:', errorMessage);
+
+    return { quests, loading: enabled && isPending, error: errorMessage };
 }
 
 /** Хук для загрузки городов с квестами */
