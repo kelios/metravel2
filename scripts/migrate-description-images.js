@@ -422,14 +422,30 @@ async function verifyCanonical(url) {
     probe.searchParams.set('w', String(width))
     probe.searchParams.set('q', '80')
     probe.searchParams.set('fit', 'contain')
-    const res = await withRetry(`проба w=${width}`, () =>
-      fetch(probe.toString(), {
-        headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
-      }),
-    )
+    let res
+    try {
+      res = await withRetry(`проба w=${width}`, async () => {
+        const response = await fetch(probe.toString(), {
+          headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
+        })
+        // 5xx приходит УСПЕШНЫМ fetch'ем, поэтому без явного throw повтор не
+        // срабатывал: прогон 2026-08-04 на статье 192 получил 502 на всех 39 пробах
+        // подряд (13 картинок × 3 ступени сразу после 13 загрузок) и счёл корректную
+        // миграцию провалом. Бросаем, чтобы перегрузка уходила в backoff.
+        if (response.status >= 500) throw new Error(`проба → HTTP ${response.status}`)
+        return response
+      })
+    } catch (error) {
+      problems.push(`w=${width} → ${error.message} (проверить не удалось)`)
+      continue
+    }
     const mode = res.headers.get('x-metravel-image-transform') || '(нет)'
     if (res.status !== 200) problems.push(`w=${width} → HTTP ${res.status}`)
     else if (!/stored-derivative/i.test(mode)) problems.push(`w=${width} → mode="${mode}"`)
+    // Пробы идут сразу после пачки загрузок, каждая из которых уже заставила прод
+    // нарезать шесть производных. Без паузы мы сами создаём тот затор, который потом
+    // читаем как ошибку.
+    await sleep(200)
   }
   return problems
 }
@@ -511,14 +527,33 @@ async function migrateOne(id, { token, dryRun }) {
 
   await sleep(1000)
   const after = JSON.parse((await request('GET', `/travels/${id}/`, null, token)).text)
-  const problems = detectRegression(before, after, { expectChanged: true, newDescription: next })
-  for (const upload of uploaded) problems.push(...(await verifyCanonical(upload.url)).map((p) => `${upload.key}: ${p}`))
 
-  if (problems.length) {
-    console.error(`   ❌ регрессия: ${problems.join('; ')}`)
+  // Регрессия ДАННЫХ — единственное основание для отката. Если слетела публикация,
+  // slug, галерея или точки, старое описание надо вернуть немедленно.
+  const regressions = detectRegression(before, after, { expectChanged: true, newDescription: next })
+  if (regressions.length) {
+    console.error(`   ❌ регрессия данных: ${regressions.join('; ')}`)
     const rollback = await request('PUT', '/travels/upsert/', buildUpsertPayload(before, { description: original }), token)
     console.error(`   ↩︎ откат PUT → HTTP ${rollback.status}`)
-    throw new Error(`статья ${id} откачена: ${problems.join('; ')}`)
+    throw new Error(`статья ${id} откачена: ${regressions.join('; ')}`)
+  }
+
+  // Провал ПРОБ — это «не смогли проверить», а не «мигрировали плохо», и откатывать
+  // по нему нельзя. Прогон 2026-08-04 на статье 192 показал цену смешения: пробы
+  // получили 502 от перегруженного прода, скрипт попытался откатить корректную
+  // миграцию, и спасло только то, что откат тоже упал на 502. Данные к этому моменту
+  // уже прошли инварианты содержания и `detectRegression`; останавливаемся, чтобы
+  // человек перепроверил, но написанное не трогаем.
+  const probeProblems = []
+  for (const upload of uploaded) {
+    probeProblems.push(...(await verifyCanonical(upload.url)).map((p) => `${upload.key}: ${p}`))
+  }
+  if (probeProblems.length) {
+    console.error(`   ⚠️  записано, но проверить не удалось: ${probeProblems.slice(0, 6).join('; ')}`)
+    throw new Error(
+      `статья ${id}: описание записано и данные целы, но ${probeProblems.length} проб не прошли — ` +
+        'откат НЕ делался, проверьте вручную',
+    )
   }
 
   console.log(`   ✅ мигрировано ${uploaded.length}, все ступени отдают stored-derivative`)

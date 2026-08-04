@@ -115,6 +115,58 @@ describe('richTextImageLayout (журнальная раскладка по ор
     });
   });
 
+  // Разметка редактора почти никогда не несёт width/height. На web резерв
+  // `aspect-ratio:800/450` подставляет normalizeImgTags, а PDF-экспорт
+  // раскладывает сырое описание — раскладка обязана совпасть на обеих сторонах.
+  describe('фото без объявленных размеров (сырое описание, как в PDF-экспорте)', () => {
+    const bare = (src = '1.jpg') => `<p><img src="${src}"></p>`;
+
+    it('одиночное фото занимает всю ширину, а не уезжает в 56%-колонку', () => {
+      const result = groupConsecutiveImages(`<p>Текст</p>${bare('1.jpg')}<p>Текст</p>${bare('2.jpg')}<p>Текст</p>`);
+      expect(result).toContain('img-single-wide');
+      expect(result).not.toContain('img-float-right');
+      expect(result).not.toContain('img-float-left');
+    });
+
+    it('группа собирается в ту же раскладку, что и на странице с резервными пропорциями', () => {
+      const withReserve = (src: string) => `<p><img src="${src}" style="aspect-ratio:800/450"></p>`;
+      const group = (build: (src: string) => string) =>
+        groupConsecutiveImages(`<p>Т</p>${build('1.jpg')}${build('2.jpg')}${build('3.jpg')}${build('4.jpg')}<p>Т</p>`);
+
+      const raw = group(bare);
+      expect(raw).toContain('img-quilt-4');
+      // Тот же набор кадров на web (с резервом) даёт ту же обёртку — книга и
+      // страница не расходятся.
+      expect(group(withReserve)).toContain('img-quilt-4');
+    });
+
+    it('объявленный квадрат по-прежнему обтекается', () => {
+      const result = groupConsecutiveImages(`<p>Т</p>${square('1.jpg')}<p>Т</p>`);
+      expect(result).toContain('img-float-right');
+    });
+  });
+
+  // Описание из редактора приходит с переводами строк между абзацами; раньше
+  // такой фрагмент считался контентом и обрывал группу — журнальные раскладки
+  // не собирались вообще.
+  describe('переводы строк между абзацами', () => {
+    it('не разрывают группу подряд идущих фото', () => {
+      const result = groupConsecutiveImages(
+        `<p>Т</p>\n${landscape('1.jpg')}\n${landscape('2.jpg')}\n<p>Т</p>`,
+      );
+      expect(result).toContain('img-stack-landscape');
+    });
+
+    it('не склеивают фото через текстовый абзац', () => {
+      const result = groupConsecutiveImages(
+        `${landscape('1.jpg')}\n<p>Текст между</p>\n${landscape('2.jpg')}`,
+      );
+      expect(result).not.toContain('img-stack-landscape');
+      expect(result).toContain('img-single-wide');
+      expect(result).toContain('<p>Текст между</p>');
+    });
+  });
+
   describe('базовые случаи', () => {
     it('пустая строка остаётся пустой', () => {
       expect(groupConsecutiveImages('')).toBe('');

@@ -81,6 +81,25 @@ function isPortraitImage(imgTag: string): boolean {
 }
 
 /**
+ * Кадр, который раскладываем как широкий: объявленный ландшафт ИЛИ кадр без
+ * объявленных размеров.
+ *
+ * Разметка редактора почти никогда не несёт `width`/`height`. На web этого не
+ * видно: `normalizeImgTags` подставляет резервные `aspect-ratio:800/450`, и все
+ * такие кадры доезжают сюда ландшафтными. PDF-экспорт раскладывает СЫРОЕ
+ * описание, без резерва — те же кадры выглядели «ни ландшафт, ни портрет» и
+ * уходили в портретные ветки: одиночные — в 56%-колонку с чередованием
+ * право/лево (в книге это рваная лесенка, потому что обтекания текстом там
+ * нет), группы — мимо журнальных раскладок. Одно допущение «размеров нет →
+ * кадр широкий» держит книгу и страницу на одной раскладке.
+ *
+ * Объявленный квадрат остаётся квадратом — его ветки не трогаем.
+ */
+function isWideImage(imgTag: string): boolean {
+  return isLandscapeImage(imgTag) || extractImageDimensions(imgTag) === null;
+}
+
+/**
  * Analyzes orientation composition of image group.
  * Returns counts of landscape, portrait, and square images.
  */
@@ -90,7 +109,7 @@ function analyzeImageGroup(images: string[]): { landscape: number; portrait: num
   let square = 0;
 
   for (const img of images) {
-    if (isLandscapeImage(img)) {
+    if (isWideImage(img)) {
       landscape++;
     } else if (isPortraitImage(img)) {
       portrait++;
@@ -123,7 +142,7 @@ function wrapImageGroup(wrapperClassName: string, images: string[]): string {
 }
 
 function appendSingleImage(result: string[], imgParagraph: string, floatDirection: number): number {
-  if (isLandscapeImage(imgParagraph)) {
+  if (isWideImage(imgParagraph)) {
     const img = appendClassToParagraph(imgParagraph, 'img-single-wide figure-landscape');
     result.push(img);
     return floatDirection;
@@ -259,6 +278,13 @@ export function groupConsecutiveImages(html: string): string {
   const result: string[] = [];
   let imageBuffer: string[] = [];
   let floatDirection = 0; // 0 = right, 1 = left, alternates
+  // Разделители между абзацами. Редактор пишет описание с переводами строк
+  // (`</p>\n<p>`), и раньше такой фрагмент считался контентом и обрывал группу:
+  // подряд идущие фото ни разу не собирались в журнальную раскладку — ни в
+  // книге, ни на странице, хотя весь словарь классов и CSS для них есть.
+  // Пробельный фрагмент контентом не является: внутри группы он отбрасывается,
+  // перед группой — сохраняется, чтобы разметка вокруг текста не менялась.
+  let pendingWhitespace = '';
 
   const flushImageBuffer = (): void => {
     if (imageBuffer.length === 0) return;
@@ -272,13 +298,26 @@ export function groupConsecutiveImages(html: string): string {
     const isImageParagraph = /<p[^>]*>[\s]*<img\b[^>]*>[\s]*(?:<br\s*\/?>[\s]*)?<\/p>/i.test(part);
 
     if (isImageParagraph) {
+      if (imageBuffer.length === 0 && pendingWhitespace) result.push(pendingWhitespace);
+      pendingWhitespace = '';
       imageBuffer.push(part);
-    } else {
-      flushImageBuffer();
-      result.push(part);
+      continue;
     }
+
+    if (!part.trim()) {
+      pendingWhitespace += part;
+      continue;
+    }
+
+    flushImageBuffer();
+    if (pendingWhitespace) {
+      result.push(pendingWhitespace);
+      pendingWhitespace = '';
+    }
+    result.push(part);
   }
   flushImageBuffer();
+  if (pendingWhitespace) result.push(pendingWhitespace);
 
   return result.join('');
 }

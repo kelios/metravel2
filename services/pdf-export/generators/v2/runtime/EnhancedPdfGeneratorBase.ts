@@ -13,6 +13,7 @@ import type { TravelQuote } from '../../../quotes/travelQuotes';
 import { pickRandomQuote } from '../../../quotes/travelQuotes';
 import { CoverPageGenerator } from '../pages/CoverPageGenerator';
 import { buildSafeImageUrl, escapeHtml as sharedEscapeHtml } from '../../../utils/htmlUtils';
+import { annotateImageSizes, extractUnsizedImageSources } from '../../../utils/descriptionImageSizes';
 import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../../../utils/pluralize';
 import {
   buildGoogleMapsUrl as sharedBuildGoogleMapsUrl,
@@ -170,7 +171,9 @@ export class EnhancedPdfGeneratorBase {
     this.currentSettings = gatedSettings;
     this.initRenderers(); // reinit with updated settings
 
-    const sortedTravels = this.sortTravels(travels, gatedSettings.sortOrder);
+    const sortedTravels = await this.annotateDescriptionImageSizes(
+      this.sortTravels(travels, gatedSettings.sortOrder)
+    );
     if (!this.selectedQuotes) {
       const coverQuote = pickRandomQuote();
       const finalQuote = pickRandomQuote(coverQuote);
@@ -581,13 +584,13 @@ export class EnhancedPdfGeneratorBase {
   }
 
   /**
-   * Замеряет aspect-ratio (width/height) фото галерей через браузерный Image.
-   * Не замеренные фото (таймаут/ошибка/SSR) отсутствуют в карте — рендерер галереи
-   * падает для них на contain+blur letterbox-фолбэк.
+   * Замеряет aspect-ratio (width/height) браузерным Image по карте
+   * «ключ → загружаемый URL». Не замеренные фото (таймаут/ошибка/SSR) в карту
+   * не попадают — вызывающий код обязан иметь фолбэк.
    */
-  private async preloadGalleryImageAspects(travels: TravelForBook[]): Promise<Map<string, number>> {
+  private async measureImageAspects(targets: Map<string, string>): Promise<Map<string, number>> {
     const aspects = new Map<string, number>();
-    if (typeof Image === 'undefined') return aspects;
+    if (typeof Image === 'undefined' || !targets.size) return aspects;
     // jsdom (Jest) не грузит изображения — onload/onerror не стреляют, ждать таймаут бессмысленно
     if (
       typeof process !== 'undefined' &&
@@ -596,25 +599,15 @@ export class EnhancedPdfGeneratorBase {
       return aspects;
     }
 
-    const urls = new Set<string>();
-    for (const travel of travels) {
-      for (const item of travel.gallery || []) {
-        const raw = typeof item === 'string' ? item : item?.url;
-        const safe = this.buildSafeImageUrl(raw);
-        if (safe && safe.trim().length) urls.add(safe);
-      }
-    }
-    if (!urls.size) return aspects;
-
     await Promise.all(
-      Array.from(urls).map(
-        (url) =>
+      Array.from(targets).map(
+        ([key, url]) =>
           new Promise<void>((resolve) => {
             const img = new Image();
             const done = () => {
               clearTimeout(timer);
               if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-                aspects.set(url, img.naturalWidth / img.naturalHeight);
+                aspects.set(key, img.naturalWidth / img.naturalHeight);
               }
               resolve();
             };
@@ -630,6 +623,51 @@ export class EnhancedPdfGeneratorBase {
       )
     );
     return aspects;
+  }
+
+  /**
+   * Замеряет aspect-ratio фото галерей: journal-раскладка строит ряды от
+   * реальных пропорций, незамеренные падают на contain+blur letterbox-фолбэк.
+   */
+  private async preloadGalleryImageAspects(travels: TravelForBook[]): Promise<Map<string, number>> {
+    const targets = new Map<string, string>();
+    for (const travel of travels) {
+      for (const item of travel.gallery || []) {
+        const raw = typeof item === 'string' ? item : item?.url;
+        const safe = this.buildSafeImageUrl(raw);
+        if (safe && safe.trim().length) targets.set(safe, safe);
+      }
+    }
+    return this.measureImageAspects(targets);
+  }
+
+  /**
+   * Проставляет в описание реальные пропорции его картинок.
+   *
+   * Раскладка фото описания выбирается ориентацией кадров, а разметка редактора
+   * её не несёт. На странице пропорции доезжают из web-конвейера (резерв +
+   * правка после загрузки), книга же собирается из сырого описания — без этого
+   * замера портрет и ландшафт попадают в один слот, и книга расходится со
+   * страницей. Замер не удался — раскладка остаётся прежней, книга собирается.
+   */
+  private async annotateDescriptionImageSizes(travels: TravelForBook[]): Promise<TravelForBook[]> {
+    const targets = new Map<string, string>();
+    for (const travel of travels) {
+      for (const src of extractUnsizedImageSources(travel.description)) {
+        const safe = this.buildSafeImageUrl(src);
+        if (safe && safe.trim().length) targets.set(src, safe);
+      }
+    }
+    if (!targets.size) return travels;
+
+    const aspects = await this.measureImageAspects(targets);
+    if (!aspects.size) return travels;
+
+    return travels.map((travel) =>
+      travel.description
+        ? { ...travel, description: annotateImageSizes(travel.description, aspects) }
+        : travel
+    );
   }
 
   private escapeHtml(value: string | null | undefined): string {
