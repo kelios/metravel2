@@ -100,11 +100,12 @@ describe('rich image letterbox fill runtime (#1233)', () => {
     return { container, img };
   };
 
-  it('paints the frame of a lone body photo, which lives inside a justified row', async () => {
+  it('paints the frame of a lone body photo, which stands outside the magazine grids', async () => {
     stubCanvas([10, 20, 30, 255]);
     const { img } = await renderAndLoadImage(lonePortrait('row-cell'));
 
-    expect(img.closest('.img-jrow')).toBeTruthy();
+    // Одиночное фото обёртки-сетки не получает — заливка обязана доехать и до него.
+    expect(img.closest('.img-row-2, .img-grid, .img-grid-mixed')).toBeNull();
     const frame = img.closest('.rich-image-frame') as HTMLElement;
     expect(frame).toBeTruthy();
     expect(frame.style.getPropertyValue('--travel-rich-image-fill')).toBe('rgba(10, 20, 30, 0.75)');

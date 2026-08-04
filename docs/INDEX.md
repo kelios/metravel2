@@ -19,6 +19,8 @@
 - `docs/DESIGN_SYSTEM.md` — design tokens и palette roles;
 - `docs/RELEASE.md` — release/deploy flow;
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist;
+- `docs/DB_BACKUP.md` — бэкап production-базы: где лежат копии, как снять дамп
+  вручную, как включить регулярную выгрузку и как восстановиться;
 - `docs/NATIVE_COMPAT_RULES.md` — web/native compatibility contract;
 - `docs/TASK_BOARD_MCP.md` — единый task board и Task Contract workflow.
 - `docs/PROBLEM_MEMORY.md` — recurring problem families, root causes,

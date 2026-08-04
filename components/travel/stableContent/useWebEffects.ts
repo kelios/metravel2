@@ -74,13 +74,10 @@ const readDominantColor = (img: HTMLImageElement): string | null => {
 /**
  * Заливка полей рамки под `contain`-фото.
  *
- * Ячейки `.img-jrow` здесь, в отличие от `adoptNaturalImageAspect`, НЕ пропускаем.
- * Там исключение по делу: геометрию ряда задаёт бакет целиком, и правка аспекта
- * одной ячейки разъехалась бы со строкой. Цвет же — свойство самого кадра: у каждой
- * ячейки свой `<img>`, поэтому и заливка у каждой своя. Пропуск делал правку
- * бесполезной: `groupConsecutiveImages` заворачивает в `.img-jrow` любой абзац-картинку,
- * включая одиночную, так что под исключение попадали вообще все фото тела статьи
- * (замер прода 2026-08-04: 59/59 и 18/18 рамок — ячейки jrow, залитых нет).
+ * Ячейки журнальных сеток здесь, в отличие от `adoptNaturalImageAspect`, НЕ пропускаем.
+ * Там исключение по делу: геометрию ячейки задаёт обёртка раскладки, и правка аспекта
+ * одного кадра разъехалась бы с сеткой. Цвет же — свойство самого кадра: у каждой
+ * ячейки свой `<img>`, поэтому и заливка у каждой своя.
  */
 const adoptDominantFrameFill = (img: HTMLImageElement, frame: HTMLElement | null) => {
   if (!frame || !imageLoadedOk(img)) return
@@ -100,15 +97,17 @@ const adoptDominantFrameFill = (img: HTMLImageElement, frame: HTMLElement | null
  * заполнять больше нечего. Остаток полей закрывает заливка рамки: на web второго
  * растра у слота нет (#1208).
  *
- * Ячейки `.img-jrow` не трогаем: их геометрию задаёт бакет строки целиком, а не
- * отдельное фото.
+ * Ячейки журнальных сеток не трогаем: их пропорции задаёт сама раскладка
+ * (`.img-row-2` / `.img-grid` / `.img-grid-mixed` выставляют `aspect-ratio` на `<p>`),
+ * и подмена аспекта одного кадра разъехалась бы с соседями по ряду. Одиночное фото
+ * обёртки не имеет — там натуральные пропорции и нужны.
  */
 const adoptNaturalImageAspect = (img: HTMLImageElement, frame: HTMLElement | null) => {
   if (!imageLoadedOk(img)) return
   // Размеры, объявленные редактором, — не наше дело: подменять их значит двигать
   // вёрстку там, где автор задал её осознанно. Трогаем только резерв 800×450.
   if (img.getAttribute('data-aspect-fallback') !== '1') return
-  if (img.closest('.img-jrow')) return
+  if (img.closest('.img-row-2, .img-grid, .img-grid-mixed')) return
   const ratio = `${img.naturalWidth} / ${img.naturalHeight}`
   if (img.style.aspectRatio === ratio) return
   img.style.aspectRatio = ratio

@@ -3,147 +3,169 @@ import {
   removeImageLayoutClasses,
   applySmartImageLayout,
 } from '@/utils/richTextImageLayout';
+import { ContentParser } from '@/services/pdf-export/parsers/ContentParser';
 
-describe('richTextImageLayout (justified rows)', () => {
-  describe('groupConsecutiveImages', () => {
-    it('returns empty string for empty input', () => {
+const landscape = (src = '1.jpg') => `<p><img src="${src}" width="1200" height="800"></p>`;
+const portrait = (src = '1.jpg') => `<p><img src="${src}" width="600" height="900"></p>`;
+const square = (src = '1.jpg') => `<p><img src="${src}" width="800" height="800"></p>`;
+
+describe('richTextImageLayout (журнальная раскладка по ориентации и количеству)', () => {
+  describe('одиночное фото', () => {
+    it('ландшафт занимает всю ширину', () => {
+      const result = groupConsecutiveImages(`<p>До</p>${landscape()}<p>После</p>`);
+      expect(result).toContain('img-single-wide');
+      expect(result).toContain('figure-landscape');
+    });
+
+    it('портрет обтекается текстом и чередует сторону', () => {
+      const result = groupConsecutiveImages(
+        `<p>Текст</p>${portrait('1.jpg')}<p>Текст</p>${portrait('2.jpg')}<p>Текст</p>`,
+      );
+      expect(result).toContain('img-float-right');
+      expect(result).toContain('img-float-left');
+      expect(result).toContain('figure-portrait');
+    });
+  });
+
+  describe('пара фото — вариант выбирается ориентацией', () => {
+    it('два портрета', () => {
+      const result = groupConsecutiveImages(`<p>Т</p>${portrait('1.jpg')}${portrait('2.jpg')}<p>Т</p>`);
+      expect(result).toContain('img-pair-portraits');
+      expect(result).toContain('img-row-2-portrait');
+    });
+
+    it('два ландшафта', () => {
+      const result = groupConsecutiveImages(`<p>Т</p>${landscape('1.jpg')}${landscape('2.jpg')}<p>Т</p>`);
+      expect(result).toContain('img-stack-landscape');
+      expect(result).toContain('img-row-2-landscape');
+    });
+
+    it('портрет + ландшафт', () => {
+      const result = groupConsecutiveImages(`<p>Т</p>${portrait('1.jpg')}${landscape('2.jpg')}<p>Т</p>`);
+      expect(result).toContain('img-pair-mixed');
+      expect(result).toContain('img-row-2-mixed');
+    });
+
+    it('два квадрата', () => {
+      const result = groupConsecutiveImages(`<p>Т</p>${square('1.jpg')}${square('2.jpg')}<p>Т</p>`);
+      expect(result).toContain('img-pair-balanced');
+      expect(result).toContain('img-row-2-balanced');
+    });
+  });
+
+  describe('три и больше — вариант выбирается ориентацией и количеством', () => {
+    it('портрет между двумя ландшафтами даёт лоскут из трёх', () => {
+      const result = groupConsecutiveImages(
+        `<p>Т</p>${landscape('1.jpg')}${portrait('2.jpg')}${landscape('3.jpg')}<p>Т</p>`,
+      );
+      expect(result).toContain('img-quilt-3');
+      expect(result).toContain('img-grid-mixed');
+      expect(result).toContain('img-grid-mixed-stack');
+    });
+
+    it('портрет первым разворачивает лоскут', () => {
+      const result = groupConsecutiveImages(
+        `<p>Т</p>${portrait('1.jpg')}${landscape('2.jpg')}${landscape('3.jpg')}<p>Т</p>`,
+      );
+      expect(result).toContain('img-grid-mixed-reverse');
+    });
+
+    it('три портрета дают триптих', () => {
+      const result = groupConsecutiveImages(
+        `<p>Т</p>${portrait('1.jpg')}${portrait('2.jpg')}${portrait('3.jpg')}<p>Т</p>`,
+      );
+      expect(result).toContain('img-portrait-triptych');
+      expect(result).toContain('img-grid-portrait');
+    });
+
+    it('четыре портрета дают квартет', () => {
+      const result = groupConsecutiveImages(
+        `<p>Т</p>${portrait('1.jpg')}${portrait('2.jpg')}${portrait('3.jpg')}${portrait('4.jpg')}<p>Т</p>`,
+      );
+      expect(result).toContain('img-portrait-quartet');
+    });
+
+    it('четыре ландшафта дают лоскут из четырёх', () => {
+      const result = groupConsecutiveImages(
+        `<p>Т</p>${landscape('1.jpg')}${landscape('2.jpg')}${landscape('3.jpg')}${landscape('4.jpg')}<p>Т</p>`,
+      );
+      expect(result).toContain('img-quilt-4');
+      expect(result).toContain('img-grid-quilt');
+    });
+
+    it('две пары разной ориентации дают сбалансированную сетку', () => {
+      const result = groupConsecutiveImages(
+        `<p>Т</p>${landscape('1.jpg')}${landscape('2.jpg')}${portrait('3.jpg')}${portrait('4.jpg')}<p>Т</p>`,
+      );
+      expect(result).toContain('img-pair-grid');
+      expect(result).toContain('img-grid-balanced');
+    });
+
+    it('ландшафтная группа из пяти уходит в редакторскую сетку', () => {
+      const images = [1, 2, 3, 4, 5].map((n) => landscape(`${n}.jpg`)).join('');
+      const result = groupConsecutiveImages(`<p>Т</p>${images}<p>Т</p>`);
+      expect(result).toContain('img-editorial-grid');
+    });
+
+    it('портретная группа из пяти собирается в колонки', () => {
+      const images = [1, 2, 3, 4, 5].map((n) => portrait(`${n}.jpg`)).join('');
+      const result = groupConsecutiveImages(`<p>Т</p>${images}<p>Т</p>`);
+      expect(result).toContain('img-column-portraits');
+      expect(result).toContain('img-grid-portrait');
+    });
+  });
+
+  describe('базовые случаи', () => {
+    it('пустая строка остаётся пустой', () => {
       expect(groupConsecutiveImages('')).toBe('');
     });
 
-    it('returns input unchanged if no images', () => {
+    it('текст без картинок не меняется', () => {
       const html = '<p>Hello world</p><p>Another paragraph</p>';
       expect(groupConsecutiveImages(html)).toBe(html);
     });
 
-    it('wraps a single landscape image in a justified row with its own aspect bucket', () => {
-      const html = '<p>Text before</p><p><img src="test.jpg" width="900" height="600"></p><p>Text after</p>';
+    it('несколько картинок в одном абзаце разворачиваются перед группировкой', () => {
+      const html = '<p>Т</p><p><img src="1.jpg" width="700" height="900"><img src="2.jpg" width="1200" height="700"><img src="3.jpg" width="700" height="900"></p><p>Т</p>';
       const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-150">');
-      expect(result).toContain('</div>');
+      expect(result).not.toContain('<img src="1.jpg" width="700" height="900"><img src="2.jpg"');
+      expect(result).toMatch(/img-(quilt|grid|row-2|portrait|column|pair|stack|editorial)/);
     });
 
-    it('wraps a single portrait image in a justified row clamped to the minimum bucket', () => {
-      const html = '<p>Text before</p><p><img src="test.jpg" width="600" height="800"></p><p>Text after</p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-100">');
+    it('картинка с <br> тоже раскладывается', () => {
+      const result = groupConsecutiveImages('<p><img src="test.jpg" width="600" height="800"><br></p>');
+      expect(result).toContain('figure-portrait');
     });
 
-    it('packs two landscapes into one full-width row', () => {
-      const html = '<p>Text</p><p><img src="1.jpg" width="1200" height="800"></p><p><img src="2.jpg" width="1200" height="800"></p><p>Text</p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-300">');
-      expect(result.match(/img-jrow/g)?.length).toBe(1);
-    });
-
-    it('packs two portraits into one row', () => {
-      const html = '<p>Text</p><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="600" height="800"></p><p>Text</p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-150">');
-      expect(result.match(/img-jrow/g)?.length).toBe(1);
-    });
-
-    it('packs portrait + landscape into one mixed row', () => {
-      const html = '<p>Text</p><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="1200" height="800"></p><p>Text</p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-225">');
-      expect(result.match(/img-jrow/g)?.length).toBe(1);
-    });
-
-    it('packs three portraits into one row of three', () => {
-      const html = '<p>Text</p><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="600" height="800"></p><p>Text</p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-225">');
-      expect(result.match(/img-jrow/g)?.length).toBe(1);
-    });
-
-    it('never leaves a lone trailing portrait: 4 portraits become 2+2', () => {
-      const html = '<p>Text</p>' +
-        '<p><img src="1.jpg" width="600" height="800"></p>' +
-        '<p><img src="2.jpg" width="600" height="800"></p>' +
-        '<p><img src="3.jpg" width="600" height="800"></p>' +
-        '<p><img src="4.jpg" width="600" height="800"></p>' +
-        '<p>Text</p>';
-      const result = groupConsecutiveImages(html);
-      const rows = result.match(/<div class="img-jrow jrow-ar-150">/g);
-      expect(rows?.length).toBe(2);
-      expect(result.match(/img-jrow/g)?.length).toBe(2);
-    });
-
-    it('allows a trailing landscape to stand alone as a full-width row', () => {
-      // P(0.75) + L(1.5) close the first row; the trailing landscape keeps its own row.
-      const html = '<p>Text</p>' +
-        '<p><img src="1.jpg" width="600" height="800"></p>' +
-        '<p><img src="2.jpg" width="1200" height="800"></p>' +
-        '<p><img src="3.jpg" width="1200" height="800"></p>' +
-        '<p>Text</p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-225">');
-      expect(result).toContain('<div class="img-jrow jrow-ar-150">');
-      expect(result.match(/img-jrow/g)?.length).toBe(2);
-    });
-
-    it('caps a row at three images even when aspects stay below target', () => {
-      const html = '<p>Text</p>' +
-        '<p><img src="1.jpg" width="500" height="900"></p>'.repeat(1) +
-        '<p><img src="2.jpg" width="500" height="900"></p>' +
-        '<p><img src="3.jpg" width="500" height="900"></p>' +
-        '<p><img src="4.jpg" width="500" height="900"></p>' +
-        '<p><img src="5.jpg" width="500" height="900"></p>' +
-        '<p><img src="6.jpg" width="500" height="900"></p>' +
-        '<p>Text</p>';
-      const result = groupConsecutiveImages(html);
-      expect(result.match(/img-jrow/g)?.length).toBe(2);
-    });
-
-    it('expands multiple image-only tags inside one paragraph before grouping them', () => {
-      const html = '<p>Text</p><p><img src="1.jpg" width="700" height="900"><img src="2.jpg" width="1200" height="700"><img src="3.jpg" width="700" height="900"></p><p>Text</p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('img-jrow');
-      expect(result).not.toContain('<p><img src="1.jpg" width="700" height="900"><img src="2.jpg" width="1200" height="700"><img src="3.jpg" width="700" height="900"></p>');
-    });
-
-    it('handles images with br tags', () => {
-      const html = '<p><img src="test.jpg" width="600" height="800"><br></p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('img-jrow');
-    });
-
-    it('treats images without dimensions as 4:3', () => {
-      // Two unknown-ratio images: 1.33 + 1.33 = 2.66 → one row, bucket 275.
-      const html = '<p><img src="1.jpg"></p><p><img src="2.jpg"></p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-275">');
-    });
-
-    it('reads aspect from inline style when width/height attributes are missing', () => {
-      const html = '<p><img src="test.jpg" style="aspect-ratio: 3 / 2"></p>';
-      const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-jrow jrow-ar-150">');
+    it('пропорции читаются из inline-стиля, когда нет width/height', () => {
+      const result = groupConsecutiveImages('<p><img src="test.jpg" style="aspect-ratio: 3 / 2"></p>');
+      expect(result).toContain('img-single-wide');
     });
   });
 
   describe('removeImageLayoutClasses', () => {
-    it('removes img-jrow wrapper', () => {
-      const html = '<div class="img-jrow jrow-ar-150"><p><img src="1.jpg"></p><p><img src="2.jpg"></p></div>';
-      const result = removeImageLayoutClasses(html);
-      expect(result).not.toContain('img-jrow');
-      expect(result).toContain('<p><img src="1.jpg"></p>');
-    });
-
-    it('removes legacy img-row-2 wrapper', () => {
+    it('снимает обёртку img-row-2', () => {
       const html = '<div class="img-row-2"><p><img src="1.jpg"></p><p><img src="2.jpg"></p></div>';
       const result = removeImageLayoutClasses(html);
       expect(result).not.toContain('img-row-2');
       expect(result).toContain('<p><img src="1.jpg"></p>');
     });
 
-    it('removes legacy img-grid wrapper', () => {
+    it('снимает обёртку img-grid', () => {
       const html = '<div class="img-grid"><p><img src="1.jpg"></p></div>';
-      const result = removeImageLayoutClasses(html);
-      expect(result).not.toContain('img-grid');
+      expect(removeImageLayoutClasses(html)).not.toContain('img-grid');
     });
 
-    it('removes legacy float classes from paragraphs', () => {
+    // Разметка эпохи aspect-sum: без снятия описание навсегда осталось бы в той раскладке.
+    it('снимает обёртку img-jrow предыдущего поколения алгоритма', () => {
+      const html = '<div class="img-jrow jrow-ar-150"><p><img src="1.jpg"></p><p><img src="2.jpg"></p></div>';
+      const result = removeImageLayoutClasses(html);
+      expect(result).not.toContain('img-jrow');
+      expect(result).not.toContain('jrow-ar-');
+      expect(result).toContain('<p><img src="1.jpg"></p>');
+    });
+
+    it('снимает классы обтекания с абзацев', () => {
       const html = '<p class="img-float-right figure-portrait"><img src="test.jpg"></p>';
       const result = removeImageLayoutClasses(html);
       expect(result).not.toContain('img-float-right');
@@ -151,32 +173,37 @@ describe('richTextImageLayout (justified rows)', () => {
       expect(result).toContain('<img src="test.jpg">');
     });
 
-    it('removes legacy single-wide class from paragraphs', () => {
+    it('снимает класс single-wide с абзацев', () => {
       const html = '<p class="img-single-wide figure-landscape"><img src="test.jpg"></p>';
       const result = removeImageLayoutClasses(html);
       expect(result).not.toContain('img-single-wide');
       expect(result).not.toContain('figure-landscape');
-      expect(result).toContain('<img src="test.jpg">');
     });
   });
 
   describe('applySmartImageLayout', () => {
-    it('cleans existing layout and reapplies', () => {
-      const html = '<div class="img-jrow jrow-ar-275"><p><img src="1.jpg"></p><p><img src="2.jpg"></p></div>';
+    it('перекладывает разметку эпохи img-jrow на журнальную без вложенности', () => {
+      const html = '<p>До</p><div class="img-jrow jrow-ar-225">' +
+        '<p><img src="1.jpg" width="600" height="900"></p>' +
+        '<p><img src="2.jpg" width="600" height="900"></p>' +
+        '</div><p>После</p>';
       const result = applySmartImageLayout(html);
-      expect(result).toContain('img-jrow');
-      expect(result.match(/img-jrow/g)?.length).toBe(1);
+      expect(result).not.toContain('img-jrow');
+      expect(result).toContain('img-pair-portraits');
+      expect(result.match(/img-pair-portraits/g)?.length).toBe(1);
     });
 
-    it('migrates legacy grid markup to justified rows without nesting', () => {
-      const html = '<p>Before</p><div class="img-pair-portraits img-row-2 img-row-2-portrait"><div class="img-pair-portraits img-row-2 img-row-2-portrait"><p><img src="1.jpg" width="600" height="900"></p><p><img src="2.jpg" width="600" height="900"></p></div></div><p>After</p>';
+    it('чистит и переприменяет без вложенности', () => {
+      const html = '<p>До</p><div class="img-pair-portraits img-row-2 img-row-2-portrait">' +
+        '<div class="img-pair-portraits img-row-2 img-row-2-portrait">' +
+        '<p><img src="1.jpg" width="600" height="900"></p><p><img src="2.jpg" width="600" height="900"></p>' +
+        '</div></div><p>После</p>';
       const result = applySmartImageLayout(html);
-      expect(result).not.toContain('img-row-2');
-      expect(result).not.toContain('img-pair-portraits');
-      expect(result.match(/img-jrow/g)?.length).toBe(1);
+      expect(result.match(/img-row-2"|img-row-2 /g)?.length ?? 0).toBeLessThanOrEqual(1);
+      expect(result.match(/img-pair-portraits/g)?.length).toBe(1);
     });
 
-    it('handles null/undefined gracefully', () => {
+    it('не падает на null/undefined', () => {
       expect(applySmartImageLayout(null as unknown as string)).toBe('');
       expect(applySmartImageLayout(undefined as unknown as string)).toBe('');
     });
@@ -186,22 +213,57 @@ describe('richTextImageLayout (justified rows)', () => {
     // прогоне, и перезаписанный после сейва черновик перестаёт быть смыслово
     // равным серверному описанию — всплывает ложный диалог восстановления.
     // Трансформ ОБЯЗАН быть идемпотентным.
-    it('is idempotent — repeated passes produce identical output (no whitespace drift)', () => {
+    it('идемпотентен — повторный проход даёт тот же HTML (без дрейфа пробелов)', () => {
       const cases = [
         '<p>Intro.</p><p class="img-float-right figure-portrait"><img src="https://metravel.by/address-image/1/c.webp"></p><p>Outro.</p>',
         '<p class="figure-portrait">plain</p>',
         '<div class="img-row-2"><p><img src="1.jpg"></p><p><img src="2.jpg"></p></div>',
         '<div class="img-jrow jrow-ar-225"><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="1200" height="800"></p></div>',
         '<p data-block="a" class="img-single-wide figure-landscape">x</p>',
-        '<p>Text</p><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="600" height="800"></p><p><img src="4.jpg" width="600" height="800"></p><p>Text</p>',
+        `<p>Т</p>${portrait('1.jpg')}${portrait('2.jpg')}${portrait('3.jpg')}${portrait('4.jpg')}<p>Т</p>`,
+        `<p>Т</p>${landscape('1.jpg')}${portrait('2.jpg')}${landscape('3.jpg')}<p>Т</p>`,
+        `<p>Т</p>${landscape('1.jpg')}${landscape('2.jpg')}${portrait('3.jpg')}${portrait('4.jpg')}<p>Т</p>`,
       ];
       for (const html of cases) {
         const once = applySmartImageLayout(html);
         const twice = applySmartImageLayout(once);
         expect(twice).toBe(once);
-        // и никакого удвоения пробелов между `<p` и `class`
         expect(once).not.toMatch(/<p {2,}/);
       }
+    });
+  });
+
+  // Веб и книга обязаны раскладывать одну группу одинаково. Именно этот паритет
+  // и потерялся, когда раскладка перешла на классы `jrow-ar-*`: PDF-парсер их не
+  // знал, и КАЖДАЯ группа падала в `grid-default`.
+  describe('паритет с PDF-экспортом', () => {
+    const groups: Array<{ name: string; html: string }> = [
+      { name: 'два портрета', html: `${portrait('1.jpg')}${portrait('2.jpg')}` },
+      { name: 'два ландшафта', html: `${landscape('1.jpg')}${landscape('2.jpg')}` },
+      { name: 'портрет + ландшафт', html: `${portrait('1.jpg')}${landscape('2.jpg')}` },
+      { name: 'два квадрата', html: `${square('1.jpg')}${square('2.jpg')}` },
+      { name: 'триптих портретов', html: `${portrait('1.jpg')}${portrait('2.jpg')}${portrait('3.jpg')}` },
+      {
+        name: 'квартет портретов',
+        html: `${portrait('1.jpg')}${portrait('2.jpg')}${portrait('3.jpg')}${portrait('4.jpg')}`,
+      },
+      {
+        name: 'лоскут из четырёх ландшафтов',
+        html: `${landscape('1.jpg')}${landscape('2.jpg')}${landscape('3.jpg')}${landscape('4.jpg')}`,
+      },
+      {
+        name: 'сбалансированная сетка 2+2',
+        html: `${landscape('1.jpg')}${landscape('2.jpg')}${portrait('3.jpg')}${portrait('4.jpg')}`,
+      },
+    ];
+
+    it.each(groups)('«$name» распознаётся книгой, а не падает в grid-default', ({ html }) => {
+      const laidOut = applySmartImageLayout(`<p>Т</p>${html}<p>Т</p>`);
+      const blocks = new ContentParser().parse(laidOut);
+      const gallery = blocks.find((block) => block.type === 'image-gallery');
+
+      expect(gallery).toBeDefined();
+      expect((gallery as { layout: string }).layout).not.toBe('grid-default');
     });
   });
 });

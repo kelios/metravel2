@@ -424,8 +424,8 @@ describe('StableContent (web) link styles', () => {
           // Без объявленных размеров: слот резервируется под 800×450, а реальные
           // пропорции кадра приходят с загрузкой (#1188).
           '<p><img src="https://example.com/one.jpg" alt="One" /></p>',
-          // Абзац между фото: иначе соседние картинки собираются в общую строку
-          // `.img-jrow`, где геометрию задаёт бакет строки, а не отдельный кадр.
+          // Абзац между фото: иначе соседние картинки собираются в общую журнальную
+          // сетку, где геометрию задаёт обёртка раскладки, а не отдельный кадр.
           '<p>Текст между фотографиями.</p>',
           '<p><img src="https://example.com/two.jpg" width="600" height="900" alt="Two" /></p>',
         ].join('')}
@@ -436,7 +436,9 @@ describe('StableContent (web) link styles', () => {
     await waitFor(() => {
       const richText = container.querySelector('.travel-rich-text');
       expect(richText).toBeTruthy();
-      expect(richText?.innerHTML).toContain('class="rich-image-frame');
+      // Класс рамки — токен в списке, а не обязательно первый: одиночному фото
+      // раскладка дописывает свои классы (`img-single-wide` / `img-float-*`) перед ним.
+      expect(richText?.querySelector('.rich-image-frame')).toBeTruthy();
       expect(richText?.innerHTML).not.toContain('--travel-rich-image:url');
       expect(richText?.innerHTML).toContain('--travel-rich-image-aspect:800/450');
     });

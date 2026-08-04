@@ -1,6 +1,7 @@
 import { useThemedColors } from '@/hooks/useTheme'
 
 import { baseStyles } from './webStyles/base'
+import { floatStyles } from './webStyles/floats'
 import { imageGridStyles } from './webStyles/imageGrids'
 import { instagramStyles } from './webStyles/instagram'
 import { instagramTrailingStyles } from './webStyles/instagramTrailing'
@@ -13,6 +14,9 @@ export const WEB_RICH_TEXT_STYLES_ID = 'travel-rich-text-styles'
 
 export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) =>
   baseStyles(colors, WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_FULL_WIDTH_CLASS) +
+  // Раньше `responsiveStyles`: мобильный блок гасит обтекание (`float: none`),
+  // и при обратном порядке одиночный портрет уезжал бы в обтекание на телефоне.
+  floatStyles(colors, WEB_RICH_TEXT_CLASS) +
   imageGridStyles(colors, WEB_RICH_TEXT_CLASS) +
   typographyStyles(colors, WEB_RICH_TEXT_CLASS) +
   instagramStyles(colors, WEB_RICH_TEXT_CLASS) +

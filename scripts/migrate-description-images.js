@@ -476,7 +476,13 @@ async function migrateOne(id, { token, dryRun }) {
   if (countImages(next) !== countImages(original)) {
     throw new Error(`число <img> изменилось: ${countImages(original)} → ${countImages(next)}`)
   }
-  if (plainText(next) !== plainText(original)) {
+  // Текст сравниваем, применив апгрейд протокола к ОБЕИМ версиям: это единственное
+  // изменение содержания, которое миграции разрешено. В телах встречаются видимые
+  // ссылки на свои же статьи, набранные текстом (`http://metravel.by/travels/…` —
+  // 6 штук в статье 447), и апгрейд их правит: https-версия избавляет читателя от
+  // редиректа, а страницу — от смешанного содержимого. Всё остальное расхождение
+  // означает, что замена задела текст, и это повод остановиться.
+  if (plainText(next) !== plainText(upgradeFirstPartyProtocol(original))) {
     throw new Error('текст статьи изменился — миграция обязана трогать только адреса')
   }
   if (collectLegacyUploadRefs(next).length) {

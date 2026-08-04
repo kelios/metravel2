@@ -156,3 +156,4 @@ testers и countries защищены.
 - [ ] Board task обновлён только после выполнения его Task Contract/Done gate.
 
 Подробности deploy path и rollback: `docs/RELEASE.md`.
+Бэкап и восстановление production-базы: `docs/DB_BACKUP.md`.
