@@ -11,6 +11,7 @@ import { View, StyleSheet, Platform } from "react-native";
 import RenderHTML from "react-native-render-html";
 
 import FullscreenGallery from "@/components/travel/FullscreenGallery";
+import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { hasIframe, prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform';
 import { useStableContentRenderConfig } from '@/components/travel/stableContent/useRenderConfig';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -25,16 +26,22 @@ interface StableContentProps {
   fullWidth?: boolean;
   // html — серверный canonical safe_html (#709): без полного sanitize, только дешёвый guard
   serverSanitized?: boolean;
+  // #1256: готовые адреса картинок тела статьи. На native `srcSet` не используется —
+  // RNRH берёт `src`, то есть ту же ступень манифеста, что и запасная на web.
+  articleBodyMedia?: ArticleBodyMediaIndex | null;
 }
 
 type IframeModelType = typeof import("@native-html/iframe-plugin")["iframeModel"];
 
-const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, serverSanitized = false }) => {
+const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, serverSanitized = false, articleBodyMedia = null }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
-  const prepared = useMemo(() => prepareStableContentHtml(html, { serverSanitized }), [html, serverSanitized]);
+  const prepared = useMemo(
+    () => prepareStableContentHtml(html, { serverSanitized, articleBodyMedia }),
+    [html, serverSanitized, articleBodyMedia],
+  );
 
   // базовая типографика — ПИКСЕЛИ, не коэффициент!
   const BASE_FONT_SIZE = Platform.select({ ios: 16, android: 16, default: 17 })!;

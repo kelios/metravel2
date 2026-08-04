@@ -15,6 +15,7 @@
 // синхронный импорт и прежнее поведение, а web этот код просто не видит.
 import React, { memo, Suspense, useMemo, useRef, useState } from 'react';
 
+import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform';
 import { useStableContentWebEffects } from '@/components/travel/stableContent/useWebEffects';
 import {
@@ -43,14 +44,19 @@ interface StableContentProps {
   fullWidth?: boolean;
   // html — серверный canonical safe_html (#709): без полного sanitize, только дешёвый guard
   serverSanitized?: boolean;
+  // #1256: готовые адреса картинок тела статьи; без них — прежняя клиентская сборка URL
+  articleBodyMedia?: ArticleBodyMediaIndex | null;
 }
 
-const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = false, serverSanitized = false }) => {
+const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = false, serverSanitized = false, articleBodyMedia = null }) => {
   const colors = useThemedColors();
   const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
   const webRootRef = useRef<HTMLDivElement | null>(null);
-  const prepared = useMemo(() => prepareStableContentHtml(html, { serverSanitized }), [html, serverSanitized]);
+  const prepared = useMemo(
+    () => prepareStableContentHtml(html, { serverSanitized, articleBodyMedia }),
+    [html, serverSanitized, articleBodyMedia],
+  );
 
   const scrollToHashTarget = (hash: string) => {
     try {
@@ -72,6 +78,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = fa
 
   useStableContentWebEffects({
     prepared,
+    articleBodyMedia,
     lightboxGallery,
     setLightboxGallery,
     webRichTextStyles,

@@ -330,6 +330,26 @@ export const toLegacyResizePath = (url: string): string | null => {
   return null;
 };
 
+/**
+ * URL ведёт прямо в наш S3-бакет, минуя первопартийный роут.
+ *
+ * Нужен там, где адрес приходит извне и его нельзя использовать как есть: бакет
+ * не понимает `?w=` и отдаёт мастер (замер 2026-08-02:
+ * `uploads/1591620319350_original.jpg` — 141 354 B против 7 820 B на `?w=320`
+ * через свой роут). Готовые URL манифеста тела статьи для legacy-класса именно
+ * такие, поэтому они отбраковываются, а не подставляются в разметку (#1256).
+ */
+export const isLegacyStorageBucketUrl = (url: string): boolean => {
+  const value = String(url || '').trim();
+  if (!/^https?:\/\//i.test(value)) return false;
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return S3_VIRTUAL_HOST.test(host) || S3_PATH_STYLE_HOST.test(host);
+  } catch {
+    return false;
+  }
+};
+
 /** Первый сегмент пути — имя ownership-семейства (`/address-image/…`). */
 const FAMILY_ROUTE_SEGMENT = /^\/([a-z-]+)\//i;
 

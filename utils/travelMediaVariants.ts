@@ -97,8 +97,16 @@ const SRCSET_WIDTH_DESCRIPTOR = /^(\S+)\s+(\d+)w$/
  * Объединение даёт ровно лестницу производных БЕЗ мастера: у точки маршрута в
  * `variants` лежит ещё и мастер 1200, которого в `srcset*` нет, и попадать в
  * кандидаты он не должен (#1112 — «тихая отдача оригинала»).
+ *
+ * #1256: тело статьи читает те же ступени через эту функцию, поэтому она
+ * публичная. Своего разбора `srcset*` заводить нельзя — расхождение двух копий
+ * разбора стоило бы ровно того же, что расхождение двух копий лестницы.
  */
-function resolveManifestSources(entry: TravelMediaImage | null | undefined): ResolvedVariant[] {
+export type ManifestImageRung = { width: number; url: string }
+
+export function resolveManifestImageRungs(
+  entry: TravelMediaImage | null | undefined,
+): ManifestImageRung[] {
   if (!entry) return []
 
   const byWidth = new Map<number, string>()
@@ -120,8 +128,12 @@ function resolveManifestSources(entry: TravelMediaImage | null | undefined): Res
   }
 
   return Array.from(byWidth.entries())
-    .map(([width, url]) => ({ width, url, fit: null }))
+    .map(([width, url]) => ({ width, url }))
     .sort((a, b) => a.width - b.width)
+}
+
+function resolveManifestSources(entry: TravelMediaImage | null | undefined): ResolvedVariant[] {
+  return resolveManifestImageRungs(entry).map((rung) => ({ ...rung, fit: null }))
 }
 
 /**

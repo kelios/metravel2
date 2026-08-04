@@ -76,10 +76,27 @@ export type TravelMediaImage = {
     updated_at?: string | null
 }
 
+/** Семейство манифеста: упорядоченная галерея плюс продублированный первый кадр. */
+export type TravelMediaGroup = {
+    cover?: TravelMediaImage | null
+    gallery?: TravelMediaImage[] | null
+}
+
 export type TravelMedia = {
     cover?: TravelMediaImage | null
     gallery?: TravelMediaImage[] | null
     address_images?: Record<string, TravelMediaImage> | null
+    /**
+     * #1256: манифест картинок ТЕЛА статьи — по одному элементу на каждый `<img>`
+     * в `description`, в том же порядке. Сопоставляется с разметкой по ключу
+     * изображения, а не по индексу: до `normalizeImgTags` в HTML успевают
+     * появиться чужие `<img>` (instagram-фасады), и порядок перестаёт совпадать.
+     *
+     * Элемент без `srcset` — это класс, у которого готовых производных нет вовсе
+     * (`uploads/**`, внешние картинки, legacy-цепочки weserv). Такой ключ идёт по
+     * прежнему клиентскому пути, см. `articleBodyMedia.ts`.
+     */
+    article_body?: TravelMediaGroup | null
 }
 
 export type Travel = {

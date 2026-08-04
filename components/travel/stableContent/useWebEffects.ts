@@ -2,6 +2,7 @@ import { Dispatch, SetStateAction, useEffect, useInsertionEffect, useLayoutEffec
 import type { RefObject } from 'react'
 import { Platform } from 'react-native'
 
+import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
 import {
   buildStableContentPrefetchUrl,
   extractFirstImgSrc,
@@ -116,6 +117,9 @@ const adoptNaturalImageAspect = (img: HTMLImageElement, frame: HTMLElement | nul
 
 type UseStableContentWebEffectsInput = {
   prepared: string
+  // #1256: тот же индекс, из которого построен `srcset`, — иначе префетч прогреет
+  // другой URL и слот скачается дважды (#1213).
+  articleBodyMedia?: ArticleBodyMediaIndex | null
   lightboxGallery: LightboxGallery | null
   setLightboxGallery: Dispatch<SetStateAction<LightboxGallery | null>>
   webRichTextStyles: string
@@ -125,6 +129,7 @@ type UseStableContentWebEffectsInput = {
 
 export function useStableContentWebEffects({
   prepared,
+  articleBodyMedia = null,
   lightboxGallery,
   setLightboxGallery,
   webRichTextStyles,
@@ -143,7 +148,7 @@ export function useStableContentWebEffects({
 
     const first = extractFirstImgSrc(prepared)
     if (!first) return
-    const safeHref = buildStableContentPrefetchUrl(first)
+    const safeHref = buildStableContentPrefetchUrl(first, articleBodyMedia)
     try {
       const resolved = new URL(safeHref, window.location.origin)
       if (resolved.origin !== window.location.origin) return
@@ -198,7 +203,7 @@ export function useStableContentWebEffects({
       }
       if (link?.parentNode) link.parentNode.removeChild(link)
     }
-  }, [prepared, rootRef])
+  }, [articleBodyMedia, prepared, rootRef])
 
   // Как только пиксели пришли, слот принимает настоящие пропорции кадра.
   //

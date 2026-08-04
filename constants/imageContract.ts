@@ -201,6 +201,22 @@ export const DERIVATIVE_WIDTHS_BY_ROUTE: ReadonlyMap<string, readonly number[]> 
 );
 
 /**
+ * Верхняя ПРОИЗВОДНАЯ семейства, или `null` — путь вне известных роутов.
+ *
+ * Потолок нужен и тем, кто строит URL сам, и тем, кто берёт готовые из манифеста:
+ * `media.article_body` помечает профилем `article_body` каждую картинку тела, включая
+ * ключи чужих семейств, и обещает им ступень 1600. Замер прода 2026-08-04,
+ * `address-image/15601/conversions/…webp` (реальный профиль `routePoint`, верхняя
+ * производная 960): `w=800`/`w=960` → 200 `immutable`, `w=1600` → **400** и на
+ * family-роуте, и на `/media-resize/legacy/`. То есть манифест здесь переобещает, и
+ * подставлять его ступени без клэмпа нельзя — это ровно регресс #1233.
+ */
+export function familyDerivativeCeiling(route: string | null | undefined): number | null {
+  const widths = route ? DERIVATIVE_WIDTHS_BY_ROUTE.get(route) : undefined;
+  return widths?.length ? widths[widths.length - 1] : null;
+}
+
+/**
  * Формат, которым спрашивается legacy-класс `uploads/**` — ВРЕМЕННАЯ мера (#1233).
  *
  * У этого класса durable-производных нет вообще. Backfill идёт по

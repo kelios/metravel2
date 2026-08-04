@@ -1,4 +1,4 @@
-import React, { Suspense, memo, useCallback } from 'react'
+import React, { Suspense, memo, useCallback, useMemo } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
@@ -8,6 +8,7 @@ import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { CollapsibleSection } from './CollapsibleSection'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import TravelDescription from '@/components/travel/TravelDescription'
+import { buildArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
 import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
@@ -61,6 +62,12 @@ export const TravelDetailsContentSection: React.FC<{
   const recommendationContent = resolveServerRichTextHtml(travel.rich_text?.recommendation, travel.recommendation)
   const plusContent = resolveServerRichTextHtml(travel.rich_text?.plus, travel.plus)
   const minusContent = resolveServerRichTextHtml(travel.rich_text?.minus, travel.minus)
+  // #1256: манифест покрывает только `description`, поэтому индекс уходит в одну
+  // секцию. Строим один раз на payload: у длинной статьи это под сотню элементов.
+  const articleBodyMedia = useMemo(
+    () => buildArticleBodyMediaIndex(travel.media?.article_body),
+    [travel.media?.article_body],
+  )
   const {
     buildInsightControl,
     hasInsights,
@@ -127,7 +134,7 @@ export const TravelDetailsContentSection: React.FC<{
               />
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
 
-              <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} noBox />
+              <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} articleBodyMedia={articleBodyMedia} noBox />
 
               {/* Кнопки «наверх» нет намеренно (#1023): навигацию покрывают sticky-табы секций */}
             </View>

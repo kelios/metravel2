@@ -12,6 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import StableContent from '@/components/travel/StableContent';
+import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -21,6 +22,9 @@ interface TravelDescriptionProps {
     noBox?: boolean;
     // htmlContent — серверный canonical safe_html (#709): без полного sanitize, только дешёвый guard
     serverSanitized?: boolean;
+    // #1256: индекс `media.article_body`. Есть только у тела статьи: у «Рекомендаций»,
+    // «Плюсов» и «Минусов» манифеста нет, и они остаются на клиентской сборке URL.
+    articleBodyMedia?: ArticleBodyMediaIndex | null;
 }
 
 /**
@@ -36,6 +40,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  htmlContent,
                                                                  noBox = false,
                                                                  serverSanitized = false,
+                                                                 articleBodyMedia = null,
                                                              }) => {
     const { width, height } = useWindowDimensions();
     const isMobileLayout = width < METRICS.breakpoints.tablet;
@@ -218,7 +223,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           {isEmptyHtml ? (
             <Text style={styles.placeholder}>{i18nT('travel:components.travel.TravelDescription.avtor_esche_ne_dobavil_opisanie_ce4c5ca8')}</Text>
           ) : canParseHtml ? (
-            <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} serverSanitized={serverSanitized} />
+            <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} serverSanitized={serverSanitized} articleBodyMedia={articleBodyMedia} />
           ) : (
             <View
               testID="travel-description-fallback"

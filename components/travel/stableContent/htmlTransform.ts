@@ -2,7 +2,12 @@ import { Platform } from 'react-native'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
 import {
-  DERIVATIVE_WIDTHS_BY_ROUTE,
+  pickManifestRung,
+  resolveArticleBodyRungs,
+  type ArticleBodyMediaIndex,
+} from '@/components/travel/stableContent/articleBodyMedia'
+import {
+  familyDerivativeCeiling,
   IMAGE_QUALITY,
   IMAGE_WIDTHS,
   LEGACY_UPLOAD_FIXED_WIDTH,
@@ -147,17 +152,20 @@ export const buildExternalImageUrl = (src: string) => {
   }
 }
 
-// Первопартийные metravel-картинки описания сервер режет по «лестнице» ширин.
-// Раньше normalizeImgTags отдавал оригинал (params стриплись) — description-картинки
-// грузились по 200-360KiB. Строим srcset по лестнице, чтобы браузер тянул под свой
-// вьюпорт (#815).
+// Ширины, которые СЛОТ тела статьи просит у источника.
 //
-// Это ТРЕТЬЯ копия списка ширин в проекте (после `DIMENSION_LADDER` в
-// `utils/imageProxy.ts` и зеркала в `scripts/generate-seo-pages.js`) — она
-// существует, потому что тело статьи ветвится по вьюпорту ещё на этапе трансформации
-// HTML, а не через один общий srcset. Каждое значение здесь обязано быть ступенью
-// лестницы; соответствие закреплено тестом «emits only widths that exist on the proxy
-// ladder» в `__tests__/components/travel/stableContent/htmlTransform.responsiveImages.test.ts`.
+// #1256: это больше не «копия лестницы бэкенда». Для картинки, у которой есть
+// манифест `media.article_body`, адрес каждой ступени берётся готовым, а набор
+// ниже работает как запрос: каждая ширина ложится на ближайшую ступень манифеста
+// (`resolveArticleBodyRungs`). Самостоятельная сборка URL по этим ширинам осталась
+// одним фолбэком — для ключей, которых в манифесте нет вовсе (legacy `uploads/**`,
+// внешние картинки, старый payload без `media`).
+//
+// Набор нужен именно слоту: тело статьи ветвится по вьюпорту ещё на этапе
+// трансформации HTML, а не через один общий srcset. Каждое значение обязано быть
+// ступенью лестницы прокси; соответствие закреплено тестом «emits only widths that
+// exist on the proxy ladder» в
+// `__tests__/components/travel/stableContent/htmlTransform.responsiveImages.test.ts`.
 // Контракт целиком — `docs/features/images.md`.
 //
 // #1160: до этого здесь стоял потолок 800 с обоснованием «1024 не входит в whitelist
@@ -209,6 +217,15 @@ const isMobileWebViewport = (): boolean =>
   typeof window !== 'undefined' &&
   (window.innerWidth || 0) <= MOBILE_VIEWPORT_MAX
 
+/**
+ * Набор ширин слота для текущего вьюпорта.
+ *
+ * Разметка и префетч обязаны спрашивать ОДИН набор: если они разойдутся, префетч
+ * прогреет ступень, которой нет в `srcset`, и слот скачается дважды (#1213).
+ */
+const currentSlotWidths = (): readonly number[] =>
+  isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
+
 const getWebViewportWidth = (): number =>
   Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth || 0 : 0
 
@@ -230,21 +247,31 @@ export const pickArticleBodyWidth = (
   dpr: number,
   familyRoute?: string,
 ): number => {
-  const slotWidths =
-    !Number.isFinite(viewportWidth) || viewportWidth <= 0
-      ? null
-      : viewportWidth <= MOBILE_VIEWPORT_MAX
-        ? RESPONSIVE_WIDTHS_MOBILE
-        : RESPONSIVE_WIDTHS_DESKTOP
-  if (!slotWidths) {
+  const needed = articleBodySlotNeed(viewportWidth, dpr)
+  if (needed === null) {
     return clampLadderToFamily(familyRoute, [RESPONSIVE_FALLBACK_WIDTH])[0]
   }
+  const slotWidths =
+    viewportWidth <= MOBILE_VIEWPORT_MAX ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
   const widths = clampLadderToFamily(familyRoute, slotWidths)
+  return widths.find((width) => width >= needed) ?? widths[widths.length - 1]
+}
+
+/**
+ * Ширина в пикселях, которую слот тела статьи просит на текущем вьюпорте, либо
+ * `null` — вьюпорта нет (SSR/native), и просить нечего.
+ *
+ * Вынесено из `pickArticleBodyWidth`, потому что у картинки из манифеста нет
+ * промежуточной «своей» лестницы: ступень выбирается прямо по этой потребности,
+ * иначе округление шло бы дважды — сначала к набору слота, потом к ступеням
+ * манифеста, — и префетч мог бы промахнуться мимо кандидата из `srcset`.
+ */
+const articleBodySlotNeed = (viewportWidth: number, dpr: number): number | null => {
+  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return null
   const slot =
     ARTICLE_BODY_SLOTS.find((entry) => viewportWidth <= entry.maxViewport) ??
     ARTICLE_BODY_SLOTS[ARTICLE_BODY_SLOTS.length - 1]
-  const needed = slot.slotWidth(viewportWidth) * (Number.isFinite(dpr) && dpr > 0 ? dpr : 1)
-  return widths.find((width) => width >= needed) ?? widths[widths.length - 1]
+  return slot.slotWidth(viewportWidth) * (Number.isFinite(dpr) && dpr > 0 ? dpr : 1)
 }
 
 /**
@@ -267,9 +294,8 @@ const clampLadderToFamily = (
   route: string | undefined,
   widths: readonly number[],
 ): readonly number[] => {
-  const familyWidths = route ? DERIVATIVE_WIDTHS_BY_ROUTE.get(route) : undefined
-  if (!familyWidths?.length) return widths
-  const ceiling = familyWidths[familyWidths.length - 1]
+  const ceiling = familyDerivativeCeiling(route)
+  if (!ceiling) return widths
   const kept = widths.filter((width) => width <= ceiling)
   // Слот целиком выше семейства — берём его самую крупную производную, иначе
   // остались бы без единого кандидата.
@@ -320,7 +346,41 @@ const parseFirstPartyArticleImage = (src: string): URL | null => {
   }
 }
 
-const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
+/**
+ * Готовые адреса из `media.article_body` — канонический путь (#1256).
+ *
+ * `sizes` остаётся нашим: `sizes_hint` манифеста описывает слот вслепую
+ * (`(max-width: 768px) 100vw, 1280px`), а реальные слоты тела статьи — 720 CSS на
+ * 1280vw и 920 на 1920vw. С подсказкой манифеста desktop @DPR1 выбирал бы 1600
+ * вместо 800/960: замер прода 2026-08-04 на 10 кадрах статьи 544 — 1 403 792 B
+ * против 946 638 B. Адресация файла — дело бэкенда, размер слота — дело вёрстки.
+ */
+const buildManifestResponsiveImage = (
+  src: string,
+  media: ArticleBodyMediaIndex | null,
+): ResponsiveImage | null => {
+  const rungs = resolveArticleBodyRungs(src, media, currentSlotWidths())
+  if (!rungs?.length) return null
+
+  const fallbackRung = pickManifestRung(rungs, RESPONSIVE_FALLBACK_WIDTH)
+  if (!fallbackRung) return null
+
+  return {
+    src: fallbackRung.url,
+    // Один кандидат — это не лестница: `srcset` из одного URL ничего браузеру не
+    // даёт, а пустая строка в `srcset=""` в части движков гасит и `src` (#1233).
+    srcSet: rungs.length > 1 ? rungs.map((rung) => `${rung.url} ${rung.width}w`).join(', ') : '',
+    sizes: rungs.length > 1 ? RESPONSIVE_SIZES : '',
+  }
+}
+
+const buildMetravelResponsiveImage = (
+  src: string,
+  media: ArticleBodyMediaIndex | null,
+): ResponsiveImage | null => {
+  const fromManifest = buildManifestResponsiveImage(src, media)
+  if (fromManifest) return fromManifest
+
   const parsed = parseFirstPartyArticleImage(src)
   if (!parsed) return null
   // #1233: у legacy-класса `uploads/**` лестница бессмысленна — мастера в нём
@@ -331,8 +391,7 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
   if (isLegacyUploadResizeUrl(parsed.pathname)) {
     return { src: buildMetravelSizedUrl(parsed, LEGACY_UPLOAD_FIXED_WIDTH), srcSet: '', sizes: '' }
   }
-  const slotWidths = isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
-  const widths = clampLadderToFamily(familyRouteOfMediaUrl(src), slotWidths)
+  const widths = clampLadderToFamily(familyRouteOfMediaUrl(src), currentSlotWidths())
   const srcSet = widths.map((w) => `${buildMetravelSizedUrl(parsed, w)} ${w}w`).join(', ')
   return {
     src: buildMetravelSizedUrl(parsed, widths[widths.length - 1] >= RESPONSIVE_FALLBACK_WIDTH
@@ -350,7 +409,20 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
  * `srcset`, а греть надо ровно ту ступень, которую браузер выберет по
  * `srcset`/`sizes`, иначе тот же слот скачивается дважды.
  */
-export const buildStableContentPrefetchUrl = (src: string): string => {
+export const buildStableContentPrefetchUrl = (
+  src: string,
+  media?: ArticleBodyMediaIndex | null,
+): string => {
+  // Кандидаты берутся тем же вызовом, что и для `srcset`, поэтому прогретый URL
+  // гарантированно один из них — даже если ступени манифеста разойдутся с набором
+  // слота. Потребность считается напрямую, без промежуточного округления.
+  const rungs = resolveArticleBodyRungs(src, media ?? null, currentSlotWidths())
+  if (rungs?.length) {
+    const needed = articleBodySlotNeed(getWebViewportWidth(), getWebDevicePixelRatio())
+    const rung = pickManifestRung(rungs, needed ?? RESPONSIVE_FALLBACK_WIDTH)
+    if (rung) return rung.url
+  }
+
   const parsed = parseFirstPartyArticleImage(src)
   if (!parsed) return buildExternalImageUrl(src) ?? src
   // Класс без лестницы греется своей единственной шириной: иначе префетч и `<img>`
@@ -409,11 +481,11 @@ const buildRichImageAspectDeclaration = (imgMarkup: string) => {
   return `--travel-rich-image-aspect:${width}/${height}`
 }
 
-const normalizeImgTags = (html: string): string => {
+const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): string => {
   let imgIdx = 0
   return html.replace(/<img\b[^>]*?>/gi, (tag) => {
     const src = tag.match(/\bsrc="([^"]+)"/i)?.[1] ?? ''
-    const responsive = src ? buildMetravelResponsiveImage(src) : null
+    const responsive = src ? buildMetravelResponsiveImage(src, media) : null
     const optimizedSrc = responsive?.src ?? (src ? buildExternalImageUrl(src) || src : src)
     let width = tag.match(/\bwidth="(\d+)"/i)?.[1]
     let height = tag.match(/\bheight="(\d+)"/i)?.[1]
@@ -675,6 +747,12 @@ export type PrepareStableContentHtmlOptions = {
   // true — html уже canonical rich_text.*.safe_html с бэка (#709): полный
   // normalize+sanitize pipeline не запускается, остаётся только дешёвый guard.
   serverSanitized?: boolean
+  /**
+   * #1256: индекс `media.article_body`. Без него картинки тела адресуются прежним
+   * клиентским способом — это штатный фолбэк, а не деградация: у статей со старым
+   * payload и на экранах вне travel манифеста нет вовсе.
+   */
+  articleBodyMedia?: ArticleBodyMediaIndex | null
 }
 
 export const prepareStableContentHtml = (html: string, options?: PrepareStableContentHtmlOptions) => {
@@ -692,7 +770,9 @@ export const prepareStableContentHtml = (html: string, options?: PrepareStableCo
     iframeStrategy: isWeb ? 'facade' : 'embed',
   })
   const safe = serverSanitized ? instagramSafeHtml : sanitizeRichText(instagramSafeHtml)
-  const normalized = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
+  const normalized = replaceYouTubeIframes(
+    normalizeImgTags(stripDangerousTags(safe), options?.articleBodyMedia ?? null),
+  )
   const demoted = normalized
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
     .replace(/<\s*\/\s*h1\s*>/gi, '</h2>')
