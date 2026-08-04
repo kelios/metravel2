@@ -308,36 +308,58 @@ function probeStatus(url) {
   })
 }
 
-/**
- * Лог показывает прошлое, а вопрос всегда про настоящее: 404 мог случиться до
- * выката алиаса. Поэтому каждый «сломанный редирект» переспрашиваем у прода
- * сейчас — отвечает 301/200 значит запрос был до выката, и человеку это не нужно.
- * Проверяем только этот бакет: у остальных живой ответ ничего не меняет.
- */
-async function verifyRegressions(report, { origin, probe = probeStatus } = {}) {
-  const rows = report.buckets.regression || []
-  if (!rows.length) return report
+const VERIFIED_BUCKETS = ['regression', 'candidate']
 
-  const stillDead = []
-  const stale = []
-  for (const row of rows) {
-    const status = await probe(`${origin}/travels/${encodeURIComponent(row.slug)}`)
-    if (status >= 200 && status < 400) {
-      stale.push({ ...row, liveStatus: status, note: `${row.note}; сейчас отвечает ${status} — запросы были до выката` })
-    } else {
-      stillDead.push({
-        ...row,
-        liveStatus: status,
-        note: `${row.note}; прод по-прежнему ${status || 'недоступен'} — редирект не выкачен либо сломан`,
-      })
+/**
+ * Лог показывает прошлое, а вопрос всегда про настоящее, поэтому обе корзины,
+ * которые зовут человека, переспрашиваем у живого прода.
+ *
+ * Без этого шага отчёт врёт в обе стороны: «сломанный редирект» неотличим от
+ * ещё не выкаченного, а переименование статьи даёт пачку ложных находок —
+ * во время rename её новый адрес секунду отдаёт 404, и обходчик успевает это
+ * поймать (поймано на батче #1234: два живых слага пришли как «мёртвые»).
+ */
+async function verifyLive(report, { origin, probe = probeStatus } = {}) {
+  const alive = []
+  for (const bucket of VERIFIED_BUCKETS) {
+    const rows = report.buckets[bucket] || []
+    if (!rows.length) continue
+
+    const stillDead = []
+    for (const row of rows) {
+      const status = await probe(`${origin}/travels/${encodeURIComponent(row.slug)}`)
+      if (status >= 200 && status < 400) {
+        alive.push({
+          ...row,
+          liveStatus: status,
+          note:
+            bucket === 'regression'
+              ? `${row.note}; сейчас отвечает ${status} — запросы были до выката`
+              : `сейчас отвечает ${status} — адрес живой, 404 был кратким (выкат или переименование)`,
+        })
+      } else {
+        stillDead.push({
+          ...row,
+          liveStatus: status,
+          note:
+            bucket === 'regression'
+              ? `${row.note}; прод по-прежнему ${status || 'недоступен'} — редирект не выкачен либо сломан`
+              : `${row.note}; прод отвечает ${status || 'недоступен'} и сейчас`,
+        })
+      }
     }
+
+    if (stillDead.length) report.buckets[bucket] = stillDead
+    else delete report.buckets[bucket]
   }
 
-  if (stillDead.length) report.buckets.regression = stillDead
-  else delete report.buckets.regression
-  if (stale.length) report.buckets.stale = stale
-  report.rows = report.rows.map((row) => stale.find((r) => r.slug === row.slug) || stillDead.find((r) => r.slug === row.slug) || row)
-  report.needsHuman = stillDead.length > 0 || (report.buckets.candidate || []).length > 0
+  if (alive.length) report.buckets.stale = [...(report.buckets.stale || []), ...alive]
+  const byslug = new Map()
+  for (const bucket of [...VERIFIED_BUCKETS, 'stale']) {
+    for (const row of report.buckets[bucket] || []) byslug.set(row.slug, row)
+  }
+  report.rows = report.rows.map((row) => byslug.get(row.slug) || row)
+  report.needsHuman = VERIFIED_BUCKETS.some((b) => (report.buckets[b] || []).length > 0)
   report.verified = true
   return report
 }
@@ -371,7 +393,7 @@ function readProdLog({ container, since }) {
 const BUCKET_VIEW = [
   ['regression', '🚨 Обещанные редиректы, которые не сработали', true],
   ['candidate', '🆕 Новые мёртвые адреса — нужна ручная сверка', true],
-  ['stale', '🕒 Адрес уже чинён: 404 в логе, но сейчас редирект работает', false],
+  ['stale', '🕒 Сейчас адрес работает: 404 в логе был кратким', false],
   ['malformed', '🧩 Битые и склеенные ссылки (класс #1185)', false],
   ['id-url', '🔢 Обращения по числовому id', false],
   ['expected', '✅ Осознанно оставленный 404', false],
@@ -441,7 +463,7 @@ async function main() {
   }
 
   const report = buildReport(digest, ctx)
-  if (args.verify) await verifyRegressions(report, { origin: args.origin })
+  if (args.verify) await verifyLive(report, { origin: args.origin })
   if (args.json) {
     console.log(JSON.stringify({ source: ctx.source, since: args.since, ...report }, null, 2))
   } else {
@@ -459,7 +481,7 @@ if (require.main === module) {
 
 module.exports = {
   parseArgs,
-  verifyRegressions,
+  verifyLive,
   extractTravelSlug,
   gluedPrefix,
   buildKnownMatchers,

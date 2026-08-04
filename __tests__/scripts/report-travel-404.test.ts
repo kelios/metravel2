@@ -7,7 +7,7 @@ const {
   digestRawLog,
   buildReport,
   formatReport,
-  verifyRegressions,
+  verifyLive,
   requestedHours,
   windowHours,
 } = require('@/scripts/report-travel-404')
@@ -149,19 +149,36 @@ describe('report-travel-404 / отчёт', () => {
   })
 })
 
-describe('report-travel-404 / живая проверка редиректов', () => {
+describe('report-travel-404 / живая проверка', () => {
   const build = () => buildReport(digestRawLog(logLine('GET /travels/liniya-stalina HTTP/1.1', 404)), ctx())
+  const buildCandidate = () =>
+    buildReport(digestRawLog(logLine('GET /travels/vena-za-1-den-i-venskii-les HTTP/1.1', 404)), ctx())
 
   it('снимает тревогу, если сейчас прод уже отдаёт редирект', async () => {
-    const report = await verifyRegressions(build(), { origin: 'https://metravel.by', probe: async () => 301 })
+    const report = await verifyLive(build(), { origin: 'https://metravel.by', probe: async () => 301 })
     expect(report.buckets.regression).toBeUndefined()
     expect(report.buckets.stale[0]).toMatchObject({ slug: 'liniya-stalina', liveStatus: 301 })
     expect(report.needsHuman).toBe(false)
   })
 
   it('оставляет тревогу, если адрес мёртв и сейчас', async () => {
-    const report = await verifyRegressions(build(), { origin: 'https://metravel.by', probe: async () => 404 })
+    const report = await verifyLive(build(), { origin: 'https://metravel.by', probe: async () => 404 })
     expect(report.buckets.regression[0].note).toContain('прод по-прежнему 404')
+    expect(report.needsHuman).toBe(true)
+  })
+
+  // Ловушка батча #1234: во время переименования новый адрес секунду отдаёт 404,
+  // и обходчик успевает это записать — без живой пробы это ложная волна.
+  it('не считает мёртвым адрес, который сейчас открывается', async () => {
+    const report = await verifyLive(buildCandidate(), { origin: 'https://metravel.by', probe: async () => 200 })
+    expect(report.buckets.candidate).toBeUndefined()
+    expect(report.buckets.stale[0].note).toContain('адрес живой')
+    expect(report.needsHuman).toBe(false)
+  })
+
+  it('оставляет кандидата, если он мёртв и сейчас', async () => {
+    const report = await verifyLive(buildCandidate(), { origin: 'https://metravel.by', probe: async () => 404 })
+    expect(report.buckets.candidate).toHaveLength(1)
     expect(report.needsHuman).toBe(true)
   })
 })
