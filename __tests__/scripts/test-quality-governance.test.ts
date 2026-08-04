@@ -17,12 +17,47 @@ const collectTestFiles = (relativeDir: string): string[] => {
 
 const testFiles = TEST_ROOTS.flatMap(collectTestFiles).filter((file) => file !== SELF)
 
+const FOCUSED_OR_DISABLED = /\b(?:describe|it|test)\.(?:only|todo)\s*\(|\b(?:xdescribe|xit|xtest)\s*\(/g
+const SKIP_CALL = /\b(?:describe|it|test)\.skip\s*\(\s*/g
+const NAMED_SKIP_HEAD = new Set([')', "'", '"', '`'])
+
+const lineOf = (source: string, index: number): number => source.slice(0, index).split(/\r?\n/).length
+
+const collectMatches = (file: string, source: string, pattern: RegExp): string[] => {
+  pattern.lastIndex = 0
+  const found: string[] = []
+  let match: RegExpExecArray | null
+  while ((match = pattern.exec(source)) !== null) {
+    found.push(`${file}:${lineOf(source, match.index)}`)
+  }
+  return found
+}
+
+// `test.skip(condition, 'reason')` — рантайм-ветка Playwright: тест остаётся в
+// наборе, выполняется при других условиях и виден в отчёте как skipped с
+// причиной. Отключением считаем только формы, которые убирают тест насовсем:
+// именованный `test.skip('name', fn)` и безаргументный `test.skip()`.
+const collectDisablingSkips = (file: string, source: string): string[] => {
+  SKIP_CALL.lastIndex = 0
+  const found: string[] = []
+  let match: RegExpExecArray | null
+  while ((match = SKIP_CALL.exec(source)) !== null) {
+    const head = source[match.index + match[0].length]
+    if (head !== undefined && NAMED_SKIP_HEAD.has(head)) {
+      found.push(`${file}:${lineOf(source, match.index)}`)
+    }
+  }
+  return found
+}
+
 describe('test quality governance', () => {
   it('does not allow disabled or focused tests', () => {
     const violations = testFiles.flatMap((file) => {
       const source = fs.readFileSync(path.join(ROOT, file), 'utf8')
-      const disabled = /\b(?:describe|it|test)\.(?:skip|only|todo)\s*\(|\b(?:xdescribe|xit|xtest)\s*\(/.test(source)
-      return disabled ? [file] : []
+      return [
+        ...collectMatches(file, source, FOCUSED_OR_DISABLED),
+        ...collectDisablingSkips(file, source),
+      ]
     })
 
     expect(violations).toEqual([])

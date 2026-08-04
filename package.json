@@ -78,6 +78,8 @@
     "build:web": "node scripts/build-web-safe.js",
     "build:web:prod": "node scripts/build-web-prod.js",
     "serve:prod": "node .claude/prod-server.js 8081",
+    "db:backup:prod": "bash scripts/backup-prod-db.sh",
+    "db:backup:prod:check": "bash scripts/backup-prod-db.sh --check",
     "seo:generate-pages": "node scripts/generate-seo-pages.js --dist dist/prod",
     "stats:login": "node scripts/google-oauth-login.js",
     "stats:gsc": "node scripts/fetch-gsc-stats.js",
