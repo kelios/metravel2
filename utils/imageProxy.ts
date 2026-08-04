@@ -8,6 +8,7 @@ import {
 } from '@/constants/imageContract';
 import {
   normalizeAbsoluteMediaUrl,
+  familyRouteOfMediaUrl,
   isLegacyUploadResizeUrl,
   isPrivateOrLocalHost,
   toLegacyResizePath,
@@ -168,26 +169,10 @@ const resolveProxyWidth = (options: ImageOptimizationOptions): number | null => 
   return snapDimensionUp(options.width);
 };
 
-/** Первый сегмент пути — имя ownership-семейства (`/address-image/…`). */
-const FAMILY_ROUTE_SEGMENT = /^\/([a-z-]+)\//i;
-
-/**
- * Семейство исходного URL. Считается по адресу ДО rewrite на legacy-роут: после
- * него путь выглядит как `/media-resize/legacy/355/conversions/…`, где первый
- * сегмент ключа — id записи, а не роут, и профиль определить уже нельзя.
- * Ограничения профиля при этом никуда не деваются — замер прода 2026-08-03,
- * `media-resize/legacy/355/conversions/…webp`: `w=960` → 200, `w=1280` → 400.
- */
-const familyRouteOf = (value: string): string | undefined => {
-  const raw = String(value || '').trim();
-  if (!raw) return undefined;
-  try {
-    const pathname = raw.startsWith('/') ? raw : new URL(raw).pathname;
-    return FAMILY_ROUTE_SEGMENT.exec(pathname)?.[1]?.toLowerCase();
-  } catch {
-    return undefined;
-  }
-};
+// #1233: определение семейства переехало в `utils/mediaUrl.ts` — тем же правилом
+// теперь пользуется и трансформация тела статьи, которая раньше клэмпа не имела
+// вовсе и просила у `address-image` ширину 1600 из набора `articleBody`.
+const familyRouteOf = familyRouteOfMediaUrl;
 
 /**
  * Потолок ширины для family-роута: его САМАЯ КРУПНАЯ производная.

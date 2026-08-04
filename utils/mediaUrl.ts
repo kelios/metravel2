@@ -330,6 +330,31 @@ export const toLegacyResizePath = (url: string): string | null => {
   return null;
 };
 
+/** Первый сегмент пути — имя ownership-семейства (`/address-image/…`). */
+const FAMILY_ROUTE_SEGMENT = /^\/([a-z-]+)\//i;
+
+/**
+ * Семейство исходного URL. Считается по адресу **до** rewrite на legacy-роут:
+ * после него путь выглядит как `/media-resize/legacy/355/conversions/…`, где
+ * первый сегмент ключа — id записи, а не роут, и профиль определить уже нельзя.
+ *
+ * Ограничения профиля при этом никуда не деваются: замер прода 2026-08-04,
+ * `address-image/15601/conversions/…webp` (профиль `routePoint`, мастер 1200,
+ * верхняя производная 960) — `w=800` и `w=960` → 200, `w=1600` → **400**.
+ * Поэтому лестницу нельзя брать по слоту-потребителю, её надо ещё и клэмпить
+ * по семейству источника.
+ */
+export const familyRouteOfMediaUrl = (value: string): string | undefined => {
+  const raw = String(value || '').trim();
+  if (!raw) return undefined;
+  try {
+    const pathname = raw.startsWith('/') ? raw : new URL(raw).pathname;
+    return FAMILY_ROUTE_SEGMENT.exec(pathname)?.[1]?.toLowerCase();
+  } catch {
+    return undefined;
+  }
+};
+
 /**
  * Путь ведёт в legacy-класс `uploads/**` — единственный без durable-производных.
  *

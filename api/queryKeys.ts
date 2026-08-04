@@ -7,10 +7,12 @@ export const queryKeys = {
   travelsPopular: () => ['travels-popular'] as const,
   travelRouteFiles: (travelId: string | number) => ['travel-route-files', travelId] as const,
   travelsOfMonth: () => ['travelsOfMonth'] as const,
+  // Справочники живут в общем кэше api/miscOptimized, у React Query остались
+  // только ключи, которые кто-то реально читает: filters() — PointList визарда,
+  // filterOptions() — каталог и рулетка. Отдельные countries()/allCountries()
+  // были ключами без читателей и порождали дубли запросов.
   filters: () => ['filters'] as const,
-  countries: () => ['countries'] as const,
   filterOptions: () => ['filter-options'] as const,
-  allCountries: () => ['all-countries'] as const,
   travelFacets: (search: string, params: Record<string, unknown>) =>
     ['travel-facets', search, params] as const,
   userPointsAll: () => ['userPointsAll'] as const,

@@ -11,8 +11,12 @@ const e2ePassword = process.env.E2E_PASSWORD;
 
 const USE_REAL_API = process.env.E2E_USE_REAL_API === '1';
 
-const maybeMockTravelFilters = async (page: Page) => {
-  if (USE_REAL_API) return;
+/** Сколько раз страница сходила за каждым словарём (см. тест про дубли ниже). */
+type DictionaryRequestCounts = { filters: number; countries: number };
+
+const maybeMockTravelFilters = async (page: Page): Promise<DictionaryRequestCounts> => {
+  const counts: DictionaryRequestCounts = { filters: 0, countries: 0 };
+  if (USE_REAL_API) return counts;
 
   const payload = {
     categories: [{ id: 1, name: 'Город' }],
@@ -42,6 +46,7 @@ const maybeMockTravelFilters = async (page: Page) => {
 
   for (const pattern of patterns) {
     await page.route(pattern, async (route) => {
+      counts.filters += 1;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -52,6 +57,7 @@ const maybeMockTravelFilters = async (page: Page) => {
 
   for (const pattern of ['**/api/countries/**', '**/api/countries/', '**/countries/**', '**/countries/']) {
     await page.route(pattern, async (route) => {
+      counts.countries += 1;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -59,6 +65,8 @@ const maybeMockTravelFilters = async (page: Page) => {
       });
     });
   }
+
+  return counts;
 };
 
 const maybeMockNominatimSearch = async (page: Page) => {
@@ -619,6 +627,8 @@ test.beforeEach(async ({ page }) => {
  */
 
 test.describe('Создание путешествия - Полный flow', () => {
+  let dictionaryRequests: DictionaryRequestCounts;
+
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       try {
@@ -633,12 +643,26 @@ test.describe('Создание путешествия - Полный flow', () 
     });
     await installDraftRecoveryAutoDismiss(page);
     await maybeMockTravelUpsert(page);
-    await maybeMockTravelFilters(page);
+    dictionaryRequests = await maybeMockTravelFilters(page);
     await maybeMockNominatimSearch(page);
     await maybeMockImageUpload(page);
     await maybeMockExifGps(page);
     await maybeLogin(page);
     await page.goto('/');
+  });
+
+  // Словари визарда просили сразу два пути — стартовый idle-префетч через React
+  // Query и useTravelFilters напрямую, — и каждый уходил в сеть своим запросом.
+  // Теперь оба читают общий кэш api/miscOptimized.
+  test('запрашивает каждый словарь не больше одного раза за загрузку', async ({ page }) => {
+    test.skip(USE_REAL_API, 'Счётчики считают перехваченные моки, а не живой API');
+
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    await ensureCanCreateTravel(page);
+    await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toBeVisible();
+
+    expect(dictionaryRequests.filters).toBeLessThanOrEqual(1);
+    expect(dictionaryRequests.countries).toBeLessThanOrEqual(1);
   });
 
   test('должен создать полное путешествие через все шаги', async ({ page }) => {

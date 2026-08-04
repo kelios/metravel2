@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
 import {
+  DERIVATIVE_WIDTHS_BY_ROUTE,
   IMAGE_QUALITY,
   IMAGE_WIDTHS,
   LEGACY_UPLOAD_FIXED_WIDTH,
@@ -13,6 +14,7 @@ import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
 import {
+  familyRouteOfMediaUrl,
   isLegacyUploadResizeUrl,
   isPrivateOrLocalHost,
   toLegacyResizePath,
@@ -223,15 +225,55 @@ const getWebDevicePixelRatio = (): number => {
  *
  * Без вьюпорта (SSR/native) остаётся прежняя fallback-ступень — там префетча нет.
  */
-export const pickArticleBodyWidth = (viewportWidth: number, dpr: number): number => {
-  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return RESPONSIVE_FALLBACK_WIDTH
-  const widths =
-    viewportWidth <= MOBILE_VIEWPORT_MAX ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
+export const pickArticleBodyWidth = (
+  viewportWidth: number,
+  dpr: number,
+  familyRoute?: string,
+): number => {
+  const slotWidths =
+    !Number.isFinite(viewportWidth) || viewportWidth <= 0
+      ? null
+      : viewportWidth <= MOBILE_VIEWPORT_MAX
+        ? RESPONSIVE_WIDTHS_MOBILE
+        : RESPONSIVE_WIDTHS_DESKTOP
+  if (!slotWidths) {
+    return clampLadderToFamily(familyRoute, [RESPONSIVE_FALLBACK_WIDTH])[0]
+  }
+  const widths = clampLadderToFamily(familyRoute, slotWidths)
   const slot =
     ARTICLE_BODY_SLOTS.find((entry) => viewportWidth <= entry.maxViewport) ??
     ARTICLE_BODY_SLOTS[ARTICLE_BODY_SLOTS.length - 1]
   const needed = slot.slotWidth(viewportWidth) * (Number.isFinite(dpr) && dpr > 0 ? dpr : 1)
   return widths.find((width) => width >= needed) ?? widths[widths.length - 1]
+}
+
+/**
+ * Лестница слота, обрезанная по потолку СЕМЕЙСТВА источника (#1233).
+ *
+ * Наборы `articleBody*` описывают слот-потребитель, а не то, что у файла есть.
+ * В телах статей лежат ключи чужих семейств: `gallery/**` (профиль `travelMedia`,
+ * верхняя производная 1600 — влезает) и `address-image/**` (профиль `routePoint`,
+ * мастер 1200, верхняя производная 960 — НЕ влезает). Замер прода 2026-08-04 на
+ * `address-image/15601/conversions/…webp`: `w=800` и `w=960` → 200,
+ * `w=1600` → **400**, то есть на desktop @DPR2 браузер выбирал ровно ту ступень,
+ * которой у семейства нет, и фото не отрисовывалось. В статье
+ * `/travels/zabroshennye-dvortsy-…` так падали 13 из 13 таких ключей, всего по
+ * сайту — 30 фото в 5 статьях.
+ *
+ * `optimizeImageUrl` этот клэмп имеет с #1224, а трансформация тела — не имела:
+ * она единственная строит `srcset` сама, мимо `imageProxy`.
+ */
+const clampLadderToFamily = (
+  route: string | undefined,
+  widths: readonly number[],
+): readonly number[] => {
+  const familyWidths = route ? DERIVATIVE_WIDTHS_BY_ROUTE.get(route) : undefined
+  if (!familyWidths?.length) return widths
+  const ceiling = familyWidths[familyWidths.length - 1]
+  const kept = widths.filter((width) => width <= ceiling)
+  // Слот целиком выше семейства — берём его самую крупную производную, иначе
+  // остались бы без единого кандидата.
+  return kept.length ? kept : [ceiling]
 }
 
 const isFirstPartyMetravelHost = (host: string): boolean => {
@@ -289,10 +331,13 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
   if (isLegacyUploadResizeUrl(parsed.pathname)) {
     return { src: buildMetravelSizedUrl(parsed, LEGACY_UPLOAD_FIXED_WIDTH), srcSet: '', sizes: '' }
   }
-  const widths = isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
+  const slotWidths = isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
+  const widths = clampLadderToFamily(familyRouteOfMediaUrl(src), slotWidths)
   const srcSet = widths.map((w) => `${buildMetravelSizedUrl(parsed, w)} ${w}w`).join(', ')
   return {
-    src: buildMetravelSizedUrl(parsed, RESPONSIVE_FALLBACK_WIDTH),
+    src: buildMetravelSizedUrl(parsed, widths[widths.length - 1] >= RESPONSIVE_FALLBACK_WIDTH
+      ? RESPONSIVE_FALLBACK_WIDTH
+      : widths[widths.length - 1]),
     srcSet,
     sizes: RESPONSIVE_SIZES,
   }
@@ -313,9 +358,11 @@ export const buildStableContentPrefetchUrl = (src: string): string => {
   if (isLegacyUploadResizeUrl(parsed.pathname)) {
     return buildMetravelSizedUrl(parsed, LEGACY_UPLOAD_FIXED_WIDTH)
   }
+  // Клэмп по семейству обязан быть тем же, что в `srcset`, иначе префетч уходит
+  // на ступень, которой у семейства нет, и греет 400 (#1213 + #1233).
   return buildMetravelSizedUrl(
     parsed,
-    pickArticleBodyWidth(getWebViewportWidth(), getWebDevicePixelRatio()),
+    pickArticleBodyWidth(getWebViewportWidth(), getWebDevicePixelRatio(), familyRouteOfMediaUrl(src)),
   )
 }
 

@@ -14,6 +14,10 @@ const rouletteTravel = {
 };
 
 async function mockRouletteApi(page: import('@playwright/test').Page) {
+  // Полный справочник стран (`/countries/`, 234 записи) рулетке не нужен:
+  // дефолтные страны берутся из словаря фильтра `/countriesforsearch/`, который
+  // страница грузит в любом случае. Считаем запросы, чтобы поймать регресс.
+  let fullCountriesRequests = 0;
   await page.route('**/getFiltersTravel/**', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -34,11 +38,14 @@ async function mockRouletteApi(page: import('@playwright/test').Page) {
     contentType: 'application/json',
     body: JSON.stringify([{ id: 3, name: 'Беларусь' }]),
   }));
-  await page.route('**/countries/**', (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify([{ id: 3, name: 'Беларусь' }]),
-  }));
+  await page.route('**/countries/**', (route) => {
+    fullCountriesRequests += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ id: 3, name: 'Беларусь' }]),
+    });
+  });
   await page.route('**/travels/facets/**', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -49,12 +56,14 @@ async function mockRouletteApi(page: import('@playwright/test').Page) {
     contentType: 'application/json',
     body: JSON.stringify({ data: [rouletteTravel], total: 1 }),
   }));
+
+  return { getFullCountriesRequests: () => fullCountriesRequests };
 }
 
 test.describe('Roulette', () => {
   test('spins and reaches a defined result or empty state', async ({ page }) => {
     await preacceptCookies(page);
-    await mockRouletteApi(page);
+    const { getFullCountriesRequests } = await mockRouletteApi(page);
 
     await page.goto('/roulette', { waitUntil: 'domcontentloaded' });
 
@@ -65,5 +74,7 @@ test.describe('Roulette', () => {
 
     await expect(page.locator('[data-testid="travel-card-link"]').first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('E2E Roulette Route', { exact: true }).first()).toBeVisible();
+
+    expect(getFullCountriesRequests()).toBe(0);
   });
 });
