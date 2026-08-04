@@ -3,7 +3,7 @@
 
 import { Platform } from 'react-native';
 import {
-  DERIVATIVE_WIDTHS_BY_ROUTE,
+  familyDerivativeCeiling,
   LEGACY_UPLOAD_TRANSFORM_FORMAT,
 } from '@/constants/imageContract';
 import {
@@ -190,9 +190,8 @@ const familyRouteOf = familyRouteOfMediaUrl;
  * определять общая лестница прокси.
  */
 const clampWidthToFamilyCeiling = (route: string | undefined, width: number): number => {
-  const familyWidths = route ? DERIVATIVE_WIDTHS_BY_ROUTE.get(route) : undefined;
-  if (!familyWidths?.length) return width;
-  return Math.min(width, familyWidths[familyWidths.length - 1]);
+  const ceiling = familyDerivativeCeiling(route);
+  return ceiling ? Math.min(width, ceiling) : width;
 };
 
 // Quality следует опубликованному proxy-contract буквально: допустимое значение

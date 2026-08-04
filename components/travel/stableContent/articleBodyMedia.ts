@@ -113,8 +113,13 @@ export const buildArticleBodyMediaIndex = (
     if (!keys.length) continue
 
     const entry: ArticleBodyMediaEntry = {
+      // Семейство ищется по всем алиасам ключа: у `/media-resize/legacy/…` его не
+      // определить, поэтому потолок даёт тот алиас, у которого роут ещё виден.
+      ceiling: keys.reduce<number | null>(
+        (found, key) => found ?? familyDerivativeCeiling(familyRouteOfMediaUrl(key)),
+        null,
+      ),
       rungs,
-      ceiling: familyDerivativeCeiling(familyRouteOfMediaUrl(keys[0])),
     }
     for (const key of [...keys, ...mediaKeysOfUrl(rungs[0].url)]) {
       if (!index.has(key)) index.set(key, entry)
@@ -168,9 +173,8 @@ export const resolveArticleBodyRungs = (
   )
   if (!entry?.rungs.length) return null
 
-  const withinFamily = entry.ceiling
-    ? entry.rungs.filter((rung) => rung.width <= entry.ceiling!)
-    : entry.rungs
+  const ceiling = entry.ceiling
+  const withinFamily = ceiling ? entry.rungs.filter((rung) => rung.width <= ceiling) : entry.rungs
   // Семейство целиком ниже самой мелкой ступени манифеста — берём её одну, иначе
   // кандидатов не осталось бы вовсе.
   const available = withinFamily.length ? withinFamily : [entry.rungs[0]]
