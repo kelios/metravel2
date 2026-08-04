@@ -581,10 +581,13 @@ describe('TravelDataTransformer', () => {
       const result = transformer.transform(travels);
       const thumb = result[0].travelAddress?.[0]?.travelImageThumbUrl;
       expect(thumb).toBeTruthy();
-      // #1163: первопартийная миниатюра идёт через наш прокси на ступени 1600 —
-      // раньше она возвращалась без параметров, то есть мастером целиком.
+      // #1163: первопартийная миниатюра идёт через наш прокси, а не мастером целиком.
+      // Ступень — 320 по слоту карточки координат (80 px, ~250 px при печати в 300 DPI);
+      // 1600 здесь стояло по недосмотру: своего слота у миниатюры не было, и она брала
+      // общую inline-ширину. У `routePoint` такой ступени нет вовсе — запрос отвечает
+      // 400 и плитка в книге оставалась пустой.
       expect(String(thumb)).toBe(
-        'https://metravel.by/gallery/5076/conversions/a-thumb.jpg?w=1600&q=85&fit=contain',
+        'https://metravel.by/gallery/5076/conversions/a-thumb.jpg?w=320&q=85&fit=contain',
       );
       expect(String(thumb)).not.toContain('192.168.50.36');
     });

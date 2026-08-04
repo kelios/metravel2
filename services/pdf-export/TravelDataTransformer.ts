@@ -8,6 +8,7 @@ import {
   buildPrintImageUrl,
   PRINT_IMAGE_FULL_WIDTH,
   PRINT_IMAGE_INLINE_WIDTH,
+  PRINT_IMAGE_THUMB_WIDTH,
 } from '@/utils/printImageUrl';
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText';
 import { translate as i18nT } from '@/i18n'
@@ -263,10 +264,11 @@ export class TravelDataTransformer {
       id: String(addr.id || addr),
       address: typeof addr === 'string' ? addr : (addr.address || addr.name || ''),
       coord: typeof addr === 'string' ? '' : (addr.coord || ''),
+      // Слот миниатюры в карточке координат — 80 px, ему не нужна inline-ступень.
       travelImageThumbUrl:
         typeof addr === 'string'
           ? undefined
-          : this.buildSafeImageUrl(addr.travelImageThumbUrl),
+          : this.buildSafeImageUrl(addr.travelImageThumbUrl, PRINT_IMAGE_THUMB_WIDTH),
       categoryName: typeof addr === 'string' ? undefined : addr.categoryName,
     }));
   }
@@ -376,9 +378,11 @@ export class TravelDataTransformer {
   }
 
   /**
-   * #1163: `width` — ступень лестницы прокси для первопартийных картинок. Обложка и
-   * полностраничное фото идут на 2500, всё остальное (галерея, миниатюры точек) — на
-   * 1600, как и раньше через weserv. Чужие URL параметров не получают.
+   * #1163: `width` — ЖЕЛАЕМАЯ ступень лестницы прокси для первопартийных картинок.
+   * Обложка и полностраничное фото просят 2500, галерея — 1600, миниатюра точки —
+   * 320 по своему слоту. Фактическую ступень выбирает `buildPrintImageUrl` из
+   * контракта семейства: запрос ширины, которой у семейства нет, отвечает 400.
+   * Чужие URL параметров не получают.
    */
   private buildSafeImageUrl(url?: string | null, width: number = PRINT_IMAGE_INLINE_WIDTH): string {
     if (!url) return PLACEHOLDER_IMAGE;
@@ -393,13 +397,15 @@ export class TravelDataTransformer {
     if (trimmed.startsWith('//')) {
       return this.buildSafeImageUrl(`https:${trimmed}`, width);
     }
-    // Относительные пути ("/storage/...") и ресурсы текущего домена считаем безопасными
+    // Относительные пути ("/storage/...") и ресурсы текущего домена считаем безопасными.
+    // Достроенный URL идёт тем же путём, что и абсолютный, — иначе он уходил бы в печать
+    // вообще без `w`, а такой запрос прокси обслуживает мастером целиком (#1161).
     if (trimmed.startsWith('/')) {
-      if (typeof window !== 'undefined' && window.location?.origin) {
-        return `${window.location.origin}${trimmed}`;
-      }
-      // В средах без window используем продовый домен
-      return `https://metravel.by${trimmed}`;
+      const origin =
+        typeof window !== 'undefined' && window.location?.origin
+          ? window.location.origin
+          : 'https://metravel.by';
+      return this.buildSafeImageUrl(`${origin}${trimmed}`, width);
     }
 
     // Если это относительный путь без протокола и без ведущего '/',

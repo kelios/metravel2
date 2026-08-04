@@ -176,6 +176,13 @@ export const IMAGE_WIDTHS = {
   /** Travel master и print-производная для inline/PDF content. */
   printFull: 2500,
   printInline: 1600,
+  /**
+   * Миниатюра точки в карточке координат книги: слот 80 CSS px, при печати в
+   * 300 DPI это ~250 px, то есть ступень 320. Просить сюда `printInline` нельзя:
+   * у `routePoint` такой ступени нет, и запрос уходит в мастер, который отдаётся
+   * `no-store` — 47 некэшируемых ответов на одну книгу вместо `immutable`.
+   */
+  printThumb: 320,
 } as const;
 
 /**
@@ -277,6 +284,57 @@ export function socialPreviewWidthForRoute(route: string): number | null {
   if (!widths?.length) return null;
   const withinTarget = widths.filter((width) => width <= SOCIAL_PREVIEW_TARGET_WIDTH);
   return withinTarget.length ? withinTarget[withinTarget.length - 1] : widths[0];
+}
+
+/**
+ * Ownership-роут в начале пути: `/gallery/…`, `/address-image/…` и т.д.
+ * По нему определяется семейство, а значит и доступные ступени ширины.
+ */
+const OWNERSHIP_ROUTE_PATTERN = /^\/([a-z-]+)\//i;
+
+/** Family-роут из пути URL, или `null` — путь не принадлежит семейству. */
+export function familyRouteFromPathname(pathname: string): string | null {
+  return OWNERSHIP_ROUTE_PATTERN.exec(String(pathname || ''))?.[1]?.toLowerCase() ?? null;
+}
+
+/**
+ * Публичный роут семейства → ширины, которые он реально обслуживает: производные
+ * ПЛЮС мастер. Отдельно от `DERIVATIVE_WIDTHS_BY_ROUTE`, потому что печати мастер
+ * доступен и нужен, а слоту в вёрстке — нет.
+ */
+export const REQUESTABLE_WIDTHS_BY_ROUTE: ReadonlyMap<string, readonly number[]> = new Map(
+  Object.values(IMAGE_STORAGE_POLICY_V1).flatMap((profile) => {
+    const widths = Object.freeze(
+      Array.from(
+        new Set([...profile.derivatives.map((variant) => variant.width), profile.master.width]),
+      ).sort((a, b) => a - b),
+    );
+    return profile.routes.map((route) => [route, widths] as const);
+  }),
+);
+
+/**
+ * Ступень семейства для печати: самая мелкая из обслуживаемых, которая не ниже
+ * целевой, иначе — мастер. `null` — путь не принадлежит family-роуту, ширину
+ * подбирать нечем и решает вызывающий код.
+ *
+ * Печать целится в 2500 (`printFull`) и 1600 (`printInline`), а у половины
+ * семейств таких ступеней нет вовсе. Пока чтение производных было fail-open,
+ * прокси резал недостающую ширину динамически; после
+ * `MEDIA_IMAGE_DERIVATIVE_READ_ENABLED` он отвечает 400 — тот же fail-closed,
+ * из-за которого соцпревью уехало в #1224.
+ *
+ * Замер прода 2026-08-04, `address-image/15057/conversions/4cd326b4….webp`
+ * (профиль `routePoint`, производные до 960, мастер 1200):
+ * `w=960|1200` → 200, `w=1600|1920|2500` → **400** (52 B). PDF просил 1600 на
+ * КАЖДУЮ картинку, поэтому в книге пропадали и фото точек в теле статьи
+ * (14 из 37 в travel 682), и миниатюры в карточках координат: `onerror`
+ * прятал `<img>` и оставлял пустой серый слот.
+ */
+export function printWidthForRoute(route: string, targetWidth: number): number | null {
+  const widths = REQUESTABLE_WIDTHS_BY_ROUTE.get(route);
+  if (!widths?.length) return null;
+  return widths.find((width) => width >= targetWidth) ?? widths[widths.length - 1];
 }
 
 /** Ширины ключевых frontend-consumers — для transition-проверок. */

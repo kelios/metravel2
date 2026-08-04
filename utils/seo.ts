@@ -2,7 +2,7 @@
  * SEO utilities for canonical URLs and site base URL normalization
  */
 
-import { socialPreviewWidthForRoute } from '@/constants/imageContract';
+import { familyRouteFromPathname, socialPreviewWidthForRoute } from '@/constants/imageContract';
 
 export const DEFAULT_OG_IMAGE_PATH = '/assets/icons/logo_yellow_512x512.png';
 
@@ -59,12 +59,6 @@ export function buildOgImageUrl(imagePath: string): string {
 }
 
 /**
- * Ownership-роут в начале пути: `/gallery/…`, `/address-image/…` и т.д.
- * По нему определяется семейство, а значит и доступные ступени ширины.
- */
-const OWNERSHIP_ROUTE_PATTERN = /^\/([a-z-]+)\//i;
-
-/**
  * Соцпревью просят картинку по «голому» адресу, без `?w=` — и получают МАСТЕР.
  *
  * Ownership-роуты объявлены `X-Cache-Status: BYPASS` в nginx, поэтому дешёвым и
@@ -81,7 +75,7 @@ function withSocialPreviewWidth(absoluteUrl: string): string {
   try {
     const url = new URL(absoluteUrl);
     if (url.searchParams.has('w')) return absoluteUrl;
-    const route = OWNERSHIP_ROUTE_PATTERN.exec(url.pathname)?.[1];
+    const route = familyRouteFromPathname(url.pathname);
     if (!route) return absoluteUrl;
     const width = socialPreviewWidthForRoute(route);
     if (!width) return absoluteUrl;

@@ -314,19 +314,29 @@ const { buildUpsertPayload, detectRegression, backupFileName, latestBackup } = r
  * бы очередь на ровном месте. Ошибки протокола (4xx/5xx с телом) сюда не попадают —
  * их бросают вызывающие функции, и они обязаны останавливать прогон.
  */
-async function withRetry(label, fn, attempts = 4) {
+async function withRetry(label, fn, attempts = 5) {
   let lastError
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       return await fn()
     } catch (error) {
       lastError = error
-      const transient = /fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|timeout/i.test(
-        error && error.message ? error.message : String(error),
-      )
+      const message = error && error.message ? error.message : String(error)
+      // 502/503/504 — это НЕ отказ, а перегрузка: прод держит один vCPU и нарезает
+      // шесть производных на каждую загрузку, так что под нашим же прогоном он
+      // временами отвечает Bad Gateway. Прогон 2026-08-04 встал на статье 207 с 502,
+      // хотя ровно та же картинка сразу после этого отдавалась 200 три раза подряд.
+      // Постоянные ошибки (4xx, битый ответ) сюда не попадают и обязаны остановить
+      // очередь.
+      const transient =
+        /fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|timeout/i.test(message) ||
+        /HTTP (502|503|504)\b/.test(message)
       if (!transient || attempt === attempts) throw error
-      const backoff = 1000 * 2 ** (attempt - 1)
-      console.log(`   ↻ ${label}: ${error.message}; повтор ${attempt}/${attempts - 1} через ${backoff} мс`)
+      // Под перегрузку нужен отступ длиннее, чем под обрыв сокета: если торопиться,
+      // повтор придётся ровно в тот же затор.
+      const overloaded = /HTTP (502|503|504)\b/.test(message)
+      const backoff = (overloaded ? 5000 : 1000) * 2 ** (attempt - 1)
+      console.log(`   ↻ ${label}: ${message}; повтор ${attempt}/${attempts - 1} через ${backoff} мс`)
       await sleep(backoff)
     }
   }
@@ -465,7 +475,10 @@ async function migrateOne(id, { token, dryRun }) {
     next = next.split(ref.raw).join(url)
     uploaded.push({ key: ref.key, url, bytes: file.buffer.length })
     console.log(`   ↑ ${ref.key} → ${url.replace(SITE, '')} (${file.buffer.length} B)`)
-    await sleep(400)
+    // 1 с между картинками, а не 0.4: каждая загрузка тянет за собой нарезку шести
+    // производных на единственном vCPU, и на статьях с 30+ фото прежний темп
+    // выбивал из прода 502 (статья 207).
+    await sleep(1000)
   }
 
   // Заодно чиним протокол у наших адресов, уже лежащих в теле: http-картинка на
@@ -644,7 +657,7 @@ async function main() {
     return runBatch(token, {
       limit,
       authorId: authorRaw == null ? null : Number(authorRaw),
-      pauseMs: valueOf('pause') ? Number(valueOf('pause')) : 1500,
+      pauseMs: valueOf('pause') ? Number(valueOf('pause')) : 2500,
     })
   }
 

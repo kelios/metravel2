@@ -1,4 +1,5 @@
 import type { BuildLocationCardsParams } from './types'
+import { buildPrintImageFallbackUrl, buildPrintImageOnError } from '@/utils/printImageUrl'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -27,6 +28,11 @@ export function buildPdfLocationCards({
           : ''
     const qrCode = qrCodes[index]
     const hasThumbnail = Boolean(location.thumbnailUrl)
+    const thumbFallback = hasThumbnail ? buildPrintImageFallbackUrl(location.thumbnailUrl!) : ''
+    const thumbFallbackAttr =
+      thumbFallback && thumbFallback !== location.thumbnailUrl
+        ? ` data-print-fallback="${escapeHtml(thumbFallback)}"`
+        : ''
 
     return `
         <div class="map-location-card" style="
@@ -50,7 +56,8 @@ export function buildPdfLocationCards({
               background: ${colors.surfaceAlt};
               position: relative;
             ">
-              <img src="${escapeHtml(location.thumbnailUrl!)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_80px_flex_shrink_0_backgroun_59c67203.text01", { value3: index + 1 })}"
+              <img src="${escapeHtml(location.thumbnailUrl!)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_80px_flex_shrink_0_backgroun_59c67203.text01", { value3: index + 1 })}"${thumbFallbackAttr}
+                onerror="${buildPrintImageOnError(thumbFallbackAttr ? thumbFallback : '')}"
                 style="width: 100%; height: 100%; object-fit: cover; display: block; ${getImageFilterStyle()}" />
               <div style="
                 position: absolute;

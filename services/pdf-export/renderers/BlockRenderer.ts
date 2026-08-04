@@ -5,7 +5,12 @@ import type { PdfThemeConfig } from '../themes/PdfThemeConfig';
 import type { ParsedContentBlock } from '../parsers/ContentParser';
 import { ContentParser } from '../parsers/ContentParser';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
-import { buildPrintImageUrl, PRINT_IMAGE_INLINE_WIDTH } from '@/utils/printImageUrl';
+import {
+  buildPrintImageFallbackUrl,
+  buildPrintImageOnError,
+  buildPrintImageUrl,
+  PRINT_IMAGE_INLINE_WIDTH,
+} from '@/utils/printImageUrl';
 import { renderImageGallery } from './blockRenderer/galleryRenderer';
 
 /**
@@ -53,6 +58,11 @@ export class BlockRenderer {
   ): string {
     const { minHeight, maxHeight, borderRadius } = options;
     const radius = borderRadius || `calc(${this.theme.blocks.borderRadius} * 0.9)`;
+    const fallbackSrc = buildPrintImageFallbackUrl(src);
+    const fallbackAttr = fallbackSrc && fallbackSrc !== src
+      ? ` data-print-fallback="${this.escapeHtml(fallbackSrc)}"`
+      : '';
+    const onError = buildPrintImageOnError(fallbackAttr ? fallbackSrc : '');
 
     return `
       <div style="
@@ -67,7 +77,7 @@ export class BlockRenderer {
         <img
           src="${this.escapeHtml(src)}"
           alt=""
-          aria-hidden="true"
+          aria-hidden="true"${fallbackAttr}
           style="
             position: absolute;
             inset: 0;
@@ -79,11 +89,11 @@ export class BlockRenderer {
             opacity: 0.88;
             ${this.theme.imageFilter ? `filter: blur(18px) saturate(1.06) ${this.theme.imageFilter};` : ''}
           "
-          onerror="this.style.display='none';"
+          onerror="${onError}"
         />
         <img
           src="${this.escapeHtml(src)}"
-          alt="${this.escapeHtml(alt)}"
+          alt="${this.escapeHtml(alt)}"${fallbackAttr}
           style="
             position: relative;
             z-index: 1;
@@ -95,7 +105,7 @@ export class BlockRenderer {
             object-fit: contain;
             ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
           "
-          onerror="this.style.display='none';"
+          onerror="${onError}"
         />
       </div>
     `;

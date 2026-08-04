@@ -7,7 +7,12 @@
 // Теперь наоборот: свои картинки идут через собственный прокси на явной ступени
 // лестницы, а чужие отдаются как есть. Сторонний ресайзер из пути печати убран.
 
-import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract'
+import {
+  familyRouteFromPathname,
+  IMAGE_QUALITY,
+  IMAGE_WIDTHS,
+  printWidthForRoute,
+} from '@/constants/imageContract'
 import { PROXY_QUERY_PARAMS, snapProxyQuality, snapProxyWidth } from '@/utils/imageProxy'
 
 /**
@@ -19,6 +24,9 @@ import { PROXY_QUERY_PARAMS, snapProxyQuality, snapProxyWidth } from '@/utils/im
  */
 export const PRINT_IMAGE_FULL_WIDTH = IMAGE_WIDTHS.printFull
 export const PRINT_IMAGE_INLINE_WIDTH = IMAGE_WIDTHS.printInline
+
+/** Миниатюра точки в карточке координат — слот 80 px, см. `IMAGE_WIDTHS.printThumb`. */
+export const PRINT_IMAGE_THUMB_WIDTH = IMAGE_WIDTHS.printThumb
 
 /**
  * Качество печати. q85 — явная ступень backend proxy-contract и
@@ -40,6 +48,21 @@ export function isFirstPartyMetravelHost(host: string, hostWithPort?: string): b
   } catch {
     return false
   }
+}
+
+/**
+ * Ступень, которую печать имеет право попросить у конкретного семейства.
+ *
+ * Печатные константы — это ЖЕЛАЕМАЯ ширина, а не обещание семейства. У `routePoint`
+ * (`address-image`) верх — мастер 1200, у `articleBody` — 1920, и запрос 1600/2500
+ * там отвечает 400 (fail-closed чтение производных), то есть картинка в книге
+ * не отрисовывается вовсе. Поэтому желаемое зажимается контрактом семейства, а на
+ * путях вне семейств (`/media-resize/**`, чужие хосты) работает прежняя лестница.
+ */
+function resolvePrintWidth(pathname: string, desiredWidth: number): number {
+  const route = familyRouteFromPathname(pathname)
+  const contractWidth = route ? printWidthForRoute(route, desiredWidth) : null
+  return contractWidth ?? snapProxyWidth(desiredWidth)
 }
 
 /**
@@ -69,9 +92,46 @@ export function buildPrintImageUrl(url: string, width: number): string {
   if (!isFirstPartyMetravelHost(parsed.hostname, parsed.host)) return trimmed
 
   for (const param of PROXY_QUERY_PARAMS) parsed.searchParams.delete(param)
-  parsed.searchParams.set('w', String(snapProxyWidth(width)))
+  parsed.searchParams.set('w', String(resolvePrintWidth(parsed.pathname, width)))
   parsed.searchParams.set('q', String(snapProxyQuality(PRINT_IMAGE_QUALITY)))
   parsed.searchParams.set('fit', 'contain')
   if (parsed.protocol === 'http:') parsed.protocol = 'https:'
   return parsed.toString()
+}
+
+/**
+ * Тот же кадр без единого прокси-параметра — страховка печати на случай, когда
+ * ступень всё-таки не обслужена.
+ *
+ * Голый адрес отдаёт мастер: дорого и `no-store`, поэтому основным путём он быть
+ * не может (#1221). Но в книге альтернатива не «картинка полегче», а пустой серый
+ * слот: разметка прячет `<img>` по `onerror`, и страница уходит в печать с дырой —
+ * ровно это владелец увидел на travel 682. Один повторный запрос дешевле дыры.
+ */
+export function buildPrintImageFallbackUrl(url: string): string {
+  const trimmed = String(url || '').trim()
+  if (!trimmed) return trimmed
+  if (/^(data:|blob:)/i.test(trimmed)) return trimmed
+
+  try {
+    const parsed = new URL(trimmed)
+    for (const param of PROXY_QUERY_PARAMS) parsed.searchParams.delete(param)
+    if (parsed.protocol === 'http:') parsed.protocol = 'https:'
+    return parsed.toString()
+  } catch {
+    return trimmed
+  }
+}
+
+/**
+ * `onerror` для печатной картинки: одна попытка без прокси-параметров, затем
+ * прячем. Инлайн-обработчик, потому что книга уезжает в отдельное окно как строка
+ * HTML — своего скрипта у неё нет.
+ */
+export function buildPrintImageOnError(fallbackSrc: string): string {
+  if (!fallbackSrc) return "this.style.display='none';"
+  return (
+    "if(this.dataset.printFallback&&this.src!==this.dataset.printFallback)" +
+    "{this.src=this.dataset.printFallback;}else{this.style.display='none';}"
+  )
 }
