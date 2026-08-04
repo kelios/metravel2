@@ -179,7 +179,7 @@
     },
     {
       "from": "dom-na-ostrove",
-      "to": "uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-i-priroda"
+      "to": "domik-na-ostrove-v-gabrielne-otdykh-v-polshe"
     },
     {
       "from": "veneciya-za-pol-dnya",
@@ -191,7 +191,7 @@
     },
     {
       "from": "berlin-poznan-minsk",
-      "to": "berlin-i-poznan-za-2-dnia-chto-posmotret-kak-dobratsia-i-interesnye-fakty-o-glavnykh-dostoprimechatelnostiakh-evropy-v-2026-godu"
+      "to": "berlin-i-poznan-za-2-dnia-chto-posmotret"
     },
     {
       "from": "polsha-suvalki-elblong-gdansk-leba",
@@ -235,7 +235,7 @@
     },
     {
       "from": "zagolovok-uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-priroda-i-interesnye-mesta-riadom",
-      "to": "uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-i-priroda"
+      "to": "domik-na-ostrove-v-gabrielne-otdykh-v-polshe"
     },
     {
       "from": "lodz-gorod-muralov-i-fabrik-chto-posmotret-za-den",
@@ -255,7 +255,7 @@
     },
     {
       "from": "ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh",
-      "to": "ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom"
+      "to": "ozero-sorapis-krugovoi-marshrut-v-dolomitakh"
     },
     {
       "from": "zamok-ksenzh-v-polshe-istoriia-legendy-i-puteshestvie-v-serdtse-nizhnei-silezii",
@@ -267,7 +267,7 @@
     },
     {
       "from": "velomarshrut-vdol-visly-chwalcow-klosin-28-km",
-      "to": "velomarshrut-vdol-visly-spokoinaia-veloprogulka-po-wislana-trasa-rowerowa-s-vidami-istoriei-i-prirodoi"
+      "to": "velomarshrut-vdol-visly-wislana-trasa-rowerowa"
     },
     {
       "from": "velomarshrut-po-minskoi-oblasti-na-1-den-sarochanskie-ozera-priroda-i-ozera-riadom-s-logoiskom",
@@ -279,11 +279,11 @@
     },
     {
       "from": "pokhod-na-tri-korony-trzy-korony-982-m",
-      "to": "tri-korony-v-peninskikh-gorakh-marshrut-iz-sromowce-nizne-kotoryi-stoit-proiti-khotia-by-raz"
+      "to": "tri-korony-v-peninakh-marshrut-iz-sromovtse"
     },
     {
       "from": "gory-tovarny-gory-towarne",
-      "to": "gory-tovarny-i-peshchery-iurskogo-kraia-marshrut-vykhodnogo-dnia-s-sobakami-istoriia-legendy-i-poleznye-sovety"
+      "to": "gory-tovarny-i-peshchery-iurskogo-kraia-marshrut"
     },
     {
       "from": "stankovo-otlichnyy-variant-dlya-progulki-na-vyhodnye-starinnyy-park-s-vekovymi-derevyami",
@@ -639,7 +639,7 @@
     },
     {
       "from": "gruziya-peshchera-sataplia",
-      "to": "chto-posmotret-v-kutaisi-peshchery-kanony-monastyri-i-interesnye-mesta-riadom-s-batumi"
+      "to": "chto-posmotret-v-kutaisi-peshchery-i-kanony"
     },
     {
       "from": "dot-usypalnica-i-dom-tadeusha-reytana",
@@ -648,6 +648,86 @@
     {
       "from": "dvorets-moniushko-vankovichei-v-smilovichakh-istoriia-legendy-i-poleznaia-informatsiia-dlia-turistov",
       "to": "dvorets-moniushko-vankovichei-v-smilovichakh-kak-doekhat"
+    },
+    {
+      "from": "mavrikii-na-avtomobile-arenda-levostoronnee-dvizhenie-i-marshrut-do-lemorn-braban",
+      "to": "mavrikii-na-avtomobile-arenda-i-marshrut"
+    },
+    {
+      "from": "gory-tovarny-i-peshchery-iurskogo-kraia-marshrut-vykhodnogo-dnia-s-sobakami-istoriia-legendy-i-poleznye-sovety",
+      "to": "gory-tovarny-i-peshchery-iurskogo-kraia-marshrut"
+    },
+    {
+      "from": "zimnii-drezden-i-bashtai-arkhitektura-muzei-i-vidy-bez-turistov",
+      "to": "zimnii-drezden-i-bastai-chto-posmotret"
+    },
+    {
+      "from": "leskowiec-922-m-legkii-marshrut-v-beskidakh-iz-rzyki-kak-podniatsia-chto-posmotret-i-gde-otdokhnut",
+      "to": "leskovets-922-m-legkii-marshrut-v-beskidakh"
+    },
+    {
+      "from": "gde-pokatatsia-na-konkakh-lyzhakh-i-snouborde-v-krakove-i-ego-okrestnostiakh",
+      "to": "gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove"
+    },
+    {
+      "from": "ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom",
+      "to": "ozero-sorapis-krugovoi-marshrut-v-dolomitakh"
+    },
+    {
+      "from": "chto-posmotret-v-kutaisi-peshchery-kanony-monastyri-i-interesnye-mesta-riadom-s-batumi",
+      "to": "chto-posmotret-v-kutaisi-peshchery-i-kanony"
+    },
+    {
+      "from": "velomarshrut-vdol-visly-spokoinaia-veloprogulka-po-wislana-trasa-rowerowa-s-vidami-istoriei-i-prirodoi",
+      "to": "velomarshrut-vdol-visly-wislana-trasa-rowerowa"
+    },
+    {
+      "from": "vena-za-1-den-i-venskii-les-chto-posmotret-kak-doekhat-legendy-i-skrytye-mesta",
+      "to": "vena-za-1-den-i-venskii-les-chto-posmotret"
+    },
+    {
+      "from": "berlin-i-poznan-za-2-dnia-chto-posmotret-kak-dobratsia-i-interesnye-fakty-o-glavnykh-dostoprimechatelnostiakh-evropy-v-2026-godu",
+      "to": "berlin-i-poznan-za-2-dnia-chto-posmotret"
+    },
+    {
+      "from": "bazilika-bogomateri-angelov-v-kalvarii-zebzhidovskoy-i-za",
+      "to": "kalvariia-zebzhidovskaia-i-gora-zhar-marshrut"
+    },
+    {
+      "from": "tri-korony-v-peninskikh-gorakh-marshrut-iz-sromowce-nizne-kotoryi-stoit-proiti-khotia-by-raz",
+      "to": "tri-korony-v-peninakh-marshrut-iz-sromovtse"
+    },
+    {
+      "from": "tivoli-idealnaia-poezdka-iz-rima-na-odin-den-kotoraia-zapomnilas-nam-ne-tolko-krasotoi-no-i-shtrafom",
+      "to": "tivoli-iz-rima-na-odin-den-chto-posmotret"
+    },
+    {
+      "from": "observatoriya-imeni-tadeusha-banahevicha-na-goru-lyubomire",
+      "to": "gora-liubomir-904-m-observatoriia-i-marshrut"
+    },
+    {
+      "from": "peshie-marshruty-v-beskidakh-kak-dobratsia-do-pilsko-i-granitsy-so-slovakiei",
+      "to": "pilsko-v-beskidakh-marshrut-k-granitse-slovakii"
+    },
+    {
+      "from": "indiya-hampi",
+      "to": "khampi-indiia-chto-posmotret-v-drevnem-gorode"
+    },
+    {
+      "from": "otdykh-v-dominikane-kak-dobratsia-chto-posmotret-luchshie-ekskursii-i-lichnyi-opyt",
+      "to": "otdykh-v-dominikane-chto-posmotret-i-ekskursii"
+    },
+    {
+      "from": "uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-i-priroda",
+      "to": "domik-na-ostrove-v-gabrielne-otdykh-v-polshe"
+    },
+    {
+      "from": "verona-za-poldnia-chto-posmotret-esli-vremeni-malo-i-pochemu-etot-gorod-tochno-stoit-dobavit-v-marshrut",
+      "to": "verona-za-poldnia-chto-posmotret"
+    },
+    {
+      "from": "kak-proiti-portugalskii-put-vdol-poberezhia-nash-opyt-camino-portugues-de-la-costa",
+      "to": "portugalskii-put-vdol-poberezhia-nash-opyt"
     }
   ]
 }
