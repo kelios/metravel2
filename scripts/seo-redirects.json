@@ -151,11 +151,11 @@
     },
     {
       "from": "mogilev",
-      "to": "mogilev-gorod-istorii-legend-i-uiutnykh-ulits-chto-posmotret-i-kak-splanirovat-poezdku"
+      "to": "mogilev-chto-posmotret-za-vykhodnye"
     },
     {
       "from": "grodno",
-      "to": "grodno-za-1-den-chto-posmotret-kak-doekhat-istoriia-goroda-legendy-i-glavnye-dostoprimechatelnosti"
+      "to": "grodno-za-1-den-chto-posmotret-i-kak-doekhat"
     },
     {
       "from": "smolyany",
@@ -195,7 +195,7 @@
     },
     {
       "from": "polsha-suvalki-elblong-gdansk-leba",
-      "to": "puteshestvie-v-polshu-na-4-dnia-marshrut-minsk-suvalki-elblong-gdansk-leba"
+      "to": "polsha-za-4-dnia-marshrut-iz-minska-v-gdansk"
     },
     {
       "from": "krakov-plashuvskoe-depo",
@@ -223,7 +223,7 @@
     },
     {
       "from": "helskaya-kosa-mayak-v-v-yastarne-mayak-gora-shvedov-helskiy-mayak",
-      "to": "khelskaia-kosa-maiak-v-v-iastarne-maiak-gora-shvedov-khelskii-maiak"
+      "to": "khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
     },
     {
       "from": "zamok-dunaec-i-smotrovaya-bashnya-na-gore-lyuban",
@@ -231,7 +231,7 @@
     },
     {
       "from": "ruiny-storozhevoy-bashni-v-rychuve-i",
-      "to": "ruiny-storozhevoi-bashni-v-rychuve-i-peshchera-jaskinia-z-kominem-marshrut-istoriia-i-chto-posmotret-v-malopolshe"
+      "to": "ruiny-bashni-v-rychuve-i-peshchera-marshrut"
     },
     {
       "from": "zagolovok-uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-priroda-i-interesnye-mesta-riadom",
@@ -259,7 +259,7 @@
     },
     {
       "from": "zamok-ksenzh-v-polshe-istoriia-legendy-i-puteshestvie-v-serdtse-nizhnei-silezii",
-      "to": "zamok-ksenzh-v-polshe-istoriia-kak-dobratsia-chto-posmotret-tainy-legendy-i-podzemelia"
+      "to": "zamok-ksenzh-kak-doekhat-i-chto-posmotret"
     },
     {
       "from": "velomarshrut-na-1-den-logoisk-ruiny-dvortsa-tyshkevichei-i-rodnik-sviatogo-iuriia",
@@ -540,6 +540,86 @@
     {
       "from": "barselona-i-park-razvlecheniy-port-aventura-v-mae",
       "to": "barselona-portaventura-i-ferrari-land-v-mae"
+    },
+    {
+      "from": "marshrut-na-odin-den-zamok-miruv-peshchera-koniushnia-zamok-bobolitse",
+      "to": "zamki-miruv-i-bobolitse-marshrut-na-odin-den"
+    },
+    {
+      "from": "sokolinye-gory-i-zamki-poblizosti-marshrut-s-legendami-i-peshcherami",
+      "to": "sokolinye-gory-marshrut-po-tropam-i-peshcheram"
+    },
+    {
+      "from": "puteshestvie-v-polshu-na-4-dnia-marshrut-minsk-suvalki-elblong-gdansk-leba",
+      "to": "polsha-za-4-dnia-marshrut-iz-minska-v-gdansk"
+    },
+    {
+      "from": "mogilev-gorod-istorii-legend-i-uiutnykh-ulits-chto-posmotret-i-kak-splanirovat-poezdku",
+      "to": "mogilev-chto-posmotret-za-vykhodnye"
+    },
+    {
+      "from": "progulka-v-zelene-tropa-bobrov-i-vetrianaia-melnitsa-v-5-km-ot-tsivilizatsii",
+      "to": "zelene-tropa-bobrov-i-vetrianaia-melnitsa"
+    },
+    {
+      "from": "albaniya-dostoprimechatelnosti-orikuma-castle-of-gjon-bocari-i-cerkov-marmiroy",
+      "to": "orikum-albaniia-zamok-bochari-i-tserkov-marmiroi"
+    },
+    {
+      "from": "marshrut-na-odin-den-dvorec-stanislava-varshickogo-zamok-morsko-peshchera-stefanova-dzyura-dzyadova-peshchera",
+      "to": "zamok-bekovets-i-dvorets-varshitskogo-marshrut"
+    },
+    {
+      "from": "ekskursiia-na-mavrikii-port-lui-botanicheskii-sad-pliazh-s-cherepakhami",
+      "to": "mavrikii-port-lui-botanicheskii-sad-i-cherepakhi"
+    },
+    {
+      "from": "litva-shveciya-norvegiya-daniya-germaniya-polsha",
+      "to": "skandinaviia-na-avto-marshrut-iz-minska-2-nedeli"
+    },
+    {
+      "from": "mavrikii-morskaia-ekskursiia-na-ostrov-il-o-serf-ile-aux-cerfs-pliazh-bel-mar-i-letuchie-lisy",
+      "to": "ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii"
+    },
+    {
+      "from": "zamok-ksenzh-v-polshe-istoriia-kak-dobratsia-chto-posmotret-tainy-legendy-i-podzemelia",
+      "to": "zamok-ksenzh-kak-doekhat-i-chto-posmotret"
+    },
+    {
+      "from": "rysianka-1322m-tuda-gde-konchaetsia-internet-i-nachinaetsia-gornyi-dzen-1",
+      "to": "gora-rysianka-v-beskidakh-marshrut-na-den"
+    },
+    {
+      "from": "marshrut-po-doline-kosteliska-smrechinskii-prud-peshchery-i-khala-ornak",
+      "to": "dolina-kosteliska-marshrut-po-tatram-za-den"
+    },
+    {
+      "from": "dolina-dlubni-i-istochniki-imbramovitse-marshrut-vykhodnogo-dnia-iz-krakova-chto-posmotret-i-kak-dobratsia",
+      "to": "dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova"
+    },
+    {
+      "from": "grodno-za-1-den-chto-posmotret-kak-doekhat-istoriia-goroda-legendy-i-glavnye-dostoprimechatelnosti",
+      "to": "grodno-za-1-den-chto-posmotret-i-kak-doekhat"
+    },
+    {
+      "from": "vodopad-tamarind-na-mavrikii-kak-dobratsia-nuzhen-li-gid-i-chto-vazhno-znat-pered-pokhodom",
+      "to": "vodopad-tamarind-na-mavrikii-kak-dobratsia"
+    },
+    {
+      "from": "khelskaia-kosa-maiak-v-v-iastarne-maiak-gora-shvedov-khelskii-maiak",
+      "to": "khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
+    },
+    {
+      "from": "ruiny-storozhevoi-bashni-v-rychuve-i-peshchera-jaskinia-z-kominem-marshrut-istoriia-i-chto-posmotret-v-malopolshe",
+      "to": "ruiny-bashni-v-rychuve-i-peshchera-marshrut"
+    },
+    {
+      "from": "peshchery-i-zapovednik-riadom-s-zamkami-miruv-i-bobolitse-marshrut-na-poldnia",
+      "to": "peshchery-u-zamkov-miruv-i-bobolitse-marshrut"
+    },
+    {
+      "from": "marshrut-na-odin-den",
+      "to": "bunkery-pod-poremboi-i-reka-mitriuga-marshrut"
     }
   ]
 }
