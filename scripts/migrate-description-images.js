@@ -305,18 +305,48 @@ async function runInventory(token) {
 // правках живых статей — своя копия разъехалась бы с ними на первой же доработке.
 const { buildUpsertPayload, detectRegression, backupFileName, latestBackup } = require('./seo-edit')
 
+/**
+ * Повтор сетевой операции с нарастающей паузой.
+ *
+ * На прогоне в тысячи файлов транзиентный обрыв — не исключение, а данность:
+ * прогон 2026-08-04 упал на статье 160 с `fetch failed`, хотя обе её картинки
+ * при ручной пробе отдавались за 0.6–1.5 с. Без повторов такой сбой останавливал
+ * бы очередь на ровном месте. Ошибки протокола (4xx/5xx с телом) сюда не попадают —
+ * их бросают вызывающие функции, и они обязаны останавливать прогон.
+ */
+async function withRetry(label, fn, attempts = 4) {
+  let lastError
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      const transient = /fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|timeout/i.test(
+        error && error.message ? error.message : String(error),
+      )
+      if (!transient || attempt === attempts) throw error
+      const backoff = 1000 * 2 ** (attempt - 1)
+      console.log(`   ↻ ${label}: ${error.message}; повтор ${attempt}/${attempts - 1} через ${backoff} мс`)
+      await sleep(backoff)
+    }
+  }
+  throw lastError
+}
+
 /** Мастер legacy-картинки. Только эта ширина у класса и отвечает 200 (#1244). */
 async function downloadMaster(key) {
   const url = `${SITE}/media-resize/${key}?w=1920`
-  const res = await fetch(url, { headers: { Accept: 'image/*,*/*' } })
-  if (!res.ok) throw new Error(`скачивание ${key} → HTTP ${res.status}`)
-  const buffer = Buffer.from(await res.arrayBuffer())
-  if (!buffer.length) throw new Error(`скачивание ${key} → пустой ответ`)
-  return {
-    buffer,
-    contentType: res.headers.get('content-type') || 'application/octet-stream',
-    filename: decodeURIComponent(key.split('/').pop() || 'photo.jpg'),
-  }
+  return withRetry(`скачивание ${key}`, async () => {
+    const res = await fetch(url, { headers: { Accept: 'image/*,*/*' } })
+    if (!res.ok) throw new Error(`скачивание ${key} → HTTP ${res.status}`)
+    const buffer = Buffer.from(await res.arrayBuffer())
+    if (!buffer.length) throw new Error(`скачивание ${key} → пустой ответ`)
+    return {
+      buffer,
+      contentType: res.headers.get('content-type') || 'application/octet-stream',
+      filename: decodeURIComponent(key.split('/').pop() || 'photo.jpg'),
+    }
+  })
 }
 
 /**
@@ -326,18 +356,24 @@ async function downloadMaster(key) {
  * `extractArticleEditorUploadUrl`.
  */
 async function uploadDescriptionImage(travelId, file, token) {
-  const form = new FormData()
-  form.append('file', new Blob([file.buffer], { type: file.contentType }), file.filename)
-  form.append('collection', 'description')
-  form.append('id', String(travelId))
+  // Повтор загрузки при обрыве может оставить в бакете лишний объект, если первая
+  // попытка всё же дошла. Это безвредный мусор (чистится по журналу), и он дешевле
+  // остановленной очереди на пять тысяч файлов.
+  const text = await withRetry(`загрузка ${file.filename}`, async () => {
+    const form = new FormData()
+    form.append('file', new Blob([file.buffer], { type: file.contentType }), file.filename)
+    form.append('collection', 'description')
+    form.append('id', String(travelId))
 
-  const res = await fetch(`${API_BASE}/upload`, {
-    method: 'POST',
-    headers: { Authorization: `Token ${token}`, Accept: 'application/json' },
-    body: form,
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Token ${token}`, Accept: 'application/json' },
+      body: form,
+    })
+    const body = await res.text()
+    if (!res.ok) throw new Error(`upload → HTTP ${res.status}: ${body.slice(0, 200)}`)
+    return body
   })
-  const text = await res.text()
-  if (!res.ok) throw new Error(`upload → HTTP ${res.status}: ${text.slice(0, 200)}`)
 
   let payload = {}
   try {
@@ -376,9 +412,11 @@ async function verifyCanonical(url) {
     probe.searchParams.set('w', String(width))
     probe.searchParams.set('q', '80')
     probe.searchParams.set('fit', 'contain')
-    const res = await fetch(probe.toString(), {
-      headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
-    })
+    const res = await withRetry(`проба w=${width}`, () =>
+      fetch(probe.toString(), {
+        headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
+      }),
+    )
     const mode = res.headers.get('x-metravel-image-transform') || '(нет)'
     if (res.status !== 200) problems.push(`w=${width} → HTTP ${res.status}`)
     else if (!/stored-derivative/i.test(mode)) problems.push(`w=${width} → mode="${mode}"`)
@@ -609,7 +647,15 @@ async function main() {
 
   const id = valueOf('id')
   if (id) {
-    const result = await migrateOne(Number(id), { token, dryRun: has('--dry-run') })
+    const dryRun = has('--dry-run')
+    const result = await migrateOne(Number(id), { token, dryRun })
+    // Ручной прогон обязан попасть в журнал: иначе починенная вручную статья
+    // остаётся помеченной `failed`, и `--status` показывает несуществующий долг.
+    if (!dryRun) {
+      const journal = readJournal()
+      journal[id] = { status: 'done', at: new Date().toISOString(), migrated: result.migrated ?? 0 }
+      writeJournal(journal)
+    }
     console.log(JSON.stringify(result))
     return
   }
