@@ -502,6 +502,103 @@ function annotateDrafts(report, drafts) {
   return report
 }
 
+/**
+ * Полные адреса манифеста, обрывком которых может оказаться этот слаг.
+ *
+ * Граница строго по дефису отсекает случайные совпадения символов
+ * (`tropa-vedm-harze` не считается началом `tropa-vedm-harzer-…`), но сама по
+ * себе от ложного срабатывания не спасает: канонический адрес вполне может быть
+ * дефисным началом более длинного старого — см. `canonicalTargets` ниже.
+ */
+function truncationSources(slug, redirectFrom) {
+  if (!slug || !redirectFrom) return []
+  const prefix = `${slug}-`
+  return [...redirectFrom.keys()].filter((from) => from.startsWith(prefix))
+}
+
+/**
+ * Живые цели манифеста — адреса, на которые редиректят, а не с которых.
+ *
+ * Ретайтл часто укорачивает слаг, поэтому `to` регулярно оказывается дефисным
+ * началом своего же `from`: `vena-za-1-den-i-venskii-les-chto-posmotret` — это
+ * цель пары `vena-za-1-den-…-kak-doekhat-legendy-i-skrytye-mesta`. На боевом
+ * манифесте таких целей девять. Если такая цель однажды сама начнёт отдавать
+ * 404 (переименовали без алиаса — ровно класс SEO-SSR-001, ради которого отчёт
+ * и написан), правило по одной префиксности объявило бы её «обрывком, редирект
+ * не нужен» и сняло бы тревогу. Поэтому цели исключаются из правила целиком.
+ */
+function canonicalTargets(redirectFrom) {
+  return new Set(redirectFrom ? [...redirectFrom.values()] : [])
+}
+
+/**
+ * Переносит из кандидатов адреса, которые на самом деле являются обрывком уже
+ * заведённой пары.
+ *
+ * Обрывок — не потерянный адрес: его никогда не существовало, и 301 на него
+ * заводить нельзя (правило #1186). Явную обрезку многоточием ловит
+ * `classifySlug`, но обрыв по длине маркера не оставляет — слаг выглядит
+ * валидным и уходит в 🆕, где зря зовёт человека (#1257).
+ *
+ * Ни одного из трёх условий не хватает поодиночке:
+ * 1) слаг — дефисный префикс какого-то `from` манифеста;
+ * 2) слаг сам НЕ является живой целью манифеста (иначе глушим настоящую
+ *    потерю канонического адреса, см. `canonicalTargets`);
+ * 3) полный адрес переспрошен у прода и ответил 3xx — значит пара заведена и
+ *    работает, а в лог попал обрезанный вариант.
+ *
+ * Прод не ответил — адрес остаётся кандидатом: молча прятать находки запрещено,
+ * иначе контроль слепнет ровно там, где должен звать (тот же принцип, что у
+ * корзины черновиков в #1255).
+ */
+async function annotateTruncated(report, { redirectFrom, origin, probe = probeStatus } = {}) {
+  const candidates = report.buckets.candidate || []
+  if (!candidates.length || !redirectFrom || !redirectFrom.size) return report
+
+  const targets = canonicalTargets(redirectFrom)
+  const stillCandidates = []
+  const truncated = []
+  for (const row of candidates) {
+    if (targets.has(row.slug)) {
+      stillCandidates.push(row)
+      continue
+    }
+    let matched = null
+    let matchedStatus = 0
+    for (const source of truncationSources(row.slug, redirectFrom)) {
+      const status = await probe(`${origin}/travels/${encodeURIComponent(source)}`)
+      if (status >= 300 && status < 400) {
+        matched = source
+        matchedStatus = status
+        break
+      }
+    }
+    if (!matched) {
+      stillCandidates.push(row)
+      continue
+    }
+    truncated.push({
+      ...row,
+      // Статус — измеренный, цель — обещание манифеста: проба читает только код
+      // ответа и Location не разбирает, поэтому выдавать цель за проверенную
+      // нельзя.
+      note:
+        `обрывок ссылки: полный адрес ${matched} живой (${matchedStatus}), манифест ведёт его → ` +
+        `${redirectFrom.get(matched)}; этот 404 честный, редирект не нужен`,
+    })
+  }
+
+  if (stillCandidates.length) report.buckets.candidate = stillCandidates
+  else delete report.buckets.candidate
+  if (truncated.length) report.buckets.malformed = [...(report.buckets.malformed || []), ...truncated]
+
+  const byslug = new Map(truncated.map((row) => [row.slug, row]))
+  report.rows = report.rows.map((row) => byslug.get(row.slug) || row)
+  report.needsHuman =
+    (report.buckets.regression || []).length > 0 || (report.buckets.candidate || []).length > 0
+  return report
+}
+
 function readProdLog({ container, since }) {
   if (!SAFE_CONTAINER.test(container)) throw new Error(`Недопустимое имя контейнера: ${container}`)
   if (since && !SAFE_SINCE.test(since)) throw new Error(`Недопустимое значение --since: ${since}`)
@@ -533,7 +630,7 @@ const BUCKET_VIEW = [
   ['candidate', '🆕 Новые мёртвые адреса — нужна ручная сверка', true],
   ['draft', '📝 Слаг занят черновиком автора: 404 — норма (#1255)', false],
   ['stale', '🕒 Сейчас адрес работает: 404 в логе был кратким', false],
-  ['malformed', '🧩 Битые и склеенные ссылки (класс #1185)', false],
+  ['malformed', '🧩 Битые, склеенные и обрезанные ссылки (класс #1185)', false],
   ['id-url', '🔢 Обращения по числовому id', false],
   ['expected', '✅ Осознанно оставленный 404', false],
   ['noise', '🤫 Пробы и negative controls', false],
@@ -622,6 +719,12 @@ async function main() {
       }
     }
   }
+  // После черновиков: черновик — более точный диагноз, и его слаг существует,
+  // поэтому обрывком он быть не может. Живая проба обязательна, так что без
+  // --verify шаг пропускается вместе с ней.
+  if (args.verify && (report.buckets.candidate || []).length) {
+    await annotateTruncated(report, { redirectFrom: ctx.redirectFrom, origin: args.origin })
+  }
   if (args.json) {
     console.log(JSON.stringify({ source: ctx.source, since: args.since, ...report }, null, 2))
   } else {
@@ -644,6 +747,9 @@ module.exports = {
   collectDraftSlugs,
   fetchDrafts,
   annotateDrafts,
+  truncationSources,
+  canonicalTargets,
+  annotateTruncated,
   extractTravelSlug,
   gluedPrefix,
   buildKnownMatchers,

@@ -12,6 +12,9 @@ const {
   collectDraftSlugs,
   fetchDrafts,
   annotateDrafts,
+  truncationSources,
+  canonicalTargets,
+  annotateTruncated,
   requestedHours,
   windowHours,
 } = require('@/scripts/report-travel-404')
@@ -290,6 +293,143 @@ describe('report-travel-404 / черновики', () => {
         },
       })
     ).toBeNull()
+  })
+})
+
+// #1257: обрыв ссылки по длине не оставляет маркера, поэтому обрывок уже
+// заведённой пары выглядел валидным адресом и уходил в 🆕 звать человека.
+describe('report-travel-404 / обрезанные ссылки', () => {
+  const FULL = 'tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele'
+  const TARGET = 'tropa-vedm-v-gartse-kak-proiti-hexenstieg'
+  const redirectFrom = () =>
+    new Map([
+      [FULL, TARGET],
+      ['liniya-stalina', 'liniia-stalina-chto-posmotret-i-kak-doekhat'],
+    ])
+
+  const candidateReport = (slug: string) =>
+    buildReport(digestRawLog(logLine(`GET /travels/${slug} HTTP/1.1`, 404)), ctx())
+
+  it('ищет полные адреса только по границе дефиса', () => {
+    const sources = redirectFrom()
+    expect(truncationSources('tropa-vedm-harzer', sources)).toEqual([FULL])
+    // Граница отсекает совпадения, обрывающиеся посреди токена: `tropa-vedm-harze`
+    // это не начало адреса, а просто общий кусок строки.
+    expect(truncationSources('tropa-vedm-harze', sources)).toEqual([])
+    // Короткий префикс по границе дефиса совпадением остаётся: обрыв мог
+    // случиться на любом токене, а от ложных срабатываний защищают исключение
+    // целей манифеста и живая проба, а не длина.
+    expect(truncationSources('tropa', sources)).toEqual([FULL])
+    expect(truncationSources('', sources)).toEqual([])
+    expect(truncationSources('tropa-vedm-harzer', new Map())).toEqual([])
+  })
+
+  // Ретайтл часто укорачивает слаг, поэтому цель пары регулярно оказывается
+  // дефисным началом своего же старого адреса (на боевом манифесте таких целей
+  // девять). Если такая цель сама начнёт отдавать 404 — это ровно тот дефект,
+  // ради которого отчёт написан, и глушить его нельзя.
+  it('не глушит живую цель манифеста, даже если она префикс своего же from', async () => {
+    const OLD = 'vena-za-1-den-i-venskii-les-chto-posmotret-kak-doekhat-legendy-i-skrytye-mesta'
+    const CANONICAL = 'vena-za-1-den-i-venskii-les-chto-posmotret'
+    expect(truncationSources(CANONICAL, new Map([[OLD, CANONICAL]]))).toEqual([OLD])
+
+    const report = candidateReport(CANONICAL)
+    const probed: string[] = []
+    await annotateTruncated(report, {
+      redirectFrom: new Map([[OLD, CANONICAL]]),
+      origin: 'https://metravel.by',
+      probe: async (url: string) => {
+        probed.push(url)
+        return 301
+      },
+    })
+    expect(report.buckets.candidate).toHaveLength(1)
+    expect(report.buckets.malformed).toBeUndefined()
+    expect(report.needsHuman).toBe(true)
+    // Цель отсеяна до сети: пробы не нужны, чтобы понять, что это не обрывок.
+    expect(probed).toEqual([])
+    expect(canonicalTargets(new Map([[OLD, CANONICAL]])).has(CANONICAL)).toBe(true)
+  })
+
+  it('уводит обрывок из кандидатов в malformed, когда полный адрес даёт 301', async () => {
+    const report = candidateReport('tropa-vedm-harzer')
+    const probed: string[] = []
+    await annotateTruncated(report, {
+      redirectFrom: redirectFrom(),
+      origin: 'https://metravel.by',
+      probe: async (url: string) => {
+        probed.push(url)
+        return 301
+      },
+    })
+    expect(report.buckets.candidate).toBeUndefined()
+    expect(report.buckets.malformed).toHaveLength(1)
+    expect(report.buckets.malformed[0].note).toContain('обрывок ссылки')
+    expect(report.buckets.malformed[0].note).toContain(TARGET)
+    // Статус — измеренный пробой, цель — обещание манифеста: проба Location не
+    // разбирает, поэтому подавать её как проверенную нельзя.
+    expect(report.buckets.malformed[0].note).toContain('живой (301)')
+    expect(report.buckets.malformed[0].note).toContain('манифест ведёт его')
+    expect(report.needsHuman).toBe(false)
+    expect(probed).toEqual([`https://metravel.by/travels/${FULL}`])
+    expect(report.rows[0].note).toContain('обрывок ссылки')
+  })
+
+  it('показывает фактический статус пробы, а не константу 301', async () => {
+    const report = candidateReport('tropa-vedm-harzer')
+    await annotateTruncated(report, {
+      redirectFrom: redirectFrom(),
+      origin: 'https://metravel.by',
+      probe: async () => 308,
+    })
+    expect(report.buckets.malformed[0].note).toContain('живой (308)')
+  })
+
+  // Прод не ответил — значит доказательства нет. Прятать находку в этом случае
+  // опаснее, чем лишний раз позвать человека.
+  it('оставляет адрес кандидатом, если полный адрес не отвечает 3xx', async () => {
+    for (const status of [404, 0, 200]) {
+      const report = candidateReport('tropa-vedm-harzer')
+      await annotateTruncated(report, {
+        redirectFrom: redirectFrom(),
+        origin: 'https://metravel.by',
+        probe: async () => status,
+      })
+      expect(report.buckets.candidate).toHaveLength(1)
+      expect(report.needsHuman).toBe(true)
+    }
+  })
+
+  it('не глушит настоящий мёртвый адрес, не являющийся ничьим префиксом', async () => {
+    const report = candidateReport('sovsem-drugoi-mertvyi-adres')
+    const probed: string[] = []
+    await annotateTruncated(report, {
+      redirectFrom: redirectFrom(),
+      origin: 'https://metravel.by',
+      probe: async (url: string) => {
+        probed.push(url)
+        return 301
+      },
+    })
+    expect(report.buckets.candidate).toHaveLength(1)
+    expect(report.needsHuman).toBe(true)
+    // Префиксных кандидатов нет — сети не касаемся вовсе.
+    expect(probed).toEqual([])
+  })
+
+  it('не трогает regression: сломанный редирект остаётся громким', async () => {
+    const report = buildReport(digestRawLog(logLine('GET /travels/liniya-stalina HTTP/1.1', 404)), ctx())
+    await annotateTruncated(report, {
+      redirectFrom: new Map([
+        ['liniya-stalina', 'liniia-stalina-chto-posmotret-i-kak-doekhat'],
+        ['liniya-stalina-i-eshche-chto-to', 'x'],
+      ]),
+      origin: 'https://metravel.by',
+      probe: async () => 301,
+    })
+    expect(report.buckets.regression).toHaveLength(1)
+    expect(report.buckets.malformed).toBeUndefined()
+    expect(report.needsHuman).toBe(true)
   })
 })
 

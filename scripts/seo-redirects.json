@@ -728,6 +728,14 @@
     {
       "from": "kak-proiti-portugalskii-put-vdol-poberezhia-nash-opyt-camino-portugues-de-la-costa",
       "to": "portugalskii-put-vdol-poberezhia-nash-opyt"
+    },
+    {
+      "from": "velomarshrut-k-baikovskomu-rodniku-odnodnevnoe-puteshestvie-po-mogilevskoi-oblasti",
+      "to": "baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy"
+    },
+    {
+      "from": "zboruv-gora",
+      "to": "zapovednik-gora-zboruv-skaly-i-peshchery"
     }
   ]
 }
