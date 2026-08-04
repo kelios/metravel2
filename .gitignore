@@ -175,6 +175,10 @@ scripts/.fix-*/
 scripts/.workflows/
 scripts/.tmp-*
 
+# migrate-description-images.js: бэкапы payload статей, инвентарь и журнал прогона
+# (#1245). Это снимки ЖИВОГО контента прода, в репозиторий им нельзя.
+scripts/.migrate-description-images/
+
 # Ad-hoc tmp dumps at repo root
 /tmp_*.json
 

@@ -18,7 +18,12 @@ export const imageGridStyles = (
    (aspect-ratio on the row), so every row spans the full content width.
    Cells take their aspect from --travel-rich-image-aspect set by
    decorateRichImageFrames, so contain-fit fills the frame without bars;
-   the neutral .rich-image-frame fill absorbs bucket rounding slivers (#1208). */
+   the .rich-image-frame fill absorbs bucket rounding slivers (#1208).
+
+   #1233: the cell rule below outranks .rich-image-frame (extra .img-jrow class),
+   so it has to read the same --travel-rich-image-fill var — otherwise the dominant
+   colour useWebEffects puts on the frame never paints and every body photo keeps
+   the neutral fill. Every image paragraph lands in a jrow, even a lone one. */
 .${cls} .img-jrow {
   display: flex;
   align-items: stretch;
@@ -41,7 +46,7 @@ ${rowAspectBucketRules(cls)}
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid ${colors.borderLight};
-  background: ${colors.backgroundSecondary};
+  background: var(--travel-rich-image-fill, ${colors.backgroundSecondary});
   box-shadow: ${colors.boxShadows?.light || 'none'};
 }
 .${cls} .img-jrow > p img {
