@@ -193,8 +193,10 @@ export function buildQuestCityCatalog<TQuest extends QuestCatalogQuest>(quests: 
 
         (questsByCityId[canonicalId] ||= []).push(quest);
 
-        const lat = Number(quest.lat);
-        const lng = Number(quest.lng);
+        // `Number(null)` — это 0, поэтому квест без координат нельзя пускать в
+        // сумму: он утащил бы центр города в Гвинейский залив.
+        const lat = quest.lat == null ? NaN : Number(quest.lat);
+        const lng = quest.lng == null ? NaN : Number(quest.lng);
         if (Number.isFinite(lat) && Number.isFinite(lng)) {
             const sum = coordSumByCanonicalId.get(canonicalId) || { lat: 0, lng: 0, count: 0 };
             sum.lat += lat;

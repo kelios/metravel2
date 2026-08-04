@@ -76,21 +76,12 @@ export function useQuestsList(opts?: { enabled?: boolean }) {
         [data],
     );
 
-    // Группировка по городу
-    const cityQuestsIndex = useMemo(() => {
-        const index: Record<string, QuestMeta[]> = {};
-        for (const q of quests) {
-            (index[q.cityId] ||= []).push(q);
-        }
-        return index;
-    }, [quests]);
-
     const errorMessage = error
         ? getErrorMessage(error, i18nT('quests:hooks.useQuestsApi.oshibka_zagruzki_kvestov_cdefd63b'))
         : null;
     if (error) devWarn('Failed to load quests list:', errorMessage);
 
-    return { quests, cityQuestsIndex, loading: enabled && isPending, error: errorMessage };
+    return { quests, loading: enabled && isPending, error: errorMessage };
 }
 
 /**

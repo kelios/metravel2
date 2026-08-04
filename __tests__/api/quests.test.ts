@@ -3,7 +3,6 @@ import {
   fetchQuestsList,
   fetchQuestsPreview,
   fetchQuestByQuestId,
-  fetchQuestCities,
   fetchOrCreateProgress,
   createProgress,
   updateProgress,
@@ -168,15 +167,6 @@ describe('api/quests', () => {
         expect(mockedGet).not.toHaveBeenCalled();
       },
     );
-  });
-
-  describe('fetchQuestCities', () => {
-    it('calls GET /quests/cities/ with the maximum page size', async () => {
-      mockedGet.mockResolvedValueOnce([]);
-      const result = await fetchQuestCities();
-      expect(mockedGet).toHaveBeenCalledWith('/quests/cities/?page_size=100');
-      expect(result).toEqual([]);
-    });
   });
 
   describe('fetchAllProgress', () => {

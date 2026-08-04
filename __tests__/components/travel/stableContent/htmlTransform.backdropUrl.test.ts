@@ -26,8 +26,10 @@ describe('rich-image-frame markup preserves native image lazy loading', () => {
     // #1176: ключ нашего legacy-бакета переводится на первопартийный resize route.
     // Проверяемое здесь свойство от этого не зависит: фон не должен появляться в
     // разметке, иначе он ломает нативный lazy.
+    // #1233: у класса `uploads/**` durable-производных нет, поэтому он спрашивается
+    // явным `f=jpeg` — единственной веткой роута, которая отвечает 200.
     expect(imgSrc).toBe(
-      'https://metravel.by/media-resize/uploads/1607344305DSC01553.JPG?w=800&amp;q=80&amp;fit=contain',
+      'https://metravel.by/media-resize/uploads/1607344305DSC01553.JPG?w=800&amp;q=80&amp;fit=contain&amp;f=jpeg',
     )
     expect(imgSrc).not.toContain('metravelprod.s3')
     expect(imgSrc).not.toContain('images.weserv.nl')

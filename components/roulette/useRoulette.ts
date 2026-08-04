@@ -6,7 +6,7 @@ import { useListTravelFilters } from '@/components/listTravel/hooks/useListTrave
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { deduplicateTravels, normalizeApiResponse } from '@/components/listTravel/utils/listTravelHelpers';
 import { buildFacetCounts, buildTravelFilterGroups } from '@/components/listTravel/utils/filterGroups';
-import { fetchAllCountries, fetchAllFiltersOptimized } from '@/api/miscOptimized';
+import { fetchAllFiltersOptimized } from '@/api/miscOptimized';
 import { fetchTravelFacets } from '@/api/travelListQueries';
 import { queryKeys } from '@/api/queryKeys';
 import { queryConfigs } from '@/utils/reactQueryConfig';
@@ -84,12 +84,6 @@ export function useRoulette() {
     ...queryConfigs.static,
   });
 
-  const { data: allCountries } = useQuery({
-    queryKey: queryKeys.allCountries(),
-    queryFn: ({ signal }) => fetchAllCountries({ signal, throwOnError: true }),
-    ...queryConfigs.static,
-  });
-
   const options: FilterOptions | undefined = useMemo(() => {
     if (!rawOptions) return undefined;
     const transformed: FilterOptions = { countries: rawOptions.countries };
@@ -108,13 +102,14 @@ export function useRoulette() {
     return transformed;
   }, [rawOptions]);
 
-  const defaultCountries = useMemo(() => {
-    if (Array.isArray(allCountries) && allCountries.length > 0) {
-      return pickDefaultCountryIds(allCountries);
-    }
-
-    return pickDefaultCountryIds(options?.countries);
-  }, [allCountries, options?.countries]);
+  // Дефолтные страны берём из того же словаря, которым набит фильтр рулетки
+  // (`/countriesforsearch/` — страны, по которым реально есть маршруты). Полный
+  // справочник `/countries/` здесь не нужен: 234 записи против 32 приезжали
+  // только ради двух id, а Беларусь и Польша есть и в словаре фильтра.
+  const defaultCountries = useMemo(
+    () => pickDefaultCountryIds(options?.countries),
+    [options?.countries],
+  );
 
   const { filter, queryParams, resetFilters, onSelect } = useListTravelFilters({
     options,

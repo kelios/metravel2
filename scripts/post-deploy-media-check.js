@@ -101,6 +101,13 @@ const FIRST_PARTY_MEDIA_ROUTE =
 const LEGACY_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp'])
 
 /**
+ * Дубль `LEGACY_UPLOAD_TRANSFORM_FORMAT` из `constants/imageContract.ts`: гейт —
+ * CommonJS и TS-константу не импортирует, как и правило маршрутизации выше.
+ * Расхождение ловит `__tests__/scripts/post-deploy-media-check.test.ts`.
+ */
+const LEGACY_UPLOAD_TRANSFORM_FORMAT = 'jpeg'
+
+/**
  * Accept ровно как у Chrome. Без него бэк уходит в jpeg-ветку
  * (`explicit_format_overrides: {jpeg: transform}` в proxy-contract), которая
  * ресайзится даже когда дефолтный webp-путь отдаёт мастер. Гейт с дефолтным
@@ -275,6 +282,14 @@ function toLegacyTarget(site, familyUrl) {
  * Path-style ссылки на бакет (`s3.<region>.amazonaws.com/<bucket>/uploads/...`)
  * сюда намеренно не попадают: манифест их не отдаёт, а угадывать имя бакета в
  * гейте — способ получить цель, которой нет на проверяемом origin.
+ *
+ * #1233: цель несёт `f=jpeg`, потому что именно так фронт теперь спрашивает этот
+ * класс (`LEGACY_UPLOAD_TRANSFORM_FORMAT`): durable-производных у `uploads/**`
+ * нет, дефолтная webp-ветка отвечает 404 на КАЖДОЙ ступени. Гейт обязан щупать
+ * ту ветку, которую видит читатель, иначе он либо валит деплой на URL, который
+ * никто не запрашивает, либо зеленеет не на том. `format_precedence` контракта
+ * ставит явный `f` выше `Accept`, поэтому обе Accept-ветки придут в jpeg — это
+ * ожидаемо ровно для этого семейства и снимается вместе с карве-аутом.
  */
 function toUploadsTarget(site, rawUrl) {
   const value = String(rawUrl || '').trim()
@@ -291,7 +306,7 @@ function toUploadsTarget(site, rawUrl) {
   if (parts.some((part) => !part || part === '.' || part === '..')) return null
   const extension = String(parts[parts.length - 1].split('.').pop() || '').toLowerCase()
   if (!LEGACY_IMAGE_EXTENSIONS.has(extension)) return null
-  return `${site}/media-resize/${key}`
+  return `${site}/media-resize/${key}?f=${LEGACY_UPLOAD_TRANSFORM_FORMAT}`
 }
 
 /** URL'ы медиа тела статьи из BE-манифеста: обложка + галерея. */

@@ -50,12 +50,12 @@ jest.mock('@/context/AuthContext', () => ({
 }));
 
 jest.mock('@/api/misc', () => ({
-  fetchAllCountries: () => mockFetchAllCountries(),
   saveFormData: jest.fn(async (d: any) => d),
 }));
 
 jest.mock('@/api/miscOptimized', () => ({
   fetchFiltersOptimized: () => mockFetchFilters(),
+  fetchAllCountriesOptimized: () => mockFetchAllCountries(),
 }));
 
 jest.mock('@/api/travelsApi', () => ({

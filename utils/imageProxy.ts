@@ -2,9 +2,13 @@
 // J4: Image URL proxy/optimization (extracted from imageOptimization.ts)
 
 import { Platform } from 'react-native';
-import { DERIVATIVE_WIDTHS_BY_ROUTE } from '@/constants/imageContract';
+import {
+  DERIVATIVE_WIDTHS_BY_ROUTE,
+  LEGACY_UPLOAD_TRANSFORM_FORMAT,
+} from '@/constants/imageContract';
 import {
   normalizeAbsoluteMediaUrl,
+  isLegacyUploadResizeUrl,
   isPrivateOrLocalHost,
   toLegacyResizePath,
   resolveLegacyResizeOrigin,
@@ -301,7 +305,17 @@ export function optimizeImageUrl(
       if (mediaWidth) {
         proxyParams.set('w', String(mediaWidth));
         if (options.quality != null) proxyParams.set('q', String(snapQuality(options.quality)));
-        if (options.format && options.format !== 'auto') proxyParams.set('f', options.format);
+        // #1233: класс `uploads/**` без durable-производных отвечает 404 на любую
+        // ступень, поэтому по умолчанию спрашивается явным `f=jpeg` —
+        // `dynamic-transform`. Явный формат от вызывающего кода уважается: обход
+        // задаёт дефолт, а не отбирает выбор. Обоснование —
+        // `LEGACY_UPLOAD_TRANSFORM_FORMAT`.
+        const legacyUploadFormat = isLegacyUploadResizeUrl(parsedUrl.pathname)
+          ? LEGACY_UPLOAD_TRANSFORM_FORMAT
+          : undefined;
+        const format =
+          options.format && options.format !== 'auto' ? options.format : legacyUploadFormat;
+        if (format) proxyParams.set('f', format);
         if (options.fit) proxyParams.set('fit', options.fit);
       }
       if (!requestedWidth && !isLegacyResizeRoute) {

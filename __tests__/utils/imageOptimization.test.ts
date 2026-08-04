@@ -405,8 +405,12 @@ describe('utils/imageOptimization', () => {
           { width: 300, quality: 80 },
         )!
         expect(uploads).not.toContain('metravelprod.s3')
+        // #1233: `f=jpeg` — не украшение, а единственная ветка роута с ответом 200:
+        // durable-производных у класса `uploads/**` нет, дефолтный webp-путь отдаёт
+        // 404 `derivative-missing` на каждой ступени. Класс `conversions/**` ниже
+        // остаётся на дефолтной ветке — там производные забэкфиллены.
         expect(uploads).toBe(
-          'https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=320&q=80',
+          'https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=320&q=80&f=jpeg',
         )
 
         const conversions = optimizeImageUrl(
@@ -421,19 +425,51 @@ describe('utils/imageOptimization', () => {
           'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/wrapped.jpg?X-Amz-Signature=secret'
         const wrapped = `https://images.weserv.nl/?url=${encodeURIComponent(wrappedOrigin)}&w=1600`
         expect(optimizeImageUrl(wrapped, { width: 300 })).toBe(
-          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=320',
+          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=320&f=jpeg',
         )
 
         // `/media-resize` never leaves the frontend without an explicit canonical
         // width, even if a dynamic caller has not measured its slot yet.
         expect(optimizeImageUrl(wrapped, {})).toBe(
-          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=800',
+          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=800&f=jpeg',
         )
 
         // Класса без legacy-роута быть переписанным не должно: `responsive-images`
         // удалён в #1157, и подмена хоста только спрятала бы мёртвую ссылку.
         const orphan = 'https://metravelprod.s3.eu-north-1.amazonaws.com/540/responsive-images/x.jpg'
         expect(optimizeImageUrl(orphan, { width: 320 })).toBe(orphan)
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
+    })
+
+    // #1233: карве-аут `f=jpeg` — обход отсутствующих durable-производных у класса
+    // `uploads/**`, а не новая политика формата. Границы фиксируем тестом: он не
+    // расползается на здоровые роуты и не отбирает выбор у вызывающего кода.
+    it('keeps the legacy-uploads jpeg carve-out narrow', () => {
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+      try {
+        const uploads = 'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy.jpg'
+
+        // Явный формат вызывающего кода сильнее дефолта обхода.
+        expect(optimizeImageUrl(uploads, { width: 320, format: 'webp' })).toBe(
+          'https://metravel.by/media-resize/uploads/legacy.jpg?w=320&f=webp',
+        )
+
+        // Здоровые семейства остаются на дефолтной webp-ветке: у них производные
+        // забэкфиллены, и динамическая конвертация тут была бы чистой потерей.
+        expect(optimizeImageUrl('https://metravel.by/gallery/540/gallery/x.webp', { width: 320 }))
+          .not.toContain('f=')
+        expect(
+          optimizeImageUrl('https://metravel.by/quest-cover/quests/10/main/x.webp', { width: 320 }),
+        ).not.toContain('f=')
+        expect(
+          optimizeImageUrl(
+            'https://metravelprod.s3.eu-north-1.amazonaws.com/3994/conversions/HcQK-detail_hd.jpg',
+            { width: 320 },
+          ),
+        ).not.toContain('f=')
       } finally {
         process.env.EXPO_PUBLIC_API_URL = previousApiUrl
       }

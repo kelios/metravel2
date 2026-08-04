@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchAllCountries } from '@/api/misc';
-import { fetchFiltersOptimized } from '@/api/miscOptimized';
+import { fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
 import { translate as i18nT } from '@/i18n'
 
 export interface TravelFilters {
@@ -284,7 +283,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
 
       const [filtersData, countryData] = await Promise.all([
         fetchFiltersOptimized(),
-        fetchAllCountries({ throwOnError: true }),
+        fetchAllCountriesOptimized(),
       ]);
 
       if (!mountedRef.current) return;
@@ -353,7 +352,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   const refetchCountries = useCallback(async () => {
     try {
       beginLoading();
-      const countryData = await fetchAllCountries({ throwOnError: true });
+      const countryData = await fetchAllCountriesOptimized();
 
       if (!mountedRef.current) return;
 

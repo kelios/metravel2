@@ -1,4 +1,4 @@
-import { fetchFilters, fetchFiltersCountry, fetchAllCountries } from './misc';
+import { fetchAllCountries, fetchFilters, fetchFiltersCountry } from './misc';
 import { devWarn } from '@/utils/logger';
 import type { FilterCountryOption, FilterDictionaries, Filters } from '@/types/types';
 
@@ -13,38 +13,80 @@ const cacheTimeout = 10 * 60 * 1000; // 10 минут
 // In-flight promise cache для дедупликации параллельных запросов
 const inFlightRequests = new Map<string, Promise<unknown>>();
 
-// Оптимизированная функция для получения фильтров с кэшированием
-export const fetchFiltersOptimized = async (
+/** Ошибка отмены в формате, который проверяют потребители (`error.name === 'AbortError'`). */
+const createAbortError = (): Error => {
+  const error = new Error('Aborted');
+  error.name = 'AbortError';
+  return error;
+};
+
+/**
+ * Отвязывает вызывающего от общего запроса по его signal, НЕ отменяя сам запрос:
+ * иначе размонтирование одного экрана рвало бы загрузку справочника у всех
+ * остальных, кто ждёт тот же in-flight промис.
+ */
+const detachOnAbort = <T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> => {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(createAbortError());
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(createAbortError());
+    signal.addEventListener('abort', onAbort);
+    const cleanup = () => signal.removeEventListener('abort', onAbort);
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        reject(error);
+      },
+    );
+  });
+};
+
+/**
+ * Общий слой словарей: TTL-кэш плюс дедупликация in-flight на один ключ.
+ *
+ * Это единственная точка сети для справочников — через неё ходят и queryFn
+ * React Query, и императивные потребители (`useTravelFilters`,
+ * `useVisitedCountries`, `useProfileCountriesData`, стартовый idle-префетч).
+ * Пока запрос по ключу летит, все остальные ждут ТОТ ЖЕ промис, поэтому один
+ * справочник не может уехать по сети дважды за загрузку страницы — раньше
+ * `/roulette` тянул и `getFiltersTravel`, и `countries` по два раза.
+ *
+ * Signal вызывающего намеренно не доходит до сети: промис общий, и отмена
+ * одного экрана оборвала бы справочник всем остальным (см. `detachOnAbort`).
+ * Словари маленькие и кэшируются, поэтому дешевле дать запросу дойти до конца.
+ */
+const loadCachedDictionary = <T>(
+  cacheKey: string,
+  loader: () => Promise<T>,
   options?: { signal?: AbortSignal },
-): Promise<FilterDictionaries> => {
-  const cacheKey = 'filters';
-  const now = Date.now();
-  
-  // Проверяем кэш
-  const cached = filtersCache.get(cacheKey) as CacheEntry<FilterDictionaries> | undefined;
-  if (cached && (now - cached.timestamp) < cacheTimeout) {
-    return cached.data;
+): Promise<T> => {
+  const cached = filtersCache.get(cacheKey) as CacheEntry<T> | undefined;
+  if (cached && (Date.now() - cached.timestamp) < cacheTimeout) {
+    return Promise.resolve(cached.data);
   }
-  
-  // Проверяем, есть ли уже in-flight запрос
-  const inFlight = inFlightRequests.get(cacheKey);
+
+  const inFlight = inFlightRequests.get(cacheKey) as Promise<T> | undefined;
   if (inFlight) {
-    return inFlight as Promise<FilterDictionaries>;
+    return detachOnAbort(inFlight, options?.signal);
   }
-  
-  // Если нет в кэше и нет in-flight, делаем запрос
+
   const request = (async () => {
     try {
-      const data = await fetchFilters({ signal: options?.signal, throwOnError: true });
+      const data = await loader();
       filtersCache.set(cacheKey, {
         data,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       return data;
     } catch (error) {
-      // Если есть ошибка, но есть закэшированные данные, возвращаем их
+      // Протухший кэш лучше пустого ответа: словари меняются раз в месяцы.
       if (cached) {
-        devWarn('Using cached filters due to error:', error);
+        devWarn(`Using cached ${cacheKey} due to error:`, error);
         return cached.data;
       }
       throw error;
@@ -52,107 +94,55 @@ export const fetchFiltersOptimized = async (
       inFlightRequests.delete(cacheKey);
     }
   })();
-  
+
   inFlightRequests.set(cacheKey, request);
-  return request;
+  return detachOnAbort(request, options?.signal);
 };
 
-// Оптимизированная функция для получения стран с кэшированием
-export const fetchFiltersCountryOptimized = async (
+/** Словарь фильтров путешествия (`/getFiltersTravel/`). */
+export const fetchFiltersOptimized = (
   options?: { signal?: AbortSignal },
-): Promise<FilterCountryOption[]> => {
-  const cacheKey = 'countries';
-  const now = Date.now();
-  
-  // Проверяем кэш
-  const cached = filtersCache.get(cacheKey) as CacheEntry<FilterCountryOption[]> | undefined;
-  if (cached && (now - cached.timestamp) < cacheTimeout) {
-    return cached.data;
-  }
-  
-  // Проверяем, есть ли уже in-flight запрос
-  const inFlight = inFlightRequests.get(cacheKey);
-  if (inFlight) {
-    return inFlight as Promise<FilterCountryOption[]>;
-  }
-  
-  // Если нет в кэше и нет in-flight, делаем запрос
-  const request = (async () => {
-    try {
-      const data = await fetchFiltersCountry({ signal: options?.signal, throwOnError: true });
-      filtersCache.set(cacheKey, {
-        data,
-        timestamp: Date.now()
-      });
-      return data;
-    } catch (error) {
-      // Если есть ошибка, но есть закэшированные данные, возвращаем их
-      if (cached) {
-        devWarn('Using cached countries due to error:', error);
-        return cached.data;
-      }
-      throw error;
-    } finally {
-      inFlightRequests.delete(cacheKey);
-    }
-  })();
-  
-  inFlightRequests.set(cacheKey, request);
-  return request;
-};
+): Promise<FilterDictionaries> =>
+  loadCachedDictionary('filters', () => fetchFilters({ throwOnError: true }), options);
 
-// Объединенная функция для получения всех фильтров за один вызов
-export const fetchAllFiltersOptimized = async (options?: { signal?: AbortSignal }): Promise<Filters> => {
-  const cacheKey = 'all-filters';
-  const now = Date.now();
-  
-  // Проверяем кэш
-  const cached = filtersCache.get(cacheKey) as CacheEntry<Filters> | undefined;
-  if (cached && (now - cached.timestamp) < cacheTimeout) {
-    return cached.data;
-  }
-  
-  // Проверяем, есть ли уже in-flight запрос
-  const inFlight = inFlightRequests.get(cacheKey);
-  if (inFlight) {
-    return inFlight as Promise<Filters>;
-  }
-  
-  // Если нет в кэше и нет in-flight, делаем запросы параллельно
-  const request = (async () => {
-    try {
+/**
+ * Страны для фильтра поиска (`/countriesforsearch/`) — только те, по которым
+ * реально есть маршруты (32 записи против 234). Не путать с
+ * {@link fetchAllCountriesOptimized}: это словарь фильтра, а не справочник.
+ */
+export const fetchFiltersCountryOptimized = (
+  options?: { signal?: AbortSignal },
+): Promise<FilterCountryOption[]> =>
+  loadCachedDictionary(
+    'countries-for-search',
+    () => fetchFiltersCountry({ throwOnError: true }),
+    options,
+  );
+
+/**
+ * Полный справочник стран (`/countries/`, 234 записи). Нужен там, где страну
+ * выбирают, а не фильтруют по ней: визард путешествия и статистика профиля.
+ */
+export const fetchAllCountriesOptimized = (
+  options?: { signal?: AbortSignal },
+): Promise<FilterCountryOption[]> =>
+  loadCachedDictionary('all-countries', () => fetchAllCountries({ throwOnError: true }), options);
+
+/** Фильтры вместе со странами поиска — один вызов для каталога и рулетки. */
+export const fetchAllFiltersOptimized = (options?: { signal?: AbortSignal }): Promise<Filters> =>
+  loadCachedDictionary(
+    'all-filters',
+    async () => {
       const [base, countries] = await Promise.all([
-        fetchFiltersOptimized(options),
-        fetchFiltersCountryOptimized(options)
+        fetchFiltersOptimized(),
+        fetchFiltersCountryOptimized(),
       ]);
-      
-      const result: Filters = { ...base, countries };
-      filtersCache.set(cacheKey, {
-        data: result,
-        timestamp: Date.now()
-      });
-      
-      return result;
-    } catch (error) {
-      // Если есть ошибка, но есть закэшированные данные, возвращаем их
-      if (cached) {
-        devWarn('Using cached all filters due to error:', error);
-        return cached.data;
-      }
-      throw error;
-    } finally {
-      inFlightRequests.delete(cacheKey);
-    }
-  })();
-  
-  inFlightRequests.set(cacheKey, request);
-  return request;
-};
+      return { ...base, countries };
+    },
+    options,
+  );
 
 // Функция для очистки кэша (полезна для отладки)
 export const clearFiltersCache = () => {
   filtersCache.clear();
 };
-
-// Экспортируем оригинальную функцию для совместимости
-export { fetchAllCountries };

@@ -359,7 +359,7 @@ type PaginatedEnvelope<T> = {
  * дочитывает их до конца: каталог из 139 квестов уходил семью последовательными
  * запросами (~405 КБ) на каждый экран, которому нужен список. Просим максимум,
  * который разрешает пагинация бэкенда (max_page_size = 100, проверено на проде):
- * каталог схлопывается до двух запросов, города (96 штук) — до одного.
+ * каталог схлопывается до двух запросов.
  */
 const LIST_PAGE_SIZE = 100;
 
@@ -554,11 +554,6 @@ export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBund
 export async function fetchQuestById(id: number): Promise<ApiQuestBundle> {
     const bundle = await apiClient.get<ApiQuestBundle>(`/quests/${id}/`);
     return normalizeQuestBundle(bundle);
-}
-
-/** Получить список городов с квестами */
-export async function fetchQuestCities(): Promise<ApiQuestCity[]> {
-    return fetchAllPages<ApiQuestCity>('/quests/cities/');
 }
 
 // ---- Прогресс ----

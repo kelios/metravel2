@@ -138,11 +138,16 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
   it('строит цель из ссылки манифеста на бакет — без префикса legacy/', () => {
     // Правило `isLegacyUploadKey` из `utils/mediaUrl.ts`: класс `uploads/**`
     // обслуживает `/media-resize/<key>`, а не `/media-resize/legacy/<key>`.
+    //
+    // #1233: цель несёт `f=jpeg` — ровно ту ветку, которой этот класс теперь
+    // спрашивается фронтом (`LEGACY_UPLOAD_TRANSFORM_FORMAT`). Гейт обязан щупать
+    // URL читателя: дефолтная webp-ветка у `uploads/**` отвечает 404 на каждой
+    // ступени, и без `f` гейт валил бы деплой на URL, который никто не запрашивает.
     expect(toUploadsTarget(SITE, `${S3}/uploads/1593619453IMG_6420.JPG`)).toBe(
-      `${SITE}/media-resize/uploads/1593619453IMG_6420.JPG`
+      `${SITE}/media-resize/uploads/1593619453IMG_6420.JPG?f=jpeg`
     )
     expect(toUploadsTarget(SITE, '/uploads/articles/legacy.jpg')).toBe(
-      `${SITE}/media-resize/uploads/articles/legacy.jpg`
+      `${SITE}/media-resize/uploads/articles/legacy.jpg?f=jpeg`
     )
   })
 
@@ -191,7 +196,7 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
     })
 
     expect(targets.find((item: { family: string }) => item.family === 'media-resize-uploads')?.url).toBe(
-      `${SITE}/media-resize/uploads/1591977314DSC_0375.JPG`
+      `${SITE}/media-resize/uploads/1591977314DSC_0375.JPG?f=jpeg`
     )
   })
 

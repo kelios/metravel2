@@ -113,7 +113,6 @@ const mockQuestApis = async (page: Page, questItems: unknown = [questMeta]) => {
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname
 
-    if (pathname.endsWith('/quests/cities/')) return fulfillJson(route, [questCity])
     if (pathname.includes(`/quests/by-quest-id/${QUEST_ID}/`)) return fulfillJson(route, questBundle)
     if (pathname.includes(`/quests/quest${QUEST_ID}/reviews/`)) return fulfillJson(route, [])
     if (pathname.endsWith('/quests/near-location/')) return fulfillJson(route, { results: [], count: 0 })

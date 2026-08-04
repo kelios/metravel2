@@ -21,7 +21,6 @@ jest.mock('@/components/listTravel/hooks/useListTravelData', () => ({
 
 jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(),
-  fetchAllCountries: jest.fn(),
 }));
 
 jest.mock('@/api/travelListQueries', () => ({
@@ -35,9 +34,8 @@ const { useListTravelFilters } = jest.requireMock('@/components/listTravel/hooks
 const { useRandomTravelData } = jest.requireMock('@/components/listTravel/hooks/useListTravelData') as {
   useRandomTravelData: jest.Mock;
 };
-const { fetchAllFiltersOptimized, fetchAllCountries } = jest.requireMock('@/api/miscOptimized') as {
+const { fetchAllFiltersOptimized } = jest.requireMock('@/api/miscOptimized') as {
   fetchAllFiltersOptimized: jest.Mock;
-  fetchAllCountries: jest.Mock;
 };
 const { fetchTravelFacets } = jest.requireMock('@/api/travelListQueries') as {
   fetchTravelFacets: jest.Mock;
@@ -75,11 +73,6 @@ describe('useRouletteLogic', () => {
         { id: 2, name: 'Польша', title_ru: 'Польша' },
       ],
     });
-
-    fetchAllCountries.mockResolvedValue([
-      { country_id: 1, title_ru: 'Беларусь' },
-      { country_id: 2, title_ru: 'Польша' },
-    ]);
 
     fetchTravelFacets.mockReturnValue({
       total: 2,
@@ -125,7 +118,9 @@ describe('useRouletteLogic', () => {
       name: 'Беларусь',
       count: 3,
     });
-    expect(fetchAllCountries).toHaveBeenCalledWith({ signal: undefined, throwOnError: true });
+    // Полный справочник `/countries/` рулетке не нужен: дефолтные страны
+    // берутся из словаря фильтра, который она грузит в любом случае.
+    expect(fetchAllFiltersOptimized).toHaveBeenCalledTimes(1);
   });
 
   it('hides facet options with zero count unless they are selected', () => {

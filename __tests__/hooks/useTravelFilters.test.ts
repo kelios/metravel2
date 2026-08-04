@@ -15,19 +15,17 @@ import {
   normalizeTravelCategories,
   normalizeCategoryTravelAddress,
 } from '@/hooks/useTravelFilters';
-import { fetchAllCountries } from '@/api/misc';
-import { fetchFiltersOptimized } from '@/api/miscOptimized';
+import { fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
 
-jest.mock('@/api/misc', () => ({
-  fetchAllCountries: jest.fn(),
-}));
-
+// Справочники берутся через дедуплицирующий слой miscOptimized: раньше прямые
+// вызовы api/misc из разных путей давали по два одинаковых запроса на страницу.
 jest.mock('@/api/miscOptimized', () => ({
   fetchFiltersOptimized: jest.fn(),
+  fetchAllCountriesOptimized: jest.fn(),
 }));
 
 const mockFetchFilters = fetchFiltersOptimized as jest.Mock;
-const mockFetchAllCountries = fetchAllCountries as jest.Mock;
+const mockFetchAllCountries = fetchAllCountriesOptimized as jest.Mock;
 
 describe('initFilters', () => {
   it('returns stable default dictionaries', () => {

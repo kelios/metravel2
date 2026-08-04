@@ -207,7 +207,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('images.weserv.nl')
     expect(out).not.toContain('metravelprod.s3')
     expect(out).toContain(
-      `src="https://metravel.by/media-resize/uploads/legacy-photo.jpg?w=800${AMP}q=80${AMP}fit=contain"`,
+      `src="https://metravel.by/media-resize/uploads/legacy-photo.jpg?w=800${AMP}q=80${AMP}fit=contain${AMP}f=jpeg"`,
     )
   })
 
@@ -225,7 +225,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
   // #1176: тела легаси-статей ссылаются прямо на бакет. S3 не понимает `w` и отдаёт
   // мастер (замер прода 2026-08-02: 141 354 B против 7 820 B на `?w=320` через свой
   // роут), и пока такие ссылки живы, анонимное чтение бакета нельзя закрыть.
-  it('rewrites a legacy bucket link onto the first-party resize route with the full ladder', () => {
+  it('rewrites a legacy bucket link onto the first-party resize route', () => {
     const html =
       '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1591620319350_original.jpg" /></p>'
     const out = prepareStableContentHtml(html)
@@ -233,16 +233,82 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('metravelprod.s3')
     expect(out).not.toContain('images.weserv.nl')
     expect(out).toContain(
-      `src="https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=800${AMP}q=80${AMP}fit=contain"`,
+      `src="https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=800${AMP}q=80${AMP}fit=contain${AMP}f=jpeg"`,
     )
-    // Лестница та же, что у первопартийных картинок тела: отдельного набора
-    // ширин для легаси не заводим — именно так уже разъезжались копии (#1170).
-    for (const w of [480, 640, 800, 960, 1600]) {
-      expect(out).toContain(
-        `https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=${w}${AMP}q=80${AMP}fit=contain ${w}w`,
+  })
+
+  // #1233: класс `uploads/**` — единственный без durable-производных, и после
+  // fail-closed чтения ВСЯ его лестница отвечала 404 `derivative-missing`: фото
+  // пропали в телах 259 из 397 статей (5 044 кадра, обход прода 2026-08-04).
+  // Замер того же дня, `uploads/1642189225IMG_6113.jpg`: w=320|480|640|800|960|1600
+  // → 404, `w=1920` → 200 `stored-master` 216 786 B на кадре 800×533. Явный
+  // `f=jpeg` уводит роут в `dynamic-transform`: 22 142 B на w=320, 200 и immutable.
+  describe('legacy uploads class asks for the transform branch that actually answers (#1233)', () => {
+    const LEGACY = 'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1642189225IMG_6113.jpg'
+
+    it('asks the transform branch on the single width it emits', () => {
+      const out = prepareStableContentHtml(`<p><img src="${LEGACY}" /></p>`)
+      const src = out.match(/\bsrc="([^"]+)"/i)?.[1] ?? ''
+
+      expect(src).toContain('/media-resize/uploads/')
+      expect(src).toContain(`${AMP}f=jpeg`)
+    })
+
+    // Лестница у класса `uploads/**` бессмысленна: обмер 160 мастеров 2026-08-04 —
+    // 500…1000 px, шире 1024 нет ни одного. Ступени выше 800 отдают либо байт в
+    // байт тот же файл (`upscale: false`, 56% класса), либо те же пиксели на 40–70%
+    // тяжелее (`DSC_0089`: w800 110 500 B против w1600 185 587 B). Поэтому одна
+    // ширина и НИ ОДНОГО `srcset`/`sizes` — браузеру не из чего выбирать.
+    it.each([
+      { label: 'mobile 390', viewport: 390 },
+      { label: 'desktop 1920', viewport: 1920 },
+    ])('emits one fixed width and no ladder on $label', ({ viewport }) => {
+      const originalOs = Platform.OS
+      const originalWidth = window.innerWidth
+      Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+      Object.defineProperty(window, 'innerWidth', { value: viewport, configurable: true })
+      try {
+        const out = prepareStableContentHtml(`<p><img src="${LEGACY}" /></p>`)
+
+        expect(out).not.toContain('srcset=')
+        expect(out).not.toContain('sizes=')
+        expect(Array.from(out.matchAll(/[?&]w=(\d+)/g), (m) => m[1])).toEqual(['800'])
+      } finally {
+        Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+        Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+      }
+    })
+
+    // #1213: префетч обязан попасть в тот же URL, что и `<img>`, иначе слот
+    // качается дважды. Без лестницы это значит «ту же единственную ширину», а не
+    // ступень, выбранную по вьюпорту.
+    it('warms the prefetch on exactly the url the img will request', () => {
+      const prepared = prepareStableContentHtml(`<p><img src="${LEGACY}" /></p>`)
+      const src = (prepared.match(/\bsrc="([^"]+)"/i)?.[1] ?? '').replace(/&amp;/g, '&')
+
+      expect(buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!)).toBe(src)
+    })
+
+    // Карве-аут обязан остаться точечным: у conversion-ключей производные
+    // забэкфиллены и вся лестница отвечает 200 `stored-derivative` (замер
+    // 2026-08-04, `legacy/5741/…-detail_hd.jpg`). Увести и их в jpeg — значит
+    // променять webp-производную на динамическую конвертацию без причины.
+    it('leaves the healthy legacy conversions route on the default webp branch', () => {
+      const out = prepareStableContentHtml(
+        '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/3994/conversions/HcQK-detail_hd.jpg" /></p>',
       )
-    }
-    expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
+
+      expect(out).toContain('/media-resize/legacy/3994/conversions/HcQK-detail_hd.jpg')
+      expect(out).not.toContain('f=jpeg')
+    })
+
+    it('leaves the canonical article-body family route on the default webp branch', () => {
+      const out = prepareStableContentHtml(
+        '<p><img src="https://metravel.by/travel-description-image/540/description/abc.JPG" /></p>',
+      )
+
+      expect(out).not.toContain('f=jpeg')
+    })
   })
 
   it('routes a legacy conversions key through the legacy resize route', () => {
@@ -268,7 +334,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('metravelprod.s3')
     expect(out).not.toContain('X-Amz-')
     expect(out).toContain(
-      `src="https://metravel.by/media-resize/uploads/%D0%98%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%201.jpg?v=42${AMP}w=800${AMP}q=80${AMP}fit=contain"`,
+      `src="https://metravel.by/media-resize/uploads/%D0%98%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%201.jpg?v=42${AMP}w=800${AMP}q=80${AMP}fit=contain${AMP}f=jpeg"`,
     )
   })
 

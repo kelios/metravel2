@@ -168,37 +168,72 @@ describe('QuestsScreen helpers', () => {
       { id: 'teens-vitebsk', cityId: 'vitebsk', tags: ['age-11-14', 'teens'] },
     ];
 
-    it('keeps kids quests in their city and merges duplicate backend city ids', () => {
-      const catalog = buildQuestCityCatalog(
-        [
-          { id: 'minsk-main', name: 'Минск', countryCode: 'BY' },
-          { id: 'minsk-kids', name: ' минск ', countryCode: 'BY' },
-          { id: 'brest', name: 'Брест', countryCode: 'BY' },
-          { id: 'grodno', name: 'Гродно', countryCode: 'BY' },
-          { id: 'vitebsk', name: 'Витебск', countryCode: 'BY' },
-        ],
-        quests.map((quest) => ({
-          ...quest,
-          cityId: quest.id === 'kids-minsk' ? 'minsk-kids' : quest.cityId === 'minsk' ? 'minsk-main' : quest.cityId,
-          cityName: quest.cityId === 'minsk' ? 'Минск' : undefined,
-          countryCode: 'BY',
-        })),
-      );
-
-      expect(catalog.cities.map((city) => city.id)).toEqual(['minsk-main', 'brest', 'grodno', 'vitebsk']);
-      expect(catalog.questsByCityId['minsk-main'].map((quest) => quest.id)).toEqual(['regular-minsk', 'kids-minsk']);
-      expect(catalog.questsByCityId.brest.map((quest) => quest.id)).toEqual(['regular-brest']);
-      expect(catalog.questsByCityId.grodno.map((quest) => quest.id)).toEqual(['kids-grodno']);
-      expect(catalog.questsByCityId.vitebsk.map((quest) => quest.id)).toEqual(['teens-vitebsk']);
-      expect(catalog.canonicalCityIdById['minsk-kids']).toBe('minsk-main');
-    });
-
     it('also collects kids quests for the audience filter', () => {
       expect(filterKidsQuests(quests).map((quest) => quest.id)).toEqual([
         'kids-minsk',
         'kids-grodno',
         'teens-vitebsk',
       ]);
+    });
+  });
+
+  describe('buildQuestCityCatalog', () => {
+    // Каталог городов строится только из меты квестов (#1241): отдельного
+    // запроса `/quests/cities/` на экране больше нет.
+    const catalogQuests = [
+      { id: 'regular-minsk', cityId: 'minsk-main', cityName: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
+      { id: 'kids-minsk', cityId: 'minsk-kids', cityName: ' минск ', countryCode: 'by', lat: 53.92, lng: 27.6 },
+      { id: 'regular-brest', cityId: 'brest', cityName: 'Брест', countryCode: 'BY', lat: 52.09, lng: 23.69 },
+      { id: 'krakow-dragon', cityId: 'krakow', cityName: 'Краков', countryCode: 'PL', lat: 50.06, lng: 19.94 },
+    ];
+
+    it('builds the city list from quest meta and merges duplicate backend city ids', () => {
+      const catalog = buildQuestCityCatalog(catalogQuests);
+
+      expect(catalog.cities.map((city) => city.id)).toEqual(['minsk-main', 'brest', 'krakow']);
+      expect(catalog.cities.map((city) => city.name)).toEqual(['Минск', 'Брест', 'Краков']);
+      expect(catalog.cities.map((city) => city.countryCode)).toEqual(['BY', 'BY', 'PL']);
+      expect(catalog.questsByCityId['minsk-main'].map((quest) => quest.id)).toEqual(['regular-minsk', 'kids-minsk']);
+      expect(catalog.questsByCityId.brest.map((quest) => quest.id)).toEqual(['regular-brest']);
+      expect(catalog.canonicalCityIdById['minsk-kids']).toBe('minsk-main');
+    });
+
+    it('centers a city on its quest starts, including quests of the merged duplicate', () => {
+      const catalog = buildQuestCityCatalog(catalogQuests);
+      const minsk = catalog.cities.find((city) => city.id === 'minsk-main');
+
+      expect(minsk?.lat).toBeCloseTo((53.9 + 53.92) / 2, 6);
+      expect(minsk?.lng).toBeCloseTo((27.56 + 27.6) / 2, 6);
+    });
+
+    it('skips quests without a city and leaves a city without usable coordinates uncentered', () => {
+      const catalog = buildQuestCityCatalog([
+        { id: 'orphan', cityId: null, cityName: 'Нигде', countryCode: 'BY', lat: 53.9, lng: 27.56 },
+        { id: 'no-coords', cityId: 'gomel', cityName: 'Гомель', countryCode: 'BY', lat: NaN, lng: NaN },
+      ]);
+
+      expect(catalog.cities.map((city) => city.id)).toEqual(['gomel']);
+      expect(catalog.cities[0].lat).toBeUndefined();
+      expect(catalog.cities[0].lng).toBeUndefined();
+    });
+
+    it('does not pull the city center to null island when a quest has no coordinates', () => {
+      const catalog = buildQuestCityCatalog([
+        { id: 'with-coords', cityId: 'brest', cityName: 'Брест', countryCode: 'BY', lat: 52.09, lng: 23.69 },
+        { id: 'null-coords', cityId: 'brest', cityName: 'Брест', countryCode: 'BY', lat: null, lng: null },
+      ]);
+
+      expect(catalog.cities[0].lat).toBeCloseTo(52.09, 6);
+      expect(catalog.cities[0].lng).toBeCloseTo(23.69, 6);
+    });
+
+    it('keeps cities with the same name in different countries apart', () => {
+      const catalog = buildQuestCityCatalog([
+        { id: 'q1', cityId: 'brest-by', cityName: 'Брест', countryCode: 'BY', lat: 52.09, lng: 23.69 },
+        { id: 'q2', cityId: 'brest-fr', cityName: 'Брест', countryCode: 'FR', lat: 48.39, lng: -4.48 },
+      ]);
+
+      expect(catalog.cities.map((city) => city.id)).toEqual(['brest-by', 'brest-fr']);
     });
   });
 

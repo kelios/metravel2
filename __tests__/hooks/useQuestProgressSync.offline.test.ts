@@ -25,7 +25,6 @@ const mockUpdateProgress = jest.fn();
 jest.mock('@/api/quests', () => ({
   fetchQuestsList: jest.fn(),
   fetchQuestByQuestId: jest.fn(),
-  fetchQuestCities: jest.fn(),
   fetchQuestReviews: jest.fn(),
   fetchOrCreateProgress: (...args: any[]) => mockFetchOrCreateProgress(...args),
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),

@@ -17,7 +17,6 @@ jest.mock('@/hooks/useNetworkStatus', () => ({
 const mockFetchQuestsList = jest.fn();
 const mockFetchQuestsPreview = jest.fn();
 const mockFetchQuestByQuestId = jest.fn();
-const mockFetchQuestCities = jest.fn();
 const mockFetchOrCreateProgress = jest.fn();
 const mockUpdateProgress = jest.fn();
 const mockDeleteProgress = jest.fn();
@@ -26,7 +25,6 @@ jest.mock('@/api/quests', () => ({
   fetchQuestsList: (...args: any[]) => mockFetchQuestsList(...args),
   fetchQuestsPreview: (...args: any[]) => mockFetchQuestsPreview(...args),
   fetchQuestByQuestId: (...args: any[]) => mockFetchQuestByQuestId(...args),
-  fetchQuestCities: (...args: any[]) => mockFetchQuestCities(...args),
   fetchOrCreateProgress: (...args: any[]) => mockFetchOrCreateProgress(...args),
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),
   deleteProgress: (...args: any[]) => mockDeleteProgress(...args),
@@ -51,17 +49,11 @@ jest.mock('@/utils/questAdapters', () => ({
     city: { name: b.city?.name, lat: 0, lng: 0 },
     coverUrl: b.cover_url ?? undefined,
   }),
-  normalizeQuestCountryCode: (rawCode: unknown, lat: number, lng: number) => {
-    const code = String(rawCode ?? '').trim().toUpperCase();
-    if (code) return code;
-    return lat >= 49 && lat <= 54.84 && lng >= 14.12 && lng <= 24.15 ? 'PL' : undefined;
-  },
 }));
 
 import {
   useQuestsList,
   useQuestsPreview,
-  useQuestCities,
   useQuestBundle,
   useQuestProgressSync,
 } from '@/hooks/useQuestsApi';
@@ -120,7 +112,6 @@ describe('useQuestsApi hooks', () => {
       mockFetchQuestsList,
       mockFetchQuestsPreview,
       mockFetchQuestByQuestId,
-      mockFetchQuestCities,
       mockFetchOrCreateProgress,
       mockUpdateProgress,
       mockDeleteProgress,
@@ -172,17 +163,6 @@ describe('useQuestsApi hooks', () => {
       expect(result.current.error).toBe('Network error');
     });
 
-    it('groups quests by city', async () => {
-      const meta2 = { ...API_META, quest_id: 'minsk-cmok', city_id: 'minsk' };
-      mockFetchQuestsList.mockResolvedValueOnce([API_META, meta2]);
-
-      const { result } = renderHook(() => useQuestsList(), { wrapper });
-
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      expect(result.current.cityQuestsIndex['krakow']).toHaveLength(1);
-      expect(result.current.cityQuestsIndex['minsk']).toHaveLength(1);
-    });
   });
 
   // ===================== useQuestsPreview =====================
@@ -243,45 +223,6 @@ describe('useQuestsApi hooks', () => {
 
       expect(result.current.quests).toEqual([]);
       expect(result.current.error).toBe('Network error');
-    });
-  });
-
-  // ===================== useQuestCities =====================
-
-  describe('useQuestCities', () => {
-    it('loads cities from API', async () => {
-      mockFetchQuestCities.mockResolvedValueOnce([API_CITY]);
-
-      const { result } = renderHook(() => useQuestCities());
-
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      expect(result.current.cities).toHaveLength(1);
-      expect(result.current.cities[0].name).toBe('Kraków');
-      expect(result.current.cities[0].lat).toBeCloseTo(50.06);
-      expect(result.current.cities[0].countryCode).toBe('PL');
-    });
-
-    it('falls back to coords when API returns a blank country code', async () => {
-      mockFetchQuestCities.mockResolvedValueOnce([
-        { ...API_CITY, country_code: '   ' },
-      ]);
-
-      const { result } = renderHook(() => useQuestCities());
-
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      expect(result.current.cities[0].countryCode).toBe('PL');
-    });
-
-    it('handles API failure gracefully (no fallback)', async () => {
-      mockFetchQuestCities.mockRejectedValue(new Error('fail'));
-
-      const { result } = renderHook(() => useQuestCities());
-
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      expect(result.current.cities).toEqual([]);
     });
   });
 

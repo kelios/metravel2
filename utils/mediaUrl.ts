@@ -331,6 +331,25 @@ export const toLegacyResizePath = (url: string): string | null => {
 };
 
 /**
+ * Путь ведёт в legacy-класс `uploads/**` — единственный без durable-производных.
+ *
+ * Отделён от `/media-resize/legacy/` намеренно: у conversion-ключей производные
+ * забэкфиллены и вся лестница отвечает 200 `stored-derivative` (замер прода
+ * 2026-08-04, `legacy/5741/…-detail_hd.jpg`: w=320…1600 → 200). Ломается ровно
+ * класс `uploads/**`, поэтому и обход по нему точечный — см.
+ * `LEGACY_UPLOAD_TRANSFORM_FORMAT`.
+ */
+export const isLegacyUploadResizeUrl = (url: string): boolean => {
+  const value = String(url || '').trim();
+  if (!value) return false;
+  try {
+    return /^\/media-resize\/uploads\//i.test(new URL(value, RELATIVE_URL_BASE).pathname);
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Origin, к которому вызывающий код должен приклеить путь из `toLegacyResizePath`.
  *
  * Ссылку на бакет обслуживает наш backend, поэтому для неё origin берётся из

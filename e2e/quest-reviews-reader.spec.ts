@@ -30,14 +30,6 @@ const MOCK_QUEST = {
   first_completer: null,
 }
 
-const MOCK_CITY = {
-  id: 1,
-  name: 'Минск',
-  lat: '53.9',
-  lng: '27.5667',
-  country_code: 'BY',
-}
-
 const MOCK_REVIEWS = [
   {
     id: 1,
@@ -65,13 +57,6 @@ const mockQuestApis = async (page: Page) => {
   await page.route('**/quests/**', async (route) => {
     const url = new URL(route.request().url())
     const pathname = url.pathname.replace(/\/+$/, '')
-    if (pathname.endsWith('/quests/cities')) {
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([MOCK_CITY]),
-      })
-    }
     if (pathname.endsWith('/quests')) {
       return route.fulfill({
         status: 200,

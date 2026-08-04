@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-import { fetchAllCountries } from '@/api/misc'
+import { fetchAllCountriesOptimized } from '@/api/miscOptimized'
 import { queryKeys } from '@/api/queryKeys'
 import { fetchUserCountryProgress } from '@/api/user'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
@@ -55,7 +55,7 @@ export function useProfileCountriesData({
 
     setCountriesLoading(true)
     setCountriesError(false)
-    fetchAllCountries({ signal: controller.signal, throwOnError: true })
+    fetchAllCountriesOptimized({ signal: controller.signal })
       .then((nextCountries) => {
         if (mounted) setCountries(nextCountries)
       })

@@ -1,13 +1,22 @@
 import { Platform } from 'react-native'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
-import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract'
+import {
+  IMAGE_QUALITY,
+  IMAGE_WIDTHS,
+  LEGACY_UPLOAD_FIXED_WIDTH,
+  LEGACY_UPLOAD_TRANSFORM_FORMAT,
+} from '@/constants/imageContract'
 import { replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText'
 import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
-import { isPrivateOrLocalHost, toLegacyResizePath } from '@/utils/mediaUrl'
+import {
+  isLegacyUploadResizeUrl,
+  isPrivateOrLocalHost,
+  toLegacyResizePath,
+} from '@/utils/mediaUrl'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { translate as i18nT } from '@/i18n'
 
@@ -235,6 +244,14 @@ const buildMetravelSizedUrl = (base: URL, width: number): string => {
   url.searchParams.set('w', String(width))
   url.searchParams.set('q', String(RESPONSIVE_QUALITY))
   url.searchParams.set('fit', 'contain')
+  // #1233: у legacy-класса `uploads/**` durable-производных нет, и после
+  // fail-closed чтения ВСЯ лестница отвечает 404 — фото легаси-статей пропали
+  // (5 044 кадра в 259 из 397 статей, обход 2026-08-04). Явный `f=jpeg` уводит
+  // класс в `dynamic-transform` и возвращает лестницу в строй; обоснование и
+  // условие снятия — у `LEGACY_UPLOAD_TRANSFORM_FORMAT`.
+  if (isLegacyUploadResizeUrl(url.pathname)) {
+    url.searchParams.set('f', LEGACY_UPLOAD_TRANSFORM_FORMAT)
+  }
   return url.toString()
 }
 
@@ -264,6 +281,14 @@ const parseFirstPartyArticleImage = (src: string): URL | null => {
 const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
   const parsed = parseFirstPartyArticleImage(src)
   if (!parsed) return null
+  // #1233: у legacy-класса `uploads/**` лестница бессмысленна — мастера в нём
+  // 500…1000 px, поэтому ступени выше 800 отдают либо тот же файл, либо те же
+  // пиксели на 40–70% тяжелее. Отдаём одну ширину без `srcset`/`sizes`: браузеру
+  // не из чего выбирать, а бэкенду не надо держать шесть производных на ключ.
+  // Числа и вывод для backfill — у `LEGACY_UPLOAD_FIXED_WIDTH`.
+  if (isLegacyUploadResizeUrl(parsed.pathname)) {
+    return { src: buildMetravelSizedUrl(parsed, LEGACY_UPLOAD_FIXED_WIDTH), srcSet: '', sizes: '' }
+  }
   const widths = isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
   const srcSet = widths.map((w) => `${buildMetravelSizedUrl(parsed, w)} ${w}w`).join(', ')
   return {
@@ -283,6 +308,11 @@ const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
 export const buildStableContentPrefetchUrl = (src: string): string => {
   const parsed = parseFirstPartyArticleImage(src)
   if (!parsed) return buildExternalImageUrl(src) ?? src
+  // Класс без лестницы греется своей единственной шириной: иначе префетч и `<img>`
+  // разошлись бы по разным URL и слот скачался бы дважды — ровно баг #1213.
+  if (isLegacyUploadResizeUrl(parsed.pathname)) {
+    return buildMetravelSizedUrl(parsed, LEGACY_UPLOAD_FIXED_WIDTH)
+  }
   return buildMetravelSizedUrl(
     parsed,
     pickArticleBodyWidth(getWebViewportWidth(), getWebDevicePixelRatio()),
@@ -373,7 +403,10 @@ const normalizeImgTags = (html: string): string => {
       .replace(/\bwidth="[^"]*"/i, '')
       .replace(/\bheight="[^"]*"/i, '')
 
-    if (responsive) {
+    // Пустой `srcSet` — это не «забыли построить», а класс без лестницы (#1233).
+    // Атрибуты в таком случае не выводим: `srcset=""` браузер трактует как
+    // кандидатов нет и в части движков гасит `src`.
+    if (responsive?.srcSet) {
       out = out.replace(
         />$/,
         ` srcset="${escapeHtmlAttr(responsive.srcSet)}" sizes="${escapeHtmlAttr(responsive.sizes)}">`
