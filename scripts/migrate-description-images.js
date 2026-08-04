@@ -58,7 +58,11 @@ const LEGACY_IMAGE_EXTENSIONS = new Set(['gif', 'heic', 'heif', 'jpeg', 'jpg', '
  */
 function unwrapWeserv(url) {
   let current = String(url || '').trim()
-  for (let i = 0; i < 8; i += 1) {
+  // Лимит с большим запасом: в статье 175 обёртки вложены ДЕВЯТЬ раз подряд
+  // (src длиной 555 символов), и прежний предел в 8 итераций недокручивал ровно
+  // на один слой — пятнадцать фотографий выглядели как «не наш класс» и молча
+  // проходили мимо миграции. Раскрутка стоит копейки, а недокрут стоит картинки.
+  for (let i = 0; i < 24; i += 1) {
     if (!/images\.weserv\.nl/i.test(current)) return current
     let next = null
     try {
@@ -183,7 +187,20 @@ function readToken() {
   process.exit(1)
 }
 
+/**
+ * GET/PUT к API с теми же повторами, что и у сетевых операций с картинками.
+ *
+ * Это был последний незакрытый путь: повторы стояли на `fetch` (скачивание,
+ * загрузка, пробы), а вызовы через `https.request` — нет. Прогон 2026-08-04 встал
+ * на статье 395 с `read ECONNRESET`, хотя запись прошла и данные оказались целы:
+ * оборвался уже проверочный GET. Идемпотентность соблюдена — повторный PUT
+ * отправляет то же описание, что и первый.
+ */
 function request(method, urlPath, body, token) {
+  return withRetry(`${method} ${urlPath}`, () => requestOnce(method, urlPath, body, token))
+}
+
+function requestOnce(method, urlPath, body, token) {
   const url = urlPath.startsWith('http') ? urlPath : `${API_BASE}${urlPath}`
   return new Promise((resolve, reject) => {
     const payload = body ? Buffer.from(JSON.stringify(body)) : null
@@ -343,6 +360,28 @@ async function withRetry(label, fn, attempts = 5) {
   throw lastError
 }
 
+/**
+ * Настоящий формат кадра — по сигнатуре файла, а не по расширению ключа.
+ *
+ * В legacy-загрузках имя и содержимое расходятся: в статье 382 пять файлов
+ * названы `.png`, а внутри JPEG, и сам роут отдаёт им `content-type: image/png`,
+ * потому что выводит его из расширения. Загрузка с таким именем справедливо
+ * отвергается бэкендом — `Image extension does not match file contents`.
+ * Поэтому имя и MIME для upload'а строим по содержимому.
+ */
+function detectImageFormat(buffer) {
+  const head = buffer.subarray(0, 12)
+  if (head[0] === 0xff && head[1] === 0xd8) return { ext: 'jpg', mime: 'image/jpeg' }
+  if (head.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { ext: 'png', mime: 'image/png' }
+  }
+  if (head.subarray(0, 4).toString('latin1') === 'RIFF' && head.subarray(8, 12).toString('latin1') === 'WEBP') {
+    return { ext: 'webp', mime: 'image/webp' }
+  }
+  if (head.subarray(0, 3).toString('latin1') === 'GIF') return { ext: 'gif', mime: 'image/gif' }
+  return null
+}
+
 /** Мастер legacy-картинки. Только эта ширина у класса и отвечает 200 (#1244). */
 async function downloadMaster(key) {
   const url = `${SITE}/media-resize/${key}?w=1920`
@@ -351,11 +390,15 @@ async function downloadMaster(key) {
     if (!res.ok) throw new Error(`скачивание ${key} → HTTP ${res.status}`)
     const buffer = Buffer.from(await res.arrayBuffer())
     if (!buffer.length) throw new Error(`скачивание ${key} → пустой ответ`)
-    return {
-      buffer,
-      contentType: res.headers.get('content-type') || 'application/octet-stream',
-      filename: decodeURIComponent(key.split('/').pop() || 'photo.jpg'),
-    }
+
+    const rawName = decodeURIComponent(key.split('/').pop() || 'photo.jpg')
+    const detected = detectImageFormat(buffer)
+    if (!detected) throw new Error(`скачивание ${key} → не распознан формат кадра`)
+
+    // Имя приводим к настоящему формату: расширение из ключа врёт достаточно часто,
+    // чтобы на это нельзя было опираться.
+    const filename = `${rawName.replace(/\.[^.]+$/, '')}.${detected.ext}`
+    return { buffer, contentType: detected.mime, filename }
   })
 }
 
@@ -631,6 +674,51 @@ async function runBatch(token, { limit, authorId, pauseMs }) {
   console.log(`📓 Журнал: ${JOURNAL_FILE}`)
 }
 
+/**
+ * Контрольный обход ЖИВОГО API: доказательство, что legacy-ссылок в телах не
+ * осталось.
+ *
+ * Считает не по журналу (он говорит лишь о том, что скрипт думает про свою
+ * работу), а по фактическому ответу прода — иначе приёмка проверяла бы сама себя.
+ */
+async function runAudit(token) {
+  const list = await listAllTravels(token)
+  const dirty = []
+  let images = 0
+
+  for (let i = 0; i < list.length; i += 1) {
+    const { status, text } = await request('GET', `/travels/${list[i].id}/`, null, token)
+    if (status !== 200) {
+      dirty.push({ id: list[i].id, slug: list[i].slug, problem: `HTTP ${status}` })
+      continue
+    }
+    const detail = JSON.parse(text)
+    const description = detail.description || ''
+    images += countImages(description)
+
+    const problems = []
+    const legacy = collectLegacyUploadRefs(description).length
+    if (legacy) problems.push(`legacy uploads: ${legacy}`)
+    const s3 = (description.match(/metravelprod\.s3/gi) || []).length
+    if (s3) problems.push(`прямых S3: ${s3}`)
+    const weserv = (description.match(/images\.weserv\.nl/gi) || []).length
+    if (weserv) problems.push(`weserv: ${weserv}`)
+    const insecure = (description.match(/http:\/\/(?:cdn\.|api\.)?metravel\.by/gi) || []).length
+    if (insecure) problems.push(`http-ссылок: ${insecure}`)
+    if (problems.length) dirty.push({ id: list[i].id, slug: list[i].slug, problem: problems.join(', ') })
+
+    if ((i + 1) % 50 === 0) console.log(`  … ${i + 1}/${list.length}`)
+    await sleep(120)
+  }
+
+  console.log('')
+  console.log(`📊 Обойдено статей: ${list.length}, картинок в телах: ${images}`)
+  console.log(`${dirty.length ? '❌' : '✅'} Статей с остатками legacy: ${dirty.length}`)
+  for (const row of dirty.slice(0, 40)) console.log(`   ${row.id} ${row.slug} — ${row.problem}`)
+  if (dirty.length > 40) console.log(`   … и ещё ${dirty.length - 40}`)
+  return dirty.length === 0
+}
+
 /** Сводка прогресса: сколько сделано, сколько осталось, где застряли. */
 function printStatus() {
   if (!fs.existsSync(INVENTORY_FILE)) throw new Error('нет инвентаря — сначала `--inventory`')
@@ -686,6 +774,12 @@ async function main() {
 
   if (has('--status')) return printStatus()
 
+  if (has('--audit')) {
+    const clean = await runAudit(token)
+    process.exitCode = clean ? 0 : 1
+    return
+  }
+
   if (has('--run')) {
     const limit = valueOf('limit') ? Number(valueOf('limit')) : null
     const authorRaw = valueOf('author')
@@ -719,7 +813,9 @@ async function main() {
   console.log('  --id <id> [--dry-run]              миграция одной статьи')
   console.log('  --restore <id>                     откат статьи из последнего бэкапа')
   console.log('  --run [--limit N] [--author <id>]  пакетный прогон по инвентарю')
-  console.log('       [--pause <ms>]                пауза между статьями, по умолчанию 1500')
+  console.log('       [--pause <ms>]                пауза между статьями, по умолчанию 2500')
+  console.log('  --status                           сводка прогресса по журналу')
+  console.log('  --audit                            контрольный обход прода: остатки legacy')
   process.exit(has('--help') ? 0 : 2)
 }
 
