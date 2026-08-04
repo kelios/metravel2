@@ -198,6 +198,10 @@ scripts/.index-cache/
 /.tmp-article/
 /.tmp-pdf-preview/
 
+# Дампы прод-базы (scripts/backup-prod-db.sh). Внутри персональные данные
+# пользователей, а репозиторий публичный — под git не попадают никогда.
+/backup/
+
 # Отладка native (adb-скриншоты, логи dev-серверов) — не коммитить
 .debug-shots/
 metro-*.log

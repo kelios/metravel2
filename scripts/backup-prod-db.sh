@@ -11,21 +11,26 @@
 #
 # npm-обёртки: `npm run db:backup:prod`, `npm run db:backup:prod:check`.
 #
-# Архив содержит персональные данные пользователей: по умолчанию он падает в
-# ~/metravel-backups (вне репозитория) с правами 600. В git его класть нельзя.
+# Архив лежит в `backup/` в корне репозитория, права 600, хранится только
+# последний: предыдущий удаляется сразу после того, как новый прошёл проверки.
+#
+# Внутри дампа персональные данные пользователей, а репозиторий публичный,
+# поэтому `backup/` закрыт в `.gitignore`, и скрипт отказывается писать в
+# каталог, который git не игнорирует.
 #
 # Документация: docs/DB_BACKUP.md
 
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # shellcheck source=./deploy-target.sh
 source "${SCRIPT_DIR}/deploy-target.sh"
 
 DB_CONTAINER="${DB_CONTAINER:-metravel_metravel-gis_1}"
-BACKUP_DIR="${DB_BACKUP_DIR:-${HOME}/metravel-backups}"
-KEEP="${DB_BACKUP_KEEP:-7}"
+BACKUP_DIR="${DB_BACKUP_DIR:-${REPO_ROOT}/backup}"
+KEEP="${DB_BACKUP_KEEP:-1}"
 MIN_BYTES="${DB_BACKUP_MIN_BYTES:-1048576}"
 CHECK_ONLY=0
 
@@ -36,10 +41,13 @@ usage() {
   cat <<'USAGE'
 Бэкап production-базы metravel.by на локальный диск.
 
-  --out DIR     куда положить архив (по умолчанию ~/metravel-backups)
-  --keep N      сколько последних архивов оставить в каталоге (по умолчанию 7)
+  --out DIR     куда положить архив (по умолчанию backup/ в корне репозитория)
+  --keep N      сколько последних архивов оставить (по умолчанию 1: старый
+                удаляется сразу после того, как новый прошёл проверки)
   --check       не качать дамп: только проверить, что БД на проде отвечает
   -h, --help    эта справка
+
+Каталог с дампами обязан быть в .gitignore — иначе скрипт откажется писать.
 
 Переменные окружения: DB_BACKUP_DIR, DB_BACKUP_KEEP, DB_CONTAINER,
 DB_BACKUP_MIN_BYTES. Адрес сервера берётся из .env.deploy (scripts/deploy-target.sh).
@@ -78,6 +86,17 @@ if [[ "$CHECK_ONLY" -eq 1 ]]; then
 fi
 
 mkdir -p "$BACKUP_DIR"
+
+# Дамп с персональными данными в публичном репозитории — самый дорогой способ
+# ошибиться, а в этом checkout ещё и работает сторонний авто-коммит, который
+# забирает всё дерево. Поэтому пишем только туда, что git заведомо игнорирует.
+if git -C "$BACKUP_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if ! git -C "$BACKUP_DIR" check-ignore -q "$BACKUP_DIR"; then
+    fail "Каталог ${BACKUP_DIR} внутри git-репозитория и НЕ покрыт .gitignore.
+   Дамп содержит персональные данные пользователей, а репозиторий публичный.
+   Добавь путь в .gitignore или укажи другой каталог через --out."
+  fi
+fi
 
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 archive="${BACKUP_DIR}/metravel-postgres-${timestamp}.sql.gz"
