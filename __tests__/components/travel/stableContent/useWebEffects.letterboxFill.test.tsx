@@ -3,6 +3,7 @@
  * @jest-environment-options {"url":"https://metravel.by/"}
  */
 
+import { Platform } from 'react-native';
 import { render, waitFor } from '@testing-library/react';
 
 let StableContent: (typeof import('@/components/travel/StableContent.web'))['default'];
@@ -67,11 +68,19 @@ describe('rich image letterbox fill runtime (#1233)', () => {
 
   // Одиночный абзац-картинка — самый частый случай в теле статьи. groupConsecutiveImages
   // всё равно заворачивает его в `.img-jrow`, поэтому это и есть основной путь заливки.
-  const LONE_PORTRAIT =
-    '<p>Текст до фото.</p><p><img src="https://metravel.by/media-resize/uploads/portrait.jpg" /></p><p>Текст после.</p>';
+  //
+  // `src` у каждого теста свой: цвет кадра кэшируется по URL на уровне модуля, и общий
+  // адрес протащил бы результат первого теста в остальные.
+  const lonePortrait = (name: string) =>
+    `<p>Текст до фото.</p><p><img src="https://metravel.by/media-resize/uploads/${name}.jpg" /></p><p>Текст после.</p>`;
 
   beforeAll(async () => {
     StableContent = (await import('@/components/travel/StableContent.web')).default;
+  });
+
+  beforeEach(() => {
+    // Без этого каждый web-эффект выходит на первой строке и обработчик load не вешается.
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
   });
 
   afterEach(() => {
@@ -93,7 +102,7 @@ describe('rich image letterbox fill runtime (#1233)', () => {
 
   it('paints the frame of a lone body photo, which lives inside a justified row', async () => {
     stubCanvas([10, 20, 30, 255]);
-    const { img } = await renderAndLoadImage(LONE_PORTRAIT);
+    const { img } = await renderAndLoadImage(lonePortrait('row-cell'));
 
     expect(img.closest('.img-jrow')).toBeTruthy();
     const frame = img.closest('.rich-image-frame') as HTMLElement;
@@ -103,7 +112,7 @@ describe('rich image letterbox fill runtime (#1233)', () => {
 
   it('leaves the frame on the neutral surface when the canvas is tainted', async () => {
     stubCanvas(new DOMException('Tainted canvas', 'SecurityError'));
-    const { img } = await renderAndLoadImage(LONE_PORTRAIT);
+    const { img } = await renderAndLoadImage(lonePortrait('tainted'));
 
     const frame = img.closest('.rich-image-frame') as HTMLElement;
     expect(frame.style.getPropertyValue('--travel-rich-image-fill')).toBe('');
@@ -113,7 +122,7 @@ describe('rich image letterbox fill runtime (#1233)', () => {
   // чёрные поля под прозрачный PNG нельзя.
   it('does not treat a fully transparent frame as black', async () => {
     stubCanvas([0, 0, 0, 0]);
-    const { img } = await renderAndLoadImage(LONE_PORTRAIT);
+    const { img } = await renderAndLoadImage(lonePortrait('transparent'));
 
     const frame = img.closest('.rich-image-frame') as HTMLElement;
     expect(frame.style.getPropertyValue('--travel-rich-image-fill')).toBe('');
