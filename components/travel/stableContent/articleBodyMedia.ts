@@ -12,12 +12,29 @@
 
 import { familyDerivativeCeiling } from '@/constants/imageContract'
 import type { TravelMediaGroup } from '@/types/types'
-import { familyRouteOfMediaUrl, isLegacyStorageBucketUrl } from '@/utils/mediaUrl'
+import {
+  familyRouteOfMediaUrl,
+  isLegacyStorageBucketUrl,
+  toLegacyResizePath,
+} from '@/utils/mediaUrl'
 import { resolveManifestImageRungs, type ManifestImageRung } from '@/utils/travelMediaVariants'
 import { unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
-/** Ключ изображения → его ступени из манифеста, по возрастанию ширины. */
-export type ArticleBodyMediaIndex = ReadonlyMap<string, readonly ManifestImageRung[]>
+export type ArticleBodyMediaEntry = {
+  /** Ступени манифеста по возрастанию ширины, адреса уже резолвнуты. */
+  rungs: readonly ManifestImageRung[]
+  /**
+   * Верхняя реальная производная семейства ИСХОДНОГО адреса, или `null`.
+   *
+   * Считается при сборке индекса, а не при выдаче: к моменту выдачи адрес может
+   * быть уже переписан на `/media-resize/legacy/…`, где первый сегмент ключа — id
+   * записи, а не роут, и семейство по нему не определяется (#1233).
+   */
+  ceiling: number | null
+}
+
+/** Ключ изображения → что манифест обещает по этому ключу. */
+export type ArticleBodyMediaIndex = ReadonlyMap<string, ArticleBodyMediaEntry>
 
 /** База для разбора корне-относительных адресов; в результат не попадает. */
 const RELATIVE_URL_BASE = 'https://metravel.by'
@@ -33,25 +50,36 @@ const RELATIVE_URL_BASE = 'https://metravel.by'
  * Вторым ключом идёт раскодированный путь: редактор кладёт в HTML
  * процент-кодированное имя (`%D0%98…jpg`), а сериализатор может отдать то же имя
  * как есть, и тогда строки не совпадут при одном и том же файле.
+ *
+ * Третьим — путь resize-роута. Один и тот же conversion-ключ адресуется двумя
+ * способами: разметка тела ссылается на family-роут (`/address-image/…`,
+ * `/gallery/…`), а `resolveMediaVariantUrl` переводит адреса манифеста на
+ * `/media-resize/legacy/…` (#1195). Без общего ключа обе стороны индекса просто
+ * не встретились бы, и манифест не применился бы ни к одной такой картинке.
  */
 const mediaKeysOfUrl = (value: string): string[] => {
   const raw = String(value || '').trim()
   if (!raw || /^(data:|blob:)/i.test(raw)) return []
 
+  const push = (keys: string[], pathname: string) => {
+    if (!pathname || pathname === '/' || keys.includes(pathname)) return
+    keys.push(pathname)
+    try {
+      const decodedPath = decodeURIComponent(pathname)
+      if (decodedPath !== pathname && !keys.includes(decodedPath)) keys.push(decodedPath)
+    } catch {
+      // Битая процент-последовательность: остаётся сырой путь.
+    }
+  }
+
   try {
     const decoded = raw.replace(/&amp;/gi, '&')
     const unwrapped = unwrapWeservImageUrl(decoded)
     const absolute = unwrapped.startsWith('//') ? `https:${unwrapped}` : unwrapped
-    const { pathname } = new URL(absolute, RELATIVE_URL_BASE)
-    if (!pathname || pathname === '/') return []
 
-    const keys = [pathname]
-    try {
-      const decodedPath = decodeURIComponent(pathname)
-      if (decodedPath !== pathname) keys.push(decodedPath)
-    } catch {
-      // Битая процент-последовательность: остаётся сырой путь.
-    }
+    const keys: string[] = []
+    push(keys, new URL(absolute, RELATIVE_URL_BASE).pathname)
+    push(keys, String(toLegacyResizePath(absolute) || '').split('?')[0])
     return keys
   } catch {
     return []
@@ -73,12 +101,23 @@ export const buildArticleBodyMediaIndex = (
   const gallery = group?.gallery
   if (!gallery?.length) return null
 
-  const index = new Map<string, readonly ManifestImageRung[]>()
-  for (const entry of gallery) {
-    const rungs = resolveManifestImageRungs(entry).filter((rung) => !isLegacyStorageBucketUrl(rung.url))
+  const index = new Map<string, ArticleBodyMediaEntry>()
+  for (const item of gallery) {
+    const rungs = resolveManifestImageRungs(item).filter((rung) => !isLegacyStorageBucketUrl(rung.url))
     if (!rungs.length) continue
-    for (const key of mediaKeysOfUrl(rungs[0].url)) {
-      if (!index.has(key)) index.set(key, rungs)
+
+    // Ключи считаем от НЕПЕРЕПИСАННОГО адреса манифеста: у него ещё виден
+    // family-роут, из которого берётся и потолок семейства, и второй алиас.
+    const originalUrl = String(item?.src || '').trim() || rungs[0].url
+    const keys = mediaKeysOfUrl(originalUrl)
+    if (!keys.length) continue
+
+    const entry: ArticleBodyMediaEntry = {
+      rungs,
+      ceiling: familyDerivativeCeiling(familyRouteOfMediaUrl(keys[0])),
+    }
+    for (const key of [...keys, ...mediaKeysOfUrl(rungs[0].url)]) {
+      if (!index.has(key)) index.set(key, entry)
     }
   }
 
@@ -123,17 +162,18 @@ export const resolveArticleBodyRungs = (
 ): readonly ManifestImageRung[] | null => {
   if (!index?.size) return null
 
-  const entry = mediaKeysOfUrl(src).reduce<readonly ManifestImageRung[] | undefined>(
+  const entry = mediaKeysOfUrl(src).reduce<ArticleBodyMediaEntry | undefined>(
     (found, key) => found ?? index.get(key),
     undefined,
   )
-  if (!entry?.length) return null
+  if (!entry?.rungs.length) return null
 
-  const ceiling = familyDerivativeCeiling(familyRouteOfMediaUrl(src))
-  const withinFamily = ceiling ? entry.filter((rung) => rung.width <= ceiling) : entry
+  const withinFamily = entry.ceiling
+    ? entry.rungs.filter((rung) => rung.width <= entry.ceiling!)
+    : entry.rungs
   // Семейство целиком ниже самой мелкой ступени манифеста — берём её одну, иначе
   // кандидатов не осталось бы вовсе.
-  const available = withinFamily.length ? withinFamily : [entry[0]]
+  const available = withinFamily.length ? withinFamily : [entry.rungs[0]]
 
   const chosen = new Map<number, ManifestImageRung>()
   for (const slotWidth of slotWidths) {
