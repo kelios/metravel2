@@ -9,7 +9,12 @@
  */
 import { IMAGE_STORAGE_POLICY_V1 } from '@/constants/imageContract';
 
-const { WIDTHS_BY_FAMILY, widthsFor, DEFAULT_WIDTHS } = require('@/scripts/post-deploy-media-check');
+const {
+  WIDTHS_BY_FAMILY,
+  widthsFor,
+  DEFAULT_WIDTHS,
+  MASTER_DERIVATIVE_BY_FAMILY,
+} = require('@/scripts/post-deploy-media-check');
 
 type Profile = { routes: readonly string[]; derivatives: readonly { width: number }[] };
 
@@ -65,6 +70,25 @@ describe('пост-деплой медиа-гейт: ступени сверен
     }
   });
 
+  // Отдельная таблица #1215: ширина мастера, которая обязана обслуживаться
+  // производной. Она — тоже копия контракта и разъезжается так же молча.
+  it.each([...MASTER_DERIVATIVE_BY_FAMILY.keys()] as string[])(
+    '%s: заявленная ширина мастера совпадает с профилем контракта',
+    (family) => {
+      const entry = profileForRoute(family);
+      expect(entry).toBeDefined();
+      expect(MASTER_DERIVATIVE_BY_FAMILY.get(family).width).toBe((entry![1] as any).master.width);
+    },
+  );
+
+  it('ширина мастера не дублирует производные ступени того же семейства', () => {
+    for (const [family, rule] of MASTER_DERIVATIVE_BY_FAMILY as Map<string, { width: number }>) {
+      const { small, large } = widthsFor(family);
+      expect(rule.width).toBeGreaterThan(large);
+      expect(rule.width).not.toBe(small);
+    }
+  });
+
   it('неизвестное семейство получает ступени по умолчанию, а не падает', () => {
     expect(widthsFor('unknown-family')).toEqual(DEFAULT_WIDTHS);
   });
@@ -75,6 +99,7 @@ describe('пост-деплой медиа-гейт: ступени сверен
     for (const family of [
       'travel-image',
       'gallery',
+      'travel-description-image',
       'address-image',
       'quest-cover',
       'media-resize-legacy',

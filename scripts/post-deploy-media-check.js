@@ -72,6 +72,60 @@ const WIDTHS_BY_FAMILY = new Map([
 /** Ступени по умолчанию — для семейства, которого ещё нет в таблице. */
 const DEFAULT_WIDTHS = { small: 96, large: 800 }
 
+/**
+ * Семейства, у которых ширина мастера обязана обслуживаться ПРОИЗВОДНОЙ (#1215).
+ *
+ * Таблица выше меряет только производные ступени и мастер намеренно не трогает —
+ * иначе `no-store` мастера даёт ложную ошибку. Но именно из-за этого гейт был
+ * слеп к дефекту #1215: `travel-description-image` на `w=1920` отдаёт мастер с
+ * `no-store`, фото тела статьи качается дважды на desktop @2x, а прогон гейта
+ * при этом зелёный — 6 семейств, 0 ошибок. Проверка ширины мастера закрывает
+ * ровно эту дыру.
+ *
+ * `pendingTicket` — протокол решения, а не выключатель: пока дефект открыт,
+ * несоответствие понижено до предупреждения (иначе каждый деплой фронта краснел
+ * бы из-за бэкендовой работы), но оно ВИДНО в отчёте. Когда прод начнёт отдавать
+ * производную, гейт сам скажет снять пометку и станет строгим — так регресс
+ * после починки уже не пройдёт молча.
+ */
+const MASTER_DERIVATIVE_BY_FAMILY = new Map([
+  ['travel-description-image', { width: 1920, pendingTicket: '#1215' }],
+])
+
+/**
+ * Семейства, ключи которых по контракту хранения обязаны быть `.webp` (#1251).
+ *
+ * 50 ключей `gallery`/`description` физически были WebP, но сохранили
+ * историческое имя `....JPG`, и мастер по ним отдавался как `image/jpeg`:
+ * Content-Type выводится из расширения ключа. Штатный `renormalize_image_sources`
+ * такие ключи пропускает совершенно правильно — формат уже целевой, —
+ * поэтому повторное появление такого ключа (новая заливка, откат, ручная правка)
+ * ловить больше нечем. Legacy-роуты (`media-resize-*`, `uploads/**`) сюда не
+ * входят: там исторические расширения — норма by design.
+ */
+const WEBP_ONLY_KEY_FAMILIES = new Set(['gallery', 'travel-description-image'])
+
+/** Классы ключей, где историческое расширение — норма by design, а не дефект. */
+const LEGACY_KEY_SEGMENT = /(^|\/)(conversions|uploads)\//i
+
+/**
+ * Расширение ключа цели, если оно нарушает контракт `.webp`; иначе null.
+ * Работает по URL цели: сеть для этого не нужна, а протухнуть нечему.
+ */
+function legacyKeyExtension(target) {
+  if (!WEBP_ONLY_KEY_FAMILIES.has(String(target?.family || '').toLowerCase())) return null
+  let pathname
+  try {
+    pathname = decodeURIComponent(new URL(String(target.url)).pathname)
+  } catch {
+    return null
+  }
+  const key = pathname.replace(/^\/[^/]+\//, '')
+  if (!key || LEGACY_KEY_SEGMENT.test(key)) return null
+  const extension = String(key.split('/').pop().split('.').pop() || '').toLowerCase()
+  return extension && extension !== 'webp' ? extension : null
+}
+
 function widthsFor(family) {
   return WIDTHS_BY_FAMILY.get(family) || DEFAULT_WIDTHS
 }
@@ -386,6 +440,17 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails
     .find(Boolean)
   push('media-resize-uploads', uploadsUrl, 'media.article_body опубликованных travel')
 
+  // Фото тела статей нового пайплайна. Ступени для семейства в таблице были с
+  // самого начала, но цель не строилась ни разу: `article_body` разбирался
+  // только ради legacy-ключа `uploads/**`. Из-за этого гейт физически не мог
+  // увидеть #1215 — сколько бы ширин ни проверял, семейства не было в наборе.
+  const descriptionUrl = details
+    .flatMap(collectArticleBodyMediaUrls)
+    .filter((candidate) => /\/travel-description-image\//i.test(String(candidate)))
+    .map((candidate) => toTargetUrl(site, candidate))
+    .find(Boolean)
+  push('travel-description-image', descriptionUrl, 'media.article_body опубликованных travel')
+
   return targets
 }
 
@@ -411,6 +476,17 @@ function validateTarget(target, probes, options = {}) {
       code,
       message: downgraded ? `${message} (известная поломка: ${knownBroken})` : message,
     })
+  }
+
+  // Расширение ключа (#1251) — чистая строковая проверка, без сети. Ступени
+  // ширины её не поймают: производные всегда `.webp`, а разъезжается имя мастера.
+  const legacyExtension = legacyKeyExtension(target)
+  if (legacyExtension) {
+    add(
+      'media.key_extension',
+      `ключ хранится как ".${legacyExtension}", а не ".webp" — Content-Type мастера берётся из расширения, ` +
+        `и WebP внутри отдаётся как image/${legacyExtension === 'png' ? 'png' : 'jpeg'} (#1251)`
+    )
   }
 
   for (const probe of probes) {
@@ -459,6 +535,38 @@ function validateTarget(target, probes, options = {}) {
         add(
           'media.cache_control.missing',
           `${scope} w=${width}: cache-control="${cacheControl || '(нет)'}" — ожидались public и max-age`
+        )
+      }
+    }
+
+    // Ширина мастера (#1215): она обязана обслуживаться производной, иначе
+    // desktop @2x берёт из srcset именно её и качает фото дважды — мастер
+    // раздаётся `no-store`. Проверяется только у семейств, где производная в
+    // эту ширину обещана; для остальных пробы `master` просто нет.
+    const masterRule = MASTER_DERIVATIVE_BY_FAMILY.get(target.family)
+    if (masterRule && probe.master) {
+      const width = masterRule.width
+      const transform = getHeaderValue(probe.master.headers, 'x-metravel-image-transform')
+      const cacheControl = getHeaderValue(probe.master.headers, 'cache-control')
+      const servedAsMaster = /stored-master/i.test(transform) || /no-store/i.test(cacheControl)
+      const pending = masterRule.pendingTicket
+
+      if (servedAsMaster) {
+        add(
+          'media.master_width_not_derivative',
+          `${scope} w=${width}: transform="${transform || '(нет)'}", cache-control="${cacheControl || '(нет)'}" — ` +
+            `ширина мастера отдаётся мастером, фото тела статьи качается дважды на desktop @2x` +
+            (pending ? ` (ожидаемо до закрытия ${pending})` : ''),
+          pending ? 'warning' : 'error'
+        )
+      } else if (pending && probe.master.status === 200) {
+        // Дефект починен, а пометка осталась: без этого напоминания гейт
+        // навсегда остался бы мягким к этой ширине и пропустил бы регресс.
+        add(
+          'media.master_width_pending_stale',
+          `${scope} w=${width}: производная появилась (transform="${transform}") — ${pending} закрыт, ` +
+            'снимите pendingTicket в MASTER_DERIVATIVE_BY_FAMILY, чтобы проверка снова стала строгой',
+          'warning'
         )
       }
     }
@@ -637,11 +745,13 @@ async function main() {
       const probes = []
       for (const variant of ACCEPT_VARIANTS) {
         const { small: smallWidth, large: largeWidth } = widthsFor(target.family)
-        const [small, large] = await Promise.all([
+        const masterRule = MASTER_DERIVATIVE_BY_FAMILY.get(target.family)
+        const [small, large, master] = await Promise.all([
           fetchMedia(withWidth(target.url, smallWidth), variant.header),
           fetchMedia(withWidth(target.url, largeWidth), variant.header),
+          masterRule ? fetchMedia(withWidth(target.url, masterRule.width), variant.header) : null,
         ])
-        probes.push({ accept: variant.id, small, large })
+        probes.push({ accept: variant.id, small, large, ...(master ? { master } : {}) })
       }
       checked.push(validateTarget(target, probes, { allowKnownBroken: ALLOW_KNOWN_BROKEN }))
     } catch (error) {
@@ -687,7 +797,10 @@ if (typeof module !== 'undefined' && module.exports) {
     BROWSER_IMAGE_ACCEPT,
     DEFAULT_WIDTHS,
     KNOWN_BROKEN_FAMILIES,
+    MASTER_DERIVATIVE_BY_FAMILY,
+    WEBP_ONLY_KEY_FAMILIES,
     WIDTHS_BY_FAMILY,
+    legacyKeyExtension,
     widthsFor,
     collectArticleBodyMediaUrls,
     extractTargetsFromPayloads,

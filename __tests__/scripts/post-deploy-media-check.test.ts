@@ -1,5 +1,7 @@
 const {
   KNOWN_BROKEN_FAMILIES,
+  MASTER_DERIVATIVE_BY_FAMILY,
+  legacyKeyExtension,
   collectArticleBodyMediaUrls,
   extractTargetsFromPayloads,
   toLegacyTarget,
@@ -341,5 +343,122 @@ describe('post-deploy media check: проверки ответа', () => {
 
   it('по умолчанию список известных поломок пуст — гейт строгий ко всем семействам', () => {
     expect(KNOWN_BROKEN_FAMILIES.size).toBe(0)
+  })
+})
+
+// #1215: гейт был зелёным, пока фото тела статьи качалось дважды на desktop @2x —
+// ширину мастера он вообще не спрашивал. Пробы `small`/`large` этого не видят.
+describe('post-deploy media check: ширина мастера обязана быть производной (#1215)', () => {
+  const FAMILY = 'travel-description-image'
+  const descriptionTarget = () => ({
+    family: FAMILY,
+    url: `${SITE}/${FAMILY}/543/description/abc.webp`,
+    source: '/api/travels/',
+  })
+  const withMaster = (master: ProbeOverrides = {}) => [
+    {
+      accept: 'browser',
+      small: response({ bytes: 2582, transform: 'stored-derivative' }),
+      large: response({ bytes: 132344, transform: 'stored-derivative' }),
+      master: response({ bytes: 398362, transform: 'stored-derivative', ...master }),
+    },
+  ]
+
+  it('таблица знает мастерскую ширину articleBody и ждёт по ней производную', () => {
+    expect(MASTER_DERIVATIVE_BY_FAMILY.get(FAMILY)).toMatchObject({ width: 1920 })
+  })
+
+  it('мастер с no-store на ширине мастера — находка, а не тишина', () => {
+    const result = validateTarget(
+      descriptionTarget(),
+      withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
+    )
+
+    const issue = result.issues.find(
+      (item: { code: string }) => item.code === 'media.master_width_not_derivative'
+    )
+    expect(issue).toBeDefined()
+    expect(issue.message).toContain('w=1920')
+  })
+
+  it('пока #1215 открыт — предупреждение, чтобы бэкендовый дефект не валил деплой фронта', () => {
+    const result = validateTarget(
+      descriptionTarget(),
+      withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
+    )
+    const issue = result.issues.find(
+      (item: { code: string }) => item.code === 'media.master_width_not_derivative'
+    )
+    expect(issue.severity).toBe('warning')
+    expect(issue.message).toContain('#1215')
+  })
+
+  it('без pendingTicket та же поломка валит гейт — иначе регресс пройдёт молча', () => {
+    const rule = MASTER_DERIVATIVE_BY_FAMILY.get(FAMILY)
+    MASTER_DERIVATIVE_BY_FAMILY.set(FAMILY, { width: rule.width })
+    try {
+      const result = validateTarget(
+        descriptionTarget(),
+        withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
+      )
+      expect(
+        result.issues.find((item: { code: string }) => item.code === 'media.master_width_not_derivative').severity
+      ).toBe('error')
+    } finally {
+      MASTER_DERIVATIVE_BY_FAMILY.set(FAMILY, rule)
+    }
+  })
+
+  it('починенная ширина мастера напоминает снять pendingTicket, а не молчит', () => {
+    const result = validateTarget(descriptionTarget(), withMaster())
+
+    const issue = result.issues.find(
+      (item: { code: string }) => item.code === 'media.master_width_pending_stale'
+    )
+    expect(issue.severity).toBe('warning')
+    expect(issue.message).toContain('#1215')
+  })
+
+  it('семейства без обещанной производной в ширину мастера эту пробу не получают', () => {
+    const result = validateTarget(target('travel-image'), probes())
+    expect(result.issues).toEqual([])
+  })
+})
+
+// #1251: 50 ключей были физически WebP, но с именем `....JPG` — мастер отдавался
+// как image/jpeg. Ступени ширины этого не видят: производные всегда `.webp`.
+describe('post-deploy media check: ключ обязан быть .webp (#1251)', () => {
+  const keyTarget = (url: string, family = 'gallery') => ({ family, url, source: '/api/travels/' })
+
+  it('ловит legacy-расширение ключа и называет тикет', () => {
+    const result = validateTarget(
+      keyTarget(`${SITE}/gallery/541/gallery/aaf5b8e791894ca2853d74ebe88febcb.JPG`),
+      probes({ transform: 'stored-derivative' }, { transform: 'stored-derivative' })
+    )
+
+    const issue = result.issues.find((item: { code: string }) => item.code === 'media.key_extension')
+    expect(issue.severity).toBe('error')
+    expect(issue.message).toContain('#1251')
+  })
+
+  it('переименованный ключ проходит чисто', () => {
+    expect(
+      legacyKeyExtension(keyTarget(`${SITE}/gallery/541/gallery/aaf5b8e79189.webp`))
+    ).toBeNull()
+  })
+
+  it('legacy-классы не трогаются: там расширение соответствует формату by design', () => {
+    expect(
+      legacyKeyExtension(keyTarget(`${SITE}/travel-image/682/conversions/abc-detail_hd.jpg`, 'travel-image'))
+    ).toBeNull()
+    expect(
+      legacyKeyExtension(keyTarget(`${SITE}/travel-description-image/uploads/2019/06/foto.jpg`, 'travel-description-image'))
+    ).toBeNull()
+  })
+
+  it('описание тела статьи проверяется так же, как галерея', () => {
+    expect(
+      legacyKeyExtension(keyTarget(`${SITE}/travel-description-image/543/description/abc.PNG`, 'travel-description-image'))
+    ).toBe('png')
   })
 })
