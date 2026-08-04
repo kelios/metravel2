@@ -90,6 +90,8 @@
     "stats:health:json": "node scripts/analytics-health-check.js --json",
     "seo:audit": "node scripts/seo-audit.js --user-id 1",
     "seo:edit": "node scripts/seo-edit.js",
+    "seo:404": "node scripts/report-travel-404.js",
+    "seo:404:json": "node scripts/report-travel-404.js --json",
     "fetch:lasy-data": "node scripts/fetch-lasy-wfs-data.js",
     "analyze:bundle": "node scripts/analyze-bundle.js",
     "guard:bundle-budget": "node scripts/guard-bundle-budget.js",
