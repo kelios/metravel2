@@ -25,6 +25,8 @@ const IS_WEB = Platform.OS === 'web';
 const PlaceListCard: React.FC<PlaceListCardProps> = ({
   title,
   imageUrl,
+  placeholderColor,
+  placeholderBlurhash,
   categoryLabel,
   coord,
   badges = [],
@@ -489,6 +491,10 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
         blurBackground: !!imageUrl,
         allowCriticalWebBlur: IS_WEB,
         blurRadius: 16,
+        // #1208: поля вокруг `contain`-снимка заливает dominant_color манифеста.
+        // На native тем же манифестом приходит blurhash — там слой рисует expo-image.
+        placeholderColor,
+        placeholderBlurhash: IS_WEB ? undefined : (placeholderBlurhash ?? undefined),
         loading: eagerImage ? 'eager' : 'lazy',
         priority: eagerImage ? 'high' : 'low',
         // #1221: здесь стоял `optimizeWeb: false` — карточка отдавала в `<img>`

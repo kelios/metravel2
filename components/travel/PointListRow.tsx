@@ -33,6 +33,12 @@ type PointListRowProps = {
   };
   imageUrl?: string;
   index: number;
+  /**
+   * dominant_color/blurhash кадра из `media.address_images`: поля letterbox под
+   * `contain`-снимком заливает цвет, а не пустой фон карточки (#1208).
+   */
+  placeholderBlurhash?: string | null;
+  placeholderColor?: string | null;
   onAddPoint?: () => void;
   onCardPress?: () => void;
   onCopy: (coordStr: string) => void | Promise<void>;
@@ -54,6 +60,8 @@ const PointListRow = React.memo(function PointListRow({
   onCopy,
   onOpenMap,
   onShare,
+  placeholderBlurhash,
+  placeholderColor,
   point,
   styles,
 }: PointListRowProps) {
@@ -93,6 +101,10 @@ const PointListRow = React.memo(function PointListRow({
             blurBackground
             allowCriticalWebBlur
             blurRadius={16}
+            placeholderColor={placeholderColor}
+            placeholderBlurhash={
+              Platform.OS === 'web' ? undefined : (placeholderBlurhash ?? undefined)
+            }
             priority="low"
             loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
             onError={handleImageError}

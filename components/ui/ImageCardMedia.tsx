@@ -983,7 +983,7 @@ type ImageDataPlaceholderProps = {
  * Сплошной цвет читается как второй фон и спорит с поверхностью карточки,
  * поэтому кладём его полупрозрачным: под ним остаётся сама карточка.
  */
-const LETTERBOX_FILL_ALPHA = 0.75;
+export const LETTERBOX_FILL_ALPHA = 0.75;
 
 const withLetterboxAlpha = (hexColor: string): string => {
   const value = hexColor.replace('#', '');

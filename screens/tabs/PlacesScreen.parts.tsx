@@ -259,6 +259,8 @@ export const PlaceCard = React.memo(function PlaceCard({
       <PlaceListCard
         title={cardTitle}
         imageUrl={imageUrl}
+        placeholderColor={place.placeholderColor}
+        placeholderBlurhash={place.placeholderBlurhash}
         categoryLabel={place.category}
         coord={place.coord}
         rating={place.rating}

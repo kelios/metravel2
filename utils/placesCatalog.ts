@@ -1,5 +1,6 @@
-import type { TravelCoords } from '@/types/types'
+import type { TravelCoords, TravelMediaImage } from '@/types/types'
 import { translate as i18nT } from '@/i18n'
+import { getMediaPlaceholderData } from '@/utils/travelMediaVariants'
 
 
 /** Rating for a single external provider (2GIS, TripAdvisor, …). */
@@ -38,6 +39,13 @@ export type CatalogPlace = TravelCoords & {
   searchText: string
   /** Present only when the backend has an external rating for this place. */
   rating: PlaceRating | null
+  /**
+   * Заливка полей letterbox под `contain`-снимком (#1208, docs/RULES.md): каталог
+   * отдаёт манифест в `media.address_images`, откуда берутся `dominant_color` и
+   * `blurhash` (последний нужен только native).
+   */
+  placeholderColor: string | null
+  placeholderBlurhash: string | null
 }
 
 export type CatalogFacet = {
@@ -303,6 +311,13 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
   const landscapeUrl = normalizeImageUrl(item.image?.landscape_url)
   const title = normalizeText(item.title, address || i18nT('map:utils.placesCatalog.mesto_bez_nazvaniya_d8d437b0'))
   const searchText = normalizeText(item.search_text).toLowerCase()
+  // Манифест каталога кладёт кадры места в `media.address_images` (ключ — id
+  // изображения). Карточка показывает один снимок, поэтому берём первую запись.
+  const mediaEntry = Object.values(
+    (item as { media?: { address_images?: Record<string, TravelMediaImage> } }).media
+      ?.address_images ?? {},
+  )[0]
+  const placeholder = getMediaPlaceholderData(mediaEntry)
 
   return {
     id,
@@ -325,6 +340,8 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
     imageUrl: thumbUrl || undefined,
     urlTravel,
     rating: parseRating(item),
+    placeholderColor: placeholder.dominantColor,
+    placeholderBlurhash: placeholder.blurhash,
 
     searchText:
       searchText ||

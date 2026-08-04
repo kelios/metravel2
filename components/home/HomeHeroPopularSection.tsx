@@ -13,6 +13,8 @@ type BookImage = {
   title: string
   subtitle: string
   href?: string
+  /** Заливка полей letterbox под `contain`-кадром (#1208). */
+  dominantColor?: string
 }
 
 type HomeHeroPopularSectionProps = {
@@ -84,6 +86,7 @@ function FeaturedRouteCard({
     >
       <ImageCardMedia
         source={image.source}
+        placeholderColor={image.dominantColor}
         width={featuredCardWidth}
         height={featuredCardHeight}
         borderRadius={0}
@@ -147,6 +150,7 @@ function PopularRouteCard({
     >
       <ImageCardMedia
         source={image.source}
+        placeholderColor={image.dominantColor}
         width={width}
         height={height}
         borderRadius={0}

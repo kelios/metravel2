@@ -20,6 +20,14 @@ export type ActionChip = {
 export type PlaceListCardProps = {
   title: string
   imageUrl?: string | null
+  /**
+   * Поля letterbox под `contain`-снимком заливает `dominant_color` из
+   * медиа-манифеста (owner decision 2026-08-02, #1208 — docs/RULES.md). Без него
+   * карточка с портретным фото оставляет по бокам пустой фон. `blurhash` идёт
+   * тем же манифестом и используется только на native.
+   */
+  placeholderColor?: string | null
+  placeholderBlurhash?: string | null
   categoryLabel?: string | null
   coord?: string | null
   badges?: string[]

@@ -177,6 +177,7 @@ export const TravelPointsBlock: React.FC<{
             baseUrl={travel.url}
             travelName={travel.name}
             onPointCardPress={handlePointCardPress}
+            addressImages={travel.media?.address_images}
           />
         </Suspense>
       </View>

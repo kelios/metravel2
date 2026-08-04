@@ -29,6 +29,8 @@ type BookImage = {
   title: string
   subtitle: string
   href?: string
+  /** Заливка полей letterbox под `contain`-кадром (#1208). */
+  dominantColor?: string
 }
 
 type Styles = any
@@ -237,6 +239,7 @@ function TabletFeaturedRoute({
     >
       <ImageCardMedia
         source={bookImage.source}
+        placeholderColor={bookImage.dominantColor}
         width={width * 0.45}
         height={340}
         borderRadius={0}
@@ -340,6 +343,7 @@ function HeroSlider({
               >
                 <ImageCardMedia
                   source={slide.source}
+                  placeholderColor={slide.dominantColor}
                   recyclingKey={`home-hero-slide-${slideIndex}`}
                   width={sliderMediaWidth}
                   height={sliderHeight}

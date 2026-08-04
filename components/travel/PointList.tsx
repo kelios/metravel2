@@ -7,6 +7,8 @@ import {
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl } from '@/utils/imageOptimization';
 import { isBareMediaEndpointUrl } from '@/utils/mediaUrl';
+import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
+import type { TravelMediaImage } from '@/types/types';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
 import {
@@ -52,6 +54,12 @@ type PointListProps = {
   baseUrl?: string;
   travelName?: string;
   onPointCardPress?: (point: Point) => void;
+  /**
+   * `media.address_images` из payload путешествия: словарь `id точки → манифест`
+   * с `dominant_color`/`blurhash`. Нужен, чтобы поля letterbox под портретным
+   * снимком заливались цветом кадра, а не оставались пустыми (#1208).
+   */
+  addressImages?: Record<string, TravelMediaImage> | null;
 };
 
 /* ---------------- helpers ---------------- */
@@ -169,7 +177,7 @@ const openExternal = async (url: string) => {
 
 /* ---------------- list ---------------- */
 
-const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPointCardPress }) => {
+const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPointCardPress, addressImages }) => {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
   const { width, isPhone, isLargePhone, isTablet } = useResponsive();
@@ -246,6 +254,8 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         openExternal,
       });
 
+      const placeholder = getMediaPlaceholderData(addressImages?.[String(item.id)]);
+
       return (
         <PointListCardRenderer
           colors={colors}
@@ -258,6 +268,8 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           onOpenMap={onOpenMap}
           onPointCardPress={onPointCardPress}
           onShare={onShare}
+          placeholderBlurhash={placeholder.blurhash}
+          placeholderColor={placeholder.dominantColor}
           relatedTravelUrl={baseUrl}
           responsive={responsive}
           styles={styles}
@@ -266,6 +278,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
     },
     [
       addingPointId,
+      addressImages,
       baseUrl,
       colors,
       handleAddPoint,
@@ -334,6 +347,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       {showList && (
         <PointListExpandedContent
           addingPointId={addingPointId}
+          addressImages={addressImages}
           colors={colors}
           getCategoryLabel={normalizeCategoryNameToString}
           getImageUrl={getOptimizedImageUrl}

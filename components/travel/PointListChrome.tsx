@@ -11,6 +11,11 @@ import {
 
 import PointListRow from '@/components/travel/PointListRow';
 import { selectPlural, translate as i18nT } from '@/i18n'
+import {
+  getMediaPlaceholderData,
+  type MediaPlaceholderData,
+} from '@/utils/travelMediaVariants';
+import type { TravelMediaImage } from '@/types/types';
 
 
 type PointLike = {
@@ -226,6 +231,8 @@ type WebPointListRowProps = {
   item: PointLike;
   index: number;
   isAdding: boolean;
+  /** Манифест точки из `media.address_images` — заливка полей letterbox (#1208). */
+  placeholder?: MediaPlaceholderData;
   getCategoryLabel: (raw: PointLike['categoryName'] | null | undefined) => string;
   getImageUrl: (url?: string, updatedAt?: string) => string | undefined;
   onCopy: (coordStr: string) => void | Promise<void>;
@@ -241,6 +248,7 @@ const WebPointListRow = React.memo(function WebPointListRow({
   item,
   index,
   isAdding,
+  placeholder,
   getCategoryLabel,
   getImageUrl,
   onCopy,
@@ -259,6 +267,8 @@ const WebPointListRow = React.memo(function WebPointListRow({
       point={{ id: item.id, address: item.address, coord: item.coord }}
       categoryLabel={categoryLabel || undefined}
       imageUrl={imageUrl}
+      placeholderColor={placeholder?.dominantColor}
+      placeholderBlurhash={placeholder?.blurhash}
       index={index}
       onCopy={onCopy}
       onShare={onShare}
@@ -287,6 +297,7 @@ const RenderItemSlot = React.memo(function RenderItemSlot({
 
 export const PointListExpandedContent = React.memo(function PointListExpandedContent({
   addingPointId,
+  addressImages,
   colors,
   getCategoryLabel,
   getImageUrl,
@@ -306,6 +317,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   styles,
 }: {
   addingPointId: string | null;
+  addressImages?: Record<string, TravelMediaImage> | null;
   colors: {
     primary: string;
     primaryDark: string;
@@ -359,6 +371,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
             item={item}
             index={idx}
             isAdding={addingPointId === item.id}
+            placeholder={getMediaPlaceholderData(addressImages?.[String(item.id)])}
             getCategoryLabel={getCategoryLabel}
             getImageUrl={getImageUrl}
             onCopy={onCopy}

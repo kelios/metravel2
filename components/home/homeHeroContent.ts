@@ -8,6 +8,13 @@ export type BookImage = {
   title: string
   subtitle: string
   href?: string
+  /**
+   * Заливка полей letterbox под `contain`-кадром (#1208, docs/RULES.md). Снимки
+   * героя вертикальные, слот — горизонтальный, поэтому без цвета по бокам
+   * оставался пустой фон. Манифеста у статичных ассетов нет, поэтому средний
+   * цвет кадра посчитан один раз и зафиксирован здесь.
+   */
+  dominantColor?: string
 }
 
 export type MoodCard = {
@@ -59,6 +66,7 @@ export const HOME_HERO_BOOK_LAYOUT_MIN_WIDTH = 1280
 export const BOOK_IMAGES: readonly BookImage[] = [
   {
     source: require('../../assets/images/cover_sorapiso.jpg'),
+    dominantColor: '#687e72',
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_sorapis_dolomity_5feebc2d') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_sorapis_2fd0cc8f') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.pohod_po_dolomitam_ozero_italiya_fa42c033') },
@@ -66,6 +74,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
   },
   {
     source: require('../../assets/images/cover_trecime.jpg'),
+    dominantColor: '#97999c',
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.tre_cime_di_lavaredo_dolomity_0341abf3') },
     title: 'Tre Cime di Lavaredo',
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.krugovoy_marshrut_10_km_gory_italiya_3b3bdd6b') },
@@ -73,6 +82,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
   },
   {
     source: require('../../assets/images/cover_bled.jpg'),
+    dominantColor: '#485c66',
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_sloveniya_a6de1598') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_4b95af32') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.chto_posmotret_za_1_den_ozero_sloveniya_337402ef') },
@@ -82,6 +92,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     source: {
       uri: 'https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp',
     },
+    dominantColor: '#94948a',
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.tropa_vedm_germaniya_08d65a9a') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.tropa_vedm_0ac8dba6') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.hayking_gornyy_marshrut_germaniya_cc4d0990') },
@@ -91,6 +102,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     source: {
       uri: 'https://metravel.by/travel-image/362/conversions/28160874221349509d697c8016c48464.webp',
     },
+    dominantColor: '#74787b',
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.morskoe_oko_v_mae_polsha_e9d180a7') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.morskoe_oko_v_mae_458dda47') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.pohod_ozero_polsha_daa096f6') },

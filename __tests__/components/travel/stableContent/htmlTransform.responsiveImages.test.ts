@@ -177,6 +177,74 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     }
   })
 
+  // #1233: наборы `articleBody*` описывают СЛОТ, а не то, что есть у файла. В телах
+  // статей лежат ключи чужих семейств, и у `address-image` (профиль `routePoint`,
+  // мастер 1200, верхняя производная 960) ступени 1600 нет вовсе. Замер прода
+  // 2026-08-04 на `address-image/15601/conversions/…webp`: `w=800`/`w=960` → 200,
+  // `w=1600` → 400. На desktop @DPR2 браузер выбирал именно 1600 — 13 из 13 таких
+  // ключей в `/travels/zabroshennye-dvortsy-…` не отрисовывались (30 фото в 5 статьях).
+  describe('body ladder is clamped to the family ceiling of the source (#1233)', () => {
+    const withViewport = <T,>(viewport: number, run: () => T): T => {
+      const originalOs = Platform.OS
+      const originalWidth = window.innerWidth
+      Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+      Object.defineProperty(window, 'innerWidth', { value: viewport, configurable: true })
+      try {
+        return run()
+      } finally {
+        Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+        Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+      }
+    }
+
+    const rungs = (html: string): number[] =>
+      Array.from(
+        new Set(Array.from(html.matchAll(/[?&]w=(\d+)/g), (m) => Number(m[1]))),
+      ).sort((a, b) => a - b)
+
+    it('never asks address-image for a width above its 960 derivative', () => {
+      const out = withViewport(1920, () =>
+        prepareStableContentHtml(
+          '<p><img src="https://metravel.by/address-image/15601/conversions/db981e7dac4f45cb840ae19a5722ed22.webp" /></p>',
+        ),
+      )
+
+      expect(out).toContain('/media-resize/legacy/15601/conversions/')
+      expect(rungs(out)).toEqual([480, 640, 800, 960])
+      expect(out).not.toContain('w=1600')
+    })
+
+    it('leaves gallery on the full slot ladder — 1600 is a real derivative there', () => {
+      const out = withViewport(1920, () =>
+        prepareStableContentHtml(
+          '<p><img src="https://metravel.by/gallery/3514/conversions/UEx4Q47U0LQBOYhC7zs2d2Kchu5JHYdogjYDNCC2-detail_hd.jpg" /></p>',
+        ),
+      )
+
+      expect(rungs(out)).toEqual([480, 640, 800, 960, 1600])
+    })
+
+    // #1213: префетч обязан попасть в кандидата из `srcset`. Клэмп по семейству
+    // должен применяться в обоих местах, иначе префетч греет 400.
+    it('keeps the prefetch inside the clamped candidate set', () => {
+      const prepared = withViewport(1920, () =>
+        prepareStableContentHtml(
+          '<p><img src="https://metravel.by/address-image/15601/conversions/db981e7dac4f45cb840ae19a5722ed22.webp" /></p>',
+        ),
+      )
+      const prefetch = withViewport(1920, () =>
+        buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!),
+      )
+      const candidates = (prepared.match(/srcset="([^"]+)"/i)?.[1] ?? '')
+        .split(',')
+        .map((entry) => entry.trim().split(/\s+/)[0]?.replace(/&amp;/g, '&') ?? '')
+        .filter(Boolean)
+
+      expect(candidates).toContain(prefetch)
+      expect(prefetch).not.toContain('w=1600')
+    })
+  })
+
   // #1163: внешняя картинка отдаётся со своего origin, без стороннего ресайзера.
   // Прежний путь через `images.weserv.nl` стоял в критическом пути отрисовки статьи и
   // отваливался под холодным кэшем; нашу лестницу к чужому хосту применить нельзя —

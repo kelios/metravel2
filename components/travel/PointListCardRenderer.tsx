@@ -54,6 +54,9 @@ type PointListCardRendererProps = {
   onOpenMap: (coordStr: string) => void | Promise<void>
   onPointCardPress?: (point: PointLike) => void
   onShare: (coordStr: string) => void | Promise<void>
+  /** dominant_color/blurhash точки из `media.address_images` (#1208). */
+  placeholderBlurhash?: string | null
+  placeholderColor?: string | null
   relatedTravelUrl?: string
   responsive: {
     coordSize: number
@@ -78,6 +81,8 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
   numColumns,
   onCopy,
   onShare,
+  placeholderBlurhash,
+  placeholderColor,
   relatedTravelUrl,
   styles,
 }: PointListCardRendererProps) {
@@ -113,6 +118,8 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
       <PlaceListCard
         title={item.address}
         imageUrl={mediaVisibility.visible ? itemModel.imageUrl : undefined}
+        placeholderColor={placeholderColor}
+        placeholderBlurhash={placeholderBlurhash}
         categoryLabel={itemModel.categoryLabel}
         coord={item.coord}
         onCardPress={itemModel.onCardPress}
