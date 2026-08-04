@@ -15,9 +15,14 @@ import type { TravelMediaGroup } from '@/types/types'
 import {
   familyRouteOfMediaUrl,
   isLegacyStorageBucketUrl,
+  isLegacyUploadResizeUrl,
   toLegacyResizePath,
 } from '@/utils/mediaUrl'
-import { resolveManifestImageRungs, type ManifestImageRung } from '@/utils/travelMediaVariants'
+import {
+  resolveManifestImageRungs,
+  selectWidthCandidates,
+  type ManifestImageRung,
+} from '@/utils/travelMediaVariants'
 import { unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
 export type ArticleBodyMediaEntry = {
@@ -87,13 +92,30 @@ const mediaKeysOfUrl = (value: string): string[] => {
 }
 
 /**
+ * Ступень манифеста, которую нельзя подставлять в разметку.
+ *
+ * Два класса, оба legacy:
+ *
+ * - адрес остался прямой ссылкой в бакет. Бакет не понимает `?w=` и отдаёт
+ *   мастер — 141 354 B против 7 820 B на `?w=320` через свой роут (#1176);
+ * - ключ `uploads/**`, даже уже переписанный на `/media-resize/uploads/…`.
+ *   Durable-производных у класса нет вовсе, и после fail-closed чтения вся его
+ *   лестница отвечает 404: живой ответ даёт только явный `f=jpeg`, который
+ *   ставит клиентская ветка (`LEGACY_UPLOAD_TRANSFORM_FORMAT`, #1233). Манифест
+ *   этого параметра не знает, поэтому его ступени для класса непригодны —
+ *   сегодня он их и не отдаёт (`srcset: null`), но проверять надо по ключу, а не
+ *   по факту пустого поля.
+ */
+const isUnusableManifestRung = (url: string): boolean =>
+  isLegacyStorageBucketUrl(url) || isLegacyUploadResizeUrl(url)
+
+/**
  * Индекс манифеста тела статьи, либо `null` — годных ступеней нет ни у одного кадра.
  *
- * Элементы без `srcset` пропускаются молча, и это штатный случай, а не потеря
- * данных: у legacy-класса `uploads/**` и у внешних картинок готовых производных
- * не существует, манифест отдаёт им один `src` на исходный файл. Для `uploads/**`
- * это ссылка прямо в бакет, который игнорирует `?w=` и отвечает мастером —
- * подставить её в разметку значит вернуть #1176. Такие ключи идут прежним путём.
+ * Кадры, у которых не осталось ни одной пригодной ступени, пропускаются молча, и
+ * это штатный случай: у внешних картинок и legacy-классов готовых производных не
+ * существует, манифест отдаёт им один `src` на исходный файл. Такие ключи идут
+ * прежним клиентским путём.
  */
 export const buildArticleBodyMediaIndex = (
   group: TravelMediaGroup | null | undefined,
@@ -103,7 +125,7 @@ export const buildArticleBodyMediaIndex = (
 
   const index = new Map<string, ArticleBodyMediaEntry>()
   for (const item of gallery) {
-    const rungs = resolveManifestImageRungs(item).filter((rung) => !isLegacyStorageBucketUrl(rung.url))
+    const rungs = resolveManifestImageRungs(item).filter((rung) => !isUnusableManifestRung(rung.url))
     if (!rungs.length) continue
 
     // Ключи считаем от НЕПЕРЕПИСАННОГО адреса манифеста: у него ещё виден
@@ -127,18 +149,6 @@ export const buildArticleBodyMediaIndex = (
   }
 
   return index.size ? index : null
-}
-
-/**
- * Ступень, которую браузер возьмёт для слота шириной `targetWidth`: минимальный
- * кандидат, покрывающий слот, иначе самый широкий. Правило то же, что в HTML-спеке.
- */
-export const pickManifestRung = (
-  rungs: readonly ManifestImageRung[],
-  targetWidth: number,
-): ManifestImageRung | null => {
-  if (!rungs.length) return null
-  return rungs.find((rung) => rung.width >= targetWidth) ?? rungs[rungs.length - 1]
 }
 
 /**
@@ -174,16 +184,12 @@ export const resolveArticleBodyRungs = (
   if (!entry?.rungs.length) return null
 
   const ceiling = entry.ceiling
-  const withinFamily = ceiling ? entry.rungs.filter((rung) => rung.width <= ceiling) : entry.rungs
-  // Семейство целиком ниже самой мелкой ступени манифеста — берём её одну, иначе
-  // кандидатов не осталось бы вовсе.
-  const available = withinFamily.length ? withinFamily : [entry.rungs[0]]
+  const available = ceiling ? entry.rungs.filter((rung) => rung.width <= ceiling) : entry.rungs
+  // Потолок семейства ниже самой мелкой ступени манифеста — подставлять нечего:
+  // любая ступень отсюда вне семейства и после fail-closed чтения ответит 400.
+  // Отдаём ключ клиентскому пути, там ширина спрашивается у самого семейства
+  // (`clampLadderToFamily` возвращает реально существующую производную).
+  if (!available.length) return null
 
-  const chosen = new Map<number, ManifestImageRung>()
-  for (const slotWidth of slotWidths) {
-    const rung = pickManifestRung(available, slotWidth)
-    if (rung) chosen.set(rung.width, rung)
-  }
-
-  return Array.from(chosen.values()).sort((a, b) => a.width - b.width)
+  return selectWidthCandidates(available, slotWidths)
 }

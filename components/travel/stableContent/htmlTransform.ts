@@ -2,7 +2,6 @@ import { Platform } from 'react-native'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
 import {
-  pickManifestRung,
   resolveArticleBodyRungs,
   type ArticleBodyMediaIndex,
 } from '@/components/travel/stableContent/articleBodyMedia'
@@ -24,6 +23,7 @@ import {
   isPrivateOrLocalHost,
   toLegacyResizePath,
 } from '@/utils/mediaUrl'
+import { pickWidthCandidate } from '@/utils/travelMediaVariants'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { translate as i18nT } from '@/i18n'
 
@@ -362,7 +362,7 @@ const buildManifestResponsiveImage = (
   const rungs = resolveArticleBodyRungs(src, media, currentSlotWidths())
   if (!rungs?.length) return null
 
-  const fallbackRung = pickManifestRung(rungs, RESPONSIVE_FALLBACK_WIDTH)
+  const fallbackRung = pickWidthCandidate(rungs, RESPONSIVE_FALLBACK_WIDTH)
   if (!fallbackRung) return null
 
   return {
@@ -419,7 +419,7 @@ export const buildStableContentPrefetchUrl = (
   const rungs = resolveArticleBodyRungs(src, media ?? null, currentSlotWidths())
   if (rungs?.length) {
     const needed = articleBodySlotNeed(getWebViewportWidth(), getWebDevicePixelRatio())
-    const rung = pickManifestRung(rungs, needed ?? RESPONSIVE_FALLBACK_WIDTH)
+    const rung = pickWidthCandidate(rungs, needed ?? RESPONSIVE_FALLBACK_WIDTH)
     if (rung) return rung.url
   }
 

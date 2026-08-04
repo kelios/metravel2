@@ -176,6 +176,47 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
       expect(out).toContain('f=jpeg')
     })
 
+    // Манифест сегодня отдаёт `uploads/**` пустой `srcset`, но отбраковка держится
+    // на КЛЮЧЕ, а не на этом факте: у класса нет durable-производных, и живой ответ
+    // даёт только явный `f=jpeg` от клиентской ветки. Появись у него лестница в
+    // манифесте — её подстановка вернула бы 404 на 5 044 кадрах (#1233).
+    it('ignores manifest rungs for the uploads class even when the backend fills srcset', () => {
+      const resized = 'https://metravel.by/media-resize/uploads/1591620319350_original.jpg'
+      const filled = {
+        ...PROD_ARTICLE_BODY_GROUP.gallery[2],
+        srcset: [320, 480, 640, 800].map((w) => `${resized}?w=${w} ${w}w`).join(', '),
+      }
+      const media = buildArticleBodyMediaIndex({ gallery: [filled] })
+      const out = withWebViewport(1920, 1, () => prepare(ARTICLE_BODY_LEGACY_UPLOAD_URL, media))
+
+      expect(media).toBeNull()
+      expect(out).toContain('f=jpeg')
+      expect(Array.from(out.matchAll(/[?&]w=(\d+)/g), (m) => m[1])).toEqual(['800'])
+    })
+
+    // Ступени манифеста целиком выше потолка семейства: подставлять нечего, любая
+    // из них вне семейства и после fail-closed чтения ответит 400. Клиентская
+    // ветка в такой ситуации спрашивает у семейства его же производную.
+    it('falls back when the family ceiling is below every manifest rung', () => {
+      const avatarKey = 'https://metravel.by/avatar/15601/conversions/abc.webp'
+      const media = buildArticleBodyMediaIndex({
+        gallery: [
+          {
+            ...ARTICLE_BODY_DESCRIPTION_IMAGE,
+            src: `${avatarKey}?w=1600`,
+            srcset: [320, 800, 1600].map((w) => `${avatarKey}?w=${w} ${w}w`).join(', '),
+            srcset_contain: null,
+          },
+        ],
+      })
+      const out = withWebViewport(1920, 1, () => prepare(avatarKey, media))
+
+      expect(out).not.toContain('w=320')
+      expect(out).toContain('q=80')
+      // avatar: производные 96/160 — клиентская ветка берёт верхнюю существующую.
+      expect(Array.from(new Set(Array.from(out.matchAll(/[?&]w=(\d+)/g), (m) => m[1])))).toEqual(['160'])
+    })
+
     it('keeps a key outside the manifest on the client-built ladder', () => {
       const raw = 'https://metravel.by/travel-description-image/540/description/abc.JPG'
       const out = withWebViewport(1920, 1, () => prepare(raw))

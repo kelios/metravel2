@@ -167,15 +167,44 @@ function resolveVariants(entry: TravelMediaImage | null | undefined): ResolvedVa
 // слот 720 схлопывался в 1280 и мобильный hero весил вдвое больше нужного.
 const MAX_VARIANT_OVERSIZE_RATIO = 1.25
 
-function pickVariantForWidth(
-  variants: ResolvedVariant[],
+/**
+ * Кандидат для слота шириной `targetWidth`: минимальный вариант, который его
+ * покрывает, иначе самый широкий. Правило то же, что в HTML-спеке для `srcset`.
+ *
+ * Дженерик и публичный, потому что потребителей манифеста несколько: карточки и
+ * hero идут через `buildResponsiveImagePropsFromMedia`, тело статьи — через
+ * `components/travel/stableContent/articleBodyMedia.ts` (#1256). Две копии этого
+ * правила разошлись бы ровно так же, как расходились копии лестницы.
+ */
+export function pickWidthCandidate<T extends { width: number }>(
+  candidates: readonly T[],
   targetWidth: number,
-): ResolvedVariant | null {
-  if (!variants.length) return null
-  for (const variant of variants) {
-    if (variant.width >= targetWidth) return variant
+): T | null {
+  if (!candidates.length) return null
+  for (const candidate of candidates) {
+    if (candidate.width >= targetWidth) return candidate
   }
-  return variants[variants.length - 1]
+  return candidates[candidates.length - 1]
+}
+
+/**
+ * Набор кандидатов слота: каждая запрошенная ширина ложится на ближайший
+ * подходящий вариант, совпадения схлопываются, порядок — по возрастанию.
+ *
+ * Это и есть «ступени слота» — из них строится `srcset`, и из них же выбирается
+ * прогреваемый префетчем URL. Один набор на обе задачи обязателен: если они
+ * разойдутся, префетч уйдёт на ступень вне `srcset` и слот скачается дважды (#1213).
+ */
+export function selectWidthCandidates<T extends { width: number }>(
+  candidates: readonly T[],
+  requestedWidths: readonly number[],
+): T[] {
+  const chosen = new Map<number, T>()
+  for (const width of requestedWidths) {
+    const candidate = pickWidthCandidate(candidates, width)
+    if (candidate) chosen.set(candidate.width, candidate)
+  }
+  return Array.from(chosen.values()).sort((a, b) => a.width - b.width)
 }
 
 /**
@@ -288,7 +317,7 @@ export function buildResponsiveImagePropsFromMedia(
   if (!variants.length) return null
 
   const maxWidth = options.maxWidth ?? 1920
-  const target = pickVariantForWidth(variants, maxWidth)
+  const target = pickWidthCandidate(variants, maxWidth)
   if (!target) return null
   // Манифест не покрывает этот слот подходящей шириной — пусть вызывающий код
   // соберёт точные URL через прокси, вместо того чтобы тянуть oversize-вариант.
@@ -299,14 +328,8 @@ export function buildResponsiveImagePropsFromMedia(
   const requestedWidths = options.widths?.length
     ? options.widths
     : variants.map((variant) => variant.width)
-  const candidates = new Map<number, string>()
-  for (const width of requestedWidths) {
-    const variant = pickVariantForWidth(variants, width)
-    if (variant) candidates.set(variant.width, variant.url)
-  }
-  const srcSet = Array.from(candidates.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([width, url]) => `${url} ${width}w`)
+  const srcSet = selectWidthCandidates(variants, requestedWidths)
+    .map((variant) => `${variant.url} ${variant.width}w`)
     .join(', ')
 
   return {
