@@ -158,6 +158,59 @@ describe('QuestWizard guest gate', () => {
     expect(onGuestRegister).toHaveBeenCalled()
   })
 
+  // Регрессия: «Вернуться к пройденным точкам» уводило гостя на СЛЕДУЮЩУЮ (ещё не
+  // отвеченную) точку и снимало гейт до конца сессии — гость проходил весь квест
+  // без регистрации (завершения в аналитике без пользователя и прогресса).
+  it('returns the guest to a passed point on dismiss and re-gates the next unanswered one', async () => {
+    const { getByLabelText, getByText, getByTestId, queryByLabelText, queryByTestId } = render(
+      <QuestWizard
+        title="Тест-квест"
+        steps={steps}
+        finale={finale}
+        intro={intro}
+        storageKey="guest_gate_repeat_quest"
+        questId="test-quest"
+        cityId="minsk"
+        guestMode
+        guestFreeSteps={2}
+        onGuestLogin={jest.fn()}
+        onGuestRegister={jest.fn()}
+      />,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      fireEvent.press(getByText('Начать квест'))
+      await Promise.resolve()
+    })
+    await act(async () => {
+      fireEvent.press(getByLabelText('Далее'))
+    })
+    await act(async () => {
+      fireEvent.press(getByLabelText('Далее'))
+    })
+    expect(getByTestId('quest-guest-gate')).toBeTruthy()
+
+    // Закрываем гейт: гость должен оказаться на ПРОЙДЕННОЙ точке 2, а не на точке 3.
+    await act(async () => {
+      fireEvent.press(getByTestId('quest-guest-gate-dismiss'))
+    })
+    expect(queryByTestId('quest-guest-gate')).toBeNull()
+    expect(getByText('Точка 2')).toBeTruthy()
+    // Точка пройдена — поля ответа/кнопки «Далее» на ней нет.
+    expect(queryByLabelText('Далее')).toBeNull()
+
+    // Шаг вперёд по навигации к точке 3 снова упирается в гейт: ответить нельзя.
+    await act(async () => {
+      fireEvent.press(getByText('3'))
+    })
+    expect(getByTestId('quest-guest-gate')).toBeTruthy()
+    expect(queryByLabelText('Далее')).toBeNull()
+  })
+
   it('uses the shared Belkraj excursions section for a native quest', () => {
     mockQuestWizardResponsiveModel = {
       ...mockQuestWizardResponsiveModel,

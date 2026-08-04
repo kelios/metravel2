@@ -174,16 +174,17 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
     const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
-    const [guestGateDismissed, setGuestGateDismissed] = useState(false);
 
-    // Гость прошёл лимит бесплатных точек. Гейт показываем, только когда игрок
-    // упирается в следующую (ещё не отвеченную) точку сверх лимита — уже
-    // пройденные точки остаются доступны (мягкий гейт, не форсит выход).
+    // Гость прошёл лимит бесплатных точек. Гейт показываем каждый раз, когда игрок
+    // упирается в очередную ещё не отвеченную точку сверх лимита: пройденные точки
+    // и карта остаются доступны (мягкий гейт, не форсит выход), но новые ответы —
+    // только после логина. Одноразовый флаг `guestGateDismissed` снимал гейт до
+    // конца сессии, и гость проходил весь квест целиком без регистрации —
+    // отсюда завершения квестов в аналитике без пользователя и прогресса.
     const guestAnsweredCount = completedSteps.length;
     const guestReachedLimit = guestMode && guestAnsweredCount >= guestFreeSteps;
     const currentStepAnswered = !!(allSteps[currentIndex] && answers[allSteps[currentIndex].id]);
-    const guestGateActive =
-        guestReachedLimit && !guestGateDismissed && !showFinaleOnly && !currentStepAnswered;
+    const guestGateActive = guestReachedLimit && !showFinaleOnly && !currentStepAnswered;
 
     const currentStep = allSteps[currentIndex];
 
@@ -312,12 +313,21 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         onGuestGate?.(guestAnsweredCount);
     }, [cityId, guestAnsweredCount, guestGateActive, onGuestGate, questId]);
 
+    // Индекс последней РЕАЛЬНО отвеченной точки. `unlockedIndex` для этого не
+    // годится: он указывает на следующую (ещё не отвеченную) точку, и «вернуться
+    // к пройденным» открывало гостю новую точку вместо старых.
+    const lastAnsweredIndex = useMemo(() => {
+        for (let i = allSteps.length - 1; i >= 0; i -= 1) {
+            const step = allSteps[i];
+            if (step && answers[step.id]) return i;
+        }
+        return 0;
+    }, [allSteps, answers]);
+
     const handleGuestGateDismiss = useCallback(() => {
-        setGuestGateDismissed(true);
         // Возвращаем игрока к последней пройденной точке — пройденное доступно.
-        const lastAnsweredIndex = Math.max(0, unlockedIndex);
         setCurrentIndex(lastAnsweredIndex);
-    }, [setCurrentIndex, unlockedIndex]);
+    }, [lastAnsweredIndex, setCurrentIndex]);
 
     useEffect(() => {
         if (allCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
