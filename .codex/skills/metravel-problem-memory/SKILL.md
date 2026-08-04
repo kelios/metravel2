@@ -19,6 +19,30 @@ Read first:
 
 ## Pre-create workflow
 
+0. Prove the defect exists before touching history. A card filed against a
+   measurement artifact costs more than a missed bug: it misroutes work and then
+   lives in the registry as fact.
+   - Output of your own script, parser, scan, or diff is a hypothesis. Confirm it
+     a second, independent way: an existing project tool, a manual probe, a DB
+     read, the browser.
+   - Build the probe from the artifact as it appears in production — copy the URL,
+     key, or line verbatim. A probe assembled from a value your own code derived
+     confirms your parsing, not the defect (2026-08-04, #1253: a regex truncated
+     `<hash>.JPG.webp` to `<hash>.JPG`, that form returned an honest `404`, and a
+     P1 card was filed for 404 non-existent breakages).
+   - Run a control on a position known to be healthy. A method that flags working
+     things as broken is the thing that is broken.
+   - Explain any disagreement with a standard project check (`sweep`, guards,
+     `npm run seo:404`, post-deploy checks) before filing. An unexplained
+     discrepancy means there is no finding yet.
+   - Separate a real defect from a race or a cache: check `updated_at` of the
+     affected rows, when you measured, and when static was last deployed.
+   - Confirm scale separately from the fact. "Broken" and "broken in N places"
+     are two claims; only the second-source number goes into the card.
+
+   `not-a-defect` is a valid verdict. Return it instead of `create-*` and do not
+   file a card "just in case".
+
 1. Describe the candidate with six facts: symptom, invariant violated, affected
    surface, owning layer, endpoint/files, and target environment.
 2. Search `docs/PROBLEM_MEMORY.md` by problem key, aliases, endpoint, file, and
@@ -28,6 +52,8 @@ Read first:
    sufficient. Do not trust `search` or `limit` unless the response proves they
    were applied; the current API may require a full-list plus detail reads.
 4. Compare root cause and invariant, not only wording:
+   - `not-a-defect`: the finding did not survive step 0 — measurement artifact,
+     race with a parallel content edit, cache, or undeployed static;
    - `reuse`: the same work is already open; append evidence to that task;
    - `reopen`: the same confirmed root cause or previously accepted invariant
      failed again; move the canonical task back to `in_progress` and append a
@@ -84,9 +110,11 @@ Return this before any create/update:
 
 Candidate:
 Problem key:
+Finding verified by:       # two independent methods + control on a healthy case
+Contradicting measurement: # disagreement with a standard check and how resolved
 Historical matches:
 Root-cause comparison:
-Decision: reuse | reopen | create-linked | create-new
+Decision: not-a-defect | reuse | reopen | create-linked | create-new
 Canonical task:
 Required links:
 Registry update:

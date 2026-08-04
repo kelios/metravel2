@@ -16,10 +16,22 @@
 //                 (сломан сам механизм — это важнее любых новых адресов);
 //   candidate   — новый мёртвый адрес, которого нет ни в манифесте, ни в
 //                 известном шуме: кандидат на ручную сверку по смыслу заголовка;
+//   draft       — слаг занят черновиком автора (publish=0): статья не
+//                 опубликована, 404 честный и редиректа не требует;
 //   malformed   — склейки и обрезки ссылок (класс #1185), не редирект;
 //   id-url      — обращения по числовому id вместо слага;
 //   expected    — адреса, которым осознанно оставлен честный 404;
 //   noise       — пробы, e2e-фикстуры и negative controls.
+//
+// Почему черновики отдельной корзиной (#1255)
+// -------------------------------------------
+// Четвёртая волна SEO-SSR-001 — 61 мёртвый адрес — целиком оказалась
+// черновиками автора: `where={"publish":0}` со staff-токеном отдаёт ровно эти
+// слаги. Анонимно их не видно ни в списке, ни в `by-slug` (404), поэтому по
+// одному лишь прод-ответу они неотличимы от потерянных адресов живых статей.
+// Список черновиков тянется живьём, а не хранится в файле: автор заводит новые
+// черновики постоянно, а статический список ещё и маскировал бы будущую
+// регрессию того же слага после публикации.
 //
 // Usage:
 //   node scripts/report-travel-404.js                  # сутки прод-лога, человекочитаемо
@@ -27,6 +39,11 @@
 //   node scripts/report-travel-404.js --json           # для агента/крона
 //   node scripts/report-travel-404.js --log-file dump.log   # офлайн-разбор снятого лога
 //   node scripts/report-travel-404.js --exit-zero      # не сигналить кодом возврата
+//   node scripts/report-travel-404.js --no-drafts      # не спрашивать API о черновиках
+//
+// Токен для проверки черновиков: env METRAVEL_TOKEN, иначе .secrets/mcp_token.json,
+// иначе ~/.metravel_token. Без токена черновики не проверяются — отчёт об этом
+// говорит вслух и оставляет адреса кандидатами (молча прятать их нельзя).
 //
 // Код возврата 1 = есть находки, требующие человека (regression или candidate).
 // Это сигнал для крона; всё остальное — код 0.
@@ -42,6 +59,8 @@ const DEFAULT_CONTAINER = 'metravel_nginx_1'
 const DEFAULT_SINCE = '24h'
 const MANIFEST_FILE = path.join(__dirname, 'seo-redirects.json')
 const KNOWN_FILE = path.join(__dirname, 'seo-404-known.json')
+const SECRETS_TOKEN_FILE = path.join(__dirname, '..', '.secrets', 'mcp_token.json')
+const HOME_TOKEN_FILE = path.join(process.env.HOME || '', '.metravel_token')
 
 // Аргументы контейнера и окна уходят в удалённый shell, поэтому допускаем
 // только заведомо безопасный алфавит вместо экранирования.
@@ -57,12 +76,14 @@ function parseArgs(argv) {
     json: false,
     exitZero: false,
     verify: true,
+    drafts: true,
   }
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--json') args.json = true
     else if (a === '--exit-zero') args.exitZero = true
     else if (a === '--no-verify') args.verify = false
+    else if (a === '--no-drafts') args.drafts = false
     else if (a === '--since') args.since = String(argv[++i] || '')
     else if (a === '--container') args.container = String(argv[++i] || '')
     else if (a === '--origin') args.origin = String(argv[++i] || '').replace(/\/+$/, '')
@@ -364,6 +385,123 @@ async function verifyLive(report, { origin, probe = probeStatus } = {}) {
   return report
 }
 
+/**
+ * Токен для списка черновиков. Порядок тот же, что у seo-edit.js, плюс
+ * .secrets/mcp_token.json — там лежит рабочий staff-токен этой машины.
+ * Значение никогда не печатается: наружу уходит только источник.
+ */
+function readToken({ env = process.env, readFile = (p) => fs.readFileSync(p, 'utf8') } = {}) {
+  const fromEnv = String(env.METRAVEL_TOKEN || '').trim()
+  if (fromEnv) return { token: fromEnv, source: 'env METRAVEL_TOKEN' }
+  try {
+    const parsed = JSON.parse(readFile(SECRETS_TOKEN_FILE))
+    const token = String(parsed.token || '').trim()
+    if (token) return { token, source: '.secrets/mcp_token.json' }
+  } catch {
+    /* нет файла или он не JSON — пробуем следующий источник */
+  }
+  try {
+    const token = String(readFile(HOME_TOKEN_FILE)).trim()
+    if (token) return { token, source: '~/.metravel_token' }
+  } catch {
+    /* источников больше нет */
+  }
+  return null
+}
+
+/** Слаги неопубликованных статей из ответа `/api/travels/?where={"publish":0}`. */
+function collectDraftSlugs(payload) {
+  const items = (payload && (payload.items || payload.results || payload.data)) || []
+  const drafts = new Map()
+  for (const item of Array.isArray(items) ? items : []) {
+    const slug = item && typeof item.slug === 'string' ? item.slug : ''
+    if (slug) drafts.set(slug, { id: item.id })
+  }
+  return drafts
+}
+
+function getJson(url, { token, timeout = 20000 } = {}) {
+  return new Promise((resolve, reject) => {
+    const headers = { 'User-Agent': 'metravel-404-report', Accept: 'application/json' }
+    if (token) headers.Authorization = `Token ${token}`
+    const req = https.request(url, { method: 'GET', timeout, headers }, (res) => {
+      let body = ''
+      res.setEncoding('utf8')
+      res.on('data', (chunk) => (body += chunk))
+      res.on('end', () => {
+        if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`))
+        try {
+          resolve(JSON.parse(body))
+        } catch (e) {
+          reject(new Error(`ответ не JSON: ${e.message}`))
+        }
+      })
+    })
+    req.on('timeout', () => req.destroy(new Error('timeout')))
+    req.on('error', reject)
+    req.end()
+  })
+}
+
+/**
+ * Черновики видны только авторизованному: анонимно список отдаёт лишь
+ * publish=1, а `by-slug` для черновика — тот же 404, что и для несуществующего
+ * адреса. Поэтому единственный способ отличить одно от другого — спросить API
+ * с токеном.
+ */
+async function fetchDrafts({ origin, token, fetchJson = getJson, perPage = 200, maxPages = 20 } = {}) {
+  const drafts = new Map()
+  for (let page = 1; page <= maxPages; page++) {
+    const query = new URLSearchParams({
+      page: String(page),
+      perPage: String(perPage),
+      where: JSON.stringify({ publish: 0 }),
+    })
+    const payload = await fetchJson(`${origin}/api/travels/?${query}`, { token })
+    const pageDrafts = collectDraftSlugs(payload)
+    for (const [slug, meta] of pageDrafts) drafts.set(slug, meta)
+    // Страницу добираем до конца списка: недобрать черновики значит вернуть их
+    // в кандидаты и снова звать человека сверять уже разобранное.
+    const total = Number(payload && (payload.total || payload.count))
+    if (!pageDrafts.size || !Number.isFinite(total) || drafts.size >= total) break
+  }
+  return drafts
+}
+
+/**
+ * Переносит кандидатов, чей слаг занят черновиком, в отдельную корзину.
+ * Кандидат — единственная корзина, которую это касается: regression должен
+ * оставаться громким даже если цель редиректа сейчас черновик.
+ */
+function annotateDrafts(report, drafts) {
+  const candidates = report.buckets.candidate || []
+  if (!candidates.length || !drafts || !drafts.size) return report
+
+  const stillCandidates = []
+  const asDrafts = []
+  for (const row of candidates) {
+    const draft = drafts.get(row.slug)
+    if (!draft) {
+      stillCandidates.push(row)
+      continue
+    }
+    const id = draft.id ? ` (travel id ${draft.id})` : ''
+    asDrafts.push({
+      ...row,
+      note: `черновик автора${id}: publish=0, статья не опубликована — 404 честный, редирект не нужен`,
+    })
+  }
+
+  if (stillCandidates.length) report.buckets.candidate = stillCandidates
+  else delete report.buckets.candidate
+  if (asDrafts.length) report.buckets.draft = [...(report.buckets.draft || []), ...asDrafts]
+
+  const byslug = new Map(asDrafts.map((row) => [row.slug, row]))
+  report.rows = report.rows.map((row) => byslug.get(row.slug) || row)
+  report.needsHuman = (report.buckets.regression || []).length > 0 || (report.buckets.candidate || []).length > 0
+  return report
+}
+
 function readProdLog({ container, since }) {
   if (!SAFE_CONTAINER.test(container)) throw new Error(`Недопустимое имя контейнера: ${container}`)
   if (since && !SAFE_SINCE.test(since)) throw new Error(`Недопустимое значение --since: ${since}`)
@@ -393,6 +531,7 @@ function readProdLog({ container, since }) {
 const BUCKET_VIEW = [
   ['regression', '🚨 Обещанные редиректы, которые не сработали', true],
   ['candidate', '🆕 Новые мёртвые адреса — нужна ручная сверка', true],
+  ['draft', '📝 Слаг занят черновиком автора: 404 — норма (#1255)', false],
   ['stale', '🕒 Сейчас адрес работает: 404 в логе был кратким', false],
   ['malformed', '🧩 Битые и склеенные ссылки (класс #1185)', false],
   ['id-url', '🔢 Обращения по числовому id', false],
@@ -414,6 +553,12 @@ function formatReport(report, ctx) {
     )
   }
   lines.push(`   Всего 404 по /travels/*: ${report.total404} (уникальных адресов: ${report.rows.length})`)
+  if (report.draftCheck && !report.draftCheck.ok) {
+    lines.push(
+      `   ⚠️  Черновики не проверены (${report.draftCheck.reason}): часть кандидатов ниже может быть`,
+      '       неопубликованными статьями. Токен: env METRAVEL_TOKEN / .secrets/mcp_token.json.'
+    )
+  }
 
   for (const [bucket, title, always] of BUCKET_VIEW) {
     const rows = report.buckets[bucket] || []
@@ -464,6 +609,19 @@ async function main() {
 
   const report = buildReport(digest, ctx)
   if (args.verify) await verifyLive(report, { origin: args.origin })
+  if (args.drafts && (report.buckets.candidate || []).length) {
+    const auth = readToken()
+    if (!auth) {
+      report.draftCheck = { ok: false, reason: 'нет токена' }
+    } else {
+      try {
+        annotateDrafts(report, await fetchDrafts({ origin: args.origin, token: auth.token }))
+        report.draftCheck = { ok: true, source: auth.source }
+      } catch (e) {
+        report.draftCheck = { ok: false, reason: `API не ответил: ${e.message}` }
+      }
+    }
+  }
   if (args.json) {
     console.log(JSON.stringify({ source: ctx.source, since: args.since, ...report }, null, 2))
   } else {
@@ -482,6 +640,10 @@ if (require.main === module) {
 module.exports = {
   parseArgs,
   verifyLive,
+  readToken,
+  collectDraftSlugs,
+  fetchDrafts,
+  annotateDrafts,
   extractTravelSlug,
   gluedPrefix,
   buildKnownMatchers,

@@ -8,6 +8,10 @@ const {
   buildReport,
   formatReport,
   verifyLive,
+  readToken,
+  collectDraftSlugs,
+  fetchDrafts,
+  annotateDrafts,
   requestedHours,
   windowHours,
 } = require('@/scripts/report-travel-404')
@@ -183,13 +187,121 @@ describe('report-travel-404 / живая проверка', () => {
   })
 })
 
+// Четвёртая волна #1255: 61 «мёртвый» адрес оказался черновиками автора.
+// Анонимно черновик неотличим от несуществующей статьи — оба дают 404.
+describe('report-travel-404 / черновики', () => {
+  const draftReport = () =>
+    buildReport(
+      digestRawLog(
+        [
+          logLine('GET /travels/boltsano-tirolskii-kharakter HTTP/1.1', 404),
+          logLine('GET /travels/gruziya-peshchera-sataplia HTTP/1.1', 404),
+        ].join('\n')
+      ),
+      ctx()
+    )
+
+  it('собирает слаги неопубликованных статей из ответа API', () => {
+    const drafts = collectDraftSlugs({ items: [{ id: 612, slug: 'boltsano-tirolskii-kharakter' }, { id: 7 }] })
+    expect(drafts.get('boltsano-tirolskii-kharakter')).toEqual({ id: 612 })
+    expect(drafts.size).toBe(1)
+    expect(collectDraftSlugs({}).size).toBe(0)
+  })
+
+  it('спрашивает API о неопубликованных с токеном', async () => {
+    const calls: Array<{ url: string; token?: string }> = []
+    await fetchDrafts({
+      origin: 'https://metravel.by',
+      token: 'secret',
+      fetchJson: async (url: string, opts: { token?: string }) => {
+        calls.push({ url, token: opts.token })
+        return { items: [] }
+      },
+    })
+    expect(calls[0].token).toBe('secret')
+    expect(decodeURIComponent(calls[0].url)).toContain('where={"publish":0}')
+  })
+
+  // Недобранный черновик вернётся в кандидаты и снова позовёт человека сверять
+  // уже разобранное, поэтому список дочитывается до конца.
+  it('дочитывает список черновиков постранично', async () => {
+    const pages = [
+      { total: 3, items: [{ id: 1, slug: 'a' }, { id: 2, slug: 'b' }] },
+      { total: 3, items: [{ id: 3, slug: 'c' }] },
+    ]
+    let calls = 0
+    const drafts = await fetchDrafts({
+      origin: 'https://metravel.by',
+      perPage: 2,
+      fetchJson: async () => pages[calls++],
+    })
+    expect(calls).toBe(2)
+    expect([...drafts.keys()]).toEqual(['a', 'b', 'c'])
+  })
+
+  it('уводит кандидата-черновик из находок и снимает тревогу', () => {
+    const report = annotateDrafts(draftReport(), new Map([['boltsano-tirolskii-kharakter', { id: 612 }]]))
+    expect(report.buckets.draft).toHaveLength(1)
+    expect(report.buckets.draft[0].note).toContain('travel id 612')
+    expect(report.buckets.candidate.map((r: { slug: string }) => r.slug)).toEqual(['gruziya-peshchera-sataplia'])
+    expect(report.needsHuman).toBe(true)
+  })
+
+  it('чистит признак «нужен человек», когда черновиками оказались все кандидаты', () => {
+    const report = annotateDrafts(
+      draftReport(),
+      new Map([
+        ['boltsano-tirolskii-kharakter', { id: 612 }],
+        ['gruziya-peshchera-sataplia', { id: 613 }],
+      ])
+    )
+    expect(report.buckets.candidate).toBeUndefined()
+    expect(report.needsHuman).toBe(false)
+    expect(formatReport(report, ctx())).toContain('Слаг занят черновиком автора')
+  })
+
+  it('не трогает regression: сломанный редирект остаётся громким', () => {
+    const report = buildReport(digestRawLog(logLine('GET /travels/liniya-stalina HTTP/1.1', 404)), ctx())
+    annotateDrafts(report, new Map([['liniya-stalina', { id: 1 }]]))
+    expect(report.buckets.regression).toHaveLength(1)
+    expect(report.needsHuman).toBe(true)
+  })
+
+  it('без токена говорит вслух, а не прячет кандидатов молча', () => {
+    const report = draftReport()
+    report.draftCheck = { ok: false, reason: 'нет токена' }
+    const text = formatReport(report, ctx())
+    expect(text).toContain('Черновики не проверены')
+    expect(report.buckets.candidate).toHaveLength(2)
+  })
+
+  it('берёт токен из env, затем из .secrets, и не находит его на пустой машине', () => {
+    const readFile = (p: string) => {
+      if (p.endsWith('mcp_token.json')) return '{"token":"from-secrets"}'
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    }
+    expect(readToken({ env: { METRAVEL_TOKEN: 'from-env' }, readFile })).toMatchObject({ token: 'from-env' })
+    expect(readToken({ env: {}, readFile })).toMatchObject({ token: 'from-secrets' })
+    expect(
+      readToken({
+        env: {},
+        readFile: () => {
+          throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+        },
+      })
+    ).toBeNull()
+  })
+})
+
 describe('report-travel-404 / аргументы и окно', () => {
   it('разбирает флаги', () => {
-    expect(parseArgs(['node', 's', '--json', '--since', '48h', '--no-verify'])).toMatchObject({
+    expect(parseArgs(['node', 's', '--json', '--since', '48h', '--no-verify', '--no-drafts'])).toMatchObject({
       json: true,
       since: '48h',
       verify: false,
+      drafts: false,
     })
+    expect(parseArgs(['node', 's']).drafts).toBe(true)
     expect(parseArgs(['node', 's', '--all']).since).toBe('')
   })
 
