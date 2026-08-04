@@ -12,7 +12,8 @@
   "noisePatterns": [
     "^__.*__$",
     "^definitely-not-a-real-slug",
-    "^etogo-slug-tochno-net"
+    "^etogo-(slug-)?tochno-net",
+    "^(ne|not)-sushchestvuiushchii-slug"
   ],
   "intentional404": [
     {
