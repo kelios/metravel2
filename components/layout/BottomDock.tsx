@@ -25,6 +25,7 @@ import { hapticSelection } from "@/utils/haptics";
 import { buildArticlesHrefFromSource } from "@/utils/articleNavigation";
 import NavigationIcon from './NavigationIcon';
 import {
+  BOTTOM_DOCK_HEIGHT,
   BOTTOM_DOCK_ITEM_DEFS,
   BOTTOM_DOCK_MORE_MENU_SECTIONS,
   normalizeBottomDockActivePath,
@@ -65,7 +66,7 @@ type DockItem = {
   isMore?: boolean;
 };
 
-const MOBILE_DOCK_HEIGHT_WEB = 56;
+const MOBILE_DOCK_HEIGHT_WEB = BOTTOM_DOCK_HEIGHT;
 const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
 const COMPACT_CONTROL_RADIUS = 8;

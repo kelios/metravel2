@@ -3,6 +3,9 @@ import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { usePathname, useIsFocused } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { BOTTOM_DOCK_HEIGHT } from '@/components/layout/bottomDockModel'
+import { useResponsive } from '@/hooks/useResponsive'
+import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 import { useThemedColors } from '@/hooks/useTheme'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
@@ -25,6 +28,9 @@ interface LegalPageProps {
   intro?: string[]
   sections: LegalSection[]
 }
+
+/** Базовый вертикальный отступ контента; снизу к нему добавляется высота дока. */
+const CONTENT_VERTICAL_PADDING = 24
 
 const hiddenWebHeadingStyle = {
   position: 'absolute' as const,
@@ -56,6 +62,16 @@ export default function LegalPage({
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const { isDesktop } = useResponsive()
+  const insets = useSafeAreaInsetsSafe()
+  // Док перекрывает низ экрана везде, кроме desktop web — условие повторяет
+  // BottomDock. Без компенсации последняя секция уходит под таб-бар (#1277).
+  const hasBottomDock = Platform.OS !== 'web' ? true : !isDesktop
+  const contentBottomPadding = useMemo(() => {
+    if (!hasBottomDock) return CONTENT_VERTICAL_PADDING
+    const safeBottom = Platform.OS === 'web' ? 0 : Math.max(0, insets?.bottom ?? 0)
+    return CONTENT_VERTICAL_PADDING + BOTTOM_DOCK_HEIGHT + safeBottom
+  }, [hasBottomDock, insets?.bottom])
   const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo')
   const canonical = buildCanonicalUrl(pathname || '/')
 
@@ -73,7 +89,7 @@ export default function LegalPage({
       )}
       <ScrollView
         style={webTouchScrollStyle}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: contentBottomPadding }]}
         {...(Platform.OS === 'web' ? ({ tabIndex: 0 } as any) : {})}
       >
         {Platform.OS === 'web' && <h1 style={hiddenWebHeadingStyle as any}>{seoTitle}</h1>}
@@ -112,7 +128,9 @@ const createStyles = (colors: Colors) =>
     },
     container: {
       paddingHorizontal: 16,
-      paddingVertical: 24,
+      // Нижний отступ переопределяется инлайном: под доком его надо увеличить
+      // на высоту таб-бара, иначе хвост контента недостижим (#1277).
+      paddingVertical: CONTENT_VERTICAL_PADDING,
       maxWidth: 900,
       alignSelf: 'center',
     },

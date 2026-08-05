@@ -4,6 +4,14 @@ import type { NavigationIconName } from '@/constants/navigationIcons'
 import { translate as i18nT } from '@/i18n'
 
 
+/**
+ * Высота полосы дока без safe-area (dp). Экраны, чей контент скроллится под доком,
+ * обязаны компенсировать её нижним отступом — иначе хвост контента недостижим
+ * (#1277: последняя секция «Контакты» юридических страниц уходила под таб-бар).
+ * На native к этому значению добавляется `insets.bottom`.
+ */
+export const BOTTOM_DOCK_HEIGHT = 56
+
 export type BottomDockIconName = NavigationIconName
 
 export type BottomDockItemDef = {
