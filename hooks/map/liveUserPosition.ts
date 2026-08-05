@@ -21,11 +21,35 @@ export type LiveUserPosition = {
 }
 
 let currentPosition: LiveUserPosition | null = null
+let lastFixReceivedAt = 0
 const listeners = new Set<(position: LiveUserPosition | null) => void>()
+
+/**
+ * Отмечает, что от геослужбы пришёл очередной фикс — независимо от того, сдвинулся
+ * ли пользователь настолько, чтобы его публиковать.
+ *
+ * Зачем отдельно от `publishLiveUserPosition`: публикация намеренно пропускает
+ * тики ближе `LIVE_LOCATION_MIN_DISTANCE_M`, поэтому у неподвижного пользователя
+ * последняя опубликованная точка не обновляется НИКОГДА. Если мерить свежесть по
+ * ней, «Местоположение давно не обновлялось» загорается у любого, кто просто стоит
+ * на месте. Свежесть — это «когда мы в последний раз получили ответ от геослужбы»,
+ * и считать её нужно по времени приёма, а не по времени фикса из ОС: первый тик
+ * Android нередко отдаёт из кэша со старым timestamp.
+ */
+export function markLiveUserPositionFix(receivedAt: number = Date.now()): void {
+  lastFixReceivedAt = receivedAt
+}
+
+/** Момент приёма последнего фикса (epoch ms) или 0, если фиксов не было. */
+export function getLiveUserPositionFixAt(): number {
+  return lastFixReceivedAt
+}
 
 /** Публикует свежий фикс подписчикам. Не вызывает ни одного React-рендера. */
 export function publishLiveUserPosition(position: LiveUserPosition | null): void {
   currentPosition = position
+  // Доступ к позиции потеряли — свежести больше нет, счётчик обнуляем.
+  if (position === null) lastFixReceivedAt = 0
   listeners.forEach((listener) => {
     try {
       listener(position)
@@ -52,5 +76,6 @@ export function subscribeLiveUserPosition(
 /** Только для тестов: сброс модульного состояния между кейсами. */
 export function resetLiveUserPosition(): void {
   currentPosition = null
+  lastFixReceivedAt = 0
   listeners.clear()
 }

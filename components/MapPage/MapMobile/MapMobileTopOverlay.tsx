@@ -31,7 +31,11 @@ import {
   TRANSPORT_SPEED_KMH,
   type TransportMode,
 } from '../transportModes'
-import { getMapMobileTopOverlayStyles } from './MapMobileTopOverlay.styles'
+import {
+  getMapMobileTopOverlayStyles,
+  MAP_TOOLBAR_TOUCH_PADDING,
+  MAP_TOOLBAR_TOUCH_TARGET_SIZE,
+} from './MapMobileTopOverlay.styles'
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 import { MapMobileTransportPopover } from './MapMobileTransportPopover'
@@ -40,11 +44,13 @@ import { translate as i18nT } from '@/i18n'
 
 type ActivePopover = 'radius' | 'layers' | 'transport' | null
 
-const BUTTON_SIZE = 38
 const ICON_SIZE = 18
 const TOOLBAR_EDGE_OFFSET = 10
-const TOOLBAR_GAP = 6
-const BUTTON_STEP = BUTTON_SIZE + TOOLBAR_GAP
+/**
+ * Шаг между центрами кнопок = ширина тач-таргета: собственного gap у ряда нет,
+ * промежуток между видимыми кругами дают прозрачные поля соседних таргетов.
+ */
+const BUTTON_STEP = MAP_TOOLBAR_TOUCH_TARGET_SIZE
 const RADIUS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 2
 const LAYERS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
 const TRANSPORT_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
@@ -291,11 +297,25 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
   // чтобы кнопки не прилипали к самому краю там, где safe-area == 0.
   const resolvedTopPadding = Math.max(topInset, 8) + 8
+  // Кнопка выше видимого круга на прозрачные поля тач-таргета, поэтому padding
+  // ряда уменьшен ровно на них: сам круг остаётся на прежней высоте.
+  const toolbarPaddingTop = Math.max(0, resolvedTopPadding - MAP_TOOLBAR_TOUCH_PADDING)
+  // Ряд иконок не должен уезжать за правый край: слева от него стоит кнопка
+  // локации, по краям — padding root. Что не помещается — ужимается к видимому
+  // кругу (см. iconButtonTouch), а не обрезается.
+  const toolbarMaxWidth =
+    viewportWidth > 0
+      ? Math.max(
+          MAP_TOOLBAR_TOUCH_TARGET_SIZE,
+          viewportWidth - MAP_TOOLBAR_TOUCH_TARGET_SIZE - TOOLBAR_EDGE_OFFSET,
+        )
+      : undefined
   // Поповеры открываются прямо под своим рядом иконок.
   // Ряд чипов стоит сразу под тулбаром, поэтому ВСЕ поповеры (включая радиус)
   // открываются ниже него — иначе поповер лёг бы прямо на чипы.
   const activeFiltersOffset = showActiveFiltersRow ? MAP_FILTER_CHIPS_STACK_OFFSET : 0
-  const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 6 + activeFiltersOffset
+  const basePopoverTop =
+    toolbarPaddingTop + MAP_TOOLBAR_TOUCH_TARGET_SIZE + 6 + activeFiltersOffset
   const routeStartSelectorOffset = isRouteMode ? ROUTE_START_SELECTOR_OFFSET : 0
   const popoverTop =
     basePopoverTop + routeStartSelectorOffset + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
@@ -335,7 +355,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.root, { paddingTop: resolvedTopPadding }]}
+      style={[styles.root, { paddingTop: toolbarPaddingTop }]}
       testID="map-mobile-top-overlay"
     >
       <Pressable
@@ -343,23 +363,33 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         onPress={onCenterOnUser}
         accessibilityRole="button"
         accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_moe_mestopolozhenie_e7418fde')}
+        // У этой кнопки нет соседей, а её родитель — полноэкранный root, поэтому
+        // hitSlop реально расширяет таргет (в отличие от кнопок внутри ряда).
         hitSlop={6}
-        style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+        style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
       >
-        <Feather name="crosshair" size={ICON_SIZE} color={colors.primaryDark} />
+        <View style={styles.iconButton} pointerEvents="none">
+          <Feather name="crosshair" size={ICON_SIZE} color={colors.primaryDark} />
+        </View>
       </Pressable>
 
       <View style={styles.toolbarStack} pointerEvents="box-none">
-        <View style={styles.toolbar} pointerEvents="auto">
+        {/* Кнопки ряда идут вплотную своими 48dp-таргетами, поэтому hitSlop у них
+            нет: он перекрывал бы соседа, а победил бы более поздний sibling. */}
+        <View
+          style={[styles.toolbar, toolbarMaxWidth ? { maxWidth: toolbarMaxWidth } : null]}
+          pointerEvents="auto"
+        >
           <Pressable
             testID="map-mobile-filters-button"
             onPress={onOpenFilters}
             accessibilityRole="button"
             accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.otkryt_filtry_2e8bb063')}
-            hitSlop={6}
-            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+            style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
           >
-            <Feather name="sliders" size={ICON_SIZE} color={colors.text} />
+            <View style={styles.iconButton} pointerEvents="none">
+              <Feather name="sliders" size={ICON_SIZE} color={colors.text} />
+            </View>
           </Pressable>
 
           {!isRouteMode && (
@@ -369,21 +399,24 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               accessibilityRole="button"
               accessibilityState={{ expanded: activePopover === 'radius' }}
               accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.radius_value1_760a1afd', { value1: radiusBadge ? ` ${radiusBadge}` : '' })}
-              hitSlop={6}
-              style={({ pressed }) => [
-                styles.iconButton,
-                activePopover === 'radius' && styles.iconButtonActive,
-                pressed && styles.iconButtonPressed,
-              ]}
+              style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
             >
-              <Feather name="target" size={ICON_SIZE} color={colors.text} />
-              {!!radiusBadge && (
-                <View style={styles.badge} pointerEvents="none">
-                  <RNText style={styles.badgeText} numberOfLines={1}>
-                    {radiusBadge}
-                  </RNText>
-                </View>
-              )}
+              <View
+                style={[
+                  styles.iconButton,
+                  activePopover === 'radius' && styles.iconButtonActive,
+                ]}
+                pointerEvents="none"
+              >
+                <Feather name="target" size={ICON_SIZE} color={colors.text} />
+                {!!radiusBadge && (
+                  <View style={styles.badge} pointerEvents="none">
+                    <RNText style={styles.badgeText} numberOfLines={1}>
+                      {radiusBadge}
+                    </RNText>
+                  </View>
+                )}
+              </View>
             </Pressable>
           )}
 
@@ -393,14 +426,17 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             accessibilityRole="button"
             accessibilityState={{ expanded: activePopover === 'layers' }}
             accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.sloi_i_nastroyki_karty_603c618f')}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.iconButton,
-              activePopover === 'layers' && styles.iconButtonActive,
-              pressed && styles.iconButtonPressed,
-            ]}
+            style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
           >
-            <Feather name="layers" size={ICON_SIZE} color={colors.text} />
+            <View
+              style={[
+                styles.iconButton,
+                activePopover === 'layers' && styles.iconButtonActive,
+              ]}
+              pointerEvents="none"
+            >
+              <Feather name="layers" size={ICON_SIZE} color={colors.text} />
+            </View>
           </Pressable>
 
           <Pressable
@@ -408,17 +444,18 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             onPress={onOpenList}
             accessibilityRole="button"
             accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_spisok_ryadom_value1_1dee15c6', { value1: listBadge ? ` — ${listBadge}` : '' })}
-            hitSlop={6}
-            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+            style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
           >
-            <Feather name="list" size={ICON_SIZE} color={colors.text} />
-            {!!listBadge && (
-              <View style={styles.badge} pointerEvents="none">
-                <RNText style={styles.badgeText} numberOfLines={1}>
-                  {listBadge}
-                </RNText>
-              </View>
-            )}
+            <View style={styles.iconButton} pointerEvents="none">
+              <Feather name="list" size={ICON_SIZE} color={colors.text} />
+              {!!listBadge && (
+                <View style={styles.badge} pointerEvents="none">
+                  <RNText style={styles.badgeText} numberOfLines={1}>
+                    {listBadge}
+                  </RNText>
+                </View>
+              )}
+            </View>
           </Pressable>
 
           {/* «Показать всё»: сбрасывает фильтры И подгоняет карту под все точки.
@@ -431,14 +468,14 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               onPress={onShowAllPlaces}
               accessibilityRole="button"
               accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_vse_mesta_na_karte_i_sbrosit_filtry_88e4aa0a')}
-              hitSlop={6}
-              style={({ pressed }) => [
-                styles.iconButton,
-                hasActiveFilters && styles.iconButtonActive,
-                pressed && styles.iconButtonPressed,
-              ]}
+              style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
             >
-              <Feather name="maximize" size={ICON_SIZE} color={colors.text} />
+              <View
+                style={[styles.iconButton, hasActiveFilters && styles.iconButtonActive]}
+                pointerEvents="none"
+              >
+                <Feather name="maximize" size={ICON_SIZE} color={colors.text} />
+              </View>
             </Pressable>
           )}
 
@@ -452,16 +489,18 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 testID="map-mobile-route-button"
                 accessibilityRole="text"
                 accessibilityLabel={routeAccessibilityLabel}
-                style={[styles.iconButton, styles.iconButtonActive]}
+                style={styles.iconButtonTouch}
               >
-                <Feather name="navigation" size={ICON_SIZE} color={colors.primary} />
-                {!!routeProgressLabel && (
-                  <View style={styles.routeProgressBadge} pointerEvents="none">
-                    <RNText style={styles.badgeText} numberOfLines={1}>
-                      {routeProgressLabel}
-                    </RNText>
-                  </View>
-                )}
+                <View style={[styles.iconButton, styles.iconButtonActive]} pointerEvents="none">
+                  <Feather name="navigation" size={ICON_SIZE} color={colors.primary} />
+                  {!!routeProgressLabel && (
+                    <View style={styles.routeProgressBadge} pointerEvents="none">
+                      <RNText style={styles.badgeText} numberOfLines={1}>
+                        {routeProgressLabel}
+                      </RNText>
+                    </View>
+                  )}
+                </View>
               </View>
 
               <Pressable
@@ -470,14 +509,17 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 accessibilityRole="button"
                 accessibilityState={{ expanded: activePopover === 'transport' }}
                 accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.tip_peredvizheniya_value1_d6bdfd68', { value1: getTransportLabel(transportMode) })}
-                hitSlop={6}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  activePopover === 'transport' && styles.iconButtonActive,
-                  pressed && styles.iconButtonPressed,
-                ]}
+                style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
               >
-                <MapIcon name={TRANSPORT_ICON[transportMode]} size={ICON_SIZE} color={colors.text} />
+                <View
+                  style={[
+                    styles.iconButton,
+                    activePopover === 'transport' && styles.iconButtonActive,
+                  ]}
+                  pointerEvents="none"
+                >
+                  <MapIcon name={TRANSPORT_ICON[transportMode]} size={ICON_SIZE} color={colors.text} />
+                </View>
               </Pressable>
 
               <Pressable
@@ -485,10 +527,11 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 onPress={onClearRoute}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ochistit_marshrut_3265b685')}
-                hitSlop={6}
-                style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+                style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
               >
-                <Feather name="x" size={ICON_SIZE} color={colors.text} />
+                <View style={styles.iconButton} pointerEvents="none">
+                  <Feather name="x" size={ICON_SIZE} color={colors.text} />
+                </View>
               </Pressable>
             </View>
           )}

@@ -17,11 +17,26 @@ import {
 // srcset/sizes атрибуты HTML-экранируют `&` -> `&amp;`; сравниваем в этой форме.
 const AMP = '&amp;'
 
+/** jsdom-окно 1024×768 — десктопный слот; платформу задаём явно (см. #1268). */
+const withWeb = <T,>(run: () => T): T => {
+  const originalOs = Platform.OS
+  Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+  try {
+    return run()
+  } finally {
+    Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+  }
+}
+
 describe('normalizeImgTags responsive delivery for first-party metravel images (#815)', () => {
   it('rebuilds a first-party description image as a responsive srcset ladder', () => {
     const html =
       '<p><img src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315&amp;w=1600" /></p>'
-    const out = prepareStableContentHtml(html)
+    // Кейс про DESKTOP web, поэтому платформа задаётся явно. Раньше тест проходил
+    // на дефолтном `Platform.OS === 'ios'`: набор был десктопным просто потому, что
+    // «не web», а не из-за ширины окна. С #1268 набор выбирается по вьюпорту на
+    // любой платформе, и такая подмена смысла теста больше не проходит молча.
+    const out = withWeb(() => prepareStableContentHtml(html))
 
     // src падает на fallback-ступень, а не отдаёт оригинал
     expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=80${AMP}fit=contain"`)

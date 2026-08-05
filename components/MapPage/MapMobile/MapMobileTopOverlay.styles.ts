@@ -3,7 +3,22 @@ import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
+/** Диаметр видимого круга кнопки. */
 const BUTTON_SIZE = 38
+/**
+ * Тач-таргет кнопки тулбара — минимум Material/Android accessibility.
+ *
+ * Раньше кликабельной была ровно видимая окружность 38dp, а «добор» до нормы
+ * приписывали `hitSlop`. На Android это не работает: RN ищет цель, спускаясь по
+ * дереву, и в потомка попадает только если точка уже внутри РОДИТЕЛЯ. Ряд
+ * `toolbar` обтягивает кнопки вплотную, поэтому hitSlop за его границы не
+ * выходил — тап на 3dp ниже кнопки не срабатывал (проверено tap-пробой на
+ * устройстве). Поэтому таргет задан реальным размером вью, а видимый круг
+ * остаётся 38dp внутри прозрачной рамки.
+ */
+export const MAP_TOOLBAR_TOUCH_TARGET_SIZE = 48
+/** Прозрачные поля вокруг видимого круга — по ним и добирается тач-таргет. */
+export const MAP_TOOLBAR_TOUCH_PADDING = (MAP_TOOLBAR_TOUCH_TARGET_SIZE - BUTTON_SIZE) / 2
 
 const shadowWeb = {
   boxShadow: '0 2px 10px rgba(15,23,42,0.12)',
@@ -26,7 +41,9 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       right: 0,
       bottom: 0,
       zIndex: 1500,
-      paddingHorizontal: 10,
+      // Отступ уменьшен на прозрачные поля тач-таргета, чтобы видимые круги
+      // остались на прежних 10dp от края экрана.
+      paddingHorizontal: 10 - MAP_TOOLBAR_TOUCH_PADDING,
       flexDirection: 'row',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
@@ -34,10 +51,15 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     toolbar: {
       flexDirection: 'row',
       alignItems: 'center',
-      // Правая группа остаётся одноcтрочной даже на узких телефонах:
-      // видимая кнопка 38px, touch-target добирается hitSlop в компоненте.
-      // Локация вынесена в левый край root, поэтому ряд не перегружает 320px.
-      gap: 6,
+      // Правая группа остаётся однострочной даже на узких телефонах: видимая
+      // кнопка 38dp, а промежуток между кругами дают прозрачные поля соседних
+      // тач-таргетов (по 5dp), поэтому собственного gap у ряда нет — иначе
+      // кнопки разъехались бы. Локация вынесена в левый край root.
+      gap: 0,
+      // Ширину ряда ограничивает компонент по реальному вьюпорту; на экранах
+      // уже ~345dp (режим маршрута — 6 кнопок) таргеты ужимаются к видимому
+      // кругу, вместо того чтобы уехать за правый край.
+      minWidth: 0,
     },
     toolbarStack: {
       alignItems: 'flex-end' as const,
@@ -46,15 +68,21 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     routeToolbar: {
       flexDirection: 'row',
       alignItems: 'center' as const,
-      gap: 8,
+      gap: 0,
+      flexShrink: 1,
+      minWidth: 0,
     },
     // Ряд чипов активных фильтров под тулбаром (radius-режим).
     activeFiltersRow: {
       alignSelf: 'flex-end' as const,
       minWidth: 0,
+      // Компенсация уменьшенного padding у root: ряд остаётся на 10dp от края.
+      marginRight: MAP_TOOLBAR_TOUCH_PADDING,
     },
     routeStartSelector: {
       minHeight: 44,
+      // Компенсация уменьшенного padding у root (см. activeFiltersRow).
+      marginRight: MAP_TOOLBAR_TOUCH_PADDING,
       // Ширину задаёт компонент по реальной свободной ширине вьюпорта; прежний
       // жёсткий maxWidth 292 был уже содержимого и обрезал «На карте».
       maxWidth: 340,
@@ -106,6 +134,18 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       color: colors.primaryDark,
       fontWeight: '700' as const,
     },
+    // Кликабельная область: 48×48dp прозрачной рамки вокруг видимого круга.
+    iconButtonTouch: {
+      width: MAP_TOOLBAR_TOUCH_TARGET_SIZE,
+      height: MAP_TOOLBAR_TOUCH_TARGET_SIZE,
+      // На узком экране ряд ужимается до видимого круга, а не обрезается.
+      flexShrink: 1,
+      minWidth: BUTTON_SIZE,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    // Видимый круг кнопки — размер не менялся, чтобы тулбар не раздувался.
     iconButton: {
       width: BUTTON_SIZE,
       height: BUTTON_SIZE,
@@ -114,7 +154,6 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       justifyContent: 'center' as const,
       // Статичный «фрост»-фон (правило проекта: без живого blur на мобиле).
       backgroundColor: colors.surface,
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
       ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
     },
     iconButtonPressed: {
@@ -204,6 +243,8 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     routeSummaryCard: {
       width: 244,
       maxWidth: '100%' as any,
+      // Компенсация уменьшенного padding у root (см. activeFiltersRow).
+      marginRight: MAP_TOOLBAR_TOUCH_PADDING,
       paddingVertical: 9,
       paddingHorizontal: 11,
       borderRadius: 12,

@@ -1,4 +1,4 @@
-import { Platform } from 'react-native'
+import { Dimensions, Platform } from 'react-native'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
 import {
@@ -212,10 +212,27 @@ const RESPONSIVE_SIZES = ARTICLE_BODY_SLOTS.map(({ maxViewport, cssSize }) =>
 // #1167: quality — на класс размера, а не на вызов. Тело статьи — крупный класс.
 const RESPONSIVE_QUALITY = IMAGE_QUALITY.large
 
-const isMobileWebViewport = (): boolean =>
-  Platform.OS === 'web' &&
-  typeof window !== 'undefined' &&
-  (window.innerWidth || 0) <= MOBILE_VIEWPORT_MAX
+/**
+ * Ширина вьюпорта, в котором стоит слот тела статьи, либо 0 — вьюпорта нет (SSR).
+ *
+ * #1268: раньше ширина бралась только из `window` под условием
+ * `Platform.OS === 'web'`, поэтому на native она была 0 ВСЕГДА, слот считался
+ * десктопным и в мобильный канал уезжал набор со ступенями до 1600. Экран
+ * телефона — такой же вьюпорт слота, просто спрашивать его надо у `Dimensions`.
+ */
+const currentSlotViewportWidth = (): number => {
+  if (Platform.OS === 'web') {
+    return typeof window !== 'undefined' ? window.innerWidth || 0 : 0
+  }
+  return Dimensions.get('window').width || 0
+}
+
+const isMobileSlotViewport = (): boolean => {
+  const width = currentSlotViewportWidth()
+  // Ширина 0 — это SSR: там вьюпорт неизвестен, и набор остаётся десктопным,
+  // как и был (разметка уезжает в браузер, который выберет ступень сам).
+  return width > 0 && width <= MOBILE_VIEWPORT_MAX
+}
 
 /**
  * Набор ширин слота для текущего вьюпорта.
@@ -224,7 +241,7 @@ const isMobileWebViewport = (): boolean =>
  * прогреет ступень, которой нет в `srcset`, и слот скачается дважды (#1213).
  */
 const currentSlotWidths = (): readonly number[] =>
-  isMobileWebViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
+  isMobileSlotViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
 
 const getWebViewportWidth = (): number =>
   Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth || 0 : 0

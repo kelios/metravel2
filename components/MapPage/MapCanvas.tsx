@@ -9,7 +9,7 @@ import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
 import WeatherLegend from '@/components/MapPage/WeatherLegend'
 import { translate as i18nT } from '@/i18n'
 import type { CoordinatesSource, MapLocationState } from '@/hooks/map/useMapCoordinates'
-import { getLiveUserPosition } from '@/hooks/map/liveUserPosition'
+import { getLiveUserPositionFixAt } from '@/hooks/map/liveUserPosition'
 
 
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
@@ -131,8 +131,14 @@ export function MapCanvas({
   // Живые тики намеренно не обновляют locationState (иначе экран перерисовывается на
   // каждый GPS-фикс во время движения), поэтому свежесть считаем по внешнему каналу:
   // компонент и так тикает раз в 15 с своим locationClock. См. hooks/map/liveUserPosition.
+  //
+  // Берём именно ПУЛЬС приёма фиксов, а не время последней опубликованной точки:
+  // публикация пропускает сдвиги меньше 12 м, поэтому у стоящего на месте
+  // пользователя точка не обновлялась бы никогда и баннер загорался бы через 30 с
+  // на ровном месте. По той же причине не годится и timestamp из ОС — первый фикс
+  // Android нередко отдаёт из кэша уже «просроченным».
   const lastFixAt = locationState.status === 'current'
-    ? Math.max(locationState.timestamp, getLiveUserPosition()?.timestamp ?? 0)
+    ? Math.max(locationState.timestamp, getLiveUserPositionFixAt())
     : 0
   const locationQuality = locationState.status === 'current'
     ? locationState.isRefreshing

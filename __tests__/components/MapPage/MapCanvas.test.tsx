@@ -2,6 +2,10 @@ import { fireEvent, render } from '@testing-library/react-native'
 import { Platform, StyleSheet, View } from 'react-native'
 
 import { MapCanvas } from '@/components/MapPage/MapCanvas'
+import {
+  markLiveUserPositionFix,
+  resetLiveUserPosition,
+} from '@/hooks/map/liveUserPosition'
 
 const mockMapLoadingBar = jest.fn(({ visible }: { visible: boolean }) => (
   <View testID="map-loading-bar" {...({ 'data-visible': String(visible) } as any)} />
@@ -258,5 +262,56 @@ describe('MapCanvas', () => {
       />,
     )
     expect(stale.getByText('Местоположение давно не обновлялось')).toBeTruthy()
+  })
+})
+
+/**
+ * Регрессия #1272: у неподвижного пользователя «Местоположение давно не
+ * обновлялось» загоралось через 30 с на ровном месте. Свежесть меряли по
+ * последней ОПУБЛИКОВАННОЙ точке, а публикация пропускает сдвиги меньше 12 м —
+ * значит, у стоящего на месте она не обновлялась никогда. По той же причине не
+ * годится timestamp из ОС: первый фикс Android отдаёт из кэша просроченным.
+ */
+describe('MapCanvas — свежесть позиции считается по пульсу приёма фиксов', () => {
+  const currentLocation = (timestamp: number) => ({
+    status: 'current' as const,
+    coordinates: { latitude: 52.2, longitude: 20.98 },
+    accuracy: 8,
+    timestamp,
+    canAskAgain: true,
+  })
+
+  afterEach(() => {
+    resetLiveUserPosition()
+  })
+
+  it('молчит, пока тики приходят, даже если фикс из ОС давно просрочен', () => {
+    markLiveUserPositionFix(Date.now())
+
+    const { queryByText } = render(
+      <MapCanvas
+        {...baseProps}
+        showProgress={false}
+        locationState={currentLocation(Date.now() - 10 * 60_000)}
+        coordinatesSource="geolocation"
+      />,
+    )
+
+    expect(queryByText('Местоположение давно не обновлялось')).toBeNull()
+  })
+
+  it('показывает баннер, когда тиков действительно нет', () => {
+    markLiveUserPositionFix(Date.now() - 31_000)
+
+    const { getByText } = render(
+      <MapCanvas
+        {...baseProps}
+        showProgress={false}
+        locationState={currentLocation(Date.now() - 31_000)}
+        coordinatesSource="geolocation"
+      />,
+    )
+
+    expect(getByText('Местоположение давно не обновлялось')).toBeTruthy()
   })
 })

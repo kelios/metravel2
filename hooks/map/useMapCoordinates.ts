@@ -3,7 +3,7 @@ import { AppState, Linking, Platform } from 'react-native';
 import { useIsFocused } from 'expo-router';
 import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
-import { publishLiveUserPosition } from '@/hooks/map/liveUserPosition';
+import { markLiveUserPositionFix, publishLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 import { translate as i18nT } from '@/i18n'
 
@@ -198,6 +198,12 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     const longitude = Number(location.longitude);
     if (!isValidCoordinate(latitude, longitude)) return false;
 
+    // Любой принятый фикс — подтверждение, что геослужба отвечает. Отмечаем его
+    // до фильтра по расстоянию: иначе у неподвижного пользователя счётчик
+    // свежести замирает на первом фиксе и загорается ложное «давно не
+    // обновлялось». См. hooks/map/liveUserPosition.
+    markLiveUserPositionFix();
+
     const next: LocationSnapshot = {
       latitude,
       longitude,
@@ -341,7 +347,13 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         {
           accuracy: Location.Accuracy.Balanced,
           timeInterval: 5000,
-          distanceInterval: LIVE_LOCATION_MIN_DISTANCE_M,
+          // Фильтр по расстоянию живёт в applyTrustedLocation, а не в запросе к
+          // ОС. `distanceInterval` на Android — это smallestDisplacement: пока
+          // телефон лежит на столе, коллбэк не приходит ВООБЩЕ, и приложение не
+          // может отличить «ничего не изменилось» от «геослужба отвалилась».
+          // Тики нужны как пульс свежести; лишние из них по-прежнему не двигают
+          // маркер и не вызывают рендер.
+          distanceInterval: 0,
         },
         (location) => {
           const { latitude, longitude, accuracy } = location.coords;
