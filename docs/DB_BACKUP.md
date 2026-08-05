@@ -1,12 +1,21 @@
 # Бэкап production-базы metravel.by
 
-Актуализировано: 2026-08-04 (все цифры ниже сняты с прода в этот день).
+Актуализировано: 2026-08-05 (цифры по скрипту сняты с прода в этот день,
+остальные — 2026-08-04).
 
 ## TL;DR
 
-- **Автоматических бэкапов БД на проде нет.** Cron-задачи, S3-выгрузки и логов
-  бэкапа не существует.
-- **Единственная копия базы — от 17.11.2025**:
+- **Автоматических бэкапов БД на проде по-прежнему нет.** Cron-задачи,
+  S3-выгрузки и лога бэкапа не существует — это задача борда **#1247** (нужен
+  sudo владельца сервера).
+- **Штатный скрипт на прод-хосте починен и проверен реальным прогоном 05.08.2026**
+  (#1246): дамп снимается напрямую через `docker exec`, без compose. Первый
+  успешный прогон — `metravel-postgres-20260805T122720Z.sql.gz`, 52 328 299 байт,
+  14 с, `gzip -t` OK, exit 0. То есть включать cron уже можно.
+- **Свежая логическая копия на сервере одна и снята вручную** —
+  `/home/sx3/db-backups/metravel-postgres-20260805T122720Z.sql.gz` (05.08.2026).
+  Она не обновляется сама: без #1247 завтра снова будет устаревать.
+- **До неё единственной копией была холодная от 17.11.2025**:
   `/home/sx3/pg_dump_17_11_2025/postgis/data`, 372.9 МиБ, владелец `root`.
   Несмотря на имя, это не логический дамп, а холодная копия каталога данных
   PostgreSQL 17 (внутри `PG_VERSION`, `base/`, `pg_wal/`, `postmaster.pid`).
@@ -16,19 +25,21 @@
 
 ## Что где лежит
 
-| Объект | Путь / расположение | Состояние на 2026-08-04 |
+| Объект | Путь / расположение | Состояние на 2026-08-05 |
 | --- | --- | --- |
 | Живая БД | контейнер `metravel_metravel-gis_1`, образ `postgis/postgis:17-3.5`, база `metravel`, пользователь `metravel` | 311 MB (`pg_database_size`) |
 | Каталог данных живой БД | bind-mount `/home/sx3/metravel/deploy/prod/postgis/data` (в compose — `./deploy/prod/postgis/data`) | 431.9 МиБ |
-| Единственная копия базы | `/home/sx3/pg_dump_17_11_2025/postgis/data` | файлы от **17.11.2025**, 372.9 МиБ, `root:root` |
-| Локальные дампы скрипта (`BACKUP_DIR`) | `/home/sx3/metravel/deploy/prod/backups/` | каталога не существует |
+| Свежая логическая копия | `/home/sx3/db-backups/metravel-postgres-20260805T122720Z.sql.gz` | 05.08.2026, 52 328 299 Б, снята вручную и не обновляется |
+| Старая холодная копия | `/home/sx3/pg_dump_17_11_2025/postgis/data` | файлы от **17.11.2025**, 372.9 МиБ, `root:root` |
+| Локальные дампы скрипта (`BACKUP_DIR`) | `/home/sx3/metravel/deploy/prod/backups/` | каталога не существует (проверочный прогон 05.08.2026 писал в `/home/sx3/db-backups/`) |
 | Дампы в S3 | не настроено: `aws` CLI не установлен, `~/.aws` нет | — |
-| Диск под всё это | `/dev/sda1` → `/` | 15 ГБ, занято 82 %, свободно ~2.6 ГБ |
+| Диск под всё это | `/dev/sda1` → `/` | 15 ГБ, занято 73 %, свободно ~3.9 ГБ (05.08.2026) |
 
 Как проверялось: поиск по всему корню хоста, включая root-owned каталоги
 (`docker run --rm -v /:/host:ro alpine find /host -xdev … -size +1M`), не нашёл
-ни одного `*.sql`, `*.sql.gz`, `*.dump` или `*backup*` крупнее 1 МиБ. То есть
-других копий базы на сервере нет.
+ни одного `*.sql`, `*.sql.gz`, `*.dump` или `*backup*` крупнее 1 МиБ. То есть на
+тот момент других копий базы на сервере не было; единственная появившаяся с тех
+пор — ручной дамп от 05.08.2026 в строке выше.
 
 Медиа — отдельная история и к БД отношения не имеет: картинки живут в S3-бакете
 `metravelprod` (eu-north-1), их полная локальная копия снимается скриптом
@@ -134,51 +145,65 @@ gzip -cd <файл> | tail -3           # -- PostgreSQL database dump complete
 
 - `deploy/prod/backup/backup_database_to_s3.sh` — сам скрипт;
 - `deploy/prod/backup/README.md` — исходная инструкция автора;
-- на сервере: `/home/sx3/metravel/deploy/prod/backup/` (версия от 09.06.2026).
+- на сервере: `/home/sx3/metravel/deploy/prod/backup/` (версия от 05.08.2026,
+  коммит `c2a99c6`).
 
 Из этого workspace бэкенд не редактируется — правки оформляются задачей
 `area=back` на общем task board.
 
 Что делает скрипт:
 
-1. `pg_dump --no-owner --no-acl` внутри сервиса `metravel-gis`;
-2. поток дампа на хост, сжатие `gzip -9`;
-3. запись в `${BACKUP_DIR}/metravel-postgres-<UTC-timestamp>.sql.gz`;
+1. `pg_dump --no-owner --no-acl` через `docker exec` по имени контейнера
+   (`${DB_CONTAINER}`), без compose — пароль не нужен, внутри контейнера
+   `pg_hba.conf` содержит `local all all trust`;
+2. поток дампа на хост, сжатие `gzip -9`; весь конвейер fail-closed
+   (`set -o pipefail`), пишется во временный файл и переименовывается атомарно;
+3. проверка `gzip -t` и минимального размера `${MIN_BACKUP_BYTES}`, затем запись
+   в `${BACKUP_DIR}/metravel-postgres-<UTC-timestamp>.sql.gz`;
 4. загрузка архива в `${S3_URI}` через `aws s3 cp`;
 5. удаление локальных архивов старше `${RETENTION_DAYS}` дней.
 
-Переменные окружения (обязательна только `S3_URI`):
+Режимы:
+
+- без флагов — полный цикл с выгрузкой в S3 (требует `S3_URI` и `aws`);
+- `--check` — только проверка доступности БД и прав, ничего не пишет; годится
+  как постоянная прод-проба;
+- `--local-only` — снять и проверить локальный архив без S3 и без `aws`.
+
+Переменные окружения (обязательна только `S3_URI`, и только в полном режиме):
 
 ```bash
 S3_URI=s3://metravel-backups/postgres
-COMPOSE_FILE=/home/sx3/metravel/docker-compose-prod.infrastructure.yaml
-DB_SERVICE=metravel-gis
+DB_CONTAINER=metravel_metravel-gis_1
 BACKUP_DIR=/home/sx3/metravel/deploy/prod/backups
 RETENTION_DAYS=14
+MIN_BACKUP_BYTES=1048576
 ```
 
-### Известная проблема: на этом хосте скрипт в текущем виде упадёт
+### Первый успешный прогон на проде: 05.08.2026
 
-Скрипт вызывает базу через `compose exec`, а `compose()` предпочитает
-`docker-compose` v1, если он есть в PATH. На проде он есть
-(`/usr/bin/docker-compose`, 1.29.2, при наличии docker compose v2.34.0), и вызов
-падает ещё до `pg_dump`:
+До 05.08.2026 скрипт на этом хосте не мог отработать вообще: он звал базу через
+`compose exec`, а `compose()` предпочитал `docker-compose` v1 из PATH, который
+падал на интерполяции `POSTGRES_PASSWORD` (в `/home/sx3/metravel` нет `.env`) ещё
+до `pg_dump`. Починено в бэкенде коммитом `c2a99c6` по задаче **#1246**: вызов
+переведён на `docker exec` по имени контейнера, конвейер сделан fail-closed.
+
+Проверка на проде 05.08.2026, из cron-подобного окружения
+(`env -i PATH=/usr/bin:/bin`):
 
 ```
-Missing mandatory value for "environment" option interpolating
-['POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}', …]
-in service "metravel-gis": POSTGRES_PASSWORD must be set
+$ bash deploy/prod/backup/backup_database_to_s3.sh --check
+[2026-08-05T12:26:51Z] Checking PostgreSQL dump access in container metravel_metravel-gis_1
+[2026-08-05T12:26:55Z] PostgreSQL dump check passed          # exit 0
+
+$ BACKUP_DIR=/home/sx3/db-backups bash deploy/prod/backup/backup_database_to_s3.sh --local-only
+[2026-08-05T12:27:20Z] Creating PostgreSQL dump from container metravel_metravel-gis_1
+[2026-08-05T12:27:34Z] Local-only backup completed: metravel-postgres-20260805T122720Z.sql.gz (52328299 bytes)
 ```
 
-Причина: в `/home/sx3/metravel` нет `.env` (только `.env.example`), а контейнеры
-подняты с окружением из другого источника, поэтому compose не может
-интерполировать `POSTGRES_PASSWORD`. Заведено на борде: **#1246**
-(`area=back`, kind=bug). Лечится одним из двух способов:
-
-- передавать compose явный `--env-file` с прод-переменными, либо
-- заменить `compose exec -T "${DB_SERVICE}"` на `docker exec -i` по имени
-  контейнера (`metravel_metravel-gis_1`) — ровно тот путь, который проверен
-  выше и работает без пароля.
+Артефакт: 52 328 299 байт (~49.9 МиБ), 14 с, `gzip -t` OK, в дампе 119
+`CREATE TABLE`, хвост — `-- PostgreSQL database dump complete`. Файл оставлен на
+сервере в `/home/sx3/db-backups/` как первая с 17.11.2025 логическая копия базы.
 
 ## Что нужно, чтобы включить регулярный бэкап
 
@@ -189,9 +214,11 @@ in service "metravel-gis": POSTGRES_PASSWORD must be set
 1. Установить AWS CLI: `sudo apt-get install -y awscli`.
 2. Завести IAM-креды с правом `s3:PutObject` на префикс бэкапов. Аккаунт AWS уже
    используется проектом — там же лежит медиа-бакет `metravelprod` (eu-north-1).
-3. Починить вызов compose (см. «Известная проблема»), иначе cron будет молча
-   падать каждую ночь.
+3. ~~Починить вызов compose~~ — сделано 05.08.2026 (#1246), см. раздел выше;
+   молчаливый провал в cron больше невозможен (`pipefail` + проверка размера).
 4. Создать `/etc/metravel-backup.env` (root, `0600`) с переменными выше.
+   `COMPOSE_FILE`/`DB_SERVICE` из старых инструкций скриптом больше не читаются —
+   вместо них `DB_CONTAINER` (по умолчанию уже верный).
 5. Создать `/etc/cron.d/metravel-db-backup`:
 
    ```cron
@@ -205,8 +232,8 @@ in service "metravel-gis": POSTGRES_PASSWORD must be set
 7. Приёмка: объект реально появился в бакете (`aws s3 ls`), локальный архив
    распаковывается, restore-smoke проходит (ниже).
 
-Про место на диске: один архив ~46 МБ, при `RETENTION_DAYS=14` локально
-накопится ~0.65 ГБ при свободных 2.6 ГБ. Локальную ретенцию разумно держать 3–5
+Про место на диске: один архив ~50 МБ, при `RETENTION_DAYS=14` локально
+накопится ~0.7 ГБ при свободных 3.9 ГБ. Локальную ретенцию разумно держать 3–5
 дней, а длительное хранение — lifecycle-политикой на стороне S3.
 
 ## Восстановление
@@ -246,7 +273,9 @@ bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; ssh 
 ```
 
 Пока вывод — `NO_CRON` / `NO_LOG` и отсутствующий каталог, регулярных бэкапов
-нет и последней актуальной копией остаётся холодный каталог от 17.11.2025.
+нет: самой свежей копией остаётся ручной дамп от 05.08.2026 в
+`/home/sx3/db-backups/`, и он не обновляется. Сам скрипт при этом рабочий —
+проверить в любой момент можно `--check` (ничего не пишет).
 
 Связанные документы: `docs/RELEASE.md` (деплой и rollback),
 `docs/PRODUCTION_CHECKLIST.md` (релизный чеклист).
