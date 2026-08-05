@@ -103,7 +103,7 @@
     },
     {
       "from": "1-avtoputeshestvie-iz-polshi-v-khorvatiiu-s-sobakoi",
-      "to": "polsha-chekhiia-avstriia-khorvatiia-na-mashine-marshrut-na-9-dnei-s-sobakoi-chto-posmotret-gde-ostanovitsia-i-kak-splanirovat-poezdku"
+      "to": "po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei"
     },
     {
       "from": "2-severnyi-velebit-marshrut-babic-sica-zavizan-premuzic-trail-na-neskolko-dnei",
@@ -115,7 +115,7 @@
     },
     {
       "from": "4-kak-provesti-idealnyi-uikend-v-parizhe-versal-mulen-ruzh-i-sokrovishcha-alegri",
-      "to": "idealnyi-uikend-v-parizhe-versal-mulen-ruzh-i-sokrovishcha-anera"
+      "to": "uikend-v-parizhe-versal-i-mulen-ruzh"
     },
     {
       "from": "4-slun-i-rastoke-skrytaia-zhemchuzhina-na-puti-k-plitvitsam",
@@ -183,7 +183,7 @@
     },
     {
       "from": "veneciya-za-pol-dnya",
-      "to": "venetsiia-za-odin-den-kak-dobratsia-gde-ostavit-mashinu-chto-posmotret-i-kakie-tainy-skryvaet-gorod-na-vode"
+      "to": "venetsiia-za-odin-den-chto-posmotret-i-parkovka"
     },
     {
       "from": "rakov-ivenec-zaslavl",
@@ -627,11 +627,11 @@
     },
     {
       "from": "trek-v-khokholovskoi-doline-v-sezon-krokusov-mart-aprel",
-      "to": "dolina-khokholovskaia-vesnoi-krokusy-legendy-tatr-i-luchshii-marshrut-dlia-puteshestviia"
+      "to": "khokholovskaia-dolina-vesnoi-krokusy-i-marshrut"
     },
     {
       "from": "oriavskii-zamok-oravsky-hrad-sledy-srednevekovia-nad-oravoi",
-      "to": "oriavskii-zamok-oravsky-hrad-sledy-srednevekovia-nad-oravoi-1"
+      "to": "oravskii-zamok-v-slovakii-chto-posmotret"
     },
     {
       "from": "marshrut-na-odin-den-progulka-vdol-reki-bobr-k-vodno-bolotnomu-zakazniku-elenka",
@@ -972,6 +972,86 @@
     {
       "from": "zhiveckie-beskidy-velka-racha-1236m",
       "to": "pokhod-na-velika-racha-wielka-racza-1236-m"
+    },
+    {
+      "from": "venetsiia-za-odin-den-kak-dobratsia-gde-ostavit-mashinu-chto-posmotret-i-kakie-tainy-skryvaet-gorod-na-vode",
+      "to": "venetsiia-za-odin-den-chto-posmotret-i-parkovka"
+    },
+    {
+      "from": "marshrut-vykhodnogo-dnia-velopoezdka-v-mogilany-i-lesnoi-rezervat-kozi-katy",
+      "to": "velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia"
+    },
+    {
+      "from": "kaliningrad-zimoi-lichnyi-opyt-poezdki-istoriia-goroda-i-glavnye-mesta",
+      "to": "kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt"
+    },
+    {
+      "from": "kuda-poekhat-v-belarusi-na-vykhodnye-na-mashine-4-gotovykh-marshruta",
+      "to": "kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta"
+    },
+    {
+      "from": "oriavskii-zamok-oravsky-hrad-sledy-srednevekovia-nad-oravoi-1",
+      "to": "oravskii-zamok-v-slovakii-chto-posmotret"
+    },
+    {
+      "from": "dolina-khokholovskaia-vesnoi-krokusy-legendy-tatr-i-luchshii-marshrut-dlia-puteshestviia",
+      "to": "khokholovskaia-dolina-vesnoi-krokusy-i-marshrut"
+    },
+    {
+      "from": "schronisko-magurka-za-90-minut-marshrut-dlia-tekh-kto-khochet-prosto-gor",
+      "to": "schronisko-magurka-marshrut-na-90-minut"
+    },
+    {
+      "from": "marshrut-iz-piwniczna-zdroj-k-smotrovym-platformam-i-wieza-widokowa-na-eliaszowce-peshii-gid-po-beskidam",
+      "to": "smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh"
+    },
+    {
+      "from": "putevoditel-po-parizhu-kak-deshevo-dobratsia-iz-krakova-i-chto-posmotret-v-parizhe",
+      "to": "parizh-iz-krakova-kak-dobratsia-i-chto-posmotret"
+    },
+    {
+      "from": "ozera-reki-ruchi-i-mesta-otdykha-u-vody-v-belarusi-33-proverennykh-mesta-s-foto-i-koordinatami",
+      "to": "otdykh-u-vody-v-belarusi-33-proverennykh-mesta"
+    },
+    {
+      "from": "pokhod-ot-zamka-rytro-do-schronisko-cyrla-marshrut-sovety-vysoty",
+      "to": "ot-zamka-rytro-do-schronisko-cyrla-marshrut"
+    },
+    {
+      "from": "tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy",
+      "to": "tre-cime-di-lavaredo-krugovoi-marshrut-10-km"
+    },
+    {
+      "from": "plitvitskie-ozera-v-khorvatii-kak-tuda-dobratsia-chto-posmotret-marshruty-legendy-i-moi-lichnyi-opyt",
+      "to": "plitvitskie-ozera-v-khorvatii-kak-dobratsia"
+    },
+    {
+      "from": "velopokhod-po-polshe-s-palatkoi-kak-vybrat-marshrut-greenvelo-i-mesta-dlia-nochevki-v-lesu",
+      "to": "velopokhod-po-polshe-greenvelo-i-nochevki"
+    },
+    {
+      "from": "polsha-chekhiia-avstriia-khorvatiia-na-mashine-marshrut-na-9-dnei-s-sobakoi-chto-posmotret-gde-ostanovitsia-i-kak-splanirovat-poezdku",
+      "to": "po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei"
+    },
+    {
+      "from": "marshrut-panevniki-rasshirennaia-petlia-ot-chernogo-stava-8-km",
+      "to": "panevniki-petlia-ot-chernogo-stava-8-km"
+    },
+    {
+      "from": "marshrut-s-sobakoi-k-ruinam-zamka-sitno-v-slovakii-opisanie-sovety-i-foto",
+      "to": "zamok-sitno-v-slovakii-marshrut-s-sobakoi"
+    },
+    {
+      "from": "idealnyi-uikend-v-parizhe-versal-mulen-ruzh-i-sokrovishcha-anera",
+      "to": "uikend-v-parizhe-versal-i-mulen-ruzh"
+    },
+    {
+      "from": "zamok-khokhostervits-zaltsburg-i-brno-final-puteshestviia-po-evrope",
+      "to": "zamok-khokhostervits-zaltsburg-i-brno-marshrut"
+    },
+    {
+      "from": "ozero-braies-forty-i-neudavshiisia-podem-na-monte-tudaio-leto-v-dolomitakh",
+      "to": "ozero-braies-i-forty-dolomitov-marshrut"
     }
   ]
 }
