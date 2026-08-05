@@ -8,6 +8,7 @@ import OptimizedImage from '@/components/ui/OptimizedImage';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl, generateSrcSet } from '@/utils/imageOptimization';
+import { lookupMediaPlaceholder } from '@/utils/mediaPlaceholderIndex';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
   WebMainImage,
@@ -213,13 +214,40 @@ function ImageCardMedia({
   const styles = useMemo(() => getStyles(colors), [colors]);
   const isIOSWebKitWeb = useMemo(() => isIOSWebKit(), []);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
+  const resolvedSource = useMemo(() => {
+    if (source) return source;
+    if (src) return { uri: src };
+    return null;
+  }, [source, src]);
+  const sourceUri = useMemo(() => {
+    if (!resolvedSource || typeof resolvedSource === 'number') return null;
+    if (typeof resolvedSource === 'string') return resolvedSource;
+    const uri = (resolvedSource as { uri?: unknown }).uri;
+    return typeof uri === 'string' ? uri.trim() || null : null;
+  }, [resolvedSource]);
   const normalizedPlaceholderBlurhash =
     typeof placeholderBlurhash === 'string' ? placeholderBlurhash.trim() : '';
-  const normalizedPlaceholderColor =
-    typeof placeholderColor === 'string' &&
-    /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(placeholderColor.trim())
-      ? placeholderColor.trim()
-      : '';
+  /**
+   * Заливка полей letterbox из общего индекса манифеста, когда вызывающий код
+   * не передал цвет пропсом (`utils/mediaPlaceholderIndex.ts`).
+   *
+   * Только web и только цвет: на native поля закрывает blur-слой expo-image
+   * (`blurBackground` по умолчанию включён), он работает на всех экранах и
+   * подменять его данными из индекса незачем. Дырка после #1208 — ровно
+   * web-сторона контракта.
+   */
+  const indexedPlaceholderColor = useMemo(() => {
+    if (Platform.OS !== 'web') return '';
+    if (typeof placeholderColor === 'string' && placeholderColor.trim()) return '';
+    return lookupMediaPlaceholder(sourceUri)?.dominantColor ?? '';
+  }, [placeholderColor, sourceUri]);
+  const normalizedPlaceholderColor = useMemo(() => {
+    const candidate =
+      typeof placeholderColor === 'string' && placeholderColor.trim()
+        ? placeholderColor.trim()
+        : indexedPlaceholderColor;
+    return /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(candidate) ? candidate : '';
+  }, [indexedPlaceholderColor, placeholderColor]);
   /**
    * На web blurhash в слой не идёт: `expo-image` декодирует его в canvas 32×32,
    * апскейлит ×10 и отдаёт `blob:`-PNG 320×320 (~48 КБ и отдельная строка в
@@ -233,23 +261,14 @@ function ImageCardMedia({
   const hasDataPlaceholder = Boolean(
     useBlurhashPlaceholder || normalizedPlaceholderColor,
   );
-  const resolvedSource = useMemo(() => {
-    if (source) return source;
-    if (src) return { uri: src };
-    return null;
-  }, [source, src]);
   // Identity key keeps signature/`?v=` query (distinguishes different images) while
   // ignoring optimization params (stable across scroll/resize). Used for load-state
   // reset, the loaded-cache and the web media React key so query-only-differing
   // images don't reuse a stale node / stale "loaded" flag.
-  const currentImageIdentityKey = useMemo(() => {
-    if (!resolvedSource || typeof resolvedSource === 'number') return null;
-    if (typeof resolvedSource === 'string') {
-      return resolveImageIdentityKey(resolvedSource);
-    }
-    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
-    return resolveImageIdentityKey(uri);
-  }, [resolvedSource]);
+  const currentImageIdentityKey = useMemo(
+    () => (sourceUri ? resolveImageIdentityKey(sourceUri) : null),
+    [sourceUri],
+  );
   const [webLoaded, setWebLoaded] = useState(() => {
     // revealOnLoadOnly is an exact decode gate. The shared cache is keyed by
     // image identity (optimization params removed), so a previously loaded 160px

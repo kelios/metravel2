@@ -8,6 +8,7 @@ import { buildGpx, buildKml, downloadTextFileWeb } from '@/utils/routeExport';
 import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
 import { beginProgrammaticMapMove } from './programmaticMoveSignal';
+import { getLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import type { OsmPoiCategory } from '@/utils/overpass';
 import type { LeafletControlRef } from './leafletBridgeTypes';
 
@@ -84,10 +85,30 @@ export function useMapApi({
 
   const canExportRoute = useMemo(() => (routePoints?.length ?? 0) >= 2, [routePoints?.length]);
 
-  const centerOnUserLocation = useCallback(() => {
+  // The parent keeps the api object produced by the PREVIOUS commit, so reading
+  // userLocation through the callback closure can be a render behind. A ref keeps
+  // "center on user" honest: a known point is centered on immediately, and only a
+  // genuinely unknown point escalates to a location request — otherwise every
+  // press cost two geolocation requests (the second one just to catch up).
+  const userLocationRef = useRef<LatLng | null>(userLocation);
+  userLocationRef.current = userLocation;
+
+  const centerOnUserLocation = useCallback((explicitTarget?: LatLng | null) => {
     if (!map) return;
-    if (userLocation) {
-      centerMapOnUser(userLocation);
+    // The caller may hand over its own trusted point (see MapUiApi.centerOnUser).
+    // Anything that is not a coordinate pair — e.g. a press event from a control
+    // wired straight to this callback — falls back to the map's own copy.
+    const handedOver =
+      explicitTarget &&
+      Number.isFinite((explicitTarget as LatLng).lat) &&
+      Number.isFinite((explicitTarget as LatLng).lng)
+        ? (explicitTarget as LatLng)
+        : null;
+    const live = getLiveUserPosition();
+    const target =
+      handedOver ?? (live ? { lat: live.latitude, lng: live.longitude } : userLocationRef.current);
+    if (target) {
+      centerMapOnUser(target);
       return;
     }
     if (onRequestUserLocationFocus) {
@@ -97,7 +118,7 @@ export function useMapApi({
         // noop
       }
     }
-  }, [centerMapOnUser, map, onRequestUserLocationFocus, userLocation]);
+  }, [centerMapOnUser, map, onRequestUserLocationFocus]);
 
   const handleDownloadGpx = useCallback(() => {
     if (!routePoints || routePoints.length < 2) return;

@@ -1,8 +1,9 @@
 // api/travelsNormalize.ts
 // Travel data normalization utilities extracted from travelsApi.ts (task A2)
 
-import { Travel } from '@/types/types';
+import { Travel, TravelMedia } from '@/types/types';
 import { isPrivateOrLocalHost } from '@/utils/mediaUrl';
+import { indexTravelMedia } from '@/utils/mediaPlaceholderIndex';
 
 export type MyTravelsItem = Record<string, unknown>;
 export type MyTravelsPayload =
@@ -141,6 +142,11 @@ const extractFirstUserId = (raw: unknown): number | null => {
 
 export const normalizeTravelItem = (input: unknown): Travel => {
     const t = asRecord(input);
+    // Единственная точка входа всех travel-пейлоадов (список и деталь), поэтому
+    // здесь же прогревается общий индекс заливки полей letterbox: обложка,
+    // галерея, кадры точек и картинки тела статьи (#1208,
+    // `utils/mediaPlaceholderIndex.ts`). Экранам ниже больше нечего передавать.
+    indexTravelMedia(t.media as TravelMedia | null | undefined);
     const out: Record<string, unknown> = { ...t };
     const mediaPathWithApiPrefix = /^\/api\/(travel-image|travel-description-image|address-image|gallery|uploads|media)(\/|$)/i;
     const firstPartyMediaUrl = /http:\/\/(?:metravel\.by|cdn\.metravel\.by|api\.metravel\.by)(\/(?:travel-image|travel-description-image|address-image|gallery|uploads|media)[^\s"'<>)]*)/gi;

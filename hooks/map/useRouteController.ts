@@ -9,6 +9,7 @@ import { CLUSTER_DISABLE_ZOOM } from '@/components/MapPage/Map/clusterFitBounds'
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
+import { getLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import { logMessage } from '@/utils/logger';
 import { showRoutePointAddedToast } from '@/utils/mapToasts';
@@ -399,11 +400,18 @@ export function useRouteController(
       const { coordStr, popupCoordCandidates, targetCoords } = target;
       const bottomSheetStore = useBottomSheetStore.getState();
       const shouldCollapseBottomSheet = bottomSheetStore.state !== 'collapsed';
+      // Живые тики GPS не идут в React-состояние (см. hooks/map/liveUserPosition),
+      // поэтому старт «от меня» берём из канала — иначе за рулём маршрут строился бы
+      // от точки последнего явного запроса геолокации.
+      const live = getLiveUserPosition();
+      const origin = live
+        ? { latitude: live.latitude, longitude: live.longitude }
+        : originCoordinates;
       const originCoords =
-        originCoordinates &&
-        Number.isFinite(originCoordinates.latitude) &&
-        Number.isFinite(originCoordinates.longitude)
-          ? { lat: originCoordinates.latitude, lng: originCoordinates.longitude }
+        origin &&
+        Number.isFinite(origin.latitude) &&
+        Number.isFinite(origin.longitude)
+          ? { lat: origin.latitude, lng: origin.longitude }
           : null;
 
       const popupOpenDelayMs = shouldCollapseBottomSheet ? 520 : 420;

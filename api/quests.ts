@@ -3,7 +3,9 @@
 import { apiClient, ApiError } from '@/api/client';
 import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { unwrapList } from '@/api/clientResponse';
+import type { TravelMediaGroup } from '@/types/types';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
 import { retry } from '@/utils/retry';
 import { isUsableRouteSegment } from '@/utils/routePaths';
 import {
@@ -106,6 +108,12 @@ export type ApiQuestMeta = {
     tags: Record<string, unknown> | null;
     pet_friendly: boolean;
     cover_url: string | null;
+    /**
+     * Медиа-манифест обложки (#1208): отсюда берётся `dominant_color` для заливки
+     * полей letterbox. В UI не пробрасывается — прогревает общий индекс, см.
+     * `utils/mediaPlaceholderIndex.ts`.
+     */
+    media?: TravelMediaGroup | null;
 } & ApiQuestRatingSnapshot;
 
 /**
@@ -130,6 +138,10 @@ function withQuestCompletionMock(meta: ApiQuestMeta): ApiQuestMeta {
  * проставляем безопасные дефолты, чтобы UI и адаптеры не падали.
  */
 export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
+    // Обложка квеста показывается в `contain`, поэтому её поля тоже должна
+    // заливать `dominant_color` из манифеста (#1208). Карточка знает только
+    // `cover_url`, поэтому цвет индексируется и под ним.
+    indexMediaImage(meta?.media?.cover, [meta?.cover_url]);
     return withQuestCompletionMock({
         ...meta,
         rating_avg: meta.rating_avg ?? null,
@@ -152,6 +164,8 @@ export type ApiQuestBundle = {
     intro: ApiQuestStep | string | null;
     storage_key: string;
     city: ApiQuestCity;
+    /** См. `ApiQuestMeta.media`: манифест обложки для индекса заливки (#1208). */
+    media?: TravelMediaGroup | null;
 } & ApiQuestOptionalRatingSnapshot;
 
 function normalizeQuestStep(step: ApiQuestStep): ApiQuestStep {
@@ -162,6 +176,7 @@ function normalizeQuestStep(step: ApiQuestStep): ApiQuestStep {
 }
 
 function normalizeQuestBundle(bundle: ApiQuestBundle): ApiQuestBundle {
+    indexMediaImage(bundle?.media?.cover, [bundle?.cover_url]);
     let normalizedSteps = bundle.steps;
     let normalizedIntro = bundle.intro;
 

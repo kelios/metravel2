@@ -3,6 +3,7 @@ import { AppState, Linking, Platform } from 'react-native'
 
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates'
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader'
+import { getLiveUserPosition, publishLiveUserPosition } from '@/hooks/map/liveUserPosition'
 
 jest.mock('@/hooks/map/expoLocationLoader', () => ({
   loadExpoLocation: jest.fn(),
@@ -13,6 +14,7 @@ describe('useMapCoordinates live location updates', () => {
   const originalNavigator = global.navigator
 
   afterEach(() => {
+    publishLiveUserPosition(null)
     ;(Platform as any).OS = originalPlatform
     Object.defineProperty(global, 'navigator', {
       configurable: true,
@@ -87,6 +89,8 @@ describe('useMapCoordinates live location updates', () => {
       isRefreshing: true,
     }))
 
+    const stateBeforeTick = result.current.locationState
+
     act(() => {
       watchSuccess?.({
         coords: {
@@ -98,9 +102,15 @@ describe('useMapCoordinates live location updates', () => {
       } as GeolocationPosition)
     })
 
+    // Живой тик виден только в канале: React-состояние (а с ним весь экран карты)
+    // на движении не обновляется — двигается лишь маркер «вы здесь».
+    expect(getLiveUserPosition()).toEqual(
+      expect.objectContaining({ latitude: 52.2004, longitude: 20.9804 }),
+    )
     expect(result.current.coordinates).toEqual({ latitude: 52.2, longitude: 20.98 })
-    expect(result.current.currentLocation).toEqual({ latitude: 52.2004, longitude: 20.9804 })
+    expect(result.current.currentLocation).toEqual({ latitude: 52.2, longitude: 20.98 })
     expect(result.current.locationState).not.toHaveProperty('isRefreshing')
+    expect(stateBeforeTick).not.toBe(result.current.locationState)
 
     unmount()
     expect(clearWatch).toHaveBeenCalledWith(77)
@@ -154,6 +164,8 @@ describe('useMapCoordinates live location updates', () => {
       expect(result.current.coordinatesAreFallback).toBe(false)
     })
 
+    const beforeJitter = result.current.locationState
+
     act(() => {
       watchSuccess?.({
         coords: {
@@ -166,9 +178,79 @@ describe('useMapCoordinates live location updates', () => {
     })
 
     expect(result.current.coordinates).toEqual({ latitude: 50.0614, longitude: 19.9366 })
+    // Jitter must not republish the position: neither React state (перерисовка экрана),
+    // ни живой канал (дёрганье маркера «вы здесь» на месте).
+    expect(result.current.locationState).toBe(beforeJitter)
+    expect(getLiveUserPosition()).toEqual(
+      expect.objectContaining({ latitude: 50.0614, longitude: 19.9366 }),
+    )
 
     unmount()
     expect(clearWatch).toHaveBeenCalledWith(78)
+  })
+
+  it('keeps the whole map screen still while the user is driving', async () => {
+    ;(Platform as any).OS = 'web'
+
+    let watchSuccess: ((position: GeolocationPosition) => void) | null = null
+    const getCurrentPosition = jest.fn((success: PositionCallback) => {
+      success({
+        coords: { latitude: 50.0614, longitude: 19.9366, accuracy: 12 },
+        timestamp: 1000,
+      } as GeolocationPosition)
+    })
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: {
+        geolocation: {
+          getCurrentPosition,
+          watchPosition: jest.fn((success: PositionCallback) => {
+            watchSuccess = success
+            return 79
+          }),
+          clearWatch: jest.fn(),
+        },
+      },
+    })
+    const webGlobal = typeof window !== 'undefined' ? window : null
+    if (webGlobal) {
+      Object.defineProperty(webGlobal, 'localStorage', {
+        configurable: true,
+        value: { getItem: jest.fn(() => null), setItem: jest.fn() },
+      })
+    }
+
+    const { result } = renderHook(() => useMapCoordinates())
+
+    await waitFor(() => expect(result.current.currentLocation).toEqual({
+      latitude: 50.0614,
+      longitude: 19.9366,
+    }))
+
+    const stateBefore = result.current.locationState
+
+    // Движение: тик раз в секунду, каждый ~120 м. Ни один из них не имеет права
+    // стать React-состоянием — иначе перерисовывается карта, список «рядом» и
+    // радиус-круг. Обновляется только живой канал (по нему двигается маркер).
+    act(() => {
+      watchSuccess?.({
+        coords: { latitude: 50.0625, longitude: 19.9366, accuracy: 10 },
+        timestamp: 2000,
+      } as GeolocationPosition)
+    })
+    act(() => {
+      watchSuccess?.({
+        coords: { latitude: 50.0636, longitude: 19.9366, accuracy: 10 },
+        timestamp: 3000,
+      } as GeolocationPosition)
+    })
+
+    expect(result.current.locationState).toBe(stateBefore)
+    expect(result.current.currentLocation).toEqual({ latitude: 50.0614, longitude: 19.9366 })
+    expect(result.current.coordinates).toEqual({ latitude: 50.0614, longitude: 19.9366 })
+    expect(getLiveUserPosition()).toEqual(
+      expect.objectContaining({ latitude: 50.0636, longitude: 19.9366 }),
+    )
   })
 
   it('keeps cached web coordinates as a viewport-only anchor after permission denial', async () => {

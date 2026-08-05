@@ -9,6 +9,7 @@ import { LAYOUT } from '@/constants/layout'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
+import { getLiveUserPosition } from '@/hooks/map/liveUserPosition'
 import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
 import { FiltersSkeleton } from '@/components/ui/SkeletonLoader'
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet'
@@ -414,9 +415,16 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     const currentPoints = useRouteStore.getState().points
     if (currentPoints.length > 0) return false
 
+    // Живая точка живёт вне React (hooks/map/liveUserPosition), проп обновляется
+    // только на явный запрос — старт маршрута берём самый свежий из известных.
+    const live = getLiveUserPosition()
+    const start = live
+      ? { latitude: live.latitude, longitude: live.longitude }
+      : trustedUserLocation
+
     clearRouteAndSetMode('route')
     addRoutePoint(
-      { lat: trustedUserLocation.latitude, lng: trustedUserLocation.longitude },
+      { lat: start.latitude, lng: start.longitude },
       i18nT('map:components.MapPage.MapMobileLayout.moe_mestopolozhenie_3ab044c9'),
     )
     setFiltersMode?.('route')

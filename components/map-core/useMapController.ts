@@ -39,11 +39,26 @@ import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 import { parseWebViewJsonObject, toFiniteCoordinate } from '@/utils/webViewBridge';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 
+import { getLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
 import type { FiltersData } from '@/hooks/map/useMapFilters';
 import { useMapDataController } from '@/hooks/map/useMapDataController';
 import { useRouteController } from '@/hooks/map/useRouteController';
 import { useSearchThisArea } from '@/hooks/map/useSearchThisArea';
+
+/**
+ * Trusted user position → the {lat,lng} shape MapUiApi.centerOnUser expects.
+ * Живые тики не идут в состояние (hooks/map/liveUserPosition), поэтому канал —
+ * приоритетный источник: иначе после поездки центрирование прыгало бы на точку
+ * последнего явного запроса.
+ */
+const toMapTarget = (
+  location: { latitude: number; longitude: number } | null,
+): { lat: number; lng: number } | null => {
+  const live = getLiveUserPosition();
+  if (live) return { lat: live.latitude, lng: live.longitude };
+  return location ? { lat: location.latitude, lng: location.longitude } : null;
+};
 
 export interface UseMapControllerParams {
   /** Responsive-флаг экрана: гейты mobile-попапа (#207) и focusPlaceStable (#539). */
@@ -93,11 +108,18 @@ export function useMapController({
   // anchors are intentionally separate and can never become a route origin.
   const userLocation = currentLocation;
 
-  // isFollowingUser is owned by the controller (centering). The F-49 "search
-  // this area" viewport state lives in useSearchThisArea (declared after route +
-  // filters so it can read mode/radius); a user gesture resets following via the
-  // onUserInitiatedMove callback wired into that hook below.
-  const [isFollowingUser, setIsFollowingUser] = useState(false);
+  // Centering is owned by the controller. Pressing "locate me" is a ONE-SHOT
+  // request: it arms this flag, the fix it produces re-centres the map once, and
+  // later live watch ticks only move the marker. Continuous following turned every
+  // GPS tick into setView + a viewport-driven cluster/tile refetch, so the map
+  // redrew nonstop while the user was driving. The F-49 "search this area" viewport
+  // state lives in useSearchThisArea (declared after route + filters so it can read
+  // mode/radius); a user gesture cancels a pending centre via the onUserInitiatedMove
+  // callback wired into that hook below.
+  const pendingCenterOnUserRef = useRef(false);
+  const cancelPendingCenterOnUser = useCallback(() => {
+    pendingCenterOnUserRef.current = false;
+  }, []);
 
   // #207 — mobile bottom card for a tapped single marker (maps.me-style).
   // On mobile-web the Leaflet popup over the marker is suppressed and the
@@ -172,10 +194,10 @@ export function useMapController({
         handlePlaceSelect(null);
         return;
       }
-      // A marker tap is an explicit request to inspect that place. Release GPS
-      // follow before the renderer flies to it, otherwise the next live-location
-      // tick immediately pulls the map back to the user and hides the card/point.
-      setIsFollowingUser(false);
+      // A marker tap is an explicit request to inspect that place. Cancel a pending
+      // centre-on-user before the renderer flies to it, otherwise an in-flight fix
+      // immediately pulls the map back to the user and hides the card/point.
+      cancelPendingCenterOnUser();
       // Capture the tap into the route ONLY while the route is still being built
       // (fewer than 2 points). Once a 2-point route exists — e.g. one built from a
       // popup's «Маршрут» button — tapping another marker must OPEN its popup, not
@@ -188,7 +210,7 @@ export function useMapController({
       }
       handlePlaceSelect(point);
     },
-    [handlePlaceSelect],
+    [cancelPendingCenterOnUser, handlePlaceSelect],
   );
   // #539 — tapping a list/panel place card must focus the marker AND show the
   // place card on mobile. `focusPlace` only centers + tries to open the Leaflet
@@ -201,8 +223,8 @@ export function useMapController({
   isMobileRef.current = isMobile;
   const focusPlaceStable = useCallback((item: TravelCoords) => {
     // List/card focus is the same explicit inspection intent as a marker tap.
-    // Keep the selected point in view until the user asks to follow GPS again.
-    setIsFollowingUser(false);
+    // Keep the selected point in view until the user asks for GPS again.
+    cancelPendingCenterOnUser();
     if (isMobileRef.current && item?.coord) {
       // Mirror handleMarkerSelect (#FIX-2): only feed the route while it is still
       // incomplete; a fully-built 2-point route releases the tap so the place card opens.
@@ -214,12 +236,12 @@ export function useMapController({
       setSelectedPlace(item as unknown as MapPoint);
     }
     return focusPlaceRef.current?.(item);
-  }, []);
+  }, [cancelPendingCenterOnUser]);
 
   // F-49 — "Search this area" viewport state. Declared here (after route +
-  // filters) so it can read the active mode/radius; a user gesture resets the
-  // controller-owned follow flag via onUserInitiatedMove.
-  const onUserInitiatedMove = useCallback(() => setIsFollowingUser(false), []);
+  // filters) so it can read the active mode/radius; a user gesture cancels the
+  // controller-owned pending centre via onUserInitiatedMove.
+  const onUserInitiatedMove = cancelPendingCenterOnUser;
   const {
     searchAreaCenter,
     setSearchAreaCenter,
@@ -336,30 +358,37 @@ export function useMapController({
     // F-49 — returning to the GPS anchor clears the explicit "search this area"
     // pick so the nearby query revolves around the user again.
     setSearchAreaCenter(null);
-    setIsFollowingUser(true);
+    // One press = one location request. The fix it produces centres the map once
+    // (effect below); the flag stays armed only until then.
+    pendingCenterOnUserRef.current = true;
     void refreshLocation?.();
     if (!userLocation) return;
+    // Instant feedback on the last trusted point while the fresh fix is in flight.
     try {
-      mapUiApi?.centerOnUser?.();
+      mapUiApi?.centerOnUser?.(toMapTarget(userLocation));
     } catch {
       // noop
     }
   }, [mapUiApi, refreshLocation, userLocation, setSearchAreaCenter]);
 
   const startManualRouteFromLocationState = useCallback(() => {
-    setIsFollowingUser(false);
+    cancelPendingCenterOnUser();
     useRouteStore.getState().clearRouteAndSetMode('route');
-  }, []);
+  }, [cancelPendingCenterOnUser]);
 
+  // Centre exactly once, on the fix the press asked for. Without the disarm, every
+  // later watch tick re-centred the map (setView → new viewport → cluster/tile
+  // refetch), which is the "map keeps redrawing while I drive" regression.
   useEffect(() => {
-    if (!isFollowingUser) return;
+    if (!pendingCenterOnUserRef.current) return;
     if (!userLocation) return;
+    pendingCenterOnUserRef.current = false;
     try {
-      mapUiApi?.centerOnUser?.();
+      mapUiApi?.centerOnUser?.(toMapTarget(userLocation));
     } catch {
       // noop
     }
-  }, [isFollowingUser, mapUiApi, userLocation]);
+  }, [mapUiApi, userLocation]);
 
   // #211 — не терять контекст карты при возврате в режим «Места» (radius).
   // Режим «Маршрут» уводит вьюпорт к общереспубликанскому виду (fit по маршруту).
@@ -376,7 +405,7 @@ export function useMapController({
       // иначе оставляем текущий вид (URL-координаты / последний центр радиуса).
       if (userLocation) {
         try {
-          mapUiApi?.centerOnUser?.();
+          mapUiApi?.centerOnUser?.(toMapTarget(userLocation));
         } catch {
           // noop
         }

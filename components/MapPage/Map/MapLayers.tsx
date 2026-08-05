@@ -3,9 +3,10 @@
  * @module components/MapPage/Map/MapLayers
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import type { LatLng } from '@/types/coordinates';
+import { getLiveUserPosition, subscribeLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import type { MapMode } from './types';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -116,6 +117,34 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
     return userLocation;
   }, [userLocation]);
 
+  // Живые тики GPS сознательно НЕ проходят через React (иначе за рулём весь экран
+  // перерисовывается на каждое обновление координат). Маркер «вы здесь» подписан на
+  // внешний канал и двигается императивно; сам компонент при этом не рендерится.
+  const userMarkerRef = useRef<any>(null);
+  useEffect(() => {
+    if (!validUserLocation) return undefined;
+    return subscribeLiveUserPosition((position) => {
+      if (!position) return;
+      if (!isValidCoordinate(position.latitude, position.longitude)) return;
+      try {
+        userMarkerRef.current?.setLatLng?.([position.latitude, position.longitude]);
+      } catch {
+        // noop
+      }
+    });
+  }, [validUserLocation]);
+
+  // Пропы отстают от канала (обновляются только на явном запросе), поэтому при
+  // любом рендере рисуем маркер по самой свежей известной точке.
+  const userMarkerPosition = useMemo<[number, number] | null>(() => {
+    if (!validUserLocation) return null;
+    const live = getLiveUserPosition();
+    if (live && isValidCoordinate(live.latitude, live.longitude)) {
+      return [live.latitude, live.longitude];
+    }
+    return [validUserLocation.lat, validUserLocation.lng];
+  }, [validUserLocation]);
+
   const shouldRenderBaseTileLayer = Platform.OS !== 'web' || isTestEnv;
   const userLocationLabel = i18nT('map:components.MapPage.Map.MapLayers.vy_zdes_ba4a137a');
 
@@ -125,6 +154,11 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
     if (!el) return;
     el.setAttribute('role', 'img');
     el.setAttribute('aria-label', userLocationLabel);
+  };
+
+  const registerUserLocationMarker = (marker: any) => {
+    userMarkerRef.current = marker ?? null;
+    labelUserLocationMarker(marker);
   };
 
   return (
@@ -157,11 +191,11 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
       {validUserLocation && userLocationIcon && (
         <Marker
           key={`user-location-${userLocationPaneName ?? 'default-pane'}`}
-          position={[validUserLocation.lat, validUserLocation.lng]}
+          position={userMarkerPosition ?? [validUserLocation.lat, validUserLocation.lng]}
           icon={userLocationIcon}
           title={userLocationLabel}
           alt={userLocationLabel}
-          ref={labelUserLocationMarker}
+          ref={registerUserLocationMarker}
           pane={Platform.OS === 'web' ? userLocationPaneName : undefined}
           interactive={Platform.OS !== 'web'}
           zIndexOffset={0}

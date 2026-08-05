@@ -23,15 +23,6 @@ async function loadExpoLocation() {
   return expoLocationModulePromise
 }
 
-const isSameCoordinates = (a: Coordinates | null, b: Coordinates | null): boolean => {
-  if (a === b) return true
-  if (!a || !b) return false
-  return (
-    Math.abs(a.latitude - b.latitude) < SAME_LOCATION_EPSILON &&
-    Math.abs(a.longitude - b.longitude) < SAME_LOCATION_EPSILON
-  )
-}
-
 type UseMapUserLocationArgs = {
   coordinates: any
   providedUserLocation?: Coordinates | null
@@ -53,23 +44,24 @@ export function useMapUserLocation({
   onUserLocationChange,
   onRequestUserLocation,
 }: UseMapUserLocationArgs) {
-  const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
+  const [ownUserLocation, setOwnUserLocation] = useState<Coordinates | null>(null)
   const geoRequestedRef = useRef(false)
   const pendingFocusRef = useRef(false)
 
-  useEffect(() => {
-    if (providedUserLocation === undefined) return
+  // Controlled mode (the owner passes providedUserLocation, possibly null) derives
+  // straight from the prop. Mirroring it into local state left this hook a commit
+  // behind the owner, so a centre request arriving together with the fresh fix still
+  // saw "no location" and fired a SECOND geolocation request to catch up.
+  const userLocation = useMemo<Coordinates | null>(() => {
+    if (providedUserLocation === undefined) return ownUserLocation
     if (
       providedUserLocation &&
       isValidCoordinate(providedUserLocation.latitude, providedUserLocation.longitude)
     ) {
-      setUserLocation((prev) =>
-        isSameCoordinates(prev, providedUserLocation) ? prev : providedUserLocation,
-      )
-      return
+      return providedUserLocation
     }
-    setUserLocation((prev) => (prev === null ? prev : null))
-  }, [providedUserLocation])
+    return null
+  }, [ownUserLocation, providedUserLocation])
 
   useEffect(() => {
     try {
@@ -96,7 +88,7 @@ export function useMapUserLocation({
     const lng = Number((coordinates as any)?.longitude)
     if (!coordinatesAreRealUser(lat, lng)) return
 
-    setUserLocation((prev) => {
+    setOwnUserLocation((prev) => {
       if (
         prev &&
         Math.abs(prev.latitude - lat) < SAME_LOCATION_EPSILON &&
@@ -143,7 +135,7 @@ export function useMapUserLocation({
       const lat = location.coords.latitude
       const lng = location.coords.longitude
       if (isValidCoordinate(lat, lng)) {
-        setUserLocation({ latitude: lat, longitude: lng })
+        setOwnUserLocation({ latitude: lat, longitude: lng })
       }
     } catch {
       // Includes the timeout above, so a hung getCurrentPositionAsync no longer

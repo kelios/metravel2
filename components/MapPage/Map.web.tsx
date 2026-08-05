@@ -968,6 +968,18 @@ function coordsApproxEqual(a: [number, number], b: [number, number] | undefined)
   return !!b && Math.abs(a[0] - b[0]) < COORD_EPSILON && Math.abs(a[1] - b[1]) < COORD_EPSILON
 }
 
+function userLocationApproxEqual(
+  a: Props['userLocation'],
+  b: Props['userLocation'],
+): boolean {
+  if (!a && !b) return true
+  if (!a || !b) return false
+  return (
+    Math.abs(a.latitude - b.latitude) < COORD_EPSILON &&
+    Math.abs(a.longitude - b.longitude) < COORD_EPSILON
+  )
+}
+
 export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   if (
     Math.abs(prevProps.coordinates.latitude - nextProps.coordinates.latitude) > COORD_EPSILON ||
@@ -975,6 +987,14 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   ) {
     return false
   }
+  // The trusted user position must reach the map, otherwise the «вы здесь» marker
+  // never appears when the fresh fix lands on the cached viewport anchor (opening
+  // the map where you already were, or pressing "locate me" twice from one spot) —
+  // no other compared prop changes there. Live jitter below COORD_EPSILON (~11 m)
+  // still cannot re-render the map, and useMapCoordinates additionally throttles
+  // live watch ticks, so a moving user costs at most one re-render per interval.
+  if (!userLocationApproxEqual(prevProps.userLocation, nextProps.userLocation)) return false
+  if (prevProps.coordinatesAreFallback !== nextProps.coordinatesAreFallback) return false
   if (prevProps.mode !== nextProps.mode || prevProps.transportMode !== nextProps.transportMode) {
     return false
   }

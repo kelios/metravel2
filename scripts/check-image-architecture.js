@@ -105,12 +105,13 @@ function identifierCarriesWidth(content, identifier, keys) {
 const OPTIMIZE_WEB_DISABLED = /optimizeWeb\s*[=:]\s*\{?\s*false\s*\}?/;
 
 /**
- * Номер строки с реальным `optimizeWeb={false}`, иначе `null`.
+ * Номер первой строки КОДА (не комментария), где срабатывает `pattern`.
  *
- * Комментарии пропускаются: в местах, где проп сняли, о нём осталось объяснение
- * («здесь стоял `optimizeWeb: false`»), и гейт ловил бы собственную историю.
+ * Комментарии пропускаются: в местах, где правило уже применено, о прежнем коде
+ * осталось объяснение («здесь стоял `optimizeWeb: false`», «поля заливает
+ * dominant_color»), и гейт ловил бы собственную историю.
  */
-function findOptimizeWebDisabledLine(content) {
+function findCodeLineMatching(content, pattern) {
   let insideBlockComment = false;
 
   const lines = content.split('\n');
@@ -123,16 +124,58 @@ function findOptimizeWebDisabledLine(content) {
       continue;
     }
     if (trimmed.startsWith('//')) continue;
+    if (trimmed.startsWith('*')) continue;
     if (trimmed.startsWith('/*')) {
       if (!trimmed.includes('*/')) insideBlockComment = true;
       continue;
     }
 
     const code = line.split('//')[0];
-    if (OPTIMIZE_WEB_DISABLED.test(code)) return i + 1;
+    if (pattern.test(code)) return i + 1;
   }
 
   return null;
+}
+
+function findOptimizeWebDisabledLine(content) {
+  return findCodeLineMatching(content, OPTIMIZE_WEB_DISABLED);
+}
+
+/**
+ * #1208: чтение `dominant_color` мимо канонического извлечения.
+ *
+ * Заливка полей letterbox раздавалась пропсом, и каждый экран доставал цвет из
+ * манифеста сам. Экраны, которые этого не сделали, остались с прозрачными полями
+ * (замер прода 2026-08-05 на `/map`: 7 `contain`-карточек, 0 слоёв заливки).
+ * Теперь извлечение живёт в `getMediaPlaceholderData`, а раздача — в общем
+ * индексе `utils/mediaPlaceholderIndex.ts`, и новая локальная копия этой логики
+ * означает возврат того же дефекта.
+ */
+const DOMINANT_COLOR_READ = /\bdominant_color\b/;
+
+const ALLOW_DOMINANT_COLOR_FILES = new Set([
+  // Канонический извлекатель.
+  path.join(ROOT, 'utils', 'travelMediaVariants.ts'),
+]);
+
+/**
+ * `scripts/**` намеренно вне правила: SSG-генераторы (`ssg-skeletons.js`,
+ * `generate-seo-pages.js`) пишут заливку прямо в HTML шелла на этапе сборки и
+ * импортировать TS-индекс не могут — это отдельный, документированный путь.
+ */
+const DOMINANT_COLOR_RULE_ROOTS = [
+  'components',
+  'screens',
+  'app',
+  'hooks',
+  'utils',
+  'services',
+  'api',
+  'stores',
+];
+
+function findDominantColorReadLine(content) {
+  return findCodeLineMatching(content, DOMINANT_COLOR_READ);
 }
 
 function collectMissingWidthCalls(file, content) {
@@ -236,6 +279,8 @@ function reportError(errors) {
   console.error('- Always pass an explicit width to optimizeImageUrl / buildResponsiveImageProps (#1161):');
   console.error('  a media request without `w` makes the proxy return the full master (132 KB instead of 2.5 KB');
   console.error('  on a 132px tile). Derive the width from the measured slot, see docs/features/images.md.');
+  console.error('- Do not read `dominant_color` outside utils/travelMediaVariants.ts (#1208): the letterbox fill');
+  console.error('  is extracted by getMediaPlaceholderData and delivered by utils/mediaPlaceholderIndex.');
   process.exit(1);
 }
 
@@ -269,6 +314,25 @@ function main() {
     if (optimizeWebLine) {
       errors.push(
         `${path.relative(ROOT, file)}:${optimizeWebLine} отключает optimizeWeb — media-URL уйдёт без \`?w=\`, ownership-роут ответит мастером с no-store (#1221)`
+      );
+    }
+  }
+
+  // #1208: заливка полей letterbox извлекается только каноническим хелпером и
+  // раздаётся общим индексом; локальная копия возвращает «экран без заливки».
+  // Проверяется шире правила ширины: расшивать манифест по-своему одинаково легко
+  // и в компоненте, и в `api/**`-нормализаторе.
+  const dominantColorRuleFiles = DOMINANT_COLOR_RULE_ROOTS.flatMap((dirName) => {
+    const dir = path.join(ROOT, dirName);
+    return fs.existsSync(dir) ? walk(dir).filter(isTextFile) : [];
+  });
+
+  for (const file of dominantColorRuleFiles) {
+    if (ALLOW_DOMINANT_COLOR_FILES.has(file)) continue;
+    const dominantColorLine = findDominantColorReadLine(read(file));
+    if (dominantColorLine) {
+      errors.push(
+        `${path.relative(ROOT, file)}:${dominantColorLine} читает dominant_color напрямую — используйте getMediaPlaceholderData + utils/mediaPlaceholderIndex (#1208)`
       );
     }
   }
@@ -317,7 +381,11 @@ function main() {
 // #1161: правило ширины покрыто негативными тестами
 // (`__tests__/scripts/image-architecture-width-rule.test.ts`), поэтому коллектор
 // экспортируется, а `main()` запускается только при прямом вызове скрипта.
-module.exports = { collectMissingWidthCalls, findOptimizeWebDisabledLine };
+module.exports = {
+  collectMissingWidthCalls,
+  findOptimizeWebDisabledLine,
+  findDominantColorReadLine,
+};
 
 if (require.main === module) {
   main();

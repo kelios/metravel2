@@ -1,4 +1,5 @@
-import { TravelsForMap, TravelsMap } from '@/types/types';
+import { TravelMediaImage, TravelsForMap, TravelsMap } from '@/types/types';
+import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
 import { normalizeNumericArray } from '@/utils/filterQuery';
 import { devError, devWarn } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
@@ -58,6 +59,25 @@ const normalizeImageUrl = (value: unknown): string => {
   }
   
   return url;
+};
+
+/**
+ * Запись манифеста для точки карты: `media.address_images` ключуется id кадра,
+ * который для точки совпадает с её `point_id`/`id`. Карточка показывает один
+ * снимок, поэтому при неизвестном ключе берём первую запись.
+ */
+const readMapPointMediaEntry = (
+  item: Record<string, unknown>,
+): TravelMediaImage | undefined => {
+  const media = (item as { media?: { address_images?: Record<string, TravelMediaImage> } }).media;
+  const images = media?.address_images;
+  if (!images || typeof images !== 'object') return undefined;
+  for (const id of [item.point_id, item.id]) {
+    if (id === undefined || id === null) continue;
+    const entry = images[String(id)];
+    if (entry) return entry;
+  }
+  return Object.values(images)[0];
 };
 
 const normalizeLatLngString = (value: unknown): string => {
@@ -148,6 +168,15 @@ const normalizeTravelCoordsItem = (raw: unknown) => {
 
   const urlTravel = normalizeString(t.urlTravel ?? t.url_travel ?? t.url, '');
   const articleUrl = normalizeString(t.articleUrl ?? t.article_url, '') || undefined;
+
+  // Заливка полей letterbox (#1208): карточка списка, попап маркера и нижняя
+  // карточка рисуют `travelImageThumbUrl`/`travelImageUrl` — это legacy-конверсии,
+  // которых в манифесте нет, поэтому цвет индексируется ещё и под ними.
+  indexMediaImage(readMapPointMediaEntry(t), [
+    travelImageThumbUrl,
+    travelImageUrl,
+    travelImageLandscapeUrl,
+  ]);
 
   return {
     ...t,
@@ -540,6 +569,10 @@ const normalizeClusterPoint = (raw: unknown): MapClusterPoint => {
 
   const idRaw = t.point_id ?? t.id;
   const id = typeof idRaw === 'number' || typeof idRaw === 'string' ? idRaw : undefined;
+
+  // Серверная кластеризация — второй источник тех же карточек/попапов, поэтому
+  // индекс заливки прогревается и здесь (см. `normalizeTravelCoordsItem`).
+  indexMediaImage(readMapPointMediaEntry(t), [travelImageThumbUrl, travelImageUrl]);
 
   return {
     id,

@@ -3,6 +3,7 @@ import { AppState, Linking, Platform } from 'react-native';
 import { useIsFocused } from 'expo-router';
 import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
+import { publishLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 import { translate as i18nT } from '@/i18n'
 
@@ -206,19 +207,33 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     const prev = lastTrustedLocationRef.current;
 
     if (!options.force && prev) {
-      const movedEnough = distanceMeters(prev, next) >= LIVE_LOCATION_MIN_DISTANCE_M;
-      if (!movedEnough) {
-        lastTrustedLocationRef.current = next;
-        setLocationState({
-          status: 'current',
-          coordinates: { latitude: prev.latitude, longitude: prev.longitude },
-          accuracy: next.accuracy ?? null,
+      // A live watch tick is telemetry, not user intent, and it must NOT become React
+      // state: while driving it arrives ~once per second, and every state update
+      // re-rendered the whole map screen — nearby cards, distance chips, radius circle.
+      // The fresh point goes to the out-of-React channel instead, so only the «вы здесь»
+      // marker moves (imperatively). See hooks/map/liveUserPosition.
+      lastTrustedLocationRef.current = next;
+      cacheWebCoordinates(next);
+      if (distanceMeters(prev, next) >= LIVE_LOCATION_MIN_DISTANCE_M) {
+        publishLiveUserPosition({
+          latitude,
+          longitude,
           timestamp: next.timestamp ?? Date.now(),
-          canAskAgain: true,
         });
-        cacheWebCoordinates(next);
-        return false;
       }
+      // The tick still proves the watch is alive: drop the "refreshing" hint left by
+      // an earlier watch error, keeping the published coordinates object identical.
+      setLocationState((current) => {
+        if (current.status !== 'current' || !current.isRefreshing) return current;
+        return {
+          status: 'current',
+          coordinates: current.coordinates,
+          accuracy: current.accuracy,
+          timestamp: current.timestamp,
+          canAskAgain: current.canAskAgain,
+        };
+      });
+      return false;
     }
 
     lastTrustedLocationRef.current = next;
@@ -239,12 +254,17 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     });
     setError(null);
     cacheWebCoordinates(next);
+    publishLiveUserPosition({
+      latitude,
+      longitude,
+      timestamp: next.timestamp ?? Date.now(),
+    });
     return true;
   }, [cacheWebCoordinates]);
 
   const markLiveLocationRefreshing = useCallback(() => {
     setLocationState((current) =>
-      current.status === 'current'
+      current.status === 'current' && !current.isRefreshing
         ? { ...current, isRefreshing: true }
         : current,
     );
@@ -423,6 +443,9 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
           setCoordinatesSource('default');
         }
         clearLocationWatch();
+        // Доступа к позиции больше нет — гасим и живой канал, иначе маркер «вы здесь»
+        // остался бы висеть на последней точке.
+        publishLiveUserPosition(null);
         setLocationState(
           positionError.code === positionError.PERMISSION_DENIED
             ? {
@@ -491,6 +514,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         });
         setCoordinates(DEFAULT_COORDINATES);
         setCoordinatesSource('default');
+        publishLiveUserPosition(null);
         setLocationState({
           status: 'denied',
           coordinates: null,

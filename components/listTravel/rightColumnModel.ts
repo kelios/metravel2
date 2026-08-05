@@ -7,15 +7,34 @@ export const TOP_SCROLL_PADDING = 8
 export const WEB_ROW_INTRINSIC_SIZE_MOBILE = 'auto 340px'
 export const WEB_ROW_INTRINSIC_SIZE_DESKTOP = 'auto 420px'
 
+/**
+ * Native lookahead FlashList для ленты карточек.
+ *
+ * FlashList v2 держит буфер `drawDistance * 2` и делит его по направлению скролла
+ * 0.3 назад / 0.7 вперёд (`RVEngagedIndicesTrackerImpl`). Значит реальный запас
+ * назад — `0.6 * drawDistance`, вперёд — `1.4 * drawDistance`.
+ *
+ * Замер Pixel 10 Pro (2026-08-05, `/search`): карточка поиска занимает 736–814 px
+ * при DPR 2.625, то есть ~280–310 dp. При прежних 180 запас был 108 dp назад и
+ * 252 dp вперёд — меньше ОДНОЙ карточки в обе стороны. Из-за этого каждый шаг
+ * прокрутки рециклил ячейку: `expo-image` на смене `recyclingKey` очищает вью,
+ * поэтому карточка сначала показывала плейсхолдер и только потом фото — и при
+ * возврате назад на один экран картинка перерисовывалась заново (лог `[IMGDBG]`:
+ * 7 `recycle` + 7 `load` вниз и те же 7 обратно за 4 свайпа).
+ *
+ * 560 даёт 336 dp назад (возврат на карточку не рециклит) и 784 dp вперёд
+ * (следующие ~2.5 карточки успевают декодировать до появления в кадре).
+ */
+const NATIVE_LIST_DRAW_DISTANCE = 560
+
 export function getRightColumnVirtualizationConfig(isWeb: boolean, isMobile: boolean) {
   // FlashList v2 progressively mounts the visible rows in small batches itself.
   // Keep only a short lookahead so the next row decodes before it scrolls in,
   // without mounting/requesting the whole 20-card page.
   return {
-    // FlashList v2 applies drawDistance on both sides of the viewport. At the top
-    // the unused "before" half moves after it, so 180 means a real 360px lookahead:
-    // enough for the next row, but still bounded when compact density has four columns.
-    drawDistance: isWeb ? (isMobile ? 160 : 180) : 180,
+    // Web остаётся коротким: там лента не рециклит нативные вью, а лишний запас
+    // тянет байты низкоприоритетных обложек и душит подгрузку следующей страницы.
+    drawDistance: isWeb ? (isMobile ? 160 : 180) : NATIVE_LIST_DRAW_DISTANCE,
   }
 }
 

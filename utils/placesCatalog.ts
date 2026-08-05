@@ -1,6 +1,7 @@
 import type { TravelCoords, TravelMediaImage } from '@/types/types'
 import { translate as i18nT } from '@/i18n'
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants'
+import { indexMediaImage } from '@/utils/mediaPlaceholderIndex'
 
 
 /** Rating for a single external provider (2GIS, TripAdvisor, …). */
@@ -318,6 +319,10 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
       ?.address_images ?? {},
   )[0]
   const placeholder = getMediaPlaceholderData(mediaEntry)
+  // Тот же кадр открывается ещё и в попапе/нижней карточке места, которые получают
+  // только URL. Индекс отдаёт им заливку по адресу, включая legacy-конверсию
+  // `thumb_url`, которой в манифесте нет (#1208).
+  indexMediaImage(mediaEntry, [thumbUrl, landscapeUrl])
 
   return {
     id,

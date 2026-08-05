@@ -459,6 +459,19 @@ npx serve dist/prod -l 3000 -s
 - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
 - Images must preserve original aspect ratio (use `contain`); the unused letterbox area is filled by `dominant_color` on web and by the Expo Image blur layer on native.
+- The web letterbox fill has exactly one delivery path (#1208, 2026-08-05): the data layer
+  indexes the media manifest through `utils/mediaPlaceholderIndex.ts`, and `ImageCardMedia`
+  resolves the colour by image URL. An explicit `placeholderColor` prop still wins, but no
+  screen has to pass one — a card left without the prop must not lose its fill.
+  - Extract `dominant_color` only through `getMediaPlaceholderData`; a second local
+    extraction is what left `/map`, quest and popup cards with transparent gutters.
+    Enforced by `npm run check:image-architecture`.
+  - A new payload family gets ONE `indexMediaImage`/`indexTravelMedia` call in its
+    normalizer, not a new prop chain through the cards.
+  - Rich-text body images are the documented exception: the backend returns
+    `article_body.*.dominant_color = null`, so their frame samples the loaded bitmap
+    (#1233, `components/travel/stableContent/useWebEffects.ts`). Merging them into the
+    index requires the backend to fill that field.
 - One visual image slot must use one effective network URI across sharp and blurred layers on web and native, and on web exactly one raster (#1208).
   - Derive any backdrop from the same loaded source/bitmap (or from backend-provided `blurhash`/`dominant_color` without another photo request).
   - Do not build or pass a second blur-only URL, `blurSrc`, `blurSource`, or source-level `width`/`height` override for the backdrop.

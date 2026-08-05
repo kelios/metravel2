@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/hooks/useTheme';
 import RightColumn from '@/components/listTravel/RightColumn';
+import { getRightColumnVirtualizationConfig } from '@/components/listTravel/rightColumnModel';
 
 const mockFlashListProps = jest.fn();
 
@@ -150,7 +151,9 @@ describe('RightColumn layout invariants', () => {
     );
 
     const props = mockFlashListProps.mock.calls.at(-1)?.[0] as any;
-    expect(props.drawDistance).toBe(180);
+    // Jest рендерит native-ветку, поэтому здесь ожидается native lookahead —
+    // он шире одной карточки, чтобы рециклинг не перерисовывал фото при скролле.
+    expect(props.drawDistance).toBe(getRightColumnVirtualizationConfig(false, false).drawDistance);
     expect(props.initialNumToRender).toBeUndefined();
     expect(props.maxToRenderPerBatch).toBeUndefined();
     expect(props.windowSize).toBeUndefined();

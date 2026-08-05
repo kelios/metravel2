@@ -9,6 +9,7 @@ import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
 import WeatherLegend from '@/components/MapPage/WeatherLegend'
 import { translate as i18nT } from '@/i18n'
 import type { CoordinatesSource, MapLocationState } from '@/hooks/map/useMapCoordinates'
+import { getLiveUserPosition } from '@/hooks/map/liveUserPosition'
 
 
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
@@ -127,12 +128,18 @@ export function MapCanvas({
     ? i18nT('map:components.MapPage.MapCanvas.poslednee_izvestnoe_mesto_2b6f90c3')
     : i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_7c41d5e8')
   const isRouteMode = mapPanelProps?.mode === 'route'
+  // Живые тики намеренно не обновляют locationState (иначе экран перерисовывается на
+  // каждый GPS-фикс во время движения), поэтому свежесть считаем по внешнему каналу:
+  // компонент и так тикает раз в 15 с своим locationClock. См. hooks/map/liveUserPosition.
+  const lastFixAt = locationState.status === 'current'
+    ? Math.max(locationState.timestamp, getLiveUserPosition()?.timestamp ?? 0)
+    : 0
   const locationQuality = locationState.status === 'current'
     ? locationState.isRefreshing
       ? 'refreshing'
       : typeof locationState.accuracy === 'number' && locationState.accuracy > LOCATION_LOW_ACCURACY_METERS
         ? 'lowAccuracy'
-        : locationClock - locationState.timestamp > LOCATION_STALE_AFTER_MS
+        : locationClock - lastFixAt > LOCATION_STALE_AFTER_MS
           ? 'stale'
           : null
     : null

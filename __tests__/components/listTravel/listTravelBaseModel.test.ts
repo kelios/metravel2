@@ -40,6 +40,19 @@ describe('search result virtualization budget', () => {
       drawDistance: 160,
     })
   })
+
+  // Native рециклит ячейки: FlashList делит буфер `drawDistance * 2` как 0.3
+  // назад / 0.7 вперёд, а карточка поиска на телефоне занимает ~300 dp. Запас
+  // назад (0.6 × drawDistance) обязан покрывать целую карточку, иначе возврат на
+  // один шаг рециклит ячейку и `expo-image` перерисовывает фото с плейсхолдера.
+  it('keeps the native lookahead wider than one card in both directions', () => {
+    const CARD_HEIGHT_DP = 300
+    const { drawDistance } = getRightColumnVirtualizationConfig(false, true)
+
+    expect(drawDistance * 0.6).toBeGreaterThanOrEqual(CARD_HEIGHT_DP)
+    expect(drawDistance * 1.4).toBeGreaterThanOrEqual(CARD_HEIGHT_DP * 2)
+    expect(getRightColumnVirtualizationConfig(false, false).drawDistance).toBe(drawDistance)
+  })
 })
 
 describe('buildListTravelFallbackSteps', () => {

@@ -7,6 +7,7 @@ import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
 import { useMapClusters } from '@/hooks/map/useMapClusters';
+import { getLiveUserPosition, subscribeLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import type { MapClustersFilters } from '@/api/map';
 import {
   buildServerClusterRenderData,
@@ -496,14 +497,35 @@ const Map: React.FC<TravelProps> = ({
 
   const pushUserLocation = useCallback(() => {
     if (!isReadyRef.current) return;
-    if (userLocationLatLng) {
+    // Живые тики намеренно не проходят через React-состояние (иначе экран
+    // перерисовывается на каждое обновление GPS), поэтому свежую точку берём из
+    // канала, а проп остаётся запасным вариантом. См. hooks/map/liveUserPosition.
+    const live = getLiveUserPosition();
+    const target = live
+      ? { lat: live.latitude, lng: live.longitude }
+      : userLocationLatLng;
+    if (target) {
       injectMapCommand(
-        `window.__metravelRenderUserLocation && window.__metravelRenderUserLocation(${userLocationLatLng.lat}, ${userLocationLatLng.lng})`,
+        `window.__metravelRenderUserLocation && window.__metravelRenderUserLocation(${target.lat}, ${target.lng})`,
       );
     } else {
       injectMapCommand('window.__metravelClearUserLocation && window.__metravelClearUserLocation()');
     }
   }, [injectMapCommand, userLocationLatLng]);
+
+  // Маркер «вы здесь» в WebView двигаем императивно — без ререндера RN-дерева.
+  useEffect(() => {
+    return subscribeLiveUserPosition((position) => {
+      if (!isReadyRef.current) return;
+      if (position) {
+        injectMapCommand(
+          `window.__metravelRenderUserLocation && window.__metravelRenderUserLocation(${position.latitude}, ${position.longitude})`,
+        );
+        return;
+      }
+      injectMapCommand('window.__metravelClearUserLocation && window.__metravelClearUserLocation()');
+    });
+  }, [injectMapCommand]);
 
   const autoCenterOnTrustedUserIfNeeded = useCallback(() => {
     if (!isReadyRef.current) return;

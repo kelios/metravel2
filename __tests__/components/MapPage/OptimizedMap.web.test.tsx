@@ -67,4 +67,24 @@ describe('Map.web arePropsEqual comparator', () => {
     const b = { ...a, transportMode: 'bike' as const };
     expect(arePropsEqual(a, b)).toBe(false);
   });
+
+  it('returns false when the trusted user location appears', () => {
+    // Иначе «вы здесь» не появляется, когда свежий fix совпал с кешированным
+    // якорем вьюпорта: другие сравниваемые пропы при этом не меняются.
+    const a = { ...baseProps(), userLocation: null, coordinatesAreFallback: true };
+    const b = { ...a, userLocation: { latitude: 53.9006, longitude: 27.559 }, coordinatesAreFallback: false };
+    expect(arePropsEqual(a, b)).toBe(false);
+  });
+
+  it('returns false when the user moves beyond epsilon', () => {
+    const a = { ...baseProps(), userLocation: { latitude: 53.9006, longitude: 27.559 } };
+    const b = { ...a, userLocation: { latitude: 53.9026, longitude: 27.559 } };
+    expect(arePropsEqual(a, b)).toBe(false);
+  });
+
+  it('returns true for user-location jitter within epsilon', () => {
+    const a = { ...baseProps(), userLocation: { latitude: 53.9006, longitude: 27.559 } };
+    const b = { ...a, userLocation: { latitude: 53.90065, longitude: 27.55905 } };
+    expect(arePropsEqual(a, b)).toBe(true);
+  });
 });

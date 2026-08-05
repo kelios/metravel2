@@ -224,6 +224,42 @@ describe('useMapController (#991 smoke)', () => {
     expect(result.current.selectedPlace).toEqual(point)
   })
 
+  it('«моё местоположение» — один запрос и одно центрирование, без follow на каждый GPS-тик', () => {
+    const mapCenterOnUser = jest.fn()
+    ;(mockMapCoordinatesResult.refreshLocation as jest.Mock).mockClear()
+
+    const { result, rerender } = renderHook(() => useMapController(baseParams))
+    act(() => {
+      result.current.mapPanelProps.onMapUiApiReady({ centerOnUser: mapCenterOnUser } as any)
+    })
+
+    act(() => { result.current.centerOnUser() })
+    expect(mockMapCoordinatesResult.refreshLocation).toHaveBeenCalledTimes(1)
+    expect(mapCenterOnUser).not.toHaveBeenCalled()
+
+    // Ответ на этот запрос центрирует карту ровно один раз.
+    act(() => {
+      Object.assign(mockMapCoordinatesResult, {
+        coordinatesSource: 'geolocation',
+        coordinatesAreFallback: false,
+        currentLocation: { latitude: 52.2, longitude: 20.98 },
+      })
+      rerender()
+    })
+    expect(mapCenterOnUser).toHaveBeenCalledTimes(1)
+
+    // Дальнейшие тики live-watch двигают только маркер: повторный setView пере-
+    // запрашивал кластеры/тайлы и карта перерисовывалась всю дорогу.
+    act(() => {
+      Object.assign(mockMapCoordinatesResult, {
+        currentLocation: { latitude: 52.2015, longitude: 20.9815 },
+      })
+      rerender()
+    })
+    expect(mapCenterOnUser).toHaveBeenCalledTimes(1)
+    expect(mockMapCoordinatesResult.refreshLocation).toHaveBeenCalledTimes(1)
+  })
+
   it('resetCoreForFilters сбрасывает search-area якорь и маршрут атомарно', () => {
     const { result } = renderHook(() => useMapController(baseParams))
     act(() => { result.current.resetCoreForFilters() })
