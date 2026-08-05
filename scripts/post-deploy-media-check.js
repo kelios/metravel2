@@ -87,9 +87,21 @@ const DEFAULT_WIDTHS = { small: 96, large: 800 }
  * бы из-за бэкендовой работы), но оно ВИДНО в отчёте. Когда прод начнёт отдавать
  * производную, гейт сам скажет снять пометку и станет строгим — так регресс
  * после починки уже не пройдёт молча.
+ *
+ * Протокол сработал: 2026-08-05 гейт выдал `media.master_width_pending_stale` в
+ * обеих Accept-ветках, и прод-проба это подтвердила. Замер на 4 ключах
+ * `travel-description-image` (`3754dddd…`, `544/description/f48b8dd5…`,
+ * `7f3b9593…`, `8c6f4e7e…`), обе ветки, `w=1920`:
+ *
+ *   200 · transform=dynamic-transform · cache-control: public, max-age=31536000, immutable
+ *
+ * Ни `stored-master`, ни `no-store` — то есть симптом #1215 (те же 110 828 B
+ * заново на каждый визит) снят. Ширина обслуживается динамическим ресайзом, а не
+ * stored-производной, но для этой проверки важно ровно одно: ширина мастера не
+ * отдаётся мастером и кэшируется. Пометка снята, проверка снова строгая.
  */
 const MASTER_DERIVATIVE_BY_FAMILY = new Map([
-  ['travel-description-image', { width: 1920, pendingTicket: '#1215' }],
+  ['travel-description-image', { width: 1920 }],
 ])
 
 /**

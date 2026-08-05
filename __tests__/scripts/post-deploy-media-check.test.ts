@@ -387,7 +387,11 @@ describe('post-deploy media check: ширина мастера обязана б
     expect(issue.message).toContain('w=1920')
   })
 
-  it('пока #1215 открыт — предупреждение, чтобы бэкендовый дефект не валил деплой фронта', () => {
+  // #1215 починен и пометка снята (прод-проба 2026-08-05: `w=1920` → 200
+  // `dynamic-transform`, `immutable` на 4 ключах в обеих Accept-ветках), поэтому
+  // возврат мастера на этой ширине снова ВАЛИТ гейт. Ради этого протокол
+  // `pendingTicket` и заводился: смягчение временное, строгость — конечное состояние.
+  it('после снятия pendingTicket та же поломка валит гейт, а не предупреждает', () => {
     const result = validateTarget(
       descriptionTarget(),
       withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
@@ -395,34 +399,53 @@ describe('post-deploy media check: ширина мастера обязана б
     const issue = result.issues.find(
       (item: { code: string }) => item.code === 'media.master_width_not_derivative'
     )
-    expect(issue.severity).toBe('warning')
-    expect(issue.message).toContain('#1215')
+    expect(issue.severity).toBe('error')
+    expect(MASTER_DERIVATIVE_BY_FAMILY.get(FAMILY).pendingTicket).toBeUndefined()
   })
 
-  it('без pendingTicket та же поломка валит гейт — иначе регресс пройдёт молча', () => {
-    const rule = MASTER_DERIVATIVE_BY_FAMILY.get(FAMILY)
-    MASTER_DERIVATIVE_BY_FAMILY.set(FAMILY, { width: rule.width })
-    try {
-      const result = validateTarget(
-        descriptionTarget(),
-        withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
-      )
-      expect(
-        result.issues.find((item: { code: string }) => item.code === 'media.master_width_not_derivative').severity
-      ).toBe('error')
-    } finally {
-      MASTER_DERIVATIVE_BY_FAMILY.set(FAMILY, rule)
-    }
-  })
-
-  it('починенная ширина мастера напоминает снять pendingTicket, а не молчит', () => {
+  it('починенная ширина мастера больше не даёт напоминания', () => {
     const result = validateTarget(descriptionTarget(), withMaster())
 
-    const issue = result.issues.find(
-      (item: { code: string }) => item.code === 'media.master_width_pending_stale'
-    )
-    expect(issue.severity).toBe('warning')
-    expect(issue.message).toContain('#1215')
+    expect(result.issues).toEqual([])
+  })
+
+  // Сам протокол остаётся рабочим для следующего такого дефекта: пока у записи
+  // есть `pendingTicket`, поломка понижена до предупреждения, а починка —
+  // напоминает пометку снять. Проверяется на временно подставленной записи,
+  // потому что в живой таблице открытых пометок сейчас нет.
+  describe('протокол pendingTicket остаётся рабочим для будущих записей', () => {
+    const withPending = (run: () => void) => {
+      const rule = MASTER_DERIVATIVE_BY_FAMILY.get(FAMILY)
+      MASTER_DERIVATIVE_BY_FAMILY.set(FAMILY, { ...rule, pendingTicket: '#0000' })
+      try {
+        run()
+      } finally {
+        MASTER_DERIVATIVE_BY_FAMILY.set(FAMILY, rule)
+      }
+    }
+
+    it('открытая пометка понижает поломку до предупреждения', () => {
+      withPending(() => {
+        const issue = validateTarget(
+          descriptionTarget(),
+          withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
+        ).issues.find((item: { code: string }) => item.code === 'media.master_width_not_derivative')
+
+        expect(issue.severity).toBe('warning')
+        expect(issue.message).toContain('#0000')
+      })
+    })
+
+    it('починка при открытой пометке напоминает её снять, а не молчит', () => {
+      withPending(() => {
+        const issue = validateTarget(descriptionTarget(), withMaster()).issues.find(
+          (item: { code: string }) => item.code === 'media.master_width_pending_stale'
+        )
+
+        expect(issue.severity).toBe('warning')
+        expect(issue.message).toContain('#0000')
+      })
+    })
   })
 
   it('семейства без обещанной производной в ширину мастера эту пробу не получают', () => {
