@@ -71,4 +71,29 @@ describe('rich-image-frame covers root-level images', () => {
     expect(framesOf(out)).toBe(0)
     expect(out).toContain('<blockquote>')
   })
+
+  // #1265: редактор оставил картинку ВНУТРИ заголовка. Для `collectRootLevelImageRanges`
+  // она вложенная, под правила <p>/<figure> не подходит — и оставалась единственным
+  // кадром статьи без рамки: замер прода 2026-08-05 на /travels/reka-isloch-… показал
+  // у неё фон `rgba(0, 0, 0, 0)` против залитой рамки у соседнего кадра в <p>.
+  it('lifts an image out of a heading into its own frame', () => {
+    const out = prepareStableContentHtml(
+      `<h2 id="chto-posmotret"><img src="${SRC}" /></h2><p>Дальше текст.</p>`
+    )
+
+    expect(framesOf(out)).toBe(1)
+    expect(out).toMatch(/<p[^>]*class="rich-image-frame"[^>]*>\s*<img\b/i)
+    // Заголовок остаётся на месте: его `id` — цель якоря и оглавления.
+    expect(out).toContain('id="chto-posmotret"')
+    expect(out).not.toMatch(/<h2[^>]*>\s*<img\b/i)
+    expect(out.indexOf('id="chto-posmotret"')).toBeLessThan(out.indexOf('rich-image-frame'))
+  })
+
+  it('keeps heading text and moves only the image below it', () => {
+    const out = prepareStableContentHtml(`<h3>Ружаны<img src="${SRC}" /></h3>`)
+
+    expect(framesOf(out)).toBe(1)
+    expect(out).toMatch(/<h3[^>]*>Ружаны<\/h3>/)
+    expect(out.indexOf('Ружаны')).toBeLessThan(out.indexOf('rich-image-frame'))
+  })
 })

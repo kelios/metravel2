@@ -703,6 +703,35 @@ const collectRootLevelImageRanges = (html: string): Array<[number, number]> => {
   return ranges
 }
 
+/**
+ * #1265: `<img>`, оставленный редактором ВНУТРИ заголовка.
+ *
+ * `collectRootLevelImageRanges` считает такую картинку вложенной (глубина 1), а под
+ * правила `<p>`/`<figure>` она не подходит — то есть рамки не получает вовсе.
+ * Замер прода 2026-08-05, `/travels/reka-isloch-…`: разметка
+ * `<h2 id="…"><img src="…0164614223…"></h2>`, у кадра нет ни заливки полей
+ * (`rgba(0, 0, 0, 0)`), ни принятия натуральных пропорций после загрузки, тогда как
+ * соседний кадр в `<p>` получает и то, и другое.
+ *
+ * Картинку выносим ПОСЛЕ заголовка, а сам заголовок оставляем на месте даже пустым:
+ * его `id` — цель якоря и оглавления, и удаление ломало бы навигацию по статье.
+ * Дальше вынесенный `<p>` проходит обычным правилом абзаца.
+ */
+const liftHeadingImages = (html: string): string =>
+  html.replace(
+    /<(h[1-6])(\b[^>]*)>([\s\S]*?)<\/\1>/gi,
+    (match, tag: string, attrs = '', inner = '') => {
+      const images = inner.match(/<img\b[^>]*>/gi)
+      if (!images?.length) return match
+      // Картинку-ссылку не трогаем: вынос из заголовка оторвал бы её от `<a>`, то
+      // есть отнял бы переход. Такой кадр остаётся как был — без рамки, но кликабельным.
+      if (/<a\b/i.test(inner)) return match
+      const rest = inner.replace(/<img\b[^>]*>/gi, '')
+      const lifted = images.map((img: string) => `<p>${img}</p>`).join('')
+      return `<${tag}${attrs}>${rest}</${tag}>${lifted}`
+    },
+  )
+
 const decorateRichImageFrames = (html: string) => {
   if (!html) return html
 
@@ -731,7 +760,7 @@ const decorateRichImageFrames = (html: string) => {
   }
 
   return wrapRootLevelImages(
-    html
+    liftHeadingImages(html)
       .replace(
         /<p([^>]*)>(\s*<img\b[^>]*\bsrc="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*)?)<\/p>/gi,
         (match, attrs = '', inner = '') => `<p${decorateAttrs(attrs, inner)}>${inner}</p>`

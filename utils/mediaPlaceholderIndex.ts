@@ -18,6 +18,14 @@
 // data-слой один раз индексирует манифест, `ImageCardMedia` находит цвет по URL
 // сам, и «забыть проп» на новом экране больше нельзя. Явный `placeholderColor`
 // по-прежнему главнее индекса.
+//
+// Ступеней ровно две, и обе здесь:
+//   1) `dominant_color` из манифеста — бесплатный и доступен ДО декода;
+//   2) `sampleDominantColor` — усреднение уже загруженного кадра, для семейств,
+//      которым бэкенд манифеста не отдаёт (тело статьи #1266, шаги квестов,
+//      обложки поездок, фото точек пользователя #1267).
+// Результат второй ступени ложится в тот же индекс, поэтому «манифест или сэмпл»
+// разбирается один раз и в одном месте. Менять поведение заливки — здесь.
 
 import type { TravelMedia, TravelMediaGroup, TravelMediaImage } from '@/types/types'
 import { getMediaPlaceholderData, type MediaPlaceholderData } from '@/utils/travelMediaVariants'
@@ -155,6 +163,73 @@ export function lookupMediaPlaceholder(
   const key = resolveMediaPlaceholderKey(url)
   if (!key) return null
   return index.get(key) ?? null
+}
+
+/**
+ * Сплошной цвет читается как второй фон и спорит с поверхностью карточки, поэтому
+ * заливка кладётся полупрозрачной: под ней остаётся сама карточка.
+ */
+export const LETTERBOX_FILL_ALPHA = 0.75
+
+/** `#rrggbb` → `rgba(r, g, b, α)` для заливки полей. Готовую альфу не трогаем. */
+export function toLetterboxFill(hexColor: string): string {
+  const value = hexColor.replace('#', '')
+  if (value.length === 8) return hexColor
+  const full =
+    value.length === 3
+      ? value
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : value
+  const r = Number.parseInt(full.slice(0, 2), 16)
+  const g = Number.parseInt(full.slice(2, 4), 16)
+  const b = Number.parseInt(full.slice(4, 6), 16)
+  if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return hexColor
+  return `rgba(${r}, ${g}, ${b}, ${LETTERBOX_FILL_ALPHA})`
+}
+
+const toHexChannel = (value: number): string => value.toString(16).padStart(2, '0')
+
+/**
+ * Цвет кадра там, где манифеста нет: усреднение УЖЕ загруженной картинки в канву
+ * 1×1 силами GPU (#1233). Второго сетевого запроса не возникает — именно из-за него
+ * в #1208/#1213 убрали размытую подложку.
+ *
+ * Это ВТОРАЯ ступень одного механизма, а не отдельный путь: результат ложится в тот
+ * же индекс, поэтому соседние слоты с тем же файлом берут его уже готовым, а разбор
+ * «манифест или сэмпл» остаётся здесь и больше нигде.
+ *
+ * `null` — цвета нет и не будет: чужой origin тейнтит канву и `getImageData` бросает
+ * SecurityError. Такой исход тоже запоминается, иначе каждая перерисовка повторяла бы
+ * бесполезную попытку.
+ */
+export function sampleDominantColor(img: HTMLImageElement | null | undefined): string | null {
+  if (!img) return null
+  const key = resolveMediaPlaceholderKey(img.currentSrc || img.src)
+  if (!key) return null
+
+  const known = index.get(key)
+  if (known) return known.dominantColor
+
+  let color: string | null = null
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1
+    canvas.height = 1
+    const ctx = canvas.getContext('2d', { willReadFrequently: false })
+    if (ctx) {
+      ctx.drawImage(img, 0, 0, 1, 1)
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data
+      // Полностью прозрачный кадр усредняется в чёрный — это не его цвет.
+      if (a > 0) color = `#${toHexChannel(r)}${toHexChannel(g)}${toHexChannel(b)}`
+    }
+  } catch {
+    color = null
+  }
+
+  remember(img.currentSrc || img.src, { blurhash: null, dominantColor: color })
+  return color
 }
 
 /** Только для тестов: индекс живёт весь сеанс и между кейсами не сбрасывается сам. */

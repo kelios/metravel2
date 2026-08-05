@@ -178,6 +178,26 @@ function findDominantColorReadLine(content) {
   return findCodeLineMatching(content, DOMINANT_COLOR_READ);
 }
 
+/**
+ * #1264: вторая ступень заливки — усреднение кадра в канву 1×1. Своя копия этой
+ * логики уже жила в `useWebEffects.ts` (#1233) параллельно с манифестной раздачей —
+ * именно так «один механизм» превращается в два с разными правилами. Семплер живёт
+ * в `utils/mediaPlaceholderIndex.ts` и кладёт результат в тот же общий индекс.
+ */
+const CANVAS_PIXEL_SAMPLING = /\bgetImageData\s*\(/;
+
+const ALLOW_CANVAS_SAMPLING_FILES = new Set([
+  path.join(ROOT, 'utils', 'mediaPlaceholderIndex.ts'),
+  // Другие задачи, не заливка: средняя яркость кадра под контраст оверлея…
+  path.join(ROOT, 'utils', 'imageAnalysis.ts'),
+  // …и проверка «плитка карты пришла однотонной» при снимке DOM.
+  path.join(ROOT, 'utils', 'mapSnapshot', 'domCapture.ts'),
+]);
+
+function findCanvasSamplingLine(content) {
+  return findCodeLineMatching(content, CANVAS_PIXEL_SAMPLING);
+}
+
 function collectMissingWidthCalls(file, content) {
   const found = [];
 
@@ -328,12 +348,24 @@ function main() {
   });
 
   for (const file of dominantColorRuleFiles) {
-    if (ALLOW_DOMINANT_COLOR_FILES.has(file)) continue;
-    const dominantColorLine = findDominantColorReadLine(read(file));
-    if (dominantColorLine) {
-      errors.push(
-        `${path.relative(ROOT, file)}:${dominantColorLine} читает dominant_color напрямую — используйте getMediaPlaceholderData + utils/mediaPlaceholderIndex (#1208)`
-      );
+    const content = read(file);
+
+    if (!ALLOW_DOMINANT_COLOR_FILES.has(file)) {
+      const dominantColorLine = findDominantColorReadLine(content);
+      if (dominantColorLine) {
+        errors.push(
+          `${path.relative(ROOT, file)}:${dominantColorLine} читает dominant_color напрямую — используйте getMediaPlaceholderData + utils/mediaPlaceholderIndex (#1208)`
+        );
+      }
+    }
+
+    if (!ALLOW_CANVAS_SAMPLING_FILES.has(file)) {
+      const samplingLine = findCanvasSamplingLine(content);
+      if (samplingLine) {
+        errors.push(
+          `${path.relative(ROOT, file)}:${samplingLine} семплит пиксели сам — заливка полей строится только в utils/mediaPlaceholderIndex (#1264)`
+        );
+      }
     }
   }
 
@@ -385,6 +417,7 @@ module.exports = {
   collectMissingWidthCalls,
   findOptimizeWebDisabledLine,
   findDominantColorReadLine,
+  findCanvasSamplingLine,
 };
 
 if (require.main === module) {

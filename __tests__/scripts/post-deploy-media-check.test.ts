@@ -2,10 +2,16 @@ const {
   KNOWN_BROKEN_FAMILIES,
   MASTER_DERIVATIVE_BY_FAMILY,
   legacyKeyExtension,
+  auditArticleBodyLadder,
   collectArticleBodyMediaUrls,
+  collectArticleBodyRungs,
   extractTargetsFromPayloads,
+  familyOfMediaUrl,
+  isBackpressureResponse,
+  mapWithConcurrency,
   toLegacyTarget,
   toTargetUrl,
+  toTargetUrlWithQuery,
   toUploadsTarget,
   uploadsScanPages,
   validateTarget,
@@ -460,5 +466,192 @@ describe('post-deploy media check: ключ обязан быть .webp (#1251)'
     expect(
       legacyKeyExtension(keyTarget(`${SITE}/travel-description-image/543/description/abc.PNG`, 'travel-description-image'))
     ).toBe('png')
+  })
+})
+
+// #1261: гейт обходит КАЖДУЮ ступень `media.article_body[*].srcset`, а не первую
+// подходящую. Ровно на этом дефект #1260 доехал до прода: 14 битых URL из 222 в
+// одной статье при зелёном гейте на всех шести семействах.
+describe('post-deploy media check: лестницы media.article_body (#1261)', () => {
+  const addressBase = `${SITE}/address-image/15601/conversions/db98.webp`
+  const galleryBase = `${SITE}/gallery/541/gallery/aaf5.webp`
+
+  const srcsetOf = (base: string, widths: readonly number[]) =>
+    widths.map((width) => `${base}?w=${width} ${width}w`).join(', ')
+
+  const detailWith = (items: unknown[]) => ({ media: { article_body: { gallery: items } } })
+
+  const ladderResponse = (overrides: { status?: number; transform?: string } = {}) => ({
+    status: overrides.status ?? 200,
+    bytes: 1000,
+    transform: overrides.transform ?? 'dynamic-transform-cache',
+    headers: { 'x-metravel-image-transform': overrides.transform ?? 'dynamic-transform-cache' },
+  })
+
+  const rungsOf = (widths: readonly number[], family = 'address-image') =>
+    widths.map((width) => ({ url: `${SITE}/x?w=${width}`, width, family }))
+
+  describe('сбор ступеней', () => {
+    it('берёт каждую ступень каждого srcset-поля, а не первую подходящую', () => {
+      const rungs = collectArticleBodyRungs(
+        detailWith([
+          {
+            src: `${addressBase}?w=960`,
+            srcset: srcsetOf(addressBase, [320, 640, 960]),
+            srcset_contain: srcsetOf(addressBase, [320, 640, 960]),
+            storage_policy: { profile: 'route_point' },
+          },
+        ]),
+        SITE
+      )
+
+      expect(rungs.map((rung: { width: number }) => rung.width)).toEqual([320, 640, 960, 320, 640, 960])
+      expect(rungs.every((rung: { family: string }) => rung.family === 'address-image')).toBe(true)
+      expect(rungs[0].url).toBe(`${SITE}/address-image/15601/conversions/db98.webp?w=320`)
+    })
+
+    it('различает семейства внутри одного тела', () => {
+      const rungs = collectArticleBodyRungs(
+        detailWith([
+          { srcset: srcsetOf(addressBase, [320]) },
+          { srcset: srcsetOf(galleryBase, [1600]) },
+        ]),
+        SITE
+      )
+
+      expect(rungs.map((rung: { family: string }) => rung.family)).toEqual(['address-image', 'gallery'])
+    })
+
+    it('пропускает прямые ссылки в бакет: они не на проверяемом origin и игнорят ?w=', () => {
+      const bucket = 'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1591620319350.jpg'
+      const rungs = collectArticleBodyRungs(detailWith([{ srcset: srcsetOf(bucket, [320, 800]) }]), SITE)
+
+      expect(rungs).toEqual([])
+    })
+
+    it('пустой и отсутствующий манифест не роняют сбор', () => {
+      expect(collectArticleBodyRungs(null, SITE)).toEqual([])
+      expect(collectArticleBodyRungs({}, SITE)).toEqual([])
+      expect(collectArticleBodyRungs(detailWith([{ srcset: null }]), SITE)).toEqual([])
+    })
+
+    it('семейство определяется и для legacy-роутов', () => {
+      expect(familyOfMediaUrl(`${SITE}/address-image/1/conversions/a.webp`, SITE)).toBe('address-image')
+      expect(familyOfMediaUrl(`${SITE}/media-resize/legacy/1/conversions/a.webp`, SITE)).toBe('media-resize-legacy')
+      expect(familyOfMediaUrl(`${SITE}/media-resize/uploads/a.jpg`, SITE)).toBe('media-resize-uploads')
+      expect(familyOfMediaUrl('', SITE)).toBeNull()
+    })
+
+    it('ширина ступени живёт в query, поэтому query цели сохраняется', () => {
+      expect(toTargetUrlWithQuery(SITE, 'https://cdn.metravel.by/gallery/a.webp?w=800')).toBe(
+        `${SITE}/gallery/a.webp?w=800`
+      )
+    })
+  })
+
+  describe('разбор ответов', () => {
+    it('любой не-200 на ступени — ошибка', () => {
+      const { issues } = auditArticleBodyLadder([
+        { rung: rungsOf([320])[0], response: ladderResponse() },
+        { rung: rungsOf([960])[0], response: ladderResponse({ status: 400 }) },
+      ])
+
+      const failures = issues.filter((issue: { code: string }) => issue.code === 'media.article_body.rung_status')
+      expect(failures).toHaveLength(1)
+      expect(failures[0].severity).toBe('error')
+      expect(failures[0].message).toContain('w=960')
+    })
+
+    it('derivative-missing — ошибка даже при 200: читатель видит битое фото', () => {
+      const { issues } = auditArticleBodyLadder([
+        { rung: rungsOf([320])[0], response: ladderResponse({ transform: 'derivative-missing' }) },
+      ])
+
+      expect(issues.map((issue: { code: string }) => issue.code)).toContain(
+        'media.article_body.rung_derivative_missing'
+      )
+    })
+
+    it('ступень выше верхней производной семейства — это класс #1260', () => {
+      const { issues } = auditArticleBodyLadder(
+        rungsOf([320, 960, 1600]).map((rung) => ({ rung, response: ladderResponse() }))
+      )
+
+      const exceeded = issues.filter(
+        (issue: { code: string }) => issue.code === 'media.article_body.ladder_exceeds_family'
+      )
+      expect(exceeded).toHaveLength(1)
+      expect(exceeded[0].severity).toBe('error')
+      expect(exceeded[0].message).toContain('960')
+    })
+
+    it('лестница ровно по потолок семейства — чисто', () => {
+      const { issues, families } = auditArticleBodyLadder(
+        rungsOf([320, 480, 640, 800, 960]).map((rung) => ({ rung, response: ladderResponse() }))
+      )
+
+      expect(issues).toEqual([])
+      expect(families).toEqual([
+        { family: 'address-image', checked: 5, failed: 0, maxWidth: 960, minWidth: 320 },
+      ])
+    })
+
+    it('gallery сохраняет 1600, address-image заканчивается на 960', () => {
+      const { issues } = auditArticleBodyLadder([
+        ...rungsOf([320, 960]).map((rung) => ({ rung, response: ladderResponse() })),
+        ...rungsOf([96, 1600], 'gallery').map((rung) => ({ rung, response: ladderResponse() })),
+      ])
+
+      expect(issues.filter((issue: { severity: string }) => issue.severity === 'error')).toEqual([])
+    })
+
+    it('потерянная верхняя ступень — предупреждение, а не тишина', () => {
+      const { issues } = auditArticleBodyLadder(
+        rungsOf([96, 960], 'gallery').map((rung) => ({ rung, response: ladderResponse() }))
+      )
+
+      const below = issues.filter(
+        (issue: { code: string }) => issue.code === 'media.article_body.ladder_below_family'
+      )
+      expect(below).toHaveLength(1)
+      expect(below[0].severity).toBe('warning')
+    })
+
+    it('незнакомое семейство не сверяется с потолком, но обходится', () => {
+      const { issues, families } = auditArticleBodyLadder(
+        rungsOf([9999], 'unknown-family').map((rung) => ({ rung, response: ladderResponse() }))
+      )
+
+      expect(issues).toEqual([])
+      expect(families[0].checked).toBe(1)
+    })
+  })
+
+  describe('backpressure отделён от дефекта контракта', () => {
+    it('503 и capacity-rejected считаются нагрузкой, а не поломкой', () => {
+      expect(isBackpressureResponse({ status: 503 })).toBe(true)
+      expect(isBackpressureResponse({ status: 200, transform: 'capacity-rejected' })).toBe(true)
+      expect(isBackpressureResponse({ status: 400, transform: 'derivative-missing' })).toBe(false)
+      expect(isBackpressureResponse({ status: 200, transform: 'dynamic-transform-cache' })).toBe(false)
+    })
+  })
+
+  describe('ограничение параллелизма', () => {
+    it('сохраняет порядок результатов и не превышает лимит', async () => {
+      let active = 0
+      let peak = 0
+      const items = Array.from({ length: 10 }, (_, index) => index)
+
+      const results = await mapWithConcurrency(items, 3, async (item: number) => {
+        active += 1
+        peak = Math.max(peak, active)
+        await new Promise((resolve) => setTimeout(resolve, 1))
+        active -= 1
+        return item * 2
+      })
+
+      expect(results).toEqual(items.map((item) => item * 2))
+      expect(peak).toBeLessThanOrEqual(3)
+    })
   })
 })

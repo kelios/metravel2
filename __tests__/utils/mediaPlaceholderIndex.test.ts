@@ -1,9 +1,12 @@
 /**
- * #1208: общий индекс заливки полей letterbox.
+ * @jest-environment jsdom
+ *
+ * #1208/#1264: общий индекс заливки полей letterbox.
  *
  * Контракт: заливка — свойство картинки, а не экрана. Один раз проиндексировали
  * запись манифеста в data-слое — и любой слот, который рисует ЛЮБУЮ производную
- * того же файла, находит цвет сам, без пропа.
+ * того же файла, находит цвет сам, без пропа. Где манифеста нет, вторая ступень
+ * усредняет уже загруженный кадр и кладёт результат в тот же индекс.
  */
 import type { TravelMedia, TravelMediaImage } from '@/types/types'
 import {
@@ -12,6 +15,8 @@ import {
   lookupMediaPlaceholder,
   resetMediaPlaceholderIndex,
   resolveMediaPlaceholderKey,
+  sampleDominantColor,
+  toLetterboxFill,
 } from '@/utils/mediaPlaceholderIndex'
 
 const COLOR = '#5c6252'
@@ -133,5 +138,81 @@ describe('indexTravelMedia', () => {
   it('пустой или отсутствующий манифест не роняет индексацию', () => {
     expect(() => indexTravelMedia(null)).not.toThrow()
     expect(() => indexTravelMedia({} as TravelMedia)).not.toThrow()
+  })
+})
+
+describe('toLetterboxFill', () => {
+  it('переводит hex в rgba с общей альфой и не трогает готовую', () => {
+    expect(toLetterboxFill('#5c6252')).toBe('rgba(92, 98, 82, 0.75)')
+    expect(toLetterboxFill('#abc')).toBe('rgba(170, 187, 204, 0.75)')
+    expect(toLetterboxFill('#5c625280')).toBe('#5c625280')
+  })
+})
+
+describe('sampleDominantColor — вторая ступень для семейств без манифеста', () => {
+  const originalGetContext = HTMLCanvasElement.prototype.getContext
+  let drawCalls = 0
+
+  const stubCanvas = (pixel: number[] | Error) => {
+    drawCalls = 0
+    HTMLCanvasElement.prototype.getContext = (() => ({
+      drawImage: () => {
+        drawCalls += 1
+      },
+      getImageData: () => {
+        if (pixel instanceof Error) throw pixel
+        return { data: pixel }
+      },
+    })) as unknown as typeof originalGetContext
+
+  }
+
+  const imgWithSrc = (src: string): HTMLImageElement => {
+    const img = document.createElement('img')
+    Object.defineProperty(img, 'currentSrc', { value: src, configurable: true })
+    return img
+  }
+
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = originalGetContext
+  })
+
+  it('усредняет кадр в hex и отдаёт его следующему слоту без повторного семпла', () => {
+    stubCanvas([92, 98, 82, 255])
+    const src = 'https://metravel.by/quest-cover/quests/1/steps/a.webp?w=640'
+
+    expect(sampleDominantColor(imgWithSrc(src))).toBe('#5c6252')
+    expect(drawCalls).toBe(1)
+
+    // Тот же файл другой ступенью — уже из индекса, канву не трогаем.
+    expect(lookupMediaPlaceholder('/quest-cover/quests/1/steps/a.webp?w=320')?.dominantColor).toBe(
+      '#5c6252',
+    )
+    expect(sampleDominantColor(imgWithSrc(src))).toBe('#5c6252')
+    expect(drawCalls).toBe(1)
+  })
+
+  it('манифест главнее: цвет из него канву не запускает', () => {
+    stubCanvas([1, 2, 3, 255])
+    indexMediaImage(entry())
+
+    expect(sampleDominantColor(imgWithSrc('/address-image/355/conversions/e4dc7a17.webp?w=320'))).toBe(
+      COLOR,
+    )
+    expect(drawCalls).toBe(0)
+  })
+
+  it('тейнт чужого origin запоминается, попытка не повторяется', () => {
+    stubCanvas(new Error('SecurityError'))
+    const src = 'https://example.com/foreign.jpg'
+
+    expect(sampleDominantColor(imgWithSrc(src))).toBeNull()
+    expect(sampleDominantColor(imgWithSrc(src))).toBeNull()
+    expect(drawCalls).toBe(1)
+  })
+
+  it('полностью прозрачный кадр не считается чёрным', () => {
+    stubCanvas([0, 0, 0, 0])
+    expect(sampleDominantColor(imgWithSrc('/gallery/1/conversions/transparent.png'))).toBeNull()
   })
 })

@@ -101,3 +101,72 @@ describe('ImageCardMedia: заливка из общего индекса ман
     expect(hasFillLayer(renderMedia({ showImmediately: true }))).toBe(false);
   });
 });
+
+/**
+ * Вторая ступень того же механизма: у семейств без манифеста (шаги квестов, обложки
+ * поездок, фото точек пользователя — #1267) цвет берётся из уже загруженного кадра.
+ * Проверяем именно контракт компонента: декодированный узел → слой заливки.
+ */
+describe('ImageCardMedia: заливка из усреднённого кадра', () => {
+  const originalPlatform = Platform.OS;
+  const originalGetContext = (global as any).HTMLCanvasElement?.prototype?.getContext;
+
+  const stubCanvas = (pixel: number[]) => {
+    (global as any).HTMLCanvasElement.prototype.getContext = () => ({
+      drawImage: () => undefined,
+      getImageData: () => ({ data: pixel }),
+    });
+  };
+
+  const decodedImage = (src: string) => {
+    const img = document.createElement('img');
+    Object.defineProperty(img, 'currentSrc', { value: src, configurable: true });
+    return img as HTMLImageElement;
+  };
+
+  // Под Jest `ImageCardMedia` рисует `OptimizedImage` вместо web-узла, поэтому
+  // web-ветку открываем так же, как соседние web-тесты компонента.
+  const originalJestWorkerId = process.env.JEST_WORKER_ID;
+
+  beforeEach(() => {
+    resetMediaPlaceholderIndex();
+    Platform.OS = 'web';
+    delete process.env.JEST_WORKER_ID;
+    stubCanvas([120, 90, 60, 255]);
+  });
+
+  afterEach(() => {
+    Platform.OS = originalPlatform;
+    if (originalJestWorkerId) process.env.JEST_WORKER_ID = originalJestWorkerId;
+    if (originalGetContext) {
+      (global as any).HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
+  });
+
+  const findWebImage = (tree: any) =>
+    tree.root.findAll((n: any) => typeof n?.props?.onDecoded === 'function', { deep: true })[0];
+
+  it('contain-слот без манифеста получает заливку после декода кадра', () => {
+    const tree = renderMedia();
+    expect(hasFillLayer(tree)).toBe(false);
+
+    const node = findWebImage(tree);
+    expect(node).toBeTruthy();
+    renderer.act(() => {
+      node.props.onDecoded(decodedImage(RENDERED_SRC));
+    });
+
+    expect(hasFillLayer(tree)).toBe(true);
+    expect(fillColor(tree)).toContain('120, 90, 60');
+  });
+
+  it('cover-слот кадр не семплит: полей у него нет', () => {
+    const tree = renderMedia({ fit: 'cover' });
+    const node = findWebImage(tree);
+    renderer.act(() => {
+      node.props.onDecoded(decodedImage('https://metravel.by/travel-image/9/conversions/cover.webp'));
+    });
+
+    expect(hasFillLayer(tree)).toBe(false);
+  });
+});

@@ -8,7 +8,12 @@ import OptimizedImage from '@/components/ui/OptimizedImage';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl, generateSrcSet } from '@/utils/imageOptimization';
-import { lookupMediaPlaceholder } from '@/utils/mediaPlaceholderIndex';
+import {
+  LETTERBOX_FILL_ALPHA,
+  lookupMediaPlaceholder,
+  sampleDominantColor,
+  toLetterboxFill,
+} from '@/utils/mediaPlaceholderIndex';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
   WebMainImage,
@@ -228,19 +233,25 @@ function ImageCardMedia({
   const normalizedPlaceholderBlurhash =
     typeof placeholderBlurhash === 'string' ? placeholderBlurhash.trim() : '';
   /**
-   * Заливка полей letterbox из общего индекса манифеста, когда вызывающий код
-   * не передал цвет пропсом (`utils/mediaPlaceholderIndex.ts`).
+   * Вторая ступень: цвет, усреднённый из уже загруженного кадра, для семейств без
+   * манифеста (шаги квестов, обложки поездок, фото точек пользователя — #1267).
+   * Хранится состоянием только чтобы вызвать перерисовку: само значение лежит в
+   * общем индексе и достаётся оттуда же, что и манифестное.
+   */
+  const [sampledPlaceholderColor, setSampledPlaceholderColor] = useState('');
+  /**
+   * Заливка полей letterbox из общего индекса, когда вызывающий код не передал
+   * цвет пропсом (`utils/mediaPlaceholderIndex.ts`).
    *
-   * Только web и только цвет: на native поля закрывает blur-слой expo-image
-   * (`blurBackground` по умолчанию включён), он работает на всех экранах и
-   * подменять его данными из индекса незачем. Дырка после #1208 — ровно
-   * web-сторона контракта.
+   * Только web: на native поля закрывает blur-слой expo-image (`blurBackground`
+   * по умолчанию включён), он работает на всех экранах и подменять его данными из
+   * индекса незачем. Дырка после #1208 — ровно web-сторона контракта.
    */
   const indexedPlaceholderColor = useMemo(() => {
     if (Platform.OS !== 'web') return '';
     if (typeof placeholderColor === 'string' && placeholderColor.trim()) return '';
-    return lookupMediaPlaceholder(sourceUri)?.dominantColor ?? '';
-  }, [placeholderColor, sourceUri]);
+    return lookupMediaPlaceholder(sourceUri)?.dominantColor ?? sampledPlaceholderColor;
+  }, [placeholderColor, sampledPlaceholderColor, sourceUri]);
   const normalizedPlaceholderColor = useMemo(() => {
     const candidate =
       typeof placeholderColor === 'string' && placeholderColor.trim()
@@ -248,6 +259,20 @@ function ImageCardMedia({
         : indexedPlaceholderColor;
     return /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(candidate) ? candidate : '';
   }, [indexedPlaceholderColor, placeholderColor]);
+  /**
+   * Семплим только там, где заливка вообще видна: у `cover`-слота полей нет, а
+   * известный цвет второй попытки не требует. `blurOnly` рисует не кадр.
+   */
+  const needsSampledFill =
+    Platform.OS === 'web' && contentFit === 'contain' && !blurOnly && !normalizedPlaceholderColor;
+  const handleWebDecoded = useCallback(
+    (img: HTMLImageElement) => {
+      if (!needsSampledFill) return;
+      const sampled = sampleDominantColor(img);
+      if (sampled) setSampledPlaceholderColor(sampled);
+    },
+    [needsSampledFill],
+  );
   /**
    * На web blurhash в слой не идёт: `expo-image` декодирует его в canvas 32×32,
    * апскейлит ×10 и отдаёт `blob:`-PNG 320×320 (~48 КБ и отдельная строка в
@@ -693,6 +718,9 @@ function ImageCardMedia({
       revealOnLoadOnlyRef.current = revealOnLoadOnly;
       if (identityChanged) {
         decodedIdentityRef.current = null;
+        // Цвет прежнего кадра нельзя оставлять новому: рециклируемая ячейка
+        // показала бы поля от чужой картинки.
+        setSampledPlaceholderColor('');
         // #1212: новой картинке — новый бюджет попыток. Само по себе состояние
         // сбоя привязано к идентичности и на чужую картинку не действует, но
         // рециклируемая ячейка может вернуться к прежнему URL (X → Y → X), и
@@ -913,6 +941,7 @@ function ImageCardMedia({
               priority={priority}
               loaded={effectiveWebLoaded}
               onLoad={handleWebLoad}
+              onDecoded={handleWebDecoded}
               onError={handleWebError}
               showImmediately={shouldShowWebImageImmediately}
             />
@@ -997,30 +1026,11 @@ type ImageDataPlaceholderProps = {
 };
 
 /**
- * Поля letterbox под `contain`-фото заливает `dominant_color` из манифеста
- * (размытой подложки на web больше нет, см. решение владельца 2026-08-02).
- * Сплошной цвет читается как второй фон и спорит с поверхностью карточки,
- * поэтому кладём его полупрозрачным: под ним остаётся сама карточка.
+ * Альфа заливки полей и её применение живут в `utils/mediaPlaceholderIndex.ts`
+ * вместе с самим механизмом — рамка тела статьи берёт их оттуда же. Здесь только
+ * ре-экспорт для прежних импортов.
  */
-export const LETTERBOX_FILL_ALPHA = 0.75;
-
-const withLetterboxAlpha = (hexColor: string): string => {
-  const value = hexColor.replace('#', '');
-  // Источник уже задал собственную альфу (#rrggbbaa) — не переопределяем.
-  if (value.length === 8) return hexColor;
-  const full =
-    value.length === 3
-      ? value
-          .split('')
-          .map((char) => char + char)
-          .join('')
-      : value;
-  const r = Number.parseInt(full.slice(0, 2), 16);
-  const g = Number.parseInt(full.slice(2, 4), 16);
-  const b = Number.parseInt(full.slice(4, 6), 16);
-  if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return hexColor;
-  return `rgba(${r}, ${g}, ${b}, ${LETTERBOX_FILL_ALPHA})`;
-};
+export { LETTERBOX_FILL_ALPHA };
 
 /** Local-only preview layer: blurhash is decoded by expo-image, color by RN/CSS. */
 export function ImageDataPlaceholder({
@@ -1045,7 +1055,7 @@ export function ImageDataPlaceholder({
       style={[
         StyleSheet.absoluteFill,
         {
-          backgroundColor: normalizedColor ? withLetterboxAlpha(normalizedColor) : 'transparent',
+          backgroundColor: normalizedColor ? toLetterboxFill(normalizedColor) : 'transparent',
           borderRadius,
           overflow: 'hidden',
           pointerEvents: 'none',

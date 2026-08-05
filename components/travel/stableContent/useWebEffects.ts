@@ -7,8 +7,8 @@ import {
   buildStableContentPrefetchUrl,
   extractFirstImgSrc,
 } from '@/components/travel/stableContent/htmlTransform'
-import { LETTERBOX_FILL_ALPHA } from '@/components/ui/ImageCardMedia'
 import { translate as i18nT } from '@/i18n'
+import { sampleDominantColor, toLetterboxFill } from '@/utils/mediaPlaceholderIndex'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
 import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
@@ -34,48 +34,13 @@ const originFromWeservSrc = (src: string): string | null => {
 const imageLoadedOk = (img: HTMLImageElement) => img.complete && img.naturalWidth > 0
 
 /**
- * Доминантный цвет кадра для заливки полей letterbox (#1233).
+ * Заливка полей рамки под `contain`-фото — тем же механизмом, что и у карточек
+ * (`utils/mediaPlaceholderIndex.ts`, #1264). Раньше здесь лежала своя копия
+ * усреднения кадра (#1233): у тела статьи манифест цвета не отдаёт (`#1266`), и
+ * копия была единственным способом его получить. Теперь ступени «манифест →
+ * сэмпл» разбирает общий модуль, а здесь остаётся только применение к рамке.
  *
- * Манифест его для тела статьи не отдаёт (`media.article_body.*.dominant_color`
- * приходит `null`), поэтому берём из УЖЕ загруженной картинки: `drawImage` в
- * канву 1×1 усредняет кадр силами GPU. Второго сетевого запроса не возникает —
- * именно из-за него в #1208/#1213 убрали размытую подложку.
- *
- * `null` — цвет недоступен: чужой origin тейнтит канву и `getImageData` бросает
- * SecurityError. Тогда рамка остаётся на нейтральной заливке.
- */
-const DOMINANT_COLOR_CACHE = new Map<string, string | null>()
-
-const readDominantColor = (img: HTMLImageElement): string | null => {
-  const key = img.currentSrc || img.src
-  if (!key) return null
-  const cached = DOMINANT_COLOR_CACHE.get(key)
-  if (cached !== undefined) return cached
-
-  let color: string | null = null
-  try {
-    const canvas = document.createElement('canvas')
-    canvas.width = 1
-    canvas.height = 1
-    const ctx = canvas.getContext('2d', { willReadFrequently: false })
-    if (ctx) {
-      ctx.drawImage(img, 0, 0, 1, 1)
-      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data
-      // Полностью прозрачный кадр усредняется в чёрный — это не его цвет.
-      if (a > 0) color = `rgba(${r}, ${g}, ${b}, ${LETTERBOX_FILL_ALPHA})`
-    }
-  } catch {
-    color = null
-  }
-
-  DOMINANT_COLOR_CACHE.set(key, color)
-  return color
-}
-
-/**
- * Заливка полей рамки под `contain`-фото.
- *
- * Ячейки журнальных сеток здесь, в отличие от `adoptNaturalImageAspect`, НЕ пропускаем.
+ * Ячейки журнальных сеток, в отличие от `adoptNaturalImageAspect`, НЕ пропускаем.
  * Там исключение по делу: геометрию ячейки задаёт обёртка раскладки, и правка аспекта
  * одного кадра разъехалась бы с сеткой. Цвет же — свойство самого кадра: у каждой
  * ячейки свой `<img>`, поэтому и заливка у каждой своя.
@@ -83,8 +48,8 @@ const readDominantColor = (img: HTMLImageElement): string | null => {
 const adoptDominantFrameFill = (img: HTMLImageElement, frame: HTMLElement | null) => {
   if (!frame || !imageLoadedOk(img)) return
   if (frame.style.getPropertyValue('--travel-rich-image-fill')) return
-  const color = readDominantColor(img)
-  if (color) frame.style.setProperty('--travel-rich-image-fill', color)
+  const color = sampleDominantColor(img)
+  if (color) frame.style.setProperty('--travel-rich-image-fill', toLetterboxFill(color))
 }
 
 /**

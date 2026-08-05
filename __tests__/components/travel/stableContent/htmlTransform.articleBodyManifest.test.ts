@@ -19,6 +19,7 @@ import {
   prepareStableContentHtml,
 } from '@/components/travel/stableContent/htmlTransform'
 import {
+  ARTICLE_BODY_ADDRESS_IMAGE,
   ARTICLE_BODY_ADDRESS_IMAGE_URL,
   ARTICLE_BODY_DESCRIPTION_IMAGE,
   ARTICLE_BODY_DESCRIPTION_IMAGE_URL,
@@ -101,18 +102,41 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
     expect(emittedWidths(out)).toEqual([480, 640, 800, 960, 1600])
   })
 
-  // #1233: манифест помечает профилем `article_body` и ключи чужих семейств, обещая
-  // им 1600. У `address-image` верхняя реальная производная — 960, и `w=1600`
-  // отвечает 400 (замер прода 2026-08-04). Потолок семейства обязан пережить переход
-  // на готовые URL, иначе фото точек в теле статьи снова перестанут отрисовываться.
-  it('clamps an over-promised manifest rung to the real family ceiling', () => {
+  // #1261: у ключа чужого семейства лестницу теперь обрывает САМ манифест — после
+  // #1260 её определяет профиль источника (`route_point`, верхняя производная 960),
+  // а не слот-потребитель. Своего потолка у фронта больше нет, и верхняя ступень
+  // здесь обязана прийти из манифеста, а не из фронтовой таблицы семейств.
+  it('takes a foreign-family ladder from the manifest without clamping it itself', () => {
     const out = withWebViewport(1920, 2, () => prepare(ARTICLE_BODY_ADDRESS_IMAGE_URL))
 
     // Адреса всё-таки из манифеста: своя сборка добавила бы `q=`/`fit=`.
     expect(out).not.toContain('q=80')
     expect(out).toContain(`${ADDRESS_IMAGE_RESOLVED}?w=960 960w`)
     expect(emittedWidths(out)).toEqual([480, 640, 800, 960])
+    // Ступени 1600 нет в манифесте этого ключа — и просить её неоткуда.
     expect(out).not.toContain('w=1600')
+    expect(ARTICLE_BODY_ADDRESS_IMAGE.srcset).not.toContain('1600')
+  })
+
+  // Обратная сторона снятого клэмпа: фронт больше не «спасает» переобещанный
+  // манифест, он его отражает. Если бэкенд снова начнёт раздавать чужому семейству
+  // ступень, которой нет, фронт её и подставит — ловит это не клиентский код, а
+  // пост-деплой гейт, обходящий каждую ступень `srcset`. Тест фиксирует ровно это
+  // разделение ответственности, чтобы клэмп не вернули «на всякий случай».
+  it('mirrors the manifest verbatim instead of second-guessing the backend', () => {
+    const overPromised = {
+      ...ARTICLE_BODY_ADDRESS_IMAGE,
+      srcset: [320, 960, 1600]
+        .map((w) => `${ARTICLE_BODY_ADDRESS_IMAGE_URL}?w=${w} ${w}w`)
+        .join(', '),
+      srcset_contain: null,
+    }
+    const media = buildArticleBodyMediaIndex({ gallery: [overPromised] })
+    const out = withWebViewport(1920, 2, () => prepare(ARTICLE_BODY_ADDRESS_IMAGE_URL, media))
+
+    // 320 отсеял отбор под слот — он к семействам отношения не имеет. А вот 1600
+    // осталась: раньше её срезал бы фронтовой потолок `route_point`.
+    expect(emittedWidths(out)).toEqual([960, 1600])
   })
 
   describe('prefetch stays inside the emitted candidate set (#1213)', () => {
@@ -134,7 +158,7 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
       expect(candidates).toContain(prefetch)
     })
 
-    it('stays inside the clamped set for a foreign-family key', () => {
+    it('stays inside the emitted set for a foreign-family key', () => {
       const { prefetch, candidates } = withWebViewport(1920, 2, () => {
         const prepared = prepare(ARTICLE_BODY_ADDRESS_IMAGE_URL)
         return {
@@ -194,28 +218,11 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
       expect(Array.from(out.matchAll(/[?&]w=(\d+)/g), (m) => m[1])).toEqual(['800'])
     })
 
-    // Ступени манифеста целиком выше потолка семейства: подставлять нечего, любая
-    // из них вне семейства и после fail-closed чтения ответит 400. Клиентская
-    // ветка в такой ситуации спрашивает у семейства его же производную.
-    it('falls back when the family ceiling is below every manifest rung', () => {
-      const avatarKey = 'https://metravel.by/avatar/15601/conversions/abc.webp'
-      const media = buildArticleBodyMediaIndex({
-        gallery: [
-          {
-            ...ARTICLE_BODY_DESCRIPTION_IMAGE,
-            src: `${avatarKey}?w=1600`,
-            srcset: [320, 800, 1600].map((w) => `${avatarKey}?w=${w} ${w}w`).join(', '),
-            srcset_contain: null,
-          },
-        ],
-      })
-      const out = withWebViewport(1920, 1, () => prepare(avatarKey, media))
-
-      expect(out).not.toContain('w=320')
-      expect(out).toContain('q=80')
-      // avatar: производные 96/160 — клиентская ветка берёт верхнюю существующую.
-      expect(Array.from(new Set(Array.from(out.matchAll(/[?&]w=(\d+)/g), (m) => m[1])))).toEqual(['160'])
-    })
+    // Прежде здесь стоял случай «лестница манифеста целиком выше потолка семейства
+    // → уходим в фолбэк». Он держался на фронтовой таблице потолков и вместе с ней
+    // снят (#1261): после #1260 лестницу задаёт профиль источника, поэтому ступеней
+    // вне своего семейства манифест не выдаёт вовсе. Что делает фронт, если бэкенд
+    // всё-таки переобещает, проверяет тест «mirrors the manifest verbatim» выше.
 
     it('keeps a key outside the manifest on the client-built ladder', () => {
       const raw = 'https://metravel.by/travel-description-image/540/description/abc.JPG'

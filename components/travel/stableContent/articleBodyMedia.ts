@@ -10,10 +10,8 @@
 // слота размер (`sizes`) и какие ступени ему вообще уместны — знание вёрстки, оно
 // остаётся в `htmlTransform`.
 
-import { familyDerivativeCeiling } from '@/constants/imageContract'
 import type { TravelMediaGroup } from '@/types/types'
 import {
-  familyRouteOfMediaUrl,
   isLegacyStorageBucketUrl,
   isLegacyUploadResizeUrl,
   toLegacyResizePath,
@@ -25,21 +23,8 @@ import {
 } from '@/utils/travelMediaVariants'
 import { unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
-export type ArticleBodyMediaEntry = {
-  /** Ступени манифеста по возрастанию ширины, адреса уже резолвнуты. */
-  rungs: readonly ManifestImageRung[]
-  /**
-   * Верхняя реальная производная семейства ИСХОДНОГО адреса, или `null`.
-   *
-   * Считается при сборке индекса, а не при выдаче: к моменту выдачи адрес может
-   * быть уже переписан на `/media-resize/legacy/…`, где первый сегмент ключа — id
-   * записи, а не роут, и семейство по нему не определяется (#1233).
-   */
-  ceiling: number | null
-}
-
-/** Ключ изображения → что манифест обещает по этому ключу. */
-export type ArticleBodyMediaIndex = ReadonlyMap<string, ArticleBodyMediaEntry>
+/** Ключ изображения → ступени манифеста по возрастанию ширины, адреса резолвнуты. */
+export type ArticleBodyMediaIndex = ReadonlyMap<string, readonly ManifestImageRung[]>
 
 /** База для разбора корне-относительных адресов; в результат не попадает. */
 const RELATIVE_URL_BASE = 'https://metravel.by'
@@ -123,28 +108,20 @@ export const buildArticleBodyMediaIndex = (
   const gallery = group?.gallery
   if (!gallery?.length) return null
 
-  const index = new Map<string, ArticleBodyMediaEntry>()
+  const index = new Map<string, readonly ManifestImageRung[]>()
   for (const item of gallery) {
     const rungs = resolveManifestImageRungs(item).filter((rung) => !isUnusableManifestRung(rung.url))
     if (!rungs.length) continue
 
-    // Ключи считаем от НЕПЕРЕПИСАННОГО адреса манифеста: у него ещё виден
-    // family-роут, из которого берётся и потолок семейства, и второй алиас.
+    // Ключи считаем от НЕПЕРЕПИСАННОГО адреса манифеста: `resolveMediaVariantUrl`
+    // переводит conversion-ключ на `/media-resize/legacy/…`, а разметка тела
+    // ссылается на family-роут, и без исходного адреса стороны не встретились бы.
     const originalUrl = String(item?.src || '').trim() || rungs[0].url
     const keys = mediaKeysOfUrl(originalUrl)
     if (!keys.length) continue
 
-    const entry: ArticleBodyMediaEntry = {
-      // Семейство ищется по всем алиасам ключа: у `/media-resize/legacy/…` его не
-      // определить, поэтому потолок даёт тот алиас, у которого роут ещё виден.
-      ceiling: keys.reduce<number | null>(
-        (found, key) => found ?? familyDerivativeCeiling(familyRouteOfMediaUrl(key)),
-        null,
-      ),
-      rungs,
-    }
     for (const key of [...keys, ...mediaKeysOfUrl(rungs[0].url)]) {
-      if (!index.has(key)) index.set(key, entry)
+      if (!index.has(key)) index.set(key, rungs)
     }
   }
 
@@ -154,21 +131,29 @@ export const buildArticleBodyMediaIndex = (
 /**
  * Кандидаты `srcset` для картинки тела: ступени манифеста, отобранные под слот.
  *
- * Почему не весь `srcset` манифеста дословно — две причины, обе измерены на проде
- * 2026-08-04.
+ * Ступени берутся ДОСЛОВНО — своего потолка семейства здесь больше нет (#1261).
+ * Он стоял тут с #1233, пока манифест строил лестницу по слоту-потребителю и
+ * обещал ступень 1600 ключам чужих семейств: у `address-image` верхняя реальная
+ * производная 960, и `w=1600` отвечал 400. После #1260 лестницу определяет
+ * профиль ИСТОЧНИКА, и манифест перестал переобещать: замер прода 2026-08-05 на
+ * `address-image/15601/conversions/…webp` — `storage_policy.profile: route_point`,
+ * `srcset` обрывается на 960; обход 4 статей (885 URL) даёт 0 non-200.
  *
- * 1. Манифест перечисляет всю лестницу семейства (320…1600) и помечает профилем
- *    `article_body` даже ключи чужих семейств. У `address-image` верхняя реальная
- *    производная — 960, и `w=1600` отвечает **400**. Поэтому потолок семейства
- *    остаётся обязательным (#1233), см. `familyDerivativeCeiling`.
- * 2. Слот решает, какие ступени ему вообще предлагать. На мобиле слот 100vw при
- *    DPR 3 просит 1170, и с полной лестницей браузер взял бы 1600: на выборке из
- *    10 кадров статьи 544 это 1 403 792 B против 946 638 B на ступени 800, то есть
- *    +48% мобильного трафика за резкость, невидимую на 390 CSS.
+ * Держать после этого свою копию потолков нельзя: две таблицы ширин расходятся
+ * молча (#1170, #1220), а фронтовая ещё и слепа к `/media-resize/legacy/…`, где
+ * роут семейства уже не виден. Регресс контракта ловит не клиентский клэмп, а
+ * пост-деплой гейт: он обходит КАЖДУЮ ступень `media.article_body[*].srcset` и
+ * сверяет верхнюю с профилем семейства (`scripts/post-deploy-media-check.js`).
  *
- * Ступени слота — это ЗАПРОС, а не адрес: каждая из них ложится на ближайшую
- * ступень манифеста, поэтому смена набора производных на бэкенде правки фронта не
- * требует. `null` — ключа в манифесте нет, вызывающий код строит URL прежним путём.
+ * Отбор под слот остаётся, и к семействам он отношения не имеет: слот решает,
+ * какие ступени вообще предлагать. На мобиле 100vw при DPR 3 просит 1170, и с
+ * полной лестницей браузер взял бы 1600 — на выборке из 10 кадров статьи 544 это
+ * 1 403 792 B против 946 638 B на ступени 800, то есть +48% мобильного трафика за
+ * резкость, невидимую на 390 CSS.
+ *
+ * Ступени слота — это ЗАПРОС, а не адрес: каждая ложится на ближайшую ступень
+ * манифеста, поэтому смена набора производных на бэкенде правки фронта не требует.
+ * `null` — ключа в манифесте нет, вызывающий код строит URL прежним путём.
  */
 export const resolveArticleBodyRungs = (
   src: string,
@@ -177,19 +162,11 @@ export const resolveArticleBodyRungs = (
 ): readonly ManifestImageRung[] | null => {
   if (!index?.size) return null
 
-  const entry = mediaKeysOfUrl(src).reduce<ArticleBodyMediaEntry | undefined>(
+  const rungs = mediaKeysOfUrl(src).reduce<readonly ManifestImageRung[] | undefined>(
     (found, key) => found ?? index.get(key),
     undefined,
   )
-  if (!entry?.rungs.length) return null
+  if (!rungs?.length) return null
 
-  const ceiling = entry.ceiling
-  const available = ceiling ? entry.rungs.filter((rung) => rung.width <= ceiling) : entry.rungs
-  // Потолок семейства ниже самой мелкой ступени манифеста — подставлять нечего:
-  // любая ступень отсюда вне семейства и после fail-closed чтения ответит 400.
-  // Отдаём ключ клиентскому пути, там ширина спрашивается у самого семейства
-  // (`clampLadderToFamily` возвращает реально существующую производную).
-  if (!available.length) return null
-
-  return selectWidthCandidates(available, slotWidths)
+  return selectWidthCandidates(rungs, slotWidths)
 }

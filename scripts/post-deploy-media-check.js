@@ -232,6 +232,34 @@ function fetchMedia(url, accept = BROWSER_IMAGE_ACCEPT, redirectDepth = 0, origi
   })
 }
 
+/**
+ * Backpressure origin'а, а не дефект контракта: 503 + `capacity-rejected`.
+ *
+ * Понадобилось вместе с лестничным обходом (#1261): он спрашивает сотни ступеней
+ * подряд, и прод под такой нагрузкой начинает сбрасывать запросы. Замер
+ * 2026-08-05: в прогоне гейта `quest-cover?w=320` ответил 503 `capacity-rejected`
+ * в обеих Accept-ветках, а тот же URL поштучно — 200 `dynamic-transform`. Без
+ * этого различения правило «любой non-200 — ошибка» валило бы деплой по нагрузке,
+ * которую гейт сам же и создал.
+ */
+const isBackpressureResponse = (response) =>
+  Number(response?.status) === 503 || /capacity-rejected/i.test(String(response?.transform || ''))
+
+const BACKPRESSURE_RETRY_ATTEMPTS = 3
+const BACKPRESSURE_RETRY_DELAY_MS = 1500
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** `fetchMedia` с повтором по backpressure; контрактные ответы не ретраятся. */
+async function fetchMediaResilient(url, accept = BROWSER_IMAGE_ACCEPT) {
+  let response = await fetchMedia(url, accept)
+  for (let attempt = 1; attempt < BACKPRESSURE_RETRY_ATTEMPTS && isBackpressureResponse(response); attempt += 1) {
+    await delay(BACKPRESSURE_RETRY_DELAY_MS * attempt)
+    response = await fetchMedia(url, accept)
+  }
+  return response
+}
+
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http
@@ -372,6 +400,160 @@ function collectArticleBodyMediaUrls(detail) {
     .filter(Boolean)
     .flatMap((item) => [item.src, item.variants?.original, item.src_contain, item.src_cover])
     .filter(Boolean)
+}
+
+/**
+ * Семейство по адресу медиа: первый сегмент пути, у legacy-роутов — второй.
+ *
+ * Совпадает с ключами `WIDTHS_BY_FAMILY`, поэтому потолок берётся оттуда же,
+ * а не из новой таблицы: сверку той таблицы с `IMAGE_STORAGE_POLICY_V1` уже
+ * держит `__tests__/scripts/postDeployMediaWidths.test.ts`.
+ */
+function familyOfMediaUrl(rawUrl, site = SITE) {
+  let pathname
+  try {
+    const value = String(rawUrl || '').trim()
+    if (!value) return null
+    pathname = (value.startsWith('/') ? new URL(value, site) : new URL(value)).pathname
+  } catch {
+    return null
+  }
+  const parts = pathname.split('/').filter(Boolean)
+  if (!parts.length) return null
+  if (parts[0].toLowerCase() === 'media-resize') {
+    return parts[1]?.toLowerCase() === 'legacy' ? 'media-resize-legacy' : 'media-resize-uploads'
+  }
+  return parts[0].toLowerCase()
+}
+
+/**
+ * КАЖДАЯ ступень `media.article_body[*].srcset`, а не первая подходящая (#1261).
+ *
+ * Гейт до этого щупал по одному URL на семейство и на двух ширинах. Этого хватало,
+ * пока лестницу в манифесте задавал слот-потребитель и она была одинаковой у всех
+ * ключей. #1260 сделал её производной от профиля ИСТОЧНИКА — значит расходиться
+ * теперь может отдельная ступень отдельного ключа, и увидеть это можно только
+ * обойдя лестницу целиком: ровно так дефект #1260 и прожил до прода (14 битых URL
+ * из 222 в одной статье, при зелёном гейте на всех шести семействах).
+ *
+ * Ссылки прямо в бакет сюда не попадают: они не на проверяемом origin, у них своя
+ * цель `media-resize-uploads`, и `?w=` бакет игнорирует by design (#1176).
+ */
+function collectArticleBodyRungs(detail, site = SITE) {
+  const body = detail?.media?.article_body
+  if (!body) return []
+  const items = [body.cover, ...(Array.isArray(body.gallery) ? body.gallery : [])].filter(Boolean)
+
+  const rungs = []
+  for (const item of items) {
+    const sources = [item.srcset, item.srcset_cover, item.srcset_contain]
+    for (const srcset of sources) {
+      if (typeof srcset !== 'string' || !srcset.trim()) continue
+      for (const rawCandidate of srcset.split(',')) {
+        const candidate = rawCandidate.trim()
+        if (!candidate) continue
+        const [rawUrl, descriptor] = candidate.split(/\s+/)
+        const width = Number(String(descriptor || '').replace(/w$/i, ''))
+        if (!rawUrl || !Number.isFinite(width) || width <= 0) continue
+        if (isLegacyBucketUrl(rawUrl)) continue
+        const url = toTargetUrlWithQuery(site, rawUrl)
+        const family = familyOfMediaUrl(rawUrl, site)
+        if (!url || !family) continue
+        rungs.push({ url, width, family, profile: item.storage_policy?.profile || null })
+      }
+    }
+  }
+  return rungs
+}
+
+/** Прямая ссылка в S3: не на проверяемом origin и `?w=` не понимает (#1176). */
+function isLegacyBucketUrl(rawUrl) {
+  return /^https?:\/\/[^/]*\bs3[.-][^/]*amazonaws\.com\//i.test(String(rawUrl || '').trim())
+}
+
+/** Как `toTargetUrl`, но сохраняет query: у ступени в нём и лежит ширина. */
+function toTargetUrlWithQuery(site, rawUrl) {
+  const value = String(rawUrl || '').trim()
+  if (!value) return null
+  try {
+    const parsed = value.startsWith('/') ? new URL(value, site) : new URL(value)
+    return `${site}${parsed.pathname}${parsed.search}`
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Разбор ответов по ступеням лестницы. Сеть отдельно, суждение отдельно — иначе
+ * тест проверял бы мок примитива, а не реальный разбор контракта.
+ *
+ * `responses` — массив `{ rung, response }` в любом порядке.
+ */
+function auditArticleBodyLadder(responses) {
+  const issues = []
+  const byFamily = new Map()
+
+  for (const { rung, response } of responses) {
+    const family = rung.family
+    const stats = byFamily.get(family) || { family, checked: 0, failed: 0, maxWidth: 0, minWidth: Infinity }
+    stats.checked += 1
+    stats.maxWidth = Math.max(stats.maxWidth, rung.width)
+    stats.minWidth = Math.min(stats.minWidth, rung.width)
+
+    // Любой не-200 — ошибка. Именно смягчение этого правила («первая подходящая
+    // ступень ответила, значит семейство живое») и прятало #1260.
+    if (response.status !== 200) {
+      stats.failed += 1
+      issues.push({
+        severity: 'error',
+        code: 'media.article_body.rung_status',
+        message:
+          `${family} w=${rung.width}: HTTP ${response.status} на ступени из media.article_body.srcset ` +
+          `(${rung.url}) — манифест обещает адрес, которого нет`,
+      })
+    }
+
+    const transform = getHeaderValue(response.headers, 'x-metravel-image-transform')
+    if (/derivative-missing/i.test(transform)) {
+      stats.failed += 1
+      issues.push({
+        severity: 'error',
+        code: 'media.article_body.rung_derivative_missing',
+        message: `${family} w=${rung.width}: transform="${transform}" — читатель видит битое фото (${rung.url})`,
+      })
+    }
+
+    byFamily.set(family, stats)
+  }
+
+  // Ступень выше верхней производной СВОЕГО семейства — это и есть класс #1260.
+  // Потолок берём из уже сверенной с контрактом таблицы, своей не заводим (#1261).
+  for (const stats of byFamily.values()) {
+    const known = WIDTHS_BY_FAMILY.get(stats.family)
+    if (!known) continue
+    if (stats.maxWidth > known.large) {
+      issues.push({
+        severity: 'error',
+        code: 'media.article_body.ladder_exceeds_family',
+        message:
+          `${stats.family}: манифест рекламирует ступень ${stats.maxWidth}, а верхняя реальная производная ` +
+          `семейства — ${known.large}. Лестница обязана считаться по профилю источника (#1260)`,
+      })
+    } else if (stats.maxWidth < known.large) {
+      // Не ошибка: у мелкого исходника верхних ступеней может не быть по-честному.
+      // Но молчать нельзя — так же незаметно семейство может ПОТЕРЯТЬ свою верхнюю
+      // ступень, и `gallery` тихо просядет с 1600 до 960 на всех статьях сразу.
+      issues.push({
+        severity: 'warning',
+        code: 'media.article_body.ladder_below_family',
+        message:
+          `${stats.family}: верхняя встреченная ступень ${stats.maxWidth} < ${known.large} — ` +
+          'либо исходники мельче, либо семейство потеряло верхнюю производную',
+      })
+    }
+  }
+
+  return { issues, families: [...byFamily.values()].sort((a, b) => a.family.localeCompare(b.family)) }
 }
 
 /**
@@ -608,6 +790,50 @@ function validateTarget(target, probes, options = {}) {
   }
 }
 
+/**
+ * Сколько статей обходит лестничная проверка тела по умолчанию.
+ *
+ * Обход ПОЛНОЙ лестницы стоит на два порядка дороже прежней проверки: у одной
+ * статьи в `media.article_body` до ~300 URL (замер прода 2026-08-05, статья 682),
+ * поэтому весь каталог из 397 опубликованных travel — это десятки тысяч запросов,
+ * то есть часы. Деплой-гейт берёт выборку, а полный обход запускается явно:
+ * `--article-body-scan all`. Сколько статей и ступеней реально проверено, гейт
+ * печатает всегда — усечённое покрытие не должно выглядеть как «проверено всё».
+ */
+const ARTICLE_BODY_SCAN_DEFAULT = 3
+
+/**
+ * Параллелизм лестничного обхода: ступеней много, а origin — прод.
+ *
+ * На 8 прод начинал отвечать 503 `capacity-rejected` (замер 2026-08-05), то есть
+ * гейт своей же нагрузкой ронял собственную проверку. Четырёх хватает: 450
+ * ступеней проходятся за ~40 с, и backpressure не воспроизводится.
+ */
+const ARTICLE_BODY_SCAN_CONCURRENCY = 4
+
+/** Значение `--article-body-scan`: число статей, `all`, или `0` — не обходить. */
+function articleBodyScanLimit() {
+  const raw = String(getArg('article-body-scan', String(ARTICLE_BODY_SCAN_DEFAULT))).trim()
+  if (/^all$/i.test(raw)) return Infinity
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : ARTICLE_BODY_SCAN_DEFAULT
+}
+
+/** Прогон задач с ограничением параллелизма; порядок результатов сохраняется. */
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length)
+  let cursor = 0
+  const runners = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor
+      cursor += 1
+      results[index] = await worker(items[index], index)
+    }
+  })
+  await Promise.all(runners)
+  return results
+}
+
 /** Сколько деталей забираем с одной страницы каталога в поиске ключа `uploads/**`. */
 const UPLOADS_SCAN_DETAILS_PER_PAGE = 4
 
@@ -652,6 +878,84 @@ async function collectUploadsScanDetails(softFetch, travels) {
   return details
 }
 
+/**
+ * Детали опубликованных travel для лестничного обхода — по порядку каталога.
+ *
+ * Выборка идёт с первой страницы, а не сечениями, как у `uploads/**`: там искали
+ * редкий legacy-класс, здесь — обычные тела статей, и они есть у всех.
+ */
+async function collectArticleBodyScanDetails(softFetch, travels, limit) {
+  if (!limit) return { details: [], scannedTravels: 0, totalTravels: 0 }
+
+  const count = Number(travels?.count ?? travels?.total ?? 0)
+  const pageSize = unwrapList(travels).length || 1
+  const lastPage = count ? Math.max(1, Math.ceil(count / pageSize)) : 1
+
+  const details = []
+  for (let page = 1; page <= lastPage && details.length < limit; page += 1) {
+    const list = page === 1 ? travels : await softFetch(`${SITE}/api/travels/?page=${page}`)
+    const ids = unwrapList(list).map((item) => item?.id).filter(Boolean)
+    if (!ids.length) break
+    for (const id of ids) {
+      if (details.length >= limit) break
+      const detail = await softFetch(`${SITE}/api/travels/${id}/`)
+      if (detail) details.push(detail)
+    }
+  }
+
+  return { details, scannedTravels: details.length, totalTravels: count }
+}
+
+/**
+ * Лестничный обход тела статей: каждая ступень `srcset` из манифеста (#1261).
+ *
+ * Возвращает `null`, когда обход выключен (`--article-body-scan 0`), — это видно
+ * в отчёте отдельно от «обошли и ничего не нашли».
+ */
+async function scanArticleBodyLadders(softFetch, travels) {
+  const limit = articleBodyScanLimit()
+  if (!limit) return null
+
+  const { details, scannedTravels, totalTravels } = await collectArticleBodyScanDetails(
+    softFetch,
+    travels,
+    limit,
+  )
+
+  // Дедуп по URL: один и тот же кадр приходит и в `srcset`, и в `srcset_contain`.
+  const byUrl = new Map()
+  for (const detail of details) {
+    for (const rung of collectArticleBodyRungs(unwrapItem(detail))) {
+      if (!byUrl.has(rung.url)) byUrl.set(rung.url, rung)
+    }
+  }
+  const rungs = [...byUrl.values()]
+
+  const responses = await mapWithConcurrency(
+    rungs,
+    ARTICLE_BODY_SCAN_CONCURRENCY,
+    async (rung) => {
+      try {
+        return { rung, response: await fetchMediaResilient(rung.url, BROWSER_IMAGE_ACCEPT) }
+      } catch (error) {
+        return {
+          rung,
+          response: { status: 0, bytes: 0, headers: {}, error: error instanceof Error ? error.message : String(error) },
+        }
+      }
+    },
+  )
+
+  return {
+    ...auditArticleBodyLadder(responses),
+    scannedTravels,
+    totalTravels,
+    checkedRungs: rungs.length,
+    // Полным обход считается только когда он реально накрыл весь каталог.
+    full: limit === Infinity || scannedTravels >= totalTravels,
+  }
+}
+
 async function collectTargets() {
   // Молчаливый catch тут опасен: пустой список целей выглядит как «нечего
   // проверять», хотя причина — недоступный API. Причину всегда печатаем.
@@ -683,7 +987,7 @@ async function collectTargets() {
     )
   }
 
-  return targets
+  return { targets, travels, softFetch }
 }
 
 function withWidth(url, width) {
@@ -721,6 +1025,36 @@ function printSummary(summary) {
       console.log(`   ${issue.severity === 'error' ? '✗' : '!'} ${issue.code}: ${issue.message}`)
     }
   }
+
+  printArticleBodySummary(summary.articleBody)
+}
+
+/** Итог лестничного обхода тела статей (#1261). */
+function printArticleBodySummary(articleBody) {
+  if (!articleBody) {
+    console.log('\nℹ️  Лестничный обход media.article_body выключен (--article-body-scan 0)')
+    return
+  }
+
+  const { scannedTravels, totalTravels, checkedRungs, families, issues, full } = articleBody
+  const coverage = full
+    ? `все ${totalTravels || scannedTravels} статей`
+    : `${scannedTravels} из ${totalTravels || '?'} статей (выборка; полный обход — --article-body-scan all)`
+  console.log(`\n🪜 Лестницы media.article_body: ${checkedRungs} ступеней, ${coverage}`)
+
+  for (const stats of families) {
+    const known = WIDTHS_BY_FAMILY.get(stats.family)
+    console.log(
+      `   ${stats.failed ? '✗' : '✅'} ${stats.family}: ${stats.checked} ступеней, ` +
+        `${stats.minWidth}…${stats.maxWidth}` +
+        (known ? ` (потолок семейства ${known.large})` : '') +
+        (stats.failed ? ` — не 200: ${stats.failed}` : '')
+    )
+  }
+
+  for (const issue of issues) {
+    console.log(`   ${issue.severity === 'error' ? '✗' : '!'} ${issue.code}: ${issue.message}`)
+  }
 }
 
 async function main() {
@@ -733,7 +1067,7 @@ async function main() {
     }
   }
 
-  const targets = await collectTargets()
+  const { targets, travels, softFetch } = await collectTargets()
   if (targets.length === 0) {
     console.error('❌ Публичный API не отдал ни одного медиа-URL — проверять нечего, гейт считается упавшим')
     process.exit(1)
@@ -747,9 +1081,11 @@ async function main() {
         const { small: smallWidth, large: largeWidth } = widthsFor(target.family)
         const masterRule = MASTER_DERIVATIVE_BY_FAMILY.get(target.family)
         const [small, large, master] = await Promise.all([
-          fetchMedia(withWidth(target.url, smallWidth), variant.header),
-          fetchMedia(withWidth(target.url, largeWidth), variant.header),
-          masterRule ? fetchMedia(withWidth(target.url, masterRule.width), variant.header) : null,
+          fetchMediaResilient(withWidth(target.url, smallWidth), variant.header),
+          fetchMediaResilient(withWidth(target.url, largeWidth), variant.header),
+          masterRule
+            ? fetchMediaResilient(withWidth(target.url, masterRule.width), variant.header)
+            : null,
         ])
         probes.push({ accept: variant.id, small, large, ...(master ? { master } : {}) })
       }
@@ -772,19 +1108,25 @@ async function main() {
     }
   }
 
+  const articleBody = await scanArticleBodyLadders(softFetch, travels)
+  const articleBodyIssues = articleBody?.issues || []
+
   const summary = {
     site: SITE,
     allowKnownBroken: ALLOW_KNOWN_BROKEN,
     totalTargets: checked.length,
-    errorCount: checked.reduce(
-      (acc, target) => acc + target.issues.filter((issue) => issue.severity === 'error').length,
-      0
-    ),
-    warningCount: checked.reduce(
-      (acc, target) => acc + target.issues.filter((issue) => issue.severity === 'warning').length,
-      0
-    ),
+    errorCount:
+      checked.reduce(
+        (acc, target) => acc + target.issues.filter((issue) => issue.severity === 'error').length,
+        0
+      ) + articleBodyIssues.filter((issue) => issue.severity === 'error').length,
+    warningCount:
+      checked.reduce(
+        (acc, target) => acc + target.issues.filter((issue) => issue.severity === 'warning').length,
+        0
+      ) + articleBodyIssues.filter((issue) => issue.severity === 'warning').length,
     targets: checked,
+    articleBody,
   }
 
   printSummary(summary)
@@ -802,7 +1144,14 @@ if (typeof module !== 'undefined' && module.exports) {
     WIDTHS_BY_FAMILY,
     legacyKeyExtension,
     widthsFor,
+    auditArticleBodyLadder,
+    isBackpressureResponse,
     collectArticleBodyMediaUrls,
+    collectArticleBodyRungs,
+    familyOfMediaUrl,
+    isLegacyBucketUrl,
+    mapWithConcurrency,
+    toTargetUrlWithQuery,
     extractTargetsFromPayloads,
     toLegacyTarget,
     toTargetUrl,

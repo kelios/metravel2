@@ -119,6 +119,12 @@ type WebMainImageProps = {
    * подложкой на всю плитку. Здесь пропорции сообщаются в момент привязки узла.
    */
   onNaturalSize?: (naturalSize: { width: number; height: number }) => void;
+  /**
+   * #1264: узел с УЖЕ декодированными пикселями. Нужен второй ступени заливки полей
+   * — усреднению кадра в канву, когда манифест цвета не дал. Сообщается там же, где
+   * `onNaturalSize`, то есть и на настоящем `load`, и на кэш-хите до маунта.
+   */
+  onDecoded?: (img: HTMLImageElement) => void;
   onError?: () => void;
   showImmediately?: boolean;
 };
@@ -147,11 +153,20 @@ export const WebMainImage = memo(function WebMainImage({
   sizes,
   onLoad,
   onNaturalSize,
+  onDecoded,
   onError,
   showImmediately = false,
 }: WebMainImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const loadReportedRef = useRef(false);
+  /**
+   * `attachImgRef` обязан оставаться стабильным (см. комментарий у него): любая
+   * пересборка заставляет React отвязать ref, а в этом окне `handleLoad` теряет
+   * доступ к `currentSrc`. Колбэк семпла меняет идентичность, когда заливка уже
+   * найдена, поэтому он живёт в ref, а не в зависимостях.
+   */
+  const onDecodedRef = useRef(onDecoded);
+  onDecodedRef.current = onDecoded;
   const handleLoad = useCallback(() => {
     // Раскрываем резкий слой прямо здесь, а не следующим React-рендером. Блюр-подложка
     // ставит свою `opacity` в DOM из собственного `load`, поэтому ожидание `setState`
@@ -172,6 +187,7 @@ export const WebMainImage = memo(function WebMainImage({
     // видимый — оставался с подложкой на всю плитку.
     const natural = naturalSizeOf(img);
     if (natural) onNaturalSize?.(natural);
+    if (natural && img) onDecodedRef.current?.(img);
 
     if (loadReportedRef.current) return;
     loadReportedRef.current = true;
@@ -209,6 +225,7 @@ export const WebMainImage = memo(function WebMainImage({
       // не сработает, и без этого вызова подложка навсегда осталась бы на всю плитку.
       const natural = naturalSizeOf(node);
       if (natural) onNaturalSize?.(natural);
+      if (natural) onDecodedRef.current?.(node);
     }
   }, [onNaturalSize]);
 
