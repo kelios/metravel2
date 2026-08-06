@@ -126,8 +126,19 @@ export function normalize(s: string): string {
         .trim();
 }
 
-/** Создаёт функцию проверки ответа из бэкенд-конфига */
+/**
+ * Создаёт функцию проверки ответа из бэкенд-конфига.
+ * Тип паттерна остаётся на самой функции (`_answerType`): телеметрия попыток
+ * решает по нему, можно ли отправлять сырой ввод, а карточка шага о правилах
+ * проверки по-прежнему ничего не знает.
+ */
 export function buildAnswerChecker(answerType: string, answerValue: string): QuestStep['answer'] {
+    const checker = createAnswerChecker(answerType, answerValue);
+    checker._answerType = answerType;
+    return checker;
+}
+
+function createAnswerChecker(answerType: string, answerValue: string): QuestStep['answer'] {
     switch (answerType) {
         case 'any': {
             const fn: QuestStep['answer'] = () => true;

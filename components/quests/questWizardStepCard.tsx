@@ -16,6 +16,8 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { hapticNotification } from '@/utils/haptics'
+import { describeQuestAnswer, evaluateQuestAnswer } from '@/utils/questAnswerEvaluation'
+import { recordQuestAnswerAttempt } from '@/utils/questAnswerTelemetry'
 
 import QuestPointNavigator from './QuestPointNavigator'
 import { copyQuestCoords, openQuestMap, type QuestMapApp } from './questWizardHelpers'
@@ -55,6 +57,8 @@ type StepCardProps = {
   showMap: boolean
   onToggleMap: () => void
   showLocationControls?: boolean
+  /** Числовой PK квеста — адрес батча попыток ответа (#1276). */
+  questNumericId?: number
   /** Поле ответа получило фокус — родитель доматывает его над клавиатурой. */
   onAnswerFocus?: (node: TextInput | null) => void
   onAnswerBlur?: () => void
@@ -136,6 +140,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     showMap,
     onToggleMap,
     showLocationControls = true,
+    questNumericId,
     onAnswerFocus,
     onAnswerBlur,
   } = props
@@ -167,9 +172,13 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     })
   }, [flip])
 
+  // Момент показа шага — база для `elapsed_ms` в телеметрии попыток.
+  const stepShownAtRef = useRef(Date.now())
+
   useEffect(() => {
     setValue('')
     setError('')
+    stepShownAtRef.current = Date.now()
   }, [step.id])
 
   const openInMap = useCallback(
@@ -205,17 +214,14 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     ]).start()
   }, [shakeAnim])
 
-  const isAutoPassStep = useMemo(
-    () => step.answer._isAny === true || /\(\)\s*=>\s*true/.test(step.answer.toString()),
-    [step.answer],
-  )
+  // Что за ответ у шага, карточка узнаёт у модуля оценки: правила проверки
+  // живут там же, где вердикт, и вью их не дублирует.
+  const answerDescription = useMemo(() => describeQuestAnswer(step), [step])
+  const isAutoPassStep = answerDescription.isAutoPass
   // Шаг со свободным ответом (`any_text`): правильного варианта нет, проверяется
-  // только длина. Порог кладёт `buildAnswerChecker`, чтобы карточка могла
-  // объяснить это игроку, а не отвечать «Неверный ответ» на короткий текст.
-  const freeTextMinLength = useMemo(
-    () => step.answer._freeTextMinLength,
-    [step.answer],
-  )
+  // только длина — порог показываем игроку, а не отвечаем «Неверный ответ» на
+  // короткий текст.
+  const freeTextMinLength = answerDescription.freeTextMinLength
   const isPassed = !!savedAnswer && step.id !== 'intro'
   const hintSuggestedAfter = 1
   const hintSuggested = hintVisible || attempts >= hintSuggestedAfter
@@ -259,10 +265,21 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       hapticNotification('warning')
       return
     }
-    const normalized = step.inputType === 'number'
-      ? trimmed.replace(',', '.').trim()
-      : trimmed.toLowerCase().replace(/\s+/g, ' ').trim()
-    const ok = step.answer(normalized)
+    const { ok, normalized, isFreeText } = evaluateQuestAnswer(step, trimmed)
+
+    void recordQuestAnswerAttempt({
+      questNumericId,
+      stepId: step.id,
+      verdict: ok ? 'accepted' : 'rejected',
+      normalized,
+      isFreeText,
+      // `attempts` — число прежних отклонённых попыток на этом шаге, поэтому
+      // текущая идёт следующим номером.
+      attemptNo: attempts + 1,
+      hintShown: hintVisible,
+      elapsedMs: Date.now() - stepShownAtRef.current,
+    })
+
     if (ok) {
       setError('')
       hapticNotification('success')
@@ -282,7 +299,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       shake()
       hapticNotification('error')
     }
-  }, [freeTextMinLength, onSubmit, onWrongAttempt, shake, step, triggerFlip, value])
+  }, [attempts, freeTextMinLength, hintVisible, onSubmit, onWrongAttempt, questNumericId, shake, step, triggerFlip, value])
 
   return (
     <Animated.View style={[styles.card, isFlipping && { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>

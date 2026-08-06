@@ -44,6 +44,7 @@ import { fetchQuestByQuestId } from '@/api/quests';
 import { saveQuestOffline } from '@/services/offline/questOfflineAdapter';
 import { useOfflineCatalog } from '@/hooks/useOfflineCatalog';
 import { queueAnalyticsEvent } from '@/utils/analytics';
+import { flushQuestAnswerAttempts } from '@/utils/questAnswerTelemetry';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
 import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
@@ -203,11 +204,22 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     useEffect(() => {
         setDesktopNavExpanded(false);
+        // Переход на следующий шаг — штатный момент доставки накопленных попыток
+        // (#1276): игрок уже дошёл до сети хотя бы на секунду.
+        void flushQuestAnswerAttempts();
         const id = requestAnimationFrame(() => {
             contentScrollRef.current?.scrollTo({ y: 0, animated: false });
         });
         return () => cancelAnimationFrame(id);
     }, [currentStep?.id, showFinaleOnly]);
+
+    // Уход с экрана квеста: дожимаем очередь state-free запросом. Если он не
+    // дойдёт (офлайн), события остаются в AsyncStorage до следующего открытия.
+    useEffect(() => {
+        return () => {
+            void flushQuestAnswerAttempts();
+        };
+    }, []);
 
     const openCurrentStepInMap = useCallback((app: QuestMapApp) => {
         if (!currentStep) return;
@@ -299,6 +311,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         if (!allCompleted || questFinishTrackedRef.current) return;
         questFinishTrackedRef.current = true;
         queueAnalyticsEvent('quest_finish', { quest_id: questId });
+        void flushQuestAnswerAttempts();
     }, [allCompleted, questId]);
 
     const guestGateTrackedRef = useRef(false);
@@ -475,6 +488,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 showMap={showMap}
                                 onToggleMap={toggleMap}
                                 showLocationControls={!useWideInlineLayout}
+                                questNumericId={questNumericId}
                                 onAnswerFocus={handleInputFocus}
                                 onAnswerBlur={handleInputBlur}
                             />

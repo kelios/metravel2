@@ -250,6 +250,11 @@ const main = () => {
       process.exit(typeDebtGuardStatus)
     }
 
+    const questAnswerEvalGuardStatus = runCommand('npm', ['run', 'guard:quest-answer-eval'])
+    if (questAnswerEvalGuardStatus !== 0) {
+      process.exit(questAnswerEvalGuardStatus)
+    }
+
     if (result.lintTargets.length === 0) {
       console.log('fast-scope-checks: no lintable changed files, eslint skipped.')
       return

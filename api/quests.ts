@@ -614,3 +614,46 @@ export async function updateProgress(
 export async function deleteProgress(id: number): Promise<void> {
     return apiClient.delete<void>(`/quest-progress/${id}/`);
 }
+
+// ===================== ТЕЛЕМЕТРИЯ ПОПЫТОК ОТВЕТА (#1275/#1276) =====================
+
+/** Одна попытка ответа. `raw_answer` не отправляется для свободных ответов. */
+export type QuestAnswerAttemptPayload = {
+    client_attempt_id: string;
+    step_id: string;
+    verdict: 'accepted' | 'rejected';
+    raw_answer?: string;
+    answer_length: number;
+    attempt_no: number;
+    hint_shown: boolean;
+    elapsed_ms?: number;
+    platform: string;
+    locale: string;
+    occurred_at: string;
+};
+
+export type QuestAnswerAttemptsBulkPayload = {
+    quest_id: number;
+    session_key: string;
+    attempts: QuestAnswerAttemptPayload[];
+};
+
+export type QuestAnswerAttemptsBulkResult = {
+    accepted: number;
+    duplicates: number;
+    rejected: number;
+};
+
+/**
+ * Приём батча попыток ответа. Эндпоинт auth-optional: гостевое прохождение
+ * пишется так же, поэтому токен прикладывается, только если он есть.
+ * Повтор того же `client_attempt_id` возвращается как `duplicates`, не как 4xx.
+ */
+export async function sendQuestAnswerAttempts(
+    payload: QuestAnswerAttemptsBulkPayload,
+): Promise<QuestAnswerAttemptsBulkResult> {
+    return apiClient.post<QuestAnswerAttemptsBulkResult>(
+        '/quest-answer-attempts/bulk/',
+        payload,
+    );
+}

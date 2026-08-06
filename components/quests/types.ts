@@ -10,6 +10,12 @@ export type QuestAnswerChecker = ((input: string) => boolean) & {
   _isAny?: boolean;
   /** Минимальная длина свободного ответа для понятной подсказки в UI. */
   _freeTextMinLength?: number;
+  /**
+   * Тип `answer_pattern`, из которого собран чекер. Нужен телеметрии попыток:
+   * по нему решается, можно ли вообще отправлять сырой ввод (свободная
+   * рефлексия не покидает устройство). Сам чекер им не пользуется.
+   */
+  _answerType?: string;
 };
 
 export type QuestStep = {
