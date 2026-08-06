@@ -164,7 +164,9 @@ function Home() {
   const { isAuthenticated, userId } = useAuth()
   const colors = useThemedColors()
   const queryClient = useQueryClient()
-  const { isSmallPhone, isPhone } = useHomeViewport()
+  // Home монтируется только после гидратации (index.tsx: `canMountContent`),
+  // поэтому первый кадр обязан знать реальную ширину — см. #1282.
+  const { isSmallPhone, isPhone } = useHomeViewport({ clientOnly: true })
   const isMobile = isSmallPhone || isPhone
 
   const [refreshing, setRefreshing] = useState(false)

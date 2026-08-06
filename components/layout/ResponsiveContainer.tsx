@@ -19,6 +19,13 @@ interface ResponsiveContainerProps {
   center?: boolean;
   style?: ViewStyle;
   testID?: string;
+  /**
+   * Ставить только внутри поддерева, которое монтируется уже после гидратации.
+   * Тогда контейнер берёт реальную ширину на первом же кадре и не переезжает с
+   * padding 8 (ветка «нулевой» ширины) на 16/40 следующим кадром — это давало
+   * заметную часть CLS главной (#1282). См. HydrationReadyOptions.
+   */
+  clientOnly?: boolean;
 }
 
 export default function ResponsiveContainer({
@@ -30,8 +37,9 @@ export default function ResponsiveContainer({
   center = true,
   style,
   testID,
+  clientOnly = false,
 }: ResponsiveContainerProps) {
-  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeDesktop } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeDesktop } = useResponsive({ clientOnly });
 
   const resolvedMaxWidth = useMemo(() => {
     if (typeof maxWidth === 'number') return maxWidth;

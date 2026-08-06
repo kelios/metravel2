@@ -16,6 +16,8 @@
  *   PERF_MAX_JS_KB   PERF_MAX_TOTAL_KB  PERF_MAX_REQUESTS  PERF_MAX_LONG_TASKS
  * Per-page LCP override:
  *   PERF_LCP_MAX_MS_HOME / _SEARCH / _MAP / _PLACES
+ * Per-page CLS override:
+ *   PERF_CLS_MAX_HOME (главная держит реальный бюджет 0,1, см. #1282)
  */
 
 import { test, expect } from '@playwright/test'
@@ -46,6 +48,13 @@ type PageTarget = {
   readySelector: string
   /** Default LCP budget (ms) — map/places are heavier, so more lenient. */
   lcpMaxMs: number
+  /**
+   * CLS budget. Общий `CLS_MAX` намеренно широкий (0,3) — он ловит только
+   * катастрофу. Для страниц, где сдвиги уже разобраны и закрыты, ставим
+   * реальный бюджет Core Web Vitals, иначе регрессия проходит незамеченной:
+   * #1282 (главная, 0,2431) укладывалась в 0,3 и гейт молчал.
+   */
+  clsMax: number
 }
 
 const DEFAULT_LCP = IS_CI ? 4000 : 10_000
@@ -57,6 +66,8 @@ const PAGES: PageTarget[] = [
     path: '/',
     readySelector: '[data-testid="home-hero"]',
     lcpMaxMs: envNum('PERF_LCP_MAX_MS_HOME', envNum('PERF_LCP_MAX_MS', DEFAULT_LCP)),
+    // #1282: SSG→React handoff главной разобран, бюджет = порог Core Web Vitals.
+    clsMax: envNum('PERF_CLS_MAX_HOME', envNum('PERF_CLS_MAX', 0.1)),
   },
   {
     key: 'SEARCH',
@@ -64,6 +75,7 @@ const PAGES: PageTarget[] = [
     path: '/search',
     readySelector: '[data-testid="search-container"]',
     lcpMaxMs: envNum('PERF_LCP_MAX_MS_SEARCH', envNum('PERF_LCP_MAX_MS', DEFAULT_LCP)),
+    clsMax: CLS_MAX,
   },
   {
     key: 'MAP',
@@ -71,6 +83,7 @@ const PAGES: PageTarget[] = [
     path: '/map',
     readySelector: '[data-testid="map-leaflet-wrapper"]',
     lcpMaxMs: envNum('PERF_LCP_MAX_MS_MAP', envNum('PERF_LCP_MAX_MS', IS_CI ? 6000 : 12_000)),
+    clsMax: CLS_MAX,
   },
   {
     key: 'PLACES',
@@ -78,6 +91,7 @@ const PAGES: PageTarget[] = [
     path: '/places',
     readySelector: 'h1',
     lcpMaxMs: envNum('PERF_LCP_MAX_MS_PLACES', envNum('PERF_LCP_MAX_MS', IS_CI ? 5000 : 11_000)),
+    clsMax: CLS_MAX,
   },
   // #1161: каталог квестов держит обложки на `/quest-cover/**` — путь, который до
   // #1113 вообще не распознавался как медийный и уходил без `w`.
@@ -87,6 +101,7 @@ const PAGES: PageTarget[] = [
     path: '/quests',
     readySelector: 'h1',
     lcpMaxMs: envNum('PERF_LCP_MAX_MS_QUESTS', envNum('PERF_LCP_MAX_MS', IS_CI ? 5000 : 11_000)),
+    clsMax: CLS_MAX,
   },
 ]
 
@@ -175,7 +190,7 @@ for (const target of PAGES) {
 
       const report = {
         page: target.path,
-        thresholds: { lcpMaxMs: target.lcpMaxMs, TBT_MAX_MS, CLS_MAX, FCP_MAX_MS, MAX_LONG_TASKS },
+        thresholds: { lcpMaxMs: target.lcpMaxMs, TBT_MAX_MS, clsMax: target.clsMax, FCP_MAX_MS, MAX_LONG_TASKS },
         metrics: {
           lcp: metrics.lcp != null ? `${Math.round(metrics.lcp)}ms` : 'N/A',
           fcp: metrics.fcp != null ? `${Math.round(metrics.fcp)}ms` : 'N/A',
@@ -205,10 +220,10 @@ for (const target of PAGES) {
       )
       expect(
         metrics.cls,
-        `${target.name} total CLS ${metrics.cls.toFixed(4)} > ${CLS_MAX} (post-ready=${metrics.clsAfterReady.toFixed(
+        `${target.name} total CLS ${metrics.cls.toFixed(4)} > ${target.clsMax} (post-ready=${metrics.clsAfterReady.toFixed(
           4,
         )})`,
-      ).toBeLessThanOrEqual(CLS_MAX)
+      ).toBeLessThanOrEqual(target.clsMax)
       expect(
         metrics.longTaskCount,
         `${target.name} ${metrics.longTaskCount} long tasks > ${MAX_LONG_TASKS}`,

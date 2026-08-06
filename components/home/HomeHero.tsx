@@ -114,7 +114,7 @@ const HomeHero = memo(function HomeHero({
     isDesktop,
     width: rawWidth,
     isPortrait,
-  } = useHomeViewport()
+  } = useHomeViewport({ clientOnly: true })
 
   // Stabilize width — ignore <50px jitters (e.g. mobile address bar collapse).
   const stableWidthRef = useRef(rawWidth)
@@ -329,7 +329,7 @@ const HomeHero = memo(function HomeHero({
 
   return (
     <View testID="home-hero" style={styles.container}>
-      <ResponsiveContainer maxWidth={1920} padding>
+      <ResponsiveContainer maxWidth={1920} padding clientOnly>
         <View style={styles.heroShell}>
           <HomeHeroBookLayout
             colors={colors}

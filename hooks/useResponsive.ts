@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Dimensions, Platform } from 'react-native';
 import { METRICS } from '@/constants/layout';
-import { useHydrationReady } from '@/hooks/useHydrationReady';
+import { useHydrationReady, type HydrationReadyOptions } from '@/hooks/useHydrationReady';
 
 type Breakpoint = keyof typeof METRICS.breakpoints;
 type Orientation = 'portrait' | 'landscape';
@@ -255,8 +255,8 @@ export function useBreakpoints() {
  *   return <TabletLayout />;
  * }
  */
-export function useResponsive(): ResponsiveState {
-  const hydrationReady = useHydrationReady();
+export function useResponsive(options?: HydrationReadyOptions): ResponsiveState {
+  const hydrationReady = useHydrationReady(options);
   const liveSnapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   // Expo Router hydrates lazy route boundaries after the root shell has already
   // committed. A global external store may be live by then, so getServerSnapshot
