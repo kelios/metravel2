@@ -107,11 +107,11 @@
     },
     {
       "from": "2-severnyi-velebit-marshrut-babic-sica-zavizan-premuzic-trail-na-neskolko-dnei",
-      "to": "severnyi-velebit-i-zavizhan-luchshii-peshii-marshrut-khorvatii-s-vidom-na-adriatiku-kotoryi-stoit-proiti"
+      "to": "severnyi-velebit-i-zavizhan-peshii-marshrut"
     },
     {
       "from": "3-kak-poekhat-v-parizhskii-disneilend-nash-opyt-tseny-marshruty-i-sovety",
-      "to": "kak-poekhat-v-parizhskii-disneilend-nash-opyt-tseny-marshruty-i-sovety"
+      "to": "parizhskii-disneilend-tseny-i-kak-dobratsia"
     },
     {
       "from": "4-kak-provesti-idealnyi-uikend-v-parizhe-versal-mulen-ruzh-i-sokrovishcha-alegri",
@@ -123,7 +123,7 @@
     },
     {
       "from": "5-zagreb-za-1-den-bashnia-muzei-tesly-i-tsentr-goroda",
-      "to": "zagreb-za-odin-den-kak-dobratsia-chto-posmotret-gde-poest"
+      "to": "zagreb-za-odin-den-chto-posmotret"
     },
     {
       "from": "6-puteshestvie-v-ogulin-i-kanon-kamachnik-chto-posmotret-v-tsentre-khorvatii",
@@ -131,19 +131,19 @@
     },
     {
       "from": "7-split-za-1-den-bashnia-sobora-dvorets-diokletiana-gora-kokteili-lichnyi-marshrut-khorvatiia",
-      "to": "split-za-odin-den-dvorets-diokletiana-podzemelia-sobor-sviatogo-dui-i-chto-posmotret-riadom"
+      "to": "split-za-odin-den-dvorets-diokletiana"
     },
     {
       "from": "8-dubrovnik-2025-progulka-po-staromu-gorodu-chto-posmotret-za-1-den",
-      "to": "dubrovnik-kak-dobratsia-chto-posmotret-interesnye-fakty-i-legendy-starogo-goroda-khorvatii"
+      "to": "dubrovnik-kak-dobratsia-i-chto-posmotret"
     },
     {
       "from": "9-poezdka-na-krka-kak-dobratsia-do-skradinskogo-buga-marshrut-tseny-rasstoianie",
-      "to": "natsionalnyi-park-krka-v-khorvatii-kak-dobratsia-chto-posmotret-i-pochemu-osen-luchshee-vremia-dlia-poezdki"
+      "to": "park-krka-v-khorvatii-vodopady-i-marshrut"
     },
     {
       "from": "10-iuzhnyi-velebit-peshii-marshrut-v-natsionalnom-parke-paklenitsa-karta-sovety-tseny",
-      "to": "natsionalnyi-park-paklenitsa-v-khorvatii-istoriia-kak-dobratsia-chto-posmotret-legendy-i-poleznye-sovety"
+      "to": "park-paklenitsa-marshruty-i-kak-dobratsia"
     },
     {
       "from": "11-makarska-otdykh-u-moria-doroga-domoi-cherez-karlovats-i-venu",
@@ -275,7 +275,7 @@
     },
     {
       "from": "putevoditel-po-banskoi-shtiavnitse-chto-posmotret-za-odin-den",
-      "to": "banska-shtiavnitsa-slovakiia-chto-posmotret-za-1-den-kak-dobratsia-istoriia-goroda-i-neobychnye-fakty"
+      "to": "banska-shtiavnitsa-za-1-den-chto-posmotret"
     },
     {
       "from": "pokhod-na-tri-korony-trzy-korony-982-m",
@@ -736,6 +736,86 @@
     {
       "from": "zboruv-gora",
       "to": "zapovednik-gora-zboruv-skaly-i-peshchery"
+    },
+    {
+      "from": "gory-polshi-19-peshikh-marshrutov-po-tatram-beskidam-i-peninam",
+      "to": "gory-polshi-19-peshikh-marshrutov"
+    },
+    {
+      "from": "severnyi-velebit-i-zavizhan-luchshii-peshii-marshrut-khorvatii-s-vidom-na-adriatiku-kotoryi-stoit-proiti",
+      "to": "severnyi-velebit-i-zavizhan-peshii-marshrut"
+    },
+    {
+      "from": "den-2-v-parizhe-progulki-po-monmartru-katakomby-i-luchshii-vid-na-gorod",
+      "to": "den-2-v-parizhe-monmartr-i-katakomby"
+    },
+    {
+      "from": "banska-shtiavnitsa-slovakiia-chto-posmotret-za-1-den-kak-dobratsia-istoriia-goroda-i-neobychnye-fakty",
+      "to": "banska-shtiavnitsa-za-1-den-chto-posmotret"
+    },
+    {
+      "from": "gomel-putevoditel-po-dvortsu-parkam-muzeiam-i-staromu-gorodu",
+      "to": "gomel-chto-posmotret-za-odin-den"
+    },
+    {
+      "from": "split-za-odin-den-dvorets-diokletiana-podzemelia-sobor-sviatogo-dui-i-chto-posmotret-riadom",
+      "to": "split-za-odin-den-dvorets-diokletiana"
+    },
+    {
+      "from": "vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den",
+      "to": "ushchele-vintgar-i-ozero-bled-marshrut-na-den"
+    },
+    {
+      "from": "dubrovnik-kak-dobratsia-chto-posmotret-interesnye-fakty-i-legendy-starogo-goroda-khorvatii",
+      "to": "dubrovnik-kak-dobratsia-i-chto-posmotret"
+    },
+    {
+      "from": "zagreb-za-odin-den-kak-dobratsia-chto-posmotret-gde-poest",
+      "to": "zagreb-za-odin-den-chto-posmotret"
+    },
+    {
+      "from": "zabroshennye-dvortsy-usadby-i-zamki-belarusi-38-atmosfernykh-mest-s-foto-i-koordinatami",
+      "to": "zabroshennye-usadby-i-zamki-belarusi-38-mest"
+    },
+    {
+      "from": "kortina-dampetstso-i-via-ferrata-cascate-di-fanes-vodopady-i-trek-v-dolomitakh",
+      "to": "kortina-dampetstso-via-ferrata-cascate-di-fanes"
+    },
+    {
+      "from": "krugovoi-trekking-u-ozera-garda-campione-prabione-pregasio",
+      "to": "trekking-u-ozera-garda-krugovoi-marshrut"
+    },
+    {
+      "from": "natsionalnyi-park-paklenitsa-v-khorvatii-istoriia-kak-dobratsia-chto-posmotret-legendy-i-poleznye-sovety",
+      "to": "park-paklenitsa-marshruty-i-kak-dobratsia"
+    },
+    {
+      "from": "muzykalnyi-festival-balaton-sound-3-dnia-muzyki-solntsa-i-ozera",
+      "to": "balaton-sound-festival-na-ozere-balaton"
+    },
+    {
+      "from": "krakov-zamok-lietava-bratislava-puteshestvie-po-slovakii",
+      "to": "iz-krakova-v-bratislavu-zamok-lietava"
+    },
+    {
+      "from": "kak-poekhat-v-parizhskii-disneilend-nash-opyt-tseny-marshruty-i-sovety",
+      "to": "parizhskii-disneilend-tseny-i-kak-dobratsia"
+    },
+    {
+      "from": "natsionalnyi-park-krka-v-khorvatii-kak-dobratsia-chto-posmotret-i-pochemu-osen-luchshee-vremia-dlia-poezdki",
+      "to": "park-krka-v-khorvatii-vodopady-i-marshrut"
+    },
+    {
+      "from": "polskoe-kamino-malopolskaia-doroga-sviatogo-iakova-camino-de-santiago-v-polshe",
+      "to": "polskoe-kamino-malopolskaia-doroga-iakova"
+    },
+    {
+      "from": "ruiny-dvortsa-szembekow-v-poreba-zegoty-atmosfernyi-velomarshrut",
+      "to": "dvorets-szembekow-v-poreba-zegoty-velomarshrut"
+    },
+    {
+      "from": "usadby-dvortsy-i-zamki-belarusi-19-marshrutov-vykhodnogo-dnia-iz-minska",
+      "to": "zamki-i-usadby-belarusi-19-marshrutov-iz-minska"
     }
   ]
 }
