@@ -144,6 +144,14 @@ export async function installMessagingMocks(
     await fulfillJson(route, { detail: 'Delete failed' }, status);
   });
 
+  // Бейдж непрочитанных ходит в лёгкий счётчик (#482), а не в список тредов.
+  // Зарегистрирован после `**/api/message-threads/*/`, чтобы выигрывать матч.
+  await page.route('**/api/message-threads/unread-count/**', (route) =>
+    fulfillJson(route, {
+      count: threads.reduce((sum, thread) => sum + (thread.unread_count ?? 0), 0),
+    }),
+  );
+
   await page.route('**/api/messages/**', async (route) => {
     const request = route.request();
     if (request.method() === 'GET') {

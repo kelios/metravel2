@@ -262,19 +262,19 @@ describe('Messages API', () => {
     });
 
     describe('fetchUnreadCount', () => {
-        it('should sum unread_count from all threads', async () => {
-            const mockThreads: MessageThread[] = [
-                { id: 1, participants: [1, 2], created_at: null, last_message_created_at: null, unread_count: 3 },
-                { id: 2, participants: [1, 3], created_at: null, last_message_created_at: null, unread_count: 5 },
-            ];
-            mockedFetch.mockResolvedValueOnce(mockResponse(mockThreads));
+        it('should call the lightweight unread-count endpoint, not the thread list', async () => {
+            mockedFetch.mockResolvedValueOnce(mockResponse({ count: 8 }));
 
             const result = await fetchUnreadCount();
+
             expect(result).toEqual({ count: 8 });
+            const [requestedUrl] = mockedFetch.mock.calls[0];
+            expect(requestedUrl).toContain('/message-threads/unread-count/');
+            expect(requestedUrl).not.toMatch(/\/message-threads\/$/);
         });
 
-        it('should return zero when no threads', async () => {
-            mockedFetch.mockResolvedValueOnce(mockResponse([]));
+        it('should return zero when nothing is unread', async () => {
+            mockedFetch.mockResolvedValueOnce(mockResponse({ count: 0 }));
 
             const result = await fetchUnreadCount();
             expect(result).toEqual({ count: 0 });
@@ -286,15 +286,11 @@ describe('Messages API', () => {
             await expect(fetchUnreadCount()).rejects.toThrow('Network error');
         });
 
-        it('should handle threads with missing unread_count', async () => {
-            const mockThreads = [
-                { id: 1, participants: [1, 2], created_at: null, last_message_created_at: null },
-                { id: 2, participants: [1, 3], created_at: null, last_message_created_at: null, unread_count: 2 },
-            ];
-            mockedFetch.mockResolvedValueOnce(mockResponse(mockThreads));
+        it('should fall back to zero when the payload has no numeric count', async () => {
+            mockedFetch.mockResolvedValueOnce(mockResponse({}));
 
             const result = await fetchUnreadCount();
-            expect(result).toEqual({ count: 2 });
+            expect(result).toEqual({ count: 0 });
         });
     });
 

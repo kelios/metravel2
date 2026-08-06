@@ -313,10 +313,13 @@ export interface UnreadCountResponse {
     count: number;
 }
 
+// Счётчик для бейджа берём отдельным лёгким эндпоинтом (#482): раньше ради одного
+// числа выгружался весь список тредов, а он отдаётся с no-store и растёт с перепиской.
 export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
-    const threads = await fetchMessageThreads();
-    const count = threads.reduce((sum, thread) => sum + (thread.unread_count ?? 0), 0);
-    return { count };
+    const raw = await messagingFetch<Partial<UnreadCountResponse> | null>(
+        '/message-threads/unread-count/',
+    );
+    return { count: typeof raw?.count === 'number' ? raw.count : 0 };
 };
 
 export const sendMessage = async (
