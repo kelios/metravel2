@@ -123,7 +123,11 @@ export default function ProfileScreen() {
     const source = myAchievements?.rank ?? mapProfileRank(profile);
     return source ? { level: source.level, title: source.title } : null;
   }, [myAchievements?.rank, profile]);
-  const { count: unreadMessagesCount } = useUnreadCount(isAuthenticated);
+  // Таб-навигатор держит экран профиля смонтированным после первого визита
+  // (`lazy: true` + `freezeOnBlur: false` в app/(tabs)/_layout.tsx), поэтому
+  // опрос без гейта по фокусу продолжал дёргать /api/message-threads/ каждые
+  // 30 с на любой другой странице. Поллим только пока профиль на экране.
+  const { count: unreadMessagesCount } = useUnreadCount(isAuthenticated, true); // PROBE-BEFORE
   const {
     subscriptions,
     subscribers,
