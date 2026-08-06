@@ -101,3 +101,56 @@ describe('MapMobileTopOverlay — тач-таргеты тулбара', () => {
     expect(surface.height).toBe(38)
   })
 })
+
+/**
+ * #1274: тот же дефект жил в остальных контролах оверлея — их правил не тулбар,
+ * поэтому #1271 их не закрыл. hitSlop тут так же бесполезен: и шапка сводки, и
+ * селектор старта обтягивают своих потомков вплотную.
+ */
+describe('MapMobileTopOverlay — тач-таргеты контролов маршрута', () => {
+  const routeProps = {
+    ...baseProps,
+    mode: 'route',
+    transportMode: 'car',
+    onToggleTransport: jest.fn(),
+    onTransportSelect: jest.fn(),
+    onClearRoute: jest.fn(),
+  } as const
+
+  it('пилюли выбора старта держат 44dp по высоте (было 36)', () => {
+    const { getByTestId } = render(
+      <MapMobileTopOverlay {...(routeProps as any)} onUseUserLocationStart={jest.fn()} onStartManualRoute={jest.fn()} />,
+    )
+
+    for (const testID of ['map-mobile-route-start-user', 'map-mobile-route-start-map']) {
+      const style = StyleSheet.flatten(getByTestId(testID).props.style)
+      expect({ testID, minHeight: style.minHeight }).toEqual({ testID, minHeight: 44 })
+    }
+  })
+
+  it('действие в подсказке маршрута держит 44dp и не раздувает плашку', () => {
+    const { getByTestId } = render(
+      <MapMobileTopOverlay {...(routeProps as any)} routePointCount={0} hasUserLocation={false} onRequestLocation={jest.fn()} />,
+    )
+
+    const style = StyleSheet.flatten(getByTestId('map-mobile-route-request-location').props.style)
+    expect(style.minHeight).toBe(44)
+    // Отрицательные поля съедают padding плашки, поэтому она остаётся одноярусной.
+    expect(style.marginVertical).toBe(-6)
+  })
+
+  it('крестик сводки маршрута: рамка 48dp, видимый круг прежние 26dp', () => {
+    const { getByTestId } = render(
+      <MapMobileTopOverlay {...(routeProps as any)} routePointCount={2} routeDistance={4200} routeDuration={900} />,
+    )
+
+    const touch = getByTestId('map-mobile-route-summary-close')
+    const touchStyle = StyleSheet.flatten(touch.props.style)
+    expect({ width: touchStyle.width, height: touchStyle.height }).toEqual({ width: 48, height: 48 })
+    // Рамка вынесена в отрицательные поля — шапка карточки прежней высоты.
+    expect(touchStyle.margin).toBe(-11)
+
+    const circle = StyleSheet.flatten(touch.children[0].props.style)
+    expect({ width: circle.width, height: circle.height }).toEqual({ width: 26, height: 26 })
+  })
+})

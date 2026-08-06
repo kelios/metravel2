@@ -1,0 +1,172 @@
+{
+  "contractVersion": 1,
+  "minTouchTarget": 44,
+  "scope": [
+    "app",
+    "components",
+    "hooks",
+    "screens"
+  ],
+  "entries": {
+    "app/(tabs)/article/[id].native.tsx::backButton": {
+      "size": 40,
+      "dimension": "minHeight"
+    },
+    "app/(tabs)/favorites.tsx::removeButton": {
+      "size": 32,
+      "dimension": "width"
+    },
+    "app/(tabs)/subscriptions.tsx::backToProfileButton": {
+      "size": 40,
+      "dimension": "minHeight"
+    },
+    "components/achievements/AdminGrantRareAward.tsx::closeBtn": {
+      "size": 36,
+      "dimension": "width"
+    },
+    "components/achievements/PeerBadgePickerSheet.tsx::closeBtn": {
+      "size": 36,
+      "dimension": "width"
+    },
+    "components/calendar/MiniCalendar.tsx::dayBtn": {
+      "size": 32,
+      "dimension": "width"
+    },
+    "components/home/HomeQuickActions.native.tsx::chip": {
+      "size": 40,
+      "dimension": "minHeight"
+    },
+    "components/layout/HeaderContextBar.tsx::crumbItem": {
+      "size": 32,
+      "dimension": "minHeight"
+    },
+    "components/listTravel/ListCatalogToolbar.tsx::chip": {
+      "size": 32,
+      "dimension": "minHeight"
+    },
+    "components/MapPage/MapMobile/MapEmptyStateToast.tsx::actionPrimary": {
+      "size": 34,
+      "dimension": "minHeight"
+    },
+    "components/MapPage/MapMobile/MapEmptyStateToast.tsx::actionSecondary": {
+      "size": 34,
+      "dimension": "minHeight"
+    },
+    "components/MapPage/MapMobileLayout.tsx::searchAreaButton": {
+      "size": 40,
+      "dimension": "height"
+    },
+    "components/MapPage/MapMobileLayout.tsx::sheetListFiltersButton": {
+      "size": 40,
+      "dimension": "width"
+    },
+    "components/MapPage/MapPlaceBottomCard.tsx::closeButton": {
+      "size": 32,
+      "dimension": "width"
+    },
+    "components/MapPage/MapPlaceBottomCard.tsx::headerCloseButton": {
+      "size": 36,
+      "dimension": "width"
+    },
+    "components/MapPage/MapSearchInput.tsx::inputWrapper": {
+      "size": 42,
+      "dimension": "minHeight"
+    },
+    "components/navigation/OpenInMapsSheet.tsx::closeButton": {
+      "size": 40,
+      "dimension": "width"
+    },
+    "components/navigation/PointNavigationMenu.tsx::actionChip": {
+      "size": 34,
+      "dimension": "minHeight"
+    },
+    "components/profile/ProfileCollectionHeader.tsx::breadcrumbItem": {
+      "size": 32,
+      "dimension": "minHeight"
+    },
+    "components/profile/UserSafetyMenu.tsx::closeBtn": {
+      "size": 36,
+      "dimension": "width"
+    },
+    "components/profile/UserSafetyMenu.tsx::trigger": {
+      "size": 40,
+      "dimension": "width"
+    },
+    "components/quests/QuestReviewsModal.tsx::closeButton": {
+      "size": 32,
+      "dimension": "width"
+    },
+    "components/screens/history/HistoryScreen.tsx::nativeClearButton": {
+      "size": 40,
+      "dimension": "width"
+    },
+    "components/travel/ShareButtons.tsx::collapseButton": {
+      "size": 32,
+      "dimension": "minWidth"
+    },
+    "components/travel/TravelRouteFilesPanel.tsx::actionButton": {
+      "size": 32,
+      "dimension": "minHeight"
+    },
+    "components/trips/chat/TripChatPanel.tsx::sendButton": {
+      "size": 42,
+      "dimension": "width"
+    },
+    "components/trips/MyCreatedTripsList.tsx::filterOption": {
+      "size": 38,
+      "dimension": "minHeight"
+    },
+    "components/trips/MyCreatedTripsList.tsx::iconControl": {
+      "size": 30,
+      "dimension": "width"
+    },
+    "components/trips/MyCreatedTripsList.tsx::resetButton": {
+      "size": 36,
+      "dimension": "minHeight"
+    },
+    "components/trips/planning/RouteBuilder.tsx::ctrl": {
+      "size": 32,
+      "dimension": "width"
+    },
+    "components/trips/PublicTripFilters.tsx::nativeSelect": {
+      "size": 42,
+      "dimension": "minHeight"
+    },
+    "components/trips/PublicTripFilters.tsx::resetButton": {
+      "size": 42,
+      "dimension": "minHeight"
+    },
+    "components/trips/PublicTripsCatalog.tsx::backCrumb": {
+      "size": 32,
+      "dimension": "minHeight"
+    },
+    "components/trips/PublicTripsCatalog.tsx::crumbItem": {
+      "size": 30,
+      "dimension": "minHeight"
+    },
+    "components/trips/PublicTripsCatalog.tsx::introToggle": {
+      "size": 34,
+      "dimension": "minHeight"
+    },
+    "components/trips/PublicTripsCatalog.tsx::searchClear": {
+      "size": 30,
+      "dimension": "width"
+    },
+    "components/ui/SelectionGroup.tsx::item": {
+      "size": 40,
+      "dimension": "minWidth"
+    },
+    "components/ui/Toggle.tsx::toggle": {
+      "size": 24,
+      "dimension": "height"
+    },
+    "screens/tabs/PlacesScreen.tsx::categorySearchClear": {
+      "size": 26,
+      "dimension": "width"
+    },
+    "screens/tabs/PlacesScreen.tsx::featuredClear": {
+      "size": 28,
+      "dimension": "width"
+    }
+  }
+}

@@ -833,15 +833,20 @@ describe('MapMobileLayout', () => {
       )
 
       fireEvent.press(screen.getByTestId('map-mobile-radius-button'))
+      // 10 (отступ от края) + 2 × 48 (шаг между центрами кнопок = ширина
+      // тач-таргета). Шаг вырос с 44 до 48 вместе с тач-таргетами тулбара
+      // (#1271), поэтому якорь сместился с 98 на 106 — попап по-прежнему
+      // ровно под своей иконкой.
       expect(
         StyleSheet.flatten(screen.getByTestId('map-mobile-radius-popover-card').props.style).right,
-      ).toBe(98)
+      ).toBe(106)
 
       fireEvent.press(screen.getByTestId('map-mobile-layers-button'))
       const layersCardStyle = StyleSheet.flatten(
         screen.getByTestId('map-mobile-layers-popover-card').props.style,
       )
-      expect(layersCardStyle.right).toBe(54)
+      // 10 + 1 × 48 (см. комментарий к якорю радиуса выше).
+      expect(layersCardStyle.right).toBe(58)
       expect(layersCardStyle.width).toBe(360)
 
       fireEvent.press(screen.getByTestId('map-mobile-layers-popover-backdrop'))
@@ -850,7 +855,7 @@ describe('MapMobileLayout', () => {
       const transportCardStyle = StyleSheet.flatten(
         screen.getByTestId('map-mobile-transport-popover-card').props.style,
       )
-      expect(transportCardStyle.right).toBe(54)
+      expect(transportCardStyle.right).toBe(58)
       expect(transportCardStyle.width).toBe(204)
     })
 

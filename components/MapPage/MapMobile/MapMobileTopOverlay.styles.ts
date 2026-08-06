@@ -20,6 +20,26 @@ export const MAP_TOOLBAR_TOUCH_TARGET_SIZE = 48
 /** Прозрачные поля вокруг видимого круга — по ним и добирается тач-таргет. */
 export const MAP_TOOLBAR_TOUCH_PADDING = (MAP_TOOLBAR_TOUCH_TARGET_SIZE - BUTTON_SIZE) / 2
 
+/** Видимый круг «скрыть сводку маршрута» — размер не меняется. */
+const ROUTE_SUMMARY_CLOSE_SIZE = 26
+/**
+ * Тач-таргет того же крестика. Тот же приём, что и у тулбара: кликабельна
+ * прозрачная рамка, а не видимый круг. Рамка вынесена в отрицательные поля,
+ * поэтому шапка карточки маршрута остаётся прежней высоты (26dp).
+ */
+const ROUTE_SUMMARY_CLOSE_TOUCH_SIZE = MAP_TOOLBAR_TOUCH_TARGET_SIZE
+const ROUTE_SUMMARY_CLOSE_TOUCH_INSET =
+  (ROUTE_SUMMARY_CLOSE_TOUCH_SIZE - ROUTE_SUMMARY_CLOSE_SIZE) / 2
+
+/**
+ * Минимальный тач-таргет для элементов, высоту которых задаёт их собственный
+ * контейнер (пилюли выбора старта, действие в подсказке маршрута). 48dp сюда
+ * не влезает без роста контейнера, 44dp — принятый в проекте floor.
+ */
+const ROUTE_CONTROL_TOUCH_TARGET_SIZE = 44
+/** Вертикальные поля плашки подсказки — их же компенсирует действие. */
+const ROUTE_HINT_PADDING_VERTICAL = 6
+
 const shadowWeb = {
   boxShadow: '0 2px 10px rgba(15,23,42,0.12)',
 } as const
@@ -80,7 +100,7 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       marginRight: MAP_TOOLBAR_TOUCH_PADDING,
     },
     routeStartSelector: {
-      minHeight: 44,
+      minHeight: ROUTE_CONTROL_TOUCH_TARGET_SIZE,
       // Компенсация уменьшенного padding у root (см. activeFiltersRow).
       marginRight: MAP_TOOLBAR_TOUCH_PADDING,
       // Ширину задаёт компонент по реальной свободной ширине вьюпорта; прежний
@@ -89,7 +109,10 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       alignItems: 'center' as const,
       gap: 4,
-      padding: 4,
+      // Вертикального поля нет: иначе пилюли внутри не могут занять все 44dp,
+      // а селектор вырос бы до 52dp. Горизонтальный инсет сохранён.
+      paddingVertical: 0,
+      paddingHorizontal: 4,
       borderRadius: 22,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -106,7 +129,9 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       color: colors.textMuted,
     },
     routeStartOption: {
-      minHeight: 36,
+      // Тач-таргет = высота самой пилюли: hitSlop за границы плотного селектора
+      // не выходит (#1274).
+      minHeight: ROUTE_CONTROL_TOUCH_TARGET_SIZE,
       // На узких экранах опции ужимаются и текст усекается многоточием, вместо
       // того чтобы уезжать за правый край вьюпорта.
       flexShrink: 1,
@@ -206,7 +231,7 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       // Без flexWrap: действие живёт в той же строке, что и текст, поэтому
       // плашка занимает один ярус, а не два (раньше ~82px и наезжала на «Старт»).
       gap: 6,
-      paddingVertical: 6,
+      paddingVertical: ROUTE_HINT_PADDING_VERTICAL,
       paddingHorizontal: 10,
       borderRadius: 10,
       // Статичный «фрост»-фон (правило проекта: без живого blur на мобиле).
@@ -222,7 +247,11 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       color: colors.text,
     },
     routeHintActionPrimary: {
-      minHeight: 32,
+      // 44dp собственной высоты вместо 32 + hitSlop. Отрицательные вертикальные
+      // поля съедают padding плашки, поэтому она остаётся одноярусной (44dp) и
+      // не наезжает на «Старт».
+      minHeight: ROUTE_CONTROL_TOUCH_TARGET_SIZE,
+      marginVertical: -ROUTE_HINT_PADDING_VERTICAL,
       flexShrink: 0,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
@@ -275,15 +304,25 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       fontWeight: '700' as const,
       color: colors.text,
     },
+    // Кликабельная область крестика: прозрачная рамка 48×48dp. Отрицательные
+    // поля возвращают шапке прежнюю высоту, поэтому карточка не выросла.
+    routeSummaryCloseTouch: {
+      width: ROUTE_SUMMARY_CLOSE_TOUCH_SIZE,
+      height: ROUTE_SUMMARY_CLOSE_TOUCH_SIZE,
+      margin: -ROUTE_SUMMARY_CLOSE_TOUCH_INSET,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      flexShrink: 0,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    // Видимый круг — размер не менялся.
     routeSummaryClose: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
+      width: ROUTE_SUMMARY_CLOSE_SIZE,
+      height: ROUTE_SUMMARY_CLOSE_SIZE,
+      borderRadius: ROUTE_SUMMARY_CLOSE_SIZE / 2,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       backgroundColor: colors.surfaceMuted,
-      flexShrink: 0,
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     routeSummaryClosePressed: {
       opacity: 0.75,

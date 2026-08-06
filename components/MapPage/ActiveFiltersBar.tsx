@@ -114,6 +114,14 @@ const shadowNative = {
   elevation: 4,
 } as const;
 
+/**
+ * Потолок высоты `floating`-полосы чипов (#1279). Один ряд чипов — это ~26dp
+ * (paddingVertical 4 + текст 11/~14 + рамка 1), запас оставлен на крупный
+ * fontScale. Значение важно не точностью, а тем, что оно КОНЕЧНО: без него
+ * полоса растягивалась на весь оверлей карты и блокировала шторку под ним.
+ */
+export const FLOATING_ROW_MAX_HEIGHT = 44;
+
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
@@ -127,6 +135,17 @@ const getStyles = (colors: ThemedColors) =>
     containerFloating: {
       paddingVertical: 0,
       backgroundColor: 'transparent',
+      // #1279 — высоту ОБЯЗАТЕЛЬНО ограничивать. `floating`-полоса живёт в
+      // абсолютном оверлее карты (`MapMobileTopOverlay`, zIndex 1500), а
+      // горизонтальный ScrollView внутри на native не получал ограничения по
+      // высоте и растягивался на всю свободную высоту оверлея: замер на
+      // устройстве дал [503,322][1054,2410], то есть до самого низа экрана.
+      // Android детей не обрезает, и этот пустой прозрачный прямоугольник
+      // ложился поверх шторки фильтров, съедая тапы по ✕, полю поиска и табам
+      // (RN отдаёт тач верхнему вью, разрешённому pointerEvents, и дальше вниз
+      // событие не идёт). На web полоса ограничена `styles.scroll`, поэтому
+      // дефект был native-only.
+      maxHeight: FLOATING_ROW_MAX_HEIGHT,
     },
     scrollContent: {
       paddingHorizontal: 10,

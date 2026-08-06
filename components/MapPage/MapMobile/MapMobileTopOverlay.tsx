@@ -651,13 +651,13 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 onPress={() => setDismissedRouteSummaryKey(routeSummaryKey)}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.skryt_svodku_marshruta_9d781c25')}
-                hitSlop={8}
-                style={({ pressed }) => [
-                  styles.routeSummaryClose,
-                  pressed && styles.routeSummaryClosePressed,
-                ]}
+                style={styles.routeSummaryCloseTouch}
               >
-                <Feather name="x" size={15} color={colors.textMuted} />
+                {({ pressed }) => (
+                  <View style={[styles.routeSummaryClose, pressed && styles.routeSummaryClosePressed]}>
+                    <Feather name="x" size={15} color={colors.textMuted} />
+                  </View>
+                )}
               </Pressable>
             </View>
             <View style={styles.routeSummaryMetrics}>
