@@ -127,7 +127,7 @@ export default function ProfileScreen() {
   // (`lazy: true` + `freezeOnBlur: false` в app/(tabs)/_layout.tsx), поэтому
   // опрос без гейта по фокусу продолжал дёргать /api/message-threads/ каждые
   // 30 с на любой другой странице. Поллим только пока профиль на экране.
-  const { count: unreadMessagesCount } = useUnreadCount(isAuthenticated, true); // PROBE-BEFORE
+  const { count: unreadMessagesCount } = useUnreadCount(isAuthenticated, isFocused);
   const {
     subscriptions,
     subscribers,
