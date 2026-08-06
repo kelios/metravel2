@@ -151,6 +151,60 @@ describe('ssg-skeletons', () => {
       expect(html).toContain('<script>');
       expect(html).toContain('ssg-skeleton');
     });
+
+    /**
+     * #1281: без hero-<img> в шелле LCP главной уезжал на гидрацию — текстовый
+     * кандидат (21 918 px²) вдвое меньше фотографии React-hero (42 200 px²), и
+     * Chrome переустанавливал метрику после handoff. Замер прода 2026-08-06:
+     * LCP 9 469 мс, Render Delay 79 % при картинке, готовой к ~2 с.
+     */
+    describe('hero image (#1281)', () => {
+      const HERO_HREF = '/assets/assets/images/cover_sorapiso.abc123.webp';
+
+      it('renders the preloaded hero photo when href is known', () => {
+        const html = buildHomeSkeletonHtml({ heroHref: HERO_HREF });
+        expect(html).toContain('ssg-home-hero-img');
+        expect(html).toContain(`src="${HERO_HREF}"`);
+        expect(html).toContain('fetchpriority="high"');
+      });
+
+      it('keeps the photo inside the hero block, above the card grid', () => {
+        const html = buildHomeSkeletonHtml({ heroHref: HERO_HREF });
+        expect(html.indexOf('ssg-home-hero-img')).toBeGreaterThan(html.indexOf('ssg-hero-search'));
+        expect(html.indexOf('ssg-home-hero-img')).toBeLessThan(html.indexOf('ssg-cards'));
+      });
+
+      it('escapes the href instead of interpolating it raw', () => {
+        const html = buildHomeSkeletonHtml({ heroHref: '/a.webp" onerror="x' });
+        expect(html).not.toContain('onerror="x"');
+        expect(html).toContain('&quot;');
+      });
+
+      it('falls back to the text-only shell when the asset is missing', () => {
+        const html = buildHomeSkeletonHtml();
+        expect(html).not.toContain('ssg-home-hero');
+        expect(html).toContain('ssg-hero-title');
+      });
+
+      /**
+       * Инвариант из #1206: бокс шелла должен быть НЕ МЕНЬШЕ кадра React-hero,
+       * иначе handoff создаёт новый, больший LCP-кандидат и метрика снова уезжает
+       * на гидрацию. Слоты React-hero (замер 2026-08-06): 343×220 на 375 px,
+       * 363×230 на 1280 px. Геометрия должна задаваться селектором специфичнее,
+       * чем безусловное `img[data-lcp]` из критического CSS (0,1,1).
+       */
+      it('sizes the shell photo above the React hero slot and outranks img[data-lcp]', () => {
+        const css = buildSkeletonCSS();
+        expect(css).toContain('.ssg-home-hero{');
+        expect(css).toContain('aspect-ratio:3/2');
+        expect(css).toContain('.ssg-home-hero img.ssg-home-hero-img{');
+        // Абсолютный бокс: aspect-ratio/min-height критического CSS не участвуют.
+        expect(css).toMatch(/\.ssg-home-hero img\.ssg-home-hero-img\{[^}]*position:absolute/);
+        expect(css).toMatch(/\.ssg-home-hero img\.ssg-home-hero-img\{[^}]*aspect-ratio:auto/);
+        // Слабая форма (одиночный класс) проигрывает img[data-lcp] по специфичности.
+        expect(css).not.toMatch(/(^|[\s,}])\.ssg-home-hero-img\{/);
+      });
+    });
   });
 
   describe('buildSearchSkeletonHtml', () => {

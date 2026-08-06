@@ -19,8 +19,11 @@ const runsRaw = getArg('--runs')
 const urlFromEnv = process.env.LIGHTHOUSE_URL
 const urlFromArg = getArg('--url')
 
-const defaultUrl =
-  'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele'
+// #1287: прежний baseline (`…-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-…`)
+// отвечает 301 — slug статьи переименован. Каждый гейтовый прогон платил лишний
+// редирект и мерил цепочку, а не саму страницу. Проверено 2026-08-06: этот URL
+// отдаёт 200 напрямую.
+const defaultUrl = 'https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg'
 
 const url = urlFromArg || urlFromEnv || defaultUrl
 
@@ -108,15 +111,56 @@ const median = (values) => {
 const formatMs = (v) => (typeof v === 'number' ? `${Math.round(v)}ms` : 'n/a')
 const formatCls = (v) => (typeof v === 'number' ? v.toFixed(3) : 'n/a')
 
+/**
+ * #1287: тихо подменённый профиль — самый дорогой вид ошибки измерения, потому
+ * что отчёт выглядит нормальным. Проверяем по самому отчёту, что Lighthouse
+ * мерил именно то, что запросили, и что URL не увёл нас редиректом на другую
+ * страницу (устаревший baseline).
+ */
+const assertMeasuredProfile = (lhr) => {
+  const measured = String(lhr?.configSettings?.formFactor || '').toLowerCase()
+  if (measured && measured !== formFactor) {
+    throw new Error(
+      `Lighthouse измерил form factor "${measured}", а запрошен "${formFactor}". ` +
+        'Отчёт невалиден — проверьте флаги профиля.',
+    )
+  }
+
+  const requested = String(lhr?.requestedUrl || url).replace(/\/+$/, '')
+  const final = String(lhr?.finalDisplayedUrl || lhr?.finalUrl || '').replace(/\/+$/, '')
+  if (final && requested && final !== requested) {
+    console.warn(
+      `⚠ Замеряемый URL увёл редиректом: ${requested} → ${final}. ` +
+        'В метрику попала лишняя навигация — обновите baseline-URL на финальный.',
+    )
+  }
+}
+
 ensureDir(outputPath)
 
+/**
+ * #1287: раньше здесь стоял `--emulated-form-factor=${formFactor}`. В Lighthouse
+ * 13.x (та же версия, что крутит PSI) этого флага НЕТ — он удалён, а неизвестный
+ * флаг не роняет прогон, а молча игнорируется. То есть `--formFactor desktop`
+ * годами мерил мобильную эмуляцию. Замер прода 2026-08-06 по одному и тому же
+ * URL, `--throttling-method=simulate`:
+ *
+ *   скрипт --formFactor desktop → score 53, FCP 7 521 мс, LCP 9 469 мс, 3 707 KiB
+ *   скрипт --formFactor mobile  → score 52, FCP 7 325 мс, LCP 9 469 мс, 3 707 KiB
+ *   npx lighthouse --preset=desktop → score 80, FCP 0,3 с, LCP 1,7 с, 2 840 KiB
+ *
+ * Одинаковые LCP и байты у двух «разных» form factor — признак одного профиля;
+ * второй маркер в network-requests: у настоящего desktop идут картинки `?w=320`,
+ * у мобиля `?w=640`. Ниже — поддерживаемая форма: desktop задаётся пресетом,
+ * mobile остаётся дефолтом Lighthouse.
+ */
 const runOnce = (runOutputPath) =>
   new Promise((resolve, reject) => {
     const lighthouseArgs = [
       'lighthouse',
       url,
       '--only-categories=performance',
-      `--emulated-form-factor=${formFactor}`,
+      ...(formFactor === 'desktop' ? ['--preset=desktop'] : []),
       `--throttling-method=${throttlingMethod}`,
       '--output=json',
       `--output-path=${runOutputPath}`,
@@ -144,7 +188,9 @@ const runOnce = (runOutputPath) =>
     const out = makeRunOutputPath(outputPath, i, runs)
     outputs.push(out)
     await runOnce(out)
-    results.push(extract(readJson(out)))
+    const lhr = readJson(out)
+    assertMeasuredProfile(lhr)
+    results.push(extract(lhr))
   }
 
   const perfValues = results.map((r) => r.perf)

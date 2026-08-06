@@ -50,6 +50,20 @@ function buildSkeletonCSS() {
 .ssg-hero-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left}
 @media(min-width:768px){.ssg-hero-sub{font-size:17px;line-height:27px}}
 .ssg-hero-search{width:100%;max-width:640px;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};margin-top:4px}
+/* #1281: hero-фотография главной в шелле.
+   До неё LCP главной определял текстовый блок заголовка (21 918 px2), а после
+   гидрации Chrome переустанавливал метрику на фотографию React-hero
+   (42 200 px2 на mobile) — замер прода 2026-08-06 давал LCP 9 469 мс с
+   Render Delay 79 % при картинке, готовой к ~2 с (её кладёт rel=preload).
+   Кандидат шелла обязан быть НЕ МЕНЬШЕ кадра React-hero, иначе handoff создаст
+   новый, больший кандидат и метрика снова уедет на гидрацию (грабля #1206).
+   Замер слотов React-hero: 343x220 на 375 px и 363x230 на 1280 px; при
+   aspect-ratio 3/2 шелл даёт 343x229 и 640x427 — больше в обоих случаях.
+   Геометрию задаём селектором со специфичностью выше, чем у безусловного
+   img[data-lcp] из критического CSS (0,1,1): позиционируем абсолютно, так что
+   его aspect-ratio и min-height не участвуют. */
+.ssg-home-hero{position:relative;width:100%;max-width:640px;aspect-ratio:3/2;margin:12px 0 0;border-radius:16px;overflow:hidden;background:${COLORS.light.bgSecondary}}
+.ssg-home-hero img.ssg-home-hero-img{position:absolute;inset:0;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;object-fit:cover;object-position:center;display:block}
 .ssg-search-intro{max-width:1200px;margin:0 auto;padding:20px 16px 8px}
 .ssg-search-h1{margin:0 0 12px;font:700 28px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.02em;max-width:720px}
 @media(min-width:768px){.ssg-search-h1{font-size:36px}}
@@ -243,19 +257,29 @@ function buildSidebarLines(count) {
 /**
  * Build home page skeleton HTML.
  */
-function buildHomeSkeletonHtml() {
+function buildHomeSkeletonHtml({ heroHref } = {}) {
   // Real hero text (not empty pulse bars) so Chrome's FCP fires on render and
   // the LCP candidate is locked to this large title block BEFORE hydration.
   // Without it the home LCP only fires after full hydration (>8s on throttled
   // mobile). NOT an <h1>: the single semantic <h1> is the out-of-flow one in
   // #root (index.tsx), so the raw HTML keeps exactly one H1. Mirrors the
   // /search and /travels skeleton approach.
+  //
+  // #1281: одного текста мало. Текстовый кандидат (21 918 px2) вдвое меньше
+  // фотографии React-hero, поэтому Chrome переустанавливал LCP на неё уже после
+  // гидрации. Картинка к этому моменту давно скачана — её кладёт
+  // injectHomeHeroPreload; не хватало только узла, который нарисует её до React.
+  // Без heroHref (ассет не нашёлся в dist) шелл рендерится как раньше.
+  const heroImg = heroHref
+    ? `<div class="ssg-home-hero"><img class="ssg-home-hero-img" src="${escapeHtmlAttr(heroHref)}" alt="Маршрут недели" decoding="async" fetchpriority="high" data-ssg-lcp="true"/></div>`
+    : '';
   return `<div id="ssg-skeleton">
 <div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
 <div class="ssg-hero">
 <div class="ssg-hero-title">Куда поехать <span class="ssg-accent">в эти выходные?</span></div>
 <p class="ssg-hero-sub">Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.</p>
 <div class="ssg-hero-search"></div>
+${heroImg}
 </div>
 <div class="ssg-cards">${buildCards(6)}</div>
 ${buildRemovalScript()}
@@ -495,7 +519,7 @@ ${buildRemovalScript()}
 function injectSkeletonShell(html, route, ctx) {
   let skeleton = '';
   if (route === '/') {
-    skeleton = buildHomeSkeletonHtml();
+    skeleton = buildHomeSkeletonHtml(ctx || {});
   } else if (route === '/search') {
     skeleton = buildSearchSkeletonHtml();
   } else if (typeof route === 'string' && route.startsWith('/travels/')) {

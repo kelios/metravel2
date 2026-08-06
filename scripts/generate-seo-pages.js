@@ -2677,7 +2677,13 @@ async function main() {
     });
 
     // P3.5: Inject SSG skeleton shell for key pages (improves FCP/LCP)
-    html = injectSkeletonShell(html, page.route);
+    // #1281: главной шелл отдаёт тот же href, что уходит в rel=preload, — иначе
+    // картинка скачана, но нарисовать её до гидрации некому и LCP уезжает.
+    html = injectSkeletonShell(
+      html,
+      page.route,
+      page.route === '/' ? { heroHref: homeHeroHref } : undefined
+    );
 
     if (page.route === '/') {
       html = injectHomeHeroPreload(html, homeHeroHref);

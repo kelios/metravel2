@@ -18,6 +18,15 @@ import {
  */
 const HAS_PROXY_SIZING = /[?&]w=\d+/;
 
+/**
+ * #1293: предохранитель ожидания hero перед прогревом соседей на mobile web.
+ * 2,5 с выбраны как «дольше нормальной загрузки LCP-кадра даже на медленном 4G»
+ * (замер прода: hero приезжал к 2,3 с) — если картинка застряла, соседи всё
+ * равно начнут греться и свайп не останется без предзагрузки.
+ */
+const HERO_PAINT_WAIT_MAX_MS = 2500;
+const HERO_PAINT_POLL_MS = 120;
+
 export interface UseSliderCoreOptions {
   images: SliderImage[];
   aspectRatio?: number;
@@ -353,12 +362,41 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
 
   // On mobile web, auto-enable prefetch shortly after mount since users swipe immediately.
   // On desktop web, prefetch is deferred until first interaction (hover/keyboard).
+  //
+  // #1293: но НЕ раньше, чем допечатается hero. Соседи стартовали через ~200 мс
+  // после монтирования и делили канал с LCP-кадром: замер прода 2026-08-06,
+  // mobile 412 / 1.6 Мбит — hero `?w=720` качался 503 → 2 315 мс, а два соседних
+  // слайда (64,5 + 110,4 КБ) уходили в сеть уже на 1 386 мс. Lighthouse списывал
+  // на это 77 % LCP (Load Time 6 775 мс из 8 800 мс). Ждём готовности hero, но с
+  // предохранителем: если картинка почему-то не догружается, свайп не должен
+  // остаться без предзагруженных соседей навсегда.
   useEffect(() => {
     if (!isWeb || !isMobile || prefetchEnabled) return;
-    const timer = setTimeout(() => {
-      if (canPrefetchOnWeb()) setPrefetchEnabled(true);
-    }, 100);
-    return () => clearTimeout(timer);
+    if (typeof document === 'undefined') return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = typeof performance !== 'undefined' ? performance.now() : 0;
+
+    const heroPainted = () => {
+      const hero = document.querySelector<HTMLImageElement>('img[data-lcp], img[data-ssg-lcp="true"]');
+      // Нет hero-узла — ждать нечего (страница без hero-картинки).
+      if (!hero) return true;
+      return hero.complete && hero.naturalWidth > 0;
+    };
+
+    const tick = () => {
+      const elapsed = (typeof performance !== 'undefined' ? performance.now() : 0) - startedAt;
+      if (heroPainted() || elapsed >= HERO_PAINT_WAIT_MAX_MS) {
+        if (canPrefetchOnWeb()) setPrefetchEnabled(true);
+        return;
+      }
+      timer = setTimeout(tick, HERO_PAINT_POLL_MS);
+    };
+
+    timer = setTimeout(tick, 100);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [isWeb, isMobile, prefetchEnabled, canPrefetchOnWeb]);
 
   useEffect(() => {
