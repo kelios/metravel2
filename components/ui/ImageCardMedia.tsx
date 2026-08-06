@@ -319,6 +319,15 @@ function ImageCardMedia({
   const hasConfirmedDecode =
     decodedIdentityRef.current !== null &&
     decodedIdentityRef.current === currentImageIdentityKey;
+  /**
+   * Идентичность, ПИКСЕЛИ которой этот узел показал последними.
+   *
+   * В отличие от `decodedIdentityRef` сменой картинки не сбрасывается: чужой
+   * кадр не исчезает из `<img>` оттого, что мы поменяли `src`, — он остаётся на
+   * экране, пока не декодируется новый. Именно поэтому здесь нужна отдельная
+   * память, переживающая reset-эффект ниже.
+   */
+  const paintedIdentityRef = useRef<string | null>(null);
   // FlashList recycles a mounted card synchronously. Do not let the previous
   // item's `webLoaded=true` leak into the first paint of the next identity while
   // the reset effect is still pending.
@@ -628,6 +637,32 @@ function ImageCardMedia({
    */
   const shouldShowWebImageImmediately = Platform.OS !== 'web' ? showImmediately : true;
 
+  /**
+   * Рециклинг ячейки списка: узел остаётся смонтированным, меняется только `src`.
+   *
+   * Ровно это переиспользование и защищает от пустого кадра (см. ключ
+   * `webMediaInstanceKey` ниже), но у него есть обратная сторона: браузер держит
+   * ПРЕДЫДУЩИЙ декодированный кадр, пока не готов новый, поэтому карточка
+   * показывает фотографию чужого путешествия. Замер прода 2026-08-06,
+   * `/travelsby`, desktop 1280×900 при 1.6 Мбит: из 54 подмен `src` 51 пришлась
+   * на карточку, уже находящуюся во вьюпорте, чужой кадр держался p50 1041 мс,
+   * p90 1500 мс, max 1716 мс; 34 раза неподвижная карточка меняла картинку под
+   * курсором уже ПОСЛЕ остановки скролла.
+   *
+   * Гасим слой ровно на это окно — под ним остаётся заливка `placeholderColor`
+   * из манифеста, то есть нейтральный плейсхолдер вместо чужого фото.
+   *
+   * Гейт узкий и включается ТОЛЬКО когда узел уже показал другую картинку:
+   * первый показ, кэш-хит и неизменный `src` проходят как раньше (решение
+   * владельца 2026-08-02 — на первом кадре гейта раскрытия нет, иначе
+   * возвращается «сначала виден только фон», а на кэш-хите фото не раскрывается
+   * вовсе, потому что события `load` для неизменного `src` не будет).
+   */
+  const isWebRecycleSwap =
+    Platform.OS === 'web' &&
+    paintedIdentityRef.current !== null &&
+    paintedIdentityRef.current !== currentImageIdentityKey;
+
   const shouldRevealWebMedia = useMemo(() => {
     if (Platform.OS !== 'web') return true;
     return shouldShowWebImageImmediately || effectiveWebLoaded;
@@ -753,6 +788,9 @@ function ImageCardMedia({
     if (currentImageIdentityKey) {
       loadedWebImageBaseCache.add(currentImageIdentityKey);
       decodedIdentityRef.current = currentImageIdentityKey;
+      // Пиксели в кадре есть только когда пришёл настоящий размер: без него это
+      // догадка по общему кэшу (см. ниже), а не показанное изображение.
+      if (naturalSize) paintedIdentityRef.current = currentImageIdentityKey;
     }
     setWebLoaded(true);
     // Состояние сбоя снимают только НАСТОЯЩИЕ пиксели.
@@ -939,11 +977,13 @@ function ImageCardMedia({
               borderRadius={resolvedBorderRadius}
               loading={resolvedLoading}
               priority={priority}
-              loaded={effectiveWebLoaded}
+              // Пока в узле висит чужой кадр, «загружено» относится к прошлой
+              // картинке: и раскрытие, и признак загрузки обязаны ждать новую.
+              loaded={isWebRecycleSwap ? false : effectiveWebLoaded}
               onLoad={handleWebLoad}
               onDecoded={handleWebDecoded}
               onError={handleWebError}
-              showImmediately={shouldShowWebImageImmediately}
+              showImmediately={isWebRecycleSwap ? false : shouldShowWebImageImmediately}
             />
           ) : !blurOnly && (
           <OptimizedImage

@@ -254,7 +254,14 @@ export const WebMainImage = memo(function WebMainImage({
     // Chromium too (observed on production after the iOS fix: complete=true,
     // naturalWidth>0, opacity remained 0). Lazy completion polling stays
     // iOS-WebKit-only so desktop article media does not keep background timers.
-    if (!img || (loading !== 'eager' && !isIOSWebKit())) return;
+    //
+    // Исключение — активный гейт раскрытия (`showImmediately=false` и слой ещё
+    // не загружен): это рециклируемая ячейка, где узел УЖЕ погашен, чтобы не
+    // показывать чужой кадр. Там потерянное событие `load` оставило бы карточку
+    // пустой навсегда, поэтому страховка нужна и ленивым картинкам — но всё так
+    // же по IntersectionObserver, то есть только рядом с вьюпортом.
+    const revealGateActive = !showImmediately && !loaded;
+    if (!img || (loading !== 'eager' && !isIOSWebKit() && !revealGateActive)) return;
 
     let cancelled = false;
     let recoveryStarted = false;
@@ -306,7 +313,7 @@ export const WebMainImage = memo(function WebMainImage({
       intersectionObserver?.disconnect();
       if (pollTimer !== undefined) clearInterval(pollTimer);
     };
-  }, [src, loaded, loading, handleLoad]);
+  }, [src, loaded, loading, showImmediately, handleLoad]);
 
   return (
     <img
