@@ -21,6 +21,20 @@ interface IconButtonProps {
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
+/**
+ * Размер иконочной кнопки = её тач-таргет: `Pressable` здесь и есть видимая
+ * поверхность, внешней рамки над ним нет. Поэтому размеры не могут быть ниже
+ * принятого в проекте floor 44dp (#1280, семейство #192 → #1044 → #1271 → #1274).
+ *
+ * Было 36/42 с комментарием «минимальная ширина для touch-целей» — минимум был
+ * задан, но НИЖЕ нормы, и его наследовали все потребители примитива.
+ * `md` — дефолт, поэтому он поднят до рекомендованных Android 48dp.
+ *
+ * ВАЖНО: проп `style` потребителя применяется ПОСЛЕ этих значений и может их
+ * перебить в меньшую сторону. Такие места ловит `npm run guard:touch-targets`.
+ */
+const TOUCH_TARGET_BY_SIZE = { sm: 44, md: 48 } as const;
+
 const getBoxShadows = (colors: ThemedColors) => {
   const themed = colors as unknown as { boxShadows?: typeof DESIGN_TOKENS.shadows };
   return themed.boxShadows ?? DESIGN_TOKENS.shadows;
@@ -42,7 +56,7 @@ function IconButton({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [hovered, setHovered] = useState(false);
-  const dimension = size === 'sm' ? 36 : 42;
+  const dimension = TOUCH_TARGET_BY_SIZE[size];
   const handlePress = disabled ? undefined : onPress
 
   if (showLabel) {

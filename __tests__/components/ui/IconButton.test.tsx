@@ -75,14 +75,20 @@ describe('IconButton', () => {
     expect(button.props.accessibilityState.selected).toBe(false)
   })
 
-  it('applies size="sm" and size="md" via style dimensions', () => {
-    const { getByRole, rerender } = renderIconButton({ size: 'sm' })
-    const buttonSm = getByRole('button')
+  it('обе размерности держат минимальный тач-таргет 44dp (#1280)', () => {
+    // Здесь `Pressable` и есть видимая поверхность — внешней рамки нет, поэтому
+    // объявленный размер И ЕСТЬ тач-таргет. До #1280 стояло 36/42: минимум был
+    // задан, но ниже нормы, и его наследовали все потребители примитива.
+    // Проверяем инвариант, а не конкретные числа, — иначе тест снова закрепит
+    // случайное значение.
+    const flatten = (node: any) =>
+      Array.isArray(node.props.style) ? Object.assign({}, ...node.props.style) : node.props.style
 
-    // Стиль задаётся функцией, в тестах он уже развёрнут в props.style
-    const flattenSm = Array.isArray(buttonSm.props.style) ? Object.assign({}, ...buttonSm.props.style) : buttonSm.props.style
-    expect(flattenSm.width).toBe(36)
-    expect(flattenSm.height).toBe(36)
+    const { getByRole, rerender } = renderIconButton({ size: 'sm' })
+    const sm = flatten(getByRole('button'))
+    expect(sm.width).toBeGreaterThanOrEqual(44)
+    expect(sm.height).toBeGreaterThanOrEqual(44)
+    expect(sm.width).toBe(sm.height)
 
     rerender(
       <IconButton
@@ -92,10 +98,20 @@ describe('IconButton', () => {
       />,
     )
 
-    const buttonMd = getByRole('button')
-    const flattenMd = Array.isArray(buttonMd.props.style) ? Object.assign({}, ...buttonMd.props.style) : buttonMd.props.style
-    expect(flattenMd.width).toBe(42)
-    expect(flattenMd.height).toBe(42)
+    const md = flatten(getByRole('button'))
+    expect(md.width).toBeGreaterThanOrEqual(44)
+    expect(md.height).toBeGreaterThanOrEqual(44)
+    // `md` — дефолт, он же Android-рекомендация 48dp, и он не меньше `sm`.
+    expect(md.width).toBeGreaterThanOrEqual(sm.width)
+  })
+
+  it('дефолтный размер (без пропа size) тоже не ниже 44dp', () => {
+    const { getByRole } = renderIconButton({})
+    const style = getByRole('button').props.style
+    const flat = Array.isArray(style) ? Object.assign({}, ...style) : style
+
+    expect(flat.minWidth).toBeGreaterThanOrEqual(44)
+    expect(flat.minHeight).toBeGreaterThanOrEqual(44)
   })
 
   it('forwards testID prop to Pressable', () => {

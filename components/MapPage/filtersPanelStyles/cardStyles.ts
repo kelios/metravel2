@@ -107,8 +107,10 @@ export const getCardStyles = ({ colors, isMobile, panelWidth }: FiltersPanelStyl
       color: colors.text,
     },
     compactMetaCloseButton: {
-      width: 26,
-      height: 26,
+      // Размеры НЕ переопределяем: раньше здесь стояло 26×26, и это перебивало
+      // собственный тач-таргет `IconButton` в меньшую сторону (#1280) — кнопка
+      // «Закрыть» была вдвое меньше нормы. Размер берётся из примитива (44dp
+      // для `size="sm"`), здесь остаётся только оформление.
       borderRadius: CONTROL_RADIUS,
       marginHorizontal: 0,
       backgroundColor: colors.surfaceAlpha40,

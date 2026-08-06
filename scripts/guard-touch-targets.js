@@ -49,12 +49,19 @@ const IGNORED_DIRS = new Set([
 ])
 
 // Элементы, которые сами являются тач-таргетом.
+//
+// `IconButton` (#1280) входит сюда, потому что его `Pressable` и есть видимая
+// поверхность, а проп `style` потребителя применяется ПОСЛЕ собственных
+// размеров примитива и может перебить их в меньшую сторону. Без этого пункта
+// гард видит только «сырые» Pressable и пропускает целый слой мест, где
+// сабминимальный таргет приходит из стиля вызывающего экрана.
 const INTERACTIVE_ELEMENTS = new Set([
   'Pressable',
   'TouchableOpacity',
   'TouchableHighlight',
   'TouchableWithoutFeedback',
   'TouchableNativeFeedback',
+  'IconButton',
 ])
 
 // Ключи, которыми вью задаёт собственный размер. `maxWidth`/`maxHeight`
