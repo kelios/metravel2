@@ -25,17 +25,10 @@ export type HydrationReadyOptions = {
 export function useHydrationReady({ clientOnly = false }: HydrationReadyOptions = {}): boolean {
   const [hydrationReady, setHydrationReady] = useState(Platform.OS !== 'web' || clientOnly)
 
-  // Зависимости обязаны остаться пустыми. С `[hydrationReady]` эффект
-  // переподписывается на переход false -> true, и React успевает перерисовать
-  // поддерево до конца гидратации: SSR-разметка `/login` и `/registration`
-  // (Google/Facebook-кнопки читают этот флаг) заменяется клиентской и даёт #418.
-  // Проверено сборкой web-экспорта: с `[hydrationReady]` обе страницы падают,
-  // с `[]` — чисто, а `clientOnly` продолжает работать через initial state.
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      setHydrationReady(true)
-    }
-  }, [])
+    if (hydrationReady) return
+    setHydrationReady(true)
+  }, [hydrationReady])
 
   return hydrationReady
 }

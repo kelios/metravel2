@@ -195,8 +195,13 @@ scripts/.index-cache/
 # Build-check artifacts (export-проверки web/android) и отладочные дампы
 /.chk-web/
 /.chk-android/
+/.chk-e2e/
 /.tmp-article/
 /.tmp-pdf-preview/
+
+# Каталог-артефакт: создаётся, когда путь вывода собрался из undefined-переменной
+# (скриншоты/дампы улетают в ./undefined вместо реального каталога).
+/undefined/
 
 # Дампы прод-базы (scripts/backup-prod-db.sh). Внутри персональные данные
 # пользователей, а репозиторий публичный — под git не попадают никогда.

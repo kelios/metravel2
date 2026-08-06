@@ -431,11 +431,18 @@ async function main() {
     // Build web export.
     // Expo export sometimes doesn't exit cleanly even after writing to dist, which can block Playwright webServer.
     // We treat the build as "done" once dist/index.html exists, then terminate the build process.
+    //
+    // `--clear` обязателен. Expo инлайнит `EXPO_PUBLIC_*` из .env-файлов на этапе
+    // трансформации модуля, а Metro кэширует результат и НЕ инвалидирует его при
+    // изменении .env. Без сброса кэша патч .env выше (E2E-флаг + локальный API URL)
+    // в бандл не попадает: модули остаются с прежними значениями, `isE2E` приходит
+    // пустой строкой, и `utils/resolveApiBaseUrl` уводит запросы на прод
+    // (`https://metravel.by`) вместо e2e-API. Проверено разбором собранного бандла.
     const buildCommand = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : 'npm';
     const buildArgs =
       process.platform === 'win32'
-        ? ['/d', '/s', '/c', 'npm run build:web -- --no-bytecode']
-        : ['run', 'build:web', '--', '--no-bytecode'];
+        ? ['/d', '/s', '/c', 'npm run build:web -- --no-bytecode --clear']
+        : ['run', 'build:web', '--', '--no-bytecode', '--clear'];
     const build = spawn(buildCommand, buildArgs, {
       cwd: rootDir,
       stdio: ['ignore', 'pipe', 'pipe'],
