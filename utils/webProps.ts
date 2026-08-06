@@ -23,6 +23,16 @@ export type WebAccessibilityProps = {
 
 export const webAccessibilityProps = <T extends WebAccessibilityProps>(props: T): T => props
 
+export type WebDataSet = Record<string, string | number | boolean>
+
+/**
+ * Типизированный мостик для `dataSet` RN-Web: RN-Web разворачивает его в
+ * атрибуты `data-*`, а это единственный стабильный CSS-хук к узлам RN-Web —
+ * атомарные классы (`r-…`) генерирует сборка, и опираться на них нельзя.
+ * Нужен там, где до-гидрационную раскладку задаёт критический CSS (#1298).
+ */
+export const webDataSetProps = (dataSet: WebDataSet): { dataSet: WebDataSet } => ({ dataSet })
+
 export type WebOnlyViewStyle = {
   backdropFilter?: React.CSSProperties['backdropFilter']
   boxShadow?: React.CSSProperties['boxShadow']

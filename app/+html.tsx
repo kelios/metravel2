@@ -6,6 +6,7 @@ import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
 import { getRootVisibilityGateCss, getTravelRouteClassScript } from '@/utils/htmlShell';
+import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap';
 import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo';
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
@@ -496,10 +497,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
-      {/* Leaflet CSS early-load for map page — self-hosted, no CDN roundtrip.
-          Applies stylesheet immediately (not just preload) so it is ready before JS hydration.
-          Only injected on /map route; loads CSS in parallel with JS chunks. */}
-      <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location&&window.location.pathname;if(p!=='/map')return;function addSheet(id,href,fb){if(document.getElementById(id))return;var l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;l.setAttribute('data-metravel-leaflet-css','preloaded');l.onerror=function(){if(l.getAttribute('data-css-fallback'))return;l.setAttribute('data-css-fallback','cdn');l.href=fb};document.head.appendChild(l)}addSheet('metravel-leaflet-css','/vendor/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');addSheet('metravel-markercluster-css','/vendor/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css')}catch(_){}})();` }} />
+      {/* /map early bootstrap: CSS before hydration + first relevant tile warmup
+          before the main bundle, with localhost -> public proxy fallback matching
+          the runtime tile path contract. */}
+      <script
+        dangerouslySetInnerHTML={{ __html: buildMapHeadBootstrapScript() }}
+      />
 
       {/* Font preloads removed: Roboto is loaded via expo-font on native only.
           On web the app uses system-ui / Inter from CSS; preloading unused .ttf files

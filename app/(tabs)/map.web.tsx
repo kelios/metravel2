@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react'
+import React, { Suspense, useCallback, useEffect } from 'react'
 import { View } from 'react-native'
 import { usePathname } from 'expo-router'
 import { useIsFocused } from 'expo-router'
@@ -23,6 +23,7 @@ const WEB_SR_ONLY_STYLE = {
 
 const mapScreenImport = Promise.resolve(import('@/screens/tabs/MapScreen'))
 const MapScreenImpl = React.lazy(() => mapScreenImport)
+const MAP_ROUTE_READY_ATTRIBUTE = 'data-map-route-ready'
 
 function MapHydrationFallback() {
   return <View style={{ flex: 1 }} />
@@ -39,6 +40,23 @@ export default function MapScreen() {
 
   useEffect(() => {
     ensureLeafletCss()
+  }, [])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const root = document.getElementById('root')
+    if (!root) return
+
+    root.removeAttribute(MAP_ROUTE_READY_ATTRIBUTE)
+
+    return () => {
+      root.removeAttribute(MAP_ROUTE_READY_ATTRIBUTE)
+    }
+  }, [])
+
+  const markRouteReady = useCallback(() => {
+    if (typeof document === 'undefined') return
+    document.getElementById('root')?.setAttribute(MAP_ROUTE_READY_ATTRIBUTE, 'true')
   }, [])
 
   const seoBlock = hydrationReady && isFocused ? (
@@ -60,7 +78,7 @@ export default function MapScreen() {
       {hydrationReady ? <h1 style={WEB_SR_ONLY_STYLE as any}>{title}</h1> : null}
       {hydrationReady ? (
         <Suspense fallback={<MapPageSkeleton />}>
-          <MapScreenImpl />
+          <MapScreenImpl onFirstWebFrame={markRouteReady} />
         </Suspense>
       ) : (
         <MapHydrationFallback />

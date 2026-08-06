@@ -47,4 +47,12 @@ describe('critical head fallback', () => {
     expect(source).not.toContain('user-scalable=no')
     expect(source).not.toContain('maximum-scale=1')
   })
+
+  it('wires the shared map head bootstrap script for early css and tile warmup', () => {
+    const filePath = path.resolve(process.cwd(), 'app/+html.tsx')
+    const source = fs.readFileSync(filePath, 'utf8')
+
+    expect(source).toContain("import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap'")
+    expect(source).toContain('buildMapHeadBootstrapScript()')
+  })
 })

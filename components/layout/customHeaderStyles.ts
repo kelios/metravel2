@@ -7,6 +7,16 @@ const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
 const CONTROL_SIZE = 44;
 
 /**
+ * #1298: ширина, которую desktop-шапка резервирует под аккаунт-секцию. Секция
+ * auth-зависимая и монтируется только после гидратации (SSR даёт React #419),
+ * поэтому её появление раньше уводило переключатель языка влево на 239 px
+ * (замер прода 2026-08-06: `x 1155 -> 916`). Резерв держит бокс постоянным:
+ * гостевой кластер «Войти» + «Гость» укладывается в него, а контент прижат
+ * вправо (`justifyContent: flex-end`), поэтому правый край не меняется.
+ */
+export const HEADER_ACCOUNT_SLOT_MIN_WIDTH = 224;
+
+/**
  * Creates styles for CustomHeader component.
  * Extracted to reduce component file size and improve maintainability.
  */
@@ -115,6 +125,9 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       gap: 8,
       flexShrink: 0,
       justifyContent: 'flex-end',
+      ...(Platform.OS === 'web' && !isMobile
+        ? { minWidth: HEADER_ACCOUNT_SLOT_MIN_WIDTH }
+        : null),
     },
     rightSectionMobile: {
       flexDirection: 'row',

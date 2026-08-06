@@ -21,6 +21,7 @@ import {
 import { resolveHeaderContextBarAction } from './headerContextBarModel'
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
 import { createCustomHeaderStyles, webStickyStyle } from './customHeaderStyles'
+import { webDataSetProps } from '@/utils/webProps'
 import Logo from './Logo'
 import LanguageSwitcher from './LanguageSwitcher'
 
@@ -30,6 +31,14 @@ const TOP_LEVEL_TAB_PATHS = new Set<string>(
 
 const CONTEXT_BAR_HEIGHT_MOBILE = 52
 const CONTEXT_BAR_HEIGHT_DESKTOP = 40
+
+// Хуки для media-query-раскладки шапки в критическом CSS (#1298). RNW отдаёт
+// `dataSet` как data-атрибуты, поэтому это единственный стабильный селектор:
+// атомарные классы RNW генерируются сборкой и на них опираться нельзя.
+const webSlotProps = (slot: 'nav' | 'account' | 'inner') =>
+  Platform.OS === 'web'
+    ? webDataSetProps(slot === 'inner' ? { headerInner: 'true' } : { headerSlot: slot })
+    : null
 
 type CustomHeaderProps = {
   onHeightChange?: (height: number) => void
@@ -47,6 +56,15 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   const isHydrated = hydrationReady && responsive.isHydrated
   const width = isHydrated ? responsive.width : 0
   const isMobile = getIsHeaderMobile(width, width)
+  // #1298: до гидратации ширина неизвестна (SSR-снимок даёт width=0), и верхняя
+  // строка шапки рисовалась мобильной, а после гидратации перекладывалась в
+  // desktop — логотип 44x44 -> 115x44, переключатель языка 624 -> 1167. Первый
+  // кадр на web теперь всегда несёт desktop-геометрию строки, а узкие экраны
+  // приводит к мобильному виду media-query критического CSS (блок
+  // `max-width:1279.98px` в utils/criticalCSSBuilder.ts). После гидратации DOM
+  // совпадает с тем, что уже нарисовал браузер, поэтому сдвига нет.
+  // Семантику контекст-бара (`isMobile`) это не трогает: у него своя ветка.
+  const rowIsMobile = Platform.OS === 'web' && !isHydrated ? false : isMobile
   const activePath = getHeaderActivePath(pathname)
   const showHeaderContextBar =
     shouldShowHeaderContextBar(pathname, isMobile) &&
@@ -68,8 +86,8 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   }, [breadcrumbModel.showBreadcrumbs, isMobile, pathname, showHeaderContextBar])
 
   const styles = useMemo(
-    () => createCustomHeaderStyles(colors, isMobile),
-    [colors, isMobile],
+    () => createCustomHeaderStyles(colors, rowIsMobile),
+    [colors, rowIsMobile],
   )
 
   const contextBarFallbackStyle = useMemo(
@@ -105,33 +123,47 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
       {...(Platform.OS === 'web' ? ({ tabIndex: -1 } as any) : null)}
     >
       <View style={styles.wrapper}>
-        <View style={[styles.inner, isMobile && styles.innerMobile]}>
-          <Logo isCompact={isMobile} showWordmark={!isMobile} />
+        <View style={[styles.inner, rowIsMobile && styles.innerMobile]} {...webSlotProps('inner')}>
+          <Logo isCompact={rowIsMobile} showWordmark={!rowIsMobile} />
 
-          {!isMobile && (
-            <Suspense fallback={<View style={styles.navScroll} />}>
-              <CustomHeaderNavSectionComp activePath={activePath} styles={styles} />
-            </Suspense>
-          )}
+          {!rowIsMobile &&
+            (isHydrated ? (
+              <Suspense fallback={<View style={styles.navScroll} />}>
+                <CustomHeaderNavSectionComp activePath={activePath} styles={styles} />
+              </Suspense>
+            ) : (
+              // До гидратации держим только бокс навигации (`flex:1`, как у самой
+              // ScrollView): так ширина строки уже финальная, но ленивый чанк не
+              // качается на узких экранах, где навигации не будет вовсе.
+              <View style={styles.navScroll} {...webSlotProps('nav')} aria-hidden />
+            ))}
 
-          <LanguageSwitcher compact={isMobile} />
+          <LanguageSwitcher compact={rowIsMobile} />
 
           {/* Account section is auth-specific (no SSR/SEO value). Render only the
               empty placeholder during prerender + first client render — mounting the
               lazy section on the server emits an errored Suspense boundary (<!--$!-->)
               that throws React #419 on hydration. isHydrated is false on the server and
-              first client render, true after hydration (and always true on native). */}
+              first client render, true after hydration (and always true on native).
+              Плейсхолдер обязан занимать тот же бокс, что и смонтированная секция,
+              иначе её появление уводит переключатель языка влево (#1298): на web
+              это `rightSection` с зарезервированной шириной, а ниже 1280px CSS
+              превращает его в мобильный `flex:1`. */}
           {isHydrated ? (
-            <Suspense fallback={isMobile ? <View style={styles.rightSection} /> : null}>
+            <Suspense fallback={<View style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection} />}>
               <CustomHeaderAccountSectionComp
                 activePath={activePath}
-                isMobile={isMobile}
+                isMobile={rowIsMobile}
                 styles={styles}
               />
             </Suspense>
-          ) : isMobile ? (
-            <View style={styles.rightSection} />
-          ) : null}
+          ) : (
+            <View
+              style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection}
+              {...webSlotProps('account')}
+              aria-hidden
+            />
+          )}
         </View>
 
         {showHeaderContextBar ? (

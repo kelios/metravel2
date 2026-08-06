@@ -101,3 +101,21 @@
 - Сначала короткий план.
 - Затем конкретные изменения и результаты проверок.
 - Ссылайся на файлы через `path/to/file.tsx:line`, когда это уместно.
+
+## Spec-Driven Development
+
+Репозиторий использует GitHub Spec Kit. Для новых фич, изменений API-контракта
+и БД, сложных багов, SEO-чувствительных правок, работы с изображениями и
+изменений, затрагивающих frontend и backend одновременно, работай через
+спецификацию, а не сразу кодом.
+
+- Обязательные принципы — `.specify/memory/constitution.md` (читать до правок).
+- Когда SDD обязателен и когда достаточно короткого пути —
+  `docs/spec-driven-development.md`.
+- Обязательные разделы `spec.md` — `docs/spec-driven-development-requirements.md`.
+- Правила процесса для агента —
+  `.github/instructions/spec-driven-development.instructions.md`.
+- Skills: `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`,
+  `/speckit-tasks`, `/speckit-analyze`, `/speckit-implement`.
+- Спецификации живут в `specs/NNN-slug/`. Feature-скрипты Spec Kit не создают
+  git-веток — работа остаётся на `main`.

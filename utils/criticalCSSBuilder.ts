@@ -66,6 +66,26 @@ export function buildCriticalCSS(): string {
     '[data-testid="travel-details-hero"] img[data-lcp]{aspect-ratio:16/9;width:100%;max-width:100%;object-fit:contain}',
     '[data-hero-data-placeholder="true"] img{width:100%;height:100%;max-width:none;aspect-ratio:auto;object-fit:cover}',
     '[data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}',
+    // #1298: шапка есть в статическом HTML, а ширины окна до гидратации нет
+    // (SSR-снимок даёт width=0). Раньше это рисовало мобильную строку, и после
+    // гидратации она перекладывалась в desktop: логотип 44x44 -> 115x44,
+    // переключатель языка 624 -> 1167 (замер прода 2026-08-06, CLS 0,0044).
+    // Теперь `CustomHeader` всегда отдаёт desktop-геометрию строки, а узкие
+    // экраны приводит к мобильному виду этот блок — до единого кадра React.
+    // Значения обязаны совпадать с мобильной веткой `customHeaderStyles.ts`
+    // (`inner` + `innerMobile`, `container.paddingBottom`, `logoCompact`) и
+    // `LanguageSwitcher.anchorCompact`. `!important` обязателен: иначе правило
+    // проигрывает атомарным классам RNW (та же грабля, что у min-height шелла).
+    '@media (max-width:1279.98px){',
+    '  [data-testid="main-header"]{padding-bottom:6px !important}',
+    '  [data-header-inner="true"]{padding:6px !important}',
+    '  [data-header-logo-wordmark="true"]{display:none !important}',
+    '  [data-header-logo-image="true"]{width:26px !important;height:26px !important}',
+    '  [data-header-slot="nav"]{display:none !important}',
+    '  [data-header-slot="account"]{flex:1 1 0% !important;min-width:0 !important}',
+    '  [data-header-lang-chevron="true"]{display:none !important}',
+    '  [data-testid="header-language-switcher"]{min-width:54px !important;padding-left:8px !important;padding-right:8px !important}',
+    '}',
     '[data-testid="home-hero"]{contain:layout style}',
     '[data-testid="home-trust-block"]{content-visibility:auto;contain-intrinsic-size:auto 220px}',
     '[data-testid="home-how-it-works"]{content-visibility:auto;contain-intrinsic-size:auto 420px}',

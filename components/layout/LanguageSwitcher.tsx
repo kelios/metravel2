@@ -8,11 +8,17 @@ import { translate as i18nT } from '@/i18n'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DialogMenu } from '@/ui/paper'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { webAccessibilityProps, webViewStyle } from '@/utils/webProps'
+import { webAccessibilityProps, webDataSetProps, webViewStyle } from '@/utils/webProps'
 
 type LanguageSwitcherProps = {
   compact?: boolean
 }
+
+// #1298: до гидратации web рисует полный (не компактный) переключатель, чтобы
+// строка шапки сразу имела desktop-геометрию. Ниже 1280px критический CSS
+// прячет шеврон и сжимает бокс — ровно к тому виду, который поставит React.
+const webChevronSlotProps = () =>
+  Platform.OS === 'web' ? webDataSetProps({ headerLangChevron: 'true' }) : null
 
 export default function LanguageSwitcher({ compact = false }: LanguageSwitcherProps) {
   const colors = useThemedColors()
@@ -52,14 +58,21 @@ export default function LanguageSwitcher({ compact = false }: LanguageSwitcherPr
               })
             : {})}
         >
-          <Feather name="globe" size={17} color={colors.textMuted} />
+          {/* #1298: иконочные глифы Feather приходят вебшрифтом, и до его
+              загрузки их ширина другая — бокс переключателя прыгал 74 -> 86 и
+              двигал соседей. Фиксированные слоты держат ширину с первого кадра. */}
+          <View style={styles.globeSlot}>
+            <Feather name="globe" size={17} color={colors.textMuted} />
+          </View>
           <Text style={styles.code}>{getLocaleDisplayCode(locale)}</Text>
           {!compact ? (
-            <Feather
-              name={visible ? 'chevron-up' : 'chevron-down'}
-              size={15}
-              color={colors.textMuted}
-            />
+            <View style={styles.chevronSlot} {...webChevronSlotProps()}>
+              <Feather
+                name={visible ? 'chevron-up' : 'chevron-down'}
+                size={15}
+                color={colors.textMuted}
+              />
+            </View>
           ) : null}
         </Pressable>
       }
@@ -119,6 +132,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     anchorCompact: {
       minWidth: 54,
       paddingHorizontal: 8,
+    },
+    globeSlot: {
+      width: 17,
+      height: 17,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    chevronSlot: {
+      width: 15,
+      height: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
     },
     anchorActive: {
       backgroundColor: colors.primarySoft,

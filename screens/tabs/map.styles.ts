@@ -9,8 +9,9 @@ const PANEL_WIDTH_TABLET = METRICS.baseUnit * 40; // 320px
 const PANEL_GAP = METRICS.spacing.m; // 16px
 const DESKTOP_SHELL_PADDING = METRICS.spacing.m;
 const TRANSITION_MS = 200;
-const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
-const WEB_HEADER_RESERVED_HEIGHT = 88;
+export const MAP_WEB_MOBILE_BREAKPOINT_PX = METRICS.breakpoints.tablet;
+export const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
+export const WEB_HEADER_RESERVED_HEIGHT = 88;
 // Tablet web keeps the desktop map chrome/header but uses the fixed mobile
 // BottomDock. Reserve both pieces of chrome so Leaflet attribution and bottom
 // controls stay above the dock instead of being painted underneath it.

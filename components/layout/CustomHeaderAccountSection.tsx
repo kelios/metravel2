@@ -17,11 +17,18 @@ export default function CustomHeaderAccountSection({
   styles,
 }: CustomHeaderAccountSectionProps) {
   const content = isMobile ? (
+    // Мобильный бокс держит обёртка ниже (`rightSectionMobile`), поэтому пустой
+    // fallback ничего не двигает.
     <Suspense fallback={null}>
       <CustomHeaderMobileAccountSectionComp activePath={activePath} styles={styles} />
     </Suspense>
   ) : (
-    <Suspense fallback={null}>
+    // #1298: у desktop-ветки собственной обёртки нет — бокс приносит сама
+    // секция. С `fallback={null}` между двумя ленивыми загрузками (этой секции
+    // и desktop-секции внутри) правый слот исчезал, и переключатель языка
+    // уезжал вправо на 240 px, а затем возвращался. Fallback обязан занимать
+    // тот же `rightSection` с зарезервированной шириной.
+    <Suspense fallback={<View style={styles.rightSection} />}>
       <CustomHeaderDesktopAccountSectionComp styles={styles} />
     </Suspense>
   )

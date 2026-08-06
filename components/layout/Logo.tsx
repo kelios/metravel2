@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { webDataSetProps } from '@/utils/webProps';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -10,6 +11,12 @@ type LogoProps = {
     showWordmark?: boolean;
     variant?: 'default';
 };
+
+// #1298: хуки для media-query-раскладки шапки в критическом CSS. До гидратации
+// web рисует desktop-логотип (32px + словесная часть), а ниже 1280px CSS сразу
+// приводит его к компактному виду — тому же, что поставит React после гидратации.
+const webLogoDataSet = (key: 'headerLogoImage' | 'headerLogoWordmark') =>
+    Platform.OS === 'web' ? webDataSetProps({ [key]: 'true' }) : null;
 
 export default React.memo(function Logo({
     isCompact = false,
@@ -42,9 +49,10 @@ export default React.memo(function Logo({
                 onError={() => setLogoLoadFailed(true)}
                 accessibilityLabel={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
                 alt={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
+                {...webLogoDataSet('headerLogoImage')}
             />
             {showWordmark && (
-                <Text style={styles.logoTextRow}>
+                <Text style={styles.logoTextRow} {...webLogoDataSet('headerLogoWordmark')}>
                     <Text style={styles.logoTextMe}>{i18nT('navigation:components.layout.Logo.me_7e450b64')}</Text><Text style={styles.logoTextTravel}>{i18nT('navigation:components.layout.Logo.travel_6006be95')}</Text>
                 </Text>
             )}

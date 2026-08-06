@@ -39,6 +39,10 @@ const RADIUS_EXPAND_DEFAULT = 30
 const ONBOARDING_DEFER_MS = 600
 const ONBOARDING_IDLE_TIMEOUT = 1000
 
+type MapScreenProps = {
+  onFirstWebFrame?: () => void
+}
+
 function preloadLeafletRuntime() {
   Promise.resolve(import('@/utils/loadLeafletRuntime'))
     .then((m) => m.loadLeafletRuntime())
@@ -61,8 +65,9 @@ if (CAN_PRELOAD_LEAFLET) {
   }
 }
 
-export default function MapScreen() {
+export default function MapScreen({ onFirstWebFrame }: MapScreenProps = {}) {
   const isWeb = Platform.OS === 'web'
+  const firstWebFrameReportedRef = useRef(false)
   // Web-only: keep --metravel-map-vh in sync with the real visible viewport so
   // the map container has a reliable height in in-app WebViews where `dvh` is
   // broken (Instagram/Threads grey-map bug). No-op on native.
@@ -490,6 +495,35 @@ export default function MapScreen() {
       handleSearchThisArea,
     ],
   )
+
+  // Must stay above the `mapError` early return below: hooks cannot be skipped
+  // on the error path without breaking the hook order.
+  useEffect(() => {
+    if (!isWeb || !onFirstWebFrame || firstWebFrameReportedRef.current) return
+    firstWebFrameReportedRef.current = true
+
+    let rafOne: number | null = null
+    let rafTwo: number | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const reportReady = () => {
+      onFirstWebFrame()
+    }
+
+    if (typeof requestAnimationFrame === 'function') {
+      rafOne = requestAnimationFrame(() => {
+        rafTwo = requestAnimationFrame(reportReady)
+      })
+    } else {
+      timeoutId = setTimeout(reportReady, 0)
+    }
+
+    return () => {
+      if (rafOne !== null) cancelAnimationFrame(rafOne)
+      if (rafTwo !== null) cancelAnimationFrame(rafTwo)
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [isWeb, onFirstWebFrame])
 
   // Desktop data-fetch error replaces the whole screen (separate from the
   // breakpoint-flip path — it is not part of the remount oscillation). Mobile

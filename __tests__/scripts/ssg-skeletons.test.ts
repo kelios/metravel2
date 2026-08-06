@@ -5,12 +5,18 @@ const {
   buildSkeletonCSS,
   buildHomeSkeletonHtml,
   buildSearchSkeletonHtml,
+  buildMapSkeletonHtml,
   buildTravelSkeletonHtml,
   injectSkeletonShell,
   buildRemovalScript,
   sanitizeArticleBodyHtml,
   COLORS,
 } = require('../../scripts/ssg-skeletons');
+const {
+  MAP_WEB_MOBILE_BREAKPOINT_PX,
+  WEB_MOBILE_FOOTER_RESERVE_HEIGHT,
+  WEB_HEADER_RESERVED_HEIGHT,
+} = require('../../screens/tabs/map.styles');
 const { buildCriticalCSS } = require('../../utils/criticalCSSBuilder');
 
 describe('ssg-skeletons', () => {
@@ -229,6 +235,41 @@ describe('ssg-skeletons', () => {
     });
   });
 
+  describe('buildMapSkeletonHtml', () => {
+    it('returns div with id ssg-skeleton', () => {
+      const html = buildMapSkeletonHtml();
+      expect(html).toContain('id="ssg-skeleton"');
+    });
+
+    it('keeps shared map shell geometry for desktop and mobile web', () => {
+      const html = buildMapSkeletonHtml();
+      expect(html).toContain('ssg-map-layout');
+      expect(html).toContain('ssg-map-canvas');
+      expect(html).toContain('ssg-map-sidebar-shell');
+      expect(html).toContain('ssg-map-mobile-card');
+      expect(html).toContain('Маршруты и достопримечательности Беларуси');
+    });
+
+    it('uses the measured map viewport contract instead of raw 100vh', () => {
+      const css = buildSkeletonCSS();
+      expect(css).toContain('var(--metravel-map-vh, 100svh)');
+      expect(css).not.toContain('calc(100vh - 56px)');
+    });
+
+    it('matches runtime viewport reserves for mobile and desktop breakpoints', () => {
+      const css = buildSkeletonCSS();
+      expect(css).toContain(
+        `.ssg-map-layout{display:flex;min-height:calc(var(--metravel-map-vh, 100svh) - ${WEB_MOBILE_FOOTER_RESERVE_HEIGHT}px)`,
+      );
+      expect(css).toContain(
+        `.ssg-map-canvas{position:relative;flex:1;min-height:calc(var(--metravel-map-vh, 100svh) - ${WEB_MOBILE_FOOTER_RESERVE_HEIGHT}px)`,
+      );
+      expect(css).toContain(
+        `@media(min-width:${MAP_WEB_MOBILE_BREAKPOINT_PX}px){.ssg-map-layout,.ssg-map-canvas{min-height:calc(var(--metravel-map-vh, 100svh) - ${WEB_HEADER_RESERVED_HEIGHT}px)}`,
+      );
+    });
+  });
+
   describe('injectSkeletonShell', () => {
     const baseHtml = `<!DOCTYPE html><html><head><title>Test</title></head><body><div id="root"></div></body></html>`;
 
@@ -253,9 +294,11 @@ describe('ssg-skeletons', () => {
       expect(result).toBe(baseHtml);
     });
 
-    it('does NOT inject skeleton for /map', () => {
+    it('injects skeleton for /map', () => {
       const result = injectSkeletonShell(baseHtml, '/map');
-      expect(result).toBe(baseHtml);
+      expect(result).toContain('id="ssg-skeleton"');
+      expect(result).toContain('ssg-map-layout');
+      expect(result).toContain('ssg-map-mobile-card');
     });
 
     it('injects CSS into head', () => {
@@ -303,6 +346,13 @@ describe('ssg-skeletons', () => {
       document.body.innerHTML =
         `<div id="ssg-skeleton">${travel ? '<div class="ssg-travel-hero"></div>' : ''}` +
         `<div class="ssg-travel-article">Текст статьи, видимый до гидратации.</div></div>` +
+        `<div id="root">${rootHtml}</div>`;
+    };
+
+    const setupMapDom = ({ rootHtml = '<div>shell</div>' } = {}) => {
+      document.head.innerHTML = '<style id="ssg-skeleton-css"></style>';
+      document.body.innerHTML =
+        '<div id="ssg-skeleton"><div class="ssg-map-layout"><div class="ssg-map-canvas"></div></div></div>' +
         `<div id="root">${rootHtml}</div>`;
     };
 
@@ -381,6 +431,30 @@ describe('ssg-skeletons', () => {
       expect(skeleton()).toBeNull();
       expect(root.contains(hero)).toBe(true);
       expect(document.getElementById('ssg-skeleton-css')).not.toBeNull();
+    });
+
+    it('keeps map skeleton while only the generic app-hydrated class is present', () => {
+      setupMapDom();
+      runScript();
+
+      document.documentElement.classList.add('app-hydrated');
+      jest.advanceTimersByTime(1000);
+
+      expect(skeleton()).not.toBeNull();
+      expect(document.getElementById('ssg-skeleton-css')).not.toBeNull();
+    });
+
+    it('removes map skeleton when the map route marks its first visible screen ready', () => {
+      setupMapDom();
+      runScript();
+
+      document.documentElement.classList.add('app-hydrated');
+      const root = document.getElementById('root') as HTMLElement;
+      root.setAttribute('data-map-route-ready', 'true');
+      jest.advanceTimersByTime(500);
+
+      expect(skeleton()).toBeNull();
+      expect(document.getElementById('ssg-skeleton-css')).toBeNull();
     });
 
     it('removes travel skeleton after 20s once app-hydrated is set', () => {
