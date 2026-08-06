@@ -21,7 +21,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
 
-const CONTRACT_VERSION = 1
+const CONTRACT_VERSION = 2
 
 // Порог = 44dp. Android/Material рекомендует 48dp, и для НОВЫХ компактных
 // иконочных кнопок это по-прежнему правильная цель, но 44 — принятый в проекте
@@ -31,7 +31,9 @@ const CONTRACT_VERSION = 1
 const MIN_TOUCH_TARGET = 44
 
 const SCAN_DIRS = Object.freeze(['app', 'components', 'hooks', 'screens'])
-const SOURCE_EXTENSIONS = new Set(['.tsx'])
+// `.ts` нужен не ради JSX, а ради модулей стилей: размер тач-таргета всё чаще
+// объявлен не рядом с `Pressable`, а в вынесенном style-модуле (#1274, приёмка).
+const SOURCE_EXTENSIONS = new Set(['.tsx', '.ts'])
 const IGNORED_DIRS = new Set([
   '.git',
   '.expo',
@@ -105,6 +107,16 @@ const numericValue = (node) => {
     const inner = numericValue(node.operand)
     return inner === null ? null : -inner
   }
+  // `width: isMobile ? 26 : 32` — самая частая форма адаптивного размера, и
+  // именно на ней гард молчал про весь мастер квеста. Для гарда значение ветки
+  // — худший случай: если хоть одна ветка даёт недомерок, он реален на
+  // соответствующей поверхности.
+  if (ts.isConditionalExpression(node)) {
+    const whenTrue = numericValue(node.whenTrue)
+    const whenFalse = numericValue(node.whenFalse)
+    if (whenTrue === null || whenFalse === null) return null
+    return Math.min(whenTrue, whenFalse)
+  }
   return null
 }
 
@@ -127,34 +139,78 @@ const readStyleObject = (objectLiteral) => {
   return dims
 }
 
+const unwrap = (node) => (node && ts.isAsExpression(node) ? node.expression : node)
+
+const isStyleSheetCreateCall = (node) =>
+  ts.isCallExpression(node) &&
+  ts.isPropertyAccessExpression(node.expression) &&
+  ts.isIdentifier(node.expression.expression) &&
+  node.expression.expression.text === 'StyleSheet' &&
+  node.expression.name.text === 'create'
+
+const isPlatformSelectCall = (node) =>
+  !!node &&
+  ts.isCallExpression(node) &&
+  ts.isPropertyAccessExpression(node.expression) &&
+  ts.isIdentifier(node.expression.expression) &&
+  node.expression.expression.text === 'Platform' &&
+  node.expression.name.text === 'select'
+
+/** `Platform.select({ web: {...}, android: {...} })` — не таблица стилей. */
+const isPlatformSelectArgument = (node) => isPlatformSelectCall(node.parent)
+
 /**
- * Все объявленные размеры из `StyleSheet.create({...})` файла.
- * Возвращает `{ [styleName]: { width?, height?, minWidth?, minHeight? } }`.
+ * Объектный литерал похож на таблицу стилей: минимум два имени, за каждым из
+ * которых стоит объект. Порог в два имени отсекает одиночные обёртки вроде
+ * `Platform.select({ web: {...} })`, а сами `Platform.select` исключены явно.
  */
-const collectStyleSizes = (sourceFile) => {
+const isStyleMapLiteral = (node) => {
+  if (!ts.isObjectLiteralExpression(node)) return false
+  let objectProps = 0
+  for (const prop of node.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue
+    if (ts.isObjectLiteralExpression(unwrap(prop.initializer))) objectProps += 1
+  }
+  return objectProps >= 2
+}
+
+const readStyleMap = (objectLiteral, styles) => {
+  for (const prop of objectLiteral.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue
+    const name = propertyName(prop)
+    if (!name) continue
+    const initializer = unwrap(prop.initializer)
+    if (!ts.isObjectLiteralExpression(initializer)) continue
+    const dims = readStyleObject(initializer)
+    const known = styles[name]
+    // Один файл может объявить имя дважды (варианты темы) — держим худший.
+    if (!known) styles[name] = dims
+    else for (const key of SIZE_KEYS) {
+      if (typeof dims[key] === 'number' && (typeof known[key] !== 'number' || dims[key] < known[key])) {
+        known[key] = dims[key]
+      }
+    }
+  }
+}
+
+/**
+ * Все объявленные размеры стилей файла.
+ * Возвращает `{ [styleName]: { width?, height?, minWidth?, minHeight? } }`.
+ *
+ * `StyleSheet.create({...})` читается везде. В модулях стилей (`includeFactories`)
+ * дополнительно читаются таблицы, возвращаемые фабриками вида
+ * `createHeaderStyles = (colors, isMobile) => ({ ... })`: они не проходят через
+ * `StyleSheet.create` в своём файле, поэтому раньше были невидимы целиком.
+ */
+const collectStyleSizes = (sourceFile, { includeFactories = false } = {}) => {
   const styles = {}
 
   const visit = (node) => {
-    const isStyleSheetCreate =
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      ts.isIdentifier(node.expression.expression) &&
-      node.expression.expression.text === 'StyleSheet' &&
-      node.expression.name.text === 'create'
-
-    if (isStyleSheetCreate) {
+    if (isStyleSheetCreateCall(node)) {
       const [arg] = node.arguments
-      if (arg && ts.isObjectLiteralExpression(arg)) {
-        for (const prop of arg.properties) {
-          if (!ts.isPropertyAssignment(prop)) continue
-          const name = propertyName(prop)
-          if (!name) continue
-          let initializer = prop.initializer
-          if (ts.isAsExpression(initializer)) initializer = initializer.expression
-          if (!ts.isObjectLiteralExpression(initializer)) continue
-          styles[name] = readStyleObject(initializer)
-        }
-      }
+      if (arg && ts.isObjectLiteralExpression(arg)) readStyleMap(arg, styles)
+    } else if (includeFactories && isStyleMapLiteral(node) && !isPlatformSelectArgument(node)) {
+      readStyleMap(node, styles)
     }
     ts.forEachChild(node, visit)
   }
@@ -217,6 +273,93 @@ const elementName = (node) => {
   return ''
 }
 
+const isJsxElement = (node) => ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)
+
+const jsxAttribute = (node, name) => {
+  for (const attribute of node.attributes.properties) {
+    if (!ts.isJsxAttribute(attribute)) continue
+    if (attribute.name && ts.isIdentifier(attribute.name) && attribute.name.text === name) return attribute
+  }
+  return null
+}
+
+/** Имена параметров функции, включая деструктуризацию `({ style })`. */
+const parameterNames = (declaration) => {
+  const names = new Set()
+  for (const parameter of declaration.parameters || []) {
+    if (ts.isIdentifier(parameter.name)) names.add(parameter.name.text)
+    else if (ts.isObjectBindingPattern(parameter.name)) {
+      for (const element of parameter.name.elements) {
+        if (ts.isIdentifier(element.name)) names.add(element.name.text)
+      }
+    }
+  }
+  return names
+}
+
+/**
+ * Локальные обёртки, пробрасывающие `style` в интерактивный элемент.
+ *
+ * Такой компонент САМ является тач-таргетом, но размер ему задаёт вызывающий
+ * код: `<ActionButton style={styles.backButton}>`. Внутри обёртки имя стиля не
+ * видно (там просто проп `style`), а снаружи тег — не `Pressable`, поэтому без
+ * этого шага целый слой кнопок невидим. Ровно так гард молчал про кнопку
+ * «Назад» 40dp в шапке, пока её не намерили на устройстве (#1274, приёмка).
+ *
+ * По той же причине в `INTERACTIVE_ELEMENTS` заведён `IconButton` (#1280).
+ */
+const collectStyleForwardingWrappers = (sourceFile) => {
+  const wrappers = new Set()
+
+  const forwardsStyle = (declaration) => {
+    const params = parameterNames(declaration)
+    if (!params.has('style')) return false
+    let found = false
+    const visit = (node) => {
+      if (found) return
+      if (isJsxElement(node) && INTERACTIVE_ELEMENTS.has(elementName(node))) {
+        const attribute = jsxAttribute(node, 'style')
+        const initializer = attribute && attribute.initializer
+        if (initializer && ts.isJsxExpression(initializer) && initializer.expression) {
+          const usesOwnStyle = (expression) => {
+            let hit = false
+            const walk = (child) => {
+              if (hit) return
+              if (ts.isIdentifier(child) && child.text === 'style') hit = true
+              else ts.forEachChild(child, walk)
+            }
+            walk(expression)
+            return hit
+          }
+          if (usesOwnStyle(initializer.expression)) found = true
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(declaration)
+    return found
+  }
+
+  const visit = (node) => {
+    if (ts.isFunctionDeclaration(node) && node.name && forwardsStyle(node)) {
+      wrappers.add(node.name.text)
+    }
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+      const initializer = node.initializer
+      if (
+        (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) &&
+        forwardsStyle(initializer)
+      ) {
+        wrappers.add(node.name.text)
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return wrappers
+}
+
 /**
  * Размеры, объявленные прямо в JSX (`style={{ width: 32 }}`). Без этого гард
  * обходится инлайновым объектом, и контракт «таргет задаётся размером вью»
@@ -247,56 +390,92 @@ const smallestOf = (dimsList) => {
   return smallest
 }
 
+/**
+ * Находка адресуется файлу, где размер ОБЪЯВЛЕН, а не файлу с JSX: чинить нужно
+ * именно объявление, и один вынесенный стиль не должен размножаться на каждого
+ * потребителя отдельной записью baseline.
+ */
 const findSmallestDeclaredSize = (styleNames, styleTables) => {
   let smallest = null
   for (const name of styleNames) {
-    let dims = null
+    let source = null
     for (const table of styleTables) {
-      if (table && Object.prototype.hasOwnProperty.call(table, name)) {
-        dims = table[name]
+      if (table.styles && Object.prototype.hasOwnProperty.call(table.styles, name)) {
+        source = table
         break
       }
     }
-    if (!dims) continue
+    if (!source) continue
     for (const key of SIZE_KEYS) {
-      const value = dims[key]
+      const value = source.styles[name][key]
       if (typeof value !== 'number') continue
       if (value >= MIN_TOUCH_TARGET) continue
-      if (!smallest || value < smallest.size) smallest = { style: name, dimension: key, size: value }
+      if (!smallest || value < smallest.size) {
+        smallest = { file: source.file, style: name, dimension: key, size: value }
+      }
     }
   }
   return smallest
 }
 
+const isStyleModule = (filePath) =>
+  /[Ss]tyles?\.(ts|tsx)$/.test(path.basename(filePath)) ||
+  /[Ss]tyles?$/.test(path.basename(path.dirname(filePath)))
+
 const readStyleSheets = (rootDir, filePath) => {
   const absolute = path.join(rootDir, filePath)
   if (!fs.existsSync(absolute)) return null
   const source = fs.readFileSync(absolute, 'utf8')
-  if (!source.includes('StyleSheet.create')) return {}
-  return collectStyleSizes(parseSource(filePath, source))
+  const includeFactories = isStyleModule(filePath)
+  if (!includeFactories && !source.includes('StyleSheet.create')) return {}
+  return collectStyleSizes(parseSource(filePath, source), { includeFactories })
 }
 
 /** Стили компонента живут либо в нём самом, либо в сиблинге `Foo.styles.ts`. */
 const resolveStyleTables = (rootDir, filePath, ownSource) => {
-  const tables = [collectStyleSizes(ownSource)]
+  const tables = [{ file: filePath, styles: collectStyleSizes(ownSource) }]
   const base = filePath.replace(/\.tsx$/, '')
   for (const candidate of [`${base}.styles.ts`, `${base}.styles.tsx`]) {
     const sibling = readStyleSheets(rootDir, candidate)
-    if (sibling) tables.push(sibling)
+    if (sibling) tables.push({ file: candidate, styles: sibling })
   }
   return tables
+}
+
+/** Имена стилей, которыми хоть где-то стилизуется интерактивный элемент. */
+const collectInteractiveStyleNames = (sourceFile, out = new Set()) => {
+  const wrappers = collectStyleForwardingWrappers(sourceFile)
+  const visit = (node) => {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = elementName(node)
+      if (INTERACTIVE_ELEMENTS.has(tag) || wrappers.has(tag)) {
+        for (const attribute of node.attributes.properties) {
+          if (!ts.isJsxAttribute(attribute)) continue
+          if (!(attribute.name && ts.isIdentifier(attribute.name) && attribute.name.text === 'style')) continue
+          const initializer = attribute.initializer
+          if (initializer && ts.isJsxExpression(initializer) && initializer.expression) {
+            for (const name of collectStyleReferences(initializer.expression)) out.add(name)
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return out
 }
 
 const scanFile = ({ rootDir, filePath, content }) => {
   if (!/Pressable|Touchable/.test(content)) return []
   const sourceFile = parseSource(filePath, content)
   const styleTables = resolveStyleTables(rootDir, filePath, sourceFile)
+  const wrappers = collectStyleForwardingWrappers(sourceFile)
   const findings = []
 
   const visit = (node) => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const name = elementName(node)
-      if (INTERACTIVE_ELEMENTS.has(name)) {
+      if (INTERACTIVE_ELEMENTS.has(name) || wrappers.has(name)) {
         let styleNames = []
         let inlineDims = []
         let hasHitSlop = false
@@ -318,19 +497,23 @@ const scanFile = ({ rootDir, filePath, content }) => {
         const smallest = useInline ? inline : named
 
         if (smallest) {
+          // Инлайновый размер объявлен в самом JSX, именованный — в своём файле
+          // стилей; ключ всегда указывает туда, где правится размер.
+          const declaredIn = useInline ? filePath : smallest.file
           findings.push({
-            file: filePath,
+            file: declaredIn,
             // Ключ baseline не содержит номер строки: он не должен протухать от
             // сдвига кода, иначе гард шумит на каждом несвязанном рефакторинге.
             // У инлайнового стиля имени нет — ключом становится сам размер.
             key: useInline
               ? `${filePath}::inline(${smallest.dimension}=${smallest.size})`
-              : `${filePath}::${smallest.style}`,
+              : `${declaredIn}::${smallest.style}`,
             style: useInline ? `inline(${smallest.dimension}=${smallest.size})` : smallest.style,
             dimension: smallest.dimension,
             size: smallest.size,
             element: name,
             hitSlop: hasHitSlop,
+            usedIn: filePath,
             line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
           })
         }
@@ -343,12 +526,66 @@ const scanFile = ({ rootDir, filePath, content }) => {
   return findings
 }
 
-const scanTouchTargets = (rootDir) => {
+/**
+ * Второй проход — по модулям стилей.
+ *
+ * Резолвинг «свой файл + сиблинг `*.styles.ts`» закрывает только тот случай,
+ * когда таблица стилей доезжает до JSX по импорту рядом. В проекте она сплошь и
+ * рядом приезжает пропом из родителя (`styles: any`) или собирается агрегатором
+ * из подпапки `<feature>Styles/*.ts` — и тогда связь «JSX → объявление» из
+ * одного файла не выводится вовсе. Так целый экран мастера квеста оказался
+ * невидимым для гарда при живых 26 и 36 dp.
+ *
+ * Поэтому связь берётся по имени стиля: имя, которым хоть где-то стилизуется
+ * интерактивный элемент, считается тач-таргетом во всех модулях стилей.
+ * Огрубление намеренное и однонаправленное — гард может заморозить лишний стиль
+ * с совпавшим именем, но не может пропустить настоящий недомерок.
+ */
+const scanStyleModule = ({ rootDir, filePath, interactiveNames }) => {
+  const table = readStyleSheets(rootDir, filePath)
+  if (!table) return []
   const findings = []
-  for (const filePath of collectSourceFiles(rootDir)) {
-    const content = fs.readFileSync(path.join(rootDir, filePath), 'utf8')
+  for (const [name, dims] of Object.entries(table)) {
+    if (!interactiveNames.has(name)) continue
+    // Одна находка на стиль — по худшей оси, как и в `scanFile`.
+    const smallest = smallestOf([dims])
+    if (!smallest) continue
+    findings.push({
+      file: filePath,
+      key: `${filePath}::${name}`,
+      style: name,
+      dimension: smallest.dimension,
+      size: smallest.size,
+      element: 'style-module',
+      hitSlop: false,
+    })
+  }
+  return findings
+}
+
+const scanTouchTargets = (rootDir) => {
+  const files = collectSourceFiles(rootDir)
+  const contents = new Map()
+  const readFile = (filePath) => {
+    if (!contents.has(filePath)) contents.set(filePath, fs.readFileSync(path.join(rootDir, filePath), 'utf8'))
+    return contents.get(filePath)
+  }
+
+  const interactiveNames = new Set()
+  const findings = []
+  for (const filePath of files) {
+    if (path.extname(filePath) !== '.tsx') continue
+    const content = readFile(filePath)
+    if (!/Pressable|Touchable/.test(content)) continue
+    collectInteractiveStyleNames(parseSource(filePath, content), interactiveNames)
     findings.push(...scanFile({ rootDir, filePath, content }))
   }
+
+  for (const filePath of files) {
+    if (!isStyleModule(filePath)) continue
+    findings.push(...scanStyleModule({ rootDir, filePath, interactiveNames }))
+  }
+
   return findings
 }
 
@@ -490,8 +727,13 @@ module.exports = {
   collectStyleSizes,
   collectStyleReferences,
   collectInlineStyleDims,
+  collectInteractiveStyleNames,
+  collectStyleForwardingWrappers,
   findSmallestDeclaredSize,
+  isStyleModule,
+  numericValue,
   scanFile,
+  scanStyleModule,
   scanTouchTargets,
   toBaselineEntries,
   createBaseline,

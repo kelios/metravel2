@@ -507,6 +507,7 @@ function MobileBento({
               hideAuthor={hideAuthor}
               viewportWidth={viewportWidth}
               visualVariant="home-featured"
+              mediaLoading="lazy"
             />
           </View>
         </React.Fragment>
@@ -536,6 +537,7 @@ function Rail({
             hideAuthor={hideAuthor}
             viewportWidth={viewportWidth}
             visualVariant="home-featured"
+            mediaLoading="lazy"
           />
         </View>
       ))}
@@ -562,6 +564,7 @@ function ThreeColumn({
             hideAuthor={hideAuthor}
             viewportWidth={viewportWidth}
             visualVariant="home-featured"
+            mediaLoading="lazy"
           />
         </View>
       ))}
@@ -598,6 +601,7 @@ function EditorialGrid({
             hideAuthor={hideAuthor}
             viewportWidth={viewportWidth}
             visualVariant="home-featured"
+            mediaLoading="lazy"
           />
         </View>
       ))}
@@ -622,6 +626,7 @@ function TrioGrid({
           hideAuthor={hideAuthor}
           viewportWidth={viewportWidth}
           visualVariant="home-featured"
+          mediaLoading="lazy"
         />
       </View>
       <View style={styles.trioBottomRow}>
@@ -634,6 +639,7 @@ function TrioGrid({
               hideAuthor={hideAuthor}
               viewportWidth={viewportWidth}
               visualVariant="home-featured"
+              mediaLoading="lazy"
             />
           </View>
         ))}
@@ -678,6 +684,7 @@ function BentoSlot({
         hideAuthor={hideAuthor}
         viewportWidth={viewportWidth}
         visualVariant="home-featured"
+        mediaLoading="lazy"
       />
     </View>
   )

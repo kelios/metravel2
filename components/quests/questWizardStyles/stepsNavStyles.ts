@@ -34,7 +34,9 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
         marginRight: 0,
         marginBottom: 0,
         borderWidth: 0,
-        minHeight: 28,
+        // Широкоэкранный вариант того же шагового навигатора, что и `stepDotTarget`
+        // на мобильном: тач-таргет задаётся высотой самой пилюли (#1274).
+        minHeight: 44,
         ...Platform.select({
             web: {
                 cursor: 'pointer',
@@ -85,16 +87,29 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
         letterSpacing: -0.2,
     },
 
+    // Прозрачная рамка тач-таргета вокруг видимой точки (#1274).
+    // Нажимается именно она, поэтому размер задан ей, а не точке: раньше
+    // Pressable был размером с точку (26dp), а её ряд — ровно такой же высоты,
+    // так что вертикальный hitSlop срезался целиком и добора не давал.
+    // Тот же приём, что `MAP_TOOLBAR_TOUCH_TARGET_SIZE` на тулбаре карты.
+    stepDotTarget: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...Platform.select({
+            web: { cursor: 'pointer' },
+        }),
+    },
+    // Видимый кружок: размер сохранён прежний, менять его задача не просила.
     stepDotMini: {
         width: isMobile ? 26 : 32,
         height: isMobile ? 26 : 32,
         borderRadius: isMobile ? 13 : 16,
-        marginRight: isMobile ? 3 : 5,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.backgroundSecondary,
         borderWidth: 0,
-        // Touch area extended via hitSlop in QuestStepDot component
         ...Platform.select({
             web: {
                 cursor: 'pointer',

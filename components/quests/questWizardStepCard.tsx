@@ -315,7 +315,10 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
             onPress={openDefaultMap}
             accessibilityRole="button"
             accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.otkryt_v_kartah_value1_6472f175', { value1: step.location })}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            // Высота строки адреса зависит от длины названия (одна строка или
+            // две), поэтому она не объявлена нигде и статический гард её не
+            // видит — на устройстве вышло 42,3dp. Задаём таргет явно (#1274).
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 }}
             hitSlop={6}
           >
             <Feather name="map-pin" size={13} color={colors.brandText} />

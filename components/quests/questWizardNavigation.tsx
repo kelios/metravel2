@@ -1,4 +1,4 @@
-import { Pressable, Text } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { translate as i18nT } from '@/i18n'
 
@@ -93,39 +93,41 @@ export function QuestStepDot({
   label,
   small = false,
 }: StepDotProps) {
-  const smallOverride = small ? { width: 28, height: 28, borderRadius: 14, marginRight: 4 } : undefined
-  // Визуальный размер точки 26–28dp. hitSlop расширяет область нажатия до ~44–48dp:
-  // по вертикали соседей нет — даём 12dp; по горизонтали зазор между точками 3–4dp,
-  // поэтому ограничиваем 9dp, чтобы хит-зоны соседей не перекрывались чрезмерно.
-  const dotHitSlop = small
-    ? { top: 12, bottom: 12, left: 10, right: 10 }
-    : { top: 12, bottom: 12, left: 9, right: 9 }
+  const smallOverride = small ? { width: 28, height: 28, borderRadius: 14 } : undefined
+  // Нажимается прозрачная рамка 44dp (`stepDotTarget`), внутри неё — прежний
+  // видимый кружок 26–28dp. До #1274 Pressable был размером с кружок и добирал
+  // область через hitSlop, но ряд точек обтягивает их по высоте, а на Android
+  // hitSlop потомка проверяется только после попадания внутрь родителя — весь
+  // вертикальный добор срезался, и точка оставалась 26dp (регресс #192).
   return (
     <Pressable
       onPress={onPress}
       disabled={!unlocked}
       accessibilityState={{ disabled: !unlocked }}
-      style={[
-        styles.stepDotMini,
-        unlocked && styles.stepDotMiniUnlocked,
-        done && !active && styles.stepDotMiniDone,
-        active && styles.stepDotMiniActive,
-        !unlocked && styles.stepDotMiniLocked,
-        smallOverride,
-      ]}
-      hitSlop={dotHitSlop}
+      style={styles.stepDotTarget}
     >
-      {isIntro ? (
-        <Feather
-          name="play"
-          size={small ? 10 : 12}
-          color={(active || done) ? colors.textOnPrimary : colors.primaryText}
-        />
-      ) : (
-        <Text style={[styles.stepDotMiniText, (active || done) && { color: colors.textOnPrimary }, small && { fontSize: 10 }]}>
-          {label}
-        </Text>
-      )}
+      <View
+        style={[
+          styles.stepDotMini,
+          unlocked && styles.stepDotMiniUnlocked,
+          done && !active && styles.stepDotMiniDone,
+          active && styles.stepDotMiniActive,
+          !unlocked && styles.stepDotMiniLocked,
+          smallOverride,
+        ]}
+      >
+        {isIntro ? (
+          <Feather
+            name="play"
+            size={small ? 10 : 12}
+            color={(active || done) ? colors.textOnPrimary : colors.primaryText}
+          />
+        ) : (
+          <Text style={[styles.stepDotMiniText, (active || done) && { color: colors.textOnPrimary }, small && { fontSize: 10 }]}>
+            {label}
+          </Text>
+        )}
+      </View>
     </Pressable>
   )
 }
@@ -143,12 +145,12 @@ export function QuestFinalePill(props: NavigationProps & { compact?: boolean }) 
 
 export function QuestFinaleDot(props: NavigationProps) {
   return (
-    <Pressable
-      onPress={props.onPress}
-      style={[props.styles.stepDotMini, props.active ? props.styles.stepDotMiniActive : props.styles.stepDotMiniUnlocked]}
-      hitSlop={6}
-    >
-      <Text style={[props.styles.stepDotMiniText, props.active && { color: props.colors.textOnPrimary }]}>{i18nT('quests:components.quests.questWizardNavigation.f_67cbee49')}</Text>
+    <Pressable onPress={props.onPress} style={props.styles.stepDotTarget}>
+      <View
+        style={[props.styles.stepDotMini, props.active ? props.styles.stepDotMiniActive : props.styles.stepDotMiniUnlocked]}
+      >
+        <Text style={[props.styles.stepDotMiniText, props.active && { color: props.colors.textOnPrimary }]}>{i18nT('quests:components.quests.questWizardNavigation.f_67cbee49')}</Text>
+      </View>
     </Pressable>
   )
 }

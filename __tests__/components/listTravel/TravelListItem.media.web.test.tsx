@@ -209,8 +209,10 @@ describe('TravelListItem media props on web', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
     expect(props.mediaProps?.placeholderSrc).toBeUndefined();
+    // #1285: карточка просит явное качество, поэтому `q` манифеста переписывается
+    // (замер прода: −21…23 % байт без видимой потери).
     expect(props.mediaProps?.webResponsiveSource?.src).toBe(
-      'https://metravel.by/gallery/11/cover.webp?w=640&q=75&fit=cover',
+      'https://metravel.by/gallery/11/cover.webp?w=640&q=70&fit=cover',
     );
     expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('160w');
     expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('320w');
@@ -328,8 +330,87 @@ describe('TravelListItem media props on web', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.mediaProps?.placeholderColor).toBe('#666b6d');
     expect(props.mediaProps?.webResponsiveSource?.src).toBe(
-      'https://metravel.by/travel-image/21/cover.webp?w=640',
+      'https://metravel.by/travel-image/21/cover.webp?w=640&q=70',
     );
+  });
+
+  // #1285: слот кадрируется `contain`, поэтому квадратный кадр в ландшафтном
+  // боксе занимает только его высоту. Прод-замер главной 2026-08-06 (mobile 412,
+  // DPR 1.75): бокс рейла 318×200 рисовал квадрат как 200×200, а `sizes` объявлял
+  // 320px — браузер требовал 560 device px и брал 640w (95 130 B) вместо 480w.
+  it('объявляет в sizes ширину ОТРИСОВКИ обложки, а не ширину бокса', () => {
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: {
+          cover: {
+            id: 14,
+            width: 800,
+            height: 800,
+            aspect_ratio: 1,
+            srcset: [
+              '/travel-image/14/conversions/c.webp?w=160 160w',
+              '/travel-image/14/conversions/c.webp?w=320 320w',
+              '/travel-image/14/conversions/c.webp?w=480 480w',
+              '/travel-image/14/conversions/c.webp?w=640 640w',
+              '/travel-image/14/conversions/c.webp?w=960 960w',
+            ].join(', '),
+          },
+          gallery: null,
+          address_images: null,
+        },
+      } as any,
+      cardWidth: 320,
+      imageHeight: 200,
+      isMobile: true,
+      viewportWidth: 412,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    const source = props.mediaProps?.webResponsiveSource;
+    expect(source?.sizes).toBe('200px');
+    // 200 CSS × DPR 2 = 400 → лестнице хватает 480w; кандидаты крупнее слоту не
+    // нужны ни на одном DPR.
+    expect(source?.srcSet).toContain('480w');
+    expect(source?.srcSet).not.toContain('640w');
+    expect(source?.srcSet).not.toContain('960w');
+    expect(source?.src).toContain('q=70');
+  });
+
+  it('портретная обложка в том же боксе просит ещё более узкую ступень', () => {
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: {
+          cover: {
+            id: 15,
+            width: 640,
+            height: 853,
+            aspect_ratio: 640 / 853,
+            srcset: [
+              '/travel-image/15/conversions/c.webp?w=160 160w',
+              '/travel-image/15/conversions/c.webp?w=320 320w',
+              '/travel-image/15/conversions/c.webp?w=480 480w',
+              '/travel-image/15/conversions/c.webp?w=640 640w',
+            ].join(', '),
+          },
+          gallery: null,
+          address_images: null,
+        },
+      } as any,
+      cardWidth: 320,
+      imageHeight: 200,
+      isMobile: true,
+      viewportWidth: 412,
+    });
+
+    const source = (mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any).mediaProps
+      ?.webResponsiveSource;
+    // 640×853 в боксе 318×200 прод рисует как 150×200 (замер DOM 2026-08-06).
+    expect(source?.sizes).toBe('150px');
+    expect(source?.srcSet).toContain('320w');
+    expect(source?.srcSet).not.toContain('480w');
+    expect(source?.srcSet).not.toContain('640w');
   });
 
   it('uses dominant color when the cover has no blurhash', () => {

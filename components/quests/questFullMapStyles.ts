@@ -71,8 +71,12 @@ export const createQuestFullMapStyles = (colors: ThemedColors) => StyleSheet.cre
         fontWeight: '600',
         fontSize: 12,
     },
+    // Размер задавал только padding вокруг иконки 18 — на mobile web выходило
+    // 34×36dp. Тач-таргет объявляем явно (#1274).
     mobileMenuButton: {
         padding: 8,
+        minWidth: 44,
+        minHeight: 44,
         borderRadius: 8,
         backgroundColor: colors.primary,
         alignItems: 'center',

@@ -587,8 +587,12 @@ const createStyles = (colors: ThemedColors) =>
             alignItems: 'center',
             gap: 8,
         },
+        // Парно с web-веткой `questFullMapStyles.ts` (#1274): тач-таргет 44dp
+        // задаётся явно, а не набирается padding'ом вокруг иконки.
         mobileMenuButton: {
             padding: 8,
+            minWidth: 44,
+            minHeight: 44,
             borderRadius: 8,
             backgroundColor: colors.primary,
             alignItems: 'center',

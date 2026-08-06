@@ -194,7 +194,13 @@ export class BlockRenderer {
   /**
    * Рендерит сырой rich-text HTML: применяет умную раскладку изображений,
    * парсит в блоки и рендерит. Централизует паттерн applySmartImageLayout → parse → render.
-   * Заголовки понижаются на 1 уровень (h2→h3, h3→h4), чтобы отличаться от секционных заголовков.
+   *
+   * Заголовки понижаются на уровень (h2→h3, h3→h4), чтобы не спорить с секционными
+   * заголовками страницы («Описание», «Плюсы» — это h2 темы). Верхняя граница — h3:
+   * выше начинается кегль секций. Нижняя — h4: тем h5 не существует.
+   *
+   * Раньше формула схлопывала в h4 вообще всё, и разделы статьи, подразделы и вопросы
+   * FAQ печатались одним кеглем — иерархия описания на бумаге пропадала.
    */
   renderRichText(rawHtml: string): string {
     if (!rawHtml) return '';
@@ -203,7 +209,7 @@ export class BlockRenderer {
     const blocks = parser.parse(formatted);
     const demoted = blocks.map((block) => {
       if (block.type === 'heading') {
-        const newLevel = Math.max(block.level + 2, 4);
+        const newLevel = Math.max(block.level + 1, 3);
         return { ...block, level: Math.min(newLevel, 4) as 1 | 2 | 3 | 4 };
       }
       return block;

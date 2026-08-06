@@ -9,7 +9,11 @@ const {
   SCAN_DIRS,
   collectStyleSizes,
   collectStyleReferences,
+  collectInteractiveStyleNames,
+  isStyleModule,
   scanFile,
+  scanStyleModule,
+  scanTouchTargets,
   toBaselineEntries,
   compareToBaseline,
   parseArgs,
@@ -142,6 +146,177 @@ describe('guard-touch-targets', () => {
     } finally {
       removeDir(rootDir)
     }
+  })
+
+  describe('styles declared outside the consuming component (#1274 acceptance)', () => {
+    // Возврат карточки: экран мастера квеста жил на 26 и 36 dp, а гард молчал.
+    // Стили лежали в `<feature>Styles/*.ts` и приезжали в JSX пропом, поэтому
+    // резолвинг «свой файл + сиблинг .styles.ts» их не видел в принципе.
+    const writeQuestLikeTree = (rootDir: string) => {
+      fs.mkdirSync(path.join(rootDir, 'components', 'quests', 'wizardStyles'), { recursive: true })
+      fs.writeFileSync(
+        path.join(rootDir, 'components', 'quests', 'wizardStyles', 'stepsNavStyles.ts'),
+        `export const createStepsNavStyles = (colors, isMobile) => ({
+           stepDotMini: { width: isMobile ? 26 : 32, height: isMobile ? 26 : 32, backgroundColor: colors.bg },
+           navActiveTitle: { fontSize: 13, color: colors.text },
+         })`,
+        'utf8',
+      )
+      // Стили приходят пропом: в этом файле нет ни импорта стилей, ни StyleSheet.
+      fs.writeFileSync(
+        path.join(rootDir, 'components', 'quests', 'QuestStepDot.tsx'),
+        `import { Pressable } from 'react-native'
+         export const QuestStepDot = ({ styles }) => (
+           <Pressable style={styles.stepDotMini} hitSlop={12} />
+         )`,
+        'utf8',
+      )
+    }
+
+    it('finds a sub-minimum size declared in a style module and reached only by prop', () => {
+      const rootDir = makeTempDir('guard-touch-targets-')
+      try {
+        writeQuestLikeTree(rootDir)
+        const entries = toBaselineEntries(scanTouchTargets(rootDir))
+
+        expect(entries).toEqual({
+          'components/quests/wizardStyles/stepsNavStyles.ts::stepDotMini': { size: 26, dimension: 'width' },
+        })
+      } finally {
+        removeDir(rootDir)
+      }
+    })
+
+    it('addresses the finding to the declaring file, not to the JSX consumer', () => {
+      const rootDir = makeTempDir('guard-touch-targets-')
+      try {
+        writeQuestLikeTree(rootDir)
+        const files = scanTouchTargets(rootDir).map((finding: any) => finding.file)
+
+        expect(files).toEqual(['components/quests/wizardStyles/stepsNavStyles.ts'])
+        expect(files).not.toContain('components/quests/QuestStepDot.tsx')
+      } finally {
+        removeDir(rootDir)
+      }
+    })
+
+    it('ignores a style module name that nothing interactive uses', () => {
+      const rootDir = makeTempDir('guard-touch-targets-')
+      try {
+        fs.mkdirSync(path.join(rootDir, 'components', 'demoStyles'), { recursive: true })
+        fs.writeFileSync(
+          path.join(rootDir, 'components', 'demoStyles', 'badgeStyles.ts'),
+          `export const createBadgeStyles = () => ({
+             badgeDot: { width: 8, height: 8 },
+             badgeLabel: { fontSize: 11 },
+           })`,
+          'utf8',
+        )
+
+        expect(scanTouchTargets(rootDir)).toEqual([])
+      } finally {
+        removeDir(rootDir)
+      }
+    })
+
+    it('resolves an adaptive size to its worst branch', () => {
+      // `isMobile ? 26 : 32` — недомерок на мобильном, и это тот случай, ради
+      // которого гард и существует.
+      const styles = collectStyleSizes(
+        parse(`const s = { row: { width: isMobile ? 26 : 32 }, cell: { height: 44 } }`),
+        { includeFactories: true },
+      )
+
+      expect(styles.row).toEqual({ width: 26 })
+    })
+
+    it('does not read Platform.select branches as a style table', () => {
+      const styles = collectStyleSizes(
+        parse(`const s = {
+          a: { width: 44 },
+          b: { ...Platform.select({ web: { width: 10 }, android: { width: 12 } }) },
+        }`),
+        { includeFactories: true },
+      )
+
+      expect(styles).not.toHaveProperty('web')
+      expect(styles).not.toHaveProperty('android')
+    })
+
+    it('recognises style modules by file and directory name', () => {
+      expect(isStyleModule('components/quests/questWizardStyles/headerStyles.ts')).toBe(true)
+      expect(isStyleModule('components/MapPage/Map/PlacePopupCard/styles.ts')).toBe(true)
+      expect(isStyleModule('components/travel/PointList.styles.ts')).toBe(true)
+      expect(isStyleModule('components/quests/QuestWizard.tsx')).toBe(false)
+    })
+
+    it('collects the names that stylise interactive elements', () => {
+      const names = collectInteractiveStyleNames(
+        parse(`
+          import { Pressable, View } from 'react-native'
+          export const Probe = () => (
+            <View style={styles.wrapper}>
+              <Pressable style={({ pressed }) => [styles.dot, pressed && styles.dotPressed]} />
+            </View>
+          )
+        `),
+      )
+
+      expect([...names].sort()).toEqual(['dot', 'dotPressed'])
+      expect(names.has('wrapper')).toBe(false)
+    })
+
+    it('sees a local wrapper that forwards style into a Pressable', () => {
+      // Кнопка «Назад» в шапке: тег — `ActionButton`, а не `Pressable`, и внутри
+      // обёртки имени стиля нет. На устройстве она мерилась 40dp, пока гард
+      // молчал.
+      const findings = scan(`
+        import { Pressable, StyleSheet } from 'react-native'
+        const styles = StyleSheet.create({ backButton: { width: 40, height: 40 } })
+        function ActionButton({ onPress, style, children }) {
+          return <Pressable onPress={onPress} style={[style, focus]}>{children}</Pressable>
+        }
+        export const Probe = () => <ActionButton style={styles.backButton} onPress={() => {}} />
+      `)
+
+      expect(findings.map((finding: any) => finding.style)).toContain('backButton')
+    })
+
+    it('does not treat a wrapper without a style prop as interactive', () => {
+      const findings = scan(`
+        import { Pressable, StyleSheet, View } from 'react-native'
+        const styles = StyleSheet.create({ badge: { width: 16, height: 16 } })
+        function Badge({ children }) {
+          return <View>{children}</View>
+        }
+        export const Probe = () => <Badge style={styles.badge} />
+      `)
+
+      expect(findings).toEqual([])
+    })
+
+    it('reports a style-module size only for interactive names', () => {
+      const rootDir = makeTempDir('guard-touch-targets-')
+      try {
+        fs.mkdirSync(path.join(rootDir, 'components'), { recursive: true })
+        fs.writeFileSync(
+          path.join(rootDir, 'components', 'probeStyles.ts'),
+          `export const create = () => ({ btn: { width: 30 }, dot: { width: 8 } })`,
+          'utf8',
+        )
+
+        const findings = scanStyleModule({
+          rootDir,
+          filePath: 'components/probeStyles.ts',
+          interactiveNames: new Set(['btn']),
+        })
+
+        expect(findings).toHaveLength(1)
+        expect(findings[0]).toMatchObject({ style: 'btn', size: 30, file: 'components/probeStyles.ts' })
+      } finally {
+        removeDir(rootDir)
+      }
+    })
   })
 
   it('collects declared sizes and skips non-numeric values', () => {

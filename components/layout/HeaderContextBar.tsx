@@ -395,9 +395,11 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
   },
+  // 44dp по обеим осям (#1274): обе кнопки шапки — это `ActionButton`, локальная
+  // обёртка над `Pressable`, которой размер задаёт только этот стиль.
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: CONTROL_RADIUS,
@@ -469,8 +471,8 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     fontWeight: '700',
   },
   mobileSectionsButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.88,

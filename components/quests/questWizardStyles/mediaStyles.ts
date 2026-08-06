@@ -84,7 +84,7 @@ export const createMediaStyles = (colors: QuestColors, isMobile: boolean, screen
     gestureContainer: { flex: 1, width: '100%' },
     animatedContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     zoomedImage: { width: '100%', height: '100%' },
-    closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
     closeButtonText: { color: colors.textOnDark, fontSize: 18, fontWeight: 'bold' },
     zoomHintContainer: { position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' },
     zoomHint: { color: colors.textOnDark, fontSize: 14, backgroundColor: 'rgba(0,0,0,0.55)', padding: 10, borderRadius: 8 },

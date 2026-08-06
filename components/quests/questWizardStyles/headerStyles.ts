@@ -96,10 +96,15 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
             } as any,
         }),
     },
+    // Иконочный вариант тех же действий: 44dp по обеим осям (#1274).
+    // Раньше здесь стояло 36/38 — и, поскольку стиль применяется ПОСЛЕ базового,
+    // он перебивал `minHeight: 44` базового вниз, то есть иконочная кнопка была
+    // недомерком, а подписанная — нет. hitSlop это не лечит: ряд шапки обтягивает
+    // кнопку по высоте и срезает его.
     actionIconButton: {
-        width: isMobile ? 36 : 38,
-        minHeight: isMobile ? 36 : 38,
-        height: isMobile ? 36 : 38,
+        width: 44,
+        minHeight: 44,
+        height: 44,
         paddingHorizontal: 0,
         justifyContent: 'center',
     },

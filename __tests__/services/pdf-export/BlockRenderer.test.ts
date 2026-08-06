@@ -11,6 +11,23 @@ describe('BlockRenderer', () => {
     expect(html).toContain('src="blob:local-image"')
   })
 
+  it('keeps the heading hierarchy of the description instead of flattening it to h4', () => {
+    const renderer = new BlockRenderer(minimalTheme)
+    const html = renderer.renderRichText(`
+      <h2>Что находится внутри</h2>
+      <h3>Замковая кухня</h3>
+      <h2>Частые вопросы о замке Мальборк</h2>
+      <details><summary><strong>Сколько времени нужно на осмотр?</strong></summary><p>Минимум четыре часа.</p></details>
+    `)
+
+    // Разделы статьи (h2) — крупнее подразделов и вопросов FAQ, но мельче секций книги (h2 темы).
+    expect(html).toMatch(/<h3[^>]*>Что находится внутри<\/h3>/)
+    expect(html).toMatch(/<h3[^>]*>Частые вопросы о замке Мальборк<\/h3>/)
+    expect(html).toMatch(/<h4[^>]*>Замковая кухня<\/h4>/)
+    expect(html).toMatch(/<h4[^>]*>Сколько времени нужно на осмотр\?<\/h4>/)
+    expect(html).not.toContain('<h5')
+  })
+
   it('does not double proxy weserv URLs', () => {
     const renderer = new BlockRenderer(minimalTheme)
     const proxied = 'https://images.weserv.nl/?url=example.com/photo.jpg&w=1600&fit=inside'

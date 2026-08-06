@@ -137,6 +137,44 @@ describe('ContentParser', () => {
     )
   })
 
+  it('unfolds <details> FAQ into heading + answer blocks instead of printing raw tags', () => {
+    const html = `
+      <details>
+        <summary><strong>Есть ли в Мальборке аудиогид на русском языке?</strong></summary>
+        <div><div><p>Да, русская версия входит в стоимость маршрута.</p></div></div>
+      </details>
+    `
+
+    const blocks = parser.parse(html)
+
+    expect(blocks).toEqual([
+      {
+        type: 'heading',
+        level: 4,
+        text: 'Есть ли в Мальборке аудиогид на русском языке?',
+      },
+      {
+        type: 'paragraph',
+        text: 'Да, русская версия входит в стоимость маршрута.',
+        html: undefined,
+      },
+    ])
+  })
+
+  it('keeps unknown tags as plain text without escaped markup', () => {
+    const html = '<aside>Полезный <em>совет</em> из врезки</aside>'
+
+    const blocks = parser.parse(html)
+
+    expect(blocks).toEqual([
+      {
+        type: 'paragraph',
+        text: 'Полезный совет из врезки',
+      },
+    ])
+    expect(JSON.stringify(blocks)).not.toContain('&lt;')
+  })
+
   it('detects special info blocks and cleans react-native wrappers', () => {
     const html = `
       <View><Text>Внутри RN обертки</Text></View>

@@ -248,7 +248,10 @@ export class ContentParser {
       case 'div':
       case 'section':
         return this.parseContainer(element);
-      
+
+      case 'details':
+        return this.parseDetails(element);
+
       case 'hr':
         return { type: 'separator' };
       
@@ -260,14 +263,16 @@ export class ContentParser {
         return this.parseTable(element);
       
       default: {
-        // Для неизвестных тегов пытаемся извлечь текст
+        // Для неизвестных тегов берём только текст.
+        //
+        // Экранированный `innerHTML` сюда класть нельзя: `BlockRenderer.renderParagraph`
+        // подставляет `html` в разметку страницы как есть, поэтому `&lt;summary&gt;`
+        // доезжал до PDF и печатался видимым тегом («</summary> <div><div> <p>…»).
         const text = this.extractTextContent(element);
         if (text && text.length > 0) {
           return {
             type: 'paragraph',
             text,
-            // ✅ ИСПРАВЛЕНИЕ: Экранируем HTML для безопасности перед сохранением
-            html: this.escapeHtml(element.innerHTML),
           };
         }
         return null;
@@ -543,7 +548,7 @@ export class ContentParser {
     const text = this.normalizeText(this.extractTextContent(element));
     if (text && text.length > 0) {
       // Проверяем, есть ли другие блочные элементы
-      const hasBlockElements = element.querySelector('h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, img, figure, table');
+      const hasBlockElements = element.querySelector('h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, img, figure, table, details');
       if (!hasBlockElements) {
         // Если нет блочных элементов, возвращаем как параграф
         return {
@@ -563,6 +568,42 @@ export class ContentParser {
         } else {
           blocks.push(parsed);
         }
+      }
+    }
+
+    return blocks.length > 0 ? blocks : null;
+  }
+
+  /**
+   * Парсит <details> — аккордеон из тела статьи (обычно блок «Частые вопросы»).
+   *
+   * На бумаге раскрывать нечего, поэтому печатаем развёрнутым: <summary> становится
+   * заголовком (он же прижимается к первому блоку ответа), остальное содержимое
+   * разбирается обычными правилами — абзацы, списки, картинки.
+   */
+  private parseDetails(element: HTMLElement): ParsedContentBlock | ParsedContentBlock[] | null {
+    const blocks: ParsedContentBlock[] = [];
+
+    for (const child of Array.from(element.childNodes)) {
+      const isSummary =
+        child.nodeType === Node.ELEMENT_NODE &&
+        (child as HTMLElement).tagName.toLowerCase() === 'summary';
+
+      if (isSummary) {
+        const question = this.normalizeText(this.extractTextContent(child as HTMLElement));
+        if (question) {
+          blocks.push({ type: 'heading', level: 4, text: question });
+        }
+        continue;
+      }
+
+      const parsed = this.parseNode(child);
+      if (!parsed) continue;
+
+      if (Array.isArray(parsed)) {
+        blocks.push(...parsed);
+      } else {
+        blocks.push(parsed);
       }
     }
 
@@ -686,25 +727,6 @@ export class ContentParser {
       headers,
       rows: tableRows,
     };
-  }
-
-  /**
-   * Экранирует HTML для безопасного отображения (защита от XSS)
-   * ✅ ИСПРАВЛЕНИЕ: Использует встроенный DOM для экранирования
-   */
-  private escapeHtml(text: string): string {
-    if (typeof document === 'undefined') {
-      // Fallback для серверного рендеринга
-      return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   /**

@@ -5,15 +5,17 @@ export const createNavControlStyles = (colors: QuestColors, isMobile: boolean, _
     navRow: {
         flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
     },
+    // «Назад»/«Дальше» и круглый переключатель рядом — основная навигация шага,
+    // поэтому 44dp по обеим осям (#1274), а не 40/36.
     navButton: {
         backgroundColor: colors.primary, paddingHorizontal: isMobile ? 12 : 16, paddingVertical: 10,
-        borderRadius: 999, minHeight: 40, justifyContent: 'center', alignItems: 'center',
+        borderRadius: 999, minHeight: 44, justifyContent: 'center', alignItems: 'center',
         ...Platform.select({ web: { cursor: 'pointer', transition: 'opacity 0.15s ease' } as any }),
     },
     navButtonText: { color: colors.textOnPrimary, fontSize: 13, fontWeight: '700' },
     navToggle: {
         backgroundColor: colors.backgroundSecondary,
-        width: 36, height: 36, borderRadius: 999,
+        width: 44, height: 44, borderRadius: 999,
         justifyContent: 'center', alignItems: 'center',
         borderWidth: 1, borderColor: colors.borderLight,
         ...Platform.select({ web: { cursor: 'pointer' } as any }),
@@ -22,6 +24,10 @@ export const createNavControlStyles = (colors: QuestColors, isMobile: boolean, _
     coordsButton: {
         backgroundColor: colors.backgroundSecondary,
         paddingHorizontal: 10, paddingVertical: 8,
+        // Высота была целиком от padding + текста (30,5dp на mobile web) —
+        // объявленного размера нет, и статический гард такое не видит (#1274).
+        minHeight: 44,
+        justifyContent: 'center',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: colors.borderLight,

@@ -8,6 +8,7 @@ import {
   findGalleryMediaImage,
   getMediaLqipUrl,
   getMediaPlaceholderData,
+  resolveMediaAspectRatio,
   resolveMediaVariantUrl,
 } from '@/utils/travelMediaVariants'
 import { buildResponsiveImageProps } from '@/utils/imageSrcSet'
@@ -139,6 +140,89 @@ describe('utils/travelMediaVariants', () => {
           src: 'https://metravel.by/gallery/563/gallery/abc.webp?w=640&q=75&fit=cover',
         })
       })
+    })
+
+    // #1285: готовые `srcset*` идут w-only, поэтому прокси применял к ним дефолт
+    // q80. Явное качество — единственный способ его сбить, но оно обязано попасть
+    // и в `src`, и в КАЖДОГО кандидата: разойдись они — и фолбэчный/прогреваемый
+    // URL перестанет совпадать с выбранным, слот скачается дважды (#1213).
+    describe('явное качество', () => {
+      it('штампует q в src и во всех кандидатов srcSet', () => {
+        withPlatform('web', () => {
+          const result = buildResponsiveImagePropsFromMedia(mediaEntry, {
+            maxWidth: 640,
+            widths: [160, 320, 640],
+            quality: 70,
+          })
+
+          expect(result?.src).toBe(
+            'https://metravel.by/gallery/563/gallery/abc.webp?w=640&q=70&fit=cover',
+          )
+          const candidates = String(result?.srcSet).split(', ')
+          expect(candidates).toHaveLength(3)
+          for (const candidate of candidates) {
+            expect(candidate).toContain('q=70')
+          }
+        })
+      })
+
+      it('значение снэпится в опубликованную лестницу качества прокси', () => {
+        withPlatform('web', () => {
+          const result = buildResponsiveImagePropsFromMedia(mediaEntry, {
+            maxWidth: 640,
+            widths: [640],
+            quality: 63,
+          })
+          expect(result?.src).toContain('q=70')
+        })
+      })
+
+      it('без quality URL манифеста остаются нетронутыми', () => {
+        withPlatform('web', () => {
+          const result = buildResponsiveImagePropsFromMedia(mediaEntry, {
+            maxWidth: 640,
+            widths: [640],
+          })
+          expect(result?.src).toBe(
+            'https://metravel.by/gallery/563/gallery/abc.webp?w=640&q=75&fit=cover',
+          )
+        })
+      })
+
+      it('URL без ширины не получает q — иначе это лишний cache-key на тот же мастер', () => {
+        withPlatform('web', () => {
+          const widthless: TravelMediaImage = {
+            ...mediaEntry,
+            variants: { card_640: '/gallery/563/gallery/abc.webp' },
+          }
+          const result = buildResponsiveImagePropsFromMedia(widthless, {
+            maxWidth: 640,
+            widths: [640],
+            quality: 70,
+          })
+          expect(result?.src).toBe('https://metravel.by/gallery/563/gallery/abc.webp')
+        })
+      })
+    })
+  })
+
+  describe('resolveMediaAspectRatio', () => {
+    it('берёт объявленные пропорции', () => {
+      expect(resolveMediaAspectRatio({ ...mediaEntry, aspect_ratio: 1.333333 })).toBeCloseTo(
+        1.333333,
+      )
+    })
+
+    it('считает пропорции из width/height, когда aspect_ratio нет', () => {
+      expect(
+        resolveMediaAspectRatio({ ...mediaEntry, aspect_ratio: null, width: 640, height: 853 }),
+      ).toBeCloseTo(640 / 853)
+    })
+
+    it('нет пригодных данных → null (вызывающий код остаётся на прежнем поведении)', () => {
+      expect(resolveMediaAspectRatio(mediaEntry)).toBeNull()
+      expect(resolveMediaAspectRatio({ ...mediaEntry, width: 0, height: 0 })).toBeNull()
+      expect(resolveMediaAspectRatio(null)).toBeNull()
     })
   })
 

@@ -84,6 +84,8 @@ type RenderTravelItemProps = {
     hideAuthor?: boolean;
     visualVariant?: 'default' | 'home-featured';
     isDeleting?: boolean;
+    /** См. `TravelListItem.mediaLoading` — экраны без виртуализации передают `lazy` (#1285). */
+    mediaLoading?: 'lazy' | 'eager';
 };
 
 type TravelListItemCompatProps = React.ComponentProps<typeof TravelListItem> & {
@@ -112,6 +114,7 @@ function RenderTravelItem({
                               hideAuthor = false,
                               visualVariant = 'default',
                                isDeleting = false,
+                               mediaLoading,
                           }: RenderTravelItemProps) {
 
     const cardWidthNumber = useMemo(() => {
@@ -154,6 +157,7 @@ function RenderTravelItem({
                 hideAuthor={hideAuthor}
                 visualVariant={visualVariant}
                 isDeleting={isDeleting}
+                mediaLoading={mediaLoading}
             />
         </View>
     );
@@ -187,6 +191,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     if (prev.imageHeight !== next.imageHeight) return false;
     if (prev.visualVariant !== next.visualVariant) return false;
     if (prev.isDeleting !== next.isDeleting) return false;
+    if (prev.mediaLoading !== next.mediaLoading) return false;
 
     return true;
 }

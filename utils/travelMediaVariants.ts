@@ -6,6 +6,7 @@
 import { Platform } from 'react-native'
 
 import type { TravelMedia, TravelMediaImage } from '@/types/types'
+import { snapProxyQuality } from '@/utils/imageProxy'
 import { buildResponsiveImageProps } from '@/utils/imageSrcSet'
 import { resolveLegacyResizeOrigin, toLegacyResizePath } from '@/utils/mediaUrl'
 
@@ -267,6 +268,71 @@ export interface MediaResponsiveOptions {
    * на разных телефонах разную композицию одного фото.
    */
   fit?: 'cover' | 'contain' | 'fill'
+  /**
+   * Явное качество для URL манифеста (#1285).
+   *
+   * Готовые `srcset*` идут w-only, поэтому прокси применяет к ним свой дефолт
+   * q80. Замер прода 2026-08-06 на реальных обложках главной:
+   *
+   *   /media-resize/legacy/599/…-thumb_200.jpg?w=320       29 590 B
+   *   /media-resize/legacy/599/…-thumb_200.jpg?w=320&q=70  23 308 B  (−21 %)
+   *   /media-resize/legacy/599/…-thumb_200.jpg?w=640       95 130 B
+   *   /media-resize/legacy/599/…-thumb_200.jpg?w=640&q=70  73 350 B  (−23 %)
+   *
+   * Значение штампуется и в `src`, и в КАЖДОГО кандидата `srcSet`: разойдись они
+   * — и прогреваемый/фолбэчный URL перестанет совпадать с выбранным, а слот
+   * скачается дважды (#1213). Часть ступеней у прокси лежит готовыми
+   * производными и на `q` не реагирует (у той же 658 это `w=480`) — там параметр
+   * просто не меняет ответ.
+   */
+  quality?: number
+}
+
+/**
+ * Пропорции кадра из манифеста: `aspect_ratio`, иначе `width/height`.
+ *
+ * Нужны слоту с `object-fit: contain`, где ширина отрисовки зависит не только от
+ * бокса, но и от самого кадра (см. `TravelListItem`). `null` — пропорции
+ * неизвестны, вызывающий код обязан остаться на прежнем поведении.
+ */
+export function resolveMediaAspectRatio(
+  entry: TravelMediaImage | null | undefined,
+): number | null {
+  const declared = entry?.aspect_ratio
+  if (typeof declared === 'number' && Number.isFinite(declared) && declared > 0) {
+    return declared
+  }
+  const width = entry?.width
+  const height = entry?.height
+  if (
+    typeof width === 'number' &&
+    typeof height === 'number' &&
+    Number.isFinite(width) &&
+    Number.isFinite(height) &&
+    width > 0 &&
+    height > 0
+  ) {
+    return width / height
+  }
+  return null
+}
+
+/** Ставит `q` в URL манифеста, не трогая остальные параметры. */
+function withProxyQuality(url: string, quality: number | undefined): string {
+  if (quality == null || !Number.isFinite(quality)) return url
+  try {
+    const parsed = new URL(url, 'https://placeholder.invalid')
+    // Ширина — единственный параметр, который прокси обязан получить, чтобы
+    // отдать производную. Без неё `q` лишь плодит cache-key на тот же мастер
+    // (та же логика, что в `optimizeImageUrl`).
+    if (!parsed.searchParams.get('w')) return url
+    parsed.searchParams.set('q', String(snapProxyQuality(quality)))
+    return parsed.origin === 'https://placeholder.invalid'
+      ? `${parsed.pathname}${parsed.search}`
+      : parsed.toString()
+  } catch {
+    return url
+  }
 }
 
 /**
@@ -323,17 +389,17 @@ export function buildResponsiveImagePropsFromMedia(
   // соберёт точные URL через прокси, вместо того чтобы тянуть oversize-вариант.
   if (options.fit && target.width > maxWidth * MAX_VARIANT_OVERSIZE_RATIO) return null
 
-  if (Platform.OS !== 'web') return { src: target.url }
+  if (Platform.OS !== 'web') return { src: withProxyQuality(target.url, options.quality) }
 
   const requestedWidths = options.widths?.length
     ? options.widths
     : variants.map((variant) => variant.width)
   const srcSet = selectWidthCandidates(variants, requestedWidths)
-    .map((variant) => `${variant.url} ${variant.width}w`)
+    .map((variant) => `${withProxyQuality(variant.url, options.quality)} ${variant.width}w`)
     .join(', ')
 
   return {
-    src: target.url,
+    src: withProxyQuality(target.url, options.quality),
     srcSet: srcSet || undefined,
     sizes: options.sizes ?? resolveSizesHint(entry, options.fit) ?? '100vw',
   }
@@ -345,6 +411,12 @@ export function buildResponsiveImagePropsPreferringMedia(
   baseUrl: string,
   options: Parameters<typeof buildResponsiveImageProps>[1] = {},
 ): { src: string; srcSet?: string; sizes?: string } {
+  // `quality` сюда НЕ проксируется намеренно. Через эту обёртку идёт hero
+  // travel-детали, чей preload генерит SSG (`scripts/generate-seo-pages.js`) по
+  // тем же URL манифеста и про `q` не знает: расхождение параметра развело бы
+  // preload и `<img>` на разные файлы, то есть вернуло бы двойную закачку слота
+  // (#1213, тест `travelHeroPreloadParity`). Слоты без SSG-preload — карточки —
+  // зовут `buildResponsiveImagePropsFromMedia` напрямую и качество передают там.
   const fromMedia = buildResponsiveImagePropsFromMedia(entry, {
     widths: options.widths,
     maxWidth: options.maxWidth,

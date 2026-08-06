@@ -19,6 +19,7 @@ import { isTravelDraft } from '@/utils/travelPublicationStatus'
 import {
   buildResponsiveImagePropsFromMedia,
   getMediaPlaceholderData,
+  resolveMediaAspectRatio,
 } from '@/utils/travelMediaVariants'
 
 import { getResponsiveCardValues } from './enhancedCardResponsiveValues'
@@ -28,8 +29,10 @@ import TravelListItemEngagementMetrics from './TravelListItemEngagementMetrics'
 import TravelListItemSelectableOverlay from './TravelListItemSelectableOverlay'
 import { createTravelListItemStyles } from './travelListItemStyles'
 import {
+  buildCoverWidths,
   isLikelyWatermarked,
   normalizeOwnerIds,
+  resolveCoverSlotGeometry,
   resolveDisplayTravelYear,
   resolveTravelAuthorDisplayName,
   resolveTravelAuthorName,
@@ -54,21 +57,14 @@ const ANDROID_LIST_IMAGE_PROPS =
       }
     : undefined
 
-// Ступени `variants` бэкенд-манифеста обложки. `maxWidth` в
-// `buildResponsiveImagePropsFromMedia` влияет только на fallback `src`, а
-// кандидаты srcSet берутся из `widths` как есть — обрезать лестницу под слот
-// приходится здесь.
-const COVER_WIDTH_LADDER = [160, 320, 480, 640, 720, 960] as const
-
-// Лестница обязана покрывать слот (последняя ступень >= maxWidth), но не уходить
-// выше первой покрывающей: всё, что дальше, браузер на DPR 2 выберет «пожирнее»,
-// хотя в бокс карточки это уже не нужно.
-function buildCoverWidths(maxWidth: number): number[] {
-  const widths = COVER_WIDTH_LADDER.filter((width) => width <= maxWidth)
-  const covering = COVER_WIDTH_LADDER.find((width) => width >= maxWidth)
-  if (covering != null && !widths.includes(covering)) widths.push(covering)
-  return widths.length ? widths : [...COVER_WIDTH_LADDER]
-}
+/**
+ * Явное качество обложки карточки (#1285).
+ *
+ * URL готовых `srcset*` манифеста идут w-only, поэтому прокси применял к ним свой
+ * дефолт q80. Замер прода 2026-08-06 на обложках главной: `?w=320` 29 590 B против
+ * `?w=320&q=70` 23 308 B (−21 %), `?w=640` 95 130 B против 73 350 B (−23 %).
+ */
+const COVER_QUALITY = 70
 
 const POINTER_EVENTS_BOX_NONE = { pointerEvents: 'box-none' } as any
 const ANCHOR_FILL_STYLE = {
@@ -114,6 +110,13 @@ type Props = {
   visualVariant?: 'default' | 'home-featured'
   webTouchAction?: string
   isDeleting?: boolean
+  /**
+   * Web cover loading policy. The `eager` default assumes a VIRTUALIZED list
+   * (FlashList mounts only the visible window), so a screen that lays cards out
+   * with a plain `map()` must pass `lazy` — otherwise the browser starts every
+   * cover at once, including rows several screens below the fold. See #1285.
+   */
+  mediaLoading?: 'lazy' | 'eager'
 }
 
 function TravelListItem({
@@ -136,6 +139,7 @@ function TravelListItem({
   visualVariant = 'default',
   webTouchAction,
   isDeleting = false,
+  mediaLoading = 'eager',
 }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createTravelListItemStyles(colors), [colors])
@@ -233,32 +237,69 @@ function TravelListItem({
     () => getMediaPlaceholderData(coverMedia),
     [coverMedia],
   )
+  const coverAspectRatio = useMemo(
+    () => resolveMediaAspectRatio(coverMedia),
+    [coverMedia],
+  )
+  const coverSlotHeight =
+    typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT
+
   const coverMediaResponsiveSource = useMemo(() => {
     if (!IS_WEB || !coverMedia) return null
-    const targetWidth =
+    // Оценка ширины карточки, когда сетка не сообщила её явно. Она обязана быть
+    // оценкой СВЕРХУ: занижение делает ландшафтную обложку мылом (см.
+    // `resolveCoverSlotGeometry`).
+    const slotWidth =
       typeof cardWidth === 'number'
         ? cardWidth
         : visualVariant === 'home-featured'
           ? 480
           : Math.min(effectiveWidth, isMobile ? 640 : 720)
 
-    const maxCoverWidth = Math.max(targetWidth, isFirst ? 720 : 640)
+    // #1285: слот кадрируется `contain`, поэтому ширину отрисовки задаёт не бокс,
+    // а высота бокса на пропорциях кадра. Ступень выбирает браузер по `sizes` ×
+    // собственный DPR; лестнице достаточно покрыть потолок DPR 2. Прежний пол
+    // (640, а для первой карточки 720) держал в наборе кандидатов, которые слоту
+    // не нужны ни на одном DPR.
+    const { renderedWidth, maxCoverWidth } = resolveCoverSlotGeometry({
+      slotWidth,
+      slotHeight: coverSlotHeight,
+      aspectRatio: coverAspectRatio,
+    })
 
     return buildResponsiveImagePropsFromMedia(coverMedia, {
-      maxWidth: maxCoverWidth,
+      // `maxWidth` задаёт только `src` — фолбэк для случая, когда `srcSet` не
+      // применился. Считать его от потолка DPR 2 значит класть туда 960w на слот
+      // 408 px: кандидат в лестнице есть, но как запасной вариант он вчетверо
+      // тяжелее нужного. Берём ступень слота при DPR 1 — она всегда входит в
+      // `widths`, поэтому фолбэк не может увести на неанонсированный файл (#1213).
+      maxWidth: renderedWidth ?? maxCoverWidth,
       // Хвост 720/960 оставался в лестнице независимо от `maxWidth`, поэтому на
       // DPR 2 браузер тянул в бокс ~390 px кандидата 960w — 2.95 МБ обложек на
       // страницу выдачи. Столько байт на низкоприоритетных картинках душат
       // fetch следующей страницы, и «Загружаем ещё» висит секундами.
       widths: buildCoverWidths(maxCoverWidth),
+      // Пропорции неизвестны — считать ширину отрисовки нечем, поэтому остаётся
+      // ровно прежняя подсказка.
       sizes:
-        typeof cardWidth === 'number'
-          ? `${Math.round(cardWidth)}px`
-          : isMobile
-            ? '100vw'
-            : '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw',
+        renderedWidth != null
+          ? `${renderedWidth}px`
+          : typeof cardWidth === 'number'
+            ? `${Math.round(cardWidth)}px`
+            : isMobile
+              ? '100vw'
+              : '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw',
+      quality: COVER_QUALITY,
     })
-  }, [cardWidth, coverMedia, effectiveWidth, isFirst, isMobile, visualVariant])
+  }, [
+    cardWidth,
+    coverAspectRatio,
+    coverMedia,
+    coverSlotHeight,
+    effectiveWidth,
+    isMobile,
+    visualVariant,
+  ])
 
   const lastSelectableTouchAtRef = useRef(0)
 
@@ -649,10 +690,12 @@ function TravelListItem({
         revealOnLoadOnly: IS_WEB,
         recyclingKey: travelKey,
         priority: IS_WEB ? (isFirst ? 'high' : 'low') : 'normal',
-        // FlashList now mounts only the visible rows plus a short draw-distance.
-        // Eager is therefore bounded to that small window and starts the request
-        // early enough to finish decoding before the user reaches the row.
-        loading: IS_WEB ? 'eager' : 'lazy',
+        // FlashList mounts only the visible rows plus a short draw-distance, so
+        // there `eager` stays bounded to that window and starts the request early
+        // enough to finish decoding before the user reaches the row. A plain
+        // non-virtualized `map()` layout has no such ceiling — that screen must
+        // pass `mediaLoading="lazy"` instead. See #1285.
+        loading: IS_WEB ? mediaLoading : 'lazy',
         prefetch: false,
         transition: Platform.OS === 'android' ? 0 : undefined,
         imageProps: ANDROID_LIST_IMAGE_PROPS,
