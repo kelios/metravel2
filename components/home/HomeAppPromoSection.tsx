@@ -12,7 +12,11 @@ import { translate as i18nT } from '@/i18n'
 
 
 const IS_WEB = Platform.OS === 'web'
-const APP_ICON = require('@/assets/images/icon.png')
+// Не `assets/images/icon.png`: это мастер иконки для сторов — 1024×1024 PNG,
+// 303 КБ. Здесь она рисуется в 56–72 px, то есть 99 % байтов уходило впустую
+// (замер прода 2026-08-06: избыточность площади ×109 на mobile, ×202 на desktop).
+// `app-icon.webp` — та же картинка в 320×320 (покрывает 72 px на DPR 4), 3,6 КБ.
+const APP_ICON = require('@/assets/images/app-icon.webp')
 
 const HIGHLIGHTS: { icon: 'map-pin' | 'flag' | 'download'; text: string }[] = [
   { icon: 'map-pin', get text() { return i18nT('homeStatic:components.home.HomeAppPromoSection.karta_mest_i_marshrutov_2231a0a5') } },

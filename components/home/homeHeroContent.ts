@@ -65,7 +65,7 @@ export const HOME_HERO_BOOK_LAYOUT_MIN_WIDTH = 1280
 
 export const BOOK_IMAGES: readonly BookImage[] = [
   {
-    source: require('../../assets/images/cover_sorapiso.jpg'),
+    source: require('../../assets/images/cover_sorapiso.webp'),
     dominantColor: '#687e72',
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_sorapis_dolomity_5feebc2d') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_sorapis_2fd0cc8f') },
@@ -73,7 +73,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     href: 'https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom?returnTo=%2Fsearch',
   },
   {
-    source: require('../../assets/images/cover_trecime.jpg'),
+    source: require('../../assets/images/cover_trecime.webp'),
     dominantColor: '#97999c',
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.tre_cime_di_lavaredo_dolomity_0341abf3') },
     title: 'Tre Cime di Lavaredo',
@@ -81,7 +81,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy',
   },
   {
-    source: require('../../assets/images/cover_bled.jpg'),
+    source: require('../../assets/images/cover_bled.webp'),
     dominantColor: '#485c66',
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_sloveniya_a6de1598') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_4b95af32') },

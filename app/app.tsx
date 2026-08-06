@@ -15,7 +15,9 @@ import { openExternalUrl } from '@/utils/externalLinks'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
 
-const APP_ICON = require('@/assets/images/icon.png')
+// 320×320 WebP (3,6 КБ) вместо мастера иконки для сторов 1024×1024 PNG (303 КБ):
+// здесь она рисуется в 96 px. Мастер остаётся только для сборки приложения (app.json).
+const APP_ICON = require('@/assets/images/app-icon.webp')
 
 type FeatherName = ComponentProps<typeof Feather>['name']
 

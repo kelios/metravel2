@@ -2,6 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Img Swap QA 8110",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://127.0.0.1:8109 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8110"
+      ],
+      "port": 8110,
+      "autoPort": false
+    },
+    {
       "name": "Quests QA 8101",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

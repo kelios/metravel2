@@ -221,7 +221,9 @@ export async function recordQuestAnswerAttempt(input: RecordQuestAttemptInput): 
   if (events.length > QUEUE_MAX_EVENTS) events.splice(0, events.length - QUEUE_MAX_EVENTS)
   await persistQueue()
 
-  if (events.length >= FLUSH_BATCH_SIZE) void flushQuestAnswerAttempts()
+  // Батч собрался — отдаём. Но если ретрай уже запланирован, значит сервер
+  // недоступен: не сбиваем бэкофф новым запросом на каждый ответ игрока.
+  if (events.length >= FLUSH_BATCH_SIZE && !retryTimer) void flushQuestAnswerAttempts()
 }
 
 const drainQueue = async (): Promise<void> => {

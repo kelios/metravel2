@@ -34,7 +34,9 @@ const FREE_TEXT_ANSWER_TYPES = new Set(['any', 'any_text'])
 // Явные заглушки вместо ответа. Список короткий и намеренно консервативный:
 // всё, что не мусор и не синоним, попадает в «не синоним» — то есть в самую
 // полезную для редактора группу.
-const GARBAGE_INPUTS = new Set(['хз', 'не знаю', 'незнаю', 'ответ', 'фиг знает', 'idk', 'нет', '?', '??', '???'])
+// «нет»/«да» сюда НЕ входят: на шаге-вопросе это осмысленный (пусть и неверный)
+// ответ, и редактору важно увидеть его в группе «фактически другой ответ».
+const GARBAGE_INPUTS = new Set(['хз', 'не знаю', 'незнаю', 'ответ', 'фиг знает', 'idk', '?', '??', '???'])
 
 const CATEGORY = {
   SYNONYM: 'synonym',
@@ -346,9 +348,18 @@ async function main() {
   }
 
   const token = readStaffToken(rootDir)
-  const questRefs = args.all
-    ? (await apiGet(args.baseUrl, '/api/quests/?page_size=300', token)).results?.map((q) => q.id) ?? []
-    : [args.quest]
+  // Список квестов приходит и пагинированным конвертом, и голым массивом —
+  // берём обе формы, иначе `--all` молча обходит ноль квестов.
+  const listAll = async () => {
+    const payload = await apiGet(args.baseUrl, '/api/quests/?page_size=300', token)
+    const rows = Array.isArray(payload) ? payload : (payload?.results ?? [])
+    return rows.map((quest) => quest.id).filter(Boolean)
+  }
+  const questRefs = args.all ? await listAll() : [args.quest]
+  if (!questRefs.length) {
+    console.error('quest:insights: список квестов пуст — нечего обходить')
+    process.exit(1)
+  }
 
   const reports = []
   for (const questRef of questRefs) {

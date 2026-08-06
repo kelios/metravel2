@@ -1,7 +1,7 @@
 /* Global CSS for web - box-sizing fix */
 
 :root {
-  --image-homeHeroBook: url('/assets/images/open-book-bg.png');
+  --image-homeHeroBook: url('/assets/images/open-book-bg.webp');
   --color-transparent: rgba(93, 140, 124, 0);
   --color-travelPoint: #ff922b;
   /* DARK-02: Gradient CSS-переменные для light mode */
@@ -98,7 +98,7 @@
 }
 
 html[data-theme="dark"] {
-  --image-homeHeroBook: url('/assets/images/open-book-bg-dark.jpg');
+  --image-homeHeroBook: url('/assets/images/open-book-bg-dark.webp');
   /* DARK-02: Gradient CSS-переменные для dark mode — тёмные, приглушённые */
   --gradient-hero: linear-gradient(135deg, #1e1e1e 0%, #202820 50%, #1a1a1a 100%);
   --gradient-card-featured: linear-gradient(180deg, #2a2a2a 0%, #222222 100%);
@@ -197,7 +197,7 @@ html[data-theme="dark"] {
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) {
-    --image-homeHeroBook: url('/assets/images/open-book-bg-dark.jpg');
+    --image-homeHeroBook: url('/assets/images/open-book-bg-dark.webp');
     --color-transparent: rgba(143, 181, 165, 0);
     --color-background: #1a1a1a;
     --color-backgroundSecondary: #202020;
