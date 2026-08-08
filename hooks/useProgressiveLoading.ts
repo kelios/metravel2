@@ -78,7 +78,16 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
       }, Math.max(0, fallbackDelay));
     }
 
-    if (typeof window === 'undefined' || typeof window.IntersectionObserver !== 'function' || !element) {
+    if (typeof window === 'undefined' || typeof window.IntersectionObserver !== 'function') {
+      // `disableFallbackOnWeb` means "visibility-only" in capable browsers,
+      // not "strand the section forever" in an older/embedded browser.
+      if (config.disableFallbackOnWeb) setShouldLoad(true);
+      return () => {
+        if (fallbackTimer) clearTimeout(fallbackTimer);
+      };
+    }
+
+    if (!element) {
       return () => {
         if (fallbackTimer) clearTimeout(fallbackTimer);
       };

@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Platform } from 'react-native';
 import Home from '@/components/home/Home';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMyTravels } from '@/api/travelUserQueries';
@@ -206,6 +207,29 @@ describe('Home Component', () => {
       
       // Should have scrollEventThrottle prop
       expect(list.props.scrollEventThrottle).toBeDefined();
+    });
+
+    it('keeps below-fold web sections unmounted before viewport proximity', () => {
+      const originalOS = Platform.OS;
+      const originalObserver = (window as any).IntersectionObserver;
+
+      class MockIntersectionObserver {
+        observe = jest.fn();
+        disconnect = jest.fn();
+      }
+
+      Platform.OS = 'web';
+      (window as any).IntersectionObserver = MockIntersectionObserver;
+
+      try {
+        const { queryByTestId, getByTestId } = renderHome();
+
+        expect(getByTestId('home-hero')).toBeTruthy();
+        expect(queryByTestId('home-faq')).toBeNull();
+      } finally {
+        Platform.OS = originalOS;
+        (window as any).IntersectionObserver = originalObserver;
+      }
     });
   });
 });

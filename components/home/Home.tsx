@@ -13,6 +13,7 @@ import { queueAnalyticsEvent } from '@/utils/analytics'
 import { hapticImpact } from '@/utils/haptics'
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
 import { queryKeys } from '@/api/queryKeys'
+import { useProgressiveLoad, type ProgressiveLoadConfig } from '@/hooks/useProgressiveLoading'
 import { useHomeViewport } from './useHomeViewport'
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import {
@@ -58,19 +59,30 @@ type DeferredSectionProps = {
   marginTop: number
   minHeight?: number
   container?: { maxWidth?: PageSectionProps['maxWidth']; padding?: boolean }
+  priority?: ProgressiveLoadConfig['priority']
+  rootMargin?: string
 }
 
-// Lazy chunks start loading as soon as the home screen mounts. Suspense keeps
-// the section geometry stable while a chunk resolves, without making content
-// availability depend on scrolling, IntersectionObserver or a fallback timer.
+// The first content feed remains eager. Everything below it is mounted when it
+// approaches the viewport, so API responses for several card grids do not land
+// in one long main-thread task during LCP. Native keeps the existing eager
+// behavior because useProgressiveLoad resolves every enabled section there.
 function DeferredSection({
   children,
   fallback,
   marginTop,
   minHeight,
   container,
+  priority = 'immediate',
+  rootMargin = '600px 0px',
 }: DeferredSectionProps) {
-  const content = <Suspense fallback={fallback}>{children}</Suspense>
+  const { shouldLoad, setElementRef } = useProgressiveLoad({
+    priority,
+    rootMargin,
+    threshold: 0,
+    disableFallbackOnWeb: priority !== 'immediate',
+  })
+  const content = shouldLoad ? <Suspense fallback={fallback}>{children}</Suspense> : fallback
   const wrapped = container ? (
     <ResponsiveContainer maxWidth={container.maxWidth ?? 'xl'} padding={container.padding ?? true}>
       {content}
@@ -81,7 +93,8 @@ function DeferredSection({
 
   return (
     <View
-      style={minHeight ? { marginTop, minHeight } : { marginTop }}
+      ref={setElementRef}
+      style={Platform.OS === 'web' && minHeight ? { marginTop, minHeight } : { marginTop }}
     >
       {wrapped}
     </View>
@@ -266,44 +279,58 @@ function Home() {
         </View>
       )}
 
-      <DeferredSection marginTop={gap.hero} container={{}} fallback={<SectionSkeleton />}>
+      <DeferredSection marginTop={gap.hero} minHeight={isMobile ? 520 : 560} container={{}} fallback={<SectionSkeleton />}>
         <HomeWeekendRoutesSection enabled={isFocused} />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
+      <DeferredSection
+        marginTop={gap.weekends}
+        minHeight={isMobile ? 500 : 540}
+        container={{}}
+        fallback={<SectionSkeleton />}
+        priority="high"
+      >
         <HomePopularRoutesSection enabled={isFocused} />
       </DeferredSection>
 
       {IS_WEB && (
-        <DeferredSection marginTop={gap.sections} fallback={null}>
+        <DeferredSection marginTop={gap.sections} minHeight={320} fallback={null} priority="low">
           <HomeAppPromoSection />
         </DeferredSection>
       )}
 
-      <DeferredSection marginTop={gap.sections} fallback={null}>
+      <DeferredSection marginTop={gap.sections} minHeight={360} fallback={null} priority="low">
         <HomeQuestsPromoSection enabled={isFocused} />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
+      <DeferredSection
+        marginTop={gap.weekends}
+        minHeight={isMobile ? 500 : 540}
+        container={{}}
+        fallback={<SectionSkeleton />}
+        priority="low"
+      >
         <HomeNewRoutesSection enabled={isFocused} />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.sections} fallback={<SectionSkeleton />}>
+      <DeferredSection marginTop={gap.sections} minHeight={320} fallback={<SectionSkeleton />} priority="low">
         <HomeInspirationSections />
       </DeferredSection>
 
       <DeferredSection
         marginTop={gap.faq}
+        minHeight={360}
         fallback={<FaqFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />}
+        priority="low"
       >
         <HomeFAQSection />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.sections} fallback={null}>
+      <DeferredSection marginTop={gap.sections} minHeight={240} fallback={null} priority="low">
         <EmailSubscriptionForm source="home" />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.finalCta} fallback={<SectionSkeleton />}>
+      <DeferredSection marginTop={gap.finalCta} minHeight={300} fallback={<SectionSkeleton />} priority="low">
         <HomeBottomCtaSection travelsCount={travelsCount} />
       </DeferredSection>
     </ScrollView>

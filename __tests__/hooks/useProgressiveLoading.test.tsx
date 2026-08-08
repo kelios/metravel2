@@ -111,4 +111,34 @@ describe('useProgressiveLoad', () => {
 
     expect(result.current.shouldLoad).toBe(false);
   });
+
+  it('loads visibility-only content when IntersectionObserver is unavailable', () => {
+    delete (window as any).IntersectionObserver;
+    delete (global as any).IntersectionObserver;
+
+    const { result } = renderHook(() =>
+      useProgressiveLoad({
+        priority: 'low',
+        enabled: true,
+        disableFallbackOnWeb: true,
+      }),
+    );
+
+    expect(result.current.shouldLoad).toBe(true);
+  });
+
+  it('keeps deferred sections eager on Android', () => {
+    Platform.OS = 'android';
+
+    const { result } = renderHook(() =>
+      useProgressiveLoad({
+        priority: 'low',
+        enabled: true,
+        disableFallbackOnWeb: true,
+      }),
+    );
+
+    expect(result.current.shouldLoad).toBe(true);
+    expect(observers).toHaveLength(0);
+  });
 });
