@@ -11,7 +11,7 @@ import {
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
-import StableContent from '@/components/travel/StableContent';
+import DeferredStableContent from '@/components/travel/DeferredStableContent';
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { translate as i18nT } from '@/i18n'
 
@@ -210,6 +210,19 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         },
     }), [colors]);
 
+    const contentFallback = (
+      <View
+        testID="travel-description-fallback"
+        style={
+          Platform.OS === "web"
+            ? [styles.webLazyContentFallback, { minHeight: estimatedHeight }]
+            : undefined
+        }
+      >
+        <Text style={styles.placeholder}>{i18nT('travel:components.travel.TravelDescription.zagruzhaem_opisanie_4a65d6c3')}</Text>
+      </View>
+    );
+
     const inner = (
       <View
         style={[
@@ -223,18 +236,16 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           {isEmptyHtml ? (
             <Text style={styles.placeholder}>{i18nT('travel:components.travel.TravelDescription.avtor_esche_ne_dobavil_opisanie_ce4c5ca8')}</Text>
           ) : canParseHtml ? (
-            <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} serverSanitized={serverSanitized} articleBodyMedia={articleBodyMedia} />
+            <DeferredStableContent
+              html={htmlContent}
+              contentWidth={contentWidth}
+              fullWidth={noBox}
+              serverSanitized={serverSanitized}
+              articleBodyMedia={articleBodyMedia}
+              fallback={contentFallback}
+            />
           ) : (
-            <View
-              testID="travel-description-fallback"
-              style={
-                Platform.OS === "web"
-                  ? [styles.webLazyContentFallback, { minHeight: estimatedHeight }]
-                  : undefined
-              }
-            >
-              <Text style={styles.placeholder}>{i18nT('travel:components.travel.TravelDescription.zagruzhaem_opisanie_4a65d6c3')}</Text>
-            </View>
+            contentFallback
           )}
       </View>
     );

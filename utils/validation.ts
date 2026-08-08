@@ -9,12 +9,12 @@ import type { AnyObject, ObjectSchema } from 'yup'
 import { getActiveLocale, translate as i18nT } from '@/i18n'
 
 
-type YupModule = typeof import('yup')
+type YupModule = typeof import('@/utils/yupVendor')
 
 let yupPromise: Promise<YupModule> | null = null
 const getYup = (): Promise<YupModule> => {
     if (!yupPromise) {
-        yupPromise = Promise.resolve(import('yup'))
+        yupPromise = Promise.resolve(import('@/utils/yupVendor'))
     }
     return yupPromise
 }

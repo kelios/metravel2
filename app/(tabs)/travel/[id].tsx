@@ -1,5 +1,5 @@
-import UpsertTravelRoute from '@/components/travel/upsert/UpsertTravelRoute';
+import LazyUpsertTravelRoute from '@/components/travel/upsert/LazyUpsertTravelRoute';
 
 export default function EditTravelScreen() {
-  return <UpsertTravelRoute />;
+  return <LazyUpsertTravelRoute />;
 }

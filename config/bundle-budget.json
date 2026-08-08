@@ -1,5 +1,5 @@
 {
-  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager/feature-чанки и release total без language-on-demand каталогов. BE/UK/PL/EN загружаются только после смены языка и контролируются отдельными chunk budgets; они не маскируют рост основного графа. Raw baseline уточнён по production export 2026-07-29 после накопленных offline/navigation/map изменений; analyze guard подтвердил eager 1009.1 KB при лимите 1200 KB, gzip budgets остались зелёными. Допуск остаётся 5%. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check после build:web:prod.",
+  "description": "Web bundle size budget (KB). Regression guard: critical path + eager/feature chunks and release total without language-on-demand catalogs. #1286 uses route-scoped shared chunks instead of a global eager __common; the hard 800 KiB Brotli ceiling is measured from the complete script set of the worst generated HTML route with no tolerance. BE/UK/PL/EN remain deferred and separately budgeted. Other budgets keep at most 5% tolerance. Regenerate only for diagnosis, then re-curate without raising limits. Runs in release:check after build:web:prod.",
   "tolerancePct": 5,
   "deferredChunks": [
     "locale-be",
@@ -7,26 +7,37 @@
     "locale-pl",
     "locale-en"
   ],
+  "forbiddenChunks": [
+    "__common"
+  ],
+  "eager": {
+    "chunks": [
+      "entry",
+      "__expo-metro-runtime"
+    ],
+    "htmlRoutes": true,
+    "maxBrotliKB": 800,
+    "tolerancePct": 0
+  },
   "total": {
-    "maxRawKB": 12529.5,
-    "maxGzipKB": 3040.2
+    "maxRawKB": 11430.4,
+    "maxGzipKB": 2917.9
   },
   "chunks": {
     "entry": {
-      "maxRawKB": 1027.2,
-      "maxGzipKB": 276.6
-    },
-    "__common": {
-      "maxRawKB": 4933,
-      "maxGzipKB": 1198.6
+      "maxRawKB": 1026,
+      "maxGzipKB": 276.4,
+      "maxBrotliKB": 218.6
     },
     "index": {
-      "maxRawKB": 178.2,
-      "maxGzipKB": 44.9
+      "maxRawKB": 161.7,
+      "maxGzipKB": 41,
+      "maxBrotliKB": 35.4
     },
     "[param]": {
-      "maxRawKB": 181.1,
-      "maxGzipKB": 49.2
+      "maxRawKB": 141.7,
+      "maxGzipKB": 38.4,
+      "maxBrotliKB": 31.8
     },
     "leafletVendor": {
       "maxRawKB": 203.8,

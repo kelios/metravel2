@@ -5,7 +5,6 @@ import React, { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Link } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
-import * as yup from 'yup';
 
 import Button from '@/components/ui/Button';
 import MiniCalendar from '@/components/calendar/MiniCalendar';
@@ -63,7 +62,13 @@ interface FormValues {
   createTelegramGroup: boolean;
 }
 
-const createSchema = () => yup.object({
+type YupModule = typeof import('@/utils/yupVendor');
+let yupPromise: Promise<YupModule> | null = null;
+
+const createSchema = async () => {
+  yupPromise ??= Promise.resolve(import('@/utils/yupVendor'));
+  const yup = await yupPromise;
+  return yup.object({
   title: yup
     .string()
     .trim()
@@ -114,7 +119,18 @@ const createSchema = () => yup.object({
       const n = Number(value);
       return Number.isFinite(n) && n >= -180 && n <= 180;
     }),
-});
+  });
+};
+
+const isYupValidationError = (
+  error: unknown,
+): error is { name: 'ValidationError'; inner: Array<{ path?: string; message: string }> } =>
+  Boolean(
+    error &&
+      typeof error === 'object' &&
+      (error as { name?: string }).name === 'ValidationError' &&
+      Array.isArray((error as { inner?: unknown }).inner),
+  );
 
 const FIELD_ERROR_ORDER: (keyof FormValues)[] = [
   'title',
@@ -213,7 +229,8 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
     }
     void consent.grant();
     try {
-      const valid = await createSchema().validate(values, { abortEarly: false });
+      const schema = await createSchema();
+      const valid = await schema.validate(values, { abortEarly: false });
       const input: CreateTripInput = {
         title: valid.title.trim(),
         description: (valid.description ?? '').trim(),
@@ -231,7 +248,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
           setSubmitError(i18nT('trips:components.trips.planning.TripCreateForm.ne_udalos_sozdat_poezdku_poprobuyte_esche_ra_f2723719')),
       });
     } catch (err) {
-      if (err instanceof yup.ValidationError) {
+      if (isYupValidationError(err)) {
         const next: Partial<Record<keyof FormValues, string>> = {};
         for (const inner of err.inner) {
           if (inner.path && !next[inner.path as keyof FormValues]) {
@@ -239,6 +256,8 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
           }
         }
         setErrors(next);
+      } else {
+        setSubmitError(i18nT('trips:components.trips.planning.TripCreateForm.ne_udalos_sozdat_poezdku_poprobuyte_esche_ra_f2723719'));
       }
     }
   };

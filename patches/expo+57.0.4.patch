@@ -1,0 +1,67 @@
+diff --git a/node_modules/expo/src/async-require/asyncRequireModule.ts b/node_modules/expo/src/async-require/asyncRequireModule.ts
+index 7c183bd..7cd155b 100644
+--- a/node_modules/expo/src/async-require/asyncRequireModule.ts
++++ b/node_modules/expo/src/async-require/asyncRequireModule.ts
+@@ -20,6 +20,22 @@ type DependencyMapPaths = { [moduleID: number | string]: unknown } | null;
+ declare const crossOriginIsolated: boolean | undefined;
+ declare let __METRO_GLOBAL_PREFIX__: string;
+
++function getBundlePath(moduleID: number, paths: DependencyMapPaths): unknown {
++  return paths != null ? paths[String(moduleID)] : undefined;
++}
++
++function maybeLoadRegisteredDependencies(
++  bundlePath: unknown,
++  loadBundle: (bundlePath: unknown) => Promise<void>
++): void | Promise<void> {
++  if (bundlePath == null) return undefined;
++  const requiredIds = (globalThis as any).__METRAVEL_CHUNK_DEPS__?.[bundlePath as any];
++  const sharedChunks = (globalThis as any).__METRAVEL_SHARED_CHUNKS__;
++  return Array.isArray(requiredIds)
++    ? Promise.all(requiredIds.map((id) => loadBundle(sharedChunks[id]))).then(() => undefined)
++    : undefined;
++}
++
+ // Shim script that wraps around a given worker entrypoint and:
+ // - Remaps `fetch` to the base URL given
+ // - Remaps `importScripts` to the base URL given
+@@ -49,13 +65,15 @@ function maybeLoadBundle(moduleID: number, paths: DependencyMapPaths): void | Pr
+   ];
+
+   if (loadBundle != null) {
+-    const stringModuleID = String(moduleID);
+-    if (paths != null) {
+-      const bundlePath = paths[stringModuleID];
+-      if (bundlePath != null) {
+-        // NOTE: Errors will be swallowed by asyncRequire.prefetch
+-        return loadBundle(bundlePath);
+-      }
++    const bundlePath = getBundlePath(moduleID, paths);
++    if (bundlePath != null) {
++      // NOTE: Errors will be swallowed by asyncRequire.prefetch
++      // METRAVEL_PER_ROUTE_COMMON_CHUNK: the route chunk registers its own
++      // deduplicated dependencies when evaluated. Load those definitions
++      // before importAll() executes the requested module factory.
++      return loadBundle(bundlePath).then(() =>
++        maybeLoadRegisteredDependencies(bundlePath, loadBundle)
++      );
+     }
+   }
+
+@@ -74,6 +92,16 @@ function asyncRequireImpl<T>(
+   // On web, split chunks may already be preloaded via `<script>` tags, so importing
+   // synchronously first prevents double-loading the script
+   if (process.env.EXPO_OS === 'web') {
++    const loadBundle: (bundlePath: unknown) => Promise<void> = (globalThis as any)[
++      `${__METRO_GLOBAL_PREFIX__ ?? ''}__loadBundleAsync`
++    ];
++    const registeredDependencies =
++      loadBundle != null
++        ? maybeLoadRegisteredDependencies(getBundlePath(moduleID, paths), loadBundle)
++        : undefined;
++    if (registeredDependencies != null) {
++      return registeredDependencies.then(importAll);
++    }
+     try {
+       return importAll();
+     } catch (error) {

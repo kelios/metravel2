@@ -19,6 +19,13 @@ import { makeTempDir, runNodeCli } from './cli-test-utils'
 
 const ROOT = path.resolve(__dirname, '..', '..')
 const STUB_REL = 'metro-stubs/react-native-gesture-handler.js'
+const ROUTE_CONTEXT_STUB_REL = 'metro-stubs/expo-router-context.web.js'
+const EXPO_CHUNK_PATCH_REL = 'patches/@expo+metro-config+57.0.3.patch'
+const EXPO_CHUNK_SERIALIZER_REL =
+  'node_modules/@expo/metro-config/build/serializer/serializeChunks.js'
+const EXPO_ASYNC_RUNTIME_PATCH_REL = 'patches/expo+57.0.4.patch'
+const EXPO_ASYNC_RUNTIME_REL = 'node_modules/expo/src/async-require/asyncRequireModule.ts'
+const EXPO_CHUNK_PATCH_MARKER = 'METRAVEL_PER_ROUTE_COMMON_CHUNK'
 
 describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
   let resolveRequest: (ctx: any, name: string, platform: string) => any
@@ -30,6 +37,7 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
   })
 
   const ctx = {
+    customResolverOptions: { environment: 'client' },
     resolveRequest: (_c: any, name: string) => ({ filePath: `ORIG:${name}`, type: 'sourceFile' }),
   }
 
@@ -58,6 +66,56 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
       const r = resolveRequest(ctx, 'react-native-gesture-handler', platform)
       expect(r.filePath).toBe('ORIG:react-native-gesture-handler')
     }
+  })
+
+  it('uses the lazy platform-filtered route context on web only', () => {
+    const web = resolveRequest(ctx, 'expo-router/_ctx', 'web')
+    expect(web.filePath.replace(/\\/g, '/').endsWith(ROUTE_CONTEXT_STUB_REL)).toBe(true)
+
+    for (const platform of ['ios', 'android']) {
+      const native = resolveRequest(ctx, 'expo-router/_ctx', platform)
+      expect(native.filePath).toBe('ORIG:expo-router/_ctx')
+    }
+
+    const source = fs.readFileSync(path.join(ROOT, ROUTE_CONTEXT_STUB_REL), 'utf8')
+    expect(source).toContain('android|ios|native')
+    expect(source).toMatch(/['"]lazy['"]/)
+  })
+
+  it('keeps the stock route context for every web server renderer', () => {
+    for (const environment of ['node', 'react-server']) {
+      const server = resolveRequest(
+        { ...ctx, customResolverOptions: { environment } },
+        'expo-router/_ctx',
+        'web',
+      )
+      expect(server.filePath).toBe('ORIG:expo-router/_ctx')
+    }
+  })
+
+  it('uses the filtered route context when the client resolver omits its environment', () => {
+    const { customResolverOptions: _environment, ...clientWithoutEnvironment } = ctx
+    const web = resolveRequest(clientWithoutEnvironment, 'expo-router/_ctx', 'web')
+    expect(web.filePath.replace(/\\/g, '/').endsWith(ROUTE_CONTEXT_STUB_REL)).toBe(true)
+  })
+
+  it('keeps the per-route Expo chunk patch applied after install', () => {
+    const patch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
+    const installedSerializer = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_SERIALIZER_REL), 'utf8')
+    const runtimePatch = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_PATCH_REL), 'utf8')
+    const installedRuntime = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_REL), 'utf8')
+
+    expect(patch).toContain(EXPO_CHUNK_PATCH_MARKER)
+    expect(installedSerializer).toContain(EXPO_CHUNK_PATCH_MARKER)
+    expect(installedSerializer).toContain('ownersByDependency')
+    expect(installedSerializer).toContain('matchingEntryPaths')
+    expect(runtimePatch).toContain(EXPO_CHUNK_PATCH_MARKER)
+    expect(installedRuntime).toContain(EXPO_CHUNK_PATCH_MARKER)
+    expect(installedSerializer).toContain('__METRAVEL_CHUNK_DEPS__')
+    expect(installedSerializer).toContain('__METRAVEL_SHARED_CHUNKS__')
+    expect(installedRuntime).toContain('__METRAVEL_CHUNK_DEPS__')
+    expect(installedRuntime).toContain('__METRAVEL_SHARED_CHUNKS__')
+    expect(installedRuntime).toContain('Promise.all(requiredIds.map')
   })
 })
 
@@ -174,6 +232,81 @@ describe('PERF-017 eager-web analyze guard', () => {
       expect(JSON.parse(result.stdout)).toMatchObject({
         ok: true,
         eagerModules: 2,
+      })
+    } finally {
+      fs.rmSync(dumpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('prefers the newest client dump after an optimization removes modules', () => {
+    const dumpDir = makeTempDir('metravel-eager-latest-client-')
+    try {
+      const clientEntry = path.join(ROOT, 'entry.js')
+      const staleNativeRoute = path.join(ROOT, 'app/(tabs)/profile.native.tsx')
+      const stalePath = path.join(dumpDir, 'metro-analyze-333-2.json')
+      const currentPath = path.join(dumpDir, 'metro-analyze-444-1.json')
+      fs.writeFileSync(
+        stalePath,
+        JSON.stringify({
+          entry: clientEntry,
+          count: 2,
+          mods: [
+            [clientEntry, 100, [], [staleNativeRoute]],
+            [staleNativeRoute, 50, []],
+          ],
+        }),
+      )
+      fs.writeFileSync(
+        currentPath,
+        JSON.stringify({ entry: clientEntry, count: 1, mods: [[clientEntry, 100, []]] }),
+      )
+      const now = new Date()
+      const staleTime = new Date(now.getTime() - 60_000)
+      fs.utimesSync(stalePath, staleTime, staleTime)
+      fs.utimesSync(currentPath, now, now)
+
+      const result = runNodeCli(
+        [path.join(ROOT, 'scripts/guard-eager-web-bundle.js'), '--from-analyze', '--fail', '--json'],
+        { METRO_DUMP_DIR: dumpDir },
+      )
+
+      expect(result.status).toBe(0)
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: true,
+        eagerModules: 1,
+        platformIncompatibleRouteModules: 0,
+      })
+    } finally {
+      fs.rmSync(dumpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when a native-only app route re-enters the web client graph', () => {
+    const dumpDir = makeTempDir('metravel-eager-native-route-')
+    try {
+      const clientEntry = path.join(ROOT, 'entry.js')
+      const nativeRoute = path.join(ROOT, 'app/(tabs)/profile.native.tsx')
+      fs.writeFileSync(
+        path.join(dumpDir, 'metro-analyze-222-2.json'),
+        JSON.stringify({
+          entry: clientEntry,
+          count: 2,
+          mods: [
+            [clientEntry, 100, [], [nativeRoute]],
+            [nativeRoute, 50, []],
+          ],
+        }),
+      )
+
+      const result = runNodeCli(
+        [path.join(ROOT, 'scripts/guard-eager-web-bundle.js'), '--from-analyze', '--fail', '--json'],
+        { METRO_DUMP_DIR: dumpDir },
+      )
+
+      expect(result.status).toBe(1)
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: false,
+        platformIncompatibleRouteModules: 1,
       })
     } finally {
       fs.rmSync(dumpDir, { recursive: true, force: true })

@@ -1,13 +1,14 @@
 // app/metravel/index.tsx
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useIsFocused } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { translate as i18nT } from '@/i18n'
-import ListTravel from '@/components/listTravel/ListTravelBase';
+import ListTravel from '@/components/listTravel/ListTravelRoute';
 
 
 export default function MeTravelScreen() {
@@ -15,6 +16,7 @@ export default function MeTravelScreen() {
     // стабильный canonical и стабильный ключ для head
     const canonical = buildCanonicalUrl('/metravel');
     const colors = useThemedColors();
+    const hydrationReady = useHydrationReady();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     return (
@@ -31,7 +33,11 @@ export default function MeTravelScreen() {
             />
             )}
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-                <ListTravel enabled={isFocused} />
+                {hydrationReady ? (
+                    <Suspense fallback={null}>
+                        <ListTravel enabled={isFocused} />
+                    </Suspense>
+                ) : null}
             </SafeAreaView>
         </>
     );

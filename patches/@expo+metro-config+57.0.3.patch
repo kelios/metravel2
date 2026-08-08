@@ -1,0 +1,281 @@
+diff --git a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
+index 1e5c598..912d879 100644
+--- a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
++++ b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
+@@ -58,14 +58,10 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
+     const entryChunk = findEntryChunk(chunks, entryFile);
+     if (entryChunk) {
+         removeEntryDepsFromAsyncChunks(entryChunk, chunks);
+-        const commonChunk = extractCommonChunk(chunks, graph, options);
+-        if (commonChunk) {
+-            entryChunk.requiredChunks.add(commonChunk);
+-            chunks.add(commonChunk);
+-        }
+-        deduplicateAgainstKnownChunks(chunks, entryChunk, commonChunk);
++        const sharedChunks = extractSharedChunks(chunks, graph, options);
++        deduplicateAgainstKnownChunks(chunks, entryChunk);
+         removeEmptyChunks(chunks);
+-        if (commonChunk) {
++        if (sharedChunks.length) {
+             createRuntimeChunk(entryChunk, chunks, graph, options);
+         }
+     }
+@@ -111,6 +107,12 @@ class Chunk {
+     // Chunks that are required to be loaded synchronously before this chunk.
+     // These are included in the HTML as <script> tags.
+     requiredChunks = new Set();
++    // Extra entry paths used only to associate dependency chunks with an HTML route.
++    matchingEntryPaths = new Set();
++    // Shared chunks use compact numeric references in the runtime dependency manifest.
++    sharedIndex = null;
++    // Filename-only edges participate in cache hashes without becoming script requires.
++    filenameDependencies = new Set();
+     constructor(name, entries, graph, options, isAsync = false, isVendor = false, isEntry = false) {
+         this.name = name;
+         this.entries = entries;
+@@ -184,6 +186,14 @@ class Chunk {
+         if (this.options.includeAsyncPaths) {
+             return targets;
+         }
++        for (const requiredChunk of this.requiredChunks) {
++            if (requiredChunk.isAsync)
++                targets.add(requiredChunk);
++        }
++        for (const filenameDependency of this.filenameDependencies) {
++            if (filenameDependency.isAsync)
++                targets.add(filenameDependency);
++        }
+         for (const module of this.deps) {
+             for (const dep of module.dependencies.values()) {
+                 if ((0, isResolvedDependency_1.isResolvedDependency)(dep) && dep.data.data.asyncType) {
+@@ -295,6 +305,30 @@ class Chunk {
+             preModules: new Set(finalPreModules),
+         });
+         const relativeEntry = path_1.default.relative(this.options.projectRoot, this.name);
++        const baseUrl = getBaseUrlOption(this.graph, this.options);
++        const requiredAsyncChunks = [...this.requiredChunks]
++            .filter((chunk) => chunk.isAsync)
++        const requiredAsyncIds = requiredAsyncChunks.map((chunk) => {
++            (0, assert_1.default)(Number.isInteger(chunk.sharedIndex), 'Required async chunk is missing its shared index: ' + chunk.name);
++            return chunk.sharedIndex;
++        });
++        const ownBundlePath = (baseUrl ?? '/') + outputFile;
++        const dependencyRegistration = this.isAsync && requiredAsyncIds.length
++            ? `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__[${JSON.stringify(ownBundlePath)}]=${JSON.stringify(requiredAsyncIds)};`
++            : '';
++        const sharedManifestRegistration = this.name === '/__expo-metro-runtime.js'
++            ? (() => {
++                const sharedChunks = [...new Set(chunksByPath.values())]
++                    .filter((chunk) => Number.isInteger(chunk.sharedIndex))
++                    .sort((a, b) => a.sharedIndex - b.sharedIndex);
++                const sharedPaths = sharedChunks.map((chunk) => {
++                    const filename = filenamesByChunk.get(chunk);
++                    (0, assert_1.default)(filename, 'Precomputed filename missing for shared async chunk: ' + chunk.name);
++                    return (baseUrl ?? '/') + filename;
++                });
++                return `globalThis.__METRAVEL_SHARED_CHUNKS__=${JSON.stringify(sharedPaths)};`;
++            })()
++            : '';
+         const jsAsset = {
+             filename: outputFile,
+             originFilename: relativeEntry,
+@@ -308,14 +342,19 @@ class Chunk {
+                 }),
+                 // Provide a list of module paths that can be used for matching chunks to routes.
+                 // TODO: Move HTML serializing closer to this code so we can reduce passing this much data around.
+-                modulePaths: [...this.deps].map((module) => module.path),
++                modulePaths: [
++                    ...new Set([
++                        ...[...this.deps].map((module) => module.path),
++                        ...this.matchingEntryPaths,
++                    ]),
++                ],
+                 paths: jsCode.paths,
+                 expoDomComponentReferences: collectOutputReferences(this.deps, 'expoDomComponentReference'),
+                 reactClientReferences: collectOutputReferences(this.deps, 'reactClientReference'),
+                 reactServerReferences: collectOutputReferences(this.deps, 'reactServerReference'),
+                 loaderReferences: collectOutputReferences(this.deps, 'loaderReference'),
+             },
+-            source: jsCode.code,
++            source: sharedManifestRegistration + dependencyRegistration + jsCode.code,
+         };
+         const assets = [jsAsset];
+         // debugId is passed into `sourceMapString` so the bundler-map path
+@@ -524,36 +563,146 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
+         }
+     }
+ }
+-function extractCommonChunk(chunks, graph, options) {
+-    const toCompare = [...chunks.values()];
+-    const commonDependencies = [];
+-    while (toCompare.length) {
+-        const chunk = toCompare.shift();
+-        for (const chunk2 of toCompare) {
+-            if (chunk !== chunk2 && chunk.isAsync && chunk2.isAsync) {
+-                const commonDeps = [...chunk.deps].filter((dep) => chunk2.deps.has(dep));
+-                for (const dep of commonDeps) {
+-                    chunk.deps.delete(dep);
+-                    chunk2.deps.delete(dep);
++function extractSharedChunks(chunks, graph, options) {
++    const asyncChunks = [...chunks.values()].filter((chunk) => chunk.isAsync);
++    if (asyncChunks.length < 2) {
++        return [];
++    }
++    // METRAVEL_PER_ROUTE_COMMON_CHUNK: keep shared dependencies deduplicated,
++    // but load each shared group only with the routes that actually use it.
++    // Expo's stock pairwise extraction places every dependency used by any two
++    // lazy roots into one synchronous `__common` chunk, making feature code
++    // eager on every route. Grouping by the exact owner set preserves total
++    // bundle size without making unrelated route code part of startup.
++    const ownersByDependency = new Map();
++    for (const chunk of asyncChunks) {
++        for (const dep of chunk.deps) {
++            const owners = ownersByDependency.get(dep) ?? [];
++            owners.push(chunk);
++            ownersByDependency.set(dep, owners);
++        }
++    }
++    const chunkIndex = new Map(asyncChunks.map((chunk, index) => [chunk, index]));
++    const groups = new Map();
++    for (const [dep, owners] of ownersByDependency) {
++        if (owners.length < 2)
++            continue;
++        const key = owners.map((owner) => chunkIndex.get(owner)).join(',');
++        const group = groups.get(key) ?? { owners, deps: [] };
++        group.deps.push(dep);
++        groups.set(key, group);
++        for (const owner of owners) {
++            owner.deps.delete(dep);
++        }
++    }
++    // Exact owner sets can produce hundreds of tiny files. Merge highly similar
++    // sets while capping each cluster at ~128 KiB transformed source. The 0.4
++    // Jaccard floor keeps the chunks route-scoped; it also cuts compression and
++    // request overhead without recreating a global eager payload.
++    const estimateDependencySize = (dep) => dep.output.reduce((total, output) => {
++        const code = output?.data?.code;
++        return total + (typeof code === 'string' ? code.length : 0);
++    }, 0);
++    const ownerSimilarity = (left, right) => {
++        let intersection = 0;
++        for (const owner of left) {
++            if (right.has(owner))
++                intersection += 1;
++        }
++        return intersection / (left.size + right.size - intersection || 1);
++    };
++    const sharedGroups = [...groups.values()].map((group) => ({
++        owners: new Set(group.owners),
++        deps: group.deps,
++        size: group.deps.reduce((total, dep) => total + estimateDependencySize(dep), 0),
++    }));
++    const MAX_SHARED_GROUP_SIZE = 128 * 1024;
++    const MIN_OWNER_SIMILARITY = 0.4;
++    while (true) {
++        let bestLeft = -1;
++        let bestRight = -1;
++        let bestSimilarity = MIN_OWNER_SIMILARITY;
++        for (let left = 0; left < sharedGroups.length; left += 1) {
++            for (let right = left + 1; right < sharedGroups.length; right += 1) {
++                const leftGroup = sharedGroups[left];
++                const rightGroup = sharedGroups[right];
++                if (leftGroup.size + rightGroup.size > MAX_SHARED_GROUP_SIZE)
++                    continue;
++                const similarity = ownerSimilarity(leftGroup.owners, rightGroup.owners);
++                if (similarity > bestSimilarity) {
++                    bestLeft = left;
++                    bestRight = right;
++                    bestSimilarity = similarity;
+                 }
+-                commonDependencies.push(...commonDeps);
+             }
+         }
++        if (bestLeft < 0)
++            break;
++        const leftGroup = sharedGroups[bestLeft];
++        const rightGroup = sharedGroups[bestRight];
++        sharedGroups[bestLeft] = {
++            owners: new Set([...leftGroup.owners, ...rightGroup.owners]),
++            deps: [...leftGroup.deps, ...rightGroup.deps],
++            size: leftGroup.size + rightGroup.size,
++        };
++        sharedGroups.splice(bestRight, 1);
++    }
++    // A merged chunk can be selected for a route through any of its original
++    // owner sets. Propagate that expanded ownership through synchronous module
++    // edges so every definition required by an executed factory is present.
++    // Without this closure, a route could preload a merged module but miss one
++    // of its dependencies and fail with "Requiring unknown module".
++    const groupByDependency = new Map();
++    for (const group of sharedGroups) {
++        for (const dep of group.deps) {
++            groupByDependency.set(dep, group);
++        }
+     }
+-    // If common dependencies were found, extract them to the shared chunk.
+-    if (commonDependencies.length) {
+-        const commonDependenciesUnique = [...new Set(commonDependencies)];
+-        return new Chunk('/__common.js', commonDependenciesUnique, graph, options, false, true);
++    let ownersChanged = true;
++    while (ownersChanged) {
++        ownersChanged = false;
++        for (const group of sharedGroups) {
++            for (const module of group.deps) {
++                for (const dependency of module.dependencies.values()) {
++                    if (!(0, isResolvedDependency_1.isResolvedDependency)(dependency) || dependency.data.data.asyncType)
++                        continue;
++                    const dependencyModule = graph.dependencies.get(dependency.absolutePath);
++                    const dependencyGroup = dependencyModule ? groupByDependency.get(dependencyModule) : undefined;
++                    if (!dependencyGroup || dependencyGroup === group)
++                        continue;
++                    for (const owner of group.owners) {
++                        if (!dependencyGroup.owners.has(owner)) {
++                            dependencyGroup.owners.add(owner);
++                            ownersChanged = true;
++                        }
++                    }
++                }
++            }
++        }
++    }
++    const sharedChunks = [];
++    let groupIndex = 0;
++    for (const group of sharedGroups) {
++        const sharedChunk = new Chunk(`/__shared-${groupIndex}.js`, group.deps, graph, options, true, true);
++        sharedChunk.sharedIndex = groupIndex++;
++        for (const owner of group.owners) {
++            owner.requiredChunks.add(sharedChunk);
++            for (const entry of owner.entries) {
++                sharedChunk.matchingEntryPaths.add(entry.path);
++            }
++        }
++        chunks.add(sharedChunk);
++        sharedChunks.push(sharedChunk);
+     }
+-    return undefined;
++    return sharedChunks;
+ }
+-function deduplicateAgainstKnownChunks(chunks, entryChunk, commonChunk) {
++function deduplicateAgainstKnownChunks(chunks, entryChunk) {
+     // TODO: Optimize this pass more.
+-    // Remove all dependencies from async chunks that are already in the common chunk.
++    // Remove dependencies from async chunks that are already in the entry chunk.
+     for (const chunk of [...chunks.values()]) {
+-        if (!chunk.isEntry && chunk !== commonChunk) {
++        if (!chunk.isEntry) {
+             for (const dep of chunk.deps) {
+-                if (entryChunk.deps.has(dep) || commonChunk?.deps.has(dep)) {
++                if (entryChunk.deps.has(dep)) {
+                     chunk.deps.delete(dep);
+                 }
+             }
+@@ -577,6 +726,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
+     for (const chunk of chunks) {
+         // Runtime chunk has to load before any other a.k.a all chunks require it.
+         chunk.requiredChunks.add(runtimeChunk);
++        if (chunk.isAsync && Number.isInteger(chunk.sharedIndex)) {
++            runtimeChunk.filenameDependencies.add(chunk);
++        }
+     }
+     chunks.add(runtimeChunk);
+ }

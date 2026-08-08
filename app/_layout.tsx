@@ -33,6 +33,7 @@ import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnost
 import { installQaDebug } from '@/utils/qaDebug';
 import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
 import { setToastDockInset } from "@/utils/toast";
+import { ROOT_ICON_FONTS } from '@/components/layout/rootIconFonts';
 
 if (__DEV__) {
   require("@expo/metro-runtime");
@@ -305,18 +306,9 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     //   text faces are bundled — fewer weights to download/parse, faster first paint.
     // - On web we do not load fonts via expo-font here. @expo/vector-icons manages its own
     //   web font injection; attempting to load via expo-font can cause timeouts and missing glyphs.
-    const [fontsLoaded, fontError] = useAppFonts(
-      isWeb
-        ? {}
-        : {
-            ...(require('@expo/vector-icons/Feather') as any).font,
-            // MapIcon рисует транспортные режимы маршрута (авто/пешком/вело) глифами
-            // MaterialCommunityIcons. Без предзагрузки @expo/vector-icons тянет .ttf лениво
-            // при открытии панели маршрута — на нестабильном dev-Metro это валит
-            // непойманный промис (ExpoAsset.downloadAsync rejected). Грузим шрифт на старте.
-            ...(require('@expo/vector-icons/MaterialCommunityIcons') as any).font,
-          }
-    );
+    // Native preload lives behind a platform file. Web resolves the empty
+    // `.web` map and does not pull native glyph maps into every route chunk.
+    const [fontsLoaded, fontError] = useAppFonts(ROOT_ICON_FONTS);
 
     // Старт не должен висеть на шрифтах: после таймаута показываем UI с системными глифами.
     const [fontWaitExpired, setFontWaitExpired] = useState(isWeb);

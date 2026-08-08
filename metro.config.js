@@ -152,6 +152,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 const RNW_SLIM_ENABLED = process.env.EXPO_PUBLIC_RNW_SLIM === '1'
 config.resolver.resolveRequest = ((orig) => {
   return (context, moduleName, platform) => {
+    const resolverEnvironment = context.customResolverOptions?.environment
+    const isWebServerEnvironment =
+      resolverEnvironment === 'node' || resolverEnvironment === 'react-server'
+    if (platform === 'web' && !isWebServerEnvironment && moduleName === 'expo-router/_ctx') {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/expo-router-context.web.js'),
+        type: 'sourceFile',
+      }
+    }
     // Expo's icon wrapper reads a process-global font cache in its constructor.
     // During static hydration the root shell can load Feather before a lazy route
     // boundary hydrates, so that boundary renders glyphs on the client while its

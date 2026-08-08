@@ -81,6 +81,14 @@ const LAZY_ONLY_VENDORS: Array<{ pkg: string; allowedSyncImporters: string[]; ti
     allowedSyncImporters: ['utils/dropzoneVendor.ts'],
     ticket: '#1148',
   },
+  // #1286: the trip-create route imported Yup synchronously while auth schemas
+  // already used a dynamic vendor root. Metro therefore hoisted Yup into
+  // `__common` for every public route. All schemas must resolve it on demand.
+  {
+    pkg: 'yup',
+    allowedSyncImporters: ['utils/yupVendor.ts'],
+    ticket: '#1286',
+  },
 ]
 
 /**

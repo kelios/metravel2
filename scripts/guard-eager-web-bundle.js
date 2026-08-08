@@ -149,6 +149,33 @@ function checkNoCommittedOptOut() {
   notes.push('no committed DISABLE_GH_STUB=1 opt-out in package.json/eas.json/app.json')
 }
 
+function checkWebRouteContext() {
+  const metroConfig = read('metro.config.js')
+  const stub = 'metro-stubs/expo-router-context.web.js'
+  if (
+    !/moduleName === 'expo-router\/_ctx'/.test(metroConfig) ||
+    !/expo-router-context\.web\.js/.test(metroConfig)
+  ) {
+    problems.push(
+      'metro.config.js no longer resolves expo-router/_ctx to the web-only route context — ' +
+        'native routes can re-enter the web __common chunk',
+    )
+    return
+  }
+  if (!exists(stub)) {
+    problems.push(`${stub} is missing — the web route-context resolver target does not exist`)
+    return
+  }
+  const source = read(stub)
+  if (!/android\|ios\|native/.test(source) || !/['"]lazy['"]/.test(source)) {
+    problems.push(
+      `${stub} must exclude android/ios/native route suffixes and keep literal lazy import mode`,
+    )
+    return
+  }
+  notes.push('web route context excludes native platform routes and stays lazy')
+}
+
 // ─── ANALYZE checks (production export) ──────────────────────────────────────
 
 function bucketOf(p) {
@@ -195,19 +222,21 @@ function runAnalyze(result) {
   }
   notes.push(`analyze dumps: ${files.length} in ${dumpDir}`)
 
-  // Prefer the client web graph. Static export also emits a router-server SSR
-  // graph, and that dump can contain slightly more modules than the client graph.
-  // Falling back to the largest dump keeps compatibility with older dump shapes.
+  // Prefer the most recent client web graph. Analyze dumps intentionally survive
+  // production builds; choosing the largest client dump can therefore select a
+  // stale, pre-fix graph forever when an optimization removes modules.
+  // Falling back to the largest dump keeps compatibility with older dump shapes
+  // that do not identify their entry.
   let best = null
   let largest = null
   for (const f of files) {
     try {
       const j = JSON.parse(fs.readFileSync(f, 'utf8'))
-      const candidate = { ...j, file: f }
+      const candidate = { ...j, file: f, mtimeMs: fs.statSync(f).mtimeMs }
       if (!largest || j.count > largest.count) largest = candidate
       const entry = String(j.entry || '').replace(/\\/g, '/')
       if (entry.endsWith('/entry.js')) {
-        if (!best || j.count > best.count) best = candidate
+        if (!best || candidate.mtimeMs > best.mtimeMs) best = candidate
       }
     } catch {
       /* skip corrupt */
@@ -217,6 +246,23 @@ function runAnalyze(result) {
   if (!best) {
     problems.push('--from-analyze: all dumps were unreadable/corrupt')
     return
+  }
+
+
+  const incompatibleRoutes = best.mods
+    .map(([modulePath]) => String(modulePath).replace(/\\/g, '/'))
+    .filter(
+      (modulePath) =>
+        modulePath.includes('/app/') && /\.(?:native|android|ios)\.[tj]sx?$/.test(modulePath),
+    )
+  result.platformIncompatibleRouteModules = incompatibleRoutes.length
+  if (incompatibleRoutes.length > 0) {
+    problems.push(
+      `web client graph contains ${incompatibleRoutes.length} native-only app route module(s): ` +
+        `${incompatibleRoutes.slice(0, 3).map((modulePath) => path.relative(repoRoot, modulePath)).join(', ')}`,
+    )
+  } else {
+    notes.push('web client graph contains no native/android/ios app route modules')
   }
 
   const size = new Map()
@@ -277,6 +323,7 @@ const result = { mode: FROM_ANALYZE ? 'analyze' : 'static' }
 checkMetroStubWiring()
 checkStubCompleteness()
 checkNoCommittedOptOut()
+checkWebRouteContext()
 if (FROM_ANALYZE) runAnalyze(result)
 
 result.ok = problems.length === 0
