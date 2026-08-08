@@ -39,6 +39,14 @@ export const VISIBILITY_LABEL: Record<TripVisibility, string> = {
   get private() { return i18nT('tripsStatic:plan.visibility.private') },
 };
 
+// Иконка обязана совпадать с подписью: «глаз» рядом с «Личная» читался как
+// «поездку видно всем» (#1314).
+export const VISIBILITY_ICON_NAME: Record<TripVisibility, string> = {
+  public: 'globe',
+  followers: 'users',
+  private: 'lock',
+};
+
 export const VISIBILITY_HINT: Record<TripVisibility, string> = {
   get public() { return i18nT('tripsStatic:plan.visibilityHint.public') },
   get followers() { return i18nT('tripsStatic:plan.visibilityHint.followers') },

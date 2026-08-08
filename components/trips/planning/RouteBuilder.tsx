@@ -2,7 +2,7 @@
 // Конструктор маршрута поездки (Sprint 13 / блок D): список точек с reorder/delete
 // (web-safe, без нативных drag-либ), inline-добавление точки, применение шаблонов
 // и живая сводка через estimateRouteSummary. Только владелец может редактировать.
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -12,6 +12,7 @@ import type { Travel, TravelAddressItem } from '@/types/types';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
+import { safeLazy } from '@/components/layout/safeLazy';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
 import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap';
@@ -28,7 +29,9 @@ import {
   TRANSPORT_LABEL,
 } from '@/components/trips/planning/tripPlanFormatting';
 import {
+  useRefreshTripRouteElevation,
   useRouteTemplates,
+  useTripRouteElevation,
   useUpdateTripTransport,
   useUpdateTripRoute,
 } from '@/hooks/usePlannedTripsApi';
@@ -38,6 +41,15 @@ import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { createStyles } from './RouteBuilder.styles';
 
+
+// Тот же график, что на travel details: react-native-svg и логика чарта грузятся
+// только когда у маршрута действительно есть высоты. safeLazy переживает
+// транзиентный отказ Metro async-require вместо пустой секции под картой.
+const RouteElevationProfile = safeLazy(
+  () => import('@/components/travel/details/sections/RouteElevationProfile'),
+  'RouteElevationProfile',
+  { retries: 1 },
+);
 
 interface Props {
   trip: PlannedTrip;
@@ -189,11 +201,52 @@ function RouteBuilder({ trip }: Props) {
   const [transportCommitPending, setTransportCommitPending] = useState(false);
   const [transportError, setTransportError] = useState<string | null>(null);
 
+  const savedRouteSignature = useMemo(() => routeSignature(trip.route), [trip.route]);
   const routeMatchesSaved = useMemo(
-    () => routeSignature(route) === routeSignature(trip.route),
-    [route, trip.route],
+    () => routeSignature(route) === savedRouteSignature,
+    [route, savedRouteSignature],
   );
-  const routeGeometry = routeMatchesSaved ? trip.routeGeometry : null;
+  const routableSavedPoints = useMemo(
+    () => trip.route.filter((point) => point.coordinates).length,
+    [trip.route],
+  );
+
+  // Профиль высот описывает сохранённый маршрут, поэтому во время несохранённых
+  // правок он скрыт вместе с серверной геометрией.
+  const routeElevationQuery = useTripRouteElevation(trip.id, {
+    enabled: routeMatchesSaved && routableSavedPoints >= 2,
+  });
+  const refreshRouteElevation = useRefreshTripRouteElevation();
+  const refreshRouteElevationMutate = refreshRouteElevation.mutate;
+  const routeElevation = routeMatchesSaved ? routeElevationQuery.data ?? null : null;
+
+  // Сохранение маршрута кладёт сводку без высот; один пересчёт ORS на маршрут
+  // возвращает ascent/descent и 3D-полилинию. Прямую линию не пересчитываем —
+  // у провайдера для неё высот нет.
+  const elevationRefreshKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!trip.isOwner || !routeMatchesSaved) return;
+    const elevation = routeElevationQuery.data;
+    if (!elevation || elevation.preview || elevation.provider !== 'ors') return;
+
+    const refreshKey = `${trip.id}:${savedRouteSignature}`;
+    if (elevationRefreshKeyRef.current === refreshKey) return;
+    elevationRefreshKeyRef.current = refreshKey;
+    refreshRouteElevationMutate({ tripId: trip.id });
+  }, [
+    refreshRouteElevationMutate,
+    routeElevationQuery.data,
+    routeMatchesSaved,
+    savedRouteSignature,
+    trip.id,
+    trip.isOwner,
+  ]);
+
+  // Пересчёт ORS обнуляет route_geometry на бэке, но та же полилиния несёт линию
+  // маршрута — без подстановки карта откатилась бы на прямые между точками.
+  const routeGeometry = routeMatchesSaved
+    ? trip.routeGeometry ?? routeElevation?.geometry ?? null
+    : null;
   const routingState = routeMatchesSaved ? trip.routingState : null;
   const summary = useMemo(
     () => (routeMatchesSaved && trip.routeSummary
@@ -201,6 +254,27 @@ function RouteBuilder({ trip }: Props) {
       : estimateRouteSummary(route, trip.transport)),
     [route, routeMatchesSaved, trip.routeSummary, trip.transport],
   );
+
+  // Названия точек маршрута подписывают старт/пик/финиш на графике.
+  const elevationPlaceHints = useMemo(
+    () =>
+      trip.route.flatMap((point) =>
+        point.coordinates
+          ? [{ name: point.name, coord: `${point.coordinates[1]},${point.coordinates[0]}` }]
+          : [],
+      ),
+    [trip.route],
+  );
+
+  const elevationProfileSection = routeElevation?.preview ? (
+    <Suspense fallback={null}>
+      <RouteElevationProfile
+        preview={routeElevation.preview}
+        placeHints={elevationPlaceHints}
+        transportHints={[TRANSPORT_LABEL[trip.transport]]}
+      />
+    </Suspense>
+  ) : null;
 
   const handleMove = (index: number, delta: number) => {
     setRoute((prev) => move(prev, index, index + delta));
@@ -529,6 +603,7 @@ function RouteBuilder({ trip }: Props) {
             if (point) handleStartEdit(point, index);
           }}
         />
+        {elevationProfileSection}
         {route.length ? (
           <View style={styles.pointList}>{route.map(renderPoint)}</View>
         ) : (
@@ -603,6 +678,8 @@ function RouteBuilder({ trip }: Props) {
         }}
         onAddPointFromMap={handleAddPointFromMap}
       />
+
+      {elevationProfileSection}
 
       {route.length ? (
         <View style={styles.pointList}>{route.map(renderPoint)}</View>

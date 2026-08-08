@@ -1090,7 +1090,9 @@ describe('injectQuestScenarioContent', () => {
     expect((twice.match(/data-ssg-quest-scenario="true"/g) || []).length).toBe(
       (once.match(/data-ssg-quest-scenario="true"/g) || []).length,
     )
-    expect((twice.match(/data-ssg-scenario-title="true"/g) || []).length).toBe(1)
+    // The marker appears twice by design — once on the title <div>, once in the
+    // mobile CSS rule that targets it. Count the element, not the string.
+    expect((twice.match(/<div data-ssg-scenario-title="true"/g) || []).length).toBe(1)
     expect((twice.match(/<h1/g) || []).length).toBe(0)
   })
 

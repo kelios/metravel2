@@ -104,11 +104,47 @@ describe('TripPlanCard start date rendering', () => {
   });
 });
 
+// #1314: строка участников собиралась из переводных фрагментов («Едут » + счёт +
+// « из ») и печаталась с двойным пробелом. Проверяем сырой вывод: getByText
+// нормализует пробелы и такой дефект пропускает.
+describe('TripPlanCard participants line', () => {
+  const going = (count: number): PlannedTrip => ({
+    ...trip,
+    seatsTotal: 4,
+    isOwner: false,
+    participants: Array.from({ length: count }, (_, index) => ({
+      id: index + 1,
+      name: `Участник ${index + 1}`,
+      avatarUrl: null,
+      rsvp: 'going' as const,
+      role: 'participant' as const,
+    })),
+  });
+
+  it.each([
+    [1, 'Едет 1 из 4'],
+    [2, 'Едут 2 из 4'],
+    [5, 'Едут 5 из 4'],
+  ])('uses the locale plural form for %i going', (count, expected) => {
+    const text = JSON.stringify(render(<TripPlanCard trip={going(count)} />).toJSON());
+    expect(text).toContain(expected);
+  });
+
+  it('renders each label as one string instead of glued fragments', () => {
+    const { getByText } = render(<TripPlanCard trip={going(2)} />);
+
+    // Один цельный дочерний узел: склейка фрагментов дала бы массив с краевыми
+    // пробелами, а getByText нормализует их и дефект не поймал бы.
+    expect(getByText('Едут 2 из 4').props.children).toBe('Едут 2 из 4');
+    expect(getByText('· 2 в списке').props.children).toBe('· 2 в списке');
+  });
+});
+
 describe('TripPlanCard organizer actions', () => {
   it('counts the organizer when the list response omits them from participants', () => {
     const { getByText } = render(<TripPlanCard trip={trip} />);
 
-    expect(getByText('Едут 1 из 1')).toBeTruthy();
+    expect(getByText('Едет 1 из 1')).toBeTruthy();
     expect(getByText('· 1 в списке')).toBeTruthy();
   });
 

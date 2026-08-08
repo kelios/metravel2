@@ -1,7 +1,10 @@
 import { translate as i18nT } from '@/i18n';
 import { useAuthStore } from '@/stores/authStore';
+import { decodeEncodedPolyline } from '@/utils/encodedPolyline';
 import { haversineKm } from '@/utils/geo';
+import { buildElevationProfile } from '@/utils/routeFileParser';
 import { parseTripDateTime } from '@/utils/tripDateTime';
+import type { ParsedRoutePoint } from '@/types/travelRoutes';
 import type {
   PlannedTrip,
   RouteGeometry,
@@ -14,6 +17,8 @@ import type {
   TripParticipant,
   TripPerson,
   TripPlanStatus,
+  TripRouteElevation,
+  TripRouteSummaryStatus,
   TripRsvp,
   TripSuggestion,
   TripTransport,
@@ -139,6 +144,22 @@ export interface CommunityTripDto {
   catalog_status?: string | null;
   going_participants_count?: number | string | null;
   available_seats?: number | string | null;
+}
+
+/** GET/POST `/trips/{id}/route-summary/` — кэшированная сводка маршрута поездки. */
+export interface TripRouteSummaryDto {
+  trip?: number | string | null;
+  distance_m?: number | string | null;
+  duration_s?: number | string | null;
+  ascent_m?: number | string | null;
+  descent_m?: number | string | null;
+  stops_count?: number | string | null;
+  provider?: string | null;
+  status?: string | null;
+  geometry?: unknown;
+  polyline?: string | null;
+  bounds?: unknown;
+  calculated_at?: string | null;
 }
 
 export interface RouteTemplateDto {
@@ -446,6 +467,62 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     createdAt: dto.created_at ?? dto.start_date ?? '',
   };
 };
+
+// ORS кодирует полилинию с точностью 5; при `elevation: true` в ней есть третье
+// измерение — высота в метрах. Другой полилинии этот эндпоинт не отдаёт.
+const ORS_POLYLINE_PRECISION = 5;
+
+const decodeElevationPolyline = (
+  polyline: string | null | undefined,
+): Pick<TripRouteElevation, 'preview' | 'geometry'> => {
+  if (typeof polyline !== 'string' || !polyline.trim()) {
+    return { preview: null, geometry: null };
+  }
+
+  const decoded = decodeEncodedPolyline(polyline, {
+    precision: ORS_POLYLINE_PRECISION,
+    dimensions: 3,
+  });
+  const linePoints: ParsedRoutePoint[] = [];
+  const geometry: RouteGeometry = [];
+
+  for (const [lng, lat, elevation] of decoded) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    geometry.push([lng, lat]);
+    linePoints.push(
+      Number.isFinite(elevation)
+        ? { coord: `${lat},${lng}`, elevation }
+        : { coord: `${lat},${lng}` },
+    );
+  }
+
+  if (geometry.length < 2) return { preview: null, geometry: null };
+
+  // Профиль строится тем же билдером, что и треки travel details, поэтому
+  // набор/сброс на графике совпадают с ascent_m/descent_m из ответа.
+  const elevationProfile = buildElevationProfile(linePoints);
+  return {
+    preview: elevationProfile.length >= 2 ? { linePoints, elevationProfile } : null,
+    geometry,
+  };
+};
+
+const routeSummaryStatusFromBe = (status?: string | null): TripRouteSummaryStatus => {
+  if (status === 'ready' || status === 'degraded') return status;
+  return 'unavailable';
+};
+
+export const mapTripRouteElevation = (
+  dto: TripRouteSummaryDto | null | undefined,
+): TripRouteElevation => ({
+  status: routeSummaryStatusFromBe(dto?.status),
+  provider: (typeof dto?.provider === 'string' && dto.provider.trim()) || 'unknown',
+  ascentM: toOptionalNum(dto?.ascent_m),
+  descentM: toOptionalNum(dto?.descent_m),
+  ...decodeElevationPolyline(dto?.polyline),
+  calculatedAt: dto?.calculated_at ?? null,
+});
 
 export const mapSuggestion = (dto: TripSuggestionDto): TripSuggestion => ({
   id: dto.id,

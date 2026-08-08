@@ -124,6 +124,8 @@ export const queryKeys = {
   communityTrips: (filters: Record<string, unknown>) =>
     ['community-trips', filters] as const,
   communityTripsAll: () => ['community-trips'] as const,
+  tripRouteElevation: (tripId: string | number | null | undefined) =>
+    ['trip-route-elevation', tripId] as const,
   routeTemplates: () => ['route-templates'] as const,
   tripSuggestions: (tripId: string | number | null | undefined) =>
     ['trip-suggestions', tripId] as const,

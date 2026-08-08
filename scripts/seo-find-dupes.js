@@ -5,10 +5,13 @@
  *
  * Detects three patterns inside the article `description` HTML:
  *   1. exact-dup    — the same normalised paragraph text appears 2+ times
- *   2. near-dup     — two paragraphs share a high word-overlap (Jaccard ≥ 0.55),
- *                     min length 60 chars — typically two definitional leads
- *   3. double-lead  — among the first 3 paragraphs, two are near-dup intros
- *                     (both contain the place name + an em-dash definition)
+ *   2. near-dup     — two long paragraphs share ≥3 literal 4-word phrases AND
+ *                     word-overlap ≥ 0.35 — typically two definitional leads
+ *   3. double-lead  — the same, among the first 3 paragraphs
+ *
+ * The schema.org FAQ section is removed before any comparison: it restates body
+ * facts on purpose. Paragraphs shorter than PAIR_MIN_CHARS are not paired at all
+ * — route articles are built from template lines that repeat by construction.
  *
  * Read-only: writes a JSON report, mutates nothing.
  *
@@ -156,8 +159,46 @@ function sharedShingles(a, b) {
 
 // --- per-article detection -------------------------------------------------
 
+// A pair of paragraphs is worth a human's attention only when it repeats a
+// THOUGHT, not a template line. Two facts learned on 2026-08-08, when all 59
+// findings across 43 articles turned out to be false positives:
+//   - route articles are full of short structural lines ("Пройдено 22 км (от A
+//     до B)", "По этой долине у нас уже есть отдельный маршрут: X") that share
+//     phrases by construction;
+//   - the FAQ section deliberately restates facts from the body — that is what
+//     FAQPage is for, so it must never be compared against the body.
+const PAIR_MIN_CHARS = 140; // below this a match is a template line, not a repeated thought
+const PAIR_MIN_SIM = 0.35; // word overlap required IN ADDITION to shared phrases
+
+/**
+ * Cut the FAQ out of the article HTML before any comparison. Two shapes exist in
+ * the corpus: the schema.org `<section data-faq>` block, and an older plain one —
+ * an `<h2>Частые вопросы…</h2>` followed by `<p><strong>Вопрос?</strong>Ответ</p>`.
+ * Both restate body facts on purpose, so neither may be compared against the body.
+ */
+function stripFaqSection(html) {
+  const source = String(html || '');
+
+  const sectionStart = source.search(/<section[^>]*(?:data-faq|class="[^"]*seo-faq)/i);
+  if (sectionStart !== -1) {
+    const end = source.indexOf('</section>', sectionStart);
+    return end === -1
+      ? source.slice(0, sectionStart)
+      : source.slice(0, sectionStart) + source.slice(end + '</section>'.length);
+  }
+
+  const headingMatch = source.match(/<h[23][^>]*>\s*(?:<[^>]+>\s*)*(?:частые вопросы|часто задаваемые|faq)[^<]*/i);
+  if (!headingMatch) return source;
+  const headingStart = headingMatch.index;
+  const after = source.slice(headingStart + headingMatch[0].length);
+  const nextHeading = after.search(/<h2\b/i);
+  return nextHeading === -1
+    ? source.slice(0, headingStart)
+    : source.slice(0, headingStart) + after.slice(nextHeading);
+}
+
 function detect(detail) {
-  const html = detail.description || '';
+  const html = stripFaqSection(detail.description || '');
   const ps = paragraphs(html).filter((p) => p.text.length >= 40);
   const findings = [];
 
@@ -178,12 +219,14 @@ function detect(detail) {
   const head = ps.slice(0, 6);
   for (let i = 0; i < head.length; i++) {
     for (let j = i + 1; j < head.length; j++) {
-      if (head[i].text.length < 60 || head[j].text.length < 60) continue;
+      if (head[i].text.length < PAIR_MIN_CHARS || head[j].text.length < PAIR_MIN_CHARS) continue;
       if (findings.some((f) => f.type === 'exact-dup' && f.a === head[i].idx && f.b === head[j].idx)) continue;
       const sh = sharedShingles(head[i].text, head[j].text);
       const sim = jaccard(head[i].text, head[j].text);
       const leadZone = head[i].idx <= 2 && head[j].idx <= 2;
-      if (sh.n >= (leadZone ? 2 : 3) || sim >= 0.5) {
+      // Shared phrases AND overlap: either signal alone flagged ordinary prose —
+      // a lead and a story about the same place always share the place name.
+      if (sh.n >= (leadZone ? 2 : 3) && sim >= PAIR_MIN_SIM) {
         findings.push({
           type: leadZone ? 'double-lead' : 'near-dup',
           a: head[i].idx, b: head[j].idx, sim: Number(sim.toFixed(2)), sharedPhrases: sh.n,
@@ -200,16 +243,16 @@ function detect(detail) {
   //    told inline above). Excludes the intentional schema.org FAQ section so we
   //    flag reader-facing repetition, not FAQ summaries. This is the "блоки
   //    повторяют одну и ту же информацию" signal.
-  const faqStart = html.indexOf('data-faq');
-  const inFaq = (p) => faqStart !== -1 && p.htmlOffset > faqStart;
-  const body = ps.filter((p) => !inFaq(p) && p.text.length >= 60);
+  // The FAQ block is already gone from `html` (stripFaqSection), so everything
+  // left here is reader-facing prose.
+  const body = ps.filter((p) => p.text.length >= PAIR_MIN_CHARS);
   for (let i = 0; i < body.length; i++) {
     for (let j = i + 1; j < body.length; j++) {
       // skip pairs already reported (exact/double-lead/near-dup)
       if (findings.some((f) => (f.a === body[i].idx && f.b === body[j].idx))) continue;
       const sh = sharedShingles(body[i].text, body[j].text);
       const sim = jaccard(body[i].text, body[j].text);
-      if (sh.n >= 3 || sim >= 0.45) {
+      if (sh.n >= 3 && sim >= 0.45) {
         findings.push({
           type: 'body-repeat',
           a: body[i].idx, b: body[j].idx, sim: Number(sim.toFixed(2)), sharedPhrases: sh.n,
@@ -270,4 +313,16 @@ async function main() {
   console.log(`\n${report.length}/${list.length} articles flagged (${withBodyRepeat} with body-level repetition) → ${path.relative(process.cwd(), REPORT)}`);
 }
 
-main().catch((e) => { console.error('FATAL', e); process.exit(1); });
+if (require.main === module) {
+  main().catch((e) => { console.error('FATAL', e); process.exit(1); });
+}
+
+module.exports = {
+  detect,
+  paragraphs,
+  stripFaqSection,
+  jaccard,
+  sharedShingles,
+  PAIR_MIN_CHARS,
+  PAIR_MIN_SIM,
+};

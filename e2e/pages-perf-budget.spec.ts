@@ -7,38 +7,31 @@
  * Performance API.
  *
  * Run:
- *   yarn build:web:prod
- *   npx playwright test e2e/pages-perf-budget.spec.ts --project=chromium
+ *   npm run e2e:perf-budget:pages   (оба профиля + негативная проба)
  *
- * Budgets default to lenient local values and tighten under CI. Override per
- * env (applies to all pages):
- *   PERF_LCP_MAX_MS  PERF_TBT_MAX_MS  PERF_CLS_MAX  PERF_FCP_MAX_MS
- *   PERF_MAX_JS_KB   PERF_MAX_TOTAL_KB  PERF_MAX_REQUESTS  PERF_MAX_LONG_TASKS
- * Per-page LCP override:
- *   PERF_LCP_MAX_MS_HOME / _SEARCH / _MAP / _PLACES
- * Per-page CLS override:
- *   PERF_CLS_MAX_HOME (главная держит реальный бюджет 0,1, см. #1282)
+ * Числовые бюджеты живут в `helpers/pagesPerfBudgets.ts` — по записи на пару
+ * (маршрут, профиль). Переменные окружения (`PERF_CLS_MAX`, `PERF_LCP_MAX_MS`,
+ * `PERF_MAX_TOTAL_KB`, … и их варианты с суффиксом `_HOME`/`_SEARCH`/…) могут
+ * только УЖЕСТОЧИТЬ потолок: послабление игнорируется и печатается в отчёте
+ * (#1287). Снять baseline можно `PERF_BUDGET_BASELINE=1` — в CI запрещено.
  */
 
 import { test, expect } from '@playwright/test'
 import {
-  envNum,
   injectPerfObservers,
   beginPostReadyClsCollection,
   collectMetrics,
+  collectFirstScreenElements,
+  collectObservedProfile,
   createNetworkTracker,
 } from './helpers/perfBudget'
-
-const IS_CI = Boolean(process.env.CI)
-
-const TBT_MAX_MS = envNum('PERF_TBT_MAX_MS', IS_CI ? 600 : 1500)
-const CLS_MAX = envNum('PERF_CLS_MAX', 0.3)
-const FCP_MAX_MS = envNum('PERF_FCP_MAX_MS', IS_CI ? 3000 : 6000)
-const MAX_LONG_TASKS = envNum('PERF_MAX_LONG_TASKS', IS_CI ? 8 : 20)
-
-const MAX_JS_TRANSFER_KB = envNum('PERF_MAX_JS_KB', 2600)
-const MAX_TOTAL_TRANSFER_KB = envNum('PERF_MAX_TOTAL_KB', IS_CI ? 7000 : 9000)
-const MAX_REQUESTS = envNum('PERF_MAX_REQUESTS', 120)
+import {
+  FORBIDDEN_SHIFT_SOURCES,
+  evaluatePageBudget,
+  evaluateTransferBudget,
+  resolveEffectiveBudget,
+  type PerfProfile,
+} from './helpers/pagesPerfBudgets'
 
 type PageTarget = {
   key: string
@@ -46,52 +39,35 @@ type PageTarget = {
   path: string
   /** Page-specific ready selector; falls back to <h1> then networkidle. */
   readySelector: string
-  /** Default LCP budget (ms) — map/places are heavier, so more lenient. */
-  lcpMaxMs: number
-  /**
-   * CLS budget. Общий `CLS_MAX` намеренно широкий (0,3) — он ловит только
-   * катастрофу. Для страниц, где сдвиги уже разобраны и закрыты, ставим
-   * реальный бюджет Core Web Vitals, иначе регрессия проходит незамеченной:
-   * #1282 (главная, 0,2431) укладывалась в 0,3 и гейт молчал.
-   */
-  clsMax: number
 }
 
-const DEFAULT_LCP = IS_CI ? 4000 : 10_000
-
+// Числовые бюджеты живут в `helpers/pagesPerfBudgets.ts` — по записи на пару
+// (маршрут, профиль). Здесь остаётся только то, что описывает саму страницу
+// (#1287): раньше общий `CLS_MAX = 0.3` пропускал регресс главной с 0,2431.
 const PAGES: PageTarget[] = [
   {
     key: 'HOME',
     name: 'Home',
     path: '/',
     readySelector: '[data-testid="home-hero"]',
-    lcpMaxMs: envNum('PERF_LCP_MAX_MS_HOME', envNum('PERF_LCP_MAX_MS', DEFAULT_LCP)),
-    // #1282: SSG→React handoff главной разобран, бюджет = порог Core Web Vitals.
-    clsMax: envNum('PERF_CLS_MAX_HOME', envNum('PERF_CLS_MAX', 0.1)),
   },
   {
     key: 'SEARCH',
     name: 'Search',
     path: '/search',
     readySelector: '[data-testid="search-container"]',
-    lcpMaxMs: envNum('PERF_LCP_MAX_MS_SEARCH', envNum('PERF_LCP_MAX_MS', DEFAULT_LCP)),
-    clsMax: CLS_MAX,
   },
   {
     key: 'MAP',
     name: 'Map',
     path: '/map',
     readySelector: '[data-testid="map-leaflet-wrapper"]',
-    lcpMaxMs: envNum('PERF_LCP_MAX_MS_MAP', envNum('PERF_LCP_MAX_MS', IS_CI ? 6000 : 12_000)),
-    clsMax: CLS_MAX,
   },
   {
     key: 'PLACES',
     name: 'Places',
     path: '/places',
     readySelector: 'h1',
-    lcpMaxMs: envNum('PERF_LCP_MAX_MS_PLACES', envNum('PERF_LCP_MAX_MS', IS_CI ? 5000 : 11_000)),
-    clsMax: CLS_MAX,
   },
   // #1161: каталог квестов держит обложки на `/quest-cover/**` — путь, который до
   // #1113 вообще не распознавался как медийный и уходил без `w`.
@@ -100,8 +76,6 @@ const PAGES: PageTarget[] = [
     name: 'Quests',
     path: '/quests',
     readySelector: 'h1',
-    lcpMaxMs: envNum('PERF_LCP_MAX_MS_QUESTS', envNum('PERF_LCP_MAX_MS', IS_CI ? 5000 : 11_000)),
-    clsMax: CLS_MAX,
   },
 ]
 
@@ -172,25 +146,57 @@ async function installDeterministicSearchApi(page: any, target: PageTarget) {
   await page.route('**/travels/**', fulfillTravelCatalog)
 }
 
+/** Профиль берётся из проекта Playwright, а не из ширины вьюпорта. */
+function profileFromProject(projectName: string): PerfProfile {
+  if (projectName === 'chromium-mobile') return 'mobile'
+  if (projectName === 'chromium') return 'desktop'
+  throw new Error(
+    `pages-perf-budget: project "${projectName}" is not mapped to a performance profile. ` +
+      'Add the mapping instead of measuring an unknown profile.',
+  )
+}
+
+/**
+ * Режим снятия baseline: печатает измерения и не сверяет их с таблицей.
+ * Нужен ровно один раз — чтобы заполнить таблицу реальными числами, а не
+ * придуманными. В CI запрещён: там гейт обязан именно проверять.
+ */
+const BASELINE_MODE = process.env.PERF_BUDGET_BASELINE === '1'
+
+// Проверка на уровне модуля, а не внутри теста: иначе защита зависела бы от
+// `mode: 'serial'` — при параллельном режиме второй тест молча пропустил бы
+// транспортные бюджеты.
+if (BASELINE_MODE && process.env.CI) {
+  throw new Error('PERF_BUDGET_BASELINE is forbidden in CI: the gate must assert, not just report')
+}
+
 for (const target of PAGES) {
   test.describe(`@perf ${target.name} — Performance Budget (prod build)`, () => {
     test.describe.configure({ mode: 'serial' })
 
-    test(`${target.name}: Core Web Vitals within budget (desktop)`, async ({ page }) => {
-      await page.setViewportSize({ width: 1440, height: 900 })
+    test(`${target.name}: Core Web Vitals within budget`, async ({ page }, testInfo) => {
+      const profile = profileFromProject(testInfo.project.name)
+
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector)
+      const observedProfile = await collectObservedProfile(page)
+      const domCounts = await collectFirstScreenElements(page)
       await beginPostReadyClsCollection(page)
       await page.waitForTimeout(500)
 
       const metrics = await collectMetrics(page)
+      const resolved = BASELINE_MODE ? null : resolveEffectiveBudget(target.key, profile)
+      const budget = resolved?.budget ?? null
 
       const report = {
         page: target.path,
-        thresholds: { lcpMaxMs: target.lcpMaxMs, TBT_MAX_MS, clsMax: target.clsMax, FCP_MAX_MS, MAX_LONG_TASKS },
+        requestedProfile: profile,
+        observedProfile,
+        budget,
+        ignoredOverrides: resolved?.ignoredOverrides ?? [],
         metrics: {
           lcp: metrics.lcp != null ? `${Math.round(metrics.lcp)}ms` : 'N/A',
           fcp: metrics.fcp != null ? `${Math.round(metrics.fcp)}ms` : 'N/A',
@@ -198,40 +204,62 @@ for (const target of PAGES) {
           clsTotal: metrics.cls.toFixed(4),
           clsAfterReady: metrics.clsAfterReady.toFixed(4),
           longTaskCount: metrics.longTaskCount,
+          firstScreenElements: domCounts.firstScreenElements,
+          documentElements: domCounts.documentElements,
         },
         clsSources: metrics.clsSources,
       }
-      console.log(`\n📊 PERF BUDGET — ${target.name} (Desktop)`)
+      console.log(`\n📊 PERF BUDGET — ${target.name} (${profile})`)
       console.log(JSON.stringify(report, null, 2))
-      test.info().annotations.push({ type: 'perf-budget', description: JSON.stringify(report) })
+      testInfo.annotations.push({ type: 'perf-budget', description: JSON.stringify(report) })
 
-      if (metrics.lcp != null) {
-        expect(metrics.lcp, `${target.name} LCP ${Math.round(metrics.lcp)}ms > ${target.lcpMaxMs}ms`).toBeLessThanOrEqual(
-          target.lcpMaxMs,
-        )
+      // Запрошенный и фактический профиль обязаны совпадать: узкий вьюпорт на
+      // desktop-браузере — это не мобильный замер (#1287).
+      if (profile === 'mobile') {
+        expect(observedProfile.hasTouch, 'mobile profile without touch support').toBe(true)
+        expect(observedProfile.devicePixelRatio, 'mobile profile with DPR 1').toBeGreaterThan(1)
+        expect(observedProfile.mobileUserAgent, 'mobile profile without a mobile user agent').toBe(true)
+      } else {
+        expect(observedProfile.hasTouch, 'desktop profile reported touch support').toBe(false)
       }
-      if (metrics.fcp != null) {
-        expect(metrics.fcp, `${target.name} FCP ${Math.round(metrics.fcp)}ms > ${FCP_MAX_MS}ms`).toBeLessThanOrEqual(
-          FCP_MAX_MS,
-        )
+
+      if (BASELINE_MODE) {
+        console.log(`\n⚠️  BASELINE MODE — budgets not asserted for ${target.name} (${profile})`)
+        return
       }
-      expect(metrics.tbt, `${target.name} TBT ${Math.round(metrics.tbt)}ms > ${TBT_MAX_MS}ms`).toBeLessThanOrEqual(
-        TBT_MAX_MS,
+
+      const violations = evaluatePageBudget(
+        {
+          cls: metrics.cls,
+          firstScreenElements: domCounts.firstScreenElements,
+          lcp: metrics.lcp,
+          fcp: metrics.fcp,
+          tbt: metrics.tbt,
+          longTaskCount: metrics.longTaskCount,
+          clsSourceFingerprints: metrics.clsSources.flatMap((entry) => entry.sources),
+        },
+        budget!,
       )
+
+      // Позитивный контроль запрещённых узлов: если селектор перестал находиться,
+      // проверка «узла нет в сдвигах» проходила бы вхолостую.
+      for (const forbidden of budget!.skipHeaderPositiveControl ? [] : FORBIDDEN_SHIFT_SOURCES) {
+        if (!forbidden.presentOn.includes(profile)) continue
+        expect(
+          await page.locator(forbidden.selector).count(),
+          `${forbidden.id}: selector ${forbidden.selector} matched nothing on ${profile} — the forbidden-source check would pass vacuously`,
+        ).toBeGreaterThan(0)
+      }
+
       expect(
-        metrics.cls,
-        `${target.name} total CLS ${metrics.cls.toFixed(4)} > ${target.clsMax} (post-ready=${metrics.clsAfterReady.toFixed(
-          4,
-        )})`,
-      ).toBeLessThanOrEqual(target.clsMax)
-      expect(
-        metrics.longTaskCount,
-        `${target.name} ${metrics.longTaskCount} long tasks > ${MAX_LONG_TASKS}`,
-      ).toBeLessThanOrEqual(MAX_LONG_TASKS)
+        violations,
+        `${target.name} (${profile}) budget violations:\n${JSON.stringify(violations, null, 2)}`,
+      ).toEqual([])
     })
 
-    test(`${target.name}: Network transfer budget (JS/total/requests)`, async ({ page }) => {
-      await page.setViewportSize({ width: 1440, height: 900 })
+    test(`${target.name}: Network transfer budget (JS/total/requests)`, async ({ page }, testInfo) => {
+      const profile = profileFromProject(testInfo.project.name)
+      const budget = BASELINE_MODE ? null : resolveEffectiveBudget(target.key, profile).budget
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
 
@@ -242,7 +270,7 @@ for (const target of PAGES) {
       await waitForReady(page, target.readySelector)
 
       const stats = tracker.getStats()
-      console.log(`\n📦 NETWORK BUDGET — ${target.name}`)
+      console.log(`\n📦 NETWORK BUDGET — ${target.name} (${profile})`)
       console.log(
         JSON.stringify(
           {
@@ -273,16 +301,23 @@ for (const target of PAGES) {
         `${target.name}: ${stats.mediaRequestsWithoutWidth.length} медиа-запрос(ов) без w — прокси отдаёт мастер целиком`,
       ).toEqual([])
 
-      expect(stats.jsKB, `${target.name} JS ${stats.jsKB}KB > ${MAX_JS_TRANSFER_KB}KB`).toBeLessThanOrEqual(
-        MAX_JS_TRANSFER_KB,
-      )
-      expect(stats.totalKB, `${target.name} total ${stats.totalKB}KB > ${MAX_TOTAL_TRANSFER_KB}KB`).toBeLessThanOrEqual(
-        MAX_TOTAL_TRANSFER_KB,
+      if (BASELINE_MODE) {
+        console.log(`\n⚠️  BASELINE MODE — transfer budgets not asserted for ${target.name} (${profile})`)
+        return
+      }
+
+      // Транспортные бюджеты берутся из таблицы на пару (маршрут, профиль):
+      // при DPR>1 картинки выбирают другие ступени `?w=`, поэтому один общий
+      // потолок для обеих раскладок либо слишком мягкий, либо ложно красный.
+      // Сравнение — та же общая функция, что покрыта unit-тестами.
+      const transferViolations = evaluateTransferBudget(
+        { jsKB: stats.jsKB, totalKB: stats.totalKB, requestCount: stats.requestCount },
+        budget!,
       )
       expect(
-        stats.requestCount,
-        `${target.name} ${stats.requestCount} first-party requests > ${MAX_REQUESTS} (all=${stats.allRequestCount})`,
-      ).toBeLessThanOrEqual(MAX_REQUESTS)
+        transferViolations,
+        `${target.name} (${profile}) transfer violations (all requests=${stats.allRequestCount}):\n${JSON.stringify(transferViolations, null, 2)}`,
+      ).toEqual([])
     })
   })
 }

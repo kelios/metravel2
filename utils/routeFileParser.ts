@@ -123,7 +123,10 @@ export const splitRouteLineSegments = (linePoints: ParsedRoutePoint[]): ParsedRo
   return segments;
 };
 
-const buildElevationProfile = (linePoints: ParsedRoutePoint[]): RouteElevationSample[] => {
+// Общий построитель профиля высот: дистанция накапливается по линии, teleport-леги
+// помечаются `gapBefore`, чтобы набор/сброс не считались через разрыв. Используется
+// и парсерами GPX/KML, и декодером ORS-полилинии планировщика поездок.
+export const buildElevationProfile = (linePoints: ParsedRoutePoint[]): RouteElevationSample[] => {
   if (!Array.isArray(linePoints) || linePoints.length < 2) return [];
 
   const teleportMeters = teleportThresholdMeters(linePoints);

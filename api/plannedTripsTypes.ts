@@ -1,3 +1,5 @@
+import type { ParsedRoutePreview } from '@/types/travelRoutes'
+
 export type TripTransport = 'car' | 'bike' | 'foot' | 'public' | 'mixed'
 export type RoutableTripTransport = Extract<TripTransport, 'car' | 'bike' | 'foot'>
 export type TripVisibility = 'public' | 'followers' | 'private'
@@ -38,6 +40,25 @@ export interface RoutingState {
   isOptimal: boolean
   fallbackReason: string | null
   warnings: string[]
+}
+
+export type TripRouteSummaryStatus = 'ready' | 'degraded' | 'unavailable'
+
+/**
+ * Высотная часть кэшированной сводки маршрута (`/trips/{id}/route-summary/`).
+ * Профиль появляется только у ORS-маршрута с 3D-полилинией: прямая линия
+ * (`provider: 'direct'`) и `unavailable` высот не несут, и график для них скрыт.
+ */
+export interface TripRouteElevation {
+  status: TripRouteSummaryStatus
+  provider: string
+  ascentM: number | null
+  descentM: number | null
+  /** Декодированная 3D-полилиния для переиспользуемого RouteElevationProfile. */
+  preview: ParsedRoutePreview | null
+  /** Та же полилиния как линия маршрута: пересчёт ORS обнуляет `route_geometry`. */
+  geometry: RouteGeometry | null
+  calculatedAt: string | null
 }
 
 export interface TripParticipant extends TripPerson {

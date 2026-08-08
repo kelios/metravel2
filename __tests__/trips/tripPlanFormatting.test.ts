@@ -5,6 +5,8 @@ import {
   PLAN_STATUS_LABEL,
   RSVP_LABEL,
   TRANSPORT_LABEL,
+  VISIBILITY_ICON_NAME,
+  VISIBILITY_LABEL,
   formatDistance,
   formatDuration,
   formatTripDateTime,
@@ -250,5 +252,25 @@ describe('label maps', () => {
       expect(typeof v).toBe('string')
       expect(v.length).toBeGreaterThan(0)
     }
+  })
+})
+
+// #1314: иконка была захардкожена как «глаз» и противоречила подписи «Личная».
+describe('VISIBILITY_ICON_NAME', () => {
+  it('covers every visibility level declared by the label map', () => {
+    expect(Object.keys(VISIBILITY_ICON_NAME).sort()).toEqual(Object.keys(VISIBILITY_LABEL).sort())
+  })
+
+  it.each([
+    ['public', 'globe'],
+    ['followers', 'users'],
+    ['private', 'lock'],
+  ] as const)('maps %s to the %s glyph', (visibility, icon) => {
+    expect(VISIBILITY_ICON_NAME[visibility]).toBe(icon)
+  })
+
+  it('never reuses the all-seeing eye for a restricted trip', () => {
+    expect(VISIBILITY_ICON_NAME.private).not.toBe('eye')
+    expect(VISIBILITY_ICON_NAME.followers).not.toBe('eye')
   })
 })

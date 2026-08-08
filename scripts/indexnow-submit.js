@@ -8,12 +8,15 @@
  *   node scripts/indexnow-submit.js --sitemap    # parse sitemap.xml instead of API
  *   node scripts/indexnow-submit.js --sitemap --recent-days 2
  *                                                  # submit URLs changed today/yesterday
+ *   node scripts/indexnow-submit.js --urls-file batch.txt
+ *                                                  # submit exactly the listed URLs
  *
  * Submits to: api.indexnow.org (→ Bing/Yandex/etc.) + yandex.com/indexnow separately
  */
 
 const https = require('https')
 const http = require('http')
+const fs = require('fs')
 
 const KEY = 'eb1c0d4b6f120c68a79525b7fe86581b'
 const HOST = 'metravel.by'
@@ -38,6 +41,35 @@ function parseRecentDays(argv) {
 }
 
 const RECENT_DAYS = parseRecentDays(process.argv)
+
+function parseUrlsFile(argv) {
+  const index = argv.indexOf('--urls-file')
+  if (index === -1) return null
+  const value = argv[index + 1]
+  if (!value || value.startsWith('--')) throw new Error('--urls-file expects a path')
+  return value
+}
+
+/**
+ * URLs from a plain-text batch file: one URL per line, `#` comments and blank
+ * lines ignored. Everything must live on this host — a foreign URL in an
+ * IndexNow payload gets the whole batch rejected, so fail on it instead of
+ * silently submitting a partial list.
+ */
+function parseUrlsFileContent(text, site = SITE) {
+  const urls = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/#.*$/, '').trim())
+    .filter(Boolean)
+
+  const foreign = urls.filter((url) => !url.startsWith(`${site}/`) && url !== `${site}/`)
+  if (foreign.length) {
+    throw new Error(`--urls-file contains URLs outside ${site}: ${foreign.slice(0, 3).join(', ')}`)
+  }
+  return [...new Set(urls)]
+}
+
+const URLS_FILE = parseUrlsFile(process.argv)
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -190,9 +222,16 @@ async function main() {
   if (RECENT_DAYS && !USE_SITEMAP) {
     throw new Error('--recent-days requires --sitemap because API records do not expose lastmod')
   }
+  if (URLS_FILE && (USE_SITEMAP || RECENT_DAYS)) {
+    throw new Error('--urls-file is an explicit list: do not combine it with --sitemap/--recent-days')
+  }
   console.log('[indexnow] Collecting URLs…')
-  const urls = USE_SITEMAP ? await collectFromSitemap() : await collectFromApi()
-  console.log(`[indexnow] ${urls.length} URLs collected`)
+  const urls = URLS_FILE
+    ? parseUrlsFileContent(fs.readFileSync(URLS_FILE, 'utf8'))
+    : USE_SITEMAP
+      ? await collectFromSitemap()
+      : await collectFromApi()
+  console.log(`[indexnow] ${urls.length} URLs collected${URLS_FILE ? ` from ${URLS_FILE}` : ''}`)
   if (RECENT_DAYS) {
     console.log(`[indexnow] Filter: sitemap lastmod within ${RECENT_DAYS} day(s)`)
   }
@@ -227,4 +266,6 @@ module.exports = {
   filterRecentSitemapEntries,
   parseRecentDays,
   parseSitemapEntries,
+  parseUrlsFile,
+  parseUrlsFileContent,
 }

@@ -28,6 +28,7 @@ import {
   PLAN_STATUS_LABEL,
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
+  VISIBILITY_ICON_NAME,
   VISIBILITY_LABEL,
   formatTripDisplayDate,
   formatTripDateTime,
@@ -276,7 +277,11 @@ export default function PlannedTripScreen() {
                   <Text style={styles.metaChipText}>{TRANSPORT_LABEL[trip.transport]}</Text>
                 </View>
                 <View style={styles.metaChip}>
-                  <Feather name="eye" size={12} color={colors.textSecondary} />
+                  <Feather
+                    name={VISIBILITY_ICON_NAME[trip.visibility] as never}
+                    size={12}
+                    color={colors.textSecondary}
+                  />
                   <Text style={styles.metaChipText}>{VISIBILITY_LABEL[trip.visibility]}</Text>
                 </View>
               </View>

@@ -42,6 +42,7 @@ const STATE_DIR = path.join(__dirname, '.migrate-description-images')
 const BACKUP_DIR = path.join(STATE_DIR, 'backups')
 const INVENTORY_FILE = path.join(STATE_DIR, 'inventory.json')
 const JOURNAL_FILE = path.join(STATE_DIR, 'journal.json')
+const SHRUNK_FILE = path.join(STATE_DIR, 'shrunk.json')
 
 // ---------------------------------------------------------------------------
 // Чистое ядро (экспортируется для тестов)
@@ -198,6 +199,123 @@ function decodeDataUri(raw, detect = detectImageFormat) {
   }
 }
 
+/**
+ * Лестница ширин, которые обслуживает прокси.
+ *
+ * Зеркало `DIMENSION_LADDER` из `utils/imageProxy.ts` — по той же причине, что и
+ * `unwrapWeserv`: скрипты CommonJS и TS-утилиту не импортируют. Источник правды у
+ * обоих один — `ALLOWED_IMAGE_WIDTHS` бэкенда (`GET /api/media/proxy-contract`).
+ */
+const PROXY_WIDTH_LADDER = [32, 96, 160, 320, 480, 640, 720, 800, 960, 1024, 1200, 1280, 1600, 1920, 2500]
+
+/**
+ * Порог «кадр раздут»: байт на пиксель, выше которого файл хранится с избыточным
+ * качеством.
+ *
+ * Замер прода 2026-08-08 по телам статей: здоровые кадры лежат на 0,11–0,20 Б/px
+ * (`5893ec1a…` 800×1067 — 94 078 B = 0,110; `bdbef1ba…` 1126×234 — 15 350 B =
+ * 0,058), раздутые — на 0,26–0,40 (`247b89ab…` 768×1024 — 317 486 B = 0,404;
+ * `0e0d0ee6…` 600×800 — 126 632 B = 0,264). Порог 0,25 разделяет эти две группы и
+ * оставляет здоровые файлы нетронутыми.
+ */
+const OVERSIZED_BYTES_PER_PIXEL = 0.25
+
+/**
+ * Ширина, на которой прокси реально пережмёт кадр: ближайшая ступень СТРОГО ниже
+ * его собственной ширины.
+ *
+ * Просить ступень ≥ ширины кадра бесполезно: прокси не апскейлит и отдаёт файл
+ * байт-в-байт, игнорируя даже `q`. Замер на `247b89ab…` (768×1024): `w=800`,
+ * `w=960`, `w=1600` — все 317 486 B, то есть сам мастер; `w=720` — 112 602 B при
+ * той же резкости (разница краёв 7123 против 7391 у локального ресайза). Именно
+ * этот вариант и кладётся обратно как новый файл.
+ */
+function shrinkWidthFor(width) {
+  const w = Number(width)
+  if (!Number.isFinite(w) || w <= 0) return null
+  let best = null
+  for (const rung of PROXY_WIDTH_LADDER) {
+    if (rung < w) best = rung
+  }
+  return best
+}
+
+/** Плотность файла в байтах на пиксель, либо `null` — геометрия неизвестна. */
+function bytesPerPixel(bytes, width, height) {
+  const area = Number(width) * Number(height)
+  if (!Number.isFinite(area) || area <= 0) return null
+  return Number(bytes) / area
+}
+
+/**
+ * Кадр стоит пересайзить: он раздут И у прокси есть ступень ниже его ширины.
+ *
+ * Второе условие обязательно. Кадр 320×240 может быть сколь угодно плотным, но
+ * ступени ниже 320 — это 160, и такой пересайз уже видно на глаз; такие кадры
+ * пропускаем, а не портим.
+ */
+function isOversizedFrame({ bytes, width, height }, threshold = OVERSIZED_BYTES_PER_PIXEL) {
+  const density = bytesPerPixel(bytes, width, height)
+  if (density == null || density <= threshold) return false
+  const target = shrinkWidthFor(width)
+  return target != null && target >= 320
+}
+
+/**
+ * Все `src` тела, ведущие в канонический класс `travel-description-image`.
+ *
+ * Это картинки, уже прошедшие миграцию (#1245/#1320): ни legacy-ключа, ни
+ * base64. Для них ветка `--shrink` и работает — она меняет не адресацию, а сам
+ * хранимый файл.
+ */
+function collectCanonicalRefs(html) {
+  const out = new Map()
+  const source = String(html || '')
+  const pattern = /<img\b[^>]*?\bsrc=["']([^"']+)["'][^>]*>/gi
+  let match
+  while ((match = pattern.exec(source)) !== null) {
+    const raw = match[1]
+    const decoded = raw.replace(/&amp;/gi, '&')
+    if (/^(data:|blob:)/i.test(decoded)) continue
+    let pathname
+    try {
+      pathname = new URL(decoded, SITE).pathname
+    } catch {
+      continue
+    }
+    if (!/^\/travel-description-image\/[^/]+$/i.test(pathname)) continue
+    // `raw` — строка для замены в HTML, `url` — абсолютный адрес для сети: в теле
+    // встречается и корне-относительная форма, а её `new URL(...)` без базы не берёт.
+    if (!out.has(raw)) {
+      out.set(raw, { raw, url: new URL(decoded, SITE).toString(), key: pathname.replace(/^\/+/, ''), pathname })
+    }
+  }
+  return Array.from(out.values())
+}
+
+/**
+ * Геометрия кадров по манифесту `media.article_body`: pathname → `{width,height}`.
+ *
+ * Размеры берём из манифеста, а не парсим заголовки файла: бэкенд их уже посчитал
+ * и они сходятся с реальными байтами (сверка 2026-08-08 на трёх кадрах статьи 485
+ * — 600×800, 800×1067, 1126×234 совпали с загруженными файлами).
+ */
+function buildManifestGeometry(payload) {
+  const gallery = payload?.media?.article_body?.gallery
+  const index = new Map()
+  if (!Array.isArray(gallery)) return index
+  for (const item of gallery) {
+    const src = String(item?.src || '').trim()
+    if (!src || !Number(item?.width) || !Number(item?.height)) continue
+    try {
+      index.set(new URL(src, SITE).pathname, { width: Number(item.width), height: Number(item.height) })
+    } catch {
+      /* адрес манифеста не разобрался — кадр просто не участвует */
+    }
+  }
+  return index
+}
+
 /** Текст без разметки — для сверки, что миграция не тронула содержание. */
 function plainText(html) {
   return String(html || '')
@@ -217,6 +335,11 @@ module.exports = {
   legacyUploadKey,
   collectLegacyUploadRefs,
   collectDataUriRefs,
+  collectCanonicalRefs,
+  buildManifestGeometry,
+  shrinkWidthFor,
+  bytesPerPixel,
+  isOversizedFrame,
   decodeDataUri,
   plainText,
   countImages,
@@ -458,6 +581,35 @@ async function downloadMaster(key) {
 }
 
 /**
+ * Кадр тела по его собственному адресу: без `w` — хранимый файл, с `w` — ступень.
+ *
+ * Отдельная функция от `downloadMaster`: тот ходит в `/media-resize/<key>` и нужен
+ * legacy-классу, а здесь адрес уже канонический и лежит прямо в теле статьи.
+ */
+async function downloadFrame(url, width = null) {
+  const target = new URL(url)
+  if (width) target.searchParams.set('w', String(width))
+  const label = `${width ? `w=${width}` : 'мастер'} ${target.pathname.split('/').pop()}`
+  return withRetry(`скачивание ${label}`, async () => {
+    const res = await fetch(target.toString(), {
+      headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
+    })
+    if (res.status >= 500) throw new Error(`скачивание ${label} → HTTP ${res.status}`)
+    if (!res.ok) throw new Error(`скачивание ${label} → HTTP ${res.status}`)
+    const buffer = Buffer.from(await res.arrayBuffer())
+    if (!buffer.length) throw new Error(`скачивание ${label} → пустой ответ`)
+    const detected = detectImageFormat(buffer)
+    if (!detected) throw new Error(`скачивание ${label} → не распознан формат кадра`)
+    const rawName = decodeURIComponent(target.pathname.split('/').pop() || 'photo.jpg')
+    return {
+      buffer,
+      contentType: detected.mime,
+      filename: `${rawName.replace(/\.[^.]+$/, '')}.${detected.ext}`,
+    }
+  })
+}
+
+/**
  * Загрузка в канонический пайплайн — ровно теми полями, что шлёт редактор статьи
  * (`components/article/articleEditorMediaHelpers.ts`): `file`, `collection=description`,
  * `id`. Ответ отдаёт адрес в одном из четырёх полей, как разбирает
@@ -664,6 +816,174 @@ async function migrateOne(id, { token, dryRun }) {
   return { id, status: 'done', migrated: uploaded.length }
 }
 
+/**
+ * Пересайз раздутых кадров тела: тот же снимок, но хранимый файл заменён на
+ * пережатую прокси-ступень.
+ *
+ * ЗАЧЕМ. Ресайз в теле статьи работает — `srcset` собирается из манифеста, ступени
+ * отвечают 200. Но кадры там узкие: у статьи 485 таких 51 из 52, у 470 — 250 из 251
+ * (мастер ≤ 800 px). Любая запрошенная ширина ≥ ширины кадра возвращает файл
+ * байт-в-байт, поэтому на десктопе @DPR2 браузер берёт верхнюю ступень и получает
+ * мастер. Уменьшить вес можно только уменьшив сам файл — и лучше всего это делает
+ * тот же прокси: `247b89ab…` 768×1024 хранится как 317 486 B, а его `w=720` весит
+ * 112 602 B при сопоставимой резкости.
+ *
+ * Перезалив кадра БЕЗ изменения ширины бесполезен: пайплайн загрузки не пережимает
+ * то, что уже уже потолка. Проверено 2026-08-08 — тот же файл, загруженный заново,
+ * дал 315 088 B вместо 317 486 B и ту же лестницу.
+ *
+ * Рельсы безопасности общие с `migrateOne`: бэкап payload до записи, инварианты
+ * содержания, `detectRegression` с автооткатом, пробы отдельно от отката.
+ */
+async function shrinkOne(id, { token, dryRun, threshold = OVERSIZED_BYTES_PER_PIXEL }) {
+  ensureDirs()
+  const { status, text } = await request('GET', `/travels/${id}/`, null, token)
+  if (status !== 200) throw new Error(`GET travel ${id} → HTTP ${status}`)
+  const before = JSON.parse(text)
+  const original = before.description || ''
+
+  const geometry = buildManifestGeometry(before)
+  const refs = collectCanonicalRefs(original)
+  const shrunkAlready = readShrunk()
+  console.log(
+    `📄 [${id}] ${before.slug} — картинок в теле ${countImages(original)}, канонических ${refs.length}, геометрия известна у ${geometry.size}`,
+  )
+
+  // Замер ДО любой записи: раздут кадр или нет, видно только по байтам мастера.
+  const targets = []
+  for (const ref of refs) {
+    // Один кадр пересайзится РОВНО ОДИН раз. Порог для этого не годится: замер
+    // после пилота на статье 512 показал, что `454947d3…` ушёл с 0,466 на 0,274 —
+    // всё ещё выше порога, и второй прогон ужал бы его до 640, третий до 480.
+    // Журнал новых ключей — единственное, что делает прогон идемпотентным.
+    if (shrunkAlready.includes(ref.pathname)) {
+      console.log(`   ✓ ${ref.key} — уже пересайжен, пропуск`)
+      continue
+    }
+    const geo = geometry.get(ref.pathname)
+    if (!geo) {
+      console.log(`   ? ${ref.key} — нет в манифесте, пропуск`)
+      continue
+    }
+    const master = await downloadFrame(ref.url)
+    const density = bytesPerPixel(master.buffer.length, geo.width, geo.height)
+    const frame = { bytes: master.buffer.length, width: geo.width, height: geo.height }
+    const shrinkTo = shrinkWidthFor(geo.width)
+    const oversized = isOversizedFrame(frame, threshold)
+    console.log(
+      `   ${oversized ? '•' : ' '} ${ref.key} ${geo.width}×${geo.height} ${master.buffer.length} B ` +
+        `(${density.toFixed(3)} Б/px)${oversized ? ` → w=${shrinkTo}` : ' — в норме'}`,
+    )
+    if (oversized) targets.push({ ref, geo, shrinkTo, beforeBytes: master.buffer.length })
+    await sleep(400)
+  }
+
+  if (!targets.length) {
+    console.log('   нечего пересайзить: все кадры в пределах порога')
+    return { id, status: 'skipped' }
+  }
+
+  if (dryRun) {
+    const total = targets.reduce((sum, t) => sum + t.beforeBytes, 0)
+    console.log(`   --dry-run: пересайзу подлежат ${targets.length} кадров, сейчас ${total} B`)
+    return { id, status: 'dry-run', targets: targets.length, bytes: total }
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const backupPath = path.join(BACKUP_DIR, backupFileName(id, stamp))
+  fs.writeFileSync(backupPath, JSON.stringify(before, null, 2))
+  console.log(`   💾 бэкап: ${path.basename(backupPath)}`)
+
+  let next = original
+  const uploaded = []
+  for (const target of targets) {
+    const file = await downloadFrame(target.ref.url, target.shrinkTo)
+    // Пережатая ступень обязана быть легче хранимой: иначе замена только плодит
+    // файлы. Такой кадр оставляем как есть — это не ошибка прогона.
+    if (file.buffer.length >= target.beforeBytes) {
+      console.log(
+        `   = ${target.ref.key}: w=${target.shrinkTo} даёт ${file.buffer.length} B против ${target.beforeBytes} B — пропуск`,
+      )
+      continue
+    }
+    const url = await uploadDescriptionImage(id, file, token)
+
+    // Считать экономию по загруженному буферу нельзя: пайплайн перекодирует кадр
+    // при приёме, и хранимый файл получается ТЯЖЕЛЕЕ отправленного. Пилот на
+    // статье 512: отправили 112 602 B — легло 171 324 B. Поэтому решение о замене
+    // принимается по фактически хранимому файлу, а не по нашим намерениям.
+    await sleep(600)
+    const stored = await downloadFrame(url)
+    if (stored.buffer.length >= target.beforeBytes) {
+      console.log(
+        `   = ${target.ref.key}: хранимый файл ${stored.buffer.length} B не легче ${target.beforeBytes} B — адрес не меняем`,
+      )
+      await sleep(600)
+      continue
+    }
+
+    next = next.split(target.ref.raw).join(url)
+    uploaded.push({
+      key: target.ref.key,
+      url,
+      pathname: new URL(url).pathname,
+      beforeBytes: target.beforeBytes,
+      afterBytes: stored.buffer.length,
+      width: target.shrinkTo,
+    })
+    console.log(
+      `   ↓ ${target.ref.key} → ${url.replace(SITE, '')} ${target.beforeBytes} → ${stored.buffer.length} B ` +
+        `(−${Math.round((1 - stored.buffer.length / target.beforeBytes) * 100)}%)`,
+    )
+    await sleep(1000)
+  }
+
+  if (!uploaded.length) {
+    console.log('   ни один кадр не стал легче — запись не нужна')
+    return { id, status: 'skipped' }
+  }
+
+  next = upgradeFirstPartyProtocol(next)
+
+  // Инварианты те же, что у миграции: меняются ТОЛЬКО адреса.
+  if (countImages(next) !== countImages(original)) {
+    throw new Error(`число <img> изменилось: ${countImages(original)} → ${countImages(next)}`)
+  }
+  if (plainText(next) !== plainText(upgradeFirstPartyProtocol(original))) {
+    throw new Error('текст статьи изменился — пересайз обязан трогать только адреса')
+  }
+
+  const payload = buildUpsertPayload(before, { description: next })
+  const put = await request('PUT', '/travels/upsert/', payload, token)
+  console.log(`   PUT /travels/upsert/ → HTTP ${put.status}`)
+  if (put.status < 200 || put.status >= 300) {
+    throw new Error(`PUT → HTTP ${put.status}: ${put.text.slice(0, 300)}`)
+  }
+
+  await sleep(1000)
+  const after = JSON.parse((await request('GET', `/travels/${id}/`, null, token)).text)
+  const regressions = detectRegression(before, after, { expectChanged: true, newDescription: next })
+  if (regressions.length) {
+    console.error(`   ❌ регрессия данных: ${regressions.join('; ')}`)
+    const rollback = await request(
+      'PUT',
+      '/travels/upsert/',
+      buildUpsertPayload(before, { description: original }),
+      token,
+    )
+    console.error(`   ↩︎ откат PUT → HTTP ${rollback.status}`)
+    throw new Error(`статья ${id} откачена: ${regressions.join('; ')}`)
+  }
+
+  // Отметку ставим только после успешной записи: упавший PUT не должен закрывать
+  // кадру дорогу к повторной попытке.
+  writeShrunk([...shrunkAlready, ...uploaded.map((u) => u.pathname)])
+
+  const savedBytes = uploaded.reduce((sum, u) => sum + (u.beforeBytes - u.afterBytes), 0)
+  console.log(`   ✅ пересайзено ${uploaded.length} кадров, экономия ${savedBytes} B на статью`)
+  return { id, status: 'done', shrunk: uploaded.length, savedBytes }
+}
+
 async function restoreOne(id, token) {
   const file = latestBackup(BACKUP_DIR, id)
   if (!file) throw new Error(`нет бэкапа для ${id}`)
@@ -682,6 +1002,13 @@ const readJournal = () =>
 
 const writeJournal = (journal) =>
   fs.writeFileSync(JOURNAL_FILE, JSON.stringify(journal, null, 2))
+
+/** Pathname кадров, уже прошедших `--shrink`: защита от повторного пережатия. */
+const readShrunk = () =>
+  fs.existsSync(SHRUNK_FILE) ? JSON.parse(fs.readFileSync(SHRUNK_FILE, 'utf8')) : []
+
+const writeShrunk = (list) =>
+  fs.writeFileSync(SHRUNK_FILE, JSON.stringify(Array.from(new Set(list)), null, 2))
 
 /**
  * Прогон по инвентарю: строго последовательно, с паузой между статьями.
@@ -855,6 +1182,18 @@ async function main() {
   if (restoreId) return restoreOne(Number(restoreId), token)
 
   const id = valueOf('id')
+  if (id && has('--shrink')) {
+    const dryRun = has('--dry-run')
+    const thresholdRaw = valueOf('threshold')
+    const result = await shrinkOne(Number(id), {
+      token,
+      dryRun,
+      threshold: thresholdRaw ? Number(thresholdRaw) : OVERSIZED_BYTES_PER_PIXEL,
+    })
+    console.log(JSON.stringify(result))
+    return
+  }
+
   if (id) {
     const dryRun = has('--dry-run')
     const result = await migrateOne(Number(id), { token, dryRun })
@@ -875,6 +1214,8 @@ async function main() {
   console.log('  --restore <id>                     откат статьи из последнего бэкапа')
   console.log('  --run [--limit N] [--author <id>]  пакетный прогон по инвентарю')
   console.log('       [--pause <ms>]                пауза между статьями, по умолчанию 2500')
+  console.log('  --id <id> --shrink [--dry-run]     пересайз раздутых кадров тела статьи')
+  console.log('       [--threshold <Б/px>]          порог «кадр раздут», по умолчанию 0.25')
   console.log('  --status                           сводка прогресса по журналу')
   console.log('  --audit                            контрольный обход прода: остатки legacy')
   process.exit(has('--help') ? 0 : 2)

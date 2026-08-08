@@ -17,13 +17,6 @@ import { preacceptCookies } from './navigation'
 
 export { isMediaRequestWithoutWidth }
 
-export function envNum(name: string, fallback: number): number {
-  const raw = process.env[name]
-  if (!raw) return fallback
-  const v = Number(raw)
-  return Number.isFinite(v) ? v : fallback
-}
-
 /** Inject PerformanceObserver collectors before page load + pre-accept cookies. */
 export async function injectPerfObservers(page: any) {
   await preacceptCookies(page)
@@ -55,6 +48,13 @@ export async function injectPerfObservers(page: any) {
                   if (!el || !el.tagName) return null
                   const tag = el.tagName.toLowerCase()
                   const tid = (el as any).getAttribute?.('data-testid') || ''
+                  // #1287/#1298: RNW-классы вида `r-1otgn73` генерируются сборкой
+                  // и меняются от билда к билду, поэтому запрещённые узлы шапки
+                  // опознаём по стабильным data-хукам, а не по классу.
+                  const markers = ['data-header-logo-image', 'data-header-logo-wordmark']
+                    .filter((name) => (el as any).getAttribute?.(name))
+                    .map((name) => `[${name}]`)
+                    .join('')
                   const cls = ((el as any).getAttribute?.('class') || '')
                     .split(' ')
                     .filter(Boolean)
@@ -65,7 +65,7 @@ export async function injectPerfObservers(page: any) {
                   const cr = s?.currentRect
                   const move =
                     pr && cr ? ` (y ${Math.round(pr.y)}→${Math.round(cr.y)}, h ${Math.round(cr.height)})` : ''
-                  return `${tag}${tid ? `[testid=${tid}]` : ''}${aria ? `[aria=${aria.slice(0, 40)}]` : ''}${cls ? `.${cls}` : ''}${move}`
+                  return `${tag}${tid ? `[testid=${tid}]` : ''}${markers}${aria ? `[aria=${aria.slice(0, 40)}]` : ''}${cls ? `.${cls}` : ''}${move}`
                 })
                 .filter(Boolean)
               w.__perfBudget.clsSources.push({ value: entry.value, sources: fingerprints })
@@ -156,6 +156,59 @@ export async function collectMetrics(page: any): Promise<PerfMetrics> {
       longTaskCount: longTasks.length,
       clsSources,
     }
+  })
+}
+
+export type ObservedProfile = {
+  viewportWidth: number
+  viewportHeight: number
+  devicePixelRatio: number
+  hasTouch: boolean
+  coarsePointer: boolean
+  mobileUserAgent: boolean
+}
+
+/**
+ * Что браузер на самом деле показал. Прежний гейт «делал мобильный» через
+ * `setViewportSize`, то есть мерил desktop-характеристики в узком боксе — это
+ * и есть класс дефекта #1287. Отчёт обязан назвать наблюдаемый профиль, чтобы
+ * запрошенный и фактический нельзя было перепутать.
+ */
+export async function collectObservedProfile(page: any): Promise<ObservedProfile> {
+  return page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio,
+    hasTouch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+    coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+    mobileUserAgent: /Android|Mobile/i.test(navigator.userAgent),
+  }))
+}
+
+/**
+ * Элементы, чей бокс пересекает первый экран на момент готовности и до любого
+ * скролла. Нулевые и нерисуемые боксы не считаются: они ничего не стоят
+ * ни рендереру, ни пользователю.
+ */
+export async function collectFirstScreenElements(page: any): Promise<{
+  firstScreenElements: number
+  documentElements: number
+}> {
+  return page.evaluate(() => {
+    const all = document.querySelectorAll('*')
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
+    let firstScreen = 0
+
+    for (const element of Array.from(all)) {
+      const rect = element.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) continue
+      if (rect.bottom <= 0 || rect.top >= viewportHeight) continue
+      if (rect.right <= 0 || rect.left >= viewportWidth) continue
+      firstScreen += 1
+    }
+
+    return { firstScreenElements: firstScreen, documentElements: all.length }
   })
 }
 

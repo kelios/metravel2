@@ -139,5 +139,22 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
       },
     },
+    // #1287: мобильный профиль — это device descriptor (touch, coarse pointer,
+    // DPR>1, мобильный UA), а не `setViewportSize` на desktop-браузере. Узкий
+    // бокс с desktop-характеристиками мерит не ту страницу: DPR выбирает другие
+    // ступени `?w=` у картинок, а часть верстки ветвится по pointer/touch.
+    //
+    // `testMatch` обязателен: без него проект подхватил бы ВЕСЬ каталог `e2e/`
+    // и команды без `--project` (`npm run e2e`, `check:e2e:changed`,
+    // `e2e:production-smoke`) прогоняли бы весь набор дважды, гоняя
+    // desktop-спеки под Pixel 7.
+    {
+      name: 'chromium-mobile',
+      testMatch: ['**/pages-perf-budget.spec.ts', '**/pages-perf-budget-negative.spec.ts'],
+      use: {
+        ...devices['Pixel 7'],
+        browserName: 'chromium',
+      },
+    },
   ],
 });

@@ -24,6 +24,7 @@ import type {
   PlannedTripDto,
   RouteTemplateDto,
   TripReportDto,
+  TripRouteSummaryDto,
   TripSuggestionDto,
 } from '@/api/plannedTripsNormalizers';
 import {
@@ -32,6 +33,7 @@ import {
   mapSuggestion,
   mapTemplate,
   mapTrip,
+  mapTripRouteElevation,
   pointTypeToBe,
   transportToBe,
   unwrap,
@@ -47,6 +49,7 @@ import type {
   SubmitReportInput,
   SuggestPointInput,
   SuggestionStatus,
+  TripRouteElevation,
   TripSuggestion,
   UpdateRouteInput,
   UpdateTripInput,
@@ -154,6 +157,44 @@ export async function fetchCommunityTrips(
     }
     throw error;
   }
+}
+
+// Высоты не мокаются: выдуманный профиль неотличим от настоящего, поэтому в
+// mock-режиме и на маршруте без ORS-полилинии график просто не показывается.
+const unavailableRouteElevation = (): TripRouteElevation => ({
+  status: 'unavailable',
+  provider: 'unknown',
+  ascentM: null,
+  descentM: null,
+  preview: null,
+  geometry: null,
+  calculatedAt: null,
+});
+
+/** Кэшированная сводка маршрута: высоты и 3D-полилиния появляются после ORS-расчёта. */
+export async function fetchTripRouteElevation(
+  tripId: number | string,
+): Promise<TripRouteElevation> {
+  if (USE_MOCK) return unavailableRouteElevation();
+  const dto = await apiClient.get<TripRouteSummaryDto>(
+    `/trips/${tripId}/route-summary/`,
+  );
+  return mapTripRouteElevation(dto);
+}
+
+/**
+ * Пересчёт сводки через ORS с запросом высот (только владелец). Нужен потому, что
+ * сохранение маршрута кладёт сводку без ascent/descent и без полилинии.
+ */
+export async function refreshTripRouteElevation(
+  tripId: number | string,
+): Promise<TripRouteElevation> {
+  if (USE_MOCK) return unavailableRouteElevation();
+  const dto = await apiClient.post<TripRouteSummaryDto>(
+    `/trips/${tripId}/route-summary/`,
+    { provider: 'ors', force_refresh: true },
+  );
+  return mapTripRouteElevation(dto);
 }
 
 export async function fetchRouteTemplates(): Promise<RouteTemplate[]> {

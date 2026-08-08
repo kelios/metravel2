@@ -1,0 +1,1193 @@
+{
+  "_comment": "Очередь подачи URL вне индекса после retitle-волны 03–06.08 (#1326). Снято URL Inspection 2026-08-08: 203/306 в индексе, 100 URL Google не знает. Пачки по 10 подаются по одной в день: IndexNow (Bing/Yandex) — автоматически, Google — только вручную в GSC «Запросить индексирование» (API для этого не существует). После подачи проставить submittedAt (ISO-дата) и не подавать пачку повторно. Когда все пачки поданы и статус проверен — задача #1326 закрывается.",
+  "source": "GSC URL Inspection 2026-08-08 (306 статей user_id=1)",
+  "createdAt": "2026-08-08",
+  "totalUrls": 103,
+  "batchSize": 10,
+  "batches": [
+    {
+      "day": 1,
+      "submittedAt": "2026-08-08",
+      "urls": [
+        "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+        "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+        "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+        "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
+        "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
+        "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
+        "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+        "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
+        "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+        "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia"
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      }
+    },
+    {
+      "day": 2,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike",
+        "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
+        "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
+        "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+        "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+        "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
+        "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+        "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
+        "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes"
+      ]
+    },
+    {
+      "day": 3,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
+        "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+        "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
+        "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
+        "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+        "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+        "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
+        "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
+        "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
+        "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava"
+      ]
+    },
+    {
+      "day": 4,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye",
+        "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode",
+        "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret",
+        "https://metravel.by/travels/usadba-linovo-dvorets-pototskikh-i-usadba-puzynov",
+        "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
+        "https://metravel.by/travels/usadba-trabutishki-i-golubye-ozera-marshrut",
+        "https://metravel.by/travels/park-sverklanets-ruiny-zamka-dvortsy-i-bunkery",
+        "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe",
+        "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia",
+        "https://metravel.by/travels/dubrovnik-kak-dobratsia-i-chto-posmotret"
+      ]
+    },
+    {
+      "day": 5,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
+        "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
+        "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+        "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia",
+        "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
+        "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko",
+        "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton",
+        "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
+        "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
+        "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den"
+      ]
+    },
+    {
+      "day": 6,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/ruiny-bashni-v-rychuve-i-peshchera-marshrut",
+        "https://metravel.by/travels/kostel-v-selishche-i-memorial-proryv-marshrut",
+        "https://metravel.by/travels/zabroshennaia-tserkov-v-begomle-kak-doekhat",
+        "https://metravel.by/travels/vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit",
+        "https://metravel.by/travels/pilsko-v-beskidakh-marshrut-k-granitse-slovakii",
+        "https://metravel.by/travels/severnyi-velebit-i-zavizhan-peshii-marshrut",
+        "https://metravel.by/travels/berlin-i-poznan-za-2-dnia-chto-posmotret",
+        "https://metravel.by/travels/tivoli-iz-rima-na-odin-den-chto-posmotret",
+        "https://metravel.by/travels/lager-zorka-i-kupel-poezdka-iz-minska",
+        "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt"
+      ]
+    },
+    {
+      "day": 7,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+        "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+        "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut",
+        "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+        "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa",
+        "https://metravel.by/travels/dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova",
+        "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+        "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+        "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+        "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia"
+      ]
+    },
+    {
+      "day": 8,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+        "https://metravel.by/travels/verona-za-poldnia-chto-posmotret",
+        "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+        "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia",
+        "https://metravel.by/travels/mavrikii-na-avtomobile-arenda-i-marshrut",
+        "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
+        "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
+        "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
+        "https://metravel.by/travels/schronisko-magurka-marshrut-na-90-minut",
+        "https://metravel.by/travels/sobachii-friendly-trek-v-chase-ot-krakova-dolina-zhabnika"
+      ]
+    },
+    {
+      "day": 9,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
+        "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+        "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
+        "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby",
+        "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei",
+        "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia",
+        "https://metravel.by/travels/panevniki-petlia-ot-chernogo-stava-8-km",
+        "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den",
+        "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
+        "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut"
+      ]
+    },
+    {
+      "day": 10,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+        "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
+        "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+        "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
+        "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
+        "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
+        "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+        "https://metravel.by/travels/zelenoe-pleso-zelene-pleso-v-vysokikh-tatrakh-pokhod-k-izumrudnomu-ozeru",
+        "https://metravel.by/travels/zamok-malbork-krupneishaia-kirpichnaia-krepost-mira-putevoditel",
+        "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta"
+      ]
+    },
+    {
+      "day": 11,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/zamok-bolchuv-progulka-cherez-les-k-ruinam-v-rudavakh-ianovitskikh",
+        "https://metravel.by/travels/adrshpashskie-skaly-marshrut-po-skalnomu-gorodu-gde-snimali-khroniki-narnii",
+        "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest"
+      ]
+    }
+  ],
+  "details": [
+    {
+      "id": 172,
+      "url": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "velomarshrut-402-lisya-gora-na-2-dnya-liniya-molotova-i-avgustovskiy-kanal"
+      ],
+      "oldClicks": 9,
+      "oldImpressions": 82
+    },
+    {
+      "id": 267,
+      "url": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zamok-ogrodzenec-skalnyy-gorod-podzamche"
+      ],
+      "oldClicks": 8,
+      "oldImpressions": 451
+    },
+    {
+      "id": 637,
+      "url": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "gory-polshi-19-peshikh-marshrutov-po-tatram-beskidam-i-peninam"
+      ],
+      "oldClicks": 6,
+      "oldImpressions": 355
+    },
+    {
+      "id": 180,
+      "url": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "stankovo-otlichnyy-variant-dlya-progulki-na-vyhodnye-starinnyy-park-s-vekovymi-derevyami",
+        "park-stankovo-pod-minskom-istoriia-usadby-chapskikh-chto-posmotret-legendy-i-kak-dobratsia"
+      ],
+      "oldClicks": 6,
+      "oldImpressions": 286
+    },
+    {
+      "id": 178,
+      "url": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "polsha-suvalki-elblong-gdansk-leba",
+        "puteshestvie-v-polshu-na-4-dnia-marshrut-minsk-suvalki-elblong-gdansk-leba"
+      ],
+      "oldClicks": 6,
+      "oldImpressions": 96
+    },
+    {
+      "id": 141,
+      "url": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "benitsa-zabroshennye-podzemelia-starinnyi-khram-i-mesto-kotoroe-slozhno-zabyt"
+      ],
+      "oldClicks": 5,
+      "oldImpressions": 85
+    },
+    {
+      "id": 461,
+      "url": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "pokhod-na-tri-korony-trzy-korony-982-m",
+        "tri-korony-v-peninskikh-gorakh-marshrut-iz-sromowce-nizne-kotoryi-stoit-proiti-khotia-by-raz"
+      ],
+      "oldClicks": 4,
+      "oldImpressions": 243
+    },
+    {
+      "id": 192,
+      "url": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "albaniya-dostoprimechatelnosti-orikuma-castle-of-gjon-bocari-i-cerkov-marmiroy"
+      ],
+      "oldClicks": 4,
+      "oldImpressions": 223
+    },
+    {
+      "id": 493,
+      "url": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zamok-ksenzh-v-polshe-istoriia-legendy-i-puteshestvie-v-serdtse-nizhnei-silezii",
+        "zamok-ksenzh-v-polshe-istoriia-kak-dobratsia-chto-posmotret-tainy-legendy-i-podzemelia"
+      ],
+      "oldClicks": 2,
+      "oldImpressions": 146
+    },
+    {
+      "id": 194,
+      "url": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "albaniya-dostoprimechatelnosti-vlera-zamok-kanina-kalaja-e-kanines-starinnaya-mechet-muradie-i-nasledie-envera-hodzhi"
+      ],
+      "oldClicks": 2,
+      "oldImpressions": 129
+    },
+    {
+      "id": 459,
+      "url": "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "helskaya-kosa-mayak-v-v-yastarne-mayak-gora-shvedov-helskiy-mayak",
+        "khelskaia-kosa-maiak-v-v-iastarne-maiak-gora-shvedov-khelskii-maiak"
+      ],
+      "oldClicks": 2,
+      "oldImpressions": 120
+    },
+    {
+      "id": 510,
+      "url": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "putevoditel-po-banskoi-shtiavnitse-chto-posmotret-za-odin-den",
+        "banska-shtiavnitsa-slovakiia-chto-posmotret-za-1-den-kak-dobratsia-istoriia-goroda-i-neobychnye-fakty"
+      ],
+      "oldClicks": 2,
+      "oldImpressions": 61
+    },
+    {
+      "id": 196,
+      "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "velomarshrut-po-belarusi-na-odin-den-krevskii-zamok-golshany-starye-usadby-i-zabroshennyi-park"
+      ],
+      "oldClicks": 2,
+      "oldImpressions": 17
+    },
+    {
+      "id": 402,
+      "url": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "park-invald-park-dinozavrov-luna-park-park-miniatyur-zoopark-i-dazhe-svoy-zamok"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 85
+    },
+    {
+      "id": 635,
+      "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "usadby-dvortsy-i-zamki-belarusi-19-marshrutov-vykhodnogo-dnia-iz-minska"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 66
+    },
+    {
+      "id": 421,
+      "url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "3-dnya-v-shklyarska-porembe-zamok-shviny-zamok-v-roztoke-pohod-na-goru-snezhka-i-mnogo-drugoe"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 47
+    },
+    {
+      "id": 300,
+      "url": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "sokolinye-gory-i-zamki-poblizosti-marshrut-s-legendami-i-peshcherami"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 32
+    },
+    {
+      "id": 143,
+      "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "narovlya-dvorcovo-parkovyy-kompleks-gorvattov",
+        "usadba-gorvattov-v-narovle-istoriia-legendy-foto-i-marshrut-poezdki"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 29
+    },
+    {
+      "id": 131,
+      "url": "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "baikovskii-rodnik-v-mogilevskoi-oblasti-velomarshrut-legendy-i-mesto-sily-nedaleko-ot-chausov",
+        "velomarshrut-k-baikovskomu-rodniku-odnodnevnoe-puteshestvie-po-mogilevskoi-oblasti"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 22
+    },
+    {
+      "id": 535,
+      "url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "kortina-dampetstso-i-via-ferrata-cascate-di-fanes-vodopady-i-trek-v-dolomitakh"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 19
+    },
+    {
+      "id": 444,
+      "url": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "bazilika-bogomateri-angelov-v-kalvarii-zebzhidovskoy-i-za"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 12
+    },
+    {
+      "id": 484,
+      "url": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "rysianka-1322m-tuda-gde-konchaetsia-internet-i-nachinaetsia-gornyi-dzen-1"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 4
+    },
+    {
+      "id": 162,
+      "url": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "litva-shveciya-norvegiya-daniya-germaniya-polsha"
+      ],
+      "oldClicks": 1,
+      "oldImpressions": 1
+    },
+    {
+      "id": 216,
+      "url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "gruziya-peshchera-sataplia",
+        "chto-posmotret-v-kutaisi-peshchery-kanony-monastyri-i-interesnye-mesta-riadom-s-batumi"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 160
+    },
+    {
+      "id": 200,
+      "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "lida-lidskiy-zamok"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 66
+    },
+    {
+      "id": 303,
+      "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "dvorec-dembinskih-rycarskiy-zamok-v-sobkove-hencinskiy-zamok-dvorec-tarlov"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 65
+    },
+    {
+      "id": 171,
+      "url": "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "barselona-i-park-razvlecheniy-port-aventura-v-mae"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 61
+    },
+    {
+      "id": 472,
+      "url": "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "vena-za-1-den-i-venskii-les-chto-posmotret-kak-doekhat-legendy-i-skrytye-mesta"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 55
+    },
+    {
+      "id": 247,
+      "url": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "marshrut-na-odin-den-letnyaya-rezidenciya-radzivilov-usadba-elenskih-usadba-stralkov-usadba-labockiy-1"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 48
+    },
+    {
+      "id": 530,
+      "url": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "krakov-zamok-lietava-bratislava-puteshestvie-po-slovakii"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 41
+    },
+    {
+      "id": 154,
+      "url": "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "mogilev",
+        "mogilev-gorod-istorii-legend-i-uiutnykh-ulits-chto-posmotret-i-kak-splanirovat-poezdku"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 39
+    },
+    {
+      "id": 206,
+      "url": "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "indiya-hampi"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 34
+    },
+    {
+      "id": 157,
+      "url": "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zimnii-drezden-i-bashtai-arkhitektura-muzei-i-vidy-bez-turistov"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 27
+    },
+    {
+      "id": 233,
+      "url": "https://metravel.by/travels/usadba-linovo-dvorets-pototskikh-i-usadba-puzynov",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "marshrut-na-oden-usadba-linovo-dvorec-potockih-usadba-puzynov"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 24
+    },
+    {
+      "id": 457,
+      "url": "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "observatoriya-imeni-tadeusha-banahevicha-na-goru-lyubomire"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 24
+    },
+    {
+      "id": 239,
+      "url": "https://metravel.by/travels/usadba-trabutishki-i-golubye-ozera-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "usadba-trabutishki-i-golubye-ozera-marshrut-zhile-vpechatleniia",
+        "usadba-trabutishki-i-poseshchenie-ozer-ilginiya-bolduk-i-karasik"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 20
+    },
+    {
+      "id": 313,
+      "url": "https://metravel.by/travels/park-sverklanets-ruiny-zamka-dvortsy-i-bunkery",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "park-sverklanets-progulka-po-ruinam-zamka-dvortsam-i-bunkeram"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 17
+    },
+    {
+      "id": 475,
+      "url": "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "dom-na-ostrove",
+        "zagolovok-uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-priroda-i-interesnye-mesta-riadom",
+        "uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-i-priroda"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 12
+    },
+    {
+      "id": 155,
+      "url": "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zimnee-puteshestvie-po-polshe-germanii-chekhii-i-avstrii-nash-marshrut"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 11
+    },
+    {
+      "id": 524,
+      "url": "https://metravel.by/travels/dubrovnik-kak-dobratsia-i-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "8-dubrovnik-2025-progulka-po-staromu-gorodu-chto-posmotret-za-1-den",
+        "dubrovnik-kak-dobratsia-chto-posmotret-interesnye-fakty-i-legendy-starogo-goroda-khorvatii"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 9
+    },
+    {
+      "id": 311,
+      "url": "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zamki-polshi-dvorec-v-chervencicah"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 8
+    },
+    {
+      "id": 491,
+      "url": "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "mavrikii-morskaia-ekskursiia-na-ostrov-il-o-serf-ile-aux-cerfs-pliazh-bel-mar-i-letuchie-lisy"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 6
+    },
+    {
+      "id": 135,
+      "url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zhemyslavl-i-dvorets-umiastovskikh-progulka-vo-vremeni",
+        "zhemyslavl-i-dvorets-umiastovskikh-progulka-vo-vremeni-1",
+        "zhemyslavl-i-dvorets-umiastovskikh-zabroshennaia-usadba-belarusi-istoriia-legendy-i-marshrut-iz-minska"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 5
+    },
+    {
+      "id": 140,
+      "url": "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "kholopenichi-ruiny-sviato-uspenskoi-tserkvi-pamiatnik-otmene-krepostnogo-prava-i-tikhie-ulitsy-zabroshennoi-derevni"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 5
+    },
+    {
+      "id": 526,
+      "url": "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "10-iuzhnyi-velebit-peshii-marshrut-v-natsionalnom-parke-paklenitsa-karta-sovety-tseny",
+        "natsionalnyi-park-paklenitsa-v-khorvatii-istoriia-kak-dobratsia-chto-posmotret-legendy-i-poleznye-sovety"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 5
+    },
+    {
+      "id": 139,
+      "url": "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "den-rozhdeniia-u-istoka-nemana-dendropark-usadba-narkevicha-iodko-i-mesto-sliianiia-chetyrekh-rek"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 3
+    },
+    {
+      "id": 531,
+      "url": "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "muzykalnyi-festival-balaton-sound-3-dnia-muzyki-solntsa-i-ozera"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 3
+    },
+    {
+      "id": 116,
+      "url": "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "otdykh-v-dominikane-kak-dobratsia-chto-posmotret-luchshie-ekskursii-i-lichnyi-opyt"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 2
+    },
+    {
+      "id": 209,
+      "url": "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "liniia-stalina-istoriia-kak-doekhat-chto-posmotret-i-kakie-tainy-khranit-muzei"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 2
+    },
+    {
+      "id": 254,
+      "url": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "marshrut-vykhodnogo-dnia-iz-minska-osipovichskaia-ges-svisloch-i-svislochsko-berezinskii-zapovednik"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 2
+    },
+    {
+      "id": 309,
+      "url": "https://metravel.by/travels/ruiny-bashni-v-rychuve-i-peshchera-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "ruiny-storozhevoy-bashni-v-rychuve-i",
+        "ruiny-storozhevoi-bashni-v-rychuve-i-peshchera-jaskinia-z-kominem-marshrut-istoriia-i-chto-posmotret-v-malopolshe"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 2
+    },
+    {
+      "id": 136,
+      "url": "https://metravel.by/travels/kostel-v-selishche-i-memorial-proryv-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "kostel-v-selishche-i-memorial-proryv-atmosfernoe-puteshestvie-po-vitebskoi-oblasti"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 1
+    },
+    {
+      "id": 185,
+      "url": "https://metravel.by/travels/zabroshennaia-tserkov-v-begomle-kak-doekhat",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "tserkov-vsekh-sviatykh-begoml",
+        "zabroshennaia-pravoslavnaia-tserkov-v-begomle-istoriia-legendy-i-marshrut-dlia-puteshestviia"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 1
+    },
+    {
+      "id": 198,
+      "url": "https://metravel.by/travels/vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "vitebsk-za-1-den-chto-posmotret-kuda-skhodit-i-pochemu-etot-gorod-khochetsia-pokazat-druziam-snova-i-snova"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 1
+    },
+    {
+      "id": 463,
+      "url": "https://metravel.by/travels/pilsko-v-beskidakh-marshrut-k-granitse-slovakii",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "peshie-marshruty-v-beskidakh-kak-dobratsia-do-pilsko-i-granitsy-so-slovakiei"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 1
+    },
+    {
+      "id": 517,
+      "url": "https://metravel.by/travels/severnyi-velebit-i-zavizhan-peshii-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "2-severnyi-velebit-marshrut-babic-sica-zavizan-premuzic-trail-na-neskolko-dnei",
+        "severnyi-velebit-i-zavizhan-luchshii-peshii-marshrut-khorvatii-s-vidom-na-adriatiku-kotoryi-stoit-proiti"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 1
+    },
+    {
+      "id": 166,
+      "url": "https://metravel.by/travels/berlin-i-poznan-za-2-dnia-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "berlin-poznan-minsk",
+        "berlin-i-poznan-za-2-dnia-chto-posmotret-kak-dobratsia-i-interesnye-fakty-o-glavnykh-dostoprimechatelnostiakh-evropy-v-2026-godu"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 221,
+      "url": "https://metravel.by/travels/tivoli-iz-rima-na-odin-den-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "tivoli-idealnaia-poezdka-iz-rima-na-odin-den-kotoraia-zapomnilas-nam-ne-tolko-krasotoi-no-i-shtrafom"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 227,
+      "url": "https://metravel.by/travels/lager-zorka-i-kupel-poezdka-iz-minska",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "poezdka-vykhodnogo-dnia-iz-minska-zabroshennyi-lager-zorka-rodnik-na-dnepre-i-kupel-panteleimona"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 245,
+      "url": "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 264,
+      "url": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "marshrut-na-odin-den-zamok-miruv-peshchera-koniushnia-zamok-bobolitse"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 281,
+      "url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "peshchery-i-zapovednik-riadom-s-zamkami-miruv-i-bobolitse-marshrut-na-poldnia"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 286,
+      "url": "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "gory-tovarny-gory-towarne",
+        "gory-tovarny-i-peshchery-iurskogo-kraia-marshrut-vykhodnogo-dnia-s-sobakami-istoriia-legendy-i-poleznye-sovety"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 297,
+      "url": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "chto-posmotret-riadom-s-krakovom-zamok-tenchin-shakhta-velichka-i-solianoi-zamok-za-odin-den"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 310,
+      "url": "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "progulka-v-zelene-tropa-bobrov-i-vetrianaia-melnitsa-v-5-km-ot-tsivilizatsii"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 405,
+      "url": "https://metravel.by/travels/dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "dolina-dlubni-i-istochniki-imbramovitse-marshrut-vykhodnogo-dnia-iz-krakova-chto-posmotret-i-kak-dobratsia"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 422,
+      "url": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zamok-v-dobchice-i-smotrovaya-bashnya-v-gorce"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 434,
+      "url": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zamok-chhuv-zamok-tropshtyn-zamok-v-novy-sonche-vezha-v-krynicezdroy"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 445,
+      "url": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+      "state": "Страница просканирована, но пока не проиндексирована",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 464,
+      "url": "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 466,
+      "url": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "marshrut-po-doline-kosteliska-smrechinskii-prud-peshchery-i-khala-ornak"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 471,
+      "url": "https://metravel.by/travels/verona-za-poldnia-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "verona-za-poldnia-chto-posmotret-esli-vremeni-malo-i-pochemu-etot-gorod-tochno-stoit-dobavit-v-marshrut"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 482,
+      "url": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+      "state": "Страница просканирована, но пока не проиндексирована",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 487,
+      "url": "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "vodopad-tamarind-na-mavrikii-kak-dobratsia-nuzhen-li-gid-i-chto-vazhno-znat-pered-pokhodom"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 488,
+      "url": "https://metravel.by/travels/mavrikii-na-avtomobile-arenda-i-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "mavrikii-na-avtomobile-arenda-levostoronnee-dvizhenie-i-marshrut-do-lemorn-braban"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 490,
+      "url": "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "ekskursiia-na-mavrikii-port-lui-botanicheskii-sad-pliazh-s-cherepakhami"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 492,
+      "url": "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "leskowiec-922-m-legkii-marshrut-v-beskidakh-iz-rzyki-kak-podniatsia-chto-posmotret-i-gde-otdokhnut"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 500,
+      "url": "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "gde-pokatatsia-na-konkakh-lyzhakh-i-snouborde-v-krakove-i-ego-okrestnostiakh"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 505,
+      "url": "https://metravel.by/travels/schronisko-magurka-marshrut-na-90-minut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 506,
+      "url": "https://metravel.by/travels/sobachii-friendly-trek-v-chase-ot-krakova-dolina-zhabnika",
+      "state": "Страница просканирована, но пока не проиндексирована",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 508,
+      "url": "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 511,
+      "url": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 512,
+      "url": "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 513,
+      "url": "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "den-2-v-parizhe-progulki-po-monmartru-katakomby-i-luchshii-vid-na-gorod"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 516,
+      "url": "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 518,
+      "url": "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 519,
+      "url": "https://metravel.by/travels/panevniki-petlia-ot-chernogo-stava-8-km",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 532,
+      "url": "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 536,
+      "url": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 539,
+      "url": "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 540,
+      "url": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh",
+        "ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 541,
+      "url": "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 543,
+      "url": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 544,
+      "url": "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 545,
+      "url": "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "kak-proiti-portugalskii-put-vdol-poberezhia-nash-opyt-camino-portugues-de-la-costa"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 548,
+      "url": "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "ruiny-dvortsa-szembekow-v-poreba-zegoty-atmosfernyi-velomarshrut"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 563,
+      "url": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 569,
+      "url": "https://metravel.by/travels/zelenoe-pleso-zelene-pleso-v-vysokikh-tatrakh-pokhod-k-izumrudnomu-ozeru",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 630,
+      "url": "https://metravel.by/travels/zamok-malbork-krupneishaia-kirpichnaia-krepost-mira-putevoditel",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 638,
+      "url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 641,
+      "url": "https://metravel.by/travels/zamok-bolchuv-progulka-cherez-les-k-ruinam-v-rudavakh-ianovitskikh",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 642,
+      "url": "https://metravel.by/travels/adrshpashskie-skaly-marshrut-po-skalnomu-gorodu-gde-snimali-khroniki-narnii",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    },
+    {
+      "id": 682,
+      "url": "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest",
+      "state": "URL неизвестен Google",
+      "renamedFrom": [
+        "zabroshennye-dvortsy-usadby-i-zamki-belarusi-38-atmosfernykh-mest-s-foto-i-koordinatami"
+      ],
+      "oldClicks": 0,
+      "oldImpressions": 0
+    }
+  ]
+}

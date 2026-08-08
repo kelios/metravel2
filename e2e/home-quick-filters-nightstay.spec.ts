@@ -9,8 +9,17 @@ test.describe('@smoke Home quick filters', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    // Quick filters block.
-    await page.getByText('Найдите маршрут под свой день', { exact: true }).waitFor({ timeout: 30_000 });
+    // Quick filters block. Секция живёт в `DeferredSection priority="low"`, а у
+    // неё на web `disableFallbackOnWeb`: она монтируется ТОЛЬКО по пересечению с
+    // вьюпортом (rootMargin 600px), таймера-подстраховки нет. До скролла её нет
+    // в DOM вообще, поэтому ожидание видимости на первом экране висит 30 с.
+    const quickFiltersHeading = page.getByText('Найдите маршрут под свой день', { exact: true });
+    for (let step = 0; step < 15; step += 1) {
+      if (await quickFiltersHeading.isVisible().catch(() => false)) break;
+      await page.mouse.wheel(0, 900);
+      await page.waitForTimeout(200);
+    }
+    await quickFiltersHeading.waitFor({ timeout: 30_000 });
 
     const nightsChip = page.getByRole('button', { name: 'Подбор Без ночлега' }).first();
     await nightsChip.waitFor({ state: 'attached', timeout: 30_000 });

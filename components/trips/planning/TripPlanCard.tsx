@@ -11,6 +11,7 @@ import {
   PLAN_STATUS_LABEL,
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
+  VISIBILITY_ICON_NAME,
   VISIBILITY_LABEL,
   formatTripDateTime,
   planStatusColor,
@@ -18,7 +19,7 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 interface Props {
@@ -106,7 +107,11 @@ function TripPlanCard({
           <Text style={styles.badgeText}>{PLAN_STATUS_LABEL[trip.status]}</Text>
         </View>
         <View style={styles.visibilityBadge}>
-          <Feather name="eye" size={12} color={colors.textSecondary} />
+          <Feather
+            name={VISIBILITY_ICON_NAME[trip.visibility] as never}
+            size={12}
+            color={colors.textSecondary}
+          />
           <Text style={styles.visibilityText}>{VISIBILITY_LABEL[trip.visibility]}</Text>
         </View>
       </View>
@@ -137,8 +142,14 @@ function TripPlanCard({
       <View style={styles.footer}>
         <View style={styles.occupancyRow}>
           <Feather name="users" size={14} color={colors.textSecondary} />
-          <Text style={styles.footerText}>{i18nT('trips:components.trips.planning.TripPlanCard.edut_f472215c')}{goingCount} {i18nT('trips:components.trips.planning.TripPlanCard.iz_b3249d51')}{trip.seatsTotal}</Text>
-          <Text style={styles.participantsHint}>· {participantsCount} {i18nT('trips:components.trips.planning.TripPlanCard.v_spiske_e0d50d93')}</Text>
+          <Text style={styles.footerText}>
+            {translatePlural('tripsStatic:plan.card.goingSeats', goingCount, {
+              seats: trip.seatsTotal,
+            })}
+          </Text>
+          <Text style={styles.participantsHint}>
+            {`· ${i18nT('tripsStatic:plan.card.inList', { people: participantsCount })}`}
+          </Text>
         </View>
         <View style={styles.cardActions} testID={`trip-plan-card-actions-${trip.id}`}>
           <CardActionPressable

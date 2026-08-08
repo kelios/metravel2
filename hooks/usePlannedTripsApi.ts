@@ -13,8 +13,10 @@ import {
   fetchMyPlannedTrips,
   fetchPlannedTrip,
   fetchRouteTemplates,
+  fetchTripRouteElevation,
   fetchTripSuggestions,
   inviteParticipants,
+  refreshTripRouteElevation,
   setRsvp,
   submitTripReport,
   suggestPoint,
@@ -30,6 +32,7 @@ import {
   type RsvpInput,
   type SubmitReportInput,
   type SuggestPointInput,
+  type TripRouteElevation,
   type TripSuggestion,
   type UpdateTripInput,
   type UpdateTripTransportInput,
@@ -52,8 +55,15 @@ const isAuthError = (error: unknown): boolean =>
 const retry = (failureCount: number, error: unknown): boolean =>
   !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
 
+// Пересчёт маршрута на бэке переписывает сводку без высот, поэтому кэш профиля
+// больше не относится к текущему маршруту.
+const invalidateRouteElevation = (qc: QueryClient, tripId: number | string): void => {
+  void qc.invalidateQueries({ queryKey: queryKeys.tripRouteElevation(tripId) });
+};
+
 const syncUpdatedPlannedTrip = (qc: QueryClient, trip: PlannedTrip): void => {
   qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
+  invalidateRouteElevation(qc, trip.id);
   void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
   void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsAll() });
   void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
@@ -94,6 +104,42 @@ export function useCommunityTrips(filters?: CommunityTripsFilters) {
     queryFn: () => fetchCommunityTrips(filters),
     staleTime: STALE_TIME,
     retry,
+  });
+}
+
+export function useTripRouteElevation(
+  tripId: string | number | null | undefined,
+  options?: { enabled?: boolean },
+) {
+  // Эндпоинт закрыт TokenAuthentication: до гидрации токена запрос даёт 401 и
+  // кэширует пустой профиль.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery<TripRouteElevation>({
+    queryKey: queryKeys.tripRouteElevation(tripId),
+    queryFn: () => fetchTripRouteElevation(tripId as string | number),
+    enabled:
+      (options?.enabled ?? true) &&
+      isAuthenticated &&
+      tripId != null &&
+      tripId !== '',
+    staleTime: STALE_TIME,
+    retry,
+  });
+}
+
+export function useRefreshTripRouteElevation() {
+  const qc = useQueryClient();
+  return useMutation<TripRouteElevation, unknown, { tripId: number | string }>({
+    mutationFn: ({ tripId }) => refreshTripRouteElevation(tripId),
+    onSuccess: (elevation, { tripId }) => {
+      qc.setQueryData<TripRouteElevation>(
+        queryKeys.tripRouteElevation(tripId),
+        elevation,
+      );
+      // Пересчёт переписывает сохранённую сводку: в поездке меняются набор высоты
+      // и routing state, а route_geometry обнуляется в пользу полилинии.
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTrip(tripId) });
+    },
   });
 }
 
@@ -174,6 +220,7 @@ export function useUpdateTripRoute() {
     mutationFn: updateTripRoute,
     onSuccess: (trip) => {
       qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
+      invalidateRouteElevation(qc, trip.id);
       void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
     },
   });

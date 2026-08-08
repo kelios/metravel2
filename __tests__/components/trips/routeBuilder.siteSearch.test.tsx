@@ -21,6 +21,8 @@ jest.mock('@/api/travelsApi', () => ({
 
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useRouteTemplates: () => ({ data: [] }),
+  useTripRouteElevation: () => ({ data: undefined }),
+  useRefreshTripRouteElevation: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdateTripRoute: () => ({
     mutate: mockMutate,
     isPending: false,

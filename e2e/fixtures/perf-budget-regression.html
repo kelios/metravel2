@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>perf budget negative fixture</title>
+    <style>
+      body { margin: 0; font: 14px/1.4 system-ui, sans-serif; }
+      /* Много мелких видимых боксов в первом экране — так проба бьёт потолок
+         DOM первого экрана, а не просто длину документа. */
+      .chip { display: inline-block; width: 10px; height: 10px; margin: 1px; background: #ccd; }
+      .row { height: 18px; padding: 0 8px; }
+      #pusher { height: 0; background: #eee; transition: none; }
+      #switcher { display: inline-block; height: 44px; padding: 0 12px; background: #ddd; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Негативная проба гейта #1287. Страница обязана нарушить сразу три правила:
+        1) сдвиг макета заметно выше 0,1;
+        2) число элементов первого экрана выше потолка пробы;
+        3) сдвиг исходит от узла с запрещённым маркером шапки.
+      Если проба зелёная — сломан сам гейт, а не эта страница.
+    -->
+    <div id="pusher"></div>
+    <!-- Картинка логотипа: она есть в обеих раскладках, а переключатель языка
+         до закрытия #1298 стоит на общем долге и ничего бы не доказал. -->
+    <div id="switcher" data-header-logo-image="true">MeTravel</div>
+    <div id="chips"></div>
+    <div id="filler"></div>
+    <script>
+      const chips = document.getElementById('chips')
+      for (let index = 0; index < 400; index += 1) {
+        const chip = document.createElement('span')
+        chip.className = 'chip'
+        chips.appendChild(chip)
+      }
+
+      const filler = document.getElementById('filler')
+      for (let index = 0; index < 200; index += 1) {
+        const row = document.createElement('div')
+        row.className = 'row'
+        row.textContent = 'row ' + index
+        filler.appendChild(row)
+      }
+
+      // Сдвиг после первой отрисовки: контент уезжает вниз на пол-экрана.
+      setTimeout(() => {
+        document.getElementById('pusher').style.height = '400px'
+      }, 400)
+    </script>
+  </body>
+</html>
