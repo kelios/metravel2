@@ -1,185 +1,188 @@
-# Spec-Driven Development в metravel.by
+# OpenSpec и Spec-Driven Development в metravel.by
 
-Актуализировано: 2026-08-06. Установленная версия Spec Kit: **0.16.0**,
-интеграция — **GitHub Copilot**, script type — `sh`.
+Актуализировано: 2026-08-08. Основная SDD-интеграция — **OpenSpec 1.8.0**,
+schema — `spec-driven`, profile — `core`, AI tool — **Codex**.
 
 Этот документ описывает, когда и как использовать Spec-Driven Development (SDD)
 в metravel.by. Обязательные технические правила остаются в `docs/RULES.md` и
-`AGENTS.md`; SDD их не заменяет, а добавляет процесс постановки задачи.
+`AGENTS.md`; OpenSpec их не заменяет, а добавляет версионируемый процесс
+согласования изменений.
 
 ## 1. Зачем metravel.by нужен SDD
 
 metravel.by — работающий production-проект с реальными пользователями,
-проиндексированным контентом и тремя активными поверхностями (desktop web,
-mobile web, Android). Основная цена ошибки здесь не «не скомпилировалось», а
+проиндексированным контентом и тремя активными поверхностями: desktop web,
+mobile web и Android. Основная цена ошибки здесь не «не скомпилировалось», а
 тихая регрессия: уехавший URL, второй запрос за той же картинкой, разъехавшийся
-mobile web и Android, потерянный `alt`, сломанный редирект.
+mobile web и Android, потерянный `alt` или сломанный редирект.
 
 SDD закрывает четыре повторяющиеся проблемы:
 
-- **Размытый scope.** Задача «почини картинки» без границ превращается в
-  рефакторинг половины медиапайплайна. `Out of scope` в спецификации делает
-  границу явной ещё до первой правки.
-- **Непроверяемая приёмка.** «Стало лучше» нельзя проверить. Acceptance criteria
-  в `spec.md` формулируются так, что их закрывает конкретная команда, URL или
-  наблюдение.
-- **Требования, придуманные исполнителем.** Спецификация фиксирует поведение до
-  реализации, поэтому агент не додумывает бизнес-логику по ходу дела.
-- **Потерянный контекст решения.** `spec.md` + `plan.md` остаются в репозитории и
-  объясняют, почему сделано именно так, когда через полгода кто-то захочет это
-  «упростить».
+- **Размытый scope.** Non-goals фиксируют границу до первой правки.
+- **Непроверяемая приёмка.** Требования и сценарии связываются с конкретными
+  командами, URL и наблюдаемым результатом.
+- **Требования, придуманные исполнителем.** Поведение согласуется до apply.
+- **Потерянный контекст решения.** Proposal, delta specs, design и tasks остаются
+  рядом с кодом, а после archive обновляют living specs.
 
-## 2. Когда SDD обязателен
+## 2. Когда OpenSpec обязателен
 
-Полный цикл (`spec.md` → `plan.md` → `tasks.md` → реализация) обязателен для:
+Полный цикл (`proposal` → `specs` → `design` → `tasks` → apply → archive)
+обязателен для:
 
-- **новых функций** — любая новая пользовательская возможность или экран;
-- **изменений API-контракта** — новые/изменённые поля, коды ошибок, пагинация,
-  формат ответа, в том числе когда фронту нужен новый контракт от бэкенда;
-- **изменений базы данных** — всё, что требует миграции в `../metravel-backend`
-  (схема, backfill, новые индексы); спецификация описывает нужный контракт,
-  сама миграция уходит задачей `area=back` на MCP task board;
-- **сложных багов** — воспроизведение неочевидно, причина неясна, затронуто
-  несколько слоёв, или баг уже возвращался (сверьтесь с `docs/PROBLEM_MEMORY.md`);
-- **SEO-чувствительных изменений** — маршруты, слаги, canonical, sitemap,
-  robots, метаданные, SSG/prerender, структурированные данные;
-- **работы с изображениями** — пайплайн загрузки/раздачи, выбор размера,
-  placeholder и letterbox fill, lazy loading, hero и галереи; здесь сначала
-  читается `docs/features/images.md`, чтобы не переизобрести пайплайн;
-- **изменений, затрагивающих frontend и backend одновременно** — когда обе
-  стороны меняются в рамках одной задачи, спецификация фиксирует контракт между
-  ними до начала работы.
+- новых пользовательских функций и экранов;
+- изменений API/data-контракта, кодов ошибок, пагинации или формата ответа;
+- задач с backend-зависимостью или миграцией БД: OpenSpec фиксирует нужный
+  контракт, а backend-работа уходит в `area=back` на MCP task board;
+- сложных или повторяющихся багов с неочевидной причиной;
+- SEO-чувствительных изменений маршрутов, slug, canonical, sitemap, robots,
+  metadata, structured data и prerender/SSG;
+- изменений media/image pipeline, hero, галерей, выбора размера, placeholder,
+  caching или lazy loading;
+- изменений, пересекающих несколько активных платформ или frontend/backend.
 
-Отдельно: любое изменение в `components/travel/sliderParts/**`,
-`components/travel/details/**`, `ImageCardMedia` или hero-геометрии обязано
-пройти двусторонний гейт `yarn verify:slider` + `yarn verify:slider-perf` —
-и это должно быть записано в acceptance criteria.
+Для recurring problem до proposal обязателен history preflight из
+`docs/PROBLEM_MEMORY.md`. OpenSpec не заменяет MCP task board: постоянный backlog,
+статус, dependencies и Done gate остаются на борде.
 
-## 3. Когда полная спецификация не нужна
+## 3. Когда полный change не нужен
 
-Достаточно сокращённого процесса:
+Без каталога `openspec/changes/<name>/` допускаются:
 
 - опечатки и грамматические правки;
-- небольшие изменения текстов, если ключ уже существует во всех локалях;
+- небольшая правка существующего текста без нового i18n-контракта;
 - замена одной ссылки;
-- публикация обычного travel-контента (статьи, точки, фото) — это контентная
-  работа, у неё свои правила в `docs/RULES.md` и профильных скиллах;
-- очевидное локальное CSS-исправление без изменения геометрии, без влияния на
-  layout shift и без нового поведения.
+- обычная публикация travel/article content по профильному workflow;
+- очевидный локальный CSS-fix без изменения геометрии, layout shift и поведения.
 
-Правило разделения: если изменение может тронуть **публичный URL, сетевой
-запрос, геометрию медиа, контракт данных или поведение на второй платформе** —
-это полный цикл, независимо от размера диффа.
+Если изменение может затронуть публичный URL, сетевой запрос, геометрию media,
+контракт данных или вторую платформу, нужен полный OpenSpec change независимо от
+размера diff.
 
-## 4. Полный workflow
+## 4. Рабочий процесс OpenSpec
 
-Все команды — это skills GitHub Copilot из `.github/skills/`, вызываются в чате
-агента как `/speckit-*`. Feature-директории Spec Kit **не создают git-веток**:
-`create-new-feature.sh` заводит только каталог `specs/NNN-slug/`, что совпадает с
-правилом проекта «работаем на `main`».
+OpenSpec CLI выполняется в терминале, а skills вызываются в чате Codex через
+`$openspec-*`. Profile `core` устанавливает шесть skills:
 
-| Шаг | Команда | Результат |
+| Шаг | Codex skill | Результат |
 | --- | --- | --- |
-| 1 | `/speckit-constitution` | создаёт/правит `.specify/memory/constitution.md` |
-| 2 | `/speckit-specify` | `specs/NNN-slug/spec.md` — поведение и приёмка |
-| 3 | `/speckit-clarify` | снимает пометки `[NEEDS CLARIFICATION]` |
-| 4 | `/speckit-plan` | `plan.md` — как реализуем, что переиспользуем |
-| 5 | `/speckit-tasks` | `tasks.md` — мелкие проверяемые задачи |
-| 6 | `/speckit-analyze` | сверка spec/plan/tasks между собой |
-| 7 | `/speckit-implement` | реализация строго внутри плана |
-
-Дополнительно доступны `/speckit-checklist` (чеклист полноты требований),
-`/speckit-converge` (оценка состояния кодовой базы и дозапись оставшейся работы
-в `tasks.md`) и `/speckit-taskstoissues` (выгрузка задач в GitHub Issues).
+| Исследование | `$openspec-explore` | read-only анализ идеи или проблемы без реализации |
+| Планирование | `$openspec-propose` | proposal, delta specs, design и tasks для одного change |
+| Уточнение | `$openspec-update-change` | согласованная правка уже существующих artifacts |
+| Реализация | `$openspec-apply-change` | выполнение tasks и отметка прогресса |
+| Синхронизация | `$openspec-sync-specs` | merge delta specs в `openspec/specs/` без archive |
+| Завершение | `$openspec-archive-change` | sync при необходимости и перенос в dated archive |
 
 Порядок работы:
 
-1. Прочитать `AGENTS.md`, `docs/RULES.md`, `.specify/memory/constitution.md` и
-   только релевантные документы из `docs/INDEX.md`.
-2. Изучить существующую реализацию в затронутой зоне и назвать её в `plan.md`.
-3. Написать `spec.md`, обязательно заполнив `Out of scope`, platform impact и
-   localization impact.
-4. Согласовать `spec.md`, `plan.md`, `tasks.md` **до** написания кода.
-5. Реализовать, не выходя за пределы файлов из плана.
-6. Проверить по масштабу изменения (`yarn check:fast` → `yarn lint` +
-   `yarn test:run`), визуальное — в браузере на desktop и mobile web, при
-   shared-изменении дополнительно на Android.
-7. Сверить результат с acceptance criteria и перечислить изменённые файлы.
+1. Прочитать `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, релевантный feature
+   contract и `docs/spec-driven-development-requirements.md`.
+2. Для неясной задачи сначала использовать `$openspec-explore`.
+3. Создать один change через `$openspec-propose <описание>` и проверить
+   proposal, delta specs, design и tasks до реализации.
+4. Уточнения вносить через `$openspec-update-change <name>`; не исправлять
+   противоречия только в одном artifact.
+5. После отдельного запроса на реализацию использовать
+   `$openspec-apply-change <name>` и выполнять tasks по порядку.
+6. Прогнать все проверки из artifacts и project rules, включая обязательную
+   browser/device validation для видимого UI и code-review-and-fix после code
+   changes.
+7. Валидировать change и только после завершения tasks архивировать его через
+   `$openspec-archive-change <name>`.
 
-Ничего не коммитится и не пушится без явного разрешения пользователя.
-
-## 5. Сокращённый workflow
-
-Для задач из раздела 3:
-
-1. Назвать scope и `Out of scope` прямо в ответе — без создания `specs/`.
-2. Сделать минимальную правку.
-3. Прогнать `yarn check:fast` (или точечный тест/линт по затронутому файлу).
-4. Для видимых правок — проверить в браузере и приложить доказательство.
-5. Перечислить изменённые файлы.
-
-Если по ходу выясняется, что задача задевает URL, запросы, геометрию медиа или
-вторую платформу — остановиться и перейти на полный цикл.
-
-## 6. Где что лежит
-
-- **Constitution** — `.specify/memory/constitution.md` (обязательные принципы
-  SDD для этого репозитория).
-- **Спецификации фич** — `specs/NNN-slug/` (`spec.md`, затем `plan.md`,
-  `tasks.md`).
-- **Обязательные разделы спецификации metravel.by** —
-  `docs/spec-driven-development-requirements.md`.
-- **Шаблоны Spec Kit** — `.specify/templates/` (**vendor-managed**, обновляются
-  вместе с CLI; свои требования держим в документе выше, а не правкой шаблонов).
-- **Скрипты Spec Kit** — `.specify/scripts/bash/`.
-- **Skills агента** — `.github/skills/speckit-*/SKILL.md`.
-
-Канонические правила проекта остаются в `docs/RULES.md`; постоянный backlog —
-только на MCP task board (`docs/TASK_BOARD_MCP.md`).
-
-## 7. Не смешивать несвязанные изменения
-
-Одна спецификация описывает одно изменение. В `spec.md` не должно быть двух
-несвязанных проблем «заодно».
-
-Если во время работы обнаружена соседняя проблема — её **не чинят походя**. Её
-записывают в `Out of scope` спецификации или заводят отдельной задачей на MCP
-task board (предварительно сверившись с `docs/PROBLEM_MEMORY.md`, чтобы не
-плодить дубль).
-
-## 8. Одна фича — одна директория
-
-**Одна фича или один логически связанный багфикс = одна директория
-`specs/NNN-slug/`.**
-
-- Связанные правки в разных слоях одной фичи — одна директория.
-- Два бага с общим корнем — одна директория.
-- Два бага, которые просто нашлись в один день, — две директории.
-- Фича и «попутный» рефакторинг — фича остаётся, рефакторинг выносится.
-
-Нумерация `NNN` последовательная, её выдаёт `create-new-feature.sh`; вручную
-каталоги не создаются.
-
-## 9. Обслуживание Spec Kit
-
-CLI ставится вне репозитория и не входит в зависимости приложения:
+Быстрые CLI-команды для диагностики:
 
 ```bash
-uv tool install specify-cli
+openspec list
+openspec status --change <name>
+openspec validate --all
 ```
 
-Проверка версии и доступных интеграций:
+Ничего не коммитится, не пушится, не деплоится и не публикуется без явного
+разрешения пользователя.
+
+## 5. Где что лежит
+
+- `openspec/config.yaml` — schema, краткий project context и project-specific
+  rules для artifacts/operations.
+- `openspec/changes/<name>/` — активный change: `proposal.md`, delta specs,
+  `design.md`, `tasks.md`.
+- `openspec/specs/<capability>/spec.md` — living specs текущего поведения.
+- `openspec/changes/archive/YYYY-MM-DD-<name>/` — завершённые changes.
+- `.agents/skills/openspec-*/SKILL.md` — vendor-generated OpenSpec skills для
+  Codex; body вручную не редактировать. Текущий Codex compatibility shim удаляет
+  только неподдерживаемое поле frontmatter `compatibility`.
+- `docs/spec-driven-development-requirements.md` — распределение обязательных
+  требований metravel.by по OpenSpec artifacts.
+
+Project rules остаются в `docs/RULES.md`; OpenSpec artifacts не являются вторым
+backlog и не заменяют Task Contract на MCP task board.
+
+## 6. Один change — одна логическая задача
+
+Один change описывает одну функцию или один связанный root cause. Несвязанные
+проблемы не добавляются «заодно».
+
+- Связанные правки разных frontend-слоёв одной функции — один change.
+- Два бага с общим подтверждённым root cause — один change.
+- Два соседних симптома без общего root cause — два change.
+- Попутный рефакторинг остаётся non-goal или отдельным change.
+
+Имя change — уникальный kebab-case без порядкового номера, например
+`fix-search-card-image-cache`. Каталог создаёт только OpenSpec CLI/skill, не
+вручную.
+
+## 7. Living specs и archive
+
+Delta spec описывает только изменение: `ADDED`, `MODIFIED`, `REMOVED` или
+`RENAMED` requirements. Main spec в `openspec/specs/` описывает уже действующее
+поведение и не содержит delta-заголовков.
+
+Перед archive нужно:
+
+1. завершить или явно согласовать все tasks;
+2. выполнить validation/Done gate из artifacts и project rules;
+3. сравнить delta specs с main specs;
+4. синхронизировать их, если change меняет living behavior;
+5. выполнить `openspec validate --all`.
+
+Archive не доказывает production rollout. Если target — production, статус
+«исправлено на проде» требует реального post-deploy evidence по
+`docs/RULES.md`.
+
+## 8. Обслуживание OpenSpec
+
+CLI устанавливается глобально и не входит в runtime-зависимости приложения:
 
 ```bash
-specify check
+npm install -g @fission-ai/openspec@1.8.0
+openspec --version
 ```
 
-Обновление CLI:
+После обновления CLI vendor-generated skills обновляются из корня репозитория:
 
 ```bash
-specify self upgrade
+npm install -g @fission-ai/openspec@<reviewed-version>
+openspec update
+openspec validate --all
 ```
 
-После обновления CLI шаблоны в `.specify/templates/` могут быть перезаписаны —
-поэтому проектные требования к спецификациям живут в
-`docs/spec-driven-development-requirements.md`, а не внутри шаблонов.
+До установки новой версии сверить changelog; после принятия обновить
+закреплённую версию в этом документе. После `openspec update` обязательно
+прогнать Codex skill validator для всех `.agents/skills/openspec-*`; OpenSpec
+1.8.0 повторно добавляет
+неподдерживаемое поле `compatibility`, которое нужно удалить до handoff.
+Project-specific правила хранятся только в `openspec/config.yaml` и canonical
+docs, а не в generated skills.
+
+## 9. Legacy Spec Kit
+
+Предыдущая интеграция Spec Kit 0.16.0 сохранена только для чтения истории:
+`.specify/`, `.github/skills/speckit-*` и черновик
+`specs/001-search-card-image-loading/`. Новые specifications там не создаются,
+а существующий draft не считается автоматически перенесённым в OpenSpec.
+
+Если работа по legacy draft возобновится, сначала создать новый OpenSpec change,
+перенести в него только актуальные подтверждённые требования и оставить ссылку
+на прежний draft как provenance. Удаление legacy tooling выполняется отдельной
+явно согласованной cleanup-задачей.

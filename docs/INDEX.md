@@ -1,6 +1,6 @@
 # Docs index
 
-Актуализировано: 2026-07-28.
+Актуализировано: 2026-08-08.
 
 `docs/RULES.md` определяет обязательные правила. Не каждый файл в `docs/`
 является source of truth: dated snapshots и legacy adapters классифицированы
@@ -13,6 +13,9 @@
 - `docs/ARCHITECTURE.md` — текущая архитектура и runtime boundaries;
 - `docs/RULES.md` — обязательные project policies;
 - `docs/CODEX.md` — AI triage, skills и validation matrix;
+- `docs/spec-driven-development.md` — канонический OpenSpec/SDD workflow;
+- `docs/spec-driven-development-requirements.md` — обязательные требования к
+  proposal, delta specs, design и tasks;
 - `docs/DEVELOPMENT.md` — local development workflow;
 - `docs/TESTING.md` — test/governance/quality-gate commands;
 - `docs/MANUAL_TEST_CASES.md` — повторяемая QA/device матрица;

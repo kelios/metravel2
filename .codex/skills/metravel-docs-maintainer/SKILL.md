@@ -7,6 +7,10 @@ description: Maintain metravel project documentation and Codex operating rules. 
 
 Read `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, and `docs/CODEX.md` before changing documentation or Codex skills.
 
+When the task changes OpenSpec/SDD behavior, also read
+`docs/spec-driven-development.md`,
+`docs/spec-driven-development-requirements.md`, and `openspec/config.yaml`.
+
 Use the AI task triage and self-check in `docs/CODEX.md` to keep docs changes scoped before editing.
 
 Keep documentation compact and authoritative:
@@ -26,6 +30,13 @@ Maintain skills in `.codex/skills/<skill-name>/`:
 - Add `references/` only for detailed material that should be loaded on demand.
 - Keep `agents/openai.yaml` aligned with the skill name, purpose, and default prompt.
 - Use `$metravel-prompt-maintainer` when the main scope is reusable prompt specs, asset-level `PROMPT.md` files, or a project-wide audit of skill default prompts.
+
+OpenSpec skills in `.agents/skills/openspec-*/` are vendor-generated through
+`openspec init`/`openspec update`. Keep project context and artifact rules in
+`openspec/config.yaml`; do not fork their bodies. After generation, validate all
+OpenSpec skills against the current Codex skill schema and apply only the
+documented frontmatter compatibility shim from
+`docs/spec-driven-development.md` when needed.
 
 Avoid documentation drift:
 

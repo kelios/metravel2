@@ -8,6 +8,9 @@
 - `docs/RULES.md` - основной источник проектных правил.
 - `docs/README.md` - карта документации и API-справка.
 - `.codex/skills/*/SKILL.md` - специализированные рабочие маршруты Codex.
+- `.agents/skills/openspec-*/SKILL.md` - vendor-generated OpenSpec
+  planning/apply routes; project constraints поступают из
+  `openspec/config.yaml`.
 
 Backend boundary: в этом frontend workspace Codex не реализует backend/Django/API/server изменения. Backend можно анализировать read-only через `$metravel-backend-diagnostician`, безопасные probes и `area=back` задачи на борде; backend working tree не редактируется и в нём не выполняются изменяющие Git-операции (`commit`, `push`, `pull`, `merge`, `rebase`, `checkout`, `reset`, `restore`, `stash`, `clean`). На production любой Git-tracked path неизменяем: перед разрешённой server-write операцией требуется read-only `git status --short` + `git ls-files`; dirty checkout означает stop, evidence и backend/ops task, а не cleanup или deploy. Для frontend deploy gate не блокируют только три production-owned исключения из `docs/RULES.md`: `deploy/prod/nginx/ssl/`, `dump.sql` и permission warning для `deploy/prod/postgis_1/data/`; их нельзя читать или менять.
 
@@ -96,6 +99,16 @@ iOS/iPadOS-приложения пока нет; iOS не входит в QA/Don
 - `$metravel-business-analyst`: используй для превращения продуктовой идеи в feature brief, user stories, acceptance criteria, non-goals, metrics и risks.
 - `$metravel-system-architect`: используй для technical design, review diff, risk mapping, validation plan и безопасного разбиения работ.
 - `$metravel-qa-agent`: используй для read-only тестирования, browser/e2e exploration, bug reports и re-test фиксов.
+- `$openspec-explore`: используй для read-only исследования неясной идеи или
+  сложной проблемы до создания change.
+- `$openspec-propose`: используй для полного planning-only change
+  (`proposal` → delta specs → design → tasks); он не авторизует реализацию.
+- `$openspec-update-change`: используй для согласованной правки существующих
+  OpenSpec artifacts без изменения implementation code.
+- `$openspec-apply-change`: используй только после отдельного запроса на
+  реализацию уже подготовленного change.
+- `$openspec-sync-specs` и `$openspec-archive-change`: используй для merge delta
+  specs в living specs и завершения change после всех project Done gates.
 
 Подключай только те skills, которые реально нужны задаче. Если skill требует дополнительные docs, читай только релевантные файлы.
 
@@ -108,6 +121,7 @@ iOS/iPadOS-приложения пока нет; iOS не входит в QA/Don
 | Документация, правила, skills | `$metravel-docs-maintainer`; добавь `$metravel-prompt-maintainer` только для prompt specs, asset prompts или `agents/openai.yaml` | Добавь `$metravel-codex-orchestrator`, если меняется workflow нескольких ролей, правила проверок или skill-selection policy. |
 | Локализация и locale-sensitive UI | `$metravel-i18n-guardrails` + профильный domain/feature skill | Добавь `$metravel-system-architect` для content-locale/API или locale-specific URL/SEO contract; mobile skills — для provider/storage/native lifecycle. |
 | Простая автоматизация и проверки | `$metravel-test-runner` для узких тестов; `$metravel-release-checks` для выбора gate; `$metravel-problem-memory` + `$metravel-ticket-board` + `$metravel-task-contract` для задач на борде | `$metravel-quality-fixer` только для полного quality-gate/fix цикла; `$metravel-devops-agent` только для явного build/deploy/release target. |
+| SDD для новой/сложной работы | `$openspec-explore` при неясности, затем `$openspec-propose`; project/domain skills выбираются внутри artifacts | Реализация начинается отдельным запросом через `$openspec-apply-change`; archive не заменяет board Done gate или production evidence. |
 | Read-only анализ проекта | `$metravel-project-analyst` | `$metravel-agent-workflow` нужен только если анализ сразу передается в BA/architect/implementation/QA/review цепочку. |
 | Product/growth/performance/security/design анализ | `$metravel-business-analyst`, `$metravel-growth-analyst`, `$metravel-performance-analyst`, `$metravel-security-reviewer` или `$metravel-design-auditor` по домену | Добавь architect/implementation только когда анализ явно должен перейти в правки; review-запрос сам по себе остаётся read-only. |
 | Обычная разработка, bugfix, refactor | `$metravel-domain-router` для доменного scope, затем профильный доменный субагент (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и `$metravel-feature-builder`; добавь `$metravel-ui-guardrails`, `$metravel-hook-builder`, `$metravel-refactor-surgeon` или `$metravel-test-writer` только по затронутой области | `$metravel-codex-orchestrator` для широкого/неясного scope; `$metravel-agent-workflow` для раздельных BA/architect/QA/reviewer стадий. |
@@ -182,6 +196,7 @@ Claude slash-команды переносятся как skill-routes, а не 
 | Тип задачи | Минимальный контекст | Обязательные акценты |
 | --- | --- | --- |
 | Feature, bugfix, refactor | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, профильный feature-doc при наличии | переиспользование существующих компонентов, hooks, utils; минимальный diff |
+| New feature / complex or recurring change | всё из feature-контекста + `docs/spec-driven-development.md`, `docs/spec-driven-development-requirements.md`, `openspec/config.yaml` | planning через `$openspec-propose`, implementation только отдельным `$openspec-apply-change`; OpenSpec не заменяет board history/Task Contract/Done gate |
 | Localization / user-facing copy | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md#localization`, `$metravel-i18n-guardrails`, `i18n/config.ts`, ближайшие i18n tests | RU/BE/UK/PL/EN key parity, без hardcoded UI strings/`ru-RU`, web hydration + native locale lifecycle, `npm run test:i18n` |
 | Domain-specific feature work | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `$metravel-domain-router`, профильный feature-doc при наличии | выбрать domain owner map для travel/map/profile/achievements/quests/PDF/new pages; затем подключить доменного субагента (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и feature/ui/test/refactor skills по фактическому scope |
 | Hooks / logic extraction | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc, ближайшие существующие hooks | выносить focused hook без лишней абстракции, сохранять client/server state boundaries, не добавлять новые `any` |

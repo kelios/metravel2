@@ -109,6 +109,11 @@
 2. Быстро определи тип задачи, нужные skills, риск-зону, platform
    impact, localization impact и план проверки по `docs/CODEX.md`.
 3. Для сложных, неясных или многошаговых задач используй `$metravel-codex-orchestrator` как верхний self-check: triage → skills → промты ролей → validation → handoff.
+   Для новых функций, сложных/повторяющихся багов и изменений контрактов сначала
+   используй OpenSpec по `docs/spec-driven-development.md`: `$openspec-explore`
+   для исследования, `$openspec-propose` для planning artifacts и только после
+   отдельного запроса `$openspec-apply-change` для реализации. OpenSpec не
+   заменяет MCP task board, Task Contract или обязательные project skills.
 4. Проверь текущую ветку и `git status --short`; если ветка не `main`, остановись и уточни дальнейшие действия.
 5. Перед созданием/переоткрытием board-задачи используй
    `$metravel-problem-memory`: проверь реестр и полный board, зафиксируй verdict и

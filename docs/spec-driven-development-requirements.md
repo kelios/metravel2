@@ -1,121 +1,117 @@
-# Обязательные разделы спецификации metravel.by
+# Обязательные требования к OpenSpec artifacts metravel.by
 
-Актуализировано: 2026-08-06. Дополняет `docs/spec-driven-development.md`.
+Актуализировано: 2026-08-08. Дополняет `docs/spec-driven-development.md` и
+`openspec/config.yaml`.
 
-## Почему это отдельный документ, а не правка шаблона
+## Почему требования распределены по artifacts
 
-Шаблоны в `.specify/templates/` — **vendor-managed**: они распаковываются из
-пакета `specify-cli` и перезаписываются при `specify self upgrade` и повторном
-`specify init`. Правка `spec-template.md` напрямую означала бы, что проектные
-требования молча исчезнут при первом же обновлении Spec Kit.
+OpenSpec разделяет intent, observable behavior, implementation design и work
+breakdown между `proposal.md`, delta specs, `design.md` и `tasks.md`. Поэтому
+проектные требования не копируются целиком в каждый файл: каждое решение имеет
+один канонический artifact, а связанные artifacts остаются согласованными.
 
-Поэтому базовый шаблон Spec Kit остаётся нетронутым, а проектные требования
-живут здесь. При написании `spec.md` берётся структура шаблона Spec Kit
-(User Scenarios & Testing, Requirements, Success Criteria, Assumptions) и
-дополняется разделами из этого документа.
+Vendor-generated body `.agents/skills/openspec-*` и built-in templates вручную
+не редактируются. Единственный текущий compatibility shim — удаление
+неподдерживаемого Codex-полем frontmatter `compatibility` после генерации.
+Короткие обязательные ограничения инжектируются через `openspec/config.yaml`,
+подробный contract живёт здесь.
 
-## Обязательные разделы
+## Proposal: зачем и где границы
 
-Каждая спецификация metravel.by обязана содержать перечисленные ниже разделы.
-Раздел нельзя пропустить: если он неприменим, пишется `Не применимо` и одна
-строка почему. Пустой раздел и молчаливое отсутствие раздела — это дефект
-спецификации.
+`proposal.md` обязан зафиксировать:
 
-### Problem
+- **Problem** — наблюдаемый факт или воспроизведение, а не предполагаемое решение;
+- **Goal** — проверяемое целевое состояние;
+- **User-visible result** — что изменится для пользователя;
+- **Platform impact** — `desktop web | mobile web | Android | shared | none`;
+- **Localization impact** — `all current locales | selected locales | none`;
+- **Dependencies** — API/backend/owner/external dependencies и точный blocker;
+- **Fallback/mock policy** — допустим ли fallback; missing backend contract не
+  маскируется mock-only поведением;
+- **Impact summary** — data/API, SEO, accessibility, performance, security и
+  analytics; для неприменимого пункта указывается причина;
+- **Existing behavior to preserve** — ключевые соседние сценарии без изменений;
+- **Out of scope / Non-goals** — содержательный список, не пустой placeholder;
+- **Open questions** — вопросы, которые материально меняют scope или acceptance.
 
-Что сломано или чего не хватает сегодня. Наблюдаемый факт, а не предполагаемое
-решение. Для бага — как воспроизвести.
+Один proposal описывает один change. Нерешённый материальный вопрос блокирует
+переход к apply, но не требует угадывать ответ.
 
-### Goal
+## Delta specs: наблюдаемое поведение
 
-Какое состояние считается достигнутым. Одно-два предложения.
+Каждый `openspec/changes/<name>/specs/<capability>/spec.md` обязан:
 
-### User scenarios
+- использовать только OpenSpec delta sections: `ADDED`, `MODIFIED`, `REMOVED`
+  и `RENAMED Requirements`;
+- описывать одну capability на один spec path;
+- формулировать requirement через `SHALL` или `MUST`;
+- содержать минимум один независимо проверяемый scenario на изменяемое
+  requirement;
+- использовать `WHEN` / `THEN`, а `GIVEN` добавлять для существенного precondition;
+- включать success, error/empty/offline/slow-network scenarios, когда они
+  относятся к capability;
+- сохранять действующие scenarios, которые change не отменяет;
+- не упоминать файлы, компоненты, hooks, библиотеки или конкретную реализацию.
 
-Пользовательские сценарии в формате Given / When / Then. Каждый сценарий
-проверяем независимо.
+Acceptance считается проверяемым, только если scenario можно закрыть командой,
+URL/API probe, browser/device observation или измеримым budget. Формулировки
+«работает корректно», «быстро» и «удобно» без метрики недопустимы.
 
-### Functional requirements
+## Design: как реализовать безопасно
 
-Нумерованные требования (`FR-001`, `FR-002`, …) в терминах поведения. Без имён
-компонентов, файлов и библиотек — это уровень `plan.md`.
+`design.md` обязан содержать только применимые разделы и явно отмечать
+неприменимые риск-зоны:
 
-### Acceptance criteria
+- существующие компоненты, hooks, services, adapters и utilities для reuse;
+- затронутые frontend paths и ownership boundaries;
+- data/API contract, auth/platform split и error handling;
+- технические решения и отклонённые альтернативы с причинами;
+- migration, compatibility, rollback/recovery strategy;
+- SEO: URL, canonical, redirect, sitemap/robots, metadata, structured data,
+  prerender/SSG;
+- accessibility: semantics, focus, keyboard, `alt`, contrast, headings и touch
+  targets;
+- performance: Core Web Vitals, requests/bytes, one-slot-one-URL, media geometry,
+  bundle impact и источник baseline;
+- security: input validation, sanitization, URL/redirect safety, tokens/secrets,
+  WebView/deep-link boundaries;
+- analytics: события, параметры, цели и допустимые удаления;
+- validation matrix для каждого impacted platform/locale и соседних consumers.
 
-Критерии, каждый из которых закрывается конкретной командой, URL или
-наблюдением. «Работает корректно» — не критерий.
+Backend/Django/server design из этого workspace остаётся read-only dependency и
+маршрутизируется в `area=back`; `../metravel-backend` не включается в список
+редактируемых paths.
 
-### Non-functional requirements
+Любое изменение в `components/travel/sliderParts/**`,
+`components/travel/details/**`, `ImageCardMedia` или hero geometry включает
+`yarn verify:slider` и `yarn verify:slider-perf` в validation plan.
 
-Ограничения по времени отклика, объёму данных, устойчивости к ошибкам,
-поведению при офлайне и медленной сети.
+## Tasks: проверяемая реализация
 
-### SEO impact
+`tasks.md` обязан:
 
-Затронутые публичные URL; изменения canonical, sitemap, robots, метаданных,
-структурированных данных; план 301-редиректов при переименовании маршрута;
-влияние на индексируемость и на SSG/prerender-выдачу. Если маршруты не
-затрагиваются — `Не применимо` и почему.
+- разбивать работу на небольшие упорядоченные шаги с конкретным результатом;
+- связывать implementation tasks с requirements/scenarios;
+- включать тесты на ближайшем надёжном уровне без `.skip`;
+- включать browser evidence для desktop/mobile web и USB Android evidence для
+  видимого shared/mobile UI;
+- включать i18n validation для localization impact;
+- включать соседние consumer/regression probes для shared changes;
+- включать обязательный code-review-and-fix после code changes;
+- включать `openspec validate --all` перед archive;
+- не включать commit, push, deploy, publish или board state change без явного
+  разрешения пользователя.
 
-### Accessibility impact
+Performance/production task закрывается только real before/after evidence по
+правилам `docs/RULES.md`; локальный build не заменяет post-deploy probe.
 
-Клавиатурная доступность и видимый фокус; `alt` для смысловых изображений и
-пустой `alt` для декоративных; семантика и порядок заголовков; контраст;
-соблюдение минимального размера тач-таргета (`yarn guard:touch-targets`).
+## Чеклист перед apply
 
-### Performance impact
-
-Влияние на Core Web Vitals; число сетевых запросов (правило «один слот — один
-URL», на web — один растр); стабильность геометрии и отсутствие layout shift;
-изменение веса бандла; необходимость `yarn verify:slider` +
-`yarn verify:slider-perf` при работе с travel-hero и галереей. Замеры — только
-с production-экспорта или боевого URL.
-
-### Security considerations
-
-Валидация пользовательского и внешнего ввода; санитизация rich text и HTML из
-API; экранирование при подстановке в `ld+json`; отсутствие утечек токенов,
-внутренних URL и конфигурации; сохранение security headers и правил авторизации.
-
-### Analytics impact
-
-Затронутые события и цели (Яндекс.Метрика, GA); новые события с именами и
-параметрами; события, которые перестанут отправляться, и почему это допустимо.
-
-### Existing behavior to preserve
-
-Явный список того, что обязано продолжить работать без изменений. Пишется до
-реализации и служит списком для регресс-проверки после.
-
-### Out of scope
-
-Что сознательно не делается в этой спецификации, включая соседние проблемы,
-найденные при анализе. Раздел обязателен и не может быть пустым.
-
-### Open questions
-
-Нерешённые вопросы в формате `[NEEDS CLARIFICATION: вопрос]`. Спецификация с
-открытыми вопросами не уходит в реализацию — сначала `/speckit-clarify`.
-
-## Обязательные поля шапки
-
-В начале `spec.md`, рядом со статусом:
-
-```
-Platform impact: desktop web | mobile web | Android | shared | none
-Localization impact: all current locales | selected locales | none
-```
-
-`none` — это вывод после проверки, а не пропущенный пункт. iOS вне scope
-проекта. Mobile web и Android — связанная пара: изменение одного автоматически
-включает проверку второго.
-
-## Чеклист перед переходом к `plan.md`
-
-- [ ] Все разделы выше присутствуют, ни один не пуст.
-- [ ] В `spec.md` нет имён компонентов, файлов и библиотек.
-- [ ] Каждый acceptance criterion закрывается командой, URL или наблюдением.
-- [ ] Заполнены platform impact и localization impact.
-- [ ] `Out of scope` заполнен содержательно.
-- [ ] Не осталось `[NEEDS CLARIFICATION]`.
-- [ ] Спецификация описывает одну фичу или один связанный багфикс.
+- [ ] Все обязательные artifacts из `openspec status --change <name>` готовы.
+- [ ] Proposal содержит impacts, dependencies, fallback policy и non-goals.
+- [ ] Delta specs валидны и описывают observable behavior.
+- [ ] Design опирается на существующую реализацию и содержит validation matrix.
+- [ ] Tasks покрывают requirements, regression, review и Done gate.
+- [ ] Нет нерешённых вопросов, которые материально меняют scope или behavior.
+- [ ] Change описывает одну логическую задачу.
+- [ ] `openspec validate <name> --type change --strict` проходит.

@@ -45,6 +45,11 @@
 ## Development workflow
 
 - Before starting any change, review relevant files in `docs/`.
+- New features, contract changes, complex/recurring bugs, SEO-sensitive changes,
+  media-pipeline work, and cross-platform or frontend/backend changes use the
+  OpenSpec workflow from `docs/spec-driven-development.md`: planning artifacts
+  are reviewed before a separate apply request. OpenSpec does not replace the
+  MCP task board, Task Contract, project skills, or validation/Done gates.
 - Work only on the `main` branch by default:
   - check the current branch before editing;
   - do not create or switch to another branch unless the user gives a new explicit instruction;

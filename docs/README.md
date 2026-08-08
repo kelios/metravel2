@@ -8,6 +8,8 @@
 - `ARCHITECTURE.md` — текущая архитектура и feature/runtime boundaries;
 - `RULES.md` — обязательные development/UI/security/operation правила;
 - `CODEX.md` — AI triage, skills и validation matrix;
+- `spec-driven-development.md` — OpenSpec workflow для proposal/specs/design/tasks;
+- `spec-driven-development-requirements.md` — обязательный contract artifacts metravel.by;
 - `DEVELOPMENT.md` — local setup и day-to-day workflow;
 - `TESTING.md` — Jest, Playwright, governance и quality gates;
 - `MANUAL_TEST_CASES.md` — повторяемые browser/mobile/device cases;
@@ -58,6 +60,17 @@ Production web export:
 ```bash
 yarn build:web:prod
 ```
+
+OpenSpec для сложных изменений:
+
+```bash
+openspec --version
+openspec list
+```
+
+В Codex новый change начинается с `$openspec-propose`, а реализация — отдельным
+запросом через `$openspec-apply-change`. Полный contract находится в
+`spec-driven-development.md`; постоянный backlog остаётся на MCP task board.
 
 Перед full/preflight/e2e/build/deploy/Lighthouse/Android install проверьте
 operation gate из `AGENTS.md` и `RULES.md`.

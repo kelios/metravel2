@@ -1,0 +1,43 @@
+schema: spec-driven
+
+context: |
+  metravel.by is a TypeScript Expo/React Native frontend with desktop web,
+  mobile web, and Android as the active product surfaces. Production UI supports
+  RU/BE/UK/PL/EN with RU as default and fallback; mobile web and Android are a
+  coupled validation pair. iOS is inactive.
+  Work in this repository is frontend/app/docs only and stays on main. Backend in
+  ../metravel-backend is read-only. Do not create branches, commit, push, deploy,
+  publish, or mutate task-board/backend/production state without explicit scope.
+  Read AGENTS.md, docs/RULES.md, docs/CODEX.md, the relevant feature docs, and
+  docs/spec-driven-development-requirements.md before producing artifacts.
+  The MCP task board remains the permanent backlog; OpenSpec change artifacts
+  describe one change and do not replace board status or its Task Contract.
+
+rules:
+  proposal:
+    - Describe one change only; include the observed problem, goal, explicit non-goals, dependencies, and fallback/mock policy.
+    - Record Platform impact and Localization impact explicitly, including none when considered and not applicable.
+    - Identify user-visible, API/data, SEO, accessibility, performance, security, and analytics impact, marking non-applicable areas with a reason.
+    - Do not authorize implementation; planning must be reviewed before apply.
+  specs:
+    - Specify observable behavior and contracts, not files, components, libraries, or implementation choices.
+    - Use SHALL or MUST requirements with independently testable WHEN/THEN scenarios and preserve relevant existing behavior.
+    - Use OpenSpec delta sections exactly and keep one capability per spec path.
+  design:
+    - Reuse existing components, hooks, services, adapters, and utilities before adding abstractions.
+    - Include affected frontend paths, data/API contract, risks, rollback or recovery, and a validation matrix for every impacted active surface and locale.
+    - Backend changes must be described as read-only dependencies and routed to area=back; never plan edits in ../metravel-backend from this workspace.
+  tasks:
+    - Keep tasks ordered, independently verifiable, and scoped to the approved proposal and design.
+    - Include relevant tests, mandatory browser/device evidence, regression checks, code review, and final OpenSpec validation.
+    - Do not include commit, push, deploy, publish, or task-board state changes unless the user explicitly authorized that operation.
+
+operations:
+  apply:
+    guidance:
+      - Follow AGENTS.md quality-gate coordination and run the narrowest reliable validation after each logical block.
+      - After code changes, run the mandatory metravel code-review-and-fix pass before handoff.
+      - Stop on a real external dependency instead of inventing a mock-only fallback.
+  archive:
+    guidance:
+      - Archive only after implementation tasks and required validation are complete; production claims require real post-deploy evidence when production is the target.

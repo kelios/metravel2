@@ -80,6 +80,12 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-security-reviewer` for XSS, sanitizer, URL, secret/token, WebView/deep-link, or dependency security review.
 - Use `$metravel-google-play-operator` only for explicit Android store build/submit/track work; use `$metravel-play-campaign-tester` only for the configured closed-testing reciprocity campaign.
 - Use `$metravel-quality-fixer` when the task is explicitly to run/fix the full quality gate.
+- Use `$openspec-explore` for read-only exploration and `$openspec-propose` for
+  planning new features, contract changes, complex/recurring bugs,
+  SEO/media-pipeline work, or cross-platform/frontend-backend changes. Planning
+  does not authorize implementation; start `$openspec-apply-change` only after a
+  separate user request. OpenSpec never replaces domain skills, task-board
+  history/Task Contract, code review, or project Done gates.
 
 ## Role Prompt Pattern
 

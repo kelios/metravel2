@@ -49,6 +49,10 @@ Prefer provider-neutral wording unless a provider-specific feature is essential.
 ## Skill metadata rules
 
 - Keep frontmatter limited to `name` and `description`.
+- Exception: vendor-generated `.agents/skills/openspec-*` may retain the
+  OpenSpec fields accepted by the Codex validator (`allowed-tools`, `license`,
+  `metadata`). Do not fork their bodies; remove only unsupported generated
+  fields documented in `docs/spec-driven-development.md`.
 - Make `description` state both capability and concrete trigger surfaces.
 - Keep `agents/openai.yaml` strings quoted.
 - Keep `short_description` at 25–64 characters.
