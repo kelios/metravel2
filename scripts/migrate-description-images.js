@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Миграция картинок в телах статей: legacy-класс `uploads/**` → канонический
- * `travel-description-image` (#1245).
+ * Миграция картинок в телах статей: legacy-класс `uploads/**` и вставленные
+ * base64-кадры (`data:image/...`) → канонический `travel-description-image`
+ * (#1245, #1320).
  *
  * ЗАЧЕМ. В телах статей фотография адресуется тремя разными способами: прямой
  * ссылкой на бакет, той же ссылкой в обёртке `images.weserv.nl` (до трёх слоёв) и
@@ -145,6 +146,58 @@ function collectLegacyUploadRefs(html) {
   return Array.from(out.values())
 }
 
+/**
+ * Все `src` тела, в которых лежит сам кадр (`data:image/...;base64,…`), а не адрес.
+ *
+ * Такой источник вреден дважды. Он раздувает саму запись, и он раздувает
+ * media-конверт: бэкенд подставляет строку в каждое поле адреса — восемь ступеней
+ * `variants`, по шесть записей в `srcset` и `srcset_contain`, плюс `src`/`src_contain`.
+ * Замер прода 2026-08-08 (#1319/#1320): блоб 2 521 255 Б в статье 512 дал 55,5 МБ
+ * в `media.article_body` и страницу 40 МБ по проводу против 58 КБ у обычной статьи.
+ *
+ * Гард на вставку в редакторе уже стоит (`QuillEditor.web.tsx`, `resolvePastePayload`),
+ * поэтому здесь речь только о легаси-записях, сделанных до него.
+ *
+ * Форма результата такая же, как у `collectLegacyUploadRefs`, чтобы дальше обе
+ * ветки шли одним конвейером: `raw` — строка для замены, `key` — человекочитаемая
+ * метка для журнала (бакетного ключа у этого источника нет).
+ */
+function collectDataUriRefs(html) {
+  const out = new Map()
+  const source = String(html || '')
+  const pattern = /<img\b[^>]*?\bsrc=["'](data:image\/[^"']+)["'][^>]*>/gi
+  let match
+  let index = 0
+  while ((match = pattern.exec(source)) !== null) {
+    const raw = match[1]
+    if (out.has(raw)) continue
+    index += 1
+    const mime = (/^data:(image\/[a-z0-9.+-]+)/i.exec(raw) || [])[1] || 'image/*'
+    out.set(raw, { raw, key: `data-uri#${index} (${mime}, ${raw.length} B)`, dataUri: true })
+  }
+  return Array.from(out.values())
+}
+
+/**
+ * Кадр из `data:`-строки — та же форма, что отдаёт `downloadMaster`.
+ *
+ * Формат берём по сигнатуре байтов, а не по MIME из самой строки: он объявляется
+ * автором вставки и врёт ровно так же часто, как расширение в legacy-ключах.
+ */
+function decodeDataUri(raw, detect = detectImageFormat) {
+  const match = /^data:image\/[a-z0-9.+-]+;base64,([\s\S]+)$/i.exec(String(raw || '').trim())
+  if (!match) throw new Error('data-uri: поддерживается только base64-форма')
+  const buffer = Buffer.from(match[1].replace(/\s+/g, ''), 'base64')
+  if (!buffer.length) throw new Error('data-uri: пустой кадр после декодирования')
+  const detected = detect(buffer)
+  if (!detected) throw new Error('data-uri: не распознан формат кадра')
+  return {
+    buffer,
+    contentType: detected.mime,
+    filename: `description-image.${detected.ext}`,
+  }
+}
+
 /** Текст без разметки — для сверки, что миграция не тронула содержание. */
 function plainText(html) {
   return String(html || '')
@@ -163,6 +216,8 @@ module.exports = {
   unwrapWeserv,
   legacyUploadKey,
   collectLegacyUploadRefs,
+  collectDataUriRefs,
+  decodeDataUri,
   plainText,
   countImages,
   upgradeFirstPartyProtocol,
@@ -500,10 +555,12 @@ async function migrateOne(id, { token, dryRun }) {
   const before = JSON.parse(text)
   const original = before.description || ''
 
-  const refs = collectLegacyUploadRefs(original)
+  const dataUriRefs = collectDataUriRefs(original)
+  const refs = [...collectLegacyUploadRefs(original), ...dataUriRefs]
   const httpRefs = (original.match(/http:\/\/(?:cdn\.|api\.)?metravel\.by/gi) || []).length
   console.log(
-    `📄 [${id}] ${before.slug} — картинок в теле ${countImages(original)}, из них legacy ${refs.length}` +
+    `📄 [${id}] ${before.slug} — картинок в теле ${countImages(original)}, из них legacy ${refs.length - dataUriRefs.length}` +
+      (dataUriRefs.length ? `, base64 ${dataUriRefs.length}` : '') +
       (httpRefs ? `, http-ссылок ${httpRefs}` : ''),
   )
   if (!refs.length && !httpRefs) {
@@ -527,7 +584,8 @@ async function migrateOne(id, { token, dryRun }) {
   let next = original
   const uploaded = []
   for (const ref of refs) {
-    const file = await downloadMaster(ref.key)
+    // Легаси-ссылку надо скачать, base64 уже несёт кадр в себе — дальше конвейер общий.
+    const file = ref.dataUri ? decodeDataUri(ref.raw) : await downloadMaster(ref.key)
     const url = await uploadDescriptionImage(id, file, token)
     // Заменяем ВСЕ вхождения именно этой строки: один и тот же кадр может стоять
     // в теле несколько раз, в том числе в разных weserv-обёртках.
@@ -559,6 +617,9 @@ async function migrateOne(id, { token, dryRun }) {
   }
   if (collectLegacyUploadRefs(next).length) {
     throw new Error('в теле остались legacy-ссылки после замены')
+  }
+  if (collectDataUriRefs(next).length) {
+    throw new Error('в теле остались base64-кадры после замены')
   }
 
   const payload = buildUpsertPayload(before, { description: next })
