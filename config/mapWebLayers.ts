@@ -1,4 +1,23 @@
 import { translate as i18nT } from '@/i18n';
+import {
+  OSM_PROXY_ATTRIBUTION,
+  OSM_PROXY_MAX_ZOOM,
+  OSM_PROXY_PUBLIC_ORIGIN,
+  OSM_PROXY_TILE_PATH,
+  getOsmTileUrl,
+} from '@/config/mapWebTileContract';
+
+export {
+  OSM_LOCAL_WEB_HOSTNAMES,
+  OSM_PRIVATE_WEB_HOST_PATTERNS,
+  OSM_PROXY_ATTRIBUTION,
+  OSM_PROXY_MAX_ZOOM,
+  OSM_PROXY_PUBLIC_ORIGIN,
+  OSM_PROXY_TILE_PATH,
+  getOsmTileCrossOrigin,
+  getOsmTileUrl,
+  resolveOsmTileRequest,
+} from '@/config/mapWebTileContract';
 
 export type WebMapLayerKind =
   | 'tile'
@@ -607,78 +626,6 @@ export const getActiveOverlayLayers = (): WebMapLayerDefinition[] =>
     if (!layer.requiresEnv) return true;
     return Boolean(readEnv(layer.requiresEnv));
   }).map(resolveLayerUrl);
-
-/**
- * Same-origin путь до OSM tile-прокси бэкенда (#156). Использовать прямой
- * tile.openstreetmap.org на web запрещено (OSM Tile Usage Policy). Без `{s}`:
- * прокси не использует субдомены, поэтому в Leaflet НЕ задаём `subdomains`.
- */
-export const OSM_PROXY_TILE_PATH = '/proxy/tiles/osm/{z}/{x}/{y}.png';
-export const OSM_PROXY_ATTRIBUTION = '&copy; OpenStreetMap contributors';
-export const OSM_PROXY_MAX_ZOOM = 19;
-
-/**
- * Origin, от которого резолвится прокси-путь.
- * - Прод (web на metravel.by): относительный путь резолвится same-origin — возвращаем как есть.
- * - Dev/preview (localhost / Metro): у локального сервера нет `/proxy/tiles`,
- *   поэтому собираем абсолютный URL на публичный origin из EXPO_PUBLIC_API_URL.
- */
-const getOsmProxyOrigin = (): string | null => {
-  try {
-    const raw = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
-    if (!raw) return null;
-    const base = raw.replace(/\/api\/?$/i, '');
-    const parsed = new URL(base);
-    const host = parsed.hostname.toLowerCase();
-    // Локальный/LAN backend тайл-прокси не отдаёт — оставляем относительный путь
-    // (на web он резолвится от window.origin), либо абсолютный публичный.
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return null;
-    return parsed.origin || null;
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Итоговый tile-URL базового OSM-слоя на web.
- * На localhost/Metro собираем абсолютный публичный URL: origin из
- * EXPO_PUBLIC_API_URL, а если он сам локальный (Metro/прокси без
- * `/proxy/tiles`) — прод metravel.by, иначе тайлы отдаёт dev-сервер
- * HTML-ками и карта серая. На проде same-origin путь резолвится сам.
- */
-export const getOsmTileUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    const host = String(window.location?.hostname || '').toLowerCase();
-    const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
-    if (isLocalHost) {
-      const origin = getOsmProxyOrigin() || OSM_PROXY_PUBLIC_ORIGIN;
-      return `${origin}${OSM_PROXY_TILE_PATH}`;
-    }
-  }
-  return OSM_PROXY_TILE_PATH;
-};
-
-/** Публичный origin с tile-прокси — фолбэк, когда EXPO_PUBLIC_API_URL недоступен для тайлов. */
-const OSM_PROXY_PUBLIC_ORIGIN = 'https://metravel.by';
-
-/**
- * crossOrigin для базового OSM-слоя: 'anonymous' нужен канвас-снапшотам карты
- * и допустим только для same-origin тайлов (прод, относительный путь).
- * Кросс-доменный dev-фолбэк (metravel.by с localhost) CORS-заголовков не шлёт —
- * с crossOrigin такие тайлы падают целиком, оставляем обычные <img>.
- */
-export const getOsmTileCrossOrigin = (): 'anonymous' | undefined => {
-  const url = getOsmTileUrl();
-  if (!/^https?:\/\//i.test(url)) return 'anonymous';
-  if (typeof window !== 'undefined') {
-    try {
-      if (new URL(url).origin === window.location.origin) return 'anonymous';
-    } catch {
-      // noop
-    }
-  }
-  return undefined;
-};
 
 /**
  * Хост, у которого заведомо НЕТ tile-прокси и/или к которому Android WebView

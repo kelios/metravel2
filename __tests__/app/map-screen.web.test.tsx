@@ -1,10 +1,9 @@
 import React from 'react'
-import { act, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, waitFor } from '@testing-library/react'
 
 import MapRoute from '@/app/(tabs)/map.web'
 
 const mockUseWebHydrationGate = jest.fn()
-const mockPendingFirstFrameSignals: Array<() => void> = []
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
@@ -30,14 +29,16 @@ jest.mock('@/components/MapPage/MapPageSkeleton', () => ({
 
 jest.mock('@/screens/tabs/MapScreen', () => ({
   __esModule: true,
-  default: function MockMapScreen({ onFirstWebFrame }: { onFirstWebFrame?: () => void }) {
-    const ReactRuntime = require('react') as typeof import('react')
-    ReactRuntime.useEffect(() => {
-      if (onFirstWebFrame) {
-        mockPendingFirstFrameSignals.push(onFirstWebFrame)
-      }
-    }, [onFirstWebFrame])
-    return <div data-testid="map-route-runtime">Map runtime</div>
+  default: function MockMapScreen() {
+    return (
+      <div data-testid="map-route-runtime">
+        <img
+          data-testid="leaflet-runtime-tile"
+          className="leaflet-tile leaflet-tile-loaded"
+          alt=""
+        />
+      </div>
+    )
   },
 }))
 
@@ -54,18 +55,28 @@ describe('map.web route hydration shell signal', () => {
     return root
   }
 
+  const setTileLoaded = (tile: HTMLImageElement, decode: () => Promise<void>) => {
+    Object.defineProperty(tile, 'complete', { configurable: true, value: true })
+    Object.defineProperty(tile, 'naturalWidth', { configurable: true, value: 256 })
+    Object.defineProperty(tile, 'decode', { configurable: true, value: decode })
+  }
+
   beforeEach(() => {
     jest.clearAllMocks()
-    mockPendingFirstFrameSignals.length = 0
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0)
+      return 1
+    })
+    jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)
     ensureRoot()
   })
 
   afterEach(() => {
-    const root = document.getElementById('root')
-    root?.remove()
+    jest.restoreAllMocks()
+    document.getElementById('root')?.remove()
   })
 
-  it('does not mark #root ready until the real map screen reports its first frame', async () => {
+  it('waits for a loaded and decoded Leaflet tile before marking the route ready', async () => {
     const root = ensureRoot()
     mockUseWebHydrationGate.mockReturnValue(false)
 
@@ -77,18 +88,152 @@ describe('map.web route hydration shell signal', () => {
     mockUseWebHydrationGate.mockReturnValue(true)
     view.rerender(<MapRoute />)
 
-    await waitFor(() => {
-      expect(view.queryByTestId('map-route-runtime')).not.toBeNull()
+    const tile = (await view.findByTestId('leaflet-runtime-tile')) as HTMLImageElement
+    let resolveDecode: (() => void) | undefined
+    const decodePromise = new Promise<void>((resolve) => {
+      resolveDecode = resolve
     })
+    setTileLoaded(tile, jest.fn(() => decodePromise))
 
+    fireEvent.load(tile)
+    await act(async () => {
+      await Promise.resolve()
+    })
     expect(root.getAttribute('data-map-route-ready')).toBeNull()
-    expect(mockPendingFirstFrameSignals).toHaveLength(1)
 
-    act(() => {
-      mockPendingFirstFrameSignals[0]()
+    await act(async () => {
+      resolveDecode?.()
+      await decodePromise
     })
 
     await waitFor(() => {
+      expect(root.getAttribute('data-map-route-ready')).toBe('true')
+    })
+  })
+
+  it('does not accept an incomplete Leaflet tile load event', async () => {
+    const root = ensureRoot()
+    mockUseWebHydrationGate.mockReturnValue(true)
+
+    const view = render(<MapRoute />, { container: root })
+    const tile = (await view.findByTestId('leaflet-runtime-tile')) as HTMLImageElement
+    const decode = jest.fn(() => Promise.resolve())
+    Object.defineProperty(tile, 'complete', { configurable: true, value: false })
+    Object.defineProperty(tile, 'naturalWidth', { configurable: true, value: 0 })
+    Object.defineProperty(tile, 'decode', { configurable: true, value: decode })
+
+    fireEvent.load(tile)
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(decode).not.toHaveBeenCalled()
+    expect(root.getAttribute('data-map-route-ready')).toBeNull()
+  })
+
+  it('detects a tile that becomes ready through a Leaflet class mutation', async () => {
+    const root = ensureRoot()
+    mockUseWebHydrationGate.mockReturnValue(true)
+
+    const view = render(<MapRoute />, { container: root })
+    const tile = (await view.findByTestId('leaflet-runtime-tile')) as HTMLImageElement
+    tile.classList.remove('leaflet-tile-loaded')
+    const decode = jest.fn(() => Promise.resolve())
+    setTileLoaded(tile, decode)
+
+    tile.classList.add('leaflet-tile-loaded')
+
+    await waitFor(() => {
+      expect(decode).toHaveBeenCalledTimes(1)
+      expect(root.getAttribute('data-map-route-ready')).toBe('true')
+    })
+  })
+
+  it('keeps the shell when the loaded tile cannot be decoded', async () => {
+    const root = ensureRoot()
+    mockUseWebHydrationGate.mockReturnValue(true)
+
+    const view = render(<MapRoute />, { container: root })
+    const tile = (await view.findByTestId('leaflet-runtime-tile')) as HTMLImageElement
+    const decode = jest.fn(() => Promise.reject(new Error('decode failed')))
+    setTileLoaded(tile, decode)
+
+    fireEvent.load(tile)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(decode).toHaveBeenCalledTimes(1)
+    expect(root.getAttribute('data-map-route-ready')).toBeNull()
+  })
+
+  it('re-decodes the current tile source when src changes during decode', async () => {
+    const root = ensureRoot()
+    mockUseWebHydrationGate.mockReturnValue(true)
+
+    const view = render(<MapRoute />, { container: root })
+    const tile = (await view.findByTestId('leaflet-runtime-tile')) as HTMLImageElement
+    let resolveFirstDecode: (() => void) | undefined
+    const firstDecode = new Promise<void>((resolve) => {
+      resolveFirstDecode = resolve
+    })
+    const decode = jest
+      .fn<Promise<void>, []>()
+      .mockReturnValueOnce(firstDecode)
+      .mockResolvedValueOnce()
+    setTileLoaded(tile, decode)
+    tile.src = '/proxy/tiles/osm/11/1180/658.png'
+    fireEvent.load(tile)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(decode).toHaveBeenCalledTimes(1)
+
+    tile.src = '/proxy/tiles/osm/11/1181/658.png'
+    await act(async () => {
+      resolveFirstDecode?.()
+      await firstDecode
+    })
+
+    await waitFor(() => {
+      expect(decode).toHaveBeenCalledTimes(2)
+      expect(root.getAttribute('data-map-route-ready')).toBe('true')
+    })
+  })
+
+  it('re-decodes a replacement source when the superseded decode rejects', async () => {
+    const root = ensureRoot()
+    mockUseWebHydrationGate.mockReturnValue(true)
+
+    const view = render(<MapRoute />, { container: root })
+    const tile = (await view.findByTestId('leaflet-runtime-tile')) as HTMLImageElement
+    let rejectFirstDecode: ((reason?: unknown) => void) | undefined
+    const firstDecode = new Promise<void>((_resolve, reject) => {
+      rejectFirstDecode = reject
+    })
+    const decode = jest
+      .fn<Promise<void>, []>()
+      .mockReturnValueOnce(firstDecode)
+      .mockResolvedValueOnce()
+    setTileLoaded(tile, decode)
+    tile.src = '/proxy/tiles/osm/11/1180/658.png'
+    fireEvent.load(tile)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(decode).toHaveBeenCalledTimes(1)
+
+    tile.src = '/proxy/tiles/osm/11/1181/658.png'
+    await act(async () => {
+      rejectFirstDecode?.(new Error('superseded source'))
+      await firstDecode.catch(() => undefined)
+    })
+
+    await waitFor(() => {
+      expect(decode).toHaveBeenCalledTimes(2)
       expect(root.getAttribute('data-map-route-ready')).toBe('true')
     })
   })
@@ -98,20 +243,41 @@ describe('map.web route hydration shell signal', () => {
     mockUseWebHydrationGate.mockReturnValue(true)
 
     const view = render(<MapRoute />, { container: root })
-
-    await waitFor(() => {
-      expect(mockPendingFirstFrameSignals).toHaveLength(1)
-    })
-
-    act(() => {
-      mockPendingFirstFrameSignals[0]()
-    })
+    const tile = (await view.findByTestId('leaflet-runtime-tile')) as HTMLImageElement
+    setTileLoaded(tile, jest.fn(() => Promise.resolve()))
+    fireEvent.load(tile)
 
     await waitFor(() => {
       expect(root.getAttribute('data-map-route-ready')).toBe('true')
     })
 
     view.unmount()
+
+    expect(root.getAttribute('data-map-route-ready')).toBeNull()
+  })
+
+  it('does not mark the route ready when decode settles after unmount', async () => {
+    const root = ensureRoot()
+    mockUseWebHydrationGate.mockReturnValue(true)
+
+    const view = render(<MapRoute />, { container: root })
+    const tile = (await view.findByTestId('leaflet-runtime-tile')) as HTMLImageElement
+    let resolveDecode: (() => void) | undefined
+    const decodePromise = new Promise<void>((resolve) => {
+      resolveDecode = resolve
+    })
+    setTileLoaded(tile, jest.fn(() => decodePromise))
+    fireEvent.load(tile)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    view.unmount()
+
+    await act(async () => {
+      resolveDecode?.()
+      await decodePromise
+    })
 
     expect(root.getAttribute('data-map-route-ready')).toBeNull()
   })

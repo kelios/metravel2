@@ -411,6 +411,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
         dangerouslySetInnerHTML={{ __html: getStorageHardeningScript() }}
       />
 
+      {/* /map early bootstrap must stay ahead of the larger shared head scripts:
+          it exits immediately on every other route, while on /map it starts the
+          first painted tile early enough to meet the load-delay budget. */}
+      <script
+        dangerouslySetInnerHTML={{ __html: buildMapHeadBootstrapScript() }}
+      />
+
       {/* Legacy URL guard: /?param=<id|slug> -> /travels/<id|slug> */}
       <script
         dangerouslySetInnerHTML={{ __html: getLegacyParamRedirectScript() }}
@@ -496,13 +503,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-
-      {/* /map early bootstrap: CSS before hydration + first relevant tile warmup
-          before the main bundle, with localhost -> public proxy fallback matching
-          the runtime tile path contract. */}
-      <script
-        dangerouslySetInnerHTML={{ __html: buildMapHeadBootstrapScript() }}
-      />
 
       {/* Font preloads removed: Roboto is loaded via expo-font on native only.
           On web the app uses system-ui / Inter from CSS; preloading unused .ttf files

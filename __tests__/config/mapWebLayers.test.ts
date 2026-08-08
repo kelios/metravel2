@@ -6,6 +6,46 @@ import {
   WEATHER_TEMP_LAYER_ID,
   WEATHER_TEMP_LABELS_LAYER_ID,
 } from '../../config/mapWebLayers';
+import { resolveOsmTileRequest } from '../../config/mapWebTileContract';
+
+describe('resolveOsmTileRequest (web single source)', () => {
+  it('uses the same-origin proxy path and anonymous mode on production web', () => {
+    expect(
+      resolveOsmTileRequest({
+        hostname: 'metravel.by',
+        pageOrigin: 'https://metravel.by',
+        envApiUrl: 'https://metravel.by/api',
+      }),
+    ).toEqual({
+      url: '/proxy/tiles/osm/{z}/{x}/{y}.png',
+      crossOrigin: 'anonymous',
+    });
+  });
+
+  it('uses one public no-CORS URL on localhost when the configured API is LAN-only', () => {
+    expect(
+      resolveOsmTileRequest({
+        hostname: 'localhost',
+        pageOrigin: 'http://localhost:8081',
+        envApiUrl: 'http://192.168.50.36:8000/api',
+      }),
+    ).toEqual({
+      url: 'https://metravel.by/proxy/tiles/osm/{z}/{x}/{y}.png',
+    });
+  });
+
+  it('uses the public proxy from a LAN-hosted static preview', () => {
+    expect(
+      resolveOsmTileRequest({
+        hostname: '192.168.50.10',
+        pageOrigin: 'http://192.168.50.10:3000',
+        envApiUrl: 'https://metravel.by/api',
+      }),
+    ).toEqual({
+      url: 'https://metravel.by/proxy/tiles/osm/{z}/{x}/{y}.png',
+    });
+  });
+});
 
 describe('getOsmNativeTileUrl (dev LAN fallback, #grey-tiles)', () => {
   const ORIGINAL_API_URL = process.env.EXPO_PUBLIC_API_URL;

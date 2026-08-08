@@ -54,5 +54,11 @@ describe('critical head fallback', () => {
 
     expect(source).toContain("import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap'")
     expect(source).toContain('buildMapHeadBootstrapScript()')
+    expect(source.indexOf('getStorageHardeningScript()')).toBeLessThan(
+      source.indexOf('buildMapHeadBootstrapScript()'),
+    )
+    expect(source.indexOf('buildMapHeadBootstrapScript()')).toBeLessThan(
+      source.indexOf('getCriticalHeadScript()'),
+    )
   })
 })

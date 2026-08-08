@@ -250,6 +250,27 @@ describe('ssg-skeletons', () => {
       expect(html).toContain('Маршруты и достопримечательности Беларуси');
     });
 
+    it('contains exactly one bounded tile slot mounted by the shared head bootstrap', () => {
+      const html = buildMapSkeletonHtml();
+      const tileTags = html.match(/<img[^>]*data-ssg-map-tile="true"[^>]*>/g) || [];
+
+      expect(tileTags).toHaveLength(1);
+      expect(tileTags[0]).toContain('width="256"');
+      expect(tileTags[0]).toContain('height="256"');
+      expect(tileTags[0]).toContain('alt=""');
+      expect(tileTags[0]).toContain('aria-hidden="true"');
+      expect(tileTags[0]).not.toMatch(/\ssrc=/);
+      expect(html).toContain('window.__metravelMountMapShellTile');
+      expect(html).toContain(
+        'class="ssg-map-canvas" role="region" aria-label="Карта маршрутов и достопримечательностей Беларуси"',
+      );
+
+      const css = buildSkeletonCSS();
+      expect(css).toContain('.ssg-map-canvas img.ssg-map-tile{position:absolute');
+      expect(css).toContain('width:256px;height:256px');
+      expect(css).toContain('max-width:none;max-height:none');
+    });
+
     it('uses the measured map viewport contract instead of raw 100vh', () => {
       const css = buildSkeletonCSS();
       expect(css).toContain('var(--metravel-map-vh, 100svh)');
