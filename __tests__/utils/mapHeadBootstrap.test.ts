@@ -2,6 +2,8 @@ import fs from 'fs'
 import path from 'path'
 
 import {
+  MAP_SHELL_TILE_OFFSET_X_CSS_VAR,
+  MAP_SHELL_TILE_OFFSET_Y_CSS_VAR,
   MAP_TILE_PRECONNECT_ID,
   MAP_TILE_PRELOAD_ID,
   MAP_TILE_PROXY_PATH,
@@ -79,6 +81,9 @@ describe('mapHeadBootstrap', () => {
     expect(script).toContain('window.__metravelMountMapShellTile')
     expect(script).toContain('^192\\\\.168\\\\.')
     expect(script).toContain('/vendor/leaflet.css')
+    expect(script.indexOf('document.head.appendChild(preload);')).toBeLessThan(
+      script.indexOf('addSheet("metravel-leaflet-css", \'/vendor/leaflet.css\''),
+    )
   })
 
   it('mounts exactly one shell tile with the same URL and mode as the one preload', () => {
@@ -109,8 +114,18 @@ describe('mapHeadBootstrap', () => {
     )
     expect(tiles[0].width).toBe(MAP_TILE_SIZE_PX)
     expect(tiles[0].height).toBe(MAP_TILE_SIZE_PX)
-    expect(tiles[0].style.transform).toMatch(/^translate\(-?\d/)
+    expect(document.documentElement.style.getPropertyValue(MAP_SHELL_TILE_OFFSET_X_CSS_VAR)).toBe(
+      '-199.703px',
+    )
+    expect(document.documentElement.style.getPropertyValue(MAP_SHELL_TILE_OFFSET_Y_CSS_VAR)).toBe(
+      '-137.24px',
+    )
+    expect(tiles[0].style.left).toBe('')
+    expect(tiles[0].style.top).toBe('')
+    expect(tiles[0].style.transform).toBe('')
 
+    document.documentElement.style.removeProperty(MAP_SHELL_TILE_OFFSET_X_CSS_VAR)
+    document.documentElement.style.removeProperty(MAP_SHELL_TILE_OFFSET_Y_CSS_VAR)
     document.head.innerHTML = ''
     document.body.innerHTML = ''
     window.history.replaceState({}, '', '/')

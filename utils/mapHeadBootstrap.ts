@@ -14,6 +14,8 @@ export const MAP_TILE_PRECONNECT_ID = 'metravel-tile-preconnect'
 export const MAP_TILE_PRELOAD_ID = 'metravel-map-tile-preload'
 export const MAP_TILE_PUBLIC_FALLBACK_ORIGIN = OSM_PROXY_PUBLIC_ORIGIN
 export const MAP_TILE_SIZE_PX = 256
+export const MAP_SHELL_TILE_OFFSET_X_CSS_VAR = '--metravel-map-shell-tile-offset-x'
+export const MAP_SHELL_TILE_OFFSET_Y_CSS_VAR = '--metravel-map-shell-tile-offset-y'
 
 const LEAFLET_CSS_ID = 'metravel-leaflet-css'
 const MARKERCLUSTER_CSS_ID = 'metravel-markercluster-css'
@@ -137,9 +139,6 @@ export function buildMapHeadBootstrapScript(envApiUrl = process.env.EXPO_PUBLIC_
       };
       document.head.appendChild(link);
     }
-    addSheet(${JSON.stringify(LEAFLET_CSS_ID)}, '/vendor/leaflet.css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-    addSheet(${JSON.stringify(MARKERCLUSTER_CSS_ID)}, '/vendor/MarkerCluster.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css');
-
     var host = String(window.location && window.location.hostname || '').toLowerCase();
     var isLocal = ${JSON.stringify(OSM_LOCAL_WEB_HOSTNAMES)}.indexOf(host) !== -1 ||
       ${JSON.stringify(OSM_PRIVATE_WEB_HOST_PATTERNS)}.some(function(pattern) {
@@ -150,6 +149,12 @@ export function buildMapHeadBootstrapScript(envApiUrl = process.env.EXPO_PUBLIC_
     var href = request.href;
     var tileOrigin = '';
     try { tileOrigin = new URL(href, pageOrigin || undefined).origin; } catch (_urlError) {}
+
+    var rootStyle = document.documentElement && document.documentElement.style;
+    if (rootStyle) {
+      rootStyle.setProperty(${JSON.stringify(MAP_SHELL_TILE_OFFSET_X_CSS_VAR)}, ${JSON.stringify(`${placement.offsetX}px`)});
+      rootStyle.setProperty(${JSON.stringify(MAP_SHELL_TILE_OFFSET_Y_CSS_VAR)}, ${JSON.stringify(`${placement.offsetY}px`)});
+    }
 
     if (tileOrigin && tileOrigin !== pageOrigin && !document.getElementById(${JSON.stringify(MAP_TILE_PRECONNECT_ID)})) {
       var preconnect = document.createElement('link');
@@ -169,9 +174,6 @@ export function buildMapHeadBootstrapScript(envApiUrl = process.env.EXPO_PUBLIC_
       if (existingHref && existingHref !== href) return;
       tile.width = ${MAP_TILE_SIZE_PX};
       tile.height = ${MAP_TILE_SIZE_PX};
-      tile.style.left = '50%';
-      tile.style.top = '50%';
-      tile.style.transform = 'translate(${placement.offsetX}px, ${placement.offsetY}px)';
       try {
         tile.fetchPriority = 'high';
         tile.setAttribute('fetchPriority', 'high');
@@ -195,6 +197,9 @@ export function buildMapHeadBootstrapScript(envApiUrl = process.env.EXPO_PUBLIC_
       if (request.crossOrigin) preload.crossOrigin = request.crossOrigin;
       document.head.appendChild(preload);
     }
+
+    addSheet(${JSON.stringify(LEAFLET_CSS_ID)}, '/vendor/leaflet.css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+    addSheet(${JSON.stringify(MARKERCLUSTER_CSS_ID)}, '/vendor/MarkerCluster.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css');
     window.__metravelMountMapShellTile();
   } catch (_e) {}
 })();

@@ -269,6 +269,9 @@ describe('ssg-skeletons', () => {
       expect(css).toContain('.ssg-map-canvas img.ssg-map-tile{position:absolute');
       expect(css).toContain('width:256px;height:256px');
       expect(css).toContain('max-width:none;max-height:none');
+      expect(css).toContain(
+        'transform:translate(var(--metravel-map-shell-tile-offset-x,-50%),var(--metravel-map-shell-tile-offset-y,-50%))',
+      );
     });
 
     it('uses the measured map viewport contract instead of raw 100vh', () => {
