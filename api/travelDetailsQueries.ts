@@ -52,6 +52,24 @@ type TravelPreloadWindow = Window & typeof globalThis & {
 const getSlugCacheKey = (slug: string): string =>
     String(slug || '').replace(/^\/+/, '').trim();
 
+export const invalidateTravelDetailMemoryCache = (
+    ...travelKeys: Array<string | number | null | undefined>
+): void => {
+    travelKeys.forEach((key) => {
+        if (key == null) return;
+        const normalizedKey = String(key).trim();
+        if (!normalizedKey) return;
+
+        const numericId = Number(normalizedKey);
+        if (Number.isFinite(numericId) && numericId > 0) {
+            travelCache.delete(numericId);
+            return;
+        }
+
+        travelSlugCache.delete(getSlugCacheKey(normalizedKey));
+    });
+};
+
 const runSharedGuestTravelRequest = async (
     key: string,
     request: () => Promise<Travel>

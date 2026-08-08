@@ -1,4 +1,10 @@
 export const questsGenerated1 = {
+  "components.quests.QuestFullMap.routeStatus.bikeBuildFailed": "Nie udało się wyznaczyć rzeczywistej trasy rowerowej.",
+  "components.quests.QuestFullMap.routeStatus.bikeLoading": "Wyznaczamy trasę rowerową po drogach",
+  "components.quests.QuestFullMap.routeStatus.bikeReady": "Trasa rowerowa jest gotowa",
+  "components.quests.QuestFullMap.routeStatus.bikeReadyWithDistance": "Trasa rowerowa jest gotowa: {{value1}}",
+  "components.quests.QuestWizard.bikeGpxReady": "Plik GPX z trasą rowerową questu jest gotowy",
+  "components.quests.questOfflineMapExport.bikeRouteDescription": "Trasa rowerowa questu Metravel, wyznaczona po drogach i ścieżkach rowerowych, do importu w mapach offline.",
   "app.tabs.quests.city.questId.gotovim_marshrut_i_zadaniya_cae5ee77": "Przygotowujemy trasę i zadania.",
   "app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7": "Do listy zadań",
   "app.tabs.quests.city.questId.kvest_ne_nayden_6b07f517": "Nie znaleziono zadania",

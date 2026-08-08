@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -19,7 +19,6 @@ import WizardStepRouter, {
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
 import { buildLoginHref } from '@/utils/authNavigation';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import {
   trackContentCreateAuthGateViewed,
   trackContentCreateCtaClicked,
@@ -424,18 +423,24 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     wizard.currentStep,
   ]);
 
-  const handleOpenPublic = useCallback(() => {
-    const id = controller.formData?.id;
-    if (!id) return;
+  const publicTravelId = controller.formData?.id;
+  const handleManualSave = controller.handleManualSave;
+  const handleOpenPublic = useCallback(async () => {
+    if (!publicTravelId) return;
 
-    const path = `/travels/${encodeURIComponent(String(id))}`;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      void openExternalUrlInNewTab(path, { allowRelative: true, baseUrl: window.location.origin });
+    try {
+      const savedData = await handleManualSave();
+      if (!savedData) return;
+    } catch {
+      // handleManualSave already reports the concrete error and keeps the editor open.
       return;
     }
 
-    router.push(path as any);
-  }, [controller.formData?.id, router]);
+    // Keep draft preview inside the running SPA. A fresh document request for an
+    // unpublished `/travels/:id` can legitimately be rejected by the public web
+    // entry point before the authenticated React app gets a chance to load it.
+    router.push(`/travels/${encodeURIComponent(String(publicTravelId))}` as any);
+  }, [handleManualSave, publicTravelId, router]);
 
   const handleSessionLogin = useCallback(async () => {
     const draftSaved = await controller.draftRecovery.flushDraft();

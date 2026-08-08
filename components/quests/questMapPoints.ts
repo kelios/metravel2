@@ -11,7 +11,23 @@ export type GroupedQuestPoint = {
     lng: number;
     indexes: number[];
     titles: string[];
+    /** Leaflet offset: earlier quest points stay visible above later nearby points. */
+    zIndexOffset: number;
 };
+
+const QUEST_MARKER_Z_INDEX_BASE = 10_000;
+const QUEST_MARKER_Z_INDEX_STEP = 100;
+
+export const ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET = 20_000;
+
+export function getQuestMarkerZIndexOffset(pointNumbers: readonly number[]): number {
+    const firstPointNumber = pointNumbers.reduce(
+        (first, value) => Number.isFinite(value) ? Math.min(first, value) : first,
+        Number.POSITIVE_INFINITY,
+    );
+    if (!Number.isFinite(firstPointNumber)) return QUEST_MARKER_Z_INDEX_BASE;
+    return QUEST_MARKER_Z_INDEX_BASE - Math.max(0, firstPointNumber) * QUEST_MARKER_Z_INDEX_STEP;
+}
 
 export function normalizeQuestStepPoints(steps: readonly QuestStepPoint[]): QuestStepPoint[] {
     return steps.filter((step) => toFiniteCoordinate(step.lat, step.lng) !== null);
@@ -40,6 +56,7 @@ export function groupQuestStepPoints(
             lng: point.lng,
             indexes: [pointNumber],
             titles: [title],
+            zIndexOffset: getQuestMarkerZIndexOffset([pointNumber]),
         });
     });
 

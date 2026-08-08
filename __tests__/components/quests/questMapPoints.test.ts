@@ -1,4 +1,6 @@
 import {
+  ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET,
+  getQuestMarkerZIndexOffset,
   groupQuestStepPoints,
   normalizeQuestStepPoints,
 } from '@/components/quests/questMapPoints';
@@ -24,13 +26,20 @@ describe('questMapPoints', () => {
         lng: 27.5600001,
         indexes: [1, 3],
         titles: ['Старт', 'Финиш'],
+        zIndexOffset: 9900,
       },
       {
         lat: 52,
         lng: 26,
         indexes: [2],
         titles: ['Точка 2'],
+        zIndexOffset: 9800,
       },
     ]);
+  });
+
+  it('keeps earlier point markers above later nearby markers', () => {
+    expect(getQuestMarkerZIndexOffset([1])).toBeGreaterThan(getQuestMarkerZIndexOffset([3]));
+    expect(ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET).toBeGreaterThan(getQuestMarkerZIndexOffset([1]));
   });
 });

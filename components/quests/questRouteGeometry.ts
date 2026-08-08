@@ -20,6 +20,7 @@ export type QuestRoutePoint = {
 };
 
 export type QuestRouteGeometrySource = 'routed' | 'direct';
+export type QuestRouteMode = 'foot' | 'bike';
 
 export type QuestRouteGeometryResult = {
   track: LngLat[];
@@ -77,8 +78,9 @@ export const calculateQuestTrackDistanceM = (track: LngLat[]): number => {
 
 export const buildDirectQuestRouteResult = (
   steps: QuestRoutePoint[],
-  error?: unknown,
+  options: { error?: unknown; routeMode?: QuestRouteMode } = {},
 ): QuestRouteGeometryResult => {
+  const { error, routeMode = 'foot' } = options;
   const track = getQuestDirectRouteTrack(steps);
   const distanceM = calculateQuestTrackDistanceM(track);
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : undefined;
@@ -87,7 +89,7 @@ export const buildDirectQuestRouteResult = (
     track,
     source: 'direct',
     distanceM,
-    durationS: estimateDurationSeconds(distanceM, 'foot'),
+    durationS: estimateDurationSeconds(distanceM, routeMode),
     error: message,
   };
 };
@@ -116,6 +118,7 @@ const normalizeTrack = (value: unknown): LngLat[] => {
 
 const buildServerRoute = async (
   points: QuestRoutePoint[],
+  routeMode: QuestRouteMode,
   signal?: AbortSignal,
 ): Promise<QuestRouteGeometryResult> => {
   const waypoints = points.map((point) => [point.lng, point.lat] as LngLat);
@@ -123,7 +126,7 @@ const buildServerRoute = async (
 
   const res = await serverRoute(
     points.map((point) => ({ lat: point.lat, lng: point.lng })),
-    'foot',
+    routeMode,
     { signal },
   );
   if (!res.ok) await throwForRouteStatus(res, i18nT('quests:components.quests.questRouteGeometry.servera_marshrutizatsii_9da8dfea'));
@@ -133,7 +136,7 @@ const buildServerRoute = async (
   if (track.length < 2) throw new Error(i18nT('quests:components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_servera_cbf4445a'));
 
   const distanceM = Number(data?.distance_m) || calculateQuestTrackDistanceM(track);
-  const durationS = Number(data?.duration_s) || estimateDurationSeconds(distanceM, 'foot');
+  const durationS = Number(data?.duration_s) || estimateDurationSeconds(distanceM, routeMode);
 
   return {
     track,
@@ -146,6 +149,7 @@ const buildServerRoute = async (
 
 const buildValhallaRoute = async (
   points: QuestRoutePoint[],
+  routeMode: QuestRouteMode,
   signal?: AbortSignal,
 ): Promise<QuestRouteGeometryResult> => {
   const waypoints = points.map((point) => [point.lng, point.lat] as LngLat);
@@ -154,7 +158,7 @@ const buildValhallaRoute = async (
   const res = await valhallaRoute(
     {
       locations: points.map((point) => ({ lat: point.lat, lon: point.lng })),
-      costing: 'pedestrian',
+      costing: routeMode === 'bike' ? 'bicycle' : 'pedestrian',
       directions_options: { units: 'kilometers' },
     },
     { signal },
@@ -172,7 +176,7 @@ const buildValhallaRoute = async (
   const distanceM = Number(data?.trip?.summary?.length) > 0
     ? Number(data.trip.summary.length) * 1000
     : calculateQuestTrackDistanceM(track);
-  const durationS = Number(data?.trip?.summary?.time) || estimateDurationSeconds(distanceM, 'foot');
+  const durationS = Number(data?.trip?.summary?.time) || estimateDurationSeconds(distanceM, routeMode);
 
   return {
     track,
@@ -183,28 +187,29 @@ const buildValhallaRoute = async (
   };
 };
 
-export async function buildQuestWalkingRouteGeometry(
+export async function buildQuestRouteGeometry(
   steps: QuestRoutePoint[],
-  init: { signal?: AbortSignal } = {},
+  init: { signal?: AbortSignal; routeMode?: QuestRouteMode } = {},
 ): Promise<QuestRouteGeometryResult> {
+  const routeMode = init.routeMode ?? 'foot';
   const points = getQuestRoutePoints(steps);
-  if (points.length < 2) return buildDirectQuestRouteResult(points);
+  if (points.length < 2) return buildDirectQuestRouteResult(points, { routeMode });
 
   let lastError: unknown;
 
   try {
-    return await buildServerRoute(points, init.signal);
+    return await buildServerRoute(points, routeMode, init.signal);
   } catch (error) {
     if (isAbortError(error)) throw error;
     lastError = error;
   }
 
   try {
-    return await buildValhallaRoute(points, init.signal);
+    return await buildValhallaRoute(points, routeMode, init.signal);
   } catch (error) {
     if (isAbortError(error)) throw error;
     lastError = error;
   }
 
-  return buildDirectQuestRouteResult(points, lastError);
+  return buildDirectQuestRouteResult(points, { error: lastError, routeMode });
 }

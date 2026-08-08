@@ -22,7 +22,7 @@ import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import { buildQuestOfflineMapGeoJSON, buildQuestOfflineMapGpx } from './questOfflineMapExport';
-import { buildQuestWalkingRouteGeometry, closeQuestRouteLoop } from './questRouteGeometry';
+import { buildQuestRouteGeometry, closeQuestRouteLoop, type QuestRouteMode } from './questRouteGeometry';
 import { hasRoutedQuestTrack, useQuestRouteGeometry, type QuestRouteGeometryState } from './useQuestRouteGeometry';
 import { saveAndShareQuestMapPng } from './questNativeMapPng';
 import {
@@ -56,10 +56,19 @@ const formatRouteDistance = (meters: number) => {
     return i18nT('quests:components.quests.QuestFullMap.value1_km_24d92f57', { value1: (meters / 1000).toFixed(meters < 10000 ? 1 : 0) });
 };
 
-const getRouteStatusText = (route: QuestRouteGeometryState) => {
-    if (route.status === 'loading') return i18nT('quests:components.quests.QuestFullMap.stroim_peshiy_marshrut_po_dorozhkam_8ab3ce79');
+const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRouteMode) => {
+    if (route.status === 'loading') {
+        return routeMode === 'bike'
+            ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeLoading')
+            : i18nT('quests:components.quests.QuestFullMap.stroim_peshiy_marshrut_po_dorozhkam_8ab3ce79');
+    }
     if (hasRoutedQuestTrack(route.track, route.source)) {
         const distance = formatRouteDistance(route.distanceM);
+        if (routeMode === 'bike') {
+            return distance
+                ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeReadyWithDistance', { value1: distance })
+                : i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeReady');
+        }
         return distance ? i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_value1_62786bc6', { value1: distance }) : i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_bca517c9');
     }
     if (route.status === 'fallback') return i18nT('quests:components.quests.QuestFullMap.marshrutizator_nedostupen_pokazana_priblizit_20e198c4');
@@ -76,6 +85,7 @@ function QuestFullMap({
     interactive = true,
     pointerFrozen = false,
     closeLoop = false,
+    routeMode = 'foot',
 }: {
     steps: QuestStepPoint[];
     height?: number;
@@ -87,6 +97,7 @@ function QuestFullMap({
     pointerFrozen?: boolean;
     /** Кольцевой квест (тег `loop`): маршрут замыкается сегментом «финиш → старт». */
     closeLoop?: boolean;
+    routeMode?: QuestRouteMode;
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
@@ -153,9 +164,9 @@ function QuestFullMap({
         [points],
     );
 
-    const routeGeometry = useQuestRouteGeometry(points, { closeLoop });
+    const routeGeometry = useQuestRouteGeometry(points, { closeLoop, routeMode });
     const routeIsRouted = hasRoutedQuestTrack(routeGeometry.track, routeGeometry.source);
-    const routeStatusText = getRouteStatusText(routeGeometry);
+    const routeStatusText = getRouteStatusText(routeGeometry, routeMode);
     const routeLineTrack = routeGeometry.track.length >= 2
         ? routeGeometry.track
         : points.map(point => [point.lng, point.lat] as [number, number]);
@@ -278,7 +289,7 @@ function QuestFullMap({
         const timeout = setTimeout(() => controller.abort(), 15000);
         try {
             const routePoints = closeLoop ? closeQuestRouteLoop(points) : points;
-            const result = await buildQuestWalkingRouteGeometry(routePoints, { signal: controller.signal });
+            const result = await buildQuestRouteGeometry(routePoints, { signal: controller.signal, routeMode });
             return result.source === 'routed' && result.track.length >= 2 ? result.track : null;
         } finally {
             clearTimeout(timeout);
@@ -289,11 +300,16 @@ function QuestFullMap({
         try {
             const routedTrack = await resolveRoutedTrackForExport();
             if (!routedTrack) {
-                Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_gpx_5b594fb6'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_01a5921d'));
+                Alert.alert(
+                    i18nT('quests:components.quests.QuestFullMap.eksport_gpx_5b594fb6'),
+                    routeMode === 'bike'
+                        ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
+                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_01a5921d'),
+                );
                 return;
             }
 
-            const gpxFile = buildQuestOfflineMapGpx({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed' });
+            const gpxFile = buildQuestOfflineMapGpx({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed', routeMode });
             const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${gpxFile.filename}`;
             await FileSystem.writeAsStringAsync(fileUri, gpxFile.content);
@@ -312,7 +328,12 @@ function QuestFullMap({
         try {
             const routedTrack = await resolveRoutedTrackForExport();
             if (!routedTrack) {
-                Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_geojson_2369b67f'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_433c08de'));
+                Alert.alert(
+                    i18nT('quests:components.quests.QuestFullMap.eksport_geojson_2369b67f'),
+                    routeMode === 'bike'
+                        ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
+                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_433c08de'),
+                );
                 return;
             }
 
@@ -320,7 +341,7 @@ function QuestFullMap({
             const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.geojson`;
             await FileSystem.writeAsStringAsync(
                 fileUri,
-                buildQuestOfflineMapGeoJSON({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed' }),
+                buildQuestOfflineMapGeoJSON({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed', routeMode }),
             );
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(fileUri, {
@@ -395,6 +416,7 @@ function QuestFullMap({
                         <QuestFullMap
                             steps={steps}
                             closeLoop={closeLoop}
+                            routeMode={routeMode}
                             height={fullscreenMapHeight}
                             title={title}
                             activeStepIndex={activeStepIndex}

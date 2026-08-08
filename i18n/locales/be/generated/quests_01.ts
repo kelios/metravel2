@@ -1,4 +1,10 @@
 export const questsGenerated1 = {
+  "components.quests.QuestFullMap.routeStatus.bikeBuildFailed": "Не ўдалося пабудаваць рэальны веласіпедны маршрут.",
+  "components.quests.QuestFullMap.routeStatus.bikeLoading": "Будуем веласіпедны маршрут па дарогах",
+  "components.quests.QuestFullMap.routeStatus.bikeReady": "Веласіпедны маршрут гатовы",
+  "components.quests.QuestFullMap.routeStatus.bikeReadyWithDistance": "Веласіпедны маршрут гатовы: {{value1}}",
+  "components.quests.QuestWizard.bikeGpxReady": "GPX з веласіпедным маршрутам квэста гатовы",
+  "components.quests.questOfflineMapExport.bikeRouteDescription": "Веласіпедны маршрут квэста Metravel, пабудаваны па дарогах і веладарожках, для імпарту ў афлайн-карты.",
   "app.tabs.quests.city.questId.gotovim_marshrut_i_zadaniya_cae5ee77": "Гатовім маршрут і заданні.",
   "app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7": "Да спісу квэстаў",
   "app.tabs.quests.city.questId.kvest_ne_nayden_6b07f517": "Квэст не знойдзены",

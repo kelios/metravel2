@@ -11,6 +11,7 @@ import { useQuestRatingMutation } from '@/hooks/useQuestRating'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestReviewSection from './QuestReviewSection'
 import type { QuestMapApp } from './questWizardHelpers'
+import type { QuestRouteMode } from './questRouteGeometry'
 
 import {
   BelkrajWidgetLazy,
@@ -62,6 +63,7 @@ export function QuestDesktopMapPanel({
   copyCurrentStepCoords,
   activeStepIndex,
   closeLoopRoute = false,
+  routeMode,
 }: SharedProps & {
   currentStep: PointLike
   steps: PointLike[]
@@ -76,6 +78,7 @@ export function QuestDesktopMapPanel({
   activeStepIndex?: number
   /** Кольцевой квест: карта и экспорт замыкают маршрут «финиш → старт». */
   closeLoopRoute?: boolean
+  routeMode?: QuestRouteMode
 }) {
   return (
     <View
@@ -140,19 +143,24 @@ export function QuestDesktopMapPanel({
         </View>
       )}
 
-      <Suspense fallback={<QuestMapSkeleton />}>
-        <QuestFullMapLazy
-          steps={steps}
-          closeLoop={closeLoopRoute}
-          height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
-          title={i18nT('quests:components.quests.questWizardSections.karta_kvesta_159fe057')}
-          activeStepIndex={activeStepIndex}
-          // На native превью-карта внутри вертикального ScrollView не должна
-          // перехватывать свайп страницы (F-7): панорамирование — только в
-          // fullscreen. На web скролл-конфликта нет, карта остаётся интерактивной.
-          interactive={Platform.OS === 'web'}
-        />
-      </Suspense>
+      {routeMode ? (
+        <Suspense fallback={<QuestMapSkeleton />}>
+          <QuestFullMapLazy
+            steps={steps}
+            closeLoop={closeLoopRoute}
+            routeMode={routeMode}
+            height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
+            title={i18nT('quests:components.quests.questWizardSections.karta_kvesta_159fe057')}
+            activeStepIndex={activeStepIndex}
+            // На native превью-карта внутри вертикального ScrollView не должна
+            // перехватывать свайп страницы (F-7): панорамирование — только в
+            // fullscreen. На web скролл-конфликта нет, карта остаётся интерактивной.
+            interactive={Platform.OS === 'web'}
+          />
+        </Suspense>
+      ) : (
+        <QuestMapSkeleton />
+      )}
     </View>
   )
 }

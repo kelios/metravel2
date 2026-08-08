@@ -46,6 +46,7 @@
 - `$metravel-quest-expert` - доменный субагент quest-кода: список/деталь/прохождение, адаптеры, answer checker, печать.
 - `$metravel-quest-writer` - автор нового городского квеста: research, связный пеший маршрут, intro/steps/finale, задания, hints и answer patterns; творческий текст только после отдельного подтверждения пользователя.
 - `$metravel-quest-editor` - субагент редактирования контента существующих квестов: тексты, задания, подсказки, answer patterns.
+- `$metravel-quest-playthrough-reviewer` - ревью конкретного прохождения по `QuestProgress`: связывает сохранённый прогресс, сырые попытки, подсказки и актуальный текст шагов, объясняет drop-off и передаёт редактору только evidence-backed правки.
 - `$metravel-quest-geo-verifier` - read-only субагент гео-сверки точек квестов через OSM/Nominatim и локальные geocheck scripts.
 - `$metravel-hook-builder` - проектирование, вынос и рефакторинг focused React hooks в `hooks/` и рядом с фичами без нарушения public contracts.
 - `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.

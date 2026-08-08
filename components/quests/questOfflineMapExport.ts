@@ -8,10 +8,11 @@ import type { LngLat } from '@/utils/routeExport';
 
 import type { QuestStep } from './types';
 import {
-  buildQuestWalkingRouteGeometry,
+  buildQuestRouteGeometry,
   closeQuestRouteLoop,
   getQuestRoutePoints,
   type QuestRouteGeometrySource,
+  type QuestRouteMode,
 } from './questRouteGeometry';
 import { translate as i18nT } from '@/i18n'
 
@@ -27,6 +28,8 @@ export type QuestOfflineMapExportOptions = {
   routeTrack?: LngLat[];
   routeSource?: QuestRouteGeometrySource;
   requireRoutedTrack?: boolean;
+  /** Профиль маршрутизации: велоквесты строятся по велосипедной сети. */
+  routeMode?: QuestRouteMode;
   /** Кольцевой квест (тег `loop`): трек замыкается сегментом «финиш → старт». */
   closeLoop?: boolean;
 };
@@ -49,6 +52,7 @@ export const buildQuestOfflineMapGpx = ({
   steps,
   routeTrack,
   routeSource,
+  routeMode = 'foot',
   closeLoop,
 }: QuestOfflineMapExportOptions) => {
   const points = getQuestOfflineMapPoints(steps);
@@ -67,7 +71,9 @@ export const buildQuestOfflineMapGpx = ({
   const file = buildGpx({
     name: title,
     description: routedTrack && routeSource === 'routed'
-      ? i18nT('quests:components.quests.questOfflineMapExport.peshiy_marshrut_kvesta_metravel_postroennyy__c574db7d')
+      ? routeMode === 'bike'
+        ? i18nT('quests:components.quests.questOfflineMapExport.bikeRouteDescription')
+        : i18nT('quests:components.quests.questOfflineMapExport.peshiy_marshrut_kvesta_metravel_postroennyy__c574db7d')
       : i18nT('quests:components.quests.questOfflineMapExport.tochki_kvesta_metravel_gpx_dlya_importa_v_of_d4cd350a'),
     track: routedTrack ?? waypointTrack,
     waypoints: points.map((point, index) => ({
@@ -137,7 +143,7 @@ const resolveRoutedTrackForExport = async (
   const points = getRouteTrackPoints(options.steps, options.closeLoop);
   if (points.length < 2) return {};
 
-  const result = await buildQuestWalkingRouteGeometry(points);
+  const result = await buildQuestRouteGeometry(points, { routeMode: options.routeMode });
   if (result.source !== 'routed') return null;
 
   return {

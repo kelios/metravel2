@@ -1,4 +1,10 @@
 export const questsGenerated1 = {
+  "components.quests.QuestFullMap.routeStatus.bikeBuildFailed": "Unable to build a real cycling route.",
+  "components.quests.QuestFullMap.routeStatus.bikeLoading": "Building a cycling route along roads",
+  "components.quests.QuestFullMap.routeStatus.bikeReady": "Cycling route ready",
+  "components.quests.QuestFullMap.routeStatus.bikeReadyWithDistance": "Cycling route ready: {{value1}}",
+  "components.quests.QuestWizard.bikeGpxReady": "The GPX with the quest cycling route is ready",
+  "components.quests.questOfflineMapExport.bikeRouteDescription": "Metravel quest cycling route, built along roads and cycleways, for import into offline maps.",
   "app.tabs.quests.city.questId.gotovim_marshrut_i_zadaniya_cae5ee77": "We are preparing the route and tasks.",
   "app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7": "To the list of quests",
   "app.tabs.quests.city.questId.kvest_ne_nayden_6b07f517": "Quest not found",

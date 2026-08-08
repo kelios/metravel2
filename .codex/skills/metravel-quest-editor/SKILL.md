@@ -31,6 +31,8 @@ Read first:
 ## Rules
 
 - Do not edit quest feature UI code; route code issues to `$metravel-quest-expert`.
+- When evidence starts from a `QuestProgress` admin URL or raw attempt history, use
+  `$metravel-quest-playthrough-reviewer` first and apply only its evidence-backed content handoff.
 - Do not create new quests; route new quest creation to `$metravel-quest-writer`.
 - Do not patch a structurally weak child quest step by step when its age band is missing, its climax occurs before the last core step, or its route needs replacement; return a rewrite handoff to `$metravel-quest-writer`.
 - Do not deeply validate coordinates; route that to `$metravel-quest-geo-verifier`.

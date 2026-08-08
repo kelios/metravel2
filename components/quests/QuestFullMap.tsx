@@ -17,9 +17,10 @@ import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGeoJSON, buildQuestOfflineMapGpx } from './questOfflineMapExport';
-import { buildQuestWalkingRouteGeometry, closeQuestRouteLoop } from './questRouteGeometry';
+import { buildQuestRouteGeometry, closeQuestRouteLoop, type QuestRouteMode } from './questRouteGeometry';
 import { hasRoutedQuestTrack, useQuestRouteGeometry, type QuestRouteGeometryState } from './useQuestRouteGeometry';
 import {
+    ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET,
     groupQuestStepPoints,
     normalizeQuestStepPoints,
     type QuestStepPoint,
@@ -48,10 +49,19 @@ const formatRouteDistance = (meters: number) => {
     return i18nT('quests:components.quests.QuestFullMap.value1_km_e6f90e2a', { value1: (meters / 1000).toFixed(meters < 10000 ? 1 : 0) });
 };
 
-const getRouteStatusText = (route: QuestRouteGeometryState) => {
-    if (route.status === 'loading') return i18nT('quests:components.quests.QuestFullMap.stroim_peshiy_marshrut_po_dorozhkam_db0b0939');
+const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRouteMode) => {
+    if (route.status === 'loading') {
+        return routeMode === 'bike'
+            ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeLoading')
+            : i18nT('quests:components.quests.QuestFullMap.stroim_peshiy_marshrut_po_dorozhkam_db0b0939');
+    }
     if (hasRoutedQuestTrack(route.track, route.source)) {
         const distance = formatRouteDistance(route.distanceM);
+        if (routeMode === 'bike') {
+            return distance
+                ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeReadyWithDistance', { value1: distance })
+                : i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeReady');
+        }
         return distance ? i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_value1_679a9da1', { value1: distance }) : i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_01c8c350');
     }
     if (route.status === 'fallback') return i18nT('quests:components.quests.QuestFullMap.marshrutizator_nedostupen_pokazana_priblizit_ec750b6f');
@@ -157,6 +167,7 @@ function QuestFullMap({
                                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                          interactive = true,
                                          closeLoop = false,
+                                         routeMode = 'foot',
                                      }: {
     steps: QuestStepPoint[];
     height?: number;
@@ -167,6 +178,7 @@ function QuestFullMap({
     interactive?: boolean;
     /** Кольцевой квест (тег `loop`): маршрут замыкается сегментом «финиш → старт». */
     closeLoop?: boolean;
+    routeMode?: QuestRouteMode;
 }) {
     const [engine, setEngine] = useState<MapCanvasEngine | null>(null);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
@@ -225,9 +237,9 @@ function QuestFullMap({
         () => normalizeQuestStepPoints(steps),
         [steps]
     );
-    const routeGeometry = useQuestRouteGeometry(points, { closeLoop });
+    const routeGeometry = useQuestRouteGeometry(points, { closeLoop, routeMode });
     const routeIsRouted = hasRoutedQuestTrack(routeGeometry.track, routeGeometry.source);
-    const routeStatusText = getRouteStatusText(routeGeometry);
+    const routeStatusText = getRouteStatusText(routeGeometry, routeMode);
     const routeLineTrack = routeGeometry.track.length >= 2
         ? routeGeometry.track
         : points.map(point => [point.lng, point.lat] as [number, number]);
@@ -288,7 +300,7 @@ function QuestFullMap({
         const timeout = setTimeout(() => controller.abort(), 15000);
         try {
             const routePoints = closeLoop ? closeQuestRouteLoop(points) : points;
-            const result = await buildQuestWalkingRouteGeometry(routePoints, { signal: controller.signal });
+            const result = await buildQuestRouteGeometry(routePoints, { signal: controller.signal, routeMode });
             return result.source === 'routed' && result.track.length >= 2 ? result.track : null;
         } finally {
             clearTimeout(timeout);
@@ -299,7 +311,12 @@ function QuestFullMap({
         try {
             const routedTrack = await resolveRoutedTrackForExport();
             if (!routedTrack) {
-                Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_gpx_c785ac18'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_590dfe0b'));
+                Alert.alert(
+                    i18nT('quests:components.quests.QuestFullMap.eksport_gpx_c785ac18'),
+                    routeMode === 'bike'
+                        ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
+                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_590dfe0b'),
+                );
                 return;
             }
 
@@ -308,7 +325,7 @@ function QuestFullMap({
                 return;
             }
 
-            const gpxFile = buildQuestOfflineMapGpx({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed' });
+            const gpxFile = buildQuestOfflineMapGpx({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed', routeMode });
             const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${gpxFile.filename}`;
 
@@ -329,7 +346,12 @@ function QuestFullMap({
         try {
             const routedTrack = await resolveRoutedTrackForExport();
             if (!routedTrack) {
-                Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_geojson_763e0f06'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_4748c560'));
+                Alert.alert(
+                    i18nT('quests:components.quests.QuestFullMap.eksport_geojson_763e0f06'),
+                    routeMode === 'bike'
+                        ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
+                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_4748c560'),
+                );
                 return;
             }
 
@@ -338,7 +360,7 @@ function QuestFullMap({
                 return;
             }
 
-            const geoJsonContent = buildQuestOfflineMapGeoJSON({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed' });
+            const geoJsonContent = buildQuestOfflineMapGeoJSON({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed', routeMode });
             const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.geojson`;
 
@@ -371,13 +393,13 @@ function QuestFullMap({
     };
 
     const exportGPX = (routedTrack: [number, number][]) => {
-        const file = buildQuestOfflineMapGpx({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed' });
+        const file = buildQuestOfflineMapGpx({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed', routeMode });
         downloadText(file.filename, file.content, file.mimeType);
     };
     const exportGeoJSON = (routedTrack: [number, number][]) =>
         downloadText(
             `${title.replace(/\s+/g, '_')}.geojson`,
-            buildQuestOfflineMapGeoJSON({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed' }),
+            buildQuestOfflineMapGeoJSON({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed', routeMode }),
             'application/geo+json'
         );
 
@@ -538,6 +560,7 @@ function QuestFullMap({
                           <QuestFullMap
                               steps={steps}
                               closeLoop={closeLoop}
+                              routeMode={routeMode}
                               height={fullscreenMapHeight}
                               title={title}
                               activeStepIndex={activeStepIndex}
@@ -650,6 +673,11 @@ function QuestFullMap({
                             <Marker
                                 key={`${gp.lat}-${gp.lng}-${idx}`}
                                 position={[gp.lat, gp.lng]}
+                                zIndexOffset={
+                                    activeStepIndex != null && gp.indexes.includes(activeStepIndex + 1)
+                                        ? ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET
+                                        : gp.zIndexOffset
+                                }
                                 icon={numberIcon(
                                     L,
                                     gp.indexes.join(','),

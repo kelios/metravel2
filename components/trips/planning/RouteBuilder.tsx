@@ -2,7 +2,7 @@
 // Конструктор маршрута поездки (Sprint 13 / блок D): список точек с reorder/delete
 // (web-safe, без нативных drag-либ), inline-добавление точки, применение шаблонов
 // и живая сводка через estimateRouteSummary. Только владелец может редактировать.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -11,26 +11,31 @@ import { fetchTravels } from '@/api/travelsApi';
 import type { Travel, TravelAddressItem } from '@/types/types';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
 import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap';
 import {
   estimateRouteSummary,
   type PlannedTrip,
+  type RoutableTripTransport,
   type RoutePoint,
   type RoutePointType,
 } from '@/api/plannedTrips';
 import {
   ROUTE_POINT_ICON_NAME,
   ROUTE_POINT_LABEL,
+  TRANSPORT_LABEL,
 } from '@/components/trips/planning/tripPlanFormatting';
 import {
   useRouteTemplates,
+  useUpdateTripTransport,
   useUpdateTripRoute,
 } from '@/hooks/usePlannedTripsApi';
 import { trackRoutePointAdded } from '@/utils/tripAnalytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { createStyles } from './RouteBuilder.styles';
 
 
@@ -39,7 +44,11 @@ interface Props {
 }
 
 const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
+const ROUTE_TRANSPORTS: RoutableTripTransport[] = ['car', 'foot', 'bike'];
 const SITE_SEARCH_MIN_LENGTH = 2;
+
+const isRoutableTransport = (value: string): value is RoutableTripTransport =>
+  ROUTE_TRANSPORTS.some((transport) => transport === value);
 
 type SiteSearchStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -151,10 +160,13 @@ const routeSignature = (route: RoutePoint[]): string =>
     .join('>');
 
 function RouteBuilder({ trip }: Props) {
+  const { t } = useTranslation();
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const updateTripRoute = useUpdateTripRoute();
+  const updateTripTransport = useUpdateTripTransport();
   const templatesQuery = useRouteTemplates();
+  const transportMutationLockedRef = useRef(false);
 
   const [route, setRoute] = useState<RoutePoint[]>(trip.route);
 
@@ -174,6 +186,8 @@ function RouteBuilder({ trip }: Props) {
   const [siteQuery, setSiteQuery] = useState('');
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
+  const [transportCommitPending, setTransportCommitPending] = useState(false);
+  const [transportError, setTransportError] = useState<string | null>(null);
 
   const routeMatchesSaved = useMemo(
     () => routeSignature(route) === routeSignature(trip.route),
@@ -386,11 +400,50 @@ function RouteBuilder({ trip }: Props) {
   };
 
   const handleSave = () => {
+    if (transportMutationLockedRef.current || updateTripTransport.isPending) return;
+
     updateTripRoute.mutate(
       { tripId: trip.id, route },
       {
         onSuccess: (updatedTrip) => {
           setRoute(updatedTrip.route);
+        },
+      },
+    );
+  };
+
+  const handleTransportChange = (value: string) => {
+    if (
+      value === trip.transport ||
+      !isRoutableTransport(value) ||
+      transportMutationLockedRef.current ||
+      updateTripRoute.isPending
+    ) {
+      return;
+    }
+
+    const persistedRouteSignature = routeSignature(trip.route);
+    transportMutationLockedRef.current = true;
+    setTransportCommitPending(true);
+    setTransportError(null);
+    updateTripTransport.mutate(
+      { tripId: trip.id, transport: value },
+      {
+        onSuccess: (updatedTrip) => {
+          setRoute((currentRoute) => (
+            routeSignature(currentRoute) === persistedRouteSignature
+              ? updatedTrip.route
+              : currentRoute
+          ));
+        },
+        onError: () => {
+          setTransportError(
+            t('trips:components.trips.planning.RouteBuilder.ne_udalos_perestroit_marshrut_poprobuyte_esche_raz_9c4be156'),
+          );
+        },
+        onSettled: () => {
+          transportMutationLockedRef.current = false;
+          setTransportCommitPending(false);
         },
       },
     );
@@ -487,10 +540,55 @@ function RouteBuilder({ trip }: Props) {
   }
 
   const templates = templatesQuery.data ?? [];
+  const transportPending = transportCommitPending || updateTripTransport.isPending;
+  const transportDisabled = transportPending || updateTripRoute.isPending;
+  const transportOptions = ROUTE_TRANSPORTS.map((transport) => ({
+    key: transport,
+    label: TRANSPORT_LABEL[transport],
+  }));
 
   return (
     <View style={styles.wrap} testID="route-builder">
       <Text style={styles.heading}>{i18nT('trips:components.trips.planning.RouteBuilder.konstruktor_marshruta_187e063e')}</Text>
+
+      <View
+        style={styles.transportControl}
+        accessibilityState={{ busy: transportPending }}
+        testID="route-builder-transport-control"
+      >
+        <Text style={styles.label}>
+          {t('trips:components.trips.planning.RouteBuilder.sposob_peredvizheniya_f5c52d42')}
+        </Text>
+        <SegmentedControl
+          options={transportOptions}
+          value={trip.transport}
+          onChange={handleTransportChange}
+          accessibilityLabel={t('trips:components.trips.planning.RouteBuilder.sposob_peredvizheniya_f5c52d42')}
+          compact
+          dense
+          minTouchHeight={44}
+          noOuterMargins
+          disabled={transportDisabled}
+        />
+        {transportPending ? (
+          <Text
+            style={styles.hint}
+            accessibilityLiveRegion="polite"
+            testID="route-builder-transport-pending"
+          >
+            {t('trips:components.trips.planning.RouteBuilder.perestraivaem_marshrut_d8d47f21')}
+          </Text>
+        ) : null}
+        {transportError ? (
+          <Text
+            style={styles.errorText}
+            accessibilityLiveRegion="assertive"
+            testID="route-builder-transport-error"
+          >
+            {transportError}
+          </Text>
+        ) : null}
+      </View>
 
       <TripPlanRouteMap
         route={route}
@@ -753,7 +851,7 @@ function RouteBuilder({ trip }: Props) {
         label={i18nT('trips:components.trips.planning.RouteBuilder.sohranit_marshrut_31633565')}
         onPress={handleSave}
         loading={updateTripRoute.isPending}
-        disabled={updateTripRoute.isPending}
+        disabled={updateTripRoute.isPending || transportPending}
         fullWidth
         testID="route-builder-save"
       />

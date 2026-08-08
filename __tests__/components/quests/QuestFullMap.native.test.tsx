@@ -94,6 +94,8 @@ describe('QuestFullMap native marker status', () => {
     expect(html).toContain('function ensureTileLayer()');
     expect(html).toContain('tileLayer.addTo(map)');
     expect(html).toContain('routeHalo.addTo(map)');
+    expect(html).toContain('zIndexOffset: gp.zIndexOffset');
+    expect(html).toContain('setZIndexOffset(active ? activeMarkerZIndexOffset : gp.zIndexOffset)');
     expect(html).toContain('Number.isFinite(nextZoom)');
     expect(html).toContain('updateWhenIdle: false');
     expect(html).toContain('updateWhenZooming: false');

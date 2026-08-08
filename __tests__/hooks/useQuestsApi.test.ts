@@ -40,8 +40,11 @@ jest.mock('@/utils/questAdapters', () => ({
     lat: parseFloat(String(m.lat)),
     lng: parseFloat(String(m.lng)),
     cover: m.cover_url ?? undefined,
+    tags: m.tags ? Object.keys(m.tags) : undefined,
   }),
   adaptBundle: (b: any) => ({
+    id: b.id,
+    questId: b.quest_id,
     title: b.title,
     steps: [],
     finale: { text: '' },
@@ -231,11 +234,12 @@ describe('useQuestsApi hooks', () => {
   describe('useQuestBundle', () => {
     it('loads bundle from API', async () => {
       mockFetchQuestByQuestId.mockResolvedValueOnce(API_BUNDLE);
-      mockFetchQuestsList.mockResolvedValueOnce([]);
+      mockFetchQuestsList.mockResolvedValue([API_META]);
 
       const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
 
       await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.bundle?.tags).toEqual([]));
 
       expect(result.current.bundle).not.toBeNull();
       expect(result.current.bundle!.title).toBe('Тайна дракона');

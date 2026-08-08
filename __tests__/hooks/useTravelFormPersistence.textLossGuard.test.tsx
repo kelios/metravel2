@@ -113,6 +113,8 @@ function setupPersistence(opts: {
   initialFormData: any;
   baselineText: any;
   isFormHydrated?: boolean;
+  rehydrateMarkerIdsFromServer?: jest.Mock;
+  uploadPendingMarkerImages?: jest.Mock;
 }) {
   const formData = { ...opts.initialFormData };
   const formState: any = {
@@ -146,8 +148,10 @@ function setupPersistence(opts: {
     serverTextBaselineRef: makeRef(opts.baselineText),
     didInvalidateAfterCreateRef: makeRef(false),
     updateBaselineRef: makeRef(jest.fn()),
-    rehydrateMarkerIdsFromServer: jest.fn().mockResolvedValue(null),
-    uploadPendingMarkerImages: jest.fn().mockResolvedValue(undefined),
+    rehydrateMarkerIdsFromServer:
+      opts.rehydrateMarkerIdsFromServer ?? jest.fn().mockResolvedValue(null),
+    uploadPendingMarkerImages:
+      opts.uploadPendingMarkerImages ?? jest.fn().mockResolvedValue(undefined),
   };
 
   const { result } = renderHook(() => useTravelFormPersistence(params));
@@ -174,6 +178,222 @@ describe('autosave hydration gate', () => {
     const options = mockUseImprovedAutoSave.mock.calls.at(-1)?.[2];
     expect(options).toEqual(expect.objectContaining({ enabled: false }));
     expect(mockSaveFormData).not.toHaveBeenCalled();
+  });
+});
+
+describe('applySavedData — route point save races', () => {
+  const pointA = {
+    id: null,
+    lat: 53.9,
+    lng: 27.56,
+    address: 'Точка A',
+    categories: [],
+    image: null,
+  };
+  const pointB = {
+    id: null,
+    lat: 53.91,
+    lng: 27.57,
+    address: 'Точка B',
+    categories: [],
+    image: 'blob:http://localhost/point-b',
+  };
+
+  it('does not drop a second point added while the first upsert is in flight', async () => {
+    const sourceTravel = {
+      id: 225,
+      name: 'Путешествие',
+      description: LONG_TEXT,
+      coordsMeTravel: [pointA],
+      countries: [],
+      gallery: [],
+    };
+    const { result, params } = setupPersistence({
+      initialFormData: sourceTravel,
+      baselineText: null,
+    });
+    params.formDataRef.current = {
+      ...sourceTravel,
+      coordsMeTravel: [pointA, pointB],
+    };
+
+    await act(async () => {
+      result.current.applySavedData(
+        {
+          ...sourceTravel,
+          coordsMeTravel: [{ ...pointA, id: 101 }],
+        },
+        sourceTravel,
+      );
+      await Promise.resolve();
+    });
+
+    expect(params.formDataRef.current.coordsMeTravel).toEqual([
+      expect.objectContaining({ id: 101, address: 'Точка A' }),
+      expect.objectContaining({ id: null, address: 'Точка B', image: pointB.image }),
+    ]);
+    expect(params.setMarkers).toHaveBeenLastCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 101, address: 'Точка A' }),
+        expect.objectContaining({ address: 'Точка B', image: pointB.image }),
+      ]),
+    );
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        coordsMeTravel: [expect.objectContaining({ address: 'Точка A' })],
+      }),
+    );
+  });
+
+  it('grafts a late point id onto live marker data before photo upload', async () => {
+    let resolveRehydrate: ((markers: any[]) => void) | null = null;
+    const rehydrateMarkerIdsFromServer = jest.fn(
+      () => new Promise<any[]>((resolve) => {
+        resolveRehydrate = resolve;
+      }),
+    );
+    const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
+    const sourceTravel = {
+      id: 225,
+      name: 'Путешествие',
+      description: LONG_TEXT,
+      coordsMeTravel: [{ ...pointA, image: 'blob:http://localhost/point-a' }],
+      countries: [],
+      gallery: [],
+    };
+    const { result, params } = setupPersistence({
+      initialFormData: sourceTravel,
+      baselineText: null,
+      rehydrateMarkerIdsFromServer,
+      uploadPendingMarkerImages,
+    });
+
+    act(() => {
+      result.current.applySavedData(sourceTravel, sourceTravel);
+    });
+
+    const liveMarkers = [
+      {
+        ...pointA,
+        address: 'Точка A — уточнено',
+        categories: [9],
+        image: 'blob:http://localhost/point-a',
+      },
+      pointB,
+    ];
+    params.formDataRef.current = {
+      ...params.formDataRef.current,
+      coordsMeTravel: liveMarkers,
+    };
+
+    await act(async () => {
+      resolveRehydrate?.([{
+        ...pointA,
+        id: 101,
+        image: null,
+      }]);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const expectedMarkers = [
+      { ...liveMarkers[0], id: 101 },
+      pointB,
+    ];
+    expect(params.formDataRef.current.coordsMeTravel).toEqual(expectedMarkers);
+    expect(params.setMarkers).toHaveBeenLastCalledWith(expectedMarkers);
+    expect(uploadPendingMarkerImages).toHaveBeenCalledWith(expectedMarkers);
+  });
+
+  it('does not baseline a text edit made while point ids rehydrate', async () => {
+    let resolveRehydrate: ((markers: any[]) => void) | null = null;
+    const rehydrateMarkerIdsFromServer = jest.fn(
+      () => new Promise<any[]>((resolve) => {
+        resolveRehydrate = resolve;
+      }),
+    );
+    const sourceTravel = {
+      id: 225,
+      name: 'Путешествие',
+      description: LONG_TEXT,
+      coordsMeTravel: [{ ...pointA, image: 'blob:http://localhost/point-a' }],
+      countries: [],
+      gallery: [],
+    };
+    const { result, params } = setupPersistence({
+      initialFormData: sourceTravel,
+      baselineText: null,
+      rehydrateMarkerIdsFromServer,
+    });
+
+    act(() => {
+      result.current.applySavedData(sourceTravel, sourceTravel);
+    });
+    params.formDataRef.current = {
+      ...params.formDataRef.current,
+      description: `${LONG_TEXT}<p>Несохранённое дополнение</p>`,
+    };
+
+    await act(async () => {
+      resolveRehydrate?.([{ ...pointA, id: 101, image: null }]);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(params.formDataRef.current).toEqual(
+      expect.objectContaining({
+        description: `${LONG_TEXT}<p>Несохранённое дополнение</p>`,
+        coordsMeTravel: [expect.objectContaining({ id: 101 })],
+      }),
+    );
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(
+      expect.objectContaining({ description: LONG_TEXT }),
+    );
+  });
+
+  it('uses the sent autosave snapshot as baseline when the form advances in flight', async () => {
+    let resolveSave: ((saved: any) => void) | null = null;
+    mockSaveFormData.mockReset();
+    mockSaveFormData.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    const sourceTravel = {
+      id: 225,
+      name: 'Путешествие',
+      description: LONG_TEXT,
+      coordsMeTravel: [pointA],
+      countries: [],
+      gallery: [],
+    };
+    const { params } = setupPersistence({
+      initialFormData: sourceTravel,
+      baselineText: null,
+    });
+    const autosaveOptions: any = mockUseImprovedAutoSave.mock.calls.at(-1)?.[2];
+    const savePromise = autosaveOptions.onSave(sourceTravel, new AbortController().signal);
+    params.formDataRef.current = {
+      ...sourceTravel,
+      coordsMeTravel: [pointA, pointB],
+    };
+
+    await act(async () => {
+      resolveSave?.({
+        ...sourceTravel,
+        coordsMeTravel: [{ ...pointA, id: 101 }],
+      });
+      const savedData = await savePromise;
+      autosaveOptions.onSuccess(savedData);
+      await Promise.resolve();
+    });
+
+    expect(params.formDataRef.current.coordsMeTravel).toHaveLength(2);
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        coordsMeTravel: [expect.objectContaining({ address: 'Точка A' })],
+      }),
+    );
   });
 });
 

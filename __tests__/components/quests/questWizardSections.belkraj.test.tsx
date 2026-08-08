@@ -1,6 +1,8 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
 
+const mockQuestFullMapLazy = jest.fn(() => null)
+
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: (props: Record<string, unknown>) => {
     const ReactModule = jest.requireActual('react') as typeof React
@@ -8,11 +10,11 @@ jest.mock('@/components/quests/questWizardMedia', () => ({
     return ReactModule.createElement(View, { ...props, testID: 'quest-belkraj-widget' })
   },
   NativeQuestVideoLazy: () => null,
-  QuestFullMapLazy: () => null,
+  QuestFullMapLazy: (props: Record<string, unknown>) => mockQuestFullMapLazy(props),
   QuestWebVideo: () => null,
 }))
 
-import { QuestExcursionsInline } from '@/components/quests/questWizardSections'
+import { QuestDesktopMapPanel, QuestExcursionsInline } from '@/components/quests/questWizardSections'
 
 const styles = {
   excursionsSection: {},
@@ -48,5 +50,41 @@ describe('QuestExcursionsInline Belkraj integration', () => {
     expect(widget.props.points).toEqual([
       { id: 1, address: 'Минск', lat: 53.9, lng: 27.56 },
     ])
+  })
+})
+
+describe('QuestDesktopMapPanel route classification', () => {
+  const mapProps = {
+    colors: {},
+    styles: { fullMapSection: {} },
+    currentStep: { id: 'intro', lat: 50.06, lng: 19.94 },
+    steps: [
+      { id: 'one', lat: 50.06, lng: 19.94 },
+      { id: 'two', lat: 50.07, lng: 19.95 },
+    ],
+    compactDesktopLayout: false,
+    useWideInlineLayout: false,
+    desktopNavExpanded: false,
+    setDesktopNavExpanded: jest.fn(),
+    showMap: true,
+    toggleMap: jest.fn(),
+    openCurrentStepInMap: jest.fn(),
+    copyCurrentStepCoords: jest.fn(),
+  }
+
+  beforeEach(() => {
+    mockQuestFullMapLazy.mockClear()
+  })
+
+  it('does not build a pedestrian route while quest tags are still loading', () => {
+    const { rerender } = render(<QuestDesktopMapPanel {...mapProps} />)
+
+    expect(mockQuestFullMapLazy).not.toHaveBeenCalled()
+
+    rerender(<QuestDesktopMapPanel {...mapProps} routeMode="bike" closeLoopRoute />)
+
+    expect(mockQuestFullMapLazy).toHaveBeenCalledWith(
+      expect.objectContaining({ routeMode: 'bike', closeLoop: true }),
+    )
   })
 })

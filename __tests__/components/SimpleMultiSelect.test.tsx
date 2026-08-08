@@ -58,6 +58,53 @@ describe('SimpleMultiSelect', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  it('keeps selected chips visually compact with a full-size remove target', () => {
+    const screen = render(
+      <SimpleMultiSelect
+        data={dataNumericIds}
+        value={[1]}
+        onChange={jest.fn()}
+        labelField="name"
+        valueField="id"
+      />
+    )
+
+    const visualChip = StyleSheet.flatten(
+      screen.getByTestId('simple-multiselect.selected-chip-visual.1').props.style,
+    )
+    const removeControl = StyleSheet.flatten(
+      screen.getByTestId('simple-multiselect.selected-chip-remove.1').props.style,
+    )
+    const removeVisual = StyleSheet.flatten(
+      screen.getByTestId('simple-multiselect.selected-chip-remove-visual.1').props.style,
+    )
+    const expectedControlSize = Platform.OS === 'android' ? 48 : 44
+
+    expect(visualChip.height).toBe(32)
+    expect(visualChip.borderRadius).toBe(12)
+    expect(removeVisual.width).toBe(expectedControlSize)
+    expect(removeControl.width).toBe(expectedControlSize)
+    expect(removeControl.height).toBe(expectedControlSize)
+  })
+
+  it('does not remove a selected value when the field is disabled', () => {
+    const onChange = jest.fn()
+    const screen = render(
+      <SimpleMultiSelect
+        data={dataNumericIds}
+        value={[1]}
+        onChange={onChange}
+        labelField="name"
+        valueField="id"
+        disabled
+      />
+    )
+
+    fireEvent.press(screen.getByTestId('simple-multiselect.selected-chip-remove.1'))
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('opens from the remaining selected field area and the explicit chevron control', () => {
     const props = {
       data: dataNumericIds,

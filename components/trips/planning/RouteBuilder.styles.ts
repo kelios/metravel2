@@ -8,6 +8,14 @@ export const createStyles = (colors: ThemedColors) =>
     label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 4 },
     hint: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
     errorText: { fontSize: 13, color: colors.danger, lineHeight: 18 },
+    transportControl: {
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: colors.surfaceMuted,
+    },
     pointList: { gap: 8 },
     pointRow: {
       flexDirection: 'row',

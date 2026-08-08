@@ -8,6 +8,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 
 const compactControlHitSlop = Platform.OS === 'android' ? 17 : 15;
+const selectedChipControlSize =
+  Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight;
 
 type MultiSelectValue = string | number;
 type MultiSelectItem = Record<string, unknown>;
@@ -100,7 +102,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   const canShowCreate = allowCreate && !!onCreateItem && trimmedQuery.length >= 2 && !hasExactMatch;
 
   const handleCreate = async () => {
-    if (!onCreateItem || !trimmedQuery || isCreating) return;
+    if (disabled || !onCreateItem || !trimmedQuery || isCreating) return;
     setIsCreating(true);
     setCreateError(null);
     try {
@@ -119,6 +121,8 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   };
 
   const handleToggleItem = (item: MultiSelectItem) => {
+    if (disabled) return;
+
     const itemValue = getItemValue(item);
     const isSelected = value.some(v => isSelectedValue(v, itemValue));
     
@@ -134,6 +138,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   };
 
   const handleRemoveItem = (itemValue: MultiSelectValue) => {
+    if (disabled) return;
     onChange(value.filter(v => !isSelectedValue(v, itemValue)));
   };
 
@@ -151,29 +156,46 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   };
 
   // ✅ Убираем useCallback для рендер-функций, которые используют colors
-  const renderSelectedChip = ({ item }: { item: MultiSelectItem }) => (
-    <View style={[styles.chip, { backgroundColor: colors.primary }]}>
-      <Pressable
-        testID={`simple-multiselect.selected-chip.${normalizeValue(getItemValue(item))}`}
-        onPress={handleOpen}
-        style={styles.chipOpenArea}
-        accessible={false}
-      >
-        <Text style={[styles.chipText, { color: colors.textOnPrimary }]} numberOfLines={1}>
-          {getItemLabel(item)}
-        </Text>
-      </Pressable>
-      <Pressable
-        onPress={() => handleRemoveItem(getItemValue(item))}
-        hitSlop={compactControlHitSlop}
-        style={styles.chipRemove}
-        accessibilityRole="button"
-        accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.removeSelected', { value1: getItemLabel(item) })}
-      >
-        <Feather name="x" size={14} color={colors.textOnPrimary} />
-      </Pressable>
-    </View>
-  );
+  const renderSelectedChip = ({ item }: { item: MultiSelectItem }) => {
+    const itemValue = getItemValue(item);
+    const normalizedItemValue = normalizeValue(itemValue);
+    const itemLabel = getItemLabel(item);
+
+    return (
+      <View style={styles.selectedChipSlot}>
+        <View
+          testID={`simple-multiselect.selected-chip-visual.${normalizedItemValue}`}
+          style={styles.chipVisual}
+          pointerEvents="none"
+        >
+          <Text style={styles.chipText} numberOfLines={1}>
+            {itemLabel}
+          </Text>
+          <View
+            testID={`simple-multiselect.selected-chip-remove-visual.${normalizedItemValue}`}
+            style={styles.chipRemoveVisual}
+          >
+            <Feather name="x" size={14} color={colors.primaryText} />
+          </View>
+        </View>
+        <Pressable
+          testID={`simple-multiselect.selected-chip.${normalizedItemValue}`}
+          onPress={handleOpen}
+          style={styles.chipOpenArea}
+          disabled={disabled}
+          accessible={false}
+        />
+        <Pressable
+          testID={`simple-multiselect.selected-chip-remove.${normalizedItemValue}`}
+          onPress={() => handleRemoveItem(itemValue)}
+          style={styles.chipRemove}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.removeSelected', { value1: itemLabel })}
+        />
+      </View>
+    );
+  };
 
   const renderItem = ({ item }: { item: MultiSelectItem }) => {
     const itemValue = getItemValue(item);
@@ -413,31 +435,49 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     fontWeight: '500',
   },
   chipsContainer: {
-    gap: DESIGN_TOKENS.spacing.xs,
+    alignItems: 'center',
     flexGrow: 1,
   },
-  chip: {
+  selectedChipSlot: {
+    minHeight: selectedChipControlSize,
+    justifyContent: 'center',
+    position: 'relative',
+    marginRight: DESIGN_TOKENS.spacing.xs,
+  },
+  chipVisual: {
+    height: 32,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: 0,
-    marginRight: DESIGN_TOKENS.spacing.xs,
-    gap: 6,
+    backgroundColor: colors.primaryAlpha30,
+    borderWidth: 1,
+    borderColor: colors.primaryAlpha50,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    paddingLeft: DESIGN_TOKENS.spacing.sm,
   },
   chipText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    ...DESIGN_TOKENS.typography.scale.bodySmall,
     fontWeight: '600',
-    color: colors.textOnPrimary,
-    maxWidth: 150,
+    color: colors.primaryText,
+    maxWidth: 168,
   },
   chipOpenArea: {
-    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
-    justifyContent: 'center',
+    ...StyleSheet.absoluteFillObject,
+    right: selectedChipControlSize,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as const } : {}),
   },
   chipRemove: {
-    padding: 2,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: selectedChipControlSize,
+    height: selectedChipControlSize,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as const } : {}),
+  },
+  chipRemoveVisual: {
+    width: selectedChipControlSize,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectedFieldOpenArea: {
     flexGrow: 1,

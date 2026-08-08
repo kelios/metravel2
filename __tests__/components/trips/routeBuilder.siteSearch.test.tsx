@@ -9,6 +9,7 @@ import type { PlacesCatalogPage } from '@/utils/placesCatalog'
 import type { Travel } from '@/types/types'
 
 const mockMutate = jest.fn()
+const mockTransportMutate = jest.fn()
 
 jest.mock('@/api/places', () => ({
   fetchPlacesCatalog: jest.fn(),
@@ -22,6 +23,10 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useRouteTemplates: () => ({ data: [] }),
   useUpdateTripRoute: () => ({
     mutate: mockMutate,
+    isPending: false,
+  }),
+  useUpdateTripTransport: () => ({
+    mutate: mockTransportMutate,
     isPending: false,
   }),
 }))
@@ -145,6 +150,7 @@ const travelsPage: { data: Travel[]; total: number } = {
 
 beforeEach(() => {
   mockMutate.mockClear()
+  mockTransportMutate.mockClear()
   mockedFetchPlacesCatalog.mockReset()
   mockedFetchTravels.mockReset()
   mockedFetchPlacesCatalog.mockResolvedValue(placesPage)

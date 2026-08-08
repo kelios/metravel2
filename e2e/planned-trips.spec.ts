@@ -1,4 +1,6 @@
 import { test, expect } from './fixtures'
+import fs from 'node:fs'
+import path from 'node:path'
 import {
   ensureAuthedStorageFallback,
   mockFakeAuthApis,
@@ -15,6 +17,12 @@ import {
 async function setupFakeAuth(page: import('@playwright/test').Page) {
   await ensureAuthedStorageFallback(page)
   await mockFakeAuthApis(page)
+}
+
+async function waitForFakeAuth(page: import('@playwright/test').Page) {
+  await expect(
+    page.getByRole('button', { name: 'Открыть меню аккаунта E2E User' }),
+  ).toBeVisible({ timeout: 15_000 })
 }
 
 async function mockCreateTrip(page: import('@playwright/test').Page) {
@@ -67,6 +75,97 @@ async function mockCreateTrip(page: import('@playwright/test').Page) {
       }),
     })
   })
+}
+
+const transportRoutePoints = [
+  {
+    id: 1,
+    point_type: 'custom',
+    order: 0,
+    title: 'Минск',
+    description: '',
+    lat: 53.9,
+    lng: 27.56,
+  },
+  {
+    id: 2,
+    point_type: 'custom',
+    order: 1,
+    title: 'Финиш',
+    description: '',
+    lat: 53.8,
+    lng: 27.4,
+  },
+]
+
+const buildTransportTrip = (transportMode: string, ownerId: number) => {
+  const degraded = transportMode === 'bicycle'
+  return {
+    id: 99002,
+    title: 'E2E переключение транспорта',
+    description: 'Проверка перестроения маршрута',
+    start_date: '2026-09-01T09:00:00',
+    status: 'planned',
+    transport_mode: transportMode,
+    owner: ownerId,
+    participants: [],
+    route: { points: transportRoutePoints },
+    route_geometry: degraded
+      ? [[27.56, 53.9], [27.5, 53.85], [27.4, 53.8]]
+      : [[27.56, 53.9], [27.4, 53.8]],
+    route_summary: {
+      distance_km: degraded ? 19.2 : 18.5,
+      duration_min: transportMode === 'walk' ? 240 : degraded ? 72 : 20,
+      elevation_gain_m: 140,
+      stops_count: 1,
+      provider: degraded ? 'direct' : 'ors',
+    },
+    routing_state: {
+      provider: degraded ? 'direct' : 'ors',
+      is_optimal: !degraded,
+      fallback_reason: degraded ? 'routing_provider_unavailable' : null,
+      warnings: [],
+    },
+    is_public: false,
+    max_participants: 4,
+  }
+}
+
+async function mockTransportTrip(page: import('@playwright/test').Page) {
+  const patchBodies: Array<Record<string, unknown>> = []
+  const plannedTripRequests: string[] = []
+  let currentTransport = 'car'
+
+  page.on('request', (request) => {
+    const pathname = new URL(request.url()).pathname
+    if (pathname.includes('/api/trips/planned/99002')) {
+      plannedTripRequests.push(`${request.method()} ${pathname}`)
+    }
+  })
+
+  await page.route('**/api/trips/route-templates/', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  )
+  await page.route('**/api/trips/planned/99002/', async (route) => {
+    const request = route.request()
+    if (request.method() === 'PATCH') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      patchBodies.push(body)
+      currentTransport = String(body.transport_mode ?? currentTransport)
+      await new Promise((resolve) => setTimeout(resolve, 250))
+    } else {
+      await waitForFakeAuth(page)
+    }
+
+    const ownerId = await page.evaluate(() => Number(window.localStorage.getItem('userId')))
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(buildTransportTrip(currentTransport, ownerId)),
+    })
+  })
+
+  return { patchBodies, plannedTripRequests }
 }
 
 // ── consent seed (mirrors public-trips.spec.ts pattern) ──────────────────────
@@ -132,5 +231,64 @@ test.describe('Trip planner — happy path', () => {
     await createResponse
 
     await expect(page).toHaveURL(/\/trips\/plan\/99001$/, { timeout: 15_000 })
+  })
+
+  test('switches route transport with one atomic PATCH on desktop and mobile web', async ({ page }) => {
+    await setupFakeAuth(page)
+    await seedConsent(page)
+    const networkEvidence = await mockTransportTrip(page)
+    const consoleErrors: string[] = []
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text())
+    })
+
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    await page.goto('/trips/plan/99002', { waitUntil: 'domcontentloaded' })
+    await expect.poll(() => page.evaluate(() => window.localStorage.getItem('userId'))).toBe('1')
+    await waitForFakeAuth(page)
+
+    const control = page.getByTestId('route-builder-transport-control')
+    await expect(control).toBeVisible({ timeout: 15_000 })
+    await expect(control.getByText('Способ передвижения', { exact: true })).toBeVisible()
+    const group = control.getByRole('radiogroup')
+    const choices = group.getByRole('radio')
+    await expect(choices).toHaveCount(3)
+    await expect(choices.nth(0)).toHaveAccessibleName('На машине')
+    await expect(choices.nth(1)).toHaveAccessibleName('Пешком')
+    await expect(choices.nth(2)).toHaveAccessibleName('На велосипеде')
+    await expect(choices.nth(0)).toHaveAttribute('aria-checked', 'true')
+
+    const evidenceDir = path.join(process.cwd(), '.codex-temp', 'trips-transport-switch')
+    fs.mkdirSync(evidenceDir, { recursive: true })
+    await control.screenshot({ path: path.join(evidenceDir, 'desktop-owner-control.png') })
+
+    await page.getByTestId('segmented-foot').click()
+    await expect(page.getByTestId('route-builder-transport-pending')).toBeVisible()
+    await expect(page.getByTestId('segmented-car')).toHaveAttribute('aria-disabled', 'true')
+    await page.getByTestId('segmented-foot').click({ force: true })
+    await expect(page.getByTestId('segmented-foot')).toHaveAttribute('aria-checked', 'true')
+
+    await page.getByTestId('segmented-bike').focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('segmented-bike')).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByTestId('route-summary-approximate')).toBeVisible()
+
+    expect(networkEvidence.patchBodies).toEqual([
+      { transport_mode: 'walk' },
+      { transport_mode: 'bicycle' },
+    ])
+    expect(networkEvidence.plannedTripRequests.filter((entry) => entry.startsWith('PATCH '))).toHaveLength(2)
+    expect(networkEvidence.plannedTripRequests.some((entry) => entry.includes('/route/'))).toBe(false)
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect(control).toBeVisible()
+    const touchHeights = await choices.evaluateAll((nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().height),
+    )
+    expect(touchHeights.every((height) => height >= 44)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await control.screenshot({ path: path.join(evidenceDir, 'mobile-owner-control.png') })
+
+    expect(consoleErrors).toEqual([])
   })
 })

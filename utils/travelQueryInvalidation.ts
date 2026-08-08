@@ -1,5 +1,6 @@
 import { type QueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queryKeys';
+import { invalidateTravelDetailMemoryCache } from '@/api/travelDetailsQueries';
 
 // React-query инвалидации после сохранения путешествия. Чистые async-хелперы,
 // извлечены из useTravelFormPersistence без изменения поведения.
@@ -22,6 +23,7 @@ export async function invalidateTravelDetails(
   queryClient: QueryClient | null | undefined,
   ...travelKeys: Array<string | number | null | undefined>
 ) {
+  invalidateTravelDetailMemoryCache(...travelKeys);
   if (!queryClient?.invalidateQueries) return;
 
   const uniqueKeys = Array.from(

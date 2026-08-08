@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { generatePrintableQuest } from './QuestPrintable';
 import DataFreshnessNotice from '@/components/legal/DataFreshnessNotice';
-import { isLoopQuest } from '@/utils/questAudience';
+import { isBikeQuest, isLoopQuest } from '@/utils/questAudience';
 import { useQuestFinaleMedia } from './useQuestFinaleMedia';
 import { QuestCompactSidebar, QuestHeaderPanel } from './questWizardShell';
 import {
@@ -61,7 +61,7 @@ export type QuestWizardProps = {
     title: string; steps: QuestStep[]; finale: QuestFinale; intro?: QuestStep;
     storageKey?: string; city?: QuestCity;
     coverUrl?: string;
-    /** Теги квеста (meta.tags): `loop` включает замыкание маршрута «финиш → старт». */
+    /** Теги квеста (meta.tags): `bike` выбирает веломаршрут, `loop` замыкает его к старту. */
     tags?: string[];
     /** Callback для синхронизации прогресса с бэкендом */
     onProgressChange?: (data: {
@@ -118,6 +118,10 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
 export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const { t } = useTranslation();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
+    // Detail API does not include tags; the list metadata enriches them shortly
+    // afterwards. Keep routing paused until that classification is known so a
+    // bike/loop quest never flashes or requests a pedestrian, open route first.
+    const routeMode = tags ? (isBikeQuest(tags) ? 'bike' : 'foot') : undefined;
     // Кольцевой квест (тег `loop`): карта и все экспорты замыкают маршрут к старту.
     const closeLoopRoute = isLoopQuest(tags);
 
@@ -374,30 +378,44 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const offlineMapPointsCount = useMemo(() => getQuestOfflineMapPoints(steps).length, [steps]);
 
     const handleOfflineMapDownload = useCallback(() => {
+        if (!routeMode) {
+            notifyQuest(i18nT('quests:components.quests.QuestFullMap.zagruzka_karty_a7d37b43'));
+            return;
+        }
         void (async () => {
             try {
-                const exported = await exportQuestOfflineMap({ title, steps, closeLoop: closeLoopRoute });
+                const exported = await exportQuestOfflineMap({ title, steps, closeLoop: closeLoopRoute, routeMode });
                 notifyQuest(
                     exported
-                        ? i18nT('quests:components.quests.QuestWizard.gpx_s_peshim_marshrutom_kvesta_gotov_dd0919a1')
+                        ? routeMode === 'bike'
+                          ? i18nT('quests:components.quests.QuestWizard.bikeGpxReady')
+                          : i18nT('quests:components.quests.QuestWizard.gpx_s_peshim_marshrutom_kvesta_gotov_dd0919a1')
                         : offlineMapPointsCount >= 2
-                          ? i18nT('quests:components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_a06b2056')
+                          ? routeMode === 'bike'
+                            ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
+                            : i18nT('quests:components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_a06b2056')
                           : i18nT('quests:components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea'),
                 );
             } catch {
                 notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_podgotovit_realnyy_marshrut_dlya_o_76e048c3'));
             }
         })();
-    }, [offlineMapPointsCount, steps, title, closeLoopRoute]);
+    }, [offlineMapPointsCount, steps, title, closeLoopRoute, routeMode]);
 
     const handleOfflineMapOpenInApp = useCallback(() => {
+        if (!routeMode) {
+            notifyQuest(i18nT('quests:components.quests.QuestFullMap.zagruzka_karty_a7d37b43'));
+            return;
+        }
         void (async () => {
             try {
-                const opened = await openQuestOfflineMapInApp({ title, steps, closeLoop: closeLoopRoute });
+                const opened = await openQuestOfflineMapInApp({ title, steps, closeLoop: closeLoopRoute, routeMode });
                 if (!opened) {
                     notifyQuest(
                         offlineMapPointsCount >= 2
-                            ? i18nT('quests:components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_1a2770b9')
+                            ? routeMode === 'bike'
+                              ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
+                              : i18nT('quests:components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_1a2770b9')
                             : i18nT('quests:components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea'),
                     );
                 }
@@ -405,7 +423,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_otkryt_realnyy_marshrut_v_prilozhe_20204379'));
             }
         })();
-    }, [offlineMapPointsCount, steps, title, closeLoopRoute]);
+    }, [offlineMapPointsCount, steps, title, closeLoopRoute, routeMode]);
 
     // Скачать весь квест для офлайна: персистим сырой бандл в кэш и прогреваем
     // дисковый кэш фото (шаги + обложка + постер финала), чтобы квест открывался
@@ -510,6 +528,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 copyCurrentStepCoords={copyCurrentStepCoords}
                                 activeStepIndex={currentIndex > 0 ? currentIndex - 1 : undefined}
                                 closeLoopRoute={closeLoopRoute}
+                                routeMode={routeMode}
                             />
                         )}
                     </View>

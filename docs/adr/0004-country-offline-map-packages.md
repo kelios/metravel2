@@ -119,7 +119,9 @@ archive до успешной проверки нового. Manifest `ready` р
 
 ## Связанные
 
-- board #1307, #1122, #1123, #1126, #1079, #909, #988
+- board #1307 (umbrella), #1315 (owner gate), #1317 (artifact pipeline),
+  #1316 (shared tile source), #1318 (catalog lifecycle), #1122, #1123, #1126,
+  #1079, #909, #988
 - `docs/features/offline.md`, `docs/features/map.md`
 - [OSMF Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/)
 - [PMTiles v3 specification](https://github.com/protomaps/PMTiles/blob/master/spec/v3/spec.md)

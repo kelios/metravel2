@@ -50,6 +50,22 @@ describe('questOfflineMapExport', () => {
     expect(file.content).toContain('<trkpt lat="53.9031" lon="27.5601"></trkpt>');
   });
 
+  it('describes a routed bike quest as a cycling route in GPX metadata', () => {
+    const file = buildQuestOfflineMapGpx({
+      title: 'Велоквест',
+      steps,
+      routeMode: 'bike',
+      routeTrack: [
+        [27.5619, 53.9023],
+        [27.5556, 53.9041],
+      ],
+      routeSource: 'routed',
+    });
+
+    expect(file.content).toContain('Велосипедный маршрут квеста Metravel');
+    expect(file.content).not.toContain('Пеший маршрут квеста Metravel');
+  });
+
   it('builds GeoJSON LineString from routed geometry and marks it as real route', () => {
     const routedTrack: Array<[number, number]> = [
       [27.5619, 53.9023],

@@ -5,6 +5,13 @@ const loadTravelsApi = (): typeof import('@/api/travelsApi') => {
   });
   return mod;
 };
+const loadTravelDetailsQueries = (): typeof import('@/api/travelDetailsQueries') => {
+  let mod!: typeof import('@/api/travelDetailsQueries');
+  jest.isolateModules(() => {
+    mod = require('@/api/travelDetailsQueries') as typeof import('@/api/travelDetailsQueries');
+  });
+  return mod;
+};
 import { 
   fetchTravelsNear, 
   fetchTravelsPopular, 
@@ -894,6 +901,26 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedApiClientGet.mock.calls[1][2]).toEqual(
         expect.objectContaining({ skipAuth: true })
       );
+    });
+
+    it('invalidateTravelDetailMemoryCache сбрасывает сохранённый detail перед предпросмотром черновика', async () => {
+      const { fetchTravel, invalidateTravelDetailMemoryCache } = loadTravelDetailsQueries();
+      mockedApiClientGet
+        .mockResolvedValueOnce({ id: 97, slug: 'draft-trip', name: 'Старый текст' } as any)
+        .mockResolvedValueOnce({ id: 97, slug: 'draft-trip', name: 'Новый текст' } as any);
+
+      mockedGetSecureItem.mockResolvedValueOnce(null);
+      await expect(fetchTravel(97)).resolves.toEqual(
+        expect.objectContaining({ name: 'Старый текст' })
+      );
+
+      invalidateTravelDetailMemoryCache(97, 'draft-trip');
+
+      mockedGetSecureItem.mockResolvedValueOnce(null);
+      await expect(fetchTravel(97)).resolves.toEqual(
+        expect.objectContaining({ name: 'Новый текст' })
+      );
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
     });
 
     it('fetchTravel добавляет Authorization и не кэширует авторизованные ответы', async () => {

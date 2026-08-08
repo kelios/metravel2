@@ -38,6 +38,7 @@ interface SegmentedControlProps {
   accessibilityLabel?: string;
   compact?: boolean;
   dense?: boolean;
+  minTouchHeight?: number;
   noOuterMargins?: boolean;
   disabled?: boolean;
   disabledKeys?: string[];
@@ -54,6 +55,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   accessibilityLabel,
   compact = false,
   dense = false,
+  minTouchHeight,
   noOuterMargins = false,
   disabled = false,
   disabledKeys = [],
@@ -65,8 +67,8 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const colors = useThemedColors();
   const styles = useMemo(
-    () => getStyles(colors, compact, tone, dense, noOuterMargins),
-    [colors, compact, tone, dense, noOuterMargins]
+    () => getStyles(colors, compact, tone, dense, noOuterMargins, minTouchHeight),
+    [colors, compact, tone, dense, noOuterMargins, minTouchHeight]
   );
 
   const activeIndex = options.findIndex((o) => o.key === value);
@@ -186,6 +188,7 @@ const getStyles = (
   tone: Tone,
   dense: boolean,
   noOuterMargins: boolean,
+  minTouchHeight?: number,
 ) => StyleSheet.create({
   segmentedControl: {
     flexDirection: 'row',
@@ -222,7 +225,7 @@ const getStyles = (
     paddingHorizontal: compact ? (dense ? 4 : 12) : 8,
     borderRadius: dense ? 5 : 6,
     minWidth: compact ? (dense ? 0 : 72) : 0,
-    minHeight: compact ? (dense ? 40 : 44) : 44,
+    minHeight: minTouchHeight ?? (compact ? (dense ? 40 : 44) : 44),
     backgroundColor: 'transparent',
     zIndex: 1,
   },

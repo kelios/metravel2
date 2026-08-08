@@ -3,7 +3,7 @@
 // только React Query. Мутации оптимистично/инвалидируют связанные кэши.
 // До готовности BE работает на мок-фолбэке из api/plannedTrips.ts.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import {
   createTrip,
@@ -19,6 +19,7 @@ import {
   submitTripReport,
   suggestPoint,
   updatePlannedTrip,
+  updatePlannedTripTransport,
   updateTripRoute,
   type CommunityTripsFilters,
   type CreateTripInput,
@@ -31,6 +32,7 @@ import {
   type SuggestPointInput,
   type TripSuggestion,
   type UpdateTripInput,
+  type UpdateTripTransportInput,
   type UpdateRouteInput,
 } from '@/api/plannedTrips';
 import { ApiError, isTimeoutError } from '@/api/client';
@@ -49,6 +51,14 @@ const isAuthError = (error: unknown): boolean =>
 
 const retry = (failureCount: number, error: unknown): boolean =>
   !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
+
+const syncUpdatedPlannedTrip = (qc: QueryClient, trip: PlannedTrip): void => {
+  qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
+  void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+  void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsAll() });
+  void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
+  void qc.invalidateQueries({ queryKey: queryKeys.communityTripsAll() });
+};
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
@@ -146,13 +156,15 @@ export function useUpdatePlannedTrip() {
   const qc = useQueryClient();
   return useMutation<PlannedTrip, unknown, UpdateTripInput>({
     mutationFn: updatePlannedTrip,
-    onSuccess: (trip) => {
-      qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
-      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
-      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsAll() });
-      void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
-      void qc.invalidateQueries({ queryKey: queryKeys.communityTripsAll() });
-    },
+    onSuccess: (trip) => syncUpdatedPlannedTrip(qc, trip),
+  });
+}
+
+export function useUpdateTripTransport() {
+  const qc = useQueryClient();
+  return useMutation<PlannedTrip, unknown, UpdateTripTransportInput>({
+    mutationFn: updatePlannedTripTransport,
+    onSuccess: (trip) => syncUpdatedPlannedTrip(qc, trip),
   });
 }
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Quest Playthrough Reviewer"
+  short_description: "Анализирует прохождения и чинит шаги квеста"
+  default_prompt: "Use $metravel-quest-playthrough-reviewer to analyze a quest progress URL, explain the player drop-off, and apply only evidence-backed quest content fixes."

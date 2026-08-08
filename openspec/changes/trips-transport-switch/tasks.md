@@ -1,22 +1,22 @@
 ## 1. Focused API Contract
 
-- [ ] 1.1 Add a transport-only planned-trip input type and request function that maps `car`, `foot`, and `bike` to the exact one-field PATCH payload, normalizes the returned trip, supports only explicit mock mode, and propagates real API failures.
-- [ ] 1.2 Add adapter tests for all three payload values, the one-request/no-rebuild invariant, normalized route fields, explicit-mock behavior, and real-error propagation.
+- [x] 1.1 Add a transport-only planned-trip input type and request function that maps `car`, `foot`, and `bike` to the exact one-field PATCH payload, normalizes the returned trip, supports only explicit mock mode, and propagates real API failures.
+- [x] 1.2 Add adapter tests for all three payload values, the one-request/no-rebuild invariant, normalized route fields, explicit-mock behavior, and real-error propagation.
 
 ## 2. Query State and Route Workspace
 
-- [ ] 2.1 Add a focused React Query mutation that writes the complete returned trip to the detail cache and invalidates existing planned, public, and community collection keys after success.
-- [ ] 2.2 Add the owner-only car/walking/bicycle segmented control above the route map, bind it to persisted transport, ignore the current value, and disable every choice while the mutation is pending.
-- [ ] 2.3 Apply the successful response atomically to the cached trip and local saved route, preserve the prior route on failure, show a retryable inline error, and retain the existing degraded-route explanation.
+- [x] 2.1 Add a focused React Query mutation that writes the complete returned trip to the detail cache and invalidates existing planned, public, and community collection keys after success.
+- [x] 2.2 Add the owner-only car/walking/bicycle segmented control above the route map, bind it to persisted transport, ignore the current value, and disable every choice while the mutation is pending.
+- [x] 2.3 Apply the successful response atomically to the cached trip and local saved route, preserve the prior route on failure, show a retryable inline error, and retain the existing degraded-route explanation.
 
 ## 3. Localization and Accessibility
 
-- [ ] 3.1 Add any required transport-group, busy, and failure copy to the `trips` resources for RU, BE, UK, PL, and EN while reusing the existing localized transport labels.
+- [x] 3.1 Add any required transport-group, busy, and failure copy to the `trips` resources for RU, BE, UK, PL, and EN while reusing the existing localized transport labels.
 - [ ] 3.2 Verify the selector exposes a localized radio-group name, checked/disabled states, web keyboard activation, non-color error feedback, and at least 44 px/dp touch targets without regressing existing segmented-control consumers.
 
 ## 4. Automated Validation
 
-- [ ] 4.1 Add focused component or integration tests for owner and non-owner rendering, option order, no-op current selection, pending lockout, atomic success, failed-update preservation and retry, and degraded-route rendering.
+- [x] 4.1 Add focused component or integration tests for owner and non-owner rendering, option order, no-op current selection, pending lockout, atomic success, failed-update preservation and retry, and degraded-route rendering.
 - [ ] 4.2 Pass the operation gate, then run the narrow adapter/component suites, `npm run test:i18n`, and `npm run check:fast`; fix failures and rerun the affected checks.
 
 ## 5. Active-Surface Validation

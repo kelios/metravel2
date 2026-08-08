@@ -1,4 +1,5 @@
 export type TripTransport = 'car' | 'bike' | 'foot' | 'public' | 'mixed'
+export type RoutableTripTransport = Extract<TripTransport, 'car' | 'bike' | 'foot'>
 export type TripVisibility = 'public' | 'followers' | 'private'
 export type TripPlanStatus = 'planning' | 'active' | 'completed'
 export type RoutePointType = 'place' | 'custom' | 'rest' | 'overnight'
@@ -126,6 +127,11 @@ export interface UpdateTripInput {
   visibility: TripVisibility
   seatsTotal: number
   coverUrl: string | null
+}
+
+export interface UpdateTripTransportInput {
+  tripId: number
+  transport: RoutableTripTransport
 }
 
 export interface UpdateRouteInput {

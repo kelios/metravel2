@@ -191,8 +191,12 @@ export function useQuestBundle(questId: string | undefined) {
                     .then((list) => {
                         if (cancelled || !Array.isArray(list)) return;
                         const matchedMeta = list.find((quest) => String(quest?.quest_id) === questId);
-                        const tags = matchedMeta ? adaptMeta(matchedMeta).tags : undefined;
-                        if (!tags?.length) return;
+                        if (!matchedMeta) return;
+                        // An empty tag set is still a completed classification:
+                        // ordinary quests must switch from the temporary map
+                        // skeleton to the default walking route. Dropping `[]`
+                        // here left every untagged quest paused indefinitely.
+                        const tags = adaptMeta(matchedMeta).tags ?? [];
                         setBundle((prev) => (prev && prev.questId === String(questId) ? { ...prev, tags } : prev));
                     })
                     .catch(() => {});

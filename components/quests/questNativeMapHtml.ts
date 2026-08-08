@@ -8,7 +8,11 @@ import {
   buildLeafletWebViewHtml,
 } from '@/components/map-core/leafletWebViewHtml';
 import { QUEST_MAP_PNG_RENDERER_SCRIPT } from './questNativeMapPng';
-import type { GroupedQuestPoint, QuestStepPoint } from './questMapPoints';
+import {
+  ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET,
+  type GroupedQuestPoint,
+  type QuestStepPoint,
+} from './questMapPoints';
 import type { QuestMapApp } from './questWizardHelpers';
 
 export const buildQuestNativeMapHtml = ({
@@ -61,6 +65,7 @@ export const buildQuestNativeMapHtml = ({
             point.lat >= -90 && point.lat <= 90 &&
             point.lng >= -180 && point.lng <= 180;
         });
+        var activeMarkerZIndexOffset = ${ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET};
         var navProviders = ${serializeForInlineScript(questNavProviders)};
         var theme = ${serializeForInlineScript({
             primary: colors.primary,
@@ -162,7 +167,7 @@ export const buildQuestNativeMapHtml = ({
         var markers = grouped.map(function (gp) {
           var marker = L.marker([gp.lat, gp.lng], {
             icon: iconFor(gp.indexes.join(','), false),
-            zIndexOffset: 1000
+            zIndexOffset: gp.zIndexOffset
           }).addTo(map);
           marker.bindPopup(
             '<b>' + gp.indexes.join(', ') + '.</b><br/>' + gp.titles.join(', ') + navButtonsHtml(gp)
@@ -243,6 +248,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
           grouped.forEach(function (gp, i) {
             var active = activeIndex != null && gp.indexes.indexOf(activeIndex + 1) !== -1;
             markers[i].setIcon(iconFor(gp.indexes.join(','), active));
+            markers[i].setZIndexOffset(active ? activeMarkerZIndexOffset : gp.zIndexOffset);
           });
           if (activeIndex != null && isValidLatLng(waypointPoints[activeIndex])) {
             map.panTo(waypointPoints[activeIndex], { animate: true });
@@ -328,4 +334,3 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
         window.setTimeout(function () { postMapStatus('settled'); }, 1000);
         window.setTimeout(function () { postMapStatus('final'); }, 1600);`,
     });
-

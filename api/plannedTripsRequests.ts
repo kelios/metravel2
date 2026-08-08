@@ -49,6 +49,7 @@ import type {
   TripSuggestion,
   UpdateRouteInput,
   UpdateTripInput,
+  UpdateTripTransportInput,
 } from '@/api/plannedTripsTypes';
 
 // ── Мок-фолбэк ───────────────────────────────────────────────────────────────
@@ -309,6 +310,26 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
     }
     throw error;
   }
+}
+
+export async function updatePlannedTripTransport(
+  input: UpdateTripTransportInput,
+): Promise<PlannedTrip> {
+  if (USE_MOCK) {
+    const trip = findMock(input.tripId);
+    if (!trip) throw new ApiError(404, 'Trip not found');
+    trip.transport = input.transport;
+    trip.routeSummary = trip.route.length
+      ? estimateRouteSummary(trip.route, input.transport)
+      : null;
+    return cloneTrip(trip);
+  }
+
+  const dto = await apiClient.patch<PlannedTripDto>(
+    `/trips/planned/${input.tripId}/`,
+    { transport_mode: transportToBe(input.transport) },
+  );
+  return mapTrip(dto);
 }
 
 export async function deletePlannedTrip(tripId: number | string): Promise<{ id: number }> {

@@ -82,6 +82,35 @@ async function mockImageUpload(page: Page) {
   });
 }
 
+async function mockDraftDetail(page: Page) {
+  await page.route('**/travels/*', async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    const match = pathname.match(/\/api\/travels\/(\d+)\/$/);
+    if (request.method() !== 'GET' || !match) {
+      await route.fallback();
+      return;
+    }
+
+    const id = Number(match[1]);
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id,
+        slug: String(id),
+        name: 'E2E Article Editor',
+        description: '<p>Draft preview body</p>',
+        publish: false,
+        moderation: false,
+        gallery: [],
+        travelAddress: [],
+        coordsMeTravel: [],
+      }),
+    });
+  });
+}
+
 async function openWizard(page: Page) {
   await mockFakeAuthApis(page);
   await ensureAuthedStorageFallback(page);
@@ -190,6 +219,23 @@ test.describe('ArticleEditor browser actions', () => {
     await exitFullscreenButton.evaluate((node: HTMLElement) => node.click());
     await expect(page.locator('[aria-label="Перейти в полноэкранный режим"]').last()).toBeVisible({ timeout: 10_000 });
     await expect(editor).toContainText(text);
+  });
+
+  test('opens the saved draft detail inside the SPA instead of a new document tab', async ({ page }) => {
+    await mockDraftDetail(page);
+
+    await page.getByTestId('travel-wizard-save').click({ force: true });
+    await expect(page).toHaveURL(
+      (url) => url.pathname === '/travel/new' && url.searchParams.get('id') === '7100',
+      { timeout: 20_000 },
+    );
+
+    const pageCountBeforePreview = page.context().pages().length;
+    await page.getByTestId('travel-wizard-more').click({ force: true });
+    await page.getByRole('menuitem', { name: 'Открыть путешествие' }).click({ force: true });
+
+    await expect(page).toHaveURL(/\/travels\/7100(?:[?#]|$)/, { timeout: 20_000 });
+    expect(page.context().pages()).toHaveLength(pageCountBeforePreview);
   });
 
   test('opens anchor modal and confirms insertion flow', async ({ page }) => {

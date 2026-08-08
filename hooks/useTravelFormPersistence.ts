@@ -48,6 +48,43 @@ import { translate as i18nT } from '@/i18n'
 
 type ToastAwareError = Error & { toastShown?: boolean };
 
+const markerIdentityMatches = (left: MarkerData, right: MarkerData): boolean => {
+  const leftId = left.id == null ? '' : String(left.id).trim();
+  const rightId = right.id == null ? '' : String(right.id).trim();
+  if (leftId && rightId) return leftId === rightId;
+
+  const leftLat = Number(left.lat);
+  const leftLng = Number(left.lng);
+  const rightLat = Number(right.lat);
+  const rightLng = Number(right.lng);
+  if (![leftLat, leftLng, rightLat, rightLng].every(Number.isFinite)) return false;
+
+  return (
+    Math.abs(leftLat - rightLat) + Math.abs(leftLng - rightLng) <= 1e-5
+  );
+};
+
+const mergeRehydratedMarkerIdsIntoLive = (
+  refreshedMarkers: MarkerData[],
+  liveMarkers: MarkerData[],
+): MarkerData[] => {
+  const usedRefreshedIndexes = new Set<number>();
+
+  return liveMarkers.map((liveMarker) => {
+    const refreshedIndex = refreshedMarkers.findIndex(
+      (refreshedMarker, index) =>
+        !usedRefreshedIndexes.has(index) &&
+        markerIdentityMatches(refreshedMarker, liveMarker),
+    );
+    if (refreshedIndex < 0) return liveMarker;
+
+    usedRefreshedIndexes.add(refreshedIndex);
+    const refreshedId = refreshedMarkers[refreshedIndex].id;
+    if (liveMarker.id != null || refreshedId == null) return liveMarker;
+    return { ...liveMarker, id: refreshedId };
+  });
+};
+
 type MonitoringWindow = Window & {
   Sentry?: {
     captureException: (error: unknown, context?: Record<string, unknown>) => void;
@@ -124,6 +161,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // более старого вызова не должен затирать state/baseline, выставленные более
   // новым applySavedData (или последующими правками пользователя).
   const applyEpochRef = useRef(0);
+
+  // useImprovedAutoSave знает отправленный payload, но onSuccess получает только
+  // ответ. Храним его отдельно, чтобы поздний response не объявил более свежую
+  // форму (например, уже с точкой B) успешно сохранённым baseline.
+  const lastAutosaveSourceRef = useRef<TravelFormData | null>(null);
 
   // Стабильная ссылка на autosave.cancelPending, чтобы handleManualSave не
   // пересоздавался на каждый тик статуса автосейва.
@@ -279,10 +321,14 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       const epoch = ++applyEpochRef.current;
 
       const normalizedSavedData = normalizeDraftPlaceholders(savedData);
+      // `sourceData` is the snapshot that started this request. The live ref can
+      // already contain another point by the time the response arrives, so it is
+      // the only safe merge target. Using the request snapshot here made a stale
+      // upsert response remove every point added while that request was in flight.
       const currentDataSnapshot =
-        (sourceData as TravelFormData | undefined) ??
         (formDataRef.current as TravelFormData) ??
-        (formState.data as TravelFormData);
+        (formState.data as TravelFormData) ??
+        (sourceData as TravelFormData);
       const hadId = normalizeTravelId(currentDataSnapshot.id) != null;
       const hasId = normalizeTravelId(normalizedSavedData.id) != null;
 
@@ -356,6 +402,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         countries: syncedCountries,
         coordsMeTravel: effectiveMarkers,
       };
+      const persistedBaselineData =
+        sourceData && !isEqual(currentDataSnapshot, sourceData)
+          ? sourceData
+          : finalData;
 
       const shouldSkipFormReset =
         options?.preserveEditingState === true &&
@@ -365,16 +415,16 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
       if (shouldSkipFormReset) {
         formDataRef.current = currentDataSnapshot;
-        updateBaselineRef.current?.(currentDataSnapshot);
-        captureTextBaseline(currentDataSnapshot);
+        updateBaselineRef.current?.(persistedBaselineData);
+        captureTextBaseline(persistedBaselineData);
       } else {
         pendingBaselineRef.current = finalData;
         try {
           formState.reset(finalData);
           formDataRef.current = finalData as TravelFormData;
           setMarkers(effectiveMarkers);
-          updateBaselineRef.current?.(finalData);
-          captureTextBaseline(finalData as TravelFormData);
+          updateBaselineRef.current?.(persistedBaselineData);
+          captureTextBaseline(persistedBaselineData);
         } finally {
           pendingBaselineRef.current = null;
         }
@@ -394,15 +444,32 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
           // Keep the refreshed marker ids in form state before attempting upload.
           // Without this step the point can stay "id-less" locally and the pending
           // point photo never leaves the blob preview state.
-          markersForUpload = refreshedMarkers;
+          // The id refresh is another async response. Merge it into the markers
+          // that are live *now* so a point added after rehydrate started is not
+          // removed immediately before its pending photo upload.
+          const liveDataSnapshot = formDataRef.current as TravelFormData;
+          const liveMarkers = Array.isArray(liveDataSnapshot.coordsMeTravel)
+            ? (liveDataSnapshot.coordsMeTravel as MarkerData[])
+            : [];
+          markersForUpload = mergeRehydratedMarkerIdsIntoLive(
+            refreshedMarkers,
+            liveMarkers,
+          );
           const refreshedData = {
-            ...(formDataRef.current as TravelFormData),
-            coordsMeTravel: refreshedMarkers as unknown as TravelFormData['coordsMeTravel'],
+            ...liveDataSnapshot,
+            coordsMeTravel: markersForUpload as unknown as TravelFormData['coordsMeTravel'],
           };
           formDataRef.current = refreshedData;
-          setMarkers(refreshedMarkers);
-          formState.updateField('coordsMeTravel', refreshedMarkers);
-          updateBaselineRef.current?.(refreshedData);
+          setMarkers(markersForUpload);
+          formState.updateField('coordsMeTravel', markersForUpload);
+          // Rehydration only proves server ids for the snapshot it started with.
+          // Do not baseline user changes made before/during that request.
+          if (
+            isEqual(persistedBaselineData, finalData) &&
+            isEqual(liveDataSnapshot, finalData)
+          ) {
+            updateBaselineRef.current?.(refreshedData);
+          }
         }
         await uploadPendingMarkerImages(markersForUpload);
       })();
@@ -440,7 +507,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       resetAutosaveErrorToastThrottle();
 
       // После первого автосейва создаётся id — остаёмся в мастере и просто подставляем новые данные.
-      applySavedData(savedData, formDataRef.current, { preserveEditingState: true });
+      applySavedData(
+        savedData,
+        lastAutosaveSourceRef.current ?? formDataRef.current,
+        { preserveEditingState: true },
+      );
     },
     [applySavedData, formDataRef, mountedRef, resetAutosaveErrorToastThrottle]
   );
@@ -502,7 +573,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       if (manualSaveInFlightRef.current) {
         throw new Error('Request aborted');
       }
-      return await cleanAndSave(dataToSave as TravelFormData, { autosave: true }, signal);
+      const sourceData = dataToSave as TravelFormData;
+      const savedData = await cleanAndSave(sourceData, { autosave: true }, signal);
+      lastAutosaveSourceRef.current = sourceData;
+      return savedData;
     },
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,

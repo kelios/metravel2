@@ -3,12 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import type { LngLat } from '@/utils/routeExport';
 import {
   buildDirectQuestRouteResult,
-  buildQuestWalkingRouteGeometry,
+  buildQuestRouteGeometry,
   calculateQuestTrackDistanceM,
   closeQuestRouteLoop,
   getQuestDirectRouteTrack,
   getQuestRoutePoints,
   type QuestRouteGeometryResult,
+  type QuestRouteMode,
   type QuestRoutePoint,
 } from './questRouteGeometry';
 import { translate as i18nT } from '@/i18n'
@@ -31,9 +32,9 @@ export const hasRoutedQuestTrack = (track?: LngLat[], source?: string) =>
 
 export function useQuestRouteGeometry(
   steps: QuestRoutePoint[],
-  options: { closeLoop?: boolean } = {},
+  options: { closeLoop?: boolean; routeMode?: QuestRouteMode } = {},
 ): QuestRouteGeometryState {
-  const { closeLoop = false } = options;
+  const { closeLoop = false, routeMode = 'foot' } = options;
   // Кольцевой квест (тег `loop`): к точкам добавляется стартовая, чтобы роутер
   // проложил обратный сегмент «финиш → старт» и трек замкнулся.
   const points = useMemo(() => {
@@ -65,7 +66,7 @@ export function useQuestRouteGeometry(
       return;
     }
 
-    const directFallback = buildDirectQuestRouteResult(points);
+    const directFallback = buildDirectQuestRouteResult(points, { routeMode });
     const loadingState: QuestRouteGeometryState = {
       ...directFallback,
       status: 'loading',
@@ -85,7 +86,7 @@ export function useQuestRouteGeometry(
     const controller = new AbortController();
     let cancelled = false;
 
-    buildQuestWalkingRouteGeometry(points, { signal: controller.signal })
+    buildQuestRouteGeometry(points, { signal: controller.signal, routeMode })
       .then((result) => {
         if (cancelled) return;
         setState({
@@ -96,7 +97,7 @@ export function useQuestRouteGeometry(
       .catch((error) => {
         if (cancelled || error?.name === 'AbortError') return;
         setState({
-          ...buildDirectQuestRouteResult(points, error),
+          ...buildDirectQuestRouteResult(points, { error, routeMode }),
           status: 'fallback',
         });
       });
@@ -105,7 +106,7 @@ export function useQuestRouteGeometry(
       cancelled = true;
       controller.abort();
     };
-  }, [directTrack, points, pointsKey]);
+  }, [directTrack, points, pointsKey, routeMode]);
 
   return state;
 }

@@ -11,6 +11,7 @@ import { act, fireEvent, render } from '@testing-library/react-native'
 
 const mockQueueAnalyticsEvent = jest.fn()
 const mockQuestExcursionsInline = jest.fn(() => null)
+const mockQuestDesktopMapPanel = jest.fn(() => null)
 let mockQuestWizardResponsiveModel = {
   screenW: 390,
   screenH: 844,
@@ -29,7 +30,7 @@ jest.mock('@/components/quests/hooks/useQuestWizardResponsiveModel', () => ({
 
 // Тяжёлые под-секции визарда — карта/экскурсии/финал/офлайн — не нужны для гейта.
 jest.mock('@/components/quests/questWizardSections', () => ({
-  QuestDesktopMapPanel: () => null,
+  QuestDesktopMapPanel: (props: any) => mockQuestDesktopMapPanel(props),
   QuestExcursionsInline: (props: any) => mockQuestExcursionsInline(props),
   QuestExcursionsSidebar: () => null,
   QuestFinalePanel: () => null,
@@ -242,6 +243,24 @@ describe('QuestWizard guest gate', () => {
 
     expect(mockQuestExcursionsInline).toHaveBeenCalledWith(
       expect.objectContaining({ city, title: 'Тест-квест' }),
+    )
+  })
+
+  it('passes the bicycle routing profile to the quest map for bike-tagged quests', () => {
+    render(
+      <QuestWizard
+        title="Велоквест"
+        steps={steps}
+        finale={finale}
+        intro={intro}
+        storageKey="bike_route_quest"
+        questId="bike-quest"
+        tags={['bike']}
+      />,
+    )
+
+    expect(mockQuestDesktopMapPanel).toHaveBeenCalledWith(
+      expect.objectContaining({ routeMode: 'bike' }),
     )
   })
 })
