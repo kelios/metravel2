@@ -39,8 +39,12 @@ test.describe('Production Media Loading Smoke Test', () => {
 
     await page.goto(`${prodUrl}/`, { waitUntil: 'networkidle' });
 
-    // Check travel cards images
-    const travelImages = await page.$$eval('img[src*="travel-image"]', (elements) => {
+    // Check images that belong to actual travel-card links. Media URLs now use
+    // `/media-resize/legacy/**` and no longer contain the old `travel-image`
+    // substring, so URL-shape matching produced a false production failure.
+    const travelCardImages = page.locator('a[href^="/travels/"] img');
+    await expect(travelCardImages.first()).toBeVisible({ timeout: 15_000 });
+    const travelImages = await travelCardImages.evaluateAll((elements) => {
       return elements.map((el) => ({
         src: el.getAttribute('src'),
         alt: el.getAttribute('alt'),
