@@ -29,3 +29,4 @@ ADR — короткая фиксация архитектурных решен�
 | 0001 | [Запрет прямого Linking.openURL](./0001-no-direct-linking-openurl.md) | Accepted |
 | 0002 | [Изображения только через ImageCardMedia](./0002-images-via-image-card-media.md) | Accepted |
 | 0003 | [Root runtime, postinstall patches и Metro stubs](./0003-root-runtime-patches-and-metro-stubs.md) | Accepted |
+| 0004 | [Страновые offline-пакеты карты через raster PMTiles](./0004-country-offline-map-packages.md) | Proposed |
