@@ -1,7 +1,7 @@
 const { EventEmitter } = require('node:events');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
+const { makeTempDir, removeDir } = require('./cli-test-utils');
 
 const {
   assertE2EArtifactConfig,
@@ -70,7 +70,7 @@ describe('e2e webserver build lifecycle', () => {
   it('turns SIGTERM into a catchable interruption so env restoration can finish', async () => {
     const targetProcess = new EventEmitter();
     const interruption = createSignalInterruption(targetProcess);
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-e2e-env-'));
+    const tempDir = makeTempDir('metravel-e2e-env-');
     const envPath = path.join(tempDir, '.env');
     const original = Buffer.from('ORIGINAL=value\r\nEXPO_PUBLIC_E2E=false\r\n', 'utf8');
     fs.writeFileSync(envPath, original);
@@ -89,7 +89,7 @@ describe('e2e webserver build lifecycle', () => {
       expect(signalExitCode(interruption.signal)).toBe(143);
     } finally {
       interruption.dispose();
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      removeDir(tempDir);
     }
   });
 
@@ -111,7 +111,7 @@ describe('e2e webserver build lifecycle', () => {
   });
 
   it('restores the exact env file after a forced build failure', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-e2e-env-'));
+    const tempDir = makeTempDir('metravel-e2e-env-');
     const envPath = path.join(tempDir, '.env');
     const original = Buffer.from('ORIGINAL=value\r\nEXPO_PUBLIC_E2E=false\r\n', 'utf8');
     fs.writeFileSync(envPath, original);
@@ -125,12 +125,12 @@ describe('e2e webserver build lifecycle', () => {
       ).rejects.toThrow('forced build failure');
       expect(fs.readFileSync(envPath)).toEqual(original);
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      removeDir(tempDir);
     }
   });
 
   it('restores the exact env file after a successful build action', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-e2e-env-'));
+    const tempDir = makeTempDir('metravel-e2e-env-');
     const envPath = path.join(tempDir, '.env');
     const original = Buffer.from('ORIGINAL=value\nEXPO_PUBLIC_E2E=false\n', 'utf8');
     fs.writeFileSync(envPath, original);
@@ -141,12 +141,12 @@ describe('e2e webserver build lifecycle', () => {
       });
       expect(fs.readFileSync(envPath)).toEqual(original);
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      removeDir(tempDir);
     }
   });
 
   it('removes a temporary env file that did not exist before the build', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-e2e-env-'));
+    const tempDir = makeTempDir('metravel-e2e-env-');
     const envPath = path.join(tempDir, '.env');
 
     try {
@@ -155,12 +155,12 @@ describe('e2e webserver build lifecycle', () => {
       });
       expect(fs.existsSync(envPath)).toBe(false);
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      removeDir(tempDir);
     }
   });
 
   it('fails closed when artifact metadata or bundled API config is stale', () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-e2e-artifact-'));
+    const tempDir = makeTempDir('metravel-e2e-artifact-');
     const jsDirectory = path.join(tempDir, 'js');
     const metaPath = path.join(tempDir, 'meta.json');
     fs.mkdirSync(jsDirectory);
@@ -212,7 +212,7 @@ describe('e2e webserver build lifecycle', () => {
         })
       ).toThrow('does not contain the configured API base and E2E mode');
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      removeDir(tempDir);
     }
   });
 });
