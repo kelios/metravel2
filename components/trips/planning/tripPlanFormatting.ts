@@ -13,7 +13,8 @@ import type {
 } from '@/api/plannedTrips';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { selectPlural, translate as i18nT } from '@/i18n'
-import { formatDate, formatNumber } from '@/i18n/format'
+import { formatNumber } from '@/i18n/format'
+import { formatTripDateLong, formatTripDateTimeLong } from '@/utils/tripDateTime'
 
 
 export const TRANSPORT_LABEL: Record<TripTransport, string> = {
@@ -181,35 +182,16 @@ function pluralStops(n: number): string {
   });
 }
 
-export function parseTripIsoDate(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-  if (!match) return null;
-  const [, yearValue, monthValue, dayValue] = match;
-  const year = Number(yearValue);
-  const month = Number(monthValue);
-  const day = Number(dayValue);
-  const parsed = new Date(year, month - 1, day);
-  if (
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month - 1 ||
-    parsed.getDate() !== day
-  ) {
-    return null;
-  }
-  return parsed;
-}
-
+/**
+ * Значение поля формы: пустое — это приглашение выбрать дату, а не «дата
+ * неизвестна». Всё остальное разбирает общий модуль (#1313).
+ */
 export function formatTripDisplayDate(value: string): string {
   if (!value.trim()) return i18nT('trips:components.trips.planning.tripPlanFormatting.vyberite_datu_54abc3cf');
-  const parsed = parseTripIsoDate(value);
-  if (!parsed) return value;
-  return formatDate(parsed, { day: 'numeric', month: 'long', year: 'numeric' });
+  return formatTripDateLong(value);
 }
 
 /** «11 июля 2026 г.» / с временем «11 июля 2026 г., 08:00». */
 export function formatTripDateTime(dateIso: string, time: string | null): string {
-  const d = parseTripIsoDate(dateIso);
-  if (!d) return dateIso;
-  const base = formatDate(d, { day: 'numeric', month: 'long', year: 'numeric' });
-  return time ? `${base}, ${time}` : base;
+  return formatTripDateTimeLong(dateIso, time);
 }

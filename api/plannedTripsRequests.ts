@@ -10,6 +10,7 @@
 import { apiClient, ApiError } from '@/api/client';
 import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
+import { serializeTripStart } from '@/utils/tripDateTime';
 import { translate as i18nT } from '@/i18n';
 import {
   MOCK_PLANNED_TRIPS,
@@ -230,7 +231,7 @@ export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
   const body = {
     title: input.title,
     description: input.description,
-    start_date: `${input.startDate}T${input.startTime || '09:00'}:00`,
+    start_date: serializeTripStart(input.startDate, input.startTime),
     status: 'planned',
     is_public: input.visibility === 'public',
     max_participants: input.seatsTotal,
@@ -263,7 +264,7 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
   const body = {
     title: input.title,
     description: input.description,
-    start_date: `${input.startDate}T${input.startTime || '09:00'}:00`,
+    start_date: serializeTripStart(input.startDate, input.startTime),
     is_public: input.visibility === 'public',
     max_participants: input.seatsTotal,
     transport_mode: transportToBe(input.transport),

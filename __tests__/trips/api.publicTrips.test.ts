@@ -81,12 +81,30 @@ describe('fetchPublicTrips — mapper', () => {
       title: 'Тестовая поездка',
       region: 'Минск',
       tripType: 'car',
-      startDate: '2026-07-01T08:00:00Z',
       seatsTotal: 6,
       seatsTaken: 2,
       status: 'open',
       organizer: { id: 5, name: 'Аня', avatarUrl: 'http://cdn/ann.jpg' },
     })
+    // #1313: каталог получает локальный календарный день, а не сырой ISO.
+    const instant = new Date('2026-07-01T08:00:00Z')
+    const pad = (value: number) => String(value).padStart(2, '0')
+    expect(trips[0].startDate).toBe(
+      `${instant.getFullYear()}-${pad(instant.getMonth() + 1)}-${pad(instant.getDate())}`,
+    )
+    expect(trips[0].startDate).not.toContain('T')
+  })
+
+  it('keeps a legacy date-only value on its calendar day', async () => {
+    mockGet.mockResolvedValueOnce(paged([tripDto({ start_at: '2026-07-01' })]) as never)
+    const trips = await fetchPublicTrips()
+    expect(trips[0].startDate).toBe('2026-07-01')
+  })
+
+  it('leaves the start empty for an unreadable value instead of passing it through', async () => {
+    mockGet.mockResolvedValueOnce(paged([tripDto({ start_at: 'not-a-date' })]) as never)
+    const trips = await fetchPublicTrips()
+    expect(trips[0].startDate).toBe('')
   })
 
   it('tolerates owner_profile returned as a bare string', async () => {

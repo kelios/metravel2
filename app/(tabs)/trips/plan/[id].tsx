@@ -66,17 +66,14 @@ const PLANNER_TABS: PlannerTab[] = [
   { key: 'more', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.esche_1eb0a8cd') }, icon: 'more-horizontal' },
 ];
 
-const toDateInputValue = (value: string): string => {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  return raw.includes('T') ? raw.split('T')[0] : raw.slice(0, 10);
-};
-
+// Форма берёт дату и время как есть: нормализация живёт на границе API
+// (`utils/tripDateTime.ts`, #1313), поэтому `startDate` здесь уже локальный
+// `YYYY-MM-DD`, а `startTime` — локальные часы или null.
 const initialEditValues = (trip: PlannedTrip) => ({
   title: trip.title,
   description: trip.description,
   coverUrl: trip.coverUrl ?? '',
-  startDate: toDateInputValue(trip.startDate),
+  startDate: trip.startDate,
   startTime: trip.startTime ?? '',
   transport: trip.transport,
   visibility: trip.visibility,

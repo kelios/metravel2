@@ -25,8 +25,8 @@ import {
   VISIBILITY_HINT,
   VISIBILITY_LABEL,
   formatTripDisplayDate,
-  parseTripIsoDate,
 } from '@/components/trips/planning/tripPlanFormatting';
+import { parseTripDateTime } from '@/utils/tripDateTime';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDefaultTripStartDate, type TripPlanPrefill } from '@/utils/tripPlanLinks';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -45,7 +45,6 @@ const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'private'];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
-export const parseTripCreateIsoDate = parseTripIsoDate;
 export const formatTripCreateDisplayDate = formatTripDisplayDate;
 
 interface FormValues {
@@ -80,11 +79,9 @@ const createSchema = async () => {
     .trim()
     .required(i18nT('tripsStatic:tripCreate.validation.startDateRequired'))
     .matches(DATE_RE, i18nT('tripsStatic:tripCreate.validation.startDateFormat'))
-    .test('valid-date', i18nT('tripsStatic:tripCreate.validation.startDateInvalid'), (value) => {
-      if (!value) return false;
-      const d = new Date(value);
-      return !Number.isNaN(d.getTime());
-    }),
+    .test('valid-date', i18nT('tripsStatic:tripCreate.validation.startDateInvalid'), (value) =>
+      parseTripDateTime(value) != null,
+    ),
   startTime: yup
     .string()
     .trim()

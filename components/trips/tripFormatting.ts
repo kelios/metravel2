@@ -8,7 +8,7 @@ import type {
 } from '@/api/publicTrips';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
-import { formatDate } from '@/i18n/format'
+import { formatTripDateRangeShort } from '@/utils/tripDateTime'
 
 
 export const TRIP_STATUS_LABEL: Record<PublicTripStatus, string> = {
@@ -55,29 +55,9 @@ export function applicationStatusColor(
   }
 }
 
-function fmt(iso: string): string {
-  if (typeof iso !== 'string' || !iso.trim()) return '';
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
-  if (!match) return iso;
-  const [, yearValue, monthValue, dayValue] = match;
-  const year = Number(yearValue);
-  const month = Number(monthValue);
-  const day = Number(dayValue);
-  const d = new Date(year, month - 1, day);
-  if (
-    d.getFullYear() !== year ||
-    d.getMonth() !== month - 1 ||
-    d.getDate() !== day
-  ) {
-    return iso;
-  }
-  return formatDate(d, { day: 'numeric', month: 'short' });
-}
-
 /** «18 июл. – 20 июл.» / «28 июн.». */
 export function formatTripDates(trip: Pick<PublicTrip, 'startDate' | 'endDate'>): string {
-  if (!trip.endDate || trip.endDate === trip.startDate) return fmt(trip.startDate);
-  return `${fmt(trip.startDate)} – ${fmt(trip.endDate)}`;
+  return formatTripDateRangeShort(trip.startDate, trip.endDate);
 }
 
 /** Свободные места: «осталось 4 из 6». */

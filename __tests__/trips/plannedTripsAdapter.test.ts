@@ -280,7 +280,6 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
       id: 314,
       title: 'Minimal planned trip',
       description: '',
-      startDate: '2026-07-11T09:00:00Z',
       transport: 'car',
       visibility: 'private',
       seatsTotal: 0,
@@ -292,6 +291,15 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
       isOwner: true,
       myRsvp: null,
     }))
+    // #1313: ISO date-time из payload превращается в локальный день и локальное
+    // время, а не доезжает до домена сырой строкой.
+    const instant = new Date('2026-07-11T09:00:00Z')
+    const pad = (value: number) => String(value).padStart(2, '0')
+    expect(trip.startDate).toBe(
+      `${instant.getFullYear()}-${pad(instant.getMonth() + 1)}-${pad(instant.getDate())}`,
+    )
+    expect(trip.startTime).toBe(`${pad(instant.getHours())}:${pad(instant.getMinutes())}`)
+    expect(trip.startDate).not.toContain('T')
     expect(trip.organizer).toEqual({ id: 7, name: '#7', avatarUrl: null })
     expect(trip.participants).toEqual([
       {

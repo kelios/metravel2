@@ -40,6 +40,7 @@ export const tripsStaticResources = {
   "plan.status.planning": "Planned",
   "plan.status.active": "On the way",
   "plan.status.completed": "Completed",
+  "plan.dateUnavailable": "Date not set",
   "plan.routePoint.place": "Place",
   "plan.routePoint.custom": "Own point",
   "plan.routePoint.rest": "Rest",

@@ -14,6 +14,7 @@ import { apiClient, ApiError } from '@/api/client';
 import { unwrapList } from '@/api/clientResponse';
 import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
+import { parseTripDateTime } from '@/utils/tripDateTime';
 import { translate as i18nT } from '@/i18n';
 import {
   MOCK_PUBLIC_TRIPS,
@@ -273,7 +274,10 @@ const mapTrip = (dto: PublicTripDto): PublicTrip => {
     coverUrl: null,
     region: dto.start_point_name ?? '',
     tripType: dto.transport_mode ?? null,
-    startDate: dto.start_at,
+    // Бэк отдаёт ISO date-time со смещением: приводим к локальному календарному
+    // дню, иначе карточка печатала сырой ISO (#1313). Каталожный сериализатор
+    // не отдаёт конец поездки — поле остаётся пустым.
+    startDate: parseTripDateTime(dto.start_at)?.date ?? '',
     endDate: null,
     organizer: {
       id: profileId(dto.owner_profile, dto.owner),

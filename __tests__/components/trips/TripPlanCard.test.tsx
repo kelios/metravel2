@@ -75,6 +75,35 @@ const trip: PlannedTrip = {
   createdAt: '2026-07-11T10:00:00Z',
 };
 
+// #1313: контроль на реальном компоненте — сырой ISO не должен доезжать до экрана
+// ни через дату старта, ни через нечитаемое значение.
+describe('TripPlanCard start date rendering', () => {
+  const renderedText = (node: ReturnType<typeof render>): string =>
+    JSON.stringify(node.toJSON());
+
+  it('renders a local date and time instead of the raw ISO value', () => {
+    const iso = '2026-10-12T09:00:00+00:00';
+    const text = renderedText(
+      render(<TripPlanCard trip={{ ...trip, startDate: iso, startTime: null }} />),
+    );
+
+    expect(text).not.toContain(iso);
+    expect(text).not.toMatch(/T\d{2}:\d{2}/);
+    expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    // Конкретный час зависит от зоны прогона; проверяем локализованную форму.
+    expect(text).toMatch(/\d{1,2} \S+ 2026 г\.,\s?\d{2}:\d{2}/);
+  });
+
+  it('renders the unavailable placeholder for an unreadable value', () => {
+    const text = renderedText(
+      render(<TripPlanCard trip={{ ...trip, startDate: 'not-a-date', startTime: null }} />),
+    );
+
+    expect(text).not.toContain('not-a-date');
+    expect(text).toContain('Дата не указана');
+  });
+});
+
 describe('TripPlanCard organizer actions', () => {
   it('counts the organizer when the list response omits them from participants', () => {
     const { getByText } = render(<TripPlanCard trip={trip} />);

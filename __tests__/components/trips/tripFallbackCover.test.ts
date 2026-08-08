@@ -22,6 +22,16 @@ describe('tripFallbackCover', () => {
     expect(getTripFallbackCoverSeason({ ...baseTrip, startDate })).toBe(expectedSeason);
   });
 
+  // #1313: сезон берётся из локального месяца, поэтому значение у границы суток
+  // не может «перепрыгнуть» в соседний сезон по UTC-месяцу.
+  it('picks the season from the local month of an ISO date-time', () => {
+    const iso = '2026-02-28T23:30:00Z';
+    const localMonth = new Date(iso).getMonth();
+    const expected = localMonth === 1 ? 'winter' : 'spring';
+
+    expect(getTripFallbackCoverSeason({ ...baseTrip, startDate: iso })).toBe(expected);
+  });
+
   it('keeps fallback stable when start date cannot be parsed', () => {
     const trip = { ...baseTrip, startDate: 'not-a-date', title: 'Поездка без даты' };
 

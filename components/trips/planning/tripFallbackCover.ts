@@ -1,5 +1,7 @@
 import { Image, Platform } from 'react-native';
 
+import { parseTripDateTime } from '@/utils/tripDateTime';
+
 type TripFallbackSeason = 'spring' | 'summer' | 'autumn' | 'winter';
 
 type TripFallbackInput = {
@@ -59,11 +61,11 @@ export const getTripFallbackCoverSeason = ({
   transport,
   region,
 }: Pick<TripFallbackInput, 'startDate' | 'title' | 'transport' | 'region'>): TripFallbackSeason => {
-  const normalizedStartDate = typeof startDate === 'string' ? startDate.trim() : '';
-  const monthMatch = /^(\d{4})-(\d{2})-\d{2}/.exec(normalizedStartDate);
-  if (monthMatch) {
-    const month = Number(monthMatch[2]);
-    const season = SEASON_BY_MONTH[month - 1];
+  // Месяц берём из общей нормализации (#1313): у ISO date-time со смещением
+  // локальный месяц может отличаться от того, что стоит в самой строке.
+  const parsedStart = parseTripDateTime(startDate);
+  if (parsedStart) {
+    const season = SEASON_BY_MONTH[parsedStart.value.getMonth()];
     if (season) return season;
   }
 

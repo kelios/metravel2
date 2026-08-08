@@ -1,6 +1,7 @@
 import { translate as i18nT } from '@/i18n';
 import { useAuthStore } from '@/stores/authStore';
 import { haversineKm } from '@/utils/geo';
+import { parseTripDateTime } from '@/utils/tripDateTime';
 import type {
   PlannedTrip,
   RouteGeometry,
@@ -373,6 +374,19 @@ const mapRoutingState = (state?: BeRoutingState | null): RoutingState | null => 
   };
 };
 
+/**
+ * Старт поездки в доменном виде: локальный календарный день + локальное время.
+ * Бэк отдаёт ISO date-time со смещением, поэтому время больше не теряется, а
+ * непрочитанное значение даёт пустую дату, а не сырую строку из payload (#1313).
+ */
+const tripStartFields = (raw: string | null | undefined): {
+  startDate: string;
+  startTime: string | null;
+} => {
+  const parsed = parseTripDateTime(raw);
+  return { startDate: parsed?.date ?? '', startTime: parsed?.time ?? null };
+};
+
 export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
   const currentUser = currentUserId();
   const tripId = toNum(dto.id);
@@ -409,8 +423,7 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     slug: String(dto.id),
     title,
     description: dto.description ?? '',
-    startDate: dto.start_date ?? '',
-    startTime: null,
+    ...tripStartFields(dto.start_date),
     transport,
     visibility: dto.is_public ? 'public' : 'private',
     seatsTotal: toNum(dto.max_participants),
@@ -457,8 +470,7 @@ export const mapCommunityTrip = (dto: CommunityTripDto): PlannedTrip => {
     slug: String(dto.id),
     title: dto.title,
     description: dto.description ?? '',
-    startDate: dto.start_at ?? '',
-    startTime: null,
+    ...tripStartFields(dto.start_at),
     transport: transportFromBe(dto.transport_mode),
     visibility: dto.is_public ? 'public' : 'private',
     seatsTotal: toNum(dto.seats_count),

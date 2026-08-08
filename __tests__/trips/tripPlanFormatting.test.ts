@@ -206,8 +206,17 @@ describe('formatTripDateTime', () => {
     expect(formatTripDateTime('2026-01-05', null)).toBe('5 января 2026 г.')
   })
 
-  it('returns original string for invalid date', () => {
-    expect(formatTripDateTime('not-a-date', null)).toBe('not-a-date')
+  // #1313: возврат входа как есть — это и был баг: сырой ISO печатался на экране.
+  it('renders the unavailable placeholder instead of the raw value', () => {
+    expect(formatTripDateTime('not-a-date', null)).toBe('Дата не указана')
+  })
+
+  it('keeps the time carried by an ISO date-time value', () => {
+    // Час зависит от зоны прогона, поэтому проверяем форму: локальная дата и
+    // время присутствуют, а ISO-разделителя в выводе нет.
+    const rendered = formatTripDateTime('2026-10-12T09:00:00+00:00', null)
+    expect(rendered).toMatch(/^\d{1,2} \S+ 2026 г\., \d{2}:\d{2}$/)
+    expect(rendered).not.toMatch(/T\d{2}:\d{2}|[+-]\d{2}:\d{2}/)
   })
 
   it('formats June date', () => {
