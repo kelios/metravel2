@@ -1056,17 +1056,31 @@ describe('injectQuestScenarioContent', () => {
     { cityId: '2', name: 'Краков', landingPath: '/quests/krakow', quests: [] },
   ]
 
-  it('renders the crawlable DIY body with a single h1 and links into the catalog', () => {
+  // The section used to render its own <h1>. Unlike quest details, this route
+  // ships a prerendered #root that already carries the screen's H1, so the page
+  // shipped two of them (audit 2026-08-08). The pre-hydration title is a <div>.
+  it('renders the crawlable DIY body without adding an h1, and links into the catalog', () => {
     const html = injectQuestScenarioContent(MINIMAL_BASE, CITIES)
 
     expect(html).toContain('data-ssg-quest-scenario="true"')
-    expect((html.match(/<h1/g) || []).length).toBe(1)
+    expect((html.match(/<h1/g) || []).length).toBe(0)
+    expect(html).toContain('data-ssg-scenario-title="true"')
     expect(html).toContain('Готовый сценарий квеста по городу')
     expect(html).toContain('href="/quests"')
     expect(html).toContain('href="/quests/minsk"')
     expect(html).toContain('href="/quests/krakow"')
     // HowTo anchors must resolve against the step ids in the body.
     expect(html).toContain('id="step-1"')
+  })
+
+  it('does not add a second h1 to a page that already has one', () => {
+    const withRootH1 = MINIMAL_BASE.replace(
+      '<div id="root">',
+      '<div id="root"><h1>Готовый сценарий квеста по городу — бесплатно распечатать</h1>',
+    )
+    const html = injectQuestScenarioContent(withRootH1, CITIES)
+
+    expect((html.match(/<h1/g) || []).length).toBe(1)
   })
 
   it('is idempotent — a rerun does not stack sections or styles', () => {
@@ -1076,7 +1090,8 @@ describe('injectQuestScenarioContent', () => {
     expect((twice.match(/data-ssg-quest-scenario="true"/g) || []).length).toBe(
       (once.match(/data-ssg-quest-scenario="true"/g) || []).length,
     )
-    expect((twice.match(/<h1/g) || []).length).toBe(1)
+    expect((twice.match(/data-ssg-scenario-title="true"/g) || []).length).toBe(1)
+    expect((twice.match(/<h1/g) || []).length).toBe(0)
   })
 
   it('still renders without cities (empty API payload)', () => {
@@ -1182,6 +1197,14 @@ describe('static noindex route coverage', () => {
     expect(source).toContain("route: '/accountconfirmation'");
     expect(source).toContain("route: '/articles'");
     expect(source).toMatch(/route: '\/articles'[\s\S]*?robots: 'noindex, nofollow'/);
+    // `/article` has no screen of its own; without an entry nginx served the
+    // home page there, canonical included.
+    expect(source).toContain("route: '/article',");
+    expect(source).toMatch(/route: '\/article',[\s\S]*?robots: 'noindex, nofollow'/);
+    // `/places` is a filterable catalog with no crawlable body and no per-place
+    // URLs — it must not sit open to indexing while empty.
+    expect(source).toContain("route: '/places',");
+    expect(source).toMatch(/route: '\/places',[\s\S]*?robots: 'noindex, follow'/);
     expect(source).toContain("route: '/set-password'");
     expect(source).toContain("route: '/messages'");
     expect(source).toContain("route: '/export'");
@@ -1191,6 +1214,56 @@ describe('static noindex route coverage', () => {
     expect(source).toContain("route: '/subscriptions'");
     expect(source).toContain("route: '/quests/map'");
     expect(source).toContain("robots: 'noindex, nofollow'");
+  });
+});
+
+// /quests/scenario shipped a 68-char title and a 165-char description — the only
+// two static pages out of the SERP budget when the 2026-08-08 audit measured prod.
+describe('static page meta budgets', () => {
+  const { STATIC_PAGES } = require('@/scripts/generate-seo-pages')
+  const { SEO_TITLE_MAX_LENGTH } = require('@/utils/seoText')
+
+  it('keeps every static page title within the SERP budget', () => {
+    const tooLong = STATIC_PAGES.filter(
+      (page: { route: string; title: string }) => page.title.length > SEO_TITLE_MAX_LENGTH,
+    ).map((page: { route: string; title: string }) => `${page.route} (${page.title.length})`)
+
+    expect(tooLong).toEqual([])
+  })
+
+  it('keeps every static page description within 160 chars', () => {
+    const tooLong = STATIC_PAGES.filter(
+      (page: { route: string; description: string }) => page.description.length > 160,
+    ).map((page: { route: string; description: string }) => `${page.route} (${page.description.length})`)
+
+    expect(tooLong).toEqual([])
+  })
+})
+
+// `#root` is empty in the static export, so a runtime <h1> never reaches raw HTML.
+// Audit 2026-08-08 found `/` and `/map` shipping zero H1 while every travel and
+// quest page had exactly one.
+describe('static landing H1 coverage', () => {
+  const source = require('fs').readFileSync(
+    require('path').resolve(process.cwd(), 'scripts/generate-seo-pages.js'),
+    'utf8',
+  );
+
+  it('declares an H1 for the home and map landings', () => {
+    expect(source).toMatch(/route: '\/',[\s\S]{0,900}?h1: '[^']+'/);
+    expect(source).toMatch(/route: '\/map',[\s\S]{0,600}?h1: '[^']+'/);
+  });
+
+  it('injects the declared H1 into the generated page', () => {
+    expect(source).toMatch(/if \(page\.h1\) \{\s*html = injectHiddenH1\(html, page\.h1\);/);
+  });
+
+  it('produces exactly one H1 for a landing that declares one', () => {
+    const result = injectHiddenH1(MINIMAL_BASE, 'Карта маршрутов и достопримечательностей Беларуси');
+    expect((result.match(/<h1\b/gi) || []).length).toBe(1);
+    expect(result).toContain('Карта маршрутов и достопримечательностей Беларуси');
+    // Out of flow and before #root — hydration must not see it inside the tree.
+    expect(result.indexOf('<h1')).toBeLessThan(result.indexOf('id="root"'));
   });
 });
 

@@ -2,6 +2,38 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Trips QA ProxyApi 8105",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4631 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8105"
+      ],
+      "port": 8105,
+      "autoPort": false
+    },
+    {
+      "name": "Api Proxy Dev8000 4631",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "4631",
+        "dist",
+        "http://192.168.50.36:8000"
+      ],
+      "port": 4631,
+      "autoPort": false
+    },
+    {
+      "name": "Trips QA DevApi 8104",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://192.168.50.36:8000 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8104"
+      ],
+      "port": 8104,
+      "autoPort": false
+    },
+    {
       "name": "Img Swap QA 8110",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

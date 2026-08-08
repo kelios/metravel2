@@ -2328,7 +2328,11 @@ function injectQuestScenarioContent(baseHtml, cities) {
 
   const section = [
     `<section data-ssg-quest-scenario="true" aria-label="${escapeAttr(QUEST_SCENARIO_TITLE_RU)}" style="${sectionStyle}">`,
-    `<h1 style="${h1Style}">${escapeAttr(QUEST_SCENARIO_TITLE_RU)}</h1>`,
+    // NOT an <h1>: unlike quest details, /quests/scenario ships a prerendered
+    // #root that already carries the screen's semantic H1, so an <h1> here made
+    // the raw HTML expose two (audit 2026-08-08). Same trick travel uses — the
+    // pre-hydration title is a styled <div>.
+    `<div data-ssg-scenario-title="true" style="${h1Style}">${escapeAttr(QUEST_SCENARIO_TITLE_RU)}</div>`,
     `<p style="${leadStyle}">${escapeAttr(QUEST_SCENARIO_LEAD_RU)}</p>`,
     `<p style="${ctaStyle}"><a href="/quests">Выбрать маршрут в каталоге квестов</a></p>`,
     `<h2 style="${h2Style}">Что входит в квест-бук</h2>`,
@@ -2347,7 +2351,7 @@ function injectQuestScenarioContent(baseHtml, cities) {
   const styleTag = [
     '<style data-ssg-quest-scenario-style="true">',
     'html.rnw-styles-ready [data-ssg-quest-scenario="true"]{display:none!important}',
-    '@media(max-width:640px){[data-ssg-quest-scenario="true"]{margin:12px;padding:16px 14px}[data-ssg-quest-scenario="true"] h1{font-size:23px!important}}',
+    '@media(max-width:640px){[data-ssg-quest-scenario="true"]{margin:12px;padding:16px 14px}[data-ssg-quest-scenario="true"] [data-ssg-scenario-title="true"]{font-size:23px!important}}',
     '</style>',
   ].join('');
 
@@ -2458,6 +2462,11 @@ const STATIC_PAGES = [
     description:
       'Планируйте путешествия, публикуйте маршруты, добавляйте фото и заметки, сохраняйте избранное и собирайте красивую книгу поездок в PDF.',
     image: `${SITE_URL}/og-home.jpg`,
+    // `#root` is empty in the static export, so the runtime H1 from index.tsx
+    // never reaches the raw HTML — Googlebot saw a page with zero H1 (audit
+    // 2026-08-08). The shell title is a <div> on purpose (LCP candidate), so the
+    // semantic H1 is injected out of flow, exactly as travel pages do it.
+    h1: 'Идеи поездок на выходные и книга путешествий',
   },
   {
     route: '/about',
@@ -2487,9 +2496,32 @@ const STATIC_PAGES = [
       'Изучайте интерактивную карту путешествий: находите маршруты, достопримечательности и точки интереса, включайте фильтры и стройте путь под свои планы.',
     image: `${SITE_URL}/og-map.png`,
     breadcrumb: 'Карта маршрутов',
+    h1: 'Карта маршрутов и достопримечательностей Беларуси',
   },
   {
     route: '/articles',
+    title: 'Статьи о путешествиях, маршрутах и советах | Metravel',
+    description: 'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    // Filterable catalog with no per-place URLs: the static HTML carries ~600
+    // chars of text and not a single link to a place, yet the page was open to
+    // indexing and outside the sitemap — an indexable empty page Google did not
+    // know (audit 2026-08-08). Closed until it has crawlable content; turning it
+    // into a real hub (intro + place links + categories) is a separate feature.
+    route: '/places',
+    title: 'Места на карте: замки, музеи, парки и природа | Metravel',
+    description:
+      'Каталог мест MeTravel: замки, усадьбы, музеи, парки, водопады и другие точки из путешествий — с фильтрами по стране, категории и рейтингу.',
+    robots: 'noindex, follow',
+  },
+  {
+    // There is no `/article` screen — only `/article/[id]`. Without a file here
+    // nginx fell back to index.html, so the address answered 200 with the home
+    // title, description and `canonical: https://metravel.by/` — declaring itself
+    // a duplicate of the home page (audit 2026-08-08).
+    route: '/article',
     title: 'Статьи о путешествиях, маршрутах и советах | Metravel',
     description: 'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.',
     robots: 'noindex, nofollow',
@@ -2568,9 +2600,11 @@ const STATIC_PAGES = [
   },
   {
     route: '/quests/scenario',
-    title: 'Готовый сценарий квеста по городу — распечатать бесплатно | Metravel',
+    // 68 chars did not fit the SERP budget (≤60); "по городу" survives in the H1
+    // and the description, so the keyword phrase is not lost. Description was 165.
+    title: 'Готовый сценарий квеста — распечатать бесплатно | Metravel',
     description:
-      'Готовый сценарий квеста по городу: распечатайте бесплатный квест-бук с картой, заданиями, дипломом и страницей ведущего с ответами. Для дня рождения, семьи и класса.',
+      'Готовый сценарий квеста по городу: распечатайте бесплатный квест-бук с картой, заданиями, дипломом и страницей ведущего. Для дня рождения, семьи и класса.',
     breadcrumb: 'Сценарий квеста',
   },
   {
@@ -2687,6 +2721,13 @@ async function main() {
 
     if (page.route === '/') {
       html = injectHomeHeroPreload(html, homeHeroHref);
+    }
+
+    // Out-of-flow semantic H1 for routes whose static HTML has none (`/`, `/map`).
+    // Same injector travel pages use: sibling before #root, so hydration is not
+    // disturbed and the raw HTML keeps exactly one H1.
+    if (page.h1) {
+      html = injectHiddenH1(html, page.h1);
     }
 
     // SSG BreadcrumbList for indexable overview/landing pages so Googlebot
@@ -3292,6 +3333,7 @@ if (typeof module !== 'undefined' && module.exports) {
     injectQuestCityLandingSection,
     buildQuestCityLandingHtml,
     patchNoindexFallbackTemplate,
+    STATIC_PAGES,
   };
 }
 

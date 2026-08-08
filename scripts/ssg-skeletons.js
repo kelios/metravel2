@@ -472,6 +472,16 @@ const SSG_ALLOWED_TAGS = new Set([
   'p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'br', 'blockquote', 'a',
 ]);
 
+// Upper bound for the article body rendered into the pre-hydration shell.
+// The previous 9 000 cut half the library mid-article: 150 of 306 published
+// travels sanitize to more than that, and the tail that disappeared was exactly
+// the "Что рядом" / FAQ / practical sections crawlers rank on (audit 2026-08-08).
+// 60 000 clears the whole corpus with room to spare — the longest article
+// (id 470, Tour du Mont Blanc) sanitizes to 45 528 chars — while still capping
+// a runaway record. Media is already stripped above, so base64 <img> payloads
+// (#1319/#1320) cannot eat this budget.
+const SSG_ARTICLE_BODY_MAX_CHARS = 60000;
+
 /** Truncate sanitized HTML at a block boundary so no tag is cut mid-way. */
 function clampHtmlAtBlock(html, max) {
   if (html.length <= max) return html;
@@ -499,7 +509,7 @@ function clampHtmlAtBlock(html, max) {
  * rel="nofollow noopener"; internal (site-relative / metravel.by) links stay
  * followable so internal link equity flows (helps indexing & crawl depth).
  */
-function sanitizeArticleBodyHtml(rawHtml, maxChars = 9000) {
+function sanitizeArticleBodyHtml(rawHtml, maxChars = SSG_ARTICLE_BODY_MAX_CHARS) {
   let html = String(rawHtml || '');
   if (!html.trim()) return '';
 
@@ -680,5 +690,6 @@ module.exports = {
   injectSkeletonShell,
   buildRemovalScript,
   sanitizeArticleBodyHtml,
+  SSG_ARTICLE_BODY_MAX_CHARS,
   COLORS,
 };

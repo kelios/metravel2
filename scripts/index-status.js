@@ -68,6 +68,16 @@ function fetchJson(url) {
   })
 }
 
+// Rows out of the list envelope. `/api/travels/` answers `{count, next, results}`;
+// the older shapes stay as fallbacks. Missing `results` here is what made the
+// whole monitor report "0 articles checked" with exit code 0 (see seo audit 08.08).
+function pickListRows(res) {
+  if (Array.isArray(res)) return res
+  if (!res || typeof res !== 'object') return []
+  const rows = res.results || res.data || res.items || res.rows
+  return Array.isArray(rows) ? rows : []
+}
+
 // List the author's published+moderated travels (paginated).
 async function listTravels(apiBase, userId) {
   const where = JSON.stringify({ user_id: userId, publish: 1, moderation: 1 })
@@ -75,7 +85,7 @@ async function listTravels(apiBase, userId) {
   for (let page = 1; page <= 50; page++) {
     const u = `${apiBase}/api/travels/?where=${encodeURIComponent(where)}&page=${page}&perPage=100`
     const res = await fetchJson(u)
-    const rows = res.data || res.items || res.rows || (Array.isArray(res) ? res : [])
+    const rows = pickListRows(res)
     if (!rows.length) break
     for (const t of rows) {
       // The list `url` field may be "/travels/<slug>", "travels/<slug>", a full
@@ -145,6 +155,13 @@ async function main() {
   const { accessToken } = await getAccessToken(SCOPE)
 
   let travels = await listTravels(args.api, args.userId)
+  // An empty list is an environment/contract failure, not "0 problems": reporting
+  // it as a success is exactly how the broken envelope read stayed invisible.
+  if (travels.length === 0) {
+    throw new Error(
+      `${args.api}/api/travels/ вернул 0 статей для user_id=${args.userId} — проверьте доступность API и формат ответа`
+    )
+  }
   if (args.limit > 0) travels = travels.slice(0, args.limit)
   if (!args.json) console.error(`🔎 Проверяю индексацию ${travels.length} статей (user_id=${args.userId})…`)
 
@@ -226,7 +243,11 @@ async function main() {
   console.log('')
 }
 
-main().catch((err) => {
-  console.error('Ошибка:', err.message)
-  process.exit(1)
-})
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('Ошибка:', err.message)
+    process.exit(1)
+  })
+}
+
+module.exports = { pickListRows, parseArgs, classify }

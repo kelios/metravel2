@@ -103,6 +103,7 @@ Dated snapshots — использовать только с указанным 
 - `docs/SEO_AUDIT_2026-07-11.md` — snapshot 2026-07-11;
 - `docs/SEO_AUDIT_2026-07-18.md` — snapshot 2026-07-18 (on-page зрелость: рычаги = индексация + off-site + title-redirects);
 - `docs/SEO_AUDIT_2026-07-27.md` — snapshot 2026-07-27 (P0: travel-URL отдают noindex-заглушку; индексация 291/306 закрыта; кластер «вторая страница»; 301-ремонт заголовков разблокирован);
+- `docs/SEO_AUDIT_2026-08-08.md` — snapshot 2026-08-08 (авария 26.07 закрыта, цель 90 дн. перевыполнена; SSG режет тело статьи на 9 000 симв.; две страницы 55.6/25.8 МБ из-за base64 в `media`; `stats:index` проверял 0 статей);
 - `docs/SOCIAL_CONTENT_PACK_2026-07.md` — content pack по июльскому GSC snapshot.
 
 ## Legacy local tooling

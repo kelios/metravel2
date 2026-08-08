@@ -59,6 +59,43 @@ describe('questAdapters', () => {
       expect(check('anything')).toBe(false);
     });
 
+    it('exact_any: returns false when value is JSON but not an array', () => {
+      const check = buildAnswerChecker('exact_any', '{"a":1}');
+      expect(check('anything')).toBe(false);
+    });
+
+    // Регресс аудита прода 06.08.2026: словарь брался как `v.toLowerCase()`, а
+    // ввод — через `normalize()`, поэтому вариант с «ё»/дефисом/пунктуацией был
+    // недостижим. 63 таких варианта были единственной формой ответа на шаге.
+    it('exact_any: variants with ё, hyphens and punctuation stay reachable', () => {
+      const check = buildAnswerChecker(
+        'exact_any',
+        '["красно-белый","тёмно-синий","в. и. ленин","1961–1989"]',
+      );
+      expect(check('красно-белый')).toBe(true);
+      expect(check('краснобелый')).toBe(true);
+      expect(check('Тёмно-синий')).toBe(true);
+      expect(check('темно синий')).toBe(false);
+      expect(check('В. И. Ленин')).toBe(true);
+      expect(check('1961-1989')).toBe(true);
+      expect(check('зелёный')).toBe(false);
+    });
+
+    it('exact_any: variant that normalizes to empty never matches empty input', () => {
+      const check = buildAnswerChecker('exact_any', '["-","кот"]');
+      expect(check('')).toBe(false);
+      expect(check('   ')).toBe(false);
+      expect(check('кот')).toBe(true);
+    });
+
+    it('exact: value with ё and hyphen stays reachable', () => {
+      const check = buildAnswerChecker('exact', 'жёлто-синий');
+      expect(check('жёлто-синий')).toBe(true);
+      expect(check('желто-синий')).toBe(true);
+      expect(check('желтосиний')).toBe(true);
+      expect(check('синий')).toBe(false);
+    });
+
     it('range: checks number in range', () => {
       const check = buildAnswerChecker('range', '{"min":10,"max":20}');
       expect(check('15')).toBe(true);

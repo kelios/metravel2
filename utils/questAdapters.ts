@@ -147,7 +147,10 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
         }
 
         case 'exact': {
-            const target = answerValue.toLowerCase();
+            // Обе стороны сравнения проходят одну нормализацию. Раньше эталон брался
+            // как `toLowerCase()`, и значение с «ё», дефисом или пунктуацией было
+            // недостижимо: ввод игрока их терял, эталон — нет.
+            const target = normalize(answerValue);
             return (input: string) => {
                 const n = normalize(input);
                 // Пробуем как число
@@ -159,10 +162,19 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
 
         case 'exact_any': {
             try {
-                const variants: string[] = JSON.parse(answerValue);
+                const parsed: unknown = JSON.parse(answerValue);
+                if (!Array.isArray(parsed)) return () => false;
+                // Нормализуем словарь один раз при сборке чекера, а не на каждую
+                // попытку. Пустые после нормализации варианты выкидываем: иначе
+                // словарь с `"-"` принимал бы любой ввод, схлопнувшийся в пустую
+                // строку. Аудит прода 06.08.2026: 161 вариант в 93 шагах был
+                // недостижим, из них 63 — единственная форма ответа на шаге.
+                const variants = parsed
+                    .map((v) => normalize(String(v)))
+                    .filter((v) => v.length > 0);
                 return (input: string) => {
                     const n = normalize(input);
-                    return variants.some(v => n === v.toLowerCase());
+                    return variants.some(v => n === v);
                 };
             } catch {
                 return () => false;

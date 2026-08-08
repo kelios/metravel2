@@ -1,10 +1,38 @@
 ## 1. Instrumented Baseline
 
-- [ ] 1.1 Build a startup probe (kept in an ignored local folder) that subscribes to the map's `zoomstart`, `zoomend`, `load` and `moveend` events and records `(event, zoom, timestamp)`; do not poll `getZoom()`, since a level entered and left between samples is exactly the defect under investigation.
-- [ ] 1.2 Extend the probe to collect the base-tile inventory from real transfer sizes, grouped by full request URL and then by the `z` segment of `/proxy/tiles/osm/{z}/{x}/{y}.png`, and to report the single pre-hydration warm-up tile as its own line rather than folding it into a zoom level.
-- [ ] 1.3 Run the probe cold (empty cache) at least five times per viewport at 1350×940 and 412×823 against the current build, and record the median per-level table (level, tile count, bytes), the totals, the settled centre/zoom and the time to the settled view.
+- [x] 1.1 Build a startup probe (kept in an ignored local folder) that subscribes to the map's `zoomstart`, `zoomend`, `load` and `moveend` events and records `(event, zoom, timestamp)`; do not poll `getZoom()`, since a level entered and left between samples is exactly the defect under investigation.
+- [x] 1.2 Extend the probe to collect the base-tile inventory from real transfer sizes, grouped by full request URL and then by the `z` segment of `/proxy/tiles/osm/{z}/{x}/{y}.png`, and to report the single pre-hydration warm-up tile as its own line rather than folding it into a zoom level.
+- [x] 1.3 Run the probe cold (empty cache) at least five times per viewport at 1350×940 and 412×823 against the current build, and record the median per-level table (level, tile count, bytes), the totals, the settled centre/zoom and the time to the settled view.
 - [ ] 1.4 Confirm the baseline reproduces #1291 — desktop levels 8+9+13 at 66 tiles / 1,748 KB, mobile at 20 tiles / 750 KB — and confirm from the zoom-event trace that the radius-derived level is settled on before the final fit; if it does not reproduce, stop and report instead of implementing.
-- [ ] 1.5 Capture the pre-change settled-view screenshot on both viewports as the visual baseline for the final centre/zoom comparison.
+- [x] 1.5 Capture the pre-change settled-view screenshot on both viewports as the visual baseline for the final centre/zoom comparison.
+
+### Baseline evidence — 2026-08-08
+
+Five live-production cold runs per viewport were recorded in
+`.codex-temp/board-1291/baseline-live-v2.json`; the event trace comes from
+Leaflet's `zoomstart`/`zoomend`/`load`/`moveend` events and the byte inventory
+comes from CDP `Network.dataReceived`/`loadingFinished`. The one head warm-up
+tile (`z11`, median 42,715 bytes) is excluded from the tables below.
+
+| Viewport | Level | Median requests | Median transferred bytes |
+|---|---:|---:|---:|
+| desktop 1350×940 | z8 | 20 | 903,834 |
+| desktop 1350×940 | z9 | 16 | 575,955 |
+| desktop 1350×940 | z13 | 30 | 272,307 |
+| desktop total | — | 66 | 1,752,096 |
+| mobile 412×823 | z8 | 12 | 540,647 |
+| mobile 412×823 | z13 | 8 | 0 (all eight requests aborted before body transfer) |
+| mobile total | — | 20 | 540,647 |
+
+Desktop reproduces the reported levels, request count and ~1,748 KB transfer.
+Mobile reproduces the reported levels and 20-request inventory, and the event
+trace still settles on z13 before final z8, but current real transfer is 540,647
+bytes rather than the required 750 KB because the obsolete z13 requests are
+cancelled before body bytes arrive. Per Task 1.4, implementation is paused until
+the artifact is revised or the 750 KB mobile baseline is reproduced. Settled
+views were stable at desktop z9 / centre 53.97870,27.46015 and mobile z8 /
+centre approximately 53.83470,27.46033; both pre-change screenshots are stored
+next to the JSON report.
 
 ## 2. Remove the Transient Startup View
 

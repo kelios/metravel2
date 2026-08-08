@@ -10,6 +10,7 @@ const {
   injectSkeletonShell,
   buildRemovalScript,
   sanitizeArticleBodyHtml,
+  SSG_ARTICLE_BODY_MAX_CHARS,
   COLORS,
 } = require('../../scripts/ssg-skeletons');
 const {
@@ -573,6 +574,35 @@ describe('ssg-skeletons', () => {
       const out = sanitizeArticleBodyHtml(many, 1000);
       expect(out.length).toBeLessThanOrEqual(1000);
       expect(out.endsWith('</p>')).toBe(true);
+    });
+
+    // The default budget used to be 9 000 chars, which silently truncated 150 of
+    // 306 published travels — the longest lost 83 % of its text, and what
+    // disappeared was the tail ("Что рядом", FAQ, practical part). A real article
+    // must reach the crawler whole; the clamp stays only as a runaway guard.
+    it('keeps a full-length real article by default (no 9k truncation)', () => {
+      const section = '<h2>Раздел</h2>' + '<p>' + 'слово '.repeat(120) + '</p>';
+      const article = section.repeat(30); // ~27k chars — a Витебск-sized article
+      expect(article.length).toBeGreaterThan(9000);
+
+      const out = sanitizeArticleBodyHtml(article);
+
+      expect(out.length).toBeGreaterThan(9000);
+      const sectionsIn = (article.match(/<h2>/g) || []).length;
+      const sectionsOut = (out.match(/<h2>/g) || []).length;
+      expect(sectionsOut).toBe(sectionsIn);
+    });
+
+    it('still clamps a runaway record at the default budget', () => {
+      const huge = ('<p>' + 'a'.repeat(500) + '</p>').repeat(500); // ~250k chars
+      const out = sanitizeArticleBodyHtml(huge);
+      expect(out.length).toBeLessThanOrEqual(SSG_ARTICLE_BODY_MAX_CHARS);
+      expect(out.endsWith('</p>')).toBe(true);
+    });
+
+    it('exposes a budget that covers the longest published article', () => {
+      // id 470 (Tour du Mont Blanc) sanitizes to 45 528 chars — the corpus maximum.
+      expect(SSG_ARTICLE_BODY_MAX_CHARS).toBeGreaterThanOrEqual(50000);
     });
   });
 
