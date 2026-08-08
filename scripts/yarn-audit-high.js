@@ -8,6 +8,16 @@ const IGNORED_MODULES = new Set([
   'node-forge', // expo > @expo/cli > @expo/code-signing-certificates
 ]);
 
+// Temporary advisory-level exceptions. Metro only accepts image-size ^1.0.2,
+// while npm has no patched release for these advisories as of 2026-08-08.
+// Keep these scoped to exact GHSA IDs so new image-size advisories still block.
+const IGNORED_ADVISORIES = new Map([
+  ['image-size', new Set([
+    'GHSA-5P2G-FCMC-QVQQ',
+    'GHSA-W3RX-R6R6-PGPR',
+  ])], // expo > @expo/metro > metro
+]);
+
 const createCounts = () => ({
   info: 0,
   low: 0,
@@ -85,12 +95,19 @@ const readSummaryCounts = (summary) => {
 
 const formatPolicySummary = (counts, ignoredCount) => {
   const allowedIgnoredModules = [...IGNORED_MODULES].sort().join(', ') || 'none';
+  const allowedIgnoredAdvisories = [...IGNORED_ADVISORIES]
+    .flatMap(([moduleName, advisoryIds]) => (
+      [...advisoryIds].map((advisoryId) => `${moduleName}/${advisoryId}`)
+    ))
+    .sort()
+    .join(', ') || 'none';
   return [
     `high/critical: ${counts.high + counts.critical}`,
     `moderate: ${counts.moderate}`,
     `low: ${counts.low}`,
     `ignored: ${ignoredCount}`,
     `allowed ignored modules: ${allowedIgnoredModules}`,
+    `allowed ignored advisories: ${allowedIgnoredAdvisories}`,
   ].join(', ');
 };
 
@@ -135,13 +152,19 @@ const evaluateSuccessfulAudit = (output) => {
     const advisory = record?.data?.advisory;
     const moduleName = typeof advisory?.module_name === 'string' ? advisory.module_name.trim() : '';
     const severity = typeof advisory?.severity === 'string' ? advisory.severity.toLowerCase() : '';
+    const githubAdvisoryId = typeof advisory?.github_advisory_id === 'string'
+      ? advisory.github_advisory_id.trim().toUpperCase()
+      : '';
 
     if (!moduleName || !SEVERITIES.includes(severity)) {
       return failClosed('malformed audit advisory record');
     }
 
     advisoryCounts[severity] += 1;
-    if (IGNORED_MODULES.has(moduleName)) {
+    if (
+      IGNORED_MODULES.has(moduleName)
+      || IGNORED_ADVISORIES.get(moduleName)?.has(githubAdvisoryId)
+    ) {
       ignoredCounts[severity] += 1;
       ignoredCount += 1;
     }
@@ -218,6 +241,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  IGNORED_ADVISORIES,
   IGNORED_MODULES,
   evaluateAuditResult,
   evaluateSuccessfulAudit,
