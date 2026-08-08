@@ -65,6 +65,7 @@ test.describe('@smoke Google auth', () => {
     });
 
     let receivedGoogleToken = '';
+    let receivedGoogleLoginUrl = '';
 
     await page.route('**/api/user/google-login/**', async (route) => {
       if (route.request().method().toUpperCase() !== 'POST') {
@@ -72,6 +73,7 @@ test.describe('@smoke Google auth', () => {
         return;
       }
 
+      receivedGoogleLoginUrl = route.request().url();
       let payload: { id_token?: unknown } = {};
       try {
         payload = (route.request().postDataJSON() as { id_token?: unknown }) || {};
@@ -155,6 +157,9 @@ test.describe('@smoke Google auth', () => {
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 });
 
     expect(receivedGoogleToken).toBe('e2e-google-credential');
+    expect(new URL(receivedGoogleLoginUrl).origin).toBe(new URL(page.url()).origin);
+    expect(new URL(receivedGoogleLoginUrl).hostname).not.toMatch(/(?:^|\.)metravel\.by$/i);
+    expect(new URL(receivedGoogleLoginUrl).pathname).toBe('/api/user/google-login/');
 
     const authSnapshot = await page.evaluate(() => {
       return {

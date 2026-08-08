@@ -5,6 +5,7 @@ const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { acquireBuildLock, releaseBuildLock } = require('./build-lock');
 
 const rootDir = path.join(__dirname, '..');
 if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
@@ -22,12 +23,46 @@ const requiredStaticRoutePaths = [
   path.join(rootDir, 'dist', 'travels', '[param].html'),
 ];
 const envPath = path.join(rootDir, '.env');
-const e2ePublicFlagLine = 'EXPO_PUBLIC_E2E=true';
 const BENIGN_EXPO_EXPORT_SHUTDOWN_WARNING =
   'Something prevented Expo from exiting, forcefully exiting now.';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createSignalInterruption(targetProcess = process) {
+  let interruptedSignal = null;
+  let rejectInterruption;
+  const promise = new Promise((_, reject) => {
+    rejectInterruption = reject;
+  });
+  const handlers = new Map();
+
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    const handler = () => {
+      if (interruptedSignal) return;
+      interruptedSignal = signal;
+      rejectInterruption(new Error(`[e2e-webserver] Interrupted by ${signal}`));
+    };
+    handlers.set(signal, handler);
+    targetProcess.on(signal, handler);
+  }
+
+  return {
+    promise,
+    get signal() {
+      return interruptedSignal;
+    },
+    dispose() {
+      for (const [signal, handler] of handlers) {
+        targetProcess.off(signal, handler);
+      }
+    },
+  };
+}
+
+function signalExitCode(signal) {
+  return signal === 'SIGINT' ? 130 : 143;
 }
 
 function readJsonIfExists(filePath) {
@@ -40,10 +75,92 @@ function readJsonIfExists(filePath) {
 }
 
 function writeJson(filePath, data) {
+  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+}
+
+function buildEnvFileContent(originalContent, overrides) {
+  const newline = originalContent.includes('\r\n') ? '\r\n' : '\n';
+  const overrideKeys = new Set(Object.keys(overrides));
+  const preservedLines = originalContent.split(/\r?\n/).filter((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return true;
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex === -1) return true;
+    return !overrideKeys.has(trimmed.slice(0, separatorIndex).trim());
+  });
+
+  while (preservedLines.at(-1) === '') preservedLines.pop();
+
+  const overrideLines = Object.entries(overrides).map(([key, value]) => `${key}=${value}`);
+  return `${[...preservedLines, ...overrideLines].join(newline)}${newline}`;
+}
+
+async function withTemporaryEnvOverrides(filePath, overrides, action) {
+  const existed = fs.existsSync(filePath);
+  const originalContents = existed ? fs.readFileSync(filePath) : null;
+  const originalText = originalContents ? originalContents.toString('utf8') : '';
+
   try {
-    fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
-  } catch {
-    // ignore
+    fs.writeFileSync(filePath, buildEnvFileContent(originalText, overrides), 'utf8');
+    return await action();
+  } finally {
+    if (existed) {
+      fs.writeFileSync(filePath, originalContents);
+    } else {
+      fs.rmSync(filePath, { force: true });
+    }
+  }
+}
+
+function listJavaScriptFiles(directoryPath) {
+  if (!fs.existsSync(directoryPath)) return [];
+  return fs.readdirSync(directoryPath, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directoryPath, entry.name);
+    if (entry.isDirectory()) return listJavaScriptFiles(entryPath);
+    return entry.isFile() && entry.name.endsWith('.js') ? [entryPath] : [];
+  });
+}
+
+function assertE2EArtifactConfig({
+  expectedApiBase,
+  jsDirectory = distJsDir,
+  metaPath = distMetaPath,
+}) {
+  const meta = readJsonIfExists(metaPath);
+  const expectedConfig = {
+    EXPO_PUBLIC_E2E: 'true',
+    EXPO_PUBLIC_IS_LOCAL_API: 'false',
+    EXPO_PUBLIC_API_URL: expectedApiBase,
+  };
+
+  for (const [key, expectedValue] of Object.entries(expectedConfig)) {
+    if (meta?.expoPublic?.[key] !== expectedValue) {
+      throw new Error(
+        `[e2e-webserver] E2E artifact metadata mismatch for ${key}: expected ${expectedValue}`
+      );
+    }
+  }
+
+  const jsFiles = listJavaScriptFiles(jsDirectory);
+  if (jsFiles.length === 0) {
+    throw new Error('[e2e-webserver] E2E artifact contains no JavaScript bundles');
+  }
+
+  const authBundleContents = jsFiles
+    .map((filePath) => fs.readFileSync(filePath, 'utf8'))
+    .filter((contents) => contents.includes('/user/google-login/'));
+  if (authBundleContents.length === 0) {
+    throw new Error('[e2e-webserver] E2E artifact contains no Google auth API bundle');
+  }
+
+  const inlinedE2EFlag = /([A-Za-z_$][\w$]*)\s*=\s*['"]true['"]\s*===\s*String\(\s*['"]true['"]\s*\)\.toLowerCase\(\)[\s\S]{0,1000}?isE2E\s*:\s*\1\b/;
+  const hasStaleAuthBundle = authBundleContents.some(
+    (contents) => !contents.includes(expectedApiBase) || !inlinedE2EFlag.test(contents)
+  );
+  if (hasStaleAuthBundle) {
+    throw new Error(
+      `[e2e-webserver] E2E auth bundle does not contain the configured API base and E2E mode ${expectedApiBase}`
+    );
   }
 }
 
@@ -132,7 +249,7 @@ function assertStableE2EBuild() {
 }
 
 function killProcessTree(child) {
-  if (!child || child.killed) return;
+  if (!child || child.exitCode != null || child.signalCode != null) return;
   try {
     child.kill('SIGTERM');
   } catch {
@@ -140,11 +257,11 @@ function killProcessTree(child) {
   }
   setTimeout(() => {
     try {
-      if (!child.killed) child.kill('SIGKILL');
+      if (child.exitCode == null && child.signalCode == null) child.kill('SIGKILL');
     } catch {
       // ignore
     }
-  }, 5000).unref();
+  }, 5000).unref?.();
 }
 
 function listListeningPids(port) {
@@ -368,12 +485,12 @@ async function main() {
     existingMeta.expoPublic.EXPO_PUBLIC_IS_LOCAL_API === buildMeta.expoPublic.EXPO_PUBLIC_IS_LOCAL_API &&
     existingMeta.expoPublic.EXPO_PUBLIC_API_URL === buildMeta.expoPublic.EXPO_PUBLIC_API_URL &&
     // Prevent stale dist reuse when local source changes.
-    // If git info is missing (e.g. CI tarball), fallback to old env-only behavior.
-    (!buildMeta.git?.head ||
-      !buildMeta.git?.statusHash ||
-      (existingMeta.git &&
-        existingMeta.git.head === buildMeta.git.head &&
-        existingMeta.git.statusHash === buildMeta.git.statusHash));
+    // Without a source stamp, an env-only match cannot prove that dist is current.
+    buildMeta.git?.head &&
+    buildMeta.git?.statusHash &&
+    existingMeta.git &&
+    existingMeta.git.head === buildMeta.git.head &&
+    existingMeta.git.statusHash === buildMeta.git.statusHash;
 
   if (canReuseBuild) {
     console.log('[e2e-webserver] Reusing existing dist build');
@@ -381,104 +498,108 @@ async function main() {
     console.log(`[e2e-webserver] Building web export (force=${forceRebuild ? '1' : '0'})`);
   }
 
-  // Ensure EXPO_PUBLIC_E2E is present for the Expo env loader (it only prints/exports vars from .env files).
-  // We patch .env temporarily for the build and restore it afterwards.
-  let originalEnvFile = null;
   if (!canReuseBuild) {
+    // The child build normally acquires this mutex itself, but that would be
+    // too late: .env is patched before it starts. Hold the shared build lock
+    // across both the temporary override and its exact restoration.
+    const interruption = createSignalInterruption();
+    let preparationFailure = null;
+    acquireBuildLock();
     try {
-      if (fs.existsSync(envPath)) {
-        originalEnvFile = fs.readFileSync(envPath, 'utf8');
-      } else {
-        originalEnvFile = '';
-      }
+      await withTemporaryEnvOverrides(
+        envPath,
+        {
+          EXPO_PUBLIC_E2E: 'true',
+          EXPO_PUBLIC_IS_LOCAL_API: 'false',
+          EXPO_PUBLIC_API_URL: e2eApiBase,
+        },
+        async () => {
+          // Force a rebuild even if a previous `dist/index.html` exists.
+          // Otherwise the readiness check can pass before the new env reaches the bundle.
+          if (fs.existsSync(distIndex)) {
+            fs.unlinkSync(distIndex);
+          }
 
-      let envLines = originalEnvFile.split(/\r?\n/);
-      const isKeyLine = (line, key) => {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) return false;
-        const normalized = trimmed.replace(/\s+/g, '');
-        return normalized.startsWith(`${key}=`);
-      };
-      const setEnvLine = (key, value) => {
-        const nextLine = `${key}=${value}`;
-        envLines = envLines.filter((line) => !isKeyLine(line, key));
-        envLines.push(nextLine);
-      };
+          // `--clear` is mandatory because Metro does not invalidate transformed
+          // modules when only Expo public env values change.
+          const buildCommand =
+            process.platform === 'win32' ? process.env.ComSpec || 'cmd.exe' : 'npm';
+          const buildArgs =
+            process.platform === 'win32'
+              ? ['/d', '/s', '/c', 'npm run build:web -- --no-bytecode --clear']
+              : ['run', 'build:web', '--', '--no-bytecode', '--clear'];
+          const build = spawn(buildCommand, buildArgs, {
+            cwd: rootDir,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: sanitizedEnv(process.env),
+          });
+          const buildStartFailure = new Promise((_, reject) => {
+            build.once('error', (error) => {
+              reject(new Error(`[e2e-webserver] Failed to start web export: ${error.message}`));
+            });
+          });
+          pipeBuildOutput(build.stdout, process.stdout);
+          pipeBuildOutput(build.stderr, process.stderr);
 
-      if (!originalEnvFile.includes('EXPO_PUBLIC_E2E=')) {
-        envLines.push(e2ePublicFlagLine);
-      }
+          let buildFailure = null;
+          let stopFailure = null;
+          const buildLifecycle = async () => {
+            await waitForFile(distIndex, buildTimeoutMs);
+            await waitForEntryBundle(buildTimeoutMs);
+            for (const requiredRoutePath of requiredStaticRoutePaths) {
+              await waitForFile(requiredRoutePath, buildTimeoutMs);
+            }
 
-      setEnvLine('EXPO_PUBLIC_IS_LOCAL_API', 'false');
-      setEnvLine('EXPO_PUBLIC_API_URL', e2eApiBase);
-
-      const next = `${envLines.filter(Boolean).join('\n')}\n`;
-      fs.writeFileSync(envPath, next, 'utf8');
-    } catch (e) {
-      console.error('[e2e-webserver] Failed to patch .env for E2E:', e);
-    }
-
-    // Force a rebuild even if a previous `dist/index.html` exists.
-    // Otherwise the "waitForFile" completes immediately and we terminate the build before it applies env changes.
-    try {
-      if (fs.existsSync(distIndex)) {
-        fs.unlinkSync(distIndex);
-      }
-    } catch (e) {
-      console.error('[e2e-webserver] Failed to remove dist/index.html before E2E build:', e);
-    }
-
-    // Build web export.
-    // Expo export sometimes doesn't exit cleanly even after writing to dist, which can block Playwright webServer.
-    // We treat the build as "done" once dist/index.html exists, then terminate the build process.
-    //
-    // `--clear` обязателен. Expo инлайнит `EXPO_PUBLIC_*` из .env-файлов на этапе
-    // трансформации модуля, а Metro кэширует результат и НЕ инвалидирует его при
-    // изменении .env. Без сброса кэша патч .env выше (E2E-флаг + локальный API URL)
-    // в бандл не попадает: модули остаются с прежними значениями, `isE2E` приходит
-    // пустой строкой, и `utils/resolveApiBaseUrl` уводит запросы на прод
-    // (`https://metravel.by`) вместо e2e-API. Проверено разбором собранного бандла.
-    const buildCommand = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : 'npm';
-    const buildArgs =
-      process.platform === 'win32'
-        ? ['/d', '/s', '/c', 'npm run build:web -- --no-bytecode --clear']
-        : ['run', 'build:web', '--', '--no-bytecode', '--clear'];
-    const build = spawn(buildCommand, buildArgs, {
-      cwd: rootDir,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: sanitizedEnv(process.env),
-    });
-    pipeBuildOutput(build.stdout, process.stdout);
-    pipeBuildOutput(build.stderr, process.stderr);
-
-    try {
-      await waitForFile(distIndex, buildTimeoutMs);
-      await waitForEntryBundle(buildTimeoutMs);
-      for (const requiredRoutePath of requiredStaticRoutePaths) {
-        await waitForFile(requiredRoutePath, buildTimeoutMs);
-      }
-
-      const exitedWithoutInterruption = await waitForProcessExit(build, buildExitGraceMs);
-      if (!exitedWithoutInterruption) {
-        killProcessTree(build);
-        await waitForProcessExit(build, 7000);
-      }
-      await sleep(500);
-      assertStableE2EBuild();
-      writeJson(distMetaPath, buildMeta);
-    } finally {
-      if (build.exitCode == null && build.signalCode == null) {
-        killProcessTree(build);
-      }
-      try {
-        if (originalEnvFile != null) {
-          fs.writeFileSync(envPath, originalEnvFile, 'utf8');
+            const exitedWithoutInterruption = await waitForProcessExit(build, buildExitGraceMs);
+            if (exitedWithoutInterruption && build.exitCode !== 0) {
+              throw new Error(`[e2e-webserver] Web export exited with code ${build.exitCode}`);
+            }
+            if (!exitedWithoutInterruption) {
+              killProcessTree(build);
+              const stopped = await waitForProcessExit(build, 7000);
+              if (!stopped) {
+                throw new Error(
+                  '[e2e-webserver] Web export did not stop before artifact verification'
+                );
+              }
+            }
+            await sleep(500);
+            assertStableE2EBuild();
+            writeJson(distMetaPath, buildMeta);
+          };
+          try {
+            await Promise.race([buildStartFailure, interruption.promise, buildLifecycle()]);
+          } catch (error) {
+            buildFailure = error;
+          } finally {
+            if (build.exitCode == null && build.signalCode == null) {
+              killProcessTree(build);
+              const stopped = await waitForProcessExit(build, 7000);
+              if (!stopped) {
+                stopFailure = new Error(
+                  '[e2e-webserver] Web export did not stop before .env restoration'
+                );
+              }
+            }
+          }
+          if (buildFailure) throw buildFailure;
+          if (stopFailure) throw stopFailure;
         }
-      } catch (e) {
-        console.error('[e2e-webserver] Failed to restore .env after E2E build:', e);
-      }
+      );
+    } catch (error) {
+      preparationFailure = error;
+    } finally {
+      releaseBuildLock();
+      interruption.dispose();
     }
+
+    if (interruption.signal) {
+      process.exit(signalExitCode(interruption.signal));
+    }
+    if (preparationFailure) throw preparationFailure;
   }
+
+  assertE2EArtifactConfig({ expectedApiBase: e2eApiBase });
 
   // Serve the built export.
   const server = spawn(process.execPath, [path.join(__dirname, 'serve-web-build.js')], {
@@ -506,7 +627,13 @@ if (require.main === module) {
 }
 
 module.exports = {
+  assertE2EArtifactConfig,
   assertStableE2EBuild,
+  buildEnvFileContent,
+  createSignalInterruption,
   hasRequiredStaticRoutesSync,
+  killProcessTree,
+  signalExitCode,
+  withTemporaryEnvOverrides,
   waitForProcessExit,
 };
