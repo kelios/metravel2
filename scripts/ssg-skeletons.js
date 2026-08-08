@@ -37,6 +37,7 @@ const MAP_VIEWPORT_HEIGHT = 'var(--metravel-map-vh, 100svh)';
 const MAP_WEB_MOBILE_BREAKPOINT_PX = 768;
 const MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX = 56;
 const MAP_WEB_DESKTOP_VIEWPORT_RESERVE_PX = 88;
+const MAP_WEB_DESKTOP_SIDEBAR_WIDTH_PX = 340;
 
 /**
  * Build skeleton CSS (shared by home and search).
@@ -99,8 +100,8 @@ function buildSkeletonCSS() {
 .ssg-map-control{width:36px;height:36px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
 .ssg-map-marker{position:absolute;width:18px;height:18px;border-radius:999px;background:#f5842c;border:3px solid rgba(255,255,255,0.96);box-shadow:0 10px 22px rgba(15,23,42,0.18);z-index:2}
 .ssg-map-marker.m1{top:24%;left:31%}.ssg-map-marker.m2{top:38%;left:56%}.ssg-map-marker.m3{top:34%;left:72%}.ssg-map-marker.m4{top:57%;left:42%}.ssg-map-marker.m5{top:62%;left:64%}
-.ssg-map-sidebar-shell{display:none;width:340px;flex-shrink:0;background:${COLORS.light.surface};border-left:1px solid ${COLORS.light.border}}
-@media(min-width:${MAP_WEB_MOBILE_BREAKPOINT_PX}px){.ssg-map-layout,.ssg-map-canvas{min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_DESKTOP_VIEWPORT_RESERVE_PX}px)}.ssg-map-sidebar-shell{display:flex;flex-direction:column}}
+.ssg-map-sidebar-shell{display:none;width:${MAP_WEB_DESKTOP_SIDEBAR_WIDTH_PX}px;flex-shrink:0;background:${COLORS.light.surface};border-left:1px solid ${COLORS.light.border}}
+@media(min-width:${MAP_WEB_MOBILE_BREAKPOINT_PX}px){.ssg-map-layout,.ssg-map-canvas{min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_DESKTOP_VIEWPORT_RESERVE_PX}px)}.ssg-map-canvas{flex:0 0 calc(100% - ${MAP_WEB_DESKTOP_SIDEBAR_WIDTH_PX}px);min-width:0}.ssg-map-sidebar-shell{display:flex;flex-direction:column}}
 .ssg-map-sidebar-head{padding:16px 16px 12px;border-bottom:1px solid ${COLORS.light.border}}
 .ssg-map-panel-kicker{margin:0 0 8px;font:600 12px/1.35 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted};text-transform:uppercase;letter-spacing:.08em}
 .ssg-map-panel-title{margin:0 0 8px;font:700 28px/1.15 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-.03em}

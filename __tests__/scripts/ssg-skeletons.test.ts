@@ -291,6 +291,9 @@ describe('ssg-skeletons', () => {
       expect(css).toContain(
         `@media(min-width:${MAP_WEB_MOBILE_BREAKPOINT_PX}px){.ssg-map-layout,.ssg-map-canvas{min-height:calc(var(--metravel-map-vh, 100svh) - ${WEB_HEADER_RESERVED_HEIGHT}px)}`,
       );
+      expect(css).toContain(
+        '.ssg-map-canvas{flex:0 0 calc(100% - 340px);min-width:0}.ssg-map-sidebar-shell{display:flex',
+      );
     });
   });
 
