@@ -37,6 +37,7 @@ export type WebOnlyViewStyle = {
   backdropFilter?: React.CSSProperties['backdropFilter']
   boxShadow?: React.CSSProperties['boxShadow']
   cursor?: React.CSSProperties['cursor']
+  minHeight?: React.CSSProperties['minHeight']
   outlineColor?: React.CSSProperties['outlineColor']
   outlineStyle?: React.CSSProperties['outlineStyle']
   outlineWidth?: React.CSSProperties['outlineWidth']

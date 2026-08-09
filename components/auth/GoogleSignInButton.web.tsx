@@ -43,6 +43,7 @@ declare global {
 }
 
 const GOOGLE_GSI_SCRIPT_ID = 'google-gsi-client-script';
+const GOOGLE_GSI_BUTTON_HEIGHT = 44;
 const LOOPBACK_WEB_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 export function getGoogleAvailability(hasClientId: boolean, hydrationReady: boolean) {
@@ -231,9 +232,14 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
                 ref={buttonContainerRef}
                 style={{
                     width: '100%',
-                    minHeight: 44,
+                    // GSI may resize its host from 44px to 80px after the iframe
+                    // settles; keep the social-auth stack geometry stable (#1299).
+                    height: GOOGLE_GSI_BUTTON_HEIGHT,
+                    maxHeight: GOOGLE_GSI_BUTTON_HEIGHT,
                     display: isGoogleLoaded && !shouldShowFallback ? 'flex' : 'none',
+                    alignItems: 'center',
                     justifyContent: 'center',
+                    overflowY: 'hidden',
                     pointerEvents: disabled ? 'none' : 'auto',
                     opacity: disabled ? 0.6 : 1,
                     // GSI-iframe светлый: при color-scheme:dark на html Chrome рисует

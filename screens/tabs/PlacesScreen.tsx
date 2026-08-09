@@ -19,6 +19,7 @@ import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { stringifyJsonLd } from '@/utils/jsonLd'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, getSiteBaseUrl } from '@/utils/seo'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
+import { webDataSetProps } from '@/utils/webProps'
 import ContributionBanner from '@/components/common/ContributionBanner'
 
 import {
@@ -112,6 +113,7 @@ export default function PlacesScreen() {
           accessibilityRole="button"
           accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7')}
           accessibilityState={{ expanded: sortMenuVisible }}
+          testID="places-sort-select"
           style={({ pressed }) => [
             styles.sortSelect,
             anchorStyleActive && styles.sortSelectActive,
@@ -276,7 +278,7 @@ export default function PlacesScreen() {
     )
   } else {
     resultsContent = (
-      <View style={styles.cardsGrid}>
+      <View style={styles.cardsGrid} testID="places-cards-grid">
         {visiblePlaces.map((place, index) => (
           <PlaceCard
             key={place.id}
@@ -298,7 +300,9 @@ export default function PlacesScreen() {
         <View style={styles.topBar} onLayout={handleTopBarLayout} testID="places-topbar">
           <View style={styles.topBarMeta}>
             <View style={styles.heroTitleRow}>
-              <Feather name="map-pin" size={18} color={colors.primary} />
+              <View style={styles.iconSlot18Bare}>
+                <Feather name="map-pin" size={18} color={colors.primary} />
+              </View>
               <Text style={styles.heroTitle}>{i18nT('map:screens.tabs.PlacesScreen.mesta_eff0ba98')}</Text>
               {showLoadedCounts ? (
                 <Text style={styles.heroCount}>· {catalogTotal} {i18nT('map:screens.tabs.PlacesScreen.v_kataloge_af576304')}</Text>
@@ -355,7 +359,9 @@ export default function PlacesScreen() {
                     facetsQuery.isLoading && styles.countrySelectDisabled,
                   ]}
                 >
-                  <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
+                  <View style={styles.iconSlot16}>
+                    <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
+                  </View>
                   <View style={styles.countrySelectTextBlock}>
                     <Text style={styles.countrySelectLabel}>{i18nT('map:screens.tabs.PlacesScreen.strana_f749c62d')}</Text>
                     <Text style={styles.countrySelectValue} numberOfLines={1}>
@@ -363,7 +369,9 @@ export default function PlacesScreen() {
                       {showLoadedCounts && !selectedCountry ? ` (${catalogTotal})` : ''}
                     </Text>
                   </View>
-                  <Feather name="chevron-down" size={16} color={colors.textMuted} />
+                  <View style={styles.iconSlot16}>
+                    <Feather name="chevron-down" size={16} color={colors.textMuted} />
+                  </View>
                 </Pressable>
               }
             >
@@ -400,12 +408,19 @@ export default function PlacesScreen() {
         )}
 
         {/* ─── Main layout ─── */}
-        <View style={styles.layout}>
+        <View
+          style={styles.layout}
+          testID="places-layout"
+          {...(Platform.OS === 'web' && !hasMeasuredWidth
+            ? webDataSetProps({ placesPrehydration: 'true' })
+            : {})}
+        >
           {/* Sidebar / collapsible filter. On mobile (compact) the search + category
               toggle live in the sticky compact bar above the scroll area, so the
               category list only expands here when the user opens the filter. */}
           {(!isCompact || filtersOpen) ? (
             <View
+              testID="places-sidebar"
               style={[
                 styles.sidebar,
                 Platform.OS === 'web' && !isCompact && topBarHeight > 0
@@ -422,12 +437,13 @@ export default function PlacesScreen() {
                 ) : null}
               </View>
               <View style={styles.categorySearchBox}>
-                <Feather
-                  name="search"
-                  size={15}
-                  color={colors.textMuted}
-                  style={styles.categorySearchIcon}
-                />
+                <View style={styles.categorySearchIconSlot}>
+                  <Feather
+                    name="search"
+                    size={15}
+                    color={colors.textMuted}
+                  />
+                </View>
                 <TextInput
                   value={categoryQuery}
                   onChangeText={setCategoryQuery}
@@ -557,10 +573,12 @@ export default function PlacesScreen() {
           ) : null}
 
           {/* Results */}
-          <View style={styles.main}>
+          <View style={styles.main} testID="places-main">
             <View style={styles.resultsHeader}>
               <View style={styles.resultsTitleBlock}>
-                <Text style={styles.resultsTitle} numberOfLines={2}>{activeCategoryTitle}</Text>
+                <Text style={styles.resultsTitle} numberOfLines={2} testID="places-results-title">
+                  {activeCategoryTitle}
+                </Text>
                 <Text style={styles.resultsMeta}>
                   {isInitialLoading
                     ? i18nT('map:screens.tabs.PlacesScreen.zagruzhaem_podborku_b98517c7')

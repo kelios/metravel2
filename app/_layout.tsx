@@ -205,7 +205,10 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     const showFooter = useMemo(
       () => {
         const p = effectivePathname || "";
-        if (p === "/login") return false;
+        // Auth entrypoints own the full screen. Mounting the mobile dock after
+        // hydration also inserts its 56px gutter and moves the centered form by
+        // half that height on the first interaction (#1299).
+        if (p === "/login" || p === "/registration" || p === "/register") return false;
         if (p === "/messages") return false;
         // On the travel create/edit wizard (/travel/new and /travel/<id>) we render our
         // own bottom actions footer; the global mobile dock would overlap the form fields

@@ -4,12 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import { queryKeys } from '@/api/queryKeys'
-import { useUpdateTripTransport } from '@/hooks/usePlannedTripsApi'
+import { usePlannedTrip, useUpdateTripTransport } from '@/hooks/usePlannedTripsApi'
+import { useAuthStore } from '@/stores/authStore'
 
 const mockUpdatePlannedTripTransport = jest.fn()
+const mockFetchPlannedTrip = jest.fn()
 
 jest.mock('@/api/plannedTrips', () => ({
   ...jest.requireActual('@/api/plannedTrips'),
+  fetchPlannedTrip: (...args: unknown[]) => mockFetchPlannedTrip(...args),
   updatePlannedTripTransport: (...args: unknown[]) => mockUpdatePlannedTripTransport(...args),
 }))
 
@@ -51,9 +54,51 @@ const makeTrip = (): PlannedTrip => ({
   createdAt: '2026-08-08T08:00:00Z',
 })
 
-describe('useUpdateTripTransport', () => {
+describe('planned trip hooks', () => {
   beforeEach(() => {
+    mockFetchPlannedTrip.mockReset()
     mockUpdatePlannedTripTransport.mockReset()
+    useAuthStore.setState({
+      authReady: true,
+      isAuthenticated: false,
+      userId: null,
+    })
+  })
+
+  it('re-derives ownership when auth identity changes without refetching a fresh cached trip', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } },
+    })
+    queryClient.setQueryData(queryKeys.plannedTrip(42), {
+      ...makeTrip(),
+      isOwner: false,
+    })
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
+    const { result } = renderHook(() => usePlannedTrip(42), { wrapper })
+
+    expect(result.current.data?.isOwner).toBe(false)
+    expect(mockFetchPlannedTrip).not.toHaveBeenCalled()
+
+    act(() => {
+      useAuthStore.setState({
+        authReady: true,
+        isAuthenticated: true,
+        userId: '7',
+      })
+    })
+
+    await waitFor(() => expect(result.current.data?.isOwner).toBe(true))
+    expect(mockFetchPlannedTrip).not.toHaveBeenCalled()
+
+    act(() => {
+      useAuthStore.setState({ userId: '8' })
+    })
+
+    await waitFor(() => expect(result.current.data?.isOwner).toBe(false))
+    expect(mockFetchPlannedTrip).not.toHaveBeenCalled()
   })
 
   it('writes the complete response to detail cache and invalidates all transport consumers', async () => {

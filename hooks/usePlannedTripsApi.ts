@@ -3,6 +3,7 @@
 // только React Query. Мутации оптимистично/инвалидируют связанные кэши.
 // До готовности BE работает на мок-фолбэке из api/plannedTrips.ts.
 
+import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import {
@@ -88,12 +89,29 @@ export function usePlannedTrip(tripId: string | number | null | undefined) {
   // и запрос до authReady кэширует isOwner=false — владелец теряет кнопки
   // «Редактировать»/«Удалить» до ручного обновления страницы.
   const authReady = useAuthStore((s) => s.authReady);
+  const userId = useAuthStore((s) => s.userId);
+  // `isOwner` is viewer-specific and must not be trusted from a shared
+  // React Query payload: a guest/cross-account cache can otherwise hide owner
+  // controls for the whole stale window on a cold direct load. Keep the shared
+  // trip key so existing mutation cache writes stay atomic, but derive the
+  // permission bit from the current auth identity on every identity change.
+  const selectForCurrentUser = useCallback(
+    (trip: PlannedTrip): PlannedTrip => {
+      const numericUserId = userId == null ? null : Number(userId);
+      const isOwner = numericUserId != null
+        && Number.isFinite(numericUserId)
+        && trip.organizer.id === numericUserId;
+      return trip.isOwner === isOwner ? trip : { ...trip, isOwner };
+    },
+    [userId],
+  );
   return useQuery<PlannedTrip>({
     queryKey: queryKeys.plannedTrip(tripId),
     queryFn: () => fetchPlannedTrip(tripId as string | number),
     enabled: authReady && tripId != null && tripId !== '',
     staleTime: STALE_TIME,
     retry,
+    select: selectForCurrentUser,
   });
 }
 

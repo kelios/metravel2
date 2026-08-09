@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 
 import { createQueryWrapper } from '../helpers/testQueryClient'
 import PlacesScreen from '@/screens/tabs/PlacesScreen'
@@ -69,6 +69,14 @@ describe('PlacesScreen pre-hydration chrome', () => {
 
     expect(getByTestId('places-compact-bar')).toBeTruthy()
     expect(getByTestId('places-topbar')).toBeTruthy()
+    expect(getByTestId('places-sidebar')).toBeTruthy()
+    expect(getByTestId('places-main')).toBeTruthy()
+    expect(getByTestId('places-cards-grid')).toBeTruthy()
+    const layout = getByTestId('places-layout')
+    expect(layout.props.dataSet).toMatchObject({ placesPrehydration: 'true' })
+    expect(StyleSheet.flatten(layout.props.style)).toMatchObject({
+      minHeight: 'calc(100vh - 168px)',
+    })
   })
 
   it('keeps only the compact bar once a phone width is measured', () => {
@@ -77,6 +85,12 @@ describe('PlacesScreen pre-hydration chrome', () => {
 
     expect(getByTestId('places-compact-bar')).toBeTruthy()
     expect(queryByTestId('places-topbar')).toBeNull()
+    expect(queryByTestId('places-sidebar')).toBeNull()
+    const layout = getByTestId('places-layout')
+    expect(layout.props.dataSet).toBeUndefined()
+    expect(StyleSheet.flatten(layout.props.style)).toMatchObject({
+      minHeight: 'calc(100vh - 179px)',
+    })
   })
 
   it('keeps only the desktop top bar once a wide width is measured', () => {

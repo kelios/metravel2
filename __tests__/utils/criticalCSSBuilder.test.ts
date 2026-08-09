@@ -91,6 +91,9 @@ describe('buildCriticalCSS: до-гидрационная раскладка ш�
 // появлялась после гидратации и опускала каталог на 115 px (CLS 0,537).
 describe('buildCriticalCSS: до-гидрационная раскладка /places', () => {
   const css = buildCriticalCSS()
+  const mobileBlockStart = css.indexOf('@media (max-width:759.98px){')
+  const mobileBlockTail = css.slice(mobileBlockStart)
+  const mobileBlock = mobileBlockTail.slice(0, mobileBlockTail.indexOf('\n}') + 2)
 
   it.each([
     ['@media (max-width:759.98px){', '[data-testid="places-topbar"]{display:none !important}'],
@@ -108,5 +111,30 @@ describe('buildCriticalCSS: до-гидрационная раскладка /pl
   it('держит порог 760 px в обеих ветках', () => {
     expect(css).toContain('@media (max-width:759.98px){')
     expect(css).toContain('@media (min-width:760px){')
+  })
+
+  it.each([
+    ['[data-testid="places-layout"][data-places-prehydration="true"]', 'min-height:calc(100vh - 179px)'],
+    ['[data-places-prehydration="true"] [data-testid="places-sidebar"]', 'display:none'],
+    ['[data-places-prehydration="true"] [data-testid="places-main"]', 'padding:12px 24px 32px'],
+    ['[data-places-prehydration="true"] [data-testid="places-results-title"]', 'font-size:17px'],
+    ['[data-places-prehydration="true"] [data-testid="places-sort-select"]', 'min-height:44px'],
+    ['[data-places-prehydration="true"] [data-testid="places-cards-grid"]', 'flex-direction:column'],
+    ['[data-places-prehydration="true"] [data-testid^="places-skeleton-card-"]', 'flex-basis:auto'],
+  ])('фиксирует mobile first-paint геометрию %s (%s)', (selector, declaration) => {
+    const rule = mobileBlock
+      .split('\n')
+      .find((line) => line.trim().startsWith(selector))
+
+    expect(rule).toBeDefined()
+    expect(rule).toContain(declaration)
+    expect(rule).toContain('!important')
+  })
+
+  it('не оставляет sidebar скрытым после гидратации', () => {
+    expect(mobileBlock).not.toContain('\n  [data-testid="places-sidebar"]{display:none')
+    expect(mobileBlock).toContain(
+      '[data-places-prehydration="true"] [data-testid="places-sidebar"]{display:none !important}',
+    )
   })
 })

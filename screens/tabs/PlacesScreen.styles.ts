@@ -2,7 +2,7 @@ import { Platform, StyleSheet } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
-import { webStyle } from '@/utils/webProps'
+import { webStyle, webViewStyle } from '@/utils/webProps'
 
 export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean) => {
   // Compact "app" layout applies to every mobile width (web + native) so /places
@@ -68,7 +68,11 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   },
   topBarMeta: {
     minWidth: 0,
-    flexShrink: 0,
+    // Reserve the final async-count width so search/country controls keep the
+    // same x-position while the catalog total arrives. At narrow desktop
+    // widths the slot may still shrink to keep both controls on screen.
+    width: 210,
+    flexShrink: 1,
     gap: 2,
   },
   heroTitleRow: {
@@ -259,9 +263,6 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
       transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
     } as any) : null),
   },
-  categorySearchIcon: {
-    marginRight: DESIGN_TOKENS.spacing.xs,
-  },
   categorySearchInput: {
     flex: 1,
     minWidth: 0,
@@ -381,6 +382,12 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     alignItems: 'flex-start',
     gap: 0,
     marginTop: mobileCompact ? 0 : DESIGN_TOKENS.spacing.md,
+    // Keep the contribution banner below the viewport while the catalog swaps
+    // its SSR/loading shell for real cards. It used to enter at y=621 mobile /
+    // y=738 desktop and leave one frame later, contributing 0.25/0.18 CLS.
+    ...(Platform.OS === 'web'
+      ? webViewStyle({ minHeight: `calc(100vh - ${mobileCompact ? 179 : 168}px)` })
+      : null),
   },
 
   // ─── Native compact sticky bar ───
@@ -520,6 +527,21 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     justifyContent: 'center' as const,
     flexShrink: 0,
     marginRight: DESIGN_TOKENS.spacing.sm,
+  },
+  iconSlot18Bare: {
+    width: 18,
+    height: 18,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    flexShrink: 0,
+  },
+  categorySearchIconSlot: {
+    width: 15,
+    height: 15,
+    marginRight: DESIGN_TOKENS.spacing.xs,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    flexShrink: 0,
   },
   compactResetBtn: {
     width: 46,

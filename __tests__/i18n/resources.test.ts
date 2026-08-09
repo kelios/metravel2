@@ -183,6 +183,50 @@ describe('i18n resources', () => {
     expect(fixedUk('travel:common.characterNoun', { count: 2 })).toBe('символи')
   })
 
+  it.each([
+    [
+      'ru',
+      ['1 участник', '2 участника', '5 участников'],
+      ['1 едет', '2 едут', '5 едут'],
+    ],
+    [
+      'be',
+      ['1 удзельнік', '2 удзельнікі', '5 удзельнікаў'],
+      ['1 едзе', '2 едуць', '5 едуць'],
+    ],
+    [
+      'uk',
+      ['1 учасник', '2 учасники', '5 учасників'],
+      ['1 їде', '2 їдуть', '5 їдуть'],
+    ],
+    [
+      'pl',
+      ['1 uczestnik', '2 uczestników', '5 uczestników'],
+      ['1 jedzie', '2 jadą', '5 jedzie'],
+    ],
+    [
+      'en',
+      ['1 participant', '2 participants', '5 participants'],
+      ['1 is going', '2 are going', '5 are going'],
+    ],
+  ] as const)(
+    'keeps planned-trip participant plurals correct in %s',
+    (locale, expectedParticipants, expectedGoing) => {
+      const fixedTranslate = getFixedTranslator(locale)
+
+      expect(
+        [1, 2, 5].map((count) =>
+          fixedTranslate('tripsStatic:plan.participants.count', { count }),
+        ),
+      ).toEqual(expectedParticipants)
+      expect(
+        [1, 2, 5].map((count) =>
+          fixedTranslate('tripsStatic:plan.participants.going', { count }),
+        ),
+      ).toEqual(expectedGoing)
+    },
+  )
+
   // #1335: на устройстве Android печаталось «4 участников» вместо «4 участника» —
   // у Hermes может не быть `Intl.PluralRules`, и i18next выбирал форму `other`.
   // Форму выбирает `selectPluralCategory`, поэтому проверяем без Intl вообще.

@@ -515,6 +515,32 @@ guard, падающий в CI на попытке обойти этот конт
   shell task; create-linked only when the owning layout primitive differs.
 - **Последняя проверка:** recurring family, no single canonical structural task.
 
+### NATIVE-TEXT-ROW-001 — dynamic Text must have an explicit row sizing contract
+
+- **Инвариант:** translated/user-generated `Text` рядом с другими children в
+  React Native `flexDirection: 'row'` либо получает явный sizing contract
+  (`flex`/`flexShrink`/bounded wrapper), либо использует осознанный product
+  ellipsis; Android Yoga intrinsic width не имеет права молча обрезать текст.
+- **Surface/owner:** shared React Native UI + Android governance; mobile web —
+  обязательный parity control.
+- **Цепочка:** `#672`, `#854`, `#1022`, `#1046`, `#1065`, `#1078`, свежий
+  рецидив `#1342`; structural control — `#1344`.
+- **Подтверждённая systemic cause:** каждый экран локально добавляет
+  `flex`/`flexShrink` только после device finding. Web flex layout часто
+  переносит ту же строку корректно и маскирует platform-specific Android/Yoga
+  measurement; общего static/governance check для row + dynamic Text нет.
+- **Controls:** до реализации `#1344` — локальные style regression tests и
+  парная Pixel/mobile-web проверка. Permanent control: governance guard с
+  positive/negative fixtures, который ловит исторический unsafe pattern
+  `#1342`, принимает bounded/intentional-ellipsis cases и не допускает
+  vacuous empty scan.
+- **Решение для новой жалобы:** конкретный runtime symptom без открытого owner —
+  `create-linked` к `#1344`; новый точечный ticket не заменяет structural guard.
+  Если guard после закрытия `#1344` пропустит тот же pattern — `reopen #1344`.
+- **Последняя проверка:** 2026-08-09; Pixel 10 Pro (`fontScale=1.15`) подтвердил
+  фикс `#1342`, board/repository audit подтвердил шестой рецидив и отсутствие
+  общего guard; `#1344` создан в `todo`.
+
 ### MAP-ROUTING-001 — incomplete routing migration
 
 - **Инвариант:** один canonical adapter владеет provider selection, DTO

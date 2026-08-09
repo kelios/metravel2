@@ -101,6 +101,17 @@ export function buildCriticalCSS(): string {
     // иначе правило проигрывает атомарным классам RNW (та же грабля, что #1298).
     '@media (max-width:759.98px){',
     '  [data-testid="places-topbar"]{display:none !important}',
+    // The width-0 static snapshot still owns desktop RNW classes. Bring every
+    // above-fold box to the compact geometry before first paint. Scope these
+    // overrides to that snapshot: after hydration the compact sidebar is an
+    // interactive disclosure and must be allowed to open with runtime styles.
+    '  [data-testid="places-layout"][data-places-prehydration="true"]{flex-direction:column !important;margin-top:0 !important;min-height:calc(100vh - 179px) !important}',
+    '  [data-places-prehydration="true"] [data-testid="places-sidebar"]{display:none !important}',
+    '  [data-places-prehydration="true"] [data-testid="places-main"]{flex:0 1 auto !important;width:100% !important;gap:16px !important;padding:12px 24px 32px !important}',
+    '  [data-places-prehydration="true"] [data-testid="places-results-title"]{font-size:17px !important;line-height:22px !important;letter-spacing:-0.2px !important;font-weight:700 !important}',
+    '  [data-places-prehydration="true"] [data-testid="places-sort-select"]{min-height:44px !important;padding-left:12px !important;padding-right:12px !important}',
+    '  [data-places-prehydration="true"] [data-testid="places-cards-grid"]{flex-direction:column !important;flex-wrap:nowrap !important;gap:16px !important}',
+    '  [data-places-prehydration="true"] [data-testid^="places-skeleton-card-"],[data-places-prehydration="true"] [data-testid^="places-card-slot-"]{width:100% !important;flex-grow:0 !important;flex-shrink:0 !important;flex-basis:auto !important;min-width:0 !important;max-width:none !important}',
     '}',
     '@media (min-width:760px){',
     '  [data-testid="places-compact-bar"]{display:none !important}',

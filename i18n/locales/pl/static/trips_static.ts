@@ -57,7 +57,7 @@ export const tripsStaticResources = {
   "plan.card.inList": "{{people}} na liście",
   "plan.participants.count": "{{count}} uczestników",
   "plan.participants.count_one": "{{count}} uczestnik",
-  "plan.participants.count_few": "{{count}} uczestnicy",
+  "plan.participants.count_few": "{{count}} uczestników",
   "plan.participants.count_many": "{{count}} uczestników",
   "plan.participants.count_other": "{{count}} uczestników",
   "plan.participants.going": "{{count}} jedzie",

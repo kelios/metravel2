@@ -255,7 +255,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   // style down to the card would land it one level too deep and collapse every
   // card to a full-width single column. The card fills this wrapper instead.
   return (
-    <View style={[styles.card, containerStyle]}>
+    <View style={[styles.card, containerStyle]} testID={`places-card-slot-${place.id}`}>
       <PlaceListCard
         title={cardTitle}
         imageUrl={imageUrl}
@@ -345,9 +345,13 @@ export function SkeletonGrid({
 }) {
   const count = isCompact ? 4 : isWide ? 6 : 4
   return (
-    <View style={styles.cardsGrid}>
+    <View style={styles.cardsGrid} testID="places-cards-grid">
       {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={[styles.card, styles.cardInner, styles.skeletonCard]}>
+        <View
+          key={i}
+          style={[styles.card, styles.cardInner, styles.skeletonCard]}
+          testID={`places-skeleton-card-${i}`}
+        >
           <View style={styles.skeletonImage} />
           <View style={styles.skeletonBody}>
             <View style={[styles.skeletonLine, { width: '45%', height: 20 }]} />

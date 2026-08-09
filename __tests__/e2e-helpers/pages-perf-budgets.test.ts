@@ -57,6 +57,45 @@ describe('budget table rules', () => {
     }
   })
 
+  // #1298 is intentionally stricter than the generic healthy-CWV ceiling.
+  // Without this assertion, changing Search from 0.01 to 0.1 would keep both
+  // the table-governance test and the browser budget green.
+  it.each(PERF_PROFILES)('pins SEARCH/%s to the strict #1298 CLS contract', (profile) => {
+    const budget = resolveBudget('SEARCH', profile)
+
+    expect(budget.clsMax).toBe(0.01)
+    expect(budget.debt).toBeUndefined()
+    expect(budget.allowedForbiddenSources).toBeUndefined()
+  })
+
+  // The browser loop iterates FORBIDDEN_SHIFT_SOURCES itself. Pin the complete
+  // policy so deleting a node OR weakening its marker/selector cannot make the
+  // positive/source controls pass vacuously.
+  it('keeps every #1298 header node in the forbidden-source policy', () => {
+    expect(FORBIDDEN_SHIFT_SOURCES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'header-logo',
+          marker: 'data-header-logo-wordmark',
+          selector: '[data-header-logo-wordmark]',
+          presentOn: ['desktop'],
+        }),
+        expect.objectContaining({
+          id: 'header-logo-image',
+          marker: 'data-header-logo-image',
+          selector: '[data-header-logo-image]',
+          presentOn: ['desktop', 'mobile'],
+        }),
+        expect.objectContaining({
+          id: 'header-language-switcher',
+          marker: 'testid=header-language-switcher',
+          selector: '[data-testid="header-language-switcher"]',
+          presentOn: ['desktop', 'mobile'],
+        }),
+      ]),
+    )
+  })
+
   it('throws on a missing route or profile instead of falling back', () => {
     expect(() => resolveBudget('NOT_A_ROUTE', 'desktop')).toThrow(BudgetConfigurationError)
     expect(() => resolveBudget('HOME', 'tablet' as never)).toThrow(BudgetConfigurationError)

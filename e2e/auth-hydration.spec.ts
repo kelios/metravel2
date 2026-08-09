@@ -58,10 +58,16 @@ function expectStableBox(
   expect(after, `${label} must remain rendered after interaction`).not.toBeNull();
   if (!after) return;
 
-  expect(after.x, `${label} x`).toBeCloseTo(before.x, 1);
-  expect(after.y, `${label} y`).toBeCloseTo(before.y, 1);
-  expect(after.width, `${label} width`).toBeCloseTo(before.width, 1);
-  expect(after.height, `${label} height`).toBeCloseTo(before.height, 1);
+  const expectWithinOnePixel = (actual: number, expected: number, axis: string) => {
+    expect(
+      Math.abs(actual - expected),
+      `${label} ${axis} differs by more than 1px`,
+    ).toBeLessThanOrEqual(1);
+  };
+  expectWithinOnePixel(after.x, before.x, 'x');
+  expectWithinOnePixel(after.y, before.y, 'y');
+  expectWithinOnePixel(after.width, before.width, 'width');
+  expectWithinOnePixel(after.height, before.height, 'height');
 }
 
 async function verifyAuthHydrationAtViewport(
@@ -101,14 +107,19 @@ async function verifyAuthHydrationAtViewport(
       await expect(facebookButton).toBeVisible();
       facebookBox = await facebookButton.boundingBox();
       expect(facebookBox, `${route} Facebook button box at ${viewport.width}px`).not.toBeNull();
+      if (!facebookBox) continue;
       expect(
-        facebookBox?.height,
+        facebookBox.height,
         `${route} Facebook button height at ${viewport.width}px`,
       ).toBeGreaterThanOrEqual(48);
       expect(
-        facebookBox?.width,
+        facebookBox.width,
         `${route} Facebook button width at ${viewport.width}px`,
       ).toBeLessThanOrEqual(viewport.width);
+      expect(
+        Math.abs(facebookBox.width - googleBox.width),
+        `${route} social buttons differ by at most 1px at ${viewport.width}px`,
+      ).toBeLessThanOrEqual(1);
     } else {
       await expect(facebookButton).toHaveCount(0);
     }
@@ -122,6 +133,7 @@ async function verifyAuthHydrationAtViewport(
 
     await page.locator('input').first().focus();
     await nextPaint(page);
+    await page.waitForTimeout(250);
     const viewportLabel = `${route} at ${viewport.width}px`;
     expectStableBox(googleBox, await googleButton.boundingBox(), `${viewportLabel} Google button`);
     if (FACEBOOK_LOGIN_ENABLED && facebookBox) {
