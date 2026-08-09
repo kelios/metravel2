@@ -168,6 +168,37 @@
 - Никогда не выводи секреты из `.env.e2e` в ответах, логах, скриншотах и коммитах.
 - Если task-board API/MCP отвечает `HTTP 401`, обнови staff token через программный login из `.env.e2e` по `docs/TASK_BOARD_MCP.md`, перезапиши `.secrets/metravel-task-board.env` без вывода токена и повтори `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`.
 
+### 3.1.1 Тестовые данные на production
+
+- Разрешение выдано владельцем ПОСТОЯННО (2026-08-09): под e2e-аккаунтами можно
+  **создавать на проде тестовые сущности, проверять на них и удалять** —
+  переспрашивать не нужно. Это относится к данным пользователя (поездки, точки
+  маршрута, RSVP, приглашения), а не к контенту сайта: чужие статьи, квесты,
+  travel-записи и настройки по-прежнему не трогать.
+- Постоянная тестовая поездка владельца: `https://metravel.by/trips/plan/31`
+  (публичная, владелец `E2E_EMAIL2`). Её можно наполнять данными для проверки.
+- Убирай за собой: временную сущность, созданную под конкретную проверку, удаляй
+  сразу после снятия evidence, а факт удаления фиксируй кодом ответа.
+- Готовые рецепты для прод-QA (проверены 2026-08-09, экономят полчаса на сессию):
+  - **Авторизация на web — только cookie.** `secure_userToken` на web не
+    используется (`utils/secureStorage.ts`: «web uses the backend-managed HttpOnly
+    cookie»). В Playwright: `context.request.post('/api/user/login/')` с
+    `X-CSRFToken` из cookie `csrftoken` ставит сессию, после чего приложению нужно
+    отдать профиль через `localStorage`: `userId`, `userName`, `isSuperuser`
+    (`checkAuthentication` без `userId` считает пользователя гостем).
+  - Создание поездки — `POST /api/trips/planned/`; маршрут — `PUT
+    /api/trips/planned/{id}/route/` с `point_type` из `place|custom|rest|overnight`
+    (значения `stop` не существует, ответ 400).
+  - Участники: сначала `POST /api/trips/planned/{id}/invite/ {"user_ids":[...]}`,
+    только потом приглашённый делает `POST .../rsvp/` со **значением бэка**
+    `accepted|declined` (FE-словарь `going` бэк не принимает). Без инвайта RSVP
+    отвечает 400 `planned trip not found or not visible`.
+  - Удаление поездки — `DELETE /api/trips/{id}/` (не `/trips/planned/{id}/`: там 405).
+  - На странице висит баннер согласия и перехватывает клики — жать «Отклонить»
+    (самый приватный вариант), а не «Принять».
+  - На мобильной ширине табы поездки — только иконки: искать по `aria-label`
+    («Люди», «Экспорт»), поиск по тексту там ничего не найдёт.
+
 ### 3.2 Android device testing and builds
 
 - Android EAS/cloud builds and submits are disabled by project policy: do not run
