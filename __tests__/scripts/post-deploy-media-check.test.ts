@@ -3,6 +3,7 @@ const {
   MASTER_DERIVATIVE_BY_FAMILY,
   legacyKeyExtension,
   auditArticleBodyLadder,
+  auditDerivativeCoverage,
   collectArticleBodyMediaUrls,
   collectArticleBodyRungs,
   extractTargetsFromPayloads,
@@ -676,5 +677,98 @@ describe('post-deploy media check: лестницы media.article_body (#1261)',
       expect(results).toEqual(items.map((item) => item * 2))
       expect(peak).toBeLessThanOrEqual(3)
     })
+  })
+})
+
+/**
+ * Режим раздачи (#1201/#1168).
+ *
+ * Проверка появилась после того, как `article_body` шесть дней провисел на
+ * динамике незамеченным: покрытие упало с 100 % до 84,3 %, потому что миграция
+ * тел статей и чистка base64 перезалили тысячи кадров уже после прогона #1180.
+ * Ответы при этом оставались 200 — поймать откат мог только контракт.
+ */
+describe('auditDerivativeCoverage', () => {
+  const familyMode = (over: Record<string, unknown> = {}) => ({
+    requested_mode: 'durable_s3_derivatives',
+    active_mode: 'durable_s3_derivatives',
+    coverage: { masters: 100, complete_masters: 100, coverage_percent: 100, complete: true },
+    ...over,
+  })
+
+  const contractWith = (families: Record<string, unknown>) => ({
+    route_behavior: { model_owned: { family_modes: families } },
+  })
+
+  it('откат на динамику при запрошенном durable — ошибка', () => {
+    const { issues } = auditDerivativeCoverage(
+      contractWith({
+        article_body: familyMode({
+          active_mode: 'dynamic_transform',
+          coverage: {
+            masters: 6650,
+            complete_masters: 5607,
+            coverage_percent: 84.315789,
+            complete: false,
+          },
+        }),
+      }),
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].severity).toBe('error')
+    expect(issues[0].code).toBe('coverage.mode_regressed')
+    expect(issues[0].message).toContain('84.3')
+    expect(issues[0].message).toContain('5607 из 6650')
+  })
+
+  it('покрытое семейство ошибок не даёт', () => {
+    const { families, issues } = auditDerivativeCoverage(contractWith({ travel: familyMode() }))
+    expect(issues).toEqual([])
+    expect(families[0]).toMatchObject({ family: 'travel', complete: true, coveragePercent: 100 })
+  })
+
+  it('durable-режим при неполном покрытии — предупреждение, а не ошибка', () => {
+    const { issues } = auditDerivativeCoverage(
+      contractWith({
+        travel: familyMode({
+          coverage: { masters: 10, complete_masters: 9, coverage_percent: 90, complete: false },
+        }),
+      }),
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].severity).toBe('warning')
+    expect(issues[0].code).toBe('coverage.incomplete')
+  })
+
+  it('семейство без мастеров пропускается: покрывать нечего', () => {
+    const { families, issues } = auditDerivativeCoverage(
+      contractWith({
+        badge: familyMode({ active_mode: 'dynamic_transform', coverage: { masters: 0 } }),
+      }),
+    )
+    expect(issues).toEqual([])
+    expect(families).toEqual([])
+  })
+
+  it('недоступный контракт — ошибка, а не молчаливый зелёный', () => {
+    for (const broken of [null, undefined, {}, { route_behavior: null }]) {
+      const { issues } = auditDerivativeCoverage(broken as never)
+      expect(issues.map((issue: { code: string }) => issue.code)).toEqual([
+        'coverage.contract_unreadable',
+      ])
+    }
+  })
+
+  it('обходит все классы ключей, а не только model_owned', () => {
+    const { families } = auditDerivativeCoverage({
+      route_behavior: {
+        model_owned: { family_modes: { travel: familyMode() } },
+        legacy_conversion: { family_modes: { travel: familyMode() } },
+      },
+    })
+    expect(families.map((f: { keyClass: string }) => f.keyClass)).toEqual([
+      'model_owned',
+      'legacy_conversion',
+    ])
   })
 })

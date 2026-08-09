@@ -43,25 +43,25 @@ describe('search result virtualization budget', () => {
   // lookahead: если строка станет выше, а запас не подтянут, тест упадёт.
   // Одна полная строка позади — возврат на шаг не роняет уже отрисованную
   // обложку; две впереди — следующая успевает декодировать до входа в кадр.
-  it.each([
+  it.each<[string, boolean, number]>([
     ['desktop', false, WEB_ROW_HEIGHT_DESKTOP],
     ['mobile', true, WEB_ROW_HEIGHT_MOBILE],
   ])('keeps one web row behind and two ahead on %s', (_label, isMobile, rowHeight) => {
-    const { drawDistance } = getRightColumnVirtualizationConfig(true, isMobile as boolean)
+    const { drawDistance } = getRightColumnVirtualizationConfig(true, isMobile)
 
-    expect(drawDistance * BUFFER_BEHIND_RATIO).toBeGreaterThanOrEqual(rowHeight as number)
-    expect(drawDistance * BUFFER_AHEAD_RATIO).toBeGreaterThanOrEqual((rowHeight as number) * 2)
+    expect(drawDistance * BUFFER_BEHIND_RATIO).toBeGreaterThanOrEqual(rowHeight)
+    expect(drawDistance * BUFFER_AHEAD_RATIO).toBeGreaterThanOrEqual(rowHeight * 2)
   })
 
   // Окно обязано остаться ограниченным: запас, сопоставимый со страницей выдачи,
   // смонтировал бы всю страницу разом и утянул байты низкоприоритетных обложек.
-  it.each([
+  it.each<[string, boolean, number]>([
     ['desktop', false, WEB_ROW_HEIGHT_DESKTOP],
     ['mobile', true, WEB_ROW_HEIGHT_MOBILE],
   ])('keeps the %s lookahead bounded to a few rows', (_label, isMobile, rowHeight) => {
-    const { drawDistance } = getRightColumnVirtualizationConfig(true, isMobile as boolean)
+    const { drawDistance } = getRightColumnVirtualizationConfig(true, isMobile)
 
-    expect(drawDistance * BUFFER_AHEAD_RATIO).toBeLessThanOrEqual((rowHeight as number) * 4)
+    expect(drawDistance * BUFFER_AHEAD_RATIO).toBeLessThanOrEqual(rowHeight * 4)
   })
 
   it('prepares a wider window on desktop, where rows are taller', () => {

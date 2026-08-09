@@ -65,6 +65,8 @@ export const tripsStaticResources = {
   "plan.participants.going_few": "{{count}} jadą",
   "plan.participants.going_many": "{{count}} jedzie",
   "plan.participants.going_other": "{{count}} jedzie",
+  "plan.map.expand": "Rozwiń mapę na pełny ekran",
+  "plan.map.collapse": "Zwiń mapę",
   "plan.routingReason.notEnoughPoints": "Dodaj przynajmniej dwa punkty trasy - wtedy zbudujemy drogę.",
   "plan.routingReason.providerUnavailable": "Usługa tworzenia tras jest chwilowo niedostępna – pokazana linia jest przybliżona.",
   "route.approximateWarning": "Wyświetlana trasa jest przybliżona — przed wyruszeniem sprawdź ją lub szlak.",

@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Reproduce the fill-only scroll window in the local production-like `/search` build with the agreed 1280×900 and 390×844 throttled traces, recording visible image readiness, source ownership, requests, downloaded bytes, duplicate URLs, and response failures.
 - [ ] 1.2 Add a focused real-browser regression scenario that drives the actual virtualized search list and fails on any visible fill-only cover, stale/wrong-photo swap, geometry shift, duplicate effective image URL, or exceeded request/byte budget.
-- [ ] 1.3 Preserve and run the recycled-source negative control proving that a cell identity change never exposes the previous travel's decoded cover.
+- [x] 1.3 Preserve and run the recycled-source negative control proving that a cell identity change never exposes the previous travel's decoded cover.
 
 ## 2. Bounded Lookahead Implementation
 
@@ -14,8 +14,8 @@
 ## 3. Automated Verification
 
 - [ ] 3.1 Run the focused virtualization-model tests, recycled-source media test, and new browser regression scenario until all assertions pass without skips.
-- [ ] 3.2 Run `npm run check:image-architecture` and verify one raster and one effective network URL per visible card slot.
-- [ ] 3.3 Run `npm run check:fast`, classify any unrelated pre-existing failures without changing user-owned files, and fix all failures in the task-owned scope.
+- [x] 3.2 Run `npm run check:image-architecture` and verify one raster and one effective network URL per visible card slot.
+- [x] 3.3 Run `npm run check:fast`, classify any unrelated pre-existing failures without changing user-owned files, and fix all failures in the task-owned scope.
 
 ## 4. Active-Platform Validation
 

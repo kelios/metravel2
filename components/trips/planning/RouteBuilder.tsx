@@ -3,7 +3,7 @@
 // (web-safe, без нативных drag-либ), inline-добавление точки, применение шаблонов
 // и живая сводка через estimateRouteSummary. Только владелец может редактировать.
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import { fetchPlacesCatalog } from '@/api/places';
@@ -16,6 +16,11 @@ import { safeLazy } from '@/components/layout/safeLazy';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
 import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap';
+import TripRouteDownloadButtons from '@/components/trips/planning/TripRouteDownloadButtons';
+import {
+  shouldRenderTripRouteExportMenu,
+  useTripRouteExport,
+} from '@/components/trips/planning/tripRouteExport';
 import {
   estimateRouteSummary,
   type PlannedTrip,
@@ -254,6 +259,23 @@ function RouteBuilder({ trip }: Props) {
       : estimateRouteSummary(route, trip.transport)),
     [route, routeMatchesSaved, trip.routeSummary, trip.transport],
   );
+
+  // #1304: скачивание живёт там же, где маршрут строится. Экспортируем то, что
+  // сейчас на карте: несохранённые правки идут без серверной геометрии (её
+  // обнуляет routeMatchesSaved), поэтому файл всегда совпадает с картинкой.
+  const exportTrip = useMemo(
+    () => ({ ...trip, route, routeGeometry, routingState }),
+    [route, routeGeometry, routingState, trip],
+  );
+  const exportController = useTripRouteExport(exportTrip);
+  const routeDownloadSection = shouldRenderTripRouteExportMenu(Platform.OS) ? (
+    <TripRouteDownloadButtons
+      controller={exportController}
+      showDisabledHint
+      showApproximateWarning
+      testID="route-builder-export"
+    />
+  ) : null;
 
   // Названия точек маршрута подписывают старт/пик/финиш на графике.
   const elevationPlaceHints = useMemo(
@@ -610,6 +632,7 @@ function RouteBuilder({ trip }: Props) {
           <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.marshrut_poka_ne_postroen_fbdcf5ed')}</Text>
         )}
         <RouteSummaryBar summary={summary} routingState={routingState} transport={trip.transport} />
+        {routeDownloadSection}
       </View>
     );
   }
@@ -923,6 +946,8 @@ function RouteBuilder({ trip }: Props) {
       ) : null}
 
       <RouteSummaryBar summary={summary} routingState={routingState} transport={trip.transport} />
+
+      {routeDownloadSection}
 
       <Button
         label={i18nT('trips:components.trips.planning.RouteBuilder.sohranit_marshrut_31633565')}

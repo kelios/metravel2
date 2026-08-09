@@ -86,6 +86,20 @@ export function buildCriticalCSS(): string {
     '  [data-header-lang-chevron="true"]{display:none !important}',
     '  [data-testid="header-language-switcher"]{min-width:54px !important;padding-left:8px !important;padding-right:8px !important}',
     '}',
+    // #1334: `/places` есть в статическом HTML, а ширины окна до гидратации нет
+    // (SSR-снимок даёт width=0 -> desktop-раскладка). Раньше компактная панель
+    // поиска появлялась только после гидратации и опускала ScrollView каталога
+    // с y=64 на y=179 — CLS 0,537 в 5 прогонах из 5 на мобильном профиле.
+    // Теперь до измерения ширины `PlacesScreen` рисует обе шапки, а выбор между
+    // ними делает этот блок — до единого кадра React. Порог 760 обязан совпадать
+    // с `isCompact = width < 760` в `PlacesScreen`. `!important` обязателен:
+    // иначе правило проигрывает атомарным классам RNW (та же грабля, что #1298).
+    '@media (max-width:759.98px){',
+    '  [data-testid="places-topbar"]{display:none !important}',
+    '}',
+    '@media (min-width:760px){',
+    '  [data-testid="places-compact-bar"]{display:none !important}',
+    '}',
     '[data-testid="home-hero"]{contain:layout style}',
     '[data-testid="home-trust-block"]{content-visibility:auto;contain-intrinsic-size:auto 220px}',
     '[data-testid="home-how-it-works"]{content-visibility:auto;contain-intrinsic-size:auto 420px}',

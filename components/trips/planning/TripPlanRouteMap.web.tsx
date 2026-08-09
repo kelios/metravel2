@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -37,6 +37,16 @@ interface Props {
 
 const DEFAULT_CENTER: [number, number] = [53.9, 27.5667];
 
+type WebPortal = (node: React.ReactNode, container: Element) => React.ReactNode;
+
+const webCreatePortal: WebPortal | null = (() => {
+  try {
+    return (require('react-dom') as { createPortal?: WebPortal })?.createPortal ?? null;
+  } catch {
+    return null;
+  }
+})();
+
 const lngLatPositions = (coordinates: Array<[number, number]>): Array<[number, number]> =>
   coordinates
     .filter((coords): coords is [number, number] => Array.isArray(coords))
@@ -45,26 +55,36 @@ const lngLatPositions = (coordinates: Array<[number, number]>): Array<[number, n
 const routePositions = (route: RoutePoint[]): Array<[number, number]> =>
   lngLatPositions(route.map((point) => point.coordinates).filter(Boolean) as Array<[number, number]>);
 
+// `fittedTokenRef` живёт в родителе и переживает пересборку карты (#1301: разворот
+// на весь экран переносит карту порталом, то есть MapContainer монтируется заново).
+// Без него подгонка под маршрут срабатывала бы на каждом развороте и отменяла
+// восстановленные центр и зум.
 function FitRouteBounds({
   L,
   positions,
   useMap,
+  fitToken,
+  fittedTokenRef,
 }: {
   L: LeafletNS;
   positions: Array<[number, number]>;
   useMap: ReactLeafletNS['useMap'];
+  fitToken: string;
+  fittedTokenRef: React.MutableRefObject<string | null>;
 }) {
   const map = useMap();
 
   useEffect(() => {
     if (!positions.length) return;
+    if (fittedTokenRef.current === fitToken) return;
+    fittedTokenRef.current = fitToken;
     if (positions.length === 1) {
       map.setView(positions[0], 12);
       return;
     }
     const bounds = L.latLngBounds(positions);
     map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
-  }, [L, map, positions]);
+  }, [L, fitToken, fittedTokenRef, map, positions]);
 
   return null;
 }
@@ -107,6 +127,50 @@ export default function TripPlanRouteMap({
   const mapKeyRef = useRef(`trip-plan-route-map-${reactId.replace(/:/g, '')}`);
   const [L, setL] = useState<LeafletNS | null>(null);
   const [RL, setRL] = useState<ReactLeafletNS | null>(null);
+  // #1301: карту конструктора можно развернуть на весь экран. `position: fixed`
+  // здесь не работает: ScrollView RN-Web ставит себе `transform: matrix(1,0,0,1,0,0)`
+  // и становится containing block — развёрнутая карта получалась 1250x782 в углу
+  // (0,118) вместо вьюпорта. Поэтому разворот — портал в document.body. Портал
+  // пересобирает MapContainer, поэтому центр и зум снимаются перед переключением
+  // и возвращаются новой карте, а подгонку под маршрут держит `fittedTokenRef`.
+  const [fullscreen, setFullscreen] = useState(false);
+  const mapRef = useRef<{ getCenter: () => { lat: number; lng: number }; getZoom: () => number } | null>(null);
+  const restoredViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const fittedTokenRef = useRef<string | null>(null);
+
+  const handleMapRef = useCallback((map: unknown) => {
+    mapRef.current = map as { getCenter: () => { lat: number; lng: number }; getZoom: () => number };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const map = mapRef.current;
+    if (map) {
+      try {
+        const center = map.getCenter();
+        restoredViewRef.current = { center: [center.lat, center.lng], zoom: map.getZoom() };
+      } catch {
+        // Карта ещё не готова — вернёмся к расчётному центру.
+      }
+    }
+    setFullscreen((value) => !value);
+  }, []);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    if (typeof document === 'undefined') return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFullscreen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [fullscreen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,6 +201,14 @@ export default function TripPlanRouteMap({
     routeGeometry?.length ? lngLatPositions(routeGeometry) : markerPositions
   ), [markerPositions, routeGeometry]);
   const center = trackPositions[0] ?? markerPositions[0] ?? DEFAULT_CENTER;
+  // Токен считается по содержимому, а не по ссылке: перезапрос маршрута даёт
+  // новый массив с теми же точками, и подгонка не должна срабатывать заново.
+  // Мемо обязательно: у routed-геометрии тысячи координат, а компонент
+  // перерисовывается на каждый ввод в панели конструктора.
+  const fitToken = useMemo(
+    () => trackPositions.map((position) => position.join(',')).join('|'),
+    [trackPositions],
+  );
   const approximate = isRouteApproximate(routingState);
   const markerIcon = useMemo(() => {
     if (!L) return null;
@@ -181,6 +253,41 @@ export default function TripPlanRouteMap({
     );
   }
 
+  const fullscreenLabel = fullscreen
+    ? i18nT('tripsStatic:plan.map.collapse')
+    : i18nT('tripsStatic:plan.map.expand');
+
+  // Развёрнутая карта уходит порталом в body: внутри ScrollView `position: fixed`
+  // зажимается его же трансформом. На месте карты остаётся заглушка той же высоты,
+  // иначе страница под оверлеем схлопывается и после выхода скролл уезжает.
+  const renderMapShell = (canvas: React.ReactNode) => {
+    const shell = (
+      <div
+        style={{
+          ...(styles.mapShell as React.CSSProperties),
+          ...(fullscreen ? (styles.mapShellFullscreen as React.CSSProperties) : null),
+        }}
+      >
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label={fullscreenLabel}
+          title={fullscreenLabel}
+          data-testid="trip-plan-map-fullscreen"
+          style={styles.fullscreenToggle as React.CSSProperties}
+        >
+          <Feather name={fullscreen ? 'minimize-2' : 'maximize-2'} size={18} color={colors.text} />
+        </button>
+        {canvas}
+      </div>
+    );
+
+    if (fullscreen && webCreatePortal && typeof document !== 'undefined') {
+      return webCreatePortal(shell, document.body);
+    }
+    return shell;
+  };
+
   const Marker = RL.Marker as any;
   const Popup = RL.Popup as any;
   const Polyline = RL.Polyline as any;
@@ -217,14 +324,16 @@ export default function TripPlanRouteMap({
         <Text style={styles.counter}>{markerPositions.length}</Text>
       </View>
 
-      <div style={styles.mapShell as React.CSSProperties}>
+      {fullscreen ? <div style={styles.mapShellPlaceholder as React.CSSProperties} /> : null}
+      {renderMapShell(
         <MapCanvas
           engine={{ L, RL }}
-          center={center}
-          zoom={trackPositions.length ? 10 : 5}
+          center={restoredViewRef.current?.center ?? center}
+          zoom={restoredViewRef.current?.zoom ?? (trackPositions.length ? 10 : 5)}
           keyboard={false}
-          containerKey={mapKeyRef.current}
+          containerKey={`${mapKeyRef.current}-${fullscreen ? 'fs' : 'inline'}`}
           mapStyle={styles.map as React.CSSProperties}
+          onMapRef={handleMapRef}
         >
           {() => (<>
           <ClickToAdd
@@ -232,7 +341,15 @@ export default function TripPlanRouteMap({
             onAddPointFromMap={onAddPointFromMap}
             useMapEvents={useMapEvents}
           />
-          {trackPositions.length ? <FitRouteBounds L={L} positions={trackPositions} useMap={useMap} /> : null}
+          {trackPositions.length ? (
+            <FitRouteBounds
+              L={L}
+              positions={trackPositions}
+              useMap={useMap}
+              fitToken={fitToken}
+              fittedTokenRef={fittedTokenRef}
+            />
+          ) : null}
           {trackPositions.length > 1 ? (
             <Polyline
               positions={trackPositions}
@@ -273,8 +390,8 @@ export default function TripPlanRouteMap({
             );
           })}
           </>)}
-        </MapCanvas>
-      </div>
+        </MapCanvas>,
+      )}
     </View>
   );
 }
@@ -330,6 +447,7 @@ const createStyles = (colors: ThemedColors) =>
       fontWeight: '800',
     },
     mapShell: {
+      position: 'relative',
       height: 320,
       minHeight: 320,
       width: '100%',
@@ -338,6 +456,48 @@ const createStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderStyle: 'solid',
       borderColor: colors.border,
+    },
+    // Держит высоту секции, пока карта живёт в портале: без заглушки страница
+    // под оверлеем схлопывается и после выхода скролл оказывается не там.
+    mapShellPlaceholder: {
+      height: 320,
+      minHeight: 320,
+      width: '100%',
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.surfaceMuted,
+    },
+    mapShellFullscreen: {
+      position: 'fixed',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      height: '100%',
+      minHeight: '100%',
+      width: '100%',
+      borderRadius: 0,
+      borderWidth: 0,
+      zIndex: 99990,
+      backgroundColor: colors.surface,
+    },
+    fullscreenToggle: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      display: 'flex',
+      borderRadius: DESIGN_TOKENS.radii.full,
+      borderWidth: 1,
+      borderStyle: 'solid',
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      color: colors.text,
+      cursor: 'pointer',
+      // Выше leaflet-контролов (у них z-index до 1000).
+      zIndex: 1200,
     },
     map: {
       width: '100%',

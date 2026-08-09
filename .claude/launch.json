@@ -2,6 +2,26 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Native Metro Trips Mock 8081",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_TRIPS_MOCK=true EXPO_NO_METRO_LAZY=1 npx expo start --clear --port 8081"
+      ],
+      "port": 8081,
+      "autoPort": false
+    },
+    {
+      "name": "Trips Mock Clear 8106",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_TRIPS_MOCK=true npx expo start --web --clear --port 8106"
+      ],
+      "port": 8106,
+      "autoPort": false
+    },
+    {
       "name": "Trips QA ProxyApi 8105",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

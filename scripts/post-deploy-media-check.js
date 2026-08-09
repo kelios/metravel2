@@ -803,6 +803,89 @@ function validateTarget(target, probes, options = {}) {
 }
 
 /**
+ * Раздача перешла на готовые файлы — или молча откатилась на ресайз в момент запроса.
+ *
+ * Режим выбирается не флагом, а измеренным покрытием: пока в семействе есть хоть
+ * один мастер без полного набора производных, fail-safe возвращает его на
+ * динамический путь. Сигнала об этом нет никакого — ответы остаются 200, вес
+ * правдоподобный, страницы выглядят нормально. Ровно так это и произошло:
+ * прогон #1180 закрыл `article_body` на 100 % 2026-08-03 при 1 313 мастерах, а к
+ * 2026-08-09 их стало 6 650 (миграция тел #1245 и чистка base64 #1320 перезалили
+ * тысячи кадров ПОСЛЕ прогона), покрытие упало до 84,3 %, и семейство вернулось
+ * на переходный путь — незамеченным шесть дней.
+ *
+ * Проверка чистая: на вход — тело `GET /api/media/proxy-contract`, наружу —
+ * находки. Сеть остаётся в `main`.
+ */
+function auditDerivativeCoverage(contract) {
+  const issues = []
+  const families = []
+
+  const routeBehavior = contract?.route_behavior
+  if (!routeBehavior || typeof routeBehavior !== 'object') {
+    issues.push({
+      severity: 'error',
+      code: 'coverage.contract_unreadable',
+      message: 'proxy-contract не отдал route_behavior — состояние раздачи неизвестно',
+    })
+    return { families, issues }
+  }
+
+  for (const [keyClass, behavior] of Object.entries(routeBehavior)) {
+    const familyModes = behavior?.family_modes
+    if (!familyModes || typeof familyModes !== 'object') continue
+
+    for (const [family, mode] of Object.entries(familyModes)) {
+      const requested = mode?.requested_mode
+      const active = mode?.active_mode
+      const coverage = mode?.coverage || {}
+      const masters = Number(coverage.masters) || 0
+
+      // Семейство без мастеров нечем покрывать: `badge` на 2026-08-09 пуст, и
+      // требовать от него durable-режима бессмысленно.
+      if (masters === 0) continue
+
+      const entry = {
+        keyClass,
+        family,
+        requestedMode: requested || null,
+        activeMode: active || null,
+        masters,
+        completeMasters: Number(coverage.complete_masters) || 0,
+        coveragePercent: Number(coverage.coverage_percent) || 0,
+        complete: coverage.complete === true,
+      }
+      families.push(entry)
+
+      if (requested === 'durable_s3_derivatives' && active !== requested) {
+        issues.push({
+          severity: 'error',
+          code: 'coverage.mode_regressed',
+          family,
+          message:
+            `${keyClass}/${family}: запрошен durable_s3_derivatives, активен «${active}» — ` +
+            `покрытие ${entry.coveragePercent.toFixed(1)} % ` +
+            `(${entry.completeMasters} из ${masters} мастеров). ` +
+            'После массовой перезаливки картинок обязателен backfill по семейству: ' +
+            'scripts/backfill-article-body-derivatives.sh',
+        })
+      } else if (requested === 'durable_s3_derivatives' && !entry.complete) {
+        issues.push({
+          severity: 'warning',
+          code: 'coverage.incomplete',
+          family,
+          message:
+            `${keyClass}/${family}: режим durable, но покрытие ${entry.coveragePercent.toFixed(1)} % — ` +
+            'часть мастеров без полного набора производных',
+        })
+      }
+    }
+  }
+
+  return { families, issues }
+}
+
+/**
  * Сколько статей обходит лестничная проверка тела по умолчанию.
  *
  * Обход ПОЛНОЙ лестницы стоит на два порядка дороже прежней проверки: у одной
@@ -1069,6 +1152,30 @@ function printArticleBodySummary(articleBody) {
   }
 }
 
+function printCoverageSummary(coverage) {
+  if (!coverage || !coverage.families.length) {
+    console.log('\n⚠️  Режим раздачи не проверен: proxy-contract недоступен или пуст')
+    return
+  }
+
+  const durable = coverage.families.filter((f) => f.activeMode === 'durable_s3_derivatives').length
+  console.log(
+    `\n📦 Режим раздачи: ${durable} из ${coverage.families.length} семейств на готовых производных`
+  )
+
+  for (const family of coverage.families) {
+    const ok = family.activeMode === family.requestedMode && family.complete
+    console.log(
+      `   ${ok ? '✅' : '✗'} ${family.keyClass}/${family.family}: ${family.activeMode}, ` +
+        `${family.coveragePercent.toFixed(1)} % (${family.completeMasters}/${family.masters})`
+    )
+  }
+
+  for (const issue of coverage.issues) {
+    console.log(`   ${issue.severity === 'error' ? '✗' : '!'} ${issue.code}: ${issue.message}`)
+  }
+}
+
 async function main() {
   if (!JSON_OUTPUT) {
     console.log(`🖼  Пост-деплой проверка медиа-контракта на ${SITE}`)
@@ -1123,6 +1230,12 @@ async function main() {
   const articleBody = await scanArticleBodyLadders(softFetch, travels)
   const articleBodyIssues = articleBody?.issues || []
 
+  // Проверка режима раздачи идёт по тому же публичному контракту, что и всё
+  // остальное в гейте, и стоит один запрос.
+  const contract = await softFetch(`${SITE}/api/media/proxy-contract`)
+  const coverage = auditDerivativeCoverage(contract)
+  const coverageIssues = coverage.issues
+
   const summary = {
     site: SITE,
     allowKnownBroken: ALLOW_KNOWN_BROKEN,
@@ -1131,17 +1244,23 @@ async function main() {
       checked.reduce(
         (acc, target) => acc + target.issues.filter((issue) => issue.severity === 'error').length,
         0
-      ) + articleBodyIssues.filter((issue) => issue.severity === 'error').length,
+      ) +
+      articleBodyIssues.filter((issue) => issue.severity === 'error').length +
+      coverageIssues.filter((issue) => issue.severity === 'error').length,
     warningCount:
       checked.reduce(
         (acc, target) => acc + target.issues.filter((issue) => issue.severity === 'warning').length,
         0
-      ) + articleBodyIssues.filter((issue) => issue.severity === 'warning').length,
+      ) +
+      articleBodyIssues.filter((issue) => issue.severity === 'warning').length +
+      coverageIssues.filter((issue) => issue.severity === 'warning').length,
     targets: checked,
     articleBody,
+    coverage,
   }
 
   printSummary(summary)
+  printCoverageSummary(coverage)
   process.exit(summary.errorCount > 0 ? 1 : 0)
 }
 
@@ -1157,6 +1276,7 @@ if (typeof module !== 'undefined' && module.exports) {
     legacyKeyExtension,
     widthsFor,
     auditArticleBodyLadder,
+    auditDerivativeCoverage,
     isBackpressureResponse,
     collectArticleBodyMediaUrls,
     collectArticleBodyRungs,

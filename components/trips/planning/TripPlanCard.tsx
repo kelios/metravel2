@@ -261,7 +261,10 @@ const createStyles = (colors: ThemedColors) =>
     },
     occupancyRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5 },
     footerText: { fontSize: 13, fontWeight: '700', color: colors.text },
-    participantsHint: { fontSize: 12, color: colors.textMuted },
+    // #1342: `Text` в row без `flexShrink` Yoga на Android меряет по intrinsic-ширине
+    // и обрезает системным ellipsis, а не переносит («· 1 в списке» → «· 1 в»).
+    // `flexShrink` вместо `flex` — при достаточной ширине раскладка не меняется.
+    participantsHint: { fontSize: 12, color: colors.textMuted, flexShrink: 1 },
     cardActions: {
       flexDirection: 'row',
       alignItems: 'center',

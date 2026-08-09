@@ -65,6 +65,8 @@ export const tripsStaticResources = {
   "plan.participants.going_few": "{{count}} едуць",
   "plan.participants.going_many": "{{count}} едуць",
   "plan.participants.going_other": "{{count}} едуць",
+  "plan.map.expand": "Разгарнуць карту на ўвесь экран",
+  "plan.map.collapse": "Згарнуць карту",
   "plan.routingReason.notEnoughPoints": "Дадайце мінімум дзве кропкі маршруту - тады мы пабудуем дарогу.",
   "plan.routingReason.providerUnavailable": "Сэрвіс пабудовы маршрутаў часова недаступны - лінія паказана прыблізна.",
   "route.approximateWarning": "Маршрут паказаны прыблізна - праверце дарогу ці сцежку перад паездкай.",

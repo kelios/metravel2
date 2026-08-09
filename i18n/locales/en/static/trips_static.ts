@@ -65,6 +65,8 @@ export const tripsStaticResources = {
   "plan.participants.going_few": "{{count}} are going",
   "plan.participants.going_many": "{{count}} are going",
   "plan.participants.going_other": "{{count}} are going",
+  "plan.map.expand": "Expand the map to full screen",
+  "plan.map.collapse": "Collapse the map",
   "plan.routingReason.notEnoughPoints": "Add at least two route points - then we will build a road.",
   "plan.routingReason.providerUnavailable": "The route building service is temporarily unavailable - the line shown is approximate.",
   "route.approximateWarning": "The route shown is approximate - check the road or trail before you go.",

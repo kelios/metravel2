@@ -118,18 +118,22 @@ export default function PlacesScreen() {
             pressed && PRESSED_OPACITY,
           ]}
         >
-          <Feather
-            name="bar-chart-2"
-            size={16}
-            color={anchorStyleActive ? colors.primary : colors.textMuted}
-          />
+          <View style={styles.iconSlot16}>
+            <Feather
+              name="bar-chart-2"
+              size={16}
+              color={anchorStyleActive ? colors.primary : colors.textMuted}
+            />
+          </View>
           <Text
             style={[styles.sortSelectValue, anchorStyleActive && styles.sortSelectValueActive]}
             numberOfLines={1}
           >
             {activeSortLabel}
           </Text>
-          <Feather name="chevron-down" size={16} color={colors.textMuted} />
+          <View style={styles.iconSlot16}>
+            <Feather name="chevron-down" size={16} color={colors.textMuted} />
+          </View>
         </Pressable>
       }
     >
@@ -199,6 +203,12 @@ export default function PlacesScreen() {
   // full stacked topBar/sidebar is desktop-only. Both platforms share one ScrollView
   // path (no native FlatList) to guarantee the same layout and scroll behaviour.
   const mobileCompact = isCompact
+  // #1334: до измерения ширины (статический HTML и первый кадр гидратации) на web
+  // отдаём ОБЕ шапки каталога — desktop `topBar` внутри скролла и компактную
+  // панель над ним. Какая из них видна, решает критический CSS по media-query,
+  // то есть до единого кадра React. Раньше компактная панель появлялась только
+  // после гидратации и опускала весь каталог на 115 px (CLS 0,537 на мобильном).
+  const renderCompactBar = mobileCompact || (Platform.OS === 'web' && !hasMeasuredWidth)
 
   const loadMoreBlock = hasMorePlaces ? (
     <View style={styles.loadMoreFooter}>
@@ -285,7 +295,7 @@ export default function PlacesScreen() {
   const pageChrome = (
     <>
         {mobileCompact ? null : (
-        <View style={styles.topBar} onLayout={handleTopBarLayout}>
+        <View style={styles.topBar} onLayout={handleTopBarLayout} testID="places-topbar">
           <View style={styles.topBarMeta}>
             <View style={styles.heroTitleRow}>
               <Feather name="map-pin" size={18} color={colors.primary} />
@@ -302,7 +312,9 @@ export default function PlacesScreen() {
 
           <View style={styles.topBarControls}>
             <View style={styles.searchBox}>
-              <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
+              <View style={styles.iconSlot18}>
+                <Feather name="search" size={18} color={colors.textMuted} />
+              </View>
               <TextInput
                 value={query}
                 onChangeText={handleQueryChange}
@@ -580,11 +592,13 @@ export default function PlacesScreen() {
   // filter are always reachable. Kept ≤~20% of the viewport: single search row +
   // a filter/reset row, no large title (the big resultsTitle stays in the
   // scrollable pageChrome). Shared by web + native for parity.
-  const compactFixedBar = mobileCompact ? (
-    <View style={styles.compactBar}>
+  const compactFixedBar = renderCompactBar ? (
+    <View style={styles.compactBar} testID="places-compact-bar">
       <View style={styles.compactSearchRow}>
         <View style={styles.compactSearchBox}>
-          <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
+          <View style={styles.iconSlot18}>
+            <Feather name="search" size={18} color={colors.textMuted} />
+          </View>
           <TextInput
             value={query}
             onChangeText={handleQueryChange}
@@ -613,7 +627,9 @@ export default function PlacesScreen() {
             accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}
             style={({ pressed }) => [styles.compactResetBtn, pressed && PRESSED_OPACITY]}
           >
-            <Feather name="refresh-ccw" size={16} color={colors.textMuted} />
+            <View style={styles.iconSlot16}>
+              <Feather name="refresh-ccw" size={16} color={colors.textMuted} />
+            </View>
           </Pressable>
         ) : null}
       </View>
@@ -642,7 +658,9 @@ export default function PlacesScreen() {
                   facetsQuery.isLoading && styles.countrySelectDisabled,
                 ]}
               >
-                <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
+                <View style={styles.iconSlot16}>
+                  <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
+                </View>
                 <Text
                   style={[
                     styles.compactCountrySelectValue,
@@ -652,7 +670,9 @@ export default function PlacesScreen() {
                 >
                   {selectedCountry ?? i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
                 </Text>
-                <Feather name="chevron-down" size={16} color={colors.textMuted} />
+                <View style={styles.iconSlot16}>
+                  <Feather name="chevron-down" size={16} color={colors.textMuted} />
+                </View>
               </Pressable>
             }
           >
@@ -697,7 +717,9 @@ export default function PlacesScreen() {
             pressed && PRESSED_OPACITY,
           ]}
         >
-          <Feather name="sliders" size={16} color={selectedCategories.length > 0 ? colors.primary : colors.text} />
+          <View style={styles.iconSlot16}>
+            <Feather name="sliders" size={16} color={selectedCategories.length > 0 ? colors.primary : colors.text} />
+          </View>
           <Text
             numberOfLines={1}
             style={[styles.mobileFilterToggleText, selectedCategories.length > 0 && styles.mobileFilterToggleTextActive]}
@@ -708,11 +730,13 @@ export default function PlacesScreen() {
               <Text style={styles.filterBadgeText}>{selectedCategories.length}</Text>
             </View>
           ) : null}
-          <Feather
-            name={filtersOpen ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={colors.textMuted}
-          />
+          <View style={styles.iconSlot16}>
+            <Feather
+              name={filtersOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={colors.textMuted}
+            />
+          </View>
         </Pressable>
       </View>
     </View>

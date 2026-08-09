@@ -502,6 +502,25 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   },
   // Icon-only, pinned at the end of the search row: a «Сбросить» text button needs
   // ~90px, which is exactly what pushed the filter row over one line at 375px.
+  // #1334: глифы Feather приезжают вебшрифтом. До его загрузки бокс иконки имеет
+  // другую ширину/высоту, и это двигало соседей в компактной панели /places
+  // (поле поиска уезжало на 30 px, «Все страны» — на 16 px, вся выдача — на 16 px).
+  // Фиксированный слот делает размер иконки независимым от момента загрузки шрифта.
+  iconSlot16: {
+    width: 16,
+    height: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    flexShrink: 0,
+  },
+  iconSlot18: {
+    width: 18,
+    height: 18,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    flexShrink: 0,
+    marginRight: DESIGN_TOKENS.spacing.sm,
+  },
   compactResetBtn: {
     width: 46,
     height: 46,

@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import TripPlanCard from '@/components/trips/planning/TripPlanCard';
@@ -137,6 +138,19 @@ describe('TripPlanCard participants line', () => {
     // пробелами, а getByText нормализует их и дефект не поймал бы.
     expect(getByText('Едут 2 из 4').props.children).toBe('Едут 2 из 4');
     expect(getByText('· 2 в списке').props.children).toBe('· 2 в списке');
+  });
+
+  // #1342: подпись живёт в `flexDirection: 'row'`; без права сжиматься Yoga на
+  // Android меряет её по intrinsic-ширине и обрезает системным ellipsis
+  // («· 2 в списке» → «· 2 в»), вместо того чтобы перенести. Ловим сам стиль:
+  // отрисовка в jsdom-хосте усечение не воспроизводит.
+  it('lets the participants hint shrink instead of being clipped in the row', () => {
+    const { getByText } = render(<TripPlanCard trip={going(2)} />);
+
+    const style = StyleSheet.flatten(getByText('· 2 в списке').props.style);
+
+    expect(style.flexShrink).toBe(1);
+    expect(style.width).toBeUndefined();
   });
 });
 

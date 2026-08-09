@@ -80,3 +80,28 @@ describe('buildCriticalCSS: до-гидрационная раскладка ш�
     }
   })
 })
+
+// #1334: `/places` до гидратации не знает ширину и рисует обе шапки каталога.
+// Выбор между ними делает только этот блок; без него компактная панель
+// появлялась после гидратации и опускала каталог на 115 px (CLS 0,537).
+describe('buildCriticalCSS: до-гидрационная раскладка /places', () => {
+  const css = buildCriticalCSS()
+
+  it.each([
+    ['@media (max-width:759.98px){', '[data-testid="places-topbar"]{display:none !important}'],
+    ['@media (min-width:760px){', '[data-testid="places-compact-bar"]{display:none !important}'],
+  ])('в %s прячет вторую шапку (%s)', (media, rule) => {
+    const block = css.slice(css.indexOf(media))
+    const mediaBlock = block.slice(0, block.indexOf('\n}') + 2)
+
+    expect(css).toContain(media)
+    expect(mediaBlock).toContain(rule)
+  })
+
+  // Порог обязан совпадать с `isCompact = width < 760` в PlacesScreen: разъезд
+  // вернёт кадр, где видны обе шапки или ни одной.
+  it('держит порог 760 px в обеих ветках', () => {
+    expect(css).toContain('@media (max-width:759.98px){')
+    expect(css).toContain('@media (min-width:760px){')
+  })
+})
