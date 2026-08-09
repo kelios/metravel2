@@ -1,21 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 
-import {
-  getActiveOverlayLayers,
-  getExclusiveGroupSiblings,
-  WEATHER_TEMP_LABELS_LAYER_ID,
-  WEATHER_TEMP_LAYER_ID,
-} from '@/config/mapWebLayers';
+import { getActiveOverlayLayers } from '@/config/mapWebLayers';
+import { useMapOverlaysStore } from '@/stores/mapOverlaysStore';
 import type { MapUiApi } from '@/types/mapUi';
 
-const getDefaultOverlayState = () => {
-  const initial: Record<string, boolean> = {};
-  getActiveOverlayLayers().forEach((layer) => {
-    initial[layer.id] = Boolean(layer.defaultEnabled);
-  });
-  return initial;
-};
-
+/**
+ * Список слоёв + синхронизация выбора с конкретной картой.
+ *
+ * Сам выбор живёт в общем persisted store (`stores/mapOverlaysStore`), поэтому
+ * /map и карта конструктора маршрута показывают одинаковый набор включённых
+ * слоёв (#1306). Хук вызывается каждым экраном со своим `mapUiApi` и приводит
+ * его карту к общему состоянию.
+ */
 export function useMapOverlays(mapUiApi: MapUiApi | null) {
   const activeOverlayLayers = useMemo(() => getActiveOverlayLayers(), []);
   const overlayOptions = useMemo(
@@ -36,34 +32,10 @@ export function useMapOverlays(mapUiApi: MapUiApi | null) {
         })),
     [activeOverlayLayers],
   );
-  const [enabledOverlays, setEnabledOverlays] = useState<Record<string, boolean>>(
-    getDefaultOverlayState,
-  );
 
-  const handleOverlayToggle = useCallback((id: string, enabled: boolean) => {
-    setEnabledOverlays((previous) => {
-      if (previous[id] === enabled) return previous;
-      const next = { ...previous, [id]: enabled };
-
-      if (enabled) {
-        for (const siblingId of getExclusiveGroupSiblings(id)) {
-          if (next[siblingId]) next[siblingId] = false;
-        }
-      }
-
-      if (id === WEATHER_TEMP_LAYER_ID) {
-        next[WEATHER_TEMP_LABELS_LAYER_ID] = enabled;
-      } else if (previous[WEATHER_TEMP_LAYER_ID] && next[WEATHER_TEMP_LAYER_ID] === false) {
-        next[WEATHER_TEMP_LABELS_LAYER_ID] = false;
-      }
-
-      return next;
-    });
-  }, []);
-
-  const resetOverlays = useCallback(() => {
-    setEnabledOverlays(getDefaultOverlayState());
-  }, []);
+  const enabledOverlays = useMapOverlaysStore((state) => state.enabledOverlays);
+  const handleOverlayToggle = useMapOverlaysStore((state) => state.setOverlayEnabled);
+  const resetOverlays = useMapOverlaysStore((state) => state.resetOverlays);
 
   const controlledOverlayIds = useMemo(
     () => overlayOptions.map((layer) => layer.id),

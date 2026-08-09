@@ -450,7 +450,7 @@ const createStyles = (colors: ThemedColors) =>
     filterTitle: { fontSize: 14, fontWeight: '800', color: colors.text },
     filterOptions: { gap: 5 },
     filterOption: {
-      minHeight: 38,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -463,7 +463,7 @@ const createStyles = (colors: ThemedColors) =>
     filterOptionText: { flex: 1, minWidth: 0, fontSize: 14, color: colors.textSecondary },
     filterOptionTextSelected: { color: colors.primaryDark, fontWeight: '700' },
     resetButton: {
-      minHeight: 36,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',

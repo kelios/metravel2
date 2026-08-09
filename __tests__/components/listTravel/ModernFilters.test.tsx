@@ -202,9 +202,9 @@ describe('ModernFilters Component', () => {
 
     const toggleAll = screen.getByTestId('toggle-all-groups');
     const toggleStyle = StyleSheet.flatten(toggleAll.props.style);
-    expect(toggleStyle.height).toBe(40);
-    // Icon-only on native — fixed 40×40 square, not the wide text variant (F-39).
-    expect(toggleStyle.width).toBe(40);
+    expect(toggleStyle.height).toBe(44);
+    // Icon-only on native — fixed 44×44 accessible target, not the wide text variant (F-39).
+    expect(toggleStyle.width).toBe(44);
 
     expect(screen.getByText('330 путешествий')).toBeTruthy();
     const resultsChip = screen.getByTestId('filters-results-chip');

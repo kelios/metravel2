@@ -42,6 +42,7 @@ export type WebOnlyViewStyle = {
   outlineWidth?: React.CSSProperties['outlineWidth']
   overflowX?: React.CSSProperties['overflowX']
   position?: React.CSSProperties['position']
+  touchAction?: React.CSSProperties['touchAction']
   transition?: React.CSSProperties['transition']
   transitionDuration?: React.CSSProperties['transitionDuration']
   transitionProperty?: React.CSSProperties['transitionProperty']

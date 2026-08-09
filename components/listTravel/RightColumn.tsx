@@ -76,6 +76,7 @@ interface RightColumnProps {
   travels: Travel[]
   gridColumns: number
   isMobileViewport?: boolean
+  isCompactToolbar?: boolean
   isMobile: boolean
   showNextPageLoading: boolean
   refetch: () => void
@@ -114,6 +115,17 @@ const standaloneListIntroScrollStyle: ViewStyle & { overflowY: 'auto' } = {
   overflowY: 'auto',
 }
 
+// The first row is above the fold and must be measured from its real contents.
+// Deferring it makes the browser report contain-intrinsic-size to FlashList
+// first, so the second row jumps when the real height arrives (#1298).
+const eagerFirstWebRowStyle: ViewStyle & {
+  contentVisibility: 'visible'
+  containIntrinsicSize: 'none'
+} = {
+  contentVisibility: 'visible',
+  containIntrinsicSize: 'none',
+}
+
 const RightColumn: React.FC<RightColumnProps> = (
   ({
      listIntroContent,
@@ -135,6 +147,7 @@ const RightColumn: React.FC<RightColumnProps> = (
      travels,
      gridColumns,
      isMobileViewport: isMobileViewportProp,
+     isCompactToolbar: isCompactToolbarProp,
      isMobile,
      showNextPageLoading,
      refetch,
@@ -266,6 +279,7 @@ const RightColumn: React.FC<RightColumnProps> = (
     // subscribe this list container to mobile address-bar height changes and
     // re-render the whole FlashList on every scroll frame (scroll jank).
     const isMobileViewport = isMobileViewportProp ?? isMobile
+    const isCompactToolbar = isCompactToolbarProp ?? isMobileViewport
     const isWebMobile = isWeb && isMobileViewport
     const hasTextSearch = search.trim().length > 0
     const showRecommendations =
@@ -370,7 +384,14 @@ const RightColumn: React.FC<RightColumnProps> = (
         const { cols, rowStyle, itemWrapperStyle, placeholderStyle } = rowLayout;
         const missingSlots = Math.max(0, cols - rowItems.length);
         return (
-          <View testID={`travel-row-${rowIndex}`} style={rowStyle}>
+          <View
+            testID={`travel-row-${rowIndex}`}
+            style={
+              isWeb && !isExport && rowIndex === 0
+                ? [rowStyle, eagerFirstWebRowStyle]
+                : rowStyle
+            }
+          >
             {rowItems.map((travel, itemIndex) => (
               // Slot-stable key (position in the row), NOT travel.id. FlashList
               // recycles the row component in place with new data on scroll; keying
@@ -408,6 +429,7 @@ const RightColumn: React.FC<RightColumnProps> = (
       [
         rowLayout,
         renderItem,
+        isExport,
         isMobile,
         showNextPageLoading,
         rows.length,
@@ -611,6 +633,7 @@ const RightColumn: React.FC<RightColumnProps> = (
             showResultsCount={
               isMobileViewport && !isSearchPending && !showInitialLoading && !isError
             }
+            compactLayout={isCompactToolbar}
           />
         ) : null}
 

@@ -174,7 +174,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       position: 'relative',
       flexDirection: 'row',
       alignItems: 'center',
-      minHeight: (Platform.OS === 'web') ? 38 : 40,
+      minHeight: 44,
       paddingVertical: (Platform.OS === 'web') ? 8 : 10,
       paddingHorizontal: 12,
       paddingLeft: (Platform.OS === 'web') ? 16 : 18,

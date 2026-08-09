@@ -211,7 +211,7 @@ const getStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderColor: colors.borderLight,
       paddingHorizontal: 10,
-      minHeight: 42,
+      minHeight: 44,
       ...(Platform.OS === 'web'
         ? ({
             transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',

@@ -161,7 +161,7 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      minHeight: 40,
+      minHeight: 44,
       paddingHorizontal: 8,
       paddingVertical: 8,
       borderRadius: 10,

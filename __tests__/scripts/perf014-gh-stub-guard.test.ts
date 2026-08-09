@@ -115,7 +115,29 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
     expect(installedSerializer).toContain('__METRAVEL_SHARED_CHUNKS__')
     expect(installedRuntime).toContain('__METRAVEL_CHUNK_DEPS__')
     expect(installedRuntime).toContain('__METRAVEL_SHARED_CHUNKS__')
-    expect(installedRuntime).toContain('Promise.all(requiredIds.map')
+    expect(installedRuntime).toContain('Promise.all(pending)')
+  })
+
+  // #1340: the runtime may only await shared chunks that are not on the page yet.
+  // Awaiting one that the HTML already shipped as a <script> pushes the route module
+  // past the start of hydration, React.lazy suspends, and the route Suspense boundary
+  // (fallback={null} in production) drops the server-rendered DOM for ~600 ms.
+  it('serialises and consumes the shared-chunk loaded marker', () => {
+    const installedSerializer = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_SERIALIZER_REL), 'utf8')
+    const installedRuntime = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_REL), 'utf8')
+    const serializerPatch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
+    const runtimePatch = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_PATCH_REL), 'utf8')
+
+    for (const source of [installedSerializer, serializerPatch]) {
+      expect(source).toContain('__METRAVEL_LOADED_CHUNKS__')
+      expect(source).toContain('loadedRegistration')
+    }
+    for (const source of [installedRuntime, runtimePatch]) {
+      expect(source).toContain('__METRAVEL_LOADED_CHUNKS__')
+      // The skip is the whole point: an already-evaluated chunk must not be awaited.
+      expect(source).toContain('loadedChunks?.[')
+      expect(source).toContain('pending.push(loadBundle(chunkPath))')
+    }
   })
 })
 

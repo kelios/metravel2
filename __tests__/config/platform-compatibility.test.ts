@@ -33,7 +33,10 @@ describe('Platform Compatibility Tests', () => {
 
     it('keeps the authenticated metravel route eager for static hydration', () => {
       const source = readRepoFile('app/(tabs)/metravel.tsx');
-      expect(source).toContain("import ListTravel from '@/components/listTravel/ListTravelBase'");
+      expect(source).toContain("import ListTravel from '@/components/listTravel/ListTravelRoute'");
+      expect(readRepoFile('components/listTravel/ListTravelRoute.tsx')).toContain(
+        "import ListTravelBase from './ListTravelBase'",
+      );
       expect(source).not.toMatch(/lazy\s*\(/);
     });
 

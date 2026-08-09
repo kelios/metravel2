@@ -140,16 +140,18 @@ describe('TripPlanCard participants line', () => {
     expect(getByText('· 2 в списке').props.children).toBe('· 2 в списке');
   });
 
-  // #1342: подпись живёт в `flexDirection: 'row'`; без права сжиматься Yoga на
-  // Android меряет её по intrinsic-ширине и обрезает системным ellipsis
-  // («· 2 в списке» → «· 2 в»), вместо того чтобы перенести. Ловим сам стиль:
-  // отрисовка в jsdom-хосте усечение не воспроизводит.
-  it('lets the participants hint shrink instead of being clipped in the row', () => {
+  // #1342: подпись живёт в `flexDirection: 'row'`; Yoga на Android меряет её по
+  // intrinsic-ширине и обрезает системным ellipsis («· 2 в списке» → «· 2 в»),
+  // вместо того чтобы перенести. Нужен именно `flex: 1`: одного `flexShrink` мало,
+  // потому что при `flexBasis: 'auto'` текст успевает свёрстаться в одну строку до
+  // сжатия бокса — проверено на устройстве. Ловим сам стиль: отрисовка в
+  // jsdom-хосте усечение не воспроизводит.
+  it('measures the participants hint against the available row width', () => {
     const { getByText } = render(<TripPlanCard trip={going(2)} />);
 
     const style = StyleSheet.flatten(getByText('· 2 в списке').props.style);
 
-    expect(style.flexShrink).toBe(1);
+    expect(style.flex).toBe(1);
     expect(style.width).toBeUndefined();
   });
 });

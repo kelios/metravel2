@@ -1,3 +1,5 @@
+import type { NetworkStats } from './perfBudget'
+
 /**
  * Таблица перфоманс-бюджетов страниц: одна запись на пару (маршрут, профиль).
  *
@@ -96,9 +98,9 @@ export const FORBIDDEN_SHIFT_SOURCES: ReadonlyArray<{
   },
   {
     // Картинка логотипа есть в обеих раскладках, и критический CSS меняет ей
-    // размер 32 → 26 px на границе 1280 px. На мобильном это единственный узел,
-    // который реально можно проверить: словесной части там нет, а переключатель
-    // языка до закрытия #1298 стоит на общем долге.
+    // размер 32 → 26 px на границе 1280 px. Оба узла мобильной шапки теперь
+    // проверяются без глобального исключения #1298: картинка логотипа и переключатель
+    // языка обязаны оставаться вне кадров сдвига.
     id: 'header-logo-image',
     marker: 'data-header-logo-image',
     selector: '[data-header-logo-image]',
@@ -114,21 +116,6 @@ export const FORBIDDEN_SHIFT_SOURCES: ReadonlyArray<{
 
 /** Порог Google для «хорошего» CLS. Здоровая запись не может быть выше. */
 export const HEALTHY_CLS_MAX = 0.1
-
-/**
- * Общий признанный долг по узлам шапки (#1298).
- *
- * Шапка одна на все страницы, и в каком именно прогоне её сдвиг попадёт в кадр
- * — вопрос гонки: замер 2026-08-08 поймал переключатель языка на Home/Search/Map
- * (desktop) и на Quests/Places (mobile) вперемешку. Постраничные исключения тут
- * дают ложные падения на здоровых маршрутах, поэтому долг зафиксирован один раз
- * и снимается вместе с #1298 — тогда контроль сразу начнёт работать везде.
- */
-export const GLOBAL_FORBIDDEN_SOURCE_DEBT = {
-  ids: ['header-language-switcher'],
-  taskRef: '#1298',
-  recordedAt: '2026-08-08',
-} as const
 
 type BudgetTable = Record<string, Partial<Record<PerfProfile, PageBudget>>>
 
@@ -178,8 +165,8 @@ export const PAGE_BUDGETS: BudgetTable = {
   },
   SEARCH: {
     desktop: {
-      clsMax: HEALTHY_CLS_MAX,
-      firstScreenElementsMax: 220, // measured 176
+      clsMax: 0.01,
+      firstScreenElementsMax: 440, // measured 359 with the non-empty regression fixture
       lcpMaxMs: LCP_FAST,
       jsTransferKBMax: 1500, // measured 1237
       totalTransferKBMax: 1600, // measured 1330
@@ -187,8 +174,8 @@ export const PAGE_BUDGETS: BudgetTable = {
       ...TIMING,
     },
     mobile: {
-      clsMax: HEALTHY_CLS_MAX,
-      firstScreenElementsMax: 150, // measured 118
+      clsMax: 0.01,
+      firstScreenElementsMax: 250, // measured 200 with the non-empty regression fixture
       lcpMaxMs: LCP_FAST,
       jsTransferKBMax: 1500, // measured 1237
       totalTransferKBMax: 1600, // measured 1330
@@ -198,11 +185,7 @@ export const PAGE_BUDGETS: BudgetTable = {
   },
   MAP: {
     desktop: {
-      // Признанный долг: 5 холодных прогонов дали 0,0923 ×4 и 0,1607 ×1 —
-      // контейнер карты двигается на гидрации и иногда сдвигается дважды.
-      // Порог прибит к худшему наблюдённому значению, запаса сверху нет.
-      clsMax: 0.1607,
-      debt: { measured: 0.1607, taskRef: '#1333', recordedAt: '2026-08-08' },
+      clsMax: HEALTHY_CLS_MAX,
       firstScreenElementsMax: 310, // measured 251
       lcpMaxMs: LCP_SLOW,
       jsTransferKBMax: 1800, // measured 1493
@@ -234,10 +217,11 @@ export const PAGE_BUDGETS: BudgetTable = {
       ...TIMING,
     },
     mobile: {
-      // Признанный долг: 5 холодных прогонов из 5 дали 0,5369 — блок каталога
-      // уезжает на 115 px после гидрации. Порог прибит к измеренному значению.
-      clsMax: 0.5369,
-      debt: { measured: 0.5369, taskRef: '#1334', recordedAt: '2026-08-08' },
+      // #1334 убрал 115px-сдвиг каталога. В post-deploy замере остался общий
+      // сдвиг шапки/статического shell: 0 / 0.3767 / 0.3767 / 0.3767 / 0.
+      // Долг прибит к новому максимуму до закрытия зависимостей #1298/#1340.
+      clsMax: 0.3767,
+      debt: { measured: 0.3767, taskRef: '#1334 -> #1298/#1340', recordedAt: '2026-08-09' },
       firstScreenElementsMax: 160, // measured 129
       lcpMaxMs: LCP_MEDIUM,
       jsTransferKBMax: 1650, // measured 1364
@@ -371,10 +355,7 @@ export function evaluatePageBudget(
   compare(violations, 'tbt', measurement.tbt, budget.tbtMaxMs)
   compare(violations, 'longTasks', measurement.longTaskCount, budget.longTasksMax)
 
-  const allowed = new Set([
-    ...GLOBAL_FORBIDDEN_SOURCE_DEBT.ids,
-    ...(budget.allowedForbiddenSources?.ids ?? []),
-  ])
+  const allowed = new Set(budget.allowedForbiddenSources?.ids ?? [])
   for (const forbidden of FORBIDDEN_SHIFT_SOURCES) {
     if (allowed.has(forbidden.id)) continue
     const hit = measurement.clsSourceFingerprints.find((fingerprint) =>
@@ -395,7 +376,7 @@ export function evaluatePageBudget(
 
 /** Транспорт меряет отдельный тест, поэтому и сравнение отдельное. */
 export function evaluateTransferBudget(
-  measurement: Pick<PageMeasurement, 'jsKB' | 'totalKB' | 'requestCount'>,
+  measurement: Pick<NetworkStats, 'jsKB' | 'totalKB' | 'requestCount'>,
   budget: PageBudget,
 ): BudgetViolation[] {
   const violations: BudgetViolation[] = []

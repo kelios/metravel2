@@ -26,6 +26,16 @@ interface UseMapInstanceProps {
    * для обратной совместимости вызова.
    */
   isDark?: boolean;
+  /**
+   * Монтировать базовую подложку самому (по умолчанию да, как на /map).
+   *
+   * `false` — подложка уже есть у вызывающего (`MapCanvas` рисует свой
+   * `TileLayer`), и хук нужен только ради оверлеев. Своя вторая подложка
+   * означала бы двойной запрос тайлов. Подложку MapCanvas при этом нельзя
+   * заменить через `MapUiApi.setBaseLayer`, поэтому такой карте не показывают
+   * выбор базового слоя.
+   */
+  manageBaseLayer?: boolean;
 }
 
 /**
@@ -54,7 +64,7 @@ const createThemedBaseLayer = (L: any) => {
   return attachTileRetry(L.tileLayer(getThemedBaseTileUrl(), getThemedBaseLayerOptions()));
 };
 
-export function useMapInstance({ map, L }: UseMapInstanceProps) {
+export function useMapInstance({ map, L, manageBaseLayer = true }: UseMapInstanceProps) {
   const leafletBaseLayerRef = useRef<any>(null);
   const leafletOverlayLayersRef = useRef<Map<string, any>>(new Map());
   const leafletControlRef: LeafletControlRef = useRef<unknown>(null);
@@ -210,9 +220,11 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       }
 
       // Setup base layer (всегда светлая OSM-подложка, независимо от темы UI).
-      const baseLayer = createThemedBaseLayer(L);
-      if (baseLayer) {
-        leafletBaseLayerRef.current = baseLayer;
+      if (manageBaseLayer) {
+        const baseLayer = createThemedBaseLayer(L);
+        if (baseLayer) {
+          leafletBaseLayerRef.current = baseLayer;
+        }
       }
 
       const overlays: Record<string, any> = {};
@@ -435,7 +447,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       lastCleanup = undefined;
       cleanup();
     };
-  }, [map, L]);
+  }, [map, L, manageBaseLayer]);
 
   // Базовая подложка карты всегда светлая (OSM-прокси) и не реагирует на смену
   // темы приложения — отдельный theme-swap-эффект для подложки больше не нужен.

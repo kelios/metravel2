@@ -190,8 +190,8 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: 12,
   },
   iconLink: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: DESIGN_TOKENS.radii.sm,
     alignItems: 'center',
     justifyContent: 'center',

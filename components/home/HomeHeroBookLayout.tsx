@@ -403,42 +403,28 @@ function HeroSlider({
           >
             <Pressable
               onPress={onPrevSlide}
-              hitSlop={isWeb ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({ hovered, focused }: any) =>
-                isWeb
-                  ? [
-                      styles.sliderNavBtnHitArea,
-                      focused && {
-                        outlineWidth: 2,
-                        outlineStyle: 'solid',
-                        outlineColor: sliderIconColor,
-                        outlineOffset: 2,
-                      },
-                    ]
-                  : [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]
-              }
+              style={({ focused }: any) => [
+                styles.sliderNavBtnHitArea,
+                isWeb && focused && {
+                  outlineWidth: 2,
+                  outlineStyle: 'solid',
+                  outlineColor: sliderIconColor,
+                  outlineOffset: 2,
+                },
+              ]}
               accessibilityRole="button"
               accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.predyduschiy_slayd_9dd70d5f')}
             >
-              {isWeb
-                ? (({ hovered }: any) => (
-                    <View style={[styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}>
-                      <Feather
-                        name="chevron-left"
-                        size={14}
-                        color={sliderIconColor}
-                        {...({ 'aria-hidden': true, focusable: false } as any)}
-                      />
-                    </View>
-                  ))
-                : (
-                    <Feather
-                      name="chevron-left"
-                      size={14}
-                      color={sliderIconColor}
-                      {...({ 'aria-hidden': true, focusable: false } as any)}
-                    />
-                  )}
+              {({ hovered }: any) => (
+                <View style={[styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}>
+                  <Feather
+                    name="chevron-left"
+                    size={14}
+                    color={sliderIconColor}
+                    {...({ 'aria-hidden': true, focusable: false } as any)}
+                  />
+                </View>
+              )}
             </Pressable>
             <Text
               style={[
@@ -451,42 +437,28 @@ function HeroSlider({
             </Text>
             <Pressable
               onPress={onNextSlide}
-              hitSlop={isWeb ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({ hovered, focused }: any) =>
-                isWeb
-                  ? [
-                      styles.sliderNavBtnHitArea,
-                      focused && {
-                        outlineWidth: 2,
-                        outlineStyle: 'solid',
-                        outlineColor: sliderIconColor,
-                        outlineOffset: 2,
-                      },
-                    ]
-                  : [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]
-              }
+              style={({ focused }: any) => [
+                styles.sliderNavBtnHitArea,
+                isWeb && focused && {
+                  outlineWidth: 2,
+                  outlineStyle: 'solid',
+                  outlineColor: sliderIconColor,
+                  outlineOffset: 2,
+                },
+              ]}
               accessibilityRole="button"
               accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.sleduyuschiy_slayd_83547ab9')}
             >
-              {isWeb
-                ? (({ hovered }: any) => (
-                    <View style={[styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}>
-                      <Feather
-                        name="chevron-right"
-                        size={14}
-                        color={sliderIconColor}
-                        {...({ 'aria-hidden': true, focusable: false } as any)}
-                      />
-                    </View>
-                  ))
-                : (
-                    <Feather
-                      name="chevron-right"
-                      size={14}
-                      color={sliderIconColor}
-                      {...({ 'aria-hidden': true, focusable: false } as any)}
-                    />
-                  )}
+              {({ hovered }: any) => (
+                <View style={[styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}>
+                  <Feather
+                    name="chevron-right"
+                    size={14}
+                    color={sliderIconColor}
+                    {...({ 'aria-hidden': true, focusable: false } as any)}
+                  />
+                </View>
+              )}
             </Pressable>
           </View>
         </Pressable>

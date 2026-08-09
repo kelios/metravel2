@@ -582,23 +582,28 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                                 <Pressable
                                     key={step}
                                     onPress={() => onStepSelect?.(step)}
-                                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                                    style={({ pressed }) => [
-                                        styles.milestoneInline,
-                                        step === currentStep && styles.milestoneInlineActive,
-                                        pressed && { opacity: 0.7 }
-                                    ]}
+                                    style={styles.milestoneInlineTarget}
                                     disabled={!onStepSelect}
                                     accessibilityRole="button"
                                     accessibilityLabel={i18nT('travel:components.travel.TravelWizardHeader.pereyti_k_shagu_value1_value2_01355266', { value1: step, value2: getStepLabel(step) })}
                                     accessibilityState={{ selected: step === currentStep, disabled: !onStepSelect }}
                                 >
-                                    {step < currentStep ? (
-                                        <Feather name="check" size={12} color={colors.primaryDark} />
-                                    ) : (
-                                        <Text style={[styles.milestoneInlineNumber, step === currentStep && styles.milestoneInlineNumberActive]}>
-                                            {step}
-                                        </Text>
+                                    {({ pressed }) => (
+                                        <View
+                                            style={[
+                                                styles.milestoneInline,
+                                                step === currentStep && styles.milestoneInlineActive,
+                                                pressed && { opacity: 0.7 },
+                                            ]}
+                                        >
+                                            {step < currentStep ? (
+                                                <Feather name="check" size={12} color={colors.primaryDark} />
+                                            ) : (
+                                                <Text style={[styles.milestoneInlineNumber, step === currentStep && styles.milestoneInlineNumberActive]}>
+                                                    {step}
+                                                </Text>
+                                            )}
+                                        </View>
                                     )}
                                 </Pressable>
                             ))}

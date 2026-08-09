@@ -462,7 +462,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexWrap: 'wrap',
     },
     actionButton: {
-      minHeight: 32,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,

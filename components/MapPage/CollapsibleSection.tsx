@@ -143,7 +143,7 @@ const getStyles = (colors: ThemedColors, tone: 'default' | 'flat') =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      minHeight: tone === 'flat' ? 38 : 44,
+      minHeight: 44,
       paddingVertical: tone === 'flat' ? 7 : 12,
       paddingHorizontal: tone === 'flat' ? 9 : 12,
       backgroundColor:

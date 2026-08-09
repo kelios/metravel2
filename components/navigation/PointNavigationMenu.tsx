@@ -167,7 +167,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.xs,
   },
   actionChip: {
-    minHeight: 34,
+    minHeight: 44,
     flexGrow: 1,
     flexBasis: '30%',
     minWidth: 84,

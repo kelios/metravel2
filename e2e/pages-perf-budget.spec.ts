@@ -39,6 +39,7 @@ type PageTarget = {
   path: string
   /** Page-specific ready selector; falls back to <h1> then networkidle. */
   readySelector: string
+  requireReadySelector?: boolean
 }
 
 // Числовые бюджеты живут в `helpers/pagesPerfBudgets.ts` — по записи на пару
@@ -55,7 +56,11 @@ const PAGES: PageTarget[] = [
     key: 'SEARCH',
     name: 'Search',
     path: '/search',
-    readySelector: '[data-testid="search-container"]',
+    // The deterministic fixture has two rows. Waiting for row 1 makes the CLS
+    // and first-screen DOM measurements describe the loaded catalog, not a race
+    // between the route shell and its async results.
+    readySelector: '[data-testid="travel-row-1"]',
+    requireReadySelector: true,
   },
   {
     key: 'MAP',
@@ -79,6 +84,22 @@ const PAGES: PageTarget[] = [
   },
 ]
 
+const SEARCH_PIXEL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8ZKfkAAAAASUVORK5CYII='
+const SEARCH_TRAVELS = Array.from({ length: 6 }, (_, index) => ({
+  id: 980_100 + index,
+  slug: `perf-search-${index}`,
+  url: `/travels/perf-search-${index}`,
+  name: `Стабильная карточка поиска ${index + 1}`,
+  countryName: 'Беларусь',
+  cityName: 'Минск',
+  travel_image_thumb_url: SEARCH_PIXEL,
+  travel_image_thumb_small_url: SEARCH_PIXEL,
+  publish: true,
+  moderation: true,
+  year: '2026',
+}))
+
 function shouldIgnoreBudgetRequest(target: PageTarget, url: string) {
   if (target.key !== 'MAP') return false
 
@@ -90,11 +111,15 @@ function shouldIgnoreBudgetRequest(target: PageTarget, url: string) {
   }
 }
 
-async function waitForReady(page: any, selector: string) {
-  await Promise.race([
-    page.waitForSelector(selector, { timeout: 30_000 }).catch(() => null),
-    page.waitForSelector('h1', { timeout: 30_000 }).catch(() => null),
-  ])
+async function waitForReady(page: any, selector: string, requireReadySelector = false) {
+  if (requireReadySelector) {
+    await page.waitForSelector(selector, { timeout: 30_000 })
+  } else {
+    await Promise.race([
+      page.waitForSelector(selector, { timeout: 30_000 }).catch(() => null),
+      page.waitForSelector('h1', { timeout: 30_000 }).catch(() => null),
+    ])
+  }
   await page.waitForLoadState('networkidle').catch(() => null)
 }
 
@@ -116,7 +141,11 @@ async function installDeterministicSearchApi(page: any, target: PageTarget) {
       complexity: [],
       month: [],
       over_nights_stay: [],
-      sortings: [],
+      sortings: [
+        { id: 'newest', name: 'Сначала новые' },
+        { id: 'oldest', name: 'Сначала старые' },
+        { id: 'popular_desc', name: 'Популярные' },
+      ],
       transports: [],
     }),
   )
@@ -131,11 +160,11 @@ async function installDeterministicSearchApi(page: any, target: PageTarget) {
 
     const pathname = new URL(request.url()).pathname
     if (pathname.endsWith('/travels/facets/')) {
-      await fulfillJson(route, { total: 0, facets: {} })
+      await fulfillJson(route, { total: SEARCH_TRAVELS.length, facets: {} })
       return
     }
     if (pathname.endsWith('/api/travels/') || pathname === '/travels/') {
-      await fulfillJson(route, { data: [], total: 0 })
+      await fulfillJson(route, { data: SEARCH_TRAVELS, total: SEARCH_TRAVELS.length })
       return
     }
 
@@ -176,16 +205,35 @@ for (const target of PAGES) {
 
     test(`${target.name}: Core Web Vitals within budget`, async ({ page }, testInfo) => {
       const profile = profileFromProject(testInfo.project.name)
+      const pageErrors: string[] = []
+      page.on('pageerror', (error) => pageErrors.push(error.message))
+
+      if (target.key === 'SEARCH') {
+        await page.setViewportSize(
+          profile === 'mobile' ? { width: 412, height: 823 } : { width: 1280, height: 900 },
+        )
+        const cdp = await page.context().newCDPSession(page)
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+      }
 
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
-      await waitForReady(page, target.readySelector)
+      await waitForReady(page, target.readySelector, target.requireReadySelector)
       const observedProfile = await collectObservedProfile(page)
       const domCounts = await collectFirstScreenElements(page)
       await beginPostReadyClsCollection(page)
       await page.waitForTimeout(500)
+
+      if (target.key === 'SEARCH') {
+        const screenshotPath = testInfo.outputPath(`search-${profile}-settled.png`)
+        await page.screenshot({ path: screenshotPath, fullPage: false })
+        await testInfo.attach(`search-${profile}-settled`, {
+          path: screenshotPath,
+          contentType: 'image/png',
+        })
+      }
 
       const metrics = await collectMetrics(page)
       const resolved = BASELINE_MODE ? null : resolveEffectiveBudget(target.key, profile)
@@ -222,6 +270,8 @@ for (const target of PAGES) {
       } else {
         expect(observedProfile.hasTouch, 'desktop profile reported touch support').toBe(false)
       }
+
+      expect(pageErrors, `${target.name} (${profile}) emitted page errors`).toEqual([])
 
       if (BASELINE_MODE) {
         console.log(`\n⚠️  BASELINE MODE — budgets not asserted for ${target.name} (${profile})`)
@@ -267,7 +317,7 @@ for (const target of PAGES) {
         ignoreBudgetRequest: (url) => shouldIgnoreBudgetRequest(target, url),
       })
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
-      await waitForReady(page, target.readySelector)
+      await waitForReady(page, target.readySelector, target.requireReadySelector)
 
       const stats = tracker.getStats()
       console.log(`\n📦 NETWORK BUDGET — ${target.name} (${profile})`)

@@ -112,8 +112,8 @@ const createRightColumn = (props: Record<string, unknown> = {}) => (
   />
 )
 
-const getFlattenedRowStyle = () => {
-  const row = screen.getByTestId('travel-row-0')
+const getFlattenedRowStyle = (index = 0) => {
+  const row = screen.getByTestId(`travel-row-${index}`)
   return StyleSheet.flatten(row.props.style) as Record<string, unknown>
 }
 
@@ -128,10 +128,14 @@ describe('RightColumn web row paint optimization', () => {
     Platform.OS = 'web'
   })
 
-  it('adds content-visibility hints for regular web list rows', () => {
+  it('paints the first visible row eagerly and defers later web rows', () => {
     renderWithProviders(createRightColumn())
 
     expect(getFlattenedRowStyle()).toMatchObject({
+      contentVisibility: 'visible',
+      containIntrinsicSize: 'none',
+    })
+    expect(getFlattenedRowStyle(1)).toMatchObject({
       contentVisibility: 'auto',
       containIntrinsicSize: 'auto 420px',
     })
@@ -140,14 +144,45 @@ describe('RightColumn web row paint optimization', () => {
   it('drops deferred paint hints when export mode is enabled', () => {
     const { rerenderWithProviders } = renderWithProviders(createRightColumn())
 
-    expect(getFlattenedRowStyle()).toMatchObject({
-      contentVisibility: 'auto',
-      containIntrinsicSize: 'auto 420px',
-    })
+    expect(getFlattenedRowStyle().contentVisibility).toBe('visible')
+    expect(getFlattenedRowStyle().containIntrinsicSize).toBe('none')
 
     rerenderWithProviders(createRightColumn({ isExport: true }))
 
     expect(getFlattenedRowStyle().contentVisibility).toBeUndefined()
     expect(getFlattenedRowStyle().containIntrinsicSize).toBeUndefined()
+  })
+
+  it('updates compact toolbar status props through the memo boundary', () => {
+    const onDensityChange = jest.fn()
+    const onStatusModeChange = jest.fn()
+    const refetch = jest.fn()
+    const { rerenderWithProviders } = renderWithProviders(
+      createRightColumn({
+        isCompactToolbar: true,
+        showDensityToggle: true,
+        onDensityChange,
+        showStatusModeToggle: true,
+        onStatusModeChange,
+        statusMode: 'all',
+        refetch,
+      }),
+    )
+
+    expect(screen.getByTestId('travel-status-all').props.accessibilityState.selected).toBe(true)
+
+    rerenderWithProviders(
+      createRightColumn({
+        isCompactToolbar: true,
+        showDensityToggle: true,
+        onDensityChange,
+        showStatusModeToggle: true,
+        onStatusModeChange,
+        statusMode: 'published',
+        refetch,
+      }),
+    )
+
+    expect(screen.getByTestId('travel-status-published').props.accessibilityState.selected).toBe(true)
   })
 })

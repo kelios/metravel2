@@ -161,14 +161,18 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   const showOsmCategoriesPanel =
     resolvedShowOverlays && osmPoiEnabled && typeof mapUiApi?.setOsmPoiCategories === 'function'
 
+  // Только когда выбор базового слоя реально показан. Иначе панель на каждом
+  // открытии пересоздавала подложку тем же самым OSM-слоем — карта перезапрашивала
+  // все видимые тайлы просто от нажатия «Слои», а на картах с чужой подложкой
+  // (MapCanvas рисует свой TileLayer) это добавляло бы вторую поверх первой.
   useEffect(() => {
-    if (!mapUiApi) return
+    if (!mapUiApi || !shouldShowBaseLayerSelector) return
     try {
       mapUiApi.setBaseLayer(selectedBaseLayerId)
     } catch {
       ignoreTransientMapRuntimeError()
     }
-  }, [mapUiApi, selectedBaseLayerId])
+  }, [mapUiApi, selectedBaseLayerId, shouldShowBaseLayerSelector])
 
   useEffect(() => {
     if (usesControlledOverlays || !mapUiApi) return

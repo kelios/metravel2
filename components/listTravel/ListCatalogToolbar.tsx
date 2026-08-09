@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -7,7 +7,6 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { getTravelLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
 import { translate as i18nT } from '@/i18n'
-import { BREAKPOINTS } from './utils/listTravelConstants'
 
 
 export type ListSortOption = { id: string; name: string }
@@ -38,6 +37,8 @@ interface ListCatalogToolbarProps {
   statusMode?: ListStatusMode
   onStatusModeChange?: (mode: ListStatusMode) => void
   showStatusModeToggle?: boolean
+  /** Hydration-stable layout mode resolved by the list viewport owner. */
+  compactLayout: boolean
 }
 
 const spacing = DESIGN_TOKENS.spacing
@@ -63,24 +64,23 @@ function ListCatalogToolbar({
   statusMode = 'all',
   onStatusModeChange,
   showStatusModeToggle = false,
+  compactLayout,
 }: ListCatalogToolbarProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
-  const { width: viewportWidth } = useWindowDimensions()
 
   const activeSort = (sortValue || '').trim() || DEFAULT_SORT_ID
   const countVisible = showResultsCount && typeof resultsCount === 'number'
   const isNative = Platform.OS !== 'web'
-  // Match the overlay-filter breakpoint used by ListTravelBase. At these
-  // widths sorting already lives in the filters sheet; keeping the full chip
-  // strip here duplicated the control and clipped its trailing options on
-  // tablets and compact laptops.
-  const isCompactWeb =
-    Platform.OS === 'web' && viewportWidth > 0 && viewportWidth < BREAKPOINTS.DESKTOP
-  const compactLayout = isNative || isCompactWeb
+  // ListTravelBase owns the responsive breakpoint and passes a value that is
+  // already stable when this lazy route mounts. Reading useWindowDimensions()
+  // again here briefly selected desktop geometry on mobile web and shifted the
+  // density control after hydration (#1298).
+  const isCompactWeb = Platform.OS === 'web' && compactLayout
+  const useCompactLayout = isNative || isCompactWeb
   // Sort chips are dropped in the compact layout (all phones + narrow web) — they'd wrap onto their
   // own full-width row and blow the 20% header budget. Sorting stays reachable in the filters sheet.
-  const sortEnabled = showSort && !compactLayout
+  const sortEnabled = showSort && !useCompactLayout
   const sortVisible = sortEnabled && sortOptions.length > 0
 
   const statusVisible = showStatusModeToggle && !!onStatusModeChange
@@ -207,7 +207,7 @@ function ListCatalogToolbar({
     </View>
   ) : null
 
-  if (isNative || isCompactWeb) {
+  if (useCompactLayout) {
     return (
       <View
         style={[styles.container, styles.compactContainer, { paddingHorizontal: contentPadding }]}
@@ -272,7 +272,10 @@ const getStyles = (colors: ThemedColors) =>
     compactTopRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      // On web, keep controls pinned to the trailing edge even before the async
+      // result count appears. With space-between, a lone controls group sat at
+      // the leading edge and jumped across the row when the count mounted (#1298).
+      justifyContent: Platform.select({ web: 'flex-end', default: 'space-between' }),
       gap: spacing.sm,
     },
     iconControlsRow: {
@@ -310,11 +313,11 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.textSecondary,
       flexShrink: 1,
       minWidth: 0,
-      marginRight: spacing.xs,
+      marginRight: Platform.select<number | 'auto'>({ web: 'auto', default: spacing.xs }),
     },
     chip: {
       flexShrink: 0,
-      minHeight: 32,
+      minHeight: 44,
       minWidth: Platform.select({ web: undefined, default: 72 }),
       alignItems: 'center',
       justifyContent: 'center',

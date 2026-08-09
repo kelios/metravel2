@@ -121,7 +121,7 @@ export function useRightColumnStyles({
         paddingBottom: DESIGN_TOKENS.spacing.xxs,
       },
       chip: {
-        minHeight: 34,
+        minHeight: 44,
         maxWidth: isMobileViewport ? '100%' : 280,
         flexDirection: 'row' as const,
         alignItems: 'center' as const,

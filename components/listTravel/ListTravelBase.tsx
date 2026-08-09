@@ -675,6 +675,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         travels: displayedTravels,
         gridColumns,
         isMobileViewport: viewportState.isCardsSingleColumn,
+        isCompactToolbar: usesOverlaySidebar,
         isMobile: isCardsSingleColumn,
         showNextPageLoading: displayedShowNextPageLoading,
         refetch: displayedRefetch,

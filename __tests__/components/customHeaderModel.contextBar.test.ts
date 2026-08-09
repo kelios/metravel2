@@ -31,7 +31,7 @@ describe('shouldShowHeaderContextBar (web)', () => {
       },
     );
 
-    it.each(['/', '/index', '/search', '/travelsby', '/places', '/trips', '/roulette', '/quests', '/login', '/registration', '/set-password', '/metravel'])(
+    it.each(['/', '/index', '/search', '/travelsby', '/map', '/places', '/trips', '/roulette', '/quests', '/login', '/registration', '/set-password', '/metravel'])(
       'keeps the context bar collapsed on top-level nav page %s',
       (path) => {
         expect(shouldShowHeaderContextBar(path, false)).toBe(false);

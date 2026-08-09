@@ -141,8 +141,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flexShrink: 1,
         },
         sidebarCloseBtn: {
-            width: 36,
-            height: 36,
+            width: 44,
+            height: 44,
             borderRadius: CONTROL_RADIUS,
             backgroundColor: colors.backgroundSecondary,
             alignItems: 'center',

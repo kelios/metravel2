@@ -79,7 +79,10 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.border,
-    minWidth: 40,
+    // Пилюля выбора сама является тач-таргетом, поэтому её собственный размер
+    // не может быть ниже принятого floor 44dp (#1297).
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -41,12 +41,7 @@ export const Toggle: React.FC<ToggleProps> = ({
 
   return (
     <Pressable
-      style={[
-        styles.toggle,
-        value && styles.toggleActive,
-        disabled && styles.toggleDisabled,
-        style
-      ]}
+      style={[styles.toggle, style]}
       onPress={(e: any) => {
         if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
         if (!disabled) onValueChange(!value);
@@ -54,18 +49,39 @@ export const Toggle: React.FC<ToggleProps> = ({
       focusable={!presentational}
       {...ariaProps}
     >
-      <View 
+      <View
         style={[
-          styles.thumb,
-          value && styles.thumbActive
-        ]} 
-      />
+          styles.toggleTrack,
+          value && styles.toggleTrackActive,
+          disabled && styles.toggleTrackDisabled,
+        ]}
+      >
+        <View
+          style={[
+            styles.thumb,
+            value && styles.thumbActive
+          ]}
+        />
+      </View>
     </Pressable>
   );
 };
 
 const createStyles = (colors: any) => StyleSheet.create({
+  /**
+   * Тач-таргет переключателя — прозрачная рамка вокруг видимой дорожки.
+   * Сама дорожка остаётся 44×24: `hitSlop` здесь не помог бы, потому что строка
+   * настроек обтягивает переключатель вплотную и срезает добор (#1274,
+   * тот же приём, что `MAP_TOOLBAR_TOUCH_TARGET_SIZE` на тулбаре карты).
+   */
   toggle: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** Видимая дорожка: размер и вид прежние. */
+  toggleTrack: {
     width: 44,
     height: 24,
     borderRadius: 12,
@@ -76,11 +92,11 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     transition: Platform.OS === 'web' ? 'background-color 0.2s' : undefined,
   } as any,
-  toggleActive: {
+  toggleTrackActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  toggleDisabled: {
+  toggleTrackDisabled: {
     opacity: 0.5,
   },
   thumb: {

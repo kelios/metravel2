@@ -165,7 +165,7 @@ export const createTypographyStyles = (ctx: HeroStyleContext) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: useDenseBookNotes ? 5 : 8,
-      minHeight: useDenseBookNotes ? 28 : 34,
+      minHeight: 44,
       paddingHorizontal: useDenseBookNotes ? 7 : 10,
       paddingVertical: useDenseBookNotes ? 5 : 7,
       borderRadius: DESIGN_TOKENS.radii.pill,

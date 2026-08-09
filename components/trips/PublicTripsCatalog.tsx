@@ -287,7 +287,7 @@ const createStyles = (colors: ThemedColors) =>
       flexWrap: 'wrap',
     },
     backCrumb: {
-      minHeight: 32,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
@@ -306,7 +306,7 @@ const createStyles = (colors: ThemedColors) =>
       minWidth: 0,
     },
     crumbItem: {
-      minHeight: 30,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
@@ -332,7 +332,7 @@ const createStyles = (colors: ThemedColors) =>
     organizeIconBtn: { flexShrink: 0, marginHorizontal: 0 },
     introToggle: {
       alignSelf: 'flex-start',
-      minHeight: 34,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,

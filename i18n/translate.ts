@@ -1,5 +1,6 @@
 import { DEFAULT_LOCALE, FALLBACK_LOCALE } from './config'
 import i18n from './instance'
+import { selectPluralCategory } from './pluralRules'
 import { resources, type TranslationKey, type TranslationParams } from './resources'
 
 const missingTranslation = resources[FALLBACK_LOCALE].common['i18n.missingTranslation']
@@ -29,8 +30,21 @@ export const getFixedTranslator = (locale = i18n.resolvedLanguage || DEFAULT_LOC
   }
 }
 
+/**
+ * Форму числа выбираем сами, а не отдаём i18next: у Hermes на Android может не
+ * быть `Intl.PluralRules`, и тогда i18next сваливается в `other`. На устройстве
+ * это давало «4 участников» там, где web через инлайнер печатал «4 участника».
+ * `selectPluralCategory` — тот же селектор, что у web (`translate.web.ts`) и у
+ * `format.ts`, поэтому три пути дают одну форму.
+ */
 export const translatePlural = (
   key: TranslationKey,
   count: number,
   params: TranslationParams = {},
-): string => translate(key, { ...params, count })
+): string => {
+  const locale = i18n.resolvedLanguage || DEFAULT_LOCALE
+  const category = selectPluralCategory(count, locale)
+  const suffixed = `${key}_${category}` as TranslationKey
+  if (runtimeI18n.exists(suffixed)) return translate(suffixed, { ...params, count })
+  return translate(key, { ...params, count })
+}

@@ -1,8 +1,8 @@
 diff --git a/node_modules/expo/src/async-require/asyncRequireModule.ts b/node_modules/expo/src/async-require/asyncRequireModule.ts
-index 7c183bd..7cd155b 100644
+index 7c183bd..7111d76 100644
 --- a/node_modules/expo/src/async-require/asyncRequireModule.ts
 +++ b/node_modules/expo/src/async-require/asyncRequireModule.ts
-@@ -20,6 +20,22 @@ type DependencyMapPaths = { [moduleID: number | string]: unknown } | null;
+@@ -20,6 +20,40 @@ type DependencyMapPaths = { [moduleID: number | string]: unknown } | null;
  declare const crossOriginIsolated: boolean | undefined;
  declare let __METRO_GLOBAL_PREFIX__: string;
 
@@ -16,16 +16,34 @@ index 7c183bd..7cd155b 100644
 +): void | Promise<void> {
 +  if (bundlePath == null) return undefined;
 +  const requiredIds = (globalThis as any).__METRAVEL_CHUNK_DEPS__?.[bundlePath as any];
++  if (!Array.isArray(requiredIds)) return undefined;
 +  const sharedChunks = (globalThis as any).__METRAVEL_SHARED_CHUNKS__;
-+  return Array.isArray(requiredIds)
-+    ? Promise.all(requiredIds.map((id) => loadBundle(sharedChunks[id]))).then(() => undefined)
-+    : undefined;
++  // METRAVEL_PER_ROUTE_COMMON_CHUNK: wait only for the shared chunks that are not
++  // on the page yet. Every shared chunk marks itself as evaluated, and the HTML of
++  // the requested route already ships the ones that route needs as <script> tags,
++  // so on the document's own route there is nothing to await. Awaiting anyway
++  // pushed the route module one microtask past the start of hydration: React.lazy
++  // suspended, the route Suspense boundary (fallback={null} in production) dropped
++  // the server-rendered DOM, and the screen stayed blank until the client render
++  // landed (#1340). Anything genuinely missing — a client-side navigation into a
++  // route this document never shipped — is still loaded before importAll().
++  // Without the marker table — native bundles, or a client still running an older
++  // runtime — nothing counts as loaded and every dependency is awaited exactly as
++  // before, so the fast path can only ever be skipped, never wrongly taken.
++  const loadedChunks = (globalThis as any).__METRAVEL_LOADED_CHUNKS__;
++  const pending: Promise<void>[] = [];
++  for (const id of requiredIds) {
++    const chunkPath = sharedChunks[id];
++    if (loadedChunks?.[chunkPath as any]) continue;
++    pending.push(loadBundle(chunkPath));
++  }
++  return pending.length ? Promise.all(pending).then(() => undefined) : undefined;
 +}
 +
  // Shim script that wraps around a given worker entrypoint and:
  // - Remaps `fetch` to the base URL given
  // - Remaps `importScripts` to the base URL given
-@@ -49,13 +65,15 @@ function maybeLoadBundle(moduleID: number, paths: DependencyMapPaths): void | Pr
+@@ -49,13 +83,15 @@ function maybeLoadBundle(moduleID: number, paths: DependencyMapPaths): void | Pr
    ];
 
    if (loadBundle != null) {
@@ -48,7 +66,7 @@ index 7c183bd..7cd155b 100644
      }
    }
 
-@@ -74,6 +92,16 @@ function asyncRequireImpl<T>(
+@@ -74,6 +110,16 @@ function asyncRequireImpl<T>(
    // On web, split chunks may already be preloaded via `<script>` tags, so importing
    // synchronously first prevents double-loading the script
    if (process.env.EXPO_OS === 'web') {

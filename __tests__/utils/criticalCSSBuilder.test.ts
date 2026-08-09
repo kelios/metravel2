@@ -53,6 +53,10 @@ describe('buildCriticalCSS: до-гидрационная раскладка ш�
     expect(css).toContain('@media (max-width:1279.98px){')
   })
 
+  it('фиксирует desktop-высоту строки до регистрации атомарных стилей RNW', () => {
+    expect(css).toContain('[data-header-inner="true"]{height:64px !important}')
+  })
+
   it.each([
     ['[data-header-logo-wordmark="true"]', 'display:none'],
     ['[data-header-logo-image="true"]', 'width:26px'],
@@ -60,6 +64,7 @@ describe('buildCriticalCSS: до-гидрационная раскладка ш�
     ['[data-header-slot="account"]', 'flex:1 1 0%'],
     ['[data-header-lang-chevron="true"]', 'display:none'],
     ['[data-testid="header-language-switcher"]', 'min-width:54px'],
+    ['[data-header-inner="true"]', 'height:56px'],
     ['[data-header-inner="true"]', 'padding:6px'],
     ['[data-testid="main-header"]', 'padding-bottom:6px'],
   ])('приводит %s к мобильной ветке (%s)', (selector, declaration) => {

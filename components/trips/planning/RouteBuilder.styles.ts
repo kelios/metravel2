@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { ThemedColors } from '@/hooks/useTheme';
-import { webTextStyle } from '@/utils/webProps';
+import { webTextStyle, webViewStyle } from '@/utils/webProps';
 export const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     wrap: { gap: 12 },
@@ -20,15 +20,47 @@ export const createStyles = (colors: ThemedColors) =>
     pointRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      gap: 10,
+      gap: 8,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 12,
-      padding: 12,
+      paddingVertical: 8,
+      paddingRight: 12,
+      paddingLeft: 4,
       backgroundColor: colors.surface,
     },
-    pointIcon: { width: 22, alignItems: 'center', paddingTop: 1 },
-    pointBody: { flex: 1, gap: 2 },
+    // Без ручки перетаскивания (чужой маршрут или единственная точка) строка
+    // сохраняет прежние отступы — слева больше нечего компенсировать.
+    pointRowFlat: { paddingVertical: 12, paddingLeft: 12 },
+    // Строку под пальцем поднимаем над соседями: на Android порядок отрисовки
+    // задаёт elevation, на web — zIndex.
+    pointRowDragging: {
+      zIndex: 2,
+      elevation: 4,
+      borderColor: colors.primary,
+      backgroundColor: colors.surfaceMuted,
+    },
+    pointRowDropTarget: { borderColor: colors.primary },
+    // #1303: ручка перетаскивания. Таргет задаётся размером самой вью — hitSlop
+    // на Android режет родитель. `touchAction: none` не даёт браузеру увести
+    // касание с ручки в скролл страницы.
+    dragHandle: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 10,
+      ...Platform.select({
+        web: webViewStyle({ cursor: 'grab', touchAction: 'none', userSelect: 'none' }),
+        default: {},
+      }),
+    },
+    dragHandleActive: {
+      backgroundColor: colors.surfaceMuted,
+      ...Platform.select({ web: webViewStyle({ cursor: 'grabbing' }), default: {} }),
+    },
+    pointBody: { flex: 1, gap: 2, paddingTop: 2 },
+    pointTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     pointType: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
     pointName: { fontSize: 15, fontWeight: '600', color: colors.text },
     pointDescription: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },

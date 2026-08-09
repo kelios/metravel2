@@ -50,6 +50,11 @@ const SDK_LOCALES = {
 export const isFacebookLoginEnabled = () =>
     String(process.env.EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED || '').trim().toLowerCase() === 'true';
 
+export const getFacebookRenderState = (enabled: boolean, hydrationReady: boolean) => {
+    if (!enabled) return 'hidden' as const;
+    return hydrationReady ? 'button' as const : 'hydration-placeholder' as const;
+};
+
 export const getFacebookSdkLocale = (locale: SupportedLocale) => SDK_LOCALES[locale];
 
 export const getFacebookLoginOptions = (mode: FacebookSignInButtonProps['mode']) => ({
@@ -93,6 +98,7 @@ export default function FacebookSignInButton({
     const appId = String(process.env.EXPO_PUBLIC_META_APP_ID || '').trim();
     const apiVersion = String(process.env.EXPO_PUBLIC_META_API_VERSION || 'v23.0').trim();
     const enabled = isFacebookLoginEnabled();
+    const renderState = getFacebookRenderState(enabled, hydrationReady);
 
     useEffect(() => {
         onSuccessRef.current = onSuccess;
@@ -147,8 +153,10 @@ export default function FacebookSignInButton({
         };
     }, [apiVersion, appId, enabled, locale]);
 
-    if (!enabled) return null;
-    if (!hydrationReady) return <View style={styles.hydrationPlaceholder} />;
+    if (renderState === 'hidden') return null;
+    if (renderState === 'hydration-placeholder') {
+        return <View style={styles.hydrationPlaceholder} />;
+    }
 
     const unavailable = !appId;
     const handlePress = () => {

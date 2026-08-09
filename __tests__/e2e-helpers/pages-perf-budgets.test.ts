@@ -8,7 +8,6 @@
 import {
   BudgetConfigurationError,
   FORBIDDEN_SHIFT_SOURCES,
-  GLOBAL_FORBIDDEN_SOURCE_DEBT,
   HEALTHY_CLS_MAX,
   PERF_PROFILES,
   clampCeiling,
@@ -140,35 +139,16 @@ describe('evaluatePageBudget', () => {
     expect(evaluatePageBudget(measurement({ lcp: null, fcp: null }), healthyBudget())).toEqual([])
   })
 
-  it.each(
-    FORBIDDEN_SHIFT_SOURCES.filter(
-      (source) => !GLOBAL_FORBIDDEN_SOURCE_DEBT.ids.includes(source.id),
-    ).map((source) => [source.id, source.marker]),
-  )('fails when %s appears among the shift sources', (id, marker) => {
-    const violations = evaluatePageBudget(
-      measurement({ clsSourceFingerprints: [`div[${marker}].css-abc (y 6→10, h 44)`] }),
-      healthyBudget(),
-    )
-    expect(violations.map((violation) => violation.detail)).toContain(id)
-  })
-
-  // Пока #1298 открыт, узел шапки на общем долге и падать не должен — но долг
-  // обязан быть адресован карточкой, иначе он превращается в тихое исключение.
-  it('keeps the globally deferred header node quiet while the debt is recorded', () => {
-    expect(GLOBAL_FORBIDDEN_SOURCE_DEBT.taskRef.trim()).not.toBe('')
-    expect(GLOBAL_FORBIDDEN_SOURCE_DEBT.ids.length).toBeGreaterThan(0)
-
-    for (const id of GLOBAL_FORBIDDEN_SOURCE_DEBT.ids) {
-      const source = FORBIDDEN_SHIFT_SOURCES.find((candidate) => candidate.id === id)
-      // Jest-овский expect не принимает сообщение вторым аргументом.
-      expect(FORBIDDEN_SHIFT_SOURCES.map((candidate) => candidate.id)).toContain(id)
+  it.each(FORBIDDEN_SHIFT_SOURCES.map((source) => [source.id, source.marker]))(
+    'fails when %s appears among the shift sources',
+    (id, marker) => {
       const violations = evaluatePageBudget(
-        measurement({ clsSourceFingerprints: [`div[${source!.marker}] (y 6→10, h 44)`] }),
+        measurement({ clsSourceFingerprints: [`div[${marker}].css-abc (y 6→10, h 44)`] }),
         healthyBudget(),
       )
-      expect(violations).toEqual([])
-    }
-  })
+      expect(violations.map((violation) => violation.detail)).toContain(id)
+    },
+  )
 })
 
 // #1287: односторонние сравнения означают, что пустая страница «укладывается»

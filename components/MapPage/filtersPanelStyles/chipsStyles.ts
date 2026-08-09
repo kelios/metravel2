@@ -39,7 +39,7 @@ export const getChipsStyles = ({ colors, isMobile }: FiltersPanelStyleContext) =
       backgroundColor: colors.backgroundSecondary,
       paddingHorizontal: 10,
       paddingVertical: 7,
-      minHeight: 32,
+      minHeight: 44,
       borderRadius: PILL_RADIUS,
       maxWidth: isMobile ? 180 : '100%',
       marginRight: 6,

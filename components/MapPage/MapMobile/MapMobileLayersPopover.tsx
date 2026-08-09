@@ -40,6 +40,17 @@ interface MapMobileLayersPopoverProps {
   minWidth?: number
   /** Card max width. Desktop uses a slightly wider card than mobile. */
   maxWidth?: number
+  /**
+   * Высота прокручиваемого списка слоёв. Дефолт рассчитан на карту во весь
+   * экран; встроенная карта конструктора маршрута (320px) передаёт меньше,
+   * иначе карточка не влезает в её `overflow: hidden`.
+   */
+  scrollMaxHeight?: number
+  /**
+   * Показывать выбор базовой подложки. `false` — у карты своя подложка, которой
+   * `MapUiApi.setBaseLayer` не управляет (карта конструктора маршрута).
+   */
+  showBaseLayer?: boolean
   mapUiApi?: MapUiApi | null
   overlayOptions?: ReadonlyArray<OverlayOption>
   enabledOverlays?: Record<string, boolean>
@@ -54,6 +65,8 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
   right,
   minWidth,
   maxWidth,
+  scrollMaxHeight,
+  showBaseLayer,
   mapUiApi,
   overlayOptions,
   enabledOverlays,
@@ -93,7 +106,10 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
       </View>
 
       <ScrollView
-        style={styles.scroll}
+        style={[
+          styles.scroll,
+          scrollMaxHeight ? { maxHeight: scrollMaxHeight } : null,
+        ]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -105,6 +121,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
           isMobile
           mode="radius"
           mapUiApi={mapUiApi}
+          showBaseLayer={showBaseLayer}
           overlayOptions={overlayOptions ? [...overlayOptions] : undefined}
           enabledOverlays={enabledOverlays}
           onOverlayToggle={onOverlayToggle}

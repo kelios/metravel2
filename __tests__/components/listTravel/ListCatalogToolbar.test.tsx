@@ -22,7 +22,6 @@ jest.mock('@/hooks/useTheme', () => ({
 
 const ReactNative = require('react-native')
 const originalPlatformOS = ReactNative.Platform.OS
-const mockUseWindowDimensions = ReactNative.useWindowDimensions as jest.Mock
 const ListCatalogToolbar = require('@/components/listTravel/ListCatalogToolbar').default
 
 describe('ListCatalogToolbar', () => {
@@ -40,15 +39,6 @@ describe('ListCatalogToolbar', () => {
     })
   })
 
-  beforeEach(() => {
-    mockUseWindowDimensions.mockReturnValue({
-      width: 390,
-      height: 844,
-      scale: 1,
-      fontScale: 1,
-    })
-  })
-
   it('keeps compact mobile web toolbar lean by dropping inline sort chips', () => {
     const { getByTestId, queryByLabelText, queryByTestId } = render(
       <ListCatalogToolbar
@@ -63,6 +53,7 @@ describe('ListCatalogToolbar', () => {
         onDensityChange={jest.fn()}
         resultsCount={24}
         showResultsCount
+        compactLayout
       />,
     )
 
@@ -72,40 +63,7 @@ describe('ListCatalogToolbar', () => {
     expect(queryByTestId('sort-chip-newest')).toBeNull()
   })
 
-  it.each([768, 1024, 1280])(
-    'keeps inline sorting in the filters sheet at compact width %ipx',
-    (width) => {
-      mockUseWindowDimensions.mockReturnValue({
-        width,
-        height: 844,
-        scale: 1,
-        fontScale: 1,
-      })
-      const { queryByLabelText, queryByTestId } = render(
-        <ListCatalogToolbar
-          sortOptions={[
-            { id: 'newest', name: 'Новые' },
-            { id: 'oldest', name: 'Старые' },
-          ]}
-          sortValue="newest"
-          onSortChange={jest.fn()}
-          density="comfortable"
-          onDensityChange={jest.fn()}
-        />,
-      )
-
-      expect(queryByLabelText('Сортировка списка')).toBeNull()
-      expect(queryByTestId('sort-chip-newest')).toBeNull()
-    },
-  )
-
   it('shows inline sorting once the docked desktop sidebar is available', () => {
-    mockUseWindowDimensions.mockReturnValue({
-      width: 1920,
-      height: 1080,
-      scale: 1,
-      fontScale: 1,
-    })
     const { getByTestId } = render(
       <ListCatalogToolbar
         sortOptions={[
@@ -116,6 +74,7 @@ describe('ListCatalogToolbar', () => {
         onSortChange={jest.fn()}
         density="comfortable"
         onDensityChange={jest.fn()}
+        compactLayout={false}
       />,
     )
 

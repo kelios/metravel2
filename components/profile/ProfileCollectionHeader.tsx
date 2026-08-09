@@ -98,7 +98,7 @@ export default function ProfileCollectionHeader({
           paddingVertical: DESIGN_TOKENS.spacing.xs,
           paddingHorizontal: DESIGN_TOKENS.spacing.xs,
           borderRadius: DESIGN_TOKENS.radii.sm,
-          minHeight: 32,
+          minHeight: 44,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: 'transparent',
         },

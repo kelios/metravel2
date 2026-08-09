@@ -81,6 +81,19 @@ async function openTravelDetailsForPerf(
   waitUntil: 'load' | 'domcontentloaded' = 'load'
 ) {
   await mockFallbackTravelDetails(page);
+  if (TRAVEL_SLUG === FALLBACK_TRAVEL_SLUG) {
+    // Keep the deterministic fixture independent from the live nearby-quest
+    // catalog. Otherwise it sometimes downloads six production quest covers
+    // and sometimes none, moving the first-party count by six requests. An
+    // explicit PERF_TRAVEL_SLUG remains genuinely live for diagnostics.
+    await page.route('**/quests/near-location/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ results: [], count: 0 }),
+      });
+    });
+  }
   await page.goto(travelUrl(TRAVEL_SLUG), {
     waitUntil,
     timeout: 60_000,

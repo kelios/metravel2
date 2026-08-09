@@ -262,8 +262,8 @@ function UserSafetyMenu({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     trigger: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
@@ -289,8 +289,8 @@ const getStyles = (colors: ThemedColors) =>
     },
     title: { fontSize: DESIGN_TOKENS.typography.sizes.lg, fontWeight: '800', color: colors.text },
     closeBtn: {
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',

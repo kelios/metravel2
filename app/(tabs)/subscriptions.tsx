@@ -156,7 +156,7 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
     backToProfileButton: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       paddingHorizontal: 12, paddingVertical: 10, borderRadius: DESIGN_TOKENS.radii.md,
-      borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface, minHeight: 40,
+      borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface, minHeight: 44,
     },
     backToProfileButtonText: { fontSize: 14, fontWeight: '600', color: colors.primaryText },
   });

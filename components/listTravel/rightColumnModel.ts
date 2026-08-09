@@ -102,6 +102,7 @@ type RightColumnComparableProps = {
   gridColumns: number
   isError: boolean
   isExport?: boolean
+  isCompactToolbar?: boolean
   isMobile: boolean
   isMobileViewport?: boolean
   isRecommendationsVisible: boolean
@@ -114,6 +115,9 @@ type RightColumnComparableProps = {
   showEmptyState: boolean
   showInitialLoading: boolean
   showNextPageLoading: boolean
+  showStatusModeToggle?: boolean
+  statusMode?: string
+  onStatusModeChange?: unknown
   topContent?: unknown
   total: number
   travels: Travel[]
@@ -146,6 +150,7 @@ export function areRightColumnPropsEqual(
     prev.isSearchPending === next.isSearchPending &&
     prev.isError === next.isError &&
     prev.isExport === next.isExport &&
+    prev.isCompactToolbar === next.isCompactToolbar &&
     prev.onFiltersPress === next.onFiltersPress &&
     prev.showEmptyState === next.showEmptyState &&
     prev.showNextPageLoading === next.showNextPageLoading &&
@@ -160,7 +165,10 @@ export function areRightColumnPropsEqual(
     prev.onDensityChange === next.onDensityChange &&
     prev.primaryAction === next.primaryAction &&
     prev.density === next.density &&
-    prev.showDensityToggle === next.showDensityToggle
+    prev.showDensityToggle === next.showDensityToggle &&
+    prev.statusMode === next.statusMode &&
+    prev.onStatusModeChange === next.onStatusModeChange &&
+    prev.showStatusModeToggle === next.showStatusModeToggle
   )
 }
 

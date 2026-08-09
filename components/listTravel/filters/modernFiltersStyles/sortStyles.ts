@@ -18,7 +18,7 @@ export const createSortStyles = (ctx: StylesCtx) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      minHeight: 42,
+      minHeight: 44,
       paddingVertical: 7,
       paddingHorizontal: spacing.sm,
       backgroundColor: colors.surface,
@@ -111,7 +111,7 @@ export const createSortStyles = (ctx: StylesCtx) => {
     sortOptionCompact: {
       paddingVertical: 8,
       paddingHorizontal: spacing.sm,
-      minHeight: 40,
+      minHeight: 44,
     },
     sortOptionSelected: {
       backgroundColor: colors.brandSoft,

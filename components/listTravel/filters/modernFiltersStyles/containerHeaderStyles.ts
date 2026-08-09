@@ -175,8 +175,8 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       flexShrink: 0,
     },
     closeButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       padding: 0,
       borderRadius: PILL_RADIUS,
       alignItems: 'center',

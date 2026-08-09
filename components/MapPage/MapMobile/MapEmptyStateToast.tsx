@@ -146,7 +146,7 @@ const getStyles = (colors: ThemedColors) =>
       gap: 8,
     },
     actionPrimary: {
-      minHeight: 34,
+      minHeight: 44,
       flexGrow: 1,
       flexBasis: 0,
       minWidth: 0,
@@ -158,7 +158,7 @@ const getStyles = (colors: ThemedColors) =>
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     actionSecondary: {
-      minHeight: 34,
+      minHeight: 44,
       flexGrow: 1,
       flexBasis: 0,
       minWidth: 0,

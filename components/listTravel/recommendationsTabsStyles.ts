@@ -52,11 +52,11 @@ export const createRecommendationsTabsStyles = (
   },
   tab: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 999, marginRight: 8, minHeight: 36, borderWidth: 1, borderColor: 'transparent',
+    borderRadius: 999, marginRight: 8, minHeight: 44, borderWidth: 1, borderColor: 'transparent',
   },
   // Compact paddings/label so all 4 tabs fit on narrow phones (≤420px) instead of overflowing
   // into a hidden horizontal scroll where the user only sees the first two.
-  tabCompact: { paddingHorizontal: 8, paddingVertical: 6, marginRight: 4, minHeight: 32 },
+  tabCompact: { paddingHorizontal: 8, paddingVertical: 6, marginRight: 4, minHeight: 44 },
   activeTab: { backgroundColor: colors.primarySoft, borderColor: colors.primaryAlpha30 },
   tabLabel: { marginLeft: 7, fontSize: 13, color: colors.textMuted, fontWeight: '600', letterSpacing: -0.1 },
   tabLabelCompact: { marginLeft: 4, fontSize: 12 },
@@ -258,8 +258,8 @@ export const createRecommendationsTabsStyles = (
     color: colors.primaryText,
   },
   shelfClearButton: {
-    width: 34,
-    height: 34,
+    width: 44,
+    height: 44,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',

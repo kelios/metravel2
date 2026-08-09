@@ -28,27 +28,40 @@ jest.mock('@/utils/loadLeafletRuntime', () => ({
   }),
 }))
 
-jest.mock('@/components/MapPage/Map/MapCanvas', () => ({
-  MapCanvas: ({
-    children,
-    containerKey,
-    center,
-    zoom,
-    onMapRef,
-  }: {
-    children?: (engine: unknown) => React.ReactNode
-    containerKey?: string
-    center?: [number, number]
-    zoom?: number
-    onMapRef?: (map: unknown) => void
-  }) => {
-    mockCanvasProps.push({ containerKey, center, zoom })
-    // Реальный MapCanvas отдаёт leaflet-инстанс наверх — компонент снимает с него
-    // центр/зум перед разворотом.
-    onMapRef?.({ getCenter: () => ({ lat: 53.5, lng: 27.5 }), getZoom: () => 14 })
-    return <div data-testid="map-canvas">{children?.({})}</div>
-  },
-}))
+jest.mock('@/components/MapPage/Map/MapCanvas', () => {
+  const ReactModule = require('react') as typeof React
+
+  return {
+    MapCanvas: ({
+      children,
+      containerKey,
+      center,
+      zoom,
+      onMapRef,
+    }: {
+      children?: (engine: unknown) => React.ReactNode
+      containerKey?: string
+      center?: [number, number]
+      zoom?: number
+      onMapRef?: (map: unknown) => void
+    }) => {
+      mockCanvasProps.push({ containerKey, center, zoom })
+      // Реальный MapCanvas отдаёт leaflet-инстанс наверх — компонент снимает с него
+      // центр/зум перед разворотом. Инстанс ОДИН на смонтированный контейнер и
+      // приезжает эффектом: карта конструктора держит его состоянием, и новый
+      // объект на каждый рендер закрутил бы бесконечный цикл, которого в проде нет.
+      const mapRef = ReactModule.useRef<unknown>(null)
+      if (!mapRef.current) {
+        mapRef.current = { getCenter: () => ({ lat: 53.5, lng: 27.5 }), getZoom: () => 14 }
+      }
+      ReactModule.useEffect(() => {
+        onMapRef?.(mapRef.current)
+      }, [onMapRef])
+
+      return <div data-testid="map-canvas">{children?.({})}</div>
+    },
+  }
+})
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () =>

@@ -261,7 +261,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.background,
     },
     backButton: {
-      minHeight: 40,
+      minHeight: 44,
       alignSelf: 'flex-start',
       flexDirection: 'row',
       alignItems: 'center',

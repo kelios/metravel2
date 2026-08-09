@@ -66,6 +66,11 @@ export function buildCriticalCSS(): string {
     '[data-testid="travel-details-hero"] img[data-lcp]{aspect-ratio:16/9;width:100%;max-width:100%;object-fit:contain}',
     '[data-hero-data-placeholder="true"] img{width:100%;height:100%;max-width:none;aspect-ratio:auto;object-fit:cover}',
     '[data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}',
+    // RNW's atomic stylesheet can register after the static header is painted.
+    // Until then the desktop inner row measured 98px instead of its final 64px,
+    // moving the logo and language switcher by 17px. Pin the exact first-frame
+    // row height; the mobile media rule below switches it to the final 56px.
+    '[data-header-inner="true"]{height:64px !important}',
     // #1298: шапка есть в статическом HTML, а ширины окна до гидратации нет
     // (SSR-снимок даёт width=0). Раньше это рисовало мобильную строку, и после
     // гидратации она перекладывалась в desktop: логотип 44x44 -> 115x44,
@@ -78,7 +83,7 @@ export function buildCriticalCSS(): string {
     // проигрывает атомарным классам RNW (та же грабля, что у min-height шелла).
     '@media (max-width:1279.98px){',
     '  [data-testid="main-header"]{padding-bottom:6px !important}',
-    '  [data-header-inner="true"]{padding:6px !important}',
+    '  [data-header-inner="true"]{height:56px !important;padding:6px !important}',
     '  [data-header-logo-wordmark="true"]{display:none !important}',
     '  [data-header-logo-image="true"]{width:26px !important;height:26px !important}',
     '  [data-header-slot="nav"]{display:none !important}',

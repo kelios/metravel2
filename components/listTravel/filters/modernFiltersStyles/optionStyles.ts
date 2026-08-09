@@ -14,7 +14,7 @@ export const createOptionStyles = (ctx: StylesCtx) => {
       marginBottom: spacing.xxs,
       borderWidth: 1,
       borderColor: 'transparent',
-      minHeight: 42,
+      minHeight: 44,
       ...Platform.select({
         web: {
           cursor: 'pointer',

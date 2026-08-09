@@ -1,5 +1,5 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-index 1e5c598..b27e264 100644
+index 1e5c598..c1d0065 100644
 --- a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 +++ b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 @@ -58,14 +58,10 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
@@ -48,7 +48,7 @@ index 1e5c598..b27e264 100644
          for (const module of this.deps) {
              for (const dep of module.dependencies.values()) {
                  if ((0, isResolvedDependency_1.isResolvedDependency)(dep) && dep.data.data.asyncType) {
-@@ -295,6 +305,30 @@ class Chunk {
+@@ -295,6 +305,47 @@ class Chunk {
              preModules: new Set(finalPreModules),
          });
          const relativeEntry = path_1.default.relative(this.options.projectRoot, this.name);
@@ -76,10 +76,27 @@ index 1e5c598..b27e264 100644
 +                return `globalThis.__METRAVEL_SHARED_CHUNKS__=${JSON.stringify(sharedPaths)};`;
 +            })()
 +            : '';
++        // METRAVEL_PER_ROUTE_COMMON_CHUNK: a shared chunk records that it has been
++        // evaluated. The HTML of every generated route already ships the shared chunks
++        // that route needs as <script> tags, so at hydration time there is nothing left
++        // to fetch — but the runtime could not tell "already on the page" from "still
++        // has to be loaded" and always returned a promise. That made the route module
++        // resolve one microtask after hydration started, React.lazy suspended, and the
++        // route Suspense boundary (fallback={null} in production) threw away the
++        // server-rendered DOM until the client render finished (#1340: ~600 ms of blank
++        // screen, and every node then re-entered from a zero-sized rect, inflating CLS).
++        // Keyed by the chunk's own hashed path, not by sharedIndex: the index depends on
++        // how many groups sort before this one, it is not part of the content hash, and a
++        // browser reusing a cached chunk under an unchanged filename would then announce
++        // the wrong id. The path is the same value the runtime manifest resolves to, so a
++        // cached copy can only ever announce itself.
++        const loadedRegistration = Number.isInteger(this.sharedIndex)
++            ? `globalThis.__METRAVEL_LOADED_CHUNKS__??={};globalThis.__METRAVEL_LOADED_CHUNKS__[${JSON.stringify(ownBundlePath)}]=1;`
++            : '';
          const jsAsset = {
              filename: outputFile,
              originFilename: relativeEntry,
-@@ -308,14 +342,19 @@ class Chunk {
+@@ -308,14 +359,19 @@ class Chunk {
                  }),
                  // Provide a list of module paths that can be used for matching chunks to routes.
                  // TODO: Move HTML serializing closer to this code so we can reduce passing this much data around.
@@ -97,11 +114,11 @@ index 1e5c598..b27e264 100644
                  loaderReferences: collectOutputReferences(this.deps, 'loaderReference'),
              },
 -            source: jsCode.code,
-+            source: sharedManifestRegistration + dependencyRegistration + jsCode.code,
++            source: sharedManifestRegistration + dependencyRegistration + loadedRegistration + jsCode.code,
          };
          const assets = [jsAsset];
          // debugId is passed into `sourceMapString` so the bundler-map path
-@@ -524,36 +563,146 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
+@@ -524,36 +580,146 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
          }
      }
  }
@@ -269,7 +286,7 @@ index 1e5c598..b27e264 100644
                      chunk.deps.delete(dep);
                  }
              }
-@@ -577,6 +726,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
+@@ -577,6 +743,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
      for (const chunk of chunks) {
          // Runtime chunk has to load before any other a.k.a all chunks require it.
          chunk.requiredChunks.add(runtimeChunk);

@@ -199,7 +199,9 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        height: 34,
+        // `height` здесь был мёртвым: и в CSS, и в Yoga `minHeight` перебивает
+        // его вверх, так что кнопка всегда была 44dp. Оставлять нельзя — гард
+        // читает объявленный размер, а не итоговый.
         minHeight: 44,
         paddingHorizontal: 10,
         borderRadius: DESIGN_TOKENS.radii.pill,
@@ -334,7 +336,7 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         fontWeight: '500',
     },
     stepSelectTrigger: {
-        minHeight: 28,
+        minHeight: 44,
         maxWidth: '100%',
         flexDirection: 'row',
         alignItems: 'center',
@@ -468,7 +470,9 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
     milestonesInlineWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: DESIGN_TOKENS.spacing.xs,
+        // Зазор между точками теперь несут прозрачные поля самих таргетов,
+        // поэтому собственный `gap` ряда не нужен.
+        gap: 0,
         flexWrap: 'nowrap',
     },
     tipPanel: {
@@ -498,6 +502,17 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         marginBottom: DESIGN_TOKENS.spacing.xs,
         paddingHorizontal: 4,
     },
+    // Прозрачная рамка тач-таргета вокруг видимой точки шага: нажимается она,
+    // а не сама точка. `hitSlop` здесь не работал — ряд `milestonesInlineWrapper`
+    // обтягивает точки вплотную и срезает добор (#1274). Ряд и так не ниже 44dp
+    // из-за кнопки «Назад», поэтому шапка не выросла.
+    milestoneInlineTarget: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    // Видимая точка: размер прежний.
     milestoneInline: {
         alignItems: 'center',
         justifyContent: 'center',

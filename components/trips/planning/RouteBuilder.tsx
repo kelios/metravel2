@@ -2,7 +2,7 @@
 // Конструктор маршрута поездки (Sprint 13 / блок D): список точек с reorder/delete
 // (web-safe, без нативных drag-либ), inline-добавление точки, применение шаблонов
 // и живая сводка через estimateRouteSummary. Только владелец может редактировать.
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -13,8 +13,8 @@ import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { safeLazy } from '@/components/layout/safeLazy';
+import RoutePointRow from '@/components/trips/planning/RoutePointRow';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
-import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap';
 import TripRouteDownloadButtons from '@/components/trips/planning/TripRouteDownloadButtons';
 import {
@@ -45,6 +45,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { createStyles } from './RouteBuilder.styles';
+import { moveItem, remapIndexAfterMove } from './routePointReorder';
+import { useRoutePointDrag } from './useRoutePointDrag';
 
 
 // Тот же график, что на travel details: react-native-svg и логика чарта грузятся
@@ -149,14 +151,6 @@ const coordinatesFromFields = (
   }
 
   return { coordinates: [lng, lat], error: null };
-};
-
-const move = <T,>(arr: T[], from: number, to: number): T[] => {
-  if (to < 0 || to >= arr.length) return arr;
-  const next = arr.slice();
-  const [item] = next.splice(from, 1);
-  next.splice(to, 0, item);
-  return next;
 };
 
 const routeSignature = (route: RoutePoint[]): string =>
@@ -298,18 +292,27 @@ function RouteBuilder({ trip }: Props) {
     </Suspense>
   ) : null;
 
-  const handleMove = (index: number, delta: number) => {
-    setRoute((prev) => move(prev, index, index + delta));
-  };
+  // Единственная точка входа для перестановки: и стрелки, и перетаскивание.
+  // Открытая форма редактирования едет вместе со своей точкой, иначе после
+  // переупорядочивания сохранение ушло бы в соседнюю строку.
+  const handleReorder = useCallback((from: number, to: number) => {
+    setRoute((prev) => moveItem(prev, from, to));
+    setEditingIndex((prev) => remapIndexAfterMove(prev, from, to));
+  }, []);
 
-  const handleDelete = (index: number) => {
+  const handleMove = useCallback(
+    (index: number, delta: number) => handleReorder(index, index + delta),
+    [handleReorder],
+  );
+
+  const handleDelete = useCallback((index: number) => {
     setRoute((prev) => prev.filter((_, i) => i !== index));
-    if (editingIndex === index) {
-      setEditingIndex(null);
-    } else if (editingIndex != null && editingIndex > index) {
-      setEditingIndex(editingIndex - 1);
-    }
-  };
+    setEditingIndex((prev) => {
+      if (prev == null) return prev;
+      if (prev === index) return null;
+      return prev > index ? prev - 1 : prev;
+    });
+  }, []);
 
   const handleAdd = () => {
     const name = newName.trim();
@@ -340,7 +343,7 @@ function RouteBuilder({ trip }: Props) {
     setNewDescription('');
   };
 
-  const handleStartEdit = (point: RoutePoint, index: number) => {
+  const handleStartEdit = useCallback((point: RoutePoint, index: number) => {
     setEditingIndex(index);
     setEditType(point.type);
     setEditName(point.name);
@@ -348,7 +351,15 @@ function RouteBuilder({ trip }: Props) {
     setEditLat(point.coordinates ? formatCoordinateInput(point.coordinates[1]) : '');
     setEditLng(point.coordinates ? formatCoordinateInput(point.coordinates[0]) : '');
     setEditError(null);
-  };
+  }, []);
+
+  const handleEditPoint = useCallback(
+    (index: number) => {
+      const point = route[index];
+      if (point) handleStartEdit(point, index);
+    },
+    [handleStartEdit, route],
+  );
 
   const handleCancelEdit = () => {
     setEditingIndex(null);
@@ -545,67 +556,34 @@ function RouteBuilder({ trip }: Props) {
     );
   };
 
+  // Перетаскивание доступно только владельцу и только когда переставлять есть
+  // что. Стрелки остаются на месте как клавиатурный и a11y путь.
+  const canReorder = trip.isOwner && route.length > 1;
+  const { drag, registerRowLayout, handleProps } = useRoutePointDrag({
+    enabled: canReorder,
+    count: route.length,
+    onReorder: handleReorder,
+  });
+
   const renderPoint = (point: RoutePoint, index: number) => (
-    <View key={point.id} style={styles.pointRow}>
-      <View style={styles.pointIcon}>
-        <Feather name={ROUTE_POINT_ICON_NAME[point.type] as never} size={18} color={colors.primaryDark} />
-      </View>
-      <View style={styles.pointBody}>
-        <Text style={styles.pointType}>{ROUTE_POINT_LABEL[point.type]}</Text>
-        <Text style={styles.pointName}>{point.name}</Text>
-        {point.description ? (
-          <TripPlanLinkedText
-            text={point.description}
-            style={styles.pointDescription}
-            linkStyle={styles.descriptionLink}
-          />
-        ) : null}
-        {point.coordinates ? (
-          <Text style={styles.pointCoordinates}>
-            {formatCoordinateInput(point.coordinates[1])}, {formatCoordinateInput(point.coordinates[0])}
-          </Text>
-        ) : null}
-      </View>
-      {trip.isOwner ? (
-        <View style={styles.pointControls}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}
-            onPress={() => handleStartEdit(point, index)}
-            style={styles.ctrl}
-            testID={`route-builder-edit-${index}`}
-          >
-            <Feather name="edit-2" size={15} color={colors.primaryDark} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('trips:components.trips.planning.RouteBuilder.podnyat_tochku_vyshe_23208202')}
-            disabled={index === 0}
-            onPress={() => handleMove(index, -1)}
-            style={[styles.ctrl, index === 0 && styles.ctrlDisabled]}
-          >
-            <Feather name="chevron-up" size={16} color={colors.text} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('trips:components.trips.planning.RouteBuilder.opustit_tochku_nizhe_c1c13a3e')}
-            disabled={index === route.length - 1}
-            onPress={() => handleMove(index, 1)}
-            style={[styles.ctrl, index === route.length - 1 && styles.ctrlDisabled]}
-          >
-            <Feather name="chevron-down" size={16} color={colors.text} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('trips:components.trips.planning.RouteBuilder.udalit_tochku_37161453')}
-            onPress={() => handleDelete(index)}
-            style={styles.ctrl}
-          >
-            <Feather name="trash-2" size={15} color={colors.danger} />
-          </Pressable>
-        </View>
-      ) : null}
-    </View>
+    <RoutePointRow
+      key={point.id}
+      point={point}
+      index={index}
+      total={route.length}
+      isOwner={trip.isOwner}
+      styles={styles}
+      colors={colors}
+      dragHandlers={canReorder ? handleProps[index] ?? null : null}
+      isDragging={drag?.index === index}
+      isDropTarget={drag != null && drag.dropIndex === index && drag.index !== index}
+      dragOffsetY={drag?.index === index ? drag.offsetY : 0}
+      formatCoordinate={formatCoordinateInput}
+      onLayout={registerRowLayout}
+      onEdit={handleEditPoint}
+      onMove={handleMove}
+      onDelete={handleDelete}
+    />
   );
 
   if (!trip.isOwner) {
@@ -620,10 +598,7 @@ function RouteBuilder({ trip }: Props) {
           transport={trip.transport}
           readonly
           activeIndex={editingIndex}
-          onEditPoint={(index) => {
-            const point = route[index];
-            if (point) handleStartEdit(point, index);
-          }}
+          onEditPoint={handleEditPoint}
         />
         {elevationProfileSection}
         {route.length ? (
@@ -695,10 +670,7 @@ function RouteBuilder({ trip }: Props) {
         summary={summary}
         transport={trip.transport}
         activeIndex={editingIndex}
-        onEditPoint={(index) => {
-          const point = route[index];
-          if (point) handleStartEdit(point, index);
-        }}
+        onEditPoint={handleEditPoint}
         onAddPointFromMap={handleAddPointFromMap}
       />
 

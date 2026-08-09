@@ -42,8 +42,8 @@ export const getStyles = (colors: ThemedColors) =>
     },
     listHeaderHint: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
     filtersIconButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       flexShrink: 0,
       alignItems: 'center',
       justifyContent: 'center',

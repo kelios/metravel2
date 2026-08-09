@@ -15,6 +15,12 @@ import {
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { MapCanvas } from '@/components/MapPage/Map/MapCanvas';
+import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
+import { useMapApi } from '@/components/MapPage/Map/useMapApi';
+import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover';
+import WeatherLegend from '@/components/MapPage/WeatherLegend';
+import { useMapOverlays } from '@/hooks/map/useMapOverlays';
+import type { MapUiApi } from '@/types/mapUi';
 import { buildDropMarkerHtml } from '@/utils/markerSvg';
 import { translate as i18nT } from '@/i18n'
 
@@ -36,6 +42,20 @@ interface Props {
 }
 
 const DEFAULT_CENTER: [number, number] = [53.9, 27.5667];
+
+// Карточка «Слои» стоит под своей кнопкой в правом верхнем углу карты.
+const LAYERS_POPOVER_TOP = 62;
+const LAYERS_POPOVER_RIGHT = 10;
+const LAYERS_POPOVER_MIN_WIDTH = 250;
+const LAYERS_POPOVER_MAX_WIDTH = 300;
+// Встроенная карта — 320px с `overflow: hidden`: список слоёв обязан уместиться
+// под кнопкой, иначе нижние секции просто обрезаются краем карты.
+const LAYERS_SCROLL_MAX_HEIGHT_INLINE = 196;
+const LAYERS_SCROLL_MAX_HEIGHT_FULLSCREEN = 420;
+
+// Стабильная ссылка: `useMapApi` пересобирает api на новый массив, а api уезжает
+// в состояние — свежий литерал на каждый рендер дал бы бесконечный цикл.
+const EMPTY_ROUTE_POINTS: Array<[number, number]> = [];
 
 type WebPortal = (node: React.ReactNode, container: Element) => React.ReactNode;
 
@@ -137,9 +157,14 @@ export default function TripPlanRouteMap({
   const mapRef = useRef<{ getCenter: () => { lat: number; lng: number }; getZoom: () => number } | null>(null);
   const restoredViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const fittedTokenRef = useRef<string | null>(null);
+  // Тот же leaflet-инстанс, но состоянием: слои и MapUiApi монтируются хуками
+  // /map, а им нужен ререндер после готовности карты (ref его не даёт).
+  const [mapInstance, setMapInstance] = useState<unknown>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
 
   const handleMapRef = useCallback((map: unknown) => {
     mapRef.current = map as { getCenter: () => { lat: number; lng: number }; getZoom: () => number };
+    setMapInstance((previous: unknown) => (previous === map ? previous : map));
   }, []);
 
   const toggleFullscreen = useCallback(() => {
@@ -244,6 +269,47 @@ export default function TripPlanRouteMap({
     });
   }, [L, colors.warning, colors.primaryDark, colors.textOnPrimary]);
 
+  // Слои карты — ровно те же, что на /map: определения и контроллеры берём из
+  // общей механики (`useMapInstance` создаёт слои, `useMapApi` их переключает),
+  // а выбор слоёв — общий persisted store (#1306). Оверлеи создаются «холодными»:
+  // запросы overpass/OWM уходят только когда слой включён.
+  const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
+    map: mapInstance,
+    L,
+    // Подложку рисует сам MapCanvas — хук нужен только ради оверлеев.
+    manageBaseLayer: false,
+  });
+
+  // «Показать всё на карте» в панели слоёв работает по точкам маршрута.
+  const overlayTravelData = useMemo(
+    () =>
+      route
+        .filter((point) => Array.isArray(point.coordinates))
+        .map((point, index) => {
+          const [lng, lat] = point.coordinates as [number, number];
+          return { id: point.id ?? index, coord: `${lat},${lng}`, address: point.name };
+        }),
+    [route],
+  );
+
+  const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
+
+  useMapApi({
+    map: mapInstance,
+    L,
+    onMapUiApiReady: setMapUiApi,
+    travelData: overlayTravelData,
+    userLocation: null,
+    routePoints: EMPTY_ROUTE_POINTS,
+    leafletBaseLayerRef,
+    leafletOverlayLayersRef,
+    leafletControlRef,
+  });
+
+  const { enabledOverlays, handleOverlayToggle, overlayOptions } = useMapOverlays(mapUiApi);
+
+  const closeLayers = useCallback(() => setLayersOpen(false), []);
+
   if (!L || !RL || !markerIcon || !activeMarkerIcon) {
     return (
       <View style={styles.loadingWrap} testID="trip-plan-route-map">
@@ -256,6 +322,7 @@ export default function TripPlanRouteMap({
   const fullscreenLabel = fullscreen
     ? i18nT('tripsStatic:plan.map.collapse')
     : i18nT('tripsStatic:plan.map.expand');
+  const layersLabel = i18nT('tripsStatic:plan.map.layers');
 
   // Развёрнутая карта уходит порталом в body: внутри ScrollView `position: fixed`
   // зажимается его же трансформом. На месте карты остаётся заглушка той же высоты,
@@ -270,15 +337,54 @@ export default function TripPlanRouteMap({
       >
         <button
           type="button"
+          onClick={() => setLayersOpen((value) => !value)}
+          aria-label={layersLabel}
+          aria-expanded={layersOpen}
+          title={layersLabel}
+          data-testid="trip-plan-map-layers"
+          style={{
+            ...(styles.mapToggleButton as React.CSSProperties),
+            ...(styles.layersToggle as React.CSSProperties),
+            ...(layersOpen ? (styles.mapToggleButtonActive as React.CSSProperties) : null),
+          }}
+        >
+          <Feather name="layers" size={18} color={layersOpen ? colors.primaryDark : colors.text} />
+        </button>
+        <button
+          type="button"
           onClick={toggleFullscreen}
           aria-label={fullscreenLabel}
           title={fullscreenLabel}
           data-testid="trip-plan-map-fullscreen"
-          style={styles.fullscreenToggle as React.CSSProperties}
+          style={{
+            ...(styles.mapToggleButton as React.CSSProperties),
+            ...(styles.fullscreenToggle as React.CSSProperties),
+          }}
         >
           <Feather name={fullscreen ? 'minimize-2' : 'maximize-2'} size={18} color={colors.text} />
         </button>
         {canvas}
+        <WeatherLegend enabledOverlays={enabledOverlays} />
+        {layersOpen ? (
+          <View style={styles.layersPopoverLayer} pointerEvents="box-none">
+            <MapMobileLayersPopover
+              colors={colors}
+              top={LAYERS_POPOVER_TOP}
+              right={LAYERS_POPOVER_RIGHT}
+              minWidth={LAYERS_POPOVER_MIN_WIDTH}
+              maxWidth={LAYERS_POPOVER_MAX_WIDTH}
+              scrollMaxHeight={
+                fullscreen ? LAYERS_SCROLL_MAX_HEIGHT_FULLSCREEN : LAYERS_SCROLL_MAX_HEIGHT_INLINE
+              }
+              mapUiApi={mapUiApi}
+              showBaseLayer={false}
+              overlayOptions={overlayOptions}
+              enabledOverlays={enabledOverlays}
+              onOverlayToggle={handleOverlayToggle}
+              onRequestClose={closeLayers}
+            />
+          </View>
+        ) : null}
       </div>
     );
 
@@ -480,10 +586,9 @@ const createStyles = (colors: ThemedColors) =>
       zIndex: 99990,
       backgroundColor: colors.surface,
     },
-    fullscreenToggle: {
+    mapToggleButton: {
       position: 'absolute',
       top: 10,
-      right: 10,
       width: 44,
       height: 44,
       alignItems: 'center',
@@ -498,6 +603,21 @@ const createStyles = (colors: ThemedColors) =>
       cursor: 'pointer',
       // Выше leaflet-контролов (у них z-index до 1000).
       zIndex: 1200,
+    },
+    mapToggleButtonActive: {
+      borderColor: colors.primaryDark,
+      backgroundColor: colors.surfaceMuted,
+    },
+    fullscreenToggle: { right: 10 },
+    layersToggle: { right: 62 },
+    // Карточка слоёв должна перекрывать кнопки карты, иначе её край уходит под них.
+    layersPopoverLayer: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      zIndex: 1300,
     },
     map: {
       width: '100%',

@@ -6,8 +6,8 @@ export const createToolbarStyles = (ctx: StylesCtx) => {
 
   return {
     toggleAllButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       padding: 0,
       borderRadius: PILL_RADIUS,
       alignItems: 'center',
@@ -24,7 +24,7 @@ export const createToolbarStyles = (ctx: StylesCtx) => {
     },
     toggleAllButtonWide: {
       width: 'auto',
-      minWidth: 40,
+      minWidth: 44,
       paddingHorizontal: spacing.sm,
     },
     toggleAllButtonPressed: {
@@ -42,7 +42,7 @@ export const createToolbarStyles = (ctx: StylesCtx) => {
       fontWeight: typography.weights.semibold as any,
     },
     clearButton: {
-      minHeight: 36,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,

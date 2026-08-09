@@ -47,7 +47,7 @@ export const createGroupStyles = (ctx: StylesCtx) => {
       minWidth: 0,
     },
     groupHeaderButton: {
-      minHeight: 42,
+      minHeight: 44,
       paddingVertical: 7,
       paddingHorizontal: spacing.sm,
       borderRadius: CONTROL_RADIUS,

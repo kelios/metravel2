@@ -47,6 +47,7 @@ const TOP_LEVEL_PATHS_NO_CONTEXT_BAR = new Set<string>([
   '/index',
   '/search',
   '/travelsby',
+  '/map',
   '/places',
   '/trips',
   '/roulette',

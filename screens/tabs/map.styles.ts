@@ -433,8 +433,8 @@ export const getStyles = (
         alignItems: 'center',
         gap: 8,
         paddingHorizontal: 16,
-        height: 40,
-        borderRadius: 20,
+        height: 44,
+        borderRadius: 22,
         backgroundColor: themedColors.primary,
         zIndex: 1001,
         ...(Platform.OS === 'web'

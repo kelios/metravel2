@@ -183,6 +183,24 @@ describe('i18n resources', () => {
     expect(fixedUk('travel:common.characterNoun', { count: 2 })).toBe('символи')
   })
 
+  // #1335: на устройстве Android печаталось «4 участников» вместо «4 участника» —
+  // у Hermes может не быть `Intl.PluralRules`, и i18next выбирал форму `other`.
+  // Форму выбирает `selectPluralCategory`, поэтому проверяем без Intl вообще.
+  it('picks the plural form without Intl.PluralRules (Hermes on Android)', () => {
+    const originalPluralRules = Intl.PluralRules
+    // @ts-expect-error — воспроизводим Hermes-окружение без Intl.PluralRules
+    delete Intl.PluralRules
+    try {
+      expect(translatePlural('tripsStatic:plan.participants.count', 1)).toBe('1 участник')
+      expect(translatePlural('tripsStatic:plan.participants.count', 4)).toBe('4 участника')
+      expect(translatePlural('tripsStatic:plan.participants.count', 5)).toBe('5 участников')
+      expect(translatePlural('tripsStatic:plan.participants.going', 1)).toBe('1 едет')
+      expect(translatePlural('tripsStatic:plan.participants.going', 2)).toBe('2 едут')
+    } finally {
+      Intl.PluralRules = originalPluralRules
+    }
+  })
+
   it('returns the configured fallback instead of leaking an unknown key', () => {
     expect(translate('common:not-a-real-key' as TranslationKey)).toBe('Перевод недоступен')
   })

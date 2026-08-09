@@ -50,6 +50,7 @@ function TripRouteDownloadButtons({
           variant="secondary"
           disabled={disabled || exportingAction !== null}
           loading={exportingAction === 'gpx'}
+          style={styles.button}
           testID="trip-route-export-gpx"
         />
         <Button
@@ -58,6 +59,7 @@ function TripRouteDownloadButtons({
           variant="secondary"
           disabled={disabled || exportingAction !== null}
           loading={exportingAction === 'kml'}
+          style={styles.button}
           testID="trip-route-export-kml"
         />
       </View>
@@ -77,7 +79,16 @@ const createStyles = (colors: ThemedColors) =>
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     warning: { fontSize: 12, color: colors.warningDark, lineHeight: 16, fontWeight: '600' },
     error: { fontSize: 12, color: colors.danger, lineHeight: 16, fontWeight: '600' },
+    // Паритет mobile web ↔ Android держится правилом «по содержимому, потом расти»:
+    // одинаковый перенос на обеих поверхностях. Жёсткие половины (`flexBasis: 0`)
+    // пробовали — на 393 dp native-подпись «Поделиться GPX» обрезалась до
+    // «Поделиться G…», поэтому кнопки сначала занимают свою ширину и переносятся
+    // целиком, а лишнее место делят между собой.
     row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    // `minWidth` обязателен: подпись кнопки — `Text` с `numberOfLines={1}`, он
+    // соглашается сжаться, поэтому без жёсткого минимума две кнопки всегда
+    // влезают в строку и на телефоне обрезаются до «Поделиться G…».
+    button: { flexGrow: 1, flexBasis: 'auto', minWidth: 200 },
   });
 
 export default React.memo(TripRouteDownloadButtons);

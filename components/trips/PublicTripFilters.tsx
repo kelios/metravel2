@@ -299,7 +299,7 @@ const createStyles = (colors: ThemedColors) =>
       width: 138,
     },
     nativeSelect: {
-      minHeight: 42,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -320,7 +320,7 @@ const createStyles = (colors: ThemedColors) =>
     },
     nativeSelectTextActive: { color: colors.text },
     resetButton: {
-      minHeight: 42,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,

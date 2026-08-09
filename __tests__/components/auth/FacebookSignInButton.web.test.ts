@@ -1,6 +1,7 @@
 import {
   getFacebookCredential,
   getFacebookLoginOptions,
+  getFacebookRenderState,
   getFacebookSdkLocale,
   isFacebookLoginEnabled,
 } from '@/components/auth/FacebookSignInButton.web';
@@ -18,6 +19,13 @@ describe('FacebookSignInButton web contract', () => {
 
     process.env.EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED = 'true';
     expect(isFacebookLoginEnabled()).toBe(true);
+  });
+
+  it('keeps the SSR and first client render on the same hydration placeholder', () => {
+    expect(getFacebookRenderState(false, false)).toBe('hidden');
+    expect(getFacebookRenderState(false, true)).toBe('hidden');
+    expect(getFacebookRenderState(true, false)).toBe('hydration-placeholder');
+    expect(getFacebookRenderState(true, true)).toBe('button');
   });
 
   it('returns a credential only for a connected Facebook response', () => {

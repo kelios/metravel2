@@ -360,7 +360,8 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.xs,
     borderRadius: CONTROL_RADIUS,
-    minHeight: 32,
+    // Тот же floor, что уже стоит на мобильных крошках (`mobileCrumbItem`).
+    minHeight: 44,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'transparent',
   },

@@ -115,8 +115,8 @@ export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>)
       height: '100%',
     },
     refreshButton: {
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       borderRadius: PILL_RADIUS,
       borderWidth: 1,
       borderColor: colors.border,
@@ -360,7 +360,7 @@ export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>)
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      minHeight: 40,
+      minHeight: 44,
     },
     backToProfileButtonText: {
       fontSize: 14,
