@@ -161,7 +161,7 @@ rroot() { # rm -rf the given paths as root in the container; never abort
 }
 
 # Purge leftovers from a prior interrupted/manual deploy before the swap.
-rroot '/app/static/dist.new /app/static/dist.old /app/static/dist.old-* /app/static/dist.old.stale-*'
+rroot '/app/static/dist.new /app/static/dist.old /app/static/dist.old-* /app/static/dist.old.stale-* /app/static/dist.failed.*'
 
 # Nginx serves /static/* from the shared static root, while the web export
 # lives one level deeper in static/dist. Publish the canonical quest
@@ -223,13 +223,115 @@ if ! mv static/dist.new static/dist; then
   fi
   exit 1
 fi
-# Drop the rollback copy as root (may be owned by another uid).
-rroot '/app/static/dist.old'
+readiness_deadline=$(( $(date +%s) + 30 ))
+
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-  docker compose -f docker-compose-prod.app.yaml restart app nginx
+  compose_nginx() {
+    docker compose -f docker-compose-prod.app.yaml exec -T nginx "$@"
+  }
 else
-  docker-compose -f docker-compose-prod.app.yaml restart nginx
+  compose_nginx() {
+    docker-compose -f docker-compose-prod.app.yaml exec -T nginx "$@"
+  }
 fi
+
+nginx_validate() {
+  compose_nginx /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf
+}
+
+nginx_reload() {
+  compose_nginx /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf
+}
+
+activate_nginx() {
+  nginx_validate && nginx_reload
+}
+
+wait_for_public_health() {
+  local attempt=1
+  local last_status=unreachable
+  local now
+  local remaining
+  local request_timeout
+
+  # The deadline starts at the static swap, so validation/reload time cannot
+  # silently extend acceptance past the 30-second contract.
+  while true; do
+    now=$(date +%s)
+    remaining=$((readiness_deadline - now))
+    if [ "$remaining" -le 0 ]; then
+      break
+    fi
+    request_timeout=2
+    if [ "$remaining" -lt "$request_timeout" ]; then
+      request_timeout="$remaining"
+    fi
+    last_status=$(curl -sS -o /dev/null -w '%{http_code}' \
+      --connect-timeout 1 --max-time "$request_timeout" https://metravel.by/health || true)
+    if [ "$last_status" = 200 ]; then
+      echo "✅ Public readiness confirmed on attempt $attempt"
+      return 0
+    fi
+    if [ $((readiness_deadline - $(date +%s))) -gt 1 ]; then
+      sleep 1
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  echo "❌ Public readiness did not return HTTP 200 (last status: $last_status)"
+  return 1
+}
+
+rollback_static() {
+  local failed_dir="static/dist.failed.$$"
+
+  echo "↩️ Restoring the previous static tree"
+  if [ -e static/dist ]; then
+    if ! mv static/dist "$failed_dir"; then
+      echo "❌ Failed to move the rejected static tree out of the live path"
+      return 1
+    fi
+  fi
+  if [ "$rollback_moved" != 1 ] || [ ! -d "$rollback_dir" ]; then
+    echo "❌ Previous static tree is unavailable; rollback cannot complete"
+    if [ -d "$failed_dir" ] && [ ! -e static/dist ]; then
+      mv "$failed_dir" static/dist || true
+    fi
+    return 1
+  fi
+  if ! mv "$rollback_dir" static/dist; then
+    echo "❌ Failed to restore the previous static tree"
+    if [ -d "$failed_dir" ] && [ ! -e static/dist ]; then
+      mv "$failed_dir" static/dist || true
+    fi
+    return 1
+  fi
+
+  rroot "/app/$failed_dir"
+  if ! activate_nginx; then
+    echo "❌ Previous static tree was restored, but Nginx reload failed"
+    return 1
+  fi
+}
+
+fail_after_swap() {
+  local reason="$1"
+  echo "❌ $reason"
+  if ! rollback_static; then
+    echo "❌ Automatic static rollback was incomplete; app process was left untouched"
+  fi
+  exit 1
+}
+
+if ! activate_nginx; then
+  fail_after_swap "Nginx validation or graceful reload failed"
+fi
+if ! wait_for_public_health; then
+  fail_after_swap "Public readiness gate failed"
+fi
+
+# Drop the rollback copy only after graceful activation and public readiness.
+rroot '/app/static/dist.old'
 rm -rf dist
 REMOTE_DEPLOY_SCRIPT
 
@@ -303,8 +405,7 @@ if [[ "$DEPLOY" == "1" ]]; then
   deploy_prod "$ENV"
 
   if [[ "$ENV" == "prod" ]]; then
-    echo "⏳ Жду перезапуск app/nginx..."
-    sleep 8
+    echo "✅ Public readiness passed; starting post-deploy acceptance checks"
     echo "Пост-деплой проверка SEO на проде..."
     # Не валит билд (деплой уже выполнен) — только сигнализирует о замечаниях.
     node scripts/post-deploy-seo-check.js --url https://metravel.by --limit 30 \

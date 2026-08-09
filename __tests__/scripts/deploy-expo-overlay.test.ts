@@ -4,6 +4,82 @@ import path from 'path'
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
 const helperPath = path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh')
+const canonicalDeployPath = path.resolve(process.cwd(), 'build-prod.sh')
+
+function readCanonicalDeploy(): string {
+  return fs.readFileSync(canonicalDeployPath, 'utf8')
+}
+
+function extractRemoteDeploy(source = readCanonicalDeploy()): string {
+  const match = source.match(
+    /<<'REMOTE_DEPLOY_SCRIPT'\n([\s\S]*?)\nREMOTE_DEPLOY_SCRIPT/,
+  )
+
+  if (!match) {
+    throw new Error('canonical remote deploy payload was not found')
+  }
+
+  return match[1]
+}
+
+function deployContractViolations(remoteDeploy: string): string[] {
+  const violations: string[] = []
+  const appLifecycleCommand =
+    /(?:docker(?:\s+compose)?|docker-compose)[^\n]*(?:restart|recreate|up\s+-d)[^\n]*\bapp\b/
+  const proxyLifecycleCommand =
+    /(?:docker(?:\s+compose)?|docker-compose)[^\n]*(?:restart|recreate|up\s+-d)[^\n]*\bnginx\b/
+  const activationContract = [
+    'activate_nginx() {',
+    'nginx_validate && nginx_reload',
+    '}',
+  ].join('\n')
+  const swapIndex = remoteDeploy.indexOf(
+    'if ! mv static/dist.new static/dist; then',
+  )
+  const deadlineIndex = remoteDeploy.indexOf('readiness_deadline=')
+  const activationIndex = remoteDeploy.indexOf(
+    'if ! activate_nginx; then',
+    remoteDeploy.indexOf('fail_after_swap() {'),
+  )
+  const readinessIndex = remoteDeploy.indexOf(
+    'if ! wait_for_public_health; then',
+  )
+  const finalCleanupIndex = remoteDeploy.indexOf(
+    "rroot '/app/static/dist.old'",
+  )
+
+  if (appLifecycleCommand.test(remoteDeploy)) {
+    violations.push('frontend deploy changes the app lifecycle')
+  }
+  if (proxyLifecycleCommand.test(remoteDeploy)) {
+    violations.push('frontend deploy hard-restarts the proxy')
+  }
+  if (!remoteDeploy.includes(activationContract)) {
+    violations.push('Nginx validation does not precede graceful reload')
+  }
+  if (
+    swapIndex === -1 ||
+    deadlineIndex === -1 ||
+    activationIndex === -1 ||
+    readinessIndex === -1 ||
+    !(
+      swapIndex < deadlineIndex &&
+      deadlineIndex < activationIndex &&
+      activationIndex < readinessIndex
+    )
+  ) {
+    violations.push('safe activation ordering is incomplete')
+  }
+  if (
+    readinessIndex === -1 ||
+    finalCleanupIndex === -1 ||
+    readinessIndex >= finalCleanupIndex
+  ) {
+    violations.push('rollback tree is removed before public readiness')
+  }
+
+  return violations
+}
 
 function makeFixture(): { root: string; fresh: string; previous: string } {
   const root = makeTempDir('metravel-expo-overlay-')
@@ -186,10 +262,7 @@ describe('normal deploy Expo overlay retention', () => {
   })
 
   it('wires the tested helper into the canonical deploy before the static swap', () => {
-    const source = fs.readFileSync(
-      path.resolve(process.cwd(), 'build-prod.sh'),
-      'utf8',
-    )
+    const source = readCanonicalDeploy()
 
     expect(source).toContain(
       'EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"',
@@ -204,21 +277,13 @@ describe('normal deploy Expo overlay retention', () => {
   })
 
   it('keeps the canonical remote deploy payload valid bash', () => {
-    const source = fs.readFileSync(
-      path.resolve(process.cwd(), 'build-prod.sh'),
-      'utf8',
-    )
-    const match = source.match(
-      /<<'REMOTE_DEPLOY_SCRIPT'\n([\s\S]*?)\nREMOTE_DEPLOY_SCRIPT/,
-    )
-
-    expect(match).not.toBeNull()
+    const remoteDeploy = extractRemoteDeploy()
 
     const fixture = makeTempDir('metravel-remote-deploy-script-')
     const remoteScriptPath = path.join(fixture, 'remote-deploy.sh')
 
     try {
-      fs.writeFileSync(remoteScriptPath, match?.[1] ?? '', 'utf8')
+      fs.writeFileSync(remoteScriptPath, remoteDeploy, 'utf8')
       const result = runCli('bash', ['-n', remoteScriptPath])
 
       expect(result.status).toBe(0)
@@ -226,5 +291,56 @@ describe('normal deploy Expo overlay retention', () => {
     } finally {
       removeDir(fixture)
     }
+  })
+
+  it('preserves app availability and safe activation ordering', () => {
+    const source = readCanonicalDeploy()
+    const remoteDeploy = extractRemoteDeploy(source)
+    const readinessIndex = source.indexOf(
+      'if ! wait_for_public_health; then',
+    )
+
+    expect(deployContractViolations(remoteDeploy)).toEqual([])
+    expect(readinessIndex).toBeGreaterThan(-1)
+    expect(readinessIndex).toBeLessThan(
+      source.indexOf('node scripts/post-deploy-seo-check.js'),
+    )
+    expect(readinessIndex).toBeLessThan(
+      source.indexOf('node scripts/post-deploy-media-check.js'),
+    )
+    expect(source).not.toContain('Жду перезапуск app/nginx')
+  })
+
+  it('rejects a reintroduced app restart', () => {
+    const unsafeDeploy = `${extractRemoteDeploy()}\n` +
+      'docker compose -f docker-compose-prod.app.yaml restart app nginx'
+
+    expect(deployContractViolations(unsafeDeploy)).toContain(
+      'frontend deploy changes the app lifecycle',
+    )
+  })
+
+  it('rejects rollback cleanup before public readiness', () => {
+    const remoteDeploy = extractRemoteDeploy()
+    const unsafeDeploy = remoteDeploy.replace(
+      'if ! wait_for_public_health; then',
+      "rroot '/app/static/dist.old'\nif ! wait_for_public_health; then",
+    )
+
+    expect(deployContractViolations(unsafeDeploy)).toContain(
+      'rollback tree is removed before public readiness',
+    )
+  })
+
+  it('rejects readiness before graceful Nginx activation', () => {
+    const remoteDeploy = extractRemoteDeploy()
+    const unsafeDeploy = remoteDeploy.replace(
+      'if ! activate_nginx; then\n  fail_after_swap "Nginx validation or graceful reload failed"',
+      'if ! wait_for_public_health; then\n  exit 1\nfi\nif ! activate_nginx; then\n  fail_after_swap "Nginx validation or graceful reload failed"',
+    )
+
+    expect(deployContractViolations(unsafeDeploy)).toContain(
+      'safe activation ordering is incomplete',
+    )
   })
 })
