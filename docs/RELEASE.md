@@ -71,7 +71,10 @@ npm run build:web:prod
 - The script is the normal production deploy path on machines with working `rsync`. It runs the canonical build and static SEO guards, uploads `dist/`, publishes the canonical quest fallback at `/static/quests/quest-default-cover.svg`, atomically swaps `static/dist`, retains a bounded overlap of old Expo assets for open tabs, validates and gracefully reloads the existing Nginx process, waits up to 30 seconds for public `/health` HTTP 200, and only then runs post-deploy SEO and media checks. A frontend-only release never restarts or recreates `app`. If validation, reload, or readiness fails, the script restores `static/dist.old`, gracefully reloads Nginx against it, and exits unsuccessfully.
 - Expo overlap retention is owned by this normal path. The fresh payload is staged first and always wins path collisions. Its `.js` and `.css` files are stamped with the deployment time so cached build artifacts start a new generation window instead of inheriting a stale source mtime. Missing assets from the live release are then backfilled without clobbering only while their deployment mtime is at most `EXPO_OVERLAY_RETENTION_DAYS` (default `14`). Older overlay generations are therefore pruned from the next static tree, while every file shipped by the fresh payload remains available for the next supported overlap window. Nested asset paths and unusual filenames are preserved, empty historical directories are not copied, and the staged HTML/static tree is exposed together by the directory swap.
 - Its server writes are limited to the documented untracked static targets. It
-  must stop rather than modify or clean a Git-tracked backend path.
+  also removes the untracked upload staging tree through the app container's
+  root cleanup chokepoint and verifies that it is gone. The deploy must stop
+  rather than modify or clean a Git-tracked backend path or report success with
+  a leftover staging tree.
 - Build without deploy:
 
 ```bash

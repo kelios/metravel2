@@ -5,6 +5,12 @@ import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
 const helperPath = path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh')
 const canonicalDeployPath = path.resolve(process.cwd(), 'build-prod.sh')
+const stagingCleanupFailureContract = [
+  'if [ -e dist ]; then',
+  '  echo "❌ Failed to remove upload staging directory: dist"',
+  '  exit 1',
+  'fi',
+].join('\n')
 
 function readCanonicalDeploy(): string {
   return fs.readFileSync(canonicalDeployPath, 'utf8')
@@ -47,6 +53,10 @@ function deployContractViolations(remoteDeploy: string): string[] {
   const finalCleanupIndex = remoteDeploy.indexOf(
     "rroot '/app/static/dist.old'",
   )
+  const stagingCleanupIndex = remoteDeploy.indexOf("rroot '/app/dist'")
+  const stagingPostconditionIndex = remoteDeploy.indexOf(
+    stagingCleanupFailureContract,
+  )
 
   if (appLifecycleCommand.test(remoteDeploy)) {
     violations.push('frontend deploy changes the app lifecycle')
@@ -76,6 +86,17 @@ function deployContractViolations(remoteDeploy: string): string[] {
     readinessIndex >= finalCleanupIndex
   ) {
     violations.push('rollback tree is removed before public readiness')
+  }
+  if (
+    finalCleanupIndex === -1 ||
+    stagingCleanupIndex === -1 ||
+    stagingPostconditionIndex === -1 ||
+    !(
+      finalCleanupIndex < stagingCleanupIndex &&
+      stagingCleanupIndex < stagingPostconditionIndex
+    )
+  ) {
+    violations.push('upload staging cleanup is not verified')
   }
 
   return violations
@@ -341,6 +362,22 @@ describe('normal deploy Expo overlay retention', () => {
 
     expect(deployContractViolations(unsafeDeploy)).toContain(
       'safe activation ordering is incomplete',
+    )
+  })
+
+  it('rejects upload staging cleanup without a verified postcondition', () => {
+    const unsafeDeploy = extractRemoteDeploy().replace(
+      stagingCleanupFailureContract,
+      [
+        'if [ -e dist ]; then',
+        '  echo "❌ Failed to remove upload staging directory: dist"',
+        '  echo "warning only"',
+        'fi',
+      ].join('\n'),
+    )
+
+    expect(deployContractViolations(unsafeDeploy)).toContain(
+      'upload staging cleanup is not verified',
     )
   })
 })

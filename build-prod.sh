@@ -332,7 +332,14 @@ fi
 
 # Drop the rollback copy only after graceful activation and public readiness.
 rroot '/app/static/dist.old'
-rm -rf dist
+# The uploaded tree can contain top-level dot paths alongside dist/$ENV.
+# Remove staging through the same root-in-container chokepoint and verify the
+# postcondition so a successful deploy never leaves the backend checkout dirty.
+rroot '/app/dist'
+if [ -e dist ]; then
+  echo "❌ Failed to remove upload staging directory: dist"
+  exit 1
+fi
 REMOTE_DEPLOY_SCRIPT
 
   rm -rf dist
