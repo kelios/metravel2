@@ -36,7 +36,7 @@ function deployContractViolations(remoteDeploy: string): string[] {
     /(?:docker(?:\s+compose)?|docker-compose)[^\n]*(?:restart|recreate|up\s+-d)[^\n]*\bnginx\b/
   const activationContract = [
     'activate_nginx() {',
-    'nginx_validate && nginx_reload',
+    '  nginx_validate && nginx_reload',
     '}',
   ].join('\n')
   const swapIndex = remoteDeploy.indexOf(
