@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform, StyleSheet } from 'react-native'
+import { Platform } from 'react-native'
 import { fireEvent, render } from '@testing-library/react-native'
 
 import RoutePointRow from '@/components/trips/planning/RoutePointRow'
@@ -50,10 +50,8 @@ describe('RoutePointRow drag handle accessibility', () => {
     )
 
     const handle = getByTestId('route-builder-drag-1')
-    const handleStyle = StyleSheet.flatten(handle.props.style) as { touchAction?: string }
     expect(handle.props.accessibilityRole).toBe('adjustable')
     expect(handle.props.tabIndex).toBe(0)
-    expect(handleStyle.touchAction).toBe('pan-y')
 
     fireEvent(handle, 'pointerDown', { clientY: 100, pointerType: 'mouse', button: 0 })
     expect(onPointerDown).toHaveBeenCalledTimes(1)

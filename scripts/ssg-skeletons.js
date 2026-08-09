@@ -263,28 +263,8 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
  * image bytes anymore). If React never mounts, the skeleton stays — readable
  * content instead of a blank page (the global chunk-reload handler does its own
  * one-shot recovery in parallel). A 45s deep fallback covers "mounted but both
- * signals missed" — but it must ask whether REACT is alive, not how much text is
- * on screen. The old check ("#root accumulated >200 chars; the dead static shell
- * is ~60") was measured against travel pages only: the `/` prerender carries
- * 5 739 chars of static text (the quest list) and `/search` is similar, so the
- * threshold was always crossed and the shell was torn off a dead bundle after
- * 45s — the exact blank screen this net exists to prevent (#1356). Instead the
- * net asks whether React is alive, via the internal keys it stamps on the DOM
- * (`__reactFiber…` on every host node it owns). The container key is deliberately
- * ignored: React writes `__reactContainer…` inside createRoot/hydrateRoot BEFORE
- * the first commit, while an SSG page already has element children in #root. A
- * render that throws above the app ErrorBoundary would therefore satisfy
- * "container key + child" without ever committing. A fiber key on a top-level
- * host node is the stronger signal that React actually hydrated/rendered it.
- *
- * A DOM-mutation backstop was considered and rejected: anything that writes into
- * #root without React (Chrome's page translator wrapping text in <font>, password
- * managers, extensions) would tear the shell off a dead bundle again.
- *
- * If nothing is mounted at 45s the shell stays until a real signal appears, so
- * the 120ms poll is slowed to 2s — an unusable page must not keep an 8Hz timer
- * alive, but a bundle that finally arrives (very slow network) still lifts the
- * shell within ~2s.
+ * signals missed": if #root accumulated real text (>200 chars; the dead static
+ * shell is ~60), the app is clearly rendering and the skeleton is torn down.
  *
  * The React travel shell also marks #root with data-travel-details-ready after
  * its own first-screen overlay has lifted. This covers Safari paths where the
@@ -299,7 +279,7 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
  * remove as an orphan if #root is still absent after the DOM is fully parsed.
  */
 function buildRemovalScript() {
-  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var mapSkel=!!s.querySelector('.ssg-map-layout');var done=false;var late=false;var deep=false;function killCss(){if(document.querySelector('[data-ssg-travel-hero-adopted="true"]'))return;var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function travelReady(){return travelSkel&&r.getAttribute('data-travel-details-ready')==='true'}function mapReady(){return mapSkel&&r.getAttribute('data-map-route-ready')==='true'}function appReady(){return !mapSkel&&(!travelSkel||late)&&document.documentElement.classList.contains('app-hydrated')}function lateHero(){return late&&!!r.querySelector('img[data-lcp]')}function reactHost(n){try{var ks=Object.keys(n);for(var i=0;i<ks.length;i++){if(ks[i].indexOf('__reactFiber')===0)return true}}catch(e){}return false}function reactMounted(){for(var c=r.firstElementChild;c;c=c.nextElementSibling){if(reactHost(c))return true}return false}function check(){if(done)return false;if(heroReady()||travelReady()||mapReady()||appReady()||lateHero()||(deep&&reactMounted())){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true,attributes:true,attributeFilter:['data-map-route-ready','data-travel-details-ready']});var iv;function tick(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}}function poll(ms){clearInterval(iv);iv=setInterval(tick,ms)}poll(120);setTimeout(function(){late=true;check()},20000);setTimeout(function(){if(done)return;deep=true;if(check())return;poll(2000)},45000)}begin()}catch(e){}})();</script>`;
+  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var mapSkel=!!s.querySelector('.ssg-map-layout');var done=false;var late=false;function killCss(){if(document.querySelector('[data-ssg-travel-hero-adopted="true"]'))return;var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function travelReady(){return travelSkel&&r.getAttribute('data-travel-details-ready')==='true'}function mapReady(){return mapSkel&&r.getAttribute('data-map-route-ready')==='true'}function appReady(){return !mapSkel&&(!travelSkel||late)&&document.documentElement.classList.contains('app-hydrated')}function lateHero(){return late&&!!r.querySelector('img[data-lcp]')}function check(){if(done)return false;if(heroReady()||travelReady()||mapReady()||appReady()||lateHero()){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true,attributes:true,attributeFilter:['data-map-route-ready','data-travel-details-ready']});var iv=setInterval(function(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}},120);setTimeout(function(){late=true;check()},20000);setTimeout(function(){if(done)return;var t=(r.textContent||'').replace(/\\s+/g,' ').trim();if(t.length>200){teardown()}},45000)}begin()}catch(e){}})();</script>`;
 }
 
 function buildCards(count) {
@@ -691,17 +671,12 @@ function injectSkeletonShell(html, route, ctx) {
 
   if (!skeleton) return html;
 
-  // Both injections MUST use a replacer function, never a replacement string.
-  // In a replacement string `$&`, `` $` ``, `$'` and `$1` are substitution
-  // patterns, and the shell legitimately contains them: `$'` appears in any
-  // `'…$'` literal inside the removal script, and the travel shell embeds the
-  // article body straight from the database, where a `$'`/`$&` in the prose is
-  // ordinary text. With a string replacement each occurrence expands into the
-  // surrounding document — one 133-byte page grew to 22 324 bytes with three
-  // duplicated `#root` nodes and a truncated inline script (#1356).
+  // Inject CSS into <head>
   const css = buildSkeletonCSS();
-  let result = html.replace('</head>', () => `${css}\n</head>`);
-  result = result.replace(/(<body[^>]*>)/i, (bodyTag) => `${bodyTag}\n${skeleton}`);
+  let result = html.replace('</head>', `${css}\n</head>`);
+
+  // Inject skeleton HTML after <body...>
+  result = result.replace(/(<body[^>]*>)/i, `$1\n${skeleton}`);
 
   return result;
 }
