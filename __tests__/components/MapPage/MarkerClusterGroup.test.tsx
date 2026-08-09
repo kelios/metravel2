@@ -446,4 +446,145 @@ describe('MarkerClusterGroup', () => {
     expect(group.removeLayers.mock.calls[0][0]).toHaveLength(1)
     expect(group.clearLayers).not.toHaveBeenCalled()
   })
+
+  // #1347 — the parent keeps a coord→marker index that MapUiApi.openPopupForCoord uses
+  // to open a place card from the list. With clear+rebuild it was re-published on every
+  // data change; the diff must keep it whole, including survivors.
+  it('republishes the whole marker index after a diff, and only drops orphaned coords', () => {
+    const makeMarker = () => {
+      const marker: any = {}
+      marker.bindPopup = jest.fn()
+      marker.bindTooltip = jest.fn()
+      marker.off = jest.fn()
+      marker.unbindPopup = jest.fn()
+      marker.on = jest.fn(() => marker)
+      return marker
+    }
+    const group = {
+      addLayers: jest.fn(),
+      addLayer: jest.fn(),
+      removeLayers: jest.fn(),
+      removeLayer: jest.fn(),
+      clearLayers: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+    }
+    const map = { addLayer: jest.fn(), removeLayer: jest.fn(), closePopup: jest.fn() }
+    const L = {
+      markerClusterGroup: jest.fn(() => group),
+      marker: jest.fn(() => makeMarker()),
+      divIcon: jest.fn(),
+    }
+    // Two places share one address, plus a third elsewhere.
+    const shared = '53.9,27.56'
+    const a = { id: 1, coord: shared, address: 'Дом 1' } as any
+    const b = { id: 2, coord: shared, address: 'Дом 2' } as any
+    const c = { id: 3, coord: '54.0,27.90', address: 'Логойск' } as any
+
+    const index = new Map<string, any>()
+    const onMarkerInstance = jest.fn((coord: string, marker: any | null) => {
+      if (marker) index.set(coord, marker)
+      else index.delete(coord)
+    })
+    const markerIcon = {}
+    const PopupContent = () => null
+    const Popup = () => null
+    const props = (points: any[]) => ({
+      L,
+      useMap: () => map,
+      points,
+      markerIcon,
+      PopupContent,
+      Popup,
+      onMarkerInstance,
+    })
+
+    const { queryClient, rerender } = renderWithClient(
+      <MarkerClusterGroup {...(props([a, b, c]) as any)} />,
+    )
+    expect(index.get(shared)).toBeTruthy()
+    expect(index.get('54.0,27.90')).toBeTruthy()
+
+    // b leaves. Its coord is still owned by a, so the shared entry must survive.
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MarkerClusterGroup {...(props([a, c]) as any)} />
+      </QueryClientProvider>,
+    )
+    expect(index.get(shared)).toBeTruthy()
+    expect(index.get('54.0,27.90')).toBeTruthy()
+
+    // c leaves — nobody owns its coord any more.
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MarkerClusterGroup {...(props([a]) as any)} />
+      </QueryClientProvider>,
+    )
+    expect(index.get(shared)).toBeTruthy()
+    expect(index.has('54.0,27.90')).toBe(false)
+  })
+
+  // #1347 — a surviving key must not freeze stale content: the marker is never
+  // re-created, so a changed address/coord has to be detected as a replacement.
+  it('re-creates a marker when the same place changes coordinates or content', () => {
+    const group = {
+      addLayers: jest.fn(),
+      addLayer: jest.fn(),
+      removeLayers: jest.fn(),
+      removeLayer: jest.fn(),
+      clearLayers: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+    }
+    const map = { addLayer: jest.fn(), removeLayer: jest.fn(), closePopup: jest.fn() }
+    const L = {
+      markerClusterGroup: jest.fn(() => group),
+      marker: jest.fn(() => {
+        const m: any = {}
+        m.bindPopup = jest.fn()
+        m.bindTooltip = jest.fn()
+        m.off = jest.fn()
+        m.unbindPopup = jest.fn()
+        m.on = jest.fn(() => m)
+        return m
+      }),
+      divIcon: jest.fn(),
+    }
+    // Stable identities: a fresh markerIcon/PopupContent per render would trip the
+    // "marker options changed" rebuild and mask what this test measures.
+    const markerIcon = {}
+    const PopupContent = () => null
+    const Popup = () => null
+    const props = (point: any) => ({
+      L,
+      useMap: () => map,
+      points: [point],
+      markerIcon,
+      PopupContent,
+      Popup,
+    })
+
+    const { queryClient, rerender } = renderWithClient(
+      <MarkerClusterGroup {...(props({ id: 7, coord: '53.9,27.56', address: 'Старый' }) as any)} />,
+    )
+    expect(L.marker).toHaveBeenCalledTimes(1)
+
+    // Same id, same coord, new address → replaced.
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MarkerClusterGroup {...(props({ id: 7, coord: '53.9,27.56', address: 'Новый' }) as any)} />
+      </QueryClientProvider>,
+    )
+    expect(L.marker).toHaveBeenCalledTimes(2)
+    expect(group.removeLayers).toHaveBeenCalledTimes(1)
+
+    // Same id, moved → replaced again.
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MarkerClusterGroup {...(props({ id: 7, coord: '54.1,27.90', address: 'Новый' }) as any)} />
+      </QueryClientProvider>,
+    )
+    expect(L.marker).toHaveBeenCalledTimes(3)
+    expect(group.removeLayers).toHaveBeenCalledTimes(2)
+  })
 })

@@ -82,3 +82,49 @@ export const strToLatLng = (
 
 export const generateUniqueId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+/**
+ * Stable identity of a map point for React keys / imperative marker diffing.
+ * Position is part of the identity: a point that moved must be re-created, not
+ * silently left at its old coordinates.
+ */
+export const getMapPointIdentityKey = (point: { id?: unknown; coord?: unknown }): string => {
+  const id = point?.id != null ? String(point.id).trim() : '';
+  const coord = String(point?.coord ?? '').replace(/,/g, '-');
+  return id ? `travel-${id}@${coord}` : `travel-${coord}`;
+};
+
+/**
+ * Everything a marker/popup actually renders. Used both to decide whether a cached
+ * points array may keep its identity and whether an already-mounted marker still
+ * shows current data.
+ */
+export const getMapPointContentKey = (point: {
+  id?: unknown;
+  coord?: unknown;
+  address?: unknown;
+  categoryName?: unknown;
+  travelImageThumbUrl?: unknown;
+  urlTravel?: unknown;
+}): string => {
+  // categoryName is polymorphic across payloads (string | object | array), so stringify
+  // defensively instead of typing it — the key only needs to change when it changes.
+  const part = (value: unknown): string => {
+    if (value == null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    try {
+      return JSON.stringify(value) ?? '';
+    } catch {
+      return '';
+    }
+  };
+
+  return [
+    getMapPointIdentityKey(point),
+    part(point?.address),
+    part(point?.categoryName),
+    part(point?.travelImageThumbUrl),
+    part(point?.urlTravel),
+  ].join('|');
+};

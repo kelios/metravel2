@@ -5,8 +5,8 @@ import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { useMapClusters } from '@/hooks/map/useMapClusters';
 import { useMapViewportSnapshot } from '@/hooks/map/useMapViewportSnapshot';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import type { Coordinates, MapMode, Point } from './types';
-import { strToLatLng } from './utils';
+import type { ClusterData, Coordinates, MapMode, Point } from './types';
+import { getMapPointContentKey, strToLatLng } from './utils';
 import { useMapUserLocation } from './useMapUserLocation';
 import {
   buildServerClusterRenderData,
@@ -31,13 +31,25 @@ function useStableByContent<T>(value: T[], signature: string): T[] {
   return ref.current.value;
 }
 
+/**
+ * The signature must cover everything the layers actually render, not just identity:
+ * a refetch that returns the same place with a new address/thumb/link would otherwise
+ * be frozen out and the map would keep showing stale content until a reload.
+ */
 const markersSignature = (points: Point[]): string =>
-  points.map((point) => `${point?.id ?? ''}@${point?.coord ?? ''}`).join('|');
+  points.map(getMapPointContentKey).join('|');
 
-const clustersSignature = (clusters: Array<{ key: string; count: number; center: [number, number] }>): string =>
-  clusters.map((cluster) => `${cluster.key}:${cluster.count}@${cluster.center[0]},${cluster.center[1]}`).join('|');
+const clustersSignature = (clusters: ClusterData[]): string =>
+  clusters
+    .map((cluster) => {
+      const [[south, west], [north, east]] = cluster.bounds;
+      // Bounds belong in the signature: a cluster tap fits the map to them, so a
+      // stale frame would zoom to the wrong area.
+      return `${cluster.key}:${cluster.count}@${cluster.center[0]},${cluster.center[1]}~${south},${west},${north},${east}#${cluster.items.length}`;
+    })
+    .join('|');
 
-const EMPTY_CLUSTERS: ReturnType<typeof buildServerClusterRenderData>['clusters'] = [];
+const EMPTY_CLUSTERS: ClusterData[] = [];
 
 type UseMapRenderDataArgs = {
   travelData: Point[];
@@ -147,10 +159,17 @@ export function useMapRenderData({
     });
   }, [coordinatesLatLng, filterCenter, mode, pointsOnly, radiusInMeters, travelData]);
 
+  // The marker index is owned by the layers that fill it (MarkerClusterGroup diffs it,
+  // ClusterLayer registers/unregisters through its ref callback). It used to be wiped
+  // wholesale whenever `filteredTravelData` changed, which was only safe while the
+  // cluster layer rebuilt every marker right after and re-registered them all. With
+  // the keyed diff (#1347) surviving markers are never re-created, so that blanket
+  // clear left the index permanently empty and `MapUiApi.openPopupForCoord` (tap a
+  // place card → open its popup) silently found nothing.
   useEffect(() => {
     const markerIndex = markerByCoordRef.current;
     return () => markerIndex.clear();
-  }, [filteredTravelData, markerByCoordRef]);
+  }, [markerByCoordRef]);
 
   const canRenderMap = leafletReady && leafletRuntimeReady;
   const viewportSnapshot = useMapViewportSnapshot(
@@ -195,8 +214,13 @@ export function useMapRenderData({
       ? radiusFilteredServerClusterRenderData.clusters
       : EMPTY_CLUSTERS;
 
-  const renderedMarkers = useStableByContent(nextMarkers, markersSignature(nextMarkers));
-  const renderedServerClusters = useStableByContent(nextClusters, clustersSignature(nextClusters));
+  // Signatures are O(n) string building, and this hook re-runs on every Map.web render
+  // (theme, pane width, bottom-sheet state…). Key them on array identity — that is the
+  // only thing that can change what the signature says.
+  const markersSig = useMemo(() => markersSignature(nextMarkers), [nextMarkers]);
+  const clustersSig = useMemo(() => clustersSignature(nextClusters), [nextClusters]);
+  const renderedMarkers = useStableByContent(nextMarkers, markersSig);
+  const renderedServerClusters = useStableByContent(nextClusters, clustersSig);
 
   return {
     canRenderMap,

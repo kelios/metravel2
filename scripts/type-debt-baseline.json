@@ -12,25 +12,25 @@
     "utils"
   ],
   "totals": {
-    "styleCast": 1404,
-    "logicCast": 1208,
-    "tsIgnore": 49,
-    "tsExpectError": 3,
+    "styleCast": 1370,
+    "logicCast": 1179,
+    "tsIgnore": 45,
+    "tsExpectError": 1,
     "eslintDisable": 29
   },
   "domains": {
     "app": {
-      "styleCast": 25,
-      "logicCast": 50,
+      "styleCast": 24,
+      "logicCast": 46,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components": {
-      "styleCast": 1274,
-      "logicCast": 1039,
-      "tsIgnore": 49,
-      "tsExpectError": 3,
+      "styleCast": 1241,
+      "logicCast": 1015,
+      "tsIgnore": 45,
+      "tsExpectError": 1,
       "eslintDisable": 17
     },
     "context": {
@@ -63,7 +63,7 @@
     },
     "utils": {
       "styleCast": 1,
-      "logicCast": 97,
+      "logicCast": 96,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
@@ -72,7 +72,7 @@
   "files": {
     "app/_layout.tsx": {
       "styleCast": 2,
-      "logicCast": 5,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -90,13 +90,6 @@
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
-    },
-    "app/(tabs)/article/[id].tsx": {
-      "styleCast": 0,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
     },
     "app/(tabs)/article/[id].web.tsx": {
       "styleCast": 1,
@@ -150,13 +143,6 @@
     "app/(tabs)/map.web.tsx": {
       "styleCast": 1,
       "logicCast": 0,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "app/(tabs)/privacy.tsx": {
-      "styleCast": 1,
-      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -506,7 +492,7 @@
     },
     "components/home/HomeAppPromoSection.tsx": {
       "styleCast": 1,
-      "logicCast": 4,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -534,7 +520,7 @@
     },
     "components/home/HomeHeroBookLayout.tsx": {
       "styleCast": 1,
-      "logicCast": 12,
+      "logicCast": 10,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -793,7 +779,7 @@
     },
     "components/layout/HeaderContextBar.tsx": {
       "styleCast": 0,
-      "logicCast": 7,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1283,7 +1269,7 @@
     },
     "components/MapPage/Map/MapLogicComponent.tsx": {
       "styleCast": 0,
-      "logicCast": 21,
+      "logicCast": 23,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1296,8 +1282,8 @@
       "eslintDisable": 0
     },
     "components/MapPage/Map/MapWebCanvas.tsx": {
-      "styleCast": 5,
-      "logicCast": 11,
+      "styleCast": 3,
+      "logicCast": 9,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1801,7 +1787,7 @@
     },
     "components/quests/questWizardStepCard.tsx": {
       "styleCast": 2,
-      "logicCast": 1,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1891,7 +1877,7 @@
       "eslintDisable": 0
     },
     "components/screens/calendar/calendarScreen.styles.ts": {
-      "styleCast": 12,
+      "styleCast": 11,
       "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
@@ -2213,7 +2199,7 @@
       "eslintDisable": 0
     },
     "components/travel/details/styles/travelDetailsHeroMediaStyles.ts": {
-      "styleCast": 19,
+      "styleCast": 17,
       "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
@@ -2256,7 +2242,7 @@
     },
     "components/travel/details/TravelDetailsContainer.tsx": {
       "styleCast": 0,
-      "logicCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2339,7 +2325,7 @@
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsStyleFragments.ts": {
-      "styleCast": 17,
+      "styleCast": 15,
       "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
@@ -2403,7 +2389,7 @@
     },
     "components/travel/gallery/ImageGallery.tsx": {
       "styleCast": 0,
-      "logicCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2418,13 +2404,6 @@
     "components/travel/GallerySection.tsx": {
       "styleCast": 0,
       "logicCast": 4,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/GroupedFiltersSection.tsx": {
-      "styleCast": 1,
-      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2481,13 +2460,6 @@
     "components/travel/PersonalizedRecommendations.tsx": {
       "styleCast": 6,
       "logicCast": 11,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/PhotoUploadWithPreview.tsx": {
-      "styleCast": 23,
-      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2637,20 +2609,6 @@
       "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/StableContent.tsx": {
-      "styleCast": 0,
-      "logicCast": 5,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/stableContent/useRenderConfig.tsx": {
-      "styleCast": 0,
-      "logicCast": 5,
-      "tsIgnore": 0,
-      "tsExpectError": 1,
       "eslintDisable": 0
     },
     "components/travel/stableContent/useWebEffects.ts": {
@@ -2935,7 +2893,7 @@
     },
     "components/ui/CustomImageRenderer.tsx": {
       "styleCast": 2,
-      "logicCast": 4,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2961,13 +2919,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/ui/ExternalLink.tsx": {
-      "styleCast": 0,
-      "logicCast": 0,
-      "tsIgnore": 0,
-      "tsExpectError": 1,
-      "eslintDisable": 0
-    },
     "components/ui/IconButton.tsx": {
       "styleCast": 2,
       "logicCast": 0,
@@ -2977,7 +2928,7 @@
     },
     "components/ui/ImageCardMedia.tsx": {
       "styleCast": 2,
-      "logicCast": 16,
+      "logicCast": 11,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2985,7 +2936,7 @@
     "components/ui/ImageCardMediaWebHelpers.tsx": {
       "styleCast": 0,
       "logicCast": 0,
-      "tsIgnore": 2,
+      "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
@@ -3021,13 +2972,6 @@
       "styleCast": 1,
       "logicCast": 0,
       "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/ui/ScrollToTopButton.tsx": {
-      "styleCast": 2,
-      "logicCast": 0,
-      "tsIgnore": 3,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
@@ -3489,13 +3433,6 @@
     "utils/performance.ts": {
       "styleCast": 0,
       "logicCast": 3,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "utils/questAdapters.ts": {
-      "styleCast": 0,
-      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0

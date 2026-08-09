@@ -36,9 +36,11 @@ const LIVE_LOCATION_MAXIMUM_AGE_MS = 15000;
 // marker AND anchors the radius search. It used to ask for `enableHighAccuracy: false`
 // with a 60 s cache, so a minute-old network fix hundreds of metres off was a normal
 // answer. Precision belongs here; the background watch (marker only) can stay cheap.
+// Both phases share the old 12 s budget: one tap must not be able to keep the locate
+// spinner up for 8 s + 12 s.
 const PRECISE_LOCATION_TIMEOUT_MS = 8000;
 const PRECISE_LOCATION_MAXIMUM_AGE_MS = 10000;
-const FALLBACK_LOCATION_TIMEOUT_MS = 12000;
+const FALLBACK_LOCATION_TIMEOUT_MS = 4000;
 const FALLBACK_LOCATION_MAXIMUM_AGE_MS = 60000;
 
 export type LocationSnapshot = Coordinates & {
@@ -125,6 +127,9 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   const routeIsFocused = useIsFocused();
   const isFocused = options.isFocused ?? routeIsFocused;
   const lastTrustedLocationRef = useRef<LocationSnapshot | null>(null);
+  // Last point actually pushed to the live channel / localStorage — the reference the
+  // 12 m movement filter compares against (see applyTrustedLocation).
+  const lastPublishedLocationRef = useRef<LocationSnapshot | null>(null);
   const liveWatchCleanupRef = useRef<(() => void) | null>(null);
   const liveWatchActiveRef = useRef(false);
   const liveWatchStartingRef = useRef(false);
@@ -227,10 +232,15 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       // The fresh point goes to the out-of-React channel instead, so only the «вы здесь»
       // marker moves (imperatively). See hooks/map/liveUserPosition.
       lastTrustedLocationRef.current = next;
-      // #1349 — persist only a position that actually moved. This used to run on every
-      // tick, i.e. a synchronous JSON.stringify + localStorage write roughly once a
-      // second for a user standing still, writing the same coordinates back.
-      if (distanceMeters(prev, next) >= LIVE_LOCATION_MIN_DISTANCE_M) {
+      // #1349 — publish/persist only a position that actually moved. The threshold is
+      // measured against the last PUBLISHED point, not against the previous tick:
+      // comparing consecutive ticks made the filter a mute button rather than a
+      // debounce — a pedestrian moves ~1.4 m per tick, never clears 12 m in one step,
+      // and would keep the marker (and the cached anchor) frozen at the start of the
+      // session no matter how far they walked.
+      const reference = lastPublishedLocationRef.current ?? prev;
+      if (distanceMeters(reference, next) >= LIVE_LOCATION_MIN_DISTANCE_M) {
+        lastPublishedLocationRef.current = next;
         cacheWebCoordinates(next);
         publishLiveUserPosition({
           latitude,
@@ -270,6 +280,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       canAskAgain: true,
     });
     setError(null);
+    lastPublishedLocationRef.current = next;
     cacheWebCoordinates(next);
     publishLiveUserPosition({
       latitude,
@@ -323,11 +334,15 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
           markLiveLocationRefreshing();
         },
         {
-          // #1349 — the watch only nudges the «вы здесь» marker; it never moves the
-          // viewport or the search anchor. High accuracy here kept the GPS radio hot
-          // for the whole session for no visible gain — precision now lives in the
-          // explicit request instead.
-          enableHighAccuracy: false,
+          // Stays high-accuracy ON PURPOSE. The watch is not only the marker driver —
+          // its callback is the freshness pulse (`markLiveUserPositionFix`) that
+          // MapCanvas checks against LOCATION_STALE_AFTER_MS = 30 s. Unlike native
+          // (`timeInterval: 5000`) the web API has no minimum tick rate, so a
+          // low-accuracy network provider can stay silent for minutes for a standing
+          // user and light up «Местоположение давно не обновлялось» on a healthy fix
+          // (#1272). It would also jitter the marker by hundreds of metres against a
+          // 12 m publish threshold.
+          enableHighAccuracy: true,
           timeout: NATIVE_LOCATION_TIMEOUT_MS,
           maximumAge: LIVE_LOCATION_MAXIMUM_AGE_MS,
         },

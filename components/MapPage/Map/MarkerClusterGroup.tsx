@@ -7,7 +7,7 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { Point } from './types'
-import { strToLatLng } from './utils'
+import { getMapPointContentKey, getMapPointIdentityKey, strToLatLng } from './utils'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import {
   CLUSTER_DISABLE_ZOOM,
@@ -241,7 +241,9 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   const map = useMap()
   const { isDark } = useTheme()
   const clusterGroupRef = useRef<any>(null)
-  const markerMapRef = useRef<Map<string, { coord: string; marker: any }>>(new Map())
+  const markerMapRef = useRef<Map<string, { coord: string; marker: any; contentKey: string }>>(
+    new Map(),
+  )
   const [openPopups, setOpenPopups] = useState<Map<string, OpenPopupEntry>>(
     () => new Map(),
   )
@@ -279,6 +281,11 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   // id, so a reordered response looked like "every marker replaced". Collisions
   // (two points at the same coord within one payload) get a deterministic suffix
   // by first-seen order instead.
+  //
+  // The key includes the coordinate, and `contentKey` carries everything the marker
+  // renders — a surviving marker is never re-created, so a point that moved or whose
+  // address/thumb changed has to be detected here or it would keep showing stale data
+  // at a stale position.
   const validPoints = useMemo(() => {
     const seen = new Map<string, number>()
     return points
@@ -287,14 +294,17 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         if (!ll) return null
         const coords = { lat: ll[1], lng: ll[0] }
         if (!CoordinateConverter.isValid(coords)) return null
-        const id = point.id != null ? String(point.id).trim() : ''
-        const baseKey = id ? `travel-${id}` : `travel-${String(point.coord).replace(/,/g, '-')}`
+        const baseKey = getMapPointIdentityKey(point)
         const duplicateIndex = seen.get(baseKey) ?? 0
         seen.set(baseKey, duplicateIndex + 1)
         return {
           point,
           coords,
           key: duplicateIndex === 0 ? baseKey : `${baseKey}#${duplicateIndex}`,
+          // Coordinates are resolved with `hintCenter`, which can flip an ambiguous
+          // "lat,lng" pair — fold the resolved position in so that flip re-creates
+          // the marker instead of leaving it at the old spot.
+          contentKey: `${getMapPointContentKey(point)}|${coords.lat},${coords.lng}`,
         }
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
@@ -447,14 +457,19 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     if (!group || !L) return
 
     const existing = markerMapRef.current
-    const nextKeys = new Set(validPoints.map((item) => item.key))
+    // A key that survived but whose rendered content changed counts as gone: the
+    // marker is re-created below with fresh position, tooltip and handlers.
+    const nextByKey = new Map(validPoints.map((item) => [item.key, item]))
 
-    // 1. Remove markers that are gone.
+    // 1. Remove markers that are gone (or stale).
     const removedMarkers: any[] = []
     const removedKeys: string[] = []
+    const removedCoords: string[] = []
     for (const [key, entry] of existing) {
-      if (nextKeys.has(key)) continue
+      const next = nextByKey.get(key)
+      if (next && next.contentKey === entry.contentKey) continue
       removedKeys.push(key)
+      removedCoords.push(entry.coord)
       removedMarkers.push(entry.marker)
       try {
         entry.marker.off()
@@ -462,7 +477,6 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       } catch {
         // noop
       }
-      onMarkerInstanceRef.current?.(entry.coord, null)
     }
     if (removedMarkers.length) {
       try {
@@ -488,7 +502,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     // 2. Create markers that are new.
     const newMarkers: any[] = []
 
-    for (const { point, coords, key } of validPoints) {
+    for (const { point, coords, key, contentKey } of validPoints) {
       if (existing.has(key)) continue
       const marker = L.marker([coords.lat, coords.lng], {
         icon: markerIcon,
@@ -601,26 +615,41 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       // иначе дубли координат перетирают друг друга и onMarkerInstance(coord,null)
       // на cleanup зовётся не для всех маркеров.
       const coordStr = String(point.coord ?? '')
-      existing.set(key, { coord: coordStr, marker })
-      onMarkerInstanceRef.current?.(coordStr, marker)
+      existing.set(key, { coord: coordStr, marker, contentKey })
 
       newMarkers.push(marker)
     }
 
-    if (!newMarkers.length) return
-
-    // Bulk add for performance
-    try {
-      group.addLayers(newMarkers)
-    } catch {
-      // Fallback: add one by one
-      for (const m of newMarkers) {
-        try {
-          group.addLayer(m)
-        } catch {
-          // noop
+    if (newMarkers.length) {
+      // Bulk add for performance
+      try {
+        group.addLayers(newMarkers)
+      } catch {
+        // Fallback: add one by one
+        for (const m of newMarkers) {
+          try {
+            group.addLayer(m)
+          } catch {
+            // noop
+          }
         }
       }
+    }
+
+    if (!removedMarkers.length && !newMarkers.length) return
+
+    // Re-publish the index to the parent. `onMarkerInstance` is keyed by COORD while
+    // markers are keyed by identity, so clearing a removed marker's coord can orphan a
+    // surviving marker that shares the same address. Drop only coords nobody owns any
+    // more, then re-announce every live marker: the parent index feeds
+    // MapUiApi.openPopupForCoord (tap a place in the list → open its popup).
+    const liveCoords = new Set<string>()
+    for (const { coord } of existing.values()) liveCoords.add(coord)
+    for (const coord of removedCoords) {
+      if (!liveCoords.has(coord)) onMarkerInstanceRef.current?.(coord, null)
+    }
+    for (const { coord, marker } of existing.values()) {
+      onMarkerInstanceRef.current?.(coord, marker)
     }
   }, [
     L,

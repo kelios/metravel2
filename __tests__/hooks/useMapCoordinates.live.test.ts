@@ -369,6 +369,84 @@ describe('useMapCoordinates live location updates', () => {
     expect(result.current.coordinatesAreFallback).toBe(true)
   })
 
+  // #1349 — the fix the user sees must be precise; a slow GPS must not leave them
+  // without a position, and a denied permission must never be retried.
+  it('asks for a precise web fix and degrades once to the cheap one on timeout', async () => {
+    ;(Platform as any).OS = 'web'
+    const calls: PositionOptions[] = []
+    const getCurrentPosition = jest.fn(
+      (success: PositionCallback, error: PositionErrorCallback, options?: PositionOptions) => {
+        calls.push(options as PositionOptions)
+        if (calls.length === 1) {
+          error({
+            code: 3,
+            message: 'timeout',
+            PERMISSION_DENIED: 1,
+            POSITION_UNAVAILABLE: 2,
+            TIMEOUT: 3,
+          } as GeolocationPositionError)
+          return
+        }
+        success({
+          coords: { latitude: 53.9, longitude: 27.56, accuracy: 240 },
+          timestamp: 5000,
+        } as GeolocationPosition)
+      },
+    )
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: { geolocation: { getCurrentPosition, watchPosition: jest.fn(() => 5), clearWatch: jest.fn() } },
+    })
+    const webGlobal = typeof window !== 'undefined' ? window : null
+    if (webGlobal) {
+      Object.defineProperty(webGlobal, 'localStorage', {
+        configurable: true,
+        value: { getItem: jest.fn(() => null), setItem: jest.fn() },
+      })
+    }
+
+    const { result } = renderHook(() => useMapCoordinates())
+
+    await waitFor(() => expect(result.current.locationState.status).toBe('current'))
+    expect(calls).toHaveLength(2)
+    expect(calls[0].enableHighAccuracy).toBe(true)
+    expect(calls[1].enableHighAccuracy).toBe(false)
+    // Both phases together must not exceed the original single-request budget.
+    expect(Number(calls[0].timeout) + Number(calls[1].timeout)).toBeLessThanOrEqual(12000)
+    expect(result.current.coordinatesSource).toBe('geolocation')
+  })
+
+  it('does not retry a denied web permission with a cheaper request', async () => {
+    ;(Platform as any).OS = 'web'
+    const getCurrentPosition = jest.fn(
+      (_success: PositionCallback, error: PositionErrorCallback) => {
+        error({
+          code: 1,
+          message: 'denied',
+          PERMISSION_DENIED: 1,
+          POSITION_UNAVAILABLE: 2,
+          TIMEOUT: 3,
+        } as GeolocationPositionError)
+      },
+    )
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: { geolocation: { getCurrentPosition, watchPosition: jest.fn(), clearWatch: jest.fn() } },
+    })
+    const webGlobal = typeof window !== 'undefined' ? window : null
+    if (webGlobal) {
+      Object.defineProperty(webGlobal, 'localStorage', {
+        configurable: true,
+        value: { getItem: jest.fn(() => null), setItem: jest.fn() },
+      })
+    }
+
+    const { result } = renderHook(() => useMapCoordinates())
+
+    await waitFor(() => expect(result.current.locationState.status).toBe('denied'))
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+  })
+
   it('preserves native canAskAgain=false for the settings flow', async () => {
     ;(Platform as any).OS = 'android'
     ;(loadExpoLocation as jest.Mock).mockResolvedValue({

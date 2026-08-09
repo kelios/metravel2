@@ -14,6 +14,12 @@ const isTestEnv =
 
 const AUTO_FIT_COORD_PRECISION = 3;
 
+/**
+ * #1348 — below this zoom a phone-width pane shows a whole region rather than "places
+ * near me". z10 on a 390 px pane is ~35 km across: a metro area, still recognisable.
+ */
+const COMPACT_MIN_FIT_ZOOM = 10;
+
 const getCoarseAutoFitLocationKey = (location?: LatLng | null): string => {
   if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
     return 'no-location';
@@ -563,15 +569,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // to far-away points, so the "never wider than the circle" contract holds.
         const padFactor = mode === 'radius' ? 0.1 : 0.12;
         const paddedBounds = bounds.pad(padFactor);
-        // #1348 — floor the radius auto-fit on a narrow pane. `getInitialRadiusZoom`
-        // already encodes the intended scale per radius (50 km → 13); two steps below
-        // it is the widest view that is still about "places near me" rather than
-        // "half the country", which is what fitting the whole circle produces on a
-        // phone. Wide panes keep the exact circle fit.
-        const radiusFitFloorZoom =
-          mode === 'radius' && compactPane && Number.isFinite(Number(radiusInMeters))
-            ? getInitialRadiusZoom(radiusInMeters) - 2
-            : null;
         try {
           const animate = !isTestEnv && hasCompletedAutoFitRef.current;
           // Mark this as self-induced motion so the cluster viewport snapshot
@@ -579,20 +576,42 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           // loop). Cover the animated flyTo duration when animating.
           beginProgrammaticMapMove(animate ? 700 : 500);
 
-          if (radiusFitFloorZoom != null && typeof map.getBoundsZoom === 'function') {
+          // #1348 — a narrow pane cannot show a wide radius circle at a useful scale:
+          // r=50 km in 390 px fits at z8, i.e. half a region, and the user reads that
+          // as "the map has no idea where I am". Rescue ONLY the genuinely regional
+          // case (below COMPACT_MIN_FIT_ZOOM); small radii still get their exact
+          // circle fit, which is what the fit contract is for.
+          if (mode === 'radius' && compactPane && typeof map.getBoundsZoom === 'function') {
             const fittedZoom = Number(map.getBoundsZoom(paddedBounds, false));
-            if (Number.isFinite(fittedZoom) && fittedZoom < radiusFitFloorZoom) {
-              const center =
-                typeof paddedBounds.getCenter === 'function' ? paddedBounds.getCenter() : null;
-              if (center) {
-                map.setView(center, Math.min(radiusFitFloorZoom, maxZoom ?? radiusFitFloorZoom), {
-                  animate,
-                  duration: animate ? 0.35 : undefined,
-                });
-                requestAnimationFrame(() => syncZoomFromMap());
-                hasCompletedAutoFitRef.current = true;
-                return;
+            const center =
+              typeof paddedBounds.getCenter === 'function' ? paddedBounds.getCenter() : null;
+            if (Number.isFinite(fittedZoom) && fittedZoom < COMPACT_MIN_FIT_ZOOM && center) {
+              // fitBounds honours the asymmetric padding that keeps the circle clear of
+              // the bottom sheet; setView does not, so shift the centre up by half the
+              // reserved strip ourselves.
+              const bottomReserve = Number((padding as any)?.paddingBottomRight?.[1] ?? 0);
+              let target = center;
+              if (
+                Number.isFinite(bottomReserve) &&
+                bottomReserve > 0 &&
+                typeof map.project === 'function' &&
+                typeof map.unproject === 'function'
+              ) {
+                try {
+                  const projected = map.project(center, COMPACT_MIN_FIT_ZOOM);
+                  projected.y += bottomReserve / 2;
+                  target = map.unproject(projected, COMPACT_MIN_FIT_ZOOM);
+                } catch {
+                  target = center;
+                }
               }
+              map.setView(target, COMPACT_MIN_FIT_ZOOM, {
+                animate,
+                duration: animate ? 0.35 : undefined,
+              } as any);
+              requestAnimationFrame(() => syncZoomFromMap());
+              hasCompletedAutoFitRef.current = true;
+              return;
             }
           }
 
