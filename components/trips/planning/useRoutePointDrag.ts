@@ -1,6 +1,7 @@
 // components/trips/planning/useRoutePointDrag.ts
 // #1303: перетаскивание точек маршрута прямо в списке конструктора.
-// Web (desktop + mobile) слушает pointer-события, native — PanResponder: тот же
+// Web слушает pointer-события для мыши и raw touch-события для пальца;
+// native — PanResponder: тот же
 // раздел ролей, что у свайпа карточки места (`MapPlaceBottomCard`), потому что
 // RN-Web pointer-пропсы и нативный responder закрывают разные половины.
 // Сторонняя DnD-библиотека не подключается: обе ветки строятся на примитивах RN.
@@ -31,17 +32,49 @@ export type RoutePointDragState = {
 
 type Gesture = {
   index: number;
+  countAtStart: number;
   active: boolean;
   timer: ReturnType<typeof setTimeout> | null;
 };
 
 type PointerLike = { clientY?: number; pointerType?: string; button?: number };
+type TouchLike = { clientY?: number; identifier?: number };
+type TouchListLike = ArrayLike<TouchLike>;
+type TouchEventLike = {
+  touches?: TouchListLike;
+  changedTouches?: TouchListLike;
+};
 
 const readPointer = (event: unknown): PointerLike => {
   const source = event as (PointerLike & { nativeEvent?: PointerLike }) | null;
   if (!source) return {};
   if (typeof source.clientY === 'number') return source;
   return source.nativeEvent ?? {};
+};
+
+const readTouchEvent = (event: unknown): TouchEventLike | null => {
+  const source = event as (TouchEventLike & { nativeEvent?: TouchEventLike }) | null;
+  if (!source) return null;
+  return source.touches || source.changedTouches ? source : source.nativeEvent ?? null;
+};
+
+const findTouch = (touches: TouchListLike | undefined, identifier: number): TouchLike | null => {
+  if (!touches) return null;
+  for (let index = 0; index < touches.length; index += 1) {
+    const touch = touches[index];
+    if (touch?.identifier === identifier) return touch;
+  }
+  return null;
+};
+
+const readStartingTouch = (event: unknown): { clientY: number; identifier: number } | null => {
+  const touchEvent = readTouchEvent(event);
+  // changedTouches identifies the contact that actually started on the handle;
+  // touches[0] may belong to a second finger already held elsewhere.
+  const touch = touchEvent?.changedTouches?.[0] ?? touchEvent?.touches?.[0];
+  return typeof touch?.clientY === 'number' && typeof touch.identifier === 'number'
+    ? { clientY: touch.clientY, identifier: touch.identifier }
+    : null;
 };
 
 type Options = {
@@ -57,15 +90,19 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
   const gestureRef = useRef<Gesture | null>(null);
   const dropIndexRef = useRef<number | null>(null);
   const pointerStartYRef = useRef(0);
+  const touchIdentifierRef = useRef<number | null>(null);
   const enabledRef = useRef(enabled);
+  const countRef = useRef(count);
   const onReorderRef = useRef(onReorder);
 
   const [drag, setDrag] = useState<RoutePointDragState | null>(null);
   // Окно слушаем только пока палец/кнопка мыши зажаты: постоянные глобальные
-  // слушатели ловили бы чужие жесты страницы.
-  const [pointerTracking, setPointerTracking] = useState(false);
+  // слушатели ловили бы чужие жесты страницы. Touch ведём отдельно: ему нужен
+  // non-passive touchmove, чтобы после long-press заблокировать скролл синхронно.
+  const [webTracking, setWebTracking] = useState<'pointer' | 'touch' | null>(null);
 
   enabledRef.current = enabled;
+  countRef.current = count;
   onReorderRef.current = onReorder;
 
   const clearTimer = useCallback(() => {
@@ -83,7 +120,12 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
   const beginGesture = useCallback(
     (index: number, immediate: boolean) => {
       clearTimer();
-      const gesture: Gesture = { index, active: false, timer: null };
+      const gesture: Gesture = {
+        index,
+        countAtStart: countRef.current,
+        active: false,
+        timer: null,
+      };
       gestureRef.current = gesture;
       dropIndexRef.current = null;
       if (immediate) {
@@ -106,9 +148,16 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
       clearTimer();
       gestureRef.current = null;
       dropIndexRef.current = null;
-      setPointerTracking(false);
+      touchIdentifierRef.current = null;
+      setWebTracking(null);
       setDrag(null);
-      if (!commit || !gesture?.active || dropIndex == null) return;
+      if (
+        !commit
+        || !enabledRef.current
+        || !gesture?.active
+        || gesture.countAtStart !== countRef.current
+        || dropIndex == null
+      ) return;
       if (dropIndex === gesture.index) return;
       onReorderRef.current(gesture.index, dropIndex);
     },
@@ -134,32 +183,66 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
   }, []);
 
   useEffect(() => {
-    if (!isWeb || !pointerTracking || typeof window === 'undefined') return;
-    const handleMove = (event: PointerEvent) => {
+    if (!isWeb || !webTracking || typeof window === 'undefined') return;
+
+    if (webTracking === 'touch') {
+      const handleTouchMove = (event: TouchEvent) => {
+        const identifier = touchIdentifierRef.current;
+        const touchEvent = readTouchEvent(event);
+        if (identifier == null || !touchEvent) return;
+        const touch = findTouch(touchEvent.touches, identifier)
+          ?? findTouch(touchEvent.changedTouches, identifier);
+        if (typeof touch?.clientY !== 'number') return;
+        updateGesture(touch.clientY - pointerStartYRef.current);
+        if (gestureRef.current?.active && event.cancelable) event.preventDefault();
+      };
+      const trackedTouchChanged = (event: TouchEvent) => {
+        const identifier = touchIdentifierRef.current;
+        return identifier != null
+          && findTouch(readTouchEvent(event)?.changedTouches, identifier) != null;
+      };
+      const handleTouchEnd = (event: TouchEvent) => {
+        if (trackedTouchChanged(event)) endGesture(true);
+      };
+      const handleTouchCancel = (event: TouchEvent) => {
+        if (trackedTouchChanged(event)) endGesture(false);
+      };
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleTouchEnd);
+      window.addEventListener('touchcancel', handleTouchCancel);
+      return () => {
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleTouchEnd);
+        window.removeEventListener('touchcancel', handleTouchCancel);
+      };
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
       updateGesture(event.clientY - pointerStartYRef.current);
       if (gestureRef.current?.active) event.preventDefault();
     };
-    const handleUp = () => endGesture(true);
-    const handleCancel = () => endGesture(false);
-    window.addEventListener('pointermove', handleMove, { passive: false });
-    window.addEventListener('pointerup', handleUp);
-    window.addEventListener('pointercancel', handleCancel);
+    const handlePointerUp = () => endGesture(true);
+    const handlePointerCancel = () => endGesture(false);
+    window.addEventListener('pointermove', handlePointerMove, { passive: false });
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerCancel);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerup', handleUp);
-      window.removeEventListener('pointercancel', handleCancel);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerCancel);
     };
-  }, [endGesture, isWeb, pointerTracking, updateGesture]);
+  }, [endGesture, isWeb, updateGesture, webTracking]);
 
   useEffect(() => () => clearTimer(), [clearTimer]);
 
-  // Список стал короче прямо во время жеста (удалили точку) — держать индексы
-  // старой раскладки нельзя.
+  // Reorder отключился или состав списка изменился прямо во время жеста —
+  // старые from/to и замеры больше не описывают те же точки. countAtStart
+  // также закрывает render→effect race в endGesture.
   useEffect(() => {
     spansRef.current.length = count;
     const gesture = gestureRef.current;
-    if (gesture && gesture.index >= count) endGesture(false);
-  }, [count, endGesture]);
+    if (gesture && (!enabled || gesture.countAtStart !== count)) endGesture(false);
+  }, [count, enabled, endGesture]);
 
   const registerRowLayout = useCallback((index: number, event: LayoutChangeEvent) => {
     const { y, height } = event.nativeEvent.layout;
@@ -169,13 +252,27 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
   const handleProps = useMemo<RouteDragHandlers[]>(() => {
     if (isWeb) {
       return Array.from({ length: count }, (_, index) => ({
+        onTouchStart: (event: unknown) => {
+          if (!enabledRef.current) return;
+          if (touchIdentifierRef.current != null) return;
+          const touch = readStartingTouch(event);
+          if (!touch) return;
+          pointerStartYRef.current = touch.clientY;
+          touchIdentifierRef.current = touch.identifier;
+          setWebTracking('touch');
+          beginGesture(index, false);
+        },
         onPointerDown: (event: unknown) => {
           if (!enabledRef.current) return;
           const pointer = readPointer(event);
+          // Touch uses raw touch events: unlike Pointer Events, a non-passive
+          // touchmove can conditionally preserve scroll before the hold and
+          // claim the same contact after the hold.
+          if (pointer.pointerType === 'touch') return;
           const isMouse = pointer.pointerType === 'mouse';
           if (isMouse && pointer.button != null && pointer.button !== 0) return;
           pointerStartYRef.current = pointer.clientY ?? 0;
-          setPointerTracking(true);
+          setWebTracking('pointer');
           beginGesture(index, isMouse);
         },
       }));

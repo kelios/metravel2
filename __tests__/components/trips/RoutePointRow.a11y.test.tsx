@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import { fireEvent, render } from '@testing-library/react-native'
 
 import RoutePointRow from '@/components/trips/planning/RoutePointRow'
@@ -7,7 +7,6 @@ import { createStyles } from '@/components/trips/planning/RouteBuilder.styles'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 const colors = new Proxy({}, { get: (_target, key) => String(key) }) as ThemedColors
-const styles = createStyles(colors)
 const originalOS = Platform.OS
 
 const setPlatformOS = (os: typeof Platform.OS) => {
@@ -15,10 +14,17 @@ const setPlatformOS = (os: typeof Platform.OS) => {
 }
 
 describe('RoutePointRow drag handle accessibility', () => {
-  beforeEach(() => setPlatformOS('web'))
+  beforeEach(() => {
+    setPlatformOS('web')
+    jest.spyOn(Platform, 'select').mockImplementation(((
+      options: { web?: unknown; default?: unknown },
+    ) => options.web ?? options.default) as typeof Platform.select)
+  })
+  afterEach(() => jest.restoreAllMocks())
   afterAll(() => setPlatformOS(originalOS))
 
   it('supports keyboard and screen-reader reorder actions without replacing drag handlers', () => {
+    const styles = createStyles(colors)
     const onMove = jest.fn()
     const onPointerDown = jest.fn()
     const preventDefault = jest.fn()
@@ -50,8 +56,10 @@ describe('RoutePointRow drag handle accessibility', () => {
     )
 
     const handle = getByTestId('route-builder-drag-1')
+    const handleStyle = StyleSheet.flatten(handle.props.style) as { touchAction?: string }
     expect(handle.props.accessibilityRole).toBe('adjustable')
     expect(handle.props.tabIndex).toBe(0)
+    expect(handleStyle.touchAction).toBe('pan-y')
 
     fireEvent(handle, 'pointerDown', { clientY: 100, pointerType: 'mouse', button: 0 })
     expect(onPointerDown).toHaveBeenCalledTimes(1)

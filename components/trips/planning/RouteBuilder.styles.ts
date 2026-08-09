@@ -42,8 +42,8 @@ export const createStyles = (colors: ThemedColors) =>
     },
     pointRowDropTarget: { borderColor: colors.primary },
     // #1303: ручка перетаскивания. Таргет задаётся размером самой вью — hitSlop
-    // на Android режет родитель. `touchAction: none` не даёт браузеру увести
-    // касание с ручки в скролл страницы.
+    // на Android режет родитель. На web быстрый вертикальный смах остаётся
+    // скроллом, а long-press забирает non-passive touchmove.
     dragHandle: {
       width: 44,
       height: 44,
@@ -51,7 +51,7 @@ export const createStyles = (colors: ThemedColors) =>
       justifyContent: 'center',
       borderRadius: 10,
       ...Platform.select({
-        web: webViewStyle({ cursor: 'grab', touchAction: 'none', userSelect: 'none' }),
+        web: webViewStyle({ cursor: 'grab', touchAction: 'pan-y', userSelect: 'none' }),
         default: {},
       }),
     },
