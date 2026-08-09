@@ -6,10 +6,10 @@
 
 ## 2. Bounded Lookahead Implementation
 
-- [ ] 2.1 Update the web virtualization model to start with a 720 px desktop and 600 px mobile lookahead while retaining the existing 560 dp native value and documenting the row-height/buffer invariant.
-- [ ] 2.2 Update focused model tests to prove that each web mode retains at least one full row behind and prepares at least two full rows ahead, and that the Android value remains unchanged.
+- [x] 2.1 Update the web virtualization model to start with a 720 px desktop and 600 px mobile lookahead while retaining the existing 560 dp native value and documenting the row-height/buffer invariant.
+- [x] 2.2 Update focused model tests to prove that each web mode retains at least one full row behind and prepares at least two full rows ahead, and that the Android value remains unchanged.
 - [ ] 2.3 Tune the web values only to the smallest distances that pass both browser readiness scenarios without exceeding six additional initial cover requests or 400,000 additional initial cover bytes; stop for a design revision if no bounded value passes.
-- [ ] 2.4 Confirm the implementation leaves `ImageCardMedia`, its stale-photo reveal gate, responsive source manifest, pagination, and one-slot/one-raster behavior unchanged; if measurement requires a broader edit, stop and revise the OpenSpec design before proceeding.
+- [x] 2.4 Confirm the implementation leaves `ImageCardMedia`, its stale-photo reveal gate, responsive source manifest, pagination, and one-slot/one-raster behavior unchanged; if measurement requires a broader edit, stop and revise the OpenSpec design before proceeding.
 
 ## 3. Automated Verification
 

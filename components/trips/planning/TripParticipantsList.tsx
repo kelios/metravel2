@@ -9,7 +9,7 @@ import { RSVP_LABEL, rsvpColor } from '@/components/trips/planning/tripPlanForma
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import UserSafetyMenu from '@/components/profile/UserSafetyMenu';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 interface Props {
@@ -72,7 +72,8 @@ function TripParticipantsList({ trip }: Props) {
       {participants.length ? (
         <>
           <Text style={styles.summary}>
-            {participants.length} {i18nT('trips:components.trips.planning.TripParticipantsList.uchastnikov_ac14f99f')}{goingCount} {i18nT('trips:components.trips.planning.TripParticipantsList.edut_ab3d0897')}</Text>
+            {`${translatePlural('tripsStatic:plan.participants.count', participants.length)} · ${translatePlural('tripsStatic:plan.participants.going', goingCount)}`}
+          </Text>
           <View style={styles.list}>{participants.map(renderRow)}</View>
         </>
       ) : (

@@ -13,7 +13,16 @@ test.describe('@smoke Home quick filters', () => {
     // неё на web `disableFallbackOnWeb`: она монтируется ТОЛЬКО по пересечению с
     // вьюпортом (rootMargin 600px), таймера-подстраховки нет. До скролла её нет
     // в DOM вообще, поэтому ожидание видимости на первом экране висит 30 с.
+    // Секция живёт в `DeferredSection priority="low"`, а у неё на web стоит
+    // `disableFallbackOnWeb`: она монтируется ТОЛЬКО по пересечению с вьюпортом
+    // (rootMargin 600px), таймера-подстраховки нет. До скролла её нет в DOM.
+    //
+    // Скроллить нужно колесом и обязательно с курсором внутри контента: страницу
+    // прокручивает внутренний контейнер RNW ScrollView, поэтому `window.scrollTo`
+    // и `scrollingElement.scrollTop` стоят на месте (`window.scrollY` всегда 0),
+    // а колесо в позиции по умолчанию (0,0) попадает в шапку.
     const quickFiltersHeading = page.getByText('Найдите маршрут под свой день', { exact: true });
+    await page.mouse.move(800, 600);
     for (let step = 0; step < 15; step += 1) {
       if (await quickFiltersHeading.isVisible().catch(() => false)) break;
       await page.mouse.wheel(0, 900);

@@ -2,7 +2,11 @@ import {
   applyListDensity,
   buildListTravelFallbackSteps,
 } from '@/components/listTravel/listTravelBaseModel'
-import { getRightColumnVirtualizationConfig } from '@/components/listTravel/rightColumnModel'
+import {
+  getRightColumnVirtualizationConfig,
+  WEB_ROW_HEIGHT_DESKTOP,
+  WEB_ROW_HEIGHT_MOBILE,
+} from '@/components/listTravel/rightColumnModel'
 
 describe('applyListDensity', () => {
   const base = { gridColumns: 3, isCardsSingleColumn: false, imageHeight: 300 }
@@ -28,17 +32,42 @@ describe('applyListDensity', () => {
   })
 })
 
+// FlashList v2 держит буфер `drawDistance * 2` и делит его по направлению
+// скролла 0.3 назад / 0.7 вперёд, то есть реальный запас — `0.6 × drawDistance`
+// назад и `1.4 × drawDistance` вперёд (`RVEngagedIndicesTrackerImpl`).
+const BUFFER_BEHIND_RATIO = 0.6
+const BUFFER_AHEAD_RATIO = 1.4
+
 describe('search result virtualization budget', () => {
-  it('keeps desktop lookahead below one additional viewport', () => {
-    expect(getRightColumnVirtualizationConfig(true, false)).toEqual({
-      drawDistance: 180,
-    })
+  // Инвариант выводится из заявленной высоты строки, а не из самого значения
+  // lookahead: если строка станет выше, а запас не подтянут, тест упадёт.
+  // Одна полная строка позади — возврат на шаг не роняет уже отрисованную
+  // обложку; две впереди — следующая успевает декодировать до входа в кадр.
+  it.each([
+    ['desktop', false, WEB_ROW_HEIGHT_DESKTOP],
+    ['mobile', true, WEB_ROW_HEIGHT_MOBILE],
+  ])('keeps one web row behind and two ahead on %s', (_label, isMobile, rowHeight) => {
+    const { drawDistance } = getRightColumnVirtualizationConfig(true, isMobile as boolean)
+
+    expect(drawDistance * BUFFER_BEHIND_RATIO).toBeGreaterThanOrEqual(rowHeight as number)
+    expect(drawDistance * BUFFER_AHEAD_RATIO).toBeGreaterThanOrEqual((rowHeight as number) * 2)
   })
 
-  it('uses a smaller lookahead for the shorter mobile rows', () => {
-    expect(getRightColumnVirtualizationConfig(true, true)).toEqual({
-      drawDistance: 160,
-    })
+  // Окно обязано остаться ограниченным: запас, сопоставимый со страницей выдачи,
+  // смонтировал бы всю страницу разом и утянул байты низкоприоритетных обложек.
+  it.each([
+    ['desktop', false, WEB_ROW_HEIGHT_DESKTOP],
+    ['mobile', true, WEB_ROW_HEIGHT_MOBILE],
+  ])('keeps the %s lookahead bounded to a few rows', (_label, isMobile, rowHeight) => {
+    const { drawDistance } = getRightColumnVirtualizationConfig(true, isMobile as boolean)
+
+    expect(drawDistance * BUFFER_AHEAD_RATIO).toBeLessThanOrEqual((rowHeight as number) * 4)
+  })
+
+  it('prepares a wider window on desktop, where rows are taller', () => {
+    expect(getRightColumnVirtualizationConfig(true, false).drawDistance).toBeGreaterThan(
+      getRightColumnVirtualizationConfig(true, true).drawDistance,
+    )
   })
 
   // Native рециклит ячейки: FlashList делит буфер `drawDistance * 2` как 0.3
@@ -49,8 +78,11 @@ describe('search result virtualization budget', () => {
     const CARD_HEIGHT_DP = 300
     const { drawDistance } = getRightColumnVirtualizationConfig(false, true)
 
-    expect(drawDistance * 0.6).toBeGreaterThanOrEqual(CARD_HEIGHT_DP)
-    expect(drawDistance * 1.4).toBeGreaterThanOrEqual(CARD_HEIGHT_DP * 2)
+    // Значение закреплено device-verify на Pixel 10 Pro (#1263): правка web-веток
+    // не должна трогать native, поэтому пин точный, а не только по инварианту.
+    expect(drawDistance).toBe(560)
+    expect(drawDistance * BUFFER_BEHIND_RATIO).toBeGreaterThanOrEqual(CARD_HEIGHT_DP)
+    expect(drawDistance * BUFFER_AHEAD_RATIO).toBeGreaterThanOrEqual(CARD_HEIGHT_DP * 2)
     expect(getRightColumnVirtualizationConfig(false, false).drawDistance).toBe(drawDistance)
   })
 })

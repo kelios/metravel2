@@ -4,8 +4,16 @@ import type { Travel } from '@/types/types'
 export const RECOMMENDATIONS_TOTAL_HEIGHT = 376
 export const STABLE_PLACEHOLDER_HEIGHT = 1200
 export const TOP_SCROLL_PADDING = 8
-export const WEB_ROW_INTRINSIC_SIZE_MOBILE = 'auto 340px'
-export const WEB_ROW_INTRINSIC_SIZE_DESKTOP = 'auto 420px'
+
+/**
+ * Заявленная высота строки ленты. Один источник правды и для
+ * `content-visibility` (`contain-intrinsic-size`), и для расчёта запаса
+ * прокрутки ниже: если высота строки поедет, тесты lookahead упадут вместе с ней.
+ */
+export const WEB_ROW_HEIGHT_MOBILE = 340
+export const WEB_ROW_HEIGHT_DESKTOP = 420
+export const WEB_ROW_INTRINSIC_SIZE_MOBILE = `auto ${WEB_ROW_HEIGHT_MOBILE}px`
+export const WEB_ROW_INTRINSIC_SIZE_DESKTOP = `auto ${WEB_ROW_HEIGHT_DESKTOP}px`
 
 /**
  * Native lookahead FlashList для ленты карточек.
@@ -27,14 +35,34 @@ export const WEB_ROW_INTRINSIC_SIZE_DESKTOP = 'auto 420px'
  */
 const NATIVE_LIST_DRAW_DISTANCE = 560
 
+/**
+ * Web lookahead выводится из той же высоты строки и того же деления буфера.
+ *
+ * Прежние 160/180 были короче ОДНОЙ строки: на десктопе назад оставалось
+ * `0.6 × 180 = 108` px при строке 420 px, вперёд `1.4 × 180 = 252` px. Замер на
+ * проде (2026-08-08, 1280×900, прокрутка на 1160 px) показал, что все 6 из 6
+ * въехавших обложек имели `opacity: 0`, пустой `currentSrc` и `naturalWidth: 0`
+ * через 100 мс — правильное фото появлялось только к ~600 мс. Гейт владения
+ * источником из #1294 работает верно (чужое фото не показывается), но окно
+ * планирования слишком короткое, и пользователь видит заливку доминантным цветом.
+ *
+ * Нижние границы при делении 0.6 назад / 1.4 вперёд:
+ *   desktop: назад `420 / 0.6 = 700`, вперёд `(2 × 420) / 1.4 = 600` → 720
+ *   mobile:  назад `340 / 0.6 ≈ 567`, вперёд `(2 × 340) / 1.4 ≈ 486` → 600
+ *
+ * Значения держат ровно одну строку позади и две впереди — окно ограничено и не
+ * растёт с числом результатов, поэтому пагинация и бюджет байтов не страдают.
+ */
+const WEB_LIST_DRAW_DISTANCE_MOBILE = 600
+const WEB_LIST_DRAW_DISTANCE_DESKTOP = 720
+
 export function getRightColumnVirtualizationConfig(isWeb: boolean, isMobile: boolean) {
-  // FlashList v2 progressively mounts the visible rows in small batches itself.
-  // Keep only a short lookahead so the next row decodes before it scrolls in,
-  // without mounting/requesting the whole 20-card page.
+  if (!isWeb) {
+    return { drawDistance: NATIVE_LIST_DRAW_DISTANCE }
+  }
+
   return {
-    // Web остаётся коротким: там лента не рециклит нативные вью, а лишний запас
-    // тянет байты низкоприоритетных обложек и душит подгрузку следующей страницы.
-    drawDistance: isWeb ? (isMobile ? 160 : 180) : NATIVE_LIST_DRAW_DISTANCE,
+    drawDistance: isMobile ? WEB_LIST_DRAW_DISTANCE_MOBILE : WEB_LIST_DRAW_DISTANCE_DESKTOP,
   }
 }
 
