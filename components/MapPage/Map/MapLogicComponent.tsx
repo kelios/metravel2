@@ -16,9 +16,14 @@ const AUTO_FIT_COORD_PRECISION = 3;
 
 /**
  * #1348 — below this zoom a phone-width pane shows a whole region rather than "places
- * near me". z10 on a 390 px pane is ~35 km across: a metro area, still recognisable.
+ * near me". z11 on a 390 px pane is ~17 km across: a city and its outskirts.
+ *
+ * It is a THRESHOLD, not a blanket floor: radii whose circle already fits above it
+ * (≈10 km and below on a phone) keep the exact circle fit. Measured on the default
+ * r=50 km: the fitted view is z8 and the first cluster request weighs 323 KB; z11
+ * brings the same request down to ~118 KB, z10 only to ~243 KB.
  */
-const COMPACT_MIN_FIT_ZOOM = 10;
+const COMPACT_MIN_FIT_ZOOM = 11;
 
 const getCoarseAutoFitLocationKey = (location?: LatLng | null): string => {
   if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {

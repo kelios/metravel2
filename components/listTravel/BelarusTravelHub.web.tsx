@@ -189,6 +189,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.xxs,
+      // Пилюля-ссылка сама является тач-таргетом, а её высота вытекала только из
+      // паддингов и давала 36dp (#1297, замер на проде).
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
       borderRadius: DESIGN_TOKENS.radii.pill,

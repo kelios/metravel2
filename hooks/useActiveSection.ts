@@ -7,6 +7,12 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Platform, View } from 'react-native';
 import type { RefObject } from 'react';
 
+import {
+  SECTION_READING_LINE_BUFFER_PX,
+  isDocumentScrollContainer,
+  resolveSectionScrollOffset,
+} from '@/utils/sectionScrollOffset';
+
 const isTestEnv =
   (typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined) ||
   (typeof navigator !== 'undefined' && Boolean((navigator as Navigator & { webdriver?: boolean }).webdriver));
@@ -97,41 +103,24 @@ export function useActiveSection(
         ? scrollRoot
         : null;
 
-    const isDocumentRoot = (node: unknown): boolean => {
-      if (!node) return true;
-      const scrollingEl = (doc.scrollingElement || doc.documentElement || doc.body) as unknown;
-      return node === window || node === doc || node === doc.body || node === doc.documentElement || node === scrollingEl;
-    };
-
     const safeHeaderOffsetRaw = typeof headerOffset === 'number' && !isNaN(headerOffset) ? headerOffset : 0;
-    const safeHeaderOffset = (() => {
-      // If we are observing the document scroll, header always overlaps viewport.
-      if (isDocumentRoot(effectiveScrollRoot)) return safeHeaderOffsetRaw;
-
-      // For nested scroll containers, apply header offset only when container is under the sticky header.
-      try {
-        if (effectiveScrollRoot && typeof effectiveScrollRoot.getBoundingClientRect === 'function') {
-          const rect = effectiveScrollRoot.getBoundingClientRect();
-          const top = Number(rect?.top ?? 0);
-          if (top < safeHeaderOffsetRaw - 4) return safeHeaderOffsetRaw;
-        }
-      } catch {
-        // noop
-      }
-      return 0;
-    })();
+    // Одно и то же смещение под липкой шапкой для scrollspy и для прокрутки к
+    // секции (useScrollNavigation): иначе клик по пункту меню паркует секцию
+    // мимо «линии чтения» и подсвечивается соседний пункт.
+    const readReadingLineOffset = () =>
+      resolveSectionScrollOffset(effectiveScrollRoot, safeHeaderOffsetRaw);
+    const safeHeaderOffset = readReadingLineOffset();
 
     const computeAndSetActive = () => {
       // Single-metric scrollspy: the active section is the one whose vertical
       // range [top, bottom] crosses a fixed reading line near the top of the
       // viewport. Hysteresis keeps the current section active while it still
       // crosses the line, preventing flicker between adjacent sections.
-      const viewportTop = safeHeaderOffset;
-      const TOP_BUFFER_PX = 24;
+      const viewportTop = readReadingLineOffset();
 
       const rootRect =
         effectiveScrollRoot &&
-        !isDocumentRoot(effectiveScrollRoot) &&
+        !isDocumentScrollContainer(effectiveScrollRoot) &&
         typeof effectiveScrollRoot.getBoundingClientRect === 'function'
           ? effectiveScrollRoot.getBoundingClientRect()
           : null;
@@ -168,7 +157,7 @@ export function useActiveSection(
 
       // Reading line: a horizontal line under the sticky header used as the
       // single source of truth for "what the user is currently reading".
-      const headerLine = viewportTop + TOP_BUFFER_PX;
+      const headerLine = viewportTop + SECTION_READING_LINE_BUFFER_PX;
 
       // Sort by top position (document order in viewport).
       measured.sort((a, b) => a.top - b.top);
@@ -265,7 +254,7 @@ export function useActiveSection(
     tryRegister();
 
     const scrollTarget: Window | HTMLElement =
-      eventScrollRoot && !isDocumentRoot(eventScrollRoot) ? eventScrollRoot : window;
+      eventScrollRoot && !isDocumentScrollContainer(eventScrollRoot) ? eventScrollRoot : window;
     const passiveOptions: AddEventListenerOptions = { passive: true };
     const captureOptions: AddEventListenerOptions = { passive: true, capture: true };
     const removeCaptureOptions: EventListenerOptions = { capture: true };

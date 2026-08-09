@@ -7,6 +7,8 @@ import { useMemo, useRef, useCallback } from 'react';
 import { View, ScrollView, Platform } from 'react-native';
 import React from 'react';
 
+import { resolveSectionScrollOffset } from '@/utils/sectionScrollOffset';
+
 type RecordUnknown = Record<string, unknown>;
 
 type DOMNodeLike = RecordUnknown & {
@@ -35,11 +37,6 @@ type ScrollViewRefLike = RecordUnknown & {
   _innerViewNode?: unknown;
   _nativeNode?: unknown;
   _domNode?: unknown;
-};
-
-type DocumentLike = Document & {
-  body?: HTMLElement | null;
-  documentElement?: HTMLElement | null;
 };
 
 const isRecord = (value: unknown): value is RecordUnknown =>
@@ -144,48 +141,6 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         const el = resolveElement();
         if (!el) return false;
 
-        const getHeaderOffset = (): number => {
-          try {
-            const header = document.querySelector('header');
-            const h = header?.getBoundingClientRect?.().height;
-            if (typeof h === 'number' && isFinite(h)) {
-              return Math.max(60, Math.min(160, Math.round(h)));
-            }
-          } catch {
-            // noop
-          }
-          return 88;
-        };
-
-        const isDocumentScrollContainer = (node: unknown): boolean => {
-          if (!node) return false;
-          const docAny = document as DocumentLike;
-          const scrollingEl = document.scrollingElement || docAny.documentElement || docAny.body || null;
-          return node === window || node === document || node === docAny.body || node === docAny.documentElement || node === scrollingEl;
-        };
-
-        const shouldApplyHeaderOffset = (container: unknown): boolean => {
-          try {
-            const headerH = getHeaderOffset();
-            if (!headerH) return false;
-
-            // If we are scrolling the document/window, the header always overlaps the viewport.
-            if (isDocumentScrollContainer(container)) return true;
-
-            // For nested scroll containers, apply offset only when the container is under the header.
-            const containerNode = asDOMNodeLike(container);
-            if (containerNode && typeof containerNode.getBoundingClientRect === 'function') {
-              const rect = containerNode.getBoundingClientRect();
-              const top = Number(rect?.top ?? 0);
-              // If container starts below the header, don't offset.
-              return top < headerH - 4;
-            }
-          } catch {
-            // noop
-          }
-          return false;
-        };
-
         const canScrollNode = (node: unknown): node is HTMLElement => {
           const domNode = asDOMNodeLike(node);
           if (!domNode) return false;
@@ -274,8 +229,9 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             const containerRect = bestScrollContainer.getBoundingClientRect();
             const elRect = el.getBoundingClientRect();
             const currentTop = bestScrollContainer.scrollTop ?? 0;
-            const HEADER_OFFSET = getHeaderOffset();
-            const adjustment = shouldApplyHeaderOffset(bestScrollContainer) ? HEADER_OFFSET : 0;
+            // Тот же расчёт, что у «линии чтения» scrollspy (useActiveSection),
+            // иначе секция паркуется мимо линии и подсвечивается соседний пункт.
+            const adjustment = resolveSectionScrollOffset(bestScrollContainer);
             const targetTopRaw = currentTop + (elRect.top - containerRect.top) - adjustment;
             const targetTop = Math.max(0, Math.round(targetTopRaw));
 
@@ -286,7 +242,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
           // Fallback: manual scroll calculation using window/document scroll
           {
-            const HEADER_OFFSET = getHeaderOffset();
+            const HEADER_OFFSET = resolveSectionScrollOffset(null);
             const elRect = el.getBoundingClientRect();
             const win = typeof window !== 'undefined' ? window : undefined;
             if (win && typeof win.scrollTo === 'function') {

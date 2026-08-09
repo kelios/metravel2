@@ -154,6 +154,36 @@ describe('useActiveSection', () => {
     expect(result.current.activeSection).toBe('section-2')
   })
 
+  it('puts the reading line under the measured sticky header, not under the static prop (regression)', () => {
+    // Прокрутка к секции (`useScrollNavigation`) паркует её ровно под измеренной
+    // шапкой. Если scrollspy считает «линию чтения» по своей константе, линия
+    // оказывается выше секции и подсвечивается хвост предыдущей — клик по
+    // «Плюсам» подсвечивал «Рекомендации». Здесь шапка выше константы (120 > 72).
+    const HEADER_BOTTOM = 120
+
+    const header = document.createElement('div') as any
+    header.setAttribute('data-testid', 'main-header')
+    header.getBoundingClientRect = jest.fn(() => ({ top: 0, bottom: HEADER_BOTTOM, height: HEADER_BOTTOM } as any))
+    document.body.appendChild(header)
+
+    // Секции идут встык, вторая запаркована ровно под шапкой.
+    const s1 = document.getElementById('section-1') as any
+    const s2 = document.getElementById('section-2') as any
+    s1.getBoundingClientRect = jest.fn(() => ({ top: HEADER_BOTTOM - 4200, bottom: HEADER_BOTTOM, height: 4200 } as any))
+    s2.getBoundingClientRect = jest.fn(() => ({ top: HEADER_BOTTOM, bottom: HEADER_BOTTOM + 1550, height: 1550 } as any))
+
+    const { result } = renderHook(() => useActiveSection({
+      'section-1': { current: null },
+      'section-2': { current: null },
+    }, 72))
+
+    act(() => {
+      lastObserverCallback?.([], null as any)
+    })
+
+    expect(result.current.activeSection).toBe('section-2')
+  })
+
   it('falls back to document scroll when provided scrollRoot is not an actual scroll container (regression)', () => {
     const anchors = {
       'section-1': { current: null },

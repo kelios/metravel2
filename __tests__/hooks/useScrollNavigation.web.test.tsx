@@ -2,6 +2,17 @@ import { act, renderHook } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 
+const STICKY_HEADER_BOTTOM = 64;
+
+/** Липкая шапка приложения: `useScrollNavigation` меряет её по `data-testid`. */
+const mountStickyHeader = (bottom = STICKY_HEADER_BOTTOM) => {
+  const header = document.createElement('div') as any;
+  header.setAttribute('data-testid', 'main-header');
+  header.getBoundingClientRect = () => ({ top: 0, bottom, height: bottom } as any);
+  document.body.appendChild(header);
+  return header;
+};
+
 describe('useScrollNavigation (web)', () => {
   beforeEach(() => {
     Platform.OS = 'web' as any;
@@ -14,6 +25,7 @@ describe('useScrollNavigation (web)', () => {
         </div>
       </div>
     `;
+    mountStickyHeader();
 
     // JSDOM doesn't compute layout; we stub rects.
     const container = document.getElementById('scroll-container') as any;
@@ -81,8 +93,8 @@ describe('useScrollNavigation (web)', () => {
     expect((window as any).scrollTo).not.toHaveBeenCalled();
     expect((window as any).scrollBy).not.toHaveBeenCalled();
 
-    // targetTop = currentTop(10) + (elTop(120) - containerTop(0)) - headerOffset(88) = 42
-    expect(container.scrollTo).toHaveBeenCalledWith({ top: 42, behavior: 'smooth' });
+    // targetTop = currentTop(10) + (elTop(120) - containerTop(0)) - headerOffset(64) = 66
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 66, behavior: 'smooth' });
   });
 
   it('applies header offset directly in scrollTo (not via separate scrollBy)', () => {
@@ -101,8 +113,8 @@ describe('useScrollNavigation (web)', () => {
     expect(container.scrollTo).toHaveBeenCalledTimes(1);
     expect(container.scrollBy).not.toHaveBeenCalled();
 
-    // targetTop = 10 + (120 - 0) - 88 = 42
-    expect(container.scrollTo).toHaveBeenCalledWith({ top: 42, behavior: 'smooth' });
+    // targetTop = 10 + (120 - 0) - 64 = 66
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 66, behavior: 'smooth' });
     expect((window as any).scrollBy).not.toHaveBeenCalled();
   });
 
@@ -129,8 +141,8 @@ describe('useScrollNavigation (web)', () => {
     });
 
     expect(container.scrollTo).toHaveBeenCalled();
-    // targetTop = 10 + (120 - 0) - 88 = 42
-    expect(container.scrollTop).toBe(42);
+    // targetTop = 10 + (120 - 0) - 64 = 66
+    expect(container.scrollTop).toBe(66);
 
     // Regression guard: should not scroll the window
     expect((window as any).scrollTo).not.toHaveBeenCalled();
@@ -154,8 +166,8 @@ describe('useScrollNavigation (web)', () => {
     });
 
     // Falls back to window.scrollTo with header offset baked in
-    // targetY = 0 + 120 - 88 = 32
-    expect(window.scrollTo).toHaveBeenCalledWith({ top: 32, behavior: 'smooth' });
+    // targetY = 0 + 120 - 64 = 56
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 56, behavior: 'smooth' });
 
     window.scrollTo = origScrollTo;
   });
@@ -167,6 +179,8 @@ describe('useScrollNavigation (web)', () => {
         <div style="height: 1000px; position: relative;"></div>
       </div>
     `;
+
+    mountStickyHeader();
 
     const container = document.getElementById('scroll-container') as any;
     Object.defineProperty(container, 'scrollTop', { value: 0, writable: true });
@@ -222,7 +236,35 @@ describe('useScrollNavigation (web)', () => {
 
     expect(el.getAttribute('data-section-key')).toBe('description');
     expect(container.scrollTo).toHaveBeenCalled();
-    // targetTop = 0 + (120 - 0) - 88 = 32
-    expect(container.scrollTo).toHaveBeenCalledWith({ top: 32, behavior: 'smooth' });
+    // targetTop = 0 + (120 - 0) - 64 = 56
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 56, behavior: 'smooth' });
+  });
+
+  it('does not double-count the header when the container already starts below it (regression)', () => {
+    // Прод-раскладка travel-details: скролл-контейнер начинается ровно под
+    // липкой шапкой, поэтому вычитать её высоту ещё раз нельзя — иначе секция
+    // паркуется ниже «линии чтения» scrollspy и подсвечивается соседний пункт
+    // бокового меню («Плюсы» -> «Рекомендации»).
+    const container: any = document.getElementById('scroll-container');
+    container.getBoundingClientRect = () => ({
+      top: STICKY_HEADER_BOTTOM,
+      bottom: STICKY_HEADER_BOTTOM + 200,
+      left: 0,
+      right: 200,
+      width: 200,
+      height: 200,
+    } as any);
+
+    const { result } = renderHook(() => useScrollNavigation());
+    (result.current.scrollRef as any).current = {
+      getScrollableNode: () => container,
+    };
+
+    act(() => {
+      result.current.scrollTo('description');
+    });
+
+    // targetTop = currentTop(10) + (elTop(120) - containerTop(64)) - offset(0) = 66
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 66, behavior: 'smooth' });
   });
 });
