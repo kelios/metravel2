@@ -391,7 +391,12 @@ describe('Map.ios Component', () => {
     );
 
     const injectedScript = getInjectedPayloadScript(rendered);
-    expect(injectedScript).toContain('"clusters":[{"key":"cluster-1"');
+    // Server ids are request-scoped and change for overlapping bbox queries.
+    // The native renderer must receive the same stable geometric key as web so
+    // an unchanged cluster is not recreated after every pan/refetch (#1347).
+    expect(injectedScript).toContain(
+      '"clusters":[{"key":"53.9500|27.6000|12"',
+    );
     expect(injectedScript).toContain('"count":12');
     expect(injectedScript).toContain('"usesServerClusters":true');
     expect(getWebViewHtml(rendered)).toContain('makeClusterIcon');
