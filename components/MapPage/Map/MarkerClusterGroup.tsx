@@ -272,20 +272,29 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     }
   }, [map])
 
-  // Parsed + validated points
+  // Parsed + validated points.
+  //
+  // The key must be stable across data refreshes, because the sync effect below
+  // diffs by it. The old key fell back to the ARRAY INDEX for points without an
+  // id, so a reordered response looked like "every marker replaced". Collisions
+  // (two points at the same coord within one payload) get a deterministic suffix
+  // by first-seen order instead.
   const validPoints = useMemo(() => {
+    const seen = new Map<string, number>()
     return points
-      .map((point, index) => {
+      .map((point) => {
         const ll = strToLatLng(String(point.coord), hintCenter)
         if (!ll) return null
         const coords = { lat: ll[1], lng: ll[0] }
         if (!CoordinateConverter.isValid(coords)) return null
+        const id = point.id != null ? String(point.id).trim() : ''
+        const baseKey = id ? `travel-${id}` : `travel-${String(point.coord).replace(/,/g, '-')}`
+        const duplicateIndex = seen.get(baseKey) ?? 0
+        seen.set(baseKey, duplicateIndex + 1)
         return {
           point,
           coords,
-          key: point.id
-            ? `travel-${point.id}`
-            : `travel-${String(point.coord).replace(/,/g, '-')}-${index}`,
+          key: duplicateIndex === 0 ? baseKey : `${baseKey}#${duplicateIndex}`,
         }
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
@@ -424,33 +433,63 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     }
   }, [isDark, groupVersion])
 
-  // Sync markers with cluster group
+  // Sync markers with cluster group.
+  //
+  // #1347 — this used to unbind every handler/popup, `clearLayers()` and rebuild
+  // ALL markers whenever `validPoints` changed identity. Because the server-cluster
+  // query re-keys on every viewport change, that meant a complete Leaflet teardown
+  // + rebuild on EVERY pan and zoom (measured: 20 DOM ops for 10 markers, 111 ms
+  // long task on a throttled phone). Now we diff by key: only markers that actually
+  // appeared or disappeared are touched, and markers that survive keep their popup,
+  // tooltip and open state.
   useEffect(() => {
     const group = clusterGroupRef.current
     if (!group || !L) return
 
-    // Clear existing — снимаем хендлеры/попапы предыдущих маркеров до clearLayers.
-    try {
-      for (const { marker } of markerMapRef.current.values()) {
-        try {
-          marker.off()
-          marker.unbindPopup?.()
-        } catch {
-          // noop
+    const existing = markerMapRef.current
+    const nextKeys = new Set(validPoints.map((item) => item.key))
+
+    // 1. Remove markers that are gone.
+    const removedMarkers: any[] = []
+    const removedKeys: string[] = []
+    for (const [key, entry] of existing) {
+      if (nextKeys.has(key)) continue
+      removedKeys.push(key)
+      removedMarkers.push(entry.marker)
+      try {
+        entry.marker.off()
+        entry.marker.unbindPopup?.()
+      } catch {
+        // noop
+      }
+      onMarkerInstanceRef.current?.(entry.coord, null)
+    }
+    if (removedMarkers.length) {
+      try {
+        group.removeLayers(removedMarkers)
+      } catch {
+        for (const m of removedMarkers) {
+          try {
+            group.removeLayer(m)
+          } catch {
+            // noop
+          }
         }
       }
-      group.clearLayers()
-    } catch {
-      // noop
+      for (const key of removedKeys) existing.delete(key)
+      setOpenPopups((prev) => {
+        if (!removedKeys.some((key) => prev.has(key))) return prev
+        const next = new Map(prev)
+        for (const key of removedKeys) next.delete(key)
+        return next
+      })
     }
-    markerMapRef.current.clear()
-    setOpenPopups((prev) => (prev.size ? new Map() : prev))
 
-    if (!validPoints.length) return
-
+    // 2. Create markers that are new.
     const newMarkers: any[] = []
 
     for (const { point, coords, key } of validPoints) {
+      if (existing.has(key)) continue
       const marker = L.marker([coords.lat, coords.lng], {
         icon: markerIcon,
         opacity: markerOpacity,
@@ -562,11 +601,13 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       // иначе дубли координат перетирают друг друга и onMarkerInstance(coord,null)
       // на cleanup зовётся не для всех маркеров.
       const coordStr = String(point.coord ?? '')
-      markerMapRef.current.set(key, { coord: coordStr, marker })
+      existing.set(key, { coord: coordStr, marker })
       onMarkerInstanceRef.current?.(coordStr, marker)
 
       newMarkers.push(marker)
     }
+
+    if (!newMarkers.length) return
 
     // Bulk add for performance
     try {
@@ -581,24 +622,59 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         }
       }
     }
-
-    const currentMarkerMap = markerMapRef.current
-
-    return () => {
-      // Notify about removed markers (per unique key → корректный coord для каждого).
-      for (const { coord } of currentMarkerMap.values()) {
-        onMarkerInstanceRef.current?.(coord, null)
-      }
-    }
   }, [
     L,
-    map,
     validPoints,
     markerIcon,
     markerOpacity,
     suppressLeafletPopupOnSelect,
     groupVersion,
   ])
+
+  // Marker options that are baked in at creation time (icon, opacity, whether a
+  // popup is bound at all) change far more rarely than the point set. When they do,
+  // drop the index once so the diff effect above re-creates every marker with the
+  // new options — the effect itself must never rebuild on a plain data change.
+  const markerBuildKey = `${markerOpacity}|${suppressLeafletPopupOnSelect ? 1 : 0}`
+  const lastMarkerBuildRef = useRef<{ icon: any; buildKey: string } | null>(null)
+  useEffect(() => {
+    const previous = lastMarkerBuildRef.current
+    lastMarkerBuildRef.current = { icon: markerIcon, buildKey: markerBuildKey }
+    if (!previous) return
+    if (previous.icon === markerIcon && previous.buildKey === markerBuildKey) return
+
+    const group = clusterGroupRef.current
+    if (!group) return
+    for (const { marker } of markerMapRef.current.values()) {
+      try {
+        marker.off()
+        marker.unbindPopup?.()
+      } catch {
+        // noop
+      }
+    }
+    try {
+      group.clearLayers()
+    } catch {
+      // noop
+    }
+    markerMapRef.current.clear()
+    setOpenPopups((prev) => (prev.size ? new Map() : prev))
+    // Re-uses the same path as a freshly created group: bump the version so the
+    // diff effect sees an empty index and repopulates it.
+    setGroupVersion((v) => v + 1)
+  }, [markerIcon, markerBuildKey])
+
+  // Unmount only: tell the parent its marker index is stale. Doing this in the diff
+  // effect's cleanup would wipe the index on every data change.
+  useEffect(() => {
+    const index = markerMapRef.current
+    return () => {
+      for (const { coord } of index.values()) {
+        onMarkerInstanceRef.current?.(coord, null)
+      }
+    }
+  }, [])
 
   return (
     <>

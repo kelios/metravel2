@@ -210,6 +210,9 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: 10,
   },
   textLink: {
+    // Размер задавался только паддингами и давал 34dp (#1297, замер в браузере).
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    justifyContent: 'center',
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: DESIGN_TOKENS.radii.sm,

@@ -234,6 +234,9 @@ const getStyles = (colors: ThemedColors) =>
     dragHandleArea: {
       alignItems: 'center',
       justifyContent: 'center',
+      // Ручка — кнопка «Свернуть/Развернуть панель»: её высота и есть тач-таргет,
+      // а из паддингов выходило 18dp (#1297, замер в браузере).
+      minHeight: 44,
       paddingTop: 8,
       paddingBottom: 6,
       cursor: 'pointer',

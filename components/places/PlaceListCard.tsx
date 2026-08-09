@@ -559,7 +559,12 @@ const createStyles = (
     },
     titleShareButton: {
       flexShrink: 0,
-      padding: 6,
+      // Размер вью и есть тач-таргет: раньше он вытекал из `padding: 6` вокруг
+      // иконки 18dp и давал 30dp (#1297, замер в браузере).
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
       marginTop: -2,
       borderRadius: 999,
       ...Platform.select({ web: { cursor: 'pointer' as any } }),

@@ -1164,7 +1164,8 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       expect(mockClusterLayerProps).toHaveBeenCalled()
       expect(mockClusterLayerProps.mock.calls[0]?.[0]?.clusters?.[0]).toEqual(
         expect.objectContaining({
-          key: 'server-cluster-1',
+          // Geometric key (#1347) — the backend id is re-hashed per request.
+          key: '53.9000|27.5600|42',
           count: 42,
           center: [53.9, 27.56],
         })
@@ -1216,7 +1217,10 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       expect(mockClusterLayerProps).toHaveBeenCalled()
       const renderedClusters = mockClusterLayerProps.mock.calls.at(-1)?.[0]?.clusters ?? []
       expect(renderedClusters).toHaveLength(1)
-      expect(renderedClusters[0]).toEqual(expect.objectContaining({ key: 'inside-cluster' }))
+      // Cluster keys are geometric (#1347), not the per-request backend id.
+      expect(renderedClusters[0]).toEqual(
+        expect.objectContaining({ key: '53.9000|27.5600|5', center: [53.9, 27.56] }),
+      )
     })
 
     it('falls back to local MarkerClusterGroup when backend clusters fail', async () => {

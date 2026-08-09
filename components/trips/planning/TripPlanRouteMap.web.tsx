@@ -53,9 +53,10 @@ const LAYERS_POPOVER_MAX_WIDTH = 300;
 const LAYERS_SCROLL_MAX_HEIGHT_INLINE = 196;
 const LAYERS_SCROLL_MAX_HEIGHT_FULLSCREEN = 420;
 
-// Стабильная ссылка: `useMapApi` пересобирает api на новый массив, а api уезжает
+// Стабильные ссылки: `useMapApi` пересобирает api на новый массив, а api уезжает
 // в состояние — свежий литерал на каждый рендер дал бы бесконечный цикл.
 const EMPTY_ROUTE_POINTS: Array<[number, number]> = [];
+const EMPTY_TRAVEL_DATA: Array<{ coord: string; address: string }> = [];
 
 type WebPortal = (node: React.ReactNode, container: Element) => React.ReactNode;
 
@@ -280,25 +281,15 @@ export default function TripPlanRouteMap({
     manageBaseLayer: false,
   });
 
-  // «Показать всё на карте» в панели слоёв работает по точкам маршрута.
-  const overlayTravelData = useMemo(
-    () =>
-      route
-        .filter((point) => Array.isArray(point.coordinates))
-        .map((point, index) => {
-          const [lng, lat] = point.coordinates as [number, number];
-          return { id: point.id ?? index, coord: `${lat},${lng}`, address: point.name };
-        }),
-    [route],
-  );
-
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
 
+  // Карта конструктора берёт из api только переключение слоёв: точки и маршрут
+  // рисует сама, а панель слоёв идёт без ряда действий карты (showMapControls).
   useMapApi({
     map: mapInstance,
     L,
     onMapUiApiReady: setMapUiApi,
-    travelData: overlayTravelData,
+    travelData: EMPTY_TRAVEL_DATA,
     userLocation: null,
     routePoints: EMPTY_ROUTE_POINTS,
     leafletBaseLayerRef,
@@ -378,6 +369,7 @@ export default function TripPlanRouteMap({
               }
               mapUiApi={mapUiApi}
               showBaseLayer={false}
+              showMapControls={false}
               overlayOptions={overlayOptions}
               enabledOverlays={enabledOverlays}
               onOverlayToggle={handleOverlayToggle}

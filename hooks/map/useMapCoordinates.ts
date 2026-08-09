@@ -32,6 +32,14 @@ const NATIVE_LAST_KNOWN_MAX_AGE_MS = 10 * 60 * 1000;
 const NATIVE_LAST_KNOWN_REQUIRED_ACCURACY_M = 5000;
 const LIVE_LOCATION_MIN_DISTANCE_M = 12;
 const LIVE_LOCATION_MAXIMUM_AGE_MS = 15000;
+// #1349 — the explicit fix is the one the user actually sees: it places the «вы здесь»
+// marker AND anchors the radius search. It used to ask for `enableHighAccuracy: false`
+// with a 60 s cache, so a minute-old network fix hundreds of metres off was a normal
+// answer. Precision belongs here; the background watch (marker only) can stay cheap.
+const PRECISE_LOCATION_TIMEOUT_MS = 8000;
+const PRECISE_LOCATION_MAXIMUM_AGE_MS = 10000;
+const FALLBACK_LOCATION_TIMEOUT_MS = 12000;
+const FALLBACK_LOCATION_MAXIMUM_AGE_MS = 60000;
 
 export type LocationSnapshot = Coordinates & {
   accuracy?: number | null;
@@ -219,8 +227,11 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       // The fresh point goes to the out-of-React channel instead, so only the «вы здесь»
       // marker moves (imperatively). See hooks/map/liveUserPosition.
       lastTrustedLocationRef.current = next;
-      cacheWebCoordinates(next);
+      // #1349 — persist only a position that actually moved. This used to run on every
+      // tick, i.e. a synchronous JSON.stringify + localStorage write roughly once a
+      // second for a user standing still, writing the same coordinates back.
       if (distanceMeters(prev, next) >= LIVE_LOCATION_MIN_DISTANCE_M) {
+        cacheWebCoordinates(next);
         publishLiveUserPosition({
           latitude,
           longitude,
@@ -312,7 +323,11 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
           markLiveLocationRefreshing();
         },
         {
-          enableHighAccuracy: true,
+          // #1349 — the watch only nudges the «вы здесь» marker; it never moves the
+          // viewport or the search anchor. High accuracy here kept the GPS radio hot
+          // for the whole session for no visible gain — precision now lives in the
+          // explicit request instead.
+          enableHighAccuracy: false,
           timeout: NATIVE_LOCATION_TIMEOUT_MS,
           maximumAge: LIVE_LOCATION_MAXIMUM_AGE_MS,
         },
@@ -479,10 +494,32 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         resolve();
       };
 
-      navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
-        enableHighAccuracy: false,
-        timeout: 12000,
-        maximumAge: 60000,
+      // #1349 — ask for a precise, fresh fix first. If the GPS cannot deliver in time
+      // (indoors, cold start) fall back ONCE to the cheap network fix rather than
+      // leaving the user without a position; a denied permission never retries.
+      const handlePreciseError = (positionError: GeolocationPositionError) => {
+        if (signal?.aborted) {
+          resolve();
+          return;
+        }
+        const canDegrade =
+          positionError.code === positionError.TIMEOUT ||
+          positionError.code === positionError.POSITION_UNAVAILABLE;
+        if (!canDegrade) {
+          handleError(positionError);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
+          enableHighAccuracy: false,
+          timeout: FALLBACK_LOCATION_TIMEOUT_MS,
+          maximumAge: FALLBACK_LOCATION_MAXIMUM_AGE_MS,
+        });
+      };
+
+      navigator.geolocation.getCurrentPosition(handleSuccess, handlePreciseError, {
+        enableHighAccuracy: true,
+        timeout: PRECISE_LOCATION_TIMEOUT_MS,
+        maximumAge: PRECISE_LOCATION_MAXIMUM_AGE_MS,
       });
     });
   }, [applyTrustedLocation, clearLocationWatch, readWebCachedCoordinates, startLocationWatch]);
@@ -579,9 +616,13 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       // trusted user marker instead of leaving the map pinned to Minsk.
       startLocationWatch();
 
+      // #1349 — mirror of the web contract: the explicit fix is the one the user sees
+      // (marker + radius anchor), so it asks for the precise provider. The foreground
+      // watch below stays Balanced because it only nudges the marker. `getLastKnownPositionAsync`
+      // above already covers the slow-cold-fix case with a viewport-only anchor.
       const location = await withTimeout(
         Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.High,
         }),
         NATIVE_LOCATION_TIMEOUT_MS,
       );

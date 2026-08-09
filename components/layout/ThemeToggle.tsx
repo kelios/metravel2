@@ -39,6 +39,8 @@ export default function ThemeToggle({
           flexDirection: 'row',
           alignItems: 'center',
           gap: compact ? 6 : 8,
+          // Высота задавалась только паддингом и давала 30dp (#1297).
+          minHeight: 44,
           paddingVertical: compact ? 6 : 8,
           paddingHorizontal: compact ? 10 : 12,
           borderRadius: 8,

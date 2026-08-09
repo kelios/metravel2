@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MapClusterBBox } from '@/api/map';
 import { programmaticMapMoveRemainingMs } from '@/components/MapPage/Map/programmaticMoveSignal';
 
@@ -68,6 +68,39 @@ const sameBBox = (left: MapClusterBBox | null, right: MapClusterBBox | null): bo
 const sameSnapshot = (left: MapViewportSnapshot, right: MapViewportSnapshot): boolean =>
   Math.abs(left.zoom - right.zoom) < EPSILON && sameBBox(left.bbox, right.bbox);
 
+/**
+ * #1347 — the published bbox is deliberately wider than the visible viewport, and a
+ * new snapshot is published only when the viewport LEAVES the area already fetched
+ * (or the rounded zoom changes, which changes server-side clustering anyway).
+ *
+ * Before this, every `moveend`/`zoomend` published a fresh bbox: React re-rendered
+ * the whole map subtree and `useMapClusters` issued another 70–320 KB request even
+ * for a nudge of a few hundred metres. The margin below is the slack a user gets for
+ * free; 0.2 keeps the over-fetch modest (~1.4× per axis) while absorbing small pans.
+ */
+const VIEWPORT_MARGIN_RATIO = 0.2;
+
+const padBBox = (bbox: MapClusterBBox): MapClusterBBox => {
+  const latMargin = Math.abs(bbox.north - bbox.south) * VIEWPORT_MARGIN_RATIO;
+  const lngMargin = Math.abs(bbox.east - bbox.west) * VIEWPORT_MARGIN_RATIO;
+  return {
+    south: Math.max(-90, bbox.south - latMargin),
+    north: Math.min(90, bbox.north + latMargin),
+    west: Math.max(-180, bbox.west - lngMargin),
+    east: Math.min(180, bbox.east + lngMargin),
+  };
+};
+
+const bboxContains = (outer: MapClusterBBox | null, inner: MapClusterBBox | null): boolean => {
+  if (!outer || !inner) return false;
+  return (
+    inner.south >= outer.south - EPSILON &&
+    inner.north <= outer.north + EPSILON &&
+    inner.west >= outer.west - EPSILON &&
+    inner.east <= outer.east + EPSILON
+  );
+};
+
 export function useMapViewportSnapshot(
   map: LeafletMapLike | null | undefined,
   fallbackZoom: number,
@@ -78,9 +111,13 @@ export function useMapViewportSnapshot(
     [fallbackZoom],
   );
   const [snapshot, setSnapshot] = useState<MapViewportSnapshot>(initialSnapshot);
+  // What the last published (padded) snapshot actually covers. Kept out of state so
+  // the containment check itself never triggers a render.
+  const publishedRef = useRef<MapViewportSnapshot | null>(null);
 
   useEffect(() => {
     if (!enabled || !map || typeof map.on !== 'function') {
+      publishedRef.current = null;
       setSnapshot((prev) => (sameSnapshot(prev, initialSnapshot) ? prev : initialSnapshot));
       return;
     }
@@ -115,7 +152,21 @@ export function useMapViewportSnapshot(
         return;
       }
       const next = readMapViewportSnapshot(map, initialSnapshot.zoom);
-      setSnapshot((prev) => (sameSnapshot(prev, next) ? prev : next));
+      const published = publishedRef.current;
+      if (
+        published &&
+        next.bbox &&
+        Math.round(published.zoom) === Math.round(next.zoom) &&
+        bboxContains(published.bbox, next.bbox)
+      ) {
+        // Still inside the area we already fetched at this zoom — nothing to do.
+        return;
+      }
+      const padded: MapViewportSnapshot = next.bbox
+        ? { bbox: padBBox(next.bbox), zoom: next.zoom }
+        : next;
+      publishedRef.current = padded;
+      setSnapshot((prev) => (sameSnapshot(prev, padded) ? prev : padded));
     };
 
     scheduleRead();

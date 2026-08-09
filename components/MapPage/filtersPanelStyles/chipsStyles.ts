@@ -243,6 +243,7 @@ export const getChipsStyles = ({ colors, isMobile }: FiltersPanelStyleContext) =
       alignItems: 'center',
       gap: 4,
       alignSelf: 'flex-start',
+      minHeight: 44,
       marginTop: 8,
       paddingVertical: 4,
       paddingHorizontal: 2,

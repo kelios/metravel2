@@ -256,6 +256,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       alignItems: 'center',
       gap: 7,
       alignSelf: 'flex-start',
+      minHeight: 44,
       paddingVertical: 4,
       ...webViewStyle({ cursor: 'pointer' }),
     },

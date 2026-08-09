@@ -33,7 +33,9 @@ describe('buildServerClusterRenderData', () => {
     expect(result.hasServerData).toBe(true);
     expect(result.clusters[0]).toEqual(
       expect.objectContaining({
-        key: 'c1',
+        // #1347 — geometric, not `cluster.id`: the backend re-hashes the id per
+        // request, so the id changes for the same physical cluster on every pan.
+        key: '53.9000|27.5600|12',
         count: 12,
         center: [53.9, 27.56],
         bounds: [
@@ -80,6 +82,54 @@ describe('buildServerClusterRenderData', () => {
         coord: '54,28',
         imageUrl: 'image.jpg',
       }),
+    ]);
+  });
+
+  // #1347 — the same physical cluster must keep its key across two overlapping
+  // viewports, otherwise React re-creates every cluster marker on every pan.
+  it('keys clusters by geometry so a re-hashed backend id does not churn them', () => {
+    const cluster = (id: string) => ({
+      id,
+      center: { lat: 53.9, lng: 27.56 },
+      count: 12,
+      bounds: { south: 53.8, west: 27.4, north: 54, east: 27.7 },
+      previewItems: [],
+    });
+    const base = { markers: [], totalCount: 12, source: 'server', generatedAt: '' };
+
+    const first = buildServerClusterRenderData({ ...base, clusters: [cluster('hash-a')] } as any);
+    const second = buildServerClusterRenderData({ ...base, clusters: [cluster('hash-b')] } as any);
+
+    expect(second.clusters[0].key).toBe(first.clusters[0].key);
+  });
+
+  it('suffixes clusters that collide on the same rounded centre and count', () => {
+    const result = buildServerClusterRenderData({
+      clusters: [
+        {
+          id: 'a',
+          center: { lat: 53.9, lng: 27.56 },
+          count: 3,
+          bounds: { south: 53.8, west: 27.4, north: 54, east: 27.7 },
+          previewItems: [],
+        },
+        {
+          id: 'b',
+          center: { lat: 53.9, lng: 27.56 },
+          count: 3,
+          bounds: { south: 53.8, west: 27.4, north: 54, east: 27.7 },
+          previewItems: [],
+        },
+      ],
+      markers: [],
+      totalCount: 6,
+      source: 'server',
+      generatedAt: '',
+    } as any);
+
+    expect(result.clusters.map((c) => c.key)).toEqual([
+      '53.9000|27.5600|3',
+      '53.9000|27.5600|3#1',
     ]);
   });
 });

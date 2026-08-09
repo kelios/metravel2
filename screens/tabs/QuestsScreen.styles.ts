@@ -326,6 +326,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
+            minHeight: 44,
             marginTop: countryGapTop,
             marginBottom: spacing.xxs,
             paddingHorizontal: spacing.xs,

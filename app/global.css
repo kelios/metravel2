@@ -739,3 +739,18 @@ select:focus-visible {
     width: 260px !important;
   }
 }
+
+/*
+ * Тач-таргет кнопок зума Leaflet (#1297).
+ * Библиотека рисует их 30×30 — ниже принятого в проекте floor 44dp, и на
+ * телефоне промахнуться по «+»/«−» проще, чем попасть. Видимый бокс кнопки и
+ * есть её тач-таргет (hitSlop к DOM-кнопке неприменим), поэтому размер задан
+ * самой кнопке; шрифт/иконка не меняются.
+ */
+.leaflet-touch .leaflet-bar a,
+.leaflet-bar a.leaflet-control-zoom-in,
+.leaflet-bar a.leaflet-control-zoom-out {
+  width: 44px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+}

@@ -158,11 +158,20 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     outlineStyle: 'none' as any,
   },
+  /** Прозрачная рамка тач-таргета вокруг видимого кружка (#1297). */
   searchClear: {
+    width: DESIGN_TOKENS.touchTarget.minWidth,
+    height: DESIGN_TOKENS.touchTarget.minHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: DESIGN_TOKENS.spacing.xxs,
+    marginRight: -DESIGN_TOKENS.spacing.xs,
+  },
+  /** Видимый кружок крестика — размер прежний. */
+  searchClearShape: {
     padding: 6,
     borderRadius: DESIGN_TOKENS.radii.full,
     backgroundColor: colors.backgroundSecondary,
-    marginLeft: DESIGN_TOKENS.spacing.xs,
   },
   countrySelect: {
     minHeight: 46,
@@ -215,6 +224,11 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     ...(Platform.OS === 'web' ? ({
       boxShadow: '0 12px 32px rgba(15,23,42,0.16)' as any,
     } as any) : null),
+  },
+  // Paper рисует пункт меню высотой 40dp — ниже floor проекта (#1297).
+  countryMenuItem: {
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    justifyContent: 'center',
   },
   countryMenuItemText: {
     color: colors.text,
@@ -333,6 +347,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   featuredSelectArea: {
     flex: 1,
     minWidth: 0,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
@@ -665,7 +680,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
 
   // ─── Sort control (shared desktop header + compact bar) ───
   sortSelect: {
-    minHeight: mobileCompact ? DESIGN_TOKENS.touchTarget.minHeight : 40,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 1,

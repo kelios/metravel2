@@ -174,6 +174,8 @@ type MapWebLeafletCanvasProps = {
   onMarkerInstance: (coord: string, marker: any | null) => void
   onClusterTap?: () => void
   travelMarkerOpacity: number
+  /** #1348 — narrow map pane: floor the radius auto-fit instead of fitting the whole circle. */
+  compactPane?: boolean
 }
 
 export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
@@ -231,6 +233,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   onMarkerInstance,
   onClusterTap,
   travelMarkerOpacity,
+  compactPane = false,
 }) => {
   const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rl
   const Polyline = (rl as any)?.Polyline as any
@@ -292,6 +295,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         useMap={useMap}
         useMapEvents={useMapEvents}
         hintCenter={hintCenterLatLng}
+        compactPane={compactPane}
       />
 
       {mode === 'route' &&

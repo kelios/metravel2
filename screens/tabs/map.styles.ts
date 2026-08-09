@@ -19,7 +19,8 @@ const WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT =
   LAYOUT.headerHeight + LAYOUT.tabBarHeight + METRICS.spacing.s;
 const PANEL_RADIUS = 20;
 const CONTROL_RADIUS = 12;
-const CONTROL_SIZE = 40;
+// Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
+const CONTROL_SIZE = 44;
 
 export const getStyles = (
   isMobile: boolean,

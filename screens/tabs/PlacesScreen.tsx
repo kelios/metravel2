@@ -142,6 +142,7 @@ export default function PlacesScreen() {
       {sortOptions.map((option) => (
         <Menu.Item
           key={option.value}
+          style={styles.countryMenuItem}
           title={option.label}
           onPress={() => handleSelectSort(option.value)}
           leadingIcon={({ size }) => (
@@ -336,7 +337,9 @@ export default function PlacesScreen() {
                   hitSlop={10}
                   style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
                 >
-                  <Feather name="x" size={16} color={colors.textMuted} />
+                  <View style={styles.searchClearShape}>
+                    <Feather name="x" size={16} color={colors.textMuted} />
+                  </View>
                 </Pressable>
               ) : null}
             </View>
@@ -376,6 +379,7 @@ export default function PlacesScreen() {
               }
             >
               <Menu.Item
+                style={styles.countryMenuItem}
                 title={showLoadedCounts ? i18nT('map:screens.tabs.PlacesScreen.vse_strany_value1_7f58288c', { value1: catalogTotal }) : i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
                 onPress={() => handleSelectCountry(null)}
                 leadingIcon={({ size }) => (
@@ -389,6 +393,7 @@ export default function PlacesScreen() {
               />
               {countryFacets.map((group) => (
                 <Menu.Item
+                  style={styles.countryMenuItem}
                   key={group.name}
                   title={`${group.name} (${group.count})`}
                   onPress={() => handleSelectCountry(group.name)}
@@ -635,7 +640,9 @@ export default function PlacesScreen() {
               hitSlop={10}
               style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
             >
-              <Feather name="x" size={16} color={colors.textMuted} />
+              <View style={styles.searchClearShape}>
+                <Feather name="x" size={16} color={colors.textMuted} />
+              </View>
             </Pressable>
           ) : null}
         </View>
@@ -696,6 +703,7 @@ export default function PlacesScreen() {
             }
           >
             <Menu.Item
+              style={styles.countryMenuItem}
               title={showLoadedCounts ? i18nT('map:screens.tabs.PlacesScreen.vse_strany_value1_7f58288c', { value1: catalogTotal }) : i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
               onPress={() => handleSelectCountry(null)}
               leadingIcon={({ size }) => (
@@ -709,6 +717,7 @@ export default function PlacesScreen() {
             />
             {countryFacets.map((group) => (
               <Menu.Item
+                style={styles.countryMenuItem}
                 key={group.name}
                 title={`${group.name} (${group.count})`}
                 onPress={() => handleSelectCountry(group.name)}

@@ -29,6 +29,21 @@ export const mapClusterPointToPoint = (point: MapClusterPoint): Point => {
   } as Point;
 };
 
+/**
+ * Cluster identity for React keys and change detection.
+ *
+ * Deliberately geometric, NOT `cluster.id`: the backend hands out a fresh opaque
+ * hash per request, so two overlapping viewports at the same zoom describe the very
+ * same cluster under two different ids (measured on prod: 9 of 11 centers identical,
+ * 0 ids shared). Keying on that id made React destroy and recreate every cluster
+ * marker on every pan (#1347). Center+count survives a pan, which is exactly what a
+ * key must do.
+ */
+const CLUSTER_KEY_PRECISION = 4;
+
+const clusterGeometryKey = (lat: number, lng: number, count: number): string =>
+  `${lat.toFixed(CLUSTER_KEY_PRECISION)}|${lng.toFixed(CLUSTER_KEY_PRECISION)}|${count}`;
+
 export const mapServerClusterToClusterData = (cluster: MapCluster): ClusterData | null => {
   const lat = Number(cluster.center?.lat);
   const lng = Number(cluster.center?.lng);
@@ -44,10 +59,11 @@ export const mapServerClusterToClusterData = (cluster: MapCluster): ClusterData 
   const items = Array.isArray(cluster.previewItems)
     ? cluster.previewItems.map(mapClusterPointToPoint).filter((point) => point.coord)
     : [];
+  const count = Number.isFinite(cluster.count) && cluster.count > 0 ? cluster.count : items.length;
 
   return {
-    key: cluster.id || `${lat.toFixed(5)}|${lng.toFixed(5)}|${cluster.count}`,
-    count: Number.isFinite(cluster.count) && cluster.count > 0 ? cluster.count : items.length,
+    key: clusterGeometryKey(lat, lng, count),
+    count,
     center: [lat, lng],
     bounds: [
       [south, west],
@@ -63,13 +79,28 @@ export interface ServerClusterRenderData {
   hasServerData: boolean;
 }
 
+/**
+ * Geometric keys can collide when two clusters share a rounded centre and count.
+ * Give the later ones a deterministic suffix so React never sees duplicate keys.
+ */
+const dedupeClusterKeys = (clusters: ClusterData[]): ClusterData[] => {
+  const seen = new Map<string, number>();
+  return clusters.map((cluster) => {
+    const used = seen.get(cluster.key) ?? 0;
+    seen.set(cluster.key, used + 1);
+    return used === 0 ? cluster : { ...cluster, key: `${cluster.key}#${used}` };
+  });
+};
+
 export const buildServerClusterRenderData = (
   data: MapClustersResult | null | undefined,
 ): ServerClusterRenderData => {
   const clusters = Array.isArray(data?.clusters)
-    ? data.clusters
-        .map(mapServerClusterToClusterData)
-        .filter((cluster): cluster is ClusterData => cluster !== null)
+    ? dedupeClusterKeys(
+        data.clusters
+          .map(mapServerClusterToClusterData)
+          .filter((cluster): cluster is ClusterData => cluster !== null),
+      )
     : [];
   const markers = Array.isArray(data?.markers)
     ? data.markers.map(mapClusterPointToPoint).filter((point) => point.coord)

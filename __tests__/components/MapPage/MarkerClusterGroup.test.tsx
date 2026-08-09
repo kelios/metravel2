@@ -353,8 +353,10 @@ describe('MarkerClusterGroup', () => {
 
     const clearLayersCalls = group.clearLayers.mock.calls.length
     const addLayersCalls = group.addLayers.mock.calls.length
-    expect(clearLayersCalls).toBeGreaterThan(0)
+    // Mount adds the marker; it must NOT tear the (empty) group down first — the
+    // sync effect diffs by key instead of clear+rebuild (#1347).
     expect(addLayersCalls).toBeGreaterThan(0)
+    expect(clearLayersCalls).toBe(0)
 
     rerender(
       <QueryClientProvider client={queryClient}>
@@ -371,5 +373,77 @@ describe('MarkerClusterGroup', () => {
 
     expect(group.clearLayers).toHaveBeenCalledTimes(clearLayersCalls)
     expect(group.addLayers).toHaveBeenCalledTimes(addLayersCalls)
+  })
+
+  // #1347 — the server-cluster query re-keys on every viewport change, so the same
+  // places arrive as a brand-new array on every pan. Rebuilding all markers there is
+  // what froze the mobile map.
+  it('diffs markers by key: a new array with the same points touches nothing', () => {
+    const makeMarker = () => {
+      const marker = {} as TestMarker & { off: jest.Mock; unbindPopup: jest.Mock }
+      marker.bindPopup = jest.fn()
+      marker.bindTooltip = jest.fn()
+      marker.off = jest.fn()
+      marker.unbindPopup = jest.fn()
+      marker.on = jest.fn((): any => marker)
+      return marker
+    }
+    const group = {
+      addLayers: jest.fn(),
+      addLayer: jest.fn(),
+      removeLayers: jest.fn(),
+      removeLayer: jest.fn(),
+      clearLayers: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+    }
+    const map = { addLayer: jest.fn(), removeLayer: jest.fn(), closePopup: jest.fn() }
+    const L = {
+      markerClusterGroup: jest.fn(() => group),
+      marker: jest.fn(() => makeMarker()),
+      divIcon: jest.fn(),
+    }
+    const markerIcon = {}
+    const pointA = { id: 1, coord: '53.9,27.56', address: 'Минск' } as any
+    const pointB = { id: 2, coord: '53.8,27.40', address: 'Дзержинск' } as any
+    const props = (points: any[]) => ({
+      L,
+      useMap: () => map,
+      points,
+      markerIcon,
+      PopupContent: () => null,
+      Popup: () => null,
+    })
+
+    const { queryClient, rerender } = renderWithClient(
+      <MarkerClusterGroup {...(props([pointA, pointB]) as any)} />,
+    )
+    expect(L.marker).toHaveBeenCalledTimes(2)
+    expect(group.addLayers).toHaveBeenCalledTimes(1)
+
+    // Same two points, fresh array + fresh objects (what a refetch produces).
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MarkerClusterGroup {...(props([{ ...pointA }, { ...pointB }]) as any)} />
+      </QueryClientProvider>,
+    )
+    expect(L.marker).toHaveBeenCalledTimes(2)
+    expect(group.addLayers).toHaveBeenCalledTimes(1)
+    expect(group.removeLayers).not.toHaveBeenCalled()
+    expect(group.clearLayers).not.toHaveBeenCalled()
+
+    // One point leaves, one arrives → exactly one create and one removal.
+    const pointC = { id: 3, coord: '54.0,27.90', address: 'Логойск' } as any
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MarkerClusterGroup {...(props([pointA, pointC]) as any)} />
+      </QueryClientProvider>,
+    )
+    expect(L.marker).toHaveBeenCalledTimes(3)
+    expect(group.addLayers).toHaveBeenCalledTimes(2)
+    expect(group.addLayers.mock.calls[1][0]).toHaveLength(1)
+    expect(group.removeLayers).toHaveBeenCalledTimes(1)
+    expect(group.removeLayers.mock.calls[0][0]).toHaveLength(1)
+    expect(group.clearLayers).not.toHaveBeenCalled()
   })
 })

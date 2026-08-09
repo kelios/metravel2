@@ -89,6 +89,14 @@ interface MapLogicProps {
   useMap: () => any;
   useMapEvents: (handlers: any) => any;
   hintCenter?: LatLng | null;
+  /**
+   * #1348 — the map pane is narrow (phone / compact web). Fitting the WHOLE radius
+   * circle into it lands at a country-scale zoom (r=50 km in 390 px ≈ z8), which
+   * reads as "the map has no idea where I am". On a compact pane the auto-fit is
+   * floored to a usable neighbourhood scale instead; the circle is then partly
+   * off-screen by design and the user can zoom out to see all of it.
+   */
+  compactPane?: boolean;
 }
 
 export const MapLogicComponent: React.FC<MapLogicProps> = ({
@@ -115,6 +123,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   useMap,
   useMapEvents,
   hintCenter,
+  compactPane = false,
 }) => {
   const map = useMap();
   const hasCalledOnMapReadyRef = useRef(false);
@@ -405,14 +414,18 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     // Avoid auto-fit while radius results are not ready yet.
     if (!canAutoFitRadiusView) return;
 
-    const dataKey = (travelData || [])
-      .map((p) => (p.id != null ? `id:${p.id}` : `c:${p.coord}`))
-      .join('|');
+    // #1350 — the key deliberately does NOT include the point composition. It used
+    // to be `travelData.map(id|coord).join('|')`, and because the radius query is an
+    // infinite list (the mobile places sheet calls onLoadMore) EVERY extra page and
+    // every background refetch produced a new key — i.e. an auto-fit right on top of
+    // the zoom the user had just set by hand. What legitimately re-fits is: the mode,
+    // the search anchor, the radius, and the first arrival of results.
     const radiusKey = circleCenter && Number.isFinite(radiusInMeters)
       ? `r:${getCoarseAutoFitLocationKey(circleCenter)}:${Number(radiusInMeters).toFixed(0)}`
       : 'no-radius';
     const initialLocationKey = lastUserLocationKeyRef.current ?? getCoarseAutoFitLocationKey(userLocation);
-    const autoFitKey = `${mode}:${dataKey}:${initialLocationKey}:${radiusKey}`;
+    const resultsKey = hasRadiusResults ? 'results' : 'empty';
+    const autoFitKey = `${mode}:${resultsKey}:${initialLocationKey}:${radiusKey}`;
     if (lastAutoFitKeyRef.current === autoFitKey) return;
 
     const hasValidCircle = hasValidRadiusCircle;
@@ -529,11 +542,16 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
         // Guard: if the map container was removed from the DOM (route change, unmount),
         // fitBounds will crash with "Cannot set properties of undefined ('_leaflet_pos')".
+        // Release the claimed key so a later effect run can retry the fit.
         if (!isTestEnv) {
           try {
             const container: HTMLElement | undefined = map.getContainer?.();
-            if (!container || !container.isConnected) return;
+            if (!container || !container.isConnected) {
+              lastAutoFitKeyRef.current = null;
+              return;
+            }
           } catch {
+            lastAutoFitKeyRef.current = null;
             return;
           }
         }
@@ -544,13 +562,41 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // center (the user marker stays centered) — it does NOT widen the target
         // to far-away points, so the "never wider than the circle" contract holds.
         const padFactor = mode === 'radius' ? 0.1 : 0.12;
+        const paddedBounds = bounds.pad(padFactor);
+        // #1348 — floor the radius auto-fit on a narrow pane. `getInitialRadiusZoom`
+        // already encodes the intended scale per radius (50 km → 13); two steps below
+        // it is the widest view that is still about "places near me" rather than
+        // "half the country", which is what fitting the whole circle produces on a
+        // phone. Wide panes keep the exact circle fit.
+        const radiusFitFloorZoom =
+          mode === 'radius' && compactPane && Number.isFinite(Number(radiusInMeters))
+            ? getInitialRadiusZoom(radiusInMeters) - 2
+            : null;
         try {
           const animate = !isTestEnv && hasCompletedAutoFitRef.current;
           // Mark this as self-induced motion so the cluster viewport snapshot
           // ignores the moveend/zoomend it fires (prevents the fit⇄data flicker
           // loop). Cover the animated flyTo duration when animating.
           beginProgrammaticMapMove(animate ? 700 : 500);
-          map.fitBounds(bounds.pad(padFactor), {
+
+          if (radiusFitFloorZoom != null && typeof map.getBoundsZoom === 'function') {
+            const fittedZoom = Number(map.getBoundsZoom(paddedBounds, false));
+            if (Number.isFinite(fittedZoom) && fittedZoom < radiusFitFloorZoom) {
+              const center =
+                typeof paddedBounds.getCenter === 'function' ? paddedBounds.getCenter() : null;
+              if (center) {
+                map.setView(center, Math.min(radiusFitFloorZoom, maxZoom ?? radiusFitFloorZoom), {
+                  animate,
+                  duration: animate ? 0.35 : undefined,
+                });
+                requestAnimationFrame(() => syncZoomFromMap());
+                hasCompletedAutoFitRef.current = true;
+                return;
+              }
+            }
+          }
+
+          map.fitBounds(paddedBounds, {
             animate,
             duration: animate ? 0.35 : undefined,
             maxZoom,
@@ -559,14 +605,19 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         } catch {
           // Pane element may not be ready yet (e.g. _mapPane is undefined).
           // Swallow to prevent "Cannot set properties of undefined" crashes.
+          lastAutoFitKeyRef.current = null;
           return;
         }
 
         // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
         requestAnimationFrame(() => syncZoomFromMap());
-        lastAutoFitKeyRef.current = autoFitKey;
         hasCompletedAutoFitRef.current = true;
       };
+
+      // #1350 — claim the key BEFORE the deferred run. `lastAutoFitKeyRef` used to be
+      // written inside `runFit`, so another effect pass in the same frame saw an
+      // unclaimed key and queued a second fitBounds on top of the first.
+      lastAutoFitKeyRef.current = autoFitKey;
 
       if (isTestEnv || typeof requestAnimationFrame !== 'function') {
         runFit();
@@ -592,6 +643,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     hasRadiusResults,
     hasValidRadiusCircle,
     canAutoFitRadiusView,
+    compactPane,
+    getInitialRadiusZoom,
   ]);
   return null;
 };

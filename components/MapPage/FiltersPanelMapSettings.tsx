@@ -61,6 +61,12 @@ interface FiltersPanelMapSettingsProps {
   showLayers?: boolean
   showBaseLayer?: boolean
   showOverlays?: boolean
+  /**
+   * Показывать ряд действий карты («Показать всё на карте», GPX/KML в режиме
+   * маршрута). `false` — панель работает только как список слоёв: так её
+   * открывает карта конструктора маршрута, у которой эти действия свои.
+   */
+  showMapControls?: boolean
   withContainer?: boolean
 }
 
@@ -77,6 +83,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   showLayers = true,
   showBaseLayer,
   showOverlays,
+  showMapControls = true,
   withContainer = true,
 }) => {
   const [selectedBaseLayerId, setSelectedBaseLayerId] = useState<string>(
@@ -192,19 +199,21 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
 
   const body = (
     <>
-      <View style={styles.mapControlsRow}>
-        <Button
-          label={i18nT('map:components.MapPage.FiltersPanelMapSettings.pokazat_vse_na_karte_ba0f263b')}
-          icon={<MapIcon name="zoom-out-map" size={18} color={colors.text} />}
-          onPress={() => safeMapUiCall(mapUiApi?.fitToResults)}
-          disabled={!mapUiApi || !canFitToResults}
-          accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelMapSettings.pokazat_vse_rezultaty_na_karte_03fcd330')}
-          size="sm"
-          variant="secondary"
-        />
-      </View>
+      {showMapControls && (
+        <View style={styles.mapControlsRow}>
+          <Button
+            label={i18nT('map:components.MapPage.FiltersPanelMapSettings.pokazat_vse_na_karte_ba0f263b')}
+            icon={<MapIcon name="zoom-out-map" size={18} color={colors.text} />}
+            onPress={() => safeMapUiCall(mapUiApi?.fitToResults)}
+            disabled={!mapUiApi || !canFitToResults}
+            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelMapSettings.pokazat_vse_rezultaty_na_karte_03fcd330')}
+            size="sm"
+            variant="secondary"
+          />
+        </View>
+      )}
 
-      {mode === 'route' && (
+      {showMapControls && mode === 'route' && (
         <View style={styles.mapControlsRow}>
           <Button
             label={i18nT('map:components.MapPage.FiltersPanelMapSettings.gpx_83a98f34')}

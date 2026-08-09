@@ -51,6 +51,11 @@ interface MapMobileLayersPopoverProps {
    * `MapUiApi.setBaseLayer` не управляет (карта конструктора маршрута).
    */
   showBaseLayer?: boolean
+  /**
+   * Показывать ряд действий карты («Показать всё на карте»). `false` — поповер
+   * работает чистым списком слоёв (карта конструктора маршрута).
+   */
+  showMapControls?: boolean
   mapUiApi?: MapUiApi | null
   overlayOptions?: ReadonlyArray<OverlayOption>
   enabledOverlays?: Record<string, boolean>
@@ -67,6 +72,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
   maxWidth,
   scrollMaxHeight,
   showBaseLayer,
+  showMapControls,
   mapUiApi,
   overlayOptions,
   enabledOverlays,
@@ -122,6 +128,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
           mode="radius"
           mapUiApi={mapUiApi}
           showBaseLayer={showBaseLayer}
+          showMapControls={showMapControls}
           overlayOptions={overlayOptions ? [...overlayOptions] : undefined}
           enabledOverlays={enabledOverlays}
           onOverlayToggle={onOverlayToggle}

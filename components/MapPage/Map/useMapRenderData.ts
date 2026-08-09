@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type MutableRefObject } from 'react';
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
 import type { MapClustersFilters } from '@/api/map';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
@@ -15,6 +15,29 @@ import {
 } from './serverClusterRenderData';
 
 type SafeCoordinates = Coordinates & { zoom: number };
+
+/**
+ * #1347 — the server-cluster query re-keys on every viewport change, so react-query
+ * hands back a NEW data object even when the visible points are identical. That new
+ * identity propagated into `renderedMarkers` / `renderedServerClusters` and made the
+ * Leaflet layers rebuild every marker on every pan. Keep the previous array whenever
+ * the rendered content is the same, so identity means "the points actually changed".
+ */
+function useStableByContent<T>(value: T[], signature: string): T[] {
+  const ref = useRef<{ signature: string; value: T[] }>({ signature, value });
+  if (ref.current.signature !== signature) {
+    ref.current = { signature, value };
+  }
+  return ref.current.value;
+}
+
+const markersSignature = (points: Point[]): string =>
+  points.map((point) => `${point?.id ?? ''}@${point?.coord ?? ''}`).join('|');
+
+const clustersSignature = (clusters: Array<{ key: string; count: number; center: [number, number] }>): string =>
+  clusters.map((cluster) => `${cluster.key}:${cluster.count}@${cluster.center[0]},${cluster.center[1]}`).join('|');
+
+const EMPTY_CLUSTERS: ReturnType<typeof buildServerClusterRenderData>['clusters'] = [];
 
 type UseMapRenderDataArgs = {
   travelData: Point[];
@@ -163,6 +186,18 @@ export function useMapRenderData({
     radiusFilteredServerClusterRenderData.hasServerData &&
     !categoryFilterUnresolved;
 
+  const nextMarkers =
+    shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
+      ? radiusFilteredServerClusterRenderData.markers
+      : filteredTravelData;
+  const nextClusters =
+    shouldUseServerClusterData && radiusFilteredServerClusterRenderData.clusters.length > 0
+      ? radiusFilteredServerClusterRenderData.clusters
+      : EMPTY_CLUSTERS;
+
+  const renderedMarkers = useStableByContent(nextMarkers, markersSignature(nextMarkers));
+  const renderedServerClusters = useStableByContent(nextClusters, clustersSignature(nextClusters));
+
   return {
     canRenderMap,
     centerOnUserLocation,
@@ -170,14 +205,8 @@ export function useMapRenderData({
     filterCenter,
     filteredTravelData,
     radiusInMeters,
-    renderedMarkers:
-      shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
-        ? radiusFilteredServerClusterRenderData.markers
-        : filteredTravelData,
-    renderedServerClusters:
-      shouldUseServerClusterData && radiusFilteredServerClusterRenderData.clusters.length > 0
-        ? radiusFilteredServerClusterRenderData.clusters
-        : [],
+    renderedMarkers,
+    renderedServerClusters,
     userLocationLatLng,
   };
 }

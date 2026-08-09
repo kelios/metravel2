@@ -927,6 +927,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         onMarkerInstance={handleMarkerInstance}
         onClusterTap={handleClusterTap}
         travelMarkerOpacity={travelMarkerOpacity}
+        compactPane={useCompactPopupLayout}
       />
 
       {shouldShowFloatingMapControls && (

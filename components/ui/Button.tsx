@@ -218,7 +218,10 @@ const getForegroundColor = (variant: ButtonVariant, colors: ThemedColors): strin
 
 const sizeStyles: Record<ButtonSize, ViewStyle> = {
   sm: {
-    minHeight: 36,
+    // `sizeStyles` применяется ПОСЛЕ `styles.base` и перебивал его floor
+    // (AND-26) вниз до 36dp на всех поверхностях, включая Android. Компактность
+    // размера `sm` держат горизонтальные/вертикальные паддинги, а не высота.
+    minHeight: Platform.OS === 'android' ? 48 : 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },

@@ -25,6 +25,51 @@ const withPlatform = (os: 'web' | 'ios' | 'android', fn: () => void) => {
 }
 
 describe('utils/imageOptimization', () => {
+  /**
+   * Граница «готовые производные / ресайз на лету» (2026-08-09).
+   *
+   * После перехода семейств на durable-раздачу `q` и `fit` перестали влиять на
+   * ответ: качество задаёт профиль, вариант уже нарезан под свой fit. Но каждый
+   * их набор — отдельный URL, то есть отдельная запись в кэше на один и тот же
+   * файл, и адрес перестаёт совпадать с манифестным (манифест таких параметров
+   * не ставит). Замер прода на `travel-description-image`: `?w=640`,
+   * `?w=640&q=70`, `?w=640&q=70&fit=contain`, `?w=640&fit=cover`, `?w=640&q=20`
+   * — все пять по 157 952 B, `stored-derivative`.
+   */
+  describe('durable-семейства не получают мёртвых q/fit', () => {
+    const familyUrl = 'https://metravel.by/travel-description-image/247b89ab.webp'
+    const legacyUrl = 'https://metravel.by/media-resize/legacy/544/conversions/a.webp'
+
+    it('family-роут: остаётся только ширина', () => {
+      const url = new URL(
+        optimizeImageUrl(familyUrl, { width: 640, quality: 70, fit: 'contain' })!,
+      )
+      expect(url.searchParams.get('w')).toBe('640')
+      expect(url.searchParams.get('q')).toBeNull()
+      expect(url.searchParams.get('fit')).toBeNull()
+    })
+
+    it('один слот — один адрес: разные q/fit больше не плодят варианты', () => {
+      const variants = new Set(
+        [
+          { width: 640, quality: 70, fit: 'contain' as const },
+          { width: 640, quality: 20, fit: 'cover' as const },
+          { width: 640 },
+        ].map((options) => optimizeImageUrl(familyUrl, options)),
+      )
+      expect(variants.size).toBe(1)
+    })
+
+    it('legacy-роут остаётся на ресайзе в момент запроса и параметры сохраняет', () => {
+      const url = new URL(
+        optimizeImageUrl(legacyUrl, { width: 640, quality: 70, fit: 'contain' })!,
+      )
+      expect(url.searchParams.get('w')).toBe('640')
+      expect(url.searchParams.get('q')).toBe('70')
+      expect(url.searchParams.get('fit')).toBe('contain')
+    })
+  })
+
   describe('optimizeImageUrl', () => {
     it('returns undefined for empty or null url', () => {
       expect(optimizeImageUrl(undefined)).toBeUndefined()
@@ -75,8 +120,9 @@ describe('utils/imageOptimization', () => {
 
         expect(url.origin).toBe('http://127.0.0.1:8085')
         expect(url.searchParams.get('w')).toBe('320')
-        expect(url.searchParams.get('q')).toBe('60')
-        expect(url.searchParams.get('fit')).toBe('cover')
+        // family-роут раздаётся готовыми производными — `q`/`fit` не отправляем
+        expect(url.searchParams.get('q')).toBeNull()
+        expect(url.searchParams.get('fit')).toBeNull()
       } finally {
         process.env.EXPO_PUBLIC_API_URL = previousApiUrl
       }
@@ -366,7 +412,7 @@ describe('utils/imageOptimization', () => {
           { width: 132, quality: 60, fit: 'contain' },
         )!
         expect(cover).toContain('w=160')
-        expect(cover).toContain('q=60')
+        expect(cover).not.toContain('q=')
 
         const avatar = optimizeImageUrl(
           'https://metravel.by/avatar/profile/82/avatar/f9b9811452104523b2088f840a77a6ee.webp',
