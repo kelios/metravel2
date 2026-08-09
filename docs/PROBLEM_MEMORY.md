@@ -519,7 +519,7 @@ guard, падающий в CI на попытке обойти этот конт
 
 - **Инвариант:** translated/user-generated `Text` рядом с другими children в
   React Native `flexDirection: 'row'` либо получает явный sizing contract
-  (`flex`/`flexShrink`/bounded wrapper), либо использует осознанный product
+  (positive `flex`/bounded wrapper), либо использует осознанный product
   ellipsis; Android Yoga intrinsic width не имеет права молча обрезать текст.
 - **Surface/owner:** shared React Native UI + Android governance; mobile web —
   обязательный parity control.
@@ -529,17 +529,23 @@ guard, падающий в CI на попытке обойти этот конт
   `flex`/`flexShrink` только после device finding. Web flex layout часто
   переносит ту же строку корректно и маскирует platform-specific Android/Yoga
   measurement; общего static/governance check для row + dynamic Text нет.
-- **Controls:** до реализации `#1344` — локальные style regression tests и
-  парная Pixel/mobile-web проверка. Permanent control: governance guard с
-  positive/negative fixtures, который ловит исторический unsafe pattern
-  `#1342`, принимает bounded/intentional-ellipsis cases и не допускает
-  vacuous empty scan.
+- **Controls:** `npm run guard:text-row-sizing` — TypeScript-AST guard для
+  high-signal wrapping-row pattern с прямыми concurrent dynamic `Text`;
+  positive/negative fixtures ловят исторический unsafe pattern `#1342`,
+  принимают positive `flex`, bounded wrapper, explicit product ellipsis и
+  literal app label, но считают translation lookup динамическим независимо от
+  текущей RU-ширины; RU/BE/UK/PL/EN fixture и repository test запрещают
+  locale-specific false negative и vacuous empty scan. Локальные
+  style regression tests и парная Pixel/mobile-web проверка остаются runtime
+  контролем конкретного экрана.
 - **Решение для новой жалобы:** конкретный runtime symptom без открытого owner —
   `create-linked` к `#1344`; новый точечный ticket не заменяет structural guard.
   Если guard после закрытия `#1344` пропустит тот же pattern — `reopen #1344`.
 - **Последняя проверка:** 2026-08-09; Pixel 10 Pro (`fontScale=1.15`) подтвердил
-  фикс `#1342`, board/repository audit подтвердил шестой рецидив и отсутствие
-  общего guard; `#1344` создан в `todo`.
+  фикс `#1342`; `#1344` добавил structural guard в canonical governance/lint,
+  реальный `TripPlanCard.metaRow` fail-before/pass-after regression и явный
+  `flex` contract без прежнего неявного single-line ellipsis для
+  transport/date labels.
 
 ### MAP-ROUTING-001 — incomplete routing migration
 

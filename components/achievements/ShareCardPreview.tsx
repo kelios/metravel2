@@ -51,7 +51,7 @@ function ShareCardPreview({ subject, testID, style }: Props) {
     <Frame tierRing={tier.ring} colors={colors} style={style} testID={testID}>
       {subject.isRare ? (
         <View style={[styles.ribbon, { backgroundColor: tier.ring }]}>
-          <Feather name="star" size={11} color="#1A1A1A" />
+          <Feather name="star" size={11} color={colors.textOnPrimary} />
           <Text style={styles.ribbonText}>{i18nT('achievements:components.achievements.ShareCardPreview.redkaya_nagrada_847c785d')}</Text>
         </View>
       ) : null}
@@ -156,7 +156,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     ribbonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '800',
-      color: '#1A1A1A',
+      color: colors.textOnPrimary,
       letterSpacing: 0.3,
       textTransform: 'uppercase',
     },
@@ -197,10 +197,12 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '800',
       color: colors.primaryText,
+      flex: 1,
     },
     cta: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
+      flex: 1,
     },
   });
 

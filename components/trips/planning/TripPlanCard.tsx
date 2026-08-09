@@ -121,18 +121,18 @@ function TripPlanCard({
       </Text>
 
       <View style={styles.metaRow}>
-        <Feather
-          name={TRANSPORT_ICON_NAME[trip.transport] as never}
-          size={13}
-          color={colors.textSecondary}
-        />
-        <Text style={styles.meta} numberOfLines={1}>
-          {TRANSPORT_LABEL[trip.transport]}
-        </Text>
-        <Text style={styles.metaDot}>·</Text>
-        <Text style={styles.meta} numberOfLines={1}>
-          {formatTripDateTime(trip.startDate, trip.startTime)}
-        </Text>
+        <View style={styles.metaGroup}>
+          <Feather
+            name={TRANSPORT_ICON_NAME[trip.transport] as never}
+            size={13}
+            color={colors.textSecondary}
+          />
+          <Text style={styles.meta}>{TRANSPORT_LABEL[trip.transport]}</Text>
+        </View>
+        <View style={styles.metaGroup}>
+          <Text style={styles.metaDot}>·</Text>
+          <Text style={styles.meta}>{formatTripDateTime(trip.startDate, trip.startTime)}</Text>
+        </View>
       </View>
 
       <Text style={styles.route} numberOfLines={1}>
@@ -250,7 +250,16 @@ const createStyles = (colors: ThemedColors) =>
     visibilityText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
     title: { fontSize: 16, fontWeight: '700', color: colors.text },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-    meta: { fontSize: 13, color: colors.textSecondary },
+    // #1344: equal `flex: 1` labels split the row 50/50 and clip the longer date.
+    // Bounded whole-item groups let Yoga wrap the date group as a unit, while
+    // the inner Text can still shrink/wrap when one label exceeds the card width.
+    metaGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      maxWidth: '100%',
+    },
+    meta: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
     metaDot: { fontSize: 13, color: colors.textMuted },
     route: { fontSize: 13, color: colors.textMuted },
     footer: {

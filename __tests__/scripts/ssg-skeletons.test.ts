@@ -342,6 +342,39 @@ describe('ssg-skeletons', () => {
       const skelPos = result.indexOf('id="ssg-skeleton"');
       expect(skelPos).toBeGreaterThan(bodyStart);
     });
+
+    // #1356. Оба инжекта обязаны идти через replacer-функцию. В строке-замене
+    // `$&`, `` $` ``, `$'` и `$1` — паттерны подстановки, а шелл легально их
+    // содержит: `$'` есть в любом литерале вида `'…$'` внутри скрипта снятия, и
+    // в теле статьи из БД. При строковой замене каждое вхождение разворачивалось
+    // в остаток документа: 133 байта превращались в 22 324, `#root` дублировался
+    // трижды вместе с entry-бандлом, а инлайн-скрипт обрывался на полуслове.
+    // Проверки на toContain этого не видели — они оставались зелёными.
+    it('does not expand $-substitution patterns while injecting', () => {
+      const withScript =
+        '<!DOCTYPE html><html><head><title>t</title></head><body>' +
+        '<div id="root">prerender</div><script src="/entry.js"></script></body></html>';
+
+      const out = injectSkeletonShell(withScript, '/');
+
+      expect(out).toContain(buildRemovalScript());
+      expect((out.match(/id="root"/g) || []).length).toBe(1);
+      expect((out.match(/entry\.js/g) || []).length).toBe(1);
+      expect(out.length).toBeLessThan(
+        withScript.length + buildHomeSkeletonHtml().length + buildSkeletonCSS().length + 64,
+      );
+    });
+
+    it('keeps a $-pattern that came from the article body as plain text', () => {
+      const out = injectSkeletonShell(
+        '<!DOCTYPE html><html><head></head><body><div id="root"></div></body></html>',
+        '/travels/x',
+        { name: 'Маршрут', descriptionHtml: "<p>Цена 20$' за вход</p>" },
+      );
+
+      expect(out).toContain("Цена 20$' за вход");
+      expect((out.match(/id="root"/g) || []).length).toBe(1);
+    });
   });
 
   describe('buildRemovalScript', () => {
@@ -496,6 +529,22 @@ describe('ssg-skeletons', () => {
       expect(document.getElementById('ssg-skeleton-css')).toBeNull();
     });
 
+    it('disconnects the root observer when the 20s timeout tears down the shell', () => {
+      const disconnect = jest.spyOn(MutationObserver.prototype, 'disconnect');
+      try {
+        setupDom();
+        runScript();
+        document.documentElement.classList.add('app-hydrated');
+
+        jest.advanceTimersByTime(20100);
+
+        expect(skeleton()).toBeNull();
+        expect(disconnect).toHaveBeenCalled();
+      } finally {
+        disconnect.mockRestore();
+      }
+    });
+
     it('removes travel skeleton after 20s once React rendered its hero img[data-lcp]', () => {
       setupDom();
       runScript();
@@ -506,15 +555,89 @@ describe('ssg-skeletons', () => {
       expect(skeleton()).toBeNull();
     });
 
-    it('45s deep fallback removes skeleton when #root accumulated real text without signals', () => {
+    // #1356. Раньше глубокий fallback спрашивал «сколько текста в #root» и снимал
+    // шелл при >200 символах. На `/` статический пререндер содержит 5 739 символов
+    // (список квестов), на `/search` — сопоставимо, поэтому порог был пройден и при
+    // мёртвом бандле: шелл снимался, оставляя пустой экран. Теперь fallback
+    // спрашивает, жив ли React, а объём текста не имеет значения.
+    it('45s deep fallback does not accept the pre-commit container key', () => {
       setupDom();
       runScript();
       jest.advanceTimersByTime(21000);
       const root = document.getElementById('root') as HTMLElement;
-      root.innerHTML = `<div>${'Реальный контент страницы. '.repeat(20)}</div>`;
+      // React ставит этот ключ до commit, а SSG-children уже есть. Оба
+      // условия могут быть истинны после аварии первого render.
+      (root as any).__reactContainer$k7d2 = {};
       jest.advanceTimersByTime(24000);
+      jest.advanceTimersByTime(1000);
+      expect(skeleton()).not.toBeNull();
+    });
+
+    it('45s deep fallback removes skeleton when only host nodes carry the React key', () => {
+      setupDom();
+      runScript();
+      const root = document.getElementById('root') as HTMLElement;
+      (root.firstElementChild as any).__reactFiber$k7d2 = {};
+      jest.advanceTimersByTime(46000);
       jest.advanceTimersByTime(500);
       expect(skeleton()).toBeNull();
+    });
+
+    it('keeps polling the React host signal after the 45s fallback', () => {
+      setupDom();
+      runScript();
+      jest.advanceTimersByTime(46000);
+      expect(skeleton()).not.toBeNull();
+
+      const root = document.getElementById('root') as HTMLElement;
+      (root.firstElementChild as any).__reactFiber$k7d2 = {};
+      jest.advanceTimersByTime(2100);
+
+      expect(skeleton()).toBeNull();
+    });
+
+    // React пишет ключ контейнера внутри createRoot/hydrateRoot — ДО первого
+    // коммита. Если рендер упал выше ErrorBoundary, ключ есть, а #root пуст:
+    // снимать шелл в этом случае значит показать белый экран.
+    it('45s deep fallback keeps skeleton when React crashed and emptied #root', () => {
+      setupDom();
+      runScript();
+      const root = document.getElementById('root') as HTMLElement;
+      (root as any).__reactContainer$k7d2 = {};
+      root.innerHTML = '';
+      jest.advanceTimersByTime(46000);
+      jest.advanceTimersByTime(1000);
+      expect(skeleton()).not.toBeNull();
+    });
+
+    // Backstop «любая мутация #root = приложение живо» отвергнут: переводчик
+    // Chrome оборачивает текст в <font> прямо в #root и снял бы шелл с мёртвого
+    // бандла — ровно баг #1356.
+    it('does not treat a non-React DOM mutation inside #root as a live app', async () => {
+      setupDom({ rootHtml: '<div>Статический пререндер страницы.</div>' });
+      runScript();
+      const root = document.getElementById('root') as HTMLElement;
+      const font = document.createElement('font');
+      font.textContent = 'translated';
+      root.firstElementChild?.appendChild(font);
+      await Promise.resolve();
+
+      jest.advanceTimersByTime(46000);
+      jest.advanceTimersByTime(1000);
+      expect(skeleton()).not.toBeNull();
+    });
+
+    it('45s deep fallback keeps skeleton over a text-heavy prerender when React never mounted', () => {
+      setupDom({ rootHtml: `<div>${'Квест по Кракову: Вавельский дракон. '.repeat(200)}</div>` });
+      runScript();
+      const rootText = (document.getElementById('root')?.textContent || '').trim();
+      expect(rootText.length).toBeGreaterThan(5000); // как на живом `/`
+
+      jest.advanceTimersByTime(46000);
+      jest.advanceTimersByTime(1000);
+
+      expect(skeleton()).not.toBeNull();
+      expect(document.getElementById('ssg-skeleton-css')).not.toBeNull();
     });
 
     it('45s deep fallback keeps skeleton over a dead static shell', () => {

@@ -979,6 +979,18 @@ async function resolveArticleEndpointCandidates() {
 // ---------------------------------------------------------------------------
 
 /**
+ * Replace an HTML match or insert a fragment beside it without letting
+ * String#replace interpret `$&`, `$'`, $` or `$1` inside generated content.
+ */
+function applyHtmlFragment(html, anchor, fragment, placement = 'replace') {
+  return html.replace(anchor, (match) => {
+    if (placement === 'before') return `${fragment}${match}`;
+    if (placement === 'after') return `${match}${fragment}`;
+    return fragment;
+  });
+}
+
+/**
  * Replace or insert a tag in the HTML.
  * If the regex matches, replace it; otherwise insert the tag before </head>.
  */
@@ -987,7 +999,7 @@ function replaceOrInsert(html, regex, tag) {
   const flags = regex.flags.includes('g') ? regex.flags : `${regex.flags}g`;
   const globalRegex = new RegExp(regex.source, flags);
   const withoutMatches = html.replace(globalRegex, '');
-  return withoutMatches.replace('</head>', `${tag}\n</head>`);
+  return applyHtmlFragment(withoutMatches, '</head>', `${tag}\n`, 'before');
 }
 
 /**
@@ -1001,7 +1013,8 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
   let html = baseHtml;
 
   // --- <title> ---
-  html = html.replace(
+  html = applyHtmlFragment(
+    html,
     /<title[^>]*>.*?<\/title>/i,
     `<title data-rh="true">${escapeAttr(title)}</title>`
   );
@@ -1137,7 +1150,8 @@ function patchNoindexFallbackTemplate(baseHtml, { title, description } = {}) {
   html = html.replace(/<link[^>]*rel="canonical"[^>]*\/?>\n?/gi, '');
 
   if (title) {
-    html = html.replace(
+    html = applyHtmlFragment(
+      html,
       /<title[^>]*>.*?<\/title>/i,
       `<title data-rh="true">${escapeAttr(title)}</title>`
     );
@@ -1169,7 +1183,7 @@ function injectBreadcrumbJsonLd(baseHtml, breadcrumb) {
   const cleanedHtml = baseHtml.replace(breadcrumbScriptRe, '');
   const payload = JSON.stringify(breadcrumb).replace(/<\/script/gi, '<\\/script');
   const scriptTag = `<script type="application/ld+json">${payload}</script>`;
-  return cleanedHtml.replace('</head>', `${scriptTag}\n</head>`);
+  return applyHtmlFragment(cleanedHtml, '</head>', `${scriptTag}\n`, 'before');
 }
 
 function injectTravelHeroPreload(baseHtml, preloadData) {
@@ -1260,13 +1274,14 @@ function injectTravelBootstrapData(baseHtml, travel, routeKey) {
     `</script>`;
 
   if (/<script[^>]*data-travel-preload-bootstrap="true"[^>]*>[\s\S]*?<\/script>/i.test(baseHtml)) {
-    return baseHtml.replace(
+    return applyHtmlFragment(
+      baseHtml,
       /<script[^>]*data-travel-preload-bootstrap="true"[^>]*>[\s\S]*?<\/script>/i,
       bootstrapScript
     );
   }
 
-  return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${bootstrapScript}`);
+  return applyHtmlFragment(baseHtml, /<body[^>]*>/i, bootstrapScript, 'after');
 }
 
 function injectHiddenH1(baseHtml, headingText) {
@@ -1297,20 +1312,18 @@ function injectHiddenH1(baseHtml, headingText) {
   const ssgHeading = `<h1 data-ssg-travel-h1="true" style="${headingStyle}">${escapeAttr(text)}</h1>`;
 
   if (/<h1[^>]*data-ssg-travel-h1="true"[^>]*>[\s\S]*?<\/h1>/i.test(baseHtml)) {
-    return baseHtml.replace(
+    return applyHtmlFragment(
+      baseHtml,
       /<h1[^>]*data-ssg-travel-h1="true"[^>]*>[\s\S]*?<\/h1>/i,
       ssgHeading
     );
   }
 
   if (/<div\s+id="root"[^>]*>/i.test(baseHtml)) {
-    return baseHtml.replace(
-      /<div(\s+id="root"[^>]*)>/i,
-      `${ssgHeading}<div$1>`
-    );
+    return applyHtmlFragment(baseHtml, /<div\s+id="root"[^>]*>/i, ssgHeading, 'before');
   }
 
-  return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${ssgHeading}`);
+  return applyHtmlFragment(baseHtml, /<body[^>]*>/i, ssgHeading, 'after');
 }
 
 function disableExpoRouterHydration(baseHtml) {
@@ -1328,11 +1341,11 @@ function injectJsonLd(baseHtml, payload, marker) {
   if (marker) {
     const markerRegex = new RegExp(`<script[^>]*data-seo-jsonld="${marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*>[\\s\\S]*?<\\/script>\\n?`, 'i');
     if (markerRegex.test(baseHtml)) {
-      return baseHtml.replace(markerRegex, `${scriptTag}\n`);
+      return applyHtmlFragment(baseHtml, markerRegex, `${scriptTag}\n`);
     }
   }
 
-  return baseHtml.replace('</head>', `${scriptTag}\n</head>`);
+  return applyHtmlFragment(baseHtml, '</head>', `${scriptTag}\n`, 'before');
 }
 
 function buildTravelArticleJsonLd({ title, description, canonical, image, travel }) {
@@ -1702,12 +1715,12 @@ function injectTravelQuestPromoSection(baseHtml, matches) {
   const insertion = `${styleTag}\n${section}\n`;
   const skeletonTitleRegex = /(<div\s+class="ssg-travel-h1"[^>]*>[\s\S]*?<\/div>)/i;
   if (skeletonTitleRegex.test(html)) {
-    return html.replace(skeletonTitleRegex, `$1\n${insertion}`);
+    return applyHtmlFragment(html, skeletonTitleRegex, `\n${insertion}`, 'after');
   }
   if (/<div\s+id="root"[^>]*>/i.test(html)) {
-    return html.replace(/<div(\s+id="root"[^>]*)>/i, `${insertion}<div$1>`);
+    return applyHtmlFragment(html, /<div\s+id="root"[^>]*>/i, insertion, 'before');
   }
-  return html.replace('</body>', `${insertion}</body>`);
+  return applyHtmlFragment(html, '</body>', insertion, 'before');
 }
 
 function injectTravelRegisterCtaSection(baseHtml) {
@@ -1734,9 +1747,9 @@ function injectTravelRegisterCtaSection(baseHtml) {
 
   const insertion = `${styleTag}\n${section}\n`;
   if (/<div\s+id="root"[^>]*>/i.test(html)) {
-    return html.replace(/<div(\s+id="root"[^>]*)>/i, `${insertion}<div$1>`);
+    return applyHtmlFragment(html, /<div\s+id="root"[^>]*>/i, insertion, 'before');
   }
-  return html.replace('</body>', `${insertion}</body>`);
+  return applyHtmlFragment(html, '</body>', insertion, 'before');
 }
 
 function parseQuestJsonField(value, fallback) {
@@ -1872,10 +1885,10 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle }
 
   let html = baseHtml.replace(/<style[^>]*data-ssg-quest-intro-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
   html = html.replace(/<section[^>]*data-ssg-quest-intro="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
-  html = html.replace('</head>', `${styleTag}\n</head>`);
+  html = applyHtmlFragment(html, '</head>', `${styleTag}\n`, 'before');
 
-  if (/<body([^>]*)>/i.test(html)) {
-    return html.replace(/<body([^>]*)>/i, `<body$1>${section}`);
+  if (/<body[^>]*>/i.test(html)) {
+    return applyHtmlFragment(html, /<body[^>]*>/i, section, 'after');
   }
 
   return `${section}${html}`;
@@ -1947,12 +1960,12 @@ function injectQuestLinksIndex(baseHtml, quests) {
   const nav = `<nav data-ssg-quest-index="true" aria-hidden="true" inert style="${navStyle}"><ul>${links}</ul></nav>`;
 
   if (/<nav[^>]*data-ssg-quest-index="true"[^>]*>[\s\S]*?<\/nav>/i.test(baseHtml)) {
-    return baseHtml.replace(/<nav[^>]*data-ssg-quest-index="true"[^>]*>[\s\S]*?<\/nav>/i, nav);
+    return applyHtmlFragment(baseHtml, /<nav[^>]*data-ssg-quest-index="true"[^>]*>[\s\S]*?<\/nav>/i, nav);
   }
   if (/<div\s+id="root"[^>]*>/i.test(baseHtml)) {
-    return baseHtml.replace(/<div(\s+id="root"[^>]*)>/i, `<div$1>${nav}`);
+    return applyHtmlFragment(baseHtml, /<div\s+id="root"[^>]*>/i, nav, 'after');
   }
-  return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${nav}`);
+  return applyHtmlFragment(baseHtml, /<body[^>]*>/i, nav, 'after');
 }
 
 // ---------------------------------------------------------------------------
@@ -2125,12 +2138,12 @@ function injectQuestsListingContent(baseHtml, quests, cityAliasMap) {
 
   let html = baseHtml.replace(/<style[^>]*data-ssg-quests-listing-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
   html = html.replace(/<section[^>]*data-ssg-quests-listing="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
-  html = html.replace('</head>', `${styleTag}\n</head>`);
+  html = applyHtmlFragment(html, '</head>', `${styleTag}\n`, 'before');
   html = injectJsonLd(html, buildQuestsFaqJsonLd(), 'quests-faq');
   html = injectJsonLd(html, buildQuestsListItemListJsonLd(quests), 'quests-itemlist');
 
-  if (/<body([^>]*)>/i.test(html)) {
-    return html.replace(/<body([^>]*)>/i, `<body$1>${section}`);
+  if (/<body[^>]*>/i.test(html)) {
+    return applyHtmlFragment(html, /<body[^>]*>/i, section, 'after');
   }
   return `${section}${html}`;
 }
@@ -2175,10 +2188,10 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead) {
 
   let html = baseHtml.replace(/<style[^>]*data-ssg-quest-city-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
   html = html.replace(/<section[^>]*data-ssg-quest-city="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
-  html = html.replace('</head>', `${styleTag}\n</head>`);
+  html = applyHtmlFragment(html, '</head>', `${styleTag}\n`, 'before');
 
-  if (/<body([^>]*)>/i.test(html)) {
-    return html.replace(/<body([^>]*)>/i, `<body$1>${section}`);
+  if (/<body[^>]*>/i.test(html)) {
+    return applyHtmlFragment(html, /<body[^>]*>/i, section, 'after');
   }
   return `${section}${html}`;
 }
@@ -2357,12 +2370,12 @@ function injectQuestScenarioContent(baseHtml, cities) {
 
   let html = baseHtml.replace(/<style[^>]*data-ssg-quest-scenario-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
   html = html.replace(/<section[^>]*data-ssg-quest-scenario="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
-  html = html.replace('</head>', `${styleTag}\n</head>`);
+  html = applyHtmlFragment(html, '</head>', `${styleTag}\n`, 'before');
   html = injectJsonLd(html, buildQuestScenarioFaqJsonLd(), 'quest-scenario-faq');
   html = injectJsonLd(html, buildQuestScenarioHowToJsonLd(), 'quest-scenario-howto');
 
-  if (/<body([^>]*)>/i.test(html)) {
-    return html.replace(/<body([^>]*)>/i, `<body$1>${section}`);
+  if (/<body[^>]*>/i.test(html)) {
+    return applyHtmlFragment(html, /<body[^>]*>/i, section, 'after');
   }
   return `${section}${html}`;
 }
@@ -3283,6 +3296,7 @@ async function main() {
 // ---------------------------------------------------------------------------
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    applyHtmlFragment,
     replaceOrInsert,
     injectMeta,
     buildSeoTitle,

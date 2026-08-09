@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import TripPlanCard from '@/components/trips/planning/TripPlanCard';
+import { formatTripDateTime } from '@/components/trips/planning/tripPlanFormatting';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -153,6 +154,20 @@ describe('TripPlanCard participants line', () => {
 
     expect(style.flex).toBe(1);
     expect(style.width).toBeUndefined();
+  });
+});
+
+describe('TripPlanCard metadata row sizing', () => {
+  it('measures both dynamic metadata labels against available width without ellipsis', () => {
+    const { getByText } = render(<TripPlanCard trip={trip} />);
+
+    const transportLabel = getByText('На машине');
+    const dateLabel = getByText(formatTripDateTime(trip.startDate, trip.startTime));
+
+    expect(StyleSheet.flatten(transportLabel.props.style).flex).toBe(1);
+    expect(StyleSheet.flatten(dateLabel.props.style).flex).toBe(1);
+    expect(transportLabel.props.numberOfLines).toBeUndefined();
+    expect(dateLabel.props.numberOfLines).toBeUndefined();
   });
 });
 

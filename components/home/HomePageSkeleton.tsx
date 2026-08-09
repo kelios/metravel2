@@ -257,65 +257,6 @@ const SectionSkeleton = memo(
 
 SectionSkeleton.displayName = 'SectionSkeleton'
 
-const HowItWorksSkeleton = memo(({ isMobile }: { isMobile: boolean }) => {
-  const colors = useThemedColors()
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        container: {
-          width: '100%',
-          maxWidth: 1200,
-          alignSelf: 'center',
-          paddingHorizontal: isMobile ? 8 : 24,
-          paddingVertical: isMobile ? 32 : 48,
-        },
-        titleBlock: {
-          alignItems: isMobile ? 'flex-start' : 'center',
-          gap: 10,
-          marginBottom: 22,
-        },
-        row: {
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: 18,
-        },
-        card: {
-          flex: 1,
-          gap: 16,
-          padding: isMobile ? 18 : 24,
-          borderRadius: 24,
-          backgroundColor: colors.surface,
-          borderWidth: 1,
-          borderColor: colors.border,
-        },
-      }),
-    [colors, isMobile],
-  )
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.titleBlock}>
-        <SkeletonLoader width={isMobile ? 190 : 280} height={isMobile ? 30 : 36} borderRadius={8} />
-        <SkeletonLoader width={isMobile ? '78%' : '36%'} height={16} borderRadius={6} />
-      </View>
-      <View style={styles.row}>
-        {Array.from({ length: 3 }).map((_, index) => (
-          <View key={`how-card-${index}`} style={styles.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <SkeletonLoader width={52} height={52} borderRadius={14} />
-              <SkeletonLoader width={34} height={34} borderRadius={17} />
-            </View>
-            <SkeletonLoader width="68%" height={20} borderRadius={8} />
-            <SkeletonLoader width="92%" height={14} borderRadius={6} />
-            <SkeletonLoader width="84%" height={14} borderRadius={6} />
-          </View>
-        ))}
-      </View>
-    </View>
-  )
-})
-
-HowItWorksSkeleton.displayName = 'HowItWorksSkeleton'
-
 const FaqSkeleton = memo(({ isMobile }: { isMobile: boolean }) => {
   const colors = useThemedColors()
   const styles = useMemo(
@@ -391,7 +332,6 @@ export const HomePageSkeleton = memo(() => {
         <View style={styles.accentSection}>
           <SectionSkeleton isMobile={isMobile} titleWidth={isMobile ? 210 : 280} accent />
         </View>
-        <HowItWorksSkeleton isMobile={isMobile} />
         <View style={styles.accentSection}>
           <SectionSkeleton isMobile={isMobile} titleWidth={isMobile ? 240 : 340} accent />
         </View>

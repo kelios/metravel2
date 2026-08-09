@@ -7,6 +7,7 @@
  */
 
 const {
+  applyHtmlFragment,
   replaceOrInsert,
   injectMeta,
   buildSeoTitle,
@@ -21,15 +22,19 @@ const {
   resolveHomeHeroAssetHref,
   injectTravelBootstrapData,
   injectHiddenH1,
+  injectBreadcrumbJsonLd,
   disableExpoRouterHydration,
   injectQuestIntroSection,
   injectQuestLinksIndex,
   injectQuestScenarioContent,
+  injectQuestCityLandingSection,
+  injectQuestsListingContent,
   buildQuestScenarioFaqJsonLd,
   buildQuestScenarioHowToJsonLd,
   buildQuestPromoCatalog,
   findTravelQuestPromoMatches,
   injectTravelQuestPromoSection,
+  injectTravelRegisterCtaSection,
   injectJsonLd,
   buildTravelArticleJsonLd,
   extractFaqEntries,
@@ -93,6 +98,108 @@ const SAMPLE_META = {
  * (`socialPreviewWidthForRoute`, сверяется `socialPreviewWidthParity.test.ts`).
  */
 const SAMPLE_META_IMAGE_RENDERED = `${SAMPLE_META.image}?w=1280`;
+
+const REPLACEMENT_TOKENS = "literal $' $& $` $1";
+const SINGLE_SHELL_BASE = MINIMAL_BASE.replace(
+  '</body>',
+  '<script src="/entry.js"></script></body>',
+);
+
+function expectSingleShell(html: string) {
+  expect((html.match(/<div\s+id="root"/g) || [])).toHaveLength(1);
+  expect((html.match(/src="\/entry\.js"/g) || [])).toHaveLength(1);
+}
+
+// ---------------------------------------------------------------------------
+// Literal-safe HTML injection (#1367)
+// ---------------------------------------------------------------------------
+describe('literal-safe HTML injection', () => {
+  it.each([
+    ['replace', '<main>literal $\' $& $` $1</main>', '<main>literal $\' $& $` $1</main>'],
+    ['before', 'literal $\' $& $` $1<main>before</main>', 'literal $\' $& $` $1'],
+    ['after', '<main>before</main>literal $\' $& $` $1', 'literal $\' $& $` $1'],
+  ] as const)('keeps replacement tokens literal in %s mode', (placement, expected, fragment) => {
+    const base = '<main>before</main>';
+    const result = applyHtmlFragment(base, /(<main>[\s\S]*?<\/main>)/, fragment, placement);
+
+    expect(result).toBe(expected);
+    expect(result.length).toBe(expected.length);
+  });
+
+  it('keeps one root and entry script across content-bearing injectors', () => {
+    const outputs = [
+      replaceOrInsert(
+        SINGLE_SHELL_BASE,
+        /<meta[^>]*data-literal-probe[^>]*>/i,
+        `<meta data-literal-probe="${REPLACEMENT_TOKENS}">`,
+      ),
+      injectMeta(SINGLE_SHELL_BASE, {
+        ...SAMPLE_META,
+        title: REPLACEMENT_TOKENS,
+        description: REPLACEMENT_TOKENS,
+      }),
+      patchNoindexFallbackTemplate(SINGLE_SHELL_BASE, {
+        title: REPLACEMENT_TOKENS,
+        description: REPLACEMENT_TOKENS,
+      }),
+      injectBreadcrumbJsonLd(SINGLE_SHELL_BASE, {
+        itemListElement: [{ '@type': 'ListItem', position: 1, name: REPLACEMENT_TOKENS }],
+      }),
+      injectTravelHeroPreload(SINGLE_SHELL_BASE, {
+        mobile: { href: REPLACEMENT_TOKENS },
+      }),
+      injectHomeHeroPreload(SINGLE_SHELL_BASE, REPLACEMENT_TOKENS),
+      injectTravelBootstrapData(SINGLE_SHELL_BASE, { name: REPLACEMENT_TOKENS }, 'literal-probe'),
+      injectHiddenH1(SINGLE_SHELL_BASE, REPLACEMENT_TOKENS),
+      injectJsonLd(SINGLE_SHELL_BASE, { '@type': 'Article', headline: REPLACEMENT_TOKENS }, 'literal-probe'),
+      injectTravelQuestPromoSection(SINGLE_SHELL_BASE, [
+        {
+          distanceKm: 1,
+          quest: {
+            route: { path: '/quests/1/literal-probe' },
+            title: REPLACEMENT_TOKENS,
+            cityName: 'Краков',
+            points: 3,
+            durationMin: 30,
+            cover: '',
+          },
+        },
+      ]),
+      injectQuestIntroSection(SINGLE_SHELL_BASE, {
+        title: REPLACEMENT_TOKENS,
+        description: REPLACEMENT_TOKENS,
+        quest: { title: REPLACEMENT_TOKENS, city_name: 'Краков' },
+        bundle: {},
+      }),
+      injectQuestLinksIndex(SINGLE_SHELL_BASE, [
+        { quest_id: 'literal-probe', city_id: '1', title: REPLACEMENT_TOKENS },
+      ]),
+      injectQuestsListingContent(
+        SINGLE_SHELL_BASE,
+        [{ quest_id: 'literal-probe', city_id: '1', city_name: 'Краков', title: REPLACEMENT_TOKENS }],
+        new Map(),
+      ),
+      injectQuestCityLandingSection(
+        SINGLE_SHELL_BASE,
+        { cityId: '1', quests: [{ path: '/quests/1/literal-probe', title: REPLACEMENT_TOKENS }] },
+        REPLACEMENT_TOKENS,
+        REPLACEMENT_TOKENS,
+      ),
+      injectQuestScenarioContent(SINGLE_SHELL_BASE, [
+        { cityId: '1', name: REPLACEMENT_TOKENS, landingPath: '/quests/literal-probe', quests: [{}] },
+      ]),
+      injectTravelRegisterCtaSection(SINGLE_SHELL_BASE),
+    ];
+
+    for (const output of outputs) {
+      expectSingleShell(output);
+      expect(output.length).toBeLessThan(SINGLE_SHELL_BASE.length + 100_000);
+    }
+    for (const output of outputs.slice(0, -1)) {
+      expect(output.replace(/&amp;/g, '&').replace(/\\u0026/g, '&')).toContain(REPLACEMENT_TOKENS);
+    }
+  });
+});
 
 // ---------------------------------------------------------------------------
 // replaceOrInsert

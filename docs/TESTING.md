@@ -10,6 +10,8 @@ Run canonical governance checks from repo root:
 - `npm run governance:verify`
 - `yarn guard:external-links`
 - `npm run guard:external-links`
+- `yarn guard:text-row-sizing`
+- `npm run guard:text-row-sizing`
 - `npm run guard:type-debt`
 
 ## Local selective checks
@@ -35,6 +37,7 @@ Behavior:
 
 - `typecheck` is the production TypeScript audit; `typecheck:e2e` is the non-emitting Playwright contract check for every `e2e/**/*.ts` file;
 - `guard:type-debt` compares production `as any`, TypeScript suppression and ESLint-disable counts against `scripts/type-debt-baseline.json` per domain and per file. Any increase fails. `guard:type-debt:update` is reserved for an explicitly reviewed baseline change after the new debt is justified;
+- `guard:text-row-sizing` AST-scans Android-relevant shared/native TSX for the high-signal `NATIVE-TEXT-ROW-001` shape: wrapping rows with three or more children and at least two direct, unconditional dynamic `Text` siblings without positive `flex`/bounded sizing or explicit product ellipsis. Translation calls remain dynamic even without interpolation because RU/BE/UK/PL/EN widths differ. Web/iOS-only files, mutually exclusive JSX branches, bounded wrappers and literal app-owned icon labels are excluded deliberately; the governance suite asserts that the clean-checkout scan is non-vacuous;
 - `check:fast` is the default lightweight workflow for a finished logical block: it runs selective checks, `guard:external-links`, `guard:type-debt`, and ESLint only for changed lintable files;
 - the `check:fast` ESLint step uses a local cache and `--max-warnings=0`, so repeat runs stay fast while new warnings in touched files still fail the block;
 - local selective checks now include targeted app Jest suites for travel/map/account/messages changes in addition to schema/validator selective runners;

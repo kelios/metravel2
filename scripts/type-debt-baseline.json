@@ -595,13 +595,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/home/HomeHowItWorks.tsx": {
-      "styleCast": 6,
-      "logicCast": 9,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/home/HomeInspirationSection.tsx": {
       "styleCast": 0,
       "logicCast": 6,
