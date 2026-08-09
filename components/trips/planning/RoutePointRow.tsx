@@ -21,6 +21,7 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { useTranslation } from '@/i18n/LocaleProvider';
+import { webViewStyle } from '@/utils/webProps';
 import type { createStyles } from './RouteBuilder.styles';
 import type { RouteDragHandlers } from './useRoutePointDrag';
 
@@ -89,6 +90,12 @@ function RoutePointRow({
   const webKeyboardProps = Platform.OS === 'web'
     ? { tabIndex: 0 as const, onKeyDown: handleKeyDown }
     : {};
+  // Pointer Events resolve touch-action before pointerdown. Keep vertical page
+  // scrolling available from the start; the web touch listener claims the
+  // gesture with preventDefault only after the hold delay has elapsed.
+  const webScrollableHandleStyle = Platform.OS === 'web'
+    ? webViewStyle({ touchAction: 'pan-y' })
+    : null;
 
   return (
     <View
@@ -114,7 +121,11 @@ function RoutePointRow({
             ...(!isLast ? [{ name: 'increment' as const, label: moveDownLabel }] : []),
           ]}
           onAccessibilityAction={handleAccessibilityAction}
-          style={[styles.dragHandle, isDragging && styles.dragHandleActive]}
+          style={[
+            styles.dragHandle,
+            webScrollableHandleStyle,
+            isDragging && styles.dragHandleActive,
+          ]}
           testID={`route-builder-drag-${index}`}
           {...dragHandlers}
           {...webKeyboardProps}

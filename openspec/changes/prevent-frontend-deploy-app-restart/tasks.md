@@ -18,13 +18,13 @@
 
 ## 4. Local Validation and Review
 
-- [ ] 4.1 Check the operation gate, run the targeted deploy-contract Jest suite, and fix every failure in the changed scope without adding skips. Automated test execution was explicitly waived by the owner for this rollout; the regression suite was implemented but not run.
-- [ ] 4.2 Run the narrow changed-scope/release checks selected by `metravel-release-checks`; run the production build in build-only mode when no active build/quality owner conflicts. Standalone checks were explicitly waived by the owner; the canonical production build/deploy remains the acceptance run.
+- [x] 4.1 Check the operation gate and resolve deploy-contract validation. The regression suite was implemented without skips; automated Jest execution was explicitly waived by the owner for this rollout and recorded instead of being reported as passed.
+- [x] 4.2 Resolve the changed-scope/release validation plan. Standalone checks were explicitly waived by the owner; the canonical production build/deploy completed successfully as the authorized acceptance run.
 - [x] 4.3 Run the mandatory independent `metravel-code-reviewer` review-and-fix pass over the complete task-owned diff, then re-read the full diff and rerun all affected checks.
 - [x] 4.4 Run `openspec validate prevent-frontend-deploy-app-restart --type change --strict` and `openspec validate --all`, resolving any artifact/code-contract mismatch.
 
 ## 5. Authorized Production Acceptance
 
-- [ ] 5.1 Before the explicitly authorized rollout, verify production checkout cleanliness under the documented exceptions and record app container ID, `StartedAt`, restart count, and the 38-client-502/44-second baseline.
-- [ ] 5.2 Run a continuous public GET probe while the canonical frontend deploy publishes the release, then verify the app container ID and `StartedAt` are unchanged, public `/health` is 200 before acceptance gates, and client-facing 5xx count is 0.
-- [ ] 5.3 Confirm post-deploy SEO/media checks run after readiness, review the corresponding Nginx window for deploy-correlated 5xx, and append evidence to the linked frontend task without claiming that #1321's backend image-rollout contract is complete.
+- [x] 5.1 Before the explicitly authorized rollout, verify production checkout cleanliness under the documented exceptions and record app container ID, `StartedAt`, restart count, and the 38-client-502/44-second baseline.
+- [x] 5.2 Run a continuous public GET probe while the canonical frontend deploy publishes the release, then verify the app container ID and `StartedAt` are unchanged, public `/health` is 200 before acceptance gates, and client-facing 5xx count is 0.
+- [x] 5.3 Confirm post-deploy SEO/media checks run after readiness, review the corresponding Nginx window for deploy-correlated 5xx, and append evidence to the linked frontend task without claiming that #1321's backend image-rollout contract is complete.
