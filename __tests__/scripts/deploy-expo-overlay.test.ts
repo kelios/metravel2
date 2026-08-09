@@ -291,6 +291,7 @@ describe('normal deploy Expo overlay retention', () => {
     expect(source).toContain(
       'EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"',
     )
+    expect(source).toContain("--delete --exclude='/.*'")
     expect(source).not.toContain('scripts/fix-prod.sh')
     expect(
       source.indexOf("printf '%s' \"$EXPO_OVERLAY_HELPER_B64\""),

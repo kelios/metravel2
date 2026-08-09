@@ -118,7 +118,10 @@ deploy_prod() {
 
   require_deploy_target || return 1
 
-  rsync -avzhe "ssh" --delete \
+  # build_env intentionally leaves root-level dot paths outside dist/$ENV,
+  # while copy-public-files publishes the required .well-known tree inside the
+  # environment artifact. Do not upload those redundant build-root leftovers.
+  rsync -avzhe "ssh" --delete --exclude='/.*' \
     ./dist/ \
     "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/"
 
