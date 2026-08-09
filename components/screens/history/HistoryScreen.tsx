@@ -88,8 +88,8 @@ export default function HistoryScreen() {
             paddingTop: 8,
         },
         nativeClearButton: {
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: DESIGN_TOKENS.radii.md,

@@ -552,8 +552,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             }),
         },
         searchClearBtn: {
-            width: 28,
-            height: 28,
+            width: 44,
+            height: 44,
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: radii.full,

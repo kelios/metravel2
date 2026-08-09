@@ -68,8 +68,8 @@ export const createStyles = (colors: ThemedColors) =>
     pointCoordinates: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     pointControls: { flexDirection: 'row', gap: 4 },
     ctrl: {
-      width: 32,
-      height: 32,
+      width: 44,
+      height: 44,
       borderRadius: 8,
       alignItems: 'center',
       justifyContent: 'center',

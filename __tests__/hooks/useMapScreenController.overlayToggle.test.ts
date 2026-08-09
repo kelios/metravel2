@@ -176,6 +176,7 @@ jest.mock('@/stores/routeStore', () => ({
 
 // ─── подключаем хук после всех моков ─────────────────────────────────────────
 import { useMapScreenController } from '@/hooks/useMapScreenController'
+import { getDefaultOverlayState, useMapOverlaysStore } from '@/stores/mapOverlaysStore'
 
 // ─── константы из конфига (дублируем для удобочитаемости тестов) ──────────────
 const TEMP = 'weather-temp'
@@ -194,6 +195,12 @@ const getOverlays = (r: { current: any }): Record<string, boolean> =>
   r.current.filtersPanelProps.contextValue.enabledOverlays
 
 describe('useMapScreenController — handleOverlayToggle', () => {
+  // Выбор слоёв живёт в общем persisted store (#1306): без сброса состояние
+  // перетекало бы из теста в тест.
+  beforeEach(() => {
+    useMapOverlaysStore.setState({ enabledOverlays: getDefaultOverlayState() })
+  })
+
   // Кейс 1: включение weather-temp → temp=true, labels=true, clouds/precip=false
   it('включение weather-temp включает подписи и сбрасывает других участников группы', () => {
     const { result } = renderHook(() => useMapScreenController())

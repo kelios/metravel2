@@ -288,7 +288,28 @@ export function optimizeImageUrl(
       // потому что его контракт запрещает widthless URL.
       if (mediaWidth) {
         proxyParams.set('w', String(mediaWidth));
-        if (options.quality != null) proxyParams.set('q', String(snapQuality(options.quality)));
+        // Семейство раздаётся предгенерированными производными: качество задано
+        // профилем (`article_body` — q70 на 320/480/640, q80 на 800/960, q85 на
+        // 1600), а вариант уже нарезан под свой `fit`. Присланные `q`/`fit`
+        // бэкенд игнорирует, но каждый их набор — ОТДЕЛЬНЫЙ URL: отдельная
+        // запись в nginx-кэше, отдельная в браузерном, и один и тот же файл
+        // качается заново, стоит другому экрану собрать адрес чуть иначе.
+        // Манифест такие параметры не ставит вовсе, поэтому «через манифест» и
+        // «через optimizeImageUrl» давали два адреса на один слот — прямое
+        // нарушение правила «один слот = один растр».
+        //
+        // Замер прода 2026-08-09 после перехода `article_body` на durable,
+        // `travel-description-image/247b89ab….webp`: `?w=640`, `?w=640&q=70`,
+        // `?w=640&q=70&fit=contain`, `?w=640&fit=cover`, `?w=640&q=20` — все
+        // пять отдают 157 952 B байт-в-байт, `stored-derivative`. То же на
+        // `quest-cover` (семейство с cover-вариантами): 3 486 B на все формы.
+        //
+        // Legacy-роуты (`/media-resize/**`) остаются на ресайзе в момент
+        // запроса, там оба параметра работают и отправляются по-прежнему.
+        const servedFromDurableFamily = Boolean(familyRoute) && !isLegacyResizeRoute;
+        if (!servedFromDurableFamily && options.quality != null) {
+          proxyParams.set('q', String(snapQuality(options.quality)));
+        }
         // #1233: класс `uploads/**` без durable-производных отвечает 404 на любую
         // ступень, поэтому по умолчанию спрашивается явным `f=jpeg` —
         // `dynamic-transform`. Явный формат от вызывающего кода уважается: обход
@@ -300,7 +321,7 @@ export function optimizeImageUrl(
         const format =
           options.format && options.format !== 'auto' ? options.format : legacyUploadFormat;
         if (format) proxyParams.set('f', format);
-        if (options.fit) proxyParams.set('fit', options.fit);
+        if (!servedFromDurableFamily && options.fit) proxyParams.set('fit', options.fit);
       }
       if (!requestedWidth && !isLegacyResizeRoute) {
         warnMissingProxyWidth(parsedUrl.toString());

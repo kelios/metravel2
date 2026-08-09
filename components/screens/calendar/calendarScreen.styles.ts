@@ -2,6 +2,7 @@ import { StyleSheet, Platform } from 'react-native'
 
 import type { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { webViewStyle } from '@/utils/webProps'
 
 export type CalendarStyles = ReturnType<typeof createCalendarStyles>
 
@@ -186,10 +187,22 @@ export function createCalendarStyles(colors: ReturnType<typeof useThemedColors>,
       backgroundColor: colors.surface,
       borderColor: colors.borderLight,
     },
+    // Прозрачная рамка тач-таргета 44dp вокруг видимого кружка 32dp. Кнопка
+    // абсолютная, поэтому рамка ничего не двигает: центр кружка остался на
+    // прежних 26/26 (top/left 4 + половина рамки).
     removeBadge: {
       position: 'absolute',
-      top: 10,
-      left: 10,
+      top: 4,
+      left: 4,
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 3,
+      ...Platform.select({ web: webViewStyle({ cursor: 'pointer' }) }),
+    },
+    /** Видимый кружок — размер и вид прежние. */
+    removeBadgeShape: {
       width: 32,
       height: 32,
       borderRadius: 16,
@@ -198,13 +211,7 @@ export function createCalendarStyles(colors: ReturnType<typeof useThemedColors>,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      zIndex: 3,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: DESIGN_TOKENS.shadows.light,
-            cursor: 'pointer',
-          } as any
-        : null),
+      ...Platform.select({ web: webViewStyle({ boxShadow: DESIGN_TOKENS.shadows.light }) }),
     },
     moderationBadge: {
       position: 'absolute',

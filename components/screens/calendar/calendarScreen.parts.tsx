@@ -257,11 +257,13 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
           accessibilityLabel={removalLabel}
           {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
         >
-          <Feather
-            name={entry.isAuthoredTravel ? 'x' : 'trash-2'}
-            size={15}
-            color={entry.isAuthoredTravel ? colors.primaryDark : colors.danger}
-          />
+          <View style={styles.removeBadgeShape}>
+            <Feather
+              name={entry.isAuthoredTravel ? 'x' : 'trash-2'}
+              size={15}
+              color={entry.isAuthoredTravel ? colors.primaryDark : colors.danger}
+            />
+          </View>
         </Pressable>
       ) : null}
 

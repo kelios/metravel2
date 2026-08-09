@@ -366,7 +366,7 @@ const createStyles = (colors: ThemedColors) =>
       paddingBottom: 4,
     },
     searchBox: {
-      minHeight: 42,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
@@ -387,9 +387,9 @@ const createStyles = (colors: ThemedColors) =>
       ...Platform.select({ web: { outlineStyle: 'none' } as any }),
     },
     searchClear: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
       ...Platform.select({ web: { cursor: 'pointer' as any } }),

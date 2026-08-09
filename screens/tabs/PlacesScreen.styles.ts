@@ -249,7 +249,8 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     lineHeight: 17,
   },
   categorySearchBox: {
-    minHeight: 40,
+    // Строка поиска не ниже тач-таргета крестика внутри неё (#1297).
+    minHeight: 44,
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -272,15 +273,24 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     paddingVertical: 0,
     ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null),
   },
+  /** Прозрачная рамка тач-таргета вокруг видимого кружка 26dp (#1274). */
   categorySearchClear: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: DESIGN_TOKENS.spacing.xxs,
+    marginRight: -DESIGN_TOKENS.spacing.xs,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+  },
+  /** Видимый кружок крестика — размер прежний. */
+  categorySearchClearShape: {
     width: 26,
     height: 26,
     borderRadius: DESIGN_TOKENS.radii.full,
     backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: DESIGN_TOKENS.spacing.xs,
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
   },
   categorySearchEmpty: {
     width: '100%',
@@ -367,8 +377,8 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     flexShrink: 0,
   },
   featuredClear: {
-    width: 28,
-    height: 28,
+    width: 44,
+    height: 44,
     borderRadius: DESIGN_TOKENS.radii.full,
     alignItems: 'center',
     justifyContent: 'center',

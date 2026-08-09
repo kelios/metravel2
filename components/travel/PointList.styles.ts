@@ -326,9 +326,9 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     }),
   },
   actionBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.overlayLight,

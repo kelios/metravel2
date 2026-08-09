@@ -312,7 +312,9 @@ const getStyles = (colors: ThemedColors, dense: boolean) =>
       borderWidth: 1,
       borderColor: colors.border,
       paddingHorizontal: dense ? 10 : 12,
-      height: dense ? 40 : 44,
+      // Строка не может быть ниже кнопки очистки: её тач-таргет 44dp, а всё,
+      // что вылезает за родителя, на Android до пальца не доходит (#1274).
+      height: 44,
     },
     searchIcon: { marginRight: dense ? 6 : 8 },
     input: {
@@ -326,9 +328,8 @@ const getStyles = (colors: ThemedColors, dense: boolean) =>
     clearButton: {
       marginLeft: dense ? 6 : 8,
       padding: 0,
-      width: dense ? 28 : 32,
-      height: dense ? 28 : 32,
-      borderRadius: dense ? 14 : 16,
+      // Размер не переопределяем: `IconButton size="sm"` сам держит 44dp, а
+      // прежние 28/32 перебивали его в меньшую сторону (#1280).
       backgroundColor: 'transparent',
       shadowColor: 'transparent',
       shadowOpacity: 0,

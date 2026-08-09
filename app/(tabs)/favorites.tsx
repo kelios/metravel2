@@ -83,10 +83,19 @@ export default function FavoritesScreen() {
         cardWrap: {
             marginBottom: 14,
         },
+        // Прозрачная рамка тач-таргета 44dp: кнопка абсолютная, поэтому рамка
+        // ничего не двигает, а видимый кружок остаётся на прежнем месте
+        // (центр 26/26 = top/left 4 + половина рамки).
         removeButton: {
             position: 'absolute',
-            top: 10,
-            left: 10,
+            top: 4,
+            left: 4,
+            width: 44,
+            height: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        removeButtonShape: {
             width: 32,
             height: 32,
             borderRadius: 999,
@@ -298,7 +307,9 @@ export default function FavoritesScreen() {
                                     accessibilityLabel={i18nT('shared:app.tabs.favorites.udalit_iz_hochu_poehat_4f301763')}
                                     {...Platform.select({ web: { cursor: 'pointer' } })}
                                 >
-                                    <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
+                                    <View style={styles.removeButtonShape}>
+                                        <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
+                                    </View>
                                 </Pressable>
                             </View>
                             );
@@ -351,7 +362,9 @@ export default function FavoritesScreen() {
                                 accessibilityLabel={i18nT('shared:app.tabs.favorites.udalit_iz_hochu_poehat_4f301763')}
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
-                                <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
+                                <View style={styles.removeButtonShape}>
+                                    <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
+                                </View>
                             </Pressable>
                         </View>
                         );

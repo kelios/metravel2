@@ -27,11 +27,11 @@ export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
     modalHeaderAction: { fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600', color: colors.primaryText },
     modalHeaderActionPrimary: { color: colors.textOnPrimary },
     modalActionButton: {
-        minHeight: 36, minWidth: 78, borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1,
+        minHeight: 44, minWidth: 78, borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1,
         borderColor: colors.border, backgroundColor: colors.surfaceElevated,
         alignItems: 'center', justifyContent: 'center', paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     },
-    modalActionButtonCompact: { minWidth: 36, width: 36, paddingHorizontal: 0 },
+    modalActionButtonCompact: { minWidth: 44, width: 44, paddingHorizontal: 0 },
     modalActionContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: DESIGN_TOKENS.spacing.xs },
     modalActionButtonPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
     modalBody: { flex: 1, paddingHorizontal: DESIGN_TOKENS.spacing.sm, paddingTop: DESIGN_TOKENS.spacing.sm, paddingBottom: DESIGN_TOKENS.spacing.md },

@@ -229,7 +229,7 @@ export const getStyles = (
         borderRadius: 11,
         gap: isMobile ? 6 : 4,
         minWidth: isMobile ? 48 : undefined,
-        minHeight: isMobile ? 34 : 34,
+        minHeight: 44,
       },
       tabActive: {
         backgroundColor: themedColors.primary,
@@ -307,9 +307,9 @@ export const getStyles = (
         borderLeftColor: themedColors.borderLight,
       },
       resetButtonCompact: {
-        width: 36,
-        minWidth: 36,
-        height: 36,
+        width: 44,
+        minWidth: 44,
+        height: 44,
         paddingHorizontal: 0,
       },
       closePanelButton: {
@@ -716,16 +716,26 @@ export const getStyles = (
         lineHeight: isMobile ? 13 : undefined,
         fontWeight: '700',
       },
+      // Прозрачная рамка тач-таргета вокруг видимого кружка 22/24dp: строка
+      // баннера обтягивала крестик, поэтому `hitSlop` до пальца не доходил
+      // (#1274). Строку это не растит — кнопки действий рядом уже 44dp.
       geoBannerClose: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...(Platform.OS === 'web'
+          ? ({ cursor: 'pointer' } as any)
+          : null),
+      },
+      /** Видимый кружок крестика — размер прежний. */
+      geoBannerCloseShape: {
         width: isMobile ? 22 : 24,
         height: isMobile ? 22 : 24,
         borderRadius: isMobile ? 11 : 12,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.backgroundSecondary,
-        ...(Platform.OS === 'web'
-          ? ({ cursor: 'pointer' } as any)
-          : null),
       },
   });
 };

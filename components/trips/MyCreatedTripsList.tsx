@@ -408,9 +408,9 @@ const createStyles = (colors: ThemedColors) =>
       paddingVertical: 10,
     },
     iconControl: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
     },

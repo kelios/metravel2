@@ -459,10 +459,11 @@ export default function PlacesScreen() {
                     onPress={() => setCategoryQuery('')}
                     accessibilityRole="button"
                     accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.ochistit_poisk_kategorii_31f7af51')}
-                    hitSlop={10}
                     style={({ pressed }) => [styles.categorySearchClear, pressed && PRESSED_OPACITY]}
                   >
-                    <Feather name="x" size={14} color={colors.textMuted} />
+                    <View style={styles.categorySearchClearShape}>
+                      <Feather name="x" size={14} color={colors.textMuted} />
+                    </View>
                   </Pressable>
                 ) : null}
               </View>

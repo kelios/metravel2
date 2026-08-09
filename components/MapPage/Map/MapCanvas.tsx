@@ -136,6 +136,35 @@ const MapCanvasLifecycle: React.FC<{
     }
   }, [map, resizeTrigger])
 
+  // Контейнер может получить размер ПОЗЖЕ маунта (скрытая вкладка, свёрнутая
+  // секция, отложенный лэйаут). Leaflet сам об этом не узнаёт: без invalidateSize
+  // карта остаётся с нулевым размером, а слои, которые ждут валидных bounds
+  // (подложка, оверлеи в useMapInstance), не поднимаются уже никогда.
+  useEffect(() => {
+    if (!map || typeof ResizeObserver === 'undefined') return
+    const el = map.getContainer?.()
+    if (!el) return
+
+    let lastWidth = el.clientWidth
+    let lastHeight = el.clientHeight
+
+    const observer = new ResizeObserver(() => {
+      const { clientWidth, clientHeight } = el
+      if (clientWidth === lastWidth && clientHeight === lastHeight) return
+      lastWidth = clientWidth
+      lastHeight = clientHeight
+      if (clientWidth <= 0 || clientHeight <= 0) return
+      try {
+        map.invalidateSize()
+      } catch {
+        // noop
+      }
+    })
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [map])
+
   // ctrl-wheel-zoom: колесо зумит только с Ctrl/Cmd, иначе страница скроллится.
   useEffect(() => {
     if (!ctrlWheelZoom || !map?.scrollWheelZoom) return

@@ -400,10 +400,16 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
     return cloneTrip(trip);
   }
   try {
+    // #1303: порядок нумеруется с единицы. Развёрнутый бэкенд подставляет вместо
+    // falsy `order: 0` собственный номер (`order or index + 1`), поэтому первая
+    // точка получала тот же order, что и вторая, и весь PUT падал на
+    // `unique_together (trip, order)` — маршрут из двух и более точек не
+    // сохранялся вовсе. Версия из origin/master клиентский order игнорирует и
+    // нумерует сама с единицы, так что 1-based безопасен для обеих.
     const points = input.route.map((p, i) => ({
       place_id: p.placeId,
       point_type: pointTypeToBe(p.type),
-      order: i,
+      order: i + 1,
       title: p.name,
       description: p.description ?? '',
       lat: p.coordinates ? p.coordinates[1] : null,

@@ -164,6 +164,8 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
   const registerRowLayout = useCallback((index: number, event: LayoutChangeEvent) => {
     const { y, height } = event.nativeEvent.layout;
     spansRef.current[index] = { y, height };
+    // eslint-disable-next-line no-console
+    console.log('[qa-drag] layout', index, y, height, spansRef.current.length);
   }, []);
 
   const handleProps = useMemo<RouteDragHandlers[]>(() => {

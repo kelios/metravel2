@@ -150,17 +150,29 @@ export default function MiniCalendar({
     },
     cell: {
       width: `${100 / 7}%` as any,
-      height: 42,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
     },
+    /**
+     * Тач-таргет дня — прозрачная рамка 44×44 вокруг видимого кружка 32dp.
+     * `hitSlop` тут не добирал: ячейка сетки обтягивала кнопку и срезала его
+     * (#1274, тот же приём, что `MAP_TOOLBAR_TOUCH_TARGET_SIZE`).
+     */
     dayBtn: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+    },
+    /** Видимый кружок дня — размер прежний. */
+    dayShape: {
       width: 32,
       height: 32,
       borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
     },
     dayBtnToday: {
       borderWidth: 1.5,
@@ -250,28 +262,31 @@ export default function MiniCalendar({
           return (
             <View key={dayStr} style={styles.cell}>
               <Pressable
-                style={[
-                  styles.dayBtn,
-                  globalFocusStyles.focusable,
-                  isMarked && !isSelected && styles.dayBtnMarked,
-                  isToday && !isSelected && styles.dayBtnToday,
-                  isSelected && styles.dayBtnSelected,
-                ]}
+                style={[styles.dayBtn, globalFocusStyles.focusable]}
                 onPress={() => onDayPress?.(dayStr)}
                 accessibilityRole="button"
                 accessibilityLabel={`${formatDate(new Date(year, month - 1, cell.day), { day: 'numeric', month: 'long' })}${isMarked ? i18nT('calendar:components.calendar.MiniCalendar.est_poezdki_931b418d') : ''}`}
                 accessibilityState={{ selected: isSelected }}
                 testID={`mini-calendar-day-${dayStr}`}
               >
-                <Text
+                <View
                   style={[
-                    styles.dayText,
-                    isSelected && styles.dayTextSelected,
+                    styles.dayShape,
+                    isMarked && !isSelected && styles.dayBtnMarked,
+                    isToday && !isSelected && styles.dayBtnToday,
+                    isSelected && styles.dayBtnSelected,
                   ]}
                 >
-                  {cell.day}
-                </Text>
-                {isMarked && !isSelected && <View style={styles.dot} />}
+                  <Text
+                    style={[
+                      styles.dayText,
+                      isSelected && styles.dayTextSelected,
+                    ]}
+                  >
+                    {cell.day}
+                  </Text>
+                  {isMarked && !isSelected && <View style={styles.dot} />}
+                </View>
               </Pressable>
             </View>
           )

@@ -15,6 +15,7 @@ import { attachOsmPoiOverlay } from '@/utils/mapWebOverlays/osmPoiOverlay';
 import { attachOsmRoutesOverlay } from '@/utils/mapWebOverlays/osmRoutesOverlay';
 import { attachOsmFeaturesOverlay } from '@/utils/mapWebOverlays/osmFeaturesOverlay';
 import { attachWeatherTempLabelsOverlay } from '@/utils/mapWebOverlays/weatherTempLabelsOverlay';
+import { useMapOverlaysStore } from '@/stores/mapOverlaysStore';
 import type { LeafletControlRef, LeafletOverlayController } from './leafletBridgeTypes';
 
 interface UseMapInstanceProps {
@@ -383,8 +384,13 @@ export function useMapInstance({ map, L, manageBaseLayer = true }: UseMapInstanc
         return;
       }
 
-      // Add default enabled overlays
-      overlayDefs.filter((d) => d.defaultEnabled).forEach((def) => {
+      // Поднимаем слои, выбранные пользователем (общий persisted store, #1306),
+      // а не только `defaultEnabled`. Слои создаются позже, чем экран успевает
+      // синхронизировать выбор через `MapUiApi.setOverlayEnabled`: отложенные
+      // тоглы там живут ограниченное время, и сохранённый выбор мог не доехать
+      // до карты вовсе. Здесь состояние читается ровно в момент создания слоёв.
+      const selectedOverlays = useMapOverlaysStore.getState().enabledOverlays;
+      overlayDefs.filter((d) => selectedOverlays[d.id] ?? d.defaultEnabled).forEach((def) => {
         const layer = leafletOverlayLayersRef.current.get(def.id);
         if (layer) {
           try {

@@ -533,8 +533,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     padding: 4,
     borderRadius: 8,
     backgroundColor: colors.backgroundSecondary,
-    minHeight: 32,
-    minWidth: 32,
+    minHeight: 44,
+    minWidth: 44,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
@@ -584,8 +584,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 2,
-    minHeight: Platform.OS === 'android' ? 48 : 40,
-    minWidth: Platform.OS === 'android' ? 48 : 40,
+    minHeight: Platform.OS === 'android' ? 48 : 44,
+    minWidth: Platform.OS === 'android' ? 48 : 44,
   },
   collapsedIndicatorPressed: {
     backgroundColor: colors.backgroundTertiary,
@@ -648,8 +648,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 999,
-    minHeight: Platform.OS === 'android' ? 48 : 40,
-    minWidth: Platform.OS === 'android' ? 48 : 40,
+    minHeight: Platform.OS === 'android' ? 48 : 44,
+    minWidth: Platform.OS === 'android' ? 48 : 44,
   },
   buttonPressed: {
     backgroundColor: colors.backgroundTertiary,
