@@ -31,6 +31,7 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
     mutate: mockTransportMutate,
     isPending: false,
   }),
+  useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
 }))
 
 jest.mock('@/components/ui/ImageCardMedia', () => {

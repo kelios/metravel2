@@ -17,6 +17,7 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useRefreshTripRouteElevation: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdateTripRoute: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdateTripTransport: () => ({ mutate: jest.fn(), isPending: false }),
+  useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
 }))
 
 jest.mock('@/utils/routeExport', () => {

@@ -21,6 +21,7 @@ import type {
   TripRouteSummaryStatus,
   TripRsvp,
   TripSuggestion,
+  TripBikeType,
   TripTransport,
 } from '@/api/plannedTripsTypes';
 
@@ -97,6 +98,7 @@ export interface PlannedTripDto {
   is_public?: boolean;
   max_participants?: number | string | null;
   transport_mode?: string | null;
+  bike_type?: string | null;
   created_at?: string | null;
 }
 
@@ -133,6 +135,7 @@ export interface CommunityTripDto {
   description?: string | null;
   start_at?: string | null;
   transport_mode?: string | null;
+  bike_type?: string | null;
   content_type?: string | null;
   is_public?: boolean;
   seats_count?: number | null;
@@ -281,6 +284,17 @@ const TRANSPORT_TO_BE: Record<TripTransport, string> = {
 
 export const transportToBe = (transport: TripTransport): string =>
   TRANSPORT_TO_BE[transport] ?? 'car';
+
+// Ключи совпадают с BIKE_TYPE_CHOICES бэка, поэтому маппинг — только валидация.
+export const TRIP_BIKE_TYPES: TripBikeType[] = ['regular', 'road', 'mountain'];
+
+export const isTripBikeType = (value: unknown): value is TripBikeType =>
+  TRIP_BIKE_TYPES.some((bikeType) => bikeType === value);
+
+// null означает «эндпоинт не отдаёт bike_type», а не «обычный велосипед»:
+// подставленный дефолт молча гасил бы неприменённую миграцию на бэке.
+export const bikeTypeFromBe = (bikeType?: string | null): TripBikeType | null =>
+  (isTripBikeType(bikeType) ? bikeType : null);
 
 const pointTypeFromBe = (pointType?: string | null): RoutePointType => {
   if (pointType === 'travel') return 'place';
@@ -446,6 +460,7 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     description: dto.description ?? '',
     ...tripStartFields(dto.start_date),
     transport,
+    bikeType: bikeTypeFromBe(dto.bike_type),
     visibility: dto.is_public ? 'public' : 'private',
     seatsTotal: toNum(dto.max_participants),
     startPoint: null,
@@ -549,6 +564,7 @@ export const mapCommunityTrip = (dto: CommunityTripDto): PlannedTrip => {
     description: dto.description ?? '',
     ...tripStartFields(dto.start_at),
     transport: transportFromBe(dto.transport_mode),
+    bikeType: bikeTypeFromBe(dto.bike_type),
     visibility: dto.is_public ? 'public' : 'private',
     seatsTotal: toNum(dto.seats_count),
     startPoint: null,

@@ -22,6 +22,7 @@ import {
   submitTripReport,
   suggestPoint,
   updatePlannedTrip,
+  updatePlannedTripBikeType,
   updatePlannedTripTransport,
   updateTripRoute,
   type CommunityTripsFilters,
@@ -35,6 +36,7 @@ import {
   type SuggestPointInput,
   type TripRouteElevation,
   type TripSuggestion,
+  type UpdateTripBikeTypeInput,
   type UpdateTripInput,
   type UpdateTripTransportInput,
   type UpdateRouteInput,
@@ -228,6 +230,14 @@ export function useUpdateTripTransport() {
   const qc = useQueryClient();
   return useMutation<PlannedTrip, unknown, UpdateTripTransportInput>({
     mutationFn: updatePlannedTripTransport,
+    onSuccess: (trip) => syncUpdatedPlannedTrip(qc, trip),
+  });
+}
+
+export function useUpdateTripBikeType() {
+  const qc = useQueryClient();
+  return useMutation<PlannedTrip, unknown, UpdateTripBikeTypeInput>({
+    mutationFn: updatePlannedTripBikeType,
     onSuccess: (trip) => syncUpdatedPlannedTrip(qc, trip),
   });
 }

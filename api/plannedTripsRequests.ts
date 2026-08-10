@@ -52,6 +52,7 @@ import type {
   TripRouteElevation,
   TripSuggestion,
   UpdateRouteInput,
+  UpdateTripBikeTypeInput,
   UpdateTripInput,
   UpdateTripTransportInput,
 } from '@/api/plannedTripsTypes';
@@ -245,6 +246,7 @@ const buildMockTrip = (input: CreateTripInput): PlannedTrip => {
     startDate: input.startDate,
     startTime: input.startTime,
     transport: input.transport,
+    bikeType: 'regular',
     visibility: input.visibility,
     seatsTotal: input.seatsTotal,
     startPoint: input.startPoint,
@@ -370,6 +372,25 @@ export async function updatePlannedTripTransport(
   const dto = await apiClient.patch<PlannedTripDto>(
     `/trips/planned/${input.tripId}/`,
     { transport_mode: transportToBe(input.transport) },
+  );
+  return mapTrip(dto);
+}
+
+// Тип велосипеда меняет профиль ORS на бэке: маршрут перестраивается тем же
+// PATCH, отдельный rebuild-запрос не нужен.
+export async function updatePlannedTripBikeType(
+  input: UpdateTripBikeTypeInput,
+): Promise<PlannedTrip> {
+  if (USE_MOCK) {
+    const trip = findMock(input.tripId);
+    if (!trip) throw new ApiError(404, 'Trip not found');
+    trip.bikeType = input.bikeType;
+    return cloneTrip(trip);
+  }
+
+  const dto = await apiClient.patch<PlannedTripDto>(
+    `/trips/planned/${input.tripId}/`,
+    { bike_type: input.bikeType },
   );
   return mapTrip(dto);
 }

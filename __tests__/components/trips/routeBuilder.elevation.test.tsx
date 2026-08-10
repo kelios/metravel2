@@ -31,6 +31,7 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   }),
   useUpdateTripRoute: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdateTripTransport: () => ({ mutate: jest.fn(), isPending: false }),
+  useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
 }))
 
 jest.mock('@/components/ui/ImageCardMedia', () => {
@@ -89,6 +90,7 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   startDate: '2026-08-08',
   startTime: '09:00',
   transport: 'car',
+  bikeType: null,
   visibility: 'private',
   seatsTotal: 4,
   startPoint: null,
@@ -224,6 +226,24 @@ describe('RouteBuilder elevation profile', () => {
     rerender(<RouteBuilder trip={trip} />)
     rerender(<RouteBuilder trip={makeTrip()} />)
     expect(mockRefreshElevation).toHaveBeenCalledTimes(1)
+  })
+
+  // #1308: смена транспорта и типа велосипеда перестраивает маршрут на тех же
+  // точках и снова стирает высоты — каждый такой профиль нужно пересчитать.
+  it('recalculates again after the route is rebuilt for another transport or bike type', async () => {
+    mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
+    const { rerender } = render(<RouteBuilder trip={makeTrip()} />)
+
+    await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(1))
+
+    rerender(<RouteBuilder trip={makeTrip({ transport: 'bike', bikeType: 'regular' })} />)
+    await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(2))
+
+    rerender(<RouteBuilder trip={makeTrip({ transport: 'bike', bikeType: 'mountain' })} />)
+    await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(3))
+
+    rerender(<RouteBuilder trip={makeTrip({ transport: 'bike', bikeType: 'mountain' })} />)
+    expect(mockRefreshElevation).toHaveBeenCalledTimes(3)
   })
 
   it('hides the profile while the route has unsaved edits', async () => {

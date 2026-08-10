@@ -15,6 +15,7 @@ import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { safeLazy } from '@/components/layout/safeLazy';
 import RoutePointRow from '@/components/trips/planning/RoutePointRow';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
+import TripBikeTypeControl from '@/components/trips/planning/TripBikeTypeControl';
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap';
 import TripRouteDownloadButtons from '@/components/trips/planning/TripRouteDownloadButtons';
 import {
@@ -27,6 +28,7 @@ import {
   type RoutableTripTransport,
   type RoutePoint,
   type RoutePointType,
+  type TripBikeType,
 } from '@/api/plannedTrips';
 import {
   ROUTE_POINT_ICON_NAME,
@@ -37,6 +39,7 @@ import {
   useRefreshTripRouteElevation,
   useRouteTemplates,
   useTripRouteElevation,
+  useUpdateTripBikeType,
   useUpdateTripTransport,
   useUpdateTripRoute,
 } from '@/hooks/usePlannedTripsApi';
@@ -176,7 +179,10 @@ function RouteBuilder({ trip }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const updateTripRoute = useUpdateTripRoute();
   const updateTripTransport = useUpdateTripTransport();
+  const updateTripBikeType = useUpdateTripBikeType();
   const templatesQuery = useRouteTemplates();
+  // Транспорт и тип велосипеда шлют один и тот же PATCH по одной поездке,
+  // поэтому лок общий: параллельных перестроений маршрута быть не должно.
   const transportMutationLockedRef = useRef(false);
 
   const [route, setRoute] = useState<RoutePoint[]>(trip.route);
@@ -198,7 +204,9 @@ function RouteBuilder({ trip }: Props) {
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
   const [transportCommitPending, setTransportCommitPending] = useState(false);
-  const [transportError, setTransportError] = useState<string | null>(null);
+  // Транспорт и тип велосипеда перестраивают маршрут одним потоком, поэтому и
+  // ошибка одна: иначе неудача одного контрола висела бы под другим успешным.
+  const [routeRebuildError, setRouteRebuildError] = useState<string | null>(null);
 
   const savedRouteSignature = useMemo(() => routeSignature(trip.route), [trip.route]);
   const routeMatchesSaved = useMemo(
@@ -228,7 +236,10 @@ function RouteBuilder({ trip }: Props) {
     const elevation = routeElevationQuery.data;
     if (!elevation || elevation.preview || elevation.provider !== 'ors') return;
 
-    const refreshKey = `${trip.id}:${savedRouteSignature}`;
+    // Профиль зависит не только от точек: смена транспорта и типа велосипеда
+    // перестраивает маршрут на тех же точках и снова обнуляет высоты, поэтому
+    // без них ключ повторно совпал бы и график высот больше не вернулся бы.
+    const refreshKey = `${trip.id}:${savedRouteSignature}:${trip.transport}:${trip.bikeType ?? 'none'}`;
     if (elevationRefreshKeyRef.current === refreshKey) return;
     elevationRefreshKeyRef.current = refreshKey;
     refreshRouteElevationMutate({ tripId: trip.id });
@@ -237,8 +248,10 @@ function RouteBuilder({ trip }: Props) {
     routeElevationQuery.data,
     routeMatchesSaved,
     savedRouteSignature,
+    trip.bikeType,
     trip.id,
     trip.isOwner,
+    trip.transport,
   ]);
 
   // Пересчёт ORS обнуляет route_geometry на бэке, но та же полилиния несёт линию
@@ -507,7 +520,13 @@ function RouteBuilder({ trip }: Props) {
   };
 
   const handleSave = () => {
-    if (transportMutationLockedRef.current || updateTripTransport.isPending) return;
+    if (
+      transportMutationLockedRef.current ||
+      updateTripTransport.isPending ||
+      updateTripBikeType.isPending
+    ) {
+      return;
+    }
 
     updateTripRoute.mutate(
       { tripId: trip.id, route },
@@ -519,41 +538,56 @@ function RouteBuilder({ trip }: Props) {
     );
   };
 
-  const handleTransportChange = (value: string) => {
-    if (
-      value === trip.transport ||
-      !isRoutableTransport(value) ||
-      transportMutationLockedRef.current ||
-      updateTripRoute.isPending
-    ) {
-      return;
-    }
+  // Инвариант «ровно один PATCH на переключение» держится здесь, а не на
+  // `disabled` дочернего контрола: ref ловит повтор в одном тике, isPending —
+  // мутацию этого экрана, которая ещё летит.
+  const canCommitRouteRebuild = () =>
+    !transportMutationLockedRef.current &&
+    !updateTripRoute.isPending &&
+    !updateTripTransport.isPending &&
+    !updateTripBikeType.isPending;
 
+  // Транспорт и тип велосипеда перестраивают маршрут одним и тем же PATCH, поэтому
+  // обвязка коммита общая: лок ставится синхронно до mutate, ответ применяется
+  // атомарно и не затирает несохранённый черновик маршрута.
+  const beginRouteRebuild = () => {
     const persistedRouteSignature = routeSignature(trip.route);
     transportMutationLockedRef.current = true;
     setTransportCommitPending(true);
-    setTransportError(null);
-    updateTripTransport.mutate(
-      { tripId: trip.id, transport: value },
-      {
-        onSuccess: (updatedTrip) => {
-          setRoute((currentRoute) => (
-            routeSignature(currentRoute) === persistedRouteSignature
-              ? updatedTrip.route
-              : currentRoute
-          ));
-        },
-        onError: () => {
-          setTransportError(
-            t('trips:components.trips.planning.RouteBuilder.ne_udalos_perestroit_marshrut_poprobuyte_esche_raz_9c4be156'),
-          );
-        },
-        onSettled: () => {
-          transportMutationLockedRef.current = false;
-          setTransportCommitPending(false);
-        },
+    setRouteRebuildError(null);
+
+    return {
+      onSuccess: (updatedTrip: PlannedTrip) => {
+        setRoute((currentRoute) => (
+          routeSignature(currentRoute) === persistedRouteSignature
+            ? updatedTrip.route
+            : currentRoute
+        ));
       },
-    );
+      onError: () => {
+        setRouteRebuildError(
+          t('trips:components.trips.planning.RouteBuilder.ne_udalos_perestroit_marshrut_poprobuyte_esche_raz_9c4be156'),
+        );
+      },
+      onSettled: () => {
+        transportMutationLockedRef.current = false;
+        setTransportCommitPending(false);
+      },
+    };
+  };
+
+  const handleTransportChange = (value: string) => {
+    if (value === trip.transport || !isRoutableTransport(value) || !canCommitRouteRebuild()) {
+      return;
+    }
+
+    updateTripTransport.mutate({ tripId: trip.id, transport: value }, beginRouteRebuild());
+  };
+
+  const handleBikeTypeChange = (value: TripBikeType) => {
+    if (value === trip.bikeType || !canCommitRouteRebuild()) return;
+
+    updateTripBikeType.mutate({ tripId: trip.id, bikeType: value }, beginRouteRebuild());
   };
 
   // Перетаскивание доступно только владельцу и только когда переставлять есть
@@ -613,7 +647,8 @@ function RouteBuilder({ trip }: Props) {
   }
 
   const templates = templatesQuery.data ?? [];
-  const transportPending = transportCommitPending || updateTripTransport.isPending;
+  const transportPending =
+    transportCommitPending || updateTripTransport.isPending || updateTripBikeType.isPending;
   const transportDisabled = transportPending || updateTripRoute.isPending;
   const transportOptions = ROUTE_TRANSPORTS.map((transport) => ({
     key: transport,
@@ -643,6 +678,14 @@ function RouteBuilder({ trip }: Props) {
           noOuterMargins
           disabled={transportDisabled}
         />
+        {trip.transport === 'bike' && trip.bikeType ? (
+          <TripBikeTypeControl
+            value={trip.bikeType}
+            disabled={transportDisabled}
+            onChange={handleBikeTypeChange}
+            styles={styles}
+          />
+        ) : null}
         {transportPending ? (
           <Text
             style={styles.hint}
@@ -652,13 +695,13 @@ function RouteBuilder({ trip }: Props) {
             {t('trips:components.trips.planning.RouteBuilder.perestraivaem_marshrut_d8d47f21')}
           </Text>
         ) : null}
-        {transportError ? (
+        {routeRebuildError ? (
           <Text
             style={styles.errorText}
             accessibilityLiveRegion="assertive"
             testID="route-builder-transport-error"
           >
-            {transportError}
+            {routeRebuildError}
           </Text>
         ) : null}
       </View>

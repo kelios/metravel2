@@ -16,6 +16,9 @@ export const createStyles = (colors: ThemedColors) =>
       padding: 12,
       backgroundColor: colors.surfaceMuted,
     },
+    // Вторичный ряд под сегментом транспорта: виден только для велосипеда.
+    bikeTypeControl: { gap: 6 },
+    bikeTypeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     pointList: { gap: 8 },
     pointRow: {
       flexDirection: 'row',

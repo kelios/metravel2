@@ -6,6 +6,7 @@ import type {
   RoutingState,
   RoutePointType,
   RouteSummary,
+  TripBikeType,
   TripPlanStatus,
   TripRsvp,
   TripTransport,
@@ -23,6 +24,12 @@ export const TRANSPORT_LABEL: Record<TripTransport, string> = {
   get foot() { return i18nT('tripsStatic:plan.transport.foot') },
   get public() { return i18nT('tripsStatic:plan.transport.public') },
   get mixed() { return i18nT('tripsStatic:plan.transport.mixed') },
+};
+
+export const BIKE_TYPE_LABEL: Record<TripBikeType, string> = {
+  get regular() { return i18nT('tripsStatic:plan.bikeType.regular') },
+  get road() { return i18nT('tripsStatic:plan.bikeType.road') },
+  get mountain() { return i18nT('tripsStatic:plan.bikeType.mountain') },
 };
 
 export const TRANSPORT_ICON_NAME: Record<TripTransport, string> = {

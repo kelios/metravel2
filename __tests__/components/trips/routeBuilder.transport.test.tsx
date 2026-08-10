@@ -30,6 +30,7 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
     mutate: mockTransportMutate,
     isPending: mockTransportPending,
   }),
+  useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
 }))
 
 jest.mock('@/components/ui/ImageCardMedia', () => {
@@ -73,6 +74,7 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   startDate: '2026-08-08',
   startTime: '09:00',
   transport: 'car',
+  bikeType: 'regular',
   visibility: 'private',
   seatsTotal: 4,
   startPoint: null,

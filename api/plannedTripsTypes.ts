@@ -2,6 +2,8 @@ import type { ParsedRoutePreview } from '@/types/travelRoutes'
 
 export type TripTransport = 'car' | 'bike' | 'foot' | 'public' | 'mixed'
 export type RoutableTripTransport = Extract<TripTransport, 'car' | 'bike' | 'foot'>
+// Профили ORS cycling-regular/road/mountain: бэк принимает и отдаёт эти же ключи.
+export type TripBikeType = 'regular' | 'road' | 'mountain'
 export type TripVisibility = 'public' | 'followers' | 'private'
 export type TripPlanStatus = 'planning' | 'active' | 'completed'
 export type RoutePointType = 'place' | 'custom' | 'rest' | 'overnight'
@@ -83,6 +85,8 @@ export interface PlannedTrip {
   startDate: string
   startTime: string | null
   transport: TripTransport
+  // null — бэк не отдал bike_type; выбор типа велосипеда в этом случае скрыт.
+  bikeType: TripBikeType | null
   visibility: TripVisibility
   seatsTotal: number
   startPoint: RoutePoint | null
@@ -153,6 +157,11 @@ export interface UpdateTripInput {
 export interface UpdateTripTransportInput {
   tripId: number
   transport: RoutableTripTransport
+}
+
+export interface UpdateTripBikeTypeInput {
+  tripId: number
+  bikeType: TripBikeType
 }
 
 export interface UpdateRouteInput {
