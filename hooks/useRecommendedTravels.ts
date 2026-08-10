@@ -23,6 +23,7 @@ const toFavoriteItems = (dto: unknown): FavoriteItem[] =>
     imageUrl: n.imageUrl,
     addedAt: n.timestamp,
     country: n.country,
+    city: n.city,
   }));
 
 /**

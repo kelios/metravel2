@@ -14,6 +14,7 @@ export interface NormalizedServerTravel {
   url: string;
   imageUrl?: string;
   country?: string;
+  city?: string;
   // Серверный updated_at в мс (finite-guarded к Date.now()). Вызывающий кладёт
   // его в своё доменное поле: addedAt (favorites/recommendations) или viewedAt.
   timestamp: number;
@@ -34,6 +35,12 @@ export const normalizeServerTravelCard = (t: CardViewTravelDto): NormalizedServe
     url: cleanTravelUrl(t),
     imageUrl: t.travel_image_thumb_url,
     country: t.countryName ?? undefined,
+    // Без этого поля коллекции теряли город даже там, где бэкенд прислал
+    // настоящее название: карточка избранного показывала одну страну, а та же
+    // карточка в истории — «Gdańsk, Польша», потому что история наполняется ещё
+    // и клиентом при просмотре. Адресоподобные значения (а их большинство)
+    // отсекает resolveTravelCityName при отображении.
+    city: t.cityName ?? undefined,
     timestamp: Number.isFinite(parsed) ? parsed : Date.now(),
   };
 };

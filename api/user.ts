@@ -12,6 +12,12 @@ export type CardViewTravelDto = {
     url: string;
     slug: string;
     countryName: string;
+    // Приходит вместе с countryName у favorite-travels/history/recommended, но
+    // городом является не всегда: у большинства записей это подпись первой точки
+    // маршрута из обратного геокодирования (адресная строка). Отсеивает такие
+    // значения `resolveTravelCityName` на границе отображения — сырое значение
+    // здесь не трогаем, его подстрокой матчит utils/questForLocation.
+    cityName?: string | null;
     travel_image_thumb_small_url: string;
     travel_image_thumb_url: string;
     updated_at: string | null;

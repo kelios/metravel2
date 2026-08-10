@@ -17,6 +17,16 @@ export const cleanTravelTitle = (title: string, country: string | null | undefin
     cleanedTitle = cleanedTitle.replace(pattern, '').trim();
   });
 
-  cleanedTitle = cleanedTitle.replace(/\s*[,.\-:]\s*$/, '').trim();
-  return cleanedTitle || title;
+  // Страна вырезается из любого места строки, поэтому осиротеть может каждый
+  // край, а не только хвост: «Польша. Варшава — Закопане» превращалось в
+  // «. Варшава — Закопане», а «Польша за 4 дня: маршрут из Минска в Гданьск» —
+  // в «за 4 дня: …» со строчной буквы. Оба варианта видны на /favorites и в
+  // истории просмотров.
+  cleanedTitle = cleanedTitle
+    .replace(/^\s*[,.:;–—-]\s*/, '')
+    .replace(/\s*[,.:;–—-]\s*$/, '')
+    .trim();
+  if (!cleanedTitle) return title;
+
+  return cleanedTitle.charAt(0).toUpperCase() + cleanedTitle.slice(1);
 };

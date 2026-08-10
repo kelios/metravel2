@@ -60,6 +60,7 @@ const normalizeServerHistory = (dto: unknown): ViewHistoryItem[] =>
     imageUrl: n.imageUrl,
     viewedAt: n.timestamp,
     country: n.country,
+    city: n.city,
   }));
 
 const readCache = (client: QueryClient | null, userId: string | null): ViewHistoryItem[] =>
