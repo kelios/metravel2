@@ -51,58 +51,50 @@ const INSECURE_TLS =
  * (fail-closed вместо тихой подмены мастером, #1201), а гейт считал это тремя
  * ошибками на ветку и валил каждый деплой — 30 ложных ошибок на прогон.
  *
- * `small` — минимальная производная профиля, `large` — максимальная. Мастер
- * сюда не берём: он раздаётся `no-store` by design, и проверка кэша на нём
- * даёт ложную ошибку. Таблицу сверяет с контрактом
- * `__tests__/scripts/postDeployMediaWidths.test.ts` — руками её править нельзя,
- * только вслед за `IMAGE_STORAGE_POLICY_V1`.
+ * `small` — минимальная производная профиля, `large` — максимальная. Ширину, которую
+ * обслужил бы МАСТЕР, сюда не берём: он раздаётся `no-store` by design, и проверка
+ * кэша на нём даёт ложную ошибку. Совпадение числа с шириной мастера при этом само
+ * по себе ничего не значит: у `articleBody` мастер 1920 и производная `content_1920`
+ * — это одна и та же ширина, и backend отдаёт её производной (#1373). Таблицу
+ * сверяет с контрактом `__tests__/scripts/postDeployMediaWidths.test.ts` — руками её
+ * править нельзя, только вслед за `IMAGE_STORAGE_POLICY_V1`.
  */
 const WIDTHS_BY_FAMILY = new Map([
   ['travel-image', { small: 96, large: 1600 }],
   ['gallery', { small: 96, large: 1600 }],
-  ['travel-description-image', { small: 320, large: 1600 }],
+  ['travel-description-image', { small: 320, large: 1920 }],
   ['address-image', { small: 320, large: 960 }],
   ['quest-cover', { small: 320, large: 800 }],
   // Legacy-роут обслуживает conversion-ключи travel-медиа, лестница у него та же.
   ['media-resize-legacy', { small: 96, large: 1600 }],
-  // Ключи `uploads/**` — это фото тела старых статей, лестница профиля `articleBody`.
-  ['media-resize-uploads', { small: 320, large: 1600 }],
+  /**
+   * Ключи `uploads/**` — фото тела старых статей. Лестницы у класса нет: durable-
+   * производных ноль, живой ответ даёт только явный `f=jpeg` (`dynamic-transform`),
+   * и фронт просит у него РОВНО одну ширину — `LEGACY_UPLOAD_FIXED_WIDTH` = 800.
+   * Поэтому верхняя ступень здесь 800, а не потолок профиля `articleBody`: мерить
+   * класс шириной, которой у него нет и которую никто не запрашивает, — это ровно
+   * та ложная тревога, из-за которой гейт перестают читать (#1373).
+   */
+  ['media-resize-uploads', { small: 320, large: 800 }],
 ])
 
 /** Ступени по умолчанию — для семейства, которого ещё нет в таблице. */
 const DEFAULT_WIDTHS = { small: 96, large: 800 }
 
 /**
- * Семейства, у которых ширина мастера обязана обслуживаться ПРОИЗВОДНОЙ (#1215).
+ * Здесь жила отдельная таблица `MASTER_DERIVATIVE_BY_FAMILY` (#1215): ширины
+ * мастера, которые обязаны обслуживаться производной. Она заводилась потому, что
+ * `WIDTHS_BY_FAMILY` мерит только производные, и ширина мастера `articleBody`
+ * (1920) не проверялась вообще — гейт был зелёным, пока фото тела статьи качалось
+ * дважды на desktop @2x.
  *
- * Таблица выше меряет только производные ступени и мастер намеренно не трогает —
- * иначе `no-store` мастера даёт ложную ошибку. Но именно из-за этого гейт был
- * слеп к дефекту #1215: `travel-description-image` на `w=1920` отдаёт мастер с
- * `no-store`, фото тела статьи качается дважды на desktop @2x, а прогон гейта
- * при этом зелёный — 6 семейств, 0 ошибок. Проверка ширины мастера закрывает
- * ровно эту дыру.
- *
- * `pendingTicket` — протокол решения, а не выключатель: пока дефект открыт,
- * несоответствие понижено до предупреждения (иначе каждый деплой фронта краснел
- * бы из-за бэкендовой работы), но оно ВИДНО в отчёте. Когда прод начнёт отдавать
- * производную, гейт сам скажет снять пометку и станет строгим — так регресс
- * после починки уже не пройдёт молча.
- *
- * Протокол сработал: 2026-08-05 гейт выдал `media.master_width_pending_stale` в
- * обеих Accept-ветках, и прод-проба это подтвердила. Замер на 4 ключах
- * `travel-description-image` (`3754dddd…`, `544/description/f48b8dd5…`,
- * `7f3b9593…`, `8c6f4e7e…`), обе ветки, `w=1920`:
- *
- *   200 · transform=dynamic-transform · cache-control: public, max-age=31536000, immutable
- *
- * Ни `stored-master`, ни `no-store` — то есть симптом #1215 (те же 110 828 B
- * заново на каждый визит) снят. Ширина обслуживается динамическим ресайзом, а не
- * stored-производной, но для этой проверки важно ровно одно: ширина мастера не
- * отдаётся мастером и кэшируется. Пометка снята, проверка снова строгая.
+ * Таблица снята вместе с закрытием #1215 на стороне backend: `content_1920` стала
+ * обычной stored-производной профиля, то есть ВЕРХНЕЙ ступенью семейства, и
+ * `WIDTHS_BY_FAMILY` спрашивает ровно её как `large`. Отдельная проба того же URL
+ * была бы дублем запроса, а её условие (`stored-master` либо `no-store`) целиком
+ * покрыто проверками ступени ниже — с той же строгостью `error`, см. severity у
+ * `media.master_instead_of_derivative` (#1373).
  */
-const MASTER_DERIVATIVE_BY_FAMILY = new Map([
-  ['travel-description-image', { width: 1920 }],
-])
 
 /**
  * Семейства, ключи которых по контракту хранения обязаны быть `.webp` (#1251).
@@ -709,14 +701,17 @@ function validateTarget(target, probes, options = {}) {
           `${scope} w=${width}: x-metravel-image-transform="${transform}" — производной нет, читатель видит битое фото`
         )
       }
-      // Мастер вместо производной. На минимальной ступени профиля это всегда
-      // провал бюджета (#1195, #1219). На верхней — пока допустимо: производной
-      // в ширину мастера может не быть by design (#1215), поэтому предупреждение.
+      // Мастер вместо производной. Обе ступени известного семейства взяты из
+      // `IMAGE_STORAGE_POLICY_V1`, то есть производная в эту ширину объявлена
+      // контрактом — значит мастер здесь провал бюджета, а не «by design» (#1195,
+      // #1219, #1215). Смягчение до предупреждения осталось только у семейств вне
+      // таблицы: их ступени взяты из `DEFAULT_WIDTHS` наугад, и верхняя может
+      // честно не существовать.
       if (/stored-master/i.test(transform)) {
         add(
           'media.master_instead_of_derivative',
           `${scope} w=${width}: отдан мастер (transform="${transform}", ${response.bytes} B) вместо производной`,
-          width === smallWidth ? 'error' : 'warning'
+          WIDTHS_BY_FAMILY.has(target.family) || width === smallWidth ? 'error' : 'warning'
         )
       }
       const cacheControl = getHeaderValue(response.headers, 'cache-control')
@@ -729,38 +724,6 @@ function validateTarget(target, probes, options = {}) {
         add(
           'media.cache_control.missing',
           `${scope} w=${width}: cache-control="${cacheControl || '(нет)'}" — ожидались public и max-age`
-        )
-      }
-    }
-
-    // Ширина мастера (#1215): она обязана обслуживаться производной, иначе
-    // desktop @2x берёт из srcset именно её и качает фото дважды — мастер
-    // раздаётся `no-store`. Проверяется только у семейств, где производная в
-    // эту ширину обещана; для остальных пробы `master` просто нет.
-    const masterRule = MASTER_DERIVATIVE_BY_FAMILY.get(target.family)
-    if (masterRule && probe.master) {
-      const width = masterRule.width
-      const transform = getHeaderValue(probe.master.headers, 'x-metravel-image-transform')
-      const cacheControl = getHeaderValue(probe.master.headers, 'cache-control')
-      const servedAsMaster = /stored-master/i.test(transform) || /no-store/i.test(cacheControl)
-      const pending = masterRule.pendingTicket
-
-      if (servedAsMaster) {
-        add(
-          'media.master_width_not_derivative',
-          `${scope} w=${width}: transform="${transform || '(нет)'}", cache-control="${cacheControl || '(нет)'}" — ` +
-            `ширина мастера отдаётся мастером, фото тела статьи качается дважды на desktop @2x` +
-            (pending ? ` (ожидаемо до закрытия ${pending})` : ''),
-          pending ? 'warning' : 'error'
-        )
-      } else if (pending && probe.master.status === 200) {
-        // Дефект починен, а пометка осталась: без этого напоминания гейт
-        // навсегда остался бы мягким к этой ширине и пропустил бы регресс.
-        add(
-          'media.master_width_pending_stale',
-          `${scope} w=${width}: производная появилась (transform="${transform}") — ${pending} закрыт, ` +
-            'снимите pendingTicket в MASTER_DERIVATIVE_BY_FAMILY, чтобы проверка снова стала строгой',
-          'warning'
         )
       }
     }
@@ -1198,15 +1161,11 @@ async function main() {
       const probes = []
       for (const variant of ACCEPT_VARIANTS) {
         const { small: smallWidth, large: largeWidth } = widthsFor(target.family)
-        const masterRule = MASTER_DERIVATIVE_BY_FAMILY.get(target.family)
-        const [small, large, master] = await Promise.all([
+        const [small, large] = await Promise.all([
           fetchMediaResilient(withWidth(target.url, smallWidth), variant.header),
           fetchMediaResilient(withWidth(target.url, largeWidth), variant.header),
-          masterRule
-            ? fetchMediaResilient(withWidth(target.url, masterRule.width), variant.header)
-            : null,
         ])
-        probes.push({ accept: variant.id, small, large, ...(master ? { master } : {}) })
+        probes.push({ accept: variant.id, small, large })
       }
       checked.push(validateTarget(target, probes, { allowKnownBroken: ALLOW_KNOWN_BROKEN }))
     } catch (error) {
@@ -1270,7 +1229,6 @@ if (typeof module !== 'undefined' && module.exports) {
     BROWSER_IMAGE_ACCEPT,
     DEFAULT_WIDTHS,
     KNOWN_BROKEN_FAMILIES,
-    MASTER_DERIVATIVE_BY_FAMILY,
     WEBP_ONLY_KEY_FAMILIES,
     WIDTHS_BY_FAMILY,
     legacyKeyExtension,

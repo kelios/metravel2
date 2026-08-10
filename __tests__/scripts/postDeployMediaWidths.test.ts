@@ -7,13 +7,12 @@
  * `w=1920`, которой нет ни в одном профиле, получал fail-closed 400 и валил
  * каждый деплой 30 ложными ошибками. Этот тест — то, чего тогда не хватало.
  */
-import { IMAGE_STORAGE_POLICY_V1 } from '@/constants/imageContract';
+import { IMAGE_STORAGE_POLICY_V1, LEGACY_UPLOAD_FIXED_WIDTH } from '@/constants/imageContract';
 
 const {
   WIDTHS_BY_FAMILY,
   widthsFor,
   DEFAULT_WIDTHS,
-  MASTER_DERIVATIVE_BY_FAMILY,
 } = require('@/scripts/post-deploy-media-check');
 
 type Profile = { routes: readonly string[]; derivatives: readonly { width: number }[] };
@@ -35,58 +34,88 @@ const derivativeRange = (profile: Profile) => {
 const SYNTHETIC_FAMILY_PROFILES: Record<string, Profile> = {
   // Legacy обслуживает conversion-ключи travel-медиа.
   'media-resize-legacy': IMAGE_STORAGE_POLICY_V1.travelMedia,
-  // `uploads/**` — фото тела старых статей, лестница та же, что у articleBody.
-  'media-resize-uploads': IMAGE_STORAGE_POLICY_V1.articleBody,
 };
 
 describe('пост-деплой медиа-гейт: ступени сверены с IMAGE_STORAGE_POLICY_V1', () => {
   const families = [...WIDTHS_BY_FAMILY.keys()] as string[];
   const syntheticFamilies = Object.keys(SYNTHETIC_FAMILY_PROFILES);
-
-  it.each(families.filter((family) => !syntheticFamilies.includes(family)))(
-    '%s: small/large — крайние производные своего профиля',
-    (family) => {
-      const entry = profileForRoute(family);
-      expect(entry).toBeDefined();
-      expect(widthsFor(family)).toEqual(derivativeRange(entry![1]));
-    },
+  /** Класс без лестницы: меряется не профилем, а тем, что фронт реально просит. */
+  const LADDERLESS_FAMILY = 'media-resize-uploads';
+  const derivedFamilies = families.filter(
+    (family) => !syntheticFamilies.includes(family) && family !== LADDERLESS_FAMILY,
   );
+
+  it.each(derivedFamilies)('%s: small/large — крайние производные своего профиля', (family) => {
+    const entry = profileForRoute(family);
+    expect(entry).toBeDefined();
+    expect(widthsFor(family)).toEqual(derivativeRange(entry![1]));
+  });
 
   it.each(syntheticFamilies)('%s: меряется лестницей профиля, чьи ключи обслуживает', (family) => {
     expect(widthsFor(family)).toEqual(derivativeRange(SYNTHETIC_FAMILY_PROFILES[family]));
   });
 
-  it('ни одна ступень гейта не равна мастеру: мастер раздаётся no-store by design', () => {
-    const masters = new Set(profiles.map(([, profile]) => (profile as any).master.width));
+  /**
+   * Раньше этот класс был приписан профилю `articleBody`, и потолок ему доставался
+   * оттуда же. Приписка неверна по существу: durable-производных у `uploads/**` нет
+   * ни одной, класс живёт только явным `f=jpeg`, а фронт просит у него РОВНО одну
+   * ширину. Пока потолок был 1600, разница не проявлялась; когда профиль дорос до
+   * 1920, гейт начал бы мерить класс шириной, которой у него нет (#1373).
+   */
+  it(`${LADDERLESS_FAMILY}: меряется шириной, которую фронт реально просит`, () => {
+    expect(widthsFor(LADDERLESS_FAMILY)).toEqual({
+      small: derivativeRange(IMAGE_STORAGE_POLICY_V1.articleBody).small,
+      large: LEGACY_UPLOAD_FIXED_WIDTH,
+    });
+  });
+
+  /**
+   * Раньше это правило звучало как «ни одна ступень гейта не равна мастеру»: мастер
+   * раздаётся `no-store` by design, и проба по его ширине давала ложную ошибку.
+   * Формулировка через РАВЕНСТВО ширин оказалась подменой: у `articleBody` мастер
+   * 1920 и объявленная производная `content_1920` — это одно число, backend отдаёт
+   * такую ширину производной (`resolve_variant` перебирает производные первыми), и
+   * запрет по совпадению чисел вычёркивал легальную ступень (#1373).
+   *
+   * Проверяемое свойство — наличие производной, а не несовпадение с мастером.
+   */
+  it('каждая ступень гейта — объявленная производная своего профиля', () => {
     for (const family of families) {
+      // У `uploads/**` своих производных нет; ширины ему режет `articleBody`, чьи
+      // ключи он обслуживает, — обе обязаны быть объявленными ступенями профиля.
+      const profile =
+        family === LADDERLESS_FAMILY
+          ? (IMAGE_STORAGE_POLICY_V1.articleBody as unknown as Profile)
+          : syntheticFamilies.includes(family)
+            ? SYNTHETIC_FAMILY_PROFILES[family]
+            : profileForRoute(family)![1];
+      const derivatives = profile.derivatives.map((item) => item.width);
       const { small, large } = widthsFor(family);
-      const entry = syntheticFamilies.includes(family) ? null : profileForRoute(family);
-      const master = entry
-        ? (entry[1] as any).master.width
-        : (SYNTHETIC_FAMILY_PROFILES[family] as any).master.width;
-      expect(large).not.toBe(master);
-      expect(small).not.toBe(master);
-      expect(masters.has(large) && large > master).toBe(false);
+
+      expect({
+        family,
+        small: derivatives.includes(small),
+        large: derivatives.includes(large),
+      }).toEqual({ family, small: true, large: true });
     }
   });
 
-  // Отдельная таблица #1215: ширина мастера, которая обязана обслуживаться
-  // производной. Она — тоже копия контракта и разъезжается так же молча.
-  it.each([...MASTER_DERIVATIVE_BY_FAMILY.keys()] as string[])(
-    '%s: заявленная ширина мастера совпадает с профилем контракта',
-    (family) => {
-      const entry = profileForRoute(family);
-      expect(entry).toBeDefined();
-      expect(MASTER_DERIVATIVE_BY_FAMILY.get(family).width).toBe((entry![1] as any).master.width);
-    },
-  );
+  /**
+   * #1373: ступень 1920 у тела статьи легальна, и её потолок обязан приезжать из
+   * контракта. Пока зеркало обрывалось на 1600, лестничная проверка считала
+   * ступень 1920 из манифеста нарушением #1260 и валила КАЖДЫЙ деплой.
+   */
+  it('travel-description-image: потолок гейта — верхняя производная articleBody, даже совпав с мастером', () => {
+    const articleBody = IMAGE_STORAGE_POLICY_V1.articleBody as unknown as Profile & {
+      master: { width: number };
+    };
+    const widest = Math.max(...articleBody.derivatives.map((item) => item.width));
 
-  it('ширина мастера не дублирует производные ступени того же семейства', () => {
-    for (const [family, rule] of MASTER_DERIVATIVE_BY_FAMILY as Map<string, { width: number }>) {
-      const { small, large } = widthsFor(family);
-      expect(rule.width).toBeGreaterThan(large);
-      expect(rule.width).not.toBe(small);
-    }
+    expect({
+      gateCeiling: widthsFor('travel-description-image').large,
+      widestDerivative: widest,
+      masterWidth: articleBody.master.width,
+    }).toEqual({ gateCeiling: 1920, widestDerivative: 1920, masterWidth: 1920 });
   });
 
   it('неизвестное семейство получает ступени по умолчанию, а не падает', () => {

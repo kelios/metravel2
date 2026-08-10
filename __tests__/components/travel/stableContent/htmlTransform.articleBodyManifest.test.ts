@@ -82,9 +82,18 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
     expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
   })
 
-  it('never asks for the 1920 master that lives only in variants', () => {
+  /**
+   * Ступень 1920 у этого ключа — не мастер, а объявленная производная
+   * `content_1920` (#1215 закрыт бэкендом). Проверяется именно происхождение
+   * адреса: он обязан прийти из `srcset` манифеста, а не из нашей сборки и не из
+   * `variants.hero_1920`, который по-прежнему в лестницу не попадает (#1373).
+   */
+  it('takes the 1920 rung from the manifest srcset, not from the master variant', () => {
     const out = withWebViewport(1920, 2, () => prepare(ARTICLE_BODY_DESCRIPTION_IMAGE_URL))
-    expect(emittedWidths(out)).not.toContain(1920)
+
+    expect(emittedWidths(out)).toContain(1920)
+    expect(String(ARTICLE_BODY_DESCRIPTION_IMAGE.srcset)).toContain('?w=1920 1920w')
+    expect(out).not.toContain('q=80')
   })
 
   // Манифест перечисляет всю лестницу семейства, но слот решает, какие ступени ему
@@ -99,7 +108,7 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
   it('offers the desktop slot the wider rungs of the same manifest', () => {
     const out = withWebViewport(1920, 1, () => prepare(ARTICLE_BODY_DESCRIPTION_IMAGE_URL))
 
-    expect(emittedWidths(out)).toEqual([480, 640, 800, 960, 1600])
+    expect(emittedWidths(out)).toEqual([480, 640, 800, 960, 1600, 1920])
   })
 
   // #1261: у ключа чужого семейства лестницу теперь обрывает САМ манифест — после
@@ -142,7 +151,10 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
   describe('prefetch stays inside the emitted candidate set (#1213)', () => {
     it.each([
       { label: 'desktop 1920 @1x', width: 1920, dpr: 1, expected: 960 },
-      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1600 },
+      // Слот 920 CSS @DPR2 просит 1840 и с производной `content_1920` закрывается
+      // 1:1 — это и есть выплата #1215 на КАНОНИЧЕСКОМ пути (манифест), а не только
+      // на клиентском фолбэке. До неё тот же слот грел 1600 с апскейлом ×1.15.
+      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1920 },
       { label: 'desktop 1280 @1x', width: 1280, dpr: 1, expected: 800 },
       { label: 'mobile 390 @3x', width: 390, dpr: 3, expected: 800 },
     ])('$label warms w=$expected', ({ width, dpr, expected }) => {
@@ -230,7 +242,9 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
 
       expect(out).toContain('q=80')
       expect(out).toContain('fit=contain')
-      expect(emittedWidths(out)).toEqual([480, 640, 800, 960, 1600])
+      // Полный desktop-набор `articleBody`, включая верхнюю производную 1920
+      // (`content_1920`, #1215/#1373): ключ идёт своим семейством, клэмп его не режет.
+      expect(emittedWidths(out)).toEqual([480, 640, 800, 960, 1600, 1920])
     })
 
     it('keeps every image on the client-built ladder when no manifest is passed', () => {

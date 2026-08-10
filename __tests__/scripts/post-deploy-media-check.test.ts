@@ -1,6 +1,5 @@
 const {
   KNOWN_BROKEN_FAMILIES,
-  MASTER_DERIVATIVE_BY_FAMILY,
   legacyKeyExtension,
   auditArticleBodyLadder,
   auditDerivativeCoverage,
@@ -279,7 +278,11 @@ describe('post-deploy media check: проверки ответа', () => {
     ).toBe(true)
   })
 
-  it('мастер вместо производной: на минимальной ступени — ошибка, на верхней — предупреждение', () => {
+  // Обе ступени семейства из таблицы взяты из `IMAGE_STORAGE_POLICY_V1`, то есть
+  // производная в эту ширину объявлена контрактом — мастер тут провал бюджета на
+  // любой из них. Мягкой верхняя ступень была, пока производной в ширину мастера
+  // могло не быть by design (#1215); с закрытием #1373 такого случая не осталось.
+  it('мастер вместо производной: у семейства из контракта ошибка на обеих ступенях', () => {
     const { small, large } = widthsFor('media-resize-uploads')
     const result = validateTarget(
       target('media-resize-uploads'),
@@ -291,7 +294,20 @@ describe('post-deploy media check: проверки ответа', () => {
     )
     expect(master).toHaveLength(2)
     expect(master.find((issue: { message: string }) => issue.message.includes(`w=${small}`))?.severity).toBe('error')
-    expect(master.find((issue: { message: string }) => issue.message.includes(`w=${large}`))?.severity).toBe('warning')
+    expect(master.find((issue: { message: string }) => issue.message.includes(`w=${large}`))?.severity).toBe('error')
+  })
+
+  // Семейство вне таблицы меряется `DEFAULT_WIDTHS`, то есть ступенями наугад:
+  // верхней производной ровно в 800 у него может не быть вовсе, и валить деплой
+  // по собственной догадке гейт не должен.
+  it('семейство вне таблицы: мастер на верхней ступени — предупреждение', () => {
+    const result = validateTarget(target('unknown-family'), probes({}, { transform: 'stored-master' }))
+
+    const master = result.issues.filter(
+      (issue: { code: string }) => issue.code === 'media.master_instead_of_derivative'
+    )
+    expect(master).toHaveLength(1)
+    expect(master[0].severity).toBe('warning')
   })
 
   it('штатный stored-derivative тревогу не поднимает', () => {
@@ -353,104 +369,48 @@ describe('post-deploy media check: проверки ответа', () => {
   })
 })
 
-// #1215: гейт был зелёным, пока фото тела статьи качалось дважды на desktop @2x —
-// ширину мастера он вообще не спрашивал. Пробы `small`/`large` этого не видят.
-describe('post-deploy media check: ширина мастера обязана быть производной (#1215)', () => {
+/**
+ * #1215 закрыт бэкендом: `content_1920` стала обычной stored-производной профиля
+ * `articleBody`, то есть ВЕРХНЕЙ ступенью семейства. Отдельная проба ширины мастера
+ * (`MASTER_DERIVATIVE_BY_FAMILY`) вместе с ней снята — она спрашивала ровно тот же
+ * URL, что и `large`. Здесь проверяется, что строгость при этом не потерялась:
+ * ширина 1920 у тела статьи по-прежнему обходится каждым прогоном, и мастер на ней
+ * по-прежнему валит гейт (#1373).
+ */
+describe('post-deploy media check: верхняя ступень articleBody — 1920 (#1215/#1373)', () => {
   const FAMILY = 'travel-description-image'
   const descriptionTarget = () => ({
     family: FAMILY,
     url: `${SITE}/${FAMILY}/543/description/abc.webp`,
     source: '/api/travels/',
   })
-  const withMaster = (master: ProbeOverrides = {}) => [
-    {
-      accept: 'browser',
-      small: response({ bytes: 2582, transform: 'stored-derivative' }),
-      large: response({ bytes: 132344, transform: 'stored-derivative' }),
-      master: response({ bytes: 398362, transform: 'stored-derivative', ...master }),
-    },
-  ]
 
-  it('таблица знает мастерскую ширину articleBody и ждёт по ней производную', () => {
-    expect(MASTER_DERIVATIVE_BY_FAMILY.get(FAMILY)).toMatchObject({ width: 1920 })
+  it('ступень 1920 входит в обход как обычная верхняя производная', () => {
+    expect(widthsFor(FAMILY)).toEqual({ small: 320, large: 1920 })
   })
 
-  it('мастер с no-store на ширине мастера — находка, а не тишина', () => {
+  it('мастер на ширине 1920 валит гейт, а не предупреждает', () => {
     const result = validateTarget(
       descriptionTarget(),
-      withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
+      probes({ transform: 'stored-derivative' }, { transform: 'stored-master', cacheControl: 'no-store' })
     )
 
     const issue = result.issues.find(
-      (item: { code: string }) => item.code === 'media.master_width_not_derivative'
-    )
-    expect(issue).toBeDefined()
-    expect(issue.message).toContain('w=1920')
-  })
-
-  // #1215 починен и пометка снята (прод-проба 2026-08-05: `w=1920` → 200
-  // `dynamic-transform`, `immutable` на 4 ключах в обеих Accept-ветках), поэтому
-  // возврат мастера на этой ширине снова ВАЛИТ гейт. Ради этого протокол
-  // `pendingTicket` и заводился: смягчение временное, строгость — конечное состояние.
-  it('после снятия pendingTicket та же поломка валит гейт, а не предупреждает', () => {
-    const result = validateTarget(
-      descriptionTarget(),
-      withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
-    )
-    const issue = result.issues.find(
-      (item: { code: string }) => item.code === 'media.master_width_not_derivative'
+      (item: { code: string }) => item.code === 'media.master_instead_of_derivative'
     )
     expect(issue.severity).toBe('error')
-    expect(MASTER_DERIVATIVE_BY_FAMILY.get(FAMILY).pendingTicket).toBeUndefined()
+    expect(issue.message).toContain('w=1920')
+    expect(result.issues.map((item: { code: string }) => item.code)).toContain(
+      'media.cache_control.no_store'
+    )
   })
 
-  it('починенная ширина мастера больше не даёт напоминания', () => {
-    const result = validateTarget(descriptionTarget(), withMaster())
+  it('честная производная на 1920 проходит чисто', () => {
+    const result = validateTarget(
+      descriptionTarget(),
+      probes({ transform: 'stored-derivative' }, { transform: 'stored-derivative' })
+    )
 
-    expect(result.issues).toEqual([])
-  })
-
-  // Сам протокол остаётся рабочим для следующего такого дефекта: пока у записи
-  // есть `pendingTicket`, поломка понижена до предупреждения, а починка —
-  // напоминает пометку снять. Проверяется на временно подставленной записи,
-  // потому что в живой таблице открытых пометок сейчас нет.
-  describe('протокол pendingTicket остаётся рабочим для будущих записей', () => {
-    const withPending = (run: () => void) => {
-      const rule = MASTER_DERIVATIVE_BY_FAMILY.get(FAMILY)
-      MASTER_DERIVATIVE_BY_FAMILY.set(FAMILY, { ...rule, pendingTicket: '#0000' })
-      try {
-        run()
-      } finally {
-        MASTER_DERIVATIVE_BY_FAMILY.set(FAMILY, rule)
-      }
-    }
-
-    it('открытая пометка понижает поломку до предупреждения', () => {
-      withPending(() => {
-        const issue = validateTarget(
-          descriptionTarget(),
-          withMaster({ transform: 'stored-master', cacheControl: 'no-store' })
-        ).issues.find((item: { code: string }) => item.code === 'media.master_width_not_derivative')
-
-        expect(issue.severity).toBe('warning')
-        expect(issue.message).toContain('#0000')
-      })
-    })
-
-    it('починка при открытой пометке напоминает её снять, а не молчит', () => {
-      withPending(() => {
-        const issue = validateTarget(descriptionTarget(), withMaster()).issues.find(
-          (item: { code: string }) => item.code === 'media.master_width_pending_stale'
-        )
-
-        expect(issue.severity).toBe('warning')
-        expect(issue.message).toContain('#0000')
-      })
-    })
-  })
-
-  it('семейства без обещанной производной в ширину мастера эту пробу не получают', () => {
-    const result = validateTarget(target('travel-image'), probes())
     expect(result.issues).toEqual([])
   })
 })

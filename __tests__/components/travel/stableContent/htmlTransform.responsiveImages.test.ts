@@ -41,16 +41,16 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     // src падает на fallback-ступень, а не отдаёт оригинал
     expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=80${AMP}fit=contain"`)
     // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768)
-    for (const w of [480, 640, 800, 960, 1600]) {
+    //
+    // Ступень 1920 здесь дважды меняла статус. #1160 поднял ею потолок, но тогда это
+    // была ширина МАСТЕРА: замер прода 2026-08-03 — на legacy-роуте `w=1920` отвечал
+    // 400, а на каноническом `travel-description-image` отдавался мастер 387 411 B с
+    // `no-store`; потолок опустили до 1600. Затем backend завёл `content_1920`
+    // производной (#1215), и ступень вернулась уже законно: проба прода 2026-08-10 —
+    // 200 `stored-derivative` `immutable`, а `w=1921` по-прежнему 400 (#1373).
+    for (const w of [480, 640, 800, 960, 1600, 1920]) {
       expect(out).toContain(`w=${w}${AMP}q=80${AMP}fit=contain ${w}w`)
     }
-    // #1160 поднял потолок с 800 до 1920, но 1920 — это МАСТЕР профиля `articleBody`.
-    // Замер прода 2026-08-03: на legacy-роуте (`media-resize/legacy/…/conversions/…`,
-    // по нему идёт тело большинства статей) `w=1920` отвечает 400 и картинка не
-    // отрисовывается вовсе, а на каноническом `travel-description-image` отдаётся
-    // мастер 387 411 B с `no-store` — то есть качается заново на каждого потребителя
-    // слота (#1215). Потолок опущен до 1600 — последней ПРОИЗВОДНОЙ семейства.
-    expect(out).not.toContain(`w=1920${AMP}q=80${AMP}fit=contain 1920w`)
     expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
     // cache-buster сохранён
     expect(out).toContain(`v=3315`)
@@ -106,9 +106,9 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       { label: 'desktop 1280 @2x', width: 1280, dpr: 2, expected: 1600 },
       { label: 'desktop 1280 @1x', width: 1280, dpr: 1, expected: 800 },
       { label: 'desktop 1920 @1x', width: 1920, dpr: 1, expected: 960 },
-      // 1840 не покрыт: производных выше 1600 у семейства нет, мастер 1920 просить
-      // нельзя (400 на legacy-роуте, no-store на каноническом).
-      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1600 },
+      // Слот 920 CSS @DPR2 просит 1840 и закрывается 1:1: `content_1920` — реальная
+      // производная профиля (#1215/#1373). До неё этот слот брал 1600 с апскейлом.
+      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1920 },
       { label: 'mobile 390 @3x', width: 390, dpr: 3, expected: 800 },
     ])('$label prefetches w=$expected, and that URL is a real srcset candidate', ({ width, dpr, expected }) => {
       const { prefetch, candidates } = withWebViewport(width, dpr, () => {
@@ -403,6 +403,71 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).toContain(
       `src="https://metravel.by/media-resize/legacy/3994/conversions/HcQK-detail_hd.jpg?w=800${AMP}q=80${AMP}fit=contain"`,
     )
+  })
+
+  /**
+   * Ссылка в бакет переписывается на `/media-resize/legacy/…`, где первый сегмент —
+   * `media-resize`, а не роут семейства: профиль по адресу не читается, и до #1373
+   * такая лестница не клэмпилась вовсе. Держалось это на том, что набор сам
+   * обрывался на 1600.
+   *
+   * За legacy-роутом стоят ровно два профиля — `travel` (верхняя производная 1600) и
+   * `route_point` (960), — и какой именно, по адресу не узнать. Поэтому потолок
+   * берётся по САМОМУ УЗКОМУ: лишняя ступень здесь стоит 400 и битого фото (замер
+   * прода: `address-image/15601/conversions/…` → `w=1600` → 400,
+   * `legacy/682/conversions/…` → `w=1920` → 400), а заниженная — только резкости.
+   */
+  it('clamps an unresolved legacy key to the narrowest profile behind that route', () => {
+    const originalOs = Platform.OS
+    const originalWidth = window.innerWidth
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    Object.defineProperty(window, 'innerWidth', { value: 1920, configurable: true })
+    try {
+      const out = prepareStableContentHtml(
+        '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/3994/conversions/HcQK-detail_hd.jpg" /></p>',
+      )
+
+      const widths = Array.from(out.matchAll(/[?&](?:amp;)?w=(\d+)/g), (m) => Number(m[1]))
+      expect(Math.max(...widths)).toBe(960)
+      expect(out).not.toContain('1920w')
+      expect(out).not.toContain('1600w')
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+      Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+    }
+  })
+
+  /**
+   * Тот же клэмп обязан работать и на префетче, причём именно на DPR2: `src` в
+   * разметке у conversion-ключа УЖЕ переписан на legacy-роут, семейство по нему не
+   * читается, и без потолка слот 920 CSS @DPR2 (нужно 1840) грел бы ступень,
+   * которой у `route_point` нет, — то есть `<link rel=prefetch>` уходил бы в 400 и
+   * мимо кандидатов `srcset` (#1213 + #1233).
+   */
+  it('keeps the prefetch of a rewritten address-image key inside the candidate set @DPR2', () => {
+    const originalOs = Platform.OS
+    const originalWidth = window.innerWidth
+    const originalDpr = window.devicePixelRatio
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    Object.defineProperty(window, 'innerWidth', { value: 1920, configurable: true })
+    Object.defineProperty(window, 'devicePixelRatio', { value: 2, configurable: true })
+    try {
+      const prepared = prepareStableContentHtml(
+        '<p><img src="https://metravel.by/address-image/15601/conversions/db981e7dac4f45cb840ae19a5722ed22.webp" /></p>',
+      )
+      const prefetch = buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!)
+      const candidates = (prepared.match(/srcset="([^"]+)"/i)?.[1] ?? '')
+        .split(',')
+        .map((entry) => entry.trim().split(/\s+/)[0]?.replace(/&amp;/g, '&') ?? '')
+        .filter(Boolean)
+
+      expect(new URL(prefetch).searchParams.get('w')).toBe('960')
+      expect(candidates).toContain(prefetch)
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+      Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+      Object.defineProperty(window, 'devicePixelRatio', { value: originalDpr, configurable: true })
+    }
   })
 
   it('preserves an encoded legacy key while stripping weserv and S3 signatures', () => {

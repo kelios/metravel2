@@ -8,9 +8,13 @@
 // потому, что на нём уже ломались прошлые заходы:
 //
 //   - `ARTICLE_BODY_DESCRIPTION_IMAGE` — канонический ключ семейства
-//     `travel-description-image`. Лестница `srcset` идёт w-only (ни `q=`, ни `fit=`),
-//     а мастер 1920 лежит только в `variants.hero_1920` и в `srcset` не попадает:
-//     просить его нельзя, чтение производных fail-closed (#1215).
+//     `travel-description-image`. Лестница `srcset` идёт w-only (ни `q=`, ни `fit=`)
+//     и доходит до 1920. Ступень 1920 здесь НЕ мастер: #1215 закрыт, backend завёл
+//     `content_1920` обычной stored-производной, и она лежит в `variants` рядом с
+//     `hero_1920`. Пересняно с прода 2026-08-10 (travel 544) в части лестницы:
+//     до этого срез 2026-08-05 обрывался на 1600 и утверждал, что 1920 просить
+//     нельзя, — на этом устаревшем срезе манифестный путь проверял контракт,
+//     которого на проде уже нет (#1373).
 //
 //   - `ARTICLE_BODY_ADDRESS_IMAGE` — ключ ЧУЖОГО семейства в теле статьи. Здесь и
 //     виден результат #1260: `storage_policy.profile` теперь `route_point` (мастер
@@ -42,7 +46,7 @@ export const ARTICLE_BODY_LEGACY_UPLOAD_URL =
   'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1591620319350_original.jpg'
 
 /** Ступени профиля `article_body`: их перечисляет ключ своего семейства. */
-export const ARTICLE_BODY_MANIFEST_WIDTHS = [320, 480, 640, 800, 960, 1600] as const
+export const ARTICLE_BODY_MANIFEST_WIDTHS = [320, 480, 640, 800, 960, 1600, 1920] as const
 
 /**
  * Ступени профиля `route_point` — лестница ключа `address-image` в теле статьи.
@@ -68,6 +72,7 @@ export const ARTICLE_BODY_DESCRIPTION_IMAGE: TravelMediaImage = {
     content_800: `${descriptionImageBase}?w=800`,
     content_960: `${descriptionImageBase}?w=960`,
     content_1600: `${descriptionImageBase}?w=1600`,
+    content_1920: `${descriptionImageBase}?w=1920`,
     hero_1920: `${descriptionImageBase}?w=1920`,
     original: descriptionImageBase,
   },

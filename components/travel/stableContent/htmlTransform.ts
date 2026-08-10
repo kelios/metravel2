@@ -11,6 +11,7 @@ import {
   IMAGE_WIDTHS,
   LEGACY_UPLOAD_FIXED_WIDTH,
   LEGACY_UPLOAD_TRANSFORM_FORMAT,
+  UNKNOWN_FAMILY_DERIVATIVE_CEILING,
 } from '@/constants/imageContract'
 import { replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText'
 import { normalizeRichTextListFragments } from '@/utils/richTextLists'
@@ -179,7 +180,7 @@ export const buildExternalImageUrl = (src: string) => {
 //
 // Как читать набор ниже (`sizes` — строкой ниже, слоты реальные):
 //   desktop 1280vw, DPR 1 → нужно  720 → кандидат  800
-//   desktop 1280vw, DPR 2 → нужно 1440 → кандидат 1920
+//   desktop 1280vw, DPR 2 → нужно 1440 → кандидат 1600
 //   desktop 1920vw, DPR 1 → нужно  920 → кандидат  960
 //   desktop 1920vw, DPR 2 → нужно 1840 → кандидат 1920
 // Мобильный набор намеренно оставлен с потолком 800: там слот 100vw, картинки тела
@@ -306,13 +307,19 @@ const articleBodySlotNeed = (viewportWidth: number, dpr: number): number | null 
  *
  * `optimizeImageUrl` этот клэмп имеет с #1224, а трансформация тела — не имела:
  * она единственная строит `srcset` сама, мимо `imageProxy`.
+ *
+ * Неизвестное семейство (legacy-роут `/media-resize/legacy/…`, куда переписывается
+ * ссылка в бакет) раньше не клэмпилось вовсе — набор сам обрывался на 1600, и все
+ * ступени отвечали 200. Со ступенью 1920 это перестало быть правдой: проба прода
+ * 2026-08-10 на `legacy/682/conversions/…webp` — `w=1600` → 200, `w=1920` → 400.
+ * Поэтому потолок берётся всегда, а для неопознанного адреса он консервативный
+ * (`UNKNOWN_FAMILY_DERIVATIVE_CEILING`, #1373).
  */
 const clampLadderToFamily = (
   route: string | undefined,
   widths: readonly number[],
 ): readonly number[] => {
-  const ceiling = familyDerivativeCeiling(route)
-  if (!ceiling) return widths
+  const ceiling = familyDerivativeCeiling(route) ?? UNKNOWN_FAMILY_DERIVATIVE_CEILING
   const kept = widths.filter((width) => width <= ceiling)
   // Слот целиком выше семейства — берём его самую крупную производную, иначе
   // остались бы без единого кандидата.
