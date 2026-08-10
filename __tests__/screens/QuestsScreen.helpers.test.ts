@@ -1,6 +1,8 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+import { OUTLINE_ORDER } from '@/utils/geoCountryOutlines';
+
 import {
   COUNTRY_NAME_KEYS,
   ALL_QUESTS_ID,
@@ -39,8 +41,12 @@ describe('QuestsScreen helpers', () => {
       resolve(__dirname, '../../utils/geoCountry.ts'),
       'utf8',
     );
-    const codes = Array.from(source.matchAll(/code:\s*'([A-Z]{2})'/g)).map((m) => m[1]);
-    expect(codes.length).toBeGreaterThan(0);
+    const boxCodes = Array.from(source.matchAll(/code:\s*'([A-Z]{2})'/g)).map((m) => m[1]);
+    // Часть кодов резолвер возвращает по контурам, и в таблицу прямоугольников
+    // такая страна попадать не обязана — иначе гард держится случайно.
+    const codes = Array.from(new Set([...boxCodes, ...OUTLINE_ORDER]));
+    expect(boxCodes.length).toBeGreaterThan(0);
+    expect(OUTLINE_ORDER.length).toBeGreaterThan(0);
     const missing = codes.filter((code) => !COUNTRY_NAME_KEYS[code]);
     expect(missing).toEqual([]);
   });

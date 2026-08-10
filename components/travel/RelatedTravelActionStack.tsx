@@ -7,7 +7,6 @@ import { fetchTravelBySlug } from '@/api/travelDetailsQueries'
 import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveRelatedTravelRef } from '@/utils/relatedTravel'
-import { resolveTravelCityName } from '@/utils/travelDisplayLocation'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -85,10 +84,7 @@ export default function RelatedTravelActionStack({
   const travelUrl = relatedTravel?.url || travelRef.route
   const travelImageUrl = relatedTravel?.travel_image_thumb_url || fallbackImageUrl || undefined
   const travelCountry = relatedTravel?.countryName || fallbackCountry || undefined
-  // `cityName` приходит подписью первой точки маршрута («Parking Zamkowy ·
-  // Wałowa · Мальборк · …»), поэтому в избранное и статусы пишем только то,
-  // что действительно похоже на город: иначе карточка покажет обрезанный адрес.
-  const travelCity = resolveTravelCityName(relatedTravel?.cityName) || fallbackCity || undefined
+  const travelCity = relatedTravel?.cityName || fallbackCity || undefined
 
   return (
     <View

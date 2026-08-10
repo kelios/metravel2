@@ -9,6 +9,7 @@ import {
   type TravelStatusEntry,
 } from '@/stores/travelStatusStore'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { resolveTravelCityName } from '@/utils/travelDisplayLocation'
 import {
   getDateFieldForTravelStatus,
   getExplicitTravelStatusDate,
@@ -164,7 +165,7 @@ export const buildCalendarEntriesWithDates = (entries: CalendarEntry[]): Calenda
 }
 
 export const getLocationLabel = (entry: CalendarEntry) =>
-  [entry.city, entry.country].filter(Boolean).join(', ')
+  [resolveTravelCityName(entry.city), entry.country].filter(Boolean).join(', ')
 
 export const getTravelPeriodLabel = (entry: CalendarEntry) => {
   const parts = [entry.travelMonthName, entry.travelYear].filter(Boolean)

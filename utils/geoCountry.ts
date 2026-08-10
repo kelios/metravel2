@@ -9,7 +9,10 @@
 //      пирсы и намывы регулярно оказываются мористее береговой линии датасета:
 //      батумские «Танцующие фонтаны» лежат в 1,5 км снаружи контура Грузии.
 //   3. Прямоугольники остальных стран — там перекрытий, ломающих резолв, нет.
-//   4. Прямоугольники «контурных» стран как страховка для точек в прибрежных водах.
+//
+// Известное ограничение: контуры соседей упрощены независимо, поэтому у самой
+// границы они не комплементарны. Нарва (в 500 м от реки Нарвы) попадает в контур
+// России — как и до этой задачи, когда её забирал прямоугольник России.
 // Раньше ступень была одна, и большой прямоугольник России (41.19–81.86 N,
 // 19.64–180 E) забирал Тбилиси, Ригу, Таллин и Алматы, а прямоугольники Беларуси
 // и Украины — Вильнюс и Кишинёв. Перестановками это не лечится: опустить Россию
@@ -25,8 +28,6 @@ type Ring = { points: readonly (readonly [number, number])[]; bbox: BBox };
 // Упорядочены от меньших/специфичных к большим для точности перекрытий
 const COUNTRIES: CountryEntry[] = [
     { code: 'BY', bbox: { minLat: 51.26, maxLat: 56.17, minLng: 23.18, maxLng: 32.78 } },
-    // CZ перед PL: bbox Польши (14.12–24.15) накрывает Прагу и северную Чехию.
-    { code: 'CZ', bbox: { minLat: 48.55, maxLat: 51.06, minLng: 12.09, maxLng: 18.86 } },
     { code: 'PL', bbox: { minLat: 49.00, maxLat: 54.84, minLng: 14.12, maxLng: 24.15 } },
     { code: 'UA', bbox: { minLat: 44.39, maxLat: 52.38, minLng: 22.14, maxLng: 40.23 } },
     { code: 'RU', bbox: { minLat: 41.19, maxLat: 81.86, minLng: 19.64, maxLng: 180.0 } },
@@ -39,6 +40,7 @@ const COUNTRIES: CountryEntry[] = [
     { code: 'ES', bbox: { minLat: 27.64, maxLat: 43.79, minLng: -18.17,maxLng: 4.33  } },
     { code: 'SK', bbox: { minLat: 47.73, maxLat: 49.61, minLng: 16.83, maxLng: 22.57 } },
     { code: 'HU', bbox: { minLat: 45.74, maxLat: 48.59, minLng: 16.11, maxLng: 22.90 } },
+    { code: 'CZ', bbox: { minLat: 48.55, maxLat: 51.06, minLng: 12.09, maxLng: 18.86 } },
     { code: 'RO', bbox: { minLat: 43.62, maxLat: 48.27, minLng: 20.26, maxLng: 29.76 } },
     { code: 'LT', bbox: { minLat: 53.90, maxLat: 56.45, minLng: 20.93, maxLng: 26.84 } },
     { code: 'LV', bbox: { minLat: 55.67, maxLat: 57.97, minLng: 20.97, maxLng: 28.24 } },
@@ -83,17 +85,19 @@ const COUNTRIES: CountryEntry[] = [
 
 const OUTLINE_CODES = new Set(OUTLINE_ORDER);
 
-/** Прямоугольники стран без контура — ступень 2. */
+/** Прямоугольники стран без контура — ступень 3. */
 const PLAIN_BOXES = COUNTRIES.filter((entry) => !OUTLINE_CODES.has(entry.code));
 
 /**
- * Прямоугольники стран с контуром — ступень 3. Россия последняя: её прямоугольник
- * накрывает половину списка, и внутри своей суши она уже поймана контуром.
+ * Ступень 4 — прямоугольники контурных стран для точек, до которых контур не
+ * дотянулся: Куршская коса, восточный берег Каспия. Россия сюда не входит:
+ * её прямоугольник (41.19–81.86 N, 19.64–180 E) накрывает Финляндию, Норвегию и
+ * Среднюю Азию, то есть ровно тот дефект, ради которого заведены контуры. Точка
+ * вне контура России честнее остаётся неопределённой — потребители это умеют.
  */
-const OUTLINE_FALLBACK_ORDER = ['LT', 'LV', 'EE', 'MD', 'GE', 'AM', 'AZ', 'KZ', 'BY', 'UA', 'RU'];
-const OUTLINE_BOXES = OUTLINE_FALLBACK_ORDER
-    .map((code) => COUNTRIES.find((entry) => entry.code === code))
-    .filter((entry): entry is CountryEntry => Boolean(entry));
+const OUTLINE_BOXES = COUNTRIES.filter(
+    (entry) => OUTLINE_CODES.has(entry.code) && entry.code !== 'RU',
+);
 
 let decodedOutlines: Record<string, Ring[]> | null = null;
 
@@ -165,10 +169,12 @@ function isInsideBBox(lat: number, lng: number, bbox: BBox, pad = 0): boolean {
 
 /**
  * Насколько далеко от контура точку ещё считаем «своей».
- * 0.05° — около 5 км: перекрывает набережные и портовые молы и втрое меньше
- * расстояния от ближайшего чужого города (Яссы — 17 км до контура Молдовы).
+ * Допуск применяется ко всему периметру, включая сухопутные границы, поэтому
+ * он намеренно узкий: 0.02° (около 2 км) хватает набережным и портовым молам
+ * (батумские «Танцующие фонтаны» — 1,5 км), но не отбирает у соседа приграничные
+ * города — Медыка в Польше и Нида в Литве остаются за своими странами.
  */
-const COASTAL_TOLERANCE_DEG = 0.05;
+const COASTAL_TOLERANCE_DEG = 0.02;
 
 function distanceToSegment(
     lat: number,
@@ -186,14 +192,21 @@ function distanceToSegment(
     return Math.hypot(lng - (lngA + clamped * dLng), lat - (latA + clamped * dLat));
 }
 
-function distanceToRing(lat: number, lng: number, ring: Ring): number {
-    if (!isInsideBBox(lat, lng, ring.bbox, COASTAL_TOLERANCE_DEG)) return Infinity;
+/**
+ * Расстояние до кольца, но только пока оно может оказаться меньше `limit`:
+ * дальше точного значения нам всё равно не нужно, а кольцо России — 1118 вершин.
+ */
+function distanceToRing(lat: number, lng: number, ring: Ring, limit: number): number {
+    if (!isInsideBBox(lat, lng, ring.bbox, limit)) return Infinity;
 
     const { points } = ring;
     let best = Infinity;
     for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
         const distance = distanceToSegment(lat, lng, points[j], points[i]);
-        if (distance < best) best = distance;
+        if (distance < best) {
+            best = distance;
+            if (best === 0) break;
+        }
     }
     return best;
 }
@@ -217,7 +230,7 @@ export function getCountryCodeByCoords(lat: number, lng: number): string | undef
     let nearestDistance = COASTAL_TOLERANCE_DEG;
     for (const code of OUTLINE_ORDER) {
         for (const ring of outlines[code] ?? []) {
-            const distance = distanceToRing(lat, lng, ring);
+            const distance = distanceToRing(lat, lng, ring, nearestDistance);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
                 nearestCode = code;

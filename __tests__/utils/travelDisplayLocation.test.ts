@@ -13,11 +13,14 @@ const PRODUCTION_ADDRESSES = [
   'Река Ислочь — стоянка «Туристическая поляна»',
   'Музей истории города Гомеля (Охотничий домик)',
   'Верхний город и площадь Свободы',
-  'Замок Болчув',
-  'Приют под Лабским Щитом',
   'Лесное озеро Гремячее (Пуховичский район)',
   'Краков · Малопольское воеводство · Польша',
 ];
+
+// Короткие подписи объектов без разделителей и цифр эвристика не отличает от
+// города — и не должна: они умещаются в строку целиком, то есть дефекта
+// «обрезанный адрес» не создают. Из 179 уникальных прод-значений таких два.
+const SHORT_PLACE_LABELS = ['Замок Болчув', 'Приют под Лабским Щитом'];
 
 // Названия городов, которые эвристика ломать не должна.
 const REAL_CITIES = [
@@ -32,8 +35,21 @@ const REAL_CITIES = [
   'Вильнюс',
   'Тбилиси',
   'Warszawa',
+  'Комсомольск-на-Амуре',
+  'Villefranche-sur-Saône',
+  // Ловушки для эвристики по словам-маркерам: 'гора', 'река', 'дорог', 'via',
+  // 'castle', 'lake' — все они встречаются внутри настоящих топонимов.
   'Загора',
   'Белоозерск',
+  'Дорогобуж',
+  'Рекавичи',
+  'Viareggio',
+  'Castleford',
+  'Lakeland',
+  'Mount Isa',
+  'San Giovanni in Persiceto',
+  'Nowe Miasto nad Pilicą',
+  'Rueil-Malmaison',
 ];
 
 describe('isAddressLikeCityName', () => {
@@ -45,6 +61,10 @@ describe('isAddressLikeCityName', () => {
   it('keeps plain city names, including ones that contain marker-like substrings', () => {
     const flagged = REAL_CITIES.filter((value) => isAddressLikeCityName(value));
     expect(flagged).toEqual([]);
+  });
+
+  it('lets short object labels through — they fit the line and hide nothing', () => {
+    expect(SHORT_PLACE_LABELS.filter((value) => isAddressLikeCityName(value))).toEqual([]);
   });
 
   it('treats empty input as not address-like', () => {

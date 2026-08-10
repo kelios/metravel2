@@ -6,6 +6,7 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTravelsForQuest } from '@/hooks/useTravelsForQuest'
 import type { TravelLocationQuery } from '@/utils/travelForLocation'
+import { resolveTravelCityName } from '@/utils/travelDisplayLocation'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -57,7 +58,12 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
         {matches.map(({ travel }) => {
           const countries =
             travel.countryName?.split(',').map((c) => c.trim()).filter(Boolean) ?? []
-          const metaText = travel.cityName || (countries.length ? countries.join(', ') : null)
+          // `cityName` — подпись первой точки маршрута, а не город: в metaText
+          // с numberOfLines={1} она приходит обрезанным адресом, поэтому
+          // адресоподобное значение уступает место списку стран.
+          const metaText =
+            resolveTravelCityName(travel.cityName) ||
+            (countries.length ? countries.join(', ') : null)
           return (
             <View key={String(travel.id)} style={styles.cardWrapper}>
               <UnifiedTravelCard

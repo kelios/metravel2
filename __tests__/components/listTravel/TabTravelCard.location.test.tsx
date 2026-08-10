@@ -44,8 +44,11 @@ describe('TabTravelCard location line', () => {
   });
 
   it('renders no dangling separator when neither city nor country is usable', () => {
-    const { queryByText } = renderCard({ city: 'Замок Болчув', country: null });
-    expect(queryByText(/Замок Болчув/)).toBeNull();
+    const { queryByText } = renderCard({
+      city: 'Rezerwat Lipowska, Kamienna, Żabnica, Живецкий повят, Польша',
+      country: null,
+    });
+    expect(queryByText(/Rezerwat Lipowska/)).toBeNull();
     expect(queryByText(/,/)).toBeNull();
   });
 });

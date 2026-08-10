@@ -30,7 +30,6 @@ import { useTravelDetailsContainerViewModel } from '@/components/travel/details/
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
-import { resolveTravelCityName } from '@/utils/travelDisplayLocation'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -161,9 +160,9 @@ export default function TravelDetailsContainer() {
       imageUrl: travel?.travel_image_thumb_url || travel?.travel_image_thumb_small_url,
       url: travelUrl,
       country: travel?.countryName || undefined,
-      // Не город, а подпись первой точки маршрута: в историю просмотров пишем
-      // только распознаваемое название города, иначе запись покажет адрес.
-      city: resolveTravelCityName(travel?.cityName),
+      // Сырое значение (адрес первой точки) сохраняется как есть: отбрасывает
+      // его слой отображения, иначе кэш истории терял бы исходные данные.
+      city: travel?.cityName || undefined,
     })
   }, [
     addToHistory,

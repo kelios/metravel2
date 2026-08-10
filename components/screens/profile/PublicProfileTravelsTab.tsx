@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
 import type { Travel } from '@/types/types';
+import { resolveTravelCityName } from '@/utils/travelDisplayLocation';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -54,7 +55,9 @@ export function PublicProfileTravelsTab({
     <View style={styles.wrap}>
       <View style={styles.grid}>
         {travels.map((travel, index) => {
-          const meta = [travel.cityName, travel.countryName]
+          // `cityName` приходит адресом первой точки: в одну строку карточки он
+          // не влезает и обрезается на первом же слове, пряча страну.
+          const meta = [resolveTravelCityName(travel.cityName), travel.countryName]
             .map((v) => String(v ?? '').trim())
             .filter(Boolean)
             .join(' · ');
