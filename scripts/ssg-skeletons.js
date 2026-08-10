@@ -45,51 +45,61 @@ const MAP_WEB_DESKTOP_SIDEBAR_WIDTH_PX = 340;
  */
 function buildSkeletonCSS() {
   return `<style id="ssg-skeleton-css">
-#ssg-skeleton{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;position:fixed;inset:0;z-index:99999;overflow:hidden;background:${COLORS.light.bg};color:${COLORS.light.text}}
+#ssg-skeleton{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;position:fixed;inset:0;z-index:99999;overflow-x:hidden;overflow-y:auto;background:${COLORS.light.bg};color:${COLORS.light.text}}
 #ssg-skeleton *{box-sizing:border-box}
 .ssg-bar{width:100%;height:56px;background:${COLORS.light.surface};border-bottom:1px solid ${COLORS.light.border};display:flex;align-items:center;padding:0 16px}
 .ssg-bar-logo{font:700 20px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.01em}
-.ssg-hero{max-width:1200px;margin:0 auto;padding:24px 16px 8px;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
-.ssg-hero-title{margin:0;font:700 32px/40px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:-0.8px;color:${COLORS.light.text};max-width:640px;text-align:left}
-.ssg-hero-title .ssg-accent{color:#f5842c;font-weight:800}
-@media(min-width:768px){.ssg-hero-title{font-size:36px;line-height:44px}}
-.ssg-hero-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left}
-@media(min-width:768px){.ssg-hero-sub{font-size:17px;line-height:27px}}
-.ssg-hero-search{width:100%;max-width:640px;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};margin-top:4px}
-/* #1281: hero-фотография главной в шелле.
-   До неё LCP главной определял текстовый блок заголовка (21 918 px2), а после
-   гидрации Chrome переустанавливал метрику на фотографию React-hero
-   (42 200 px2 на mobile) — замер прода 2026-08-06 давал LCP 9 469 мс с
-   Render Delay 79 % при картинке, готовой к ~2 с (её кладёт rel=preload).
-   Кандидат шелла обязан быть НЕ МЕНЬШЕ кадра React-hero, иначе handoff создаст
-   новый, больший кандидат и метрика снова уедет на гидрацию (грабля #1206).
-   Замер слотов React-hero: 343x220 на 375 px и 363x230 на 1280 px; при
-   aspect-ratio 3/2 шелл даёт 343x229 и 640x427 — больше в обоих случаях.
-   Геометрию задаём селектором со специфичностью выше, чем у безусловного
-   img[data-lcp] из критического CSS (0,1,1): позиционируем абсолютно, так что
-   его aspect-ratio и min-height не участвуют. */
-.ssg-home-hero{position:relative;width:100%;max-width:640px;aspect-ratio:3/2;margin:12px 0 0;border-radius:16px;overflow:hidden;background:${COLORS.light.bgSecondary}}
-.ssg-home-hero img.ssg-home-hero-img{position:absolute;inset:0;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;object-fit:cover;object-position:center;display:block}
-.ssg-search-intro{max-width:1200px;margin:0 auto;padding:20px 16px 8px}
+.ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:8px 16px}
+.ssg-home-book{display:flex;flex-direction:column;gap:14px;width:100%}
+.ssg-home-page{display:flex;flex-direction:column;align-items:stretch;gap:16px;padding:44px 20px 20px;border-radius:8px;background:${COLORS.light.bgSecondary}}
+.ssg-home-title{margin:0;font:700 32px/40px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:-0.8px;color:${COLORS.light.text};max-width:640px;text-align:left}
+.ssg-home-title .ssg-accent{color:#f5842c;font-weight:800}
+.ssg-home-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left}
+.ssg-home-search{width:100%;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};margin-top:4px}
+.ssg-home-cta{width:100%;height:46px;border-radius:16px;background:#f5842c;margin-top:8px}
+.ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:62px}
+.ssg-home-mood{height:46px;border-radius:999px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
+.ssg-home-week{position:relative;overflow:hidden;border-radius:20px;background:${COLORS.light.surface};border:0}
+/* #1281/#1358: реальная hero-фотография остаётся крупнейшим LCP-кандидатом.
+   Mobile-shell имеет 16px бокового inset: на viewport 390px слот 358x239px
+   даёт 85 443px2, то есть не меньше замеренного React-кандидата 85 438px2.
+   На desktop фотография занимает измеренный слот правой страницы книги. Селектор остаётся
+   специфичнее img[data-lcp] из critical CSS, поэтому его aspect-ratio/min-height
+   не могут изменить бокс. */
+.ssg-home-hero{position:relative;width:100%;aspect-ratio:3/2;margin:0;border-radius:inherit;overflow:hidden;background:${COLORS.light.bgSecondary}}
+.ssg-home-hero img.ssg-home-hero-img{position:absolute;inset:0;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;object-fit:contain;object-position:center;display:block}
+.ssg-home-week-body{position:absolute;left:16px;right:16px;bottom:16px;z-index:2;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:16px;background:rgba(255,255,255,.88)}
+.ssg-home-week-kicker{width:120px;height:20px;border-radius:10px}
+.ssg-home-week-title{width:56%;height:28px;border-radius:8px}
+.ssg-home-week-sub{width:74%;height:16px;border-radius:6px}
+.ssg-home-week-action{width:140px;height:38px;border-radius:16px}
+.ssg-home-popular{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:28px}
+.ssg-home-popular-card{height:124px;border-radius:18px;background:${COLORS.light.bgSecondary};border:1px solid ${COLORS.light.border}}
+@media(min-width:768px) and (max-width:1279px){.ssg-home-shell{padding:24px}.ssg-home-book{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}.ssg-home-page{justify-content:center;gap:16px;padding:32px}.ssg-home-moods{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0}.ssg-home-hero{aspect-ratio:auto;height:320px}.ssg-home-popular{grid-column:1/-1;margin-top:0}}
+@media(min-width:1280px){.ssg-home-shell{max-width:none;padding:20px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(calc(100vw - 80px),calc(135.9477svh - 244.7059px),1200px);height:auto;aspect-ratio:1040/765;margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:21.6%;align-self:start;justify-content:flex-start;gap:12px;padding:0 9% 0 16%;border-radius:0;background:transparent;overflow:hidden}.ssg-home-title{font-size:clamp(24px,1.9vw,32px);line-height:1.15}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-search{height:44px}.ssg-home-cta{width:190px;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%;border-radius:12px;border:0;background:${COLORS.light.bgSecondary}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
+@media(min-width:1280px) and (min-height:961px){.ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}.ssg-home-mood{height:44px}}
+.ssg-search-shell{width:100%;max-width:1214px;margin:0 auto;padding:10px}
+.ssg-search-layout{display:block;min-width:0}
+.ssg-search-aside{display:none}
+.ssg-search-aside-group{margin-bottom:18px}
+.ssg-search-aside-title{margin:0 0 10px;font:600 12px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};text-transform:uppercase;letter-spacing:.08em}
+.ssg-search-aside-line{height:14px;border-radius:7px;margin-bottom:10px}
+.ssg-search-main{min-width:0}
+.ssg-search-header{padding-top:14px}
+.ssg-search-bar{height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;padding:0 16px;font:400 15px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
+.ssg-search-toolbar{height:32px;display:flex;align-items:center;gap:8px;margin-top:8px}
+.ssg-search-tool{width:88px;height:32px;border-radius:999px;background:${COLORS.light.bgSecondary};border:1px solid ${COLORS.light.border}}
+.ssg-search-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}
+.ssg-search-card{min-width:0;border-radius:12px;overflow:hidden;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
+.ssg-search-card-media{width:100%;height:220px}
+.ssg-search-card-body{padding:12px;display:flex;flex-direction:column;gap:8px}
+.ssg-search-card-line{height:14px;border-radius:4px}
+.ssg-search-card-line.w70{width:70%}.ssg-search-card-line.w50{width:50%}.ssg-search-card-line.w30{width:30%}
+.ssg-search-seo{position:relative;width:100%;margin:32px 0 0;padding:0}
 .ssg-search-h1{margin:0 0 12px;font:700 28px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.02em;max-width:720px}
-@media(min-width:768px){.ssg-search-h1{font-size:36px}}
 .ssg-search-lead{margin:0;font:400 16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted};max-width:720px}
-.ssg-cards{max-width:1200px;margin:0 auto;padding:0 16px 32px;display:grid;grid-template-columns:1fr;gap:16px}
-@media(min-width:640px){.ssg-cards{grid-template-columns:repeat(2,1fr)}}
-@media(min-width:1024px){.ssg-cards{grid-template-columns:repeat(3,1fr)}}
-.ssg-card{border-radius:12px;overflow:hidden;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
-.ssg-card-img{width:100%;height:180px}
-.ssg-card-body{padding:12px;display:flex;flex-direction:column;gap:8px}
-.ssg-card-line{height:14px;border-radius:4px}
-.ssg-card-line.w70{width:70%}.ssg-card-line.w50{width:50%}.ssg-card-line.w30{width:30%}
-.ssg-sidebar{display:none;width:240px;min-height:400px;background:${COLORS.light.surface};border-right:1px solid ${COLORS.light.border};padding:16px;flex-shrink:0}
-@media(min-width:1024px){.ssg-sidebar{display:block}}
-.ssg-sidebar-group{margin-bottom:18px}
-.ssg-sidebar-title{margin:0 0 10px;font:600 12px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};text-transform:uppercase;letter-spacing:0.08em}
-.ssg-sidebar-line{height:14px;border-radius:4px;margin-bottom:10px}
-.ssg-search-layout{max-width:1200px;margin:0 auto;display:flex}
-.ssg-search-main{flex:1;padding:16px}
-.ssg-search-bar{height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};margin-bottom:16px;display:flex;align-items:center;padding:0 16px;font:400 15px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
+@media(min-width:768px){.ssg-search-shell{padding:14px}.ssg-search-header{padding-top:59px}.ssg-search-toolbar{gap:14px;margin-top:14px}.ssg-search-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}.ssg-search-card-media{height:270px}.ssg-search-h1{font-size:36px}}
+@media(min-width:1440px){.ssg-search-shell{max-width:1600px}.ssg-search-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px}.ssg-search-aside{display:block;min-height:520px;padding:16px;background:${COLORS.light.surface};border-right:1px solid ${COLORS.light.border}}}
 .ssg-map-layout{display:flex;min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX}px);background:${COLORS.light.bgSecondary}}
 .ssg-map-canvas{position:relative;flex:1;min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX}px);overflow:hidden;background:linear-gradient(135deg,${COLORS.light.bgSecondary} 0%,${COLORS.light.bg} 50%,${COLORS.light.bgSecondary} 100%)}
 .ssg-map-canvas::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.24) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.24) 1px,transparent 1px);background-size:48px 48px;opacity:.45}
@@ -121,10 +131,11 @@ function buildSkeletonCSS() {
 .ssg-map-mobile-sub{margin:0 0 12px;font:400 14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
 .ssg-map-mobile-actions{display:flex;gap:8px;flex-wrap:wrap}
 .ssg-map-mobile-action{height:32px;min-width:64px;border-radius:999px;background:${COLORS.light.bgSecondary};border:1px solid ${COLORS.light.border}}
-.ssg-travel-spacer{height:88px}
-.ssg-travel-wrap{max-width:1200px;margin:0 auto;padding:0 6px}
-.ssg-travel-hero{position:relative;width:100%;height:70vh;min-height:360px;max-height:750px;border-radius:12px;overflow:hidden;background:${COLORS.light.bgSecondary};margin:8px 0 16px}
-@media(max-width:767px){.ssg-travel-hero{height:min(56vh,520px);min-height:260px;max-height:520px;border-radius:0;margin:0 -6px 16px;width:calc(100% + 12px)}}
+.ssg-travel-spacer{height:61px}
+.ssg-travel-wrap{max-width:1200px;margin:0 auto;padding:0 10px}
+.ssg-travel-first-screen{min-height:calc(100svh - 117px)}
+.ssg-travel-hero{position:relative;width:100%;height:min(56vh,520px);min-height:260px;max-height:520px;border:1px solid ${COLORS.light.border};border-radius:8px;overflow:hidden;background:${COLORS.light.bgSecondary};margin:0 0 12px}
+@media(min-width:768px){.ssg-travel-spacer{height:24px}.ssg-travel-wrap{padding:0 24px}.ssg-travel-hero{height:70vh;min-height:360px;max-height:750px;margin:8px 0 16px}}
 .ssg-travel-hero[data-ssg-travel-hero-adopted="true"]{position:absolute;inset:0;width:100%;height:100%;min-height:0;max-height:none;margin:0;border-radius:inherit}
 /* #1206: hero-фотография обязана заполнить бокс hero ещё ДО гидрации.
    ВНИМАНИЕ: этот CSS живёт внутри JS-шаблона, поэтому обратные кавычки здесь
@@ -150,6 +161,30 @@ function buildSkeletonCSS() {
    с zIndex 0): оно тонирует только поля letterbox. При z-index:1 оно лежало
    поверх кадра, и на handoff фотография заметно светлела. */
 .ssg-travel-hero-bg{position:absolute;inset:0;background:rgba(7,12,19,0.24);pointer-events:none;z-index:0}
+.ssg-travel-author-skeleton{display:flex;align-items:center;gap:12px;min-height:68px;padding:8px 4px 12px;margin-bottom:8px}
+.ssg-travel-author-avatar{width:44px;height:44px;flex:0 0 44px;border-radius:999px}
+.ssg-travel-author-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:8px}
+.ssg-travel-author-label{width:96px;height:11px;border-radius:6px}
+.ssg-travel-author-name{width:min(52%,180px);height:16px;border-radius:8px}
+.ssg-travel-author-actions{display:flex;gap:8px}
+.ssg-travel-author-action{width:36px;height:36px;border-radius:12px}
+.ssg-travel-meta-row{display:flex;gap:8px;flex-wrap:wrap;padding:0 4px 12px}
+.ssg-travel-meta-chip{width:92px;height:20px;border-radius:999px}
+.ssg-travel-primary{min-width:0}
+.ssg-travel-desktop-sidebar{display:none}
+.ssg-travel-sidebar-card{display:flex;align-items:center;gap:12px;padding:18px;border-radius:28px;background:${COLORS.light.surface}}
+.ssg-travel-sidebar-avatar{width:48px;height:48px;flex:0 0 48px;border-radius:999px}
+.ssg-travel-sidebar-copy{display:flex;flex:1;flex-direction:column;gap:9px}
+.ssg-travel-sidebar-line{height:14px;border-radius:7px}
+.ssg-travel-sidebar-line.w55{width:55%}.ssg-travel-sidebar-line.w75{width:75%}
+.ssg-travel-sidebar-nav{display:flex;flex-direction:column;gap:12px;padding:18px 8px}
+.ssg-travel-sidebar-nav-line{height:18px;border-radius:9px}
+/* #1359: реальные title/article/related остаются обычными raw HTML-узлами
+   в нормальном DOM-flow. Перед ними first-screen занимает остаток viewport,
+   поэтому SEO-текст и инжектируемый сразу после .ssg-travel-h1 quest-promo
+   не попадают в первый экран без clipping/display:none/visibility/inert. */
+.ssg-travel-crawlable{position:relative;width:100%;margin:0;padding:0}
+@media(min-width:1280px){.ssg-travel-wrap{max-width:1600px;padding:0 24px}.ssg-travel-first-screen{display:grid;grid-template-columns:307px minmax(0,1fr);gap:16px;min-height:calc(100svh - 80px)}.ssg-travel-desktop-sidebar{display:flex;flex-direction:column;min-width:0}.ssg-travel-primary>.ssg-travel-author-skeleton{display:none}.ssg-travel-crawlable{width:calc(100% - 323px);margin-left:323px}}
 .ssg-travel-title{height:32px;width:70%;border-radius:8px;margin:0 0 12px}
 .ssg-travel-meta{height:16px;width:40%;border-radius:6px;margin:0 0 24px}
 .ssg-travel-line{height:14px;border-radius:4px;margin-bottom:10px}
@@ -182,14 +217,19 @@ html[data-theme="dark"] .ssg-bar{background:${COLORS.dark.surface};border-color:
 html[data-theme="dark"] .ssg-bar-logo{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-h1{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-lead{color:${COLORS.dark.textMuted}}
-html[data-theme="dark"] .ssg-sidebar-title{color:${COLORS.dark.text}}
-html[data-theme="dark"] .ssg-hero-title{color:${COLORS.dark.text}}
-html[data-theme="dark"] .ssg-hero-title .ssg-accent{color:#f0a060}
-html[data-theme="dark"] .ssg-hero-sub{color:${COLORS.dark.textMuted}}
-html[data-theme="dark"] .ssg-hero-search{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
-html[data-theme="dark"] .ssg-card{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
-html[data-theme="dark"] .ssg-sidebar{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-search-aside-title{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-home-book,html[data-theme="dark"] .ssg-home-week{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-home-page{background-color:${COLORS.dark.bgSecondary}}
+html[data-theme="dark"] .ssg-home-title{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-home-title .ssg-accent{color:#f0a060}
+html[data-theme="dark"] .ssg-home-sub{color:${COLORS.dark.textMuted}}
+html[data-theme="dark"] .ssg-home-search,html[data-theme="dark"] .ssg-home-mood{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-home-popular-card{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-home-week-body{background:rgba(32,32,32,.88)}
+@media(min-width:1280px){html[data-theme="dark"] .ssg-home-page{background-color:transparent}}
+html[data-theme="dark"] .ssg-search-card,html[data-theme="dark"] .ssg-search-aside{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-search-bar{background:${COLORS.dark.surface};border-color:${COLORS.dark.border};color:${COLORS.dark.textMuted}}
+html[data-theme="dark"] .ssg-search-tool{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-map-layout{background:${COLORS.dark.bgSecondary}}
 html[data-theme="dark"] .ssg-map-canvas{background:linear-gradient(135deg,${COLORS.dark.bgSecondary} 0%,${COLORS.dark.bg} 50%,${COLORS.dark.bgSecondary} 100%)}
 html[data-theme="dark"] .ssg-map-canvas::before{background-image:linear-gradient(rgba(255,255,255,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.08) 1px,transparent 1px)}
@@ -198,7 +238,8 @@ html[data-theme="dark"] .ssg-map-panel-kicker,html[data-theme="dark"] .ssg-map-p
 html[data-theme="dark"] .ssg-map-panel-title,html[data-theme="dark"] .ssg-map-toolbar-pill,html[data-theme="dark"] .ssg-map-mobile-title{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-map-chip,html[data-theme="dark"] .ssg-map-mobile-action,html[data-theme="dark"] .ssg-map-sidebar-thumb,html[data-theme="dark"] .ssg-map-mobile-hero{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-map-mobile-sub{color:${COLORS.dark.textMuted}}
-html[data-theme="dark"] .ssg-travel-hero{background:${COLORS.dark.bgSecondary}}
+html[data-theme="dark"] .ssg-travel-hero{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-travel-sidebar-card{background:${COLORS.dark.surface}}
 html[data-theme="dark"] .ssg-travel-h1{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-travel-article{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-travel-article h2,html[data-theme="dark"] .ssg-travel-article h3{color:${COLORS.dark.text}}
@@ -302,19 +343,19 @@ function buildRemovalScript() {
   return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var mapSkel=!!s.querySelector('.ssg-map-layout');var done=false;var late=false;var deep=false;var o;var iv;function killCss(){if(document.querySelector('[data-ssg-travel-hero-adopted="true"]'))return;var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{if(o)o.disconnect()}catch(e){}if(iv)clearInterval(iv);try{s.classList.add('ssg-hiding')}catch(e){}try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function travelReady(){return travelSkel&&r.getAttribute('data-travel-details-ready')==='true'}function mapReady(){return mapSkel&&r.getAttribute('data-map-route-ready')==='true'}function appReady(){return !mapSkel&&(!travelSkel||late)&&document.documentElement.classList.contains('app-hydrated')}function lateHero(){return late&&!!r.querySelector('img[data-lcp]')}function reactHost(n){try{var ks=Object.keys(n);for(var i=0;i<ks.length;i++){if(ks[i].indexOf('__reactFiber')===0)return true}}catch(e){}return false}function reactMounted(){for(var c=r.firstElementChild;c;c=c.nextElementSibling){if(reactHost(c))return true}return false}function check(){if(done)return false;if(heroReady()||travelReady()||mapReady()||appReady()||lateHero()||(deep&&reactMounted())){teardown();return true}return false}if(check())return;o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true,attributes:true,attributeFilter:['data-map-route-ready','data-travel-details-ready']});function tick(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}}function poll(ms){clearInterval(iv);iv=setInterval(tick,ms)}poll(120);setTimeout(function(){late=true;check()},20000);setTimeout(function(){if(done)return;deep=true;if(check())return;poll(2000)},45000)}begin()}catch(e){}})();</script>`;
 }
 
-function buildCards(count) {
+function buildSearchCards(count) {
   let html = '';
   for (let i = 0; i < count; i++) {
-    html += `<div class="ssg-card"><div class="ssg-card-img ssg-pulse"></div><div class="ssg-card-body"><div class="ssg-card-line w70 ssg-pulse"></div><div class="ssg-card-line w50 ssg-pulse"></div><div class="ssg-card-line w30 ssg-pulse"></div></div></div>`;
+    html += `<div class="ssg-search-card"><div class="ssg-search-card-media ssg-pulse"></div><div class="ssg-search-card-body"><div class="ssg-search-card-line w70 ssg-pulse"></div><div class="ssg-search-card-line w50 ssg-pulse"></div><div class="ssg-search-card-line w30 ssg-pulse"></div></div></div>`;
   }
   return html;
 }
 
-function buildSidebarLines(count) {
+function buildSearchSidebarLines(count) {
   let html = '';
   const widths = ['80%', '60%', '90%', '70%', '50%', '85%', '65%', '75%'];
   for (let i = 0; i < count; i++) {
-    html += `<div class="ssg-sidebar-line ssg-pulse" style="width:${widths[i % widths.length]}"></div>`;
+    html += `<div class="ssg-search-aside-line ssg-pulse" style="width:${widths[i % widths.length]}"></div>`;
   }
   return html;
 }
@@ -334,19 +375,34 @@ function buildHomeSkeletonHtml({ heroHref } = {}) {
   // фотографии React-hero, поэтому Chrome переустанавливал LCP на неё уже после
   // гидрации. Картинка к этому моменту давно скачана — её кладёт
   // injectHomeHeroPreload; не хватало только узла, который нарисует её до React.
-  // Без heroHref (ассет не нашёлся в dist) шелл рендерится как раньше.
+  // Без heroHref (ассет не нашёлся в dist) сохраняем тот же нейтральный слот,
+  // чтобы карточка не схлопывалась из-за абсолютно позиционированного body.
   const heroImg = heroHref
-    ? `<div class="ssg-home-hero"><img class="ssg-home-hero-img" src="${escapeHtmlAttr(heroHref)}" alt="Маршрут недели" decoding="async" fetchpriority="high" data-ssg-lcp="true"/></div>`
+    ? `<img class="ssg-home-hero-img" src="${escapeHtmlAttr(heroHref)}" alt="Маршрут недели" decoding="async" fetchpriority="high" data-ssg-lcp="true"/>`
     : '';
   return `<div id="ssg-skeleton">
 <div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
-<div class="ssg-hero">
-<div class="ssg-hero-title">Куда поехать <span class="ssg-accent">в эти выходные?</span></div>
-<p class="ssg-hero-sub">Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.</p>
-<div class="ssg-hero-search"></div>
-${heroImg}
+<main class="ssg-home-shell">
+<div class="ssg-home-book">
+<section class="ssg-home-page">
+<div class="ssg-home-title">Куда поехать <span class="ssg-accent">в эти выходные?</span></div>
+<p class="ssg-home-sub">Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.</p>
+<div class="ssg-home-search"></div>
+<div class="ssg-home-cta" aria-hidden="true"></div>
+<div class="ssg-home-moods" aria-hidden="true">${Array.from({ length: 5 }, () => '<div class="ssg-home-mood"></div>').join('')}</div>
+</section>
+<article class="ssg-home-week">
+<div class="ssg-home-hero">${heroImg}</div>
+<div class="ssg-home-week-body" aria-hidden="true">
+<div class="ssg-home-week-kicker ssg-pulse"></div>
+<div class="ssg-home-week-title ssg-pulse"></div>
+<div class="ssg-home-week-sub ssg-pulse"></div>
+<div class="ssg-home-week-action ssg-pulse"></div>
 </div>
-<div class="ssg-cards">${buildCards(6)}</div>
+</article>
+<div class="ssg-home-popular" aria-hidden="true"><div class="ssg-home-popular-card ssg-pulse"></div><div class="ssg-home-popular-card ssg-pulse"></div></div>
+</div>
+</main>
 ${buildRemovalScript()}
 </div>`;
 }
@@ -354,11 +410,9 @@ ${buildRemovalScript()}
 /**
  * Build search page skeleton HTML.
  *
- * Contains visible text (H1 + lead + sidebar titles + search placeholder) so
- * that Chrome's First Contentful Paint fires on skeleton render (~FCP), and
- * so the Largest Contentful Paint candidate is locked to the hero text block
- * before React hydration. Without visible text, Chrome's FCP/LCP only fire
- * after hydration renders real content (>6s on mobile).
+ * Mirrors the catalogue first screen before hydration. The exact crawlable H1
+ * and lead stay in normal DOM flow after the cards, so they remain raw SEO text
+ * without displacing the search controls and first result card.
  */
 function buildSearchSkeletonHtml() {
   const leadText =
@@ -374,19 +428,24 @@ function buildSearchSkeletonHtml() {
     'трек-файлы GPX и подробные заметки — всё, что нужно, чтобы собраться и поехать.';
   return `<div id="ssg-skeleton">
 <div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
-<div class="ssg-search-intro">
+<div class="ssg-search-shell">
+<div class="ssg-search-layout">
+<aside class="ssg-search-aside">
+<div class="ssg-search-aside-group"><div class="ssg-search-aside-title">Страны</div>${buildSearchSidebarLines(3)}</div>
+<div class="ssg-search-aside-group"><div class="ssg-search-aside-title">Категории</div>${buildSearchSidebarLines(3)}</div>
+<div class="ssg-search-aside-group"><div class="ssg-search-aside-title">Сложность</div>${buildSearchSidebarLines(2)}</div>
+</aside>
+<main class="ssg-search-main">
+<div class="ssg-search-header">
+<div class="ssg-search-bar">Найти маршрут…</div>
+<div class="ssg-search-toolbar" aria-hidden="true"><div class="ssg-search-tool"></div><div class="ssg-search-tool"></div><div class="ssg-search-tool"></div></div>
+</div>
+<div class="ssg-search-grid">${buildSearchCards(6)}</div>
+<section class="ssg-search-seo">
 <h1 class="ssg-search-h1">Поиск путешествий и маршрутов</h1>
 <p class="ssg-search-lead">${leadText}</p>
-</div>
-<div class="ssg-search-layout">
-<div class="ssg-sidebar">
-<div class="ssg-sidebar-group"><div class="ssg-sidebar-title">Страны</div>${buildSidebarLines(3)}</div>
-<div class="ssg-sidebar-group"><div class="ssg-sidebar-title">Категории</div>${buildSidebarLines(3)}</div>
-<div class="ssg-sidebar-group"><div class="ssg-sidebar-title">Сложность</div>${buildSidebarLines(2)}</div>
-</div>
-<div class="ssg-search-main">
-<div class="ssg-search-bar">Найти маршрут…</div>
-<div class="ssg-cards">${buildCards(6)}</div>
+</section>
+</main>
 </div>
 </div>
 ${buildRemovalScript()}
@@ -634,18 +693,16 @@ function buildTravelSkeletonHtml({ heroPreload, name, descriptionHtml, related }
     ? `<div class="ssg-travel-hero"${heroFillStyle}>${heroImg}<div class="ssg-travel-hero-bg"></div></div>`
     : `<div class="ssg-travel-hero ssg-pulse"></div>`;
 
-  // FE-IDX-1: render the REAL article text into the pre-hydration shell so
-  // crawlers see substantive, indexable content (not just placeholder bars).
-  // The shell is a sibling before #root and is torn down on hydration, so this
-  // is visible-but-transient: no duplicate UX, no #root flex-layout conflict.
-  // Visible pre-hydration title. NOT an <h1>: the single semantic <h1> stays the
-  // out-of-flow one injected before #root by injectHiddenH1 (so raw HTML keeps
-  // exactly one H1 — post-deploy SEO check enforces travel.h1.count === 1).
-  // Styled identically via the .ssg-travel-h1 class.
+  // FE-IDX-1/#1359: render the REAL title/article/related links into ordinary
+  // raw DOM nodes so crawlers see substantive content. They stay in normal flow
+  // after a viewport-sized first-screen block, so the first paint mirrors the
+  // React hero and author/meta geometry without hiding indexable content.
+  // The title is NOT an <h1>: the single semantic <h1> stays the out-of-flow
+  // one injected before #root by injectHiddenH1.
   const titleText = String(name || '').trim();
   const titleBlock = titleText ? `<div class="ssg-travel-h1">${escapeHtmlAttr(titleText)}</div>` : '';
   const articleHtml = sanitizeArticleBodyHtml(descriptionHtml);
-  const contentBlock = articleHtml
+  const crawlableContentBlock = articleHtml
     ? `<div class="ssg-travel-article">${articleHtml}</div>`
     : `<div class="ssg-travel-title ssg-pulse"></div>
 <div class="ssg-travel-meta ssg-pulse"></div>
@@ -659,10 +716,26 @@ function buildTravelSkeletonHtml({ heroPreload, name, descriptionHtml, related }
 <div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
 <div class="ssg-travel-spacer"></div>
 <div class="ssg-travel-wrap">
+<div class="ssg-travel-first-screen">
+<aside class="ssg-travel-desktop-sidebar" aria-hidden="true">
+<div class="ssg-travel-sidebar-card"><div class="ssg-travel-sidebar-avatar ssg-pulse"></div><div class="ssg-travel-sidebar-copy"><div class="ssg-travel-sidebar-line w55 ssg-pulse"></div><div class="ssg-travel-sidebar-line w75 ssg-pulse"></div></div></div>
+<div class="ssg-travel-sidebar-nav"><div class="ssg-travel-sidebar-nav-line ssg-pulse"></div><div class="ssg-travel-sidebar-nav-line ssg-pulse"></div><div class="ssg-travel-sidebar-nav-line ssg-pulse"></div><div class="ssg-travel-sidebar-nav-line ssg-pulse"></div><div class="ssg-travel-sidebar-nav-line ssg-pulse"></div></div>
+</aside>
+<div class="ssg-travel-primary">
 ${heroBlock}
+<div class="ssg-travel-author-skeleton" aria-hidden="true">
+<div class="ssg-travel-author-avatar ssg-pulse"></div>
+<div class="ssg-travel-author-copy"><div class="ssg-travel-author-label ssg-pulse"></div><div class="ssg-travel-author-name ssg-pulse"></div></div>
+<div class="ssg-travel-author-actions"><div class="ssg-travel-author-action ssg-pulse"></div><div class="ssg-travel-author-action ssg-pulse"></div></div>
+</div>
+<div class="ssg-travel-meta-row" aria-hidden="true"><div class="ssg-travel-meta-chip ssg-pulse"></div><div class="ssg-travel-meta-chip ssg-pulse"></div><div class="ssg-travel-meta-chip ssg-pulse"></div></div>
+</div>
+</div>
+<div class="ssg-travel-crawlable">
 ${titleBlock}
-${contentBlock}
+${crawlableContentBlock}
 ${buildRelatedBlock(related)}
+</div>
 </div>
 ${buildRemovalScript()}
 </div>`;

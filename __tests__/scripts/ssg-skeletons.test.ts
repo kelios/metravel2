@@ -38,6 +38,19 @@ describe('ssg-skeletons', () => {
       const css = buildSkeletonCSS();
       expect(css).toContain('data-theme="dark"');
       expect(css).toContain(COLORS.dark.surface);
+      expect(css).toContain(
+        '@media(min-width:1280px){html[data-theme="dark"] .ssg-home-page{background-color:transparent}}',
+      );
+    });
+
+    it('keeps below-fold raw content scrollable while the fixed shell is present', () => {
+      const css = buildSkeletonCSS();
+      const match = css.match(/#ssg-skeleton\{([^}]*)\}/);
+      expect(match).not.toBeNull();
+      const rule = (match as RegExpMatchArray)[1];
+      expect(rule).toContain('overflow-x:hidden');
+      expect(rule).toContain('overflow-y:auto');
+      expect(rule).not.toContain('overflow:hidden');
     });
 
     it('includes shimmer animation', () => {
@@ -132,6 +145,32 @@ describe('ssg-skeletons', () => {
         '.ssg-travel-hero-bg{position:absolute;inset:0;background:rgba(7,12,19,0.24);pointer-events:none;z-index:0}',
       );
     });
+
+    it('matches the measured 390x844 mobile first-screen slot (#1359)', () => {
+      const css = buildSkeletonCSS();
+      const outerWidth = 390 - 10 * 2;
+      const outerHeight = Math.round(844 * 0.56);
+      const imageArea = (outerWidth - 2) * (outerHeight - 2);
+
+      expect(56 + 61).toBe(117);
+      expect(outerWidth).toBe(370);
+      expect(outerHeight).toBe(473);
+      expect(imageArea).toBeGreaterThanOrEqual(152100);
+      expect(css).toContain('.ssg-travel-spacer{height:61px}');
+      expect(css).toContain('.ssg-travel-wrap{max-width:1200px;margin:0 auto;padding:0 10px}');
+      expect(css).toContain('border:1px solid');
+      expect(css).toContain('border-radius:8px');
+      expect(css).toContain('.ssg-travel-first-screen{min-height:calc(100svh - 117px)}');
+    });
+
+    it('mirrors the desktop sidebar and content-column geometry (#1359)', () => {
+      const css = buildSkeletonCSS();
+      const html = buildTravelSkeletonHtml({ name: 'Маршрут', descriptionHtml: '<p>x</p>' });
+      expect(css).toContain('grid-template-columns:307px minmax(0,1fr);gap:16px');
+      expect(css).toContain('.ssg-travel-crawlable{width:calc(100% - 323px);margin-left:323px}');
+      expect(html).toContain('ssg-travel-desktop-sidebar');
+      expect(html.indexOf('ssg-travel-desktop-sidebar')).toBeLessThan(html.indexOf('ssg-travel-primary'));
+    });
   });
 
   describe('buildHomeSkeletonHtml', () => {
@@ -140,17 +179,70 @@ describe('ssg-skeletons', () => {
       expect(html).toContain('id="ssg-skeleton"');
     });
 
-    it('includes header bar, hero section, and card grid', () => {
+    it('mirrors the hero composition instead of rendering six generic cards', () => {
       const html = buildHomeSkeletonHtml();
       expect(html).toContain('ssg-bar');
-      expect(html).toContain('ssg-hero');
-      expect(html).toContain('ssg-cards');
-      expect(html).toContain('ssg-card');
+      expect(html).toContain('ssg-home-book');
+      expect(html).toContain('ssg-home-page');
+      expect(html).toContain('ssg-home-cta');
+      expect(html).toContain('ssg-home-moods');
+      expect(html.match(/class="ssg-home-mood"/g)).toHaveLength(5);
+      expect(html).toContain('ssg-home-week');
+      expect(html.match(/class="ssg-home-popular-card ssg-pulse"/g)).toHaveLength(2);
+      expect(html).not.toContain('ssg-cards');
+      expect(html).not.toContain('class="ssg-card"');
     });
 
     it('includes hero search bar', () => {
       const html = buildHomeSkeletonHtml();
-      expect(html).toContain('ssg-hero-search');
+      expect(html).toContain('ssg-home-search');
+    });
+
+    it('uses the desktop open-book geometry and the compact mobile composition', () => {
+      const css = buildSkeletonCSS();
+      const mobileTitleTop = 56 + 8 + 44;
+      const mobileCtaTop = mobileTitleTop + 80 + 16 + 48 + 16 + 4 + 48 + 16 + 8;
+      const mobileMoodsTop = mobileCtaTop + 46 + 16 + 62;
+      const mobileMoodsHeight = 46 * 3 + 12 * 2;
+      const mobileWeekTop = mobileMoodsTop + mobileMoodsHeight + 20 + 14;
+      const mobileWeekHeight = (390 - 16 * 2) / (3 / 2);
+      const mobilePopularTop = mobileWeekTop + mobileWeekHeight + 14 + 28;
+      const desktopBookWidth = Math.min(1280 - 80, ((940 - 180) * 1040) / 765, 1200);
+      const desktopBookHeight = desktopBookWidth / (1040 / 765);
+      const desktopBookTop = 56 + 20;
+      const desktopPageTop = desktopBookTop + desktopBookHeight * 0.216;
+      const desktopHeroTop = desktopBookTop + desktopBookHeight * 0.216;
+      const desktopHeroWidth = desktopBookWidth * 0.51 * 0.688;
+      const desktopHeroHeight = desktopBookHeight * 0.397;
+
+      expect(mobileTitleTop).toBe(108);
+      expect(mobileCtaTop).toBe(344);
+      expect(mobileMoodsTop).toBe(468);
+      expect(mobileWeekTop).toBe(664);
+      expect(mobilePopularTop).toBeCloseTo(945, 0);
+      expect(desktopBookWidth).toBeCloseTo(1033, 0);
+      expect(desktopPageTop).toBeGreaterThanOrEqual(241 - 24);
+      expect(desktopPageTop).toBeLessThanOrEqual(241 + 24);
+      expect(desktopHeroTop).toBeGreaterThanOrEqual(240 - 24);
+      expect(desktopHeroTop).toBeLessThanOrEqual(240 + 24);
+      expect(desktopHeroWidth).toBeGreaterThanOrEqual(363 - 24);
+      expect(desktopHeroWidth).toBeLessThanOrEqual(363 + 24);
+      expect(desktopHeroHeight).toBeGreaterThanOrEqual(302 - 24);
+      expect(desktopHeroHeight).toBeLessThanOrEqual(302 + 24);
+      expect(css).toContain('.ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:8px 16px}');
+      expect(css).toContain('@media(min-width:1280px){.ssg-home-shell{');
+      expect(css).toContain('grid-template-columns:49% 51%');
+      expect(css).toContain('width:min(calc(100vw - 80px),calc(135.9477svh - 244.7059px),1200px)');
+      expect(css).toContain('aspect-ratio:1040/765');
+      expect(css).toContain('background-image:var(--image-homeHeroBook,none)');
+      expect(css).toContain('.ssg-home-page{position:relative;top:21.6%;align-self:start;');
+      expect(css).toContain('padding:0 9% 0 16%');
+      expect(css).toContain(
+        '.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%',
+      );
+      expect(css).toContain('.ssg-home-cta{width:100%;height:46px');
+      expect(css).toContain('.ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))');
+      expect(css).toContain('.ssg-home-week-body{position:absolute');
     });
 
     it('includes auto-removal script', () => {
@@ -175,10 +267,11 @@ describe('ssg-skeletons', () => {
         expect(html).toContain('fetchpriority="high"');
       });
 
-      it('keeps the photo inside the hero block, above the card grid', () => {
+      it('keeps the photo in the week-route card after the search controls', () => {
         const html = buildHomeSkeletonHtml({ heroHref: HERO_HREF });
-        expect(html.indexOf('ssg-home-hero-img')).toBeGreaterThan(html.indexOf('ssg-hero-search'));
-        expect(html.indexOf('ssg-home-hero-img')).toBeLessThan(html.indexOf('ssg-cards'));
+        expect(html.indexOf('ssg-home-hero-img')).toBeGreaterThan(html.indexOf('ssg-home-search'));
+        expect(html.indexOf('ssg-home-hero-img')).toBeGreaterThan(html.indexOf('ssg-home-week'));
+        expect(html.indexOf('ssg-home-hero-img')).toBeLessThan(html.indexOf('ssg-home-week-body'));
       });
 
       it('escapes the href instead of interpolating it raw', () => {
@@ -187,10 +280,12 @@ describe('ssg-skeletons', () => {
         expect(html).toContain('&quot;');
       });
 
-      it('falls back to the text-only shell when the asset is missing', () => {
+      it('keeps a neutral, sized hero slot when the asset is missing', () => {
         const html = buildHomeSkeletonHtml();
-        expect(html).not.toContain('ssg-home-hero');
-        expect(html).toContain('ssg-hero-title');
+        expect(html).toContain('<div class="ssg-home-hero"></div>');
+        expect(html).not.toContain('ssg-home-hero-img');
+        expect(html).not.toContain('data-ssg-lcp');
+        expect(html).toContain('ssg-home-title');
       });
 
       /**
@@ -202,12 +297,16 @@ describe('ssg-skeletons', () => {
        */
       it('sizes the shell photo above the React hero slot and outranks img[data-lcp]', () => {
         const css = buildSkeletonCSS();
+        const mobileSlotWidth = 390 - 16 * 2;
+        const mobileCandidateArea = mobileSlotWidth * (mobileSlotWidth / (3 / 2));
+        expect(mobileCandidateArea).toBeGreaterThanOrEqual(85438);
         expect(css).toContain('.ssg-home-hero{');
         expect(css).toContain('aspect-ratio:3/2');
         expect(css).toContain('.ssg-home-hero img.ssg-home-hero-img{');
         // Абсолютный бокс: aspect-ratio/min-height критического CSS не участвуют.
         expect(css).toMatch(/\.ssg-home-hero img\.ssg-home-hero-img\{[^}]*position:absolute/);
         expect(css).toMatch(/\.ssg-home-hero img\.ssg-home-hero-img\{[^}]*aspect-ratio:auto/);
+        expect(css).toMatch(/\.ssg-home-hero img\.ssg-home-hero-img\{[^}]*object-fit:contain/);
         // Слабая форма (одиночный класс) проигрывает img[data-lcp] по специфичности.
         expect(css).not.toMatch(/(^|[\s,}])\.ssg-home-hero-img\{/);
       });
@@ -215,24 +314,87 @@ describe('ssg-skeletons', () => {
   });
 
   describe('buildSearchSkeletonHtml', () => {
+    const EXPECTED_H1 = 'Поиск путешествий и маршрутов';
+    const EXPECTED_LEAD =
+      'Ищите маршруты по странам, категориям и уровню сложности. ' +
+      'Подбирайте идеи для поездок на выходные, сохраняйте путешествия ' +
+      'с фото и заметками и собирайте личную книгу путешествий в PDF. ' +
+      'Тысячи готовых маршрутов по Беларуси, Европе и миру — от однодневных ' +
+      'прогулок рядом с домом до многодневных трипов с семьёй, друзьями ' +
+      'или в одиночку. Фильтруйте поездки по сезону, бюджету, типу транспорта ' +
+      'и уровню физической нагрузки: пешие маршруты, велопоходы, автопутешествия, ' +
+      'поездки на общественном транспорте, водные и горные маршруты. ' +
+      'Смотрите фотографии от путешественников, карты с точками интереса, ' +
+      'трек-файлы GPX и подробные заметки — всё, что нужно, чтобы собраться и поехать.';
+
     it('returns div with id ssg-skeleton', () => {
       const html = buildSearchSkeletonHtml();
       expect(html).toContain('id="ssg-skeleton"');
     });
 
-    it('includes sidebar for desktop', () => {
+    it('keeps the catalogue before the exact raw SEO copy', () => {
       const html = buildSearchSkeletonHtml();
-      expect(html).toContain('ssg-sidebar');
+      const barIndex = html.indexOf('ssg-search-bar');
+      const gridIndex = html.indexOf('ssg-search-grid');
+      const seoIndex = html.indexOf('ssg-search-seo');
+      expect(barIndex).toBeGreaterThan(-1);
+      expect(gridIndex).toBeGreaterThan(barIndex);
+      expect(seoIndex).toBeGreaterThan(gridIndex);
+      expect(html).toContain(`<h1 class="ssg-search-h1">${EXPECTED_H1}</h1>`);
+      expect(html).toContain(`<p class="ssg-search-lead">${EXPECTED_LEAD}</p>`);
+      expect(html).not.toContain('ssg-search-intro');
     });
 
-    it('includes search bar', () => {
+    it('keeps SEO copy in normal flow without hiding contracts', () => {
+      const css = buildSkeletonCSS();
       const html = buildSearchSkeletonHtml();
-      expect(html).toContain('ssg-search-bar');
+      const match = css.match(/\.ssg-search-seo\{([^}]*)\}/);
+      expect(match).not.toBeNull();
+      const rule = (match as RegExpMatchArray)[1];
+      expect(rule).toContain('position:relative');
+      expect(rule).not.toContain('display:none');
+      expect(rule).not.toContain('visibility:hidden');
+      expect(rule).not.toContain('clip:');
+      expect(rule).not.toContain('overflow:hidden');
+      expect(html).not.toContain('class="ssg-search-seo" aria-hidden');
+      expect(html).not.toContain('<template');
     });
 
-    it('includes card grid', () => {
+    it('matches mobile and 1280px catalogue geometry', () => {
+      const css = buildSkeletonCSS();
+      const mobileSearchTop = 56 + 10 + 14;
+      const mobileFirstCardTop = mobileSearchTop + 48 + 8 + 32 + 8;
+      const desktopSearchTop = 56 + 14 + 59;
+      const desktopFirstCardTop = desktopSearchTop + 48 + 14 + 32 + 14;
+      const desktopCardWidth = (1214 - 14 * 2 - 14 * 2) / 3;
+
+      expect(mobileSearchTop).toBe(80);
+      expect(mobileFirstCardTop).toBe(176);
+      expect(desktopFirstCardTop).toBe(237);
+      expect(desktopCardWidth).toBe(386);
+      expect(css).toContain('.ssg-search-shell{width:100%;max-width:1214px;margin:0 auto;padding:10px}');
+      expect(css).toContain('.ssg-search-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}');
+      expect(css).toContain('.ssg-search-card-media{width:100%;height:220px}');
+      expect(css).toContain('grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px');
+      expect(css).toContain('.ssg-search-card-media{height:270px}');
+    });
+
+    it('shows the 300px aside only from 1440px', () => {
+      const css = buildSkeletonCSS();
       const html = buildSearchSkeletonHtml();
-      expect(html).toContain('ssg-cards');
+      expect(html).toContain('ssg-search-aside');
+      expect(css).toContain('@media(min-width:1440px){.ssg-search-shell{');
+      expect(css).toContain('grid-template-columns:300px minmax(0,1fr);gap:16px');
+      expect(css).not.toContain('@media(min-width:1024px){.ssg-search-aside');
+    });
+
+    it('does not invent a mock, cover, or invisible LCP image', () => {
+      const html = buildSearchSkeletonHtml();
+      const visibleShell = html.split('<script>')[0];
+      expect(visibleShell.match(/class="ssg-search-card"/g)).toHaveLength(6);
+      expect(visibleShell).not.toMatch(/<img[\s>]/i);
+      expect(visibleShell).not.toContain('data-lcp');
+      expect(visibleShell).not.toContain('cover');
     });
   });
 
@@ -305,13 +467,13 @@ describe('ssg-skeletons', () => {
       const result = injectSkeletonShell(baseHtml, '/');
       expect(result).toContain('id="ssg-skeleton"');
       expect(result).toContain('id="ssg-skeleton-css"');
-      expect(result).toContain('ssg-hero');
+      expect(result).toContain('ssg-home-book');
     });
 
     it('injects skeleton for /search route', () => {
       const result = injectSkeletonShell(baseHtml, '/search');
       expect(result).toContain('id="ssg-skeleton"');
-      expect(result).toContain('ssg-sidebar');
+      expect(result).toContain('ssg-search-aside');
       expect(result).toContain('ssg-search-bar');
     });
 
@@ -730,15 +892,38 @@ describe('ssg-skeletons', () => {
   });
 
   describe('buildTravelSkeletonHtml (FE-IDX-1)', () => {
-    it('renders a visible title and article body when description is provided', () => {
+    it('keeps the title and article as raw DOM after the first-screen shell', () => {
       const html = buildTravelSkeletonHtml({
         name: 'Тестовый маршрут',
         descriptionHtml: '<p>Подробное описание маршрута.</p><h2>Как добраться</h2><p>На машине.</p>',
       });
+      expect(html.indexOf('ssg-travel-crawlable')).toBeGreaterThan(html.indexOf('ssg-travel-first-screen'));
       expect(html).toContain('<div class="ssg-travel-h1">Тестовый маршрут</div>');
       expect(html).toContain('<div class="ssg-travel-article">');
       expect(html).toContain('Подробное описание маршрута.');
       expect(html).toContain('<h2>Как добраться</h2>');
+      expect(html).not.toContain('<template');
+      expect(html).not.toContain('class="ssg-travel-crawlable" aria-hidden');
+    });
+
+    it('keeps crawlable content in normal flow without clipping or hiding it', () => {
+      const css = buildSkeletonCSS();
+      const match = css.match(/\.ssg-travel-crawlable\{([^}]*)\}/);
+      expect(match).not.toBeNull();
+      const rule = (match as RegExpMatchArray)[1];
+      expect(rule).toContain('position:relative');
+      expect(rule).not.toContain('position:absolute');
+      expect(rule).not.toContain('display:none');
+      expect(rule).not.toContain('visibility:hidden');
+      expect(rule).not.toContain('clip:');
+      expect(rule).not.toContain('overflow:hidden');
+    });
+
+    it('places neutral author and fact geometry immediately after the hero', () => {
+      const html = buildTravelSkeletonHtml({ name: 'Маршрут', descriptionHtml: '<p>x</p>' });
+      expect(html).toContain('<div class="ssg-travel-hero ssg-pulse"></div>\n<div class="ssg-travel-author-skeleton"');
+      expect(html.indexOf('ssg-travel-meta-row')).toBeGreaterThan(html.indexOf('ssg-travel-author-skeleton'));
+      expect(html.indexOf('ssg-travel-crawlable')).toBeGreaterThan(html.indexOf('ssg-travel-meta-row'));
     });
 
     it('does NOT emit any <h1> in the skeleton (single-H1 invariant lives in #root)', () => {

@@ -121,18 +121,14 @@ function TripPlanCard({
       </Text>
 
       <View style={styles.metaRow}>
-        <View style={styles.metaGroup}>
-          <Feather
-            name={TRANSPORT_ICON_NAME[trip.transport] as never}
-            size={13}
-            color={colors.textSecondary}
-          />
-          <Text style={styles.meta}>{TRANSPORT_LABEL[trip.transport]}</Text>
-        </View>
-        <View style={styles.metaGroup}>
-          <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.meta}>{formatTripDateTime(trip.startDate, trip.startTime)}</Text>
-        </View>
+        <Feather
+          name={TRANSPORT_ICON_NAME[trip.transport] as never}
+          size={13}
+          color={colors.textSecondary}
+        />
+        <Text style={styles.meta}>
+          {`${TRANSPORT_LABEL[trip.transport]} · ${formatTripDateTime(trip.startDate, trip.startTime)}`}
+        </Text>
       </View>
 
       <Text style={styles.route} numberOfLines={1}>
@@ -250,17 +246,10 @@ const createStyles = (colors: ThemedColors) =>
     visibilityText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
     title: { fontSize: 16, fontWeight: '700', color: colors.text },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-    // #1344: equal `flex: 1` labels split the row 50/50 and clip the longer date.
-    // Bounded whole-item groups let Yoga wrap the date group as a unit, while
-    // the inner Text can still shrink/wrap when one label exceeds the card width.
-    metaGroup: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      maxWidth: '100%',
-    },
-    meta: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
-    metaDot: { fontSize: 13, color: colors.textMuted },
+    // #1344: two independently measured dynamic Text siblings clipped at every
+    // intrinsic/flex allocation tried on Pixel. One flexible string gives Yoga
+    // a single remaining-width outlet and preserves normal wrapping.
+    meta: { fontSize: 13, color: colors.textSecondary, flex: 1 },
     route: { fontSize: 13, color: colors.textMuted },
     footer: {
       marginTop: 4,

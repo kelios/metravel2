@@ -4,9 +4,10 @@
 //
 // Android Yoga can measure dynamic Text in a flex row at its intrinsic width
 // and silently truncate it even when mobile web wraps the same content. A row
-// child therefore needs a zero-basis sizing contract (positive `flex` or a
-// bounded width), or an explicit product ellipsis contract. Standalone
-// `flexShrink` keeps the intrinsic basis and is not sufficient for this family.
+// child therefore needs one zero-basis outlet, a bounded width/group, or an
+// explicit product ellipsis contract. Standalone `flexShrink` keeps the
+// intrinsic basis, while multiple `flex` labels divide the row into competing
+// allocations; neither is sufficient for this family.
 
 const fs = require('node:fs')
 const path = require('node:path')
@@ -286,9 +287,22 @@ const hasSizingContract = (properties) =>
   hasBoundedDimension(properties, 'width') ||
   hasBoundedDimension(properties, 'maxWidth')
 
+const hasPositiveFlexContract = (properties) => hasPositiveOrDynamic(properties, 'flex')
+
+const hasBoundedSizingContract = (properties) =>
+  hasBoundedDimension(properties, 'width') || hasBoundedDimension(properties, 'maxWidth')
+
 const hasGuaranteedSizingContract = (resolvedStyle) =>
   resolvedStyle.variants.length > 0 &&
   resolvedStyle.variants.every((properties) => hasSizingContract(properties))
+
+const hasGuaranteedPositiveFlexContract = (resolvedStyle) =>
+  resolvedStyle.variants.length > 0 &&
+  resolvedStyle.variants.every((properties) => hasPositiveFlexContract(properties))
+
+const hasGuaranteedBoundedSizingContract = (resolvedStyle) =>
+  resolvedStyle.variants.length > 0 &&
+  resolvedStyle.variants.every((properties) => hasBoundedSizingContract(properties))
 
 const jsxName = (opening) => (ts.isIdentifier(opening.tagName) ? opening.tagName.text : '')
 
@@ -382,23 +396,41 @@ const scanFile = ({ filePath, content }) => {
 
   const definitions = collectStyleDefinitions(sourceFile)
   const findingsByKey = new Map()
+  const countedDynamicTextNodes = new Set()
   let rowCount = 0
   let dynamicTextCount = 0
+
+  const recordDynamicText = (node) => {
+    if (countedDynamicTextNodes.has(node)) return
+    countedDynamicTextNodes.add(node)
+    dynamicTextCount += 1
+  }
 
   const inspectRow = (rowElement) => {
     const rowOpening = rowElement.openingElement
     const rowStyle = resolveStyle(rowOpening, definitions)
     const directChildren = collectTopLevelElements(rowElement.children)
-    // The intrinsic-width failure family is about competing row children. Two
-    // child icon-label controls are intentionally outside this guard; rows with
-    // three or more children and at least two dynamic Text descendants are the
-    // structural shape reproduced by #1342 and the TripPlanCard transport row.
+    // The intrinsic-width failure family is about competing row children. Two-
+    // child icon-label controls are intentionally outside this high-signal
+    // guard; bounded/nested groups are treated as their own layout contracts.
     if (directChildren.length < 3 || rowStyle.properties.get('flexWrap') !== 'wrap') return
     rowCount += 1
     const directUnconditionalChildren = new Set(
       rowElement.children.filter((child) => ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)),
     )
     const dynamicCandidates = []
+
+    const countDynamicTextDescendants = (node) => {
+      if (!node) return
+      if (ts.isJsxElement(node)) {
+        const opening = openingOf(node)
+        if (opening && textNames.has(jsxName(opening)) && isDynamicText(node)) {
+          recordDynamicText(node)
+          return
+        }
+      }
+      ts.forEachChild(node, countDynamicTextDescendants)
+    }
 
     const inspectNode = (node, rowChild) => {
       if (!node) return
@@ -409,7 +441,13 @@ const scanFile = ({ filePath, content }) => {
 
         if (node !== rowElement && ts.isJsxElement(node)) {
           const nestedStyle = resolveStyle(opening, definitions)
-          if (nestedStyle.properties.get('flexDirection') === 'row') return
+          if (nestedStyle.properties.get('flexDirection') === 'row') {
+            // A nested row owns its own sizing contract, so its labels are not
+            // candidates of the outer row. Still count them to keep bounded-
+            // wrapper fixtures and repository scans observably non-vacuous.
+            countDynamicTextDescendants(node)
+            return
+          }
         }
 
         if (
@@ -417,12 +455,12 @@ const scanFile = ({ filePath, content }) => {
           textNames.has(jsxName(opening)) &&
           isDynamicText(node)
         ) {
-          dynamicTextCount += 1
+          recordDynamicText(node)
           const textStyle = resolveStyle(opening, definitions)
           const childOpening = openingOf(currentRowChild)
           const childStyle = childOpening ? resolveStyle(childOpening, definitions) : textStyle
           const childIsText = currentRowChild === node
-          const wrapperIsBounded = !childIsText && hasGuaranteedSizingContract(childStyle)
+          const wrapperIsBounded = !childIsText && hasGuaranteedBoundedSizingContract(childStyle)
           // A JSX element hidden under `condition && ...` / ternary is not
           // statically proven concurrent with another branch. Only direct,
           // unconditional row children (or their direct wrapper subtree) form
@@ -444,18 +482,32 @@ const scanFile = ({ filePath, content }) => {
     for (const child of rowElement.children) inspectNode(child, null)
     if (dynamicCandidates.length < 2) return
 
+    const competingFlexCandidates = dynamicCandidates.filter(
+      ({ opening, textStyle, wrapperIsBounded }) =>
+        hasGuaranteedPositiveFlexContract(textStyle) &&
+        !hasGuaranteedBoundedSizingContract(textStyle) &&
+        !wrapperIsBounded &&
+        !hasIntentionalEllipsis(opening),
+    )
+
     const unsafeCandidates = dynamicCandidates.filter(
       ({ opening, textStyle, wrapperIsBounded }) =>
         !hasGuaranteedSizingContract(textStyle) &&
         !wrapperIsBounded &&
         !hasIntentionalEllipsis(opening),
     )
-    // One explicitly flexible/bounded dynamic sibling is enough to consume the
-    // remaining row width. The dangerous shape has at least two competing
-    // intrinsic-width dynamic labels with no such outlet.
-    if (unsafeCandidates.length < 2) return
+    // One flexible/bounded sibling is the outlet for the remaining row width;
+    // the existing occupancy row is the healthy control for that shape. The
+    // dangerous cases are at least two intrinsic labels, or multiple competing
+    // flex labels that Yoga divides into independent zero-basis shares.
+    const reportedCandidates = competingFlexCandidates.length >= 2
+      ? competingFlexCandidates
+      : unsafeCandidates.length >= 2
+        ? unsafeCandidates
+        : []
+    if (reportedCandidates.length === 0) return
 
-    for (const { opening, textStyle } of unsafeCandidates) {
+    for (const { opening, textStyle } of reportedCandidates) {
       const key = findingKey({
         filePath,
         rowStyleNames: rowStyle.styleNames,
@@ -572,8 +624,8 @@ const run = (args = parseArgs([])) => {
     }
     if (result.violations.length > 0) {
       process.stderr.write(
-        '- dynamic React Native Text in a flex row needs positive flex/bounded width, ' +
-        'a bounded direct wrapper, or explicit numberOfLines + ellipsizeMode\n',
+        '- competing dynamic React Native Text needs one positive-flex outlet, bounded widths/groups, ' +
+        'or explicit numberOfLines + ellipsizeMode; do not assign flex to multiple labels\n',
       )
     }
   }
@@ -593,6 +645,8 @@ module.exports = {
   resolveStyle,
   hasSizingContract,
   hasGuaranteedSizingContract,
+  hasGuaranteedPositiveFlexContract,
+  hasGuaranteedBoundedSizingContract,
   isDynamicText,
   hasIntentionalEllipsis,
   scanFile,

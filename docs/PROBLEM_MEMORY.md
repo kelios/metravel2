@@ -518,34 +518,40 @@ guard, падающий в CI на попытке обойти этот конт
 ### NATIVE-TEXT-ROW-001 — dynamic Text must have an explicit row sizing contract
 
 - **Инвариант:** translated/user-generated `Text` рядом с другими children в
-  React Native `flexDirection: 'row'` либо получает явный sizing contract
-  (positive `flex`/bounded wrapper), либо использует осознанный product
-  ellipsis; Android Yoga intrinsic width не имеет права молча обрезать текст.
+  React Native `flexDirection: 'row'` либо получает один positive-`flex` outlet,
+  bounded width/whole-item wrapper, либо использует осознанный product
+  ellipsis. Standalone `flexShrink` и `flex` сразу на нескольких competing
+  labels не являются sizing contract: оба паттерна подтверждённо обрезались на
+  Pixel; Android Yoga intrinsic width не имеет права молча обрезать текст.
 - **Surface/owner:** shared React Native UI + Android governance; mobile web —
   обязательный parity control.
 - **Цепочка:** `#672`, `#854`, `#1022`, `#1046`, `#1065`, `#1078`, свежий
   рецидив `#1342`; structural control — `#1344`.
-- **Подтверждённая systemic cause:** каждый экран локально добавляет
+- **Подтверждённая systemic cause:** каждый экран локально добавлял
   `flex`/`flexShrink` только после device finding. Web flex layout часто
   переносит ту же строку корректно и маскирует platform-specific Android/Yoga
-  measurement; общего static/governance check для row + dynamic Text нет.
+  measurement; до `#1344` общего static/governance check для row + dynamic Text
+  не было.
 - **Controls:** `npm run guard:text-row-sizing` — TypeScript-AST guard для
   high-signal wrapping-row pattern с прямыми concurrent dynamic `Text`;
   positive/negative fixtures ловят исторический unsafe pattern `#1342`,
-  принимают positive `flex`, bounded wrapper, explicit product ellipsis и
-  literal app label, но считают translation lookup динамическим независимо от
-  текущей RU-ширины; RU/BE/UK/PL/EN fixture и repository test запрещают
-  locale-specific false negative и vacuous empty scan. Локальные
+  принимают один positive-`flex` outlet, bounded direct wrapper, explicit
+  product ellipsis и literal app label; standalone `flexShrink` и несколько
+  competing `flex` labels остаются negative regressions. Translation lookup
+  считается динамическим независимо от текущей RU-ширины; RU/BE/UK/PL/EN
+  fixture и repository test запрещают locale-specific false negative и
+  vacuous empty scan. Локальные
   style regression tests и парная Pixel/mobile-web проверка остаются runtime
   контролем конкретного экрана.
 - **Решение для новой жалобы:** конкретный runtime symptom без открытого owner —
   `create-linked` к `#1344`; новый точечный ticket не заменяет structural guard.
   Если guard после закрытия `#1344` пропустит тот же pattern — `reopen #1344`.
 - **Последняя проверка:** 2026-08-09; Pixel 10 Pro (`fontScale=1.15`) подтвердил
-  фикс `#1342`; `#1344` добавил structural guard в canonical governance/lint,
-  реальный `TripPlanCard.metaRow` fail-before/pass-after regression и явный
-  `flex` contract без прежнего неявного single-line ellipsis для
-  transport/date labels.
+  фикс `#1342` и опроверг промежуточные `TripPlanCard.metaRow` варианты с
+  standalone `flexShrink`, equal `flex: 1` и inner-wrapper `flexShrink`;
+  `#1344` добавил structural guard в canonical governance/lint, а финальный
+  `TripPlanCard` объединил transport/date в один normal-wrapping `Text` с
+  единственным `flex: 1` outlet без прежнего неявного single-line ellipsis.
 
 ### MAP-ROUTING-001 — incomplete routing migration
 

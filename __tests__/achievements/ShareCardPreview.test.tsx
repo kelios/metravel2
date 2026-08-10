@@ -53,16 +53,19 @@ const badge: Badge = {
 }
 
 describe('ShareCardPreview brand row sizing', () => {
-  it('measures both translated labels against the available row width', () => {
+  it('wraps translated brand items as bounded whole groups', () => {
     const { getByText } = render(
       <ShareCardPreview subject={{ badge, isRare: false }} />,
     )
 
-    expect(StyleSheet.flatten(getByText('metravel.by').props.style)).toMatchObject({
-      flex: 1,
-    })
-    expect(
-      StyleSheet.flatten(getByText('Build your collection').props.style),
-    ).toMatchObject({ flex: 1 })
+    const brandLabel = getByText('metravel.by')
+    const ctaLabel = getByText('Build your collection')
+
+    expect(StyleSheet.flatten(brandLabel.parent?.parent?.props.style).maxWidth).toBe('100%')
+    expect(StyleSheet.flatten(ctaLabel.parent?.parent?.props.style).maxWidth).toBe('100%')
+    expect(StyleSheet.flatten(brandLabel.props.style).flex).toBeUndefined()
+    expect(StyleSheet.flatten(ctaLabel.props.style).flex).toBeUndefined()
+    expect(StyleSheet.flatten(brandLabel.props.style).flexShrink).toBeUndefined()
+    expect(StyleSheet.flatten(ctaLabel.props.style).flexShrink).toBeUndefined()
   })
 })

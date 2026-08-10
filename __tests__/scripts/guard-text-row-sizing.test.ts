@@ -60,18 +60,28 @@ describe('guard-text-row-sizing', () => {
     ])
   })
 
-  it('accepts positive flex and rejects standalone flexShrink', () => {
-    const safe = scanFile({
+  it('accepts one flex outlet and rejects standalone flexShrink or competing flex labels', () => {
+    const flexWithBoundedSibling = scanFile({
       filePath: 'components/Probe.tsx',
-      content: fixture({ firstStyle: ', flex: 1', secondStyle: ', flex: 1' }),
+      content: fixture({ firstStyle: ', maxWidth: 120', secondStyle: ', flex: 1' }),
+    })
+    const flexWithIntrinsicSibling = scanFile({
+      filePath: 'components/Probe.tsx',
+      content: fixture({ secondStyle: ', flex: 1' }),
     })
     const intrinsicBasis = scanFile({
       filePath: 'components/Probe.tsx',
       content: fixture({ firstStyle: ', flexShrink: 1', secondStyle: ', flexShrink: 1' }),
     })
+    const competingFlex = scanFile({
+      filePath: 'components/Probe.tsx',
+      content: fixture({ firstStyle: ', flex: 1', secondStyle: ', flex: 1' }),
+    })
 
-    expect(safe.findings).toEqual([])
+    expect(flexWithBoundedSibling.findings).toEqual([])
+    expect(flexWithIntrinsicSibling.findings).toEqual([])
     expect(intrinsicBasis.findings).toHaveLength(2)
+    expect(competingFlex.findings).toHaveLength(2)
   })
 
   it('requires the sizing contract in every conditional style branch', () => {
@@ -82,7 +92,7 @@ describe('guard-text-row-sizing', () => {
         .replace('style={styles.second}', 'style={[styles.second, enabled && styles.optional]}')
         .replace(
           'secondBounds: { width: 100 },',
-          'secondBounds: { width: 100 },\n    optional: { flexShrink: 1 },',
+          'secondBounds: { width: 100 },\n    optional: { flex: 1 },',
         ),
     })
     const safeInBothBranches = scanFile({
@@ -90,19 +100,19 @@ describe('guard-text-row-sizing', () => {
       content: fixture()
         .replace(
           'style={styles.first}',
-          'style={[enabled ? styles.firstFlex : styles.firstShrink]}',
+          'style={[enabled ? styles.firstOutletEnabled : styles.firstOutletDisabled]}',
         )
         .replace(
           'style={styles.second}',
-          'style={[enabled ? styles.secondFlex : styles.secondShrink]}',
+          'style={[enabled ? styles.secondBoundsEnabled : styles.secondBoundsDisabled]}',
         )
         .replace(
           'secondBounds: { width: 100 },',
           `secondBounds: { width: 100 },
-           firstFlex: { flex: 1 },
-           firstShrink: { flex: 1 },
-           secondFlex: { flex: 1 },
-           secondShrink: { flex: 1 },`,
+           firstOutletEnabled: { flex: 1 },
+           firstOutletDisabled: { flex: 1 },
+           secondBoundsEnabled: { maxWidth: 120 },
+           secondBoundsDisabled: { maxWidth: 120 },`,
         ),
     })
 
@@ -116,6 +126,21 @@ describe('guard-text-row-sizing', () => {
       content: fixture({ wrapped: true }),
     })
 
+    expect(result.rowCount).toBe(1)
+    expect(result.dynamicTextCount).toBe(2)
+    expect(result.findings).toEqual([])
+  })
+
+  it('counts nested row labels without treating them as outer-row candidates', () => {
+    const result = scanFile({
+      filePath: 'components/Probe.tsx',
+      content: fixture({ wrapped: true })
+        .replace('firstBounds: { maxWidth: 120 }', "firstBounds: { flexDirection: 'row' }")
+        .replace('secondBounds: { width: 100 }', "secondBounds: { flexDirection: 'row' }"),
+    })
+
+    expect(result.rowCount).toBe(1)
+    expect(result.dynamicTextCount).toBe(2)
     expect(result.findings).toEqual([])
   })
 
@@ -253,30 +278,47 @@ describe('guard-text-row-sizing', () => {
     ).toBe(true)
   })
 
-  it('fails before and passes after the real TripPlanCard transport sizing fix', () => {
+  it('rejects split-label iterations and accepts the combined-label result', () => {
     const filePath = 'components/trips/planning/TripPlanCard.tsx'
     const afterSource = fs.readFileSync(path.resolve(process.cwd(), filePath), 'utf8')
-    const failedFlexShrinkSource = afterSource.replace(
+    const combinedLabel = [
+      '        <Text style={styles.meta}>',
+      '          {`${TRANSPORT_LABEL[trip.transport]} · ${formatTripDateTime(trip.startDate, trip.startTime)}`}',
+      '        </Text>',
+    ].join('\n')
+    const competingLabels = [
+      '        <Text style={styles.meta}>{TRANSPORT_LABEL[trip.transport]}</Text>',
+      '        <Text style={styles.metaDot}>·</Text>',
+      '        <Text style={styles.meta}>{formatTripDateTime(trip.startDate, trip.startTime)}</Text>',
+    ].join('\n')
+    const failedCompetingFlexSource = afterSource.replace(combinedLabel, competingLabels)
+    const failedFlexShrinkSource = failedCompetingFlexSource.replace(
       'meta: { fontSize: 13, color: colors.textSecondary, flex: 1 },',
       'meta: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },',
     )
-    const beforeSource = failedFlexShrinkSource
+    const beforeSource = failedCompetingFlexSource
       .replace(
-        'meta: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },',
+        'meta: { fontSize: 13, color: colors.textSecondary, flex: 1 },',
         'meta: { fontSize: 13, color: colors.textSecondary },',
       )
       .replaceAll('<Text style={styles.meta}>', '<Text style={styles.meta} numberOfLines={1}>')
 
     expect(beforeSource).not.toBe(afterSource)
     expect(failedFlexShrinkSource).not.toBe(afterSource)
+    expect(failedCompetingFlexSource).not.toBe(afterSource)
+    expect(afterSource).toContain(combinedLabel)
     expect(beforeSource.match(/style=\{styles\.meta\} numberOfLines=\{1\}/g)).toHaveLength(2)
-    expect(scanFile({ filePath, content: beforeSource }).findings).toEqual([
-      expect.objectContaining({ key: `${filePath}::metaRow::meta` }),
-    ])
-    expect(scanFile({ filePath, content: failedFlexShrinkSource }).findings).toEqual([
-      expect.objectContaining({ key: `${filePath}::metaRow::meta` }),
-    ])
-    expect(scanFile({ filePath, content: afterSource }).findings).not.toEqual(
+    expect(scanFile({ filePath, content: beforeSource }).findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: `${filePath}::metaRow::meta` })]),
+    )
+    expect(scanFile({ filePath, content: failedFlexShrinkSource }).findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: `${filePath}::metaRow::meta` })]),
+    )
+    expect(scanFile({ filePath, content: failedCompetingFlexSource }).findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: `${filePath}::metaRow::meta` })]),
+    )
+    const afterResult = scanFile({ filePath, content: afterSource })
+    expect(afterResult.findings).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ key: `${filePath}::metaRow::meta` })]),
     )
   })

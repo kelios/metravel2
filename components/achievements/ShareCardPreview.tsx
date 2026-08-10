@@ -86,9 +86,13 @@ function ShareCardPreview({ subject, testID, style }: Props) {
       </View>
 
       <View style={styles.brandRow}>
-        <Feather name="map-pin" size={12} color={colors.primaryDark} />
-        <Text style={styles.brand}>{i18nT('achievements:components.achievements.ShareCardPreview.metravel_by_8afe6b7c')}</Text>
-        <Text style={styles.cta}>{i18nT('achievements:components.achievements.ShareCardPreview.soberi_svoyu_kollektsiyu_61067247')}</Text>
+        <View style={styles.brandGroup}>
+          <Feather name="map-pin" size={12} color={colors.primaryDark} />
+          <Text style={styles.brand}>{i18nT('achievements:components.achievements.ShareCardPreview.metravel_by_8afe6b7c')}</Text>
+        </View>
+        <View style={styles.brandGroup}>
+          <Text style={styles.cta}>{i18nT('achievements:components.achievements.ShareCardPreview.soberi_svoyu_kollektsiyu_61067247')}</Text>
+        </View>
       </View>
     </Frame>
   );
@@ -193,16 +197,20 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexWrap: 'wrap',
       justifyContent: 'center',
     },
+    brandGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      maxWidth: '100%',
+    },
     brand: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '800',
       color: colors.primaryText,
-      flex: 1,
     },
     cta: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
-      flex: 1,
     },
   });
 
