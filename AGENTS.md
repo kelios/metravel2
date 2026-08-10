@@ -26,6 +26,7 @@
 - Работай только с веткой `main`: перед изменениями проверь текущую ветку, не создавай и не переключайся на другие ветки без явной новой инструкции пользователя. Если сессия запущена харнесом в авто-worktree (`.claude/worktrees/*`, ветка `claude/*` или detached HEAD), работа там не остаётся: по завершении задачи перенеси изменения в основной checkout, закоммить их на `main` и не оставляй в worktree-ветке коммитов, которых нет в `main`.
 - В этом workspace AI-агент делает только frontend/app/docs изменения. Backend/Django/API/server (`../metravel-backend`, `area=back`) можно только анализировать read-only, проверять безопасными probes и оформлять/обновлять задачи на борде; backend working tree, миграции, тесты, настройки и server code не редактировать. Запрещены любые изменяющие backend Git-операции локально и на сервере: `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, `clean`.
 - Где лежит backend (не спрашивай у пользователя, checkout уже есть на машине): `../metravel-backend` относительно этого репо — раскладка каталогов зависит от машины (на текущем Mac `~/Sites/metravel2/metravel-backend`, на PhpStorm-раскладке `~/PhpstormProjects/metravel-backend`), поэтому в конфиги и скрипты зашивай относительный путь, а не абсолютный. Это клон приватного репо `sergey-savran/metravel` (именно `metravel`, не `metravel-backend`), default branch `master`. SSH-ключ к GitHub не привязан, поэтому обращаться к remote только по HTTPS (`gh` + osxkeychain, аккаунт `kelios`); допустимы лишь read-only обращения — `git -C ../metravel-backend fetch` и чтение через `git -C ../metravel-backend show origin/master:<path>`, working tree не трогать. Если backend-код требует правки — это `area=back` задача на борде для владельца бэка, а не изменение в этой сессии.
+- Задачи `area=back` в приёмку и проверку по умолчанию НЕ берутся. Тестировать, верифицировать или закрывать бэкенд-тикеты — включая read-only прод-пробы, сверку с `origin/master` и дописывание верификационных заметок в карточку — можно только по прямому запросу пользователя именно про бэкенд («проверь бэкенд-задачи», «что сделал бэкенд», «сверь бэкенд-очередь»). Общая просьба вида «проверь задачи в review и testing», приёмка спринта или батч-проход по борду бэкенд-очередь не включают: она пропускается, а в отчёте указывается только количество пропущенных `area=back` тикетов. Причина — очередь бэка ведёт её владелец, а его фиксы регулярно остаются незапушенными в `origin/master`, поэтому массовая приёмка бэка даёт заведомо отрицательный результат и тратит время впустую.
 - На production-сервере Git-tracked файлы backend checkout неизменяемы для AI-агента. Перед любой явно разрешённой server-write операцией сначала read-only проверь `git status --short` и каждый repo-relative путь через `git ls-files --error-unmatch -- <repo-relative-path>`; tracked path нельзя патчить, перезаписывать, копировать, удалять, переименовывать или менять ему права. Если checkout уже dirty, ничего не исправляй и не продолжай deploy/pull: зафиксируй paths/diff summary без секретов, создай/обнови `area=back`/ops задачу и передай backend-владельцу. Узкое исключение frontend deploy gate: известные untracked ops/runtime paths `deploy/prod/nginx/ssl/`, `dump.sql` и warning об отсутствии read-доступа к `deploy/prod/postgis_1/data/` не считаются dirty-блокером сами по себе; их содержимое нельзя читать, менять, копировать, удалять или chmod'ить. Любая другая status entry/warning по-прежнему означает stop. Разрешённые project-owned frontend deploy scripts могут менять только документированные untracked runtime/static targets вроде `static/dist`.
 - Если frontend-задача требует ещё не существующего backend-контракта или исправления на сервере и поэтому реализацию нельзя начать/продолжить, не маскируй это mock-фолбэком: создай/обнови `area=back` задачу и используй `blocked_by` с реальной hard dependency. Если frontend уже реализован и ждёт backend/deploy/production/API/browser/device validation, держи его в `review` или `testing`, а не в `blocked_by`.
 - Колонка `blocked_by` означает только невозможность начать или продолжить работу из-за конкретной незакрытой внешней зависимости. Незавершённый Done gate, ожидание review/QA/production-проверки или неуспешная проверка сами по себе не являются блокировкой: готовый код идёт в `review`/`testing`, а найденный дефект возвращает задачу в `in_progress`.
@@ -35,72 +36,9 @@
 
 ## 2. Skills для Codex
 
-Перед работой выбери минимальный набор project skills:
-
-- `$metravel-feature-builder` - фичи, рефакторинг, баги, API, hooks, services, SEO и обычная разработка.
-- `$metravel-domain-router` - карта доменных feature areas (travel/map/profile/achievements/quests/PDF/new pages), файлов, owner-boundaries и нужных проверок перед разработкой.
-- `$metravel-travel-expert` - доменный субагент travel: списки/детали/мастер, route points, save/moderation, export/PDF.
-- `$metravel-map-expert` - доменный субагент карты и places: MapPage, Leaflet web, native map/WebView, ORS и попапы.
-- `$metravel-profile-expert` - доменный субагент профиля: личный/публичный профиль, settings, подписки, счётчики, profile IA.
-- `$metravel-achievements-expert` - доменный субагент achievements/badges: ранги, XP, peer-награды, моки и profile embeds.
-- `$metravel-quest-expert` - доменный субагент quest-кода: список/деталь/прохождение, адаптеры, answer checker, печать.
-- `$metravel-quest-writer` - автор нового городского квеста: research, связный пеший маршрут, intro/steps/finale, задания, hints и answer patterns; творческий текст только после отдельного подтверждения пользователя.
-- `$metravel-quest-editor` - субагент редактирования контента существующих квестов: тексты, задания, подсказки, answer patterns.
-- `$metravel-quest-playthrough-reviewer` - ревью конкретного прохождения по `QuestProgress`: связывает сохранённый прогресс, сырые попытки, подсказки и актуальный текст шагов, объясняет drop-off и передаёт редактору только evidence-backed правки.
-- `$metravel-quest-geo-verifier` - read-only субагент гео-сверки точек квестов через OSM/Nominatim и локальные geocheck scripts.
-- `$metravel-hook-builder` - проектирование, вынос и рефакторинг focused React hooks в `hooks/` и рядом с фичами без нарушения public contracts.
-- `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.
-- `$metravel-i18n-guardrails` - многоязычный UI и locale-sensitive логика на web
-  и Android: translation keys/resources, language persistence, Intl/plurals,
-  accessibility, SEO locale и i18n validation.
-- `$metravel-design-auditor` - read-only сквозной аудит нескольких экранов: design-system consistency, responsive/mobile parity, состояния, accessibility и evidence matrix.
-- `$metravel-visual-asset-designer` - генерация и интеграция брендовых raster icons/badges/app/marketing assets через imagegen по `docs/ICON_ART_PROMPTS.md`; не подменяет Feather icons или фотореалистичные travel/article media.
-- `$metravel-child-quest-visuals` - отдельный автор визуалов детских/семейных/подростковых квестов: возрастной режим, акварель/сказка/анимация, сюжетная читаемость обложки, imagegen, prompt и production verification.
-- `$metravel-browser-reviewer` - browser review/fix loop для видимых web-изменений: diff + preview/browser + screenshot + console/network + reverify.
-- `$metravel-refactor-surgeon` - распил god-components и file-complexity нарушений без изменения поведения.
-- `$metravel-release-checks` - выбор и запуск проверок, preflight, release/deploy, production web checks.
-- `$metravel-quality-fixer` - полный прогон lint + Jest + Playwright с исправлением найденных проблем и обязательным rerun проверок.
-- `$metravel-test-runner` - точечный запуск Jest/unit/integration/governance проверок, выбор минимального набора команд и разбор падений.
-- `$metravel-test-writer` - написание и обновление unit/integration/governance тестов без `.skip`, с опорой на реальные контракты фичи.
-- `$metravel-e2e-runner` - запуск и отладка Playwright/e2e сценариев, browser smoke, работа с `.env.e2e`, trace и screenshot evidence.
-- `$metravel-performance-analyst` - Lighthouse, bundle/perf budget analysis, сравнение baseline и проверка performance только по production build или real URL.
-- `$metravel-growth-analyst` - анализ GA4/GSC/Yandex/affiliate-цифр, SEO/organic роста, поведения пользователей, воронок регистрации и добавления маршрутов/статей.
-- `$metravel-seo-index-operator` - ежедневная SEO/index рутина, GSC/index diagnostics, IndexNow backup, список URL для ручной индексации и SEO task routing.
-- `$metravel-code-reviewer` - обязательный review/fix pass после любых изменений
-  кода: проверка полного task diff на баги, избыточность, дублирование, плохой
-  reuse и неоптимальную логику, исправление findings, повторный review и validation.
-- `$metravel-security-reviewer` - evidence-backed frontend security review: XSS/sanitization, unsafe URLs/redirects, secrets/tokens, WebView/deep links и production dependencies; read-only без явного запроса на fixes.
-- `$metravel-devops-agent` - подготовка, запуск и проверка deploy на dev/preprod/prod с preflight, secret hygiene и post-deploy validation.
-- `$metravel-android-portable-builder` - переносимая локальная Android-сборка на
-  macOS/Windows/Linux из gitignored `.secrets` bundle без ручной настройки
-  Keychain и без EAS; build-only, Play tracks не меняет.
-- `$metravel-google-play-operator` - локальная Android production AAB-сборка и
-  production-only Google Play API без EAS; closed-testing tracks и настройки
-  защищены от изменений.
-- `$metravel-production-smoke` - read-only smoke production `metravel.by` после deploy или при подозрении на 502/white screen/static/API/sitemap регрессию.
-- `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
-- `$metravel-prompt-maintainer` - аудит и поддержка `docs/*PROMPTS.md`, `assets/**/PROMPT.md`, skill metadata/default prompts, воспроизводимости и prompt-governance без написания самого article/quest content.
-- `$metravel-task-contract` - обязательный контракт FE/BE задач на борде: scope, user-visible result, Data/API contract, platform/localization impact, dependencies, fallback/mock policy, validation и Done gate перед стартом/review/done.
-- `$metravel-problem-memory` - обязательная проверка истории перед созданием,
-  переоткрытием или дроблением задачи: ищет прежние `done`/`wont_do`/open
-  карточки и реестр `docs/PROBLEM_MEMORY.md`, затем выбирает
-  `reuse | reopen | create-linked | create-new`.
-- `$metravel-ticket-board` - оператор общего MCP task board: list/create/update/sync задач и спринтов без правки feature-кода.
-- `$metravel-sprint-reviewer` - приёмка тикетов активного спринта на MCP task board по Task Contract/Done gate с реальными тестами/browser/API evidence.
-- `$metravel-backend-diagnostician` - read-only диагностика backend/API проблем, 5xx/contract mismatch, backend status sync и создание/обновление back-задач с evidence.
-- `$metravel-article-editor-agent` - создание/редактирование/публикация article и travel-guide записей через API, photo-folder drafts, generated images/media, author/publish verification и только подтвержденные текстовые правки без вывода токенов.
-- `$metravel-codex-orchestrator` - верхний workflow для Codex: triage, выбор skills/агентов, промты ролей, план проверок и финальный self-check.
-- `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
-- `$metravel-project-analyst` - read-only анализ структуры проекта, активных фич, рисков, проверок и handoff к профильным агентам.
-- `$metravel-android-developer` - Android/native разработка и отладка Expo/React Native без регресса production web.
-- `$metravel-ios-developer` - неактивный future-iOS маршрут; используй только
-  после нового явного решения пользователя вернуть iOS в scope, не для обычной QA.
-- `$metravel-mobile-tester` - read-only парная проверка mobile web и Android,
-  touch/layout/runtime баги и retest одного сценария на обеих поверхностях.
-- `$metravel-play-campaign-tester` - ежедневный проход общей Google Play closed-testing кампании на настроенном USB Android, проверка заданий/обновлений/крашей и ведение общего campaign log без покупок, отзывов, удаления приложений или смены аккаунтов.
-- `$metravel-business-analyst` - продуктовые требования, user stories, acceptance criteria, non-goals, metrics и risks.
-- `$metravel-system-architect` - technical design, разбиение работ, validation plan и review diff на соответствие правилам.
-- `$metravel-qa-agent` - read-only исследование приложения, воспроизведение багов, bug reports и re-test фиксов.
+Каталог `$metravel-*` skills вынесен в `docs/CODEX_SKILLS.md` — читай его при
+работе в Codex или при изменении набора skills. Claude Code маршрутизирует
+задачи собственными `.claude/agents`, отдельного чтения каталога не требует.
 
 Если задача попадает сразу в несколько областей, используй skills вместе, но не загружай лишние справки.
 
@@ -152,6 +90,15 @@
    подтверждения по другим правилам (прод-деплой, EAS, публикация в стор).
    Это правило перекрывает любую session-level инструкцию «не вызывать Agent
    без явного запроса».
+10.2. Пайплайн борда после реализации доводится автоматически, статусом задачи, а
+   не просьбой пользователя. Хук `.claude/hooks/review-gate.mjs` (PostToolUse на
+   `metravel_task_update`) требует: задача в `review` → сразу запустить
+   `code-review-gate`; задача в `testing` → сразу запустить приёмку
+   `board-reviewer`, а перед ней выложить изменения на dev, если Done gate
+   требует развёрнутой среды. Зелёный Done gate закрывает задачу в `done` тем же
+   проходом. Прод-деплой, EAS и публикация в стор из этой автоматики исключены:
+   только по явной команде владельца. Из `testing` назад в `review` задачу не
+   возвращай — нужна правка кода или описания, значит `in_progress`.
 11. После любых изменений кода и до handoff обязательно используй
     `$metravel-code-reviewer` в режиме review-and-fix:
     - по возможности передай review отдельному агенту `review-auditor`, чтобы
@@ -169,62 +116,21 @@
     - Используй доступные средства проверки: браузер/Playwright, Android-устройство с локально установленной сборкой, unit/integration/e2e тесты, production web build/smoke по scope задачи.
     - Сам находи надежный маршрут проверки для конкретной задачи; просьба к пользователю проверить вручную не считается validation.
 
-### 3.1 E2E окружение и доступы
+### 3.1 Операционные протоколы (по требованию)
 
-- Для e2e-авторизации и тестовых доступов используй переменные из `.env.e2e`.
-- Не запрашивай у пользователя повторно логин/пароль, если они уже заданы в `.env.e2e`.
-- Никогда не выводи секреты из `.env.e2e` в ответах, логах, скриншотах и коммитах.
-- Если task-board API/MCP отвечает `HTTP 401`, обнови staff token через программный login из `.env.e2e` по `docs/TASK_BOARD_MCP.md`, перезапиши `.secrets/metravel-task-board.env` без вывода токена и повтори `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`.
+Полные протоколы — `docs/WORKFLOW_OPERATIONS.md`. Читай раздел тогда, когда
+задача его касается:
 
-### 3.1.1 Тестовые данные на production
+- e2e-доступы, `.env.e2e`, обновление board token при `HTTP 401` → §3.1;
+- тестовые сущности на проде под e2e-аккаунтами (разрешены постоянно, убирать за
+  собой) и готовые рецепты прод-QA → §3.1.1;
+- Android: EAS запрещён, локальная сборка и прогон на USB-устройстве → §3.2;
+- production-target baseline/after, закрытие perf/media/network задач → §3.3.1;
+- deploy/build/e2e/Lighthouse, эксклюзивность и locks → §3.4.
 
-- Разрешение выдано владельцем ПОСТОЯННО (2026-08-09): под e2e-аккаунтами можно
-  **создавать на проде тестовые сущности, проверять на них и удалять** —
-  переспрашивать не нужно. Это относится к данным пользователя (поездки, точки
-  маршрута, RSVP, приглашения), а не к контенту сайта: чужие статьи, квесты,
-  travel-записи и настройки по-прежнему не трогать.
-- Постоянная тестовая поездка владельца: `https://metravel.by/trips/plan/31`
-  (публичная, владелец `E2E_EMAIL2`). Её можно наполнять данными для проверки.
-- Убирай за собой: временную сущность, созданную под конкретную проверку, удаляй
-  сразу после снятия evidence, а факт удаления фиксируй кодом ответа.
-- Готовые рецепты для прод-QA (проверены 2026-08-09, экономят полчаса на сессию):
-  - **Авторизация на web — только cookie.** `secure_userToken` на web не
-    используется (`utils/secureStorage.ts`: «web uses the backend-managed HttpOnly
-    cookie»). В Playwright: `context.request.post('/api/user/login/')` с
-    `X-CSRFToken` из cookie `csrftoken` ставит сессию, после чего приложению нужно
-    отдать профиль через `localStorage`: `userId`, `userName`, `isSuperuser`
-    (`checkAuthentication` без `userId` считает пользователя гостем).
-  - Создание поездки — `POST /api/trips/planned/`; маршрут — `PUT
-    /api/trips/planned/{id}/route/` с `point_type` из `place|custom|rest|overnight`
-    (значения `stop` не существует, ответ 400).
-  - Участники: сначала `POST /api/trips/planned/{id}/invite/ {"user_ids":[...]}`,
-    только потом приглашённый делает `POST .../rsvp/` со **значением бэка**
-    `accepted|declined` (FE-словарь `going` бэк не принимает). Без инвайта RSVP
-    отвечает 400 `planned trip not found or not visible`.
-  - Удаление поездки — `DELETE /api/trips/{id}/` (не `/trips/planned/{id}/`: там 405).
-  - На странице висит баннер согласия и перехватывает клики — жать «Отклонить»
-    (самый приватный вариант), а не «Принять».
-  - На мобильной ширине табы поездки — только иконки: искать по `aria-label`
-    («Люди», «Экспорт»), поиск по тексту там ничего не найдёт.
-
-### 3.2 Android device testing and builds
-
-- Android EAS/cloud builds and submits are disabled by project policy: do not run
-  `eas build --platform android`, `eas submit --platform android` or any
-  `--platform all` command. Android production artifacts are built locally by
-  `npm run android:build:prod`; store operations use the project Google Play API
-  script. Re-enabling Android EAS requires a new explicit user decision.
-- На новом компьютере production signing и Android production env берутся из
-  переносимого `.secrets` bundle через `npm run android:release:doctor` и
-  `npm run android:build:prod`; ручная настройка macOS Keychain не требуется.
-- Current standing release authorization permits the agent to prepare and run the
-  local Android production build/Production submit when an Android release is the
-  active task. This never authorizes changing `alpha`, `internal`, `beta`, tester
-  lists, countries, or the active closed-testing release.
-- Если задачу нужно проверить на Android, считай, что Android-телефон подключён к этому компьютеру по USB-кабелю: сначала проверь `adb devices -l`.
-- Если `adb` показывает устройство со статусом `device`, сначала собери Android локально и установи сборку на телефон (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`), затем самостоятельно тестируй нужный Android-сценарий по `docs/MANUAL_TEST_CASES.md` `AND-USB-*`.
-- Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
-- `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
+Действует всегда, без чтения файла: чужой активный quality-gate (`SKIPPED` с
+кодом `0`) не ждать и не повторять; deploy/build того же target вторым
+экземпляром не запускать; секреты из `.env.e2e` не выводить.
 
 ### 3.3 Active platform validation and mobile parity
 
@@ -241,45 +147,6 @@
   иерархии, порядку блоков, ключевым размерам, действиям и touch semantics.
   Допустимы только технические отличия движка, системных permissions/insets и
   OS API; они не должны создавать другой UX.
-
-### 3.3.1 Production-target validation and task closure
-
-- Если проблема воспроизводится на production, Task Contract называет production
-  target или задача оптимизирует запросы, изображения, LCP, bundle, cache либо
-  API fan-out, до правки сними baseline на живом production URL. Минимальный
-  evidence: точный URL, viewport/browser/DPR, auth/cache state, число запросов,
-  байты, коды ответов и фактический размер выбранного media-варианта; для
-  Android — тот же flow и сетевой/byte замер на устройстве, когда Android в scope.
-- После явным образом разрешённого deploy повтори тот же сценарий на живом URL и
-  сравни before/after. Локальная production-сборка, preview с production API,
-  unit/e2e с mock media primitive, успешный deploy log и post-build guard не
-  являются post-deploy production evidence.
-- Если deploy не входил в разрешённый scope или production ещё не обновлён,
-  сообщай `local fix ready; production verification pending` и оставляй board
-  task в `review`/`testing`. Нельзя писать «исправлено на проде» и нельзя двигать
-  задачу в `done`.
-- Performance/media/network задача закрывается только когда повторный production
-  probe подтверждает целевой budget всей страницы, а не одного элемента:
-  request/API cardinality, total/transfer bytes, oversized/unsized media,
-  duplicate URL variants, 4xx/5xx и progressive/lazy behavior до и после scroll.
-  Обязателен negative probe для прежнего fail-open/unsupported режима.
-- Shared media, pagination, source-builder и caching изменения должны проверять
-  соседние consumer routes. Третий рецидив одного problem key требует общего
-  regression guard и structural task; ещё один локальный point fix сам по себе
-  не закрывает семейство проблемы.
-
-### 3.4 Координация долгих операций
-
-- Деплой, release/build, production web build, Android local/EAS build or install, server rebuild/restart, full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции с общими артефактами считаются эксклюзивными.
-- Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
-- Если другой агент уже запустил deploy/build/rebuild для того же target, не запускай второй экземпляр: используй уже идущую операцию, дождись её только когда результат обязателен для твоего scope, либо зафиксируй blocker с PID, командой и target.
-- Для test/quality gate действует отдельное non-waiting правило: если живой `.codex-temp/ops/quality-gate.lock` или активный quality-процесс уже существует, текущий чат сразу прекращает свой запуск. Не жди, не poll'и, не следи за завершением, не повторяй команду после освобождения lock и не запускай более узкий обходной тест.
-- Если активный gate по своему scope покрывает проверки текущей задачи и автоматические тесты — единственный оставшийся Done-gate шаг, фиксируй `validation delegated: active gate pid/name` и задачу можно завершить/закрыть. Это не означает `passed`: владелец активного gate обязан исправить все реальные падения и повторить свою проверку; если падение нельзя исправить в его scope, он переоткрывает затронутую задачу или фиксирует blocker. Если scope активного gate не покрывает задачу либо остаются deploy/browser/API/device/другие проверки, фиксируй `validation skipped: active gate pid/name` и не закрывай задачу.
-- Чат, который первым запустил gate, владеет его результатом и исправлениями. Остальные чаты не дублируют эту работу и не используют занятый gate как blocker, когда корректно применим `validation delegated`.
-- Не убивай и не перезапускай чужой процесс без явной команды пользователя или документированного safe-wrapper'а. Если lock явно stale, сначала зафиксируй почему он stale, затем аккуратно очисти lock и продолжай.
-- Если запускаешь новую долгую операцию без собственного lock механизма, оставь короткий marker в `.codex-temp/ops/` и удали его после завершения.
-- `build-prod.sh` удерживает общий `.codex-temp/ops/web-build.lock` до конца полного цикла build + SEO + deploy. Не обходи этот wrapper: прямой `expo export` или запуск `scripts/build-web-safe.js` параллельно с deploy запрещен.
-- Основные test/quality команды (`check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, `release:check`) обязаны запускаться только через общий `scripts/run-with-quality-gate-lock.js`. Он использует атомарный `.codex-temp/ops/quality-gate.lock`, сообщает PID владельца и при живом владельце сразу возвращает нейтральный `SKIPPED` с кодом `0`, чтобы чат завершил собственный запуск без ожидания/ретрая. `SKIPPED` нельзя записывать как `passed`, но при выполнении условий выше он оформляется как `validation delegated` и не блокирует Done. Lock умершего процесса восстанавливается автоматически. Общая Jest-конфигурация применяет тот же контракт к прямому `npx jest`. Не обходи wrapper прямым Playwright-запуском.
 
 ## 4. Обязательные технические правила
 

@@ -83,8 +83,8 @@ iOS/iPadOS-приложения пока нет; iOS не входит в QA/Don
   при повторном симптоме; он сверяет `docs/PROBLEM_MEMORY.md` и все статусы board,
   затем выбирает `reuse`, `reopen`, `create-linked` или `create-new`.
 - `$metravel-ticket-board`: используй как оператора общего MCP task board для list/create/update/sync задач и спринтов; он не пишет feature code.
-- `$metravel-sprint-reviewer`: используй для приёмки тикетов активного спринта на MCP task board: проверить Task Contract/Done gate реальными тестами/browser/API evidence и двигать только подтвержденное в `done`.
-- `$metravel-backend-diagnostician`: используй для read-only диагностики backend/API/5xx/contract mismatch, сверки backend status с бордом и оформления back-задач без правки backend-кода.
+- `$metravel-sprint-reviewer`: используй для приёмки тикетов активного спринта на MCP task board: проверить Task Contract/Done gate реальными тестами/browser/API evidence и двигать только подтвержденное в `done`. Тикеты `area=back` в приёмку не берутся: они отфильтровываются из очереди, в отчёте остаётся строка «пропущено N тикетов `area=back`» — см. `docs/TASK_BOARD_MCP.md` → «Правило: `area=back` не проверяется без прямого запроса».
+- `$metravel-backend-diagnostician`: используй для read-only диагностики backend/API/5xx/contract mismatch, сверки backend status с бордом и оформления back-задач без правки backend-кода. Запускай только по прямому запросу пользователя именно про бэкенд; при общей приёмке борда бэкенд-очередь пропускается.
 - `$metravel-article-editor-agent`: используй для article и travel-guide API, photo-folder drafts, media, author/publish verification и безопасной работы с токеном из `.secrets`; любые творческие правки текста статьи сначала подтверждай отдельным вопросом.
 - `$metravel-codex-orchestrator`: используй как верхний self-check для сложных или многошаговых задач: triage, минимальный набор skills, role prompts, validation plan, handoff и final self-check по правилам проекта.
 - `$metravel-agent-workflow`: используй для координации ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
