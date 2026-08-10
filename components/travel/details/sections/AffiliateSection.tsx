@@ -9,11 +9,8 @@ import { getCountryCodeByCoords } from '@/utils/geoCountry'
 import { translate as i18nT } from '@/i18n'
 
 
-/** ISO country code: explicit `countryCode`, else derived from the first point's coords. */
-const resolveCountryCode = (travel: Travel): string | undefined => {
-  const explicit = String((travel as any).countryCode ?? '').trim().toUpperCase()
-  if (/^[A-Z]{2}$/.test(explicit)) return explicit
-
+/** ISO country code of the first map point, via bbox lookup. */
+const resolveCodeFromFirstPoint = (travel: Travel): string | undefined => {
   const point = travel.travelAddress?.[0] as { coord?: string; lat?: number; lng?: number } | undefined
   if (!point) return undefined
 
@@ -28,6 +25,30 @@ const resolveCountryCode = (travel: Travel): string | undefined => {
   return getCountryCodeByCoords(lat, lng)
 }
 
+/** ISO country code: explicit `countryCode`, else derived from the first point's coords. */
+const resolveCountryCode = (travel: Travel): string | undefined => {
+  const raw = String((travel as any).countryCode ?? '').trim()
+
+  // Мульти-страновой маршрут отдаёт код списком («ua, ge»). Берём страну первой
+  // точки, но только если она объявлена в этом же списке: bbox-таблица знает не
+  // все страны и накрывает соседей, поэтому непроверенный код увёл бы читателя
+  // туда, где маршрута нет — у 213 «Украина, Грузия» первая точка в Тбилиси
+  // резолвится как RU. Не прошло проверку — ссылка остаётся нейтральной
+  // (homepage партнёра), а копия ниже — без названия страны.
+  // Первый токен списка брать нельзя: у 205 «ru, in» и 210 «ru, eg» он уводит
+  // на Россию с индийского и египетского маршрута.
+  if (raw.includes(',')) {
+    const declared = raw.toUpperCase().split(',').map((code) => code.trim())
+    const fromPoint = resolveCodeFromFirstPoint(travel)
+    return fromPoint && declared.includes(fromPoint) ? fromPoint : undefined
+  }
+
+  const explicit = raw.toUpperCase()
+  if (/^[A-Z]{2}$/.test(explicit)) return explicit
+
+  return resolveCodeFromFirstPoint(travel)
+}
+
 export const AffiliateSection: React.FC<{
   travel: Travel
   styles: any
@@ -36,15 +57,26 @@ export const AffiliateSection: React.FC<{
   // configures a Travelpayouts marker — so nothing ships until ready (FE-2).
   if (!isAffiliateEnabled()) return null
 
-  const city = travel.cityName?.trim()
-  const country = travel.countryName?.trim()
-  // Reliable location signal = country code from the first map point's coords
-  // (cityName is empty in the data); same approach as BelkrajWidget.
+  // `cityName` в данных — это адрес первой точки из обратного геокодинга
+  // («Базилика Святого Стефана, 1, Szent István tér, …, 1051, Венгрия»), а не
+  // название города, поэтому в подписи он не участвует: место = страна, ровно
+  // как и destination самой партнёрской ссылки. Reliable location signal =
+  // country code from the first map point's coords; same approach as BelkrajWidget.
   const countryCode = resolveCountryCode(travel)
-  if (!countryCode && !city && !country) return null
+  // Мульти-страновые маршруты отдают `countryName` списком («Украина, Грузия»),
+  // а ссылка всегда одностранная — по countryCode. Подписать такую пару списком
+  // значит пообещать одно, а привести в другое, поэтому место просто не
+  // показываем: оффер остаётся, копия — без названия страны.
+  const rawCountry = travel.countryName?.trim()
+  const country = rawCountry && !rawCountry.includes(',') ? rawCountry : undefined
+  // Гейт смотрит на сырое значение, а не на вычищенное: у мульти-странового
+  // маршрута с нерезолвимой первой точкой (162 «Литва, Швеция, Норвегия…» —
+  // Норвегии нет в таблице bbox) и код, и `country` пусты, но блок там был и
+  // должен остаться — просто с нейтральными ссылками и копией без места.
+  if (!countryCode && !rawCountry) return null
 
   // Don't render an orphan header when there are no offers to show.
-  if (getAffiliateOffers({ city, country, countryCode, travelId: travel.id }).length === 0) return null
+  if (getAffiliateOffers({ country, countryCode, travelId: travel.id }).length === 0) return null
 
   const webRegionProps = Platform.OS === 'web'
     ? {
@@ -79,7 +111,6 @@ export const AffiliateSection: React.FC<{
 
       <View style={{ marginTop: 12 }}>
         <AffiliateOffers
-          city={city}
           country={country}
           countryCode={countryCode}
           travelId={travel.id}

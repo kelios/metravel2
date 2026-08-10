@@ -77,6 +77,16 @@ describe('affiliateConfig', () => {
     expect(offer.url).not.toContain(encodeURIComponent('/destinations/'))
   })
 
+  // Callers that know a real place name (quest city, trip region) keep it in the copy;
+  // travel details deliberately passes only the country (its `cityName` is an address).
+  it('prefers an explicit city over the country in the offer copy', () => {
+    process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
+    process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE = TOURS_TPL
+    const [offer] = getAffiliateOffers({ city: 'Минск', country: 'Беларусь', countryCode: 'BY' })
+    expect(offer.subtitle).toContain('Минск')
+    expect(offer.subtitle).not.toContain('Беларусь')
+  })
+
   it('still builds offers from a country name when no countryCode resolves', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
     process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL

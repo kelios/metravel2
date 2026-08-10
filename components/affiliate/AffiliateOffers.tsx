@@ -25,13 +25,18 @@ function AffiliateOffers({ city, country, countryCode, travelId, onOfferClick }:
     [city, country, countryCode, travelId],
   )
 
+  // `countryCode` рядом с `city`: travel-детали города не передают (там в данных
+  // адрес, а не город), и без кода гео-сигнал у этой поверхности исчезает совсем,
+  // а сегментация перестаёт сходиться с квестами и поездками. Код — низкая
+  // кардинальность, в отличие от адресной строки.
   const trackImpression = useCallback(() => {
     queueAnalyticsEvent('Affiliate_Impression', {
       travelId: travelId != null ? String(travelId) : undefined,
       city: city || undefined,
+      countryCode: countryCode || undefined,
       offers: offers.map((o) => o.key).join(','),
     })
-  }, [offers, travelId, city])
+  }, [offers, travelId, city, countryCode])
 
   const impression = useAffiliateImpression(trackImpression)
 
@@ -41,6 +46,7 @@ function AffiliateOffers({ city, country, countryCode, travelId, onOfferClick }:
         program: offer.key,
         travelId: travelId != null ? String(travelId) : undefined,
         city: city || undefined,
+        countryCode: countryCode || undefined,
       })
       onOfferClick?.(offer.key)
       void openExternalUrlInNewTab(offer.url, {
@@ -48,7 +54,7 @@ function AffiliateOffers({ city, country, countryCode, travelId, onOfferClick }:
         windowFeatures: 'noopener',
       })
     },
-    [travelId, city, onOfferClick],
+    [travelId, city, countryCode, onOfferClick],
   )
 
   if (offers.length === 0) return null

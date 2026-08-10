@@ -2,9 +2,12 @@ import { translate as i18nT } from '@/i18n'
 /**
  * FE-2: Travelpayouts affiliate configuration.
  *
- * Travel rows have NO city in the data (cityName is empty across all of them) —
- * the only reliable location signal is the country, derived from the first map
- * point's coordinates (same approach as the Belkraj widget). So offers link to a
+ * Travel rows have NO usable city in the data: `cityName` holds the reverse-geocoded
+ * address of the first point ("Базилика Святого Стефана, 1, …, 1051, Венгрия"), so
+ * travel callers pass only the country. Callers that DO know a real place name
+ * (quest city, trip region) still pass `city` and it wins in the copy.
+ * The only reliable location signal for travels is the country, derived from the first
+ * map point's coordinates (same approach as the Belkraj widget). So offers link to a
  * COUNTRY-level destination, built in code from the ISO country code:
  *   - Ostrovok hotels     → https://ostrovok.ru/hotel/<countrySlug>/
  *   - Tripster excursions → https://experience.tripster.ru/destinations/<countrySlug>/
