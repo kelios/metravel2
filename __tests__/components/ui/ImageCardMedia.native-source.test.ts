@@ -26,8 +26,13 @@ describe('ImageCardMedia native sharp source', () => {
     })
 
     expect(source?.uri).toContain('w=480')
-    expect(source?.uri).toContain('q=60')
-    expect(source?.uri).toContain('fit=cover')
+    // `quest-cover` — durable-семейство: производная уже нарезана с качеством
+    // своего профиля и под свой fit, поэтому `q`/`fit` не отправляются (гейт
+    // `servedFromDurableFamily` в `utils/imageProxy.ts`). Проба прода 2026-08-10:
+    // `?w=800` и `?w=800&q=60&fit=cover` — один и тот же md5 `c6aa4466…`, 7 798 B.
+    // Здесь такие же ожидания, что и в `__tests__/components/QuestCard.test.tsx`.
+    expect(source?.uri).not.toMatch(/[?&]q=/)
+    expect(source?.uri).not.toMatch(/[?&]fit=/)
     // #1113: `h` больше не отправляется — прокси ресайзит только по ширине, а
     // высота в URL делала ссылку зависимой от геометрии контейнера и плодила
     // лишние варианты того же файла.

@@ -5,6 +5,7 @@ import { PixelRatio, Platform } from 'react-native';
 
 import QuestCard from '@/screens/tabs/QuestCard';
 import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient';
+import { IMAGE_WIDTHS } from '@/constants/imageContract';
 import type { QuestMeta } from '@/utils/questAdapters';
 
 const mockPush = jest.fn();
@@ -191,10 +192,34 @@ describe('QuestCard', () => {
             );
 
             const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
-            expect(src).toContain('https://metravel.by/quest-cover/quests/1/main/abc.png?');
-            expect(src).toContain('w=');
-            expect(src).toContain('q=60');
-            expect(src).toContain('fit=cover');
+            const url = new URL(src);
+
+            expect(url.origin + url.pathname).toBe(
+                'https://metravel.by/quest-cover/quests/1/main/abc.png',
+            );
+            // Ширина — ступень контракта, а не «хоть какая-нибудь»: слот 340 CSS
+            // при DPR 2 просит 680, ближайшая ступень `IMAGE_WIDTHS.questCover` — 800.
+            expect(IMAGE_WIDTHS.questCover).toContain(Number(url.searchParams.get('w')));
+
+            // Раньше здесь ожидались `q=60` и `fit=cover`. `quest-cover` — durable-
+            // семейство: производные нарезаны заранее с качеством своего профиля
+            // (`IMAGE_QUALITY.questCover`, он же q60) и под свой fit, поэтому оба
+            // параметра бэкенд игнорирует, а каждый их набор — ОТДЕЛЬНЫЙ адрес,
+            // отдельная запись в nginx- и браузерном кэше на один и тот же файл, и
+            // расхождение с манифестным адресом (манифест их не ставит).
+            //
+            // Проба прода 2026-08-10, `quest-cover/quests/1/main/f0011e51….webp`:
+            // `?w=800`, `?w=800&q=60&fit=cover` и даже `?w=800&q=20` — 7 798 B и
+            // один и тот же md5 `c6aa4466…`, `immutable`. То есть `q` здесь не
+            // «настройка качества», а мёртвый cache-buster: снятие его картинку не
+            // ухудшает, она и так отдаётся q60-производной.
+            //
+            // Гейт живёт в `utils/imageProxy.ts` (`servedFromDurableFamily`), его
+            // прямой контракт — `__tests__/utils/imageOptimization.test.ts`.
+            // Legacy-роуты (`/media-resize/**`) режут в момент запроса, там оба
+            // параметра по-прежнему отправляются.
+            expect(url.searchParams.get('q')).toBeNull();
+            expect(url.searchParams.get('fit')).toBeNull();
         } finally {
             process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
         }
