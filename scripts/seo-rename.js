@@ -76,11 +76,19 @@ const CLI_SPEC = {
     name: {
       type: 'string',
       valueName: 'a title',
+      // Titles legitimately open with a dash: «-40 °C: зимний Байкал».
+      allowLeadingDash: true,
       requiresMode: 'id',
       reason: 'a map file carries its own names',
     },
     restore: { type: 'string', valueName: 'a travel id' },
-    'dry-run': { type: 'boolean' },
+    'dry-run': {
+      type: 'boolean',
+      // `--restore 186 --dry-run` used to swallow the rehearsal flag and PUT for
+      // real — the same ignored-flag shape already closed in seo-edit.js (#1391).
+      forbiddenModes: ['restore'],
+      reason: 'a restore always writes',
+    },
   },
   modes: {
     flags: ['map-file', 'id', 'restore'],
@@ -255,10 +263,6 @@ async function renameOne({ id, name }, dryRun) {
 
 async function main() {
   const args = parseCliArgs(process.argv, CLI_SPEC);
-  if (args.help) {
-    console.log(USAGE);
-    return;
-  }
   if (args.mode === 'restore') return restoreFromBackup(args.restore);
 
   const dryRun = args.dryRun;

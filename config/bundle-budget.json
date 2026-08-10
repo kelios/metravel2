@@ -16,20 +16,36 @@
       "__expo-metro-runtime"
     ],
     "htmlRoutes": true,
-    "maxBrotliKB": 800,
-    "maxRequests": 59,
+    "maxBrotliKB": 775,
+    "maxRequests": 51,
     "maxRequestsByRoute": {
-      "index.html": 36,
-      "search.html": 32,
-      "map.html": 40,
-      "quests.html": 34,
-      "(tabs)/travels/[param].html": 59
+      "index.html": 35,
+      "search.html": 30,
+      "map.html": 39,
+      "quests.html": 33,
+      "(tabs)/travels/[param].html": 51
     },
     "payloadRoutes": {
       "geoCountryOutlines": {
         "marker": "4155,4241,-5,23,-8,10",
-        "maxRoutes": 1663,
-        "mustNotLoad": []
+        "maxRoutes": 2,
+        "mustNotLoad": [
+          "index.html",
+          "search.html",
+          "(tabs)/search.html",
+          "map.html",
+          "(tabs)/map.html",
+          "quests.html",
+          "(tabs)/quests.html",
+          "profile.html",
+          "(tabs)/profile.html",
+          "articles.html",
+          "(tabs)/articles.html",
+          "login.html",
+          "(tabs)/login.html",
+          "terms.html",
+          "(tabs)/terms.html"
+        ]
       }
     },
     "tolerancePct": 0

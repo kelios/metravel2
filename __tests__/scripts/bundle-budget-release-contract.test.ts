@@ -35,20 +35,26 @@ describe('bundle budget release contract', () => {
       Number(budget.tolerancePct) <= 5,
       'config/bundle-budget.json tolerancePct must stay at or below 5%.',
     )
+    // #1393: числа опущены до фактических после выноса слоя данных квестов и
+    // таблицы контуров стран из стартового графа. Пин существует, чтобы потолок
+    // нельзя было ПОДНЯТЬ ради зелёной сборки; опускать его вслед за реальным
+    // выигрышем — ровно то, ради чего он и заведён. Замер 2026-08-10 на
+    // production-сборке: 758,4 КБ brotli, `(tabs)/travels/[param].html` 51
+    // запрос (было 785,0 КБ и 59).
     expect(budget?.eager).toMatchObject({
       chunks: ['entry', '__expo-metro-runtime'],
       htmlRoutes: true,
-      maxBrotliKB: 800,
+      maxBrotliKB: 775,
       // #1372: потолок на ЧИСЛО eager JS-запросов маршрута. Без пина его легко
       // поднять, чтобы «позеленить» сборку, — а именно это Task Contract
       // задачи и запрещает.
-      maxRequests: 59,
+      maxRequests: 51,
       maxRequestsByRoute: {
-        'index.html': 36,
-        'search.html': 32,
-        'map.html': 40,
-        'quests.html': 34,
-        '(tabs)/travels/[param].html': 59,
+        'index.html': 35,
+        'search.html': 30,
+        'map.html': 39,
+        'quests.html': 33,
+        '(tabs)/travels/[param].html': 51,
       },
       tolerancePct: 0,
     })
@@ -442,8 +448,24 @@ describe('bundle budget release contract', () => {
       // Маркер — фрагмент первого кольца контура Грузии. Пин по имени чанка не
       // годится: `__shared-N` перенумеровывается от сборки к сборке.
       expect(spec.marker).toBe('4155,4241,-5,23,-8,10')
-      expect(typeof spec.maxRoutes).toBe('number')
-      expect(Array.isArray(spec.mustNotLoad)).toBe(true)
+      // #1393: после выноса слоя квестов таблица контуров осталась только у
+      // партнёрского блока планировщика — это два HTML одного маршрута
+      // (`trips/plan/[id]` и его `(tabs)`-копия). Было 960 из 967 маршрутов.
+      expect(spec.maxRoutes).toBe(2)
+      // Односторонний рэтчет по числу разрешил бы освободить главную и тем же
+      // числом нагрузить карту, поэтому отвоёванные маршруты закреплены поимённо.
+      expect(spec.mustNotLoad).toEqual(
+        expect.arrayContaining([
+          'index.html',
+          'search.html',
+          'map.html',
+          'quests.html',
+          'profile.html',
+          'articles.html',
+          'login.html',
+          'terms.html',
+        ]),
+      )
     })
 
     it('counts only the routes that actually load the payload', () => {

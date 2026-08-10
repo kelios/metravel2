@@ -177,10 +177,6 @@ async function apply() {
 
 async function main() {
   const args = parseCliArgs(process.argv, CLI_SPEC);
-  if (args.help) {
-    console.log(USAGE);
-    return;
-  }
   ID = args.id;
   FAQ_FILE = args.faqFile;
   COMMENT_FILE = args.commentFile;

@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 
 /**
  * #1148: регрессия на состав eager-бандла.
@@ -104,6 +104,101 @@ const LAZY_ONLY_MODULES = [
   },
 ]
 
+/**
+ * #1393: маршрутная привязка тяжёлого payload'а.
+ *
+ * Проверки выше ловят «вендор уехал в общий чанк» по ОДНОМУ синхронному импорту.
+ * Здесь другой класс дефекта: импорт формально легален (крошки имеют право знать
+ * про квесты), но модуль, до которого он дотягивается, оказывается в стартовом
+ * графе маршрутов, которым он не нужен. Так таблица контуров стран (47 КБ raw)
+ * ехала тегом <script> на 960 из 967 маршрутов — через шапку, которая
+ * рендерится на каждом маршруте, и через статический блок квеста на
+ * travel-деталях.
+ *
+ * Гейт по собранному бандлу (`eager.payloadRoutes` в guard-bundle-budget) видит
+ * это же нарушение, но стоит полной production-сборки (~20 мин). Эта проверка
+ * считает достижимость по исходникам за секунду и падает ДО сборки.
+ */
+const ROUTE_SCOPED_PAYLOADS: Array<{
+  module: string
+  allowedRoutes: string[]
+  mustReachFrom: string
+  ticket: string
+}> = [
+  {
+    module: 'utils/geoCountryOutlines.ts',
+    // Единственный оставшийся законный потребитель: партнёрский блок
+    // планировщика резолвит страну точки по координатам. Квестам таблица больше
+    // не нужна — `country_code` приходит из API (замер прода 2026-08-10: 139 из
+    // 139 квестов), и координатный фолбэк из `questAdapters` убран.
+    allowedRoutes: ['app/(tabs)/trips/plan/[id].tsx'],
+    // Маршрут-контроль детектора: если резолвер сломается, «ноль маршрутов»
+    // выглядит как идеальный результат, поэтому одно срабатывание обязано быть.
+    mustReachFrom: 'app/(tabs)/trips/plan/[id].tsx',
+    ticket: '#1393',
+  },
+]
+
+const RESOLVE_EXTS = ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js']
+
+/** Разрешение импорта под web-бандл: `.web.*` выигрывает у платформенно-общего файла. */
+const resolveImport = (specifier: string, fromFile: string): string | null => {
+  let base: string
+  if (specifier.startsWith('@/')) base = join(ROOT, specifier.slice(2))
+  else if (specifier.startsWith('.')) base = resolve(dirname(fromFile), specifier)
+  else return null // node_modules — вес вендоров держат проверки выше
+  for (const ext of RESOLVE_EXTS) if (existsSync(base + ext)) return base + ext
+  for (const ext of RESOLVE_EXTS) if (existsSync(join(base, `index${ext}`))) return join(base, `index${ext}`)
+  return existsSync(base) && statSync(base).isFile() ? base : null
+}
+
+const syncDepsCache = new Map<string, string[]>()
+
+/** Синхронные рёбра графа. `import()` — граница чанка, по ней обход не идёт. */
+const syncDeps = (file: string): string[] => {
+  const cached = syncDepsCache.get(file)
+  if (cached) return cached
+  let content = ''
+  try {
+    content = stripComments(readFileSync(file, 'utf8'))
+  } catch {
+    /* платформенная пара может отсутствовать — это не ребро */
+  }
+  const out = new Set<string>()
+  const add = (specifier: string) => {
+    const resolved = resolveImport(specifier, file)
+    if (resolved) out.add(resolved)
+  }
+  // `import ... from 'x'` и `export ... from 'x'`, кроме `import type` / `export type`.
+  for (const m of content.matchAll(/(?:^|\n)\s*(?:import|export)\s+(?!type\s)[\s\S]*?from\s*['"]([^'"]+)['"]/g)) add(m[1])
+  for (const m of content.matchAll(/(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g)) add(m[1])
+  for (const m of content.matchAll(/(?<!\.)\brequire\(\s*['"]([^'"]+)['"]\s*\)/g)) add(m[1])
+  const list = [...out]
+  syncDepsCache.set(file, list)
+  return list
+}
+
+/** Кратчайшая синхронная цепочка `root → target`, или null. */
+const syncPathTo = (root: string, target: string): string[] | null => {
+  const prev = new Map<string, string | null>([[root, null]])
+  const queue = [root]
+  while (queue.length) {
+    const current = queue.shift() as string
+    if (current === target) {
+      const chain: string[] = []
+      for (let node: string | null = current; node; node = prev.get(node) ?? null) chain.unshift(relative(ROOT, node))
+      return chain
+    }
+    for (const dep of syncDeps(current)) {
+      if (!prev.has(dep)) {
+        prev.set(dep, current)
+        queue.push(dep)
+      }
+    }
+  }
+  return null
+}
+
 const SOURCE_DIRS = ['app', 'components', 'hooks', 'screens', 'stores', 'utils', 'constants']
 const SOURCE_EXTS = ['.ts', '.tsx', '.js', '.jsx']
 
@@ -174,6 +269,23 @@ describe('состав eager-бандла (#1148)', () => {
         .filter((file) => !allowedSyncImporters.includes(file))
 
       expect({ module, offenders }).toEqual({ module, offenders: [] })
+    },
+  )
+
+  it.each(ROUTE_SCOPED_PAYLOADS)(
+    'payload $module остаётся в стартовом графе только своих маршрутов ($ticket)',
+    ({ module, allowedRoutes, mustReachFrom }) => {
+      const target = join(ROOT, module)
+      const routeRoots = collectSourceFiles(join(ROOT, 'app'))
+      const reached = routeRoots
+        .map((root) => ({ root: relative(ROOT, root), chain: syncPathTo(root, target) }))
+        .filter((hit) => hit.chain !== null)
+
+      expect(reached.map((hit) => hit.root)).toContain(mustReachFrom)
+
+      const offenders = reached.filter((hit) => !allowedRoutes.includes(hit.root))
+      // Цепочка в сообщении — сразу видно, каким ребром payload попал на маршрут.
+      expect(offenders.map((hit) => `${hit.root}: ${hit.chain!.join(' -> ')}`)).toEqual([])
     },
   )
 

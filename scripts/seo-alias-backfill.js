@@ -333,10 +333,6 @@ const defaultDeps = { getTravel, putName, verifyAlias, saveBackup }
 
 async function main() {
   const args = parseCliArgs(process.argv, CLI_SPEC)
-  if (args.help) {
-    console.log(USAGE)
-    return
-  }
   const dryRun = args.dryRun
 
   let entries = []

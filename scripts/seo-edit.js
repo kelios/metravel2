@@ -73,7 +73,7 @@ const CLI_SPEC = {
     'prepend-file': { type: 'string', valueName: 'a path', default: '', requiresMode: 'id', reason: 'a restore rewrites the whole backed-up body' },
     'append-file': { type: 'string', valueName: 'a path', default: '', requiresMode: 'id', reason: 'a restore rewrites the whole backed-up body' },
     'desc-file': { type: 'string', valueName: 'a path', default: '', requiresMode: 'id', reason: 'a restore rewrites the whole backed-up body' },
-    meta: { type: 'string', valueName: 'a meta description', default: null, requiresMode: 'id', reason: 'a restore puts the backed-up meta back' },
+    meta: { type: 'string', valueName: 'a meta description', default: null, allowLeadingDash: true, requiresMode: 'id', reason: 'a restore puts the backed-up meta back' },
     'dry-run': { type: 'boolean', requiresMode: 'id', reason: 'a restore always writes' },
     'backup-dir': { type: 'string', valueName: 'a directory', default: DEFAULT_BACKUP_DIR },
   },
@@ -331,10 +331,6 @@ async function main() {
   // Parsed here, not at module level, so a UsageError reaches runSeoCli() below
   // and a bad invocation exits 2 instead of touching a live article (#1391).
   const args = parseArgs(process.argv);
-  if (args.help) {
-    console.log(USAGE);
-    return;
-  }
 
   const backupDir = args.backupDir;
   if (args.mode === 'restore') return restore(args.restore, backupDir);

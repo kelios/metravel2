@@ -7,8 +7,8 @@ import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
-import { fetchQuestByQuestId, type ApiQuestBundle } from '@/api/quests';
-import { useQuestsList } from '@/hooks/useQuestsApi';
+import { fetchQuestByQuestId, fetchQuestsList, type ApiQuestBundle, type ApiQuestMeta } from '@/api/quests';
+import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import { resolveQuestCitySegment } from '@/utils/questCityAlias';
 import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import { fetchPlannedTrip, type PlannedTrip } from '@/api/plannedTrips';
@@ -294,13 +294,30 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return parts.length === 2 ? parts[1] : null;
   }, [resolvedPathname]);
 
-  const { quests: questsForCityCrumb } = useQuestsList({ enabled: !!questCitySegment });
+  // #1393: крошка читает СЫРОЙ ответ `/quests/`, а не адаптированный список из
+  // `useQuestsList`. Крошки живут в шапке каждого маршрута, поэтому импорт
+  // `useQuestsApi` тянул в стартовый граф всего сайта `utils/questAdapters` →
+  // `utils/geoCountry` → таблицу контуров стран (47 КБ raw) — ради двух полей,
+  // `city_id` и `city_name`, которые есть в ответе как есть.
+  //
+  // Ключ, queryFn и времена кеша совпадают с `useQuestsList`, поэтому экран
+  // квестов и крошка по-прежнему дедуплицируются в один запрос `/quests/`.
+  const { data: questsForCityCrumb } = useQuery<ApiQuestMeta[]>({
+    queryKey: queryKeys.quests(),
+    queryFn: ({ signal }) => fetchQuestsList({ signal }),
+    enabled: !!questCitySegment,
+    staleTime: QUESTS_LIST_STALE_TIME,
+    gcTime: QUESTS_LIST_GC_TIME,
+  });
 
   const questCityName = useMemo(() => {
     if (!questCitySegment) return '';
-    const resolved = resolveQuestCitySegment(questCitySegment, questsForCityCrumb);
+    const quests = questsForCityCrumb ?? [];
+    // `resolveQuestCitySegment` читает `city_id ?? cityId`, поэтому сырой список
+    // ему подходит так же, как адаптированный.
+    const resolved = resolveQuestCitySegment(questCitySegment, quests);
     if (!resolved) return '';
-    return questsForCityCrumb.find((q) => q.cityId === resolved.cityId)?.cityName || '';
+    return quests.find((q) => String(q.city_id) === resolved.cityId)?.city_name || '';
   }, [questCitySegment, questsForCityCrumb]);
 
   // Article title from API (for header/breadcrumbs on /article/[id] pages — F-19)

@@ -68,23 +68,18 @@ function AffiliateOffers({ city, country, countryCode, travelId, onOfferClick }:
     >
       {offers.map((offer) => (
         <View key={offer.key} style={styles.card}>
-          <View style={styles.cardRow}>
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>{offer.title}</Text>
-              <Text
-              style={styles.cardSubtitle}
-              numberOfLines={2}
-            >{offer.subtitle}</Text>
-            </View>
-            <Pressable
-              onPress={() => handlePress(offer)}
-              accessibilityRole="link"
-              accessibilityLabel={`${offer.cta}: ${offer.title}`}
-              style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-            >
-              <Text style={styles.ctaText}>{offer.cta}</Text>
-            </Pressable>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>{offer.title}</Text>
+            <Text style={styles.cardSubtitle}>{offer.subtitle}</Text>
           </View>
+          <Pressable
+            onPress={() => handlePress(offer)}
+            accessibilityRole="link"
+            accessibilityLabel={`${offer.cta}: ${offer.title}`}
+            style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+          >
+            <Text style={styles.ctaText}>{offer.cta}</Text>
+          </Pressable>
         </View>
       ))}
       <Text style={styles.disclosure}>{i18nT('shared:components.affiliate.AffiliateOffers.reklama_partnerskie_predlozheniya_tsena_dlya_777e00fa')}</Text>
@@ -98,6 +93,10 @@ const getStyles = (colors: ThemedColors) =>
       gap: DESIGN_TOKENS.spacing.sm,
     },
     card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.md,
+      flexWrap: 'wrap',
       padding: DESIGN_TOKENS.spacing.md,
       borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1,
@@ -105,25 +104,10 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web' ? { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' } : colors.shadows.light),
     },
-    // Web wraps the CTA under the copy once the row gets narrow, and that is the
-    // layout we want on a phone. Android/Yoga, however, sizes the first-line child
-    // of a *wrapped* row from a measurement taken at a slightly wider width than it
-    // finally lays out, so a subtitle that overflows by less than a word keeps a
-    // single-line height and its tail is clipped — «Авторские экскурсии и местные
-    // гиды —» loses the place name (#1392, family NATIVE-TEXT-ROW-001). Native
-    // therefore stacks explicitly instead of relying on flex wrapping: same visual
-    // result on a phone, but every child keeps a definite width to measure against.
-    cardRow: {
-      gap: DESIGN_TOKENS.spacing.md,
-      ...(Platform.OS === 'web'
-        ? { flexDirection: 'row' as const, alignItems: 'center' as const, flexWrap: 'wrap' as const }
-        : { flexDirection: 'column' as const, alignItems: 'flex-start' as const }),
-    },
     cardBody: {
+      flex: 1,
+      minWidth: 160,
       gap: DESIGN_TOKENS.spacing.xxs,
-      ...(Platform.OS === 'web'
-        ? { flex: 1, minWidth: 160 }
-        : { alignSelf: 'stretch' as const }),
     },
     cardTitle: {
       fontSize: 16,
@@ -134,6 +118,17 @@ const getStyles = (colors: ThemedColors) =>
       fontSize: Platform.select({ default: 13, web: 14 }),
       lineHeight: 18,
       color: colors.textMuted,
+      // Android reports this label narrower than it later paints it (on a Pixel,
+      // «Авторские экскурсии и местные гиды — Минск» measures 340dp and paints
+      // ~346.5dp), so a line ending just under the box width is sized as one line and
+      // painted as two, and the tail line — the one naming the place — is clipped
+      // away with no ellipsis to hint at it (#1392, NATIVE-TEXT-MEASURE-001).
+      // The reserve moves the wrap decision away from that edge and is what makes the
+      // place visible again on every surface and font scale we measured. It narrows
+      // the exposure, it does not remove it: the measure/paint gap is the platform's,
+      // so some other place name can still land against the new edge. Applied on web
+      // too, to keep one wrapping rule in the codebase rather than two.
+      maxWidth: '96%',
     },
     cta: {
       minHeight: 44,

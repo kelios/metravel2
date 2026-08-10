@@ -648,10 +648,6 @@ async function processArticle(listItem, log) {
 
 async function main() {
   const args = parseArgs(process.argv);
-  if (args.help) {
-    console.log(USAGE);
-    return;
-  }
   USER_ID = args.userId;
   EDITOR_USER_ID = args.editorUserId;
   LIMIT = args.limit;

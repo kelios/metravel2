@@ -11,7 +11,6 @@ import type {
     ApiQuestFinale,
     ApiQuestFirstCompleter,
 } from '@/api/quests';
-import { getCountryCodeByCoords } from '@/utils/geoCountry';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { devError } from '@/utils/logger';
 import { getQuestAgeCategory, type QuestAgeCategory } from '@/utils/questAudience';
@@ -381,21 +380,30 @@ export function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
     };
 }
 
-export function normalizeQuestCountryCode(rawCode: unknown, lat: number, lng: number): string | undefined {
+// #1393: раньше здесь был фолбэк `getCountryCodeByCoords(lat, lng)` на случай,
+// когда бэкенд не прислал `country_code`. Он тянул `utils/geoCountry` с таблицей
+// контуров стран (47 КБ raw) в слой данных квестов, а оттуда — в стартовый граф
+// маршрутов, которым квесты не нужны вовсе.
+//
+// Замер прод-API 2026-08-10: `country_code` непустой у всех 139 квестов
+// (27 различных кодов, ни одного пропуска), то есть фолбэк не срабатывал ни разу.
+// Таблица контуров осталась там, где по координатам действительно ищут страну, —
+// у партнёрских блоков (`AffiliateSection`, `TripAffiliateBlock`, `BelkrajWidget`).
+export function normalizeQuestCountryCode(rawCode: unknown): string | undefined {
     const normalizedRawCode = typeof rawCode === 'string'
         ? rawCode.trim().toUpperCase()
         : rawCode == null
             ? ''
             : String(rawCode).trim().toUpperCase();
 
-    return normalizedRawCode || getCountryCodeByCoords(lat, lng) || undefined;
+    return normalizedRawCode || undefined;
 }
 
 /** Конвертирует город из API формата */
 export function adaptCity(apiCity: ApiQuestCity): QuestCity {
     const lat = coordNum(apiCity.lat);
     const lng = coordNum(apiCity.lng);
-    const countryCode = normalizeQuestCountryCode(apiCity.country_code, lat, lng);
+    const countryCode = normalizeQuestCountryCode(apiCity.country_code);
     return {
         name: apiCity.name || undefined,
         lat,
@@ -508,7 +516,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
 export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
     const lat = coordNum(apiMeta.lat);
     const lng = coordNum(apiMeta.lng);
-    const normalizedCountryCode = normalizeQuestCountryCode(apiMeta.country_code, lat, lng);
+    const normalizedCountryCode = normalizeQuestCountryCode(apiMeta.country_code);
     const tags = apiMeta.tags ? Object.keys(apiMeta.tags) : undefined;
 
     return {

@@ -167,10 +167,6 @@ function classify(r) {
 
 async function main() {
   const args = parseArgs(process.argv)
-  if (args.help) {
-    console.log(USAGE)
-    return
-  }
   const { accessToken } = await getAccessToken(SCOPE)
 
   // An empty list is an environment/contract failure, not "0 problems": reporting

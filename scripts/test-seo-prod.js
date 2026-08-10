@@ -12,29 +12,65 @@
  *   - og:image is a large image (not thumb_200)
  *   - robots meta for noindex pages
  *
- * Usage:
- *   node scripts/test-seo-prod.js [--url https://metravel.by] [--verbose] [--insecure]
+ * `--help` prints USAGE below; every flag goes through the shared SEO CLI
+ * contract (#1391). The hand-rolled `args.indexOf('--url')` this replaced turned
+ * a typo into the default target: `--ur https://dev.metravel.by` quietly gated
+ * PRODUCTION and reported on the wrong site — the first incident of the
+ * `SEO-OPS-001` family (#1107).
  *
- * Exit code 0 = all pass, 1 = failures found.
+ * Exit codes: 0 = all pass, 1 = failures found, 2 = bad invocation.
  */
 
 const https = require('https');
 const http = require('http');
 const { SEO_TITLE_MAX_LENGTH, SEO_TITLE_SUFFIX } = require('../utils/seoText');
+const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
 
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
-const args = process.argv.slice(2);
-function hasFlag(name) { return args.includes(`--${name}`); }
-function getArg(name, fallback) {
-  const idx = args.indexOf(`--${name}`);
-  return idx !== -1 && args[idx + 1] ? args[idx + 1] : fallback;
-}
+const USAGE = `SEO smoke-test against production HTML — metravel.by
 
-const SITE = getArg('url', 'https://metravel.by').replace(/\/+$/, '');
-const VERBOSE = hasFlag('verbose');
-const INSECURE_TLS = hasFlag('insecure') || String(process.env.SEO_TEST_INSECURE || '0') === '1';
+Usage:
+  node scripts/test-seo-prod.js [options]
+
+Options:
+  --url <origin>        origin to test (default https://metravel.by)
+  --verbose             log passing assertions too, not just failures
+  --insecure            skip TLS certificate validation (same as SEO_TEST_INSECURE=1)
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/test-seo-prod.js
+  node scripts/test-seo-prod.js --url https://dev.metravel.by --verbose --insecure`;
+
+/**
+ * Every flag this script accepts. Anything else is a UsageError, so a mistyped
+ * `--ur` can no longer fall through to the production default (#1107, #1391).
+ */
+const CLI_SPEC = {
+  name: 'test-seo-prod',
+  usage: USAGE,
+  flags: {
+    url: {
+      type: 'string',
+      valueName: 'an origin',
+      default: 'https://metravel.by',
+      stripTrailingSlash: true,
+    },
+    verbose: { type: 'boolean' },
+    insecure: { type: 'boolean' },
+  },
+};
+
+const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC);
+
+// Assigned in main() right after the parse: a module-level parse would run
+// before runSeoCli() could map a UsageError onto exit code 2.
+let SITE = '';
+let VERBOSE = false;
+let INSECURE_TLS = false;
+
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 
 // ---------------------------------------------------------------------------
@@ -320,6 +356,12 @@ async function testPage(path, expectations) {
 // ---------------------------------------------------------------------------
 
 async function main() {
+  const args = parseArgs(process.argv);
+
+  SITE = args.url;
+  VERBOSE = args.verbose;
+  INSECURE_TLS = args.insecure || String(process.env.SEO_TEST_INSECURE || '0') === '1';
+
   console.log(`\n🌐 SEO smoke-test against: ${SITE}\n${'='.repeat(60)}`);
   if (INSECURE_TLS) {
     console.log('⚠️  TLS certificate validation is disabled (--insecure / SEO_TEST_INSECURE=1).');
@@ -391,6 +433,15 @@ async function main() {
     ];
   }
 
+  // A dead API has the hardcoded fallback above. A LIVE API that answers with
+  // zero slugs has none: the envelope key changed, the gate would check no
+  // travel page at all and still print "All SEO checks passed" (#1325).
+  requireNonEmptySelection(travelSlugs, {
+    what: 'travel slugs',
+    source: `${SITE}/api/travels/`,
+    hint: 'no travel detail page would be checked — fix the article source instead of reporting a clean run',
+  });
+
   for (const slug of travelSlugs) {
     await testPage(`/travels/${slug}`, {
       titleNotGeneric: true,
@@ -440,15 +491,11 @@ async function main() {
     process.exit(1);
   } else {
     console.log('\n✅ All SEO checks passed!');
-    process.exit(0);
   }
 }
 
 if (require.main === module) {
-  main().catch((err) => {
-    console.error('❌ Fatal:', err);
-    process.exit(1);
-  });
+  runSeoCli(main, { name: 'test-seo-prod', usage: USAGE });
 }
 
-module.exports = { isBlockedFromIndexing, checkSeoTitleContract };
+module.exports = { CLI_SPEC, USAGE, parseArgs, isBlockedFromIndexing, checkSeoTitleContract };

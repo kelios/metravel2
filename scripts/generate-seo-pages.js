@@ -17,7 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { fetchJson } = require('./lib/fetchJson');
+const { fetchJson, sleep } = require('./lib/fetchJson');
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
 const { buildSeoTitle: buildSharedSeoTitle, normalizeSeoLead } = require('../utils/seoText');
@@ -53,6 +53,25 @@ const SITE_URL = 'https://metravel.by';
 const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 const IMAGE_OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
+
+// ---------------------------------------------------------------------------
+// #1394: build-time API pacing
+//
+// Prod nginx guards /api with `limit_req zone=api rate=30r/s burst=60 nodelay`
+// keyed by client IP (nginx/nginx.conf). Detail fetches used to run 10 sockets
+// wide with no pacing: ~400 travels went out at ~100 r/s, the build tripped its
+// own limiter, and nginx answered 503 before the app ever saw the request.
+// The pace below keeps a whole build inside a fraction of the zone, so the
+// limiter never closes and real users never share a bucket with the build.
+// ---------------------------------------------------------------------------
+const API_ZONE_RATE_PER_SEC = 30;
+const BUILD_FETCH_RATE_PER_SEC = 8;
+const BUILD_FETCH_MIN_INTERVAL_MS = Math.ceil(1000 / BUILD_FETCH_RATE_PER_SEC);
+/** In-flight cap: bounds the burst even when a single request is slow */
+const TRAVEL_DETAIL_CONCURRENCY = 4;
+const QUEST_DETAIL_CONCURRENCY = 4;
+/** Past this many misses the API is down, not flaky — stop and report */
+const MAX_DETAIL_FAILURES_BEFORE_ABORT = 20;
 
 const API_ORIGIN = (() => {
   try {
@@ -755,13 +774,36 @@ function buildRedirectStubHtml(toSlug) {
 `;
 }
 
-/** Run async tasks with limited concurrency. */
-async function batchAsync(items, concurrency, fn) {
+/**
+ * Spread task starts at least `minIntervalMs` apart.
+ *
+ * The slot is reserved synchronously before the await, so concurrent workers
+ * queue up instead of all reading the same "now" and starting together.
+ */
+function createRequestPacer(minIntervalMs, { now = Date.now, wait = sleep } = {}) {
+  if (!minIntervalMs || minIntervalMs <= 0) return async () => {};
+  let nextStartAt = 0;
+  return async () => {
+    const current = now();
+    const startAt = Math.max(current, nextStartAt);
+    nextStartAt = startAt + minIntervalMs;
+    if (startAt > current) await wait(startAt - current);
+  };
+}
+
+/**
+ * Run async tasks with limited concurrency, an optional start-rate cap and an
+ * optional early exit (`shouldStop`) for runs that are already doomed.
+ */
+async function batchAsync(items, concurrency, fn, { minIntervalMs = 0, now, wait, shouldStop } = {}) {
   const results = new Array(items.length);
+  const pace = createRequestPacer(minIntervalMs, { now, wait });
   let idx = 0;
   async function worker() {
     while (idx < items.length) {
+      if (shouldStop && shouldStop()) break;
       const i = idx++;
+      await pace();
       results[i] = await fn(items[i], i);
     }
   }
@@ -867,52 +909,108 @@ function extractTravelDetailContentFields(detail) {
   return contentFields;
 }
 
-async function fetchTravelDetail(id, slug) {
-  // Try /api/travels/{id}/ first
-  try {
-    const url = `${API_BASE}/api/travels/${id}/`;
-    const detail = await fetchJson(url);
-    return {
-      description: detail.description || '',
-      // #1116: media-манифест обязателен здесь — из него hero preload берёт тот же
-      // вариант, что запросит клиент. Без него preload уходил в клиентскую сборку
-      // (`?v=…&q=82`), расходился с LCP-`<img>` и грел лишний файл.
-      media: detail.media || null,
-      gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
-      travelAddress: Array.isArray(detail.travelAddress) ? detail.travelAddress : [],
-      coordsMeTravel: Array.isArray(detail.coordsMeTravel) ? detail.coordsMeTravel : [],
-      countryCode: detail.countryCode || '',
-      ...extractTravelDetailAuthorFields(detail),
-      ...extractTravelDetailContentFields(detail),
-    };
-  } catch {
-    // Fallback to /api/travels/by-slug/{slug}/ if id-based fetch fails
-    if (slug) {
-      try {
-        const slugUrl = `${API_BASE}/api/travels/by-slug/${encodeURIComponent(slug)}/`;
-        const detail = await fetchJson(slugUrl);
-        return {
-          description: detail.description || '',
-          media: detail.media || null,
-          gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
-          travelAddress: Array.isArray(detail.travelAddress) ? detail.travelAddress : [],
-          coordsMeTravel: Array.isArray(detail.coordsMeTravel) ? detail.coordsMeTravel : [],
-          countryCode: detail.countryCode || '',
-          ...extractTravelDetailAuthorFields(detail),
-          ...extractTravelDetailContentFields(detail),
-        };
-      } catch {
-        // Both endpoints failed
-      }
-    }
-    return {
-      description: '',
-      gallery: [],
-      travelAddress: [],
-      coordsMeTravel: [],
-      countryCode: '',
-    };
+function normalizeTravelDetail(detail) {
+  // A 200 carrying something that is not a travel object would spread into an
+  // all-empty page and pass every downstream check — the same silent
+  // degradation #1394 is about, just arriving over a healthy connection.
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) {
+    throw new Error(`unexpected detail payload: ${Object.prototype.toString.call(detail)}`);
   }
+  return {
+    description: detail.description || '',
+    // #1116: media-манифест обязателен здесь — из него hero preload берёт тот же
+    // вариант, что запросит клиент. Без него preload уходил в клиентскую сборку
+    // (`?v=…&q=82`), расходился с LCP-`<img>` и грел лишний файл.
+    media: detail.media || null,
+    gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
+    travelAddress: Array.isArray(detail.travelAddress) ? detail.travelAddress : [],
+    coordsMeTravel: Array.isArray(detail.coordsMeTravel) ? detail.coordsMeTravel : [],
+    countryCode: detail.countryCode || '',
+    ...extractTravelDetailAuthorFields(detail),
+    ...extractTravelDetailContentFields(detail),
+  };
+}
+
+/**
+ * Fetch one travel detail, by id with a by-slug fallback.
+ *
+ * #1394: this used to swallow both failures and return an empty stub, so a
+ * rate-limited build produced a page with no body, no gallery and no route
+ * points while still reporting success. An unreachable detail is now an error
+ * — the caller counts it and fails the build instead of shipping a blank page.
+ */
+async function fetchTravelDetail(id, slug, deps = {}) {
+  const fetchDetail = deps.fetchJson || fetchJson;
+  const apiBase = deps.apiBase || API_BASE;
+
+  let idError;
+  try {
+    return normalizeTravelDetail(await fetchDetail(`${apiBase}/api/travels/${id}/`));
+  } catch (err) {
+    idError = err;
+  }
+
+  if (!slug) {
+    const failure = new Error(`travel ${id}: ${idError.message} (no slug for the by-slug fallback)`, {
+      cause: idError,
+    });
+    failure.statusCode = idError.statusCode;
+    throw failure;
+  }
+
+  try {
+    const slugUrl = `${apiBase}/api/travels/by-slug/${encodeURIComponent(slug)}/`;
+    return normalizeTravelDetail(await fetchDetail(slugUrl));
+  } catch (slugError) {
+    // Keep the status codes on the error: with a hundred failures the histogram
+    // in the build gate is what tells "the limiter closed" from "an article was
+    // deleted" without reading a hundred lines.
+    const failure = new Error(
+      `travel ${id} (${slug}): ${idError.message}; by-slug fallback: ${slugError.message}`,
+      { cause: slugError }
+    );
+    failure.statusCode = slugError.statusCode ?? idError.statusCode;
+    failure.idStatusCode = idError.statusCode;
+    throw failure;
+  }
+}
+
+/** Group failures by status so the first log line names the kind of incident. */
+function summarizeDetailFailures(failedDetails) {
+  const byStatus = new Map();
+  for (const failure of failedDetails) {
+    const key = typeof failure.statusCode === 'number' ? `HTTP ${failure.statusCode}` : 'transport error';
+    byStatus.set(key, (byStatus.get(key) || 0) + 1);
+  }
+  return [...byStatus.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([status, count]) => `${status} ×${count}`)
+    .join(', ');
+}
+
+/**
+ * #1394: a missing detail means an empty body, gallery and map — a page that
+ * looks published but reads as thin content. Refuse the build instead of
+ * shipping it, and name every article that did not come through.
+ */
+function assertTravelDetailsComplete(failedDetails, total, { attempted = total, log = console.error } = {}) {
+  if (!failedDetails.length) return;
+
+  const histogram = summarizeDetailFailures(failedDetails);
+  // After an early abort most of the catalog was never tried, so "20/397" would
+  // read as "377 came through fine" — the opposite of what happened.
+  const scope =
+    attempted < total
+      ? `${failedDetails.length}/${attempted} attempted travels (${total - attempted} of ${total} never tried)`
+      : `${failedDetails.length}/${total} travels`;
+
+  log(`❌ Failed to fetch details for ${scope} (${histogram}) — refusing to generate blank article pages.`);
+  for (const failure of failedDetails) {
+    log(`   • id=${failure.id} slug=${failure.slug || '—'}: ${failure.message}`);
+  }
+  throw new Error(
+    `Travel details unavailable for ${scope} (${histogram}; first: id=${failedDetails[0].id})`
+  );
 }
 
 function extractCollectionItems(result) {
@@ -2781,22 +2879,29 @@ async function main() {
     console.log(`  📦 Got ${quests.length} quests`);
 
     if (quests.length > 0) {
-      console.log(`  📥 Fetching quest details for location matching (concurrency: 8)...`);
+      console.log(
+        `  📥 Fetching quest details for location matching (concurrency: ${QUEST_DETAIL_CONCURRENCY}, ≤${BUILD_FETCH_RATE_PER_SEC} req/s)...`
+      );
       let bundleFailures = 0;
-      const bundles = await batchAsync(quests, 8, async (quest, i) => {
-        const route = questRouteKey(quest);
-        if (!route) return null;
-        if ((i + 1) % 20 === 0 || i === quests.length - 1) {
-          console.log(`  📡 Fetched ${i + 1}/${quests.length} quest details...`);
-        }
-        try {
-          return await fetchJson(`${API_BASE}/api/quests/by-quest-id/${encodeURIComponent(route.questId)}/`);
-        } catch (err) {
-          bundleFailures++;
-          console.warn(`  ⚠️  Quest bundle not available for ${route.questId}: ${err.message}`);
-          return null;
-        }
-      });
+      const bundles = await batchAsync(
+        quests,
+        QUEST_DETAIL_CONCURRENCY,
+        async (quest, i) => {
+          const route = questRouteKey(quest);
+          if (!route) return null;
+          if ((i + 1) % 20 === 0 || i === quests.length - 1) {
+            console.log(`  📡 Fetched ${i + 1}/${quests.length} quest details...`);
+          }
+          try {
+            return await fetchJson(`${API_BASE}/api/quests/by-quest-id/${encodeURIComponent(route.questId)}/`);
+          } catch (err) {
+            bundleFailures++;
+            console.warn(`  ⚠️  Quest bundle not available for ${route.questId}: ${err.message}`);
+            return null;
+          }
+        },
+        { minIntervalMs: BUILD_FETCH_MIN_INTERVAL_MS }
+      );
       quests.forEach((quest, i) => {
         const route = questRouteKey(quest);
         if (route && bundles[i]) questBundleMap.set(route.questId, bundles[i]);
@@ -2876,13 +2981,49 @@ async function main() {
   if (travels.length > 0) {
     // Fetch detail for each travel (description + gallery) with concurrency limit
     const travelsWithId = travels.filter((t) => t.id);
-    console.log(`\n📥 Fetching details for ${travelsWithId.length} travels (concurrency: 10)...`);
-    const details = await batchAsync(travelsWithId, 10, async (travel, i) => {
-      if ((i + 1) % 50 === 0 || i === travelsWithId.length - 1) {
-        console.log(`  📡 Fetched ${i + 1}/${travelsWithId.length} details...`);
+    console.log(
+      `\n📥 Fetching details for ${travelsWithId.length} travels (concurrency: ${TRAVEL_DETAIL_CONCURRENCY}, ≤${BUILD_FETCH_RATE_PER_SEC} req/s)...`
+    );
+    const failedDetails = [];
+    let attemptedDetails = 0;
+    const details = await batchAsync(
+      travelsWithId,
+      TRAVEL_DETAIL_CONCURRENCY,
+      async (travel, i) => {
+        attemptedDetails += 1;
+        if ((i + 1) % 50 === 0 || i === travelsWithId.length - 1) {
+          console.log(`  📡 Fetched ${i + 1}/${travelsWithId.length} details...`);
+        }
+        try {
+          return await fetchTravelDetail(travel.id, travel.slug);
+        } catch (err) {
+          // Collect every miss instead of bailing on the first one: the whole
+          // list tells apart "one deleted article" from "the limiter closed".
+          failedDetails.push({
+            id: travel.id,
+            slug: travel.slug || '',
+            statusCode: err.statusCode,
+            message: err.message,
+          });
+          return null;
+        }
+      },
+      {
+        minIntervalMs: BUILD_FETCH_MIN_INTERVAL_MS,
+        // A dead API costs 6 requests and ~13 s per article. Walking the whole
+        // catalog to prove it would hold the build for ~20 minutes before
+        // reporting a failure that was obvious after the first few dozen.
+        shouldStop: () => failedDetails.length >= MAX_DETAIL_FAILURES_BEFORE_ABORT,
       }
-      return fetchTravelDetail(travel.id, travel.slug);
-    });
+    );
+
+    if (attemptedDetails < travelsWithId.length) {
+      console.error(
+        `⛔ Stopped after ${failedDetails.length} failed details — the API is not answering, the remaining ${travelsWithId.length - attemptedDetails} of ${travelsWithId.length} were not attempted.`
+      );
+    }
+    assertTravelDetailsComplete(failedDetails, travelsWithId.length, { attempted: attemptedDetails });
+
     const detailMap = new Map();
     travelsWithId.forEach((t, i) => detailMap.set(t.id, details[i]));
 
@@ -3296,6 +3437,18 @@ async function main() {
 // ---------------------------------------------------------------------------
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    API_ZONE_RATE_PER_SEC,
+    BUILD_FETCH_RATE_PER_SEC,
+    BUILD_FETCH_MIN_INTERVAL_MS,
+    TRAVEL_DETAIL_CONCURRENCY,
+    QUEST_DETAIL_CONCURRENCY,
+    MAX_DETAIL_FAILURES_BEFORE_ABORT,
+    assertTravelDetailsComplete,
+    batchAsync,
+    createRequestPacer,
+    fetchTravelDetail,
+    normalizeTravelDetail,
+    summarizeDetailFailures,
     applyHtmlFragment,
     replaceOrInsert,
     injectMeta,

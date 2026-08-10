@@ -549,11 +549,14 @@ describe('questAdapters', () => {
       expect(result.lng).toBeCloseTo(19.9383);
     });
 
-    it('normalizes backend country code and falls back to coords when it is blank', () => {
+    // #1393: координатного фолбэка больше нет — таблица контуров стран (47 КБ)
+    // ради него уезжала в стартовый граф маршрутов без квестов. На проде
+    // `country_code` приходит у всех 139 квестов, поэтому фолбэк не срабатывал.
+    it('normalizes backend country code and yields undefined when it is blank', () => {
       expect(adaptCity({ name: 'Kraków', lat: '50.0617', lng: '19.9383', country_code: ' pl ' } as any).countryCode)
         .toBe('PL');
       expect(adaptCity({ name: 'Kraków', lat: '50.0617', lng: '19.9383', country_code: '   ' } as any).countryCode)
-        .toBe('PL');
+        .toBeUndefined();
     });
   });
 
@@ -582,7 +585,7 @@ describe('questAdapters', () => {
       expect(result.cover).toBe('https://img.com/cover.jpg');
     });
 
-    it('normalizes backend country code and falls back to coords when it is blank', () => {
+    it('normalizes backend country code and yields undefined when it is blank', () => {
       expect(adaptMeta({
         quest_id: 'krakow-dragon',
         title: 'Тайна дракона',
@@ -601,7 +604,7 @@ describe('questAdapters', () => {
         lat: '50.06',
         lng: '19.94',
         country_code: '   ',
-      } as any).countryCode).toBe('PL');
+      } as any).countryCode).toBeUndefined();
     });
 
     it('handles missing optional fields', () => {

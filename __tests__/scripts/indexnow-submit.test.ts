@@ -2,6 +2,8 @@ import path from 'path'
 
 import { makeTempDir, removeDir, runNodeCli, writeTextFile } from './cli-test-utils'
 
+const { HelpRequested } = require('../../scripts/lib/seo-cli-contract')
+
 const {
   CLI_SPEC,
   USAGE,
@@ -106,8 +108,10 @@ describe('IndexNow argument parsing', () => {
   })
 
   it('accepts --help before any mode check', () => {
-    expect(parseArgs(argvOf('--help')).help).toBe(true)
-    expect(parseArgs(argvOf('-h')).help).toBe(true)
+    // The contract throws HelpRequested so a forgotten help branch cannot run
+    // the script for real; runSeoCli prints USAGE and exits 0 (see CLI tests).
+    expect(() => parseArgs(argvOf('--help'))).toThrow(HelpRequested)
+    expect(() => parseArgs(argvOf('-h'))).toThrow(HelpRequested)
   })
 
   it('reads each mode explicitly', () => {
@@ -203,9 +207,10 @@ describe('IndexNow submission is never reached without a mode', () => {
   it('collects nothing and submits nothing with --help', async () => {
     const spies = makeSpies()
 
-    await main(argvOf('--help'), spies)
+    // main() no longer swallows help itself: the parser throws and runSeoCli
+    // prints USAGE, so a forgotten help branch cannot turn --help into a run.
+    await expect(main(argvOf('--help'), spies)).rejects.toThrow(HelpRequested)
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('--urls-file <path>'))
     expect(spies.collectFromApi).not.toHaveBeenCalled()
     expect(spies.collectFromSitemap).not.toHaveBeenCalled()
     expect(spies.readUrlsFile).not.toHaveBeenCalled()

@@ -13,7 +13,7 @@ import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 import { LazyYouTube } from './LazyYouTubeSection'
-import QuestForCitySection from './QuestForCitySection'
+import DeferredQuestForCitySection from './DeferredQuestForCitySection'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import { translate as i18nT } from '@/i18n'
 
@@ -100,7 +100,7 @@ export const TravelDetailsContentSection: React.FC<{
 
   return (
     <>
-      <QuestForCitySection travel={travel} styles={styles} />
+      <DeferredQuestForCitySection travel={travel} styles={styles} />
 
       {shouldRenderDescriptionSection && (
         <View

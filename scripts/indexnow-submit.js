@@ -263,10 +263,6 @@ async function main(argv = process.argv, deps = {}) {
   const collectors = { ...DEFAULT_DEPS, ...deps }
 
   const args = parseArgs(argv)
-  if (args.help) {
-    console.log(USAGE)
-    return
-  }
 
   console.log('[indexnow] Collecting URLs…')
   const urls = args.mode === 'urls-file'

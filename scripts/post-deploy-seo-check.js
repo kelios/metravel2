@@ -10,32 +10,70 @@
  * - travel page SSR markers (H1 + Article JSON-LD)
  * - mobile icon / manifest presence on home
  *
- * Usage:
- *   node scripts/post-deploy-seo-check.js [--url https://metravel.by] [--verbose]
- *     [--json] [--limit 50] [--concurrency 12] [--insecure]
+ * `--help` prints USAGE below; every flag goes through the shared SEO CLI
+ * contract (#1391). The hand-rolled `args.indexOf('--url')` this replaced answered
+ * a typo with the default target, so `--ur https://dev.metravel.by` gated
+ * PRODUCTION while reporting on the site nobody asked about (`SEO-OPS-001`).
+ *
+ * Exit codes: 0 = clean, 1 = errors found, 2 = bad invocation.
  */
 
 const https = require('https')
 const http = require('http')
 
-const args = process.argv.slice(2)
+const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract')
 
-function hasFlag(name) {
-  return args.includes(`--${name}`)
+const USAGE = `Post-deploy SEO check — metravel.by
+
+Usage:
+  node scripts/post-deploy-seo-check.js [options]
+
+Options:
+  --url <origin>        origin to check (default https://metravel.by)
+  --verbose             also list passing pages and warning-only pages
+  --json                print the full summary as JSON instead of a report
+  --limit <n>           check only the first n queued URLs, 0 = all (default 0)
+  --concurrency <n>     parallel page fetches (default 12)
+  --insecure            skip TLS certificate validation (same as SEO_TEST_INSECURE=1)
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/post-deploy-seo-check.js
+  node scripts/post-deploy-seo-check.js --url https://dev.metravel.by --limit 30 --verbose`
+
+/**
+ * Every flag this script accepts. Anything else is a UsageError, so a mistyped
+ * flag can no longer widen or redirect a production gate silently (#1391).
+ */
+const CLI_SPEC = {
+  name: 'post-deploy-seo-check',
+  usage: USAGE,
+  flags: {
+    url: {
+      type: 'string',
+      valueName: 'an origin',
+      default: 'https://metravel.by',
+      stripTrailingSlash: true,
+    },
+    verbose: { type: 'boolean' },
+    json: { type: 'boolean' },
+    limit: { type: 'int', min: 0, valueName: 'a non-negative integer', default: 0 },
+    concurrency: { type: 'int', min: 1, valueName: 'a positive integer', default: 12 },
+    insecure: { type: 'boolean' },
+  },
 }
 
-function getArg(name, fallback) {
-  const idx = args.indexOf(`--${name}`)
-  return idx !== -1 && args[idx + 1] ? args[idx + 1] : fallback
-}
+const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC)
 
-const SITE = getArg('url', 'https://metravel.by').replace(/\/+$/, '')
-const VERBOSE = hasFlag('verbose')
-const JSON_OUTPUT = hasFlag('json')
-const INSECURE_TLS =
-  hasFlag('insecure') || String(process.env.SEO_TEST_INSECURE || '0') === '1'
-const LIMIT = Math.max(0, Number.parseInt(getArg('limit', '0'), 10) || 0)
-const CONCURRENCY = Math.max(1, Number.parseInt(getArg('concurrency', '12'), 10) || 12)
+// Assigned in main() right after the parse: a module-level parse would run
+// before runSeoCli() could map a UsageError onto exit code 2.
+let SITE = ''
+let VERBOSE = false
+let JSON_OUTPUT = false
+let INSECURE_TLS = false
+let LIMIT = 0
+let CONCURRENCY = 12
+
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.'
 const GENERIC_TITLES = new Set(['Metravel', 'MeTravel', 'Статья | Metravel'])
 
@@ -459,7 +497,15 @@ async function loadTargetUrls() {
     throw new Error(`Could not fetch sitemap.xml: HTTP ${sitemapResponse.status}`)
   }
 
-  const sitemapUrls = parseSitemapUrls(sitemapResponse.body)
+  // The seven core routes below are hardcoded, so the merged queue is never
+  // empty and cannot detect a broken sitemap. A sitemap that parses to zero
+  // <loc> entries means the gate would check the static routes and call the
+  // deploy clean without looking at a single article (#1325).
+  const sitemapUrls = requireNonEmptySelection(parseSitemapUrls(sitemapResponse.body), {
+    what: '<loc> entries',
+    source: `${SITE}/sitemap.xml`,
+    hint: 'the gate would pass on the static routes alone, checking no article at all',
+  })
   const coreUrls = [
     `${SITE}/`,
     `${SITE}/search`,
@@ -509,6 +555,14 @@ function printSummary(summary) {
 }
 
 async function main() {
+  const args = parseArgs(process.argv)
+  SITE = args.url
+  VERBOSE = args.verbose
+  JSON_OUTPUT = args.json
+  INSECURE_TLS = args.insecure || String(process.env.SEO_TEST_INSECURE || '0') === '1'
+  LIMIT = args.limit
+  CONCURRENCY = args.concurrency
+
   const { sitemapResponse, urls } = await loadTargetUrls()
   if (!JSON_OUTPUT) {
     console.log(`🌐 Post-deploy SEO check against ${SITE}`)
@@ -553,12 +607,13 @@ async function main() {
   if (summary.errorCount > 0) {
     process.exit(1)
   }
-
-  process.exit(0)
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    CLI_SPEC,
+    USAGE,
+    parseArgs,
     detectPageType,
     extractTitle,
     extractCanonical,
@@ -579,8 +634,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (require.main === module) {
-  main().catch((error) => {
-    console.error('❌ Post-deploy SEO check failed:', error)
-    process.exit(1)
-  })
+  runSeoCli(main, { name: 'post-deploy-seo-check', usage: USAGE })
 }

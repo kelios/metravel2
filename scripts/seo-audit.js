@@ -338,10 +338,6 @@ async function main() {
   // Parsed here, not at module level: a UsageError has to reach runSeoCli()
   // below so a bad invocation exits 2 instead of running a wide audit (#1391).
   const args = parseArgs(process.argv);
-  if (args.help) {
-    console.log(USAGE);
-    return;
-  }
 
   const API_BASE = args.api;
   const userId = args.userId;

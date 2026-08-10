@@ -310,10 +310,6 @@ function structure(detail) {
 
 async function main() {
   const args = parseArgs(process.argv);
-  if (args.help) {
-    console.log(USAGE);
-    return;
-  }
   USER_ID = args.userId;
   ONLY = args.only.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 

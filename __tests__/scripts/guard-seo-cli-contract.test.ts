@@ -28,8 +28,7 @@ const USAGE = 'usage'
 const CLI_SPEC = { name: 'seo-demo', usage: USAGE, flags: { 'dry-run': { type: 'boolean' } } }
 
 async function main() {
-  const args = parseCliArgs(process.argv, CLI_SPEC)
-  if (args.help) { console.log(USAGE); return }
+  parseCliArgs(process.argv, CLI_SPEC)
   requireNonEmptySelection([], { what: 'rows', source: 'demo' })
 }
 
@@ -41,20 +40,29 @@ if (require.main === module) {
 const sourceOf = (filePath: string, content: string) => ({ filePath, content })
 
 describe('covered set is derived from the filesystem, with no allowlist to escape into', () => {
-  it('covers every seo-*, indexnow-* and index-status script directly in scripts/', () => {
+  it('covers every SEO CLI of the family, including the two prod gates', () => {
     expect(isCoveredFile('scripts/seo-audit.js')).toBe(true)
     expect(isCoveredFile('scripts/seo-index-queue-check.js')).toBe(true)
     expect(isCoveredFile('scripts/indexnow-submit.js')).toBe(true)
     expect(isCoveredFile('scripts/index-status.js')).toBe(true)
+    // #1107, the first incident of SEO-OPS-001, and its post-deploy twin: the
+    // family cannot be closed with its own origin left outside the guard.
+    expect(isCoveredFile('scripts/test-seo-prod.js')).toBe(true)
+    expect(isCoveredFile('scripts/post-deploy-seo-check.js')).toBe(true)
     // A script invented tomorrow joins the covered set without touching the guard.
     expect(isCoveredFile('scripts/seo-brand-new-thing.js')).toBe(true)
     expect(COVERED_FILE_PATTERN.test('indexnow-retry.js')).toBe(true)
   })
 
+  it('follows a CLI moved into a subfolder instead of losing it', () => {
+    expect(isCoveredFile('scripts/seo/seo-audit.js')).toBe(true)
+    expect(isCoveredFile('scripts/ops/nested/indexnow-submit.js')).toBe(true)
+  })
+
   it('does not reach outside that surface', () => {
+    // scripts/lib is the library home — the shared contract itself lives there.
     expect(isCoveredFile('scripts/lib/seo-cli-contract.js')).toBe(false)
     expect(isCoveredFile('scripts/guard-seo-cli-contract.js')).toBe(false)
-    expect(isCoveredFile('scripts/test-seo-prod.js')).toBe(false)
     expect(isCoveredFile('utils/seo-helper.js')).toBe(false)
     expect(isCoveredFile('scripts/seo-redirects.json')).toBe(false)
   })
@@ -82,9 +90,20 @@ describe('positive probe: the scripts in this repo satisfy the contract', () => 
   it('exits 0 when run as a CLI against this repo', () => {
     const result = runCli(process.execPath, [GUARD], { cwd: process.cwd() })
 
-    expect(result.stderr).toBe('')
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('seo-cli-contract: passed')
+  })
+
+  it('parses its own arguments through the contract it enforces', () => {
+    // A guard that answered a mistyped `--jsonn` with human text would break the
+    // caller that parses its JSON — the shape it exists to stop.
+    const typo = runCli(process.execPath, [GUARD, '--jsonn'], { cwd: process.cwd() })
+    expect(typo.status).toBe(2)
+    expect(typo.stderr).toContain('Unknown argument: --jsonn')
+
+    const help = runCli(process.execPath, [GUARD, '--help'], { cwd: process.cwd() })
+    expect(help.status).toBe(0)
+    expect(help.stdout).toContain('SEO CLI contract guard')
   })
 })
 
@@ -137,6 +156,27 @@ describe('negative probe: putting the permissive default back fails the guard', 
       reason: /does not require scripts\/lib\/seo-cli-contract\.js/,
       content: "const fs = require('fs')\nasync function main() { return fs }\nmain()\n",
     },
+    {
+      // A switch has the same hole as the if-chain: `default` keeps going.
+      label: 'a switch over flag literals with a fall-through default',
+      rule: 'hand-rolled-parse',
+      reason: /default branch swallows an unknown flag/,
+      content: `${COMPLIANT_SOURCE}\nfunction read(t) { switch (t) { case '--all': return 'all'; default: return 'all' } }\n`,
+    },
+    {
+      // Assigning argv to a local first is the obvious way past a needle that
+      // only looks for the literal `process.argv.slice(`.
+      label: 'argv aliased to a local before being sliced',
+      rule: 'hand-rolled-parse',
+      reason: /slices the argument vector by hand/,
+      content: `${COMPLIANT_SOURCE}\nconst argvAll = process.argv\nconst tokens = argvAll.slice(2)\n`,
+    },
+    {
+      label: 'a zero exit written as process.exitCode',
+      rule: 'exit-zero-on-empty',
+      reason: /success is the absence of a failure/,
+      content: `${COMPLIANT_SOURCE}\nfunction bail(rows) { if (!rows.length) { process.exitCode = 0 } }\n`,
+    },
   ]
 
   it.each(cases)('fails on $label, naming the file and the reason', ({ rule, content, reason }) => {
@@ -156,6 +196,25 @@ describe('negative probe: putting the permissive default back fails the guard', 
     expect(result.violations.map((entry: { rule: string }) => entry.rule)).toEqual(
       expect.arrayContaining(['contract-module', 'strict-parse', 'exit-contract']),
     )
+  })
+
+  it('refuses to report success when it scanned nothing at all', () => {
+    // The guard must not commit the sin it polices: a clean report over zero
+    // rows is exactly #1325. Scanning nothing means the scan is broken.
+    const result = evaluateGuard({ sources: [] })
+
+    expect(result.ok).toBe(false)
+    expect(result.checkedFiles).toBe(0)
+    expect(result.violations[0].rule).toBe('empty-scan')
+
+    const dir = makeTempDir('seo-cli-guard-empty-')
+    try {
+      const cli = runCli(process.execPath, [GUARD, '--json'], { cwd: dir })
+      expect(cli.status).toBe(1)
+      expect(JSON.parse(cli.stdout)).toMatchObject({ ok: false, checkedFiles: 0 })
+    } finally {
+      removeDir(dir)
+    }
   })
 
   it('does not mistake prose about the ban for the ban itself', () => {

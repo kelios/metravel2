@@ -9,8 +9,15 @@
  * selection.
  */
 
+import path from 'path'
+
+import { makeTempDir, removeDir, runNodeCli, writeTextFile } from './cli-test-utils'
+
+const CONTRACT_PATH = path.resolve(process.cwd(), 'scripts', 'lib', 'seo-cli-contract.js')
+
 const {
   EmptySelectionError,
+  HelpRequested,
   UsageError,
   formatFlagList,
   normalizeSpec,
@@ -114,6 +121,33 @@ describe('parseCliArgs: values', () => {
     expect(parse('--sitemap', '--recent-days', '2').recentDays).toBe(2)
   })
 
+  it('reads digits only, so Number() cannot smuggle in hex, exponents or padding', () => {
+    // `Number('1e3')` is 1000 and `Number('0x10')` is 16 — an operator who typed
+    // one of those meant something else, and the run must stop, not guess.
+    expect(() => parse('--all', '--limit', '1e3')).toThrow('--limit expects an integer')
+    expect(() => parse('--all', '--limit', '0x10')).toThrow('--limit expects an integer')
+    expect(() => parse('--all', '--limit', ' 7 ')).toThrow('--limit expects an integer')
+    expect(() => parse('--all', '--limit', '')).toThrow('--limit expects an integer')
+    expect(parse('--all', '--limit', '7').limit).toBe(7)
+  })
+
+  it('lets a free-text flag carry a leading dash, but keeps paths and numbers strict', () => {
+    const spec = {
+      name: 'demo',
+      usage: 'demo usage',
+      flags: {
+        name: { type: 'string', valueName: 'a title', allowLeadingDash: true },
+        file: { type: 'string', valueName: 'a path' },
+      },
+    }
+    // «-40 °C: зимний Байкал» is a real title; rejecting it would make the
+    // article unrenamable from the CLI.
+    expect(parseCliArgs(argvOf('--name', '-40 °C: зимний Байкал'), spec).name).toBe(
+      '-40 °C: зимний Байкал',
+    )
+    expect(() => parseCliArgs(argvOf('--file', '-h'), spec)).toThrow('--file expects a path')
+  })
+
   it('applies declared defaults, camelCase keys, key overrides and trailing-slash trimming', () => {
     expect(parse('--all')).toMatchObject({
       userId: '1',
@@ -132,6 +166,30 @@ describe('parseCliArgs: values', () => {
     )
   })
 
+  it('refuses a flag the chosen mode would ignore instead of dropping it', () => {
+    // `--restore 186 --dry-run` used to swallow the rehearsal flag and write for
+    // real: a mode that ignores a flag has to say so.
+    const spec = {
+      name: 'demo',
+      usage: 'demo usage',
+      flags: {
+        id: { type: 'string' },
+        restore: { type: 'string' },
+        'dry-run': {
+          type: 'boolean',
+          forbiddenModes: ['restore'],
+          reason: 'a restore always writes',
+        },
+      },
+      modes: { flags: ['id', 'restore'], label: 'actions' },
+    }
+    expect(() => parseCliArgs(argvOf('--restore', '186', '--dry-run'), spec)).toThrow(
+      '--dry-run cannot be combined with --restore because a restore always writes',
+    )
+    expect(parseCliArgs(argvOf('--id', '186', '--dry-run'), spec).dryRun).toBe(true)
+    expect(parseCliArgs(argvOf('--restore', '186'), spec).mode).toBe('restore')
+  })
+
   it('enforces required flags', () => {
     const spec = {
       name: 'demo',
@@ -145,9 +203,17 @@ describe('parseCliArgs: values', () => {
 
 describe('parseCliArgs: --help', () => {
   it('answers the question instead of demanding the flags it is being asked about', () => {
-    expect(parse('--help')).toMatchObject({ help: true, mode: null })
-    expect(parse('-h').help).toBe(true)
-    expect(parse('--sitemap', '--help').help).toBe(true)
+    expect(() => parse('--help')).toThrow(HelpRequested)
+    expect(() => parse('-h')).toThrow(HelpRequested)
+    expect(() => parse('--sitemap', '--help')).toThrow(HelpRequested)
+  })
+
+  it('throws instead of returning a flag, so a forgotten branch cannot run the script', () => {
+    // Returned as `{help: true}`, a caller that forgets `if (args.help) return`
+    // runs for real — in seo-fix-links that made `--help` rewrite every
+    // published body, because "no mode" reads as "not a dry run".
+    expect(() => parse('--help')).toThrow(HelpRequested)
+    expect(() => parse('--help')).not.toThrow(UsageError)
   })
 
   it('still rejects an unknown flag passed next to --help', () => {
@@ -199,6 +265,64 @@ describe('requireNonEmptySelection', () => {
     expect(() => requireNonEmptySelection([], { message: 'вернул 0 статей' })).toThrow(
       'вернул 0 статей',
     )
+  })
+})
+
+describe('runSeoCli exit-code contract', () => {
+  const scriptFor = (body: string) => `
+const path = require('path')
+const contract = require(${JSON.stringify(CONTRACT_PATH)})
+const { ExpectedFailureError, UsageError, requireNonEmptySelection, runSeoCli } = contract
+async function main() { ${body} }
+runSeoCli(main, { name: 'probe', usage: 'PROBE USAGE' })
+`
+
+  const runScript = (body: string) => {
+    const dir = makeTempDir('seo-cli-runner-')
+    try {
+      const file = path.join(dir, 'probe.js')
+      writeTextFile(file, scriptFor(body))
+      return runNodeCli([file])
+    } finally {
+      removeDir(dir)
+    }
+  }
+
+  it('reports a found problem as one line and exit 1, not as a crash', () => {
+    // A gate that ran correctly and found 4 stale URLs already printed the detail;
+    // burying that under a stack makes the verdict look like a bug in the script.
+    const result = runScript("throw new ExpectedFailureError('4 stale URLs in the queue')")
+
+    expect(result.status).toBe(1)
+    expect(result.stderr.trim()).toBe('[probe] 4 stale URLs in the queue')
+    expect(result.stderr).not.toContain('at ')
+  })
+
+  it('keeps the stack for an unexpected failure', () => {
+    // Half-applied production batch: "which line died" is the whole question.
+    const result = runScript("throw new TypeError('cannot read property x of undefined')")
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('cannot read property x of undefined')
+    expect(result.stderr).toContain('at ')
+  })
+
+  it('keeps an empty selection to one line too', () => {
+    const result = runScript("requireNonEmptySelection([], { what: 'rows', source: 'src' })")
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('src returned 0 rows')
+    expect(result.stderr).not.toContain('at ')
+  })
+
+  it('prints usage and exits 2 for a bad invocation, 0 for --help', () => {
+    const bad = runScript("throw new UsageError('called wrong')")
+    expect(bad.status).toBe(2)
+    expect(bad.stderr).toContain('PROBE USAGE')
+
+    const help = runScript("contract.parseCliArgs(['n', 's', '--help'], { name: 'probe', usage: 'PROBE USAGE', flags: {} })")
+    expect(help.status).toBe(0)
+    expect(help.stdout).toContain('PROBE USAGE')
   })
 })
 

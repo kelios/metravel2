@@ -15,6 +15,7 @@ import {
     deleteProgress as apiDeleteProgress,
 } from '@/api/quests';
 import { queryKeys } from '@/api/queryKeys';
+import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import {
     adaptMeta,
     adaptBundle,
@@ -55,8 +56,11 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 // экран квестов, промо-блок главной и три мета-хука детали (rating/completion/
 // pioneer) дедуплицировались в один запрос /quests/. Держим список «свежим»
 // ~30 мин и в кеше ~60 мин.
-export const QUESTS_LIST_STALE_TIME = 30 * 60 * 1000;
-export const QUESTS_LIST_GC_TIME = 60 * 60 * 1000;
+//
+// #1393: сами значения живут в листовом `questsListCachePolicy`, чтобы
+// потребителю одних лишь времён кеша не приезжал слой адаптеров с таблицей
+// контуров стран. Ре-экспорт сохраняет прежний публичный API этого модуля.
+export { QUESTS_LIST_STALE_TIME, QUESTS_LIST_GC_TIME };
 
 // ===================== ХУКИ =====================
 

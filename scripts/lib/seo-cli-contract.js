@@ -30,8 +30,24 @@ const FLAG_NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
 /** Bad invocation, as opposed to a run that failed on its way to the network. */
 class UsageError extends Error {}
 
+/**
+ * `--help` was asked for. Thrown rather than returned as a flag on purpose: a
+ * caller that forgets `if (args.help) return` would otherwise run the script for
+ * real — in seo-fix-links that meant `--help` rewriting every published body,
+ * because "no mode" reads as "not a dry run". `runSeoCli` prints the usage and
+ * ends the run, so forgetting it is not possible.
+ */
+class HelpRequested extends Error {}
+
 /** The run selected nothing to work on — a failure, not a clean report. */
 class EmptySelectionError extends Error {}
+
+/**
+ * The check ran, worked correctly and found something bad — "4 URLs in the queue
+ * answer 301", "9 pages have no canonical". A reported outcome, not a crash: the
+ * detail is already in the report above, so the exit line stays one line.
+ */
+class ExpectedFailureError extends Error {}
 
 const toCamelCase = (name) => name.replace(/-([a-z0-9])/g, (_match, char) => char.toUpperCase())
 
@@ -70,8 +86,12 @@ function normalizeSpec(spec) {
       type,
       valueName: rawFlag.valueName || DEFAULT_VALUE_NAMES[type],
       min: rawFlag.min,
+      // Free text can legitimately start with `-` («-30 % на жильё»). Paths and
+      // numbers cannot, so for them a leading `-` stays a mistyped flag.
+      allowLeadingDash: Boolean(rawFlag.allowLeadingDash),
       required: Boolean(rawFlag.required),
       requiresMode: rawFlag.requiresMode || null,
+      forbiddenModes: Array.isArray(rawFlag.forbiddenModes) ? rawFlag.forbiddenModes : [],
       reason: rawFlag.reason || '',
       stripTrailingSlash: Boolean(rawFlag.stripTrailingSlash),
       default: Object.prototype.hasOwnProperty.call(rawFlag, 'default')
@@ -104,12 +124,17 @@ const applyDefaults = (flags) => {
 
 function readFlagValue(flag, token, rawValue) {
   // A leading `-` is a mistyped flag, not a value: `--urls-file -h` has to say so
-  // here instead of failing later on ENOENT '-h'.
-  if (rawValue === undefined || rawValue.startsWith('-')) {
+  // here instead of failing later on ENOENT '-h'. Flags that carry free text opt
+  // out with `allowLeadingDash`, otherwise a title like "-40 °C" is unpassable.
+  const looksLikeFlag = rawValue !== undefined && rawValue.startsWith('-') && !flag.allowLeadingDash
+  if (rawValue === undefined || looksLikeFlag) {
     throw new UsageError(`${token} expects ${flag.valueName}`)
   }
   if (flag.type === 'int') {
-    const parsed = Number(rawValue)
+    // Digits only, deliberately: `Number()` would read `1e3` as 1000 and `0x10`
+    // as 16, so `--limit 1e3` (a typo for 1000? for 13?) must not quietly become
+    // a run over a different set than the operator meant.
+    const parsed = /^\d+$/.test(rawValue) ? Number(rawValue) : NaN
     const tooSmall = typeof flag.min === 'number' && parsed < flag.min
     if (!Number.isInteger(parsed) || tooSmall) throw new UsageError(`${token} expects ${flag.valueName}`)
     return parsed
@@ -164,7 +189,7 @@ function parseCliArgs(argv, spec) {
 
   // `--help` short-circuits every requirement: asking what the flags are must
   // never be answered with "you did not pass the right flags".
-  if (help) return { ...values, help: true, mode }
+  if (help) throw new HelpRequested()
 
   if (modes && !mode) {
     throw new UsageError(
@@ -173,13 +198,21 @@ function parseCliArgs(argv, spec) {
   }
   for (const flag of flags.values()) {
     if (flag.required && !seen.has(flag.name)) throw new UsageError(`--${flag.name} is required`)
-    if (flag.requiresMode && seen.has(flag.name) && mode !== flag.requiresMode) {
-      const because = flag.reason ? ` because ${flag.reason}` : ''
+    if (!seen.has(flag.name)) continue
+    const because = flag.reason ? ` because ${flag.reason}` : ''
+    if (flag.requiresMode && mode !== flag.requiresMode) {
       throw new UsageError(`--${flag.name} requires --${flag.requiresMode}${because}`)
+    }
+    // A flag that the chosen mode would ignore is refused, not dropped: a
+    // swallowed `--dry-run` is how a rehearsal becomes a live write (#1391).
+    if (flag.forbiddenModes.includes(mode)) {
+      throw new UsageError(`--${flag.name} cannot be combined with --${mode}${because}`)
     }
   }
 
-  return { ...values, help: false, mode }
+  // No `help` key on purpose: `--help` never reaches here, so a `false` field
+  // would only invite `if (args.help)` branches back into the callers.
+  return { ...values, mode }
 }
 
 /**
@@ -198,24 +231,41 @@ function requireNonEmptySelection(items, { what, source, hint, message } = {}) {
 
 /**
  * One exit-code contract for every SEO CLI: 2 = you called it wrong (usage is
- * printed), 1 = the run itself failed, 0 = it actually did the work.
+ * printed), 1 = the run failed or the check found something, 0 = it actually did
+ * the work and found nothing wrong. Throw `ExpectedFailureError` for the second
+ * case so the operator gets the verdict, not a stack over their own report.
  */
 function runSeoCli(main, { name, usage }) {
   return Promise.resolve()
     .then(() => main())
     .catch((error) => {
+      if (error instanceof HelpRequested) {
+        console.log(usage)
+        return
+      }
       if (error instanceof UsageError) {
         console.error(`[${name}] ${error.message}\n`)
         console.error(usage)
         process.exit(2)
       }
-      console.error(`[${name}] ${(error && error.message) || error}`)
+      // A reported outcome — an empty selection, or a check that found what it
+      // was looking for — already explains itself above, so it stays a one-liner.
+      // For anything unexpected the stack goes out: these scripts write to
+      // production halfway through a batch, and "which line died on article 180
+      // of 306" is the whole question when the run is half applied.
+      const reported = error instanceof EmptySelectionError || error instanceof ExpectedFailureError
+      const detail = reported
+        ? error.message
+        : (error && (error.stack || error.message)) || error
+      console.error(`[${name}] ${detail}`)
       process.exit(1)
     })
 }
 
 module.exports = {
   EmptySelectionError,
+  ExpectedFailureError,
+  HelpRequested,
   UsageError,
   formatFlagList,
   normalizeSpec,

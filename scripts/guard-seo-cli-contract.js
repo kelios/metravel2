@@ -3,6 +3,8 @@
 const fs = require('fs')
 const path = require('path')
 
+const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract')
+
 // Guard #1391: SEO ops scripts have no permissive default.
 //
 // Four incidents in one family (`SEO-OPS-001`: #1107, #1325, #1389, #1390) broke
@@ -30,7 +32,17 @@ const OUTPUT_CONTRACT_VERSION = 1
 
 const SCRIPTS_DIR = 'scripts'
 const CONTRACT_MODULE = 'scripts/lib/seo-cli-contract.js'
-const COVERED_FILE_PATTERN = /^(seo-.+|indexnow-.+|index-status)\.js$/
+// By name for the family's naming convention, plus the two prod gates that
+// predate it — `test-seo-prod.js` is #1107, the first incident of SEO-OPS-001,
+// and `post-deploy-seo-check.js` is its post-deploy twin.
+const COVERED_FILE_PATTERN =
+  /^(seo-.+|indexnow-.+|index-status|test-seo-prod|post-deploy-seo-check)\.js$/
+// `scripts/lib/` is the library home, not a CLI surface — the shared contract
+// itself lives there and obviously cannot require itself. Matched as an exact
+// path prefix, not by folder name: a `scripts/ops/lib/seo-foo.js` is still a CLI
+// and must stay covered. Everything else under `scripts/`, at any depth, is
+// covered — moving a CLI into a subfolder must not be a way out.
+const EXCLUDED_PATH_PREFIXES = [`${SCRIPTS_DIR}/lib/`, `${SCRIPTS_DIR}/node_modules/`]
 
 const REQUIRED_NEEDLES = [
   {
@@ -52,9 +64,11 @@ const REQUIRED_NEEDLES = [
 
 const FORBIDDEN_PATTERNS = [
   {
+    // `.slice(2)` on anything, not just `process.argv`: assigning argv to a local
+    // first is the obvious way around a `process.argv.slice(` needle.
     rule: 'hand-rolled-parse',
-    pattern: /process\.argv\.slice\(/,
-    reason: 'reads process.argv directly — pass process.argv to parseCliArgs() instead',
+    pattern: /\.slice\(\s*2\s*[,)]/,
+    reason: 'slices the argument vector by hand — pass process.argv to parseCliArgs() instead',
   },
   {
     rule: 'hand-rolled-parse',
@@ -65,6 +79,18 @@ const FORBIDDEN_PATTERNS = [
     rule: 'hand-rolled-parse',
     pattern: /===\s*['"]--[a-z]/,
     reason: 'compares an argument against a flag literal — declare the flag in the CLI spec instead',
+  },
+  {
+    // A `switch` over the argument vector has the same hole as the if-chain: its
+    // `default` branch keeps going instead of refusing the unknown flag.
+    rule: 'hand-rolled-parse',
+    pattern: /case\s+['"]-{1,2}[a-z]/,
+    reason: 'switches on a flag literal — its default branch swallows an unknown flag',
+  },
+  {
+    rule: 'exit-zero-on-empty',
+    pattern: /process\.exitCode\s*=\s*0\b/,
+    reason: 'sets a zero exit code explicitly — success is the absence of a failure, not an assignment',
   },
   {
     // Every way of spelling a zero exit: `exit(0)`, the argument-less `exit()`
@@ -78,12 +104,31 @@ const FORBIDDEN_PATTERNS = [
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
 
-const parseArgs = (argv) => ({ output: argv.includes('--json') ? 'json' : 'text' })
+const USAGE = `SEO CLI contract guard — SEO-OPS-001
+
+Usage:
+  node scripts/guard-seo-cli-contract.js [--json]
+
+Options:
+  --json                machine-readable result on stdout
+  --help, -h            print this help and exit`
+
+// The guard parses its own arguments through the contract it enforces: a
+// mistyped \`--jsonn\` printing human text to a caller that expects JSON is the
+// very shape this guard exists to stop.
+const CLI_SPEC = {
+  name: 'guard-seo-cli-contract',
+  usage: USAGE,
+  flags: { json: { type: 'boolean' } },
+}
+
+const isExcludedPath = (normalizedPath) =>
+  EXCLUDED_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))
 
 const isCoveredFile = (relativePath) => {
   const normalized = normalizePath(relativePath)
-  const dir = path.posix.dirname(normalized)
-  if (dir !== SCRIPTS_DIR) return false
+  if (!normalized.startsWith(`${SCRIPTS_DIR}/`)) return false
+  if (isExcludedPath(normalized)) return false
   return COVERED_FILE_PATTERN.test(path.posix.basename(normalized))
 }
 
@@ -97,11 +142,21 @@ const isCommentLine = (line) => {
 const collectCoveredFiles = (rootDir) => {
   const scriptsDir = path.join(rootDir, SCRIPTS_DIR)
   if (!fs.existsSync(scriptsDir)) return []
-  return fs
-    .readdirSync(scriptsDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && COVERED_FILE_PATTERN.test(entry.name))
-    .map((entry) => `${SCRIPTS_DIR}/${entry.name}`)
-    .sort()
+
+  const found = []
+  const walk = (absoluteDir, relativeDir) => {
+    for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+      const relative = `${relativeDir}/${entry.name}`
+      if (entry.isDirectory()) {
+        if (!isExcludedPath(`${relative}/`)) walk(path.join(absoluteDir, entry.name), relative)
+        continue
+      }
+      if (entry.isFile() && isCoveredFile(relative)) found.push(relative)
+    }
+  }
+
+  walk(scriptsDir, SCRIPTS_DIR)
+  return found.sort()
 }
 
 const findViolationsInSource = ({ filePath, content }) => {
@@ -143,6 +198,25 @@ const evaluateGuard = ({ sources = [] } = {}) => {
   const violations = []
   for (const source of covered) violations.push(...findViolationsInSource(source))
 
+  // A guard that scanned nothing and said "passed" would be the very report this
+  // whole family is about (#1325). Zero covered files means the scan looked in
+  // the wrong place, not that the repository is clean.
+  if (covered.length === 0) {
+    return {
+      ok: false,
+      reason: `No SEO CLI script matched under ${SCRIPTS_DIR}/ — the guard scanned nothing, which is a broken scan, not a clean repository`,
+      checkedFiles: 0,
+      violations: [
+        {
+          file: `${SCRIPTS_DIR}/`,
+          line: 1,
+          rule: 'empty-scan',
+          reason: 'covered set is empty — run the guard from the repository root',
+        },
+      ],
+    }
+  }
+
   if (violations.length === 0) {
     return {
       ok: true,
@@ -176,7 +250,7 @@ const formatViolations = (violations) =>
   violations.map((v) => `- ${v.file}:${v.line} [${v.rule}] ${v.reason}${v.snippet ? `\n    ${v.snippet}` : ''}`)
 
 const main = () => {
-  const args = parseArgs(process.argv.slice(2))
+  const args = parseCliArgs(process.argv, CLI_SPEC)
   const rootDir = process.cwd()
   const sources = collectCoveredFiles(rootDir).map((relativePath) => ({
     filePath: relativePath,
@@ -185,7 +259,7 @@ const main = () => {
 
   const result = evaluateGuard({ sources })
 
-  if (args.output === 'json') {
+  if (args.json) {
     process.stdout.write(`${JSON.stringify(buildJsonResult(result), null, 2)}\n`)
     if (!result.ok) process.exit(1)
     return
@@ -203,19 +277,21 @@ const main = () => {
 }
 
 if (require.main === module) {
-  main()
+  runSeoCli(main, { name: 'guard-seo-cli-contract', usage: USAGE })
 }
 
 module.exports = {
+  CLI_SPEC,
   COVERED_FILE_PATTERN,
+  EXCLUDED_PATH_PREFIXES,
   FORBIDDEN_PATTERNS,
   OUTPUT_CONTRACT_VERSION,
   REQUIRED_NEEDLES,
+  USAGE,
   buildJsonResult,
   collectCoveredFiles,
   evaluateGuard,
   findViolationsInSource,
   isCoveredFile,
   isCommentLine,
-  parseArgs,
 }

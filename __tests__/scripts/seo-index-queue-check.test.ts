@@ -438,6 +438,10 @@ server.listen(0, '127.0.0.1', () => console.log('PORT=' + server.address().port)
     expect(result.stdout).toContain(`${origin}/travels/moved-old`)
     expect(result.stdout).toContain(`${origin}/travels/gone`)
     expect(result.stdout).toContain('Не-200 в очереди: 3')
+    // Ожидаемый исход печатается одной строкой: трасса вызовов тут только шум,
+    // разбор по каждому адресу уже выведен выше.
+    expect(result.stderr).toContain('[seo-index-queue] не-200 в очереди: 3')
+    expect(result.stderr).not.toContain('    at ')
     // Живой адрес в отбраковку не попал — иначе проверка ловит саму себя.
     expect(result.stdout).toContain('✅ живые: 1')
     // Файл не тронут: без --fix проверка ничего не переписывает.
@@ -502,6 +506,29 @@ server.listen(0, '127.0.0.1', () => console.log('PORT=' + server.address().port)
     expect(result.status).toBe(1)
     expect(result.stdout).toBe('')
     expect(fs.existsSync(out)).toBe(false)
+  })
+
+  it('в машиночитаемом режиме кладёт пачку в отчёт, а не поверх JSON', () => {
+    const file = writeQueueFile('batch-json.json', queueAt(['/travels/alive', '/travels/moved-new']))
+
+    const result = runNodeCli([SCRIPT, '--queue', file, '--batch', '1', '--json'])
+
+    expect(result.status).toBe(0)
+    expect(JSON.parse(result.stdout).batchUrls).toEqual([
+      `${origin}/travels/alive`,
+      `${origin}/travels/moved-new`,
+    ])
+  })
+
+  it('в машиночитаемом режиме не отдаёт грязную пачку ни одним полем', () => {
+    const file = writeQueueFile('batch-json-dirty.json', queueAt(['/travels/alive', '/travels/gone']))
+
+    const result = runNodeCli([SCRIPT, '--queue', file, '--batch', '1', '--json'])
+    const report = JSON.parse(result.stdout)
+
+    expect(result.status).toBe(1)
+    expect(report.failed).toBe(1)
+    expect(report.batchUrls).toBeUndefined()
   })
 
   it('выдаёт проверенную пачку для indexnow-submit --urls-file', () => {

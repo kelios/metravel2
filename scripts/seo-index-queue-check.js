@@ -40,6 +40,7 @@ const https = require('https')
 const http = require('http')
 
 const {
+  ExpectedFailureError,
   UsageError,
   parseCliArgs,
   requireNonEmptySelection,
@@ -51,9 +52,6 @@ const MAX_REDIRECT_HOPS = 5
 const PROBE_TIMEOUT_MS = 15000
 const USER_AGENT = 'metravel-index-queue-check'
 const CLI_NAME = 'seo-index-queue'
-
-/** Проверка дошла до прода и нашла не-200: провал прогона, а не ошибка вызова. */
-class QueueNotLiveError extends Error {}
 
 const USAGE = `Live-status gate for the indexing queue — scripts/seo-index-queue.json
 
@@ -97,8 +95,9 @@ const CLI_SPEC = {
  * флагами.
  */
 function parseArgs(argv) {
+  // `--help` сюда не доходит: контракт бросает `HelpRequested`, а `runSeoCli`
+  // печатает справку и выходит нулём.
   const args = parseCliArgs(argv, CLI_SPEC)
-  if (args.help) return args
 
   // Список адресов выдаётся только для одной пачки: файл на всю очередь — это и
   // есть та самая «подача всего сайта разом», от которой закрывались в #1389.
@@ -393,11 +392,6 @@ async function main(argv = process.argv, deps = {}) {
   const today = deps.today || new Date().toISOString().slice(0, 10)
 
   const args = parseArgs(argv)
-  if (args.help) {
-    console.log(USAGE)
-    return
-  }
-
   const queue = readQueue(args.queueFile)
   // Пустая очередь — это отказ чтения или сломанный формат, а не «нет проблем»:
   // молчаливый зелёный отчёт над пустой выборкой и есть класс #1325.
@@ -455,13 +449,22 @@ async function main(argv = process.argv, deps = {}) {
     rows,
   }
 
+  // Список пачки — часть отчёта, а не отдельная запись в stdout: дописать его
+  // после JSON значило бы отдать машиночитаемому потребителю битый документ.
+  // Грязная пачка не выдаётся ни одним каналом: текстовый режим до неё не
+  // доходит из-за броска ниже, и машиночитаемый не должен отдавать её тоже —
+  // иначе `--json` останется дырой ровно того класса, что и #1389.
+  if (batch && !failed) report.batchUrls = [...(batch.urls || [])]
+
   if (args.json) console.log(JSON.stringify(report, null, 2))
   else say(formatReport(report))
 
   // Провал доносится броском, а не кодом возврата: единый контракт кодов живёт
-  // в runSeoCli (#1391), и пачка при этом не выдаётся вовсе.
+  // в runSeoCli (#1391), и пачка при этом не выдаётся вовсе. `ExpectedFailureError` —
+  // это «проверка отработала и нашла плохое»: причина уже разобрана построчно
+  // выше, поэтому наружу уходит одна строка, а не трасса вызовов.
   if (failed) {
-    throw new QueueNotLiveError(
+    throw new ExpectedFailureError(
       batch
         ? `пачка ${args.batch} не выдана: ${failed} из ${rows.length} адресов не отдают 200`
         : `не-200 в очереди: ${failed} — разбор выше`
@@ -469,11 +472,11 @@ async function main(argv = process.argv, deps = {}) {
   }
 
   if (batch) {
-    const list = (batch.urls || []).join('\n') + '\n'
+    const list = report.batchUrls.join('\n') + '\n'
     if (args.out) {
       writeOut(args.out, list)
-      console.error(`📄 ${(batch.urls || []).length} адресов записаны в ${args.out}`)
-    } else {
+      console.error(`📄 ${report.batchUrls.length} адресов записаны в ${args.out}`)
+    } else if (!args.json) {
       process.stdout.write(list)
     }
   }
@@ -488,7 +491,6 @@ if (require.main === module) {
 module.exports = {
   CLI_SPEC,
   QUEUE_FILE,
-  QueueNotLiveError,
   USAGE,
   UsageError,
   applyRedirectFixes,

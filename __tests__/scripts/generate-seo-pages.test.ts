@@ -1774,3 +1774,248 @@ describe('home hero LCP preload', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// #1394: build-time API pacing и громкий отказ вместо пустой заглушки
+// ---------------------------------------------------------------------------
+describe('#1394 build-time fetch of travel details', () => {
+  const {
+    API_ZONE_RATE_PER_SEC,
+    BUILD_FETCH_RATE_PER_SEC,
+    BUILD_FETCH_MIN_INTERVAL_MS,
+    TRAVEL_DETAIL_CONCURRENCY,
+    QUEST_DETAIL_CONCURRENCY,
+    MAX_DETAIL_FAILURES_BEFORE_ABORT,
+    assertTravelDetailsComplete,
+    batchAsync,
+    createRequestPacer,
+    fetchTravelDetail,
+  } = require('@/scripts/generate-seo-pages');
+
+  const apiBase = 'https://metravel.test';
+  const httpError = (statusCode: number, url: string) =>
+    Object.assign(new Error(`HTTP ${statusCode} for ${url}`), { statusCode });
+
+  describe('темп запросов', () => {
+    it('держит сборку заметно ниже лимита зоны api', () => {
+      // nginx/nginx.conf: limit_req zone=api rate=30r/s. Прогон в 10 потоков без
+      // паузы уходил за порог и закрывал лимитер на всю сборку.
+      expect(API_ZONE_RATE_PER_SEC).toBe(30);
+      expect(BUILD_FETCH_RATE_PER_SEC).toBeLessThan(API_ZONE_RATE_PER_SEC / 2);
+      expect(BUILD_FETCH_MIN_INTERVAL_MS).toBe(Math.ceil(1000 / BUILD_FETCH_RATE_PER_SEC));
+      expect(TRAVEL_DETAIL_CONCURRENCY).toBeLessThanOrEqual(4);
+      expect(QUEST_DETAIL_CONCURRENCY).toBeLessThanOrEqual(4);
+    });
+
+    it('разносит старты на minIntervalMs даже при параллельных воркерах', async () => {
+      // Часы заморожены: тогда пауза, о которой просит пейсер, и есть смещение
+      // слота от начала прогона. Три воркера не стартуют одновременно — каждый
+      // следующий занимает слот на 125 мс позже предыдущего.
+      const waits: number[] = [];
+      const handled: number[] = [];
+
+      await batchAsync(
+        [1, 2, 3, 4, 5],
+        3,
+        async (item: number) => {
+          handled.push(item);
+        },
+        {
+          minIntervalMs: 125,
+          now: () => 1_000,
+          wait: async (ms: number) => {
+            waits.push(ms);
+          },
+        },
+      );
+
+      expect(handled).toHaveLength(5);
+      // Первый запрос уходит сразу, остальные четыре — по одному слоту на 125 мс.
+      expect(waits).toEqual([125, 250, 375, 500]);
+    });
+
+    it('без minIntervalMs не платит ни одной паузы', async () => {
+      const waits: number[] = [];
+      const pace = createRequestPacer(0, { now: () => 0, wait: async (ms: number) => void waits.push(ms) });
+
+      await pace();
+      await pace();
+
+      expect(waits).toEqual([]);
+    });
+  });
+
+  describe('fetchTravelDetail', () => {
+    it('нормализует ответ by-id', async () => {
+      const detail = await fetchTravelDetail(641, 'usadba-bohvicev-podorosk', {
+        apiBase,
+        fetchJson: async (url: string) => {
+          expect(url).toBe(`${apiBase}/api/travels/641/`);
+          return {
+            description: '<p>тело</p>',
+            media: { sizes: [] },
+            gallery: [{ url: 'a.jpg' }],
+            travelAddress: [{ id: 1 }],
+            coordsMeTravel: ['53.9,27.5'],
+            countryCode: 'BY',
+            userName: 'kelios',
+          };
+        },
+      });
+
+      expect(detail.description).toBe('<p>тело</p>');
+      expect(detail.gallery).toHaveLength(1);
+      expect(detail.coordsMeTravel).toEqual(['53.9,27.5']);
+      expect(detail.userName).toBe('kelios');
+    });
+
+    it('падает на by-slug, когда by-id отдал 503', async () => {
+      const calls: string[] = [];
+      const detail = await fetchTravelDetail(641, 'usadba-bohvicev-podorosk', {
+        apiBase,
+        fetchJson: async (url: string) => {
+          calls.push(url);
+          if (url.includes('/api/travels/641/')) throw httpError(503, url);
+          return { description: '<p>из by-slug</p>' };
+        },
+      });
+
+      expect(calls).toEqual([
+        `${apiBase}/api/travels/641/`,
+        `${apiBase}/api/travels/by-slug/usadba-bohvicev-podorosk/`,
+      ]);
+      expect(detail.description).toBe('<p>из by-slug</p>');
+    });
+
+    it('бросает, а не отдаёт пустую заглушку, когда оба пути упали', async () => {
+      // Прежнее поведение: тихий `{ description: '', gallery: [] }` → страница
+      // без тела, галереи и точек уезжала на прод как «успешная».
+      await expect(
+        fetchTravelDetail(641, 'usadba-bohvicev-podorosk', {
+          apiBase,
+          fetchJson: async (url: string) => {
+            throw httpError(503, url);
+          },
+        }),
+      ).rejects.toThrow(/travel 641 \(usadba-bohvicev-podorosk\).*HTTP 503.*by-slug fallback: HTTP 503/s);
+    });
+
+    it('бросает, когда by-id упал и слага для fallback нет', async () => {
+      await expect(
+        fetchTravelDetail(641, '', {
+          apiBase,
+          fetchJson: async (url: string) => {
+            throw httpError(503, url);
+          },
+        }),
+      ).rejects.toThrow(/travel 641: HTTP 503.*no slug/s);
+    });
+
+    it('сохраняет статусы, чтобы 404 и 503 различались без чтения ста строк', async () => {
+      const failure = await fetchTravelDetail(641, 'usadba-bohvicev-podorosk', {
+        apiBase,
+        fetchJson: async (url: string) => {
+          throw httpError(url.includes('by-slug') ? 404 : 503, url);
+        },
+      }).catch((err: any) => err);
+
+      expect(failure.statusCode).toBe(404);
+      expect(failure.idStatusCode).toBe(503);
+      expect(failure.cause).toBeDefined();
+    });
+
+    it('бросает на 200 с неожиданным телом вместо пустой статьи', async () => {
+      // Ответ-конверт `{ data: {...} }` раньше растекался в страницу без тела,
+      // проходил все проверки и уезжал на прод как «успешная» сборка.
+      for (const payload of [null, 'ok', [{ description: '<p>тело</p>' }]]) {
+        await expect(
+          fetchTravelDetail(641, '', { apiBase, fetchJson: async () => payload }),
+        ).rejects.toThrow(/unexpected detail payload/);
+      }
+    });
+  });
+
+  describe('гейт сборки при недобранных деталях', () => {
+    const logged: string[] = [];
+    const log = (line: string) => void logged.push(line);
+
+    beforeEach(() => {
+      logged.length = 0;
+    });
+
+    it('пропускает сборку, когда провалов нет', () => {
+      expect(() => assertTravelDetailsComplete([], 397, { log })).not.toThrow();
+      expect(logged).toEqual([]);
+    });
+
+    it('валит сборку и печатает id/slug каждой непрошедшей статьи', () => {
+      const failures = [
+        { id: 641, slug: 'usadba-bohvicev-podorosk', statusCode: 503, message: 'travel 641: HTTP 503' },
+        { id: 642, slug: '', statusCode: 503, message: 'travel 642: HTTP 503' },
+      ];
+
+      expect(() => assertTravelDetailsComplete(failures, 397, { log })).toThrow(
+        /Travel details unavailable for 2\/397 travels/,
+      );
+      expect(logged[0]).toContain('2/397');
+      expect(logged.join('\n')).toContain('id=641 slug=usadba-bohvicev-podorosk');
+      expect(logged.join('\n')).toContain('id=642 slug=—');
+    });
+
+    it('после раннего обрыва не выдаёт непопробованные статьи за успешные', () => {
+      // «20/397» читалось бы как «377 добрались нормально» — ровно наоборот.
+      const failures = Array.from({ length: 20 }, (_, i) => ({
+        id: i,
+        slug: `s${i}`,
+        statusCode: 503,
+        message: 'm',
+      }));
+
+      expect(() => assertTravelDetailsComplete(failures, 397, { attempted: 120, log })).toThrow(
+        /20\/120 attempted travels \(277 of 397 never tried\)/,
+      );
+      expect(logged[0]).not.toContain('20/397');
+    });
+
+    it('первой строкой даёт гистограмму статусов: 503-лимитер против удалённой статьи', () => {
+      const failures = [
+        ...Array.from({ length: 108 }, (_, i) => ({ id: i, slug: `s${i}`, statusCode: 503, message: 'm' })),
+        { id: 999, slug: 'deleted', statusCode: 404, message: 'm' },
+        { id: 1000, slug: 'socket', statusCode: undefined, message: 'm' },
+      ];
+
+      expect(() => assertTravelDetailsComplete(failures, 397, { log })).toThrow(/HTTP 503 ×108/);
+      expect(logged[0]).toContain('HTTP 503 ×108, HTTP 404 ×1, transport error ×1');
+    });
+  });
+
+  describe('ранний обрыв обречённого прогона', () => {
+    it('перестаёт добирать статьи, когда провалов накопилось выше порога', async () => {
+      const attempted: number[] = [];
+      const failures: number[] = [];
+      const items = Array.from({ length: 200 }, (_, i) => i);
+
+      await batchAsync(
+        items,
+        4,
+        async (item: number) => {
+          attempted.push(item);
+          failures.push(item);
+          return null;
+        },
+        { shouldStop: () => failures.length >= MAX_DETAIL_FAILURES_BEFORE_ABORT },
+      );
+
+      // Порог + до (concurrency - 1) задач, уже взятых воркерами в этот момент.
+      expect(attempted.length).toBeGreaterThanOrEqual(MAX_DETAIL_FAILURES_BEFORE_ABORT);
+      expect(attempted.length).toBeLessThan(MAX_DETAIL_FAILURES_BEFORE_ABORT + 4);
+      expect(attempted.length).toBeLessThan(items.length);
+    });
+
+    it('без shouldStop проходит весь список', async () => {
+      const seen: number[] = [];
+      await batchAsync([1, 2, 3, 4, 5], 2, async (item: number) => void seen.push(item));
+      expect(seen).toHaveLength(5);
+    });
+  });
+});
