@@ -39,6 +39,16 @@ Read first:
 - Every new `area=front` or `area=back` task needs active sprint, Problem History,
   Task Contract, `Platform impact`, `Localization impact`, dependencies/blockers,
   validation, and Done gate.
+- Write every task description in Russian, in plain language, using the seven mandatory
+  sections in order: `## Простыми словами` (что сейчас / как должно быть / кого задевает),
+  `## В чём проблема`, `## Из-за чего возникла`, `## Что должно быть сделано`,
+  `## Что уже сделано`, `## Что блокирует`, `## Как протестировать` — then Problem History
+  and Task Contract. Never drop a section; when there is nothing to say, say why. The same
+  applies to evidence notes appended later. Contract
+  headings, field names, paths, commands, URLs and board statuses stay untranslated as
+  identifiers. English prose paragraphs and loan-phrases («tracked-config classification»,
+  «paired evidence») are refinement debt, exactly like an incomplete contract. Full rule:
+  `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и человеческим языком».
 - Visible UI/UX tasks must reference durable `Design evidence` (tracked `docs/` mock or stable Figma URL) and name the required states/platforms. The current board API has no file-attachment field, so never reference a temporary `.codex-temp/` artifact as the task attachment.
 - Human work and agent work must be separate tasks linked by `blocked_by_id`, `depends_on_ids`, or `related_to_ids`.
 - If board tools return HTTP 401, refresh the staff token through `.env.e2e` following `docs/TASK_BOARD_MCP.md`; never print token values.

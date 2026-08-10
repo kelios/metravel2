@@ -40,6 +40,15 @@ Android/native задачи — `area=front` с `[AND-...]` и paired mobile-web
    <каких полей нет>», сошлись на `docs/TASK_BOARD_MCP.md`. Это refinement-долг, не приёмка.
    Обязательно сверь `Platform impact` и `Localization impact`; shared-правка
    без desktop-web и парного mobile-web/Android evidence и i18n-правка без RU/BE/UK/PL/EN contract не проходят Done gate. iOS evidence не требуется.
+   Тут же проверь **язык и структуру описания**: семь обязательных разделов по порядку
+   (`Простыми словами` → `В чём проблема` → `Из-за чего возникла` → `Что должно быть сделано`
+   → `Что уже сделано` → `Что блокирует` → `Как протестировать`), по-русски, без английских
+   абзацев и кальки. Отдельно сверь `## Что блокирует` с полями `blocked_by`/`depends_on` и
+   `## Что уже сделано` с реальным ходом работы: расхождение — тот же refinement-долг.
+   Нарушение — такой же refinement-долг, как неполный контракт: верни в `review` с заметкой
+   «описание не по правилу языка: <что не так>» и сошлись на `docs/TASK_BOARD_MCP.md` →
+   «Правило: описание задачи — по-русски и человеческим языком». Evidence-заметки, которые
+   ты дописываешь сам, подчиняются тому же правилу.
 2. **Собери gate.** Из `Done gate` + `Validation` + `Acceptance Criteria` выпиши конкретные
    проверки: команды (`npm run test:run -- <scope>`, `typecheck`, e2e), runtime-пробы
    (`curl` к endpoint, browser flow, нужный UI state), target env (`dev`/`prod`/local).

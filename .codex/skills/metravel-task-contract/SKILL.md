@@ -27,9 +27,27 @@ Read first:
 
 ## Required Contract
 
-Every `area=front` or `area=back` board task must include:
+Every `area=front` or `area=back` board task must include, in this order:
 
 ```md
+## Простыми словами
+
+Что сейчас:
+Как должно быть:
+Кого задевает:
+
+## В чём проблема
+
+## Из-за чего возникла
+
+## Что должно быть сделано
+
+## Что уже сделано
+
+## Что блокирует
+
+## Как протестировать
+
 ## Problem History
 
 Problem key:
@@ -55,6 +73,18 @@ Done gate:
 ## Rules
 
 - Do not create a FE/BE task without the contract block.
+- Write the whole description in Russian, in plain language, and in the seven mandatory
+  sections above, in that exact order: plain-language lead, the observed problem in detail,
+  the root cause (write «не установлена» rather than guessing), the numbered plan plus what
+  is out of scope, the dated progress log, the blocker (must match `blocked_by`/`depends_on`),
+  and a hands-on test walkthrough for a human (`Validation` keeps the exact gate commands —
+  they are not the same thing). Never delete a section: if there is nothing to say, say why. Keep contract headings (`## Problem History`,
+  `## Task Contract`), field names, paths, commands, URLs and board statuses
+  untranslated — they are identifiers used by gates and acceptance. English prose
+  paragraphs, loan-phrases («tracked-config classification», «paired evidence») and a
+  description that opens with the technical analysis are rejected exactly like an empty
+  contract. Full rule: `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски
+  и человеческим языком».
 - Do not create, reopen, or split a task without a Problem Memory Verdict. A
   recurring family must name its problem key, canonical prior task and decision
   (`reuse | reopen | create-linked | create-new`); reuse/reopen is preferred over

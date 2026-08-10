@@ -165,6 +165,17 @@ npm run test:run
   - `blocked_by` is only for a task that cannot start or continue because a concrete hard dependency is unresolved. A completed implementation waiting for code review, QA, backend/deploy/production/API/browser/device evidence, or another Done-gate check stays in `review` or `testing`; a validation failure requiring code changes returns to `in_progress`;
   - never use `blocked_by` merely because a Done gate is incomplete, a reviewer/tester has not run yet, or production verification is pending. Link the true blocker task/gate only when it prevents implementation work itself;
   - every `area=front` or `area=back` board task must include the required Task Contract, sprint, dependencies, blockers, validation, and Done gate;
+  - every board task description is written in Russian, in plain language, and in the seven
+    mandatory sections, in order: `## Простыми словами` (what happens now / what it should be /
+    who it affects), `## В чём проблема`, `## Из-за чего возникла`, `## Что должно быть
+    сделано`, `## Что уже сделано`, `## Что блокирует`, `## Как протестировать` — Problem
+    History and the contract follow them. Never drop a section: when there is nothing to say,
+    say why. Never invent a root cause. `## Что блокирует` must agree with
+    `blocked_by`/`depends_on`, and `## Что уже сделано` is updated on every status move. Contract headings (`## Problem History`, `## Task Contract`), its
+    field names, paths, commands, and board statuses stay untranslated as identifiers; English
+    prose paragraphs and loan-phrases in the description are rejected the same way an empty
+    contract is. Full rule: `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и
+    человеческим языком»;
   - every new board task, including Android/native QA bugs filed as `area=front`, must be assigned to the current active sprint unless `docs/TASK_BOARD_MCP.md` defines a more specific active sprint rule;
   - do not create new local `tasks/*.md` task files as the normal workflow; local task files are only a temporary fallback/migration draft when the board is unavailable, and must be imported/synced to the board before handoff;
   - do not create ad-hoc backend task notes outside the board workflow.
