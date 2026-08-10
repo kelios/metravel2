@@ -2,14 +2,12 @@
 /**
  * IndexNow batch submit — metravel.by
  *
- * Usage:
- *   node scripts/indexnow-submit.js              # submit all URLs
- *   node scripts/indexnow-submit.js --dry-run    # print URLs, no HTTP POST
- *   node scripts/indexnow-submit.js --sitemap    # parse sitemap.xml instead of API
- *   node scripts/indexnow-submit.js --sitemap --recent-days 2
- *                                                  # submit URLs changed today/yesterday
- *   node scripts/indexnow-submit.js --urls-file batch.txt
- *                                                  # submit exactly the listed URLs
+ * `--help` prints USAGE below; a unit test asserts that every flag `parseArgs`
+ * accepts is documented there, so the help cannot quietly fall behind the parser.
+ *
+ * A mode (--all / --sitemap / --urls-file) is mandatory and there is deliberately
+ * no default set: an unknown or mistyped flag used to fall through to "submit the
+ * whole site", which on 2026-08-10 pushed 544 URLs by accident (#1389).
  *
  * Submits to: api.indexnow.org (→ Bing/Yandex/etc.) + yandex.com/indexnow separately
  */
@@ -27,27 +25,78 @@ const DEFAULT_PAGE_SIZE = 100
 
 const STATIC_ROUTES = ['/', '/search', '/map', '/travelsby', '/about', '/contact', '/roulette']
 
-const DRY_RUN = process.argv.includes('--dry-run')
-const USE_SITEMAP = process.argv.includes('--sitemap')
+const USAGE = `IndexNow batch submit — metravel.by
 
-function parseRecentDays(argv) {
-  const index = argv.indexOf('--recent-days')
-  if (index === -1) return null
-  const value = Number(argv[index + 1])
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error('--recent-days expects a positive integer')
+Usage:
+  node scripts/indexnow-submit.js <mode> [options]
+
+Modes (exactly one is required — the script never picks a URL set for you):
+  --all                 every published travel, every quest and the static routes
+  --sitemap             the URLs listed in sitemap.xml
+  --urls-file <path>    exactly the URLs listed in a text file (one per line)
+
+Options:
+  --dry-run             print the URLs, send nothing
+  --recent-days <n>     with --sitemap: keep only URLs changed in the last n days
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/indexnow-submit.js --all
+  node scripts/indexnow-submit.js --sitemap --recent-days 2
+  node scripts/indexnow-submit.js --urls-file batch.txt --dry-run`
+
+/** Bad invocation, as opposed to a run that failed on its way to IndexNow. */
+class UsageError extends Error {}
+
+/**
+ * Explicit parse, never `argv.includes`: anything unrecognised has to stop the
+ * run instead of falling through to the widest possible action (#1389).
+ */
+function parseArgs(argv) {
+  const args = { help: false, dryRun: false, mode: null, urlsFile: null, recentDays: null }
+
+  const setMode = (mode, flag) => {
+    if (args.mode && args.mode !== mode) {
+      throw new UsageError(`--${args.mode} and ${flag} pick different URL sets — choose one`)
+    }
+    args.mode = mode
   }
-  return value
-}
 
-const RECENT_DAYS = parseRecentDays(process.argv)
+  for (let i = 2; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === '--help' || arg === '-h') args.help = true
+    else if (arg === '--dry-run') args.dryRun = true
+    else if (arg === '--all') setMode('all', arg)
+    else if (arg === '--sitemap') setMode('sitemap', arg)
+    else if (arg === '--urls-file') {
+      if (args.urlsFile !== null) throw new UsageError('--urls-file given twice — pass one batch file')
+      setMode('urls-file', arg)
+      const value = argv[++i]
+      // A leading `-` is a mistyped flag, not a path: `--urls-file -h` must say so
+      // instead of failing later on ENOENT '-h'.
+      if (!value || value.startsWith('-')) throw new UsageError('--urls-file expects a path')
+      args.urlsFile = value
+    } else if (arg === '--recent-days') {
+      if (args.recentDays !== null) throw new UsageError('--recent-days given twice — pass one window')
+      const value = Number(argv[++i])
+      if (!Number.isInteger(value) || value < 1) {
+        throw new UsageError('--recent-days expects a positive integer')
+      }
+      args.recentDays = value
+    } else {
+      throw new UsageError(`Unknown argument: ${arg}`)
+    }
+  }
 
-function parseUrlsFile(argv) {
-  const index = argv.indexOf('--urls-file')
-  if (index === -1) return null
-  const value = argv[index + 1]
-  if (!value || value.startsWith('--')) throw new Error('--urls-file expects a path')
-  return value
+  if (args.help) return args
+
+  if (!args.mode) {
+    throw new UsageError('No mode given: pass --all, --sitemap or --urls-file <path> explicitly')
+  }
+  if (args.recentDays !== null && args.mode !== 'sitemap') {
+    throw new UsageError('--recent-days requires --sitemap because API records do not expose lastmod')
+  }
+  return args
 }
 
 /**
@@ -69,7 +118,9 @@ function parseUrlsFileContent(text, site = SITE) {
   return [...new Set(urls)]
 }
 
-const URLS_FILE = parseUrlsFile(process.argv)
+function readUrlsFile(filePath) {
+  return parseUrlsFileContent(fs.readFileSync(filePath, 'utf8'))
+}
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -194,7 +245,7 @@ function filterRecentSitemapEntries(entries, recentDays, now = new Date()) {
   })
 }
 
-async function collectFromSitemap({ recentDays = RECENT_DAYS, now = new Date() } = {}) {
+async function collectFromSitemap({ recentDays = null, now = new Date() } = {}) {
   const xml = await fetchText(`${SITE}/sitemap.xml`)
   const entries = filterRecentSitemapEntries(parseSitemapEntries(xml), recentDays, now)
   return entries.map((entry) => entry.loc)
@@ -202,9 +253,14 @@ async function collectFromSitemap({ recentDays = RECENT_DAYS, now = new Date() }
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 
-async function submit(endpoint, urlList) {
+// `dryRun` has no default on purpose: a call site that forgets it must fail
+// loudly, not quietly turn a rehearsal into a real submission (#1389).
+async function submit(endpoint, urlList, { dryRun } = {}) {
+  if (typeof dryRun !== 'boolean') {
+    throw new Error('submit() requires an explicit dryRun flag')
+  }
   const body = { host: HOST, key: KEY, keyLocation: KEY_LOCATION, urlList }
-  if (DRY_RUN) {
+  if (dryRun) {
     console.log(`[dry-run] POST https://${endpoint} — ${urlList.length} URLs`)
     return
   }
@@ -218,25 +274,29 @@ async function submit(endpoint, urlList) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-async function main() {
-  if (RECENT_DAYS && !USE_SITEMAP) {
-    throw new Error('--recent-days requires --sitemap because API records do not expose lastmod')
-  }
-  if (URLS_FILE && (USE_SITEMAP || RECENT_DAYS)) {
-    throw new Error('--urls-file is an explicit list: do not combine it with --sitemap/--recent-days')
-  }
-  console.log('[indexnow] Collecting URLs…')
-  const urls = URLS_FILE
-    ? parseUrlsFileContent(fs.readFileSync(URLS_FILE, 'utf8'))
-    : USE_SITEMAP
-      ? await collectFromSitemap()
-      : await collectFromApi()
-  console.log(`[indexnow] ${urls.length} URLs collected${URLS_FILE ? ` from ${URLS_FILE}` : ''}`)
-  if (RECENT_DAYS) {
-    console.log(`[indexnow] Filter: sitemap lastmod within ${RECENT_DAYS} day(s)`)
+const DEFAULT_DEPS = { collectFromApi, collectFromSitemap, readUrlsFile, submit }
+
+async function main(argv = process.argv, deps = {}) {
+  const collectors = { ...DEFAULT_DEPS, ...deps }
+
+  const args = parseArgs(argv)
+  if (args.help) {
+    console.log(USAGE)
+    return
   }
 
-  if (DRY_RUN) {
+  console.log('[indexnow] Collecting URLs…')
+  const urls = args.mode === 'urls-file'
+    ? collectors.readUrlsFile(args.urlsFile)
+    : args.mode === 'sitemap'
+      ? await collectors.collectFromSitemap({ recentDays: args.recentDays })
+      : await collectors.collectFromApi()
+  console.log(`[indexnow] ${urls.length} URLs collected${args.urlsFile ? ` from ${args.urlsFile}` : ''}`)
+  if (args.recentDays) {
+    console.log(`[indexnow] Filter: sitemap lastmod within ${args.recentDays} day(s)`)
+  }
+
+  if (args.dryRun) {
     urls.forEach((u) => console.log(' ', u))
   }
 
@@ -250,22 +310,33 @@ async function main() {
   for (let i = 0; i < urls.length; i += CHUNK) {
     const chunk = urls.slice(i, i + CHUNK)
     // api.indexnow.org propagates to all participating engines (Bing, Yandex, etc.)
-    await submit('api.indexnow.org/indexnow', chunk)
+    await collectors.submit('api.indexnow.org/indexnow', chunk, { dryRun: args.dryRun })
     // Yandex also accepts directly (belt + suspenders)
-    await submit('yandex.com/indexnow', chunk)
+    await collectors.submit('yandex.com/indexnow', chunk, { dryRun: args.dryRun })
   }
 
   console.log('[indexnow] Done.')
 }
 
 if (require.main === module) {
-  main().catch((e) => { console.error('[indexnow] Fatal:', e.message); process.exit(1) })
+  main().catch((e) => {
+    if (e instanceof UsageError) {
+      console.error(`[indexnow] ${e.message}\n`)
+      console.error(USAGE)
+      process.exit(2)
+    }
+    console.error('[indexnow] Fatal:', e.message)
+    process.exit(1)
+  })
 }
 
 module.exports = {
+  UsageError,
+  USAGE,
   filterRecentSitemapEntries,
-  parseRecentDays,
+  main,
+  parseArgs,
   parseSitemapEntries,
-  parseUrlsFile,
   parseUrlsFileContent,
+  submit,
 }

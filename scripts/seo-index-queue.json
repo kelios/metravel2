@@ -1,5 +1,5 @@
 {
-  "_comment": "Очередь подачи URL вне индекса после retitle-волны 03–06.08 (#1326). Снято URL Inspection 2026-08-08: 203/306 в индексе, 100 URL Google не знает. Пачки по 10 подаются по одной в день: IndexNow (Bing/Yandex) — автоматически, Google — только вручную в GSC «Запросить индексирование» (API для этого не существует). После подачи проставить submittedAt (ISO-дата) и не подавать пачку повторно. Когда все пачки поданы и статус проверен — задача #1326 закрывается.",
+  "_comment": "Очередь подачи URL вне индекса после retitle-волны 03–06.08 (#1326). Снято URL Inspection 2026-08-08: 203/306 в индексе, 100 URL Google не знает. Пачки по 10 подаются по одной в день: IndexNow (Bing/Yandex) — автоматически, Google — только вручную в GSC «Запросить индексирование» (API для этого не существует). После подачи проставить submittedAt (ISO-дата) и не подавать пачку повторно. Когда все пачки поданы и статус проверен — задача #1326 закрывается. 2026-08-10: клики в GSC делает агент через Claude in Chrome; квота ровно 10 принятых запросов в сутки на свойство; перед подачей URL проверяется статус — уже проиндексированные пропускаются.",
   "source": "GSC URL Inspection 2026-08-08 (306 статей user_id=1)",
   "createdAt": "2026-08-08",
   "totalUrls": 103,
@@ -32,7 +32,52 @@
           "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
           "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret"
         ]
-      }
+      },
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+          "result": "accepted",
+          "at": "2026-08-10",
+          "note": "отправлен дважды (сбой автоматизации), одна лишняя единица квоты"
+        },
+        {
+          "url": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
+          "result": "already-indexed",
+          "at": "2026-08-10",
+          "note": "URL Inspection: «URL есть в индексе Google» — подача не нужна"
+        },
+        {
+          "url": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia",
+          "result": "accepted",
+          "at": "2026-08-10"
+        }
+      ],
+      "gscRequestedAt": "2026-08-10"
     },
     {
       "day": 2,
@@ -60,7 +105,31 @@
         "indexedUrls": [
           "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
         ]
-      }
+      },
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
+          "result": "already-indexed",
+          "at": "2026-08-10",
+          "note": "URL Inspection: «URL есть в индексе Google» — подача не нужна"
+        },
+        {
+          "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+          "result": "quota-exceeded",
+          "at": "2026-08-10",
+          "note": "«Квота превышена» — перенесено на следующий день"
+        }
+      ]
     },
     {
       "day": 3,
@@ -1301,5 +1370,27 @@
       "Страница отправлена и проиндексирована": 199,
       "Страница просканирована, но пока не проиндексирована": 3
     }
+  },
+  "_gscQuota": {
+    "perDay": 10,
+    "observedAt": "2026-08-10",
+    "evidence": "11-я подача вернула «Квота превышена. Мы не можем обработать этот запрос, так как вы превысили ежедневную квоту»",
+    "note": "квоту тратит каждый принятый клик, включая повторный по тому же URL"
+  },
+  "_sitemapResubmit": {
+    "at": "2026-08-10",
+    "sitemap": "https://metravel.by/sitemap.xml",
+    "before": {
+      "submitted": "2026-07-15",
+      "lastRead": "2026-07-15",
+      "discoveredPages": 509
+    },
+    "after": {
+      "submitted": "2026-08-10",
+      "lastRead": "2026-08-10",
+      "discoveredPages": 638,
+      "status": "Успешно"
+    },
+    "why": "URL Inspection по каждому URL очереди показывал «Нет ссылающихся файлов Sitemap»: Google не перечитывал sitemap с 15.07, то есть все переименованные 03–06.08 адреса ему просто не были предъявлены"
   }
 }
