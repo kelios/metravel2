@@ -23,6 +23,15 @@
       "indexnow": {
         "api.indexnow.org": 200,
         "yandex.com": 202
+      },
+      "indexCheck": {
+        "checkedAt": "2026-08-10",
+        "indexed": 2,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+          "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret"
+        ]
       }
     },
     {
@@ -43,11 +52,19 @@
       "indexnow": {
         "api.indexnow.org": 200,
         "yandex.com": 202
+      },
+      "indexCheck": {
+        "checkedAt": "2026-08-10",
+        "indexed": 1,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
+        ]
       }
     },
     {
       "day": 3,
-      "submittedAt": null,
+      "submittedAt": "2026-08-10",
       "urls": [
         "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
         "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
@@ -59,7 +76,18 @@
         "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
         "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
         "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexCheck": {
+        "checkedAt": "2026-08-10",
+        "indexed": 0,
+        "of": 10,
+        "indexedUrls": []
+      }
     },
     {
       "day": 4,
@@ -75,7 +103,13 @@
         "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe",
         "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia",
         "https://metravel.by/travels/dubrovnik-kak-dobratsia-i-chto-posmotret"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexnowSubmittedAt": "2026-08-10"
     },
     {
       "day": 5,
@@ -91,7 +125,13 @@
         "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
         "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
         "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexnowSubmittedAt": "2026-08-10"
     },
     {
       "day": 6,
@@ -107,7 +147,13 @@
         "https://metravel.by/travels/tivoli-iz-rima-na-odin-den-chto-posmotret",
         "https://metravel.by/travels/lager-zorka-i-kupel-poezdka-iz-minska",
         "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexnowSubmittedAt": "2026-08-10"
     },
     {
       "day": 7,
@@ -123,7 +169,13 @@
         "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
         "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
         "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexnowSubmittedAt": "2026-08-10"
     },
     {
       "day": 8,
@@ -139,7 +191,13 @@
         "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
         "https://metravel.by/travels/schronisko-magurka-marshrut-na-90-minut",
         "https://metravel.by/travels/sobachii-friendly-trek-v-chase-ot-krakova-dolina-zhabnika"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexnowSubmittedAt": "2026-08-10"
     },
     {
       "day": 9,
@@ -155,7 +213,13 @@
         "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den",
         "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
         "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexnowSubmittedAt": "2026-08-10"
     },
     {
       "day": 10,
@@ -168,19 +232,31 @@
         "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
         "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
         "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
-        "https://metravel.by/travels/zelenoe-pleso-zelene-pleso-v-vysokikh-tatrakh-pokhod-k-izumrudnomu-ozeru",
-        "https://metravel.by/travels/zamok-malbork-krupneishaia-kirpichnaia-krepost-mira-putevoditel",
+        "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru",
+        "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
         "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexnowSubmittedAt": "2026-08-10"
     },
     {
       "day": 11,
       "submittedAt": null,
       "urls": [
-        "https://metravel.by/travels/zamok-bolchuv-progulka-cherez-les-k-ruinam-v-rudavakh-ianovitskikh",
-        "https://metravel.by/travels/adrshpashskie-skaly-marshrut-po-skalnomu-gorodu-gde-snimali-khroniki-narnii",
+        "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
+        "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
         "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest"
-      ]
+      ],
+      "indexnow": {
+        "api.indexnow.org": 200,
+        "yandex.com": 202
+      },
+      "indexnowVia": "full-site submit 2026-08-10",
+      "indexnowSubmittedAt": "2026-08-10"
     }
   ],
   "details": [
@@ -1145,19 +1221,25 @@
     },
     {
       "id": 569,
-      "url": "https://metravel.by/travels/zelenoe-pleso-zelene-pleso-v-vysokikh-tatrakh-pokhod-k-izumrudnomu-ozeru",
+      "url": "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru",
       "state": "URL неизвестен Google",
-      "renamedFrom": [],
+      "renamedFrom": [
+        "zelenoe-pleso-zelene-pleso-v-vysokikh-tatrakh-pokhod-k-izumrudnomu-ozeru"
+      ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "staleRedirectFixedAt": "2026-08-10"
     },
     {
       "id": 630,
-      "url": "https://metravel.by/travels/zamok-malbork-krupneishaia-kirpichnaia-krepost-mira-putevoditel",
+      "url": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
       "state": "URL неизвестен Google",
-      "renamedFrom": [],
+      "renamedFrom": [
+        "zamok-malbork-krupneishaia-kirpichnaia-krepost-mira-putevoditel"
+      ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "staleRedirectFixedAt": "2026-08-10"
     },
     {
       "id": 638,
@@ -1169,19 +1251,25 @@
     },
     {
       "id": 641,
-      "url": "https://metravel.by/travels/zamok-bolchuv-progulka-cherez-les-k-ruinam-v-rudavakh-ianovitskikh",
+      "url": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
       "state": "URL неизвестен Google",
-      "renamedFrom": [],
+      "renamedFrom": [
+        "zamok-bolchuv-progulka-cherez-les-k-ruinam-v-rudavakh-ianovitskikh"
+      ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "staleRedirectFixedAt": "2026-08-10"
     },
     {
       "id": 642,
-      "url": "https://metravel.by/travels/adrshpashskie-skaly-marshrut-po-skalnomu-gorodu-gde-snimali-khroniki-narnii",
+      "url": "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
       "state": "URL неизвестен Google",
-      "renamedFrom": [],
+      "renamedFrom": [
+        "adrshpashskie-skaly-marshrut-po-skalnomu-gorodu-gde-snimali-khroniki-narnii"
+      ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "staleRedirectFixedAt": "2026-08-10"
     },
     {
       "id": 682,
@@ -1193,5 +1281,25 @@
       "oldClicks": 0,
       "oldImpressions": 0
     }
-  ]
+  ],
+  "_indexnowFullSubmit": {
+    "date": "2026-08-10",
+    "scope": "все 544 живых URL сайта (полный набор скрипта, не пачка)",
+    "results": {
+      "api.indexnow.org": 200,
+      "yandex.com": 202
+    },
+    "note": "Подача выполнена случайно: node scripts/indexnow-submit.js без аргументов (режим по умолчанию — весь сайт). Покрыла 99 из 103 URL очереди; оставшиеся 4 отсутствовали в живом наборе, потому что были протухшими 301 — заменены на цели редиректа в этот же день. Побочный эффект безвредный (свои же URL, ключ верифицирован), но пачки 1-2 получили повторную подачу. Google этим не кормится — ручные клики в GSC идут по расписанию без изменений."
+  },
+  "_lastIndexSweep": {
+    "checkedAt": "2026-08-10T05:57:52.840Z",
+    "total": 306,
+    "indexed": 199,
+    "notIndexed": 107,
+    "byCoverageState": {
+      "URL неизвестен Google": 104,
+      "Страница отправлена и проиндексирована": 199,
+      "Страница просканирована, но пока не проиндексирована": 3
+    }
+  }
 }
