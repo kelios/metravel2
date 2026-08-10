@@ -39,9 +39,113 @@ describe('bundle budget release contract', () => {
       chunks: ['entry', '__expo-metro-runtime'],
       htmlRoutes: true,
       maxBrotliKB: 800,
+      // #1372: потолок на ЧИСЛО eager JS-запросов маршрута. Без пина его легко
+      // поднять, чтобы «позеленить» сборку, — а именно это Task Contract
+      // задачи и запрещает.
+      maxRequests: 59,
+      maxRequestsByRoute: {
+        'index.html': 36,
+        'search.html': 32,
+        'map.html': 40,
+        'quests.html': 34,
+        '(tabs)/travels/[param].html': 59,
+      },
       tolerancePct: 0,
     })
     expect(budget?.forbiddenChunks).toEqual(['__common'])
+  })
+
+  it('fails closed when a route exceeds its own eager JS request budget', () => {
+    const tmpDir = makeTempDir('metravel-bundle-budget-requests-')
+    try {
+      const jsDir = path.join(tmpDir, 'js')
+      const htmlDir = path.join(tmpDir, 'html')
+      const testBudgetPath = path.join(tmpDir, 'budget.json')
+      fs.mkdirSync(jsDir, { recursive: true })
+      fs.mkdirSync(path.join(htmlDir, 'search'), { recursive: true })
+
+      const scriptTags = []
+      for (let index = 0; index < 3; index += 1) {
+        fs.writeFileSync(path.join(jsDir, `chunk${index}-abcdef.js`), 'globalThis.x = 1;')
+        scriptTags.push(`<script src="/_expo/static/js/web/chunk${index}-abcdef.js" defer></script>`)
+      }
+      // Та же страница под двумя именами: ключ маршрута должен схлопнуться в один.
+      fs.writeFileSync(path.join(htmlDir, 'search.html'), `<html><body>${scriptTags.join('')}</body></html>`)
+      fs.writeFileSync(
+        path.join(htmlDir, 'search', 'index.html'),
+        `<html><body>${scriptTags.join('')}</body></html>`,
+      )
+      fs.writeFileSync(
+        testBudgetPath,
+        JSON.stringify({
+          eager: {
+            chunks: [],
+            htmlRoutes: true,
+            maxRequests: 99,
+            maxRequestsByRoute: { 'search.html': 2 },
+            tolerancePct: 0,
+          },
+        }),
+      )
+
+      const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+        BUNDLE_BUDGET_JS_DIR: jsDir,
+        BUNDLE_BUDGET_HTML_DIR: htmlDir,
+        BUNDLE_BUDGET_CONFIG: testBudgetPath,
+      })
+
+      expect(result.status).toBe(1)
+      const parsed = JSON.parse(result.stdout)
+      expect(parsed.eagerRequests).toBe(3)
+      expect(parsed.breaches).toContainEqual(
+        expect.objectContaining({ label: 'EAGER (requests, search.html)', actual: 3, max: 2 }),
+      )
+      // Глобальный потолок 99 не тронут — сработал именно помаршрутный.
+      expect(parsed.breaches.filter((b: { label: string }) => /EAGER \(requests/.test(b.label))).toHaveLength(1)
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails closed when a budgeted route disappears from the build', () => {
+    const tmpDir = makeTempDir('metravel-bundle-budget-route-missing-')
+    try {
+      const jsDir = path.join(tmpDir, 'js')
+      const htmlDir = path.join(tmpDir, 'html')
+      const testBudgetPath = path.join(tmpDir, 'budget.json')
+      fs.mkdirSync(jsDir, { recursive: true })
+      fs.mkdirSync(htmlDir, { recursive: true })
+      fs.writeFileSync(path.join(jsDir, 'chunk0-abcdef.js'), 'globalThis.x = 1;')
+      fs.writeFileSync(
+        path.join(htmlDir, 'index.html'),
+        '<html><body><script src="/_expo/static/js/web/chunk0-abcdef.js" defer></script></body></html>',
+      )
+      fs.writeFileSync(
+        testBudgetPath,
+        JSON.stringify({
+          eager: {
+            chunks: [],
+            htmlRoutes: true,
+            maxRequestsByRoute: { 'search.html': 32 },
+            tolerancePct: 0,
+          },
+        }),
+      )
+
+      const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+        BUNDLE_BUDGET_JS_DIR: jsDir,
+        BUNDLE_BUDGET_HTML_DIR: htmlDir,
+        BUNDLE_BUDGET_CONFIG: testBudgetPath,
+      })
+
+      expect(result.status).toBe(1)
+      expect(JSON.parse(result.stdout).breaches).toContainEqual({
+        label: 'EAGER budgeted route missing from build: search.html',
+        missing: true,
+      })
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
   })
 
   it('fails closed when the configured eager chunks exceed the hard Brotli budget', () => {
