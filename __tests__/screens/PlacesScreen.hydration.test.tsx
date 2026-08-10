@@ -4,7 +4,17 @@ import { Platform, StyleSheet } from 'react-native'
 import { createQueryWrapper } from '../helpers/testQueryClient'
 import PlacesScreen from '@/screens/tabs/PlacesScreen'
 import { fetchPlacesCatalog } from '@/api/places'
+import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
 import type { PlacesCatalogPage } from '@/utils/placesCatalog'
+
+// Порог берём из самого критического CSS, а не из литерала в тесте: только так
+// расхождение `isCompact = width < 760` с media-query падает в CI. Разъезд даёт
+// кадр, где видны обе шапки каталога или ни одной.
+const COMPACT_BREAKPOINT = Number(
+  buildCriticalCSS().match(
+    /@media \(min-width:(\d+(?:\.\d+)?)px\)\{\n\s*\[data-testid="places-compact-bar"\]/,
+  )?.[1],
+)
 
 let mockWidth = 0
 
@@ -99,6 +109,25 @@ describe('PlacesScreen pre-hydration chrome', () => {
 
     expect(getByTestId('places-topbar')).toBeTruthy()
     expect(queryByTestId('places-compact-bar')).toBeNull()
+  })
+
+  // Критический CSS показывает компактную панель до `min-width:760px`, а React
+  // переключается по `width < 760`. Пока обе стороны читают одно число, кадр до
+  // и после гидратации совпадает; иначе возвращается прыжок каталога на 115 px.
+  it('switches headers exactly at the breakpoint declared in the critical CSS', () => {
+    expect(Number.isFinite(COMPACT_BREAKPOINT)).toBe(true)
+    expect(buildCriticalCSS()).toContain(`@media (max-width:${COMPACT_BREAKPOINT - 0.02}px){`)
+
+    mockWidth = COMPACT_BREAKPOINT - 1
+    const compact = renderScreen()
+    expect(compact.getByTestId('places-compact-bar')).toBeTruthy()
+    expect(compact.queryByTestId('places-topbar')).toBeNull()
+    compact.unmount()
+
+    mockWidth = COMPACT_BREAKPOINT
+    const wide = renderScreen()
+    expect(wide.getByTestId('places-topbar')).toBeTruthy()
+    expect(wide.queryByTestId('places-compact-bar')).toBeNull()
   })
 
   // На native ширина известна с первого кадра, гидратации нет — второй шапки

@@ -1,3 +1,7 @@
+import { Platform, StyleSheet } from 'react-native'
+
+import { getThemedColors } from '@/constants/designSystem'
+import { createStyles } from '@/screens/tabs/PlacesScreen.styles'
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
 
 // Регресс #1: широкое правило `[data-testid="travel-details-hero"] img{max-width:720px}`
@@ -136,5 +140,114 @@ describe('buildCriticalCSS: до-гидрационная раскладка /pl
     expect(mobileBlock).toContain(
       '[data-places-prehydration="true"] [data-testid="places-sidebar"]{display:none !important}',
     )
+  })
+})
+
+// #1334 (регресс-контроль). Правила выше — это ручная копия мобильной ветки
+// `PlacesScreen.styles`. Пока значения совпадают, первый кадр статического HTML
+// и кадр после гидратации имеют одну геометрию, и CLS `/places` держится на
+// 0,0025 (замер прода 2026-08-10, 5/5 прогонов, mobile 412x823, CPU 4x).
+// Разъезд любого числа возвращает исходный дефект: каталог 412x628 -> 412x444 и
+// CLS 0,519. Ассерты ниже сравнивают CSS не с литералом, а с реальным стилем —
+// иначе правка `PlacesScreen.styles` проходит CI молча.
+describe('buildCriticalCSS: до-гидрационные размеры /places равны мобильным стилям экрана', () => {
+  const css = buildCriticalCSS()
+  const mobileBlockTail = css.slice(css.indexOf('@media (max-width:759.98px){'))
+  const mobileBlock = mobileBlockTail.slice(0, mobileBlockTail.indexOf('\n}') + 2)
+
+  const originalOS = Platform.OS
+  beforeAll(() => {
+    // `layout.minHeight` живёт под `Platform.OS === 'web'`: на других платформах
+    // резервации нет и сравнивать было бы нечего.
+    ;(Platform as unknown as { OS: string }).OS = 'web'
+  })
+  afterAll(() => {
+    ;(Platform as unknown as { OS: string }).OS = originalOS
+  })
+
+  const compactStyles = () => createStyles(getThemedColors(false), true, false)
+  const flat = (style: unknown) => StyleSheet.flatten(style as never) as Record<string, unknown>
+  /** `margin-top:0` и `0px` — одно и то же значение, сравнивать их как строки нельзя. */
+  const px = (value: unknown) => (Number(value) === 0 ? '0' : `${value}px`)
+  const asPx = (declared: string) => (Number.parseFloat(declared) === 0 ? '0' : declared)
+
+  /** Разбирает объявления одного правила критического CSS в карту свойств. */
+  const declarationsOf = (selector: string): Record<string, string> => {
+    const line = mobileBlock.split('\n').find((entry) => entry.trim().startsWith(selector))
+    if (!line) throw new Error(`критический CSS потерял правило «${selector}»`)
+    const body = line.slice(line.indexOf('{') + 1, line.lastIndexOf('}'))
+    return Object.fromEntries(
+      body
+        .split(';')
+        .filter(Boolean)
+        .map((declaration) => {
+          const colon = declaration.indexOf(':')
+          return [
+            declaration.slice(0, colon).trim(),
+            declaration.slice(colon + 1).replace('!important', '').trim(),
+          ]
+        }),
+    ) as Record<string, string>
+  }
+
+  it('резервирует ту же высоту каталога, что и мобильная ветка стилей', () => {
+    const declared = declarationsOf('[data-testid="places-layout"][data-places-prehydration="true"]')
+    const layout = flat(compactStyles().layout)
+
+    expect(declared['min-height']).toBe(layout.minHeight)
+    expect(declared['flex-direction']).toBe(layout.flexDirection)
+    expect(asPx(declared['margin-top'])).toBe(px(layout.marginTop))
+  })
+
+  it('повторяет отступы и шаг колонки результатов', () => {
+    const declared = declarationsOf('[data-places-prehydration="true"] [data-testid="places-main"]')
+    const main = flat(compactStyles().main)
+
+    expect(declared.padding).toBe(
+      `${main.paddingTop}px ${main.paddingHorizontal}px ${main.paddingBottom}px`,
+    )
+    expect(declared.gap).toBe(`${main.gap}px`)
+  })
+
+  it('повторяет типографику заголовка результатов', () => {
+    const declared = declarationsOf(
+      '[data-places-prehydration="true"] [data-testid="places-results-title"]',
+    )
+    const title = flat(compactStyles().resultsTitle)
+
+    expect(declared['font-size']).toBe(`${title.fontSize}px`)
+    expect(declared['line-height']).toBe(`${title.lineHeight}px`)
+    expect(declared['letter-spacing']).toBe(`${title.letterSpacing}px`)
+    expect(declared['font-weight']).toBe(String(title.fontWeight))
+  })
+
+  it('повторяет размер контрола сортировки', () => {
+    const declared = declarationsOf(
+      '[data-places-prehydration="true"] [data-testid="places-sort-select"]',
+    )
+    const sortSelect = flat(compactStyles().sortSelect)
+
+    expect(declared['min-height']).toBe(`${sortSelect.minHeight}px`)
+    expect(declared['padding-left']).toBe(`${sortSelect.paddingHorizontal}px`)
+    expect(declared['padding-right']).toBe(`${sortSelect.paddingHorizontal}px`)
+  })
+
+  it('повторяет раскладку сетки карточек и ширину слота', () => {
+    const grid = declarationsOf('[data-places-prehydration="true"] [data-testid="places-cards-grid"]')
+    const gridStyle = flat(compactStyles().cardsGrid)
+
+    expect(grid['flex-direction']).toBe(gridStyle.flexDirection)
+    expect(grid['flex-wrap']).toBe(gridStyle.flexWrap)
+    expect(grid.gap).toBe(`${gridStyle.gap}px`)
+
+    const slot = declarationsOf(
+      '[data-places-prehydration="true"] [data-testid^="places-skeleton-card-"]',
+    )
+    const card = flat(compactStyles().card)
+
+    expect(slot.width).toBe(card.width)
+    expect(slot['flex-grow']).toBe(String(card.flexGrow))
+    expect(slot['flex-shrink']).toBe(String(card.flexShrink))
+    expect(slot['flex-basis']).toBe(card.flexBasis)
   })
 })
