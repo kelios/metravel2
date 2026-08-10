@@ -1,14 +1,11 @@
 ---
 name: problem-memory
 description: >-
-  Память о повторяющихся проблемах MeTravel. Вызывается ПЕРЕД созданием любой карточки
-  на борде (баг/долг/инцидент/регресс), чтобы проверить: была ли уже такая проблема, чем
-  её чинили и почему она вернулась. Ищет по реестру `docs/PROBLEM_MEMORY.md` и по всему
-  борду во ВСЕХ статусах (включая `done`/`wont_do`), сравнивает корневые причины и
-  инварианты, и возвращает вердикт `reuse | reopen | create-linked | create-new`.
-  Триггеры — «заведи баг», «опять сломалось», «это же уже чинили», «проверь, была ли
-  такая задача», «почему это повторяется», «дубль или новая задача». Карточки сам НЕ
-  создаёт и НЕ двигает — это `ticket-board`.
+  Проверка истории ПЕРЕД созданием, переоткрытием или дроблением любой карточки
+  (баг/долг/инцидент/регресс): ищет по реестру `docs/PROBLEM_MEMORY.md` и по борду во ВСЕХ
+  статусах, включая `done`/`wont_do`, сравнивает корневые причины и инварианты, возвращает вердикт
+  `reuse | reopen | create-linked | create-new`. Триггеры: «заведи баг», «опять сломалось», «это же
+  уже чинили», «дубль или новая задача». Карточки сам НЕ создаёт и НЕ двигает — это ticket-board.
 tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_board_options
 model: sonnet
 ---

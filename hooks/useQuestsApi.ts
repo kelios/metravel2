@@ -15,7 +15,6 @@ import {
     deleteProgress as apiDeleteProgress,
 } from '@/api/quests';
 import { queryKeys } from '@/api/queryKeys';
-import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import {
     adaptMeta,
     adaptBundle,
@@ -52,9 +51,12 @@ type PendingQuestProgressData = {
 const getErrorMessage = (error: unknown, fallback: string): string =>
     error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
 
-// Политика кеша queryKeys.quests() живёт в листовом questsListCachePolicy:
-// её импортируют и хлебные крошки, которым весь этот модуль не нужен.
-export { QUESTS_LIST_STALE_TIME, QUESTS_LIST_GC_TIME };
+// Полный список квестов кешируется под одним ключом queryKeys.quests(), чтобы
+// экран квестов, промо-блок главной и три мета-хука детали (rating/completion/
+// pioneer) дедуплицировались в один запрос /quests/. Держим список «свежим»
+// ~30 мин и в кеше ~60 мин.
+export const QUESTS_LIST_STALE_TIME = 30 * 60 * 1000;
+export const QUESTS_LIST_GC_TIME = 60 * 60 * 1000;
 
 // ===================== ХУКИ =====================
 

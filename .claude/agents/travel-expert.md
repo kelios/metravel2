@@ -1,6 +1,8 @@
 ---
 name: travel-expert
-description: Эксперт по фиче travel (travel list, details, wizard, export). Используй для задач по `components/travel/**`, `components/listTravel/**`, `app/(tabs)/travel*`, `hooks/useTravel*`, `api/travel/**`, `stores/*travel*`.
+description: >-
+  Фича travel: `components/travel/**`, `components/listTravel/**`, `app/(tabs)/travel*`,
+  `hooks/useTravel*`, `api/travel/**`, `stores/*travel*` — список, детали, мастер, экспорт.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

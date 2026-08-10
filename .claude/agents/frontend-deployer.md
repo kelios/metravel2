@@ -1,6 +1,9 @@
 ---
 name: frontend-deployer
-description: Деплой web-фронтенда на прод metravel.by строго через `./build-prod.sh prod` (сборка → guard'ы → rsync → атомарный свап → рестарт app+nginx → health-check), умеет откатывать. `scripts/fix-prod.sh` — только аварийное восстановление. Бэкенд не деплоит.
+description: >-
+  Деплой web-фронтенда на прод metravel.by строго через `./build-prod.sh prod` (сборка → guard’ы →
+  rsync → атомарный свап → рестарт app+nginx → health-check), умеет откатывать.
+  `scripts/fix-prod.sh` — только аварийное восстановление. Бэкенд не деплоит.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

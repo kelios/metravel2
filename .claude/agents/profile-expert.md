@@ -1,17 +1,10 @@
 ---
 name: profile-expert
 description: >-
-  Эксперт по фиче профиля пользователя MeTravel — личный кабинет и публичный
-  профиль (информационная архитектура, шапка-идентичность, сегмент-табы
-  Обзор/Маршруты/Избранное/История, счётчики-пилюли, экран настроек).
-  Используй для задач по `app/(tabs)/profile.tsx`, `app/(tabs)/user/[id].tsx`,
-  `app/(tabs)/settings.tsx`, `components/profile/**`,
-  `components/screens/profile/**`, `components/settings/**`, и встройкам фич в
-  профиль (достижения, подписки, контакты, Telegram, Trust & Safety).
-  Триггеры — «почини/переделай профиль», «редизайн профиля», «распили
-  settings.tsx», «добавь вкладку/секцию в профиль», «подписки теряются в
-  профиле». Контент достижений — это achievements-expert; карта — map-expert;
-  список/детали путешествий — travel-expert.
+  Профиль пользователя: `app/(tabs)/profile.tsx`, `app/(tabs)/user/[id].tsx`,
+  `app/(tabs)/settings.tsx`, `components/profile/**`, `components/screens/profile/**`,
+  `components/settings/**` — личный и публичный профиль, сегмент-табы, счётчики-пилюли, настройки,
+  встройки фич. Триггеры: «переделай профиль», «распили settings.tsx», «добавь вкладку в профиль».
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

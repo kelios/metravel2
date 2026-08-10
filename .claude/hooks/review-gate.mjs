@@ -1,10 +1,18 @@
 #!/usr/bin/env node
 /**
- * review-gate — принудительный код-ревью гейт перед переходом задачи борда в `testing`.
+ * review-gate — автоматический код-ревью гейт на переходе задачи борда `review → testing`
+ * и продолжение цепочки `testing → QA/deploy → done`.
+ *
+ * Гейт работает в две стороны:
+ *   PostToolUse (толкает)  — как только задача переведена в `review`, требует немедленно
+ *                            запустить агента `code-review-gate`; как только она оказалась
+ *                            в `testing` — требует запустить QA/приёмку (`board-reviewer`).
+ *                            Ревью и приёмка перестают быть «по требованию пользователя».
+ *   PreToolUse  (держит)   — блокирует `status=testing` без свежего вердикта `pass`,
+ *                            чтобы задачу нельзя было протащить в QA мимо ревью.
  *
  * Режимы:
- *   (stdin JSON)                       PreToolUse hook для `metravel_task_update`.
- *                                      Блокирует `status=testing` без свежего вердикта `pass`.
+ *   (stdin JSON)                       hook для `metravel_task_update` (Pre + Post).
  *   record --task <id> --verdict pass|changes_requested [--findings N] [--note "..."]
  *                                      Пишет вердикт агента `code-review-gate` с отпечатком diff'а.
  *   show --task <id>                   Печатает состояние вердикта (exit 0 = пропустит, 1 = нет).
@@ -26,8 +34,10 @@ import path from 'node:path';
 const GATE_DIR_REL = '.codex-temp/review-gate';
 const TARGET_TOOL = 'mcp__metravel-task-board__metravel_task_update';
 const GUARDED_STATUS = 'testing';
+const REVIEW_STATUS = 'review';
 const MAX_AGE_HOURS = Number(process.env.REVIEW_GATE_MAX_AGE_HOURS || 24);
 const REVIEWER_AGENT = 'code-review-gate';
+const ACCEPTANCE_AGENT = 'board-reviewer';
 
 function git(args, cwd) {
   try {
@@ -159,6 +169,41 @@ function denyReason(taskId, result) {
   return lines.join('\n');
 }
 
+/** Директива оркестратору после того, как задача реально оказалась в `review`. */
+function autoReviewDirective(taskId, result) {
+  if (result.ok) {
+    return [
+      `АВТО-ГЕЙТ БОРДА: задача #${taskId} в \`${REVIEW_STATUS}\`, и свежий вердикт \`pass\` агента \`${REVIEWER_AGENT}\` для текущего diff'а уже есть.`,
+      '',
+      `1. Если задачу вернули в \`${REVIEW_STATUS}\` не из-за кода (неполный Task Contract, описание не по правилу, замечание приёмки) — сначала закрой причину возврата.`,
+      `2. Затем сразу переведи задачу в \`${GUARDED_STATUS}\` (\`metravel_task_update\`) — повторное ревью того же diff'а не нужно.`,
+    ].join('\n');
+  }
+  return [
+    `АВТО-ГЕЙТ БОРДА: задача #${taskId} переведена в \`${REVIEW_STATUS}\`. Код-ревью на этом переходе запускается АВТОМАТИЧЕСКИ — не жди просьбы пользователя, не откладывай на конец сессии и не спрашивай разрешения (AGENTS.md §10.1: субагенты запускаются без подтверждения).`,
+    `Состояние гейта: ${result.code} — ${result.detail}.`,
+    '',
+    'Сделай это СЛЕДУЮЩИМ действием:',
+    `1. Вызови Agent tool с subagent_type="${REVIEWER_AGENT}"; в промпте передай id #${taskId}, scope diff'а (файлы/фича) и что уже проверено.`,
+    `2. Вердикт \`changes_requested\` → агент сам вернёт задачу в \`in_progress\` с findings. Почини их и снова поставь \`${REVIEW_STATUS}\` — ревью прогонится заново автоматически.`,
+    `3. Вердикт \`pass\` → агент сам запишет вердикт и переведёт задачу в \`${GUARDED_STATUS}\`. Руками статус не двигай: PreToolUse-гейт всё равно откажет.`,
+    `4. Задачу без своего diff'а (код уже закоммичен и задеплоен, чужой scope в дереве) не гоняй через агента: отметь это в тикете и закрывай по факту приёмки.`,
+  ].join('\n');
+}
+
+/** Директива оркестратору после того, как задача реально оказалась в `testing`. */
+function autoAcceptanceDirective(taskId) {
+  return [
+    `АВТО-ГЕЙТ БОРДА: задача #${taskId} прошла код-ревью и переведена в \`${GUARDED_STATUS}\`. QA-приёмка продолжается АВТОМАТИЧЕСКИ, тем же проходом — не жди отдельной просьбы пользователя.`,
+    '',
+    'Сделай это СЛЕДУЮЩИМ действием:',
+    `1. Если Done gate требует развёрнутой среды — сначала выложи изменения на dev (skill \`/dev-deploy\`, агент \`dev-deployer\`). Прод-деплой (\`build-prod.sh\`, \`frontend-deployer\`), EAS и публикацию в стор БЕЗ явной команды владельца не запускай.`,
+    `2. Вызови Agent tool с subagent_type="${ACCEPTANCE_AGENT}" и id #${taskId}: он прогоняет тесты и браузер/API/устройство-пробы против target env по \`Task Contract\`.`,
+    `3. Done gate зелёный → \`${ACCEPTANCE_AGENT}\` сам ставит \`done\` с evidence. Найден дефект → задача возвращается в \`in_progress\`, и после фикса цикл \`${REVIEW_STATUS}\` → \`${GUARDED_STATUS}\` повторится сам.`,
+    '4. `done` руками не ставь: закрывает только приёмка с доказательством (тест/браузер/устройство + target env).',
+  ].join('\n');
+}
+
 function emit(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
 }
@@ -168,28 +213,45 @@ function allow(systemMessage) {
   process.exit(0);
 }
 
-function runHook() {
-  let raw = '';
-  try {
-    raw = readFileSync(0, 'utf8');
-  } catch {
-    allow();
+/** Обновление статуса не применилось — толкать цепочку дальше нельзя. */
+function toolFailed(response) {
+  if (!response || typeof response !== 'object') return false;
+  return response.isError === true || response.is_error === true || response.status === 'error' || Boolean(response.error);
+}
+
+/** PostToolUse: статус уже изменён — сообщаем оркестратору, что делать дальше. */
+function runPostHook(input, toolInput, taskId) {
+  if (toolFailed(input.tool_response)) allow();
+
+  const root = repoRoot();
+  const status = toolInput.status;
+
+  if (status === REVIEW_STATUS) {
+    const result = evaluate(root, taskId);
+    emit({
+      systemMessage: result.ok
+        ? `review-gate: #${taskId} в review, вердикт ${REVIEWER_AGENT} свежий — можно сразу в ${GUARDED_STATUS}`
+        : `review-gate: #${taskId} в review — запускаю код-ревью (${REVIEWER_AGENT}) автоматически`,
+      hookSpecificOutput: {
+        hookEventName: 'PostToolUse',
+        additionalContext: autoReviewDirective(taskId, result),
+      },
+    });
+    process.exit(0);
   }
 
-  let input;
-  try {
-    input = JSON.parse(raw || '{}');
-  } catch {
-    allow();
-  }
+  emit({
+    systemMessage: `review-gate: #${taskId} в ${GUARDED_STATUS} — дальше QA-приёмка (${ACCEPTANCE_AGENT}), прод-деплой только по явной команде`,
+    hookSpecificOutput: {
+      hookEventName: 'PostToolUse',
+      additionalContext: autoAcceptanceDirective(taskId),
+    },
+  });
+  process.exit(0);
+}
 
-  if (input.tool_name !== TARGET_TOOL) allow();
-  const toolInput = input.tool_input || {};
-  if (toolInput.status !== GUARDED_STATUS) allow();
-
-  const taskId = toolInput.task_id;
-  if (!taskId) allow();
-
+/** PreToolUse: держим `testing` закрытым, пока нет свежего вердикта `pass`. */
+function runPreHook(taskId) {
   if (process.env.REVIEW_GATE_BYPASS === '1') {
     allow(`review-gate: обход по REVIEW_GATE_BYPASS=1 (задача #${taskId} уходит в ${GUARDED_STATUS} без вердикта ревью)`);
   }
@@ -210,6 +272,38 @@ function runHook() {
     },
   });
   process.exit(0);
+}
+
+/** Общий вход хука: один скрипт обслуживает и PreToolUse, и PostToolUse. */
+function runHook() {
+  let raw = '';
+  try {
+    raw = readFileSync(0, 'utf8');
+  } catch {
+    allow();
+  }
+
+  let input;
+  try {
+    input = JSON.parse(raw || '{}');
+  } catch {
+    allow();
+  }
+
+  if (input.tool_name !== TARGET_TOOL) allow();
+
+  const toolInput = input.tool_input || {};
+  const status = toolInput.status;
+  if (status !== REVIEW_STATUS && status !== GUARDED_STATUS) allow();
+
+  const taskId = toolInput.task_id;
+  if (!taskId) allow();
+
+  if (input.hook_event_name === 'PostToolUse') runPostHook(input, toolInput, taskId);
+
+  // PreToolUse стережёт только вход в `testing`; переход в `review` не блокируется никогда.
+  if (status !== GUARDED_STATUS) allow();
+  runPreHook(taskId);
 }
 
 function parseArgs(argv) {

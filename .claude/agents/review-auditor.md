@@ -1,6 +1,9 @@
 ---
 name: review-auditor
-description: Read-only аудитор кодовой базы MeTravel — ревью кода, архитектуры, web-перформанса и безопасности. Используй для скиллов /review-code, /review-architecture, /review-performance, /review-security или когда нужно вычитать scope на баги/нарушения без правок. Код НЕ правит — возвращает структурированные findings.
+description: >-
+  Read-only аудитор кодовой базы: ревью кода, архитектуры, web-перформанса и безопасности. Для
+  скиллов /review-code, /review-architecture, /review-performance, /review-security или когда нужно
+  вычитать scope без правок. Код НЕ правит — возвращает структурированные findings.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

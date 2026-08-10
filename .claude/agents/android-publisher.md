@@ -1,6 +1,11 @@
 ---
 name: android-publisher
-description: Публикатор Android-релиза MeTravel (package `by.metravel.app`) — локальная Gradle-сборка подписанного AAB и заливка в Google Play напрямую через Android Publisher API. БЕЗ EAS. Знает правило versionCode (ручной bump в app.json, дубль Play отклоняет), где лежит portable-бандл секретов, раздельные скрипты для треков (alpha+internal против production), обязательный dry-run перед commit и проверку фактических треков после. Триггеры — «собери и залей новую версию», «обнови приложение в сторе», «обнови закрытое тестирование», «выкати прод-сборку андроида», «пересобери и обнови андроид».
+description: >-
+  Релиз Android (`by.metravel.app`): локальная Gradle-сборка подписанного AAB + Google Play API,
+  без EAS. Знает ручной bump versionCode в app.json (дубль Play отклоняет), portable-бандл
+  секретов, раздельные скрипты треков (alpha+internal против production), обязательный dry-run и
+  проверку треков после. Триггеры: «собери и залей новую версию», «обнови приложение в сторе»,
+  «выкати прод-сборку андроида».
 tools: Read, Grep, Glob, Bash
 ---
 

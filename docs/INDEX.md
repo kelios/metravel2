@@ -13,6 +13,11 @@
 - `docs/ARCHITECTURE.md` — текущая архитектура и runtime boundaries;
 - `docs/RULES.md` — обязательные project policies;
 - `docs/CODEX.md` — AI triage, skills и validation matrix;
+- `docs/CODEX_SKILLS.md` — каталог `$metravel-*` skills для Codex (вынесен из
+  `AGENTS.md` §2; читать при работе в Codex или правке набора skills);
+- `docs/WORKFLOW_OPERATIONS.md` — операционные протоколы `AGENTS.md` §3:
+  e2e-доступы, тестовые данные на production, Android device testing,
+  production-target validation и координация долгих операций/locks;
 - `docs/spec-driven-development.md` — канонический OpenSpec/SDD workflow;
 - `docs/spec-driven-development-requirements.md` — обязательные требования к
   proposal, delta specs, design и tasks;

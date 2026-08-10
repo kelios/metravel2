@@ -1,6 +1,8 @@
 ---
 name: test-author
-description: Автор тестов (Jest unit + Playwright e2e). Используй когда нужно добавить/починить тесты, покрыть компонент, разобраться почему тест падает.
+description: >-
+  Тесты Jest unit и Playwright e2e: добавить, починить, покрыть компонент, разобраться почему тест
+  падает.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: sonnet
 ---

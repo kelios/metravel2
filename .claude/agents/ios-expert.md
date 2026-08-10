@@ -1,6 +1,8 @@
 ---
 name: ios-expert
-description: Неактивный future-iOS маршрут MeTravel. Используй только после нового явного решения владельца вернуть iOS-приложение в scope; не запускай для обычной QA, Done gate или shared-change validation.
+description: >-
+  Неактивный future-iOS маршрут. Только после нового явного решения владельца вернуть iOS в scope;
+  не для обычной QA, Done gate или shared-change validation.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

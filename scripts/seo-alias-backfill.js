@@ -38,10 +38,9 @@
  * канонический адрес живой статьи. Такой случай инструмент отказывается делать
  * и пишет причину — это решение владельца, а не побочный эффект прогона.
  *
- * Usage:
- *   node scripts/seo-alias-backfill.js --map-file scripts/.seo-aliases.json --dry-run
- *   node scripts/seo-alias-backfill.js --map-file scripts/.seo-aliases.json
- *   node scripts/seo-alias-backfill.js --id 239 --old-slug usadba-trabutishki-…
+ * `--help` печатает USAGE ниже; сами аргументы разбирает общий SEO CLI contract
+ * (#1391), поэтому опечатка `--dry-runn` — это ошибка вызова, а не настоящий
+ * прогон переименований на проде.
  *
  * Формат map-файла: [{ "id": 239, "oldSlug": "usadba-trabutishki-…" }, …]
  *
@@ -53,18 +52,60 @@ const os = require('os')
 const path = require('path')
 const https = require('https')
 const { buildUpsertPayload } = require('./seo-edit')
+const {
+  UsageError,
+  parseCliArgs,
+  requireNonEmptySelection,
+  runSeoCli,
+} = require('./lib/seo-cli-contract')
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by').replace(/\/+$/, '') + '/api'
 const BACKUP_DIR = path.join(__dirname, '.seo-backups')
 const SECRETS_TOKEN_FILE = path.join(__dirname, '..', '.secrets', 'mcp_token.json')
 
-function getArg(args, name, fallback) {
-  const i = args.indexOf(`--${name}`)
-  return i !== -1 && args[i + 1] ? args[i + 1] : fallback
-}
+const USAGE = `301-алиасы старых слагов travel без бэкенд-миграции — metravel.by
 
-function hasFlag(args, name) {
-  return args.includes(`--${name}`)
+Usage:
+  node scripts/seo-alias-backfill.js <input> [options]
+
+Наборы входа (ровно один обязателен — сам скрипт статьи не выбирает):
+  --map-file <path>     все пары {id, oldSlug} из JSON-файла
+  --id <id>             одна статья; нужен --old-slug
+
+Options:
+  --old-slug <slug>     прежний слаг статьи, только вместе с --id
+  --dry-run             показать план, ничего не писать
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/seo-alias-backfill.js --map-file scripts/.seo-aliases.json --dry-run
+  node scripts/seo-alias-backfill.js --map-file scripts/.seo-aliases.json
+  node scripts/seo-alias-backfill.js --id 239 --old-slug usadba-trabutishki`
+
+/**
+ * Каждый шаг временно уводит живую статью на чужой адрес, поэтому «вход не
+ * распознан» не имеет права превращаться в набор по умолчанию: набор объявлен
+ * режимом, и парсер откажется работать, пока его не назвали явно.
+ */
+const CLI_SPEC = {
+  name: 'seo-alias-backfill',
+  usage: USAGE,
+  flags: {
+    'map-file': { type: 'string', valueName: 'a path' },
+    id: { type: 'string', valueName: 'a travel id' },
+    'old-slug': {
+      type: 'string',
+      valueName: 'a slug',
+      requiresMode: 'id',
+      reason: 'map-файл несёт свои слаги',
+    },
+    'dry-run': { type: 'boolean' },
+  },
+  modes: {
+    flags: ['map-file', 'id'],
+    label: 'наборы входа',
+    missing: 'Вход не задан: передайте --map-file <path> либо --id <id> --old-slug <slug>',
+  },
 }
 
 function token() {
@@ -291,21 +332,27 @@ const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const defaultDeps = { getTravel, putName, verifyAlias, saveBackup }
 
 async function main() {
-  const args = process.argv.slice(2)
-  const dryRun = hasFlag(args, 'dry-run')
-  const mapFile = getArg(args, 'map-file', '')
-  const id = getArg(args, 'id', '')
-  const oldSlug = getArg(args, 'old-slug', '')
+  const args = parseCliArgs(process.argv, CLI_SPEC)
+  if (args.help) {
+    console.log(USAGE)
+    return
+  }
+  const dryRun = args.dryRun
 
   let entries = []
-  if (mapFile) {
-    entries = JSON.parse(fs.readFileSync(mapFile, 'utf8'))
-  } else if (id && oldSlug) {
-    entries = [{ id: Number(id), oldSlug }]
+  if (args.mode === 'map-file') {
+    entries = JSON.parse(fs.readFileSync(args.mapFile, 'utf8'))
   } else {
-    console.error('Usage: --map-file <file> | --id <id> --old-slug <slug> [--dry-run]')
-    process.exit(1)
+    if (!args.oldSlug) throw new UsageError('--id нужен вместе с --old-slug <slug>')
+    entries = [{ id: Number(args.id), oldSlug: args.oldSlug }]
   }
+  // Пустой map-файл разобрался бы в зелёный отчёт «0 заведено» — это ровно та
+  // форма, которой жил #1325. Пустая выборка обязана дойти до кода возврата.
+  entries = requireNonEmptySelection(entries, {
+    what: 'пар {id, oldSlug}',
+    source: args.mode === 'map-file' ? args.mapFile : '--id/--old-slug',
+    hint: 'формат: [{ "id": 239, "oldSlug": "…" }, …]',
+  })
 
   console.log(`${dryRun ? '🧪 DRY-RUN ' : '🔗 '}Алиасы без миграции: ${entries.length} пар(ы) через ${API_BASE}\n`)
 
@@ -320,14 +367,11 @@ async function main() {
   const ok = results.filter((r) => r.status === 'ok').length
   const failed = results.filter((r) => r.status === 'failed').length
   console.log(`\nИтог: ${ok} заведено, ${results.length - ok - failed} пропущено, ${failed} не удалось.`)
-  process.exit(failed > 0 ? 1 : 0)
+  if (failed > 0) process.exit(1)
 }
 
-module.exports = { backfillOne, detectDamage, verifyAlias }
+module.exports = { CLI_SPEC, USAGE, backfillOne, detectDamage, verifyAlias }
 
 if (require.main === module) {
-  main().catch((err) => {
-    console.error('❌ Fatal:', err.message)
-    process.exit(1)
-  })
+  runSeoCli(main, { name: 'seo-alias-backfill', usage: USAGE })
 }

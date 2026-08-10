@@ -2,12 +2,13 @@
 /**
  * IndexNow batch submit — metravel.by
  *
- * `--help` prints USAGE below; a unit test asserts that every flag `parseArgs`
- * accepts is documented there, so the help cannot quietly fall behind the parser.
+ * `--help` prints USAGE below; a unit test asserts that every flag in CLI_SPEC is
+ * documented there, so the help cannot quietly fall behind the parser.
  *
  * A mode (--all / --sitemap / --urls-file) is mandatory and there is deliberately
  * no default set: an unknown or mistyped flag used to fall through to "submit the
- * whole site", which on 2026-08-10 pushed 544 URLs by accident (#1389).
+ * whole site", which on 2026-08-10 pushed 544 URLs by accident (#1389). The strict
+ * parse behind that now lives in the shared SEO CLI contract (#1391).
  *
  * Submits to: api.indexnow.org (→ Bing/Yandex/etc.) + yandex.com/indexnow separately
  */
@@ -15,6 +16,13 @@
 const https = require('https')
 const http = require('http')
 const fs = require('fs')
+
+const {
+  UsageError,
+  parseCliArgs,
+  requireNonEmptySelection,
+  runSeoCli,
+} = require('./lib/seo-cli-contract')
 
 const KEY = 'eb1c0d4b6f120c68a79525b7fe86581b'
 const HOST = 'metravel.by'
@@ -45,59 +53,34 @@ Examples:
   node scripts/indexnow-submit.js --sitemap --recent-days 2
   node scripts/indexnow-submit.js --urls-file batch.txt --dry-run`
 
-/** Bad invocation, as opposed to a run that failed on its way to IndexNow. */
-class UsageError extends Error {}
-
 /**
- * Explicit parse, never `argv.includes`: anything unrecognised has to stop the
- * run instead of falling through to the widest possible action (#1389).
+ * Every flag this script accepts. The shared contract refuses anything else, so
+ * a typo can no longer fall through to the widest possible action (#1389).
  */
-function parseArgs(argv) {
-  const args = { help: false, dryRun: false, mode: null, urlsFile: null, recentDays: null }
-
-  const setMode = (mode, flag) => {
-    if (args.mode && args.mode !== mode) {
-      throw new UsageError(`--${args.mode} and ${flag} pick different URL sets — choose one`)
-    }
-    args.mode = mode
-  }
-
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg === '--help' || arg === '-h') args.help = true
-    else if (arg === '--dry-run') args.dryRun = true
-    else if (arg === '--all') setMode('all', arg)
-    else if (arg === '--sitemap') setMode('sitemap', arg)
-    else if (arg === '--urls-file') {
-      if (args.urlsFile !== null) throw new UsageError('--urls-file given twice — pass one batch file')
-      setMode('urls-file', arg)
-      const value = argv[++i]
-      // A leading `-` is a mistyped flag, not a path: `--urls-file -h` must say so
-      // instead of failing later on ENOENT '-h'.
-      if (!value || value.startsWith('-')) throw new UsageError('--urls-file expects a path')
-      args.urlsFile = value
-    } else if (arg === '--recent-days') {
-      if (args.recentDays !== null) throw new UsageError('--recent-days given twice — pass one window')
-      const value = Number(argv[++i])
-      if (!Number.isInteger(value) || value < 1) {
-        throw new UsageError('--recent-days expects a positive integer')
-      }
-      args.recentDays = value
-    } else {
-      throw new UsageError(`Unknown argument: ${arg}`)
-    }
-  }
-
-  if (args.help) return args
-
-  if (!args.mode) {
-    throw new UsageError('No mode given: pass --all, --sitemap or --urls-file <path> explicitly')
-  }
-  if (args.recentDays !== null && args.mode !== 'sitemap') {
-    throw new UsageError('--recent-days requires --sitemap because API records do not expose lastmod')
-  }
-  return args
+const CLI_SPEC = {
+  name: 'indexnow',
+  usage: USAGE,
+  flags: {
+    all: { type: 'boolean' },
+    sitemap: { type: 'boolean' },
+    'urls-file': { type: 'string', valueName: 'a path' },
+    'dry-run': { type: 'boolean' },
+    'recent-days': {
+      type: 'int',
+      min: 1,
+      valueName: 'a positive integer',
+      requiresMode: 'sitemap',
+      reason: 'API records do not expose lastmod',
+    },
+  },
+  modes: {
+    flags: ['all', 'sitemap', 'urls-file'],
+    label: 'URL sets',
+    missing: 'No mode given: pass --all, --sitemap or --urls-file <path> explicitly',
+  },
 }
+
+const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC)
 
 /**
  * URLs from a plain-text batch file: one URL per line, `#` comments and blank
@@ -301,8 +284,18 @@ async function main(argv = process.argv, deps = {}) {
   }
 
   if (urls.length === 0) {
-    console.log('[indexnow] No recent URL changes to submit.')
-    return
+    // A `--recent-days` window with nothing in it is a real no-op. An empty set
+    // anywhere else means the collector or the batch file broke, and reporting
+    // that as a clean run is the #1325 shape: a green report over zero rows.
+    if (args.recentDays) {
+      console.log('[indexnow] No recent URL changes to submit.')
+      return
+    }
+    requireNonEmptySelection(urls, {
+      what: 'URLs',
+      source: args.mode === 'urls-file' ? args.urlsFile : `--${args.mode} collector`,
+      hint: 'nothing would be submitted — check the source instead of treating it as a clean run',
+    })
   }
 
   // IndexNow batch limit = 10 000, chunk just in case
@@ -319,18 +312,11 @@ async function main(argv = process.argv, deps = {}) {
 }
 
 if (require.main === module) {
-  main().catch((e) => {
-    if (e instanceof UsageError) {
-      console.error(`[indexnow] ${e.message}\n`)
-      console.error(USAGE)
-      process.exit(2)
-    }
-    console.error('[indexnow] Fatal:', e.message)
-    process.exit(1)
-  })
+  runSeoCli(main, { name: 'indexnow', usage: USAGE })
 }
 
 module.exports = {
+  CLI_SPEC,
   UsageError,
   USAGE,
   filterRecentSitemapEntries,

@@ -1,6 +1,9 @@
 ---
 name: backend-expert
-description: Диагност бэкенда MeTravel (Django/DRF/PostGIS, отдельное репо `../metravel-backend`). Разбирает причины проблем API/моделей/миграций/деплоя/5xx и оформляет TASK для владельца бэка. Код бэка не правит, фронтенд не трогает.
+description: >-
+  Диагност бэкенда (Django/DRF/PostGIS, репо `../metravel-backend`): разбирает причины проблем
+  API/моделей/миграций/деплоя/5xx и оформляет `area=back` задачу для владельца бэка. Код бэка не
+  правит, фронтенд не трогает.
 tools: Read, Grep, Glob, Write, Bash
 model: opus
 ---

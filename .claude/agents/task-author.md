@@ -1,9 +1,9 @@
 ---
 name: task-author
 description: >-
-  Оформляет TASK-файлы в `tasks/` строго по шаблону `tasks/000-template.md`: новая
-  задача из сырого описания, обновление статуса/Progress Log, Acceptance Criteria +
-  Gherkin. Код не пишет. Триггеры: «оформи задачу», «создай таск», «обнови статус задачи».
+  TASK-файлы в `tasks/` строго по шаблону `tasks/000-template.md`: новая задача из сырого описания,
+  обновление статуса/Progress Log, Acceptance Criteria + Gherkin. Код не пишет. Триггеры: «оформи
+  задачу», «создай таск».
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---

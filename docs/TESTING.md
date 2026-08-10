@@ -10,6 +10,8 @@ Run canonical governance checks from repo root:
 - `npm run governance:verify`
 - `yarn guard:external-links`
 - `npm run guard:external-links`
+- `yarn guard:seo-cli-contract`
+- `npm run guard:seo-cli-contract`
 - `yarn guard:text-row-sizing`
 - `npm run guard:text-row-sizing`
 - `npm run guard:type-debt`
@@ -38,6 +40,7 @@ Behavior:
 - `typecheck` is the production TypeScript audit; `typecheck:e2e` is the non-emitting Playwright contract check for every `e2e/**/*.ts` file;
 - `guard:type-debt` compares production `as any`, TypeScript suppression and ESLint-disable counts against `scripts/type-debt-baseline.json` per domain and per file. Any increase fails. `guard:type-debt:update` is reserved for an explicitly reviewed baseline change after the new debt is justified;
 - `guard:text-row-sizing` AST-scans Android-relevant shared/native TSX for the high-signal `NATIVE-TEXT-ROW-001` shape: wrapping rows with at least three direct children and at least two direct dynamic `Text` siblings that are concurrently present. Safe contracts are one positive-`flex` outlet, bounded widths/direct wrappers, or explicit product ellipsis. Standalone `flexShrink` and positive `flex` on multiple competing labels are rejected because both clipped real Pixel layouts. Translation calls remain dynamic even without interpolation because RU/BE/UK/PL/EN widths differ. Web/iOS-only files, mutually exclusive JSX branches, nested row groups and literal app-owned icon labels are excluded deliberately; the governance suite asserts that both fixture and clean-checkout scans are non-vacuous;
+- `guard:seo-cli-contract` enforces `SEO-OPS-001`: every `scripts/seo-*.js`, `scripts/indexnow-*.js` and `scripts/index-status.js` parses its arguments through `scripts/lib/seo-cli-contract.js`, runs through `runSeoCli`, holds no hand-rolled flag lookup (`argv.includes('--all')`, `args.indexOf('--limit')`, `arg === '--json'`) and never calls `process.exit(0)`. Those shapes answer a typo with the widest default — that is how `#1389` submitted 544 URLs and how `#1325` reported a green "0 checked". The covered set comes from the filesystem, so a new script of that family is guarded without editing an allowlist, and there is deliberately no skip-when-unclear path;
 - `check:fast` is the default lightweight workflow for a finished logical block: it runs selective checks, `guard:external-links`, `guard:type-debt`, and ESLint only for changed lintable files;
 - the `check:fast` ESLint step uses a local cache and `--max-warnings=0`, so repeat runs stay fast while new warnings in touched files still fail the block;
 - local selective checks now include targeted app Jest suites for travel/map/account/messages changes in addition to schema/validator selective runners;

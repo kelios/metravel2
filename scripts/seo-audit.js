@@ -13,17 +13,21 @@
  * analyzeMeta, auditTravel, summarizeAudit) that are unit-tested. main() is the
  * thin I/O shell around them.
  *
- * Usage:
- *   node scripts/seo-audit.js --user-id 1 [--api https://metravel.by]
- *                             [--json out.json] [--limit 50] [--min-words 400]
+ * `--help` prints the flag list (USAGE below). Every flag goes through the shared
+ * SEO CLI contract, so a mistyped `--limt 5` is an error instead of a silent
+ * audit of all 306 articles (#1391).
  *
  * Exit code is 0 even when problems are found — this is a report, not a gate.
+ * An EMPTY article list is the one exception: it means the API or its envelope
+ * broke, not that the author has nothing to fix, so it exits non-zero (#1325).
  */
 
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+
+const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
 
 // ---------------------------------------------------------------------------
 // Thresholds (kept in sync with scripts/generate-seo-pages.js SEO rules)
@@ -34,6 +38,45 @@ const THIN_WORDS = 400; // below this a travel reads as a thin photo dump
 const LEAD_CHARS = 160; // the SERP snippet = first ~160 chars of the description body
 const KEYWORD_MIN_LEN = 4; // title words this long+ count as topical keywords
 const KEYWORD_STEM_LEN = 5; // compare keywords on this-long stem to absorb inflection
+
+// ---------------------------------------------------------------------------
+// CLI surface
+// ---------------------------------------------------------------------------
+const USAGE = `Travel SEO auditor — metravel.by
+
+Usage:
+  node scripts/seo-audit.js [options]
+
+Options:
+  --user-id <id>        author whose published travels are audited (default 1)
+  --api <origin>        API origin the article list comes from (default https://metravel.by)
+  --limit <n>           audit only the first n articles, 0 = all (default 0)
+  --min-words <n>       word count below which a body counts as thin (default ${THIN_WORDS})
+  --json <path>         also write the full report to this JSON file
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/seo-audit.js --user-id 1 --limit 5
+  node scripts/seo-audit.js --user-id 1 --min-words 500 --json report.json`;
+
+/**
+ * Every flag this script accepts. A typo used to be dropped on the floor by the
+ * hand-rolled indexOf lookup, and the audit silently widened to every article —
+ * the shared contract turns it into a UsageError instead (#1391).
+ */
+const CLI_SPEC = {
+  name: 'seo-audit',
+  usage: USAGE,
+  flags: {
+    'user-id': { type: 'string', valueName: 'an author id', default: '1' },
+    api: { type: 'string', valueName: 'an origin', default: 'https://metravel.by', stripTrailingSlash: true },
+    limit: { type: 'int', min: 0, valueName: 'a non-negative integer', default: 0 },
+    'min-words': { type: 'int', min: 1, valueName: 'a positive integer', default: THIN_WORDS },
+    json: { type: 'string', valueName: 'a file path', default: '' },
+  },
+};
+
+const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC);
 
 // ---------------------------------------------------------------------------
 // Pure analysis (exported for tests)
@@ -233,11 +276,6 @@ function summarizeAudit(rows) {
 // ---------------------------------------------------------------------------
 // I/O shell
 // ---------------------------------------------------------------------------
-function getArg(args, name, fallback) {
-  const idx = args.indexOf(`--${name}`);
-  return idx !== -1 && args[idx + 1] ? args[idx + 1] : fallback;
-}
-
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
@@ -297,12 +335,19 @@ async function batchAsync(items, concurrency, fn) {
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const API_BASE = getArg(args, 'api', 'https://metravel.by').replace(/\/+$/, '');
-  const userId = getArg(args, 'user-id', '1');
-  const limit = parseInt(getArg(args, 'limit', '0'), 10) || 0;
-  const minWords = parseInt(getArg(args, 'min-words', String(THIN_WORDS)), 10) || THIN_WORDS;
-  const jsonOut = getArg(args, 'json', '');
+  // Parsed here, not at module level: a UsageError has to reach runSeoCli()
+  // below so a bad invocation exits 2 instead of running a wide audit (#1391).
+  const args = parseArgs(process.argv);
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
+
+  const API_BASE = args.api;
+  const userId = args.userId;
+  const limit = args.limit;
+  const minWords = args.minWords;
+  const jsonOut = args.json;
 
   const where = JSON.stringify({ user_id: userId, publish: 1, moderation: 1 });
   console.log(`🔎 SEO audit for user_id=${userId} via ${API_BASE}`);
@@ -319,6 +364,13 @@ async function main() {
     if (list.length >= total || items.length === 0) break;
     page++;
   }
+  // Zero articles is a broken envelope or an unreachable API, never a clean
+  // audit — reporting "total: 0 | clean: 0" with exit 0 is the #1325 shape.
+  requireNonEmptySelection(list, {
+    what: 'articles',
+    source: `${API_BASE}/api/travels/`,
+    hint: `user_id=${userId}, publish=1, moderation=1`,
+  });
   if (limit) list = list.slice(0, limit);
   console.log(`📦 ${list.length} published travels`);
 
@@ -371,6 +423,9 @@ async function main() {
 // ---------------------------------------------------------------------------
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    CLI_SPEC,
+    USAGE,
+    parseArgs,
     stripHtmlToText,
     countWords,
     analyzeTitle,
@@ -389,8 +444,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (require.main === module) {
-  main().catch((err) => {
-    console.error('❌ Fatal error:', err.message);
-    process.exit(1);
-  });
+  runSeoCli(main, { name: 'seo-audit', usage: USAGE });
 }

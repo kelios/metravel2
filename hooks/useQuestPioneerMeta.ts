@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { fetchQuestsList, type ApiQuestMeta } from '@/api/quests'
 import { queryKeys } from '@/api/queryKeys'
-import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
+import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/useQuestsApi'
 
 export type QuestPioneer = { id: number; name: string; avatar: string | null }
 

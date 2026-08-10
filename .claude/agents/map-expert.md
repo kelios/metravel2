@@ -1,6 +1,8 @@
 ---
 name: map-expert
-description: Эксперт по карте (MapPage, PlacePopupCard, Leaflet web + RN Maps native). Используй для задач по `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*`.
+description: >-
+  Карта и places: `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*` —
+  Leaflet web, RN Maps native, PlacePopupCard, попапы и кластеры.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---
@@ -46,7 +48,7 @@ model: opus
 
 ## После изменений
 
-`npm run check:fast` и отдельно визуальная проверка через preview_start + preview_snapshot, если меняешь UI.
+`npm run check:fast` и отдельно визуальная проверка через preview_start + read_page, если меняешь UI.
 
 ## Статус на борде (WIP-видимость) — load-bearing
 

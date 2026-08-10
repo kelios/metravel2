@@ -1,9 +1,9 @@
-import fs from 'fs'
 import path from 'path'
 
 import { makeTempDir, removeDir, runNodeCli, writeTextFile } from './cli-test-utils'
 
 const {
+  CLI_SPEC,
   USAGE,
   UsageError,
   filterRecentSitemapEntries,
@@ -142,13 +142,12 @@ describe('IndexNow argument parsing', () => {
   })
 
   it('documents in USAGE every flag the parser accepts', () => {
-    const source = fs.readFileSync(SCRIPT, 'utf8')
-    const flags = [...source.matchAll(/arg === '(-{1,2}[a-z-]+)'/g)].map((match) => match[1])
+    const flags = Object.keys(CLI_SPEC.flags).map((flag) => `--${flag}`)
 
     expect(flags).toEqual(
-      expect.arrayContaining(['--help', '-h', '--dry-run', '--all', '--sitemap', '--urls-file']),
+      expect.arrayContaining(['--dry-run', '--all', '--sitemap', '--urls-file', '--recent-days']),
     )
-    for (const flag of flags) {
+    for (const flag of [...flags, '--help', '-h']) {
       expect(USAGE).toContain(flag)
     }
   })

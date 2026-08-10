@@ -1,0 +1,112 @@
+# Operational workflow protocols
+
+Ситуативные протоколы рабочего процесса, вынесенные из `AGENTS.md` §3.
+Правила не изменились — изменился момент загрузки: читать нужный раздел тогда,
+когда задача его касается, а не в каждой сессии.
+
+Карта:
+
+- e2e-доступы и board token → «3.1 E2E окружение и доступы»;
+- создание/удаление тестовых сущностей на проде → «3.1.1 Тестовые данные на production»;
+- сборка и прогон на USB-устройстве → «3.2 Android device testing and builds»;
+- baseline/after на живом URL, закрытие perf/media/network задач → «3.3.1 Production-target validation and task closure»;
+- deploy/build/e2e/Lighthouse и общие locks → «3.4 Координация долгих операций».
+
+Обязательный минимум остаётся в `AGENTS.md`: платформенная пара mobile web ↔
+Android (§3.3) и правило quality-gate lock (§3, шаг 9).
+
+### 3.1 E2E окружение и доступы
+
+- Для e2e-авторизации и тестовых доступов используй переменные из `.env.e2e`.
+- Не запрашивай у пользователя повторно логин/пароль, если они уже заданы в `.env.e2e`.
+- Никогда не выводи секреты из `.env.e2e` в ответах, логах, скриншотах и коммитах.
+- Если task-board API/MCP отвечает `HTTP 401`, обнови staff token через программный login из `.env.e2e` по `docs/TASK_BOARD_MCP.md`, перезапиши `.secrets/metravel-task-board.env` без вывода токена и повтори `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`.
+
+### 3.1.1 Тестовые данные на production
+
+- Разрешение выдано владельцем ПОСТОЯННО (2026-08-09): под e2e-аккаунтами можно
+  **создавать на проде тестовые сущности, проверять на них и удалять** —
+  переспрашивать не нужно. Это относится к данным пользователя (поездки, точки
+  маршрута, RSVP, приглашения), а не к контенту сайта: чужие статьи, квесты,
+  travel-записи и настройки по-прежнему не трогать.
+- Постоянная тестовая поездка владельца: `https://metravel.by/trips/plan/31`
+  (публичная, владелец `E2E_EMAIL2`). Её можно наполнять данными для проверки.
+- Убирай за собой: временную сущность, созданную под конкретную проверку, удаляй
+  сразу после снятия evidence, а факт удаления фиксируй кодом ответа.
+- Готовые рецепты для прод-QA (проверены 2026-08-09, экономят полчаса на сессию):
+  - **Авторизация на web — только cookie.** `secure_userToken` на web не
+    используется (`utils/secureStorage.ts`: «web uses the backend-managed HttpOnly
+    cookie»). В Playwright: `context.request.post('/api/user/login/')` с
+    `X-CSRFToken` из cookie `csrftoken` ставит сессию, после чего приложению нужно
+    отдать профиль через `localStorage`: `userId`, `userName`, `isSuperuser`
+    (`checkAuthentication` без `userId` считает пользователя гостем).
+  - Создание поездки — `POST /api/trips/planned/`; маршрут — `PUT
+    /api/trips/planned/{id}/route/` с `point_type` из `place|custom|rest|overnight`
+    (значения `stop` не существует, ответ 400).
+  - Участники: сначала `POST /api/trips/planned/{id}/invite/ {"user_ids":[...]}`,
+    только потом приглашённый делает `POST .../rsvp/` со **значением бэка**
+    `accepted|declined` (FE-словарь `going` бэк не принимает). Без инвайта RSVP
+    отвечает 400 `planned trip not found or not visible`.
+  - Удаление поездки — `DELETE /api/trips/{id}/` (не `/trips/planned/{id}/`: там 405).
+  - На странице висит баннер согласия и перехватывает клики — жать «Отклонить»
+    (самый приватный вариант), а не «Принять».
+  - На мобильной ширине табы поездки — только иконки: искать по `aria-label`
+    («Люди», «Экспорт»), поиск по тексту там ничего не найдёт.
+
+### 3.2 Android device testing and builds
+
+- Android EAS/cloud builds and submits are disabled by project policy: do not run
+  `eas build --platform android`, `eas submit --platform android` or any
+  `--platform all` command. Android production artifacts are built locally by
+  `npm run android:build:prod`; store operations use the project Google Play API
+  script. Re-enabling Android EAS requires a new explicit user decision.
+- На новом компьютере production signing и Android production env берутся из
+  переносимого `.secrets` bundle через `npm run android:release:doctor` и
+  `npm run android:build:prod`; ручная настройка macOS Keychain не требуется.
+- Current standing release authorization permits the agent to prepare and run the
+  local Android production build/Production submit when an Android release is the
+  active task. This never authorizes changing `alpha`, `internal`, `beta`, tester
+  lists, countries, or the active closed-testing release.
+- Если задачу нужно проверить на Android, считай, что Android-телефон подключён к этому компьютеру по USB-кабелю: сначала проверь `adb devices -l`.
+- Если `adb` показывает устройство со статусом `device`, сначала собери Android локально и установи сборку на телефон (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`), затем самостоятельно тестируй нужный Android-сценарий по `docs/MANUAL_TEST_CASES.md` `AND-USB-*`.
+- Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
+- `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
+
+### 3.3.1 Production-target validation and task closure
+
+- Если проблема воспроизводится на production, Task Contract называет production
+  target или задача оптимизирует запросы, изображения, LCP, bundle, cache либо
+  API fan-out, до правки сними baseline на живом production URL. Минимальный
+  evidence: точный URL, viewport/browser/DPR, auth/cache state, число запросов,
+  байты, коды ответов и фактический размер выбранного media-варианта; для
+  Android — тот же flow и сетевой/byte замер на устройстве, когда Android в scope.
+- После явным образом разрешённого deploy повтори тот же сценарий на живом URL и
+  сравни before/after. Локальная production-сборка, preview с production API,
+  unit/e2e с mock media primitive, успешный deploy log и post-build guard не
+  являются post-deploy production evidence.
+- Если deploy не входил в разрешённый scope или production ещё не обновлён,
+  сообщай `local fix ready; production verification pending` и оставляй board
+  task в `review`/`testing`. Нельзя писать «исправлено на проде» и нельзя двигать
+  задачу в `done`.
+- Performance/media/network задача закрывается только когда повторный production
+  probe подтверждает целевой budget всей страницы, а не одного элемента:
+  request/API cardinality, total/transfer bytes, oversized/unsized media,
+  duplicate URL variants, 4xx/5xx и progressive/lazy behavior до и после scroll.
+  Обязателен negative probe для прежнего fail-open/unsupported режима.
+- Shared media, pagination, source-builder и caching изменения должны проверять
+  соседние consumer routes. Третий рецидив одного problem key требует общего
+  regression guard и structural task; ещё один локальный point fix сам по себе
+  не закрывает семейство проблемы.
+
+### 3.4 Координация долгих операций
+
+- Деплой, release/build, production web build, Android local/EAS build or install, server rebuild/restart, full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции с общими артефактами считаются эксклюзивными.
+- Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
+- Если другой агент уже запустил deploy/build/rebuild для того же target, не запускай второй экземпляр: используй уже идущую операцию, дождись её только когда результат обязателен для твоего scope, либо зафиксируй blocker с PID, командой и target.
+- Для test/quality gate действует отдельное non-waiting правило: если живой `.codex-temp/ops/quality-gate.lock` или активный quality-процесс уже существует, текущий чат сразу прекращает свой запуск. Не жди, не poll'и, не следи за завершением, не повторяй команду после освобождения lock и не запускай более узкий обходной тест.
+- Если активный gate по своему scope покрывает проверки текущей задачи и автоматические тесты — единственный оставшийся Done-gate шаг, фиксируй `validation delegated: active gate pid/name` и задачу можно завершить/закрыть. Это не означает `passed`: владелец активного gate обязан исправить все реальные падения и повторить свою проверку; если падение нельзя исправить в его scope, он переоткрывает затронутую задачу или фиксирует blocker. Если scope активного gate не покрывает задачу либо остаются deploy/browser/API/device/другие проверки, фиксируй `validation skipped: active gate pid/name` и не закрывай задачу.
+- Чат, который первым запустил gate, владеет его результатом и исправлениями. Остальные чаты не дублируют эту работу и не используют занятый gate как blocker, когда корректно применим `validation delegated`.
+- Не убивай и не перезапускай чужой процесс без явной команды пользователя или документированного safe-wrapper'а. Если lock явно stale, сначала зафиксируй почему он stale, затем аккуратно очисти lock и продолжай.
+- Если запускаешь новую долгую операцию без собственного lock механизма, оставь короткий marker в `.codex-temp/ops/` и удали его после завершения.
+- `build-prod.sh` удерживает общий `.codex-temp/ops/web-build.lock` до конца полного цикла build + SEO + deploy. Не обходи этот wrapper: прямой `expo export` или запуск `scripts/build-web-safe.js` параллельно с deploy запрещен.
+- Основные test/quality команды (`check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, `release:check`) обязаны запускаться только через общий `scripts/run-with-quality-gate-lock.js`. Он использует атомарный `.codex-temp/ops/quality-gate.lock`, сообщает PID владельца и при живом владельце сразу возвращает нейтральный `SKIPPED` с кодом `0`, чтобы чат завершил собственный запуск без ожидания/ретрая. `SKIPPED` нельзя записывать как `passed`, но при выполнении условий выше он оформляется как `validation delegated` и не блокирует Done. Lock умершего процесса восстанавливается автоматически. Общая Jest-конфигурация применяет тот же контракт к прямому `npx jest`. Не обходи wrapper прямым Playwright-запуском.

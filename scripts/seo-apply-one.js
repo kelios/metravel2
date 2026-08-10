@@ -4,11 +4,9 @@
  * Designed to be called by Workflow agents so each agent owns its full
  * mutation (no parent dependency on file persistence).
  *
- * Usage:
- *   node scripts/seo-apply-one.js \
- *     --id 638 \
- *     --faq-file /tmp/faq-638.html \
- *     --comment-file /tmp/cmt-638.txt
+ * `--help` prints USAGE below; the arguments themselves go through the shared SEO
+ * CLI contract (#1391), so a mistyped `--faq-fil` is a usage error instead of a
+ * half-applied mutation.
  *
  * Behaviour:
  *   - GET /api/travels/{id}/; if description already has FAQ_MARKER, FAQ apply
@@ -29,21 +27,45 @@ const os = require('os');
 const path = require('path');
 const https = require('https');
 const seoEdit = require('./seo-edit');
+const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const FAQ_MARKER = 'data-faq="metravel-seo"';
 const COMMENT_PREFIX = 'От редакции metravel:';
 const EDITOR_USER_ID = 120;
 
-const args = process.argv.slice(2);
-const getArg = (n, d) => { const i = args.indexOf(`--${n}`); return i !== -1 && args[i + 1] ? args[i + 1] : d; };
-const ID = parseInt(getArg('id', ''), 10);
-const FAQ_FILE = getArg('faq-file', '');
-const COMMENT_FILE = getArg('comment-file', '');
-if (!ID || !FAQ_FILE || !COMMENT_FILE) {
-  console.error('ERROR: --id, --faq-file, --comment-file required');
-  process.exit(1);
-}
+const USAGE = `Apply one article's FAQ + editor comment — metravel.by
+
+Usage:
+  node scripts/seo-apply-one.js --id <id> --faq-file <path> --comment-file <path>
+
+Options:
+  --id <id>             travel to mutate (required)
+  --faq-file <path>     HTML appended to the description (required)
+  --comment-file <path> editor comment posted under the article (required)
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/seo-apply-one.js --id 638 --faq-file /tmp/faq-638.html --comment-file /tmp/cmt-638.txt`;
+
+// All three inputs are mandatory and go through the shared SEO CLI contract
+// (#1391): a mistyped flag used to read as "not provided" and take the script
+// down the same missing-argument path as a genuinely empty invocation.
+const CLI_SPEC = {
+  name: 'seo-apply-one',
+  usage: USAGE,
+  flags: {
+    id: { type: 'int', min: 1, valueName: 'a travel id', required: true },
+    'faq-file': { type: 'string', valueName: 'a path', required: true },
+    'comment-file': { type: 'string', valueName: 'a path', required: true },
+  },
+};
+
+// Assigned inside main() right after the parse: parsing at module level would put
+// a UsageError outside runSeoCli and lose the exit-code contract.
+let ID = null;
+let FAQ_FILE = '';
+let COMMENT_FILE = '';
 
 function loadToken(envName, fileName) {
   if (process.env[envName]) return process.env[envName].trim();
@@ -86,7 +108,7 @@ async function getJson(url, token) {
   try { return JSON.parse(body); } catch { return null; }
 }
 
-async function main() {
+async function apply() {
   const result = { id: ID, faq: 'skipped', comment: 'skipped' };
 
   // FAQ ----------------------------------------------------------------
@@ -153,7 +175,25 @@ async function main() {
   console.log(JSON.stringify(result));
 }
 
-main().catch((e) => {
-  console.error(JSON.stringify({ id: ID, error: e.message }));
-  process.exit(2);
-});
+async function main() {
+  const args = parseCliArgs(process.argv, CLI_SPEC);
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
+  ID = args.id;
+  FAQ_FILE = args.faqFile;
+  COMMENT_FILE = args.commentFile;
+  // The machine-readable failure line stays this script's own report; rethrowing
+  // hands the exit code to the shared contract.
+  return apply().catch((e) => {
+    console.error(JSON.stringify({ id: ID, error: e.message }));
+    throw e;
+  });
+}
+
+if (require.main === module) {
+  runSeoCli(main, { name: 'seo-apply-one', usage: USAGE });
+}
+
+module.exports = { CLI_SPEC, USAGE };

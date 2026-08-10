@@ -15,9 +15,9 @@
  *
  * Read-only: writes a JSON report, mutates nothing.
  *
- * Usage:
- *   node scripts/seo-find-dupes.js --user-id 1
- *   node scripts/seo-find-dupes.js --user-id 1 --only 384,362
+ * `--help` prints the flag list (USAGE below); every flag goes through the
+ * shared SEO CLI contract, so a mistyped `--onlyy 384` is an error instead of a
+ * silent scan of all 306 articles (#1391).
  */
 
 const fs = require('fs');
@@ -25,13 +25,40 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
+const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const REPORT = path.join(__dirname, '.seo-dupes-report.json');
 
-const args = process.argv.slice(2);
-const getArg = (n, d) => { const i = args.indexOf(`--${n}`); return i !== -1 && args[i + 1] ? args[i + 1] : d; };
-const USER_ID = getArg('user-id', '1');
-const ONLY = (getArg('only', '') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
+const USAGE = `Duplicated-text scanner for published travels — metravel.by
+
+Usage:
+  node scripts/seo-find-dupes.js [options]
+
+Options:
+  --user-id <id>        author whose published travels are scanned (default 1)
+  --only <ids>          scan only these travel ids (comma-separated)
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/seo-find-dupes.js --user-id 1
+  node scripts/seo-find-dupes.js --user-id 1 --only 384,362`;
+
+const CLI_SPEC = {
+  name: 'seo-find-dupes',
+  usage: USAGE,
+  flags: {
+    'user-id': { type: 'string', valueName: 'an author id', default: '1' },
+    only: { type: 'string', valueName: 'a comma-separated id list', default: '' },
+  },
+};
+
+const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC);
+
+// Assigned in main() from the parsed args — the parse has to happen INSIDE
+// main() so a UsageError reaches runSeoCli() and exits 2 (#1391).
+let USER_ID = '1';
+let ONLY = [];
 
 function fetchJson(url, opts = {}) {
   return new Promise((resolve, reject) => {
@@ -282,8 +309,27 @@ function structure(detail) {
 }
 
 async function main() {
+  const args = parseArgs(process.argv);
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
+  USER_ID = args.userId;
+  ONLY = args.only.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
+
   let list = await listAuthorTravels(USER_ID);
-  if (ONLY.length) list = list.filter((t) => ONLY.includes(t.id));
+  // Nothing to scan is an environment failure, not "no duplicates": a green
+  // report over an empty list is exactly what #1325 shipped for months.
+  requireNonEmptySelection(list, {
+    what: 'articles',
+    source: `${API}/travels/`,
+    hint: `user_id=${USER_ID}, publish=1, moderation=1`,
+  });
+  if (ONLY.length) {
+    list = requireNonEmptySelection(list.filter((t) => ONLY.includes(t.id)), {
+      message: `--only ${ONLY.join(',')} matched none of the ${list.length} published travels of user_id=${USER_ID}`,
+    });
+  }
   console.log(`scanning ${list.length} travels (user_id=${USER_ID})`);
 
   const report = [];
@@ -314,10 +360,13 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((e) => { console.error('FATAL', e); process.exit(1); });
+  runSeoCli(main, { name: 'seo-find-dupes', usage: USAGE });
 }
 
 module.exports = {
+  CLI_SPEC,
+  USAGE,
+  parseArgs,
   detect,
   paragraphs,
   stripFaqSection,

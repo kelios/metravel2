@@ -23,12 +23,10 @@
  *     + buildUpsertPayload (so backups/regression detection are inherited), and
  *     comments via POST /api/travel-comments/.
  *
- * Usage:
- *   node scripts/seo-mass-augment.js --user-id 1 --dry-run
- *   node scripts/seo-mass-augment.js --user-id 1 --only 384,362,442 --dry-run
- *   node scripts/seo-mass-augment.js --user-id 1 --apply --limit 5
- *   node scripts/seo-mass-augment.js --user-id 1 --apply --faq-only
- *   node scripts/seo-mass-augment.js --user-id 1 --apply --comments-only
+ * `--help` prints the flag list (USAGE below). A mode (--dry-run / --apply) is
+ * mandatory and there is no default: a mistyped `--dry-runn` used to fall
+ * through to "no mode", and the strict parse behind that now lives in the
+ * shared SEO CLI contract (#1391).
  *
  * Tokens:
  *   - Author edits  → METRAVEL_TOKEN env or ~/.metravel_token
@@ -42,6 +40,7 @@ const https = require('https');
 const http = require('http');
 
 const seoEdit = require('./seo-edit');
+const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const FAQ_MARKER = 'data-faq="metravel-seo"';
@@ -51,23 +50,67 @@ const OUT_COMMENT_DIR = path.join(__dirname, '.seo-comments');
 const LOG_PATH = path.join(__dirname, '.seo-mass-augment.log.json');
 
 // --- args ------------------------------------------------------------------
-const args = process.argv.slice(2);
-const getArg = (n, d) => { const i = args.indexOf(`--${n}`); return i !== -1 && args[i + 1] ? args[i + 1] : d; };
-const has = (n) => args.includes(`--${n}`);
+const USAGE = `Mass FAQ + editor-comment augmentation — metravel.by
 
-const USER_ID = getArg('user-id', '1');
-const EDITOR_USER_ID = parseInt(getArg('editor-user-id', '120'), 10);
-const LIMIT = parseInt(getArg('limit', '0'), 10) || 0;
-const ONLY = (getArg('only', '') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
-const DRY = has('dry-run');
-const APPLY = has('apply');
-const FAQ_ONLY = has('faq-only');
-const COMMENTS_ONLY = has('comments-only');
+Usage:
+  node scripts/seo-mass-augment.js <mode> [options]
 
-if (!DRY && !APPLY) {
-  console.error('ERROR: pass --dry-run (preview) or --apply (write)');
-  process.exit(1);
-}
+Modes (exactly one is required — the script never picks write-or-preview for you):
+  --dry-run             generate everything to scripts/.seo-faq / .seo-comments, write nothing live
+  --apply               write the FAQ into the article and post the editor comment
+
+Options:
+  --user-id <id>          author whose published travels are processed (default 1)
+  --editor-user-id <id>   user the editor comment is posted as (default 120)
+  --limit <n>             process only the first n travels, 0 = all (default 0)
+  --only <ids>            process only these travel ids (comma-separated)
+  --faq-only              skip the editor comment
+  --comments-only         skip the FAQ block
+  --help, -h              print this help and exit
+
+Examples:
+  node scripts/seo-mass-augment.js --user-id 1 --dry-run
+  node scripts/seo-mass-augment.js --user-id 1 --only 384,362,442 --dry-run
+  node scripts/seo-mass-augment.js --user-id 1 --apply --limit 5
+  node scripts/seo-mass-augment.js --user-id 1 --apply --faq-only`;
+
+/**
+ * Every flag this script accepts. `--dry-run` / `--apply` stay a mandatory mode
+ * pair, and now every other flag is checked too: `--limt 5` or `--faq-onlyy`
+ * used to be ignored, so `--apply` kept running over the full author list
+ * instead of the narrowed one (#1391).
+ */
+const CLI_SPEC = {
+  name: 'seo-mass-augment',
+  usage: USAGE,
+  flags: {
+    'dry-run': { type: 'boolean' },
+    apply: { type: 'boolean' },
+    'user-id': { type: 'string', valueName: 'an author id', default: '1' },
+    'editor-user-id': { type: 'int', min: 1, valueName: 'a user id', default: 120 },
+    limit: { type: 'int', min: 0, valueName: 'a non-negative integer', default: 0 },
+    only: { type: 'string', valueName: 'a comma-separated id list', default: '' },
+    'faq-only': { type: 'boolean' },
+    'comments-only': { type: 'boolean' },
+  },
+  modes: {
+    flags: ['dry-run', 'apply'],
+    label: 'run modes',
+    missing: 'No mode given: pass --dry-run (preview) or --apply (write)',
+  },
+};
+
+const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC);
+
+// Assigned in main() from the parsed args — the parse has to happen INSIDE
+// main() so a UsageError reaches runSeoCli() and exits 2 (#1391).
+let USER_ID = '1';
+let EDITOR_USER_ID = 120;
+let LIMIT = 0;
+let ONLY = [];
+let APPLY = false;
+let FAQ_ONLY = false;
+let COMMENTS_ONLY = false;
 
 // --- tokens ---------------------------------------------------------------
 function loadToken(envName, fileName) {
@@ -604,11 +647,35 @@ async function processArticle(listItem, log) {
 // --- main ------------------------------------------------------------------
 
 async function main() {
+  const args = parseArgs(process.argv);
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
+  USER_ID = args.userId;
+  EDITOR_USER_ID = args.editorUserId;
+  LIMIT = args.limit;
+  ONLY = args.only.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
+  APPLY = args.mode === 'apply';
+  FAQ_ONLY = args.faqOnly;
+  COMMENTS_ONLY = args.commentsOnly;
+
   console.log(`mode=${APPLY ? 'APPLY' : 'DRY-RUN'}${FAQ_ONLY ? ' (faq-only)' : ''}${COMMENTS_ONLY ? ' (comments-only)' : ''}`);
   console.log(`author user_id=${USER_ID}, editor user_id=${EDITOR_USER_ID}`);
 
   let list = await listAuthorTravels(USER_ID);
-  if (ONLY.length) list = list.filter((t) => ONLY.includes(t.id));
+  // An empty list is a broken envelope or an unreachable API — a run that
+  // augments nothing must not finish with a green summary (#1325).
+  requireNonEmptySelection(list, {
+    what: 'articles',
+    source: `${API}/travels/`,
+    hint: `user_id=${USER_ID}, publish=1, moderation=1`,
+  });
+  if (ONLY.length) {
+    list = requireNonEmptySelection(list.filter((t) => ONLY.includes(t.id)), {
+      message: `--only ${ONLY.join(',')} matched none of the ${list.length} published travels of user_id=${USER_ID}`,
+    });
+  }
   if (LIMIT) list = list.slice(0, LIMIT);
   console.log(`📦 ${list.length} travels to process`);
 
@@ -640,4 +707,16 @@ async function main() {
   console.log('\nSummary:', JSON.stringify(counts, null, 2));
 }
 
-main().catch((e) => { console.error('FATAL:', e); process.exit(1); });
+if (require.main === module) {
+  runSeoCli(main, { name: 'seo-mass-augment', usage: USAGE });
+}
+
+module.exports = {
+  CLI_SPEC,
+  USAGE,
+  buildComment,
+  buildFaq,
+  classify,
+  main,
+  parseArgs,
+};

@@ -14,33 +14,48 @@
 // covers URL Inspection. Quota: ~2000 inspections/day, 600/min per property.
 const https = require('https')
 const { getAccessToken } = require('./lib/google-token')
+const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract')
 
 const SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly'
 
-function parseArgs(argv) {
-  const args = {
-    json: false,
-    onlyProblems: false,
-    userId: '1',
-    api: 'https://metravel.by',
-    origin: 'https://metravel.by',
-    site: 'sc-domain:metravel.by',
-    limit: 0,
-    delayMs: 250,
-  }
-  for (let i = 2; i < argv.length; i++) {
-    const a = argv[i]
-    if (a === '--json') args.json = true
-    else if (a === '--only-problems') args.onlyProblems = true
-    else if (a === '--user-id') args.userId = argv[++i]
-    else if (a === '--api') args.api = argv[++i].replace(/\/+$/, '')
-    else if (a === '--origin') args.origin = argv[++i].replace(/\/+$/, '')
-    else if (a === '--site') args.site = argv[++i]
-    else if (a === '--limit') args.limit = parseInt(argv[++i], 10) || 0
-    else if (a === '--delay') args.delayMs = parseInt(argv[++i], 10) || 0
-  }
-  return args
+const USAGE = `Indexing monitor — metravel.by
+
+Usage:
+  node scripts/index-status.js [options]
+
+Options:
+  --json                machine-readable output (for the agent)
+  --only-problems       list every not-indexed URL instead of the first 40
+  --user-id <id>        author to inspect (default 1)
+  --api <origin>        API origin the article list comes from
+  --origin <origin>     site origin the inspected URLs are built from
+  --site <property>     Search Console property (default sc-domain:metravel.by)
+  --limit <n>           inspect only the first n articles (smoke test)
+  --delay <ms>          pause between inspections (default 250)
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/index-status.js --limit 5
+  node scripts/index-status.js --json --only-problems`
+
+// Every flag lives in the shared SEO CLI contract (#1391): a mistyped `--limt 5`
+// used to be dropped on the floor and quietly inspect all 306 articles.
+const CLI_SPEC = {
+  name: 'index-status',
+  usage: USAGE,
+  flags: {
+    json: { type: 'boolean' },
+    'only-problems': { type: 'boolean' },
+    'user-id': { type: 'string', valueName: 'an author id', default: '1' },
+    api: { type: 'string', valueName: 'an origin', default: 'https://metravel.by', stripTrailingSlash: true },
+    origin: { type: 'string', valueName: 'an origin', default: 'https://metravel.by', stripTrailingSlash: true },
+    site: { type: 'string', valueName: 'a Search Console property', default: 'sc-domain:metravel.by' },
+    limit: { type: 'int', min: 0, valueName: 'a non-negative integer', default: 0 },
+    delay: { type: 'int', key: 'delayMs', min: 0, valueName: 'milliseconds', default: 250 },
+  },
 }
+
+const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC)
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms))
@@ -152,16 +167,19 @@ function classify(r) {
 
 async function main() {
   const args = parseArgs(process.argv)
+  if (args.help) {
+    console.log(USAGE)
+    return
+  }
   const { accessToken } = await getAccessToken(SCOPE)
 
-  let travels = await listTravels(args.api, args.userId)
   // An empty list is an environment/contract failure, not "0 problems": reporting
   // it as a success is exactly how the broken envelope read stayed invisible.
-  if (travels.length === 0) {
-    throw new Error(
-      `${args.api}/api/travels/ вернул 0 статей для user_id=${args.userId} — проверьте доступность API и формат ответа`
-    )
-  }
+  let travels = requireNonEmptySelection(await listTravels(args.api, args.userId), {
+    message:
+      `${args.api}/api/travels/ вернул 0 статей для user_id=${args.userId} — ` +
+      'проверьте доступность API и формат ответа',
+  })
   if (args.limit > 0) travels = travels.slice(0, args.limit)
   if (!args.json) console.error(`🔎 Проверяю индексацию ${travels.length} статей (user_id=${args.userId})…`)
 
@@ -244,10 +262,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((err) => {
-    console.error('Ошибка:', err.message)
-    process.exit(1)
-  })
+  runSeoCli(main, { name: 'index-status', usage: USAGE })
 }
 
-module.exports = { pickListRows, parseArgs, classify }
+module.exports = { CLI_SPEC, USAGE, pickListRows, parseArgs, classify }

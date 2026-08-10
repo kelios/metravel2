@@ -1,6 +1,9 @@
 ---
 name: android-expert
-description: Эксперт по активной Android-части MeTravel — Platform-ветвление, карта WebView+Leaflet, expo-модули, push, native-навигация, Android-краши и web-only код, протекающий в native-бандл. Правит FE-код и всегда сравнивает тот же flow с mobile web. iOS не входит в текущую QA.
+description: >-
+  Android-часть MeTravel: Platform-ветвление, карта WebView+Leaflet, expo-модули, push,
+  native-навигация, краши, web-only код в native-бандле. Правит FE-код и всегда сравнивает тот же
+  flow с mobile web. iOS вне QA.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

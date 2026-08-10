@@ -11,10 +11,9 @@
  * buildUpsertPayload (publish/moderation/gallery/points preserved) with a backup
  * + post-write verification + auto-rollback on regression.
  *
- * Usage:
- *   node scripts/seo-fix-links.js --user-id 1 --dry-run
- *   node scripts/seo-fix-links.js --user-id 1
- *   node scripts/seo-fix-links.js --restore <id>
+ * `--help` prints USAGE below; the arguments themselves go through the shared SEO
+ * CLI contract (#1391), so a mistyped `--dry-runn` is a usage error instead of a
+ * real rewrite of every published body.
  *
  * Token: METRAVEL_TOKEN env or ~/.metravel_token (never logged).
  */
@@ -24,18 +23,39 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const { buildUpsertPayload } = require('./seo-edit');
+const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by').replace(/\/+$/, '') + '/api';
 const BACKUP_DIR = path.join(__dirname, '.seo-backups');
 const MANIFEST = path.join(__dirname, 'seo-redirects.json');
 
-function getArg(args, name, fallback) {
-  const i = args.indexOf(`--${name}`);
-  return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
-}
-function hasFlag(args, name) {
-  return args.includes(`--${name}`);
-}
+const USAGE = `Rewrite stale internal travel links sitewide — metravel.by
+
+Usage:
+  node scripts/seo-fix-links.js [options]
+
+Options:
+  --user-id <id>        author whose published travels are scanned (default 1)
+  --restore <id>        roll one travel back from its most recent backup
+  --dry-run             print what would change, write nothing
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/seo-fix-links.js --user-id 1 --dry-run
+  node scripts/seo-fix-links.js --user-id 1
+  node scripts/seo-fix-links.js --restore 186`;
+
+// Every flag lives in the shared SEO CLI contract (#1391): a mistyped `--dry-runn`
+// used to be dropped on the floor and PUT the rewritten bodies for real.
+const CLI_SPEC = {
+  name: 'seo-fix-links',
+  usage: USAGE,
+  flags: {
+    'user-id': { type: 'string', valueName: 'an author id', default: '1' },
+    restore: { type: 'string', valueName: 'a travel id' },
+    'dry-run': { type: 'boolean' },
+  },
+};
 
 function token() {
   let t = process.env.METRAVEL_TOKEN;
@@ -164,14 +184,23 @@ async function restore(id) {
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const restoreId = getArg(args, 'restore', null);
-  if (restoreId) return restore(restoreId);
+  const args = parseCliArgs(process.argv, CLI_SPEC);
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
+  if (args.restore) return restore(args.restore);
 
-  const userId = getArg(args, 'user-id', '1');
-  const dryRun = hasFlag(args, 'dry-run');
+  const userId = args.userId;
+  const dryRun = args.dryRun;
   const slugMap = loadSlugMap();
-  if (!slugMap.size) { console.error('Manifest has no redirects — nothing to fix'); process.exit(0); }
+  // No redirects means the manifest never saw a rename — an empty selection, not
+  // a clean "nothing to fix" (#1325): it has to reach the exit code.
+  requireNonEmptySelection([...slugMap.keys()], {
+    what: 'renamed slugs',
+    source: 'the redirect manifest',
+    hint: `run scripts/seo-rename.js first — ${path.relative(process.cwd(), MANIFEST)} lists no redirects`,
+  });
 
   console.log(`${dryRun ? '🧪 DRY-RUN ' : '🔗 '}Fixing stale internal links (${slugMap.size} renamed slugs) for user ${userId} via ${API_BASE}\n`);
   const travels = await listTravels(userId);
@@ -219,7 +248,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((err) => { console.error('❌ Fatal:', err.message); process.exit(1); });
+  runSeoCli(main, { name: 'seo-fix-links', usage: USAGE });
 }
 
-module.exports = { rewriteLinks, detectRegression };
+module.exports = { CLI_SPEC, USAGE, rewriteLinks, detectRegression };

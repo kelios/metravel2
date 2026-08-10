@@ -18,11 +18,9 @@
  *   4. Record {from: oldSlug, to: newSlug} into scripts/seo-redirects.json so
  *      generate-seo-pages.js emits a soft-301 stub for the old URL.
  *
- * Usage:
- *   node scripts/seo-rename.js --map-file scripts/.seo-renames.json --dry-run
- *   node scripts/seo-rename.js --map-file scripts/.seo-renames.json
- *   node scripts/seo-rename.js --id 186 --name "Новый заголовок"
- *   node scripts/seo-rename.js --restore 186      # roll back from last backup
+ * `--help` prints USAGE below; the arguments themselves go through the shared SEO
+ * CLI contract (#1391), so a mistyped `--dry-runn` is a usage error instead of a
+ * real write to production.
  *
  * Token: METRAVEL_TOKEN env or ~/.metravel_token (never logged).
  */
@@ -32,18 +30,65 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const { buildUpsertPayload } = require('./seo-edit');
+const {
+  UsageError,
+  parseCliArgs,
+  requireNonEmptySelection,
+  runSeoCli,
+} = require('./lib/seo-cli-contract');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by').replace(/\/+$/, '') + '/api';
 const BACKUP_DIR = path.join(__dirname, '.seo-backups');
 const MANIFEST = path.join(__dirname, 'seo-redirects.json');
 
-function getArg(args, name, fallback) {
-  const i = args.indexOf(`--${name}`);
-  return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
-}
-function hasFlag(args, name) {
-  return args.includes(`--${name}`);
-}
+const USAGE = `Safe title renamer with paired 301 redirects — metravel.by
+
+Usage:
+  node scripts/seo-rename.js <input> [options]
+
+Input sets (exactly one is required — the script never picks the travels for you):
+  --map-file <path>     rename every {id, name} entry listed in a JSON file
+  --id <id>             rename a single travel; needs --name
+  --restore <id>        roll one travel back from its most recent backup
+
+Options:
+  --name <title>        the new title, only together with --id
+  --dry-run             print what would change, write nothing
+  --help, -h            print this help and exit
+
+Examples:
+  node scripts/seo-rename.js --map-file scripts/.seo-renames.json --dry-run
+  node scripts/seo-rename.js --map-file scripts/.seo-renames.json
+  node scripts/seo-rename.js --id 186 --name "Новый заголовок"
+  node scripts/seo-rename.js --restore 186`;
+
+/**
+ * Renaming rewrites a live slug, so "no input" must never resolve to a default
+ * batch: the input set is declared as a mode and the parser refuses to run until
+ * exactly one of them is named.
+ */
+const CLI_SPEC = {
+  name: 'seo-rename',
+  usage: USAGE,
+  flags: {
+    'map-file': { type: 'string', valueName: 'a path' },
+    id: { type: 'string', valueName: 'a travel id' },
+    name: {
+      type: 'string',
+      valueName: 'a title',
+      requiresMode: 'id',
+      reason: 'a map file carries its own names',
+    },
+    restore: { type: 'string', valueName: 'a travel id' },
+    'dry-run': { type: 'boolean' },
+  },
+  modes: {
+    flags: ['map-file', 'id', 'restore'],
+    label: 'input sets',
+    missing:
+      'No input given: pass --map-file <path>, --id <id> --name <title> or --restore <id>',
+  },
+};
 
 function token() {
   let t = process.env.METRAVEL_TOKEN;
@@ -209,23 +254,29 @@ async function renameOne({ id, name }, dryRun) {
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const restoreId = getArg(args, 'restore', null);
-  if (restoreId) return restoreFromBackup(restoreId);
+  const args = parseCliArgs(process.argv, CLI_SPEC);
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
+  if (args.mode === 'restore') return restoreFromBackup(args.restore);
 
-  const dryRun = hasFlag(args, 'dry-run');
+  const dryRun = args.dryRun;
   let entries;
-  const mapFile = getArg(args, 'map-file', null);
-  if (mapFile) {
-    const data = JSON.parse(fs.readFileSync(mapFile, 'utf8'));
+  if (args.mode === 'map-file') {
+    const data = JSON.parse(fs.readFileSync(args.mapFile, 'utf8'));
     entries = Array.isArray(data) ? data : data.renames || [];
   } else {
-    const id = getArg(args, 'id', null);
-    const name = getArg(args, 'name', null);
-    if (!id || !name) { console.error('ERROR: provide --map-file or --id + --name'); process.exit(1); }
-    entries = [{ id, name }];
+    if (!args.name) throw new UsageError('--id also needs --name <title>');
+    entries = [{ id: args.id, name: args.name }];
   }
-  entries = entries.filter((e) => e && e.id && e.name);
+  // A map file that parsed but yielded nothing usable is a broken input, not a
+  // clean run: reporting "0 renamed" over it is the #1325 shape.
+  entries = requireNonEmptySelection(entries.filter((e) => e && e.id && e.name), {
+    what: 'renames',
+    source: args.mode === 'map-file' ? args.mapFile : '--id/--name',
+    hint: 'every entry needs both an id and a name',
+  });
   console.log(`${dryRun ? '🧪 DRY-RUN ' : '✏️  '}Renaming ${entries.length} travel(s) via ${API_BASE}\n`);
 
   const pairs = [];
@@ -246,7 +297,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((err) => { console.error('❌ Fatal:', err.message); process.exit(1); });
+  runSeoCli(main, { name: 'seo-rename', usage: USAGE });
 }
 
-module.exports = { detectRegression, appendRedirects, readManifest };
+module.exports = { CLI_SPEC, USAGE, detectRegression, appendRedirects, readManifest };

@@ -1,6 +1,9 @@
 ---
 name: android-builder
-description: УСТАРЕЛ для Android. EAS-оператор мобильных сборок; Android-релиз с 2026-07-15 идёт локальным Gradle и прямым Play Publisher API, поэтому «собери Android-билд», «залей в Google Play», «обнови версию в сторе» — это агент `android-publisher`, а не этот. Здесь остался только спящий iOS/EAS-маршрут (`npm run ios:build:*`, `ios:submit:*`), который вне текущего scope проекта и запускается лишь после нового решения владельца вернуть iOS. Код приложения не пишет — это `android-expert`.
+description: >-
+  УСТАРЕЛ для Android — сборку и публикацию делает android-publisher. Здесь остался спящий
+  iOS/EAS-маршрут (`ios:build:*`, `ios:submit:*`) вне текущего scope проекта. Код приложения не
+  пишет.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

@@ -1,11 +1,10 @@
 ---
 name: ticket-board
 description: >-
-  Оператор общего MCP task board MeTravel (Django app `task_board` на metravel.by, единый
-  для фронта и бэка). Читает/создаёт/обновляет тикеты и спринты через MCP-инструменты
-  `metravel-task-board`, синхронизирует статусы, импортирует локальные TASK-файлы и заводит
-  новые задачи. Код фичей не пишет. Триггеры: «заведи тикет на борде», «покажи борд»,
-  «обнови статус задачи N», «импортируй tasks/ на борд», «какие FE-задачи в todo».
+  Оператор общего MCP task board (Django `task_board` на metravel.by, единый для фронта и бэка):
+  читает/создаёт/обновляет тикеты и спринты, синхронизирует статусы, импортирует локальные
+  TASK-файлы. Код фичей не пишет. Триггеры: «заведи тикет на борде», «покажи борд», «обнови статус
+  задачи N», «какие FE-задачи в todo».
 tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_create, mcp__metravel-task-board__metravel_task_update, mcp__metravel-task-board__metravel_task_delete, mcp__metravel-task-board__metravel_task_board_options, mcp__metravel-task-board__metravel_sprints_list, mcp__metravel-task-board__metravel_sprint_get, mcp__metravel-task-board__metravel_sprint_create, mcp__metravel-task-board__metravel_sprint_update
 model: sonnet
 ---

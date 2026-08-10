@@ -17,7 +17,10 @@ jest.mock('@/api/travelDetailsQueries', () => ({
 
 jest.mock('@/api/quests', () => ({
   fetchQuestByQuestId: jest.fn(),
-  fetchQuestsList: jest.fn(async () => []),
+}));
+
+jest.mock('@/hooks/useQuestsApi', () => ({
+  useQuestsList: jest.fn(() => ({ quests: [], cityQuestsIndex: {}, loading: false, error: null })),
 }));
 
 jest.mock('@/api/plannedTrips', () => ({
@@ -36,9 +39,6 @@ describe('useBreadcrumbModel', () => {
 
   const { fetchTravelBySlug } = jest.requireMock('@/api/travelDetailsQueries') as {
     fetchTravelBySlug: jest.Mock;
-  };
-  const { fetchQuestsList } = jest.requireMock('@/api/quests') as {
-    fetchQuestsList: jest.Mock;
   };
   const { fetchPlannedTrip } = jest.requireMock('@/api/plannedTrips') as {
     fetchPlannedTrip: jest.Mock;
@@ -252,10 +252,14 @@ describe('useBreadcrumbModel', () => {
   });
 
   it('uses the localized city name, not the raw URL segment, for /quests city landing', async () => {
-    // Крошка читает сырой ответ /quests/ — алиас «minsk» выводится из quest_id.
-    fetchQuestsList.mockResolvedValue([
-      { quest_id: 'minsk-center-dragon', city_id: '4', city_name: 'Минск', title: 'Квест по центру Минска' },
-    ]);
+    const { useQuestsList } = jest.requireMock('@/hooks/useQuestsApi') as { useQuestsList: jest.Mock };
+    useQuestsList.mockReturnValue({
+      // adaptMeta maps quest_id → id, so the alias («minsk») is derived from this slug.
+      quests: [{ id: 'minsk-center-dragon', cityId: '4', cityName: 'Минск', title: 'Квест по центру Минска' }],
+      cityQuestsIndex: {},
+      loading: false,
+      error: null,
+    });
     usePathname.mockReturnValue('/quests/minsk');
     useLocalSearchParams.mockReturnValue({});
 
@@ -292,7 +296,8 @@ describe('useBreadcrumbModel', () => {
   });
 
   it('falls back to the segment for a city landing whose quests are not loaded yet', async () => {
-    fetchQuestsList.mockReturnValue(new Promise(() => {}));
+    const { useQuestsList } = jest.requireMock('@/hooks/useQuestsApi') as { useQuestsList: jest.Mock };
+    useQuestsList.mockReturnValue({ quests: [], cityQuestsIndex: {}, loading: true, error: null });
     usePathname.mockReturnValue('/quests/minsk');
     useLocalSearchParams.mockReturnValue({});
 

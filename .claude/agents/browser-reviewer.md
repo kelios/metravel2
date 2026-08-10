@@ -1,7 +1,10 @@
 ---
 name: browser-reviewer
-description: Ревьювер-фиксер, который проверяет изменения НЕ только чтением кода, но и в реальном браузере через preview-инструменты, и сам чинит найденное. Используй, когда правка наблюдаема в превью (UI travel/map/quests/article, layout, тема, интерактив) и нужно подтвердить/довести до рабочего состояния. Делает code-review diff + browser-verify (snapshot/console/network/screenshot/resize/click), правит баги и ре-верифицирует в браузере, пока не станет зелёным.
-tools: Read, Grep, Glob, Bash, Edit, Write, mcp__Claude_Preview__preview_start, mcp__Claude_Preview__preview_stop, mcp__Claude_Preview__preview_list, mcp__Claude_Preview__preview_eval, mcp__Claude_Preview__preview_snapshot, mcp__Claude_Preview__preview_console_logs, mcp__Claude_Preview__preview_logs, mcp__Claude_Preview__preview_network, mcp__Claude_Preview__preview_inspect, mcp__Claude_Preview__preview_click, mcp__Claude_Preview__preview_fill, mcp__Claude_Preview__preview_resize, mcp__Claude_Preview__preview_screenshot
+description: >-
+  Ревьюер-фиксер с проверкой в реальном браузере через preview-инструменты. Для правок, наблюдаемых
+  в превью (UI travel/map/quests/article, layout, тема, интерактив): code-review diff +
+  snapshot/console/network/screenshot/resize/click, чинит найденное и ре-верифицирует до зелёного.
+tools: Read, Grep, Glob, Bash, Edit, Write, mcp__Claude_Browser__preview_start, mcp__Claude_Browser__preview_stop, mcp__Claude_Browser__preview_list, mcp__Claude_Browser__preview_logs, mcp__Claude_Browser__navigate, mcp__Claude_Browser__read_page, mcp__Claude_Browser__get_page_text, mcp__Claude_Browser__find, mcp__Claude_Browser__computer, mcp__Claude_Browser__form_input, mcp__Claude_Browser__javascript_tool, mcp__Claude_Browser__read_console_messages, mcp__Claude_Browser__read_network_requests, mcp__Claude_Browser__resize_window
 model: opus
 ---
 
@@ -55,13 +58,13 @@ model: opus
 2. **Code-review часть**: пройди diff на корректность, регрессии, нарушения контрактов CLAUDE.md.
    Каждого кандидата верифицируй чтением реального кода (цитируй строку, прослеживай вызовы).
 3. **Browser-verify часть** (только если правка наблюдаема в превью):
-   - Подними/переиспользуй превью, открой затронутый маршрут (`preview_eval` → navigate/reload).
-   - `preview_console_logs` + `preview_logs` + `preview_network` — ошибки, упавшие запросы, варнинги.
-   - `preview_snapshot` — контент и структура отрендерились.
-   - `preview_inspect` — конкретные CSS-значения (если правка про стили/размеры).
-   - `preview_click`/`preview_fill` — проверь интерактив, затем снова `preview_snapshot`.
-   - `preview_resize` — mobile 390px + desktop 1280px, при необходимости dark mode.
-   - `preview_screenshot` — доказательство визуальной правки.
+   - Подними/переиспользуй превью, открой затронутый маршрут (`javascript_tool` → navigate/reload).
+   - `read_console_messages` + `preview_logs` + `read_network_requests` — ошибки, упавшие запросы, варнинги.
+   - `read_page` — контент и структура отрендерились.
+   - `javascript_tool` — конкретные CSS-значения (если правка про стили/размеры).
+   - `computer`/`form_input` — проверь интерактив, затем снова `read_page`.
+   - `resize_window` — mobile 390px + desktop 1280px, при необходимости dark mode.
+   - `computer (screenshot)` — доказательство визуальной правки.
    - Пропускай нерелевантные шаги (нет CSS — нет inspect; нет интерактива — нет click).
 4. **Fix-loop**: подтверждённый баг (P1/P2) чини в исходниках по правилам выше, затем повтори
    browser-verify (reload → console/network/snapshot/screenshot) — пока не станет зелёным.
@@ -126,7 +129,7 @@ P1 — реальный баг/регрессия/уязвимость (в т.ч
 «Мобильная версия» = mobile web (~390px, `isMobile`) + Android ОДНОВРЕМЕННО: пользователь на обеих поверхностях должен видеть один и тот же дизайн. Когда в задаче сказано «мобильный/mobile» — это всегда mobile web и Android вместе, не только одна из них.
 
 - **Парная проверка обязательна.** Изменение mobile web проверяется тем же flow на локальной Android USB-сборке; изменение Android проверяется на mobile web. Расхождение исправляется в общем контракте. iOS-приложения пока нет: iOS не входит в QA, Done gate или `verify pending`.
-- **Верификация UI-правок — на обеих платформах со скринами:** web-превью 390px (`preview_resize` + `preview_screenshot`) И устройство/эмулятор (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны).
+- **Верификация UI-правок — на обеих платформах со скринами:** web-превью 390px (`resize_window` + `computer (screenshot)`) И устройство/эмулятор (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны).
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

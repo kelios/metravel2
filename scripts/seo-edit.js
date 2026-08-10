@@ -16,11 +16,10 @@
  * The heavy lifting is in pure functions (composeDescription, buildUpsertPayload,
  * detectRegression) that are unit-tested. main() is the thin I/O shell.
  *
- * Usage:
- *   node scripts/seo-edit.js --id 169 --prepend-file lead.html --append-file blocks.html [--meta "…"]
- *   node scripts/seo-edit.js --id 169 --desc-file full.html          # replace whole body
- *   node scripts/seo-edit.js --id 169 --dry-run                      # show plan, write nothing
- *   node scripts/seo-edit.js --restore 169                           # revert from latest backup
+ * `--help` prints the flag list (USAGE below). Exactly one action is required —
+ * `--id` (edit) or `--restore` (revert) — and every flag goes through the shared
+ * SEO CLI contract, so a mistyped `--dry-runn` can no longer turn a rehearsal
+ * into a live write (#1391).
  *
  * Token: env METRAVEL_TOKEN or ~/.metravel_token.
  */
@@ -31,9 +30,61 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
+const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
+
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const SENTINEL = '__draft_placeholder__'; // app's "empty" marker; API rejects blank strings
 const DEFAULT_BACKUP_DIR = path.join(__dirname, '.seo-backups');
+
+const USAGE = `Safe editor for live published travels — metravel.by
+
+Usage:
+  node scripts/seo-edit.js <action> [options]
+
+Actions (exactly one is required — the script never guesses an article):
+  --id <id>             edit this travel (backup → PUT → verify → auto-rollback)
+  --restore <id>        revert this travel from its latest backup
+
+Options:
+  --prepend-file <path>  HTML prepended as the lead (with --id)
+  --append-file <path>   HTML appended after the body (with --id)
+  --desc-file <path>     HTML replacing the whole body (with --id)
+  --meta <text>          new meta_description (with --id)
+  --dry-run              print the plan, write nothing (with --id)
+  --backup-dir <path>    where backups are written and read (default scripts/.seo-backups)
+  --help, -h             print this help and exit
+
+Examples:
+  node scripts/seo-edit.js --id 169 --prepend-file lead.html --append-file blocks.html
+  node scripts/seo-edit.js --id 169 --dry-run
+  node scripts/seo-edit.js --restore 169`;
+
+/**
+ * Every flag this script accepts. The write-shaping flags are pinned to `--id`
+ * on purpose: `--restore 169 --dry-run` used to swallow the `--dry-run` and
+ * write to production anyway — the ignored-flag shape of SEO-OPS-001 (#1391).
+ */
+const CLI_SPEC = {
+  name: 'seo-edit',
+  usage: USAGE,
+  flags: {
+    id: { type: 'string', valueName: 'a travel id' },
+    restore: { type: 'string', valueName: 'a travel id' },
+    'prepend-file': { type: 'string', valueName: 'a path', default: '', requiresMode: 'id', reason: 'a restore rewrites the whole backed-up body' },
+    'append-file': { type: 'string', valueName: 'a path', default: '', requiresMode: 'id', reason: 'a restore rewrites the whole backed-up body' },
+    'desc-file': { type: 'string', valueName: 'a path', default: '', requiresMode: 'id', reason: 'a restore rewrites the whole backed-up body' },
+    meta: { type: 'string', valueName: 'a meta description', default: null, requiresMode: 'id', reason: 'a restore puts the backed-up meta back' },
+    'dry-run': { type: 'boolean', requiresMode: 'id', reason: 'a restore always writes' },
+    'backup-dir': { type: 'string', valueName: 'a directory', default: DEFAULT_BACKUP_DIR },
+  },
+  modes: {
+    flags: ['id', 'restore'],
+    label: 'actions',
+    missing: 'No action given: pass --id <id> to edit an article or --restore <id> to revert it',
+  },
+};
+
+const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC);
 
 // ---------------------------------------------------------------------------
 // Pure core (exported for tests)
@@ -258,13 +309,6 @@ function latestBackup(dir, id) {
   return files.length ? path.join(dir, files[files.length - 1]) : null;
 }
 
-function getArg(args, name, fallback) {
-  const i = args.indexOf(`--${name}`);
-  return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
-}
-function hasFlag(args, name) {
-  return args.includes(`--${name}`);
-}
 function readFileArg(file) {
   return file ? fs.readFileSync(file, 'utf8') : '';
 }
@@ -284,23 +328,27 @@ async function restore(id, backupDir) {
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const backupDir = getArg(args, 'backup-dir', DEFAULT_BACKUP_DIR);
+  // Parsed here, not at module level, so a UsageError reaches runSeoCli() below
+  // and a bad invocation exits 2 instead of touching a live article (#1391).
+  const args = parseArgs(process.argv);
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
 
-  const restoreId = getArg(args, 'restore', null);
-  if (restoreId) return restore(restoreId, backupDir);
+  const backupDir = args.backupDir;
+  if (args.mode === 'restore') return restore(args.restore, backupDir);
 
-  const id = getArg(args, 'id', null);
-  if (!id) { console.error('ERROR: --id is required'); process.exit(1); }
-  const meta = getArg(args, 'meta', null);
-  const dryRun = hasFlag(args, 'dry-run');
+  const id = args.id;
+  const meta = args.meta;
+  const dryRun = args.dryRun;
 
   const detail = await getTravel(id);
   const oldDesc = detail.description || '';
   const newDesc = composeDescription(oldDesc, {
-    prepend: readFileArg(getArg(args, 'prepend-file', '')),
-    append: readFileArg(getArg(args, 'append-file', '')),
-    replace: getArg(args, 'desc-file', '') ? readFileArg(getArg(args, 'desc-file', '')) : null,
+    prepend: readFileArg(args.prependFile),
+    append: readFileArg(args.appendFile),
+    replace: args.descFile ? readFileArg(args.descFile) : null,
   });
 
   console.log(`travel #${detail.id} «${detail.name}»`);
@@ -327,7 +375,9 @@ async function main() {
     const revert = buildUpsertPayload(detail, { description: oldDesc, meta: detail.meta_description });
     const rb = await putTravel(revert);
     console.error(`   rollback PUT → HTTP ${rb.status}`);
-    process.exit(2);
+    // 1, not 2: under the shared CLI contract 2 means "you called it wrong", and
+    // a detected regression is a failed run, not a bad invocation (#1391).
+    process.exit(1);
   }
   console.log(`✅ OK — still published, gallery=${(after.gallery || []).length}, ` +
     `points=${(after.coordsMeTravel || []).length}, desc=${(after.description || '').length} chars`);
@@ -336,6 +386,9 @@ async function main() {
 // ---------------------------------------------------------------------------
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    CLI_SPEC,
+    USAGE,
+    parseArgs,
     composeDescription,
     buildUpsertPayload,
     detectRegression,
@@ -347,5 +400,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (require.main === module) {
-  main().catch((err) => { console.error('❌ Fatal:', err.message); process.exit(1); });
+  runSeoCli(main, { name: 'seo-edit', usage: USAGE });
 }

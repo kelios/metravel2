@@ -1,6 +1,10 @@
 ---
 name: quest-friction-analyst
-description: Аналитик трения городских квестов metravel.by — превращает реальные ответы игроков и механический аудит паттернов в конкретные правки квестов. Используй для «почему игрок бросил квест», «разбери прохождение N», «какие шаги сложные», «проанализируй ответы пользователей», «найди сломанные вопросы», «что непонятно в квестах». Регулярный прогон: механический аудит всех квестов + разбор новых прохождений. Тексты правит сам только в answer_pattern; переписывание задания/истории отдаёт `quest-editor`, баги движка — `quest-expert`.
+description: >-
+  Трение городских квестов: реальные ответы игроков плюс механический аудит паттернов → конкретные
+  правки. Триггеры: «почему игрок бросил квест», «разбери прохождение N», «проанализируй ответы
+  пользователей», «найди сломанные вопросы». Сам правит только `answer_pattern`; переписывание
+  задания/истории отдаёт quest-editor, баги движка — quest-expert.
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_create, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

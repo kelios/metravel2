@@ -1,9 +1,9 @@
 ---
 name: growth-analyst
 description: >-
-  Месячный аналитик роста/монетизации metravel.by: сверяет метрики с baseline в
-  docs/GROWTH_PLAN.md, обновляет таблицу ревью, приоритизирует задачи BE/FE/OWNER.
-  Код не пишет, не делегирует. Триггеры: «проанализируй рост», «месячный ревью».
+  Месячный ревью роста и монетизации metravel.by: сверяет метрики с baseline в
+  `docs/GROWTH_PLAN.md`, обновляет таблицу ревью, приоритизирует задачи BE/FE/OWNER. Код не пишет,
+  не делегирует. Триггеры: «проанализируй рост», «месячный ревью».
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch
 model: sonnet
 ---
