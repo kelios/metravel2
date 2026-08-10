@@ -322,8 +322,13 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       }
     }
 
+    // Возврат из route в radius: маршрутный fitBounds увёл карту в коридор
+    // маршрута, поэтому радиусный вид надо применить заново. Сбрасываем и ключ
+    // авто-фита — теперь стартовый вид применяет только он, и без сброса ключа
+    // эффект вышел бы на «уже фитил этот ключ» и карта осталась бы на маршруте.
     if (lastModeRef.current === 'route' && mode === 'radius') {
       hasInitializedRef.current = false;
+      lastAutoFitKeyRef.current = null;
     }
 
     lastModeRef.current = mode;
@@ -336,7 +341,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     lastModeRef,
     lastAutoFitKeyRef,
     syncZoomFromMap,
-    circleCenter,
     radiusInMeters,
   ]);
 
@@ -540,6 +544,11 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
               } as any);
               requestAnimationFrame(() => syncZoomFromMap());
               hasCompletedAutoFitRef.current = true;
+              // #1291 — авто-фит стал единственным, кто применяет стартовый вид в
+              // radius-режиме, поэтому именно он и отмечает «вид применён».
+              // Иначе флаг навсегда остался бы false и вход в route-режим каждый
+              // раз телепортировал бы карту на анкер поиска в z13.
+              hasInitializedRef.current = true;
               return;
             }
           }
@@ -560,6 +569,9 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
         requestAnimationFrame(() => syncZoomFromMap());
         hasCompletedAutoFitRef.current = true;
+        // См. комментарий выше: стартовый вид применён — вход в route-режим не
+        // должен переустанавливать вид поверх него.
+        hasInitializedRef.current = true;
       };
 
       // #1350 — claim the key BEFORE the deferred run. `lastAutoFitKeyRef` used to be
@@ -586,6 +598,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     radiusInMeters,
     fitBoundsPadding,
     lastAutoFitKeyRef,
+    hasInitializedRef,
     hintCenter,
     syncZoomFromMap,
     hasRadiusResults,

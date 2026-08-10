@@ -31,18 +31,16 @@ describe('MapLogicComponent radius zoom initialization', () => {
     const useMap = jest.fn(() => map);
     const useMapEvents = jest.fn(() => null);
 
+    const mockBounds = {
+      pad: jest.fn(() => 'padded-bounds'),
+      getSouthWest: () => ({ lat: 53, lng: 27 }),
+      getNorthEast: () => ({ lat: 54, lng: 28 }),
+      isValid: () => true,
+      extend: jest.fn(),
+    };
     const mockLeaflet = {
       latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
-      latLngBounds: jest.fn(() => ({
-        pad: jest.fn(() => 'padded-bounds'),
-      })),
-      circle: jest.fn(() => ({
-        getBounds: () => ({
-          pad: jest.fn(() => 'padded-bounds'),
-          getSouthWest: () => ({ lat: 53, lng: 27 }),
-          getNorthEast: () => ({ lat: 54, lng: 28 }),
-        }),
-      })),
+      latLngBounds: jest.fn(() => mockBounds),
     };
 
     const baseProps = {
@@ -93,76 +91,92 @@ describe('MapLogicComponent radius zoom initialization', () => {
     expect(map.fitBounds).toHaveBeenCalledTimes(2);
   });
 
-  // Пин на кардинальность стартовых зум-уровней: любая новая промежуточная
-  // установка вида в radius-режиме снова начнёт качать лишние тайлы.
-  it('never applies more than one settled zoom level during radius startup', async () => {
-    const zoomTrail: number[] = [];
-    let currentZoom = 11;
-    const map = {
-      fitBounds: jest.fn(() => {
-        currentZoom = 9;
-        zoomTrail.push(currentZoom);
-      }),
-      setView: jest.fn((_center: unknown, zoom: number) => {
-        currentZoom = zoom;
-        zoomTrail.push(currentZoom);
-      }),
+  // #1291 — авто-фит стал единственным владельцем стартового вида, поэтому
+  // именно он теперь отвечает и за переключение режимов: раньше это делал
+  // удалённый radius-setView, и без явного контракта переходы ломались молча.
+  describe('mode switching after the startup view is applied', () => {
+    const makeMap = () => ({
+      fitBounds: jest.fn(),
+      setView: jest.fn(),
       closePopup: jest.fn(),
-      getZoom: jest.fn(() => currentZoom),
+      getZoom: jest.fn(() => 9),
       getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
       on: jest.fn(),
       off: jest.fn(),
+    });
+
+    const makeProps = (map: ReturnType<typeof makeMap>) => {
+      const mockBounds = {
+        pad: jest.fn(() => 'padded-bounds'),
+        getSouthWest: () => ({ lat: 53, lng: 27 }),
+        getNorthEast: () => ({ lat: 54, lng: 28 }),
+        isValid: () => true,
+        extend: jest.fn(),
+      };
+      return {
+        mapClickHandler: () => undefined,
+        mode: 'radius',
+        coordinates: { lat: 53.9, lng: 27.5667 },
+        userLocation: { lat: 53.9, lng: 27.5667 },
+        disableFitBounds: false,
+        L: {
+          latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+          latLngBounds: jest.fn(() => mockBounds),
+        },
+        circleCenter: { lat: 53.9, lng: 27.5667 },
+        radiusInMeters: 50000,
+        fitBoundsPadding: { paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] },
+        setMapZoom: jest.fn(),
+        mapRef: { current: null },
+        onMapReady: jest.fn(),
+        savedMapViewRef: { current: null },
+        hasInitializedRef: { current: false },
+        lastModeRef: { current: null },
+        lastAutoFitKeyRef: { current: null },
+        leafletBaseLayerRef: { current: null },
+        leafletOverlayLayersRef: { current: new Map() },
+        leafletControlRef: { current: null },
+        useMap: jest.fn(() => map),
+        useMapEvents: jest.fn(() => null),
+        hintCenter: { lat: 53.9, lng: 27.5667 },
+        travelData: [{ id: 1, coord: '53.9,27.5667', address: 'A' }],
+      };
     };
 
-    const mockBounds = {
-      pad: jest.fn(() => 'padded-bounds'),
-      getSouthWest: () => ({ lat: 53, lng: 27 }),
-      getNorthEast: () => ({ lat: 54, lng: 28 }),
-      isValid: () => true,
-      extend: jest.fn(),
-    };
+    it('does not re-apply the route initial view once the radius view is fitted', async () => {
+      const map = makeMap();
+      const props = makeProps(map);
 
-    const baseProps = {
-      mapClickHandler: () => undefined,
-      mode: 'radius',
-      coordinates: { lat: 53.9, lng: 27.5667 },
-      userLocation: { lat: 53.9, lng: 27.5667 },
-      disableFitBounds: false,
-      L: {
-        latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
-        latLngBounds: jest.fn(() => mockBounds),
-      },
-      circleCenter: { lat: 53.9, lng: 27.5667 },
-      radiusInMeters: 50000,
-      fitBoundsPadding: { paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] },
-      setMapZoom: jest.fn(),
-      mapRef: { current: null },
-      onMapReady: jest.fn(),
-      savedMapViewRef: { current: null },
-      hasInitializedRef: { current: false },
-      lastModeRef: { current: null },
-      lastAutoFitKeyRef: { current: null },
-      leafletBaseLayerRef: { current: null },
-      leafletOverlayLayersRef: { current: new Map() },
-      leafletControlRef: { current: null },
-      useMap: jest.fn(() => map),
-      useMapEvents: jest.fn(() => null),
-      hintCenter: { lat: 53.9, lng: 27.5667 },
-    };
+      const { rerender } = render(<MapLogicComponent {...props} />);
+      await act(async () => {});
+      expect(map.fitBounds).toHaveBeenCalled();
 
-    const { rerender } = render(<MapLogicComponent {...baseProps} travelData={[]} />);
-    await act(async () => {});
+      map.setView.mockClear();
+      rerender(<MapLogicComponent {...props} mode="route" />);
+      await act(async () => {});
 
-    rerender(
-      <MapLogicComponent
-        {...baseProps}
-        travelData={[{ id: 1, coord: '53.9,27.5667', address: 'A' }]}
-      />
-    );
-    await act(async () => {});
+      // Вход в маршрут не выбрасывает уже применённый вид на анкер в z13.
+      expect(map.setView).not.toHaveBeenCalled();
+    });
 
-    expect(map.setView).not.toHaveBeenCalled();
-    expect(new Set(zoomTrail).size).toBe(1);
+    it('re-applies the radius view when coming back from route mode', async () => {
+      const map = makeMap();
+      const props = makeProps(map);
+
+      const { rerender } = render(<MapLogicComponent {...props} />);
+      await act(async () => {});
+
+      rerender(<MapLogicComponent {...props} mode="route" />);
+      await act(async () => {});
+
+      map.fitBounds.mockClear();
+      rerender(<MapLogicComponent {...props} mode="radius" />);
+      await act(async () => {});
+
+      // Маршрутный fitBounds увёл карту в коридор маршрута — радиусный вид
+      // обязан вернуться, иначе пользователь остаётся на чужой рамке.
+      expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('recomputes fitBounds when radius changes', async () => {

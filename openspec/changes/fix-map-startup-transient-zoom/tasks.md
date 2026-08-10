@@ -77,11 +77,52 @@ it, so its radius-mode bookkeeping change is contained.
 
 ## 3. Tests and Regression Control
 
-- [ ] 3.1 Rewrite `__tests__/components/MapPage/MapLogicComponent.zoom-radius.test.tsx` so it asserts observable final behaviour — no `setView` carrying a radius-derived zoom before the startup fit, one startup fit for a valid circle, and a re-fit when the radius changes — replacing the assertion of the now-removed call at line 87.
-- [ ] 3.2 Preserve the existing stability cases in the same file (no re-fit on small user-location drift, viewport stable on a later live-location tick) and review `__tests__/components/MapPage/MapLogicComponent.test.tsx` for the same coupling, updating only what genuinely changed; leave no `.skip`.
+- [x] 3.1 Rewrite `__tests__/components/MapPage/MapLogicComponent.zoom-radius.test.tsx` so it asserts observable final behaviour — no `setView` carrying a radius-derived zoom before the startup fit, one startup fit for a valid circle, and a re-fit when the radius changes — replacing the assertion of the now-removed call at line 87.
+- [x] 3.2 Preserve the existing stability cases in the same file (no re-fit on small user-location drift, viewport stable on a later live-location tick) and review `__tests__/components/MapPage/MapLogicComponent.test.tsx` for the same coupling, updating only what genuinely changed; leave no `.skip`.
 - [ ] 3.3 Add the startup tile-cardinality regression assertion on a surface that does **not** mock tiles — neither `e2e/map-page.spec.ts` (mocks `**/proxy/tiles/osm/**`) nor `e2e/pages-perf-budget.spec.ts` (excludes `/proxy/tiles/` from the MAP budget) can carry this evidence — asserting the number of distinct startup zoom levels and the per-viewport byte budget.
-- [ ] 3.4 Prove the regression control actually catches the defect: temporarily restore the removed radius-zoom view locally, confirm the new assertions fail, then revert the temporary restoration.
-- [ ] 3.5 Run the focused Jest suite for `__tests__/components/MapPage/**` and confirm zero failures and zero skipped tests.
+- [x] 3.4 Prove the regression control actually catches the defect: temporarily restore the removed radius-zoom view locally, confirm the new assertions fail, then revert the temporary restoration.
+- [x] 3.5 Run the focused Jest suite for `__tests__/components/MapPage/**` and confirm zero failures and zero skipped tests.
+
+### Test evidence — 2026-08-10
+
+`npx jest __tests__/components/MapPage/` → **53 suites / 364 tests passed**, 0
+skipped. `npx tsc --noEmit` and `npx eslint` on the touched files are clean.
+
+Task 3.4 was run twice, because the first probe was invalid and said so:
+
+1. First attempt restored the removed `setView` gated on `hasInitializedRef`.
+   All tests stayed green — but only because the fix now sets that same flag
+   from the auto-fit, so the restored block never executed. A green run here
+   proves nothing; the probe was rejected.
+2. Second attempt was faithful to the original code: a flag-independent
+   `setView([circleCenter], 13)` in the startup effect **with `hasRadiusResults`
+   back in its dependency list** (the original effect re-ran on results arrival;
+   the fixed one does not). With that, `fits the radius circle without ever
+   passing through an intermediate radius zoom` fails, and passes again once the
+   probe is reverted.
+
+Coverage limit, stated honestly: a unit test can only catch the results-gated
+half of the defect. The pre-fit half lived behind `!isTestEnv` and was invisible
+to Jest by construction — that is why the original suite never caught it. The
+fix removes the `isTestEnv` divergence from the radius startup path altogether,
+so there is no browser-only branch left in this component to hide behind; the
+remaining browser-level proof belongs to Task 3.3 / Section 4.
+
+Two regressions found by the mandatory review pass and fixed in the same change,
+both caused by the startup view changing owner:
+
+- **route → radius return.** The removed block was what re-applied the radius
+  view after `MapRoute` had fitted the route corridor. The auto-fit could not
+  take over because `lastAutoFitKeyRef` still held the pre-route key. Fixed by
+  clearing that key in the mode-transition branch.
+- **radius → route entry.** `hasInitializedRef` was previously set true by the
+  removed block; with it gone, entering route mode re-applied `setView(anchor,
+  13)` every time and discarded the user's view — moving the very tile cost this
+  change removes from startup to mode switching. Fixed by setting the flag where
+  the auto-fit actually applies the view.
+
+Both transitions are now pinned by tests in the `mode switching after the
+startup view is applied` block.
 
 ## 4. Active-Platform Validation
 

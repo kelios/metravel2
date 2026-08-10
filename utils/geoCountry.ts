@@ -1,13 +1,32 @@
 // utils/geoCountry.ts
-// Определение кода страны по координатам через bounding boxes.
+// Определение кода страны по координатам.
 // Используется когда бэкенд не возвращает country_code.
+//
+// Резолв идёт четырьмя ступенями:
+//   1. Точные контуры стран, которые прямоугольники систематически перехватывали
+//      друг у друга (Кавказ, Прибалтика, Молдова, Средняя Азия, RU/BY/UA).
+//   2. Ближайший контур в пределах COASTAL_TOLERANCE_DEG. Набережные, порты,
+//      пирсы и намывы регулярно оказываются мористее береговой линии датасета:
+//      батумские «Танцующие фонтаны» лежат в 1,5 км снаружи контура Грузии.
+//   3. Прямоугольники остальных стран — там перекрытий, ломающих резолв, нет.
+//   4. Прямоугольники «контурных» стран как страховка для точек в прибрежных водах.
+// Раньше ступень была одна, и большой прямоугольник России (41.19–81.86 N,
+// 19.64–180 E) забирал Тбилиси, Ригу, Таллин и Алматы, а прямоугольники Беларуси
+// и Украины — Вильнюс и Кишинёв. Перестановками это не лечится: опустить Россию
+// ниже соседей значит отдать Новосибирск Казахстану, а Эльбрус — Грузии.
+
+import { COUNTRY_OUTLINES, OUTLINE_ORDER } from './geoCountryOutlines';
 
 type BBox = { minLat: number; maxLat: number; minLng: number; maxLng: number };
 type CountryEntry = { code: string; bbox: BBox };
+/** Кольцо контура вместе со своим bbox: он отсекает точку до перебора вершин. */
+type Ring = { points: readonly (readonly [number, number])[]; bbox: BBox };
 
 // Упорядочены от меньших/специфичных к большим для точности перекрытий
 const COUNTRIES: CountryEntry[] = [
     { code: 'BY', bbox: { minLat: 51.26, maxLat: 56.17, minLng: 23.18, maxLng: 32.78 } },
+    // CZ перед PL: bbox Польши (14.12–24.15) накрывает Прагу и северную Чехию.
+    { code: 'CZ', bbox: { minLat: 48.55, maxLat: 51.06, minLng: 12.09, maxLng: 18.86 } },
     { code: 'PL', bbox: { minLat: 49.00, maxLat: 54.84, minLng: 14.12, maxLng: 24.15 } },
     { code: 'UA', bbox: { minLat: 44.39, maxLat: 52.38, minLng: 22.14, maxLng: 40.23 } },
     { code: 'RU', bbox: { minLat: 41.19, maxLat: 81.86, minLng: 19.64, maxLng: 180.0 } },
@@ -18,7 +37,6 @@ const COUNTRIES: CountryEntry[] = [
     { code: 'DE', bbox: { minLat: 47.27, maxLat: 55.06, minLng: 5.87,  maxLng: 15.04 } },
     { code: 'FR', bbox: { minLat: 41.34, maxLat: 51.09, minLng: -5.14, maxLng: 9.56  } },
     { code: 'ES', bbox: { minLat: 27.64, maxLat: 43.79, minLng: -18.17,maxLng: 4.33  } },
-    { code: 'CZ', bbox: { minLat: 48.55, maxLat: 51.06, minLng: 12.09, maxLng: 18.86 } },
     { code: 'SK', bbox: { minLat: 47.73, maxLat: 49.61, minLng: 16.83, maxLng: 22.57 } },
     { code: 'HU', bbox: { minLat: 45.74, maxLat: 48.59, minLng: 16.11, maxLng: 22.90 } },
     { code: 'RO', bbox: { minLat: 43.62, maxLat: 48.27, minLng: 20.26, maxLng: 29.76 } },
@@ -50,8 +68,8 @@ const COUNTRIES: CountryEntry[] = [
     { code: 'JO', bbox: { minLat: 29.19, maxLat: 33.37, minLng: 34.96, maxLng: 39.30 } },
     { code: 'LB', bbox: { minLat: 33.05, maxLat: 34.69, minLng: 35.10, maxLng: 36.62 } },
     { code: 'IR', bbox: { minLat: 25.06, maxLat: 39.78, minLng: 44.03, maxLng: 63.33 } },
-    { code: 'KZ', bbox: { minLat: 40.57, maxLat: 55.44, minLng: 50.27, maxLng: 87.36 } },
     { code: 'UZ', bbox: { minLat: 37.18, maxLat: 45.59, minLng: 55.99, maxLng: 73.15 } },
+    { code: 'KZ', bbox: { minLat: 40.57, maxLat: 55.44, minLng: 50.27, maxLng: 87.36 } },
     { code: 'TH', bbox: { minLat: 5.61,  maxLat: 20.46, minLng: 97.34, maxLng: 105.64} },
     { code: 'VN', bbox: { minLat: 8.56,  maxLat: 23.39, minLng: 102.14,maxLng: 109.46} },
     { code: 'JP', bbox: { minLat: 24.25,  maxLat: 45.52, minLng: 122.93,maxLng: 153.99} },
@@ -63,19 +81,158 @@ const COUNTRIES: CountryEntry[] = [
     { code: 'AU', bbox: { minLat: -43.64,maxLat: -10.67,minLng: 113.34, maxLng: 153.57} },
 ];
 
+const OUTLINE_CODES = new Set(OUTLINE_ORDER);
+
+/** Прямоугольники стран без контура — ступень 2. */
+const PLAIN_BOXES = COUNTRIES.filter((entry) => !OUTLINE_CODES.has(entry.code));
+
+/**
+ * Прямоугольники стран с контуром — ступень 3. Россия последняя: её прямоугольник
+ * накрывает половину списка, и внутри своей суши она уже поймана контуром.
+ */
+const OUTLINE_FALLBACK_ORDER = ['LT', 'LV', 'EE', 'MD', 'GE', 'AM', 'AZ', 'KZ', 'BY', 'UA', 'RU'];
+const OUTLINE_BOXES = OUTLINE_FALLBACK_ORDER
+    .map((code) => COUNTRIES.find((entry) => entry.code === code))
+    .filter((entry): entry is CountryEntry => Boolean(entry));
+
+let decodedOutlines: Record<string, Ring[]> | null = null;
+
+/** Разворачивает дельта-строки контуров в кольца [lng, lat]. Считается один раз. */
+function getOutlines(): Record<string, Ring[]> {
+    if (decodedOutlines) return decodedOutlines;
+
+    const decoded: Record<string, Ring[]> = {};
+    for (const code of OUTLINE_ORDER) {
+        const encodedRings = COUNTRY_OUTLINES[code];
+        if (!encodedRings) continue;
+        decoded[code] = encodedRings.map((encoded) => {
+            const deltas = encoded.split(',');
+            const points: [number, number][] = [];
+            const bbox: BBox = {
+                minLat: Infinity,
+                maxLat: -Infinity,
+                minLng: Infinity,
+                maxLng: -Infinity,
+            };
+            let lng = 0;
+            let lat = 0;
+            for (let i = 0; i < deltas.length - 1; i += 2) {
+                lng += Number(deltas[i]);
+                lat += Number(deltas[i + 1]);
+                const pointLng = lng / 100;
+                const pointLat = lat / 100;
+                points.push([pointLng, pointLat]);
+                if (pointLat < bbox.minLat) bbox.minLat = pointLat;
+                if (pointLat > bbox.maxLat) bbox.maxLat = pointLat;
+                if (pointLng < bbox.minLng) bbox.minLng = pointLng;
+                if (pointLng > bbox.maxLng) bbox.maxLng = pointLng;
+            }
+            return { points, bbox };
+        });
+    }
+
+    decodedOutlines = decoded;
+    return decoded;
+}
+
+/** Ray casting: чётное число пересечений — точка снаружи кольца. */
+function isInsideRing(lat: number, lng: number, ring: Ring): boolean {
+    if (!isInsideBBox(lat, lng, ring.bbox)) return false;
+
+    const { points } = ring;
+    let inside = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const [lngI, latI] = points[i];
+        const [lngJ, latJ] = points[j];
+        if (
+            latI > lat !== latJ > lat &&
+            lng < ((lngJ - lngI) * (lat - latI)) / (latJ - latI) + lngI
+        ) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+function isInsideBBox(lat: number, lng: number, bbox: BBox, pad = 0): boolean {
+    return (
+        lat >= bbox.minLat - pad &&
+        lat <= bbox.maxLat + pad &&
+        lng >= bbox.minLng - pad &&
+        lng <= bbox.maxLng + pad
+    );
+}
+
+/**
+ * Насколько далеко от контура точку ещё считаем «своей».
+ * 0.05° — около 5 км: перекрывает набережные и портовые молы и втрое меньше
+ * расстояния от ближайшего чужого города (Яссы — 17 км до контура Молдовы).
+ */
+const COASTAL_TOLERANCE_DEG = 0.05;
+
+function distanceToSegment(
+    lat: number,
+    lng: number,
+    [lngA, latA]: readonly [number, number],
+    [lngB, latB]: readonly [number, number],
+): number {
+    const dLng = lngB - lngA;
+    const dLat = latB - latA;
+    const lengthSq = dLng * dLng + dLat * dLat;
+    const projection = lengthSq
+        ? ((lng - lngA) * dLng + (lat - latA) * dLat) / lengthSq
+        : 0;
+    const clamped = Math.max(0, Math.min(1, projection));
+    return Math.hypot(lng - (lngA + clamped * dLng), lat - (latA + clamped * dLat));
+}
+
+function distanceToRing(lat: number, lng: number, ring: Ring): number {
+    if (!isInsideBBox(lat, lng, ring.bbox, COASTAL_TOLERANCE_DEG)) return Infinity;
+
+    const { points } = ring;
+    let best = Infinity;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const distance = distanceToSegment(lat, lng, points[j], points[i]);
+        if (distance < best) best = distance;
+    }
+    return best;
+}
+
 /**
  * Возвращает ISO 3166-1 alpha-2 код страны по координатам.
- * Использует bounding boxes — достаточно точно для определения страны квеста.
+ * Точность — уровень страны: у самой границы и у уреза воды возможна ошибка
+ * в несколько километров, для группировки точек и партнёрских ссылок этого хватает.
  * Возвращает undefined если страна не определена.
  */
 export function getCountryCodeByCoords(lat: number, lng: number): string | undefined {
-    for (const { code, bbox } of COUNTRIES) {
-        if (
-            lat >= bbox.minLat && lat <= bbox.maxLat &&
-            lng >= bbox.minLng && lng <= bbox.maxLng
-        ) {
+    const outlines = getOutlines();
+    for (const code of OUTLINE_ORDER) {
+        const rings = outlines[code];
+        if (rings?.some((ring) => isInsideRing(lat, lng, ring))) {
             return code;
         }
     }
+
+    let nearestCode: string | undefined;
+    let nearestDistance = COASTAL_TOLERANCE_DEG;
+    for (const code of OUTLINE_ORDER) {
+        for (const ring of outlines[code] ?? []) {
+            const distance = distanceToRing(lat, lng, ring);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestCode = code;
+            }
+        }
+    }
+    if (nearestCode) return nearestCode;
+
+    for (const { code, bbox } of PLAIN_BOXES) {
+        if (isInsideBBox(lat, lng, bbox)) return code;
+    }
+
+    for (const { code, bbox } of OUTLINE_BOXES) {
+        if (isInsideBBox(lat, lng, bbox)) return code;
+    }
+
     return undefined;
 }

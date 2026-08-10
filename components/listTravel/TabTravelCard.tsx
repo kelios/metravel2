@@ -7,6 +7,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { formatViewCount } from '@/components/travel/utils/travelHelpers';
+import { resolveTravelCityName } from '@/utils/travelDisplayLocation';
 import { translate as i18nT } from '@/i18n';
 
 import { createTabCardTemplate, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
@@ -74,7 +75,10 @@ function TabTravelCard({
   const title = item?.title || i18nT('travel:common.untitled');
 
   const location = useMemo(() => {
-    return [item?.city, item?.country].filter(Boolean).join(', ');
+    // `city` у путешествия — это подпись первой точки маршрута из обратного
+    // геокодинга, а не город; в одну строку с numberOfLines={1} она приходила
+    // обрезанным адресом. Адресоподобное значение отбрасываем и показываем страну.
+    return [resolveTravelCityName(item?.city), item?.country].filter(Boolean).join(', ');
   }, [item?.city, item?.country]);
 
   const views = Number(item?.views) || 0;

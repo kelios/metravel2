@@ -6,6 +6,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { devError, devWarn } from '@/utils/logger'
 import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
+import { resolveTravelCityName } from '@/utils/travelDisplayLocation'
 import { useAuth } from '@/context/AuthContext'
 import { queryKeys } from '@/api/queryKeys'
 import { getActiveQueryClient } from '@/api/activeQueryClient'
@@ -168,7 +169,9 @@ const normalizeAuthoredTravelEntry = (item: unknown): TravelStatusEntry | null =
     addedAt: parseServerTimestamp(item.updated_at ?? item.created_at),
     imageUrl,
     country: normalizeOptionalString(item.countryName ?? item.country_name ?? item.country),
-    city: normalizeOptionalString(item.cityName ?? item.city_name ?? item.city),
+    // `cityName` у путешествия — подпись первой точки маршрута, а не город;
+    // адресоподобное значение отбрасываем, чтобы карточка показала страну.
+    city: resolveTravelCityName(normalizeOptionalString(item.cityName ?? item.city_name ?? item.city)),
     // Явную дату кладём в поле, соответствующее выведенному статусу, иначе
     // normalizeStatusDates её обнулит; fallback по году/месяцу остаётся derived.
     [getStatusDateField(status)]: explicitDate,
