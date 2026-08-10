@@ -7,9 +7,9 @@ import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
-import { fetchQuestByQuestId, type ApiQuestBundle } from '@/api/quests';
-import { useQuestsList } from '@/hooks/useQuestsApi';
-import { resolveQuestCitySegment } from '@/utils/questCityAlias';
+import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests';
+import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
+import { questRouteKey, resolveQuestCitySegment } from '@/utils/questCityAlias';
 import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import { fetchPlannedTrip, type PlannedTrip } from '@/api/plannedTrips';
 import { fetchPublicTrip, type PublicTrip } from '@/api/publicTrips';
@@ -277,7 +277,15 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
   const { data: questApiData } = useQuery<ApiQuestBundle | null>({
     queryKey: queryKeys.questBundle(questSlugForBreadcrumb),
-    queryFn: () => questSlugForBreadcrumb ? fetchQuestByQuestId(questSlugForBreadcrumb) : null,
+    // Слой данных квестов подтягивается только на самих страницах квестов.
+    // Крошки живут в шапке каждого маршрута, поэтому статический импорт
+    // `@/api/quests` держал бы его в стартовом графе всего сайта — см. шапку
+    // questsListCachePolicy.
+    queryFn: async () => {
+      if (!questSlugForBreadcrumb) return null;
+      const { fetchQuestByQuestId } = await import('@/api/quests');
+      return fetchQuestByQuestId(questSlugForBreadcrumb);
+    },
     enabled: !!questSlugForBreadcrumb,
     staleTime: 600_000,
     gcTime: 10 * 60 * 1000,
@@ -294,14 +302,29 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return parts.length === 2 ? parts[1] : null;
   }, [resolvedPathname]);
 
-  const { quests: questsForCityCrumb } = useQuestsList({ enabled: !!questCitySegment });
+  // Тот же ключ и та же политика кеша, что у `useQuestsList`, поэтому экран
+  // квестов и крошка делят один запрос. Но крошке хватает сырых `city_id`/
+  // `city_name` из ответа API, и она не зовёт `adaptMeta`: адаптер тянет за
+  // собой `geoCountry` с таблицей контуров стран, а она не нужна ни одному
+  // маршруту, кроме квестов и travel-деталей.
+  const { data: questCityMetas } = useQuery<ApiQuestMeta[]>({
+    queryKey: queryKeys.quests(),
+    queryFn: async ({ signal }) => {
+      const { fetchQuestsList } = await import('@/api/quests');
+      return fetchQuestsList({ signal });
+    },
+    enabled: !!questCitySegment,
+    staleTime: QUESTS_LIST_STALE_TIME,
+    gcTime: QUESTS_LIST_GC_TIME,
+  });
 
   const questCityName = useMemo(() => {
     if (!questCitySegment) return '';
-    const resolved = resolveQuestCitySegment(questCitySegment, questsForCityCrumb);
+    const metas = questCityMetas ?? [];
+    const resolved = resolveQuestCitySegment(questCitySegment, metas);
     if (!resolved) return '';
-    return questsForCityCrumb.find((q) => q.cityId === resolved.cityId)?.cityName || '';
-  }, [questCitySegment, questsForCityCrumb]);
+    return metas.find((meta) => questRouteKey(meta)?.cityId === resolved.cityId)?.city_name || '';
+  }, [questCitySegment, questCityMetas]);
 
   // Article title from API (for header/breadcrumbs on /article/[id] pages — F-19)
   const articleParamForBreadcrumb = useMemo(() => {
