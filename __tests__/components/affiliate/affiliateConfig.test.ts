@@ -51,6 +51,26 @@ describe('affiliateConfig', () => {
     expect(offer.subtitle).toContain('Польша')
   })
 
+  // #1386: страны, которые резолвер научился определять по координатам. Слаги
+  // проверены на живых страницах обеих площадок (с контролем на заведомо
+  // несуществующем слаге), поэтому ссылка обязана быть страновой, а не homepage.
+  it.each([
+    ['FI', 'finland'],
+    ['KG', 'kyrgyzstan'],
+    ['MN', 'mongolia'],
+    ['NO', 'norway'],
+    ['SE', 'sweden'],
+    ['DK', 'denmark'],
+  ])('deep-links both partners to the %s country page', (countryCode, slug) => {
+    process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
+    process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE = TOURS_TPL
+    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
+
+    const [tours, hotels] = getAffiliateOffers({ countryCode })
+    expect(tours.url).toContain(encodeURIComponent(`https://experience.tripster.ru/destinations/${slug}/`))
+    expect(hotels.url).toContain(encodeURIComponent(`https://ostrovok.ru/hotel/${slug}/`))
+  })
+
   it('hotels falls back to the Ostrovok homepage for an unmapped country', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
     process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
@@ -87,12 +107,48 @@ describe('affiliateConfig', () => {
     expect(offer.subtitle).not.toContain('Беларусь')
   })
 
-  it('still builds offers from a country name when no countryCode resolves', () => {
+  it('still builds offers from a country name when no countryCode resolves, without naming it', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
     process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
     const [offer] = getAffiliateOffers({ country: 'Беларусь' })
-    // no ISO code → homepage, but the offer still renders with the country in copy
+    // no ISO code → homepage: the offer still renders, but the copy goes neutral,
+    // because the click no longer takes the reader to Belarus.
     expect(offer.url).toContain(encodeURIComponent('https://ostrovok.ru/'))
-    expect(offer.subtitle).toContain('Беларусь')
+    expect(offer.subtitle).toBe('Отели и апартаменты рядом с маршрутом')
+  })
+
+  // #1371. Инвариант «копия ⇔ фактическая ссылка» для стран без страновой
+  // страницы у партнёров: CZ/DO нет в COUNTRY_SLUG, UA исключена намеренно, обе
+  // ссылки уходят на homepage — значит подпись не имеет права называть страну.
+  // Живой баг: travel 642/158 показывали «Отели и апартаменты — Чехия», а вели
+  // на ostrovok.ru/. Гард ловит любую новую страну, добавленную без слага.
+  // `city` здесь не для красоты: квесты передают city вместе с countryCode
+  // (questWizardSections), и без страновой страницы у партнёра настоящий город
+  // тоже нельзя ставить в подпись — ссылка ведёт не в Прагу, а на homepage.
+  it.each([
+    ['CZ', 'Чехия', 'Прага'],
+    ['DO', 'Доминиканская Республика', 'Пунта-Кана'],
+    ['UA', 'Украина', 'Львов'],
+    // #1386: geoCountry научился резолвить KR, но страновой страницы у Ostrovok
+    // для неё нет ни под одним слагом — значит подпись страну не называет.
+    ['KR', 'Южная Корея', 'Сеул'],
+  ])('keeps both offers but names no place for %s when the link is the homepage', (countryCode, country, city) => {
+    process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
+    process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE = TOURS_TPL
+    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
+
+    const offers = getAffiliateOffers({ countryCode, country, city, travelId: 642 })
+    expect(offers.map((o) => o.key)).toEqual(['tours', 'hotels'])
+    const [tours, hotels] = offers
+
+    // Точная копия, а не отсутствие подстроки: «Отели и апартаменты — » с
+    // отвалившимся местом тоже не содержит страны, но остаётся сломанной.
+    expect(tours.subtitle).toBe('Авторские экскурсии и местные гиды')
+    expect(tours.url).toContain(encodeURIComponent('https://experience.tripster.ru/'))
+    expect(tours.url).not.toContain(encodeURIComponent('/destinations/'))
+
+    expect(hotels.subtitle).toBe('Отели и апартаменты рядом с маршрутом')
+    expect(hotels.url).toContain(encodeURIComponent('https://ostrovok.ru/'))
+    expect(hotels.url).not.toContain(encodeURIComponent('/hotel/'))
   })
 })

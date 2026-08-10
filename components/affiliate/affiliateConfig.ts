@@ -5,7 +5,10 @@ import { translate as i18nT } from '@/i18n'
  * Travel rows have NO usable city in the data: `cityName` holds the reverse-geocoded
  * address of the first point ("Базилика Святого Стефана, 1, …, 1051, Венгрия"), so
  * travel callers pass only the country. Callers that DO know a real place name
- * (quest city, trip region) still pass `city` and it wins in the copy.
+ * (quest city, trip region) still pass `city` and it wins in the copy — but ONLY
+ * when `countryCode` resolves to a COUNTRY_SLUG entry, because that is what makes
+ * the link land somewhere. Pass no resolvable `countryCode` and the copy is
+ * place-less no matter how good the `city` is (see `resolvePlace`).
  * The only reliable location signal for travels is the country, derived from the first
  * map point's coordinates (same approach as the Belkraj widget). So offers link to a
  * COUNTRY-level destination, built in code from the ISO country code:
@@ -15,7 +18,8 @@ import { translate as i18nT } from '@/i18n'
  * sitemap-countries.xml); /experience/<X>/ is for CITIES and silently renders an
  * empty soft-404 shell (HTTP 200!) for non-city slugs — never link countries
  * there. Each offer falls back to the partner homepage when the country is
- * unknown/unmapped — never a dead page.
+ * unknown/unmapped — never a dead page — and the copy then names no place at
+ * all, so the text never promises a destination the click doesn't open.
  *
  * The owner pastes the tp.media wrapper (per-account marker + per-program
  * trs/p/campaign_id) into env with a `{url}` slot for the destination; the whole
@@ -57,7 +61,9 @@ export interface AffiliateOffer {
  *   Ostrovok  `https://ostrovok.ru/hotel/<slug>/`
  *   Tripster  `https://experience.tripster.ru/destinations/<slug>/`
  * Every slug is present in Tripster's sitemap-countries.xml AND serves a real
- * Ostrovok country page; an unmapped country falls back to the partner homepage.
+ * Ostrovok country page; an unmapped country falls back to the partner homepage
+ * and loses the place from its copy (see `resolvePlace`), so adding a slug is
+ * purely additive — a missing one degrades honestly instead of lying.
  * Slugs MUST stay lowercase. UA is intentionally absent (no Tripster
  * destination; Ostrovok geo-redirects it). Extend as new countries appear.
  */
@@ -68,7 +74,12 @@ const COUNTRY_SLUG: Record<string, string> = {
   AT: 'austria', CH: 'switzerland', NL: 'netherlands', PT: 'portugal',
   HR: 'croatia', SI: 'slovenia', AL: 'albania', IN: 'india', VN: 'vietnam',
   NO: 'norway', SE: 'sweden', DK: 'denmark', EG: 'egypt', MU: 'mauritius',
-  ME: 'montenegro',
+  ME: 'montenegro', FI: 'finland', KG: 'kyrgyzstan', MN: 'mongolia',
+  // KR намеренно отсутствует: у Tripster страница есть, у Ostrovok ни одного
+  // рабочего слага (south-korea / korea / republic-of-korea / korea-south — 404,
+  // проверено 2026-08-10 с контролем на заведомо несуществующем слаге). Правило
+  // выше требует обе площадки, поэтому Южная Корея честно деградирует до
+  // нейтральной ссылки, пока слаг Ostrovok не найдётся.
 }
 
 const OSTROVOK_HOME = 'https://ostrovok.ru/'
@@ -125,8 +136,16 @@ export const getAffiliateMarker = (): string => clean(process.env.EXPO_PUBLIC_TR
 
 export const isAffiliateEnabled = (): boolean => getAffiliateMarker().length > 0
 
-/** Destination label shown in the offer copy. */
-const resolvePlace = (ctx: AffiliateOfferContext): string => clean(ctx.city) || clean(ctx.country)
+/**
+ * Destination label shown in the offer copy — only when the link actually lands
+ * on that place. Both partners build their URL from the same country slug, so a
+ * country that is missing (CZ, DO) or intentionally excluded (UA) from
+ * COUNTRY_SLUG sends BOTH offers to the partner homepage; naming it there sold
+ * «Отели и апартаменты — Чехия» and opened `ostrovok.ru/`. No slug → no place in
+ * the copy: the offer stays, the promise shrinks to what the click delivers.
+ */
+const resolvePlace = (ctx: AffiliateOfferContext): string =>
+  resolveCountrySlug(ctx) ? clean(ctx.city) || clean(ctx.country) : ''
 
 const resolveSubId = (ctx: AffiliateOfferContext): string => {
   const id = clean(ctx.travelId != null ? String(ctx.travelId) : '')
