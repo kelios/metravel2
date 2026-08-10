@@ -266,6 +266,7 @@ let eagerRequests = 0
 let eagerRequestsPage = null
 const eagerRequestBreaches = new Map()
 const eagerRequestRoutes = new Set()
+const payloadRouteCounts = new Map()
 if (budget?.eager?.htmlRoutes === true) {
   if (!fs.existsSync(htmlDir)) {
     breaches.push({ label: `EAGER HTML directory missing: ${path.relative(repoRoot, htmlDir)}`, missing: true })
@@ -294,7 +295,15 @@ if (budget?.eager?.htmlRoutes === true) {
           .filter(Boolean),
       )
       if (!scriptFiles.size) continue
-      const result = { raw: 0, gzip: 0, brotli: 0, requests: scriptFiles.size, missing: [], file: htmlFile }
+      const result = {
+        raw: 0,
+        gzip: 0,
+        brotli: 0,
+        requests: scriptFiles.size,
+        scripts: scriptFiles,
+        missing: [],
+        file: htmlFile,
+      }
       for (const scriptFile of scriptFiles) {
         const sizes = fileSizes.get(scriptFile)
         if (!sizes) {
@@ -331,6 +340,72 @@ if (budget?.eager?.htmlRoutes === true) {
           eagerRequestBreaches.set(routeKey, { actual: candidate.requests, max: routeMax })
         }
       }
+      // #1393: атрибуция «тяжёлый payload → маршруты, которые его тянут».
+      // Ни байтовый, ни счётчиковый бюджет не видят, ЧТО именно приехало на
+      // маршрут: #1286 меряет сумму по худшей странице, #1372 — число тегов.
+      // Модуль, достижимый из двух и более async-корней, поднимается Metro в
+      // shared-чанк без проверки, кому этот чанк нужен, и оба гейта остаются
+      // зелёными. Здесь payload опознаётся по маркеру в собранном JS, а не по
+      // имени чанка: имена вида `__shared-5` перенумеровываются от сборки к
+      // сборке (в #1393 один и тот же payload успел побывать `__shared-5`,
+      // `__shared-14` и `__shared-59`), и пин по имени не пережил бы и одной
+      // пересборки.
+      for (const [payloadName, spec] of Object.entries(budget?.eager?.payloadRoutes || {})) {
+        const marker = spec?.marker
+        if (!marker) continue
+        const carriers = files.filter((file) =>
+          fs.readFileSync(path.join(jsDir, file), 'utf8').includes(marker),
+        )
+        if (!carriers.length) {
+          // Маркер пропал — payload переехал, переименовался или вырезан.
+          // Молча пропускать нельзя: гейт перестал бы что-либо охранять.
+          breaches.push({
+            label: `EAGER payload marker not found in build: ${payloadName}`,
+            missing: true,
+          })
+          continue
+        }
+        const carrierSet = new Set(carriers)
+        // Ключи маршрутов, а не файлы: `search/index.html` и `search.html` — одна
+        // страница, и без схлопывания она давала бы двойной вклад и в числитель,
+        // и в знаменатель.
+        const routes = new Set(
+          candidates
+            .filter((candidate) => [...candidate.scripts].some((script) => carrierSet.has(script)))
+            .map((candidate) =>
+              toRouteKey(path.relative(htmlDir, candidate.file) || path.basename(candidate.file)),
+            ),
+        )
+        const totalRoutes = new Set(
+          candidates.map((candidate) =>
+            toRouteKey(path.relative(htmlDir, candidate.file) || path.basename(candidate.file)),
+          ),
+        )
+        payloadRouteCounts.set(payloadName, { routes: routes.size, total: totalRoutes.size })
+        checkCount(`EAGER payload routes (${payloadName})`, routes.size, spec.maxRoutes)
+        // Односторонний рэтчет `maxRoutes` не защищает конкретный маршрут:
+        // освободить главную и одновременно нагрузить карту он разрешает.
+        // `mustNotLoad` закрепляет уже освобождённые маршруты поимённо.
+        const forbidden = new Set(Array.isArray(spec.mustNotLoad) ? spec.mustNotLoad : [])
+        for (const routeKey of forbidden) {
+          if (!totalRoutes.has(routeKey)) {
+            // Переименованная или исчезнувшая страница молча снимала бы пин —
+            // ровно так гейт и перестаёт охранять то, ради чего заведён.
+            breaches.push({
+              label: `EAGER payload pinned route missing from build: ${payloadName} on ${routeKey}`,
+              missing: true,
+            })
+            continue
+          }
+          if (routes.has(routeKey)) {
+            breaches.push({
+              label: `EAGER payload on forbidden route: ${payloadName} on ${routeKey}`,
+              forbidden: true,
+            })
+          }
+        }
+      }
+
       const worst = candidates.sort((a, b) => b.brotli - a.brotli)[0]
       eager = { raw: worst.raw, gzip: worst.gzip, brotli: worst.brotli }
       eagerPage = path.relative(htmlDir, worst.file) || path.basename(worst.file)
@@ -371,6 +446,16 @@ if (budget.eager) {
       breaches.push({ label: `EAGER budgeted route missing from build: ${routeKey}`, missing: true })
     }
   }
+  // Тот же fail-closed принцип, что и у счётчика запросов: настроенная
+  // атрибуция payload'ов без разбора HTML-маршрутов молчала бы вместо проверки.
+  for (const payloadName of Object.keys(budget.eager.payloadRoutes || {})) {
+    if (!payloadRouteCounts.has(payloadName)) {
+      breaches.push({
+        label: `EAGER payload attribution unavailable: ${payloadName} (htmlRoutes disabled?)`,
+        missing: true,
+      })
+    }
+  }
 }
 
 if (JSON_OUT) {
@@ -395,6 +480,9 @@ if (JSON_OUT) {
         eagerRequestsPage,
         eagerRequestsByRoute: Object.fromEntries(
           [...eagerRequestBreaches].map(([routeKey, value]) => [routeKey, value.actual]),
+        ),
+        eagerPayloadRoutes: Object.fromEntries(
+          [...payloadRouteCounts].map(([payloadName, value]) => [payloadName, value.routes]),
         ),
         forbiddenChunks: forbiddenChunkNames,
         chunkCount: chunks.size,
@@ -423,12 +511,21 @@ if (JSON_OUT) {
         (budget?.eager?.maxRequests != null ? ` / ${budget.eager.maxRequests}` : ''),
     )
   }
+  for (const [payloadName, { routes, total }] of payloadRouteCounts) {
+    const max = budget?.eager?.payloadRoutes?.[payloadName]?.maxRoutes
+    console.log(
+      `  eager payload ${payloadName}: ${routes} / ${total} HTML routes` +
+        (max != null ? ` (max ${max})` : ''),
+    )
+  }
   if (breaches.length === 0) {
     console.log('✓ all budgeted chunks within limits')
   } else {
     console.log(`✗ ${breaches.length} budget breach(es):`)
     for (const b of breaches) {
-      if (b.missing) {
+      // `missing`/`forbidden` — не размерные нарушения: у них нет ни actual, ни
+      // budget, и общий формат печатал бы «undefined KB > undefined KB».
+      if (b.missing || b.forbidden) {
         console.log(`  - ${b.label}`)
       } else if (b.actual != null) {
         console.log(`  - ${b.label}: ${b.actual} > ${b.max} (budget ${b.max})`)

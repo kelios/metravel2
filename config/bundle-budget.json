@@ -1,5 +1,5 @@
 {
-  "description": "Web bundle size budget (KB). Regression guard: critical path + eager/feature chunks and release total without language-on-demand catalogs. #1286 uses route-scoped shared chunks instead of a global eager __common; the hard 800 KiB Brotli ceiling is measured from the complete script set of the worst generated HTML route with no tolerance. #1372 adds eager.maxRequests / eager.maxRequestsByRoute: the same script sets counted as REQUESTS, because at 150 ms mobile latency round-trips dominate over bytes and the byte ceiling alone misses that regression. Per-route ceilings are pinned to the values measured on 2026-08-10 (index 36, search 32, map 40, quests 34, travels/[param] 59) with no spare, so a route-local split regression cannot hide under the global worst route; maxRequests is the fallback ceiling for routes without their own line. Counts only eager &lt;script&gt; tags in the exported HTML — runtime import() chunks (roughly half of the 62 JS requests measured on /search before app-hydrated) need a network probe and are NOT covered here. BE/UK/PL/EN remain deferred and separately budgeted. Other budgets keep at most 5% tolerance. Regenerate only for diagnosis, then re-curate without raising limits. Runs in release:check after build:web:prod.",
+  "description": "Web bundle size budget (KB). Regression guard: critical path + eager/feature chunks and release total without language-on-demand catalogs. #1286 uses route-scoped shared chunks instead of a global eager __common; the hard 800 KiB Brotli ceiling is measured from the complete script set of the worst generated HTML route with no tolerance. #1372 adds eager.maxRequests / eager.maxRequestsByRoute: the same script sets counted as REQUESTS, because at 150 ms mobile latency round-trips dominate over bytes and the byte ceiling alone misses that regression. Per-route ceilings are pinned to the values measured on 2026-08-10 (index 36, search 32, map 40, quests 34, travels/[param] 59) with no spare, so a route-local split regression cannot hide under the global worst route; maxRequests is the fallback ceiling for routes without their own line. Counts only eager &lt;script&gt; tags in the exported HTML — runtime import() chunks (roughly half of the 62 JS requests measured on /search before app-hydrated) need a network probe and are NOT covered here. #1393 adds eager.payloadRoutes: WHICH routes carry a heavy first-party payload, because neither the byte nor the request ceiling answers that — a module reachable from two or more async roots is hoisted into a shared chunk with no check on who needs it, and both earlier gates stay green. Payloads are identified by a marker string in the built JS, never by chunk name: __shared-N is renumbered between builds (the same payload was __shared-5, __shared-14 and __shared-59 within one session). maxRoutes is a one-way ratchet pinned to the measured count; mustNotLoad pins already-freed routes by name so the ratchet cannot trade the home page for the map. BE/UK/PL/EN remain deferred and separately budgeted. Other budgets keep at most 5% tolerance. Regenerate only for diagnosis, then re-curate without raising limits. Runs in release:check after build:web:prod.",
   "tolerancePct": 5,
   "deferredChunks": [
     "locale-be",
@@ -24,6 +24,13 @@
       "map.html": 40,
       "quests.html": 34,
       "(tabs)/travels/[param].html": 59
+    },
+    "payloadRoutes": {
+      "geoCountryOutlines": {
+        "marker": "4155,4241,-5,23,-8,10",
+        "maxRoutes": 1663,
+        "mustNotLoad": []
+      }
     },
     "tolerancePct": 0
   },

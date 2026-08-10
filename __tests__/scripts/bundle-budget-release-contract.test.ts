@@ -386,4 +386,257 @@ describe('bundle budget release contract', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
   })
+
+  // #1393: ни вес, ни число запросов не отвечают на вопрос «ЧТО именно приехало
+  // на этот маршрут». Модуль, достижимый из двух и более async-корней, Metro
+  // поднимает в shared-чанк без проверки, кому чанк нужен, и оба прежних гейта
+  // остаются зелёными. Атрибуция payload'а к маршрутам закрывает этот пробел.
+  describe('eager payload route attribution', () => {
+    // Хелпер: сборка из одного чанка с маркером и одного без, разложенная по
+    // указанным маршрутам.
+    const buildFixture = (
+      tmpDir: string,
+      routesWithPayload: string[],
+      routesWithout: string[],
+      marker: string,
+    ) => {
+      const jsDir = path.join(tmpDir, 'js')
+      const htmlDir = path.join(tmpDir, 'html')
+      fs.mkdirSync(jsDir, { recursive: true })
+      fs.mkdirSync(htmlDir, { recursive: true })
+      fs.writeFileSync(path.join(jsDir, 'payload-abcdef.js'), `globalThis.d='${marker}';`)
+      fs.writeFileSync(path.join(jsDir, 'plain-abcdef.js'), 'globalThis.x = 1;')
+      const tag = (name: string) => `<script src="/_expo/static/js/web/${name}-abcdef.js" defer></script>`
+      for (const route of routesWithPayload) {
+        fs.mkdirSync(path.dirname(path.join(htmlDir, route)), { recursive: true })
+        fs.writeFileSync(path.join(htmlDir, route), `<html><body>${tag('plain')}${tag('payload')}</body></html>`)
+      }
+      for (const route of routesWithout) {
+        fs.mkdirSync(path.dirname(path.join(htmlDir, route)), { recursive: true })
+        fs.writeFileSync(path.join(htmlDir, route), `<html><body>${tag('plain')}</body></html>`)
+      }
+      return { jsDir, htmlDir }
+    }
+
+    const writeBudget = (tmpDir: string, payloadSpec: Record<string, unknown>) => {
+      const testBudgetPath = path.join(tmpDir, 'budget.json')
+      fs.writeFileSync(
+        testBudgetPath,
+        JSON.stringify({
+          eager: {
+            chunks: [],
+            htmlRoutes: true,
+            payloadRoutes: { geoCountryOutlines: payloadSpec },
+            tolerancePct: 0,
+          },
+        }),
+      )
+      return testBudgetPath
+    }
+
+    it('pins the committed payload attribution so it cannot be quietly dropped', () => {
+      const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'))
+      const spec = budget?.eager?.payloadRoutes?.geoCountryOutlines
+
+      ensure(!!spec, 'config/bundle-budget.json must keep eager.payloadRoutes.geoCountryOutlines.')
+      // Маркер — фрагмент первого кольца контура Грузии. Пин по имени чанка не
+      // годится: `__shared-N` перенумеровывается от сборки к сборке.
+      expect(spec.marker).toBe('4155,4241,-5,23,-8,10')
+      expect(typeof spec.maxRoutes).toBe('number')
+      expect(Array.isArray(spec.mustNotLoad)).toBe(true)
+    })
+
+    it('counts only the routes that actually load the payload', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-payload-count-')
+      try {
+        const marker = '4155,4241,-5,23,-8,10'
+        const { jsDir, htmlDir } = buildFixture(tmpDir, ['quests.html'], ['index.html', 'map.html'], marker)
+        const testBudgetPath = writeBudget(tmpDir, { marker, maxRoutes: 1, mustNotLoad: [] })
+
+        const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_HTML_DIR: htmlDir,
+          BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+
+        expect(result.status).toBe(0)
+        expect(JSON.parse(result.stdout).eagerPayloadRoutes).toEqual({ geoCountryOutlines: 1 })
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    it('fails closed when the payload spreads to more routes than pinned', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-payload-spread-')
+      try {
+        const marker = '4155,4241,-5,23,-8,10'
+        const { jsDir, htmlDir } = buildFixture(tmpDir, ['quests.html', 'index.html'], ['map.html'], marker)
+        const testBudgetPath = writeBudget(tmpDir, { marker, maxRoutes: 1, mustNotLoad: [] })
+
+        const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_HTML_DIR: htmlDir,
+          BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+
+        expect(result.status).toBe(1)
+        expect(JSON.parse(result.stdout).breaches).toContainEqual(
+          expect.objectContaining({
+            label: 'EAGER payload routes (geoCountryOutlines)',
+            actual: 2,
+            max: 1,
+          }),
+        )
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    // Односторонний рэтчет по количеству разрешает разгрузить главную и тем же
+    // числом нагрузить карту. Поимённый список закрывает уже отвоёванное.
+    it('fails closed when the payload returns to a route freed earlier', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-payload-forbidden-')
+      try {
+        const marker = '4155,4241,-5,23,-8,10'
+        const { jsDir, htmlDir } = buildFixture(tmpDir, ['index.html'], ['quests.html'], marker)
+        const testBudgetPath = writeBudget(tmpDir, {
+          marker,
+          maxRoutes: 99,
+          mustNotLoad: ['index.html'],
+        })
+
+        const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_HTML_DIR: htmlDir,
+          BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+
+        expect(result.status).toBe(1)
+        expect(JSON.parse(result.stdout).breaches).toContainEqual({
+          label: 'EAGER payload on forbidden route: geoCountryOutlines on index.html',
+          forbidden: true,
+        })
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    // Пин на переименованную страницу снимался бы молча — тот же класс дыры,
+    // что и пропавший маркер.
+    it('fails closed when a pinned route disappears from the build', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-payload-pin-gone-')
+      try {
+        const marker = '4155,4241,-5,23,-8,10'
+        const { jsDir, htmlDir } = buildFixture(tmpDir, ['quests.html'], [], marker)
+        const testBudgetPath = writeBudget(tmpDir, {
+          marker,
+          maxRoutes: 99,
+          mustNotLoad: ['renamed-away.html'],
+        })
+
+        const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_HTML_DIR: htmlDir,
+          BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+
+        expect(result.status).toBe(1)
+        expect(JSON.parse(result.stdout).breaches).toContainEqual({
+          label: 'EAGER payload pinned route missing from build: geoCountryOutlines on renamed-away.html',
+          missing: true,
+        })
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    // `search.html` и `search/index.html` — одна страница; без схлопывания она
+    // давала бы двойной вклад и рэтчет считал бы несуществующий рост.
+    it('collapses the duplicate index.html route key when counting', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-payload-dedup-')
+      try {
+        const marker = '4155,4241,-5,23,-8,10'
+        const { jsDir, htmlDir } = buildFixture(
+          tmpDir,
+          ['search.html', 'search/index.html'],
+          ['map.html'],
+          marker,
+        )
+        const testBudgetPath = writeBudget(tmpDir, { marker, maxRoutes: 1, mustNotLoad: [] })
+
+        const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_HTML_DIR: htmlDir,
+          BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+
+        expect(result.status).toBe(0)
+        expect(JSON.parse(result.stdout).eagerPayloadRoutes).toEqual({ geoCountryOutlines: 1 })
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    // Молчаливый пропуск был бы худшим исходом: гейт выглядит зелёным, но не
+    // охраняет ничего. Маркер обязан находиться в сборке.
+    it('fails closed when the payload marker is absent from the build', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-payload-missing-')
+      try {
+        const { jsDir, htmlDir } = buildFixture(tmpDir, [], ['index.html'], 'unused-marker')
+        const testBudgetPath = writeBudget(tmpDir, {
+          marker: 'marker-that-does-not-exist',
+          maxRoutes: 99,
+          mustNotLoad: [],
+        })
+
+        const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_HTML_DIR: htmlDir,
+          BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+
+        expect(result.status).toBe(1)
+        expect(JSON.parse(result.stdout).breaches).toContainEqual({
+          label: 'EAGER payload marker not found in build: geoCountryOutlines',
+          missing: true,
+        })
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    it('fails closed when payload attribution is configured but HTML routes are off', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-payload-nohtml-')
+      try {
+        const jsDir = path.join(tmpDir, 'js')
+        fs.mkdirSync(jsDir, { recursive: true })
+        fs.writeFileSync(path.join(jsDir, 'payload-abcdef.js'), "globalThis.d='marker';")
+        const testBudgetPath = path.join(tmpDir, 'budget.json')
+        fs.writeFileSync(
+          testBudgetPath,
+          JSON.stringify({
+            eager: {
+              chunks: [],
+              htmlRoutes: false,
+              payloadRoutes: { geoCountryOutlines: { marker: 'marker', maxRoutes: 99 } },
+              tolerancePct: 0,
+            },
+          }),
+        )
+
+        const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+
+        expect(result.status).toBe(1)
+        expect(JSON.parse(result.stdout).breaches).toContainEqual({
+          label: 'EAGER payload attribution unavailable: geoCountryOutlines (htmlRoutes disabled?)',
+          missing: true,
+        })
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+  })
 })
