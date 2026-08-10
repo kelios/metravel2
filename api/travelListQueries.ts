@@ -17,6 +17,7 @@ import {
     savePublicStalePayload,
 } from '@/utils/publicStaleCache';
 import { normalizeTravelItem } from './travelsNormalize';
+import { takeTravelListPreload } from '@/utils/travelListPreload';
 import { translate as i18nT } from '@/i18n';
 import {
     LONG_TIMEOUT,
@@ -242,12 +243,30 @@ export const fetchTravels = async (
             ...(options?.signal ? { signal: options.signal } : {}),
         };
 
-        const res = options?.signal
-            ? await fetchWithTimeout(urlTravel, baseInit, LONG_TIMEOUT)
-            : await retry(
+        const requestTravels = () => options?.signal
+            ? fetchWithTimeout(urlTravel, baseInit, LONG_TIMEOUT)
+            : retry(
                 async () => fetchWithTimeout(urlTravel, baseInit, LONG_TIMEOUT),
                 { maxAttempts: 2, delay: 1000, shouldRetry: (error) => isRetryableError(error) }
             );
+
+        // #1372: тот же самый запрос мог уйти из статического HTML ещё до
+        // гидратации. Забираем его сырой Response, чтобы вся постобработка ниже
+        // осталась общей. Сам прогрев отменить нельзя — он уже в полёте, — но
+        // отмену потребителя после его завершения уважаем, иначе отменённый
+        // запрос молча дописал бы public-stale кэш.
+        const preloadedResponse = takeTravelListPreload(urlTravel);
+        const res = preloadedResponse
+            ? await preloadedResponse.catch((error) => {
+                if (__DEV__) devWarn('Travel list preload failed, falling back to a fresh request:', error);
+                return requestTravels();
+            })
+            : await requestTravels();
+        if (preloadedResponse && options?.signal?.aborted) {
+            const abortError = new Error('Aborted');
+            abortError.name = 'AbortError';
+            throw abortError;
+        }
 
         const parseFallback: Travel[] = [];
         const result = await safeJsonParse<{

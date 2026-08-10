@@ -8,6 +8,14 @@ import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
 import { getRootVisibilityGateCss, getTravelRouteClassScript } from '@/utils/htmlShell';
 import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap';
 import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo';
+import { isLikelySelfProxyApiUrl, resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
+import {
+  buildTravelListPreloadUrl,
+  TRAVEL_LIST_FILTER_PARAM_KEYS,
+  TRAVEL_LIST_PRELOAD_GLOBAL,
+  TRAVEL_LIST_PRELOAD_TIMEOUT_MS,
+} from '@/utils/travelListPreload';
+import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
 
@@ -116,6 +124,89 @@ const getFontFaceSwapScript = () => String.raw`
 })();
 `;
 
+
+/**
+ * #1372: прогрев первой страницы каталога `/search` до гидратации.
+ *
+ * Запрос строится на сборке из тех же env, что и `api/travelQueryShared`,
+ * поэтому URL совпадает побайтово с тем, что потом соберёт React Query, и
+ * `fetchTravels` забирает готовый `Response` вместо второго запроса.
+ *
+ * Скрипт не выпускается, когда база API на рантайме может разойтись со
+ * сборочной — это ровно те ветки `resolveApiBaseUrl`, что смотрят на
+ * `window.location` (E2E, локальный API, self-proxy dev-хост). Тогда прогрев
+ * был бы лишним запросом мимо кэша, а не прогревом.
+ */
+const TRAVEL_LIST_PRELOAD_ENDPOINT = (() => {
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+  const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
+  const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
+  if (isE2E || isLocalApi || isLikelySelfProxyApiUrl(envApiUrl)) return '';
+
+  return buildTravelListPreloadUrl(
+    resolveApiBaseUrl({
+      platformOS: 'web',
+      envApiUrl,
+      prodApiUrl: process.env.PROD_API_URL,
+      nodeEnv: process.env.NODE_ENV,
+      isE2E,
+      isLocalApi,
+      windowOrigin: null,
+      windowHostname: null,
+    }),
+    PER_PAGE,
+  );
+})();
+
+const getTravelListPreloadScript = () => String.raw`
+(function(){
+  try {
+    var endpoint = ${JSON.stringify(TRAVEL_LIST_PRELOAD_ENDPOINT)};
+    if (!endpoint) return;
+    var loc = window.location;
+    var path = String((loc && loc.pathname) || '');
+    if (path.length > 1) path = path.replace(/\/+$/, '');
+    if (path !== '/search') return;
+    // Фильтр, сортировка или поисковая строка в URL делают запрос другим —
+    // греть дефолтный нельзя. Трекинговые параметры (utm_*, fbclid, …) на
+    // запрос не влияют и прогрев не гасят.
+    var search = (loc && loc.search) || '';
+    if (search) {
+      var params = new URLSearchParams(search);
+      var filterKeys = ${JSON.stringify(TRAVEL_LIST_FILTER_PARAM_KEYS)};
+      for (var i = 0; i < filterKeys.length; i++) {
+        if (params.has(filterKeys[i])) return;
+      }
+    }
+    if (window[${JSON.stringify(TRAVEL_LIST_PRELOAD_GLOBAL)}]) return;
+    // Свой таймаут обязателен: потребитель ждёт именно этот промис, а
+    // fetchWithTimeout с его LONG_TIMEOUT здесь уже не участвует. Окно то же
+    // самое, поэтому обрыв не может добавить второй полный запрос поверх
+    // уже потраченного времени.
+    var controller = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function(){
+      try { if (controller) controller.abort(); } catch (_e) {}
+    }, ${TRAVEL_LIST_PRELOAD_TIMEOUT_MS});
+    // credentials:'omit' повторяет getApiRequestCredentials(skipAuth) для
+    // публичного каталога: с 'include' это был бы другой запрос.
+    var response = fetch(endpoint, {
+      method: 'GET',
+      credentials: 'omit',
+      signal: controller ? controller.signal : undefined
+    });
+    // Отказ обрабатывает потребитель (он уйдёт на обычный запрос); здесь гасим
+    // только unhandled rejection, не подменяя сам промис.
+    try {
+      response.then(function(){ clearTimeout(timer); }, function(){ clearTimeout(timer); });
+    } catch (_e) {}
+    window[${JSON.stringify(TRAVEL_LIST_PRELOAD_GLOBAL)}] = {
+      url: endpoint,
+      startedAt: Date.now(),
+      response: response
+    };
+  } catch (_e) {}
+})();
+`;
 
 const getTravelHeroPreloadScript = () => String.raw`
 (function(){
@@ -416,6 +507,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
           first painted tile early enough to meet the load-delay budget. */}
       <script
         dangerouslySetInnerHTML={{ __html: buildMapHeadBootstrapScript() }}
+      />
+
+      {/* /search: стартуем запрос каталога здесь же, рядом с бутстрапом карты.
+          Гидратация на мобильном профиле занимает ~4,7 с, и до неё страница
+          физически не могла даже начать запрос данных (#1372). */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getTravelListPreloadScript() }}
       />
 
       {/* Legacy URL guard: /?param=<id|slug> -> /travels/<id|slug> */}

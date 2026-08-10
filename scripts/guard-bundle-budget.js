@@ -211,6 +211,29 @@ function check(label, actualKB, maxKB, tolerance = tol) {
   }
 }
 
+// #1372: счётчик, а не байты. После сплита #1286 маршрут стал тянуть десятки
+// отдельных JS-файлов, и на мобильной задержке 150 мс round-trip'ы доминируют
+// над весом — байтовый бюджет этот класс регрессии не видит. Допуска нет:
+// счётчик целый и растёт только осознанной правкой разбиения.
+//
+// Область охвата: считаются ТОЛЬКО eager-запросы, объявленные тегами <script>
+// в статическом HTML. Динамические import()-чанки маршрута сюда не попадают:
+// прод-замер #1372 дал 62 сетевых JS-запроса до `app-hydrated` при 32 тегах в
+// `/search`, то есть примерно половина графа приходит рантаймом и этим гейтом
+// не покрыта. Ловить её нужно сетевым прогоном, а не разбором HTML.
+function checkCount(label, actual, max) {
+  if (max == null) return
+  if (actual > max) {
+    breaches.push({ label, actual, max })
+  }
+}
+
+// `search/index.html` и `search.html` — одна и та же страница; ключ маршрута
+// должен быть один, иначе бюджет пришлось бы дублировать.
+function toRouteKey(relativePath) {
+  return relativePath.replace(/\/index\.html$/, '.html')
+}
+
 for (const [name, b] of Object.entries(budget.chunks || {})) {
   const c = chunks.get(name)
   if (!c) continue // chunk dropped/renamed — not a size regression
@@ -239,6 +262,10 @@ const configuredEager = eagerChunkNames.reduce(
 )
 let eager = configuredEager
 let eagerPage = null
+let eagerRequests = 0
+let eagerRequestsPage = null
+const eagerRequestBreaches = new Map()
+const eagerRequestRoutes = new Set()
 if (budget?.eager?.htmlRoutes === true) {
   if (!fs.existsSync(htmlDir)) {
     breaches.push({ label: `EAGER HTML directory missing: ${path.relative(repoRoot, htmlDir)}`, missing: true })
@@ -267,7 +294,7 @@ if (budget?.eager?.htmlRoutes === true) {
           .filter(Boolean),
       )
       if (!scriptFiles.size) continue
-      const result = { raw: 0, gzip: 0, brotli: 0, missing: [], file: htmlFile }
+      const result = { raw: 0, gzip: 0, brotli: 0, requests: scriptFiles.size, missing: [], file: htmlFile }
       for (const scriptFile of scriptFiles) {
         const sizes = fileSizes.get(scriptFile)
         if (!sizes) {
@@ -283,6 +310,27 @@ if (budget?.eager?.htmlRoutes === true) {
     if (!candidates.length) {
       breaches.push({ label: 'EAGER HTML route scripts missing', missing: true })
     } else {
+      // Самая тяжёлая и самая «многозапросная» страница — не обязательно одна и
+      // та же, поэтому счётчик берём отдельным максимумом.
+      const heaviestByRequests = candidates.reduce((a, b) => (b.requests > a.requests ? b : a))
+      eagerRequests = heaviestByRequests.requests
+      eagerRequestsPage = toRouteKey(
+        path.relative(htmlDir, heaviestByRequests.file) || path.basename(heaviestByRequests.file),
+      )
+      // Потолок нужен ПОМАРШРУТНЫЙ: глобальный максимум держит только самый
+      // многозапросный маршрут, а регрессия на `/search` (32 → 55) прошла бы
+      // под ним незамеченной.
+      for (const candidate of candidates) {
+        const routeKey = toRouteKey(
+          path.relative(htmlDir, candidate.file) || path.basename(candidate.file),
+        )
+        const routeMax = budget?.eager?.maxRequestsByRoute?.[routeKey]
+        if (routeMax == null) continue
+        eagerRequestRoutes.add(routeKey)
+        if (candidate.requests > routeMax) {
+          eagerRequestBreaches.set(routeKey, { actual: candidate.requests, max: routeMax })
+        }
+      }
       const worst = candidates.sort((a, b) => b.brotli - a.brotli)[0]
       eager = { raw: worst.raw, gzip: worst.gzip, brotli: worst.brotli }
       eagerPage = path.relative(htmlDir, worst.file) || path.basename(worst.file)
@@ -303,6 +351,26 @@ if (budget.eager) {
   check('EAGER (raw)', toKB(eager.raw), budget.eager.maxRawKB, eagerTol)
   check('EAGER (gzip)', toKB(eager.gzip), budget.eager.maxGzipKB, eagerTol)
   check('EAGER (brotli)', toKB(eager.brotli), budget.eager.maxBrotliKB, eagerTol)
+  const wantsRequestBudget =
+    budget.eager.maxRequests != null || budget.eager.maxRequestsByRoute != null
+  if (wantsRequestBudget && !eagerRequests) {
+    breaches.push({ label: 'EAGER HTML request count unavailable (htmlRoutes disabled?)', missing: true })
+  }
+  for (const [routeKey, { actual, max }] of eagerRequestBreaches) {
+    checkCount(`EAGER (requests, ${routeKey})`, actual, max)
+  }
+  // Общий потолок ловит маршруты без собственной строки бюджета — в том числе
+  // только что появившиеся.
+  checkCount(
+    `EAGER (requests${eagerRequestsPage ? `, worst HTML ${eagerRequestsPage}` : ''})`,
+    eagerRequests,
+    budget.eager.maxRequests,
+  )
+  for (const routeKey of Object.keys(budget.eager.maxRequestsByRoute || {})) {
+    if (!eagerRequestRoutes.has(routeKey)) {
+      breaches.push({ label: `EAGER budgeted route missing from build: ${routeKey}`, missing: true })
+    }
+  }
 }
 
 if (JSON_OUT) {
@@ -323,6 +391,11 @@ if (JSON_OUT) {
         eagerBrotliKB: toKB(eager.brotli),
         eagerChunks: eagerChunkNames,
         eagerPage,
+        eagerRequests,
+        eagerRequestsPage,
+        eagerRequestsByRoute: Object.fromEntries(
+          [...eagerRequestBreaches].map(([routeKey, value]) => [routeKey, value.actual]),
+        ),
         forbiddenChunks: forbiddenChunkNames,
         chunkCount: chunks.size,
         breaches,
@@ -344,16 +417,24 @@ if (JSON_OUT) {
         `${toKB(eager.gzip)} KB gzip / ${toKB(eager.brotli)} KB brotli`,
     )
   }
+  if (eagerRequests) {
+    console.log(
+      `  eager JS requests (worst HTML ${eagerRequestsPage}): ${eagerRequests}` +
+        (budget?.eager?.maxRequests != null ? ` / ${budget.eager.maxRequests}` : ''),
+    )
+  }
   if (breaches.length === 0) {
     console.log('✓ all budgeted chunks within limits')
   } else {
     console.log(`✗ ${breaches.length} budget breach(es):`)
     for (const b of breaches) {
-      console.log(
-        b.missing
-          ? `  - ${b.label}`
-          : `  - ${b.label}: ${b.actualKB} KB > ${b.limitKB} KB (budget ${b.maxKB} KB)`,
-      )
+      if (b.missing) {
+        console.log(`  - ${b.label}`)
+      } else if (b.actual != null) {
+        console.log(`  - ${b.label}: ${b.actual} > ${b.max} (budget ${b.max})`)
+      } else {
+        console.log(`  - ${b.label}: ${b.actualKB} KB > ${b.limitKB} KB (budget ${b.maxKB} KB)`)
+      }
     }
   }
 }
