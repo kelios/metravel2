@@ -150,18 +150,39 @@ describe('AffiliateSection native', () => {
     expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/poland/'))
   })
 
-  it('falls back to the partner homepage when the first point is outside the declared list', () => {
+  // Реальная статья, из-за которой появился гейт «объявлена ли страна в списке».
+  // Пока `getCountryCodeByCoords` работал по bbox, Тбилиси резолвился как RU и
+  // увёл бы читателя на Россию; с контурами страна первой точки — GE, и она в
+  // списке объявлена, поэтому ссылка обязана вести именно в Грузию.
+  it('deep-links a multi-country route to the declared country of the first point', () => {
     const georgia = {
       id: 213,
       cityName: 'Тбилисский ботанический сад, Тбилиси, Грузия',
       countryName: 'Украина, Грузия',
       countryCode: 'ua, ge',
-      // Тбилиси лежит в bbox России (известное ограничение utils/geoCountry.ts),
-      // RU в списке не объявлен — значит гадание отбрасывается целиком.
       travelAddress: [{ id: 1, address: 'Тбилисский ботанический сад', coord: '41.6873906,44.8022161' }],
     } as any
 
     const { getByText } = render(<AffiliateSection travel={georgia} styles={styles} />)
+    fireEvent.press(getByText('Подобрать жильё'))
+
+    expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/georgia/'))
+    expect(hotelsDestination()).not.toContain('russia')
+  })
+
+  // Инвариант отдельно от точности гео-таблицы: что бы ни вернул резолвер, код
+  // страны принимается только если он объявлен в списке маршрута. Точка в Анкаре
+  // (TR) при списке «ua, ge» — гадание мимо, ссылка остаётся нейтральной.
+  it('falls back to the partner homepage when the first point is outside the declared list', () => {
+    const offList = {
+      id: 213,
+      cityName: 'Анкара, Турция',
+      countryName: 'Украина, Грузия',
+      countryCode: 'ua, ge',
+      travelAddress: [{ id: 1, address: 'Анкара', coord: '39.9334,32.8597' }],
+    } as any
+
+    const { getByText } = render(<AffiliateSection travel={offList} styles={styles} />)
     fireEvent.press(getByText('Подобрать жильё'))
 
     expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/'))
