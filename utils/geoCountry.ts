@@ -89,10 +89,10 @@ const COUNTRIES: CountryEntry[] = [
 const OUTLINE_CODES = new Set(OUTLINE_ORDER);
 
 /**
- * Порядок ступени 4 — тот же OUTLINE_ORDER, но Россия сдвинута в конец: рамка её
- * главного кольца тянется от Балтики до Чукотки и иначе забирала бы у соседей
- * всё, что не попало в контур, — ту же Куршскую косу. Остальные соотношения
- * рамок (NO выше SE, KG выше KZ) заданы самим OUTLINE_ORDER.
+ * Порядок ступени 4. Сама ступень выбирает страну по ближайшему контуру, так что
+ * порядок решает только точные ничьи; Россия сдвинута в конец, потому что при
+ * равном расстоянии сосед с компактной геометрией — более вероятный ответ, чем
+ * страна, кольцо которой тянется от Балтики до Чукотки.
  */
 const OUTLINE_FALLBACK_ORDER = [...OUTLINE_ORDER].sort((a, b) =>
     a === 'RU' ? 1 : b === 'RU' ? -1 : 0,
@@ -258,12 +258,25 @@ export function getCountryCodeByCoords(lat: number, lng: number): string | undef
     // есть повторил бы дефект, ради которого заведены контуры; рамка кольца
     // ограничена реальной геометрией и лишь добирает точки у воды — порт Певека,
     // лиман Анадыря, Куршскую косу, восточный берег Каспия.
+    //
+    // Рамка отвечает лишь на вопрос «может ли точка быть рядом с этой страной»,
+    // поэтому из всех подошедших берём страну с ближайшим контуром, а не первую
+    // по порядку. Порядком это не решается: рамка кольца Норвегии
+    // (57.99–71.13 N, 4.93–31.06 E) накрывает Швецию и Финляндию целиком, а
+    // рамка Финляндии — Кронштадт и Высоцк. Выбор по порядку отдавал Нюнесхамн
+    // Норвегии, до берега которой оттуда 239 км, а до шведского — 2,6 км.
+    let fallbackCode: string | undefined;
+    let fallbackDistance = Infinity;
     for (const code of OUTLINE_FALLBACK_ORDER) {
-        const rings = outlines[code];
-        if (rings?.some((ring) => isInsideBBox(lat, lng, ring.bbox, RING_BOX_PADDING_DEG))) {
-            return code;
+        for (const ring of outlines[code] ?? []) {
+            if (!isInsideBBox(lat, lng, ring.bbox, RING_BOX_PADDING_DEG)) continue;
+            const distance = distanceToRing(lat, lng, ring, fallbackDistance);
+            if (distance < fallbackDistance) {
+                fallbackDistance = distance;
+                fallbackCode = code;
+            }
         }
     }
 
-    return undefined;
+    return fallbackCode;
 }
