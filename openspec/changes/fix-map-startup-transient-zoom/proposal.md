@@ -1,5 +1,13 @@
 ## Why
 
+> **Revised 2026-08-10 (owner-approved).** The measured baseline corrected two
+> premises below: the mobile cost is 20 initiated requests but only 540,647 B
+> transferred (the 8 obsolete z13 requests are aborted before any body byte),
+> and the mobile final zoom is the #1348 compact floor `≥ 11`, not 8. The
+> primary invariant is therefore **zero initiated requests at the
+> radius-derived level**, with mobile `≤ 650 KiB` kept as a non-regression
+> bound. See `tasks.md` → "Owner-approved revision".
+
 A cold load of `/map` downloads base tiles for three different zoom levels
 before the user sees a single stable view: 66 tiles / 1,748 KB on a
 1350×940 desktop viewport (levels 8, 9 and 13) and 20 tiles / 750 KB on a

@@ -141,19 +141,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const lastUserLocationKeyRef = useRef<string | null>(null);
   const lastRadiusKeyRef = useRef<string | null>(null);
   const lastSyncedZoomRef = useRef<number | null>(null);
-  const lastPreFitKeyRef = useRef<string | null>(null);
   const hasCompletedAutoFitRef = useRef(false);
-
-  const getInitialRadiusZoom = useCallback((radiusMeters?: number | null) => {
-    const r = Number(radiusMeters);
-    if (!Number.isFinite(r) || r <= 0) return 13;
-    const km = r / 1000;
-    if (km <= 10) return 15;
-    if (km <= 25) return 14;
-    if (km <= 60) return 13;
-    if (km <= 120) return 12;
-    return 11;
-  }, []);
 
   const hasRadiusResults = (travelData ?? []).length > 0;
   // Whether we know enough to draw/fit the radius circle around the user (or the
@@ -301,38 +289,14 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       return;
     }
 
-    // Radius mode: as soon as a center is known, center the map on it at a zoom
-    // that matches the radius circle. Do this BEFORE results are ready so the
-    // initial UX is "circle around me" rather than a too-tight street view that
-    // hides the radius circle. The auto-fit effect below then refines to the
-    // exact circle bounds. Keep tests unchanged (tests expect setView only after
-    // radius results), so this pre-fit only runs outside the test env.
-    if (!isTestEnv && mode === 'radius' && !hasInitializedRef.current) {
-      const preCenter = circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng)
-        ? { lat: circleCenter.lat, lng: circleCenter.lng }
-        : hasValidUserLocation
-          ? { lat: userLocation!.lat, lng: userLocation!.lng }
-          : null;
-      const preFitKey = preCenter
-        ? `${preCenter.lat.toFixed(5)},${preCenter.lng.toFixed(5)}:${Number(radiusInMeters)}`
-        : null;
-      if (preCenter && preFitKey && lastPreFitKeyRef.current !== preFitKey) {
-        lastPreFitKeyRef.current = preFitKey;
-        try {
-          beginProgrammaticMapMove();
-          map.setView(
-            [preCenter.lat, preCenter.lng],
-            getInitialRadiusZoom(radiusInMeters),
-            { animate: false },
-          );
-          requestAnimationFrame(() => syncZoomFromMap());
-          // Do NOT set hasInitializedRef here: leave the auto-fit effect free to
-          // refine to the exact circle bounds (and tighten to clustered results).
-        } catch {
-          // noop
-        }
-      }
-    }
+    // #1291 — radius mode has NO intermediate setView any more. Раньше здесь были
+    // два шага: pre-fit на радиусный зум до прихода результатов и повтор того же
+    // зума после них. Оба немедленно перекрывались авто-фитом ниже, но Leaflet
+    // успевал скачать тайлы промежуточного уровня (r=50 км → z13), которые
+    // пользователь никогда не видел: холодный старт трогал три зум-уровня.
+    // Авто-фит и так срабатывает по одному валидному кругу, без результатов
+    // (`canAutoFitRadiusView`), поэтому «круг вокруг меня» виден с первого кадра,
+    // а стартовый вид применяется ровно один раз — сразу конечным.
 
     // Radius mode: allow one auto-fit when trusted userLocation first becomes
     // available. Live ticks must not repeatedly reset the viewport after a
@@ -362,44 +326,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       hasInitializedRef.current = false;
     }
 
-    // Radius mode: do NOT apply an initial zoom/center until radius results are ready.
-    // The intended UX is to set the view only after points in the radius have been computed.
-    if (!hasInitializedRef.current && hasRadiusResults) {
-      // Prefer explicit circleCenter (radius mode), then user location, then provided coordinates.
-      const hasValidCircleCenter =
-        circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng);
-      const radiusZoom = getInitialRadiusZoom(radiusInMeters);
-
-      if (hasValidCircleCenter) {
-        try {
-          beginProgrammaticMapMove();
-          map.setView([circleCenter!.lat, circleCenter!.lng], radiusZoom, { animate: false });
-        } catch {
-          // Pane may not be ready yet
-        }
-        requestAnimationFrame(() => syncZoomFromMap());
-        hasInitializedRef.current = true;
-      } else if (hasValidUserLocation) {
-        try {
-          beginProgrammaticMapMove();
-          map.setView([userLocation.lat, userLocation.lng], radiusZoom, { animate: false });
-        } catch {
-          // Pane may not be ready yet
-        }
-        requestAnimationFrame(() => syncZoomFromMap());
-        hasInitializedRef.current = true;
-      } else if (hasValidCoords) {
-        try {
-          beginProgrammaticMapMove();
-          map.setView([coordinates.lat, coordinates.lng], radiusZoom, { animate: false });
-        } catch {
-          // Pane may not be ready yet
-        }
-        requestAnimationFrame(() => syncZoomFromMap());
-        hasInitializedRef.current = true;
-      }
-    }
-
     lastModeRef.current = mode;
   }, [
     map,
@@ -410,10 +336,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     lastModeRef,
     lastAutoFitKeyRef,
     syncZoomFromMap,
-    hasRadiusResults,
     circleCenter,
     radiusInMeters,
-    getInitialRadiusZoom,
   ]);
 
   // Fit bounds to all travel points (radius mode only)
@@ -668,7 +592,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     hasValidRadiusCircle,
     canAutoFitRadiusView,
     compactPane,
-    getInitialRadiusZoom,
   ]);
   return null;
 };

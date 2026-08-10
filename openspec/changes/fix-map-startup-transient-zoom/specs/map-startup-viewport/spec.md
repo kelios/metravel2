@@ -60,9 +60,12 @@ values observed before the change for the same viewport, radius and data.
 #### Scenario: Final mobile view is preserved
 
 - **WHEN** the mobile startup view settles at 412×823 with the default radius
-- **THEN** the final zoom is 8
-- **AND** the final centre matches the pre-change centre within the recorded
-  measurement tolerance
+- **THEN** the final zoom is the compact-pane floor established by #1348, i.e.
+  at least 11, and not the pre-#1348 whole-circle fit of 8
+- **AND** the final centre matches the centre of the current behaviour within
+  the recorded measurement tolerance
+- **AND** the radius circle may extend beyond the pane, which #1348 accepts by
+  design on a narrow pane
 
 #### Scenario: Startup view is visually identical
 
@@ -97,7 +100,9 @@ of the change.
 - **THEN** the median run contains at most two distinct zoom levels, one of
   which is the final startup zoom
 - **AND** the median total of downloaded startup tile bytes is at most
-  650 KiB, down from the recorded 750 KB baseline
+  650 KiB, treated as a non-regression bound rather than a saving: the measured
+  pre-change mobile transfer is 540,647 B, because all eight obsolete
+  radius-zoom requests are aborted before any body byte arrives
 
 #### Scenario: The removed zoom level never returns
 
@@ -105,7 +110,10 @@ of the change.
   level
 - **THEN** no group corresponds to the radius-derived zoom level that the
   previous behaviour requested
-- **AND** the count of tiles for that level is zero
+- **AND** the count of **initiated requests** for that level is zero, not only
+  the count of completed ones — on mobile the defect costs connections and
+  proxy work rather than transferred bytes, so a cancelled request still
+  counts as a violation
 
 #### Scenario: Evidence reports every observed level
 
@@ -151,7 +159,17 @@ happens after startup, nor the startup behaviour of the map's route mode.
 
 - **WHEN** a different search radius is selected after the startup view settled
 - **THEN** the map re-fits to the new radius circle as it did before the change
-- **AND** the new settled view shows the whole new circle
+- **AND** the new settled view shows the whole new circle, subject to the
+  #1348 compact-pane floor on a narrow pane
+
+#### Scenario: A manually chosen viewport is not refitted
+
+- **GIVEN** the user has panned or zoomed the map by hand after startup
+- **WHEN** a further results page arrives or the results are refetched in the
+  background
+- **THEN** the map keeps the viewport the user chose, as established by #1350
+- **AND** removing the startup views does not reintroduce a refit on new point
+  composition
 
 #### Scenario: The user focuses a point or cluster
 

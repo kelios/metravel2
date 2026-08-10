@@ -14,7 +14,10 @@ describe('MapLogicComponent radius zoom initialization', () => {
     global.requestAnimationFrame = originalRaf;
   });
 
-  it('does not setView until radius results are ready', async () => {
+  // #1291 — стартовый вид применяется ровно один раз, сразу конечным. Промежуточный
+  // радиусный зум (r=50 км → z13) убран: Leaflet успевал скачать его тайлы, хотя
+  // авто-фит перекрывал этот вид до первого кадра.
+  it('fits the radius circle without ever passing through an intermediate radius zoom', async () => {
     const map = {
       fitBounds: jest.fn(),
       setView: jest.fn(),
@@ -70,7 +73,9 @@ describe('MapLogicComponent radius zoom initialization', () => {
 
     await act(async () => {});
 
-    // No results yet: should not initialize view.
+    // Круг вокруг пользователя виден с первого кадра, ещё до результатов, —
+    // и это сразу конечный вид, а не промежуточный зум.
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
     expect(map.setView).not.toHaveBeenCalled();
 
     rerender(
@@ -82,9 +87,82 @@ describe('MapLogicComponent radius zoom initialization', () => {
 
     await act(async () => {});
 
-    // Results exist: initialization should happen; prefer circleCenter.
-    // Initial zoom is derived from radius (60km -> 13).
-    expect(map.setView).toHaveBeenCalledWith([53.9, 27.5667], 13, { animate: false });
+    // Приход результатов только уточняет рамку тем же fitBounds; радиусного
+    // setView (60 км → z13) не должно случиться ни разу за весь старт.
+    expect(map.setView).not.toHaveBeenCalled();
+    expect(map.fitBounds).toHaveBeenCalledTimes(2);
+  });
+
+  // Пин на кардинальность стартовых зум-уровней: любая новая промежуточная
+  // установка вида в radius-режиме снова начнёт качать лишние тайлы.
+  it('never applies more than one settled zoom level during radius startup', async () => {
+    const zoomTrail: number[] = [];
+    let currentZoom = 11;
+    const map = {
+      fitBounds: jest.fn(() => {
+        currentZoom = 9;
+        zoomTrail.push(currentZoom);
+      }),
+      setView: jest.fn((_center: unknown, zoom: number) => {
+        currentZoom = zoom;
+        zoomTrail.push(currentZoom);
+      }),
+      closePopup: jest.fn(),
+      getZoom: jest.fn(() => currentZoom),
+      getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
+      on: jest.fn(),
+      off: jest.fn(),
+    };
+
+    const mockBounds = {
+      pad: jest.fn(() => 'padded-bounds'),
+      getSouthWest: () => ({ lat: 53, lng: 27 }),
+      getNorthEast: () => ({ lat: 54, lng: 28 }),
+      isValid: () => true,
+      extend: jest.fn(),
+    };
+
+    const baseProps = {
+      mapClickHandler: () => undefined,
+      mode: 'radius',
+      coordinates: { lat: 53.9, lng: 27.5667 },
+      userLocation: { lat: 53.9, lng: 27.5667 },
+      disableFitBounds: false,
+      L: {
+        latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+        latLngBounds: jest.fn(() => mockBounds),
+      },
+      circleCenter: { lat: 53.9, lng: 27.5667 },
+      radiusInMeters: 50000,
+      fitBoundsPadding: { paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] },
+      setMapZoom: jest.fn(),
+      mapRef: { current: null },
+      onMapReady: jest.fn(),
+      savedMapViewRef: { current: null },
+      hasInitializedRef: { current: false },
+      lastModeRef: { current: null },
+      lastAutoFitKeyRef: { current: null },
+      leafletBaseLayerRef: { current: null },
+      leafletOverlayLayersRef: { current: new Map() },
+      leafletControlRef: { current: null },
+      useMap: jest.fn(() => map),
+      useMapEvents: jest.fn(() => null),
+      hintCenter: { lat: 53.9, lng: 27.5667 },
+    };
+
+    const { rerender } = render(<MapLogicComponent {...baseProps} travelData={[]} />);
+    await act(async () => {});
+
+    rerender(
+      <MapLogicComponent
+        {...baseProps}
+        travelData={[{ id: 1, coord: '53.9,27.5667', address: 'A' }]}
+      />
+    );
+    await act(async () => {});
+
+    expect(map.setView).not.toHaveBeenCalled();
+    expect(new Set(zoomTrail).size).toBe(1);
   });
 
   it('recomputes fitBounds when radius changes', async () => {

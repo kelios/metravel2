@@ -3,7 +3,7 @@
 - [x] 1.1 Build a startup probe (kept in an ignored local folder) that subscribes to the map's `zoomstart`, `zoomend`, `load` and `moveend` events and records `(event, zoom, timestamp)`; do not poll `getZoom()`, since a level entered and left between samples is exactly the defect under investigation.
 - [x] 1.2 Extend the probe to collect the base-tile inventory from real transfer sizes, grouped by full request URL and then by the `z` segment of `/proxy/tiles/osm/{z}/{x}/{y}.png`, and to report the single pre-hydration warm-up tile as its own line rather than folding it into a zoom level.
 - [x] 1.3 Run the probe cold (empty cache) at least five times per viewport at 1350×940 and 412×823 against the current build, and record the median per-level table (level, tile count, bytes), the totals, the settled centre/zoom and the time to the settled view.
-- [ ] 1.4 Confirm the baseline reproduces #1291 — desktop levels 8+9+13 at 66 tiles / 1,748 KB, mobile at 20 tiles / 750 KB — and confirm from the zoom-event trace that the radius-derived level is settled on before the final fit; if it does not reproduce, stop and report instead of implementing.
+- [x] 1.4 Confirm the baseline reproduces #1291 — desktop levels 8+9+13 at 66 tiles / 1,748 KB, mobile at 20 tiles / 750 KB — and confirm from the zoom-event trace that the radius-derived level is settled on before the final fit; if it does not reproduce, stop and report instead of implementing. **Resolved by the owner-approved revision of 2026-08-10 (see below): the defect reproduces, two premises were corrected.**
 - [x] 1.5 Capture the pre-change settled-view screenshot on both viewports as the visual baseline for the final centre/zoom comparison.
 
 ### Baseline evidence — 2026-08-08
@@ -34,13 +34,46 @@ views were stable at desktop z9 / centre 53.97870,27.46015 and mobile z8 /
 centre approximately 53.83470,27.46033; both pre-change screenshots are stored
 next to the JSON report.
 
+### Owner-approved revision — 2026-08-10
+
+Task 1.4 blocked implementation because the recorded baseline contradicted two
+premises of the original artifact. The owner approved the revision below; the
+defect itself is confirmed and unchanged.
+
+1. **Primary invariant is request-level, not byte-level.** Mobile initiates 20
+   requests, of which 8 obsolete radius-zoom (z13) requests are aborted with 0
+   body bytes, so the real transfer is 540,647 B and the original 750 KB mobile
+   premise is wrong. The invariant is therefore **zero initiated requests at the
+   radius-derived level**; mobile `≤ 650 KiB` stays only as a non-regression
+   bound.
+2. **The mobile final zoom is no longer 8.** #1348 floors the compact-pane fit
+   at `COMPACT_MIN_FIT_ZOOM = 11`, so requiring a final z8 would revert accepted
+   behaviour. The mobile requirement is now the compact floor, i.e. **final zoom
+   ≥ 11**; desktop final z9 is unchanged.
+3. **#1350 is explicitly preserved:** a viewport the user set by hand is not
+   refitted when a later results page or a background refetch arrives.
+
+Desktop evidence (66 tiles / 1,752,096 B across z8+z9+z13) is unaffected and
+remains the byte baseline for the desktop budget.
+
 ## 2. Remove the Transient Startup View
 
-- [ ] 2.1 Remove the radius-derived pre-fit view application in `components/MapPage/Map/MapLogicComponent.tsx` (the `setView` at lines 303-307 inside the block at 284-315), including its `!isTestEnv` divergence, so the browser and the test environment follow the same startup path.
-- [ ] 2.2 Remove the radius-derived view application in the results-gated block (`setView` calls at lines 356, 365 and 374 within 345-381) and drop `getInitialRadiusZoom` (lines 127-136) once it has no remaining consumer, leaving the auto-fit effect (lines 399-595) as the single owner of the startup view.
-- [ ] 2.3 Keep the initialization bookkeeping intact — `hasInitializedRef`, `lastModeRef`, `lastRadiusKeyRef`, `lastUserLocationKeyRef`, `lastAutoFitKeyRef` and `syncZoomFromMap` must still govern when a re-fit is allowed — and leave route mode's own initial view at line 272 unchanged.
+- [x] 2.1 Remove the radius-derived pre-fit view application in `components/MapPage/Map/MapLogicComponent.tsx`, including its `!isTestEnv` divergence, so the browser and the test environment follow the same startup path.
+- [x] 2.2 Remove the radius-derived view application in the results-gated block and drop `getInitialRadiusZoom` (plus the now-unused `lastPreFitKeyRef`) once it has no remaining consumer, leaving the auto-fit effect as the single owner of the startup view.
+- [x] 2.3 Keep the initialization bookkeeping intact — `hasInitializedRef`, `lastModeRef`, `lastRadiusKeyRef`, `lastUserLocationKeyRef`, `lastAutoFitKeyRef` and `syncZoomFromMap` still govern when a re-fit is allowed — and leave route mode's own initial view unchanged.
 - [ ] 2.4 Re-run the probe from Task 1 on both viewports and check which level the base tile layer attaches at; if base tiles still settle on the container mount zoom, apply only the bounded follow-up from design Decision 2 (align the container's initial zoom with the computed startup zoom) and re-measure.
 - [ ] 2.5 If neither the removal alone nor the bounded follow-up meets the level and byte budget, stop and revise the OpenSpec design instead of widening the scope, delaying the base layer or lowering the final zoom.
+
+### Implementation note — 2026-08-10
+
+The auto-fit effect already runs on a valid circle alone
+(`canAutoFitRadiusView = hasRadiusResults || hasValidRadiusCircle`), so the
+removed pre-fit was never what made the circle visible before results — it only
+inserted a radius-derived zoom that the fit immediately overwrote. `disableFitBounds`
+is `useState(false)` in `Map.web.tsx` and never set, so no surface loses its
+startup view by relying on the removed `setView`. `hasInitializedRef` is created
+in `Map.web.tsx` and only passed down; nothing outside `MapLogicComponent` reads
+it, so its radius-mode bookkeeping change is contained.
 
 ## 3. Tests and Regression Control
 
