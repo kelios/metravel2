@@ -386,8 +386,12 @@ async function main(argv = process.argv, deps = {}) {
   const probe = deps.probe || probeStatus
   const readQueue = deps.readQueue || ((file) => JSON.parse(fs.readFileSync(file, 'utf8')))
   // Файл очереди перезаписывается тем же двухпробельным JSON, каким лежит в
-  // репозитории: правка должна читаться в диффе построчно.
-  const writeQueue = deps.writeQueue || ((file, queue) => fs.writeFileSync(file, JSON.stringify(queue, null, 2), 'utf8'))
+  // репозитории: правка должна читаться в диффе построчно. Завершающий перевод
+  // строки — часть этого «как лежит»: без него первый же `--fix` подмешивал к
+  // содержательной правке однобайтовый хвостовой diff (`\ No newline at end of
+  // file`), которого никто не заказывал.
+  const writeQueue =
+    deps.writeQueue || ((file, queue) => fs.writeFileSync(file, `${JSON.stringify(queue, null, 2)}\n`, 'utf8'))
   const writeOut = deps.writeOut || ((file, text) => fs.writeFileSync(file, text, 'utf8'))
   const today = deps.today || new Date().toISOString().slice(0, 10)
 

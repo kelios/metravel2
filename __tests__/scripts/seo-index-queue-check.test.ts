@@ -539,6 +539,22 @@ server.listen(0, '127.0.0.1', () => console.log('PORT=' + server.address().port)
     })
   })
 
+  // `scripts/seo-index-queue.json` лежит в репозитории с завершающим переводом
+  // строки. Пока `--fix` писал без него, к содержательной правке молча
+  // подмешивался хвостовой однобайтовый diff («\ No newline at end of file»),
+  // которого никто не заказывал. Проверяем не наличие «\n» на конце, а
+  // побайтовое совпадение с той сериализацией, о которой говорит комментарий
+  // над writeQueue: иначе тест переживёт и смену отступа, и потерю новой строки.
+  it('--fix пишет файл ровно в том виде, в каком очередь лежит в репозитории', () => {
+    const file = writeQueueFile('fix-bytes.json', queueAt(['/travels/alive', '/travels/moved-old']))
+
+    expect(runNodeCli([SCRIPT, '--queue', file, '--fix']).status).toBe(0)
+
+    const raw = fs.readFileSync(file, 'utf8')
+    expect(raw).toBe(`${JSON.stringify(JSON.parse(raw), null, 2)}\n`)
+    expect(raw.endsWith('\n\n')).toBe(false)
+  })
+
   it('--fix не выдаёт зелёный, пока в очереди остаётся мёртвый адрес', () => {
     const file = writeQueueFile('fix-dead.json', queueAt(['/travels/moved-old', '/travels/gone']))
 
