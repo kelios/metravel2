@@ -529,7 +529,8 @@ guard, падающий в CI на попытке обойти этот конт
   лежит С завершающей строкой; дефекта там нет только потому, что писателя у
   него вообще нет. **Переучёт правильным методом (от файла, а не от скрипта):**
   из 90 tracked `.json` завершающую строку имеют 77, писатель есть у семи —
-  `BASELINE_METRICS.json` (два писателя, js и py, оба теряли), `seo-index-queue.json`
+  `BASELINE_METRICS.json` (на тот момент два писателя, js и py, оба теряли; py
+  удалён следом, `#1408`), `seo-index-queue.json`
   (терял), `config/bundle-budget.json`, `touch-targets-baseline.json`,
   `type-debt-baseline.json`, `seo-redirects.json` (эти четыре уже писали
   корректно) и `app.json` (`scripts/ios-build.sh:96` пишет через `jq`, а тот сам

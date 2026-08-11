@@ -17,33 +17,44 @@ import fs from 'fs'
 import path from 'path'
 import { execFileSync } from 'child_process'
 
-const ROOT = process.cwd()
+const ROOT = path.resolve(__dirname, '../..')
 const ARTIFACT = 'BASELINE_METRICS.json'
 const OWNER = 'scripts/analyze-bundle.js'
 
-/** Примитивы записи в файл — на тех языках, на которых в репозитории пишут скрипты. */
-const WRITE_CALL = /writeFileSync|writeFile\(|json\.dump|write_text|>\s*["']?BASELINE_METRICS\.json/
-
-const trackedFiles = () =>
-  execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean)
+/**
+ * Примитивы записи в файл — на всех языках, на которых в репозитории пишут
+ * скрипты, включая shell-обходной путь `jq … > tmp; mv tmp FILE`: именно так
+ * `scripts/ios-build.sh` пишет `app.json`, и регулярка, знающая только
+ * `writeFileSync`, такого писателя не увидела бы.
+ */
+const WRITE_CALL = /writeFileSync|writeFile\(|createWriteStream|json\.dump|write_text|\bmv\b|\bcp\b|\btee\b|>>?\s*["'$]/
 
 /**
- * Кандидат в писатели — трекнутый файл, который упоминает артефакт и содержит
- * вызов записи. Документация и сам артефакт исключены: упоминание в тексте
- * писателем не делает.
+ * Кандидаты берутся у git, а не обходом дерева: `git grep` не читает 34 МБ
+ * рабочей копии, сам пропускает бинарники и не спотыкается о пути, которые
+ * `git ls-files` отдал бы в кавычках (`core.quotePath`) — на таком пути
+ * `readFileSync` упал бы, и файл молча выпал бы из проверки.
  */
-const findWriters = () =>
-  trackedFiles()
+const filesMentioningArtifact = (): string[] => {
+  const out = execFileSync('git', ['grep', '-lI', '--cached', '--', ARTIFACT], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  })
+  return out.split('\n').filter(Boolean)
+}
+
+/**
+ * Писатель — файл, который упоминает артефакт и содержит вызов записи.
+ * Совпадение ищется по файлу целиком, а не рядом со строкой упоминания:
+ * гард должен ошибаться в сторону шума, а не молчания. Будущий скрипт,
+ * который читает baseline и пишет СВОЙ отчёт, этот тест уронит — и это
+ * правильное поведение: список писателей ниже задан поимённо, так что
+ * разбираться будет человек, а не регулярка.
+ */
+const findWriters = (): string[] =>
+  filesMentioningArtifact()
     .filter((file) => file !== ARTIFACT && !file.startsWith('docs/') && !file.startsWith('__tests__/'))
-    .filter((file) => {
-      let source: string
-      try {
-        source = fs.readFileSync(path.join(ROOT, file), 'utf8')
-      } catch {
-        return false
-      }
-      return source.includes(ARTIFACT) && WRITE_CALL.test(source)
-    })
+    .filter((file) => WRITE_CALL.test(fs.readFileSync(path.join(ROOT, file), 'utf8')))
 
 describe('BASELINE_METRICS.json: один писатель и он вызываемый', () => {
   it('писатель ровно один — и это analyze-bundle.js', () => {
@@ -52,18 +63,20 @@ describe('BASELINE_METRICS.json: один писатель и он вызыва�
 
   it('писатель подключён к npm-скрипту, а не лежит мёртвым', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
-    const entry = Object.entries(pkg.scripts as Record<string, string>).filter(([, cmd]) =>
-      cmd.includes('scripts/analyze-bundle.js'),
+    const wired = Object.entries(pkg.scripts as Record<string, string>).filter(([, cmd]) =>
+      cmd.includes(OWNER),
     )
 
-    expect(entry.length).toBeGreaterThan(0)
+    expect(wired.length).toBeGreaterThan(0)
   })
 
-  it('пишет и devDependencies тоже — мёртвый python-вариант их терял целиком', () => {
+  it('считает и devDependencies тоже — мёртвый python-вариант их терял целиком', () => {
     const source = fs.readFileSync(path.join(ROOT, OWNER), 'utf8')
 
-    // Ровно та строка, которой не было у второго писателя: он брал только
-    // dependencies, поэтому dev всегда выходил нулём.
-    expect(source).toMatch(/\.\.\.packageJson\.devDependencies/)
+    // Две строки, каждой из которых у второго писателя не было. Первая кладёт
+    // devDependencies в выборку, вторая помечает их как dev — без неё поле `dev`
+    // снова станет нулём, а тест на одну лишь выборку остался бы зелёным.
+    expect(source).toMatch(/\.\.\.\s*packageJson\.devDependencies/)
+    expect(source).toMatch(/isDev:\s*!!packageJson\.devDependencies\[/)
   })
 })
