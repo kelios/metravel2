@@ -111,5 +111,8 @@ const baselineMetrics = {
 };
 
 const metricsPath = path.join(__dirname, '../BASELINE_METRICS.json');
-fs.writeFileSync(metricsPath, JSON.stringify(baselineMetrics, null, 2));
+// Завершающий перевод строки — часть того, как файл лежит в репозитории: без
+// него прогон подмешивал бы к обновлению метрик однобайтовый хвостовой diff.
+// Тот же класс, что #1407; второй писатель этого файла — scripts/analyze_bundle.py.
+fs.writeFileSync(metricsPath, `${JSON.stringify(baselineMetrics, null, 2)}\n`);
 

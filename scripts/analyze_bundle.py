@@ -158,8 +158,11 @@ def main():
     }
 
     metrics_path = project_root / 'BASELINE_METRICS.json'
+    # Завершающий перевод строки — часть того, как файл лежит в репозитории;
+    # второй писатель того же файла (scripts/analyze-bundle.js) пишет так же.
     with open(metrics_path, 'w') as f:
         json.dump(baseline_metrics, f, indent=2)
+        f.write('\n')
 
     print('')
     print('✅ Baseline metrics saved to BASELINE_METRICS.json')
