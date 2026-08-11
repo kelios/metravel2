@@ -339,6 +339,58 @@ describe('очередь индексации: знаменатель доли',
   })
 })
 
+// Записи о подаче ведутся руками после сессии в Search Console, а долю индексации
+// `seo-index-queue-check.js` считает по `indexCheck.indexedUrls` и больше ни по
+// чему. Значит, расхождение между `indexed`, `indexedUrls` и подробным `results`
+// (#1375) никем не ловится: доля молча уедет, а по карточке будет «всё сходится».
+describe('очередь индексации: согласованность записей в реальном файле', () => {
+  const queue = JSON.parse(
+    fs.readFileSync(path.resolve(process.cwd(), 'scripts', 'seo-index-queue.json'), 'utf8')
+  )
+
+  it.each(queue.batches.map((b: { day: number }) => [b.day]))('пачка %i: замер сходится сам с собой', (day: number) => {
+    const batch = queue.batches.find((b: { day: number }) => b.day === day)
+    const check = batch.indexCheck
+    if (!check) return
+
+    const listed = check.indexedUrls || []
+    expect(check.indexed).toBe(listed.length)
+    expect(check.of).toBe(batch.urls.length)
+    expect(listed.filter((url: string) => !batch.urls.includes(url))).toEqual([])
+
+    // Подробная форма (`results`) появилась в пачке 1 и обязана совпадать со
+    // списком, по которому реально считается доля.
+    if (check.results) {
+      expect(check.results.map((r: { url: string }) => r.url)).toEqual(batch.urls)
+      const indexedInResults = check.results
+        .filter((r: { outcome: string }) => r.outcome === 'indexed')
+        .map((r: { url: string }) => r.url)
+      expect(indexedInResults).toEqual(listed)
+    }
+  })
+
+  it.each(queue.batches.map((b: { day: number }) => [b.day]))('пачка %i: подача записана по адресам пачки', (day: number) => {
+    const batch = queue.batches.find((b: { day: number }) => b.day === day)
+    const requests = batch.gscRequests
+    if (!requests) return
+
+    // Пачка может быть подана частично (квота GSC — 10 кликов в сутки), и по
+    // одному адресу допустимо несколько записей `quota-exceeded` — это история
+    // попыток. А вот исход, закрывающий адрес, бывает только один: два
+    // «accepted» на один URL означают, что подача съела лишнюю единицу квоты.
+    const urls = requests.map((r: { url: string }) => r.url)
+    expect(urls.filter((url: string) => !batch.urls.includes(url))).toEqual([])
+    for (const r of requests) {
+      expect(['accepted', 'already-indexed', 'quota-exceeded']).toContain(r.result)
+    }
+
+    const settled = requests
+      .filter((r: { result: string }) => r.result !== 'quota-exceeded')
+      .map((r: { url: string }) => r.url)
+    expect(new Set(settled).size).toBe(settled.length)
+  })
+})
+
 // Настоящий прод-путь целиком: живой HTTP-сервер, настоящие HEAD-запросы через
 // сокет, настоящий CLI отдельным процессом и настоящая перезапись файла очереди.
 // Мок HTTP-клиента поверх готового ответа доказательством здесь не считается:

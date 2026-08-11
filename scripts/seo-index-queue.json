@@ -25,12 +25,104 @@
         "yandex.com": 202
       },
       "indexCheck": {
-        "checkedAt": "2026-08-10",
-        "indexed": 2,
+        "checkedAt": "2026-08-11",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
         "of": 10,
         "indexedUrls": [
+          "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+          "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+          "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+          "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
+          "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
+          "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
           "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
-          "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret"
+          "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
+          "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+          "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia"
+        ],
+        "note": "Контрольный замер после подачи 10.08. У всех десяти адресов verdict PASS и coverageState «Страница отправлена и проиндексирована»; googleCanonical совпадает с новым адресом, старый слаг каноническим не стал; robotsTxtState ALLOWED.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-11T03:01:10Z",
+            "googleCanonical": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T22:38:32Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche"
+          },
+          {
+            "url": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T10:40:38Z",
+            "googleCanonical": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov"
+          },
+          {
+            "url": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T21:57:46Z",
+            "googleCanonical": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat"
+          },
+          {
+            "url": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T10:42:38Z",
+            "googleCanonical": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk"
+          },
+          {
+            "url": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T10:42:39Z",
+            "googleCanonical": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram"
+          },
+          {
+            "url": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T04:23:03Z",
+            "googleCanonical": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse"
+          },
+          {
+            "url": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T07:21:10Z",
+            "googleCanonical": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-09T12:08:23Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T10:44:40Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia"
+          }
         ]
       },
       "gscRequests": [
@@ -66,10 +158,22 @@
           "at": "2026-08-10"
         },
         {
+          "url": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+          "result": "already-indexed",
+          "at": "2026-08-10",
+          "note": "URL Inspection sweep 10.08: verdict PASS — подача не нужна"
+        },
+        {
           "url": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
           "result": "already-indexed",
           "at": "2026-08-10",
           "note": "URL Inspection: «URL есть в индексе Google» — подача не нужна"
+        },
+        {
+          "url": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+          "result": "already-indexed",
+          "at": "2026-08-10",
+          "note": "URL Inspection sweep 10.08: verdict PASS — подача не нужна"
         },
         {
           "url": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia",
@@ -77,7 +181,17 @@
           "at": "2026-08-10"
         }
       ],
-      "gscRequestedAt": "2026-08-10"
+      "gscRequestedAt": "2026-08-10",
+      "previousIndexCheck": {
+        "checkedAt": "2026-08-10",
+        "indexed": 2,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+          "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret"
+        ],
+        "note": "Снимок сделан 10.08 до сессии подачи: индексированными числились только tri-korony и zamok-ksenzh. Третий адрес, orikum-albaniia-zamok-bochari-i-tserkov-marmiroi, подтверждён как уже индексированный уже в ходе самой сессии URL Inspection, поэтому в этом снимке его нет, а в gscRequests он записан как already-indexed."
+      }
     },
     {
       "day": 2,
@@ -1367,14 +1481,15 @@
     "note": "Подача выполнена случайно: node scripts/indexnow-submit.js без аргументов (режим по умолчанию — весь сайт). Покрыла 99 из 103 URL очереди; оставшиеся 4 отсутствовали в живом наборе, потому что были протухшими 301 — заменены на цели редиректа в этот же день. Побочный эффект безвредный (свои же URL, ключ верифицирован), но пачки 1-2 получили повторную подачу. Google этим не кормится — ручные клики в GSC идут по расписанию без изменений."
   },
   "_lastIndexSweep": {
-    "checkedAt": "2026-08-10T05:57:52.840Z",
+    "checkedAt": "2026-08-11T19:22:48.279Z",
     "total": 306,
-    "indexed": 199,
-    "notIndexed": 107,
+    "indexed": 215,
+    "notIndexed": 91,
     "byCoverageState": {
-      "URL неизвестен Google": 104,
-      "Страница отправлена и проиндексирована": 199,
-      "Страница просканирована, но пока не проиндексирована": 3
+      "URL неизвестен Google": 34,
+      "Страница отправлена и проиндексирована": 215,
+      "Обнаружена, не проиндексирована": 52,
+      "Страница просканирована, но пока не проиндексирована": 5
     }
   },
   "_gscQuota": {
