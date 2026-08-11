@@ -405,6 +405,23 @@ type CoverSample = {
   };
 };
 
+type CatalogMediaPolicySample = {
+  row: number;
+  loading: string | null;
+  fetchPriority: string | null;
+};
+
+const sampleCatalogMediaPolicy = (): CatalogMediaPolicySample[] =>
+  Array.from(document.querySelectorAll('[data-testid^="travel-row-"]')).flatMap((row) => {
+    const match = (row.getAttribute('data-testid') || '').match(/^travel-row-(\d+)$/);
+    if (!match) return [];
+    return Array.from(row.querySelectorAll('img')).map((img) => ({
+      row: Number(match[1]),
+      loading: img.getAttribute('loading'),
+      fetchPriority: img.getAttribute('fetchpriority'),
+    }));
+  });
+
 /** Состояние всех обложек, реально видимых в кадре. */
 const sampleVisibleCovers = () => {
   const stripQuery = (url: string | null | undefined) => (url ? String(url).split('?')[0] : '');
@@ -542,10 +559,15 @@ const runSearchScrollTrace = async (page: Page, profile: TraceProfile) => {
 
   const byRequestId = new Map<string, string>();
   const transfers: { url: string; bytes: number; at: number }[] = [];
+  const cancelledCoverRequests: string[] = [];
   cdp.on('Network.requestWillBeSent', (e: any) => byRequestId.set(e.requestId, e.request.url));
   cdp.on('Network.loadingFinished', (e: any) => {
     const url = byRequestId.get(e.requestId);
     if (url) transfers.push({ url, bytes: e.encodedDataLength, at: Date.now() });
+  });
+  cdp.on('Network.loadingFailed', (e: any) => {
+    const url = byRequestId.get(e.requestId);
+    if (url && e.canceled && isTravelCoverRequest(url)) cancelledCoverRequests.push(url);
   });
 
   await gotoWithRetry(page, SEARCH_TRACE.url, { waitUntil: 'domcontentloaded' });
@@ -580,6 +602,7 @@ const runSearchScrollTrace = async (page: Page, profile: TraceProfile) => {
 
   // Контроль на заведомо здоровой позиции: первый экран обязан быть готов.
   const control = await page.evaluate(sampleVisibleCovers);
+  const initialMediaPolicy = await page.evaluate(sampleCatalogMediaPolicy);
   const afterInitial = Date.now();
 
   const scroller = page.locator(tid('right-column-scrollview'));
@@ -601,16 +624,30 @@ const runSearchScrollTrace = async (page: Page, profile: TraceProfile) => {
   };
 
   await sweep('down', 1);
+  const afterDownMediaPolicy = await page.evaluate(sampleCatalogMediaPolicy);
   const afterDown = Date.now();
   await sweep('up', -1);
+  // #1400: после поведенческого sweep отдельно выполняем требуемые десять
+  // быстрых циклов вниз-вверх. Адреса уже известны браузеру, так что повторный
+  // запрос или canceled здесь означает дефект lifecycle/windowing.
+  for (let cycle = 0; cycle < 10; cycle += 1) {
+    await scroller.evaluate((node: HTMLElement, offset: number) => {
+      node.scrollTop = offset;
+      node.dispatchEvent(new Event('scroll', { bubbles: true }));
+    }, SEARCH_TRACE.scrollPx);
+    await page.waitForTimeout(50);
+    await scroller.evaluate((node: HTMLElement) => {
+      node.scrollTop = 0;
+      node.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+    await page.waitForTimeout(50);
+  }
+  const afterReturnMediaPolicy = await page.evaluate(sampleCatalogMediaPolicy);
   const afterReturn = Date.now();
 
   // Бюджет считаем по ШАБЛОНУ медиа-путей, а не по наблюдённым обложкам.
-  // Карточки грузятся eager, поэтому весь хвост lookahead ниже конечной позиции
-  // скролла скачивается, но в кадр не попадает и в `__1263CoverKeys` не
-  // записывается. По прежнему allowlist поднятие drawDistance до 2000 не
-  // изменило бы ни requests, ни bytes — то есть бюджет был слеп ровно к тому
-  // over-prefetch, ради которого написан.
+  // Считаем весь хвост lookahead, включая lazy-узлы за пределами кадра: бюджет
+  // не должен зависеть от того, попала ли конкретная обложка в DOM-выборку.
   const covers = transfers.filter((t) => isTravelCoverRequest(t.url));
   const bytesUntil = (ts: number) =>
     covers.filter((c) => c.at <= ts).reduce((sum, c) => sum + c.bytes, 0);
@@ -642,6 +679,10 @@ const runSearchScrollTrace = async (page: Page, profile: TraceProfile) => {
     samples,
     transferOf,
     redownloaded,
+    cancelledCoverRequests,
+    initialMediaPolicy,
+    afterDownMediaPolicy,
+    afterReturnMediaPolicy,
     initial: { requests: requestsUntil(afterInitial), bytes: bytesUntil(afterInitial) },
     afterDown: { requests: requestsUntil(afterDown), bytes: bytesUntil(afterDown) },
     afterReturn: { requests: requestsUntil(afterReturn), bytes: bytesUntil(afterReturn) },
@@ -656,6 +697,26 @@ const assertScrollTrace = (
     cards.filter(predicate).map((c) => `${c.slug} (видно ${Math.round(c.visRatio * 100)}%)`);
 
   expect(describeCards(trace.control.cards, (c) => c.fillOnly), 'первый экран до скролла').toEqual([]);
+
+  expect(trace.initialMediaPolicy.length, 'начальный ряд не содержит img').toBeGreaterThan(0);
+  expect(
+    trace.initialMediaPolicy.filter(
+      (sample) =>
+        sample.loading !== (sample.row === 0 ? 'eager' : 'lazy') ||
+        sample.fetchPriority !== (sample.row === 0 ? 'high' : 'low'),
+    ),
+    'до скролла eager/high разрешён только начальному ряду',
+  ).toEqual([]);
+  for (const [phase, samples] of [
+    ['после прокрутки вниз', trace.afterDownMediaPolicy],
+    ['после возврата', trace.afterReturnMediaPolicy],
+  ] as const) {
+    expect(samples.length, `${phase}: виртуализированный ряд не содержит img`).toBeGreaterThan(0);
+    expect(
+      samples.filter((sample) => sample.loading !== 'lazy' || sample.fetchPriority !== 'low'),
+      `${phase}: после первого скролла все ремоунты должны быть lazy/low`,
+    ).toEqual([]);
+  }
 
   // Инвариант тикета — «карточка ВЪЕХАЛА в кадр и осталась пустой», а не
   // «пиксель обложки мелькнул недекодированным между двумя шагами колеса».
@@ -717,6 +778,7 @@ const assertScrollTrace = (
   // придут уже после отсечки и дадут ложное падение. Точный инвариант — ни один
   // адрес обложки не скачан по сети дважды.
   expect(trace.redownloaded, 'обложка скачана повторно при возврате').toEqual([]);
+  expect(trace.cancelledCoverRequests, 'обложка отменена при штатном windowing').toEqual([]);
   expect(trace.afterReturn.requests).toBeLessThanOrEqual(budget.maxRequests);
   expect(trace.afterReturn.bytes).toBeLessThanOrEqual(budget.maxBytes);
 };

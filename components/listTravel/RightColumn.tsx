@@ -88,7 +88,12 @@ interface RightColumnProps {
   cardsContainerStyle?: ViewStyle | ViewStyle[]
   cardsGridStyle?: ViewStyle | ViewStyle[]
   footerLoaderStyle?: ViewStyle | ViewStyle[]
-  renderItem: (travel: Travel, index: number) => React.ReactNode
+  /**
+   * #1400: `hasUserScrolled` сообщает, что начальный показ закончился. После
+   * первого скролла ремоунт первого ряда не должен возвращать eager-загрузку
+   * обложек: на разворотах быстрой прокрутки она стартует и тут же отменяется.
+   */
+  renderItem: (travel: Travel, index: number, hasUserScrolled?: boolean) => React.ReactNode
   cardSpacing?: number
   testID?: string
   listRef?: React.RefObject<any>
@@ -203,6 +208,10 @@ const RightColumn: React.FC<RightColumnProps> = (
     const lastEndReachedAtRef = useRef(0)
     const lastEndReachedHeightRef = useRef(0)
     const scrollNodeRef = useRef<any>(null)
+    // #1400: один флип на визит — после первого реального скролла ремоунты
+    // первого ряда переходят с eager на lazy (см. renderItem prop doc).
+    const [hasUserScrolled, setHasUserScrolled] = useState(false)
+    const hasUserScrolledRef = useRef(false)
 
     const cancelScheduledAfterLayout = useCallback(() => {
       if (scheduledRafRef.current != null && typeof cancelAnimationFrame === 'function') {
@@ -352,6 +361,10 @@ const RightColumn: React.FC<RightColumnProps> = (
       const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent
       const node = (e as any)?.target
       if (node && typeof node.scrollHeight === 'number') scrollNodeRef.current = node
+      if (!hasUserScrolledRef.current && contentOffset.y > 0) {
+        hasUserScrolledRef.current = true
+        setHasUserScrolled(true)
+      }
       evaluateEndReached(contentSize.height, layoutMeasurement.height, contentOffset.y)
     }, [evaluateEndReached])
 
@@ -404,7 +417,7 @@ const RightColumn: React.FC<RightColumnProps> = (
                 testID={`travel-row-${rowIndex}-item-${itemIndex}`}
                 style={itemWrapperStyle}
               >
-                {renderItem(travel, rowIndex * cols + itemIndex)}
+                {renderItem(travel, rowIndex * cols + itemIndex, hasUserScrolled)}
               </View>
             ))}
 
@@ -429,6 +442,7 @@ const RightColumn: React.FC<RightColumnProps> = (
       [
         rowLayout,
         renderItem,
+        hasUserScrolled,
         isExport,
         isMobile,
         showNextPageLoading,
@@ -514,6 +528,13 @@ const RightColumn: React.FC<RightColumnProps> = (
       [showNextPageLoading, footerLoaderStyle, colors.textMuted]
     )
 
+    // Стабильная ссылка: новый массив на каждом рендере заставил бы FlashList
+    // перерисовывать все смонтированные ряды при любом родительском рендере.
+    const flashListExtraData = useMemo(
+      () => [gridColumns, hasUserScrolled] as const,
+      [gridColumns, hasUserScrolled]
+    )
+
     const loadedResultsContent = useMemo(() => {
       if (showInitialLoading || isError || showEmptyState || travels.length === 0) {
         return null
@@ -529,7 +550,7 @@ const RightColumn: React.FC<RightColumnProps> = (
           ref={listRef as any}
           data={rows}
           renderItem={renderRow as any}
-          extraData={gridColumns}
+          extraData={flashListExtraData}
           keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
           ListHeaderComponent={ListHeader}
           ListFooterComponent={listFooter}
@@ -569,6 +590,7 @@ const RightColumn: React.FC<RightColumnProps> = (
       ListHeader,
       RowSeparator,
       listFooter,
+      flashListExtraData,
       gridColumns,
       isError,
       isExport,

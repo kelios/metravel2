@@ -1,9 +1,33 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react-native'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Platform, StyleSheet } from 'react-native'
 
 import { ThemeProvider } from '@/hooks/useTheme'
+
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+
+  return {
+    FlashList: React.forwardRef((props: any, ref: any) => {
+      React.useImperativeHandle(ref, () => ({ scrollToOffset: jest.fn() }))
+      return (
+        <View testID={props.testID} onScroll={props.onScroll}>
+          {props.ListHeaderComponent ?? null}
+          {Array.isArray(props.data)
+            ? props.data.map((item: any, index: number) => (
+                <React.Fragment key={`flashlist-item-${index}`}>
+                  {props.renderItem?.({ item, index })}
+                </React.Fragment>
+              ))
+            : null}
+          {props.ListFooterComponent ?? null}
+        </View>
+      )
+    }),
+  }
+})
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
@@ -151,6 +175,32 @@ describe('RightColumn web row paint optimization', () => {
 
     expect(getFlattenedRowStyle().contentVisibility).toBeUndefined()
     expect(getFlattenedRowStyle().containIntrinsicSize).toBeUndefined()
+  })
+
+  it('demotes recycled card media after the first web scroll', async () => {
+    const renderItemSpy = jest.fn((travel: any, _index: number, hasUserScrolled?: boolean) => {
+      const { Text } = require('react-native')
+      return <Text testID={`travel-card-${String(travel.id)}`}>{String(hasUserScrolled)}</Text>
+    })
+
+    renderWithProviders(createRightColumn({ renderItem: renderItemSpy }))
+
+    expect(renderItemSpy.mock.calls.some((call) => call[2] === false)).toBe(true)
+    const callsBeforeScroll = renderItemSpy.mock.calls.length
+
+    fireEvent.scroll(screen.getByTestId('right-column-scrollview'), {
+      nativeEvent: {
+        layoutMeasurement: { height: 844 },
+        contentOffset: { y: 120 },
+        contentSize: { height: 2400 },
+      },
+    })
+
+    await waitFor(() => {
+      const callsAfterScroll = renderItemSpy.mock.calls.slice(callsBeforeScroll)
+      expect(callsAfterScroll.length).toBeGreaterThan(0)
+      expect(callsAfterScroll.every((call) => call[2] === true)).toBe(true)
+    })
   })
 
   it('updates compact toolbar status props through the memo boundary', () => {

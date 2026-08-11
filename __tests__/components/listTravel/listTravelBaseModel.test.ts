@@ -1,6 +1,7 @@
 import {
   applyListDensity,
   buildListTravelFallbackSteps,
+  getCatalogCardMediaLoading,
 } from '@/components/listTravel/listTravelBaseModel'
 import {
   getRightColumnVirtualizationConfig,
@@ -29,6 +30,32 @@ describe('applyListDensity', () => {
     expect(applyListDensity(base, 'compact').gridColumns).toBe(4)
     expect(applyListDensity({ ...base, gridColumns: 4 }, 'compact').gridColumns).toBe(4)
     expect(applyListDensity(base, 'compact').imageHeight).toBeLessThan(base.imageHeight)
+  })
+})
+
+// #1400: eager (вместе с fetchPriority=high через isFirst) остаётся только у
+// начального видимого ряда; остальные обложки стартуют по нативному lazy, чтобы
+// быстрый скролл не запускал загрузки, которые рециклинг тут же отменяет.
+describe('getCatalogCardMediaLoading', () => {
+  it('keeps the whole first row eager and everything below lazy', () => {
+    const gridColumns = 3
+    expect(getCatalogCardMediaLoading(0, gridColumns)).toBe('eager')
+    expect(getCatalogCardMediaLoading(2, gridColumns)).toBe('eager')
+    expect(getCatalogCardMediaLoading(3, gridColumns)).toBe('lazy')
+    expect(getCatalogCardMediaLoading(30, gridColumns)).toBe('lazy')
+  })
+
+  it('matches the isFirst boundary on a single-column mobile list', () => {
+    expect(getCatalogCardMediaLoading(0, 1)).toBe('eager')
+    expect(getCatalogCardMediaLoading(1, 1)).toBe('lazy')
+  })
+
+  // Ремоунт первого ряда на развороте быстрой прокрутки не должен заново
+  // стартовать eager-загрузку: разворот вниз тут же её отменяет.
+  it('demotes the first row to lazy after the user has scrolled', () => {
+    expect(getCatalogCardMediaLoading(0, 3, true)).toBe('lazy')
+    expect(getCatalogCardMediaLoading(2, 3, true)).toBe('lazy')
+    expect(getCatalogCardMediaLoading(0, 1, true)).toBe('lazy')
   })
 })
 

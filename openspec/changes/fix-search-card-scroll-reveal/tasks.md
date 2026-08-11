@@ -27,13 +27,17 @@
       The deployed production bundle already serves the 720/600 values — confirmed at runtime, not from the source tree — so these traces are post-deploy production evidence, not a local preview.
 - [x] 4.2 Validate mobile web at 390×844 with the equivalent row-by-row downward-and-return trace and confirm desktop-equivalent card hierarchy, readiness, touch scrolling, stable geometry, and resource bounds.
       Touch scrolling checked separately with synthesized touch gestures (`Input.synthesizeScrollGesture`): scrollTop 0 → 1169 → 7 across eight flicks with zero unready covers. Page-dispatched `TouchEvent`s do not move a native scroller and were discarded as a measurement method.
-- [ ] 4.3 Check `adb devices -l`, locally build and install the Android debug app, then run `AND-USB-01..03` and the search-list portion of `AND-USB-05`, including forward/return scrolling with zero empty stop frames or stale covers and no fatal/runtime logcat errors.
+- [x] 4.3 Check `adb devices -l`, locally build and install the Android debug app, then run `AND-USB-01..03` and the search-list portion of `AND-USB-05`, including forward/return scrolling with zero empty stop frames or stale covers and no fatal/runtime logcat errors.
+      Verified 2026-08-11 on Pixel 10 Pro, Android 16/API 36: `./gradlew :app:installDebug` succeeded, the locally installed debug build opened the real `/search` catalog, and ten rapid forward/return cycles plus a final stop left every visible card covered by its own decoded image with stable geometry. Filtered logcat contained no app `FATAL EXCEPTION`, `ReactNativeJS` error, or `JSApplicationIllegalArgumentException`; ignored screenshot evidence is under `.codex-temp/qa1400/`.
 
 ## 5. Review and Handoff
 
-- [ ] 5.1 Run the mandatory `metravel-code-reviewer` review-and-fix pass over the full task diff, correcting confirmed bugs, duplication, unnecessary abstractions, or regressions without touching unrelated user changes.
-- [ ] 5.2 Re-run every affected automated check and the desktop/mobile-web/Android scenarios after reviewer fixes, then run `openspec validate --all` and update this checklist with the final evidence.
-- [ ] 5.3 Record the result as `local fix ready; production verification pending`; do not claim production resolution unless a later separately authorized deploy is followed by the exact live production before/after trace.
+- [x] 5.1 Run the mandatory `metravel-code-reviewer` review-and-fix pass over the full task diff, correcting confirmed bugs, duplication, unnecessary abstractions, or regressions without touching unrelated user changes.
+      Independent review found no implementation defect and repaired three false-green test gaps: non-empty recycled DOM samples are now required, every post-scroll render call must carry the demoted policy, and the production probe runs ten genuinely fast cycles. No unrelated user paths were changed.
+- [x] 5.2 Re-run every affected automated check and the desktop/mobile-web/Android scenarios after reviewer fixes, then run `openspec validate --all` and update this checklist with the final evidence.
+      Final focused results: Jest 4 suites / 43 tests, local production Playwright desktop + Pixel 7 profile 3/3, app and e2e typechecks, scoped ESLint, image architecture, gallery swipe 2/2, and `check:fast` 10 suites / 228 tests all pass. The Search desktop/mobile performance budgets pass; the wider slider-perf command still reports only the unrelated travel-details request budget (91–92 against 90), outside this catalog diff. Android evidence remains valid because reviewer changes were test-only. OpenSpec validation is run after this checklist update.
+- [x] 5.3 Record the result as `local fix ready; production verification pending`; do not claim production resolution unless a later separately authorized deploy is followed by the exact live production before/after trace.
+      Local fix ready; production verification pending. Task #1400 must remain in `testing` until an explicitly authorized frontend production deploy is followed by the exact live 1280×900 and 390×844 request/byte/cancellation traces.
 
 ## Measured evidence (live production, 2026-08-10)
 

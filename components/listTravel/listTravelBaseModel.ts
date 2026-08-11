@@ -61,6 +61,32 @@ export function applyListDensity(
   }
 }
 
+/**
+ * #1400: web-политика загрузки обложек виртуализированной ленты каталога.
+ *
+ * `eager` (вместе с `fetchPriority=high` через `isFirst`) остаётся только у
+ * реально видимого НАЧАЛЬНОГО ряда — он же LCP-кандидат. Остальные карточки
+ * отдаются нативному `loading="lazy"`: FlashList по-прежнему монтирует ряды на
+ * drawDistance вперёд, но старт запроса решает браузер по близости к вьюпорту.
+ * При быстрой прокрутке это убирает серии canceled-запросов: eager стартовал
+ * загрузку синхронно на каждой подмене `src` рециклируемого узла, и следующая
+ * подмена её отменяла.
+ *
+ * После первого скролла (`hasUserScrolled`) eager теряет и первый ряд: его
+ * ремоунт на развороте быстрой прокрутки иначе заново стартует обложки, и
+ * обратный разворот их отменяет — замер 2026-08-11 давал по одному canceled на
+ * каждый проход вниз-вверх только из-за этого. LCP к этому моменту уже
+ * зафиксирован начальным показом.
+ */
+export function getCatalogCardMediaLoading(
+  index: number,
+  gridColumns: number,
+  hasUserScrolled = false,
+): 'eager' | 'lazy' {
+  if (hasUserScrolled) return 'lazy'
+  return index < gridColumns ? 'eager' : 'lazy'
+}
+
 export function getSearchCardWidth({
   effectiveWidth,
   gapSize,

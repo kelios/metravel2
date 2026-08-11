@@ -68,7 +68,7 @@ const createTestClient = () =>
 const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> = {}) => {
   const queryClient = createTestClient();
 
-  return render(
+  const createItem = (nextProps: Partial<React.ComponentProps<typeof TravelListItem>>) => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <FavoritesProvider>
@@ -78,12 +78,19 @@ const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> 
             isSuperuser={false}
             isMetravel={false}
             isMobile={false}
-            {...props}
+            {...nextProps}
           />
         </FavoritesProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
+
+  const rendered = render(createItem(props));
+  return {
+    ...rendered,
+    rerenderItem: (nextProps: Partial<React.ComponentProps<typeof TravelListItem>>) =>
+      rendered.rerender(createItem(nextProps)),
+  };
 };
 
 describe('TravelListItem media props on web', () => {
@@ -169,6 +176,21 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.priority).toBe('high');
     expect(props.mediaProps?.loading).toBe('eager');
     expect(props.mediaProps?.prefetch).toBe(false);
+  });
+
+  it('applies the catalog lazy policy through the memo boundary after scrolling', () => {
+    const { rerenderItem } = renderItem({ isFirst: true, mediaLoading: 'eager' });
+
+    expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.mediaProps?.loading).toBe('eager');
+
+    rerenderItem({ isFirst: false, mediaLoading: 'lazy' });
+
+    expect(mockUnifiedTravelCard).toHaveBeenCalledTimes(2);
+    expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.mediaProps).toMatchObject({
+      loading: 'lazy',
+      priority: 'low',
+      prefetch: false,
+    });
   });
 
   it('uses compact owner controls on mobile web cards', () => {

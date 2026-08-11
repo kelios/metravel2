@@ -40,6 +40,7 @@ import {
   isListTravelAnyFallbackLoading,
   isListTravelFallbackStageExhausted,
   selectListTravelFallbackMatch,
+  getCatalogCardMediaLoading,
   getSearchCardImageHeight,
   getSearchCardWidth,
 } from './listTravelBaseModel'
@@ -324,28 +325,32 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     );
 
     const renderTravelListItem = useCallback(
-      (travel: Travel, index: number) => (
-        <RenderTravelItem
-          item={travel}
-          index={index}
-          isMobile={isMobileDevice}
-          isSuperuser={isSuper}
-          currentUserId={userId != null ? String(userId) : null}
-          isMetravel={isMeTravel}
-          onDeletePress={handleDeletePress}
-          // Грузим весь первый ряд eager/high-priority (а не только index 0):
-          // на многоколоночных раскладках карточки 2..N тоже above-the-fold и
-          // иначе показывали пустые серые боксы на первом кадре.
-          isFirst={index < gridColumns}
-          selectable={isExport}
-          isSelected={isSelected(travel.id)}
-          onToggle={isExport ? () => toggleSelect(travel) : undefined}
-          cardWidth={searchCardWidth}
-          imageHeight={searchCardImageHeight}
-          viewportWidth={width}
-          gridColumns={gridColumns}
-        />
-      ),
+      (travel: Travel, index: number, hasUserScrolled = false) => {
+        const mediaLoading = getCatalogCardMediaLoading(index, gridColumns, hasUserScrolled)
+
+        return (
+          <RenderTravelItem
+            item={travel}
+            index={index}
+            isMobile={isMobileDevice}
+            isSuperuser={isSuper}
+            currentUserId={userId != null ? String(userId) : null}
+            isMetravel={isMeTravel}
+            onDeletePress={handleDeletePress}
+            // Грузим весь начальный первый ряд eager/high-priority (а не только
+            // index 0). После первого скролла все ремоунты переходят на lazy/low.
+            isFirst={mediaLoading === 'eager'}
+            mediaLoading={mediaLoading}
+            selectable={isExport}
+            isSelected={isSelected(travel.id)}
+            onToggle={isExport ? () => toggleSelect(travel) : undefined}
+            cardWidth={searchCardWidth}
+            imageHeight={searchCardImageHeight}
+            viewportWidth={width}
+            gridColumns={gridColumns}
+          />
+        )
+      },
       [
         handleDeletePress,
         isExport,

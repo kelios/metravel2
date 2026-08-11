@@ -115,6 +115,10 @@ type Props = {
    * (FlashList mounts only the visible window), so a screen that lays cards out
    * with a plain `map()` must pass `lazy` — otherwise the browser starts every
    * cover at once, including rows several screens below the fold. See #1285.
+   * The catalog list passes a per-index policy instead (initial first row
+   * `eager`; everything else — including first-row remounts after the user has
+   * scrolled — `lazy`), so fast flings don't start cover requests that the
+   * recycler's next `src` swap immediately cancels. See #1400.
    */
   mediaLoading?: 'lazy' | 'eager'
 }
@@ -758,6 +762,7 @@ function areEqual(prev: Props, next: Props) {
     prev.imageHeight === next.imageHeight &&
     prev.viewportWidth === next.viewportWidth &&
     prev.gridColumns === next.gridColumns &&
+    prev.mediaLoading === next.mediaLoading &&
     prev.webTouchAction === next.webTouchAction &&
     prev.isDeleting === next.isDeleting
   )
