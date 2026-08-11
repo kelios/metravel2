@@ -620,6 +620,25 @@ describe('post-deploy media check: лестницы media.article_body (#1261)',
       expect(isBackpressureResponse({ status: 400, transform: 'derivative-missing' })).toBe(false)
       expect(isBackpressureResponse({ status: 200, transform: 'dynamic-transform-cache' })).toBe(false)
     })
+
+    // #1373: два прогона поймали по одному 502 на легальных stored-derivative
+    // ступенях; немедленный повтор дал 200. Краткий 502 ретраится, а не валит гейт.
+    it('краткий 502 ретраится как upstream-сбой', () => {
+      expect(isBackpressureResponse({ status: 502 })).toBe(true)
+    })
+
+    it('постоянный 502 после исчерпания попыток остаётся ошибкой ступени', () => {
+      const { issues } = auditArticleBodyLadder([
+        { rung: rungsOf([960])[0], response: ladderResponse({ status: 502 }) },
+      ])
+
+      const failures = issues.filter(
+        (issue: { code: string; severity: string }) =>
+          issue.code === 'media.article_body.rung_status' && issue.severity === 'error'
+      )
+      expect(failures).toHaveLength(1)
+      expect(failures[0].message).toContain('HTTP 502')
+    })
   })
 
   describe('ограничение параллелизма', () => {

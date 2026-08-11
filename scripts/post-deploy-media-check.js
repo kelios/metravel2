@@ -248,9 +248,18 @@ function fetchMedia(url, accept = BROWSER_IMAGE_ACCEPT, redirectDepth = 0, origi
  * в обеих Accept-ветках, а тот же URL поштучно — 200 `dynamic-transform`. Без
  * этого различения правило «любой non-200 — ошибка» валило бы деплой по нагрузке,
  * которую гейт сам же и создал.
+ *
+ * HTTP 502 — та же категория (#1373): два независимых прогона 2026-08-11 поймали
+ * по одному 502 на разных легальных stored-derivative ступенях, и немедленный
+ * точный повтор каждого URL дал 3/3 HTTP 200 `stored-derivative` + `immutable` —
+ * краткий сбой upstream-цепочки, а не отсутствующая производная. Постоянный 502
+ * гейт по-прежнему валит: после исчерпания попыток ответ возвращается как есть
+ * и попадает в правило «любой non-200 — ошибка».
  */
 const isBackpressureResponse = (response) =>
-  Number(response?.status) === 503 || /capacity-rejected/i.test(String(response?.transform || ''))
+  Number(response?.status) === 503 ||
+  Number(response?.status) === 502 ||
+  /capacity-rejected/i.test(String(response?.transform || ''))
 
 const BACKPRESSURE_RETRY_ATTEMPTS = 3
 const BACKPRESSURE_RETRY_DELAY_MS = 1500
