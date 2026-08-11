@@ -251,7 +251,12 @@ describe('ssg-skeletons', () => {
       const sub =
         homeGenerated1['components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_9e18c02e'];
       expect(html).toContain(`>${title} <span class="ssg-accent">${titleAccent}</span>`);
-      expect(html).toContain(`<p class="ssg-home-sub">${sub}</p>`);
+      // Подзаголовок в двух вариантах: у мобильной и книжной раскладки в
+      // HomeHero.heroSubtitle разный текст.
+      const subDesktop =
+        homeGenerated1['components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_ot_te_3f0b1078'];
+      expect(html).toContain(`<p class="ssg-home-sub ssg-home-sub-mobile">${sub}</p>`);
+      expect(html).toContain(`<p class="ssg-home-sub ssg-home-sub-desktop">${subDesktop}</p>`);
     });
 
     // Порядок и пара «иконка ↔ заголовок» тоже часть контракта: перестановка
@@ -293,7 +298,9 @@ describe('ssg-skeletons', () => {
       // Регрессия ревью #1405: на desktop кнопка была прибита к 190px, и подпись
       // «Смотреть маршруты» (201px вместе с иконкой) резалась с обеих сторон.
       // Ширина должна идти от содержимого, 190px остаётся нижней границей.
-      expect(css).toContain('.ssg-home-cta{width:fit-content;min-width:190px');
+      // На desktop кнопка тянется на ширину колонки (реальная — 288 px); жёсткие
+      // 190 px резали подпись, поэтому фиксированная ширина запрещена.
+      expect(css).toMatch(/@media\(min-width:1280px\)\{[^\n]*\.ssg-home-cta\{width:100%;min-width:190px/);
       expect(css).not.toMatch(/\.ssg-home-cta\{width:190px/);
       expect(css).toMatch(/html\[data-theme="dark"\] \.ssg-home-mood\{[^}]*color:#e8e8e8/);
     });
@@ -329,50 +336,46 @@ describe('ssg-skeletons', () => {
       expect(css).toMatch(/\.ssg-home-week-body\{position:absolute;left:0;right:0;bottom:0/);
     });
 
-    it('uses the desktop open-book geometry and the compact mobile composition', () => {
+    // Геометрия перепривязана к живому проду (замер 2026-08-12, #1409): шапка
+    // 64/78 px вместо плоских 56, книга — бокс настоящей книги, левая страница и
+    // слот фото — в тех же координатах. Прежние якоря считались от шапки 56 px и
+    // aspect-ratio книги, из-за чего подмена шелла на React читалась как прыжок.
+    it('mirrors the measured first screen: bar, book and left page', () => {
       const css = buildSkeletonCSS();
-      const mobileTitleTop = 56 + 8 + 44;
-      const mobileCtaTop = mobileTitleTop + 80 + 16 + 48 + 16 + 4 + 48 + 16 + 8;
-      // Белая карточка hero заканчивается на CTA + padding 20; дальше gap 14,
-      // margin 9 до hairline-разделителя, border 1 и padding 34 до грида чипов.
-      const mobileHeroCardBottom = mobileCtaTop + 46 + 20;
-      const mobileMoodsTop = mobileHeroCardBottom + 14 + 9 + 1 + 34;
-      const mobileMoodsHeight = 46 * 3 + 12 * 2;
-      const mobileWeekTop = mobileMoodsTop + mobileMoodsHeight + 14 + 20;
-      const mobileWeekHeight = (390 - 16 * 2) / (3 / 2);
-      const mobilePopularTop = mobileWeekTop + mobileWeekHeight + 14 + 28;
-      const desktopBookWidth = Math.min(1280 - 80, ((940 - 180) * 1040) / 765, 1200);
-      const desktopBookHeight = desktopBookWidth / (1040 / 765);
-      const desktopBookTop = 56 + 20;
-      const desktopPageTop = desktopBookTop + desktopBookHeight * 0.216;
-      const desktopHeroTop = desktopBookTop + desktopBookHeight * 0.216;
-      const desktopHeroWidth = desktopBookWidth * 0.51 * 0.688;
-      const desktopHeroHeight = desktopBookHeight * 0.397;
 
+      // --- mobile 390: заголовок карточки на 108 px, как у React-hero ---
+      const mobileBar = 64;
+      const mobileTitleTop = mobileBar + 0 + 44; // шапка + padding шелла + padding карточки
       expect(mobileTitleTop).toBe(108);
-      expect(mobileCtaTop).toBe(344);
-      expect(mobileMoodsTop).toBe(468);
-      expect(mobileWeekTop).toBe(664);
-      expect(mobilePopularTop).toBeCloseTo(945, 0);
-      expect(desktopBookWidth).toBeCloseTo(1033, 0);
-      expect(desktopPageTop).toBeGreaterThanOrEqual(241 - 24);
-      expect(desktopPageTop).toBeLessThanOrEqual(241 + 24);
-      expect(desktopHeroTop).toBeGreaterThanOrEqual(240 - 24);
-      expect(desktopHeroTop).toBeLessThanOrEqual(240 + 24);
-      expect(desktopHeroWidth).toBeGreaterThanOrEqual(363 - 24);
-      expect(desktopHeroWidth).toBeLessThanOrEqual(363 + 24);
-      expect(desktopHeroHeight).toBeGreaterThanOrEqual(302 - 24);
-      expect(desktopHeroHeight).toBeLessThanOrEqual(302 + 24);
-      expect(css).toContain('.ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:8px 16px}');
-      expect(css).toContain('@media(min-width:1280px){.ssg-home-shell{');
+      expect(css).toContain('.ssg-home-bar{height:64px');
+      expect(css).toContain('.ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:0 16px}');
+      // Высоты контролов равны реальным: поле поиска 46, mood-чип 50.
+      expect(css).toMatch(/\.ssg-home-search\{[^}]*height:46px/);
+      expect(css).toMatch(/\.ssg-home-mood\{height:50px/);
+
+      // --- desktop 1350x940: книга 1200x760 в точке (68,130) ---
+      const desktopBar = 78;
+      const shellPaddingTop = 52;
+      expect(desktopBar + shellPaddingTop).toBe(130);
+      const bookWidth = Math.min(1350 - 15 - 80, 1200); // вьюпорт минус скроллбар и padding шелла
+      const bookHeight = Math.min(940 - 180, (1350 - 80) / 1.3594771);
+      expect(bookWidth).toBe(1200);
+      expect(Math.round(bookHeight)).toBe(760);
+      // Слот фото: 60,8% второй колонки и 55,5% высоты книги = 372x422 у React.
+      expect(Math.round(bookWidth * 0.51 * 0.608)).toBe(372);
+      expect(Math.round(bookHeight * 0.555)).toBe(422);
+
+      expect(css).toMatch(/@media\(min-width:1280px\)\{[^\n]*\.ssg-home-bar\{height:78px/);
+      expect(css).toContain('.ssg-home-shell{max-width:none;padding:52px 40px 24px}');
       expect(css).toContain('grid-template-columns:49% 51%');
-      expect(css).toContain('width:min(calc(100vw - 80px),calc(135.9477svh - 244.7059px),1200px)');
-      expect(css).toContain('aspect-ratio:1040/765');
+      expect(css).toContain('width:min(100%,1200px);height:min(calc(100svh - 180px),calc((100vw - 80px)/1.3594771))');
+      // Прежняя привязка через aspect-ratio делала книгу на 167 px уже настоящей.
+      expect(css).not.toContain('aspect-ratio:1040/765');
       expect(css).toContain('background-image:var(--image-homeHeroBook,none)');
-      expect(css).toContain('.ssg-home-page{position:relative;top:21.6%;align-self:start;');
-      expect(css).toContain('padding:0 9% 0 16%');
+      expect(css).toContain('.ssg-home-page{position:relative;top:11.0%;align-self:start;');
+      expect(css).toContain('padding:0 18.4% 0 32.65%');
       expect(css).toContain(
-        '.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%',
+        '.ssg-home-week{top:14.9%;align-self:start;width:60.8%;height:55.5%;margin:0 0 0 5.2%',
       );
       expect(css).toContain('.ssg-home-cta{width:100%;height:46px');
       expect(css).toContain(
@@ -380,6 +383,25 @@ describe('ssg-skeletons', () => {
       );
       expect(css).toContain('padding-top:34px');
       expect(css).toContain('.ssg-home-week-body{position:absolute');
+    });
+
+    // Шапка — самая заметная часть подмены: раньше вместо неё была полоса 56 px
+    // с одним словом. Подписи меню обязаны совпадать с HEADER_NAV_ITEMS.
+    it('replicates the real header: logo, nav labels, language and account pills', () => {
+      const html = buildHomeSkeletonHtml();
+      const css = buildSkeletonCSS();
+
+      expect(html).toContain('src="/assets/icons/logo_yellow_60x60.png"');
+      expect(html).toContain('<span class="ssg-home-bar-word">MeTravel</span>');
+      ['Маршруты', 'Беларусь', 'Карта', 'Места', 'Случайный маршрут', 'Квесты'].forEach((label) => {
+        expect(html).toContain(`<span class="ssg-home-bar-nav-ico"></span>${label}</span>`);
+      });
+      expect(html).toContain('RU</span>');
+      expect(html).toContain('Войти</span>');
+      expect(html).toContain('Гость</span>');
+      // Слот под иконку пункта меню держит подписи на позициях настоящей шапки.
+      expect(css).toContain('.ssg-home-bar-nav-ico{width:18px;height:18px;flex:0 0 18px}');
+      expect(css).toMatch(/\.ssg-home-bar-nav\{display:flex;align-items:center;gap:22px;margin-left:41px/);
     });
 
     it('includes auto-removal script', () => {

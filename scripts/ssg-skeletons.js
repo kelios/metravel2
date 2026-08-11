@@ -66,9 +66,20 @@ const SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial
 //   homeHeroContent.MOOD_CARDS[*].title
 // Парность проверяется тестом __tests__/scripts/ssg-skeletons.test.ts.
 const HOME_COPY = {
+  // Подзаголовок у мобильной и книжной раскладки разный (HomeHero.heroSubtitle):
+  // на десктопе это три строки, и подмена короткого текста на длинный двигала
+  // поиск и кнопку вниз на 16 px.
+  subMobile: 'Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.',
+  subDesktop:
+    'Реальные маршруты по Беларуси и Европе от тех, кто там был — с фото, заметками и GPS-треками.',
   searchPlaceholder: 'Куда хотите поехать? Город, озеро, замок…',
   cta: 'Смотреть маршруты',
   weekKicker: 'Маршрут недели',
+  // Пункты меню шапки на desktop (HEADER_NAV_ITEMS, первые шесть — те, что
+  // помещаются на 1350). Иконки NavigationIcon не дублируются: под каждую
+  // зарезервирован пустой слот 18px, поэтому подписи стоят ровно там же, где в
+  // настоящей шапке, и на подмене появляются только сами глифы.
+  nav: ['Маршруты', 'Беларусь', 'Карта', 'Места', 'Случайный маршрут', 'Квесты'],
   moods: [
     { title: 'У воды', icon: 'droplet' },
     { title: 'Замки', icon: 'flag' },
@@ -94,7 +105,16 @@ const FEATHER_PATHS = {
     '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>',
   'map-pin':
     '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>',
+  globe:
+    '<circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>',
+  menu: '<line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>',
+  'log-in':
+    '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line>',
 };
+
+// Логотип шапки — статичный путь без хеша, тот же, что грузит React-шапка.
+const HEADER_LOGO_SRC = '/assets/icons/logo_yellow_60x60.png';
 
 function featherSvg(name, size, className) {
   return `<svg class="${className}" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${FEATHER_PATHS[name]}</svg>`;
@@ -116,20 +136,36 @@ function buildSkeletonCSS() {
 #ssg-skeleton *{box-sizing:border-box}
 .ssg-bar{width:100%;height:56px;background:${COLORS.light.surface};border-bottom:1px solid ${COLORS.light.border};display:flex;align-items:center;padding:0 16px}
 .ssg-bar-logo{font:700 20px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.01em}
-.ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:8px 16px}
+/* Шапка шелла главной повторяет настоящую (замер прода 2026-08-12): высота
+   64px на мобильном и 78px на desktop, тот же логотип и языковая пилюля.
+   Прежняя плоская полоса 56px с одним словом «MeTravel» давала на подмене
+   и смену содержимого, и вертикальный сдвиг всей страницы под ней.
+   Класс отдельный: у шеллов travel/search геометрия привязана к .ssg-bar 56px. */
+.ssg-home-bar{height:64px;padding:0 15px;gap:10px;justify-content:flex-start;background:${COLORS.light.bg};border-bottom:1px solid rgba(58,58,58,.06)}
+.ssg-home-bar-brand{display:flex;align-items:center;gap:6px;min-width:0}
+.ssg-home-bar-logo{width:26px;height:26px;display:block;flex:0 0 26px}
+.ssg-home-bar-word{display:none}
+.ssg-home-bar-lang{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;margin-left:8px;border-radius:12px;background:${COLORS.light.bgSecondary};font:700 13px/1 ${SANS};color:${COLORS.light.text}}
+.ssg-home-bar-lang svg{flex:0 0 17px;color:${COLORS.light.textMuted}}
+.ssg-home-bar-nav{display:none}
+.ssg-home-bar-spacer{flex:1}
+.ssg-home-bar-login,.ssg-home-bar-guest{display:none}
+.ssg-home-bar-burger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:${COLORS.light.bgSecondary};color:${COLORS.light.text}}
+.ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:0 16px}
 .ssg-home-book{display:flex;flex-direction:column;gap:14px;width:100%}
-.ssg-home-page{display:flex;flex-direction:column;align-items:stretch;gap:16px;padding:44px 20px 20px;border-radius:24px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
+.ssg-home-page{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:44px 20px 20px;border-radius:24px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
 .ssg-home-chapter{display:none}
 .ssg-home-title{margin:0;font:700 32px/40px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:-0.8px;color:${COLORS.light.text};max-width:640px;text-align:left}
 .ssg-home-title .ssg-accent{display:block;color:${COLORS.light.accent};font-weight:800}
+.ssg-home-sub-desktop{display:none}
 .ssg-home-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left}
-.ssg-home-search-row{display:flex;gap:8px;margin-top:4px;height:48px}
+.ssg-home-search-row{display:flex;gap:8px;height:46px}
 /* Контролы шелла несут реальные подписи, а не пустые серые плашки: до гидрации
    первый экран должен читаться как страница, а не как скелетон (#1405). */
-.ssg-home-search{flex:1;min-width:0;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;gap:10px;padding:0 14px;color:${COLORS.light.textMuted}}
+.ssg-home-search{flex:1;min-width:0;height:46px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;gap:10px;padding:0 14px;color:${COLORS.light.textMuted}}
 .ssg-home-search-ico{flex:0 0 18px}
 .ssg-home-search-text{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:400 14px/1.2 ${SANS};color:${COLORS.light.textMuted}}
-.ssg-home-search-btn{width:48px;height:48px;flex:0 0 48px;border-radius:12px;background:${COLORS.light.primary};display:flex;align-items:center;justify-content:center;color:${COLORS.light.textOnPrimary}}
+.ssg-home-search-btn{width:46px;height:46px;flex:0 0 46px;border-radius:12px;background:${COLORS.light.primary};display:flex;align-items:center;justify-content:center;color:${COLORS.light.textOnPrimary}}
 .ssg-home-cta{width:100%;height:46px;border-radius:16px;background:${COLORS.light.primary};margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;font:600 15px/1.2 ${SANS};color:${COLORS.light.textOnPrimary};white-space:nowrap;overflow:hidden}
 .ssg-home-cta-ico{flex:0 0 16px}
 /* Чипы вне белой карточки, под hairline-разделителем — как HomeHeroMoodRail.
@@ -140,7 +176,7 @@ function buildSkeletonCSS() {
    мобильном React использует sans, поэтому serif здесь не нужен. Пятый чип
    («Карта до 60 км») в React-ряду растягивается на всю ширину — grid-column
    держит ту же геометрию. */
-.ssg-home-mood{height:46px;border-radius:999px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;justify-content:center;gap:10px;padding:0 14px;font:500 16px/22px ${SANS};letter-spacing:-0.12px;color:${COLORS.light.text};white-space:nowrap;overflow:hidden}
+.ssg-home-mood{height:50px;border-radius:999px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;justify-content:center;gap:10px;padding:0 14px;font:500 16px/22px ${SANS};letter-spacing:-0.12px;color:${COLORS.light.text};white-space:nowrap;overflow:hidden}
 .ssg-home-mood-ico{flex:0 0 19px;color:${COLORS.light.textMuted}}
 .ssg-home-mood:nth-child(5){grid-column:1/-1}
 .ssg-home-notes{display:none}
@@ -168,7 +204,7 @@ function buildSkeletonCSS() {
 .ssg-home-popular-line{height:12px;border-radius:6px;margin:10px 12px 0}
 .ssg-home-popular-line.w76{width:76%}.ssg-home-popular-line.w55{width:55%}
 @media(min-width:768px) and (max-width:1279px){.ssg-home-shell{padding:24px}.ssg-home-book{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}.ssg-home-page{grid-column:1;grid-row:1;justify-content:center;gap:16px;padding:32px}.ssg-home-week{grid-column:2;grid-row:1;margin-top:0}.ssg-home-moods{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0;border-top:0;padding-top:0}.ssg-home-hero{aspect-ratio:auto;height:320px}.ssg-home-popular{display:none}}
-@media(min-width:1280px){.ssg-home-shell{max-width:none;padding:20px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(calc(100vw - 80px),calc(135.9477svh - 244.7059px),1200px);height:auto;aspect-ratio:1040/765;margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:21.6%;align-self:start;justify-content:flex-start;gap:12px;padding:0 9% 0 16%;border-radius:0;background:transparent;border:0;overflow:hidden}.ssg-home-chapter{display:flex;align-items:center;gap:10px;margin-bottom:2px}.ssg-home-chapter-label{font:600 11px/1.4 Baskerville,Georgia,'Times New Roman',serif;letter-spacing:.14em;text-transform:uppercase;color:${COLORS.light.textMuted};white-space:nowrap}.ssg-home-chapter-line{flex:1;height:1px;background:${COLORS.light.border}}.ssg-home-title{font-family:Baskerville,Georgia,'Times New Roman',serif;font-size:clamp(24px,1.9vw,32px);line-height:1.24;letter-spacing:-0.2px}.ssg-home-title .ssg-accent{color:${BOOK_PAGE_ACCENT}}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-search-row{height:44px;margin-top:4px}.ssg-home-search{height:44px}.ssg-home-search-btn{width:44px;height:44px;flex:0 0 44px}.ssg-home-cta{width:fit-content;min-width:190px;max-width:100%;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%;border-radius:12px;border:0;background:${HOME_HERO_FILL}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
+@media(min-width:1280px){.ssg-home-bar{height:78px;padding:0 24px;gap:0}.ssg-home-bar-logo{width:32px;height:32px;flex:0 0 32px}.ssg-home-bar-brand{gap:8px}.ssg-home-bar-word{display:inline;font:600 18px/1 ${SANS};color:${COLORS.light.text};letter-spacing:-0.01em}.ssg-home-bar-burger{display:none}.ssg-home-bar-nav{display:flex;align-items:center;gap:22px;margin-left:41px;font:500 14px/1 ${SANS};color:${COLORS.light.text};white-space:nowrap}.ssg-home-bar-nav-item{display:inline-flex;align-items:center;gap:6px}.ssg-home-bar-nav-ico{width:18px;height:18px;flex:0 0 18px}.ssg-home-bar-login{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;margin-left:12px;border-radius:12px;background:${COLORS.light.primary};font:700 14px/1 ${SANS};color:${COLORS.light.textOnPrimary}}.ssg-home-bar-guest{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;margin-left:12px;border-radius:12px;background:${COLORS.light.bgSecondary};font:500 14px/1 ${SANS};color:${COLORS.light.text}}.ssg-home-shell{max-width:none;padding:52px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(100%,1200px);height:min(calc(100svh - 180px),calc((100vw - 80px)/1.3594771));margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:11.0%;align-self:start;justify-content:flex-start;gap:10px;padding:0 18.4% 0 32.65%;border-radius:0;background:transparent;border:0;overflow:hidden}.ssg-home-chapter{display:flex;align-items:center;gap:10px;margin-bottom:2px}.ssg-home-chapter-label{font:600 11px/1.4 Baskerville,Georgia,'Times New Roman',serif;letter-spacing:.14em;text-transform:uppercase;color:${COLORS.light.textMuted};white-space:nowrap}.ssg-home-chapter-line{flex:1;height:1px;background:${COLORS.light.border}}.ssg-home-title{font-family:Baskerville,Georgia,'Times New Roman',serif;font-size:clamp(24px,1.9vw,32px);line-height:1.24;letter-spacing:-0.2px}.ssg-home-title .ssg-accent{color:${BOOK_PAGE_ACCENT}}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-sub-mobile{display:none}.ssg-home-sub-desktop{display:block}.ssg-home-search-row{height:50px;margin-top:2px}.ssg-home-search{height:50px}.ssg-home-search-btn{width:50px;height:50px;flex:0 0 50px}.ssg-home-cta{width:100%;min-width:190px;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:14.9%;align-self:start;width:60.8%;height:55.5%;margin:0 0 0 5.2%;border-radius:12px;border:0;background:${HOME_HERO_FILL}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
 @media(min-width:1280px) and (min-height:961px){.ssg-home-notes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}.ssg-home-note{height:44px;border-radius:12px;background:rgba(255,255,255,.45);border:1px solid ${COLORS.light.border}}}
 .ssg-search-shell{width:100%;max-width:1214px;margin:0 auto;padding:10px}
 .ssg-search-layout{display:block;min-width:0}
@@ -310,6 +346,11 @@ html[data-theme="dark"] .ssg-bar-logo{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-h1{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-lead{color:${COLORS.dark.textMuted}}
 html[data-theme="dark"] .ssg-search-aside-title{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-home-bar{background:${COLORS.dark.bg};border-bottom-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .ssg-home-bar-lang,html[data-theme="dark"] .ssg-home-bar-burger{background:${COLORS.dark.bgSecondary};color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-home-bar-word,html[data-theme="dark"] .ssg-home-bar-nav{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-home-bar-login{background:${COLORS.dark.primary};color:${COLORS.dark.textOnPrimary}}
+html[data-theme="dark"] .ssg-home-bar-guest{background:${COLORS.dark.bgSecondary};color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-home-book{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-home-page{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-home-title{color:${COLORS.dark.text}}
@@ -503,13 +544,22 @@ function buildHomeSkeletonHtml({ heroHref } = {}) {
   // книги media-query'ями; чипы прячутся, а на высоких экранах вместо них в
   // левой странице показывается грид page-notes (.ssg-home-notes).
   return `<div id="ssg-skeleton">
-<div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
+<div class="ssg-bar ssg-home-bar">
+<div class="ssg-home-bar-brand"><img class="ssg-home-bar-logo" src="${HEADER_LOGO_SRC}" alt="" width="32" height="32" decoding="async"/><span class="ssg-home-bar-word">MeTravel</span></div>
+<nav class="ssg-home-bar-nav" aria-hidden="true">${HOME_COPY.nav.map((label) => `<span class="ssg-home-bar-nav-item"><span class="ssg-home-bar-nav-ico"></span>${label}</span>`).join('')}</nav>
+<span class="ssg-home-bar-spacer"></span>
+<span class="ssg-home-bar-lang" aria-hidden="true">${featherSvg('globe', 17, 'ssg-home-bar-globe')}RU</span>
+<span class="ssg-home-bar-login" aria-hidden="true">${featherSvg('log-in', 14, 'ssg-home-bar-login-ico')}Войти</span>
+<span class="ssg-home-bar-guest" aria-hidden="true">${featherSvg('user', 15, 'ssg-home-bar-guest-ico')}Гость</span>
+<span class="ssg-home-bar-burger" aria-hidden="true">${featherSvg('menu', 24, 'ssg-home-bar-burger-ico')}</span>
+</div>
 <main class="ssg-home-shell">
 <div class="ssg-home-book">
 <section class="ssg-home-page">
 <div class="ssg-home-chapter" aria-hidden="true"><span class="ssg-home-chapter-label">Идеи путешествий</span><span class="ssg-home-chapter-line"></span></div>
 <div class="ssg-home-title">Куда поехать <span class="ssg-accent">в эти выходные?</span></div>
-<p class="ssg-home-sub">Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.</p>
+<p class="ssg-home-sub ssg-home-sub-mobile">${HOME_COPY.subMobile}</p>
+<p class="ssg-home-sub ssg-home-sub-desktop">${HOME_COPY.subDesktop}</p>
 <div class="ssg-home-search-row" aria-hidden="true"><div class="ssg-home-search">${featherSvg('search', 18, 'ssg-home-search-ico')}<span class="ssg-home-search-text">${HOME_COPY.searchPlaceholder}</span></div><div class="ssg-home-search-btn">${featherSvg('search', 18, 'ssg-home-search-ico')}</div></div>
 <div class="ssg-home-cta" aria-hidden="true">${featherSvg('compass', 16, 'ssg-home-cta-ico')}${HOME_COPY.cta}</div>
 <div class="ssg-home-notes" aria-hidden="true">${Array.from({ length: 5 }, () => '<div class="ssg-home-note"></div>').join('')}</div>

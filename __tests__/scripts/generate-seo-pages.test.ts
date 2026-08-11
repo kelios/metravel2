@@ -19,6 +19,8 @@ const {
   buildTravelHeroPreloadData,
   injectTravelHeroPreload,
   injectHomeHeroPreload,
+  injectIconFontPreload,
+  resolveIconFontHref,
   resolveHomeHeroAssetHref,
   injectTravelBootstrapData,
   injectHiddenH1,
@@ -149,6 +151,7 @@ describe('literal-safe HTML injection', () => {
         mobile: { href: REPLACEMENT_TOKENS },
       }),
       injectHomeHeroPreload(SINGLE_SHELL_BASE, REPLACEMENT_TOKENS),
+      injectIconFontPreload(SINGLE_SHELL_BASE, REPLACEMENT_TOKENS),
       injectTravelBootstrapData(SINGLE_SHELL_BASE, { name: REPLACEMENT_TOKENS }, 'literal-probe'),
       injectHiddenH1(SINGLE_SHELL_BASE, REPLACEMENT_TOKENS),
       injectJsonLd(SINGLE_SHELL_BASE, { '@type': 'Article', headline: REPLACEMENT_TOKENS }, 'literal-probe'),
@@ -204,6 +207,45 @@ describe('literal-safe HTML injection', () => {
 // ---------------------------------------------------------------------------
 // replaceOrInsert
 // ---------------------------------------------------------------------------
+// #1409: шрифт иконок узнавался только из JS-бандла и догружался уже ПОСЛЕ
+// снятия SSG-шелла (замер прода: старт 848/1038 мс, готов 959/1159 мс против
+// снятия шелла на 901/1109 мс), поэтому сразу после подмены иконки в шапке,
+// чипах и кнопке секунду рисовались пустыми квадратами.
+describe('injectIconFontPreload', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+
+  it('preloads the icon font with crossorigin', () => {
+    const html = injectIconFontPreload(SINGLE_SHELL_BASE, '/assets/Feather.abc123.ttf');
+    expect(html).toContain('rel="preload"');
+    expect(html).toContain('as="font"');
+    expect(html).toContain('href="/assets/Feather.abc123.ttf"');
+    // Без crossorigin браузер считает preload другим запросом и качает шрифт дважды.
+    expect(html).toContain('crossorigin="anonymous"');
+  });
+
+  it('does nothing without a resolved font (fail-open)', () => {
+    expect(injectIconFontPreload(SINGLE_SHELL_BASE, null)).toBe(SINGLE_SHELL_BASE);
+  });
+
+  it('resolves the hashed font file from dist and returns null when missing', () => {
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), 'ssg-font-'));
+    const fontsDir = path.join(
+      dist,
+      'assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts'
+    );
+    expect(resolveIconFontHref(dist)).toBeNull();
+
+    fs.mkdirSync(fontsDir, { recursive: true });
+    fs.writeFileSync(path.join(fontsDir, 'Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf'), 'x');
+    expect(resolveIconFontHref(dist)).toBe(
+      '/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf'
+    );
+    fs.rmSync(dist, { recursive: true, force: true });
+  });
+});
+
 describe('replaceOrInsert', () => {
   it('replaces existing tag when regex matches', () => {
     const html = '<head><meta property="og:title" content="old"/></head>';

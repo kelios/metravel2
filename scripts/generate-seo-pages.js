@@ -1335,6 +1335,47 @@ function resolveHomeHeroAssetHref(distDir) {
 }
 
 /**
+ * Preload иконочного шрифта Feather.
+ *
+ * Замер прода 2026-08-12 (без троттлинга): шрифт начинал грузиться на 848 мс
+ * (desktop) и 1038 мс (mobile) — то есть его URL узнаётся только из JS-бандла,
+ * запрос стартует после гидрации и шрифт готов на 959/1159 мс, уже ПОСЛЕ
+ * снятия SSG-шелла (901/1109 мс). В эти 50–120 мс иконки в шапке, чипах,
+ * поиске и CTA рисуются пустыми квадратами — это и читается как «моргание»
+ * сразу после подмены шелла на приложение. Preload переносит запрос в начало
+ * документа, параллельно бандлу.
+ *
+ * `crossorigin` обязателен даже для своего origin: без него браузер считает
+ * preload другим запросом, чем реальную загрузку шрифта, и качает файл дважды.
+ */
+function resolveIconFontHref(distDir) {
+  const relativeDir = path.join(
+    'assets',
+    'node_modules',
+    '@expo',
+    'vector-icons',
+    'build',
+    'vendor',
+    'react-native-vector-icons',
+    'Fonts'
+  );
+  const pattern = /^Feather\.[a-f0-9]+\.ttf$/i;
+  try {
+    const match = fs.readdirSync(path.join(distDir, relativeDir)).find((name) => pattern.test(name));
+    if (match) return `/${relativeDir.split(path.sep).join('/')}/${match}`;
+  } catch {
+    // Каталога нет — fail-open, страница просто останется без preload.
+  }
+  return null;
+}
+
+function injectIconFontPreload(baseHtml, href) {
+  if (!href) return baseHtml;
+  const tag = `<link data-icon-font-preload="true" rel="preload" as="font" type="font/ttf" href="${escapeAttr(href)}" crossorigin="anonymous"/>`;
+  return replaceOrInsert(baseHtml, /<link[^>]*data-icon-font-preload="true"[^>]*\/?>/i, tag);
+}
+
+/**
  * Preload hero-картинки главной.
  *
  * Без него URL картинки известен только из JS-бандла, поэтому запрос стартует
@@ -2807,6 +2848,11 @@ async function main() {
     console.warn('  ⚠️  home hero asset (cover_sorapiso.*) not found in dist — LCP preload skipped');
   }
 
+  const iconFontHref = resolveIconFontHref(DIST_DIR);
+  if (!iconFontHref) {
+    console.warn('  ⚠️  icon font (Feather.*.ttf) not found in dist — preload skipped');
+  }
+
   // --- 1. Static pages ---
   console.log('📄 Generating static pages...');
   for (const page of STATIC_PAGES) {
@@ -2833,6 +2879,9 @@ async function main() {
     if (page.route === '/') {
       html = injectHomeHeroPreload(html, homeHeroHref);
     }
+
+    // Иконки Feather есть в шапке на каждом маршруте, поэтому шрифт греем везде.
+    html = injectIconFontPreload(html, iconFontHref);
 
     // Out-of-flow semantic H1 for routes whose static HTML has none (`/`, `/map`).
     // Same injector travel pages use: sibling before #root, so hydration is not
@@ -3139,7 +3188,8 @@ async function main() {
           related: pickRelatedTravels(travel, relatedIndex, 6),
         }
       );
-      const htmlWithQuestPromo = injectTravelQuestPromoSection(htmlWithSkeleton, questMatches);
+      const htmlWithIconFont = injectIconFontPreload(htmlWithSkeleton, iconFontHref);
+      const htmlWithQuestPromo = injectTravelQuestPromoSection(htmlWithIconFont, questMatches);
       const htmlWithRegisterCta = injectTravelRegisterCtaSection(htmlWithQuestPromo);
       const finalTravelHtml = disableExpoRouterHydration(
         injectHiddenH1(htmlWithRegisterCta, name || routeKey)
@@ -3465,6 +3515,8 @@ if (typeof module !== 'undefined' && module.exports) {
     buildTravelHeroPreloadData,
     injectTravelHeroPreload,
     injectHomeHeroPreload,
+    injectIconFontPreload,
+    resolveIconFontHref,
     resolveHomeHeroAssetHref,
     injectTravelBootstrapData,
     injectHiddenH1,
