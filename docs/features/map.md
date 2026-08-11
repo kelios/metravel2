@@ -104,6 +104,12 @@ refetch, pagination, pan/zoom и переключение `radius`/`route` не 
 пересоздают базовый слой. Это не debounce и не затрагивает Android WebView
 renderer, который сохраняет собственный tile lifecycle.
 
+Статический HTML bootstrap заранее загружает Leaflet/MarkerCluster CSS и может
+сделать только connection-level preconnect к внешнему proxy в local/dev. Он не
+подставляет guessed OSM URL в preload или SSG shell image: до settled data fit
+неизвестны финальные zoom и tile coordinates, поэтому любой такой запрос мог бы
+стать отдельным лишним уровнем до runtime base-layer attach.
+
 ### Native bridge ownership
 
 `components/MapPage/Map.ios.tsx` владеет протоколом основной native-карты:

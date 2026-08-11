@@ -1,69 +1,30 @@
-import { DEFAULT_ZOOM } from '@/components/MapPage/Map/constants'
 import {
   OSM_LOCAL_WEB_HOSTNAMES,
   OSM_PRIVATE_WEB_HOST_PATTERNS,
-  OSM_PROXY_PUBLIC_ORIGIN,
-  OSM_PROXY_TILE_PATH,
   resolveOsmTileRequest,
 } from '@/config/mapWebTileContract'
-import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig'
 
 export const MAP_ROUTE_PATH = '/map'
-export const MAP_TILE_PROXY_PATH = OSM_PROXY_TILE_PATH
 export const MAP_TILE_PRECONNECT_ID = 'metravel-tile-preconnect'
-export const MAP_TILE_PRELOAD_ID = 'metravel-map-tile-preload'
-export const MAP_TILE_PUBLIC_FALLBACK_ORIGIN = OSM_PROXY_PUBLIC_ORIGIN
-export const MAP_TILE_SIZE_PX = 256
-export const MAP_SHELL_TILE_OFFSET_X_CSS_VAR = '--metravel-map-shell-tile-offset-x'
-export const MAP_SHELL_TILE_OFFSET_Y_CSS_VAR = '--metravel-map-shell-tile-offset-y'
 
 const LEAFLET_CSS_ID = 'metravel-leaflet-css'
 const MARKERCLUSTER_CSS_ID = 'metravel-markercluster-css'
 
-type WarmupTileParams = {
-  lat?: number
-  lng?: number
-  zoom?: number
+type TilePreconnectParams = {
   hostname?: string | null
   envApiUrl?: string | null
 }
 
-export function latLngToSlippyTilePlacement(
-  lat: number,
-  lng: number,
-  zoom: number,
-): { x: number; y: number; offsetX: number; offsetY: number } {
-  const clampedLat = Math.max(-85.05112878, Math.min(85.05112878, Number(lat)))
-  const normalizedLng = ((Number(lng) + 180) % 360 + 360) % 360 - 180
-  const safeZoom = Math.max(0, Math.floor(Number.isFinite(zoom) ? zoom : DEFAULT_ZOOM))
-  const latRad = (clampedLat * Math.PI) / 180
-  const scale = 2 ** safeZoom
-  const worldX = ((normalizedLng + 180) / 360) * scale
-  const worldY = ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * scale
-  const x = Math.floor(worldX)
-  const y = Math.floor(worldY)
-
-  return {
-    x: Math.max(0, Math.min(scale - 1, x)),
-    y: Math.max(0, Math.min(scale - 1, y)),
-    offsetX: Number((-(worldX - x) * MAP_TILE_SIZE_PX).toFixed(3)),
-    offsetY: Number((-(worldY - y) * MAP_TILE_SIZE_PX).toFixed(3)),
-  }
-}
-
-export function latLngToSlippyTileXY(
-  lat: number,
-  lng: number,
-  zoom: number,
-): { x: number; y: number } {
-  const { x, y } = latLngToSlippyTilePlacement(lat, lng, zoom)
-  return { x, y }
-}
-
-export function resolveMapTileWarmupOrigin({
+/**
+ * Resolve only an external tile-proxy origin that can be safely preconnected.
+ * A concrete tile URL must not be guessed before the map's settled initial fit:
+ * its zoom/coordinates may differ from the final viewport and every initiated
+ * OSM request is part of the strict startup cardinality contract (#1291).
+ */
+export function resolveMapTilePreconnectOrigin({
   hostname,
   envApiUrl,
-}: Pick<WarmupTileParams, 'hostname' | 'envApiUrl'>): string | null {
+}: TilePreconnectParams): string | null {
   const { url } = resolveOsmTileRequest({ hostname, envApiUrl })
   if (!/^https?:\/\//i.test(url)) return null
   try {
@@ -73,49 +34,11 @@ export function resolveMapTileWarmupOrigin({
   }
 }
 
-export function buildMapWarmupTileHref({
-  lat = DEFAULT_MAP_CENTER.latitude,
-  lng = DEFAULT_MAP_CENTER.longitude,
-  zoom = DEFAULT_ZOOM,
-  hostname,
-  envApiUrl,
-}: WarmupTileParams = {}): string {
-  const { x, y } = latLngToSlippyTileXY(lat, lng, zoom)
-  const { url } = resolveOsmTileRequest({ hostname, envApiUrl })
-
-  return url
-    .replace('{z}', String(Math.max(0, Math.floor(zoom))))
-    .replace('{x}', String(x))
-    .replace('{y}', String(y))
-}
-
-export function buildMapTileWarmupRequest(
-  params: WarmupTileParams = {},
-): { href: string; crossOrigin?: 'anonymous' } {
-  const request = resolveOsmTileRequest({
-    hostname: params.hostname,
-    envApiUrl: params.envApiUrl,
-  })
-  return {
-    href: buildMapWarmupTileHref(params),
-    ...(request.crossOrigin ? { crossOrigin: request.crossOrigin } : {}),
-  }
-}
-
 export function buildMapHeadBootstrapScript(envApiUrl = process.env.EXPO_PUBLIC_API_URL): string {
-  const productionRequest = buildMapTileWarmupRequest({
-    hostname: 'metravel.by',
-    envApiUrl: envApiUrl || null,
-  })
-  const localRequest = buildMapTileWarmupRequest({
+  const localTileOrigin = resolveMapTilePreconnectOrigin({
     hostname: 'localhost',
     envApiUrl: envApiUrl || null,
   })
-  const placement = latLngToSlippyTilePlacement(
-    DEFAULT_MAP_CENTER.latitude,
-    DEFAULT_MAP_CENTER.longitude,
-    DEFAULT_ZOOM,
-  )
 
   return String.raw`
 (function(){
@@ -139,22 +62,14 @@ export function buildMapHeadBootstrapScript(envApiUrl = process.env.EXPO_PUBLIC_
       };
       document.head.appendChild(link);
     }
+
     var host = String(window.location && window.location.hostname || '').toLowerCase();
     var isLocal = ${JSON.stringify(OSM_LOCAL_WEB_HOSTNAMES)}.indexOf(host) !== -1 ||
       ${JSON.stringify(OSM_PRIVATE_WEB_HOST_PATTERNS)}.some(function(pattern) {
         return new RegExp(pattern).test(host);
       });
-    var request = isLocal ? ${JSON.stringify(localRequest)} : ${JSON.stringify(productionRequest)};
     var pageOrigin = String(window.location && window.location.origin || '');
-    var href = request.href;
-    var tileOrigin = '';
-    try { tileOrigin = new URL(href, pageOrigin || undefined).origin; } catch (_urlError) {}
-
-    var rootStyle = document.documentElement && document.documentElement.style;
-    if (rootStyle) {
-      rootStyle.setProperty(${JSON.stringify(MAP_SHELL_TILE_OFFSET_X_CSS_VAR)}, ${JSON.stringify(`${placement.offsetX}px`)});
-      rootStyle.setProperty(${JSON.stringify(MAP_SHELL_TILE_OFFSET_Y_CSS_VAR)}, ${JSON.stringify(`${placement.offsetY}px`)});
-    }
+    var tileOrigin = isLocal ? ${JSON.stringify(localTileOrigin)} : '';
 
     if (tileOrigin && tileOrigin !== pageOrigin && !document.getElementById(${JSON.stringify(MAP_TILE_PRECONNECT_ID)})) {
       var preconnect = document.createElement('link');
@@ -165,42 +80,8 @@ export function buildMapHeadBootstrapScript(envApiUrl = process.env.EXPO_PUBLIC_
       document.head.appendChild(preconnect);
     }
 
-    window.__metravelMapTileWarmupHref = href;
-
-    window.__metravelMountMapShellTile = function() {
-      var tile = document.querySelector('img[data-ssg-map-tile="true"]');
-      if (!tile) return;
-      var existingHref = tile.getAttribute('src');
-      if (existingHref && existingHref !== href) return;
-      tile.width = ${MAP_TILE_SIZE_PX};
-      tile.height = ${MAP_TILE_SIZE_PX};
-      try {
-        tile.fetchPriority = 'high';
-        tile.setAttribute('fetchPriority', 'high');
-      } catch (_priorityError) {}
-      if (request.crossOrigin) tile.crossOrigin = request.crossOrigin;
-      else tile.removeAttribute('crossorigin');
-      if (!existingHref) tile.src = href;
-    };
-
-    if (!document.getElementById(${JSON.stringify(MAP_TILE_PRELOAD_ID)})) {
-      var preload = document.createElement('link');
-      preload.id = ${JSON.stringify(MAP_TILE_PRELOAD_ID)};
-      preload.rel = 'preload';
-      preload.as = 'image';
-      preload.href = href;
-      preload.setAttribute('data-metravel-map-tile-preload', 'true');
-      try {
-        preload.fetchPriority = 'high';
-        preload.setAttribute('fetchPriority', 'high');
-      } catch (_e) {}
-      if (request.crossOrigin) preload.crossOrigin = request.crossOrigin;
-      document.head.appendChild(preload);
-    }
-
     addSheet(${JSON.stringify(LEAFLET_CSS_ID)}, '/vendor/leaflet.css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
     addSheet(${JSON.stringify(MARKERCLUSTER_CSS_ID)}, '/vendor/MarkerCluster.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css');
-    window.__metravelMountMapShellTile();
   } catch (_e) {}
 })();
 `;

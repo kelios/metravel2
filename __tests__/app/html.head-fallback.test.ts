@@ -48,7 +48,7 @@ describe('critical head fallback', () => {
     expect(source).not.toContain('maximum-scale=1')
   })
 
-  it('wires the shared map head bootstrap script for early css and tile warmup', () => {
+  it('wires the shared map head bootstrap script for early CSS and tile preconnect', () => {
     const filePath = path.resolve(process.cwd(), 'app/+html.tsx')
     const source = fs.readFileSync(filePath, 'utf8')
 
