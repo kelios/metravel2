@@ -45,6 +45,7 @@ import {
   getSearchCardWidth,
 } from './listTravelBaseModel'
 import { useListTravelViewportState } from './hooks/useListTravelViewportState'
+import { markSsgFirstScreenReady } from '@/utils/ssgShellFirstScreen'
 import ListTravelOwnUserGate, {
   getListTravelOwnUserGateMode,
 } from './parts/ListTravelOwnUserGate'
@@ -540,6 +541,25 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const hasDisplayedItems = displayedTravels.length > 0;
     const displayedShowEmptyState = !activeFallbackMatch && !isFallbackLoading && showEmptyState;
     const displayedShowInitialLoading = isInitialLoading || isFallbackLoading;
+
+    // #1406: SSG-шелл каталога снимается по готовности ДАННЫХ, а не кода
+    // приложения (`app-hydrated` приходит на ~1 с раньше первых карточек, и
+    // пользователь смотрел на голый SearchPageSkeleton). Терминальное состояние
+    // первого экрана — реальные карточки, честное «пусто» или ошибка; только в
+    // этот момент маршрут сообщает removal-скрипту о готовности. Контракт
+    // utils/ssgShellFirstScreen.ts требует от маршрута, ждущего данных, именно
+    // такой предикат. Атрибут, выставленный однажды, при смене фильтров не
+    // снимается: шелл одноразовый, а повторное «не готово» относится уже не к
+    // первому экрану.
+    const firstScreenReady =
+      !displayedShowInitialLoading &&
+      (hasDisplayedItems || displayedShowEmptyState || isError);
+    const firstScreenCleanupRef = useRef<(() => void) | null>(null);
+    useEffect(() => {
+        if (!firstScreenReady || firstScreenCleanupRef.current) return;
+        firstScreenCleanupRef.current = markSsgFirstScreenReady();
+    }, [firstScreenReady]);
+    useEffect(() => () => { firstScreenCleanupRef.current?.(); }, []);
 
     // Троттл lastEndReachedAtRef общий для всех источников. При переключении основной
     // выдачи ↔ fallback сбрасываем его, иначе первый onEndReached нового списка будет

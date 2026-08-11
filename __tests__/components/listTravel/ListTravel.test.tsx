@@ -117,6 +117,13 @@ jest.mock('@/api/travelListQueries', () => ({
   fetchTravelFacets: jest.fn(() => Promise.resolve({ total: 0, facets: {} })),
 }));
 
+// #1406: маршрут каталога сообщает removal-скрипту SSG-шелла о готовности
+// первого экрана. Здесь проверяется контракт маршрута (КОГДА сигналить);
+// сам DOM-атрибут — зона utils/ssgShellFirstScreen.
+jest.mock('@/utils/ssgShellFirstScreen', () => ({
+  markSsgFirstScreenReady: jest.fn(),
+}));
+
 jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(() => Promise.resolve({
     countries: [],
@@ -426,5 +433,68 @@ describe('ListTravel', () => {
     });
 
     (Platform as any).OS = originalOS;
+  });
+
+  // #1406: SSG-шелл /search должен сниматься по готовности каталога, а не по
+  // гидрации приложения. Маршрут сигналит через markSsgFirstScreenReady()
+  // только в терминальном состоянии первого экрана: карточки, пусто, ошибка.
+  describe('SSG first-screen-ready (#1406)', () => {
+    const getMark = (): jest.Mock =>
+      require('@/utils/ssgShellFirstScreen').markSsgFirstScreenReady;
+
+    let cleanupSpy: jest.Mock;
+
+    beforeEach(() => {
+      cleanupSpy = jest.fn();
+      getMark().mockReset();
+      getMark().mockReturnValue(cleanupSpy);
+    });
+
+    it('сигналит готовность после прихода реальных карточек — ровно один раз', async () => {
+      const travelListQueries: any = require('@/api/travelListQueries');
+      travelListQueries.fetchTravels.mockResolvedValueOnce({
+        data: [{ id: 42, title: 'Реальная карточка' }],
+        total: 1,
+        hasMore: false,
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(getMark()).toHaveBeenCalledTimes(1);
+      });
+      // Состояние продолжает жить (рефетчи, фильтры) — повторных сигналов нет.
+      expect(getMark()).toHaveBeenCalledTimes(1);
+    });
+
+    it('сигналит готовность и на честном пустом состоянии', async () => {
+      renderComponent();
+
+      expect(await screen.findByText(/Пока нет путешествий/i)).toBeTruthy();
+      await waitFor(() => {
+        expect(getMark()).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('молчит, пока первичная загрузка каталога не завершилась', async () => {
+      const travelListQueries: any = require('@/api/travelListQueries');
+      travelListQueries.fetchTravels.mockImplementationOnce(() => new Promise(() => {}));
+
+      renderComponent();
+
+      expect(await screen.findByPlaceholderText('Найти путешествия...')).toBeTruthy();
+      expect(getMark()).not.toHaveBeenCalled();
+    });
+
+    it('на анмаунте вызывает cleanup утилиты', async () => {
+      const rendered = renderComponent();
+
+      await waitFor(() => {
+        expect(getMark()).toHaveBeenCalledTimes(1);
+      });
+
+      rendered.unmount();
+      expect(cleanupSpy).toHaveBeenCalledTimes(1);
+    });
   });
 });

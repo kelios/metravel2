@@ -695,6 +695,13 @@ describe('ssg-skeletons', () => {
         `<div id="root">${rootHtml}</div>`;
     };
 
+    const setupSearchDom = ({ rootHtml = '<div>shell</div>' } = {}) => {
+      document.head.innerHTML = '<style id="ssg-skeleton-css"></style>';
+      document.body.innerHTML =
+        '<div id="ssg-skeleton"><div class="ssg-search-shell"><div class="ssg-search-layout"></div></div></div>' +
+        `<div id="root">${rootHtml}</div>`;
+    };
+
     const skeleton = () => document.getElementById('ssg-skeleton');
 
     beforeEach(() => {
@@ -778,6 +785,36 @@ describe('ssg-skeletons', () => {
       document.getElementById('root')?.setAttribute('data-first-screen-ready', 'true');
       jest.advanceTimersByTime(1000);
       expect(skeleton()).not.toBeNull();
+    });
+
+    // #1406: на /search гидрация приходит РАНЬШЕ данных каталога (~1 с), и
+    // app-hydrated снимал шелл на голый SearchPageSkeleton. Search-шелл ждёт
+    // терминального состояния каталога (data-first-screen-ready от
+    // ListTravelBase); гидрация остаётся только late-бэкстопом.
+    it('keeps the search shell on app-hydrated until the catalog marks readiness (#1406)', () => {
+      setupSearchDom();
+      runScript();
+
+      document.documentElement.classList.add('app-hydrated');
+      jest.advanceTimersByTime(1000);
+      expect(skeleton()).not.toBeNull();
+
+      document.getElementById('root')?.setAttribute('data-first-screen-ready', 'true');
+      jest.advanceTimersByTime(200);
+      expect(skeleton()).toBeNull();
+      expect(document.getElementById('ssg-skeleton-css')).toBeNull();
+    });
+
+    it('search shell still falls back to app-hydrated at the 20s backstop (#1406)', () => {
+      setupSearchDom();
+      runScript();
+
+      document.documentElement.classList.add('app-hydrated');
+      jest.advanceTimersByTime(19000);
+      expect(skeleton()).not.toBeNull();
+
+      jest.advanceTimersByTime(1200);
+      expect(skeleton()).toBeNull();
     });
 
     it('does not rely on a CSS transition to hide the shell', () => {
