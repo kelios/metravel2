@@ -75,6 +75,12 @@ npm run build:web:prod
   root cleanup chokepoint and verifies that it is gone. The deploy must stop
   rather than modify or clean a Git-tracked backend path or report success with
   a leftover staging tree.
+- The remote program travels over `ssh ... bash -s` stdin, so every docker
+  command inside it isolates stdin with `</dev/null`, and the deploy is
+  accepted only when the remote program echoes back a per-run success marker
+  (`MT_REMOTE_DEPLOY_OK:*`) from its final line. `ssh` exiting 0 alone is not
+  success: a missing marker means the remote readiness/cleanup tail did not
+  run (truncated program) and the script reports the deploy as failed.
 - Build without deploy:
 
 ```bash

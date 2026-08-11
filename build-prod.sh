@@ -369,7 +369,9 @@ if [ -e dist ]; then
   exit 1
 fi
 # Last command by contract: the caller refuses success without this line.
-echo "$DEPLOY_SUCCESS_MARKER"
+# The leading newline keeps the marker on its own line for the caller's
+# whole-line grep even if earlier output ended without a trailing newline.
+printf '\n%s\n' "$DEPLOY_SUCCESS_MARKER"
 REMOTE_DEPLOY_SCRIPT
 
   # ssh exit 0 alone is not success: when a stdin-consuming command swallows

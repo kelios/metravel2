@@ -26,17 +26,25 @@ import {
 } from './remote-deploy-test-utils'
 
 const MARKER = 'MT_TEST_DEPLOY_MARKER:1401'
-const MARKER_ECHO = 'echo "$DEPLOY_SUCCESS_MARKER"'
+// printf with a leading newline: the marker must sit on its own line for the
+// caller's whole-line grep even if earlier output lacked a trailing newline.
+const MARKER_ECHO = `printf '\\n%s\\n' "$DEPLOY_SUCCESS_MARKER"`
 
 const helperB64 = fs
   .readFileSync(path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh'))
   .toString('base64')
 
-function dockerLines(remoteDeploy: string): string[] {
+// Known stdin readers: docker keeps exec stdin open, the rest consume stdin
+// outright. Any payload line running one of them without </dev/null could
+// swallow the unread remainder of the program.
+const stdinConsumerCommand =
+  /(?:^|[^\w./-])(?:docker-compose|docker|cat|read|ssh|xargs|mysql|psql)(?:$|[^\w-])/
+
+function stdinConsumerLines(remoteDeploy: string): string[] {
   return remoteDeploy
     .split('\n')
     .filter((line) => !/^\s*#/.test(line))
-    .filter((line) => /(?:docker-compose|docker)(?:$|[^\w-])/.test(line))
+    .filter((line) => stdinConsumerCommand.test(line))
 }
 
 function writeExecutable(filePath: string, lines: string[]): void {
@@ -197,8 +205,8 @@ function runDeployProdHarness(
 }
 
 describe('build-prod.sh remote stdin transport', () => {
-  it('isolates stdin on every docker invocation in the remote payload', () => {
-    const lines = dockerLines(extractRemoteDeploy())
+  it('isolates stdin on every stdin-consuming command in the remote payload', () => {
+    const lines = stdinConsumerLines(extractRemoteDeploy())
 
     // app_ctr discovery, rroot exec, compose detection, both compose_nginx
     // variants: the guard must keep seeing the docker surface it protects.
