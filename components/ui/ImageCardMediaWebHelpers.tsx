@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 export type Priority = 'low' | 'normal' | 'high';
 
@@ -127,6 +127,78 @@ type WebMainImageProps = {
   onDecoded?: (img: HTMLImageElement) => void;
   onError?: () => void;
   showImmediately?: boolean;
+  /**
+   * Keep a near-viewport request alive when a virtualized cell reuses this DOM
+   * node for another source. The detached owner is created only inside the
+   * browser's bounded native-lazy request band, so far-offscreen rows stay
+   * deferred.
+   */
+  retainRequestOnSourceSwap?: boolean;
+};
+
+type RetainedWebImageRequest = {
+  image: HTMLImageElement;
+  timeout: ReturnType<typeof setTimeout>;
+};
+
+const retainedWebImageRequests = new Map<string, RetainedWebImageRequest>();
+const RETAINED_WEB_IMAGE_TIMEOUT_MS = 60_000;
+// Chromium starts native-lazy image transfers up to roughly 1250 px outside
+// the viewport. Use the same bounded band for catalog request ownership: a
+// narrower gate can miss an already-started transfer and let the next recycled
+// source abort it. FlashList still limits how many catalog cells are mounted.
+const RECYCLED_IMAGE_RETAIN_MARGIN_PX = 1250;
+const LAZY_IMAGE_RECOVERY_MARGIN_PX = 300;
+const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+const isCurrentImageIdentityComplete = (image: HTMLImageElement, src: string): boolean => {
+  if (!image.complete || image.naturalWidth <= 0) return false;
+  const requestedIdentity = resolveImageIdentityKey(src);
+  const currentIdentity = resolveImageIdentityKey(image.currentSrc || image.src);
+  return requestedIdentity !== null && requestedIdentity === currentIdentity;
+};
+
+/**
+ * FlashList keeps one `<img>` mounted and swaps `src/srcSet` as a slot moves.
+ * Chromium aborts the old request when that happens, even when the element is
+ * still connected. A detached `Image` sharing the same responsive source keeps
+ * the already-started request owned until load/error, after which normal HTTP
+ * cache reuse takes over. This is deliberately called only inside Chromium's
+ * bounded native-lazy band; calling it for every lazy row would turn the whole
+ * catalog into eager loading.
+ */
+const retainWebImageRequest = ({
+  src,
+  srcSet,
+  sizes,
+  priority,
+}: {
+  src: string;
+  srcSet?: string;
+  sizes?: string;
+  priority: Priority;
+}): void => {
+  if (typeof Image === 'undefined') return;
+  const key = `${src}\n${srcSet ?? ''}\n${sizes ?? ''}`;
+  if (retainedWebImageRequests.has(key)) return;
+
+  const image = new Image();
+  const release = () => {
+    const retained = retainedWebImageRequests.get(key);
+    if (!retained || retained.image !== image) return;
+    clearTimeout(retained.timeout);
+    retainedWebImageRequests.delete(key);
+  };
+  const timeout = setTimeout(release, RETAINED_WEB_IMAGE_TIMEOUT_MS);
+  retainedWebImageRequests.set(key, { image, timeout });
+  image.addEventListener('load', release, { once: true });
+  image.addEventListener('error', release, { once: true });
+  image.decoding = 'async';
+  image.loading = 'eager';
+  image.fetchPriority = priority === 'high' ? 'high' : 'low';
+  if (sizes) image.sizes = sizes;
+  if (srcSet) image.srcset = srcSet;
+  image.src = src;
 };
 
 const naturalSizeOf = (img: HTMLImageElement | null): { width: number; height: number } | undefined => {
@@ -156,6 +228,7 @@ export const WebMainImage = memo(function WebMainImage({
   onDecoded,
   onError,
   showImmediately = false,
+  retainRequestOnSourceSwap = false,
 }: WebMainImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const loadReportedRef = useRef(false);
@@ -199,6 +272,51 @@ export const WebMainImage = memo(function WebMainImage({
   useEffect(() => {
     loadReportedRef.current = false;
   }, [src]);
+
+  // Start the keeper in the same commit that rewrites the recycled node's
+  // responsive source. Waiting for IntersectionObserver alone leaves a race:
+  // under CPU ×4 the next 50 ms recycle can arrive before its callback. The
+  // geometry check follows Chromium's bounded native-lazy request band. The
+  // narrower decode-recovery observer below remains at 300 px.
+  useWebLayoutEffect(() => {
+    if (!retainRequestOnSourceSwap || typeof window === 'undefined') return;
+    const img = imgRef.current;
+    if (!img) return;
+    const retainIfNearViewport = (): boolean => {
+      const rect = img.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const isNearViewport =
+        rect.bottom >= -RECYCLED_IMAGE_RETAIN_MARGIN_PX &&
+        rect.top <= viewportHeight + RECYCLED_IMAGE_RETAIN_MARGIN_PX &&
+        rect.right >= 0 &&
+        rect.left <= viewportWidth;
+      // The initial row flips eager/high -> lazy/low after the first scroll.
+      // That policy-only update must not create a detached owner for an image
+      // whose same identity is already decoded. During a real recycle swap the
+      // node still reports the previous currentSrc, so the keeper stays active.
+      if (isNearViewport && !isCurrentImageIdentityComplete(img, src)) {
+        retainWebImageRequest({ src, srcSet, sizes, priority });
+      }
+      return isNearViewport;
+    };
+    if (retainIfNearViewport() || typeof IntersectionObserver === 'undefined') return;
+
+    // A freshly remounted FlashList slot can still have its old/far geometry in
+    // the layout effect. Observe the same bounded band so its request gains an
+    // owner as soon as FlashList places it, without enabling decode recovery.
+    const retainObserver = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      if (!isCurrentImageIdentityComplete(img, src)) {
+        retainWebImageRequest({ src, srcSet, sizes, priority });
+      }
+      retainObserver.disconnect();
+    }, {
+      rootMargin: `${RECYCLED_IMAGE_RETAIN_MARGIN_PX}px 0px`,
+    });
+    retainObserver.observe(img);
+    return () => retainObserver.disconnect();
+  }, [retainRequestOnSourceSwap, src, srcSet, sizes, priority]);
 
   // #1212: битый `<img>` браузер рисует alt-текстом со значком сломанной
   // картинки — именно это видно в карточке квеста. Гасим узел прямо в
@@ -279,6 +397,10 @@ export const WebMainImage = memo(function WebMainImage({
       recoveryStarted = true;
       intersectionObserver?.disconnect();
 
+      if (retainRequestOnSourceSwap && !isCurrentImageIdentityComplete(img, src)) {
+        retainWebImageRequest({ src, srcSet, sizes, priority });
+      }
+
       // For lazy article media this runs only once IntersectionObserver reports
       // that the image is close to the viewport, so decode() does not turn all
       // description photos into eager requests.
@@ -303,7 +425,7 @@ export const WebMainImage = memo(function WebMainImage({
       intersectionObserver = new IntersectionObserver((entries) => {
         if (entries.some((entry) => entry.isIntersecting)) startRecovery();
       }, {
-        rootMargin: '300px 0px',
+        rootMargin: `${LAZY_IMAGE_RECOVERY_MARGIN_PX}px 0px`,
       });
       intersectionObserver.observe(img);
     }
@@ -313,7 +435,17 @@ export const WebMainImage = memo(function WebMainImage({
       intersectionObserver?.disconnect();
       if (pollTimer !== undefined) clearInterval(pollTimer);
     };
-  }, [src, loaded, loading, showImmediately, handleLoad]);
+  }, [
+    src,
+    srcSet,
+    sizes,
+    priority,
+    loaded,
+    loading,
+    showImmediately,
+    retainRequestOnSourceSwap,
+    handleLoad,
+  ]);
 
   return (
     <img

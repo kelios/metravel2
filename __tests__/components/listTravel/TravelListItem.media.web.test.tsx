@@ -190,6 +190,7 @@ describe('TravelListItem media props on web', () => {
       loading: 'lazy',
       priority: 'low',
       prefetch: false,
+      retainWebRequestOnRecycle: true,
     });
   });
 

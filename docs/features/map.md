@@ -1,6 +1,6 @@
 # Фича: map
 
-**Последняя актуализация:** 2026-07-14
+**Последняя актуализация:** 2026-08-11
 
 **Ответственный домен:** frontend map/places
 
@@ -80,7 +80,7 @@ generic web fallback; platform resolution выбирает `.web`, `.ios` или
 | Движок | Leaflet + React Leaflet | Leaflet внутри `react-native-webview` |
 | Runtime loading | `useLeafletLoader`, web CSS/runtime loaders | inline Leaflet assets из `utils/leafletInlineAsset.ts` |
 | Markers/clusters | React components/layers | сериализованный payload, injected JS, server cluster data |
-| Overlays | `config/mapWebLayers.ts`, `utils/mapWebOverlays/*` | сериализуемое подмножество layers; weather labels остаются web-only |
+| Overlays | `config/mapWebLayers.ts`, `utils/mapWebOverlays/*` | тот же сериализуемый набор layers; числовые weather labels поддерживаются и в Leaflet WebView через `nativeMapHtml.ts` |
 | View commands | Leaflet refs/API | `injectJavaScript` через `MapUiApi` |
 | Map events | React Leaflet handlers | `WebView.onMessage` |
 | Offline tiles | web tile/network path | `utils/mapTileCache.ts`, `MapOfflineDownloadControl.tsx` |

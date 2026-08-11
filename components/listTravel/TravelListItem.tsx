@@ -692,6 +692,10 @@ function TravelListItem({
         // This removes the blur -> progressive image flash during fast scrolling
         // and also forces the web backdrop onto the shared <img srcSet> path.
         revealOnLoadOnly: IS_WEB,
+        // A web FlashList slot keeps one <img> mounted and rewrites its source.
+        // Once a recycled lazy cover enters the browser's native-lazy band,
+        // retain it until completion so a 50 ms source swap cannot abort it (#1400).
+        retainWebRequestOnRecycle: IS_WEB && mediaLoading === 'lazy',
         recyclingKey: travelKey,
         priority: IS_WEB ? (isFirst ? 'high' : 'low') : 'normal',
         // FlashList mounts only the visible rows plus a short draw-distance, so

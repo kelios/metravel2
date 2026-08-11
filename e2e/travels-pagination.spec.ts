@@ -1,13 +1,11 @@
 import { test, expect } from './fixtures';
 import { devices, type Page } from '@playwright/test';
-import fs from 'node:fs';
-import path from 'node:path';
 import { gotoWithRetry, preacceptCookies, tid } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
 const CARD = '[data-testid="travel-card-link"], [testID="travel-card-link"]';
-const IMAGE = '/e2e-catalog-cover.webp';
-const IMAGE_BODY = fs.readFileSync(path.resolve('public/assets/images/open-book-bg.webp'));
+const IMAGE_PATH = '/assets/images/open-book-bg.webp';
+const IMAGE = (id: number) => `${IMAGE_PATH}?id=${id}`;
 
 const createTravel = (id: number) => ({
   id,
@@ -16,21 +14,50 @@ const createTravel = (id: number) => ({
   name: `E2E paginated travel ${id}`,
   countryName: 'Беларусь',
   cityName: 'Минск',
-  travel_image_thumb_url: IMAGE,
-  travel_image_thumb_small_url: IMAGE,
+  travel_image_thumb_url: IMAGE(id),
+  travel_image_thumb_small_url: IMAGE(id),
   publish: true,
   moderation: true,
 });
 
 const verifyCatalogMediaLoadingPolicy = async (page: Page, screenshotPath: string) => {
   const runtimeErrors: string[] = [];
+  const coverRequests: string[] = [];
+  const finishedCoverRequests: string[] = [];
+  const failedCoverRequests: { url: string; error: string }[] = [];
+  const pendingCoverRequests = new Set<import('@playwright/test').Request>();
   page.on('pageerror', (error) => runtimeErrors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') runtimeErrors.push(message.text());
   });
+  page.on('request', (request) => {
+    if (!request.url().includes(IMAGE_PATH)) return;
+    coverRequests.push(request.url());
+    pendingCoverRequests.add(request);
+  });
+  page.on('requestfinished', (request) => {
+    if (!request.url().includes(IMAGE_PATH)) return;
+    finishedCoverRequests.push(request.url());
+    pendingCoverRequests.delete(request);
+  });
+  page.on('requestfailed', (request) => {
+    if (!request.url().includes(IMAGE_PATH)) return;
+    pendingCoverRequests.delete(request);
+    failedCoverRequests.push({
+      url: request.url(),
+      error: request.failure()?.errorText ?? 'unknown',
+    });
+  });
   await preacceptCookies(page);
 
-  const travels = Array.from({ length: 18 }, (_, index) => createTravel(index + 1));
+  // Stay above FlashList's retained window so the stress loop exercises a real
+  // image-node remount/source swap instead of only starting deferred requests
+  // on an entirely mounted short list.
+  const travels = Array.from({ length: 60 }, (_, index) => createTravel(index + 1));
+  let releaseTravelsResponse: () => void = () => {};
+  const travelsResponseGate = new Promise<void>((resolve) => {
+    releaseTravelsResponse = resolve;
+  });
   const fulfillList = async (route: import('@playwright/test').Route) => {
     const url = new URL(route.request().url());
     const isListEndpoint =
@@ -39,6 +66,7 @@ const verifyCatalogMediaLoadingPolicy = async (page: Page, screenshotPath: strin
       await route.fallback();
       return;
     }
+    await travelsResponseGate;
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -48,12 +76,16 @@ const verifyCatalogMediaLoadingPolicy = async (page: Page, screenshotPath: strin
 
   await page.route('**/api/travels/**', fulfillList);
   await page.route('**/travels/**', fulfillList);
-  await page.route('**/e2e-catalog-cover.webp*', (route) => route.fulfill({
-    status: 200,
-    contentType: 'image/webp',
-    body: IMAGE_BODY,
-  }));
   await gotoWithRetry(page, getTravelsListPath());
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Network.enable');
+  await cdp.send('Network.emulateNetworkConditions', {
+    offline: false,
+    latency: 150,
+    downloadThroughput: (1.6 * 1024 * 1024) / 8,
+    uploadThroughput: (1.6 * 1024 * 1024) / 8,
+  });
+  releaseTravelsResponse();
   await expect
     .poll(() => page.locator(CARD).count(), { timeout: 30_000 })
     .toBeGreaterThanOrEqual(2);
@@ -99,6 +131,53 @@ const verifyCatalogMediaLoadingPolicy = async (page: Page, screenshotPath: strin
     })
     .toBe(true);
 
+  const requestsBeforeLifecycle = coverRequests.length;
+  const finishedBeforeLifecycle = finishedCoverRequests.length;
+  const failuresBeforeLifecycle = failedCoverRequests.length;
+  const lifecycleBefore = await page.locator(`img[src*="${IMAGE_PATH}"]`).evaluateAll((images) =>
+    images.map((img, index) => {
+      const marker = `before-turnover-${index}`;
+      (img as HTMLImageElement).dataset.catalogLifecycleMarker = marker;
+      return { marker, src: (img as HTMLImageElement).src };
+    }),
+  );
+  await scroll.evaluate((node: HTMLElement) => {
+    node.scrollTop = node.scrollHeight - node.clientHeight;
+    node.dispatchEvent(new Event('scroll', { bubbles: true }));
+  });
+  await page.waitForTimeout(50);
+  const lifecycleAfterJump = await page.locator('img[data-catalog-lifecycle-marker]').evaluateAll(
+    (images) => images.map((img) => ({
+      marker: (img as HTMLImageElement).dataset.catalogLifecycleMarker || '',
+      src: (img as HTMLImageElement).src,
+    })),
+  );
+  const sourcesAfterJump = new Map(
+    lifecycleAfterJump.map(({ marker, src }) => [marker, src]),
+  );
+  expect(
+    lifecycleBefore.some(({ marker, src }) => sourcesAfterJump.get(marker) !== src),
+    'lifecycle control is vacuous: no cover <img> was remounted or reused',
+  ).toBe(true);
+  await scroll.evaluate((node: HTMLElement) => {
+    node.scrollTop = 120;
+    node.dispatchEvent(new Event('scroll', { bubbles: true }));
+  });
+  await page.waitForTimeout(50);
+  await expect
+    .poll(() => pendingCoverRequests.size, { timeout: 15_000 })
+    .toBe(0);
+  expect(
+    coverRequests.length - requestsBeforeLifecycle,
+    'lifecycle control is vacuous: turnover did not start a cover request',
+  ).toBeGreaterThan(0);
+  expect(finishedCoverRequests.length - finishedBeforeLifecycle).toBeGreaterThan(0);
+  expect(
+    failedCoverRequests.slice(failuresBeforeLifecycle),
+    'a cover request was aborted during real FlashList turnover',
+  ).toEqual([]);
+
+  const failuresBeforeStress = failedCoverRequests.length;
   for (let cycle = 0; cycle < 10; cycle += 1) {
     await scroll.evaluate((node: HTMLElement) => {
       node.scrollTop = Math.min(node.scrollHeight - node.clientHeight, 1160);
@@ -111,6 +190,14 @@ const verifyCatalogMediaLoadingPolicy = async (page: Page, screenshotPath: strin
     });
     await page.waitForTimeout(50);
   }
+
+  await expect
+    .poll(() => pendingCoverRequests.size, { timeout: 15_000 })
+    .toBe(0);
+  expect(
+    failedCoverRequests.slice(failuresBeforeStress),
+    'a recycled cover request was aborted when the mounted <img> changed source',
+  ).toEqual([]);
 
   await expect
     .poll(async () => {

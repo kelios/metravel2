@@ -1,5 +1,10 @@
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
-import { getActiveOverlayLayers, getThemedBaseAttribution, getThemedBaseMaxZoom } from '@/config/mapWebLayers';
+import {
+  getActiveOverlayLayers,
+  getThemedBaseAttribution,
+  getThemedBaseMaxZoom,
+  type WebMapLayerDefinition,
+} from '@/config/mapWebLayers';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
@@ -9,15 +14,17 @@ import {
   ESCAPE_HTML_FN_SCRIPT,
 } from '@/components/map-core/leafletWebViewHtml';
 import { buildBirdMarkerHtml } from './mapMarkerStyles';
+import { buildNativeWeatherTempLabelsScript } from './nativeWeatherTempLabelsScript';
 
 const DEFAULT_LAT = 53.8828449;
 const DEFAULT_LNG = 27.7273595;
 const OVERPASS_ENDPOINT =
   process.env.EXPO_PUBLIC_OVERPASS_ENDPOINT || 'https://overpass-api.de/api/interpreter';
 
-const NATIVE_OVERLAY_LAYERS = getActiveOverlayLayers()
-  .filter((layer) => layer.kind !== 'weather-temp-labels')
-  .map((layer) => ({
+export const toNativeOverlayLayerDefinitions = (
+  layers: readonly WebMapLayerDefinition[],
+) =>
+  layers.map((layer) => ({
     id: layer.id,
     kind: layer.kind,
     url: layer.url,
@@ -32,6 +39,8 @@ const NATIVE_OVERLAY_LAYERS = getActiveOverlayLayers()
     wfsSrs: layer.wfsParams?.srsName ?? 'EPSG:4326',
     wfsBboxOrder: layer.wfsParams?.bboxOrder ?? 'lonlat',
   }));
+
+const NATIVE_OVERLAY_LAYERS = toNativeOverlayLayerDefinitions(getActiveOverlayLayers());
 
 const USER_LOCATION_COLOR = DESIGN_TOKENS.colors.accent;
 const BIRD_MARKER_HTML = buildBirdMarkerHtml();
@@ -68,6 +77,10 @@ export const buildNativeMapHtml = ({
           font-weight: 700;
           font-size: 14px;
           line-height: 1;
+        }
+        .metravel-temp-label {
+          background: transparent;
+          border: 0;
         }`,
     bodyScript: `        const MAP_LANGUAGE = ${serializeForInlineScript(getActiveLocaleDefinition().geocoderLanguage)};
         // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
@@ -704,6 +717,8 @@ ${ESCAPE_HTML_FN_SCRIPT}
           }).addTo(layerGroup);
         }
 
+${buildNativeWeatherTempLabelsScript()}
+
         function buildOverlay(def) {
           if (def.kind === 'tile') {
             var tile = L.tileLayer(def.url, { opacity: def.opacity, maxZoom: def.maxZoom || 19, zIndex: def.zIndex });
@@ -729,6 +744,8 @@ ${ESCAPE_HTML_FN_SCRIPT}
           } else if (def.kind === 'wfs-geojson') {
             controller = makeBboxController(group, function(b) { return wfsUrl(def, b); },
               function(g, d) { renderWfsGeoJson(g, d); }, 700, { minZoom: def.minZoom, logId: def.id });
+          } else if (def.kind === 'weather-temp-labels') {
+            controller = makeWeatherTempLabelsController(group, def);
           }
           return { layer: group, controller: controller };
         }

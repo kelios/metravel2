@@ -348,8 +348,14 @@ const SEARCH_TRACE = {
   url: 'https://metravel.by/search',
   scrollPx: 1160,
   stepPx: 145,
-  // Окно ожидания после жеста должно быть соразмерно закреплённому каналу,
-  // иначе гейт краснеет от самой тяжёлой обложки набора, а не от дефекта.
+  // Первый кадр после шага проверяет сам въезд. Порог отсекает случайный
+  // пиксель на границе viewport, но оставляет явно заметную пользователю
+  // четверть обложки. Длинное окно ниже отвечает только за eventual/network
+  // состояние и не может больше «простить» пустой первый кадр.
+  entryMinVisibleRatio: 0.25,
+  motionSampleMs: 60,
+  // Окно eventual-ожидания после жеста соразмерно закреплённому каналу,
+  // иначе сетевые гейты краснеют от самой тяжёлой обложки набора, а не от дефекта.
   // Замер прода 2026-08-10: `?w=640` весит от 36 КБ (травел 682) до 82 КБ
   // (травел 641); при 200 КБ/с это 0,18–0,41 с только на передачу, плюс
   // очередь. 40 × 75 мс = 3 с даёт запас ~7× к самой тяжёлой.
@@ -614,8 +620,15 @@ const runSearchScrollTrace = async (page: Page, profile: TraceProfile) => {
   const sweep = async (phase: string, direction: 1 | -1) => {
     for (let done = 0; done < SEARCH_TRACE.scrollPx; done += SEARCH_TRACE.stepPx) {
       await page.mouse.wheel(0, direction * SEARCH_TRACE.stepPx);
-      await page.waitForTimeout(60);
-      samples.push({ phase, frame: await page.evaluate(sampleVisibleCovers) });
+      // `mouse.wheel()` не ждёт применения scroll/виртуализации. Первый rAF —
+      // ближайший воспроизводимый кадр, в котором пользователь уже видит
+      // въехавшую карточку; именно его прежний 3-секундный settle скрывал.
+      await page.evaluate(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+      );
+      samples.push({ phase: `${phase}-entry`, frame: await page.evaluate(sampleVisibleCovers) });
+      await page.waitForTimeout(SEARCH_TRACE.motionSampleMs);
+      samples.push({ phase: `${phase}-motion`, frame: await page.evaluate(sampleVisibleCovers) });
     }
     for (let i = 0; i < SEARCH_TRACE.settleFrames; i += 1) {
       samples.push({ phase: `${phase}-settle`, frame: await page.evaluate(sampleVisibleCovers) });
@@ -718,24 +731,36 @@ const assertScrollTrace = (
     ).toEqual([]);
   }
 
-  // Инвариант тикета — «карточка ВЪЕХАЛА в кадр и осталась пустой», а не
-  // «пиксель обложки мелькнул недекодированным между двумя шагами колеса».
-  // Поэтому zero-tolerance держим на settle-кадрах: это ровно то состояние,
-  // которое видит пользователь, когда прокрутка остановилась. Кадры в движении
-  // проверяем на «залипание»: карточка, попавшая в fill-only во время жеста,
-  // обязана оказаться декодированной к моменту остановки.
+  // Инвариант тикета — «карточка ВЪЕХАЛА в кадр уже с фотографией». Для каждого
+  // направления фиксируем первый кадр, где видно хотя бы четверть обложки.
+  // Поздний decode в settle не должен превращать наблюдаемую заливку в PASS.
   const inMotion = new Set<string>();
+  const firstEntries = new Map<string, CoverSample>();
   const stale = new Set<string>();
   let minVisible = Number.POSITIVE_INFINITY;
   for (const { phase, frame } of trace.samples) {
     minVisible = Math.min(minVisible, frame.count);
     if (!phase.endsWith('-settle')) {
-      for (const c of frame.cards) if (c.fillOnly) inMotion.add(c.slug);
+      const direction = phase.startsWith('down') ? 'down' : 'up';
+      for (const c of frame.cards) {
+        if (c.fillOnly) inMotion.add(c.slug);
+        if (c.visRatio >= SEARCH_TRACE.entryMinVisibleRatio) {
+          const key = `${direction}:${c.slug}`;
+          if (!firstEntries.has(key)) firstEntries.set(key, c);
+        }
+      }
     }
     for (const c of frame.cards) {
       if (c.stale) stale.add(`${c.slug} (видно ${Math.round(c.visRatio * 100)}%)`);
     }
   }
+  const initiallyVisible = new Set(trace.control.cards.map((c) => c.slug));
+  const newlyEntered = new Set(
+    [...firstEntries.values()].filter((c) => !initiallyVisible.has(c.slug)).map((c) => c.slug),
+  );
+  const blankOnEntry = [...firstEntries.entries()]
+    .filter(([, c]) => c.fillOnly)
+    .map(([key, c]) => `${key} (видно ${Math.round(c.visRatio * 100)}%)`);
 
   // Итоговое состояние берём из ПОСЛЕДНЕГО settle-кадра каждого прохода, а не
   // копим по всем: карточка, не готовая в первом кадре после остановки, ещё не
@@ -769,6 +794,11 @@ const assertScrollTrace = (
 
   expect([...settled], 'обложки остались залиты доминантным цветом после остановки').toEqual([]);
   expect(stuck, 'обложка не догрузилась к остановке прокрутки').toEqual([]);
+  expect(
+    newlyEntered.size,
+    'невакуозная трасса: прокрутка не ввела в кадр новые обложки',
+  ).toBeGreaterThanOrEqual(Math.max(1, Math.ceil(budget.minVisibleCovers / 2)));
+  expect(blankOnEntry, 'обложка въехала в кадр до готовности фотографии').toEqual([]);
   expect([...stale], 'подмена чужого фото').toEqual([]);
   expect(minVisible, 'провал геометрии: строка не смонтирована').toBeGreaterThanOrEqual(
     budget.minVisibleCovers,

@@ -154,6 +154,8 @@ type Props = {
   allowCriticalWebBlur?: boolean;
   /** On web, keep main image hidden until onLoad even for eager/high-priority media. */
   revealOnLoadOnly?: boolean;
+  /** Keep a started web request alive while a virtualized cell swaps sources. */
+  retainWebRequestOnRecycle?: boolean;
   /**
    * Принимается для совместимости с вызывающими (слайдеры передают его для native).
    * На web не используется: сегментной blur-подложки, ради которой считалась
@@ -207,6 +209,7 @@ function ImageCardMedia({
   showImmediately = false,
   allowCriticalWebBlur = false,
   revealOnLoadOnly = false,
+  retainWebRequestOnRecycle = false,
   preserveOptimizedWebSrc = false,
   optimizeWeb = true,
   webResponsiveSource,
@@ -984,6 +987,7 @@ function ImageCardMedia({
               onDecoded={handleWebDecoded}
               onError={handleWebError}
               showImmediately={isWebRecycleSwap ? false : shouldShowWebImageImmediately}
+              retainRequestOnSourceSwap={retainWebRequestOnRecycle}
             />
           ) : !blurOnly && (
           <OptimizedImage

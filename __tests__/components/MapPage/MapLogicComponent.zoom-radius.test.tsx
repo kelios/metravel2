@@ -1,7 +1,10 @@
 const React = require('react');
 const { render, act } = require('@testing-library/react-native');
 
-const { MapLogicComponent } = require('@/components/MapPage/Map/MapLogicComponent');
+const {
+  MapLogicComponent,
+  shouldDeferRadiusAutoFit,
+} = require('@/components/MapPage/Map/MapLogicComponent');
 
 describe('MapLogicComponent radius zoom initialization', () => {
   const originalRaf = global.requestAnimationFrame;
@@ -12,6 +15,11 @@ describe('MapLogicComponent radius zoom initialization', () => {
 
   afterAll(() => {
     global.requestAnimationFrame = originalRaf;
+  });
+
+  it('runs the first radius fit synchronously, before base tiles can mount', () => {
+    expect(shouldDeferRadiusAutoFit(false)).toBe(false);
+    expect(shouldDeferRadiusAutoFit(true)).toBe(true);
   });
 
   // #1291 — стартовый вид применяется ровно один раз, сразу конечным. Промежуточный

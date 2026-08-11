@@ -25,6 +25,16 @@ const AUTO_FIT_COORD_PRECISION = 3;
  */
 const COMPACT_MIN_FIT_ZOOM = 11;
 
+/**
+ * The first radius fit must run before the parent mounts the base tile layer.
+ * Deferring it by one animation frame lets Leaflet request the MapContainer's
+ * placeholder zoom first (z8/z11 on the default desktop flow), only to replace
+ * it with the final z9 view immediately afterwards. Later fits may stay deferred
+ * so layout changes can settle without changing the startup request contract.
+ */
+export const shouldDeferRadiusAutoFit = (hasCompletedAutoFit: boolean): boolean =>
+  hasCompletedAutoFit && typeof requestAnimationFrame === 'function';
+
 const getCoarseAutoFitLocationKey = (location?: LatLng | null): string => {
   if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
     return 'no-location';
@@ -579,10 +589,10 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       // unclaimed key and queued a second fitBounds on top of the first.
       lastAutoFitKeyRef.current = autoFitKey;
 
-      if (isTestEnv || typeof requestAnimationFrame !== 'function') {
-        runFit();
-      } else {
+      if (!isTestEnv && shouldDeferRadiusAutoFit(hasCompletedAutoFitRef.current)) {
         requestAnimationFrame(runFit);
+      } else {
+        runFit();
       }
     } catch {
       // noop
