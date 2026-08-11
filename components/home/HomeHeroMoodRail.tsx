@@ -54,7 +54,7 @@ const renderMoodChip = (
     accessibilityLabel={i18nT('home:components.home.HomeHeroMoodRail.value1_ideya_poezdki_c416349a', { value1: card.title })}
   >
     <Feather
-      name={card.icon as any}
+      name={card.icon}
       size={19}
       color={colors.textMuted}
       {...({ 'aria-hidden': true, focusable: false } as any)}

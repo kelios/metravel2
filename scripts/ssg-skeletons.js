@@ -904,6 +904,7 @@ function injectSkeletonShell(html, route, ctx) {
 }
 
 module.exports = {
+  HOME_COPY,
   buildSkeletonCSS,
   buildHomeSkeletonHtml,
   buildSearchSkeletonHtml,

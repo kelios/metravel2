@@ -12,6 +12,7 @@ const {
   sanitizeArticleBodyHtml,
   SSG_ARTICLE_BODY_MAX_CHARS,
   COLORS,
+  HOME_COPY,
 } = require('../../scripts/ssg-skeletons');
 const {
   MAP_WEB_MOBILE_BREAKPOINT_PX,
@@ -251,6 +252,26 @@ describe('ssg-skeletons', () => {
         homeGenerated1['components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_9e18c02e'];
       expect(html).toContain(`>${title} <span class="ssg-accent">${titleAccent}</span>`);
       expect(html).toContain(`<p class="ssg-home-sub">${sub}</p>`);
+    });
+
+    // Порядок и пара «иконка ↔ заголовок» тоже часть контракта: перестановка
+    // MOOD_CARDS иначе разъехалась бы с шеллом молча — проверка вхождения
+    // строк этого не ловит.
+    it('mood chips match MOOD_CARDS one to one, in order and with the same icons', () => {
+      const { MOOD_CARDS } = require('../../components/home/homeHeroContent');
+
+      expect(HOME_COPY.moods).toEqual(
+        MOOD_CARDS.map((card: { title: string; icon: string }) => ({
+          title: card.title,
+          icon: card.icon,
+        })),
+      );
+
+      const html = buildHomeSkeletonHtml();
+      const rendered = (html.match(/<div class="ssg-home-mood">[\s\S]*?<\/div>/g) || []).map((chunk: string) =>
+        chunk.replace(/<svg[\s\S]*?<\/svg>/, '').replace(/<[^>]+>/g, ''),
+      );
+      expect(rendered).toEqual(MOOD_CARDS.map((card: { title: string }) => card.title));
     });
 
     // Подписи должны быть видимы: без flex/цвета текст лёг бы в угол плашки,
