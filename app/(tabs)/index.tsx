@@ -9,6 +9,7 @@ import Home from '@/components/home/Home'
 import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
+import { markSsgFirstScreenReady } from '@/utils/ssgShellFirstScreen'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -116,6 +117,12 @@ function HomeScreen() {
 
   const handleContentReady = useCallback(() => setContentReady(true), [])
   const canMountContent = hydrated
+  // На web эта ветка недостижима, и так и задумано: `isHomePath` становится
+  // true только после `hydrated`, а до этого экран выходит выше по `!isHomePath`.
+  // Первый экран на web держит SSG-шелл (scripts/ssg-skeletons.js), поэтому
+  // React-скелетон там показал бы вторую заглушку поверх первой. Проверено на
+  // сборке: в `dist/prod/index.html` есть search/map-скелетоны и нет home.
+  // Значит `HomePageSkeleton` — экран Android (и любой не-web платформы).
   const shouldShowSkeleton = !canMountContent || (!IS_WEB && !contentReady)
 
   if (!isHomePath) {
@@ -242,6 +249,12 @@ const HomeWithReadyCallback = React.memo<{ onReady: () => void }>(({ onReady }) 
     hasSignaled.current = true
     requestAnimationFrame(() => onReady())
   }, [onReady])
+
+  // Web: снять SSG-шелл, как только первый экран главной отрисован. Без этого
+  // оверлей висит до прихода ленивого чанка RootWebDeferredChrome (`app-hydrated`)
+  // — на throttled mobile это 1,55 с скелетона поверх готовой страницы.
+  useEffect(() => markSsgFirstScreenReady(), [])
+
   return <Home />
 })
 HomeWithReadyCallback.displayName = 'HomeWithReadyCallback'

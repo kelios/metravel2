@@ -212,6 +212,71 @@ describe('ssg-skeletons', () => {
       expect(html).toContain('ssg-home-search-btn');
     });
 
+    // #1405: до гидрации первый экран обязан читаться как страница, а не как
+    // скелетон. Подписи контролов дублируются из RU-ресурсов (fallback-локаль),
+    // поэтому тест сверяет их с i18n, а не с самим собой.
+    it('carries the real hero copy instead of blank grey blocks', () => {
+      const html = buildHomeSkeletonHtml();
+      const { homeGenerated1 } = require('../../i18n/locales/ru/generated/home_01');
+      const { homeStaticResources } = require('../../i18n/locales/ru/static/home_static');
+
+      const placeholder =
+        homeGenerated1['components.home.HomeHeroSearchBar.kuda_hotite_poehat_gorod_ozero_zamok_5ca126e6'];
+      const cta = homeGenerated1['components.home.HomeHeroBookLayout.smotret_marshruty_4a0b9a63'];
+      // Бейдж карточки недели рендерит HomeHeroPopularSection — сверяем с ним.
+      const weekKicker = homeGenerated1['components.home.HomeHeroPopularSection.marshrut_nedeli_b1be152b'];
+      const moods = [
+        homeStaticResources['components.home.homeHeroContent.u_vody_7c603574'],
+        homeStaticResources['components.home.homeHeroContent.zamki_aec014c6'],
+        homeStaticResources['components.home.homeHeroContent.ruiny_f6673a79'],
+        homeStaticResources['components.home.homeHeroContent.hayking_3faa621d'],
+        homeStaticResources['components.home.homeHeroContent.karta_do_60_km_23bb7996'],
+      ];
+
+      expect(html).toContain(`<span class="ssg-home-search-text">${placeholder}</span>`);
+      expect(html).toContain(`</svg>${cta}</div>`);
+      // Бейдж несёт тот же глиф map-pin, что реальный slideEyebrow.
+      expect(html).toContain('class="ssg-home-week-ico"');
+      expect(html).toContain(`</svg>${weekKicker}</div>`);
+      moods.forEach((title) => {
+        expect(html).toContain(`class="ssg-home-mood-ico"`);
+        expect(html).toContain(`</svg>${title}</div>`);
+      });
+      // Иконка поиска — тот же Feather `search`, что в HomeHeroSearchBar.
+      expect(html.match(/class="ssg-home-search-ico"/g)).toHaveLength(2);
+      // Заголовок и подзаголовок шелла тоже обязаны совпадать с RU-каталогом.
+      const title = homeGenerated1['components.home.HomeHeroBookLayout.kuda_poehat_07cb7b59'];
+      const titleAccent = homeGenerated1['components.home.HomeHeroBookLayout.v_eti_vyhodnye_c69482dd'];
+      const sub =
+        homeGenerated1['components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_9e18c02e'];
+      expect(html).toContain(`>${title} <span class="ssg-accent">${titleAccent}</span>`);
+      expect(html).toContain(`<p class="ssg-home-sub">${sub}</p>`);
+    });
+
+    // Подписи должны быть видимы: без flex/цвета текст лёг бы в угол плашки,
+    // а пятый чип («Карта до 60 км») в React-ряду занимает всю ширину.
+    it('lays out the shell copy like the React controls', () => {
+      const css = buildSkeletonCSS();
+      expect(css).toMatch(/\.ssg-home-cta\{[^}]*display:flex;align-items:center;justify-content:center/);
+      // Текст на зелёном акценте тёмный (MODERN_MATTE_PALETTE.textOnPrimary),
+      // белый на #7a9d8f дал бы ≈2:1 и разошёлся бы с React-кнопкой.
+      expect(css).toMatch(new RegExp(`\\.ssg-home-cta\\{[^}]*color:${COLORS.light.textOnPrimary}`));
+      expect(css).toMatch(new RegExp(`\\.ssg-home-search-btn\\{[^}]*color:${COLORS.light.textOnPrimary}`));
+      expect(css).toMatch(
+        new RegExp(`html\\[data-theme="dark"\\] \\.ssg-home-cta[^{]*\\{[^}]*color:${COLORS.dark.textOnPrimary}`),
+      );
+      expect(css).toMatch(/\.ssg-home-search\{[^}]*display:flex;align-items:center/);
+      expect(css).toMatch(/\.ssg-home-search-text\{[^}]*text-overflow:ellipsis/);
+      expect(css).toMatch(/\.ssg-home-mood\{[^}]*justify-content:center/);
+      expect(css).toContain('.ssg-home-mood:nth-child(5){grid-column:1/-1}');
+      // Регрессия ревью #1405: на desktop кнопка была прибита к 190px, и подпись
+      // «Смотреть маршруты» (201px вместе с иконкой) резалась с обеих сторон.
+      // Ширина должна идти от содержимого, 190px остаётся нижней границей.
+      expect(css).toContain('.ssg-home-cta{width:fit-content;min-width:190px');
+      expect(css).not.toMatch(/\.ssg-home-cta\{width:190px/);
+      expect(css).toMatch(/html\[data-theme="dark"\] \.ssg-home-mood\{[^}]*color:#e8e8e8/);
+    });
+
     // Скелетон обязан красить контролы в реальные цвета hero: зелёный primary
     // CTA/кнопка поиска, терракотовый акцент заголовка (brandText вне книги,
     // bookPageAccent на странице книги), заливка letterbox цветом кадра.
@@ -681,6 +746,38 @@ describe('ssg-skeletons', () => {
 
       expect(skeleton()).toBeNull();
       expect(document.getElementById('ssg-skeleton-css')).toBeNull();
+    });
+
+    // #1405: `app-hydrated` ставит ленивый чанк RootWebDeferredChrome, поэтому на
+    // главной он приходил на 1,55 с позже реального первого экрана. Экран сам
+    // сообщает о готовности атрибутом на #root.
+    it('removes a non-travel shell as soon as the route marks its first screen ready', () => {
+      setupDom({ travel: false });
+      runScript();
+
+      document.getElementById('root')?.setAttribute('data-first-screen-ready', 'true');
+      jest.advanceTimersByTime(200);
+
+      expect(document.documentElement.classList.contains('app-hydrated')).toBe(false);
+      expect(skeleton()).toBeNull();
+      expect(document.getElementById('ssg-skeleton-css')).toBeNull();
+    });
+
+    // У travel/map свои гейты, защищающие LCP-кадр: чужой сигнал их не снимает.
+    it('ignores the first-screen attribute on travel and map shells', () => {
+      setupDom();
+      runScript();
+      document.getElementById('root')?.setAttribute('data-first-screen-ready', 'true');
+      jest.advanceTimersByTime(1000);
+      expect(skeleton()).not.toBeNull();
+
+      document.head.innerHTML = '';
+      document.body.innerHTML = '';
+      setupMapDom();
+      runScript();
+      document.getElementById('root')?.setAttribute('data-first-screen-ready', 'true');
+      jest.advanceTimersByTime(1000);
+      expect(skeleton()).not.toBeNull();
     });
 
     it('does not rely on a CSS transition to hide the shell', () => {

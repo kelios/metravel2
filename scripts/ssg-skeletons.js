@@ -25,6 +25,9 @@ const COLORS = {
     // цветовой скачок на гидрации.
     primary: '#7a9d8f',
     accent: '#a95000',
+    // MODERN_MATTE_PALETTE.textOnPrimary: на зелёном акценте текст тёмный,
+    // белый давал бы ≈2:1 и расходился бы с React-кнопкой.
+    textOnPrimary: '#111827',
   },
   dark: {
     bg: '#1a1a1a',
@@ -37,6 +40,7 @@ const COLORS = {
     shimmerTo: '#3a3a3a',
     primary: '#8fb5a5',
     accent: '#f0a060',
+    textOnPrimary: '#1a1a1a',
   },
 };
 
@@ -49,6 +53,52 @@ const BOOK_PAGE_ACCENT = '#b35900';
 // Без заливки узкая портретная полоса фото висела на белом фоне и выглядела
 // сломанной вёрсткой.
 const HOME_HERO_FILL = '#687e72';
+
+// Системный sans-стек шелла (тот же, что у .ssg-home-title/.ssg-home-sub).
+const SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
+// Реальные подписи первого экрана главной. Шелл рисуется на этапе сборки, у него
+// нет доступа к i18n-каталогам, поэтому строки продублированы из RU-ресурсов
+// (fallback-локаль проекта) и обязаны совпадать с React-hero:
+//   HomeHeroSearchBar.kuda_hotite_poehat_gorod_ozero_zamok_5ca126e6
+//   HomeHeroBookLayout.smotret_marshruty_4a0b9a63
+//   HomeHeroPopularSection.marshrut_nedeli_b1be152b (бейдж карточки недели)
+//   homeHeroContent.MOOD_CARDS[*].title
+// Парность проверяется тестом __tests__/scripts/ssg-skeletons.test.ts.
+const HOME_COPY = {
+  searchPlaceholder: 'Куда хотите поехать? Город, озеро, замок…',
+  cta: 'Смотреть маршруты',
+  weekKicker: 'Маршрут недели',
+  moods: [
+    { title: 'У воды', icon: 'droplet' },
+    { title: 'Замки', icon: 'flag' },
+    { title: 'Руины', icon: 'layers' },
+    { title: 'Хайкинг', icon: 'trending-up' },
+    { title: 'Карта до 60 км', icon: 'map-pin' },
+  ],
+};
+
+// Те же глифы Feather, что рисует React-hero (@expo/vector-icons/Feather):
+// поиск 18px в HomeHeroSearchBar, compass 16px на CTA, иконки чипов 19px в
+// HomeHeroMoodRail. Шелл собирается на этапе билда и шрифт иконок не грузит,
+// поэтому глифы инлайнятся как SVG-пути.
+const FEATHER_PATHS = {
+  search: '<circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>',
+  compass:
+    '<circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>',
+  droplet: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>',
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line>',
+  layers:
+    '<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline>',
+  'trending-up':
+    '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>',
+  'map-pin':
+    '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>',
+};
+
+function featherSvg(name, size, className) {
+  return `<svg class="${className}" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${FEATHER_PATHS[name]}</svg>`;
+}
 
 const MAP_VIEWPORT_HEIGHT = 'var(--metravel-map-vh, 100svh)';
 const MAP_WEB_MOBILE_BREAKPOINT_PX = 768;
@@ -74,14 +124,25 @@ function buildSkeletonCSS() {
 .ssg-home-title .ssg-accent{display:block;color:${COLORS.light.accent};font-weight:800}
 .ssg-home-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left}
 .ssg-home-search-row{display:flex;gap:8px;margin-top:4px;height:48px}
-.ssg-home-search{flex:1;min-width:0;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
-.ssg-home-search-btn{width:48px;height:48px;flex:0 0 48px;border-radius:12px;background:${COLORS.light.primary}}
-.ssg-home-cta{width:100%;height:46px;border-radius:16px;background:${COLORS.light.primary};margin-top:8px}
+/* Контролы шелла несут реальные подписи, а не пустые серые плашки: до гидрации
+   первый экран должен читаться как страница, а не как скелетон (#1405). */
+.ssg-home-search{flex:1;min-width:0;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;gap:10px;padding:0 14px;color:${COLORS.light.textMuted}}
+.ssg-home-search-ico{flex:0 0 18px}
+.ssg-home-search-text{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:400 14px/1.2 ${SANS};color:${COLORS.light.textMuted}}
+.ssg-home-search-btn{width:48px;height:48px;flex:0 0 48px;border-radius:12px;background:${COLORS.light.primary};display:flex;align-items:center;justify-content:center;color:${COLORS.light.textOnPrimary}}
+.ssg-home-cta{width:100%;height:46px;border-radius:16px;background:${COLORS.light.primary};margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;font:600 15px/1.2 ${SANS};color:${COLORS.light.textOnPrimary};white-space:nowrap;overflow:hidden}
+.ssg-home-cta-ico{flex:0 0 16px}
 /* Чипы вне белой карточки, под hairline-разделителем — как HomeHeroMoodRail.
    Якоря геометрии (тест ssg-skeletons): низ карточки 410 + gap 14 + margin 9
    = линия 433; + border 1 + padding 34 = верх чипов 468 — позиция React-грида. */
 .ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:9px;border-top:1px solid ${COLORS.light.border};padding-top:34px}
-.ssg-home-mood{height:46px;border-radius:999px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
+/* Подпись чипа повторяет moodChipTitle (16/22, weight 500, по центру); на
+   мобильном React использует sans, поэтому serif здесь не нужен. Пятый чип
+   («Карта до 60 км») в React-ряду растягивается на всю ширину — grid-column
+   держит ту же геометрию. */
+.ssg-home-mood{height:46px;border-radius:999px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;justify-content:center;gap:10px;padding:0 14px;font:500 16px/22px ${SANS};letter-spacing:-0.12px;color:${COLORS.light.text};white-space:nowrap;overflow:hidden}
+.ssg-home-mood-ico{flex:0 0 19px;color:${COLORS.light.textMuted}}
+.ssg-home-mood:nth-child(5){grid-column:1/-1}
 .ssg-home-notes{display:none}
 .ssg-home-week{position:relative;overflow:hidden;border-radius:20px;background:${HOME_HERO_FILL};border:0;margin-top:20px}
 /* #1281/#1358: реальная hero-фотография остаётся крупнейшим LCP-кандидатом.
@@ -96,7 +157,8 @@ function buildSkeletonCSS() {
    а не лежит белой плашкой поверх кадра. */
 .ssg-home-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,16,14,0) 34%,rgba(10,16,14,.58) 100%);pointer-events:none}
 .ssg-home-week-body{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px}
-.ssg-home-week-kicker{width:132px;height:24px;border-radius:12px;background:rgba(16,22,20,.45);border:1px solid rgba(255,255,255,.28)}
+.ssg-home-week-kicker{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:rgba(252,248,241,.08);border:1px solid rgba(244,235,221,.24);font:500 10px/14px ${SANS};letter-spacing:.45px;text-transform:uppercase;color:rgba(247,240,228,.94);white-space:nowrap}
+.ssg-home-week-ico{flex:0 0 11px}
 .ssg-home-week-title{width:56%;height:26px;border-radius:8px;background:rgba(255,255,255,.85)}
 .ssg-home-week-sub{width:74%;height:14px;border-radius:6px;background:rgba(255,255,255,.55)}
 .ssg-home-week-action{width:150px;height:34px;border-radius:17px;background:rgba(16,22,20,.45);border:1px solid rgba(255,255,255,.32)}
@@ -106,7 +168,7 @@ function buildSkeletonCSS() {
 .ssg-home-popular-line{height:12px;border-radius:6px;margin:10px 12px 0}
 .ssg-home-popular-line.w76{width:76%}.ssg-home-popular-line.w55{width:55%}
 @media(min-width:768px) and (max-width:1279px){.ssg-home-shell{padding:24px}.ssg-home-book{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}.ssg-home-page{grid-column:1;grid-row:1;justify-content:center;gap:16px;padding:32px}.ssg-home-week{grid-column:2;grid-row:1;margin-top:0}.ssg-home-moods{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0;border-top:0;padding-top:0}.ssg-home-hero{aspect-ratio:auto;height:320px}.ssg-home-popular{display:none}}
-@media(min-width:1280px){.ssg-home-shell{max-width:none;padding:20px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(calc(100vw - 80px),calc(135.9477svh - 244.7059px),1200px);height:auto;aspect-ratio:1040/765;margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:21.6%;align-self:start;justify-content:flex-start;gap:12px;padding:0 9% 0 16%;border-radius:0;background:transparent;border:0;overflow:hidden}.ssg-home-chapter{display:flex;align-items:center;gap:10px;margin-bottom:2px}.ssg-home-chapter-label{font:600 11px/1.4 Baskerville,Georgia,'Times New Roman',serif;letter-spacing:.14em;text-transform:uppercase;color:${COLORS.light.textMuted};white-space:nowrap}.ssg-home-chapter-line{flex:1;height:1px;background:${COLORS.light.border}}.ssg-home-title{font-family:Baskerville,Georgia,'Times New Roman',serif;font-size:clamp(24px,1.9vw,32px);line-height:1.24;letter-spacing:-0.2px}.ssg-home-title .ssg-accent{color:${BOOK_PAGE_ACCENT}}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-search-row{height:44px;margin-top:4px}.ssg-home-search{height:44px}.ssg-home-search-btn{width:44px;height:44px;flex:0 0 44px}.ssg-home-cta{width:190px;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%;border-radius:12px;border:0;background:${HOME_HERO_FILL}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
+@media(min-width:1280px){.ssg-home-shell{max-width:none;padding:20px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(calc(100vw - 80px),calc(135.9477svh - 244.7059px),1200px);height:auto;aspect-ratio:1040/765;margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:21.6%;align-self:start;justify-content:flex-start;gap:12px;padding:0 9% 0 16%;border-radius:0;background:transparent;border:0;overflow:hidden}.ssg-home-chapter{display:flex;align-items:center;gap:10px;margin-bottom:2px}.ssg-home-chapter-label{font:600 11px/1.4 Baskerville,Georgia,'Times New Roman',serif;letter-spacing:.14em;text-transform:uppercase;color:${COLORS.light.textMuted};white-space:nowrap}.ssg-home-chapter-line{flex:1;height:1px;background:${COLORS.light.border}}.ssg-home-title{font-family:Baskerville,Georgia,'Times New Roman',serif;font-size:clamp(24px,1.9vw,32px);line-height:1.24;letter-spacing:-0.2px}.ssg-home-title .ssg-accent{color:${BOOK_PAGE_ACCENT}}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-search-row{height:44px;margin-top:4px}.ssg-home-search{height:44px}.ssg-home-search-btn{width:44px;height:44px;flex:0 0 44px}.ssg-home-cta{width:fit-content;min-width:190px;max-width:100%;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%;border-radius:12px;border:0;background:${HOME_HERO_FILL}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
 @media(min-width:1280px) and (min-height:961px){.ssg-home-notes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}.ssg-home-note{height:44px;border-radius:12px;background:rgba(255,255,255,.45);border:1px solid ${COLORS.light.border}}}
 .ssg-search-shell{width:100%;max-width:1214px;margin:0 auto;padding:10px}
 .ssg-search-layout{display:block;min-width:0}
@@ -252,13 +314,14 @@ html[data-theme="dark"] .ssg-home-book{background-color:${COLORS.dark.surface};b
 html[data-theme="dark"] .ssg-home-page{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-home-title{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-home-sub{color:${COLORS.dark.textMuted}}
-html[data-theme="dark"] .ssg-home-cta,html[data-theme="dark"] .ssg-home-search-btn{background:${COLORS.dark.primary}}
-html[data-theme="dark"] .ssg-home-mood{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-home-cta,html[data-theme="dark"] .ssg-home-search-btn{background:${COLORS.dark.primary};color:${COLORS.dark.textOnPrimary}}
+html[data-theme="dark"] .ssg-home-mood{background:${COLORS.dark.surface};border-color:${COLORS.dark.border};color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-home-mood-ico{color:${COLORS.dark.textMuted}}
 html[data-theme="dark"] .ssg-home-moods{border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-home-popular-card{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
 /* Акцент и поле поиска темизируются только вне книги: страница раскрытой книги
    на desktop всегда светлая (bookPageAccent + бумажные цвета поиска). */
-@media(max-width:1279px){html[data-theme="dark"] .ssg-home-title .ssg-accent{color:${COLORS.dark.accent}}html[data-theme="dark"] .ssg-home-search{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}}
+@media(max-width:1279px){html[data-theme="dark"] .ssg-home-title .ssg-accent{color:${COLORS.dark.accent}}html[data-theme="dark"] .ssg-home-search{background:${COLORS.dark.surface};border-color:${COLORS.dark.border};color:${COLORS.dark.textMuted}}html[data-theme="dark"] .ssg-home-search-text{color:${COLORS.dark.textMuted}}}
 @media(min-width:1280px){html[data-theme="dark"] .ssg-home-page{background-color:transparent}}
 html[data-theme="dark"] .ssg-search-card,html[data-theme="dark"] .ssg-search-aside{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-search-bar{background:${COLORS.dark.surface};border-color:${COLORS.dark.border};color:${COLORS.dark.textMuted}}
@@ -326,6 +389,17 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
  * `app-hydrated` class set by RootWebDeferredChrome after a rAF) — the early text
  * LCP is already captured, so this only removes a stale overlay.
  *
+ * That class alone is too late (#1405). RootWebDeferredChrome is a LAZY chunk
+ * (rootRuntimeComponents.web.tsx → safeLazy import), so `app-hydrated` lands only
+ * after that extra request. Prod measurement 2026-08-11 (`/`, mobile 390, CPU 4x,
+ * 1.6 Mbps / 150 ms): the real hero was in #root at 4977 ms, `app-hydrated` at
+ * 6530 ms, shell removed at 6551 ms — 1.55 s of skeleton on top of a finished,
+ * interactive page (desktop: 1308 → 1824 ms). So the route that owns the first
+ * screen now marks #root with `data-first-screen-ready` right after its own
+ * content is painted (home: app/(tabs)/index.tsx via utils/ssgShellFirstScreen).
+ * `app-hydrated` stays as the backstop for routes that do not set it. Travel and
+ * map are excluded from this gate: they keep their own LCP-protecting signals.
+ *
  * 20s safety net: by then LCP is long settled, so the only question is whether
  * React actually mounted. The old check (`#root has childNodes`) could not tell:
  * the static export ALWAYS prerenders a shell inside #root, so the skeleton —
@@ -373,7 +447,7 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
  * remove as an orphan if #root is still absent after the DOM is fully parsed.
  */
 function buildRemovalScript() {
-  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var mapSkel=!!s.querySelector('.ssg-map-layout');var done=false;var late=false;var deep=false;var o;var iv;function killCss(){if(document.querySelector('[data-ssg-travel-hero-adopted="true"]'))return;var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{if(o)o.disconnect()}catch(e){}if(iv)clearInterval(iv);try{s.classList.add('ssg-hiding')}catch(e){}try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function travelReady(){return travelSkel&&r.getAttribute('data-travel-details-ready')==='true'}function mapReady(){return mapSkel&&r.getAttribute('data-map-route-ready')==='true'}function appReady(){return !mapSkel&&(!travelSkel||late)&&document.documentElement.classList.contains('app-hydrated')}function lateHero(){return late&&!!r.querySelector('img[data-lcp]')}function reactHost(n){try{var ks=Object.keys(n);for(var i=0;i<ks.length;i++){if(ks[i].indexOf('__reactFiber')===0)return true}}catch(e){}return false}function reactMounted(){for(var c=r.firstElementChild;c;c=c.nextElementSibling){if(reactHost(c))return true}return false}function check(){if(done)return false;if(heroReady()||travelReady()||mapReady()||appReady()||lateHero()||(deep&&reactMounted())){teardown();return true}return false}if(check())return;o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true,attributes:true,attributeFilter:['data-map-route-ready','data-travel-details-ready']});function tick(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}}function poll(ms){clearInterval(iv);iv=setInterval(tick,ms)}poll(120);setTimeout(function(){late=true;check()},20000);setTimeout(function(){if(done)return;deep=true;if(check())return;poll(2000)},45000)}begin()}catch(e){}})();</script>`;
+  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var mapSkel=!!s.querySelector('.ssg-map-layout');var done=false;var late=false;var deep=false;var o;var iv;function killCss(){if(document.querySelector('[data-ssg-travel-hero-adopted="true"]'))return;var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{if(o)o.disconnect()}catch(e){}if(iv)clearInterval(iv);try{s.classList.add('ssg-hiding')}catch(e){}try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function travelReady(){return travelSkel&&r.getAttribute('data-travel-details-ready')==='true'}function mapReady(){return mapSkel&&r.getAttribute('data-map-route-ready')==='true'}function screenReady(){return !travelSkel&&!mapSkel&&r.getAttribute('data-first-screen-ready')==='true'}function appReady(){return !mapSkel&&(!travelSkel||late)&&document.documentElement.classList.contains('app-hydrated')}function lateHero(){return late&&!!r.querySelector('img[data-lcp]')}function reactHost(n){try{var ks=Object.keys(n);for(var i=0;i<ks.length;i++){if(ks[i].indexOf('__reactFiber')===0)return true}}catch(e){}return false}function reactMounted(){for(var c=r.firstElementChild;c;c=c.nextElementSibling){if(reactHost(c))return true}return false}function check(){if(done)return false;if(heroReady()||travelReady()||mapReady()||screenReady()||appReady()||lateHero()||(deep&&reactMounted())){teardown();return true}return false}if(check())return;o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true,attributes:true,attributeFilter:['data-map-route-ready','data-travel-details-ready','data-first-screen-ready']});function tick(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}}function poll(ms){clearInterval(iv);iv=setInterval(tick,ms)}poll(120);setTimeout(function(){late=true;check()},20000);setTimeout(function(){if(done)return;deep=true;if(check())return;poll(2000)},45000)}begin()}catch(e){}})();</script>`;
 }
 
 function buildSearchCards(count) {
@@ -427,15 +501,15 @@ function buildHomeSkeletonHtml({ heroHref } = {}) {
 <div class="ssg-home-chapter" aria-hidden="true"><span class="ssg-home-chapter-label">Идеи путешествий</span><span class="ssg-home-chapter-line"></span></div>
 <div class="ssg-home-title">Куда поехать <span class="ssg-accent">в эти выходные?</span></div>
 <p class="ssg-home-sub">Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.</p>
-<div class="ssg-home-search-row" aria-hidden="true"><div class="ssg-home-search"></div><div class="ssg-home-search-btn"></div></div>
-<div class="ssg-home-cta" aria-hidden="true"></div>
+<div class="ssg-home-search-row" aria-hidden="true"><div class="ssg-home-search">${featherSvg('search', 18, 'ssg-home-search-ico')}<span class="ssg-home-search-text">${HOME_COPY.searchPlaceholder}</span></div><div class="ssg-home-search-btn">${featherSvg('search', 18, 'ssg-home-search-ico')}</div></div>
+<div class="ssg-home-cta" aria-hidden="true">${featherSvg('compass', 16, 'ssg-home-cta-ico')}${HOME_COPY.cta}</div>
 <div class="ssg-home-notes" aria-hidden="true">${Array.from({ length: 5 }, () => '<div class="ssg-home-note"></div>').join('')}</div>
 </section>
-<div class="ssg-home-moods" aria-hidden="true">${Array.from({ length: 5 }, () => '<div class="ssg-home-mood"></div>').join('')}</div>
+<div class="ssg-home-moods" aria-hidden="true">${HOME_COPY.moods.map((mood) => `<div class="ssg-home-mood">${featherSvg(mood.icon, 19, 'ssg-home-mood-ico')}${mood.title}</div>`).join('')}</div>
 <article class="ssg-home-week">
 <div class="ssg-home-hero">${heroImg}</div>
 <div class="ssg-home-week-body" aria-hidden="true">
-<div class="ssg-home-week-kicker"></div>
+<div class="ssg-home-week-kicker">${featherSvg('map-pin', 11, 'ssg-home-week-ico')}${HOME_COPY.weekKicker}</div>
 <div class="ssg-home-week-title"></div>
 <div class="ssg-home-week-sub"></div>
 <div class="ssg-home-week-action"></div>

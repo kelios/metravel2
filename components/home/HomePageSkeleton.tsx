@@ -1,10 +1,13 @@
 import { memo, useMemo } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native'
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import { BOOK_IMAGES } from './homeHeroContent'
+import { translate as i18nT } from '@/i18n'
+import { BOOK_IMAGES, MOOD_CARDS } from './homeHeroContent'
 import { useHomeViewport } from './useHomeViewport'
 
 const BOOK_ASPECT_RATIO = 1040 / 765
@@ -18,8 +21,21 @@ const HOME_SKELETON_FEATURED_SOURCE =
  * mood-чипов, карточка «Маршрут недели» с заливкой кадра и подписью на
  * скриме, грид «Популярного». Старый вариант рисовал desktop-книгу с рамкой
  * высотой 720 — на телефоне это не совпадало ни с одним реальным экраном.
+ *
+ * Где это видно: только на Android (и любой не-web платформе) — на web первый
+ * экран держит SSG-шелл, а эта ветка недостижима (см. комментарий в
+ * `app/(tabs)/index.tsx` у `shouldShowSkeleton`).
+ *
+ * Статичный текст первого экрана рисуется как есть, а не серыми плашками:
+ * заголовок, подзаголовок, плейсхолдер поиска, подпись CTA, названия чипов и
+ * бейдж «Маршрут недели» не зависят от данных и известны сразу. Плашки
+ * остаются только там, где контент приходит из API (обложка недели, карточки
+ * «Популярного»). Тот же принцип, что у SSG-шелла главной на web
+ * (scripts/ssg-skeletons.js): до готовности экрана пользователь видит
+ * страницу, а не скелетон. Типографика продублирована из homeHeroStyles
+ * (mobile-ветка), чтобы не тянуть весь модуль стилей hero в eager-граф.
  */
-const MobileHeroSkeleton = memo(() => {
+const MobileHeroSkeleton = memo(({ isSmallPhone }: { isSmallPhone: boolean }) => {
   const colors = useThemedColors()
 
   const styles = useMemo(
@@ -42,10 +58,70 @@ const MobileHeroSkeleton = memo(() => {
           paddingBottom: 20,
           gap: 16,
         },
-        titleGroup: { gap: 12 },
-        subGroup: { gap: 8 },
+        // Значения mobile-ветки createTypographyStyles/createCtaStyles.
+        title: {
+          fontSize: isSmallPhone ? 28 : 32,
+          fontWeight: '700' as const,
+          color: colors.text,
+          letterSpacing: -0.8,
+          lineHeight: isSmallPhone ? 34 : 40,
+          textAlign: 'left' as const,
+        },
+        titleAccent: {
+          fontWeight: '800' as const,
+          color: colors.brandText,
+        },
+        subtitle: {
+          fontSize: 16,
+          fontWeight: '400' as const,
+          color: colors.textMuted,
+          lineHeight: 24,
+          letterSpacing: 0.1,
+          maxWidth: 520,
+        },
         searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-        searchField: { flex: 1 },
+        searchField: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          height: 46,
+          paddingHorizontal: 14,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+        },
+        searchPlaceholder: {
+          flex: 1,
+          fontSize: 14,
+          color: colors.textMuted,
+        },
+        searchButton: {
+          width: 46,
+          height: 46,
+          borderRadius: 12,
+          alignItems: 'center' as const,
+          justifyContent: 'center' as const,
+          backgroundColor: colors.primary,
+        },
+        cta: {
+          flexDirection: 'row',
+          alignItems: 'center' as const,
+          justifyContent: 'center' as const,
+          gap: 8,
+          height: 46,
+          borderRadius: DESIGN_TOKENS.radii.md,
+          backgroundColor: colors.primary,
+        },
+        ctaLabel: {
+          // flexShrink обязателен: Text без него в row не сжимается и на длинной
+          // локализованной подписи вылезает за кнопку вместо многоточия.
+          flexShrink: 1,
+          fontSize: 15,
+          fontWeight: '600' as const,
+          color: colors.textOnPrimary,
+        },
         divider: {
           height: 1,
           backgroundColor: colors.border,
@@ -57,8 +133,29 @@ const MobileHeroSkeleton = memo(() => {
           gap: 12,
           marginTop: 33,
         },
-        chip: { width: '47.5%' },
-        chipWide: { width: '68%' },
+        chip: {
+          width: '47.5%',
+          flexDirection: 'row',
+          alignItems: 'center' as const,
+          justifyContent: 'center' as const,
+          gap: 10,
+          height: 46,
+          paddingHorizontal: 14,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+        },
+        // Пятый чип («Карта до 60 км») в реальном ряду растягивается на всю
+        // ширину: moodChipWrapItem flexBasis 44% + flexGrow 1.
+        chipWide: { width: '100%' },
+        chipTitle: {
+          flexShrink: 1,
+          fontSize: 16,
+          fontWeight: '500' as const,
+          color: colors.text,
+          letterSpacing: -0.12,
+        },
         featured: {
           marginTop: 34,
           width: '100%',
@@ -76,13 +173,27 @@ const MobileHeroSkeleton = memo(() => {
           gap: 10,
           alignItems: 'flex-start',
         },
+        // Точная копия slideEyebrow/slideEyebrowText реальной карточки недели
+        // (homeHeroStyles/sliderMediaStyles): иначе бейдж прыгает на handoff.
         captionKicker: {
-          width: 132,
-          height: 24,
-          borderRadius: 12,
-          backgroundColor: 'rgba(16,22,20,0.45)',
+          flexDirection: 'row' as const,
+          alignItems: 'center' as const,
+          gap: 5,
+          alignSelf: 'flex-start' as const,
+          paddingHorizontal: 9,
+          paddingVertical: 4,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: 'rgba(252,248,241,0.08)',
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.28)',
+          borderColor: 'rgba(244,235,221,0.24)',
+        },
+        captionKickerText: {
+          fontSize: 10,
+          lineHeight: 14,
+          fontWeight: '500' as const,
+          letterSpacing: 0.45,
+          color: 'rgba(247,240,228,0.94)',
+          textTransform: 'uppercase' as const,
         },
         captionTitle: {
           width: '56%',
@@ -120,45 +231,70 @@ const MobileHeroSkeleton = memo(() => {
         },
         popularLine: { marginTop: 10, marginHorizontal: 12 },
       }),
-    [colors],
+    [colors, isSmallPhone],
   )
 
   return (
     <View style={styles.shell} testID="home-skeleton">
       <View style={styles.heroCard}>
-        <View style={styles.titleGroup}>
-          <SkeletonLoader width="82%" height={34} borderRadius={8} />
-          <SkeletonLoader width="64%" height={34} borderRadius={8} />
-        </View>
-        <View style={styles.subGroup}>
-          <SkeletonLoader width="88%" height={16} borderRadius={6} />
-          <SkeletonLoader width="70%" height={16} borderRadius={6} />
-        </View>
+        {/* Перенос строки жёсткий, хотя HomeHeroBookLayout на узкой раскладке
+            передаёт пробел: у реального hero title-бокс уже (на native карточка
+            без рамки, на web — с ней), и замер на устройстве 2026-08-11 показал
+            разбивку «Куда поехать / в эти выходные?». Пробел здесь давал
+            «Куда поехать в эти / выходные?» — лишний прыжок слова на handoff.
+            Ориентир — наблюдаемый рендер, а не тернарник источника. */}
+        <Text style={styles.title}>
+          {i18nT('home:components.home.HomeHeroBookLayout.kuda_poehat_07cb7b59')}{'\n'}
+          <Text style={styles.titleAccent}>
+            {i18nT('home:components.home.HomeHeroBookLayout.v_eti_vyhodnye_c69482dd')}
+          </Text>
+        </Text>
+        <Text style={styles.subtitle}>
+          {i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_9e18c02e')}
+        </Text>
         <View style={styles.searchRow}>
           <View style={styles.searchField}>
-            <SkeletonLoader width="100%" height={46} borderRadius={12} />
+            <Feather name="search" size={18} color={colors.textMuted} />
+            <Text style={styles.searchPlaceholder} numberOfLines={1}>
+              {i18nT('home:components.home.HomeHeroSearchBar.kuda_hotite_poehat_5f13aee9')}
+            </Text>
           </View>
-          <SkeletonLoader width={46} height={46} borderRadius={12} />
+          <View style={styles.searchButton}>
+            <Feather name="search" size={18} color={colors.textOnPrimary} />
+          </View>
         </View>
-        <SkeletonLoader width="100%" height={46} borderRadius={16} />
+        <View style={styles.cta}>
+          <Feather name="compass" size={16} color={colors.textOnPrimary} />
+          <Text style={styles.ctaLabel} numberOfLines={1}>
+            {i18nT('home:components.home.HomeHeroBookLayout.smotret_marshruty_4a0b9a63')}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.divider} />
 
       <View style={styles.chipsGrid}>
-        {['a', 'b', 'c', 'd'].map((key) => (
-          <View key={`hero-chip-${key}`} style={styles.chip}>
-            <SkeletonLoader width="100%" height={46} borderRadius={23} />
+        {MOOD_CARDS.map((card, index) => (
+          <View
+            key={`hero-chip-${card.icon}`}
+            style={[styles.chip, index === MOOD_CARDS.length - 1 && styles.chipWide]}
+          >
+            <Feather name={card.icon} size={19} color={colors.textMuted} />
+            <Text style={styles.chipTitle} numberOfLines={1}>
+              {card.title}
+            </Text>
           </View>
         ))}
-        <View style={styles.chipWide}>
-          <SkeletonLoader width="100%" height={46} borderRadius={23} />
-        </View>
       </View>
 
       <View style={styles.featured}>
         <View style={styles.featuredCaption}>
-          <View style={styles.captionKicker} />
+          <View style={styles.captionKicker}>
+            <Feather name="map-pin" size={11} color={colors.textOnDark} />
+            <Text style={styles.captionKickerText} numberOfLines={1}>
+              {i18nT('home:components.home.HomeHeroPopularSection.marshrut_nedeli_b1be152b')}
+            </Text>
+          </View>
           <View style={styles.captionTitle} />
           <View style={styles.captionSub} />
           <View style={styles.captionAction} />
@@ -184,7 +320,7 @@ const MobileHeroSkeleton = memo(() => {
 
 MobileHeroSkeleton.displayName = 'MobileHeroSkeleton'
 
-const HeroSkeleton = memo(({ isMobile }: { isMobile: boolean }) => {
+const HeroSkeleton = memo(({ isMobile, isSmallPhone }: { isMobile: boolean; isSmallPhone: boolean }) => {
   const colors = useThemedColors()
 
   const styles = useMemo(
@@ -264,7 +400,7 @@ const HeroSkeleton = memo(({ isMobile }: { isMobile: boolean }) => {
     [colors],
   )
 
-  if (isMobile) return <MobileHeroSkeleton />
+  if (isMobile) return <MobileHeroSkeleton isSmallPhone={isSmallPhone} />
 
   return (
     <View style={styles.shell}>
@@ -497,7 +633,7 @@ export const HomePageSkeleton = memo(() => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <HeroSkeleton isMobile={isMobile} />
+        <HeroSkeleton isMobile={isMobile} isSmallPhone={isSmallPhone} />
         <View style={styles.accentSection}>
           <SectionSkeleton isMobile={isMobile} titleWidth={isMobile ? 210 : 280} accent />
         </View>

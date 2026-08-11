@@ -1,3 +1,6 @@
+import type { ComponentProps } from 'react'
+import type Feather from '@expo/vector-icons/Feather'
+
 import type { QuickFilterParams, QuickFilterValue } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
 
@@ -17,9 +20,12 @@ export type BookImage = {
   dominantColor?: string
 }
 
+/** Имя глифа Feather: тип, а не строка, иначе каждый консьюмер пишет `as any`. */
+export type FeatherIconName = ComponentProps<typeof Feather>['name']
+
 export type MoodCard = {
   title: string
-  icon: string
+  icon: FeatherIconName
   filters: QuickFilterParams
   route: string
   meta?: string
