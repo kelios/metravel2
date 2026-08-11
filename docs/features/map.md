@@ -121,6 +121,19 @@ renderer, который сохраняет собственный tile lifecycl
 - dynamic payload передаётся через безопасную JSON-сериализацию и
   `injectJavaScript`, а не через пересборку HTML на каждое изменение данных.
 
+Позиция пользователя на Android следует атомарному визуальному контракту:
+
+- явный trusted target одной WebView-командой сначала создаёт accuracy-круг и
+  общий 30px GPS-маркер, а затем центрирует карту по той же координате;
+- user-location pane находится выше POI/cluster `markerPane`, но ниже tooltip и
+  popup, поэтому «Вы здесь» не скрывается маркерами и не перекрывает подсказки;
+- сам GPS-маркер не перехватывает события, поэтому совпадающие POI/кластеры
+  остаются доступными для нажатия, как на mobile web; у всего visual-only pane
+  отключён DOM hit-testing, чтобы viewport-sized accuracy canvas не перекрывал
+  нижний `markerPane`;
+- ошибка отрисовки очищает визуальный слой и center target: состояние «камера
+  центрируется, но точки нет» не допускается.
+
 `TravelMap.native.tsx` имеет более узкий отдельный bridge для embedded travel
 map (`POINT_SELECT`, `CLEAR_SELECTED_POINT`, `OPEN_URL`, `RESIZE`). Изменение
 одного bridge не означает автоматический parity второго.

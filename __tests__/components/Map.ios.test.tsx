@@ -232,6 +232,17 @@ describe('Map.ios Component', () => {
         centerOnUser: expect.any(Function),
       }),
     );
+
+    const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      api.centerOnUser({ lat: 50.0680351, lng: 19.849518 });
+    });
+    expect(mockInjectJavaScript).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser(50.0680351, 19.849518)',
+      ),
+    );
   });
 
   it('does not center on the fallback viewport when real user location is absent', () => {
@@ -241,7 +252,7 @@ describe('Map.ios Component', () => {
 
     const html = getWebViewHtml(rendered);
     expect(html).toContain('const target = map.__realUserLocation;');
-    expect(html).toContain('if (!target) return;');
+    expect(html).toContain('if (!target) return false;');
     expect(html).not.toContain('map.__realUserLocation || map.__userCenter');
   });
 

@@ -32,6 +32,91 @@ const flushPromiseQueue = async () => {
   for (let index = 0; index < 8; index += 1) await Promise.resolve();
 };
 
+const createNativeUserLocationHarness = (html: string) => {
+  const userLocationStart = html.indexOf(
+    "const USER_LOCATION_PANE = 'metravel-user-location'",
+  );
+  const userLocationEnd = html.indexOf('// #843', userLocationStart);
+  const centerStart = html.indexOf('map.__realUserLocation = null;');
+  const centerEnd = html.indexOf('// Базовая подложка', centerStart);
+  expect(userLocationStart).toBeGreaterThan(-1);
+  expect(userLocationEnd).toBeGreaterThan(userLocationStart);
+  expect(centerStart).toBeGreaterThan(-1);
+  expect(centerEnd).toBeGreaterThan(centerStart);
+
+  const layers: Array<{ kind: 'accuracy' | 'marker'; coordinates: [number, number] }> = [];
+  const state = { throwOnMarkerAdd: false, throwOnClear: false };
+  const userLayer = {
+    addTo: jest.fn(() => userLayer),
+    clearLayers: jest.fn(() => {
+      if (state.throwOnClear) {
+        state.throwOnClear = false;
+        throw new Error('clear failed');
+      }
+      layers.splice(0, layers.length);
+    }),
+  };
+  const markerOptions: Array<Record<string, unknown>> = [];
+  const userLocationPane = { style: {} as Record<string, string> };
+  const map = {
+    __realUserLocation: null as [number, number] | null,
+    createPane: jest.fn(() => userLocationPane),
+    getZoom: jest.fn(() => 12),
+    setView: jest.fn(),
+  };
+  const L = {
+    layerGroup: jest.fn(() => userLayer),
+    divIcon: jest.fn((options: Record<string, unknown>) => options),
+    circle: jest.fn((coordinates: [number, number]) => ({
+      addTo: jest.fn(() => {
+        layers.push({ kind: 'accuracy', coordinates });
+      }),
+    })),
+    marker: jest.fn((coordinates: [number, number], options: Record<string, unknown>) => {
+      markerOptions.push(options);
+      return {
+        bindPopup: jest.fn(),
+        addTo: jest.fn(() => {
+          if (state.throwOnMarkerAdd) throw new Error('marker add failed');
+          layers.push({ kind: 'marker', coordinates });
+        }),
+      };
+    }),
+  };
+  const windowObject: Record<string, unknown> = {};
+  const compile = new Function(
+    'L',
+    'map',
+    'window',
+    `var __metravelProgrammaticMoveUntil = 0;
+     ${html.slice(userLocationStart, userLocationEnd)}
+     ${html.slice(centerStart, centerEnd)}
+     return {
+       render: window.__metravelRenderUserLocation,
+       clear: window.__metravelClearUserLocation,
+       center: window.__metravelMapCenterOnUser
+     };`,
+  );
+
+  return {
+    ...compile(L, map, windowObject),
+    layers,
+    map,
+    markerOptions,
+    state,
+    userLocationPane,
+  } as {
+    render: (lat: unknown, lng: unknown) => boolean;
+    clear: () => void;
+    center: (lat?: unknown, lng?: unknown) => boolean;
+    layers: typeof layers;
+    map: typeof map;
+    markerOptions: typeof markerOptions;
+    state: typeof state;
+    userLocationPane: typeof userLocationPane;
+  };
+};
+
 const createWeatherControllerFactory = ({
   L,
   map,
@@ -161,6 +246,68 @@ describe('buildNativeMapHtml — engine regression invariants', () => {
     expect(html).toContain('window.__metravelMapZoomOut = function');
     expect(html).toContain('window.__metravelMapCenterOnUser = function');
     expect(html).toContain('window.__metravelSetTile = function');
+  });
+
+  it('keeps the native user marker visible above POIs and commits location atomically', () => {
+    expect(html).toContain("const USER_LOCATION_PANE = 'metravel-user-location'");
+    expect(html).toContain("userLocationPane.style.zIndex = '625'");
+    expect(html).toContain("userLocationPane.style.pointerEvents = 'none'");
+    expect(html).toContain("className: 'metravel-pin-marker metravel-pin-marker-user'");
+    expect(html).toContain('iconSize: [30, 30]');
+    expect(html).toContain('pane: USER_LOCATION_PANE');
+    expect(html).toContain('interactive: false');
+    expect(html).toContain('const dot = L.marker([lat, lng]');
+    expect(html).not.toContain('const dot = L.circleMarker([lat, lng]');
+
+    const addMarkerIndex = html.indexOf('dot.addTo(userLayer)');
+    const commitLocationIndex = html.indexOf('map.__realUserLocation = [lat, lng]');
+    expect(addMarkerIndex).toBeGreaterThan(-1);
+    expect(commitLocationIndex).toBeGreaterThan(addMarkerIndex);
+    expect(html).toContain(
+      'userLayer.clearLayers();\n              map.__realUserLocation = null;\n              return false;',
+    );
+    expect(html).toContain('map.__realUserLocation = null;\n            return false;');
+  });
+
+  it('replaces the user layer without duplicates and never centers after a failed render', () => {
+    const harness = createNativeUserLocationHarness(html);
+
+    expect(harness.userLocationPane.style).toEqual({
+      zIndex: '625',
+      pointerEvents: 'none',
+    });
+    expect(harness.center(50.0680351, 19.849518)).toBe(true);
+    expect(harness.layers).toEqual([
+      { kind: 'accuracy', coordinates: [50.0680351, 19.849518] },
+      { kind: 'marker', coordinates: [50.0680351, 19.849518] },
+    ]);
+    expect(harness.markerOptions[0]).toMatchObject({
+      pane: 'metravel-user-location',
+      interactive: false,
+    });
+    expect(harness.map.setView).toHaveBeenCalledWith([50.0680351, 19.849518], 13);
+
+    expect(harness.render(52.2297, 21.0122)).toBe(true);
+    expect(harness.layers).toEqual([
+      { kind: 'accuracy', coordinates: [52.2297, 21.0122] },
+      { kind: 'marker', coordinates: [52.2297, 21.0122] },
+    ]);
+
+    harness.state.throwOnMarkerAdd = true;
+    harness.map.setView.mockClear();
+    expect(harness.center(53.9, 27.56)).toBe(false);
+    expect(harness.layers).toEqual([]);
+    expect(harness.map.__realUserLocation).toBeNull();
+    expect(harness.map.setView).not.toHaveBeenCalled();
+  });
+
+  it('clears the center target even if Leaflet layer cleanup fails', () => {
+    const harness = createNativeUserLocationHarness(html);
+    expect(harness.render(50.0680351, 19.849518)).toBe(true);
+
+    harness.state.throwOnClear = true;
+    expect(() => harness.clear()).not.toThrow();
+    expect(harness.map.__realUserLocation).toBeNull();
   });
 
   it('preserves bridge message protocols', () => {

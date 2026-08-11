@@ -30,6 +30,7 @@ import {
 } from './Map/nativeBridge';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
+import type { MapUiApi } from '@/types/mapUi';
 
 type Point = {
   id?: number | string;
@@ -111,7 +112,7 @@ interface TravelProps {
   onMapUiApiReady?: (api: {
     zoomIn: () => void;
     zoomOut: () => void;
-    centerOnUser: () => void;
+    centerOnUser: MapUiApi['centerOnUser'];
     setOverlayEnabled: (id: string, enabled: boolean) => void;
   } | null) => void;
 }
@@ -416,7 +417,20 @@ const Map: React.FC<TravelProps> = ({
     onMapUiApiReady({
       zoomIn: () => injectMapCommand('window.__metravelMapZoomIn && window.__metravelMapZoomIn()'),
       zoomOut: () => injectMapCommand('window.__metravelMapZoomOut && window.__metravelMapZoomOut()'),
-      centerOnUser: () => injectMapCommand('window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()'),
+      centerOnUser: (target) => {
+        const lat = Number(target?.lat);
+        const lng = Number(target?.lng);
+        const hasValidTarget =
+          Number.isFinite(lat) &&
+          Number.isFinite(lng) &&
+          Math.abs(lat) <= 90 &&
+          Math.abs(lng) <= 180;
+        injectMapCommand(
+          hasValidTarget
+            ? `window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser(${lat}, ${lng})`
+            : 'window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()',
+        );
+      },
       setOverlayEnabled,
     });
 

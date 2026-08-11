@@ -13,7 +13,7 @@ import {
   buildLeafletWebViewHtml,
   ESCAPE_HTML_FN_SCRIPT,
 } from '@/components/map-core/leafletWebViewHtml';
-import { buildBirdMarkerHtml } from './mapMarkerStyles';
+import { buildBirdMarkerHtml, buildUserLocationHtml } from './mapMarkerStyles';
 import { buildNativeWeatherTempLabelsScript } from './nativeWeatherTempLabelsScript';
 
 const DEFAULT_LAT = 53.8828449;
@@ -44,6 +44,7 @@ const NATIVE_OVERLAY_LAYERS = toNativeOverlayLayerDefinitions(getActiveOverlayLa
 
 const USER_LOCATION_COLOR = DESIGN_TOKENS.colors.accent;
 const BIRD_MARKER_HTML = buildBirdMarkerHtml();
+const USER_LOCATION_MARKER_HTML = buildUserLocationHtml(USER_LOCATION_COLOR);
 export const buildNativeMapHtml = ({
   themeColors,
   markerShadowColor,
@@ -81,6 +82,11 @@ export const buildNativeMapHtml = ({
         .metravel-temp-label {
           background: transparent;
           border: 0;
+        }
+        @keyframes metravelUserPulse {
+          0% { transform: scale(0.6); opacity: 0.5; }
+          70% { opacity: 0; }
+          100% { transform: scale(2.6); opacity: 0; }
         }`,
     bodyScript: `        const MAP_LANGUAGE = ${serializeForInlineScript(getActiveLocaleDefinition().geocoderLanguage)};
         // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
@@ -198,11 +204,20 @@ export const buildNativeMapHtml = ({
         map.__realUserLocation = null;
         window.__metravelMapCenterOnUser = function() {
           try {
+            if (arguments.length >= 2) {
+              const lat = Number(arguments[0]);
+              const lng = Number(arguments[1]);
+              if (!window.__metravelRenderUserLocation ||
+                  !window.__metravelRenderUserLocation(lat, lng)) return false;
+            }
             const target = map.__realUserLocation;
-            if (!target) return;
+            if (!target) return false;
             __metravelProgrammaticMoveUntil = Date.now() + 700;
             map.setView(target, Math.max(map.getZoom ? map.getZoom() : 10, 13));
-          } catch (e) {}
+            return true;
+          } catch (e) {
+            return false;
+          }
         };
 
         // Базовая подложка всегда светлая (OSM-прокси, без {s}), независимо от
@@ -272,24 +287,45 @@ ${buildInvalidateSchedulerScript({
         // clusters. Do one initial positioning pass only; user gestures and
         // explicit cluster/marker taps remain in control after that.
         var __metravelDidInitialRadiusPosition = false;
-        // Отдельный слой для маркера «вы здесь». НЕ чистится в __metravelRenderPoints
-        // (где clearLayers зовётся только для markersLayer/routeLayer), поэтому синяя
-        // точка не мигает при ре-рендере travel-маркеров. Добавлен последним —
-        // лежит поверх travel-маркеров.
+        // Отдельный pane держит «вы здесь» выше POI/cluster markerPane (600), но
+        // ниже tooltip/popup (650/700). Порядок добавления layerGroup сам по себе
+        // pane не меняет: прежний circleMarker жил в overlayPane (400) и мог быть
+        // полностью закрыт обычным маркером.
+        const USER_LOCATION_PANE = 'metravel-user-location';
+        const userLocationPane = map.createPane(USER_LOCATION_PANE);
+        userLocationPane.style.zIndex = '625';
+        // preferCanvas renders the accuracy circle into a viewport-sized canvas.
+        // Disable DOM hit-testing for the whole visual-only pane so that the
+        // canvas cannot block POI/cluster markers in the lower markerPane.
+        userLocationPane.style.pointerEvents = 'none';
+
+        // НЕ чистится в __metravelRenderPoints, поэтому GPS-маркер не мигает при
+        // обновлении travel-маркеров и серверных кластеров.
         const userLayer = L.layerGroup().addTo(map);
 
         const USER_LOCATION_COLOR = ${serializeForInlineScript(USER_LOCATION_COLOR)};
-        const USER_LOCATION_RING = ${serializeForInlineScript(themeColors.textOnDark)};
+        const userLocationIcon = L.divIcon({
+          className: 'metravel-pin-marker metravel-pin-marker-user',
+          html: ${serializeForInlineScript(USER_LOCATION_MARKER_HTML)},
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+          popupAnchor: [0, -16]
+        });
 
-        // Рисует синюю точку пользователя (accent-цвет, как на web) + полупрозрачный
-        // accuracy-круг под ней. Перед отрисовкой чистит userLayer, чтобы точка не
-        // дублировалась при обновлении гео.
+        // Рисует тот же заметный 30px GPS-маркер, что mobile web, и accuracy-круг.
+        // map.__realUserLocation коммитится только после успешного добавления обоих
+        // слоёв: камера не должна центрироваться на точке, которой визуально нет.
         window.__metravelRenderUserLocation = function(lat, lng) {
           try {
-            if (!isFinite(lat) || !isFinite(lng)) return;
-            map.__realUserLocation = [lat, lng];
-            userLayer.clearLayers();
-            L.circle([lat, lng], {
+            lat = Number(lat);
+            lng = Number(lng);
+            if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+              userLayer.clearLayers();
+              map.__realUserLocation = null;
+              return false;
+            }
+            const accuracy = L.circle([lat, lng], {
+              pane: USER_LOCATION_PANE,
               radius: 60,
               color: USER_LOCATION_COLOR,
               weight: 1,
@@ -297,21 +333,33 @@ ${buildInvalidateSchedulerScript({
               fillColor: USER_LOCATION_COLOR,
               fillOpacity: 0.12,
               interactive: false
-            }).addTo(userLayer);
-            const dot = L.circleMarker([lat, lng], {
-              radius: 8,
-              color: USER_LOCATION_RING,
-              weight: 3,
-              fillColor: USER_LOCATION_COLOR,
-              fillOpacity: 1
-            }).addTo(userLayer);
+            });
+            const dot = L.marker([lat, lng], {
+              pane: USER_LOCATION_PANE,
+              icon: userLocationIcon,
+              // The pane is above POIs, so an interactive icon would steal taps
+              // from a coincident marker/cluster. Mobile web uses the same
+              // non-interactive location marker contract.
+              interactive: false,
+              keyboard: false,
+              zIndexOffset: 1000
+            });
             dot.bindPopup(${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.currentLocation'))});
-            try { dot.bringToFront(); } catch (e) {}
-          } catch (e) {}
+            userLayer.clearLayers();
+            accuracy.addTo(userLayer);
+            dot.addTo(userLayer);
+            map.__realUserLocation = [lat, lng];
+            return true;
+          } catch (e) {
+            try { userLayer.clearLayers(); } catch (clearError) {}
+            map.__realUserLocation = null;
+            return false;
+          }
         };
 
         window.__metravelClearUserLocation = function() {
-          try { userLayer.clearLayers(); map.__realUserLocation = null; } catch (e) {}
+          map.__realUserLocation = null;
+          try { userLayer.clearLayers(); } catch (e) {}
         };
 
         // #843 — shared brand «bird» divIcon. Inline HTML renders reliably in Android

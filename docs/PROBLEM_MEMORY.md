@@ -1,6 +1,6 @@
 # Problem memory and recurrence registry
 
-Актуализировано: 2026-08-08.
+Актуализировано: 2026-08-11.
 
 Этот документ — постоянная память о системных семействах проблем MeTravel. Он
 не заменяет task board и не хранит обычный progress log. Борд остаётся
@@ -769,6 +769,43 @@ guard, падающий в CI на попытке обойти этот конт
   к `#1392`; правка sizing contract строки бесполезна.
 - **Последняя проверка:** 2026-08-10; Pixel 10 Pro, `fontScale` 1.0/1.15/1.30,
   экраны поездки и travel-деталей.
+
+### MAP-USER-LOCATION-MARKER-001 — Android-маркер пользователя ниже POI
+
+- **Инвариант:** trusted GPS-позиция на Android и mobile web
+  обязана иметь заметный единый маркер «Вы здесь». На Android он
+  остаётся выше POI/кластеров, но не перехватывает их нажатия;
+  камера не центрируется по позиции, если маркер не был успешно
+  нарисован.
+- **Surface/owner:** Android Leaflet WebView renderer; mobile web — обязательный
+  парный контроль. Владелец — `components/MapPage/Map/nativeMapHtml.ts`
+  и native bridge `components/MapPage/Map.ios.tsx`.
+- **Цепочка:** `#912/#914/#984` — trusted/live location state;
+  `#1404` — порядок и надёжность визуального слоя Android.
+- **Подтверждённая причина:** прежний `L.circleMarker` жил в
+  `overlayPane` (z-index 400), а POI/кластеры — в `markerPane` (600), поэтому
+  `bringToFront()` не мог поднять GPS-точку над POI. Кроме того,
+  `map.__realUserLocation` записывался до отрисовки с пустым
+  `catch`, а native adapter игнорировал явный target из `MapUiApi`. После
+  подъёма user-location pane первый runtime-прогон выявил второй failure mode:
+  при `preferCanvas` accuracy-круг создавал viewport-sized canvas в pane 625,
+  который оставался DOM hit target и перекрывал POI из нижнего `markerPane`,
+  даже когда сам GPS-маркер был `interactive: false`.
+- **Controls:** dedicated pane z-index 625 (выше POI, ниже tooltip/popup),
+  общий 30px `buildUserLocationHtml`, неинтерактивный pane/маркер (включая
+  viewport-sized accuracy canvas) и атомарная команда render→commit→center.
+  Исполняемый WebView regression test
+  проверяет замену без дублей, fail-closed и запрет `setView` после
+  ошибки. Runtime-control — MAP-04/MAP-06 на Pixel и mobile web 390×844,
+  включая точное совпадение GPS с POI.
+- **Решение для новой жалобы:** проблему trusted/fallback state связывать
+  с `#912/#984`; исчезновение/перекрытие уже trusted маркера по той
+  же pane/atomic-render причине — `reopen #1404`; другой renderer failure mode —
+  `create-linked` к `#1404`.
+- **Последняя проверка:** 2026-08-11; Pixel 10 Pro/API 36 и mobile web 390×844
+  прошли парный post-correction overlap-контроль: GPS-маркер остался поверх POI,
+  физическое нажатие открыло его карточку, повторный locate не создал дублей,
+  runtime-ошибок нет (`#1404`).
 
 ### MAP-ROUTING-001 — incomplete routing migration
 
