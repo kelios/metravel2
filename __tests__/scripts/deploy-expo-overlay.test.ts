@@ -2,31 +2,13 @@ import fs from 'fs'
 import path from 'path'
 
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
+import {
+  extractRemoteDeploy,
+  readCanonicalDeploy,
+  stagingCleanupFailureContract,
+} from './remote-deploy-test-utils'
 
 const helperPath = path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh')
-const canonicalDeployPath = path.resolve(process.cwd(), 'build-prod.sh')
-const stagingCleanupFailureContract = [
-  'if [ -e dist ]; then',
-  '  echo "❌ Failed to remove upload staging directory: dist"',
-  '  exit 1',
-  'fi',
-].join('\n')
-
-function readCanonicalDeploy(): string {
-  return fs.readFileSync(canonicalDeployPath, 'utf8')
-}
-
-function extractRemoteDeploy(source = readCanonicalDeploy()): string {
-  const match = source.match(
-    /<<'REMOTE_DEPLOY_SCRIPT'\n([\s\S]*?)\nREMOTE_DEPLOY_SCRIPT/,
-  )
-
-  if (!match) {
-    throw new Error('canonical remote deploy payload was not found')
-  }
-
-  return match[1]
-}
 
 function deployContractViolations(remoteDeploy: string): string[] {
   const violations: string[] = []

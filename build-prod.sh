@@ -105,6 +105,8 @@ deploy_prod() {
   local EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
   local EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"
   local EXPO_OVERLAY_HELPER_B64
+  local REMOTE_DONE_MARKER
+  local REMOTE_LOG
 
   if [[ ! "$EXPO_OVERLAY_RETENTION_DAYS" =~ ^[0-9]+$ ]]; then
     echo "❌ EXPO_OVERLAY_RETENTION_DAYS must be a non-negative integer"
@@ -125,6 +127,14 @@ deploy_prod() {
     ./dist/ \
     "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/"
 
+  # The success marker travels as an argument and comes back only if the
+  # remote program reached its final line. The heredoc is quoted, so the
+  # nonce never appears in the program text: a stdin-consuming command that
+  # echoes the swallowed tail can leak the variable name, never the value.
+  REMOTE_DONE_MARKER="MT_REMOTE_DEPLOY_OK:$(date +%s).$$.$RANDOM"
+  REMOTE_LOG="$(mktemp -t metravel-remote-deploy 2>/dev/null || mktemp /tmp/metravel-remote-deploy.XXXXXX)"
+  trap 'rm -f "${REMOTE_LOG:-}"' EXIT
+
   # Send the remote program as literal stdin. Embedding it in a local
   # double-quoted argument strips nested quotes and turns punctuation inside
   # diagnostics into remote shell syntax before bash can parse the program.
@@ -134,13 +144,28 @@ deploy_prod() {
     "$ENV" \
     "$EXPO_OVERLAY_RETENTION_DAYS" \
     "$EXPO_OVERLAY_HELPER_B64" \
-    "$PROD_REMOTE_DIR" <<'REMOTE_DEPLOY_SCRIPT'
+    "$PROD_REMOTE_DIR" \
+    "$REMOTE_DONE_MARKER" <<'REMOTE_DEPLOY_SCRIPT' | tee "$REMOTE_LOG"
 set -e
+
+# The program itself is bash's stdin (ssh ... bash -s), read lazily while it
+# runs. Any command that reads stdin swallows the not-yet-executed remainder,
+# and bash exits 0 at the resulting EOF — readiness and cleanup silently
+# skipped (2026-08-11 incident). 'docker compose exec -T' keeps stdin open
+# (-T only disables the TTY), so every docker invocation below isolates
+# stdin with </dev/null. Never 'exec </dev/null' at the top of this program:
+# the program IS stdin, that would truncate it immediately.
 
 ENV="$1"
 EXPO_OVERLAY_RETENTION_DAYS="$2"
 EXPO_OVERLAY_HELPER_B64="$3"
 REMOTE_DIR="$4"
+DEPLOY_SUCCESS_MARKER="$5"
+
+if [ -z "$DEPLOY_SUCCESS_MARKER" ]; then
+  echo "❌ Deploy success marker argument is required"
+  exit 1
+fi
 
 cd "$REMOTE_DIR"
 mkdir -p static
@@ -151,13 +176,13 @@ mkdir -p static
 # dirs pile up (past manual-recovery need). Route every destructive removal
 # through root inside the container; mv/rename still works on the host
 # (write on static/ is enough for a rename within it).
-app_ctr=$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]app[-_]1$' | head -1)
+app_ctr=$(docker ps --format '{{.Names}}' </dev/null | grep -E '^metravel[-_]app[-_]1$' | head -1)
 if [ -z "$app_ctr" ]; then
   echo "⚠️ app container not found; stale-dir cleanup falls back to host rm (may lack permissions)"
 fi
 rroot() { # rm -rf the given paths as root in the container; never abort
   if [ -n "$app_ctr" ]; then
-    docker exec -u 0 "$app_ctr" sh -c "rm -rf $1" || true
+    docker exec -u 0 "$app_ctr" sh -c "rm -rf $1" </dev/null || true
   else
     rm -rf $1 2>/dev/null || true
   fi
@@ -228,13 +253,13 @@ if ! mv static/dist.new static/dist; then
 fi
 readiness_deadline=$(( $(date +%s) + 30 ))
 
-if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+if command -v docker >/dev/null 2>&1 && docker compose version </dev/null >/dev/null 2>&1; then
   compose_nginx() {
-    docker compose -f docker-compose-prod.app.yaml exec -T nginx "$@"
+    docker compose -f docker-compose-prod.app.yaml exec -T nginx "$@" </dev/null
   }
 else
   compose_nginx() {
-    docker-compose -f docker-compose-prod.app.yaml exec -T nginx "$@"
+    docker-compose -f docker-compose-prod.app.yaml exec -T nginx "$@" </dev/null
   }
 fi
 
@@ -343,7 +368,19 @@ if [ -e dist ]; then
   echo "❌ Failed to remove upload staging directory: dist"
   exit 1
 fi
+# Last command by contract: the caller refuses success without this line.
+echo "$DEPLOY_SUCCESS_MARKER"
 REMOTE_DEPLOY_SCRIPT
+
+  # ssh exit 0 alone is not success: when a stdin-consuming command swallows
+  # the unread remainder of the program, bash hits EOF and still returns 0.
+  # Only the echoed nonce proves the remote program ran through its final
+  # line — readiness, rollback handling and cleanup included.
+  if ! grep -qxF -- "$REMOTE_DONE_MARKER" "$REMOTE_LOG"; then
+    echo "❌ Remote deploy output is missing the success marker — the readiness/cleanup tail did not run"
+    return 1
+  fi
+  rm -f "$REMOTE_LOG"
 
   rm -rf dist
 }
