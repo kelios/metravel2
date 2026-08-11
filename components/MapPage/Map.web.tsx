@@ -115,6 +115,7 @@ export const getMarkerFocusPlan = ({
 const MapPageComponent: React.FC<Props> = (props) => {
   const {
     travel = { data: [] },
+    initialResultsSettled = true,
     coordinates,
     // Intentionally NOT defaulted: trust is explicit and undefined fails closed.
     coordinatesAreFallback,
@@ -163,6 +164,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [errors, setErrors] = useState<any>({ routing: false })
   const [disableFitBounds] = useState(false)
   const [mapInstance, setMapInstance] = useState<any>(null)
+  const [initialViewReady, setInitialViewReady] = useState(false)
   const [offlineBBox, setOfflineBBox] = useState<OfflineBBox | null>(null)
   // True while a Leaflet marker popup is open. Freezes the server-cluster refetch
   // (useMapClusters) for the duration: a marker tap flies/zooms the map, which
@@ -450,10 +452,16 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [errors?.routing, errors?.routingCode])
 
   const customIcons = useLeafletIcons(L)
+  const handleInitialViewReady = useCallback(() => {
+    // Monotonic for this MapContainer instance: later loading/refetch states must
+    // never detach an already-mounted base layer or recreate overlay controllers.
+    setInitialViewReady(true)
+  }, [])
   // Базовая подложка карты всегда светлая (обычный цвет), даже в тёмной теме UI.
   const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
     map: mapInstance,
     L,
+    layerStartupReady: initialViewReady,
   })
 
   // Expose marker index for MapUiApi.openPopupForCoord
@@ -893,6 +901,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
         coordinatesLatLng={coordinatesLatLng}
         disableFitBounds={disableFitBounds}
         travelData={filteredTravelData}
+        initialResultsSettled={initialResultsSettled}
+        onInitialViewReady={handleInitialViewReady}
         fitBoundsPadding={fitBoundsPadding}
         setMapZoom={setMapZoom}
         mapRef={mapRef}
@@ -1013,6 +1023,7 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   if (prevProps.radius !== nextProps.radius) return false
   if (prevProps.mapClusterFilters !== nextProps.mapClusterFilters) return false
   if (prevProps.categoryFilterUnresolved !== nextProps.categoryFilterUnresolved) return false
+  if (prevProps.initialResultsSettled !== nextProps.initialResultsSettled) return false
 
   // #207 host-stability (#217): the map is a stable host that never remounts, so a
   // desktop↔mobile resize flips isMobile at the caller, toggling these props (mobile

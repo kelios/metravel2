@@ -22,10 +22,10 @@ describe('MapLogicComponent radius zoom initialization', () => {
     expect(shouldDeferRadiusAutoFit(true)).toBe(true);
   });
 
-  // #1291 — стартовый вид применяется ровно один раз, сразу конечным. Промежуточный
-  // радиусный зум (r=50 км → z13) убран: Leaflet успевал скачать его тайлы, хотя
-  // авто-фит перекрывал этот вид до первого кадра.
-  it('fits the radius circle without ever passing through an intermediate radius zoom', async () => {
+  // #1291 — map readiness and tile readiness are separate. Leaflet may publish
+  // its instance while data is loading, but the base layer is enabled only after
+  // the settled result set has synchronously applied the one final fit.
+  it('waits for settled results, fits once, then enables base-layer startup once', async () => {
     const map = {
       fitBounds: jest.fn(),
       setView: jest.fn(),
@@ -51,6 +51,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       latLngBounds: jest.fn(() => mockBounds),
     };
 
+    const attachBaseLayer = jest.fn();
     const baseProps = {
       mapClickHandler: () => undefined,
       mode: 'radius',
@@ -64,6 +65,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       setMapZoom: jest.fn(),
       mapRef: { current: null },
       onMapReady: jest.fn(),
+      onInitialViewReady: attachBaseLayer,
       savedMapViewRef: { current: null },
       hasInitializedRef: { current: false },
       lastModeRef: { current: null },
@@ -75,28 +77,277 @@ describe('MapLogicComponent radius zoom initialization', () => {
       useMapEvents,
     };
 
-    const { rerender } = render(<MapLogicComponent {...baseProps} travelData={[]} />);
+    const { rerender } = render(
+      <MapLogicComponent
+        {...baseProps}
+        travelData={[]}
+        initialResultsSettled={false}
+      />,
+    );
 
     await act(async () => {});
 
-    // Круг вокруг пользователя виден с первого кадра, ещё до результатов, —
-    // и это сразу конечный вид, а не промежуточный зум.
-    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    expect(baseProps.onMapReady).toHaveBeenCalledWith(map);
+    expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).not.toHaveBeenCalled();
+    expect(attachBaseLayer).not.toHaveBeenCalled();
 
     rerender(
       <MapLogicComponent
         {...baseProps}
+        initialResultsSettled
         travelData={[{ id: 1, coord: '53.9,27.5667', address: 'A' }]}
       />
     );
 
     await act(async () => {});
 
-    // Приход результатов только уточняет рамку тем же fitBounds; радиусного
-    // setView (60 км → z13) не должно случиться ни разу за весь старт.
     expect(map.setView).not.toHaveBeenCalled();
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    expect(attachBaseLayer).toHaveBeenCalledTimes(1);
+    expect(map.fitBounds.mock.invocationCallOrder[0]).toBeLessThan(
+      attachBaseLayer.mock.invocationCallOrder[0],
+    );
+
+    rerender(
+      <MapLogicComponent
+        {...baseProps}
+        initialResultsSettled
+        travelData={[
+          { id: 1, coord: '53.9,27.5667', address: 'A' },
+          { id: 2, coord: '53.91,27.58', address: 'B' },
+        ]}
+      />,
+    );
+    await act(async () => {});
+
+    // Later pages/refetches neither re-fit the same results state nor re-enable
+    // an already enabled layer.
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    expect(attachBaseLayer).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the radius circle as the explicit fallback for a settled empty result', async () => {
+    const map = {
+      fitBounds: jest.fn(),
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+      getZoom: jest.fn(() => 9),
+      getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
+      on: jest.fn(),
+      off: jest.fn(),
+    };
+    const bounds = {
+      pad: jest.fn(() => 'padded-circle-bounds'),
+      getSouthWest: () => ({ lat: 53, lng: 27 }),
+      getNorthEast: () => ({ lat: 54, lng: 28 }),
+      isValid: () => true,
+      extend: jest.fn(),
+    };
+    const onInitialViewReady = jest.fn();
+    const props = {
+      mapClickHandler: () => undefined,
+      mode: 'radius',
+      coordinates: { lat: 53.9, lng: 27.5667 },
+      userLocation: { lat: 53.9, lng: 27.5667 },
+      disableFitBounds: false,
+      L: {
+        latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+        latLngBounds: jest.fn(() => bounds),
+      },
+      travelData: [],
+      circleCenter: { lat: 53.9, lng: 27.5667 },
+      radiusInMeters: 50000,
+      fitBoundsPadding: { paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] },
+      setMapZoom: jest.fn(),
+      mapRef: { current: null },
+      onMapReady: jest.fn(),
+      onInitialViewReady,
+      savedMapViewRef: { current: null },
+      hasInitializedRef: { current: false },
+      lastModeRef: { current: null },
+      lastAutoFitKeyRef: { current: null },
+      leafletBaseLayerRef: { current: null },
+      leafletOverlayLayersRef: { current: new Map() },
+      leafletControlRef: { current: null },
+      useMap: jest.fn(() => map),
+      useMapEvents: jest.fn(() => null),
+    };
+
+    render(<MapLogicComponent {...props} initialResultsSettled />);
+    await act(async () => {});
+
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    expect(map.fitBounds).toHaveBeenCalledWith(
+      'padded-circle-bounds',
+      expect.objectContaining({ animate: false, maxZoom: 16 }),
+    );
+    expect(onInitialViewReady).toHaveBeenCalledTimes(1);
+    expect(map.fitBounds.mock.invocationCallOrder[0]).toBeLessThan(
+      onInitialViewReady.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('retries a transient first-frame fit failure before enabling base layers', async () => {
+    const map = {
+      fitBounds: jest
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new Error('pane is not ready');
+        })
+        .mockImplementationOnce(() => undefined),
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+      getZoom: jest.fn(() => 9),
+      getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
+      on: jest.fn(),
+      off: jest.fn(),
+    };
+    const bounds = {
+      pad: jest.fn(() => 'padded-bounds'),
+      getSouthWest: () => ({ lat: 53, lng: 27 }),
+      getNorthEast: () => ({ lat: 54, lng: 28 }),
+      isValid: () => true,
+      extend: jest.fn(),
+    };
+    const onInitialViewReady = jest.fn();
+
+    render(
+      <MapLogicComponent
+        mapClickHandler={() => undefined}
+        mode="radius"
+        coordinates={{ lat: 53.9, lng: 27.5667 }}
+        userLocation={{ lat: 53.9, lng: 27.5667 }}
+        disableFitBounds={false}
+        L={{
+          latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+          latLngBounds: jest.fn(() => bounds),
+        }}
+        travelData={[{ id: 1, coord: '53.9,27.5667', address: 'A' }]}
+        initialResultsSettled
+        onInitialViewReady={onInitialViewReady}
+        circleCenter={{ lat: 53.9, lng: 27.5667 }}
+        radiusInMeters={50000}
+        fitBoundsPadding={{ paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] }}
+        setMapZoom={jest.fn()}
+        mapRef={{ current: null }}
+        onMapReady={jest.fn()}
+        savedMapViewRef={{ current: null }}
+        hasInitializedRef={{ current: false }}
+        lastModeRef={{ current: null }}
+        lastAutoFitKeyRef={{ current: null }}
+        leafletBaseLayerRef={{ current: null }}
+        leafletOverlayLayersRef={{ current: new Map() }}
+        leafletControlRef={{ current: null }}
+        useMap={jest.fn(() => map)}
+        useMapEvents={jest.fn(() => null)}
+      />,
+    );
+    await act(async () => {});
+
     expect(map.fitBounds).toHaveBeenCalledTimes(2);
+    expect(onInitialViewReady).toHaveBeenCalledTimes(1);
+    expect(map.fitBounds.mock.invocationCallOrder[1]).toBeLessThan(
+      onInitialViewReady.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('releases a cancelled first-fit retry so a newer result can apply the viewport', async () => {
+    const priorRaf = global.requestAnimationFrame;
+    const priorCancelRaf = global.cancelAnimationFrame;
+    const queuedFrames = new Map<number, FrameRequestCallback>();
+    let nextFrameId = 1;
+    global.requestAnimationFrame = jest.fn((callback: FrameRequestCallback) => {
+      const id = nextFrameId++;
+      queuedFrames.set(id, callback);
+      return id;
+    });
+    global.cancelAnimationFrame = jest.fn((id: number) => {
+      queuedFrames.delete(id);
+    });
+
+    try {
+      const map = {
+        fitBounds: jest
+          .fn()
+          .mockImplementationOnce(() => {
+            throw new Error('pane is not ready');
+          })
+          .mockImplementationOnce(() => undefined),
+        setView: jest.fn(),
+        closePopup: jest.fn(),
+        getZoom: jest.fn(() => 9),
+        getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
+        on: jest.fn(),
+        off: jest.fn(),
+      };
+      const bounds = {
+        pad: jest.fn(() => 'padded-bounds'),
+        getSouthWest: () => ({ lat: 53, lng: 27 }),
+        getNorthEast: () => ({ lat: 54, lng: 28 }),
+        isValid: () => true,
+        extend: jest.fn(),
+      };
+      const onInitialViewReady = jest.fn();
+      const lastAutoFitKeyRef = { current: null as string | null };
+      const baseProps = {
+        mapClickHandler: () => undefined,
+        mode: 'radius' as const,
+        coordinates: { lat: 53.9, lng: 27.5667 },
+        userLocation: { lat: 53.9, lng: 27.5667 },
+        disableFitBounds: false,
+        L: {
+          latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+          latLngBounds: jest.fn(() => bounds),
+        },
+        initialResultsSettled: true,
+        onInitialViewReady,
+        circleCenter: { lat: 53.9, lng: 27.5667 },
+        radiusInMeters: 50000,
+        fitBoundsPadding: { paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] },
+        setMapZoom: jest.fn(),
+        mapRef: { current: null },
+        onMapReady: jest.fn(),
+        savedMapViewRef: { current: null },
+        hasInitializedRef: { current: false },
+        lastModeRef: { current: null },
+        lastAutoFitKeyRef,
+        leafletBaseLayerRef: { current: null },
+        leafletOverlayLayersRef: { current: new Map() },
+        leafletControlRef: { current: null },
+        useMap: jest.fn(() => map),
+        useMapEvents: jest.fn(() => null),
+      };
+
+      const { rerender } = render(
+        <MapLogicComponent
+          {...baseProps}
+          travelData={[{ id: 1, coord: '53.9,27.5667', address: 'A' }]}
+        />,
+      );
+      await act(async () => {});
+      expect(map.fitBounds).toHaveBeenCalledTimes(1);
+      expect(onInitialViewReady).not.toHaveBeenCalled();
+      expect(queuedFrames.size).toBe(1);
+
+      rerender(
+        <MapLogicComponent
+          {...baseProps}
+          travelData={[
+            { id: 1, coord: '53.9,27.5667', address: 'A' },
+            { id: 2, coord: '53.91,27.58', address: 'B' },
+          ]}
+        />,
+      );
+      await act(async () => {});
+
+      expect(global.cancelAnimationFrame).toHaveBeenCalled();
+      expect(map.fitBounds).toHaveBeenCalledTimes(2);
+      expect(onInitialViewReady).toHaveBeenCalledTimes(1);
+    } finally {
+      global.requestAnimationFrame = priorRaf;
+      global.cancelAnimationFrame = priorCancelRaf;
+    }
   });
 
   // #1291 — авто-фит стал единственным владельцем стартового вида, поэтому

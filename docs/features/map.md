@@ -85,6 +85,25 @@ generic web fallback; platform resolution выбирает `.web`, `.ios` или
 | Map events | React Leaflet handlers | `WebView.onMessage` |
 | Offline tiles | web tile/network path | `utils/mapTileCache.ts`, `MapOfflineDownloadControl.tsx` |
 
+### Web cold-start viewport and tiles
+
+На основной web-карте готовность Leaflet и готовность базовой OSM-подложки —
+разные события. `useMapController` передаёт `initialResultsSettled` через
+`MapPanel` только web-renderer. Пока первый map data request остаётся в состоянии
+`loading`, query выключен из-за потери focus либо новый anchor ещё проходит
+debounce/placeholder fetch, `MapLogicComponent` не применяет radius auto-fit, а
+`useMapInstance` не создаёт tile/overlay layers. После settled result set карта
+синхронно применяет один стартовый fit и только затем разрешает подключение
+слоёв. Retryable first-frame pane error получает один следующий animation frame
+до разрешения fallback, поэтому он не открывает transient placeholder tiles.
+Для settled empty result явный fallback — fit валидного radius circle; если fit
+намеренно недоступен, сохраняется безопасный исходный viewport.
+
+Гейт монотонный для смонтированного `MapContainer`: последующие background
+refetch, pagination, pan/zoom и переключение `radius`/`route` не снимают и не
+пересоздают базовый слой. Это не debounce и не затрагивает Android WebView
+renderer, который сохраняет собственный tile lifecycle.
+
 ### Native bridge ownership
 
 `components/MapPage/Map.ios.tsx` владеет протоколом основной native-карты:

@@ -131,6 +131,8 @@ type MapWebLeafletCanvasProps = {
   coordinatesLatLng: { lat: number; lng: number }
   disableFitBounds: boolean
   travelData: Point[]
+  initialResultsSettled: boolean
+  onInitialViewReady: () => void
   fitBoundsPadding: { paddingTopLeft: [number, number]; paddingBottomRight: [number, number] }
   setMapZoom: (zoom: number) => void
   mapRef: any
@@ -199,6 +201,8 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   coordinatesLatLng,
   disableFitBounds,
   travelData,
+  initialResultsSettled,
+  onInitialViewReady,
   fitBoundsPadding,
   setMapZoom,
   mapRef,
@@ -279,6 +283,8 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         disableFitBounds={disableFitBounds}
         L={L}
         travelData={travelData}
+        initialResultsSettled={initialResultsSettled}
+        onInitialViewReady={onInitialViewReady}
         circleCenter={circleCenterLatLng}
         radiusInMeters={radiusInMeters}
         fitBoundsPadding={fitBoundsPadding}

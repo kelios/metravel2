@@ -94,6 +94,10 @@ interface MapLogicProps {
   disableFitBounds: boolean;
   L: any;
   travelData: Point[];
+  /** Wait for the first result set before applying the initial web viewport. */
+  initialResultsSettled?: boolean;
+  /** Called once, synchronously after the initial viewport (or explicit fallback) is applied. */
+  onInitialViewReady?: () => void;
   circleCenter?: LatLng | null;
   radiusInMeters?: number | null;
   fitBoundsPadding?: { paddingTopLeft?: [number, number]; paddingBottomRight?: [number, number] } | null;
@@ -128,6 +132,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   disableFitBounds,
   L,
   travelData,
+  initialResultsSettled = true,
+  onInitialViewReady,
   circleCenter,
   radiusInMeters,
   fitBoundsPadding,
@@ -152,6 +158,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const lastRadiusKeyRef = useRef<string | null>(null);
   const lastSyncedZoomRef = useRef<number | null>(null);
   const hasCompletedAutoFitRef = useRef(false);
+  const hasSignaledInitialViewReadyRef = useRef(false);
 
   const hasRadiusResults = (travelData ?? []).length > 0;
   // Whether we know enough to draw/fit the radius circle around the user (or the
@@ -165,6 +172,12 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     Number.isFinite(radiusInMeters) &&
     Number(radiusInMeters) > 0;
   const canAutoFitRadiusView = hasRadiusResults || hasValidRadiusCircle;
+
+  const signalInitialViewReady = useCallback(() => {
+    if (hasSignaledInitialViewReadyRef.current) return;
+    hasSignaledInitialViewReadyRef.current = true;
+    onInitialViewReady?.();
+  }, [onInitialViewReady]);
 
   // Helper: ensure mapZoom state matches real leaflet zoom even after programmatic moves.
   // Only push state when the zoom actually changed — a plain pan (moveend) keeps the
@@ -284,17 +297,20 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const hasValidUserLocation = userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng);
 
     if (mode === 'route') {
+      let hasAppliedRouteView = hasInitializedRef.current;
       if (!hasInitializedRef.current && hasValidCoords) {
         try {
           beginProgrammaticMapMove();
           map.setView([coordinates.lat, coordinates.lng], 13, { animate: false });
+          hasInitializedRef.current = true;
+          hasAppliedRouteView = true;
         } catch {
           // Pane may not be ready yet
         }
         // ensure clusters get correct zoom after programmatic set
         requestAnimationFrame(() => syncZoomFromMap());
-        hasInitializedRef.current = true;
       }
+      if (initialResultsSettled && hasAppliedRouteView) signalInitialViewReady();
       lastModeRef.current = mode;
       return;
     }
@@ -352,11 +368,17 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     lastAutoFitKeyRef,
     syncZoomFromMap,
     radiusInMeters,
+    initialResultsSettled,
+    signalInitialViewReady,
   ]);
 
   // Fit bounds to all travel points (radius mode only)
   useEffect(() => {
     if (!map) return;
+    // #1291 — fitting an empty loading placeholder first produced z8, then the
+    // settled result set produced z9. Keep the base layer detached until the
+    // first real result set can choose the one initial viewport.
+    if (!initialResultsSettled) return;
     if (disableFitBounds || mode === 'route') return;
     if (!L || typeof (L as any).latLngBounds !== 'function' || typeof (L as any).latLng !== 'function') return;
 
@@ -458,17 +480,28 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           : userLocation
             ? ([[userLocation.lng, userLocation.lat]] as [number, number][])
             : ([] as [number, number][]);
-      if (coords.length === 0) return;
+      if (coords.length === 0) {
+        signalInitialViewReady();
+        return;
+      }
       try {
         targetBounds = (L as any).latLngBounds(
           coords.map(([lng, lat]) => (L as any).latLng(lat, lng)),
         );
       } catch {
+        signalInitialViewReady();
         return;
       }
     }
 
-    if (!targetBounds) return;
+    if (!targetBounds) {
+      signalInitialViewReady();
+      return;
+    }
+
+    let cancelled = false;
+    let scheduledFitFrame: number | null = null;
+    let initialFitRetryCount = 0;
 
     try {
       const bounds = targetBounds;
@@ -482,7 +515,17 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // noop
       }
 
+      const scheduleFit = (run: () => void): boolean => {
+        if (typeof requestAnimationFrame !== 'function') return false;
+        scheduledFitFrame = requestAnimationFrame(() => {
+          scheduledFitFrame = null;
+          run();
+        });
+        return true;
+      };
+
       const runFit = () => {
+        if (cancelled) return;
         try {
           map.invalidateSize?.({ animate: false } as any);
         } catch {
@@ -511,8 +554,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // center (the user marker stays centered) — it does NOT widen the target
         // to far-away points, so the "never wider than the circle" contract holds.
         const padFactor = mode === 'radius' ? 0.1 : 0.12;
-        const paddedBounds = bounds.pad(padFactor);
         try {
+          const paddedBounds = bounds.pad(padFactor);
           const animate = !isTestEnv && hasCompletedAutoFitRef.current;
           // Mark this as self-induced motion so the cluster viewport snapshot
           // ignores the moveend/zoomend it fires (prevents the fit⇄data flicker
@@ -559,6 +602,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
               // Иначе флаг навсегда остался бы false и вход в route-режим каждый
               // раз телепортировал бы карту на анкер поиска в z13.
               hasInitializedRef.current = true;
+              signalInitialViewReady();
               return;
             }
           }
@@ -571,8 +615,18 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           } as any);
         } catch {
           // Pane element may not be ready yet (e.g. _mapPane is undefined).
-          // Swallow to prevent "Cannot set properties of undefined" crashes.
-          lastAutoFitKeyRef.current = null;
+          // A first-frame failure is retryable: enabling the base layer here would
+          // request placeholder-zoom tiles before the real fit. Retry once on the
+          // next frame; only then accept MapContainer's view as an explicit fallback.
+          if (!hasCompletedAutoFitRef.current && initialFitRetryCount < 1) {
+            initialFitRetryCount += 1;
+            if (scheduleFit(runFit)) return;
+          }
+          // Later fits remain retryable on a future dependency/event pass. The
+          // exhausted initial attempt keeps its claimed key because the fallback
+          // is now the chosen startup view and must not trigger a surprise re-fit.
+          if (hasCompletedAutoFitRef.current) lastAutoFitKeyRef.current = null;
+          signalInitialViewReady();
           return;
         }
 
@@ -582,6 +636,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // См. комментарий выше: стартовый вид применён — вход в route-режим не
         // должен переустанавливать вид поверх него.
         hasInitializedRef.current = true;
+        signalInitialViewReady();
       };
 
       // #1350 — claim the key BEFORE the deferred run. `lastAutoFitKeyRef` used to be
@@ -590,15 +645,33 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       lastAutoFitKeyRef.current = autoFitKey;
 
       if (!isTestEnv && shouldDeferRadiusAutoFit(hasCompletedAutoFitRef.current)) {
-        requestAnimationFrame(runFit);
+        scheduleFit(runFit);
       } else {
         runFit();
       }
     } catch {
-      // noop
+      signalInitialViewReady();
     }
+
+    return () => {
+      cancelled = true;
+      if (scheduledFitFrame != null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(scheduledFitFrame);
+      }
+      // If a first-fit retry was cancelled by a newer result/anchor before it
+      // ran, release the claim. Otherwise the replacement effect sees the same
+      // coarse key and assumes a viewport that was never actually applied.
+      if (
+        scheduledFitFrame != null &&
+        !hasCompletedAutoFitRef.current &&
+        !hasSignaledInitialViewReadyRef.current
+      ) {
+        lastAutoFitKeyRef.current = null;
+      }
+    };
   }, [
     map,
+    initialResultsSettled,
     disableFitBounds,
     mode,
     L,
@@ -615,6 +688,33 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     hasValidRadiusCircle,
     canAutoFitRadiusView,
     compactPane,
+    signalInitialViewReady,
+  ]);
+
+  // Explicit settled fallback for views that intentionally skip radius fitting
+  // (route mode, disabled fit, missing Leaflet bounds helpers, or no valid target).
+  // This effect is declared after the fit effect so a valid radius always applies
+  // its final viewport before the base layer can be enabled.
+  useEffect(() => {
+    if (!map || !initialResultsSettled || hasSignaledInitialViewReadyRef.current) return;
+
+    const canAttemptRadiusFit =
+      mode === 'radius' &&
+      !disableFitBounds &&
+      !!L &&
+      typeof L.latLngBounds === 'function' &&
+      typeof L.latLng === 'function' &&
+      canAutoFitRadiusView;
+
+    if (!canAttemptRadiusFit) signalInitialViewReady();
+  }, [
+    map,
+    initialResultsSettled,
+    mode,
+    disableFitBounds,
+    L,
+    canAutoFitRadiusView,
+    signalInitialViewReady,
   ]);
   return null;
 };

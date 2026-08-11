@@ -24,6 +24,10 @@ const mockMapCoordinatesResult: Record<string, any> = {
 }
 
 let mockRouteStoreState = { mode: 'radius', points: [] as unknown[] }
+let mockMapLoading = false
+let mockMapFetching = false
+let mockMapPlaceholder = false
+let mockMapDebouncing = false
 
 jest.mock('@/stores/routeStore', () => ({
   useRouteStore: {
@@ -90,9 +94,9 @@ jest.mock('@/hooks/map/useMapDataController', () => ({
     allTravelsData: [],
     travelsData: [],
     total: 0,
-    loading: false,
-    isFetching: false,
-    isPlaceholderData: false,
+    loading: mockMapLoading,
+    isFetching: mockMapFetching,
+    isPlaceholderData: mockMapPlaceholder,
     mapError: null,
     mapErrorDetails: null,
     refetchMapData: jest.fn(),
@@ -100,7 +104,7 @@ jest.mock('@/hooks/map/useMapDataController', () => ({
     hasMore: false,
     onLoadMore: jest.fn(),
     isFetchingNextPage: false,
-    isDebouncingFilters: false,
+    isDebouncingFilters: mockMapDebouncing,
   }),
 }))
 
@@ -126,6 +130,10 @@ describe('useMapController (#991 smoke)', () => {
     mockSetSearchAreaCenter.mockClear()
     mockClearRouteAndSetMode.mockClear()
     mockAddRoutePointFromTravel.mockClear()
+    mockMapLoading = false
+    mockMapFetching = false
+    mockMapPlaceholder = false
+    mockMapDebouncing = false
     mockRouteStoreState = { mode: 'radius', points: [] }
     Object.assign(mockMapCoordinatesResult, {
       coordinates: { latitude: 53.9, longitude: 27.5667 },
@@ -141,6 +149,7 @@ describe('useMapController (#991 smoke)', () => {
     const props = result.current.mapPanelProps
     for (const key of [
       'travelsData', 'coordinates', 'coordinatesAreFallback', 'userLocation',
+      'initialResultsSettled',
       'routePoints', 'fullRouteCoords', 'mode', 'transportMode', 'radius',
       'mapClusterFilters', 'categoryFilterUnresolved', 'setRoutePoints',
       'onMapClick', 'onMapUiApiReady', 'onRequestUserLocation', 'onMapMove',
@@ -152,6 +161,41 @@ describe('useMapController (#991 smoke)', () => {
     expect(props.onMarkerSelect).toBeUndefined()
     expect(props.onMapBackgroundTap).toBeUndefined()
     expect(props.suppressLeafletPopupOnSelect).toBe(false)
+    expect(props.initialResultsSettled).toBe(true)
+  })
+
+  it('#1291 — opens the web startup gate only for the active settled result set', () => {
+    mockMapLoading = true
+    const { result, rerender } = renderHook(() => useMapController(baseParams))
+
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
+
+    mockMapLoading = false
+    mockMapFetching = true
+    mockMapPlaceholder = true
+    rerender()
+
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
+
+    mockMapFetching = false
+    mockMapPlaceholder = false
+    mockMapDebouncing = true
+    rerender()
+
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
+
+    mockMapDebouncing = false
+    rerender()
+
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
+  })
+
+  it('#1291 — stays closed while the map screen query is unfocused and disabled', () => {
+    const { result } = renderHook(() =>
+      useMapController({ ...baseParams, isFocused: false }),
+    )
+
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
   })
 
   it('#207 — isMobile включает marker-select/background-tap гейты', () => {

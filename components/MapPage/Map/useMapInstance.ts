@@ -37,6 +37,12 @@ interface UseMapInstanceProps {
    * выбор базового слоя.
    */
   manageBaseLayer?: boolean;
+  /**
+   * Monotonic web startup gate. The owning map flips it once, after its first
+   * settled result set has produced the initial view, so placeholder-zoom tiles
+   * and overlay requests are never started and immediately discarded.
+   */
+  layerStartupReady?: boolean;
 }
 
 /**
@@ -65,7 +71,12 @@ const createThemedBaseLayer = (L: any) => {
   return attachTileRetry(L.tileLayer(getThemedBaseTileUrl(), getThemedBaseLayerOptions()));
 };
 
-export function useMapInstance({ map, L, manageBaseLayer = true }: UseMapInstanceProps) {
+export function useMapInstance({
+  map,
+  L,
+  manageBaseLayer = true,
+  layerStartupReady = true,
+}: UseMapInstanceProps) {
   const leafletBaseLayerRef = useRef<any>(null);
   const leafletOverlayLayersRef = useRef<Map<string, any>>(new Map());
   const leafletControlRef: LeafletControlRef = useRef<unknown>(null);
@@ -75,6 +86,7 @@ export function useMapInstance({ map, L, manageBaseLayer = true }: UseMapInstanc
     if (Platform.OS !== 'web') return;
     if (!map || !L) return;
     if (typeof map.addLayer !== 'function') return;
+    if (!layerStartupReady) return;
 
     const cleanup = () => {
       try {
@@ -453,7 +465,7 @@ export function useMapInstance({ map, L, manageBaseLayer = true }: UseMapInstanc
       lastCleanup = undefined;
       cleanup();
     };
-  }, [map, L, manageBaseLayer]);
+  }, [map, L, manageBaseLayer, layerStartupReady]);
 
   // Базовая подложка карты всегда светлая (OSM-прокси) и не реагирует на смену
   // темы приложения — отдельный theme-swap-эффект для подложки больше не нужен.

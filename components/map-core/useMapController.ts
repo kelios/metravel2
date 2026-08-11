@@ -470,6 +470,16 @@ export function useMapController({
   const mapPanelProps = useMemo(
     () => ({
       travelsData,
+      // #1291 — fail closed until the active query has produced its own settled
+      // result. `!loading` alone is briefly true for an unfocused/disabled query
+      // and while debounce/placeholder data still belongs to the previous anchor.
+      // Map.web latches the first `true`, so later refetches never remove layers.
+      initialResultsSettled:
+        isFocused &&
+        !loading &&
+        !isFetching &&
+        !isPlaceholderData &&
+        !isDebouncingFilters,
       coordinates: mapPanelCoordinates,
       coordinatesAreFallback: mapPanelCoordinatesAreFallback,
       userLocation,
@@ -500,6 +510,11 @@ export function useMapController({
     }),
     [
       travelsData,
+      isFocused,
+      loading,
+      isFetching,
+      isPlaceholderData,
+      isDebouncingFilters,
       mapPanelCoordinates,
       mapPanelCoordinatesAreFallback,
       routePoints,

@@ -62,6 +62,12 @@ describe('Map.web arePropsEqual comparator', () => {
     expect(arePropsEqual(a, b)).toBe(false);
   });
 
+  it('returns false when the first result set becomes settled', () => {
+    const a = { ...baseProps(), initialResultsSettled: false };
+    const b = { ...a, initialResultsSettled: true };
+    expect(arePropsEqual(a, b)).toBe(false);
+  });
+
   it('returns false when transportMode changes', () => {
     const a = baseProps();
     const b = { ...a, transportMode: 'bike' as const };

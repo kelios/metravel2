@@ -8,6 +8,12 @@ import type { Point, TransportMode, MapMode, Coordinates } from '@/components/ma
 
 export interface MapProps {
   travel?: { data?: Point[] };
+  /**
+   * Web startup gate: the first result set has either resolved or failed, so the
+   * renderer can apply its final initial view before attaching the base tiles.
+   * Native adapters ignore this optional prop.
+   */
+  initialResultsSettled?: boolean;
   coordinates: Coordinates;
   /**
    * True when `coordinates` is a non-user viewport/search anchor. Only explicit

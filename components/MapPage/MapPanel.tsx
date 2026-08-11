@@ -27,6 +27,8 @@ const LazyWebMap = React.lazy(() =>
 
 interface MapPanelProps {
     travelsData: any[];
+    /** First map result set is no longer loading; used only by the web tile startup gate. */
+    initialResultsSettled?: boolean;
     coordinates: LatLng | null;
     /** Trusted current user fix, independent from the viewport/query center. */
     userLocation?: LatLng | null;
@@ -84,6 +86,7 @@ function Placeholder({ text = i18nT('map:components.MapPage.MapPanel.karta_dostu
 
 const MapPanel: React.FC<MapPanelProps> = ({
                                                travelsData,
+                                               initialResultsSettled = true,
                                                coordinates,
                                                userLocation,
                                                coordinatesAreFallback,
@@ -208,6 +211,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                   <LazyWebMap
                       key={`map-${mapKeyVersion}`}
                       travel={travelProp}
+                      initialResultsSettled={initialResultsSettled}
                       coordinates={safeCoordinates}
                       coordinatesAreFallback={coordinatesAreFallback}
                       userLocation={resolvedUserLocation}
