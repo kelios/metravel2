@@ -5,6 +5,10 @@ import type { RoutePoint } from '@/api/plannedTrips'
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap.web'
 
 const mockCanvasProps: Array<{ containerKey?: string; center?: [number, number]; zoom?: number }> = []
+const mockFitBounds = jest.fn()
+const mockSetView = jest.fn()
+const mockStop = jest.fn()
+const mockMap = { setView: mockSetView, fitBounds: mockFitBounds, stop: mockStop }
 
 // Развёрнутая карта уходит порталом в document.body; react-test-renderer порталы
 // в DOM-контейнер не умеет, поэтому в тесте портал рендерит узел на месте.
@@ -22,7 +26,7 @@ jest.mock('@/utils/loadLeafletRuntime', () => ({
       Marker: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
       Popup: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
       Polyline: () => null,
-      useMap: () => ({ setView: jest.fn(), fitBounds: jest.fn() }),
+      useMap: () => mockMap,
       useMapEvents: () => null,
     },
   }),
@@ -58,7 +62,7 @@ jest.mock('@/components/MapPage/Map/MapCanvas', () => {
         onMapRef?.(mapRef.current)
       }, [onMapRef])
 
-      return <div data-testid="map-canvas">{children?.({})}</div>
+      return <div key={containerKey} data-testid="map-canvas">{children?.({})}</div>
     },
   }
 })
@@ -76,8 +80,8 @@ const route: RoutePoint[] = [
   { id: 'b', type: 'place', name: 'Финиш', description: null, coordinates: [27.6, 53.91], placeId: null },
 ]
 
-const renderMap = async () => {
-  const utils = render(<TripPlanRouteMap route={route} />)
+const renderMap = async (routeOverride = route) => {
+  const utils = render(<TripPlanRouteMap route={routeOverride} />)
   await waitFor(() => utils.getByLabelText(EXPAND))
   return utils
 }
@@ -89,6 +93,9 @@ const renderMap = async () => {
 describe('TripPlanRouteMap fullscreen (web)', () => {
   beforeEach(() => {
     mockCanvasProps.length = 0
+    mockFitBounds.mockClear()
+    mockSetView.mockClear()
+    mockStop.mockClear()
     document.body.style.overflow = ''
   })
 
@@ -148,5 +155,36 @@ describe('TripPlanRouteMap fullscreen (web)', () => {
     fireEvent(getByLabelText(EXPAND), 'click')
 
     expect(UNSAFE_getByProps({ 'data-testid': 'map-canvas' })).toBeTruthy()
+  })
+
+  it('stops an active fitBounds transition when the Leaflet map is removed', async () => {
+    const { unmount } = await renderMap()
+
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+    expect(mockStop).not.toHaveBeenCalled()
+    unmount()
+
+    expect(mockStop).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops an active setView transition when a single-point map is removed', async () => {
+    const { unmount } = await renderMap([route[0]])
+
+    expect(mockSetView).toHaveBeenCalledWith([53.9, 27.56], 12)
+    expect(mockStop).not.toHaveBeenCalled()
+    unmount()
+
+    expect(mockStop).toHaveBeenCalledTimes(1)
+  })
+
+  it('registers cleanup for a remounted fullscreen map after bounds were already fitted', async () => {
+    const { getByLabelText, unmount } = await renderMap()
+
+    expect(mockStop).not.toHaveBeenCalled()
+    fireEvent(getByLabelText(EXPAND), 'click')
+    expect(mockStop).toHaveBeenCalledTimes(1)
+
+    unmount()
+    expect(mockStop).toHaveBeenCalledTimes(2)
   })
 })

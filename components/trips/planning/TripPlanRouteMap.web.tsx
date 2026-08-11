@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -94,6 +94,15 @@ function FitRouteBounds({
   fittedTokenRef: React.MutableRefObject<string | null>;
 }) {
   const map = useMap();
+
+  // MapContainer removes the Leaflet instance from a passive effect. Stop any
+  // pending pan/zoom in the earlier layout cleanup, including remounted maps
+  // whose bounds token was already fitted (fullscreen restores their view).
+  useLayoutEffect(() => {
+    return () => {
+      map.stop();
+    };
+  }, [map]);
 
   useEffect(() => {
     if (!positions.length) return;

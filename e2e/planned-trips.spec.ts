@@ -21,7 +21,7 @@ async function setupFakeAuth(page: import('@playwright/test').Page) {
 
 async function waitForFakeAuth(page: import('@playwright/test').Page) {
   await expect(
-    page.getByRole('button', { name: 'Открыть меню аккаунта E2E User' }),
+    page.locator('[data-testid="account-menu-anchor"]:visible').first(),
   ).toBeVisible({ timeout: 15_000 })
 }
 
@@ -98,8 +98,13 @@ const transportRoutePoints = [
   },
 ]
 
-const buildTransportTrip = (transportMode: string, ownerId: number) => {
+const buildTransportTrip = (transportMode: string, ownerId: number, bikeType = 'regular') => {
   const degraded = transportMode === 'bicycle'
+  const bicycleViaPoint = bikeType === 'road'
+    ? [27.51, 53.86]
+    : bikeType === 'mountain'
+      ? [27.47, 53.83]
+      : [27.5, 53.85]
   return {
     id: 99002,
     title: 'E2E переключение транспорта',
@@ -107,11 +112,12 @@ const buildTransportTrip = (transportMode: string, ownerId: number) => {
     start_date: '2026-09-01T09:00:00',
     status: 'planned',
     transport_mode: transportMode,
+    bike_type: bikeType,
     owner: ownerId,
     participants: [],
     route: { points: transportRoutePoints },
     route_geometry: degraded
-      ? [[27.56, 53.9], [27.5, 53.85], [27.4, 53.8]]
+      ? [[27.56, 53.9], bicycleViaPoint, [27.4, 53.8]]
       : [[27.56, 53.9], [27.4, 53.8]],
     route_summary: {
       distance_km: degraded ? 19.2 : 18.5,
@@ -135,6 +141,7 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
   const patchBodies: Array<Record<string, unknown>> = []
   const plannedTripRequests: string[] = []
   let currentTransport = 'car'
+  let currentBikeType = 'regular'
 
   page.on('request', (request) => {
     const pathname = new URL(request.url()).pathname
@@ -152,6 +159,7 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
       const body = request.postDataJSON() as Record<string, unknown>
       patchBodies.push(body)
       currentTransport = String(body.transport_mode ?? currentTransport)
+      currentBikeType = String(body.bike_type ?? currentBikeType)
       await new Promise((resolve) => setTimeout(resolve, 250))
     } else {
       await waitForFakeAuth(page)
@@ -161,7 +169,7 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(buildTransportTrip(currentTransport, ownerId)),
+      body: JSON.stringify(buildTransportTrip(currentTransport, ownerId, currentBikeType)),
     })
   })
 
@@ -290,5 +298,36 @@ test.describe('Trip planner — happy path', () => {
     await control.screenshot({ path: path.join(evidenceDir, 'mobile-owner-control.png') })
 
     expect(consoleErrors).toEqual([])
+  })
+
+  test('switches bike profiles atomically and reloads without a Leaflet teardown error', async ({ page }) => {
+    await setupFakeAuth(page)
+    await seedConsent(page)
+    const networkEvidence = await mockTransportTrip(page)
+    const pageErrors: string[] = []
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/trips/plan/99002', { waitUntil: 'domcontentloaded' })
+    await waitForFakeAuth(page)
+    await expect(page.getByTestId('trip-plan-route-map').locator('.leaflet-container')).toBeVisible()
+
+    await page.getByTestId('segmented-bike').click()
+    await expect(page.getByTestId('route-builder-bike-type-control')).toBeVisible()
+    await page.getByTestId('route-builder-bike-type-road').click()
+    await expect(page.getByTestId('route-builder-bike-type-road')).toHaveAttribute('aria-pressed', 'true')
+    await page.getByTestId('route-builder-bike-type-mountain').click()
+    await expect(page.getByTestId('route-builder-bike-type-mountain')).toHaveAttribute('aria-pressed', 'true')
+
+    expect(networkEvidence.patchBodies).toEqual([
+      { transport_mode: 'bicycle' },
+      { bike_type: 'road' },
+      { bike_type: 'mountain' },
+    ])
+    expect(networkEvidence.plannedTripRequests.some((entry) => entry.includes('/route/'))).toBe(false)
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('route-builder-bike-type-mountain')).toHaveAttribute('aria-pressed', 'true')
+    expect(pageErrors).toEqual([])
   })
 })
