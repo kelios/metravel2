@@ -67,7 +67,8 @@ const invalidateRouteElevation = (qc: QueryClient, tripId: number | string): voi
 const syncUpdatedPlannedTrip = (qc: QueryClient, trip: PlannedTrip): void => {
   qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
   invalidateRouteElevation(qc, trip.id);
-  void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+  // `plannedTripsAll` is the parent key for `plannedTripsMine`; invalidating
+  // both can cancel and restart the same active collection refetch.
   void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsAll() });
   void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
   void qc.invalidateQueries({ queryKey: queryKeys.communityTripsAll() });

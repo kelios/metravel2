@@ -136,6 +136,7 @@ const baseTrip: PlannedTrip = {
   startDate: '2026-08-15',
   startTime: '08:00',
   transport: 'car',
+  bikeType: 'regular',
   visibility: 'public',
   seatsTotal: 4,
   startPoint: null,
@@ -262,6 +263,22 @@ describe('PlannedTripScreen — planner states', () => {
         onSuccess: expect.any(Function),
         onError: expect.any(Function),
       }),
+    );
+  });
+
+  it('keeps an untouched metadata transport aligned with a route-builder update', () => {
+    mockTrip(makeTrip({ isOwner: true, transport: 'car' }));
+    const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
+    const { getByTestId, rerender } = render(<PlannedTripScreen />);
+
+    fireEvent.press(getByTestId('trip-plan-edit'));
+    mockTrip(makeTrip({ isOwner: true, transport: 'bike' }));
+    rerender(<PlannedTripScreen />);
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+
+    expect(mockUpdateTripMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ transport: 'bike' }),
+      expect.any(Object),
     );
   });
 

@@ -4,14 +4,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import { queryKeys } from '@/api/queryKeys'
-import { usePlannedTrip, useUpdateTripTransport } from '@/hooks/usePlannedTripsApi'
+import {
+  useMyPlannedTrips,
+  usePlannedTrip,
+  useUpdateTripTransport,
+} from '@/hooks/usePlannedTripsApi'
 import { useAuthStore } from '@/stores/authStore'
 
+const mockFetchMyPlannedTrips = jest.fn()
 const mockUpdatePlannedTripTransport = jest.fn()
 const mockFetchPlannedTrip = jest.fn()
 
 jest.mock('@/api/plannedTrips', () => ({
   ...jest.requireActual('@/api/plannedTrips'),
+  fetchMyPlannedTrips: (...args: unknown[]) => mockFetchMyPlannedTrips(...args),
   fetchPlannedTrip: (...args: unknown[]) => mockFetchPlannedTrip(...args),
   updatePlannedTripTransport: (...args: unknown[]) => mockUpdatePlannedTripTransport(...args),
 }))
@@ -24,6 +30,7 @@ const makeTrip = (): PlannedTrip => ({
   startDate: '2026-08-08',
   startTime: '09:00',
   transport: 'bike',
+  bikeType: 'regular',
   visibility: 'private',
   seatsTotal: 4,
   startPoint: null,
@@ -56,6 +63,7 @@ const makeTrip = (): PlannedTrip => ({
 
 describe('planned trip hooks', () => {
   beforeEach(() => {
+    mockFetchMyPlannedTrips.mockReset()
     mockFetchPlannedTrip.mockReset()
     mockUpdatePlannedTripTransport.mockReset()
     useAuthStore.setState({
@@ -124,9 +132,36 @@ describe('planned trip hooks', () => {
       transport: 'bike',
     })
     expect(queryClient.getQueryData(queryKeys.plannedTrip(42))).toEqual(updatedTrip)
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.plannedTripsMine() })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.plannedTripsAll() })
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: queryKeys.plannedTripsMine() })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.publicTripsAll() })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.communityTripsAll() })
+  })
+
+  it('refetches an active planned-trip collection only once after transport success', async () => {
+    const updatedTrip = makeTrip()
+    mockFetchMyPlannedTrips.mockResolvedValue([updatedTrip])
+    mockUpdatePlannedTripTransport.mockResolvedValue(updatedTrip)
+    useAuthStore.setState({ isAuthenticated: true, userId: '7' })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
+    const { result } = renderHook(
+      () => ({ trips: useMyPlannedTrips(), updateTransport: useUpdateTripTransport() }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.trips.isSuccess).toBe(true))
+    expect(mockFetchMyPlannedTrips).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await result.current.updateTransport.mutateAsync({ tripId: 42, transport: 'bike' })
+    })
+
+    await waitFor(() => expect(mockFetchMyPlannedTrips).toHaveBeenCalledTimes(2))
   })
 })

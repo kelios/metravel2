@@ -114,6 +114,7 @@ export default function PlannedTripScreen() {
   const [editDatePickerVisible, setEditDatePickerVisible] = useState(false);
   const [coverUploadPending, setCoverUploadPending] = useState(false);
   const [activeTab, setActiveTab] = useState<PlannerTabKey>('route');
+  const persistedTransportRef = useRef<TripTransport | null>(null);
   const { data: trip, isLoading, isError } = usePlannedTrip(
     Number.isFinite(tripId) ? tripId : null,
   );
@@ -140,6 +141,21 @@ export default function PlannedTripScreen() {
     // иначе refetchOnWindowFocus стирает несохранённый ввод.
     if (trip && !isEditing) setEditValues(initialEditValues(trip));
   }, [trip, isEditing]);
+
+  useEffect(() => {
+    if (!trip) return;
+    const previousTransport = persistedTransportRef.current;
+    persistedTransportRef.current = trip.transport;
+    if (!isEditing || previousTransport == null || previousTransport === trip.transport) return;
+
+    // RouteBuilder commits transport independently. Keep an already-open
+    // metadata form aligned unless the user deliberately changed this field.
+    setEditValues((current) => (
+      current?.transport === previousTransport
+        ? { ...current, transport: trip.transport }
+        : current
+    ));
+  }, [isEditing, trip]);
 
   const editDeeplinkConsumedRef = useRef(false);
   useEffect(() => {
