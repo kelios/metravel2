@@ -37,6 +37,15 @@ if (require.main === module) {
 }
 `
 
+// The #1389 regression shape: the compliant parse call swapped for an argv
+// sniff. Built once at module level so a drifted replace target cannot quietly
+// yield a still-compliant fixture again — that no-op is exactly how 2cb97468
+// broke the two negative probes below.
+const REGRESSED_ARGV_SNIFF_SOURCE = COMPLIANT_SOURCE.replace(
+  'parseCliArgs(process.argv, CLI_SPEC)',
+  "const args = { all: process.argv.includes('--all') }",
+)
+
 const sourceOf = (filePath: string, content: string) => ({ filePath, content })
 
 describe('covered set is derived from the filesystem, with no allowlist to escape into', () => {
@@ -113,10 +122,7 @@ describe('negative probe: putting the permissive default back fails the guard', 
       label: 'a flag sniffed with argv.includes — the #1389 shape',
       rule: 'hand-rolled-parse',
       reason: /mistyped flag silently keeps the default/,
-      content: COMPLIANT_SOURCE.replace(
-        "const args = parseCliArgs(process.argv, CLI_SPEC)",
-        "const args = { all: process.argv.includes('--all') }",
-      ),
+      content: REGRESSED_ARGV_SNIFF_SOURCE,
     },
     {
       label: 'a getArg() helper built on indexOf',
@@ -179,6 +185,12 @@ describe('negative probe: putting the permissive default back fails the guard', 
     },
   ]
 
+  it('builds the regressed fixture from a replace that actually changed the source', () => {
+    // A drifted target makes String.replace a silent no-op and every probe on
+    // this fixture would then assert against a still-compliant script.
+    expect(REGRESSED_ARGV_SNIFF_SOURCE).not.toBe(COMPLIANT_SOURCE)
+  })
+
   it.each(cases)('fails on $label, naming the file and the reason', ({ rule, content, reason }) => {
     const result = evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', content)] })
 
@@ -225,13 +237,7 @@ describe('negative probe: putting the permissive default back fails the guard', 
   it('exits non-zero as a CLI and prints the offending file and rule', () => {
     const dir = makeTempDir('seo-cli-guard-')
     try {
-      writeTextFile(
-        path.join(dir, 'scripts', 'seo-regressed.js'),
-        COMPLIANT_SOURCE.replace(
-          'const args = parseCliArgs(process.argv, CLI_SPEC)',
-          "const args = { all: process.argv.includes('--all') }",
-        ),
-      )
+      writeTextFile(path.join(dir, 'scripts', 'seo-regressed.js'), REGRESSED_ARGV_SNIFF_SOURCE)
       writeTextFile(path.join(dir, 'scripts', 'seo-good.js'), COMPLIANT_SOURCE)
 
       const result = runCli(process.execPath, [GUARD, '--json'], { cwd: dir })

@@ -1,3 +1,6 @@
+import fs from 'fs'
+import path from 'path'
+
 const {
   countTag,
   extractItems,
@@ -7,6 +10,27 @@ const {
   getMetaContent,
   verifyTravelHtml,
 } = require('@/scripts/verify-static-travel-seo')
+
+describe('verify-static-travel-seo network contract', () => {
+  const source = fs.readFileSync(
+    path.resolve(process.cwd(), 'scripts/verify-static-travel-seo.js'),
+    'utf8',
+  )
+
+  it('uses the shared fetchJson module instead of a local HTTP client', () => {
+    // Retries/backoff/Retry-After and the build User-Agent all come from the
+    // shared module; a local copy silently loses them (#1399, pattern of #1394).
+    expect(source).toContain("require('./lib/fetchJson')")
+    expect(source).not.toMatch(/function\s+fetchJson\s*\(/)
+    expect(source).not.toMatch(/\bconst\s+fetchJson\s*=\s*(?:async\s*)?\(/)
+    // The removed client called `mod.get(url, …)` through a ternary alias, so
+    // the needle must not be tied to the module name; `node:` is the accepted
+    // require spelling across scripts/ and must not slip through either.
+    expect(source).not.toMatch(/\bhttps?\.get\s*\(/)
+    expect(source).not.toMatch(/\.get\s*\(\s*url\b/)
+    expect(source).not.toMatch(/\brequire\(['"](?:node:)?https?['"]\)/)
+  })
+})
 
 describe('verify-static-travel-seo helpers', () => {
   it('extractItems supports collection payload shapes', () => {

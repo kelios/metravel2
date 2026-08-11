@@ -2,8 +2,8 @@
 
 const fs = require('fs')
 const path = require('path')
-const https = require('https')
-const http = require('http')
+
+const { fetchJson } = require('./lib/fetchJson')
 
 const args = process.argv.slice(2)
 
@@ -20,42 +20,6 @@ const SAMPLE_SIZE =
     ? Math.max(1, Number.parseInt(sampleSizeArg, 10) || 1)
     : null
 const GENERIC_TRAVEL_DESCRIPTION = 'Найди место для путешествия и поделись своим опытом.'
-
-function fetchJson(url) {
-  return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http
-    const opts = { timeout: 30000 }
-    if (mod === https) opts.rejectUnauthorized = false
-
-    const req = mod.get(url, opts, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchJson(res.headers.location).then(resolve, reject)
-      }
-      if (res.statusCode !== 200) {
-        return reject(new Error(`HTTP ${res.statusCode} for ${url}`))
-      }
-
-      let body = ''
-      res.setEncoding('utf8')
-      res.on('data', (chunk) => {
-        body += chunk
-      })
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(body))
-        } catch (error) {
-          reject(error)
-        }
-      })
-    })
-
-    req.on('error', reject)
-    req.on('timeout', () => {
-      req.destroy()
-      reject(new Error(`Timeout: ${url}`))
-    })
-  })
-}
 
 function extractItems(payload) {
   if (Array.isArray(payload)) return payload

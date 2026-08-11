@@ -70,14 +70,9 @@ describe('пост-деплой медиа-гейт: ступени сверен
   });
 
   /**
-   * Раньше это правило звучало как «ни одна ступень гейта не равна мастеру»: мастер
-   * раздаётся `no-store` by design, и проба по его ширине давала ложную ошибку.
-   * Формулировка через РАВЕНСТВО ширин оказалась подменой: у `articleBody` мастер
-   * 1920 и объявленная производная `content_1920` — это одно число, backend отдаёт
-   * такую ширину производной (`resolve_variant` перебирает производные первыми), и
-   * запрет по совпадению чисел вычёркивал легальную ступень (#1373).
-   *
-   * Проверяемое свойство — наличие производной, а не несовпадение с мастером.
+   * Первое из двух свойств каждой ступени: она обязана быть ОБЪЯВЛЕННОЙ
+   * производной своего профиля — ширину вне профиля durable-чтение отвечает 400,
+   * и гейт мерил бы фикцию.
    */
   it('каждая ступень гейта — объявленная производная своего профиля', () => {
     for (const family of families) {
@@ -101,11 +96,41 @@ describe('пост-деплой медиа-гейт: ступени сверен
   });
 
   /**
-   * #1373: ступень 1920 у тела статьи легальна, и её потолок обязан приезжать из
-   * контракта. Пока зеркало обрывалось на 1600, лестничная проверка считала
-   * ступень 1920 из манифеста нарушением #1260 и валила КАЖДЫЙ деплой.
+   * Второе свойство — tripwire, снятие которого уже один раз пропустило дрейф:
+   * ни одна ступень гейта не равна ширине мастера своего профиля. Мастер
+   * раздаётся `no-store` by design, и проба по его ширине — ложная ошибка на
+   * каждый деплой. Однодневное исключение «у articleBody есть производная
+   * content_1920 в ширину мастера» бэкенд снял shrink-коммитом `9136878`
+   * («SHALL NOT expose … content_1920»), и правило снова без исключений (#1373).
    */
-  it('travel-description-image: потолок гейта — верхняя производная articleBody, даже совпав с мастером', () => {
+  it('ни одна ступень гейта не равна ширине мастера своего профиля', () => {
+    for (const family of families) {
+      const profile =
+        family === LADDERLESS_FAMILY
+          ? (IMAGE_STORAGE_POLICY_V1.articleBody as unknown as Profile)
+          : syntheticFamilies.includes(family)
+            ? SYNTHETIC_FAMILY_PROFILES[family]
+            : profileForRoute(family)![1];
+      const master = (profile as unknown as { master: { width: number } }).master.width;
+      const { small, large } = widthsFor(family);
+
+      expect({ family, smallIsMaster: small === master, largeIsMaster: large === master }).toEqual({
+        family,
+        smallIsMaster: false,
+        largeIsMaster: false,
+      });
+    }
+  });
+
+  /**
+   * #1373, обе фазы. Сначала зеркало обещало МЕНЬШЕ бэкенда (потолок 1600 против
+   * живой производной 1920) — гейт валил каждый деплой ложной `ladder_exceeds_family`.
+   * Потолок подняли до 1920 — и тем же днём бэкенд снял `content_1920` shrink-
+   * коммитом `9136878`: теперь 1920 — только мастер с `no-store`, и потолок 1920
+   * стал бы ложной ошибкой уже в другую сторону. Потолок обязан приезжать из
+   * контракта и быть СТРОГО ниже ширины мастера.
+   */
+  it('travel-description-image: потолок гейта — верхняя производная articleBody, ниже ширины мастера', () => {
     const articleBody = IMAGE_STORAGE_POLICY_V1.articleBody as unknown as Profile & {
       master: { width: number };
     };
@@ -114,8 +139,8 @@ describe('пост-деплой медиа-гейт: ступени сверен
     expect({
       gateCeiling: widthsFor('travel-description-image').large,
       widestDerivative: widest,
-      masterWidth: articleBody.master.width,
-    }).toEqual({ gateCeiling: 1920, widestDerivative: 1920, masterWidth: 1920 });
+    }).toEqual({ gateCeiling: 1600, widestDerivative: 1600 });
+    expect(widest).toBeLessThan(articleBody.master.width);
   });
 
   it('неизвестное семейство получает ступени по умолчанию, а не падает', () => {

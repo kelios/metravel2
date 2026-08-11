@@ -53,9 +53,11 @@ describe('печатная ширина не выходит за контрак�
   })
 
   it('берёт наименьшую подходящую ступень, а не всегда мастер', () => {
-    // articleBody: производные …960, 1600; мастер 1920.
+    // articleBody: производные 480, 800, 960, 1600; мастер 1920.
     expect(printWidthForRoute('travel-description-image', PRINT_IMAGE_INLINE_WIDTH)).toBe(1600)
-    expect(printWidthForRoute('travel-description-image', PRINT_IMAGE_THUMB_WIDTH)).toBe(320)
+    // Ступени 320 у shrink-профиля больше нет (#1373): для thumb-цели 320 берётся
+    // ближайшая обслуживаемая 480 — в durable-режиме 320 отвечала бы 400.
+    expect(printWidthForRoute('travel-description-image', PRINT_IMAGE_THUMB_WIDTH)).toBe(480)
     // Выше всех производных — остаётся мастер.
     expect(printWidthForRoute('travel-description-image', PRINT_IMAGE_FULL_WIDTH)).toBe(1920)
   })

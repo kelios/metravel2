@@ -73,7 +73,7 @@ jest.mock('@/utils/loadLeafletRuntime', () => ({
       Marker: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
       Popup: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
       Polyline: () => null,
-      useMap: () => ({ setView: jest.fn(), fitBounds: jest.fn() }),
+      useMap: () => ({ setView: jest.fn(), fitBounds: jest.fn(), stop: jest.fn() }),
       useMapEvents: () => null,
     },
   }),

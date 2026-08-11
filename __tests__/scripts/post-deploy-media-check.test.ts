@@ -279,9 +279,9 @@ describe('post-deploy media check: проверки ответа', () => {
   })
 
   // Обе ступени семейства из таблицы взяты из `IMAGE_STORAGE_POLICY_V1`, то есть
-  // производная в эту ширину объявлена контрактом — мастер тут провал бюджета на
-  // любой из них. Мягкой верхняя ступень была, пока производной в ширину мастера
-  // могло не быть by design (#1215); с закрытием #1373 такого случая не осталось.
+  // производная в эту ширину объявлена контрактом, а ширины мастера в таблице нет
+  // вовсе (контрактный тест `postDeployMediaWidths`) — мастер тут провал бюджета
+  // на любой из ступеней, мягкой градации не осталось (#1215/#1373).
   it('мастер вместо производной: у семейства из контракта ошибка на обеих ступенях', () => {
     const { small, large } = widthsFor('media-resize-uploads')
     const result = validateTarget(
@@ -370,14 +370,15 @@ describe('post-deploy media check: проверки ответа', () => {
 })
 
 /**
- * #1215 закрыт бэкендом: `content_1920` стала обычной stored-производной профиля
- * `articleBody`, то есть ВЕРХНЕЙ ступенью семейства. Отдельная проба ширины мастера
- * (`MASTER_DERIVATIVE_BY_FAMILY`) вместе с ней снята — она спрашивала ровно тот же
- * URL, что и `large`. Здесь проверяется, что строгость при этом не потерялась:
- * ширина 1920 у тела статьи по-прежнему обходится каждым прогоном, и мастер на ней
- * по-прежнему валит гейт (#1373).
+ * Shrink-профиль `article_body` (бэкенд-коммит `9136878`, #1373): производные —
+ * только 480/800/960/1600, ширина мастера 1920 отдаётся мастером с `no-store` и в
+ * обход гейта не входит вовсе. Отдельная проба ширины мастера
+ * (`MASTER_DERIVATIVE_BY_FAMILY`) не вернётся — требование «мастерская ширина
+ * обслуживается производной» противоречило бы контракту хранения. Здесь
+ * проверяется, что строгость не потерялась: верхняя ступень 1600 обходится каждым
+ * прогоном, и мастер на ней валит гейт.
  */
-describe('post-deploy media check: верхняя ступень articleBody — 1920 (#1215/#1373)', () => {
+describe('post-deploy media check: потолок articleBody — производная 1600, не мастер (#1373)', () => {
   const FAMILY = 'travel-description-image'
   const descriptionTarget = () => ({
     family: FAMILY,
@@ -385,11 +386,12 @@ describe('post-deploy media check: верхняя ступень articleBody —
     source: '/api/travels/',
   })
 
-  it('ступень 1920 входит в обход как обычная верхняя производная', () => {
-    expect(widthsFor(FAMILY)).toEqual({ small: 320, large: 1920 })
+  it('обход спрашивает крайние производные shrink-профиля, а не ширину мастера', () => {
+    expect(widthsFor(FAMILY)).toEqual({ small: 480, large: 1600 })
   })
 
-  it('мастер на ширине 1920 валит гейт, а не предупреждает', () => {
+  it('мастер на верхней ступени валит гейт, а не предупреждает', () => {
+    const { large } = widthsFor(FAMILY)
     const result = validateTarget(
       descriptionTarget(),
       probes({ transform: 'stored-derivative' }, { transform: 'stored-master', cacheControl: 'no-store' })
@@ -399,13 +401,13 @@ describe('post-deploy media check: верхняя ступень articleBody —
       (item: { code: string }) => item.code === 'media.master_instead_of_derivative'
     )
     expect(issue.severity).toBe('error')
-    expect(issue.message).toContain('w=1920')
+    expect(issue.message).toContain(`w=${large}`)
     expect(result.issues.map((item: { code: string }) => item.code)).toContain(
       'media.cache_control.no_store'
     )
   })
 
-  it('честная производная на 1920 проходит чисто', () => {
+  it('честная производная на верхней ступени проходит чисто', () => {
     const result = validateTarget(
       descriptionTarget(),
       probes({ transform: 'stored-derivative' }, { transform: 'stored-derivative' })
@@ -729,6 +731,39 @@ describe('auditDerivativeCoverage', () => {
     expect(families.map((f: { keyClass: string }) => f.keyClass)).toEqual([
       'model_owned',
       'legacy_conversion',
+    ])
+  })
+
+  it('проверяет per-object режим contract v12 без family_modes', () => {
+    const { families, issues } = auditDerivativeCoverage({
+      route_behavior: {
+        model_owned: { default_mode: 'per_object_derivative' },
+        legacy_upload: { default_mode: 'per_object_derivative' },
+        legacy_conversion: { default_mode: 'per_object_derivative' },
+      },
+    })
+
+    expect(issues).toEqual([])
+    expect(families).toHaveLength(3)
+    expect(families[0]).toMatchObject({
+      family: '*',
+      requestedMode: 'per_object_derivative',
+      activeMode: 'per_object_derivative',
+      contractMode: 'per_object',
+    })
+  })
+
+  it('не пропускает откат или неизвестную схему contract v12', () => {
+    expect(auditDerivativeCoverage({
+      route_behavior: { model_owned: { default_mode: 'dynamic_transform' } },
+    }).issues).toEqual([
+      expect.objectContaining({ severity: 'error', code: 'delivery.mode_regressed' }),
+    ])
+
+    expect(auditDerivativeCoverage({
+      route_behavior: { model_owned: { routes: ['/gallery/'] } },
+    }).issues).toEqual([
+      expect.objectContaining({ severity: 'error', code: 'coverage.contract_unreadable' }),
     ])
   })
 })

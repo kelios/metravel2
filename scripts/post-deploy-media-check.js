@@ -51,18 +51,20 @@ const INSECURE_TLS =
  * (fail-closed вместо тихой подмены мастером, #1201), а гейт считал это тремя
  * ошибками на ветку и валил каждый деплой — 30 ложных ошибок на прогон.
  *
- * `small` — минимальная производная профиля, `large` — максимальная. Ширину, которую
- * обслужил бы МАСТЕР, сюда не берём: он раздаётся `no-store` by design, и проверка
- * кэша на нём даёт ложную ошибку. Совпадение числа с шириной мастера при этом само
- * по себе ничего не значит: у `articleBody` мастер 1920 и производная `content_1920`
- * — это одна и та же ширина, и backend отдаёт её производной (#1373). Таблицу
- * сверяет с контрактом `__tests__/scripts/postDeployMediaWidths.test.ts` — руками её
+ * `small` — минимальная производная профиля, `large` — максимальная. Ширина
+ * мастера среди ступеней не встречается ВООБЩЕ: точную её backend отдаёт мастером
+ * с `no-store` by design, и проба по ней даёт ложную ошибку на каждый деплой.
+ * У `articleBody` это правило успело один раз развернуться и вернуться за сутки:
+ * бэкенд завёл производную `content_1920` (#1215), таблица получила large 1920 —
+ * и тем же днём shrink-коммит `9136878` производную снял («SHALL NOT expose …
+ * content_1920»), вернув 1920 статус чистого мастера (#1373). Таблицу сверяет с
+ * контрактом `__tests__/scripts/postDeployMediaWidths.test.ts` — руками её
  * править нельзя, только вслед за `IMAGE_STORAGE_POLICY_V1`.
  */
 const WIDTHS_BY_FAMILY = new Map([
   ['travel-image', { small: 96, large: 1600 }],
   ['gallery', { small: 96, large: 1600 }],
-  ['travel-description-image', { small: 320, large: 1920 }],
+  ['travel-description-image', { small: 480, large: 1600 }],
   ['address-image', { small: 320, large: 960 }],
   ['quest-cover', { small: 320, large: 800 }],
   // Legacy-роут обслуживает conversion-ключи travel-медиа, лестница у него та же.
@@ -75,7 +77,7 @@ const WIDTHS_BY_FAMILY = new Map([
    * класс шириной, которой у него нет и которую никто не запрашивает, — это ровно
    * та ложная тревога, из-за которой гейт перестают читать (#1373).
    */
-  ['media-resize-uploads', { small: 320, large: 800 }],
+  ['media-resize-uploads', { small: 480, large: 800 }],
 ])
 
 /** Ступени по умолчанию — для семейства, которого ещё нет в таблице. */
@@ -88,12 +90,13 @@ const DEFAULT_WIDTHS = { small: 96, large: 800 }
  * (1920) не проверялась вообще — гейт был зелёным, пока фото тела статьи качалось
  * дважды на desktop @2x.
  *
- * Таблица снята вместе с закрытием #1215 на стороне backend: `content_1920` стала
- * обычной stored-производной профиля, то есть ВЕРХНЕЙ ступенью семейства, и
- * `WIDTHS_BY_FAMILY` спрашивает ровно её как `large`. Отдельная проба того же URL
- * была бы дублем запроса, а её условие (`stored-master` либо `no-store`) целиком
- * покрыто проверками ступени ниже — с той же строгостью `error`, см. severity у
- * `media.master_instead_of_derivative` (#1373).
+ * Таблица не вернётся: shrink-профиль бэкенда (`9136878`, #1373) объявляет ровно
+ * обратное — точная ширина мастера отдаётся МАСТЕРОМ с `no-store`, производной в
+ * неё нет и не должно быть, а фронт эту ширину больше вообще не просит (потолок
+ * наборов — 1600). Требование «ширина мастера обслуживается производной» теперь
+ * противоречило бы контракту хранения. От возврата мастерской ширины в таблицу
+ * ступеней защищает контрактный тест `postDeployMediaWidths.test.ts`
+ * («ни одна ступень гейта не равна ширине мастера»).
  */
 
 /**
@@ -783,6 +786,7 @@ function validateTarget(target, probes, options = {}) {
 function auditDerivativeCoverage(contract) {
   const issues = []
   const families = []
+  let recognizedModeSchema = false
 
   const routeBehavior = contract?.route_behavior
   if (!routeBehavior || typeof routeBehavior !== 'object') {
@@ -796,53 +800,89 @@ function auditDerivativeCoverage(contract) {
 
   for (const [keyClass, behavior] of Object.entries(routeBehavior)) {
     const familyModes = behavior?.family_modes
-    if (!familyModes || typeof familyModes !== 'object') continue
+    if (familyModes && typeof familyModes === 'object') {
+      recognizedModeSchema = true
+      for (const [family, mode] of Object.entries(familyModes)) {
+        const requested = mode?.requested_mode
+        const active = mode?.active_mode
+        const coverage = mode?.coverage || {}
+        const masters = Number(coverage.masters) || 0
 
-    for (const [family, mode] of Object.entries(familyModes)) {
-      const requested = mode?.requested_mode
-      const active = mode?.active_mode
-      const coverage = mode?.coverage || {}
-      const masters = Number(coverage.masters) || 0
+        // Семейство без мастеров нечем покрывать: `badge` на 2026-08-09 пуст, и
+        // требовать от него durable-режима бессмысленно.
+        if (masters === 0) continue
 
-      // Семейство без мастеров нечем покрывать: `badge` на 2026-08-09 пуст, и
-      // требовать от него durable-режима бессмысленно.
-      if (masters === 0) continue
-
-      const entry = {
-        keyClass,
-        family,
-        requestedMode: requested || null,
-        activeMode: active || null,
-        masters,
-        completeMasters: Number(coverage.complete_masters) || 0,
-        coveragePercent: Number(coverage.coverage_percent) || 0,
-        complete: coverage.complete === true,
-      }
-      families.push(entry)
-
-      if (requested === 'durable_s3_derivatives' && active !== requested) {
-        issues.push({
-          severity: 'error',
-          code: 'coverage.mode_regressed',
+        const entry = {
+          keyClass,
           family,
-          message:
-            `${keyClass}/${family}: запрошен durable_s3_derivatives, активен «${active}» — ` +
-            `покрытие ${entry.coveragePercent.toFixed(1)} % ` +
-            `(${entry.completeMasters} из ${masters} мастеров). ` +
-            'После массовой перезаливки картинок обязателен backfill по семейству: ' +
-            'scripts/backfill-article-body-derivatives.sh',
-        })
-      } else if (requested === 'durable_s3_derivatives' && !entry.complete) {
-        issues.push({
-          severity: 'warning',
-          code: 'coverage.incomplete',
-          family,
-          message:
-            `${keyClass}/${family}: режим durable, но покрытие ${entry.coveragePercent.toFixed(1)} % — ` +
-            'часть мастеров без полного набора производных',
-        })
+          requestedMode: requested || null,
+          activeMode: active || null,
+          masters,
+          completeMasters: Number(coverage.complete_masters) || 0,
+          coveragePercent: Number(coverage.coverage_percent) || 0,
+          complete: coverage.complete === true,
+          contractMode: 'family_coverage',
+        }
+        families.push(entry)
+
+        if (requested === 'durable_s3_derivatives' && active !== requested) {
+          issues.push({
+            severity: 'error',
+            code: 'coverage.mode_regressed',
+            family,
+            message:
+              `${keyClass}/${family}: запрошен durable_s3_derivatives, активен «${active}» — ` +
+              `покрытие ${entry.coveragePercent.toFixed(1)} % ` +
+              `(${entry.completeMasters} из ${masters} мастеров). ` +
+              'После массовой перезаливки картинок обязателен backfill по семейству: ' +
+              'scripts/backfill-article-body-derivatives.sh',
+          })
+        } else if (requested === 'durable_s3_derivatives' && !entry.complete) {
+          issues.push({
+            severity: 'warning',
+            code: 'coverage.incomplete',
+            family,
+            message:
+              `${keyClass}/${family}: режим durable, но покрытие ${entry.coveragePercent.toFixed(1)} % — ` +
+              'часть мастеров без полного набора производных',
+          })
+        }
       }
+      continue
     }
+
+    // Contract v12 удалил глобальный coverage-switch: каждый объект теперь
+    // читает свою производную и точечно чинит отсутствующий ключ. Не принять
+    // `default_mode` здесь означало бы молча пропустить весь deploy gate.
+    const active = behavior?.default_mode
+    if (typeof active !== 'string') continue
+    recognizedModeSchema = true
+    families.push({
+      keyClass,
+      family: '*',
+      requestedMode: 'per_object_derivative',
+      activeMode: active,
+      complete: true,
+      contractMode: 'per_object',
+    })
+    if (active !== 'per_object_derivative') {
+      issues.push({
+        severity: 'error',
+        code: 'delivery.mode_regressed',
+        family: '*',
+        message:
+          `${keyClass}: ожидается per_object_derivative, активен «${active}» — ` +
+          'раздача готовых производных не подтверждена публичным контрактом',
+      })
+    }
+  }
+
+  if (!recognizedModeSchema) {
+    issues.push({
+      severity: 'error',
+      code: 'coverage.contract_unreadable',
+      message: 'proxy-contract не отдал проверяемый режим раздачи',
+    })
   }
 
   return { families, issues }
@@ -1121,13 +1161,21 @@ function printCoverageSummary(coverage) {
     return
   }
 
-  const durable = coverage.families.filter((f) => f.activeMode === 'durable_s3_derivatives').length
+  const ready = coverage.families.filter(
+    (f) => f.activeMode === f.requestedMode && f.complete
+  ).length
   console.log(
-    `\n📦 Режим раздачи: ${durable} из ${coverage.families.length} семейств на готовых производных`
+    `\n📦 Режим раздачи: ${ready} из ${coverage.families.length} классов/семейств на готовых производных`
   )
 
   for (const family of coverage.families) {
     const ok = family.activeMode === family.requestedMode && family.complete
+    if (family.contractMode === 'per_object') {
+      console.log(
+        `   ${ok ? '✅' : '✗'} ${family.keyClass}: ${family.activeMode}`
+      )
+      continue
+    }
     console.log(
       `   ${ok ? '✅' : '✗'} ${family.keyClass}/${family.family}: ${family.activeMode}, ` +
         `${family.coveragePercent.toFixed(1)} % (${family.completeMasters}/${family.masters})`

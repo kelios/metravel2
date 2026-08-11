@@ -1,0 +1,26 @@
+import { fetchQuestsList } from '@/api/quests'
+import { queryKeys } from '@/api/queryKeys'
+import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
+
+/**
+ * Единственное определение запроса списка квестов.
+ *
+ * #1393: под ключом `queryKeys.quests()` ходят экран квестов, промо-блок
+ * главной, три мета-хука детали и крошка города. Дедупликация в ОДИН запрос
+ * `/quests/` держится на том, что у всех совпадают ключ, queryFn и времена
+ * кеша, — а держалась она копипастой в двух местах, где разъехаться могли и
+ * `select`, и `retry`, и сигнатура `queryFn`.
+ *
+ * Модуль намеренно лёгкий: `@/api/quests` + ключи + политика кеша. Слой
+ * адаптеров (`utils/questAdapters` → `utils/geoCountry`) он не тянет, поэтому
+ * его можно импортировать из универсальных крошек, которые рендерятся на
+ * каждом маршруте.
+ */
+export function questsListQueryOptions() {
+  return {
+    queryKey: queryKeys.quests(),
+    queryFn: ({ signal }: { signal?: AbortSignal }) => fetchQuestsList({ signal }),
+    staleTime: QUESTS_LIST_STALE_TIME,
+    gcTime: QUESTS_LIST_GC_TIME,
+  } as const
+}

@@ -7,8 +7,8 @@ import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
-import { fetchQuestByQuestId, fetchQuestsList, type ApiQuestBundle, type ApiQuestMeta } from '@/api/quests';
-import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
+import { fetchQuestByQuestId, type ApiQuestBundle, type ApiQuestMeta } from '@/api/quests';
+import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import { resolveQuestCitySegment } from '@/utils/questCityAlias';
 import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import { fetchPlannedTrip, type PlannedTrip } from '@/api/plannedTrips';
@@ -303,11 +303,8 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   // Ключ, queryFn и времена кеша совпадают с `useQuestsList`, поэтому экран
   // квестов и крошка по-прежнему дедуплицируются в один запрос `/quests/`.
   const { data: questsForCityCrumb } = useQuery<ApiQuestMeta[]>({
-    queryKey: queryKeys.quests(),
-    queryFn: ({ signal }) => fetchQuestsList({ signal }),
+    ...questsListQueryOptions(),
     enabled: !!questCitySegment,
-    staleTime: QUESTS_LIST_STALE_TIME,
-    gcTime: QUESTS_LIST_GC_TIME,
   });
 
   const questCityName = useMemo(() => {

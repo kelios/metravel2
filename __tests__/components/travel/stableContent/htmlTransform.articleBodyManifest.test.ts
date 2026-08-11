@@ -83,16 +83,17 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
   })
 
   /**
-   * Ступень 1920 у этого ключа — не мастер, а объявленная производная
-   * `content_1920` (#1215 закрыт бэкендом). Проверяется именно происхождение
-   * адреса: он обязан прийти из `srcset` манифеста, а не из нашей сборки и не из
-   * `variants.hero_1920`, который по-прежнему в лестницу не попадает (#1373).
+   * Ширина 1920 у этого ключа — ТОЛЬКО мастер `hero_1920` в `variants`: shrink-
+   * профиль бэкенда (`9136878`) снял производную `content_1920`, в `srcset`
+   * манифеста такой ступени нет, и точную ширину мастера backend отдаёт мастером
+   * с `no-store`. Лестница обязана не звать её вовсе — ни из своей сборки, ни из
+   * `variants.hero_1920` (#1373, обе фазы дрейфа).
    */
-  it('takes the 1920 rung from the manifest srcset, not from the master variant', () => {
+  it('never asks for the 1920 master that lives only in variants', () => {
     const out = withWebViewport(1920, 2, () => prepare(ARTICLE_BODY_DESCRIPTION_IMAGE_URL))
 
-    expect(emittedWidths(out)).toContain(1920)
-    expect(String(ARTICLE_BODY_DESCRIPTION_IMAGE.srcset)).toContain('?w=1920 1920w')
+    expect(emittedWidths(out)).not.toContain(1920)
+    expect(String(ARTICLE_BODY_DESCRIPTION_IMAGE.srcset)).not.toContain('1920w')
     expect(out).not.toContain('q=80')
   })
 
@@ -102,13 +103,13 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
   it('keeps the mobile slot off the top rungs the manifest offers', () => {
     const out = withWebViewport(390, 3, () => prepare(ARTICLE_BODY_DESCRIPTION_IMAGE_URL))
 
-    expect(emittedWidths(out)).toEqual([320, 480, 640, 800])
+    expect(emittedWidths(out)).toEqual([480, 800])
   })
 
   it('offers the desktop slot the wider rungs of the same manifest', () => {
     const out = withWebViewport(1920, 1, () => prepare(ARTICLE_BODY_DESCRIPTION_IMAGE_URL))
 
-    expect(emittedWidths(out)).toEqual([480, 640, 800, 960, 1600, 1920])
+    expect(emittedWidths(out)).toEqual([480, 800, 960, 1600])
   })
 
   // #1261: у ключа чужого семейства лестницу теперь обрывает САМ манифест — после
@@ -121,7 +122,10 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
     // Адреса всё-таки из манифеста: своя сборка добавила бы `q=`/`fit=`.
     expect(out).not.toContain('q=80')
     expect(out).toContain(`${ADDRESS_IMAGE_RESOLVED}?w=960 960w`)
-    expect(emittedWidths(out)).toEqual([480, 640, 800, 960])
+    // Манифест route_point предлагает и 640, но отбор под слот оставляет только
+    // ступени набора тела статьи, а у него 640 больше нет (shrink `9136878`).
+    // Потолок при этом манифестный: 960 остаётся, 1600 не появляется.
+    expect(emittedWidths(out)).toEqual([480, 800, 960])
     // Ступени 1600 нет в манифесте этого ключа — и просить её неоткуда.
     expect(out).not.toContain('w=1600')
     expect(ARTICLE_BODY_ADDRESS_IMAGE.srcset).not.toContain('1600')
@@ -151,10 +155,10 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
   describe('prefetch stays inside the emitted candidate set (#1213)', () => {
     it.each([
       { label: 'desktop 1920 @1x', width: 1920, dpr: 1, expected: 960 },
-      // Слот 920 CSS @DPR2 просит 1840 и с производной `content_1920` закрывается
-      // 1:1 — это и есть выплата #1215 на КАНОНИЧЕСКОМ пути (манифест), а не только
-      // на клиентском фолбэке. До неё тот же слот грел 1600 с апскейлом ×1.15.
-      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1920 },
+      // Слот 920 CSS @DPR2 просит 1840 и закрывается верхней производной 1600 с
+      // апскейлом ×1.15: ступени выше в shrink-профиле нет (`9136878`), а 1920 —
+      // мастер с `no-store`, греть его нельзя (#1373).
+      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1600 },
       { label: 'desktop 1280 @1x', width: 1280, dpr: 1, expected: 800 },
       { label: 'mobile 390 @3x', width: 390, dpr: 3, expected: 800 },
     ])('$label warms w=$expected', ({ width, dpr, expected }) => {
@@ -242,9 +246,9 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
 
       expect(out).toContain('q=80')
       expect(out).toContain('fit=contain')
-      // Полный desktop-набор `articleBody`, включая верхнюю производную 1920
-      // (`content_1920`, #1215/#1373): ключ идёт своим семейством, клэмп его не режет.
-      expect(emittedWidths(out)).toEqual([480, 640, 800, 960, 1600, 1920])
+      // Полный desktop-набор `articleBody` — четыре ступени shrink-профиля
+      // (#1373): ключ идёт своим семейством, потолок 1600 совпадает с набором.
+      expect(emittedWidths(out)).toEqual([480, 800, 960, 1600])
     })
 
     it('keeps every image on the client-built ladder when no manifest is passed', () => {

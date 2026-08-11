@@ -5,10 +5,15 @@ import { isBikeQuest, isQuestForChildrenOrTeens } from '@/utils/questAudience';
 import { translate as i18nT, type TranslationKey } from '@/i18n';
 
 // Русские названия стран для заголовков групп в каталоге квестов. Ключи —
-// ISO alpha-2 коды из utils/geoCountry.ts (getCountryCodeByCoords). Держи в
-// синхроне: у каждого кода, который может вернуть geoCountry, должно быть имя,
-// иначе заголовок группы падает на сырой код («GR», «HR»). Добавляешь квест в
-// новой стране — добавь сюда её код.
+// ISO alpha-2 коды из поля `country_code` ответа `/quests/`. Держи в синхроне:
+// у каждого кода, который может прийти с бэкенда, должно быть имя, иначе
+// заголовок группы падает на сырой код («GR», «HR»). Добавляешь квест в новой
+// стране — добавь сюда её код.
+//
+// #1393: раньше здесь стояла ссылка на `utils/geoCountry.ts`
+// (`getCountryCodeByCoords`), и тест сторожил именно его таблицу. Координатный
+// фолбэк из адаптера квестов убран, `geoCountry` остался только у партнёрских
+// блоков, так что источником кодов он больше не является.
 export const COUNTRY_NAME_KEYS: Record<string, TranslationKey> = {
     BY: 'quests:screens.tabs.QuestsScreen.country.BY',
     PL: 'quests:screens.tabs.QuestsScreen.country.PL',

@@ -20,9 +20,12 @@ async function setupFakeAuth(page: import('@playwright/test').Page) {
 }
 
 async function waitForFakeAuth(page: import('@playwright/test').Page) {
-  await expect(
-    page.locator('[data-testid="account-menu-anchor"]:visible').first(),
-  ).toBeVisible({ timeout: 15_000 })
+  await expect
+    .poll(
+      () => page.evaluate(() => Boolean(window.localStorage.getItem('userId'))),
+      { timeout: 15_000 },
+    )
+    .toBe(true)
 }
 
 async function mockCreateTrip(page: import('@playwright/test').Page) {

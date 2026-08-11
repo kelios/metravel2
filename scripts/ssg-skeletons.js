@@ -20,6 +20,11 @@ const COLORS = {
     border: '#e8e6e1',
     shimmerFrom: '#f5f4f2',
     shimmerTo: '#e8e6e1',
+    // primary / brandText из MODERN_MATTE_PALETTE: реальный hero рисует зелёный
+    // CTA и терракотовый акцент заголовка — оранжевый #f5842c в шелле давал
+    // цветовой скачок на гидрации.
+    primary: '#7a9d8f',
+    accent: '#a95000',
   },
   dark: {
     bg: '#1a1a1a',
@@ -30,8 +35,20 @@ const COLORS = {
     border: '#3a3a3a',
     shimmerFrom: '#282828',
     shimmerTo: '#3a3a3a',
+    primary: '#8fb5a5',
+    accent: '#f0a060',
   },
 };
+
+// Страница раскрытой книги всегда светлая, поэтому desktop-акцент не темизируется
+// (MODERN_MATTE_PALETTE.bookPageAccent).
+const BOOK_PAGE_ACCENT = '#b35900';
+// Средний цвет первого слайда hero (BOOK_IMAGES[0].dominantColor в
+// components/home/homeHeroContent.ts). Кадр вертикальный, слот горизонтальный:
+// React-hero заливает поля letterbox этим цветом + blur, шелл — этим же цветом.
+// Без заливки узкая портретная полоса фото висела на белом фоне и выглядела
+// сломанной вёрсткой.
+const HOME_HERO_FILL = '#687e72';
 
 const MAP_VIEWPORT_HEIGHT = 'var(--metravel-map-vh, 100svh)';
 const MAP_WEB_MOBILE_BREAKPOINT_PX = 768;
@@ -51,33 +68,46 @@ function buildSkeletonCSS() {
 .ssg-bar-logo{font:700 20px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.01em}
 .ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:8px 16px}
 .ssg-home-book{display:flex;flex-direction:column;gap:14px;width:100%}
-.ssg-home-page{display:flex;flex-direction:column;align-items:stretch;gap:16px;padding:44px 20px 20px;border-radius:8px;background:${COLORS.light.bgSecondary}}
+.ssg-home-page{display:flex;flex-direction:column;align-items:stretch;gap:16px;padding:44px 20px 20px;border-radius:24px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
+.ssg-home-chapter{display:none}
 .ssg-home-title{margin:0;font:700 32px/40px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:-0.8px;color:${COLORS.light.text};max-width:640px;text-align:left}
-.ssg-home-title .ssg-accent{color:#f5842c;font-weight:800}
+.ssg-home-title .ssg-accent{display:block;color:${COLORS.light.accent};font-weight:800}
 .ssg-home-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left}
-.ssg-home-search{width:100%;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};margin-top:4px}
-.ssg-home-cta{width:100%;height:46px;border-radius:16px;background:#f5842c;margin-top:8px}
-.ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:62px}
+.ssg-home-search-row{display:flex;gap:8px;margin-top:4px;height:48px}
+.ssg-home-search{flex:1;min-width:0;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
+.ssg-home-search-btn{width:48px;height:48px;flex:0 0 48px;border-radius:12px;background:${COLORS.light.primary}}
+.ssg-home-cta{width:100%;height:46px;border-radius:16px;background:${COLORS.light.primary};margin-top:8px}
+/* Чипы вне белой карточки, под hairline-разделителем — как HomeHeroMoodRail.
+   Якоря геометрии (тест ssg-skeletons): низ карточки 410 + gap 14 + margin 9
+   = линия 433; + border 1 + padding 34 = верх чипов 468 — позиция React-грида. */
+.ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:9px;border-top:1px solid ${COLORS.light.border};padding-top:34px}
 .ssg-home-mood{height:46px;border-radius:999px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
-.ssg-home-week{position:relative;overflow:hidden;border-radius:20px;background:${COLORS.light.surface};border:0}
+.ssg-home-notes{display:none}
+.ssg-home-week{position:relative;overflow:hidden;border-radius:20px;background:${HOME_HERO_FILL};border:0;margin-top:20px}
 /* #1281/#1358: реальная hero-фотография остаётся крупнейшим LCP-кандидатом.
    Mobile-shell имеет 16px бокового inset: на viewport 390px слот 358x239px
    даёт 85 443px2, то есть не меньше замеренного React-кандидата 85 438px2.
    На desktop фотография занимает измеренный слот правой страницы книги. Селектор остаётся
    специфичнее img[data-lcp] из critical CSS, поэтому его aspect-ratio/min-height
    не могут изменить бокс. */
-.ssg-home-hero{position:relative;width:100%;aspect-ratio:3/2;margin:0;border-radius:inherit;overflow:hidden;background:${COLORS.light.bgSecondary}}
+.ssg-home-hero{position:relative;width:100%;aspect-ratio:3/2;margin:0;border-radius:inherit;overflow:hidden;background:${HOME_HERO_FILL}}
 .ssg-home-hero img.ssg-home-hero-img{position:absolute;inset:0;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;object-fit:contain;object-position:center;display:block}
-.ssg-home-week-body{position:absolute;left:16px;right:16px;bottom:16px;z-index:2;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:16px;background:rgba(255,255,255,.88)}
-.ssg-home-week-kicker{width:120px;height:20px;border-radius:10px}
-.ssg-home-week-title{width:56%;height:28px;border-radius:8px}
-.ssg-home-week-sub{width:74%;height:16px;border-radius:6px}
-.ssg-home-week-action{width:140px;height:38px;border-radius:16px}
+/* Скрим снизу — как slideOverlay React-слайдера: подпись читается на фото,
+   а не лежит белой плашкой поверх кадра. */
+.ssg-home-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,16,14,0) 34%,rgba(10,16,14,.58) 100%);pointer-events:none}
+.ssg-home-week-body{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px}
+.ssg-home-week-kicker{width:132px;height:24px;border-radius:12px;background:rgba(16,22,20,.45);border:1px solid rgba(255,255,255,.28)}
+.ssg-home-week-title{width:56%;height:26px;border-radius:8px;background:rgba(255,255,255,.85)}
+.ssg-home-week-sub{width:74%;height:14px;border-radius:6px;background:rgba(255,255,255,.55)}
+.ssg-home-week-action{width:150px;height:34px;border-radius:17px;background:rgba(16,22,20,.45);border:1px solid rgba(255,255,255,.32)}
 .ssg-home-popular{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:28px}
-.ssg-home-popular-card{height:124px;border-radius:18px;background:${COLORS.light.bgSecondary};border:1px solid ${COLORS.light.border}}
-@media(min-width:768px) and (max-width:1279px){.ssg-home-shell{padding:24px}.ssg-home-book{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}.ssg-home-page{justify-content:center;gap:16px;padding:32px}.ssg-home-moods{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0}.ssg-home-hero{aspect-ratio:auto;height:320px}.ssg-home-popular{grid-column:1/-1;margin-top:0}}
-@media(min-width:1280px){.ssg-home-shell{max-width:none;padding:20px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(calc(100vw - 80px),calc(135.9477svh - 244.7059px),1200px);height:auto;aspect-ratio:1040/765;margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:21.6%;align-self:start;justify-content:flex-start;gap:12px;padding:0 9% 0 16%;border-radius:0;background:transparent;overflow:hidden}.ssg-home-title{font-size:clamp(24px,1.9vw,32px);line-height:1.15}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-search{height:44px}.ssg-home-cta{width:190px;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%;border-radius:12px;border:0;background:${COLORS.light.bgSecondary}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
-@media(min-width:1280px) and (min-height:961px){.ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}.ssg-home-mood{height:44px}}
+.ssg-home-popular-card{border-radius:18px;overflow:hidden;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};padding-bottom:12px}
+.ssg-home-popular-thumb{width:100%;aspect-ratio:164/112}
+.ssg-home-popular-line{height:12px;border-radius:6px;margin:10px 12px 0}
+.ssg-home-popular-line.w76{width:76%}.ssg-home-popular-line.w55{width:55%}
+@media(min-width:768px) and (max-width:1279px){.ssg-home-shell{padding:24px}.ssg-home-book{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}.ssg-home-page{grid-column:1;grid-row:1;justify-content:center;gap:16px;padding:32px}.ssg-home-week{grid-column:2;grid-row:1;margin-top:0}.ssg-home-moods{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0;border-top:0;padding-top:0}.ssg-home-hero{aspect-ratio:auto;height:320px}.ssg-home-popular{display:none}}
+@media(min-width:1280px){.ssg-home-shell{max-width:none;padding:20px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(calc(100vw - 80px),calc(135.9477svh - 244.7059px),1200px);height:auto;aspect-ratio:1040/765;margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:21.6%;align-self:start;justify-content:flex-start;gap:12px;padding:0 9% 0 16%;border-radius:0;background:transparent;border:0;overflow:hidden}.ssg-home-chapter{display:flex;align-items:center;gap:10px;margin-bottom:2px}.ssg-home-chapter-label{font:600 11px/1.4 Baskerville,Georgia,'Times New Roman',serif;letter-spacing:.14em;text-transform:uppercase;color:${COLORS.light.textMuted};white-space:nowrap}.ssg-home-chapter-line{flex:1;height:1px;background:${COLORS.light.border}}.ssg-home-title{font-family:Baskerville,Georgia,'Times New Roman',serif;font-size:clamp(24px,1.9vw,32px);line-height:1.24;letter-spacing:-0.2px}.ssg-home-title .ssg-accent{color:${BOOK_PAGE_ACCENT}}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-search-row{height:44px;margin-top:4px}.ssg-home-search{height:44px}.ssg-home-search-btn{width:44px;height:44px;flex:0 0 44px}.ssg-home-cta{width:190px;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%;border-radius:12px;border:0;background:${HOME_HERO_FILL}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
+@media(min-width:1280px) and (min-height:961px){.ssg-home-notes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}.ssg-home-note{height:44px;border-radius:12px;background:rgba(255,255,255,.45);border:1px solid ${COLORS.light.border}}}
 .ssg-search-shell{width:100%;max-width:1214px;margin:0 auto;padding:10px}
 .ssg-search-layout{display:block;min-width:0}
 .ssg-search-aside{display:none}
@@ -218,14 +248,17 @@ html[data-theme="dark"] .ssg-bar-logo{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-h1{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-lead{color:${COLORS.dark.textMuted}}
 html[data-theme="dark"] .ssg-search-aside-title{color:${COLORS.dark.text}}
-html[data-theme="dark"] .ssg-home-book,html[data-theme="dark"] .ssg-home-week{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
-html[data-theme="dark"] .ssg-home-page{background-color:${COLORS.dark.bgSecondary}}
+html[data-theme="dark"] .ssg-home-book{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-home-page{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-home-title{color:${COLORS.dark.text}}
-html[data-theme="dark"] .ssg-home-title .ssg-accent{color:#f0a060}
 html[data-theme="dark"] .ssg-home-sub{color:${COLORS.dark.textMuted}}
-html[data-theme="dark"] .ssg-home-search,html[data-theme="dark"] .ssg-home-mood{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-home-cta,html[data-theme="dark"] .ssg-home-search-btn{background:${COLORS.dark.primary}}
+html[data-theme="dark"] .ssg-home-mood{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-home-moods{border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-home-popular-card{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
-html[data-theme="dark"] .ssg-home-week-body{background:rgba(32,32,32,.88)}
+/* Акцент и поле поиска темизируются только вне книги: страница раскрытой книги
+   на desktop всегда светлая (bookPageAccent + бумажные цвета поиска). */
+@media(max-width:1279px){html[data-theme="dark"] .ssg-home-title .ssg-accent{color:${COLORS.dark.accent}}html[data-theme="dark"] .ssg-home-search{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}}
 @media(min-width:1280px){html[data-theme="dark"] .ssg-home-page{background-color:transparent}}
 html[data-theme="dark"] .ssg-search-card,html[data-theme="dark"] .ssg-search-aside{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-search-bar{background:${COLORS.dark.surface};border-color:${COLORS.dark.border};color:${COLORS.dark.textMuted}}
@@ -380,27 +413,35 @@ function buildHomeSkeletonHtml({ heroHref } = {}) {
   const heroImg = heroHref
     ? `<img class="ssg-home-hero-img" src="${escapeHtmlAttr(heroHref)}" alt="Маршрут недели" decoding="async" fetchpriority="high" data-ssg-lcp="true"/>`
     : '';
+  // Мобильная композиция зеркалит React-hero: белая карточка (заголовок,
+  // подзаголовок, поиск с кнопкой, зелёный CTA), под ней hairline-разделитель и
+  // грид mood-чипов, затем карточка «Маршрут недели» с фото и скримом, затем
+  // 2 карточки «Популярного». На desktop те же узлы перекладываются в разворот
+  // книги media-query'ями; чипы прячутся, а на высоких экранах вместо них в
+  // левой странице показывается грид page-notes (.ssg-home-notes).
   return `<div id="ssg-skeleton">
 <div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
 <main class="ssg-home-shell">
 <div class="ssg-home-book">
 <section class="ssg-home-page">
+<div class="ssg-home-chapter" aria-hidden="true"><span class="ssg-home-chapter-label">Идеи путешествий</span><span class="ssg-home-chapter-line"></span></div>
 <div class="ssg-home-title">Куда поехать <span class="ssg-accent">в эти выходные?</span></div>
 <p class="ssg-home-sub">Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.</p>
-<div class="ssg-home-search"></div>
+<div class="ssg-home-search-row" aria-hidden="true"><div class="ssg-home-search"></div><div class="ssg-home-search-btn"></div></div>
 <div class="ssg-home-cta" aria-hidden="true"></div>
-<div class="ssg-home-moods" aria-hidden="true">${Array.from({ length: 5 }, () => '<div class="ssg-home-mood"></div>').join('')}</div>
+<div class="ssg-home-notes" aria-hidden="true">${Array.from({ length: 5 }, () => '<div class="ssg-home-note"></div>').join('')}</div>
 </section>
+<div class="ssg-home-moods" aria-hidden="true">${Array.from({ length: 5 }, () => '<div class="ssg-home-mood"></div>').join('')}</div>
 <article class="ssg-home-week">
 <div class="ssg-home-hero">${heroImg}</div>
 <div class="ssg-home-week-body" aria-hidden="true">
-<div class="ssg-home-week-kicker ssg-pulse"></div>
-<div class="ssg-home-week-title ssg-pulse"></div>
-<div class="ssg-home-week-sub ssg-pulse"></div>
-<div class="ssg-home-week-action ssg-pulse"></div>
+<div class="ssg-home-week-kicker"></div>
+<div class="ssg-home-week-title"></div>
+<div class="ssg-home-week-sub"></div>
+<div class="ssg-home-week-action"></div>
 </div>
 </article>
-<div class="ssg-home-popular" aria-hidden="true"><div class="ssg-home-popular-card ssg-pulse"></div><div class="ssg-home-popular-card ssg-pulse"></div></div>
+<div class="ssg-home-popular" aria-hidden="true">${Array.from({ length: 2 }, () => '<div class="ssg-home-popular-card"><div class="ssg-home-popular-thumb ssg-pulse"></div><div class="ssg-home-popular-line w76 ssg-pulse"></div><div class="ssg-home-popular-line w55 ssg-pulse"></div></div>').join('')}</div>
 </div>
 </main>
 ${buildRemovalScript()}

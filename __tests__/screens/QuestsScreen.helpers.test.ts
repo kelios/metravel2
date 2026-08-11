@@ -1,8 +1,3 @@
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-
-import { OUTLINE_ORDER } from '@/utils/geoCountryOutlines';
-
 import {
   COUNTRY_NAME_KEYS,
   ALL_QUESTS_ID,
@@ -34,21 +29,23 @@ describe('QuestsScreen helpers', () => {
     expect(getQuestCountryName('RS')).toBe('Сербия');
   });
 
-  it('has a Russian name for every country code geoCountry can return', () => {
-    // Любой код из getCountryCodeByCoords должен иметь запись в COUNTRY_NAMES,
-    // иначе заголовок группы в каталоге показывает сырой ISO-код.
-    const source = readFileSync(
-      resolve(__dirname, '../../utils/geoCountry.ts'),
-      'utf8',
-    );
-    const boxCodes = Array.from(source.matchAll(/code:\s*'([A-Z]{2})'/g)).map((m) => m[1]);
-    // Часть кодов резолвер возвращает по контурам, и в таблицу прямоугольников
-    // такая страна попадать не обязана — иначе гард держится случайно.
-    const codes = Array.from(new Set([...boxCodes, ...OUTLINE_ORDER]));
-    expect(boxCodes.length).toBeGreaterThan(0);
-    expect(OUTLINE_ORDER.length).toBeGreaterThan(0);
-    const missing = codes.filter((code) => !COUNTRY_NAME_KEYS[code]);
-    expect(missing).toEqual([]);
+  // #1393: раньше этот гард брал коды из `utils/geoCountry.ts` — таблицы
+  // координатного резолвера. Источником страны для квеста он быть перестал:
+  // фолбэк `getCountryCodeByCoords` убран из `questAdapters`, и код приходит
+  // только полем `country_code` из `/quests/`. Гард, сторожащий не тот
+  // источник, зелёный при любом состоянии реального — поэтому пин теперь по
+  // кодам, которые прод реально отдаёт.
+  it('has a Russian name for every country code the quests API returns', () => {
+    // Снято с прод-API 2026-08-10: `/quests/?page_size=500`, 139 квестов,
+    // 27 различных непустых `country_code`. Новая страна в каталоге — добавь
+    // её код и сюда, и в COUNTRY_NAME_KEYS.
+    const PROD_QUEST_COUNTRY_CODES = [
+      'AL', 'AM', 'AT', 'BA', 'BG', 'BY', 'CY', 'CZ', 'DE', 'EE', 'ES', 'FR', 'GE', 'GR',
+      'HR', 'HU', 'LT', 'LV', 'NL', 'PL', 'PT', 'RO', 'RS', 'RU', 'SK', 'TR', 'UA',
+    ]
+
+    const missing = PROD_QUEST_COUNTRY_CODES.filter((code) => !COUNTRY_NAME_KEYS[code])
+    expect(missing).toEqual([])
   });
 
   it('keeps quests inside the visible map bounds when searching this area', () => {

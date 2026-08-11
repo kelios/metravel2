@@ -84,14 +84,6 @@ describe('constants/imageContract — набор размеров исполня
     })
   })
 
-  /**
-   * Производная РОВНО в ширину мастера — исключение, а не общее правило: у
-   * `articleBody` backend хранит `content_1920` рядом с мастером 1920, и такая
-   * ширина отдаётся производной (#1215/#1373). Список исключений явный, потому что
-   * для остальных профилей эта же ширина означает fail-closed 400 у читателя.
-   */
-  const PROFILES_WITH_MASTER_WIDTH_DERIVATIVE = new Set(['articleBody'])
-
   it('в каждом storage-profile мастер один, а производные уникальны и отсортированы', () => {
     for (const [name, profile] of Object.entries(IMAGE_STORAGE_POLICY_V1)) {
       const derivativeWidths = profile.derivatives.map((variant) => variant.width)
@@ -99,9 +91,13 @@ describe('constants/imageContract — набор размеров исполня
         name,
         derivativeWidths: [...new Set(derivativeWidths)].sort((a, b) => a - b),
       })
+      // Ширина мастера — никогда не производная: точную её backend отдаёт мастером
+      // с `no-store`. Допущение «у articleBody есть content_1920» прожило меньше
+      // суток и снято бэкендом (shrink `9136878`, #1373) — этот строгий expect и
+      // есть tripwire, который ловит следующий такой дрейф зеркала.
       expect({ name, includesMaster: derivativeWidths.includes(profile.master.width) }).toEqual({
         name,
-        includesMaster: PROFILES_WITH_MASTER_WIDTH_DERIVATIVE.has(name),
+        includesMaster: false,
       })
       for (const variant of [profile.master, ...profile.derivatives]) {
         expect(PROXY_QUALITY_LADDER).toContain(variant.quality)
@@ -238,40 +234,38 @@ describe('constants/imageContract — набор размеров исполня
     })
 
     /**
-     * Самый широкий слот тела статьи: 920 CSS на вьюпорте 1920 при DPR2 просит 1840.
+     * Самый широкий слот тела статьи: 920 CSS на вьюпорте 1920 при DPR2 просит 1840,
+     * а закрывается верхней ПРОИЗВОДНОЙ 1600 с управляемым апскейлом ×1.15.
      *
-     * История этой ступени — два противоположных дрейфа одного зеркала. Сначала
-     * набор закрывал слот шириной 1920, которая была только МАСТЕРОМ: после
-     * перехода backend на fail-closed чтение такой запрос стал отвечать 400 (замер
-     * прода 2026-08-03: `w=1600` → 200 stored-derivative, `w=1920` → 400), и фото
-     * тела статьи не отрисовывались на desktop @DPR2 вовсе — ступень сняли, слот
-     * закрывался 1600 с апскейлом ×1.15. Затем backend завёл `content_1920`
-     * производной (#1215), а зеркало об этом не узнало и стало обещать МЕНЬШЕ, чем
-     * есть (#1373).
+     * История этой ступени — три дрейфа одного зеркала за год. Набор закрывал слот
+     * шириной 1920-мастера — fail-closed чтение начало отвечать на неё 400 (замер
+     * прода 2026-08-03), ступень сняли. Backend завёл `content_1920` производной
+     * (#1215) — зеркало отстало, гейт валил деплой, ступень вернули (#1373).
+     * Тем же днём backend снял `content_1920` shrink-коммитом `9136878` («SHALL NOT
+     * expose … content_1920») — точная 1920 снова только мастер с `no-store`,
+     * ступень снята обратно.
      *
-     * Поэтому проверяется не число, а инвариант: слот закрывается ПРОИЗВОДНОЙ,
-     * причём теперь 1:1 и без апскейла.
+     * Инвариант: слот закрывается объявленной производной, управляемый апскейл
+     * лучше и битой картинки (400), и no-store-мастера, качающегося на каждый визит.
      */
-    it('тело статьи, 920 CSS @DPR2 (vw 1920) закрывается верхней производной 1:1', () => {
+    it('тело статьи, 920 CSS @DPR2 (vw 1920) упирается в потолок производных, а не в мастер', () => {
       const set = IMAGE_WIDTHS.articleBodyDesktop
       // Ступень лестницы прокси, а не итоговый `w` из URL: с #1221 `optimizeImageUrl`
       // клэмпит family-роут потолком его производных, и голая лестница видна только
       // через `snapProxyWidth`. Проверяемое свойство — набор ширин класса, а не клэмп.
       const needed = snapProxyWidth(920 * 2)
       const candidate = [...set].sort((a, b) => a - b).find((w) => w >= needed) ?? Math.max(...set)
-      const derivatives = IMAGE_STORAGE_POLICY_V1.articleBody.derivatives.map(
-        (variant) => variant.width,
+      const widestDerivative = Math.max(
+        ...IMAGE_STORAGE_POLICY_V1.articleBody.derivatives.map((variant) => variant.width),
       )
 
-      expect({ needed, candidate, widestDerivative: Math.max(...derivatives) }).toEqual({
+      expect({ needed, candidate, widestDerivative }).toEqual({
         needed: 1920,
-        candidate: 1920,
-        widestDerivative: 1920,
+        candidate: 1600,
+        widestDerivative: 1600,
       })
-      expect({ upscale: candidate < needed }).toEqual({ upscale: false })
-      // Ширина мастера здесь легальна ровно потому, что она же — объявленная
-      // производная. Просить мастер как мастер по-прежнему нельзя.
-      expect(derivatives).toContain(IMAGE_STORAGE_POLICY_V1.articleBody.master.width)
+      expect({ upscale: needed / candidate <= 1.2 }).toEqual({ upscale: true })
+      expect(set).not.toContain(IMAGE_STORAGE_POLICY_V1.articleBody.master.width)
     })
   })
 })

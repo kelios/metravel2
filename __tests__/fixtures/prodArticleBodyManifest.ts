@@ -9,12 +9,14 @@
 //
 //   - `ARTICLE_BODY_DESCRIPTION_IMAGE` — канонический ключ семейства
 //     `travel-description-image`. Лестница `srcset` идёт w-only (ни `q=`, ни `fit=`)
-//     и доходит до 1920. Ступень 1920 здесь НЕ мастер: #1215 закрыт, backend завёл
-//     `content_1920` обычной stored-производной, и она лежит в `variants` рядом с
-//     `hero_1920`. Пересняно с прода 2026-08-10 (travel 544) в части лестницы:
-//     до этого срез 2026-08-05 обрывался на 1600 и утверждал, что 1920 просить
-//     нельзя, — на этом устаревшем срезе манифестный путь проверял контракт,
-//     которого на проде уже нет (#1373).
+//     и обрывается на 1600 — верхней производной shrink-профиля `article_body`
+//     (бэкенд-коммит `9136878`: только `content_480/800/960/1600`). Ширина мастера
+//     1920 живёт ТОЛЬКО в `variants.hero_1920` и в лестницу не попадает: точную её
+//     backend отдаёт мастером с `no-store`. Пересняно с прода 2026-08-11
+//     (travel 544): суточный срез 2026-08-10 успел заявить производную
+//     `content_1920` и лестницу до 1920 — бэкенд снял её тем же днём, и на
+//     устаревшем срезе манифестный путь проверял контракт, которого на проде уже
+//     нет (#1373, оба направления дрейфа).
 //
 //   - `ARTICLE_BODY_ADDRESS_IMAGE` — ключ ЧУЖОГО семейства в теле статьи. Здесь и
 //     виден результат #1260: `storage_policy.profile` теперь `route_point` (мастер
@@ -46,7 +48,7 @@ export const ARTICLE_BODY_LEGACY_UPLOAD_URL =
   'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1591620319350_original.jpg'
 
 /** Ступени профиля `article_body`: их перечисляет ключ своего семейства. */
-export const ARTICLE_BODY_MANIFEST_WIDTHS = [320, 480, 640, 800, 960, 1600, 1920] as const
+export const ARTICLE_BODY_MANIFEST_WIDTHS = [480, 800, 960, 1600] as const
 
 /**
  * Ступени профиля `route_point` — лестница ключа `address-image` в теле статьи.
@@ -66,13 +68,10 @@ export const ARTICLE_BODY_DESCRIPTION_IMAGE: TravelMediaImage = {
   blurhash: null,
   lqip_url: null,
   variants: {
-    content_320: `${descriptionImageBase}?w=320`,
     content_480: `${descriptionImageBase}?w=480`,
-    content_640: `${descriptionImageBase}?w=640`,
     content_800: `${descriptionImageBase}?w=800`,
     content_960: `${descriptionImageBase}?w=960`,
     content_1600: `${descriptionImageBase}?w=1600`,
-    content_1920: `${descriptionImageBase}?w=1920`,
     hero_1920: `${descriptionImageBase}?w=1920`,
     original: descriptionImageBase,
   },

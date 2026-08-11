@@ -40,17 +40,17 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
 
     // src падает на fallback-ступень, а не отдаёт оригинал
     expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=80${AMP}fit=contain"`)
-    // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768)
-    //
-    // Ступень 1920 здесь дважды меняла статус. #1160 поднял ею потолок, но тогда это
-    // была ширина МАСТЕРА: замер прода 2026-08-03 — на legacy-роуте `w=1920` отвечал
-    // 400, а на каноническом `travel-description-image` отдавался мастер 387 411 B с
-    // `no-store`; потолок опустили до 1600. Затем backend завёл `content_1920`
-    // производной (#1215), и ступень вернулась уже законно: проба прода 2026-08-10 —
-    // 200 `stored-derivative` `immutable`, а `w=1921` по-прежнему 400 (#1373).
-    for (const w of [480, 640, 800, 960, 1600, 1920]) {
+    // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768):
+    // четыре ступени shrink-профиля `article_body` (бэкенд-коммит `9136878`)
+    for (const w of [480, 800, 960, 1600]) {
       expect(out).toContain(`w=${w}${AMP}q=80${AMP}fit=contain ${w}w`)
     }
+    // Ступень 1920 дважды входила в набор и дважды снята. #1160 поднял ею потолок,
+    // когда это была ширина МАСТЕРА: fail-closed чтение отвечало 400 (замер прода
+    // 2026-08-03), потолок опустили до 1600. Backend завёл `content_1920`
+    // производной (#1215), ступень вернули (#1373) — и тем же днём shrink `9136878`
+    // производную снял: точная 1920 снова только мастер с `no-store`, звать её нельзя.
+    expect(out).not.toContain(`w=1920${AMP}q=80${AMP}fit=contain 1920w`)
     expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
     // cache-buster сохранён
     expect(out).toContain(`v=3315`)
@@ -106,9 +106,10 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       { label: 'desktop 1280 @2x', width: 1280, dpr: 2, expected: 1600 },
       { label: 'desktop 1280 @1x', width: 1280, dpr: 1, expected: 800 },
       { label: 'desktop 1920 @1x', width: 1920, dpr: 1, expected: 960 },
-      // Слот 920 CSS @DPR2 просит 1840 и закрывается 1:1: `content_1920` — реальная
-      // производная профиля (#1215/#1373). До неё этот слот брал 1600 с апскейлом.
-      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1920 },
+      // Слот 920 CSS @DPR2 просит 1840 и закрывается верхней производной 1600 с
+      // апскейлом ×1.15: ступени выше в shrink-профиле нет, а 1920 — мастер с
+      // `no-store` (#1373).
+      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1600 },
       { label: 'mobile 390 @3x', width: 390, dpr: 3, expected: 800 },
     ])('$label prefetches w=$expected, and that URL is a real srcset candidate', ({ width, dpr, expected }) => {
       const { prefetch, candidates } = withWebViewport(width, dpr, () => {
@@ -142,7 +143,8 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       const html = '<p><img src="https://metravel.by/travel-description-image/540/description/abc.JPG" /></p>'
       const out = prepareStableContentHtml(html)
 
-      for (const w of [320, 480, 640, 800]) {
+      // Две ступени мобильного набора: 320/640 у shrink-профиля больше нет (#1373).
+      for (const w of [480, 800]) {
         expect(out).toContain(`w=${w}${AMP}q=80${AMP}fit=contain ${w}w`)
       }
       // #1160: потолок подняли только на desktop. На мобиле слот 100vw и картинки
@@ -225,7 +227,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       )
 
       expect(out).toContain('/media-resize/legacy/15601/conversions/')
-      expect(rungs(out)).toEqual([480, 640, 800, 960])
+      expect(rungs(out)).toEqual([480, 800, 960])
       expect(out).not.toContain('w=1600')
     })
 
@@ -236,7 +238,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
         ),
       )
 
-      expect(rungs(out)).toEqual([480, 640, 800, 960, 1600])
+      expect(rungs(out)).toEqual([480, 800, 960, 1600])
     })
 
     // #1213: префетч обязан попасть в кандидата из `srcset`. Клэмп по семейству

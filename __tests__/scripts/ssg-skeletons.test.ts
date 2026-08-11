@@ -187,24 +187,72 @@ describe('ssg-skeletons', () => {
       expect(html).toContain('ssg-home-cta');
       expect(html).toContain('ssg-home-moods');
       expect(html.match(/class="ssg-home-mood"/g)).toHaveLength(5);
+      expect(html.match(/class="ssg-home-note"/g)).toHaveLength(5);
       expect(html).toContain('ssg-home-week');
-      expect(html.match(/class="ssg-home-popular-card ssg-pulse"/g)).toHaveLength(2);
+      expect(html.match(/class="ssg-home-popular-card"/g)).toHaveLength(2);
+      expect(html.match(/class="ssg-home-popular-thumb ssg-pulse"/g)).toHaveLength(2);
       expect(html).not.toContain('ssg-cards');
       expect(html).not.toContain('class="ssg-card"');
     });
 
-    it('includes hero search bar', () => {
+    // Чипы — вне белой карточки hero (как HomeHeroMoodRail после карточки),
+    // page-notes — внутри левой страницы книги (desktop-tall ветка React).
+    it('keeps mood chips outside the hero card and page notes inside it', () => {
       const html = buildHomeSkeletonHtml();
+      const pageEnd = html.indexOf('</section>');
+      expect(html.indexOf('ssg-home-notes')).toBeLessThan(pageEnd);
+      expect(html.indexOf('ssg-home-moods')).toBeGreaterThan(pageEnd);
+      expect(html.indexOf('ssg-home-moods')).toBeLessThan(html.indexOf('ssg-home-week'));
+    });
+
+    it('includes hero search bar with the round submit button', () => {
+      const html = buildHomeSkeletonHtml();
+      expect(html).toContain('ssg-home-search-row');
       expect(html).toContain('ssg-home-search');
+      expect(html).toContain('ssg-home-search-btn');
+    });
+
+    // Скелетон обязан красить контролы в реальные цвета hero: зелёный primary
+    // CTA/кнопка поиска, терракотовый акцент заголовка (brandText вне книги,
+    // bookPageAccent на странице книги), заливка letterbox цветом кадра.
+    // Старый оранжевый #f5842c давал цветовой скачок на гидрации.
+    it('paints controls with the real hero palette instead of legacy orange', () => {
+      const css = buildSkeletonCSS();
+      expect(css).toContain(`.ssg-home-cta{width:100%;height:46px;border-radius:16px;background:${COLORS.light.primary}`);
+      expect(css).toMatch(new RegExp(`\\.ssg-home-search-btn\\{[^}]*background:${COLORS.light.primary}`));
+      expect(css).toMatch(new RegExp(`\\.ssg-home-title \\.ssg-accent\\{display:block;color:${COLORS.light.accent}`));
+      expect(css).toContain('.ssg-home-title .ssg-accent{color:#b35900}');
+      // Оранжевый #f5842c остаётся только у маркеров карты (бренд-цвет пинов);
+      // в правилах главной его быть не должно.
+      const homeRules = (css.match(/\.ssg-home-[^{]*\{[^}]*\}/g) || []).join('\n');
+      expect(homeRules.length).toBeGreaterThan(0);
+      expect(homeRules).not.toContain('#f5842c');
+      expect(css).toMatch(/\.ssg-home-week\{[^}]*background:#687e72/);
+      expect(css).toMatch(/\.ssg-home-hero\{[^}]*background:#687e72/);
+    });
+
+    // Desktop-заголовок книги — serif (editorialSerif из homeHeroStyles);
+    // mobile остаётся sans (паритет с native). Подпись «Маршрут недели» лежит
+    // на скриме поверх фото, а не на белой плашке.
+    it('uses the serif book typography on desktop and a photo scrim caption', () => {
+      const css = buildSkeletonCSS();
+      expect(css).toMatch(/@media\(min-width:1280px\)\{[^\n]*\.ssg-home-title\{font-family:Baskerville,Georgia,'Times New Roman',serif/);
+      expect(css).toContain('.ssg-home-hero::after');
+      expect(css).toMatch(/\.ssg-home-hero::after\{[^}]*linear-gradient/);
+      expect(css).not.toContain('.ssg-home-week-body{position:absolute;left:16px;right:16px;bottom:16px;z-index:2;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:16px;background:rgba(255,255,255,.88)}');
+      expect(css).toMatch(/\.ssg-home-week-body\{position:absolute;left:0;right:0;bottom:0/);
     });
 
     it('uses the desktop open-book geometry and the compact mobile composition', () => {
       const css = buildSkeletonCSS();
       const mobileTitleTop = 56 + 8 + 44;
       const mobileCtaTop = mobileTitleTop + 80 + 16 + 48 + 16 + 4 + 48 + 16 + 8;
-      const mobileMoodsTop = mobileCtaTop + 46 + 16 + 62;
+      // Белая карточка hero заканчивается на CTA + padding 20; дальше gap 14,
+      // margin 9 до hairline-разделителя, border 1 и padding 34 до грида чипов.
+      const mobileHeroCardBottom = mobileCtaTop + 46 + 20;
+      const mobileMoodsTop = mobileHeroCardBottom + 14 + 9 + 1 + 34;
       const mobileMoodsHeight = 46 * 3 + 12 * 2;
-      const mobileWeekTop = mobileMoodsTop + mobileMoodsHeight + 20 + 14;
+      const mobileWeekTop = mobileMoodsTop + mobileMoodsHeight + 14 + 20;
       const mobileWeekHeight = (390 - 16 * 2) / (3 / 2);
       const mobilePopularTop = mobileWeekTop + mobileWeekHeight + 14 + 28;
       const desktopBookWidth = Math.min(1280 - 80, ((940 - 180) * 1040) / 765, 1200);
@@ -241,7 +289,10 @@ describe('ssg-skeletons', () => {
         '.ssg-home-week{top:21.6%;align-self:start;width:68.8%;height:39.7%;margin:0 0 0 2.6%',
       );
       expect(css).toContain('.ssg-home-cta{width:100%;height:46px');
-      expect(css).toContain('.ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))');
+      expect(css).toContain(
+        '.ssg-home-moods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:9px;border-top:1px solid',
+      );
+      expect(css).toContain('padding-top:34px');
       expect(css).toContain('.ssg-home-week-body{position:absolute');
     });
 

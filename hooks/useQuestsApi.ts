@@ -16,6 +16,7 @@ import {
 } from '@/api/quests';
 import { queryKeys } from '@/api/queryKeys';
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
+import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import {
     adaptMeta,
     adaptBundle,
@@ -57,10 +58,11 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 // pioneer) дедуплицировались в один запрос /quests/. Держим список «свежим»
 // ~30 мин и в кеше ~60 мин.
 //
-// #1393: сами значения живут в листовом `questsListCachePolicy`, чтобы
-// потребителю одних лишь времён кеша не приезжал слой адаптеров с таблицей
-// контуров стран. Ре-экспорт сохраняет прежний публичный API этого модуля.
-export { QUESTS_LIST_STALE_TIME, QUESTS_LIST_GC_TIME };
+// #1393: и само определение запроса, и времена кеша живут в листовых модулях
+// `questsListQuery` / `questsListCachePolicy`. Ре-экспорта отсюда намеренно
+// НЕТ: он оставлял бы открытой ровно ту дверь, которую задача закрывала, —
+// импорт двух констант из модуля, который тянет за собой адаптеры и таблицу
+// контуров стран.
 
 // ===================== ХУКИ =====================
 
@@ -68,11 +70,8 @@ export { QUESTS_LIST_STALE_TIME, QUESTS_LIST_GC_TIME };
 export function useQuestsList(opts?: { enabled?: boolean }) {
     const enabled = opts?.enabled ?? true;
     const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
-        queryKey: queryKeys.quests(),
-        queryFn: ({ signal }) => fetchQuestsList({ signal }),
+        ...questsListQueryOptions(),
         enabled,
-        staleTime: QUESTS_LIST_STALE_TIME,
-        gcTime: QUESTS_LIST_GC_TIME,
     });
 
     const quests = useMemo<QuestMeta[]>(
