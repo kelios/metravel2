@@ -110,9 +110,13 @@ const baselineMetrics = {
   status: 'ANALYSIS_IN_PROGRESS'
 };
 
+// Единственный писатель BASELINE_METRICS.json. Второй, scripts/analyze_bundle.py,
+// удалён (#1408): он не был подключён ни к одному npm-скрипту и при этом писал в
+// те же поля другие числа — читал только `dependencies`, поэтому devDependencies
+// терялись целиком (`total` 78 вместо 120, `dev` всегда 0). Инвариант держит
+// __tests__/scripts/baseline-metrics-single-writer.test.ts.
 const metricsPath = path.join(__dirname, '../BASELINE_METRICS.json');
 // Завершающий перевод строки — часть того, как файл лежит в репозитории: без
-// него прогон подмешивал бы к обновлению метрик однобайтовый хвостовой diff.
-// Тот же класс, что #1407; второй писатель этого файла — scripts/analyze_bundle.py.
+// него прогон подмешивал бы к обновлению метрик однобайтовый хвостовой diff (#1407).
 fs.writeFileSync(metricsPath, `${JSON.stringify(baselineMetrics, null, 2)}\n`);
 
