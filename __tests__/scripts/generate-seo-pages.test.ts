@@ -213,7 +213,6 @@ describe('literal-safe HTML injection', () => {
 // чипах и кнопке секунду рисовались пустыми квадратами.
 describe('injectIconFontPreload', () => {
   const fs = require('fs');
-  const os = require('os');
   const path = require('path');
 
   it('preloads the icon font with crossorigin', () => {
@@ -230,7 +229,7 @@ describe('injectIconFontPreload', () => {
   });
 
   it('resolves the hashed font file from dist and returns null when missing', () => {
-    const dist = fs.mkdtempSync(path.join(os.tmpdir(), 'ssg-font-'));
+    const dist = makeTempDir('ssg-font-');
     const fontsDir = path.join(
       dist,
       'assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts'
