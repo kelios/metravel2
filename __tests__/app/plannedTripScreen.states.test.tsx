@@ -12,6 +12,7 @@ import type { PlannedTrip } from '@/api/plannedTrips';
 
 const mockUsePlannedTrip = jest.fn();
 const mockUpdateTripMutate = jest.fn();
+const mockTripsPageSeo = jest.fn(() => null);
 const originalOS = Platform.OS;
 let mockSearchParams: Record<string, string> = { id: '8001' };
 let mockResponsive = { isMobile: false };
@@ -29,6 +30,11 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => mockResponsive,
+}));
+
+jest.mock('@/components/trips/TripsPageSeo', () => ({
+  __esModule: true,
+  default: (props: unknown) => mockTripsPageSeo(props),
 }));
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -180,6 +186,7 @@ describe('PlannedTripScreen — planner states', () => {
     mockResponsive = { isMobile: false };
     mockUsePlannedTrip.mockReset();
     mockUpdateTripMutate.mockReset();
+    mockTripsPageSeo.mockClear();
   });
 
   const mockTrip = (trip: PlannedTrip) =>
@@ -189,6 +196,11 @@ describe('PlannedTripScreen — planner states', () => {
     mockTrip(makeTrip());
     const { getByTestId, queryByTestId } = renderScreen();
 
+    expect(mockTripsPageSeo).toHaveBeenCalledWith({
+      canonicalPath: '/trips/plan/8001',
+      fallbackTitle: 'plan',
+      label: 'Маршрут по Браславским озёрам',
+    });
     expect(getByTestId('trip-plan-summary')).toBeTruthy();
     expect(getByTestId('route-builder')).toBeTruthy();
     // Optimal ORS route → no "approximate" banner in the header.

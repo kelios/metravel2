@@ -24,6 +24,7 @@ import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
 import TripChatPanel from '@/components/trips/chat/TripChatPanel';
 import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
+import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import {
   PLAN_STATUS_LABEL,
   TRANSPORT_ICON_NAME,
@@ -252,14 +253,20 @@ export default function PlannedTripScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.inner}>
-        {isLoading ? (
-          <ActivityIndicator style={styles.loader} />
-        ) : isError || !trip ? (
-          <Text style={styles.error}>{i18nT('trips:app.tabs.trips.plan.id.ne_udalos_zagruzit_poezdku_b321e113')}</Text>
-        ) : (
-          <>
+    <>
+      <TripsPageSeo
+        canonicalPath={Number.isFinite(tripId) ? `/trips/plan/${tripId}` : '/trips/my'}
+        fallbackTitle="plan"
+        label={trip?.title}
+      />
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <View style={styles.inner}>
+          {isLoading ? (
+            <ActivityIndicator style={styles.loader} />
+          ) : isError || !trip ? (
+            <Text style={styles.error}>{i18nT('trips:app.tabs.trips.plan.id.ne_udalos_zagruzit_poezdku_b321e113')}</Text>
+          ) : (
+            <>
             {/* ── Compact header: identity + route status at a glance ── */}
             <View style={styles.cover} testID="trip-plan-cover">
               <ImageCardMedia
@@ -672,9 +679,10 @@ export default function PlannedTripScreen() {
               confirmTestID="trip-plan-delete-confirm"
               cancelTestID="trip-plan-delete-cancel"
             />
-          </>
-        )}
-      </View>
-    </ScrollView>
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </>
   );
 }

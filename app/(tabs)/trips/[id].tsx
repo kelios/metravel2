@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import PublicTripDetail from '@/components/trips/PublicTripDetail';
+import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -23,17 +24,23 @@ export default function TripDetailScreen() {
   useSoftKeyboardInset();
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.inner}>
-        {Number.isFinite(tripId) ? (
-          <PublicTripDetail tripId={tripId} />
-        ) : (
-          <View style={styles.center}>
-            <ActivityIndicator />
-          </View>
-        )}
-      </View>
-    </ScrollView>
+    <>
+      <TripsPageSeo
+        canonicalPath={Number.isFinite(tripId) ? `/trips/${tripId}` : '/trips'}
+        fallbackTitle="publicTrip"
+      />
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <View style={styles.inner}>
+          {Number.isFinite(tripId) ? (
+            <PublicTripDetail tripId={tripId} />
+          ) : (
+            <View style={styles.center}>
+              <ActivityIndicator />
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </>
   );
 }
 

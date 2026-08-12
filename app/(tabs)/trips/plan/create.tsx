@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import TripCreateForm from '@/components/trips/planning/TripCreateForm';
+import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { buildLoginHref } from '@/utils/authNavigation';
@@ -20,6 +21,18 @@ const SCROLL_BOTTOM_RESERVE = Platform.select({
 });
 
 export default function CreateTripScreen() {
+  return (
+    <>
+      <TripsPageSeo
+        canonicalPath="/trips/plan/create"
+        fallbackTitle="create"
+      />
+      <CreateTripScreenContent />
+    </>
+  );
+}
+
+function CreateTripScreenContent() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();

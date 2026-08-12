@@ -2,6 +2,7 @@
 // Каталог маршрутов сообщества (Sprint 13 / блок D, FE-community-routes).
 import React, { Suspense } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import { useWebHydrationGate } from '@/hooks/useWebHydrationGate';
 
 const CommunityRoutesCatalog = React.lazy(
@@ -19,13 +20,19 @@ function CommunityRoutesFallback() {
 export default function CommunityRoutesScreen() {
   const hydrationReady = useWebHydrationGate();
 
-  if (!hydrationReady) {
-    return <CommunityRoutesFallback />;
-  }
-
   return (
-    <Suspense fallback={<CommunityRoutesFallback />}>
-      <CommunityRoutesCatalog />
-    </Suspense>
+    <>
+      <TripsPageSeo
+        canonicalPath="/trips/community"
+        fallbackTitle="community"
+      />
+      {hydrationReady ? (
+        <Suspense fallback={<CommunityRoutesFallback />}>
+          <CommunityRoutesCatalog />
+        </Suspense>
+      ) : (
+        <CommunityRoutesFallback />
+      )}
+    </>
   );
 }
