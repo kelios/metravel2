@@ -19,7 +19,7 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/RELEASE.md`, and `do
 - Lighthouse mobile and desktop scores
 - LCP element and first-screen behavior
 - Bootup, main-thread work, and unused JavaScript
-- Bundle composition via build output or `npm run analyze:bundle`
+- Bundle composition via build output or `npm run guard:bundle-budget` (measures built chunks against config/bundle-budget.json)
 - Existing perf-budget tests such as `npm run test:travel:performance` or `npm run e2e:perf-budget`
 
 ## Repo command map
@@ -30,7 +30,7 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/RELEASE.md`, and `do
 - `npm run lighthouse:produrl:travel:mobile`
 - `npm run lighthouse:produrl:travel:desktop`
 - `npm run lighthouse:produrl:summary`
-- `npm run analyze:bundle`
+- `npm run guard:bundle-budget`
 
 ## Output contract
 

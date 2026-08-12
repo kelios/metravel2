@@ -34,8 +34,12 @@ echo "🔍 2. Анализ состава бандла..."
 echo ""
 
 if command -v npx &> /dev/null; then
-  echo "Запускаем webpack-bundle-analyzer..."
-  npm run analyze:bundle || echo -e "${YELLOW}⚠️  Скрипт analyze:bundle не найден${NC}"
+  # Меряет собранные чанки (raw/gzip/Brotli) против config/bundle-budget.json.
+  # Прежний analyze:bundle тут только выглядел анализом: веса зависимостей у него
+  # были захардкожены, а раздел «крупные файлы» печатал пустоту — обход каталогов
+  # был нерекурсивным, а в components/ на верхнем уровне нет ни одного файла.
+  echo "Сверяем размер собранных чанков с бюджетом..."
+  npm run guard:bundle-budget || echo -e "${YELLOW}⚠️  Бюджет бандла не проверен: нужна сборка dist/prod${NC}"
 else
   echo -e "${YELLOW}⚠️  npx не установлен${NC}"
 fi
