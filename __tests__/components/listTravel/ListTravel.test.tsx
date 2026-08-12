@@ -5,6 +5,7 @@ import ListTravel from '@/components/listTravel/ListTravelBase';
 
 const mockRouterPush = jest.fn();
 const mockUseHydrationReady = jest.fn(() => true);
+const mockMarkSsgFirstScreenReady = jest.fn();
 
 // Базовый мок для AuthContext и маршрута, который можно перенастраивать в тестах
 const mockUseAuth: jest.Mock<any, any> = jest.fn(() => ({
@@ -32,6 +33,7 @@ jest.mock('@/context/AuthContext', () => ({
 
 jest.mock('@/hooks/useHydrationReady', () => ({
   useHydrationReady: () => mockUseHydrationReady(),
+  markSsgFirstScreenReady: () => mockMarkSsgFirstScreenReady(),
 }));
 
 // Mock dependencies
@@ -119,10 +121,7 @@ jest.mock('@/api/travelListQueries', () => ({
 
 // #1406: маршрут каталога сообщает removal-скрипту SSG-шелла о готовности
 // первого экрана. Здесь проверяется контракт маршрута (КОГДА сигналить);
-// сам DOM-атрибут — зона utils/ssgShellFirstScreen.
-jest.mock('@/utils/ssgShellFirstScreen', () => ({
-  markSsgFirstScreenReady: jest.fn(),
-}));
+// сам DOM-атрибут — зона hooks/useHydrationReady.
 
 jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(() => Promise.resolve({
@@ -439,8 +438,7 @@ describe('ListTravel', () => {
   // гидрации приложения. Маршрут сигналит через markSsgFirstScreenReady()
   // только в терминальном состоянии первого экрана: карточки, пусто, ошибка.
   describe('SSG first-screen-ready (#1406)', () => {
-    const getMark = (): jest.Mock =>
-      require('@/utils/ssgShellFirstScreen').markSsgFirstScreenReady;
+    const getMark = (): jest.Mock => mockMarkSsgFirstScreenReady;
 
     let cleanupSpy: jest.Mock;
 

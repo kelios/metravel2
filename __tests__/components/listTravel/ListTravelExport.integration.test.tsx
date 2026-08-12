@@ -27,6 +27,7 @@ jest.mock('@/context/AuthContext', () => ({
 
 jest.mock('@/hooks/useHydrationReady', () => ({
   useHydrationReady: () => true,
+  markSsgFirstScreenReady: jest.fn(),
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({

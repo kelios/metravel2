@@ -9,7 +9,7 @@ import { Platform } from 'react-native'
 import {
   SSG_FIRST_SCREEN_READY_ATTR,
   markSsgFirstScreenReady,
-} from '@/utils/ssgShellFirstScreen'
+} from '@/hooks/useHydrationReady'
 
 describe('markSsgFirstScreenReady', () => {
   let frames: Array<() => void>

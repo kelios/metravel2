@@ -11,7 +11,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import StaleContentBanner from '@/components/ui/StaleContentBanner'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { useHydrationReady } from '@/hooks/useHydrationReady'
+import { markSsgFirstScreenReady, useHydrationReady } from '@/hooks/useHydrationReady'
 import type { Travel } from '@/types/types'
 import { SEARCH_DEBOUNCE } from './utils/listTravelConstants'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
@@ -45,7 +45,6 @@ import {
   getSearchCardWidth,
 } from './listTravelBaseModel'
 import { useListTravelViewportState } from './hooks/useListTravelViewportState'
-import { markSsgFirstScreenReady } from '@/utils/ssgShellFirstScreen'
 import ListTravelOwnUserGate, {
   getListTravelOwnUserGateMode,
 } from './parts/ListTravelOwnUserGate'
@@ -547,7 +546,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     // пользователь смотрел на голый SearchPageSkeleton). Терминальное состояние
     // первого экрана — реальные карточки, честное «пусто» или ошибка; только в
     // этот момент маршрут сообщает removal-скрипту о готовности. Контракт
-    // utils/ssgShellFirstScreen.ts требует от маршрута, ждущего данных, именно
+    // markSsgFirstScreenReady требует от маршрута, ждущего данных, именно
     // такой предикат. Атрибут, выставленный однажды, при смене фильтров не
     // снимается: шелл одноразовый, а повторное «не готово» относится уже не к
     // первому экрану.

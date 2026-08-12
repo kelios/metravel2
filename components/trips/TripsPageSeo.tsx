@@ -1,8 +1,8 @@
 import React from 'react';
 import { useIsFocused } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import { useTranslation } from '@/i18n/LocaleProvider';
 import { translate as i18nT } from '@/i18n';
 import { buildCanonicalUrl } from '@/utils/seo';
 

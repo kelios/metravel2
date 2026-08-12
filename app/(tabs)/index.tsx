@@ -7,9 +7,9 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import Home from '@/components/home/Home'
 import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
+import { markSsgFirstScreenReady } from '@/hooks/useHydrationReady'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
-import { markSsgFirstScreenReady } from '@/utils/ssgShellFirstScreen'
 import { translate as i18nT } from '@/i18n'
 
 
