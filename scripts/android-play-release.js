@@ -189,6 +189,14 @@ function maxVersionCodeFromTracks(tracks) {
   return validVersionCodes.length ? Math.max(...validVersionCodes) : 0
 }
 
+function trackHasCompletedVersion(track, versionCode) {
+  return (track?.releases || []).some(
+    (release) =>
+      release.status === 'completed' &&
+      (release.versionCodes || []).some((value) => Number(value) === versionCode)
+  )
+}
+
 async function uploadBundle(accessToken, packageName, editId, aabPath) {
   const url = `${UPLOAD_ROOT}/${encodeURIComponent(packageName)}/edits/${encodeURIComponent(
     editId
@@ -348,18 +356,28 @@ async function runProductionEdit(accessToken, appContract, options) {
       ...Object.values(protectedBefore),
       productionBefore,
     ])
-    if (appContract.versionCode <= maxPublishedVersionCode) {
+    const productionVersionCode = maxVersionCodeFromTracks([productionBefore])
+    const promotesCommittedTestingBundle =
+      productionVersionCode < appContract.versionCode &&
+      maxPublishedVersionCode === appContract.versionCode &&
+      trackHasCompletedVersion(protectedBefore.alpha, appContract.versionCode) &&
+      trackHasCompletedVersion(protectedBefore.internal, appContract.versionCode)
+
+    if (appContract.versionCode <= maxPublishedVersionCode && !promotesCommittedTestingBundle) {
       fail(
         `app.json versionCode ${appContract.versionCode} must be greater than Play versionCode ${maxPublishedVersionCode}`
       )
     }
 
-    const bundle = await uploadBundle(accessToken, appContract.packageName, editId, aabPath)
-    const versionCode = Number(bundle.versionCode)
-    if (versionCode !== appContract.versionCode) {
-      fail(
-        `uploaded AAB versionCode ${versionCode} does not match app.json ${appContract.versionCode}`
-      )
+    let versionCode = appContract.versionCode
+    if (!promotesCommittedTestingBundle) {
+      const bundle = await uploadBundle(accessToken, appContract.packageName, editId, aabPath)
+      versionCode = Number(bundle.versionCode)
+      if (versionCode !== appContract.versionCode) {
+        fail(
+          `uploaded AAB versionCode ${versionCode} does not match app.json ${appContract.versionCode}`
+        )
+      }
     }
 
     await setProductionRelease(accessToken, appContract.packageName, editId, versionCode)
@@ -439,6 +457,7 @@ module.exports = {
   runStatus,
   setTrackRelease,
   snapshotTracks,
+  trackHasCompletedVersion,
   uploadBundle,
   validateEdit,
   withTemporaryEdit,
