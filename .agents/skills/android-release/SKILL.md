@@ -75,8 +75,20 @@ description: >-
 
 7. `npm run android:release:doctor` — Node 22.13.1+, JDK 17–21, Android SDK,
    keystore, `.env.prod`, ключ Play.
-8. `npm run release:check` — зелёный целиком (lint, typecheck, security, audit,
-   jest, e2e, прод-сборка веба, guard'ы).
+8. Подтвердить зелёный `npm run release:check` (lint, typecheck, security,
+   audit, jest, e2e, прод-сборка веба, guard'ы) **один раз для проверенного
+   release-scope**. Сразу записать evidence: commit, команду, результат и
+   затронутые runtime-inputs.
+   - Не повторять уже зелёный gate из-за перехода к следующей фазе, ошибки
+     Gradle/Play, повторного dry-run/status или изменений только в docs, SEO,
+     тестах и release-инструкциях.
+   - Повторять gate только после нового изменения app/native/shared runtime,
+     которое не покрыто записанным evidence. Для локальной правки самого
+     release-wrapper достаточно узкой статической проверки и dry-run.
+   - Явная команда владельца «без тестов» перекрывает этот шаг: переиспользовать
+     имеющееся зелёное evidence, не запускать тестовые команды повторно и для
+     необходимых release-коммитов использовать `--no-verify`, чтобы Git hooks
+     не запустили их скрыто. Исключение не отменяет сборочную и Play-проверку.
 9. `npm run android:build:prod` → подписанный
    `android/app/build/outputs/bundle/release/app-release.aab`. Проверить package,
    `versionCode`/`versionName` против `app.json` и подпись upload key.

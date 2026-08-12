@@ -110,7 +110,16 @@ npm run android:submit:production     # COMMIT production
 
 1. **Pre-flight:** ветка `main`, `npm run android:play:status`, `npm run android:release:doctor`.
 2. **Версия:** bump `versionCode` (max по трекам + 1) и при необходимости `version` в `app.json`.
-3. **Gate:** `npm run release:check` — зелёный целиком, не выборочно.
+3. **Gate:** получить один зелёный `npm run release:check` на текущий
+   release-scope и сохранить evidence: commit, команда, результат, перечень
+   runtime-inputs. Не гонять gate повторно после каждого перехода фазы,
+   Gradle/Play failure, dry-run/status или изменения только docs/SEO/tests/
+   release-инструкций. Повтор нужен лишь после нового app/native/shared runtime
+   diff, которого не покрывает evidence. Для правки release-wrapper — узкая
+   статическая проверка плюс реальный dry-run, а не полный gate.
+   Явное указание владельца «без тестов» означает не запускать их снова и
+   выполнять необходимые release-коммиты с `--no-verify`, чтобы hooks не
+   запустили тесты неявно; сборочные и Play fail-closed проверки сохраняются.
 4. **Сборка:** `npm run android:build:prod`. Скрипт сам проверяет наличие артефакта и
    `jarsigner -verify`.
 5. **Проверка артефакта:** package `by.metravel.app`, versionCode/versionName совпадают с
