@@ -19,13 +19,17 @@ NC='\033[0m' # No Color
 echo "📦 1. Проверка размера бандла..."
 echo ""
 
-if [ ! -d "dist" ]; then
-  echo -e "${YELLOW}⚠️  Бандл не найден. Запускаем сборку...${NC}"
+# Проверяем именно dist/prod: туда кладёт build:web:prod, и оттуда же читает
+# бюджет бандла на шаге 2. Прежнее условие смотрело на dist, поэтому чужая
+# сборка build:web (тот же dist, без prod) заставляла шаг 1 пропустить сборку,
+# а шаг 2 — напечатать «чанки не найдены» вместо замера.
+if [ ! -d "dist/prod" ]; then
+  echo -e "${YELLOW}⚠️  Прод-сборка не найдена. Запускаем сборку...${NC}"
   npm run build:web:prod
 fi
 
 # Получаем размер основного бандла
-BUNDLE_SIZE=$(du -sh dist | cut -f1)
+BUNDLE_SIZE=$(du -sh dist/prod | cut -f1)
 echo -e "${GREEN}✓${NC} Размер бандла: $BUNDLE_SIZE"
 echo ""
 
