@@ -67,6 +67,7 @@ Examples:
 const CLI_SPEC = {
   name: 'seo-audit',
   usage: USAGE,
+  selection: 'articles',
   flags: {
     'user-id': { type: 'string', valueName: 'an author id', default: '1' },
     api: { type: 'string', valueName: 'an origin', default: 'https://metravel.by', stripTrailingSlash: true },

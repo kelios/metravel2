@@ -54,6 +54,7 @@ Examples:
 const CLI_SPEC = {
   name: 'seo-apply-one',
   usage: USAGE,
+  selection: 'none', // one article named by --id, never a list
   flags: {
     id: { type: 'int', min: 1, valueName: 'a travel id', required: true },
     'faq-file': { type: 'string', valueName: 'a path', required: true },

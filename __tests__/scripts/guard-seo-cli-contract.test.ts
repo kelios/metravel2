@@ -16,8 +16,10 @@ import { makeTempDir, removeDir, runCli, writeTextFile } from './cli-test-utils'
 const {
   COVERED_FILE_PATTERN,
   collectCoveredFiles,
+  declaresSelection,
   evaluateGuard,
   isCoveredFile,
+  readDeclaredSelection,
 } = require('@/scripts/guard-seo-cli-contract')
 
 const GUARD = path.resolve(process.cwd(), 'scripts', 'guard-seo-cli-contract.js')
@@ -25,7 +27,7 @@ const GUARD = path.resolve(process.cwd(), 'scripts', 'guard-seo-cli-contract.js'
 const COMPLIANT_SOURCE = `const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract')
 
 const USAGE = 'usage'
-const CLI_SPEC = { name: 'seo-demo', usage: USAGE, flags: { 'dry-run': { type: 'boolean' } } }
+const CLI_SPEC = { name: 'seo-demo', usage: USAGE, selection: 'rows', flags: { 'dry-run': { type: 'boolean' } } }
 
 async function main() {
   parseCliArgs(process.argv, CLI_SPEC)
@@ -45,6 +47,20 @@ const REGRESSED_ARGV_SNIFF_SOURCE = COMPLIANT_SOURCE.replace(
   'parseCliArgs(process.argv, CLI_SPEC)',
   "const args = { all: process.argv.includes('--all') }",
 )
+
+// The #1398 shape: a script that satisfies every other rule — it loads the
+// contract, parses through it, runs through runSeoCli and names no exit code —
+// and still reports success over an empty list, because returning from main()
+// leaves the process at 0. Rule 4 cannot see this one: there is no exit(0) to ban.
+const SILENT_EMPTY_RETURN_SOURCE = COMPLIANT_SOURCE.replace(
+  ', requireNonEmptySelection,',
+  ',',
+).replace(
+  "  requireNonEmptySelection([], { what: 'rows', source: 'demo' })",
+  '  const rows = []\n  if (rows.length === 0) return',
+)
+
+const UNDECLARED_SELECTION_SOURCE = COMPLIANT_SOURCE.replace(" selection: 'rows',", '')
 
 const sourceOf = (filePath: string, content: string) => ({ filePath, content })
 
@@ -94,6 +110,36 @@ describe('positive probe: the scripts in this repo satisfy the contract', () => 
     expect(result.violations).toEqual([])
     expect(result.ok).toBe(true)
     expect(result.checkedFiles).toBe(sources.length)
+  })
+
+  it('leaves the scripts that work on one named target alone', () => {
+    // The control against a false positive: seo-edit and seo-apply-one take a
+    // single --id, so there is no list for requireNonEmptySelection() to guard
+    // and demanding it would be noise. The probe is only worth anything because
+    // neither file calls the helper — if one ever does, this stops proving it.
+    const sources = ['scripts/seo-edit.js', 'scripts/seo-apply-one.js'].map((relativePath) =>
+      sourceOf(relativePath, fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')),
+    )
+
+    for (const source of sources) {
+      expect(source.content).not.toContain('requireNonEmptySelection(')
+      expect(declaresSelection(source.content)).toBe(false)
+      expect(readDeclaredSelection(source.content)).toBe('none')
+    }
+    expect(evaluateGuard({ sources })).toMatchObject({ ok: true, violations: [] })
+  })
+
+  it('reads what each covered script says it selects', () => {
+    // Every covered script declares the field, and the ones that select a list
+    // are exactly the ones the empty-selection rule applies to.
+    const withSelection = collectCoveredFiles(process.cwd()).filter((relativePath) =>
+      declaresSelection(fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')),
+    )
+
+    expect(withSelection).toContain('scripts/indexnow-submit.js')
+    expect(withSelection).toContain('scripts/index-status.js')
+    expect(withSelection).not.toContain('scripts/seo-edit.js')
+    expect(withSelection).not.toContain('scripts/seo-apply-one.js')
   })
 
   it('exits 0 when run as a CLI against this repo', () => {
@@ -183,12 +229,51 @@ describe('negative probe: putting the permissive default back fails the guard', 
       reason: /success is the absence of a failure/,
       content: `${COMPLIANT_SOURCE}\nfunction bail(rows) { if (!rows.length) { process.exitCode = 0 } }\n`,
     },
+    {
+      // #1398: the green report in its quiet spelling — no exit code named at all.
+      label: 'a declared selection that just returns when it is empty — the #1398 shape',
+      rule: 'empty-selection-guard',
+      reason: /never passes it through requireNonEmptySelection/,
+      content: SILENT_EMPTY_RETURN_SOURCE,
+    },
+    {
+      label: 'a script that says nothing about whether it selects anything',
+      rule: 'selection-declared',
+      reason: /does not declare a selection in its CLI spec/,
+      content: UNDECLARED_SELECTION_SOURCE,
+    },
+    {
+      // An empty value would otherwise read as "declared, and not a selection" —
+      // the escape hatch the declaration exists to close.
+      label: 'an empty selection value',
+      rule: 'selection-declared',
+      reason: /does not declare a selection in its CLI spec/,
+      content: COMPLIANT_SOURCE.replace("selection: 'rows'", "selection: ''"),
+    },
   ]
 
   it('builds the regressed fixture from a replace that actually changed the source', () => {
     // A drifted target makes String.replace a silent no-op and every probe on
     // this fixture would then assert against a still-compliant script.
     expect(REGRESSED_ARGV_SNIFF_SOURCE).not.toBe(COMPLIANT_SOURCE)
+    // The #1398 fixture has to be regressed in the one way it claims: no helper
+    // left anywhere in it, and everything else about it still compliant.
+    expect(SILENT_EMPTY_RETURN_SOURCE).not.toContain('requireNonEmptySelection')
+    expect(SILENT_EMPTY_RETURN_SOURCE).toContain("selection: 'rows'")
+    expect(SILENT_EMPTY_RETURN_SOURCE).toContain('runSeoCli(')
+    expect(UNDECLARED_SELECTION_SOURCE).not.toContain('selection:')
+  })
+
+  it('names only the missing declaration when a script declares nothing', () => {
+    // Two rules could fire on the same file; the one that fires must be the one
+    // the author can act on, not "you did not call a helper we cannot know you need".
+    const result = evaluateGuard({
+      sources: [sourceOf('scripts/seo-fixture.js', UNDECLARED_SELECTION_SOURCE)],
+    })
+
+    expect(result.violations.map((entry: { rule: string }) => entry.rule)).toEqual([
+      'selection-declared',
+    ])
   })
 
   it.each(cases)('fails on $label, naming the file and the reason', ({ rule, content, reason }) => {

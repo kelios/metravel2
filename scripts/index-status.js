@@ -43,6 +43,7 @@ Examples:
 const CLI_SPEC = {
   name: 'index-status',
   usage: USAGE,
+  selection: 'articles',
   flags: {
     json: { type: 'boolean' },
     'only-problems': { type: 'boolean' },

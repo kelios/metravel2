@@ -70,6 +70,7 @@ Examples:
 const CLI_SPEC = {
   name: 'seo-rename',
   usage: USAGE,
+  selection: 'renames',
   flags: {
     'map-file': { type: 'string', valueName: 'a path' },
     id: { type: 'string', valueName: 'a travel id' },

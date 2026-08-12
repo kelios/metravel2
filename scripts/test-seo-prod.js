@@ -51,6 +51,7 @@ Examples:
 const CLI_SPEC = {
   name: 'test-seo-prod',
   usage: USAGE,
+  selection: 'travel slugs',
   flags: {
     url: {
       type: 'string',

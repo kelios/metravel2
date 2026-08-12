@@ -213,11 +213,98 @@
         "yandex.com": 202
       },
       "indexCheck": {
-        "checkedAt": "2026-08-10",
-        "indexed": 1,
+        "checkedAt": "2026-08-12",
+        "source": "gsc-url-inspection",
+        "indexed": 4,
         "of": 10,
         "indexedUrls": [
-          "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
+          "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike",
+          "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
+          "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
+          "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska"
+        ],
+        "note": "Замер сразу после подачи остатка пачки 12.08. Пять из шести поданных адресов перешли из «URL неизвестен Google»/«Обнаружена, не проиндексирована» в «Страница просканирована, но пока не проиндексирована», а шестой, zamki-i-usadby-belarusi-19-marshrutov-iz-minska, проиндексирован в тот же час. То есть Google забрал всю шестёрку сразу; пяти просканированным адресам осталось дождаться решения об индексации, замер повторить.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-09T07:58:23Z",
+            "googleCanonical": "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
+          },
+          {
+            "url": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T10:44:39Z",
+            "googleCanonical": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-10T10:46:39Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T18:58:27Z",
+            "googleCanonical": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park"
+          },
+          {
+            "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:35:29Z",
+            "googleCanonical": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska"
+          },
+          {
+            "url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:37:30Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:39:31Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:39:30Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:41:30Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:41:31Z",
+            "googleCanonical": null
+          }
         ]
       },
       "gscRequests": [
@@ -248,8 +335,54 @@
           "result": "quota-exceeded",
           "at": "2026-08-11",
           "note": "Повторная попытка: GSC всё ещё сообщает «Квота превышена»; новых принятых запросов нет, остаток пачки не отправлялся"
+        },
+        {
+          "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перенос с 10–11.08 после «Квота превышена»; квота сброшена, получено «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
         }
-      ]
+      ],
+      "gscRequestedAt": "2026-08-12",
+      "previousIndexCheck": {
+        "checkedAt": "2026-08-10",
+        "indexed": 1,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
+        ],
+        "note": "Снимок сделан 10.08 до сессии подачи: индексированным числился только khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike. Второй адрес, park-invald-dinozavry-miniatiury-luna-park, подтверждён как уже индексированный уже в ходе самой сессии URL Inspection, поэтому в этом снимке его нет, а в gscRequests он записан как already-indexed."
+      }
     },
     {
       "day": 3,
@@ -272,11 +405,144 @@
       },
       "indexnowVia": "full-site submit 2026-08-10",
       "indexCheck": {
+        "checkedAt": "2026-08-12",
+        "source": "gsc-url-inspection",
+        "indexed": 1,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava"
+        ],
+        "note": "Замер сразу после частичной подачи 12.08. Все пять принятых адресов перешли в «Страница просканирована, но пока не проиндексирована» — Google забрал их в тот же час. iz-krakova-v-bratislavu-zamok-lietava значился в индексе ещё до подачи и в GSC не отправлялся. Четыре адреса не поданы, суточная квота исчерпана: khentsinskii и usadby-radzivillov по-прежнему «URL неизвестен Google», barselona и vena — «Обнаружена, не проиндексирована», сканирования у них не было (lastCrawlTime отсутствует). Именно по этим четырём и виден будет эффект следующей подачи.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:57:35Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:59:36Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:59:36Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T08:03:36Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-12T08:05:42Z",
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+            "outcome": "url-unknown",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google",
+            "lastCrawlTime": null,
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
+            "outcome": "discovered-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Обнаружена, не проиндексирована",
+            "lastCrawlTime": null,
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
+            "outcome": "discovered-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Обнаружена, не проиндексирована",
+            "lastCrawlTime": null,
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
+            "outcome": "url-unknown",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google",
+            "lastCrawlTime": null,
+            "googleCanonical": null
+          },
+          {
+            "url": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T22:19:03Z",
+            "googleCanonical": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava"
+          }
+        ]
+      },
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava",
+          "result": "already-indexed",
+          "at": "2026-08-12",
+          "note": "URL Inspection: «Страница отправлена и проиндексирована» — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+          "result": "quota-exceeded",
+          "at": "2026-08-12",
+          "note": "«Квота превышена» на 12-м запросе суток (11 принято: 6 по пачке day:2 и 5 по этой) — перенесено на следующий день"
+        }
+      ],
+      "previousIndexCheck": {
         "checkedAt": "2026-08-10",
         "indexed": 0,
         "of": 10,
-        "indexedUrls": []
-      }
+        "indexedUrls": [],
+        "note": "Снимок сделан 10.08 днём, до сессии подачи, и показывал 0 из 10. Адрес iz-krakova-v-bratislavu-zamok-lietava Google просканировал позже в тот же день (lastCrawlTime 2026-08-10T22:19:03Z), поэтому 12.08 он уже значился в индексе и в GSC не отправлялся — в gscRequests он записан как already-indexed."
+      },
+      "gscRequestedAt": "2026-08-12"
     },
     {
       "day": 4,
@@ -1493,10 +1759,11 @@
     }
   },
   "_gscQuota": {
-    "perDay": 10,
-    "observedAt": "2026-08-10",
-    "evidence": "11-я подача вернула «Квота превышена. Мы не можем обработать этот запрос, так как вы превысили ежедневную квоту»",
-    "note": "квоту тратит каждый принятый клик, включая повторный по тому же URL"
+    "planFloor": 10,
+    "observedMaxAccepted": 11,
+    "observedAt": "2026-08-12",
+    "evidence": "10.08 принято 10, 11-й отклонён. 12.08 принято 11 подряд (6 адресов пачки day:2 и 5 адресов пачки day:3), отклонён 12-й — «Квота превышена. Мы не можем обработать этот запрос, так как вы превысили ежедневную квоту».",
+    "note": "Точного суточного числа у свойства нет: замеры дали 10 и 11. Планировать пачку по planFloor, а подавать до фактического отказа — отказ квоту не тратит, поэтому упереться в него безопасно. Квоту тратит каждый принятый клик, включая повторный по тому же адресу. 11.08 отказ пришёл на первом же запросе суток, то есть окно сброса не совпадает с календарными сутками: получив отказ первым запросом, в этот день дальше не идти. Проверка статуса через URL Inspection API идёт по отдельной квоте и подачу не расходует."
   },
   "_sitemapResubmit": {
     "at": "2026-08-10",

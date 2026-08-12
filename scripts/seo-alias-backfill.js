@@ -90,6 +90,7 @@ Examples:
 const CLI_SPEC = {
   name: 'seo-alias-backfill',
   usage: USAGE,
+  selection: 'alias pairs',
   flags: {
     'map-file': { type: 'string', valueName: 'a path' },
     id: { type: 'string', valueName: 'a travel id' },

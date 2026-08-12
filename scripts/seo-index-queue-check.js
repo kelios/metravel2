@@ -78,6 +78,7 @@ Examples:
 const CLI_SPEC = {
   name: CLI_NAME,
   usage: USAGE,
+  selection: 'queue URLs',
   flags: {
     fix: { type: 'boolean' },
     json: { type: 'boolean' },

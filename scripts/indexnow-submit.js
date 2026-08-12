@@ -60,6 +60,7 @@ Examples:
 const CLI_SPEC = {
   name: 'indexnow',
   usage: USAGE,
+  selection: 'URLs',
   flags: {
     all: { type: 'boolean' },
     sitemap: { type: 'boolean' },

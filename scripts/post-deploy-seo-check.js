@@ -48,6 +48,7 @@ Examples:
 const CLI_SPEC = {
   name: 'post-deploy-seo-check',
   usage: USAGE,
+  selection: 'sitemap entries',
   flags: {
     url: {
       type: 'string',

@@ -47,6 +47,7 @@ Examples:
 const CLI_SPEC = {
   name: 'seo-find-dupes',
   usage: USAGE,
+  selection: 'articles',
   flags: {
     'user-id': { type: 'string', valueName: 'an author id', default: '1' },
     only: { type: 'string', valueName: 'a comma-separated id list', default: '' },

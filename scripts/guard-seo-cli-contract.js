@@ -21,7 +21,12 @@ const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract')
 //      `args.indexOf('--limit')`, `arg === '--json'` — each of which answers a
 //      typo with the default instead of an error (#1389 submitted 544 URLs that way);
 //   4. it never calls `process.exit(0)`: "nothing to do" is a named non-zero
-//      failure, not a green report over an empty selection (#1325).
+//      failure, not a green report over an empty selection (#1325);
+//   5. it says in its CLI spec whether it selects anything, and when it does, the
+//      selection goes through `requireNonEmptySelection()` (#1398). Rule 4 alone
+//      only catches the loud spelling of the green report; a script that simply
+//      returns from `main()` over an empty list names no exit code at all and
+//      still leaves the process at 0.
 //
 // The covered set is derived from the filesystem, not an allowlist: a new
 // `scripts/seo-*.js` or `scripts/indexnow-*.js` joins it automatically and fails
@@ -44,6 +49,32 @@ const COVERED_FILE_PATTERN =
 // covered — moving a CLI into a subfolder must not be a way out.
 const EXCLUDED_PATH_PREFIXES = [`${SCRIPTS_DIR}/lib/`, `${SCRIPTS_DIR}/node_modules/`]
 
+// Whether a script has a selection is declared, not inferred: `selection: 'URLs'`
+// for a run over a list, `selection: 'none'` for one that works on a single named
+// target (`seo-edit --id 641`, `seo-apply-one --id 641`), where an empty selection
+// cannot happen. `normalizeSpec` ignores the field — its only reader is this
+// guard, which needs it to know when `requireNonEmptySelection()` is mandatory.
+//
+// The alternative was to derive the answer from the source: "the file iterates a
+// fetch result, so it has a selection". That is a heuristic, and a heuristic that
+// cannot decide has to fall through to "probably fine" — the permissive default
+// this entire family exists to remove. A declaration can be wrong, but it is
+// wrong in writing, in review, next to the flags it describes.
+const NO_SELECTION = 'none'
+// The value must be a non-empty quoted string: `selection: ''` would otherwise
+// read as "declared, and not a selection" and become the escape hatch again.
+const SELECTION_DECLARATION = /(?:^|[\s{,;])selection:\s*(['"`])\s*([^'"`\n]+?)\s*\1/
+
+const readDeclaredSelection = (code) => {
+  const match = SELECTION_DECLARATION.exec(String(code || ''))
+  return match ? match[2] : null
+}
+
+const declaresSelection = (code) => {
+  const value = readDeclaredSelection(code)
+  return Boolean(value) && value !== NO_SELECTION
+}
+
 const REQUIRED_NEEDLES = [
   {
     rule: 'contract-module',
@@ -59,6 +90,23 @@ const REQUIRED_NEEDLES = [
     rule: 'exit-contract',
     needle: 'runSeoCli(',
     reason: 'never calls runSeoCli() — bad input would not reach the non-zero exit contract',
+  },
+  {
+    rule: 'selection-declared',
+    pattern: SELECTION_DECLARATION,
+    reason:
+      "does not declare a selection in its CLI spec — add selection: '<what the run works on>', " +
+      `or selection: '${NO_SELECTION}' when it works on one named target, so the guard knows ` +
+      'whether an empty selection is possible instead of assuming it is not',
+  },
+  {
+    rule: 'empty-selection-guard',
+    needle: 'requireNonEmptySelection(',
+    appliesWhen: declaresSelection,
+    reason:
+      'declares a selection but never passes it through requireNonEmptySelection() — over an empty ' +
+      'list it would return from main() without naming an exit code, and the run would still report ' +
+      'success (#1325)',
   },
 ]
 
@@ -171,8 +219,13 @@ const findViolationsInSource = ({ filePath, content }) => {
 
   const violations = []
 
-  for (const { rule, needle, reason } of REQUIRED_NEEDLES) {
-    if (!code.includes(needle)) {
+  for (const { rule, needle, pattern, appliesWhen, reason } of REQUIRED_NEEDLES) {
+    // A rule that applies only to some scripts still has no "unclear, so skip"
+    // branch: `appliesWhen` reads a declaration the script had to make, and a
+    // missing declaration is its own violation above.
+    if (appliesWhen && !appliesWhen(code)) continue
+    const satisfied = needle ? code.includes(needle) : pattern.test(code)
+    if (!satisfied) {
       violations.push({ file: normalizedPath, line: 1, rule, reason })
     }
   }
@@ -285,13 +338,17 @@ module.exports = {
   COVERED_FILE_PATTERN,
   EXCLUDED_PATH_PREFIXES,
   FORBIDDEN_PATTERNS,
+  NO_SELECTION,
   OUTPUT_CONTRACT_VERSION,
   REQUIRED_NEEDLES,
+  SELECTION_DECLARATION,
   USAGE,
   buildJsonResult,
   collectCoveredFiles,
+  declaresSelection,
   evaluateGuard,
   findViolationsInSource,
   isCoveredFile,
   isCommentLine,
+  readDeclaredSelection,
 }

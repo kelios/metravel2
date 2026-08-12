@@ -83,6 +83,7 @@ Examples:
 const CLI_SPEC = {
   name: 'seo-mass-augment',
   usage: USAGE,
+  selection: 'articles',
   flags: {
     'dry-run': { type: 'boolean' },
     apply: { type: 'boolean' },

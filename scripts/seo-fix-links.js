@@ -57,6 +57,7 @@ Examples:
 const CLI_SPEC = {
   name: 'seo-fix-links',
   usage: USAGE,
+  selection: 'published travels',
   flags: {
     'dry-run': { type: 'boolean' },
     apply: { type: 'boolean' },

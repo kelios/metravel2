@@ -67,6 +67,7 @@ Examples:
 const CLI_SPEC = {
   name: 'seo-edit',
   usage: USAGE,
+  selection: 'none', // one article named by --id/--restore, never a list
   flags: {
     id: { type: 'string', valueName: 'a travel id' },
     restore: { type: 'string', valueName: 'a travel id' },

@@ -366,6 +366,18 @@ describe('очередь индексации: согласованность з
         .filter((r: { outcome: string }) => r.outcome === 'indexed')
         .map((r: { url: string }) => r.url)
       expect(indexedInResults).toEqual(listed)
+
+      // Замер снимается руками, и соблазн записать всем неиндексированным один
+      // и тот же `outcome` велик — а он потом читается как «что изменилось после
+      // подачи». Адрес, который Google ни разу не скачал (`lastCrawlTime: null`),
+      // просканированным называть нельзя: следующий замер тогда не покажет
+      // перехода «неизвестен → просканирована», ради которого подача и делается.
+      for (const r of check.results) {
+        expect(r.outcome === 'indexed').toBe(r.verdict === 'PASS')
+        if (r.outcome === 'crawled-not-indexed' || r.outcome === 'indexed') {
+          expect(r.lastCrawlTime).toBeTruthy()
+        }
+      }
     }
   })
 
