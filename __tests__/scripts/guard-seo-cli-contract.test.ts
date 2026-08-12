@@ -18,8 +18,9 @@ const {
   collectCoveredFiles,
   declaresSelection,
   evaluateGuard,
+  findViolationsInSource,
   isCoveredFile,
-  readDeclaredSelection,
+  readDeclaredSelections,
 } = require('@/scripts/guard-seo-cli-contract')
 
 const GUARD = path.resolve(process.cwd(), 'scripts', 'guard-seo-cli-contract.js')
@@ -61,6 +62,14 @@ const SILENT_EMPTY_RETURN_SOURCE = COMPLIANT_SOURCE.replace(
 )
 
 const UNDECLARED_SELECTION_SOURCE = COMPLIANT_SOURCE.replace(" selection: 'rows',", '')
+
+// Neither the declaration nor the helper. Both rules could fire here, which is
+// what makes it the fixture for the exclusivity probe: with `appliesWhen` gone,
+// the guard would name two problems where the author can only act on one.
+const UNDECLARED_AND_UNGUARDED_SOURCE = SILENT_EMPTY_RETURN_SOURCE.replace(
+  " selection: 'rows',",
+  '',
+)
 
 const sourceOf = (filePath: string, content: string) => ({ filePath, content })
 
@@ -117,29 +126,15 @@ describe('positive probe: the scripts in this repo satisfy the contract', () => 
     // single --id, so there is no list for requireNonEmptySelection() to guard
     // and demanding it would be noise. The probe is only worth anything because
     // neither file calls the helper — if one ever does, this stops proving it.
-    const sources = ['scripts/seo-edit.js', 'scripts/seo-apply-one.js'].map((relativePath) =>
-      sourceOf(relativePath, fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')),
-    )
+    // Asserted through findViolationsInSource, the path the guard itself takes,
+    // so the control cannot pass on a normalization the guard does not use.
+    for (const relativePath of ['scripts/seo-edit.js', 'scripts/seo-apply-one.js']) {
+      const content = fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')
 
-    for (const source of sources) {
-      expect(source.content).not.toContain('requireNonEmptySelection(')
-      expect(declaresSelection(source.content)).toBe(false)
-      expect(readDeclaredSelection(source.content)).toBe('none')
+      expect(content).not.toContain('requireNonEmptySelection(')
+      expect(content).toContain("selection: 'none'")
+      expect(findViolationsInSource(sourceOf(relativePath, content))).toEqual([])
     }
-    expect(evaluateGuard({ sources })).toMatchObject({ ok: true, violations: [] })
-  })
-
-  it('reads what each covered script says it selects', () => {
-    // Every covered script declares the field, and the ones that select a list
-    // are exactly the ones the empty-selection rule applies to.
-    const withSelection = collectCoveredFiles(process.cwd()).filter((relativePath) =>
-      declaresSelection(fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')),
-    )
-
-    expect(withSelection).toContain('scripts/indexnow-submit.js')
-    expect(withSelection).toContain('scripts/index-status.js')
-    expect(withSelection).not.toContain('scripts/seo-edit.js')
-    expect(withSelection).not.toContain('scripts/seo-apply-one.js')
   })
 
   it('exits 0 when run as a CLI against this repo', () => {
@@ -233,7 +228,7 @@ describe('negative probe: putting the permissive default back fails the guard', 
       // #1398: the green report in its quiet spelling — no exit code named at all.
       label: 'a declared selection that just returns when it is empty — the #1398 shape',
       rule: 'empty-selection-guard',
-      reason: /never passes it through requireNonEmptySelection/,
+      reason: /never calls requireNonEmptySelection/,
       content: SILENT_EMPTY_RETURN_SOURCE,
     },
     {
@@ -250,6 +245,39 @@ describe('negative probe: putting the permissive default back fails the guard', 
       reason: /does not declare a selection in its CLI spec/,
       content: COMPLIANT_SOURCE.replace("selection: 'rows'", "selection: ''"),
     },
+    {
+      // Reading only the first declaration in the file would let any unrelated
+      // `selection: 'none'` above the spec switch the rule off.
+      label: "a stray selection: 'none' above a spec that does select a list",
+      rule: 'empty-selection-guard',
+      reason: /never calls requireNonEmptySelection/,
+      content: SILENT_EMPTY_RETURN_SOURCE.replace(
+        'const USAGE',
+        "const RETRY = { selection: 'none', attempts: 3 }\nconst USAGE",
+      ),
+    },
+    {
+      // A requirement satisfied by prose is not a requirement: the helper is
+      // named in a trailing comment and called nowhere.
+      label: 'the helper claimed in a trailing comment instead of called',
+      rule: 'empty-selection-guard',
+      reason: /never calls requireNonEmptySelection/,
+      content: SILENT_EMPTY_RETURN_SOURCE.replace(
+        '  const rows = []',
+        '  const rows = [] // requireNonEmptySelection(rows) is not needed here',
+      ),
+    },
+    {
+      // The declaration rots: it stays 'none' on the day the script grows a flag
+      // that means many targets.
+      label: "selection: 'none' next to a flag that names many targets",
+      rule: 'selection-none-with-list-flag',
+      reason: /takes a flag that names many targets/,
+      content: COMPLIANT_SOURCE.replace(
+        "selection: 'rows', flags: { 'dry-run': { type: 'boolean' } }",
+        "selection: 'none', flags: { all: { type: 'boolean' } }",
+      ),
+    },
   ]
 
   it('builds the regressed fixture from a replace that actually changed the source', () => {
@@ -262,18 +290,35 @@ describe('negative probe: putting the permissive default back fails the guard', 
     expect(SILENT_EMPTY_RETURN_SOURCE).toContain("selection: 'rows'")
     expect(SILENT_EMPTY_RETURN_SOURCE).toContain('runSeoCli(')
     expect(UNDECLARED_SELECTION_SOURCE).not.toContain('selection:')
+    expect(UNDECLARED_AND_UNGUARDED_SOURCE).not.toContain('selection:')
+    expect(UNDECLARED_AND_UNGUARDED_SOURCE).not.toContain('requireNonEmptySelection')
   })
 
   it('names only the missing declaration when a script declares nothing', () => {
-    // Two rules could fire on the same file; the one that fires must be the one
-    // the author can act on, not "you did not call a helper we cannot know you need".
+    // Two rules could fire on this file — it has no declaration and no helper —
+    // and the one that fires must be the one the author can act on, not "you did
+    // not call a helper we cannot know you need". Drop `appliesWhen` and this
+    // probe sees two rules instead of one.
     const result = evaluateGuard({
-      sources: [sourceOf('scripts/seo-fixture.js', UNDECLARED_SELECTION_SOURCE)],
+      sources: [sourceOf('scripts/seo-fixture.js', UNDECLARED_AND_UNGUARDED_SOURCE)],
     })
 
     expect(result.violations.map((entry: { rule: string }) => entry.rule)).toEqual([
       'selection-declared',
     ])
+  })
+
+  it('reads every declaration in the file, not the first one it meets', () => {
+    expect(readDeclaredSelections("{ selection: 'rows' }")).toEqual(['rows'])
+    expect(readDeclaredSelections("a: { selection: 'none' }, b: { selection: 'URLs' }")).toEqual([
+      'none',
+      'URLs',
+    ])
+    expect(readDeclaredSelections('nothing here')).toEqual([])
+    // Fail closed: one 'none' among the declarations does not turn the rule off.
+    expect(declaresSelection("x = { selection: 'none' }\nCLI_SPEC = { selection: 'URLs' }")).toBe(true)
+    expect(declaresSelection("CLI_SPEC = { selection: 'none' }")).toBe(false)
+    expect(declaresSelection("CLI_SPEC = { selection: '' }")).toBe(false)
   })
 
   it.each(cases)('fails on $label, naming the file and the reason', ({ rule, content, reason }) => {
@@ -317,6 +362,28 @@ describe('negative probe: putting the permissive default back fails the guard', 
   it('does not mistake prose about the ban for the ban itself', () => {
     const withComment = `// never do process.exit(0) here, and never use argv.includes('--all')\n${COMPLIANT_SOURCE}`
     expect(evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', withComment)] }).ok).toBe(true)
+
+    // The same prose at the end of a code line, where it used to be read as the
+    // ban itself and reported a violation the author could not remove.
+    const trailing = COMPLIANT_SOURCE.replace(
+      'const USAGE',
+      "const note = 1 // never process.exit(0) over an empty list\nconst USAGE",
+    )
+    expect(evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', trailing)] }).ok).toBe(true)
+
+    // …and the control that keeps the comment stripper honest: a `//` inside a
+    // string is part of the string, so the line is read whole.
+    const withUrl = COMPLIANT_SOURCE.replace(
+      'const USAGE',
+      "const API = 'https://metravel.by/api'\nconst USAGE",
+    )
+    const urlResult = evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', withUrl)] })
+    expect(urlResult.ok).toBe(true)
+    expect(
+      findViolationsInSource(
+        sourceOf('scripts/seo-fixture.js', withUrl.replace("'https://metravel.by/api'", "'https://metravel.by/api' + process.argv.slice(2)")),
+      ).map((entry: { rule: string }) => entry.rule),
+    ).toContain('hand-rolled-parse')
   })
 
   it('exits non-zero as a CLI and prints the offending file and rule', () => {

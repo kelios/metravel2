@@ -22,11 +22,13 @@ const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract')
 //      typo with the default instead of an error (#1389 submitted 544 URLs that way);
 //   4. it never calls `process.exit(0)`: "nothing to do" is a named non-zero
 //      failure, not a green report over an empty selection (#1325);
-//   5. it says in its CLI spec whether it selects anything, and when it does, the
-//      selection goes through `requireNonEmptySelection()` (#1398). Rule 4 alone
-//      only catches the loud spelling of the green report; a script that simply
-//      returns from `main()` over an empty list names no exit code at all and
-//      still leaves the process at 0.
+//   5. it says in its CLI spec whether it selects anything, and when it does, it
+//      calls `requireNonEmptySelection()` (#1398). Rule 4 alone only catches the
+//      loud spelling of the green report; a script that simply returns from
+//      `main()` over an empty list names no exit code at all and still leaves
+//      the process at 0. What this rule proves is that the call is there — which
+//      list reaches it would take an AST, deliberately out of scope; what it
+//      removes is the shape where nothing checks the selection at all.
 //
 // The covered set is derived from the filesystem, not an allowlist: a new
 // `scripts/seo-*.js` or `scripts/indexnow-*.js` joins it automatically and fails
@@ -64,15 +66,25 @@ const NO_SELECTION = 'none'
 // The value must be a non-empty quoted string: `selection: ''` would otherwise
 // read as "declared, and not a selection" and become the escape hatch again.
 const SELECTION_DECLARATION = /(?:^|[\s{,;])selection:\s*(['"`])\s*([^'"`\n]+?)\s*\1/
+// `--all`, `--ids`, `--limit`, `--map-file`, `--urls-file` all mean "many
+// targets" — matched where flags are declared (`all: { type:`), not anywhere the
+// word appears.
+const LIST_FLAG_DECLARATION = /(?:^|[\s{,])'?(all|ids|limit|map-file|urls-file)'?:\s*\{\s*type:/
 
-const readDeclaredSelection = (code) => {
-  const match = SELECTION_DECLARATION.exec(String(code || ''))
-  return match ? match[2] : null
-}
+// Every declaration in the file, not the first one: a stray `selection: 'none'`
+// in an unrelated object literal above the spec would otherwise switch the rule
+// off for a script that does select a list. Reading them all and believing the
+// one that names something keeps the miss on the loud side.
+const readDeclaredSelections = (code) =>
+  [...String(code || '').matchAll(new RegExp(SELECTION_DECLARATION.source, 'g'))].map(
+    (match) => match[2],
+  )
 
-const declaresSelection = (code) => {
-  const value = readDeclaredSelection(code)
-  return Boolean(value) && value !== NO_SELECTION
+const declaresSelection = (code) => readDeclaredSelections(code).some((value) => value !== NO_SELECTION)
+
+const declaresNoSelection = (code) => {
+  const values = readDeclaredSelections(code)
+  return values.length > 0 && values.every((value) => value === NO_SELECTION)
 }
 
 const REQUIRED_NEEDLES = [
@@ -104,9 +116,8 @@ const REQUIRED_NEEDLES = [
     needle: 'requireNonEmptySelection(',
     appliesWhen: declaresSelection,
     reason:
-      'declares a selection but never passes it through requireNonEmptySelection() — over an empty ' +
-      'list it would return from main() without naming an exit code, and the run would still report ' +
-      'success (#1325)',
+      'declares a selection but never calls requireNonEmptySelection() — over an empty list it would ' +
+      'return from main() without naming an exit code, and the run would still report success (#1325)',
   },
 ]
 
@@ -148,6 +159,16 @@ const FORBIDDEN_PATTERNS = [
     pattern: /process\.exit\((?:\s*\)|[^)]*\b0\b[^)]*\))/,
     reason: 'exits 0 explicitly — an empty selection must fail through requireNonEmptySelection(), not report success (#1325)',
   },
+  {
+    // A declaration nobody revisits rots: seo-edit is honest about its single
+    // --id today and would stay `none` on the day someone adds --all. This is a
+    // heuristic, but it only ever adds a violation — the unclear case fails
+    // loudly, which is the opposite of the permissive default it guards (#1398).
+    rule: 'selection-none-with-list-flag',
+    appliesWhen: declaresNoSelection,
+    pattern: LIST_FLAG_DECLARATION,
+    reason: `declares selection: '${NO_SELECTION}' but takes a flag that names many targets — a run over a list does select something, and that selection has to go through requireNonEmptySelection()`,
+  },
 ]
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
@@ -187,6 +208,27 @@ const isCommentLine = (line) => {
   return trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')
 }
 
+// The same reasoning one step further in: a comment at the end of a code line is
+// still prose. Cutting it works both ways — `const n = 1 // process.exit(0)` is
+// not a banned exit, and `const rows = [] // requireNonEmptySelection(rows)` is
+// not a satisfied requirement. A `//` inside a string stays put, or every URL in
+// these scripts would lose its host.
+const stripTrailingComment = (line) => {
+  const text = String(line || '')
+  let quote = null
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    if (quote) {
+      if (char === '\\') i++
+      else if (char === quote) quote = null
+      continue
+    }
+    if (char === "'" || char === '"' || char === '`') quote = char
+    else if (char === '/' && text[i + 1] === '/') return text.slice(0, i)
+  }
+  return text
+}
+
 const collectCoveredFiles = (rootDir) => {
   const scriptsDir = path.join(rootDir, SCRIPTS_DIR)
   if (!fs.existsSync(scriptsDir)) return []
@@ -212,9 +254,11 @@ const findViolationsInSource = ({ filePath, content }) => {
   if (!isCoveredFile(normalizedPath)) return []
 
   const lines = String(content || '').split('\n')
+  // `line` is what the rules read — comments removed; `raw` is what the operator
+  // sees in the report, so the snippet still shows the line as written.
   const codeLines = lines
-    .map((line, index) => ({ line, number: index + 1 }))
-    .filter((entry) => !isCommentLine(entry.line))
+    .map((raw, index) => ({ raw, line: stripTrailingComment(raw), number: index + 1 }))
+    .filter((entry) => !isCommentLine(entry.raw))
   const code = codeLines.map((entry) => entry.line).join('\n')
 
   const violations = []
@@ -230,7 +274,8 @@ const findViolationsInSource = ({ filePath, content }) => {
     }
   }
 
-  for (const { rule, pattern, reason } of FORBIDDEN_PATTERNS) {
+  for (const { rule, pattern, appliesWhen, reason } of FORBIDDEN_PATTERNS) {
+    if (appliesWhen && !appliesWhen(code)) continue
     const hit = codeLines.find((entry) => pattern.test(entry.line))
     if (hit) {
       violations.push({
@@ -238,7 +283,7 @@ const findViolationsInSource = ({ filePath, content }) => {
         line: hit.number,
         rule,
         reason,
-        snippet: hit.line.trim().slice(0, 120),
+        snippet: hit.raw.trim().slice(0, 120),
       })
     }
   }
@@ -338,6 +383,7 @@ module.exports = {
   COVERED_FILE_PATTERN,
   EXCLUDED_PATH_PREFIXES,
   FORBIDDEN_PATTERNS,
+  LIST_FLAG_DECLARATION,
   NO_SELECTION,
   OUTPUT_CONTRACT_VERSION,
   REQUIRED_NEEDLES,
@@ -345,10 +391,12 @@ module.exports = {
   USAGE,
   buildJsonResult,
   collectCoveredFiles,
+  declaresNoSelection,
   declaresSelection,
   evaluateGuard,
   findViolationsInSource,
   isCoveredFile,
   isCommentLine,
-  readDeclaredSelection,
+  readDeclaredSelections,
+  stripTrailingComment,
 }
