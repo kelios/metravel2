@@ -5,7 +5,7 @@ import { getTravelsListPath } from './routes';
 const TRAVEL_DETAILS_LOAD_ERROR_PATTERN = /не удалось загрузить путешествие|требуется авторизация/i;
 const FALLBACK_IMAGE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8ZKfkAAAAASUVORK5CYII=';
-const FALLBACK_TRAVEL_ID = 990081;
+export const FALLBACK_TRAVEL_ID = 990081;
 export const FALLBACK_TRAVEL_SLUG = 'e2e-stable-travel-details';
 
 /**

@@ -27,6 +27,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import {
+  FALLBACK_TRAVEL_ID,
   FALLBACK_TRAVEL_SLUG,
   mockFallbackTravelDetails,
   preacceptCookies,
@@ -85,6 +86,13 @@ async function openTravelDetailsForPerf(
 ) {
   await mockFallbackTravelDetails(page);
   if (TRAVEL_SLUG === FALLBACK_TRAVEL_SLUG) {
+    await page.route(`**/api/achievements/travel/${FALLBACK_TRAVEL_ID}/**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ peer_received: [] }),
+      });
+    });
     // Keep the deterministic fixture independent from the live nearby-quest
     // catalog. Otherwise it sometimes downloads six production quest covers
     // and sometimes none, moving the first-party count by six requests. An

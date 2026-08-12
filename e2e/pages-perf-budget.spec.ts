@@ -42,6 +42,12 @@ type PageTarget = {
   requireReadySelector?: boolean
 }
 
+type MapFixtureCounters = {
+  filters: number
+  travels: number
+  clusters: number
+}
+
 // Числовые бюджеты живут в `helpers/pagesPerfBudgets.ts` — по записи на пару
 // (маршрут, профиль). Здесь остаётся только то, что описывает саму страницу
 // (#1287): раньше общий `CLS_MAX = 0.3` пропускал регресс главной с 0,2431.
@@ -175,6 +181,54 @@ async function installDeterministicSearchApi(page: any, target: PageTarget) {
   await page.route('**/travels/**', fulfillTravelCatalog)
 }
 
+async function installDeterministicMapApi(
+  page: any,
+  target: PageTarget,
+): Promise<MapFixtureCounters> {
+  const counters: MapFixtureCounters = { filters: 0, travels: 0, clusters: 0 }
+  if (target.key !== 'MAP') return counters
+
+  const fulfillJson = (route: any, body: unknown) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    })
+
+  await page.route('**/api/filterformap/**', (route: any) => {
+    counters.filters += 1
+    return fulfillJson(route, {
+      countries: [],
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      transports: [],
+      year: [],
+    })
+  })
+  await page.route('**/api/travels/search_travels_for_map/**', (route: any) => {
+    counters.travels += 1
+    return fulfillJson(route, { results: [], total: 0 })
+  })
+  await page.route('**/api/map/clusters/**', (route: any) => {
+    counters.clusters += 1
+    return fulfillJson(route, { clusters: [], markers: [], total_count: 0 })
+  })
+
+  return counters
+}
+
+function expectMapFixturesUsed(target: PageTarget, counters: MapFixtureCounters) {
+  if (target.key !== 'MAP') return
+
+  for (const [endpoint, count] of Object.entries(counters)) {
+    expect(count, `Map ${endpoint} fixture was not exercised`).toBeGreaterThan(0)
+  }
+}
+
 /** Профиль берётся из проекта Playwright, а не из ширины вьюпорта. */
 function profileFromProject(projectName: string): PerfProfile {
   if (projectName === 'chromium-mobile') return 'mobile'
@@ -218,9 +272,11 @@ for (const target of PAGES) {
 
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
+      const mapFixtureCounters = await installDeterministicMapApi(page, target)
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
+      expectMapFixturesUsed(target, mapFixtureCounters)
       const observedProfile = await collectObservedProfile(page)
       const domCounts = await collectFirstScreenElements(page)
       await beginPostReadyClsCollection(page)
@@ -312,12 +368,14 @@ for (const target of PAGES) {
       const budget = BASELINE_MODE ? null : resolveEffectiveBudget(target.key, profile).budget
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
+      const mapFixtureCounters = await installDeterministicMapApi(page, target)
 
       const tracker = createNetworkTracker(page, {
         ignoreBudgetRequest: (url) => shouldIgnoreBudgetRequest(target, url),
       })
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
+      expectMapFixturesUsed(target, mapFixtureCounters)
 
       const stats = tracker.getStats()
       console.log(`\n📦 NETWORK BUDGET — ${target.name} (${profile})`)
