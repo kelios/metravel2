@@ -546,7 +546,7 @@
     },
     {
       "day": 4,
-      "submittedAt": null,
+      "submittedAt": "2026-08-13",
       "urls": [
         "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye",
         "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode",
@@ -571,8 +571,61 @@
           "result": "quota-exceeded",
           "at": "2026-08-13",
           "note": "Первая попытка по пачке: GSC сообщил «Квота превышена»; принято 0 из 10, остальные адреса не отправлялись и перенесены на следующее суточное окно"
+        },
+        {
+          "url": "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye",
+          "result": "accepted",
+          "at": "2026-08-13",
+          "note": "Повторная попытка после сброса квоты: получено «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/usadba-linovo-dvorets-pototskikh-i-usadba-puzynov",
+          "result": "already-indexed",
+          "at": "2026-08-13",
+          "note": "URL Inspection показал «URL есть в индексе Google» — повторная подача не нужна"
+        },
+        {
+          "url": "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/usadba-trabutishki-i-golubye-ozera-marshrut",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/park-sverklanets-ruiny-zamka-dvortsy-i-bunkery",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/dubrovnik-kak-dobratsia-i-chto-posmotret",
+          "result": "accepted",
+          "at": "2026-08-13"
         }
-      ]
+      ],
+      "gscRequestedAt": "2026-08-13"
     },
     {
       "day": 5,
@@ -594,7 +647,25 @@
         "yandex.com": 202
       },
       "indexnowVia": "full-site submit 2026-08-10",
-      "indexnowSubmittedAt": "2026-08-10"
+      "indexnowSubmittedAt": "2026-08-10",
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
+          "result": "accepted",
+          "at": "2026-08-13"
+        },
+        {
+          "url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+          "result": "quota-exceeded",
+          "at": "2026-08-13",
+          "note": "После двух принятых адресов GSC сообщил «Квота превышена»; этот и оставшиеся семь адресов перенесены на следующее суточное окно"
+        }
+      ]
     },
     {
       "day": 6,
