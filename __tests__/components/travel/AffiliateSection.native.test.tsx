@@ -42,9 +42,9 @@ describe('AffiliateSection native', () => {
     ;(Platform as any).OS = 'ios'
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = 'test-marker'
     process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE =
-      'https://tp.media/r?marker={subid}&u={url}'
+      'https://tp.media/r?marker=test-marker.{subid}&p=652&trs=423278&u={url}'
     process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE =
-      'https://tp.media/h?marker={subid}&u={url}'
+      'https://tp.media/r?marker=test-marker.{subid}&p=7038&trs=423278&u={url}'
   })
 
   afterEach(() => {

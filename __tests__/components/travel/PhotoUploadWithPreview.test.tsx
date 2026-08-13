@@ -8,6 +8,10 @@ const ORIGINAL_PLATFORM_OS = Platform.OS;
 
 // Mock dependencies
 jest.mock('@/api/misc');
+// jest-expo resolves extensionless imports to `.native.ts` before `.ts` even
+// when a test overrides Platform.OS at runtime. This suite exercises the web
+// dropzone too, so keep that branch on the same converter Metro selects on web.
+jest.mock('@/utils/webImageUpload', () => jest.requireActual('@/utils/webImageUpload.web'));
 jest.mock('react-native-image-picker', () => ({
     launchImageLibrary: jest.fn(),
 }));

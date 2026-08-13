@@ -30,9 +30,9 @@ describe('AffiliateOffers', () => {
     })
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '999999'
     process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE =
-      'https://tp.media/r?marker=999999.{subid}&u={url}'
+      'https://tp.media/r?marker=999999.{subid}&p=652&trs=423278&u={url}'
     process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE =
-      'https://tp.media/r?marker=999999.{subid}&u={url}'
+      'https://tp.media/r?marker=999999.{subid}&p=7038&trs=423278&u={url}'
   })
 
   afterEach(() => {
