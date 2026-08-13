@@ -79,12 +79,13 @@ Status: accepted, 2026-07-25.
 | Поверхность | Вид |
 | --- | --- |
 | desktop web | иконка + подпись (`ui/Button` c `icon` + `label`) |
-| mobile web и Android | icon-only 44/48dp в ОДНУ строку, подпись уходит в `accessibilityLabel` |
+| mobile web, Android и iPhone | icon-only 44/48dp в ОДНУ строку, подпись уходит в `accessibilityLabel` |
 
 Правила:
 
-- Режим берётся из вьюпорта (`useResponsive`), а не из `Platform.OS`: mobile web и
-  Android обязаны получить один и тот же ряд (mobile parity в `docs/RULES.md`).
+- Режим берётся из вьюпорта (`useResponsive`), а не из `Platform.OS`: mobile web,
+  Android и iPhone обязаны получить один и тот же ряд (mobile parity в
+  `docs/RULES.md`).
 - `label` обязателен всегда и должен быть осмысленным: на телефоне он остаётся
   единственным доступным именем кнопки для screen reader.
 - Иконка обязана быть «говорящей» из набора Feather (`mic`, `upload`,
@@ -112,7 +113,7 @@ Status: accepted, 2026-07-25.
 
 Контракт держат обе поверхности:
 
-- Android/native: `components/article/articleEditorNativeHtml.ts` — `#toolbar`
+- Android/iPhone native: `components/article/articleEditorNativeHtml.ts` — `#toolbar`
   идёт после `#editor`, `border-top`, у `.ql-editor` нижний запас 72px.
 - mobile web: `components/article/QuillEditor.web.tsx`, блок
   `@media (max-width: 767px)` — `order: 2` у `.ql-toolbar`, `order: 1` у

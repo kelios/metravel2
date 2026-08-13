@@ -1,6 +1,6 @@
 ---
 name: metravel-agent-workflow
-description: Orchestrate a role-based metravel AI workflow across project analyst, business analyst, system architect, designer, Android developer, programmer, paired mobile-web/Android tester, security/design reviewers, QA, reviewer, Google Play operator, and DevOps agents. Use when Codex needs to split a metravel task into agent roles, run a bug-finding/fixing/deploy loop, or coordinate project analysis, discovery, implementation, mobile validation, review, and release without losing project rules.
+description: Orchestrate a role-based metravel AI workflow across analysis, architecture, design, web, Android and iOS development, testing, review, store operators, and DevOps. Use when Codex needs to split a task into agents, coordinate implementation and validation, or run a controlled bug/release loop without losing project rules.
 ---
 
 # Metravel Agent Workflow
@@ -8,7 +8,8 @@ description: Orchestrate a role-based metravel AI workflow across project analys
 Use this skill to coordinate multiple role prompts or subagents for metravel
 work. Keep the workflow controlled: each role has a narrow output contract, code
 changes happen in implementation and in the mandatory review-and-fix stage, and
-deploys happen only through the DevOps stage after explicit environment gating.
+web/server deploys happen only through the DevOps stage. Store mutations happen
+only through the matching release operator after an explicit target gate.
 
 Do not use this skill for docs-only changes, simple automated checks, one isolated bugfix/refactor, one board-contract update, or read-only analysis that does not need handoff to implementation/QA/review. Use the single matching specialist skill instead.
 
@@ -33,9 +34,9 @@ Default feature flow:
    and web/mobile behavior; add `$metravel-i18n-guardrails` for UI copy, locale
    state/formatting, accessibility, SEO locale, and RU/BE/UK/PL/EN coverage; use
    `$metravel-design-auditor` for cross-screen evidence and `$metravel-visual-asset-designer` for requested raster assets.
-8. Native Developer: use `$metravel-android-developer` for platform
-   implementation, crashes, platform files, or Expo native modules; keep the
-   future-iOS route inactive unless the user explicitly reactivates it.
+8. Native Developer: use `$metravel-android-developer` for Android and
+   `$metravel-ios-developer` for iPhone implementation, crashes, platform files,
+   Expo native modules, permissions, storage, links, notifications, maps, or media.
 9. Refactor Surgeon: use `$metravel-refactor-surgeon` for behavior-preserving large component splits.
 10. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
 11. Backend Diagnostician: use `$metravel-backend-diagnostician` for read-only API/backend blockers and board follow-up.
@@ -51,7 +52,10 @@ Default feature flow:
 17. Sprint Reviewer: use `$metravel-sprint-reviewer` to accept task-board tickets only with Done-gate evidence.
 18. Production Smoke: use `$metravel-production-smoke` for read-only production health checks.
 19. Store Operator: use `$metravel-google-play-operator` only for an explicit Google Play build, submit, promotion, or status request; use `$metravel-play-campaign-tester` only for the configured reciprocity campaign.
-20. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a deployment.
+20. iOS Roles: use `$metravel-ios-architect` for design, `$metravel-ios-reviewer`
+    for independent repair review, `$metravel-ios-tester` for simulator/device/TestFlight
+    evidence, and `$metravel-ios-release-operator` for separately authorized store stages.
+21. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a web/server deployment.
 
 Default bug loop:
 
@@ -61,7 +65,10 @@ Default bug loop:
 4. QA Agent or Mobile Tester re-tests the fixed scenario.
 5. Reviewer/Fixer checks the complete diff, fixes confirmed in-scope findings,
    re-reviews the result, and repeats relevant validation.
-6. DevOps Agent deploys/builds/releases only if the fix is approved and the user explicitly requested a target environment or mobile build. Android production/EAS builds require an explicit Android build/submit request in the current task.
+6. DevOps Agent handles only an explicitly requested web/server target. Android
+   release work goes to `$metravel-google-play-operator`; iPhone signed/store
+   work goes to `$metravel-ios-release-operator`. Android EAS remains prohibited,
+   and every allowed store stage requires its exact current authorization.
 
 ## Control Rules
 
@@ -77,8 +84,9 @@ Default bug loop:
 - Keep Mobile Tester read-only unless the user explicitly asks to update tests.
 - Do not let Android Developer change mobile release/build configs without explicit user approval.
 - Do not let Android Developer or Mobile Tester run Android EAS/cloud builds, Android production builds/submits, or dev-client/export Android QA routes without explicit user approval; Android QA defaults to local build/install on the USB-connected phone.
-- Keep iOS Developer out of normal workflows, QA, Done gates, and `verify
-  pending` until the user explicitly reactivates iOS application work.
+- Keep iOS roles separated: architect/tester are read-only, developer does not
+  publish, reviewer runs review-and-fix, and release operator requires separate
+  explicit gates for signed build, upload, App Review submit, and storefront release.
 - Do not let Google Play Operator build, submit, promote, or mutate a track beyond the exact target the user authorized in the current task.
 - Do not let Refactor Surgeon change business logic or visual design; it only extracts structure.
 - Do not let Sprint Reviewer move tickets to `done` without runtime evidence for the Task Contract Done gate.
@@ -91,13 +99,17 @@ Default bug loop:
 - Do not let Production Smoke deploy, rollback, or mutate production; it only probes read-only health.
 - Do not let implementation start from vague requirements; require acceptance criteria or a bug report first.
 - Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
-- Before assigning deploy, build, Android install, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, check the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if the same target is already running, do not start a second agent command.
+- Before assigning deploy, build, Android install, iOS simulator/archive/EAS,
+  store upload/submit, server rebuild/restart, full/preflight tests,
+  Playwright/e2e, or Lighthouse work, check the operation coordination rule from
+  `AGENTS.md`/`docs/RULES.md`; if the same target is already running, do not
+  start a second agent command.
 - Keep unrelated user changes separate; never revert files outside the task.
 - Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
 - Require every role handoff to state platform impact and localization impact.
-  Implementation/review/QA must cover desktop web, mobile web, Android, and
-  RU/BE/UK/PL/EN where affected; mobile-web and Android evidence is always
-  paired, and unavailable active-platform evidence is `verify pending`.
+  Implementation/review/QA must cover desktop web, mobile web, Android, iOS, and
+  RU/BE/UK/PL/EN where affected; mobile-web/Android remain paired controls and
+  iPhone uses the required simulator/physical/TestFlight layer.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.
 - If an audit-only role finds a real issue, route it to implementation. The
   mandatory Code Reviewer/Fixer repairs its own confirmed in-scope findings
@@ -117,7 +129,11 @@ Each role should return one compact artifact:
 - Quest Geo Verifier: `Quest Geo Report`
 - Designer: `UI Contract`
 - Android Developer: `Android Implementation Summary`
-- iOS Developer: reserved future route, omitted from normal handoff
+- iOS Architect: `iOS Technical Design`
+- iOS Developer: `iOS Implementation Summary`
+- iOS Reviewer: `iOS Review and Repair`
+- iOS Tester: `iOS QA Pass` or `Bug Report`
+- iOS Release Operator: `iOS Release Report`
 - Refactor Surgeon: `Refactor Summary`
 - Programmer: `Implementation Summary`
 - Backend Diagnostician: `Backend Diagnosis`

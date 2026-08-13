@@ -17,7 +17,7 @@
 | --- | --- |
 | triage, выбор skill, матрица проверок | `docs/CODEX.md` (нужный раздел) |
 | технические правила: UI, workflow, localization | `docs/RULES.md` (нужный раздел) |
-| e2e-доступы, тестданные на проде, Android-устройство, prod-baseline, долгие операции и locks | `docs/WORKFLOW_OPERATIONS.md` |
+| e2e-доступы, тестданные на проде, Android/iPhone devices, prod-baseline, долгие операции и locks | `docs/WORKFLOW_OPERATIONS.md` |
 | каталог `$metravel-*` skills (Codex) | `docs/CODEX_SKILLS.md` |
 | борд, Task Contract, формат описания задачи | `docs/TASK_BOARD_MCP.md` |
 | повторяющиеся проблемы перед заведением карточки | `docs/PROBLEM_MEMORY.md` |
@@ -35,11 +35,12 @@
   пользователя не нужно; читать read-only, изменения оформлять `area=back`
   задачей на борде;
 - секреты не выводить и не просить вставлять в чат;
-- EAS build/submit и production deploy выполнять только по явному точному запросу;
+- iOS signed build, TestFlight/App Store upload, App Review submit, storefront
+  release и production deploy выполнять только по отдельному явному точному запросу;
 - проверять собственные изменения, не перекладывая QA на пользователя;
-- перед любой задачей фиксировать platform impact для desktop web, mobile web и
-  Android; mobile web и Android всегда проверять парно. iOS/iPadOS-приложения
-  пока нет, поэтому iOS не входит в QA/Done gate/`verify pending`;
+- перед любой задачей фиксировать platform impact для desktop web, mobile web,
+  Android и iOS. Shared mobile UX проверять одним flow/state/locale; iPhone
+  использует simulator/physical/TestFlight layer по риску, iPadOS вне первого release;
 - фиксировать localization impact для RU/BE/UK/PL/EN; app-owned UI text
   проводить через `@/i18n`, а locale-sensitive formatting — через
   `i18n/format.ts`;

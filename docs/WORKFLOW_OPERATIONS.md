@@ -9,6 +9,7 @@
 - e2e-доступы и board token → «3.1 E2E окружение и доступы»;
 - создание/удаление тестовых сущностей на проде → «3.1.1 Тестовые данные на production»;
 - сборка и прогон на USB-устройстве → «3.2 Android device testing and builds»;
+- Xcode/simulator/physical iPhone/TestFlight → «3.2.1 iOS testing and release operations»;
 - baseline/after на живом URL, закрытие perf/media/network задач → «3.3.1 Production-target validation and task closure»;
 - deploy/build/e2e/Lighthouse и общие locks → «3.4 Координация долгих операций».
 
@@ -72,6 +73,33 @@ Android (§3.3) и правило quality-gate lock (§3, шаг 9).
 - Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
 - `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
 
+### 3.2.1 iOS testing and release operations
+
+- Активный первый iOS release поддерживает iPhone; iPadOS-specific layout,
+  screenshots и acceptance вне scope.
+- Для iOS/shared задачи сначала проверь `xcode-select -p`,
+  `xcodebuild -version` и eligible destinations через `xcodebuild
+  -showdestinations`/`xcrun simctl list devices available`. Отсутствующий runtime
+  — конкретный environment blocker, а не повод считать QA пройденной.
+- Simulator используется для compilation, startup, basic navigation/UI, locales,
+  safe areas, keyboard и deterministic error states. Physical iPhone обязателен
+  для camera/photo/HEIC, Keychain/biometrics, APNs, Universal Links, sharing,
+  permission allow/deny/restricted behavior и lifecycle.
+- Exact processed TestFlight build — acceptance boundary перед App Review. Local
+  debug/simulator build не доказывает signing, embedded production config,
+  entitlement/APNs behavior или App Store processing.
+- Перед `xcodebuild`, Expo/EAS iOS build, archive, upload или submit проверь
+  operation gate и не запускай дубликат того же target/build number.
+- Signed distribution build, App Store Connect/TestFlight upload/group mutation,
+  App Review submit и storefront release — четыре независимых mutating gates.
+  Для каждого нужна отдельная текущая команда владельца; `--auto-submit` без неё
+  запрещён, а upload нельзя называть публикацией.
+- Секреты Apple/EAS, 2FA, Team ID, UDID, `.p8`/`.p12`, private keys, profiles и
+  reviewer credentials не выводятся и не попадают в Git/board/evidence.
+- Для active iOS work используй `ios-architect` → `ios-expert` →
+  `ios-reviewer` → `ios-tester` → `ios-deployer`; backend Apple auth/AASA/push
+  остаются linked `area=back` dependencies.
+
 ### 3.3.1 Production-target validation and task closure
 
 - Если проблема воспроизводится на production, Task Contract называет production
@@ -100,8 +128,11 @@ Android (§3.3) и правило quality-gate lock (§3, шаг 9).
 
 ### 3.4 Координация долгих операций
 
-- Деплой, release/build, production web build, Android local/EAS build or install, server rebuild/restart, full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции с общими артефактами считаются эксклюзивными.
-- Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
+- Деплой, release/build, production web build, Android local build/install,
+  iOS simulator/archive/EAS/upload/submit, server rebuild/restart,
+  full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции
+  с общими артефактами считаются эксклюзивными.
+- Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `xcodebuild`, `simctl`, `expo run:ios`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
 - Если другой агент уже запустил deploy/build/rebuild для того же target, не запускай второй экземпляр: используй уже идущую операцию, дождись её только когда результат обязателен для твоего scope, либо зафиксируй blocker с PID, командой и target.
 - Для test/quality gate действует отдельное non-waiting правило: если живой `.codex-temp/ops/quality-gate.lock` или активный quality-процесс уже существует, текущий чат сразу прекращает свой запуск. Не жди, не poll'и, не следи за завершением, не повторяй команду после освобождения lock и не запускай более узкий обходной тест.
 - Если активный gate по своему scope покрывает проверки текущей задачи и автоматические тесты — единственный оставшийся Done-gate шаг, фиксируй `validation delegated: active gate pid/name` и задачу можно завершить/закрыть. Это не означает `passed`: владелец активного gate обязан исправить все реальные падения и повторить свою проверку; если падение нельзя исправить в его scope, он переоткрывает затронутую задачу или фиксирует blocker. Если scope активного gate не покрывает задачу либо остаются deploy/browser/API/device/другие проверки, фиксируй `validation skipped: active gate pid/name` и не закрывай задачу.

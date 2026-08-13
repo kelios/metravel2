@@ -1,6 +1,6 @@
 # Обязательные требования к OpenSpec artifacts metravel.by
 
-Актуализировано: 2026-08-08. Дополняет `docs/spec-driven-development.md` и
+Актуализировано: 2026-08-13. Дополняет `docs/spec-driven-development.md` и
 `openspec/config.yaml`.
 
 ## Почему требования распределены по artifacts
@@ -23,7 +23,7 @@ Vendor-generated body `.agents/skills/openspec-*` и built-in templates вруч
 - **Problem** — наблюдаемый факт или воспроизведение, а не предполагаемое решение;
 - **Goal** — проверяемое целевое состояние;
 - **User-visible result** — что изменится для пользователя;
-- **Platform impact** — `desktop web | mobile web | Android | shared | none`;
+- **Platform impact** — `desktop web | mobile web | Android | iOS | shared | none`;
 - **Localization impact** — `all current locales | selected locales | none`;
 - **Dependencies** — API/backend/owner/external dependencies и точный blocker;
 - **Fallback/mock policy** — допустим ли fallback; missing backend contract не
@@ -93,8 +93,8 @@ Backend/Django/server design из этого workspace остаётся read-onl
 - разбивать работу на небольшие упорядоченные шаги с конкретным результатом;
 - связывать implementation tasks с requirements/scenarios;
 - включать тесты на ближайшем надёжном уровне без `.skip`;
-- включать browser evidence для desktop/mobile web и USB Android evidence для
-  видимого shared/mobile UI;
+- включать browser evidence для desktop/mobile web, USB Android evidence и
+  iPhone simulator/physical/TestFlight layer по риску видимого shared/mobile UI;
 - включать i18n validation для localization impact;
 - включать соседние consumer/regression probes для shared changes;
 - включать обязательный code-review-and-fix после code changes;

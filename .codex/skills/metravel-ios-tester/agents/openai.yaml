@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel iOS Tester"
+  short_description: "Test MeTravel on simulator and physical iPhone."
+  default_prompt: "Use $metravel-ios-tester to run read-only iPhone QA at the correct simulator, physical-device, or TestFlight layer, capture evidence without secrets, and route confirmed defects to the owning role."

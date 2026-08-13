@@ -18,9 +18,8 @@ Build UI by extending existing primitives first:
 - Reuse `components/ui` and existing feature components before inventing new one-off building blocks.
 - Prefer the existing `Button`, `IconButton`, and `Chip` primitives for small controls.
 - Keep layout stable across loading, success, and error states.
-- Keep mobile web and Android visually and behaviorally identical for the same
-  mobile flow. Any change on one surface automatically requires the same-flow
-  check on the other. Do not introduce platform-specific alternate UX unless the
+- Keep mobile web, Android, and iPhone visually and behaviorally aligned for the
+  same shared mobile flow. Do not introduce platform-specific alternate UX unless the
   platform API makes it technically unavoidable.
 - Design translated layouts for RU/BE/UK/PL/EN: labels may expand, wrap, or use
   different plural forms. Do not solve overflow by hiding meaning or shortening
@@ -41,8 +40,9 @@ Build UI by extending existing primitives first:
 For a new page or redesign:
 
 - Define the route goal and section hierarchy before implementation; reuse `ResponsiveContainer`, `ResponsiveStack`, typography, SEO helpers, and feature components.
-- Verify desktop web, mobile web, and the same flow on a local USB Android build,
-  plus light/dark theme, loading/empty/error states, keyboard/focus, and paired
+- Verify desktop web, mobile web, the same flow on a local USB Android build,
+  and iPhone through `$metravel-ios-tester`, plus light/dark theme,
+  loading/empty/error states, keyboard/focus, and shared
   mobile parity when the screen is shared.
 - Use `$metravel-design-auditor` for a cross-screen consistency matrix; use this skill for the implementation contract and `$metravel-browser-reviewer` for the final browser fix/reverify loop.
 - Use `$metravel-visual-asset-designer` only when an existing primitive, Feather icon, local asset, or real/photorealistic media cannot satisfy the requested slot.
@@ -87,6 +87,8 @@ Verify visual changes before finishing:
 - Check the browser console for new errors.
 - Run the same visible scenario on the locally built Android app installed on the
   USB-connected phone; compare it directly with mobile web.
+- For iOS/shared impact, run the same visible scenario on iPhone at the required
+  simulator/physical/TestFlight layer; do not use simulator evidence for hardware behavior.
 - Run `npm run guard:external-links` or `npm run governance:verify` whenever link handling or policy-sensitive UI changed.
 - Run `npm run test:i18n` and verify affected locales whenever UI copy or
   locale-sensitive behavior changed.

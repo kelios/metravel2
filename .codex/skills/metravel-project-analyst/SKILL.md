@@ -20,8 +20,8 @@ Read first:
 
 - App shape: routes, screens, reusable UI, hooks, services, API clients, utilities, tests, scripts, and deployment files.
 - Platform shape: shared Expo/React Native code, desktop/mobile web adapters,
-  Android files and inactive iOS scaffolding, native modules/config boundaries,
-  and available browser/USB-device validation.
+  Android and active iPhone files, native modules/config boundaries, and
+  available browser/Android-USB/iPhone validation.
 - Localization shape: locale registry, RU/BE/UK/PL/EN resources, web/native
   runtime split, formatting helpers, UI-literal governance, and i18n tests.
 - Active feature areas and existing feature maps.

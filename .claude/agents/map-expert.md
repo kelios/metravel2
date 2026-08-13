@@ -28,7 +28,7 @@ model: opus
 
 - **Не форкать структуру.** Расхождение web↔native лечится общим компонентом; платформенный `.web`/`.native`-файл или `Platform.OS`-гейт — только для технического расхождения (движок Leaflet DOM vs WebView, safe-area инсеты, тени), НЕ для другой вёрстки/порядка кнопок/пропорций/поведения.
 - **При правке любого из:** `MapPlaceBottomCard`, `PlacePopupCard`, `createMapPopupComponent`, `MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet` — обязательно свери, что контракт `map.md` §Mobile parity contract не нарушен на ОБЕИХ платформах, и что общий компонент остался общим (не появился новый `.web`/`.native`-форк вёрстки).
-- **Как проверяю:** mobile web — вживую в браузере (≤560px: screenshot карточки места и тулбара, light+dark). Android — тот же flow на локально собранной и установленной USB-сборке с `adb exec-out screencap`; если устройство/сборка недоступны — точный Android `verify pending`. iOS в текущую QA не входит.
+- **Как проверяю:** mobile web — вживую в браузере (≤560px: screenshot карточки места и тулбара, light+dark). Android — тот же flow на локально собранной и установленной USB-сборке. iPhone — тот же map flow через `ios-tester` на simulator/physical layer по риску; unavailable device/runtime даёт точный `verify pending`.
 
 ## Крупные файлы (нужен split)
 
@@ -64,9 +64,9 @@ model: opus
 
 ## Паритет mobile web ↔ устройство (обязательное правило)
 
-«Мобильная версия» = mobile web (~390px, `isMobile`) + Android ОДНОВРЕМЕННО: пользователь на обеих поверхностях должен видеть один и тот же дизайн. Когда в задаче сказано «мобильный/mobile» — это всегда mobile web и Android вместе, не только одна из них.
+«Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
 
-- **Парная проверка обязательна.** Изменение mobile web проверяется тем же flow на локальной Android USB-сборке; изменение Android проверяется на mobile web. Расхождение исправляется в общем контракте. iOS-приложения пока нет: iOS не входит в QA, Done gate или `verify pending`.
+- **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
 - **Верификация UI-правок — на обеих платформах со скринами:** web-превью 390px (`preview_resize` + `preview_screenshot`) И устройство/эмулятор (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны).
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.

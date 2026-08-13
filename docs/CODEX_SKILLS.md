@@ -66,8 +66,17 @@
 - `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst` - read-only анализ структуры проекта, активных фич, рисков, проверок и handoff к профильным агентам.
 - `$metravel-android-developer` - Android/native разработка и отладка Expo/React Native без регресса production web.
-- `$metravel-ios-developer` - неактивный future-iOS маршрут; используй только
-  после нового явного решения пользователя вернуть iOS в scope, не для обычной QA.
+- `$metravel-ios-architect` - архитектура активного iPhone-приложения: shared/iOS
+  boundaries, Apple capabilities, privacy/signing, task slicing и validation plan.
+- `$metravel-ios-developer` - реализация и отладка активного iPhone-приложения:
+  iOS platform files, Xcode/runtime, Keychain, Apple auth UI, APNs, Universal Links,
+  permissions, maps, media и safe areas.
+- `$metravel-ios-reviewer` - независимый review-and-fix полного iOS task diff с
+  Apple/privacy/release checklist и повторной validation.
+- `$metravel-ios-tester` - read-only QA на simulator, physical iPhone и exact
+  TestFlight candidate; device evidence не подменяется симулятором.
+- `$metravel-ios-release-operator` - signed build, TestFlight/App Store Connect,
+  App Review и storefront operations по четырём отдельным explicit gates.
 - `$metravel-mobile-tester` - read-only парная проверка mobile web и Android,
   touch/layout/runtime баги и retest одного сценария на обеих поверхностях.
 - `$metravel-play-campaign-tester` - ежедневный проход общей Google Play closed-testing кампании на настроенном USB Android, проверка заданий/обновлений/крашей и ведение общего campaign log без покупок, отзывов, удаления приложений или смены аккаунтов.

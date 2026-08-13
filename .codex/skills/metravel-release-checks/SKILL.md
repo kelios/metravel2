@@ -36,7 +36,11 @@ Keep release and performance validation aligned with repo policy:
 - Shared app changes need desktop-web evidence plus paired mobile-web/Android
   evidence. Do not mark Android-ready from a web viewport or mobile-web-ready
   from Android alone; report unavailable active-platform coverage as
-  `verify pending`. iOS is not a current release-readiness target.
+  `verify pending`. Active iOS/shared changes also require the appropriate
+  simulator/physical-iPhone/TestFlight evidence layer.
+- Route explicit signed iPhone build, App Store Connect upload, TestFlight
+  mutation, App Review submit, or storefront release to
+  `$metravel-ios-release-operator`; each stage needs its own authorization.
 - Route explicit Google Play build/submit/track work to `$metravel-google-play-operator`; release-checks may prepare gates but must not infer store mutation authority.
 - Treat deploy execution and rollback as `$metravel-devops-agent` work, not release-checks work.
 - For production deploy command selection, defer to `docs/RELEASE.md` and `$metravel-devops-agent`.

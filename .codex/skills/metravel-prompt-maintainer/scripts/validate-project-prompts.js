@@ -14,6 +14,8 @@ const read = (file) => fs.readFileSync(file, 'utf8')
 const relative = (file) => path.relative(repoRoot, file)
 const agentsInstructions = read(path.join(repoRoot, 'AGENTS.md'))
 const codexGuide = read(path.join(repoRoot, 'docs', 'CODEX.md'))
+const codexSkillsGuide = read(path.join(repoRoot, 'docs', 'CODEX_SKILLS.md'))
+const agentsRoutesSkillCatalog = agentsInstructions.includes('docs/CODEX_SKILLS.md')
 
 const walk = (dir, matcher, output = []) => {
   if (!fs.existsSync(dir)) return output
@@ -44,7 +46,11 @@ for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
     continue
   }
 
-  if (!agentsInstructions.includes(`$${skillName}`)) fail(skillFile, 'skill is not routed from AGENTS.md')
+  const routedFromAgents = agentsInstructions.includes(`$${skillName}`)
+    || (agentsRoutesSkillCatalog && codexSkillsGuide.includes(`$${skillName}`))
+  if (!routedFromAgents) {
+    fail(skillFile, 'skill is not routed from AGENTS.md or its docs/CODEX_SKILLS.md catalog')
+  }
   if (!codexGuide.includes(`$${skillName}`)) fail(skillFile, 'skill is not routed from docs/CODEX.md')
 
   const skill = read(skillFile)

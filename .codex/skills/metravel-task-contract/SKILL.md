@@ -90,14 +90,15 @@ Done gate:
   (`reuse | reopen | create-linked | create-new`); reuse/reopen is preferred over
   a competing card.
 - Architect-level detail is mandatory: concrete request/response shapes (fields +
-  types), desktop-web/mobile-web/Android impact, RU/BE/UK/PL/EN impact, real
+  types), desktop-web/mobile-web/Android/iOS impact, RU/BE/UK/PL/EN impact, real
   board ids for dependencies, and concrete validation commands/URLs. Placeholder
   or empty fields mean the task is not ready — send it back to
   `$metravel-system-architect` or ask one clarifying question.
 - `Platform impact` must name
-  `desktop web | mobile web | Android | shared | none` and the required
-  browser/device evidence. Any mobile-web or Android impact requires paired
-  evidence for both. `Localization impact` must name affected
+  `desktop web | mobile web | Android | iOS | shared | none` and the required
+  browser/device evidence. Any iOS/shared impact selects simulator, physical
+  iPhone, or TestFlight evidence according to the observable contract.
+  Mobile-web/Android impact requires paired evidence for both. `Localization impact` must name affected
   locales or `none`; localization work includes namespaces/keys and `npm run test:i18n`.
 - Do not move a task to `todo` for implementation until the contract has concrete, testable acceptance.
 - `blocked_by` is valid only while a concrete hard dependency prevents implementation from

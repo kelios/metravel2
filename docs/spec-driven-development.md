@@ -1,6 +1,6 @@
 # OpenSpec и Spec-Driven Development в metravel.by
 
-Актуализировано: 2026-08-08. Основная SDD-интеграция — **OpenSpec 1.8.0**,
+Актуализировано: 2026-08-13. Основная SDD-интеграция — **OpenSpec 1.8.0**,
 schema — `spec-driven`, profile — `core`, AI tool — **Codex**.
 
 Этот документ описывает, когда и как использовать Spec-Driven Development (SDD)
@@ -11,10 +11,11 @@ schema — `spec-driven`, profile — `core`, AI tool — **Codex**.
 ## 1. Зачем metravel.by нужен SDD
 
 metravel.by — работающий production-проект с реальными пользователями,
-проиндексированным контентом и тремя активными поверхностями: desktop web,
-mobile web и Android. Основная цена ошибки здесь не «не скомпилировалось», а
+проиндексированным контентом и четырьмя активными поверхностями: desktop
+web, mobile web, Android и iPhone. Основная цена ошибки здесь не «не
+скомпилировалось», а
 тихая регрессия: уехавший URL, второй запрос за той же картинкой, разъехавшийся
-mobile web и Android, потерянный `alt` или сломанный редирект.
+mobile web/Android/iPhone UX, потерянный `alt` или сломанный редирект.
 
 SDD закрывает четыре повторяющиеся проблемы:
 

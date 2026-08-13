@@ -19,8 +19,8 @@ Read first:
 
 ## Scope
 
-- Platform files: `.android.tsx`, `.native.tsx`, `.web.tsx`, inactive `.ios.tsx`
-  scaffolding when adjacent context requires it, and narrow `Platform.OS` gates.
+- Platform files: `.android.tsx`, `.native.tsx`, `.web.tsx`, active adjacent
+  `.ios.tsx` contracts when shared context requires them, and narrow `Platform.OS` gates.
 - Android/native runtime: Expo modules, permissions, notifications, SecureStore, image picker/media, sharing, WebBrowser, navigation, and native-only app startup.
 - Native map behavior: keep web Leaflet code out of native bundles and native map/WebView code out of web bundles.
 - Native crash triage from a local Android build and `adb logcat`.

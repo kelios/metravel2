@@ -13,12 +13,11 @@
 - Рабочая директория приложения: корень репозитория, папка с `package.json`.
 - Источник правил проекта: `docs/RULES.md` и `docs/README.md`.
 - Карта работы Codex и skills: `docs/CODEX.md`.
-- Активные продуктовые поверхности — desktop web, mobile web и Android.
-  iOS/iPadOS-приложения пока нет: iOS не входит в обязательную validation,
-  Done gate или `verify pending`, даже если в репозитории остаются `.ios.*` и
-  `ios/` как технический задел. Перед любой задачей явно определи platform
-  impact: `desktop web | mobile web | Android | shared | none`; правка
-  shared-кода не должна ломать непроверенные активные поверхности.
+- Активные продуктовые поверхности — desktop web, mobile web, Android и iPhone
+  (iOS). Первый iOS-релиз поддерживает только iPhone; iPadOS остаётся вне scope и
+  не создаёт `verify pending`. Перед любой задачей явно определи platform impact:
+  `desktop web | mobile web | Android | iOS | shared | none`; `shared` означает
+  все затронутые активные поверхности.
 - Production UI многоязычен: RU/BE/UK/PL/EN, default/fallback — RU.
   Источник locale contract — `i18n/config.ts`, resource contract —
   `i18n/resources.ts`. Перед любой задачей явно определи localization
@@ -39,6 +38,15 @@
 Каталог `$metravel-*` skills вынесен в `docs/CODEX_SKILLS.md` — читай его при
 работе в Codex или при изменении набора skills. Claude Code маршрутизирует
 задачи собственными `.claude/agents`, отдельного чтения каталога не требует.
+
+Активный iOS-маршрут разделён по ролям:
+
+- `$metravel-ios-architect` — architecture и task slicing;
+- `$metravel-ios-developer` — implementation/debug;
+- `$metravel-ios-reviewer` — независимый review-and-fix;
+- `$metravel-ios-tester` — simulator/physical iPhone/TestFlight QA;
+- `$metravel-ios-release-operator` — signed build и App Store operations по
+  отдельным authorization gates.
 
 Если задача попадает сразу в несколько областей, используй skills вместе, но не загружай лишние справки.
 
@@ -125,6 +133,7 @@
 - тестовые сущности на проде под e2e-аккаунтами (разрешены постоянно, убирать за
   собой) и готовые рецепты прод-QA → §3.1.1;
 - Android: EAS запрещён, локальная сборка и прогон на USB-устройстве → §3.2;
+- iOS: local Xcode/simulator/physical-iPhone QA и store authorization gates → §3.2.1;
 - production-target baseline/after, закрытие perf/media/network задач → §3.3.1;
 - deploy/build/e2e/Lighthouse, эксклюзивность и locks → §3.4.
 
@@ -134,19 +143,24 @@
 
 ### 3.3 Active platform validation and mobile parity
 
-- iOS/iPadOS-приложения пока нет. Не запускай iOS simulator/device/EAS QA, не
-  добавляй iOS в обязательные проверки и не ставь `verify pending` из-за
-  отсутствия iOS evidence. Вернуть iOS в validation можно только новым явным
-  решением пользователя.
-- Любое видимое UI/layout/interaction изменение проверяй на desktop web, mobile
-  web и локально собранном Android-приложении на USB-устройстве.
-- Mobile web и Android — связанная пара. Если задача затрагивает одну из этих
-  поверхностей, автоматически включи вторую в scope и проверь один и тот же
-  сценарий, состояние и locale на обеих.
-- Mobile web и Android должны быть визуально и поведенчески идентичны по
+- Любое видимое shared UI/layout/interaction изменение проверяй на desktop web,
+  mobile web, локально собранном Android-приложении на USB-устройстве и iPhone.
+- Mobile web, Android и iPhone — один связанный mobile UX. Если shared/mobile
+  задача затрагивает одну из этих поверхностей, проверь один и тот же сценарий,
+  состояние и locale на всех затронутых поверхностях.
+- Simulator подтверждает compilation/basic UI. Физический iPhone обязателен для
+  camera/photo/HEIC, Keychain/biometrics, APNs, Universal Links, sharing,
+  permissions и lifecycle; exact processed TestFlight build — acceptance
+  boundary App Store release. Неполное обязательное evidence даёт точный
+  `verify pending`/`testing`, а не ложный pass.
+- Mobile web, Android и iPhone должны быть визуально и поведенчески идентичны по
   иерархии, порядку блоков, ключевым размерам, действиям и touch semantics.
   Допустимы только технические отличия движка, системных permissions/insets и
   OS API; они не должны создавать другой UX.
+- Local Xcode/simulator/device QA разрешена для назначенной iOS/shared задачи.
+  Signed distribution build, App Store Connect/TestFlight upload, App Review
+  submission и storefront release — отдельные mutating operations; каждая
+  требует точной текущей команды пользователя и никогда не запускается автоматически.
 
 ## 4. Обязательные технические правила
 
@@ -168,8 +182,8 @@
 
 - Сначала переиспользуй `components/ui` и существующие фиче-компоненты.
 - Для кнопок/иконок/чипов предпочитай существующие примитивы: `Button`, `IconButton`, `Chip`.
-- Мобильная верстка должна быть визуально и поведенчески одинаковой на mobile web
-  и Android. Платформенные файлы допустимы для технических зависимостей, но не
+- Мобильная верстка должна быть визуально и поведенчески одинаковой на mobile web,
+  Android и iPhone. Платформенные файлы допустимы для технических зависимостей, но не
   для другого UX, порядка блоков, размеров ключевых зон или набора действий.
 - Для map/place/travel-point карточек используй единый point/place template:
   fullscreen в доступной app content-area с видимыми header/footer, hero-фото около
@@ -260,8 +274,9 @@
   («tracked-config classification», «paired evidence») в описании запрещены. Полное правило —
   `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и человеческим языком».
 - На борде используются только рабочие области `front` и `back`: Android/native
-  баги приложения заводи как `area=front` с префиксом `[AND-...]` и парной
-  mobile-web/Android validation в описании; backend/API/server задачи заводи как `area=back`.
+  баги приложения заводи как `area=front` с префиксом `[AND-...]`, iOS-баги —
+  как `area=front` с префиксом `[IOS-...]`; shared mobile tasks содержат
+  mobile-web/Android/iPhone validation. Backend/API/server задачи — `area=back`.
 - Не создавай новые локальные `tasks/*.md` как обычный workflow. Локальные task-файлы допустимы только как временный fallback/migration draft при недоступном борде, после чего задачу нужно перенести на борд и убрать локальный черновик.
 - Все новые задачи, включая Android QA баги, должны быть созданы или обновлены на борде в текущем активном спринте до handoff; локальный fallback не считается завершением задачи, если board token можно обновить через `.env.e2e`.
 
@@ -272,10 +287,10 @@
   повторный review и validation.
 - Запущены проверки по масштабу задачи.
 - Не нарушены правила external links и governance.
-- UI-поведение не сломано на desktop web/mobile web/Android.
-- Platform impact проверен для desktop web/mobile web/Android; mobile web и
-  Android подтверждены парным evidence, а непроверенный Android device scope
-  явно помечен `verify pending`.
+- UI-поведение не сломано на desktop web/mobile web/Android/iPhone.
+- Platform impact проверен для desktop web/mobile web/Android/iOS; shared mobile
+  scope подтверждён одним flow/state/locale, а непроверенный Android/iPhone
+  device scope явно помечен `verify pending`.
 - Localization impact явно указан; для затронутого UI нет новых
   hardcoded strings, а `npm run test:i18n` прошёл.
 - Документация обновлена только при необходимости и в правильном месте.

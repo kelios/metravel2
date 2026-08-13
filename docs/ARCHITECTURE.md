@@ -28,7 +28,7 @@ Production health, Lighthouse и device readiness подтверждаются �
 
 | Область | Что это | Основные файлы |
 | --- | --- | --- |
-| Runtime приложения | Expo Router приложение для desktop/mobile web и Android; iOS scaffolding неактивен | `entry.js`, `app/_layout.tsx`, `app/(tabs)/_layout.tsx` |
+| Runtime приложения | Expo Router для desktop/mobile web, Android и active iPhone; iPad вне v1 | `entry.js`, `app/_layout.tsx`, `app/(tabs)/_layout.tsx` |
 | Frontend UI | React Native компоненты, web-варианты, фичевые блоки | `components/`, `screens/` |
 | Доступ к данным | API-клиенты, query keys, нормализация ответов | `api/`, `utils/resolveApiBaseUrl.ts` |
 | Server state | TanStack Query cache и мутации | `api/queryClient.ts`, `utils/reactQueryConfig.ts`, `hooks/*Api.ts` |
@@ -36,7 +36,7 @@ Production health, Lighthouse и device readiness подтверждаются �
 | Общая логика | Валидация, SEO, external links, медиа, карты, экспорт | `utils/`, `services/` |
 | Дизайн-система | Токены, цвета, layout-константы, CSS-переменные | `constants/designSystem.ts`, `app/global.css` |
 | Проверки | Jest, Playwright, governance guards, selective checks | `__tests__/`, `e2e/`, `scripts/` |
-| Native shell | Активный Android project; `ios/` сохранён как неактивный технический задел | `ios/`, `android/`, `app.json`, `eas.json` |
+| Native shell | Активные Android и iPhone projects; iPad-specific support вне первого release | `ios/`, `android/`, `app.json`, `eas.json` |
 | Документация | Правила, workflow, feature maps, release/testing docs | `docs/` |
 
 ## Технологический Стек
@@ -45,7 +45,7 @@ Production health, Lighthouse и device readiness подтверждаются �
 | --- | --- |
 | Framework | Expo SDK 57, Expo Router 57, React 19.2, React Native 0.86 |
 | Web | React Native Web, Metro web bundler, static export в `dist/prod` |
-| Native | Expo/React Native; активный Android через local Gradle; iOS inactive |
+| Native | Expo/React Native; Android через local Gradle; active iPhone через Xcode/EAS path после release hardening |
 | Язык | TypeScript 6 strict mode, alias `@/*` на корень репозитория |
 | Server state | `@tanstack/react-query` |
 | Client state | Zustand stores + React contexts |
@@ -55,7 +55,7 @@ Production health, Lighthouse и device readiness подтверждаются �
 | Медиа | `expo-image`, upload helpers, CDN/media URL normalization |
 | Auth storage | Native: `expo-secure-store`; web source поддерживает backend-managed HttpOnly cookie без JS token; deployed behavior подтверждается отдельным auth runtime probe |
 | Тесты | Jest/JSDOM, Jest Expo preset, Playwright Chromium |
-| Build/deploy | `npm run build:web:prod`, `build-prod.sh`, local Android Gradle + Play API; iOS scripts dormant |
+| Build/deploy | `npm run build:web:prod`, `build-prod.sh`, local Android Gradle + Play API; iPhone Xcode/EAS + App Store operator gates |
 
 ## Запуск Приложения
 
@@ -560,7 +560,8 @@ Backend ожидается как DRF-like API под `/api`. Многие мо�
 | Messages | implemented | backend-dependent | production thread/message/unread verification |
 | PDF/book export | implemented | export работает; monetization partial | checkout отсутствует, premium gate намеренно выключен |
 | SEO and analytics | implemented | web providers wired; native path должен сохранять consent/secret contract | production HTML/consent проверяются после deploy |
-| Android shell | implemented | readiness требует свежей installed-build проверки | Android USB + парный mobile-web pass; iOS shell inactive |
+| Android shell | implemented | readiness требует свежей installed-build проверки | Android USB + парный mobile-web pass |
+| iPhone shell | active release scope | Expo/Xcode identity и simulator runtime требуют reconciliation | simulator + physical iPhone + exact TestFlight acceptance; iPad вне v1 |
 
 ## Карта Frontend Функциональности
 
@@ -854,12 +855,12 @@ gate сначала создаётся Task Contract на ограниченны
 
 ## Платформенные Различия
 
-| Возможность | Web | Android (iOS scaffolding inactive) |
+| Возможность | Web | Android / iPhone |
 | --- | --- | --- |
 | Routing | Expo Router web static routes | Expo Router native navigation |
 | Main map | Leaflet + React Leaflet | Leaflet inside `react-native-webview` |
 | Header/dock | Custom web chrome + responsive dock/footer | Native footer/dock и native status bar |
-| Storage | local/session storage hardening + AsyncStorage abstractions | SecureStore для секретов, AsyncStorage для несекретного |
+| Storage | local/session storage hardening + AsyncStorage abstractions | SecureStore для секретов (iOS Keychain), AsyncStorage для несекретного |
 | Uploads | `File`, `Blob`, drag/drop helpers | document/image picker assets, XHR upload progress |
 | Push notifications | web hook/fallback | `expo-notifications` native setup |
 | Biometrics | web placeholder | `expo-local-authentication` |
@@ -915,8 +916,8 @@ server paths или SSL paths без проверки существования
 ### Native builds
 
 `app.json` задает bundle IDs, permissions, universal/app links, plugins и Expo
-Router async-route behavior. `eas.json` содержит dormant iOS cloud profiles;
-они не входят в текущий release/QA contract. Активный Android release собирается
+Router async-route behavior. iOS cloud/local release path выбирается и
+fail-closed проверяется active App Store task; активный Android release собирается
 локальным Gradle и публикуется через production-only Google Play API client.
 
 Common scripts:
@@ -931,8 +932,9 @@ npm run android:submit:latest
 npm run android:submit:production
 ```
 
-`ios:*` команды выше — только future scaffolding reference; обычные агенты их не
-запускают и не добавляют iOS evidence/`verify pending` в Done gate.
+`ios:*` команды — legacy entrypoints до hardening канонического App Store path.
+Local simulator/device QA разрешена в iOS/shared задачах; signed build, upload,
+App Review submit и storefront release требуют отдельных authorization gates.
 
 ## Поверхность Проверок
 

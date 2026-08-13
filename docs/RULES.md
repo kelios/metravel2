@@ -10,20 +10,21 @@
 
 ## Application architecture and localization
 
-- Metravel's active product surfaces are desktop web, mobile web, and Android.
-  The repository may retain `ios/` and `.ios.*` scaffolding, but there is no
-  current iOS/iPadOS application, so iOS is not a required QA, release-readiness,
-  Done-gate, or `verify pending` surface until the user explicitly reactivates it.
+- Metravel's active product surfaces are desktop web, mobile web, Android, and
+  iPhone (iOS). The first App Store release is iPhone-only; iPadOS-specific UI,
+  screenshots, multitasking, and acceptance remain out of scope and their
+  absence does not create `verify pending`.
 - Before every task, record
-  `Platform impact: desktop web | mobile web | Android | shared | none` and
+  `Platform impact: desktop web | mobile web | Android | iOS | shared | none` and
   `Localization impact: all current locales | selected locales | none`.
   `none` must be a considered conclusion, not an omitted check.
 - Shared components, hooks, services, API adapters, and state must preserve all
   affected active platforms. Platform files may adapt engines, permissions,
   safe areas, storage, or native APIs, but must not silently fork product behavior.
-- Mobile web and Android are a coupled validation pair. If a change affects one,
-  the task automatically includes the other and verifies the same scenario,
-  state, locale, hierarchy, action order, key geometry, and touch semantics on both.
+- Mobile web, Android, and iPhone implement one mobile UX. Shared/mobile changes
+  verify the same scenario, state, locale, hierarchy, action order, key geometry,
+  and touch semantics on every affected surface. OS APIs, permissions, safe
+  areas/insets, and rendering engines may differ without changing product meaning.
 - The production locale registry is defined by `i18n/config.ts`; it currently
   contains RU/BE/UK/PL/EN with RU as default/fallback. `i18n/resources.ts` and the
   Russian resources define the typed namespace/key contract.
@@ -39,8 +40,8 @@
   lifecycle; do not add locale URL prefixes or `hreflang` without a separate SEO
   routing contract.
 - Any localization-impacting change must pass `npm run test:i18n` plus the normal
-  feature checks. Shared native changes require separate mobile-web and Android
-  evidence; one does not replace the other.
+  feature checks. Shared native changes require separate mobile-web, Android,
+  and iPhone evidence at the appropriate simulator/device layer.
 
 ## Development workflow
 
@@ -84,8 +85,9 @@ npm run test:run
   - check the browser console for errors (no new errors should appear after the change).
 - If a task changes visible UI/layout/interaction on any active surface, also run
   the same scenario on a locally built Android app installed on the USB-connected
-  phone. Visible UI completion therefore requires desktop web + mobile web +
-  Android evidence unless a concrete environment blocker is reported.
+  phone and on iPhone when iOS/shared behavior is affected. Visible shared UI
+  completion therefore requires desktop web + mobile web + Android + iPhone
+  evidence unless a concrete environment blocker is reported.
 - Always self-verify (mandatory):
   - the agent must verify its own changes end-to-end (browser and/or tests) before handoff — never defer verification to the user and never report a change as done/fixed while verification is still pending;
   - **never offload browser verification to the user.** Asking the user to scroll, hard-refresh, open devtools, run a console snippet, take a screenshot, or "tell me what you see" is NOT verification — it is offloading, and it is forbidden as a substitute for doing it yourself. The user reporting a bug is the input; confirming the fix in a browser is your job, not theirs;
@@ -109,8 +111,16 @@ npm run test:run
   - Android device QA requires a locally built Android app installed over USB on the connected phone, for example `cd android && ./gradlew :app:installDebug` or `:app:assembleDebug` plus `adb install -r ...`;
   - do not substitute mobile web viewport evidence, Expo web export, EAS preview/development/production builds, or dev-client/export flows for Android device validation without explicit user approval;
   - if local build/install is blocked, report the exact command, result, and next safe step instead of claiming Android verification passed.
-- Do not start iOS simulator/device/EAS QA as an implicit path. iOS is inactive
-  and excluded from current validation until a new explicit product decision.
+- iOS validation policy (mandatory):
+  - local Xcode/simulator/device QA is a normal path for assigned iOS/shared work;
+  - simulator evidence covers compilation and basic UI, but not hardware,
+    signing, TestFlight, APNs delivery, Universal Links, HEIC, biometrics, or
+    production embedded configuration;
+  - physical iPhone evidence is required for device capabilities and lifecycle;
+    the exact processed TestFlight build is the App Store acceptance boundary;
+  - signed distribution build, App Store Connect/TestFlight upload, App Review
+    submission, and storefront release are separate operations, each requiring
+    an explicit current user command. Never infer or automate the next gate.
 - Task-board token recovery (mandatory):
   - if `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`, or the MCP `ticket-board` tools return `HTTP 401`, first refresh the staff DRF token with a programmatic login using the credentials from `.env.e2e` and the procedure in `docs/TASK_BOARD_MCP.md`;
   - write the refreshed token only to `.secrets/metravel-task-board.env`, never to chat, screenshots, committed files, or shell logs, then retry the board endpoints;
@@ -125,7 +135,7 @@ npm run test:run
   - For larger changes, use the full `npm run lint` and `npm run test:run` pass.
 - Long-running operation coordination is mandatory:
   - deploys, release/build commands, production web builds, Android local/EAS builds or installs, server rebuilds/restarts, full/preflight checks, Playwright/e2e, Lighthouse, and any command that writes shared build/test artifacts are exclusive by operation type and target;
-  - before starting one, check active processes and known locks for the same target, for example `ps`/`pgrep -af` matches for `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `docker compose`, `nginx`, `systemctl`, plus lock files such as `dist/.prod-build.lock` or `.codex-temp/ops/*.lock`;
+  - before starting one, check active processes and known locks for the same target, for example `ps`/`pgrep -af` matches for `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `xcodebuild`, `simctl`, `expo run:ios`, `docker compose`, `nginx`, `systemctl`, plus lock files such as `dist/.prod-build.lock` or `.codex-temp/ops/*.lock`;
   - if another agent or terminal already runs the same deploy/build/rebuild target, do not start a duplicate. Reuse the active operation, wait only when its result is required by your scope, or report a blocker with PID, command, target, and the next safe action;
   - test/quality gates use a stricter non-waiting contract: when a live `.codex-temp/ops/quality-gate.lock` or active quality process exists, stop the attempted validation immediately. Do not wait, poll, monitor completion, retry after the lock is released, or start a narrower bypass test;
   - when the active gate's scope covers the current task and automated tests are its only remaining Done-gate step, report `validation delegated: active gate pid/name`; the task may be completed/closed without claiming that tests already passed. The active owner must fix real failures and rerun; if a failure cannot be resolved in that scope, the owner reopens the affected task or records a blocker;
@@ -160,8 +170,9 @@ npm run test:run
     `created_at`/`updated_at` when immutable status history is unavailable;
   - frontend, backend, and cross-functional work items must be created on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`;
   - task `area` is only `front` or `back` for active workflow: Android/native app
-    bugs are `area=front` with `[AND-...]` context and paired mobile-web/Android
-    validation in the title/description; use `area=back` only for backend/API/server work;
+    bugs are `area=front` with `[AND-...]` context, iOS app bugs are `area=front`
+    with `[IOS-...]` context, and shared mobile tasks name mobile-web/Android/iPhone
+    validation in the description; use `area=back` only for backend/API/server work;
   - `blocked_by` is only for a task that cannot start or continue because a concrete hard dependency is unresolved. A completed implementation waiting for code review, QA, backend/deploy/production/API/browser/device evidence, or another Done-gate check stays in `review` or `testing`; a validation failure requiring code changes returns to `in_progress`;
   - never use `blocked_by` merely because a Done gate is incomplete, a reviewer/tester has not run yet, or production verification is pending. Link the true blocker task/gate only when it prevents implementation work itself;
   - every `area=front` or `area=back` board task must include the required Task Contract, sprint, dependencies, blockers, validation, and Done gate;
@@ -432,10 +443,10 @@ npx serve dist/prod -l 3000 -s
 - Before creating new UI components or styles, check `components/ui` and existing feature components and reuse them.
 - Add new components only when no existing component can be reasonably extended or composed.
 - When adding buttons, icons, or small UI primitives, prefer existing `components/ui` primitives (`Button`, `IconButton`, `Chip`) over custom one-offs.
-- Rows of **secondary tool actions** (dictate, import, paste, copy, download, export) must use `components/ui/ToolActionsRow.tsx`: icon + label on desktop web, icon-only 44/48dp in a single row on mobile web and Android. Do not ship two or three full-size labeled buttons that wrap into a stack on a phone. Primary step/screen actions (Save, Next, Publish) keep their labels on every width. Details and exceptions: `docs/DESIGN_SYSTEM.md`.
+- Rows of **secondary tool actions** (dictate, import, paste, copy, download, export) must use `components/ui/ToolActionsRow.tsx`: icon + label on desktop web, icon-only 44/48dp in a single row on mobile web, Android, and iPhone. Do not ship two or three full-size labeled buttons that wrap into a stack on a phone. Primary step/screen actions (Save, Next, Publish) keep their labels on every width. Details and exceptions: `docs/DESIGN_SYSTEM.md`.
 - Never ship a control that is permanently `disabled` because the platform lacks the API (example: Web Speech dictation on native). Render it only where it works and explain the alternative with a hint.
-- Rich-text editor toolbars are docked **below** the editor on mobile web and Android: the OS text-selection menu ("Cut / Copy / …") draws over the selection and would cover a top toolbar exactly when the user needs the link/image buttons.
-- Mobile layout parity is mandatory: mobile web and Android must use the same
+- Rich-text editor toolbars are docked **below** the editor on mobile web, Android, and iPhone: the OS text-selection menu ("Cut / Copy / …") draws over the selection and would cover a top toolbar exactly when the user needs the link/image buttons.
+- Mobile layout parity is mandatory: mobile web, Android, and iPhone must use the same
   visual and interaction contract for the same user-facing flow. A change on
   either surface must be checked on both. Platform files may adapt technical map
   engines, safe areas, or native APIs, but must not introduce different UX,

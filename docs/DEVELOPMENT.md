@@ -40,15 +40,18 @@ Dev note:
 - Do not patch app code only to silence this environment-specific limitation.
 - Treat it as a bug only when frontend code generated an invalid URL or regressed existing media normalization.
 
-### Android (active) / iOS scaffolding (inactive)
+### Android and iPhone (active)
 
 ```bash
 npm run ios
 npm run android
 ```
 
-`npm run ios` сохранён как future scaffolding path, но iOS-приложения пока нет:
-обычные development/QA задачи его не запускают и не создают iOS `verify pending`.
+`npm run ios` запускает Expo iOS dev flow, но сам по себе не доказывает local
+Xcode build, physical-device behavior или TestFlight readiness. Для active iOS
+task сначала проверь eligible destination, затем используй simulator/physical
+iPhone layer по `docs/WORKFLOW_OPERATIONS.md`; store operations выполняет только
+`$metravel-ios-release-operator` после отдельной authorization.
 
 Android QA rule:
 
@@ -59,6 +62,16 @@ Android QA rule:
   does not use Expo export/dev-client as a device substitute.
 - Любая Android UI-проверка включает тот же сценарий на mobile web; любое
   изменение mobile web включает парную Android USB-проверку.
+
+iPhone QA rule:
+
+- Simulator подтверждает compilation/basic UI. Camera/photos/HEIC,
+  Keychain/biometrics, APNs, Universal Links, sharing, permissions и lifecycle
+  проверяются на физическом iPhone; release acceptance — на exact TestFlight build.
+- Shared/mobile changes сохраняют тот же flow/state/locale на mobile web,
+  Android и iPhone. iPad-specific layout/screenshots не входят в первый release.
+- Signed build, TestFlight/App Store upload, App Review submit и storefront
+  release — отдельные operations; ни одна не разрешает следующую автоматически.
 
 ## Useful scripts
 

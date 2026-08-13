@@ -1,6 +1,6 @@
 # Docs index
 
-Актуализировано: 2026-08-08.
+Актуализировано: 2026-08-13.
 
 `docs/RULES.md` определяет обязательные правила. Не каждый файл в `docs/`
 является source of truth: dated snapshots и legacy adapters классифицированы
@@ -74,6 +74,9 @@
 
 ## Native/store operations
 
+- `docs/IOS_OWNER_GUIDE.md` — пошаговая owner-инструкция для подготовки Apple
+  Developer и App Store Connect по человеческой задаче #1410; создание App
+  Store record, TestFlight и submission в этот этап не входят;
 - `docs/ANDROID_OWNER_GUIDE.md` — owner-only Android build/Play flow;
 - `docs/ANDROID_STORE_LISTING.md` — текущий store listing draft.
 

@@ -244,17 +244,25 @@ Android release contract:
   `internal` together after its dry-run; it keeps `production`, `beta`, testers,
   and countries immutable. See `docs/ANDROID_OWNER_GUIDE.md`.
 
-### iOS (inactive)
+### iOS / App Store (active iPhone scope)
 
-iOS/iPadOS-приложения пока нет. Эти команды сохранены только как future
-scaffolding reference и не входят в обычные release checks, QA или Done gate.
-Запуск возможен только после нового явного решения пользователя вернуть iOS в scope.
+Первый релиз — iPhone-only; iPad-specific UI/screenshots не входят в acceptance.
+Команды ниже остаются legacy entrypoints до выбора и hardening одного
+канонического release path в active iOS release task. Interactive helper может
+предлагать `--auto-submit`, поэтому его нельзя считать blanket authorization.
 
 ```bash
 npm run ios:prebuild
 npm run ios:build:prod
 npm run ios:submit:latest
 ```
+
+Разделяй четыре authorization gates: signed distribution build, App Store
+Connect/TestFlight upload, App Review submission и storefront release. Для
+каждого нужна отдельная текущая команда владельца. До build/upload fail closed
+на placeholder IDs, version/build drift, signing/entitlements/privacy mismatch,
+dev origins и неизвестный source revision. Exact processed TestFlight candidate
+принимается `$metravel-ios-tester` на физическом iPhone до App Review submit.
 
 ### Android
 
@@ -292,8 +300,8 @@ npm run android:build:prod
 See `PRODUCTION_CHECKLIST.md`.
 
 - Do not commit production secrets into `.env.*`.
-- iOS cloud secrets относятся только к неактивному future path и не нужны для
-  текущих web/Android release checks.
+- iOS credentials and signing material belong only in approved local/EAS/Apple
+  secret stores; they are excluded from web/Android checks, Git, logs, and docs.
 - Keep Android upload-keystore credentials in the local secret store as the four
   `METRAVEL_ANDROID_KEYSTORE_*` variables. Keep the Google Play service-account
   key gitignored; never print either credential set.

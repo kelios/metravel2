@@ -169,10 +169,12 @@ reopen count.
 Модель: `Task{title, description, kind: task|feature|bug, status: backlog→todo→in_progress→review→
 testing→done (+ blocked_by, wont_do), area: front|back, urgency: highest|high|medium|low|
 lowest, reporter, assignee, sprint, position, needs_human, blocked_by_id, depends_on_ids[],
-related_to_ids[]}`. Заголовок с префиксом источника `[FE-…]`/`[BE-…]`/`[AND-…]`.
-Android/native-задачи по приложению ведутся как `area=front`; paired
-mobile-web/Android контекст фиксируй
-в заголовке, описании, owner/assignee и Done gate. `area=back` используй только для backend/API/
+related_to_ids[]}`. Заголовок с префиксом источника `[FE-…]`/`[BE-…]`/`[AND-…]`/`[IOS-…]`.
+Android/iOS-задачи по приложению ведутся как `area=front`; `[AND-…]`
+сохраняет paired mobile-web/Android context, `[IOS-…]` фиксирует нужный
+simulator/physical/TestFlight layer, а shared mobile task называет все
+затронутые поверхности в описании, owner/assignee и Done gate. `area=back`
+используй только для backend/API/
 инфраструктуры.
 
 ### Правило: `area=back` не проверяется без прямого запроса
@@ -470,9 +472,8 @@ id зависимостей, конкретные команды/URL валид�
 - `User-visible result` — наблюдаемое поведение на web/mobile/admin/API.
 - `Data/API contract` — для BE: endpoint, method, auth, request/response shape, migrations/seed;
   для FE: какие endpoints/fields/events потребляются и какие UI states должны появиться.
-- `Platform impact` — `desktop web | mobile web | Android | shared | none`, с
-  точным перечнем обязательных browser/device checks; mobile web и Android
-  проверяются парно, `none` должен быть обоснован.
+- `Platform impact` — `desktop web | mobile web | Android | iOS | shared | none`,
+  с точным перечнем обязательных browser/device checks; `none` должен быть обоснован.
 - `Localization impact` — RU/BE/UK/PL/EN, выбранные locales или `none`;
   для app-owned UI copy укажи translation namespaces/keys и `npm run test:i18n`.
 - `Dependencies` — board id связанных FE/BE задач; если FE ждёт BE, укажи конкретный BE id и
@@ -489,9 +490,9 @@ id зависимостей, конкретные команды/URL валид�
   операция, исследование); для bug и для консолидации `none` запрещён.
   Это поле — прямое следствие замера в `docs/PROBLEM_MEMORY.md`: семейства, у которых
   после фикса не осталось постоянного контроля, воспроизводились неограниченно.
-- Для shared-правок `Validation` разделяет desktop-web evidence и парное
-  mobile-web/Android evidence; одна активная поверхность не заменяет другую.
-  iOS не входит в текущий Done gate. Localization evidence указывает
+- Для shared-правок `Validation` разделяет desktop-web, mobile-web/Android
+  control и iPhone evidence нужного simulator/physical/TestFlight layer; одна
+  активная поверхность не заменяет другую. Localization evidence указывает
   проверенные locales, formatting/plural/SEO/accessibility scope и i18n tests.
 - `Done gate` — условия закрытия: код + тесты + runtime evidence. Для BE, который разблокирует
   FE, `done` требует smoke-пробу deploy target (`dev`/`prod`) по контрактным endpoints. Для FE,
@@ -568,8 +569,8 @@ evidence на заявленных платформах и сравнение с
 - При **создании** любого тикета (`metravel_task_create`) — всегда указывать `sprint`. Не
   знаешь какой — сначала получи `/api/sprints/` или `metravel_sprints_list` и выбери текущий
   спринт со статусом `active`. Если есть несколько активных спринтов, клади в активный спринт
-  нужной рабочей очереди: frontend/app/mobile/Android → `area=front`,
-  legacy inactive iOS records также остаются `area=front`, backend/API/infra →
+  нужной рабочей очереди: frontend/app/mobile/Android/iOS → `area=front`,
+  backend/API/infra →
   `area=back`. Бэклог-кандидаты без даты — только в активный backlog/migration спринт.
 - При **аудите** борда любой открытый тикет (`backlog/todo/in_progress/review/testing`) без
   спринта = дефект гигиены → положить в подходящий активный спринт. Закрытые

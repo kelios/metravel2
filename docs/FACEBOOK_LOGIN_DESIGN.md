@@ -4,7 +4,9 @@
 deploy backend task `#962`.
 
 Нормативные экраны: desktop/mobile web `/login` и `/registration` плюс тот же
-flow на Android. iOS в текущий scope не входит.
+flow на Android. iPhone активен в продукте, но старая задача `#963`
+не охватывала iOS; его auth contract ведёт активная `[IOS-...]`
+задача, а не web-only Facebook SDK из этого документа.
 
 Текущая задача `#963` реализует только web-вариант. Android здесь остаётся
 целевым parity-контрактом для отдельной native-задачи: web SDK не подменяет

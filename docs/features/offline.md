@@ -90,7 +90,7 @@ Mobile web сохраняет тот же control/state contract и умеет �
 ## UX states и Design evidence
 
 Нормативны порядок блоков, подписи действий, empty/error/progress states,
-touch-targets 44/48dp и одинаковая иерархия на mobile web/Android.
+touch-targets 44/48dp и одинаковая иерархия на mobile web/Android/iPhone.
 
 ```text
 ┌─────────────────────────────────────┐

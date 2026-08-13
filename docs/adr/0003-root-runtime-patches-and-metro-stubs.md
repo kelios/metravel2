@@ -29,7 +29,7 @@ removal gate. Новые обходы нельзя добавлять без с�
 | --- | --- | --- | --- |
 | `entry.js` | До первого import ставит узкий web guard повторного `default` export, Safari polyfills, native RNGH/Reanimated globals и FontFaceObserver hardening; последним передаёт управление `expo-router/entry`. | [Expo Router](https://github.com/expo/expo/tree/main/packages/expo-router). Удалять workaround отдельно, когда поддерживаемые браузеры/Expo воспроизводимо не требуют его и negative regression test проходит без него. | `npm run guard:eager-web:fail`; production web build; Safari web smoke; Android startup smoke для native bootstrap. |
 | `app/+html.tsx` | Формирует pre-hydration HTML: storage hardening первым script, legacy redirect, route SEO/canonical/theme, critical CSS, resource hints, hero preload и consent-gated web analytics. Порядок head scripts и отсутствие duplicate title/canonical — invariant. | [Expo Router HTML](https://docs.expo.dev/router/advanced/root-html/). Удалять отдельный script только после эквивалентного framework/server path и static-export evidence. | `__tests__/app/html.head-fallback.test.ts`, `html.storage-hardening.test.ts`, `leafletCssLink.test.ts`, `html.analytics.test.ts`; production SEO/build checks. |
-| `app/_layout.tsx` | Владеет provider order, QueryClient lifetime, theme/error boundary, fonts/splash, web hydration chrome и native footer/runtime. Один provider tree и отсутствие native black screen — invariant. | [Expo Router root layout](https://docs.expo.dev/router/basics/layout/). Менять только с provider-order contract test и web/native runtime evidence. | `npm run typecheck`; affected layout/provider Jest; desktop/mobile web route smoke; installed Android build smoke. |
+| `app/_layout.tsx` | Владеет provider order, QueryClient lifetime, theme/error boundary, fonts/splash, web hydration chrome и native footer/runtime. Один provider tree и отсутствие native black screen — invariant. | [Expo Router root layout](https://docs.expo.dev/router/basics/layout/). Менять только с provider-order contract test и web/native runtime evidence. | `npm run typecheck`; affected layout/provider Jest; desktop/mobile web route smoke; installed Android build smoke; iPhone simulator/physical smoke по риску. |
 | `metro.config.js` | Сохраняет Expo defaults, блокирует generated dirs, включает inline requires, задаёт platform resolver/stubs, dev API/static middleware и opt-in bundle probe. Native resolution и production output не должны меняться от web aliases. | [Expo Metro config](https://github.com/expo/expo/tree/main/packages/%40expo/metro-config), [Metro](https://github.com/facebook/metro). Удалять ветку только после upgrade comparison и platform-specific build evidence. | `node scripts/verify-react-leaflet-setup.js`; `npm run guard:eager-web:fail`; production web build; native smoke при resolver changes. |
 
 ### Postinstall patch inventory
@@ -65,7 +65,8 @@ Baseline в каждой строке — Expo `57.0.4` / RN `0.86.0`.
 2. Сначала добавить executable regression для named invariant, затем временно убрать один patch/stub.
 3. Для web resolver/root HTML — production export и browser/SEO/bundle checks; dev Metro недостаточен.
 4. Для native bootstrap/resolution/rich text — локальная установленная Android
-   сборка + парный mobile-web flow; iOS не входит в текущий scope.
+   сборка + парный mobile-web flow + iPhone simulator/physical layer
+   по риску затронутого native contract.
 5. Удалять один workaround за изменение. При неуспехе вернуть его и сохранить evidence/upstream blocker.
 
 ## Последствия

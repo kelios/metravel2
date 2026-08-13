@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel iOS Release Operator"
+  short_description: "Build and operate TestFlight/App Store releases."
+  default_prompt: "Use $metravel-ios-release-operator to prepare the exact authorized iPhone release gate, fail closed on identity/signing/privacy drift, and keep signed build, TestFlight upload, App Review submission, and storefront release as separate approvals."

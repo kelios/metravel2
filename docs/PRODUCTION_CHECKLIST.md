@@ -1,13 +1,14 @@
 # Production release checklist
 
-Актуализировано: 2026-07-17.
+Актуализировано: 2026-08-13.
 
 Checklist описывает действия, но не подтверждает, что конкретный релиз уже
 прошёл. Evidence прикладывается к release/task на MCP board.
 
 ## Authorization and target
 
-- [ ] Явно указан активный target: web `dev` / `preprod` / `prod` или Android.
+- [ ] Явно указан активный target: web `dev` / `preprod` / `prod`, Android или
+      iPhone, а для store — конкретная операция.
 - [ ] Для production rollout/submit есть отдельное явное разрешение пользователя.
 - [ ] Текущая ветка — `main`; working tree и scope проверены.
 - [ ] Нет чужого build/deploy/test процесса или активного lock для того же target.
@@ -112,6 +113,34 @@ testers и countries защищены.
       использованы только `android:submit:testing:latest` →
       `android:submit:testing`; после commit подтверждены `alpha`/`internal`, а
       `production`/`beta`, тестировщики и страны не изменились.
+
+## iPhone / App Store release
+
+Канонический owner flow — `docs/IOS_OWNER_GUIDE.md`, `docs/RELEASE.md` и
+`$metravel-ios-release-operator`. Первый release поддерживает iPhone;
+iPad-specific UI/screenshots не входят в acceptance.
+
+- [ ] Подтверждена точная текущая authorization только для одного
+      stage: signed build, App Store Connect/TestFlight upload/group mutation,
+      App Review submit или storefront release. Предыдущий stage не
+      разрешает следующий; implicit `--auto-submit` запрещён.
+- [ ] Source revision на `main`, bundle identifier, marketing version,
+      возрастающий build number, signing team/profile, entitlements, privacy
+      manifest/purpose strings и production HTTPS origins согласованы.
+- [ ] Нет placeholder Apple/App Store/Team IDs, dev hosts, неизвестного
+      archive source, неполного privacy/compliance state или секретов в
+      config/artifact/logs/evidence.
+- [ ] Simulator подтвердил compilation/basic UI; physical iPhone закрыл
+      нужные device-capability кейсы. Перед App Review exact processed
+      TestFlight build прошёл `IOS-01..14` scope из Task Contract.
+- [ ] Upload выполнен один раз; processing не привёл к duplicate upload.
+      Фактические version/build и App Store Connect state сверены после
+      операции.
+- [ ] Store metadata, screenshots, privacy labels, encryption/compliance,
+      support/privacy/account-deletion URLs и reviewer access соответствуют
+      фактическому runtime принятого build.
+- [ ] Upload не назван публикацией; Apple approval и public storefront
+      availability не заявлены до фактического App Store Connect state.
 
 ## Post-deploy
 

@@ -446,10 +446,10 @@ board task.
 
 ## Прогон по платформам
 
-После написания/ревью всех сценариев выше видимый UI проверяется на трёх активных
-поверхностях: desktop web, mobile web и Android. Mobile web и Android всегда
-проверяются парно: один и тот же flow, состояние и locale должны выглядеть и
-работать одинаково. iOS-native в текущий прогон не входит.
+После написания/ревью всех сценариев выше видимый shared UI проверяется на
+desktop web, mobile web, Android и iPhone. Mobile web и Android остаются парным
+контролем; active iPhone проверяет тот же flow/state/locale на simulator или
+physical/TestFlight layer по риску. iPadOS не входит в первый релиз.
 
 ### Android USB / local-build smoke
 
@@ -583,6 +583,37 @@ Owners/follow-up:
 | AND-USB-30 | P1 | manual Android profile IA/statistics | manual |
 | AND-USB-31 | P2 | manual Android header/menu/ad slots | manual |
 
+### iPhone simulator / physical device / TestFlight
+
+Перед прогоном укажи source revision, version/build, layer, model/runtime,
+iOS version, backend target, account mode и locale. Не записывай Team ID, UDID,
+Apple credentials, tokens или signing material. Simulator не закрывает кейсы с
+hardware/signing/production behavior.
+
+| ID | Layer | Сценарий | Ожидаемый результат |
+| --- | --- | --- | --- |
+| IOS-01 | Simulator | Eligible destination + clean build/launch | Xcode видит destination; app собирается и открывается без Metro dependency, red screen и fatal runtime error |
+| IOS-02 | Simulator + TestFlight | Guest journey: home/search/travel/article/quest/map | Public content доступен без forced login; navigation и loading/error states не зависают |
+| IOS-03 | Physical + TestFlight | Auth providers, включая Sign in with Apple | Cancel/error не создают partial session; success даёт стандартную MeTravel session; returning/private-relay user не дублируется |
+| IOS-04 | Physical + TestFlight | Keychain lifecycle | Sign-in survives background/force-stop/cold restart; logout/account invalidation removes session without logout flash loop |
+| IOS-05 | Physical + TestFlight | Universal Links cold/warm | Valid `https://metravel.by` route opens equivalent screen; malformed/untrusted path uses safe fallback without duplicate stack |
+| IOS-06 | Simulator + Physical | Safe areas, keyboard, Dynamic Type, VoiceOver, reduced motion | Primary content/actions remain named, ordered, reachable, unclipped and at least 44 pt |
+| IOS-07 | Physical + TestFlight | Map/location/navigation | Tiles/markers/cards load; deny location keeps manual browsing; external navigation has safe installed/not-installed fallback |
+| IOS-08 | Physical + TestFlight | Photo/camera/HEIC/gallery/share/export | Allow/deny paths recover; HEIC uploads; ordering/delete/swipe are stable; system share/export returns to the same screen |
+| IOS-09 | Physical + TestFlight | Notification permission, APNs and routing | Prompt timing is contextual; real delivery arrives; foreground/background/tap routes work; token update/removal is observable |
+| IOS-10 | Simulator + Physical + TestFlight | RU/BE/UK/PL/EN and cold restart | No raw keys; long labels fit; dates/plurals use active locale; selected locale restores before launch-critical copy |
+| IOS-11 | TestFlight | Offline/slow/error recovery | Cached/visible content remains useful; retry recovers; no blank screen, infinite skeleton, crash or unrelated data loss |
+| IOS-12 | TestFlight | Fresh install/update + production configuration | Exact processed candidate uses expected bundle/version/build and production HTTPS origins; no dev host, placeholder or secret appears |
+| IOS-13 | TestFlight | Profile/settings/account deletion/privacy paths | Reviewer can find required privacy/support/account-deletion behavior and runtime matches store declarations |
+| IOS-14 | TestFlight | Crash/hang/launch matrix | Launch-critical flows complete without crash/hang; evidence identifies exact build and any non-blocking warning |
+
+Любой release-blocking fail возвращает implementation task в `in_progress`.
+Если дефект найден в уже загруженном/processed TestFlight candidate,
+после фикса нужен новый увеличенный build number и полный candidate
+gate; simulator/local-device fail до upload сам по себе build number не
+расходует. Ожидание TestFlight processing или App Store state остаётся
+`testing`, а не `blocked_by`.
+
 ### Чек-лист платформ
 
 | Платформа | Среда | Особенности проверки |
@@ -590,9 +621,13 @@ Owners/follow-up:
 | **Web Desktop** | Браузер ≥1440px | 2–3 колонки списка, sidebar фильтров, Leaflet-карта, hover/focus, Web Share API, экспорт PDF/GPX/KML |
 | **Web Mobile** | Браузер ≤600px | 1 колонка, фильтры в fullscreen modal, bottom sheet на карте, fullscreen popup места |
 | **Android** | Локальная сборка на USB-устройстве | Тот же mobile UX, что на Web Mobile; WebView + Leaflet native map, нативный share/picker, кнопка «назад» системы |
+| **iPhone simulator** | Eligible Xcode simulator | Compilation/startup, basic UI/navigation, locales, safe areas, keyboard и deterministic error states |
+| **Physical iPhone** | Локальная signed/dev build на подключённом устройстве | Camera/photo/HEIC, Keychain/biometrics, permissions, Universal Links, sharing, lifecycle и real safe areas |
+| **TestFlight** | Exact processed release candidate | Production config/signing, fresh install/update, Apple login, APNs delivery, complete release matrix и crash/hang evidence |
 
-iOS/iPadOS-приложения пока нет. Не добавляйте iOS simulator/device evidence или
-`verify pending` в обычные прогоны до отдельного решения вернуть iOS в scope.
+Simulator evidence не заменяет physical iPhone/TestFlight там, где тест зависит
+от hardware, signing, entitlements, APNs, Universal Links или production config.
+Отсутствующее обязательное evidence фиксируется как точный blocker/`verify pending`.
 
 
 ## Политика evidence

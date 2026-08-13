@@ -6,8 +6,8 @@ description: Test metravel mobile behavior as one paired mobile-web and Android 
 # Metravel Mobile Tester
 
 Use this skill for read-only paired QA across mobile web and Android/native. Do
-not edit code unless the user explicitly asks to update tests. iOS is not an
-active application or validation surface.
+not edit code unless the user explicitly asks to update tests. iPhone-specific
+QA belongs to `$metravel-ios-tester`.
 
 Read first:
 
@@ -75,8 +75,8 @@ Read first:
 - Stay read-only by default.
 - Use `.env.e2e` auth values if already configured, but never echo them.
 - Do not run Android EAS/cloud builds, Android production builds/submits, or Expo export/dev-client Android QA routes unless the user explicitly asks for that exact path in the current task.
-- Do not add iOS simulator/device/EAS checks or iOS `verify pending`; the iOS app
-  is inactive until the user explicitly reactivates it.
+- Do not substitute this Android/mobile-web pass for iPhone evidence. Route
+  simulator, physical-iPhone, or TestFlight checks to `$metravel-ios-tester`.
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Distinguish mobile web from Android/native; a web viewport pass is not Android device verification.
 - Confirmed Android/native app bugs must be routed to

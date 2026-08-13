@@ -34,7 +34,7 @@ production-readiness отчётом. Реальная доступность р�
 | --- | --- | --- |
 | `/map` на web | React Leaflet, filters, radius/route modes, panels, overlays | browser flow, console/network, backend payloads |
 | `/map` на Android | Leaflet HTML/JS в WebView, RN bridge, offline tile cache | локальная USB device build, permissions, WebView messages, tiles/offline + сравнение с mobile web |
-| iOS scaffolding | `Map.ios.tsx` содержит общий WebView renderer-задел | не входит в текущую QA/Done gate |
+| iPhone | `Map.ios.tsx` содержит WebView renderer | active release scope; simulator + physical iPhone map QA |
 | Embedded travel map | React Leaflet на web, Leaflet-in-WebView на native | travel detail interaction и route-point parity |
 | `/places` | отдельный places catalog поверх нормализованных map points | см. `docs/features/places.md`; backend-dependent |
 | Quest maps | отдельные quest adapters | не принадлежат основной map renderer; проверяются quest-сценарием |

@@ -18,11 +18,10 @@
 - `features/` — domain maps; `adr/` — принятые architecture decisions.
 
 Общий application contract: активные поверхности единого Expo/React Native
-codebase — desktop web, mobile web и Android; production UI поддерживает
-RU/BE/UK/PL/EN. iOS/iPadOS-приложения пока нет, поэтому iOS не входит в
-обязательную validation или Done gate. Перед задачей фиксируй
-platform/localization impact по `AGENTS.md` и `CODEX.md`; mobile web и Android
-всегда проверяются парно, implementation-детали i18n — в
+codebase — desktop web, mobile web, Android и iPhone; production UI поддерживает
+RU/BE/UK/PL/EN. Первый App Store release — iPhone-only, iPadOS пока вне scope.
+Перед задачей фиксируй platform/localization impact по `AGENTS.md` и `CODEX.md`;
+mobile web, Android и iPhone сохраняют один mobile UX, implementation-детали i18n — в
 `DEVELOPMENT.md#localization`.
 
 Dated analytics/SEO/content files — snapshots, а не live source of truth.
@@ -94,8 +93,8 @@ OpenAPI/Redoc URL строится от текущего configured origin. Не
 документации частный LAN host.
 
 Auth contract разделён по платформам: web использует HttpOnly cookie,
-`credentials: include` и CSRF без читаемого JavaScript token; Android использует
-SecureStore и `Authorization: Token`. Все fetch/upload/download adapters должны
+`credentials: include` и CSRF без читаемого JavaScript token; Android/iOS используют
+SecureStore (на iOS — Keychain) и `Authorization: Token`. Все fetch/upload/download adapters должны
 сохранять этот split. Credentials и tokens берутся только из gitignored
 env/secret files и никогда не копируются в docs или логи.
 

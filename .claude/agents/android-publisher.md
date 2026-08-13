@@ -25,7 +25,8 @@ Publisher API** через штатные npm-обёртки. Ниже — пр�
   локальный `:app:bundleRelease`, а не облако.
 - `npm run android:submit:*` — это `scripts/android-play-release.js` /
   `scripts/android-play-testing-release.js`, прямой Publisher API, а не `eas submit`.
-- Профили `eas.json` остались только для iOS-маршрута, который сейчас вне scope проекта.
+- iPhone EAS/Xcode/TestFlight/App Store route принадлежит `ios-deployer` и не
+  смешивается с Android release contract.
 
 ## Карта треков (не перепутай)
 

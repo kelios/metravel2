@@ -213,9 +213,9 @@ which is **read-only from this workspace**.
 - Unresolved ambiguity MUST be marked `[NEEDS CLARIFICATION: question]` rather
   than silently resolved by invention.
 - Every specification MUST record `Platform impact:
-  desktop web | mobile web | Android | shared | none` and `Localization impact:
+  desktop web | mobile web | Android | iOS | shared | none` and `Localization impact:
   all current locales | selected locales | none`. `none` MUST be a considered
-  conclusion, not an omitted check. iOS is out of scope.
+  conclusion, not an omitted check. iPadOS is out of the first release.
 
 ### X. Scope Control
 
@@ -233,9 +233,9 @@ which is **read-only from this workspace**.
 
 ## Platform, Localization and Ownership Constraints
 
-- Active product surfaces are **desktop web, mobile web, and Android**. The
-  repository retains `ios/` scaffolding, but iOS is not a QA, release-readiness,
-  Done-gate, or `verify pending` surface until the user reactivates it.
+- Active product surfaces are **desktop web, mobile web, Android, and iPhone**.
+  The first App Store release is iPhone-only; iPadOS-specific support remains
+  outside scope without excluding iOS from current QA or Done gates.
 - Shared Expo/React Native code MUST preserve all active platforms. Platform
   files may adapt map engines, permissions, safe areas, storage, or native APIs,
   but MUST NOT silently fork product behavior, block order, primary actions, or

@@ -1,13 +1,13 @@
 ---
 name: metravel-ios-developer
-description: Reserved future-iOS route for metravel. Use only after the user explicitly reactivates iOS application work; never select it for normal QA, Done gates, or shared-change validation while iOS is inactive.
+description: Implement and debug the active MeTravel iPhone application in the shared Expo and React Native codebase. Use for iOS platform files, Xcode runtime issues, native modules, permissions, Keychain, Apple authentication UI, APNs integration, Universal Links, maps, media, safe areas, and iPhone-specific regressions; do not use it for App Store upload or submission.
 ---
 
 # Metravel iOS Developer
 
-The iOS application is currently inactive. Do not use this skill for normal
-implementation, QA, release readiness, or `verify pending`. It becomes active
-only after a new explicit user decision that puts future iOS work in scope.
+Use this skill for implementation and debugging of the active iPhone-first
+MeTravel application. iPad-specific product support remains out of scope for the
+first release.
 
 Read first:
 
@@ -15,46 +15,63 @@ Read first:
 - `docs/RULES.md`
 - `docs/CODEX.md`
 - `docs/NATIVE_COMPAT_RULES.md`
-- `docs/features/map.md` for map/place work
+- `docs/DEVELOPMENT.md`
+- `docs/MANUAL_TEST_CASES.md`
+- `openspec/changes/launch-ios-app-store/` for first-release work
+- Relevant feature docs, especially `docs/features/map.md` for map/place work.
 
 ## Scope
 
-- `.ios.tsx`, `.native.tsx`, `.web.tsx`, and narrow `Platform.OS === 'ios'` branches.
-- WKWebView/Safari behavior, safe-area/notch/home-indicator layout, iOS permissions, Keychain/SecureStore, APNs, Face ID/Touch ID, sharing, SFSafariViewController, deep links, and Universal Links.
-- iOS locale lifecycle: `expo-localization`, versioned preference storage,
-  RU/BE/UK/PL/EN resources, Intl/plurals, translated accessibility text, and cold restart behavior.
-- `components/MapPage/Map.ios.tsx`: keep Leaflet/react-leaflet out of native bundles and preserve the shared map/card UI contract.
+- `.ios.tsx`, `.native.tsx`, `.web.tsx`, tracked `ios/**`, and narrow
+  `Platform.OS === 'ios'` branches.
+- Xcode/simulator startup, WKWebView/Safari behavior, safe areas, keyboard,
+  Dynamic Type, VoiceOver, reduced motion, and iPhone navigation lifecycle.
+- Keychain/SecureStore, Sign in with Apple client integration, APNs client flow,
+  Universal Links, location, camera/photo/HEIC, sharing, and native map behavior.
+- iOS locale lifecycle for RU/BE/UK/PL/EN, including cold restart and native
+  permission/accessibility copy.
 
-## Rules
+## Boundaries
 
-- Stop if iOS was not explicitly reactivated in the current user request. Route
-  current product work to desktop web, mobile web, and Android skills instead.
-
-- If explicitly reactivated, keep any future iOS work from regressing the active
-  mobile-web/Android contract. Platform files may change engines, APIs, insets,
-  and shadows, not hierarchy, action order, card proportions, or tap semantics.
-- Prefer a platform file for structural differences; use a local `Platform.OS` gate only for a small property or API difference.
-- Guard `window`, `document`, storage, DOM events/observers, and web-only imports in shared files.
-- Use `useSafeAreaInsets`; do not hardcode notch, Dynamic Island, or home-indicator offsets.
-- Require HTTPS for iOS resources. Treat ATS failures, APNs permission order, and missing `NS*UsageDescription` values as configuration findings.
-- Do not edit `app.json`, `eas.json`, `plugins/**`, or release scripts unless the user explicitly asked for that configuration change.
-- Use `utils/externalLinks.ts`, `utils/secureStorage.ts`, and the project image wrappers instead of direct platform calls.
-- Follow `$metravel-i18n-guardrails`; do not add iOS-only hardcoded app copy or
-  locale formatting outside `i18n/format.ts`.
-- Route backend/API gaps to an `area=back` board task; never edit backend code from this workspace.
-- Never turn inactive iOS scaffolding into a QA/Done-gate requirement by inference.
+- Preserve desktop web, mobile web, and Android. Shared mobile product behavior
+  stays aligned across mobile web, Android, and iPhone; platform files may adapt
+  engines, permissions, insets, and OS APIs, not information hierarchy or primary actions.
+- Prefer a platform file for structural or dependency differences. Use a local
+  platform gate only for a small property or API difference.
+- Guard DOM/web APIs and imports in shared files. Keep Leaflet/react-leaflet out
+  of native bundles and native-only modules out of web bundles.
+- Use `utils/externalLinks.ts`, `utils/secureStorage.ts`, existing image wrappers,
+  shared i18n resources, and existing auth/session stores.
+- Treat missing usage strings, entitlements, privacy declarations, ATS HTTPS,
+  AASA, APNs credentials, and Apple server verification as fail-closed findings.
+- Protected release/config paths (`app.json`, `eas.json`, `plugins/**`,
+  `scripts/**`, tracked Xcode project settings) change only when the current user
+  request or assigned board task explicitly puts that configuration in scope.
+- Backend changes remain `area=back` work. Never implement Apple token
+  verification, AASA hosting, or server push behavior in this frontend checkout.
+- Signed distribution builds, App Store Connect uploads, TestFlight assignment,
+  App Review submission, and storefront release belong to
+  `$metravel-ios-release-operator`, each with its own authorization gate.
 
 ## Workflow
 
-1. Reproduce or map the iOS-only path and read the whole guarded effect/function before calling a web API reference unsafe.
-2. Check adjacent Android/web implementations and preserve the common mobile contract.
-3. Implement the smallest platform split or guard.
-4. Run targeted tests, native compatibility governance, and `npm run check:fast` for a finished code block; add `npm run test:i18n` when locale behavior or UI copy changed.
-5. Only after explicit reactivation, define the requested iOS validation path;
-   otherwise stop without adding simulator/device work or `verify pending`.
-6. Do not start any EAS iOS build or submit unless the user explicitly requested that exact build/submit in the current task.
+1. Record iOS/shared platform impact, RU/BE/UK/PL/EN impact, assigned board task,
+   and exact files/configuration in scope.
+2. Reproduce on an eligible iPhone simulator or physical iPhone as appropriate;
+   read the whole guarded effect/function before classifying a shared reference as unsafe.
+3. Compare the existing web and Android implementation and make the smallest
+   platform split that preserves the common product contract.
+4. Add focused regression coverage. For configuration changes, verify resolved
+   Expo config, Xcode settings, plist/entitlements/privacy files, and production origins.
+5. Run targeted tests, native compatibility governance, `npm run check:fast`,
+   and `npm run test:i18n` when locale or app-owned copy changed. Shared files
+   also require affected desktop-web and paired mobile-web/Android evidence.
+6. Hand the complete diff and evidence to `$metravel-ios-reviewer`; after fixes,
+   hand the resulting build to `$metravel-ios-tester`.
 
-## Handoff
+## Output Contract
 
-If explicitly reactivated, report the future-iOS scope, files changed, active
-mobile-web/Android impact, checks run, and separately authorized evidence.
+Report the iOS requirement or bug, changed files, platform split, configuration
+impact, simulator/device evidence, shared-platform controls, checks run, and any
+release/backend/owner dependency. Never claim App Store readiness from a
+simulator build alone.

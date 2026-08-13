@@ -1,6 +1,6 @@
 ---
 name: metravel-i18n-guardrails
-description: Implement and review metravel localization across desktop web, mobile web, and Android. Use when work adds or changes user-facing copy, validation/errors, accessibility labels, language selection, locale persistence, dates/numbers/plurals, SEO locale metadata, geocoder language, PDF/export UI, translation resources, or any shared UI whose behavior must remain correct for RU/BE/UK/PL/EN.
+description: Implement and review metravel localization across desktop web, mobile web, Android, and iPhone. Use when work changes user-facing copy, validation/errors, accessibility labels, language selection, locale persistence, dates/numbers/plurals, SEO locale metadata, geocoder language, PDF/export UI, translation resources, or shared RU/BE/UK/PL/EN behavior.
 ---
 
 # Metravel I18n Guardrails
@@ -60,11 +60,11 @@ Read first:
 4. Run `npm run test:i18n` for any localization or user-facing copy change, then
    run the normal checks required by the touched feature.
 5. Verify the changed user flow in every affected locale/platform. Pair mobile
-   web with the same Android flow and cold restart. If the Android device is
-   unavailable, report that active platform as `verify pending`; do not
-   substitute mobile-web evidence for Android verification. Do not add iOS QA.
+   web with the same Android flow and cold restart; for iOS/shared scope also
+   verify iPhone cold restart at the required simulator/physical/TestFlight layer.
+   Report unavailable active-platform evidence as exact `verify pending`.
 
 ## Handoff
 
-Report affected locales, namespaces/keys, desktop-web/mobile-web/Android impact,
+Report affected locales, namespaces/keys, desktop-web/mobile-web/Android/iOS impact,
 checks and paired runtime evidence, and any exact active-platform blocker.

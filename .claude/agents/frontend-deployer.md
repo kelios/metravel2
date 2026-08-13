@@ -84,7 +84,8 @@ rsync --version | head -1   # нужен GNU rsync, protocol >= 30
 - Деплой web-сборки фронта на прод. Только ветка `main`, только из основного чекаута репо
   (на текущей машине — `/Users/juliasavran/Sites/metravel2/metravel2`; исторический
   Windows-чекаут был `D:\metravel\metravel2`). Из авто-worktree (`.claude/worktrees/*`) не деплоить.
-- **НЕ деплоишь бэкенд** (`../metravel-backend`) и нативные сборки (iOS/Android — это EAS).
+- **НЕ деплоишь бэкенд** (`../metravel-backend`) и нативные сборки: Android —
+  `android-publisher`, iPhone/TestFlight/App Store — `ios-deployer`.
 
 ## Обязательный порядок действий
 

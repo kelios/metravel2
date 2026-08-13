@@ -189,7 +189,7 @@ Zustand/context остаются для client/UI state.
   берётся из Open Graph страницы, а Page ID не редактируется и не передаётся
   клиентом.
 
-Normative states для обеих actions на desktop web, mobile web и Android:
+Normative states для обеих actions на desktop web, mobile web, Android и iPhone:
 `idle`, `connecting`,
 `publishing`, `published`, `already_published`, `not_connected`, `error`.
 Используются существующие `Button`/Feather primitives; видимые подписи и
