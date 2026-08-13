@@ -186,7 +186,11 @@ ssh "$SERVER" "set -euo pipefail
   # inside the leftover dir instead of replacing it (past manual-recovery need).
   docker exec -u 0 \"\$app_ctr\" sh -c 'chown 1984:1000 /app/static && chmod 2775 /app/static && rm -rf /app/static/dist.new /app/static/dist.old'
   printf '%s' '$SWAP_B64' | base64 -d | docker exec -i \"\$app_ctr\" sh -s
-  docker restart \"\$nginx_ctr\"
+  # Static files are already live through the bind mount. Validate the active
+  # config and ask the existing Nginx master to reload gracefully; a frontend
+  # recovery must not stop or recreate any application/infra container.
+  docker exec \"\$nginx_ctr\" /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf
+  docker exec \"\$nginx_ctr\" /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf
   rm -rf dist icons images
   # Leftovers from the tar+ssh fallback deploy path (board #898): harmless to
   # remove after a successful release, 90M of dead weight otherwise.

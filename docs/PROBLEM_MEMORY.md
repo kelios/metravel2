@@ -1,6 +1,6 @@
 # Problem memory and recurrence registry
 
-Актуализировано: 2026-08-11.
+Актуализировано: 2026-08-13.
 
 Этот документ — постоянная память о системных семействах проблем MeTravel. Он
 не заменяет task board и не хранит обычный progress log. Борд остаётся
@@ -251,6 +251,33 @@ guard, падающий в CI на попытке обойти этот конт
 - **Решение для новой жалобы:** тот же permission-denied/uid drift — `reopen
   #653`, не создавать третий ticket и не чинить сервер из frontend workspace.
 - **Последняя проверка:** `#653 done`, 2026-07-03.
+
+### OPS-DEPLOY-LIFECYCLE-001 — frontend static deploy не управляет контейнерами
+
+- **Инвариант:** frontend-owned публикация или аварийное восстановление может
+  атомарно менять только документированные untracked static targets, проверять
+  Nginx и делать graceful reload существующего master process. Она не выполняет
+  `restart`, `recreate`, `down`, `up`, `stop` или `rm` для app, Nginx, Redis,
+  Redis Images, Postgres либо full-stack Compose.
+- **Surface/owner:** frontend release/recovery scripts (`build-prod.sh`,
+  `scripts/fix-prod.sh`); backend/infra lifecycle остаётся у backend owner.
+- **Цепочка:** `#1365` — основной production deploy; linked follow-up `#1427` —
+  аварийный recovery path; backend context `#1368`.
+- **Подтверждённые причины:** основной и аварийный пути развивались отдельно.
+  `#1365` заменил hard restart на Nginx validate/reload и добавил source-contract
+  test только для remote payload `build-prod.sh`; `scripts/fix-prod.sh` остался
+  вне этого guard и продолжал выполнять `docker restart "$nginx_ctr"` после
+  atomic static swap.
+- **Controls:** общий source-contract test читает реальные `build-prod.sh` и
+  `scripts/fix-prod.sh`, запрещает Docker/Compose lifecycle commands и содержит
+  negative fixtures; оба пути используют Nginx config validation + graceful
+  reload без изменения container identity/restart count.
+- **Решение для новой жалобы:** lifecycle-команда вернулась в одном из этих двух
+  путей — `reopen #1427`; новый frontend-owned deploy/recovery entrypoint с тем
+  же обходом — `create-linked` к `#1427` и сразу расширить общий guard. Backend
+  deploy или scheduler lifecycle относится к `#1368`/backend family.
+- **Последняя проверка:** 2026-08-13; локальная реализация `#1427`, production
+  acceptance требует отдельной явной deploy/recovery команды.
 
 ### ROUTING-ORS-001 — degraded routing must not look healthy
 

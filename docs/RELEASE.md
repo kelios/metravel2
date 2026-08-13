@@ -158,8 +158,9 @@ Use it only when the user explicitly asks for emergency frontend recovery or the
 unavailable and the reason is recorded in the handoff.
 
 The script acquires a remote deploy lock, can rebuild `dist/prod`, verifies the prod artifact config,
-uploads static assets, performs an in-container atomic swap, overlays missing old Expo chunks, restarts
-nginx, validates live chunks/config, and fails closed on wrong prod config. It remains emergency-only;
+uploads static assets, performs an in-container atomic swap, overlays missing old Expo chunks, validates
+the active Nginx config and gracefully reloads the existing process without restarting any container,
+validates live chunks/config, and fails closed on wrong prod config. It remains emergency-only;
 the canonical 14-day retention policy belongs to `./build-prod.sh prod`. Do not replace the normal
 deploy or Windows/Codex wrapper flow with `scripts/fix-prod.sh`, custom `rsync`, `scp`, or SSH commands.
 

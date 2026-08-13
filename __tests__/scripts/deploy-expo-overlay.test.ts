@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
+import { findFrontendDeployLifecycleViolations } from './frontend-deploy-lifecycle-contract'
 import {
   extractRemoteDeploy,
   readCanonicalDeploy,
@@ -12,10 +13,6 @@ const helperPath = path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh')
 
 function deployContractViolations(remoteDeploy: string): string[] {
   const violations: string[] = []
-  const appLifecycleCommand =
-    /(?:docker(?:\s+compose)?|docker-compose)[^\n]*(?:restart|recreate|up\s+-d)[^\n]*\bapp\b/
-  const proxyLifecycleCommand =
-    /(?:docker(?:\s+compose)?|docker-compose)[^\n]*(?:restart|recreate|up\s+-d)[^\n]*\bnginx\b/
   const activationContract = [
     'activate_nginx() {',
     '  nginx_validate && nginx_reload',
@@ -40,11 +37,8 @@ function deployContractViolations(remoteDeploy: string): string[] {
     stagingCleanupFailureContract,
   )
 
-  if (appLifecycleCommand.test(remoteDeploy)) {
-    violations.push('frontend deploy changes the app lifecycle')
-  }
-  if (proxyLifecycleCommand.test(remoteDeploy)) {
-    violations.push('frontend deploy hard-restarts the proxy')
+  if (findFrontendDeployLifecycleViolations(remoteDeploy).length > 0) {
+    violations.push('frontend deploy changes container lifecycle')
   }
   if (!remoteDeploy.includes(activationContract)) {
     violations.push('Nginx validation does not precede graceful reload')
@@ -320,7 +314,7 @@ describe('normal deploy Expo overlay retention', () => {
       'docker compose -f docker-compose-prod.app.yaml restart app nginx'
 
     expect(deployContractViolations(unsafeDeploy)).toContain(
-      'frontend deploy changes the app lifecycle',
+      'frontend deploy changes container lifecycle',
     )
   })
 

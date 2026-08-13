@@ -439,8 +439,9 @@ Operation gate:
   in the repo — it is public. The `metravel-prod` alias is not defined on every machine — probe by
   direct host, and do not mistake a missing alias for missing access. See `docs/RELEASE.md`.
 - `scripts/fix-prod.sh` is an emergency production frontend recovery path only. It has its own remote
-  deploy lock, prod artifact config gate, in-container atomic swap, old Expo chunk overlap, nginx restart,
-  and live chunk/config verification. Use it through `$metravel-devops-agent` only when normal deploy is
+  deploy lock, prod artifact config gate, in-container atomic swap, old Expo chunk overlap, Nginx config
+  validation plus graceful reload without a container restart, and live chunk/config verification. Use
+  it through `$metravel-devops-agent` only when normal deploy is
   unavailable or explicitly requested for recovery; do not replace approved deploy paths with ad-hoc
   `rsync`, `scp`, or SSH commands.
 
