@@ -443,6 +443,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: shows required map attribution (OpenStreetMap)', async ({ page }) => {
+    // The base layer intentionally mounts only after the first map-data result
+    // settles and the initial viewport is ready. Keep that precondition local
+    // and deterministic instead of racing the default API timeout.
+    await installMobileFiltersPanelMocks(page, []);
     await gotoMapWithRecovery(page);
 
     await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 60_000 });
@@ -1190,16 +1194,19 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     // Закрываем панель повторным нажатием на кнопку меню (toggle).
     const close = page.getByTestId('map-mobile-sheet-close');
+    const sheet = page.getByRole('dialog', { name: 'Панель карты' });
     await expect(close).toBeVisible({ timeout: 20_000 });
-    // header-context-bar is a sticky element that can overlap the close button
-    // at mobile viewport widths; bypass the intercept check since we already
-    // asserted visibility above.
-    await close.click({ force: true });
+    await expect(sheet).toBeVisible({ timeout: 20_000 });
+    // The sheet grows with a CSS height transition. A forced click bypasses
+    // Playwright's stability/actionability wait, so RN Web can cancel onPress
+    // when the close button moves between pointerdown and pointerup.
+    await expectTopmostAtCenter(page, close, 'map panel close');
+    await close.click();
 
     // A single close action must complete the transition. Re-clicking the
     // still-visible button during the closing animation can toggle the sheet
     // back open and makes this assertion race with the animation itself.
-    await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeHidden({ timeout: 20_000 });
+    await expect(sheet).toBeHidden({ timeout: 20_000 });
     await expect(close).toBeHidden({ timeout: 20_000 });
     await expect(getMobilePanelEntry(page)).toBeVisible({ timeout: 20_000 });
   });
