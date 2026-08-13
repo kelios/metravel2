@@ -235,7 +235,11 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         void copyQuestCoords(currentStep);
     }, [currentStep]);
 
-    const advanceToNextStep = useCallback(() => {
+    const continueFromCurrentStep = useCallback(() => {
+        if (currentIndex >= allSteps.length - 1) {
+            setShowFinaleOnly(true);
+            return;
+        }
         const nextIndex = Math.min(currentIndex + 1, allSteps.length - 1);
         setCurrentIndex(nextIndex);
         setUnlockedIndex(prev => Math.max(prev, nextIndex));
@@ -250,8 +254,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             quest_id: questId,
             step_index: steps.findIndex(step => step.id === currentStep.id),
         });
-        advanceToNextStep();
-    }, [advanceToNextStep, currentStep, questId, setAnswers, setAttempts, setHints, steps]);
+        continueFromCurrentStep();
+    }, [continueFromCurrentStep, currentStep, questId, setAnswers, setAttempts, setHints, steps]);
 
     const handleCurrentStepWrongAttempt = useCallback(() => {
         if (!currentStep) return;
@@ -269,9 +273,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const skipStep = useCallback(() => {
         const hasNext = currentIndex < allSteps.length - 1;
-        advanceToNextStep();
+        continueFromCurrentStep();
         if (hasNext) notifyQuest(i18nT('quests:components.quests.QuestWizard.shag_propuschen_f8686cda'));
-    }, [advanceToNextStep, allSteps.length, currentIndex]);
+    }, [allSteps.length, continueFromCurrentStep, currentIndex]);
 
     const goToStep = useCallback((index: number) => {
         const step = allSteps[index];
@@ -499,6 +503,10 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 attempts={attempts[currentStep.id] || 0}
                                 hintVisible={hints[currentStep.id] || false}
                                 savedAnswer={answers[currentStep.id]}
+                                continueLabel={currentIndex >= allSteps.length - 1
+                                    ? t('quests:components.quests.questWizardStepCard.continueToFinale')
+                                    : t('quests:components.quests.questWizardStepCard.continueToNextStep')}
+                                onContinue={continueFromCurrentStep}
                                 onSubmit={handleCurrentStepAnswer}
                                 onWrongAttempt={handleCurrentStepWrongAttempt}
                                 onToggleHint={toggleCurrentStepHint}

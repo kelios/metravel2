@@ -250,6 +250,8 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.apple_maps_7e7eb0fd": "Apple Maps",
   "components.quests.questWizardStepCard.bilety_e9c72fb2": "Квитки",
   "components.quests.questWizardStepCard.chasy_raboty_64c942b8": "Годинник роботи",
+  "components.quests.questWizardStepCard.continueToFinale": "Перейти до фіналу",
+  "components.quests.questWizardStepCard.continueToNextStep": "Наступний крок",
   "components.quests.questWizardStepCard.dalee_74add698": "Далі",
   "components.quests.questWizardStepCard.eto_statichnoe_foto_podskazka_ne_interaktivn_290925e0": "Це статична фото-підказка, не інтерактивна карта.",
   "components.quests.questWizardStepCard.foto_39b57795": "Фото",

@@ -924,15 +924,17 @@ Common scripts:
 
 ```bash
 npm run ios:prebuild
-npm run ios:build:prod
-npm run ios:submit:latest
+IOS_SIGNED_BUILD_AUTHORIZATION=1 npm run ios:build:prod
+IOS_UPLOAD_AUTHORIZATION=1 npm run ios:submit -- EAS_BUILD_ID
 npm run android:prebuild
 npm run android:build:prod
 npm run android:submit:latest
 npm run android:submit:production
 ```
 
-`ios:*` команды — legacy entrypoints до hardening канонического App Store path.
+`ios:*` entrypoints закрепляют EAS CLI/image, проверяют release-конфигурацию и
+разделяют signed build и upload. Upload принимает только явный EAS build ID и
+использует заранее настроенные для bundle EAS-managed credentials.
 Local simulator/device QA разрешена в iOS/shared задачах; signed build, upload,
 App Review submit и storefront release требуют отдельных authorization gates.
 

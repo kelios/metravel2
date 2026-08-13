@@ -1,12 +1,13 @@
 {
   "expo": {
     "owner": "savran.juli",
-    "name": "metravel",
+    "name": "MeTravel",
     "slug": "metravel",
     "version": "1.0.5",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "metravel",
+    "newArchEnabled": true,
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "assets/images/*",
@@ -15,19 +16,14 @@
       "assets/icons/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "by.metravel.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide personalized travel recommendations.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload travel photos.",
-        "NSPhotoLibraryAddUsageDescription": "This app needs permission to save photos to your library.",
-        "NSCameraUsageDescription": "This app needs access to your camera to take travel photos.",
-        "NSMicrophoneUsageDescription": "This app needs access to your microphone for video recording.",
-        "UIBackgroundModes": [
-          "location"
-        ],
+        "NSLocationWhenInUseUsageDescription": "MeTravel uses your location to show nearby routes, places, and quest points.",
+        "NSPhotoLibraryUsageDescription": "MeTravel accesses photos you choose so you can add them to your profile, trips, and articles.",
+        "NSCameraUsageDescription": "MeTravel uses the camera when you choose to take a photo for your profile, trip, or article.",
+        "NSFaceIDUsageDescription": "MeTravel uses Face ID only when you choose biometric sign-in.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "usesAppleSignIn": false,
@@ -95,7 +91,29 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "locationWhenInUsePermission": "MeTravel uses your location to show nearby routes, places, and quest points.",
+          "isIosBackgroundLocationEnabled": false,
+          "motionUsagePermission": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MeTravel accesses photos you choose so you can add them to your profile, trips, and articles.",
+          "cameraPermission": "MeTravel uses the camera when you choose to take a photo for your profile, trip, or article.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "MeTravel accesses photos you choose so you can add them to your profile, trips, and articles.",
+          "savePhotosPermission": false,
+          "isAccessMediaLocationEnabled": false,
+          "preventAutomaticLimitedAccessAlert": false,
+          "granularPermissions": []
         }
       ],
       [
@@ -110,16 +128,29 @@
           }
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
       "expo-secure-store",
       "expo-font",
       "expo-image",
-      "expo-local-authentication",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "MeTravel uses Face ID only when you choose biometric sign-in."
+        }
+      ],
       "expo-sharing",
       "expo-web-browser",
       "./plugins/withAndroidShortcuts",
       "./plugins/withAndroidReleaseSafety",
       [
-        "expo-notifications",
+        "./plugins/withAndroidNotifications",
         {
           "icon": "./assets/images/notification-icon.png",
           "color": "#7a9d8f",

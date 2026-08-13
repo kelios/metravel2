@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.9.0"
+    "version": "21.8.0",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -8,6 +9,8 @@
       "distribution": "internal",
       "node": "22.13.1",
       "ios": {
+        "image": "macos-tahoe-26.5-xcode-26.6",
+        "scheme": "metravel",
         "simulator": true,
         "buildConfiguration": "Debug"
       }
@@ -16,6 +19,8 @@
       "distribution": "internal",
       "node": "22.13.1",
       "ios": {
+        "image": "macos-tahoe-26.5-xcode-26.6",
+        "scheme": "metravel",
         "simulator": false,
         "buildConfiguration": "Release"
       }
@@ -23,19 +28,24 @@
     "production": {
       "distribution": "store",
       "node": "22.13.1",
+      "environment": "production",
+      "autoIncrement": false,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://metravel.by",
+        "PROD_API_URL": "https://metravel.by"
+      },
       "ios": {
+        "image": "macos-tahoe-26.5-xcode-26.6",
+        "scheme": "metravel",
         "simulator": false,
-        "buildConfiguration": "Release",
-        "autoIncrement": true
+        "buildConfiguration": "Release"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "savran.juli@example.com",
-        "ascAppId": "METRAVEL_APP_ID",
-        "appleTeamId": "METRAVEL_TEAM_ID"
+        "bundleIdentifier": "by.metravel.app"
       }
     }
   }

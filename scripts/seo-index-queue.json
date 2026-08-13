@@ -564,7 +564,15 @@
         "yandex.com": 202
       },
       "indexnowVia": "full-site submit 2026-08-10",
-      "indexnowSubmittedAt": "2026-08-10"
+      "indexnowSubmittedAt": "2026-08-10",
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye",
+          "result": "quota-exceeded",
+          "at": "2026-08-13",
+          "note": "Первая попытка по пачке: GSC сообщил «Квота превышена»; принято 0 из 10, остальные адреса не отправлялись и перенесены на следующее суточное окно"
+        }
+      ]
     },
     {
       "day": 5,

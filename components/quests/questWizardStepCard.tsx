@@ -12,6 +12,7 @@ import {
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler'
 import Feather from '@expo/vector-icons/Feather'
 
+import Button from '@/components/ui/Button'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { openExternalUrl } from '@/utils/externalLinks'
@@ -50,6 +51,8 @@ type StepCardProps = {
   attempts: number
   hintVisible: boolean
   savedAnswer?: string
+  continueLabel: string
+  onContinue: () => void
   onSubmit: (v: string) => void
   onWrongAttempt: () => void
   onToggleHint: () => void
@@ -133,6 +136,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     attempts,
     hintVisible,
     savedAnswer,
+    continueLabel,
+    onContinue,
     onSubmit,
     onWrongAttempt,
     onToggleHint,
@@ -441,6 +446,15 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                   <Text style={styles.answerLabel}>{i18nT('quests:components.quests.questWizardStepCard.vash_otvet_540d4fc8')}</Text>
                   <Text style={styles.answerValue} numberOfLines={3}>{savedAnswer}</Text>
                 </View>
+                <Button
+                  label={continueLabel}
+                  onPress={onContinue}
+                  size="lg"
+                  fullWidth
+                  trailingIcon={<Feather name="arrow-right" size={20} color={colors.textOnPrimary} />}
+                  style={styles.completedContinueButton}
+                  testID="quest-step-continue"
+                />
               </View>
             )}
 

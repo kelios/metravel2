@@ -49,9 +49,16 @@ npm run android
 
 `npm run ios` запускает Expo iOS dev flow, но сам по себе не доказывает local
 Xcode build, physical-device behavior или TestFlight readiness. Для active iOS
-task сначала проверь eligible destination, затем используй simulator/physical
-iPhone layer по `docs/WORKFLOW_OPERATIONS.md`; store operations выполняет только
-`$metravel-ios-release-operator` после отдельной authorization.
+task сначала запусти `npm run ios:environment:check`: version-aware preflight
+сверяет выбранный Xcode SDK с доступным simulator runtime и требует конкретный
+eligible iPhone destination, а также проверяет CocoaPods workspace/support files,
+синхронность `Podfile.lock` и sandbox manifest и отсутствие старой
+`react-native-google-maps` pod-записи. Затем используй simulator/physical iPhone
+layer по `docs/WORKFLOW_OPERATIONS.md`; store operations выполняет только
+`$metravel-ios-release-operator` после отдельной authorization. Если preflight
+сообщает `IOS_ENV_RUNTIME_SDK_MISMATCH`, восстанови matching runtime через Xcode
+Settings → Components или `xcodebuild -downloadPlatform iOS`, затем повтори
+preflight.
 
 Android QA rule:
 

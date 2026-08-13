@@ -247,14 +247,15 @@ Android release contract:
 ### iOS / App Store (active iPhone scope)
 
 Первый релиз — iPhone-only; iPad-specific UI/screenshots не входят в acceptance.
-Команды ниже остаются legacy entrypoints до выбора и hardening одного
-канонического release path в active iOS release task. Interactive helper может
-предлагать `--auto-submit`, поэтому его нельзя считать blanket authorization.
+EAS CLI и build image закреплены release-конфигурацией. Build и upload остаются
+разными явными операциями; upload принимает конкретный EAS build ID, работает
+non-interactive и использует EAS-managed App Store Connect credentials, заранее
+настроенные для `by.metravel.app` в owner task `#1410`.
 
 ```bash
 npm run ios:prebuild
-npm run ios:build:prod
-npm run ios:submit:latest
+IOS_SIGNED_BUILD_AUTHORIZATION=1 npm run ios:build:prod
+IOS_UPLOAD_AUTHORIZATION=1 npm run ios:submit -- EAS_BUILD_ID
 ```
 
 Разделяй четыре authorization gates: signed distribution build, App Store

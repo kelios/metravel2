@@ -277,16 +277,6 @@ function QuestFullMap({
                 return;
             }
 
-            // expo-media-library — native-only: lazy require внутри native-ветки
-            // (после web-return выше), иначе top-level import инициализирует
-            // ExpoMediaLibraryNext и валит web-бандл в рантайме.
-            const MediaLibrary = require('expo-media-library') as typeof import('expo-media-library');
-            const { status } = await MediaLibrary.requestPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert(i18nT('quests:components.quests.QuestFullMap.trebuetsya_razreshenie_fb33c81f'), i18nT('quests:components.quests.QuestFullMap.razreshite_dostup_k_galeree_dlya_sohraneniya_72af3496'));
-                return;
-            }
-
             Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_a573001b'), i18nT('quests:components.quests.QuestFullMap.funktsiya_eksporta_png_na_mobilnyh_ustroystv_38234d18'));
         } catch (error) {
             console.error('Error sharing PNG:', error);

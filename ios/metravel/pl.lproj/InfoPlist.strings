@@ -1,0 +1,4 @@
+"NSLocationWhenInUseUsageDescription" = "MeTravel używa Twojego położenia, aby pokazywać pobliskie trasy, miejsca i punkty questów.";
+"NSPhotoLibraryUsageDescription" = "MeTravel uzyskuje dostęp tylko do wybranych przez Ciebie zdjęć, aby dodać je do profilu, podróży i artykułów.";
+"NSCameraUsageDescription" = "MeTravel używa aparatu, gdy wybierasz zrobienie zdjęcia do profilu, podróży lub artykułu.";
+"NSFaceIDUsageDescription" = "MeTravel używa Face ID tylko wtedy, gdy wybierasz logowanie biometryczne.";

@@ -250,6 +250,8 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.apple_maps_7e7eb0fd": "Apple Maps",
   "components.quests.questWizardStepCard.bilety_e9c72fb2": "Bilety",
   "components.quests.questWizardStepCard.chasy_raboty_64c942b8": "Godziny otwarcia",
+  "components.quests.questWizardStepCard.continueToFinale": "Przejdź do finału",
+  "components.quests.questWizardStepCard.continueToNextStep": "Następny krok",
   "components.quests.questWizardStepCard.dalee_74add698": "Następny",
   "components.quests.questWizardStepCard.eto_statichnoe_foto_podskazka_ne_interaktivn_290925e0": "To statyczny przewodnik po zdjęciach, a nie interaktywna mapa.",
   "components.quests.questWizardStepCard.foto_39b57795": "Zdjęcie",

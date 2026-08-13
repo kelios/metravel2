@@ -20,11 +20,18 @@ export const HEADER_ACCOUNT_SLOT_MIN_WIDTH = 224;
  * Creates styles for CustomHeader component.
  * Extracted to reduce component file size and improve maintainability.
  */
-export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean) =>
-  StyleSheet.create({
+export const createCustomHeaderStyles = (
+  colors: ThemedColors,
+  isMobile: boolean,
+  safeAreaTop = 0,
+) => {
+  const iosTopInset =
+    Platform.OS === 'ios' && Number.isFinite(safeAreaTop) ? Math.max(0, safeAreaTop) : 0;
+
+  return StyleSheet.create({
     container: {
       backgroundColor: Platform.OS === 'web' ? colors.background : colors.surface,
-      paddingTop: Platform.OS === 'ios' ? (StatusBar.currentHeight || 0) : 0,
+      paddingTop: iosTopInset,
       paddingBottom: Platform.OS === 'web' ? (isMobile ? 6 : 12) : 0,
       borderBottomWidth: Platform.OS === 'web' ? StyleSheet.hairlineWidth : 0,
       borderBottomColor: colors.border,
@@ -66,7 +73,7 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       ...Platform.select({
         ios: {
           minHeight: 44,
-          paddingTop: (StatusBar.currentHeight || 0) + 8,
+          paddingTop: 8,
         },
         android: {
           minHeight: 48,
@@ -388,6 +395,7 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       marginHorizontal: 16,
     },
   });
+};
 
 export const webStickyStyle =
   Platform.OS === 'web'

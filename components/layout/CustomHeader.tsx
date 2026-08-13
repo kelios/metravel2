@@ -6,6 +6,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useHydrationReady } from '@/hooks/useHydrationReady'
 import { useThemedColors } from '@/hooks/useTheme'
 import useBreadcrumbModel from '@/hooks/useBreadcrumbModel'
+import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 
 import {
   CustomHeaderAccountSectionComp,
@@ -47,6 +48,7 @@ type CustomHeaderProps = {
 
 function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeaderProps) {
   const colors = useThemedColors()
+  const safeAreaInsets = useSafeAreaInsetsSafe()
   const pathname = usePathname()
   // useResponsive returns width=0 during SSR and first client render,
   // matching the server snapshot → prevents hydration mismatch in Suspense fallback.
@@ -86,8 +88,8 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   }, [breadcrumbModel.showBreadcrumbs, isMobile, pathname, showHeaderContextBar])
 
   const styles = useMemo(
-    () => createCustomHeaderStyles(colors, rowIsMobile),
-    [colors, rowIsMobile],
+    () => createCustomHeaderStyles(colors, rowIsMobile, safeAreaInsets.top),
+    [colors, rowIsMobile, safeAreaInsets.top],
   )
 
   const contextBarFallbackStyle = useMemo(
@@ -123,7 +125,11 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
       {...(Platform.OS === 'web' ? ({ tabIndex: -1 } as any) : null)}
     >
       <View style={styles.wrapper}>
-        <View style={[styles.inner, rowIsMobile && styles.innerMobile]} {...webSlotProps('inner')}>
+        <View
+          style={[styles.inner, rowIsMobile && styles.innerMobile]}
+          testID="main-header-row"
+          {...webSlotProps('inner')}
+        >
           <Logo isCompact={rowIsMobile} showWordmark={!rowIsMobile} />
 
           {!rowIsMobile &&

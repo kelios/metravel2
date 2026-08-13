@@ -153,4 +153,5 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
     },
     answerLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 4, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 },
     answerValue: { fontSize: Math.round(15 * fontScale), fontWeight: '700', color: colors.text },
+    completedContinueButton: { marginTop: SPACING.md },
 } as const);

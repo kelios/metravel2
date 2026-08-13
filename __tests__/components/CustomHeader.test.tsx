@@ -4,7 +4,9 @@ import { usePathname, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CustomHeader from '@/components/layout/CustomHeader';
 import * as ReactNative from 'react-native';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
+
+let mockSafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 const mockAuthContext = {
     isAuthenticated: false,
@@ -63,6 +65,10 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsiveWidth: () => (global as any).__mockResponsive?.width ?? 1440,
 }));
 
+jest.mock('@/hooks/useSafeAreaInsetsSafe', () => ({
+    useSafeAreaInsetsSafe: () => mockSafeAreaInsets,
+}));
+
 // Моки для expo-router
 jest.mock('expo-router', () => ({
     usePathname: jest.fn(),
@@ -94,20 +100,68 @@ describe('CustomHeader', () => {
         mockFiltersContext.updateFilters.mockClear();
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
         dimensionsSpy.mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
+        mockSafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
     });
 
     afterEach(() => {
         Object.defineProperty(Platform, 'OS', { value: originalPlatformOS });
     });
 
-    const renderHeader = () => {
+    const renderHeader = (props: React.ComponentProps<typeof CustomHeader> = {}) => {
         const client = createTestQueryClient();
         return render(
             <QueryClientProvider client={client}>
-                <CustomHeader />
+                <CustomHeader {...props} />
             </QueryClientProvider>
         );
     };
+
+    describe('iPhone safe area', () => {
+        it('places the header row below the top inset exactly once', () => {
+            Object.defineProperty(Platform, 'OS', { value: 'ios' });
+            mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
+            const onHeightChange = jest.fn();
+            (global as any).__mockResponsive = {
+                width: 393,
+                height: 852,
+                isPhone: true,
+                isLargePhone: false,
+                isTablet: false,
+                isDesktop: false,
+                isMobile: true,
+                isHydrated: true,
+            };
+            (usePathname as jest.Mock).mockReturnValue('/');
+
+            try {
+                const { getByTestId } = renderHeader({ onHeightChange });
+                const header = getByTestId('main-header');
+                const headerStyle = StyleSheet.flatten(header.props.style);
+                const rowStyle = StyleSheet.flatten(getByTestId('main-header-row').props.style);
+
+                expect(headerStyle.paddingTop).toBe(59);
+                expect(rowStyle.paddingTop).toBe(8);
+
+                fireEvent(header, 'layout', { nativeEvent: { layout: { height: 119 } } });
+                fireEvent(header, 'layout', { nativeEvent: { layout: { height: 119 } } });
+                expect(onHeightChange).toHaveBeenCalledTimes(1);
+                expect(onHeightChange).toHaveBeenCalledWith(119);
+            } finally {
+                (global as any).__mockResponsive = undefined;
+            }
+        });
+
+        it.each(['android', 'web'] as const)('does not apply the iOS top inset on %s', (os) => {
+            Object.defineProperty(Platform, 'OS', { value: os });
+            mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
+            (usePathname as jest.Mock).mockReturnValue('/');
+
+            const { getByTestId } = renderHeader();
+            const headerStyle = StyleSheet.flatten(getByTestId('main-header').props.style);
+
+            expect(headerStyle.paddingTop).toBe(0);
+        });
+    });
 
     describe('Desktop navigation', () => {
         it('renders desktop navigation by default', () => {

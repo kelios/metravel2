@@ -1,13 +1,13 @@
 ## 1. Environment and Apple gates
 
-- [ ] 1.1 Reopen board task `#957` with current `xcodebuild -showdestinations` evidence, restore an eligible iPhone simulator for Xcode 26, and add a preflight that detects Expo/Xcode runtime drift before native work.
+- [x] 1.1 Reopen board task `#957` with current `xcodebuild -showdestinations` evidence, restore an eligible iPhone simulator for Xcode 26, and add a preflight that detects Expo/Xcode runtime drift before native work.
 - [ ] 1.2 Complete the separate owner task for Apple Developer/App Store Connect access, current agreements, team identifier, explicit `by.metravel.app` App ID, capability choices, signing authority, and a physical iPhone available for agent-driven testing without placing credentials in Git or board text.
 - [ ] 1.3 Complete the separate backend task for `POST /api/user/apple-login/`, Apple identity-token verification, stable-subject account linking, private-relay handling, standard MeTravel session response, collision/error codes, and deletion/revocation behavior; record deploy-target API evidence.
 - [ ] 1.4 Complete the separate website/backend/ops dependency that serves a valid Apple App Site Association document for `metravel.by` and the registered Apple team/bundle identity, with HTTPS content and route coverage evidence.
 
 ## 2. iPhone release foundation
 
-- [ ] 2.1 Reconcile `app.json`, tracked Xcode build settings, bundle identity, iPhone-only device family, display name, URL schemes, marketing version, increasing build number, deployment target, and production API configuration; add a deterministic parity check.
+- [x] 2.1 Reconcile `app.json`, tracked Xcode build settings, bundle identity, iPhone-only device family, display name, URL schemes, marketing version, increasing build number, deployment target, and production API configuration; add a deterministic parity check.
 - [ ] 2.2 Audit and reconcile `Info.plist`, entitlements, Associated Domains, APNs, Sign in with Apple, purpose strings, background modes, encryption declaration, `PrivacyInfo.xcprivacy`, app icon, and splash assets; remove capabilities without a launch use case.
 - [ ] 2.3 Pin a current supported iOS build/upload toolchain and replace placeholder App Store identifiers through approved secret/config inputs, then prove a clean local simulator build without a development-server dependency or secret/placeholder leakage.
 - [ ] 2.4 Add focused configuration and native-governance tests for bundle/version/device-family parity, valid plist/privacy files, required iPhone release assets, production URL resolution, and forbidden development/store placeholders.
