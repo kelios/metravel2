@@ -13,7 +13,6 @@ async function installTileMock(page: any) {
   const fulfill = (route: any) =>
     route.fulfill({ status: 200, contentType: 'image/png', body: png })
 
-  await page.route('**://*.basemaps.cartocdn.com/**', fulfill)
   await page.route('**://tile.openstreetmap.org/**', fulfill)
   await page.route('**://*.tile.openstreetmap.org/**', fulfill)
   await page.route('**/proxy/tiles/osm/**', fulfill)

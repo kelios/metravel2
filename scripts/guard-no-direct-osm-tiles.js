@@ -9,11 +9,7 @@ const path = require('path')
 
 const OUTPUT_CONTRACT_VERSION = 1
 
-// Единственный источник истины для tile-URL — сам провайдер. CARTO-константы
-// живут там же (back-compat), поэтому файл в allowlist.
-const ALLOWED_FILES = new Set([
-  'config/mapWebLayers.ts',
-])
+const ALLOWED_FILES = new Set()
 
 const IGNORED_DIRS = new Set([
   '.git',
@@ -41,9 +37,10 @@ const IGNORED_DIRS = new Set([
 
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'])
 
-// Прямые OSM tile-хосты (org/fr/de). CARTO-подложка живёт в провайдере и
-// покрыта allowlist'ом, поэтому здесь не запрещается.
-const DIRECT_OSM_TILE_REGEX = /tile\.openstreetmap\.(?:org|fr|de)/
+// Прямые OSM tile-хосты обходят MeTravel proxy; CARTO запрещён, пока для
+// коммерческого приложения нет отдельно подтверждённой лицензии.
+const DIRECT_OSM_TILE_REGEX =
+  /(?:tile\.openstreetmap\.(?:org|fr|de)|basemaps\.cartocdn\.com|cartodb-basemaps-[^./\s]+\.global\.ssl\.fastly\.net)/i
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
 
@@ -123,14 +120,14 @@ const evaluateGuard = ({ sources = [] } = {}) => {
   if (violations.length === 0) {
     return {
       ok: true,
-      reason: 'No direct OSM tile hosts outside the tile provider (config/mapWebLayers)',
+      reason: 'No direct OSM tile hosts or unlicensed CARTO basemaps',
       violations: [],
     }
   }
 
   return {
     ok: false,
-    reason: 'Direct OSM tile host found outside the tile provider — route tiles through getOsmTileUrl()/getOsmNativeTileUrl()',
+    reason: 'Direct OSM/CARTO tile host found — route licensed OSM tiles through getOsmTileUrl()/getOsmNativeTileUrl()',
     violations,
   }
 }

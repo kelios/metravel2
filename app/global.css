@@ -484,9 +484,16 @@ select:focus-visible {
   body:has([data-testid="map-screen-root"]) .leaflet-control-attribution {
     max-width: calc(100vw - 32px);
     border-radius: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  /* Leaflet anchors attribution to the map bottom. Lift it above the mobile
+     dock and, when present, the consent banner so licence text/logo remain
+     actually visible instead of merely existing under the overlays. */
+  body:has([data-testid="map-screen-root"]) .leaflet-bottom {
+    bottom: calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 8px);
   }
 }
 

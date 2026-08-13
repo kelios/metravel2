@@ -5,8 +5,8 @@
 // карта живёт внутри WebView, а его DOM-origin (`about:blank`) делает tile-canvas
 // «tainted» → toDataURL бросает SecurityError. Поэтому здесь НЕ снимаем видимую
 // карту, а рисуем собственный off-DOM canvas тем же алгоритмом, что печатный
-// web-путь (utils/mapSnapshot/canvasRenderer.ts): тайлы CARTO с CORS
-// (crossOrigin=anonymous, сервер отдаёт Access-Control-Allow-Origin) → canvas
+// web-путь (utils/mapSnapshot/canvasRenderer.ts): лицензированные OSM-тайлы через
+// MeTravel proxy с CORS (crossOrigin=anonymous) → canvas
 // не tainted → toDataURL работает. Маркеры — пронумерованные кружки как на
 // видимой native-карте (iconFor) и как web numberIcon.
 //
@@ -15,6 +15,8 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { translate as i18nT } from '@/i18n'
+import { getOsmNativeTileUrl } from '@/config/mapWebLayers';
+import { serializeForInlineScript } from '@/utils/webViewBridge';
 
 
 export const QUEST_MAP_PNG_MESSAGE_TYPE = 'quest-map-png';
@@ -77,6 +79,7 @@ export async function saveAndShareQuestMapPng(params: {
 // Читает in-scope переменные htmlContent: grouped, routePoints, theme, isValidLatLng.
 // Плоский var-стиль без async/await — паритет с остальным HTML-скриптом.
 export const QUEST_MAP_PNG_RENDERER_SCRIPT = `
+        var __qmTileUrlTemplate = ${serializeForInlineScript(getOsmNativeTileUrl())};
         function __qmPostPng(ok, dataUrl) {
           try {
             if (!window.ReactNativeWebView) return;
@@ -155,13 +158,14 @@ export const QUEST_MAP_PNG_RENDERER_SCRIPT = `
             ctx.fillStyle = '#e8e4df';
             ctx.fillRect(0, 0, width, height);
 
-            var subdomains = 'abcd';
             var jobs = [];
             for (var tx = startTX; tx <= endTX; tx++) {
               for (var ty = startTY; ty <= endTY; ty++) {
                 (function (tx, ty) {
-                  var s = subdomains[Math.abs(tx + ty) % subdomains.length];
-                  var url = 'https://' + s + '.basemaps.cartocdn.com/rastertiles/voyager/' + zoom + '/' + tx + '/' + ty + '@2x.png';
+                  var url = __qmTileUrlTemplate
+                    .replace('{z}', String(zoom))
+                    .replace('{x}', String(tx))
+                    .replace('{y}', String(ty));
                   var drawX = tx * tileSize - (cxPx - width / 2);
                   var drawY = ty * tileSize - (cyPx - height / 2);
                   jobs.push(__qmLoadTile(url).then(function (img) {
@@ -215,7 +219,7 @@ export const QUEST_MAP_PNG_RENDERER_SCRIPT = `
                 ctx.fillStyle = 'rgba(0,0,0,0.4)';
                 ctx.font = '10px sans-serif';
                 ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-                ctx.fillText('(c) OpenStreetMap (c) CARTO', width - 6, height - 4);
+                ctx.fillText('(c) OpenStreetMap contributors', width - 6, height - 4);
 
                 var dataUrl = canvas.toDataURL('image/png');
                 __qmPostPng(true, dataUrl);

@@ -1,4 +1,5 @@
 import type { QuestMapApp } from '@/components/quests/questWizardHelpers'
+import { OSM_ATTRIBUTION_URL } from '@/config/mapWebTileContract'
 import {
   parseWebViewJsonObject,
   toFiniteCoordinate,
@@ -17,6 +18,7 @@ const QUEST_MAP_APPS: ReadonlySet<QuestMapApp> = new Set([
 
 export type QuestMapBridgeMessage =
   | { type: 'quest-map-png'; ok: boolean; dataUrl: string | null }
+  | { type: 'OPEN_URL'; url: string }
   | {
       type: 'quest-map-nav'
       app: QuestMapApp
@@ -62,6 +64,11 @@ export const parseQuestMapBridgeMessage = (raw: unknown): QuestMapBridgeMessage 
       lng: coordinate.longitude,
       ...(typeof parsed.title === 'string' ? { title: parsed.title } : {}),
     }
+  }
+
+  if (parsed.type === 'OPEN_URL') {
+    if (parsed.url !== OSM_ATTRIBUTION_URL) return null
+    return { type: 'OPEN_URL', url: parsed.url }
   }
 
   if (parsed.type === 'quest-map-status') {

@@ -28,6 +28,7 @@ export const toNativeOverlayLayerDefinitions = (
     id: layer.id,
     kind: layer.kind,
     url: layer.url,
+    attribution: layer.attribution,
     opacity: layer.opacity ?? 1,
     minZoom: layer.minZoom ?? 0,
     maxZoom: layer.maxZoom ?? 19,
@@ -224,11 +225,10 @@ export const buildNativeMapHtml = ({
         // темы приложения — обычный цвет карты. Тёмными остаются только панели/
         // контролы/маркеры.
         //
-        // Офлайн-карта (Фаза 0): вместо прямого L.tileLayer (который грузит <img>
-        // из сети) используем мост TileBridge → RN. Каждый тайл createTile постит
-        // TILE_REQ наружу; RN читает дисковый кэш (офлайн-показ), а при онлайн-
-        // промахе качает реальный тайл через прокси И кэширует его. Онлайн-картинка
-        // не меняется — те же тайлы, просто через RN-мост (прозрачный кэш).
+        // Вместо прямого L.tileLayer используем мост TileBridge → RN. Каждый тайл,
+        // который Leaflet реально запросил для текущего viewport, проходит через
+        // ограниченный сроком прозрачный кэш. Prefetch/bulk регионов здесь нет:
+        // стандартный OSM tile server запрещает offline download.
         window.__metravelTilePending = {};
         var TileBridge = L.GridLayer.extend({
           createTile: function(coords, done) {
@@ -247,7 +247,7 @@ export const buildNativeMapHtml = ({
           }
         });
         // RN отдаёт результат сюда: data-URL → рисуем тайл; пусто → прозрачный
-        // тайл (офлайн + не в кэше), карта не виснет в ожидании.
+        // тайл при сетевом промахе, карта не виснет в ожидании.
         window.__metravelSetTile = function(key, dataUrl) {
           try {
             var pending = window.__metravelTilePending[key];
@@ -560,6 +560,20 @@ ${ESCAPE_HTML_FN_SCRIPT}
         var overlayLayers = {};      // id -> L.layerGroup/L.tileLayer
         var overlayControllers = {}; // id -> { start, stop } для bbox-driven слоёв
         var overlayEnabled = {};     // id -> bool
+        var overlayAttributionActive = {}; // id -> bool
+
+        function setOverlayAttribution(def, enabled) {
+          try {
+            if (!def || !def.attribution || !map.attributionControl) return;
+            if (enabled && !overlayAttributionActive[def.id]) {
+              map.attributionControl.addAttribution(def.attribution);
+              overlayAttributionActive[def.id] = true;
+            } else if (!enabled && overlayAttributionActive[def.id]) {
+              map.attributionControl.removeAttribution(def.attribution);
+              overlayAttributionActive[def.id] = false;
+            }
+          } catch (e) {}
+        }
 
         function overlayBBox() {
           try {
@@ -814,10 +828,12 @@ ${buildNativeWeatherTempLabelsScript()}
             var ctrl = overlayControllers[id];
             if (enabled) {
               if (!map.hasLayer(layer)) layer.addTo(map);
+              setOverlayAttribution(def, true);
               if (ctrl) ctrl.start();
             } else {
               if (ctrl) ctrl.stop();
               if (map.hasLayer(layer)) map.removeLayer(layer);
+              setOverlayAttribution(def, false);
             }
           } catch (e) {}
         };

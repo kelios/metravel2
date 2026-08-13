@@ -30,6 +30,27 @@ export const LEAFLET_WEBVIEW_RESET_CSS = `* { margin: 0; padding: 0; box-sizing:
         html, body { width: 100%; height: 100%; }
         #map { width: 100%; height: 100%; }`;
 
+/**
+ * Native WebView не должен навигировать сам на внешний URL: иначе нажатие на
+ * обязательную Leaflet attribution заменяет карту страницей правообладателя.
+ * Передаём ссылку RN-хосту, где URL проходит общий protocol/scheme guard.
+ */
+export const LEAFLET_ATTRIBUTION_LINK_BRIDGE_SCRIPT = `        document.addEventListener('click', function(event) {
+          try {
+            var target = event && event.target;
+            var anchor = target && target.closest
+              ? target.closest('.leaflet-control-attribution a[href]')
+              : null;
+            if (!anchor || !window.ReactNativeWebView || !window.ReactNativeWebView.postMessage) return;
+            event.preventDefault();
+            event.stopPropagation();
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'OPEN_URL',
+              url: anchor.getAttribute('href') || anchor.href || ''
+            }));
+          } catch (e) {}
+        }, true);`;
+
 export interface LeafletWebViewHtmlOptions {
   /** Доп. CSS движка (popup/marker/cluster/qmark/z-index), кладётся после reset. */
   headStyles?: string;
@@ -63,6 +84,7 @@ export const buildLeafletWebViewHtml = ({
       <div id="map"></div>
       <script>
 ${bodyScript}
+${LEAFLET_ATTRIBUTION_LINK_BRIDGE_SCRIPT}
       </script>
     </body>
     </html>

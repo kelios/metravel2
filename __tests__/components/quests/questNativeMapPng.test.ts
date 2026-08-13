@@ -80,5 +80,10 @@ describe('QUEST_MAP_PNG_RENDERER_SCRIPT', () => {
     expect(QUEST_MAP_PNG_RENDERER_SCRIPT).toContain("canvas.toDataURL('image/png')");
     expect(QUEST_MAP_PNG_RENDERER_SCRIPT).toContain(QUEST_MAP_PNG_MESSAGE_TYPE);
     expect(QUEST_MAP_PNG_RENDERER_SCRIPT).toContain("crossOrigin = 'anonymous'");
+    expect(QUEST_MAP_PNG_RENDERER_SCRIPT).toContain(
+      'https://metravel.by/proxy/tiles/osm/{z}/{x}/{y}.png',
+    );
+    expect(QUEST_MAP_PNG_RENDERER_SCRIPT).toContain('OpenStreetMap contributors');
+    expect(QUEST_MAP_PNG_RENDERER_SCRIPT).not.toMatch(/cartocdn|CARTO/);
   });
 });

@@ -1,24 +1,21 @@
 // utils/mapTileCache.ts
-// Офлайн-кэш тайлов карты для native (iOS/Android). Тайлы пишутся на диск в
-// персистентный documentDirectory (НЕ cacheDirectory — ОС чистит cache под
-// давлением памяти), реестр скачанных регионов — в AsyncStorage.
-//
-// Модуль импортируется ТОЛЬКО из native-путей карты (Map.ios.tsx,
-// hooks/map/useOfflineTileDownload.ts). expo-file-system подключаем через
-// /legacy — главный экспорт бросает legacy-методы в рантайме (NATIVE_COMPAT_RULES §8).
+// Прозрачный кэш реально просмотренных тайлов для native (iOS/Android).
+// Массовая/опережающая загрузка стандартных OSM-тайлов запрещена политикой
+// tile.openstreetmap.org, поэтому этот модуль не перечисляет и не скачивает
+// регионы. Реестр старых регионов читается только для удаления legacy-данных.
+// expo-file-system подключаем через /legacy — главный экспорт бросает
+// legacy-методы в рантайме (NATIVE_COMPAT_RULES §8).
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TILE_ROOT = `${FileSystem.documentDirectory ?? ''}map-tiles/`;
 const REGIONS_KEY = 'map-offline-regions';
 const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
+const TILE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Суммарный лимит дискового кэша регионов. Скачанные пользователем регионы
-// считаются pinned: при превышении лимита новая загрузка отклоняется, старые
-// регионы никогда не удаляются без явного действия пользователя.
-export const MAX_OFFLINE_BYTES = 500 * 1024 * 1024; // 500 MB
-// Средний вес тайла OSM-подложки для оценки размера ДО скачивания.
-export const AVG_TILE_BYTES = 15 * 1024;
+// Средний вес одного тайла используется как fallback, если файловая система не
+// вернула размер после обычной интерактивной загрузки.
+const AVG_TILE_BYTES = 15 * 1024;
 
 export interface OfflineBBox {
   south: number;
@@ -38,14 +35,20 @@ export interface OfflineRegion {
   savedAt: number;
 }
 
-// ───────────────────────── Тайл-математика ─────────────────────────
-// Зеркалит questNativeMapPng.ts __qmLngToTileX/__qmLatToTileY (та же формула
-// slippy-map, что использует Leaflet), чтобы координаты тайлов совпадали с тем,
-// что запрашивает GridLayer в WebView.
-export const lngToTileX = (lng: number, z: number): number =>
+export const isTileCacheEntryFresh = (
+  modificationTimeSeconds: number | undefined,
+  nowMs = Date.now(),
+): boolean => {
+  if (!Number.isFinite(modificationTimeSeconds)) return false;
+  const ageMs = nowMs - Number(modificationTimeSeconds) * 1000;
+  return ageMs >= 0 && ageMs <= TILE_CACHE_MAX_AGE_MS;
+};
+
+// Тайл-математика нужна только для точечного удаления старых регионов.
+const lngToTileX = (lng: number, z: number): number =>
   ((lng + 180) / 360) * Math.pow(2, z);
 
-export const latToTileY = (lat: number, z: number): number => {
+const latToTileY = (lat: number, z: number): number => {
   const r = (lat * Math.PI) / 180;
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * Math.pow(2, z);
 };
@@ -56,7 +59,7 @@ const clampTile = (value: number, z: number): number => {
   return Math.min(max, Math.max(0, Math.floor(value)));
 };
 
-export interface TileCoord {
+interface TileCoord {
   z: number;
   x: number;
   y: number;
@@ -66,7 +69,7 @@ export interface TileCoord {
  * Перечисляет тайлы, покрывающие bbox на всех зумах [minZ, maxZ].
  * north соответствует меньшему y (slippy-map ось Y растёт на юг).
  */
-export const enumerateTiles = (bbox: OfflineBBox, minZ: number, maxZ: number): TileCoord[] => {
+const enumerateTiles = (bbox: OfflineBBox, minZ: number, maxZ: number): TileCoord[] => {
   const tiles: TileCoord[] = [];
   const lo = Math.max(0, Math.min(minZ, maxZ));
   const hi = Math.max(minZ, maxZ);
@@ -86,56 +89,6 @@ export const enumerateTiles = (bbox: OfflineBBox, minZ: number, maxZ: number): T
     }
   }
   return tiles;
-};
-
-/** Оценка количества тайлов для bbox без перечисления (для превью размера). */
-export const estimateTiles = (bbox: OfflineBBox, minZ: number, maxZ: number): number => {
-  let total = 0;
-  const lo = Math.max(0, Math.min(minZ, maxZ));
-  const hi = Math.max(minZ, maxZ);
-  for (let z = lo; z <= hi; z += 1) {
-    const x1 = clampTile(lngToTileX(bbox.west, z), z);
-    const x2 = clampTile(lngToTileX(bbox.east, z), z);
-    const y1 = clampTile(latToTileY(bbox.north, z), z);
-    const y2 = clampTile(latToTileY(bbox.south, z), z);
-    const nx = Math.abs(x2 - x1) + 1;
-    const ny = Math.abs(y2 - y1) + 1;
-    total += nx * ny;
-  }
-  return total;
-};
-
-export interface OfflineZoomPlan {
-  minZ: number;
-  maxZ: number;
-  tileCount: number;
-}
-
-/**
- * Подбирает максимальный зум, при котором область влезает в бюджет тайлов.
- *
- * Фиксированный потолок зума не работает на реальных областях: каждый уровень
- * зума даёт ×4 тайлов, поэтому один только z16 — это ~75% объёма, и обзорная
- * область города (~40 км) выходит за любой разумный бюджет (~25 000 тайлов при
- * лимите 4000). Раньше это просто гасило кнопку «Скачать эту область» на всех
- * масштабах крупнее пары кварталов. Теперь вместо отказа срезаем детализацию:
- * область сохраняется целиком, но до того зума, который влезает.
- *
- * @returns план или `null`, если даже базовый `minZ` не помещается в бюджет.
- */
-export const planOfflineZoomRange = (
-  bbox: OfflineBBox,
-  minZ: number,
-  maxZ: number,
-  maxTiles: number,
-): OfflineZoomPlan | null => {
-  const lo = Math.max(0, Math.min(minZ, maxZ));
-  const hi = Math.max(minZ, maxZ);
-  for (let z = hi; z >= lo; z -= 1) {
-    const tileCount = estimateTiles(bbox, lo, z);
-    if (tileCount <= maxTiles) return { minZ: lo, maxZ: z, tileCount };
-  }
-  return null;
 };
 
 // ───────────────────────── Файловые операции ─────────────────────────
@@ -158,15 +111,6 @@ const ensureDir = async (dir: string): Promise<void> => {
   }
 };
 
-export const hasTile = async (z: number, x: number, y: number): Promise<boolean> => {
-  try {
-    const info = await FileSystem.getInfoAsync(tilePath(z, x, y));
-    return Boolean(info.exists) && !info.isDirectory;
-  } catch {
-    return false;
-  }
-};
-
 /** Читает тайл с диска как data-URL (для инъекции в <img> внутри WebView). */
 export const getCachedTileDataUrl = async (
   z: number,
@@ -177,30 +121,15 @@ export const getCachedTileDataUrl = async (
     const path = tilePath(z, x, y);
     const info = await FileSystem.getInfoAsync(path);
     if (!info.exists || info.isDirectory) return null;
+    if (!isTileCacheEntryFresh(info.modificationTime)) {
+      await FileSystem.deleteAsync(path, { idempotent: true });
+      return null;
+    }
     const base64 = await FileSystem.readAsStringAsync(path, { encoding: 'base64' });
     if (!base64) return null;
     return `${PNG_DATA_URL_PREFIX}${base64}`;
   } catch {
     return null;
-  }
-};
-
-/** Сохраняет тайл из base64 (когда данные уже в JS, напр. из WebView). */
-export const saveTileBase64 = async (
-  z: number,
-  x: number,
-  y: number,
-  base64: string,
-): Promise<void> => {
-  if (!base64) return;
-  const clean = base64.startsWith(PNG_DATA_URL_PREFIX)
-    ? base64.slice(PNG_DATA_URL_PREFIX.length)
-    : base64;
-  try {
-    await ensureDir(tileDir(z));
-    await FileSystem.writeAsStringAsync(tilePath(z, x, y), clean, { encoding: 'base64' });
-  } catch {
-    // Диск полон / нет прав — тайл просто не закэшируется.
   }
 };
 
@@ -235,7 +164,7 @@ export const downloadTileToDisk = async (
 };
 
 // ───────────────────────── Реестр регионов ─────────────────────────
-export const listRegions = async (): Promise<OfflineRegion[]> => {
+const listLegacyRegions = async (): Promise<OfflineRegion[]> => {
   try {
     const raw = await AsyncStorage.getItem(REGIONS_KEY);
     if (!raw) return [];
@@ -249,13 +178,8 @@ export const listRegions = async (): Promise<OfflineRegion[]> => {
   }
 };
 
-const writeRegions = async (regions: OfflineRegion[]): Promise<void> => {
+const writeLegacyRegions = async (regions: OfflineRegion[]): Promise<void> => {
   await AsyncStorage.setItem(REGIONS_KEY, JSON.stringify(regions));
-};
-
-export const getTotalOfflineBytes = async (): Promise<number> => {
-  const regions = await listRegions();
-  return regions.reduce((sum, r) => sum + (Number.isFinite(r.bytes) ? r.bytes : 0), 0);
 };
 
 /**
@@ -283,47 +207,12 @@ const deleteRegionTiles = async (
   }
 };
 
-/**
- * Чистит тайлы незавершённой загрузки, но сохраняет каждый тайл, на который
- * ссылается уже зарегистрированный регион.
- */
-export const deleteDownloadedTiles = async (tiles: TileCoord[]): Promise<void> => {
-  const regions = await listRegions();
-  const keep = new Set<string>();
-  regions.forEach((region) => {
-    enumerateTiles(region.bbox, region.minZ, region.maxZ).forEach((tile) => {
-      keep.add(`${tile.z}/${tile.x}/${tile.y}`);
-    });
-  });
-  for (const tile of tiles) {
-    if (keep.has(`${tile.z}/${tile.x}/${tile.y}`)) continue;
-    try {
-      await FileSystem.deleteAsync(tilePath(tile.z, tile.x, tile.y), { idempotent: true });
-    } catch {
-      // Best effort cleanup after a cancelled or failed download.
-    }
-  }
-};
-
+/** Удаляет данные старого bulk-региона при явном удалении legacy-пакета. */
 export const deleteRegion = async (id: string): Promise<void> => {
-  const regions = await listRegions();
+  const regions = await listLegacyRegions();
   const target = regions.find((r) => r.id === id);
   if (!target) return;
   const remaining = regions.filter((r) => r.id !== id);
   await deleteRegionTiles(target, remaining);
-  await writeRegions(remaining);
-};
-
-/**
- * Регистрирует полностью скачанный регион. Пользовательские регионы не
- * вытесняют друг друга автоматически: при превышении лимита операция падает.
- */
-export const registerRegion = async (region: OfflineRegion): Promise<void> => {
-  const regions = await listRegions();
-  const next = regions.filter((r) => r.id !== region.id);
-  next.push(region);
-  next.sort((a, b) => a.savedAt - b.savedAt);
-  const total = next.reduce((sum, r) => sum + (Number.isFinite(r.bytes) ? r.bytes : 0), 0);
-  if (total > MAX_OFFLINE_BYTES) throw new Error('OFFLINE_MAP_STORAGE_LIMIT_EXCEEDED');
-  await writeRegions(next);
+  await writeLegacyRegions(remaining);
 };

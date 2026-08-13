@@ -290,5 +290,13 @@ Evidence 2026-07-28:
 - board `#909` — tile proxy rate contract;
 - `utils/publicStaleCache.ts`, `utils/queryPersist.ts`;
 - `api/questBundleCache.ts`, `hooks/useOfflineTravelCache.ts`;
-- `hooks/map/useOfflineTileDownload.ts`, `utils/mapTileCache.ts`;
+- `components/MapPage/MapOfflineDownloadControl.web.tsx` сохраняет только индекс
+  точек (без тайлов); `utils/mapTileCache.ts` держит ограниченный сроком
+  прозрачный кэш только реально просмотренных native-тайлов;
+- bulk/prefetch стандартных тайлов OpenStreetMap удалён 2026-08-13: публичная
+  OSM Tile Usage Policy запрещает offline download с `tile.openstreetmap.org`,
+  в том числе через caching proxy. Законная замена описана как
+  licensed/self-hosted PMTiles в ADR 0004, но #1307/#1315/#1316/#1317 остаются
+  `wont_do`: первый релиз не обещает офлайн-подложку, пока владелец отдельно не
+  утвердит лицензию и бюджет;
 - `docs/NATIVE_COMPAT_RULES.md` and `docs/MANUAL_TEST_CASES.md`.

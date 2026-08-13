@@ -161,6 +161,40 @@ const interpolateTemplate = (
     .replace(/\{url\}/g, encodeURIComponent(destinationUrl))
     .replace(/\{subid\}/g, encodeURIComponent(resolveSubId(ctx)))
 
+const hasSinglePositiveIntegerParam = (params: URLSearchParams, key: string): boolean => {
+  const values = params.getAll(key)
+  return values.length === 1 && /^[1-9]\d*$/.test(values[0] ?? '')
+}
+
+const isValidTravelpayoutsRedirect = (
+  url: string,
+  expected: { marker: string; subId: string; destinationUrl: string },
+): boolean => {
+  try {
+    const parsed = new URL(url)
+    const markerValues = parsed.searchParams.getAll('marker')
+    const destinationValues = parsed.searchParams.getAll('u')
+    const redirectMarker = clean(markerValues[0])
+    const expectedSubIdMarker = `${expected.marker}.${expected.subId}`
+    return (
+      parsed.protocol === 'https:' &&
+      parsed.hostname === 'tp.media' &&
+      parsed.pathname === '/r' &&
+      !parsed.username &&
+      !parsed.password &&
+      !parsed.port &&
+      markerValues.length === 1 &&
+      (redirectMarker === expected.marker || redirectMarker === expectedSubIdMarker) &&
+      destinationValues.length === 1 &&
+      destinationValues[0] === expected.destinationUrl &&
+      hasSinglePositiveIntegerParam(parsed.searchParams, 'p') &&
+      hasSinglePositiveIntegerParam(parsed.searchParams, 'trs')
+    )
+  } catch {
+    return false
+  }
+}
+
 /**
  * Resolve the displayable offers for a given travel context. Returns only offers
  * whose tp.media wrapper is configured. Empty array → block renders nothing.
@@ -169,12 +203,18 @@ export const getAffiliateOffers = (ctx: AffiliateOfferContext): AffiliateOffer[]
   if (!isAffiliateEnabled()) return []
 
   const place = resolvePlace(ctx)
+  const marker = getAffiliateMarker()
 
   return OFFER_PRESETS.reduce<AffiliateOffer[]>((acc, preset) => {
     const template = clean(preset.templateEnv())
-    if (!template) return acc
-    const url = interpolateTemplate(template, ctx, preset.buildDestinationUrl(ctx))
-    if (!url) return acc
+    if (!template || !template.includes('{url}')) return acc
+    const destinationUrl = preset.buildDestinationUrl(ctx)
+    const url = interpolateTemplate(template, ctx, destinationUrl)
+    if (!isValidTravelpayoutsRedirect(url, {
+      marker,
+      subId: resolveSubId(ctx),
+      destinationUrl,
+    })) return acc
     acc.push({
       key: preset.key,
       title: preset.title,

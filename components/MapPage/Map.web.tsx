@@ -20,7 +20,7 @@ import { useLeafletIcons } from './Map/useLeafletIcons'
 import { useMapInstance } from './Map/useMapInstance'
 import { useMapApi } from './Map/useMapApi'
 import MapControls from './Map/MapControls'
-import MapOfflineDownloadControl from './MapOfflineDownloadControl'
+import MapOfflineDownloadControl from './MapOfflineDownloadControl.web'
 import type { OfflineBBox } from '@/utils/mapTileCache'
 import {
   MapLoadingOverlay,

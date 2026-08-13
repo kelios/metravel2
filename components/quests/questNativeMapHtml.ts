@@ -1,5 +1,9 @@
 import { DESIGN_COLORS } from '@/constants/designSystem';
-import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
+import {
+  getOsmNativeTileUrl,
+  OSM_PROXY_ATTRIBUTION,
+  OSM_PROXY_MAX_ZOOM,
+} from '@/config/mapWebLayers';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
@@ -100,7 +104,7 @@ export const buildQuestNativeMapHtml = ({
         }).setView(initialCenter, routePoints.length > 1 ? 14 : 15);
 
         var tileLayer = L.tileLayer('${getOsmNativeTileUrl()}', {
-          attribution: '© OpenStreetMap',
+          attribution: ${serializeForInlineScript(OSM_PROXY_ATTRIBUTION)},
           maxZoom: ${OSM_PROXY_MAX_ZOOM},
           updateWhenIdle: false,
           updateWhenZooming: false,

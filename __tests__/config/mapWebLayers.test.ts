@@ -7,6 +7,10 @@ import {
   WEATHER_TEMP_LABELS_LAYER_ID,
 } from '../../config/mapWebLayers';
 import { resolveOsmTileRequest } from '../../config/mapWebTileContract';
+import {
+  OPENWEATHER_ATTRIBUTION,
+  OPENWEATHER_PROVIDER_URL,
+} from '../../config/mapProviderAttribution';
 
 describe('resolveOsmTileRequest (web single source)', () => {
   it('uses the same-origin proxy path and anonymous mode on production web', () => {
@@ -154,6 +158,26 @@ describe('mapWebLayers invariants', () => {
       expect(typeof layer.attribution).toBe('string');
       expect((layer.attribution || '').trim().length).toBeGreaterThan(0);
     }
+  });
+
+  it('uses the complete OpenWeather text, link and official embedded logo', () => {
+    const weatherLayers = WEB_MAP_OVERLAY_LAYERS.filter((layer) =>
+      layer.id.startsWith('weather-'),
+    );
+
+    expect(weatherLayers).toHaveLength(4);
+    for (const layer of weatherLayers) {
+      expect(layer.attribution).toBe(OPENWEATHER_ATTRIBUTION);
+    }
+    expect(OPENWEATHER_ATTRIBUTION).toContain('Weather data provided by OpenWeather');
+    expect(OPENWEATHER_ATTRIBUTION).toContain(`href="${OPENWEATHER_PROVIDER_URL}"`);
+    expect(OPENWEATHER_ATTRIBUTION).toContain('src="data:image/png;base64,');
+    expect(OPENWEATHER_ATTRIBUTION).toContain('alt="OpenWeather logo"');
+  });
+
+  it('does not configure CARTO tiles without a confirmed commercial licence', () => {
+    const allLayers = [...WEB_MAP_BASE_LAYERS, ...WEB_MAP_OVERLAY_LAYERS];
+    expect(allLayers.some((layer) => /cartocdn|carto/i.test(layer.url))).toBe(false);
   });
 
   it('default web base tile layer declares maxZoom for marker clustering', () => {

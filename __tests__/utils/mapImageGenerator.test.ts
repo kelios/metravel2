@@ -119,11 +119,16 @@ describe('generateLeafletRouteSnapshot', () => {
   it('creates off-screen map snapshot and cleans up DOM', async () => {
     jest.useFakeTimers()
     ;(window as any).L = mockLeaflet
-    ;(window as any).html2canvas = jest.fn(() =>
-      Promise.resolve({
+    ;(window as any).html2canvas = jest.fn((container: HTMLElement) => {
+      const attribution = container.querySelector('[data-testid="map-snapshot-attribution"]')
+      expect(attribution?.textContent).toBe('© OpenStreetMap contributors')
+      expect((attribution as HTMLElement | null)?.dataset.sourceAttribution).toContain(
+        'openstreetmap.org/copyright',
+      )
+      return Promise.resolve({
         toDataURL: () => 'data:image/png;base64,leaflet',
       })
-    )
+    })
 
     const promise = generateLeafletRouteSnapshot(
       [
@@ -138,6 +143,13 @@ describe('generateLeafletRouteSnapshot', () => {
 
     expect(result).toBe('data:image/png;base64,leaflet')
     expect(mockLeaflet.map).toHaveBeenCalled()
+    expect(mockLeaflet.tileLayer).toHaveBeenCalledWith(
+      expect.stringContaining('/proxy/tiles/osm/{z}/{x}/{y}.png'),
+      expect.objectContaining({
+        crossOrigin: 'anonymous',
+        maxZoom: 19,
+      }),
+    )
     expect(mockMapRemove).toHaveBeenCalled()
     expect(document.getElementById('metravel-map-snapshot')).toBeNull()
   })

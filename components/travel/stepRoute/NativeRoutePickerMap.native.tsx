@@ -5,10 +5,12 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { buildBirdMarkerHtml } from '@/components/MapPage/Map/mapMarkerStyles'
 import { DEFAULT_CENTER } from '@/components/MapPage/Map/travelMapGeometry'
+import { OSM_ATTRIBUTION_URL } from '@/config/mapWebTileContract'
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { MarkerData } from '@/types/types'
+import { openExternalUrl } from '@/utils/externalLinks'
 import { showToastMessage } from '@/utils/toast'
 import { translate as i18nT } from '@/i18n'
 
@@ -99,6 +101,10 @@ export const NativeRoutePickerMap = React.memo(function NativeRoutePickerMap({
           const shouldFit = markers.length > 0
           pushPoints(shouldFit)
           if (shouldFit) hasFittedRef.current = true
+          return
+        }
+        if (parsed?.type === 'OPEN_URL' && parsed.url === OSM_ATTRIBUTION_URL) {
+          void openExternalUrl(parsed.url, { allowedProtocols: ['https:'] })
           return
         }
         if (parsed?.type === 'POINT_ADD') {

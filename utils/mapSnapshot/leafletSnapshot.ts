@@ -1,5 +1,10 @@
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import {
+  OSM_PROXY_ATTRIBUTION,
+  OSM_PROXY_MAX_ZOOM,
+  getOsmTileUrl,
+} from '@/config/mapWebTileContract'
+import {
   ensureLeafletSnapshotStyles,
   isTestEnvironment,
   normalizeCoordPair,
@@ -396,20 +401,36 @@ export async function generateLeafletRouteSnapshot(
         center: [centerLat, centerLng],
         zoom,
         zoomControl: false,
-        attributionControl: false,
+        attributionControl: true,
         zoomAnimation: false,
         fadeAnimation: false,
         markerZoomAnimation: false,
       })
 
-      const tileLayer = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-        {
-          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-          crossOrigin: 'anonymous',
-          subdomains: 'abcd',
-        },
-      ).addTo(map)
+      const tileLayer = L.tileLayer(getOsmTileUrl(), {
+        crossOrigin: 'anonymous',
+        maxZoom: OSM_PROXY_MAX_ZOOM,
+      }).addTo(map)
+
+      // html2canvas cannot preserve a clickable attribution link inside a PNG.
+      // Render the required visible provider text in the exported image and keep
+      // the canonical linked HTML in the source for one shared wording contract.
+      const snapshotAttribution = document.createElement('div')
+      snapshotAttribution.dataset.sourceAttribution = OSM_PROXY_ATTRIBUTION
+      snapshotAttribution.textContent = '© OpenStreetMap contributors'
+      snapshotAttribution.setAttribute('data-testid', 'map-snapshot-attribution')
+      Object.assign(snapshotAttribution.style, {
+        position: 'absolute',
+        right: '4px',
+        bottom: '3px',
+        zIndex: '1000',
+        padding: '2px 4px',
+        borderRadius: '2px',
+        background: 'rgba(255,255,255,0.78)',
+        color: '#222',
+        font: '9px/1.2 sans-serif',
+      })
+      container.appendChild(snapshotAttribution)
 
       const latLngs = validPoints.map((p) => L.latLng(p.lat, p.lng))
 

@@ -18,9 +18,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import {
   downloadTileToDisk,
   getCachedTileDataUrl,
-  type OfflineBBox,
 } from '@/utils/mapTileCache';
-import { MapOfflineDownloadControl } from './MapOfflineDownloadControl';
 import type { MapMovePayload } from './Map/types';
 import {
   isSameViewportSnapshot,
@@ -104,11 +102,6 @@ interface TravelProps {
    * кластер-эндпоинт. Для карты квестов (`/quests`), где показываем только квесты.
    */
   pointsOnly?: boolean;
-  /**
-   * Показывать контрол «Скачать эту область» офлайн-карты. Только для главной
-   * карты (MapPanel передаёт true). Каталог квестов (pointsOnly) его не включает.
-   */
-  enableOfflineDownload?: boolean;
   onMapUiApiReady?: (api: {
     zoomIn: () => void;
     zoomOut: () => void;
@@ -119,16 +112,6 @@ interface TravelProps {
 
 const DEFAULT_LAT = 53.8828449;
 const DEFAULT_LNG = 27.7273595;
-
-/**
- * Отступ снизу для FAB «Скачать область» (сам контрол добавляет ещё +16).
- *
- * Кнопка стоит в том же правом нижнем углу, что и extended-FAB «Маршрут» из
- * мобильного overlay (bottom 96/104 + высота 48), а overlay рисуется ПОВЕРХ
- * карты — при прежних 90dp «Маршрут» полностью накрывал круглую кнопку
- * скачивания. Поэтому офлайн-FAB встаёт над ним: 144 + 16 = 160dp.
- */
-const OFFLINE_FAB_BOTTOM_INSET = 144;
 
 const withAlpha = (color: string, alpha: number) => {
   if (!color || color.startsWith('rgba') || color.startsWith('rgb')) {
@@ -159,7 +142,6 @@ const Map: React.FC<TravelProps> = ({
   mapClusterFilters,
   categoryFilterUnresolved = false,
   pointsOnly = false,
-  enableOfflineDownload = false,
   onMapUiApiReady,
 }) => {
   const router = useRouter();
@@ -263,21 +245,6 @@ const Map: React.FC<TravelProps> = ({
   );
   const renderedNativePointsRef = useRef(renderedNativePoints);
   renderedNativePointsRef.current = renderedNativePoints;
-
-  // Текущий bbox видимой области для контрола «Скачать эту область».
-  const offlineBBox = useMemo<OfflineBBox | null>(() => {
-    const b = viewportSnapshot?.bbox;
-    if (!b) return null;
-    if (
-      !Number.isFinite(b.south) ||
-      !Number.isFinite(b.west) ||
-      !Number.isFinite(b.north) ||
-      !Number.isFinite(b.east)
-    ) {
-      return null;
-    }
-    return { south: b.south, west: b.west, north: b.north, east: b.east };
-  }, [viewportSnapshot?.bbox]);
 
   const injectMapCommand = useCallback((script: string) => {
     try {
@@ -718,9 +685,6 @@ const Map: React.FC<TravelProps> = ({
         }}
         scrollEnabled={true}
       />
-      {enableOfflineDownload && !pointsOnly && (
-        <MapOfflineDownloadControl bbox={offlineBBox} bottomInset={OFFLINE_FAB_BOTTOM_INSET} />
-      )}
     </View>
   );
 };

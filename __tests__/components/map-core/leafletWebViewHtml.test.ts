@@ -4,6 +4,7 @@ import {
   buildLeafletWebViewHtml,
   buildInvalidateSchedulerScript,
   ESCAPE_HTML_FN_SCRIPT,
+  LEAFLET_ATTRIBUTION_LINK_BRIDGE_SCRIPT,
   LEAFLET_WEBVIEW_RESET_CSS,
 } from '@/components/map-core/leafletWebViewHtml';
 import {
@@ -167,6 +168,9 @@ describe('buildLeafletWebViewHtml (shared skeleton)', () => {
     expect(html).toContain(LEAFLET_WEBVIEW_RESET_CSS);
     // bodyScript инлайнится дословно
     expect(html).toContain('/*BODY_MARKER*/');
+    expect(html).toContain(LEAFLET_ATTRIBUTION_LINK_BRIDGE_SCRIPT);
+    expect(html).toContain("closest('.leaflet-control-attribution a[href]')");
+    expect(html).toContain("type: 'OPEN_URL'");
     // Внутри одного <script> тела карты
     expect(html.indexOf('/*BODY_MARKER*/')).toBeGreaterThan(html.indexOf('<div id="map">'));
   });
@@ -348,6 +352,20 @@ describe('buildNativeMapHtml — engine regression invariants', () => {
     expect(() => new Function(buildNativeWeatherTempLabelsScript())).not.toThrow();
   });
 
+  it('keeps visible licence attribution for the base map and enabled overlays', () => {
+    const definitions = toNativeOverlayLayerDefinitions(WEB_MAP_OVERLAY_LAYERS);
+    const serializedDefinitions = JSON.stringify(definitions);
+
+    expect(definitions.every(({ attribution }) => Boolean(attribution))).toBe(true);
+    expect(html).toContain('openstreetmap.org/copyright');
+    expect(serializedDefinitions).toContain('Weather data provided by OpenWeather');
+    expect(serializedDefinitions).toContain('https://openweathermap.org/');
+    expect(serializedDefinitions).toContain('data:image/png;base64,');
+    expect(serializedDefinitions).toContain('alt=\\"OpenWeather logo\\"');
+    expect(html).toContain('map.attributionControl.addAttribution(def.attribution)');
+    expect(html).toContain('map.attributionControl.removeAttribution(def.attribution)');
+  });
+
   it('discards an obsolete OWM response when the viewport moves during loading', async () => {
     jest.useFakeTimers();
     try {
@@ -519,7 +537,9 @@ describe('buildQuestNativeMapHtml — engine regression invariants', () => {
     expect(html).toContain('[80, 240, 600].forEach');
     // PNG-renderer script injected (off-DOM canvas exporter helpers present)
     expect(html).toContain('function __qmPostPng');
-    expect(html).toContain('basemaps.cartocdn.com');
+    expect(html).toContain('metravel.by/proxy/tiles/osm/');
+    expect(html).not.toContain('cartocdn');
+    expect(html).not.toContain('CARTO');
     // Quest-specific extra registration preserved in body
     expect(html).toContain("map.on('moveend zoomend', function() { scheduleMapRefresh('map-change'); });");
   });
@@ -527,6 +547,7 @@ describe('buildQuestNativeMapHtml — engine regression invariants', () => {
   it('uses the direct native tile provider (no TileBridge offline mux)', () => {
     expect(html).toContain('L.tileLayer(');
     expect(html).not.toContain('TileBridge');
+    expect(html).toContain('openstreetmap.org/copyright');
   });
 });
 
@@ -559,5 +580,6 @@ describe('buildTravelMapNativeHtml — engine regression invariants', () => {
     expect(html).toContain('map.whenReady(function()');
     expect(html).not.toContain('[80, 240, 600].forEach');
     expect(html).toContain('L.tileLayer(');
+    expect(html).toContain('openstreetmap.org/copyright');
   });
 });

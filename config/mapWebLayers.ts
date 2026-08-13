@@ -6,8 +6,10 @@ import {
   OSM_PROXY_TILE_PATH,
   getOsmTileUrl,
 } from '@/config/mapWebTileContract';
+import { OPENWEATHER_ATTRIBUTION } from '@/config/mapProviderAttribution';
 
 export {
+  OSM_ATTRIBUTION_URL,
   OSM_LOCAL_WEB_HOSTNAMES,
   OSM_PRIVATE_WEB_HOST_PATTERNS,
   OSM_PROXY_ATTRIBUTION,
@@ -499,7 +501,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     get title() { return i18nT('map:config.mapWebLayers.layer.weatherClouds.title'); },
     kind: 'tile',
     url: owmTileUrl('clouds_new'),
-    attribution: 'Weather data © OpenWeatherMap',
+    attribution: OPENWEATHER_ATTRIBUTION,
     category: 'weather',
     get subtitle() { return i18nT('map:config.mapWebLayers.layer.weatherClouds.subtitle'); },
     badge: 'OWM',
@@ -515,7 +517,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     get title() { return i18nT('map:config.mapWebLayers.layer.weatherPrecip.title'); },
     kind: 'tile',
     url: owmTileUrl('precipitation_new'),
-    attribution: 'Weather data © OpenWeatherMap',
+    attribution: OPENWEATHER_ATTRIBUTION,
     category: 'weather',
     get subtitle() { return i18nT('map:config.mapWebLayers.layer.weatherPrecip.subtitle'); },
     badge: 'OWM',
@@ -531,7 +533,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     get title() { return i18nT('map:config.mapWebLayers.layer.weatherTemp.title'); },
     kind: 'tile',
     url: owmTileUrl('temp_new'),
-    attribution: 'Weather data © OpenWeatherMap',
+    attribution: OPENWEATHER_ATTRIBUTION,
     category: 'weather',
     get subtitle() { return i18nT('map:config.mapWebLayers.layer.weatherTemp.subtitle'); },
     badge: 'OWM',
@@ -547,7 +549,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     get title() { return i18nT('map:config.mapWebLayers.layer.weatherTempLabels.title'); },
     kind: 'weather-temp-labels',
     url: '',
-    attribution: 'Weather data © OpenWeatherMap',
+    attribution: OPENWEATHER_ATTRIBUTION,
     category: 'weather',
     get subtitle() { return i18nT('map:config.mapWebLayers.layer.weatherTempLabels.subtitle'); },
     badge: 'OWM',
@@ -671,19 +673,6 @@ export const getOsmNativeTileUrl = (): string => {
   }
   return `${origin}${OSM_PROXY_TILE_PATH}`;
 };
-
-/**
- * CARTO «dark_all» — бесплатный OSM-совместимый тёмный стиль. Константы
- * сохранены для обратной совместимости импортов, но базовая подложка карты
- * больше НЕ переключается на тёмную при тёмной теме UI: пользователь хочет
- * обычную (светлую) карту независимо от темы приложения. Тёмными остаются
- * только панели/контролы/маркеры (контраст), не сами тайлы карты.
- */
-export const CARTO_DARK_TILE_URL =
-  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-export const CARTO_DARK_SUBDOMAINS = 'abcd';
-export const CARTO_DARK_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
-export const CARTO_DARK_MAX_ZOOM = 20;
 
 /**
  * Базовая подложка карты. Всегда светлая (OSM-прокси) — независимо от темы

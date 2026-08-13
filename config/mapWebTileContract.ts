@@ -4,7 +4,9 @@
  * `app/+html.tsx` does not pull the full map configuration into its boundary.
  */
 export const OSM_PROXY_TILE_PATH = '/proxy/tiles/osm/{z}/{x}/{y}.png';
-export const OSM_PROXY_ATTRIBUTION = '&copy; OpenStreetMap contributors';
+export const OSM_ATTRIBUTION_URL = 'https://www.openstreetmap.org/copyright';
+export const OSM_PROXY_ATTRIBUTION =
+  `&copy; <a href="${OSM_ATTRIBUTION_URL}" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors`;
 export const OSM_PROXY_MAX_ZOOM = 19;
 export const OSM_PROXY_PUBLIC_ORIGIN = 'https://metravel.by';
 

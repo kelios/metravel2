@@ -1,6 +1,6 @@
 # Фича: map
 
-**Последняя актуализация:** 2026-08-11
+**Последняя актуализация:** 2026-08-13
 
 **Ответственный домен:** frontend map/places
 
@@ -83,7 +83,7 @@ generic web fallback; platform resolution выбирает `.web`, `.ios` или
 | Overlays | `config/mapWebLayers.ts`, `utils/mapWebOverlays/*` | тот же сериализуемый набор layers; числовые weather labels поддерживаются и в Leaflet WebView через `nativeMapHtml.ts` |
 | View commands | Leaflet refs/API | `injectJavaScript` через `MapUiApi` |
 | Map events | React Leaflet handlers | `WebView.onMessage` |
-| Offline tiles | web tile/network path | `utils/mapTileCache.ts`, `MapOfflineDownloadControl.tsx` |
+| Offline map data | point-index package only; no tile bulk download | transparent seven-day cache of tiles actually viewed; lawful PMTiles option is documented in ADR 0004 but remains `wont_do` until the owner approves its license and budget |
 
 ### Web cold-start viewport and tiles
 
@@ -165,6 +165,20 @@ Backend-facing map adapter — `api/map.ts`; React Query ownership находи�
 - geolocation permissions и platform network state;
 - env key names из runtime config. Значения ключей в документацию и логи не
   копируются.
+
+### Лицензии и атрибуция внешних картографических провайдеров
+
+- Все стандартные OSM-подложки, включая PNG/PDF-снимки карты, загружаются
+  только через MeTravel OSM proxy и показывают `© OpenStreetMap contributors`
+  со ссылкой на страницу copyright. Прямые OSM tile-hosts и CARTO basemaps
+  запрещены guard-скриптом.
+- CARTO не используется, пока коммерческая лицензия не подтверждена отдельно.
+- Каждый активный OpenWeather-слой, включая числовые температурные подписи,
+  добавляет в Leaflet обязательные текст `Weather data provided by OpenWeather`,
+  ссылку на OpenWeather и официальный логотип. Это provider-owned wording и
+  поэтому намеренно не локализуется.
+- Отсутствие API key скрывает OpenWeather-слои; наличие ключа не доказывает
+  тариф или договор и проверяется отдельно перед релизом.
 
 Некоторые API adapters возвращают empty payload при recoverable/expected error.
 Поэтому пустая карта должна диагностироваться по network/API evidence, а не

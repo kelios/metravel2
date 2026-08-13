@@ -11,9 +11,11 @@ export type WeatherTempLabelsOverlayOptions = {
   /** Размер сетки выборки: число колонок и строк. */
   gridCols?: number;
   gridRows?: number;
+  /** Provider attribution shown by Leaflet while this custom layer is active. */
+  attribution?: string;
 };
 
-const defaultOpts: Required<WeatherTempLabelsOverlayOptions> = {
+const defaultOpts: Required<Omit<WeatherTempLabelsOverlayOptions, 'attribution'>> = {
   debounceMs: 600,
   maxLabels: 12,
   gridCols: 4,
@@ -60,7 +62,10 @@ export const attachWeatherTempLabelsOverlay = (
 ) => {
   const options = { ...defaultOpts, ...(opts || {}) };
 
-  const layerGroup = L.layerGroup();
+  const layerGroup = L.layerGroup(
+    [],
+    opts?.attribution ? { attribution: opts.attribution } : undefined,
+  );
 
   let abort: AbortController | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;

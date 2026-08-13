@@ -328,6 +328,7 @@ export function useMapInstance({
             maxLabels: 12,
             gridCols: 4,
             gridRows: 3,
+            attribution: tempLabelsDef.attribution,
           });
           leafletOverlayLayersRef.current.set(tempLabelsDef.id, tempLabelsController.layer);
           overlays[tempLabelsDef.title] = tempLabelsController.layer;

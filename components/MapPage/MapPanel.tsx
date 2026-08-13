@@ -198,7 +198,6 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     onMapMove={onMapMove}
                     onMapUiApiReady={onMapUiApiReady}
                     onRequestUserLocation={onRequestUserLocation}
-                    enableOfflineDownload
                 />
             </View>
         );

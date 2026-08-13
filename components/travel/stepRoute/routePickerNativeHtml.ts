@@ -12,7 +12,11 @@
 // Мост RN → WebView: __mtRouteSetPoints / __mtRouteFlyTo / __mtRouteFit.
 // Мост WebView → RN: POINT_ADD / POINT_MOVE / POINT_SELECT / MAP_READY.
 import { buildLeafletWebViewHtml } from '@/components/map-core/leafletWebViewHtml';
-import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
+import {
+  getOsmNativeTileUrl,
+  OSM_PROXY_ATTRIBUTION,
+  OSM_PROXY_MAX_ZOOM,
+} from '@/config/mapWebLayers';
 
 export interface RoutePickerNativeHtmlParams {
   center: [number, number];
@@ -40,7 +44,7 @@ export const buildRoutePickerNativeHtml = ({
     bodyScript: `        const map = L.map('map', { zoomControl: true, tap: false })
           .setView([${center[0]}, ${center[1]}], ${initialZoom});
         L.tileLayer('${getOsmNativeTileUrl()}', {
-          attribution: '© OpenStreetMap',
+          attribution: ${JSON.stringify(OSM_PROXY_ATTRIBUTION)},
           maxZoom: ${OSM_PROXY_MAX_ZOOM}
         }).addTo(map);
 

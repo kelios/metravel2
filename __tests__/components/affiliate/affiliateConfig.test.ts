@@ -42,6 +42,30 @@ describe('affiliateConfig', () => {
     expect(offers.map((o) => o.key)).toEqual(['hotels'])
   })
 
+  it.each([
+    ['http protocol', 'http://tp.media/r?marker=123456.{subid}&p=7038&trs=423278&u={url}'],
+    ['lookalike host', 'https://tp.media.evil.test/r?marker=123456.{subid}&p=7038&trs=423278&u={url}'],
+    ['wrong marker', 'https://tp.media/r?marker=999999.{subid}&p=7038&trs=423278&u={url}'],
+    ['missing destination', 'https://tp.media/r?marker=123456.{subid}&p=7038&trs=423278'],
+    ['missing program id', 'https://tp.media/r?marker=123456.{subid}&trs=423278&u={url}'],
+    ['missing source id', 'https://tp.media/r?marker=123456.{subid}&p=7038&u={url}'],
+    ['non-numeric program id', 'https://tp.media/r?marker=123456.{subid}&p=hotel&trs=423278&u={url}'],
+    ['unexpected marker suffix', 'https://tp.media/r?marker=123456.other&p=7038&trs=423278&u={url}'],
+    [
+      'placeholder outside redirect destination',
+      'https://tp.media/r?marker=123456.{subid}&p=7038&trs=423278&u=https%3A%2F%2Fevil.test%2F&extra={url}',
+    ],
+    [
+      'duplicate destination',
+      'https://tp.media/r?marker=123456.{subid}&p=7038&trs=423278&u={url}&u=https%3A%2F%2Fevil.test%2F',
+    ],
+  ])('fails closed for a malformed affiliate template: %s', (_label, template) => {
+    process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
+    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = template
+
+    expect(getAffiliateOffers({ countryCode: 'BY' })).toEqual([])
+  })
+
   it('hotels deep-links to the Ostrovok country page by ISO code, with {subid}', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
     process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL

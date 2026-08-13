@@ -3,7 +3,7 @@ import {
   isHeicLikeFile,
   prepareWebImageFileForUpload,
   HeicConversionError,
-} from '@/utils/webImageUpload';
+} from '@/utils/webImageUpload.web';
 
 const mockHeicTo = jest.fn(async () => new Blob([new Uint8Array([9, 8, 7])], { type: 'image/jpeg' }));
 

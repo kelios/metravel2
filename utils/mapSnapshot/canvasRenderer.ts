@@ -7,6 +7,7 @@ import {
   filterValidCoords,
   filterValidRouteLine,
 } from './shared'
+import { getOsmTileUrl } from '@/config/mapWebTileContract'
 
 const MAP_COLORS = {
   route: '#0f5ea8',
@@ -82,13 +83,15 @@ export async function generateCanvasMapSnapshot(
   ctx.fillStyle = '#e8e4df'
   ctx.fillRect(0, 0, width, height)
 
-  const subdomains = 'abcd'
+  const tileUrlTemplate = getOsmTileUrl()
   const tilePromises: Promise<void>[] = []
 
   for (let tx = startTX; tx <= endTX; tx++) {
     for (let ty = startTY; ty <= endTY; ty++) {
-      const s = subdomains[Math.abs(tx + ty) % subdomains.length]
-      const url = `https://${s}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}@2x.png`
+      const url = tileUrlTemplate
+        .replace('{z}', String(zoom))
+        .replace('{x}', String(tx))
+        .replace('{y}', String(ty))
       const drawX = tx * tileSize - (cxPx - width / 2)
       const drawY = ty * tileSize - (cyPx - height / 2)
 
@@ -270,7 +273,7 @@ export async function generateCanvasMapSnapshot(
   ctx.font = '9px sans-serif'
   ctx.textAlign = 'right'
   ctx.textBaseline = 'bottom'
-  ctx.fillText('© OpenStreetMap © CARTO', width - 6, height - 4)
+  ctx.fillText('© OpenStreetMap contributors', width - 6, height - 4)
 
   return canvas.toDataURL('image/png')
 }

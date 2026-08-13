@@ -9,7 +9,11 @@
 // native/quest): у travel-карты нет офлайн-тайлов/оверлеев, поэтому лёгкого fit
 // достаточно — поведение сохранено 1:1 из прежнего inline-HTML.
 import { buildLeafletWebViewHtml } from '@/components/map-core/leafletWebViewHtml';
-import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
+import {
+  getOsmNativeTileUrl,
+  OSM_PROXY_ATTRIBUTION,
+  OSM_PROXY_MAX_ZOOM,
+} from '@/config/mapWebLayers';
 
 export interface TravelMapNativeHtmlParams {
   /** JSON-сериализуемые точки (coord/address/...). */
@@ -48,7 +52,7 @@ export const buildTravelMapNativeHtml = ({
         .metravel-marker { background: transparent; border: 0; }`,
     bodyScript: `        const map = L.map('map', { zoomControl: true }).setView([${center[0]}, ${center[1]}], ${initialZoom});
         L.tileLayer('${getOsmNativeTileUrl()}', {
-          attribution: '© OpenStreetMap',
+          attribution: ${JSON.stringify(OSM_PROXY_ATTRIBUTION)},
           maxZoom: ${OSM_PROXY_MAX_ZOOM}
         }).addTo(map);
 

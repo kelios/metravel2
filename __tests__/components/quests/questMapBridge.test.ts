@@ -31,6 +31,12 @@ describe('quest map bridge', () => {
         JSON.stringify({ type: 'quest-map-png', ok: true, dataUrl: 'data:image/png;base64,AA==' }),
       ),
     ).toEqual({ type: 'quest-map-png', ok: true, dataUrl: 'data:image/png;base64,AA==' })
+
+    expect(
+      parseQuestMapBridgeMessage(
+        JSON.stringify({ type: 'OPEN_URL', url: 'https://www.openstreetmap.org/copyright' }),
+      ),
+    ).toEqual({ type: 'OPEN_URL', url: 'https://www.openstreetmap.org/copyright' })
   })
 
   it('ignores unknown apps, invalid coordinates, malformed PNG data and non-JSON input', () => {
@@ -48,6 +54,12 @@ describe('quest map bridge', () => {
       parseQuestMapBridgeMessage(
         JSON.stringify({ type: 'quest-map-png', ok: 'yes', dataUrl: [] }),
       ),
+    ).toBeNull()
+    expect(
+      parseQuestMapBridgeMessage(JSON.stringify({ type: 'OPEN_URL', url: '   ' })),
+    ).toBeNull()
+    expect(
+      parseQuestMapBridgeMessage(JSON.stringify({ type: 'OPEN_URL', url: 'https://evil.test' })),
     ).toBeNull()
     expect(parseQuestMapBridgeMessage('window.location="https://evil.test"')).toBeNull()
   })

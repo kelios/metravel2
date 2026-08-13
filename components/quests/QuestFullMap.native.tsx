@@ -37,6 +37,7 @@ import {
 import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
 import { buildQuestNativeMapHtml } from './questNativeMapHtml';
 import { selectPlural, translate as i18nT } from '@/i18n'
+import { openExternalUrl } from '@/utils/externalLinks';
 
 
 const MIN_INLINE_MAP_HEIGHT = 420;
@@ -214,6 +215,10 @@ function QuestFullMap({
                 { lat: message.lat, lng: message.lng, title: message.title },
                 message.app,
             );
+            return;
+        }
+        if (message.type === 'OPEN_URL') {
+            void openExternalUrl(message.url, { allowedProtocols: ['https:'] });
             return;
         }
         setMarkerStatus({
