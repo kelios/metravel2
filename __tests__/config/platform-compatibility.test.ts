@@ -5,6 +5,7 @@
 export {};
 
 const packageJson = require('../../package.json');
+const { getConfig } = require('@expo/config');
 
 const fs = require('fs');
 const path = require('path');
@@ -272,6 +273,23 @@ describe('Platform Compatibility Tests', () => {
         web: true,
         default: false,
       });
+    });
+
+    it('provides the hosted origin required by Expo Router Handoff on iOS', () => {
+      const appConfig = readAppConfig();
+      const routerPlugin = appConfig.expo.plugins.find((plugin: any) =>
+        Array.isArray(plugin) && plugin[0] === 'expo-router'
+      );
+      const resolvedConfig = getConfig(path.resolve(__dirname, '../..'), {
+        skipPlugins: false,
+        skipSDKVersionRequirement: true,
+      }).exp;
+
+      expect(routerPlugin?.[1]?.origin).toBe('https://metravel.by');
+      expect(routerPlugin?.[1]).not.toHaveProperty('headOrigin');
+      expect(appConfig.expo.extra?.router?.origin).not.toBe(false);
+      expect(resolvedConfig.extra?.router?.origin).toBe('https://metravel.by');
+      expect(resolvedConfig.extra?.router).not.toHaveProperty('headOrigin');
     });
 
     it('should have expo-location plugin with config', () => {

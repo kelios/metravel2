@@ -82,6 +82,7 @@
       [
         "expo-router",
         {
+          "origin": "https://metravel.by",
           "asyncRoutes": {
             "web": true,
             "default": false
@@ -165,9 +166,6 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {
-        "origin": false
-      },
       "eas": {
         "projectId": "472c9f49-998e-43c5-bf37-0478cf259645"
       }
