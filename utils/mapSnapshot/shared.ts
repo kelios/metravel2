@@ -1,4 +1,5 @@
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { isValidCoordinate } from '@/utils/coordinateValidator'
 
 export function isTestEnvironment(): boolean {
   return (
@@ -137,27 +138,11 @@ export function drawRoundRect(
 export function filterValidCoords<T extends { lat: number; lng: number }>(
   points: T[],
 ): T[] {
-  return points.filter(
-    (p) =>
-      Number.isFinite(p.lat) &&
-      Number.isFinite(p.lng) &&
-      p.lat >= -90 &&
-      p.lat <= 90 &&
-      p.lng >= -180 &&
-      p.lng <= 180,
-  )
+  return points.filter((p) => isValidCoordinate(p.lat, p.lng))
 }
 
 export function filterValidRouteLine(
   routeLine: Array<[number, number]>,
 ): Array<[number, number]> {
-  return routeLine.filter(
-    ([lat, lng]) =>
-      Number.isFinite(lat) &&
-      Number.isFinite(lng) &&
-      lat >= -90 &&
-      lat <= 90 &&
-      lng >= -180 &&
-      lng <= 180,
-  )
+  return routeLine.filter(([lat, lng]) => isValidCoordinate(lat, lng))
 }
