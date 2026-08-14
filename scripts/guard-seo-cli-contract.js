@@ -63,22 +63,94 @@ const EXCLUDED_PATH_PREFIXES = [`${SCRIPTS_DIR}/lib/`, `${SCRIPTS_DIR}/node_modu
 // this entire family exists to remove. A declaration can be wrong, but it is
 // wrong in writing, in review, next to the flags it describes.
 const NO_SELECTION = 'none'
-// The value must be a non-empty quoted string: `selection: ''` would otherwise
-// read as "declared, and not a selection" and become the escape hatch again.
-const SELECTION_DECLARATION = /(?:^|[\s{,;])selection:\s*(['"`])\s*([^'"`\n]+?)\s*\1/
 // `--all`, `--ids`, `--limit`, `--map-file`, `--urls-file` all mean "many
 // targets" — matched where flags are declared (`all: { type:`), not anywhere the
 // word appears.
 const LIST_FLAG_DECLARATION = /(?:^|[\s{,])'?(all|ids|limit|map-file|urls-file)'?:\s*\{\s*type:/
 
-// Every declaration in the file, not the first one: a stray `selection: 'none'`
-// in an unrelated object literal above the spec would otherwise switch the rule
-// off for a script that does select a list. Reading them all and believing the
-// one that names something keeps the miss on the loud side.
-const readDeclaredSelections = (code) =>
-  [...String(code || '').matchAll(new RegExp(SELECTION_DECLARATION.source, 'g'))].map(
-    (match) => match[2],
-  )
+// Read only the CLI_SPEC object. A `selection: 'none'` in another object (or in
+// prose) is not the declaration this contract asks for and must not let a
+// script with an undeclared selection pass.
+const findCliSpecObject = (code) => {
+  const text = String(code || '')
+  const assignment = /(?:^|[\n;])\s*(?:const|let|var)\s+CLI_SPEC\s*=\s*\{/.exec(text)
+  if (!assignment) return ''
+
+  const start = assignment.index + assignment[0].lastIndexOf('{')
+  let quote = null
+  let depth = 0
+  for (let i = start; i < text.length; i++) {
+    const char = text[i]
+    if (quote) {
+      if (char === '\\') i++
+      else if (char === quote) quote = null
+      continue
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '{') depth++
+    else if (char === '}' && --depth === 0) return text.slice(start, i + 1)
+  }
+
+  return ''
+}
+
+const readDeclaredSelections = (code) => {
+  const cliSpec = findCliSpecObject(stripComments(code))
+  const values = []
+  let quote = null
+  let depth = 0
+
+  for (let i = 0; i < cliSpec.length; i++) {
+    const char = cliSpec[i]
+    if (quote) {
+      if (char === '\\') i++
+      else if (char === quote) quote = null
+      continue
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '{') {
+      depth++
+      continue
+    }
+    if (char === '}') {
+      depth--
+      continue
+    }
+    if (depth !== 1 || !cliSpec.startsWith('selection', i)) continue
+    if (/[A-Za-z0-9_$]/.test(cliSpec[i - 1] || '') || /[A-Za-z0-9_$]/.test(cliSpec[i + 9] || '')) {
+      continue
+    }
+
+    let cursor = i + 9
+    while (/\s/.test(cliSpec[cursor] || '')) cursor++
+    if (cliSpec[cursor] !== ':') continue
+    cursor++
+    while (/\s/.test(cliSpec[cursor] || '')) cursor++
+    const delimiter = cliSpec[cursor]
+    if (delimiter !== "'" && delimiter !== '"' && delimiter !== '`') continue
+
+    let value = ''
+    for (cursor++; cursor < cliSpec.length; cursor++) {
+      if (cliSpec[cursor] === '\\' && cliSpec[cursor + 1] !== undefined) {
+        value += cliSpec[++cursor]
+      } else if (cliSpec[cursor] === delimiter) {
+        break
+      } else {
+        value += cliSpec[cursor]
+      }
+    }
+    if (value.trim()) values.push(value.trim())
+    i = cursor
+  }
+
+  return values
+}
 
 const declaresSelection = (code) => readDeclaredSelections(code).some((value) => value !== NO_SELECTION)
 
@@ -105,7 +177,7 @@ const REQUIRED_NEEDLES = [
   },
   {
     rule: 'selection-declared',
-    pattern: SELECTION_DECLARATION,
+    satisfiedWhen: (code) => readDeclaredSelections(code).length > 0,
     reason:
       "does not declare a selection in its CLI spec — add selection: '<what the run works on>', " +
       `or selection: '${NO_SELECTION}' when it works on one named target, so the guard knows ` +
@@ -113,7 +185,7 @@ const REQUIRED_NEEDLES = [
   },
   {
     rule: 'empty-selection-guard',
-    needle: 'requireNonEmptySelection(',
+    satisfiedWhen: (code) => hasCallExpression(code, 'requireNonEmptySelection'),
     appliesWhen: declaresSelection,
     reason:
       'declares a selection but never calls requireNonEmptySelection() — over an empty list it would ' +
@@ -201,32 +273,94 @@ const isCoveredFile = (relativePath) => {
   return COVERED_FILE_PATTERN.test(path.posix.basename(normalized))
 }
 
-// Prose about the ban — including the comments in this guard's own remediation —
-// is not a violation.
-const isCommentLine = (line) => {
-  const trimmed = String(line || '').trim()
-  return trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')
-}
-
-// The same reasoning one step further in: a comment at the end of a code line is
-// still prose. Cutting it works both ways — `const n = 1 // process.exit(0)` is
-// not a banned exit, and `const rows = [] // requireNonEmptySelection(rows)` is
-// not a satisfied requirement. A `//` inside a string stays put, or every URL in
-// these scripts would lose its host.
-const stripTrailingComment = (line) => {
-  const text = String(line || '')
+// Prose is not code, whether it occupies a whole line, trails a statement, or
+// sits in an inline block comment. Comments are replaced rather than deleted so
+// violation line numbers still point at the original source. A `//` inside a
+// string stays put, or every URL in these scripts would lose its host.
+const stripComments = (source) => {
+  const text = String(source || '')
+  let output = ''
   let quote = null
+  let regex = false
+  let regexCharacterClass = false
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     if (quote) {
-      if (char === '\\') i++
+      output += char
+      if (char === '\\' && text[i + 1] !== undefined) output += text[++i]
       else if (char === quote) quote = null
+      else if (char === '\n' && quote !== '`') quote = null
       continue
     }
-    if (char === "'" || char === '"' || char === '`') quote = char
-    else if (char === '/' && text[i + 1] === '/') return text.slice(0, i)
+    if (regex) {
+      output += char
+      if (char === '\\' && text[i + 1] !== undefined) output += text[++i]
+      else if (char === '[') regexCharacterClass = true
+      else if (char === ']') regexCharacterClass = false
+      else if (char === '/' && !regexCharacterClass) regex = false
+      else if (char === '\n') regex = false
+      continue
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      quote = char
+      output += char
+      continue
+    }
+    if (char === '/' && text[i + 1] === '/') {
+      while (i < text.length && text[i] !== '\n') {
+        output += ' '
+        i++
+      }
+      if (text[i] === '\n') output += '\n'
+      continue
+    }
+    if (char === '/' && text[i + 1] === '*') {
+      output += '  '
+      i += 2
+      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) {
+        output += text[i] === '\n' ? '\n' : ' '
+        i++
+      }
+      if (i < text.length) {
+        output += ' '
+        i++
+      }
+      continue
+    }
+    if (char === '/') {
+      const beforeSlash = output.trimEnd()
+      const previous = beforeSlash.at(-1) || ''
+      const startsRegex =
+        !previous ||
+        '=(:,!&|?{[;'.includes(previous) ||
+        beforeSlash.endsWith('=>') ||
+        /\b(?:case|return|throw|typeof|void|yield)$/.test(beforeSlash)
+      if (startsRegex) {
+        regex = true
+        regexCharacterClass = false
+      }
+    }
+    output += char
   }
-  return text
+  return output
+}
+
+const hasCallExpression = (code, name) => {
+  const callPattern = new RegExp(`\\b${name}\\s*\\(`, 'g')
+  return String(code || '')
+    .split('\n')
+    .some((line) => {
+      for (const match of line.matchAll(callPattern)) {
+        const prefix = line.slice(0, match.index)
+        const preceding = prefix.at(-1) || ''
+        // Calls in this family are direct helper calls. Quotes before the match
+        // mean it is string prose; a slash means a regex literal. Resetting this
+        // small check per line avoids mistaking quotes inside an earlier regex
+        // (for example /['"]/) for a multiline JavaScript string.
+        if (!/['"`]/.test(prefix) && !/[A-Za-z0-9_$./\\]/.test(preceding)) return true
+      }
+      return false
+    })
 }
 
 const collectCoveredFiles = (rootDir) => {
@@ -254,21 +388,28 @@ const findViolationsInSource = ({ filePath, content }) => {
   if (!isCoveredFile(normalizedPath)) return []
 
   const lines = String(content || '').split('\n')
+  const strippedLines = stripComments(content).split('\n')
   // `line` is what the rules read — comments removed; `raw` is what the operator
   // sees in the report, so the snippet still shows the line as written.
-  const codeLines = lines
-    .map((raw, index) => ({ raw, line: stripTrailingComment(raw), number: index + 1 }))
-    .filter((entry) => !isCommentLine(entry.raw))
+  const codeLines = lines.map((raw, index) => ({
+    raw,
+    line: strippedLines[index] || '',
+    number: index + 1,
+  }))
   const code = codeLines.map((entry) => entry.line).join('\n')
 
   const violations = []
 
-  for (const { rule, needle, pattern, appliesWhen, reason } of REQUIRED_NEEDLES) {
+  for (const { rule, needle, pattern, satisfiedWhen, appliesWhen, reason } of REQUIRED_NEEDLES) {
     // A rule that applies only to some scripts still has no "unclear, so skip"
     // branch: `appliesWhen` reads a declaration the script had to make, and a
     // missing declaration is its own violation above.
     if (appliesWhen && !appliesWhen(code)) continue
-    const satisfied = needle ? code.includes(needle) : pattern.test(code)
+    const satisfied = satisfiedWhen
+      ? satisfiedWhen(code)
+      : needle
+        ? code.includes(needle)
+        : pattern.test(code)
     if (!satisfied) {
       violations.push({ file: normalizedPath, line: 1, rule, reason })
     }
@@ -387,7 +528,6 @@ module.exports = {
   NO_SELECTION,
   OUTPUT_CONTRACT_VERSION,
   REQUIRED_NEEDLES,
-  SELECTION_DECLARATION,
   USAGE,
   buildJsonResult,
   collectCoveredFiles,
@@ -396,7 +536,5 @@ module.exports = {
   evaluateGuard,
   findViolationsInSource,
   isCoveredFile,
-  isCommentLine,
   readDeclaredSelections,
-  stripTrailingComment,
 }

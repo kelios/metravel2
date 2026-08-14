@@ -71,6 +71,21 @@ const UNDECLARED_AND_UNGUARDED_SOURCE = SILENT_EMPTY_RETURN_SOURCE.replace(
   '',
 )
 
+const STRAY_UNRELATED_SELECTION_SOURCE = UNDECLARED_AND_UNGUARDED_SOURCE.replace(
+  'const USAGE',
+  "const RETRY = { selection: 'none', attempts: 3 }\nconst USAGE",
+)
+
+const BLOCK_COMMENT_HELPER_SOURCE = SILENT_EMPTY_RETURN_SOURCE.replace(
+  '  const rows = []',
+  '  const rows = [] /* requireNonEmptySelection(rows) */',
+)
+
+const NESTED_SELECTION_SOURCE = UNDECLARED_AND_UNGUARDED_SOURCE.replace(
+  "flags: { 'dry-run': { type: 'boolean' } }",
+  "flags: { 'dry-run': { type: 'boolean', selection: 'none' } }",
+)
+
 const sourceOf = (filePath: string, content: string) => ({ filePath, content })
 
 describe('covered set is derived from the filesystem, with no allowlist to escape into', () => {
@@ -268,6 +283,30 @@ describe('negative probe: putting the permissive default back fails the guard', 
       ),
     },
     {
+      // The declaration belongs in CLI_SPEC. An unrelated object must not be
+      // able to declare this script exempt from the empty-selection rule.
+      label: "a stray selection: 'none' with no selection in CLI_SPEC",
+      rule: 'selection-declared',
+      reason: /does not declare a selection in its CLI spec/,
+      content: STRAY_UNRELATED_SELECTION_SOURCE,
+    },
+    {
+      // Block-comment prose is the same bypass as a trailing line comment: it
+      // names the helper without calling it.
+      label: 'the helper claimed in an inline block comment instead of called',
+      rule: 'empty-selection-guard',
+      reason: /never calls requireNonEmptySelection/,
+      content: BLOCK_COMMENT_HELPER_SOURCE,
+    },
+    {
+      // The property must be top-level metadata on CLI_SPEC. A similarly named
+      // field inside one flag does not describe the script's selection.
+      label: 'a selection declaration nested inside a flag config',
+      rule: 'selection-declared',
+      reason: /does not declare a selection in its CLI spec/,
+      content: NESTED_SELECTION_SOURCE,
+    },
+    {
       // The declaration rots: it stays 'none' on the day the script grows a flag
       // that means many targets.
       label: "selection: 'none' next to a flag that names many targets",
@@ -292,6 +331,12 @@ describe('negative probe: putting the permissive default back fails the guard', 
     expect(UNDECLARED_SELECTION_SOURCE).not.toContain('selection:')
     expect(UNDECLARED_AND_UNGUARDED_SOURCE).not.toContain('selection:')
     expect(UNDECLARED_AND_UNGUARDED_SOURCE).not.toContain('requireNonEmptySelection')
+    expect(STRAY_UNRELATED_SELECTION_SOURCE).toContain("selection: 'none'")
+    expect(STRAY_UNRELATED_SELECTION_SOURCE).not.toContain(
+      "CLI_SPEC = { name: 'seo-demo', usage: USAGE, selection:",
+    )
+    expect(BLOCK_COMMENT_HELPER_SOURCE).toContain('/* requireNonEmptySelection(rows) */')
+    expect(NESTED_SELECTION_SOURCE).toContain("type: 'boolean', selection: 'none'")
   })
 
   it('names only the missing declaration when a script declares nothing', () => {
@@ -308,17 +353,27 @@ describe('negative probe: putting the permissive default back fails the guard', 
     ])
   })
 
-  it('reads every declaration in the file, not the first one it meets', () => {
-    expect(readDeclaredSelections("{ selection: 'rows' }")).toEqual(['rows'])
-    expect(readDeclaredSelections("a: { selection: 'none' }, b: { selection: 'URLs' }")).toEqual([
-      'none',
-      'URLs',
-    ])
+  it('reads declarations from CLI_SPEC only', () => {
+    expect(readDeclaredSelections("const CLI_SPEC = { selection: 'rows' }")).toEqual(['rows'])
+    expect(
+      readDeclaredSelections(
+        "const RETRY = { selection: 'none' }; const CLI_SPEC = { selection: 'URLs' }",
+      ),
+    ).toEqual(['URLs'])
+    expect(readDeclaredSelections("const RETRY = { selection: 'none' }")).toEqual([])
+    expect(
+      readDeclaredSelections(
+        "const CLI_SPEC = { flags: { all: { type: 'boolean', selection: 'none' } } }",
+      ),
+    ).toEqual([])
+    expect(readDeclaredSelections("/* const CLI_SPEC = { selection: 'none' } */")).toEqual([])
     expect(readDeclaredSelections('nothing here')).toEqual([])
-    // Fail closed: one 'none' among the declarations does not turn the rule off.
-    expect(declaresSelection("x = { selection: 'none' }\nCLI_SPEC = { selection: 'URLs' }")).toBe(true)
-    expect(declaresSelection("CLI_SPEC = { selection: 'none' }")).toBe(false)
-    expect(declaresSelection("CLI_SPEC = { selection: '' }")).toBe(false)
+    // Fail closed: a stray 'none' outside CLI_SPEC does not turn the rule off.
+    expect(
+      declaresSelection("const x = { selection: 'none' }\nconst CLI_SPEC = { selection: 'URLs' }"),
+    ).toBe(true)
+    expect(declaresSelection("const CLI_SPEC = { selection: 'none' }")).toBe(false)
+    expect(declaresSelection("const CLI_SPEC = { selection: '' }")).toBe(false)
   })
 
   it.each(cases)('fails on $label, naming the file and the reason', ({ rule, content, reason }) => {
@@ -370,6 +425,16 @@ describe('negative probe: putting the permissive default back fails the guard', 
       "const note = 1 // never process.exit(0) over an empty list\nconst USAGE",
     )
     expect(evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', trailing)] }).ok).toBe(true)
+
+    // A quote character inside a regex literal is not the start of a string.
+    // The trailing comment after that regex must still be removed.
+    const trailingAfterRegex = COMPLIANT_SOURCE.replace(
+      'const USAGE',
+      "const quotePattern = /['\"]/ // never process.exit(0)\nconst USAGE",
+    )
+    expect(
+      evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', trailingAfterRegex)] }).ok,
+    ).toBe(true)
 
     // …and the control that keeps the comment stripper honest: a `//` inside a
     // string is part of the string, so the line is read whole.
