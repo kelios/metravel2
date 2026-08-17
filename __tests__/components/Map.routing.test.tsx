@@ -26,7 +26,8 @@ describe('Map Routing Display Tests', () => {
     );
 
     expect(getByText('Маршрут построен')).toBeTruthy();
-    expect(getByText('8.5 км')).toBeTruthy();
+    // #1440: разделитель дробной части берётся из локали интерфейса (RU — запятая)
+    expect(getByText('8,5 км')).toBeTruthy();
   });
 
   it('should display error message when routing fails', () => {
@@ -138,7 +139,7 @@ describe('Map Routing Display Tests', () => {
       />
     );
 
-    expect(getByText('15.0 км')).toBeTruthy();
+    expect(getByText('15,0 км')).toBeTruthy();
   });
 
   it('should return null when no route data and not loading', () => {

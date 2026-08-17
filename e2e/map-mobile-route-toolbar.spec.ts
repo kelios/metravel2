@@ -159,7 +159,9 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
       await expect(cardAction).toContainText('Маршрут от меня', { timeout: 15_000 })
       await cardAction.click({ force: true })
       await expect(byTid(page, 'map-mobile-route-summary')).toBeVisible({ timeout: 15_000 })
-      await expect(page.getByText('11.4 км', { exact: true })).toBeVisible()
+      // #1440: разделитель дробной части берётся из локали интерфейса — на RU
+      // это запятая, а не английская точка из toFixed.
+      await expect(page.getByText('11,4 км', { exact: true })).toBeVisible()
       await expect(page.getByText('27 мин', { exact: true })).toBeVisible()
       await expect(page.getByText('2/2', { exact: true })).toBeVisible()
       await byTid(page, 'map-mobile-route-clear-button').click({ force: true })

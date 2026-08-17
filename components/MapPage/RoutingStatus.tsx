@@ -12,6 +12,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import MapIcon from './MapIcon'
+import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -54,8 +55,7 @@ function estimateDurationSeconds(meters: number, mode: TransportMode): number {
 }
 
 function formatDistance(meters: number): string {
-  if (meters < 1000) return i18nT('map:components.MapPage.RoutingStatus.value1_m_c093a0f2', { value1: Math.round(meters) })
-  return i18nT('map:components.MapPage.RoutingStatus.value1_km_eff5e281', { value1: (meters / 1000).toFixed(1) })
+  return formatDistanceMeters(meters, ROUTE_DISTANCE_FORMAT)
 }
 
 function MiniCard({

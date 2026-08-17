@@ -39,6 +39,7 @@ import {
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 import { MapMobileTransportPopover } from './MapMobileTransportPopover'
+import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -88,8 +89,7 @@ const ROUTE_START_SELECTOR_MIN_WIDTH = 200
 
 function formatRouteDistance(meters: number): string {
   if (!Number.isFinite(meters) || meters <= 0) return ''
-  if (meters < 1000) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_m_5d0efb19', { value1: Math.round(meters) })
-  return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_km_6c6f740a', { value1: (meters / 1000).toFixed(1) })
+  return formatDistanceMeters(meters, ROUTE_DISTANCE_FORMAT)
 }
 
 function estimateRouteDurationSeconds(meters: number, mode: TransportMode): number {

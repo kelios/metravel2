@@ -35,21 +35,48 @@ function toRad(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
+export interface DistanceFormatOptions {
+  /**
+   * С какого значения километры печатаются целыми. По умолчанию 10: в списках
+   * и карточках «16 км» читается лучше, чем «15,6 км».
+   */
+  integerFromKm?: number;
+}
+
+const DEFAULT_INTEGER_FROM_KM = 10;
+
 /**
- * Форматирует расстояние для отображения
+ * Маршрут (панель на карте, валидатор длины): дробный километр держится до
+ * 1000 км — пользователь сверяет построенный маршрут, и «11 км» вместо
+ * «11,4 км» там теряет смысл.
+ */
+export const ROUTE_DISTANCE_FORMAT: DistanceFormatOptions = { integerFromKm: 1000 };
+
+/**
+ * Единственный форматтер расстояния в приложении (#1440): выбирает единицу,
+ * а разделители дроби и разрядов берёт из локали интерфейса, иначе русскому
+ * пользователю печатается английское «11.4 км» и «2800 км» без разрядов.
  * @param distance - расстояние в километрах
  * @returns отформатированная строка
  */
-export function formatDistance(distance: number): string {
+export function formatDistance(distance: number, options: DistanceFormatOptions = {}): string {
   if (distance < 1) {
-    return i18nT('shared:utils.distanceCalculator.value1_m_b71cf84d', { value1: Math.round(distance * 1000) });
-  }
-  if (distance < 10) {
-    return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', {
-      value1: formatNumber(distance, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+    return i18nT('shared:utils.distanceCalculator.value1_m_b71cf84d', {
+      value1: formatNumber(Math.round(distance * 1000), { maximumFractionDigits: 0 }),
     });
   }
-  return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', { value1: Math.round(distance) });
+  const fractionDigits = distance < (options.integerFromKm ?? DEFAULT_INTEGER_FROM_KM) ? 1 : 0;
+  return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', {
+    value1: formatNumber(distance, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }),
+  });
+}
+
+/** Тот же форматтер для источников, которые считают в метрах. */
+export function formatDistanceMeters(meters: number, options: DistanceFormatOptions = {}): string {
+  return formatDistance(meters / 1000, options);
 }
 
 /**

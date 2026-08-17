@@ -179,8 +179,6 @@ export const sharedGenerated2 = {
   "utils.commentCacheHelpers.otpravka_3a4c32fb": "Відправка...",
   "utils.confirmAction.otmena_719687da": "Скасування",
   "utils.confirmAction.podtverdit_bceede58": "Підтвердити",
-  "utils.coordinateConverter.value1_km_c01fe287": "{{value1}} км",
-  "utils.coordinateConverter.value1_m_7499185a": "{{value1}} м",
   "utils.distanceCalculator.value1_ch_3f6ab619": "{{value1}} год",
   "utils.distanceCalculator.value1_ch_value2_min_d6e2cc67": "{{value1}} год {{value2}} хв",
   "utils.distanceCalculator.value1_km_e94147ae": "{{value1}} км",

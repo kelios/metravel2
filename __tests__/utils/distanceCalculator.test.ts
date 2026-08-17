@@ -5,6 +5,8 @@
 import {
   calculateDistance,
   formatDistance,
+  formatDistanceMeters,
+  ROUTE_DISTANCE_FORMAT,
   calculateTravelTime,
   formatTravelTime,
   getDistanceInfo,
@@ -87,6 +89,55 @@ describe('distanceCalculator', () => {
           expect(formatDistance(0)).toBe(locale === 'ru' || locale === 'be' || locale === 'uk' ? '0 м' : '0 m');
         },
       );
+    });
+
+    // #1440: у больших чисел разряды тоже локальные — «2800 км» вместо
+    // «2 800 км» читается как другое число. Порог группировки берётся из
+    // локали: be/pl группируют только с пяти цифр (minimumGroupingDigits=2).
+    describe('разделитель разрядов по локали', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('ru');
+      });
+
+      it.each([
+        ['ru', '2\u00a0800 км', '12\u00a0000 км'],
+        ['be', '2800 км', '12\u00a0000 км'],
+        ['uk', '2\u00a0800 км', '12\u00a0000 км'],
+        ['pl', '2800 km', '12\u00a0000 km'],
+        ['en', '2,800 km', '12,000 km'],
+      ] as const)('печатает разряды по нормам локали %s', async (locale, small, large) => {
+        await i18n.changeLanguage(locale);
+
+        expect(formatDistance(2800)).toBe(small);
+        expect(formatDistance(12000)).toBe(large);
+      });
+    });
+  });
+
+  // #1440: панель маршрута на карте и валидатор длины считают в метрах и
+  // держат дробный километр дольше, чем списки, — но форматтер один.
+  describe('formatDistanceMeters', () => {
+    afterEach(async () => {
+      await i18n.changeLanguage('ru');
+    });
+
+    it('переводит метры в ту же ветку, что и километры', () => {
+      expect(formatDistanceMeters(800)).toBe('800 м');
+      expect(formatDistanceMeters(1500)).toBe('1,5 км');
+      expect(formatDistanceMeters(15_600)).toBe('16 км');
+    });
+
+    it('в режиме маршрута держит дробный километр до 1000 км', () => {
+      expect(formatDistanceMeters(11_400, ROUTE_DISTANCE_FORMAT)).toBe('11,4 км');
+      expect(formatDistanceMeters(512_300, ROUTE_DISTANCE_FORMAT)).toBe('512,3 км');
+      expect(formatDistanceMeters(2_800_000, ROUTE_DISTANCE_FORMAT)).toBe('2\u00a0800 км');
+    });
+
+    it('в режиме маршрута берёт разделители из локали', async () => {
+      await i18n.changeLanguage('en');
+
+      expect(formatDistanceMeters(11_400, ROUTE_DISTANCE_FORMAT)).toBe('11.4 km');
+      expect(formatDistanceMeters(2_800_000, ROUTE_DISTANCE_FORMAT)).toBe('2,800 km');
     });
   });
 

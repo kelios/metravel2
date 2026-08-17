@@ -1,5 +1,5 @@
 import type { LatLng, LatLngTuple, LatLngBounds } from '@/types/coordinates';
-import { translate as i18nT } from '@/i18n'
+import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from './distanceCalculator';
 
 
 /**
@@ -158,10 +158,7 @@ export class CoordinateConverter {
    * Format distance for display
    */
   static formatDistance(meters: number): string {
-    if (meters < 1000) {
-      return i18nT('shared:utils.coordinateConverter.value1_m_7499185a', { value1: Math.round(meters) });
-    }
-    return i18nT('shared:utils.coordinateConverter.value1_km_c01fe287', { value1: (meters / 1000).toFixed(1) });
+    return formatDistanceMeters(meters, ROUTE_DISTANCE_FORMAT);
   }
 
   /**

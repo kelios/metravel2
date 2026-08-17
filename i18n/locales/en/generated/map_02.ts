@@ -57,7 +57,6 @@ export const mapGenerated2 = {
   "components.MapPage.RoutingStatus.value1_ch_ee64dc1f": "{{value1}}h",
   "components.MapPage.RoutingStatus.value1_ch_value2_m_dc3e9fbc": "{{value1}}h {{value2}}m",
   "components.MapPage.RoutingStatus.value1_ch_value2_min_b2532ef4": "{{value1}} h {{value2}} min",
-  "components.MapPage.RoutingStatus.value1_km_eff5e281": "{{value1}} km",
   "components.MapPage.RoutingStatus.value1_m_0adff6ff": "{{value1}}m",
   "components.MapPage.RoutingStatus.value1_m_c093a0f2": "{{value1}} m",
   "components.MapPage.RoutingStatus.value1_min_6e3c22ce": "{{value1}} min",

@@ -179,8 +179,6 @@ export const sharedGenerated2 = {
   "utils.commentCacheHelpers.otpravka_3a4c32fb": "Wysyłanie...",
   "utils.confirmAction.otmena_719687da": "Anuluj",
   "utils.confirmAction.podtverdit_bceede58": "Potwierdź",
-  "utils.coordinateConverter.value1_km_c01fe287": "{{value1}} km",
-  "utils.coordinateConverter.value1_m_7499185a": "{{value1}} m",
   "utils.distanceCalculator.value1_ch_3f6ab619": "{{value1}} godz",
   "utils.distanceCalculator.value1_ch_value2_min_d6e2cc67": "{{value1}} godz. {{value2}} min",
   "utils.distanceCalculator.value1_km_e94147ae": "{{value1}} km",

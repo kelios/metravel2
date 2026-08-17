@@ -297,8 +297,6 @@ export const mapGenerated1 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_marshruta_vruchnuyu_d0723436": "Указаць старт маршруту ўручную",
   "components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_53da1ce7": "{{value1}} ч",
   "components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_value2_min_0833ca5d": "{{value1}} ч {{value2}} мін",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.value1_km_6c6f740a": "{{value1}} км",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.value1_m_5d0efb19": "{{value1}} м",
   "components.MapPage.MapMobile.MapMobileTopOverlay.value1_min_b586289b": "{{value1}} мін",
   "components.MapPage.MapMobileLayout.filtry_i_poisk_e9eb803e": "Фільтры і пошук",
   "components.MapPage.MapMobileLayout.iskat_v_etoy_oblasti_1828db63": "Шукаць у гэтай галіне",

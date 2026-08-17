@@ -297,8 +297,6 @@ export const mapGenerated1 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_marshruta_vruchnuyu_d0723436": "Określ początek trasy ręcznie",
   "components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_53da1ce7": "{{value1}} godz",
   "components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_value2_min_0833ca5d": "{{value1}} godz. {{value2}} min",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.value1_km_6c6f740a": "{{value1}} km",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.value1_m_5d0efb19": "{{value1}} m",
   "components.MapPage.MapMobile.MapMobileTopOverlay.value1_min_b586289b": "{{value1}} min",
   "components.MapPage.MapMobileLayout.filtry_i_poisk_e9eb803e": "Filtry i wyszukiwanie",
   "components.MapPage.MapMobileLayout.iskat_v_etoy_oblasti_1828db63": "Szukaj w tym obszarze",
