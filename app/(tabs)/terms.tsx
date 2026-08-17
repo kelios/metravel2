@@ -9,7 +9,7 @@ export default function TermsScreen() {
       seoTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_a107cf93')}
       seoDescription={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_usloviya_860ebcea')}
       pageTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_13d561c9')}
-      effectiveDate="21.07.2026"
+      effectiveDate="17.08.2026"
       intro={[
         i18nT('legal:app.tabs.terms.nastoyaschee_polzovatelskoe_soglashenie_regu_15e5e27a'),
         i18nT('legal:app.tabs.terms.relatedDocuments'),
