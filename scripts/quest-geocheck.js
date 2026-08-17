@@ -21,6 +21,12 @@
  *   node scripts/quest-geocheck.js
  */
 
+const {
+  fetchQuestBundles,
+  loadLocalBundles,
+  parseSteps: parseRawSteps,
+} = require('./lib/questBundles');
+
 const DEFAULT_API_URL = 'https://metravel.by';
 const DEFAULT_THRESHOLD_METERS = 60;
 // A hop that moves the player back along the route's main axis by more than this
@@ -178,59 +184,11 @@ function isInfra(result) {
   return INFRA_TYPES.has(String(result?.type || ''));
 }
 
+// Bundle loading (paginated catalog walk, local data files) lives in
+// scripts/lib/questBundles.js — shared with the other quest audit scripts.
+// Intro steps are not a location to verify, so they are dropped here.
 function parseSteps(bundle) {
-  const raw = Array.isArray(bundle.steps) ? bundle.steps : JSON.parse(bundle.steps || '[]');
-  return raw.filter((step) => !step.is_intro);
-}
-
-// The list endpoint is paginated: { data | results, next_page_url }. Walk pages
-// and collect every quest_id, then expand each via the by-quest-id bundle.
-async function fetchAllQuestIds(base) {
-  const ids = [];
-  let url = `${base}/api/quests/`;
-  const seen = new Set();
-  while (url && !seen.has(url)) {
-    seen.add(url);
-    const page = await fetchJson(url);
-    const rows = Array.isArray(page) ? page : page.data || page.results || [];
-    for (const quest of rows) {
-      if (quest?.quest_id) ids.push(quest.quest_id);
-    }
-    const next = Array.isArray(page) ? null : page.next_page_url || page.next || null;
-    url = next ? (next.startsWith('http') ? next : `${base}${next}`) : null;
-  }
-  return ids;
-}
-
-async function fetchQuestBundles(apiUrl, questId) {
-  const base = apiUrl.replace(/\/+$/, '');
-  if (questId) {
-    return [await fetchJson(`${base}/api/quests/by-quest-id/${encodeURIComponent(questId)}/`)];
-  }
-  const ids = await fetchAllQuestIds(base);
-  const bundles = [];
-  for (const id of ids) {
-    bundles.push(await fetchJson(`${base}/api/quests/by-quest-id/${encodeURIComponent(id)}/`));
-  }
-  return bundles;
-}
-
-// Load quest bundles from a local data file (scripts/<city>-quest-data.js),
-// normalizing it to the same shape fetchQuestBundles returns.
-function loadLocalBundles(sourceFile, questId) {
-  const resolved = require('path').resolve(process.cwd(), sourceFile);
-  const data = require(resolved);
-  const quests = Array.isArray(data) ? data : [data];
-  const picked = questId ? quests.filter((q) => q?.quest_id === questId) : quests;
-  if (questId && picked.length === 0) {
-    throw new Error(`quest_id "${questId}" not found in ${sourceFile}`);
-  }
-  return picked.map((quest) => ({
-    quest_id: quest.quest_id,
-    title: quest.title,
-    city: quest.city,
-    steps: (quest.steps || []).filter((s) => !s.is_intro),
-  }));
+  return parseRawSteps(bundle).filter((step) => !step.is_intro);
 }
 
 // --- Address verification helpers ---------------------------------------

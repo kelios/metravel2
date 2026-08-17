@@ -20,10 +20,9 @@
  * Exit code 1, если найдена хотя бы одна утечка.
  */
 
-const path = require('path')
+const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
-const USER_AGENT = 'metravel-hint-leak-scan/1.0'
 
 // Поля шага, в которых ищем ответ. По умолчанию только `hint`: это тот контур,
 // который правило 4a требует держать чистым безусловно. `title`/`story` шумят
@@ -136,53 +135,15 @@ function scanQuests(quests, fields) {
 }
 
 // ===================== Источники данных =====================
-
-// Скан обходит все 139 квестов по одному запросу на квест, поэтому попадает в
-// окно прод-деплоя (swap статики + рестарт даёт короткий 502). Без ретрая
-// падает весь прогон из-за одного шага — и «утечек нет» никто не увидит.
-async function fetchJson(url, attempt = 1) {
-  const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } })
-  const text = await response.text()
-  if (!response.ok) {
-    if (response.status >= 500 && attempt < 4) {
-      await new Promise((r) => setTimeout(r, attempt * 2000))
-      return fetchJson(url, attempt + 1)
-    }
-    throw new Error(`${response.status} ${url}: ${text.slice(0, 200)}`)
-  }
-  return JSON.parse(text)
-}
-
-function parseSteps(bundle) {
-  const raw = Array.isArray(bundle.steps) ? bundle.steps : JSON.parse(bundle.steps || '[]')
-  return raw
-}
+//
+// Загрузка бандлов — в `scripts/lib/questBundles`: обход страниц каталога и
+// ретраи там в одном экземпляре на все аудит-скрипты. В локальных данных
+// `answer_pattern` уже объект, а не строка, поэтому форма совпадает с API и
+// приводить ничего не нужно.
 
 async function loadFromApi(apiUrl, questId) {
-  const base = apiUrl.replace(/\/+$/, '')
-  const ids = questId
-    ? [questId]
-    : (await fetchJson(`${base}/api/quests/?page_size=500`)).results.map((q) => q.quest_id)
-
-  const quests = []
-  for (const id of ids) {
-    const bundle = await fetchJson(`${base}/api/quests/by-quest-id/${encodeURIComponent(id)}/`)
-    quests.push({ id: bundle.id, quest_id: bundle.quest_id, steps: parseSteps(bundle) })
-  }
-  return quests
-}
-
-/**
- * Локальный `scripts/<city>-quest-data.js` — та же проверка ДО заливки.
- * В локальных данных `answer_pattern` уже объект, а не строка, поэтому форма
- * совпадает с API и приводить ничего не нужно.
- */
-function loadFromSource(sourceFile, questId) {
-  const data = require(path.resolve(process.cwd(), sourceFile))
-  const quests = Array.isArray(data) ? data : [data]
-  const picked = questId ? quests.filter((q) => q?.quest_id === questId) : quests
-  if (questId && !picked.length) throw new Error(`quest_id "${questId}" не найден в ${sourceFile}`)
-  return picked.map((quest) => ({ id: null, quest_id: quest.quest_id, steps: quest.steps || [] }))
+  const bundles = await fetchQuestBundles(apiUrl, questId)
+  return bundles.map((bundle) => ({ id: bundle.id, quest_id: bundle.quest_id, steps: parseSteps(bundle) }))
 }
 
 // ===================== CLI =====================
@@ -205,7 +166,7 @@ function parseArgs(argv) {
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const quests = args.source
-    ? loadFromSource(args.source, args.questId)
+    ? loadLocalBundles(args.source, args.questId)
     : await loadFromApi(args.apiUrl, args.questId)
 
   const { findings, scannedSteps } = scanQuests(quests, args.fields)
