@@ -78,28 +78,42 @@ const FALLBACK_DESC = 'Найди место для путешествия и п
 // Helpers
 // ---------------------------------------------------------------------------
 
-function fetchHtml(url) {
+/**
+ * One GET, no interpretation: status, redirect target and body as they came.
+ * The 404 template (#1441) is only reachable this way — `fetchHtml` below treats
+ * a 404 as a transport failure and would never see that head.
+ */
+function fetchRaw(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
     const opts = { timeout: 30000, headers: { 'User-Agent': 'MeTravelSEOTest/1.0' } };
     if (mod === https) opts.rejectUnauthorized = !INSECURE_TLS;
     const req = mod.get(url, opts, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        const loc = res.headers.location.startsWith('http')
-          ? res.headers.location
-          : `${SITE}${res.headers.location}`;
-        return fetchHtml(loc).then(resolve, reject);
-      }
-      if (res.statusCode !== 200) {
-        return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-      }
       let body = '';
       res.setEncoding('utf8');
       res.on('data', (c) => (body += c));
-      res.on('end', () => resolve(body));
+      res.on('end', () => resolve({
+        status: res.statusCode,
+        location: res.headers.location,
+        html: body,
+      }));
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
+  });
+}
+
+/** Follows redirects and rejects anything that is not a 200 with a body. */
+function fetchHtml(url) {
+  return fetchRaw(url).then((res) => {
+    if (res.status >= 300 && res.status < 400 && res.location) {
+      const loc = res.location.startsWith('http') ? res.location : `${SITE}${res.location}`;
+      return fetchHtml(loc);
+    }
+    if (res.status !== 200) {
+      throw new Error(`HTTP ${res.status} for ${url}`);
+    }
+    return res.html;
   });
 }
 
@@ -352,6 +366,48 @@ async function testPage(path, expectations) {
   assert(ogImageCount === 1, 'no duplicate og:image', `found ${ogImageCount}`);
 }
 
+/**
+ * #1441: the 404 template must not canonicalize an error page to the home page.
+ *
+ * Every unknown URL is served the same prebuilt `+not-found.html`, so a build-time
+ * canonical there can only ever point at some other page — it pointed at `/`,
+ * contradicting the `noindex, nofollow` on the same head. Absent is correct;
+ * self-referential (what the inline head script produces for JS clients) is also
+ * accepted, since the raw HTML this gate reads is what robots without JS see.
+ *
+ * The regression this catches from the other side is `testPage`'s `canonicalPath`
+ * assertions on real pages: strip canonical everywhere and those go red.
+ */
+async function testNotFoundTemplate(path) {
+  const url = `${SITE}${path}`;
+  console.log(`\n🔍 ${url} (404 template)`);
+  let res;
+  try {
+    res = await fetchRaw(url);
+  } catch (e) {
+    totalTests++;
+    failed++;
+    const msg = `FETCH FAILED: ${describeFetchError(e)}`;
+    failures.push(`${path}: ${msg}`);
+    console.log(`  ❌ ${msg}`);
+    return;
+  }
+
+  const { status, html } = res;
+  assert(status === 404, `${path} answers 404`, `got HTTP ${status}`);
+
+  const robots = getMeta(html, 'name', 'robots')[0] || '';
+  assert(isBlockedFromIndexing(robots), `${path} is noindex`, `got: "${robots}"`);
+
+  const canonical = getCanonical(html);
+  const isSelfReferential = canonical.replace(/\/$/, '') === url.replace(/\/$/, '');
+  assert(
+    !canonical || isSelfReferential,
+    `${path} carries no canonical to another page`,
+    `got: "${canonical}"`
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -479,6 +535,13 @@ async function main() {
     canonicalPath: '/registration',
     robots: 'noindex',
   });
+
+  // --- 10. Shared 404 template (#1441) ---
+  // Three shapes of "not a page": a plainly invalid URL, and the two bare
+  // prefixes that used to answer 200 with the home shell (#1341).
+  for (const path of ['/zzz-does-not-exist-1441', '/article', '/user']) {
+    await testNotFoundTemplate(path);
+  }
 
   // --- Summary ---
   console.log(`\n${'='.repeat(60)}`);

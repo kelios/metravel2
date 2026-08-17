@@ -7,7 +7,6 @@ import Button from '@/components/ui/Button'
 import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import { buildCanonicalUrl } from '@/utils/seo'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -17,11 +16,20 @@ export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: i18nT('shared:app.missing.oops_a237d9cd') }} />
+      {/*
+        #1441: без canonical. Этот экран экспортируется в один статический
+        `+not-found.html`, который nginx отдаёт на ЛЮБОЙ несуществующий адрес,
+        поэтому build-time canonical физически не может быть self-referential —
+        он был жёстко прибит к главной и давал роботам противоречивую пару
+        «noindex + canonical на `/`». Страница-ошибка не является версией
+        главной, а при `noindex, nofollow` canonical всё равно не учитывается.
+        Клиентам с JS критический скрипт в `app/+html.tsx` проставляет
+        canonical/og:url на сам запрошенный URL.
+      */}
       <InstantSEO
         headKey="not-found"
         title={i18nT('shared:app.missing.stranitsa_ne_naydena_metravel_a9673114')}
         description={i18nT('shared:app.missing.stranitsa_ne_naydena_pereydite_na_glavnuyu_i_0cfdec3b')}
-        canonical={buildCanonicalUrl('/')}
         robots="noindex, nofollow"
       />
       <View style={styles.container}>
