@@ -439,6 +439,202 @@ describe('useQuestWizardProgress', () => {
     await waitFor(() => expect(remounted.result.current.questCompleted).toBe(true))
   })
 
+  it('пропуск всех шагов подряд не выдаёт ни прохождения, ни финала', async () => {
+    // #1430: приглашение «пропустить шаг» снимает шаг с гейта финала, и гейт
+    // при этом МОЖЕТ опуститься до пустого — `[].every(...) === true` объявлял
+    // тогда квест пройденным без единого ответа, с бейджем, «первопроходцем» и
+    // `completed: true` на бэкенде. Ноль ответов не даёт даже частичного финала:
+    // показывать финальное видео за пропуск всего маршрута незачем.
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+      { id: 'p-3', answer: checker },
+    ]
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey: 'quest_progress_skip_everything',
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(3))
+
+    act(() => {
+      routeSteps.forEach((step) => result.current.markStepSkipped(step.id))
+    })
+
+    expect(result.current.questFinished).toBe(false)
+    expect(result.current.questCompleted).toBe(false)
+    expect(result.current.partiallyCompleted).toBe(false)
+    expect(result.current.completedSteps).toHaveLength(0)
+  })
+
+  it('один ответ и пропуск остальных даёт частичный финал без зачёта прохождения', async () => {
+    // #1443: политика пропусков. До неё хватало ОДНОГО честного ответа — на
+    // остальных точках трёх неверных попыток и приглашения «Не сходится?
+    // Пропустить шаг и идти дальше», — чтобы получить полноценное прохождение со
+    // значком, «первопроходцем» и `completed: true` на бэкенде.
+    const checker = () => true
+    const routeSteps = Array.from({ length: 9 }, (_, i) => ({ id: `p-${i + 1}`, answer: checker }))
+    const storageKey = 'quest_progress_policy_one_answer'
+    const onProgressChange = jest.fn()
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey,
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(9))
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a' })
+    })
+    act(() => {
+      routeSteps.slice(1).forEach((step) => result.current.markStepSkipped(step.id))
+    })
+
+    // Финал есть — обещание «идти дальше» выполнено, игрок не заперт в маршруте.
+    expect(result.current.questFinished).toBe(true)
+    // Но прохождение не засчитано: до порога (две трети от 9 — это 6) не хватает 5 точек.
+    expect(result.current.questCompleted).toBe(false)
+    expect(result.current.partiallyCompleted).toBe(true)
+    expect(result.current.stepsMissingForCompletion).toBe(5)
+
+    // На бэкенд `completed: true` не уезжает — значит нет ни счётчика прохождений,
+    // ни «первопроходца», ни значка.
+    await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({ completed: false }))
+    await waitFor(async () => {
+      const saved = await AsyncStorage.getItem(storageKey)
+      expect(JSON.parse(saved!).completed).toBe(false)
+    })
+
+    // Частичный финал не финальный приговор: добор точек до порога засчитывает квест.
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b', 'p-3': 'c', 'p-4': 'd', 'p-5': 'e', 'p-6': 'f' })
+    })
+
+    expect(result.current.questCompleted).toBe(true)
+    expect(result.current.partiallyCompleted).toBe(false)
+    expect(result.current.stepsMissingForCompletion).toBe(0)
+    await waitFor(() => expect(onProgressChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ completed: true }),
+    ))
+  })
+
+  it('пропуск ПЕРВОГО шага не запирает квест: остальные пройденные его закрывают', async () => {
+    // #1430, раунд 4: защита «не завершать квест с нулём ответов» сначала жила в
+    // условии на пропуск, и шаг, пропущенный до первого ответа, оставался в
+    // гейте навсегда — игрок доходил маршрут и молча не получал финала. Порог
+    // переехал в сам гейт, поэтому пропуск работает одинаково с первого шага.
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+      { id: 'p-3', answer: checker },
+    ]
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey: 'quest_progress_skip_first',
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(3))
+
+    act(() => {
+      result.current.markStepSkipped('p-1')
+    })
+    expect(result.current.questCompleted).toBe(false)
+
+    act(() => {
+      result.current.setAnswers({ 'p-2': 'b', 'p-3': 'c' })
+    })
+
+    expect(result.current.questCompleted).toBe(true)
+    expect(result.current.finishedEarly).toBe(true)
+  })
+
+  it('снапшот, где пропущены все шаги, не запирает квест при живых ответах', async () => {
+    // `skipped` монотонен и мержится между устройствами по ИЛИ, поэтому снапшот
+    // «все шаги пропущены» реально достижим (старая сборка, чужое устройство).
+    // Такой снапшот не должен запирать квест: гейт закрыт, финал доступен, а
+    // зачёт прохождения решает порог по числу ответов.
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+    ]
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey: 'quest_progress_all_skipped_snapshot',
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(2))
+
+    act(() => {
+      routeSteps.forEach((step) => result.current.markStepSkipped(step.id))
+    })
+    expect(result.current.questFinished).toBe(false)
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a' })
+    })
+
+    // Финал открыт, но одна точка из двух порога не берёт — прохождение частичное.
+    expect(result.current.questFinished).toBe(true)
+    expect(result.current.questCompleted).toBe(false)
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
+    })
+
+    expect(result.current.questCompleted).toBe(true)
+  })
+
+  it('пропуск части шагов финал не ломает: хватает пройденных из оставшихся', async () => {
+    // Обратная сторона предыдущего теста — порог зачёта не должен закрыть штатный
+    // сценарий, где игрок пропустил пару точек и прошёл остальные: две трети от
+    // шести — это четыре, значит два пропуска прохождению не мешают.
+    const checker = () => true
+    const routeSteps = Array.from({ length: 6 }, (_, i) => ({ id: `p-${i + 1}`, answer: checker }))
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey: 'quest_progress_skip_partial',
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(6))
+
+    act(() => {
+      result.current.setAnswers({ 'p-2': 'b', 'p-3': 'c', 'p-4': 'd', 'p-5': 'e' })
+    })
+    act(() => {
+      result.current.markStepSkipped('p-1')
+      result.current.markStepSkipped('p-6')
+    })
+
+    expect(result.current.questCompleted).toBe(true)
+    expect(result.current.stepsMissingForCompletion).toBe(0)
+    expect(result.current.finishedEarly).toBe(true)
+  })
+
   it('не считает досрочным финишем чужой completed с сервера', async () => {
     // #1431: в квест могут добавить шаг уже после прохождения. Сервер помнит
     // completed=true, но это не решение игрока закончить на месте — иначе его
@@ -477,6 +673,7 @@ describe('useQuestWizardProgress', () => {
     const checker = () => true
     const routeSteps = [
       { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
       { id: 'p-far', answer: checker },
     ]
     const storageKey = 'quest_progress_finish_here'
@@ -489,10 +686,12 @@ describe('useQuestWizardProgress', () => {
       })
     )
 
-    await waitFor(() => expect(result.current.requiredCount).toBe(2))
+    await waitFor(() => expect(result.current.requiredCount).toBe(3))
 
+    // Две точки из трёх берут порог зачёта — финиш на месте остаётся полноценным
+    // прохождением, а не частичным.
     act(() => {
-      result.current.setAnswers({ 'p-1': 'a' })
+      result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
     })
     act(() => {
       result.current.finishEarly()
@@ -514,6 +713,42 @@ describe('useQuestWizardProgress', () => {
     )
     await waitFor(() => expect(remounted.result.current.questCompleted).toBe(true))
     expect(remounted.result.current.finishedEarly).toBe(true)
+  })
+
+  it('финиш на месте в начале маршрута прохождения не засчитывает', async () => {
+    // #1443: «Завершить квест здесь» — тот же вопрос политики, что и пропуски.
+    // Две точки из девяти это не пройденный квест, поэтому финал у игрока есть, а
+    // значка и «первопроходца» — нет.
+    const checker = () => true
+    const routeSteps = Array.from({ length: 9 }, (_, i) => ({ id: `p-${i + 1}`, answer: checker }))
+    const storageKey = 'quest_progress_finish_here_early'
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey,
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(9))
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
+    })
+    act(() => {
+      result.current.finishEarly()
+    })
+
+    expect(result.current.questFinished).toBe(true)
+    expect(result.current.questCompleted).toBe(false)
+    expect(result.current.partiallyCompleted).toBe(true)
+    expect(result.current.stepsMissingForCompletion).toBe(4)
+
+    await waitFor(async () => {
+      const saved = await AsyncStorage.getItem(storageKey)
+      expect(JSON.parse(saved!)).toMatchObject({ completed: false, earlyFinish: true })
+    })
   })
 
   it('resets persisted progress and state', async () => {

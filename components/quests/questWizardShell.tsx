@@ -35,7 +35,7 @@ type NavigationSharedProps = {
   answers: Record<string, string>
   currentIndex: number
   unlockedIndex: number
-  allCompleted: boolean
+  questFinished: boolean
   showFinaleOnly: boolean
   goToStep: (index: number) => void
   onShowFinale: () => void
@@ -263,7 +263,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     answers,
     currentIndex,
     unlockedIndex,
-    allCompleted,
+    questFinished,
     showFinaleOnly,
     goToStep,
     onShowFinale,
@@ -366,7 +366,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         {allSteps.map((step, index) => {
           const isActive = index === currentIndex && !showFinaleOnly
           const isDone = !!answers[step.id] && step.id !== 'intro'
-          const isUnlocked = index <= unlockedIndex || !!answers[step.id] || allCompleted
+          const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
 
           return (
             <QuestStepPill
@@ -471,7 +471,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     answers,
     currentIndex,
     unlockedIndex,
-    allCompleted,
+    questFinished,
     showFinaleOnly,
     goToStep,
     onShowFinale,
@@ -615,7 +615,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {allSteps.map((step, index) => {
             const isActive = index === currentIndex && !showFinaleOnly
             const isDone = !!answers[step.id] && step.id !== 'intro'
-            const isUnlocked = index <= unlockedIndex || !!answers[step.id] || allCompleted
+            const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
 
             return (
               <QuestStepPill
@@ -652,7 +652,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {allSteps.map((step, index) => {
             const isActive = index === currentIndex && !showFinaleOnly
             const isDone = !!answers[step.id] && step.id !== 'intro'
-            const isUnlocked = index <= unlockedIndex || !!answers[step.id] || allCompleted
+            const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
 
             if (screenW < 600) {
               return (

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { questStepsMissingForCompletion } from '@/utils/questCompletionPolicy'
 import {
   mergeQuestProgress,
   normalizeQuestProgressSnapshot,
@@ -263,10 +264,27 @@ export function useQuestWizardProgress({
   const completedSteps = useMemo(() => requiredSteps.filter((step) => answers[step.id]), [answers, requiredSteps])
   const requiredCount = requiredSteps.length
   const progress = requiredCount > 0 ? completedSteps.length / requiredCount : 0
+  // Гейт маршрута закрыт: на каждой точке, которую игрок не пропустил, есть
+  // ответ. Пропуск гейт сужает, поэтому гейт МОЖЕТ опуститься до пустого —
+  // `[].every(...) === true`, и сам по себе он ничего о пройденном не говорит.
   const allCompleted = requiredCount > 0 && gatingSteps.every((step) => !!answers[step.id])
   // Квест закончен: либо пройдены все точки, которые игрок не пропустил, либо он
-  // закрыл квест на месте, оставив за спиной только далёкие.
-  const questCompleted = allCompleted || earlyFinish
+  // закрыл квест на месте, оставив за спиной только далёкие. Ноль ответов финалом
+  // не считается: пропустить подряд весь маршрут — это не прохождение, даже
+  // частичное, и такому игроку показывать финальное видео незачем.
+  const questFinished = requiredCount > 0 && completedSteps.length > 0 && (allCompleted || earlyFinish)
+  // Сколько точек не хватает до засчитанного прохождения (#1443): порог живёт в
+  // `utils/questCompletionPolicy.ts` вместе с обоснованием.
+  const stepsMissingForCompletion = questStepsMissingForCompletion(requiredCount, completedSteps.length)
+  // Прохождение засчитано: маршрут закончен И пройдено не меньше двух третей
+  // точек. Именно этот флаг даёт значок, «первопроходца» и `completed: true` на
+  // бэкенде — раньше для всего этого хватало одного ответа и пропуска остальных
+  // точек приглашением «Не сходится? Пропустить шаг и идти дальше» (#1430).
+  const questCompleted = questFinished && stepsMissingForCompletion === 0
+  // Финал есть, но прохождение не засчитано: игрок пропустил слишком много.
+  // Прогресс при этом сохраняется, и вернуться к пропущенным точкам можно —
+  // порог перестаёт быть недобранным, как только на них появятся ответы.
+  const partiallyCompleted = questFinished && !questCompleted
   // Прохождение неполное по воле игрока: пропущенная далёкая точка или финиш на
   // месте. Не то же самое, что «отвечено меньше, чем шагов»: в квест могли
   // добавить шаг уже после прохождения (#1431).
@@ -389,7 +407,10 @@ export function useQuestWizardProgress({
     requiredCount,
     progress,
     allCompleted,
+    questFinished,
     questCompleted,
+    partiallyCompleted,
+    stepsMissingForCompletion,
     finishedEarly,
     finishEarly,
     markStepSkipped,

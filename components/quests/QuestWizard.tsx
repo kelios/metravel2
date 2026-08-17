@@ -26,7 +26,7 @@ import {
     QuestFinalePanel,
     QuestNativeAffiliateSection,
 } from './questWizardSections';
-import { QuestStepCard } from './questWizardStepCard';
+import { QuestStepCard, clearQuestCooldowns } from './questWizardStepCard';
 import QuestGuestGate from './QuestGuestGate';
 import { useQuestWizardProgress } from './useQuestWizardProgress';
 import { useQuestReminder } from './useQuestReminder';
@@ -151,7 +151,10 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         completedSteps,
         requiredCount,
         progress,
+        questFinished,
         questCompleted,
+        partiallyCompleted,
+        stepsMissingForCompletion,
         finishedEarly,
         finishEarly,
         markStepSkipped,
@@ -170,7 +173,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         title,
         completedCount: completedSteps.length,
         totalCount: requiredCount,
-        allCompleted: questCompleted,
+        // Напоминания и геозоны выключает сам факт финала: игроку, который
+        // закончил маршрут частично, напоминать «вернитесь к точке» не нужно.
+        allCompleted: questFinished,
     });
     useQuestGeofence({
         questId,
@@ -178,7 +183,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         title,
         steps,
         answers,
-        allCompleted: questCompleted,
+        allCompleted: questFinished,
     });
 
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
@@ -320,14 +325,34 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         skipStep();
     }, [currentStep, markStepSkipped, skipStep]);
 
+    // Игрок принял приглашение уйти со сломанного шага (#1430). Обещание
+    // «идти дальше» должно быть честным: шаг снимается с гейта финала тем же
+    // механизмом, что и далёкая точка, иначе застрявший игрок дошёл бы маршрут
+    // до конца и всё равно не получил бы прохождение.
+    const skipStuckStep = useCallback(() => {
+        if (!currentStep) return;
+        // Шаг снимается с гейта всегда — приглашение обещает «идти дальше», и
+        // на первом шаге маршрута это обещание должно работать так же, как в
+        // середине. От дешёвого «прохождения» защищает не это место, а политика
+        // зачёта (#1443): пропуск больше трети маршрута оставляет игрока с
+        // частичным финалом, без значка и «первопроходца».
+        queueAnalyticsEvent('quest_skip_stuck_step', {
+            quest_id: questId,
+            step_index: currentRealIndex,
+            attempts: attempts[currentStep.id] ?? 0,
+        });
+        markStepSkipped(currentStep.id);
+        skipStep();
+    }, [attempts, currentRealIndex, currentStep, markStepSkipped, questId, skipStep]);
+
     const goToStep = useCallback((index: number) => {
         const step = allSteps[index];
         const isAnswered = !!(step && answers[step.id]);
-        if (index <= unlockedIndex || isAnswered || questCompleted) {
+        if (index <= unlockedIndex || isAnswered || questFinished) {
             setShowFinaleOnly(false);
             setCurrentIndex(index);
         }
-    }, [allSteps, answers, questCompleted, setCurrentIndex, unlockedIndex]);
+    }, [allSteps, answers, questFinished, setCurrentIndex, unlockedIndex]);
 
     const showFinale = useCallback(() => {
         setShowFinaleOnly(true);
@@ -338,12 +363,16 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         if (!ok) return;
         try {
             await resetProgress();
+            // Паузы между попытками (#1428) живут вне снапшота прогресса,
+            // поэтому сбрасываются отдельно — иначе переигровка в той же вкладке
+            // начиналась бы с унаследованной ступени лестницы.
+            clearQuestCooldowns(questNumericId);
             setShowFinaleOnly(false);
             notifyQuest(i18nT('quests:components.quests.QuestWizard.progress_ochischen_54659954'));
         } catch (e) {
             console.error('Error resetting progress:', e);
         }
-    }, [resetProgress]);
+    }, [questNumericId, resetProgress]);
 
     const questStartTrackedRef = useRef(false);
     useEffect(() => {
@@ -359,14 +388,21 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const questFinishTrackedRef = useRef(false);
     useEffect(() => {
-        if (!questCompleted || questFinishTrackedRef.current) return;
+        if (!questFinished || questFinishTrackedRef.current) return;
         questFinishTrackedRef.current = true;
         // `early` отличает неполное прохождение (пропущенная далёкая точка или
         // финиш на месте) от обычного: иначе они неразличимо сливаются в воронку
-        // завершений.
-        queueAnalyticsEvent('quest_finish', { quest_id: questId, early: finishedEarly });
+        // завершений. `partial` отделяет незасчитанное прохождение от засчитанного
+        // (#1443): без него в воронке завершений слились бы и они.
+        queueAnalyticsEvent('quest_finish', {
+            quest_id: questId,
+            early: finishedEarly,
+            partial: partiallyCompleted,
+            passed_count: completedSteps.length,
+            steps_count: requiredCount,
+        });
         void flushQuestAnswerAttempts();
-    }, [finishedEarly, questCompleted, questId]);
+    }, [completedSteps.length, finishedEarly, partiallyCompleted, questFinished, questId, requiredCount]);
 
     const guestGateTrackedRef = useRef(false);
     useEffect(() => {
@@ -397,8 +433,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     }, [lastAnsweredIndex, setCurrentIndex]);
 
     useEffect(() => {
-        if (questCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
-    }, [questCompleted, allSteps.length, setUnlockedIndex]);
+        if (questFinished) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
+    }, [questFinished, allSteps.length, setUnlockedIndex]);
 
     const {
         frameW,
@@ -558,6 +594,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onToggleHint={toggleCurrentStepHint}
                                 onSkip={skipStep}
                                 onSkipFarStep={skipFarStep}
+                                onSkipStuckStep={skipStuckStep}
                                 approachLeg={farStepModel.approach}
                                 nextLeg={farStepModel.nextLeg}
                                 isFarStep={farStepModel.currentIsFar}
@@ -622,7 +659,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         colors={colors}
                         styles={styles}
                         finale={finale}
-                        allCompleted={questCompleted}
+                        questFinished={questFinished}
+                        questCompleted={questCompleted}
+                        stepsMissingForCompletion={stepsMissingForCompletion}
                         finishedEarly={finishedEarly}
                         completedCount={completedSteps.length}
                         stepsCount={requiredCount}
@@ -671,7 +710,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 answers={answers}
                                 currentIndex={currentIndex}
                                 unlockedIndex={unlockedIndex}
-                                allCompleted={questCompleted}
+                                questFinished={questFinished}
                                 showFinaleOnly={showFinaleOnly}
                                 goToStep={goToStep}
                                 onShowFinale={showFinale}
@@ -715,7 +754,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 answers={answers}
                                 currentIndex={currentIndex}
                                 unlockedIndex={unlockedIndex}
-                                allCompleted={questCompleted}
+                                questFinished={questFinished}
                                 showFinaleOnly={showFinaleOnly}
                                 goToStep={goToStep}
                                 onShowFinale={showFinale}

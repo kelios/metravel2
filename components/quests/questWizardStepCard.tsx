@@ -30,6 +30,48 @@ import { translate as i18nT } from '@/i18n'
 
 const SHOULD_USE_NATIVE_DRIVER = false
 
+// #1428: пауза между неверными попытками на шагах с перебираемым ответом.
+// Нарастает, но остаётся короткой — это не наказание, а стоп-кран для подбора:
+// четыре варианта узкого диапазона больше не укладываются в 11 секунд.
+// Последнее значение действует и для всех дальнейших попыток.
+const WRONG_ATTEMPT_COOLDOWNS_MS = [3000, 5000, 8000, 12000, 15000]
+
+// #1430: после скольких неверных попыток подряд игроку предлагается выход
+// вперёд — пропустить шаг. Одна ошибка это ещё не тупик, поэтому не 1.
+const SKIP_SUGGESTED_AFTER = 3
+
+const cooldownForAttempt = (wrongAttemptNo: number): number =>
+  WRONG_ATTEMPT_COOLDOWNS_MS[
+    Math.min(Math.max(wrongAttemptNo, 1), WRONG_ATTEMPT_COOLDOWNS_MS.length) - 1
+  ]
+
+/**
+ * Паузы переживают перемонтирование карточки: полоса шагов на том же экране
+ * позволяет уйти на соседний шаг и вернуться в два тапа, и в локальном стейте
+ * дедлайн на этом терялся — перебор продолжался без ожидания.
+ *
+ * Живёт в модуле, а не в снапшоте прогресса рядом с `attempts`, намеренно:
+ * пауза — свойство текущего сеанса подбора, а не многодневного прогресса.
+ * Игрок, ошибавшийся вчера, начинает сегодня с первой ступени лестницы, а не с
+ * пятнадцати секунд.
+ */
+const stepCooldowns = new Map<string, { until: number; wrongAttempts: number }>()
+
+const cooldownKey = (questNumericId: number | undefined, stepId: string): string =>
+  `${questNumericId ?? 'quest'}:${stepId}`
+
+/**
+ * Сброс прогресса квеста должен уносить и паузы: иначе переигровка в той же
+ * вкладке встречает игрока унаследованной ступенью лестницы (первая же ошибка —
+ * 15 секунд вместо трёх). Заодно ограничивает рост карты.
+ */
+export const clearQuestCooldowns = (questNumericId?: number): void => {
+  const prefix = `${questNumericId ?? 'quest'}:`
+  for (const key of Array.from(stepCooldowns.keys())) {
+    if (key.startsWith(prefix)) stepCooldowns.delete(key)
+  }
+}
+
 type QuestStepLike = {
   id: string
   title: string
@@ -61,6 +103,8 @@ type StepCardProps = {
   onSkip: () => void
   /** Пропуск далёкой точки: снимает её с гейта финала, в отличие от `onSkip`. */
   onSkipFarStep: () => void
+  /** Уход со сломанного шага после серии неудач: тоже снимает шаг с гейта (#1430). */
+  onSkipStuckStep: () => void
   /** Путь до этой точки от той, где игрок стоит (null — считать не от чего). */
   approachLeg?: QuestLegInfo | null
   /** Путь от пройденной точки к следующей — предупреждение до выхода. */
@@ -164,6 +208,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     onToggleHint,
     onSkip,
     onSkipFarStep,
+    onSkipStuckStep,
     approachLeg = null,
     nextLeg = null,
     isFarStep = false,
@@ -179,6 +224,10 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
 
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
+  // Момент, до которого проверка ответа на паузе (#1428), и остаток в секундах
+  // для игрока: без видимого счётчика пауза читается как сломанная кнопка.
+  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState(0)
   const [imageModalVisible, setImageModalVisible] = useState(false)
   const [navExpanded, setNavExpanded] = useState(false)
   const shakeAnim = useRef(new Animated.Value(0)).current
@@ -210,8 +259,33 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   useEffect(() => {
     setValue('')
     setError('')
+    // Не «сбросить паузу», а «поднять ту, что осталась от этого шага»: иначе
+    // переход на соседний шаг и обратно снимал бы её (#1428).
+    const pending = stepCooldowns.get(cooldownKey(questNumericId, step.id))
+    setCooldownUntil(pending && pending.until > Date.now() ? pending.until : 0)
+    setCooldownSecondsLeft(0)
     stepShownAtRef.current = Date.now()
-  }, [step.id])
+  }, [questNumericId, step.id])
+
+  // Тик обратного отсчёта живёт только пока пауза активна: на шаге без паузы
+  // таймеров не заводим вовсе.
+  useEffect(() => {
+    if (!cooldownUntil) return undefined
+
+    const tick = () => {
+      const leftMs = cooldownUntil - Date.now()
+      if (leftMs <= 0) {
+        setCooldownSecondsLeft(0)
+        setCooldownUntil(0)
+        return
+      }
+      setCooldownSecondsLeft(Math.ceil(leftMs / 1000))
+    }
+
+    tick()
+    const timer = setInterval(tick, 250)
+    return () => clearInterval(timer)
+  }, [cooldownUntil])
 
   const openInMap = useCallback(
     (app: QuestMapApp) => openQuestMap(step, app),
@@ -254,7 +328,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   // только длина — порог показываем игроку, а не отвечаем «Неверный ответ» на
   // короткий текст.
   const freeTextMinLength = answerDescription.freeTextMinLength
+  // Ответ, который можно подобрать перебором, а не решить: между неверными
+  // попытками на таком шаге держим паузу (#1428).
+  const isBruteForceable = answerDescription.isBruteForceable
   const isPassed = !!savedAnswer && step.id !== 'intro'
+  const isCoolingDown = cooldownSecondsLeft > 0
   const hintSuggestedAfter = 1
   const hintSuggested = hintVisible || attempts >= hintSuggestedAfter
   const hasMapPaneContent = showLocationControls || (showMap && !!step.image)
@@ -267,6 +345,13 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   // Далёкую точку показываем блоком с действиями, обычный длинный перегон —
   // одной честной строкой: расстояние игрок узнаёт до того, как выйдет.
   const showFarStepBlock = step.id !== 'intro' && !isPassed && isFarStep && !!approachLeg
+  // #1430: серия неудач подряд — это тупик, а не повод ещё раз предложить
+  // подсказку. У далёкой точки официальный пропуск уже стоит кнопкой в блоке о
+  // расстоянии, так что второй раз звать туда же не нужно. Свободный ответ из
+  // приглашения исключён: там отказ означает «слишком коротко», а не тупик, и
+  // уводить игрока со шага, который проходится любым текстом, незачем.
+  const showSkipPrompt =
+    !isPassed && !showFarStepBlock && !freeTextMinLength && attempts >= SKIP_SUGGESTED_AFTER
   const showApproachNote =
     step.id !== 'intro' && !isPassed && !showFarStepBlock && !!approachLeg?.notable
   const showNextLegNote = isPassed && !!nextLeg?.notable
@@ -296,6 +381,15 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     const trimmed = value.trim()
     if (step.id === 'intro') {
       onSubmit('start')
+      return
+    }
+    // Кнопка на паузе уже отключена, но Enter в поле ввода идёт сюда же —
+    // иначе перебор продолжался бы с клавиатуры (#1428). Источник правды здесь
+    // сама карта, а не стейт: после перемонтирования существует один рендер, где
+    // стейт ещё нулевой, а запись о паузе уже жива.
+    const pendingUntil = stepCooldowns.get(cooldownKey(questNumericId, step.id))?.until ?? 0
+    if (pendingUntil > Date.now()) {
+      shake()
       return
     }
     if (!trimmed) {
@@ -335,10 +429,20 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         ? i18nT('quests:components.quests.questWizardStepCard.slishkom_korotko_value1_3c7f91ab', { value1: freeTextMinLength })
         : i18nT('quests:components.quests.questWizardStepCard.nevernyy_otvet_22371740'))
       onWrongAttempt()
+      if (isBruteForceable) {
+        // Ступень лестницы считается по неверным попыткам ТЕКУЩЕГО сеанса, а не
+        // по `attempts` из снапшота: восстановленный прогресс иначе встречал бы
+        // игрока сразу пятнадцатью секундами.
+        const key = cooldownKey(questNumericId, step.id)
+        const wrongAttempts = (stepCooldowns.get(key)?.wrongAttempts ?? 0) + 1
+        const until = Date.now() + cooldownForAttempt(wrongAttempts)
+        stepCooldowns.set(key, { until, wrongAttempts })
+        setCooldownUntil(until)
+      }
       shake()
       hapticNotification('error')
     }
-  }, [attempts, freeTextMinLength, hintVisible, onSubmit, onWrongAttempt, questNumericId, shake, step, triggerFlip, value])
+  }, [attempts, freeTextMinLength, hintVisible, isBruteForceable, onSubmit, onWrongAttempt, questNumericId, shake, step, triggerFlip, value])
 
   return (
     <Animated.View style={[styles.card, isFlipping && { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>
@@ -470,10 +574,28 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                       autoCorrect={false}
                     />
                   </Animated.View>
-                  <Pressable style={styles.checkButton} onPress={handleCheck} hitSlop={6} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.proverit_otvet_76814505')}>
-                    <Feather name="arrow-right" size={24} color={colors.textOnPrimary} />
+                  <Pressable
+                    style={[styles.checkButton, isCoolingDown && styles.checkButtonCooldown]}
+                    onPress={handleCheck}
+                    disabled={isCoolingDown}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: isCoolingDown }}
+                    accessibilityLabel={isCoolingDown
+                      ? i18nT('quests:components.quests.questWizardStepCard.cooldown.wait', { value1: cooldownSecondsLeft })
+                      : i18nT('quests:components.quests.questWizardStepCard.proverit_otvet_76814505')}
+                    testID="quest-step-check"
+                  >
+                    {isCoolingDown
+                      ? <Text style={styles.checkButtonCountdown} testID="quest-step-cooldown-countdown">{cooldownSecondsLeft}</Text>
+                      : <Feather name="arrow-right" size={24} color={colors.textOnPrimary} />}
                   </Pressable>
                 </View>
+                {isCoolingDown && (
+                  <Text style={styles.cooldownNote} testID="quest-step-cooldown-note">
+                    {i18nT('quests:components.quests.questWizardStepCard.cooldown.note', { value1: cooldownSecondsLeft })}
+                  </Text>
+                )}
                 {!!freeTextMinLength && !error && (
                   <Text style={styles.freeTextNote}>
                     {i18nT('quests:components.quests.questWizardStepCard.svobodnyy_otvet_value1_9d4a2f10', { value1: freeTextMinLength })}
@@ -492,17 +614,31 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                   )}
                   {/* У далёкой точки то же действие уже есть кнопкой в блоке о
                       расстоянии — второй ссылкой его не дублируем. */}
-                  {step.hint && !showFarStepBlock && (<Text style={styles.linkSeparator}>·</Text>)}
-                  {!showFarStepBlock && (
+                  {/* Пока внизу висит приглашение уйти со шага, серая ссылка
+                      рядом с подсказкой — второй экземпляр того же действия. */}
+                  {step.hint && !showFarStepBlock && !showSkipPrompt && (<Text style={styles.linkSeparator}>·</Text>)}
+                  {!showFarStepBlock && !showSkipPrompt && (
                     <Pressable onPress={onSkip} hitSlop={8} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.propustit_shag_1965c65e')}>
                       <Text style={styles.linkText}>{i18nT('quests:components.quests.questWizardStepCard.propustit_0358f4b6')}</Text>
                     </Pressable>
                   )}
                 </View>
-                {step.hint && !hintVisible && hintSuggested && (
+                {showSkipPrompt ? (
+                  <Pressable
+                    onPress={onSkipStuckStep}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.skipPrompt')}
+                    testID="quest-step-skip-prompt"
+                  >
+                    <Text style={[styles.linkText, styles.skipPrompt]}>
+                      {i18nT('quests:components.quests.questWizardStepCard.skipPrompt')}
+                    </Text>
+                  </Pressable>
+                ) : (step.hint && !hintVisible && hintSuggested && (
                   <Text style={styles.hintPrompt}>
                     {i18nT('quests:components.quests.questWizardStepCard.zastryali_otkroyte_podskazku_vyshe_128fae28')}</Text>
-                )}
+                ))}
               </>
             )
         )}

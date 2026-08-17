@@ -37,6 +37,25 @@ const FREE_TEXT_ANSWER_TYPES = new Set(['any_text', 'any'])
 const UNKNOWN_ANSWER_TYPE = 'unknown'
 
 /**
+ * Типы `answer_pattern`, где ответ добывается перебором, а не решением задания:
+ * закрытый словарь вариантов или узкий числовой коридор. #1428 — в прохождении
+ * `braslav-mezh-ozyor` шаг `1-uspenskaya-church` был пройден вводом
+ * `2 → 3 → 1 → 4` за 11 секунд. Карточка шага держит паузу между неверными
+ * попытками именно на таких типах.
+ */
+const BRUTE_FORCEABLE_ANSWER_TYPES = new Set([
+  'range',
+  'exact',
+  'exact_any',
+  'approx',
+])
+
+// `any_number` в наборе намеренно НЕТ, хотя карточка #1428 его перечисляла:
+// такой шаг принимает любое число (`questAdapters.ts`, case 'any_number'), и
+// подбирать там нечего. Единственная причина отказа — нечисловой ввод, то есть
+// пауза наказывала бы игрока за опечатку, а не тормозила перебор.
+
+/**
  * Нормализация ввода перед проверкой. Числовой шаг принимает запятую как
  * десятичный разделитель, текстовый — приводится к нижнему регистру со
  * схлопыванием пробелов. Более глубокую нормализацию (пунктуация, «ё») делает
@@ -62,6 +81,8 @@ export type QuestAnswerDescription = {
   freeTextMinLength?: number
   /** Шаг без проверяемого ответа — карточка проходит его кнопкой «Далее». */
   isAutoPass: boolean
+  /** Ответ можно подобрать перебором — между неверными попытками нужна пауза. */
+  isBruteForceable: boolean
 }
 
 /**
@@ -72,14 +93,16 @@ export function describeQuestAnswer(step: EvaluableQuestStep): QuestAnswerDescri
   const checker = step.answer
   const freeTextMinLength = checker?._freeTextMinLength
   const answerType = checker?._answerType ?? (checker?._isAny ? 'any' : UNKNOWN_ANSWER_TYPE)
+  const isFreeText =
+    FREE_TEXT_ANSWER_TYPES.has(answerType) ||
+    checker?._isAny === true ||
+    typeof freeTextMinLength === 'number'
 
   return {
     answerType,
-    isFreeText:
-      FREE_TEXT_ANSWER_TYPES.has(answerType) ||
-      checker?._isAny === true ||
-      typeof freeTextMinLength === 'number',
+    isFreeText,
     freeTextMinLength,
+    isBruteForceable: !isFreeText && BRUTE_FORCEABLE_ANSWER_TYPES.has(answerType),
     // Легаси-чекеры из `function`-паттерна приходят без маркера `_isAny`,
     // поэтому распознаём и их тело — карточка иначе просит ответ там, где
     // подходит любой.

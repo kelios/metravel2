@@ -319,7 +319,9 @@ export function QuestFinalePanel({
   colors: _colors,
   styles,
   finale,
-  allCompleted,
+  questFinished,
+  questCompleted,
+  stepsMissingForCompletion,
   finishedEarly,
   completedCount,
   stepsCount,
@@ -336,7 +338,12 @@ export function QuestFinalePanel({
   questNumericId,
 }: SharedProps & {
   finale: FinaleLike
-  allCompleted: boolean
+  /** Игрок закончил маршрут: финал показываем целиком, а не приглашение вернуться к точкам. */
+  questFinished: boolean
+  /** Прохождение засчитано (#1443): значок, «первопроходец» и счётчик — только здесь. */
+  questCompleted: boolean
+  /** Сколько точек не хватает до засчитанного прохождения. */
+  stepsMissingForCompletion: number
   /** Прохождение неполное по воле игрока: пропущенная далёкая точка или финиш на месте. */
   finishedEarly: boolean
   completedCount: number
@@ -355,21 +362,40 @@ export function QuestFinalePanel({
 }) {
   return (
     <View style={styles.completionScreen}>
-      {allCompleted ? (
+      {questFinished ? (
         <View style={styles.finaleContent}>
-          <Text style={styles.completionTitle}>{i18nT('quests:components.quests.questWizardSections.kvest_zavershen_6d9d9233')}</Text>
+          <Text style={styles.completionTitle}>
+            {questCompleted
+              ? i18nT('quests:components.quests.questWizardSections.kvest_zavershen_6d9d9233')
+              : i18nT('quests:components.quests.questWizardSections.partialTitle')}
+          </Text>
 
           {/* Квест закончен на месте: далёкие точки остались непройденными —
               счётчик показываем честно, а не подменяем «всё пройдено». Строка
               привязана к решению игрока, а не к «отвечено меньше, чем шагов»:
               шаг могли добавить в квест уже после прохождения (#1431). */}
-          {finishedEarly && completedCount < stepsCount && (
+          {questCompleted && finishedEarly && completedCount < stepsCount && (
             <Text style={[styles.completionText, { opacity: 0.8 }]} testID="quest-finale-partial">
               {i18nT('quests:components.quests.questWizardSections.finishedEarly', { value1: completedCount, value2: stepsCount })}
             </Text>
           )}
 
-          {questId ? (
+          {/* Пропущено больше, чем политика считает прохождением (#1443): финал и
+              прогресс остаются, но игрок должен видеть, что квест НЕ засчитан и
+              сколько точек до этого не хватает. */}
+          {!questCompleted && (
+            <Text style={[styles.completionText, { opacity: 0.8 }]} testID="quest-finale-not-credited">
+              {i18nT('quests:components.quests.questWizardSections.partialNotCredited', {
+                value1: completedCount,
+                value2: stepsCount,
+                count: stepsMissingForCompletion,
+              })}
+            </Text>
+          )}
+
+          {/* Значок, «первопроходец» и счётчик прохождений — только за засчитанное
+              прохождение: на бэкенд в этом случае уходит `completed: true`. */}
+          {questCompleted && questId ? (
             <>
               <QuestPioneerBlock questId={questId} questNumericId={questNumericId} />
               <BadgeUnlockToast />
@@ -441,7 +467,9 @@ export function QuestFinalePanel({
 
           <Text style={styles.completionText}>{finale.text}</Text>
 
-          {questId ? (
+          {/* «Прошли N человек, включая вас» — тоже про засчитанное прохождение:
+              при частичном игрока в этот счётчик бэкенд не берёт. */}
+          {questCompleted && questId ? (
             <QuestFinaleCompletionLine
               styles={styles}
               questId={questId}
@@ -450,6 +478,20 @@ export function QuestFinalePanel({
           ) : null}
 
           <QuestFinaleFeedback questId={questId} questNumericId={questNumericId} />
+
+          {/* Путь назад к пропущенным точкам: порог перестанет быть недобранным,
+              как только на них появятся ответы. */}
+          {!questCompleted && onContinue && (
+            <Pressable
+              style={styles.primaryButton}
+              onPress={onContinue}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')}
+              testID="quest-finale-continue-partial"
+            >
+              <Text style={styles.buttonText}>{i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')}</Text>
+            </Pressable>
+          )}
         </View>
       ) : (
         <>

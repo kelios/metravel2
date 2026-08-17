@@ -92,6 +92,16 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
         }),
     },
 
+    // Пауза между неверными попытками (#1428): кнопка гаснет и вместо стрелки
+    // показывает обратный отсчёт — иначе неактивная кнопка читается как поломка.
+    checkButtonCooldown: { opacity: 0.55 },
+    checkButtonCountdown: {
+        color: colors.textOnPrimary,
+        fontWeight: '700',
+        fontSize: Math.round(18 * fontScale),
+    },
+    cooldownNote: { fontSize: 12, color: colors.textMuted, marginTop: SPACING.xs, lineHeight: 17 },
+
     inlineActions: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         flexWrap: 'wrap', gap: 12, marginTop: 8, marginBottom: 4,
@@ -104,6 +114,15 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
     linkSeparator: { color: colors.borderStrong, fontSize: 13 },
 
     hintPrompt: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: SPACING.xs },
+    // Выход вперёд после серии неудач (#1430): накладывается поверх `linkText`,
+    // поэтому тач-таргет и курсор берутся оттуда, а здесь остаётся только акцент —
+    // на сломанном шаге подсказка ведёт в тупик, а этот путь работает.
+    skipPrompt: {
+        color: colors.brandText,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: SPACING.xs,
+    },
     // Пояснение под полем для шагов со свободным ответом: снимает вопрос
     // «что от меня хотят» до первой попытки, а не после отказа.
     freeTextNote: { fontSize: 12, color: colors.textMuted, marginTop: SPACING.xs, lineHeight: 17 },
