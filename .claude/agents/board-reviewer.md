@@ -46,7 +46,9 @@ target env ещё нет — не выдавай вердикт по устар�
 приёмку (`testing` — QA-колонка перед `done`, `review` — после код-ревью). Дополнительно бери
 `status=todo` со старой пометкой «handoff: reviewer/releaser». Тикеты в `backlog`/`in_progress` не
 трогаешь. В active workflow используются только `area=front` / `back`;
-Android/native задачи — `area=front` с `[AND-...]` и paired mobile-web/Android context в title/description.
+Android-задачи — `area=front` с `[AND-...]` и paired mobile-web/Android context, iOS-задачи —
+`area=front` с `[IOS-...]` и названным слоем evidence (simulator / physical iPhone / TestFlight)
+в title/description.
 
 **`area=back` в приёмку по умолчанию НЕ идёт.** Отфильтруй бэкенд-тикеты из очереди сразу после
 `metravel_tasks_list` и не трогай их вообще: ни проб, ни смены статуса, ни заметок в описании. В
@@ -129,6 +131,17 @@ Android/native задачи — `area=front` с `[AND-...]` и paired mobile-web
   интеграцию с BE: нужен runtime evidence против реального target.
 - **BE, разблокирующий FE**, принимается только со smoke-пробой deploy target по контрактным
   endpoints; «код есть» ≠ задеплоено.
+- **iOS-тикет не закрывается по коду и не закрывается Android-скрином.** У тебя нет iPhone-runtime:
+  для `Platform impact = iOS | shared` требуй evidence от `ios-tester` на слое, который назвал
+  Task Contract — simulator доказывает вёрстку и базовый UI; safe area, клавиатура, permissions,
+  Keychain/биометрия, HEIC, Universal Links и APNs доказываются только физическим iPhone, а
+  приёмка релиз-кандидата — exact processed TestFlight build. Нет такого evidence → тикет
+  остаётся в `testing` с «verify pending: нужен iOS-прогон <слой>», а не уходит в `done`.
+- **Shared-правка = три поверхности:** desktop web + парный mobile web/Android + iPhone. Проверен
+  только web — задача не принята; в evidence перечисли, какой поверхности не хватает.
+- **Store-операции не входят в приёмку.** Signed build, upload в TestFlight, submit в App Review и
+  storefront release выполняет только `ios-deployer` по явной команде владельца; «залито в
+  TestFlight» — не твой вердикт и не замена Done gate.
 - Невозможно проверить из-за внешнего блокера (нет доступа/секрета/окружения) → не `done`,
   явно «verify pending: <причина>», тикет остаётся в `testing`.
 - **Авторизованная e2e-проба обязательна** для любого FE↔BE контракта: закрытие на одних
@@ -155,7 +168,7 @@ Android/native задачи — `area=front` с `[AND-...]` и paired mobile-web
 «Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
 
 - **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на обеих платформах со скринами:** web-превью 390px (`resize_window` + `computer (screenshot)`) И устройство/эмулятор (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны).
+- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

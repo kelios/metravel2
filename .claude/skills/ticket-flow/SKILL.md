@@ -33,14 +33,18 @@ description: >-
 | Роль (как на бэке) | Исполнитель в этом репо |
 |---|---|
 | task-watcher / manager | агент `ticket-board` (борд: create/list/update/sync) |
-| refinement / BA | оркестратор: уточнить Goal/AC, при нехватке — `task-author` оформит детали |
+| refinement / BA | оркестратор: уточнить Goal/AC, при нехватке — `task-author` оформит детали; для App Store scope и Apple-требований — `ios-analyst` |
+| architect (мобильный/платформенный scope) | `ios-architect` для iOS/shared границ и плана валидации |
+| designer | `ios-designer` (HIG, safe area, скриншоты стора, паритет трёх поверхностей) |
 | developer (FE) | `travel-expert`, `map-expert`, `metravel-seo-expert`, `refactor-surgeon`, `dev-loop` |
+| developer (мобильный) | `android-expert` (Android/native), `ios-expert` (iPhone/iOS-платформа) |
 | content / SEO | `travel-writer`, `metravel-seo-expert`, `index-doctor` |
-| tester | `test-author` (Jest unit + Playwright e2e) |
+| tester | `test-author` (Jest unit + Playwright e2e); устройство — `android-expert` (adb) и `ios-tester` (simulator/physical/TestFlight) |
 | reviewer (гейт `review → testing`) | агент `code-review-gate` — ОБЯЗАТЕЛЕН, без его вердикта борд не пустит задачу в `testing` |
 | reviewer (доп. фокус) | `/code-review`, `review-auditor` (углублённый аудит), `browser-reviewer` (видимые web-изменения) |
+| reviewer (iOS-диффы) | `ios-reviewer` — независимый review-and-fix перед iPhone-тестированием |
 | acceptance (приёмка спринта) | агент `board-reviewer` / skill `/sprint-review` — Done gate → `done` |
-| releaser | preflight (`/preflight`) + `frontend-deployer` по явному target env |
+| releaser | preflight (`/preflight`) + `frontend-deployer` по явному target env; сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
 
 Бэкенд-тикеты (`area=back`) этот скилл НЕ реализует — только заводит/трекает через
 `ticket-board`; реализация в `../metravel-backend` (владелец/бэкендер).
@@ -97,7 +101,8 @@ description: >-
 
 - Каждый переход статуса отражается на борде — борд не должен отставать от реальности.
   Профильные FE-агенты (`travel-expert`, `map-expert`, `quest-expert`, `profile-expert`,
-  `achievements-expert`, `android-expert`, `refactor-surgeon`, `test-author`) теперь САМИ
+  `achievements-expert`, `android-expert`, `ios-expert`, `ios-designer`, `refactor-surgeon`,
+  `test-author`) теперь САМИ
   держат WIP-статус своего тикета (`in_progress` в начале → `review` с evidence в конце) —
   у них есть board-инструменты `metravel_task_get/update/tasks_list/task_board` и протокол
   «Статус на борде». Оркестратор это подстраховывает: при batch/параллельной раздаче СНАЧАЛА
@@ -129,7 +134,7 @@ description: >-
 «Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
 
 - **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на обеих платформах со скринами:** web-превью 390px (`preview_resize` + `preview_screenshot`) И устройство/эмулятор (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны).
+- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

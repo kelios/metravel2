@@ -629,7 +629,7 @@
     },
     {
       "day": 5,
-      "submittedAt": null,
+      "submittedAt": "2026-08-17",
       "urls": [
         "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
         "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
@@ -664,8 +664,71 @@
           "result": "quota-exceeded",
           "at": "2026-08-13",
           "note": "После двух принятых адресов GSC сообщил «Квота превышена»; этот и оставшиеся семь адресов перенесены на следующее суточное окно"
+        },
+        {
+          "url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+          "result": "accepted",
+          "at": "2026-08-17",
+          "note": "Повторная попытка после сброса квоты: получено «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia",
+          "result": "accepted",
+          "at": "2026-08-17"
+        },
+        {
+          "url": "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko",
+          "result": "accepted",
+          "at": "2026-08-17"
+        },
+        {
+          "url": "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton",
+          "result": "accepted",
+          "at": "2026-08-17"
+        },
+        {
+          "url": "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
+          "result": "accepted",
+          "at": "2026-08-17"
+        },
+        {
+          "url": "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
+          "result": "accepted",
+          "at": "2026-08-17"
+        },
+        {
+          "url": "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
+          "result": "already-indexed",
+          "at": "2026-08-17",
+          "note": "URL Inspection перед подачей показал «Submitted and indexed» — Google обошёл адрес сам, клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den",
+          "result": "already-indexed",
+          "at": "2026-08-17",
+          "note": "URL Inspection перед подачей показал «Submitted and indexed» — Google обошёл адрес сам, клик не нужен"
         }
-      ]
+      ],
+      "gscRequestedAt": "2026-08-17",
+      "indexCheck": {
+        "checkedAt": "2026-08-17",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
+          "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
+          "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+          "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia",
+          "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
+          "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko",
+          "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton",
+          "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
+          "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
+          "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den"
+        ],
+        "note": "Замер сразу после завершения подачи 17.08. Все десять адресов — «Submitted and indexed», googleCanonical равен новому адресу у всех. lastCrawlTime шести поданных сегодня адресов 2026-08-17T08:55-08:59Z, то есть Google обошёл их в минуты после клика. Ранний положительный замер терминален: отсрочка 3-5 суток защищает только от ложного минуса."
+      }
     },
     {
       "day": 6,

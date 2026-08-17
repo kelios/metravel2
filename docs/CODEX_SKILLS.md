@@ -66,8 +66,14 @@
 - `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst` - read-only анализ структуры проекта, активных фич, рисков, проверок и handoff к профильным агентам.
 - `$metravel-android-developer` - Android/native разработка и отладка Expo/React Native без регресса production web.
+- `$metravel-ios-analyst` - требования и compliance первого iPhone-релиза: scope/non-goals,
+  acceptance criteria со слоем evidence, маппинг App Review Guidelines, метаданные
+  App Store и разделение agent-owned работы и Apple-действий владельца.
 - `$metravel-ios-architect` - архитектура активного iPhone-приложения: shared/iOS
   boundaries, Apple capabilities, privacy/signing, task slicing и validation plan.
+- `$metravel-ios-designer` - HIG и дизайн-система на iPhone: safe area, touch-таргеты,
+  Dynamic Type, тёмная тема, accessibility, иконка/splash под release guard,
+  локализованные скриншоты App Store и паритет mobile web/Android/iPhone.
 - `$metravel-ios-developer` - реализация и отладка активного iPhone-приложения:
   iOS platform files, Xcode/runtime, Keychain, Apple auth UI, APNs, Universal Links,
   permissions, maps, media и safe areas.

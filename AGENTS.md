@@ -41,7 +41,9 @@
 
 Активный iOS-маршрут разделён по ролям:
 
+- `$metravel-ios-analyst` — требования, App Review compliance и release scope;
 - `$metravel-ios-architect` — architecture и task slicing;
+- `$metravel-ios-designer` — HIG, mobile parity и store-ассеты;
 - `$metravel-ios-developer` — implementation/debug;
 - `$metravel-ios-reviewer` — независимый review-and-fix;
 - `$metravel-ios-tester` — simulator/physical iPhone/TestFlight QA;

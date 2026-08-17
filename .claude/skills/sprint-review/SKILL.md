@@ -83,6 +83,14 @@ release). `sprint-review` — это батч-гейт на конце: проб
 - **Статус соседней задачи — не доказательство.** BE `done`, но FE-проба ловит 404/не тот
   field/event → FE не закрывать; оставить `testing`/`blocked_by` + evidence.
 - **Mock/dev-fallback + зелёные unit-тесты** не закрывают задачу, где AC требует интеграцию с BE.
+- **Мобильный тикет = все затронутые поверхности.** `Platform impact = Android` закрывается
+  прогоном на устройстве, `iOS` — прогоном `ios-tester` на слое из Task Contract (simulator —
+  вёрстка; физический iPhone — safe area/permissions/Keychain/HEIC/Universal Links/APNs;
+  TestFlight — приёмка релиз-кандидата), `shared` — desktop web + парный mobile web/Android +
+  iPhone. Android-скрин не доказывает iPhone, и наоборот.
+- **Store-операции вне приёмки.** Signed build, upload в TestFlight, submit в App Review и
+  storefront release делает только `ios-deployer` по явной команде владельца; факт заливки
+  не является вердиктом приёмки.
 - Невозможно проверить из-за внешнего блокера → не `done`, явно «verify pending: <причина>».
 - Каждый переход статуса — с дописанным доказательством; борд не должен отставать от реальности.
 - Не печатать секреты/токены. Деплой — только по явному target, не в приёмке по умолчанию.
@@ -93,6 +101,8 @@ release). `sprint-review` — это батч-гейт на конце: проб
 | борд: листинг/статусы/спринт | `ticket-board` |
 | приёмка: проверка + перевод в done/возврат | `board-reviewer` |
 | багфикс отбитого тикета (FE) | `travel-expert`, `map-expert`, `browser-reviewer`, `dev-loop` |
+| runtime-evidence на Android | `android-expert` (локальная сборка + `adb`) |
+| runtime-evidence на iPhone | `ios-tester` (simulator / physical / TestFlight), фикс — `ios-expert` |
 | BE-блокер / deploy-проба | трекинг `ticket-board` (`area=back`) + сверка `backend-status-sync` |
 
 ## Выход
@@ -105,7 +115,7 @@ release). `sprint-review` — это батч-гейт на конце: проб
 «Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
 
 - **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на обеих платформах со скринами:** web-превью 390px (`preview_resize` + `preview_screenshot`) И устройство/эмулятор (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны).
+- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

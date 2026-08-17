@@ -49,7 +49,7 @@ model: opus
 ## Шаг 1. Контракт задачи
 
 `metravel_task_get(task_id)` → прочитай Goal/AC и `Task Contract`: scope, user-visible result,
-platform impact (desktop web / mobile web / Android), localization impact (RU/BE/UK/PL/EN),
+platform impact (desktop web / mobile web / Android / iOS / shared), localization impact (RU/BE/UK/PL/EN),
 зависимости, Done gate. Запомни `assignee` — ему возвращать работу.
 Если тикет в статусе, из которого переход в `testing` невозможен (`todo`, `backlog`) — скажи это
 и не выдавай вердикт.
@@ -111,8 +111,14 @@ rg -n "<ключевая строка логики>" components hooks utils api 
 - новый app-owned UI-текст без `@/i18n`, translation key не добавлен во все RU/BE/UK/PL/EN,
   locale-форматирование мимо `i18n/format.ts`, хардкод `ru-RU`;
 - новый `any` в `api/`, `hooks/`, `stores/`; `@ts-ignore`/`eslint-disable` без причины;
-- web-only ветвление, ломающее паритет mobile web ↔ Android; правки в запрещённых путях
-  (`eas.json`, `app.json`, `scripts/`, `nginx/`, `.github/workflows/`, `entry.js`) без явного запроса.
+- web-only ветвление, ломающее паритет mobile web ↔ Android ↔ iPhone; web-API (`window`,
+  `document`, `localStorage`, `navigator`) без Platform-guard в общем файле; web-only импорт
+  (`leaflet`) в native-пути или native-only модуль в web-пути;
+- для iOS-задач: изменение bundle id / версии / `buildNumber` мимо паритета Expo↔plist↔Xcode,
+  отсутствующие purpose strings, entitlements или privacy manifest под новую capability —
+  их состояние показывает `npm run ios:release:guard`;
+- правки в запрещённых путях (`eas.json`, `app.json`, `plugins/`, `scripts/`, `ios/`, `android/`,
+  `nginx/`, `.github/workflows/`, `entry.js`) без явного запроса.
 
 Собственным контрактам кода:
 - изменённая функция противоречит своим вызовам в других файлах (новое предусловие, другая форма

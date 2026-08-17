@@ -43,10 +43,21 @@ Local read-only preflight and source/archive inspection do not mutate store stat
   API origin, encryption/compliance state, and App Store Connect app record.
 - Do not use placeholder Apple IDs, Team IDs, App Store IDs, credentials, dev
   server addresses, or an archive whose source revision cannot be identified.
-- The current interactive `scripts/ios-build.sh` and `scripts/ios-submit.sh`
-  include prompts and an auto-submit path; they are legacy helpers, not blanket
-  publication authorization. Use only the canonical path selected and hardened
-  by the active release task. Never use `--auto-submit` implicitly.
+- `scripts/ios-build.sh` and `scripts/ios-submit.sh` are the canonical hardened
+  path: both are non-interactive, both run `node scripts/ios-release-guard.js`
+  first, and both fail closed without the matching environment authorization
+  (`IOS_SIGNED_BUILD_AUTHORIZATION=1` for `preview`/`production` builds,
+  `IOS_UPLOAD_AUTHORIZATION=1` plus an explicit build id for upload). Build and
+  upload are separate commands; neither submits to App Review or releases a
+  storefront version, and `IOS_AUTO_SUBMIT_FORBIDDEN` in the guard keeps
+  `--auto-submit` out of the repository. Setting an authorization variable is
+  itself an owner-authorized act — never export one to unblock yourself.
+- Run the read-only checks before any gated command: `npm run ios:release:guard`
+  (identity, version/build parity across Expo/plist/Xcode, entitlements, purpose
+  strings, privacy manifest, production origins, placeholder and tracked-secret
+  detection, EAS pinning) and `npm run ios:environment:check` (Xcode/SDK,
+  eligible iPhone simulator destination, Pods state) when the local toolchain is
+  involved. The EAS CLI version is pinned inside the scripts — do not float it.
 - Pin/verify the EAS CLI and Apple/Xcode upload requirements at execution time.
   If the approved EAS image cannot meet Apple requirements, use only the
   explicitly selected local Xcode archive plus Apple-supported upload fallback.

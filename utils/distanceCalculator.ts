@@ -1,4 +1,5 @@
 import { translate as i18nT } from '@/i18n'
+import { formatNumber } from '@/i18n/format'
 /**
  * Утилита для расчета расстояния и времени в пути
  */
@@ -44,7 +45,9 @@ export function formatDistance(distance: number): string {
     return i18nT('shared:utils.distanceCalculator.value1_m_b71cf84d', { value1: Math.round(distance * 1000) });
   }
   if (distance < 10) {
-    return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', { value1: distance.toFixed(1) });
+    return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', {
+      value1: formatNumber(distance, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+    });
   }
   return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', { value1: Math.round(distance) });
 }

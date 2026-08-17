@@ -9,6 +9,7 @@ import {
   formatTravelTime,
   getDistanceInfo,
 } from '@/utils/distanceCalculator';
+import { i18n } from '@/i18n';
 
 describe('distanceCalculator', () => {
   describe('calculateDistance', () => {
@@ -49,13 +50,43 @@ describe('distanceCalculator', () => {
     });
 
     it('должен форматировать расстояние 1-10 км с одним знаком', () => {
-      expect(formatDistance(1.5)).toBe('1.5 км');
-      expect(formatDistance(9.9)).toBe('9.9 км');
+      expect(formatDistance(1.5)).toBe('1,5 км');
+      expect(formatDistance(9.9)).toBe('9,9 км');
     });
 
     it('должен форматировать расстояние больше 10 км округленно', () => {
       expect(formatDistance(15.6)).toBe('16 км');
       expect(formatDistance(150.4)).toBe('150 км');
+    });
+
+    // #1433: десятичный разделитель берётся из локали интерфейса, а не из toFixed
+    const localeCases: Array<[string, string, string, string]> = [
+      // локаль, 1 км, 2.5 км, 100 км
+      ['ru', '1,0 км', '2,5 км', '100 км'],
+      ['be', '1,0 км', '2,5 км', '100 км'],
+      ['uk', '1,0 км', '2,5 км', '100 км'],
+      ['pl', '1,0 km', '2,5 km', '100 km'],
+      ['en', '1.0 km', '2.5 km', '100 km'],
+    ];
+
+    describe('десятичный разделитель по локали', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('ru');
+      });
+
+      it.each(localeCases)(
+        'форматирует дробные километры по нормам локали %s',
+        async (locale, one, twoAndHalf, hundred) => {
+          await i18n.changeLanguage(locale);
+
+          expect(formatDistance(1)).toBe(one);
+          expect(formatDistance(2.5)).toBe(twoAndHalf);
+          // ≥10 км округляется до целого — дробной части быть не должно
+          expect(formatDistance(100)).toBe(hundred);
+          // <1 км уходит в метровую ветку, дробной части там нет вовсе
+          expect(formatDistance(0)).toBe(locale === 'ru' || locale === 'be' || locale === 'uk' ? '0 м' : '0 m');
+        },
+      );
     });
   });
 
