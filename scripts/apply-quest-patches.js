@@ -41,8 +41,12 @@ if (!TOKEN && !isDryRun) {
   process.exit(1)
 }
 
-const ALLOWED = new Set(['task', 'hint', 'answer_pattern', 'lat', 'lng', 'maps_url', 'story', 'order'])
+const ALLOWED = new Set(['task', 'hint', 'answer_pattern', 'lat', 'lng', 'maps_url', 'story', 'order', 'input_type'])
 const TYPES = new Set(['any', 'exact', 'exact_any', 'range', 'any_text', 'any_number', 'approx'])
+// Клавиатуру шага выбирает фронт по типу ответа, но колонка input_type в БД
+// остаётся источником правды для админки и механического аудита (класс B —
+// рассогласование input_type и типа паттерна), поэтому её тоже надо уметь чинить.
+const INPUT_TYPES = new Set(['text', 'number'])
 
 function validate(p, file) {
   if (!p.step_db_id) throw new Error(`${file} ${p.quest_id}/${p.step_id}: нет step_db_id`)
@@ -56,6 +60,9 @@ function validate(p, file) {
     const ap = JSON.parse(payload.answer_pattern)
     if (!TYPES.has(ap.type)) throw new Error(`${file} ${p.step_id}: неизвестный type ${ap.type}`)
     if (['exact_any', 'range', 'any_text', 'approx'].includes(ap.type)) JSON.parse(ap.value)
+  }
+  if (payload.input_type !== undefined && !INPUT_TYPES.has(payload.input_type)) {
+    throw new Error(`${file} ${p.step_id}: неизвестный input_type ${payload.input_type}`)
   }
   for (const k of ['lat', 'lng']) {
     if (payload[k] !== undefined && !Number.isFinite(Number(payload[k])))
