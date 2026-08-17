@@ -152,7 +152,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         requiredCount,
         progress,
         questCompleted,
+        finishedEarly,
         finishEarly,
+        markStepSkipped,
         resetProgress,
     } = useQuestWizardProgress({
         allSteps,
@@ -309,6 +311,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         if (hasNext) notifyQuest(i18nT('quests:components.quests.QuestWizard.shag_propuschen_f8686cda'));
     }, [allSteps.length, continueFromCurrentStep, currentIndex]);
 
+    // Пропуск далёкой точки — не то же самое, что «пропустить шаг» ссылкой:
+    // точка снимается с гейта финала, иначе далёкая точка в середине маршрута
+    // закрывала бы финал навсегда вопреки обещанию на карточке.
+    const skipFarStep = useCallback(() => {
+        if (!currentStep) return;
+        markStepSkipped(currentStep.id);
+        skipStep();
+    }, [currentStep, markStepSkipped, skipStep]);
+
     const goToStep = useCallback((index: number) => {
         const step = allSteps[index];
         const isAnswered = !!(step && answers[step.id]);
@@ -350,9 +361,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     useEffect(() => {
         if (!questCompleted || questFinishTrackedRef.current) return;
         questFinishTrackedRef.current = true;
-        queueAnalyticsEvent('quest_finish', { quest_id: questId });
+        // `early` отличает неполное прохождение (пропущенная далёкая точка или
+        // финиш на месте) от обычного: иначе они неразличимо сливаются в воронку
+        // завершений.
+        queueAnalyticsEvent('quest_finish', { quest_id: questId, early: finishedEarly });
         void flushQuestAnswerAttempts();
-    }, [questCompleted, questId]);
+    }, [finishedEarly, questCompleted, questId]);
 
     const guestGateTrackedRef = useRef(false);
     useEffect(() => {
@@ -543,6 +557,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onWrongAttempt={handleCurrentStepWrongAttempt}
                                 onToggleHint={toggleCurrentStepHint}
                                 onSkip={skipStep}
+                                onSkipFarStep={skipFarStep}
                                 approachLeg={farStepModel.approach}
                                 nextLeg={farStepModel.nextLeg}
                                 isFarStep={farStepModel.currentIsFar}
@@ -608,6 +623,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         styles={styles}
                         finale={finale}
                         allCompleted={questCompleted}
+                        finishedEarly={finishedEarly}
                         completedCount={completedSteps.length}
                         stepsCount={requiredCount}
                         frameW={frameW}

@@ -320,6 +320,7 @@ export function QuestFinalePanel({
   styles,
   finale,
   allCompleted,
+  finishedEarly,
   completedCount,
   stepsCount,
   frameW,
@@ -336,6 +337,8 @@ export function QuestFinalePanel({
 }: SharedProps & {
   finale: FinaleLike
   allCompleted: boolean
+  /** Прохождение неполное по воле игрока: пропущенная далёкая точка или финиш на месте. */
+  finishedEarly: boolean
   completedCount: number
   stepsCount: number
   frameW: number
@@ -357,8 +360,10 @@ export function QuestFinalePanel({
           <Text style={styles.completionTitle}>{i18nT('quests:components.quests.questWizardSections.kvest_zavershen_6d9d9233')}</Text>
 
           {/* Квест закончен на месте: далёкие точки остались непройденными —
-              счётчик показываем честно, а не подменяем «всё пройдено». */}
-          {completedCount < stepsCount && (
+              счётчик показываем честно, а не подменяем «всё пройдено». Строка
+              привязана к решению игрока, а не к «отвечено меньше, чем шагов»:
+              шаг могли добавить в квест уже после прохождения (#1431). */}
+          {finishedEarly && completedCount < stepsCount && (
             <Text style={[styles.completionText, { opacity: 0.8 }]} testID="quest-finale-partial">
               {i18nT('quests:components.quests.questWizardSections.finishedEarly', { value1: completedCount, value2: stepsCount })}
             </Text>

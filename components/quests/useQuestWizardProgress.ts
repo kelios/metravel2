@@ -47,6 +47,7 @@ type InitialQuestProgress = {
 // AsyncStorage-запись прогресса. Ключи index/unlocked исторические; completed,
 // updatedAt и answeredAt добавлены для слияния между устройствами и отсутствуют
 // в записях, созданных до этого — такие читаются как «время неизвестно».
+// skipped и earlyFinish полей на бэкенде не имеют и живут только здесь.
 type StoredProgressRecord = {
   index: number
   unlocked: number
@@ -55,6 +56,8 @@ type StoredProgressRecord = {
   hints: Record<string, boolean>
   showMap: boolean
   completed?: boolean
+  skipped?: Record<string, boolean>
+  earlyFinish?: boolean
   updatedAt?: number
   answeredAt?: Record<string, number>
 }
@@ -68,6 +71,8 @@ const snapshotFromRecord = (record: Partial<StoredProgressRecord> | null | undef
     hints: record?.hints,
     showMap: record?.showMap,
     completed: record?.completed,
+    skipped: record?.skipped,
+    earlyFinish: record?.earlyFinish,
     updatedAt: record?.updatedAt,
     answeredAt: record?.answeredAt,
   })
@@ -80,6 +85,8 @@ const serializeRecord = (snapshot: QuestProgressSnapshot): string => JSON.string
   hints: snapshot.hints,
   showMap: snapshot.showMap,
   completed: snapshot.completed,
+  skipped: snapshot.skipped,
+  earlyFinish: snapshot.earlyFinish,
   updatedAt: snapshot.updatedAt,
   answeredAt: snapshot.answeredAt,
 })
@@ -93,6 +100,8 @@ const stateFingerprint = (state: {
   attempts: Record<string, number>
   hints: Record<string, boolean>
   showMap: boolean
+  skipped: Record<string, boolean>
+  earlyFinish: boolean
 }): string => JSON.stringify({
   index: state.currentIndex,
   unlocked: state.unlockedIndex,
@@ -100,6 +109,8 @@ const stateFingerprint = (state: {
   attempts: state.attempts,
   hints: state.hints,
   showMap: state.showMap,
+  skipped: state.skipped,
+  earlyFinish: state.earlyFinish,
 })
 
 const readStoredProgress = async (storageKey: string): Promise<QuestProgressSnapshot> => {
@@ -133,9 +144,15 @@ export function useQuestWizardProgress({
   const [attempts, setAttempts] = useState<Record<string, number>>({})
   const [hints, setHints] = useState<Record<string, boolean>>({})
   const [showMap, setShowMap] = useState(true)
-  // Игрок закончил квест, не дойдя до точек за длинным перегоном. Отдельного
-  // поля на бэкенде нет и не нужно: это ровно `completed` при неполных
-  // ответах — и хранилище, и сервер уже умеют его переносить и сливать.
+  // Точки, которые игрок официально пропустил на карточке «эта точка далеко».
+  // Пропуск обязан снимать точку с гейта финала: иначе обещание «квест
+  // засчитается и без неё» не выполняется, а далёкая точка в СЕРЕДИНЕ маршрута
+  // закрывает финал навсегда.
+  const [skipped, setSkipped] = useState<Record<string, boolean>>({})
+  // Игрок закончил квест, не дойдя до точек за длинным перегоном. Хранится
+  // отдельно от `completed`: `completed` монотонен и приходит в том числе с
+  // сервера, и если в квест добавят шаг (#1431), прежний финишер иначе получил
+  // бы форс-редирект в финал и чужую строку «дальние вы отложили».
   const [earlyFinish, setEarlyFinish] = useState(false)
   // Отпечаток состояния, которое хук засеял сам (слияние, AsyncStorage, сброс).
   // Save-эффект пропускает ровно его — без прежней гонки `suppressSave` с
@@ -148,6 +165,8 @@ export function useQuestWizardProgress({
     attempts: {},
     hints: {},
     showMap: true,
+    skipped: {},
+    earlyFinish: false,
   }))
   // Какой storageKey уже засеян бэкенд-прогрессом. initialProgress пересоздаётся
   // в роуте через useMemo на каждое setProgress (эхо нашего же debounced-сейва),
@@ -164,7 +183,8 @@ export function useQuestWizardProgress({
   const liveSnapshotRef = useRef<QuestProgressSnapshot>(normalizeQuestProgressSnapshot(null))
 
   const applyProgressState = (snapshot: QuestProgressSnapshot) => {
-    setEarlyFinish(snapshot.completed)
+    setSkipped(snapshot.skipped)
+    setEarlyFinish(snapshot.earlyFinish)
     setCurrentIndex(snapshot.currentIndex)
     setUnlockedIndex(snapshot.unlockedIndex)
     setAnswers(snapshot.answers)
@@ -233,9 +253,27 @@ export function useQuestWizardProgress({
 
   // Только обязательные (проверяемые) шаги гейтят финал и считаются в прогрессе.
   const requiredSteps = useMemo(() => steps.filter((step) => !isOptionalStep(step)), [steps])
+  // Пропущенная далёкая точка из гейта финала выпадает, но из знаменателя
+  // «пройдено N из M» — нет: счётчик остаётся честным.
+  const gatingSteps = useMemo(
+    () => requiredSteps.filter((step) => !skipped[step.id]),
+    [requiredSteps, skipped],
+  )
+
+  const completedSteps = useMemo(() => requiredSteps.filter((step) => answers[step.id]), [answers, requiredSteps])
+  const requiredCount = requiredSteps.length
+  const progress = requiredCount > 0 ? completedSteps.length / requiredCount : 0
+  const allCompleted = requiredCount > 0 && gatingSteps.every((step) => !!answers[step.id])
+  // Квест закончен: либо пройдены все точки, которые игрок не пропустил, либо он
+  // закрыл квест на месте, оставив за спиной только далёкие.
+  const questCompleted = allCompleted || earlyFinish
+  // Прохождение неполное по воле игрока: пропущенная далёкая точка или финиш на
+  // месте. Не то же самое, что «отвечено меньше, чем шагов»: в квест могли
+  // добавить шаг уже после прохождения (#1431).
+  const finishedEarly = earlyFinish || requiredSteps.some((step) => skipped[step.id] && !answers[step.id])
 
   useEffect(() => {
-    const fingerprint = stateFingerprint({ currentIndex, unlockedIndex, answers, attempts, hints, showMap })
+    const fingerprint = stateFingerprint({ currentIndex, unlockedIndex, answers, attempts, hints, showMap, skipped, earlyFinish })
     // Наш собственный сид уже лежит и в состоянии, и в хранилище — не гоняем
     // его обратно на сервер эхом.
     if (seededSnapshotRef.current === fingerprint) {
@@ -258,8 +296,6 @@ export function useQuestWizardProgress({
     lastAnswersRef.current = answers
     updatedAtRef.current = now
 
-    const completed =
-      earlyFinish || (requiredSteps.length > 0 && requiredSteps.every((step) => !!answers[step.id]))
     AsyncStorage.setItem(storageKey, serializeRecord({
       currentIndex,
       unlockedIndex,
@@ -267,7 +303,9 @@ export function useQuestWizardProgress({
       attempts,
       hints,
       showMap,
-      completed,
+      completed: questCompleted,
+      skipped,
+      earlyFinish,
       updatedAt: now,
       answeredAt,
     })).catch((error) => console.error('Error saving progress:', error))
@@ -279,20 +317,11 @@ export function useQuestWizardProgress({
       attempts,
       hints,
       showMap,
-      completed,
+      completed: questCompleted,
       updatedAt: now,
       answeredAt,
     })
-  }, [answers, attempts, currentIndex, earlyFinish, hints, onProgressChange, requiredSteps, showMap, storageKey, unlockedIndex])
-
-  const completedSteps = useMemo(() => requiredSteps.filter((step) => answers[step.id]), [answers, requiredSteps])
-  const requiredCount = requiredSteps.length
-  const progress = requiredCount > 0 ? completedSteps.length / requiredCount : 0
-  const allCompleted = requiredCount > 0 && completedSteps.length === requiredCount
-  // Квест закончен: либо пройдены все обязательные точки, либо игрок закрыл его
-  // на месте, оставив за спиной только далёкие. Финал и `completed` смотрят
-  // сюда, счётчик «пройдено N из M» — по-прежнему на реальные ответы.
-  const questCompleted = allCompleted || earlyFinish
+  }, [answers, attempts, currentIndex, earlyFinish, hints, onProgressChange, questCompleted, showMap, skipped, storageKey, unlockedIndex])
 
   // Живой снимок для слияния серверных обновлений, прилетевших во время сессии.
   liveSnapshotRef.current = normalizeQuestProgressSnapshot({
@@ -303,6 +332,8 @@ export function useQuestWizardProgress({
     hints,
     showMap,
     completed: questCompleted,
+    skipped,
+    earlyFinish,
     updatedAt: updatedAtRef.current,
     answeredAt: answeredAtRef.current,
   })
@@ -323,6 +354,13 @@ export function useQuestWizardProgress({
 
   const finishEarly = useCallback(() => {
     setEarlyFinish(true)
+  }, [])
+
+  // Пропуск далёкой точки. Монотонен, как и всё остальное в прогрессе: снять
+  // отметку нельзя, но вернуться и ответить — можно, ответ и счётчик от этого
+  // не страдают.
+  const markStepSkipped = useCallback((stepId: string) => {
+    setSkipped((prev) => (prev[stepId] ? prev : { ...prev, [stepId]: true }))
   }, [])
 
   const resetProgress = async () => {
@@ -352,7 +390,9 @@ export function useQuestWizardProgress({
     progress,
     allCompleted,
     questCompleted,
+    finishedEarly,
     finishEarly,
+    markStepSkipped,
     resetProgress,
   }
 }

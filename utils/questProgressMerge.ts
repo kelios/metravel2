@@ -8,6 +8,8 @@
 //   hints          — логическое ИЛИ по ключу
 //   unlockedIndex  — max
 //   completed      — ИЛИ
+//   skipped        — логическое ИЛИ по ключу (только клиент, на сервер не уходит)
+//   earlyFinish    — ИЛИ (только клиент)
 //   currentIndex, showMap — last-writer-wins (косметика: где курсор и включена ли
 //                    карта; это не данные прохождения)
 //
@@ -26,6 +28,14 @@ export type QuestProgressSnapshot = {
     hints: Record<string, boolean>
     showMap: boolean
     completed: boolean
+    /**
+     * Точки, которые игрок официально пропустил (далёкие, #1432). Поля на
+     * бэкенде нет — запись живёт только в AsyncStorage, поэтому в
+     * `toQuestProgressServerPayload` и в отпечаток сервера не входит.
+     */
+    skipped: Record<string, boolean>
+    /** Игрок закрыл квест на месте, не дойдя до далёких точек. Тоже только клиент. */
+    earlyFinish: boolean
     /** epoch ms последнего изменения снапшота; 0 — время неизвестно (легаси-запись) */
     updatedAt: number
     /** epoch ms ответа по шагам; для серверных данных подставляется updatedAt записи */
@@ -73,6 +83,8 @@ export const normalizeQuestProgressSnapshot = (
     hints: asRecord<boolean>(raw?.hints),
     showMap: raw?.showMap !== false,
     completed: Boolean(raw?.completed),
+    skipped: asRecord<boolean>(raw?.skipped),
+    earlyFinish: Boolean(raw?.earlyFinish),
     updatedAt: toFiniteNumber(raw?.updatedAt),
     answeredAt: asRecord<number>(raw?.answeredAt),
 })
@@ -231,7 +243,12 @@ const serverFingerprint = (snapshot: QuestProgressSnapshot): string =>
     })
 
 const localFingerprint = (snapshot: QuestProgressSnapshot): string =>
-    `${serverFingerprint(snapshot)}|${JSON.stringify(sortRecord(snapshot.answeredAt))}`
+    [
+        serverFingerprint(snapshot),
+        JSON.stringify(sortRecord(snapshot.answeredAt)),
+        JSON.stringify(sortRecord(snapshot.skipped)),
+        String(snapshot.earlyFinish),
+    ].join('|')
 
 /**
  * Слияние локального и серверного прогресса без потери ответов.
@@ -258,6 +275,8 @@ export function mergeQuestProgress(
         hints: mergeBooleanRecords(local.hints, server.hints),
         showMap: cursorSource.showMap,
         completed: local.completed || server.completed,
+        skipped: mergeBooleanRecords(local.skipped, server.skipped),
+        earlyFinish: local.earlyFinish || server.earlyFinish,
         updatedAt: Math.max(local.updatedAt, server.updatedAt),
         answeredAt: mergeAnsweredAt(local, server, answers),
     }

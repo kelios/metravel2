@@ -378,6 +378,144 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.allCompleted).toBe(true)
   })
 
+  it('засчитывает квест после пропуска далёкой точки в середине маршрута', async () => {
+    // #1432: у `minsk-dvoriki` далёкая точка `5-prikurivayushchiy` (1085 м) стоит
+    // в СЕРЕДИНЕ — за ней ещё два коротких перегона. Пока пропуск не снимал точку
+    // с гейта, финал после него был недостижим навсегда, хотя карточка обещает
+    // «квест засчитается и без неё».
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+      { id: 'p-far', answer: checker },
+      { id: 'p-4', answer: checker },
+      { id: 'p-5', answer: checker },
+    ]
+    const storageKey = 'quest_progress_skip_far_middle'
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey,
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(5))
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
+    })
+    act(() => {
+      result.current.markStepSkipped('p-far')
+    })
+
+    expect(result.current.questCompleted).toBe(false)
+
+    act(() => {
+      result.current.setAnswers((prev) => ({ ...prev, 'p-4': 'd', 'p-5': 'e' }))
+    })
+
+    expect(result.current.questCompleted).toBe(true)
+    expect(result.current.finishedEarly).toBe(true)
+    // Счётчик остаётся честным: пропущенная точка из знаменателя не исчезает.
+    expect(result.current.completedSteps).toHaveLength(4)
+    expect(result.current.requiredCount).toBe(5)
+
+    // Пропуск переживает перезапуск: иначе после возврата в квест финал снова
+    // оказался бы закрыт.
+    await waitFor(async () => {
+      const saved = await AsyncStorage.getItem(storageKey)
+      expect(JSON.parse(saved!).skipped).toEqual({ 'p-far': true })
+    })
+
+    const remounted = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey,
+      })
+    )
+    await waitFor(() => expect(remounted.result.current.questCompleted).toBe(true))
+  })
+
+  it('не считает досрочным финишем чужой completed с сервера', async () => {
+    // #1431: в квест могут добавить шаг уже после прохождения. Сервер помнит
+    // completed=true, но это не решение игрока закончить на месте — иначе его
+    // форсит в финал и показывает «дальние вы отложили».
+    const checker = () => true
+    const grownSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+      { id: 'p-new', answer: checker },
+    ]
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...grownSteps],
+        steps: grownSteps,
+        storageKey: 'quest_progress_grown_quest',
+        initialProgress: {
+          currentIndex: 2,
+          unlockedIndex: 2,
+          answers: { 'p-1': 'a', 'p-2': 'b' },
+          attempts: {},
+          hints: {},
+          showMap: true,
+          completed: true,
+        },
+      })
+    )
+
+    await waitFor(() => expect(result.current.answers['p-2']).toBe('b'))
+
+    expect(result.current.finishedEarly).toBe(false)
+    expect(result.current.questCompleted).toBe(false)
+  })
+
+  it('помнит финиш на месте между сессиями', async () => {
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-far', answer: checker },
+    ]
+    const storageKey = 'quest_progress_finish_here'
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey,
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(2))
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a' })
+    })
+    act(() => {
+      result.current.finishEarly()
+    })
+
+    expect(result.current.questCompleted).toBe(true)
+
+    await waitFor(async () => {
+      const saved = await AsyncStorage.getItem(storageKey)
+      expect(JSON.parse(saved!)).toMatchObject({ completed: true, earlyFinish: true })
+    })
+
+    const remounted = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey,
+      })
+    )
+    await waitFor(() => expect(remounted.result.current.questCompleted).toBe(true))
+    expect(remounted.result.current.finishedEarly).toBe(true)
+  })
+
   it('resets persisted progress and state', async () => {
     await AsyncStorage.setItem('quest_progress_reset', JSON.stringify({
       index: 2,

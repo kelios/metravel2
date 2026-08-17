@@ -11,8 +11,6 @@
 // 32 квестах (3,9 %), городские 100–350 м не задеваются вовсе.
 import { haversineKm } from '@/utils/geo'
 import { calculateTravelTime } from '@/utils/distanceCalculator'
-import { translate as i18nT } from '@/i18n'
-import { formatNumber } from '@/i18n/format'
 
 import type { QuestRouteMode } from './questRouteGeometry'
 
@@ -81,25 +79,6 @@ export function describeQuestLeg(
       meters >= FAR_LEG_MIN_METERS[mode] &&
       (medianMeters <= 0 || meters >= medianMeters * FAR_LEG_MEDIAN_RATIO),
   }
-}
-
-/**
- * «800 м» / «1,0 км»: разделитель дробной части берётся из локали, иначе
- * русскому игроку показывается английская точка (`1.0 км`).
- */
-export function formatLegDistance(km: number): string {
-  if (km < 1) {
-    return i18nT('shared:utils.distanceCalculator.value1_m_b71cf84d', {
-      value1: formatNumber(Math.round(km * 1000), { maximumFractionDigits: 0 }),
-    })
-  }
-  const fractionDigits = km < 10 ? 1 : 0
-  return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', {
-    value1: formatNumber(km, {
-      minimumFractionDigits: fractionDigits,
-      maximumFractionDigits: fractionDigits,
-    }),
-  })
 }
 
 export type QuestFarStepModel = {

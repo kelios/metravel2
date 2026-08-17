@@ -22,9 +22,9 @@ import { recordQuestAnswerAttempt } from '@/utils/questAnswerTelemetry'
 
 import QuestPointNavigator from './QuestPointNavigator'
 import { copyQuestCoords, openQuestMap, type QuestMapApp } from './questWizardHelpers'
-import { formatLegDistance, type QuestLegInfo } from './questStepDistance'
+import { type QuestLegInfo } from './questStepDistance'
 import type { QuestAnswerChecker, QuestPoiInfo } from './types'
-import { formatTravelTime } from '@/utils/distanceCalculator'
+import { formatDistance, formatTravelTime } from '@/utils/distanceCalculator'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -59,6 +59,8 @@ type StepCardProps = {
   onWrongAttempt: () => void
   onToggleHint: () => void
   onSkip: () => void
+  /** Пропуск далёкой точки: снимает её с гейта финала, в отличие от `onSkip`. */
+  onSkipFarStep: () => void
   /** Путь до этой точки от той, где игрок стоит (null — считать не от чего). */
   approachLeg?: QuestLegInfo | null
   /** Путь от пройденной точки к следующей — предупреждение до выхода. */
@@ -80,7 +82,7 @@ type StepCardProps = {
 
 /** «1,0 км · примерно 12 мин пешком» — расстояние и время через i18n-форматтеры. */
 const legSummaryText = (leg: QuestLegInfo): string => {
-  const params = { value1: formatLegDistance(leg.km), value2: formatTravelTime(leg.walkMinutes) }
+  const params = { value1: formatDistance(leg.km), value2: formatTravelTime(leg.walkMinutes) }
   return leg.mode === 'bike'
     ? i18nT('quests:components.quests.questWizardStepCard.legSummaryBike', params)
     : i18nT('quests:components.quests.questWizardStepCard.legSummaryFoot', params)
@@ -161,6 +163,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     onWrongAttempt,
     onToggleHint,
     onSkip,
+    onSkipFarStep,
     approachLeg = null,
     nextLeg = null,
     isFarStep = false,
@@ -387,7 +390,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
           <View style={styles.farStepActions}>
             <Button
               label={i18nT('quests:components.quests.questWizardStepCard.farStep.skip')}
-              onPress={onSkip}
+              onPress={onSkipFarStep}
               variant="outline"
               size="md"
               icon={<Feather name="skip-forward" size={16} color={colors.primaryText} />}
@@ -492,7 +495,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                   {step.hint && !showFarStepBlock && (<Text style={styles.linkSeparator}>·</Text>)}
                   {!showFarStepBlock && (
                     <Pressable onPress={onSkip} hitSlop={8} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.propustit_shag_1965c65e')}>
-                      <Text style={styles.linkText}>{i18nT('quests:components.quests.questWizardStepCard.propustit_shag_1965c65e')}</Text>
+                      <Text style={styles.linkText}>{i18nT('quests:components.quests.questWizardStepCard.propustit_0358f4b6')}</Text>
                     </Pressable>
                   )}
                 </View>
