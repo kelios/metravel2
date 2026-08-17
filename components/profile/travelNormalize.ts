@@ -1,5 +1,6 @@
 import type { Travel } from '@/types/types';
 import { attachTravelEngagementStats } from '@/utils/travelEngagementStats'
+import { buildTravelPath, normalizeRouteSegment } from '@/utils/routePaths'
 import { translate as i18nT } from '@/i18n'
 
 export type ProfileListItem = {
@@ -75,7 +76,13 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
   const idRaw = item?.id ?? item?._id ?? 0;
   const id = typeof idRaw === 'number' ? idRaw : Number(idRaw) || 0;
   const url = String(item?.url ?? item?.urlTravel ?? item?.href ?? '').trim();
-  const slug = String(item?.slug ?? getSlugFromUrl(url, String(id || item?.id || ''))).trim();
+  // #1438: fallback подставлял в слаг сырое `item.id`, поэтому значение
+  // `id: 'undefined'` давало слаг `"undefined"` — и адрес, и все потребители
+  // поля (`resolveTravelUrl` в карточке каталога) получали `/travels/undefined`.
+  const slug =
+    normalizeRouteSegment(
+      String(item?.slug ?? getSlugFromUrl(url, String(id || item?.id || ''))).trim(),
+    ) ?? '';
   const name = String(item?.name ?? item?.title ?? '').trim() || i18nT('profile:components.profile.travelNormalize.untitled');
 
   const travel_image_thumb_url =
@@ -100,7 +107,15 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
     name,
     travel_image_thumb_url,
     travel_image_thumb_small_url: travel_image_thumb_url,
-    url: slug ? `/travels/${slug}` : (url ? String(url).split('?')[0].split('#')[0] : `/travels/${id}`),
+    // #1438: последней веткой был безусловный `/travels/${id}`, а `id` здесь
+    // вырождается в `0` на любом непригодном значении — карточка получала
+    // адрес `/travels/0`, такую же 404, как `/travels/null`. Пустая строка
+    // означает «ссылки нет» (контракт `resolveTravelUrl`).
+    url: slug
+      ? `/travels/${slug}`
+      : url
+        ? String(url).split('?')[0].split('#')[0]
+        : buildTravelPath(id) ?? '',
     youtube_link: '',
     userName: String(item?.userName ?? item?.authorName ?? ''),
     description: String(item?.description ?? ''),

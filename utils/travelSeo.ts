@@ -2,6 +2,7 @@ import type { Travel } from '@/types/types';
 import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
 import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, normalizeSeoLead } from '@/utils/seoText'
 import { normalizeOgImageUrl } from '@/utils/seo'
+import { normalizeRouteSegment } from '@/utils/routePaths'
 
 
 const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');
@@ -12,16 +13,20 @@ const TRAVEL_SLUG_STOP_WORDS = new Set(['i', 'k', 'ko', 'na', 'o', 'ot', 'po', '
 
 /**
  * Возвращает относительный путь к странице путешествия: `/travels/{slug|id}`.
- * Без encodeURIComponent и без валидации slug — для совместимости
- * с существующими прямыми использованиями в hero/sticky-actions.
+ * Без encodeURIComponent — для совместимости с существующими прямыми
+ * использованиями в hero/sticky-actions.
+ *
+ * #1438: пригодность сегмента проверяет общий гард `normalizeRouteSegment`, а
+ * не собственное `key !== ''`. Раньше две одноимённые функции (`utils/routePaths`
+ * и эта) расходились контрактом, и здесь литерал вроде `id: 'null'` проходил
+ * насквозь — share-ссылка и запись избранного получали адрес в 404.
  */
 export function buildTravelPath(
   travel: Pick<Travel, 'slug' | 'id'> | null | undefined,
 ): string | null {
   if (!travel) return null;
   const slug = typeof travel.slug === 'string' ? travel.slug : '';
-  const id = travel.id;
-  const key = slug || (id != null ? String(id) : '');
+  const key = normalizeRouteSegment(slug) ?? normalizeRouteSegment(travel.id);
   return key ? `/travels/${key}` : null;
 }
 

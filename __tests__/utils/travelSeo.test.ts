@@ -1,4 +1,5 @@
 import {
+  buildTravelPath,
   buildTravelSeoFallbackDescription,
   buildTravelSeoFallbackTitle,
   buildTravelSeoTitle,
@@ -142,5 +143,31 @@ describe('travelSeo', () => {
         }),
       ])
     );
+  });
+  // #1438: эта функция — второй, «слабый» `buildTravelPath` рядом с
+  // `utils/routePaths`. Собственная проверка `key !== ''` пропускала литералы
+  // пустоты, и share-ссылка с записью избранного получали адрес в 404.
+  describe('buildTravelPath', () => {
+    it('builds the path from a slug or a numeric id', () => {
+      expect(buildTravelPath({ slug: 'grodno', id: 7 } as any)).toBe('/travels/grodno');
+      expect(buildTravelPath({ slug: '', id: 7 } as any)).toBe('/travels/7');
+      // Испорченный слаг не должен «съедать» здоровый id.
+      expect(buildTravelPath({ slug: 'null', id: 7 } as any)).toBe('/travels/7');
+    });
+
+    it.each([
+      [{ slug: null, id: null }],
+      [{ slug: '', id: undefined }],
+      [{ slug: 'null', id: null }],
+      [{ slug: '', id: 'undefined' }],
+      [{ slug: '', id: Number.NaN }],
+    ])('returns null for an unusable identity %p', (travel) => {
+      expect(buildTravelPath(travel as any)).toBeNull();
+    });
+
+    it('returns null without a travel', () => {
+      expect(buildTravelPath(null)).toBeNull();
+      expect(buildTravelPath(undefined)).toBeNull();
+    });
   });
 });

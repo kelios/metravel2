@@ -42,6 +42,20 @@ describe('normalizeServerTravelCard', () => {
     expect(normalizeServerTravelCard(dto({ cityName: null })).city).toBeUndefined();
   });
 
+  // #1438: пустой слаг плюс `id: null` (поле объявлено `number`, но бэкенд
+  // присылает и `null`) собирал адрес `/travels/null` — карточка коллекции
+  // вела в 404. Пустая строка = «ссылки нет», вызывающий её не рисует.
+  it.each([null, undefined, 0])('returns no url when slug is empty and id is %p', (id) => {
+    const n = normalizeServerTravelCard(dto({ slug: '', url: '', id: id as any }));
+
+    expect(n.url).toBe('');
+  });
+
+  it('still builds the url from a real slug or id', () => {
+    expect(normalizeServerTravelCard(dto({ slug: 'grodno' })).url).toBe('/travels/grodno');
+    expect(normalizeServerTravelCard(dto({ slug: '', url: '', id: 77 })).url).toBe('/travels/77');
+  });
+
   it('carries city through the list mapper', () => {
     const [first, second] = normalizeServerTravelCards([
       dto({ id: 177, cityName: 'Warszawa' }),

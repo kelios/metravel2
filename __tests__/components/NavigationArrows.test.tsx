@@ -207,5 +207,29 @@ describe('NavigationArrows', () => {
 
     expect(mockRouter.push).toHaveBeenCalledWith('/travels/2');
   });
+
+  // #1438: `slug || id` при обоих пустых полях подставлял в адрес литерал —
+  // получался переход на `/travels/null`, то есть 404 после перезагрузки
+  // или шаринга такой ссылки.
+  it.each([
+    ['slug null, id null', { slug: null, id: null }],
+    ['slug пустой, id undefined', { slug: '', id: undefined }],
+    ['slug пустой, id ноль', { slug: '', id: 0 }],
+  ])('does not navigate when the neighbour has no usable identity (%s)', (_label, broken) => {
+    const current: Travel = { ...baseTravel, id: 1, slug: 'current-travel', name: 'Current' };
+    const relatedTravels = [
+      { ...baseTravel, id: 5, slug: 'prev-travel', name: 'Previous' },
+      current,
+      { ...baseTravel, ...broken, name: 'Broken' } as Travel,
+    ];
+
+    const { getByLabelText } = render(
+      <NavigationArrows currentTravel={current} relatedTravels={relatedTravels} />
+    );
+
+    fireEvent.press(getByLabelText('Следующее путешествие: Broken'));
+
+    expect(mockRouter.push).not.toHaveBeenCalled();
+  });
 });
 

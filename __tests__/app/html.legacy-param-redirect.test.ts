@@ -44,6 +44,22 @@ describe('+html legacy ?param= redirect', () => {
     },
   )
 
+  // #1438: этот IIFE уходит в HTML каждой страницы как есть, вместе с
+  // комментариями. Пока в нём стояли примеры `/travels/null` и
+  // `/travels/undefined`, любой скрапер, вытаскивающий адреса регуляркой из
+  // сырого HTML, находил на здоровой статье ссылку в 404.
+  it('never ships a literal travel path with an empty-literal segment', () => {
+    const source = fs.readFileSync(path.resolve(process.cwd(), 'app/+html.tsx'), 'utf8')
+    // Только inline-скрипты: обычные комментарии модуля бандлер вырезает, а
+    // содержимое `String.raw` уходит в разметку дословно.
+    const inlineScripts = [...source.matchAll(/String\.raw`([\s\S]*?)`/g)].map((m) => m[1])
+    expect(inlineScripts.length).toBeGreaterThan(0)
+
+    for (const script of inlineScripts) {
+      expect(script).not.toMatch(/\/travels\/(null|undefined|nan|none|false)\b/i)
+    }
+  })
+
   it('ignores malformed values and other routes, as before', () => {
     expect(runOn('/', '?param=a/b')).toBeNull()
     expect(runOn('/', '?param=')).toBeNull()

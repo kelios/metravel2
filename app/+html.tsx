@@ -289,8 +289,11 @@ const getLegacyParamRedirectScript = () => String.raw`
     if (!value) return;
     // Guard against malformed values: allow only simple slug/id tokens.
     if (/[/?#\\]/.test(value)) return;
-    // #1185: literal empty markers are not slugs. Redirecting them produced
-    // /travels/null and /travels/undefined — a 404 instead of the home page.
+    // #1185: literal empty markers are not slugs. Redirecting them built a
+    // travel URL out of the literal word and landed on a 404 instead of the
+    // home page. #1438: those example URLs are deliberately not spelled out
+    // here — this comment ships inside the served HTML, and URL-regex
+    // scrapers crawl anything that looks like a path.
     if (/^(null|undefined|nan|none|false|0)$/i.test(value)) return;
 
     var target = '/travels/' + encodeURIComponent(value);

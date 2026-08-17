@@ -49,6 +49,25 @@ describe('subscriptions.helpers', () => {
       expect(resolveTravelUrl({ id: 0 })).toBe('');
       expect(resolveTravelUrl({ id: Number.NaN })).toBe('');
     });
+
+    // #1438: результат уходит прямо в `href` карточки каталога — это
+    // единственный настоящий `<a>` с travel-адресом на странице статьи.
+    // Серверное поле `url` пропускалось без проверки сегмента.
+    it.each(['/travels/null', '/travels/undefined', '/travels/0', 'https://metravel.by/travels/null'])(
+      'does not pass the unusable backend url %p through to the href',
+      (url) => {
+        expect(resolveTravelUrl({ id: null, url } as any)).toBe('');
+      },
+    );
+
+    it('still prefers a healthy backend url and keeps non-travel links intact', () => {
+      expect(resolveTravelUrl({ id: null, url: '/travels/grodno' } as any)).toBe('/travels/grodno');
+      expect(resolveTravelUrl({ id: 1, url: '/custom/url?a=1#b' })).toBe('/custom/url');
+    });
+
+    it('falls back to the id when the backend url is unusable', () => {
+      expect(resolveTravelUrl({ id: 77, url: '/travels/null' })).toBe('/travels/77');
+    });
   });
 });
 

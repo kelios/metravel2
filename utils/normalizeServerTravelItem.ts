@@ -5,6 +5,7 @@
 // делили ровно одну реализацию.
 
 import type { CardViewTravelDto } from '@/api/user';
+import { buildTravelPath } from '@/utils/routePaths';
 import { translate as i18nT } from '@/i18n';
 
 export interface NormalizedServerTravel {
@@ -20,10 +21,14 @@ export interface NormalizedServerTravel {
   timestamp: number;
 }
 
+// Пустая строка означает «ссылки нет» — тот же контракт, что у
+// `resolveTravelUrl`. #1438: последней веткой был безусловный
+// `/travels/${t.id}`, а поле объявлено `number`, но с бэкенда приходит и `null`,
+// то есть карточка коллекции получала адрес `/travels/null` — 404.
 const cleanTravelUrl = (t: CardViewTravelDto): string => {
   if (t.slug) return `/travels/${t.slug}`;
   if (t.url) return String(t.url).split('?')[0].split('#')[0];
-  return `/travels/${t.id}`;
+  return buildTravelPath(t.id) ?? '';
 };
 
 export const normalizeServerTravelCard = (t: CardViewTravelDto): NormalizedServerTravel => {

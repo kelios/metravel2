@@ -13,6 +13,7 @@ import type { Travel } from '@/types/types';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageWidth } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { buildTravelPath } from '@/utils/routePaths';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
@@ -73,11 +74,15 @@ function NavigationArrows({
   const handleNavigate = useCallback(
     (travel: Travel | null) => {
       if (!travel) return;
-      const travelId = travel.slug || travel.id;
+      // #1438: `slug || id` при обоих пустых полях давало литерал в адресе —
+      // после перезагрузки или шаринга такой URL это 404. Нет пригодного
+      // сегмента — перехода нет.
+      const travelPath = buildTravelPath(travel.slug || travel.id);
+      if (!travelPath) return;
       if (onNavigate) {
-        onNavigate(travelId);
+        onNavigate(travel.slug || travel.id);
       } else {
-        router.push(`/travels/${travelId}`);
+        router.push(travelPath as never);
       }
     },
     [onNavigate, router]
