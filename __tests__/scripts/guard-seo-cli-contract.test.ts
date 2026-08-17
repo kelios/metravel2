@@ -19,7 +19,9 @@ const {
   declaresSelection,
   evaluateGuard,
   findViolationsInSource,
+  hasCallExpression,
   isCoveredFile,
+  maskSource,
   readDeclaredSelections,
 } = require('@/scripts/guard-seo-cli-contract')
 
@@ -84,6 +86,35 @@ const BLOCK_COMMENT_HELPER_SOURCE = SILENT_EMPTY_RETURN_SOURCE.replace(
 const NESTED_SELECTION_SOURCE = UNDECLARED_AND_UNGUARDED_SOURCE.replace(
   "flags: { 'dry-run': { type: 'boolean' } }",
   "flags: { 'dry-run': { type: 'boolean', selection: 'none' } }",
+)
+
+// The helper named in the USAGE text and called nowhere. Every covered script
+// writes its usage as a multi-line template, so a checker that only looks for a
+// quote earlier on the same line sees a bare `requireNonEmptySelection(` line
+// and takes it for the call.
+const USAGE_TEMPLATE_HELPER_SOURCE = SILENT_EMPTY_RETURN_SOURCE.replace(
+  "const USAGE = 'usage'",
+  [
+    'const USAGE = `usage',
+    '',
+    'Notes:',
+    '  requireNonEmptySelection(rows) refuses an empty run',
+    '`',
+  ].join('\n'),
+)
+
+// A local binding that happens to share the name answers for the script: read
+// the first `CLI_SPEC` at any depth and this one, which selects nothing, hides
+// the real spec below it.
+const SHADOWED_CLI_SPEC_SOURCE = SILENT_EMPTY_RETURN_SOURCE.replace(
+  'const CLI_SPEC',
+  [
+    'function buildFallback() {',
+    "  const CLI_SPEC = { name: 'fallback', selection: 'none' }",
+    '  return CLI_SPEC',
+    '}',
+    'const CLI_SPEC',
+  ].join('\n'),
 )
 
 const sourceOf = (filePath: string, content: string) => ({ filePath, content })
@@ -307,6 +338,22 @@ describe('negative probe: putting the permissive default back fails the guard', 
       content: NESTED_SELECTION_SOURCE,
     },
     {
+      // Prose in a string is prose wherever the string opened. The mention sits
+      // on its own line inside the USAGE template, with no quote in front of it.
+      label: 'the helper claimed in the USAGE template instead of called',
+      rule: 'empty-selection-guard',
+      reason: /never calls requireNonEmptySelection/,
+      content: USAGE_TEMPLATE_HELPER_SOURCE,
+    },
+    {
+      // The declaration is top-level metadata on CLI_SPEC. A local binding of
+      // the same name inside a function does not describe the script.
+      label: 'a local CLI_SPEC shadowing the real spec above it',
+      rule: 'empty-selection-guard',
+      reason: /never calls requireNonEmptySelection/,
+      content: SHADOWED_CLI_SPEC_SOURCE,
+    },
+    {
       // The declaration rots: it stays 'none' on the day the script grows a flag
       // that means many targets.
       label: "selection: 'none' next to a flag that names many targets",
@@ -337,6 +384,14 @@ describe('negative probe: putting the permissive default back fails the guard', 
     )
     expect(BLOCK_COMMENT_HELPER_SOURCE).toContain('/* requireNonEmptySelection(rows) */')
     expect(NESTED_SELECTION_SOURCE).toContain("type: 'boolean', selection: 'none'")
+    // The mention has to land inside the template and on its own line, or the
+    // fixture stops being the shape it claims.
+    expect(USAGE_TEMPLATE_HELPER_SOURCE).toContain(
+      '\n  requireNonEmptySelection(rows) refuses an empty run\n',
+    )
+    expect(USAGE_TEMPLATE_HELPER_SOURCE).toContain('const USAGE = `usage')
+    expect(SHADOWED_CLI_SPEC_SOURCE).toContain("const CLI_SPEC = { name: 'fallback', selection: 'none' }")
+    expect(SHADOWED_CLI_SPEC_SOURCE).toContain("selection: 'rows'")
   })
 
   it('names only the missing declaration when a script declares nothing', () => {
@@ -368,6 +423,14 @@ describe('negative probe: putting the permissive default back fails the guard', 
     ).toEqual([])
     expect(readDeclaredSelections("/* const CLI_SPEC = { selection: 'none' } */")).toEqual([])
     expect(readDeclaredSelections('nothing here')).toEqual([])
+    // Only top-level declarations: a local binding of the same name is not the
+    // script's spec, and a spec quoted inside a string is not code.
+    expect(
+      readDeclaredSelections(
+        ["function f() {", "  const CLI_SPEC = { selection: 'none' }", '}', "const CLI_SPEC = { selection: 'URLs' }"].join('\n'),
+      ),
+    ).toEqual(['URLs'])
+    expect(readDeclaredSelections("const help = `const CLI_SPEC = { selection: 'none' }`")).toEqual([])
     // Fail closed: a stray 'none' outside CLI_SPEC does not turn the rule off.
     expect(
       declaresSelection("const x = { selection: 'none' }\nconst CLI_SPEC = { selection: 'URLs' }"),
@@ -449,6 +512,51 @@ describe('negative probe: putting the permissive default back fails the guard', 
         sourceOf('scripts/seo-fixture.js', withUrl.replace("'https://metravel.by/api'", "'https://metravel.by/api' + process.argv.slice(2)")),
       ).map((entry: { rule: string }) => entry.rule),
     ).toContain('hand-rolled-parse')
+  })
+
+  it('reads a call as a call wherever the line around it starts', () => {
+    // The mirror of the bypass above, and the direction that costs an author an
+    // hour: a real call whose line opens with a string used to read as prose,
+    // because the check only asked whether a quote appeared before it.
+    const afterString = COMPLIANT_SOURCE.replace(
+      "  requireNonEmptySelection([], { what: 'rows', source: 'demo' })",
+      "  console.warn('nothing selected'); requireNonEmptySelection([], { what: 'rows', source: 'demo' })",
+    )
+    expect(evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', afterString)] }).ok).toBe(true)
+
+    // A `${…}` interpolation is code, not template prose, so the call inside it
+    // counts — masking a template whole would fail this one.
+    const interpolated = COMPLIANT_SOURCE.replace(
+      "  requireNonEmptySelection([], { what: 'rows', source: 'demo' })",
+      "  const report = `${requireNonEmptySelection([], { what: 'rows', source: 'demo' })}`",
+    )
+    expect(evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', interpolated)] }).ok).toBe(true)
+
+    expect(hasCallExpression("requireNonEmptySelection(rows)", 'requireNonEmptySelection')).toBe(true)
+    expect(hasCallExpression("const help = 'requireNonEmptySelection(rows)'", 'requireNonEmptySelection')).toBe(false)
+    expect(hasCallExpression('const p = /requireNonEmptySelection\\(/', 'requireNonEmptySelection')).toBe(false)
+  })
+
+  it('keeps the masked reading aligned with the source it came from', () => {
+    // Every violation line number, and the CLI_SPEC slice the declaration is read
+    // from, depend on the mask replacing character for character.
+    const source = fs.readFileSync(path.join(process.cwd(), 'scripts', 'seo-audit.js'), 'utf8')
+
+    for (const literals of [false, true]) {
+      const masked = maskSource(source, { literals })
+      expect(masked).toHaveLength(source.length)
+      expect(masked.split('\n')).toHaveLength(source.split('\n').length)
+      expect(maskSource(masked, { literals })).toBe(masked)
+    }
+
+    // Comments go in both readings; literals only in the masked one.
+    const commented = 'const a = 1 // requireNonEmptySelection(x)'
+    expect(maskSource(commented)).toHaveLength(commented.length)
+    expect(maskSource(commented).trimEnd()).toBe('const a = 1')
+    expect(maskSource("const a = 'https://metravel.by'")).toBe("const a = 'https://metravel.by'")
+    expect(maskSource("const a = 'https://metravel.by'", { literals: true })).toBe(
+      `const a = '${' '.repeat('https://metravel.by'.length)}'`,
+    )
   })
 
   it('exits non-zero as a CLI and prints the offending file and rule', () => {

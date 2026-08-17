@@ -68,52 +68,51 @@ const NO_SELECTION = 'none'
 // word appears.
 const LIST_FLAG_DECLARATION = /(?:^|[\s{,])'?(all|ids|limit|map-file|urls-file)'?:\s*\{\s*type:/
 
-// Read only the CLI_SPEC object. A `selection: 'none'` in another object (or in
-// prose) is not the declaration this contract asks for and must not let a
-// script with an undeclared selection pass.
-const findCliSpecObject = (code) => {
-  const text = String(code || '')
-  const assignment = /(?:^|[\n;])\s*(?:const|let|var)\s+CLI_SPEC\s*=\s*\{/.exec(text)
-  if (!assignment) return ''
+const SELECTION_KEY = 'selection'
 
-  const start = assignment.index + assignment[0].lastIndexOf('{')
-  let quote = null
-  let depth = 0
-  for (let i = start; i < text.length; i++) {
-    const char = text[i]
-    if (quote) {
-      if (char === '\\') i++
-      else if (char === quote) quote = null
-      continue
+// The declaration is top-level metadata on CLI_SPEC. Anchored to a line that
+// starts in column 0, so a `const CLI_SPEC` shadowing the real one inside a
+// function body cannot answer for the script; a second statement on that same
+// top-level line still counts (`const RETRY = {…}; const CLI_SPEC = {…}`).
+// Not finding it fails closed: `selection-declared` fires.
+const CLI_SPEC_DECLARATION = /^(?![ \t])(?:[^\n]*;[ \t]*)?(?:const|let|var)[ \t]+CLI_SPEC[ \t]*=[ \t]*\{/gm
+
+// Read only CLI_SPEC objects. A `selection: 'none'` in another object, in prose
+// or inside a string is not the declaration this contract asks for and must not
+// let a script with an undeclared selection pass. Every top-level CLI_SPEC is
+// read, not just the first: with more than one in view, the rule stays on if any
+// of them selects something.
+const findCliSpecObjects = (code) => {
+  const text = String(code || '')
+  // Located over the masked reading, where a `{` inside a string or a comment is
+  // no longer a brace, then sliced out of the source so the values stay readable.
+  const masked = maskSource(text, { literals: true })
+  const objects = []
+
+  for (const match of masked.matchAll(CLI_SPEC_DECLARATION)) {
+    const start = match.index + match[0].lastIndexOf('{')
+    let depth = 0
+    for (let i = start; i < masked.length; i++) {
+      if (masked[i] === '{') depth++
+      else if (masked[i] === '}' && --depth === 0) {
+        objects.push({ source: text.slice(start, i + 1), masked: masked.slice(start, i + 1) })
+        break
+      }
     }
-    if (char === "'" || char === '"' || char === '`') {
-      quote = char
-      continue
-    }
-    if (char === '{') depth++
-    else if (char === '}' && --depth === 0) return text.slice(start, i + 1)
   }
 
-  return ''
+  return objects
 }
 
-const readDeclaredSelections = (code) => {
-  const cliSpec = findCliSpecObject(stripComments(code))
+// Walked over the masked object, where only real syntax is left, and read out of
+// the source at the same offsets — `maskSource` replaces character for character,
+// so the two stay aligned.
+const readSelectionValues = ({ source, masked }) => {
   const values = []
-  let quote = null
   let depth = 0
 
-  for (let i = 0; i < cliSpec.length; i++) {
-    const char = cliSpec[i]
-    if (quote) {
-      if (char === '\\') i++
-      else if (char === quote) quote = null
-      continue
-    }
-    if (char === "'" || char === '"' || char === '`') {
-      quote = char
-      continue
-    }
+  for (let i = 0; i < masked.length; i++) {
+    const char = masked[i]
     if (char === '{') {
       depth++
       continue
@@ -122,27 +121,28 @@ const readDeclaredSelections = (code) => {
       depth--
       continue
     }
-    if (depth !== 1 || !cliSpec.startsWith('selection', i)) continue
-    if (/[A-Za-z0-9_$]/.test(cliSpec[i - 1] || '') || /[A-Za-z0-9_$]/.test(cliSpec[i + 9] || '')) {
+    if (depth !== 1 || !masked.startsWith(SELECTION_KEY, i)) continue
+    const after = i + SELECTION_KEY.length
+    if (/[A-Za-z0-9_$]/.test(masked[i - 1] || '') || /[A-Za-z0-9_$]/.test(masked[after] || '')) {
       continue
     }
 
-    let cursor = i + 9
-    while (/\s/.test(cliSpec[cursor] || '')) cursor++
-    if (cliSpec[cursor] !== ':') continue
+    let cursor = after
+    while (/\s/.test(masked[cursor] || '')) cursor++
+    if (masked[cursor] !== ':') continue
     cursor++
-    while (/\s/.test(cliSpec[cursor] || '')) cursor++
-    const delimiter = cliSpec[cursor]
+    while (/\s/.test(masked[cursor] || '')) cursor++
+    const delimiter = masked[cursor]
     if (delimiter !== "'" && delimiter !== '"' && delimiter !== '`') continue
 
     let value = ''
-    for (cursor++; cursor < cliSpec.length; cursor++) {
-      if (cliSpec[cursor] === '\\' && cliSpec[cursor + 1] !== undefined) {
-        value += cliSpec[++cursor]
-      } else if (cliSpec[cursor] === delimiter) {
+    for (cursor++; cursor < source.length; cursor++) {
+      if (source[cursor] === '\\' && source[cursor + 1] !== undefined) {
+        value += source[++cursor]
+      } else if (source[cursor] === delimiter) {
         break
       } else {
-        value += cliSpec[cursor]
+        value += source[cursor]
       }
     }
     if (value.trim()) values.push(value.trim())
@@ -151,6 +151,9 @@ const readDeclaredSelections = (code) => {
 
   return values
 }
+
+const readDeclaredSelections = (code) =>
+  findCliSpecObjects(code).flatMap((cliSpec) => readSelectionValues(cliSpec))
 
 const declaresSelection = (code) => readDeclaredSelections(code).some((value) => value !== NO_SELECTION)
 
@@ -273,94 +276,151 @@ const isCoveredFile = (relativePath) => {
   return COVERED_FILE_PATTERN.test(path.posix.basename(normalized))
 }
 
-// Prose is not code, whether it occupies a whole line, trails a statement, or
-// sits in an inline block comment. Comments are replaced rather than deleted so
-// violation line numbers still point at the original source. A `//` inside a
-// string stays put, or every URL in these scripts would lose its host.
-const stripComments = (source) => {
-  const text = String(source || '')
-  let output = ''
-  let quote = null
-  let regex = false
-  let regexCharacterClass = false
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    if (quote) {
-      output += char
-      if (char === '\\' && text[i + 1] !== undefined) output += text[++i]
-      else if (char === quote) quote = null
-      else if (char === '\n' && quote !== '`') quote = null
-      continue
-    }
-    if (regex) {
-      output += char
-      if (char === '\\' && text[i + 1] !== undefined) output += text[++i]
-      else if (char === '[') regexCharacterClass = true
-      else if (char === ']') regexCharacterClass = false
-      else if (char === '/' && !regexCharacterClass) regex = false
-      else if (char === '\n') regex = false
-      continue
-    }
-    if (char === "'" || char === '"' || char === '`') {
-      quote = char
-      output += char
-      continue
-    }
-    if (char === '/' && text[i + 1] === '/') {
-      while (i < text.length && text[i] !== '\n') {
-        output += ' '
-        i++
-      }
-      if (text[i] === '\n') output += '\n'
-      continue
-    }
-    if (char === '/' && text[i + 1] === '*') {
-      output += '  '
-      i += 2
-      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) {
-        output += text[i] === '\n' ? '\n' : ' '
-        i++
-      }
-      if (i < text.length) {
-        output += ' '
-        i++
-      }
-      continue
-    }
-    if (char === '/') {
-      const beforeSlash = output.trimEnd()
-      const previous = beforeSlash.at(-1) || ''
-      const startsRegex =
-        !previous ||
-        '=(:,!&|?{[;'.includes(previous) ||
-        beforeSlash.endsWith('=>') ||
-        /\b(?:case|return|throw|typeof|void|yield)$/.test(beforeSlash)
-      if (startsRegex) {
-        regex = true
-        regexCharacterClass = false
-      }
-    }
-    output += char
-  }
-  return output
+// A `/` in code position starts a regex only after something an expression can
+// follow — an operator, an opening bracket, a keyword. After a value it is division.
+const REGEX_PRECEDERS = '=(:,!&|?{[;'
+const startsRegexLiteral = (emitted) => {
+  const before = emitted.trimEnd()
+  const previous = before.at(-1) || ''
+  const tail = before.slice(-8)
+  return (
+    !previous ||
+    REGEX_PRECEDERS.includes(previous) ||
+    tail.endsWith('=>') ||
+    /\b(?:case|return|throw|typeof|void|yield)$/.test(tail)
+  )
 }
 
-const hasCallExpression = (code, name) => {
-  const callPattern = new RegExp(`\\b${name}\\s*\\(`, 'g')
-  return String(code || '')
-    .split('\n')
-    .some((line) => {
-      for (const match of line.matchAll(callPattern)) {
-        const prefix = line.slice(0, match.index)
-        const preceding = prefix.at(-1) || ''
-        // Calls in this family are direct helper calls. Quotes before the match
-        // mean it is string prose; a slash means a regex literal. Resetting this
-        // small check per line avoids mistaking quotes inside an earlier regex
-        // (for example /['"]/) for a multiline JavaScript string.
-        if (!/['"`]/.test(prefix) && !/[A-Za-z0-9_$./\\]/.test(preceding)) return true
+// The one scanner the whole guard reads through. It blanks what is not
+// executable code — comments always, and with `literals: true` the contents of
+// string, template and regex literals too — writing one space per hidden
+// character and keeping every newline, so offsets and line numbers still match
+// the file on disk.
+//
+// Two readings come out of it, and both rules need their own. Rules that read
+// values (`selection: 'rows'`, `require('./lib/seo-cli-contract')`,
+// `argv.includes('--all')`) need the literals intact. Rules that look for a call
+// need them blanked: `requireNonEmptySelection(` inside a USAGE template, a
+// regex or any other string is prose about the call, not the call — and every
+// covered script writes its USAGE as a multi-line template, so that shape is the
+// natural one, not a contrived one.
+//
+// One scanner rather than three is the point. The bypasses closed here were all
+// the same defect: three hand-rolled scanners disagreeing about where a literal
+// ends, so a mention was code to one of them and prose to another.
+//
+// Template interpolations stay code — `${…}` is real JavaScript and can hold the
+// very call a rule is looking for.
+const maskSource = (source, { literals = false } = {}) => {
+  const text = String(source || '')
+  let out = ''
+  let i = 0
+
+  const keep = (count = 1) => {
+    out += text.slice(i, i + count)
+    i += count
+  }
+  const hide = (count = 1) => {
+    for (let n = 0; n < count && i < text.length; n++, i++) out += text[i] === '\n' ? '\n' : ' '
+  }
+  // Inside a literal: hidden when the caller asked for the masked reading, kept
+  // as written otherwise.
+  const step = (count = 1) => (literals ? hide(count) : keep(count))
+
+  // `depth` counts braces open in the current code context. A `}` at depth 0
+  // closes the `${…}` that opened this context and hands the scan back to its
+  // template.
+  const contexts = [{ template: false, depth: 0 }]
+
+  while (i < text.length) {
+    const context = contexts[contexts.length - 1]
+    const char = text[i]
+    const next = text[i + 1]
+
+    if (context.template) {
+      if (char === '\\' && next !== undefined) step(2)
+      else if (char === '`') {
+        contexts.pop()
+        keep()
+      } else if (char === '$' && next === '{') {
+        contexts.push({ template: false, depth: 0 })
+        keep(2)
+      } else step()
+      continue
+    }
+
+    if (char === '/' && next === '/') {
+      while (i < text.length && text[i] !== '\n') hide()
+      continue
+    }
+
+    if (char === '/' && next === '*') {
+      hide(2)
+      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) hide()
+      hide(2)
+      continue
+    }
+
+    if (char === "'" || char === '"') {
+      keep()
+      while (i < text.length && text[i] !== char && text[i] !== '\n') {
+        if (text[i] === '\\' && text[i + 1] !== undefined) step(2)
+        else step()
       }
-      return false
-    })
+      if (text[i] === char) keep()
+      continue
+    }
+
+    if (char === '`') {
+      contexts.push({ template: true, depth: 0 })
+      keep()
+      continue
+    }
+
+    if (char === '/' && startsRegexLiteral(out)) {
+      keep()
+      let characterClass = false
+      while (i < text.length && text[i] !== '\n') {
+        if (text[i] === '\\' && text[i + 1] !== undefined) {
+          step(2)
+          continue
+        }
+        if (text[i] === '[') characterClass = true
+        else if (text[i] === ']') characterClass = false
+        else if (text[i] === '/' && !characterClass) break
+        step()
+      }
+      if (text[i] === '/') keep()
+      continue
+    }
+
+    if (char === '{') {
+      context.depth++
+      keep()
+      continue
+    }
+    if (char === '}') {
+      if (context.depth === 0 && contexts.length > 1) contexts.pop()
+      else context.depth--
+      keep()
+      continue
+    }
+
+    keep()
+  }
+
+  return out
+}
+
+// A member call (`contract.requireNonEmptySelection(…)`) is deliberately not
+// counted: this family imports the helper by name, and the narrow reading fails
+// closed.
+const hasCallExpression = (code, name) => {
+  const masked = maskSource(code, { literals: true })
+  for (const match of masked.matchAll(new RegExp(`\\b${name}\\s*\\(`, 'g'))) {
+    if ((masked[match.index - 1] || '') !== '.') return true
+  }
+  return false
 }
 
 const collectCoveredFiles = (rootDir) => {
@@ -388,7 +448,7 @@ const findViolationsInSource = ({ filePath, content }) => {
   if (!isCoveredFile(normalizedPath)) return []
 
   const lines = String(content || '').split('\n')
-  const strippedLines = stripComments(content).split('\n')
+  const strippedLines = maskSource(content).split('\n')
   // `line` is what the rules read — comments removed; `raw` is what the operator
   // sees in the report, so the snippet still shows the line as written.
   const codeLines = lines.map((raw, index) => ({
@@ -535,6 +595,8 @@ module.exports = {
   declaresSelection,
   evaluateGuard,
   findViolationsInSource,
+  hasCallExpression,
   isCoveredFile,
+  maskSource,
   readDeclaredSelections,
 }
