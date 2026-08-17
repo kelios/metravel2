@@ -727,7 +727,89 @@
           "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
           "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den"
         ],
-        "note": "Замер сразу после завершения подачи 17.08. Все десять адресов — «Submitted and indexed», googleCanonical равен новому адресу у всех. lastCrawlTime шести поданных сегодня адресов 2026-08-17T08:55-08:59Z, то есть Google обошёл их в минуты после клика. Ранний положительный замер терминален: отсрочка 3-5 суток защищает только от ложного минуса."
+        "note": "Замер сразу после завершения подачи 17.08. Все десять адресов — «Submitted and indexed», googleCanonical равен новому адресу у всех. lastCrawlTime шести поданных сегодня адресов 2026-08-17T08:55-08:59Z, то есть Google обошёл их в минуты после клика. Ранний положительный замер терминален: отсрочка 3-5 суток защищает только от ложного минуса.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T19:30:37Z",
+            "googleCanonical": "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv"
+          },
+          {
+            "url": "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T19:30:37Z",
+            "googleCanonical": "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii"
+          },
+          {
+            "url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:55:23Z",
+            "googleCanonical": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska"
+          },
+          {
+            "url": "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:55:23Z",
+            "googleCanonical": "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia"
+          },
+          {
+            "url": "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T11:46:37Z",
+            "googleCanonical": "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia"
+          },
+          {
+            "url": "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:57:23Z",
+            "googleCanonical": "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko"
+          },
+          {
+            "url": "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:57:24Z",
+            "googleCanonical": "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton"
+          },
+          {
+            "url": "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:59:25Z",
+            "googleCanonical": "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii"
+          },
+          {
+            "url": "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:59:24Z",
+            "googleCanonical": "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat"
+          },
+          {
+            "url": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T10:01:37Z",
+            "googleCanonical": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den"
+          }
+        ]
       }
     },
     {
