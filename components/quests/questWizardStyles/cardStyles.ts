@@ -103,6 +103,44 @@ export const createCardStyles = (colors: QuestColors, isMobile: boolean, _screen
         color: colors.text,
         letterSpacing: -0.1,
     },
+    // Честное расстояние до точки: короткой строкой — обычный длинный перегон,
+    // карточкой с действиями — тот, за которым точка становится необязательной.
+    legNote: {
+        fontSize: Math.round(13 * fontScale),
+        lineHeight: Math.round(18 * fontScale),
+        color: colors.textMuted,
+        marginBottom: SPACING.sm,
+    },
+    farStepCard: {
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: 14,
+        padding: isMobile ? SPACING.md : SPACING.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+        gap: SPACING.sm,
+    },
+    farStepHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.xs,
+    },
+    farStepTitle: {
+        fontSize: Math.round((isMobile ? 14 : 15) * fontScale),
+        lineHeight: Math.round((isMobile ? 20 : 22) * fontScale),
+        fontWeight: '800',
+        color: colors.text,
+        flexShrink: 1,
+    },
+    farStepText: {
+        fontSize: Math.round(14 * fontScale),
+        lineHeight: Math.round(20 * fontScale),
+        color: colors.text,
+    },
+    farStepActions: {
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: SPACING.sm,
+    },
     visitorInfoCard: {
         backgroundColor: colors.backgroundSecondary,
         borderRadius: 14,

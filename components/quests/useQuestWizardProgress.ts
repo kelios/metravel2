@@ -133,6 +133,10 @@ export function useQuestWizardProgress({
   const [attempts, setAttempts] = useState<Record<string, number>>({})
   const [hints, setHints] = useState<Record<string, boolean>>({})
   const [showMap, setShowMap] = useState(true)
+  // Игрок закончил квест, не дойдя до точек за длинным перегоном. Отдельного
+  // поля на бэкенде нет и не нужно: это ровно `completed` при неполных
+  // ответах — и хранилище, и сервер уже умеют его переносить и сливать.
+  const [earlyFinish, setEarlyFinish] = useState(false)
   // Отпечаток состояния, которое хук засеял сам (слияние, AsyncStorage, сброс).
   // Save-эффект пропускает ровно его — без прежней гонки `suppressSave` с
   // `setTimeout(0)`, где лишний await в load-эффекте решал, сработает гейт или
@@ -160,6 +164,7 @@ export function useQuestWizardProgress({
   const liveSnapshotRef = useRef<QuestProgressSnapshot>(normalizeQuestProgressSnapshot(null))
 
   const applyProgressState = (snapshot: QuestProgressSnapshot) => {
+    setEarlyFinish(snapshot.completed)
     setCurrentIndex(snapshot.currentIndex)
     setUnlockedIndex(snapshot.unlockedIndex)
     setAnswers(snapshot.answers)
@@ -253,7 +258,8 @@ export function useQuestWizardProgress({
     lastAnswersRef.current = answers
     updatedAtRef.current = now
 
-    const completed = requiredSteps.length > 0 && requiredSteps.every((step) => !!answers[step.id])
+    const completed =
+      earlyFinish || (requiredSteps.length > 0 && requiredSteps.every((step) => !!answers[step.id]))
     AsyncStorage.setItem(storageKey, serializeRecord({
       currentIndex,
       unlockedIndex,
@@ -277,12 +283,16 @@ export function useQuestWizardProgress({
       updatedAt: now,
       answeredAt,
     })
-  }, [answers, attempts, currentIndex, hints, onProgressChange, requiredSteps, showMap, storageKey, unlockedIndex])
+  }, [answers, attempts, currentIndex, earlyFinish, hints, onProgressChange, requiredSteps, showMap, storageKey, unlockedIndex])
 
   const completedSteps = useMemo(() => requiredSteps.filter((step) => answers[step.id]), [answers, requiredSteps])
   const requiredCount = requiredSteps.length
   const progress = requiredCount > 0 ? completedSteps.length / requiredCount : 0
   const allCompleted = requiredCount > 0 && completedSteps.length === requiredCount
+  // Квест закончен: либо пройдены все обязательные точки, либо игрок закрыл его
+  // на месте, оставив за спиной только далёкие. Финал и `completed` смотрят
+  // сюда, счётчик «пройдено N из M» — по-прежнему на реальные ответы.
+  const questCompleted = allCompleted || earlyFinish
 
   // Живой снимок для слияния серверных обновлений, прилетевших во время сессии.
   liveSnapshotRef.current = normalizeQuestProgressSnapshot({
@@ -292,7 +302,7 @@ export function useQuestWizardProgress({
     attempts,
     hints,
     showMap,
-    completed: allCompleted,
+    completed: questCompleted,
     updatedAt: updatedAtRef.current,
     answeredAt: answeredAtRef.current,
   })
@@ -310,6 +320,10 @@ export function useQuestWizardProgress({
     const nextReachable = Math.min(maxAnsweredIndex + 1, allSteps.length - 1)
     setUnlockedIndex((prev) => Math.max(prev, nextReachable))
   }, [allSteps.length, maxAnsweredIndex])
+
+  const finishEarly = useCallback(() => {
+    setEarlyFinish(true)
+  }, [])
 
   const resetProgress = async () => {
     await AsyncStorage.removeItem(storageKey)
@@ -337,6 +351,8 @@ export function useQuestWizardProgress({
     requiredCount,
     progress,
     allCompleted,
+    questCompleted,
+    finishEarly,
     resetProgress,
   }
 }

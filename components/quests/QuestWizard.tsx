@@ -39,6 +39,7 @@ import {
     type QuestMapApp,
 } from './questWizardHelpers';
 import { exportQuestOfflineMap, getQuestOfflineMapPoints, openQuestOfflineMapInApp } from './questOfflineMapExport';
+import { buildQuestFarStepModel, questMedianLegMeters } from './questStepDistance';
 
 import { fetchQuestByQuestId } from '@/api/quests';
 import { saveQuestOffline } from '@/services/offline/questOfflineAdapter';
@@ -150,7 +151,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         completedSteps,
         requiredCount,
         progress,
-        allCompleted,
+        questCompleted,
+        finishEarly,
         resetProgress,
     } = useQuestWizardProgress({
         allSteps,
@@ -166,7 +168,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         title,
         completedCount: completedSteps.length,
         totalCount: requiredCount,
-        allCompleted,
+        allCompleted: questCompleted,
     });
     useQuestGeofence({
         questId,
@@ -174,7 +176,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         title,
         steps,
         answers,
-        allCompleted,
+        allCompleted: questCompleted,
     });
 
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
@@ -271,6 +273,36 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         setShowMap(prev => !prev);
     }, [setShowMap]);
 
+    // Координаты всех точек уже в бандле, поэтому длину перегона считаем на
+    // клиенте: игрок видит расстояние до следующей точки до того, как выйдет.
+    const routePoints = useMemo(
+        () => steps.map((step) => ({ id: step.id, lat: step.lat, lng: step.lng })),
+        [steps],
+    );
+    const medianLegMeters = useMemo(() => questMedianLegMeters(routePoints), [routePoints]);
+    const currentRealIndex = intro ? currentIndex - 1 : currentIndex;
+    const farStepModel = useMemo(
+        () => buildQuestFarStepModel({
+            points: routePoints,
+            answers,
+            currentIndex: currentRealIndex,
+            medianMeters: medianLegMeters,
+            mode: routeMode === 'bike' ? 'bike' : 'foot',
+        }),
+        [answers, currentRealIndex, medianLegMeters, routePoints, routeMode],
+    );
+
+    const finishQuestHere = useCallback(() => {
+        queueAnalyticsEvent('quest_finish_early', {
+            quest_id: questId,
+            step_index: currentRealIndex,
+            passed_count: completedSteps.length,
+            steps_count: requiredCount,
+        });
+        finishEarly();
+        setShowFinaleOnly(true);
+    }, [completedSteps.length, currentRealIndex, finishEarly, questId, requiredCount]);
+
     const skipStep = useCallback(() => {
         const hasNext = currentIndex < allSteps.length - 1;
         continueFromCurrentStep();
@@ -280,11 +312,11 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const goToStep = useCallback((index: number) => {
         const step = allSteps[index];
         const isAnswered = !!(step && answers[step.id]);
-        if (index <= unlockedIndex || isAnswered || allCompleted) {
+        if (index <= unlockedIndex || isAnswered || questCompleted) {
             setShowFinaleOnly(false);
             setCurrentIndex(index);
         }
-    }, [allCompleted, allSteps, answers, setCurrentIndex, unlockedIndex]);
+    }, [allSteps, answers, questCompleted, setCurrentIndex, unlockedIndex]);
 
     const showFinale = useCallback(() => {
         setShowFinaleOnly(true);
@@ -316,11 +348,11 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const questFinishTrackedRef = useRef(false);
     useEffect(() => {
-        if (!allCompleted || questFinishTrackedRef.current) return;
+        if (!questCompleted || questFinishTrackedRef.current) return;
         questFinishTrackedRef.current = true;
         queueAnalyticsEvent('quest_finish', { quest_id: questId });
         void flushQuestAnswerAttempts();
-    }, [allCompleted, questId]);
+    }, [questCompleted, questId]);
 
     const guestGateTrackedRef = useRef(false);
     useEffect(() => {
@@ -351,8 +383,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     }, [lastAnsweredIndex, setCurrentIndex]);
 
     useEffect(() => {
-        if (allCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
-    }, [allCompleted, allSteps.length, setUnlockedIndex]);
+        if (questCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
+    }, [questCompleted, allSteps.length, setUnlockedIndex]);
 
     const {
         frameW,
@@ -511,6 +543,11 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onWrongAttempt={handleCurrentStepWrongAttempt}
                                 onToggleHint={toggleCurrentStepHint}
                                 onSkip={skipStep}
+                                approachLeg={farStepModel.approach}
+                                nextLeg={farStepModel.nextLeg}
+                                isFarStep={farStepModel.currentIsFar}
+                                canFinishHere={farStepModel.canFinishHere}
+                                onFinishHere={finishQuestHere}
                                 showMap={showMap}
                                 onToggleMap={toggleMap}
                                 showLocationControls={!useWideInlineLayout}
@@ -570,7 +607,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         colors={colors}
                         styles={styles}
                         finale={finale}
-                        allCompleted={allCompleted}
+                        allCompleted={questCompleted}
                         completedCount={completedSteps.length}
                         stepsCount={requiredCount}
                         frameW={frameW}
@@ -618,7 +655,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 answers={answers}
                                 currentIndex={currentIndex}
                                 unlockedIndex={unlockedIndex}
-                                allCompleted={allCompleted}
+                                allCompleted={questCompleted}
                                 showFinaleOnly={showFinaleOnly}
                                 goToStep={goToStep}
                                 onShowFinale={showFinale}
@@ -662,7 +699,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 answers={answers}
                                 currentIndex={currentIndex}
                                 unlockedIndex={unlockedIndex}
-                                allCompleted={allCompleted}
+                                allCompleted={questCompleted}
                                 showFinaleOnly={showFinaleOnly}
                                 goToStep={goToStep}
                                 onShowFinale={showFinale}

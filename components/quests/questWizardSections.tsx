@@ -356,6 +356,14 @@ export function QuestFinalePanel({
         <View style={styles.finaleContent}>
           <Text style={styles.completionTitle}>{i18nT('quests:components.quests.questWizardSections.kvest_zavershen_6d9d9233')}</Text>
 
+          {/* Квест закончен на месте: далёкие точки остались непройденными —
+              счётчик показываем честно, а не подменяем «всё пройдено». */}
+          {completedCount < stepsCount && (
+            <Text style={[styles.completionText, { opacity: 0.8 }]} testID="quest-finale-partial">
+              {i18nT('quests:components.quests.questWizardSections.finishedEarly', { value1: completedCount, value2: stepsCount })}
+            </Text>
+          )}
+
           {questId ? (
             <>
               <QuestPioneerBlock questId={questId} questNumericId={questNumericId} />
