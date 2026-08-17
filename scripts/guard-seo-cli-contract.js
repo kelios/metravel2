@@ -414,11 +414,14 @@ const maskSource = (source, { literals = false } = {}) => {
 
 // A member call (`contract.requireNonEmptySelection(…)`) is deliberately not
 // counted: this family imports the helper by name, and the narrow reading fails
-// closed.
+// closed. `/` and `\` are refused for the same reason — they only precede the
+// name inside a regex the mask read as division, and a mention in a pattern is
+// not a call.
+const NOT_A_CALL_BEFORE = './\\'
 const hasCallExpression = (code, name) => {
   const masked = maskSource(code, { literals: true })
   for (const match of masked.matchAll(new RegExp(`\\b${name}\\s*\\(`, 'g'))) {
-    if ((masked[match.index - 1] || '') !== '.') return true
+    if (!NOT_A_CALL_BEFORE.includes(masked[match.index - 1] || ' ')) return true
   }
   return false
 }

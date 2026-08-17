@@ -535,6 +535,12 @@ describe('negative probe: putting the permissive default back fails the guard', 
     expect(hasCallExpression("requireNonEmptySelection(rows)", 'requireNonEmptySelection')).toBe(true)
     expect(hasCallExpression("const help = 'requireNonEmptySelection(rows)'", 'requireNonEmptySelection')).toBe(false)
     expect(hasCallExpression('const p = /requireNonEmptySelection\\(/', 'requireNonEmptySelection')).toBe(false)
+    // A pattern the mask reads as division — `]` does not open an expression, so
+    // the regex body stays code. The name is still preceded by a slash, and a
+    // mention in a pattern is not a call.
+    expect(
+      hasCallExpression('const rows = []\n/requireNonEmptySelection(rows)/.test(src)', 'requireNonEmptySelection'),
+    ).toBe(false)
   })
 
   it('keeps the masked reading aligned with the source it came from', () => {
