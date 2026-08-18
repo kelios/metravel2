@@ -97,23 +97,34 @@ async function main() {
     sessions: +r.metricValues[1].value,
   }))
 
-  // Событийная воронка: --events. Отвечает на вопрос «долетают ли события вообще»,
-  // поэтому берём ВСЕ события за окно, а не только ожидаемый список: событие, которого
-  // нет в ответе, не долетает — это instrumentation gap, а не ноль.
+  // Событийная воронка: --events. Берём ВСЕ события за окно, а не ожидаемый список:
+  // отсутствие имени в ответе значит только «за окно не зафиксировано». Причину —
+  // эмиттера нет в коде, эмиттер шипнут позже начала окна или действие никто не
+  // совершал — определяет чтение кода, а не этот отчёт.
+  const EVENT_NAME_LIMIT = 200
   let events = null
+  let eventsTruncated = false
   if (args.events) {
     const byEvent = await runReport(accessToken, args.property, {
       dateRanges,
       dimensions: [{ name: 'eventName' }],
       metrics: [{ name: 'eventCount' }, { name: 'totalUsers' }],
       orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
-      limit: 200,
+      limit: EVENT_NAME_LIMIT,
     })
     events = (byEvent.rows || []).map((r) => ({
       event: r.dimensionValues[0].value,
       count: +r.metricValues[0].value,
       users: +r.metricValues[1].value,
     }))
+    // Сортировка по убыванию счётчика: при переполнении лимита отрезается хвост из
+    // самых редких имён — ровно тех, ради которых режим и сделан. Молчать нельзя.
+    eventsTruncated = events.length >= EVENT_NAME_LIMIT
+    if (eventsTruncated && !args.json) {
+      console.log(
+        `   ⚠️  Список событий обрезан лимитом ${EVENT_NAME_LIMIT} (всего в ресурсе: ${byEvent.rowCount ?? 'неизвестно'}). Редкие имена могли не попасть в отчёт.`
+      )
+    }
   }
 
   const result = {
@@ -128,7 +139,7 @@ async function main() {
       bounceRatePct: +(num(4) * 100).toFixed(2),
     },
     channels,
-    ...(events ? { events } : {}),
+    ...(events ? { events, eventsTruncated } : {}),
   }
 
   if (args.json) {
