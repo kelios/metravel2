@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import { formatRadiusLabel } from '@/constants/mapConfig'
+import { formatRadiusLabel, formatRadiusValue } from '@/constants/mapConfig'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import MapPanel from '@/components/MapPage/MapPanel'
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
@@ -192,7 +192,7 @@ export function MapCanvas({
         <Pressable
           style={styles.radiusPill}
           accessibilityRole="button"
-          accessibilityLabel={i18nT('map:components.MapPage.MapCanvas.radius_poiska_value1_km_nazhmite_chtoby_izme_d6b055e9', { value1: currentRadius })}
+          accessibilityLabel={i18nT('map:components.MapPage.MapCanvas.radius_poiska_value1_km_nazhmite_chtoby_izme_d6b055e9', { value1: formatRadiusValue(currentRadius) })}
           testID="map-radius-pill"
           onPress={() => {
             handleSelectSearchTab()

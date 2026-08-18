@@ -20,6 +20,7 @@ import type { StravaActivitySummary, StravaAthleteSummary, StravaConnectionStatu
 import { showToast } from '@/utils/toast';
 import { formatDate as formatLocalizedDate, translate as i18nT } from '@/i18n'
 import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
+import { formatInteger } from '@/i18n/format'
 
 
 const SUPPORT_EMAIL = 'metraveldev@gmail.com';
@@ -64,12 +65,12 @@ const formatDuration = (seconds?: number | null) => {
   if (seconds == null || !Number.isFinite(seconds)) return null;
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.round((seconds % 3600) / 60);
-  return hours > 0 ? i18nT('profile:components.settings.StravaSettingsSection.value1_ch_value2_min_c49d665b', { value1: hours, value2: minutes }) : i18nT('profile:components.settings.StravaSettingsSection.value1_min_124a9f19', { value1: minutes });
+  return hours > 0 ? i18nT('profile:components.settings.StravaSettingsSection.value1_ch_value2_min_c49d665b', { value1: formatInteger(hours), value2: formatInteger(minutes) }) : i18nT('profile:components.settings.StravaSettingsSection.value1_min_124a9f19', { value1: formatInteger(minutes) });
 };
 
 const formatElevation = (meters?: number | null) => {
   if (meters == null || !Number.isFinite(meters)) return null;
-  return i18nT('profile:components.settings.StravaSettingsSection.value1_m_nabora_0fd281ae', { value1: Math.round(meters) });
+  return i18nT('profile:components.settings.StravaSettingsSection.value1_m_nabora_0fd281ae', { value1: formatInteger(meters) });
 };
 
 const getAthleteName = (athlete?: StravaAthleteSummary | null) => {

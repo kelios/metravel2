@@ -27,8 +27,10 @@
  * `bielsko-biala-cartoon-vienna` пряталась за «Смешанных слов нет». Отсюда
  * `textNodes()`: он собирает ВСЕ текстовые узлы бандла — заголовок квеста,
  * интро, каждый шаг и текст финала, — а не только те, до которых легко
- * дотянуться. Та же грабля повторилась на финале: он лежит в двух формах
- * (`finale.text` и `finale.story`), и первая правка увидела только одну.
+ * дотянуться. Та же грабля повторилась дважды: финал лежит в двух формах
+ * (`finale.text` и `finale.story`), и первая правка увидела только одну, а часы
+ * работы и цена билета прячутся ещё на уровень глубже — внутри `poi_info`
+ * (ключ тоже в двух формах: `poi_info` и `poiInfo`).
  *
  * Baseline у скана нет намеренно: #1464 вычистил все 13 находок на проде и в
  * локальных данных до нуля, поэтому порог здесь нулевой — любая находка валит
@@ -38,7 +40,7 @@
  *   node scripts/scan-quest-mixed-script-text.js                       # весь прод
  *   node scripts/scan-quest-mixed-script-text.js --quest-id=belgrade-white-city
  *   node scripts/scan-quest-mixed-script-text.js --source=scripts/belgrade-quest-data.js
- *   node scripts/scan-quest-mixed-script-text.js --fields=story,task,finale
+ *   node scripts/scan-quest-mixed-script-text.js --fields=story,task,finale,poi_info.opening_hours
  *   node scripts/scan-quest-mixed-script-text.js --json
  *
  * Exit code 1, если найдено хотя бы одно слово.
@@ -50,12 +52,23 @@ const { mixedScriptWords, confusableChars } = require('./lib/questScriptMixing')
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
 // Все поля, которые игрок видит глазами. `answer_pattern` сюда не входит — он не
-// текст, и его держит скан достижимости. `finale` — это `quest.finale.text`,
-// экран после последнего шага.
-const DEFAULT_FIELDS = ['story', 'task', 'hint', 'title', 'location', 'finale']
+// текст, и его держит скан достижимости. `finale` — текст экрана после
+// последнего шага в ОБЕИХ формах, в которых он лежит в данных
+// (`finale.text` / `finale.story`); почему их две — см. `textNodes()`.
+const DEFAULT_FIELDS = [
+  'story', 'task', 'hint', 'title', 'location',
+  'poi_info.opening_hours', 'poi_info.ticket_price',
+  'finale',
+]
 const KNOWN_FIELDS = new Set(DEFAULT_FIELDS)
 // Поля шага (и интро — у него та же форма). Остальные поля квестовые.
 const STEP_FIELDS = ['story', 'task', 'hint', 'title', 'location']
+// Проза внутри `poi_info` — часы работы и цена билета. Игрок читает их на
+// карточке шага, а `scripts/sync-quest-to-prod.js:69` шлёт весь блок на прод как
+// есть. Соседние ключи блока не сканируем и это осознанно: `is_museum` — булев,
+// а `website` — URL, где смешанный алфавит ломает саму ссылку, и это другой
+// класс дефекта с другим контролем, а не опечатка в тексте.
+const POI_FIELDS = ['opening_hours', 'ticket_price']
 
 // Сколько символов текста вокруг слова показать в отчёте: подменённую букву
 // глазами не видно, и без фразы находку невозможно проверить.
@@ -83,23 +96,29 @@ function textNodes(quest) {
   const push = (scope, stepId, stepDbId, field, value) => {
     if (value != null && value !== '') nodes.push({ scope, step_id: stepId, step_db_id: stepDbId, field, value })
   }
+  // Текст одного шага: собственные поля плюс проза внутри `poi_info`.
+  // `poiInfo` — вторая форма ключа в локальных data-файлах, `sync-quest-to-prod.js`
+  // принимает обе, значит и читать надо обе.
+  const pushStep = (scope, step) => {
+    for (const field of STEP_FIELDS) push(scope, step.step_id, step.id ?? null, field, step[field])
+    const poi = step.poi_info ?? step.poiInfo
+    if (!poi) return
+    for (const field of POI_FIELDS) push(scope, step.step_id, step.id ?? null, `poi_info.${field}`, poi[field])
+  }
 
   push('quest', null, null, 'title', quest.title)
-  if (quest.intro) {
-    for (const field of STEP_FIELDS) push('intro', quest.intro.step_id ?? 'intro', quest.intro.id ?? null, field, quest.intro[field])
-  }
-  for (const step of parseSteps(quest)) {
-    for (const field of STEP_FIELDS) push('step', step.step_id, step.id ?? null, field, step[field])
-  }
+  if (quest.intro) pushStep('intro', { ...quest.intro, step_id: quest.intro.step_id ?? 'intro' })
+  for (const step of parseSteps(quest)) pushStep('step', step)
   // Финал в локальных данных встречается в двух формах: `{title, text}` и
   // `{title, story}`. Обе уезжают в одно и то же поле прода —
   // `scripts/sync-quest-to-prod.js:114` берёт `q.finale.text || q.finale.story`,
   // — поэтому смотреть надо обе, иначе `--source` в check:fast слеп к финалу
   // пяти квестов (`chisinau-white-stone`, `hel-fishermen`, `hel-jurata-amber`,
   // `orheiul-vechi-rock-monastery`, `soroca-round-fortress`). `finale.title` не
-  // сканируем сознательно: в прод-сериализатор финала он не попадает вовсе
-  // (ключи прод-финала — `text`, `video_url`, `poster_url`, `poster_media`),
-  // игрок его не видит.
+  // сканируем сознательно: на прод он не уезжает и в бандле квеста его нет —
+  // `GET /api/quests/by-quest-id/{id}/` отдаёт финал полями `text`,
+  // `video_url`, `poster_url`, `poster_media`, заголовка среди них нет, и игрок
+  // его не видит.
   push('quest', null, null, 'finale', quest.finale?.text ?? quest.finale?.story)
 
   return nodes
@@ -189,7 +208,7 @@ async function main() {
   if (findings.length) process.exitCode = 1
 }
 
-module.exports = { scanQuests, textNodes, parseArgs, contextAround, DEFAULT_FIELDS, STEP_FIELDS, KNOWN_FIELDS }
+module.exports = { scanQuests, textNodes, parseArgs, contextAround, DEFAULT_FIELDS, STEP_FIELDS, POI_FIELDS, KNOWN_FIELDS }
 
 if (require.main === module) {
   main().catch((e) => {

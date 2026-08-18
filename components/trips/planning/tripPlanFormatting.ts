@@ -14,6 +14,7 @@ import type {
 } from '@/api/plannedTrips';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { selectPlural, translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 import { formatDistance as formatDistanceKm } from '@/utils/distanceCalculator'
 import { formatTripDateLong, formatTripDateTimeLong } from '@/utils/tripDateTime'
 
@@ -128,14 +129,14 @@ export function formatDuration(min: number): string {
   if (min <= 0) return '—';
   const h = Math.floor(min / 60);
   const m = min % 60;
-  if (h <= 0) return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_min_eb78c758', { value1: m });
-  if (m === 0) return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_ch_a0bf8320', { value1: h });
-  return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_ch_value2_min_124c7a8f', { value1: h, value2: m });
+  if (h <= 0) return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_min_eb78c758', { value1: formatInteger(m) });
+  if (m === 0) return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_ch_a0bf8320', { value1: formatInteger(h) });
+  return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_ch_value2_min_124c7a8f', { value1: formatInteger(h), value2: formatInteger(m) });
 }
 
 export function formatElevation(m: number): string {
   if (m <= 0) return '—';
-  return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_m_7f82c902', { value1: m });
+  return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_m_7f82c902', { value1: formatInteger(m) });
 }
 
 /** Краткая сводка маршрута строкой: «252 км · 4 ч 12 мин · 3 остановки». */

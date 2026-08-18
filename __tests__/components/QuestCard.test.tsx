@@ -96,8 +96,8 @@ describe('QuestCard', () => {
         (Platform as { OS: string }).OS = 'web';
     });
 
-    it('renders mobile quest media with a sharp cover and pioneer badge', () => {
-        const { getByTestId } = renderWithQueryClient(
+    it('renders mobile quest media with a sharp cover and no zero-completions badge', () => {
+        const { queryByTestId, queryByText } = renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -122,7 +122,9 @@ describe('QuestCard', () => {
         );
         expect(mockImageCardMedia.mock.calls[0]?.[0]).not.toHaveProperty('allowCriticalWebBlur');
         expect(mockImageCardMedia.mock.calls[0]?.[0]).not.toHaveProperty('preserveOptimizedWebSrc');
-        expect(getByTestId('quest-card-pioneer-krakow-dragon')).toBeTruthy();
+        // INV2-01: карточка с нулём прохождений не должна публично сообщать об этом.
+        expect(queryByTestId('quest-card-pioneer-krakow-dragon')).toBeNull();
+        expect(queryByText('Ещё никто не проходил')).toBeNull();
     });
 
     it('requests high fetch priority for the first above-the-fold cards', () => {

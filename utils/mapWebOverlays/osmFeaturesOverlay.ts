@@ -9,6 +9,7 @@ import {
 } from '@/utils/overpass';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 type LeafletMap = any;
@@ -122,7 +123,7 @@ export const attachOsmFeaturesOverlay = (
         const ele = p.tags?.ele;
         const eleNum = ele != null ? Number(ele) : NaN;
         const eleLine = Number.isFinite(eleNum)
-          ? `<div style="margin-top:4px;font-size:12px;color:${escapeHtml(DESIGN_TOKENS.colors.textMuted)}">${i18nT("shared:utils.mapWebOverlays.osmFeaturesOverlay.div_style_margin_top_4px_font_size_12px_colo_0325279b.text01", { value2: Math.round(eleNum) })}</div>`
+          ? `<div style="margin-top:4px;font-size:12px;color:${escapeHtml(DESIGN_TOKENS.colors.textMuted)}">${i18nT("shared:utils.mapWebOverlays.osmFeaturesOverlay.div_style_margin_top_4px_font_size_12px_colo_0325279b.text01", { value2: formatInteger(eleNum) })}</div>`
           : '';
 
         const html = `<div style="max-width:260px"><div style="font-weight:800;font-size:14px;color:${escapeHtml(

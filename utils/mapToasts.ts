@@ -6,6 +6,7 @@
 import { showToast } from './toast';
 import { formatDistance, ROUTE_DISTANCE_FORMAT } from './distanceCalculator';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 /**
@@ -19,7 +20,7 @@ export function showRouteBuiltToast(distanceKm: number, durationMinutes: number)
     // висит над той же панелью маршрута и обязан печатать то же число.
     text2: i18nT('errors:utils.mapToasts.routeBuiltSummary', {
       value1: formatDistance(distanceKm, ROUTE_DISTANCE_FORMAT),
-      value2: Math.round(durationMinutes),
+      value2: formatInteger(durationMinutes),
     }),
     position: 'bottom',
     visibilityTime: 3000,

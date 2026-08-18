@@ -1,4 +1,5 @@
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 /**
  * Map configuration constants
  */
@@ -35,6 +36,18 @@ export const DEFAULT_MAP_CENTER_TUPLE: [number, number] = [
 ];
 
 /**
+ * Само число радиуса строкой. Радиус приходит и числом, и id-строкой опции
+ * (`'100'`), поэтому #1468: числовое значение печатает локаль, а нечисловое
+ * остаётся как есть — это уже готовая подпись, а не количество.
+ */
+export function formatRadiusValue(value: string | number | null | undefined): string {
+  const raw = typeof value === 'number' ? value : String(value ?? '').trim()
+  if (raw === '') return ''
+  const numeric = Number(raw)
+  return Number.isFinite(numeric) ? formatInteger(numeric) : String(raw)
+}
+
+/**
  * Единый формат подписи радиуса («50 км»). Единственный источник форматирования —
  * используется в панели фильтров, мобильном чипе и списке активных фильтров,
  * чтобы не дублировать `${value} км` инлайн в нескольких местах.
@@ -43,5 +56,5 @@ export function formatRadiusLabel(value: string | number | null | undefined): st
   if (value === null || value === undefined) return i18nT('shared:constants.mapConfig.radius_395844b2')
   const str = String(value).trim()
   if (!str) return i18nT('shared:constants.mapConfig.radius_395844b2')
-  return i18nT('shared:constants.mapConfig.value1_km_b45e1a6a', { value1: str })
+  return i18nT('shared:constants.mapConfig.value1_km_b45e1a6a', { value1: formatRadiusValue(str) })
 }

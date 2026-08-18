@@ -117,6 +117,8 @@ type StepCardProps = {
   showMap: boolean
   onToggleMap: () => void
   showLocationControls?: boolean
+  /** Метаданные маршрута и раскрытие об ИИ — только на стартовом шаге (#1480). */
+  introSlot?: React.ReactNode
   /** Числовой PK квеста — адрес батча попыток ответа (#1276). */
   questNumericId?: number
   /** Поле ответа получило фокус — родитель доматывает его над клавиатурой. */
@@ -217,6 +219,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     showMap,
     onToggleMap,
     showLocationControls = true,
+    introSlot,
     questNumericId,
     onAnswerFocus,
     onAnswerBlur,
@@ -475,6 +478,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         {isPassed && (<View style={styles.completedBadge}><Text style={styles.completedText}>✓</Text></View>)}
       </View>
 
+      {step.id === 'intro' && introSlot ? <View style={styles.section}>{introSlot}</View> : null}
+
       {showApproachNote && approachLeg && (
         <Text style={styles.legNote} testID="quest-step-approach-note">
           {i18nT('quests:components.quests.questWizardStepCard.approachNote', { value1: legSummaryText(approachLeg) })}
@@ -572,6 +577,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                       keyboardType={step.inputType === 'number' ? (Platform.OS === 'ios' ? 'number-pad' : 'numeric') : 'default'}
                       autoCapitalize="none"
                       autoCorrect={false}
+                      // Без этого react-native-web ставит DOM autocomplete="on", и
+                      // выпадашка автозаполнения браузера перехватывает Enter: он
+                      // выбирает подсказку и делает preventDefault, поэтому
+                      // onSubmitEditing не срабатывает и ответ не отправляется (#1483).
+                      autoComplete="off"
                     />
                   </Animated.View>
                   <Pressable

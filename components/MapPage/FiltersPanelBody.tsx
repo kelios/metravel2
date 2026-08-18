@@ -12,6 +12,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 import { getNextRadiusOption, shouldShowMapEmptyState } from '@/components/MapPage/mapEmptyState'
 import { translate as i18nT } from '@/i18n'
+import { formatRadiusValue } from '@/constants/mapConfig'
 
 
 const MOBILE_QUICK_CHIPS_LIMIT = 2
@@ -216,9 +217,9 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           <View style={styles.noPointsActions}>
             {nextRadiusOption && (
               <Button
-                label={i18nT('map:components.MapPage.FiltersPanelBody.uvelichit_do_value1_km_edbb1aa6', { value1: nextRadiusOption.name })}
+                label={i18nT('map:components.MapPage.FiltersPanelBody.uvelichit_do_value1_km_edbb1aa6', { value1: formatRadiusValue(nextRadiusOption.name) })}
                 onPress={() => onFilterChange('radius', nextRadiusOption.id)}
-                accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelBody.uvelichit_radius_do_value1_kilometrov_92dd77b0', { value1: nextRadiusOption.name })}
+                accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelBody.uvelichit_radius_do_value1_kilometrov_92dd77b0', { value1: formatRadiusValue(nextRadiusOption.name) })}
                 size="sm"
                 style={styles.ctaButton}
               />

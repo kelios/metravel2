@@ -1,6 +1,7 @@
 import type { RoutePoint, ValidationResult } from '@/types/route';
 import { CoordinateConverter } from './coordinateConverter';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 /**
@@ -47,7 +48,7 @@ export class RouteValidator {
         
         if (distance < this.MIN_DISTANCE) {
           errors.push(
-            i18nT('shared:utils.routeValidator.tochki_value1_i_value2_slishkom_blizko_value_b5a84d9d', { value1: points[i].address, value2: points[j].address, value3: Math.round(distance) })
+            i18nT('shared:utils.routeValidator.tochki_value1_i_value2_slishkom_blizko_value_b5a84d9d', { value1: points[i].address, value2: points[j].address, value3: formatInteger(distance) })
           );
         }
       }
@@ -110,7 +111,7 @@ export class RouteValidator {
       
       if (distance < this.MIN_DISTANCE) {
         errors.push(
-          i18nT('shared:utils.routeValidator.tochka_slishkom_blizko_k_value1_value2_m_9383282b', { value1: point.address, value2: Math.round(distance) })
+          i18nT('shared:utils.routeValidator.tochka_slishkom_blizko_k_value1_value2_m_9383282b', { value1: point.address, value2: formatInteger(distance) })
         );
       }
     }

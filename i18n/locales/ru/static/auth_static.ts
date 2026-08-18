@@ -1,4 +1,13 @@
 export const authStaticResources = {
+  "authScreen.login.title": "С возвращением",
+  "authScreen.login.subtitle": "Войдите, чтобы продолжить с того места, где остановились.",
+  "authScreen.register.title": "Создайте аккаунт MeTravel",
+  "authScreen.register.subtitle": "Бесплатно, меньше минуты — и прогресс сохранится.",
+  "authScreen.benefit.quests": "Сохраняйте прогресс квестов",
+  "authScreen.benefit.favorites": "Избранные маршруты на карте",
+  "authScreen.benefit.book": "Свои маршруты и книга путешествий в PDF",
+  "authScreen.dividerEmail": "или по email",
+  "authScreen.progressSaved": "Сохранили ваш прогресс",
   "google.unavailable.text": "Google Sign-In не настроен",
   "google.unavailable.a11y": "Google Sign-In не настроен для мобильного приложения",
   "accountConfirmation.failed": "Не удалось подтвердить учетную запись. {{details}}",

@@ -9,6 +9,7 @@ import QuestConsentGate from '@/components/quests/QuestConsentGate';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
 import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
+import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
 import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
@@ -426,6 +427,19 @@ export default function QuestByIdScreen() {
     );
   }, [bundle]);
 
+  // Email-захват под контентом квеста (INV2-06): показываем всем — гостям и
+  // залогиненным, — так как органический читатель квеста обычно гость.
+  const subscribeSlot = useMemo(
+    () => (
+      <EmailSubscriptionForm
+        source="quest"
+        title={i18nT('sharedStatic:subscription.questTitle')}
+        subtitle={i18nT('sharedStatic:subscription.questSubtitle')}
+      />
+    ),
+    [],
+  );
+
   const questConsent = useActionConsent(CONSENT_TYPES.QUEST_START);
 
   const handleProgressReset = useCallback(() => {
@@ -478,6 +492,7 @@ export default function QuestByIdScreen() {
               onProgressChange={guestFlow.persistGuestProgress}
               initialProgress={initialProgress}
               relatedTravelsSlot={relatedTravelsSlot}
+              subscribeSlot={subscribeSlot}
               ratingSlot={ratingSlot}
               completionSlot={completionSlot}
               questId={questId}
@@ -502,6 +517,7 @@ export default function QuestByIdScreen() {
             onProgressChange={guestFlow.persistGuestProgress}
             initialProgress={initialProgress}
             relatedTravelsSlot={relatedTravelsSlot}
+              subscribeSlot={subscribeSlot}
             ratingSlot={ratingSlot}
             completionSlot={completionSlot}
             questId={questId}
@@ -580,6 +596,7 @@ export default function QuestByIdScreen() {
             initialProgress={initialProgress}
             onFinaleVideoRetry={refetch}
             relatedTravelsSlot={relatedTravelsSlot}
+              subscribeSlot={subscribeSlot}
             ratingSlot={ratingSlot}
             completionSlot={completionSlot}
             questId={questId}
@@ -602,6 +619,7 @@ export default function QuestByIdScreen() {
           initialProgress={initialProgress}
           onFinaleVideoRetry={refetch}
           relatedTravelsSlot={relatedTravelsSlot}
+              subscribeSlot={subscribeSlot}
           ratingSlot={ratingSlot}
           completionSlot={completionSlot}
           questId={questId}

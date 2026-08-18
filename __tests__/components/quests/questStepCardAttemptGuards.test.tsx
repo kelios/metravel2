@@ -267,3 +267,53 @@ describe('#1430 — выход вперёд после серии неудач',
     },
   )
 })
+
+describe('#1483 — Enter в поле ответа отправляет ответ', () => {
+  it('поле ответа отключает автозаполнение браузера, иначе выпадашка глотает Enter', () => {
+    // react-native-web без явного значения ставит DOM autocomplete="on", и
+    // подсказка автозаполнения браузера перехватывает Enter (выбирает подсказку и
+    // делает preventDefault) — onSubmitEditing не срабатывает, ответ не уходит.
+    // Явный "off" убирает выпадашку и возвращает Enter путь на кнопку проверки.
+    const screen = renderCard()
+
+    expect(screen.getByPlaceholderText(/Ваш ответ/).props.autoComplete).toBe('off')
+  })
+
+  it('submitEditing верного ответа отправляет его тем же путём, что кнопка-стрелка', () => {
+    jest.useFakeTimers()
+    try {
+      const screen = renderCard()
+
+      fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), '3')
+      fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
+      // Верный ответ уходит через переворот карточки — onSubmit ждёт таймер.
+      act(() => {
+        jest.advanceTimersByTime(200)
+      })
+
+      expect(screen.props.onSubmit).toHaveBeenCalledWith('3')
+    } finally {
+      jest.runOnlyPendingTimers()
+      jest.useRealTimers()
+    }
+  })
+
+  it('повторный Enter во время паузы дубль не отправляет', () => {
+    jest.useFakeTimers()
+    try {
+      const screen = renderCard()
+
+      // Неверный ответ уводит перебираемый шаг на паузу.
+      fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), '9')
+      fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
+      expect(screen.props.onWrongAttempt).toHaveBeenCalledTimes(1)
+
+      // Enter, пока пауза не истекла, молчит — как и отключённая кнопка.
+      fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
+      expect(screen.props.onWrongAttempt).toHaveBeenCalledTimes(1)
+    } finally {
+      jest.runOnlyPendingTimers()
+      jest.useRealTimers()
+    }
+  })
+})

@@ -1,4 +1,5 @@
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 // src/utils/validation.ts
 // ✅ Утилиты для валидации входных данных
 
@@ -125,7 +126,7 @@ export function validateFileSize(fileSize: number, maxSizeMB: number = 10): { va
     if (fileSize > maxSizeBytes) {
         return {
             valid: false,
-            error: i18nT('errors:utils.aiValidation.fayl_slishkom_bolshoy_maksimalnyy_razmer_val_58c2ec47', { value1: maxSizeMB })
+            error: i18nT('errors:utils.aiValidation.fayl_slishkom_bolshoy_maksimalnyy_razmer_val_58c2ec47', { value1: formatInteger(maxSizeMB) })
         };
     }
     if (fileSize === 0) {

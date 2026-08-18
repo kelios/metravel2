@@ -17,6 +17,7 @@ const {
   contextAround,
   DEFAULT_FIELDS,
   STEP_FIELDS,
+  POI_FIELDS,
 } = require('@/scripts/scan-quest-mixed-script-text')
 const { mixedScriptWords: sharedMixedScriptWords } = require('@/scripts/lib/questScriptMixing')
 const { mixedScriptWords: reachabilityMixedScriptWords } = require('@/scripts/scan-quest-answer-reachability')
@@ -85,8 +86,13 @@ describe('что считается смешением', () => {
     expect(STEP_FIELDS).toEqual(['story', 'task', 'hint', 'title', 'location'])
   })
 
-  it('к полям шага добавлен текст финала — его игрок тоже читает', () => {
-    expect(DEFAULT_FIELDS).toEqual(['story', 'task', 'hint', 'title', 'location', 'finale'])
+  it('к полям шага добавлены проза poi_info и текст финала — их игрок тоже читает', () => {
+    expect(DEFAULT_FIELDS).toEqual([
+      'story', 'task', 'hint', 'title', 'location',
+      'poi_info.opening_hours', 'poi_info.ticket_price',
+      'finale',
+    ])
+    expect(POI_FIELDS).toEqual(['opening_hours', 'ticket_price'])
   })
 })
 
@@ -143,6 +149,8 @@ describe('textNodes — что вообще читает игрок', () => {
       'step.story',
       'quest.finale',
     ])
+    // Порядок именно такой, потому что игрок читает квест сверху вниз: имя →
+    // интро → шаги по порядку → финал. Отчёт скана идёт тем же порядком.
   })
 
   it('пустые и отсутствующие узлы в обход не попадают', () => {
@@ -196,6 +204,30 @@ describe('textNodes — что вообще читает игрок', () => {
     expect(scanQuests([titled]).findings).toEqual([])
   })
 
+  it('проза poi_info читается — и под ключом `poi_info`, и под `poiInfo`', () => {
+    // `scripts/sync-quest-to-prod.js:69` шлёт на прод `s.poi_info || s.poiInfo`,
+    // поэтому обе формы ключа одинаково доходят до игрока.
+    const poi = { is_museum: true, opening_hours: 'вт-вс 10:00–18:00, brusчатка', ticket_price: 'память о морe' }
+    const snake = { quest_id: 'q', steps: [{ step_id: 's', poi_info: poi }] }
+    const camel = { quest_id: 'q', steps: [{ step_id: 's', poiInfo: poi }] }
+    const seen = (quest: unknown) => scanQuests([quest]).findings.map((f: Finding) => [f.field, f.word])
+    expect(seen(snake)).toEqual([['poi_info.opening_hours', 'brusчатка'], ['poi_info.ticket_price', 'морe']])
+    expect(seen(camel)).toEqual(seen(snake))
+  })
+
+  it('`website` и `is_museum` внутри poi_info не сканируются — это не проза', () => {
+    // Смешанный алфавит в URL ломает саму ссылку: другой класс дефекта, другой контроль.
+    const quest = { quest_id: 'q', steps: [{ step_id: 's', poi_info: { is_museum: true, website: 'https://muzeум.pl' } }] }
+    expect(scanQuests([quest]).findings).toEqual([])
+  })
+
+  it('poi_info интро читается наравне с шаговым', () => {
+    const quest = { quest_id: 'q', intro: { step_id: 'intro', poi_info: { ticket_price: 'память о морe' } }, steps: [] }
+    expect(scanQuests([quest]).findings.map((f: Finding & { scope: string }) => [f.scope, f.field])).toEqual([
+      ['intro', 'poi_info.ticket_price'],
+    ])
+  })
+
   it('считает текстовые узлы, а не шаги — счётчик не должен прятать необойдённое', () => {
     const clean = { id: 1, quest_id: 'q', title: 'заголовок', steps: [{ id: 1, step_id: 's', story: 'чистый текст' }] }
     expect(scanQuests([clean])).toEqual({ findings: [], scannedNodes: 2 })
@@ -237,10 +269,11 @@ describe('parseArgs', () => {
 })
 
 describe('корпус прода до правки #1464', () => {
-  // Четырнадцать слов, снятых с прода 2026-08-18: слева форма, которая там
-  // лежала, справа — та, на которую её заменили. Скан обязан ловить первую и
-  // молчать на второй, иначе правка «закрыта» только на бумаге. Последняя
-  // строка — интро, найденное только после расширения обхода на `quest.intro`.
+  // Одиннадцать различных форм, покрывающих все 14 слов, снятых с прода
+  // 2026-08-18 (пять вхождений «Луža» дают одну форму): слева то, что там
+  // лежало, справа — то, на что заменили. Скан обязан ловить первую и молчать
+  // на второй, иначе правка «закрыта» только на бумаге. Последняя строка —
+  // интро, найденное только после расширения обхода на `quest.intro`.
   const CASES: Array<[string, string, string]> = [
     ['pakocim-voices/1-herb', 'рыцарь по прозвищу Dołęга из засады', 'рыцарь по прозвищу Dołęga из засады'],
     ['porto-port-wine/5-se-catedral story', 'площадь Террейру-да-Сé', 'площадь Террейру-да-Се'],

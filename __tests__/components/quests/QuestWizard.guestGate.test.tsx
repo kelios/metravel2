@@ -121,7 +121,10 @@ describe('QuestWizard guest gate', () => {
       await Promise.resolve()
     })
 
-    expect(getByTestId('quest-ai-disclosure')).toBeTruthy()
+    // #1480: на стартовом экране раскрытие об ИИ свёрнуто в одну строку —
+    // видимой остаётся она, а не рамка-предупреждение на весь первый экран.
+    expect(getByTestId('quest-ai-disclosure-toggle')).toBeTruthy()
+    expect(queryByTestId('quest-ai-disclosure')).toBeNull()
     expect(getByRole('button', { name: 'Начать квест' })).toBeTruthy()
 
     // intro → точка 1: на intro шаге кнопка «Начать квест» продвигает вперёд.
@@ -131,7 +134,7 @@ describe('QuestWizard guest gate', () => {
     })
     // quest_start уходит для гостя, как только видна первая настоящая точка.
     expect(firedEvents()).toContain('quest_start')
-    expect(queryByTestId('quest-ai-disclosure')).toBeNull()
+    expect(queryByTestId('quest-ai-disclosure-toggle')).toBeNull()
     expect(
       mockQueueAnalyticsEvent.mock.calls.find((call) => call[0] === 'quest_start')?.[1],
     ).toEqual(expect.objectContaining({ quest_id: 'test-quest', city: 'minsk' }))

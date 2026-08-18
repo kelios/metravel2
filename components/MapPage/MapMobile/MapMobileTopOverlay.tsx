@@ -41,6 +41,7 @@ import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 import { MapMobileTransportPopover } from './MapMobileTransportPopover'
 import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 type ActivePopover = 'radius' | 'layers' | 'transport' | null
@@ -101,11 +102,11 @@ function estimateRouteDurationSeconds(meters: number, mode: TransportMode): numb
 function formatRouteDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return ''
   const totalMinutes = Math.max(1, Math.round(seconds / 60))
-  if (totalMinutes < 60) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_min_b586289b', { value1: totalMinutes })
+  if (totalMinutes < 60) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_min_b586289b', { value1: formatInteger(totalMinutes) })
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
-  if (minutes === 0) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_53da1ce7', { value1: hours })
-  return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_value2_min_0833ca5d', { value1: hours, value2: minutes })
+  if (minutes === 0) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_53da1ce7', { value1: formatInteger(hours) })
+  return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_value2_min_0833ca5d', { value1: formatInteger(hours), value2: formatInteger(minutes) })
 }
 
 interface MapMobileTopOverlayProps {

@@ -1,4 +1,13 @@
 export const authStaticResources = {
+  "authScreen.login.title": "Welcome back",
+  "authScreen.login.subtitle": "Log in to pick up right where you left off.",
+  "authScreen.register.title": "Create your MeTravel account",
+  "authScreen.register.subtitle": "Free, under a minute — and everything is saved.",
+  "authScreen.benefit.quests": "Save your quest progress",
+  "authScreen.benefit.favorites": "Favorite routes on the map",
+  "authScreen.benefit.book": "Your own routes and a PDF travel book",
+  "authScreen.dividerEmail": "or with email",
+  "authScreen.progressSaved": "Your progress is saved",
   "google.unavailable.text": "Google Sign-In is not configured",
   "google.unavailable.a11y": "Google Sign-In is not configured for the mobile app",
   "accountConfirmation.failed": "Failed to verify account. {{details}}",

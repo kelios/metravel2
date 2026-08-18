@@ -29,6 +29,7 @@ import { osrmRoute } from '@/api/external/osrm';
 import { buildPlaceTitleParts, stripCountryFromCategoryString } from './placeTitle';
 import { useHasUserLocation, type UserLocationSignal } from './userLocationSignal';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 /**
  * MeTravel own place rating (backend #986) is feature-flagged OFF by default.
@@ -497,7 +498,7 @@ export const createMapPopupComponent = ({
               : null;
       const parts = [
         [questMeta.cityName, questMeta.countryName].filter(Boolean).join(', ') || null,
-        questMeta.durationMin ? i18nT('map:components.MapPage.Map.createMapPopupComponent.value1_min_f86f860f', { value1: questMeta.durationMin }) : null,
+        questMeta.durationMin ? i18nT('map:components.MapPage.Map.createMapPopupComponent.value1_min_f86f860f', { value1: formatInteger(questMeta.durationMin) }) : null,
         stepCount > 0 ? `${stepCount} ${stepWord}` : null,
         difficultyLabel,
       ].filter(Boolean);

@@ -4,6 +4,7 @@ import { Link, useIsFocused, useNavigation, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import QuestsSeoIntroFaq, { type QuestFaqItem } from '@/screens/tabs/QuestsSeoIntroFaq'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import { useQuestsList } from '@/hooks/useQuestsApi'
@@ -428,6 +429,14 @@ export default function QuestScenarioScreen() {
         faqTitle={i18nT('quests:screens.tabs.QuestScenarioScreen.faqTitle')}
         testID="quest-scenario-faq"
       />
+
+      <View style={{ maxWidth: COLUMN_MAX_WIDTH, width: '100%' }} testID="quest-scenario-email-subscribe">
+        <EmailSubscriptionForm
+          source="scenario"
+          title={i18nT('sharedStatic:subscription.scenarioTitle')}
+          subtitle={i18nT('sharedStatic:subscription.scenarioSubtitle')}
+        />
+      </View>
 
       <CtaLink colors={colors} href={QUEST_LIST_ROUTE} label={i18nT('quests:screens.tabs.QuestScenarioScreen.cta')} />
     </ScrollView>

@@ -10,6 +10,7 @@ import type { TripNotification } from '@/api/publicTrips';
 import { useTripNotifications } from '@/hooks/usePublicTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 const ICON: Record<TripNotification['kind'], keyof typeof Feather.glyphMap> = {
@@ -23,8 +24,8 @@ function relativeTime(iso: string): string {
   const diff = Date.now() - then;
   const day = 24 * 60 * 60 * 1000;
   if (diff < 60 * 60 * 1000) return i18nT('trips:components.trips.TripNotificationsList.tolko_chto_efbf164e');
-  if (diff < day) return i18nT('trips:components.trips.TripNotificationsList.value1_ch_nazad_8fcf483e', { value1: Math.floor(diff / (60 * 60 * 1000)) });
-  return i18nT('trips:components.trips.TripNotificationsList.value1_dn_nazad_01c7bb11', { value1: Math.floor(diff / day) });
+  if (diff < day) return i18nT('trips:components.trips.TripNotificationsList.value1_ch_nazad_8fcf483e', { value1: formatInteger(Math.floor(diff / (60 * 60 * 1000))) });
+  return i18nT('trips:components.trips.TripNotificationsList.value1_dn_nazad_01c7bb11', { value1: formatInteger(Math.floor(diff / day)) });
 }
 
 function TripNotificationsList() {

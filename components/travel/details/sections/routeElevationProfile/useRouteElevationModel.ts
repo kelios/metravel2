@@ -12,6 +12,7 @@ import {
   resolveNearestHintName,
 } from '../RouteElevationProfile.utils'
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 export type ChartPoint = {
@@ -338,11 +339,11 @@ export function useRouteElevationModel({
     }
     const summaryParts = [
       formatProfileKm(metrics.totalDistanceKm),
-      i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.value1_m_nabora_e36ee2c8', { value1: Math.round(metrics.ascent) }),
+      i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.value1_m_nabora_e36ee2c8', { value1: formatInteger(metrics.ascent) }),
       i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.pik_value1_9b073c08', { value1: formatProfileMeters(metrics.maxElevation ?? 0) }),
     ]
     if (Number.isFinite(metrics.avgClimbMPerKm as number)) {
-      summaryParts.push(i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.value1_m_km_ce1a520a', { value1: Math.round(metrics.avgClimbMPerKm as number) }))
+      summaryParts.push(i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.value1_m_km_ce1a520a', { value1: formatInteger(metrics.avgClimbMPerKm as number) }))
     }
     return summaryParts.join(' • ')
   }, [metrics])

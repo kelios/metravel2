@@ -1,5 +1,5 @@
 import { translate as i18nT } from '@/i18n'
-import { formatNumber } from '@/i18n/format'
+import { formatInteger, formatNumber } from '@/i18n/format'
 /**
  * Утилита для расчета расстояния и времени в пути
  */
@@ -115,17 +115,17 @@ export function formatTravelTime(minutes: number): string {
     return i18nT('shared:utils.distanceCalculator.lessThanOneMinute');
   }
   if (minutes < 60) {
-    return i18nT('shared:utils.distanceCalculator.value1_min_fe6f791a', { value1: minutes });
+    return i18nT('shared:utils.distanceCalculator.value1_min_fe6f791a', { value1: formatInteger(minutes) });
   }
 
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
 
   if (mins === 0) {
-    return i18nT('shared:utils.distanceCalculator.value1_ch_3f6ab619', { value1: hours });
+    return i18nT('shared:utils.distanceCalculator.value1_ch_3f6ab619', { value1: formatInteger(hours) });
   }
 
-  return i18nT('shared:utils.distanceCalculator.value1_ch_value2_min_d6e2cc67', { value1: hours, value2: mins });
+  return i18nT('shared:utils.distanceCalculator.value1_ch_value2_min_d6e2cc67', { value1: formatInteger(hours), value2: formatInteger(mins) });
 }
 
 /**

@@ -19,6 +19,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapRadiusOption } from '@/components/MapPage/mapEmptyState'
 import { translate as i18nT } from '@/i18n'
+import { formatRadiusValue } from '@/constants/mapConfig'
 
 interface MapEmptyStateToastProps {
   colors: ThemedColors
@@ -66,14 +67,14 @@ const MapEmptyStateToastInner: React.FC<MapEmptyStateToastProps> = ({
               accessibilityRole="button"
               accessibilityLabel={i18nT(
                 'map:components.MapPage.FiltersPanelBody.uvelichit_radius_do_value1_kilometrov_92dd77b0',
-                { value1: nextRadiusOption.name },
+                { value1: formatRadiusValue(nextRadiusOption.name) },
               )}
               hitSlop={6}
               style={({ pressed }) => [styles.actionPrimary, pressed && styles.actionPressed]}
             >
               <Text style={styles.actionPrimaryText} numberOfLines={1}>
                 {i18nT('map:components.MapPage.FiltersPanelBody.uvelichit_do_value1_km_edbb1aa6', {
-                  value1: nextRadiusOption.name,
+                  value1: formatRadiusValue(nextRadiusOption.name),
                 })}
               </Text>
             </Pressable>

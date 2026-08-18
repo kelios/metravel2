@@ -17,7 +17,7 @@ import {
   trackQuestCardImpression,
 } from '@/utils/growthFunnelAnalytics'
 import { selectPlural, translate as i18nT } from '@/i18n'
-import { formatNumber } from '@/i18n/format'
+import { formatInteger, formatNumber } from '@/i18n/format'
 
 
 const CARD_MEDIA_SIZE = 132
@@ -38,7 +38,7 @@ function formatPoints(points: number): string {
 }
 
 function formatDuration(durationMin: number): string {
-  if (durationMin < 60) return i18nT('quests:components.quests.QuestForCityCard.value1_min_7d3797a3', { value1: durationMin })
+  if (durationMin < 60) return i18nT('quests:components.quests.QuestForCityCard.value1_min_7d3797a3', { value1: formatInteger(durationMin) })
   const hours = durationMin / 60
   // #1459: дробный час печатает локаль — «1,5 ч», а не «1.5 ч».
   const rounded = formatNumber(hours, { maximumFractionDigits: 1 })

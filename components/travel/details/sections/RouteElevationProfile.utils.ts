@@ -1,18 +1,27 @@
 import type { ParsedRoutePoint } from '@/types/travelRoutes'
 import { translate as i18nT } from '@/i18n'
+import { formatInteger, formatNumber } from '@/i18n/format'
 
 
 export const CHART_HEIGHT = 120
 export const CHART_PADDING = 8
 
-export const roundProfileValue = (value: number): number =>
-  Math.round(value * 10) / 10
-
+/**
+ * #1468: единица приходит из ключа перевода, но число до этого уходило в
+ * интерполяцию сырым `number`, а `i18n/instance.ts` печатает его через
+ * `String()` — русская страница показывала «12.6 км» против «12,6 км» в PDF
+ * того же маршрута. Разделитель берёт локаль, как и в остальных форматтерах
+ * расстояния.
+ */
 export const formatProfileKm = (value: number): string =>
-  i18nT('travel:components.travel.details.sections.RouteElevationProfile_utils.value1_km_8a6fa4bb', { value1: roundProfileValue(value) })
+  i18nT('travel:components.travel.details.sections.RouteElevationProfile_utils.value1_km_8a6fa4bb', {
+    value1: formatNumber(value, { maximumFractionDigits: 1 }),
+  })
 
 export const formatProfileMeters = (value: number): string =>
-  i18nT('travel:components.travel.details.sections.RouteElevationProfile_utils.value1_m_657a510c', { value1: Math.round(value) })
+  i18nT('travel:components.travel.details.sections.RouteElevationProfile_utils.value1_m_657a510c', {
+    value1: formatInteger(value),
+  })
 
 export const getLocalPointerX = (event: any): number | null => {
   const locationX = event?.nativeEvent?.locationX

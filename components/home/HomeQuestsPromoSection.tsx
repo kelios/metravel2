@@ -13,24 +13,39 @@ import { translate as i18nT } from '@/i18n'
 
 
 const IS_WEB = Platform.OS === 'web'
-// Ровно столько карточек и запрашиваем: через полный useQuestsList блок тянул
-// весь каталог квестов (139 записей, ~405 КБ семью запросами) ради этой пары.
-const MAX_QUESTS = 2
+// Одним запросом (?page_size=N) забираем ровно столько карточек, сколько
+// показываем: через полный useQuestsList блок тянул весь каталог квестов ради
+// нескольких плиток. 6 хватает на сетку 2×3 на десктопе; мобайл показывает 4,
+// чтобы секция сразу после hero осталась в пределах первых экранов прокрутки.
+const MAX_QUESTS = 6
+const MAX_QUESTS_MOBILE = 4
+const SCENARIO_ROUTE = '/quests/scenario'
 
 function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   const router = useRouter()
   const colors = useThemedColors()
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
-  const { quests: visibleQuests, loading } = useQuestsPreview(MAX_QUESTS, { enabled })
+  const { quests: previewQuests, loading } = useQuestsPreview(MAX_QUESTS, { enabled })
   const [hovered, setHovered] = useState(false)
+  const [scenarioHovered, setScenarioHovered] = useState(false)
 
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
+
+  const visibleQuests = useMemo(
+    () => previewQuests.slice(0, isMobile ? MAX_QUESTS_MOBILE : MAX_QUESTS),
+    [previewQuests, isMobile],
+  )
 
   const handleViewAll = useCallback(() => {
     sendAnalyticsEvent('HomeClick_ViewAllQuests', { count: visibleQuests.length })
     router.push('/quests' as any)
   }, [router, visibleQuests.length])
+
+  const handleScenario = useCallback(() => {
+    sendAnalyticsEvent('HomeClick_QuestScenario', { source: 'home_quests' })
+    router.push(SCENARIO_ROUTE as any)
+  }, [router])
 
   // Без скелетонов: пока грузится или пусто — секции на главной нет (бережём LCP).
   if (loading || visibleQuests.length === 0) return null
@@ -62,6 +77,38 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
             </View>
           ))}
         </View>
+
+        {/* Подарочный сценарий-вход: отдельный CTA под подбор «квест в подарок». */}
+        <Pressable
+          onPress={handleScenario}
+          accessibilityRole={IS_WEB ? ('link' as any) : 'button'}
+          accessibilityLabel={i18nT('quests:components.home.HomeQuestsPromoSection.scenarioAria')}
+          style={[styles.scenarioCard, scenarioHovered && styles.scenarioCardHover]}
+          {...(IS_WEB
+            ? ({
+                onMouseEnter: () => setScenarioHovered(true),
+                onMouseLeave: () => setScenarioHovered(false),
+              } as any)
+            : {})}
+        >
+          <View style={styles.scenarioIcon}>
+            <Feather name="gift" size={20} color={colors.primaryDark} />
+          </View>
+          <View style={styles.scenarioBody}>
+            <Text style={styles.scenarioTitle} numberOfLines={1}>
+              {i18nT('quests:components.home.HomeQuestsPromoSection.scenarioTitle')}
+            </Text>
+            <Text style={styles.scenarioSubtitle} numberOfLines={2}>
+              {i18nT('quests:components.home.HomeQuestsPromoSection.scenarioSubtitle')}
+            </Text>
+          </View>
+          <View style={styles.scenarioCta}>
+            <Text style={styles.scenarioCtaText}>
+              {i18nT('quests:components.home.HomeQuestsPromoSection.scenarioCta')}
+            </Text>
+            <Feather name="arrow-right" size={16} color={colors.primaryDark} />
+          </View>
+        </Pressable>
 
         <View style={styles.ctaRow}>
           <Pressable
@@ -123,6 +170,71 @@ function createStyles(colors: ThemedColors, isMobile: boolean) {
     },
     cardSlotMobile: {
       width: '100%',
+    },
+    scenarioCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: isMobile ? 12 : 16,
+      marginTop: isMobile ? 16 : 24,
+      paddingVertical: isMobile ? 12 : 16,
+      paddingHorizontal: isMobile ? 14 : 20,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.primarySoft,
+      ...(IS_WEB
+        ? ({
+            cursor: 'pointer',
+            transition: 'border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease',
+          } as any)
+        : null),
+    },
+    scenarioCardHover: {
+      borderColor: colors.primary,
+      ...Platform.select({
+        web: {
+          boxShadow: '0 10px 28px rgba(15, 23, 42, 0.12)',
+          transform: 'translateY(-2px)',
+        } as any,
+      }),
+    },
+    scenarioIcon: {
+      width: 44,
+      height: 44,
+      flexShrink: 0,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+    },
+    scenarioBody: {
+      flex: 1,
+      minWidth: 0,
+      gap: 3,
+    },
+    scenarioTitle: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    scenarioSubtitle: {
+      fontSize: isMobile ? 13 : 14,
+      color: colors.textMuted,
+      lineHeight: isMobile ? 18 : 20,
+    },
+    scenarioCta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexShrink: 0,
+      // На узком мобайле длинную подпись оставляем сверху, а стрелку-CTA
+      // прячем: тап по всей карточке всё равно ведёт на сценарий.
+      ...(isMobile ? { display: 'none' as const } : null),
+    },
+    scenarioCtaText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.primaryText,
     },
     ctaRow: {
       alignItems: 'center',

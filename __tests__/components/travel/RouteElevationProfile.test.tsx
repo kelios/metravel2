@@ -31,7 +31,7 @@ describe('RouteElevationProfile', () => {
     )
 
     expect(screen.getByText('Профиль высот: Маршрут')).toBeTruthy()
-    expect(screen.getByText('7.5 км • +240 м набора • пик 1145 м • 32 м/км')).toBeTruthy()
+    expect(screen.getByText('7,5 км • +240 м набора • пик 1\u00a0145 м • 32 м/км')).toBeTruthy()
     expect(screen.getByText('Дистанция')).toBeTruthy()
     expect(screen.getByText('Набор')).toBeTruthy()
     expect(screen.getByText('Сброс')).toBeTruthy()

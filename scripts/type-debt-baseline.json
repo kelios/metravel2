@@ -12,8 +12,8 @@
     "utils"
   ],
   "totals": {
-    "styleCast": 1370,
-    "logicCast": 1179,
+    "styleCast": 1366,
+    "logicCast": 1169,
     "tsIgnore": 45,
     "tsExpectError": 1,
     "eslintDisable": 29
@@ -27,8 +27,8 @@
       "eslintDisable": 1
     },
     "components": {
-      "styleCast": 1241,
-      "logicCast": 1015,
+      "styleCast": 1237,
+      "logicCast": 1007,
       "tsIgnore": 45,
       "tsExpectError": 1,
       "eslintDisable": 17
@@ -63,7 +63,7 @@
     },
     "utils": {
       "styleCast": 1,
-      "logicCast": 96,
+      "logicCast": 94,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
@@ -527,7 +527,7 @@
     },
     "components/home/HomeHeroMoodRail.tsx": {
       "styleCast": 0,
-      "logicCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -624,8 +624,8 @@
       "eslintDisable": 0
     },
     "components/home/HomeQuestsPromoSection.tsx": {
-      "styleCast": 1,
-      "logicCast": 4,
+      "styleCast": 3,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -989,7 +989,7 @@
     },
     "components/listTravel/RecommendationsTabs.tsx": {
       "styleCast": 0,
-      "logicCast": 21,
+      "logicCast": 19,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2137,7 +2137,7 @@
     },
     "components/travel/details/sections/TravelDetailsFooterSection.tsx": {
       "styleCast": 1,
-      "logicCast": 3,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -3517,13 +3517,6 @@
     "utils/userPointsCategories.ts": {
       "styleCast": 0,
       "logicCast": 9,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "utils/webImageUpload.ts": {
-      "styleCast": 0,
-      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0

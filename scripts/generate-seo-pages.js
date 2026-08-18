@@ -2215,6 +2215,97 @@ function buildQuestsListItemListJsonLd(quests, { url = `${SITE_URL}/quests`, nam
   };
 }
 
+// Concise lead for the home crawlable quests section. Shorter than the /quests
+// intro on purpose — the home page competes for LCP, so the block stays text and
+// compact. The full copy still lives on /quests (injectQuestsListingContent).
+const HOME_QUESTS_LEAD_RU =
+  'Городские квесты Metravel — бесплатные пешеходные маршруты с заданиями по реальным местам города. Проходите их со смартфона как самостоятельную квест-экскурсию без гида, а любой маршрут можно распечатать как подарочный квест-бук. Ниже — несколько маршрутов, полный каталог открывается по ссылке.';
+
+// How many featured quests the home section spells out inline. The full 148-link
+// index still ships via injectQuestLinksIndex, so this is only the visible teaser.
+const HOME_QUESTS_FEATURED_LIMIT = 8;
+
+/**
+ * Visible crawlable «Городские квесты» section for the home page (INV2-05).
+ *
+ * The home quest promo is lazy-mounted at runtime (IntersectionObserver) and so
+ * absent from static HTML — a crawler (and a no-JS visitor) saw only the hidden
+ * link index. This injects a real, headed section with a lead, a handful of
+ * featured quest links and CTAs into /quests and /quests/scenario, so the
+ * flagship asset is present in SSG-HTML, not only after hydration. It stays
+ * text-only (no <img>) to avoid adding LCP-competing image loads to the home
+ * first screen; covers live in the hydrated React card grid. Hidden once RNW
+ * styles are ready, exactly like the sibling /quests and city-landing blocks.
+ */
+function injectHomeQuestsSection(baseHtml, quests) {
+  const routable = (Array.isArray(quests) ? quests : []).filter((quest) => questRouteKey(quest));
+  if (!routable.length) return baseHtml;
+
+  const featured = routable.slice(0, HOME_QUESTS_FEATURED_LIMIT);
+
+  const sectionStyle = [
+    'box-sizing:border-box',
+    'max-width:840px',
+    'margin:24px auto',
+    'padding:20px 18px',
+    `font:16px/1.55 ${QUESTS_SSG_FONT}`,
+    'color:var(--color-text,#22332c)',
+    'background:var(--color-surface,#ffffff)',
+    'border:1px solid var(--color-border,#dbe7df)',
+    'border-radius:8px',
+  ].join(';');
+  const h2Style = `margin:0 0 10px;font:800 24px/1.2 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
+  const leadStyle = 'margin:0 0 12px;color:var(--color-text-muted,#5f756c)';
+  const ulStyle = 'margin:0 0 12px;padding:0 0 0 18px;color:var(--color-text,#22332c)';
+  const linkRowStyle = 'margin:0 0 6px;font-weight:700';
+
+  const links = featured
+    .map((quest) => {
+      const route = questRouteKey(quest);
+      const title = String(quest.title || 'Городской квест').trim();
+      const cityName = String(
+        quest.city_name || quest.cityName || (quest.city && quest.city.name) || '',
+      ).trim();
+      const label = cityName ? `${title} — ${cityName}` : title;
+      return `<li style="margin:0 0 3px"><a href="${escapeAttr(route.path)}">${escapeAttr(label)}</a></li>`;
+    })
+    .join('');
+
+  const section = [
+    `<section data-ssg-home-quests="true" aria-label="Городские квесты Metravel" style="${sectionStyle}">`,
+    `<h2 style="${h2Style}">${escapeAttr(QUESTS_INTRO_TITLE_RU)}</h2>`,
+    `<p style="${leadStyle}">${escapeAttr(HOME_QUESTS_LEAD_RU)}</p>`,
+    `<ul style="${ulStyle}">${links}</ul>`,
+    `<p style="${linkRowStyle}"><a href="/quests/scenario">Квест в подарок — готовый сценарий, распечатать бесплатно</a></p>`,
+    `<p style="${linkRowStyle}"><a href="/quests">Все городские квесты</a></p>`,
+    '</section>',
+  ].join('');
+
+  const styleTag = [
+    '<style data-ssg-home-quests-style="true">',
+    'html.rnw-styles-ready [data-ssg-home-quests="true"]{display:none!important}',
+    '@media(max-width:640px){[data-ssg-home-quests="true"]{margin:12px;padding:16px 14px}[data-ssg-home-quests="true"] h2{font-size:21px!important}}',
+    '</style>',
+  ].join('');
+
+  let html = baseHtml.replace(/<style[^>]*data-ssg-home-quests-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
+  html = html.replace(/<section[^>]*data-ssg-home-quests="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
+  html = applyHtmlFragment(html, '</head>', `${styleTag}\n`, 'before');
+  html = injectJsonLd(
+    html,
+    buildQuestsListItemListJsonLd(featured, { url: `${SITE_URL}/`, name: 'Городские квесты Metravel' }),
+    'home-quests-itemlist',
+  );
+
+  if (/<div\s+id="root"[^>]*>/i.test(html)) {
+    return applyHtmlFragment(html, /<div\s+id="root"[^>]*>/i, section, 'after');
+  }
+  if (/<body[^>]*>/i.test(html)) {
+    return applyHtmlFragment(html, /<body[^>]*>/i, section, 'after');
+  }
+  return `${section}${html}`;
+}
+
 /** Rich static intro + per-city links + FAQ for the /quests listing page. */
 function injectQuestsListingContent(baseHtml, quests, cityAliasMap) {
   const cities = buildQuestsListingModel(quests, cityAliasMap);
@@ -3307,7 +3398,13 @@ async function main() {
 
     const homeVariant = path.join(DIST_DIR, 'index.html');
     if (fs.existsSync(homeVariant)) {
-      writeFileSafe(homeVariant, injectQuestLinksIndex(fs.readFileSync(homeVariant, 'utf8'), quests));
+      // Visible crawlable «Городские квесты» section (INV2-05) + the full hidden
+      // 148-link index for deep internal linking. The section makes the flagship
+      // asset present in SSG-HTML; the index keeps every quest reachable.
+      let homeHtml = fs.readFileSync(homeVariant, 'utf8');
+      homeHtml = injectHomeQuestsSection(homeHtml, quests);
+      homeHtml = injectQuestLinksIndex(homeHtml, quests);
+      writeFileSafe(homeVariant, homeHtml);
     }
 
     // City landing pages /quests/<cityId> and /quests/<alias> (alias = canonical).
@@ -3541,6 +3638,7 @@ if (typeof module !== 'undefined' && module.exports) {
     injectTravelRegisterCtaSection,
     injectQuestIntroSection,
     injectQuestLinksIndex,
+    injectHomeQuestsSection,
     buildQuestsListingModel,
     mergeQuestCityLandingsByAlias,
     buildQuestsFaqJsonLd,

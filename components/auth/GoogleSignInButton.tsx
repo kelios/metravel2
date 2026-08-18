@@ -109,6 +109,11 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
     const [isGoogleButtonRendered, setIsGoogleButtonRendered] = useState(false);
+    // INV2-07: size the Google GSI button to the container so it carries the same
+    // visual weight as the full-width Facebook button instead of a fixed 300px
+    // widget that reads as an unfinished, secondary control.
+    const [renderWidth, setRenderWidth] = useState<number | null>(null);
+    const lastRenderedWidthRef = useRef<number | null>(null);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
     // Latest-рефы на колбэки: родитель часто передаёт инлайн onSuccess/onError, из-за
     // чего init-эффект иначе пере-вызывал google.accounts.id.initialize на каждый рендер.
@@ -234,10 +239,34 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
         }
     }, [googleAvailability.enabled, googleClientId, hasClientId, isGoogleLoaded]);
 
+    // Measure the container so the rendered Google button fills the same width as
+    // the Facebook button. The GSI widget only accepts a fixed px width (200–400),
+    // so we re-measure on layout changes and re-render the button when it changes.
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (!googleAvailability.enabled || !isGoogleLoaded) return;
+        const host = buttonContainerRef.current;
+        if (!host) return;
+
+        const clampWidth = (w: number) => Math.max(200, Math.min(400, Math.round(w)));
+        const measure = () => {
+            const width = host.clientWidth;
+            setRenderWidth(width > 0 ? clampWidth(width) : 300);
+        };
+        measure();
+
+        if (typeof ResizeObserver === 'undefined') return;
+        const observer = new ResizeObserver(measure);
+        observer.observe(host);
+        return () => observer.disconnect();
+    }, [googleAvailability.enabled, isGoogleLoaded]);
+
     useEffect(() => {
         if (!googleAvailability.enabled) return;
         if (Platform.OS !== 'web' || !isGoogleLoaded || !window.google || !hasClientId) return;
-        if (!buttonContainerRef.current || isGoogleButtonRendered) return;
+        if (!buttonContainerRef.current || renderWidth == null) return;
+        // Re-render only when the measured width changes (or the first render).
+        if (isGoogleButtonRendered && lastRenderedWidthRef.current === renderWidth) return;
 
         try {
             buttonContainerRef.current.innerHTML = '';
@@ -248,8 +277,9 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
                 text: 'signin_with',
                 shape: 'rectangular',
                 logo_alignment: 'left',
-                width: 300,
+                width: renderWidth,
             });
+            lastRenderedWidthRef.current = renderWidth;
             setIsGoogleButtonRendered(true);
         } catch (error) {
             if (__DEV__) {
@@ -257,7 +287,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             }
             onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.oshibka_otobrazheniya_knopki_google_sign_in_4b06f7ad'));
         }
-    }, [googleAvailability.enabled, hasClientId, isDark, isGoogleButtonRendered, isGoogleLoaded]);
+    }, [googleAvailability.enabled, hasClientId, isDark, isGoogleButtonRendered, isGoogleLoaded, renderWidth]);
 
     if (Platform.OS !== 'web') {
         return null;

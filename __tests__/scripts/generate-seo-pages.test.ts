@@ -28,6 +28,7 @@ const {
   disableExpoRouterHydration,
   injectQuestIntroSection,
   injectQuestLinksIndex,
+  injectHomeQuestsSection,
   injectQuestScenarioContent,
   injectQuestCityLandingSection,
   injectQuestsListingContent,
@@ -1195,6 +1196,55 @@ describe('injectQuestLinksIndex', () => {
     expect(html).toContain('href="/quests/1/krakow-dragon" tabindex="-1"')
     expect(html).toContain('href="/quests/2/minsk-old-town" tabindex="-1"')
     expect(html).not.toContain('aria-label="Все квесты"')
+  })
+})
+
+describe('injectHomeQuestsSection', () => {
+  const QUESTS = [
+    { quest_id: 'krakow-dragon', city_id: '1', title: 'Краковский дракон', city_name: 'Краков' },
+    { quest_id: 'minsk-old-town', city_id: '2', title: 'Старый Минск', city_name: 'Минск' },
+  ]
+
+  it('renders a visible, headed quests section present in static HTML', () => {
+    const html = injectHomeQuestsSection(MINIMAL_BASE, QUESTS)
+
+    expect(html).toContain('data-ssg-home-quests="true"')
+    // A crawlable <section>, not the hidden aria-hidden/inert nav.
+    expect(html).not.toMatch(/data-ssg-home-quests="true"[^>]*aria-hidden/i)
+    expect(html).toMatch(/<section[^>]*data-ssg-home-quests="true"/i)
+    expect(html).toContain('Городские квесты')
+    // Featured quests link out with a city-qualified label.
+    expect(html).toContain('href="/quests/1/krakow-dragon"')
+    expect(html).toContain('Краковский дракон — Краков')
+    // CTAs into the catalog and the DIY gift scenario.
+    expect(html).toContain('href="/quests/scenario"')
+    expect(html).toContain('href="/quests">Все городские квесты')
+    // ItemList JSON-LD for the featured set.
+    expect(html).toContain('"@type":"ItemList"')
+  })
+
+  it('adds an h2 rather than a second h1 (home already ships one h1)', () => {
+    const html = injectHomeQuestsSection(MINIMAL_BASE, QUESTS)
+    expect((html.match(/<h1/g) || []).length).toBe(0)
+    expect(html).toMatch(/<h2[^>]*>Городские квесты<\/h2>/i)
+  })
+
+  it('hides the block once RNW styles are ready, like the sibling quest blocks', () => {
+    const html = injectHomeQuestsSection(MINIMAL_BASE, QUESTS)
+    expect(html).toContain('html.rnw-styles-ready [data-ssg-home-quests="true"]{display:none!important}')
+  })
+
+  it('is idempotent — re-running replaces rather than duplicates', () => {
+    const once = injectHomeQuestsSection(MINIMAL_BASE, QUESTS)
+    const twice = injectHomeQuestsSection(once, QUESTS)
+    expect((twice.match(/<section data-ssg-home-quests="true"/g) || []).length).toBe(1)
+    expect((twice.match(/data-ssg-home-quests-style="true"/g) || []).length).toBe(1)
+    expect((twice.match(/home-quests-itemlist/g) || []).length).toBe(1)
+  })
+
+  it('leaves HTML untouched when no routable quests exist', () => {
+    expect(injectHomeQuestsSection(MINIMAL_BASE, [])).toBe(MINIMAL_BASE)
+    expect(injectHomeQuestsSection(MINIMAL_BASE, [{ title: 'no route' }])).toBe(MINIMAL_BASE)
   })
 })
 

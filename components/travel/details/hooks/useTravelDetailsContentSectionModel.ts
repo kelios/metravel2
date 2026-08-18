@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import type { Travel } from '@/types/types'
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 export type InsightKey = 'recommendation' | 'plus' | 'minus'
@@ -55,7 +56,7 @@ export function useTravelDetailsContentSectionModel({
     if (!travel.description) return ''
     const wordCount = travel.description.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length
     const minutes = Math.max(1, Math.ceil(wordCount / 200))
-    return i18nT('travel:components.travel.details.hooks.useTravelDetailsContentSectionModel.value1_min_chteniya_886e0693', { value1: minutes })
+    return i18nT('travel:components.travel.details.hooks.useTravelDetailsContentSectionModel.value1_min_chteniya_886e0693', { value1: formatInteger(minutes) })
   }, [travel.description])
 
   const shouldUseMobileInsights = isMobile && insightConfigs.length > 0

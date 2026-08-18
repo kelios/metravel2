@@ -1,4 +1,13 @@
 export const authStaticResources = {
+  "authScreen.login.title": "Witaj ponownie",
+  "authScreen.login.subtitle": "Zaloguj się, aby wrócić do miejsca, w którym skończyłeś.",
+  "authScreen.register.title": "Załóż konto MeTravel",
+  "authScreen.register.subtitle": "Za darmo, w mniej niż minutę — i wszystko się zapisze.",
+  "authScreen.benefit.quests": "Zapisuj postęp questów",
+  "authScreen.benefit.favorites": "Ulubione trasy na mapie",
+  "authScreen.benefit.book": "Własne trasy i album z podróży w PDF",
+  "authScreen.dividerEmail": "lub przez e-mail",
+  "authScreen.progressSaved": "Zapisaliśmy Twój postęp",
   "google.unavailable.text": "Logowanie Google nie jest skonfigurowane",
   "google.unavailable.a11y": "Logowanie Google nie jest skonfigurowane dla aplikacji mobilnej",
   "accountConfirmation.failed": "Nie udało się zweryfikować konta. {{details}}",

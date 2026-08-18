@@ -3,6 +3,7 @@ import { Platform, StyleSheet, View } from 'react-native'
 
 import ShareButtons from '@/components/travel/ShareButtons'
 import CTASection from '@/components/travel/CTASection'
+import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
@@ -103,6 +104,18 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
           <CTASection travel={travel} />
         </View>
       )}
+
+      <View
+        testID="travel-details-email-subscribe"
+        accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
+        style={footerStyles.compactSection}
+      >
+        <EmailSubscriptionForm
+          source="article"
+          title={i18nT('sharedStatic:subscription.articleTitle')}
+          subtitle={i18nT('sharedStatic:subscription.articleSubtitle')}
+        />
+      </View>
     </>
   )
 })

@@ -5,7 +5,7 @@
 import { useMemo } from 'react'
 
 import { formatPlaces } from '@/utils/pluralize'
-import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
+import { DEFAULT_RADIUS_KM, formatRadiusValue } from '@/constants/mapConfig'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -120,7 +120,7 @@ export function useMapMobileDerivations(
   )
   const quickRadiusValue = useMemo(() => {
     if (!activeRadius) return i18nT('map:hooks.map.useMapMobileDerivations.vybor_9b7adb0c')
-    return i18nT('map:hooks.map.useMapMobileDerivations.value1_km_1378ad0e', { value1: activeRadius })
+    return i18nT('map:hooks.map.useMapMobileDerivations.value1_km_1378ad0e', { value1: formatRadiusValue(activeRadius) })
   }, [activeRadius])
   const quickCategoriesValue = useMemo(() => {
     if (quickFilterSelected.length === 0) return i18nT('map:hooks.map.useMapMobileDerivations.vse_514353e4')

@@ -7,6 +7,7 @@ import { uploadImage } from '@/api/misc';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { prepareWebImageFileForUpload, HeicConversionError } from '@/utils/webImageUpload';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
@@ -222,7 +223,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const validateFile = useCallback((file: File | NativeUploadFile): string | null => {
     const maxSize = maxSizeMB * 1024 * 1024;
     if (typeof file.size === 'number' && file.size > maxSize) {
-      return i18nT('shared:hooks.usePhotoUpload.fayl_slishkom_bolshoy_maksimalnyy_razmer_val_4f239ac1', { value1: maxSizeMB });
+      return i18nT('shared:hooks.usePhotoUpload.fayl_slishkom_bolshoy_maksimalnyy_razmer_val_4f239ac1', { value1: formatInteger(maxSizeMB) });
     }
     if (file.type && !ALLOWED_TYPES.includes(file.type.toLowerCase())) {
       return i18nT('shared:hooks.usePhotoUpload.nepodderzhivaemyy_format_razresheny_jpg_png__f81e3a7b');

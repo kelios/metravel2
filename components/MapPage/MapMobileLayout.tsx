@@ -27,6 +27,7 @@ import { isMapFilterChipsRowVisible } from './mapFilterChips'
 import { getPlacesLabel, PLACE_COUNT_BADGE_CAP } from './TravelListPanel/helpers'
 import type { TransportMode } from './transportModes'
 import { translate as i18nT } from '@/i18n'
+import { formatRadiusValue } from '@/constants/mapConfig'
 
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
@@ -345,7 +346,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     const hasRadiusContext =
       currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
 
-    return `${placesCountLabel} ${getPlacesLabel(displayCount)}${hasRadiusContext ? i18nT('map:components.MapPage.MapMobileLayout.value1_km_9e970651', { value1: currentRadiusKm }) : ''}`
+    return `${placesCountLabel} ${getPlacesLabel(displayCount)}${hasRadiusContext ? i18nT('map:components.MapPage.MapMobileLayout.value1_km_9e970651', { value1: formatRadiusValue(currentRadiusKm) }) : ''}`
   }, [currentRadiusKm, displayCount])
 
   // Радиус-поповер и слои-поповер переиспользуют ту же модель, что и шит:

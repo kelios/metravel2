@@ -628,7 +628,7 @@ export const sendFeedback = async (
   }
 };
 
-export type SubscribeSource = 'home' | 'article' | 'footer' | string;
+export type SubscribeSource = 'home' | 'article' | 'footer' | 'quest' | 'scenario' | string;
 
 export interface SubscribeResult {
   ok: boolean;

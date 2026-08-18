@@ -14,6 +14,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import MapIcon from './MapIcon'
 import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 type TransportMode = 'car' | 'bike' | 'foot'
@@ -43,10 +44,12 @@ const PRESSED_OPACITY_07 = { opacity: 0.7 }
 function formatDuration(seconds: number, compact = false): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return ''
   const totalMinutes = Math.round(seconds / 60)
-  if (totalMinutes < 60) return compact ? i18nT('map:components.MapPage.RoutingStatus.value1_m_0adff6ff', { value1: totalMinutes }) : i18nT('map:components.MapPage.RoutingStatus.value1_min_6e3c22ce', { value1: totalMinutes })
-  const h = Math.floor(totalMinutes / 60)
-  const m = totalMinutes % 60
-  if (m === 0) return compact ? i18nT('map:components.MapPage.RoutingStatus.value1_ch_ee64dc1f', { value1: h }) : i18nT('map:components.MapPage.RoutingStatus.value1_ch_39ade1be', { value1: h })
+  // #1468: единица приходит из ключа, разряды числа — из локали.
+  const minutesLabel = formatInteger(totalMinutes)
+  if (totalMinutes < 60) return compact ? i18nT('map:components.MapPage.RoutingStatus.value1_m_0adff6ff', { value1: minutesLabel }) : i18nT('map:components.MapPage.RoutingStatus.value1_min_6e3c22ce', { value1: minutesLabel })
+  const h = formatInteger(Math.floor(totalMinutes / 60))
+  const m = formatInteger(totalMinutes % 60)
+  if (totalMinutes % 60 === 0) return compact ? i18nT('map:components.MapPage.RoutingStatus.value1_ch_ee64dc1f', { value1: h }) : i18nT('map:components.MapPage.RoutingStatus.value1_ch_39ade1be', { value1: h })
   return compact ? i18nT('map:components.MapPage.RoutingStatus.value1_ch_value2_m_dc3e9fbc', { value1: h, value2: m }) : i18nT('map:components.MapPage.RoutingStatus.value1_ch_value2_min_b2532ef4', { value1: h, value2: m })
 }
 
@@ -239,7 +242,7 @@ function RoutingStatus({
             <MiniCard
               icon="trending-up"
               iconColor={colors.success}
-              value={i18nT('map:components.MapPage.RoutingStatus.value1_m_c093a0f2', { value1: Math.round(Number(elevationGain)) })}
+              value={i18nT('map:components.MapPage.RoutingStatus.value1_m_c093a0f2', { value1: formatInteger(Number(elevationGain)) })}
               label={i18nT('map:components.MapPage.RoutingStatus.nabor_d6b0e427')}
               styles={styles}
               compact={compact}
@@ -248,7 +251,7 @@ function RoutingStatus({
             <MiniCard
               icon="trending-down"
               iconColor={colors.danger}
-              value={i18nT('map:components.MapPage.RoutingStatus.value1_m_c093a0f2', { value1: Math.round(Number(elevationLoss)) })}
+              value={i18nT('map:components.MapPage.RoutingStatus.value1_m_c093a0f2', { value1: formatInteger(Number(elevationLoss)) })}
               label={i18nT('map:components.MapPage.RoutingStatus.spusk_d1ac5e92')}
               styles={styles}
               compact={compact}

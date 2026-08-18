@@ -279,7 +279,19 @@ function Home() {
         </View>
       )}
 
-      <DeferredSection marginTop={gap.hero} minHeight={isMobile ? 520 : 560} container={{}} fallback={<SectionSkeleton />}>
+      {/* Городские квесты — флагманский актив, поэтому идут сразу после hero,
+          в пределах первых экранов прокрутки (INV2-05). Секция остаётся lazy:
+          пока грузится/пусто — рисует null, так что hero-текст остаётся LCP. */}
+      <DeferredSection
+        marginTop={gap.hero}
+        minHeight={360}
+        fallback={null}
+        priority="high"
+      >
+        <HomeQuestsPromoSection enabled={isFocused} />
+      </DeferredSection>
+
+      <DeferredSection marginTop={gap.weekends} minHeight={isMobile ? 520 : 560} container={{}} fallback={<SectionSkeleton />}>
         <HomeWeekendRoutesSection enabled={isFocused} />
       </DeferredSection>
 
@@ -298,10 +310,6 @@ function Home() {
           <HomeAppPromoSection />
         </DeferredSection>
       )}
-
-      <DeferredSection marginTop={gap.sections} minHeight={360} fallback={null} priority="low">
-        <HomeQuestsPromoSection enabled={isFocused} />
-      </DeferredSection>
 
       <DeferredSection
         marginTop={gap.weekends}

@@ -20,11 +20,12 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
 import { loginSchema } from '@/utils/validation';
 import { useYupForm } from '@/hooks/useYupForm';
-import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
+import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { globalFocusStyles } from '@/styles/globalFocus';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics';
+import { notifyAuthProgressSaved } from '@/utils/authProgressToast';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
@@ -76,6 +77,7 @@ export default function Login() {
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const hasReturnContext = Boolean(intent || redirect);
 
     const showMsg = (text: string, error = false) => {
         if (!mountedRef.current) return;
@@ -112,19 +114,19 @@ export default function Login() {
     const handleResetPassword = async (email: string) => {
         // ✅ ИСПРАВЛЕНИЕ: Валидация email перед отправкой запроса
         const trimmedEmail = email.trim();
-        
+
         if (!trimmedEmail) {
             showMsg(i18nT('auth:components.auth.LoginForm.vvedite_email_adres_51fd4d2d'), true);
             return;
         }
-        
+
         // Проверка формата email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(trimmedEmail)) {
             showMsg(i18nT('auth:components.auth.LoginForm.vvedite_korrektnyy_email_adres_04386f4a'), true);
             return;
         }
-        
+
         try {
             const res = await sendPassword(trimmedEmail);
             showMsg(res, /ошиб|не удалось/i.test(res));
@@ -148,6 +150,7 @@ export default function Login() {
                 // Держим форму заблокированной до фактической навигации (finally вызовет
                 // setSubmitting(false), но submitted оставляет кнопки disabled).
                 setSubmitted(true);
+                notifyAuthProgressSaved(hasReturnContext);
                 replaceAfterAuth();
             } else {
                 showMsg(i18nT('auth:components.auth.LoginForm.nevernyy_email_ili_parol_18c8d999'), true);
@@ -173,6 +176,7 @@ export default function Login() {
                 }
                 navigating = true;
                 setSubmitted(true);
+                notifyAuthProgressSaved(hasReturnContext);
                 replaceAfterAuth();
             } else {
                 showMsg(i18nT('auth:components.auth.LoginForm.ne_udalos_voyti_cherez_google_0930989b'), true);
@@ -193,6 +197,7 @@ export default function Login() {
         sendAnalyticsEvent('login_success', { method: 'facebook', intent: String(intent || '') });
         if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
         setSubmitted(true);
+        notifyAuthProgressSaved(hasReturnContext);
         replaceAfterAuth();
     };
 
@@ -213,6 +218,7 @@ export default function Login() {
     const title = i18nT('auth:components.auth.LoginForm.vhod_v_metravel_akkaunt_marshruty_i_hochu_po_bf2420aa');
     const description =
         i18nT('auth:components.auth.LoginForm.voydite_v_akkaunt_metravel_chtoby_sohranyat__2df803f3');
+    const busy = isSubmitting || submitted || googleBusy || facebookBusy;
 
     /* ---------- render ---------- */
     return (
@@ -248,168 +254,167 @@ export default function Login() {
                     <View style={styles.bg}>
                         <View style={styles.inner}>
                             <View style={styles.card}>
-                                    {Platform.OS === 'web' &&
-                                        React.createElement(
-                                            'h1',
-                                            {
-                                                style: {
-                                                    position: 'absolute' as const,
-                                                    width: 1,
-                                                    height: 1,
-                                                    padding: 0,
-                                                    margin: -1,
-                                                    overflow: 'hidden' as const,
-                                                    clip: 'rect(0,0,0,0)',
-                                                    whiteSpace: 'nowrap',
-                                                    borderWidth: 0,
-                                                } as any,
-                                            },
-                                            title
-                                        )}
-                                    {msg.text !== '' && (
-                                        <Text
+                                {/* ---------- header ---------- */}
+                                {Platform.OS === 'web' ? (
+                                    React.createElement(
+                                        'h1',
+                                        { style: { margin: 0, marginBottom: 6, fontSize: 24, lineHeight: '30px', fontWeight: 800, color: colors.text } as any },
+                                        i18nT('authStatic:authScreen.login.title'),
+                                    )
+                                ) : (
+                                    <Text style={styles.heading}>
+                                        {i18nT('authStatic:authScreen.login.title')}
+                                    </Text>
+                                )}
+                                <Text style={styles.subtitle}>
+                                    {i18nT('authStatic:authScreen.login.subtitle')}
+                                </Text>
+
+                                {msg.text !== '' && (
+                                    <Text
+                                        style={[
+                                            styles.message,
+                                            msg.error ? styles.err : styles.ok,
+                                        ]}
+                                        accessibilityLiveRegion="polite"
+                                    >
+                                        {msg.text}
+                                    </Text>
+                                )}
+
+                                {/* ---------- social first ---------- */}
+                                <View style={styles.socialActions}>
+                                    <GoogleSignInButton
+                                        onSuccess={handleGoogleSignIn}
+                                        onError={handleGoogleError}
+                                        disabled={busy}
+                                    />
+                                    <FacebookAuthFlow
+                                        onAuthenticated={handleFacebookAuthenticated}
+                                        onBusyChange={setFacebookBusy}
+                                        disabled={isSubmitting || submitted || googleBusy}
+                                    />
+                                </View>
+
+                                <View style={styles.dividerContainer}>
+                                    <View style={styles.dividerLine} />
+                                    <Text style={styles.dividerText}>{i18nT('authStatic:authScreen.dividerEmail')}</Text>
+                                    <View style={styles.dividerLine} />
+                                </View>
+
+                                {/* ---------- email + password ---------- */}
+                                <FormFieldWithValidation
+                                    label={i18nT('auth:components.auth.LoginForm.email_c5e1625d')}
+                                    error={touched.email && errors.email ? errors.email : null}
+                                    required
+                                >
+                                    <TextInput
+                                        style={[
+                                            styles.input,
+                                            touched.email && errors.email && styles.inputError,
+                                            globalFocusStyles.focusable,
+                                        ]}
+                                        placeholder={i18nT('auth:components.auth.LoginForm.email_c5e1625d')}
+                                        value={values.email}
+                                        onChangeText={handleChange('email')}
+                                        onBlur={handleBlur('email')}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        autoComplete="email"
+                                        textContentType="emailAddress"
+                                        placeholderTextColor={colors.textMuted}
+                                        returnKeyType="next"
+                                        blurOnSubmit={false}
+                                        onSubmitEditing={() => passwordRef.current?.focus()}
+                                    />
+                                </FormFieldWithValidation>
+
+                                <FormFieldWithValidation
+                                    label={i18nT('auth:components.auth.LoginForm.parol_288eb6a9')}
+                                    error={touched.password && errors.password ? errors.password : null}
+                                    required
+                                >
+                                    <View style={styles.passwordContainer}>
+                                        <TextInput
+                                            ref={passwordRef}
                                             style={[
-                                                styles.message,
-                                                msg.error ? styles.err : styles.ok,
+                                                styles.input,
+                                                styles.passwordInput,
+                                                touched.password && errors.password && styles.inputError,
+                                                globalFocusStyles.focusable,
                                             ]}
+                                            placeholder={i18nT('auth:components.auth.LoginForm.parol_288eb6a9')}
+                                            value={values.password}
+                                            onChangeText={handleChange('password')}
+                                            onBlur={handleBlur('password')}
+                                            secureTextEntry={!showPassword}
+                                            autoComplete="current-password"
+                                            textContentType="password"
+                                            placeholderTextColor={colors.textMuted}
+                                            returnKeyType="done"
+                                            onSubmitEditing={() => handleSubmit()}
+                                        />
+                                        <Pressable
+                                            onPress={() => setShowPassword((v) => !v)}
+                                            style={[styles.eyeButton, globalFocusStyles.focusable]}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={showPassword ? i18nT('auth:components.auth.LoginForm.skryt_parol_406391d8') : i18nT('auth:components.auth.LoginForm.pokazat_parol_cfedfb8e')}
+                                            hitSlop={8}
                                         >
-                                            {msg.text}
-                                        </Text>
-                                    )}
+                                            <Feather
+                                                name={showPassword ? 'eye-off' : 'eye'}
+                                                size={20}
+                                                color={colors.textMuted}
+                                            />
+                                        </Pressable>
+                                    </View>
+                                </FormFieldWithValidation>
 
-                                                {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для email */}
-                                                <FormFieldWithValidation
-                                                    label={i18nT('auth:components.auth.LoginForm.email_c5e1625d')}
-                                                    error={touched.email && errors.email ? errors.email : null}
-                                                    required
-                                                >
-                                                    <TextInput
-                                                        style={[
-                                                            styles.input,
-                                                            touched.email && errors.email && styles.inputError,
-                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                                                        ]}
-                                                        placeholder={i18nT('auth:components.auth.LoginForm.email_c5e1625d')}
-                                                        value={values.email}
-                                                        onChangeText={handleChange('email')}
-                                                        onBlur={handleBlur('email')}
-                                                        keyboardType="email-address"
-                                                        autoCapitalize="none"
-                                                        autoComplete="email"
-                                                        textContentType="emailAddress"
-                                                        placeholderTextColor={colors.textMuted}
-                                                        returnKeyType="next"
-                                                        blurOnSubmit={false}
-                                                        onSubmitEditing={() => passwordRef.current?.focus()}
-                                                    />
-                                                </FormFieldWithValidation>
+                                <Button
+                                    label={isSubmitting || submitted ? i18nT('auth:components.auth.LoginForm.podozhdite_113cf4cf') : i18nT('auth:components.auth.LoginForm.voyti_608953ec')}
+                                    onPress={() => handleSubmit()}
+                                    disabled={busy}
+                                    loading={isSubmitting || submitted}
+                                    variant="primary"
+                                    size="lg"
+                                    style={styles.btn}
+                                    accessibilityLabel={i18nT('auth:components.auth.LoginForm.voyti_608953ec')}
+                                />
 
-                                                {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
-                                                <FormFieldWithValidation
-                                                    label={i18nT('auth:components.auth.LoginForm.parol_288eb6a9')}
-                                                    error={touched.password && errors.password ? errors.password : null}
-                                                    required
-                                                >
-                                                    <View style={styles.passwordContainer}>
-                                                        <TextInput
-                                                            ref={passwordRef}
-                                                            style={[
-                                                                styles.input,
-                                                                styles.passwordInput,
-                                                                touched.password && errors.password && styles.inputError,
-                                                                globalFocusStyles.focusable,
-                                                            ]}
-                                                            placeholder={i18nT('auth:components.auth.LoginForm.parol_288eb6a9')}
-                                                            value={values.password}
-                                                            onChangeText={handleChange('password')}
-                                                            onBlur={handleBlur('password')}
-                                                            secureTextEntry={!showPassword}
-                                                            autoComplete="current-password"
-                                                            textContentType="password"
-                                                            placeholderTextColor={colors.textMuted}
-                                                            returnKeyType="done"
-                                                            onSubmitEditing={() => handleSubmit()}
-                                                        />
-                                                        <Pressable
-                                                            onPress={() => setShowPassword((v) => !v)}
-                                                            style={[styles.eyeButton, globalFocusStyles.focusable]}
-                                                            accessibilityRole="button"
-                                                            accessibilityLabel={showPassword ? i18nT('auth:components.auth.LoginForm.skryt_parol_406391d8') : i18nT('auth:components.auth.LoginForm.pokazat_parol_cfedfb8e')}
-                                                            hitSlop={8}
-                                                        >
-                                                            <Feather
-                                                                name={showPassword ? 'eye-off' : 'eye'}
-                                                                size={20}
-                                                                color={colors.textMuted}
-                                                            />
-                                                        </Pressable>
-                                                    </View>
-                                                </FormFieldWithValidation>
+                                <Pressable
+                                    onPress={() => handleResetPassword(values.email)}
+                                    disabled={busy}
+                                    style={({ pressed }) => [
+                                        styles.forgotButton,
+                                        pressed && { opacity: 0.7 },
+                                        globalFocusStyles.focusable,
+                                    ]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={i18nT('auth:components.auth.LoginForm.sbrosit_parol_ec9af7c3')}
+                                >
+                                    <Text style={styles.forgot}>{i18nT('auth:components.auth.LoginForm.zabyli_parol_05f81115')}</Text>
+                                </Pressable>
 
-                                                <Button
-                                                    label={isSubmitting || submitted ? i18nT('auth:components.auth.LoginForm.podozhdite_113cf4cf') : i18nT('auth:components.auth.LoginForm.voyti_608953ec')}
-                                                    onPress={() => handleSubmit()}
-                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
-                                                    loading={isSubmitting || submitted}
-                                                    variant="primary"
-                                                    size="lg"
-                                                    style={styles.btn}
-                                                    accessibilityLabel={i18nT('auth:components.auth.LoginForm.voyti_608953ec')}
-                                                />
-
-                                                <Pressable
-                                                    onPress={() => handleResetPassword(values.email)}
-                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
-                                                    style={({ pressed }) => [
-                                                        styles.forgotButton,
-                                                        pressed && { opacity: 0.7 },
-                                                        globalFocusStyles.focusable,
-                                                    ]}
-                                                    accessibilityRole="button"
-                                                    accessibilityLabel={i18nT('auth:components.auth.LoginForm.sbrosit_parol_ec9af7c3')}
-                                                >
-                                                    <Text style={styles.forgot}>{i18nT('auth:components.auth.LoginForm.zabyli_parol_05f81115')}</Text>
-                                                </Pressable>
-
-                                                <View style={styles.dividerContainer}>
-                                                    <View style={styles.dividerLine} />
-                                                    <Text style={styles.dividerText}>{i18nT('auth:components.auth.LoginForm.ili_c82ebb8c')}</Text>
-                                                    <View style={styles.dividerLine} />
-                                                </View>
-
-                                                <View style={styles.socialActions}>
-                                                    <GoogleSignInButton
-                                                        onSuccess={handleGoogleSignIn}
-                                                        onError={handleGoogleError}
-                                                        disabled={isSubmitting || submitted || googleBusy || facebookBusy}
-                                                    />
-                                                    <FacebookAuthFlow
-                                                        onAuthenticated={handleFacebookAuthenticated}
-                                                        onBusyChange={setFacebookBusy}
-                                                        disabled={isSubmitting || submitted || googleBusy}
-                                                    />
-                                                </View>
-
-                                            <View style={styles.registerContainer}>
-                                                <Text style={styles.registerText}>{i18nT('auth:components.auth.LoginForm.net_akkaunta_6dd7f1de')}</Text>
-                                                <Link
-                                                    href={
-                                                        (redirect && typeof redirect === 'string')
-                                                            ? (buildRegistrationHref({ redirect, intent }) as any)
-                                                            : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
-                                                    }
-                                                    style={styles.registerLink}
-                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
-                                                    onPress={() => {
-                                                        trackRegisterCtaClicked({
-                                                            source: 'login_form',
-                                                            intent,
-                                                            authState: 'guest',
-                                                        });
-                                                    }}
-                                                >
-                                                    {i18nT('auth:components.auth.LoginForm.zaregistriruytes_2bd038aa')}</Link>
-                                            </View>
+                                <View style={styles.registerContainer}>
+                                    <Text style={styles.registerText}>{i18nT('auth:components.auth.LoginForm.net_akkaunta_6dd7f1de')}</Text>
+                                    <Link
+                                        href={
+                                            (redirect && typeof redirect === 'string')
+                                                ? (buildRegistrationHref({ redirect, intent }) as any)
+                                                : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                        }
+                                        style={styles.registerLink}
+                                        disabled={busy}
+                                        onPress={() => {
+                                            trackRegisterCtaClicked({
+                                                source: 'login_form',
+                                                intent,
+                                                authState: 'guest',
+                                            });
+                                        }}
+                                    >
+                                        {i18nT('auth:components.auth.LoginForm.zaregistriruytes_2bd038aa')}</Link>
+                                </View>
                             </View>
                         </View>
                     </View>
@@ -449,6 +454,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: '100%',
         maxWidth: 440,
         paddingHorizontal: 16,
+        paddingVertical: 24,
     },
     card: {
         backgroundColor: colors.surface,
@@ -468,6 +474,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 boxShadow: colors.boxShadows.modal,
             },
         }),
+    },
+    heading: {
+        fontSize: 24,
+        lineHeight: 30,
+        fontWeight: '800',
+        color: colors.text,
+        marginBottom: 6,
+    },
+    subtitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        lineHeight: 20,
+        color: colors.textMuted,
+        marginBottom: DESIGN_TOKENS.spacing.lg,
     },
     input: {
         marginBottom: 0, // ✅ Отступ управляется FormFieldWithValidation
@@ -555,21 +574,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '600',
         textDecorationLine: 'underline',
     },
-    message: { 
-        marginBottom: 15, 
-        textAlign: 'center', 
+    message: {
+        marginBottom: 15,
+        textAlign: 'center',
         fontSize: 16,
         padding: 12,
         borderRadius: 8,
         fontWeight: '500',
     },
-    err: { 
+    err: {
         color: colors.dangerDark,
         backgroundColor: colors.dangerSoft,
         borderLeftWidth: 3,
         borderLeftColor: colors.danger,
     },
-    ok: { 
+    ok: {
         color: colors.success,
         backgroundColor: colors.successSoft,
         borderLeftWidth: 3,

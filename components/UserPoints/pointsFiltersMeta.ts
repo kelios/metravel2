@@ -1,5 +1,6 @@
 import type { PointStatus } from '@/types/userPoints';
 import { translate as i18nT, type TranslationKey } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 type ActivePresetLike = { labelKey: TranslationKey } | null;
@@ -66,7 +67,7 @@ export const buildActiveFilterChips = ({
 
   const radiusKm = filters.radiusKm;
   if (radiusKm != null && Number.isFinite(Number(radiusKm)) && Number(radiusKm) !== 100) {
-    chips.push({ key: 'radius', label: i18nT('map:components.UserPoints.pointsFiltersMeta.radius_value1_km_24430a34', { value1: Number(radiusKm) }) });
+    chips.push({ key: 'radius', label: i18nT('map:components.UserPoints.pointsFiltersMeta.radius_value1_km_24430a34', { value1: formatInteger(Number(radiusKm)) }) });
   }
 
   (filters.statuses ?? []).forEach((status) => {

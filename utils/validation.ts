@@ -35,6 +35,31 @@ const memoize = <T extends AnyObject>(
 }
 
 /**
+ * Схема валидации для упрощённой регистрации (INV2-07): только email + пароль.
+ * Имя пользователя выводится из email, а подтверждение пароля убрано из формы,
+ * поэтому эти поля здесь не проверяются. Полный `registrationSchema` ниже
+ * остаётся контрактом API-уровня (username + confirmPassword).
+ */
+export const registrationEmailSchema = memoize((yup) =>
+    yup.object({
+        email: yup
+            .string()
+            .trim()
+            .required(i18nT('errors:utils.validation.email_obyazatelen_97bfc28f'))
+            .email(i18nT('errors:utils.validation.vvedite_korrektnyy_email_adres_5fccc4cc'))
+            .max(255, i18nT('errors:utils.validation.email_ne_dolzhen_prevyshat_255_simvolov_10b65efb')),
+        password: yup
+            .string()
+            .required(i18nT('errors:utils.validation.parol_obyazatelen_77a3e968'))
+            .min(8, i18nT('errors:utils.validation.parol_dolzhen_soderzhat_minimum_8_simvolov_bef147ab'))
+            .matches(
+                /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                i18nT('errors:utils.validation.parol_dolzhen_soderzhat_hotya_by_odnu_zaglav_97ae916f'),
+            ),
+    }),
+)
+
+/**
  * Схема валидации для регистрации
  */
 export const registrationSchema = memoize((yup) =>

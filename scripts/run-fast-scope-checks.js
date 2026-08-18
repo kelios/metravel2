@@ -303,6 +303,19 @@ const main = () => {
       if (textScriptStatus !== 0) {
         process.exit(textScriptStatus)
       }
+
+      // Правило авторинга 4a: ответ не стоит в тексте, который игрок читает до
+      // попытки. Умолчание скана — `hint` + `location` (#1467); оба контура
+      // вычищены до нуля на всей локальной базе, поэтому baseline'а нет и любая
+      // новая находка валит гейт сразу. Полный свип по проду —
+      // `npm run quest:scan-hint-leak`.
+      const hintLeakStatus = runCommand('node', [
+        'scripts/scan-quest-hint-leak.js',
+        `--source=${questDataFile}`,
+      ], { shell: false })
+      if (hintLeakStatus !== 0) {
+        process.exit(hintLeakStatus)
+      }
     }
 
     if (result.lintTargets.length === 0) {

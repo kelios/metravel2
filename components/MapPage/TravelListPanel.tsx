@@ -33,6 +33,7 @@ import {
 } from './TravelListPanel/helpers'
 import { getWebCardWidth } from './AddressListItem/utils'
 import { translate as i18nT } from '@/i18n'
+import { formatRadiusValue } from '@/constants/mapConfig'
 
 
 export { buildTravelListSummaryHint }
@@ -196,7 +197,7 @@ const TravelListPanel: React.FC<Props> = ({
           <View pointerEvents="none" style={styles.listHeaderCountChip}>
             <Text style={styles.listHeaderCountChipText}>
               {placesCountLabel} {placesWord}
-              {hasRadiusContext ? i18nT('map:components.MapPage.TravelListPanel.value1_km_ff41a766', { value1: currentRadiusKm }) : ''}
+              {hasRadiusContext ? i18nT('map:components.MapPage.TravelListPanel.value1_km_ff41a766', { value1: formatRadiusValue(currentRadiusKm) }) : ''}
             </Text>
           </View>
           {onOpenFilters && (

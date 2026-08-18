@@ -7,6 +7,7 @@ import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import Chip from '@/components/ui/Chip';
 import ColorChip from '@/components/ui/ColorChip';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 const RADIUS_OPTIONS: Array<number | null> = [100, 150, 200, 300, 500, null]; // null = all points
@@ -14,7 +15,7 @@ const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
 
 const getRadiusLabel = (km: number | null) => {
   if (km === null) return i18nT('map:components.UserPoints.PointFilters.vse_tochki_c09f7775');
-  return i18nT('map:components.UserPoints.PointFilters.value1_km_00637647', { value1: km });
+  return i18nT('map:components.UserPoints.PointFilters.value1_km_00637647', { value1: formatInteger(km) });
 };
 
 const toggleListValue = <T,>(list: T[] | undefined, value: T) => {

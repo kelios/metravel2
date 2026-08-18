@@ -1,4 +1,4 @@
-// app/register.tsx (или соответствующий путь)
+// app/registration.tsx (или соответствующий путь)
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     KeyboardAvoidingView,
@@ -19,11 +19,13 @@ import { useIsFocused, useLocalSearchParams, usePathname, useRouter } from 'expo
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { registration } from '@/api/auth';
 import type { FormValues } from '@/types/types';
-import { registrationSchema } from '@/utils/validation';
+import { registrationEmailSchema } from '@/utils/validation';
 import { getRegistrationPasswordStrengthMeta } from '@/utils/registrationPasswordStrength';
+import { deriveUsernameFromEmail } from '@/utils/deriveUsername';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
+import { globalFocusStyles } from '@/styles/globalFocus';
+import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation';
+import AuthBenefits from '@/components/auth/AuthBenefits';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import {
     trackRegistrationFailed,
@@ -31,6 +33,7 @@ import {
     trackRegistrationSucceeded,
     trackRegistrationViewed,
 } from '@/utils/growthFunnelAnalytics';
+import { notifyAuthProgressSaved } from '@/utils/authProgressToast';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/context/AuthContext';
@@ -40,6 +43,12 @@ import { webTouchScrollStyle } from '@/utils';
 import { buildLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
 
+// INV2-07: streamlined form collects only email + password. Username is derived
+// from the email at submit time and the confirm-password field is removed.
+interface RegistrationFormValues {
+    email: string;
+    password: string;
+}
 
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
@@ -66,6 +75,7 @@ export default function RegisterForm() {
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const hasReturnContext = Boolean(intent || redirect);
 
     const pathname = usePathname();
     const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
@@ -80,13 +90,23 @@ export default function RegisterForm() {
     }, [intent, isFocused, redirect]);
 
     const onSubmit = async (
-        values: FormValues,
+        values: RegistrationFormValues,
         { setSubmitting, resetForm }: { setSubmitting: (v: boolean) => void; resetForm: () => void },
     ) => {
         setMsg({ text: '', error: false });
         trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'email' });
         try {
-            const res = await registration(values);
+            const email = values.email.trim();
+            // Backend RegisterSerializer still requires username + confirmPassword;
+            // derive the display name from the email and mirror the password so
+            // the streamlined 2-field UI stays compatible with the API contract.
+            const payload: FormValues = {
+                username: deriveUsernameFromEmail(email),
+                email,
+                password: values.password,
+                confirmPassword: values.password,
+            };
+            const res = await registration(payload);
             const ok = typeof res === 'object' && 'ok' in res ? res.ok : false;
             const message = typeof res === 'object' && 'message' in res ? res.message : String(res ?? '');
 
@@ -102,7 +122,9 @@ export default function RegisterForm() {
                 return;
             }
 
-            // AUTH-03: Явное welcome-сообщение
+            // AUTH-03: явное welcome-сообщение. Email-регистрация создаёт неактивный
+            // аккаунт (нужно подтверждение по почте), поэтому здесь НЕ показываем
+            // тост «сохранили прогресс» — сессии ещё нет.
             setMsg({ text: i18nT('auth:components.auth.RegistrationForm.dobro_pozhalovat_akkaunt_sozdan_proverte_poc_7c94e26e'), error: false });
             resetForm();
             // Не разблокируем кнопку на успехе (finally вызовет setSubmitting(false)):
@@ -146,6 +168,7 @@ export default function RegisterForm() {
                 }
                 navigating = true;
                 setSubmitted(true);
+                notifyAuthProgressSaved(hasReturnContext);
                 replaceAfterAuth();
             } else {
                 trackRegistrationFailed({
@@ -192,6 +215,7 @@ export default function RegisterForm() {
         trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'facebook' });
         if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
         setSubmitted(true);
+        notifyAuthProgressSaved(hasReturnContext);
         replaceAfterAuth();
     };
 
@@ -217,9 +241,9 @@ export default function RegisterForm() {
         handleChange,
         handleBlur,
         handleSubmit,
-    } = useYupForm<FormValues>({
-        initialValues: { username: '', email: '', password: '', confirmPassword: '' },
-        validationSchema: registrationSchema,
+    } = useYupForm<RegistrationFormValues>({
+        initialValues: { email: '', password: '' },
+        validationSchema: registrationEmailSchema,
         onSubmit,
     });
     const passwordStrengthMeta = useMemo(
@@ -230,6 +254,7 @@ export default function RegisterForm() {
     const title = i18nT('auth:components.auth.RegistrationForm.registratsiya_v_metravel_akkaunt_i_marshruty_94d7b8e7');
     const description =
         i18nT('auth:components.auth.RegistrationForm.sozdayte_akkaunt_v_metravel_chtoby_publikova_7610c3f7');
+    const busy = isSubmitting || submitted || googleBusy || facebookBusy;
 
     return (
         <>
@@ -258,284 +283,206 @@ export default function RegisterForm() {
                 )}
                 <ScrollView style={webTouchScrollStyle} contentContainerStyle={{ flexGrow: 1 }}>
                     <View style={styles.bg}>
-                                <View style={styles.center}>
-                                    <View style={styles.card}>
-                                            {Platform.OS === 'web' &&
-                                                React.createElement(
-                                                    'h1',
-                                                    {
-                                                        style: {
-                                                            position: 'absolute' as const,
-                                                            width: 1,
-                                                            height: 1,
-                                                            padding: 0,
-                                                            margin: -1,
-                                                            overflow: 'hidden' as const,
-                                                            clip: 'rect(0,0,0,0)',
-                                                            whiteSpace: 'nowrap',
-                                                            borderWidth: 0,
-                                                        } as any,
-                                                    },
-                                                    title
-                                                )}
-                                            {generalMsg.text !== '' && (
-                                                <Text
-                                                    style={[
-                                                        styles.msg,
-                                                        generalMsg.error ? styles.err : styles.ok,
-                                                    ]}
-                                                >
-                                                    {generalMsg.text}
-                                                </Text>
-                                            )}
+                        <View style={styles.center}>
+                            <View style={styles.card}>
+                                {/* ---------- header ---------- */}
+                                {Platform.OS === 'web' ? (
+                                    React.createElement(
+                                        'h1',
+                                        { style: { margin: 0, marginBottom: 6, fontSize: 24, lineHeight: '30px', fontWeight: 800, color: colors.text } as any },
+                                        i18nT('authStatic:authScreen.register.title'),
+                                    )
+                                ) : (
+                                    <Text style={styles.heading}>
+                                        {i18nT('authStatic:authScreen.register.title')}
+                                    </Text>
+                                )}
+                                <Text style={styles.subtitle}>
+                                    {i18nT('authStatic:authScreen.register.subtitle')}
+                                </Text>
 
-                                            {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для username */}
-                                            <FormFieldWithValidation
-                                                label={i18nT('auth:components.auth.RegistrationForm.imya_polzovatelya_f7321ed7')}
-                                                error={touched.username && errors.username ? errors.username : null}
-                                                required
-                                            >
-                                                <View style={[
-                                                    styles.inputWrap,
-                                                    touched.username && errors.username && styles.inputWrapError,
-                                                ]}>
-                                                    <Feather 
-                                                        name="user" 
-                                                        size={20} 
-                                                        color={touched.username && errors.username 
-                                                            ? colors.danger
-                                                            : colors.textMuted
-                                                        } 
-                                                    />
-                                                    <TextInput
-                                                        style={[
-                                                            styles.input,
-                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                                                        ]}
-                                                        placeholder={i18nT('auth:components.auth.RegistrationForm.imya_polzovatelya_f7321ed7')}
-                                                        placeholderTextColor={colors.textMuted}
-                                                        value={values.username}
-                                                        onChangeText={handleChange('username')}
-                                                        onBlur={handleBlur('username')}
-                                                        autoCapitalize="none"
-                                                        autoComplete="username"
-                                                        textContentType="username"
-                                                        returnKeyType="next"
-                                                    />
-                                                </View>
-                                            </FormFieldWithValidation>
+                                {/* ---------- value proposition ---------- */}
+                                <AuthBenefits />
 
-                                            {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для email */}
-                                            <FormFieldWithValidation
-                                                label={i18nT('auth:components.auth.RegistrationForm.email_7e1a2f1e')}
-                                                error={touched.email && errors.email ? errors.email : null}
-                                                required
-                                            >
-                                                <View style={[
-                                                    styles.inputWrap,
-                                                    touched.email && errors.email && styles.inputWrapError,
-                                                ]}>
-                                                    <Feather 
-                                                        name="mail" 
-                                                        size={20} 
-                                                        color={touched.email && errors.email 
-                                                            ? colors.danger
-                                                            : colors.textMuted
-                                                        } 
-                                                    />
-                                                    <TextInput
-                                                        style={[
-                                                            styles.input,
-                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                                                        ]}
-                                                        placeholder={i18nT('auth:components.auth.RegistrationForm.email_7e1a2f1e')}
-                                                        placeholderTextColor={colors.textMuted}
-                                                        value={values.email}
-                                                        onChangeText={handleChange('email')}
-                                                        onBlur={handleBlur('email')}
-                                                        keyboardType="email-address"
-                                                        autoCapitalize="none"
-                                                        autoComplete="email"
-                                                        textContentType="emailAddress"
-                                                        returnKeyType="next"
-                                                    />
-                                                </View>
-                                            </FormFieldWithValidation>
+                                {generalMsg.text !== '' && (
+                                    <Text
+                                        style={[
+                                            styles.msg,
+                                            generalMsg.error ? styles.err : styles.ok,
+                                        ]}
+                                        accessibilityLiveRegion="polite"
+                                    >
+                                        {generalMsg.text}
+                                    </Text>
+                                )}
 
-                                            {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
-                                            <FormFieldWithValidation
-                                                label={i18nT('auth:components.auth.RegistrationForm.parol_cf3a7cd2')}
-                                                error={touched.password && errors.password ? errors.password : null}
-                                                hint={i18nT('auth:components.auth.RegistrationForm.minimum_8_simvolov_luchshe_ispolzovat_bukvy__47013a93')}
-                                                required
-                                            >
-                                                <View style={[
-                                                    styles.inputWrap,
-                                                    touched.password && errors.password && styles.inputWrapError,
-                                                ]}>
-                                                    <Feather 
-                                                        name="lock" 
-                                                        size={20} 
-                                                        color={touched.password && errors.password 
-                                                            ? colors.danger
-                                                            : colors.textMuted
-                                                        } 
-                                                    />
-                                                    <TextInput
-                                                        style={[
-                                                            styles.input,
-                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                                                        ]}
-                                                        placeholder={i18nT('auth:components.auth.RegistrationForm.parol_cf3a7cd2')}
-                                                        placeholderTextColor={colors.textMuted}
-                                                        value={values.password}
-                                                        onChangeText={handleChange('password')}
-                                                        onBlur={handleBlur('password')}
-                                                        secureTextEntry={!showPass}
-                                                        autoComplete="new-password"
-                                                        textContentType="newPassword"
-                                                        returnKeyType="next"
-                                                    />
-                                                    <Pressable
-                                                        onPress={() => setShowPass(v => !v)}
-                                                        hitSlop={8}
-                                                        style={styles.eyeButton}
-                                                        accessibilityRole="button"
-                                                        accessibilityLabel={showPass ? i18nT('auth:components.auth.RegistrationForm.skryt_parol_69667518') : i18nT('auth:components.auth.RegistrationForm.pokazat_parol_63d309f3')}
-                                                    >
-                                                        <Feather
-                                                            name={showPass ? 'eye-off' : 'eye'}
-                                                            size={20}
-                                                            color={colors.textMuted}
-                                                        />
-                                                    </Pressable>
-                                                </View>
-                                                <Text style={styles.passwordHint}>
-                                                    {i18nT('auth:components.auth.RegistrationForm.minimum_8_simvolov_luchshe_dobavit_tsifru_i__b3e7b48b')}</Text>
-                                                {passwordStrengthMeta && (
-                                                    <View
-                                                        style={styles.strengthContainer}
-                                                        accessibilityRole="progressbar"
-                                                        accessibilityValue={{
-                                                            min: 0,
-                                                            max: 100,
-                                                            now: passwordStrengthMeta.progress,
-                                                            text: i18nT('auth:components.auth.RegistrationForm.nadezhnost_parolya_value1_d7238316', { value1: passwordStrengthMeta.label }),
-                                                        }}
-                                                        accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.nadezhnost_parolya_da369b84')}
-                                                    >
-                                                        <View style={styles.strengthBarBg}>
-                                                            <View
-                                                                style={[
-                                                                    styles.strengthBarFill,
-                                                                    {
-                                                                        width: passwordStrengthMeta.width,
-                                                                        backgroundColor: passwordStrengthMeta.color,
-                                                                    },
-                                                                ]}
-                                                            />
-                                                        </View>
-                                                        <Text
-                                                            style={[
-                                                                styles.strengthLabel,
-                                                                { color: passwordStrengthMeta.color },
-                                                            ]}
-                                                        >
-                                                            {passwordStrengthMeta.label}
-                                                        </Text>
-                                                    </View>
-                                                )}
-                                            </FormFieldWithValidation>
-
-                                            {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для подтверждения пароля */}
-                                            <FormFieldWithValidation
-                                                label={i18nT('auth:components.auth.RegistrationForm.povtorite_parol_1e4f5f06')}
-                                                error={touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : null}
-                                                required
-                                            >
-                                                <View style={[
-                                                    styles.inputWrap,
-                                                    touched.confirmPassword && errors.confirmPassword && styles.inputWrapError,
-                                                ]}>
-                                                    <Feather 
-                                                        name="check-circle" 
-                                                        size={20} 
-                                                        color={touched.confirmPassword && errors.confirmPassword 
-                                                            ? colors.danger
-                                                            : colors.textMuted
-                                                        } 
-                                                    />
-                                                    <TextInput
-                                                        style={[
-                                                            styles.input,
-                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                                                        ]}
-                                                        placeholder={i18nT('auth:components.auth.RegistrationForm.povtorite_parol_1e4f5f06')}
-                                                        placeholderTextColor={colors.textMuted}
-                                                        value={values.confirmPassword}
-                                                        onChangeText={handleChange('confirmPassword')}
-                                                        onBlur={handleBlur('confirmPassword')}
-                                                        secureTextEntry={!showPass}
-                                                        autoComplete="new-password"
-                                                        textContentType="newPassword"
-                                                        returnKeyType="done"
-                                                        onSubmitEditing={() => handleSubmit()}
-                                                    />
-                                                </View>
-                                            </FormFieldWithValidation>
-
-                                            {/* ---------- button ---------- */}
-                                            <Button
-                                                label={isSubmitting || submitted ? i18nT('auth:components.auth.RegistrationForm.podozhdite_c6f74920') : i18nT('auth:components.auth.RegistrationForm.zaregistrirovatsya_3ca6aeb7')}
-                                                onPress={() => handleSubmit()}
-                                                disabled={isSubmitting || submitted || googleBusy || facebookBusy}
-                                                loading={isSubmitting || submitted}
-                                                variant="primary"
-                                                size="lg"
-                                                style={styles.btn}
-                                                accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.zaregistrirovatsya_3ca6aeb7')}
-                                            />
-
-                                            <View style={styles.dividerContainer}>
-                                                <View style={styles.dividerLine} />
-                                                <Text style={styles.dividerText}>{i18nT('auth:components.auth.RegistrationForm.ili_956a0bdd')}</Text>
-                                                <View style={styles.dividerLine} />
-                                            </View>
-
-                                            <View style={styles.socialActions}>
-                                                <GoogleSignInButton
-                                                    onSuccess={handleGoogleSignIn}
-                                                    onError={handleGoogleError}
-                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
-                                                />
-                                                <FacebookAuthFlow
-                                                    onAttempt={handleFacebookAttempt}
-                                                    onAuthenticated={handleFacebookAuthenticated}
-                                                    onFailure={handleFacebookFailure}
-                                                    onBusyChange={setFacebookBusy}
-                                                    disabled={isSubmitting || submitted || googleBusy}
-                                                />
-                                            </View>
-
-                                            <View style={styles.loginContainer}>
-                                                <Text style={styles.loginText}>{i18nT('auth:components.auth.RegistrationForm.uzhe_est_akkaunt_3eaf8790')}</Text>
-                                                <Pressable
-                                                    onPress={() =>
-                                                        router.push(
-                                                            (redirect && typeof redirect === 'string')
-                                                                ? (buildLoginHref({ redirect, intent }) as any)
-                                                                : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
-                                                        )
-                                                    }
-                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
-                                                    accessibilityRole="button"
-                                                    accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.voyti_v_akkaunt_c9c50168')}
-                                                >
-                                                    <Text style={styles.loginLink}>{i18nT('auth:components.auth.RegistrationForm.voyti_4b1b46b3')}</Text>
-                                                </Pressable>
-                                            </View>
-                                    </View>
+                                {/* ---------- social first ---------- */}
+                                <View style={styles.socialActions}>
+                                    <GoogleSignInButton
+                                        onSuccess={handleGoogleSignIn}
+                                        onError={handleGoogleError}
+                                        disabled={busy}
+                                    />
+                                    <FacebookAuthFlow
+                                        onAttempt={handleFacebookAttempt}
+                                        onAuthenticated={handleFacebookAuthenticated}
+                                        onFailure={handleFacebookFailure}
+                                        onBusyChange={setFacebookBusy}
+                                        disabled={isSubmitting || submitted || googleBusy}
+                                    />
                                 </View>
+
+                                <View style={styles.dividerContainer}>
+                                    <View style={styles.dividerLine} />
+                                    <Text style={styles.dividerText}>{i18nT('authStatic:authScreen.dividerEmail')}</Text>
+                                    <View style={styles.dividerLine} />
+                                </View>
+
+                                {/* ---------- email + password ---------- */}
+                                <FormFieldWithValidation
+                                    label={i18nT('auth:components.auth.RegistrationForm.email_7e1a2f1e')}
+                                    error={touched.email && errors.email ? errors.email : null}
+                                    required
+                                >
+                                    <View style={[
+                                        styles.inputWrap,
+                                        touched.email && errors.email && styles.inputWrapError,
+                                    ]}>
+                                        <Feather
+                                            name="mail"
+                                            size={20}
+                                            color={touched.email && errors.email
+                                                ? colors.danger
+                                                : colors.textMuted
+                                            }
+                                        />
+                                        <TextInput
+                                            style={[styles.input, globalFocusStyles.focusable]}
+                                            placeholder={i18nT('auth:components.auth.RegistrationForm.email_7e1a2f1e')}
+                                            placeholderTextColor={colors.textMuted}
+                                            value={values.email}
+                                            onChangeText={handleChange('email')}
+                                            onBlur={handleBlur('email')}
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                            autoComplete="email"
+                                            textContentType="emailAddress"
+                                            returnKeyType="next"
+                                        />
+                                    </View>
+                                </FormFieldWithValidation>
+
+                                <FormFieldWithValidation
+                                    label={i18nT('auth:components.auth.RegistrationForm.parol_cf3a7cd2')}
+                                    error={touched.password && errors.password ? errors.password : null}
+                                    hint={i18nT('auth:components.auth.RegistrationForm.minimum_8_simvolov_luchshe_ispolzovat_bukvy__47013a93')}
+                                    required
+                                >
+                                    <View style={[
+                                        styles.inputWrap,
+                                        touched.password && errors.password && styles.inputWrapError,
+                                    ]}>
+                                        <Feather
+                                            name="lock"
+                                            size={20}
+                                            color={touched.password && errors.password
+                                                ? colors.danger
+                                                : colors.textMuted
+                                            }
+                                        />
+                                        <TextInput
+                                            style={[styles.input, globalFocusStyles.focusable]}
+                                            placeholder={i18nT('auth:components.auth.RegistrationForm.parol_cf3a7cd2')}
+                                            placeholderTextColor={colors.textMuted}
+                                            value={values.password}
+                                            onChangeText={handleChange('password')}
+                                            onBlur={handleBlur('password')}
+                                            secureTextEntry={!showPass}
+                                            autoComplete="new-password"
+                                            textContentType="newPassword"
+                                            returnKeyType="done"
+                                            onSubmitEditing={() => handleSubmit()}
+                                        />
+                                        <Pressable
+                                            onPress={() => setShowPass(v => !v)}
+                                            hitSlop={8}
+                                            style={styles.eyeButton}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={showPass ? i18nT('auth:components.auth.RegistrationForm.skryt_parol_69667518') : i18nT('auth:components.auth.RegistrationForm.pokazat_parol_63d309f3')}
+                                        >
+                                            <Feather
+                                                name={showPass ? 'eye-off' : 'eye'}
+                                                size={20}
+                                                color={colors.textMuted}
+                                            />
+                                        </Pressable>
+                                    </View>
+                                    {passwordStrengthMeta && (
+                                        <View
+                                            style={styles.strengthContainer}
+                                            accessibilityRole="progressbar"
+                                            accessibilityValue={{
+                                                min: 0,
+                                                max: 100,
+                                                now: passwordStrengthMeta.progress,
+                                                text: i18nT('auth:components.auth.RegistrationForm.nadezhnost_parolya_value1_d7238316', { value1: passwordStrengthMeta.label }),
+                                            }}
+                                            accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.nadezhnost_parolya_da369b84')}
+                                        >
+                                            <View style={styles.strengthBarBg}>
+                                                <View
+                                                    style={[
+                                                        styles.strengthBarFill,
+                                                        {
+                                                            width: passwordStrengthMeta.width,
+                                                            backgroundColor: passwordStrengthMeta.color,
+                                                        },
+                                                    ]}
+                                                />
+                                            </View>
+                                            <Text
+                                                style={[
+                                                    styles.strengthLabel,
+                                                    { color: passwordStrengthMeta.color },
+                                                ]}
+                                            >
+                                                {passwordStrengthMeta.label}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </FormFieldWithValidation>
+
+                                {/* ---------- button ---------- */}
+                                <Button
+                                    label={isSubmitting || submitted ? i18nT('auth:components.auth.RegistrationForm.podozhdite_c6f74920') : i18nT('auth:components.auth.RegistrationForm.zaregistrirovatsya_3ca6aeb7')}
+                                    onPress={() => handleSubmit()}
+                                    disabled={busy}
+                                    loading={isSubmitting || submitted}
+                                    variant="primary"
+                                    size="lg"
+                                    style={styles.btn}
+                                    accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.zaregistrirovatsya_3ca6aeb7')}
+                                />
+
+                                <View style={styles.loginContainer}>
+                                    <Text style={styles.loginText}>{i18nT('auth:components.auth.RegistrationForm.uzhe_est_akkaunt_3eaf8790')}</Text>
+                                    <Pressable
+                                        onPress={() =>
+                                            router.push(
+                                                (redirect && typeof redirect === 'string')
+                                                    ? (buildLoginHref({ redirect, intent }) as any)
+                                                    : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                            )
+                                        }
+                                        disabled={busy}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.voyti_v_akkaunt_c9c50168')}
+                                    >
+                                        <Text style={styles.loginLink}>{i18nT('auth:components.auth.RegistrationForm.voyti_4b1b46b3')}</Text>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -559,6 +506,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: '100%',
         maxWidth: 440,
         paddingHorizontal: 16,
+        paddingVertical: 24,
     },
     card: {
         padding: 24,
@@ -579,6 +527,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             },
         }),
     },
+    heading: {
+        fontSize: 24,
+        lineHeight: 30,
+        fontWeight: '800',
+        color: colors.text,
+        marginBottom: 6,
+    },
+    subtitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        lineHeight: 20,
+        color: colors.textMuted,
+        marginBottom: DESIGN_TOKENS.spacing.lg,
+    },
     inputWrap: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -587,26 +548,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: DESIGN_TOKENS.radii.sm,
         backgroundColor: colors.surface,
         paddingHorizontal: 12,
-        marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Отступ управляется FormFieldWithValidation
-        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        marginBottom: 0,
+        minHeight: 44,
         ...Platform.select({
             web: {
                 transition: 'border-color 0.2s ease',
             },
         }),
     },
-    // ✅ ИСПРАВЛЕНИЕ: Стиль для ошибок в inputWrap
     inputWrapError: {
         borderColor: colors.danger,
         borderWidth: 2,
         backgroundColor: colors.dangerSoft,
     },
-    input: { 
-        flex: 1, 
-        paddingVertical: 10, 
+    input: {
+        flex: 1,
+        paddingVertical: 10,
         fontSize: 16,
         color: colors.text,
-        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        minHeight: 44,
         ...Platform.select({
             web: {
                 outlineStyle: 'none',
@@ -620,18 +580,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         justifyContent: 'center',
     },
-    passwordHint: {
-        marginTop: 6,
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        lineHeight: 16,
-        color: colors.textMuted,
-    },
-    // ✅ ИСПРАВЛЕНИЕ: Стили больше не используются (ошибки показываются через FormFieldWithValidation)
     err: { color: colors.dangerDark, marginBottom: 6, textAlign: 'left' },
-    ok: { 
-        color: colors.success, 
-        marginBottom: 20, 
-        textAlign: 'center', 
+    ok: {
+        color: colors.success,
+        marginBottom: 20,
+        textAlign: 'center',
         fontWeight: 'bold',
         padding: 12,
         borderRadius: 8,
@@ -639,9 +592,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderLeftWidth: 3,
         borderLeftColor: colors.success,
     },
-    msg: { 
-        marginBottom: 20, 
-        textAlign: 'center', 
+    msg: {
+        marginBottom: 20,
+        textAlign: 'center',
         fontSize: 16,
         padding: 12,
         borderRadius: 8,
@@ -678,6 +631,22 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     socialActions: {
         gap: 12,
     },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.border,
+    },
+    dividerText: {
+        marginHorizontal: 16,
+        fontSize: 14,
+        color: colors.textMuted,
+        fontWeight: '500',
+    },
     loginContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
@@ -701,21 +670,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.primary,
         borderRadius: DESIGN_TOKENS.radii.lg,
         marginTop: 8,
-    },
-    dividerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 20,
-    },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: colors.border,
-    },
-    dividerText: {
-        marginHorizontal: 16,
-        fontSize: 14,
-        color: colors.textMuted,
-        fontWeight: '500',
     },
 });

@@ -12,6 +12,7 @@ import {
 import { getPopupTooltips } from './constants';
 import { isInternalArticleHref } from './domEvents';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 import { formatDistanceMeters } from '@/utils/distanceCalculator'
 
 
@@ -103,7 +104,7 @@ export function usePopupActions({
     if (km > DRIVE_ETA_MAX_KM) return kmLabel;
     const totalMins = Math.max(1, Math.round(drivingDurationSeconds! / 60));
     const durationLabel =
-      totalMins < 60 ? i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_min_a48c9273', { value1: totalMins }) : i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_ch_value2_min_dc78275e', { value1: Math.floor(totalMins / 60), value2: totalMins % 60 });
+      totalMins < 60 ? i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_min_a48c9273', { value1: formatInteger(totalMins) }) : i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_ch_value2_min_dc78275e', { value1: formatInteger(Math.floor(totalMins / 60)), value2: formatInteger(totalMins % 60) });
     return `${kmLabel} · ${durationLabel}`;
   }, [drivingDistanceMeters, drivingDurationSeconds, hasDrivingInfo]);
 

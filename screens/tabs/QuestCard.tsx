@@ -20,6 +20,7 @@ import { isBikeQuest } from './QuestsScreen.helpers';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 import { formatDistance } from '@/utils/distanceCalculator'
 import { formatRatingValue } from '@/utils/ratingHelpers'
 
@@ -58,7 +59,7 @@ export default function QuestCard({
     const [isHovered, setIsHovered] = useState(false);
     const [reviewsOpen, setReviewsOpen] = useState(false);
 
-    const durationText = quest.durationMin ? i18nT('quests:screens.tabs.QuestCard.value1_min_1c47c0c7', { value1: Math.round((quest.durationMin ?? 60) / 5) * 5 }) : i18nT('quests:screens.tabs.QuestCard.1_2_ch_59b7a35e');
+    const durationText = quest.durationMin ? i18nT('quests:screens.tabs.QuestCard.value1_min_1c47c0c7', { value1: formatInteger(Math.round((quest.durationMin ?? 60) / 5) * 5) }) : i18nT('quests:screens.tabs.QuestCard.1_2_ch_59b7a35e');
     const pointsText = pluralizePoints(quest.points ?? 0);
     const difficultyInfo = getDifficultyInfo(quest.difficulty);
     const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags);
@@ -68,7 +69,6 @@ export default function QuestCard({
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? formatDistance(quest._distanceKm)
         : null;
-    const isPioneerQuest = (quest.completionsCount ?? 0) <= 0;
     // Паритет с native: на устройстве чип «Посмотреть отзывы (0)» виден всегда —
     // web (включая mobile web) ведёт себя так же.
     const showReviewsAction = true;
@@ -219,16 +219,6 @@ export default function QuestCard({
                     <View style={[styles.questCardCompletedBadge, distanceText ? { top: 44 } : null]}>
                         <Feather name="check-circle" size={12} color={colors.textOnDark} />
                         <Text style={styles.questCardCompletedText}>{i18nT('quests:screens.tabs.QuestCard.proyden_73ced70e')}</Text>
-                    </View>
-                )}
-
-                {isPioneerQuest && !quest.isCompletedByMe && (
-                    <View
-                        style={[styles.questCardCompletedBadge, distanceText ? { top: 44 } : null]}
-                        testID={`quest-card-pioneer-${quest.id}`}
-                    >
-                        <Feather name="flag" size={12} color={colors.textOnDark} />
-                        <Text style={styles.questCardCompletedText}>{i18nT('quests:screens.tabs.QuestCard.esche_nikto_ne_prohodil_341ee9f0')}</Text>
                     </View>
                 )}
 

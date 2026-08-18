@@ -27,6 +27,7 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger, formatNumber } from '@/i18n/format'
 import { formatRatingValue } from '@/utils/ratingHelpers';
 
 
@@ -235,7 +236,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     const result: string[] = [];
     if (subtitle) result.push(subtitle);
     if (point.description) result.push(String(point.description));
-    if (driveInfo?.status === 'ok') result.push(i18nT('map:components.UserPoints.PointCard.value1_km_value2_min_c446b117', { value1: driveInfo.distanceKm, value2: driveInfo.durationMin }));
+    if (driveInfo?.status === 'ok') result.push(i18nT('map:components.UserPoints.PointCard.value1_km_value2_min_c446b117', { value1: formatNumber(driveInfo.distanceKm, { maximumFractionDigits: 1 }), value2: formatInteger(driveInfo.durationMin) }));
     if (driveInfo?.status === 'loading') result.push(i18nT('map:components.UserPoints.PointCard.schitayu_marshrut_7f9bef46'));
     if (typeof point.rating === 'number' && Number.isFinite(point.rating)) result.push(formatRatingValue(point.rating));
     return result;

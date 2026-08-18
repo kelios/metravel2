@@ -10,7 +10,7 @@
 // that in one more domain each. This guard turns the fifth occurrence into a
 // failing check instead of a fifth ticket.
 //
-// Two shapes are reported:
+// Three shapes are reported:
 //   1. `display-toFixed`  — a `.toFixed(0..2)` result that reaches user-visible
 //      text (JSX text, a display attribute, a translation argument, or a
 //      binding used in one of those places).
@@ -19,6 +19,17 @@
 //      from `.toFixed()`, `Math.round()` or plain arithmetic. Such a suffix is
 //      user-visible by definition, so this shape is reported wherever it is
 //      written.
+//   3. `numeric-translation-argument` (#1468) — the other half of the same
+//      invariant. Shapes 1 and 2 say «the unit must come from the translation
+//      key, not from the code», and a call site that obeys them still prints an
+//      English number: `i18nT('… {{value1}} км', { value1: round(km) })` hands
+//      i18next a raw `number`, and `i18n/instance.ts` has no `interpolation.
+//      format`, so the locale never enters. This shape reads the unit from the
+//      RU string instead of from a template literal: when a placeholder is
+//      immediately followed by a unit, its value must arrive already formatted
+//      by `i18n/format.ts` or a domain wrapper. A template literal counts as
+//      formatted only when every substitution inside it already is — a bare
+//      `` `${km}` `` just stringifies the number and still prints English.
 //
 // Deliberately out of scope, structurally rather than by allowlist:
 //   * coordinates (`lat`/`lng`/`lon`/`latitude`/`longitude` receivers) — they
@@ -26,14 +37,28 @@
 //   * precision >= 3 — cache keys, geometry and coordinate rounding live there,
 //     while displayed numbers in this codebase round to 0..2 digits;
 //   * everything that never reaches a display position (cache keys, request
-//     params, console diagnostics, SVG path data).
+//     params, console diagnostics, SVG path data);
+//   * every placeholder that is not followed by a unit — counters, indexes,
+//     years, page numbers and identifiers keep printing as they are, because
+//     nothing in the string says they are a measured quantity;
+//   * i18next's `count`, which selects the plural form and must stay a number.
 
 const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
 
-const CONTRACT_VERSION = 1
-const SCAN_DIRS = Object.freeze(['app', 'components', 'screens', 'hooks', 'services', 'utils'])
+// v2 (#1468): added the `numeric-translation-argument` shape and the two
+// counters that keep its scan from going vacuous.
+const CONTRACT_VERSION = 2
+const SCAN_DIRS = Object.freeze([
+  'app',
+  'components',
+  'constants',
+  'hooks',
+  'screens',
+  'services',
+  'utils',
+])
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx'])
 const IGNORED_DIRS = new Set([
   '.git',
@@ -70,6 +95,37 @@ const ISO_DURATION_PREFIX = /(?:^|[^A-Za-z])P(?:T[\dHMS]*|[\dYMWD]*)$/
 const UNIT_SUFFIX = /^\s*(K|M|k|B|KB|MB|GB|km|mi|ft|тыс\.?|млн|млрд|км|м|ч|мин)(?![\p{L}\d])/u
 
 const TRANSLATION_CALLEES = new Set(['t', 'i18nT', 'translate', 'getFixedTranslator'])
+
+// RU is the typed key baseline (`i18n/resources.ts`), so it is the one locale
+// where every key is guaranteed to exist and to carry the unit the reader sees.
+const TRANSLATION_CATALOGUE_DIR = 'i18n/locales/ru'
+
+// Producers of an already-locale-formatted string. `i18n/format.ts` is the
+// canonical layer; the rest are its documented domain wrappers, plus the
+// translation call itself (a resolved key is text, not a number).
+const LOCALE_FORMAT_CALLEES = new Set([
+  'formatCompactNumber',
+  'formatCurrency',
+  'formatDate',
+  'formatDateTime',
+  'formatDistance',
+  'formatDistanceKm',
+  'formatDistanceMeters',
+  'formatFileSize',
+  'formatInteger',
+  'formatList',
+  'formatNumber',
+  'formatRadiusValue',
+  'formatRatingValue',
+  'formatRelativeTime',
+  'formatTravelTime',
+  'selectPlural',
+  ...TRANSLATION_CALLEES,
+])
+
+// `count` drives i18next plural selection: handing it a string would pick the
+// wrong form, so it stays a number by contract rather than by exception.
+const PLURAL_SELECTOR_ARGUMENT = 'count'
 
 // Callees that hand back a number ready to be printed.
 const NUMERIC_CALLEES = new Set([
@@ -163,6 +219,137 @@ const collectSourceFiles = (rootDir) => {
   }
   for (const directory of SCAN_DIRS) walk(path.join(rootDir, directory))
   return files.sort()
+}
+
+/**
+ * Flat dotted key -> the RU strings it can resolve to. Namespaces are dropped:
+ * `t('travel:a.b.c')` and a namespaced `t('a.b.c')` from `useTranslation` are
+ * the same key here, and the generated keys carry a content hash, so a bare
+ * path is unique in practice. Several strings under one key mean the guard
+ * checks all of them.
+ */
+const collectTranslationCatalogue = (rootDir) => {
+  const catalogue = new Map()
+  const localeRoot = path.join(rootDir, TRANSLATION_CATALOGUE_DIR)
+  if (!fs.existsSync(localeRoot)) return catalogue
+
+  const remember = (key, value) => {
+    if (!catalogue.has(key)) catalogue.set(key, new Set())
+    catalogue.get(key).add(value)
+  }
+
+  const readObject = (objectLiteral, prefix) => {
+    for (const property of objectLiteral.properties) {
+      if (!ts.isPropertyAssignment(property)) continue
+      const name = ts.isIdentifier(property.name)
+        ? property.name.text
+        : ts.isStringLiteral(property.name)
+          ? property.name.text
+          : null
+      if (name === null) continue
+      const key = prefix ? `${prefix}.${name}` : name
+      const initializer = unwrapDown(property.initializer)
+      if (ts.isStringLiteral(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer)) {
+        remember(key, initializer.text)
+      } else if (ts.isObjectLiteralExpression(initializer)) {
+        readObject(initializer, key)
+      }
+    }
+  }
+
+  const walk = (dirPath) => {
+    for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+      const absolute = path.join(dirPath, entry.name)
+      if (entry.isDirectory()) {
+        walk(absolute)
+        continue
+      }
+      if (!entry.isFile() || path.extname(entry.name) !== '.ts') continue
+      const sourceFile = parseSource(absolute, fs.readFileSync(absolute, 'utf8'))
+      const visit = (node) => {
+        if (ts.isVariableDeclaration(node) && node.initializer) {
+          const initializer = unwrapDown(node.initializer)
+          if (ts.isObjectLiteralExpression(initializer)) readObject(initializer, '')
+        }
+        ts.forEachChild(node, visit)
+      }
+      visit(sourceFile)
+    }
+  }
+  walk(localeRoot)
+  return catalogue
+}
+
+const translationTexts = (catalogue, key) => {
+  const bare = key.includes(':') ? key.slice(key.indexOf(':') + 1) : key
+  return [...(catalogue.get(bare) ?? [])]
+}
+
+/**
+ * The unit written right after the substitution — `км` in `{{value1}} км`. This
+ * is the same question `hardcodedUnitSuffix` asks of a template literal, moved
+ * to the place #1459 told call sites to put the unit.
+ */
+const unitAfterPlaceholder = (text, placeholder) => {
+  const escaped = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = new RegExp(`\\{\\{\\s*-?\\s*${escaped}\\s*(?:,[^}]*)?\\}\\}`, 'u').exec(text)
+  if (!match) return null
+  const suffix = UNIT_SUFFIX.exec(text.slice(match.index + match[0].length))
+  return suffix ? suffix[1] : null
+}
+
+/** Named expressions in the file, so a value assembled one line earlier still reads. */
+const collectLocalBindings = (sourceFile) => {
+  const bindings = new Map()
+  const visit = (node) => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+      // A name declared twice is ambiguous; the guard keeps the first shape it
+      // saw rather than pretending the later one wins.
+      if (!bindings.has(node.name.text)) bindings.set(node.name.text, node.initializer)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return bindings
+}
+
+/** Did this value come out of the locale layer, or is it a raw number? */
+const isLocaleFormatted = (node, bindings, seen = new Set()) => {
+  const current = unwrapDown(node)
+  if (!current) return false
+  if (ts.isStringLiteral(current) || ts.isNoSubstitutionTemplateLiteral(current)) return true
+  if (ts.isTemplateExpression(current)) {
+    // A template is only formatted if every substitution already is: `` `${km}` ``
+    // just stringifies a raw number and would print the English «12.6» this shape
+    // is here to catch.
+    return current.templateSpans.every((span) =>
+      isLocaleFormatted(span.expression, bindings, seen),
+    )
+  }
+  if (ts.isCallExpression(current)) return LOCALE_FORMAT_CALLEES.has(calleeName(current) ?? '')
+  if (ts.isConditionalExpression(current)) {
+    return (
+      isLocaleFormatted(current.whenTrue, bindings, seen) &&
+      isLocaleFormatted(current.whenFalse, bindings, seen)
+    )
+  }
+  if (
+    ts.isBinaryExpression(current) &&
+    (current.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken ||
+      current.operatorToken.kind === ts.SyntaxKind.BarBarToken)
+  ) {
+    return (
+      isLocaleFormatted(current.left, bindings, seen) &&
+      isLocaleFormatted(current.right, bindings, seen)
+    )
+  }
+  if (ts.isIdentifier(current)) {
+    if (seen.has(current.text)) return false
+    seen.add(current.text)
+    const binding = bindings.get(current.text)
+    return binding ? isLocaleFormatted(binding, bindings, seen) : false
+  }
+  return false
 }
 
 const isToFixedCall = (node) =>
@@ -391,11 +578,13 @@ const collectDisplayNames = (sourceFile) => {
 const findingKey = ({ filePath, binding, reason }) =>
   [filePath, binding || 'module-scope', reason].join('::')
 
-const scanFile = ({ filePath, content }) => {
+const scanFile = ({ filePath, content, catalogue = new Map() }) => {
   const sourceFile = parseSource(filePath, content)
   const displayNames = collectDisplayNames(sourceFile)
+  const localBindings = collectLocalBindings(sourceFile)
   const findingsByKey = new Map()
   let toFixedCount = 0
+  let unitPlaceholderCount = 0
 
   const record = (node, { reason, detail, binding }) => {
     const key = findingKey({ filePath, binding, reason })
@@ -455,13 +644,60 @@ const scanFile = ({ filePath, content }) => {
       if (suffix && isComputedNumber(node.left)) recordUnitSuffix(node.left, suffix[1])
     }
 
+    // `i18nT('… {{value1}} км', { value1: round(km) })` — the unit obeys #1459
+    // and the number still prints English.
+    if (ts.isCallExpression(node) && TRANSLATION_CALLEES.has(calleeName(node) ?? '')) {
+      recordTranslationArguments(node)
+    }
+
     ts.forEachChild(node, visit)
+  }
+
+  const recordTranslationArguments = (call) => {
+    const [keyArgument, ...rest] = call.arguments
+    if (
+      !keyArgument ||
+      !(ts.isStringLiteral(keyArgument) || ts.isNoSubstitutionTemplateLiteral(keyArgument))
+    ) {
+      return
+    }
+    const texts = translationTexts(catalogue, keyArgument.text)
+    if (texts.length === 0) return
+
+    for (const argument of rest) {
+      if (!ts.isObjectLiteralExpression(argument)) continue
+      for (const property of argument.properties) {
+        const isShorthand = ts.isShorthandPropertyAssignment(property)
+        if (!isShorthand && !ts.isPropertyAssignment(property)) continue
+        const placeholder = ts.isIdentifier(property.name)
+          ? property.name.text
+          : ts.isStringLiteral(property.name)
+            ? property.name.text
+            : null
+        if (!placeholder || placeholder === PLURAL_SELECTOR_ARGUMENT) continue
+
+        const unit = texts.map((text) => unitAfterPlaceholder(text, placeholder)).find(Boolean)
+        if (!unit) continue
+        unitPlaceholderCount += 1
+
+        const value = isShorthand ? property.name : property.initializer
+        if (isLocaleFormatted(value, localBindings)) continue
+
+        const keyTail = keyArgument.text.split('.').pop()
+        record(property, {
+          reason: 'numeric-translation-argument',
+          detail: `"${unit}" follows {{${placeholder}}} in ${keyTail}`,
+          binding: `${enclosingBinding(call) ?? 'module-scope'}.${placeholder}@${keyTail}`,
+        })
+      }
+    }
   }
 
   visit(sourceFile)
 
   return {
     toFixedCount,
+    unitPlaceholderCount,
     displayNameCount: displayNames.size,
     findings: [...findingsByKey.values()].sort((left, right) => left.key.localeCompare(right.key)),
   }
@@ -471,6 +707,8 @@ const evaluateFindings = ({
   files,
   toFixedCount,
   displayNameCount,
+  catalogueSize,
+  unitPlaceholderCount,
   findings,
   allowlist = ALLOWLIST,
 }) => {
@@ -479,7 +717,15 @@ const evaluateFindings = ({
   const staleAllowlist = allowlistKeys.filter((key) => !findingKeys.has(key)).sort()
   const violations = findings.filter((finding) => !Object.hasOwn(allowlist, finding.key))
   const allowlisted = findings.filter((finding) => Object.hasOwn(allowlist, finding.key))
-  const vacuous = files === 0 || toFixedCount === 0 || displayNameCount === 0
+  // Each shape needs its own evidence that it actually looked at something: a
+  // silent catalogue or a silent placeholder pass would make shape 3 pass by
+  // scanning nothing, which is exactly how #1465 survived #1459.
+  const vacuous =
+    files === 0 ||
+    toFixedCount === 0 ||
+    displayNameCount === 0 ||
+    catalogueSize === 0 ||
+    unitPlaceholderCount === 0
   const allowlistTooLarge = allowlistKeys.length > MAX_ALLOWLIST_ENTRIES
 
   return {
@@ -488,6 +734,8 @@ const evaluateFindings = ({
     fileCount: files,
     toFixedCount,
     displayNameCount,
+    catalogueSize,
+    unitPlaceholderCount,
     findingCount: findings.length,
     allowlistedCount: allowlisted.length,
     violationCount: violations.length,
@@ -501,22 +749,28 @@ const evaluateFindings = ({
 
 const scanLocaleNumberFormat = (rootDir, { allowlist = ALLOWLIST } = {}) => {
   const files = collectSourceFiles(rootDir)
+  const catalogue = collectTranslationCatalogue(rootDir)
   const findings = []
   let toFixedCount = 0
   let displayNameCount = 0
+  let unitPlaceholderCount = 0
   for (const filePath of files) {
     const result = scanFile({
       filePath,
       content: fs.readFileSync(path.join(rootDir, filePath), 'utf8'),
+      catalogue,
     })
     toFixedCount += result.toFixedCount
     displayNameCount += result.displayNameCount
+    unitPlaceholderCount += result.unitPlaceholderCount
     findings.push(...result.findings)
   }
   return evaluateFindings({
     files: files.length,
     toFixedCount,
     displayNameCount,
+    catalogueSize: catalogue.size,
+    unitPlaceholderCount,
     findings,
     allowlist,
   })
@@ -542,12 +796,16 @@ const run = (args = parseArgs([])) => {
   } else if (result.ok) {
     process.stdout.write(
       `Locale number format guard passed. files=${result.fileCount} ` +
-      `toFixed=${result.toFixedCount} allowlisted=${result.allowlistedCount}\n`,
+      `toFixed=${result.toFixedCount} unitPlaceholders=${result.unitPlaceholderCount} ` +
+      `allowlisted=${result.allowlistedCount}\n`,
     )
   } else {
     process.stderr.write('Locale number format guard failed.\n')
     if (result.vacuous) {
-      process.stderr.write('- scan is vacuous; expected source files, toFixed calls and display positions\n')
+      process.stderr.write(
+        '- scan is vacuous; expected source files, toFixed calls, display positions, ' +
+        'an RU catalogue and unit placeholders\n',
+      )
     }
     if (result.allowlistTooLarge) {
       process.stderr.write(`- allowlist exceeds reviewed maximum (${MAX_ALLOWLIST_ENTRIES})\n`)
@@ -562,7 +820,8 @@ const run = (args = parseArgs([])) => {
       process.stderr.write(
         '- displayed numbers go through i18n/format.ts (formatNumber/formatInteger/' +
         'formatCompactNumber/formatCurrency) or utils/distanceCalculator.ts; units come from a ' +
-        'translation key, not from a hardcoded suffix\n',
+        'translation key, not from a hardcoded suffix; a number handed to a translation ' +
+        'placeholder that carries a unit must already be a formatted string\n',
       )
     }
   }
@@ -578,10 +837,17 @@ module.exports = {
   MAX_DISPLAY_FRACTION_DIGITS,
   ALLOWLIST,
   MACHINE_ATTRIBUTES,
+  LOCALE_FORMAT_CALLEES,
+  PLURAL_SELECTOR_ARGUMENT,
+  TRANSLATION_CATALOGUE_DIR,
   isDisplayAttribute,
   parseSource,
   collectSourceFiles,
   collectDisplayNames,
+  collectTranslationCatalogue,
+  collectLocalBindings,
+  unitAfterPlaceholder,
+  isLocaleFormatted,
   isToFixedCall,
   isCoordinateReceiver,
   isComputedNumber,

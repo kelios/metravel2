@@ -15,7 +15,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { generatePrintableQuest } from './QuestPrintable';
-import DataFreshnessNotice from '@/components/legal/DataFreshnessNotice';
+import QuestTrustBar from './QuestTrustBar';
 import { isBikeQuest, isLoopQuest } from '@/utils/questAudience';
 import { useQuestFinaleMedia } from './useQuestFinaleMedia';
 import { QuestCompactSidebar, QuestHeaderPanel } from './questWizardShell';
@@ -85,6 +85,8 @@ export type QuestWizardProps = {
     onFinaleVideoRetry?: () => void;
     /** Доп. блок под экскурсиями (напр. «Путешествия по этому городу») */
     relatedTravelsSlot?: React.ReactNode;
+    /** Email-захват под контентом квеста (INV2-06): «пришлём этот квест на почту» */
+    subscribeSlot?: React.ReactNode;
     /** Readonly-рейтинг квеста под заголовком в шапке */
     ratingSlot?: React.ReactNode;
     /** Бейдж «Пройден» + «Пройдено N раз» под заголовком в шапке */
@@ -116,7 +118,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const { t } = useTranslation();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
     // Detail API does not include tags; the list metadata enriches them shortly
@@ -523,18 +525,22 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         })();
     }, [cityId, offlineQuestState, questId]);
 
+    // Раскрытие об ИИ и метаданные маршрута — внутри стартовой карточки, под
+    // названием квеста (#1480). Гостевой гейт и финал стартовую карточку не
+    // показывают, поэтому отдельного условия им не нужно.
+    const introTrustBar = useMemo(() => (
+        <QuestTrustBar
+            pointsCount={steps.length}
+            questTitle={title}
+            questId={questId}
+            cityId={cityId}
+        />
+    ), [cityId, questId, steps.length, title]);
+
     const mainContent = (
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
             <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageMain : undefined}>
-                {currentIndex === 0 && !showFinaleOnly && !guestGateActive ? (
-                    <DataFreshnessNotice
-                        text={t('quests:components.quests.QuestWizard.aiDisclosure')}
-                        style={styles.aiDisclosure}
-                        testID="quest-ai-disclosure"
-                    />
-                ) : null}
-
                 {/* Гостевой мягкий гейт после лимита бесплатных точек */}
                 {guestGateActive && (
                     <QuestGuestGate
@@ -579,6 +585,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 questNumericId={questNumericId}
                                 onAnswerFocus={handleInputFocus}
                                 onAnswerBlur={handleInputBlur}
+                                introSlot={introTrustBar}
                             />
                         </View>
 
@@ -619,6 +626,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
                 {/* Путешествия по этому городу — обратная перелинковка квест → travel */}
                 {!showFinaleOnly && relatedTravelsSlot}
+
+                {/* Email-захват под контентом квеста (INV2-06) */}
+                {!showFinaleOnly && subscribeSlot}
 
                 {/* Финал — доступен всегда; видео — когда всё пройдено */}
                 {showFinaleOnly && (
