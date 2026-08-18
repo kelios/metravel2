@@ -3,6 +3,7 @@
 // Usage:
 //   GA4_PROPERTY_ID=123456789 node scripts/fetch-ga4-stats.js
 //   node scripts/fetch-ga4-stats.js --property 123456789 --days 28 --json
+//   node scripts/fetch-ga4-stats.js --events --days 30   # воронка: сработавшие события
 //
 // Find the numeric property ID in GA4: Admin → Property settings → "Идентификатор ресурса".
 // Needs the service-account email added to the GA4 property (Admin → Property Access
@@ -32,6 +33,7 @@ function parseArgs(argv) {
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--json') args.json = true
+    else if (a === '--events') args.events = true
     else if (a === '--days') args.days = parseInt(argv[++i], 10)
     else if (a === '--property') args.property = argv[++i]
   }
@@ -95,6 +97,25 @@ async function main() {
     sessions: +r.metricValues[1].value,
   }))
 
+  // Событийная воронка: --events. Отвечает на вопрос «долетают ли события вообще»,
+  // поэтому берём ВСЕ события за окно, а не только ожидаемый список: событие, которого
+  // нет в ответе, не долетает — это instrumentation gap, а не ноль.
+  let events = null
+  if (args.events) {
+    const byEvent = await runReport(accessToken, args.property, {
+      dateRanges,
+      dimensions: [{ name: 'eventName' }],
+      metrics: [{ name: 'eventCount' }, { name: 'totalUsers' }],
+      orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+      limit: 200,
+    })
+    events = (byEvent.rows || []).map((r) => ({
+      event: r.dimensionValues[0].value,
+      count: +r.metricValues[0].value,
+      users: +r.metricValues[1].value,
+    }))
+  }
+
   const result = {
     source: 'google-analytics-4',
     property: args.property,
@@ -107,6 +128,7 @@ async function main() {
       bounceRatePct: +(num(4) * 100).toFixed(2),
     },
     channels,
+    ...(events ? { events } : {}),
   }
 
   if (args.json) {
@@ -124,6 +146,13 @@ async function main() {
   console.log(`\n   Каналы (по сессиям):`)
   for (const c of result.channels) {
     console.log(`     ${c.sessions.toString().padStart(5)} сессий | ${c.users} польз. | ${c.channel}`)
+  }
+  if (events) {
+    console.log(`\n   События за ${args.days} дн. (всего ${events.length} имён):`)
+    for (const e of events) {
+      console.log(`     ${e.count.toString().padStart(7)} × ${e.event.padEnd(28)} | польз.: ${e.users}`)
+    }
+    if (!events.length) console.log('     (ни одного события за окно — проверить инициализацию GA4)')
   }
   console.log('\n   ⚠️  GA4 недосчитывает реальный трафик (consent + адблоки). GSC — точнее по organic.\n')
 }
