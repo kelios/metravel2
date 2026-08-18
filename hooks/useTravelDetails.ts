@@ -37,6 +37,12 @@ type TravelPreloadWindow = Window & typeof globalThis & {
     slug?: string;
     isId?: boolean;
     source?: string;
+    // #1479: the SSG inline preload ships only `media.cover`; the full media
+    // manifest (gallery/address/body) is dropped to shrink the document and
+    // free bandwidth for the hero LCP. When true, the runtime must still treat
+    // the preload as sufficient for first paint but force one background
+    // refetch to backfill the full media.
+    mediaPartial?: boolean;
   };
   __metravelTravelPreloadScriptLoaded?: boolean;
   __metravelTravelPreloadPending?: boolean;
@@ -316,6 +322,20 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     () => consumePreloadedTravel(normalizedSlug, isId, idNum, { consume: false }),
     [normalizedSlug, isId, idNum]
   );
+  // #1479: The SSG inline preload for this slug carries only `media.cover`; the
+  // full manifest is fetched in the background. Detect that partial state here
+  // (during the initial render, before the consume effect deletes the global)
+  // so first paint still hydrates from the preload while the query is told to
+  // backfill the full media once on mount.
+  const preloadMediaPartial = useMemo(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+    const preload = (window as TravelPreloadWindow).__metravelTravelPreload;
+    if (!preload?.mediaPartial) return false;
+    const matches = isId
+      ? preload.isId && String(preload.slug) === String(idNum)
+      : !preload.isId && preload.slug === normalizedSlug;
+    return Boolean(matches);
+  }, [normalizedSlug, isId, idNum]);
   useEffect(() => {
     if (!initialPreloadedTravel) return;
     const timeoutId = setTimeout(() => {
@@ -342,10 +362,15 @@ export function useTravelDetails(): UseTravelDetailsReturn {
       // When a sufficient preload was already available synchronously (initialData),
       // skip the polling wait entirely: if this queryFn still runs, the preload is
       // either committed or consumed, so waiting again is pure dead time.
-      const preloaded = await waitForTravelPreload(normalizedSlug, isId, idNum, {
-        skipPolling: Boolean(initialPreloadedTravel),
-      });
-      if (preloaded) return preloaded;
+      // #1479: A partial-media preload (only `media.cover`) intentionally skips
+      // preload reuse here so the background mount refetch reaches the network
+      // and backfills the full media manifest (gallery/address/body).
+      if (!preloadMediaPartial) {
+        const preloaded = await waitForTravelPreload(normalizedSlug, isId, idNum, {
+          skipPolling: Boolean(initialPreloadedTravel),
+        });
+        if (preloaded) return preloaded;
+      }
 
       return isId
         ? fetchTravel(idNum, { signal })
@@ -382,8 +407,12 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 4000),
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,
-    // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала
-    refetchOnMount: shouldRefetchInAutomation,
+    // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала.
+    // #1479: но когда preload media частичный (только `media.cover`), нужен ровно
+    // один фоновый refetch на маунте, чтобы догрузить полный манифест галереи/
+    // точек/тела статьи. 'always' гидратирует hero из initialData мгновенно и
+    // качает полный payload в фоне, не мигая контентом.
+    refetchOnMount: preloadMediaPartial ? 'always' : shouldRefetchInAutomation,
     refetchOnWindowFocus: shouldRefetchInAutomation,
     // keepPreviousData removed: it caused showing the PREVIOUS travel's gallery/content
     // when navigating between different travels, producing a visible flicker

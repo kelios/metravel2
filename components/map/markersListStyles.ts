@@ -358,6 +358,10 @@ export const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo
         borderRadius: '999px',
         backgroundColor: colors.accentSoft,
         color: colors.accentDark,
+        maxWidth: '100%',
+        whiteSpace: 'nowrap' as const,
+        overflow: 'hidden' as const,
+        textOverflow: 'ellipsis' as const,
     },
     badgeMuted: {
         fontSize: '11px',
@@ -365,14 +369,19 @@ export const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo
         borderRadius: '999px',
         backgroundColor: colors.backgroundSecondary,
         color: colors.textMuted,
+        maxWidth: '100%',
+        whiteSpace: 'nowrap' as const,
+        overflow: 'hidden' as const,
+        textOverflow: 'ellipsis' as const,
     },
+    // Кнопки под текстом, не колонкой справа: в 420px панели (WebMapComponent.styles.ts)
+    // колонка съедала ~130px и выдавливала название/категорию в 2-3 строки переноса.
     actions: {
         display: 'flex',
-        flexDirection: 'column' as const,
+        flexDirection: 'row' as const,
         gap: '8px',
-        marginLeft: '8px',
-        flexShrink: 0,
-        alignSelf: 'flex-start',
+        marginTop: '10px',
+        justifyContent: 'flex-end',
     },
     editButton: {
         backgroundColor: colors.primarySoft,

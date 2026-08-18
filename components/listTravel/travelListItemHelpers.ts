@@ -188,16 +188,26 @@ export const resolveCoverSlotGeometry = ({
   slotWidth,
   slotHeight,
   aspectRatio,
+  fit = 'contain',
 }: {
   slotWidth: number
   slotHeight: number
   aspectRatio: number | null
+  /**
+   * INV2-17: `cover` заполняет весь бокс, поэтому кадр рисуется НА ВСЮ ширину
+   * бокса при любой ориентации — draw-width оптимизация #1285 (объявить узкую
+   * ширину отрисовки портрета) для него неприменима: она увела бы `sizes` ниже
+   * ширины бокса и дала мыло. Для `cover` держим прежнюю box-based лестницу
+   * (`renderedWidth: null` → вызывающий оставляет box-based `sizes`), только
+   * ограниченную потолком бокса. `contain` — прежнее поведение #1285.
+   */
+  fit?: 'cover' | 'contain'
 }): { renderedWidth: number | null; maxCoverWidth: number } => {
   const boundedWidth = Number.isFinite(slotWidth) && slotWidth > 0 ? slotWidth : 0
   const usableHeight = Number.isFinite(slotHeight) && slotHeight > 0 ? slotHeight : 0
   const hasAspect = aspectRatio != null && Number.isFinite(aspectRatio) && aspectRatio > 0
 
-  if (!hasAspect || usableHeight <= 0) {
+  if (fit === 'cover' || !hasAspect || usableHeight <= 0) {
     return {
       renderedWidth: null,
       maxCoverWidth: Math.max(COVER_LEGACY_WIDTH_FLOOR, Math.round(boundedWidth)),

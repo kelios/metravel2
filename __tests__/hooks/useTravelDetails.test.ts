@@ -195,6 +195,68 @@ describe('useTravelDetails', () => {
     expect(setQueryData).not.toHaveBeenCalled();
   });
 
+  it('hydrates instantly from a partial-media preload and forces a background backfill fetch', async () => {
+    (Platform.OS as any) = 'web';
+    let capturedConfig: any = null;
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 498,
+          slug: 'awesome-trip',
+          name: 'Trip',
+          description: '<p>Full text</p>',
+          gallery: [{ id: 7, url: '/gallery/7.webp', caption: '' }],
+          travelAddress: [{ id: 1, name: 'Point' }],
+          coordsMeTravel: [],
+          // Only the hero cover manifest survives the SSG trim (#1479); the
+          // full gallery/address/body manifest is fetched in the background.
+          media: { cover: { id: 1, dominant_color: '#abc' } },
+        },
+        slug: 'awesome-trip',
+        isId: false,
+        mediaPartial: true,
+      },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+
+    (fetchTravelBySlug as jest.Mock).mockImplementation((slug: string) => ({
+      slug,
+      media: { cover: {}, gallery: [{ id: 7 }], article_body: {}, address_images: {} },
+    }));
+    (fetchTravel as jest.Mock).mockImplementation(() => {
+      throw new Error('should not be called for slug');
+    });
+
+    (useQuery as jest.Mock).mockImplementation((config: any) => {
+      capturedConfig = config;
+      capturedQueryFn = config.queryFn;
+      return {
+        data: config.initialData,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    });
+
+    const { result } = renderHook(() => useTravelDetails());
+
+    // (a) First paint hydrates instantly from the partial preload (initialData).
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.travel).toMatchObject({ id: 498, slug: 'awesome-trip' });
+
+    // (b) The query is configured to force exactly one background refetch on
+    // mount so the full media manifest backfills.
+    expect(capturedConfig.refetchOnMount).toBe('always');
+
+    // And the queryFn reaches the network (does NOT re-consume the partial
+    // preload), so gallery/address/body manifests upgrade to their full forms.
+    const backfilled = await capturedQueryFn!();
+    expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
+    expect(backfilled.media.gallery).toEqual([{ id: 7 }]);
+  });
+
   it('skips preload polling in queryFn once initialData has consumed the preload', async () => {
     (Platform.OS as any) = 'web';
     (global as any).window = {

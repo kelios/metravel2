@@ -89,3 +89,51 @@ describe('#1285 геометрия слота обложки', () => {
       .toEqual({ renderedWidth: null, maxCoverWidth: 640 })
   })
 })
+
+describe('INV2-17 геометрия слота под fit=cover', () => {
+  const browserPick = (ladder: readonly number[], sizesPx: number, dpr: number): number =>
+    ladder.find((width) => width >= sizesPx * dpr) ?? ladder[ladder.length - 1]
+
+  it('портрет под cover сайзится по ширине бокса, а не по draw-width', () => {
+    // Тот же кадр 640×853, что под contain давал renderedWidth 150 (draw-width):
+    // под cover он заполняет всю ширину бокса, поэтому renderedWidth не
+    // навязывается (null → вызывающий оставляет box-based `sizes`), а лестница
+    // ограничена потолком бокса.
+    const geom = resolveCoverSlotGeometry({
+      slotWidth: 320,
+      slotHeight: 200,
+      aspectRatio: 640 / 853,
+      fit: 'cover',
+    })
+    expect(geom.renderedWidth).toBeNull()
+    expect(geom.maxCoverWidth).toBe(640)
+    // Бокс 320 × DPR 2 = 640 → retina-ступень 640w остаётся в наборе.
+    expect(buildCoverWidths(geom.maxCoverWidth)).toContain(640)
+    expect(browserPick(buildCoverWidths(geom.maxCoverWidth), 320, 2)).toBe(640)
+  })
+
+  it('квадрат под cover не режет лестницу по draw-width высоты', () => {
+    const geom = resolveCoverSlotGeometry({
+      slotWidth: 480,
+      slotHeight: 220,
+      aspectRatio: 1,
+      fit: 'cover',
+    })
+    expect(geom.renderedWidth).toBeNull()
+    // Потолок = ширина бокса (не floor 640, т.к. 480 < 640, но COVER_LEGACY_FLOOR
+    // держит минимум 640 для retina-ступеней).
+    expect(geom.maxCoverWidth).toBe(640)
+  })
+
+  it('широкий бокс под cover сохраняет ступень крупнее 640', () => {
+    const geom = resolveCoverSlotGeometry({
+      slotWidth: 720,
+      slotHeight: 270,
+      aspectRatio: 1.5,
+      fit: 'cover',
+    })
+    expect(geom.renderedWidth).toBeNull()
+    expect(geom.maxCoverWidth).toBe(720)
+    expect(buildCoverWidths(geom.maxCoverWidth)).toContain(720)
+  })
+})

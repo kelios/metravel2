@@ -357,11 +357,11 @@ describe('TravelListItem media props on web', () => {
     );
   });
 
-  // #1285: слот кадрируется `contain`, поэтому квадратный кадр в ландшафтном
-  // боксе занимает только его высоту. Прод-замер главной 2026-08-06 (mobile 412,
-  // DPR 1.75): бокс рейла 318×200 рисовал квадрат как 200×200, а `sizes` объявлял
-  // 320px — браузер требовал 560 device px и брал 640w (95 130 B) вместо 480w.
-  it('объявляет в sizes ширину ОТРИСОВКИ обложки, а не ширину бокса', () => {
+  // INV2-17: карточка кадрируется `cover` — кадр заполняет весь бокс при любой
+  // ориентации, поэтому `sizes` объявляет ширину БОКСА, а не draw-width портрета
+  // (draw-width оптимизация #1285 для `cover` неприменима: она увела бы `sizes`
+  // ниже ширины бокса и дала мыло). Лестница ограничена потолком бокса (DPR 2).
+  it('объявляет в sizes ширину БОКСА (cover), а не draw-width портрета', () => {
     renderItem({
       travel: {
         ...baseTravel,
@@ -391,16 +391,15 @@ describe('TravelListItem media props on web', () => {
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     const source = props.mediaProps?.webResponsiveSource;
-    expect(source?.sizes).toBe('200px');
-    // 200 CSS × DPR 2 = 400 → лестнице хватает 480w; кандидаты крупнее слоту не
-    // нужны ни на одном DPR.
-    expect(source?.srcSet).toContain('480w');
-    expect(source?.srcSet).not.toContain('640w');
+    // Бокс 320 → `sizes` = ширина бокса. На DPR 2 (320 × 2 = 640) лестница
+    // держит retina-ступень 640w; выше бокса (960w) кандидатов нет.
+    expect(source?.sizes).toBe('320px');
+    expect(source?.srcSet).toContain('640w');
     expect(source?.srcSet).not.toContain('960w');
     expect(source?.src).toContain('q=70');
   });
 
-  it('портретная обложка в том же боксе просит ещё более узкую ступень', () => {
+  it('портретная обложка (cover) тоже сайзится по ширине бокса, не по draw-width', () => {
     renderItem({
       travel: {
         ...baseTravel,
@@ -429,11 +428,11 @@ describe('TravelListItem media props on web', () => {
 
     const source = (mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any).mediaProps
       ?.webResponsiveSource;
-    // 640×853 в боксе 318×200 прод рисует как 150×200 (замер DOM 2026-08-06).
-    expect(source?.sizes).toBe('150px');
-    expect(source?.srcSet).toContain('320w');
-    expect(source?.srcSet).not.toContain('480w');
-    expect(source?.srcSet).not.toContain('640w');
+    // INV2-17: под `cover` портрет заполняет всю ширину бокса (кроп сверху/снизу),
+    // поэтому `sizes` = ширина бокса (320px), а не прежние 150px draw-width.
+    // Лестница держит retina-ступень 640w для 320px бокса на DPR 2.
+    expect(source?.sizes).toBe('320px');
+    expect(source?.srcSet).toContain('640w');
   });
 
   it('uses dominant color when the cover has no blurhash', () => {

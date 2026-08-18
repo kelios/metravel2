@@ -261,15 +261,17 @@ function TravelListItem({
           ? 480
           : Math.min(effectiveWidth, isMobile ? 640 : 720)
 
-    // #1285: слот кадрируется `contain`, поэтому ширину отрисовки задаёт не бокс,
-    // а высота бокса на пропорциях кадра. Ступень выбирает браузер по `sizes` ×
-    // собственный DPR; лестнице достаточно покрыть потолок DPR 2. Прежний пол
-    // (640, а для первой карточки 720) держал в наборе кандидатов, которые слоту
-    // не нужны ни на одном DPR.
+    // INV2-17: слот кадрируется `cover` — кадр заполняет весь бокс, поэтому
+    // ширину отрисовки задаёт ширина бокса, а не draw-width портрета (#1285).
+    // Ступень выбирает браузер по box-based `sizes` × собственный DPR; лестница
+    // ограничена потолком бокса (DPR 2).
     const { renderedWidth, maxCoverWidth } = resolveCoverSlotGeometry({
       slotWidth,
       slotHeight: coverSlotHeight,
       aspectRatio: coverAspectRatio,
+      // INV2-17: карточка кадрируется `cover`, кадр занимает весь бокс —
+      // ширину отрисовки задаёт бокс, а не draw-width портрета (#1285).
+      fit: 'cover',
     })
 
     return buildResponsiveImagePropsFromMedia(coverMedia, {
@@ -660,7 +662,11 @@ function TravelListItem({
       imageUrl={thumbUrl && !isLikelyWatermarked(thumbUrl) ? thumbUrl : null}
       onPress={handlePress}
       width={IS_WEB ? undefined : cardWidth}
-      mediaFit="contain"
+      // INV2-17: карточки маршрутов кадрируются `cover` с центр-кропом — иначе
+      // портретные/квадратные обложки в широком слоте оставляли letterbox-поля
+      // до ~28% ширины (плоская `dominant_color`-подложка, blur на web снят
+      // намеренно #1208). См. docs/RULES.md.
+      mediaFit="cover"
       visualVariant={visualVariant === 'home-featured' ? 'featured' : 'default'}
       heroTitleOverlay={false}
       testID={cardTestId}

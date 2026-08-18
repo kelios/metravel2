@@ -23,6 +23,7 @@ const {
   resolveIconFontHref,
   resolveHomeHeroAssetHref,
   injectTravelBootstrapData,
+  gateAppScriptsBehindHero,
   injectHiddenH1,
   injectBreadcrumbJsonLd,
   disableExpoRouterHydration,
@@ -292,6 +293,39 @@ describe('injectTravelBootstrapData', () => {
     expect(html).toContain('window.__metravelTravelPreloadPending=false');
     expect(html).toContain('window.__metravelTravelPreloadPromise=Promise.resolve(window.__metravelTravelPreload.data)');
     expect(html.indexOf('data-travel-preload-bootstrap="true"')).toBeLessThan(html.indexOf('<div id="root">'));
+  });
+
+  it('trims below-the-fold media manifests from the inline preload and flags it partial (#1479)', () => {
+    const bootstrapTravel = {
+      id: 42,
+      slug: 'hexenstieg',
+      name: 'Hexenstieg',
+      media: {
+        cover: { id: 1, dominant_color: '#abc', srcset: '/c.webp 720w' },
+        gallery: [{ id: 2, srcset: '/g.webp 720w' }],
+        address_images: { '9': { id: 3, srcset: '/a.webp 720w' } },
+        article_body: { images: [{ id: 4, srcset: '/b.webp 720w' }] },
+      },
+    };
+    const html = injectTravelBootstrapData(MINIMAL_BASE, bootstrapTravel, 'hexenstieg');
+
+    // Only the hero cover manifest is inlined; the heavy below-fold manifests drop.
+    expect(html).toContain('"mediaPartial":true');
+    expect(html).toContain('"cover":{"id":1');
+    expect(html).not.toContain('"gallery":[{"id":2');
+    expect(html).not.toContain('"address_images"');
+    expect(html).not.toContain('"article_body"');
+  });
+
+  it('keeps mediaPartial false and does not touch data when media has no below-fold manifests', () => {
+    const html = injectTravelBootstrapData(
+      MINIMAL_BASE,
+      { id: 42, name: 'Hexenstieg', media: { cover: { id: 1 } } },
+      'hexenstieg',
+    );
+
+    expect(html).toContain('"mediaPartial":false');
+    expect(html).toContain('"cover":{"id":1}');
   });
 
   it('replaces an existing bootstrap script instead of duplicating it', () => {
@@ -2108,5 +2142,136 @@ describe('#1394 build-time fetch of travel details', () => {
       await batchAsync([1, 2, 3, 4, 5], 2, async (item: number) => void seen.push(item));
       expect(seen).toHaveLength(5);
     });
+  });
+});
+
+describe('gateAppScriptsBehindHero (#1479)', () => {
+  const HERO_IMG =
+    '<div id="ssg-skeleton"><div class="ssg-travel-hero"><picture>' +
+    '<img class="ssg-travel-hero-img" data-ssg-lcp="true" src="/hero.webp?w=720" alt="x"></picture></div></div>';
+  const APP_SCRIPTS =
+    '<script src="/_expo/static/js/web/__expo-metro-runtime-a.js" defer></script>' +
+    '<script src="/_expo/static/js/web/__shared-1-b.js" defer></script>' +
+    '<script src="/_expo/static/js/web/entry-c.js" defer></script>';
+  const INLINE_KEEP =
+    '<script data-travel-preload-bootstrap="true">window.__x=1;</script>' +
+    '<script type="application/ld+json">{"@type":"Article"}</script>';
+  const BASE = `<html><body>${HERO_IMG}<div id="root"></div>${INLINE_KEEP}${APP_SCRIPTS}</body></html>`;
+
+  const controllerSource = (html: string) => {
+    const m = html.match(/<script data-app-script-gate="true">([\s\S]*?)<\/script>/);
+    return m ? m[1] : null;
+  };
+
+  it('strips only /_expo app <script> tags and keeps inline/jsonld scripts', () => {
+    const out = gateAppScriptsBehindHero(BASE);
+    expect(out).not.toMatch(/<script src="\/_expo\/static\/js\/web\/[^"]+"[^>]*><\/script>/);
+    expect(out).toContain('data-travel-preload-bootstrap="true"');
+    expect(out).toContain('application/ld+json');
+    expect(out).toContain('data-app-script-gate="true"');
+  });
+
+  it('preserves original script order in the injected list', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    const listMatch = src.match(/var S=(\[[^\]]*\])/)!;
+    const list = JSON.parse(listMatch[1].replace(/\\u003c/g, '<').replace(/\\u003e/g, '>'));
+    expect(list).toEqual([
+      '/_expo/static/js/web/__expo-metro-runtime-a.js',
+      '/_expo/static/js/web/__shared-1-b.js',
+      '/_expo/static/js/web/entry-c.js',
+    ]);
+  });
+
+  it('returns HTML unchanged when there are no /_expo app scripts', () => {
+    const noApp = `<html><body>${HERO_IMG}${INLINE_KEEP}</body></html>`;
+    expect(gateAppScriptsBehindHero(noApp)).toBe(noApp);
+  });
+
+  it('SAFETY: never strips scripts if the controller cannot be placed (no </body>)', () => {
+    const noBody = `<html>${HERO_IMG}${APP_SCRIPTS}</html>`;
+    const out = gateAppScriptsBehindHero(noBody);
+    // scripts must still be present — we never leave a page with no loader
+    expect(out).toBe(noBody);
+    expect(out).toContain('/_expo/static/js/web/entry-c.js');
+  });
+
+  // ---- runtime behaviour of the injected controller (mock DOM, no jsdom) ----
+  function runController(src: string, opts: { hero?: any; readyState?: string } = {}) {
+    const injected: string[] = [];
+    const asyncFlags: boolean[] = [];
+    const timeouts: Array<() => void> = [];
+    const docListeners: Record<string, Array<() => void>> = {};
+    const body = { appendChild: (el: any) => { injected.push(el.src); asyncFlags.push(el.async); } };
+    const document: any = {
+      readyState: opts.readyState || 'complete',
+      body,
+      createElement: () => ({ src: '', async: undefined }),
+      querySelector: (sel: string) => (sel === 'img[data-ssg-lcp]' ? (opts.hero ?? null) : null),
+      addEventListener: (ev: string, cb: () => void) => {
+        (docListeners[ev] = docListeners[ev] || []).push(cb);
+      },
+    };
+    const sandbox: any = {
+      document,
+      setTimeout: (cb: () => void) => { timeouts.push(cb); return 0 as any; },
+    };
+    new Function('document', 'setTimeout', src)(sandbox.document, sandbox.setTimeout);
+    return { injected, asyncFlags, timeouts, docListeners };
+  }
+
+  it('injects all scripts in order, async=false, once the hero image loads', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    const heroListeners: Record<string, () => void> = {};
+    const hero = {
+      complete: false,
+      naturalWidth: 0,
+      addEventListener: (ev: string, cb: () => void) => { heroListeners[ev] = cb; },
+    };
+    const r = runController(src, { hero });
+    expect(r.injected).toEqual([]); // gated: nothing yet
+    heroListeners.load(); // hero finishes downloading
+    expect(r.injected).toEqual([
+      '/_expo/static/js/web/__expo-metro-runtime-a.js',
+      '/_expo/static/js/web/__shared-1-b.js',
+      '/_expo/static/js/web/entry-c.js',
+    ]);
+    expect(r.asyncFlags).toEqual([false, false, false]);
+  });
+
+  it('injects immediately when the hero image is already complete', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    const hero = { complete: true, naturalWidth: 720, addEventListener: () => {} };
+    const r = runController(src, { hero });
+    expect(r.injected).toHaveLength(3);
+  });
+
+  it('injects immediately when there is no hero image (non-hero page safety)', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    const r = runController(src, { hero: null });
+    expect(r.injected).toHaveLength(3);
+  });
+
+  it('the hard timeout is a guaranteed fallback that boots the app', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    const hero = { complete: false, naturalWidth: 0, addEventListener: () => {} };
+    const r = runController(src, { hero });
+    expect(r.injected).toEqual([]); // still gated
+    r.timeouts.forEach((cb) => cb()); // fire the timeout
+    expect(r.injected).toHaveLength(3); // app booted
+  });
+
+  it('does not double-inject when multiple triggers fire', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    const heroListeners: Record<string, () => void> = {};
+    const hero = {
+      complete: false,
+      naturalWidth: 0,
+      addEventListener: (ev: string, cb: () => void) => { heroListeners[ev] = cb; },
+    };
+    const r = runController(src, { hero });
+    heroListeners.load();
+    r.timeouts.forEach((cb) => cb()); // late timeout must be a no-op
+    (r.docListeners.pointerdown || []).forEach((cb) => cb());
+    expect(r.injected).toHaveLength(3); // exactly once
   });
 });

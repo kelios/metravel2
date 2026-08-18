@@ -53,6 +53,18 @@ Android (§3.3) и правило quality-gate lock (§3, шаг 9).
     (самый приватный вариант), а не «Принять».
   - На мобильной ширине табы поездки — только иконки: искать по `aria-label`
     («Люди», «Экспорт»), поиск по тексту там ничего не найдёт.
+  - **База API — `https://metravel.by/api`, а не голый домен.**
+    `utils/resolveApiBaseUrl.ts` дописывает `/api` сам. POST на
+    `https://metravel.by/user/registration/` не ошибётся, а тихо вернёт HTTP 200 с
+    HTML SPA и ничего не создаст — легко принять за успех.
+  - **Регистрация на проде требует активации по письму.** `POST
+    /api/user/registration/` с `{username, email, password, confirmPassword}`
+    отдаёт 201 и реально заводит пользователя, но следующий `POST
+    /api/user/login/` возвращает 401 «Аккаунт не активирован. Воспользуйтесь
+    ссылкой активации в письме». Поэтому аккаунт на несуществующем домене
+    (`example.com`, `test@test.com`) для QA бесполезен: создать можно, войти —
+    нельзя. Для сценариев с логином нужен адрес, реально принимающий почту, либо
+    активация записи через Django admin — это действие владельца, а не агента.
 
 ### 3.2 Android device testing and builds
 
@@ -99,6 +111,50 @@ Android (§3.3) и правило quality-gate lock (§3, шаг 9).
 - Для active iOS work используй `ios-architect` → `ios-expert` →
   `ios-reviewer` → `ios-tester` → `ios-deployer`; backend Apple auth/AASA/push
   остаются linked `area=back` dependencies.
+
+### 3.2.2 iOS permission matrix и account-deletion QA
+
+Процедура для Done gate «permissions/App Privacy» (#1416). Порядок важен: каждый
+шаг снимает конкретный вид evidence, который приёмка требует отдельно.
+
+**Что где запрашивается.** Разрешение просится по действию, а не на старте:
+
+| Разрешение | Триггер в UI | Код |
+| --- | --- | --- |
+| Location When-In-Use | кнопка геопозиции на `/map`, квесты «рядом», навигатор точки квеста, route picker мастера | `components/MapPage/Map/useMapUserLocation.ts`, `screens/tabs/QuestsScreen.tsx`, `components/quests/QuestPointNavigator.native.tsx` |
+| Photo Library | выбор фото в мастере travel, галерее, редакторе статьи | `components/travel/PhotoUploadWithPreview.tsx`, `components/travel/ImageGalleryComponent.ios.tsx` |
+| Camera | «снять фото» на тех же экранах | `components/travel/PhotoUploadWithPreview.tsx` |
+| Notifications | **локальные**, не push: напоминание о незаконченном квесте и геофенсинг | `components/quests/useQuestReminder.native.ts`, `services/questGeofencing.native.ts` |
+
+Remote push на iOS в v1 не запрашивается вообще: `NativeAppRuntime.native.tsx`
+передаёт `autoRequest: false`, `requestPermission()` из UI не вызывает никто, а
+плагин уведомлений Android-only и `aps-environment` не синтезирует. Поэтому
+«notifications» в матрице проверяются через квестовый сценарий локальных
+уведомлений, и отсутствие APNs-промпта — ожидаемое поведение, а не дефект.
+
+**Сборка кандидата.** Собирать только из чистого дерева:
+
+- Если в рабочем дереве есть чужие незакоммиченные изменения (частая ситуация
+  при параллельных сессиях), собранный бинарник — это «HEAD + чужой WIP», и такое
+  evidence приёмка заворачивает. Делай `git worktree add --detach <scratch>/wt <HEAD>`,
+  симлинкуй `node_modules` из основного дерева (13 ГБ, копировать нельзя) и
+  копируй `.env.prod` в `<worktree>/.env` — иначе сборка уйдёт на dev-API.
+- `pod install` в worktree падает без UTF-8 локали:
+  `Unicode Normalization not appropriate for ASCII-8BIT`. Запускать как
+  `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install`.
+- Не проверяй результат командой вида `pod install | tail`: код возврата тогда
+  принадлежит `tail`, и упавшая установка выглядит как `exit 0`.
+
+**Fresh install обязателен.** Разрешения на физическом устройстве не
+сбрасываются командой — `simctl privacy` работает только на симуляторе. Чистое
+состояние даёт только удаление приложения и повторная установка, поэтому матрицу
+deny → allow → Settings → retry снимают на свежепоставленном билде.
+
+**Account deletion.** Кнопка в `components/settings/AccountSection.tsx`, обработка
+в `components/screens/settings/SettingsScreen.tsx`. Нужен аккаунт, который не
+жалко удалить и которым можно войти — см. ограничение активации в §3.1.1: аккаунт
+на несуществующем домене создаётся, но не логинится, поэтому для этого сценария
+не годится.
 
 ### 3.3.1 Production-target validation and task closure
 

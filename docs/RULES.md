@@ -492,6 +492,7 @@ npx serve dist/prod -l 3000 -s
 - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
 - Images must preserve original aspect ratio (use `contain`); the unused letterbox area is filled by `dominant_color` on web and by the Expo Image blur layer on native.
+  - Exception (INV2-17, 2026-08-18): travel **route cards** (`TravelListItem` → `UnifiedTravelCard`, catalog + home sections) crop with `cover` (center) instead. `contain` in a wide card slot left flat `dominant_color` bars up to ~28% of the width on portrait/square covers (the web blur backdrop was removed by #1208, so the gutter reads as a flat colour). Under `cover` there is no persistent letterbox; the `dominant_color`/blurhash placeholder stays only as the pre-decode loading fill. Sizing follows the box width, not the `contain` draw-width (`resolveCoverSlotGeometry({ fit: 'cover' })`, superseding the #1285 draw-width optimization for these cards). Hero/slider, rich-text description media, map previews, popups and quest covers keep `contain` + `dominant_color`.
 - The web letterbox fill has exactly one delivery path — `utils/mediaPlaceholderIndex.ts`
   (#1208/#1264, 2026-08-05). Change fill behaviour there and nowhere else. Two stages, both
   inside that module:

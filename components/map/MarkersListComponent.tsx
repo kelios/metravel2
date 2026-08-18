@@ -466,30 +466,30 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                             {hasImage && <span style={styles.badgeMuted}>{i18nT('map:components.map.MarkersListComponent.est_foto_6531b724')}</span>}
                                         </div>
                                     </div>
-                                    <div style={styles.actions}>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onEdit(index);
-                                            }}
-                                            style={styles.editButton}
-                                            type="button"
-                                        >
-                                            <Feather name="edit-2" size={13} color={colors.primaryDark} />
-                                            <span>{i18nT('map:components.map.MarkersListComponent.redaktirovat_6de468c0')}</span>
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onRemove(index);
-                                            }}
-                                            style={styles.deleteButton}
-                                            type="button"
-                                        >
-                                            <Feather name="trash-2" size={13} color={colors.dangerDark} />
-                                            <span>{i18nT('map:components.map.MarkersListComponent.udalit_316dc2c9')}</span>
-                                        </button>
-                                    </div>
+                                </div>
+                                <div style={styles.actions}>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEdit(index);
+                                        }}
+                                        style={styles.editButton}
+                                        type="button"
+                                    >
+                                        <Feather name="edit-2" size={13} color={colors.primaryDark} />
+                                        <span>{i18nT('map:components.map.MarkersListComponent.redaktirovat_6de468c0')}</span>
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRemove(index);
+                                        }}
+                                        style={styles.deleteButton}
+                                        type="button"
+                                    >
+                                        <Feather name="trash-2" size={13} color={colors.dangerDark} />
+                                        <span>{i18nT('map:components.map.MarkersListComponent.udalit_316dc2c9')}</span>
+                                    </button>
                                 </div>
                             </div>
                         );

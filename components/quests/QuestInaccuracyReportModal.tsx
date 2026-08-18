@@ -6,7 +6,18 @@
 // контент квеста нет, а заводить полдюжины полей ради него незачем — админу
 // нужны те же три поля плюс адрес страницы, который мы дописываем сами.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
@@ -114,107 +125,119 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <Pressable
-        style={styles.overlay}
-        onPress={handleClose}
-        accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.close')}
+      {/* Modal — отдельное окно: ни `softwareKeyboardLayoutMode` из app.json, ни
+          useQuestKeyboardReveal визарда на него не действуют, поэтому на iOS
+          клавиатура закрывала бы поле «Что не так» и кнопку отправки. Тот же
+          приём, что у формы обратной связи на /contact. */}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoider}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable
-          style={styles.sheet}
-          onPress={(event) => event.stopPropagation()}
-          testID="quest-inaccuracy-report-modal"
+          style={styles.overlay}
+          onPress={handleClose}
+          accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.close')}
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {i18nT('quests:components.quests.QuestInaccuracyReportModal.title')}
-            </Text>
-            <Pressable
-              onPress={handleClose}
-              hitSlop={10}
-              style={styles.closeButton}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.close')}
-              testID="quest-inaccuracy-report-close"
-            >
-              <Feather name="x" size={20} color={colors.text} />
-            </Pressable>
-          </View>
-
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
-            <Text style={styles.questLine} numberOfLines={2}>
-              {i18nT('quests:components.quests.QuestInaccuracyReportModal.questLine', { value1: questTitle })}
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder={i18nT('quests:components.quests.QuestInaccuracyReportModal.namePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              autoComplete="name"
-              accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.namePlaceholder')}
-              testID="quest-inaccuracy-report-name"
-            />
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder={i18nT('quests:components.quests.QuestInaccuracyReportModal.emailPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              keyboardType="email-address"
-              autoComplete="email"
-              autoCapitalize="none"
-              accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.emailPlaceholder')}
-              testID="quest-inaccuracy-report-email"
-            />
-            <TextInput
-              style={[styles.input, styles.textarea]}
-              value={message}
-              onChangeText={setMessage}
-              placeholder={i18nT('quests:components.quests.QuestInaccuracyReportModal.messagePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.messagePlaceholder')}
-              testID="quest-inaccuracy-report-message"
-            />
-
-            <ConsentCheckbox
-              checked={agree}
-              onToggle={setAgree}
-              testID="quest-inaccuracy-report-consent"
-              accessibilityLabel={i18nT('home:components.about.ContactForm.soglasen_na_obrabotku_personalnyh_dannyh_2823c5ba')}
-            >
-              {i18nT('home:components.about.ContactForm.soglasen_na_na_obrabotku_personalnyh_dannyh_ffa70353')}
-            </ConsentCheckbox>
-
-            {error ? (
-              <Text style={styles.error} testID="quest-inaccuracy-report-error">
-                {error}
+          <Pressable
+            style={styles.sheet}
+            onPress={(event) => event.stopPropagation()}
+            testID="quest-inaccuracy-report-modal"
+          >
+            <View style={styles.header}>
+              <Text style={styles.title}>
+                {i18nT('quests:components.quests.QuestInaccuracyReportModal.title')}
               </Text>
-            ) : null}
-
-            <View style={styles.actions}>
-              {sending ? <ActivityIndicator color={colors.primaryDark} /> : null}
-              <Button
-                label={i18nT('quests:components.quests.QuestInaccuracyReportModal.submit')}
-                onPress={handleSubmit}
-                variant="primary"
-                size="md"
-                disabled={sending}
-                testID="quest-inaccuracy-report-submit"
-              />
+              <Pressable
+                onPress={handleClose}
+                hitSlop={10}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.close')}
+                testID="quest-inaccuracy-report-close"
+              >
+                <Feather name="x" size={20} color={colors.text} />
+              </Pressable>
             </View>
-          </ScrollView>
+
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
+              <Text style={styles.questLine} numberOfLines={2}>
+                {i18nT('quests:components.quests.QuestInaccuracyReportModal.questLine', { value1: questTitle })}
+              </Text>
+
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder={i18nT('quests:components.quests.QuestInaccuracyReportModal.namePlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                autoComplete="name"
+                accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.namePlaceholder')}
+                testID="quest-inaccuracy-report-name"
+              />
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder={i18nT('quests:components.quests.QuestInaccuracyReportModal.emailPlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                keyboardType="email-address"
+                autoComplete="email"
+                autoCapitalize="none"
+                accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.emailPlaceholder')}
+                testID="quest-inaccuracy-report-email"
+              />
+              <TextInput
+                style={[styles.input, styles.textarea]}
+                value={message}
+                onChangeText={setMessage}
+                placeholder={i18nT('quests:components.quests.QuestInaccuracyReportModal.messagePlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.messagePlaceholder')}
+                testID="quest-inaccuracy-report-message"
+              />
+
+              <ConsentCheckbox
+                checked={agree}
+                onToggle={setAgree}
+                testID="quest-inaccuracy-report-consent"
+                accessibilityLabel={i18nT('home:components.about.ContactForm.soglasen_na_obrabotku_personalnyh_dannyh_2823c5ba')}
+              >
+                {i18nT('home:components.about.ContactForm.soglasen_na_na_obrabotku_personalnyh_dannyh_ffa70353')}
+              </ConsentCheckbox>
+
+              {error ? (
+                <Text style={styles.error} testID="quest-inaccuracy-report-error">
+                  {error}
+                </Text>
+              ) : null}
+
+              <View style={styles.actions}>
+                {sending ? <ActivityIndicator color={colors.primaryDark} /> : null}
+                <Button
+                  label={i18nT('quests:components.quests.QuestInaccuracyReportModal.submit')}
+                  onPress={handleSubmit}
+                  variant="primary"
+                  size="md"
+                  disabled={sending}
+                  testID="quest-inaccuracy-report-submit"
+                />
+              </View>
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
 
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
+    keyboardAvoider: {
+      flex: 1,
+    },
     overlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.55)',
@@ -222,9 +245,11 @@ const createStyles = (colors: ThemedColors) =>
       justifyContent: 'center',
       padding: spacing.md,
     },
+    // Метрики шита держим едиными со второй модалкой квеста —
+    // `QuestReviewsModal`: игрок открывает обе с одного экрана.
     sheet: {
       width: '100%',
-      maxWidth: 480,
+      maxWidth: 520,
       maxHeight: '85%',
       borderRadius: radii.lg,
       backgroundColor: colors.surface,
@@ -243,8 +268,8 @@ const createStyles = (colors: ThemedColors) =>
     },
     title: {
       flex: 1,
-      fontSize: 17,
-      fontWeight: '800',
+      fontSize: 18,
+      fontWeight: '700',
       color: colors.text,
     },
     closeButton: {
@@ -252,10 +277,15 @@ const createStyles = (colors: ThemedColors) =>
       height: 44,
       minWidth: 44,
       minHeight: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
     },
     body: {
+      // `flexGrow`, а не `flex`: когда клавиатура сжимает шит, контент должен
+      // стать прокручиваемым, а не ужаться вместе с ним.
+      flexGrow: 1,
       padding: spacing.md,
       gap: spacing.sm,
     },

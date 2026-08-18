@@ -115,6 +115,10 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     const [renderWidth, setRenderWidth] = useState<number | null>(null);
     const lastRenderedWidthRef = useRef<number | null>(null);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
+    // Full-width wrapper used only to measure the available width. The GSI target
+    // is a fit-content child so its container always equals the rendered button
+    // (no internal overflow/clip when the localized label exceeds a narrow column).
+    const measureRef = useRef<HTMLDivElement | null>(null);
     // Latest-рефы на колбэки: родитель часто передаёт инлайн onSuccess/onError, из-за
     // чего init-эффект иначе пере-вызывал google.accounts.id.initialize на каждый рендер.
     const onSuccessRef = useRef(onSuccess);
@@ -245,13 +249,20 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         if (!googleAvailability.enabled || !isGoogleLoaded) return;
-        const host = buttonContainerRef.current;
+        const host = measureRef.current;
         if (!host) return;
 
         const clampWidth = (w: number) => Math.max(200, Math.min(400, Math.round(w)));
+        // GSI writes the requested width onto its container, then renders the
+        // button at its own label-driven minimum (~300px). Requesting less makes
+        // the container narrower than the button and clips it. Floor the request
+        // so the container is never smaller than the button; the small overflow
+        // beyond a narrow mobile column sits inside the card padding, uncut.
+        const GSI_MIN_BUTTON_WIDTH = 320;
         const measure = () => {
             const width = host.clientWidth;
-            setRenderWidth(width > 0 ? clampWidth(width) : 300);
+            const target = Math.max(width > 0 ? width : GSI_MIN_BUTTON_WIDTH, GSI_MIN_BUTTON_WIDTH);
+            setRenderWidth(clampWidth(target));
         };
         measure();
 
@@ -313,15 +324,34 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
                 </View>
             )}
             <div
-                ref={buttonContainerRef}
+                ref={measureRef}
                 style={{
                     width: '100%',
                     minHeight: 44,
-                    display: isGoogleLoaded && !shouldShowFallback ? 'block' : 'none',
+                    // Center the GSI widget within the available width. When its
+                    // localized label needs more than a narrow mobile column, the
+                    // fit-content child below keeps the button intact and lets the
+                    // few px of overflow sit inside the card padding, not clipped.
+                    display: isGoogleLoaded && !shouldShowFallback ? 'flex' : 'none',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    overflow: 'visible',
                     pointerEvents: disabled ? 'none' : 'auto',
                     opacity: disabled ? 0.6 : 1,
                 }}
-            />
+            >
+                <div
+                    ref={buttonContainerRef}
+                    style={{
+                        // Explicit width so GSI's inner wrapper (width:100%) resolves
+                        // to a box at least as wide as the button — never narrower,
+                        // which is what clips the rounded edges into two lines.
+                        width: renderWidth ?? undefined,
+                        flexShrink: 0,
+                        overflow: 'visible',
+                    }}
+                />
+            </div>
         </View>
     );
 }
@@ -470,6 +500,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...Platform.select({
             web: {
                 width: '100%',
+                // Let the GSI widget render its full rounded button even when its
+                // min content width slightly exceeds a narrow mobile container.
+                overflow: 'visible',
             },
         }),
     },

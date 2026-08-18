@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_ENABLE_GOOGLE_SIGN_IN_LOCAL=true npx expo start --web --clear --port 8115"
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_ENABLE_GOOGLE_SIGN_IN_LOCAL=true npx expo start --web --port 8115"
       ],
       "port": 8115,
       "autoPort": false
@@ -155,16 +155,6 @@
         "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8099"
       ],
       "port": 8099,
-      "autoPort": false
-    },
-    {
-      "name": "INV2-05 Verify 8120",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": [
-        "-c",
-        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8120"
-      ],
-      "port": 8120,
       "autoPort": false
     },
     {

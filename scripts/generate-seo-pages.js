@@ -1392,10 +1392,35 @@ function injectHomeHeroPreload(baseHtml, href) {
 function injectTravelBootstrapData(baseHtml, travel, routeKey) {
   if (!travel || typeof travel !== 'object') return baseHtml;
 
+  // #1479: The full media manifest is ~232KB of the inline preload blob and is
+  // entirely below the fold (article_body / address_images / gallery). It
+  // competes with the hero webp for pipe bandwidth on throttled mobile links
+  // (85% of LCP time is hero DOWNLOAD) and inflates main-thread JSON parse
+  // (TBT). The first screen / LCP needs only `media.cover`. Trim the inline
+  // manifest to `{ cover }`; below-fold images fall back to derived client URLs
+  // (utils/travelMediaVariants → buildResponsiveImageProps) until the app's
+  // background query backfills the full media. `mediaPartial` tells the runtime
+  // the preload is incomplete so it forces one background refetch on mount.
+  const fullMedia =
+    travel.media && typeof travel.media === 'object' ? travel.media : null;
+  const mediaPartial = Boolean(
+    fullMedia &&
+      (fullMedia.gallery != null ||
+        fullMedia.address_images != null ||
+        fullMedia.article_body != null)
+  );
+  const bootstrapData = mediaPartial
+    ? {
+        ...travel,
+        media: fullMedia.cover != null ? { cover: fullMedia.cover } : null,
+      }
+    : travel;
+
   const serialized = JSON.stringify({
-    data: travel,
+    data: bootstrapData,
     slug: String(routeKey || '').trim(),
     isId: false,
+    mediaPartial,
   })
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
@@ -1421,6 +1446,55 @@ function injectTravelBootstrapData(baseHtml, travel, routeKey) {
   }
 
   return applyHtmlFragment(baseHtml, /<body[^>]*>/i, bootstrapScript, 'after');
+}
+
+/**
+ * #1479: Gate the deferred Expo app <script> tags behind the SSG hero image load
+ * (travel pages only).
+ *
+ * The SSG hero <img data-ssg-lcp> is the LCP element, and 85% of its LCP time is
+ * DOWNLOAD — a ~115KB webp choked because ~960KB of deferred JS shares the
+ * throttled mobile pipe (measured: hero starts 916ms, finishes 6157ms). Removing
+ * the static `<script defer>` tags and re-injecting them (in original order,
+ * async=false so execution order is preserved) only AFTER the hero image has
+ * loaded lets the hero download on a near-empty pipe, collapsing LCP toward FCP.
+ *
+ * Bulletproof: the app ALWAYS boots. Scripts inject on the first of — hero
+ * `load`/`error`, a hard timeout, or first user interaction — and immediately if
+ * there is no hero image at all. Expo-router hydration is already disabled on
+ * these pages (fresh mount into #root), so this only delays the mount while the
+ * SSG hero stays on screen as the LCP; it does not change first-paint output.
+ *
+ * Safety: if the inline controller cannot be placed (no </body>), the original
+ * HTML is returned UNTOUCHED — scripts are never stripped without a loader.
+ */
+function gateAppScriptsBehindHero(baseHtml, options = {}) {
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 2500;
+  // Match only Expo app chunks (…/_expo/static/js/web/*.js), any attribute order.
+  const scriptRe = /<script\b[^>]*\bsrc="(\/_expo\/static\/js\/web\/[^"]+)"[^>]*><\/script>\s*/gi;
+
+  const srcs = [];
+  let m;
+  while ((m = scriptRe.exec(baseHtml)) !== null) srcs.push(m[1]);
+  if (srcs.length === 0) return baseHtml;
+
+  const stripped = baseHtml.replace(scriptRe, '');
+  const list = JSON.stringify(srcs).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+  const controller =
+    `<script data-app-script-gate="true">` +
+    `(function(){var S=${list};var f=false;` +
+    `function go(){if(f)return;f=true;for(var i=0;i<S.length;i++){var e=document.createElement('script');e.src=S[i];e.async=false;document.body.appendChild(e);}}` +
+    `function arm(){var img=document.querySelector('img[data-ssg-lcp]');if(!img){go();return;}if(img.complete&&img.naturalWidth>0){go();return;}img.addEventListener('load',go,{once:true});img.addEventListener('error',go,{once:true});}` +
+    `setTimeout(go,${timeoutMs});` +
+    `['pointerdown','keydown','touchstart'].forEach(function(ev){document.addEventListener(ev,go,{once:true,passive:true});});` +
+    `if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',arm,{once:true});}else{arm();}` +
+    `})();` +
+    `</script>`;
+
+  const gated = applyHtmlFragment(stripped, '</body>', controller, 'before');
+  // Safety guard: only accept the transform if the controller was actually placed.
+  if (gated.indexOf('data-app-script-gate="true"') === -1) return baseHtml;
+  return gated;
 }
 
 function injectHiddenH1(baseHtml, headingText) {
@@ -3282,8 +3356,10 @@ async function main() {
       const htmlWithIconFont = injectIconFontPreload(htmlWithSkeleton, iconFontHref);
       const htmlWithQuestPromo = injectTravelQuestPromoSection(htmlWithIconFont, questMatches);
       const htmlWithRegisterCta = injectTravelRegisterCtaSection(htmlWithQuestPromo);
-      const finalTravelHtml = disableExpoRouterHydration(
-        injectHiddenH1(htmlWithRegisterCta, name || routeKey)
+      const finalTravelHtml = gateAppScriptsBehindHero(
+        disableExpoRouterHydration(
+          injectHiddenH1(htmlWithRegisterCta, name || routeKey)
+        )
       );
 
       // Write both explicit-file and directory-index variants.
@@ -3616,6 +3692,7 @@ if (typeof module !== 'undefined' && module.exports) {
     resolveIconFontHref,
     resolveHomeHeroAssetHref,
     injectTravelBootstrapData,
+    gateAppScriptsBehindHero,
     injectHiddenH1,
     disableExpoRouterHydration,
     injectJsonLd,
