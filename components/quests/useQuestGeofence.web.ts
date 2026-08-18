@@ -14,7 +14,7 @@ type QuestGeofenceParams = {
   title: string;
   steps: QuestStepWithCoords[];
   answers: Record<string, string>;
-  allCompleted: boolean;
+  questFinished: boolean;
 };
 
 export function useQuestGeofence(_params: QuestGeofenceParams): void {

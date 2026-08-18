@@ -206,6 +206,12 @@ backend upload/persistence scope. Отменённая metallic-medal prompt-с�
 
 ## 8. Фронтенд
 
+> Актуальная карта фронта — `docs/features/achievements.md`. Этот раздел отстал:
+> в нём нет контуров rare awards, place-first badges и gamification-прогрессии,
+> а точки входа описаны по старой структуре (сейчас профиль строится через
+> `ProfileOverviewTab` → `AwardsHub`, а `AchievementsSection` рендерится внутри
+> него в режиме `bare`). Контракты DTO/API ниже остаются актуальными.
+
 ### API-слой
 - `api/achievements.ts` — стабильный facade типов, normalizers и requests.
 - `api/achievementsTypes.ts`, `api/achievementsNormalizers.ts`,

@@ -14,7 +14,7 @@ import type {
 } from '@/api/plannedTrips';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { selectPlural, translate as i18nT } from '@/i18n'
-import { formatNumber } from '@/i18n/format'
+import { formatDistance as formatDistanceKm } from '@/utils/distanceCalculator'
 import { formatTripDateLong, formatTripDateTimeLong } from '@/utils/tripDateTime'
 
 
@@ -114,11 +114,13 @@ export function rsvpColor(rsvp: TripRsvp, colors: ThemedColors): string {
   }
 }
 
-/** «12,4 км» / «252 км». */
+/**
+ * «12,4 км» / «252 км» / «2 800 км» — числом занимается общий форматтер
+ * (#1440), здесь остаётся только прочерк для пустого маршрута.
+ */
 export function formatDistance(km: number): string {
   if (km <= 0) return '—';
-  if (km < 10) return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_km_97fd3744', { value1: formatNumber(km, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) });
-  return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_km_97fd3744', { value1: Math.round(km) });
+  return formatDistanceKm(km);
 }
 
 /** «1 ч 45 мин» / «36 мин». */

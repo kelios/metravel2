@@ -2,7 +2,7 @@ import type { Travel } from '@/types/types';
 import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
 import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, normalizeSeoLead } from '@/utils/seoText'
 import { normalizeOgImageUrl } from '@/utils/seo'
-import { normalizeRouteSegment } from '@/utils/routePaths'
+import { buildTravelPath as buildRouteTravelPath } from '@/utils/routePaths'
 
 
 const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');
@@ -16,18 +16,21 @@ const TRAVEL_SLUG_STOP_WORDS = new Set(['i', 'k', 'ko', 'na', 'o', 'ot', 'po', '
  * Без encodeURIComponent — для совместимости с существующими прямыми
  * использованиями в hero/sticky-actions.
  *
- * #1438: пригодность сегмента проверяет общий гард `normalizeRouteSegment`, а
- * не собственное `key !== ''`. Раньше две одноимённые функции (`utils/routePaths`
- * и эта) расходились контрактом, и здесь литерал вроде `id: 'null'` проходил
- * насквозь — share-ссылка и запись избранного получали адрес в 404.
+ * #1438: это тонкая обёртка над `utils/routePaths.buildTravelPath`, а не вторая
+ * реализация. Раньше две одноимённые функции расходились контрактом: здесь
+ * пригодность сегмента проверялась собственным `key !== ''`, поэтому литералы
+ * (`'null'`) и нулевой id проходили насквозь — share-ссылка и запись избранного
+ * получали адрес в 404.
  */
 export function buildTravelPath(
   travel: Pick<Travel, 'slug' | 'id'> | null | undefined,
 ): string | null {
   if (!travel) return null;
   const slug = typeof travel.slug === 'string' ? travel.slug : '';
-  const key = normalizeRouteSegment(slug) ?? normalizeRouteSegment(travel.id);
-  return key ? `/travels/${key}` : null;
+  return (
+    buildRouteTravelPath(slug, { encode: false }) ??
+    buildRouteTravelPath(travel.id, { encode: false })
+  );
 }
 
 function getTravelCanonicalUrl(travel: Travel | null | undefined): string | null {

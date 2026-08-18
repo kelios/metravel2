@@ -51,9 +51,41 @@ export function buildQuestPath(cityId: unknown, questId: unknown): string | null
  * другого нет. Нулевой и отрицательный id тоже непригодны: `/travels/0` — такая
  * же несуществующая страница, как `/travels/null`.
  */
-export function buildTravelPath(slugOrId: unknown): string | null {
+export function buildTravelPath(slugOrId: unknown, options?: { encode?: boolean }): string | null {
   const segment = normalizeRouteSegment(slugOrId);
   if (!segment) return null;
   if (/^-?\d+$/.test(segment) && Number(segment) <= 0) return null;
-  return `/travels/${encodeURIComponent(segment)}`;
+  return `/travels/${options?.encode === false ? segment : encodeURIComponent(segment)}`;
+}
+
+/**
+ * Проверка готового адреса, пришедшего с бэкенда (поле `url` карточки), перед
+ * тем как отдать его в `href` или в переход.
+ *
+ * Возвращает адрес как есть либо `null`, если это наша travel-страница с
+ * непригодным сегментом (`/travels/null`, `/travels/undefined`, `/travels/0`).
+ *
+ * #1438: поле `url` уходило в разметку без проверки, и одна запись с таким
+ * адресом делала кликабельной ссылку в 404. Проверяем только относительные
+ * пути: абсолютный адрес — это внешняя ссылка, наш роутинг её не обслуживает,
+ * и подменять её собственным `/travels/<id>` нельзя.
+ */
+export function sanitizeTravelHref(href: unknown): string | null {
+  const raw = String(href ?? '').trim();
+  if (!raw) return null;
+  if (!raw.startsWith('/') || raw.startsWith('//')) return raw;
+
+  const pathname = raw.split('?')[0].split('#')[0];
+  const match = pathname.match(/^\/travels\/([^/]+)/);
+  if (!match) return raw;
+
+  return buildTravelPath(decodeSegmentSafely(match[1])) === null ? null : raw;
+}
+
+function decodeSegmentSafely(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
 }

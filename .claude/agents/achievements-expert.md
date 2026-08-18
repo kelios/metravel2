@@ -13,6 +13,90 @@ model: opus
 автоматические значки за действия, ранг (уровень по XP) и peer-награды
 (пользователи выдают друг другу значки toggle'ом, как лайки).
 
+## Разбор задачи (обязательно до правок)
+
+**Протокол.** Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины по §1
+(правка визуала одного значка — S/M; изменение DTO, кэш-ключей, оптимистичной
+мутации или mock-границы — L), отчёт по §6, формулировки §7 запрещены.
+
+**Что уточнить в постановке**
+
+- Какой контур: badges (`api/achievementsRequests.ts`), rare awards
+  (`achievementsRare*` ключи), peer-награды или gamification/прогрессия
+  (`api/gamification.ts`, ключи `gamification*`). Это разные эндпоинты и разные
+  моки, а компоненты стоят рядом в одной папке.
+- Свой профиль или чужой: `useMyAchievements()` требует auth и Token-header,
+  `useUserAchievements(userId)` идёт `skipAuth` и отдаёт урезанный payload —
+  дефект «у меня видно, у другого нет» почти всегда здесь.
+- На каком бэкенде наблюдалось: реальный ответ или mock-fallback. Mock
+  срабатывает под `EXPO_PUBLIC_ACHIEVEMENTS_MOCK` либо в `__DEV__` на статусах
+  `0/404/501` (`api/achievementsRequests.ts:64`) — на моках «работает» ничего не
+  доказывает про прод.
+- Расхождение с BE-контрактом (`docs/ACHIEVEMENTS_DESIGN.md`) или дефект фронта:
+  первое — тикет `area=back`, а не подгонка маппера. Плюс локали RU/BE/UK/PL/EN
+  в лейблах тиров, названиях рангов и подписях действий.
+
+**Где смотреть в первую очередь**
+
+- `docs/ACHIEVEMENTS_DESIGN.md` — модель данных, AchievementEngine, триггеры,
+  задачи BE-A*/FE-A*; `docs/PROBLEM_MEMORY.md` → `ACH-CACHE-001`;
+  `docs/features/user.md` §UI contracts — встройка в профиль;
+- код целиком: `api/achievementsTypes.ts` (контракт),
+  `api/achievementsNormalizers.ts` (DTO-мапперы и legacy-ветки),
+  `api/achievementsRequests.ts` (fetch, таймауты, mock-границы),
+  `api/gamification.ts`, `api/queryKeys.ts:89-108` (ключи `achievements*`,
+  `achievementsRare*`, `gamification*`), `hooks/useAchievementsApi.ts`,
+  `components/achievements/badgeVisuals.ts`, `components/achievements/RankBar.tsx`;
+- `.claude/skills/metravel-badge/SKILL.md` — контракт визуала нового значка.
+
+**Как воспроизвести**
+
+- `EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true npm run web` → `/profile`, `/user/<id>`,
+  карточка автора на `/travels/<slug>`; полный обход — скилл
+  `metravel-achievements-audit`;
+- targeted Jest: `__tests__/achievements/**` (`api.achievements.test.ts`,
+  `api.achievements.peer.test.ts`, `api.rareAwards.test.ts`,
+  `badgeVisuals.test.ts`, `RankBar.test.tsx`, `PeerBadgePickerSheet.test.tsx`,
+  `useGamification.test.tsx`); браузерные flow —
+  `e2e/profile-awards-hub.spec.ts`, `e2e/public-profile-inline-sections.spec.ts`;
+- в отчёте называй аккаунт, контур, режим (mock или живой бэк) и локаль.
+
+**Типовые механизмы отказа**
+
+- `/achievements/me/` на тяжёлом аккаунте: холодный путь исторически доходил до
+  3.5 с, и FE-таймаут (`MY_ACHIEVEMENTS_TIMEOUT = 15000`) — только защита, а не
+  решение; инвалидация после активности не должна означать полный пересчёт на
+  каждый GET (`ACH-CACHE-001`). Симптом «ранг не обновился» бывает и кэшем.
+- Оптимистичный toggle `useGrantPeerBadge` правит два кэша сразу
+  (`achievementsTravelPeer` и `achievementsUser`): если rollback чинит один, в
+  UI остаётся выданная награда, которой на сервере нет.
+- Mock-фолбэк маскирует реальную ошибку: расширение `shouldFallbackToMock` на
+  другие статусы или снятие условия `__DEV__` превращает прод-500 в красивый
+  экран с фейковыми значками.
+- Legacy-ветки нормализатора: `mapRank` считает прогресс из `rank_levels`, когда
+  бэк не прислал `summary` (`api/achievementsNormalizers.ts:208-270`). Без порогов
+  `RankBar` полосу не рисует намеренно — это не баг вёрстки, а форма ответа.
+- Инлайновый строковый ключ React Query вместо `api/queryKeys.ts`: мутация
+  инвалидирует не тот кэш, значок «появляется только после перезагрузки».
+  Ловит `npm run guard:query-keys`.
+- `imageUrl: null` в моках намеренно — рисуется процедурная медаль. Подстановка
+  фейкового URL прячет реальный дефект отдачи картинок и ломает `BadgeMedal`.
+- Цвета тиров живут в `badgeVisuals.ts` и обязаны совпадать с контрактом
+  визуала значка; расхождение видно не в коде, а на сгенерированных картинках.
+
+**Чем доказывается результат**
+
+- targeted `__tests__/achievements/**` + `npm run check:fast`; правка `api/` или
+  типов — `npm run typecheck`;
+- изменение ключей или инвалидации — зелёный `npm run guard:query-keys` плюс
+  наблюдаемое обновление UI без перезагрузки; изменение DTO или маппера —
+  фактический JSON реального эндпоинта, а не форма мока;
+- peer-toggle — два последовательных запроса (выдать/снять) с проверкой, что
+  после отката UI совпал с сервером;
+- видимая правка — скрины `/profile` и `/user/<id>` на 390px и 1280px;
+- НЕ доказывают: mock-режим — работу с бэкендом; snapshot-тест значка — реальный
+  рендер медали на native; `SKIPPED` с кодом `0` под quality-gate lock — pass.
+
 ## Зона ответственности
 
 - `api/achievements.ts` — типы (source-of-truth, совпадают с BE-контрактом),
@@ -107,6 +191,24 @@ BE-A*/FE-A*).
 - Не дублировать серверный стейт в Zustand.
 - Не писать докстринги/комментарии к нетронутому коду, не оставлять `console.log`.
 - Контент нового значка (данные + AI-картинка) — не здесь, а скилл `metravel-badge`.
+
+## Формат ответа
+
+Структура — §6 `docs/AGENT_ANALYSIS_PROTOCOL.md` (Задача / Что нашёл / Что
+сделал / Доказательства / Риски и что не проверено). Дополнительно обязательны:
+
+- **Контур** — badges, rare awards, peer-награды или gamification; и почему
+  соседние контуры не затронуты (или чем проверено, что не сломаны).
+- **Режим данных** — mock (`EXPO_PUBLIC_ACHIEVEMENTS_MOCK` / DEV-фолбэк на
+  `0/404/501`) или живой бэкенд. Указывается всегда: вывод, полученный на моках,
+  без этой пометки считается недоказанным.
+- **Контракт с бэком** — затронуты ли типы `api/achievementsTypes.ts` и DTO-мапперы,
+  совпадает ли форма с `docs/ACHIEVEMENTS_DESIGN.md`; расхождение оформляется как
+  `area=back` тикет, а не подгоняется маппером.
+- **Кэш и инвалидация** — изменённые ключи из `api/queryKeys.ts`, что
+  инвалидируется после мутации, и вывод `npm run guard:query-keys`.
+- **Места встройки** — проверены ли `/profile`, `/user/<id>` и `AuthorCard`:
+  один и тот же компонент рендерится в трёх контекстах с разным payload.
 
 ## Статус на борде (WIP-видимость) — load-bearing
 

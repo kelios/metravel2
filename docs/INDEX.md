@@ -13,6 +13,9 @@
 - `docs/ARCHITECTURE.md` — текущая архитектура и runtime boundaries;
 - `docs/RULES.md` — обязательные project policies;
 - `docs/CODEX.md` — AI triage, skills и validation matrix;
+- `docs/AGENT_ANALYSIS_PROTOCOL.md` — обязательная глубина разбора задачи для
+  агентов: уровни, постановка, механизм отказа, план, доказательства, формат
+  отчёта и стоп-слова;
 - `docs/CODEX_SKILLS.md` — каталог `$metravel-*` skills для Codex (вынесен из
   `AGENTS.md` §2; читать при работе в Codex или правке набора skills);
 - `docs/WORKFLOW_OPERATIONS.md` — операционные протоколы `AGENTS.md` §3:
@@ -44,6 +47,15 @@
 - `docs/features/calendar.md` — travel status calendar;
 - `docs/features/offline.md` — offline-first shell, package storage, UX states
   and paired mobile-web/Android validation contract;
+- `docs/features/quests.md` — квесты: список, лендинг города, прохождение,
+  правила ответа, офлайн и печать;
+- `docs/features/achievements.md` — достижения: значки, ранги, XP, peer- и
+  редкие награды, gamification-прогрессия;
+- `docs/features/trips.md` — совместные поездки, заявки и планировщик маршрута;
+- `docs/features/article.md` — rich-text тело статьи: редактор, санитизация,
+  черновики, SSG-подача и SEO;
+- `docs/features/export.md` — PDF-книга, печатная версия квеста и выгрузка
+  маршрута в GPX/KML;
 - `docs/features/images.md` — сквозной пайплайн изображений (загрузка, хранение,
   раздача, выбор размера на фронте), зафиксированные решения и инварианты;
   читать ДО любой правки, касающейся картинок, чтобы не переизобретать пайплайн;
@@ -58,7 +70,10 @@
 - `docs/ACHIEVEMENTS_DESIGN.md` — achievements/ranks/peer/rare contract;
 - `docs/PERF_014_EAGER_BUNDLE_AUDIT.md` — rationale и guard contract для web
   eager bundle;
-- `docs/ICON_ART_PROMPTS.md` — canonical raster icon/art prompt specification.
+- `docs/ICON_ART_PROMPTS.md` — canonical raster icon/art prompt specification;
+- `docs/ACHIEVEMENTS_BADGE_PROMPTS.md` — badge visual spec: векторная эмблема
+  (`components/achievements/BadgeEmblem.tsx`, `badgeMotif`) как дефолт и
+  AI-промпт-схема как опциональный фоллбэк для `image_url`.
 - `docs/FACEBOOK_LOGIN_DESIGN.md` — normative web auth states for Facebook
   registration/login rollout (implemented behind flag, blocked by backend contract).
 

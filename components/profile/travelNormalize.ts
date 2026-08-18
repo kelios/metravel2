@@ -1,6 +1,6 @@
 import type { Travel } from '@/types/types';
 import { attachTravelEngagementStats } from '@/utils/travelEngagementStats'
-import { buildTravelPath, normalizeRouteSegment } from '@/utils/routePaths'
+import { buildTravelPath, normalizeRouteSegment, sanitizeTravelHref } from '@/utils/routePaths'
 import { translate as i18nT } from '@/i18n'
 
 export type ProfileListItem = {
@@ -111,11 +111,11 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
     // вырождается в `0` на любом непригодном значении — карточка получала
     // адрес `/travels/0`, такую же 404, как `/travels/null`. Пустая строка
     // означает «ссылки нет» (контракт `resolveTravelUrl`).
-    url: slug
-      ? `/travels/${slug}`
-      : url
-        ? String(url).split('?')[0].split('#')[0]
-        : buildTravelPath(id) ?? '',
+    url:
+      buildTravelPath(slug, { encode: false }) ??
+      sanitizeTravelHref(url)?.split('?')[0].split('#')[0] ??
+      buildTravelPath(id) ??
+      '',
     youtube_link: '',
     userName: String(item?.userName ?? item?.authorName ?? ''),
     description: String(item?.description ?? ''),

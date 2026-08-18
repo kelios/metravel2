@@ -14,6 +14,7 @@ import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import TravelHeroQuickJumps from './TravelHeroQuickJumps'
 import { useTravelHeroExtrasModel } from './hooks/useTravelHeroExtrasModel'
 import { translate as i18nT } from '@/i18n'
+import { buildTravelPath } from '@/utils/travelSeo'
 
 
 export const TravelHeroExtras: React.FC<{
@@ -58,7 +59,7 @@ export const TravelHeroExtras: React.FC<{
           <TravelStatusButton
             travelId={travel.id}
             travelTitle={travel.name}
-            travelUrl={`/travels/${travel.slug || travel.id}`}
+            travelUrl={buildTravelPath(travel) ?? ''}
             travelImageUrl={travel.travel_image_thumb_url}
             travelCountry={travel.countryName}
             travelYear={travel.year}

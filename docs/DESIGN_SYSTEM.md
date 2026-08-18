@@ -167,3 +167,53 @@ New exceptions should be added here with the same shape — component path, the
 specific contract it needs that the primitive does not provide, and the task
 reference — so that "why isn't this a `ui/Button`?" always has a documented
 answer.
+
+## Резерв места под плавающей нижней панелью (`--mt-dock-h`, `--mt-consent-h`)
+
+Load-bearing web-контракт. На мобильном web поверх контента висят два класса
+плавающих панелей — постоянный `BottomDock` и временные плашки (consent-баннер,
+`AppInstallBar`). Оба резерва живут в CSS-переменных, потому что контент
+скроллится под ними, а не рядом.
+
+**Кто пишет переменные**
+
+- `--mt-dock-h` — статически в `app/global.css:477`: `0px` на desktop и
+  `calc(56px + env(safe-area-inset-bottom, 0px))` при `max-width: 1023px`.
+  Ничего в рантайме её не выставляет.
+- `--mt-consent-h` — динамически, через `utils/bottomChromeReserve.ts`.
+  Владельцы регистрируются по имени (`setBottomChromeReserve(owner, px)` /
+  `releaseBottomChromeReserve(owner)`), в CSS уходит **максимум** по всем
+  владельцам. Сегодня владельцев двое: `components/layout/ConsentBanner.tsx` и
+  `components/layout/AppInstallBar.tsx`. Именно поэтому там реестр, а не одна
+  запись: панель, скрывшаяся последней, иначе стирала бы резерв ещё видимой
+  соседки.
+
+**Кто читает**
+
+Любой скролл-контейнер или нижняя закреплённая панель, которую иначе закроет
+плашка: `components/home/Home.tsx`, `components/listTravel/useRightColumnStyles.ts`,
+`components/travel/details/TravelStickyActions.tsx`, `components/auth/LoginForm.tsx`,
+`screens/tabs/PlacesScreen.styles.ts`, `components/MapPage/MapMobileLayout.styles.ts`,
+`components/quests/QuestConsentGate.tsx`, `components/trips/planning/plannedTripScreen.styles.ts`,
+`app/(tabs)/trips/[id].tsx`, `app/(tabs)/trips/plan/create.tsx`.
+
+**Как читать правильно**
+
+- Всегда через `max()` с базовым отступом и всегда с fallback `0px`:
+  `calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 10px)`. Голая
+  переменная без `max()` уменьшает существующий отступ на desktop, где она `0px`.
+- Резерв — только web. На native тот же зазор считается из
+  `useSafeAreaInsets()` + `LAYOUT.tabBarHeight`; CSS-переменных там нет.
+  В RN-стилях значение уходит через `Platform.select({ web: ..., default: ... })`
+  и приводится `as unknown as number`.
+- На Android padding у `contentContainer` не всегда даёт дотянуться до
+  последнего CTA — там вместо отступа ставится отдельный пустой `View`
+  (`app/(tabs)/trips/[id].native.tsx`, `testID="trip-detail-bottom-reserve"`).
+
+**Как проверяется**
+
+Мобильный вьюпорт (≤560px) со **сброшенным** согласием: последний CTA страницы
+и нижние закреплённые кнопки не перекрыты плашкой, при этом на desktop нижний
+отступ не вырос. Регрессии закрыты `__tests__/app/tripDetailScreen.dockReserve.test.tsx`,
+`__tests__/components/MapPage/MapMobileLayout.test.tsx` и
+`__tests__/app/mapAttributionCss.test.ts`.

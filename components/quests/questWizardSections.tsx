@@ -19,7 +19,7 @@ import {
   QuestFullMapLazy,
   QuestWebVideo,
 } from './questWizardMedia'
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 type PointLike = {
@@ -315,6 +315,31 @@ function QuestFinaleFeedback({
   )
 }
 
+/** Возврат к точкам: одна кнопка и для недособранного финала, и для частичного прохождения. */
+function QuestFinaleContinueButton({
+  styles,
+  onContinue,
+  testID,
+}: {
+  styles: any
+  onContinue?: () => void
+  testID?: string
+}) {
+  if (!onContinue) return null
+  const label = i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')
+  return (
+    <Pressable
+      style={styles.primaryButton}
+      onPress={onContinue}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+    >
+      <Text style={styles.buttonText}>{label}</Text>
+    </Pressable>
+  )
+}
+
 export function QuestFinalePanel({
   colors: _colors,
   styles,
@@ -385,10 +410,12 @@ export function QuestFinalePanel({
               сколько точек до этого не хватает. */}
           {!questCompleted && (
             <Text style={[styles.completionText, { opacity: 0.8 }]} testID="quest-finale-not-credited">
-              {i18nT('quests:components.quests.questWizardSections.partialNotCredited', {
+              {/* Форму числа выбираем через `translatePlural`, а не отдаём i18next:
+                  у Hermes на Android нет `Intl.PluralRules`, и плюрал схлопывается
+                  в `_other` — «ещё 2 точек» вместо «ещё 2 точки» (#1335). */}
+              {translatePlural('quests:components.quests.questWizardSections.partialNotCredited', stepsMissingForCompletion, {
                 value1: completedCount,
                 value2: stepsCount,
-                count: stepsMissingForCompletion,
               })}
             </Text>
           )}
@@ -481,16 +508,12 @@ export function QuestFinalePanel({
 
           {/* Путь назад к пропущенным точкам: порог перестанет быть недобранным,
               как только на них появятся ответы. */}
-          {!questCompleted && onContinue && (
-            <Pressable
-              style={styles.primaryButton}
-              onPress={onContinue}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')}
+          {!questCompleted && (
+            <QuestFinaleContinueButton
+              styles={styles}
+              onContinue={onContinue}
               testID="quest-finale-continue-partial"
-            >
-              <Text style={styles.buttonText}>{i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')}</Text>
-            </Pressable>
+            />
           )}
         </View>
       ) : (
@@ -498,16 +521,7 @@ export function QuestFinalePanel({
           <Text style={[styles.completionText, { opacity: 0.8 }]}>
             {i18nT('quests:components.quests.questWizardSections.chtoby_otkryt_priz_i_video_zavershite_vse_sh_fd0438f8')}{completedCount} {i18nT('quests:components.quests.questWizardSections.iz_277be07e')}{stepsCount}.
           </Text>
-          {onContinue && (
-            <Pressable
-              style={styles.primaryButton}
-              onPress={onContinue}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')}
-            >
-              <Text style={styles.buttonText}>{i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')}</Text>
-            </Pressable>
-          )}
+          <QuestFinaleContinueButton styles={styles} onContinue={onContinue} />
         </>
       )}
     </View>

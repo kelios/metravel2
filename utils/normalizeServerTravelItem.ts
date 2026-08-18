@@ -5,7 +5,7 @@
 // делили ровно одну реализацию.
 
 import type { CardViewTravelDto } from '@/api/user';
-import { buildTravelPath } from '@/utils/routePaths';
+import { buildTravelPath, sanitizeTravelHref } from '@/utils/routePaths';
 import { translate as i18nT } from '@/i18n';
 
 export interface NormalizedServerTravel {
@@ -26,8 +26,12 @@ export interface NormalizedServerTravel {
 // `/travels/${t.id}`, а поле объявлено `number`, но с бэкенда приходит и `null`,
 // то есть карточка коллекции получала адрес `/travels/null` — 404.
 const cleanTravelUrl = (t: CardViewTravelDto): string => {
-  if (t.slug) return `/travels/${t.slug}`;
-  if (t.url) return String(t.url).split('?')[0].split('#')[0];
+  const slugPath = buildTravelPath(t.slug, { encode: false });
+  if (slugPath) return slugPath;
+
+  const explicitUrl = sanitizeTravelHref(t.url);
+  if (explicitUrl) return explicitUrl.split('?')[0].split('#')[0];
+
   return buildTravelPath(t.id) ?? '';
 };
 

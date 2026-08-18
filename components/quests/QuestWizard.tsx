@@ -50,6 +50,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
 import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
 import { useQuestKeyboardReveal } from './hooks/useQuestKeyboardReveal';
+import { useQuestWizardAnalytics } from './hooks/useQuestWizardAnalytics';
 import { createQuestWizardStyles } from './questWizardStyles';
 import { useTranslation } from '@/i18n/LocaleProvider';
 
@@ -175,7 +176,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         totalCount: requiredCount,
         // Напоминания и геозоны выключает сам факт финала: игроку, который
         // закончил маршрут частично, напоминать «вернитесь к точке» не нужно.
-        allCompleted: questFinished,
+        questFinished,
     });
     useQuestGeofence({
         questId,
@@ -183,7 +184,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         title,
         steps,
         answers,
-        allCompleted: questFinished,
+        questFinished,
     });
 
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
@@ -374,47 +375,20 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         }
     }, [questNumericId, resetProgress]);
 
-    const questStartTrackedRef = useRef(false);
-    useEffect(() => {
-        if (questStartTrackedRef.current) return;
-        const isRealStep = !!currentStep && currentStep.id !== intro?.id;
-        if (!isRealStep) return;
-        questStartTrackedRef.current = true;
-        queueAnalyticsEvent('quest_start', {
-            quest_id: questId,
-            city: cityId,
-        });
-    }, [cityId, currentStep, intro?.id, questId]);
-
-    const questFinishTrackedRef = useRef(false);
-    useEffect(() => {
-        if (!questFinished || questFinishTrackedRef.current) return;
-        questFinishTrackedRef.current = true;
-        // `early` отличает неполное прохождение (пропущенная далёкая точка или
-        // финиш на месте) от обычного: иначе они неразличимо сливаются в воронку
-        // завершений. `partial` отделяет незасчитанное прохождение от засчитанного
-        // (#1443): без него в воронке завершений слились бы и они.
-        queueAnalyticsEvent('quest_finish', {
-            quest_id: questId,
-            early: finishedEarly,
-            partial: partiallyCompleted,
-            passed_count: completedSteps.length,
-            steps_count: requiredCount,
-        });
-        void flushQuestAnswerAttempts();
-    }, [completedSteps.length, finishedEarly, partiallyCompleted, questFinished, questId, requiredCount]);
-
-    const guestGateTrackedRef = useRef(false);
-    useEffect(() => {
-        if (!guestGateActive || guestGateTrackedRef.current) return;
-        guestGateTrackedRef.current = true;
-        queueAnalyticsEvent('quest_guest_gate_view', {
-            quest_id: questId,
-            city: cityId,
-            passed_count: guestAnsweredCount,
-        });
-        onGuestGate?.(guestAnsweredCount);
-    }, [cityId, guestAnsweredCount, guestGateActive, onGuestGate, questId]);
+    useQuestWizardAnalytics({
+        questId,
+        cityId,
+        onRealStep: !!currentStep && currentStep.id !== intro?.id,
+        questFinished,
+        questCompleted,
+        partiallyCompleted,
+        finishedEarly,
+        passedCount: completedSteps.length,
+        stepsCount: requiredCount,
+        guestGateActive,
+        guestAnsweredCount,
+        onGuestGate,
+    });
 
     // Индекс последней РЕАЛЬНО отвеченной точки. `unlockedIndex` для этого не
     // годится: он указывает на следующую (ещё не отвеченную) точку, и «вернуться

@@ -266,13 +266,15 @@ export function useQuestWizardProgress({
   const progress = requiredCount > 0 ? completedSteps.length / requiredCount : 0
   // Гейт маршрута закрыт: на каждой точке, которую игрок не пропустил, есть
   // ответ. Пропуск гейт сужает, поэтому гейт МОЖЕТ опуститься до пустого —
-  // `[].every(...) === true`, и сам по себе он ничего о пройденном не говорит.
-  const allCompleted = requiredCount > 0 && gatingSteps.every((step) => !!answers[step.id])
+  // `[].every(...) === true`. Само по себе это НЕ означает пройденного квеста:
+  // «пропустил всё подряд» тоже закрывает гейт при нуле ответов, поэтому
+  // наружу отдаётся не эта величина, а `questFinished`/`questCompleted`.
+  const routeGateClosed = requiredCount > 0 && gatingSteps.every((step) => !!answers[step.id])
   // Квест закончен: либо пройдены все точки, которые игрок не пропустил, либо он
   // закрыл квест на месте, оставив за спиной только далёкие. Ноль ответов финалом
   // не считается: пропустить подряд весь маршрут — это не прохождение, даже
   // частичное, и такому игроку показывать финальное видео незачем.
-  const questFinished = requiredCount > 0 && completedSteps.length > 0 && (allCompleted || earlyFinish)
+  const questFinished = requiredCount > 0 && completedSteps.length > 0 && (routeGateClosed || earlyFinish)
   // Сколько точек не хватает до засчитанного прохождения (#1443): порог живёт в
   // `utils/questCompletionPolicy.ts` вместе с обоснованием.
   const stepsMissingForCompletion = questStepsMissingForCompletion(requiredCount, completedSteps.length)
@@ -406,7 +408,8 @@ export function useQuestWizardProgress({
     completedSteps,
     requiredCount,
     progress,
-    allCompleted,
+    /** Гейт маршрута закрыт. Не «квест пройден» — см. комментарий у вычисления. */
+    routeGateClosed,
     questFinished,
     questCompleted,
     partiallyCompleted,

@@ -141,8 +141,11 @@ export default function FavoritesScreen() {
         }
     }, [clearFavorites]);
 
+    // #1438: нормализатор отдаёт пустую строку, когда пригодного адреса нет
+    // («ссылки нет»). Без гарда `router.push('')` уводил бы на индекс-роут.
     const handleOpen = useCallback(
         (url: string) => {
+            if (!url) return;
             router.push(url as any);
         },
         [router]

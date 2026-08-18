@@ -8,6 +8,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { readConsent, writeConsent, ConsentState } from '@/utils/consent';
+import { releaseBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve';
+import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -17,7 +19,7 @@ function ConsentBanner() {
   const colors = useThemedColors();
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
-  const [suspendForOverlay, setSuspendForOverlay] = useState(false);
+  const suspendForOverlay = useFooterOverlayOpen();
   const { isMobile, width } = useResponsive();
   const isNarrowMobile = isMobile && width > 0 && width < 360;
   const insets = useSafeAreaInsets();
@@ -42,29 +44,6 @@ function ConsentBanner() {
     if (!isWeb || typeof document === 'undefined') return;
     const body = document.body;
     if (!body) return;
-    const update = () => {
-      setSuspendForOverlay(body.getAttribute('data-footer-more-open') === 'true');
-    };
-    update();
-    const observer = new MutationObserver(update);
-    observer.observe(body, { attributes: true, attributeFilter: ['data-footer-more-open'] });
-    const handle = (event: Event) => {
-      const detail = (event as CustomEvent<{ open?: boolean }>).detail;
-      if (detail && typeof detail.open === 'boolean') {
-        setSuspendForOverlay(detail.open);
-      }
-    };
-    window.addEventListener('metravel:footer-more', handle);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('metravel:footer-more', handle);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isWeb || typeof document === 'undefined') return;
-    const body = document.body;
-    if (!body) return;
 
     const shouldExposeBanner = visible && !suspendForOverlay;
     if (shouldExposeBanner) {
@@ -80,10 +59,9 @@ function ConsentBanner() {
 
   useEffect(() => {
     if (!isWeb || typeof document === 'undefined') return;
-    const root = document.documentElement;
     const shouldExpose = visible && !suspendForOverlay && !isConsentSettingsRoute;
     if (!shouldExpose) {
-      root.style.removeProperty('--mt-consent-h');
+      releaseBottomChromeReserve('consent-banner');
       return;
     }
     // Reserve enough vertical space so scroll containers (RightColumn etc.) don't hide
@@ -91,9 +69,9 @@ function ConsentBanner() {
     // accounts for the bottom dock + safe-area; the banner itself is ~96px on mobile,
     // ~64px on desktop. The +8 keeps an additional breathing gap below the last card.
     const bannerH = isMobile ? 104 : 64;
-    root.style.setProperty('--mt-consent-h', `${bottomOffset + bannerH + 8}px`);
+    setBottomChromeReserve('consent-banner', bottomOffset + bannerH + 8);
     return () => {
-      root.style.removeProperty('--mt-consent-h');
+      releaseBottomChromeReserve('consent-banner');
     };
   }, [bottomOffset, isConsentSettingsRoute, isMobile, suspendForOverlay, visible]);
 

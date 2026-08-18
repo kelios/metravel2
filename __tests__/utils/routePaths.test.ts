@@ -3,6 +3,7 @@ import {
   buildTravelPath,
   isUsableRouteSegment,
   normalizeRouteSegment,
+  sanitizeTravelHref,
 } from '@/utils/routePaths'
 
 // Регресс на #1185: прод отдавал 404 на /quests/undefined/undefined,
@@ -79,6 +80,51 @@ describe('utils/routePaths', () => {
     it('returns null for non-positive ids — /travels/0 is as broken as /travels/null', () => {
       expect(buildTravelPath(0)).toBeNull()
       expect(buildTravelPath(-3)).toBeNull()
+    })
+
+    it('keeps the segment raw when encoding is switched off', () => {
+      // Ветка для travelSeo/hero/sticky-actions: там адрес исторически
+      // собирается без encodeURIComponent.
+      expect(buildTravelPath('a b', { encode: false })).toBe('/travels/a b')
+      expect(buildTravelPath('a b')).toBe('/travels/a%20b')
+    })
+  })
+
+  // #1438: готовый адрес из поля `url` карточки уходил в `href` без проверки —
+  // одна запись с `/travels/null` делала кликабельной ссылку в 404.
+  describe('sanitizeTravelHref', () => {
+    it.each([
+      '/travels/null',
+      '/travels/undefined',
+      '/travels/0',
+      '/travels/null/photos',
+      '/travels/null?returnTo=%2Fsearch',
+      '/travels/%6Eull',
+    ])('rejects our travel path with an unusable segment: %p', (href) => {
+      expect(sanitizeTravelHref(href)).toBeNull()
+    })
+
+    it('passes healthy travel paths through untouched', () => {
+      expect(sanitizeTravelHref('/travels/grodno')).toBe('/travels/grodno')
+      expect(sanitizeTravelHref('/travels/77?returnTo=%2Fsearch')).toBe(
+        '/travels/77?returnTo=%2Fsearch',
+      )
+    })
+
+    it('does not touch non-travel and external links', () => {
+      // Абсолютный адрес — внешняя ссылка, наш роутинг её не обслуживает:
+      // подменять её собственным `/travels/<id>` нельзя.
+      expect(sanitizeTravelHref('https://example.com/travels/null')).toBe(
+        'https://example.com/travels/null',
+      )
+      expect(sanitizeTravelHref('/quests/5/yerevan-ararat')).toBe('/quests/5/yerevan-ararat')
+      expect(sanitizeTravelHref('/travelsby')).toBe('/travelsby')
+    })
+
+    it('returns null for empty input', () => {
+      expect(sanitizeTravelHref('')).toBeNull()
+      expect(sanitizeTravelHref(null)).toBeNull()
+      expect(sanitizeTravelHref(undefined)).toBeNull()
     })
   })
 })

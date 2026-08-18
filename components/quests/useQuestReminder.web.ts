@@ -7,7 +7,7 @@ type QuestReminderParams = {
   title: string;
   completedCount: number;
   totalCount: number;
-  allCompleted: boolean;
+  questFinished: boolean;
 };
 
 export function useQuestReminder(_params: QuestReminderParams): void {

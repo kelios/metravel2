@@ -104,7 +104,7 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.answers).toEqual({ intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' })
     expect(result.current.attempts).toEqual({ 'step-2': 2 })
     expect(result.current.showMap).toBe(false)
-    expect(result.current.allCompleted).toBe(true)
+    expect(result.current.routeGateClosed).toBe(true)
 
     // И доливается на сервер, а не остаётся только локально.
     await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
@@ -162,7 +162,7 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.attempts).toEqual({ 'step-1': 2, 'step-2': 1 })
     expect(result.current.hints).toEqual({ 'step-2': true })
     expect(result.current.unlockedIndex).toBe(2)
-    expect(result.current.allCompleted).toBe(true)
+    expect(result.current.routeGateClosed).toBe(true)
 
     // Слитое уходит на сервер: серверу не хватало step-1.
     await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
@@ -282,7 +282,7 @@ describe('useQuestWizardProgress', () => {
     })
 
     expect(result.current.progress).toBe(0.5)
-    expect(result.current.allCompleted).toBe(false)
+    expect(result.current.routeGateClosed).toBe(false)
   })
 
   it('does not revert the user step when initialProgress identity changes (save echo)', async () => {
@@ -334,7 +334,7 @@ describe('useQuestWizardProgress', () => {
     // Репро бага «пройдено 7 из 9»: необязательные точки-паузы ☕/✨ приходят с
     // answer_pattern type='any' (checker помечен _isAny) и раньше сидели в
     // знаменателе гейта — финал был недостижим, пока игрок явно не нажмёт «Далее»
-    // на каждой. Теперь такие шаги исключены из requiredCount/allCompleted.
+    // на каждой. Теперь такие шаги исключены из requiredCount/routeGateClosed.
     const anyChecker = (() => {
       const fn = () => true
       ;(fn as unknown as { _isAny: boolean })._isAny = true
@@ -375,7 +375,7 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.requiredCount).toBe(2)
     expect(result.current.completedSteps).toEqual([{ id: 'req-1', answer: realChecker }, { id: 'req-2', answer: realChecker }])
     expect(result.current.progress).toBe(1)
-    expect(result.current.allCompleted).toBe(true)
+    expect(result.current.routeGateClosed).toBe(true)
   })
 
   it('засчитывает квест после пропуска далёкой точки в середине маршрута', async () => {

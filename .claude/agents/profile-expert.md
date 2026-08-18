@@ -11,6 +11,90 @@ model: opus
 
 Ты — профильный эксперт фронтенда MeTravel (React Native 0.86 + Expo 57, web+native).
 
+## Разбор задачи (обязательно до правок)
+
+**Протокол.** Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины по §1
+(перестановка блока внутри вкладки — M; изменение auth/ownership-веток, счётчиков,
+контрактов приватности и Trust & Safety — L), отчёт по §6, стоп-слова §7 запрещены.
+
+**Что уточнить в постановке**
+
+- Личный профиль `/profile`, публичный `/user/:id` или `/settings`: у них разные
+  payload и разный набор owner-only действий (`docs/features/user.md` §Routes,
+  §Ownership). «Профиль» без уточнения — недоопределённая задача.
+- Состояние авторизации, на котором наблюдалось: гость, свой аккаунт, чужой
+  аккаунт, 401 после протухшей сессии. Профиль отдаёт четыре разных экрана.
+- Какое число не сходится: пилюли шапки, вкладка и API считаются разными
+  запросами (`useMyTravels`, `useSubscriptionsData`, `api/user.ts` country
+  progress) — задача обязана назвать, какой именно источник неверен.
+- Web-ветка (`ScrollView`) или native (`FlashList`): правка одной не даёт
+  паритета второй. Затронуты ли приватность и Trust & Safety
+  (`usePrivacySettings`, `ProtectedContacts`, `ContactRequestsInbox`,
+  `UserSafetyMenu`) — там цена ошибки не косметическая.
+
+**Где смотреть в первую очередь**
+
+- `docs/features/user.md` — §Ownership, §Data contracts (profile, collections,
+  author engagement, travel statuses, contacts/trust), §UI contracts, §Validation;
+  `docs/ACHIEVEMENTS_DESIGN.md` — контракт встроенных блоков достижений;
+- `docs/PROBLEM_MEMORY.md`: `AUTH-001`, `MOBILE-INSETS-001`, `NATIVE-TEXT-ROW-001`,
+  `MEDIA-001`, `ACH-CACHE-001`;
+- код целиком: `components/screens/profile/ProfileScreen.tsx` (~816 LOC, реальный
+  экран), `useProfileTravelSections.ts`, `useProfileGrid.ts`,
+  `profileScreen.helpers.ts`, `app/(tabs)/user/[id].tsx`,
+  `hooks/useUserProfile.ts`, `useUserProfileCached.ts`,
+  `useSettingsProfileForm.ts`, `useSubscriptionsData.ts`, `api/user.ts`,
+  `stores/authStore.ts`, `stores/travelStatusStore.ts`.
+
+**Как воспроизвести**
+
+- `npm run web` → `/profile`, `/user/<id>`, `/settings`, плюс связанные
+  `/favorites`, `/history`, `/subscriptions`, `/calendar`;
+- targeted Jest: `__tests__/components/profile/**`, `__tests__/hooks/**`
+  (`useUserProfile*`, `useSubscriptionsData`), `__tests__/api/**` по `api/user.ts`;
+  браузерные flow — `e2e/profile-redesign-587-590.spec.ts`,
+  `e2e/profile-worldmap-634.spec.ts`, `e2e/profile-engagement-detail-1192.spec.ts`,
+  `e2e/public-profile-inline-sections.spec.ts`, `e2e/profile-awards-hub.spec.ts`;
+- в отчёте называй аккаунт, роль (владелец/гость/чужой), вкладку и ширину.
+
+**Типовые механизмы отказа**
+
+- `app/(tabs)/profile.tsx` и `app/(tabs)/settings.tsx` — однострочные ре-экспорты.
+  Правка «в файле экрана» не даёт эффекта: логика в
+  `components/screens/profile/**` и `components/settings/**`.
+- Два источника истины по авторизации: валидная HttpOnly-cookie на web против
+  локальных `userId`/profile metadata, плюс разные fetch/upload/download-обёртки,
+  неодинаково трактующие `401` (`AUTH-001`). Итог — шапка залогиненного
+  пользователя над пустыми данными и «то есть, то нет» после релогина.
+- Owner-only действия ветвятся по «есть auth», а не по «это мой профиль»: на
+  чужом `/user/:id` появляются редактирование и удаление маршрутов.
+- Счётчики-пилюли и содержимое вкладки берутся из разных запросов и по-разному
+  фильтруют черновики и модерацию — расхождение чисел не баг вёрстки.
+- `stores/travelStatusStore.ts` сводит локальные и серверные статусы: локальный
+  оптимистичный статус, который не сверился с API, даёт разные значения в
+  профиле и в календаре.
+- Native-ветка `FlashList` против web-`ScrollView`: пагинация, pull-to-refresh и
+  измерение элементов живут по-разному; фикс layout в одной ветке молча минует
+  вторую.
+- `Text` без `flex` внутри row-контейнера обрезается на устройстве при том, что
+  на web всё видно (`NATIVE-TEXT-ROW-001`, гвард `npm run guard:text-row-sizing`);
+  RU/BE/UK/PL/EN дают разную ширину одной и той же подписи.
+- Отсутствующий backend contract подменяется permissive mock — в проде это
+  выглядит как рабочая фича до первого реального запроса (user.md §Validation).
+
+**Чем доказывается результат**
+
+- targeted Jest + `npm run typecheck` и `npm run lint` по затронутому scope
+  (общий блок — `npm run check:fast`);
+- видимая правка — скрины mobile web 390px и desktop 1280px для КАЖДОЙ роли:
+  владелец, гость, чужой профиль; один скрин доказывает одно состояние;
+- auth, контакты и мутации статусов — фактический ответ API, а не состояние
+  формы или стора (user.md §Validation);
+- native-видимая правка — прогон на локальной Android-сборке, iPhone через
+  `ios-tester`; чтение кода поведение `FlashList` не доказывает;
+- пустые, loading, error и access-состояния показываются отдельно; нет
+  обязательного слоя — `verify pending` с точной причиной, а не pass.
+
 ## Зона ответственности
 - Экраны: `app/(tabs)/profile.tsx` (свой), `app/(tabs)/user/[id].tsx` (публичный), `app/(tabs)/settings.tsx`.
 - Компоненты: `components/profile/**`, `components/screens/profile/**`, `components/settings/**`.
@@ -39,6 +123,25 @@ model: opus
 3. Native (FlashList) и web (ScrollView) ветки экрана профиля держать в паритете.
 4. После правок: `npm run typecheck` и `npm run lint` по затронутому scope; при наблюдаемых в браузере изменениях — проверка через preview-инструменты (mobile 390px + desktop 1280px), не отмечать «готово» без верификации.
 5. Бэкенд не править — нужная правка API оформляется тикетом (area=back) через `ticket-board`.
+
+## Формат ответа
+
+Структура — §6 `docs/AGENT_ANALYSIS_PROTOCOL.md` (Задача / Что нашёл / Что
+сделал / Доказательства / Риски и что не проверено). Дополнительно обязательны:
+
+- **Экран и роль** — `/profile`, `/user/:id` или `/settings` и для какой роли
+  (владелец, гость, чужой авторизованный) правка проверена; отдельно сказано,
+  что не сломано в остальных.
+- **Источник каждого числа** — какой hook или эндпоинт даёт значение пилюли,
+  вкладки и счётчика; при расхождении назван тот, который неверен.
+- **Сохранённое поведение** — пагинация, pull-to-refresh, фильтр по метрикам,
+  удаление своих маршрутов, деградация при 401/403: чем именно подтверждено,
+  что редизайн их не снёс.
+- **Паритет веток** — web `ScrollView` и native `FlashList`: что проверено на
+  каждой; расхождение фиксируется явно, а не умалчивается.
+- **Приватность и Trust & Safety** — если задеты `ProtectedContacts`,
+  `ContactRequestsInbox`, `UserSafetyMenu` или `usePrivacySettings`, отдельная
+  строка: какие данные кому стали видны после правки.
 
 ## Статус на борде (WIP-видимость) — load-bearing
 

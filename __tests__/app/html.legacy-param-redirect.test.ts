@@ -48,17 +48,29 @@ describe('+html legacy ?param= redirect', () => {
   // комментариями. Пока в нём стояли примеры `/travels/null` и
   // `/travels/undefined`, любой скрапер, вытаскивающий адреса регуляркой из
   // сырого HTML, находил на здоровой статье ссылку в 404.
-  it('never ships a literal travel path with an empty-literal segment', () => {
-    const source = fs.readFileSync(path.resolve(process.cwd(), 'app/+html.tsx'), 'utf8')
-    // Только inline-скрипты: обычные комментарии модуля бандлер вырезает, а
-    // содержимое `String.raw` уходит в разметку дословно.
-    const inlineScripts = [...source.matchAll(/String\.raw`([\s\S]*?)`/g)].map((m) => m[1])
-    expect(inlineScripts.length).toBeGreaterThan(0)
+  // Все файлы, чьи строки уходят в разметку шелла через
+  // `dangerouslySetInnerHTML`. Проверяем их целиком, а не только блоки
+  // `String.raw`: инлайн-скрипты собираются и обычными template literal'ами
+  // (`+html.tsx`, LCP decode helper), и соседними модулями-билдерами.
+  const INLINE_SCRIPT_SOURCES = [
+    'app/+html.tsx',
+    'utils/htmlShell.ts',
+    'utils/mapHeadBootstrap.ts',
+    'utils/analyticsInlineScript.ts',
+  ]
 
-    for (const script of inlineScripts) {
-      expect(script).not.toMatch(/\/travels\/(null|undefined|nan|none|false)\b/i)
-    }
-  })
+  it.each(INLINE_SCRIPT_SOURCES)(
+    '%s never spells out a travel path with an empty-literal segment',
+    (relativePath) => {
+      const source = fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8')
+
+      // Правило намеренно строгое: содержимое этих файлов приезжает в HTML
+      // каждой страницы вместе с комментариями, а скраперы вытаскивают адреса
+      // регуляркой из сырого HTML и уходят по ним в 404. Описывай проблему
+      // словами, не примером адреса.
+      expect(source).not.toMatch(/\/travels\/(null|undefined|nan|none|false|0)\b/i)
+    },
+  )
 
   it('ignores malformed values and other routes, as before', () => {
     expect(runOn('/', '?param=a/b')).toBeNull()

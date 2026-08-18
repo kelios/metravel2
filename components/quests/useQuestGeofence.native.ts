@@ -29,7 +29,7 @@ type QuestGeofenceParams = {
   title: string;
   steps: QuestStepWithCoords[];
   answers: Record<string, string>;
-  allCompleted: boolean;
+  questFinished: boolean;
 };
 
 /** Build the geofence-region list from steps that aren't answered yet. */
@@ -55,7 +55,7 @@ export function useQuestGeofence({
   title,
   steps,
   answers,
-  allCompleted,
+  questFinished,
 }: QuestGeofenceParams): void {
   const isFocused = useIsFocused();
 
@@ -74,7 +74,7 @@ export function useQuestGeofence({
   useEffect(() => {
     if (!questId || !cityId) return undefined;
 
-    if (!isFocused || allCompleted) {
+    if (!isFocused || questFinished) {
       void stopQuestGeofencing();
       return undefined;
     }
@@ -88,7 +88,7 @@ export function useQuestGeofence({
 
     void startQuestGeofencing(questId, cityId, t, regions);
     return undefined;
-  }, [questId, cityId, isFocused, allCompleted, pendingKey]);
+  }, [questId, cityId, isFocused, questFinished, pendingKey]);
 
   // Unmount safety net — stop monitoring when leaving the quest entirely.
   useEffect(() => {

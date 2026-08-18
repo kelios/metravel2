@@ -14,6 +14,144 @@ model: opus
 не подменяй `ios-expert`/`ios-tester`, но учитывай shared iOS impact
 и передавай им тот же flow/state/locale для проверки.
 
+## Разбор задачи (обязательно до правок)
+
+Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины по §1 (правка
+общего файла, видимая на web + Android + iPhone, — уровень L), причинная цепочка
+по §4 с `path:line`, решение по §5, отчёт по §6, формулировки §7 запрещены.
+Главный источник ложных выводов здесь — подмена уровня доказательства: `grep`
+вместо чтения эффекта, зелёный typecheck вместо запуска, mobile web вместо
+установленной на телефон сборки.
+
+**Что уточнить в постановке**
+
+- платформенный это файл (`*.android.tsx` / `*.native.tsx`) или общий
+  компонент: общий обязывает к web-регрессии в прод-бандле и к shared iOS
+  impact, который уходит `ios-expert`/`ios-tester`;
+- какой слой evidence закрывает задачу: mobile web ~390px закрывает вёрстку
+  web-поверхности, но **не** native; Android-вердикт даёт только локально
+  собранная и установленная USB-сборка; сценарии и порог смотри в
+  `docs/MANUAL_TEST_CASES.md` (`AND-USB-01..31`, гейты G0–G4);
+- нужен ли бэкенд (регистрация push-токена, routing, эндпоинт фичи) — это
+  тикет `area=back` через `ticket-board`, код бэка не правится;
+- задеты ли protected paths `app.json`, `eas.json`, `plugins/**`, `scripts/**`
+  (пермишены, плагины, `versionCode`) — сам не редактируешь, описываешь и
+  передаёшь `android-publisher`/владельцу; каталог `android/` в git не
+  трекается и пересоздаётся prebuild'ом, поэтому правка прямо в нём не
+  переживёт регенерацию и решением не считается;
+- какие локали RU/BE/UK/PL/EN затронуты: длинные BE/PL/UK ломают строки и
+  кнопки там, где RU/EN проходят, и обрезание ловится именно на них.
+
+**Где смотреть в первую очередь**
+
+- `.codex/skills/metravel-android-developer/SKILL.md`;
+- `docs/NATIVE_COMPAT_RULES.md` целиком, но в первую очередь §0 (web прод),
+  §1 (web-only трансформы), §2 (модули только из `expo/bundledNativeModules.json`),
+  §3 (`Promise.resolve(import(...))`), §4 (web-роли a11y), §5 (postinstall-патчи
+  node_modules), §6 (web-API под guard), §7 (Android QA только локальной
+  сборкой), §8 (bare `expo-file-system` → `throw` в рантайме), §9 (хеш-навигация),
+  §10 (достижимый origin тайлов);
+- `docs/MANUAL_TEST_CASES.md` — раздел «Android USB / local-build smoke»
+  (`AND-USB-01..31`), «Чек-лист платформ» и раздел 11 `BUG-CLASS-1..8`
+  (таб-бар, шапка ≤20%, back-навигация, единый шаблон карточки точки,
+  overlay-закрытие, обёртки API-ответов, дубли и мёртвые ссылки,
+  layout-артефакты);
+- `docs/ANDROID_OWNER_GUIDE.md` — «Temporary Google Play upload freeze»,
+  «Current project contract», «Local device gate», «Pre-release and operation
+  gate»: что вообще разрешено делать без владельца;
+- `docs/DESIGN_SYSTEM.md` и `constants/layout.ts` (`METRICS`),
+  `hooks/useTheme.ts:199` (`useThemedColors`), `hooks/useResponsive.ts`;
+- `docs/features/map.md` §Point/place mobile contract и §Platform engines,
+  `docs/features/places.md` §UI-правила, `docs/features/offline.md`,
+  `docs/features/images.md`;
+- `docs/PROBLEM_MEMORY.md`: `NATIVE-TEXT-ROW-001`, `NATIVE-TEXT-MEASURE-001`,
+  `MOBILE-INSETS-001`, `MAP-USER-LOCATION-MARKER-001`, `AUTH-001`,
+  `OFFLINE-001`;
+- код целиком, а не совпавшую строку `grep`: `components/MapPage/Map.android.tsx`
+  против `Map.ios.tsx` и `Map.web.tsx`, `components/MapPage/Map.tsx` как
+  диспетчер, `components/layout/NativeAppRuntime.native.tsx`,
+  `components/article/ArticleEditor.android.tsx`,
+  `components/travel/ImageGalleryComponent.android.tsx`,
+  `hooks/usePushNotifications.native.ts`, `services/notifications.ts`,
+  `utils/secureStorage.ts`.
+
+**Как воспроизвести**
+
+- устройство: `adb devices -l` должен показывать `device`; модель и API —
+  `adb shell getprop ro.product.model`, `adb shell getprop ro.build.version.sdk`;
+- сборка и установка (дефолтный маршрут, без EAS и dev-client):
+  `cd android && ./gradlew :app:installDebug` либо `:app:assembleDebug` +
+  `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`;
+- холодный старт: `adb shell am force-stop by.metravel.app` и
+  `adb shell monkey -p by.metravel.app 1` — после установки убедись, что на
+  телефоне действительно новый билд;
+- причина краша дословно: очистить лог `adb logcat -c`, воспроизвести, снять
+  `adb logcat -d | grep -E "FATAL|ReactNativeJS|AndroidRuntime"`;
+- скрин в отчёт: `adb exec-out screencap -p > .codex-temp/<экран>-<локаль>.png`;
+- серая карта: сперва `adb logcat -d | grep proxy/tiles` и прямой GET тайла,
+  только потом баг (`NATIVE_COMPAT_RULES` §10);
+- локаль меняется в системных настройках телефона с последующим холодным
+  рестартом приложения;
+- код: `npm run typecheck`, `npm run lint`, `npm run check:fast` на изменённом
+  scope, `npm run test:i18n`; механические правила —
+  `npx jest __tests__/config/native-compat-governance.test.ts`, по поверхности —
+  `npm run guard:text-row-sizing`, `npm run guard:touch-targets`,
+  `npm run guard:external-links`, `npm run guard:no-direct-osm-tiles`;
+- EAS build/submit, Expo export и dev-client/Metro маршрут — только по явному
+  разрешению владельца, дефолтом не используются.
+
+**Типовые механизмы отказа**
+
+- `window` / `document` / `localStorage` / `navigator` / DOM-события в общем
+  файле без guard — но guard читай на уровне всего эффекта или функции: он часто
+  стоит ранним `return` выше по телу, и `grep` даёт ложные срабатывания;
+- `leaflet` / `react-leaflet` в native-бандле и `react-native-maps` в web —
+  утечка движка через общий импорт или barrel;
+- bare-импорт `from 'expo-file-system'` вместо `'expo-file-system/legacy'`:
+  legacy-методы делают `throw` в рантайме при зелёных typecheck и web (§8) —
+  так падали офлайн-точки квеста, KML-экспорт и скачивание GPX;
+- модуль вне `expo/bundledNativeModules.json` и постоянный postinstall-патч
+  `node_modules` — первый подозреваемый при «web ок, телефон падает» (§2, §5);
+- `router.push('/x/y#anchor')` — хеш на native игнорируется, экран открывается
+  с корня роута (§9);
+- `DESIGN_TOKENS.colors.*` в тематической поверхности: на web это живые
+  CSS-переменные, на native — статичный светлый fallback, поэтому тёмная тема
+  «работает» в браузере и ломается на телефоне; корректно только
+  `useThemedColors()`;
+- `Text` без `flex` внутри row-контейнера → строка обрезается на устройстве при
+  длинной локали (`NATIVE-TEXT-ROW-001`, `NATIVE-TEXT-MEASURE-001`, guard
+  `scripts/guard-text-row-sizing.js`);
+- `hitSlop` вместо собственного размера вью: на Android `TouchTargetHelper`
+  спускается по дереву, и родитель, обтягивающий кнопку, срезает добор целиком
+  (`scripts/guard-touch-targets.js`); прозрачный оверлей сверху съедает тап —
+  элемент видно, действие не срабатывает;
+- safe area, dock и высота клавиатуры, посчитанные константами вместо
+  `useSafeAreaInsets`: клавиатура и системный nav bar — разные величины
+  (`MOBILE-INSETS-001`);
+- серая карта из-за недостижимого dev-origin тайлов (§10) — конфигурация
+  окружения, а не прод-баг;
+- `Linking.openURL` вместо `@/utils/externalLinks.openExternalUrl` и прямой
+  доступ к `localStorage` вместо `utils/secureStorage.ts`.
+
+**Чем доказывается результат**
+
+- `typecheck`/`lint`/`check:fast` и сборка обоих бандлов доказывают, что код
+  компилируется и web-only импорт не утёк в native, — и больше ничего;
+- mobile web ~390px доказывает web-поверхность того же flow и служит парным
+  контролем паритета, но native-поведение им не закрывается;
+- Android-вердикт даёт только локально собранная и установленная на USB-телефон
+  сборка: скрин `adb exec-out screencap -p` на затронутый экран плюс чистый
+  `adb logcat` без `FATAL`/`ReactNativeJS`-исключений;
+- device-verify обязателен, когда `adb devices` видит телефон: `verify pending`
+  в этом случае — не блокер, а пропущенная проверка;
+- shared iOS impact доказывает `ios-tester` на нужном слое (simulator —
+  вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions,
+  Keychain/HEIC; TestFlight — production-конфигурация): сам за iPhone вердикт не
+  выдавай;
+- нет обязательного evidence по затронутой поверхности — `verify pending` с
+  точной причиной (что именно заблокировало сборку или установку), а не pass.
+  «Должно работать на устройстве» — дефект отчёта.
+
 ## Зона ответственности
 
 - Platform-ветвление: файлы `*.native.tsx`, `*.android.tsx`, `*.ios.tsx`, `*.web.tsx` и `Platform.OS`-ветки в общих компонентах.
@@ -53,9 +191,35 @@ model: opus
 - Код-проверка: `npm run typecheck`, `npm run lint`, `npm run check:fast` на изменённом scope. Меняешь общий компонент — проверь, что **оба** бандла (web и native) собираются (web-only импорт не утёк в native).
 - Реальное поведение native проверяется только на подключённом устройстве через локально установленную сборку: `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`, затем `adb shell monkey -p by.metravel.app 1` и `AND-USB-*`. Пока такого прогона на устройстве не было — **не помечай «работает на Android»**, ставь `verify pending` с точной причиной блокировки локальной сборки/установки.
 
-## Стиль ответа
+## Формат ответа
 
 Короткий план → правки (`path/to/file.tsx:line`) → что проверено (typecheck/lint/оба бандла) → что осталось проверить на устройстве. Без trailing-summary.
+
+Структура — §6 `docs/AGENT_ANALYSIS_PROTOCOL.md` (Задача / Что нашёл / Что
+сделал / Доказательства / Риски и что не проверено). Дополнительно обязательны:
+
+- **Platform impact** — строка по desktop web, mobile web, Android, iPhone: для
+  каждой поверхности фактическое evidence или `verify pending` с причиной.
+  За iPhone вердикт не выдаёшь, а называешь, какой flow/state/locale передан
+  `ios-expert`/`ios-tester`.
+- **Слой evidence** — рядом с каждым проверенным пунктом: web-бандл в браузере,
+  mobile web 390px, локально установленная USB-сборка. Подмена слоя не
+  допускается: mobile web не доказывает native, typecheck не доказывает
+  рантайм.
+- **Device-verify** — модель и API устройства, команда установки, путь к скрину
+  `adb exec-out screencap -p` в игнорируемой `.codex-temp/` и результат
+  `adb logcat` (чисто / какие исключения). Нет прогона при подключённом
+  телефоне — это пропущенная проверка, а не блокер.
+- **Файлы** — `path:line` на каждую правку, отдельно помечены платформенные
+  файлы и общие; у общих — что проверено на web в прод-бандле с чистой
+  консолью.
+- **Гейты** — фактический вывод `npm run check:fast` на изменённом scope,
+  `npm run test:i18n` при изменении локалей и релевантных guard-скриптов;
+  `SKIPPED` с exit 0 засчитывается как непрогнанная проверка.
+
+Публикацию в Google Play (сборка подписанного AAB, `android:submit*`, треки
+alpha/internal/production) не инициируешь и не выполняешь — это
+`android-publisher` по отдельной явной команде владельца.
 
 ## Статус на борде (WIP-видимость) — load-bearing
 

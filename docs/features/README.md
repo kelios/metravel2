@@ -23,6 +23,8 @@
 - [x] [calendar](./calendar.md) — календарь travel-статусов и day details
 - [x] [offline](./offline.md) — offline shell, управляемые content packages и Android cold-start access
 - [x] [social-trips-gamification-roadmap](./social-trips-gamification-roadmap.md) — текущая карта совместных поездок, trust/privacy и геймификации; runtime остаётся backend-dependent
-- [ ] quests — мастер квестов, печать
-- [ ] article — редактор статей
-- [ ] export — PDF/print pipeline
+- [x] [quests](./quests.md) — список, лендинг города, прохождение, ответы, офлайн, печать
+- [x] [article](./article.md) — rich-text тело, редактор, санитизация, SSG-подача
+- [x] [export](./export.md) — PDF-книга, печать квеста, выгрузка маршрута
+- [x] [achievements](./achievements.md) — значки, ранги, XP, peer- и редкие награды, прогрессия
+- [x] [trips](./trips.md) — совместные поездки, заявки, планировщик маршрута

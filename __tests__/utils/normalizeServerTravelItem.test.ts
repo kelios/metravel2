@@ -56,6 +56,20 @@ describe('normalizeServerTravelCard', () => {
     expect(normalizeServerTravelCard(dto({ slug: '', url: '', id: 77 })).url).toBe('/travels/77');
   });
 
+  // Тот же гард, что и в `resolveTravelUrl`: сюда попадают сырые серверные
+  // `slug`/`url`, а результат уходит в `router.push` из избранного и истории.
+  it.each(['null', 'undefined'])('does not build the url from the literal slug %p', (slug) => {
+    expect(normalizeServerTravelCard(dto({ slug, url: '', id: null as any })).url).toBe('');
+    expect(normalizeServerTravelCard(dto({ slug, url: '', id: 77 })).url).toBe('/travels/77');
+  });
+
+  it.each(['/travels/null', '/travels/undefined', '/travels/0'])(
+    'does not pass the unusable backend url %p through',
+    (url) => {
+      expect(normalizeServerTravelCard(dto({ slug: '', url, id: null as any })).url).toBe('');
+    },
+  );
+
   it('carries city through the list mapper', () => {
     const [first, second] = normalizeServerTravelCards([
       dto({ id: 177, cityName: 'Warszawa' }),

@@ -245,8 +245,11 @@ export default function HistoryScreen() {
     const computedColumns = Math.max(1, Math.floor((availableWidth + columnGap) / (minCardWidth + columnGap)));
     const numColumns = Math.min(computedColumns, 3);
 
+    // #1438: нормализатор отдаёт пустую строку, когда пригодного адреса нет
+    // («ссылки нет»). Без гарда `router.push('')` уводил бы на индекс-роут.
     const handleOpen = useCallback(
         (url: string) => {
+            if (!url) return;
             router.push(url as any);
         },
         [router]
@@ -393,7 +396,7 @@ export default function HistoryScreen() {
                         <Button
                             label={latestHistoryItem ? i18nT('shared:app.tabs.history.prodolzhit_s_poslednego_22c6c480') : i18nT('shared:app.tabs.history.prodolzhit_poisk_9044fea2')}
                             onPress={() =>
-                                latestHistoryItem
+                                latestHistoryItem?.url
                                     ? router.push(latestHistoryItem.url as any)
                                     : router.push('/search')
                             }

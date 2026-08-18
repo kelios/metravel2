@@ -28,7 +28,8 @@ board по `docs/TASK_BOARD_MCP.md`.
 | Источник | Что использовать |
 | --- | --- |
 | `docs/ANALYTICS_AUDIT_2026-07.md` | snapshot GA4/GSC/Yandex от 2026-07-02 |
-| `docs/SEO_AUDIT_2026-07-11.md` | indexing/search snapshot от 2026-07-11 |
+| `docs/SEO_AUDIT_2026-08-08.md` | текущий indexing/search snapshot от 2026-08-08 |
+| `docs/SEO_AUDIT_2026-07-11.md`, `2026-07-18.md`, `2026-07-27.md` | предыдущие срезы, только как история |
 | `docs/ARTICLE_ATTENTION_LOG.md` | append-only article attention cycles |
 | `docs/QUEST_DEMAND_LOG.md` | append-only quest demand cycles |
 | MCP task board | текущие работы, blockers и Done evidence |

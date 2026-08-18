@@ -19,7 +19,21 @@ describe('normalizeToTravel: адрес путешествия', () => {
     ['id null', { id: null }],
     ['id ноль', { id: 0 }],
     ['id — строка «undefined»', { id: 'undefined' }],
+    ['слаг — литерал пустоты', { id: null, slug: 'null' }],
+    ['серверный url ведёт в 404', { id: null, url: '/travels/null' }],
   ])('не выдаёт адрес, когда %s', (_label, item) => {
     expect(normalizeToTravel(item as Record<string, unknown>).url).toBe('')
+  })
+
+  it('здоровый id перебивает испорченные слаг и url', () => {
+    expect(normalizeToTravel({ id: 77, slug: 'null', url: '/travels/undefined' }).url).toBe(
+      '/travels/77',
+    )
+  })
+
+  it('внешнюю ссылку не подменяет своим адресом', () => {
+    expect(normalizeToTravel({ id: 77, url: 'https://example.com/travels/null' }).url).toBe(
+      'https://example.com/travels/null',
+    )
   })
 })

@@ -271,6 +271,17 @@ const RecommendationsTabs = memo(
       if (dataKey) ensureServerData(dataKey);
     }, [activeTab, ensureServerData, isAuthenticated, isMobile, isTabsVisible]);
 
+    // #1438: нормализатор коллекций отдаёт пустую строку, когда пригодного
+    // адреса нет («ссылки нет»). Без гарда `router.push('')` уводит на
+    // индекс-роут вместо статьи.
+    const openCollectionItem = useCallback(
+      (url: string) => {
+        if (!url) return;
+        router.push(url as any);
+      },
+      [router],
+    );
+
     const handleClearFavorites = useCallback(async () => {
       try {
         if (typeof clearFavorites !== 'function') return;
@@ -436,7 +447,7 @@ const RecommendationsTabs = memo(
           <View key={getRecommendationsCollectionKey(item, kind)} style={styles.shelfCardWrap}>
             <TabTravelCard
               item={mapRecommendationsCardItem(item)}
-              onPress={() => router.push(item.url as any)}
+              onPress={() => openCollectionItem(item.url)}
               layout="horizontal"
               width={SHELF_CARD_WIDTH}
               style={styles.shelfCard}
@@ -594,7 +605,7 @@ const RecommendationsTabs = memo(
                     <TabTravelCard
                       key={getRecommendationsCollectionKey(item, 'favorites')}
                       item={mapRecommendationsCardItem(item)}
-                      onPress={() => router.push(item.url as any)}
+                      onPress={() => openCollectionItem(item.url)}
                       layout={cardLayout}
                     />
                   )
@@ -641,7 +652,7 @@ const RecommendationsTabs = memo(
                         backgroundColor: colors.overlay,
                         iconColor: colors.textOnDark,
                       }}
-                      onPress={() => router.push(item.url as any)}
+                      onPress={() => openCollectionItem(item.url)}
                       layout={cardLayout}
                     />
                   )

@@ -40,6 +40,16 @@ describe('formatDistance', () => {
     // 9.99 → still < 10 → decimal with comma
     expect(formatDistance(9.99)).toBe('10,0 км')
   })
+
+  // #1440: тело сведено к общему форматтеру расстояния, поэтому короткий
+  // перегон печатается в метрах, а у больших чисел появляются разряды.
+  it('switches to meters below a kilometre', () => {
+    expect(formatDistance(0.8)).toBe('800 м')
+  })
+
+  it('groups thousands by locale', () => {
+    expect(formatDistance(2800)).toBe('2\u00a0800 км')
+  })
 })
 
 // ── formatDuration ────────────────────────────────────────────────────────────

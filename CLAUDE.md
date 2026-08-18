@@ -16,6 +16,8 @@
 | задача | документ |
 | --- | --- |
 | triage, выбор skill, матрица проверок | `docs/CODEX.md` (нужный раздел) |
+| глубина разбора задачи, доказательства, формат отчёта | `docs/AGENT_ANALYSIS_PROTOCOL.md` |
+| ожидаемое поведение фичи (источник истины для постановки) | `docs/features/<фича>.md` |
 | технические правила: UI, workflow, localization | `docs/RULES.md` (нужный раздел) |
 | e2e-доступы, тестданные на проде, Android/iPhone devices, prod-baseline, долгие операции и locks | `docs/WORKFLOW_OPERATIONS.md` |
 | каталог `$metravel-*` skills (Codex) | `docs/CODEX_SKILLS.md` |

@@ -229,7 +229,6 @@ export const tripsGenerated1 = {
   "components.trips.planning.tripPlanFormatting.servis_routinga_ne_smog_postroit_dorogu_ili__b8007009": "The routing service was unable to build a road or trail, the line shown is approximate.",
   "components.trips.planning.tripPlanFormatting.value1_ch_a0bf8320": "{{value1}} h",
   "components.trips.planning.tripPlanFormatting.value1_ch_value2_min_124c7a8f": "{{value1}} h {{value2}} min",
-  "components.trips.planning.tripPlanFormatting.value1_km_97fd3744": "{{value1}} km",
   "components.trips.planning.tripPlanFormatting.value1_m_7f82c902": "{{value1}} m",
   "components.trips.planning.tripPlanFormatting.value1_min_eb78c758": "{{value1}} min",
   "components.trips.planning.tripPlanFormatting.vyberite_datu_54abc3cf": "Select date",

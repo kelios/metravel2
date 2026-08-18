@@ -20,6 +20,7 @@ import { showToast } from '@/utils/toast';
 import { devWarn } from '@/utils/logger';
 import { buildTripPlanCreateHref } from '@/utils/tripPlanLinks';
 import { translate as i18nT } from '@/i18n'
+import { buildTravelPath } from '@/utils/travelSeo'
 
 
 const JOURNAL_FONT_FAMILY =
@@ -58,7 +59,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
           type: 'travel',
           title: travel.name,
           imageUrl: travel.travel_image_thumb_url,
-          url: `/travels/${travel.slug || travel.id}`,
+          url: buildTravelPath(travel) ?? '',
           country: (travel as any).countryName,
         });
       }
@@ -268,7 +269,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
         <TravelStatusButton
           travelId={travel.id}
           travelTitle={travel.name}
-          travelUrl={`/travels/${travel.slug || travel.id}`}
+          travelUrl={buildTravelPath(travel) ?? ''}
           travelImageUrl={travel.travel_image_thumb_url}
           travelCountry={(travel as any).countryName}
           travelYear={travel.year}

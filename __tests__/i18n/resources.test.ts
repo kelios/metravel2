@@ -240,6 +240,19 @@ describe('i18n resources', () => {
       expect(translatePlural('tripsStatic:plan.participants.count', 5)).toBe('5 участников')
       expect(translatePlural('tripsStatic:plan.participants.going', 1)).toBe('1 едет')
       expect(translatePlural('tripsStatic:plan.participants.going', 2)).toBe('2 едут')
+      // #1443: строка недобора точек на частичном финале квеста — тот же путь.
+      expect(
+        translatePlural('quests:components.quests.questWizardSections.partialNotCredited', 2, {
+          value1: 1,
+          value2: 9,
+        }),
+      ).toBe('Пройдено 1 из 9 точек. Квест засчитается, когда пройдёте ещё 2 точки.')
+      expect(
+        translatePlural('quests:components.quests.questWizardSections.partialNotCredited', 5, {
+          value1: 1,
+          value2: 9,
+        }),
+      ).toBe('Пройдено 1 из 9 точек. Квест засчитается, когда пройдёте ещё 5 точек.')
     } finally {
       Intl.PluralRules = originalPluralRules
     }

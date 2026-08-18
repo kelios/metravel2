@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { View } from 'react-native'
 
 import { safeLazy } from '@/components/layout/safeLazy'
+import { isAndroidPhoneUserAgent } from '@/utils/appInstallHint'
 
 const NetworkStatusLazy = safeLazy(
   () =>
@@ -26,6 +27,10 @@ const NewVersionPromptLazy = safeLazy(
   () => import('@/components/layout/NewVersionPrompt'),
   'NewVersionPrompt'
 )
+const AppInstallBarLazy = safeLazy(
+  () => import('@/components/layout/AppInstallBar'),
+  'AppInstallBar'
+)
 
 interface RootWebDeferredChromeProps {
   isMobile: boolean
@@ -47,7 +52,7 @@ export default function RootWebDeferredChrome({
   const [showNetworkStatusChrome, setShowNetworkStatusChrome] = useState(true)
   const [showRuntimeEffects, setShowRuntimeEffects] = useState(true)
   const [showConsentBanner, setShowConsentBanner] = useState(false)
-  const [showServiceWorkerCleanup, setShowServiceWorkerCleanup] = useState(false)
+  const [showIdleChrome, setShowIdleChrome] = useState(false)
 
   useEffect(() => {
     setShowRuntimeEffects(true)
@@ -110,13 +115,13 @@ export default function RootWebDeferredChrome({
     const delay = 1000
 
     timeoutId = setTimeout(() => {
-      setShowServiceWorkerCleanup(true)
+      setShowIdleChrome(true)
     }, delay)
 
     if ('requestIdleCallback' in window) {
       idleId = (window as any).requestIdleCallback(
         () => {
-          setShowServiceWorkerCleanup(true)
+          setShowIdleChrome(true)
         },
         { timeout: 1000 }
       )
@@ -134,6 +139,15 @@ export default function RootWebDeferredChrome({
     }
   }, [isTravelPerformanceRoute])
 
+  // Чанк подсказки про приложение подтягиваем только там, где она в принципе
+  // может показаться: Android-телефон в мобильном вьюпорте и уже после idle.
+  // Остальные посетители его вообще не скачивают.
+  const showAppInstallBar =
+    isMobile &&
+    showIdleChrome &&
+    typeof navigator !== 'undefined' &&
+    isAndroidPhoneUserAgent(navigator.userAgent)
+
   return (
     <>
       {showNetworkStatusChrome && (
@@ -148,13 +162,13 @@ export default function RootWebDeferredChrome({
         </React.Suspense>
       )}
 
-      {showServiceWorkerCleanup && (
+      {showIdleChrome && (
         <React.Suspense fallback={null}>
           <WebServiceWorkerCleanupLazy />
         </React.Suspense>
       )}
 
-      {showServiceWorkerCleanup && (
+      {showIdleChrome && (
         <React.Suspense fallback={null}>
           <NewVersionPromptLazy />
         </React.Suspense>
@@ -163,6 +177,12 @@ export default function RootWebDeferredChrome({
       {showConsentBanner && (
         <React.Suspense fallback={null}>
           <ConsentBannerLazy />
+        </React.Suspense>
+      )}
+
+      {showAppInstallBar && (
+        <React.Suspense fallback={null}>
+          <AppInstallBarLazy />
         </React.Suspense>
       )}
 

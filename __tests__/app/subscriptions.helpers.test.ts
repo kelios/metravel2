@@ -53,7 +53,7 @@ describe('subscriptions.helpers', () => {
     // #1438: результат уходит прямо в `href` карточки каталога — это
     // единственный настоящий `<a>` с travel-адресом на странице статьи.
     // Серверное поле `url` пропускалось без проверки сегмента.
-    it.each(['/travels/null', '/travels/undefined', '/travels/0', 'https://metravel.by/travels/null'])(
+    it.each(['/travels/null', '/travels/undefined', '/travels/0', '/travels/null/photos'])(
       'does not pass the unusable backend url %p through to the href',
       (url) => {
         expect(resolveTravelUrl({ id: null, url } as any)).toBe('');
@@ -67,6 +67,21 @@ describe('subscriptions.helpers', () => {
 
     it('falls back to the id when the backend url is unusable', () => {
       expect(resolveTravelUrl({ id: 77, url: '/travels/null' })).toBe('/travels/77');
+    });
+
+    // #1438: ветка слага не проверялась вовсе, а результат уходит прямо в `href`
+    // карточки каталога — литерал давал ровно тот адрес, из-за которого заведён
+    // тикет.
+    it.each(['null', 'undefined', 'NaN', 'none', 'false'])(
+      'does not build the href from the literal slug %p',
+      (slug) => {
+        expect(resolveTravelUrl({ id: null, slug } as any)).toBe('');
+        expect(resolveTravelUrl({ id: 77, slug })).toBe('/travels/77');
+      },
+    );
+
+    it('keeps a real slug raw, without percent-encoding', () => {
+      expect(resolveTravelUrl({ id: 77, slug: 'gora-kosiazh' })).toBe('/travels/gora-kosiazh');
     });
   });
 });

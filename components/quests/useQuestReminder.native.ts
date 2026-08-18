@@ -14,7 +14,7 @@ type QuestReminderParams = {
   title: string;
   completedCount: number;
   totalCount: number;
-  allCompleted: boolean;
+  questFinished: boolean;
 };
 
 export function useQuestReminder({
@@ -23,22 +23,22 @@ export function useQuestReminder({
   title,
   completedCount,
   totalCount,
-  allCompleted,
+  questFinished,
 }: QuestReminderParams): void {
   const isFocused = useIsFocused();
 
   // Keep latest progress in a ref so the unmount/blur cleanup reads fresh values
   // without re-subscribing on every answer.
-  const stateRef = useRef({ completedCount, totalCount, allCompleted, title });
-  stateRef.current = { completedCount, totalCount, allCompleted, title };
+  const stateRef = useRef({ completedCount, totalCount, questFinished, title });
+  stateRef.current = { completedCount, totalCount, questFinished, title };
 
   // On focus / completion: cancel any pending reminder (user is here / done — don't nag).
   useEffect(() => {
     if (!questId) return;
-    if (isFocused || allCompleted) {
+    if (isFocused || questFinished) {
       void cancelQuestReminder(questId);
     }
-  }, [questId, isFocused, allCompleted]);
+  }, [questId, isFocused, questFinished]);
 
   // On leaving the screen (blur or unmount): if started-but-unfinished, schedule.
   useEffect(() => {
@@ -46,7 +46,7 @@ export function useQuestReminder({
     if (isFocused) return undefined;
 
     // Effect runs when isFocused flips to false → schedule using fresh ref state.
-    const { completedCount: done, totalCount: total, allCompleted: finished, title: questTitle } =
+    const { completedCount: done, totalCount: total, questFinished: finished, title: questTitle } =
       stateRef.current;
     if (!finished && done > 0 && total > 0) {
       void scheduleQuestReminder(questId, questTitle, done, total, `${cityId}/${questId}`);
@@ -58,7 +58,7 @@ export function useQuestReminder({
   useEffect(() => {
     return () => {
       if (!questId || !cityId) return;
-      const { completedCount: done, totalCount: total, allCompleted: finished, title: questTitle } =
+      const { completedCount: done, totalCount: total, questFinished: finished, title: questTitle } =
         stateRef.current;
       if (!finished && done > 0 && total > 0) {
         void scheduleQuestReminder(questId, questTitle, done, total, `${cityId}/${questId}`);

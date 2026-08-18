@@ -19,6 +19,23 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
  // ✅ РЕДИЗАЙН: Темная тема
 
+/**
+ * Идентификатор соседа, из которого получается рабочий адрес: сначала слаг,
+ * потом id. `null`, если ни то, ни другое не годится.
+ *
+ * #1438: раньше здесь стояло `slug || id`, и запись с литеральным слагом
+ * (`slug: 'null'`) при живом id считалась битой целиком. Все три нормализатора
+ * адреса в этой же правке падают в таком случае на id и ссылку сохраняют —
+ * порядок должен совпадать, иначе стрелка пропадает у достижимой карточки.
+ */
+function resolveTravelKey(travel: Travel | null | undefined): string | number | null {
+  if (!travel) return null;
+  const slug = typeof travel.slug === 'string' ? travel.slug : '';
+  if (buildTravelPath(slug, { encode: false })) return slug;
+  if (buildTravelPath(travel.id)) return travel.id;
+  return null;
+}
+
 interface NavigationArrowsProps {
   currentTravel: Travel;
   relatedTravels: Travel[];
@@ -45,13 +62,18 @@ function NavigationArrows({
 
   // P2-6: Если текущее путешествие не в списке — показываем первые 2 как «Похожие маршруты»
   const { prevTravel, nextTravel, isFallback } = useMemo(() => {
+    // #1438: сосед без пригодного слага и id — это карточка, ведущая в 404.
+    // Такую стрелку не рисуем вовсе, вместо мёртвого нажатия (контракт задачи:
+    // «карточка рендерится без ссылки либо не рендерится вовсе»).
+    const usable = (travel: Travel | null | undefined) => resolveTravelKey(travel) !== null;
+
     if (relatedTravels.length === 0) {
       return { prevTravel: null, nextTravel: null, isFallback: false };
     }
 
     if (currentIndex === -1) {
       const filtered = relatedTravels.filter(
-        (t) => t.id !== currentTravel?.id
+        (t) => t.id !== currentTravel?.id && usable(t)
       );
       return {
         prevTravel: filtered[0] ?? null,
@@ -68,19 +90,24 @@ function NavigationArrows({
     const next =
       currentIndex < relatedTravels.length - 1 ? relatedTravels[currentIndex + 1] : null;
 
-    return { prevTravel: prev, nextTravel: next, isFallback: false };
+    return {
+      prevTravel: usable(prev) ? prev : null,
+      nextTravel: usable(next) ? next : null,
+      isFallback: false,
+    };
   }, [currentIndex, relatedTravels, currentTravel]);
 
   const handleNavigate = useCallback(
     (travel: Travel | null) => {
-      if (!travel) return;
       // #1438: `slug || id` при обоих пустых полях давало литерал в адресе —
-      // после перезагрузки или шаринга такой URL это 404. Нет пригодного
-      // сегмента — перехода нет.
-      const travelPath = buildTravelPath(travel.slug || travel.id);
+      // после перезагрузки или шаринга такой URL это 404. Такие соседи уже
+      // отсеяны выше, гард здесь — на случай вызова из другого места.
+      const key = resolveTravelKey(travel);
+      if (key === null) return;
+      const travelPath = buildTravelPath(key);
       if (!travelPath) return;
       if (onNavigate) {
-        onNavigate(travel.slug || travel.id);
+        onNavigate(key);
       } else {
         router.push(travelPath as never);
       }

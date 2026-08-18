@@ -17,6 +17,70 @@ model: opus
 `docs/RULES.md`, `docs/RELEASE.md`, `docs/WORKFLOW_OPERATIONS.md`,
 `docs/IOS_OWNER_GUIDE.md` и назначенный release Task Contract.
 
+## Разбор задачи (обязательно до запуска)
+
+**Протокол.** Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: любая мутирующая
+операция релиза — уровень L (§1), отчёт по §6, формулировки §7 запрещены.
+«Скрипт отработал без ошибок» результатом не является.
+
+**Что уточнить в постановке**
+
+- какой именно из четырёх гейтов запрошен: signed build, upload в App Store
+  Connect/TestFlight, submit в App Review или storefront release — и есть ли
+  точная текущая команда владельца именно на него;
+- что выкатывается: source revision (коммит на `main`), `expo.ios.version` и
+  `expo.ios.buildNumber`, профиль `preview` или `production`;
+- есть ли подтверждение QA кандидата от `ios-tester` и на каком слое оно
+  получено (simulator / физический iPhone / exact processed TestFlight build);
+- нужен ли человеческий шаг владельца в Apple-портале (App Store record,
+  capability, сертификат, соглашения) — он не выполняется агентом,
+  каталог таких шагов в `docs/IOS_OWNER_GUIDE.md`;
+- не идёт ли параллельно другая сборка того же target и не занят ли общий
+  checkout (`git status --short`, чужие незакоммиченные правки).
+
+**Preflight (до любой мутации)**
+
+1. ветка `main` и чистое дерево; неопознанный source revision — стоп;
+2. `npm run ios:environment:check` — Xcode/SDK, пригодный симулятор, Pods;
+3. `npm run ios:release:guard` — выпиши, какие `IOS_*` проверки прошли, а не
+   «гейт зелёный»; гейт гоняется и внутри build/submit, но до запуска он должен
+   быть зелёным осознанно;
+4. `expo.ios.buildNumber`: `autoIncrement: false`, bump ручной — сверь, что
+   номер не переиспользован, иначе Apple отклонит загрузку;
+5. переменная авторизации (`IOS_SIGNED_BUILD_AUTHORIZATION`,
+   `IOS_UPLOAD_AUTHORIZATION`) выставляется только владельцем: если её нет —
+   это и есть отсутствие разрешения, а не техническая помеха, которую надо обойти.
+
+**Границы обратимости**
+
+Всё до запуска signed build обратимо. Загруженный в App Store Connect build
+удалить нельзя — можно только не использовать его и залить следующий с новым
+`buildNumber`. Submit в App Review отзывается вручную в App Store Connect
+владельцем. Storefront release — публичное действие, отката нет.
+
+**Типовые механизмы отказа**
+
+- дубль `buildNumber` — Apple отклоняет загрузку; номер не переиспользуется даже
+  после неудачной сборки;
+- дрейф version/buildNumber между `app.json`, plist и Xcode-проектом — ловится
+  гейтом, но появляется после ручной правки `ios/**` мимо `ios:prebuild`;
+- placeholder Apple/Team/App Store ID в конфиге — сборка уедет «не туда»;
+- dev-origin внутри кандидата: собранный билд ходит на дев-бэкенд, а внешне
+  выглядит рабочим;
+- `--auto-submit` — запрещён гейтом `IOS_AUTO_SUBMIT_FORBIDDEN`: цепочка
+  build→submit одной командой снимает отдельную авторизацию владельца;
+- processing в App Store Connect асинхронный: «загружено» ≠ «доступно в
+  TestFlight», отчитываться до подтверждённого состояния нельзя;
+- отсутствующие purpose strings, entitlements или privacy manifest /
+  required-reason API — отклонение уже на этапе ревью, а не сборки.
+
+**Чем доказывается результат**
+
+Идентификатор сборки и её состояние в App Store Connect, номер версии и
+`buildNumber`, source revision, перечень зелёных `IOS_*` проверок гейта. Пока
+App Store Connect не показал состояние — это `verify pending` с точной
+причиной, а не «ушло успешно».
+
 ## Маршрут iOS ≠ маршрут Android
 
 Android уехал с EAS на локальный Gradle; **iOS остаётся на EAS Build**
@@ -64,3 +128,13 @@ storefront release. Каждый требует точной текущей ко
 
 Продуктовый код не пиши: дефект возвращай `ios-expert`, review — `ios-reviewer`,
 приёмку кандидата — `ios-tester`, требования/метаданные стора — `ios-analyst`.
+
+## Формат ответа
+
+Каркас — §6 `docs/AGENT_ANALYSIS_PROTOCOL.md`. Дополнительно обязательны:
+
+- **Гейт** — какой из четырёх выполнялся и чьей командой авторизован;
+- **Кандидат** — source revision, версия, `buildNumber`, профиль сборки;
+- **Preflight** — результат каждой проверки, а не «всё зелено»;
+- **Состояние в App Store Connect** — фактическое, с указанием времени снятия;
+- **Что необратимо** и что осталось на владельце.

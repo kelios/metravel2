@@ -1,4 +1,4 @@
-import { buildTravelPath } from '@/utils/routePaths';
+import { buildTravelPath, sanitizeTravelHref } from '@/utils/routePaths';
 
 export type TravelPreview = {
   id: number;
@@ -54,35 +54,14 @@ export const normalizeTravelPreview = (value: unknown): TravelPreview => {
  * строку `/travels/null` — в проде это 5 переходов на 404 за двое суток.
  */
 export const resolveTravelUrl = (travel: TravelPreview): string => {
-  const slug = String(travel.slug ?? '').trim();
-  if (slug) return `/travels/${slug}`;
-  const explicitUrl = String(travel.url ?? '').trim();
-  if (explicitUrl) {
-    const clean = explicitUrl.split('?')[0].split('#')[0];
-    // #1438: серверное `url` уходило в `href` карточки как есть. Это
-    // единственный настоящий `<a href>` с travel-адресом на странице статьи
-    // (`TravelListItem`), поэтому запись с `/travels/null` в этом поле стала бы
-    // кликабельной ссылкой в 404. Сегмент проверяем тем же гардом, что и id.
-    if (isUsableTravelUrl(clean)) return clean;
-  }
+  // #1438: ветка слага раньше не проверялась вовсе — серверный литерал
+  // `slug: 'null'` отдавал ровно тот `/travels/null`, из-за которого заведён
+  // тикет. Здесь и в поле `url` действует общий гард сегмента.
+  const slugPath = buildTravelPath(travel.slug, { encode: false });
+  if (slugPath) return slugPath;
+
+  const explicitUrl = sanitizeTravelHref(travel.url);
+  if (explicitUrl) return explicitUrl.split('?')[0].split('#')[0];
+
   return buildTravelPath(travel.id) ?? '';
 };
-
-/**
- * `true`, если адрес не является travel-страницей с непригодным сегментом
- * (`/travels/null`, `/travels/undefined`, `/travels/0`). Не-travel адреса
- * пропускаем как есть: это поле бэкенд использует и для внешних ссылок.
- */
-function isUsableTravelUrl(url: string): boolean {
-  const match = url.match(/\/travels\/([^/]+)\/?$/);
-  if (!match) return true;
-  return buildTravelPath(decodeSegmentSafely(match[1])) !== null;
-}
-
-function decodeSegmentSafely(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
