@@ -53,8 +53,5 @@ export const offline = {
   mapPointsSaved: 'Zapisane punkty: {{count}}',
   mapRegionUnavailable: 'Najpierw poczekaj na wczytanie obszaru mapy.',
   savedRegions: 'Zapisane obszary',
-  bytes: '{{value}} B',
-  kilobytes: '{{value}} KB',
-  megabytes: '{{value}} MB',
   updated: 'Zaktualizowano {{date}}',
 } as const

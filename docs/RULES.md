@@ -35,6 +35,12 @@
 - Use `useTranslation()` from `@/i18n` in React code and the shared translation
   helpers outside React. Use `i18n/format.ts` for locale-sensitive formatting,
   plural selection, and collation; do not hardcode `ru-RU` or manual plural rules.
+- Never build a displayed number on the call site: `toFixed` plus a hardcoded
+  unit (`4.6`, `1.2K`, `1.5 KB`) is `LOCALE-NUMBER-FORMAT-001` and fails
+  `npm run guard:locale-number-format`. Units come from a translation key, and
+  domain wrappers (`utils/distanceCalculator.ts`, `utils/ratingHelpers.ts`,
+  `utils/fileSize.ts`) stay the single entry point for distance, rating, and
+  file size.
 - Add every new translation key to all production locales in the same change.
   Preserve deterministic web SSR/hydration and the existing native locale/storage
   lifecycle; do not add locale URL prefixes or `hreflang` without a separate SEO

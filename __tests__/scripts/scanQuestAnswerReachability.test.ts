@@ -273,14 +273,53 @@ describe('scanQuests', () => {
 })
 
 describe('доказательство рантаймом: находка mixed_script — это отказ игроку', () => {
-  // Словарь скопирован из ответа прода `GET /api/quest-steps/130/` как есть.
-  const PROD_STEP_130 = '["часы","часов","куранты","часы куранты","башенные часы","гадзiннiк","гадзинник","clock"]'
+  // Словарь шага 130 `grodno-royal/farny` до правки #1455, скопирован из ответа
+  // прода `GET /api/quest-steps/130/` как есть: латинская i (U+0069) в
+  // «гадзiннiк». Оставлен как доказательство дефекта — он и объясняет, зачем
+  // класс `mixed_script` держат в blocker'ах.
+  const PROD_STEP_130_BEFORE =
+    '["часы","часов","куранты","часы куранты","башенные часы","гадзiннiк","гадзинник","clock"]'
+  // Тот же шаг после правки #1455 (LIVE-патч 2026-08-18, сверено
+  // `GET /api/quests/by-quest-id/grodno-royal/`): белорусская і (U+0456).
+  const PROD_STEP_130_AFTER =
+    '["часы","часов","куранты","часы куранты","башенные часы","гадзіннік","гадзинник","clock"]'
 
-  it('белорусская форма с кириллической і отвергается, хотя ради неё вариант и заведён', () => {
-    const check = buildAnswerChecker('exact_any', PROD_STEP_130)
+  it('до правки: белорусская форма с кириллической і отвергается, хотя ради неё вариант и заведён', () => {
+    const check = buildAnswerChecker('exact_any', PROD_STEP_130_BEFORE)
 
     expect(check('гадзіннік')).toBe(false)      // U+0456 — то, что наберёт игрок
-    expect(check('гадзiннiк')).toBe(true)       // U+0069 — то, что лежит в словаре
+    expect(check('гадзiннiк')).toBe(true)       // U+0069 — то, что лежало в словаре
     expect(check('часы')).toBe(true)            // контроль на здоровой позиции
+  })
+
+  it('после правки: набранное кириллицей «гадзіннік» засчитывается', () => {
+    const check = buildAnswerChecker('exact_any', PROD_STEP_130_AFTER)
+
+    expect(check('гадзіннік')).toBe(true)       // U+0456 — ради этой формы вариант и заводили
+    expect(check('гадзiннiк')).toBe(false)      // U+0069 — мёртвой записи в словаре больше нет
+    expect(check('часы')).toBe(true)            // контроль на здоровой позиции
+  })
+
+  it('после правки: национальные формы остальных пяти шагов вводимы своей раскладкой', () => {
+    // Словари сверены с прод-ответами `GET /api/quests/by-quest-id/{id}/` после LIVE-патча #1455.
+    const cases: Array<[string, string, string]> = [
+      ['mogilev-stargazer/ratusha', '["могислав","могіслаў","могислаў","магислав"]', 'могіслаў'],
+      ['amsterdam-on-piles/5-munttoren', '["4","четыре","четыре циферблата","4 циферблата"]', 'четыре'],
+      [
+        'belgrade-white-city/1-skadarlija',
+        '["tri sesira","tri šešira","три шешира","три шешире","три сесира"]',
+        'три шешира',
+      ],
+      ['lodz-murals/4-twozywo', '["zwykly","zwykły","звыклы","звыклый","звыкли"]', 'zwykły'],
+      [
+        'bratislava-coronation-crown/4-stara-radnica',
+        '["ядро","ядра","пушечное ядро","ядро пушечное","снаряд","ядро от пушки","delová guľa","delova gula","gula"]',
+        'delová guľa',
+      ],
+    ]
+
+    for (const [label, dictionary, typed] of cases) {
+      expect([label, buildAnswerChecker('exact_any', dictionary)(typed)]).toEqual([label, true])
+    }
   })
 })

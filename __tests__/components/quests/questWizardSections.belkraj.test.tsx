@@ -2,6 +2,14 @@ import React from 'react'
 import { render } from '@testing-library/react-native'
 
 const mockQuestFullMapLazy = jest.fn(() => null)
+let mockBelkrajRenderable = true
+
+// Гейт рендера Belkraj открыт только в production-сборке; в jest управляем им явно.
+jest.mock('@/components/belkraj/belkrajAvailability', () => ({
+  ...(jest.requireActual('@/components/belkraj/belkrajAvailability') as object),
+  isBelkrajEnabled: () => mockBelkrajRenderable,
+  canRenderBelkrajWidget: () => mockBelkrajRenderable,
+}))
 
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: (props: Record<string, unknown>) => {
@@ -26,6 +34,10 @@ const styles = {
 }
 
 describe('QuestExcursionsInline Belkraj integration', () => {
+  beforeEach(() => {
+    mockBelkrajRenderable = true
+  })
+
   it('passes the quest city coordinates to the shared Belkraj widget', () => {
     const city = {
       name: 'Минск',
@@ -50,6 +62,38 @@ describe('QuestExcursionsInline Belkraj integration', () => {
     expect(widget.props.points).toEqual([
       { id: 1, address: 'Минск', lat: 53.9, lng: 27.56 },
     ])
+  })
+
+  // #1452: обвязка секции (разделитель + карточка + заголовок) рисовалась даже
+  // тогда, когда виджет молча возвращал null — на экране оставалась пустая
+  // карточка-призрак с одним заголовком «Экскурсии рядом».
+  it('renders nothing when neither the widget nor affiliate offers have content', () => {
+    mockBelkrajRenderable = false
+
+    const { queryByText, queryByTestId } = render(
+      <QuestExcursionsInline
+        colors={{}}
+        styles={styles}
+        city={{ name: 'Минск', lat: 53.9, lng: 27.56, countryCode: 'BY' }}
+        title="Тест-квест"
+      />,
+    )
+
+    expect(queryByTestId('quest-excursions-section')).toBeNull()
+    expect(queryByText('Экскурсии рядом')).toBeNull()
+  })
+
+  it('keeps exactly one «Экскурсии рядом» heading in the step-card section', () => {
+    const { getAllByText } = render(
+      <QuestExcursionsInline
+        colors={{}}
+        styles={styles}
+        city={{ name: 'Минск', lat: 53.9, lng: 27.56, countryCode: 'BY' }}
+        title="Тест-квест"
+      />,
+    )
+
+    expect(getAllByText('Экскурсии рядом')).toHaveLength(1)
   })
 })
 

@@ -5,6 +5,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import type { PlaceRating } from '@/utils/placesCatalog'
 import { translate as i18nT } from '@/i18n'
 import { formatCompactNumber } from '@/i18n/format'
+import { formatRatingValue } from '@/utils/ratingHelpers'
 
 // The site's own aggregated user rating. It needs no external attribution, so its
 // provider label is hidden on the badge (just the stars + score are shown).
@@ -55,7 +56,7 @@ function PlaceRatingBadge({ rating, style, testID = 'place-rating-badge' }: Prop
   const isNativeProvider = primarySource?.provider.trim().toLowerCase() === NATIVE_PROVIDER
   // Own MeTravel rating shows no source attribution; external sources always do.
   const showProvider = !!providerLabel && !isNativeProvider
-  const valueLabel = rating.value.toFixed(1)
+  const valueLabel = formatRatingValue(rating.value)
   const countLabel = formatCount(rating.count)
 
   return (
@@ -79,7 +80,14 @@ function PlaceRatingBadge({ rating, style, testID = 'place-rating-badge' }: Prop
           </Text>
         </>
       ) : null}
-      {countLabel ? <Text style={styles.count}>({countLabel})</Text> : null}
+      {countLabel ? (
+        // Пилюля ограничена maxWidth, а русская компактная строка длиннее
+        // английской («(12,5 тыс.)» против «(12.5k)») — счётчику нужен свой
+        // выход по ширине, иначе Yoga режет его на Android (#1457).
+        <Text style={styles.count} numberOfLines={1}>
+          ({countLabel})
+        </Text>
+      ) : null}
     </View>
   )
 }
@@ -123,6 +131,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: 11,
       color: colors.textOnDark ?? '#fff',
       opacity: 0.75,
+      flexShrink: 1,
     },
   })
 

@@ -1,6 +1,7 @@
 import { Platform } from "react-native"
 
 import type { Travel } from "@/types/types"
+import { canRenderBelkrajWidget } from "@/components/belkraj/belkrajAvailability"
 import { translate as i18nT } from '@/i18n'
 
 
@@ -53,7 +54,11 @@ export const buildTravelSectionLinks = (
   pushIf(hasRecommendation, links, { key: "recommendation", icon: "thumbs-up", label: i18nT('travel:components.travel.sectionLinks.rekomendatsii_83cdaba4') })
   pushIf(hasPlus, links, { key: "plus", icon: "plus", label: i18nT('travel:components.travel.sectionLinks.plyusy_80285d53') })
   pushIf(hasMinus, links, { key: "minus", icon: "minus", label: i18nT('travel:components.travel.sectionLinks.minusy_722b20a7') })
-  pushIf((platform === "web" || platform === "android") && hasTravelAddress, links, { key: "excursions", icon: "compass", label: i18nT('travel:components.travel.sectionLinks.ekskursii_60b416ff') })
+  // Ссылка «Экскурсии» держится того же предиката, что и сама ExcursionsSection:
+  // секция не рисуется, когда Belkraj-виджет ничего не отдаст, и пункт навигации,
+  // ведущий в никуда, появляться не должен.
+  const hasExcursions = canRenderBelkrajWidget(travel.travelAddress, travel.countryCode)
+  pushIf((platform === "web" || platform === "android") && hasExcursions, links, { key: "excursions", icon: "compass", label: i18nT('travel:components.travel.sectionLinks.ekskursii_60b416ff') })
 
   links.push({ key: "map", icon: "map", label: i18nT('travel:components.travel.sectionLinks.karta_marshruta_e95d2bba') })
   pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: i18nT('travel:components.travel.sectionLinks.koordinaty_mest_b024ee27') })

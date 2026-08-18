@@ -5,6 +5,7 @@ import StarRating from '@/components/ui/StarRating';
 import { usePlaceRating } from '@/hooks/usePlaceRating';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { selectPlural, translate as i18nT } from '@/i18n';
+import { formatRatingValue } from '@/utils/ratingHelpers';
 
 type Props = {
   placeId: string | number | undefined;
@@ -86,7 +87,7 @@ function PlaceRatingSection({
 
       <View style={styles.ratingRow}>
         <View style={styles.ratingDisplay}>
-          <Text style={styles.ratingValue}>{rating ? rating.toFixed(1) : '—'}</Text>
+          <Text style={styles.ratingValue}>{rating ? formatRatingValue(rating) : '—'}</Text>
           <StarRating rating={rating} size="large" showValue={false} showCount={false} />
         </View>
 

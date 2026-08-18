@@ -236,6 +236,11 @@
   RU resources — типизированный key baseline.
 - Даты, числа, валюты, списки, relative time, plural и sorting форматируй
   через `i18n/format.ts`; не хардкодь `ru-RU` и не пиши plural rules через `%`.
+- Отображаемое число не собирай на месте через `toFixed` и не склеивай с
+  хардкодной единицей: это ловит `npm run guard:locale-number-format`
+  (`LOCALE-NUMBER-FORMAT-001`). Единица приходит из ключа перевода, доменные
+  обёртки — `utils/distanceCalculator.ts`, `utils/ratingHelpers.ts` и
+  `utils/fileSize.ts`.
 - Не переводи на клиенте user/editorial/API content, названия мест,
   комментарии, сообщения и stable backend codes; для этого нужен отдельный
   content-locale/API contract.

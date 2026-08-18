@@ -5,6 +5,7 @@ import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { translate as i18nT } from '@/i18n'
+import { canRenderBelkrajWidget } from '@/components/belkraj/belkrajAvailability'
 import { getAccessibilityRole } from '@/utils/a11y'
 
 
@@ -49,7 +50,11 @@ export const ExcursionsSection: React.FC<{
   styles: any
   shouldForceRenderExcursions: boolean
 }> = ({ travel, anchors, styles, shouldForceRenderExcursions }) => {
-  if ((travel.travelAddress?.length ?? 0) <= 0) return null
+  // Обвязку секции (заголовок + подзаголовок + карточка) рисуем только когда виджет
+  // реально что-то отдаст — иначе остаётся пустая карточка-призрак (#1452). Тот же
+  // предикат гейтит ссылку «Экскурсии» в buildTravelSectionLinks, чтобы в навигации
+  // не появился пункт, ведущий в никуда.
+  if (!canRenderBelkrajWidget(travel.travelAddress, travel.countryCode)) return null
 
   return (
     <Suspense fallback={<Fallback />}>

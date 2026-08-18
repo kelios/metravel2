@@ -20,6 +20,7 @@ import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { snapshotFromServerProgress } from '@/utils/questProgressMerge';
+import { buildQuestProgressStorageKey } from '@/utils/questProgressStorage';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { buildQuestSeoMetadata } from '@/utils/questSeo';
@@ -27,6 +28,7 @@ import { buildQuestSeoMetadata } from '@/utils/questSeo';
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
 import { getFormatLocale, translate as i18nT } from '@/i18n'
+import { formatRatingValue } from '@/utils/ratingHelpers';
 
 
 const QuestWizard = React.lazy<React.ComponentType<QuestWizardProps>>(() =>
@@ -308,7 +310,7 @@ export default function QuestByIdScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const canonical = useMemo(() => buildCanonicalUrl(`/quests/${cityId}/${questId}`), [cityId, questId]);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userId } = useAuth();
   const shouldLoadQuest = isFocused && Boolean(questId);
   const { bundle, loading: isQuestLoading, error: bundleError, refetch } = useQuestBundle(
     shouldLoadQuest ? questId : undefined,
@@ -327,7 +329,7 @@ export default function QuestByIdScreen() {
   const ratingMeta = useQuestRatingMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
   const ratingSlot = useMemo(() => {
     if (ratingMeta.ratingCount === 0) return null;
-    const avg = (ratingMeta.ratingAvg ?? 0).toFixed(1);
+    const avg = formatRatingValue(ratingMeta.ratingAvg ?? 0);
     const countLabel = i18nT('quests:app.tabs.quests.city.questId.reviewCount', { count: ratingMeta.ratingCount });
     return (
       <Pressable
@@ -447,7 +449,7 @@ export default function QuestByIdScreen() {
   }
 
   if (!isAuthenticated) {
-    const guestStorageKey = `guest_${bundle.storageKey ?? questId}`;
+    const guestStorageKey = buildQuestProgressStorageKey(bundle.storageKey ?? questId, { isAuthenticated: false });
     return (
       <View style={styles.page}>
         {isFocused ? (
@@ -543,6 +545,11 @@ export default function QuestByIdScreen() {
     );
   }
 
+  // Локальная копия прогресса — под ключом с id аккаунта (#1456): на общем
+  // устройстве запись предыдущего пользователя не должна находиться и сливаться
+  // с прогрессом следующего вошедшего.
+  const progressStorageKey = buildQuestProgressStorageKey(bundle.storageKey ?? questId, { isAuthenticated: true, userId });
+
   return (
     <View style={styles.page}>
       {isFocused ? (
@@ -565,7 +572,7 @@ export default function QuestByIdScreen() {
             tags={bundle.tags}
             finale={bundle.finale}
             intro={bundle.intro}
-            storageKey={bundle.storageKey}
+            storageKey={progressStorageKey}
             city={bundle.city}
             coverUrl={bundle.coverUrl}
             onProgressChange={saveProgress}
@@ -587,7 +594,7 @@ export default function QuestByIdScreen() {
           tags={bundle.tags}
           finale={bundle.finale}
           intro={bundle.intro}
-          storageKey={bundle.storageKey}
+          storageKey={progressStorageKey}
           city={bundle.city}
           coverUrl={bundle.coverUrl}
           onProgressChange={saveProgress}

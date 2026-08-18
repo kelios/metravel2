@@ -292,6 +292,17 @@ const main = () => {
       if (reachabilityStatus !== 0) {
         process.exit(reachabilityStatus)
       }
+
+      // Тот же дефект — смешение алфавитов внутри слова — но в видимом игроку
+      // тексте шага (#1464). Порог нулевой и baseline'а нет: все находки
+      // вычищены до нуля, поэтому любое новое слово валит гейт сразу.
+      const textScriptStatus = runCommand('node', [
+        'scripts/scan-quest-mixed-script-text.js',
+        `--source=${questDataFile}`,
+      ], { shell: false })
+      if (textScriptStatus !== 0) {
+        process.exit(textScriptStatus)
+      }
     }
 
     if (result.lintTargets.length === 0) {

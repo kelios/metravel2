@@ -75,24 +75,46 @@ describe('affiliateConfig', () => {
     expect(offer.subtitle).toContain('Польша')
   })
 
-  // #1386: страны, которые резолвер научился определять по координатам. Слаги
-  // проверены на живых страницах обеих площадок (с контролем на заведомо
-  // несуществующем слаге), поэтому ссылка обязана быть страновой, а не homepage.
+  // #1386: страны, которые резолвер научился определять по координатам, плюс
+  // страны квестов, добавленные 2026-08-18. Слаги проверены на живых страницах
+  // обеих площадок (с контролем на заведомо несуществующем слаге), поэтому
+  // ссылка обязана быть страновой, а не homepage. Таблица держит слаг отдельно
+  // для каждой площадки: у многословных стран они не совпадают.
   it.each([
-    ['FI', 'finland'],
-    ['KG', 'kyrgyzstan'],
-    ['MN', 'mongolia'],
-    ['NO', 'norway'],
-    ['SE', 'sweden'],
-    ['DK', 'denmark'],
-  ])('deep-links both partners to the %s country page', (countryCode, slug) => {
+    ['FI', 'finland', 'finland'],
+    ['KG', 'kyrgyzstan', 'kyrgyzstan'],
+    ['MN', 'mongolia', 'mongolia'],
+    ['NO', 'norway', 'norway'],
+    ['SE', 'sweden', 'sweden'],
+    ['DK', 'denmark', 'denmark'],
+    ['GR', 'greece', 'greece'],
+    ['CY', 'cyprus', 'cyprus'],
+    ['RO', 'romania', 'romania'],
+    ['RS', 'serbia', 'serbia'],
+    ['BG', 'bulgaria', 'bulgaria'],
+    ['EE', 'estonia', 'estonia'],
+    // Многословные: Ostrovok пишет через подчёркивание, Tripster через дефис —
+    // перекрёстная подстановка даёт 404 у обеих.
+    ['CZ', 'czech_republic', 'czech-republic'],
+    ['BA', 'bosnia_and_herzegovina', 'bosnia-and-herzegovina'],
+  ])('deep-links both partners to the %s country page', (countryCode, ostrovokSlug, tripsterSlug) => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
     process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE = TOURS_TPL
     process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
 
     const [tours, hotels] = getAffiliateOffers({ countryCode })
-    expect(tours.url).toContain(encodeURIComponent(`https://experience.tripster.ru/destinations/${slug}/`))
-    expect(hotels.url).toContain(encodeURIComponent(`https://ostrovok.ru/hotel/${slug}/`))
+    expect(tours.url).toContain(encodeURIComponent(`https://experience.tripster.ru/destinations/${tripsterSlug}/`))
+    expect(hotels.url).toContain(encodeURIComponent(`https://ostrovok.ru/hotel/${ostrovokSlug}/`))
+  })
+
+  // Страна с раздельными слагами обязана называть место в копии наравне с
+  // односложными: запись есть — значит обе ссылки страновые.
+  it('names the place for a country whose partners use different slugs', () => {
+    process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
+    process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE = TOURS_TPL
+
+    const [tours] = getAffiliateOffers({ countryCode: 'CZ', country: 'Чехия', city: 'Прага' })
+    expect(tours.subtitle).toContain('Прага')
   })
 
   it('hotels falls back to the Ostrovok homepage for an unmapped country', () => {
@@ -142,15 +164,15 @@ describe('affiliateConfig', () => {
   })
 
   // #1371. Инвариант «копия ⇔ фактическая ссылка» для стран без страновой
-  // страницы у партнёров: CZ/DO нет в COUNTRY_SLUG, UA исключена намеренно, обе
+  // страницы у партнёров: DO нет в COUNTRY_SLUG, UA исключена намеренно, обе
   // ссылки уходят на homepage — значит подпись не имеет права называть страну.
   // Живой баг: travel 642/158 показывали «Отели и апартаменты — Чехия», а вели
   // на ostrovok.ru/. Гард ловит любую новую страну, добавленную без слага.
+  // (Сама Чехия с 2026-08-18 в таблице — у неё раздельные слаги площадок.)
   // `city` здесь не для красоты: квесты передают city вместе с countryCode
   // (questWizardSections), и без страновой страницы у партнёра настоящий город
-  // тоже нельзя ставить в подпись — ссылка ведёт не в Прагу, а на homepage.
+  // тоже нельзя ставить в подпись — ссылка ведёт не в Пунта-Кану, а на homepage.
   it.each([
-    ['CZ', 'Чехия', 'Прага'],
     ['DO', 'Доминиканская Республика', 'Пунта-Кана'],
     ['UA', 'Украина', 'Львов'],
     // #1386: geoCountry научился резолвить KR, но страновой страницы у Ostrovok

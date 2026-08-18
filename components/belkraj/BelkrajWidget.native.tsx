@@ -3,7 +3,11 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native'
 import { WebView, type WebViewNavigation } from 'react-native-webview'
 
 import { translate as i18nT } from '@/i18n'
-import { getCountryCodeByCoords } from '@/utils/geoCountry'
+import {
+  canRenderBelkrajWidget,
+  parseBelkrajCoord,
+  resolveBelkrajCountryCode,
+} from './belkrajAvailability'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
@@ -52,20 +56,6 @@ const getEstimatedWidgetHeight = (cardsCount: number, width: number) => {
   )
 }
 
-const parsePointCoord = (point?: TravelAddress) => {
-  if (!point) return null
-  if (typeof point.lat === 'number' && typeof point.lng === 'number') {
-    return { lat: point.lat, lng: point.lng }
-  }
-  if (!point.coord) return null
-
-  const [rawLat, rawLng] = point.coord.split(',').map((value) => value.trim())
-  const lat = Number(rawLat)
-  const lng = Number(rawLng)
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-  return { lat, lng }
-}
-
 function BelkrajWidget({
   points,
   countryCode,
@@ -80,7 +70,7 @@ function BelkrajWidget({
   const reactId = useId()
   const widgetId = useMemo(() => `metravel-${reactId.replace(/[:]/g, '')}`, [reactId])
 
-  const firstCoord = useMemo(() => parsePointCoord(points?.[0]), [points])
+  const firstCoord = useMemo(() => parseBelkrajCoord(points?.[0]), [points])
   const calculatedHeight = useMemo(
     () => getEstimatedWidgetHeight(cardsCount, width),
     [cardsCount, width],
@@ -89,12 +79,16 @@ function BelkrajWidget({
     ? Math.max(expandedHeight, collapsedHeight ?? calculatedHeight)
     : collapsedHeight ?? calculatedHeight
 
-  const resolvedCountryCode = useMemo(() => {
-    const normalized = String(countryCode || '').trim().toUpperCase()
-    if (/^[A-Z]{2}$/.test(normalized)) return normalized
-    if (!firstCoord) return undefined
-    return getCountryCodeByCoords(firstCoord.lat, firstCoord.lng)
-  }, [countryCode, firstCoord])
+  const resolvedCountryCode = useMemo(
+    () => resolveBelkrajCountryCode(points, countryCode),
+    [countryCode, points],
+  )
+
+  // Гейт тот же, что спрашивают секции вокруг виджета: расходиться им нельзя.
+  const canRender = useMemo(
+    () => canRenderBelkrajWidget(points, countryCode),
+    [countryCode, points],
+  )
 
   const widgetUrl = useMemo(() => {
     if (!firstCoord) return null
@@ -122,12 +116,7 @@ function BelkrajWidget({
     return false
   }, [])
 
-  const isProd =
-    typeof process !== 'undefined' &&
-    process.env &&
-    process.env.NODE_ENV === 'production'
-
-  if (!firstCoord || !isProd || !widgetUrl) return null
+  if (!canRender || !widgetUrl) return null
 
   return (
     <View style={[styles.container, { height: finalHeight }]}>

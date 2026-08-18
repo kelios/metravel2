@@ -14,6 +14,7 @@ import {
 import type { ParsedRoutePoint, ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes';
 import { downloadTravelRouteFile } from '@/utils/travelRouteDownload';
 import { parseRouteFilePreview } from '@/utils/routeFileParser';
+import { formatFileSize } from '@/utils/fileSize';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -27,14 +28,6 @@ type Props = {
 };
 
 const SUPPORTED_EXTENSIONS = new Set(['gpx', 'kml']);
-
-const formatSize = (bytes?: number): string => {
-  if (!Number.isFinite(bytes)) return '—';
-  const value = Number(bytes);
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 const resolveFileExt = (file: TravelRouteFile): string => {
   const ext = String(file.ext ?? '').toLowerCase().replace(/^\./, '');
@@ -373,7 +366,7 @@ export default function TravelRouteFilesPanel({
           <View key={file.id} style={styles.item}>
             <View style={styles.itemInfo}>
               <Text numberOfLines={1} style={styles.itemTitle}>{file.original_name || `route-${file.id}.${ext.toLowerCase()}`}</Text>
-              <Text style={styles.itemMeta}>{ext || 'FILE'} • {formatSize(file.size)}</Text>
+              <Text style={styles.itemMeta}>{ext || 'FILE'} • {formatFileSize(Number(file.size))}</Text>
             </View>
 
             <View style={styles.actionsRow}>

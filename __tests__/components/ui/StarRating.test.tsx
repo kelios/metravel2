@@ -19,7 +19,8 @@ describe('StarRating', () => {
 
         expect(getByTestId('star-rating')).toBeTruthy();
         expect(getByTestId('star-rating-value')).toBeTruthy();
-        expect(getByText('4.5')).toBeTruthy();
+        // #1459: дробную часть оценки печатает локаль (дефолт — русский)
+        expect(getByText('4,5')).toBeTruthy();
         expect(getByText('(120)')).toBeTruthy();
     });
 
@@ -29,7 +30,7 @@ describe('StarRating', () => {
         );
 
         expect(getByTestId('star-rating-compact')).toBeTruthy();
-        expect(getByText('4.2')).toBeTruthy();
+        expect(getByText('4,2')).toBeTruthy();
         // Compact mode should not show count by default
         expect(queryByTestId('star-rating-compact-count')).toBeNull();
     });
@@ -111,7 +112,8 @@ describe('StarRating', () => {
         rerender(
             <StarRating rating={4} ratingCount={1500} showCount testID="star-rating" />
         );
-        expect(getByText('(1.5k)')).toBeTruthy();
+        // #1457: компактная единица берётся из локали (дефолт — русский)
+        expect(getByText('(1,5\u00a0тыс.)')).toBeTruthy();
     });
 
     it('hides count when showCount is false', () => {

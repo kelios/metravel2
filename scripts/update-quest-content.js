@@ -27,6 +27,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { QUESTS: FINALE_QUESTS } = require('./generate-quest-finale-videos.js');
+
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
 const get = (k, d) => { const a = args.find(x => x.startsWith(`--${k}=`)); return a ? a.split('=').slice(1).join('=') : d; };
@@ -72,10 +74,31 @@ function archiveApplied(absPath) {
     return target;
 }
 
+// Точный маппинг questId -> pk финала: тот же источник, по которому заливаются
+// финальные видео (`upload-quest-finales.js`), сверенный с продом по тексту.
+// Для квеста из маппинга угадывать по тексту не нужно вообще.
+const KNOWN_FINALE_PK = new Map(FINALE_QUESTS.filter(q => q.finaleId).map(q => [q.questId, q.finaleId]));
+
+// Верхняя граница перебора для квестов ВНЕ маппинга: FK quest->finale API не
+// отдаёт, других идентификаторов в ответе нет. Граница считается от реальных
+// данных — фиксированные 60 обрывали перебор на середине (78 из 131 известных
+// финалов лежат за ними), и «не нашёл pk» становилось штатным исходом.
+const FINALE_PK_SCAN_LIMIT = Math.max(60, ...KNOWN_FINALE_PK.values()) + 20;
+
 // путь для сообщений: относительный внутри репо, абсолютный снаружи
 function displayPath(absPath) {
     const rel = path.relative(process.cwd(), absPath);
     return rel && !rel.startsWith('..') ? rel : absPath;
+}
+
+// Провал запуска после того, как часть записей уже могла уйти на прод: снимок
+// НЕ архивируется — он ещё нужен для повторного применения после разбора
+// (PATCH-и идемпотентны, повторный запуск безопасен).
+function failRun(dataPath, lines) {
+    console.error(`\n❌ ${lines[0]}`);
+    for (const line of lines.slice(1)) console.error(line);
+    console.error(`   Снимок оставлен на месте: ${displayPath(dataPath)}`);
+    process.exit(1);
 }
 
 function resolveToken() {
@@ -96,7 +119,10 @@ function serializeAnswer(ap) { return ap ? JSON.stringify(ap) : undefined; }
 
 async function apiGet(endpoint) {
     const r = await fetch(`${API_BASE}${endpoint}`, { headers: TOKEN ? { Authorization: `Token ${TOKEN}` } : {} });
-    if (!r.ok) throw new Error(`HTTP ${r.status} GET ${endpoint}: ${(await r.text()).slice(0, 200)}`);
+    // statusCode нужен перебору финалов: 404 там означает «нет такой записи» и
+    // пропускается, а 5xx/сеть — сбой, после которого пропущенное совпадение
+    // превратило бы коллизию в мнимо однозначный резолв.
+    if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status} GET ${endpoint}: ${(await r.text()).slice(0, 200)}`), { statusCode: r.status });
     return r.json();
 }
 async function apiPatch(endpoint, payload) {
@@ -121,6 +147,68 @@ function stepPayload(s) {
     if (s.lng != null) p.lng = decimal(s.lng);
     if (s.input_type) p.input_type = s.input_type;
     return p;
+}
+
+// Резолв pk записи финала. Маппинг проверяется по тексту: pk из маппинга и
+// финал квеста — одна и та же запись, поэтому расхождение текстов означает, что
+// маппинг протух, и продолжать по нему нельзя. Фолбэк для квестов вне маппинга —
+// перебор по тексту с детектором коллизии.
+async function resolveFinalePk(curText, dataPath) {
+    const mapped = KNOWN_FINALE_PK.get(QUEST_ID);
+    if (mapped != null) {
+        let mappedText = null;
+        try { mappedText = ((await apiGet(`/api/quest-finales/${mapped}/`)).text || '').trim(); }
+        catch (e) {
+            failRun(dataPath, [
+                `Финал квеста «${QUEST_ID}» по маппингу должен лежать в pk=${mapped}, но записи нет: ${e.message}`,
+                '   Маппинг questId → finaleId в scripts/generate-quest-finale-videos.js протух — сверь его с продом.',
+            ]);
+        }
+        if (mappedText !== curText) {
+            failRun(dataPath, [
+                `Маппинг ведёт финал квеста «${QUEST_ID}» в pk=${mapped}, но там лежит другой текст — запись ушла бы в чужой квест.`,
+                `   В pk=${mapped}: «${mappedText.slice(0, 100)}${mappedText.length > 100 ? '…' : ''}»`,
+                `   У квеста:   «${curText.slice(0, 100)}${curText.length > 100 ? '…' : ''}»`,
+                '   Поправь маппинг questId → finaleId в scripts/generate-quest-finale-videos.js и повтори.',
+            ]);
+        }
+        return mapped;
+    }
+
+    const matches = [];
+    for (let i = 1; i <= FINALE_PK_SCAN_LIMIT; i++) {
+        let finale = null;
+        try { finale = await apiGet(`/api/quest-finales/${i}/`); }
+        catch (e) {
+            if (e.statusCode === 404) continue;
+            // Пропущенный из-за сбоя pk мог быть вторым совпадением: тогда
+            // коллизия выглядела бы однозначным резолвом.
+            failRun(dataPath, [
+                `Перебор финалов оборвался на pk=${i}: ${e.message}`,
+                '   Резолв по тексту без полного перебора не отличает коллизию от однозначного совпадения.',
+            ]);
+        }
+        if ((finale.text || '').trim() === curText) matches.push(i);
+    }
+    if (matches.length > 1) {
+        failRun(dataPath, [
+            `Текущий текст финала квеста «${QUEST_ID}» совпадает сразу с несколькими записями: pk=${matches.join(', ')}.`,
+            '   По тексту нужную запись не отличить, а запись наугад ушла бы в чужой квест.',
+            `   Разбери вручную: сравни GET /api/quest-finales/{${matches.join(',')}}/ и примени текст точечно.`,
+        ]);
+    }
+    // Не нашли запись — правка финала не легла бы никуда. Раньше это был ⚠️ с
+    // продолжением: снимок уезжал в архив с кодом 0, а отредактированный финал
+    // тихо терялся. Пропуск здесь не мягче коллизии, он просто менее заметен.
+    if (matches.length === 0) {
+        failRun(dataPath, [
+            `Не нашёл запись финала квеста «${QUEST_ID}» по текущему тексту в pk 1..${FINALE_PK_SCAN_LIMIT} — текст финала не применён.`,
+            '   Текущий текст финала на проде изменился между снятием снимка и запуском,',
+            `   либо запись лежит за границей перебора (pk > ${FINALE_PK_SCAN_LIMIT}).`,
+            `   Добавь квест в маппинг questId → finaleId (scripts/generate-quest-finale-videos.js) или примени текст точечно.`,
+        ]);
+    }
+    return matches[0];
 }
 
 async function main() {
@@ -157,27 +245,42 @@ async function main() {
         applied++;
         console.log(`  ✅ step ${s.step_id} (id=${target.id})`);
     }
-    // finale: pk финала НЕ равен pk квеста (FK quest->finale не отдаётся API).
-    // Резолвим реальный pk по совпадению ТЕКУЩЕГО текста финала, затем PATCH + verify.
+    // finale: pk финала НЕ равен pk квеста (FK quest->finale API не отдаёт).
+    // Основной путь — точный маппинг questId -> pk (`KNOWN_FINALE_PK`), тот же,
+    // по которому заливаются финальные видео. Угадывание по тексту осталось
+    // фолбэком для квестов вне маппинга: текст — не ключ (#1458), у двух
+    // квестов он может совпасть дословно, поэтому диапазон сканируется целиком
+    // и неоднозначность — отказ, а не выбор наугад. Применённым финал считается
+    // только после совпавшего verify: сам по себе успешный PATCH не доказывает,
+    // что запись ушла в нужный квест.
     if (data.finale && data.finale.text) {
         const curText = (bundle.finale && bundle.finale.text || '').trim();
-        if (!curText) { console.warn('  ⚠️ у квеста нет текущего финала — pk не резолвится, пропуск'); }
+        // Пустой текущий финал — не повод продолжать: записи, в которую лёг бы
+        // текст, у квеста нет, а писать по маппингу вслепую значит писать в
+        // чужую. Мягкий пропуск здесь того же класса, что и ненайденный pk:
+        // снимок уехал бы в архив с кодом 0, а правка финала потерялась.
+        if (!curText) {
+            failRun(dataPath, [
+                `У квеста «${QUEST_ID}» на проде нет текста финала — применять правку финала некуда.`,
+                '   Скрипт только обновляет существующие записи: финал создаётся вместе с квестом (migrate-*).',
+                '   Проверь квест на проде или убери блок finale из снимка.',
+            ]);
+        }
+        const pk = await resolveFinalePk(curText, dataPath);
+        await apiPatch(`/api/quest-finales/${pk}/`, { text: data.finale.text });
+        if (isDryRun) console.log(`  [DRY] finale → pk=${pk}`);
         else {
-            let pk = null;
-            for (let i = 1; i <= 60 && pk == null; i++) {
-                try { const f = await apiGet(`/api/quest-finales/${i}/`); if ((f.text || '').trim() === curText) pk = i; }
-                catch { /* 404 — пропуск */ }
+            const v = await apiGet(`/api/quests/by-quest-id/${encodeURIComponent(QUEST_ID)}/`);
+            const liveText = (v.finale && v.finale.text || '').trim();
+            if (liveText !== data.finale.text.trim()) {
+                failRun(dataPath, [
+                    `Текст финала записан в pk=${pk}, но у квеста «${QUEST_ID}» на проде остался другой текст — правка ушла в чужую запись.`,
+                    `   Сейчас у квеста: «${liveText.slice(0, 120)}${liveText.length > 120 ? '…' : ''}»`,
+                    `   В pk=${pk} лежит текст из снимка — верни его вручную по GET/PATCH /api/quest-finales/${pk}/.`,
+                ]);
             }
-            if (pk == null) { console.warn('  ⚠️ не нашёл pk финала по тексту, пропуск finale'); }
-            else {
-                await apiPatch(`/api/quest-finales/${pk}/`, { text: data.finale.text });
-                applied++;
-                if (!isDryRun) {
-                    const v = await apiGet(`/api/quests/by-quest-id/${encodeURIComponent(QUEST_ID)}/`);
-                    const ok = ((v.finale && v.finale.text || '').trim() === data.finale.text.trim());
-                    console.log(`  ${ok ? '✅' : '❌'} finale (pk=${pk})${ok ? '' : ' — текст не применился к нужному квесту!'}`);
-                } else console.log(`  [DRY] finale → pk=${pk}`);
-            }
+            applied++;
+            console.log(`  ✅ finale (pk=${pk})`);
         }
     }
     if (isDryRun) {

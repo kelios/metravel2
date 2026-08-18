@@ -58,6 +58,8 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   offlineQuestState: OfflineQuestDownloadState
   ratingSlot?: React.ReactNode
   completionSlot?: React.ReactNode
+  /** Нужен блоку экскурсий для SubID партнёрских ссылок (`quest-<id>`). */
+  questId?: string
   showExcursions?: boolean
 }
 
@@ -278,6 +280,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     ratingSlot,
     completionSlot,
     showExcursions = true,
+    questId,
   } = props
   const iconOnlyActions = Platform.OS === 'web'
 
@@ -402,6 +405,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
             styles={styles}
             city={city}
             title={title}
+            questId={questId}
           />
         )}
       </ScrollView>

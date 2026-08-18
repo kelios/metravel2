@@ -85,6 +85,22 @@ publish/moderation, а user-owned запросы могут включать dra
 | `sections/TravelDetailsMapSection.tsx`, `TravelRouteMapBlock*` | embedded map/route line composition |
 | `components/MapPage/TravelMap.web.tsx`, `TravelMap.native.tsx` | platform renderers встроенной travel-карты |
 
+Секция «Экскурсии» (`sections/ExcursionsSection.tsx`) и пункт навигации `excursions`
+из `components/travel/sectionLinks.ts` гейтятся ОДНИМ предикатом
+`canRenderBelkrajWidget(travel.travelAddress, travel.countryCode)`
+(`components/belkraj/belkrajAvailability.ts`: координаты первой точки + production +
+страна каталога партнёра). Инвариант: **на web и Android** пункт меню существует ровно
+там, где секция рендерится. Разъезд даёт либо пустую карточку-призрак с одним
+заголовком, либо живую ссылку в никуда — оба состояния уже ловились (#1452). Регресс
+закрыт с обеих сторон: `__tests__/components/travel/sectionLinks.test.ts` (сторона
+ссылки) и `__tests__/components/travel/ExcursionsSection.gate.test.tsx` (сторона
+секции) — иначе замена условия в одном месте прошла бы зелёной.
+
+Известное исключение: сам пункт навигации ограничен `platform === "web" || "android"`
+(`sectionLinks.ts`), тогда как секцию `TravelDetailsMapSection` рендерит на всех
+платформах. На iOS секция видна, а пункта в списке секций нет — дореформенное
+поведение, к гейту Belkraj отношения не имеет; трогать его нужно отдельной задачей.
+
 Detail data может загружаться по numeric ID или slug. Web direct-load path также
 учитывает preload из `app/+html.tsx`; SPA navigation не должна ждать stale preload
 другого travel. Recoverable public errors могут читать stale payload, поэтому

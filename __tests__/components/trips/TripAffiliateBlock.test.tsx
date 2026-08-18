@@ -27,7 +27,10 @@ const point = (name: string, coordinates: [number, number] | null): RoutePoint =
   ({ id: name, type: 'place', name, description: null, coordinates, placeId: null })
 
 const MINSK: [number, number] = [27.5615, 53.9023]
-const PRAGUE: [number, number] = [14.4378, 50.0755]
+// Киев: UA намеренно исключена из COUNTRY_SLUG (у Tripster нет destination),
+// поэтому это стабильный пример страны, чья ссылка всегда homepage. Прага на эту
+// роль больше не годится — CZ добавлена в таблицу 2026-08-18.
+const KYIV: [number, number] = [30.5234, 50.4501]
 
 const makeTrip = (route: RoutePoint[], region = ''): PlannedTrip =>
   ({ id: 31, region, route, startPoint: null } as unknown as PlannedTrip)
@@ -96,10 +99,10 @@ describe('TripAffiliateBlock', () => {
   })
 
   it('names no place when the country has no partner page and the link is the homepage', () => {
-    // CZ нет в COUNTRY_SLUG — обе ссылки уходят на homepage, значит подпись не
-    // имеет права называть Прагу.
+    // UA исключена из COUNTRY_SLUG — обе ссылки уходят на homepage, значит
+    // подпись не имеет права называть Киев.
     const { getByText } = render(
-      <TripAffiliateBlock trip={makeTrip([point('Прага', PRAGUE)], 'Прага')} />,
+      <TripAffiliateBlock trip={makeTrip([point('Киев', KYIV)], 'Киев')} />,
     )
 
     expect(getByText('Отели и апартаменты рядом с маршрутом')).toBeTruthy()

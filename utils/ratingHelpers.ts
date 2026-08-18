@@ -1,3 +1,14 @@
+import { formatNumber } from '@/i18n/format'
+
+/**
+ * Канонический вывод оценки (#1459): дробную часть печатает локаль — русскому
+ * пользователю «4,6», а не «4.6». Новое место, где показывается рейтинг, зовёт
+ * этот форматтер, а не собирает строку через `toFixed`.
+ */
+export function formatRatingValue(value: number): string {
+  return formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+}
+
 /**
  * Вычисляет приблизительный новый рейтинг при добавлении/изменении оценки
  */

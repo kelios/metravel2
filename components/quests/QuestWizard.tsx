@@ -24,7 +24,6 @@ import {
     QuestExcursionsInline,
     QuestExcursionsSidebar,
     QuestFinalePanel,
-    QuestNativeAffiliateSection,
 } from './questWizardSections';
 import { QuestStepCard, clearQuestCooldowns } from './questWizardStepCard';
 import QuestGuestGate from './QuestGuestGate';
@@ -605,21 +604,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                     </View>
                 )}
 
-                {/* Экскурсии рядом — в основном потоке, когда нет отдельной правой колонки */}
+                {/* Экскурсии рядом — в основном потоке, когда нет отдельной правой
+                    колонки. Одна секция на оба источника (Belkraj + affiliate):
+                    отдельная native-секция с тем же заголовком задваивала блок (#1452). */}
                 {(Platform.OS !== 'web' || !useWideExcursionsSidebar) && (!showFinaleOnly) && currentStep && city && (
                     <QuestExcursionsInline
                         colors={colors}
                         styles={styles}
                         city={city}
                         title={title}
-                    />
-                )}
-
-                {Platform.OS !== 'web' && (!showFinaleOnly) && currentStep && city && (
-                    <QuestNativeAffiliateSection
-                        colors={colors}
-                        styles={styles}
-                        city={city}
                         questId={questId}
                     />
                 )}
@@ -662,6 +655,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                     styles={styles}
                     city={city}
                     title={title}
+                    questId={questId}
                 />
             )}
         </View>
@@ -698,6 +692,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 offlineQuestState={offlineQuestState}
                                 ratingSlot={ratingSlot}
                                 completionSlot={completionSlot}
+                                questId={questId}
                                 showExcursions={false}
                             />
 

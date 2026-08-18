@@ -21,6 +21,7 @@ import { isBikeQuest } from './QuestsScreen.helpers';
 import { pluralizePoints, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
 import { formatDistance } from '@/utils/distanceCalculator'
+import { formatRatingValue } from '@/utils/ratingHelpers'
 
 
 const loadedQuestImageCache = new Set<string>();
@@ -299,7 +300,7 @@ export default function QuestCard({
                                     >
                                         <Feather name="star" size={13} color="rgba(255,255,255,0.95)" />
                                         <Text style={styles.questCardMetaText}>
-                                            {(quest.ratingAvg ?? 0).toFixed(1)} ({quest.ratingCount})
+                                            {formatRatingValue(quest.ratingAvg ?? 0)} ({quest.ratingCount})
                                         </Text>
                                     </View>
                                 )}
@@ -346,7 +347,7 @@ export default function QuestCard({
                             >
                                 <Feather name="star" size={13} color={colors.textMuted} />
                                 <Text style={styles.questCardDetailsText}>
-                                    {(quest.ratingAvg ?? 0).toFixed(1)}
+                                    {formatRatingValue(quest.ratingAvg ?? 0)}
                                 </Text>
                             </View>
                         )}

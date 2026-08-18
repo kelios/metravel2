@@ -41,7 +41,14 @@ if (!TOKEN && !isDryRun) {
   process.exit(1)
 }
 
-const ALLOWED = new Set(['task', 'hint', 'answer_pattern', 'lat', 'lng', 'maps_url', 'story', 'order', 'input_type'])
+// `location` правится вместе с `task`: подпись места видна игроку на карточке
+// шага (`components/quests/questWizardStepCard.tsx`) и потому способна выдать
+// ответ не хуже подсказки — «Скульптура музыканта с собакой» при вопросе про
+// животное рядом с музыкантом (#1453).
+// `title` — по той же причине: заголовок шага виден игроку на карточке, и
+// механическая опечатка в нём (подменённая буква чужого алфавита, #1464)
+// правится тем же путём, что и остальной видимый текст.
+const ALLOWED = new Set(['task', 'hint', 'answer_pattern', 'lat', 'lng', 'maps_url', 'story', 'location', 'title', 'order', 'input_type'])
 const TYPES = new Set(['any', 'exact', 'exact_any', 'range', 'any_text', 'any_number', 'approx'])
 // Клавиатуру шага выбирает фронт по типу ответа, но колонка input_type в БД
 // остаётся источником правды для админки и механического аудита (класс B —

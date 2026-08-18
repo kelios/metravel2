@@ -83,7 +83,7 @@ describe('#1457 компактные счётчики идут через кан
     it.each(COMPACT_CASES)('печатает число отзывов по нормам локали %s', async (locale, _thousand, thousands) => {
       await i18n.changeLanguage(locale)
 
-      const { getByTestId } = render(
+      const { getByText } = render(
         <PlaceRatingBadge
           rating={{
             value: 4.6,
@@ -92,7 +92,7 @@ describe('#1457 компактные счётчики идут через кан
           } as any}
         />,
       )
-      expect(getByTestId('place-rating-badge')).toHaveTextContent(thousands)
+      expect(getByText(`(${thousands})`)).toBeTruthy()
     })
   })
 

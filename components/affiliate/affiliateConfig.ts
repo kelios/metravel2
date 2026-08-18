@@ -57,17 +57,31 @@ export interface AffiliateOffer {
 }
 
 /**
- * ISO alpha-2 → lowercase English country slug, shared by both partners:
+ * ISO alpha-2 → lowercase English country slug:
  *   Ostrovok  `https://ostrovok.ru/hotel/<slug>/`
  *   Tripster  `https://experience.tripster.ru/destinations/<slug>/`
- * Every slug is present in Tripster's sitemap-countries.xml AND serves a real
- * Ostrovok country page; an unmapped country falls back to the partner homepage
- * and loses the place from its copy (see `resolvePlace`), so adding a slug is
- * purely additive — a missing one degrades honestly instead of lying.
- * Slugs MUST stay lowercase. UA is intentionally absent (no Tripster
- * destination; Ostrovok geo-redirects it). Extend as new countries appear.
+ * Обычно слаг у площадок совпадает, и запись — одна строка. Но многословные
+ * страны они пишут по-разному: Ostrovok через подчёркивание (`czech_republic`,
+ * `bosnia_and_herzegovina`, `united_arab_emirates`), Tripster через дефис
+ * (`czech-republic`, `bosnia-and-herzegovina`). Перекрёстная проверка даёт 404 на
+ * обеих (2026-08-18), поэтому такие страны записываются парой
+ * `{ ostrovok, tripster }`. Раньше формат допускал только общую строку — и
+ * Чехия с Боснией выпадали из таблицы не потому, что страниц нет, а потому что
+ * одной строкой их не описать.
+ *
+ * Запись появляется, ТОЛЬКО если обе площадки отдают реальную страницу страны:
+ * Tripster — присутствие в sitemap-countries.xml, Ostrovok — живая страница
+ * (проверять с контролем на заведомо несуществующем слаге: 404 на мусоре у обеих
+ * ~116 КБ / ~324 КБ против ~1 МБ у настоящей страницы). Незамапленная страна
+ * уходит на главную партнёра и теряет место в копии (см. `resolvePlace`), так
+ * что добавление слага — чисто аддитивное, а его отсутствие честно деградирует.
+ * Слаги ОБЯЗАНЫ оставаться в нижнем регистре. UA отсутствует намеренно (у
+ * Tripster нет destination, Ostrovok гео-редиректит). Дополнять по мере
+ * появления новых стран.
  */
-const COUNTRY_SLUG: Record<string, string> = {
+type CountrySlug = string | { ostrovok: string; tripster: string }
+
+const COUNTRY_SLUG: Record<string, CountrySlug> = {
   BY: 'belarus', PL: 'poland', RU: 'russia', AM: 'armenia',
   GE: 'georgia', TR: 'turkey', DE: 'germany', FR: 'france', IT: 'italy',
   ES: 'spain', SK: 'slovakia', HU: 'hungary', LT: 'lithuania', LV: 'latvia',
@@ -75,6 +89,12 @@ const COUNTRY_SLUG: Record<string, string> = {
   HR: 'croatia', SI: 'slovenia', AL: 'albania', IN: 'india', VN: 'vietnam',
   NO: 'norway', SE: 'sweden', DK: 'denmark', EG: 'egypt', MU: 'mauritius',
   ME: 'montenegro', FI: 'finland', KG: 'kyrgyzstan', MN: 'mongolia',
+  // Страны квестов, добавленные 2026-08-18 после закрытия Belkraj-виджета
+  // страновым гейтом: у не-BY квестов на web место виджета занимают эти офферы.
+  GR: 'greece', CY: 'cyprus', RO: 'romania', RS: 'serbia', BG: 'bulgaria',
+  EE: 'estonia',
+  CZ: { ostrovok: 'czech_republic', tripster: 'czech-republic' },
+  BA: { ostrovok: 'bosnia_and_herzegovina', tripster: 'bosnia-and-herzegovina' },
   // KR намеренно отсутствует: у Tripster страница есть, у Ostrovok ни одного
   // рабочего слага (south-korea / korea / republic-of-korea / korea-south — 404,
   // проверено 2026-08-10 с контролем на заведомо несуществующем слаге). Правило
@@ -87,16 +107,22 @@ const TRIPSTER_HOME = 'https://experience.tripster.ru/'
 
 const clean = (value?: string | null): string => String(value ?? '').trim()
 
-const resolveCountrySlug = (ctx: AffiliateOfferContext): string | undefined =>
+const resolveCountrySlug = (ctx: AffiliateOfferContext): CountrySlug | undefined =>
   COUNTRY_SLUG[clean(ctx.countryCode).toUpperCase()]
 
+const pickSlug = (
+  entry: CountrySlug | undefined,
+  partner: 'ostrovok' | 'tripster',
+): string | undefined =>
+  typeof entry === 'string' ? entry : entry?.[partner]
+
 const buildOstrovokUrl = (ctx: AffiliateOfferContext): string => {
-  const slug = resolveCountrySlug(ctx)
+  const slug = pickSlug(resolveCountrySlug(ctx), 'ostrovok')
   return slug ? `https://ostrovok.ru/hotel/${slug}/` : OSTROVOK_HOME
 }
 
 const buildTripsterUrl = (ctx: AffiliateOfferContext): string => {
-  const slug = resolveCountrySlug(ctx)
+  const slug = pickSlug(resolveCountrySlug(ctx), 'tripster')
   return slug ? `https://experience.tripster.ru/destinations/${slug}/` : TRIPSTER_HOME
 }
 
@@ -138,10 +164,11 @@ export const isAffiliateEnabled = (): boolean => getAffiliateMarker().length > 0
 
 /**
  * Destination label shown in the offer copy — only when the link actually lands
- * on that place. Both partners build their URL from the same country slug, so a
- * country that is missing (CZ, DO) or intentionally excluded (UA) from
- * COUNTRY_SLUG sends BOTH offers to the partner homepage; naming it there sold
- * «Отели и апартаменты — Чехия» and opened `ostrovok.ru/`. No slug → no place in
+ * on that place. Запись в COUNTRY_SLUG появляется только когда обе площадки
+ * отдают страницу страны, поэтому её наличие — единственный признак: страна,
+ * которой в таблице нет (DO) или которая исключена намеренно (UA), отправляет
+ * ОБА оффера на главную партнёра; назвать место там значило продать
+ * «Отели и апартаменты — Чехия» и открыть `ostrovok.ru/`. No slug → no place in
  * the copy: the offer stays, the promise shrinks to what the click delivers.
  */
 const resolvePlace = (ctx: AffiliateOfferContext): string =>

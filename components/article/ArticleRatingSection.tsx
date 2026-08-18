@@ -5,6 +5,7 @@ import StarRating from '@/components/ui/StarRating';
 import { useArticleRating } from '@/hooks/useArticleRating';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { selectPlural, translate as i18nT } from '@/i18n'
+import { formatRatingValue } from '@/utils/ratingHelpers'
 
 
 type Props = {
@@ -74,7 +75,7 @@ function ArticleRatingSection({
             <View style={styles.ratingRow}>
                 <View style={styles.ratingDisplay}>
                     <Text style={styles.ratingValue}>
-                        {rating ? rating.toFixed(1) : '—'}
+                        {rating ? formatRatingValue(rating) : '—'}
                     </Text>
                     <StarRating
                         rating={rating}

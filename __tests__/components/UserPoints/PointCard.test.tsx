@@ -89,7 +89,8 @@ describe('PointCard', () => {
     expect(props.badges).toEqual([
       'Main Street 123, Kyiv',
       'A great place to eat',
-      '4.5',
+      // #1459: дробную часть оценки печатает локаль (дефолт — русский)
+      '4,5',
     ]);
     expect(screen.getByText('Ресторан')).toBeTruthy();
     expect(screen.getByText('Main Street 123, Kyiv')).toBeTruthy();

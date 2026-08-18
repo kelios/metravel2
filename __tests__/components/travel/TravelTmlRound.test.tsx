@@ -74,6 +74,7 @@ describe('TravelTmlRound', () => {
     expect(getByText('Беларусь')).toBeTruthy();
     expect(getByText('Анна Иванова')).toBeTruthy();
     expect(getByText('2024')).toBeTruthy();
-    expect(getByText('2.4K')).toBeTruthy();
+    // #1457: компактная единица берётся из локали (дефолт — русский)
+    expect(getByText('2,4\u00a0тыс.')).toBeTruthy();
   });
 });

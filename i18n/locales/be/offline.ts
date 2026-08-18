@@ -53,8 +53,5 @@ export const offline = {
   mapPointsSaved: 'Захавана пунктаў: {{count}}',
   mapRegionUnavailable: 'Спачатку дачакайцеся загрузкі вобласці карты.',
   savedRegions: 'Захаваныя вобласці',
-  bytes: '{{value}} Б',
-  kilobytes: '{{value}} КБ',
-  megabytes: '{{value}} МБ',
   updated: 'Абноўлена {{date}}',
 } as const

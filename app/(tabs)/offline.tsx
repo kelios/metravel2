@@ -10,7 +10,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
 import { useOfflineCatalog } from '@/hooks/useOfflineCatalog';
 import { useThemedColors } from '@/hooks/useTheme';
-import { formatDate, formatInteger, formatNumber, selectPlural } from '@/i18n/format';
+import { formatDate, formatInteger, selectPlural } from '@/i18n/format';
+import { formatFileSize } from '@/utils/fileSize';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import type { OfflineContentType, OfflinePackageManifest } from '@/services/offline/types';
 import { deleteMapRegionOffline } from '@/services/offline/mapOfflineAdapter';
@@ -72,17 +73,6 @@ export default function OfflineLibraryScreen() {
     maps: t('offline:maps'),
   }), [t]);
 
-  const formatBytes = useCallback((bytes: number) => {
-    if (bytes >= 1024 * 1024) {
-      return t('offline:megabytes', {
-        value: formatNumber(bytes / (1024 * 1024), { maximumFractionDigits: 1 }),
-      });
-    }
-    if (bytes >= 1024) {
-      return t('offline:kilobytes', { value: formatInteger(bytes / 1024) });
-    }
-    return t('offline:bytes', { value: formatInteger(bytes) });
-  }, [t]);
 
   const handleRemove = useCallback(async (item: OfflinePackageManifest) => {
     const confirmed = await confirmAction({
@@ -116,7 +106,7 @@ export default function OfflineLibraryScreen() {
               {item.status === 'ready' ? (
                 <Text style={styles.cardMeta}>
                   {item.pinned ? t('offline:availableOffline') : t('offline:recentAvailable')}
-                  {' · '}{formatBytes(item.bytes)}
+                  {' · '}{formatFileSize(item.bytes)}
                 </Text>
               ) : (
                 <Text style={[styles.cardMeta, item.status === 'failed' && { color: colors.danger }]}>
@@ -245,13 +235,13 @@ export default function OfflineLibraryScreen() {
               {t('offline:summary', {
                 count: formatInteger(summary.packageCount),
                 objects: objectLabel,
-                size: formatBytes(summary.bytes),
+                size: formatFileSize(summary.bytes),
               })}
             </Text>
           </View>
           <View style={styles.storageBadge}>
             <Feather name="hard-drive" size={16} color={colors.textMuted} />
-            <Text style={styles.storageText}>{t('offline:storage', { size: formatBytes(summary.bytes) })}</Text>
+            <Text style={styles.storageText}>{t('offline:storage', { size: formatFileSize(summary.bytes) })}</Text>
           </View>
         </View>
 

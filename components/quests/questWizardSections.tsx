@@ -4,6 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import AffiliateOffers from '@/components/affiliate/AffiliateOffers'
 import { getAffiliateOffers } from '@/components/affiliate/affiliateConfig'
+import { canRenderBelkrajWidget } from '@/components/belkraj/belkrajAvailability'
 import { BadgeUnlockToast } from '@/components/achievements'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
@@ -165,29 +166,81 @@ export function QuestDesktopMapPanel({
   )
 }
 
+// Источники блока «Экскурсии рядом» для всех трёх его раскладок: карточки шага,
+// правой колонки desktop и компактного сайдбара. Гейт и набор источников
+// считаются здесь один раз, чтобы раскладки не разъезжались между собой.
+//
+// Belkraj закрыт вне Беларуси (см. belkrajAvailability): у квестов Лимасола,
+// Кракова и прочих не-BY городов он подставлял минские экскурсии. Там, где
+// виджета нет, его место на web занимают affiliate-офферы — блок остаётся
+// полезным, а не пустеет. На native порядок прежний: виджет и офферы
+// сосуществуют в одной карточке.
+function useQuestExcursionSlots(city: CityLike, title: string, questId?: string) {
+  const points = React.useMemo(
+    () => [{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }],
+    [city.name, city.lat, city.lng, title],
+  )
+
+  const showWidget = canRenderBelkrajWidget(points, city.countryCode)
+
+  const affiliateContext = React.useMemo(
+    () => (Platform.OS === 'web' && showWidget
+      ? null
+      : {
+        city: city.name,
+        countryCode: city.countryCode,
+        travelId: questId ? `quest-${questId}` : undefined,
+      }),
+    [city.name, city.countryCode, questId, showWidget],
+  )
+
+  const showAffiliate = !!affiliateContext && getAffiliateOffers(affiliateContext).length > 0
+
+  return { points, showWidget, showAffiliate, affiliateContext }
+}
+
+// Единственная секция «Экскурсии рядом» на карточке шага. Раньше партнёрские
+// офферы жили в отдельной секции (QuestNativeAffiliateSection) с тем же
+// заголовком и той же обвязкой, поэтому на native игрок видел «Экскурсии рядом»
+// дважды подряд (#1452). Теперь оба источника — Belkraj-виджет и affiliate —
+// лежат в одной карточке под одним заголовком, а сама карточка не рисуется,
+// когда показывать нечего.
 export function QuestExcursionsInline({
   styles,
   city,
   title,
+  questId,
 }: SharedProps & {
   city: CityLike
   title: string
+  questId?: string
 }) {
+  const { points, showWidget, showAffiliate, affiliateContext } = useQuestExcursionSlots(
+    city,
+    title,
+    questId,
+  )
+
+  if (!showWidget && !showAffiliate) return null
+
   return (
-    <View style={styles.excursionsSection}>
+    <View style={styles.excursionsSection} testID="quest-excursions-section">
       <View style={styles.excursionsDivider} />
       <View style={styles.excursionsCard}>
         <View style={styles.excursionsHeader}>
           <Text style={styles.excursionsTitle}>{i18nT('quests:components.quests.questWizardSections.ekskursii_ryadom_46600fc1')}</Text>
           <Text style={styles.excursionsSubtitle}>{i18nT('quests:components.quests.questWizardSections.otkroyte_bolshe_s_mestnymi_gidami_048b2051')}</Text>
         </View>
-        <Suspense fallback={null}>
-          <BelkrajWidgetLazy
-            points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-            countryCode={city.countryCode}
-            className="belkraj-slot"
-          />
-        </Suspense>
+        {showWidget && (
+          <Suspense fallback={null}>
+            <BelkrajWidgetLazy
+              points={points}
+              countryCode={city.countryCode}
+              className="belkraj-slot"
+            />
+          </Suspense>
+        )}
+        {showAffiliate && affiliateContext && <AffiliateOffers {...affiliateContext} />}
       </View>
     </View>
   )
@@ -197,23 +250,36 @@ export function QuestExcursionsSidebar({
   styles,
   city,
   title,
+  questId,
 }: SharedProps & {
   city: CityLike
   title: string
+  questId?: string
 }) {
+  const { points, showWidget, showAffiliate, affiliateContext } = useQuestExcursionSlots(
+    city,
+    title,
+    questId,
+  )
+
+  if (!showWidget && !showAffiliate) return null
+
   return (
-    <View style={styles.excursionsSidebar}>
+    <View style={styles.excursionsSidebar} testID="quest-excursions-sidebar">
       <View style={styles.excursionsSidebarInner}>
         <Text style={styles.excursionsTitle}>{i18nT('quests:components.quests.questWizardSections.ekskursii_ryadom_46600fc1')}</Text>
         <Text style={styles.excursionsSubtitle}>{i18nT('quests:components.quests.questWizardSections.otkroyte_bolshe_s_mestnymi_gidami_048b2051')}</Text>
         <View style={styles.excursionsSidebarWidget}>
-          <Suspense fallback={null}>
-            <BelkrajWidgetLazy
-              points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-              countryCode={city.countryCode}
-              className="belkraj-slot"
-            />
-          </Suspense>
+          {showWidget && (
+            <Suspense fallback={null}>
+              <BelkrajWidgetLazy
+                points={points}
+                countryCode={city.countryCode}
+                className="belkraj-slot"
+              />
+            </Suspense>
+          )}
+          {showAffiliate && affiliateContext && <AffiliateOffers {...affiliateContext} />}
         </View>
       </View>
     </View>
@@ -224,53 +290,36 @@ export function QuestCompactExcursions({
   styles,
   city,
   title,
+  questId,
 }: SharedProps & {
   city: CityLike
   title: string
+  questId?: string
 }) {
+  const { points, showWidget, showAffiliate, affiliateContext } = useQuestExcursionSlots(
+    city,
+    title,
+    questId,
+  )
+
+  if (!showWidget && !showAffiliate) return null
+
   return (
-    <View style={styles.compactExcursionsSection}>
+    <View style={styles.compactExcursionsSection} testID="quest-compact-excursions">
       <View style={styles.compactExcursionsHeader}>
         <Text style={styles.excursionsTitle}>{i18nT('quests:components.quests.questWizardSections.ekskursii_ryadom_46600fc1')}</Text>
         <Text style={styles.excursionsSubtitle}>{i18nT('quests:components.quests.questWizardSections.otkroyte_bolshe_s_mestnymi_gidami_048b2051')}</Text>
       </View>
-      <Suspense fallback={null}>
-        <BelkrajWidgetLazy
-          points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-          countryCode={city.countryCode}
-          className="belkraj-slot"
-        />
-      </Suspense>
-    </View>
-  )
-}
-
-export function QuestNativeAffiliateSection({
-  styles,
-  city,
-  questId,
-}: SharedProps & {
-  city: CityLike
-  questId?: string
-}) {
-  const context = {
-    city: city.name,
-    countryCode: city.countryCode,
-    travelId: questId ? `quest-${questId}` : undefined,
-  }
-
-  if (getAffiliateOffers(context).length === 0) return null
-
-  return (
-    <View style={styles.excursionsSection} testID="quest-affiliate-section">
-      <View style={styles.excursionsDivider} />
-      <View style={styles.excursionsCard}>
-        <View style={styles.excursionsHeader}>
-          <Text style={styles.excursionsTitle}>{i18nT('quests:components.quests.questWizardSections.ekskursii_ryadom_46600fc1')}</Text>
-          <Text style={styles.excursionsSubtitle}>{i18nT('quests:components.quests.questWizardSections.otkroyte_bolshe_s_mestnymi_gidami_048b2051')}</Text>
-        </View>
-        <AffiliateOffers {...context} />
-      </View>
+      {showWidget && (
+        <Suspense fallback={null}>
+          <BelkrajWidgetLazy
+            points={points}
+            countryCode={city.countryCode}
+            className="belkraj-slot"
+          />
+        </Suspense>
+      )}
+      {showAffiliate && affiliateContext && <AffiliateOffers {...affiliateContext} />}
     </View>
   )
 }

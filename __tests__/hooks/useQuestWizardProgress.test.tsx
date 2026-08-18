@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { act, renderHook, waitFor } from '@testing-library/react-native'
 
 import { useQuestWizardProgress } from '@/components/quests/useQuestWizardProgress'
+import { buildQuestProgressStorageKey } from '@/utils/questProgressStorage'
 
 const allSteps = [
   { id: 'intro' },
@@ -846,6 +847,110 @@ describe('useQuestWizardProgress', () => {
       expect(onProgressChange).toHaveBeenLastCalledWith(
         expect.objectContaining({ completed: false }),
       )
+    })
+  })
+
+  it('не подставляет прогресс другого аккаунта на общем устройстве (#1456)', async () => {
+    // Аккаунт A прошёл квест на этом устройстве (с официальным пропуском далёкой
+    // точки, поэтому `completed: true`) и вышел. Аккаунт B открывает тот же
+    // квест: его запись лежит под своим ключом, чужая просто не находится — ни
+    // ответы, ни монотонный `completed` в прохождение B не попадают.
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+    ]
+    const base = 'quest_progress_shared_device'
+    const keyA = buildQuestProgressStorageKey(base, { isAuthenticated: true, userId: '17' })
+    const keyB = buildQuestProgressStorageKey(base, { isAuthenticated: true, userId: '42' })
+
+    await AsyncStorage.setItem(keyA, JSON.stringify({
+      index: 2,
+      unlocked: 2,
+      answers: { 'p-1': 'ответ мужа', 'p-2': 'и второй' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+      completed: true,
+      updatedAt: Date.now(),
+    }))
+
+    const onProgressChange = jest.fn()
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey: keyB,
+        // Серверный прогресс аккаунта B: квест ещё не начат.
+        initialProgress: {
+          currentIndex: 0,
+          unlockedIndex: 0,
+          answers: {},
+          attempts: {},
+          hints: {},
+          showMap: true,
+          completed: false,
+        },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(2))
+    expect(result.current.answers).toEqual({})
+    expect(result.current.currentIndex).toBe(0)
+    expect(result.current.questCompleted).toBe(false)
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'свой ответ' })
+    })
+
+    await waitFor(() => {
+      expect(onProgressChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          completed: false,
+          answers: { 'p-1': 'свой ответ' },
+        }),
+      )
+    })
+
+    // Запись аккаунта A на месте и не перезаписана прохождением B.
+    expect(JSON.parse((await AsyncStorage.getItem(keyA))!)).toMatchObject({
+      answers: { 'p-1': 'ответ мужа', 'p-2': 'и второй' },
+      completed: true,
+    })
+    expect(JSON.parse((await AsyncStorage.getItem(keyB))!)).toMatchObject({
+      answers: { 'p-1': 'свой ответ' },
+      completed: false,
+    })
+  })
+
+  it('тот же аккаунт после релогина видит свой локальный прогресс (#1456)', async () => {
+    // Обратная сторона привязки к пользователю: офлайн-ответы, не долетевшие до
+    // сервера, обязаны пережить выход и повторный вход того же игрока.
+    const base = 'quest_progress_same_user_relogin'
+    const storageKey = buildQuestProgressStorageKey(base, { isAuthenticated: true, userId: '17' })
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
+      index: 2,
+      unlocked: 2,
+      answers: { 'step-1': 'офлайн-ответ', 'step-2': 'и второй' },
+      attempts: {},
+      hints: {},
+      showMap: false,
+      updatedAt: Date.now(),
+    }))
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+      })
+    )
+
+    await waitFor(() => {
+      expect(result.current.answers['step-1']).toBe('офлайн-ответ')
+      expect(result.current.answers['step-2']).toBe('и второй')
+      expect(result.current.currentIndex).toBe(2)
     })
   })
 

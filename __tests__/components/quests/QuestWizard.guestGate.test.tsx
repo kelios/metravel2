@@ -35,7 +35,6 @@ jest.mock('@/components/quests/questWizardSections', () => ({
   QuestExcursionsInline: (props: any) => mockQuestExcursionsInline(props),
   QuestExcursionsSidebar: () => null,
   QuestFinalePanel: (props: any) => mockQuestFinalePanel(props),
-  QuestNativeAffiliateSection: () => null,
 }))
 jest.mock('@/components/quests/useQuestFinaleMedia', () => ({
   useQuestFinaleMedia: () => ({

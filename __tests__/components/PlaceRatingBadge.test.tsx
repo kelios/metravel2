@@ -17,11 +17,12 @@ describe('PlaceRatingBadge', () => {
   it('renders the score, primary provider label and review count', () => {
     const { getByText, getByTestId } = render(<PlaceRatingBadge rating={rating()} />)
 
-    expect(getByText('4.6')).toBeTruthy()
+    // #1459: дробную часть оценки печатает локаль (дефолт — русский)
+    expect(getByText('4,6')).toBeTruthy()
     expect(getByText('2GIS')).toBeTruthy()
     expect(getByText('(128)')).toBeTruthy()
     // Accessible label carries the human-readable rating for screen readers.
-    expect(getByTestId('place-rating-badge').props.accessibilityLabel).toContain('4.6')
+    expect(getByTestId('place-rating-badge').props.accessibilityLabel).toContain('4,6')
   })
 
   it('renders nothing without an aggregate score', () => {
@@ -40,7 +41,7 @@ describe('PlaceRatingBadge', () => {
         })}
       />,
     )
-    expect(getByText('4.6')).toBeTruthy()
+    expect(getByText('4,6')).toBeTruthy()
     expect(queryByText('MeTravel')).toBeNull()
     expect(queryByText('·')).toBeNull()
   })

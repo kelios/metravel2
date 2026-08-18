@@ -64,13 +64,34 @@ Canonical лендинга — alias-вариант, если alias есть, и
      │   ├─ recordQuestAnswerAttempt (очередь телеметрии)
      │   └─ <QuestPointNavigator>    (.native — компас; .web — null)
      ├─ <QuestDesktopMapPanel> → <QuestFullMap[.native]>
-     ├─ <QuestExcursionsInline|Sidebar>, <QuestNativeAffiliateSection>
+     ├─ <QuestExcursionsInline|Sidebar>   (одна секция «Экскурсии рядом»)
      ├─ {relatedTravelsSlot} = <TravelsForQuestSection>
      └─ <QuestFinalePanel>
          ├─ видео/постер (useQuestFinaleMedia)
          ├─ <QuestReviewSection>  (звёзды + текст, useQuestRatingMutation)
          └─ <QuestPioneerBlock>   (только при засчитанном прохождении)
 ```
+
+«Экскурсии рядом» на карточке шага — **ровно одна секция**. `QuestExcursionsInline`
+держит под общим заголовком Belkraj-виджет и партнёрские офферы `AffiliateOffers`;
+отдельной native-секции с тем же заголовком быть не должно — именно её задвоение
+чинил #1452. Рисовать обвязку (разделитель + карточка + заголовок) можно только когда
+есть что показать: гейт виджета живёт в `components/belkraj/belkrajAvailability.ts`
+(`canRenderBelkrajWidget` — координаты, `NODE_ENV === 'production'` и страна), оттуда
+же его берут оба варианта `BelkrajWidget`, чтобы предикат не разошёлся с поведением
+самого виджета. Если ни виджет, ни офферы не отдают контент, секция возвращает `null`.
+На debug/dev-client сборке Belkraj закрыт гейтом — видны только офферы, это ожидаемо.
+
+**Belkraj — только Беларусь.** Каталог партнёра покрывает BY, а на координаты вне
+страны его виджет отвечает не пустым списком, а подменой города: квест по Лимасолу
+(`limassol-lionheart`, `country_code=cy`) показывал минские экскурсии с подписью
+«Минск, Кипр», без параметра `country` — гомельские (#1461). Поэтому гейт режет по
+стране: явный `countryCode` важнее координат, иначе страна берётся по первой точке
+через `getCountryCodeByCoords`. Внутри Беларуси координаты партнёр резолвит верно —
+витебский квест отдаёт витебские экскурсии, — так что городской точности гейт не
+требует. У не-BY квестов место виджета на web занимают `AffiliateOffers`; на native
+офферы показываются как и раньше. Тот же гейт стоит на travel-секции «Экскурсии»
+(`ExcursionsSection`) и на ссылке в `buildTravelSectionLinks`.
 
 | Файл | LOC | Зона ответственности |
 | --- | --- | --- |
@@ -190,7 +211,7 @@ Canonical лендинга — alias-вариант, если alias есть, и
 | Owner | Где | Отвечает за |
 | --- | --- | --- |
 | `useQuestWizardProgress` | `components/quests/useQuestWizardProgress.ts` | `currentIndex`, `unlockedIndex`, `answers`, `attempts`, `hints`, `showMap`, `skipped`, `earlyFinish` + производные пороги |
-| AsyncStorage (авториз.) | ключ = `bundle.storage_key` | локальный снапшот прогресса, включая `skipped`/`earlyFinish`/`updatedAt`/`answeredAt` |
+| AsyncStorage (авториз.) | ключ = `{bundle.storage_key}__u{userId}` (`utils/questProgressStorage.ts`); пока `userId` не подтянулся — `__u:pending` | локальный снапшот прогресса, включая `skipped`/`earlyFinish`/`updatedAt`/`answeredAt`. Привязка к аккаунту (#1456): на общем устройстве запись предыдущего пользователя не находится и не сливается с прогрессом следующего. Записи под старым ключом без `__u` не мигрируются — владельца у них нет |
 | AsyncStorage (гость) | `guestQuestProgress:v1:{questId}`, ключ визарда `guest_{storageKey}` | гостевой прогресс до логина |
 | AsyncStorage (телеметрия) | `quest_attempts_queue_v1`, `quest_attempts_session_v1` | очередь попыток и ключ сессии прохождения |
 | AsyncStorage (каталог) | `STORAGE_SELECTED_CITY` | выбранный город каталога |
@@ -341,7 +362,7 @@ Canonical лендинга — alias-вариант, если alias есть, и
 | Печать | `generatePrintableQuest` работает | ранний `return` при `Platform.OS !== 'web'` |
 | Визард | грузится через `React.lazy` + `Suspense` | прямой импорт (`QuestWizardDirect`) |
 | Экспорт карты | `downloadTextFileWeb` | `expo-file-system` + `expo-sharing` |
-| Партнёрский блок | inline/сайдбар экскурсий | дополнительно `QuestNativeAffiliateSection` |
+| Партнёрский блок | inline/сайдбар экскурсий, без affiliate-офферов | те же офферы внутри той же карточки «Экскурсии рядом» (`QuestExcursionsInline`), отдельной секции нет |
 
 Поле `geo_verify {enabled, radius_m}` присутствует в типе `ApiQuestStep`, но в
 коде фронтенда не читается: проверка «игрок на месте» на клиенте не реализована,
@@ -454,6 +475,24 @@ E2E (Playwright): `e2e/quests-list-detail.spec.ts` (каталог → дета�
   (входит в `check:fast`) падает, если снимок снова окажется под git. Источники
   создания новых квестов `scripts/*-quest-data.js` под это правило не попадают —
   они не снимки применённых правок.
+- **pk финала резолвится по неуникальному тексту** (#1458). FK `quest -> finale`
+  API не отдаёт. `scripts/update-quest-content.js` берёт pk из точного маппинга
+  `questId -> finaleId` в `scripts/generate-quest-finale-videos.js` — того же,
+  по которому заливаются финальные видео, — и сверяет текст записи с текущим
+  финалом квеста: расхождение означает протухший маппинг и валит запуск, а не
+  правит наугад. Перебор по тексту остался фолбэком для квестов вне маппинга;
+  текст не ключ, поэтому диапазон сканируется целиком (граница считается от
+  максимума маппинга, а не фиксированные 60 — за ними лежат 78 из 131
+  известного финала), при двух и более совпадениях запуск падает, а не выбирает
+  первое. Применённым финал считается только после совпавшего verify, а не по
+  факту отправленного PATCH: раньше счётчик применённых рос до проверки, промах
+  мимо квеста печатался в консоль при коде возврата 0 и снимок уезжал в архив.
+  Ненайденная запись, оборванный не-404 ошибкой перебор и пустой текущий финал
+  у квеста — тоже провал, а не пропуск: скрипт только обновляет существующие
+  записи (сам финал создаётся вместе с квестом в `migrate-*`), поэтому писать
+  правку некуда, и молчаливый пропуск терял бы её. Регрессия закрыта
+  `__tests__/scripts/update-quest-content-finale.test.ts` — прогон настоящего
+  CLI по локальному HTTP-стабу, без обращения к проду.
 - **`tags` нет в детальном API.** `routeMode` до их прихода равен `undefined`, и
   это НЕ ошибка, а гейт: карта и экспорты паузятся, чтобы велоквест не построил
   пеший маршрут. Пустой набор тегов (`[]`) — тоже завершённая классификация;

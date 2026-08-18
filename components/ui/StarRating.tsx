@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, Platform, Animated } from 'react-nat
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 import { formatCompactNumber } from '@/i18n/format'
+import { formatRatingValue } from '@/utils/ratingHelpers'
 
 
 type Props = {
@@ -112,7 +113,7 @@ function StarRating({
 
     const formatRating = (value: number) => {
         if (value === 0) return '—';
-        return value.toFixed(1);
+        return formatRatingValue(value);
     };
 
     // Пустая строка прячет счётчик целиком — это решение UI, а не форматтера.

@@ -2,12 +2,6 @@
   "contractVersion": 1,
   "note": "Известные находки в локальных данных квестов. Гейт check:fast падает только на том, что добавила правка; перечисленное здесь чинится отдельной карточкой. Обновлять: npm run quest:scan-answer-reachability:baseline",
   "known": {
-    "scripts/amsterdam-quest-data.js": [
-      "mixed_script|amsterdam-on-piles|5-munttoren|четырe"
-    ],
-    "scripts/belgrade-quest-data.js": [
-      "mixed_script|belgrade-white-city|1-skadarlija|три шеšира"
-    ],
     "scripts/berlin-quest-data.js": [
       "duplicate_normalized|berlin-wall-line|2-liniya-steny|19611989",
       "duplicate_normalized|berlin-wall-line|2-liniya-steny|1961–1989",
@@ -20,8 +14,7 @@
     "scripts/bratislava-quest-data.js": [
       "duplicate_normalized|bratislava-coronation-crown|11-bratislavsky-hrad|перевернутый стол",
       "duplicate_normalized|bratislava-coronation-crown|11-bratislavsky-hrad|перевернутый столик",
-      "duplicate_normalized|bratislava-coronation-crown|9-fontana-pred-divadlom|ребёнка",
-      "mixed_script|bratislava-coronation-crown|4-stara-radnica|делova gula"
+      "duplicate_normalized|bratislava-coronation-crown|9-fontana-pred-divadlom|ребёнка"
     ],
     "scripts/brest-city-quest-data.js": [
       "duplicate_normalized|brest-lantern|3-pamyatnik-tysyacheletiya|анел"
@@ -63,9 +56,6 @@
     ],
     "scripts/gomel-teens-city-blueprint-quest-data.js": [
       "duplicate_normalized|gomel-teens-city-blueprint|7-orlov-bank|орел"
-    ],
-    "scripts/grodno-royal-quest-data.js": [
-      "mixed_script|grodno-royal|farny|гадзiннiк"
     ],
     "scripts/hel-jurata-quest-data.js": [
       "duplicate_normalized|hel-jurata-amber|gwiazda-polnocy|50'",
@@ -119,8 +109,7 @@
       "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтая",
       "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтого",
       "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтое",
-      "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтый",
-      "mixed_script|lodz-murals|4-twozywo|zwykłы"
+      "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтый"
     ],
     "scripts/lublin-old-town-quest-data.js": [
       "duplicate_normalized|lublin-old-town|trybunal|орёл"
@@ -135,8 +124,7 @@
       "duplicate_normalized|minsk-kids-bronze-friends|7-cirk-kloun|поросёночек"
     ],
     "scripts/mogilev-stargazer-quest-data.js": [
-      "duplicate_normalized|mogilev-stargazer|teatr|пёс",
-      "mixed_script|mogilev-stargazer|ratusha|могiслаў"
+      "duplicate_normalized|mogilev-stargazer|teatr|пёс"
     ],
     "scripts/mozyr-quest-data.js": [
       "duplicate_normalized|mozyr-polesie-capital|4-mig|к. ф. захаров",

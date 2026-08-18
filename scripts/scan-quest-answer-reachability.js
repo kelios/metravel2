@@ -59,6 +59,10 @@ const path = require('path')
 
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
 const { normalizeAnswer } = require('./lib/questAnswerNormalize')
+// Определение смешения алфавитов — общее со сканом видимого текста (#1464):
+// две копии регулярок разошлись бы, и один скан начал бы отчитываться «чисто»
+// о том, что другой считает дефектом.
+const { mixedScriptWords, confusableChars } = require('./lib/questScriptMixing')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -73,9 +77,6 @@ const QUEST_DATA_FILE_PATTERN = /^[^/]+-quests?-data\.js$/
 const SCANNED_TYPE = 'exact_any'
 
 const BLOCKER_KINDS = new Set(['dictionary_unusable', 'empty_after_normalize', 'mixed_script', 'step_unreachable'])
-
-const CYRILLIC = /[Ѐ-ӿԀ-ԯ]/
-const LATIN = /[A-Za-zÀ-ɏ]/
 
 // Вопрос, который сам ставит ответ в родительный падеж. Форма узкая намеренно:
 // «из какого материала» тоже начинается с «какого», но естественный ответ там —
@@ -99,28 +100,6 @@ function parseDictionary(answerPattern) {
   } catch {
     return null
   }
-}
-
-/**
- * Слова с перемешанными алфавитами. Считаем по СЫРОМУ варианту, а не по
- * нормализованному: `normalize()` срезает дефис, и «SPA-центр» превратился бы в
- * «spaцентр» — ложный вердикт «набрать нельзя» для формы, которую игрок
- * прекрасно вводит. Разделитель любой не-буквенный символ: «кафе Bar» и
- * «SPA-центр» — нормальные двуязычные варианты, а «гадзiннiк» с латинской `i`
- * внутри одного слова не наберёт никто.
- */
-function mixedScriptWords(rawVariant) {
-  return String(rawVariant == null ? '' : rawVariant)
-    .split(/[^\p{L}]+/u)
-    .filter((word) => word && CYRILLIC.test(word) && LATIN.test(word))
-}
-
-/** Буквы алфавита-меньшинства в слове — чтобы находку можно было проверить глазами. */
-function confusableChars(word) {
-  const cyrillic = word.match(/[Ѐ-ӿԀ-ԯ]/g) || []
-  const latin = word.match(/[A-Za-zÀ-ɏ]/g) || []
-  const minority = cyrillic.length >= latin.length ? latin : cyrillic
-  return [...new Set(minority)].join('')
 }
 
 /**

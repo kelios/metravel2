@@ -39,6 +39,7 @@ import {
 } from './travelListItemHelpers'
 import { useTravelListItemNavigation } from './useTravelListItemNavigation'
 import { translate as i18nT } from '@/i18n'
+import { formatRatingValue } from '@/utils/ratingHelpers'
 
 
 const PLACEHOLDER_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj'
@@ -625,7 +626,7 @@ function TravelListItem({
         {hasRating && (
           <View style={styles.metaRating} testID="rating-meta">
             <Text style={styles.metaRatingStar}>★</Text>
-            <Text style={styles.metaRatingValue}>{travel.rating!.toFixed(1)}</Text>
+            <Text style={styles.metaRatingValue}>{formatRatingValue(travel.rating!)}</Text>
           </View>
         )}
       </View>

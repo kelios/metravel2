@@ -1,6 +1,10 @@
 // components/belkraj/BelkrajWidget.tsx
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { getCountryCodeByCoords } from '@/utils/geoCountry';
+import {
+    canRenderBelkrajWidget,
+    parseBelkrajCoord,
+    resolveBelkrajCountryCode,
+} from './belkrajAvailability';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { translate as i18nT } from '@/i18n'
 
@@ -79,32 +83,23 @@ function BelkrajWidget({
     const [measuredHeight, setMeasuredHeight] = useState(finalCollapsedHeight);
 
     const firstCoord = useMemo(() => {
-        const p = points?.[0];
-        if (!p) return null;
-        if (typeof p.lat === 'number' && typeof p.lng === 'number') return { lat: p.lat, lng: p.lng };
-        if (p.coord) {
-            const [a, b] = p.coord.split(',').map(s => s.trim());
-            const lat = Number(a), lng = Number(b);
-            if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
-        }
-        return null;
+        return parseBelkrajCoord(points?.[0]);
     }, [points]);
 
     // Текущая целевая высота iframe
     const targetHeight = expanded ? expandedHeight : finalCollapsedHeight;
     const finalHeight = allowScroll ? Math.max(targetHeight, measuredHeight) : measuredHeight;
 
-    const isProd =
-        typeof process !== 'undefined' &&
-        process.env &&
-        process.env.NODE_ENV === 'production';
+    const resolvedCountryCode = useMemo(
+        () => resolveBelkrajCountryCode(points, countryCode),
+        [countryCode, points],
+    );
 
-    const resolvedCountryCode = useMemo(() => {
-        const normalized = String(countryCode || '').trim().toUpperCase();
-        if (/^[A-Z]{2}$/.test(normalized)) return normalized;
-        if (!firstCoord) return undefined;
-        return getCountryCodeByCoords(firstCoord.lat, firstCoord.lng);
-    }, [countryCode, firstCoord]);
+    // Гейт тот же, что спрашивают секции вокруг виджета: расходиться им нельзя.
+    const canRender = useMemo(
+        () => canRenderBelkrajWidget(points, countryCode),
+        [countryCode, points],
+    );
 
     const iframeSrc = useMemo(() => {
         if (!firstCoord) return null;
@@ -210,8 +205,8 @@ function BelkrajWidget({
         resizeSyncTimeoutsRef.current = [250, 750].map((delay) => window.setTimeout(syncHeight, delay));
     };
 
-    // Не рендерим ничего, если нет координат
-    if (!firstCoord || !isProd || !iframeSrc) return null;
+    // Не рендерим ничего, если нет координат либо точка вне Беларуси
+    if (!canRender || !iframeSrc) return null;
 
     return (
         <div
