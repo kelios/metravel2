@@ -1,31 +1,43 @@
 # Google Play Closed Testing — журнал кампании 2026-07-09 → 2026-07-26
 
-Цель: 14 дней подряд ежедневная активность тестера по всем приложениям из `config.json`,
-чтобы наши приложения прошли закрытое тестирование Google Play. Пропуск дня = риск провала кампании.
+**Статус: КАМПАНИЯ ЗАКРЫТА 2026-07-26.** Обязательные 14 дней Google
+(2026-07-09 → 2026-07-22) выполнены; дни 15–18 — добивание community-миссии
+Pack Boneclaw IV, закрытой 2026-07-26 (`Day 16/16`, `ALL DONE`). Поэтому строк
+в таблице 18 при `days: 14` в конфиге — это не расхождение, а хвост миссии.
+С 2026-07-27 ежедневные прогоны не требуются: `play-tester` и
+`play-update-watcher` обязаны отказываться от запуска, пока в
+`config.json` не появится новая кампания со `status: "active"`.
+
+Цель (пока кампания была активна): 14 дней подряд ежедневная активность тестера по всем
+приложениям из `config.json`, чтобы наши приложения прошли закрытое тестирование Google Play.
+Пропуск дня = риск провала кампании.
 
 Правила заполнения: агент `play-tester` после каждого прохода отмечает день, число открытых
 приложений, краши и найденные задания. Агент `play-update-watcher` пишет обновления.
+Маркеры колонки «Тест-проход» — текстовые, без эмодзи: `ok N/M` — день пройден,
+`part` — день неполный (обязательно с причиной в заметках), `blocked` — блокер,
+`—` — прогона не было.
 
 | День | Дата       | Тест-проход | Обновления | Задания из community | Заметки |
 |------|------------|-------------|------------|----------------------|---------|
-| 1    | 2026-07-09 | ⏳          |            |                      | Пачка установлена вручную владельцем |
+| 1    | 2026-07-09 | —           |            |                      | Пачка установлена вручную владельцем |
 | 2    | 2026-07-10 |             |            |                      | |
 | 3    | 2026-07-11 |             |            |                      | |
 | 4    | 2026-07-12 |             |            |                      | |
 | 5    | 2026-07-13 |             |            |                      | |
 | 6    | 2026-07-14 |             |            |                      | |
 | 7    | 2026-07-15 |             |            |                      | |
-| 8    | 2026-07-16 | ✅          |            | TCT: uploads done; post-reset TCT: 12/12 uploads submitted; Pack Boneclaw IV: 13/13 done (100%); App Testers: 1 install/test, stopped before Play review | Evidence: `.claude/play-testing/evidence/2026-07-16/`; 110 moons; Putik/Jurisprudence retested |
-| 9    | 2026-07-17 | ✅          | `com.nadeemgs.testerscommunity` 37 → 38 | Pack Boneclaw IV: 13/13 done (100%); TCT: MVG/HealthMate/Damas reuploads submitted, partner proofs accepted; GridArt/Bigpic partner proofs accepted; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-17/`; TCT home: `You're all caught up!`; no crash-buffer hits |
-| 10   | 2026-07-18 | ✅          | none | Pack Boneclaw IV: 12/12 done (100%); TCT: 10 completed today, 2 pending states audited; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-18/`; bugs/risks logged: GridArt 404/waiting partner, Rocky list/detail status mismatch, own app opens dev launcher |
-| 11   | 2026-07-19 | ✅          | none checked | Pack Boneclaw IV: 12/12 done (100%); TCT: 7 completed today, 5 pending partner/review waits; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-19/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged |
-| 12   | 2026-07-20 | ✅          | none checked | Pack Boneclaw IV: 11/11 done (100%); TCT: 4 pending uploads, 8 completed today; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-20/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged; no crash-buffer hits |
-| 13   | 2026-07-21 | ✅          | snapshot refreshed: `com.kitchenmatch.game` 2→3, `com.kolorino.kolorino` 2→6, `com.unnoyashiro` 2→3, `by.metravel.app` 8→15; Priority dz Play listing checked: no Update button | Pack Boneclaw IV: 11/11 done (100%); TCT: visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-21/`; 3+ minute interactive testing used for each TC task app; chat note: Priority dz developer asked to update, but Play showed only `Играть`; no crash-buffer hits |
-| 14   | 2026-07-22 | ✅          | snapshot refreshed: `com.baremacros.app` 1→10, `com.kitchenmatch.game` 3→6, `com.kolorino.kolorino` 6→7, `com.ja.callofpoker` 69000→71000 | Pack Boneclaw IV: 11/11 done (100%); TCT: one partner MeTravel proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-22/`; linked 30+ second task sessions recovered the stale `0/11` mission state; all target versionCodes match snapshot; no target-package crash-buffer hits |
-| 15   | 2026-07-23 | ✅          | none; installed versionCodes match snapshot for today's 10 assigned packages | Pack Boneclaw IV: Day 13/16, 10/10 done (100%); TCT visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-23/`; each TC task had real 3+ minute app usage plus linked 30+ second TestersCommunity completion where needed; final proof shows `ALL DONE`; no target-package crash-buffer hits |
-| 16   | 2026-07-24 | ✅          | snapshot refreshed: `com.ballsort.zen` 2→5, `com.unnoyashiro` 3→4 | Pack Boneclaw IV: live app showed Day 14/16, 10/10 done (100%); TCT Damas Go Day 10 partner proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-24/`; linked task flow recovered after two script attempts that used Android Back too aggressively; final proof shows `ALL DONE`; no target-package crash-buffer hits |
-| 17   | 2026-07-25 | ✅          | none checked | Pack Boneclaw IV: Day 15/16, 10/10 done (100%) | Evidence: `.claude/play-testing/evidence/2026-07-25/`; completed from the existing open task; no target-package crash-buffer hits |
-| 18   | 2026-07-26 | ✅          | snapshot refreshed: PraEx 4→6, Call Of Poker 71000→76000, Kitchen Match & Merge 6→8 | Pack Boneclaw IV: final Day 16/16, 10/10 done (100%); TCT all caught up; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-26/`; final proof shows `ALL DONE`; Call Of Poker blank-board bug logged; installed MeTravel opens dev launcher; no target-package crash-buffer hits |
+| 8    | 2026-07-16 | ok          |            | TCT: uploads done; post-reset TCT: 12/12 uploads submitted; Pack Boneclaw IV: 13/13 done (100%); App Testers: 1 install/test, stopped before Play review | Evidence: `.claude/play-testing/evidence/2026-07-16/`; 110 moons; Putik/Jurisprudence retested |
+| 9    | 2026-07-17 | ok          | `com.nadeemgs.testerscommunity` 37 → 38 | Pack Boneclaw IV: 13/13 done (100%); TCT: MVG/HealthMate/Damas reuploads submitted, partner proofs accepted; GridArt/Bigpic partner proofs accepted; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-17/`; TCT home: `You're all caught up!`; no crash-buffer hits |
+| 10   | 2026-07-18 | ok          | none | Pack Boneclaw IV: 12/12 done (100%); TCT: 10 completed today, 2 pending states audited; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-18/`; bugs/risks logged: GridArt 404/waiting partner, Rocky list/detail status mismatch, own app opens dev launcher |
+| 11   | 2026-07-19 | ok          | none checked | Pack Boneclaw IV: 12/12 done (100%); TCT: 7 completed today, 5 pending partner/review waits; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-19/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged |
+| 12   | 2026-07-20 | ok          | none checked | Pack Boneclaw IV: 11/11 done (100%); TCT: 4 pending uploads, 8 completed today; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-20/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged; no crash-buffer hits |
+| 13   | 2026-07-21 | ok          | snapshot refreshed: `com.kitchenmatch.game` 2→3, `com.kolorino.kolorino` 2→6, `com.unnoyashiro` 2→3, `by.metravel.app` 8→15; Priority dz Play listing checked: no Update button | Pack Boneclaw IV: 11/11 done (100%); TCT: visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-21/`; 3+ minute interactive testing used for each TC task app; chat note: Priority dz developer asked to update, but Play showed only `Играть`; no crash-buffer hits |
+| 14   | 2026-07-22 | ok          | snapshot refreshed: `com.baremacros.app` 1→10, `com.kitchenmatch.game` 3→6, `com.kolorino.kolorino` 6→7, `com.ja.callofpoker` 69000→71000 | Pack Boneclaw IV: 11/11 done (100%); TCT: one partner MeTravel proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-22/`; linked 30+ second task sessions recovered the stale `0/11` mission state; all target versionCodes match snapshot; no target-package crash-buffer hits |
+| 15   | 2026-07-23 | ok          | none; installed versionCodes match snapshot for today's 10 assigned packages | Pack Boneclaw IV: Day 13/16, 10/10 done (100%); TCT visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-23/`; each TC task had real 3+ minute app usage plus linked 30+ second TestersCommunity completion where needed; final proof shows `ALL DONE`; no target-package crash-buffer hits |
+| 16   | 2026-07-24 | ok          | snapshot refreshed: `com.ballsort.zen` 2→5, `com.unnoyashiro` 3→4 | Pack Boneclaw IV: live app showed Day 14/16, 10/10 done (100%); TCT Damas Go Day 10 partner proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-24/`; linked task flow recovered after two script attempts that used Android Back too aggressively; final proof shows `ALL DONE`; no target-package crash-buffer hits |
+| 17   | 2026-07-25 | ok          | none checked | Pack Boneclaw IV: Day 15/16, 10/10 done (100%) | Evidence: `.claude/play-testing/evidence/2026-07-25/`; completed from the existing open task; no target-package crash-buffer hits |
+| 18   | 2026-07-26 | ok          | snapshot refreshed: PraEx 4→6, Call Of Poker 71000→76000, Kitchen Match & Merge 6→8 | Pack Boneclaw IV: final Day 16/16, 10/10 done (100%); TCT all caught up; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-26/`; final proof shows `ALL DONE`; Call Of Poker blank-board bug logged; installed MeTravel opens dev launcher; no target-package crash-buffer hits |
 
 ## Найденные задания / инциденты
 

@@ -37,6 +37,15 @@ const parseArgs = (argv) => {
 }
 
 const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|mjs|cjs)$/
+// Локальные данные квеста, из которых собирается заливка на бэкенд. Их словари
+// `exact_any` проверяются на достижимость ДО заливки: после неё недостижимый
+// вариант ловится только живым игроком на маршруте (#1450). Имя файла узнаёт
+// сам скан — второй копии шаблона здесь не заводим, иначе гейт и baseline
+// разойдутся в том, какие файлы считаются данными квеста.
+const {
+  QUEST_DATA_FILE_PATTERN,
+  BASELINE_PATH: QUEST_REACHABILITY_BASELINE_PATH,
+} = require('./scan-quest-answer-reachability')
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
@@ -103,6 +112,14 @@ const matchesIgnorePattern = (filePath, patternOrMatcher) => {
 
 const isIgnoredLintTarget = (filePath) => {
   return IGNORE_PATTERN_MATCHERS.some((matcher) => matchesIgnorePattern(filePath, matcher))
+}
+
+const getChangedQuestDataFiles = (changedFiles) => {
+  return (changedFiles || [])
+    .map((filePath) => normalizeForMatching(filePath))
+    .filter((filePath) => path.dirname(filePath) === 'scripts')
+    .filter((filePath) => QUEST_DATA_FILE_PATTERN.test(path.basename(filePath)))
+    .filter((filePath) => fs.existsSync(path.resolve(process.cwd(), filePath)))
 }
 
 const getLintTargets = (changedFiles) => {
@@ -255,6 +272,28 @@ const main = () => {
       process.exit(questAnswerEvalGuardStatus)
     }
 
+    const questReviewSnapshotsGuardStatus = runCommand('npm', ['run', 'guard:quest-review-snapshots'])
+    if (questReviewSnapshotsGuardStatus !== 0) {
+      process.exit(questReviewSnapshotsGuardStatus)
+    }
+
+    // Скан достижимости идёт по изменённым локальным данным, а не по проду:
+    // прогон по всей базе — это ~140 сетевых запросов, которым не место в
+    // check:fast. Полный свип — `npm run quest:scan-answer-reachability`.
+    // Baseline держит уже лежавшие в файле находки, чтобы правка одной строки
+    // не краснела из-за чужого контента; пополняется только явным
+    // `npm run quest:scan-answer-reachability:baseline`.
+    for (const questDataFile of getChangedQuestDataFiles(input.files)) {
+      const reachabilityStatus = runCommand('node', [
+        'scripts/scan-quest-answer-reachability.js',
+        `--source=${questDataFile}`,
+        `--baseline=${QUEST_REACHABILITY_BASELINE_PATH}`,
+      ], { shell: false })
+      if (reachabilityStatus !== 0) {
+        process.exit(reachabilityStatus)
+      }
+    }
+
     if (result.lintTargets.length === 0) {
       console.log('fast-scope-checks: no lintable changed files, eslint skipped.')
       return
@@ -284,6 +323,8 @@ module.exports = {
   matchesIgnorePattern,
   createIgnorePatternMatcher,
   getLintTargets,
+  getChangedQuestDataFiles,
+  QUEST_DATA_FILE_PATTERN,
   buildEslintArgs,
   ESLINT_CACHE_LOCATION,
   ESLINT_BIN_PATH,

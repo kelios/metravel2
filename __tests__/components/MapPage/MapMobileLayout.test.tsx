@@ -764,7 +764,9 @@ describe('MapMobileLayout', () => {
 
         expect(screen.getByTestId('map-mobile-route-summary')).toBeTruthy()
         expect(screen.getByText('Маршрут готов')).toBeTruthy()
-        expect(screen.getByText('12.5 км')).toBeTruthy()
+        // #1440/#1449: расстояние печатает канонический форматтер — в RU-локали
+        // разделитель дроби запятая, а не английская точка.
+        expect(screen.getByText('12,5 км')).toBeTruthy()
         expect(screen.getByText('30 мин')).toBeTruthy()
 
         act(() => {
@@ -789,7 +791,7 @@ describe('MapMobileLayout', () => {
         })
 
         expect(screen.getByTestId('map-mobile-route-summary')).toBeTruthy()
-        expect(screen.getByText('16.0 км')).toBeTruthy()
+        expect(screen.getByText('16,0 км')).toBeTruthy()
         expect(screen.getByText('40 мин')).toBeTruthy()
       } finally {
         jest.useRealTimers()

@@ -224,6 +224,33 @@ describe('mergeQuestProgress', () => {
     })
   })
 
+  it('не отправляет completed:false поверх серверного completed:true (#1451)', () => {
+    // Устройство B не знает про официальный пропуск девятой точки (`skipped`
+    // на бэкенде не хранится), поэтому пересчитывает прохождение как
+    // незаконченное. Payload обязан остаться `completed: true`: иначе у игрока
+    // молча пропадает «Пройден» и единица из счётчика прохождений квеста.
+    const deviceB = snapshot({
+      answers: { 'step-1': 'a1', 'step-2': 'a2' },
+      completed: false,
+      updatedAt: T0 + 10_000,
+    })
+    const server = snapshotFromServerProgress({
+      current_index: 2,
+      unlocked_index: 2,
+      answers: { 'step-1': 'a1', 'step-2': 'a2' },
+      attempts: {},
+      hints: {},
+      show_map: true,
+      completed: true,
+      updated_at: new Date(T0).toISOString(),
+    })
+
+    const { merged } = mergeQuestProgress(deviceB, server)
+
+    expect(merged.completed).toBe(true)
+    expect(toQuestProgressServerPayload(merged).completed).toBe(true)
+  })
+
   it('переживает битые/частичные данные без исключений', () => {
     const { merged } = mergeQuestProgress(
       { answers: null as never, currentIndex: NaN as never },

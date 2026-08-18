@@ -47,6 +47,31 @@ export const formatInteger = (
   locale: SupportedLocale = getActiveLocale(),
 ): string => formatNumber(value, { maximumFractionDigits: 0 }, locale)
 
+/**
+ * С какого значения счётчик печатается компактно. Ниже порога компактная форма
+ * не экономит место («999» короче «0,9 тыс.»), поэтому число идёт целым.
+ */
+export const COMPACT_NUMBER_THRESHOLD = 1000
+
+/**
+ * Канонический компактный счётчик (#1457): единицу выбирает локаль, а не
+ * хардкод — русскому пользователю «1,2 тыс.», а не английское «1.2K».
+ * Новое место, где печатается компактное число, должно звать его, а не
+ * собирать строку на месте.
+ */
+export const formatCompactNumber = (
+  value: number,
+  options: Intl.NumberFormatOptions = {},
+  locale: SupportedLocale = getActiveLocale(),
+): string =>
+  Math.abs(value) < COMPACT_NUMBER_THRESHOLD
+    ? formatNumber(value, { maximumFractionDigits: 0, ...options }, locale)
+    : formatNumber(
+        value,
+        { notation: 'compact', maximumFractionDigits: 1, ...options },
+        locale,
+      )
+
 export const formatCurrency = (
   value: number,
   currency: string,

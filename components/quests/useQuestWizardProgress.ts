@@ -182,6 +182,14 @@ export function useQuestWizardProgress({
   // Живое состояние для слияния серверных обновлений, пришедших во время сессии:
   // load-эффект асинхронный, замыкание успевает устареть.
   const liveSnapshotRef = useRef<QuestProgressSnapshot>(normalizeQuestProgressSnapshot(null))
+  // Уже подтверждённое прохождение (сервер или прежняя сессия этого устройства).
+  // `skipped`/`earlyFinish` на бэкенде не хранятся (#1451), поэтому второе
+  // устройство пересчитывает засчитанный квест как незаконченный и без этой
+  // отметки отправило бы `completed: false`, отняв у игрока «Пройден» и единицу
+  // из счётчика прохождений. Отметка живёт в ref, а не в state: на рендер она не
+  // влияет и намеренно НЕ поднимает `questCompleted` — форсить прежнего финишера
+  // в финал нельзя (#1431).
+  const confirmedCompletedRef = useRef(false)
 
   const applyProgressState = (snapshot: QuestProgressSnapshot) => {
     setSkipped(snapshot.skipped)
@@ -203,6 +211,9 @@ export function useQuestWizardProgress({
     answeredAtRef.current = snapshot.answeredAt
     lastAnswersRef.current = snapshot.answers
     updatedAtRef.current = snapshot.updatedAt
+    // Присваивание, а не ИЛИ: слитый снапшот уже объединил серверное и локальное
+    // `completed`, а сброс прогресса обязан снимать отметку.
+    confirmedCompletedRef.current = snapshot.completed
     seededSnapshotRef.current = markSeeded ? stateFingerprint(snapshot) : null
     applyProgressState(snapshot)
     return AsyncStorage.setItem(storageKey, serializeRecord(snapshot)).catch(() => {})
@@ -316,6 +327,12 @@ export function useQuestWizardProgress({
     lastAnswersRef.current = answers
     updatedAtRef.current = now
 
+    // Наружу (в хранилище и на сервер) `completed` монотонен: пересчёт на
+    // устройстве, не знающем про пропуски, не должен отменять уже засчитанное
+    // прохождение (#1451).
+    const reportedCompleted = questCompleted || confirmedCompletedRef.current
+    confirmedCompletedRef.current = reportedCompleted
+
     AsyncStorage.setItem(storageKey, serializeRecord({
       currentIndex,
       unlockedIndex,
@@ -323,7 +340,7 @@ export function useQuestWizardProgress({
       attempts,
       hints,
       showMap,
-      completed: questCompleted,
+      completed: reportedCompleted,
       skipped,
       earlyFinish,
       updatedAt: now,
@@ -337,7 +354,7 @@ export function useQuestWizardProgress({
       attempts,
       hints,
       showMap,
-      completed: questCompleted,
+      completed: reportedCompleted,
       updatedAt: now,
       answeredAt,
     })
@@ -351,7 +368,7 @@ export function useQuestWizardProgress({
     attempts,
     hints,
     showMap,
-    completed: questCompleted,
+    completed: questCompleted || confirmedCompletedRef.current,
     skipped,
     earlyFinish,
     updatedAt: updatedAtRef.current,

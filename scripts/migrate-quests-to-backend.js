@@ -95,9 +95,15 @@ function serializeAnswer(answerFn) {
         return { type: 'exact_any', value: JSON.stringify(multiExact) };
     }
 
-    // Fallback: сохраняем строку функции для ручной обработки
-    console.warn('⚠️  Не удалось автоматически сериализовать answer:', fnStr.substring(0, 100));
-    return { type: 'function', value: fnStr };
+    // Раньше здесь был fallback `{ type: 'function', value: fnStr }`: шаг уезжал на
+    // бэкенд со строкой функции, а клиент исполнял её через `eval`. Теперь клиент
+    // такой шаг не принимает (fail closed в `utils/questAdapters.ts`), поэтому залить
+    // его — значит выложить заведомо неотвечаемый шаг. Падаем здесь, до заливки.
+    throw new Error(
+        'Не удалось сериализовать answer в поддерживаемый answer_pattern: ' +
+        `${fnStr.substring(0, 160)}\n` +
+        'Перепиши ответ шага в exact / exact_any / range / approx / any_text / any_number.'
+    );
 }
 
 function serializeStep(step) {
@@ -391,7 +397,11 @@ async function main() {
     console.log('\n✅ Миграция завершена');
 }
 
-main().catch(err => {
-    console.error('Ошибка миграции:', err);
-    process.exit(1);
-});
+// Запуск только как CLI — см. комментарий в `migrate-quests-to-prod.js`:
+// `require()` этого модуля не должен запускать миграцию.
+if (require.main === module) {
+    main().catch(err => {
+        console.error('Ошибка миграции:', err);
+        process.exit(1);
+    });
+}

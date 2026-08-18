@@ -37,6 +37,7 @@ import {
 import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
 import { buildQuestNativeMapHtml } from './questNativeMapHtml';
 import { selectPlural, translate as i18nT } from '@/i18n'
+import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { openExternalUrl } from '@/utils/externalLinks';
 
 
@@ -51,10 +52,11 @@ function formatPointCount(count: number) {
     });
 }
 
+// Панель маршрута квеста — маршрутная поверхность (#1440/#1449): дробный
+// километр держится и на длинных велоквестах, разделители берёт из локали.
 const formatRouteDistance = (meters: number) => {
     if (!Number.isFinite(meters) || meters <= 0) return null;
-    if (meters < 1000) return i18nT('quests:components.quests.QuestFullMap.value1_m_a64562c6', { value1: Math.round(meters) });
-    return i18nT('quests:components.quests.QuestFullMap.value1_km_24d92f57', { value1: (meters / 1000).toFixed(meters < 10000 ? 1 : 0) });
+    return formatDistanceMeters(meters, ROUTE_DISTANCE_FORMAT);
 };
 
 const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRouteMode) => {

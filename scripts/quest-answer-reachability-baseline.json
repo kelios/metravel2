@@ -1,0 +1,254 @@
+{
+  "contractVersion": 1,
+  "note": "Известные находки в локальных данных квестов. Гейт check:fast падает только на том, что добавила правка; перечисленное здесь чинится отдельной карточкой. Обновлять: npm run quest:scan-answer-reachability:baseline",
+  "known": {
+    "scripts/amsterdam-quest-data.js": [
+      "mixed_script|amsterdam-on-piles|5-munttoren|четырe"
+    ],
+    "scripts/belgrade-quest-data.js": [
+      "mixed_script|belgrade-white-city|1-skadarlija|три шеšира"
+    ],
+    "scripts/berlin-quest-data.js": [
+      "duplicate_normalized|berlin-wall-line|2-liniya-steny|19611989",
+      "duplicate_normalized|berlin-wall-line|2-liniya-steny|1961–1989",
+      "duplicate_normalized|berlin-wall-line|2-liniya-steny|1961—1989"
+    ],
+    "scripts/bielsko-biala-quest-data.js": [
+      "duplicate_normalized|bielsko-biala-cartoon-vienna|5-reksio|пес",
+      "duplicate_normalized|bielsko-biala-cartoon-vienna|5-reksio|песик"
+    ],
+    "scripts/bratislava-quest-data.js": [
+      "duplicate_normalized|bratislava-coronation-crown|11-bratislavsky-hrad|перевернутый стол",
+      "duplicate_normalized|bratislava-coronation-crown|11-bratislavsky-hrad|перевернутый столик",
+      "duplicate_normalized|bratislava-coronation-crown|9-fontana-pred-divadlom|ребёнка",
+      "mixed_script|bratislava-coronation-crown|4-stara-radnica|делova gula"
+    ],
+    "scripts/brest-city-quest-data.js": [
+      "duplicate_normalized|brest-lantern|3-pamyatnik-tysyacheletiya|анел"
+    ],
+    "scripts/bucharest-quest-data.js": [
+      "duplicate_normalized|bucharest-curtea-veche|4-macca-vilacrosse|жёлтая",
+      "duplicate_normalized|bucharest-curtea-veche|4-macca-vilacrosse|жёлтого цвета",
+      "duplicate_normalized|bucharest-curtea-veche|4-macca-vilacrosse|жёлтое",
+      "duplicate_normalized|bucharest-curtea-veche|4-macca-vilacrosse|жёлтый"
+    ],
+    "scripts/budapest-quest-data.js": [
+      "duplicate_normalized|budapest-two-cities|6-malyshka-princessa|её колени"
+    ],
+    "scripts/dubrovnik-quest-data.js": [
+      "duplicate_normalized|dubrovnik-libertas|3-franciscan-monastery|распухшая щёка",
+      "duplicate_normalized|dubrovnik-libertas|5-orlando-column|флер-де-лис"
+    ],
+    "scripts/florence-quest-data.js": [
+      "duplicate_normalized|florence-guilds-renaissance|6-porcellino-mercato-nuovo|поросенок"
+    ],
+    "scripts/gervyaty-quest-data.js": [
+      "duplicate_normalized|gervyaty-kostel|6-melnitsa|бревна",
+      "duplicate_normalized|gervyaty-kostel|7-most|костел",
+      "duplicate_normalized|gervyaty-kostel|7-most|костел в воде",
+      "duplicate_normalized|gervyaty-kostel|7-most|отражение костела"
+    ],
+    "scripts/gniezno-quest-data.js": [
+      "duplicate_normalized|gniezno-white-eagle|8-rynek-herb|белый орёл",
+      "duplicate_normalized|gniezno-white-eagle|8-rynek-herb|орёл"
+    ],
+    "scripts/golshany-quest-data.js": [
+      "duplicate_normalized|golshany-black-monk|8-melnitsa-golshanka|брёвна"
+    ],
+    "scripts/gomel-kids-lost-playbill-quest-data.js": [
+      "duplicate_normalized|gomel-kids-lost-playbill|3-girl-and-dog|пес"
+    ],
+    "scripts/gomel-soviet-quest-data.js": [
+      "case_form_gap|gomel-soviet|4-dom-mayanca|[\"красный и белый\",\"красно-белый\",\"белый и красный\",\"кирпичный и белый\",\"красный белый\",\"белый красный\",\"красный и белый цвет\",\"красный кирпич и белый\"]"
+    ],
+    "scripts/gomel-teens-city-blueprint-quest-data.js": [
+      "duplicate_normalized|gomel-teens-city-blueprint|7-orlov-bank|орел"
+    ],
+    "scripts/grodno-royal-quest-data.js": [
+      "mixed_script|grodno-royal|farny|гадзiннiк"
+    ],
+    "scripts/hel-jurata-quest-data.js": [
+      "duplicate_normalized|hel-jurata-amber|gwiazda-polnocy|50'",
+      "duplicate_normalized|hel-jurata-amber|hel-kopiec-kaszubow|чёрный гриф",
+      "duplicate_normalized|hel-jurata-amber|wladyslawowo-hallerowka|брёвна",
+      "duplicate_raw|hel-jurata-amber|rozewie-latarnia|две"
+    ],
+    "scripts/istanbul-quest-data.js": [
+      "case_form_gap|istanbul-empires|1-nemetskiy-fontan|[\"золотой\",\"золотая\",\"золотые\",\"золото\",\"из золота\",\"позолота\",\"позолоченный\",\"позолоченная\",\"золотистый\",\"золотистая\",\"золотистые\",\"золотым\"]"
+    ],
+    "scripts/kamenets-quest-data.js": [
+      "duplicate_normalized|kamenets-white-tower|6-kameneckaya-vezha|темно-красный"
+    ],
+    "scripts/kazimierz-dolny-quest-data.js": [
+      "duplicate_raw|kazimierz-dolny-kogut|10-bulwar-wisly|замок"
+    ],
+    "scripts/kossovo-ruzhany-palaces-quest-data.js": [
+      "duplicate_normalized|kossovo-ruzhany-palaces|ruzhany|копьё"
+    ],
+    "scripts/krakow-bike-quest-data.js": [
+      "case_form_gap|krakow-bike-tyniec|2-zakrzowek|[\"бирюзовый\",\"бирюзовая\",\"бирюза\",\"изумрудный\",\"изумрудная\",\"лазурный\",\"лазурная\",\"голубой\",\"голубая\",\"сине зеленый\",\"сине зеленая\",\"зелено голубой\",\"аквамарин\",\"аквамариновый\"]"
+    ],
+    "scripts/krakow-district-quests-data.js": [
+      "duplicate_normalized|krakow-podgorze|2-apteka|орел",
+      "mixed_script|krakow-kazimierz|5-corpus-christi|однa"
+    ],
+    "scripts/krakow-dragon-quest-data.js": [
+      "duplicate_normalized|krakow-dragon|2-mariacki|золочёная корона",
+      "duplicate_normalized|krakow-dragon|4-barbakan|белый орёл",
+      "duplicate_normalized|krakow-dragon|4-barbakan|орёл"
+    ],
+    "scripts/krakow-kids-quest-data.js": [
+      "duplicate_normalized|krakow-kids-dragon-keeper|7-smok-wodny|рыбёшка",
+      "duplicate_normalized|krakow-kids-dragon-keeper|8-smok|дыхнул огнем",
+      "duplicate_normalized|krakow-kids-dragon-keeper|8-smok|дышит огнем",
+      "duplicate_normalized|krakow-kids-dragon-keeper|8-smok|огнем",
+      "duplicate_normalized|krakow-kids-dragon-keeper|8-smok|плюётся огнём"
+    ],
+    "scripts/krakow-podgorze-quest-data.js": [
+      "duplicate_normalized|krakow-podgorze|2-apteka|орел"
+    ],
+    "scripts/lepel-quest-data.js": [
+      "duplicate_normalized|lepel-tsmok|3-tserkov-paraskevy|брёвна",
+      "duplicate_normalized|lepel-tsmok|3-tserkov-paraskevy|из брёвен",
+      "duplicate_normalized|lepel-tsmok|6-rusalka|желтая кувшинка"
+    ],
+    "scripts/lisbon-quest-data.js": [
+      "duplicate_normalized|lisbon-terramoto|6-santo-antonio|ребёнка"
+    ],
+    "scripts/lodz-murals-quest-data.js": [
+      "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтая",
+      "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтого",
+      "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтое",
+      "duplicate_normalized|lodz-murals|8-osgemeos-aryz|жёлтый",
+      "mixed_script|lodz-murals|4-twozywo|zwykłы"
+    ],
+    "scripts/lublin-old-town-quest-data.js": [
+      "duplicate_normalized|lublin-old-town|trybunal|орёл"
+    ],
+    "scripts/luninets-quest-data.js": [
+      "duplicate_raw|luninets-railway|3-suhoj|сухій"
+    ],
+    "scripts/minsk-kids-quest-data.js": [
+      "duplicate_normalized|minsk-kids-bronze-friends|6-cirk-piramida|слоненок",
+      "duplicate_normalized|minsk-kids-bronze-friends|7-cirk-kloun|поросёнка",
+      "duplicate_normalized|minsk-kids-bronze-friends|7-cirk-kloun|поросёнок",
+      "duplicate_normalized|minsk-kids-bronze-friends|7-cirk-kloun|поросёночек"
+    ],
+    "scripts/mogilev-stargazer-quest-data.js": [
+      "duplicate_normalized|mogilev-stargazer|teatr|пёс",
+      "mixed_script|mogilev-stargazer|ratusha|могiслаў"
+    ],
+    "scripts/mozyr-quest-data.js": [
+      "duplicate_normalized|mozyr-polesie-capital|4-mig|к. ф. захаров",
+      "duplicate_normalized|mozyr-polesie-capital|8-zamok|брёвна",
+      "duplicate_normalized|mozyr-polesie-capital|8-zamok|из брёвен"
+    ],
+    "scripts/naples-quest-data.js": [
+      "duplicate_normalized|naples-blood-of-san-gennaro|5-statua-del-nilo|ребенок"
+    ],
+    "scripts/niedzica-quest-data.js": [
+      "duplicate_normalized|niedzica-skarb-inkow|1-spichlerz|бревна",
+      "duplicate_normalized|niedzica-skarb-inkow|1-spichlerz|из бревен"
+    ],
+    "scripts/ojcow-quest-data.js": [
+      "duplicate_normalized|ojcow-lokietek|5-zamek-ojcow|железная решетка",
+      "duplicate_normalized|ojcow-lokietek|5-zamek-ojcow|металлическая решетка",
+      "duplicate_normalized|ojcow-lokietek|5-zamek-ojcow|решетка",
+      "duplicate_normalized|ojcow-lokietek|5-zamek-ojcow|решеткой"
+    ],
+    "scripts/pakocim-voices-quest-data.js": [
+      "duplicate_normalized|pakocim-voices|5-hedgehog|ёж",
+      "duplicate_normalized|pakocim-voices|5-hedgehog|ёжик"
+    ],
+    "scripts/paris-quest-data.js": [
+      "duplicate_normalized|paris-point-zero|4-bashnya-s-chasami|флёр де лис",
+      "duplicate_normalized|paris-point-zero|6-bukinisty|темнозеленый",
+      "duplicate_raw|paris-point-zero|4-bashnya-s-chasami|флер де лис"
+    ],
+    "scripts/rome-quest-data.js": [
+      "duplicate_normalized|rome-mouth-of-truth|3-teatro-di-marcello|жилье",
+      "duplicate_normalized|rome-mouth-of-truth|7-colonna-traiana|апостол петр",
+      "duplicate_normalized|rome-mouth-of-truth|7-colonna-traiana|петр",
+      "duplicate_normalized|rome-mouth-of-truth|7-colonna-traiana|св петр",
+      "duplicate_normalized|rome-mouth-of-truth|7-colonna-traiana|святого пётра",
+      "duplicate_normalized|rome-mouth-of-truth|7-colonna-traiana|святой петр"
+    ],
+    "scripts/sasino-quest-data.js": [
+      "duplicate_normalized|sasino-stilo|3-osetnik|трёх",
+      "duplicate_normalized|sasino-stilo|3-osetnik|трёх поясов"
+    ],
+    "scripts/slavgorod-krinica-quest-data.js": [
+      "duplicate_normalized|slavgorod-blue-krinica|1-krinitsa-vanna|пузырек"
+    ],
+    "scripts/sofia-quest-data.js": [
+      "duplicate_normalized|sofia-serdica-underfoot|11-alexander-nevsky|золоченый",
+      "duplicate_normalized|sofia-serdica-underfoot|5-sveta-petka|под землей"
+    ],
+    "scripts/spb-quest-data.js": [
+      "duplicate_normalized|spb-guardians|4-alexander-column|александру i благодарная россия.",
+      "duplicate_normalized|spb-guardians|8-singer-house|американский орёл",
+      "duplicate_normalized|spb-guardians|8-singer-house|орёл"
+    ],
+    "scripts/swiety-krzyz-quest-data.js": [
+      "duplicate_normalized|swiety-krzyz-lysa-gora|2-figura-emeryka|козырек",
+      "duplicate_normalized|swiety-krzyz-lysa-gora|3-droga-krolewska|мощеная камнем",
+      "duplicate_normalized|swiety-krzyz-lysa-gora|9-goloborze|металлическая решетка",
+      "duplicate_normalized|swiety-krzyz-lysa-gora|9-goloborze|решетка"
+    ],
+    "scripts/tallinn-quest-data.js": [
+      "case_form_gap|tallinn-vana-toomas|1-pikk-hermann|[\"синий\",\"синяя\",\"синяя полоса\",\"голубой\",\"темно-синий\",\"тёмно-синий\"]",
+      "duplicate_normalized|tallinn-vana-toomas|1-pikk-hermann|тёмно-синий"
+    ],
+    "scripts/tbilisi-quest-data.js": [
+      "duplicate_normalized|tbilisi-warm-city|7-kartlis-deda|меч чаша",
+      "duplicate_normalized|tbilisi-warm-city|7-kartlis-deda|чаша меч"
+    ],
+    "scripts/torun-copernicus-quest-data.js": [
+      "duplicate_normalized|torun-copernicus|krzywa|наклоненная"
+    ],
+    "scripts/vienna-quest-data.js": [
+      "duplicate_raw|vienna-imperial-secrets|2-stock-im-eisen|гвозди"
+    ],
+    "scripts/vilnius-kids-quest-data.js": [
+      "duplicate_normalized|vilnius-kids-iron-wolf|7-katinas|сережка",
+      "duplicate_normalized|vilnius-kids-iron-wolf|7-katinas|серёжку"
+    ],
+    "scripts/vitebsk-kids-living-drawing-quest-data.js": [
+      "duplicate_normalized|vitebsk-kids-living-drawing|4-clockwork-dog|пес"
+    ],
+    "scripts/vitebsk-kids-quest-data.js": [
+      "duplicate_normalized|vitebsk-kids-skazki|2-tsvetochnitsa|василек"
+    ],
+    "scripts/vlora-quest-data.js": [
+      "duplicate_normalized|vlora-independence|1-flag-square|двуглавый орёл",
+      "duplicate_normalized|vlora-independence|1-flag-square|орёл"
+    ],
+    "scripts/warsaw-quest-data.js": [
+      "case_form_gap|warsaw-syrenka|6-zamek|[\"красный\",\"красные\",\"кирпичный\",\"кирпичные\",\"краснокоричневый\",\"красно коричневый\",\"терракотовый\",\"бордовый\",\"розовый\",\"розово терракотовый\"]",
+      "duplicate_normalized|warsaw-syrenka|2-syrenka|меч, щит",
+      "duplicate_normalized|warsaw-syrenka|2-syrenka|щит, меч",
+      "duplicate_normalized|warsaw-syrenka|5-kolumna|крест, меч",
+      "duplicate_normalized|warsaw-syrenka|5-kolumna|крест, сабля"
+    ],
+    "scripts/wave3-final-quest-data.js": [
+      "duplicate_normalized|myadel-obet-i-ozernicy|1-troitskaya-tserkov|темный",
+      "duplicate_normalized|myadel-obet-i-ozernicy|1-troitskaya-tserkov|черно-золотой",
+      "duplicate_normalized|myadel-obet-i-ozernicy|1-troitskaya-tserkov|черного",
+      "duplicate_normalized|myadel-obet-i-ozernicy|1-troitskaya-tserkov|черный",
+      "duplicate_normalized|myadel-obet-i-ozernicy|1-troitskaya-tserkov|черный с золотом",
+      "duplicate_normalized|myadel-obet-i-ozernicy|3-naberezhnaya-ugor|копченый угорь"
+    ],
+    "scripts/wroclaw-gnomes-quest-data.js": [
+      "duplicate_normalized|wroclaw-gnomes|magdalena|щётка",
+      "duplicate_normalized|wroclaw-gnomes|most-tumski|костёл"
+    ],
+    "scripts/yelnya-quest-data.js": [
+      "duplicate_normalized|yelnya-bog-bells|3-pyany-les|сосёнка",
+      "duplicate_normalized|yelnya-bog-bells|3-pyany-les|сосёнки"
+    ],
+    "scripts/yerevan-quest-data.js": [
+      "duplicate_normalized|yerevan-ararat|10-ararat|меч, щит",
+      "duplicate_normalized|yerevan-ararat|10-ararat|щит, меч"
+    ]
+  }
+}

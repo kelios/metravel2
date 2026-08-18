@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { hapticNotification } from '@/utils/haptics'
 import { translate as i18nT } from '@/i18n'
+import { formatDistanceMeters } from '@/utils/distanceCalculator'
 
 
 export type QuestPointNavigatorProps = {
@@ -56,14 +57,6 @@ function roundDistance(m: number): number {
   if (m < 100) return Math.round(m / 5) * 5
   if (m < 1000) return Math.round(m / 10) * 10
   return Math.round(m / 50) * 50
-}
-
-function formatDistance(m: number): string {
-  if (m >= 1000) {
-    const km = m / 1000
-    return i18nT('quests:components.quests.QuestPointNavigator.value1_km_beba36b1', { value1: km >= 10 ? Math.round(km) : km.toFixed(1) })
-  }
-  return i18nT('quests:components.quests.QuestPointNavigator.value1_m_c15ed44c', { value1: Math.round(m) })
 }
 
 // Shortest signed delta a→b in degrees, range (-180, 180].
@@ -293,7 +286,7 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
         arrived
           ? i18nT('quests:components.quests.QuestPointNavigator.vy_na_meste_9edf4197')
           : distanceM != null
-            ? i18nT('quests:components.quests.QuestPointNavigator.do_tochki_value1_d2ec5e32', { value1: formatDistance(distanceM) })
+            ? i18nT('quests:components.quests.QuestPointNavigator.do_tochki_value1_d2ec5e32', { value1: formatDistanceMeters(distanceM) })
             : i18nT('quests:components.quests.QuestPointNavigator.opredelenie_napravleniya_36c04176')
       }
       style={{
@@ -315,7 +308,7 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
             <Feather name="navigation" size={15} color={arrow} />
           </Animated.View>
           <Text style={{ color: arrow, fontSize: 13, fontWeight: '600' }}>
-            {distanceM != null ? formatDistance(distanceM) : '…'}
+            {distanceM != null ? formatDistanceMeters(distanceM) : '…'}
           </Text>
         </>
       )}

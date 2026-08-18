@@ -21,6 +21,10 @@
  */
 
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
+// Нормализация — общая с рантаймом и со сканом достижимости (#1450): собственная
+// копия правил разошлась бы с `utils/questAdapters.normalize` и молча изменила
+// бы ответ «утечек нет».
+const { normalizeAnswer: normalize } = require('./lib/questAnswerNormalize')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -42,16 +46,6 @@ const NUMERIC_RANGE_TYPE = 'range'
 // На всей базе (912 шагов с непустым hint) порог 3 даёт ноль ложных
 // срабатываний по `hint` и находит все три известных кейса #1447.
 const MIN_VALUE_LENGTH = 3
-
-/** Нормализация как в `utils/questAdapters.normalize` — сравниваем ровно так же, как сервер засчитывает ответ. */
-function normalize(value) {
-  return String(value == null ? '' : value)
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;:!?'„""–—-]/g, '')
-    .replace(/ё/g, 'е')
-    .trim()
-}
 
 /** Строки-ответы шага. Свободные типы (`any`, `any_text`, `any_number`) словаря не имеют. */
 function dictionaryValues(answerPattern) {

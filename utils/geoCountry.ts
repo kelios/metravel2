@@ -39,7 +39,12 @@ const COUNTRIES: CountryEntry[] = [
     { code: 'AZ', bbox: { minLat: 38.39, maxLat: 41.91, minLng: 44.77, maxLng: 50.37 } },
     { code: 'TR', bbox: { minLat: 35.82, maxLat: 42.11, minLng: 25.67, maxLng: 44.82 } },
     { code: 'DE', bbox: { minLat: 47.27, maxLat: 55.06, minLng: 5.87,  maxLng: 15.04 } },
-    { code: 'FR', bbox: { minLat: 41.34, maxLat: 51.09, minLng: -5.14, maxLng: 9.56  } },
+    // FR разбита на материк и Корсику. Единый прямоугольник тянулся до lng 9.56
+    // только ради острова, а материковая Франция кончается на 8.23; в итоге
+    // «хвост» до 9.56 накрывал Милан (9.19) и Лугано (8.95) и уводил их во
+    // Францию, потому что FR проверяется раньше CH и IT.
+    { code: 'FR', bbox: { minLat: 42.33, maxLat: 51.09, minLng: -5.14, maxLng: 8.25  } },
+    { code: 'FR', bbox: { minLat: 41.33, maxLat: 43.03, minLng: 8.53,  maxLng: 9.57  } },
     { code: 'ES', bbox: { minLat: 27.64, maxLat: 43.79, minLng: -18.17,maxLng: 4.33  } },
     { code: 'SK', bbox: { minLat: 47.73, maxLat: 49.61, minLng: 16.83, maxLng: 22.57 } },
     { code: 'HU', bbox: { minLat: 45.74, maxLat: 48.59, minLng: 16.11, maxLng: 22.90 } },

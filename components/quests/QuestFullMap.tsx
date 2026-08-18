@@ -33,6 +33,7 @@ import {
 import { createQuestFullMapStyles } from './questFullMapStyles';
 import { MapCanvas, type MapCanvasEngine } from '@/components/MapPage/Map/MapCanvas';
 import { translate as i18nT } from '@/i18n'
+import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 
 
 const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; kind: 'google' | 'organic' | 'waze' | 'yandex' | 'osm' }> = [
@@ -43,10 +44,11 @@ const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; kind: 'google' | 'organic' 
     { app: 'osm', kind: 'osm' },
 ];
 
+// Панель маршрута квеста — маршрутная поверхность (#1440/#1449): дробный
+// километр держится и на длинных велоквестах, разделители берёт из локали.
 const formatRouteDistance = (meters: number) => {
     if (!Number.isFinite(meters) || meters <= 0) return null;
-    if (meters < 1000) return i18nT('quests:components.quests.QuestFullMap.value1_m_fd529197', { value1: Math.round(meters) });
-    return i18nT('quests:components.quests.QuestFullMap.value1_km_e6f90e2a', { value1: (meters / 1000).toFixed(meters < 10000 ? 1 : 0) });
+    return formatDistanceMeters(meters, ROUTE_DISTANCE_FORMAT);
 };
 
 const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRouteMode) => {

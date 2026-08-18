@@ -74,8 +74,14 @@ function serializeAnswer(answerFn) {
     if (len) return JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: +len[1] + 1 }) });
     const slen = f.match(/s\.length\s*>\s*(\d+)/);
     if (slen) return JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: +slen[1] + 1 }) });
-    console.warn('⚠️  Cannot serialize:', f.substring(0, 80));
-    return JSON.stringify({ type: 'function', value: f });
+    // См. `scripts/migrate-quests-to-backend.js`: `type: 'function'` больше не
+    // выпускается — клиент такой шаг не примет (fail closed), а раньше исполнял его
+    // через `eval`. Останавливаемся до заливки.
+    throw new Error(
+        'Не удалось сериализовать answer в поддерживаемый answer_pattern: ' +
+        `${f.substring(0, 160)}\n` +
+        'Перепиши ответ шага в exact / exact_any / range / approx / any_text / any_number.'
+    );
 }
 
 // Import quest data from the existing migration script
@@ -229,4 +235,9 @@ async function main() {
     console.log('\n✅ Миграция завершена');
 }
 
-main().catch(err => { console.error('Fatal:', err); process.exit(1); });
+// Запуск только как CLI. Раньше `main()` вызывался прямо при загрузке модуля,
+// поэтому любой `require()` этого файла — из другого скрипта, теста или проверки —
+// стартовал LIVE-миграцию на прод.
+if (require.main === module) {
+    main().catch(err => { console.error('Fatal:', err); process.exit(1); });
+}

@@ -20,6 +20,7 @@ import { isBikeQuest } from './QuestsScreen.helpers';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
+import { formatDistance } from '@/utils/distanceCalculator'
 
 
 const loadedQuestImageCache = new Set<string>();
@@ -64,9 +65,7 @@ export default function QuestCard({
     const isBike = isBikeQuest(quest.tags);
     const categoryLabel = quest.cityName || quest.countryName || null;
     const distanceText = nearby && typeof quest._distanceKm === 'number'
-        ? quest._distanceKm < 1
-            ? i18nT('quests:screens.tabs.QuestCard.value1_m_b93b13fa', { value1: Math.round(quest._distanceKm * 1000) })
-            : i18nT('quests:screens.tabs.QuestCard.value1_km_9154fdca', { value1: quest._distanceKm.toFixed(1) })
+        ? formatDistance(quest._distanceKm)
         : null;
     const isPioneerQuest = (quest.completionsCount ?? 0) <= 0;
     // Паритет с native: на устройстве чип «Посмотреть отзывы (0)» виден всегда —

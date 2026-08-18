@@ -4,6 +4,7 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 import { useThemedColors } from '@/hooks/useTheme'
 import type { PlaceRating } from '@/utils/placesCatalog'
 import { translate as i18nT } from '@/i18n'
+import { formatCompactNumber } from '@/i18n/format'
 
 // The site's own aggregated user rating. It needs no external attribution, so its
 // provider label is hidden on the badge (just the stars + score are shown).
@@ -26,11 +27,8 @@ const formatProvider = (provider: string): string => {
   return provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : ''
 }
 
-const formatCount = (count: number): string => {
-  if (count <= 0) return ''
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}k`
-  return String(count)
-}
+// Пустая строка прячет счётчик целиком — это решение UI, а не форматтера.
+const formatCount = (count: number): string => (count <= 0 ? '' : formatCompactNumber(count))
 
 type Props = {
   rating: PlaceRating | null | undefined

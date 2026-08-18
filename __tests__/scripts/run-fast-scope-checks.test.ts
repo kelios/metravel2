@@ -13,6 +13,7 @@ const {
   createIgnorePatternMatcher,
   isIgnoredLintTarget,
   runFastScopeChecks,
+  getChangedQuestDataFiles,
 } = require('@/scripts/run-fast-scope-checks')
 
 describe('run-fast-scope-checks', () => {
@@ -35,6 +36,23 @@ describe('run-fast-scope-checks', () => {
       dryRun: true,
       output: 'json',
     })
+  })
+
+  it('picks changed quest data files for the answer reachability scan (#1450)', () => {
+    expect(getChangedQuestDataFiles([
+      'scripts/yelnya-quest-data.js',
+      'scripts/krakow-district-quests-data.js',
+      'scripts/run-fast-scope-checks.js',
+      'scripts/lib/questBundles.js',
+      'docs/features/quests.md',
+    ])).toEqual([
+      'scripts/yelnya-quest-data.js',
+      'scripts/krakow-district-quests-data.js',
+    ])
+  })
+
+  it('skips deleted quest data files so a removed source does not fail the run', () => {
+    expect(getChangedQuestDataFiles(['scripts/atlantis-quest-data.js'])).toEqual([])
   })
 
   it('keeps lint scope on changed source files only', () => {

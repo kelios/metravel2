@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform, Animated } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { formatCompactNumber } from '@/i18n/format'
 
 
 type Props = {
@@ -114,11 +115,8 @@ function StarRating({
         return value.toFixed(1);
     };
 
-    const formatCount = (count: number) => {
-        if (count === 0) return '';
-        if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
-        return String(count);
-    };
+    // Пустая строка прячет счётчик целиком — это решение UI, а не форматтера.
+    const formatCount = (count: number) => (count === 0 ? '' : formatCompactNumber(count));
 
     // Компактный режим: одна звезда + число
     if (compact) {

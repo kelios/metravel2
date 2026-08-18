@@ -206,7 +206,6 @@ export const mapGenerated1 = {
   "components.MapPage.Map.PlacePopupCard.usePopupActions.postroit_marshrut_ot_moego_mestopolozheniya_aae59049": "Построить маршрут от моего местоположения",
   "components.MapPage.Map.PlacePopupCard.usePopupActions.statya_07e31f72": "Статья",
   "components.MapPage.Map.PlacePopupCard.usePopupActions.value1_ch_value2_min_dc78275e": "{{value1}} ч {{value2}} мин",
-  "components.MapPage.Map.PlacePopupCard.usePopupActions.value1_km_cbb88f64": "{{value1}} км",
   "components.MapPage.Map.PlacePopupCard.usePopupActions.value1_min_a48c9273": "{{value1}} мин",
   "components.MapPage.Map.PlacePopupCard.usePopupActions.waze_3b6c0cbd": "Waze",
   "components.MapPage.Map.PlacePopupCard.usePopupActions.yandeks_karty_cded233a": "Яндекс Карты",

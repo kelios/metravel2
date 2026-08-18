@@ -48,7 +48,7 @@ lat/lng. Задание должно быть выполнимо, стоя на 
 ## Шаг 3 — самопроверка КАЖДОГО шага
 Ответ (и ключевые токены answer_pattern.value) НЕ в task/hint. Если есть — перепиши.
 
-## Шаг 4 — записать `scripts/review/<QUEST_ID>.json`
+## Шаг 4 — записать `scripts/.quest-review/<QUEST_ID>.json`
 ```
 { "intro": {"step_id":"...","story":"...","task":"...","hint":null,"answer_pattern":{...}},
   "steps": [{"step_id":"...","story":"...","task":"...","hint":"...","answer_pattern":{...},"lat":..,"lng":..}],
@@ -57,9 +57,18 @@ lat/lng. Задание должно быть выполнимо, стоя на 
 Для каждого шага ВСЕГДА включай story+task+hint+answer_pattern. lat/lng — только
 если исправлял. finale — можно отполировать, чтобы связать нить (необязательно).
 
+Каталог `scripts/.quest-review/` gitignored, и это принципиально (#1448): снимок
+описывает ЖИВОЙ прод на момент снятия и протухает после следующей правки. В
+репозиторий его не коммитят и повторно не применяют — источник правды по живому
+контенту один, и это прод. Скрипт применения отказывается брать git-tracked файл,
+а применённый снимок сам уезжает в `scripts/.quest-review/applied/`. Если снимок
+нужен снова — сними свежий по шагу 0, а не доставай старый.
+
 ## Шаг 5 — применить на прод
-`node scripts/update-quest-content.js --quest-id=<QUEST_ID> --data=scripts/review/<QUEST_ID>.json --dry-run`
+`node scripts/update-quest-content.js --quest-id=<QUEST_ID> --data=scripts/.quest-review/<QUEST_ID>.json --dry-run`
 затем без `--dry-run`. (токен в `.secrets/metravel-token.json` уже есть.)
+После LIVE-прогона снимок переезжает в `scripts/.quest-review/applied/` — так и
+задумано, восстанавливать его на прежнее место не нужно.
 
 ## Шаг 6 — верификация
 `curl -s "https://metravel.by/api/quests/by-quest-id/<QUEST_ID>/"` → подтверди по

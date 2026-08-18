@@ -5,6 +5,7 @@
 
 import { BREAKPOINTS, MENU_WIDTH, CONTENT_PADDING, MAX_CONTENT_WIDTH } from './travelConstants';
 import { formatDate as formatLocalizedDate, translate as i18nT } from '@/i18n'
+import { formatCompactNumber } from '@/i18n/format'
 
 
 // ✅ ОПТИМИЗАЦИЯ: Определение типа устройства
@@ -222,15 +223,9 @@ export function throttle<T extends (...args: any[]) => any>(
   };
 }
 
-// ✅ ОПТИМИЗАЦИЯ: Форматирование числа просмотров
+// Счётчик просмотров: компактную единицу выбирает локаль (#1457).
 export function formatViewCount(count: number): string {
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(1)}M`;
-  }
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}K`;
-  }
-  return count.toString();
+  return formatCompactNumber(count);
 }
 
 // ✅ ОПТИМИЗАЦИЯ: Форматирование даты

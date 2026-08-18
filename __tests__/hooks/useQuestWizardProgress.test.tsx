@@ -751,6 +751,104 @@ describe('useQuestWizardProgress', () => {
     })
   })
 
+  it('не понижает засчитанное прохождение на втором устройстве (#1451)', async () => {
+    // Устройство A прошло 2 точки из 3 и официально пропустило далёкую — квест
+    // засчитан, на сервере `completed: true`. Устройство B про пропуск не знает
+    // (`skipped` бэкенд не хранит) и пересчитывает прохождение как незаконченное.
+    // Любое тривиальное действие в визарде не должно отправлять `completed:
+    // false`: иначе игрок теряет «Пройден» и единицу из счётчика прохождений.
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+      { id: 'p-far', answer: checker },
+    ]
+    const storageKey = 'quest_progress_second_device'
+    const onProgressChange = jest.fn()
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey,
+        initialProgress: {
+          currentIndex: 2,
+          unlockedIndex: 2,
+          answers: { 'p-1': 'a', 'p-2': 'b' },
+          attempts: {},
+          hints: {},
+          showMap: true,
+          completed: true,
+        },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(result.current.answers['p-2']).toBe('b'))
+    // Форс-редиректа в финал у прежнего финишера по-прежнему нет (#1431).
+    expect(result.current.questCompleted).toBe(false)
+
+    act(() => {
+      result.current.setShowMap(false)
+    })
+
+    await waitFor(() => {
+      expect(onProgressChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ completed: true, showMap: false }),
+      )
+    })
+    const saved = await AsyncStorage.getItem(storageKey)
+    expect(JSON.parse(saved!).completed).toBe(true)
+  })
+
+  it('сброс прогресса снимает подтверждённое прохождение (#1451)', async () => {
+    // Монотонность не должна пережить осознанный сброс: после «пройти заново»
+    // клиент обязан снова отдавать `completed: false`. Серверную запись сброс
+    // удаляет отдельно (`useQuestProgressSync.resetProgress`), поэтому здесь
+    // бэкенд-прогресса нет.
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+    ]
+    const storageKey = 'quest_progress_reset_clears_completed'
+    const onProgressChange = jest.fn()
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey,
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(2))
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
+    })
+    await waitFor(() => {
+      expect(onProgressChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ completed: true }),
+      )
+    })
+
+    await act(async () => {
+      await result.current.resetProgress()
+    })
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'a' })
+    })
+
+    await waitFor(() => {
+      expect(onProgressChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ completed: false }),
+      )
+    })
+  })
+
   it('resets persisted progress and state', async () => {
     await AsyncStorage.setItem('quest_progress_reset', JSON.stringify({
       index: 2,

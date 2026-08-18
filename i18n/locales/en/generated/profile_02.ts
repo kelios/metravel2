@@ -170,8 +170,6 @@ export const profileGenerated2 = {
   "components.settings.StravaSettingsSection.strava_ne_podklyuchena_c83e113c": "Strava is not connected",
   "components.settings.StravaSettingsSection.strava_podklyuchena_b2ecf298": "Strava connected",
   "components.settings.StravaSettingsSection.value1_ch_value2_min_c49d665b": "{{value1}} h {{value2}} min",
-  "components.settings.StravaSettingsSection.value1_km_cb14e0a5": "{{value1}} km",
-  "components.settings.StravaSettingsSection.value1_m_d2dbf1b0": "{{value1}} m",
   "components.settings.StravaSettingsSection.value1_m_nabora_0fd281ae": "{{value1}} m set",
   "components.settings.StravaSettingsSection.value1_min_124a9f19": "{{value1}} min",
   "components.settings.StravaSettingsSection.vy_ne_predostavili_dostup_strava_ddc9eb74": "You haven't granted access to Strava.",

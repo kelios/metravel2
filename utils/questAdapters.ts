@@ -225,11 +225,16 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
         }
 
         case 'function': {
-            // Fallback: пробуем eval (только для миграции, в проде не должно быть)
-            try {
-                const fn = eval(`(${answerValue})`);
-                if (typeof fn === 'function') return fn;
-            } catch { /* ignore */ }
+            // Fail closed. `answer_value` приходит с бэкенда, поэтому исполнять его
+            // (раньше здесь был `eval`) — это выполнение произвольного кода в клиенте
+            // по данным, которыми управляет не клиент. Проверено 2026-08-17: на проде
+            // 139 квестов / 1160 шагов, ни одного паттерна `function`; такой тип
+            // порождают только legacy-скрипты миграции, когда не смогли сериализовать
+            // ответ, и теперь они на этом падают, а не заливают шаг.
+            console.warn(
+                '[quests] answer_pattern type "function" не поддерживается: шаг не будет ' +
+                'принимать ответы. Пересериализуй его в exact/exact_any/range/any_text.'
+            );
             return () => false;
         }
 

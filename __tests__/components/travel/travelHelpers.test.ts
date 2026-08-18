@@ -86,11 +86,13 @@ describe('travelHelpers', () => {
     expect(extractDimensionsFromFilename('image.jpg')).toEqual({})
   })
 
+  // #1457: компактная единица берётся из локали интерфейса (дефолт — русский),
+  // раскладка по всем пяти локалям — в __tests__/i18n/compactNumberCallSites.test.tsx
   it('formats view counts', () => {
     expect(formatViewCount(999)).toBe('999')
-    expect(formatViewCount(1000)).toBe('1.0K')
-    expect(formatViewCount(12500)).toBe('12.5K')
-    expect(formatViewCount(1000000)).toBe('1.0M')
+    expect(formatViewCount(1000)).toBe('1\u00a0тыс.')
+    expect(formatViewCount(12500)).toBe('12,5\u00a0тыс.')
+    expect(formatViewCount(1000000)).toBe('1\u00a0млн')
   })
 
   it('formats dates and returns empty string for invalid date', () => {

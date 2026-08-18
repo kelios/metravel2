@@ -23,11 +23,28 @@ Load-bearing контракт для `components/travel/**`,
 
 ## Status model
 
-| `publication_status` | `publish` | `moderation` | Смысл |
-| --- | --- | --- | --- |
-| `draft` | false | false | черновик |
-| `approved` | false | true | прошёл модерацию, ещё не опубликован |
-| `published` | true | true | опубликован |
+Состояния задаются парой булевых флагов `publish` / `moderation`. Это то, что
+пишет и читает мастер (`components/travel/useTravelPublishModeration.ts`):
+
+| `publish` | `moderation` | Смысл | Чип в мастере | Кто выставляет |
+| --- | --- | --- | --- | --- |
+| false | false | черновик | «Черновик» | автор («Сохранить как черновик»), админ при отклонении |
+| **true** | **false** | **отправлено, ждёт решения админа** | «Отправлено на модерацию» | автор («Отправить на модерацию»), `intent='publish'` |
+| true | true | опубликовано | «Опубликовано» | админ при одобрении |
+| false | true | — | — | **фронт такого не создаёт** |
+
+Чип считается по `moderation` в первую очередь, `publish` — во вторую
+(`useTravelPublishModeration.ts:87-91`); «ждёт админа» определяется как
+`publish && !moderation` (`:94`).
+
+Отдельно существует **бэкендовое поле `publication_status`** (`draft` /
+`approved` / `published`). Мастер его **не выставляет** — оно используется для
+фильтров списков и очереди модерации (`utils/travelPublicationStatus.ts`,
+`utils/filterQuery.ts`, `components/profile/travelNormalize.ts`). Как бэкенд
+маппит пару флагов в это поле, из фронтенд-репозитория не видно; смешивать две
+модели в одну таблицу нельзя — прежняя редакция этого раздела делала именно так
+и приписывала `approved` комбинацию `publish=false, moderation=true`, которой
+на фронте не бывает.
 
 Поля `publish` и `moderation` описывают текущий status, а не намерение
 текущего запроса.

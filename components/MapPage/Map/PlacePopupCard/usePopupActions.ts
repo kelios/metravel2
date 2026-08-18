@@ -12,6 +12,7 @@ import {
 import { getPopupTooltips } from './constants';
 import { isInternalArticleHref } from './domEvents';
 import { translate as i18nT } from '@/i18n'
+import { formatDistanceMeters } from '@/utils/distanceCalculator'
 
 
 type FeatherIcon = React.ComponentProps<typeof Feather>['name'];
@@ -96,7 +97,7 @@ export function usePopupActions({
   const drivingText = useMemo(() => {
     if (!hasDrivingInfo) return null;
     const km = drivingDistanceMeters! / 1000;
-    const kmLabel = km >= 10 ? i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_km_cbb88f64', { value1: Math.round(km) }) : i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_km_cbb88f64', { value1: km.toFixed(1) });
+    const kmLabel = formatDistanceMeters(drivingDistanceMeters!);
     // За пределами разумной автопоездки ETA теряет смысл (тысячи км → тысячи минут) —
     // показываем только расстояние.
     if (km > DRIVE_ETA_MAX_KM) return kmLabel;

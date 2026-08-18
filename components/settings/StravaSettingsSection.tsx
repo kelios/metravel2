@@ -19,6 +19,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import type { StravaActivitySummary, StravaAthleteSummary, StravaConnectionStatus } from '@/api/strava';
 import { showToast } from '@/utils/toast';
 import { formatDate as formatLocalizedDate, translate as i18nT } from '@/i18n'
+import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 
 
 const SUPPORT_EMAIL = 'metraveldev@gmail.com';
@@ -52,10 +53,11 @@ const formatDate = (value?: string | null) => {
   });
 };
 
+// Тренировка Strava — маршрутная поверхность (#1449): дробный километр нужен
+// и на марафоне, разделители дроби и разрядов берутся из локали.
 const formatDistance = (meters?: number | null) => {
   if (meters == null || !Number.isFinite(meters)) return null;
-  if (meters >= 1000) return i18nT('profile:components.settings.StravaSettingsSection.value1_km_cb14e0a5', { value1: (meters / 1000).toFixed(1) });
-  return i18nT('profile:components.settings.StravaSettingsSection.value1_m_d2dbf1b0', { value1: Math.round(meters) });
+  return formatDistanceMeters(meters, ROUTE_DISTANCE_FORMAT);
 };
 
 const formatDuration = (seconds?: number | null) => {

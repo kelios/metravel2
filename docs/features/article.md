@@ -257,18 +257,14 @@ YouTube и Instagram рендерятся фасадами, а не живыми
 
 ## Открытые вопросы и долги
 
+Исправлено 2026-08-17: расхождение `docs/TRAVEL_DRAFT_RECOVERY.md` про
+`recoverDraft` (он черновик не удаляет) и таблица статусов в
+`docs/TRAVEL_SAVE_MODERATION_CONTRACT.md` (состояние «отправлено» —
+`publish=true, moderation=false`, а `publication_status` — отдельное
+бэкендовое поле, которое мастер не пишет). Оба документа приведены к коду.
+
 - `onAutosave` редактора не подключён ни к одному продовому вызову: это
   задел, мёртвый контур или пропущенная проводка — не установлено.
-- `docs/TRAVEL_DRAFT_RECOVERY.md:52-53` утверждает, что `recoverDraft`
-  («Продолжить с черновика») удаляет черновик из хранилища. В коде
-  (`hooks/useDraftRecovery.ts:439-464`) он только читает; удаляют `dismissDraft`
-  и `clearDraft`. Документ расходится с кодом — правда за кодом.
-- `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md:24-31` описывает `approved` как
-  `publish=false, moderation=true` и не имеет состояния `publish=true,
-  moderation=false`. Мастер использует обратное соглашение: `publish=true,
-  moderation=false` — это «отправлено, ждёт админа». Ни один путь фронта не
-  создаёт `publish=false, moderation=true`. Таблицу в документе надо приводить
-  к коду.
 - Как бэкенд обрабатывает `enforce_moderation_validation` и как маппит
   `publish`/`moderation` в `publication_status` — из этого репозитория не видно.
 - `rejectionComment` при отклонении модерации никуда не отправляется: он только

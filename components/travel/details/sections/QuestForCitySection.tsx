@@ -7,6 +7,7 @@ import { parseTravelCoords, type LocationQuery } from '@/utils/questForLocation'
 import { NEARBY_QUEST_THRESHOLD_KM, SAME_CITY_THRESHOLD_KM } from '@/constants/nearby'
 import type { Travel } from '@/types/types'
 import { translate as i18nT } from '@/i18n'
+import { formatDistance } from '@/utils/distanceCalculator'
 
 
 const CARD_LIST_STYLE = { marginTop: 12, gap: 12 } as const
@@ -24,8 +25,8 @@ type TravelWithExtraCoords = Travel & {
 function buildEyebrow(distanceKm: number, cityName?: string): string | undefined {
   if (Number.isFinite(distanceKm) && distanceKm < SAME_CITY_THRESHOLD_KM) return i18nT('travel:components.travel.details.sections.QuestForCitySection.v_etom_gorode_564dcecf')
   if (Number.isFinite(distanceKm) && distanceKm < NEARBY_QUEST_THRESHOLD_KM) {
-    const rounded = distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)
-    return cityName ? i18nT('travel:components.travel.details.sections.QuestForCitySection.value1_km_value2_a298ad71', { value1: rounded, value2: cityName }) : i18nT('travel:components.travel.details.sections.QuestForCitySection.value1_km_ryadom_4891f0e6', { value1: rounded })
+    const distance = formatDistance(distanceKm)
+    return cityName ? i18nT('travel:components.travel.details.sections.QuestForCitySection.value1_value2_f9d4c90f', { value1: distance, value2: cityName }) : i18nT('travel:components.travel.details.sections.QuestForCitySection.value1_ryadom_bb7fd54d', { value1: distance })
   }
   return undefined
 }

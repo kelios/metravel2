@@ -8,7 +8,13 @@
  * Сопоставление по step_id: данные ревью matched к шагам прода по step_id
  * (intro — по is_intro/step_id='intro'). DB-id берётся из bundle.
  *
- *   node scripts/update-quest-content.js --quest-id=<id> --data=scripts/review/<id>.json [--dry-run]
+ *   node scripts/update-quest-content.js --quest-id=<id> --data=scripts/.quest-review/<id>.json [--dry-run]
+ *
+ * Жизненный цикл снимка (#1448): снимок описывает ЖИВОЙ прод на момент снятия и
+ * протухает сразу после следующей правки, поэтому в репозитории он не хранится.
+ * Снимок лежит в gitignored `scripts/.quest-review/`, git-tracked файл скрипт
+ * применять отказывается, а применённый снимок уезжает в
+ * `scripts/.quest-review/applied/`. Источник правды по живому контенту — прод.
  *
  * Токен: --token=, env METRAVEL_TOKEN, .secrets/metravel-token.json, ~/.metravel_token.
  * Формат data-файла (JSON): { intro?: Step, steps: Step[], finale?: { text } }
@@ -16,6 +22,7 @@
  *           lat?, lng?, maps_url?, input_type? } — присылаются только меняемые поля.
  */
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -28,6 +35,48 @@ const QUEST_ID = get('quest-id');
 const DATA_FILE = get('data');
 
 if (!QUEST_ID || !DATA_FILE) { console.error('❌ нужны --quest-id и --data'); process.exit(1); }
+
+const REVIEW_DIR = path.resolve(__dirname, '.quest-review');
+const APPLIED_DIR = path.join(REVIEW_DIR, 'applied');
+
+// Снимок под git — это снимок, который кто-то уже применил и оставил в
+// репозитории как «канонические» данные. Он неотличим от актуального и при
+// повторном применении молча возвращает прод к старому тексту (#1448: так
+// вернулись бы подсказки, пересказывающие ответ, исправленные в #1445/#1447).
+// cwd — каталог самого файла, а не корень этого чекаута: снимок может лежать в
+// соседнем worktree или клоне, и он там ровно так же tracked.
+function isTrackedByGit(absPath) {
+    try {
+        execFileSync('git', ['ls-files', '--error-unmatch', '--', absPath], {
+            cwd: path.dirname(absPath),
+            stdio: 'ignore',
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// Применённый снимок уезжает из рабочего пути: следующий запуск не подхватит его
+// как актуальный, но разбор инцидента остаётся возможен.
+function archiveApplied(absPath) {
+    fs.mkdirSync(APPLIED_DIR, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const target = path.join(APPLIED_DIR, `${stamp}-${QUEST_ID}.json`);
+    try {
+        fs.renameSync(absPath, target);
+    } catch {
+        fs.copyFileSync(absPath, target);
+        fs.unlinkSync(absPath);
+    }
+    return target;
+}
+
+// путь для сообщений: относительный внутри репо, абсолютный снаружи
+function displayPath(absPath) {
+    const rel = path.relative(process.cwd(), absPath);
+    return rel && !rel.startsWith('..') ? rel : absPath;
+}
 
 function resolveToken() {
     const t = get('token');
@@ -76,7 +125,17 @@ function stepPayload(s) {
 
 async function main() {
     console.log(`🔧 Update quest content «${QUEST_ID}» → ${API_BASE} (${isDryRun ? 'DRY' : 'LIVE'})\n`);
-    const data = JSON.parse(fs.readFileSync(path.resolve(DATA_FILE), 'utf8'));
+    const dataPath = path.resolve(DATA_FILE);
+    if (isTrackedByGit(dataPath)) {
+        console.error(`❌ ${displayPath(dataPath)} лежит под git.`);
+        console.error('   Снимок контента квеста — эфемерный артефакт: он описывает прод на момент');
+        console.error('   снятия и протухает после следующей правки, а применение протухшего файла');
+        console.error('   откатывает прод на старый текст (#1448).');
+        console.error(`   Сними свежий снимок в ${displayPath(REVIEW_DIR)}/ и примени его.`);
+        process.exit(1);
+    }
+    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+    let applied = 0;
     const bundle = await apiGet(`/api/quests/by-quest-id/${encodeURIComponent(QUEST_ID)}/`);
     const steps = typeof bundle.steps === 'string' ? JSON.parse(bundle.steps) : bundle.steps;
     const intro = typeof bundle.intro === 'string' ? JSON.parse(bundle.intro) : bundle.intro;
@@ -88,13 +147,14 @@ async function main() {
     if (data.intro) {
         const target = intro || [...byStepId.values()].find(s => s.is_intro);
         if (!target) console.warn('  ⚠️ intro на проде не найден, пропуск');
-        else { await apiPatch(`/api/quest-steps/${target.id}/`, stepPayload(data.intro)); console.log(`  ✅ intro (id=${target.id})`); }
+        else { await apiPatch(`/api/quest-steps/${target.id}/`, stepPayload(data.intro)); applied++; console.log(`  ✅ intro (id=${target.id})`); }
     }
     // steps
     for (const s of data.steps || []) {
         const target = byStepId.get(s.step_id);
         if (!target) { console.warn(`  ⚠️ step_id=${s.step_id} не найден на проде, пропуск`); continue; }
         await apiPatch(`/api/quest-steps/${target.id}/`, stepPayload(s));
+        applied++;
         console.log(`  ✅ step ${s.step_id} (id=${target.id})`);
     }
     // finale: pk финала НЕ равен pk квеста (FK quest->finale не отдаётся API).
@@ -111,6 +171,7 @@ async function main() {
             if (pk == null) { console.warn('  ⚠️ не нашёл pk финала по тексту, пропуск finale'); }
             else {
                 await apiPatch(`/api/quest-finales/${pk}/`, { text: data.finale.text });
+                applied++;
                 if (!isDryRun) {
                     const v = await apiGet(`/api/quests/by-quest-id/${encodeURIComponent(QUEST_ID)}/`);
                     const ok = ((v.finale && v.finale.text || '').trim() === data.finale.text.trim());
@@ -119,6 +180,20 @@ async function main() {
             }
         }
     }
-    console.log('\n✅ Done');
+    if (isDryRun) {
+        console.log('\n✅ Done (DRY — снимок остался на месте)');
+        return;
+    }
+    // Ноль применённых записей — это не успех: обычно опечатка в --quest-id или
+    // снимок от другого квеста. Архивировать нечего, «Done» печатать нельзя.
+    if (applied === 0) {
+        console.error('\n❌ Ни одна запись снимка не совпала с квестом на проде — ничего не применено.');
+        console.error(`   Проверь --quest-id=${QUEST_ID} и step_id внутри ${displayPath(dataPath)}.`);
+        console.error('   Снимок оставлен на месте.');
+        process.exit(1);
+    }
+    const archived = archiveApplied(dataPath);
+    console.log(`\n📦 Снимок применён и убран в ${displayPath(archived)}`);
+    console.log('✅ Done');
 }
 main().catch(e => { console.error('Fatal:', e.message); process.exit(1); });
