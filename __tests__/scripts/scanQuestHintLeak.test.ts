@@ -5,7 +5,7 @@
 // ловить словоформы: ответ «вал» утёк через «перед валом», и если совпадение
 // однажды сузят до границы слова, скан начнёт рапортовать «утечек нет» на тех
 // же самых шагах. Эти тесты падают, если это случится.
-const { dictionaryValues, findLeaks, numericValues, scanQuests } = require('@/scripts/scan-quest-hint-leak')
+const { dictionaryValues, findLeaks, numericValues, parseArgs, scanQuests } = require('@/scripts/scan-quest-hint-leak')
 
 const step = (over: Record<string, unknown> = {}) => ({
   id: 1,
@@ -92,6 +92,17 @@ describe('findLeaks — совпадение ответа с текстом по
     expect(findLeaks(step({ hint: 'построен в 1884 году', answer_pattern: pattern }), 'hint')).toEqual([])
   })
 
+  it('ловит ответ в подписи места — реальный шаг 677 «Ротонда Святого Георгия»', () => {
+    const leaks = findLeaks(
+      step({
+        location: 'Ротонда Святого Георгия, двор между Президентством и отелем «Балкан»',
+        answer_pattern: { type: 'exact_any', value: JSON.stringify(['круглая', 'цилиндр', 'ротонда']) },
+      }),
+      'location',
+    )
+    expect(leaks).toEqual([{ kind: 'dictionary', value: 'ротонда' }])
+  })
+
   it('чистая подсказка не даёт находок', () => {
     const leaks = findLeaks(
       step({
@@ -101,6 +112,25 @@ describe('findLeaks — совпадение ответа с текстом по
       'hint',
     )
     expect(leaks).toEqual([])
+  })
+})
+
+describe('parseArgs — набор сканируемых полей', () => {
+  // #1461: `location` печатается игроку ДО попытки — в мастере под заголовком
+  // шага, в печатной версии в шапке шага и в таблице маршрута, в офлайн-экспорте
+  // именем точки. Поле было носителем утечки по реестру QUEST-HINT-LEAK-001, но
+  // CLI его не принимал и падал с `Fatal: неизвестное поле`: инвариант записан,
+  // проверки у него нет. Тест падает, если поле снова выпадет из набора.
+  it('принимает location', () => {
+    expect(parseArgs(['--fields=location']).fields).toEqual(['location'])
+  })
+
+  it('по умолчанию сканирует только hint: остальные поля шумят и в gate не входят', () => {
+    expect(parseArgs([]).fields).toEqual(['hint'])
+  })
+
+  it('незнакомое поле отвергает, а не сканирует молча пустоту', () => {
+    expect(() => parseArgs(['--fields=subtitle'])).toThrow(/subtitle/)
   })
 })
 

@@ -20,7 +20,7 @@ export default function AccountConfirmation() {
 
     const { hash } = useLocalSearchParams(); // ✅ заменили useRoute
     const router = useRouter();              // ✅ заменили useNavigation
-    const { setIsAuthenticated } = useAuth();
+    const { applyConfirmedAccountSession } = useAuth();
     const confirmedHashRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -41,8 +41,16 @@ export default function AccountConfirmation() {
             try {
                 const response = await confirmAccount(hashStr);
                 if (!active) return;
-                if (response.userToken) {
-                    setIsAuthenticated(true);
+                const confirmedUserId = response.userId;
+                // Личность ставим сразу: до #1462 экран поднимал только флаг
+                // авторизации, и до следующего `checkAuthentication` приложение знало
+                // «кто-то вошёл», но не знало кто — привязанное к пользователю
+                // состояние (ключ прогресса квеста) уходило в общую ячейку.
+                if (response.userToken && String(confirmedUserId ?? '').trim() !== '') {
+                    applyConfirmedAccountSession({
+                        userId: confirmedUserId as string | number,
+                        userName: response.userName,
+                    });
                     router.replace('/'); // ✅ переходим на главную
                 } else {
                     setError(i18nT('authStatic:accountConfirmation.failed', { details: (response as any)?.non_field_errors?.[0] ?? '' }));
@@ -57,7 +65,7 @@ export default function AccountConfirmation() {
 
         confirm();
         return () => { active = false; };
-        // router/setIsAuthenticated намеренно вне deps: эффект должен выполниться
+        // router/applyConfirmedAccountSession намеренно вне deps: эффект должен выполниться
         // один раз на hash, иначе одноразовый токен будет израсходован повторно.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hash]);

@@ -62,6 +62,12 @@ async function fetchQuestBundles(apiUrl, questId, userAgent = DEFAULT_USER_AGENT
 /**
  * Бандлы из локального `scripts/<city>-quest-data.js` — та же проверка ДО заливки.
  * Форма совпадает с тем, что отдаёт `fetchQuestBundles`; `is_intro` не фильтруется.
+ *
+ * `intro` и `finale` проносятся отдельными ключами, ровно как их отдаёт
+ * `GET /api/quests/by-quest-id/{id}/`: интро НЕ лежит внутри `steps` ни в API, ни
+ * в локальном файле. Скан, который обходит только `steps`, интро не видит и
+ * молча отчитывается «чисто» — на этом поймана первая редакция
+ * `scan-quest-mixed-script-text.js` (#1464).
  */
 function loadLocalBundles(sourceFile, questId) {
   const data = require(path.resolve(process.cwd(), sourceFile))
@@ -75,6 +81,8 @@ function loadLocalBundles(sourceFile, questId) {
     quest_id: quest.quest_id,
     title: quest.title,
     city: quest.city,
+    intro: quest.intro ?? null,
+    finale: quest.finale ?? null,
     steps: quest.steps || [],
   }))
 }

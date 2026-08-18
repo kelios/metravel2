@@ -18,6 +18,7 @@ export const createAuthFallbackValue = (): AuthStore => ({
   setUserAvatar: () => {},
   triggerProfileRefresh: () => {},
   invalidateAuthState: () => {},
+  applyConfirmedAccountSession: () => {},
   checkAuthentication: async () => {},
   login: async () => false,
   loginWithGoogle: async () => false,

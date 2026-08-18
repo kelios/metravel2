@@ -190,6 +190,31 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         Promise.resolve(removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar'])).catch(() => undefined);
     },
 
+    // --- вход по подтверждению почты ---
+    // Экран подтверждения аккаунта входит в сессию мимо `login`/`checkAuthentication`:
+    // токены и storage пишет уже `confirmAccount`, а стору доставался только флаг
+    // `isAuthenticated` — `userId` оставался `null` до следующей проверки авторизации.
+    // В этом окне всё, что приложение сохраняет «на пользователя» (ключ прогресса
+    // квеста, #1456), теряло владельца и на общем устройстве смешивалось между
+    // аккаунтами. Ставим личность атомарно, одним набором. (#1462)
+    applyConfirmedAccountSession: ({ userId, userName }) => {
+        // Проверка авторизации, стартовавшая до подтверждения, читала storage ещё без
+        // нового `userId`: без смены эпохи её поздний ответ разлогинил бы нас обратно.
+        authEpoch += 1;
+        set((s) => ({
+            isAuthenticated: true,
+            userId: String(userId),
+            username: normalizeProfileName(userName),
+            // Свежеподтверждённый аккаунт не наследует личность предыдущего: на общем
+            // устройстве в сторе могли остаться его права, аватар и premium-флаг.
+            isSuperuser: false,
+            userAvatar: null,
+            isPremium: false,
+            authReady: true,
+            profileRefreshToken: s.profileRefreshToken + 1,
+        }));
+    },
+
     // --- check stored auth on mount ---
     checkAuthentication: async () => {
         const epochAtStart = authEpoch;

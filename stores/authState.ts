@@ -29,6 +29,10 @@ export interface AuthActions {
     setUserAvatar: (v: string | null) => void;
     triggerProfileRefresh: () => void;
     invalidateAuthState: () => void;
+    applyConfirmedAccountSession: (session: {
+        userId: string | number;
+        userName?: unknown;
+    }) => void;
     checkAuthentication: () => Promise<void>;
     login: (email: string, password: string) => Promise<boolean>;
     loginWithGoogle: (credential: string) => Promise<boolean>;

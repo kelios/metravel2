@@ -33,7 +33,7 @@ const path = require('node:path')
 const ts = require('typescript')
 
 const CONTRACT_VERSION = 1
-const SCAN_DIRS = Object.freeze(['app', 'components', 'screens', 'hooks', 'utils'])
+const SCAN_DIRS = Object.freeze(['app', 'components', 'screens', 'hooks', 'services', 'utils'])
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx'])
 const IGNORED_DIRS = new Set([
   '.git',

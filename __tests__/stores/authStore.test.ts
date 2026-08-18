@@ -150,6 +150,68 @@ describe('authStore', () => {
     });
   });
 
+  // #1462: подтверждение почты входит в сессию мимо login/checkAuthentication.
+  describe('applyConfirmedAccountSession', () => {
+    it('заполняет userId и имя, а не только флаг авторизации', () => {
+      act(() => useAuthStore.getState().applyConfirmedAccountSession({ userId: 77, userName: 'Ирина' }));
+      const s = useAuthStore.getState();
+      expect(s.isAuthenticated).toBe(true);
+      expect(s.userId).toBe('77');
+      expect(s.username).toBe('Ирина');
+      expect(s.authReady).toBe(true);
+    });
+
+    it('не наследует личность предыдущего аккаунта на общем устройстве', () => {
+      useAuthStore.setState({
+        isAuthenticated: true,
+        userId: '1',
+        username: 'Bob',
+        isSuperuser: true,
+        userAvatar: 'https://img/bob.jpg',
+        isPremium: true,
+      });
+
+      act(() => useAuthStore.getState().applyConfirmedAccountSession({ userId: '77' }));
+
+      const s = useAuthStore.getState();
+      expect(s.userId).toBe('77');
+      expect(s.username).toBe('');
+      expect(s.isSuperuser).toBe(false);
+      expect(s.userAvatar).toBeNull();
+      expect(s.isPremium).toBe(false);
+    });
+
+    it('проверка авторизации, стартовавшая до подтверждения, не разлогинивает', async () => {
+      // checkAuthentication читает storage ещё без нового userId и завершается
+      // ПОСЛЕ подтверждения: без смены эпохи её ответ затёр бы свежую сессию.
+      getSecureItem.mockResolvedValue(null);
+      let releaseCheck: (() => void) | undefined;
+      getStorageBatch.mockImplementation(
+        () => new Promise((resolve) => {
+          releaseCheck = () => resolve({});
+        }),
+      );
+
+      let checking: Promise<void> | undefined;
+      await act(async () => {
+        checking = useAuthStore.getState().checkAuthentication();
+        await flushPromises();
+      });
+
+      act(() => useAuthStore.getState().applyConfirmedAccountSession({ userId: '77', userName: 'Ирина' }));
+
+      await act(async () => {
+        releaseCheck?.();
+        await checking;
+        await flushPromises();
+      });
+
+      const s = useAuthStore.getState();
+      expect(s.isAuthenticated).toBe(true);
+      expect(s.userId).toBe('77');
+    });
+  });
+
   describe('checkAuthentication', () => {
     it('sets authenticated when token exists', async () => {
       getSecureItem.mockResolvedValue('tok123');

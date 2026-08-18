@@ -14,7 +14,7 @@
  *   node scripts/scan-quest-hint-leak.js                      # весь прод
  *   node scripts/scan-quest-hint-leak.js --quest-id=vienna-imperial-secrets
  *   node scripts/scan-quest-hint-leak.js --source=scripts/vienna-quest-data.js
- *   node scripts/scan-quest-hint-leak.js --fields=hint,story,title
+ *   node scripts/scan-quest-hint-leak.js --fields=hint,story,title,task,location
  *   node scripts/scan-quest-hint-leak.js --json
  *
  * Exit code 1, если найдена хотя бы одна утечка.
@@ -33,8 +33,18 @@ const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 // закономерно — шаг «Кривая башня» с вопросом «как называется башня» попадает в
 // совпадение, оставаясь корректным, — поэтому включаются только флагом и в
 // gate не входят.
+//
+// `location` (#1461) — подпись места. Она печатается игроку ДО попытки: в
+// мастере строкой под заголовком шага (`questWizardStepCard.tsx:468`), в
+// печатной версии в шапке шага и в таблице маршрута
+// (`QuestPrintable.tsx:99,255`), в офлайн-экспорте именем и описанием точки
+// (`questOfflineMapExport.ts:80-81`). Замер 18.08.2026 по проду: 17 находок на
+// 1256 шагах, ручная классификация — реальные утечки все 17, шума нет. В
+// умолчание поле всё равно не входит: пока эти 17 шагов не переписаны,
+// `npm run quest:scan-hint-leak` падал бы на каждом прогоне и перестал бы
+// отличать новую утечку от известной.
 const DEFAULT_FIELDS = ['hint']
-const KNOWN_FIELDS = new Set(['hint', 'story', 'title', 'task'])
+const KNOWN_FIELDS = new Set(['hint', 'story', 'title', 'task', 'location'])
 
 // Словарные типы: у них есть закрытый список принимаемых строк.
 const DICT_TYPES = new Set(['exact_any', 'exact'])
@@ -182,7 +192,7 @@ async function main() {
   if (findings.length) process.exitCode = 1
 }
 
-module.exports = { normalize, dictionaryValues, numericValues, findLeaks, scanQuests }
+module.exports = { normalize, dictionaryValues, numericValues, findLeaks, scanQuests, parseArgs }
 
 if (require.main === module) {
   main().catch((e) => {

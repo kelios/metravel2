@@ -18,7 +18,7 @@ import { sanitizeInput } from '@/utils/security';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { devError } from '@/utils/logger';
 import { setSecureItem } from '@/utils/secureStorage';
-import { setStorageBatch } from '@/utils/storageBatch';
+import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 
 jest.mock('react-native', () => ({
   Alert: {
@@ -53,6 +53,7 @@ jest.mock('@/utils/secureStorage', () => ({
 
 jest.mock('@/utils/storageBatch', () => ({
   setStorageBatch: jest.fn(),
+  removeStorageBatch: jest.fn(),
 }));
 
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
@@ -143,10 +144,14 @@ describe('src/api/auth.ts auth/password API', () => {
         }),
         expect.any(Number),
       );
+      // #1462: пишем ту же тройку ключей, что и обычный вход, и снимаем аватар
+      // предыдущего аккаунта — иначе `checkAuthentication` восстановит чужой.
       expect(setStorageBatch).toHaveBeenCalledWith([
         ['userName', 'Pending User'],
         ['userId', '42'],
+        ['isSuperuser', 'false'],
       ]);
+      expect(removeStorageBatch).toHaveBeenCalledWith(['userAvatar']);
       expect(setSecureItem).not.toHaveBeenCalled();
     });
 
@@ -166,6 +171,7 @@ describe('src/api/auth.ts auth/password API', () => {
       expect(setStorageBatch).toHaveBeenCalledWith([
         ['userName', 'Native User'],
         ['userId', '73'],
+        ['isSuperuser', 'false'],
       ]);
     });
 
@@ -180,6 +186,7 @@ describe('src/api/auth.ts auth/password API', () => {
 
       expect(setSecureItem).not.toHaveBeenCalled();
       expect(setStorageBatch).not.toHaveBeenCalled();
+      expect(removeStorageBatch).not.toHaveBeenCalled();
     });
   });
 

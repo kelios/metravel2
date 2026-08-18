@@ -1,16 +1,22 @@
-// #1464: скан смешения алфавитов в видимом игроку тексте шага квеста.
+// #1464: скан смешения алфавитов в видимом игроку тексте квеста.
 //
 // Скан существует ради ответа «смешанных слов нет», поэтому его два главных
 // риска — разойтись с родственным сканом достижимости в том, ЧТО считается
-// смешением (блок «общее определение смешения»), и потерять популяцию шагов,
-// которую словарный скан законно не смотрит: интро и шаги с несловарным типом
-// ответа (блок «популяция шагов шире словарного скана»).
+// смешением (блок «общее определение смешения»), и недобрать текста, который
+// игрок на самом деле читает (блок «textNodes — что вообще читает игрок»).
+//
+// Второй риск не теоретический: первая редакция скана обходила только
+// `parseSteps(quest)`, а интро лежит в бандле ОТДЕЛЬНЫМ объектом `quest.intro`
+// — 147 интро прода в отчёт не попадали, и живая находка «пройdём» в интро
+// `bielsko-biala-cartoon-vienna` пряталась за «Смешанных слов нет». Поэтому
+// фикстуры здесь повторяют реальную форму бандла, а не удобную.
 const {
-  scanStepText,
   scanQuests,
+  textNodes,
   parseArgs,
   contextAround,
   DEFAULT_FIELDS,
+  STEP_FIELDS,
 } = require('@/scripts/scan-quest-mixed-script-text')
 const { mixedScriptWords: sharedMixedScriptWords } = require('@/scripts/lib/questScriptMixing')
 const { mixedScriptWords: reachabilityMixedScriptWords } = require('@/scripts/scan-quest-answer-reachability')
@@ -19,6 +25,12 @@ type Finding = { field: string; word: string; confusables: string; context: stri
 
 const words = (findings: Finding[]) => findings.map((f) => f.word)
 const fields = (findings: Finding[]) => findings.map((f) => f.field)
+
+// Все проверки идут через `scanQuests` — единственный путь, который исполняет
+// сам прогон. Отдельного «просканируй один шаг» у скрипта намеренно нет: пока
+// он был, корпусный регресс держал зелёным код, мимо которого прогон шёл.
+const scanStepText = (step: Record<string, unknown>, fieldList?: string[]) =>
+  scanQuests([{ quest_id: 'q', steps: [{ step_id: 's', ...step }] }], fieldList).findings
 
 describe('общее определение смешения', () => {
   // Определение вынесено в `scripts/lib/questScriptMixing.js` именно потому, что
@@ -29,7 +41,7 @@ describe('общее определение смешения', () => {
   })
 })
 
-describe('scanStepText — что считается смешением', () => {
+describe('что считается смешением', () => {
   it('ловит подменённую букву в каждом видимом поле', () => {
     const step = {
       story: 'кальдрма, brusчатка старого Белграда',
@@ -65,8 +77,16 @@ describe('scanStepText — что считается смешением', () => 
     expect(words(scanStepText(step, ['title']))).toEqual(['морe'])
   })
 
-  it('по умолчанию смотрит ровно пять видимых полей', () => {
-    expect(DEFAULT_FIELDS).toEqual(['story', 'task', 'hint', 'title', 'location'])
+  it('находки шага несут scope «step», а не квестовый', () => {
+    expect(scanStepText({ story: 'brusчатка' })[0]).toMatchObject({ scope: 'step', step_id: 's', field: 'story' })
+  })
+
+  it('поля шага — ровно пять видимых', () => {
+    expect(STEP_FIELDS).toEqual(['story', 'task', 'hint', 'title', 'location'])
+  })
+
+  it('к полям шага добавлен текст финала — его игрок тоже читает', () => {
+    expect(DEFAULT_FIELDS).toEqual(['story', 'task', 'hint', 'title', 'location', 'finale'])
   })
 })
 
@@ -96,41 +116,94 @@ describe('контекст находки', () => {
   })
 })
 
-describe('популяция шагов шире словарного скана', () => {
-  // Словарный скан (#1450) пропускает `is_intro` и всё, что не `exact_any`, —
-  // ему вне словаря смотреть не на что. Видимый текст есть у каждого шага.
+describe('textNodes — что вообще читает игрок', () => {
+  // Форма бандла снята с `GET /api/quests/by-quest-id/{id}/` и с локального
+  // `scripts/<city>-quest-data.js`: интро и финал — СОСЕДИ `steps`, а не его
+  // элементы. Тест на удобной форме `steps:[{is_intro:true}]` был бы зелёным
+  // ровно на том пути, который в проде не выполняется.
   const quest = {
-    id: 62,
-    quest_id: 'belgrade-white-city',
+    id: 121,
+    quest_id: 'bielsko-biala-cartoon-vienna',
+    title: 'Бельско-Бяла: маленькая Вена',
+    intro: { id: 1174, step_id: 'intro', story: 'Мы пройdём оба берега' },
     steps: [
-      { id: 1, step_id: 'intro', is_intro: true, story: 'кальдрма, brusчатка старого Белграда' },
       { id: 2, step_id: 'free', answer_pattern: { type: 'any_text' }, title: 'память о морe' },
       { id: 3, step_id: 'dict', answer_pattern: { type: 'exact_any', value: '["ответ"]' }, hint: 'ищи Momчилова' },
       { id: 4, step_id: 'clean', story: 'обычный текст без подмен' },
     ],
+    finale: { text: 'Готово — ты прошёл оба берега' },
   }
 
-  it('сканирует интро и шаги с несловарным типом ответа', () => {
-    const { findings, scannedSteps } = scanQuests([quest])
-    expect(scannedSteps).toBe(4)
-    expect(findings.map((f: { step_id: string }) => f.step_id)).toEqual(['intro', 'free', 'dict'])
+  it('собирает узлы в порядке чтения: квест → интро → шаги → финал', () => {
+    expect(textNodes(quest).map((n: { scope: string; field: string }) => `${n.scope}.${n.field}`)).toEqual([
+      'quest.title',
+      'intro.story',
+      'step.title',
+      'step.hint',
+      'step.story',
+      'quest.finale',
+    ])
   })
 
-  it('к каждой находке прикладывает опознавательные признаки шага', () => {
+  it('пустые и отсутствующие узлы в обход не попадают', () => {
+    const bare = { quest_id: 'q', title: '', intro: null, steps: [{ step_id: 's', story: 'текст' }], finale: null }
+    expect(textNodes(bare)).toHaveLength(1)
+  })
+
+  it('интро сканируется — на этом ловилась первая редакция скана', () => {
+    const { findings } = scanQuests([quest])
+    expect(findings.map((f: { scope: string; word: string }) => [f.scope, f.word])).toEqual([
+      ['intro', 'пройdём'],
+      ['step', 'морe'],
+      ['step', 'Momчилова'],
+    ])
+  })
+
+  it('находка интро несёт признаки интро, а не первого шага', () => {
     const { findings } = scanQuests([quest])
     expect(findings[0]).toMatchObject({
-      quest_db_id: 62,
-      quest_id: 'belgrade-white-city',
-      step_db_id: 1,
+      quest_db_id: 121,
+      quest_id: 'bielsko-biala-cartoon-vienna',
+      scope: 'intro',
+      step_db_id: 1174,
       step_id: 'intro',
       field: 'story',
-      word: 'brusчатка',
+      word: 'пройdём',
     })
   })
 
-  it('квест без находок даёт пустой список, но шаги считает', () => {
-    const clean = { id: 1, quest_id: 'q', steps: [{ id: 1, step_id: 's', story: 'чистый текст' }] }
-    expect(scanQuests([clean])).toEqual({ findings: [], scannedSteps: 1 })
+  it('заголовок квеста и текст финала сканируются как квестовые, без step_id', () => {
+    const dirty = { id: 7, quest_id: 'q', title: 'память о морe', steps: [], finale: { text: 'кальдрма, brusчатка' } }
+    const { findings } = scanQuests([dirty])
+    expect(findings.map((f: { scope: string; field: string; step_id: null }) => [f.scope, f.field, f.step_id])).toEqual([
+      ['quest', 'title', null],
+      ['quest', 'finale', null],
+    ])
+  })
+
+  it('финал читается в ОБЕИХ формах — `text` и `story`', () => {
+    // `scripts/sync-quest-to-prod.js` заливает на прод `finale.text || finale.story`,
+    // поэтому обе формы одинаково доходят до игрока. Пять локальных квестов
+    // (`hel-fishermen`, `chisinau-white-stone`, …) держат именно `story`.
+    const asText = { quest_id: 'q', steps: [], finale: { title: 'Финал', text: 'кальдрма, brusчатка' } }
+    const asStory = { quest_id: 'q', steps: [], finale: { title: 'Финал', story: 'кальдрма, brusчатка' } }
+    expect(words(scanQuests([asText]).findings)).toEqual(['brusчатка'])
+    expect(words(scanQuests([asStory]).findings)).toEqual(['brusчатка'])
+  })
+
+  it('`finale.title` не сканируется — в прод-сериализатор финала он не попадает', () => {
+    const titled = { quest_id: 'q', steps: [], finale: { title: 'память о морe', text: 'чистый текст' } }
+    expect(scanQuests([titled]).findings).toEqual([])
+  })
+
+  it('считает текстовые узлы, а не шаги — счётчик не должен прятать необойдённое', () => {
+    const clean = { id: 1, quest_id: 'q', title: 'заголовок', steps: [{ id: 1, step_id: 's', story: 'чистый текст' }] }
+    expect(scanQuests([clean])).toEqual({ findings: [], scannedNodes: 2 })
+  })
+
+  it('фильтр --fields режет и квестовые узлы тоже', () => {
+    const dirty = { id: 7, quest_id: 'q', title: 'память о морe', steps: [], finale: { text: 'brusчатка' } }
+    expect(words(scanQuests([dirty], ['finale']).findings)).toEqual(['brusчатка'])
   })
 
   it('шаги в бандле лежат строкой JSON — так их отдаёт часть источников', () => {
@@ -164,9 +237,10 @@ describe('parseArgs', () => {
 })
 
 describe('корпус прода до правки #1464', () => {
-  // Тринадцать слов, снятых с прода 2026-08-18: слева форма, которая там лежала,
-  // справа — та, на которую её заменили. Скан обязан ловить первую и молчать на
-  // второй, иначе правка «закрыта» только на бумаге.
+  // Четырнадцать слов, снятых с прода 2026-08-18: слева форма, которая там
+  // лежала, справа — та, на которую её заменили. Скан обязан ловить первую и
+  // молчать на второй, иначе правка «закрыта» только на бумаге. Последняя
+  // строка — интро, найденное только после расширения обхода на `quest.intro`.
   const CASES: Array<[string, string, string]> = [
     ['pakocim-voices/1-herb', 'рыцарь по прозвищу Dołęга из засады', 'рыцарь по прозвищу Dołęga из засады'],
     ['porto-port-wine/5-se-catedral story', 'площадь Террейру-да-Сé', 'площадь Террейру-да-Се'],
@@ -178,10 +252,20 @@ describe('корпус прода до правки #1464', () => {
     ['sofia-serdica-underfoot/4-mineral-baths', 'болгарина Петко Momчилова', 'болгарина Петко Момчилова'],
     ['kazimierz-dolny-kogut/6-gora-trzech-krzyzy', 'Гора Трёх Крестов — память о морe', 'Гора Трёх Крестов — память о море'],
     ['venice-lion-of-saint-mark/11-gobbo-di-rialto', 'работа Пьетро да Салó, 1541 год', 'работа Пьетро да Сало, 1541 год'],
+    ['bielsko-biala-cartoon-vienna/intro', 'Мы пройdём оба берега', 'Мы пройдём оба берега'],
   ]
 
   it.each(CASES)('%s — старая форма ловится, новая проходит', (_label, before, after) => {
     expect(scanStepText({ story: before })).toHaveLength(1)
     expect(scanStepText({ story: after })).toEqual([])
+  })
+
+  it('тот же корпус в интро и в финале — поверхности, добавленные после ревью', () => {
+    for (const [, before, after] of CASES) {
+      expect(words(scanQuests([{ quest_id: 'q', intro: { step_id: 'intro', story: before }, steps: [] }]).findings)).toHaveLength(1)
+      expect(scanQuests([{ quest_id: 'q', intro: { step_id: 'intro', story: after }, steps: [] }]).findings).toEqual([])
+      expect(words(scanQuests([{ quest_id: 'q', steps: [], finale: { story: before } }]).findings)).toHaveLength(1)
+      expect(scanQuests([{ quest_id: 'q', steps: [], finale: { story: after } }]).findings).toEqual([])
+    }
   })
 })

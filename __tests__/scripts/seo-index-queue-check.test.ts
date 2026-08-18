@@ -1,8 +1,7 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
-import { makeTempDir, removeDir, runNodeCli, writeTextFile } from './cli-test-utils'
+import { makeTempDir, removeDir, runNodeCli, startStubServer, writeTextFile, type StubServer } from './cli-test-utils'
 
 const {
   CLI_SPEC,
@@ -408,13 +407,10 @@ describe('очередь индексации: согласованность з
 // Мок HTTP-клиента поверх готового ответа доказательством здесь не считается:
 // он не проверит ни разбор Location, ни код возврата, ни диff файла.
 describe('очередь индексации: сквозной прогон по живому серверу', () => {
-  let server: ChildProcessWithoutNullStreams
+  let server: StubServer
   let origin = ''
   let dir = ''
 
-  // Сервер живёт отдельным процессом: CLI запускается через execFileSync, а он
-  // блокирует event loop этого процесса — сервер внутри Jest не успел бы
-  // ответить ни на один запрос и все пробы упёрлись бы в таймаут.
   const SERVER_SOURCE = `
 const http = require('http')
 const routes = {
@@ -467,26 +463,12 @@ server.listen(0, '127.0.0.1', () => console.log('PORT=' + server.address().port)
 
   beforeAll(async () => {
     dir = makeTempDir('seo-index-queue-')
-    const serverFile = path.join(dir, 'server.js')
-    writeTextFile(serverFile, SERVER_SOURCE)
-
-    server = spawn(process.execPath, [serverFile], { stdio: ['ignore', 'pipe', 'pipe'] })
-    const port = await new Promise<string>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('тестовый сервер не поднялся')), 10000)
-      server.stdout.setEncoding('utf8')
-      server.stdout.on('data', (chunk: string) => {
-        const match = /PORT=(\d+)/.exec(chunk)
-        if (!match) return
-        clearTimeout(timer)
-        resolve(match[1])
-      })
-      server.on('error', reject)
-    })
-    origin = `http://127.0.0.1:${port}`
+    server = await startStubServer(SERVER_SOURCE, dir)
+    origin = server.origin
   })
 
   afterAll(() => {
-    server.kill()
+    server.stop()
     removeDir(dir)
   })
 

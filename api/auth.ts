@@ -13,7 +13,7 @@ import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { getCsrfHeader } from '@/utils/csrf';
-import { setStorageBatch } from '@/utils/storageBatch';
+import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import {
     getApiRequestCredentials,
     hasUsableAuthCredential,
@@ -448,7 +448,12 @@ export const confirmAccount = async (hash: string) => {
             await setStorageBatch([
                 ['userName', jsonResponse.userName || ''],
                 ['userId', String(userId)],
+                ['isSuperuser', 'false'],
             ]);
+            // На общем устройстве в storage мог остаться аватар предыдущего аккаунта:
+            // у только что подтверждённого его нет, а `checkAuthentication` восстановил
+            // бы чужой. Пишем ту же тройку ключей, что и обычный вход. (#1462)
+            await removeStorageBatch(['userAvatar']);
         }
         return jsonResponse;
     } catch (error: unknown) {

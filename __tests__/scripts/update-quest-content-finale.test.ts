@@ -19,12 +19,11 @@
  * проверит ни код возврата, ни то, что снимок не уехал в архив.
  */
 
-import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
 
-import { makeTempDir, removeDir, runNodeCli, writeTextFile } from './cli-test-utils'
+import { makeTempDir, removeDir, runNodeCli, startStubServer, writeTextFile, type StubServer } from './cli-test-utils'
 
 const { QUESTS } = require('../../scripts/generate-quest-finale-videos.js')
 
@@ -115,7 +114,7 @@ const STEP = { 10: { id: 10, step_id: '1-start', story: 'старая истор
 const OTHER_STEP = { 20: { id: 20, step_id: '1-start', story: 'чужая история' } }
 
 describe('update-quest-content: резолв pk финала (#1458)', () => {
-  let server: ChildProcessWithoutNullStreams
+  let server: StubServer
   let origin = ''
   let dir = ''
   // Архивы, созданные прогонами этого сьюта, — по одному имени на запуск CLI.
@@ -168,22 +167,8 @@ describe('update-quest-content: резолв pk финала (#1458)', () => {
 
   beforeAll(async () => {
     dir = makeTempDir('update-quest-content-')
-    const serverFile = path.join(dir, 'server.js')
-    writeTextFile(serverFile, SERVER_SOURCE)
-
-    server = spawn(process.execPath, [serverFile], { stdio: ['ignore', 'pipe', 'pipe'] })
-    const port = await new Promise<string>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('тестовый сервер не поднялся')), 10000)
-      server.stdout.setEncoding('utf8')
-      server.stdout.on('data', (chunk: string) => {
-        const match = /PORT=(\d+)/.exec(chunk)
-        if (!match) return
-        clearTimeout(timer)
-        resolve(match[1])
-      })
-      server.on('error', reject)
-    })
-    origin = `http://127.0.0.1:${port}`
+    server = await startStubServer(SERVER_SOURCE, dir)
+    origin = server.origin
   })
 
   // Упавший кейс тоже мог оставить архив — чистим независимо от исхода, но
@@ -197,7 +182,7 @@ describe('update-quest-content: резолв pk финала (#1458)', () => {
   })
 
   afterAll(() => {
-    server.kill()
+    server.stop()
     removeDir(dir)
   })
 

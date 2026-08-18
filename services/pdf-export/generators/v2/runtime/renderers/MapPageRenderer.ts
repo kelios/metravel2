@@ -2,6 +2,8 @@ import type { ParsedRoutePreview } from '@/types/travelRoutes'
 import { escapeHtml } from '../../../../utils/htmlUtils'
 import { buildRunningHeader, type RuntimeRenderContext } from './renderHelpers'
 import { translate as i18nT, translatePlural } from '@/i18n'
+import { formatInteger, formatNumber } from '@/i18n/format'
+import { formatDistance, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 
 
 export interface RuntimeMapPageData {
@@ -263,8 +265,13 @@ export class RuntimeMapRenderer {
       if (delta < 0) descent += Math.abs(delta)
     }
 
-    const round = (v: number) => Math.round(v * 10) / 10
-    const fmt = (v: number) => i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.value1_m_29abffac', { value1: Math.round(v) })
+    // Числа профиля печатаются тем же правилом, что и на сайте (#1465): дробный
+    // километр держится как у панели маршрута, разделитель приходит из локали.
+    // `distanceKmText` идёт в ключи, где единица уже в переводе, `distanceLabel` —
+    // туда, где единицу выбирает сам форматтер.
+    const distanceLabel = formatDistance(totalDistanceKm, ROUTE_DISTANCE_FORMAT)
+    const distanceKmText = formatNumber(totalDistanceKm, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    const fmt = (v: number) => i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.value1_m_29abffac', { value1: formatInteger(v) })
 
     // Key samples
     const startSample = samples[0]
@@ -310,7 +317,7 @@ export class RuntimeMapRenderer {
 
     // 6 summary cards (matches summaryCards in RouteElevationProfile.tsx)
     const summaryCards = [
-      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.distantsiya_9619f33b'), value: `${round(totalDistanceKm)} км`, accent: true },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.distantsiya_9619f33b'), value: distanceLabel, accent: true },
       { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.nabor_85a14ea7'), value: `+${fmt(ascent)}`, accent: true },
       { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.sbros_6cf0dd2d'), value: `-${fmt(descent)}`, accent: false },
       { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.min_vysota_aaac7871'), value: fmt(minElevation), accent: false },
@@ -340,7 +347,7 @@ export class RuntimeMapRenderer {
         <div style="margin-bottom: 8px;">
           <div style="font-size: 9pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.div_style_margin_bottom_4mm_padding_10px_bac_14492623.text01")}</div>
           <div style="font-size: ${typography.caption.size}; color: ${colors.textMuted}; margin-top: 2px;">
-            ${escapeHtml(i18nT('export:services.pdfExport.runtime.map.elevationSummary', { value1: round(totalDistanceKm), value2: Math.round(ascent), value3: fmt(maxElevation) }))}</div>
+            ${escapeHtml(i18nT('export:services.pdfExport.runtime.map.elevationSummary', { value1: distanceKmText, value2: formatInteger(ascent), value3: fmt(maxElevation) }))}</div>
         </div>
 
         <!-- 6 summary cards -->
@@ -399,7 +406,7 @@ export class RuntimeMapRenderer {
                   stroke="${colors.borderLight}" stroke-width="1" stroke-dasharray="3 4" opacity="0.8"/>
                 <text x="${(PL - 3).toFixed(1)}" y="${(gy + 3.5).toFixed(1)}"
                   font-size="10" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
-                >${i18nT('export:services.pdfExport.runtime.map.meters', { value1: Math.round(val) })}</text>
+                >${i18nT('export:services.pdfExport.runtime.map.meters', { value1: formatInteger(val) })}</text>
               `
             }).join('')}
 
@@ -424,7 +431,7 @@ export class RuntimeMapRenderer {
               font-size="10" fill="${colors.textMuted}" font-family="${typography.bodyFont}">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.div_style_margin_bottom_4mm_padding_10px_bac_14492623.text04")}</text>
             <text x="${(CW - PR).toFixed(1)}" y="${(CH - 3).toFixed(1)}"
               font-size="9" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
-            >${escapeHtml(i18nT('export:services.pdfExport.runtime.map.distance', { value1: round(totalDistanceKm) }))}</text>
+            >${escapeHtml(i18nT('export:services.pdfExport.runtime.map.distance', { value1: distanceKmText }))}</text>
           </svg>
         </div>
 
