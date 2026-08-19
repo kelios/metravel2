@@ -92,6 +92,8 @@ export const errorsStaticResources = {
   "api.misc.subscriptionFailed": "Не вдалося передплатити.",
   "api.misc.subscriptionFailedShort": "Не вдалося оформити передплату",
   "api.misc.invalidMessage": "Некоректне повідомлення",
+  "api.backendErrors.invalidEmail": "Введіть коректний email",
+  "api.backendErrors.fieldRequired": "Заповніть це поле",
   "api.plannedTrips.participantFallback": "Учасник",
   "api.plannedTrips.routePointFallback": "Точка {{index}}",
   "api.plannedTrips.organizerFallback": "Організатор",

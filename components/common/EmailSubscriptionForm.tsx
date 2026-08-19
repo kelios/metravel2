@@ -23,8 +23,10 @@ interface EmailSubscriptionFormProps {
   subtitle?: string
 }
 
-// Lightweight client-side gate; the backend is the source of truth and returns
-// a localized 400 for anything it rejects.
+// Быстрый клиентский гейт: ловит основную массу опечаток без запроса. Он
+// заведомо слабее валидатора Django (например `a@b..c` проходит), поэтому 400 от
+// бэкенда достижим. Сообщения бэкенда приходят по-английски — на локаль их
+// переводит localizeBackendFieldError в api/backendErrors.ts.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Минимальная ширина колонки с текстом обещания. Блок встраивается и в узкие

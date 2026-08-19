@@ -92,6 +92,8 @@ export const errorsStaticResources = {
   "api.misc.subscriptionFailed": "Не атрымалася аформіць падпіску.",
   "api.misc.subscriptionFailedShort": "Не атрымалася аформіць падпіску",
   "api.misc.invalidMessage": "Некарэктнае паведамленне",
+  "api.backendErrors.invalidEmail": "Увядзіце карэктны email",
+  "api.backendErrors.fieldRequired": "Запоўніце гэта поле",
   "api.plannedTrips.participantFallback": "Удзельнік",
   "api.plannedTrips.routePointFallback": "Кропка {{index}}",
   "api.plannedTrips.organizerFallback": "Арганізатар",

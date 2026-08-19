@@ -2,6 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Apple Web Verify 8123",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8123\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8123\" NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_APPLE_WEB_CLIENT_ID=by.metravel.web EXPO_PUBLIC_APPLE_WEB_REDIRECT_URI=https://metravel.by/api/user/apple-web-callback/ npx expo start --web --port 8123"
+      ],
+      "port": 8123,
+      "autoPort": false
+    },
+    {
       "name": "Apple Auth Verify 8121",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

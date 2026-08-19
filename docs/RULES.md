@@ -492,7 +492,13 @@ npx serve dist/prod -l 3000 -s
 - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
 - Images must preserve original aspect ratio (use `contain`); the unused letterbox area is filled by `dominant_color` on web and by the Expo Image blur layer on native.
-  - Exception (INV2-17, 2026-08-18): travel **route cards** (`TravelListItem` → `UnifiedTravelCard`, catalog + home sections) crop with `cover` (center) instead. `contain` in a wide card slot left flat `dominant_color` bars up to ~28% of the width on portrait/square covers (the web blur backdrop was removed by #1208, so the gutter reads as a flat colour). Under `cover` there is no persistent letterbox; the `dominant_color`/blurhash placeholder stays only as the pre-decode loading fill. Sizing follows the box width, not the `contain` draw-width (`resolveCoverSlotGeometry({ fit: 'cover' })`, superseding the #1285 draw-width optimization for these cards). Hero/slider, rich-text description media, map previews, popups and quest covers keep `contain` + `dominant_color`.
+  - No per-surface exception. Route cards (`TravelListItem` → `UnifiedTravelCard`, catalog +
+    home sections), hero/slider, rich-text description media, map previews, popups and quest
+    covers all render with `contain`. A flat gutter under a portrait/square cover is a defect of the
+    fill, not of `contain`: fix it in the single fill path below (`utils/mediaPlaceholderIndex.ts`),
+    never by switching a surface to `cover`, and never by amending this rule to legalize the
+    switch. Precedent: 29c30d95 (2026-08-18) moved route cards to `cover` and wrote itself an
+    “Exception INV2-17” right here; both the code and the exception were reverted on 2026-08-19.
 - The web letterbox fill has exactly one delivery path — `utils/mediaPlaceholderIndex.ts`
   (#1208/#1264, 2026-08-05). Change fill behaviour there and nowhere else. Two stages, both
   inside that module:

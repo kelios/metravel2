@@ -96,6 +96,50 @@ describe('api/appleAuth.ts', () => {
       );
     });
 
+    // IOS-17 (#1506): у веба свой audience (Services ID), у приложения — bundle ID.
+    it('шлёт client_id, когда credential пришёл с веб-поверхности', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        token: 'apple-session-token',
+        id: 51,
+      } as any);
+
+      await expect(
+        appleAuthApi({
+          identityToken: 'apple-identity-token',
+          authorizationCode: 'one-time-code',
+          clientId: '  by.metravel.web  ',
+        }),
+      ).resolves.toMatchObject({ status: 'authenticated' });
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          body: JSON.stringify({
+            identity_token: 'apple-identity-token',
+            authorization_code: 'one-time-code',
+            client_id: 'by.metravel.web',
+          }),
+        }),
+        expect.any(Number),
+      );
+    });
+
+    it('нативный credential остаётся без client_id: audience там один', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ token: 'apple-session-token', id: 51 } as any);
+
+      await appleAuthApi({ identityToken: 'apple-identity-token', clientId: null });
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          body: JSON.stringify({ identity_token: 'apple-identity-token' }),
+        }),
+        expect.any(Number),
+      );
+    });
+
     it('без identity token не ходит в сеть', async () => {
       await expect(appleAuthApi({ identityToken: '   ' })).resolves.toMatchObject({
         status: 'error',

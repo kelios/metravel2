@@ -43,6 +43,7 @@
 - `docs/features/travel.md` — catalog/detail/wizard ownership;
 - `docs/features/map.md` — web/native map engines, bridge и place contract;
 - `docs/features/places.md` — places catalog;
+- `docs/features/auth.md` — вход/регистрация и матрица «провайдер × поверхность»;
 - `docs/features/user.md` — profile, collections и author stats;
 - `docs/features/calendar.md` — travel status calendar;
 - `docs/features/offline.md` — offline-first shell, package storage, UX states

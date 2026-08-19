@@ -19,6 +19,7 @@
 - [x] [travel](./travel.md) — список, детали, wizard, экспорт
 - [x] [map](./map.md) — карта, попапы, роутинг
 - [x] [places](./places.md) — каталог отдельных точек, фильтры, карта, связь с путешествиями
+- [x] [auth](./auth.md) — вход и регистрация, матрица «провайдер × поверхность»
 - [x] [user](./user.md) — профиль, collections, calendar statuses, author stats
 - [x] [calendar](./calendar.md) — календарь travel-статусов и day details
 - [x] [offline](./offline.md) — offline shell, управляемые content packages и Android cold-start access

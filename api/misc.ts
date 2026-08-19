@@ -19,6 +19,7 @@ import {
 } from '@/utils/authPlatform';
 import { translate as i18nT } from '@/i18n';
 import { normalizeFilterCountries, normalizeFilterDictionaries } from '@/api/filterDictionaries';
+import { localizeBackendFieldError } from '@/api/backendErrors';
 import { isBlankTravelContent } from '@/utils/travelFormNormalization';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
@@ -608,11 +609,10 @@ export const sendFeedback = async (
 
     if (!res.ok) {
       const firstError =
-        (Array.isArray(json?.email) ? json.email[0] : undefined) ||
-        (Array.isArray(json?.name) ? json.name[0] : undefined) ||
-        (Array.isArray(json?.message) ? json.message[0] : undefined) ||
-        (typeof json?.message === 'string' ? json.message : undefined) ||
-        json?.detail ||
+        localizeBackendFieldError(json?.email) ||
+        localizeBackendFieldError(json?.name) ||
+        localizeBackendFieldError(json?.message) ||
+        localizeBackendFieldError(json?.detail) ||
         i18nT('errorsStatic:api.misc.sendFailed');
       throw new Error(firstError);
     }
@@ -673,9 +673,9 @@ export const subscribeEmail = async (
 
     if (!res.ok) {
       const firstError =
-        (Array.isArray(json?.email) ? json.email[0] : undefined) ||
-        (Array.isArray(json?.source) ? json.source[0] : undefined) ||
-        json?.detail ||
+        localizeBackendFieldError(json?.email) ||
+        localizeBackendFieldError(json?.source) ||
+        localizeBackendFieldError(json?.detail) ||
         (res.status === 429
           ? i18nT('errorsStatic:api.misc.tooManyAttempts')
           : i18nT('errorsStatic:api.misc.subscriptionFailed'));

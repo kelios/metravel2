@@ -574,6 +574,10 @@ describe('api/misc', () => {
     mockSafeJsonParse.mockResolvedValue({ email: ['bad email'], detail: 'fallback' })
 
     await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('bad email')
+
+    // Тот же DRF-дефолт, что и в подписке, должен приходить на локали (#1505).
+    mockSafeJsonParse.mockResolvedValue({ email: ['Enter a valid email address.'] })
+    await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('Введите корректный email')
   })
 
   it('subscribeEmail requires an email and returns created on success', async () => {
@@ -612,13 +616,34 @@ describe('api/misc', () => {
   it('subscribeEmail surfaces field validation (400) and throttle (429)', async () => {
     mockSanitizeInput.mockImplementation((v: string) => v.trim())
 
+    // DRF отдаёт свои дефолты только по-английски, показывать их нельзя (#1505).
     mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 400 })
     mockSafeJsonParse.mockResolvedValue({ email: ['Enter a valid email address.'] })
-    await expect(subscribeEmail('nope', 'home')).rejects.toThrow('Enter a valid email address.')
+    await expect(subscribeEmail('nope', 'home')).rejects.toThrow('Введите корректный email')
 
     mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 429 })
     mockSafeJsonParse.mockResolvedValue({})
     await expect(subscribeEmail('a@b.com', 'home')).rejects.toThrow('Слишком много попыток. Попробуйте позже.')
+
+    // ScopedRateThrottle кладёт английский текст в detail, который раньше
+    // выигрывал у локализованного fallback'а по статусу.
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 429 })
+    mockSafeJsonParse.mockResolvedValue({
+      detail: 'Request was throttled. Expected available in 42 seconds.',
+    })
+    await expect(subscribeEmail('a@b.com', 'home')).rejects.toThrow('Слишком много попыток. Попробуйте позже.')
+  })
+
+  it('subscribeEmail keeps backend messages it cannot map', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 400 })
+    mockSafeJsonParse.mockResolvedValue({
+      source: ['Use letters, numbers, dots, colons, underscores, or hyphens.'],
+    })
+    await expect(subscribeEmail('a@b.com', 'ПЛОХО')).rejects.toThrow(
+      'Use letters, numbers, dots, colons, underscores, or hyphens.',
+    )
   })
 
   it('sendAIMessage validates input and handles success', async () => {

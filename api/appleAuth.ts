@@ -33,6 +33,13 @@ export type AppleCredentialPayload = {
     authorizationCode?: string | null;
     givenName?: string | null;
     familyName?: string | null;
+    /**
+     * IOS-17 (#1506): audience, для которого Apple выпустил `identity_token`.
+     * У приложения это bundle ID, у веба — Services ID, и ключ проверки на
+     * сервере у них разный. Нативная поверхность поле не шлёт: там audience
+     * ровно один и сервер берёт его по умолчанию.
+     */
+    clientId?: string | null;
 };
 
 export type AppleAuthResult =
@@ -76,11 +83,13 @@ export const appleAuthApi = async (credential: AppleCredentialPayload): Promise<
         const authorizationCode = String(credential?.authorizationCode || '').trim();
         const givenName = String(credential?.givenName || '').trim();
         const familyName = String(credential?.familyName || '').trim();
+        const clientId = String(credential?.clientId || '').trim();
 
         const body: Record<string, string> = { identity_token: identityToken };
         if (authorizationCode) body.authorization_code = authorizationCode;
         if (givenName) body.given_name = givenName;
         if (familyName) body.family_name = familyName;
+        if (clientId) body.client_id = clientId;
 
         const response = await fetchWithTimeout(APPLE_LOGIN, {
             method: 'POST',

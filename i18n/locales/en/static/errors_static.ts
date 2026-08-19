@@ -92,6 +92,8 @@ export const errorsStaticResources = {
   "api.misc.subscriptionFailed": "Failed to subscribe.",
   "api.misc.subscriptionFailedShort": "Failed to subscribe",
   "api.misc.invalidMessage": "Incorrect message",
+  "api.backendErrors.invalidEmail": "Enter a correct email",
+  "api.backendErrors.fieldRequired": "Fill in this field",
   "api.plannedTrips.participantFallback": "Member",
   "api.plannedTrips.routePointFallback": "Point {{index}}",
   "api.plannedTrips.organizerFallback": "Organizer",
