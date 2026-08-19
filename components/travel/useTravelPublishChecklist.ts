@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { TravelFormData } from '@/types/types';
-import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
+import { getModerationIssues, getPointsWithoutCategories, type ModerationIssue } from '@/utils/formValidation';
 import { getQualityScore } from '@/utils/travelWizardValidation';
 import { translate as i18nT } from '@/i18n'
 
@@ -34,6 +34,14 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     return Array.isArray(gallery) ? gallery : [];
   }, [formData.gallery]);
 
+  // Бэк отклоняет отправку на модерацию, если хотя бы у одной точки нет категории
+  // (upsert_travel_service.py `_validate_coordinate_categories_for_moderation`).
+  // Показываем это в чек-листе ДО нажатия кнопки, а не 400-й в ответе.
+  const uncategorizedPointsCount = useMemo(
+    () => getPointsWithoutCategories(routePoints).length,
+    [routePoints],
+  );
+
   const requiredChecklist = useMemo<ChecklistItem[]>(() => {
     const hasName = !!formData.name && formData.name.trim().length >= 3;
     const hasDescription = !!formData.description && formData.description.trim().length >= 50;
@@ -47,6 +55,7 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
       { key: 'name', label: i18nT('travel:components.travel.useTravelPublishChecklist.nazvanie_marshruta_3f5fd620'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_3_simvola_6627ac3c'), ok: hasName, required: true },
       { key: 'description', label: i18nT('travel:components.travel.useTravelPublishChecklist.opisanie_marshruta_e77b9baa'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_50_simvolov_0da73d52'), ok: hasDescription, required: true },
       { key: 'route', label: i18nT('travel:components.travel.useTravelPublishChecklist.marshrut_na_karte_4463d1b9'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_1_tochka_shag_2_ee6b3e68'), ok: hasRoute, required: true },
+      { key: 'pointCategories', label: i18nT('travel:components.travel.useTravelPublishChecklist.kategorii_u_tochek_marshruta_7b34e0a1'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_1_kategoriya_u_kazhdoy_tochki_shag_2_4c6d81f3'), ok: hasRoute && uncategorizedPointsCount === 0, required: true },
       { key: 'countries', label: i18nT('travel:components.travel.useTravelPublishChecklist.strany_marshruta_91145fda'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_1_strana_shag_2_ccfa6f24'), ok: hasCountries, required: true },
       { key: 'categories', label: i18nT('travel:components.travel.useTravelPublishChecklist.kategorii_marshruta_81500fea'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_1_kategoriya_shag_5_79d7518c'), ok: hasCategories, required: true },
       { key: 'photos', label: i18nT('travel:components.travel.useTravelPublishChecklist.foto_ili_oblozhka_5874111e'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.oblozhka_ili_1_foto_shag_3_7dd535ea'), ok: hasPhotos, required: true },
@@ -59,6 +68,7 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     formData.travel_image_thumb_small_url,
     galleryItems.length,
     routePoints.length,
+    uncategorizedPointsCount,
   ]);
 
   const recommendedChecklist = useMemo<ChecklistItem[]>(() => {
@@ -92,6 +102,7 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
       { key: 'countries', label: i18nT('travel:components.travel.useTravelPublishChecklist.strany_marshruta_minimum_odna_vybirayutsya_n_b5e6a718'), ok: hasCountries },
       { key: 'categories', label: i18nT('travel:components.travel.useTravelPublishChecklist.kategorii_marshruta_minimum_odna_vybirayutsy_7333f07f'), ok: hasCategories },
       { key: 'route', label: i18nT('travel:components.travel.useTravelPublishChecklist.marshrut_na_karte_minimum_odna_tochka_na_sha_ce6389ab'), ok: hasRoute },
+      { key: 'pointCategories', label: i18nT('travel:components.travel.useTravelPublishChecklist.u_kazhdoy_tochki_marshruta_zadana_kategoriya_2fa5b6c9'), ok: hasRoute && uncategorizedPointsCount === 0 },
       { key: 'photos', label: i18nT('travel:components.travel.useTravelPublishChecklist.foto_ili_oblozhka_marshruta_rekomenduem_gori_cdfe3c6c'), ok: hasPhotos },
     ];
   }, [
@@ -102,6 +113,7 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     formData.travel_image_thumb_small_url,
     galleryItems.length,
     routePoints.length,
+    uncategorizedPointsCount,
   ]);
 
   const moderationIssues = useMemo(() => {

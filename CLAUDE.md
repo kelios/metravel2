@@ -19,6 +19,7 @@
 | глубина разбора задачи, доказательства, формат отчёта | `docs/AGENT_ANALYSIS_PROTOCOL.md` |
 | ожидаемое поведение фичи (источник истины для постановки) | `docs/features/<фича>.md` |
 | технические правила: UI, workflow, localization | `docs/RULES.md` (нужный раздел) |
+| правка nginx: CSP, заголовки, кэш, редиректы (всегда backend-owned) | `docs/RULES.md` → «Nginx config ownership» |
 | e2e-доступы, тестданные на проде, Android/iPhone devices, prod-baseline, долгие операции и locks | `docs/WORKFLOW_OPERATIONS.md` |
 | каталог `$metravel-*` skills (Codex) | `docs/CODEX_SKILLS.md` |
 | борд, Task Contract, формат описания задачи | `docs/TASK_BOARD_MCP.md` |

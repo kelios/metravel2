@@ -49,6 +49,15 @@ export const previewPointsKey = (
   `${transport}:${points.map(([lng, lat]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join('|')}`;
 
 /**
+ * Движок уже что-то ответил. Свежесмонтированный `useRouting` секунду живёт
+ * пустым состоянием (`loading: false`, ноль координат и метров) — до старта
+ * собственного дебаунса. Считать это «маршрут построен» нельзя: индикатор
+ * построения гас бы ровно в тот момент, когда запрос только уходит.
+ */
+export const hasEngineAnswer = (result: UseMapRoutingResult | null): boolean =>
+  Boolean(result && (result.error || result.coords.length >= 2 || result.distance > 0));
+
+/**
  * Деградация движка: `useRouting` отдаёт прямую линию между точками и текст
  * ошибки. Молча выдавать её за маршрут нельзя (`ROUTING-ORS-001`).
  */
@@ -85,6 +94,14 @@ export const schematicRoutingState = (): RoutingState => ({
 });
 
 /**
+ * «Остановки» — это число точек маршрута. Ровно так же их считает бэкенд
+ * (`stops_count = len(route_points)` в `trips/views.py`), включая точки без
+ * координат. Своя формула здесь развела бы превью и серверную сводку на
+ * единицу, и счётчик прыгал бы на ровном месте при каждой правке (#1490).
+ */
+export const previewStopsCount = (route: RoutePoint[]): number => route.length;
+
+/**
  * Сводка схематичной линии: остановки посчитать можно, расстояние и время
  * общественным транспортом — нет. Нули печатаются прочерком, и это честнее
  * подставленной оценки по прямой.
@@ -95,7 +112,7 @@ export const schematicSummary = (route: RoutePoint[]): RouteSummary | null => {
     distanceKm: 0,
     durationMin: 0,
     elevationGainM: 0,
-    stopsCount: Math.max(route.length - 1, 0),
+    stopsCount: previewStopsCount(route),
     provider: PREVIEW_SCHEMATIC_PROVIDER,
     updatedAt: null,
   };
@@ -124,7 +141,7 @@ export const previewSummary = (
     elevationGainM: Number.isFinite(result.elevationGain as number)
       ? Number(result.elevationGain)
       : 0,
-    stopsCount: Math.max(route.length - 1, 0),
+    stopsCount: previewStopsCount(route),
     provider: result.error ? PREVIEW_DIRECT_PROVIDER : PREVIEW_PROVIDER,
     updatedAt: null,
   };

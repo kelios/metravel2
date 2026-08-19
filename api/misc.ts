@@ -19,7 +19,7 @@ import {
 } from '@/utils/authPlatform';
 import { translate as i18nT } from '@/i18n';
 import { normalizeFilterCountries, normalizeFilterDictionaries } from '@/api/filterDictionaries';
-import { localizeBackendFieldError } from '@/api/backendErrors';
+import { localizeBackendFieldError } from '@/utils/errorHelpers';
 import { isBlankTravelContent } from '@/utils/travelFormNormalization';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
@@ -41,6 +41,17 @@ const URLAPI = rawApiUrl;
 
 const DEFAULT_TIMEOUT = 10000;
 const LONG_TIMEOUT = 30000;
+
+// Сохранение статьи ждёт дольше остальных запросов, и это осознанно. Полное
+// сохранение тяжёлой статьи на проде идёт 11–12 с, а верхнюю границу задаёт не
+// клиент, а сам сервер: у `location ~ ^/api/travels/` в прод-конфиге nginx
+// `proxy_read_timeout 60s`, то есть на 60-й секунде клиент получит 504.
+// Клиентский таймаут короче серверного — худший из вариантов: мы бросаем ждать,
+// пока запрос ещё выполняется, судьба записи остаётся неизвестной, а повтор
+// добавляет вторую тяжёлую транзакцию по той же статье (инцидент 19.08.2026,
+// travel/619). Поэтому ждём чуть дольше серверного потолка и всегда узнаём
+// исход от сервера, а не гадаем по своему таймеру.
+const SAVE_TRAVEL_TIMEOUT = 65000;
 
 const GET_FILTERS = `${URLAPI}/getFiltersTravel/`;
 const GET_FILTERS_COUNTRY = `${URLAPI}/countriesforsearch/`;
@@ -228,7 +239,7 @@ export const saveFormData = async (
         body: JSON.stringify(body),
         signal,
       },
-      LONG_TIMEOUT
+      SAVE_TRAVEL_TIMEOUT
     );
   } catch (error) {
     if (__DEV__) {
@@ -511,11 +522,36 @@ export const createPointCategory = async (
   return { id, name: typeof result?.name === 'string' && result.name.trim() ? result.name : name };
 };
 
+/**
+ * Уникальный query-параметр для запроса «мимо клиентского кэша».
+ *
+ * `cache: 'reload'` — опция Web Fetch, React Native её игнорирует, а OkHttp
+ * (Android) и NSURLCache (iOS) продолжают уважать тот же `max-age`. Серверной
+ * нагрузки параметр не добавляет: прод кэширует этот роут ключом без query
+ * (источник правды — `deploy/prod/nginx/nginx.conf` в бэкенд-репо, `master`;
+ * снаружи видно по заголовку `x-cache-status` на `/api/getFiltersTravel/`).
+ */
+const withCacheBuster = (url: string): string =>
+  `${url}${url.includes('?') ? '&' : '?'}_fresh=${Date.now()}`;
+
 export const fetchFilters = async (
-  options?: { signal?: AbortSignal; throwOnError?: boolean },
+  options?: { signal?: AbortSignal; throwOnError?: boolean; forceRefresh?: boolean },
 ): Promise<FilterDictionaries> => {
   try {
-    const res = await fetchWithTimeout(GET_FILTERS, { signal: options?.signal }, DEFAULT_TIMEOUT);
+    const res = await fetchWithTimeout(
+      options?.forceRefresh ? withCacheBuster(GET_FILTERS) : GET_FILTERS,
+      {
+        signal: options?.signal,
+        // Словарь редактируется в админке прямо во время работы автора (новая
+        // категория точки), а прод отдаёт на этот роут ДВА Cache-Control:
+        // Django `max-age=1800` и nginx `max-age=60`. Браузер берёт первый,
+        // поэтому обычный запрос до 30 минут читается из HTTP-кэша и новую
+        // категорию не видит (BE-задача #1436). `forceRefresh` идёт мимо кэша
+        // на всех платформах: `cache: 'reload'` на web, busting-параметр везде.
+        ...(options?.forceRefresh ? { cache: 'reload' as RequestCache } : null),
+      },
+      DEFAULT_TIMEOUT,
+    );
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;

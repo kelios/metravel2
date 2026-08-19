@@ -1,8 +1,9 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import SocialAuthButton, {
+    SocialAuthButtonPlaceholder,
+} from '@/components/auth/SocialAuthButton.web';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useLocale } from '@/i18n/LocaleProvider';
@@ -87,7 +88,6 @@ export default function FacebookSignInButton({
     mode = 'sign_in',
 }: FacebookSignInButtonProps) {
     const colors = useThemedColors();
-    const styles = useMemo(() => createStyles(colors), [colors]);
     const hydrationReady = useHydrationReady();
     const { locale } = useLocale();
     const [ready, setReady] = useState(false);
@@ -154,9 +154,7 @@ export default function FacebookSignInButton({
     }, [apiVersion, appId, enabled, locale]);
 
     if (renderState === 'hidden') return null;
-    if (renderState === 'hydration-placeholder') {
-        return <View style={styles.hydrationPlaceholder} />;
-    }
+    if (renderState === 'hydration-placeholder') return <SocialAuthButtonPlaceholder />;
 
     const unavailable = !appId;
     const handlePress = () => {
@@ -188,73 +186,24 @@ export default function FacebookSignInButton({
     const idleLabel = mode === 'rerequest_email'
         ? i18nT('authStatic:facebook.rerequestEmail')
         : i18nT('authStatic:facebook.signIn');
+    const label = unavailable
+        ? i18nT('authStatic:facebook.unavailable')
+        : loading
+            ? i18nT('authStatic:facebook.loading')
+            : idleLabel;
     return (
-        <Pressable
-            onPress={handlePress}
-            disabled={isDisabled}
-            accessibilityRole="button"
+        <SocialAuthButton
+            label={label}
             accessibilityLabel={unavailable
                 ? i18nT('authStatic:facebook.unavailableA11y')
                 : idleLabel}
-            accessibilityState={{ disabled: isDisabled, busy: loading }}
+            icon={<Feather name="facebook" size={20} color={colors.textOnPrimary} />}
+            backgroundColor={colors.info}
+            foregroundColor={colors.textOnPrimary}
+            onPress={handlePress}
             testID="facebook-sign-in-button"
-            style={({ pressed }) => [
-                styles.button,
-                isDisabled && styles.buttonDisabled,
-                pressed && styles.buttonPressed,
-            ]}
-        >
-            <View style={styles.content}>
-                {loading ? (
-                    <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                ) : (
-                    <Feather name="facebook" size={20} color={colors.textOnPrimary} />
-                )}
-                <Text style={styles.text}>
-                    {unavailable
-                        ? i18nT('authStatic:facebook.unavailable')
-                        : loading
-                            ? i18nT('authStatic:facebook.loading')
-                            : idleLabel}
-                </Text>
-            </View>
-        </Pressable>
+            loading={loading}
+            disabled={isDisabled}
+        />
     );
 }
-
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-    hydrationPlaceholder: {
-        width: '100%',
-        minHeight: 48,
-        borderRadius: DESIGN_TOKENS.radii.lg,
-    },
-    button: {
-        width: '100%',
-        minHeight: 48,
-        borderRadius: DESIGN_TOKENS.radii.lg,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: colors.info,
-    },
-    buttonDisabled: {
-        opacity: 0.55,
-    },
-    buttonPressed: {
-        opacity: 0.88,
-        transform: [{ scale: 0.99 }],
-    },
-    content: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
-        paddingHorizontal: 16,
-    },
-    text: {
-        color: colors.textOnPrimary,
-        fontSize: 16,
-        fontWeight: '600',
-        flexShrink: 1,
-        textAlign: 'center',
-    },
-});

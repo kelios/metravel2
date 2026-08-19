@@ -45,6 +45,7 @@ export const errorsGenerated1 = {
   "utils.formValidation.foto_ili_oblozhka_eb83919e": "Фото або обкладинка",
   "utils.formValidation.god_dolzhen_byt_ot_1900_do_value1_60553492": "Рік має бути від 1900 до {{value1}}",
   "utils.formValidation.kategorii_minimum_odna_2425408b": "Категорії (мінімум одна)",
+  "utils.formValidation.kategorii_u_tochek_marshruta_ne_zadany_u_val_9c3a17e2": "Категорії у точок маршруту — не задані у: {{value1}}",
   "utils.formValidation.kolichestvo_dney_dolzhno_byt_ot_1_do_365_bb7a91c9": "Кількість днів має бути від 1 до 365",
   "utils.formValidation.kolichestvo_lyudey_dolzhno_byt_ot_1_do_100_638b929a": "Кількість людей повинна бути від 1 до 100",
   "utils.formValidation.marshrut_minimum_odna_tochka_4def96d5": "Маршрут (мінімум одна точка)",

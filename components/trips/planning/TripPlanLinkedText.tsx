@@ -39,13 +39,17 @@ const DOMAIN_LABELS = '(?:[A-Za-z0-9][A-Za-z0-9-]{0,62}\\.){1,8}';
 // пропущенным пробелом после точки — становятся ссылками.
 const TLD_BOUNDARY = '(?![A-Za-z0-9-])';
 const URL_TAIL = '[^\\s<>"«»]*';
+// Хвост схемы и `www.` обязателен: со звёздочкой обрывки «https://» и «www.»
+// из живого текста сами становились кандидатами и доезжали до анкора на
+// несуществующий хост (`https://www/`) плюс мусорного чипа в блоке «Ссылки».
+const REQUIRED_TAIL = '[^\\s<>"«»]+';
 
 const URL_PATTERN = new RegExp(
   [
     // явный протокол (регистр схемы значения не имеет)
-    `[Hh][Tt][Tt][Pp][Ss]?:\\/\\/${URL_TAIL}`,
+    `[Hh][Tt][Tt][Pp][Ss]?:\\/\\/${REQUIRED_TAIL}`,
     // www без протокола
-    `[Ww]{3}\\.${URL_TAIL}`,
+    `[Ww]{3}\\.${REQUIRED_TAIL}`,
     // голый домен с путём/запросом — здесь допустим весь список TLD
     `${DOMAIN_LABELS}(?:${[...COMMON_TLDS, ...EXTRA_TLDS].join('|')})${TLD_BOUNDARY}[/?#]${URL_TAIL}`,
     // голый домен без пути — только частые TLD, чтобы имя файла не стало ссылкой
@@ -54,7 +58,31 @@ const URL_PATTERN = new RegExp(
   'g',
 );
 
-const TRAILING_PUNCTUATION = /[),.;:!?'"»]+$/;
+const TRAILING_CHARACTER = /[),.;:!?'"»]/;
+
+/**
+ * Отделяет от кандидата хвостовую пунктуацию предложения. Закрывающая скобка
+ * срезается только как непарная: в `https://ru.wikipedia.org/wiki/Браслав_(озеро)`
+ * она часть адреса, и слепая срезка уводила ссылку на 404.
+ */
+const splitTrailingPunctuation = (raw: string): { clean: string; trailing: string } => {
+  let clean = raw;
+  let trailing = '';
+
+  while (clean) {
+    const last = clean[clean.length - 1];
+    if (!TRAILING_CHARACTER.test(last)) break;
+    if (last === ')') {
+      const opened = (clean.match(/\(/g) ?? []).length;
+      const closed = (clean.match(/\)/g) ?? []).length;
+      if (opened >= closed) break;
+    }
+    trailing = last + trailing;
+    clean = clean.slice(0, -1);
+  }
+
+  return { clean, trailing };
+};
 // `foo@example.com` и `path/example.com` — не самостоятельные ссылки: голый домен
 // засчитывается только тогда, когда слева от него нет продолжения другого токена.
 const ATTACHED_PREFIX = /[@\w./-]$/;
@@ -94,6 +122,8 @@ const extractDomain = (absoluteUrl: string): string =>
 export const resolveTripPlanLink = (raw: string): TripPlanLink | null => {
   const absolute = normalizeExternalUrl(normalizeUrl(raw));
   if (!absolute) return null;
+  // хост без точки — не адрес, а обрывок текста (`https://www/`, `https://https//`)
+  if (!/^https?:\/\/[^/?#]*\.[^/?#]/i.test(absolute)) return null;
   const internalPath = resolveInternalHref(absolute);
   return {
     url: absolute,
@@ -127,8 +157,7 @@ export const splitTripPlanLinkedText = (value: string): TripPlanTextSegment[] =>
     const hasProtocol = /^https?:\/\//i.test(raw);
     if (!hasProtocol && index > 0 && ATTACHED_PREFIX.test(value[index - 1])) continue;
 
-    const trailing = raw.match(TRAILING_PUNCTUATION)?.[0] ?? '';
-    const clean = trailing ? raw.slice(0, -trailing.length) : raw;
+    const { clean, trailing } = splitTrailingPunctuation(raw);
     const link = clean ? resolveTripPlanLink(clean) : null;
 
     if (index > lastIndex) {

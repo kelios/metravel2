@@ -240,17 +240,27 @@ export function useTravelPublishModeration({
         }
     };
 
+    const collectCriticalMissing = useCallback(() => getModerationIssues({
+        name: formData.name ?? '',
+        description: formData.description ?? '',
+        countries: formData.countries ?? [],
+        categories: formData.categories ?? [],
+        coordsMeTravel: routePoints,
+        gallery: galleryItems,
+        travel_image_thumb_small_url: formData.travel_image_thumb_small_url ?? null,
+    }), [
+        formData.name,
+        formData.description,
+        formData.countries,
+        formData.categories,
+        formData.travel_image_thumb_small_url,
+        routePoints,
+        galleryItems,
+    ]);
+
     const handleSendToModeration = async () => {
         if (!startAction()) return;
-        const criticalMissing = getModerationIssues({
-            name: formData.name ?? '',
-            description: formData.description ?? '',
-            countries: formData.countries ?? [],
-            categories: formData.categories ?? [],
-            coordsMeTravel: routePoints,
-            gallery: galleryItems,
-            travel_image_thumb_small_url: formData.travel_image_thumb_small_url ?? null,
-        });
+        const criticalMissing = collectCriticalMissing();
         const missingLabels = criticalMissing.map(i => i.label);
 
         await trackWizardEvent('wizard_moderation_attempt', {
@@ -358,6 +368,23 @@ export function useTravelPublishModeration({
 
     const handleApproveModeration = async () => {
         if (!startAction()) return;
+
+        // Одобрение админа — такой же submit на модерацию (publish+moderation=true),
+        // и бэк гоняет ту же валидацию полноты. Без пред-проверки запрос улетал и
+        // возвращался 400 со структурой `{coordsMeTravel: [...]}`, из которой FE не
+        // показывал ничего внятного. Ловим то же самое до запроса и подсвечиваем,
+        // что именно не заполнено.
+        const criticalMissing = collectCriticalMissing();
+        if (criticalMissing.length > 0) {
+            setMissingForModeration(criticalMissing);
+            hapticNotification('warning');
+            pulsePrimaryError(i18nT('travel:components.travel.TravelWizardStepPublish.nelzya_otpravit_ispravte_oshibki_eb8fb6a9'));
+            scrollToMissingBanner();
+            finishAction();
+            return;
+        }
+        setMissingForModeration([]);
+
         const previousForm = formData;
         const nextForm = {
             ...formData,

@@ -235,6 +235,9 @@ export function normalizeCategoryTravelAddress(raw: unknown): Array<{ id: string
     .filter(Boolean);
 }
 
+/** Как часто вход на шаг с точками имеет право дёрнуть словарь мимо кэшей. */
+const POINT_CATEGORIES_REFRESH_INTERVAL = 60 * 1000;
+
 interface UseTravelFiltersOptions {
   loadOnMount?: boolean;
   currentStep?: number;
@@ -256,6 +259,11 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   });
   const triedPointCatsRef = useRef<number | null>(null);
   const triedCountriesRef = useRef<number | null>(null);
+  const lastPointCatsForcedAtRef = useRef<number>(0);
+  // Растёт на каждую успешную запись категорий точек. Стартовая загрузка
+  // сверяет ревизию до и после своих await'ов, чтобы не откатить более свежий
+  // словарь (см. `loadFilters`).
+  const pointCatsRevisionRef = useRef(0);
 
   const beginLoading = useCallback(() => {
     inFlightCountRef.current += 1;
@@ -281,6 +289,8 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       beginLoading();
       setError(null);
 
+      const pointCatsRevisionAtStart = pointCatsRevisionRef.current;
+
       const [filtersData, countryData] = await Promise.all([
         fetchFiltersOptimized(),
         fetchAllCountriesOptimized(),
@@ -299,16 +309,26 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       );
       const normalizedCountries = normalizeCountries(countryData);
 
-      setFilters({
+      // Пока стартовая загрузка ждала справочник стран (234 записи по сети),
+      // вход на шаг с точками мог уже положить СВЕЖИЙ словарь категорий мимо
+      // кэшей: словарь фильтров при этом мог прийти мгновенно из HTTP-кэша.
+      // Полная замена откатила бы свежие категории к устаревшим, поэтому более
+      // новую ревизию не трогаем.
+      const pointCatsRefreshedWhileLoading =
+        pointCatsRevisionRef.current !== pointCatsRevisionAtStart;
+
+      setFilters(prev => ({
         categories: normalizedCategories,
         transports: normalizedTransports,
         companions: normalizedCompanions,
         complexity: normalizedComplexity,
         month: normalizedMonth,
         over_nights_stay: normalizedOvernights,
-        categoryTravelAddress: normalizedCategoryTravelAddress,
+        categoryTravelAddress: pointCatsRefreshedWhileLoading
+          ? prev.categoryTravelAddress
+          : normalizedCategoryTravelAddress,
         countries: normalizedCountries,
-      });
+      }));
       
       loadedRef.current = true;
     } catch (err) {
@@ -320,16 +340,30 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
     }
   }, [beginLoading, endLoading]);
 
-  const refetchPointCategories = useCallback(async () => {
+  /**
+   * Догрузка словаря категорий точек.
+   *
+   * `force` обходит и TTL-кэш `api/miscOptimized`, и HTTP-кэш браузера: категории
+   * заводятся в админке во время работы автора, а прод отдаёт словарю два
+   * Cache-Control и браузер держит ответ 30 минут (BE-задача #1436). `silent`
+   * не трогает общий `isLoading`, чтобы обновление уже показанного списка не
+   * дёргало скелет поля стран.
+   */
+  const refetchPointCategories = useCallback(async (
+    refetchOptions?: { force?: boolean; silent?: boolean },
+  ) => {
     const refetchState = refetchStateRef.current;
     if (refetchState.inFlight) return;
+
+    const silent = refetchOptions?.silent === true;
+    const force = refetchOptions?.force === true;
 
     refetchState.inFlight = true;
     refetchState.step = currentStep || null;
 
     try {
-      beginLoading();
-      const filtersData = await fetchFiltersOptimized();
+      if (!silent) beginLoading();
+      const filtersData = await fetchFiltersOptimized(force ? { force: true } : undefined);
 
       if (!mountedRef.current) return;
 
@@ -337,6 +371,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
         filtersData?.categoryTravelAddress || []
       );
 
+      pointCatsRevisionRef.current += 1;
       setFilters(prev => ({
         ...prev,
         categoryTravelAddress: normalizedCategoryTravelAddress,
@@ -344,7 +379,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
     } catch (err) {
       console.error('Error refetching point categories:', err);
     } finally {
-      endLoading();
+      if (!silent) endLoading();
       refetchState.inFlight = false;
     }
   }, [currentStep, beginLoading, endLoading]);
@@ -375,6 +410,12 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
     }
   }, [loadOnMount, loadFilters]);
 
+  // Вход на шаг с точками = момент, когда автор выбирает категории точек.
+  // Раньше догрузка стояла под условием «список пуст», а стартовый стейт
+  // `initFilters()` уже содержит фолбэк-категории, поэтому она не выполнялась
+  // никогда и новая категория из админки не появлялась до истечения HTTP-кэша.
+  // Теперь на каждый вход тянем словарь мимо кэшей, но не чаще раза в минуту —
+  // это и есть TTL, который прод задумывал для браузера (nginx `max-age=60`).
   useEffect(() => {
     const isPointStep = currentStep === 2 || currentStep === 3;
 
@@ -383,13 +424,25 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       return;
     }
 
+    if (triedPointCatsRef.current === currentStep) return;
+
+    // Вход на шаг отмечаем ДО троттлинга: иначе шаг, пропущенный по окну в 60
+    // секунд, оставался бы «непосещённым», а следующий возврат на предыдущий
+    // шаг навсегда упирался бы в ранний выход выше и словарь не обновлялся бы
+    // уже никогда.
+    triedPointCatsRef.current = currentStep;
+
     const hasPointCats =
       !!filters?.categoryTravelAddress && filters.categoryTravelAddress.length > 0;
+    const now = Date.now();
+    const throttled =
+      hasPointCats && now - lastPointCatsForcedAtRef.current < POINT_CATEGORIES_REFRESH_INTERVAL;
 
-    if (hasPointCats || triedPointCatsRef.current === currentStep) return;
+    if (throttled) return;
 
-    triedPointCatsRef.current = currentStep;
-    refetchPointCategories();
+    lastPointCatsForcedAtRef.current = now;
+    // Список уже показан — обновляем молча, без спиннера.
+    refetchPointCategories({ force: true, silent: hasPointCats });
   }, [currentStep, filters?.categoryTravelAddress, refetchPointCategories]);
 
   useEffect(() => {

@@ -195,6 +195,168 @@ describe('useTravelFilters', () => {
     expect(mockFetchFilters).toHaveBeenCalledTimes(1);
   });
 
+  // Регресс: догрузка категорий точек стояла под условием «список пуст», а
+  // стартовый `initFilters()` уже содержит фолбэк-категории — условие не
+  // выполнялось никогда, и категория, заведённая в админке, не появлялась в
+  // редакторе точки, пока не истечёт HTTP-кэш браузера (до 30 минут).
+  it('refreshes point categories past the caches on every entry to the point step', async () => {
+    mockFetchFilters.mockResolvedValue({
+      categories: [{ id: 1, name: 'Горы' }],
+      categoryTravelAddress: [{ id: 4, name: 'Достопримечательность' }],
+    });
+    mockFetchAllCountries.mockResolvedValue([]);
+
+    const { result, rerender } = renderHook(
+      ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
+      { initialProps: { step: 1 } },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mockFetchFilters).toHaveBeenCalledTimes(1);
+    expect(mockFetchFilters).toHaveBeenLastCalledWith();
+
+    mockFetchFilters.mockResolvedValue({
+      categories: [{ id: 1, name: 'Горы' }],
+      categoryTravelAddress: [
+        { id: 4, name: 'Достопримечательность' },
+        { id: 227, name: 'Индустриальное наследие' },
+      ],
+    });
+
+    await act(async () => {
+      rerender({ step: 2 });
+    });
+
+    expect(mockFetchFilters).toHaveBeenCalledTimes(2);
+    expect(mockFetchFilters).toHaveBeenLastCalledWith({ force: true });
+    await waitFor(() =>
+      expect(result.current.filters.categoryTravelAddress).toEqual([
+        { id: '4', name: 'Достопримечательность' },
+        { id: '227', name: 'Индустриальное наследие' },
+      ]),
+    );
+  });
+
+  it('keeps the point-step refresh silent and throttled to one network call per minute', async () => {
+    mockFetchFilters.mockResolvedValue({
+      categories: [],
+      categoryTravelAddress: [{ id: 4, name: 'Достопримечательность' }],
+    });
+    mockFetchAllCountries.mockResolvedValue([]);
+
+    const { result, rerender } = renderHook(
+      ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
+      { initialProps: { step: 1 } },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let resolveRefresh: (value: unknown) => void = () => {};
+    mockFetchFilters.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveRefresh = resolve; }),
+    );
+
+    await act(async () => {
+      rerender({ step: 2 });
+    });
+
+    // Список уже показан — обновление молчаливое, скелет поля стран не мигает.
+    expect(result.current.isLoading).toBe(false);
+
+    await act(async () => {
+      resolveRefresh({ categories: [], categoryTravelAddress: [{ id: 4, name: 'Достопримечательность' }] });
+    });
+
+    expect(mockFetchFilters).toHaveBeenCalledTimes(2);
+
+    // Переход 2 → 3 внутри минуты не выпускает второй запрос.
+    await act(async () => {
+      rerender({ step: 3 });
+    });
+    expect(mockFetchFilters).toHaveBeenCalledTimes(2);
+  });
+
+  // Регресс: стартовая загрузка заканчивалась полной заменой стейта и могла
+  // приехать ПОЗЖЕ принудительной догрузки (словарь фильтров отдаётся из
+  // HTTP-кэша мгновенно, справочник стран идёт по сети), откатывая свежие
+  // категории обратно к устаревшим.
+  it('does not let the slower initial load overwrite freshly refetched point categories', async () => {
+    // Стран за шаг просят двое: стартовый loadFilters и догрузка стран на шаге
+    // 2, поэтому держим все резолверы и отпускаем их разом.
+    const countryResolvers: Array<(value: unknown) => void> = [];
+    mockFetchAllCountries.mockImplementation(
+      () => new Promise((resolve) => { countryResolvers.push(resolve); }),
+    );
+    mockFetchFilters.mockImplementation((opts?: { force?: boolean }) =>
+      Promise.resolve({
+        categories: [{ id: 1, name: 'Горы' }],
+        categoryTravelAddress: opts?.force
+          ? [
+              { id: 4, name: 'Достопримечательность' },
+              { id: 227, name: 'Индустриальное наследие' },
+            ]
+          : [{ id: 4, name: 'Достопримечательность' }],
+      }),
+    );
+
+    const { result } = renderHook(() => useTravelFilters({ currentStep: 2 }));
+
+    await waitFor(() =>
+      expect(result.current.filters.categoryTravelAddress).toEqual([
+        { id: '4', name: 'Достопримечательность' },
+        { id: '227', name: 'Индустриальное наследие' },
+      ]),
+    );
+
+    await act(async () => {
+      countryResolvers.forEach((resolve) => resolve([{ country_id: 5, title_ru: 'Польша' }]));
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.filters.countries).toEqual([
+      expect.objectContaining({ country_id: '5', title_ru: 'Польша' }),
+    ]);
+    expect(result.current.filters.categoryTravelAddress).toEqual([
+      { id: '4', name: 'Достопримечательность' },
+      { id: '227', name: 'Индустриальное наследие' },
+    ]);
+  });
+
+  // Регресс: шаг, пропущенный по окну троттлинга, оставался «непосещённым», и
+  // возврат на него навсегда упирался в ранний выход — словарь переставал
+  // обновляться вообще.
+  it('refreshes again on returning to a point step once the throttle window has passed', async () => {
+    const nowSpy = jest.spyOn(Date, 'now');
+    let now = 1_000_000;
+    nowSpy.mockImplementation(() => now);
+
+    mockFetchFilters.mockResolvedValue({
+      categories: [],
+      categoryTravelAddress: [{ id: 4, name: 'Достопримечательность' }],
+    });
+    mockFetchAllCountries.mockResolvedValue([]);
+
+    const { result, rerender } = renderHook(
+      ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
+      { initialProps: { step: 1 } },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const callsAfterLoad = mockFetchFilters.mock.calls.length;
+
+    await act(async () => { rerender({ step: 2 }); });
+    expect(mockFetchFilters).toHaveBeenCalledTimes(callsAfterLoad + 1);
+
+    now += 10_000;
+    await act(async () => { rerender({ step: 3 }); });
+    expect(mockFetchFilters).toHaveBeenCalledTimes(callsAfterLoad + 1);
+
+    now += 120_000;
+    await act(async () => { rerender({ step: 2 }); });
+    expect(mockFetchFilters).toHaveBeenCalledTimes(callsAfterLoad + 2);
+    expect(mockFetchFilters).toHaveBeenLastCalledWith({ force: true });
+
+    nowSpy.mockRestore();
+  });
+
   it('refetchCountries refreshes only the countries slice', async () => {
     mockFetchFilters.mockResolvedValue({
       categories: [{ id: 1, name: 'Горы' }],

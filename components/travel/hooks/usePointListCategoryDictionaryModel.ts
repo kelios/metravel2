@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as ReactQuery from '@tanstack/react-query';
 
-import { fetchFiltersOptimized } from '@/api/miscOptimized';
-import { queryKeys } from '@/queryKeys';
+import {
+  fetchPointCategoryDictionary,
+  pointCategoryDictionaryQueryKey,
+} from '@/utils/pointCategoryDictionaryQuery';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import {
   CategoryDictionaryItem,
   createCategoryNameToIdsMap,
-  normalizeCategoryDictionary,
 } from '@/utils/userPointsCategories';
 
 export function usePointListCategoryDictionaryModel() {
@@ -20,11 +21,8 @@ export function usePointListCategoryDictionaryModel() {
   if (typeof queryRunner === 'function') {
     try {
       const queryResult = queryRunner<CategoryDictionaryItem[]>({
-        queryKey: queryKeys.filters(),
-        queryFn: async () => {
-          const data = await fetchFiltersOptimized();
-          return normalizeCategoryDictionary(data.categoryTravelAddress);
-        },
+        queryKey: pointCategoryDictionaryQueryKey(),
+        queryFn: fetchPointCategoryDictionary,
         ...queryConfigs.static,
         select: (data) => (Array.isArray(data) ? data : []),
       });
@@ -39,11 +37,9 @@ export function usePointListCategoryDictionaryModel() {
     let active = true;
     const loadDictionary = async () => {
       try {
-        const data = await fetchFiltersOptimized();
+        const dictionary = await fetchPointCategoryDictionary();
         if (active) {
-          setSiteCategoryDictionaryFallback(
-            normalizeCategoryDictionary(data.categoryTravelAddress),
-          );
+          setSiteCategoryDictionaryFallback(dictionary);
         }
       } catch {
         if (active) setSiteCategoryDictionaryFallback([]);

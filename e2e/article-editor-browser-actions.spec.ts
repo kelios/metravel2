@@ -221,7 +221,7 @@ test.describe('ArticleEditor browser actions', () => {
     await expect(editor).toContainText(text);
   });
 
-  test('opens the saved draft detail inside the SPA instead of a new document tab', async ({ page }) => {
+  test('opens the saved travel in a new tab and keeps the editor tab open', async ({ page }) => {
     await mockDraftDetail(page);
 
     await page.getByTestId('travel-wizard-save').click({ force: true });
@@ -230,12 +230,22 @@ test.describe('ArticleEditor browser actions', () => {
       { timeout: 20_000 },
     );
 
-    const pageCountBeforePreview = page.context().pages().length;
+    const editorUrl = page.url();
     await page.getByTestId('travel-wizard-more').click({ force: true });
+    const newTabPromise = page.context().waitForEvent('page', { timeout: 20_000 });
     await page.getByRole('menuitem', { name: 'Открыть путешествие' }).click({ force: true });
 
-    await expect(page).toHaveURL(/\/travels\/7100(?:[?#]|$)/, { timeout: 20_000 });
-    expect(page.context().pages()).toHaveLength(pageCountBeforePreview);
+    // Вкладка открывается на `about:blank` в стеке клика и переезжает на адрес
+    // путешествия только после успешного сохранения — ждём именно перехода.
+    const newTab = await newTabPromise;
+    await newTab.waitForURL(/\/travels\/[^/]+$/, { timeout: 20_000 });
+
+    // Адрес новой вкладки строится по слагу, а не по числовому id: свежий запрос
+    // документа резолвит сервер, и id для него — 404. Слаг генерируется из
+    // названия («E2E Article Editor» из beforeEach) плюс случайный хвост.
+    expect(new URL(newTab.url()).pathname).toMatch(/^\/travels\/e2e-article-editor-[a-z0-9]{4}$/);
+    expect(page.url()).toBe(editorUrl);
+    await newTab.close();
   });
 
   test('opens anchor modal and confirms insertion flow', async ({ page }) => {

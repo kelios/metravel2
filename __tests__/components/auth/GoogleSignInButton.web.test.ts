@@ -4,9 +4,18 @@
 
 import {
   getGoogleAvailability,
+  measureGsiRenderedWidth,
   resolveGsiOverflowWidth,
   resolveGsiRenderWidth,
 } from '@/components/auth/GoogleSignInButton.web'
+
+const fakeContainer = (scrollWidth: number, childWidths: number[]) =>
+  ({
+    scrollWidth,
+    children: childWidths.map((width) => ({
+      getBoundingClientRect: () => ({ width }),
+    })),
+  }) as unknown as { children: ArrayLike<Element>; scrollWidth: number }
 
 describe('GoogleSignInButton web hydration availability', () => {
   it('keeps Google enabled for SSR and the first hydration render', () => {
@@ -42,6 +51,29 @@ describe('GSI render width', () => {
     expect(resolveGsiRenderWidth(0)).toBeNull()
     expect(resolveGsiRenderWidth(Number.NaN)).toBeNull()
   })
+
+  it('floors a fractional column instead of overflowing it', () => {
+    // Rounding 294.6 up to 295 asks GSI for more than the column has; the host
+    // answers a sub-pixel overflow with a horizontal scrollbar.
+    expect(resolveGsiRenderWidth(294.6)).toBe(294)
+  })
+})
+
+describe('GSI rendered width measurement', () => {
+  it('ignores GSI\'s permanently zero-width first child', () => {
+    // GSI injects its hidden credential holder first; reading only
+    // firstElementChild reports "not painted" and the compensation never fires.
+    expect(measureGsiRenderedWidth(fakeContainer(305, [0, 305]))).toBe(305)
+  })
+
+  it('prefers a fractional child box over the rounded scrollWidth', () => {
+    // scrollWidth rounds down to 304 and would leave the button clipped by a pixel.
+    expect(measureGsiRenderedWidth(fakeContainer(304, [0, 304.4]))).toBe(305)
+  })
+
+  it('reports nothing while the container is empty', () => {
+    expect(measureGsiRenderedWidth(fakeContainer(0, []))).toBeNull()
+  })
 })
 
 describe('GSI overflow width', () => {
@@ -52,6 +84,12 @@ describe('GSI overflow width', () => {
 
   it('stays unset when the button fit the requested width', () => {
     expect(resolveGsiOverflowWidth(295, 295)).toBeNull()
+  })
+
+  it('ignores a measurement wider than GSI can render', () => {
+    // An absolutely positioned helper node inflates scrollWidth; widening the
+    // container to that would push the button clean out of the card.
+    expect(resolveGsiOverflowWidth(9999, 295)).toBeNull()
   })
 
   it('documents why the comparison takes the requested width, not the container', () => {

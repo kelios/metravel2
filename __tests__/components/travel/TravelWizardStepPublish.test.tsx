@@ -88,7 +88,7 @@ const baseFormData: TravelFormData = {
   travelAddressCountry: [],
   travelAddressAdress: [],
   travelAddressCategory: [],
-  coordsMeTravel: [{ lat: 0, lng: 0, categories: [] }],
+  coordsMeTravel: [{ lat: 0, lng: 0, categories: ['1'], address: 'Rynek 5' }],
   thumbs200ForCollectionArr: [],
   travelImageThumbUrlArr: [],
   travelImageAddress: [],
@@ -276,6 +276,82 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     expect(onFinish).not.toHaveBeenCalled();
+  });
+
+  // Прод, travel/619: у трёх точек из восьми не было категорий. Бэк отвечал 400
+  // со структурой `{coordsMeTravel: [{index, id, address, field, message}]}`, FE
+  // показывал безликую ошибку, и пользователь не мог понять, почему не публикуется.
+  // Теперь блокируем до запроса и называем проблемные точки.
+  it('blocks the admin approve when a route point has no category', async () => {
+    const onManualSave = jest.fn().mockResolvedValue(undefined);
+    const setFormData = jest.fn();
+
+    const adminData: TravelFormData = {
+      ...baseFormData,
+      publish: true,
+      moderation: false,
+      coordsMeTravel: [
+        { lat: 0, lng: 0, categories: ['1'], address: 'Rynek 5' },
+        { lat: 1, lng: 1, categories: [], address: 'Zabrzańska 5 \u00b7 Бытом' },
+      ],
+    };
+
+    const { getByText, findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={adminData}
+        setFormData={setFormData}
+        isSuperAdmin={true}
+        onManualSave={onManualSave}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByText('Одобрить модерацию'));
+    });
+
+    expect(onManualSave).not.toHaveBeenCalled();
+    expect(setFormData).not.toHaveBeenCalled();
+    expect(await findByText(/Zabrzańska 5/)).toBeTruthy();
+    // Чек-лист готовности показывает пункт ещё до нажатия — пользователь видит
+    // недостающие категории точек, не дожидаясь отказа.
+    expect(getByText('Категории у точек маршрута')).toBeTruthy();
+  });
+
+  it('blocks the user moderation submit when a route point has no category', async () => {
+    const onManualSave = jest.fn().mockResolvedValue(undefined);
+    const setFormData = jest.fn();
+
+    const { getByText, getByTestId, findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{
+          ...baseFormData,
+          coordsMeTravel: [{ lat: 0, lng: 0, categories: [], address: 'Rynek 5' }],
+        }}
+        setFormData={setFormData}
+        isSuperAdmin={false}
+        onManualSave={onManualSave}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    const moderationRow = getByText('Отправить на модерацию').parent?.parent;
+    if (!moderationRow) throw new Error('Moderation option row not found');
+    await act(async () => {
+      fireEvent.press(moderationRow);
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('primary-button'));
+    });
+
+    expect(onManualSave).not.toHaveBeenCalled();
+    expect(await findByText(/Rynek 5/)).toBeTruthy();
   });
 
   it('shows admin panel when publish=true and moderation=false', () => {

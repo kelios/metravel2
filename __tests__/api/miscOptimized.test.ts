@@ -135,6 +135,78 @@ describe('miscOptimized', () => {
     expect(fetchFiltersCountry).toHaveBeenCalledTimes(1);
   });
 
+  // Категории точек заводятся в админке во время работы автора, а прод отдаёт
+  // словарю два Cache-Control (Django 1800 + nginx 60) — браузер берёт первый и
+  // держит ответ 30 минут. Поэтому «обновить словарь» обязано пробивать оба
+  // кэша: и TTL-кэш этого модуля, и HTTP-кэш браузера.
+  it('force bypasses the TTL cache and asks the network layer for a fresh response', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    fetchFilters.mockResolvedValue(filters);
+
+    await fetchFiltersOptimized();
+    expect(fetchFilters).toHaveBeenCalledTimes(1);
+    expect(fetchFilters).toHaveBeenLastCalledWith({ throwOnError: true });
+
+    // Обычный вызов внутри TTL сети не касается.
+    await fetchFiltersOptimized();
+    expect(fetchFilters).toHaveBeenCalledTimes(1);
+
+    const refreshed = { ...filters, categoryTravelAddress: [{ id: 227, name: 'Индустриальное наследие' }] };
+    fetchFilters.mockResolvedValue(refreshed);
+
+    await expect(fetchFiltersOptimized({ force: true })).resolves.toEqual(refreshed);
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+    expect(fetchFilters).toHaveBeenLastCalledWith({ throwOnError: true, forceRefresh: true });
+
+    // Свежий ответ становится новым содержимым кэша.
+    await expect(fetchFiltersOptimized()).resolves.toEqual(refreshed);
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not let a forced refresh join a plain in-flight request', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    let resolvePlain: (value: unknown) => void = () => {};
+    fetchFilters.mockImplementationOnce(
+      () => new Promise((resolve) => { resolvePlain = resolve; }),
+    );
+    const refreshed = { ...filters, categoryTravelAddress: [{ id: 227, name: 'Индустриальное наследие' }] };
+    fetchFilters.mockResolvedValue(refreshed);
+
+    const plain = fetchFiltersOptimized();
+    const forced = fetchFiltersOptimized({ force: true });
+
+    resolvePlain(filters);
+
+    await expect(plain).resolves.toEqual(filters);
+    await expect(forced).resolves.toEqual(refreshed);
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+  });
+
+  // Когда по одному ключу летят двое, TTL-кэш обязан остаться за тем, кто
+  // стартовал позже: иначе обычный запрос, отданный из 30-минутного HTTP-кэша
+  // браузера, ложится поверх свежего forced-ответа и живёт ещё 10 минут.
+  it('keeps the newer forced response in the TTL cache when a stale plain request finishes last', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    const refreshed = { ...filters, categoryTravelAddress: [{ id: 227, name: 'Индустриальное наследие' }] };
+
+    let resolvePlain: (value: unknown) => void = () => {};
+    fetchFilters.mockImplementationOnce(
+      () => new Promise((resolve) => { resolvePlain = resolve; }),
+    );
+    fetchFilters.mockResolvedValueOnce(refreshed);
+
+    const plain = fetchFiltersOptimized();
+    const forced = fetchFiltersOptimized({ force: true });
+
+    await expect(forced).resolves.toEqual(refreshed);
+    resolvePlain(filters);
+    await expect(plain).resolves.toEqual(filters);
+
+    // Следующий обычный вызов читает кэш — там должен лежать forced-ответ.
+    await expect(fetchFiltersOptimized()).resolves.toEqual(refreshed);
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+  });
+
   // Отмена одного потребителя не должна рвать общий запрос остальным: префетч и
   // экран делят один in-flight промис.
   it('detaches an aborted filters caller without cancelling the shared request', async () => {

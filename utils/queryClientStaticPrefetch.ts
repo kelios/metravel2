@@ -1,7 +1,10 @@
 import type { QueryClient } from '@tanstack/react-query'
 
-import { fetchFiltersOptimized } from '@/api/miscOptimized'
-import { queryKeys } from '@/queryKeys'
+import {
+  fetchPointCategoryDictionary,
+  pointCategoryDictionaryQueryKey,
+} from '@/utils/pointCategoryDictionaryQuery'
+import { queryConfigs } from '@/utils/reactQueryConfig'
 
 // Маршрутный предикат живёт в отдельном модуле без импортов api/*: его тянет
 // корневой layout, а этот файл грузится динамически, чтобы словари фильтров не
@@ -22,9 +25,13 @@ export { shouldPrefetchTravelStatics } from '@/utils/staticPrefetchRoutes'
  * так что отдельный запрос был чистым расходом канала.
  */
 export function runStaticQueryClientPrefetch(client: QueryClient) {
-  client.prefetchQuery({
-    queryKey: queryKeys.filters(),
-    queryFn: () => fetchFiltersOptimized(),
-    staleTime: 30 * 60 * 1000,
+  // Промис возвращается только чтобы прогрев можно было дождаться в тестах:
+  // вызывающий код по-прежнему запускает его fire-and-forget на idle.
+  // Ключ, загрузчик и TTL — общие с потребителем (`pointCategoryDictionaryQuery`,
+  // `queryConfigs.static`), иначе под одним ключом снова разъедутся формы.
+  return client.prefetchQuery({
+    queryKey: pointCategoryDictionaryQueryKey(),
+    queryFn: fetchPointCategoryDictionary,
+    staleTime: queryConfigs.static.staleTime,
   })
 }

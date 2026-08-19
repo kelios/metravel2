@@ -6,12 +6,26 @@ import type { FilterCountryOption, FilterDictionaries, Filters } from '@/types/t
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
+  sequence: number;
 }
 const filtersCache = new Map<string, CacheEntry<unknown>>();
 const cacheTimeout = 10 * 60 * 1000; // 10 минут
 
-// In-flight promise cache для дедупликации параллельных запросов
-const inFlightRequests = new Map<string, Promise<unknown>>();
+// Порядковый номер запроса. Нужен, когда по одному ключу летят двое (обычный и
+// forced): TTL-кэш должен остаться за тем, кто СТАРТОВАЛ позже, а не за тем, кто
+// случайно финишировал последним — иначе ответ из HTTP-кэша браузера ложится
+// поверх свежего.
+let requestSequence = 0;
+
+// In-flight promise cache для дедупликации параллельных запросов.
+// `forced` помечает запрос, который идёт мимо HTTP-кэша браузера: обычный вызов
+// вправе присоединиться к любому летящему запросу, а forced — только к такому же
+// forced, иначе «обновить словарь» вернуло бы тот самый устаревший ответ.
+interface InFlightEntry<T> {
+  promise: Promise<T>;
+  forced: boolean;
+}
+const inFlightRequests = new Map<string, InFlightEntry<unknown>>();
 
 /** Ошибка отмены в формате, который проверяют потребители (`error.name === 'AbortError'`). */
 const createAbortError = (): Error => {
@@ -62,26 +76,35 @@ const detachOnAbort = <T>(promise: Promise<T>, signal?: AbortSignal): Promise<T>
  */
 const loadCachedDictionary = <T>(
   cacheKey: string,
-  loader: () => Promise<T>,
-  options?: { signal?: AbortSignal },
+  loader: (loaderOptions: { forceRefresh: boolean }) => Promise<T>,
+  options?: { signal?: AbortSignal; force?: boolean },
 ): Promise<T> => {
+  const force = options?.force === true;
   const cached = filtersCache.get(cacheKey) as CacheEntry<T> | undefined;
-  if (cached && (Date.now() - cached.timestamp) < cacheTimeout) {
+  if (!force && cached && (Date.now() - cached.timestamp) < cacheTimeout) {
     return Promise.resolve(cached.data);
   }
 
-  const inFlight = inFlightRequests.get(cacheKey) as Promise<T> | undefined;
-  if (inFlight) {
-    return detachOnAbort(inFlight, options?.signal);
+  const inFlight = inFlightRequests.get(cacheKey) as InFlightEntry<T> | undefined;
+  if (inFlight && (!force || inFlight.forced)) {
+    return detachOnAbort(inFlight.promise, options?.signal);
   }
 
-  const request = (async () => {
+  const entry: InFlightEntry<T> = { promise: undefined as unknown as Promise<T>, forced: force };
+  inFlightRequests.set(cacheKey, entry as InFlightEntry<unknown>);
+  const sequence = ++requestSequence;
+
+  entry.promise = (async () => {
     try {
-      const data = await loader();
-      filtersCache.set(cacheKey, {
-        data,
-        timestamp: Date.now(),
-      });
+      const data = await loader({ forceRefresh: force });
+      const current = filtersCache.get(cacheKey);
+      if (!current || current.sequence < sequence) {
+        filtersCache.set(cacheKey, {
+          data,
+          timestamp: Date.now(),
+          sequence,
+        });
+      }
       return data;
     } catch (error) {
       // Протухший кэш лучше пустого ответа: словари меняются раз в месяцы.
@@ -91,19 +114,32 @@ const loadCachedDictionary = <T>(
       }
       throw error;
     } finally {
-      inFlightRequests.delete(cacheKey);
+      // Снимаем только СВОЮ запись: forced-запрос мог перезаписать чужую.
+      if (inFlightRequests.get(cacheKey) === (entry as InFlightEntry<unknown>)) {
+        inFlightRequests.delete(cacheKey);
+      }
     }
   })();
 
-  inFlightRequests.set(cacheKey, request);
-  return detachOnAbort(request, options?.signal);
+  return detachOnAbort(entry.promise, options?.signal);
 };
 
-/** Словарь фильтров путешествия (`/getFiltersTravel/`). */
+/**
+ * Словарь фильтров путешествия (`/getFiltersTravel/`).
+ *
+ * `force` нужен визарду: категории точек заводятся в админке во время работы
+ * автора, а без обхода TTL-кэша и HTTP-кэша браузера новая категория не видна
+ * до получаса (см. `fetchFilters` и BE-задачу #1436).
+ */
 export const fetchFiltersOptimized = (
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; force?: boolean },
 ): Promise<FilterDictionaries> =>
-  loadCachedDictionary('filters', () => fetchFilters({ throwOnError: true }), options);
+  loadCachedDictionary(
+    'filters',
+    ({ forceRefresh }) =>
+      fetchFilters({ throwOnError: true, ...(forceRefresh ? { forceRefresh: true } : null) }),
+    options,
+  );
 
 /**
  * Страны для фильтра поиска (`/countriesforsearch/`) — только те, по которым

@@ -13,6 +13,7 @@ import type {
   TripVisibility,
 } from '@/api/plannedTrips';
 import {
+  PREVIEW_DIRECT_PROVIDER,
   PREVIEW_PROVIDER,
   PREVIEW_SCHEMATIC_PROVIDER,
 } from '@/components/trips/planning/tripRoutingProviders';
@@ -155,7 +156,7 @@ export function routeSummaryLine(summary: RouteSummary | null): string {
 
 export function isRouteApproximate(routingState: RoutingState | null | undefined): boolean {
   if (!routingState) return false;
-  return routingState.provider === 'direct' || routingState.isOptimal === false;
+  return routingState.provider === PREVIEW_DIRECT_PROVIDER || routingState.isOptimal === false;
 }
 
 export function routingStateLabel(routingState: RoutingState | null | undefined): string {

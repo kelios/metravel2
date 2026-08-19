@@ -45,6 +45,7 @@ export const errorsGenerated1 = {
   "utils.formValidation.foto_ili_oblozhka_eb83919e": "Zdjęcie lub okładka",
   "utils.formValidation.god_dolzhen_byt_ot_1900_do_value1_60553492": "Rok musi mieścić się w przedziale od 1900 do {{value1}}",
   "utils.formValidation.kategorii_minimum_odna_2425408b": "Kategorie (przynajmniej jedna)",
+  "utils.formValidation.kategorii_u_tochek_marshruta_ne_zadany_u_val_9c3a17e2": "Kategorie punktów trasy — brak dla: {{value1}}",
   "utils.formValidation.kolichestvo_dney_dolzhno_byt_ot_1_do_365_bb7a91c9": "Liczba dni musi wynosić od 1 do 365",
   "utils.formValidation.kolichestvo_lyudey_dolzhno_byt_ot_1_do_100_638b929a": "Liczba osób musi wynosić od 1 do 100",
   "utils.formValidation.marshrut_minimum_odna_tochka_4def96d5": "Trasa (co najmniej jeden punkt)",

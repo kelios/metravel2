@@ -57,13 +57,42 @@ const LOOPBACK_WEB_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
  * Width to ask GSI for: the column width, clamped to the range GSI honours.
  * Returns null while the host has no layout yet (measuring 0 would pin the
  * button to the 200px floor and leave it narrower than the Facebook button).
+ *
+ * Floors rather than rounds: half a pixel more than the column has is already
+ * an overflow, and the host used to answer an overflow with a horizontal
+ * scrollbar. Feed it a fractional rect width, not the rounded `clientWidth`.
  */
 export function resolveGsiRenderWidth(availableWidth: number): number | null {
     if (!Number.isFinite(availableWidth) || availableWidth <= 0) return null;
     return Math.max(
         GSI_MIN_SUPPORTED_WIDTH,
-        Math.min(GSI_MAX_SUPPORTED_WIDTH, Math.round(availableWidth)),
+        Math.min(GSI_MAX_SUPPORTED_WIDTH, Math.floor(availableWidth)),
     );
+}
+
+/**
+ * Width GSI actually drew inside the container, or null while it has not
+ * painted yet.
+ *
+ * Takes the widest of `scrollWidth` and the direct children's boxes instead of
+ * trusting `firstElementChild`: GSI's first child is its hidden credential
+ * holder, which stays zero-width forever, so reading only that child reports
+ * "nothing painted" for every real overflow and the compensation below never
+ * fires. `scrollWidth` alone is not enough either — it rounds to an integer and
+ * lands a pixel short of a fractional button width, which still clips.
+ */
+export function measureGsiRenderedWidth(container: {
+    children: ArrayLike<Element>;
+    scrollWidth: number;
+}): number | null {
+    if (container.children.length === 0) return null;
+    let widest = container.scrollWidth;
+    for (let i = 0; i < container.children.length; i += 1) {
+        const width = container.children[i].getBoundingClientRect().width;
+        if (Number.isFinite(width) && width > widest) widest = width;
+    }
+    const rendered = Math.ceil(widest);
+    return rendered > 0 ? rendered : null;
 }
 
 /**
@@ -76,6 +105,11 @@ export function resolveGsiOverflowWidth(
     renderedWidth: number,
     requestedWidth: number,
 ): number | null {
+    // Wider than GSI can render at all is not the button: an absolutely
+    // positioned helper node inflating scrollWidth. Widening the container to
+    // that would push the button out of the card; overflowX:hidden already
+    // keeps such a stray node invisible.
+    if (renderedWidth > GSI_MAX_SUPPORTED_WIDTH) return null;
     return renderedWidth > requestedWidth ? renderedWidth : null;
 }
 
@@ -236,7 +270,9 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
         if (!host) return;
 
         const measure = () => {
-            const next = resolveGsiRenderWidth(host.clientWidth);
+            // Rect width, not clientWidth: clientWidth rounds a fractional column
+            // up, and asking GSI for that rounded width overflows the host.
+            const next = resolveGsiRenderWidth(host.getBoundingClientRect().width);
             if (next != null) setRenderWidth(next);
         };
         measure();
@@ -302,14 +338,12 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
         if (!container) return;
 
         const check = () => {
-            // Only a drawn, laid-out button is evidence. A missing or zero-width
-            // child means GSI has not painted yet (the render effect clears the
-            // container before each re-render); treating that as "fits" would drop
-            // an already-applied compensation and flash the clipped button.
-            const child = container.firstElementChild;
-            if (!child) return;
-            const rendered = Math.ceil(child.getBoundingClientRect().width);
-            if (rendered <= 0) return;
+            // Only a drawn, laid-out button is evidence. An empty container means
+            // GSI has not painted yet (the render effect clears it before each
+            // re-render); treating that as "fits" would drop an already-applied
+            // compensation and flash the clipped button.
+            const rendered = measureGsiRenderedWidth(container);
+            if (rendered == null) return;
             setOverflowWidth(resolveGsiOverflowWidth(rendered, renderWidth));
         };
         check();
@@ -366,6 +400,12 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
                     display: isGoogleLoaded && !shouldShowFallback ? 'flex' : 'none',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    // Both axes, and overflowX spelled out: `overflowY:'hidden'`
+                    // alone computes overflowX to `auto`, so any horizontal
+                    // overflow raises a real horizontal scrollbar inside the 48px
+                    // host. It eats ~15px of the height and squeezes the button
+                    // flat; a sign-in button is never meant to be scrolled.
+                    overflowX: 'hidden',
                     overflowY: 'hidden',
                     pointerEvents: disabled ? 'none' : 'auto',
                     opacity: disabled ? 0.6 : 1,

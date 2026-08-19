@@ -26,7 +26,9 @@ interface EmailSubscriptionFormProps {
 // Быстрый клиентский гейт: ловит основную массу опечаток без запроса. Он
 // заведомо слабее валидатора Django (например `a@b..c` проходит), поэтому 400 от
 // бэкенда достижим. Сообщения бэкенда приходят по-английски — на локаль их
-// переводит localizeBackendFieldError в api/backendErrors.ts.
+// переводит localizeBackendFieldError в utils/errorHelpers.ts.
+// Отказ по регулярке и отказ по 400 берут ОДИН ключ: пользователю не должно быть
+// видно, кто именно забраковал адрес, а две копии одной строки разъезжаются.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Минимальная ширина колонки с текстом обещания. Блок встраивается и в узкие
@@ -74,7 +76,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
     setConsentMissing(false)
     const trimmed = email.trim()
     if (!EMAIL_RE.test(trimmed)) {
-      setLocalError(i18nT('shared:components.common.EmailSubscriptionForm.vvedite_korrektnyy_email_03c63cf4'))
+      setLocalError(i18nT('errorsStatic:api.backendErrors.invalidEmail'))
       return
     }
     setLocalError(null)

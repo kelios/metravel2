@@ -1,6 +1,6 @@
 # Problem memory and recurrence registry
 
-Актуализировано: 2026-08-18.
+Актуализировано: 2026-08-19.
 
 Этот документ — постоянная память о системных семействах проблем MeTravel. Он
 не заменяет task board и не хранит обычный progress log. Борд остаётся
@@ -90,7 +90,7 @@ guard, падающий в CI на попытке обойти этот конт
 | --- | --- | --- |
 | P0 | Backend task history, typed relations, atomic create idempotency и active `problem_key` conflict | Board хранит текущее состояние карточки, а не жизненный цикл проблемы; duplicate обнаруживается после create. |
 | P0 | Версионированный media capability/manifest contract и observable unsupported transform | Fail-open `200 original` делает тяжёлый ответ похожим на успешную оптимизацию; feature pipelines строят разные URL. |
-| P0 | Travel `PATCH` или revision/ETag/idempotency save contract | Autosave вынужден отправлять full replace из частично hydrated state и может стереть серверные поля. |
+| P0 | Travel `PATCH` или revision/ETag/idempotency save contract (канонические `#1513` BE / `#1516` FE) | Autosave вынужден отправлять full replace из частично hydrated state: может стереть серверные поля и, как показал 19.08.2026, перегрузить прод серией полных пересборок статьи. |
 | P1 | Единый auth session bootstrap и transport policy для `401/403/CSRF` | Cookie, локальная metadata и разные fetch/upload/download wrappers расходятся. |
 | P1 | Общий bottom-chrome geometry provider | Каждый экран заново складывает dock, safe area и keyboard offsets. |
 | P1 | Один routing adapter + typed provider failures/coordinates | Server canonical path, direct providers и legacy store bridge существуют одновременно. |
@@ -281,6 +281,33 @@ guard, падающий в CI на попытке обойти этот конт
 - **Последняя проверка:** 2026-08-13; локальная реализация `#1427`, production
   acceptance требует отдельной явной deploy/recovery команды.
 
+### OPS-NGINX-COPY-001 — правка конфига, которую никто не деплоит
+
+- **Инвариант:** конфигурация nginx меняется только в
+  `deploy/prod/nginx/nginx.conf` backend-репозитория. `nginx/nginx.conf` во
+  frontend-репозитории — read-only копия: её не читает ни один скрипт, и правка
+  в ней не меняет прод ни на байт.
+- **Surface/owner:** backend/ops; frontend workspace read-only, изменение
+  оформляется задачей `area=back` с точным диффом директив.
+- **Цепочка:** `#472 (wont_do)` → `#966 (done)` → `#1508`.
+- **Подтверждённая причина recurrence:** файл в репозитории выглядит как
+  конфигурация и правится как конфигурация, а прод берёт правила из другого
+  репозитория. 2026-06-21 так «включили» `emrldtp.cc`; 2026-08-19 — домены Apple
+  для веб-входа (`d45b2429`, фича `#1506`). В обоих случаях правка попала в
+  `main`, а прод-политика осталась прежней. Прежние фиксы закрывали конкретный
+  домен, а не свойство «копию можно принять за источник правды».
+- **Controls:** правило в `docs/RULES.md` → «Nginx config ownership (mandatory)»
+  и `AGENTS.md` §1; баннер в шапке `nginx/nginx.conf` с источником и датой
+  снимка; сам файл приведён к снимку backend `origin/master`, чтобы в копии не
+  оставалось правок, которых нет на проде; факт проверяется не чтением файла, а
+  `curl -sI https://metravel.by/` и
+  `git -C ../metravel-backend show origin/master:deploy/prod/nginx/nginx.conf`.
+- **Решение для новой жалобы:** фронтовой фиче не хватает правила nginx —
+  `create-linked` к `#1508` с точным диффом директив. Правка локальной копии
+  вместо задачи бэку — рецидив этой семьи, а не выполненная работа.
+- **Последняя проверка:** 2026-08-19; `#1508` в `todo`, прод-CSP без доменов
+  Apple (проверено `curl -sI https://metravel.by/`).
+
 ### ROUTING-ORS-001 — degraded routing must not look healthy
 
 - **Инвариант:** нормальный production probe возвращает `provider: ors`,
@@ -381,10 +408,32 @@ guard, падающий в CI на попытке обойти этот конт
   явному removal plan.
 - **Controls:** destructive-save integration test с неполной hydration, stale
   revision conflict, repeated/background save и сохранностью media/markers.
+- **Observed recurrence 2026-08-19:** второй симптом того же корня — не потеря
+  данных, а перегрузка. При редактировании описания `travel/619` автосейв выдал
+  ~20 `PUT /travels/upsert/` подряд, каждый убит клиентом на ~5,05 с
+  (`(canceled)` / nginx `499`) и при этом полностью выполнен сервером; прод ушёл
+  в `CPU sustained high: 100%, load1=1.70 on 1 core`. Усилители: дебаунс 5 с при
+  сохранении 11–12 с; безусловный `abort()` предыдущего запроса в prod-версии
+  `useImprovedAutoSave`; `select_for_update` на строке travel, удерживаемый до
+  commit, из-за чего конкурентные сохранения одной статьи сериализуются;
+  клиентский таймаут 30 с, добавляющий повторы; предохранитель
+  `endpointLimits: { '/travels/upsert/': 120 }`, который в такой аварии не
+  срабатывает никогда. Дополнительно вскрыто: `TravelTextVersion` пишется на
+  каждый тик автосейва при retention 10, из-за чего история версий покрывает
+  около минуты и заявленная защита от затирания не выполняется.
+- **Канонический контракт (заведён 2026-08-19):** BE `#1513` (разделение
+  content-save и full-replace), BE `#1514` (горизонт версий текста), BE `#1515`
+  (стоимость структурного сохранения); FE `#1511` (единственность летящего
+  сохранения и запрет самоотмены), FE `#1516` (переход на узкий content-save,
+  blocked by `#1513`), FE `#1517` (устранение дремлющих движков и честный
+  статус). Спецификация поведения:
+  `openspec/changes/stabilize-travel-article-autosave/`.
 - **Решение для новой жалобы:** потеря серверных полей при save — `reuse`/`reopen`
-  canonical save-contract task; dialog/key lifecycle остаётся
-  `WIZARD-DRAFT-001`, а не смешивается с API replace semantics.
-- **Последняя проверка:** 2026-07-28; structural backend contract остаётся.
+  canonical save-contract task `#1513`; перегрузка/шторм сохранений — `#1511`;
+  dialog/key lifecycle остаётся `WIZARD-DRAFT-001`, а не смешивается с API
+  replace semantics.
+- **Последняя проверка:** 2026-08-19; recurrence подтверждён, канонический
+  structural backend contract заведён на борде.
 
 ### SEO-SSR-001 — validated slug must serve exact static document
 

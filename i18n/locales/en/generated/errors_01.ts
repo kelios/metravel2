@@ -45,6 +45,7 @@ export const errorsGenerated1 = {
   "utils.formValidation.foto_ili_oblozhka_eb83919e": "Photo or cover",
   "utils.formValidation.god_dolzhen_byt_ot_1900_do_value1_60553492": "The year must be from 1900 to {{value1}}",
   "utils.formValidation.kategorii_minimum_odna_2425408b": "Categories (at least one)",
+  "utils.formValidation.kategorii_u_tochek_marshruta_ne_zadany_u_val_9c3a17e2": "Route point categories — missing for: {{value1}}",
   "utils.formValidation.kolichestvo_dney_dolzhno_byt_ot_1_do_365_bb7a91c9": "The number of days must be from 1 to 365",
   "utils.formValidation.kolichestvo_lyudey_dolzhno_byt_ot_1_do_100_638b929a": "The number of people must be from 1 to 100",
   "utils.formValidation.marshrut_minimum_odna_tochka_4def96d5": "Route (at least one point)",

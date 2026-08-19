@@ -40,6 +40,11 @@ Apple в Android-приложении отсутствует осознанно:
 До #1506 на вебе кнопки Apple не было, и такой пользователь не мог войти на
 сайт вообще — а при «Скрыть мою почту» не работал и сброс пароля.
 
+Оболочка кнопки общая с Facebook — `components/auth/SocialAuthButton.web.tsx`:
+геометрия, состояния и accessibility живут одним экземпляром, снаружи приходят
+только бренд-цвета и логотип. Google под неё не заводится: его кнопку рисует
+сам GSI.
+
 Механизм: `components/auth/AppleSignInButton.web.tsx` подключает Apple JS SDK
 тегом `<script>` при монтировании формы и открывает popup
 (`AppleID.auth.signIn()`). Popup отдаёт `id_token` прямо в JS, поэтому дальше
@@ -73,9 +78,17 @@ Apple в Android-приложении отсутствует осознанно:
 прежними. Это конфигурационный гейт того же вида, что
 `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED`, а не заглушка.
 
-CSP: в `nginx/nginx.conf` добавлены `https://appleid.cdn-apple.com` в
-`script-src` и `https://appleid.apple.com` в `connect-src` и `frame-src`. Без
-деплоя nginx SDK не загрузится.
+CSP (обязательное условие, ещё не выполнено): прод-политика должна разрешать
+`https://appleid.cdn-apple.com` в `script-src` и `https://appleid.apple.com` в
+`connect-src` и `frame-src` — иначе браузер не загрузит Apple JS SDK и кнопка
+на проде не сработает. Конфигурация nginx backend-owned: правится только в
+`deploy/prod/nginx/nginx.conf` backend-репозитория, задача `#1508`. Файл
+`nginx/nginx.conf` в этом репозитории — read-only копия, его правка на прод не
+влияет (`docs/RULES.md` → «Nginx config ownership»). Проверка факта:
+
+```bash
+curl -sI https://metravel.by/ | tr ';' '\n' | grep -iE 'script-src|connect-src|frame-src'
+```
 
 ### Что должен сделать владелец в Apple Developer
 
@@ -109,8 +122,9 @@ CSP: в `nginx/nginx.conf` добавлены `https://appleid.cdn-apple.com` в
 
 ## Проверка
 
-- unit: `__tests__/components/auth/AppleSignInButton.web.test.ts`,
-  `__tests__/api/appleAuth.test.ts`;
+- unit: `__tests__/components/auth/AppleSignInButton.web.test.ts` (чистые
+  функции), `__tests__/components/auth/AppleSignInButton.web.render.test.tsx`
+  (поведение кнопки целиком), `__tests__/api/appleAuth.test.ts`;
 - браузер: desktop 1280 и mobile 390 — кнопка в соц-блоке `/login` и
   `/registration`, порядок Apple → Google → Facebook, тёмная и светлая темы;
 - end-to-end (требует шагов владельца выше и серверного audience): аккаунт,

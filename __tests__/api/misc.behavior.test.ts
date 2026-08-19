@@ -393,6 +393,35 @@ describe('api/misc', () => {
     expect(mockSafeJsonParse).toHaveBeenCalledWith(expect.anything())
   })
 
+  // Словарь правится в админке во время работы автора, поэтому «обновить» обязано
+  // уходить мимо клиентского кэша: на web это `cache: 'reload'`, на native (где
+  // RequestInit.cache игнорируется) — уникальный query-параметр. Обычный вызов
+  // остаётся кэшируемым.
+  it('fetchFilters bypasses the client cache only when forceRefresh is set', async () => {
+    const payload = {
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      transports: [],
+      sortings: [],
+    }
+    mockFetchWithTimeout.mockResolvedValue({ ok: true })
+    mockSafeJsonParse.mockResolvedValue(payload)
+
+    await fetchFilters({ throwOnError: true })
+    const [plainUrl, plainInit] = mockFetchWithTimeout.mock.calls.at(-1) as [string, RequestInit]
+    expect(plainUrl).not.toContain('_fresh=')
+    expect(plainInit.cache).toBeUndefined()
+
+    await fetchFilters({ throwOnError: true, forceRefresh: true })
+    const [freshUrl, freshInit] = mockFetchWithTimeout.mock.calls.at(-1) as [string, RequestInit]
+    expect(freshUrl).toMatch(/[?&]_fresh=\d+/)
+    expect(freshInit.cache).toBe('reload')
+  })
+
   it('fetchFilters propagates invalid JSON, malformed dictionaries, and 502 with throwOnError', async () => {
     mockFetchWithTimeout.mockResolvedValueOnce({ ok: true })
     mockSafeJsonParse.mockRejectedValueOnce(new Error('Invalid JSON'))

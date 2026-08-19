@@ -100,14 +100,38 @@ describe('splitTripPlanLinkedText', () => {
     })
   })
 
+  it('does not link a bare scheme or a bare www prefix', () => {
+    for (const value of ['Наш сайт www. metravel.by', 'Ссылка https:// пока нет', 'Пиши http:// сюда']) {
+      const links = splitTripPlanLinkedText(value).filter((segment) => segment.type === 'link')
+      expect(links.every((link) => /^https?:\/\/[^/]+\.[^/]/.test(link.url))).toBe(true)
+      expect(links.map((link) => link.url)).not.toContain('https://www/')
+    }
+    expect(resolveTripPlanLink('www')).toBeNull()
+    expect(resolveTripPlanLink('https://')).toBeNull()
+  })
+
+  // Вики-адреса со скобкой — обычный случай в описании поездки; слепая срезка
+  // хвостовой пунктуации уводила такую ссылку на 404.
+  it('keeps a closing bracket that belongs to the url and drops a sentence one', () => {
+    expect(splitTripPlanLinkedText('Смотри https://ru.wikipedia.org/wiki/Braslav_(lake) там')[1]).toMatchObject({
+      url: 'https://ru.wikipedia.org/wiki/Braslav_(lake)',
+    })
+    const segments = splitTripPlanLinkedText('Ночёвка (см. https://example.com/camp) рядом')
+    expect(segments.find((segment) => segment.type === 'link')).toMatchObject({
+      url: 'https://example.com/camp',
+    })
+    expect(segments.map((segment) => (segment.type === 'text' ? segment.text : '')).join('')).toContain(')')
+  })
+
   // Регрессия на катастрофический откат: склеенная строка из латиницы и точек
-  // раньше разбиралась секундами и вешала поток на вводе описания.
+  // раньше разбиралась секундами и вешала поток на вводе описания. Вход и порог
+  // подобраны так, чтобы до-фиксная форма регулярки (>1 с на этом входе) падала.
   it('parses a long dotted token without backtracking blowup', () => {
-    const value = `Заметка ${'ab.'.repeat(4000)}cd конец`
+    const value = `Заметка ${'ab.'.repeat(8000)}cd конец`
     const startedAt = process.hrtime.bigint()
     splitTripPlanLinkedText(value)
     const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1e6
-    expect(elapsedMs).toBeLessThan(2000)
+    expect(elapsedMs).toBeLessThan(300)
   })
 
   it('rejects unsafe schemes instead of rendering them as links', () => {

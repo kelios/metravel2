@@ -1,4 +1,4 @@
-import { localizeBackendFieldError } from '@/api/backendErrors'
+import { localizeBackendFieldError } from '@/utils/errorHelpers'
 import { i18n } from '@/i18n'
 
 describe('localizeBackendFieldError', () => {

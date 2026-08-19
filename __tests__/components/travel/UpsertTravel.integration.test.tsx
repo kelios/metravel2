@@ -289,7 +289,7 @@ describe('Travel wizard publish step (integration)', () => {
     const { getByTestId, onFinish } = renderPublishStep({
       countries: ['1'],
       categories: ['city'],
-      coordsMeTravel: [{ lat: 1, lng: 2 } as any],
+      coordsMeTravel: [{ lat: 1, lng: 2, categories: ['1'] } as any],
       moderation: false,
       publish: false,
       travel_image_thumb_small_url: 'https://example.com/cover.jpg',
@@ -316,7 +316,7 @@ describe('Travel wizard publish step (integration)', () => {
     const formData: TravelFormData = {
       ...baseFormData,
       categories: [],
-      coordsMeTravel: [{ lat: 1, lng: 2 } as any],
+      coordsMeTravel: [{ lat: 1, lng: 2, categories: ['1'] } as any],
       travel_image_thumb_small_url: 'https://example.com/cover.jpg',
     } as any;
 

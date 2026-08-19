@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -19,6 +19,7 @@ import WizardStepRouter, {
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { openWebWindow } from '@/utils/externalLinks';
 import {
   trackContentCreateAuthGateViewed,
   trackContentCreateCtaClicked,
@@ -424,23 +425,62 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   ]);
 
   const publicTravelId = controller.formData?.id;
+  const publicTravelSlug = controller.formData?.slug;
   const handleManualSave = controller.handleManualSave;
+  const openPublicInFlightRef = useRef(false);
   const handleOpenPublic = useCallback(async () => {
     if (!publicTravelId) return;
+    // Повторный клик, пока идёт сохранение, открыл бы ВТОРУЮ пустую вкладку:
+    // сам сейв дедуплицируется и вернёт тот же промис, а вкладок останется две.
+    if (openPublicInFlightRef.current) return;
+    openPublicInFlightRef.current = true;
 
+    // Вкладку открываем СИНХРОННО, ещё в стеке обработчика клика: после `await`
+    // сохранения браузер считает `window.open` программным и глушит его попап-
+    // блокировщиком — правка сохранялась, а вкладка не появлялась. Пустую вкладку
+    // потом либо переводим на адрес путешествия, либо закрываем, если сейв упал.
+    const pendingTab =
+      Platform.OS === 'web' ? openWebWindow('about:blank', { windowFeatures: '' }) : null;
+
+    let savedData: Awaited<ReturnType<typeof handleManualSave>>;
     try {
-      const savedData = await handleManualSave();
-      if (!savedData) return;
+      savedData = await handleManualSave();
     } catch {
       // handleManualSave already reports the concrete error and keeps the editor open.
+      pendingTab?.close();
+      return;
+    } finally {
+      openPublicInFlightRef.current = false;
+    }
+    if (!savedData) {
+      pendingTab?.close();
       return;
     }
 
-    // Keep draft preview inside the running SPA. A fresh document request for an
-    // unpublished `/travels/:id` can legitimately be rejected by the public web
-    // entry point before the authenticated React app gets a chance to load it.
-    router.push(`/travels/${encodeURIComponent(String(publicTravelId))}` as any);
-  }, [handleManualSave, publicTravelId, router]);
+    const travelId = String(savedData.id ?? publicTravelId);
+
+    // Пользователь мог закрыть пустую вкладку, пока шёл сейв: переход в неё тогда
+    // молча провалится, и действие осталось бы вообще без навигации — в этом
+    // случае уходим в ту же ветку, что и native/заблокированный попап.
+    if (pendingTab && !pendingTab.closed) {
+      // Свежий запрос документа резолвит сервер, а он знает только слаг —
+      // числовой id отдаёт 404. Внутри SPA всё наоборот, поэтому адрес для
+      // новой вкладки строится отдельно от адреса для router.push.
+      const slug = savedData.slug?.trim() || publicTravelSlug?.trim();
+      try {
+        // `replace`, а не `assign`: `about:blank` не должен оставаться в истории
+        // новой вкладки и перехватывать её кнопку «Назад».
+        pendingTab.location.replace(`/travels/${encodeURIComponent(slug || travelId)}`);
+        return;
+      } catch {
+        // Окно уже недоступно — падаем в SPA-навигацию ниже.
+      }
+    }
+
+    // Native и заблокированный попап: остаёмся в текущем SPA-стеке и ходим по
+    // id — он резолвится у автора и для неопубликованного черновика.
+    router.push(`/travels/${encodeURIComponent(travelId)}` as any);
+  }, [handleManualSave, publicTravelId, publicTravelSlug, router]);
 
   const handleSessionLogin = useCallback(async () => {
     const draftSaved = await controller.draftRecovery.flushDraft();

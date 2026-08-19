@@ -16,6 +16,7 @@ import type {
 import type { ParsedRoutePreview } from '@/types/travelRoutes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
+  hasEngineAnswer,
   isPreviewDegraded,
   isRoutableTransport,
   previewElevation,
@@ -142,9 +143,10 @@ export function useTripRoutePreview({ route, transport, enabled }: Options): Tri
       active,
       schematic: false,
       transportMode: transport as RoutableTripTransport,
-      // «Строим маршрут» держится и на время дебаунса: для пользователя это один
-      // и тот же процесс, а не пауза, во время которой ничего не происходит.
-      loading: !fresh || fresh.loading,
+      // «Строим маршрут» держится и на время дебаунса — своего и внутреннего
+      // дебаунса движка: для пользователя это один процесс, а не пауза, во
+      // время которой блок статуса моргает и исчезает.
+      loading: !hasEngineAnswer(fresh) || Boolean(fresh?.loading),
       degraded: isPreviewDegraded(fresh),
       geometry: previewGeometry(fresh),
       summary: previewSummary(fresh, route),

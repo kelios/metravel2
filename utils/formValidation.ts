@@ -42,6 +42,7 @@ export type ModerationIssueKey =
   | 'countries'
   | 'categories'
   | 'route'
+  | 'pointCategories'
   | 'photos';
 
 export interface ModerationIssue {
@@ -119,6 +120,51 @@ export function validateStep(
  *  - Маршрут (минимум одна точка: coordsMeTravel или markers)
  *  - Фото (обложка или ≥1 фото в галерее)
  */
+export interface UncategorizedRoutePoint {
+  /** Номер точки для человека: 1-based позиция в маршруте. */
+  number: number;
+  address: string;
+}
+
+/**
+ * Точки маршрута без категорий. Ровно тот же критерий, что у бэка:
+ * пустой/отсутствующий `categories` у элемента `coordsMeTravel`.
+ */
+export function getPointsWithoutCategories(
+  markers: unknown[] | null | undefined,
+): UncategorizedRoutePoint[] {
+  if (!Array.isArray(markers)) return [];
+
+  const result: UncategorizedRoutePoint[] = [];
+  markers.forEach((marker, index) => {
+    if (!marker || typeof marker !== 'object') return;
+    const record = marker as Record<string, unknown>;
+    const categories = record.categories;
+    const hasCategories = Array.isArray(categories) && categories.length > 0;
+    if (hasCategories) return;
+
+    const rawAddress = typeof record.address === 'string' ? record.address.trim() : '';
+    result.push({
+      number: index + 1,
+      // Полный адрес точки — это склейка «объект · улица · город · регион · страна».
+      // Для сообщения хватает первого сегмента: он и есть название места.
+      address: rawAddress ? rawAddress.split('\u00b7')[0].trim() : '',
+    });
+  });
+
+  return result;
+}
+
+const POINT_LIST_LIMIT = 3;
+
+function formatPointList(points: UncategorizedRoutePoint[]): string {
+  const head = points.slice(0, POINT_LIST_LIMIT).map((point) => (
+    point.address ? `#${point.number} ${point.address}` : `#${point.number}`
+  ));
+  const rest = points.length - head.length;
+  return rest > 0 ? `${head.join(', ')} +${rest}` : head.join(', ');
+}
+
 export function getModerationErrors(
   formData: TravelFormLike,
   markers?: unknown[] | null,
@@ -180,6 +226,24 @@ export function getModerationIssues(
     missing.push({
       key: 'route',
       label: i18nT('errors:utils.formValidation.marshrut_minimum_odna_tochka_4def96d5'),
+      targetStep: 2,
+      anchorId: 'markers-list-root',
+    });
+  }
+
+  // Бэк (`_validate_coordinate_categories_for_moderation`, upsert_travel_service.py)
+  // отклоняет отправку на модерацию/одобрение с 400, если хотя бы у одной точки
+  // маршрута пустые `categories`, и возвращает МАССИВ объектов
+  // `{coordsMeTravel: [{index, id, address, field, message}]}` — из него FE не умел
+  // собрать текст, и пользователь видел безликое «Ошибка запроса». Проверяем это
+  // на клиенте до запроса и называем конкретные точки.
+  const uncategorizedPoints = getPointsWithoutCategories(markersSource);
+  if (!markersError && uncategorizedPoints.length > 0) {
+    missing.push({
+      key: 'pointCategories',
+      label: i18nT('errors:utils.formValidation.kategorii_u_tochek_marshruta_ne_zadany_u_val_9c3a17e2', {
+        value1: formatPointList(uncategorizedPoints),
+      }),
       targetStep: 2,
       anchorId: 'markers-list-root',
     });

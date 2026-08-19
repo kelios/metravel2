@@ -255,7 +255,7 @@ describe('RouteBuilder elevation profile', () => {
     expect(mockRefreshElevation).toHaveBeenCalledTimes(3)
   })
 
-  it('hides the profile while the route has unsaved edits', async () => {
+  it('hides the profile once an unsaved point changes the road', async () => {
     mockElevationData = makeElevation()
     const { findByTestId, getByTestId, queryByTestId } = render(
       <RouteBuilder trip={makeTrip()} />,
@@ -265,10 +265,30 @@ describe('RouteBuilder elevation profile', () => {
 
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Poronin')
+    fireEvent.changeText(getByTestId('route-builder-lat'), '49.339')
+    fireEvent.changeText(getByTestId('route-builder-lng'), '20.009')
     fireEvent.press(getByTestId('route-builder-add'))
 
     expect(queryByTestId('route-elevation-profile')).toBeNull()
     expect(getByTestId('route-map-geometry').props.children).toBe('0')
+  })
+
+  // #1490: серверные высоты и геометрия описывают дорогу, а дорога зависит от
+  // координат. Точка без координат на карту не попадает и обесценить их не может.
+  it('keeps the profile when the added point has no coordinates', async () => {
+    mockElevationData = makeElevation()
+    const { findByTestId, getByTestId, queryByTestId } = render(
+      <RouteBuilder trip={makeTrip()} />,
+    )
+
+    await findByTestId('route-elevation-profile')
+
+    fireEvent.press(getByTestId('route-builder-type-custom'))
+    fireEvent.changeText(getByTestId('route-builder-name'), 'Кофе по дороге')
+    fireEvent.press(getByTestId('route-builder-add'))
+
+    expect(queryByTestId('route-elevation-profile')).not.toBeNull()
+    expect(getByTestId('route-map-geometry').props.children).toBe('3')
   })
 
   it('never recalculates for a participant who cannot own the route', () => {

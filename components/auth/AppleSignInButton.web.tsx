@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { AppleCredentialPayload } from '@/api/appleAuth';
 import type { AppleSignInButtonProps } from '@/components/auth/appleSignInTypes';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import SocialAuthButton, {
+    SocialAuthButtonPlaceholder,
+} from '@/components/auth/SocialAuthButton.web';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useTheme } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
@@ -33,9 +34,6 @@ import { translate as i18nT } from '@/i18n';
  * - `client_id` уходит на сервер: у веба свой audience (Services ID), отличный
  *   от bundle ID приложения, и сервер по нему выбирает ключ проверки.
  */
-
-/** Один touch-таргет с Google/Facebook в том же соц-блоке. */
-const APPLE_BUTTON_HEIGHT = 48;
 
 const SDK_SCRIPT_ID = 'apple-signin-sdk';
 
@@ -188,7 +186,7 @@ export default function AppleSignInButton({
     const config = useMemo(getAppleWebConfig, []);
     const configured = isAppleWebConfigured(config);
     const renderState = getAppleRenderState(configured, hydrationReady);
-    const styles = useMemo(() => createStyles(isDark), [isDark]);
+    const palette = getAppleButtonPalette(isDark);
     const [ready, setReady] = useState(false);
     const [loading, setLoading] = useState(false);
     const stateRef = useRef('');
@@ -268,9 +266,7 @@ export default function AppleSignInButton({
     }, [config.clientId, config.redirectUri, configured]);
 
     if (renderState === 'hidden') return null;
-    if (renderState === 'hydration-placeholder') {
-        return <View style={styles.hydrationPlaceholder} />;
-    }
+    if (renderState === 'hydration-placeholder') return <SocialAuthButtonPlaceholder />;
 
     const isDisabled = Boolean(disabled || loading || !ready);
     const idleLabel = mode === 'sign_up'
@@ -304,30 +300,17 @@ export default function AppleSignInButton({
     };
 
     return (
-        <Pressable
-            onPress={handlePress}
-            disabled={isDisabled}
-            accessibilityRole="button"
+        <SocialAuthButton
+            label={loading ? i18nT('authStatic:apple.loading') : idleLabel}
             accessibilityLabel={idleLabel}
-            accessibilityState={{ disabled: isDisabled, busy: loading }}
+            icon={<AppleLogo color={palette.foreground} />}
+            backgroundColor={palette.background}
+            foregroundColor={palette.foreground}
+            onPress={handlePress}
             testID="apple-sign-in-button"
-            style={({ pressed }) => [
-                styles.button,
-                isDisabled && styles.buttonDisabled,
-                pressed && styles.buttonPressed,
-            ]}
-        >
-            <View style={styles.content}>
-                {loading ? (
-                    <ActivityIndicator size="small" color={styles.text.color as string} />
-                ) : (
-                    <AppleLogo color={styles.text.color as string} />
-                )}
-                <Text style={styles.text}>
-                    {loading ? i18nT('authStatic:apple.loading') : idleLabel}
-                </Text>
-            </View>
-        </Pressable>
+            loading={loading}
+            disabled={isDisabled}
+        />
     );
 }
 
@@ -336,43 +319,7 @@ export default function AppleSignInButton({
  * контрастен теме: чёрная на светлой, белая на тёмной. Токены темы здесь не
  * годятся, цвета кнопки заданы брендбуком Apple и не тянутся за палитрой.
  */
-const createStyles = (isDark: boolean) => {
-    const background = isDark ? '#FFFFFF' : '#000000';
-    const foreground = isDark ? '#000000' : '#FFFFFF';
-    return StyleSheet.create({
-        hydrationPlaceholder: {
-            width: '100%',
-            minHeight: APPLE_BUTTON_HEIGHT,
-            borderRadius: DESIGN_TOKENS.radii.lg,
-        },
-        button: {
-            width: '100%',
-            minHeight: APPLE_BUTTON_HEIGHT,
-            borderRadius: DESIGN_TOKENS.radii.lg,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: background,
-        },
-        buttonDisabled: {
-            opacity: 0.55,
-        },
-        buttonPressed: {
-            opacity: 0.88,
-            transform: [{ scale: 0.99 }],
-        },
-        content: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            paddingHorizontal: 16,
-        },
-        text: {
-            color: foreground,
-            fontSize: 16,
-            fontWeight: '600',
-            flexShrink: 1,
-            textAlign: 'center',
-        },
-    });
-};
+export const getAppleButtonPalette = (isDark: boolean) => ({
+    background: isDark ? '#FFFFFF' : '#000000',
+    foreground: isDark ? '#000000' : '#FFFFFF',
+});

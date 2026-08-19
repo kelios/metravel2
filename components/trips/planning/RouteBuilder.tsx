@@ -29,6 +29,9 @@ import TripRoutePreviewEngine from '@/components/trips/planning/TripRoutePreview
 import {
   ROUTE_TRANSPORTS,
   isRoutableTransport,
+  previewPointsKey,
+  previewStopsCount,
+  routablePreviewPoints,
 } from '@/components/trips/planning/tripRoutePreview';
 import { useTripRoutePreview } from '@/components/trips/planning/useTripRoutePreview';
 import {
@@ -212,30 +215,38 @@ function RouteBuilder({ trip }: Props) {
   const [routeRebuildError, setRouteRebuildError] = useState<string | null>(null);
 
   const savedRouteSignature = useMemo(() => routeSignature(trip.route), [trip.route]);
-  const routeMatchesSaved = useMemo(
-    () => routeSignature(route) === savedRouteSignature,
-    [route, savedRouteSignature],
+  // Геометрия, сводка и высоты зависят только от координат и транспорта: правка
+  // названия или описания точки их не обесценивает. Поэтому серверные данные
+  // держатся за координатной сигнатурой, а не за полной — иначе опечатка в
+  // названии снимала бы с карты сохранённую дорогу и жгла запрос к ORS (#1490).
+  const savedRouteShape = useMemo(
+    () => previewPointsKey(routablePreviewPoints(trip.route), trip.transport),
+    [trip.route, trip.transport],
+  );
+  const routeShapeMatchesSaved = useMemo(
+    () => previewPointsKey(routablePreviewPoints(route), trip.transport) === savedRouteShape,
+    [route, savedRouteShape, trip.transport],
   );
   const routableSavedPoints = useMemo(
     () => trip.route.filter((point) => point.coordinates).length,
     [trip.route],
   );
 
-  // Профиль высот описывает сохранённый маршрут, поэтому во время несохранённых
-  // правок он скрыт вместе с серверной геометрией.
+  // Профиль высот описывает сохранённый маршрут, поэтому пока точки не совпадают
+  // с серверными, он скрыт вместе с серверной геометрией.
   const routeElevationQuery = useTripRouteElevation(trip.id, {
-    enabled: routeMatchesSaved && routableSavedPoints >= 2,
+    enabled: routeShapeMatchesSaved && routableSavedPoints >= 2,
   });
   const refreshRouteElevation = useRefreshTripRouteElevation();
   const refreshRouteElevationMutate = refreshRouteElevation.mutate;
-  const routeElevation = routeMatchesSaved ? routeElevationQuery.data ?? null : null;
+  const routeElevation = routeShapeMatchesSaved ? routeElevationQuery.data ?? null : null;
 
   // Сохранение маршрута кладёт сводку без высот; один пересчёт ORS на маршрут
   // возвращает ascent/descent и 3D-полилинию. Прямую линию не пересчитываем —
   // у провайдера для неё высот нет.
   const elevationRefreshKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!trip.isOwner || !routeMatchesSaved) return;
+    if (!trip.isOwner || !routeShapeMatchesSaved) return;
     const elevation = routeElevationQuery.data;
     if (!elevation || elevation.preview || elevation.provider !== 'ors') return;
 
@@ -249,7 +260,7 @@ function RouteBuilder({ trip }: Props) {
   }, [
     refreshRouteElevationMutate,
     routeElevationQuery.data,
-    routeMatchesSaved,
+    routeShapeMatchesSaved,
     savedRouteSignature,
     trip.bikeType,
     trip.id,
@@ -262,16 +273,26 @@ function RouteBuilder({ trip }: Props) {
   const preview = useTripRoutePreview({
     route,
     transport: trip.transport,
-    enabled: !routeMatchesSaved,
+    enabled: !routeShapeMatchesSaved,
   });
 
   // Пересчёт ORS обнуляет route_geometry на бэке, но та же полилиния несёт линию
   // маршрута — без подстановки карта откатилась бы на прямые между точками.
-  const routeGeometry = routeMatchesSaved
+  const routeGeometry = routeShapeMatchesSaved
     ? trip.routeGeometry ?? routeElevation?.geometry ?? null
     : preview.geometry;
-  const routingState = routeMatchesSaved ? trip.routingState : preview.routingState;
-  const summary = routeMatchesSaved ? trip.routeSummary : preview.summary;
+  const routingState = routeShapeMatchesSaved ? trip.routingState : preview.routingState;
+  // Точка без координат дорогу не меняет, поэтому серверные геометрия и цифры
+  // остаются в силе — но в списке точек она есть, и счётчик остановок обязан
+  // увидеть её сразу, а не после сохранения. Формула та же, что у бэкенда
+  // (`stops_count = len(route_points)`), поэтому подмена — no-op, пока список
+  // точек совпадает с сохранённым.
+  const summaryBase = routeShapeMatchesSaved ? trip.routeSummary : preview.summary;
+  const summary = useMemo(() => {
+    if (!summaryBase) return summaryBase;
+    const stopsCount = previewStopsCount(route);
+    return summaryBase.stopsCount === stopsCount ? summaryBase : { ...summaryBase, stopsCount };
+  }, [route, summaryBase]);
 
   // #1304: скачивание живёт там же, где маршрут строится. Экспортируем то, что
   // сейчас на карте: у несохранённых правок это геометрия превью, поэтому файл
@@ -302,7 +323,7 @@ function RouteBuilder({ trip }: Props) {
     [route],
   );
 
-  const elevationPreview = routeMatchesSaved
+  const elevationPreview = routeShapeMatchesSaved
     ? routeElevation?.preview ?? null
     : preview.elevation;
 

@@ -267,20 +267,42 @@ npm run lighthouse:travel:desktop
 
 ### Nginx config ownership (mandatory)
 
-- `nginx/nginx.conf` в этом репозитории **устарел и не является источником правды**.
-  Активная конфигурация прода живёт в backend-репозитории
-  (`deploy/prod/nginx/nginx.conf`); менять nginx можно только там и только силами
-  backend-владельца. Файл в этом репо оставлен как исторический артефакт: сверяться
-  с ним при диагностике прода нельзя.
-- Backend-checkout доступен **только на чтение** (например `git -C … show`,
-  `git log`, чтение файлов по SSH на проде). Ничего в нём не менять; расхождение
-  оформляется задачей `area=back`.
-- Практический пример (инцидент #1090, 2026-07-26): `/travels/<slug>` обслуживает
-  Django-вью `public_travel_slug_view`, которая отвечает заголовком
-  `X-Accel-Redirect: /__internal/travel-shell`; внутренний URI резолвится правилами
-  backend-конфига. Поэтому блок `location ~ ^/travels/.+` из `nginx/nginx.conf` на
-  поведение прода по этому маршруту не влияет, и «починка» SEO-выдачи правкой
-  фронтового конфига невозможна.
+- Источник правды один: `deploy/prod/nginx/nginx.conf` в backend-репозитории
+  (`../metravel-backend`, branch `master`). **Любое** изменение nginx — CSP,
+  security-заголовки, кэш, редиректы, `location`, rate-limit, proxy, логи —
+  делается только там и только силами backend-владельца, через задачу
+  `area=back` на борде.
+- `nginx/nginx.conf` в этом репозитории — **read-only локальная копия**, а не
+  конфигурация. Её никто не читает и никуда не деплоит: ни `build-prod.sh`, ни
+  `build-dev.sh`, ни один скрипт или compose-файл репозитория. Правка этого
+  файла не меняет прод ни на байт и не является выполнением задачи.
+- Править локальную копию запрещено — в том числе «заодно с фичей» и в том
+  числе когда фронтовая фича без правила nginx не работает. Копия обновляется
+  только целиком, снимком из backend `origin/master`, с указанием источника и
+  даты в шапке файла.
+- Backend-checkout доступен **только на чтение** (`git -C ../metravel-backend
+  fetch`, `git -C ../metravel-backend show origin/master:<path>`, чтение файлов
+  по SSH на проде). Ничего в нём не менять.
+- Порядок, когда фронтовой фиче нужно правило nginx:
+  1. снять фактическое состояние прода read-only пробой (заголовки ответа —
+     команды ниже);
+  2. сверить с источником правды:
+     `git -C ../metravel-backend show origin/master:deploy/prod/nginx/nginx.conf`;
+  3. завести задачу `area=back` с точным диффом директив — не «поправить CSP», а
+     список: что добавить, в какую директиву, зачем, как проверить;
+  4. фронтовую задачу держать в `review`/`testing` до деплоя бэком; `blocked_by`
+     ставить только если без правила nginx нельзя дописать код (обычно можно).
+- Инцидент 2026-08-19 (из-за него правило ужесточено): веб-кнопке Sign in with
+  Apple (`#1506`) нужны `appleid.cdn-apple.com` в `script-src` и
+  `appleid.apple.com` в `connect-src`/`frame-src`. Домены дописали в локальную
+  копию (`d45b2429`) — прод их не получил, на проде кнопка упирается в CSP.
+  Правильный путь — задача бэку `#1508`.
+- Инцидент 2026-07-26 (`#1090`): `/travels/<slug>` обслуживает Django-вью
+  `public_travel_slug_view`, которая отвечает заголовком
+  `X-Accel-Redirect: /__internal/travel-shell`; внутренний URI резолвится
+  правилами backend-конфига. Поэтому блок `location ~ ^/travels/.+` из
+  `nginx/nginx.conf` на поведение прода по этому маршруту не влияет, и «починка»
+  SEO-выдачи правкой фронтового конфига невозможна.
 - Диагностический признак принадлежности маршрута: сравни заголовки ответа с
   `add_header`, объявленными во фронтовом `location`. Если прод не вернул их
   (`Cache-Control`, `Pragma`, `Expires`, `Access-Control-Allow-Origin`), запрос
@@ -288,12 +310,12 @@ npm run lighthouse:travel:desktop
 
 ```bash
 curl -sI -A Googlebot https://metravel.by/travels/<slug> | grep -iE 'cache-control|pragma|expires|access-control'
+curl -sI https://metravel.by/ | tr ';' '\n' | grep -iE 'script-src|connect-src|frame-src'
 ```
 
 - Вывод для работы: расхождение прод-поведения с `nginx/nginx.conf` — это не баг
-  фронтового конфига. Диагноз оформляется задачей `area=back`; фронтовый
-  `nginx/nginx.conf` не правится «на всякий случай» (см. также protected paths в
-  Project scope).
+  фронтового конфига и не повод его править. Диагноз оформляется задачей
+  `area=back` (см. также protected paths в Project scope).
 
 ### Production Git-tracked file immutability (mandatory)
 

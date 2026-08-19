@@ -2,7 +2,7 @@
 // #1490: до нажатия «Сохранить маршрут» конструктор обязан строить дорогу тем же
 // движком, что и /map, а не рисовать прямую и печатать оценочные цифры.
 import React from 'react'
-import { act, fireEvent, render } from '@testing-library/react-native'
+import { act, fireEvent, render, within } from '@testing-library/react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import type { UseMapRoutingResult } from '@/components/map-core/useMapRouting'
@@ -239,6 +239,8 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByText('24 км')).toBeTruthy()
     expect(queryByText('34 мин')).toBeTruthy()
     expect(queryByText('145 м')).toBeTruthy()
+    // Счётчик остановок совпадает с серверным: те же три точки — то же число.
+    expect(within(getByTestId('route-summary')).queryByText('3')).toBeTruthy()
   })
 
   it('announces a direct line with a retry instead of passing it off as a route', () => {
@@ -299,6 +301,53 @@ describe('RouteBuilder live route preview', () => {
     expect(getByTestId('route-elevation-samples').props.children).toBe('3')
   })
 
+  it('keeps the saved route when only a point label changed', () => {
+    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-edit-0'))
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Минск (старт)')
+    fireEvent.press(getByTestId('route-builder-edit-save'))
+    settleDebounce()
+
+    // Геометрия зависит от координат, а не от подписи: опечатка в названии не
+    // повод снимать сохранённую дорогу и жечь запрос к лимитированному ORS.
+    expect(queryByTestId('trip-route-preview-engine')).toBeNull()
+    expect(mockEngine.mounts).toHaveLength(0)
+    expect(getByTestId('route-map-geometry').props.children).toBe('3')
+    expect(getByTestId('route-map-provider').props.children).toBe('ors')
+  })
+
+  it('keeps showing progress until the engine actually answers', () => {
+    const { getByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
+
+    editRoute(getByTestId)
+    settleDebounce()
+
+    // Свежесмонтированный useRouting сначала отдаёт пустое состояние — свой
+    // дебаунс он ещё не отработал. Считать это готовым маршрутом нельзя.
+    deliver(engineResult({ loading: false, distance: 0, duration: 0, coords: [] }))
+
+    expect(queryByText('Построение маршрута…')).toBeTruthy()
+    expect(getByTestId('route-map-provider').props.children).toBe('none')
+  })
+
+  it('counts a coordinate-less point in the stops chip right away', () => {
+    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+
+    expect(within(getByTestId('route-summary')).queryByText('3')).toBeTruthy()
+
+    fireEvent.press(getByTestId('route-builder-type-custom'))
+    fireEvent.changeText(getByTestId('route-builder-name'), 'Кофе по дороге')
+    fireEvent.press(getByTestId('route-builder-add'))
+    settleDebounce()
+
+    // Дорога не поменялась — серверные геометрия и цифры на месте, движок молчит.
+    expect(queryByTestId('trip-route-preview-engine')).toBeNull()
+    expect(getByTestId('route-map-geometry').props.children).toBe('3')
+    // Но точка в списке уже есть, и счётчик остановок обязан её видеть.
+    expect(within(getByTestId('route-summary')).queryByText('4')).toBeTruthy()
+  })
+
   it('never auto-routes public transport and says the line is schematic', () => {
     const { getByTestId, queryByTestId, queryByText } = render(
       <RouteBuilder trip={makeTrip({ transport: 'public', routingState: null })} />,
@@ -313,6 +362,6 @@ describe('RouteBuilder live route preview', () => {
     // Остановки посчитать можно, расстояние общественным транспортом — нет.
     expect(queryByText('Схематичная линия')).toBeTruthy()
     expect(queryByTestId('route-summary-approximate')).not.toBeNull()
-    expect(queryByText('2')).toBeTruthy()
+    expect(within(getByTestId('route-summary')).queryByText('3')).toBeTruthy()
   })
 })

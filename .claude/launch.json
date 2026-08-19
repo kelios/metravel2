@@ -2,13 +2,46 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "Apple Web Verify 8123",
+      "name": "Upsert Lab Proxy 4711",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-juliasavran-Sites-metravel2-metravel2/57e4df12-f99e-491e-b842-b9d8839edddc/scratchpad/upsert-lab-proxy.js",
+        "4711",
+        "https://metravel.by",
+        "9000",
+        "http://localhost:8131"
+      ],
+      "port": 4711,
+      "autoPort": false
+    },
+    {
+      "name": "Expo Web Upsert Lab 8131",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8123\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8123\" NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_APPLE_WEB_CLIENT_ID=by.metravel.web EXPO_PUBLIC_APPLE_WEB_REDIRECT_URI=https://metravel.by/api/user/apple-web-callback/ npx expo start --web --port 8123"
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8131\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8131\" NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4711 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8131"
       ],
-      "port": 8123,
+      "port": 8131,
+      "autoPort": false
+    },
+    {
+      "name": "Apple Web Verify Shared 8124",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_APPLE_WEB_CLIENT_ID=by.metravel.web EXPO_PUBLIC_APPLE_WEB_REDIRECT_URI=https://metravel.by/api/user/apple-web-callback/ npx expo start --web --port 8124"
+      ],
+      "port": 8124,
+      "autoPort": false
+    },
+    {
+      "name": "Apple FB Gate Negative Verify 8127",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED=true EXPO_PUBLIC_META_APP_ID= npx expo start --web --port 8127"
+      ],
+      "port": 8127,
       "autoPort": false
     },
     {

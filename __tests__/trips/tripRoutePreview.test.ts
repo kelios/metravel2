@@ -86,7 +86,8 @@ describe('previewSummary', () => {
       distanceKm: 18.5,
       durationMin: 52,
       elevationGainM: 132,
-      stopsCount: 1,
+      // Точки маршрута, как их считает бэкенд (`stops_count = len(route_points)`).
+      stopsCount: 2,
       provider: 'preview',
       updatedAt: null,
     })
@@ -171,7 +172,7 @@ describe('schematicRoutingState', () => {
       distanceKm: 0,
       durationMin: 0,
       elevationGainM: 0,
-      stopsCount: 2,
+      stopsCount: 3,
       provider: 'schematic',
       updatedAt: null,
     })

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import isEqual from 'fast-deep-equal';
 
+import { isTimeoutError } from '@/api/clientErrors';
+
 interface UseImprovedAutoSaveOptions<T> {
   debounce?: number;
   onSave: (data: T, signal?: AbortSignal) => Promise<T>;
@@ -12,6 +14,13 @@ interface UseImprovedAutoSaveOptions<T> {
   enableRetry?: boolean;
   enabled?: boolean;
   isOnline?: boolean;
+  /**
+   * Сколько после клиентского таймаута фоновое сохранение считается небезопасным.
+   * Наш abort не останавливает обработку на сервере, поэтому попытка, оборванная
+   * таймаутом, ещё какое-то время реально выполняется. Новый фоновый сейв в это
+   * окно — вторая тяжёлая транзакция по той же сущности.
+   */
+  timeoutCooldown?: number;
 }
 
 type AutosaveStatus = 'idle' | 'debouncing' | 'saving' | 'saved' | 'error';
@@ -32,6 +41,15 @@ const getErrorStatus = (error: unknown): number | null => {
 
 const isRetryableSaveError = (error: Error): boolean => {
   if (error.message === 'Request aborted') {
+    return false;
+  }
+
+  // Клиентский таймаут не отменяет работу на сервере: запрос продолжает
+  // выполняться и после нашего abort. Немедленный повтор — это вторая такая же
+  // тяжёлая транзакция по той же сущности, то есть таймаут превращается в
+  // генератор дублирующих попыток. Следующая попытка уходит обычным
+  // debounce-циклом с актуальными данными, но не раньше timeoutCooldown.
+  if (isTimeoutError(error)) {
     return false;
   }
 
@@ -68,6 +86,7 @@ export function useImprovedAutoSave<T>(
     enableRetry = true,
     enabled = true,
     isOnline: networkIsOnline = true,
+    timeoutCooldown = 30000,
   } = options;
 
   const [state, setState] = useState<AutosaveState>({
@@ -86,7 +105,16 @@ export function useImprovedAutoSave<T>(
   const isOnlineRef = useRef<boolean>(networkIsOnline);
   const blockingErrorStatusRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const onlineResaveRef = useRef<(() => void) | null>(null);
+  const inFlightRef = useRef(false);
+  // Фоновый тик, пропущенный из-за летящего сохранения: после его завершения
+  // актуальные данные должны уйти одним следующим сохранением, иначе правки,
+  // сделанные во время полёта, останутся неотправленными до новой правки.
+  const pendingBackgroundSaveRef = useRef(false);
+  // До этой отметки фоновое сохранение не стартует: предыдущая попытка оборвана
+  // нашим таймаутом и, вероятно, всё ещё выполняется на сервере.
+  const serverBusyUntilRef = useRef(0);
+  const runBackgroundSaveRef = useRef<(() => void) | null>(null);
+  const scheduleBackgroundSaveRef = useRef<(() => void) | null>(null);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -101,7 +129,9 @@ export function useImprovedAutoSave<T>(
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+      inFlightRef.current = false;
     }
+    pendingBackgroundSaveRef.current = false;
   }, []);
 
   // Network status is supplied by the screen-level cross-platform source.
@@ -114,7 +144,7 @@ export function useImprovedAutoSave<T>(
         ? prev
         : { ...prev, isOnline: networkIsOnline });
     }
-    if (!wasOnline && networkIsOnline) onlineResaveRef.current?.();
+    if (!wasOnline && networkIsOnline) scheduleBackgroundSaveRef.current?.();
   }, [networkIsOnline]);
 
   // Main cleanup on unmount
@@ -131,10 +161,33 @@ export function useImprovedAutoSave<T>(
   };
 
   // Save function with retry logic
-  const performSave = useCallback(async (dataToSave: T, retryAttempt = 0): Promise<T> => {
+  const performSave = useCallback(async (
+    dataToSave: T,
+    retryAttempt = 0,
+    options?: { preempt?: boolean; notifyStart?: boolean },
+  ): Promise<T> => {
     if (!enabled) {
       return dataToSave;
     }
+
+    // Фоновый сейв НИКОГДА не обрывает уже летящий запрос. Сейв тяжёлой статьи
+    // на проде идёт дольше debounce (upsert travel/619 — 11–12 c при debounce
+    // 5 c), поэтому «отменить предыдущий и начать заново» вырождалось в
+    // бесконечный цикл: каждый запрос умирал по abort на ~5-й секунде (в сети
+    // `(canceled)`), клиент не видел ответа и стартовал следующий — при том что
+    // бэк каждую попытку всё равно дорабатывал до конца. Пропускаем тик и
+    // помечаем, что данные не отправлены: после завершения летящего сохранения
+    // они уйдут одним следующим. Право вытеснения остаётся только у явных
+    // действий автора (saveNow/retrySave) и у размонтирования экрана.
+    if (inFlightRef.current && options?.preempt !== true) {
+      pendingBackgroundSaveRef.current = true;
+      return dataToSave;
+    }
+
+    if (options?.notifyStart) {
+      onStart?.();
+    }
+
     // Отменяем предыдущее in-flight сохранение, чтобы его контроллер не осиротел
     // и устаревший результат не перетёр состояние более свежего сохранения.
     if (abortControllerRef.current) {
@@ -142,6 +195,8 @@ export function useImprovedAutoSave<T>(
     }
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    inFlightRef.current = true;
+    let saveSucceeded = false;
     // Этот вызов всё ещё актуален, только если его контроллер — текущий.
     const isCurrent = () => abortControllerRef.current === controller;
 
@@ -163,11 +218,15 @@ export function useImprovedAutoSave<T>(
         return result;
       }
 
-      // Update refs and state on success using the sent payload, чтобы
-      // не триггерить новые автосохранения из-за служебных полей (например updated_at),
-      // которые приходят только в ответе сервера.
+      // Подтверждённым считаем ОТПРАВЛЕННЫЙ payload, а не ответ сервера: иначе
+      // служебные поля ответа (например updated_at) выглядели бы как новая
+      // правка и запускали следующий автосейв.
+      // latestDataRef здесь не трогаем: он хранит последние наблюдаемые данные,
+      // и если автор печатал, пока запрос летел, они новее отправленного
+      // снимка. Затирание этой ссылки отправленным payload'ом стирало память о
+      // неотправленных правках — форма показывала «Сохранено», а последние
+      // абзацы на сервер не уходили.
       lastSavedDataRef.current = dataToSave;
-      latestDataRef.current = dataToSave;
       blockingErrorStatusRef.current = null;
 
       // ✅ FIX: Проверка монтирования перед setState
@@ -181,6 +240,7 @@ export function useImprovedAutoSave<T>(
         }));
       }
 
+      saveSucceeded = true;
       onSuccess?.(result);
       return result;
 
@@ -192,6 +252,13 @@ export function useImprovedAutoSave<T>(
       }
 
       const saveError = error instanceof Error ? error : new Error('Save failed');
+
+      if (isTimeoutError(saveError)) {
+        // Мы перестали ждать, но сервер попытку не отменял — она продолжает
+        // выполняться. Держим окно, в котором фоновое сохранение той же сущности
+        // не стартует, иначе таймаут порождает вторую параллельную транзакцию.
+        serverBusyUntilRef.current = Date.now() + timeoutCooldown;
+      }
 
       if (isAbortedSaveError(saveError)) {
         if (mountedRef.current) {
@@ -250,35 +317,88 @@ export function useImprovedAutoSave<T>(
 
       onError?.(saveError);
       throw saveError;
-    }
-  }, [onSave, onSuccess, onError, enableRetry, maxRetries, retryDelay, enabled]);
+    } finally {
+      // Снимаем флаг только за собой: если нас вытеснил более новый сейв,
+      // in-flight принадлежит уже ему.
+      if (isCurrent()) {
+        inFlightRef.current = false;
+        // Завершившийся контроллер больше никому не нужен: если оставить его,
+        // следующий сейв вызовет abort() на уже отработавшем запросе и в логах
+        // появится отмена, которой не было.
+        abortControllerRef.current = null;
 
-  // Перепланирование автосейва после возврата в онлайн: если за время оффлайна
-  // накопились несохранённые изменения, дебаунсим обычное сохранение (без дублей —
-  // если уже запланирован debounce/retry, ничего не делаем).
+        // Пока мы летели, дебаунс успел сработать вхолостую — отправляем
+        // накопленные правки одним следующим сохранением. Только после успеха:
+        // после ошибки повтором управляет retry/терминальное состояние, иначе
+        // неустранимый отказ зациклился бы на том же payload.
+        const hadPendingWork = pendingBackgroundSaveRef.current;
+        pendingBackgroundSaveRef.current = false;
+        if (hadPendingWork && saveSucceeded) {
+          scheduleBackgroundSaveRef.current?.();
+        }
+      }
+    }
+  }, [onSave, onSuccess, onError, onStart, enableRetry, maxRetries, retryDelay, enabled, timeoutCooldown]);
+
+  // Единственная точка запуска фонового сохранения. Ею пользуются все три
+  // источника — debounce-тик, возврат в онлайн и добор правок после завершения
+  // летящего сохранения, — чтобы предусловия не разъезжались по копиям.
   useEffect(() => {
-    onlineResaveRef.current = () => {
+    const runBackgroundSave = () => {
+      if (!enabled) return;
+      if (!mountedRef.current) return;
+      if (blockingErrorStatusRef.current === 401) return;
+      if (!isOnlineRef.current) return;
+      if (isEqual(latestDataRef.current, lastSavedDataRef.current)) return;
+
+      // Предыдущая попытка оборвана нашим таймаутом и, скорее всего, всё ещё
+      // выполняется на сервере. Не стартуем вторую, а переносим тик на конец
+      // окна: к этому моменту серверная работа либо завершилась, либо запрос
+      // уже потерян и повтор безопасен.
+      const cooldownLeft = serverBusyUntilRef.current - Date.now();
+      if (cooldownLeft > 0) {
+        pendingBackgroundSaveRef.current = true;
+        if (!timeoutRef.current) {
+          timeoutRef.current = setTimeout(() => {
+            timeoutRef.current = null;
+            runBackgroundSaveRef.current?.();
+          }, cooldownLeft);
+        }
+        return;
+      }
+
+      performSave(latestDataRef.current, 0, { notifyStart: true }).catch(() => {
+        // Ошибка уже отражена в состоянии через performSave.
+      });
+    };
+
+    // Отложенный запуск без сброса уже взведённого таймера: используется там,
+    // где новых правок не было (возврат в онлайн, добор после сохранения).
+    const scheduleBackgroundSave = () => {
       if (!enabled) return;
       if (!mountedRef.current) return;
       if (blockingErrorStatusRef.current === 401) return;
       if (isEqual(latestDataRef.current, lastSavedDataRef.current)) return;
       if (timeoutRef.current || retryTimeoutRef.current) return;
 
+      // Отправка ещё не подтверждена — статус не должен оставаться «Сохранено».
+      setState(prev => (prev.status === 'debouncing'
+        ? prev
+        : { ...prev, status: 'debouncing', error: null }));
+
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null;
-        if (!mountedRef.current) return;
-        if (!isOnlineRef.current) return;
-        if (isEqual(latestDataRef.current, lastSavedDataRef.current)) return;
-        onStart?.();
-        performSave(latestDataRef.current).catch(() => {
-          // Ошибка уже отражена в состоянии через performSave.
-        });
+        runBackgroundSaveRef.current?.();
       }, debounce);
     };
+
+    runBackgroundSaveRef.current = runBackgroundSave;
+    scheduleBackgroundSaveRef.current = scheduleBackgroundSave;
     return () => {
-      onlineResaveRef.current = null;
+      runBackgroundSaveRef.current = null;
+      scheduleBackgroundSaveRef.current = null;
     };
-  }, [enabled, debounce, onStart, performSave]);
+  }, [enabled, debounce, performSave]);
 
   // Упрощённый безопасный автосейв:
   // срабатывает, только если данные реально отличаются от последнего успешно сохранённого
@@ -335,27 +455,7 @@ export function useImprovedAutoSave<T>(
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
-      if (!mountedRef.current) return;
-
-      // Если к моменту срабатывания таймера данные уже совпадают с последним сохранённым,
-      // то сохранять нечего.
-      const current = latestDataRef.current;
-      if (isEqual(current, lastSavedDataRef.current)) {
-        return;
-      }
-
-      // Не сохраняем, если оффлайн.
-      if (!isOnlineRef.current) {
-        return;
-      }
-
-      // Опциональный коллбек начала сохранения.
-      onStart?.();
-
-      // Запускаем сохранение. Ошибку обрабатываем внутри performSave.
-      performSave(current).catch(() => {
-        // Ошибка уже отражена в состоянии через performSave.
-      });
+      runBackgroundSaveRef.current?.();
     }, debounce);
 
     return () => {
@@ -364,7 +464,7 @@ export function useImprovedAutoSave<T>(
         timeoutRef.current = null;
       }
     };
-  }, [data, debounce, performSave, onStart, enabled, cleanup, networkIsOnline]); // Removed hasDataChanged from dependencies
+  }, [data, debounce, performSave, enabled, cleanup, networkIsOnline]); // Removed hasDataChanged from dependencies
 
   // Manual save function
   const saveNow = useCallback(async (): Promise<T> => {
@@ -378,7 +478,7 @@ export function useImprovedAutoSave<T>(
 
     cleanup();
     blockingErrorStatusRef.current = null;
-    return performSave(data);
+    return performSave(data, 0, { preempt: true });
   }, [data, performSave, cleanup, state.isOnline, enabled]);
 
   // Reset to original data
@@ -416,7 +516,7 @@ export function useImprovedAutoSave<T>(
       throw new Error('No failed save to retry');
     }
     blockingErrorStatusRef.current = null;
-    return performSave(data);
+    return performSave(data, 0, { preempt: true });
   }, [state.status, state.error, data, performSave, enabled]);
 
   // Update baseline data (e.g., after loading from server)

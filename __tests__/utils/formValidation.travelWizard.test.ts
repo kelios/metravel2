@@ -108,12 +108,49 @@ describe('travel wizard validation', () => {
         description: 'X'.repeat(60),
         countries: ['1'],
         categories: ['city'],
-        coordsMeTravel: [{ lat: 1, lng: 2 }],
+        coordsMeTravel: [{ lat: 1, lng: 2, categories: [7] }],
         gallery: ['img'],
         travel_image_thumb_small_url: null,
       } as any, []);
 
       expect(errors).toEqual([]);
+    });
+
+    // Бэк (`_validate_coordinate_categories_for_moderation`) отвечает 400 на любую
+    // отправку на модерацию, если хоть у одной точки пустой `categories`. Раньше FE
+    // этого не знал: запрос улетал, ответ приходил массивом объектов, и пользователь
+    // видел «Ошибка запроса» без единой подсказки (прод, travel/619).
+    it('reports route points without categories and names them', () => {
+      const errors = getModerationErrors({
+        name: 'Test',
+        description: 'X'.repeat(60),
+        countries: ['1'],
+        categories: ['city'],
+        coordsMeTravel: [
+          { lat: 1, lng: 2, categories: [7], address: 'Rynek 5 \u00b7 Бытом \u00b7 Польша' },
+          { lat: 3, lng: 4, categories: [], address: 'Zabrzańska 5 \u00b7 Бытом \u00b7 Польша' },
+        ],
+        gallery: ['img'],
+        travel_image_thumb_small_url: null,
+      } as any, []);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('#2');
+      expect(errors[0]).toContain('Zabrzańska 5');
+    });
+
+    it('does not duplicate the point-categories issue when the route is empty', () => {
+      const errors = getModerationErrors({
+        name: 'Test',
+        description: 'X'.repeat(60),
+        countries: ['1'],
+        categories: ['city'],
+        coordsMeTravel: [],
+        gallery: ['img'],
+        travel_image_thumb_small_url: null,
+      } as any, []);
+
+      expect(errors).toEqual(['Маршрут (минимум одна точка)']);
     });
 
     it('treats either gallery or cover image as satisfying photos requirement', () => {
