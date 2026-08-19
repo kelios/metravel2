@@ -1,6 +1,7 @@
-import { queueAnalyticsEvent } from '@/utils/analytics';
+import { queueAnalyticsEvent, sendAnalyticsEvent } from '@/utils/analytics';
 import {
   GROWTH_FUNNEL_EVENTS,
+  trackAppDownloadClicked,
   trackFavoriteIntentGuest,
   trackArticleEditorAutosaveSucceeded,
   trackContentCreateCtaClicked,
@@ -19,15 +20,20 @@ import {
 
 jest.mock('@/utils/analytics', () => ({
   queueAnalyticsEvent: jest.fn(),
+  sendAnalyticsEvent: jest.fn(),
 }));
 
 const mockedQueueAnalyticsEvent = queueAnalyticsEvent as jest.MockedFunction<
   typeof queueAnalyticsEvent
 >;
+const mockedSendAnalyticsEvent = sendAnalyticsEvent as jest.MockedFunction<
+  typeof sendAnalyticsEvent
+>;
 
 describe('growthFunnelAnalytics', () => {
   beforeEach(() => {
     mockedQueueAnalyticsEvent.mockClear();
+    mockedSendAnalyticsEvent.mockClear();
   });
 
   it('tracks registration views with safe funnel dimensions', () => {
@@ -69,6 +75,21 @@ describe('growthFunnelAnalytics', () => {
       'travel_publish',
       'cta_register_click',
     ]);
+  });
+
+  it('sends the unified app download goal id from every install surface', () => {
+    trackAppDownloadClicked({ source: 'home_promo' });
+    trackAppDownloadClicked({ source: 'install_bar' });
+    trackAppDownloadClicked({ source: 'app_page' });
+
+    expect(GROWTH_FUNNEL_EVENTS.appDownloadClick).toBe('app_download_click');
+    expect(mockedSendAnalyticsEvent.mock.calls).toEqual([
+      ['app_download_click', { source: 'home_promo', platform: 'android' }],
+      ['app_download_click', { source: 'install_bar', platform: 'android' }],
+      ['app_download_click', { source: 'app_page', platform: 'android' }],
+    ]);
+    // Конверсионный клик уводит в Play — очередь requestIdleCallback его теряет.
+    expect(mockedQueueAnalyticsEvent).not.toHaveBeenCalled();
   });
 
   it('tracks unified register CTA clicks with the contract goal id', () => {

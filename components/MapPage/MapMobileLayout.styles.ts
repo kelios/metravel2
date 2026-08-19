@@ -1,19 +1,35 @@
 import { Platform, StyleSheet } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { LAYOUT } from '@/constants/layout'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 const MOBILE_WEB_BOTTOM_CHROME_GAP = 28
-const MOBILE_WEB_SEARCH_AREA_BOTTOM = 16
-const MOBILE_WEB_CONSENT_SEARCH_AREA_BOTTOM = 176
 const CONTROL_RADIUS = 12
 /**
- * «Искать в этой области» (по центру) и FAB «Маршрут» (справа) живут в одной
- * нижней зоне и на узких экранах перекрываются: pill ~214px по центру заезжает
- * под FAB ~130px у правого края. Поэтому pill поднимаем на высоту FAB + воздух,
- * а не двигаем по горизонтали — центр для него канонический (Google/Organic).
+ * Нижняя зона карты держит РОВНО две вещи: подпись Leaflet (прижата к низу
+ * карты, `app/global.css` → `.leaflet-bottom`) и «Искать в этой области» прямо
+ * над ней. Вход в маршрут уехал иконкой в верхний тулбар, поэтому pill больше
+ * не приходится поднимать на высоту FAB.
+ *
+ * CLEARANCE = высота блока подписи (~23px) + воздух: pill по центру (~214px)
+ * и подпись справа расходятся по горизонтали не на всех ширинах, поэтому
+ * развести их можно только по вертикали.
  */
-const ROUTE_FAB_LIFT = 56
+const MOBILE_WEB_ATTRIBUTION_BOTTOM = 8
+const MOBILE_WEB_ATTRIBUTION_CLEARANCE = 36
+const MOBILE_WEB_SEARCH_AREA_BOTTOM =
+  MOBILE_WEB_ATTRIBUTION_BOTTOM + MOBILE_WEB_ATTRIBUTION_CLEARANCE
+/**
+ * Плавающая нижняя плашка (consent-баннер, «MeTravel в приложении») публикует
+ * свой резерв в `--mt-consent-h` — и меряет его ОТ НИЗА ВЬЮПОРТА. Экран карты
+ * заканчивается на 56px выше (высота web-дока, `WEB_MOBILE_FOOTER_RESERVE_HEIGHT`),
+ * поэтому внутри карты резерв нужно уменьшить ровно на док: иначе подпись и pill
+ * поднимаются на высоту дока дважды и повисают посреди карты.
+ */
+const MOBILE_WEB_DOCK_RESERVE = LAYOUT?.tabBarHeight ?? 56
+const MOBILE_WEB_FLOATING_CHROME_LIFT =
+  `max(0px, var(--mt-consent-h, 0px) - ${MOBILE_WEB_DOCK_RESERVE}px)`
 
 type MapMobileLayoutStyleOptions = {
   isNarrow: boolean
@@ -22,29 +38,17 @@ type MapMobileLayoutStyleOptions = {
   isSheetPreview: boolean
 }
 
-/** Нижняя зона карты: FAB «Маршрут» стоит на ней, pill поиска — на ROUTE_FAB_LIFT выше. */
-export function getRouteFabBottom(
-  isWeb: boolean,
-  isNarrow: boolean,
-  consentBannerVisible = false,
-) {
-  if (isWeb && consentBannerVisible) {
-    return `max(${MOBILE_WEB_CONSENT_SEARCH_AREA_BOTTOM}px, var(--mt-consent-h, ${MOBILE_WEB_CONSENT_SEARCH_AREA_BOTTOM}px))`
-  }
+/**
+ * «Искать в этой области» — единственная кнопка нижней зоны, прижата к низу
+ * карты над подписью Leaflet. Обе поднимаются над плавающей нижней плашкой по
+ * одной и той же формуле (`app/global.css` → `.leaflet-bottom`), поэтому зазор
+ * между ними держится постоянным при любой её высоте.
+ */
+export function getSearchAreaButtonBottom(isWeb: boolean, isNarrow: boolean) {
   if (isWeb) {
-    return `calc(${MOBILE_WEB_SEARCH_AREA_BOTTOM}px + env(safe-area-inset-bottom))`
+    return `calc(${MOBILE_WEB_FLOATING_CHROME_LIFT} + ${MOBILE_WEB_SEARCH_AREA_BOTTOM}px)`
   }
   return isNarrow ? 96 : 104
-}
-
-export function getSearchAreaButtonBottom(
-  isWeb: boolean,
-  isNarrow: boolean,
-  consentBannerVisible = false,
-) {
-  const fabBottom = getRouteFabBottom(isWeb, isNarrow, consentBannerVisible)
-  if (typeof fabBottom === 'number') return fabBottom + ROUTE_FAB_LIFT
-  return `calc(${fabBottom} + ${ROUTE_FAB_LIFT}px)`
 }
 
 export const getMapMobileLayoutStyles = (
@@ -479,9 +483,9 @@ export const getMapMobileLayoutStyles = (
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     // F-49 — «Искать в этой области» — pill по центру СНИЗУ (Google/Organic
-    // Maps). Локация и список переехали в верхний icon-toolbar, поэтому снизу
-    // остаётся только этот pill — держим его на комфортной высоте над нижним
-    // доком/safe-area.
+    // Maps). Локация, список и вход в маршрут переехали в верхний icon-toolbar,
+    // поэтому снизу остаётся только этот pill — прижимаем его к низу карты,
+    // оставляя место подписи Leaflet под ним.
     searchAreaButton: {
       position: 'absolute' as const,
       alignSelf: 'center' as const,
@@ -510,46 +514,6 @@ export const getMapMobileLayoutStyles = (
     },
     searchAreaButtonText: {
       fontSize: 13,
-      fontWeight: '700' as const,
-      color: colors.textOnPrimary,
-      letterSpacing: 0.1,
-    },
-    // Вход в режим маршрута — extended FAB у правого нижнего края (конвенция
-    // Google Maps «Проложить маршрут»): основное действие карты под большим
-    // пальцем, а шапка остаётся одним рядом иконок.
-    routeFab: {
-      position: 'absolute' as const,
-      right: 12,
-      bottom: getRouteFabBottom(Platform.OS === 'web', options.isNarrow) as any,
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      gap: 8,
-      height: 48,
-      maxWidth: 200,
-      paddingHorizontal: 16,
-      borderRadius: 24,
-      backgroundColor: colors.primary,
-      zIndex: 1450,
-      ...(Platform.OS === 'web'
-        ? ({
-            boxShadow: '0 6px 18px rgba(15,23,42,0.24)',
-            cursor: 'pointer',
-          } as any)
-        : {
-            shadowColor: DESIGN_TOKENS.colors.text,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.22,
-            shadowRadius: 10,
-            elevation: 6,
-          }),
-    },
-    routeFabPressed: {
-      opacity: 0.9,
-    },
-    routeFabText: {
-      flexShrink: 1,
-      fontSize: 14,
       fontWeight: '700' as const,
       color: colors.textOnPrimary,
       letterSpacing: 0.1,

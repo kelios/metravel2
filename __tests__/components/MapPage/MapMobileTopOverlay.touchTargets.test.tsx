@@ -24,6 +24,9 @@ const RADIUS_MODE_BUTTONS = [
   'map-mobile-layers-button',
   'map-mobile-open-list',
   'map-mobile-show-all',
+  // Вход в маршрут переехал из нижнего FAB в этот же ряд — норма 48dp на него
+  // распространяется так же, как на соседей.
+  'map-mobile-route-button',
 ] as const
 
 const ROUTE_MODE_BUTTONS = [
@@ -52,6 +55,7 @@ const baseProps = {
   radiusOptions: [{ id: '50', name: '50 км' }],
   radiusValue: '50',
   onRadiusSelect: jest.fn(),
+  onEnterRoute: jest.fn(),
 } as const
 
 afterEach(cleanup)

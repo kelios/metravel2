@@ -520,6 +520,64 @@ describe('useDraftRecovery', () => {
     expect(await AsyncStorage.getItem(draftKey)).toBeNull();
   });
 
+  it('persists a pending draft on unmount instead of dropping it (#1511)', async () => {
+    // Leaving the screen mid-debounce is exactly when the local draft is the only
+    // copy: the autosave payload in flight is older than these keystrokes, and an
+    // author typing continuously restarts the 2s timer so it never fires on its own.
+    const { result, unmount } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server' } as any,
+      })
+    );
+
+    act(() => {
+      result.current.saveDraft({ name: 'typed-then-left' } as any);
+    });
+
+    unmount();
+
+    await waitFor(async () => {
+      const stored = await AsyncStorage.getItem(draftKey);
+      expect(stored).toBeTruthy();
+      expect(JSON.parse(stored as string).data).toEqual({ name: 'typed-then-left' });
+    });
+  });
+
+  it('writes nothing on unmount once a save has confirmed the data (#1511)', async () => {
+    // clearDraft nulls the pending snapshot, so a confirmed form must not
+    // resurrect a draft - and with it a false recovery prompt - on unmount.
+    const { result, unmount } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server' } as any,
+      })
+    );
+
+    act(() => {
+      result.current.saveDraft({ name: 'pending' } as any);
+    });
+
+    await act(async () => {
+      await result.current.clearDraft();
+    });
+
+    AsyncStorage.setItem.mockClear();
+    unmount();
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(draftKey)).toBeNull();
+  });
+
   it('drops the old-key draft when isNew flips to false and id appears (F-09 P2)', async () => {
     // Simulate a NEW travel that autosaved: a draft exists under `_new`, then the
     // server id is reflected in the URL so the key transitions to `_<id>`.
@@ -556,6 +614,39 @@ describe('useDraftRecovery', () => {
       expect(result.current.hasPendingDraft).toBe(false);
     });
     expect(await AsyncStorage.getItem('metravel_travel_draft_777')).toBeNull();
+  });
+
+  it('writes the unmount draft under the new key after a `_new` -> `_<id>` flip (#1511)', async () => {
+    // The unmount write must follow the key flip, not race it: landing under
+    // `_new` after the key-flip cleanup already removed that key would leave an
+    // orphan draft that the next `/travel/new` session offers as a recovery
+    // prompt containing another article's text (the F-09 class defect).
+    const { result, rerender, unmount } = renderHook(
+      (props: { travelId: string | null; isNew: boolean }) =>
+        useDraftRecovery({
+          travelId: props.travelId,
+          isNew: props.isNew,
+          enabled: true,
+          currentData: { name: 'server' } as any,
+        }),
+      { initialProps: { travelId: null as string | null, isNew: true } }
+    );
+
+    rerender({ travelId: '777', isNew: false });
+
+    act(() => {
+      result.current.saveDraft({ name: 'typed-after-flip' } as any);
+    });
+
+    unmount();
+
+    await waitFor(async () => {
+      const stored = await AsyncStorage.getItem('metravel_travel_draft_777');
+      expect(stored).toBeTruthy();
+      expect(JSON.parse(stored as string).data).toEqual({ name: 'typed-after-flip' });
+    });
+
+    expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toBeNull();
   });
 
   it('still recovers a genuine draft saved under the post-transition `_<id>` key (legit recovery preserved)', async () => {

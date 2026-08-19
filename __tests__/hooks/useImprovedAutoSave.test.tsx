@@ -395,6 +395,62 @@ describe('useImprovedAutoSave', () => {
     expect(onSave).toHaveBeenLastCalledWith({ value: 'more typing' }, expect.any(Object))
   })
 
+  it('does not retry a gateway timeout and holds off background saves', async () => {
+    jest.useFakeTimers()
+
+    // Штатный исход перегруженного сохранения: SAVE_TRAVEL_TIMEOUT (65 с) выше
+    // nginx `proxy_read_timeout 60s`, поэтому сдаётся сервер, а не клиент. На
+    // HTTP/2 `statusText` пуст, так что сообщение слова "timeout" не содержит —
+    // распознаём по статусу, иначе 504 уходил бы в общий retry для 5xx.
+    const gatewayTimeout = Object.assign(new Error('HTTP 504'), { status: 504 })
+    const onSave = jest.fn(async () => {
+      throw gatewayTimeout
+    })
+    const onError = jest.fn()
+
+    const { result, rerender } = renderHook(
+      ({ data }) =>
+        useImprovedAutoSave(data, { value: 'initial' }, {
+          debounce: 20,
+          retryDelay: 10,
+          maxRetries: 3,
+          timeoutCooldown: 1000,
+          onSave,
+          onError,
+        }),
+      { initialProps: { data: { value: 'initial' } } },
+    )
+
+    rerender({ data: { value: 'slow server' } })
+    await act(async () => {
+      jest.advanceTimersByTime(50)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledWith(gatewayTimeout)
+    expect(result.current.status).toBe('error')
+
+    // Правка внутри окна — вторая транзакция по заблокированной строке не уходит.
+    rerender({ data: { value: 'more typing' } })
+    await act(async () => {
+      jest.advanceTimersByTime(50)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(onSave).toHaveBeenCalledTimes(1)
+
+    // Окно истекло — сохранение возобновляется само, с актуальными данными.
+    await act(async () => {
+      jest.advanceTimersByTime(1000)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(onSave).toHaveBeenCalledTimes(2)
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'more typing' }, expect.any(Object))
+  })
+
   it('does not retry a validation rejection and surfaces it to the author', async () => {
     jest.useFakeTimers()
 

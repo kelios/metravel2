@@ -15,7 +15,6 @@ import { FiltersSkeleton } from '@/components/ui/SkeletonLoader'
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet'
 import {
   getMapMobileLayoutStyles,
-  getRouteFabBottom,
   getSearchAreaButtonBottom,
 } from './MapMobileLayout.styles'
 import { MapEmptyStateToast } from './MapMobile/MapEmptyStateToast'
@@ -608,25 +607,21 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     ? WEB_MOBILE_SELECTED_PLACE_INSET +
       (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
     : bottomSheetInset
-  const searchAreaButtonBottom = getSearchAreaButtonBottom(
-    IS_WEB,
-    isNarrow,
-    consentBannerVisible,
-  )
-  const routeFabBottom = getRouteFabBottom(IS_WEB, isNarrow, consentBannerVisible)
-  // Плашка empty-state встаёт НАД самой верхней занятой нижней кнопкой:
-  // «Искать в этой области» (h 40) когда она видна, иначе FAB «Маршрут» (h 48).
+  const searchAreaButtonBottom = getSearchAreaButtonBottom(IS_WEB, isNarrow)
+  // Нижнюю зону карты занимает ровно одна кнопка — «Искать в этой области».
+  // Плашка empty-state встаёт НАД ней (высота pill 44 + воздух), а когда pill
+  // не видна — на её же место.
   const emptyStateToastBottom = useMemo(() => {
-    const base = showSearchAreaButton ? searchAreaButtonBottom : routeFabBottom
-    const lift = showSearchAreaButton ? 48 : 56
-    return typeof base === 'number' ? base + lift : `calc(${base} + ${lift}px)`
-  }, [showSearchAreaButton, searchAreaButtonBottom, routeFabBottom])
+    if (!showSearchAreaButton) return searchAreaButtonBottom
+    const lift = 52
+    return typeof searchAreaButtonBottom === 'number'
+      ? searchAreaButtonBottom + lift
+      : `calc(${searchAreaButtonBottom} + ${lift}px)`
+  }, [showSearchAreaButton, searchAreaButtonBottom])
 
-  // Вход в маршрут — основное действие карты, поэтому FAB виден в radius-режиме
-  // всегда, пока шторка закрыта и не открыта карточка места (те же условия, что
-  // у верхнего overlay: иначе кнопка ложится поверх списка/карточки).
-  const showRouteFab =
-    routeMode !== 'route' && sheetState === 'collapsed' && !hasSelectedPlace
+  // Вход в маршрут — иконка верхнего тулбара (было: extended FAB справа снизу).
+  // Условие прежнее: только в radius-режиме; сам тулбар и так скрыт при полной
+  // шторке и открытой карточке места.
 
   // Empty-state ПОВЕРХ КАРТЫ: при закрытой панели пользователь не видит
   // `filters-empty-state` (он живёт внутри FiltersPanelBody), поэтому «Искать в
@@ -670,11 +665,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     canRemove: !!onRemoveActiveFilter,
   })
   const showAllPlacesButton = activeFiltersRowVisible ? undefined : onShowAllPlaces
-  // Подпись — короткое «Маршрут»: прежнее «Маршрут от меня» обещало старт от
-  // пользователя ещё до того, как старт вообще выбран (и висело даже без
-  // геолокации). Старт выбирается следующим шагом, в самом режиме маршрута.
-  const routeFabLabel = i18nT('map:components.MapPage.MapMobileLayout.marshrut_bf0aedf2')
-
   const filtersLoadingFallback = useMemo(
     () => (
       <View
@@ -828,6 +818,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             onClearActiveFilters={onShowAllPlaces ?? onResetFilters}
             onCenterOnUser={onCenterOnUser}
             onOpenList={openList}
+            onEnterRoute={enterRouteMode}
             listBadge={listBadge}
             radiusOptions={quickRadiusOptions}
             radiusValue={activeRadius}
@@ -876,29 +867,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           </Pressable>
         )}
 
-        {/* Вход в режим маршрута — extended FAB справа снизу (Google Maps
-            «Проложить маршрут»). Раньше это была пилюля под шапкой: третий ярус
-            поверх карты и основное действие в самом неудобном для пальца углу. */}
-        {showRouteFab && (
-          <Pressable
-            testID="map-mobile-route-button"
-            onPress={enterRouteMode}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.routeFab,
-              IS_WEB ? ({ bottom: routeFabBottom } as any) : null,
-              pressed && styles.routeFabPressed,
-            ]}
-          >
-            <Feather name="navigation" size={18} color={colors.textOnPrimary} />
-            <RNText style={styles.routeFabText} numberOfLines={1}>
-              {routeFabLabel}
-            </RNText>
-          </Pressable>
-        )}
-
         {/* Плашка «В этой области ничего не нашлось» — над «Искать в этой
             области» / FAB «Маршрут», чтобы не перекрывать ни их, ни нижний док. */}
         {showEmptyStateToast && (
@@ -912,9 +880,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           />
         )}
 
-        {/* Локация и «Список · N» перенесены в верхний icon-toolbar
-            (MapMobileTopOverlay): нижний FAB локации и нижняя кнопка списка
-            больше не рендерятся. «Искать в этой области» остаётся снизу. */}
+        {/* Локация, «Список · N» и вход в маршрут живут в верхнем icon-toolbar
+            (MapMobileTopOverlay). Внизу остаётся ровно одна кнопка — «Искать в
+            этой области», прижатая к низу карты над подписью Leaflet. */}
 
         {/* #207 — maps.me-style bottom card for a tapped single marker. */}
         {hasSelectedPlace && (

@@ -12,6 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { openExternalUrl } from '@/utils/externalLinks'
+import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
 
@@ -48,6 +49,7 @@ function AppDownloadScreen() {
   const canonical = buildCanonicalUrl('/app')
 
   const handleDownload = useCallback(() => {
+    trackAppDownloadClicked({ source: 'app_page' })
     void openExternalUrl(GOOGLE_PLAY_APP_URL, {
       onError: (error) => {
         if (__DEV__) console.warn('[app] Ошибка открытия Google Play:', error)

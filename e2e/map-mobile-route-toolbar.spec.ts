@@ -265,7 +265,8 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     await installMapApiMocks(page)
     await gotoMobileMap(page)
 
-    await expect(byTid(page, 'map-mobile-route-button')).toContainText('Маршрут')
+    // Вход в маршрут — иконка верхнего тулбара (подписи «Маршрут» у неё нет).
+    await expect(byTid(page, 'map-mobile-route-button')).toBeVisible()
     await byTid(page, 'map-mobile-route-button').click({ force: true })
     await expect(page.getByText('0/2', { exact: true })).toBeVisible()
     await expect(byTid(page, 'map-mobile-route-request-location')).toBeVisible()

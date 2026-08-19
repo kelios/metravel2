@@ -1,4 +1,4 @@
-import { queueAnalyticsEvent } from '@/utils/analytics';
+import { queueAnalyticsEvent, sendAnalyticsEvent } from '@/utils/analytics';
 
 export const GROWTH_FUNNEL_EVENTS = {
   registerCtaClick: 'cta_register_click',
@@ -26,12 +26,14 @@ export const GROWTH_FUNNEL_EVENTS = {
   contentScrollDepth: 'content_scroll_depth',
   questCardImpression: 'quest_card_impression',
   questCardClick: 'quest_card_click',
+  appDownloadClick: 'app_download_click',
 } as const;
 
 export type GrowthContentType = 'route' | 'article';
 export type GrowthAuthState = 'guest' | 'authenticated';
 export type GrowthRegistrationMethod = 'email' | 'google' | 'facebook' | 'apple';
 export type GrowthRegistrationErrorReason = 'api' | 'exception' | 'provider';
+export type AppDownloadSource = 'home_promo' | 'install_bar' | 'app_page';
 
 type EventParams = Record<string, unknown>;
 
@@ -167,6 +169,31 @@ export const trackRegisterCtaImpression = ({ source, intent, authState }: Regist
     source: safeString(source) ?? 'unknown',
     intent: safeString(intent),
     auth_state: authState,
+  });
+};
+
+/**
+ * Единая цель «скачали приложение» `app_download_click`: любой клик по кнопке
+ * установки в любом месте web-UI (промо на главной, нижний бар на Android,
+ * лендинг `/app`). Поверхностные события (`HomeClick_InstallApp`,
+ * `AppInstallBar_Click`) остаются как детализация — тем же приёмом, что и у
+ * `cta_register_click`.
+ *
+ * Отправляется через `sendAnalyticsEvent`, а не через отложенную очередь
+ * `queueAnalyticsEvent`: клик уводит пользователя в Google Play (новая вкладка,
+ * на Android — приложение Play поверх браузера), вкладка-источник уходит в фон,
+ * и `requestIdleCallback` там тормозится до возврата пользователя. Для
+ * конверсионной цели это потеря, поэтому событие уходит синхронно с кликом.
+ *
+ * Установку как таковую web-счётчик Метрики не видит: реальные установки живут
+ * только в Google Play Console. Здесь считается намерение — клик по установке.
+ */
+export const trackAppDownloadClicked = ({ source }: { source: AppDownloadSource }) => {
+  // Пока в сторах есть только Android-приложение; когда появится iOS-сборка,
+  // сюда добавится параметр стора, а не второе событие — цель остаётся одна.
+  void sendAnalyticsEvent(GROWTH_FUNNEL_EVENTS.appDownloadClick, {
+    source,
+    platform: 'android',
   });
 };
 

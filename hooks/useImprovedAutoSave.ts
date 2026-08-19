@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import isEqual from 'fast-deep-equal';
 
-import { isTimeoutError } from '@/api/clientErrors';
+import { isServerStillWorkingAfter } from '@/api/clientErrors';
 
 interface UseImprovedAutoSaveOptions<T> {
   debounce?: number;
@@ -15,10 +15,13 @@ interface UseImprovedAutoSaveOptions<T> {
   enabled?: boolean;
   isOnline?: boolean;
   /**
-   * Сколько после клиентского таймаута фоновое сохранение считается небезопасным.
-   * Наш abort не останавливает обработку на сервере, поэтому попытка, оборванная
-   * таймаутом, ещё какое-то время реально выполняется. Новый фоновый сейв в это
-   * окно — вторая тяжёлая транзакция по той же сущности.
+   * Минимальное окно, в течение которого после таймаута фоновое сохранение
+   * считается небезопасным. Речь и о нашем клиентском таймауте, и о `504` от
+   * nginx: ни тот, ни другой не останавливают обработку на сервере, поэтому
+   * попытка, ожидание которой прервано, ещё какое-то время реально выполняется.
+   * Новый фоновый сейв в это окно — вторая тяжёлая транзакция по той же
+   * сущности. Фактическое окно — не меньше времени, которое отработала сама
+   * неудавшаяся попытка.
    */
   timeoutCooldown?: number;
 }
@@ -39,17 +42,16 @@ const getErrorStatus = (error: unknown): number | null => {
   return typeof status === 'number' && Number.isFinite(status) ? status : null;
 };
 
+// Повтор недопустим, пока предыдущая попытка может выполняться на сервере
+// (см. isServerStillWorkingAfter): иначе ожидание превращается в генератор
+// дублирующих попыток. Следующая попытка уходит обычным debounce-циклом с
+// актуальными данными, но не раньше окна serverBusyUntilRef.
 const isRetryableSaveError = (error: Error): boolean => {
   if (error.message === 'Request aborted') {
     return false;
   }
 
-  // Клиентский таймаут не отменяет работу на сервере: запрос продолжает
-  // выполняться и после нашего abort. Немедленный повтор — это вторая такая же
-  // тяжёлая транзакция по той же сущности, то есть таймаут превращается в
-  // генератор дублирующих попыток. Следующая попытка уходит обычным
-  // debounce-циклом с актуальными данными, но не раньше timeoutCooldown.
-  if (isTimeoutError(error)) {
+  if (isServerStillWorkingAfter(error)) {
     return false;
   }
 
@@ -197,6 +199,7 @@ export function useImprovedAutoSave<T>(
     abortControllerRef.current = controller;
     inFlightRef.current = true;
     let saveSucceeded = false;
+    const startedAt = Date.now();
     // Этот вызов всё ещё актуален, только если его контроллер — текущий.
     const isCurrent = () => abortControllerRef.current === controller;
 
@@ -253,11 +256,18 @@ export function useImprovedAutoSave<T>(
 
       const saveError = error instanceof Error ? error : new Error('Save failed');
 
-      if (isTimeoutError(saveError)) {
-        // Мы перестали ждать, но сервер попытку не отменял — она продолжает
-        // выполняться. Держим окно, в котором фоновое сохранение той же сущности
-        // не стартует, иначе таймаут порождает вторую параллельную транзакцию.
-        serverBusyUntilRef.current = Date.now() + timeoutCooldown;
+      if (isServerStillWorkingAfter(saveError)) {
+        // Ждать перестали (наш таймаут) или сервер сам сдался по
+        // `proxy_read_timeout` (504), но попытку никто не отменял — она
+        // продолжает выполняться. Держим окно, в котором фоновое сохранение той
+        // же сущности не стартует, иначе ожидание порождает вторую параллельную
+        // транзакцию по уже заблокированной строке.
+        // Окно не короче того, что попытка уже отработала: 504 приходит на 60-й
+        // секунде, то есть транзакция к этому моменту заведомо идёт дольше
+        // обычных 11–12 с. Ждать после этого фиксированные 30 с — значит с
+        // хорошей вероятностью попасть во всё ещё удерживаемую блокировку.
+        const elapsed = Date.now() - startedAt;
+        serverBusyUntilRef.current = Date.now() + Math.max(timeoutCooldown, elapsed);
       }
 
       if (isAbortedSaveError(saveError)) {
@@ -530,6 +540,16 @@ export function useImprovedAutoSave<T>(
     }
   }, []);
 
+  // Синхронное чтение того же признака, что и `hasUnsavedChanges`, но по рефу
+  // baseline, а не по значению, посчитанному на рендере. Нужно там, где решение
+  // принимается сразу после `await` и рендера может не случиться вовсе: ручной
+  // сейв в мастере навигирует через `router.replace`, а у размонтированного
+  // поддерева passive-эффекты уже не запускаются.
+  const getHasUnsavedChanges = useCallback(
+    (currentData: T) => !isEqual(currentData, lastSavedDataRef.current),
+    []
+  );
+
   const hasUnsavedChanges = hasDataChanged();
   const canSave = state.isOnline && state.status !== 'saving';
   const isSaving = state.status === 'saving';
@@ -553,6 +573,7 @@ export function useImprovedAutoSave<T>(
     clearError,
     retrySave,
     updateBaseline,
+    getHasUnsavedChanges,
 
     // Utilities
     canSave,
@@ -572,6 +593,7 @@ export function useImprovedAutoSave<T>(
     clearError,
     retrySave,
     updateBaseline,
+    getHasUnsavedChanges,
     canSave,
     isSaving,
     hasError,

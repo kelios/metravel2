@@ -489,11 +489,17 @@ select:focus-visible {
     text-overflow: clip;
   }
 
-  /* Leaflet anchors attribution to the map bottom. Lift it above the mobile
-     dock and, when present, the consent banner so licence text/logo remain
-     actually visible instead of merely existing under the overlays. */
+  /* Leaflet anchors attribution to the map bottom. Экран карты уже заканчивается
+     НАД нижним доком (map-screen-root под него не заезжает), поэтому подъём на
+     всю высоту дока вешал подпись в воздухе посреди нижней зоны: прижимаем её к
+     низу карты — туда, где раньше стоял FAB «Маршрут».
+     Плавающие плашки (consent-баннер, «MeTravel в приложении») публикуют резерв
+     --mt-consent-h ОТ НИЗА ВЬЮПОРТА, поэтому внутри карты из него вычитается
+     высота дока — иначе док считался бы дважды. Та же формула у кнопки «Искать
+     в этой области» (MapMobileLayout.styles.ts), поэтому зазор между ними
+     постоянный. */
   body:has([data-testid="map-screen-root"]) .leaflet-bottom {
-    bottom: calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 8px);
+    bottom: calc(max(0px, var(--mt-consent-h, 0px) - 56px) + 8px);
   }
 }
 

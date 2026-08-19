@@ -149,6 +149,13 @@ interface MapMobileTopOverlayProps {
   onTransportSelect?: (mode: TransportMode) => void
   /** Clear the route and return to radius mode. */
   onClearRoute?: () => void
+  /**
+   * Вход в режим маршрута. Раньше это был extended FAB справа снизу: он держал
+   * всю нижнюю зону карты, из-за чего «Искать в этой области» и подпись Leaflet
+   * не могли встать к низу. Теперь это иконка этого же ряда, а в route-режиме
+   * её слот занимает индикатор маршрута.
+   */
+  onEnterRoute?: () => void
   /** Number of route points dropped so far — hint hides once 2 are set. */
   routePointCount?: number
   /** Built route distance in meters. */
@@ -209,6 +216,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   onToggleTransport,
   onTransportSelect,
   onClearRoute,
+  onEnterRoute,
   routePointCount = 0,
   routeDistance,
   routeDuration,
@@ -477,6 +485,23 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 pointerEvents="none"
               >
                 <Feather name="maximize" size={ICON_SIZE} color={colors.text} />
+              </View>
+            </Pressable>
+          )}
+
+          {/* Вход в маршрут — иконка в общем ряду (было: extended FAB снизу
+              справа). В route-режиме этот же слот занимает индикатор маршрута,
+              поэтому testID у них один и тот же: одновременно они не живут. */}
+          {!isRouteMode && onEnterRoute && (
+            <Pressable
+              testID="map-mobile-route-button"
+              onPress={onEnterRoute}
+              accessibilityRole="button"
+              accessibilityLabel={routeAccessibilityLabel}
+              style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
+            >
+              <View style={styles.iconButton} pointerEvents="none">
+                <Feather name="navigation" size={ICON_SIZE} color={colors.text} />
               </View>
             </Pressable>
           )}

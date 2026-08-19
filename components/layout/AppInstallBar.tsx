@@ -23,6 +23,7 @@ import {
 import { releaseBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
 import { readConsent } from '@/utils/consent'
 import { openExternalUrl } from '@/utils/externalLinks'
+import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics'
 import { webViewStyle } from '@/utils/webProps'
 
 const IS_WEB = Platform.OS === 'web'
@@ -159,6 +160,7 @@ function AppInstallBar() {
   const handleInstall = useCallback(() => {
     markAppInstallHintConverted()
     void sendAnalyticsEvent('AppInstallBar_Click', { platform: 'android' })
+    trackAppDownloadClicked({ source: 'install_bar' })
     setClosed(true)
     void openExternalUrl(GOOGLE_PLAY_APP_URL, {
       onError: (error) => {

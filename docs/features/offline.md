@@ -83,7 +83,7 @@ Mobile web сохраняет тот же control/state contract и умеет �
 | Profile/Settings → «Офлайн» | стабильный вход в библиотеку |
 | offline banner → «Открыть сохранённое» | быстрый вход без блокировки текущего экрана |
 | travel/article/quest detail → «Сохранить офлайн» | создать или обновить content package |
-| map → «Скачать область» | сохранить тайлы и плоский point index региона |
+| map → «Скачать область» | сохранить тайлы и плоский point index региона — только native; на web входа больше нет (см. «Что уже есть») |
 
 Нижний dock не меняет набор вкладок и не отключает переходы при offline.
 
@@ -290,9 +290,14 @@ Evidence 2026-07-28:
 - board `#909` — tile proxy rate contract;
 - `utils/publicStaleCache.ts`, `utils/queryPersist.ts`;
 - `api/questBundleCache.ts`, `hooks/useOfflineTravelCache.ts`;
-- `components/MapPage/MapOfflineDownloadControl.web.tsx` сохраняет только индекс
-  точек (без тайлов); `utils/mapTileCache.ts` держит ограниченный сроком
-  прозрачный кэш только реально просмотренных native-тайлов;
+- web-кнопка «Скачать область» на карте (`MapOfflineDownloadControl.web.tsx`,
+  вместе с e2e `offline-loaded-shell.spec.ts`) удалена 2026-08-19: без service
+  worker (его целенаправленно снимает `WebServiceWorkerCleanup`) и без тайлов
+  (см. пункт ниже) она сохраняла только индекс точек и работала лишь в уже
+  загруженной вкладке, то есть обещала офлайн-карту, которой на web нет. Сервисный
+  слой (`api/mapOffline.ts`, `services/offline/mapOfflineAdapter.ts`,
+  `utils/mapTileCache.ts`) оставлен: `/offline` по-прежнему управляет
+  сохранённым, а native-тайлы кэшируются по мере просмотра;
 - bulk/prefetch стандартных тайлов OpenStreetMap удалён 2026-08-13: публичная
   OSM Tile Usage Policy запрещает offline download с `tile.openstreetmap.org`,
   в том числе через caching proxy. Законная замена описана как

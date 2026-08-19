@@ -30,6 +30,7 @@ jest.mock('@/hooks/useTravelFilters', () => ({
 }));
 
 jest.mock('@/hooks/useDraftRecovery', () => ({
+  ...jest.requireActual('@/hooks/useDraftRecovery'),
   useDraftRecovery: jest.fn(),
 }));
 
@@ -72,6 +73,9 @@ describe('useUpsertTravelController', () => {
     autosave: {
       status: 'idle',
       hasUnsavedChanges: false,
+      // Synchronous ref read used by saveAndClearDraft: the render-time value is
+      // still the pre-save one when the manual save resolves.
+      getHasUnsavedChanges: jest.fn(() => false),
       canSave: true,
       error: null,
       clearError: jest.fn(),
@@ -79,6 +83,9 @@ describe('useUpsertTravelController', () => {
     handleManualSave: jest.fn(),
     handleCountrySelect: jest.fn(),
     handleCountryDeselect: jest.fn(),
+    // Live read of the form: saveAndClearDraft snapshots it before the manual
+    // save and again after, to tell in-flight keystrokes from server echo.
+    getFormData: jest.fn(() => ({ id: 1, countries: [], categories: [] })),
   };
 
   const baseFilters = {
@@ -123,6 +130,7 @@ describe('useUpsertTravelController', () => {
       dismissDraft: jest.fn(async () => undefined),
       saveDraft: jest.fn(),
       clearDraft: jest.fn(async () => undefined),
+      flushDraft: jest.fn(async () => true),
     });
   });
 
@@ -197,6 +205,7 @@ describe('useUpsertTravelController', () => {
       dismissDraft: jest.fn(async () => undefined),
       saveDraft,
       clearDraft: jest.fn(async () => undefined),
+      flushDraft: jest.fn(async () => true),
     });
 
     mockUseTravelFormData.mockReturnValue({
@@ -220,6 +229,7 @@ describe('useUpsertTravelController', () => {
       dismissDraft: jest.fn(async () => undefined),
       saveDraft,
       clearDraft: jest.fn(async () => undefined),
+      flushDraft: jest.fn(async () => true),
     });
 
     const formData = { id: 1, countries: [], categories: [] };
@@ -228,6 +238,9 @@ describe('useUpsertTravelController', () => {
       formState: { isDirty: true },
       hasUserInteracted: true,
       formData,
+      // An author who just typed has edits the server has not confirmed yet -
+      // that is the state the autosave engine reports here.
+      autosave: { ...baseForm.autosave, hasUnsavedChanges: true },
     });
 
     renderHook(() => useUpsertTravelController());
@@ -235,60 +248,9 @@ describe('useUpsertTravelController', () => {
     expect(saveDraft).toHaveBeenCalledWith(formData);
   });
 
-  it('does not persist a draft right after an autosave succeeds (F-09 P2)', () => {
+  it('clears rather than re-persists the draft once a save confirmed the data (F-09 P2)', () => {
     const saveDraft = jest.fn();
-    mockUseDraftRecovery.mockReturnValue({
-      hasPendingDraft: false,
-      draftTimestamp: null,
-      isRecovering: false,
-      recoverDraft: jest.fn(async () => null),
-      dismissDraft: jest.fn(async () => undefined),
-      saveDraft,
-      clearDraft: jest.fn(async () => undefined),
-    });
-
-    // Dirty + interacted, but the autosave just succeeded: the data is on the
-    // server, so re-persisting a draft would create a false recovery prompt.
-    mockUseTravelFormData.mockReturnValue({
-      ...baseForm,
-      formState: { isDirty: true },
-      hasUserInteracted: true,
-      formData: { id: 1, countries: [], categories: [] },
-      autosave: { ...baseForm.autosave, status: 'saved' },
-    });
-
-    renderHook(() => useUpsertTravelController());
-    expect(saveDraft).not.toHaveBeenCalled();
-  });
-
-  it('does not persist a draft while an autosave is in flight', () => {
-    const saveDraft = jest.fn();
-    mockUseDraftRecovery.mockReturnValue({
-      hasPendingDraft: false,
-      draftTimestamp: null,
-      isRecovering: false,
-      recoverDraft: jest.fn(async () => null),
-      dismissDraft: jest.fn(async () => undefined),
-      saveDraft,
-      clearDraft: jest.fn(async () => undefined),
-    });
-
-    mockUseTravelFormData.mockReturnValue({
-      ...baseForm,
-      formState: { isDirty: true },
-      hasUserInteracted: true,
-      formData: { id: 1, countries: [], categories: [] },
-      autosave: { ...baseForm.autosave, status: 'saving' },
-    });
-
-    renderHook(() => useUpsertTravelController());
-    expect(saveDraft).not.toHaveBeenCalled();
-  });
-
-  it('clears local draft after manual save to prevent draft popup after reload', async () => {
     const clearDraft = jest.fn(async () => undefined);
-    const saveDraft = jest.fn();
-
     mockUseDraftRecovery.mockReturnValue({
       hasPendingDraft: false,
       draftTimestamp: null,
@@ -297,7 +259,126 @@ describe('useUpsertTravelController', () => {
       dismissDraft: jest.fn(async () => undefined),
       saveDraft,
       clearDraft,
+      flushDraft: jest.fn(async () => true),
     });
+
+    // Dirty + interacted, but the autosave confirmed everything the author has:
+    // the data is on the server, so re-persisting a draft would create a false
+    // recovery prompt - and the stored one has to actually go away.
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formState: { isDirty: true },
+      hasUserInteracted: true,
+      formData: { id: 1, countries: [], categories: [] },
+      autosave: { ...baseForm.autosave, status: 'saved', hasUnsavedChanges: false },
+    });
+
+    renderHook(() => useUpsertTravelController());
+    expect(saveDraft).not.toHaveBeenCalled();
+    expect(clearDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not persist a draft while an autosave confirms the current data', () => {
+    const saveDraft = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft,
+      clearDraft: jest.fn(async () => undefined),
+      flushDraft: jest.fn(async () => true),
+    });
+
+    // In flight, but the payload already covers everything the author has:
+    // nothing is unconfirmed, so there is nothing to keep locally.
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formState: { isDirty: true },
+      hasUserInteracted: true,
+      formData: { id: 1, countries: [], categories: [] },
+      autosave: { ...baseForm.autosave, status: 'saving', hasUnsavedChanges: false },
+    });
+
+    renderHook(() => useUpsertTravelController());
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('persists edits typed while an autosave is in flight', () => {
+    const saveDraft = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft,
+      clearDraft: jest.fn(async () => undefined),
+      flushDraft: jest.fn(async () => true),
+    });
+
+    // Autosave no longer aborts itself, so a heavy article sits in `saving` for
+    // the whole upsert. Anything typed in that window is newer than the payload
+    // in flight and lives only here until the next save confirms it.
+    const formData = { id: 1, countries: [], categories: [], description: 'typed mid-flight' };
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formState: { isDirty: true },
+      hasUserInteracted: true,
+      formData,
+      autosave: { ...baseForm.autosave, status: 'saving', hasUnsavedChanges: true },
+    });
+
+    renderHook(() => useUpsertTravelController());
+    expect(saveDraft).toHaveBeenCalledWith(formData);
+  });
+
+  it('keeps the draft when a save succeeds with edits still unconfirmed', () => {
+    const clearDraft = jest.fn(async () => undefined);
+    const saveDraft = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft,
+      clearDraft,
+      flushDraft: jest.fn(async () => true),
+    });
+
+    // The finished save confirms its own payload, not the keystrokes that landed
+    // after it started. Clearing here would wipe their only local copy.
+    const formData = { id: 1, countries: [], categories: [], description: 'typed mid-flight' };
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formState: { isDirty: true },
+      hasUserInteracted: true,
+      formData,
+      autosave: { ...baseForm.autosave, status: 'saved', hasUnsavedChanges: true },
+    });
+
+    renderHook(() => useUpsertTravelController());
+    expect(clearDraft).not.toHaveBeenCalled();
+    expect(saveDraft).toHaveBeenCalledWith(formData);
+  });
+
+  const draftMock = (over: Record<string, unknown> = {}) => ({
+    hasPendingDraft: false,
+    draftTimestamp: null,
+    isRecovering: false,
+    recoverDraft: jest.fn(async () => null),
+    dismissDraft: jest.fn(async () => undefined),
+    saveDraft: jest.fn(),
+    clearDraft: jest.fn(async () => undefined),
+    flushDraft: jest.fn(async () => true),
+    ...over,
+  });
+
+  it('clears local draft after manual save to prevent draft popup after reload', async () => {
+    const clearDraft = jest.fn(async () => undefined);
+    mockUseDraftRecovery.mockReturnValue(draftMock({ clearDraft }));
 
     const handleManualSave = jest.fn(async () => ({ id: 1 } as any));
     mockUseTravelFormData.mockReturnValue({
@@ -306,14 +387,129 @@ describe('useUpsertTravelController', () => {
       formState: { isDirty: true },
       formData: { id: 1, countries: [], categories: [] },
       handleManualSave,
+      autosave: { ...baseForm.autosave, getHasUnsavedChanges: jest.fn(() => false) },
     });
 
     const { result } = renderHook(() => useUpsertTravelController());
 
-    await result.current.handleManualSave();
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
 
     expect(handleManualSave).toHaveBeenCalledTimes(1);
     expect(clearDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the draft after a partial-override manual save too (#1511)', async () => {
+    // ContentUpsertSection/TravelWizardStepRoute call onManualSave({ description })
+    // and { countries, coordsMeTravel }. What reaches the server is that partial
+    // MERGED into the live form, so deciding by comparing the argument against the
+    // form could never match and the draft would survive every manual save.
+    const clearDraft = jest.fn(async () => undefined);
+    const flushDraft = jest.fn(async () => true);
+    mockUseDraftRecovery.mockReturnValue(draftMock({ clearDraft, flushDraft }));
+
+    const handleManualSave = jest.fn(async () => ({ id: 1 } as any));
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      hasUserInteracted: true,
+      formState: { isDirty: true },
+      formData: { id: 1, countries: [], categories: [], name: 'Статья', description: '<p>b</p>' },
+      handleManualSave,
+      autosave: { ...baseForm.autosave, getHasUnsavedChanges: jest.fn(() => false) },
+    });
+
+    const { result } = renderHook(() => useUpsertTravelController());
+
+    await act(async () => {
+      await result.current.handleManualSave({ description: '<p>new</p>' } as any);
+    });
+
+    expect(clearDraft).toHaveBeenCalledTimes(1);
+    expect(flushDraft).not.toHaveBeenCalled();
+  });
+
+  it('settles the draft before returning, not on a later render (#1511)', async () => {
+    // useTravelPublishModeration calls router.replace right after this resolves,
+    // deliberately unmounting the wizard - a passive effect would never run on the
+    // removed subtree, so the draft would survive and reopen the recovery dialog.
+    // Asserted without an act() wrapper: nothing here may depend on a render
+    // happening after the callback returned.
+    const clearDraft = jest.fn(async () => undefined);
+    mockUseDraftRecovery.mockReturnValue(draftMock({ clearDraft }));
+
+    const handleManualSave = jest.fn(async () => ({ id: 1 } as any));
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      hasUserInteracted: true,
+      formState: { isDirty: true },
+      formData: { id: 1, countries: [], categories: [] },
+      handleManualSave,
+      autosave: { ...baseForm.autosave, getHasUnsavedChanges: jest.fn(() => false) },
+    });
+
+    const { result, unmount } = renderHook(() => useUpsertTravelController());
+
+    await result.current.handleManualSave();
+    expect(clearDraft).toHaveBeenCalledTimes(1);
+
+    unmount();
+  });
+
+  it('keeps keystrokes typed while a manual save was in flight (#1511)', async () => {
+    // A heavy article saves for 11-12s with the editors still live, and this flow
+    // can navigate away on completion - so the draft is the only copy of whatever
+    // was typed after the payload went out, and nothing reschedules it.
+    const clearDraft = jest.fn(async () => undefined);
+    const flushDraft = jest.fn(async () => true);
+    mockUseDraftRecovery.mockReturnValue(draftMock({ clearDraft, flushDraft }));
+
+    const handleManualSave = jest.fn(async () => ({ id: 1 } as any));
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      hasUserInteracted: true,
+      formState: { isDirty: true },
+      formData: { id: 1, countries: [], categories: [], name: 'typed while saving' },
+      handleManualSave,
+      autosave: { ...baseForm.autosave, getHasUnsavedChanges: jest.fn(() => true) },
+    });
+
+    const { result } = renderHook(() => useUpsertTravelController());
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    expect(flushDraft).toHaveBeenCalledTimes(1);
+    expect(clearDraft).not.toHaveBeenCalled();
+  });
+
+  it('touches nothing when the author declines the rich-text loss confirm (#1511)', async () => {
+    // That path is a clean no-op: no request, form untouched. The draft still holds
+    // unconfirmed edits, so clearing it there would delete the only local copy.
+    const clearDraft = jest.fn(async () => undefined);
+    const flushDraft = jest.fn(async () => true);
+    mockUseDraftRecovery.mockReturnValue(draftMock({ clearDraft, flushDraft }));
+
+    const handleManualSave = jest.fn(async () => undefined);
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      hasUserInteracted: true,
+      formState: { isDirty: true },
+      formData: { id: 1, countries: [], categories: [] },
+      handleManualSave,
+      autosave: { ...baseForm.autosave, hasUnsavedChanges: false },
+    });
+
+    const { result } = renderHook(() => useUpsertTravelController());
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    expect(handleManualSave).toHaveBeenCalledTimes(1);
+    expect(clearDraft).not.toHaveBeenCalled();
+    expect(flushDraft).not.toHaveBeenCalled();
   });
 
   it('recovers a new-travel draft without a stale server id and restores route points', async () => {
@@ -345,6 +541,7 @@ describe('useUpsertTravelController', () => {
       dismissDraft: jest.fn(async () => undefined),
       saveDraft: jest.fn(),
       clearDraft: jest.fn(async () => undefined),
+      flushDraft: jest.fn(async () => true),
     });
     mockUseTravelFormData.mockReturnValue({
       ...baseForm,

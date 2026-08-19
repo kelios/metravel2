@@ -20,8 +20,6 @@ import { useLeafletIcons } from './Map/useLeafletIcons'
 import { useMapInstance } from './Map/useMapInstance'
 import { useMapApi } from './Map/useMapApi'
 import MapControls from './Map/MapControls'
-import MapOfflineDownloadControl from './MapOfflineDownloadControl.web'
-import type { OfflineBBox } from '@/utils/mapTileCache'
 import {
   MapLoadingOverlay,
   MapWebBackground,
@@ -165,7 +163,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [disableFitBounds] = useState(false)
   const [mapInstance, setMapInstance] = useState<any>(null)
   const [initialViewReady, setInitialViewReady] = useState(false)
-  const [offlineBBox, setOfflineBBox] = useState<OfflineBBox | null>(null)
   // True while a Leaflet marker popup is open. Freezes the server-cluster refetch
   // (useMapClusters) for the duration: a marker tap flies/zooms the map, which
   // would otherwise change the viewport bbox/zoom → refetch clusters → REMOUNT the
@@ -541,7 +538,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
             north: Math.max(southWest.lat, northEast.lat),
             east: Math.max(southWest.lng, northEast.lng),
           }
-          setOfflineBBox(payload.bbox)
         }
         if (Number.isFinite(zoom)) {
           payload.zoom = zoom
@@ -578,25 +574,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
       } catch {
         ignoreOptionalMapRuntimeError()
       }
-    }
-  }, [mapInstance])
-
-  useEffect(() => {
-    if (!mapInstance) return
-    try {
-      const bounds = mapInstance.getBounds?.()
-      const southWest = bounds?.getSouthWest?.()
-      const northEast = bounds?.getNorthEast?.()
-      if (!southWest || !northEast) return
-      const next = {
-        south: Math.min(Number(southWest.lat), Number(northEast.lat)),
-        west: Math.min(Number(southWest.lng), Number(northEast.lng)),
-        north: Math.max(Number(southWest.lat), Number(northEast.lat)),
-        east: Math.max(Number(southWest.lng), Number(northEast.lng)),
-      }
-      if (Object.values(next).every(Number.isFinite)) setOfflineBBox(next)
-    } catch {
-      ignoreOptionalMapRuntimeError()
     }
   }, [mapInstance])
 
@@ -950,10 +927,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
           alignLeft
         />
       )}
-      <MapOfflineDownloadControl
-        bbox={offlineBBox}
-        bottomInset={useCompactPopupLayout ? 144 : 0}
-      />
     </View>
   )
 }

@@ -7,6 +7,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 import { sendAnalyticsEvent } from '@/utils/analytics'
+import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { translate as i18nT } from '@/i18n'
 
@@ -35,6 +36,7 @@ function HomeAppPromoSection() {
 
   const handleInstall = useCallback(() => {
     sendAnalyticsEvent('HomeClick_InstallApp', { platform: 'android' })
+    trackAppDownloadClicked({ source: 'home_promo' })
     void openExternalUrl(GOOGLE_PLAY_APP_URL, {
       onError: (error) => {
         if (__DEV__) console.warn('[home] Ошибка открытия Google Play:', error)

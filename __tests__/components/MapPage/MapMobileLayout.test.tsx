@@ -3,7 +3,6 @@ import { BackHandler, Platform, StyleSheet, View } from 'react-native'
 
 import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout'
 import {
-  getRouteFabBottom,
   getSearchAreaButtonBottom,
 } from '@/components/MapPage/MapMobileLayout.styles'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
@@ -378,26 +377,16 @@ describe('MapMobileLayout', () => {
     })
   })
 
-  it('keeps the web route FAB close to the mobile footer dock', () => {
-    expect(getRouteFabBottom(true, true)).toBe('calc(16px + env(safe-area-inset-bottom))')
-    expect(getRouteFabBottom(true, true, true)).toBe(
-      'max(176px, var(--mt-consent-h, 176px))',
-    )
-    expect(getRouteFabBottom(false, true)).toBe(96)
-    expect(getRouteFabBottom(false, false)).toBe(104)
-  })
-
-  it('lifts search-this-area above the route FAB so the two never overlap', () => {
-    // Pill по центру (~214px) и FAB справа (~130px) не расходятся по горизонтали
-    // на 375px — поэтому pill живёт ровно на высоту FAB выше.
+  it('pins search-this-area to the map bottom, leaving room for the Leaflet attribution', () => {
+    // Вход в маршрут уехал иконкой в верхний тулбар, поэтому снизу остаётся
+    // только pill: 8px подписи от низа + 36px её высоты с воздухом. Резерв
+    // плавающей плашки меряется от низа вьюпорта, поэтому внутри карты из него
+    // вычитается высота дока — ровно как у .leaflet-bottom в global.css.
     expect(getSearchAreaButtonBottom(true, true)).toBe(
-      'calc(calc(16px + env(safe-area-inset-bottom)) + 56px)',
+      'calc(max(0px, var(--mt-consent-h, 0px) - 56px) + 44px)',
     )
-    expect(getSearchAreaButtonBottom(true, true, true)).toBe(
-      'calc(max(176px, var(--mt-consent-h, 176px)) + 56px)',
-    )
-    expect(getSearchAreaButtonBottom(false, true)).toBe(96 + 56)
-    expect(getSearchAreaButtonBottom(false, false)).toBe(104 + 56)
+    expect(getSearchAreaButtonBottom(false, true)).toBe(96)
+    expect(getSearchAreaButtonBottom(false, false)).toBe(104)
   })
 
   // Ровно ОДИН явный способ сброса на экране: пока виден ряд чипов активных
@@ -520,9 +509,11 @@ describe('MapMobileLayout', () => {
         />,
       )
 
-      // Radius mode: no contextual route icons yet, just the entry FAB.
+      // Radius mode: no contextual route icons yet, just the entry icon in the
+      // top toolbar (иконка без подписи — «Маршрут» текстом больше не рисуем).
       expect(screen.queryByTestId('map-mobile-route-toolbar')).toBeNull()
-      expect(screen.getByText('Маршрут')).toBeTruthy()
+      expect(screen.queryByText('Маршрут')).toBeNull()
+      expect(screen.getByTestId('map-mobile-route-button')).toBeTruthy()
       expect(screen.queryByTestId('map-mobile-transport-button')).toBeNull()
       expect(screen.queryByTestId('map-mobile-route-clear-button')).toBeNull()
 
@@ -590,9 +581,9 @@ describe('MapMobileLayout', () => {
         />,
       )
 
-      // Подпись FAB одна на оба состояния: «Маршрут от меня» обещало старт от
-      // пользователя ещё до выбора старта. Старт задаётся уже внутри режима.
-      expect(screen.getByText('Маршрут')).toBeTruthy()
+      // Вход в маршрут — иконка верхнего тулбара; подписи у неё нет, старт
+      // задаётся уже внутри режима.
+      expect(screen.getByTestId('map-mobile-route-button')).toBeTruthy()
 
       fireEvent.press(screen.getByTestId('map-mobile-route-button'))
 

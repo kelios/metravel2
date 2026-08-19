@@ -95,16 +95,38 @@ export function useUpsertTravelController(): UpsertTravelController {
     enabled: isAuthenticated && !form.isInitialLoading && form.hasAccess && !form.loadError,
   });
 
-  const { saveDraft, clearDraft, recoverDraft } = draft;
+  const { saveDraft, clearDraft, recoverDraft, flushDraft } = draft;
   const { setFormData, setMarkers, handleManualSave, getFormData } = form;
 
   const saveAndClearDraft = useCallback<ManualSave>(
     async (dataOverride, options) => {
       const result = await handleManualSave(dataOverride, options);
-      await clearDraft();
+
+      // `undefined` means no save happened - the author declined the rich-text
+      // loss confirmation, which is a clean no-op that leaves the form untouched.
+      // Clearing there would delete a draft holding still-unconfirmed edits.
+      if (result === undefined) return result;
+
+      // Settled synchronously, before returning: this flow navigates the moment
+      // it resolves (`router.replace` in useTravelPublishModeration, deliberately,
+      // "чтобы мастер точно размонтировался"), and a passive effect on an
+      // unmounted subtree never runs - so deferring the decision to the next
+      // render leaves the draft behind and reopens the recovery dialog.
+      // Both operands are already final in refs here: applySavedData has set
+      // formDataRef to the saved data and pushed the baseline through
+      // updateBaseline. Asked as a ref read rather than the render-time value,
+      // which is still the pre-save one at this point.
+      if (form.autosave.getHasUnsavedChanges(getFormData())) {
+        // The save confirmed its own payload, not what was typed while it was in
+        // flight. Those keystrokes live only in the draft, and nothing
+        // reschedules them: leaving the screen tears the autosave down too.
+        await flushDraft();
+      } else {
+        await clearDraft();
+      }
       return result;
     },
-    [handleManualSave, clearDraft]
+    [handleManualSave, getFormData, flushDraft, clearDraft, form.autosave]
   );
 
   // The wizard only reads `publish`/`moderation` from the save result and
@@ -131,30 +153,41 @@ export function useUpsertTravelController(): UpsertTravelController {
     currentStep: wizard.currentStep,
   });
 
-  // Persist a draft while the user edits an unsaved form.
-  // Skip while a save is in flight or has just succeeded: at that point the data
-  // already lives on the server, so re-persisting a draft (especially right after
-  // a NEW travel's id-sync flips the draft key from `_new` to `_<id>`) would
-  // resurrect a false "unsaved changes" recovery prompt on reload (F-09 / P2).
+  // Persist a draft while the user has edits the server has not confirmed.
+  // The gate is `hasUnsavedChanges`, not the request status: a save that is in
+  // flight is exactly when the local copy is the only copy. Autosave no longer
+  // aborts itself, so a heavy article stays in `saving` for the full 11-12s of
+  // the upsert, and everything typed in that window is newer than the payload
+  // already sent (the engine deliberately keeps its latest snapshot ahead of the
+  // confirmed baseline). Skipping the draft for the whole flight left those
+  // edits only in component state, so leaving the screen dropped them.
+  // Nothing to persist once the server has confirmed the current data, which is
+  // what kept a NEW travel's id-sync (`_new` -> `_<id>`) from resurrecting a
+  // false "unsaved changes" prompt on reload (F-09 / P2); the stale draft under
+  // the old key is dropped by the key-flip cleanup in useDraftRecovery.
   useEffect(() => {
     if (!form.formData) return;
     if (!form.formState?.isDirty) return;
     if (!form.hasUserInteracted) return;
-    if (form.autosave.status === 'saving' || form.autosave.status === 'saved') return;
+    if (!form.autosave.hasUnsavedChanges) return;
     saveDraft(form.formData);
   }, [
     form.formData,
     form.formState?.isDirty,
     form.hasUserInteracted,
-    form.autosave.status,
+    form.autosave.hasUnsavedChanges,
     saveDraft,
   ]);
 
-  // Drop the draft once an autosave succeeds.
+  // Drop the draft once an autosave succeeds - but only when it confirmed
+  // everything the author has. A save that started before the last keystrokes
+  // confirms its own payload, not those keystrokes; clearing on the status alone
+  // wiped the only local copy of edits that were still unsent.
   useEffect(() => {
     if (form.autosave.status !== 'saved') return;
+    if (form.autosave.hasUnsavedChanges) return;
     clearDraft();
-  }, [form.autosave.status, clearDraft]);
+  }, [form.autosave.status, form.autosave.hasUnsavedChanges, clearDraft]);
 
   // After the first successful autosave of a NEW travel the server assigns an id.
   // Reflect it in the URL once, so re-entering this in-progress create flow loads

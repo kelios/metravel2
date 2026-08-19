@@ -522,13 +522,34 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     prevDraftKeyRef.current = draftKey;
   }, [draftKey]);
 
-  // Cleanup on unmount
+  // Keep the newest persist closure reachable from the unmount cleanup without
+  // making that cleanup depend on `draftKey`: it must run on a real unmount, not
+  // on every key flip.
+  const persistDraftRef = useRef(persistDraft);
+  useEffect(() => {
+    persistDraftRef.current = persistDraft;
+  }, [persistDraft]);
+
+  // Cleanup on unmount. The pending snapshot is written rather than dropped:
+  // leaving the screen is exactly when the local draft is the only copy of edits
+  // the server has not confirmed. Cancelling the debounce timer without
+  // persisting lost everything typed since the last write - and because each
+  // keystroke restarts the timer, an author typing continuously never reaches a
+  // write at all, so the whole burst was lost. `pendingDraftDataRef` is null once
+  // a save confirmed the data (clearDraft) or after a key flip, so a confirmed
+  // form writes nothing here and cannot resurrect a recovery prompt.
+  // persistDraft guards its own setState with mountedRef, so a write completing
+  // after unmount is safe.
   useEffect(() => {
     return () => {
-      mountedRef.current = false;
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
       }
+      const pending = pendingDraftDataRef.current;
+      pendingDraftDataRef.current = null;
+      mountedRef.current = false;
+      if (pending) void persistDraftRef.current(pending);
     };
   }, []);
 
