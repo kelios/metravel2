@@ -44,7 +44,7 @@ export type { UseMapLifecycleOptions, UseMapLifecycleReturn } from './useMapLife
 
 // C4.1: Elevation
 export { useElevation, sampleIndices, computeElevationGainLoss } from './useElevation';
-export type { UseElevationOptions, UseElevationResult } from './useElevation';
+export type { UseElevationOptions, UseElevationResult, ElevationSample, ElevationResultCallback } from './useElevation';
 
 // C2.4: Marker layer
 export { default as MapMarkerLayer, FitBoundsOnData } from './MapMarkerLayer';

@@ -28,6 +28,8 @@ import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics';
 import { notifyAuthProgressSaved } from '@/utils/authProgressToast';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import type { AppleCredentialPayload } from '@/api/appleAuth';
+import AppleSignInButton from '@/components/auth/AppleSignInButton';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import { webTouchScrollStyle } from '@/utils';
@@ -56,6 +58,7 @@ export default function Login() {
     const [submitted, setSubmitted] = useState(false);
     const [googleBusy, setGoogleBusy] = useState(false);
     const [facebookBusy, setFacebookBusy] = useState(false);
+    const [appleBusy, setAppleBusy] = useState(false);
     const passwordRef = useRef<TextInput>(null);
     const mountedRef = useRef(true);
 
@@ -67,7 +70,7 @@ export default function Login() {
 
     /* ---------- helpers ---------- */
     const router = useRouter();
-    const { login, loginWithGoogle, sendPassword, isAuthenticated } = useAuth();
+    const { login, loginWithGoogle, loginWithApple, sendPassword, isAuthenticated } = useAuth();
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
 
     const isFocused = useIsFocused();
@@ -107,6 +110,7 @@ export default function Login() {
             setSubmitted(false);
             setGoogleBusy(false);
             setFacebookBusy(false);
+            setAppleBusy(false);
         }
     }, [isFocused, isAuthenticated]);
 
@@ -163,7 +167,7 @@ export default function Login() {
     };
 
     const handleGoogleSignIn = async (credential: string) => {
-        if (googleBusy || facebookBusy || submitted) return;
+        if (googleBusy || facebookBusy || appleBusy || submitted) return;
         setGoogleBusy(true);
         let navigating = false;
         try {
@@ -193,6 +197,38 @@ export default function Login() {
         showMsg(error, true);
     };
 
+    // IOS-05: Apple отдаёт credential, серверную проверку делает #1412.
+    const handleAppleSignIn = async (credential: AppleCredentialPayload) => {
+        if (googleBusy || facebookBusy || appleBusy || submitted) return;
+        setAppleBusy(true);
+        let navigating = false;
+        try {
+            showMsg('');
+            const result = await loginWithApple(credential);
+            if (result.status === 'authenticated') {
+                sendAnalyticsEvent('login_success', { method: 'apple', intent: String(intent || '') });
+                if (intent) {
+                    sendAnalyticsEvent('AuthSuccess', { source: 'apple', intent });
+                }
+                navigating = true;
+                setSubmitted(true);
+                notifyAuthProgressSaved(hasReturnContext);
+                replaceAfterAuth();
+            } else {
+                showMsg(result.message || i18nT('authStatic:apple.signInFailed'), true);
+            }
+        } catch (error) {
+            showMsg(getErrorMessage(error, i18nT('authStatic:apple.signInFailed')), true);
+        } finally {
+            // На успехе оставляем заблокированным до размонтирования (идёт навигация).
+            if (!navigating && mountedRef.current) setAppleBusy(false);
+        }
+    };
+
+    const handleAppleError = (error: string) => {
+        showMsg(error, true);
+    };
+
     const handleFacebookAuthenticated = () => {
         sendAnalyticsEvent('login_success', { method: 'facebook', intent: String(intent || '') });
         if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
@@ -218,7 +254,7 @@ export default function Login() {
     const title = i18nT('auth:components.auth.LoginForm.vhod_v_metravel_akkaunt_marshruty_i_hochu_po_bf2420aa');
     const description =
         i18nT('auth:components.auth.LoginForm.voydite_v_akkaunt_metravel_chtoby_sohranyat__2df803f3');
-    const busy = isSubmitting || submitted || googleBusy || facebookBusy;
+    const busy = isSubmitting || submitted || googleBusy || facebookBusy || appleBusy;
 
     /* ---------- render ---------- */
     return (
@@ -284,6 +320,13 @@ export default function Login() {
 
                                 {/* ---------- social first ---------- */}
                                 <View style={styles.socialActions}>
+                                    {/* Apple первым: HIG требует показывать Sign in with Apple
+                                        не менее заметно, чем прочие провайдеры. */}
+                                    <AppleSignInButton
+                                        onSuccess={handleAppleSignIn}
+                                        onError={handleAppleError}
+                                        disabled={busy}
+                                    />
                                     <GoogleSignInButton
                                         onSuccess={handleGoogleSignIn}
                                         onError={handleGoogleError}
@@ -292,7 +335,7 @@ export default function Login() {
                                     <FacebookAuthFlow
                                         onAuthenticated={handleFacebookAuthenticated}
                                         onBusyChange={setFacebookBusy}
-                                        disabled={isSubmitting || submitted || googleBusy}
+                                        disabled={isSubmitting || submitted || googleBusy || appleBusy}
                                     />
                                 </View>
 

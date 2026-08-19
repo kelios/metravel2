@@ -12,6 +12,10 @@ import type {
   TripTransport,
   TripVisibility,
 } from '@/api/plannedTrips';
+import {
+  PREVIEW_PROVIDER,
+  PREVIEW_SCHEMATIC_PROVIDER,
+} from '@/components/trips/planning/tripRoutingProviders';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { selectPlural, translate as i18nT } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
@@ -156,7 +160,15 @@ export function isRouteApproximate(routingState: RoutingState | null | undefined
 
 export function routingStateLabel(routingState: RoutingState | null | undefined): string {
   if (!routingState) return i18nT('trips:components.trips.planning.tripPlanFormatting.lokalnaya_otsenka_1df49d8f');
+  // Общественный и смешанный транспорт движок не прокладывает вовсе, поэтому у
+  // его линии отдельная подпись, а не общее «приблизительно» (#1490).
+  if (routingState.provider === PREVIEW_SCHEMATIC_PROVIDER) {
+    return i18nT('tripsStatic:plan.routingState.schematic');
+  }
   if (isRouteApproximate(routingState)) return i18nT('trips:components.trips.planning.tripPlanFormatting.priblizitelnyy_marshrut_915ddadf');
+  if (routingState.provider === PREVIEW_PROVIDER) {
+    return i18nT('tripsStatic:plan.routingState.preview');
+  }
   if (routingState.provider === 'ors') return i18nT('trips:components.trips.planning.tripPlanFormatting.marshrut_postroen_ors_c62e109b');
   return i18nT('trips:components.trips.planning.tripPlanFormatting.marshrut_postroen_value1_19ed87bb', { value1: routingState.provider });
 }
@@ -183,6 +195,9 @@ function humanizeRoutingReason(reason: string | null | undefined): string | null
 
 export function routingStateHint(routingState: RoutingState | null | undefined): string | null {
   if (!routingState || !isRouteApproximate(routingState)) return null;
+  if (routingState.provider === PREVIEW_SCHEMATIC_PROVIDER) {
+    return i18nT('tripsStatic:plan.routingReason.schematic');
+  }
   const candidates = [...routingState.warnings, routingState.fallbackReason];
   for (const candidate of candidates) {
     const humanized = humanizeRoutingReason(candidate);

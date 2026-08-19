@@ -118,6 +118,17 @@ function pluginOptions(plugin) {
   return Array.isArray(plugin) ? plugin[1] || {} : {};
 }
 
+function hasIosPodspec(packageRoot) {
+  return ['.', 'ios'].some(segment => {
+    try {
+      return fs.readdirSync(path.join(packageRoot, segment))
+        .some(entry => entry.endsWith('.podspec'));
+    } catch {
+      return false;
+    }
+  });
+}
+
 function parseInfoPlistStrings(source) {
   const entries = {};
   const linePattern = /^\s*"([^"]+)"\s*=\s*"([^"]*)";\s*$/gm;
@@ -184,6 +195,7 @@ function validateIosRelease(root = process.cwd()) {
   let scheme;
   let packageJson;
   let yarnLock;
+  let podfileLock;
   let buildScript;
   let submitScript;
   let appIconContents;
@@ -209,6 +221,7 @@ function validateIosRelease(root = process.cwd()) {
     scheme = read(root, 'ios/metravel.xcodeproj/xcshareddata/xcschemes/metravel.xcscheme');
     packageJson = readJson(root, 'package.json');
     yarnLock = read(root, 'yarn.lock');
+    podfileLock = read(root, 'ios/Podfile.lock');
     buildScript = read(root, 'scripts/ios-build.sh');
     submitScript = read(root, 'scripts/ios-submit.sh');
     appDelegate = read(root, 'ios/metravel/AppDelegate.swift');
@@ -346,12 +359,14 @@ function validateIosRelease(root = process.cwd()) {
   if (packageJson.dependencies?.['expo-task-manager'] || packageJson.devDependencies?.['expo-task-manager']) {
     fail('IOS_BACKGROUND_LOCATION_SCOPE', 'expo-task-manager requires a new background-location capability audit');
   }
-  if (app.ios?.usesAppleSignIn !== false) {
-    fail('IOS_APPLE_SIGN_IN_SCOPE', 'Sign in with Apple remains disabled until its separate launch flow is ready');
+  // #1415 открыл owner gate для Sign in with Apple: пока в сборке есть сторонний
+  // соцвход (Google/Facebook), App Review Guideline 4.8 делает Apple-вход
+  // обязательным. Гейт теперь пиннит включённое состояние, а не выключенное.
+  if (app.ios?.usesAppleSignIn !== true) {
+    fail('IOS_APPLE_SIGN_IN_SCOPE', 'Sign in with Apple must stay enabled while third-party social login ships (Guideline 4.8)');
   }
-  if (packageJson.dependencies?.['expo-apple-authentication'] ||
-      packageJson.devDependencies?.['expo-apple-authentication']) {
-    fail('IOS_APPLE_SIGN_IN_SCOPE', 'Apple authentication package requires its separate launch capability audit');
+  if (!packageJson.dependencies?.['expo-apple-authentication']) {
+    fail('IOS_APPLE_SIGN_IN_SCOPE', 'expo-apple-authentication must remain a runtime dependency of the Apple sign-in flow');
   }
   if (!jsonEqual(app.ios?.associatedDomains, ['applinks:metravel.by'])) {
     fail('IOS_ASSOCIATED_DOMAIN_EXPO', JSON.stringify(app.ios?.associatedDomains));
@@ -508,11 +523,12 @@ function validateIosRelease(root = process.cwd()) {
   }
 
   const entitlementKeys = Object.keys(entitlementsConfig).sort();
-  if (!jsonEqual(entitlementKeys, ['com.apple.developer.associated-domains']) ||
-      !jsonEqual(entitlementsConfig['com.apple.developer.associated-domains'], ['applinks:metravel.by'])) {
+  if (!jsonEqual(entitlementKeys, ['com.apple.developer.applesignin', 'com.apple.developer.associated-domains']) ||
+      !jsonEqual(entitlementsConfig['com.apple.developer.associated-domains'], ['applinks:metravel.by']) ||
+      !jsonEqual(entitlementsConfig['com.apple.developer.applesignin'], ['Default'])) {
     fail(
       'IOS_ENTITLEMENT_SCOPE',
-      'only the metravel.by Associated Domain is enabled; APNs and Apple Sign-In need separate owner gates'
+      'only the metravel.by Associated Domain and Sign in with Apple are enabled; APNs needs a separate owner gate'
     );
   }
 
@@ -577,6 +593,38 @@ function validateIosRelease(root = process.cwd()) {
     }
   } catch (error) {
     fail('IOS_XCODE_PROJECT_PARSE', error.message);
+  }
+
+  // `pod install` пере-сериализует канонический Xcode-проект целиком, поэтому
+  // отставший tracked `ios/Podfile.lock` виден только в момент сборки — на EAS
+  // поды доустанавливаются по autolinking, а локальная фаза
+  // `[CP] Check Pods Manifest.lock` падает. Гейт ловит расхождение раньше (#1504).
+  // Только закавыченные пути из EXTERNAL SOURCES: свободный поиск по строке
+  // ловит ещё и хвосты вида «expo`)» из секции DEPENDENCIES.
+  const lockedNodeModules = new Set(
+    Array.from(
+      podfileLock.matchAll(/:(?:path|podspec): "\.\.\/node_modules\/([^"]+)"/g),
+      match => {
+        const segments = match[1].split('/');
+        return segments[0].startsWith('@') ? segments.slice(0, 2).join('/') : segments[0];
+      }
+    )
+  );
+  const nodeModulesRoot = path.join(root, 'node_modules');
+  if (fs.existsSync(nodeModulesRoot)) {
+    const unlockedPods = Object.keys(packageJson.dependencies || {}).filter(
+      name => !lockedNodeModules.has(name) && hasIosPodspec(path.join(nodeModulesRoot, name))
+    );
+    const orphanedPods = Array.from(lockedNodeModules).filter(
+      name => !fs.existsSync(path.join(nodeModulesRoot, name))
+    );
+    if (unlockedPods.length > 0 || orphanedPods.length > 0) {
+      const detail = [
+        unlockedPods.length > 0 && `missing from lock: ${unlockedPods.sort().join(', ')}`,
+        orphanedPods.length > 0 && `locked but absent from node_modules: ${orphanedPods.sort().join(', ')}`,
+      ].filter(Boolean).join('; ');
+      fail('IOS_PODFILE_LOCK_STALE', `ios/Podfile.lock is out of sync with node_modules — ${detail}`);
+    }
   }
   for (const [locale, expectedStrings] of Object.entries(LOCALIZED_PURPOSE_STRINGS)) {
     const parsedStrings = parseInfoPlistStrings(localizedPurposeSources[locale]);

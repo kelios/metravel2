@@ -1,7 +1,7 @@
 // components/trips/planning/RouteSummaryBar.tsx
 // Сводка маршрута (Sprint 13 / блок D): дистанция / время / набор высоты /
-// остановки в виде стат-чипов. Питается RouteSummary из estimateRouteSummary
-// (мгновенный предпросмотр) или routeSummary поездки с бэка.
+// остановки в виде стат-чипов. Питается RouteSummary живого превью маршрута
+// (движок /map, #1490) или routeSummary поездки с бэка.
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';

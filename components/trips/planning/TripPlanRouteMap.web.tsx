@@ -10,6 +10,7 @@ import {
   formatDistance,
   formatDuration,
   isRouteApproximate,
+  routingStateHint,
   routingStateLabel,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -418,14 +419,17 @@ export default function TripPlanRouteMap({
             </View>
           ) : null}
           <Text style={styles.hint}>
-            {trackPositions.length >= 2 && routeGeometry?.length
+            {trackPositions.length >= 2 && routingState
               ? routingStateLabel(routingState)
               : readonly
                 ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
                 : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
           </Text>
           {approximate ? (
-            <Text style={styles.warning}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4')}</Text>
+            <Text style={styles.warning}>
+              {routingStateHint(routingState)
+                ?? i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4')}
+            </Text>
           ) : null}
         </View>
         <Text style={styles.counter}>{markerPositions.length}</Text>

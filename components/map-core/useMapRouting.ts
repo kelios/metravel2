@@ -2,7 +2,7 @@
 // C4.2: Unified routing hook — combines useRouting + RoutingMachine sync + useElevation
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouting } from '@/components/MapPage/useRouting';
-import { useElevation } from './useElevation';
+import { useElevation, type ElevationSample } from './useElevation';
 import { showRouteBuiltToast, showRouteErrorToast } from '@/utils/mapToasts';
 import type { TransportMode } from './types';
 import { translate as i18nT } from '@/i18n';
@@ -20,6 +20,12 @@ export interface UseMapRoutingOptions {
   apiKey?: string;
   /** Whether elevation should be computed (for bike/foot) */
   enableElevation?: boolean;
+  /**
+   * Тосты «маршрут построен / не построен». На /map это единственная обратная
+   * связь о результате, а в конструкторе поездки маршрут перестраивается на
+   * каждую правку точки, поэтому там их выключают (#1490).
+   */
+  showToasts?: boolean;
 }
 
 export interface UseMapRoutingResult {
@@ -37,6 +43,8 @@ export interface UseMapRoutingResult {
   elevationGain: number | null;
   /** Elevation loss in meters (bike/foot only) */
   elevationLoss: number | null;
+  /** Замеры высот вдоль `coords` — для профиля высот (bike/foot only) */
+  elevationSamples: ElevationSample[] | null;
 }
 
 export type RouteChangeCallback = (result: UseMapRoutingResult) => void;
@@ -56,7 +64,13 @@ export function useMapRouting(
   options: UseMapRoutingOptions,
   onRouteChange?: RouteChangeCallback,
 ): UseMapRoutingResult {
-  const { routePoints, transportMode, apiKey, enableElevation = true } = options;
+  const {
+    routePoints,
+    transportMode,
+    apiKey,
+    enableElevation = true,
+    showToasts = true,
+  } = options;
 
   const hasTwoPoints = routePoints.length >= 2;
   const routingState = useRouting(routePoints, transportMode, apiKey);
@@ -75,11 +89,16 @@ export function useMapRouting(
   // маршрута пересоздавал result и доставлял свежие gain/loss через onRouteChange (#121).
   const [elevationGain, setElevationGain] = useState<number | null>(null);
   const [elevationLoss, setElevationLoss] = useState<number | null>(null);
+  const [elevationSamples, setElevationSamples] = useState<ElevationSample[] | null>(null);
 
-  const handleElevationResult = useCallback((gain: number | null, loss: number | null) => {
-    setElevationGain(gain);
-    setElevationLoss(loss);
-  }, []);
+  const handleElevationResult = useCallback(
+    (gain: number | null, loss: number | null, samples: ElevationSample[] | null) => {
+      setElevationGain(gain);
+      setElevationLoss(loss);
+      setElevationSamples(samples);
+    },
+    [],
+  );
 
   useElevation(
     {
@@ -100,7 +119,8 @@ export function useMapRouting(
     coords: routingState.coords,
     elevationGain,
     elevationLoss,
-  }), [routingState.loading, routingState.error, routingState.distance, routingState.duration, routingState.coords, elevationGain, elevationLoss]);
+    elevationSamples,
+  }), [routingState.loading, routingState.error, routingState.distance, routingState.duration, routingState.coords, elevationGain, elevationLoss, elevationSamples]);
 
   // Sync to parent & show toasts
   const prevStateRef = useRef<string>('');
@@ -117,6 +137,7 @@ export function useMapRouting(
         coords: [] as [number, number][],
         elevationGain: null,
         elevationLoss: null,
+        elevationSamples: null,
       };
       onRouteChange?.(emptyResult);
       return;
@@ -130,16 +151,18 @@ export function useMapRouting(
     lastSentRef.current = stateKey;
 
     // Toasts
-    if (result.error) {
-      showRouteErrorToast(result.error || i18nT('errorsStatic:map.routeFailed'));
-    } else if (!result.loading && result.distance > 0 && result.duration > 0) {
-      showRouteBuiltToast(result.distance / 1000, result.duration / 60);
+    if (showToasts) {
+      if (result.error) {
+        showRouteErrorToast(result.error || i18nT('errorsStatic:map.routeFailed'));
+      } else if (!result.loading && result.distance > 0 && result.duration > 0) {
+        showRouteBuiltToast(result.distance / 1000, result.duration / 60);
+      }
     }
 
     onRouteChange?.(result);
     // result is derived from the listed primitives; onRouteChange omitted intentionally as a stable parent callback
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasTwoPoints, result.loading, result.error, result.distance, result.duration, coordsKey, result.elevationGain, result.elevationLoss]);
+  }, [hasTwoPoints, showToasts, result.loading, result.error, result.distance, result.duration, coordsKey, result.elevationGain, result.elevationLoss]);
 
   return result;
 }

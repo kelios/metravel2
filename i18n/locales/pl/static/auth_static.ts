@@ -14,6 +14,7 @@ export const authStaticResources = {
   "accountConfirmation.error": "Wystąpił błąd podczas potwierdzania konta. {{details}}",
   "registration.failed": "Nie udało się zarejestrować.",
   "google.signInFailed": "Błąd logowania przez Google.",
+  "apple.signInFailed": "Nie udało się zalogować przez Apple.",
   "facebook.signIn": "Zaloguj się przez Facebook",
   "facebook.loading": "Logowanie przez Facebook…",
   "facebook.unavailable": "Logowanie przez Facebook jest chwilowo niedostępne",

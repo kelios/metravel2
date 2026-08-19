@@ -24,6 +24,7 @@ function fixture(changes: Record<string, (value: string) => string>): string {
     'android/app/src/main/res/values/colors.xml',
     'assets/images/notification-icon.png',
     'ios/Podfile.properties.json',
+    'ios/Podfile.lock',
     'ios/metravel/AppDelegate.swift',
     'ios/metravel.xcodeproj/project.pbxproj',
     'ios/metravel.xcodeproj/xcshareddata/xcschemes/metravel.xcscheme',
@@ -87,6 +88,7 @@ describe('iOS release configuration', () => {
     const notificationMetadata = android.manifest.manifest.application[0]['meta-data'];
 
     expect(ios.entitlements).toEqual({
+      'com.apple.developer.applesignin': ['Default'],
       'com.apple.developer.associated-domains': ['applinks:metravel.by'],
     });
     expect(ios.infoPlist).not.toHaveProperty('NSMotionUsageDescription');
@@ -352,6 +354,37 @@ describe('iOS release configuration', () => {
     );
   });
 
+  it('fails closed when Sign in with Apple is turned off while social login ships', () => {
+    // Guideline 4.8: сторонний соцвход в сборке делает Apple-вход обязательным (#1415).
+    const testRoot = fixture({
+      'app.json': value => value.replace('"usesAppleSignIn": true', '"usesAppleSignIn": false'),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_APPLE_SIGN_IN_SCOPE' })])
+    );
+  });
+
+  it('fails closed when the Apple authentication package leaves runtime dependencies', () => {
+    const testRoot = fixture({
+      'package.json': value => value.replace(/\n\s*"expo-apple-authentication": "[^"]+",/, ''),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_APPLE_SIGN_IN_SCOPE' })])
+    );
+  });
+
+  it('fails closed when the Apple sign-in entitlement is dropped from the native target', () => {
+    const testRoot = fixture({
+      'ios/metravel/metravel.entitlements': value => value.replace(
+        '    <key>com.apple.developer.applesignin</key>\n    <array>\n      <string>Default</string>\n    </array>\n',
+        ''
+      ),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_ENTITLEMENT_SCOPE' })])
+    );
+  });
+
   it('fails closed when native localization fallback is not Russian', () => {
     const testRoot = fixture({
       'ios/metravel.xcodeproj/project.pbxproj': value => value.replace(
@@ -379,6 +412,41 @@ describe('iOS release configuration', () => {
     });
     expect(validateIosRelease(testRoot)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_PURPOSE_STRINGS_XCODE' })])
+    );
+  });
+
+  it('fails closed when the tracked Podfile.lock is behind node_modules', () => {
+    // Источник истины для подов — autolinking по node_modules, а не сам lock:
+    // отставший lock роняет фазу `[CP] Check Pods Manifest.lock` уже на сборке (#1504).
+    const testRoot = fixture({
+      'ios/Podfile.lock': value => value
+        .split('\n')
+        .filter(line => !line.includes('../node_modules/expo-apple-authentication'))
+        .join('\n'),
+    });
+    const podspecDirectory = path.join(testRoot, 'node_modules/expo-apple-authentication/ios');
+    fs.mkdirSync(podspecDirectory, { recursive: true });
+    fs.writeFileSync(path.join(podspecDirectory, 'ExpoAppleAuthentication.podspec'), '');
+    // detail проверяется прицельно: фикстура задевает и обратную ветку тоже,
+    // а изолировать надо именно «пакет есть, записи в lock нет».
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_PODFILE_LOCK_STALE',
+        detail: expect.stringContaining('missing from lock: expo-apple-authentication'),
+      })])
+    );
+  });
+
+  it('fails closed when Podfile.lock keeps a pod whose package left node_modules', () => {
+    // Обратное направление того же расхождения: пакет выпилили из зависимостей,
+    // а запись в lock осталась — `pod install` снова разъедет sandbox (#1504).
+    const testRoot = fixture({});
+    fs.mkdirSync(path.join(testRoot, 'node_modules'), { recursive: true });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_PODFILE_LOCK_STALE',
+        detail: expect.stringContaining('locked but absent from node_modules: '),
+      })])
     );
   });
 

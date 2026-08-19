@@ -9,7 +9,26 @@ import type { TransportMode } from './types';
 
 const MAX_ELEVATION_SAMPLES = 60;
 const MAX_ELEVATION_CACHE_ENTRIES = 50;
-const elevationCache = new Map<string, { gain: number; loss: number }>();
+
+/**
+ * Одна замеренная высота на маршруте. `index` — позиция в исходном массиве
+ * `coords`, поэтому потребитель может разложить редкие замеры обратно на плотную
+ * геометрию и построить профиль высот той же линии (#1490).
+ */
+export interface ElevationSample {
+  index: number;
+  elevationM: number;
+}
+
+type ElevationCacheEntry = {
+  gain: number;
+  loss: number;
+  /** Длина `coords`, на которой считались индексы: чужая длина делает их бессмысленными. */
+  total: number;
+  samples: ElevationSample[];
+};
+
+const elevationCache = new Map<string, ElevationCacheEntry>();
 
 const elevationCacheGet = (key: string) => {
   const value = elevationCache.get(key);
@@ -21,7 +40,7 @@ const elevationCacheGet = (key: string) => {
   return value;
 };
 
-const elevationCacheSet = (key: string, value: { gain: number; loss: number }) => {
+const elevationCacheSet = (key: string, value: ElevationCacheEntry) => {
   elevationCache.delete(key);
   if (elevationCache.size >= MAX_ELEVATION_CACHE_ENTRIES) {
     const oldest = elevationCache.keys().next().value;
@@ -88,13 +107,24 @@ export interface UseElevationResult {
 }
 
 /**
+ * Приёмник результата. Третий аргумент — сами замеры высот вдоль `coords`
+ * (#1490): по ним планировщик поездок строит профиль высот превью-маршрута.
+ * Потребителям, которым нужны только набор/сброс, его можно не объявлять.
+ */
+export type ElevationResultCallback = (
+  gain: number | null,
+  loss: number | null,
+  samples: ElevationSample[] | null,
+) => void;
+
+/**
  * Fetches elevation data for a route and computes gain/loss.
  * Only active for bike/foot transport modes.
  * Uses Open-Meteo elevation API (no API key required).
  */
 export const useElevation = (
   options: UseElevationOptions,
-  onResult: (gain: number | null, loss: number | null) => void,
+  onResult: ElevationResultCallback,
 ): void => {
   const { coords, transportMode, enabled, coordsKey } = options;
   const onResultRef = useRef(onResult);
@@ -104,7 +134,7 @@ export const useElevation = (
   useEffect(() => {
     if (transportMode !== 'car') return;
     try {
-      onResultRef.current(null, null);
+      onResultRef.current(null, null, null);
     } catch {
       // noop
     }
@@ -119,9 +149,17 @@ export const useElevation = (
     const indices = sampleIndices(coords.length, MAX_ELEVATION_SAMPLES);
     if (indices.length < 2) return;
 
-    const sampled = indices
-      .map((i) => coords[i])
-      .filter((p) => Array.isArray(p) && p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    // Индексы уцелевших точек нужны так же, как их координаты: по ним ответ
+    // Open-Meteo раскладывается обратно на исходную геометрию маршрута (#1490).
+    const sampledIndices: number[] = [];
+    const sampled: Array<[number, number]> = [];
+    for (const i of indices) {
+      const point = coords[i];
+      if (!Array.isArray(point) || point.length < 2) continue;
+      if (!Number.isFinite(point[0]) || !Number.isFinite(point[1])) continue;
+      sampledIndices.push(i);
+      sampled.push(point);
+    }
 
     if (sampled.length < 2) return;
 
@@ -132,7 +170,13 @@ export const useElevation = (
     const cached = elevationCacheGet(cacheKey);
     if (cached) {
       try {
-        onResultRef.current(cached.gain, cached.loss);
+        // Индексы замеров привязаны к длине геометрии, на которой их считали:
+        // при чужой длине отдаём только набор/сброс, без профиля.
+        onResultRef.current(
+          cached.gain,
+          cached.loss,
+          cached.total === coords.length ? cached.samples : null,
+        );
       } catch {
         // noop
       }
@@ -141,7 +185,7 @@ export const useElevation = (
 
     // Clear stale values while we fetch
     try {
-      onResultRef.current(null, null);
+      onResultRef.current(null, null, null);
     } catch {
       // noop
     }
@@ -169,12 +213,21 @@ export const useElevation = (
         const elevations = (data as any)?.elevation;
         if (!Array.isArray(elevations) || elevations.length < 2) return;
 
-        const stats = computeElevationGainLoss(elevations.map((x: any) => Number(x)));
+        const numericElevations = elevations.map((x: any) => Number(x));
+        const stats = computeElevationGainLoss(numericElevations);
+        // `sampled` собран из `indices` тем же фильтром, поэтому i-й ответ
+        // Open-Meteo принадлежит i-й уцелевшей точке, а не i-му индексу.
+        const samples: ElevationSample[] = [];
+        for (let i = 0; i < sampledIndices.length && i < numericElevations.length; i += 1) {
+          const elevationM = numericElevations[i];
+          if (!Number.isFinite(elevationM)) continue;
+          samples.push({ index: sampledIndices[i], elevationM });
+        }
         // Cache even if stale; but only emit to the (possibly unmounted) callback when current.
-        elevationCacheSet(cacheKey, stats);
+        elevationCacheSet(cacheKey, { ...stats, total: coords.length, samples });
         if (cancelled) return;
         try {
-          onResultRef.current(stats.gain, stats.loss);
+          onResultRef.current(stats.gain, stats.loss, samples);
         } catch {
           // noop
         }

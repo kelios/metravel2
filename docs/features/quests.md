@@ -41,7 +41,7 @@ runtime-доказательствами под задачу, а не налич
 | `/quests/scenario` | `app/(tabs)/quests/scenario.tsx` (9 LOC) → `screens/tabs/QuestScenarioScreen.tsx` (435 LOC) | DIY-лендинг «квест-бук для печати»; тоже статический сегмент перед `[city]` |
 | `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` (229 LOC) | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); неизвестный сегмент → `router.replace('/quests')` |
 | `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов |
-| Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | две карточки через `useQuestsPreview(limit)` |
+| Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; SSG-двойник — `injectHomeQuestsSection` в `scripts/generate-seo-pages.js` (crawlable `data-ssg-home-quests`) |
 | Промо в travel-детали | `components/travel/details/sections/QuestForCitySection.tsx` (+ `Deferred*.tsx` / `Deferred*.web.tsx`) | «квест по этому городу» на странице путешествия |
 
 Alias-роутов на уровне Expo Router нет: alias — это тот же сегмент `[city]`,
@@ -334,11 +334,32 @@ Canonical лендинга — alias-вариант, если alias есть, и
 - Ключ сессии общий для гостя и залогиненного: логин посреди квеста не рвёт
   прохождение на две сессии.
 - Продуктовая аналитика (`queueAnalyticsEvent`): `quest_start`,
+  `quest_step_view`, `quest_answer_submit`, `quest_hint`,
   `quest_point_done`, `quest_finish_early`, `quest_skip_stuck_step`,
   `quest_finish` (с `early`/`partial`/`passed_count`/`steps_count`),
   `quest_completion_credited`, `quest_guest_gate_view`,
   `quest_guest_gate_login_click`, `quest_guest_gate_register_click`,
   `quest_guest_progress_migrated`.
+- **Пошаговая воронка (#1498).** `quest_step_view` (`quest_id`, `step_index`) —
+  игрок открыл точку; `quest_answer_submit` (`+ is_correct`, `attempt_no`) — одна
+  на каждое нажатие «Проверить»; `quest_hint` (`+ attempt_no`) — раскрытие
+  подсказки. `attempt_no` в `quest_answer_submit` — номер текущей попытки,
+  считая с 1; в `quest_hint` — сколько неверных попыток игрок сделал ДО
+  раскрытия (0 = взял подсказку сразу). Схлопывание: просмотр и подсказка считаются один раз на точку за
+  прохождение (возврат назад и повторное раскрытие аккордеона новых событий не
+  дают), попытка — каждая, иначе не построить распределение провалов по
+  `step_index`. `quest_step_view` уходит только когда карточка шага реально на
+  экране: у гостя за лимитом бесплатных точек её подменяет собой гейт
+  регистрации, и просмотр этой точке не засчитывается — иначе провал на гейте
+  (`quest_guest_gate_view`) стал бы неотличим от провала на самом вопросе. Все три живут в `useQuestWizardAnalytics`; попытка приходит из
+  карточки шага через `onAnswerAttempt` рядом с серверной очередью
+  `recordQuestAnswerAttempt` — GA4 отвечает «на каком шаге сыплются попытки»,
+  очередь «что игрок писал».
+- `step_index` во всех событиях — индекс среди настоящих точек (`steps`), intro в
+  него не входит. Intro больше не шлёт `quest_point_done`: он уходил со
+  `step_index: -1` и завышал «пройдено точек на старт» ровно на один старт
+  (#1498), поэтому исторические счётчики `quest_point_done` до 19.08.2026
+  содержат по одному лишнему событию на каждый `quest_start`.
 - Разбор трения: `npm run quest:insights` (`scripts/quest-answer-insights.js`),
   читает staff-агрегат `GET /api/quests/{id}/answer-stats/`; формула
   `rejected_per_solver + 2×hint_open_rate + 3×abandon_rate`. Staff-токен из

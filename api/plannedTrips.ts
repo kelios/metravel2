@@ -3,5 +3,5 @@
 // request ownership and development fixtures live in focused modules.
 
 export type * from '@/api/plannedTripsTypes';
-export { estimateRouteSummary, TRIP_BIKE_TYPES } from '@/api/plannedTripsNormalizers';
+export { TRIP_BIKE_TYPES } from '@/api/plannedTripsNormalizers';
 export * from '@/api/plannedTripsRequests';

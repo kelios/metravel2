@@ -37,6 +37,8 @@ import { notifyAuthProgressSaved } from '@/utils/authProgressToast';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/context/AuthContext';
+import type { AppleCredentialPayload } from '@/api/appleAuth';
+import AppleSignInButton from '@/components/auth/AppleSignInButton';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import { webTouchScrollStyle } from '@/utils';
@@ -58,6 +60,7 @@ export default function RegisterForm() {
     const [submitted, setSubmitted] = useState(false);
     const [googleBusy, setGoogleBusy] = useState(false);
     const [facebookBusy, setFacebookBusy] = useState(false);
+    const [appleBusy, setAppleBusy] = useState(false);
     const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -71,7 +74,7 @@ export default function RegisterForm() {
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
     const isFocused = useIsFocused();
     const router = useRouter();
-    const { loginWithGoogle } = useAuth();
+    const { loginWithGoogle, loginWithApple } = useAuth();
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -154,7 +157,7 @@ export default function RegisterForm() {
     };
 
     const handleGoogleSignIn = async (credential: string) => {
-        if (googleBusy || facebookBusy || submitted) return;
+        if (googleBusy || facebookBusy || appleBusy || submitted) return;
         setGoogleBusy(true);
         let navigating = false;
         try {
@@ -201,6 +204,60 @@ export default function RegisterForm() {
             intent,
             redirect,
             method: 'google',
+            reason: 'provider',
+        });
+        setMsg({ text: error, error: true });
+    };
+
+    // IOS-05: Apple отдаёт credential, серверную проверку делает #1412.
+    const handleAppleSignIn = async (credential: AppleCredentialPayload) => {
+        if (googleBusy || facebookBusy || appleBusy || submitted) return;
+        setAppleBusy(true);
+        let navigating = false;
+        try {
+            setMsg({ text: '', error: false });
+            trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'apple' });
+            const result = await loginWithApple(credential);
+            if (result.status === 'authenticated') {
+                trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'apple' });
+                if (intent) {
+                    sendAnalyticsEvent('AuthSuccess', { source: 'apple', intent });
+                }
+                navigating = true;
+                setSubmitted(true);
+                notifyAuthProgressSaved(hasReturnContext);
+                replaceAfterAuth();
+            } else {
+                trackRegistrationFailed({
+                    source: 'registration',
+                    intent,
+                    redirect,
+                    method: 'apple',
+                    reason: 'api',
+                });
+                setMsg({ text: result.message || i18nT('authStatic:apple.signInFailed'), error: true });
+            }
+        } catch (e: any) {
+            trackRegistrationFailed({
+                source: 'registration',
+                intent,
+                redirect,
+                method: 'apple',
+                reason: 'exception',
+            });
+            setMsg({ text: e?.message || i18nT('authStatic:apple.signInFailed'), error: true });
+        } finally {
+            // На успехе оставляем заблокированным до размонтирования (идёт навигация).
+            if (!navigating) setAppleBusy(false);
+        }
+    };
+
+    const handleAppleError = (error: string) => {
+        trackRegistrationFailed({
+            source: 'registration',
+            intent,
+            redirect,
+            method: 'apple',
             reason: 'provider',
         });
         setMsg({ text: error, error: true });
@@ -254,7 +311,7 @@ export default function RegisterForm() {
     const title = i18nT('auth:components.auth.RegistrationForm.registratsiya_v_metravel_akkaunt_i_marshruty_94d7b8e7');
     const description =
         i18nT('auth:components.auth.RegistrationForm.sozdayte_akkaunt_v_metravel_chtoby_publikova_7610c3f7');
-    const busy = isSubmitting || submitted || googleBusy || facebookBusy;
+    const busy = isSubmitting || submitted || googleBusy || facebookBusy || appleBusy;
 
     return (
         <>
@@ -318,6 +375,14 @@ export default function RegisterForm() {
 
                                 {/* ---------- social first ---------- */}
                                 <View style={styles.socialActions}>
+                                    {/* Apple первым: HIG требует показывать Sign in with Apple
+                                        не менее заметно, чем прочие провайдеры. */}
+                                    <AppleSignInButton
+                                        onSuccess={handleAppleSignIn}
+                                        onError={handleAppleError}
+                                        disabled={busy}
+                                        mode="sign_up"
+                                    />
                                     <GoogleSignInButton
                                         onSuccess={handleGoogleSignIn}
                                         onError={handleGoogleError}
@@ -328,7 +393,7 @@ export default function RegisterForm() {
                                         onAuthenticated={handleFacebookAuthenticated}
                                         onFailure={handleFacebookFailure}
                                         onBusyChange={setFacebookBusy}
-                                        disabled={isSubmitting || submitted || googleBusy}
+                                        disabled={isSubmitting || submitted || googleBusy || appleBusy}
                                     />
                                 </View>
 

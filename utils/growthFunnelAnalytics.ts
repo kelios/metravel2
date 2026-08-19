@@ -30,7 +30,7 @@ export const GROWTH_FUNNEL_EVENTS = {
 
 export type GrowthContentType = 'route' | 'article';
 export type GrowthAuthState = 'guest' | 'authenticated';
-export type GrowthRegistrationMethod = 'email' | 'google' | 'facebook';
+export type GrowthRegistrationMethod = 'email' | 'google' | 'facebook' | 'apple';
 export type GrowthRegistrationErrorReason = 'api' | 'exception' | 'provider';
 
 type EventParams = Record<string, unknown>;

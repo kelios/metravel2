@@ -115,7 +115,11 @@ function GoogleSignInButtonConfigured({
 
         setIsLoading(true);
         try {
-            await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+            // Play Services существуют только на Android: на iOS этот вызов
+            // ничего не проверяет и лишь путает диагностику. (IOS-05)
+            if (Platform.OS === 'android') {
+                await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+            }
             const result = await GoogleSignin.signIn();
 
             if (isGoogleSignInCancelled(result)) {

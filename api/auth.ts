@@ -5,13 +5,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FormValues } from '@/types/types';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
+import { API_BASE_URL as URLAPI, DEFAULT_TIMEOUT } from '@/api/apiConfig';
+import {
+    parseSocialSession,
+    type SocialAuthResponse,
+    type SocialSessionPayload,
+} from '@/api/authShared';
 import { sanitizeInput } from '@/utils/security';
 import { validatePassword } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
-import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { getCsrfHeader } from '@/utils/csrf';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import {
@@ -20,25 +25,6 @@ import {
     shouldUseStoredAuthToken,
 } from '@/utils/authPlatform';
 import { translate as i18nT } from '@/i18n';
-
-const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
-const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
-const rawApiUrl = resolveApiBaseUrl({
-    platformOS: Platform.OS,
-    envApiUrl: process.env.EXPO_PUBLIC_API_URL,
-    prodApiUrl: process.env.PROD_API_URL,
-    nodeEnv: process.env.NODE_ENV,
-    isLocalApi,
-    isE2E,
-    windowOrigin: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.origin : null,
-    windowHostname: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.hostname : null,
-});
-if (!rawApiUrl) {
-    throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
-}
-const URLAPI = rawApiUrl;
-
-const DEFAULT_TIMEOUT = 10000; // 10 секунд
 
 const LOGIN = `${URLAPI}/user/login/`;
 const LOGOUT = `${URLAPI}/user/logout/`;
@@ -83,19 +69,8 @@ export const validateWebCookieSessionApi = async (): Promise<boolean> => {
     return true;
 };
 
-type GoogleAuthResponse = {
-    token?: string;
-    refresh?: string;
-    name?: string;
-    email?: string;
-    id?: string | number;
-    is_superuser?: boolean;
-    detail?: string;
-    error?: string;
-    message?: string;
-    non_field_errors?: string[];
-    id_token?: string[];
-};
+/** Исторический алиас: Google-ветка ниже читает общую форму ответа. */
+type GoogleAuthResponse = SocialAuthResponse;
 
 type FacebookAuthResponse = GoogleAuthResponse & {
     error_code?:
@@ -117,17 +92,8 @@ export type FacebookEmailCompletionReason =
     | 'facebook_email_permission_missing'
     | 'facebook_primary_email_unavailable';
 
-export type FacebookSessionPayload = {
-    token: string;
-    refresh?: string;
-    name: string;
-    email: string;
-    id: string | number;
-    is_superuser: boolean;
-};
-
 export type FacebookAuthResult =
-    | { status: 'authenticated'; user: FacebookSessionPayload }
+    | { status: 'authenticated'; user: SocialSessionPayload }
     | {
         status: 'email_completion_required';
         completionHandle: string;
@@ -548,18 +514,6 @@ const facebookErrorResult = (
     message: getFacebookAuthErrorMessage(payload, status),
 });
 
-const parseFacebookSession = (payload: FacebookAuthResponse): FacebookSessionPayload | null => {
-    if (!payload.token || payload.id === undefined || payload.id === null) return null;
-    return {
-        token: payload.token,
-        refresh: payload.refresh,
-        name: String(payload.name || ''),
-        email: String(payload.email || ''),
-        id: payload.id,
-        is_superuser: Boolean(payload.is_superuser),
-    };
-};
-
 const parseFacebookCompletion = (
     payload: FacebookAuthResponse,
 ): Extract<FacebookAuthResult, { status: 'email_completion_required' }> | null => {
@@ -619,7 +573,7 @@ export const facebookAuthApi = async (accessToken: string): Promise<FacebookAuth
             if (response.status === 409 && completion) return completion;
             return facebookErrorResult(json, response.status);
         }
-        const user = parseFacebookSession(json);
+        const user = parseSocialSession(json);
         if (user) return { status: 'authenticated', user };
         return {
             status: 'error',
@@ -673,7 +627,7 @@ export const confirmFacebookEmailCompletionApi = async (
         }, DEFAULT_TIMEOUT);
         const json = await safeJsonParse<FacebookAuthResponse>(response, {});
         if (!response.ok) return facebookErrorResult(json, response.status);
-        const user = parseFacebookSession(json);
+        const user = parseSocialSession(json);
         if (user) return { status: 'authenticated', user };
         return {
             status: 'error',

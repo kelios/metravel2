@@ -28,7 +28,6 @@ import type {
   TripSuggestionDto,
 } from '@/api/plannedTripsNormalizers';
 import {
-  estimateRouteSummary,
   mapCommunityTrip,
   mapSuggestion,
   mapTemplate,
@@ -325,7 +324,6 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
     trip.visibility = input.visibility;
     trip.seatsTotal = input.seatsTotal;
     trip.coverUrl = input.coverUrl;
-    trip.routeSummary = trip.route.length ? estimateRouteSummary(trip.route, input.transport) : null;
     return cloneTrip(trip);
   }
 
@@ -348,7 +346,6 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
         trip.visibility = input.visibility;
         trip.seatsTotal = input.seatsTotal;
         trip.coverUrl = input.coverUrl;
-        trip.routeSummary = trip.route.length ? estimateRouteSummary(trip.route, input.transport) : null;
         return cloneTrip(trip);
       }
     }
@@ -363,9 +360,6 @@ export async function updatePlannedTripTransport(
     const trip = findMock(input.tripId);
     if (!trip) throw new ApiError(404, 'Trip not found');
     trip.transport = input.transport;
-    trip.routeSummary = trip.route.length
-      ? estimateRouteSummary(trip.route, input.transport)
-      : null;
     return cloneTrip(trip);
   }
 
@@ -417,7 +411,9 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
     const trip = findMock(input.tripId);
     if (!trip) throw new ApiError(404, 'Trip not found');
     trip.route = input.route;
-    trip.routeSummary = estimateRouteSummary(input.route, trip.transport);
+    // Движка маршрутизации у мока нет, а старая сводка описывает уже другие
+    // точки: честнее отдать «сводки пока нет» (#1490).
+    trip.routeSummary = null;
     return cloneTrip(trip);
   }
   try {
@@ -447,7 +443,7 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
       const trip = findMock(input.tripId);
       if (trip) {
         trip.route = input.route;
-        trip.routeSummary = estimateRouteSummary(input.route, trip.transport);
+        trip.routeSummary = null;
         return cloneTrip(trip);
       }
     }

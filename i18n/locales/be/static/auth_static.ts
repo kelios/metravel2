@@ -14,6 +14,7 @@ export const authStaticResources = {
   "accountConfirmation.error": "Адбылася памылка пры пацверджанні ўліковага запісу. {{details}}",
   "registration.failed": "Не ўдалося зарэгістравацца.",
   "google.signInFailed": "Памылка пры ўваходзе праз Google.",
+  "apple.signInFailed": "Не атрымалася ўвайсці праз Apple.",
   "facebook.signIn": "Увайсці праз Facebook",
   "facebook.loading": "Уваход праз Facebook…",
   "facebook.unavailable": "Уваход праз Facebook часова недаступны",

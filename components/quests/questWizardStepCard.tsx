@@ -121,6 +121,8 @@ type StepCardProps = {
   introSlot?: React.ReactNode
   /** Числовой PK квеста — адрес батча попыток ответа (#1276). */
   questNumericId?: number
+  /** Попытка ответа для продуктовой воронки: одна на каждое «Проверить» (#1498). */
+  onAnswerAttempt?: (attempt: { isCorrect: boolean; attemptNo: number }) => void
   /** Поле ответа получило фокус — родитель доматывает его над клавиатурой. */
   onAnswerFocus?: (node: TextInput | null) => void
   onAnswerBlur?: () => void
@@ -221,6 +223,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     showLocationControls = true,
     introSlot,
     questNumericId,
+    onAnswerAttempt,
     onAnswerFocus,
     onAnswerBlur,
   } = props
@@ -415,6 +418,9 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       hintShown: hintVisible,
       elapsedMs: Date.now() - stepShownAtRef.current,
     })
+    // Тот же факт во внешнюю воронку: серверная очередь отвечает на «что игрок
+    // писал», GA4 — на «на каком шаге сыплются попытки» (#1498).
+    onAnswerAttempt?.({ isCorrect: ok, attemptNo: attempts + 1 })
 
     if (ok) {
       setError('')
@@ -445,7 +451,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       shake()
       hapticNotification('error')
     }
-  }, [attempts, freeTextMinLength, hintVisible, isBruteForceable, onSubmit, onWrongAttempt, questNumericId, shake, step, triggerFlip, value])
+  }, [attempts, freeTextMinLength, hintVisible, isBruteForceable, onAnswerAttempt, onSubmit, onWrongAttempt, questNumericId, shake, step, triggerFlip, value])
 
   return (
     <Animated.View style={[styles.card, isFlipping && { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>

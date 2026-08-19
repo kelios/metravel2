@@ -10,8 +10,10 @@ import {
   formatDistance,
   formatDuration,
   formatTripDateTime,
+  isRouteApproximate,
   routeSummaryLine,
   routingStateHint,
+  routingStateLabel,
 } from '@/components/trips/planning/tripPlanFormatting'
 import type { RouteSummary, RoutingState } from '@/api/plannedTrips'
 
@@ -204,6 +206,49 @@ describe('routingStateHint', () => {
 })
 
 // ── formatTripDateTime ────────────────────────────────────────────────────────
+
+// ── статусы живого превью маршрута (#1490) ───────────────────────────────────
+
+describe('routingStateLabel / routingStateHint for the live preview', () => {
+  const state = (over: Partial<RoutingState>): RoutingState => ({
+    provider: 'preview',
+    isOptimal: true,
+    fallbackReason: null,
+    warnings: [],
+    ...over,
+  })
+
+  it('calls a preview route a road route, not a local estimate', () => {
+    const preview = state({})
+
+    expect(routingStateLabel(preview)).toBe('Маршрут построен по дорогам')
+    expect(isRouteApproximate(preview)).toBe(false)
+    expect(routingStateHint(preview)).toBeNull()
+  })
+
+  it('names the public/mixed line schematic and explains why', () => {
+    const schematic = state({ provider: 'schematic', isOptimal: false })
+
+    expect(routingStateLabel(schematic)).toBe('Схематичная линия')
+    // Пунктир и предупреждение на карте держатся на этом флаге.
+    expect(isRouteApproximate(schematic)).toBe(true)
+    expect(routingStateHint(schematic)).toBe(
+      'Для общественного и смешанного транспорта маршрут по дорогам не строится — точки соединены прямыми линиями.',
+    )
+  })
+
+  it('keeps a degraded preview marked as approximate with the provider reason', () => {
+    const degraded = state({
+      provider: 'direct',
+      isOptimal: false,
+      fallbackReason: 'routing_provider_unavailable',
+    })
+
+    expect(isRouteApproximate(degraded)).toBe(true)
+    expect(routingStateLabel(degraded)).toBe('Приблизительный маршрут')
+    expect(routingStateHint(degraded)).toContain('Сервис построения маршрутов временно недоступен')
+  })
+})
 
 describe('formatTripDateTime', () => {
   it('formats date only when time is null', () => {

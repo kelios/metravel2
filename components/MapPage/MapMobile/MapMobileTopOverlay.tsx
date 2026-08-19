@@ -25,6 +25,7 @@ import {
   MAP_FILTER_CHIPS_STACK_OFFSET,
 } from '../mapFilterChips'
 import MapIcon from '../MapIcon'
+import { ROUTING_DIRECT_LINE } from '../RoutingStatus'
 import {
   TRANSPORT_ICON,
   getTransportLabel,
@@ -288,7 +289,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const routeDistanceText = formatRouteDistance(distanceMeters)
   const routeDurationText = formatRouteDuration(durationSeconds)
   const routeSummaryStatus =
-    routingError === 'Using direct line'
+    routingError === ROUTING_DIRECT_LINE
       ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_79c7e056')
       : routingLoading
         ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_obnovlyaetsya_eab45ca3')
@@ -676,7 +677,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                   </RNText>
                 </View>
               )}
-              {routingError === 'Using direct line' && (
+              {routingError === ROUTING_DIRECT_LINE && (
                 <RNText style={styles.routeSummaryNote} numberOfLines={1}>
                   {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_e561a708')}</RNText>
               )}

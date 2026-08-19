@@ -19,6 +19,12 @@ import { formatInteger } from '@/i18n/format'
 
 type TransportMode = 'car' | 'bike' | 'foot'
 
+/**
+ * Сигнальное значение `error`: провайдеры маршрута не дали дорогу, показана
+ * прямая линия. Не текст ошибки, а состояние, поэтому у него отдельный баннер.
+ */
+export const ROUTING_DIRECT_LINE = 'Using direct line'
+
 interface RoutingStatusProps {
   isLoading: boolean
   error: string | boolean | null
@@ -142,7 +148,7 @@ function RoutingStatus({
     )
   }
 
-  if (error && typeof error === 'string' && error !== 'Using direct line') {
+  if (error && typeof error === 'string' && error !== ROUTING_DIRECT_LINE) {
     return (
       <View
         style={[styles.container, styles.errorContainer]}
@@ -172,7 +178,7 @@ function RoutingStatus({
     )
   }
 
-  if (error === 'Using direct line') {
+  if (error === ROUTING_DIRECT_LINE) {
     return (
       <View style={[styles.container, styles.warningContainer]}>
         <View style={styles.warningContent}>
@@ -183,6 +189,17 @@ function RoutingStatus({
               {i18nT('map:components.MapPage.RoutingStatus.optimalnyy_marshrut_nedostupen_pokazana_prya_cc230e83')}</Text>
           </View>
         </View>
+        {onRetry && (
+          <Pressable
+            style={({ pressed }) => [styles.retryButton, pressed && PRESSED_OPACITY_07]}
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('map:components.MapPage.RoutingStatus.povtorit_postroenie_marshruta_8f17d9ea')}
+          >
+            <Feather name="refresh-cw" size={13} color={colors.danger} />
+            <Text style={styles.retryButtonText}>{i18nT('map:components.MapPage.RoutingStatus.povtorit_a4d0f601')}</Text>
+          </Pressable>
+        )}
       </View>
     )
   }

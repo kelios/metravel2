@@ -17,90 +17,39 @@ jest.mock('@/utils/logger', () => ({
   devError: jest.fn(),
 }))
 
-// estimateRouteSummary relies on haversineKm — keep real implementation.
+
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 import type {
   CreateTripInput,
   PlannedTrip,
-  RoutePoint,
   RsvpInput,
   SubmitReportInput,
-  TripTransport,
 } from '@/api/plannedTrips'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── regression guard: локальной оценки маршрута больше нет (#1490) ───────────
 
-const pt = (
-  id: string,
-  name: string,
-  coordinates: [number, number] | null,
-): RoutePoint => ({
-  id,
-  type: 'place',
-  name,
-  description: null,
-  coordinates,
-  placeId: null,
-})
-
-// ── estimateRouteSummary ──────────────────────────────────────────────────────
-
-describe('estimateRouteSummary', () => {
-  let estimateRouteSummary: (route: RoutePoint[], transport: TripTransport) => ReturnType<typeof import('@/api/plannedTrips').estimateRouteSummary>
-
-  beforeAll(() => {
-    // Import after mocks are registered.
-    estimateRouteSummary = require('@/api/plannedTrips').estimateRouteSummary
+describe('local route estimation is removed', () => {
+  it('no longer exposes estimateRouteSummary on the planned-trips API', () => {
+    const api = require('@/api/plannedTrips') as Record<string, unknown>
+    expect(api.estimateRouteSummary).toBeUndefined()
   })
 
-  it('returns zeros for empty route', () => {
-    const result = estimateRouteSummary([], 'car')
-    expect(result.distanceKm).toBe(0)
-    expect(result.durationMin).toBe(0)
-    expect(result.stopsCount).toBe(0)
-  })
-
-  it('returns zeros when all points lack coordinates', () => {
-    const route = [pt('a', 'A', null), pt('b', 'B', null)]
-    const result = estimateRouteSummary(route, 'car')
-    expect(result.distanceKm).toBe(0)
-    expect(result.durationMin).toBe(0)
-    expect(result.stopsCount).toBe(1) // stopsCount = route.length - 1
-  })
-
-  it('computes positive distanceKm for 2-point route with real coords', () => {
-    // Минск → Несвиж (~115 км по прямой)
-    const route = [
-      pt('start', 'Минск', [27.5615, 53.9023]),
-      pt('end', 'Несвижский замок', [26.6906, 53.2225]),
-    ]
-    const result = estimateRouteSummary(route, 'car')
-    expect(result.distanceKm).toBeGreaterThan(50)
-    expect(result.distanceKm).toBeLessThan(200)
-    expect(result.durationMin).toBeGreaterThan(0)
-    expect(result.stopsCount).toBe(1)
-    expect(result.elevationGainM).toBeGreaterThanOrEqual(0)
-  })
-
-  it('durationMin scales with transport speed', () => {
-    const route = [
-      pt('a', 'A', [27.5615, 53.9023]),
-      pt('b', 'B', [26.6906, 53.2225]),
-    ]
-    const byCar = estimateRouteSummary(route, 'car')
-    const byFoot = estimateRouteSummary(route, 'foot')
-    // foot (4.5 km/h) is much slower than car (60 km/h)
-    expect(byFoot.durationMin).toBeGreaterThan(byCar.durationMin)
-  })
-
-  it('counts stopsCount as route.length - 1', () => {
-    const route = [
-      pt('a', 'A', [27.5615, 53.9023]),
-      pt('b', 'B', [27.6, 53.95]),
-      pt('c', 'C', [27.65, 54.0]),
-    ]
-    const result = estimateRouteSummary(route, 'bike')
-    expect(result.stopsCount).toBe(2)
+  // Регресс вернулся бы тихо: функция снова появилась бы «чтобы было что
+  // показать», и конструктор опять печатал бы прямую вместо дороги.
+  it.each([
+    'api/plannedTripsNormalizers.ts',
+    'api/plannedTripsRequests.ts',
+    'components/trips/planning/tripRoutePreview.ts',
+    'components/trips/planning/useTripRoutePreview.ts',
+    'components/trips/planning/RouteBuilder.tsx',
+  ])('keeps %s free of the haversine + «km × 8» summary formula', (file) => {
+    const source = readFileSync(join(__dirname, '..', '..', file), 'utf8')
+    expect(source).not.toContain('estimateRouteSummary')
+    expect(source).not.toMatch(/haversine/i)
+    expect(source).not.toMatch(/distanceKm\s*\*\s*8/)
+    expect(source).not.toMatch(/TRANSPORT_SPEED_KMH/)
   })
 })
 

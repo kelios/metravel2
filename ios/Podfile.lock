@@ -192,10 +192,16 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - ExpoAdapterFBSDKNext (13.4.3):
+    - ExpoModulesCore
+    - FBSDKCoreKit
+    - React-Core
   - ExpoAdapterGoogleSignIn (16.1.2):
     - ExpoModulesCore
     - GoogleSignIn (~> 9.0)
     - React-Core
+  - ExpoAppleAuthentication (57.0.1):
+    - ExpoModulesCore
   - ExpoAsset (57.0.3):
     - ExpoModulesCore
   - ExpoClipboard (57.0.0):
@@ -301,7 +307,21 @@ PODS:
     - ExpoModulesCore
   - EXUpdatesInterface (57.0.0):
     - ExpoModulesCore
+  - FBAEMKit (18.1.0):
+    - FBSDKCoreKit_Basics (= 18.1.0)
   - FBLazyVector (0.86.0)
+  - FBSDKCoreKit (18.1.0):
+    - FBAEMKit (= 18.1.0)
+    - FBSDKCoreKit_Basics (= 18.1.0)
+  - FBSDKCoreKit_Basics (18.1.0)
+  - FBSDKGamingServicesKit (18.1.0):
+    - FBSDKCoreKit (= 18.1.0)
+    - FBSDKCoreKit_Basics (= 18.1.0)
+    - FBSDKShareKit (= 18.1.0)
+  - FBSDKLoginKit (18.1.0):
+    - FBSDKCoreKit (= 18.1.0)
+  - FBSDKShareKit (18.1.0):
+    - FBSDKCoreKit (= 18.1.0)
   - GoogleSignIn (9.2.0):
     - AppAuth (~> 2.1)
     - AppCheckCore (~> 11.0)
@@ -1797,6 +1817,21 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-fbsdk-next (13.4.3):
+    - React-Core
+    - react-native-fbsdk-next/Core (= 13.4.3)
+    - react-native-fbsdk-next/Login (= 13.4.3)
+    - react-native-fbsdk-next/Share (= 13.4.3)
+  - react-native-fbsdk-next/Core (13.4.3):
+    - FBSDKCoreKit (~> 18.0)
+    - React-Core
+  - react-native-fbsdk-next/Login (13.4.3):
+    - FBSDKLoginKit (~> 18.0)
+    - React-Core
+  - react-native-fbsdk-next/Share (13.4.3):
+    - FBSDKGamingServicesKit (~> 18.0)
+    - FBSDKShareKit (~> 18.0)
+    - React-Core
   - react-native-image-picker (8.2.1):
     - hermes-engine
     - RCTRequired
@@ -2376,6 +2411,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNDateTimePicker (9.1.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNGestureHandler (2.32.0):
     - hermes-engine
     - RCTRequired
@@ -2706,7 +2763,9 @@ DEPENDENCIES:
   - expo-dev-launcher (from `../node_modules/expo-dev-launcher`)
   - expo-dev-menu (from `../node_modules/expo-dev-menu`)
   - expo-dev-menu-interface (from `../node_modules/expo-dev-menu-interface/ios`)
+  - ExpoAdapterFBSDKNext (from `../node_modules/react-native-fbsdk-next/ios`)
   - "ExpoAdapterGoogleSignIn (from `../node_modules/@react-native-google-signin/google-signin/expo/ios`)"
+  - ExpoAppleAuthentication (from `../node_modules/expo-apple-authentication/ios`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
   - ExpoClipboard (from `../node_modules/expo-clipboard/ios`)
   - ExpoCrypto (from `../node_modules/expo-crypto/ios`)
@@ -2782,6 +2841,7 @@ DEPENDENCIES:
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
+  - react-native-fbsdk-next (from `../node_modules/react-native-fbsdk-next`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-render-html (from `../node_modules/react-native-render-html`)
@@ -2825,6 +2885,7 @@ DEPENDENCIES:
   - RecaptchaInterop
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNCMaskedView (from `../node_modules/@react-native-masked-view/masked-view`)"
+  - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
   - RNReanimated (from `../node_modules/react-native-reanimated`)
@@ -2837,6 +2898,12 @@ SPEC REPOS:
   trunk:
     - AppAuth
     - AppCheckCore
+    - FBAEMKit
+    - FBSDKCoreKit
+    - FBSDKCoreKit_Basics
+    - FBSDKGamingServicesKit
+    - FBSDKLoginKit
+    - FBSDKShareKit
     - GoogleSignIn
     - GoogleUtilities
     - GTMAppAuth
@@ -2871,8 +2938,12 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-dev-menu"
   expo-dev-menu-interface:
     :path: "../node_modules/expo-dev-menu-interface/ios"
+  ExpoAdapterFBSDKNext:
+    :path: "../node_modules/react-native-fbsdk-next/ios"
   ExpoAdapterGoogleSignIn:
     :path: "../node_modules/@react-native-google-signin/google-signin/expo/ios"
+  ExpoAppleAuthentication:
+    :path: "../node_modules/expo-apple-authentication/ios"
   ExpoAsset:
     :path: "../node_modules/expo-asset/ios"
   ExpoClipboard:
@@ -3020,6 +3091,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
   React-mutationobservernativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver"
+  react-native-fbsdk-next:
+    :path: "../node_modules/react-native-fbsdk-next"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
   react-native-netinfo:
@@ -3104,6 +3177,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNCMaskedView:
     :path: "../node_modules/@react-native-masked-view/masked-view"
+  RNDateTimePicker:
+    :path: "../node_modules/@react-native-community/datetimepicker"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
@@ -3131,7 +3206,9 @@ SPEC CHECKSUMS:
   expo-dev-launcher: 3a5012ec6e2fe5488b3ab1c2a44fb2fcde74b02e
   expo-dev-menu: ec44430d95774d757adc9524fc4a755b8bd8e6c1
   expo-dev-menu-interface: 7a59e803916fbfd1b96c75ff91ea8dddac7e722f
+  ExpoAdapterFBSDKNext: 49ecf2414e4787250b0ed1faae99d1295dee674e
   ExpoAdapterGoogleSignIn: ab4d9fc38cb91077a4138d178395525ec65d0c2e
+  ExpoAppleAuthentication: 97d113f0f2680067e6e76d3c9249e7e1fc026b42
   ExpoAsset: 586e89aeaab2e23bfa90b9dce4d7d5e36815c039
   ExpoClipboard: 67d46a8be4a50ec610c7b2f4966c0475aec6d969
   ExpoCrypto: f9db7ec10f772afa112c0e465f34bedbc38adf5f
@@ -3166,7 +3243,13 @@ SPEC CHECKSUMS:
   ExpoVideo: 11cd8703a21fbeb87980017f6912c1f3145dad52
   ExpoWebBrowser: 32dfd25ad5d384028137a0de71991f28663562e0
   EXUpdatesInterface: 492cdb30f3889cc35d9e737a4b5fc3aec39d1131
+  FBAEMKit: 64088ff0380f50e4a56e2ee07d984f7f1aef7595
   FBLazyVector: b3e7ad108f0d882e30445c5527d774e3fd432f3d
+  FBSDKCoreKit: 8390ea3a8fac186f444275f31d7512e760b47cba
+  FBSDKCoreKit_Basics: 3a0005c78b355388bf2df5c6dbe6381b77ea4be3
+  FBSDKGamingServicesKit: 5bdf3a2c3079cd08ec64444a027fd25573b4e624
+  FBSDKLoginKit: d8e2711a3a03b0026703735c8d28a2b5a0e1f4fd
+  FBSDKShareKit: e0893ca96a6e33f61385914a06ce2bd064a5dbdc
   GoogleSignIn: e449a40a92e9f2eea56e98b5214d13725dc5a00a
   GoogleUtilities: 766ace00c6b10d8148408f329d10c4f051931850
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
@@ -3214,6 +3297,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: ce449ccdf3b80384415b925606be8a4bdcfc65d3
   React-microtasksnativemodule: 2eb3f49d0d8e77b5343455eccd057010b8d38b6b
   React-mutationobservernativemodule: f0a0d5ae9b51caf7becbeabf836d716cfedb6bf2
+  react-native-fbsdk-next: 325e4973a478f098bb9406fb2a13fa2e1f5dffeb
   react-native-image-picker: 23540feacc79c63c60857f318fdfa8477c26e70a
   react-native-netinfo: 2f906d5d9a639090ed1c079135d6485a95f749f1
   react-native-render-html: 5afc4751f1a98621b3009432ef84c47019dcb2bd
@@ -3257,6 +3341,7 @@ SPEC CHECKSUMS:
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   RNCAsyncStorage: 2ad919e88b8bc2cd80e8697ce66d04d006743283
   RNCMaskedView: eb2b2e538afa907f05a5848a1a1ac26092e6fec9
+  RNDateTimePicker: 7b2738f1e595f83c14580a11c476872755c5befc
   RNGestureHandler: 92172e79df6e88e0e93b6341f9dcd8b5a02746ba
   RNGoogleSignin: 0d72ae233fe10522497424748acf00fcc1ed2ee7
   RNReanimated: a9bf68fb5f19ce1c363b7d1413dcf8ee323185b8

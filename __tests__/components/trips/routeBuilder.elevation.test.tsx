@@ -41,6 +41,15 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
   }
 })
 
+// #1490: живое превью маршрута ходит в сеть за дорогой; здесь оно не предмет
+// проверки, поэтому движок заглушён.
+jest.mock('@/components/trips/planning/TripRoutePreviewEngine', () => {
+  return function TripRoutePreviewEngine() {
+    const { View } = require('react-native')
+    return <View testID="trip-route-preview-engine" />
+  }
+})
+
 jest.mock('@/components/trips/planning/TripPlanRouteMap', () => {
   return function TripPlanRouteMap({
     routeGeometry,

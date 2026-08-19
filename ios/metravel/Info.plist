@@ -36,11 +36,42 @@
 				<string>exp+metravel</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.985610284874-pa1qov2cdi61uug2kai9fqjl6k378pb2</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb2443100196153960</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>FacebookAdvertiserIDCollectionEnabled</key>
+	<false/>
+	<key>FacebookAppID</key>
+	<string>2443100196153960</string>
+	<key>FacebookAutoInitEnabled</key>
+	<true/>
+	<key>FacebookAutoLogAppEventsEnabled</key>
+	<false/>
+	<key>FacebookClientToken</key>
+	<string>79861dc67bac6c63a25a724748cdf7cc</string>
+	<key>FacebookDisplayName</key>
+	<string>meTravel.by</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-api</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
 	<key>LSMinimumSystemVersion</key>
 	<string>16.4</string>
 	<key>LSRequiresIPhoneOS</key>

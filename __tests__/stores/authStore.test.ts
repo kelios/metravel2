@@ -1,6 +1,10 @@
 import { act } from '@testing-library/react';
 import { Platform } from 'react-native';
 
+jest.mock('@/api/appleAuth', () => ({
+  appleAuthApi: jest.fn(),
+}));
+
 jest.mock('@/api/auth', () => ({
   loginApi: jest.fn(),
   facebookAuthApi: jest.fn(),
@@ -35,6 +39,8 @@ jest.mock('@/api/user', () => ({
   },
 }));
 
+const { appleAuthApi } = require('@/api/appleAuth') as { appleAuthApi: jest.Mock };
+
 const {
   loginApi,
   facebookAuthApi,
@@ -56,9 +62,10 @@ const {
     validateWebCookieSessionApi: jest.Mock;
   };
 
-const { getSecureItem, setSecureItem } = require('@/utils/secureStorage') as {
+const { getSecureItem, setSecureItem, removeSecureItems } = require('@/utils/secureStorage') as {
   getSecureItem: jest.Mock;
   setSecureItem: jest.Mock;
+  removeSecureItems: jest.Mock;
 };
 const { getStorageBatch, removeStorageBatch, setStorageBatch } = require('@/utils/storageBatch') as {
   getStorageBatch: jest.Mock;
@@ -424,6 +431,94 @@ describe('authStore', () => {
 
       await act(() => useAuthStore.getState().login('test@test.com', 'p'));
       expect(useAuthStore.getState().username).toBe('test@test.com');
+    });
+  });
+
+  describe('loginWithApple', () => {
+    const appleCredential = {
+      identityToken: 'apple-identity-token',
+      authorizationCode: 'one-time-code',
+      givenName: 'Apple',
+      familyName: 'User',
+    };
+
+    it('кладёт сессию в Keychain и поднимает состояние', async () => {
+      appleAuthApi.mockResolvedValue({
+        status: 'authenticated',
+        user: {
+          token: 'apple-session-token',
+          refresh: 'apple-refresh',
+          id: 77,
+          name: 'Apple User',
+          email: 'apple@example.com',
+          is_superuser: false,
+        },
+      });
+      fetchUserProfile.mockResolvedValue({ first_name: 'Apple', last_name: 'User', avatar: null });
+
+      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+        status: 'authenticated',
+      });
+
+      expect(appleAuthApi).toHaveBeenCalledWith(appleCredential);
+      expect(setSecureItem).toHaveBeenCalledWith('userToken', 'apple-session-token');
+      expect(setSecureItem).toHaveBeenCalledWith('refreshToken', 'apple-refresh');
+      expect(useAuthStore.getState()).toEqual(expect.objectContaining({
+        isAuthenticated: true,
+        userId: '77',
+        username: 'Apple User',
+      }));
+    });
+
+    it('на ошибке сервера не оставляет частичную сессию', async () => {
+      appleAuthApi.mockResolvedValue({
+        status: 'error',
+        errorCode: 'apple_account_disabled',
+        message: 'disabled',
+      });
+
+      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+        status: 'error',
+        errorCode: 'apple_account_disabled',
+      });
+
+      expect(setSecureItem).not.toHaveBeenCalled();
+      expect(setStorageBatch).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
+
+    it('logout во время входа откатывает записанные креды', async () => {
+      appleAuthApi.mockResolvedValue({
+        status: 'authenticated',
+        user: {
+          token: 'apple-session-token',
+          id: 77,
+          name: 'Apple User',
+          email: 'apple@example.com',
+          is_superuser: false,
+        },
+      });
+      // Профиль резолвится уже после того, как параллельный logout сдвинул epoch.
+      fetchUserProfile.mockImplementationOnce(async () => {
+        useAuthStore.getState().invalidateAuthState();
+        return null;
+      });
+
+      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+        status: 'error',
+      });
+
+      expect(removeSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
+
+    it('исключение внутри адаптера не роняет вход', async () => {
+      appleAuthApi.mockRejectedValue(new Error('boom'));
+
+      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+        status: 'error',
+      });
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
   });
 

@@ -14,6 +14,7 @@ export const authStaticResources = {
   "accountConfirmation.error": "Произошла ошибка при подтверждении учетной записи. {{details}}",
   "registration.failed": "Не удалось зарегистрироваться.",
   "google.signInFailed": "Ошибка при входе через Google.",
+  "apple.signInFailed": "Не удалось войти через Apple.",
   "facebook.signIn": "Войти через Facebook",
   "facebook.loading": "Вход через Facebook…",
   "facebook.unavailable": "Вход через Facebook временно недоступен",

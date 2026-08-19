@@ -22,6 +22,7 @@ export const mapGenerated1 = {
   "components.map.MarkersListComponent.ili_nazhmite_chtoby_vybrat_koordinaty_iz_exi_b1c912b3": "ці націсніце, каб абраць — каардынаты з EXIF",
   "components.map.MarkersListComponent.ili_nazhmite_chtoby_vybrat_tochki_dobavyatsy_dcd11896": "або націсніце, каб выбраць. Кропкі дададуцца паводле геалакацыі EXIF",
   "components.map.MarkersListComponent.iz_foto_30cc8944": "З фота",
+  "components.map.MarkersListComponent.bez_kategorii_7c41a0d5": "Без катэгорыі",
   "components.map.MarkersListComponent.kategorii_ne_vybrany_a50ecfb7": "Катэгорыі не выбраны",
   "components.map.MarkersListComponent.nichego_ne_naydeno_713c909b": "Нічога не знойдзена",
   "components.map.MarkersListComponent.ochistit_poisk_dd1cdf6a": "Ачысціць пошук",

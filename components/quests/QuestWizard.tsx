@@ -203,6 +203,29 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const guestGateActive = guestReachedLimit && !showFinaleOnly && !currentStepAnswered;
 
     const currentStep = allSteps[currentIndex];
+    // Индекс точки среди настоящих: intro в `steps` нет, поэтому на нём -1.
+    const currentRealIndex = intro ? currentIndex - 1 : currentIndex;
+    // Карточка шага реально на экране: гостевой гейт и режим «только финал»
+    // подменяют её собой. Выражение одно и для рендера, и для `quest_step_view`,
+    // иначе аналитика считает просмотры того, чего игрок не видел (#1498).
+    const stepCardVisible = !showFinaleOnly && !guestGateActive && !!currentStep;
+
+    const { trackAnswerSubmitted, trackHintOpened, resetFunnelSession } = useQuestWizardAnalytics({
+        questId,
+        cityId,
+        onRealStep: !!currentStep && currentStep.id !== intro?.id,
+        stepIndex: currentRealIndex,
+        stepVisible: stepCardVisible,
+        questFinished,
+        questCompleted,
+        partiallyCompleted,
+        finishedEarly,
+        passedCount: completedSteps.length,
+        stepsCount: requiredCount,
+        guestGateActive,
+        guestAnsweredCount,
+        onGuestGate,
+    });
 
     // Каждый шаг (и финал) открываем сверху — иначе на Android контент-ScrollView
     // сохраняет прошлый offset и новый шаг открывается прокрученным вниз.
@@ -261,12 +284,16 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         setAnswers(prev => ({ ...prev, [currentStep.id]: answer }));
         setAttempts(prev => ({ ...prev, [currentStep.id]: 0 }));
         setHints(prev => ({ ...prev, [currentStep.id]: false }));
-        queueAnalyticsEvent('quest_point_done', {
-            quest_id: questId,
-            step_index: steps.findIndex(step => step.id === currentStep.id),
-        });
+        // Intro не точка маршрута: он уходил со `step_index: -1` и завышал
+        // «пройдено точек на старт» ровно на один старт (#1498).
+        if (currentRealIndex >= 0) {
+            queueAnalyticsEvent('quest_point_done', {
+                quest_id: questId,
+                step_index: currentRealIndex,
+            });
+        }
         continueFromCurrentStep();
-    }, [continueFromCurrentStep, currentStep, questId, setAnswers, setAttempts, setHints, steps]);
+    }, [continueFromCurrentStep, currentRealIndex, currentStep, questId, setAnswers, setAttempts, setHints]);
 
     const handleCurrentStepWrongAttempt = useCallback(() => {
         if (!currentStep) return;
@@ -275,8 +302,11 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const toggleCurrentStepHint = useCallback(() => {
         if (!currentStep) return;
+        // Событие шлём только на раскрытие и снаружи апдейтера: он обязан
+        // остаться чистым (StrictMode вызывает его дважды).
+        if (!hints[currentStep.id]) trackHintOpened({ attemptNo: attempts[currentStep.id] || 0 });
         setHints(prev => ({ ...prev, [currentStep.id]: !prev[currentStep.id] }));
-    }, [currentStep, setHints]);
+    }, [attempts, currentStep, hints, setHints, trackHintOpened]);
 
     const toggleMap = useCallback(() => {
         setShowMap(prev => !prev);
@@ -289,7 +319,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         [steps],
     );
     const medianLegMeters = useMemo(() => questMedianLegMeters(routePoints), [routePoints]);
-    const currentRealIndex = intro ? currentIndex - 1 : currentIndex;
     const farStepModel = useMemo(
         () => buildQuestFarStepModel({
             points: routePoints,
@@ -369,27 +398,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             // поэтому сбрасываются отдельно — иначе переигровка в той же вкладке
             // начиналась бы с унаследованной ступени лестницы.
             clearQuestCooldowns(questNumericId);
+            // Переигровка — новое прохождение и новая воронка: почему именно
+            // так, объяснено в `useQuestWizardAnalytics` (#1498).
+            resetFunnelSession();
             setShowFinaleOnly(false);
             notifyQuest(i18nT('quests:components.quests.QuestWizard.progress_ochischen_54659954'));
         } catch (e) {
             console.error('Error resetting progress:', e);
         }
-    }, [questNumericId, resetProgress]);
-
-    useQuestWizardAnalytics({
-        questId,
-        cityId,
-        onRealStep: !!currentStep && currentStep.id !== intro?.id,
-        questFinished,
-        questCompleted,
-        partiallyCompleted,
-        finishedEarly,
-        passedCount: completedSteps.length,
-        stepsCount: requiredCount,
-        guestGateActive,
-        guestAnsweredCount,
-        onGuestGate,
-    });
+    }, [questNumericId, resetFunnelSession, resetProgress]);
 
     // Индекс последней РЕАЛЬНО отвеченной точки. `unlockedIndex` для этого не
     // годится: он указывает на следующую (ещё не отвеченную) точку, и «вернуться
@@ -553,7 +570,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 )}
 
                 {/* Шаги/карты — скрываем, если показываем только финал или активен гостевой гейт */}
-                {(!showFinaleOnly) && !guestGateActive && currentStep && (
+                {stepCardVisible && currentStep && (
                     <View style={useWideInlineLayout ? styles.desktopRow : undefined}>
                         <View style={useWideInlineLayout ? styles.desktopMain : undefined}>
                             <QuestStepCard
@@ -583,6 +600,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onToggleMap={toggleMap}
                                 showLocationControls={!useWideInlineLayout}
                                 questNumericId={questNumericId}
+                                onAnswerAttempt={trackAnswerSubmitted}
                                 onAnswerFocus={handleInputFocus}
                                 onAnswerBlur={handleInputBlur}
                                 introSlot={introTrustBar}

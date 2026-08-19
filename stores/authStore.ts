@@ -9,10 +9,8 @@ import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/st
 import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
-import type {
-    FacebookAuthResult,
-    FacebookSessionPayload,
-} from '@/api/auth';
+import type { FacebookAuthResult } from '@/api/auth';
+import type { SocialSessionPayload } from '@/api/authShared';
 import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
@@ -20,6 +18,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 const getAuthApi = async () => import('@/api/auth');
+const getAppleAuthApi = async () => import('@/api/appleAuth');
 const getUserApi = async () => import('@/api/user');
 
 // Fetch the current user's profile through the mounted QueryClient so the request
@@ -94,16 +93,15 @@ export type { AuthState, AuthStore } from '@/stores/authState';
 let authEpoch = 0;
 
 export const useAuthStore = create<AuthStore>((set, get) => {
-    const finishFacebookAuthentication = async (
-        userData: FacebookSessionPayload,
+    // Общий финиш нативного социального входа (Google/Facebook/Apple): токены в
+    // SecureStore, профиль, единое состояние. Любой проигрыш epoch-гонке —
+    // logout, прилетевший во время входа, — откатывает уже записанные креды,
+    // поэтому частичная сессия на диске не остаётся. (#923/#810, IOS-05)
+    const applySocialSession = async (
+        userData: SocialSessionPayload,
         epochAtStart: number,
-    ): Promise<FacebookAuthResult> => {
-        if (epochAtStart !== authEpoch) {
-            return {
-                status: 'error',
-                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
-            };
-        }
+    ): Promise<boolean> => {
+        if (epochAtStart !== authEpoch) return false;
 
         if (shouldUseStoredAuthToken()) {
             await setSecureItem('userToken', userData.token);
@@ -124,10 +122,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
         if (epochAtStart !== authEpoch) {
             await rollbackPersistedCredentials();
-            return {
-                status: 'error',
-                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
-            };
+            return false;
         }
 
         const displayName = resolveAuthDisplayName(profile, userData.name, userData.email);
@@ -144,10 +139,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
         if (epochAtStart !== authEpoch) {
             await rollbackPersistedCredentials();
-            return {
-                status: 'error',
-                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
-            };
+            return false;
         }
 
         set((s) => ({
@@ -160,8 +152,31 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             profileRefreshToken: s.profileRefreshToken + 1,
             isPremium: profile?.is_premium ?? false,
         }));
+        return true;
+    };
+
+    // Провайдеры с discriminated-результатом (Facebook, Apple) отличаются только
+    // текстом отказа, поэтому маппинг общий.
+    const finishSocialAuthentication = async (
+        userData: SocialSessionPayload,
+        epochAtStart: number,
+        resolveFailureMessage: () => string,
+    ): Promise<
+        | { status: 'authenticated'; user: SocialSessionPayload }
+        | { status: 'error'; message: string }
+    > => {
+        const applied = await applySocialSession(userData, epochAtStart);
+        if (!applied) return { status: 'error', message: resolveFailureMessage() };
         return { status: 'authenticated', user: userData };
     };
+
+    const finishFacebookAuthentication = (
+        userData: SocialSessionPayload,
+        epochAtStart: number,
+    ): Promise<FacebookAuthResult> =>
+        finishSocialAuthentication(userData, epochAtStart, () =>
+            i18nT('errorsStatic:api.auth.facebookSignInFailed'),
+        );
 
     return {
     // --- state ---
@@ -419,69 +434,33 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             const { googleAuthApi } = await getAuthApi();
             const userData = await googleAuthApi(credential);
             if (!userData) return false;
-            if (epochAtStart !== authEpoch) return false;
-
-            if (shouldUseStoredAuthToken()) {
-                await setSecureItem('userToken', userData.token);
-                if (userData.refresh) {
-                    await setSecureItem('refreshToken', userData.refresh);
-                }
-            }
-
-            let profile: UserProfileDto | null = null;
-            try {
-                const { fetchUserProfile } = await getUserApi();
-                profile = await fetchUserProfile(String(userData.id));
-            } catch (e) {
-                if (__DEV__) {
-                    console.warn('Не удалось загрузить профиль пользователя:', e);
-                }
-            }
-
-            if (epochAtStart !== authEpoch) {
-                await rollbackPersistedCredentials();
-                return false;
-            }
-
-            const displayName = resolveAuthDisplayName(profile, userData.name, userData.email);
-            const avatar = normalizeAvatar(profile?.avatar);
-
-            const items: Array<[string, string]> = [
-                ['userId', String(userData.id)],
-                ['userName', displayName],
-                ['isSuperuser', userData.is_superuser ? 'true' : 'false'],
-            ];
-            if (avatar) {
-                items.push(['userAvatar', avatar]);
-            }
-
-            await setStorageBatch(items);
-            if (!avatar) {
-                await removeStorageBatch(['userAvatar']);
-            }
-
-            if (epochAtStart !== authEpoch) {
-                await rollbackPersistedCredentials();
-                return false;
-            }
-
-            set((s) => ({
-                isAuthenticated: true,
-                userId: String(userData.id),
-                username: displayName,
-                isSuperuser: userData.is_superuser,
-                userAvatar: avatar,
-                authReady: true,
-                profileRefreshToken: s.profileRefreshToken + 1,
-                isPremium: profile?.is_premium ?? false,
-            }));
-
-            return true;
+            return await applySocialSession(userData, epochAtStart);
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка входа через Google:', error);
             }
             return false;
+        }
+    },
+
+    // --- login with Apple (IOS-05) ---
+    loginWithApple: async (credential) => {
+        const epochAtStart = authEpoch;
+        try {
+            const { appleAuthApi } = await getAppleAuthApi();
+            const result = await appleAuthApi(credential);
+            if (result.status !== 'authenticated') return result;
+            return await finishSocialAuthentication(result.user, epochAtStart, () =>
+                i18nT('errorsStatic:api.auth.appleSignInFailed'),
+            );
+        } catch (error) {
+            if (__DEV__) {
+                console.error('Ошибка входа через Apple:', error);
+            }
+            return {
+                status: 'error',
+                message: i18nT('errorsStatic:api.auth.appleSignInFailed'),
+            };
         }
     },
 

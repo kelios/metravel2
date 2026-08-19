@@ -224,13 +224,43 @@ stop/go по блокам — задача INV2-12.
 | `favorite_add` (9 / 2 польз.), `favorite_intent_guest` (10 / 7) | работает |
 | `Affiliate_Impression`, `Affiliate_Click` | работает |
 | `travel_publish` | эмиттер есть с 19.07, событий ноль → ноль публикаций, не гэп |
-| `quest_skip_stuck_step`, `quest_finish_early` | эмиттеры шипнуты 17.08 — в окно попадают сутки, отсутствие ожидаемо |
-| `quest_completion_credited`, `quest_card_impression` | эмиттер в коде есть, за окно ноль — проверить в INV2-18 |
-| `quest_step_view`, `quest_answer_submit`, `quest_hint` | **эмиттера в коде нет** — instrumentation gap, INV2-18 |
+| `quest_skip_stuck_step`, `quest_finish_early`, `quest_completion_credited` | эмиттеры шипнуты 17–18.08 — в окно попадают часы, отсутствие ожидаемо |
+| `quest_card_impression` | эмиттер шипнут 17.07 (`QuestForCityCard.tsx:92`) и работал всё окно, но ноль показов при 26 кликах карточек — **починено 19.08.2026**, см. вердикт ниже |
+| `quest_step_view`, `quest_answer_submit`, `quest_hint` | эмиттеров не было; **добавлены 19.08.2026** (INV2-18) |
 
-Пока нет `quest_answer_submit` и `quest_hint`, невозможно сказать, на каком
-именно вопросе ломается прохождение и как часто берут подсказку. Это и есть
-содержание задачи INV2-18.
+### Вердикт INV2-18 по нулевым событиям (19.08.2026)
+
+**`quest_card_impression` — был сломан механизм показа, починено.**
+`useTrackedImpression` ставил `IntersectionObserver` в ref-колбэке (фаза
+коммита), а эффект «сбросить состояние при смене ключа» на первом же проходе —
+то есть сразу после монтирования — рвал эту подписку безусловно. Ref-колбэк
+после этого повторно не вызывается, взводить наблюдатель было некому, и показ
+не фиксировался никогда. Отсюда ноль `quest_card_impression` при 26 кликах и
+единственный `register_cta_impression` за 30 дней: дефект общий для всех
+поверхностей хука (карточка квеста, `ArticleNextStepSection`,
+`ArticleActivationCtaSection`, `TravelRegisterCtaSection`). Регрессия закрыта
+тестом `__tests__/hooks/useTrackedImpression.test.tsx` (проверено: падает на
+старом коде).
+
+**`quest_completion_credited` — ноль корректен, эмиттер моложе окна.**
+Событие появилось в коде 18.08.2026 (коммит `ab711bd1`), то есть в последние
+сутки окна 19.07–18.08 — та же категория, что `quest_skip_stuck_step` и
+`quest_finish_early`. Инструментального дефекта нет: условие срабатывания —
+`questFinished && stepsMissingForCompletion === 0`, то есть любое засчитанное
+прохождение, а не только возврат с частичного финала. После деплоя счётчик
+обязан сходиться с `quest_finish` при `partial: false`; если разойдётся —
+это уже про политику зачёта (#1443), а не про трекер.
+
+**Побочная находка: `quest_point_done` завышен на один старт.**
+Intro-шаг проходит тем же обработчиком ответа и слал `quest_point_done` со
+`step_index: -1`. То есть baseline «1,56 пройденной точки на старт» (181 / 116)
+содержит ~116 событий с intro; реальная величина ближе к 0,56 точки на старт, и
+воронка ещё хуже, чем читалась. Intro исключён из события 19.08.2026; счётчики
+`quest_point_done` до этой даты несравнимы с последующими.
+
+Три новых события (`quest_step_view`, `quest_answer_submit`, `quest_hint`)
+отвечают на вопрос, на каком именно вопросе ломается прохождение. Проверка —
+`npm run stats:ga4 -- --events --days 7` через 7 дней после деплоя.
 
 ## Security and access
 

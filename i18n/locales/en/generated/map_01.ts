@@ -22,6 +22,7 @@ export const mapGenerated1 = {
   "components.map.MarkersListComponent.ili_nazhmite_chtoby_vybrat_koordinaty_iz_exi_b1c912b3": "or click to select - coordinates from EXIF",
   "components.map.MarkersListComponent.ili_nazhmite_chtoby_vybrat_tochki_dobavyatsy_dcd11896": "or click to select. Points will be added by EXIF geolocation",
   "components.map.MarkersListComponent.iz_foto_30cc8944": "From photo",
+  "components.map.MarkersListComponent.bez_kategorii_7c41a0d5": "No category",
   "components.map.MarkersListComponent.kategorii_ne_vybrany_a50ecfb7": "No categories selected",
   "components.map.MarkersListComponent.nichego_ne_naydeno_713c909b": "Nothing found",
   "components.map.MarkersListComponent.ochistit_poisk_dd1cdf6a": "Clear search",

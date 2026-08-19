@@ -1,7 +1,9 @@
 // components/trips/planning/RouteBuilder.tsx
 // Конструктор маршрута поездки (Sprint 13 / блок D): список точек с reorder/delete
 // (web-safe, без нативных drag-либ), inline-добавление точки, применение шаблонов
-// и живая сводка через estimateRouteSummary. Только владелец может редактировать.
+// и живая сводка маршрута. Только владелец может редактировать.
+// #1490: пока правки не сохранены, линию и цифры даёт тот же движок
+// маршрутизации, что и /map, а не прямая между точками.
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -22,10 +24,15 @@ import {
   shouldRenderTripRouteExportMenu,
   useTripRouteExport,
 } from '@/components/trips/planning/tripRouteExport';
+import RoutingStatus, { ROUTING_DIRECT_LINE } from '@/components/MapPage/RoutingStatus';
+import TripRoutePreviewEngine from '@/components/trips/planning/TripRoutePreviewEngine';
 import {
-  estimateRouteSummary,
+  ROUTE_TRANSPORTS,
+  isRoutableTransport,
+} from '@/components/trips/planning/tripRoutePreview';
+import { useTripRoutePreview } from '@/components/trips/planning/useTripRoutePreview';
+import {
   type PlannedTrip,
-  type RoutableTripTransport,
   type RoutePoint,
   type RoutePointType,
   type TripBikeType,
@@ -66,11 +73,7 @@ interface Props {
 }
 
 const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
-const ROUTE_TRANSPORTS: RoutableTripTransport[] = ['car', 'foot', 'bike'];
 const SITE_SEARCH_MIN_LENGTH = 2;
-
-const isRoutableTransport = (value: string): value is RoutableTripTransport =>
-  ROUTE_TRANSPORTS.some((transport) => transport === value);
 
 type SiteSearchStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -254,25 +257,28 @@ function RouteBuilder({ trip }: Props) {
     trip.transport,
   ]);
 
+  // #1490: несохранённый маршрут строит тот же движок, что и /map. Сохранённый
+  // остаётся за бэкендом — превью его не подменяет.
+  const preview = useTripRoutePreview({
+    route,
+    transport: trip.transport,
+    enabled: !routeMatchesSaved,
+  });
+
   // Пересчёт ORS обнуляет route_geometry на бэке, но та же полилиния несёт линию
   // маршрута — без подстановки карта откатилась бы на прямые между точками.
   const routeGeometry = routeMatchesSaved
     ? trip.routeGeometry ?? routeElevation?.geometry ?? null
-    : null;
-  const routingState = routeMatchesSaved ? trip.routingState : null;
-  const summary = useMemo(
-    () => (routeMatchesSaved && trip.routeSummary
-      ? trip.routeSummary
-      : estimateRouteSummary(route, trip.transport)),
-    [route, routeMatchesSaved, trip.routeSummary, trip.transport],
-  );
+    : preview.geometry;
+  const routingState = routeMatchesSaved ? trip.routingState : preview.routingState;
+  const summary = routeMatchesSaved ? trip.routeSummary : preview.summary;
 
   // #1304: скачивание живёт там же, где маршрут строится. Экспортируем то, что
-  // сейчас на карте: несохранённые правки идут без серверной геометрии (её
-  // обнуляет routeMatchesSaved), поэтому файл всегда совпадает с картинкой.
+  // сейчас на карте: у несохранённых правок это геометрия превью, поэтому файл
+  // всегда совпадает с картинкой.
   const exportTrip = useMemo(
-    () => ({ ...trip, route, routeGeometry, routingState }),
-    [route, routeGeometry, routingState, trip],
+    () => ({ ...trip, route, routeGeometry, routingState, routeSummary: summary }),
+    [route, routeGeometry, routingState, summary, trip],
   );
   const exportController = useTripRouteExport(exportTrip);
   const routeDownloadSection = shouldRenderTripRouteExportMenu(Platform.OS) ? (
@@ -284,25 +290,56 @@ function RouteBuilder({ trip }: Props) {
     />
   ) : null;
 
-  // Названия точек маршрута подписывают старт/пик/финиш на графике.
+  // Названия точек маршрута подписывают старт/пик/финиш на графике. Берём
+  // текущий маршрут, а не сохранённый: график идёт вслед за превью.
   const elevationPlaceHints = useMemo(
     () =>
-      trip.route.flatMap((point) =>
+      route.flatMap((point) =>
         point.coordinates
           ? [{ name: point.name, coord: `${point.coordinates[1]},${point.coordinates[0]}` }]
           : [],
       ),
-    [trip.route],
+    [route],
   );
 
-  const elevationProfileSection = routeElevation?.preview ? (
+  const elevationPreview = routeMatchesSaved
+    ? routeElevation?.preview ?? null
+    : preview.elevation;
+
+  const elevationProfileSection = elevationPreview ? (
     <Suspense fallback={null}>
       <RouteElevationProfile
-        preview={routeElevation.preview}
+        preview={elevationPreview}
         placeHints={elevationPlaceHints}
         transportHints={[TRANSPORT_LABEL[trip.transport]]}
       />
     </Suspense>
+  ) : null;
+
+  // Движок живёт под ключом retryToken: у useRouting нет входа «построй заново»,
+  // а деградированный ответ он намеренно не кэширует (ROUTING-ORS-001).
+  const previewEngine = preview.active && preview.transportMode ? (
+    <TripRoutePreviewEngine
+      key={preview.retryToken}
+      points={preview.points}
+      transportMode={preview.transportMode}
+      onResult={preview.handleResult}
+    />
+  ) : null;
+
+  // Прогресс построения и баннер «Прямая линия» с повтором — общий компонент
+  // /map. distance не передаём: цифры печатает RouteSummaryBar, дублировать их
+  // здесь незачем, и в спокойном состоянии блок не рендерится вовсе.
+  // Схематичная линия public/mixed сюда не попадает: там ничего не строится,
+  // и объясняет её подпись самой карты, а не прогресс-бар с повтором.
+  const previewStatusSection = preview.engaged && !preview.schematic && preview.transportMode ? (
+    <RoutingStatus
+      isLoading={preview.loading && !preview.degraded}
+      error={preview.degraded ? ROUTING_DIRECT_LINE : null}
+      distance={null}
+      transportMode={preview.transportMode}
+      onRetry={preview.retry}
+    />
   ) : null;
 
   // Единственная точка входа для перестановки: и стрелки, и перетаскивание.
@@ -716,6 +753,8 @@ function RouteBuilder({ trip }: Props) {
         onEditPoint={handleEditPoint}
         onAddPointFromMap={handleAddPointFromMap}
       />
+      {previewEngine}
+      {previewStatusSection}
 
       {elevationProfileSection}
 
@@ -844,7 +883,9 @@ function RouteBuilder({ trip }: Props) {
               onChangeText={setNewDescription}
               placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_po_zhelaniyu_3bb69cb4')}
               placeholderTextColor={colors.textMuted}
-              style={styles.input}
+              multiline
+              numberOfLines={3}
+              style={[styles.input, styles.textArea]}
               testID="route-builder-description"
             />
             <Button
@@ -918,7 +959,9 @@ function RouteBuilder({ trip }: Props) {
             onChangeText={setEditDescription}
             placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_ili_ssylka_po_zhelaniyu_2a1ab272')}
             placeholderTextColor={colors.textMuted}
-            style={styles.input}
+            multiline
+            numberOfLines={3}
+            style={[styles.input, styles.textArea]}
             testID="route-builder-edit-description"
           />
           {editError ? <Text style={styles.errorText}>{editError}</Text> : null}

@@ -14,6 +14,7 @@ export const authStaticResources = {
   "accountConfirmation.error": "An error occurred while confirming your account. {{details}}",
   "registration.failed": "Failed to register.",
   "google.signInFailed": "Error logging in via Google.",
+  "apple.signInFailed": "Could not sign in with Apple.",
   "facebook.signIn": "Continue with Facebook",
   "facebook.loading": "Connecting to Facebook…",
   "facebook.unavailable": "Facebook Login is temporarily unavailable",

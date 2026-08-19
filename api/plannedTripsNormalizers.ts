@@ -1,7 +1,6 @@
 import { translate as i18nT } from '@/i18n';
 import { useAuthStore } from '@/stores/authStore';
 import { decodeEncodedPolyline } from '@/utils/encodedPolyline';
-import { haversineKm } from '@/utils/geo';
 import { buildElevationProfile } from '@/utils/routeFileParser';
 import { parseTripDateTime } from '@/utils/tripDateTime';
 import type { ParsedRoutePoint } from '@/types/travelRoutes';
@@ -173,35 +172,6 @@ export interface RouteTemplateDto {
   duration_days?: number;
   tags?: string[];
   preview_image_url?: string | null;
-}
-
-const TRANSPORT_SPEED_KMH: Record<TripTransport, number> = {
-  car: 60,
-  bike: 16,
-  foot: 4.5,
-  public: 30,
-  mixed: 35,
-};
-
-export function estimateRouteSummary(
-  route: RoutePoint[],
-  transport: TripTransport,
-): RouteSummary {
-  const points = route.filter((point) => point.coordinates);
-  let distanceKm = 0;
-  for (let index = 1; index < points.length; index += 1) {
-    const [previousLng, previousLat] = points[index - 1].coordinates as [number, number];
-    const [currentLng, currentLat] = points[index].coordinates as [number, number];
-    distanceKm += haversineKm(previousLat, previousLng, currentLat, currentLng);
-  }
-  distanceKm = Math.round(distanceKm * 10) / 10;
-  const speed = TRANSPORT_SPEED_KMH[transport] ?? 35;
-  return {
-    distanceKm,
-    durationMin: Math.round((distanceKm / speed) * 60),
-    elevationGainM: Math.round(distanceKm * 8),
-    stopsCount: Math.max(route.length - 1, 0),
-  };
 }
 
 export const unwrap = <T>(response: Paginated<T> | T[] | null | undefined): T[] =>
@@ -468,9 +438,10 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     organizer: owner,
     route,
     routeGeometry: normalizeRouteGeometry(dto.route_geometry),
-    routeSummary:
-      mapRouteSummary(dto.route_summary) ??
-      (route.length ? estimateRouteSummary(route, transport) : null),
+    // #1490: своей оценки расстояния/времени у клиента больше нет. Пока бэкенд
+    // не посчитал сводку, её нет — конструктор в это время показывает цифры
+    // живого превью от движка маршрутизации, а не выдуманные.
+    routeSummary: mapRouteSummary(dto.route_summary),
     routingState: mapRoutingState(dto.routing_state),
     participants,
     coverUrl: dto.cover_url ?? dto.cover ?? dto.preview_image_url ?? null,

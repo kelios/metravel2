@@ -125,6 +125,13 @@ export const createStyles = (colors: ThemedColors) =>
       fontSize: 14,
       ...Platform.select({ web: webTextStyle({ outlineWidth: 0 }) }),
     },
+    // #1494: описание точки — многострочное поле. `textAlignVertical` нужен
+    // Android: без него курсор multiline-поля центрируется по вертикали.
+    textArea: {
+      minHeight: 76,
+      paddingTop: 10,
+      textAlignVertical: 'top',
+    },
     coordRow: { flexDirection: 'row', gap: 8 },
     coordInput: { flex: 1 },
     siteSearch: { gap: 8 },

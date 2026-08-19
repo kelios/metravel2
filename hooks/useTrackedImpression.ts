@@ -15,15 +15,16 @@ export function useTrackedImpression(
   onImpression: () => void,
 ): TrackedImpression {
   const firedRef = useRef(false)
+  const nodeRef = useRef<unknown>(null)
   const disconnectRef = useRef<(() => void) | undefined>(undefined)
   const callbackRef = useRef(onImpression)
   callbackRef.current = onImpression
-
-  useEffect(() => {
-    firedRef.current = false
-    disconnectRef.current?.()
-    disconnectRef.current = undefined
-  }, [impressionKey])
+  // Ключ, под который наблюдатель уже взведён. Сравнение с ним отличает смену
+  // ключа от первого прохода эффекта на монтировании (#1498): раньше эффект
+  // безусловно рвал наблюдатель, поставленный ref-колбэком двумя фазами
+  // раньше, и показ не фиксировался вообще никогда — ноль `quest_card_impression`
+  // при 26 кликах карточек за 30 дней.
+  const armedKeyRef = useRef(impressionKey)
 
   const fireOnce = useCallback(() => {
     if (firedRef.current) return
@@ -31,10 +32,11 @@ export function useTrackedImpression(
     callbackRef.current()
   }, [])
 
-  const setRef = useCallback((node: unknown) => {
+  const observe = useCallback(() => {
     disconnectRef.current?.()
     disconnectRef.current = undefined
 
+    const node = nodeRef.current
     if (Platform.OS !== 'web' || !node || firedRef.current) return
     if (typeof IntersectionObserver === 'undefined') return
 
@@ -51,6 +53,21 @@ export function useTrackedImpression(
     observer.observe(node as Element)
     disconnectRef.current = () => observer.disconnect()
   }, [fireOnce])
+
+  const setRef = useCallback((node: unknown) => {
+    nodeRef.current = node
+    observe()
+  }, [observe])
+
+  useEffect(() => {
+    if (armedKeyRef.current === impressionKey) return
+    armedKeyRef.current = impressionKey
+    firedRef.current = false
+    // Узел тот же, а показ снова считается новым (карточка переиспользована под
+    // другой контент), поэтому наблюдатель надо взвести заново вручную:
+    // ref-колбэк на смену ключа не вызывается.
+    observe()
+  }, [impressionKey, observe])
 
   const onLayout = useCallback(() => {
     if (Platform.OS !== 'web') fireOnce()

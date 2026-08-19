@@ -4,6 +4,7 @@
 // чтобы потребители типов и `INITIAL_AUTH_STATE` (напр. `authContextBase`) не
 // создавали циклический импорт через store. (FE-ARCH P3)
 
+import type { AppleAuthResult, AppleCredentialPayload } from '@/api/appleAuth';
 import type {
     FacebookAuthResult,
     FacebookCompletionStartResult,
@@ -36,6 +37,7 @@ export interface AuthActions {
     checkAuthentication: () => Promise<void>;
     login: (email: string, password: string) => Promise<boolean>;
     loginWithGoogle: (credential: string) => Promise<boolean>;
+    loginWithApple: (credential: AppleCredentialPayload) => Promise<AppleAuthResult>;
     loginWithFacebook: (credential: string) => Promise<FacebookAuthResult>;
     startFacebookEmailCompletion: (
         completionHandle: string,

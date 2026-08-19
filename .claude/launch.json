@@ -2,6 +2,26 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Apple Auth Verify 8121",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8121\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8121\" NODE_OPTIONS=--max-old-space-size=8192 npx expo start --web --port 8121"
+      ],
+      "port": 8121,
+      "autoPort": false
+    },
+    {
+      "name": "Email Subscribe Verify 8119",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp\" NODE_OPTIONS=--max-old-space-size=8192 npx expo start --web --port 8119"
+      ],
+      "port": 8119,
+      "autoPort": false
+    },
+    {
       "name": "Expo Web GSI Verify 8115",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

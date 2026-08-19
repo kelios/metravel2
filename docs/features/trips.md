@@ -154,7 +154,8 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/tripFallbackCover.ts` | 97 | детерминированная обложка-заглушка |
 | `components/trips/planning/TripRsvpControl.tsx` | 97 | going/maybe/declined |
 | `components/trips/planning/TripRouteDownloadButtons.tsx` | 94 | пара кнопок GPX/KML, общая для двух мест |
-| `components/trips/planning/TripPlanLinkedText.tsx` | 86 | ссылки в описании поездки |
+| `components/trips/planning/TripPlanLinkedText.tsx` | 246 | автолинк в описании: на web настоящий `<a href>`, на native `onPress` |
+| `components/trips/planning/TripPlanLinksBlock.tsx` | 85 | блок «Ссылки» — чипы с доменами из описания поездки |
 | `components/trips/tripFormatting.ts` | 74 | метки/цвета статусов каталога, даты, места |
 | `components/trips/planning/TripAffiliateBlock.tsx` | 74 | партнёрские ссылки |
 | `components/trips/TripsPageSeo.tsx` | 71 | SEO-обёртка всех trips-роутов |
@@ -573,8 +574,19 @@ create/update), `formatTripDateRangeShort`. Нормализация живёт 
 
 `TripRouteExportMenu` дополнительно строит deeplink'и в навигаторы
 (`ROUTE_NAVIGATORS`, `buildNavigatorUrl`; `TRANSPORT_MODE` схлопывает
-`public`/`mixed` в `driving`), Garmin/Komoot — через GPX + импорт. Все внешние
-ссылки идут только через `openExternalUrl`.
+`public`/`mixed` в `driving`), Garmin/Komoot — через GPX + импорт. Внешние
+ссылки этого меню идут только через `openExternalUrl`.
+
+Ссылки внутри описания поездки и описаний точек маршрута — отдельный контракт
+(#1494, `TripPlanLinkedText`): на web сегмент рендерится настоящим `<a href>`
+(RNW `href`/`hrefAttrs`; внешние — `target="_blank" rel="noopener"`, внутренние
+metravel.by — относительный путь без `target`), поэтому работают средняя кнопка
+мыши, контекстное меню и «копировать адрес ссылки». Сам адрес всё равно проходит
+через `normalizeExternalUrl` из `utils/externalLinks.ts`, на native открытие идёт
+через `handleRichTextLinkPress`. Автолинк ловит `https://`, `www.` и голые
+домены по закрытому списку TLD; выделение текста включено на web и iOS и
+выключено на Android (RN #22811). Найденные в описании ссылки дублируются
+чипами в блоке «Ссылки» (`TripPlanLinksBlock`, ключ `tripsStatic:plan.links.title`).
 
 Шаринг самой поездки — `utils/tripPlanLinks.ts`: `buildTripPlanPath/Url`
 (id проходит `/^[1-9]\d*$/`, иначе пустая строка), `buildTripShareText`,
@@ -619,8 +631,9 @@ Unit/component (Jest):
   `MyTripsDashboard`, `TripPlanCard`, `TripParticipantsList`, `TripRatingPanel`,
   `TripAffiliateBlock`, `TripsPageSeo`, `tripInvitePanel`, `tripReportForm`,
   `tripRouteExportMenu`, `tripTelegramGroupCard`, `tripConsent`,
-  `tripPlanLinkedText`, `tripFallbackCover`, `publicTripFallbackCover`,
-  `tripPlanRouteMapFullscreen`, `tripPlanRouteMapLayers`, `tripPlanRouteMapNative`;
+  `tripPlanLinkedText`, `routeBuilder.pointDescription`, `tripFallbackCover`,
+  `publicTripFallbackCover`, `tripPlanRouteMapFullscreen`,
+  `tripPlanRouteMapLayers`, `tripPlanRouteMapNative`;
 - `__tests__/app/` — `plannedTripScreen.states`, `plannedTripScreen.routeExport`,
   `plannedTripsScreen.redirect` (редирект `/trips/plan` → `/trips/my`),
   `tripCreateScreen.authGate`, `tripDetailScreen.dockReserve`;

@@ -14,10 +14,78 @@ import { translate as i18nT } from '@/i18n'
 // у фото-дропа dataTransfer.types содержит 'Files', у reorder — этот тип.
 const MARKER_DND_TYPE = 'application/x-marker-index';
 
+// Ниже этой ширины панели адрес точки в одну строку ужимается до нечитаемого
+// огрызка (замерено на мобильном bottom-sheet: 250px контента → ~46px текста).
+const COMPACT_LAYOUT_WIDTH = 340;
+
 const isMarkerIndexDrag = (e: React.DragEvent): boolean => {
     const types = e.dataTransfer?.types;
     if (!types) return false;
     return Array.from(types).includes(MARKER_DND_TYPE);
+};
+
+/**
+ * Иконочная кнопка строки точки. Инлайн-стили не умеют `:hover`, поэтому
+ * состояние держится локально — ререндерится одна кнопка, а не весь список.
+ * Тач-таргет задаёт размер самой кнопки (см. `scripts/guard-touch-targets.js`),
+ * видимая подложка появляется только под курсором/фокусом.
+ */
+type HoverIconButtonProps = {
+    color: string;
+    disabled?: boolean;
+    disabledStyle?: React.CSSProperties;
+    hoverColor?: string;
+    hoverStyle?: React.CSSProperties;
+    iconName: React.ComponentProps<typeof Feather>['name'];
+    iconSize?: number;
+    label: string;
+    onClick: () => void;
+    style: React.CSSProperties;
+};
+
+const HoverIconButton: React.FC<HoverIconButtonProps> = ({
+    color,
+    disabled,
+    disabledStyle,
+    hoverColor,
+    hoverStyle,
+    iconName,
+    iconSize = 16,
+    label,
+    onClick,
+    style,
+}) => {
+    const [hovered, setHovered] = useState(false);
+    const highlighted = hovered && !disabled;
+    const handleClick = useCallback(
+        (event: React.MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            onClick();
+        },
+        [onClick],
+    );
+
+    return (
+        <button
+            type="button"
+            data-card-action="true"
+            aria-label={label}
+            title={label}
+            disabled={disabled}
+            onClick={handleClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            onFocus={() => setHovered(true)}
+            onBlur={() => setHovered(false)}
+            style={{
+                ...style,
+                ...(highlighted ? hoverStyle ?? {} : {}),
+                ...(disabled ? disabledStyle ?? {} : {}),
+            }}
+        >
+            <Feather name={iconName} size={iconSize} color={highlighted && hoverColor ? hoverColor : color} />
+        </button>
+    );
 };
 
 interface MarkersListComponentProps {
@@ -52,6 +120,11 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const styles = useStyles(colors);
     const [search, setSearch] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
+    // Панель живёт и в широком листе визарда (~420px), и в мобильном
+    // bottom-sheet, где контенту остаётся ~250px: там строка «ручка → фото →
+    // адрес → действия» не помещается, и карточка переключается на два уровня.
+    const [isCompact, setIsCompact] = useState(false);
+    const containerRef = useRef<HTMLDivElement | null>(null);
     // Индексы (в РЕАЛЬНОМ массиве markers) для reorder-перетаскивания строки.
     const [dragIndex, setDragIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -124,6 +197,19 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleRowDragEnd = useCallback(() => {
         setDragIndex(null);
         setDragOverIndex(null);
+    }, []);
+
+    useEffect(() => {
+        const node = containerRef.current;
+        if (!node || typeof ResizeObserver === 'undefined') return;
+
+        const observer = new ResizeObserver((entries) => {
+            const width = entries[0]?.contentRect?.width ?? 0;
+            if (width <= 0) return;
+            setIsCompact(width < COMPACT_LAYOUT_WIDTH);
+        });
+        observer.observe(node);
+        return () => observer.disconnect();
     }, []);
 
     useEffect(() => {
@@ -230,6 +316,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
 
     return (
         <div
+            ref={containerRef}
             style={{
                 ...(styles.container as React.CSSProperties),
                 ...(isDragOver ? (styles.containerDragActive as React.CSSProperties) : {}),
@@ -361,7 +448,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                   .filter(Boolean)
                                   .slice(0, 2)
                                   .join(', ') || i18nT('map:components.map.MarkersListComponent.kategorii_vybrany_5cae87f4'))
-                            : i18nT('map:components.map.MarkersListComponent.kategorii_ne_vybrany_a50ecfb7');
+                            : i18nT('map:components.map.MarkersListComponent.bez_kategorii_7c41a0d5');
                         const imageUrl = getTravelPointImageUrl(marker.image);
                         const hasImage = imageUrl.length > 0;
 
@@ -369,6 +456,95 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
 
                         const isDragging = dragIndex === index;
                         const isDragTarget = dragOverIndex === index && dragIndex !== index;
+
+                        const reorderNodes = canReorder ? (
+                            <>
+                                <HoverIconButton
+                                    iconName="chevron-up"
+                                    label={i18nT('map:components.map.MarkersListComponent.peremestit_vyshe')}
+                                    color={colors.textMuted}
+                                    style={(isCompact ? styles.iconAction : styles.reorderButton) as React.CSSProperties}
+                                    hoverStyle={(isCompact ? styles.iconActionHover : styles.reorderButtonHover) as React.CSSProperties}
+                                    disabledStyle={styles.reorderButtonDisabled as React.CSSProperties}
+                                    disabled={index === 0}
+                                    onClick={() => {
+                                        if (index > 0) onReorder?.(index, index - 1);
+                                    }}
+                                />
+                                <HoverIconButton
+                                    iconName="chevron-down"
+                                    label={i18nT('map:components.map.MarkersListComponent.peremestit_nizhe')}
+                                    color={colors.textMuted}
+                                    style={(isCompact ? styles.iconAction : styles.reorderButton) as React.CSSProperties}
+                                    hoverStyle={(isCompact ? styles.iconActionHover : styles.reorderButtonHover) as React.CSSProperties}
+                                    disabledStyle={styles.reorderButtonDisabled as React.CSSProperties}
+                                    disabled={index === markers.length - 1}
+                                    onClick={() => {
+                                        if (index < markers.length - 1) onReorder?.(index, index + 1);
+                                    }}
+                                />
+                            </>
+                        ) : null;
+
+                        const thumbNode = (
+                            <div style={styles.thumbnailWrapper as React.CSSProperties}>
+                                {hasImage ? (
+                                    <ImageCardMedia
+                                        src={imageUrl}
+                                        fit="contain"
+                                        blurBackground
+                                        allowCriticalWebBlur
+                                        loading="lazy"
+                                        priority="low"
+                                        borderRadius={10}
+                                        style={styles.previewMedia as any}
+                                    />
+                                ) : (
+                                    <div style={styles.placeholderImage} aria-hidden="true" />
+                                )}
+                                <span style={styles.indexBadge as React.CSSProperties}>{index + 1}</span>
+                            </div>
+                        );
+
+                        const textNode = (
+                            <div style={styles.previewText}>
+                                <div style={styles.markerTitle} title={marker.address || i18nT('map:components.map.MarkersListComponent.bez_adresa_d9cfb4f0')}>
+                                    {marker.address || i18nT('map:components.map.MarkersListComponent.bez_adresa_d9cfb4f0')}
+                                </div>
+                                <div style={styles.metaRow as React.CSSProperties}>
+                                    <span style={styles.metaText}>{categoriesLabel}</span>
+                                    {hasImage && (
+                                        <>
+                                            <span style={styles.metaSeparator} aria-hidden="true">·</span>
+                                            <span style={styles.metaText}>{i18nT('map:components.map.MarkersListComponent.est_foto_6531b724')}</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        );
+
+                        const actionNodes = (
+                            <>
+                                <HoverIconButton
+                                    iconName="edit-2"
+                                    label={i18nT('map:components.map.MarkersListComponent.redaktirovat_6de468c0')}
+                                    color={colors.textMuted}
+                                    hoverColor={colors.primaryDark}
+                                    style={styles.iconAction as React.CSSProperties}
+                                    hoverStyle={styles.iconActionHover as React.CSSProperties}
+                                    onClick={() => onEdit(index)}
+                                />
+                                <HoverIconButton
+                                    iconName="trash-2"
+                                    label={i18nT('map:components.map.MarkersListComponent.udalit_316dc2c9')}
+                                    color={colors.textMuted}
+                                    hoverColor={colors.dangerDark}
+                                    style={styles.iconAction as React.CSSProperties}
+                                    hoverStyle={styles.iconActionDangerHover as React.CSSProperties}
+                                    onClick={() => onRemove(index)}
+                                />
+                            </>
+                        );
 
                         return (
                             <div
@@ -381,6 +557,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                 onDragEnd={canReorder ? handleRowDragEnd : undefined}
                                 style={{
                                     ...(styles.markerItem as React.CSSProperties),
+                                    ...(isCompact ? (styles.markerItemCompact as React.CSSProperties) : {}),
                                     ...(isEditing ? (styles.editingItem as React.CSSProperties) : {}),
                                     ...(isActive ? (styles.activeItem as React.CSSProperties) : {}),
                                     ...(isDragTarget ? (styles.markerItemDragOver as React.CSSProperties) : {}),
@@ -388,109 +565,35 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                 }}
                                 onClick={() => setActiveIndex?.(index)}
                             >
-                                <div style={styles.row}>
-                                    {canReorder ? (
-                                        <div style={styles.reorderColumn as React.CSSProperties}>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (index > 0) onReorder?.(index, index - 1);
-                                                }}
-                                                disabled={index === 0}
-                                                data-card-action="true"
-                                                aria-label={i18nT('map:components.map.MarkersListComponent.peremestit_vyshe')}
-                                                title={i18nT('map:components.map.MarkersListComponent.peremestit_vyshe')}
-                                                style={{
-                                                    ...(styles.reorderButton as React.CSSProperties),
-                                                    ...(index === 0 ? (styles.reorderButtonDisabled as React.CSSProperties) : {}),
-                                                }}
-                                            >
-                                                <Feather name="chevron-up" size={18} color={colors.textMuted} />
-                                            </button>
+                                {isCompact ? (
+                                    <>
+                                        <div style={styles.compactMain as React.CSSProperties}>
+                                            {thumbNode}
+                                            {textNode}
+                                        </div>
+                                        <div style={styles.compactToolbar as React.CSSProperties}>
+                                            {reorderNodes}
+                                            <div style={styles.compactToolbarSpacer} />
+                                            {actionNodes}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        {canReorder ? (
                                             <div
-                                                style={styles.dragHandle as React.CSSProperties}
-                                                aria-label={i18nT('map:components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a')}
+                                                style={styles.reorderColumn as React.CSSProperties}
                                                 title={i18nT('map:components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a')}
                                             >
-                                                <div style={styles.dragHandleDots as React.CSSProperties} aria-hidden="true">
-                                                    <Feather name="more-vertical" size={16} color={colors.textMuted} />
-                                                    <Feather name="more-vertical" size={16} color={colors.textMuted} />
-                                                </div>
+                                                {reorderNodes}
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (index < markers.length - 1) onReorder?.(index, index + 1);
-                                                }}
-                                                disabled={index === markers.length - 1}
-                                                data-card-action="true"
-                                                aria-label={i18nT('map:components.map.MarkersListComponent.peremestit_nizhe')}
-                                                title={i18nT('map:components.map.MarkersListComponent.peremestit_nizhe')}
-                                                style={{
-                                                    ...(styles.reorderButton as React.CSSProperties),
-                                                    ...(index === markers.length - 1 ? (styles.reorderButtonDisabled as React.CSSProperties) : {}),
-                                                }}
-                                            >
-                                                <Feather name="chevron-down" size={18} color={colors.textMuted} />
-                                            </button>
+                                        ) : null}
+                                        {thumbNode}
+                                        {textNode}
+                                        <div style={styles.actions as React.CSSProperties}>
+                                            {actionNodes}
                                         </div>
-                                    ) : null}
-                                    <div style={styles.indexBadge}>{index + 1}</div>
-                                    <div style={styles.thumbnailWrapper}>
-                                        {hasImage ? (
-                                            <ImageCardMedia
-                                                src={imageUrl}
-                                                fit="contain"
-                                                blurBackground
-                                                allowCriticalWebBlur
-                                                loading="lazy"
-                                                priority="low"
-                                                borderRadius={10}
-                                                style={styles.previewMedia as any}
-                                            />
-                                        ) : (
-                                            <div
-                                                style={styles.placeholderImage}
-                                                aria-hidden="true"
-                                            />
-                                        )}
-                                        </div>
-                                    <div style={styles.previewText}>
-                                        <div style={styles.markerTitle} title={marker.address || i18nT('map:components.map.MarkersListComponent.bez_adresa_d9cfb4f0')}>
-                                            {marker.address || i18nT('map:components.map.MarkersListComponent.bez_adresa_d9cfb4f0')}
-                                        </div>
-                                        <div style={styles.metaRow}>
-                                            <span style={styles.badge}>{categoriesLabel}</span>
-                                            {hasImage && <span style={styles.badgeMuted}>{i18nT('map:components.map.MarkersListComponent.est_foto_6531b724')}</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={styles.actions}>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onEdit(index);
-                                        }}
-                                        style={styles.editButton}
-                                        type="button"
-                                    >
-                                        <Feather name="edit-2" size={13} color={colors.primaryDark} />
-                                        <span>{i18nT('map:components.map.MarkersListComponent.redaktirovat_6de468c0')}</span>
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onRemove(index);
-                                        }}
-                                        style={styles.deleteButton}
-                                        type="button"
-                                    >
-                                        <Feather name="trash-2" size={13} color={colors.dangerDark} />
-                                        <span>{i18nT('map:components.map.MarkersListComponent.udalit_316dc2c9')}</span>
-                                    </button>
-                                </div>
+                                    </>
+                                )}
                             </div>
                         );
                     })}

@@ -24,6 +24,7 @@ import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
 import TripChatPanel from '@/components/trips/chat/TripChatPanel';
 import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
+import TripPlanLinksBlock from '@/components/trips/planning/TripPlanLinksBlock';
 import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import {
   PLAN_STATUS_LABEL,
@@ -339,12 +340,15 @@ export default function PlannedTripScreen() {
               ) : null}
 
               {trip.description ? (
-                <TripPlanLinkedText
-                  text={trip.description}
-                  style={styles.description}
-                  linkStyle={styles.descriptionLink}
-                  testID="trip-plan-description"
-                />
+                <>
+                  <TripPlanLinkedText
+                    text={trip.description}
+                    style={styles.description}
+                    linkStyle={styles.descriptionLink}
+                    testID="trip-plan-description"
+                  />
+                  <TripPlanLinksBlock text={trip.description} />
+                </>
               ) : null}
 
               {trip.isOwner ? (
