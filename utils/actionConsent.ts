@@ -16,6 +16,7 @@ export const CONSENT_TYPES = {
   TRIP_APPLY: 'trip_apply',
   TRIP_ORGANIZER: 'trip_organizer',
   CONTACT_EXCHANGE: 'contact_exchange',
+  EMAIL_SUBSCRIBE: 'email_subscribe',
 } as const
 
 export type ConsentType = (typeof CONSENT_TYPES)[keyof typeof CONSENT_TYPES]
