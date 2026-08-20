@@ -1222,7 +1222,7 @@
     },
     {
       "day": 7,
-      "submittedAt": null,
+      "submittedAt": "2026-08-20",
       "urls": [
         "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
         "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
@@ -1240,7 +1240,160 @@
         "yandex.com": 202
       },
       "indexnowVia": "full-site submit 2026-08-10",
-      "indexnowSubmittedAt": "2026-08-10"
+      "indexnowSubmittedAt": "2026-08-10",
+      "gscRequestedAt": "2026-08-20",
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+          "result": "already-indexed",
+          "at": "2026-08-20",
+          "note": "URL Inspection перед подачей показал «Страница отправлена и проиндексирована» — клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+          "result": "already-indexed",
+          "at": "2026-08-20",
+          "note": "URL Inspection перед подачей показал «Страница отправлена и проиндексирована» — клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut",
+          "result": "already-indexed",
+          "at": "2026-08-20",
+          "note": "URL Inspection перед подачей показал «Страница отправлена и проиндексирована» — клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa",
+          "result": "already-indexed",
+          "at": "2026-08-20",
+          "note": "URL Inspection перед подачей показал «Страница отправлена и проиндексирована» — клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+          "result": "already-indexed",
+          "at": "2026-08-20",
+          "note": "URL Inspection перед подачей показал «Страница отправлена и проиндексирована» — клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+          "result": "already-indexed",
+          "at": "2026-08-20",
+          "note": "URL Inspection перед подачей показал «Страница отправлена и проиндексирована» — клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        }
+      ],
+      "indexCheck": {
+        "checkedAt": "2026-08-20",
+        "source": "gsc-url-inspection",
+        "indexed": 6,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+          "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+          "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut",
+          "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa",
+          "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+          "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch"
+        ],
+        "note": "Замер до подачи 20.08: 6/10 адресов проиндексированы, ожидаемый повторный показатель — 10/10. Четыре оставшихся поданы кликом «Запросить индексирование». Повторный ручной GSC URL Inspection всех 10 адресов: не ранее 2026-08-23 22:30 Europe/Warsaw (≈72 часа после последнего accepted), окно до 2026-08-25 22:30; перед записью нового indexCheck сохранить этот baseline как previousIndexCheck.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T08:22:48Z",
+            "googleCanonical": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den"
+          },
+          {
+            "url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T14:43:15Z",
+            "googleCanonical": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T01:03:09Z",
+            "googleCanonical": "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+            "outcome": "not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google"
+          },
+          {
+            "url": "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:41:27Z",
+            "googleCanonical": "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa"
+          },
+          {
+            "url": "https://metravel.by/travels/dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova",
+            "outcome": "not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google"
+          },
+          {
+            "url": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T09:31:37Z",
+            "googleCanonical": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T23:03:23Z",
+            "googleCanonical": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch"
+          },
+          {
+            "url": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-14T09:48:41Z"
+          },
+          {
+            "url": "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia",
+            "outcome": "not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google"
+          }
+        ]
+      }
     },
     {
       "day": 8,
