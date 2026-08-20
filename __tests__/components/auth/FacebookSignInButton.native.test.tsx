@@ -112,6 +112,26 @@ describe('FacebookSignInButton native', () => {
     })
   })
 
+  it('stays unavailable without app id and never initializes or reports success', () => {
+    process.env.EXPO_PUBLIC_META_APP_ID = ''
+    const onSuccess = jest.fn()
+    const screen = render(
+      <FacebookSignInButton onSuccess={onSuccess} onError={jest.fn()} />,
+    )
+    const button = screen.getByTestId('facebook-sign-in-button')
+
+    expect(button.props.accessibilityState).toEqual({
+      disabled: true,
+      busy: false,
+    })
+    expect(Settings.initializeSDK).not.toHaveBeenCalled()
+
+    fireEvent.press(button)
+
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(loginMock).not.toHaveBeenCalled()
+  })
+
   it('treats a cancelled SDK dialog as a no-op', async () => {
     loginMock.mockResolvedValue({ isCancelled: true })
     const onSuccess = jest.fn()
