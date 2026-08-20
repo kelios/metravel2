@@ -1415,7 +1415,137 @@
         "yandex.com": 202
       },
       "indexnowVia": "full-site submit 2026-08-10",
-      "indexnowSubmittedAt": "2026-08-10"
+      "indexnowSubmittedAt": "2026-08-10",
+      "gscRequestedAt": "2026-08-20",
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+          "result": "already-indexed",
+          "at": "2026-08-20",
+          "note": "URL Inspection перед подачей показал «Страница отправлена и проиндексирована» — клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/verona-za-poldnia-chto-posmotret",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia",
+          "result": "already-indexed",
+          "at": "2026-08-20",
+          "note": "URL Inspection перед подачей показал «Страница отправлена и проиндексирована» — клик не нужен"
+        },
+        {
+          "url": "https://metravel.by/travels/mavrikii-na-avtomobile-arenda-i-marshrut",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
+          "result": "accepted",
+          "at": "2026-08-20",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        }
+      ],
+      "indexCheck": {
+        "checkedAt": "2026-08-20",
+        "source": "gsc-url-inspection",
+        "indexed": 2,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+          "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia"
+        ],
+        "note": "Замер до частичной подачи 20.08. Два из десяти адресов уже находились в индексе; шесть запросов приняты GSC. schronisko-magurka и sobachii-friendly не подавались из-за исчерпания известной суточной квоты и проверяются повторно 21.08.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T12:04:06Z",
+            "googleCanonical": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den"
+          },
+          {
+            "url": "https://metravel.by/travels/verona-za-poldnia-chto-posmotret",
+            "outcome": "discovered-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Обнаружена, не проиндексирована"
+          },
+          {
+            "url": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-05-10T01:26:22Z"
+          },
+          {
+            "url": "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T19:25:47Z",
+            "googleCanonical": "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia"
+          },
+          {
+            "url": "https://metravel.by/travels/mavrikii-na-avtomobile-arenda-i-marshrut",
+            "outcome": "url-unknown",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google"
+          },
+          {
+            "url": "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
+            "outcome": "url-unknown",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google"
+          },
+          {
+            "url": "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
+            "outcome": "discovered-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Обнаружена, не проиндексирована"
+          },
+          {
+            "url": "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
+            "outcome": "url-unknown",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google"
+          },
+          {
+            "url": "https://metravel.by/travels/schronisko-magurka-marshrut-na-90-minut",
+            "outcome": "url-unknown",
+            "verdict": "NEUTRAL",
+            "coverageState": "URL неизвестен Google"
+          },
+          {
+            "url": "https://metravel.by/travels/sobachii-friendly-trek-v-chase-ot-krakova-dolina-zhabnika",
+            "outcome": "crawled-not-indexed",
+            "verdict": "NEUTRAL",
+            "coverageState": "Страница просканирована, но пока не проиндексирована",
+            "lastCrawlTime": "2026-08-07T04:41:36Z"
+          }
+        ]
+      }
     },
     {
       "day": 9,
