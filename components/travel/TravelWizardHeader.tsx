@@ -480,7 +480,14 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     ) : null;
 
     const AutosaveText = saveStatusBadge ? (
-        <Text style={styles.autosaveBadgeText} numberOfLines={1} accessibilityLiveRegion="polite">
+        <Text
+            testID="travel-autosave-status"
+            style={styles.autosaveBadgeText}
+            numberOfLines={1}
+            accessibilityLiveRegion="polite"
+            role="status"
+            aria-live="polite"
+        >
             {saveStatusBadge}
         </Text>
     ) : null;

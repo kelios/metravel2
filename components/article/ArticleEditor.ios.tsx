@@ -34,6 +34,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   placeholder = i18nT('shared:components.article.ArticleEditor.vvedite_opisanie_5aa2e118'),
   content,
   onChange,
+  autosaveMode,
   onAutosave,
   autosaveDelay = ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
   idTravel,
@@ -56,6 +57,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const [imageUploadRequest, setImageUploadRequest] = useState(0);
   const [anchorModalVisible, setAnchorModalVisible] = useState(false);
   const [anchorValue, setAnchorValue] = useState('');
+  const standaloneAutosave = autosaveMode === 'standalone' ? onAutosave : undefined;
   const webViewRef = useRef<WebView>(null);
   const lastPropContentRef = useRef<string>(content);
   const isUserEditingRef = useRef<boolean>(false);
@@ -82,9 +84,9 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   }, [idTravel, variant]);
 
   const handleTrackedAutosave = useCallback((nextHtml: string) => {
-    if (!onAutosave) return;
+    if (!standaloneAutosave) return;
 
-    void Promise.resolve(onAutosave(nextHtml))
+    void Promise.resolve(standaloneAutosave(nextHtml))
       .then(() => {
         trackArticleEditorAutosaveSucceeded({
           source: 'article_editor_native',
@@ -101,7 +103,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           contentLength: nextHtml.length,
         });
       });
-  }, [idTravel, onAutosave, variant]);
+  }, [idTravel, standaloneAutosave, variant]);
 
   // Quill HTML template with dynamic theme colors
   const quillHTML = useMemo(() => buildArticleEditorNativeHtml({
@@ -156,7 +158,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
         debouncedOnChange(newHtml);
         
         // Автосохранение
-        if (onAutosave) {
+        if (standaloneAutosave) {
           if (autosaveTimer.current) {
             clearTimeout(autosaveTimer.current);
           }
@@ -172,7 +174,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     } catch (error) {
       console.error('Error parsing WebView message:', error);
     }
-  }, [autosaveDelay, debouncedOnChange, handleTrackedAutosave, onAutosave]);
+  }, [autosaveDelay, debouncedOnChange, handleTrackedAutosave, standaloneAutosave]);
 
   // Обновление контента при изменении prop (только внешние изменения)
   useLayoutEffect(() => {

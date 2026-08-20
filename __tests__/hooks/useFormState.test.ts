@@ -72,53 +72,6 @@ describe('useFormState (facade)', () => {
     expect(result.current.isDirty).toBe(true)
   })
 
-  it('handles manual save', async () => {
-    const mockSave = jest.fn().mockResolvedValue({ id: 1, name: 'Saved' })
-
-    const { result } = renderHook(() =>
-      useFormState(initialData, {
-        onSave: mockSave,
-      })
-    )
-
-    act(() => {
-      result.current.updateField('name', 'Test Travel')
-    })
-
-    await act(async () => {
-      try {
-        await result.current.save()
-      } catch {
-        // keep behavior parity with underlying hook
-      }
-    })
-
-    expect(mockSave).toHaveBeenCalledWith(result.current.data)
-    expect(result.current.isDirty).toBe(false)
-  })
-
-  it('handles save error', async () => {
-    const mockSave = jest.fn().mockRejectedValue(new Error('Save failed'))
-    const mockOnError = jest.fn()
-
-    const { result } = renderHook(() =>
-      useFormState(initialData, {
-        onSave: mockSave,
-        onError: mockOnError,
-      })
-    )
-
-    act(() => {
-      result.current.updateField('name', 'Test Travel')
-    })
-
-    await act(async () => {
-      await expect(result.current.save()).rejects.toThrow('Save failed')
-    })
-
-    expect(mockOnError).toHaveBeenCalled()
-  })
-
   it('resets form correctly', () => {
     const { result } = renderHook(() => useFormState(initialData))
 

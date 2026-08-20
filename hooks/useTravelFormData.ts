@@ -80,7 +80,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const updateBaselineRef = useRef<((data: TravelFormData) => void) | null>(null);
 
   const formState = useFormState<TravelFormData>(initialFormData, {
-    debounce: 5000,
     validateOnChange: true,
     validationDebounce: 300,
   });

@@ -92,6 +92,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     placeholder = i18nT('shared:components.article.ArticleEditor.vvedite_opisanie_638bcc13'),
     content,
     onChange,
+    autosaveMode,
     onAutosave,
     onManualSave,
     autosaveDelay = ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
@@ -121,6 +122,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const [linkValue, setLinkValue] = useState('');
     const [isImageUploading, setIsImageUploading] = useState(false);
     const [isManualSaving, setIsManualSaving] = useState(false);
+    const standaloneAutosave = autosaveMode === 'standalone' ? onAutosave : undefined;
     const htmlSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
     const [htmlForcedSelection, setHtmlForcedSelection] = useState<{ start: number; end: number } | null>(null);
 
@@ -344,9 +346,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const handleTrackedAutosave = useCallback(
         async (nextHtml: string) => {
-            if (!onAutosave) return;
+            if (!standaloneAutosave) return;
             try {
-                await Promise.resolve(onAutosave(nextHtml));
+                await Promise.resolve(standaloneAutosave(nextHtml));
                 trackArticleEditorAutosaveSucceeded({
                     source: 'article_editor_web',
                     travelId: idTravel,
@@ -363,10 +365,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 throw error;
             }
         },
-        [idTravel, onAutosave, variant],
+        [idTravel, standaloneAutosave, variant],
     );
 
-    const trackedAutosave = onAutosave ? handleTrackedAutosave : undefined;
+    const trackedAutosave = standaloneAutosave ? handleTrackedAutosave : undefined;
 
     useEffect(() => {
         return runAutosaveEffect({

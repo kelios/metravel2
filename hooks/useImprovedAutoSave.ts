@@ -27,10 +27,16 @@ interface UseImprovedAutoSaveOptions<T> {
 }
 
 type AutosaveStatus = 'idle' | 'debouncing' | 'saving' | 'saved' | 'error';
+export type AutosavePhase = 'clean' | 'pending' | 'saving' | 'saved' | 'error';
 
 interface AutosaveState {
   status: AutosaveStatus;
+  phase: AutosavePhase;
+  localRevision: number;
+  inFlightRevision: number | null;
+  confirmedRevision: number;
   lastSaved: Date | null;
+  lastSavedAt: string | null;
   error: Error | null;
   retryCount: number;
   isOnline: boolean;
@@ -91,9 +97,16 @@ export function useImprovedAutoSave<T>(
     timeoutCooldown = 30000,
   } = options;
 
+  const initialRevision = isEqual(data, originalData) ? 0 : 1;
+
   const [state, setState] = useState<AutosaveState>({
-    status: 'idle',
+    status: initialRevision === 0 ? 'idle' : 'debouncing',
+    phase: initialRevision === 0 ? 'clean' : 'pending',
+    localRevision: initialRevision,
+    inFlightRevision: null,
+    confirmedRevision: 0,
     lastSaved: null,
+    lastSavedAt: null,
     error: null,
     retryCount: 0,
     isOnline: networkIsOnline,
@@ -104,14 +117,12 @@ export function useImprovedAutoSave<T>(
   const mountedRef = useRef(true);
   const lastSavedDataRef = useRef<T>(originalData);
   const latestDataRef = useRef<T>(data);
+  const localRevisionRef = useRef(initialRevision);
+  const confirmedRevisionRef = useRef(0);
   const isOnlineRef = useRef<boolean>(networkIsOnline);
   const blockingErrorStatusRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const inFlightRef = useRef(false);
-  // Фоновый тик, пропущенный из-за летящего сохранения: после его завершения
-  // актуальные данные должны уйти одним следующим сохранением, иначе правки,
-  // сделанные во время полёта, останутся неотправленными до новой правки.
-  const pendingBackgroundSaveRef = useRef(false);
   // До этой отметки фоновое сохранение не стартует: предыдущая попытка оборвана
   // нашим таймаутом и, вероятно, всё ещё выполняется на сервере.
   const serverBusyUntilRef = useRef(0);
@@ -133,7 +144,6 @@ export function useImprovedAutoSave<T>(
       abortControllerRef.current = null;
       inFlightRef.current = false;
     }
-    pendingBackgroundSaveRef.current = false;
   }, []);
 
   // Network status is supplied by the screen-level cross-platform source.
@@ -156,6 +166,31 @@ export function useImprovedAutoSave<T>(
       cleanup();
     };
   }, [cleanup]);
+
+  // Every distinct local snapshot receives a monotonic revision. Save responses
+  // can then confirm only the revision that was actually dispatched, never
+  // edits that appeared while that request was in flight.
+  useEffect(() => {
+    if (isEqual(data, latestDataRef.current)) return;
+    latestDataRef.current = data;
+    localRevisionRef.current += 1;
+    if (mountedRef.current) {
+      setState(prev => {
+        const hasBlockingAuthError = blockingErrorStatusRef.current === 401;
+        return {
+          ...prev,
+          localRevision: localRevisionRef.current,
+          status: hasBlockingAuthError
+            ? prev.status
+            : inFlightRef.current ? 'saving' : 'debouncing',
+          phase: hasBlockingAuthError
+            ? prev.phase
+            : inFlightRef.current ? 'saving' : 'pending',
+          error: hasBlockingAuthError ? prev.error : null,
+        };
+      });
+    }
+  }, [data]);
 
   // Check if data has changed - inline function, not in dependencies
   const hasDataChanged = (): boolean => {
@@ -182,7 +217,6 @@ export function useImprovedAutoSave<T>(
     // они уйдут одним следующим. Право вытеснения остаётся только у явных
     // действий автора (saveNow/retrySave) и у размонтирования экрана.
     if (inFlightRef.current && options?.preempt !== true) {
-      pendingBackgroundSaveRef.current = true;
       return dataToSave;
     }
 
@@ -198,6 +232,7 @@ export function useImprovedAutoSave<T>(
     const controller = new AbortController();
     abortControllerRef.current = controller;
     inFlightRef.current = true;
+    const dispatchedRevision = localRevisionRef.current;
     let saveSucceeded = false;
     const startedAt = Date.now();
     // Этот вызов всё ещё актуален, только если его контроллер — текущий.
@@ -209,6 +244,8 @@ export function useImprovedAutoSave<T>(
         setState(prev => ({
           ...prev,
           status: 'saving',
+          phase: 'saving',
+          inFlightRevision: dispatchedRevision,
           error: null,
         }));
       }
@@ -231,13 +268,22 @@ export function useImprovedAutoSave<T>(
       // абзацы на сервер не уходили.
       lastSavedDataRef.current = dataToSave;
       blockingErrorStatusRef.current = null;
+      const currentSnapshotIsConfirmed = isEqual(latestDataRef.current, dataToSave);
+      confirmedRevisionRef.current = currentSnapshotIsConfirmed
+        ? localRevisionRef.current
+        : Math.max(confirmedRevisionRef.current, dispatchedRevision);
+      const savedAt = new Date();
 
       // ✅ FIX: Проверка монтирования перед setState
       if (mountedRef.current) {
         setState(prev => ({
           ...prev,
-          status: 'saved',
-          lastSaved: new Date(),
+          status: currentSnapshotIsConfirmed ? 'saved' : 'debouncing',
+          phase: currentSnapshotIsConfirmed ? 'saved' : 'pending',
+          confirmedRevision: confirmedRevisionRef.current,
+          inFlightRevision: null,
+          lastSaved: savedAt,
+          lastSavedAt: savedAt.toISOString(),
           error: null,
           retryCount: 0,
         }));
@@ -274,7 +320,9 @@ export function useImprovedAutoSave<T>(
         if (mountedRef.current) {
           setState(prev => ({
             ...prev,
-            status: 'idle',
+            status: 'debouncing',
+            phase: 'pending',
+            inFlightRevision: null,
             error: null,
             retryCount: 0,
           }));
@@ -289,6 +337,9 @@ export function useImprovedAutoSave<T>(
         if (mountedRef.current) {
           setState(prev => ({
             ...prev,
+            status: 'debouncing',
+            phase: 'pending',
+            inFlightRevision: null,
             error: saveError,
             retryCount: retryAttempt + 1,
           }));
@@ -320,6 +371,8 @@ export function useImprovedAutoSave<T>(
         setState(prev => ({
           ...prev,
           status: 'error',
+          phase: 'error',
+          inFlightRevision: null,
           error: saveError,
           retryCount: 0,
         }));
@@ -341,9 +394,11 @@ export function useImprovedAutoSave<T>(
         // накопленные правки одним следующим сохранением. Только после успеха:
         // после ошибки повтором управляет retry/терминальное состояние, иначе
         // неустранимый отказ зациклился бы на том же payload.
-        const hadPendingWork = pendingBackgroundSaveRef.current;
-        pendingBackgroundSaveRef.current = false;
-        if (hadPendingWork && saveSucceeded) {
+        const hasUnconfirmedSnapshot = !isEqual(
+          latestDataRef.current,
+          lastSavedDataRef.current,
+        );
+        if (hasUnconfirmedSnapshot && saveSucceeded) {
           scheduleBackgroundSaveRef.current?.();
         }
       }
@@ -367,7 +422,6 @@ export function useImprovedAutoSave<T>(
       // уже потерян и повтор безопасен.
       const cooldownLeft = serverBusyUntilRef.current - Date.now();
       if (cooldownLeft > 0) {
-        pendingBackgroundSaveRef.current = true;
         if (!timeoutRef.current) {
           timeoutRef.current = setTimeout(() => {
             timeoutRef.current = null;
@@ -394,7 +448,7 @@ export function useImprovedAutoSave<T>(
       // Отправка ещё не подтверждена — статус не должен оставаться «Сохранено».
       setState(prev => (prev.status === 'debouncing'
         ? prev
-        : { ...prev, status: 'debouncing', error: null }));
+        : { ...prev, status: 'debouncing', phase: 'pending', error: null }));
 
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null;
@@ -416,6 +470,9 @@ export function useImprovedAutoSave<T>(
   useEffect(() => {
     if (!enabled) {
       cleanup();
+      if (!isEqual(data, lastSavedDataRef.current) && mountedRef.current) {
+        setState(prev => ({ ...prev, status: 'debouncing', phase: 'pending' }));
+      }
       return;
     }
 
@@ -423,11 +480,43 @@ export function useImprovedAutoSave<T>(
     const isEqualResult = isEqual(data, lastSavedDataRef.current);
 
     if (isEqualResult) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (mountedRef.current && blockingErrorStatusRef.current !== 401) {
+        if (inFlightRef.current) {
+          setState(prev => ({
+            ...prev,
+            status: 'saving',
+            phase: 'saving',
+            localRevision: localRevisionRef.current,
+            error: null,
+          }));
+        } else {
+          confirmedRevisionRef.current = localRevisionRef.current;
+          setState(prev => {
+            // applySavedData copies the confirmed payload into a new form object.
+            // That deep-equal identity change must not erase the observable
+            // successful-save state (and its timestamp) on the next effect pass.
+            const keepSavedConfirmation =
+              prev.phase === 'saved' &&
+              prev.confirmedRevision === localRevisionRef.current;
+
+            return {
+              ...prev,
+              status: keepSavedConfirmation ? 'saved' : 'idle',
+              phase: keepSavedConfirmation ? 'saved' : 'clean',
+              localRevision: localRevisionRef.current,
+              confirmedRevision: confirmedRevisionRef.current,
+              inFlightRevision: null,
+              error: null,
+            };
+          });
+        }
+      }
       return;
     }
-
-    // Запоминаем последние наблюдаемые данные.
-    latestDataRef.current = data;
 
     // An expired session is terminal for background autosave. Preserve the visible
     // error/CTA and the latest local snapshot until the user authenticates again.
@@ -452,12 +541,15 @@ export function useImprovedAutoSave<T>(
     // ✅ FIX: Проверка монтирования перед setState
     if (mountedRef.current) {
       setState(prev => {
-        if (prev.status === 'debouncing') {
+        const nextStatus = inFlightRef.current ? 'saving' : 'debouncing';
+        const nextPhase = inFlightRef.current ? 'saving' : 'pending';
+        if (prev.status === nextStatus && prev.phase === nextPhase) {
           return prev; // Не вызываем setState если статус уже debouncing
         }
         return {
           ...prev,
-          status: 'debouncing',
+          status: nextStatus,
+          phase: nextPhase,
           error: null,
         };
       });
@@ -496,11 +588,19 @@ export function useImprovedAutoSave<T>(
     cleanup();
     blockingErrorStatusRef.current = null;
     lastSavedDataRef.current = originalData;
+    latestDataRef.current = originalData;
+    localRevisionRef.current = 0;
+    confirmedRevisionRef.current = 0;
     // ✅ FIX: Проверка монтирования перед setState
     if (mountedRef.current) {
       setState({
         status: 'idle',
+        phase: 'clean',
+        localRevision: 0,
+        inFlightRevision: null,
+        confirmedRevision: 0,
         lastSaved: null,
+        lastSavedAt: null,
         error: null,
         retryCount: 0,
         isOnline: state.isOnline,
@@ -513,7 +613,13 @@ export function useImprovedAutoSave<T>(
     blockingErrorStatusRef.current = null;
     // ✅ FIX: Проверка монтирования перед setState
     if (mountedRef.current) {
-      setState(prev => ({ ...prev, error: null, status: 'idle' }));
+      const hasPendingChanges = !isEqual(latestDataRef.current, lastSavedDataRef.current);
+      setState(prev => ({
+        ...prev,
+        error: null,
+        status: hasPendingChanges ? 'debouncing' : 'idle',
+        phase: hasPendingChanges ? 'pending' : 'clean',
+      }));
     }
   }, []);
 
@@ -532,11 +638,20 @@ export function useImprovedAutoSave<T>(
   // Update baseline data (e.g., after loading from server)
   const updateBaseline = useCallback((newBaseline: T) => {
     lastSavedDataRef.current = newBaseline;
-    latestDataRef.current = newBaseline;
+    const coversCurrentRevision = isEqual(latestDataRef.current, newBaseline);
+    if (coversCurrentRevision) {
+      confirmedRevisionRef.current = localRevisionRef.current;
+    }
     // hasUnsavedChanges вычисляется на рендере из lastSavedDataRef. Без рендера
     // потребитель не увидит сброс флага после updateBaseline — форсим пересчёт.
     if (mountedRef.current) {
-      setState(prev => ({ ...prev }));
+      setState(prev => ({
+        ...prev,
+        confirmedRevision: confirmedRevisionRef.current,
+        ...(coversCurrentRevision && prev.status !== 'saved'
+          ? { status: 'idle' as const, phase: 'clean' as const }
+          : {}),
+      }));
     }
   }, []);
 
@@ -561,7 +676,12 @@ export function useImprovedAutoSave<T>(
   return useMemo(() => ({
     // State
     status: state.status,
+    phase: state.phase,
+    localRevision: state.localRevision,
+    inFlightRevision: state.inFlightRevision,
+    confirmedRevision: state.confirmedRevision,
     lastSaved: state.lastSaved,
+    lastSavedAt: state.lastSavedAt,
     error: state.error,
     retryCount: state.retryCount,
     isOnline: state.isOnline,
@@ -583,7 +703,12 @@ export function useImprovedAutoSave<T>(
     cancelPending: cleanup,
   }), [
     state.status,
+    state.phase,
+    state.localRevision,
+    state.inFlightRevision,
+    state.confirmedRevision,
     state.lastSaved,
+    state.lastSavedAt,
     state.error,
     state.retryCount,
     state.isOnline,

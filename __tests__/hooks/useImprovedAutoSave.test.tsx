@@ -37,7 +37,9 @@ describe('useImprovedAutoSave', () => {
 
     expect(onSave).toHaveBeenCalledTimes(1)
     expect(onError).not.toHaveBeenCalled()
-    expect(result.current.status).toBe('idle')
+    expect(result.current.status).toBe('debouncing')
+    expect(result.current.phase).toBe('pending')
+    expect(result.current.lastSavedAt).toBeNull()
     expect(result.current.error).toBeNull()
   })
 
@@ -116,6 +118,7 @@ describe('useImprovedAutoSave', () => {
     expect(onSave).not.toHaveBeenCalled()
     expect(result.current.isOnline).toBe(false)
     expect(result.current.hasUnsavedChanges).toBe(true)
+    expect(result.current.phase).toBe('pending')
 
     rerender({ data: { value: 'offline edit' }, isOnline: true })
     await act(async () => {
@@ -194,12 +197,17 @@ describe('useImprovedAutoSave', () => {
     )
 
     rerender({ data: { value: 'first' } })
+    expect(result.current.phase).toBe('pending')
+    expect(result.current.localRevision).toBe(1)
+    expect(result.current.confirmedRevision).toBe(0)
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
     })
     expect(onSave).toHaveBeenCalledTimes(1)
     expect(onSave).toHaveBeenLastCalledWith({ value: 'first' }, expect.any(Object))
+    expect(result.current.phase).toBe('saving')
+    expect(result.current.inFlightRevision).toBe(1)
 
     // Автор продолжает печатать, пока первый сейв ещё летит.
     rerender({ data: { value: 'second' } })
@@ -208,6 +216,9 @@ describe('useImprovedAutoSave', () => {
       await Promise.resolve()
     })
     expect(onSave).toHaveBeenCalledTimes(1)
+    expect(result.current.phase).toBe('saving')
+    expect(result.current.localRevision).toBe(2)
+    expect(result.current.inFlightRevision).toBe(1)
 
     await act(async () => {
       resolveSave?.({ value: 'first' })
@@ -217,7 +228,11 @@ describe('useImprovedAutoSave', () => {
 
     // Сохранение подтверждено, но неотправленные правки есть — статус не «saved».
     expect(result.current.status).toBe('debouncing')
+    expect(result.current.phase).toBe('pending')
     expect(result.current.hasUnsavedChanges).toBe(true)
+    expect(result.current.confirmedRevision).toBe(1)
+    expect(result.current.localRevision).toBe(2)
+    expect(result.current.lastSavedAt).not.toBeNull()
 
     await act(async () => {
       jest.advanceTimersByTime(60)
@@ -226,6 +241,139 @@ describe('useImprovedAutoSave', () => {
 
     expect(onSave).toHaveBeenCalledTimes(2)
     expect(onSave).toHaveBeenLastCalledWith({ value: 'second' }, expect.any(Object))
+
+    await act(async () => {
+      resolveSave?.({ value: 'second' })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(result.current.phase).toBe('saved')
+    expect(result.current.confirmedRevision).toBe(2)
+    expect(result.current.localRevision).toBe(2)
+    expect(result.current.inFlightRevision).toBeNull()
+  })
+
+  it('recognizes the exact confirmed snapshot even after later revisions revert to it', async () => {
+    jest.useFakeTimers()
+
+    let resolveSave: ((value: { value: string }) => void) | null = null
+    const onSave = jest.fn((data: { value: string }) => new Promise<{ value: string }>((resolve) => {
+      resolveSave = () => resolve(data)
+    }))
+
+    const { result, rerender } = renderHook(
+      ({ data }) =>
+        useImprovedAutoSave(data, { value: 'initial' }, {
+          debounce: 50,
+          onSave,
+          enableRetry: false,
+        }),
+      { initialProps: { data: { value: 'initial' } } },
+    )
+
+    rerender({ data: { value: 'first' } })
+    await act(async () => {
+      jest.advanceTimersByTime(60)
+      await Promise.resolve()
+    })
+
+    rerender({ data: { value: 'second' } })
+    rerender({ data: { value: 'first' } })
+    expect(result.current.localRevision).toBe(3)
+
+    await act(async () => {
+      resolveSave?.({ value: 'first' })
+      await Promise.resolve()
+      await Promise.resolve()
+      jest.advanceTimersByTime(60)
+      await Promise.resolve()
+    })
+
+    expect(result.current.phase).toBe('saved')
+    expect(result.current.confirmedRevision).toBe(3)
+    expect(result.current.localRevision).toBe(3)
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the saved confirmation after the form adopts an equal server snapshot', async () => {
+    jest.useFakeTimers()
+    const onSave = jest.fn(async (data: { value: string }) => data)
+
+    const { result, rerender } = renderHook(
+      ({ data }) =>
+        useImprovedAutoSave(data, { value: 'initial' }, {
+          debounce: 50,
+          onSave,
+          enableRetry: false,
+        }),
+      { initialProps: { data: { value: 'initial' } } },
+    )
+
+    rerender({ data: { value: 'confirmed' } })
+    await act(async () => {
+      jest.advanceTimersByTime(60)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(result.current.phase).toBe('saved')
+    const savedAt = result.current.lastSavedAt
+
+    // applySavedData/reset creates a new object even when the confirmed content
+    // is unchanged. The status must still describe the server confirmation.
+    rerender({ data: { value: 'confirmed' } })
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(result.current.phase).toBe('saved')
+    expect(result.current.lastSavedAt).toBe(savedAt)
+  })
+
+  it('keeps a compensating revert pending when an in-flight request will overwrite the baseline', async () => {
+    jest.useFakeTimers()
+
+    let resolveSave: ((value: { value: string }) => void) | null = null
+    const onSave = jest.fn((data: { value: string }) => new Promise<{ value: string }>((resolve) => {
+      resolveSave = () => resolve(data)
+    }))
+
+    const { result, rerender } = renderHook(
+      ({ data }) =>
+        useImprovedAutoSave(data, { value: 'initial' }, {
+          debounce: 50,
+          onSave,
+          enableRetry: false,
+        }),
+      { initialProps: { data: { value: 'initial' } } },
+    )
+
+    rerender({ data: { value: 'server-will-receive-this' } })
+    await act(async () => {
+      jest.advanceTimersByTime(60)
+      await Promise.resolve()
+    })
+
+    rerender({ data: { value: 'initial' } })
+    expect(result.current.phase).toBe('saving')
+
+    await act(async () => {
+      resolveSave?.({ value: 'server-will-receive-this' })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(result.current.phase).toBe('pending')
+    expect(result.current.hasUnsavedChanges).toBe(true)
+
+    await act(async () => {
+      jest.advanceTimersByTime(60)
+      await Promise.resolve()
+    })
+
+    expect(onSave).toHaveBeenCalledTimes(2)
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'initial' }, expect.any(Object))
   })
 
   // Порог для смоука из карточки #1511: за длительную непрерывную правку число
@@ -481,7 +629,9 @@ describe('useImprovedAutoSave', () => {
     expect(onSave).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(validationError)
     expect(result.current.status).toBe('error')
+    expect(result.current.phase).toBe('error')
     expect(result.current.hasUnsavedChanges).toBe(true)
+    expect(result.current.lastSavedAt).toBeNull()
   })
 
   // Уход со страницы: результат летящего сохранения не применяется к состоянию

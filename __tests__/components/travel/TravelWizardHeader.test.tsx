@@ -62,6 +62,23 @@ describe('TravelWizardHeader', () => {
     expect(getByText('Ошибки: 2')).toBeTruthy();
   });
 
+  it('keeps autosave status in a polite live region', () => {
+    const { getByTestId } = render(
+      <TravelWizardHeader
+        title="Маршрут"
+        subtitle="Шаг 2 из 6"
+        progressPercent={34}
+        autosaveBadge="Есть несохранённые изменения"
+      />
+    );
+
+    const status = getByTestId('travel-autosave-status');
+    expect(status.props.accessibilityLiveRegion).toBe('polite');
+    expect(status.props.role).toBe('status');
+    expect(status.props['aria-live']).toBe('polite');
+    expect(status.props.children).toBe('Есть несохранённые изменения');
+  });
+
   it('keeps the mobile save button at a 44px touch target', () => {
     mockResponsiveState = {
       isHydrated: true,

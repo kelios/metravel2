@@ -138,7 +138,7 @@ describe('ArticleEditor.web autosave', () => {
       const autosaveDelay = 30
 
       const { getByTestId } = render(
-        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
+        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
       )
 
       for (let i = 0; i < 20; i++) {
@@ -183,7 +183,7 @@ describe('ArticleEditor.web autosave', () => {
       const autosaveDelay = 20
 
       const { getByTestId } = render(
-        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
+        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
       )
 
       for (let i = 0; i < 20; i++) {
@@ -218,7 +218,7 @@ describe('ArticleEditor.web autosave', () => {
         .mockResolvedValueOnce(undefined)
 
       const { getByTestId } = render(
-        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
+        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
       )
 
       for (let i = 0; i < 20; i++) {
@@ -251,7 +251,7 @@ describe('ArticleEditor.web autosave', () => {
 
     const autosaveDelay = 30
     const { getByTestId, getByLabelText, getByPlaceholderText } = render(
-      <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={jest.fn(async () => {})} autosaveDelay={autosaveDelay} />
+      <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={jest.fn(async () => {})} autosaveDelay={autosaveDelay} />
     )
 
     await waitFor(() => {
@@ -279,7 +279,7 @@ describe('ArticleEditor.web autosave', () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
     const { getByTestId, getByLabelText } = render(
-      <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={jest.fn(async () => {})} autosaveDelay={20} />
+      <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={jest.fn(async () => {})} autosaveDelay={20} />
     )
 
     await waitFor(() => {
@@ -317,7 +317,7 @@ describe('ArticleEditor.web autosave', () => {
     const onChange = jest.fn()
 
     const { getByTestId } = render(
-      <ArticleEditor content={'<p>start</p>'} onChange={onChange} onAutosave={jest.fn(async () => {})} autosaveDelay={20} />
+      <ArticleEditor content={'<p>start</p>'} onChange={onChange} autosaveMode="standalone" onAutosave={jest.fn(async () => {})} autosaveDelay={20} />
     )
 
     await waitFor(() => {
@@ -402,6 +402,7 @@ describe('ArticleEditor.web autosave', () => {
         content={'<p>start</p>'}
         onChange={onChange}
         onManualSave={onManualSave}
+        autosaveMode="standalone"
         onAutosave={jest.fn(async () => {})}
         autosaveDelay={20}
       />

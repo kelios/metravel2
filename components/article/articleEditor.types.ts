@@ -3,19 +3,32 @@ import type { Ref } from 'react';
 export type ArticleEditorVariant = 'default' | 'compact';
 export type ArticleEditorChrome = 'default' | 'mobile';
 
-export interface ArticleEditorProps {
+interface ArticleEditorBaseProps {
   label?: string;
   placeholder?: string;
   content: string;
   onChange: (html: string) => void;
-  onAutosave?: (html: string) => Promise<void>;
   onManualSave?: (html?: string) => Promise<unknown> | void;
-  autosaveDelay?: number;
   idTravel?: string;
   editorRef?: Ref<any>;
   variant?: ArticleEditorVariant;
   chrome?: ArticleEditorChrome;
 }
+
+type StandaloneArticleEditorAutosave = {
+  autosaveMode: 'standalone';
+  onAutosave: (html: string) => Promise<void>;
+  autosaveDelay?: number;
+};
+
+type ParentOwnedArticleEditorAutosave = {
+  autosaveMode?: never;
+  onAutosave?: never;
+  autosaveDelay?: never;
+};
+
+export type ArticleEditorProps = ArticleEditorBaseProps &
+  (StandaloneArticleEditorAutosave | ParentOwnedArticleEditorAutosave);
 
 export type ArticleEditorSelection = {
   index: number;

@@ -1,12 +1,7 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import isEqual from 'fast-deep-equal';
 
-interface UseOptimizedFormStateOptions<T> {
-  debounce?: number;
-  onSave?: (data: T) => Promise<T>;
-  onSuccess?: (savedData: T) => void;
-  onError?: (error: unknown) => void;
-  onStart?: () => void;
+interface UseOptimizedFormStateOptions {
   validateOnChange?: boolean;
   validationDebounce?: number;
 }
@@ -22,14 +17,9 @@ interface FormState<T> {
 
 export function useOptimizedFormState<T extends object>(
   initialData: T,
-  options: UseOptimizedFormStateOptions<T> = {}
+  options: UseOptimizedFormStateOptions = {}
 ) {
   const {
-    debounce = 5000,
-    onSave,
-    onSuccess,
-    onError,
-    onStart,
     validateOnChange = true,
     validationDebounce = 300,
   } = options;
@@ -46,17 +36,14 @@ export function useOptimizedFormState<T extends object>(
 
   // Refs for performance optimization
   const originalDataRef = useRef<T>(initialData);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
-  const isSavingRef = useRef(false);
   const initialDataRef = useRef<T>(initialData);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       mountedRef.current = false;
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
     };
   }, []);
@@ -128,96 +115,6 @@ export function useOptimizedFormState<T extends object>(
     });
   }, []);
 
-  // Autosave functionality
-  useEffect(() => {
-    if (!onSave || !state.isDirty) return;
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    const id = setTimeout(async () => {
-      if (!mountedRef.current) return;
-      // Ручной save() уже в полёте — не запускаем параллельный autosave.
-      // isDirty остаётся true, поэтому следующий цикл перепланирует сохранение.
-      if (isSavingRef.current) return;
-
-      onStart?.();
-      isSavingRef.current = true;
-
-      try {
-        setState(prev => ({ ...prev, isSubmitting: true }));
-        const savedData = await onSave(state.data);
-
-        if (mountedRef.current) {
-          originalDataRef.current = savedData;
-          setState(prev => ({
-            ...prev,
-            isDirty: false,
-            isSubmitting: false,
-          }));
-          onSuccess?.(savedData);
-        }
-      } catch (error) {
-        if (mountedRef.current) {
-          setState(prev => ({ ...prev, isSubmitting: false }));
-          onError?.(error);
-        }
-      } finally {
-        isSavingRef.current = false;
-        timeoutRef.current = null;
-      }
-    }, debounce);
-
-    timeoutRef.current = id;
-
-    return () => clearTimeout(id);
-  }, [state.data, state.isDirty, debounce, onSave, onSuccess, onError, onStart]);
-
-  // Manual save
-  const save = useCallback(async (): Promise<T> => {
-    if (!onSave) {
-      throw new Error('No onSave function provided');
-    }
-
-    // Cancel any scheduled autosave so we don't double-save.
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-
-    if (isSavingRef.current) {
-      throw new Error('Save already in flight');
-    }
-    isSavingRef.current = true;
-
-    setState(prev => ({ ...prev, isSubmitting: true }));
-
-    try {
-      const savedData = await onSave(state.data);
-      
-      if (mountedRef.current) {
-        originalDataRef.current = savedData;
-        setState(prev => ({
-          ...prev,
-          isDirty: false,
-          isSubmitting: false,
-        }));
-        onSuccess?.(savedData);
-      }
-      
-      return savedData;
-    } catch (error) {
-      if (mountedRef.current) {
-        setState(prev => ({ ...prev, isSubmitting: false }));
-        onError?.(error);
-      }
-      throw error;
-    } finally {
-      isSavingRef.current = false;
-    }
-  }, [onSave, state.data, onSuccess, onError]);
-
   // Reset form
   const reset = useCallback((newData?: T) => {
     const dataToReset = newData || initialData;
@@ -264,7 +161,6 @@ export function useOptimizedFormState<T extends object>(
     updateFields,
     validateField,
     validateAll,
-    save,
     reset,
     clearErrors,
     setFieldError,
@@ -284,7 +180,6 @@ export function useOptimizedFormState<T extends object>(
     updateFields,
     validateField,
     validateAll,
-    save,
     reset,
     clearErrors,
     setFieldError,

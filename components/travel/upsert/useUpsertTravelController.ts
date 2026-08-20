@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useCallback, useRef } from 'react';
+import { useMemo, useEffect, useCallback, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
@@ -8,7 +8,7 @@ import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 import { normalizeTravelId } from '@/utils/travelFormUtils';
-import { translate as i18nT } from '@/i18n'
+import { formatRelativeTime, translate as i18nT } from '@/i18n'
 
 type ManualSave = ReturnType<typeof useTravelFormData>['handleManualSave'];
 
@@ -55,11 +55,55 @@ export interface UpsertTravelController {
   };
 }
 
-const AUTOSAVE_BADGES: Record<string, string | undefined> = {
-  get saving() { return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.saving') },
-  get saved() { return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.saved') },
-  get error() { return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.error') },
-  get debouncing() { return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.debouncing') },
+type AutosaveState = ReturnType<typeof useTravelFormData>['autosave'];
+type AutosaveBadgeState = Pick<
+  AutosaveState,
+  'phase' | 'isOnline' | 'hasUnsavedChanges' | 'lastSaved'
+>;
+
+export const formatAutosaveLastSaved = (
+  savedAt: Date,
+  now: number = Date.now(),
+): string => {
+  const elapsedSeconds = Math.max(0, Math.round((now - savedAt.getTime()) / 1000));
+  if (elapsedSeconds < 60) {
+    return formatRelativeTime(-elapsedSeconds, 'second');
+  }
+
+  const elapsedMinutes = Math.round(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return formatRelativeTime(-elapsedMinutes, 'minute');
+  }
+
+  const elapsedHours = Math.round(elapsedMinutes / 60);
+  return formatRelativeTime(-elapsedHours, 'hour');
+};
+
+export const getAutosaveBadge = (
+  autosave: AutosaveBadgeState,
+  now: number = Date.now(),
+): string => {
+  if (autosave.phase === 'error') {
+    return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.error');
+  }
+  if (autosave.phase === 'saving') {
+    return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.saving');
+  }
+  if (!autosave.isOnline && autosave.hasUnsavedChanges) {
+    return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.offline');
+  }
+  if (autosave.phase === 'pending') {
+    return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.pending');
+  }
+  if (autosave.phase === 'saved') {
+    return autosave.lastSaved
+      ? i18nT(
+          'travel:components.travel.upsert.useUpsertTravelController.autosave.savedAt',
+          { value1: formatAutosaveLastSaved(autosave.lastSaved, now) },
+        )
+      : i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.saved');
+  }
+  return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.idle');
 };
 
 export function useUpsertTravelController(): UpsertTravelController {
@@ -87,6 +131,15 @@ export function useUpsertTravelController(): UpsertTravelController {
       await logout();
     },
   });
+
+  const [autosaveClock, setAutosaveClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (form.autosave.phase !== 'saved' || !form.autosave.lastSaved) return;
+
+    setAutosaveClock(Date.now());
+    const interval = setInterval(() => setAutosaveClock(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, [form.autosave.lastSaved, form.autosave.phase]);
 
   const draft = useDraftRecovery({
     travelId,
@@ -239,7 +292,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     ]
   );
 
-  const autosaveBadge = AUTOSAVE_BADGES[form.autosave.status];
+  const autosaveBadge = getAutosaveBadge(form.autosave, autosaveClock);
 
   const progress = wizard.currentStep / wizard.totalSteps;
 

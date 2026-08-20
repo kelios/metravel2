@@ -165,6 +165,7 @@
     "guard:seo-cli-contract": "node scripts/guard-seo-cli-contract.js",
     "guard:seo-cli-contract:json": "node scripts/guard-seo-cli-contract.js --json",
     "guard:social-auth-infra": "jest __tests__/components/auth/socialAuthInfrastructure.guard.test.ts --runInBand",
+    "guard:travel-autosave-owner": "jest __tests__/hooks/travelAutosaveOwnership.guard.test.ts --runInBand",
     "guard:external-links": "npm run guard:no-direct-linking-openurl && npm run guard:no-direct-window-open",
     "guard:file-complexity": "node scripts/guard-file-complexity.js",
     "guard:file-complexity:fail": "node scripts/guard-file-complexity.js --fail",

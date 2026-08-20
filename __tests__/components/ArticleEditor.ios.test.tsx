@@ -78,6 +78,7 @@ describe('ArticleEditor.ios Component', () => {
     <ArticleEditor
       content=""
       onChange={mockOnChange}
+      autosaveMode="standalone"
       onAutosave={mockOnAutosave}
       idTravel="123"
       {...props}
@@ -156,6 +157,7 @@ describe('ArticleEditor.ios Component', () => {
       <ArticleEditor
         content="<p>Initial</p>"
         onChange={mockOnChange}
+        autosaveMode="standalone"
         onAutosave={mockOnAutosave}
         idTravel="123"
       />
@@ -182,6 +184,7 @@ describe('ArticleEditor.ios Component', () => {
       <ArticleEditor
         content="<p>Initial text</p>"
         onChange={mockOnChange}
+        autosaveMode="standalone"
         onAutosave={mockOnAutosave}
         idTravel="123"
       />

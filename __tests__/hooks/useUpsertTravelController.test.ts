@@ -1,6 +1,11 @@
 import { act, renderHook } from '@testing-library/react-native';
 
-import { useUpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
+import {
+  formatAutosaveLastSaved,
+  getAutosaveBadge,
+  useUpsertTravelController,
+} from '@/components/travel/upsert/useUpsertTravelController';
+import { i18n } from '@/i18n';
 
 const mockSetParams = jest.fn();
 
@@ -72,6 +77,9 @@ describe('useUpsertTravelController', () => {
     formState: { isDirty: false },
     autosave: {
       status: 'idle',
+      phase: 'clean',
+      isOnline: true,
+      lastSaved: null,
       hasUnsavedChanges: false,
       // Synchronous ref read used by saveAndClearDraft: the render-time value is
       // still the pre-save one when the manual save resolves.
@@ -134,6 +142,10 @@ describe('useUpsertTravelController', () => {
     });
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('sets isNew=true when id is missing', () => {
     const { result } = renderHook(() => useUpsertTravelController());
     expect(result.current.isNew).toBe(true);
@@ -148,11 +160,73 @@ describe('useUpsertTravelController', () => {
   it('computes autosaveBadge from autosave status', () => {
     mockUseTravelFormData.mockReturnValue({
       ...baseForm,
-      autosave: { ...baseForm.autosave, status: 'saving' },
+      autosave: { ...baseForm.autosave, status: 'saving', phase: 'saving' },
     });
 
     const { result } = renderHook(() => useUpsertTravelController());
     expect(result.current.autosaveBadge).toBe('Сохранение...');
+  });
+
+  it('distinguishes clean, pending, offline, saving, saved and error labels', () => {
+    const autosave: Parameters<typeof getAutosaveBadge>[0] = {
+      phase: 'clean',
+      isOnline: true,
+      hasUnsavedChanges: false,
+      lastSaved: null,
+    };
+
+    expect(getAutosaveBadge(autosave)).toBe('Нет изменений');
+    expect(getAutosaveBadge({ ...autosave, phase: 'pending', hasUnsavedChanges: true }))
+      .toBe('Есть несохранённые изменения');
+    expect(getAutosaveBadge({
+      ...autosave,
+      phase: 'pending',
+      hasUnsavedChanges: true,
+      isOnline: false,
+    })).toBe('Изменения ожидают подключения');
+    expect(getAutosaveBadge({ ...autosave, phase: 'saving' })).toBe('Сохранение...');
+    expect(getAutosaveBadge({ ...autosave, phase: 'error' })).toBe('Ошибка сохранения');
+    expect(getAutosaveBadge({ ...autosave, phase: 'saved', lastSaved: new Date() }))
+      .toContain('Сохранено');
+  });
+
+  it('formats last-save time through the active locale', async () => {
+    const savedAt = new Date('2026-08-20T10:00:00.000Z');
+    const now = Date.parse('2026-08-20T10:01:00.000Z');
+
+    await i18n.changeLanguage('ru');
+    expect(formatAutosaveLastSaved(savedAt, now)).toBe('1 минуту назад');
+    await i18n.changeLanguage('en');
+    expect(formatAutosaveLastSaved(savedAt, now)).toBe('1 minute ago');
+    await i18n.changeLanguage('be');
+    expect(formatAutosaveLastSaved(savedAt, now)).toBe('1 хвіліну таму');
+    await i18n.changeLanguage('uk');
+    expect(formatAutosaveLastSaved(savedAt, now)).toBe('1 хвилину тому');
+    await i18n.changeLanguage('pl');
+    expect(formatAutosaveLastSaved(savedAt, now)).toBe('1 minutę temu');
+    await i18n.changeLanguage('ru');
+  });
+
+  it('refreshes the visible saved-relative-time while the editor stays open', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-20T10:01:00.000Z'));
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      autosave: {
+        ...baseForm.autosave,
+        status: 'saved',
+        phase: 'saved',
+        lastSaved: new Date('2026-08-20T10:00:00.000Z'),
+      },
+    });
+
+    const { result } = renderHook(() => useUpsertTravelController());
+    expect(result.current.autosaveBadge).toBe('Сохранено 1 минуту назад');
+
+    act(() => {
+      jest.advanceTimersByTime(60_000);
+    });
+    expect(result.current.autosaveBadge).toBe('Сохранено 2 минуты назад');
   });
 
   it('computes progress based on wizard currentStep / totalSteps', () => {
