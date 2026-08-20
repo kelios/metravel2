@@ -7,7 +7,6 @@ import {
   Text,
   View,
 } from 'react-native'
-import { AccessToken, LoginManager, Settings } from 'react-native-fbsdk-next'
 
 import type {
   FacebookCredential,
@@ -16,6 +15,8 @@ import type {
 import { SOCIAL_AUTH_BUTTON_GEOMETRY } from '@/components/auth/socialAuthButtonGeometry'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+
+type FacebookNativeSdk = typeof import('react-native-fbsdk-next')
 
 export const isFacebookNativeLoginEnabled = () =>
   String(process.env.EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED || '')
@@ -53,6 +54,8 @@ export default function FacebookSignInButton({
   const styles = useMemo(() => createStyles(colors), [colors])
   const [ready, setReady] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [sdkUnavailable, setSdkUnavailable] = useState(false)
+  const sdkRef = useRef<FacebookNativeSdk | null>(null)
   const onSuccessRef = useRef(onSuccess)
   const onErrorRef = useRef(onError)
   const onCancelRef = useRef(onCancel)
@@ -67,30 +70,45 @@ export default function FacebookSignInButton({
 
   useEffect(() => {
     if (!enabled || !appId) return
-    try {
-      Settings.initializeSDK()
-      LoginManager.setLoginBehavior('native_with_fallback')
-      setReady(true)
-    } catch {
-      onErrorRef.current?.(i18nT('authStatic:facebook.sdkLoadFailed'))
+    let active = true
+
+    import('react-native-fbsdk-next')
+      .then((sdk) => {
+        if (!active) return
+        sdk.Settings.initializeSDK()
+        sdk.LoginManager.setLoginBehavior('native_with_fallback')
+        sdkRef.current = sdk
+        setReady(true)
+      })
+      .catch(() => {
+        if (!active) return
+        sdkRef.current = null
+        setSdkUnavailable(true)
+        onErrorRef.current?.(i18nT('authStatic:facebook.sdkLoadFailed'))
+      })
+
+    return () => {
+      active = false
+      sdkRef.current = null
     }
   }, [appId, enabled])
 
   if (!enabled) return null
 
-  const unavailable = !appId
+  const unavailable = !appId || sdkUnavailable
   const handlePress = async () => {
-    if (disabled || loading || unavailable || !ready) return
+    const sdk = sdkRef.current
+    if (disabled || loading || unavailable || !ready || !sdk) return
     setLoading(true)
     try {
-      const result = await LoginManager.logInWithPermissions(
+      const result = await sdk.LoginManager.logInWithPermissions(
         getFacebookNativePermissions(mode),
       )
       if (result.isCancelled) {
         onCancelRef.current?.()
         return
       }
-      const currentAccessToken = await AccessToken.getCurrentAccessToken()
+      const currentAccessToken = await sdk.AccessToken.getCurrentAccessToken()
       const credential = getFacebookNativeCredential(
         currentAccessToken?.accessToken,
         currentAccessToken?.permissions || result.grantedPermissions,

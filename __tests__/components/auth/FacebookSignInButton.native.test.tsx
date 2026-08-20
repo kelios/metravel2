@@ -132,6 +132,32 @@ describe('FacebookSignInButton native', () => {
     expect(loginMock).not.toHaveBeenCalled()
   })
 
+  it('falls back to unavailable when the native SDK cannot initialize', async () => {
+    ;(Settings.initializeSDK as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('native module unavailable')
+    })
+    const onSuccess = jest.fn()
+    const onError = jest.fn()
+    const screen = render(
+      <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('facebook-sign-in-button').props.accessibilityState,
+      ).toEqual({ disabled: true, busy: false }),
+    )
+    expect(
+      screen.getByText('Вход через Facebook временно недоступен'),
+    ).toBeTruthy()
+    expect(onError).toHaveBeenCalledTimes(1)
+
+    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(loginMock).not.toHaveBeenCalled()
+  })
+
   it('treats a cancelled SDK dialog as a no-op', async () => {
     loginMock.mockResolvedValue({ isCancelled: true })
     const onSuccess = jest.fn()
