@@ -31,9 +31,10 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/RELEASE.md`, and `do
   a heavy original returned as `200` is a failure, not a fallback success.
 - Distinguish `production build`, `preview with production data`, and `live
   production URL` explicitly. Only the last can close a production Done gate.
-- If the change is not deployed, report `local fix ready; production verification
-  pending` and keep the task in `review`/`testing`. Never infer production success
-  from source code, tests, build logs, or deploy completion alone.
+- If the change is not deployed and live evidence is mandatory, request exact
+  deploy authorization/result and pause the acceptance decision. Never infer
+  production success from source code, tests, build logs, or deploy completion,
+  and do not park the task in `testing` because production was unavailable.
 
 ## What to analyze
 

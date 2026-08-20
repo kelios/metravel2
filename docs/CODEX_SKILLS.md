@@ -23,9 +23,10 @@
 - `$metravel-quest-geo-verifier` - read-only субагент гео-сверки точек квестов через OSM/Nominatim и локальные geocheck scripts.
 - `$metravel-hook-builder` - проектирование, вынос и рефакторинг focused React hooks в `hooks/` и рядом с фичами без нарушения public contracts.
 - `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.
-- `$metravel-i18n-guardrails` - многоязычный UI и locale-sensitive логика на web
-  и Android: translation keys/resources, language persistence, Intl/plurals,
-  accessibility, SEO locale и i18n validation.
+- `$metravel-i18n-guardrails` - многоязычный UI и locale-sensitive логика:
+  translation keys/resources, language persistence, Intl/plurals,
+  accessibility, SEO locale и i18n validation; native lifecycle проверяется
+  только для затронутой Android/iOS реализации.
 - `$metravel-design-auditor` - read-only сквозной аудит нескольких экранов: design-system consistency, responsive/mobile parity, состояния, accessibility и evidence matrix.
 - `$metravel-visual-asset-designer` - генерация и интеграция брендовых raster icons/badges/app/marketing assets через imagegen по `docs/ICON_ART_PROMPTS.md`; не подменяет Feather icons или фотореалистичные travel/article media.
 - `$metravel-child-quest-visuals` - отдельный автор визуалов детских/семейных/подростковых квестов: возрастной режим, акварель/сказка/анимация, сюжетная читаемость обложки, imagegen, prompt и production verification.
@@ -59,8 +60,15 @@
   карточки и реестр `docs/PROBLEM_MEMORY.md`, затем выбирает
   `reuse | reopen | create-linked | create-new`.
 - `$metravel-ticket-board` - оператор общего MCP task board: list/create/update/sync задач и спринтов без правки feature-кода.
-- `$metravel-sprint-reviewer` - приёмка тикетов активного спринта на MCP task board по Task Contract/Done gate с реальными тестами/browser/API evidence.
-- `$metravel-backend-diagnostician` - read-only диагностика backend/API проблем, 5xx/contract mismatch, backend status sync и создание/обновление back-задач с evidence.
+- `$metravel-sprint-reviewer` - приёмка тикетов активного спринта на MCP task
+  board по Task Contract/Done gate с in-scope тестами/browser/API evidence;
+  pass закрывает текущую карточку, `testing` сохраняется только для exact
+  retest/temporal gate, отдельный дефект получает связанную карточку через
+  Problem Memory, а missing access/device вызывает unblock-запрос и продолжение
+  приёмки.
+- `$metravel-backend-diagnostician` - read-only диагностика backend/API проблем,
+  5xx/contract mismatch, backend status sync и создание/обновление back-задач с
+  source/API/log evidence без автоматического Android/iPhone gate.
 - `$metravel-article-editor-agent` - создание/редактирование/публикация article и travel-guide записей через API, photo-folder drafts, generated images/media, author/publish verification и только подтвержденные текстовые правки без вывода токенов.
 - `$metravel-codex-orchestrator` - верхний workflow для Codex: triage, выбор skills/агентов, промты ролей, план проверок и финальный self-check.
 - `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
@@ -83,8 +91,9 @@
   TestFlight candidate; device evidence не подменяется симулятором.
 - `$metravel-ios-release-operator` - signed build, TestFlight/App Store Connect,
   App Review и storefront operations по четырём отдельным explicit gates.
-- `$metravel-mobile-tester` - read-only парная проверка mobile web и Android,
-  touch/layout/runtime баги и retest одного сценария на обеих поверхностях.
+- `$metravel-mobile-tester` - read-only проверка mobile web и, когда scope
+  затрагивает Android-specific behavior, локальной Android USB-сборки;
+  touch/layout/runtime evidence выбирается по реально затронутой поверхности.
 - `$metravel-play-campaign-tester` - ежедневный проход общей Google Play closed-testing кампании на настроенном USB Android, проверка заданий/обновлений/крашей и ведение общего campaign log без покупок, отзывов, удаления приложений или смены аккаунтов.
 - `$metravel-business-analyst` - продуктовые требования, user stories, acceptance criteria, non-goals, metrics и risks.
 - `$metravel-system-architect` - technical design, разбиение работ, validation plan и review diff на соответствие правилам.

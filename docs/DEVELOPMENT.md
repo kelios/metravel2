@@ -62,21 +62,34 @@ preflight.
 
 Android QA rule:
 
-- `npm run android` only starts the Expo/Metro Android dev flow; it is not sufficient Android device validation by itself.
-- For Android testing, assume the phone is connected by USB, run `adb devices -l`, build locally, install to the device, and test that installed build. Default local commands are `cd android && ./gradlew :app:installDebug` or `:app:assembleDebug` followed by `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
+- `npm run android` only starts the Expo/Metro Android dev flow; it is not
+  sufficient evidence for Android-specific behavior by itself.
+- Android device QA is required when the change affects Android-only/native
+  behavior: platform files, native modules, permissions, intents, system Back,
+  WebView/map engine, storage/lifecycle, build/runtime or release configuration.
+  Then assume the phone is connected by USB, run `adb devices -l`, build
+  locally, install to the device, and test that installed build. Default local
+  commands are `cd android && ./gradlew :app:installDebug` or
+  `:app:assembleDebug` followed by
+  `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
 - Do not run Android EAS/cloud build, submit, or an EAS `--platform all`
   command. Android production uses the local Gradle/Play API release path; QA
   does not use Expo export/dev-client as a device substitute.
-- Любая Android UI-проверка включает тот же сценарий на mobile web; любое
-  изменение mobile web включает парную Android USB-проверку.
+- Общий/shared UI проверяется на desktop web и mobile web. Mobile web не
+  создаёт автоматический Android device gate. Parity с Android остаётся
+  design-инвариантом; Android USB evidence добавляется только при затронутом
+  Android-specific поведении.
 
 iPhone QA rule:
 
 - Simulator подтверждает compilation/basic UI. Camera/photos/HEIC,
   Keychain/biometrics, APNs, Universal Links, sharing, permissions и lifecycle
   проверяются на физическом iPhone; release acceptance — на exact TestFlight build.
-- Shared/mobile changes сохраняют тот же flow/state/locale на mobile web,
-  Android и iPhone. iPad-specific layout/screenshots не входят в первый release.
+- Simulator/physical/TestFlight evidence требуется только для iOS-specific
+  behavior или явно назначенного iPhone release scope. Shared UI сохраняет тот
+  же product contract для iPhone как design-инвариант, но принимается по
+  desktop/mobile web без автоматического iPhone gate. iPad-specific
+  layout/screenshots не входят в первый release.
 - Signed build, TestFlight/App Store upload, App Review submit и storefront
   release — отдельные operations; ни одна не разрешает следующую автоматически.
 

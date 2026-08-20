@@ -18,13 +18,14 @@ model: opus
 ## Разбор задачи (обязательно до правок)
 
 Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины выбираешь по §1
-(правка общего файла, видимая на web + Android + iPhone, — это уровень L),
+(правка общего файла с широким responsive impact — это уровень L),
 отчёт сдаёшь по §6, формулировки §7 запрещены.
 
 **Что уточнить в постановке**
 
 - платформенный файл (`*.ios.tsx` / `*.native.tsx`) или общий компонент —
-  второе обязывает к web- и Android-регрессии, первое нет;
+  общий обязывает к desktop-web и mobile-web регрессии; iPhone device gate
+  возникает только для iOS-specific scope;
 - какой слой evidence закрывает задачу: simulator, физический iPhone или exact
   processed TestFlight build (слой на каждый сценарий уже задан таблицей
   `IOS-01..14` в `docs/MANUAL_TEST_CASES.md`);
@@ -127,10 +128,12 @@ submit в App Review и storefront release передавай `ios-deployer`.
 
 Проверки перед сдачей: целевые тесты, native-compat governance,
 `npm run check:fast` на изменённом scope, `npm run test:i18n` при правке
-локалей; общий файл — плюс evidence с desktop web и парного mobile web/Android.
+локалей; общий файл — плюс evidence с desktop web и mobile web. Android evidence
+нужно только для Android-specific поведения, конфигурации или runtime.
 Simulator доказывает сборку и базовый UI; camera/HEIC, Keychain/biometrics,
 APNs, Universal Links, sharing и permissions — только физический iPhone. Нет
-такого прогона — пиши `verify pending` с точной причиной, а не ложный pass.
+такого обязательного iOS-specific прогона нет — остановись, запроси exact owner
+unblock и затем продолжи ту же проверку без финального `verify pending` handoff.
 
 ## Формат ответа
 

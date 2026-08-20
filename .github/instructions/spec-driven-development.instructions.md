@@ -48,8 +48,9 @@ description: 'Spec-Driven Development workflow rules for metravel.by'
   `yarn governance:verify`. Внешние ссылки — `yarn guard:external-links`.
   Изображения — `yarn check:image-architecture`. Travel-hero и галерея — оба
   гейта `yarn verify:slider` и `yarn verify:slider-perf`.
-- Видимые изменения проверяйте сами в браузере на desktop и mobile web, при
-  shared-изменении — дополнительно на Android. Просить пользователя обновить
+- Видимые common/shared изменения проверяйте сами в браузере на desktop и mobile web.
+  Android/iPhone device evidence требуется только для соответствующего platform-specific
+  поведения, конфигурации или runtime. Просить пользователя обновить
   страницу, открыть devtools или рассказать, что он видит, — это не верификация.
 
 ## Отчёт
@@ -59,8 +60,9 @@ description: 'Spec-Driven Development workflow rules for metravel.by'
   чтобы молча его обойти. Если принцип мешает нужной работе — поднимите вопрос и
   получите явное решение.
 - Не отмечайте задачу выполненной, пока каждый acceptance criterion не проверен
-  с доказательством. Если проверка невозможна — пометьте `verify pending` с
-  конкретным блокером и списком уже испробованных путей.
+  с доказательством. Если обязательную проверку нельзя запустить из-за устройства,
+  доступа, окружения или active gate — остановитесь, запросите у владельца exact
+  unblock и продолжите ту же проверку; это не финальный `verify pending` handoff.
 - Явно указывайте, что осталось за рамками (`Out of scope`).
 - **Не коммитьте и не пушьте без явного разрешения пользователя.** Не создавайте
   Pull Request по своей инициативе. Работа идёт на `main`; ветки не создаются без

@@ -6,8 +6,8 @@ developer_instructions = """
 вместе с `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md` и назначенным Task Contract.
 
 Твоя зона — task-owned iOS/app/shared implementation. iPad не входит в первый
-релиз. Сохраняй desktop web, mobile web и Android; shared mobile UX проверяется
-одним сценарием на mobile web, Android и iPhone.
+релиз. Сохраняй desktop web, mobile web и Android. Shared/common UI проверяется
+на desktop web + mobile web; iPhone device gate возникает только для iOS-specific scope.
 
 Не выполняй signed distribution build, TestFlight/App Store Connect upload,
 App Review submission или storefront release: передавай их `ios-deployer`.

@@ -1,10 +1,12 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { Pressable, StyleSheet } from 'react-native'
 import { AccessToken, LoginManager, Settings } from 'react-native-fbsdk-next'
 
 import FacebookSignInButton, {
   getFacebookNativeCredential,
   getFacebookNativePermissions,
 } from '@/components/auth/FacebookSignInButton.native'
+import { SOCIAL_AUTH_BUTTON_GEOMETRY } from '@/components/auth/socialAuthButtonGeometry'
 
 jest.mock('react-native-fbsdk-next', () => ({
   AccessToken: {
@@ -91,6 +93,23 @@ describe('FacebookSignInButton native', () => {
       }),
     )
     expect(loginMock).toHaveBeenCalledWith(['public_profile', 'email'])
+  })
+
+  it('uses the shared social button geometry for its native touch target', async () => {
+    const screen = render(
+      <FacebookSignInButton onSuccess={jest.fn()} onError={jest.fn()} />,
+    )
+
+    await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
+    const button = screen.UNSAFE_getByType(Pressable)
+    const resolvedStyle = button.props.style({ pressed: true })
+
+    expect(StyleSheet.flatten(resolvedStyle)).toMatchObject({
+      minHeight: SOCIAL_AUTH_BUTTON_GEOMETRY.minHeight,
+      borderRadius: SOCIAL_AUTH_BUTTON_GEOMETRY.borderRadius,
+      opacity: SOCIAL_AUTH_BUTTON_GEOMETRY.pressedOpacity,
+      transform: [{ scale: SOCIAL_AUTH_BUTTON_GEOMETRY.pressedScale }],
+    })
   })
 
   it('treats a cancelled SDK dialog as a no-op', async () => {

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { getGoogleSignInButtonTheme } from './googleSignInButtonTheme';
 import { translate as i18nT } from '@/i18n'
 import { useHydrationReady } from '@/hooks/useHydrationReady';
+import { useExternalScript } from '@/hooks/useExternalScript';
 
 
 interface GoogleSignInButtonProps {
@@ -43,6 +44,7 @@ declare global {
 }
 
 const GOOGLE_GSI_SCRIPT_ID = 'google-gsi-client-script';
+const GOOGLE_GSI_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 // Matches the Facebook button block (minHeight 48) so the two social buttons
 // read as one pair; also pins the host against GSI's 44->80px resize (#1299).
 const GOOGLE_GSI_BUTTON_HEIGHT = 48;
@@ -180,61 +182,31 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
     const shouldShowFallback = !googleAvailability.enabled;
     const isButtonDisabled = disabled || !isGoogleLoaded || shouldShowFallback || !hasClientId;
 
+    const markGoogleLoaded = useCallback(() => {
+        setIsGoogleLoaded(true);
+    }, []);
+
+    const handleGoogleScriptError = useCallback(() => {
+        onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.ne_udalos_zagruzit_google_sign_in_3373f8ec'));
+    }, []);
+
+    const hasGoogleSdk = typeof window !== 'undefined' && Boolean(window.google?.accounts?.id);
+
     useEffect(() => {
         if (!hasClientId) {
             onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_ne_nastroen_otsutstvuet_expo__4517e59c'));
             return;
         }
-        if (!googleAvailability.enabled) return;
+        if (googleAvailability.enabled && hasGoogleSdk) markGoogleLoaded();
+    }, [googleAvailability.enabled, hasClientId, hasGoogleSdk, markGoogleLoaded]);
 
-        let cancelled = false;
-        const markLoaded = () => {
-            if (!cancelled) setIsGoogleLoaded(true);
-        };
-        const handleScriptError = () => {
-            if (!cancelled) onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.ne_udalos_zagruzit_google_sign_in_3373f8ec'));
-        };
-        let attachedScript: HTMLScriptElement | null = null;
-
-        const loadGoogleScript = () => {
-            if (window.google?.accounts?.id) {
-                markLoaded();
-                return;
-            }
-
-            const existingScript = document.getElementById(GOOGLE_GSI_SCRIPT_ID) as HTMLScriptElement | null;
-            if (existingScript) {
-                if (window.google?.accounts?.id) {
-                    markLoaded();
-                    return;
-                }
-                attachedScript = existingScript;
-                existingScript.addEventListener('load', markLoaded, { once: true });
-                existingScript.addEventListener('error', handleScriptError, { once: true });
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.id = GOOGLE_GSI_SCRIPT_ID;
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.async = true;
-            script.defer = true;
-            attachedScript = script;
-            script.addEventListener('load', markLoaded, { once: true });
-            script.addEventListener('error', handleScriptError, { once: true });
-            document.head.appendChild(script);
-        };
-
-        loadGoogleScript();
-
-        return () => {
-            cancelled = true;
-            if (attachedScript) {
-                attachedScript.removeEventListener('load', markLoaded);
-                attachedScript.removeEventListener('error', handleScriptError);
-            }
-        };
-    }, [hasClientId, googleAvailability.enabled]);
+    useExternalScript({
+        id: GOOGLE_GSI_SCRIPT_ID,
+        src: GOOGLE_GSI_SCRIPT_SRC,
+        onReady: markGoogleLoaded,
+        onError: handleGoogleScriptError,
+        enabled: hasClientId && googleAvailability.enabled && !hasGoogleSdk,
+    });
 
     useEffect(() => {
         if (!googleAvailability.enabled) return;

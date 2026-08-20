@@ -41,8 +41,10 @@ model: sonnet
 - **Sprint**: `title`, `goal`, `status` (`planned` | `active` | `closed`), `starts_at`, `ends_at`.
 - **Enum’ы не зубри — сверяй `metravel_task_board_options`** (`task_statuses` / `task_areas` /
   `task_urgencies` / `sprint_statuses`). Это источник правды; при расхождении доверяй ему, а не доке.
-- **`testing`** — QA/приёмка между `review` (код-ревью) и `done`; раньше handoff эмулировался
-  возвратом в `todo`. Связи: `blocked_by_id` — кто блокирует (со статусом `blocked_by`);
+- **`testing`** — только активная QA/приёмка или конкретный повторный замер с exact параметром,
+  threshold/trigger и временем. Завершённая проверка: pass → текущий тикет `done`;
+  подтверждённый отдельный дефект → `problem-memory` + create/reuse связанной bug/task, текущий
+  acceptance-тикет не парковать. Связи: `blocked_by_id` — кто блокирует (со статусом `blocked_by`);
   `depends_on_ids` — пока не закрыты, тикет не стартует; `related_to_ids` — контекст без блокировки.
   `needs_human=true` — есть ручной шаг человека, агент такую задачу не закрывает сам.
 - **Конвенция заголовка:** префикс источника — `[BE-NNN] …`, `[FE-NNN] …` или
@@ -155,10 +157,12 @@ model: sonnet
 **Как разбивать.** Одна карточка = одна логическая проблема с одним Done gate.
 
 - Бэкендная часть выносится **отдельной карточкой** `area=back` и связывается: FE не может
-  начать без контракта → FE в `blocked_by` с `blocked_by_id=<id BE-задачи>`; FE реализован и
-  ждёт только runtime evidence → FE в `testing`, связь через `depends_on_ids`/`related_to_ids`.
-- Человеческий шаг (доступ, апрув, действие в стороннем кабинете, физическое устройство) —
-  отдельная карточка `needs_human=true` без Task Contract, связанная с агентской.
+  начать без контракта → FE в `blocked_by` с `blocked_by_id=<id BE-задачи>`; отдельный
+  подтверждённый runtime-дефект → `problem-memory` + связанная карточка, без парковки текущего
+  acceptance-тикета.
+- Человеческий шаг (доступ, апрув, действие в стороннем кабинете, физическое устройство) может
+  иметь карточку `needs_human=true`, но отсутствующий обязательный gate не является финальным
+  `verify pending`/`testing` handoff: остановись, запроси exact unblock и продолжи ту же приёмку.
 - `kind` ставится по рубрике выше, `area` — `front` для web/Android/iOS-приложения и `back`
   только для backend/API/инфраструктуры, `sprint_id` — активный спринт нужной очереди
   (`metravel_sprints_list` → `status=active`). Задача без спринта на борд не выкладывается.
@@ -188,6 +192,11 @@ model: sonnet
 `in_progress` (исполнитель взял) → `review` (код-ревью) → `testing` (QA/приёмка) → `done`.
 Заблокированные — статус `blocked_by` + `blocked_by_id=<id блокера>`; отменённые — `wont_do`.
 Двигаешь задачу, обновляя `status` + `assignee` и дописывая evidence.
+
+`todo`/`in_progress` означают реальную оставшуюся implementation/refinement/ops работу.
+`testing` не используется как парковка. Если обязательную проверку нельзя запустить из-за
+устройства, доступа или активного gate, статус не меняй: запроси exact unblock у владельца и
+после него продолжи тот же acceptance.
 
 ## Сценарии
 

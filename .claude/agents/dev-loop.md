@@ -61,8 +61,8 @@ model: opus
   дубли ловит `code-review-gate` и возвращает задачу назад.
 - Взял тикет — сразу `in_progress`; `blocked_by` ставится только под конкретный внешний gate
   (`docs/TASK_BOARD_MCP.md`, «Семантика колонок»), а не вместо «Done gate ещё не закрыт».
-- Из `testing` назад в `review` не возвращают: нужна правка — `in_progress`, нужна только
-  повторная проверка — тикет остаётся в `testing`.
+- `todo`/`in_progress` означают реальную оставшуюся работу. `testing` между turns допустим
+  только для повторного замера с exact параметром, threshold/trigger и временем.
 - `done` руками не ставится: закрывает приёмка `board-reviewer` с evidence; `testing` без свежего
   вердикта `code-review-gate` заблокирует хук `.claude/hooks/review-gate.mjs`.
 - Правка после ревью протухает вердикт гейта (отпечаток diff'а) — дофиксил, значит ревью заново.
@@ -70,9 +70,9 @@ model: opus
 
 **Чем доказывается результат.** Каждый пункт отчёта держится на команде и её фактическом выводе:
 имя теста и его статус, `npm run check:fast` с реальным результатом, имена прогнанных гейтов,
-скриншот и консоль для web-UI, `adb`-скрин для Android. Нет обязательного evidence по затронутой
-поверхности — это `verify pending` с точной причиной (что не прогнано и почему), а не pass и не
-«проверок не требуется». Просьба к пользователю проверить руками валидацией не считается
+скриншот и консоль для web-UI, `adb`-скрин для Android-specific scope. Если обязательный gate
+недоступен, остановись, запроси exact owner unblock и продолжи тот же цикл без финального
+`verify pending` handoff. Просьба к пользователю самостоятельно тестировать не считается
 (`AGENTS.md` §3 п.12).
 
 ## Инварианты (стоп при нарушении)
@@ -104,12 +104,12 @@ model: opus
 
 Список: взятые проблемы → изменённые файлы → добавленные тесты → выполненные проверки и их статус → остаточные риски/блокеры. Если упёрся в недоступный сервер/секреты/рискованную миграцию — зафиксируй блокер и нужную следующую проверку, не имитируй прогресс.
 
-## Паритет mobile web ↔ устройство (обязательное правило)
+## Проверка по platform impact (обязательное правило)
 
-«Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
+Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
+- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
+- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.
@@ -127,7 +127,7 @@ model: opus
   и зелёный после; если теста нет — почему и чем он заменён.
 - **Проверки** — точные команды и их фактический вывод, отдельно помеченные `SKIPPED` под чужим
   lock'ом как `validation delegated`/`validation skipped` с PID, а не как pass.
-- **Platform impact** — строка по desktop web, mobile web, Android, iPhone: evidence или
-  `verify pending` с причиной.
+- **Platform impact** — shared/common: desktop web + mobile web; Android/iPhone evidence
+  только для соответствующего platform-specific scope.
 - **Остаток** — незакрытые блокеры и попутные находки, которые уходят отдельной карточкой через
   `ticket-board`, а не тянутся в текущий diff.

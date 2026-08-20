@@ -43,8 +43,11 @@ Default bug loop:
 - Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
 - Keep unrelated user changes separate; never revert files outside the task.
 - Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
-- Require every handoff to state platform and localization impact; unavailable
-  native evidence remains `verify pending`, not an inferred pass.
+- Require every handoff to state platform and localization impact. Common/shared UI
+  requires desktop-web and mobile-web evidence; native evidence is only a gate for
+  corresponding platform-specific scope. If such a required gate is unavailable,
+  stop and request an exact owner unblock, then resume the same acceptance rather
+  than issuing a final `verify pending` handoff.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.
 - If a role finds a real issue in the touched scope, route it to implementation before handoff unless it is explicitly blocked.
 

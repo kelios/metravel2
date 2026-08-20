@@ -137,3 +137,20 @@ index 400860c..832d10e 100644
    }
  
    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+diff --git a/node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec b/node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec
+index 58e0039..6c0c2cd 100644
+--- a/node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec
++++ b/node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec
+@@ -6,2 +6,3 @@
+ require "json"
++require "pathname"
+ require_relative "./hermes-utils.rb"
+@@ -95,3 +96,7 @@ Pod::Spec.new do |spec|
++      hermesc_path = File.join(hermes_compiler_path, 'hermesc', 'osx-bin', 'hermesc')
++      pods_root = Pod::Config.instance.sandbox.root
++      relative_hermesc = Pathname.new(hermesc_path).relative_path_from(pods_root)
++
+       spec.user_target_xcconfig = {
+-        'HERMES_CLI_PATH' => "#{hermes_compiler_path}/hermesc/osx-bin/hermesc"
++        'HERMES_CLI_PATH' => "$(PODS_ROOT)/#{relative_hermesc}"
+       }

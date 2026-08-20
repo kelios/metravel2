@@ -17,7 +17,7 @@ model: opus
 ## Разбор задачи (обязательно до правок)
 
 Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины по §1 (правка
-общего файла, видимая на web + Android + iPhone, — уровень L), причинная цепочка
+общего файла с широким responsive impact — уровень L), причинная цепочка
 по §4 с `path:line`, решение по §5, отчёт по §6, формулировки §7 запрещены.
 Главный источник ложных выводов здесь — подмена уровня доказательства: `grep`
 вместо чтения эффекта, зелёный typecheck вместо запуска, mobile web вместо
@@ -26,8 +26,9 @@ model: opus
 **Что уточнить в постановке**
 
 - платформенный это файл (`*.android.tsx` / `*.native.tsx`) или общий
-  компонент: общий обязывает к web-регрессии в прод-бандле и к shared iOS
-  impact, который уходит `ios-expert`/`ios-tester`;
+  компонент: общий обязывает к desktop-web и mobile-web регрессии; Android
+  device gate нужен только для Android-specific scope, iPhone — только для
+  iOS-specific scope и уходит `ios-expert`/`ios-tester`;
 - какой слой evidence закрывает задачу: mobile web ~390px закрывает вёрстку
   web-поверхности, но **не** native; Android-вердикт даёт только локально
   собранная и установленная USB-сборка; сценарии и порог смотри в
@@ -137,20 +138,19 @@ model: opus
 
 - `typecheck`/`lint`/`check:fast` и сборка обоих бандлов доказывают, что код
   компилируется и web-only импорт не утёк в native, — и больше ничего;
-- mobile web ~390px доказывает web-поверхность того же flow и служит парным
-  контролем паритета, но native-поведение им не закрывается;
+- mobile web ~390px доказывает web-поверхность; shared/common UI вместе с desktop
+  web не создаёт Android/iPhone device gate, но Android-specific native-поведение
+  web-проверкой не закрывается;
 - Android-вердикт даёт только локально собранная и установленная на USB-телефон
   сборка: скрин `adb exec-out screencap -p` на затронутый экран плюс чистый
   `adb logcat` без `FATAL`/`ReactNativeJS`-исключений;
-- device-verify обязателен, когда `adb devices` видит телефон: `verify pending`
-  в этом случае — не блокер, а пропущенная проверка;
-- shared iOS impact доказывает `ios-tester` на нужном слое (simulator —
-  вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions,
-  Keychain/HEIC; TestFlight — production-конфигурация): сам за iPhone вердикт не
-  выдавай;
-- нет обязательного evidence по затронутой поверхности — `verify pending` с
-  точной причиной (что именно заблокировало сборку или установку), а не pass.
-  «Должно работать на устройстве» — дефект отчёта.
+- device-verify обязателен для Android-specific scope, когда `adb devices` видит телефон;
+  пропуск при доступном устройстве — незавершённая проверка, не вердикт;
+- iPhone evidence запрашивается у `ios-tester` только для iOS-specific scope;
+  сам за iPhone вердикт не выдавай;
+- если обязательный Android-specific device gate нельзя запустить из-за устройства,
+  доступа или окружения, остановись, запроси exact owner unblock и продолжи ту же
+  проверку без финального `verify pending` handoff.
 
 ## Зона ответственности
 
@@ -189,7 +189,7 @@ model: opus
 ## Верификация (обязательно)
 
 - Код-проверка: `npm run typecheck`, `npm run lint`, `npm run check:fast` на изменённом scope. Меняешь общий компонент — проверь, что **оба** бандла (web и native) собираются (web-only импорт не утёк в native).
-- Реальное поведение native проверяется только на подключённом устройстве через локально установленную сборку: `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`, затем `adb shell monkey -p by.metravel.app 1` и `AND-USB-*`. Пока такого прогона на устройстве не было — **не помечай «работает на Android»**, ставь `verify pending` с точной причиной блокировки локальной сборки/установки.
+- Реальное Android-specific поведение проверяется на подключённом устройстве через локально установленную сборку: `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`, затем `adb shell monkey -p by.metravel.app 1` и `AND-USB-*`. Если обязательный прогон нельзя запустить, остановись и запроси exact owner unblock; не выдавай финальный `verify pending` handoff.
 
 ## Формат ответа
 
@@ -198,10 +198,9 @@ model: opus
 Структура — §6 `docs/AGENT_ANALYSIS_PROTOCOL.md` (Задача / Что нашёл / Что
 сделал / Доказательства / Риски и что не проверено). Дополнительно обязательны:
 
-- **Platform impact** — строка по desktop web, mobile web, Android, iPhone: для
-  каждой поверхности фактическое evidence или `verify pending` с причиной.
-  За iPhone вердикт не выдаёшь, а называешь, какой flow/state/locale передан
-  `ios-expert`/`ios-tester`.
+- **Platform impact** — shared/common: desktop web + mobile web; Android/iPhone
+  evidence только для соответствующего platform-specific scope. Недоступный
+  обязательный gate требует exact owner unblock, не финальный handoff.
 - **Слой evidence** — рядом с каждым проверенным пунктом: web-бандл в браузере,
   mobile web 390px, локально установленная USB-сборка. Подмена слоя не
   допускается: mobile web не доказывает native, typecheck не доказывает
@@ -233,12 +232,12 @@ alpha/internal/production) не инициируешь и не выполняе�
 - **Без тикета** (прямая правка по просьбе, без id на борде) — борд не трогай.
 - Если борд недоступен (MCP не отвечает) — не блокируйся, сделай работу и явно отметь в ответе «борд не обновлён, нужен ticket-board».
 
-## Паритет mobile web ↔ устройство (обязательное правило)
+## Проверка по platform impact (обязательное правило)
 
-«Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
+Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
+- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
+- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

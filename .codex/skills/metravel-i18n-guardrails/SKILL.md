@@ -59,12 +59,12 @@ Read first:
    for shared provider, storage, or configuration changes.
 4. Run `npm run test:i18n` for any localization or user-facing copy change, then
    run the normal checks required by the touched feature.
-5. Verify the changed user flow in every affected locale/platform. Pair mobile
-   web with the same Android flow and cold restart; for iOS/shared scope also
-   verify iPhone cold restart at the required simulator/physical/TestFlight layer.
-   Report unavailable active-platform evidence as exact `verify pending`.
+5. Verify the changed user flow in every affected locale and observable target.
+   Common/shared responsive copy uses desktop-web and mobile-web evidence.
+   Verify Android or iPhone cold restart only for that platform's locale
+   lifecycle/storage/runtime scope at the appropriate native evidence layer.
 
 ## Handoff
 
 Report affected locales, namespaces/keys, desktop-web/mobile-web/Android/iOS impact,
-checks and paired runtime evidence, and any exact active-platform blocker.
+checks and target-specific runtime evidence, and any exact in-scope blocker.

@@ -88,12 +88,12 @@ end-to-end на web (и совместима с native). Чинит найден
 - Не выводить секреты/токены в логи и скриншоты.
 - Не подставлять фейковые `imageUrl` ради «красивого» скрина.
 
-## Паритет mobile web ↔ устройство (обязательное правило)
+## Проверка по platform impact (обязательное правило)
 
-«Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
+Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
+- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
+- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

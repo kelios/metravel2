@@ -93,8 +93,10 @@ Backend/Django/server design из этого workspace остаётся read-onl
 - разбивать работу на небольшие упорядоченные шаги с конкретным результатом;
 - связывать implementation tasks с requirements/scenarios;
 - включать тесты на ближайшем надёжном уровне без `.skip`;
-- включать browser evidence для desktop/mobile web, USB Android evidence и
-  iPhone simulator/physical/TestFlight layer по риску видимого shared/mobile UI;
+- включать browser evidence для desktop/mobile web при видимом common/shared
+  UI; USB Android evidence — только для Android-specific behavior; iPhone
+  simulator/physical/TestFlight layer — только для iOS-specific behavior или
+  явно назначенного release gate;
 - включать i18n validation для localization impact;
 - включать соседние consumer/regression probes для shared changes;
 - включать обязательный code-review-and-fix после code changes;
@@ -104,6 +106,15 @@ Backend/Django/server design из этого workspace остаётся read-onl
 
 Performance/production task закрывается только real before/after evidence по
 правилам `docs/RULES.md`; локальный build не заменяет post-deploy probe.
+
+Backend/API/server tasks не получают client-device gate автоматически: для них
+планируются доступные source/config/test/API/log/temporal probes. Validation-only
+gap не создаёт implementation task: `testing` допустим только для активной QA
+или exact temporal/retest gate с параметром, порогом, текущим значением и
+trigger. Pass → `done`; отдельный подтверждённый дефект → новая/reused связанная
+карточка после Problem Memory; missing access/device → запрос разблокировки и
+продолжение того же прохода. Нерелевантное/out-of-scope device evidence не
+блокирует `done`.
 
 ## Чеклист перед apply
 

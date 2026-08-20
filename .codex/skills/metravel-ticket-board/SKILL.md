@@ -35,8 +35,9 @@ Read first:
   cause/owner. Append a dated Recurrence Log for repeated families.
 - Use only `area=front` or `area=back` in the active workflow. Android app bugs
   use `area=front` + `[AND-...]`; iOS app bugs use `area=front` + `[IOS-...]`;
-  shared mobile tasks name mobile-web/Android/iPhone validation. Backend/API/server
-  tasks are `area=back`.
+  shared responsive UI tasks name desktop-web and mobile-web validation, while
+  Android/iOS validation is added only for platform-specific observable scope.
+  Backend/API/server tasks are `area=back`.
 - Every new `area=front` or `area=back` task needs active sprint, Problem History,
   Task Contract, `Platform impact`, `Localization impact`, dependencies/blockers,
   validation, and Done gate.
@@ -54,32 +55,49 @@ Read first:
 - Human work and agent work must be separate tasks linked by `blocked_by_id`, `depends_on_ids`, or `related_to_ids`.
 - If board tools return HTTP 401, refresh the staff token through `.env.e2e` following `docs/TASK_BOARD_MCP.md`; never print token values.
 - Do not write feature code.
-- Do not move work to `done` unless acting as `$metravel-sprint-reviewer` with runtime evidence.
+- Move work to `done` only through an acceptance pass: normally
+  `$metravel-sprint-reviewer`, or the equivalent explicit backend-acceptance
+  path using relevant available backend evidence and the same status contract.
 
 ## Status Semantics
 
 Use the canonical status map from `docs/TASK_BOARD_MCP.md`:
 
-- `todo`: ready to implement, not started.
+- `todo`: implementation, refinement, deploy/configuration, data, or other owner
+  work remains; it may be not started or returned with a concrete action.
 - `in_progress`: implementation/fix work is active.
 - `review`: implementation is complete and awaits code/architecture/security review.
-- `testing`: implementation/review is ready and awaits or is undergoing automated, QA,
-  browser, API, backend/deploy, production, device, or release validation.
+- `testing`: implementation/review is ready and QA is active, or an exact
+  in-scope retest/time-window gate is recorded with parameter, threshold,
+  current value, trigger/earliest recheck, and command/scenario.
+- `done`: implementation/owner work is complete and all available, relevant
+  mandatory probes for the task's owned scope are green.
 - `blocked_by`: implementation cannot start or continue because a concrete hard dependency or
   external gate is unresolved. Record `blocked_by_id` when a board task is the blocker and state
   the exact unblock event.
 
-Never use `blocked_by` merely because review/testing has not happened, production evidence is
-pending, a Done gate is incomplete, or a validation failed. Keep evidence gaps in `review` or
-`testing`; return failures that require code changes to `in_progress`.
+Never use `blocked_by` merely because review/testing has not happened, production
+evidence is pending, a Done gate is incomplete, or validation failed. Missing
+access/device/gate output is not a parking verdict: request the exact unblock
+action and resume acceptance. After a completed pass use `done`; return
+unfinished ticket-owned work to `todo`/`in_progress`; route a separate confirmed
+defect through Problem Memory to a new/reused linked task.
+
+For `area=back`, do not return a completed implementation to `todo` because a
+time-based observation is still accumulating or client/device evidence is
+unavailable. Keep an executable time gate in `testing` only with the full retest
+record; close when the relevant backend probes are green. Use `todo` only when
+backend implementation/refinement/deploy/configuration/data work still remains.
+Unavailable required access pauses the board mutation for an unblock request.
 
 ## Workflow
 
 1. Run `$metravel-problem-memory` and read the existing sprint/task state before
    mutating.
 2. For new tasks, persist the Problem History verdict and fill Task Contract,
-   including desktop-web/mobile-web/Android/iOS and RU/BE/UK/PL/EN impact, the
-   correct web/device/TestFlight validation, plus any required UI `Design evidence`, before
+   including explicit affected-platform and RU/BE/UK/PL/EN impact, the correct
+   desktop/mobile-web validation for shared responsive UI, target-specific
+   Android/iOS validation only when owned, plus any required UI `Design evidence`, before
    `todo`/handoff.
 3. For status updates, preserve existing description and append concise evidence/blocker notes.
    Before setting `blocked_by`, name the work that cannot proceed, the concrete dependency/gate,

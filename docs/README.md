@@ -21,8 +21,11 @@
 codebase — desktop web, mobile web, Android и iPhone; production UI поддерживает
 RU/BE/UK/PL/EN. Первый App Store release — iPhone-only, iPadOS пока вне scope.
 Перед задачей фиксируй platform/localization impact по `AGENTS.md` и `CODEX.md`;
-mobile web, Android и iPhone сохраняют один mobile UX, implementation-детали i18n — в
-`DEVELOPMENT.md#localization`.
+mobile web, Android и iPhone сохраняют один mobile UX как архитектурный
+инвариант. Common/shared responsive UI проверяется на desktop web и mobile web;
+Android/iPhone device gate появляется только для platform-specific наблюдаемого
+поведения, конфигурации или runtime. Общий файл сам по себе device gate не
+создаёт. Implementation-детали i18n — в `DEVELOPMENT.md#localization`.
 
 Dated analytics/SEO/content files — snapshots, а не live source of truth.
 Legacy local workboard files — compatibility tooling, а не task state.
@@ -77,16 +80,27 @@ operation gate из `AGENTS.md` и `RULES.md`.
 Если test/quality gate уже принадлежит другому живому процессу, текущий чат
 сразу получает `SKIPPED`: не ждёт, не перезапускает проверку после освобождения
 lock и не запускает обходной тест. Если этот gate покрывает нужный scope и тесты
-были единственным оставшимся Done-gate шагом, handoff фиксирует
-`validation delegated: active gate pid/name`, и задачу можно закрыть без заявления
-`passed`. Владелец активного gate исправляет падения и повторяет проверку; иначе
-используется `validation skipped`, и задача остаётся открытой.
+были единственным оставшимся Done-gate шагом, `validation delegated: active gate
+pid/name` фиксирует только координацию, не pass. Приёмочный проход
+останавливается, запрашивает результат владельца gate и продолжается после него;
+`validation skipped` также не является причиной парковать задачу в `testing`.
 
 ## Backend boundary
 
 Этот workspace не содержит backend implementation. Backend/Django/API/server
 можно анализировать read-only; исправления оформляются как `area=back` tasks на
 MCP board. Frontend не маскирует отсутствующий contract mock-only fallback.
+При прямой приёмке backend-задачи проверяются только доступными релевантными
+source/API/production probes; client/browser/device evidence относится к
+связанной `area=front` задаче. Реальная оставшаяся backend/ops работа ведёт в
+`todo`, ожидание заданного временного окна — в `testing`, а завершённая работа с
+зелёными доступными обязательными in-scope проверками — в `done`.
+После начатого прохода `testing` допустим только для точного повторного замера с
+записанными параметром, порогом, текущим значением, trigger/earliest recheck и
+сценарием. Pass закрывает текущую карточку; отдельный подтверждённый дефект идёт
+в новую/reused связанную карточку после Problem Memory preflight. Недоступный
+доступ или нужное platform-specific устройство требуют немедленного запроса на
+unlock/connect, а не итогового pending-verdict.
 
 API origin задаётся `EXPO_PUBLIC_API_URL`; API clients нормализуют `/api` path.
 OpenAPI/Redoc URL строится от текущего configured origin. Не закрепляйте в
@@ -137,6 +151,11 @@ active sprint, `area=front|back`, Task Contract, dependencies, validation и Don
 gate. При `401` сначала обновляется staff token по `TASK_BOARD_MCP.md` через
 `.env.e2e`; локальный `tasks/000-template.md` допустим только как временный
 fallback.
+
+Статусы отражают фактическую работу: `todo` — работа осталась, `in_progress` —
+идёт, `testing` — in-scope проверка активна либо назначен точный повторный
+замер/временное окно, `done` — работа завершена и доступные обязательные in-scope
+проверки зелёные. `blocked_by` применяется только для hard dependency.
 
 Перед create/reopen/split обязателен historical preflight через
 `$metravel-problem-memory`: `docs/PROBLEM_MEMORY.md` хранит системные problem

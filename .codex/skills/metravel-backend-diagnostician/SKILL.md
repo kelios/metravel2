@@ -51,6 +51,30 @@ Read first:
    - Done gate
 6. If backend work is verified fixed, state the evidence and route unblocked FE work to `$metravel-feature-builder`.
 
+## Backend Acceptance And Status
+
+- Verify only the backend-owned surface that is relevant and accessible:
+  `origin/master` source, exact API/HTTP behavior, production runtime, and
+  database/log/queue/ops observations when access exists.
+- Never require Android or iPhone testing to accept an `area=back` task. Client
+  rendering, device auth, deep links, and other device behavior belong to a
+  linked `area=front` task.
+- Move or return a backend task to `todo` only when concrete backend
+  implementation, refinement, deploy/configuration, data, or other owner work
+  remains. Name that action in the evidence note.
+- Keep a completed backend task in `testing` when it waits for an executable
+  in-scope time window, retention period, or observation interval. Record the
+  parameter, threshold, current value, earliest valid recheck/trigger, and exact
+  probe instead of inventing implementation work.
+- Mark a backend task `done` when owner work is complete and all available,
+  relevant mandatory backend probes pass. Irrelevant, unavailable, or
+  client/device evidence outside backend ownership does not block Done.
+- A started acceptance pass cannot end with generic `testing` or "could not
+  verify". Pass → `done`; unfinished backend-owned work → `todo`/`in_progress`;
+  a separate confirmed defect → Problem Memory plus a new/reused linked task.
+  Missing required access pauses the status decision for a concrete unblock
+  request and then resumes the same pass.
+
 ## Output
 
 Return:

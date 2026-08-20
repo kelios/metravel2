@@ -1,13 +1,14 @@
 ---
 name: metravel-mobile-tester
-description: Test metravel mobile behavior as one paired mobile-web and Android contract. Use for touch targets, responsive layouts, mobile navigation, USB-connected Android local-build QA, Maestro flows, mobile-browser/device comparisons, or regression reports before mobile release or UI handoff. Do not run EAS/cloud or store builds without an explicit user request.
+description: Test target-specific metravel behavior on mobile web and/or Android. Use for responsive browser layouts, touch/navigation checks, Android-specific USB local-build QA, Maestro flows, deliberate cross-platform comparisons, or regression reports before a target-specific handoff. Do not run EAS/cloud or store builds without an explicit user request.
 ---
 
 # Metravel Mobile Tester
 
-Use this skill for read-only paired QA across mobile web and Android/native. Do
-not edit code unless the user explicitly asks to update tests. iPhone-specific
-QA belongs to `$metravel-ios-tester`.
+Use this skill for read-only target-specific QA on mobile web, Android/native,
+or both when the task explicitly needs a comparison. Do not edit code unless
+the user explicitly asks to update tests. iPhone-specific QA belongs to
+`$metravel-ios-tester`.
 
 Read first:
 
@@ -25,16 +26,23 @@ Read first:
 - Android/native smoke: app launch, tabs/navigation, map, travel details, search, login/token persistence, favorites, image/media flows, permissions, push prompt, external links.
 - Interaction quality: no covered CTAs, no horizontal scroll, stable sheets/modals, reachable close buttons, touch targets near 44px, no broken placeholders, no emoji icons in production UI.
 - Runtime health: console errors on web, Metro/runtime errors on native, and relevant `adb logcat` crash lines when available.
-- Localization parity: RU/BE/UK/PL/EN language selection and persistence,
+- Localization behavior: RU/BE/UK/PL/EN language selection and persistence,
   translated labels/accessibility text, long-label layout, dates/numbers/plurals,
-  web reload and Android cold restart when the flow is affected.
+  web reload for mobile-web scope, and Android cold restart for Android scope.
 
-## Parity Contract
+## Target Selection And Parity
 
-- Compare mobile web and Android against the same intended mobile UX. A task on
-  either surface automatically includes the other. Differences in safe area or
-  native map engine are acceptable; different visual
-  hierarchy, action order, card proportions, or tap behavior are bugs.
+- Select the QA target from observable scope before testing:
+  - common/shared responsive UI: desktop web plus mobile web; no automatic
+    Android or iPhone run
+  - Android-specific behavior/configuration/runtime: locally built Android app
+  - explicit cross-platform regression or parity investigation: mobile web and
+    Android comparison
+- Mobile web, Android, and iPhone preserve the same intended mobile UX as a
+  product invariant. Differences in safe area or native map engine are
+  acceptable; different visual hierarchy, action order, card proportions, or
+  tap behavior remain defects when observed. The invariant does not create an
+  automatic all-device Done gate.
 - Compare the same locale on all affected platforms. A translated web pass does
   not prove native resource loading, storage, formatting, or accessibility behavior.
 - For map/place/travel-point checks, verify the shared point/place card:
@@ -50,18 +58,23 @@ Read first:
 
 ## Evidence
 
-- Use Playwright mobile viewport or browser preview for mobile web.
-- Use local-build device evidence for Android and compare it to the same
-  scenario/state/locale captured on mobile web.
-- If `adb devices -l` shows a connected device, build/install locally and run or explicitly block the relevant `AND-USB-*` cases from `docs/MANUAL_TEST_CASES.md`; do not substitute mobile web viewport evidence for Android device evidence.
-- Prefer Maestro flows in `e2e/maestro/` for repeatable native regressions when Java/Maestro are available; if Maestro is blocked, record the blocker and run the matching manual device steps.
+- Use Playwright mobile viewport or browser preview for mobile-web scope.
+- Use local-build device evidence for Android-specific observable scope. A web
+  viewport is not proof of Android behavior.
+- If Android is in scope and `adb devices -l` shows a connected device,
+  build/install locally and run the relevant `AND-USB-*` cases from
+  `docs/MANUAL_TEST_CASES.md`. If it is absent/locked/unauthorized, request the
+  exact connect/unlock/RSA action and continue; do not finish with a pending
+  verdict.
+- Prefer Maestro flows in `e2e/maestro/` for repeatable native regressions when Java/Maestro are available; if Maestro itself is blocked, run the matching manual device steps.
 - Store screenshots, traces, logs, and temporary captures only in ignored folders such as `.codex-temp/`, `.codex-debug/`, `test-results/`, or `playwright-report/`.
 - Never print `.env.e2e` credentials, auth tokens, EAS secrets, or Google Play keys.
 
 ## Android USB Device Flow
 
 1. Resolve `adb` with `which adb` on macOS or `where.exe adb` on Windows.
-2. Verify the device with `adb devices -l`; `unauthorized` is blocked until the RSA prompt is accepted.
+2. Verify the device with `adb devices -l`; when absent/locked/`unauthorized`,
+   ask the owner to connect/unlock/accept the RSA prompt and resume after it.
 3. Record non-secret environment facts: model, Android release, API level, local build/install command, backend/API URL.
 4. Check the operation gate, then build/install locally: `cd android && ./gradlew :app:installDebug`, or `:app:assembleDebug` plus `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
 5. Force-stop and launch the installed app: `adb shell am force-stop by.metravel.app` then `adb shell monkey -p by.metravel.app 1`.
@@ -75,17 +88,20 @@ Read first:
 - Stay read-only by default.
 - Use `.env.e2e` auth values if already configured, but never echo them.
 - Do not run Android EAS/cloud builds, Android production builds/submits, or Expo export/dev-client Android QA routes unless the user explicitly asks for that exact path in the current task.
-- Do not substitute this Android/mobile-web pass for iPhone evidence. Route
-  simulator, physical-iPhone, or TestFlight checks to `$metravel-ios-tester`.
+- Do not add iPhone evidence unless iOS-specific observable scope is assigned.
+  Route that scope to `$metravel-ios-tester`.
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Distinguish mobile web from Android/native; a web viewport pass is not Android device verification.
 - Confirmed Android/native app bugs must be routed to
-  `$metravel-android-developer` or the relevant frontend owner and created or
-  updated on the shared board as `area=front` in the current active sprint
-  before handoff. Keep Android and paired mobile-web context in the
-  title/description. If the board returns `401`, follow `docs/TASK_BOARD_MCP.md`
+  `$metravel-android-developer` or the relevant frontend owner. Run
+  `$metravel-problem-memory`, then create/reuse the linked shared-board
+  `area=front` task in the current active sprint
+  before handoff. Keep the actual target and any deliberate parity comparison
+  in the title/description. If the board returns `401`, follow `docs/TASK_BOARD_MCP.md`
   token refresh via `.env.e2e` without printing secrets.
 - Other confirmed bugs should become a compact `Bug Report` for `$metravel-feature-builder` or `$metravel-ui-guardrails`.
+- A completed pass closes the accepted current ticket; it is not parked in
+  `testing` because the separate bug has its own linked task.
 
 ## Output Contract
 
@@ -95,6 +111,7 @@ Return one compact artifact:
 ## Mobile QA Pass
 
 Scope:
+Targets selected and why:
 Environment:
 Scenarios tested:
 Locales tested:

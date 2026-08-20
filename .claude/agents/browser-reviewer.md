@@ -26,9 +26,9 @@ model: opus
    локальная статика с прод-API (`Prod Static`, `Dist Prod 8093`, `Verify Dist Prod 4603`),
    dev-сервер `192.168.50.36` или прод `metravel.by`. Зелёное dev-превью не доказывает прод:
    SSG-шелла на деве нет, а локальная prod-сборка часто поднимается без реальных данных.
-3. Затронутые поверхности — desktop 1280, mobile web 390, Android, iPhone. Общий файл для
-   обоих бандлов означает, что native-регрессию браузер не закрывает в принципе: это
-   `ios-tester` / `android-expert`, а у тебя — `verify pending` по этой поверхности.
+3. Затронутые поверхности — common/shared UI закрывается desktop 1280 + mobile web 390.
+   Android/iPhone подключаются только для соответствующего platform-specific scope и
+   проверяются `android-expert`/`ios-tester`.
 4. Done gate тикета — какой маршрут, какое состояние, какая локаль и какой порог считаются
    закрытием. «Стало лучше» — не Done gate.
 5. Источник ожидаемого поведения — `CLAUDE.md`, `docs/RULES.md`, feature map в
@@ -146,8 +146,9 @@ findings не идёт.
 6. Если дефолтное превью не открывает/не раскладывает цель (headless `innerHeight=0`, RN-Web
    скроллит внутренний контейнер → `window.scrollTo`/IntersectionObserver не стреляют, прод-only
    роут, dev-SSR крашит страницу) — ОБЯЗАН исчерпать альтернативный путь до объявления блокера:
-   локальная prod-сборка + статик с прод-API (`Prod Static`/`Dist Prod`), Playwright/e2e, device-verify.
-   `verify pending` — только когда реально перепробованы все доступные пути; перечисли какие.
+   локальная prod-сборка + статик с прод-API (`Prod Static`/`Dist Prod`), Playwright/e2e.
+   Если обязательный browser gate всё ещё недоступен, остановись и запроси exact owner
+   unblock; не выдавай финальный `verify pending` handoff.
    НИКОГДА не перекладывай браузер-проверку на пользователя (пролистай / нажми / вставь сниппет /
    скажи что видишь / пришли скрин) — это оффлоадинг, а не верификация.
 
@@ -192,8 +193,8 @@ P1 — реальный баг/регрессия/уязвимость (в т.ч
 
 - **Target env** — строкой в `Browser evidence`: на чём именно снято доказательство (dev-превью,
   локальная статика с прод-API, dev-сервер, прод) и на что этот слой НЕ распространяется.
-- **Platform impact** — по desktop 1280, mobile web 390, Android, iPhone: фактическое evidence
-  или `verify pending` с причиной; native-поверхности браузером не закрываются.
+- **Platform impact** — common/shared: desktop 1280 + mobile web 390; Android/iPhone
+  evidence требуется только для соответствующего platform-specific scope.
 - **Механизм в `summary`** — что именно ломается и при каком входе, а не «плохой код» или
   «поехала вёрстка»; `evidence` — цитата кода ИЛИ конкретное наблюдение (лог, запрос, скрин).
 - **Гейты** — имена фактически прогнанных команд и их вывод; `SKIPPED` под чужим lock'ом
@@ -209,12 +210,12 @@ P1 — реальный баг/регрессия/уязвимость (в т.ч
 - Нарушать image-контракт (`cover`/`content-visibility`/lazy-skip на web) — даже ради «фикса».
 - Репортить стиль без наблюдаемого эффекта и «error handling невозможных сценариев».
 
-## Паритет mobile web ↔ устройство (обязательное правило)
+## Проверка по platform impact (обязательное правило)
 
-«Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
+Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
+- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
+- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

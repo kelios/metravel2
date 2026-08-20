@@ -243,6 +243,33 @@ describe('RouteBuilder live route preview', () => {
     expect(within(getByTestId('route-summary')).queryByText('3')).toBeTruthy()
   })
 
+  it('routes a fourth coordinate point and updates the stops chip without saving', () => {
+    const { getByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-type-custom'))
+    fireEvent.changeText(getByTestId('route-builder-name'), 'QA Android point')
+    fireEvent.changeText(getByTestId('route-builder-lat'), '53.8400')
+    fireEvent.changeText(getByTestId('route-builder-lng'), '27.7200')
+    fireEvent.press(getByTestId('route-builder-add'))
+    settleDebounce()
+
+    expect(getByTestId('preview-engine-points').props.children).toBe('4')
+    expect(mockEngine.mounts.at(-1)?.points).toEqual([
+      [27.5615, 53.9023],
+      [26.6906, 53.2225],
+      [26.4731, 53.4512],
+      [27.72, 53.84],
+    ])
+
+    deliver(engineResult())
+
+    expect(getByTestId('route-map-provider').props.children).toBe('preview')
+    expect(getByTestId('route-map-geometry').props.children).toBe('30')
+    expect(within(getByTestId('route-summary')).queryByText('4')).toBeTruthy()
+    expect(queryByText('Маршрут построен по дорогам')).toBeTruthy()
+    expect(queryByText('Локальная оценка')).toBeNull()
+  })
+
   it('announces a direct line with a retry instead of passing it off as a route', () => {
     const { getByTestId, queryByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
 

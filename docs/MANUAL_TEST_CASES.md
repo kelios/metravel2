@@ -1,6 +1,7 @@
 # MeTravel — Ручные тест-кейсы
 
-> Порядок прохождения: **1. Путешествия → 2. Карта → 3. Места**, затем прогон по платформам (mobile / web).
+> Порядок прохождения: **1. Путешествия → 2. Карта → 3. Места**, затем выбери
+> платформенные кейсы по фактическому scope задачи.
 > Легенда статуса: ✅ Pass · ❌ Fail · ⚠️ Blocked · — Not run
 
 **Окружение:** укажи перед прогоном — URL/билд, аккаунт (гость / авторизованный e2e), платформа, версия.
@@ -446,14 +447,19 @@ board task.
 
 ## Прогон по платформам
 
-После написания/ревью всех сценариев выше видимый shared UI проверяется на
-desktop web, mobile web, Android и iPhone. Mobile web и Android остаются парным
-контролем; active iPhone проверяет тот же flow/state/locale на simulator или
-physical/TestFlight layer по риску. iPadOS не входит в первый релиз.
+Видимый общий/shared UI проверяется на desktop web и mobile web. Таблицы ниже —
+каталог risk-based сценариев, а не требование прогонять все устройства для
+каждой задачи. Android USB-кейсы выбираются только при Android-specific
+поведении; iPhone simulator/physical/TestFlight — только при iOS-specific
+поведении или явном release gate. Mobile parity остаётся design-инвариантом.
+iPadOS не входит в первый релиз.
 
 ### Android USB / local-build smoke
 
-Используй этот набор, когда Android-устройство подключено по USB и нужно подтвердить native-поведение, а не только mobile web. Перед прогоном укажи: модель устройства, Android/API, локальный build/install command, backend/API URL, аккаунт (`гость` или e2e-аккаунт без вывода секрета).
+Используй этот набор, когда задача затрагивает Android-specific поведение и
+нужно подтвердить его на подключённом USB-устройстве. Перед прогоном укажи:
+модель устройства, Android/API, локальный build/install command, backend/API
+URL, аккаунт (`гость` или e2e-аккаунт без вывода секрета).
 
 Правила client demo gate:
 
@@ -585,6 +591,10 @@ Owners/follow-up:
 
 ### iPhone simulator / physical device / TestFlight
 
+Используй этот набор только для iOS-specific задачи или явно назначенного
+iPhone release gate. Shared/web-only UI не требует автоматического прогона этой
+матрицы.
+
 Перед прогоном укажи source revision, version/build, layer, model/runtime,
 iOS version, backend target, account mode и locale. Не записывай Team ID, UDID,
 Apple credentials, tokens или signing material. Simulator не закрывает кейсы с
@@ -627,7 +637,14 @@ gate; simulator/local-device fail до upload сам по себе build number 
 
 Simulator evidence не заменяет physical iPhone/TestFlight там, где тест зависит
 от hardware, signing, entitlements, APNs, Universal Links или production config.
-Отсутствующее обязательное evidence фиксируется как точный blocker/`verify pending`.
+Если обязательное устройство/сессия недоступны, приёмка останавливается и агент
+просит конкретный unlock/connect/login, затем продолжает тот же сценарий; это не
+финальный QA-verdict и не причина парковать задачу в `testing`. После
+прогона pass → `done`; незавершённая собственная работа → `todo`/`in_progress`;
+отдельный подтверждённый дефект → новая/reused связанная карточка после Problem
+Memory. `testing` сохраняется только для точного retest/temporal gate с
+параметром, порогом, текущим значением и trigger. Out-of-scope device evidence
+не блокирует `done`.
 
 
 ## Политика evidence
@@ -636,6 +653,13 @@ Simulator evidence не заменяет physical iPhone/TestFlight там, гд
 Результаты запуска фиксируются в MCP task board с абсолютной датой, environment,
 commit/build, командами и ссылками на ignored screenshots/traces. Старые матрицы
 результатов не копируются вперёд как текущий статус.
+
+Backend/API/server задачи не требуют Android/iPhone evidence: их проверяют
+доступными source/config/test/API/log/temporal probes. Platform-specific client
+integration оформляется и принимается отдельной связанной `area=front` задачей.
+Если in-scope temporal gate ещё не завершён, backend-задача остаётся в
+`testing`; если все доступные in-scope проверки пройдены и реализации больше не
+требуется, нерелевантное device evidence не мешает закрыть задачу.
 
 При изменении поведения обновляйте сам case и ближайшую автоматизацию. Не
 добавляйте `.skip`; failed/blocked сценарий получает board task и повторный прогон

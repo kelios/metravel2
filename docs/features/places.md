@@ -60,11 +60,13 @@
   дополнительное действие.
 - Для мест, связанных с travel, статус должен быть явным: "Был здесь",
   "Хочу поехать", "Планирую" или компактная кнопка "Был / Хочу / Планирую".
-- Mobile web и Android не должны расходиться визуально или по поведению; карточки
-  места всегда проверяются парно. Платформенные отличия допустимы только для
-  safe area, map engine и нативных API.
-- После видимых изменений проверять desktop/mobile web в браузере и тот же flow
-  на локальной Android USB-сборке.
+- Mobile web, Android и iPhone не должны расходиться визуально или по поведению;
+  это design-инвариант. Платформенные отличия допустимы только для safe area,
+  map engine и нативных API.
+- После видимых общих изменений проверять desktop/mobile web в браузере.
+  Локальная Android USB-сборка нужна при изменении Android map engine, intents,
+  system Back или другого Android-specific behavior; iPhone evidence — только
+  при iOS-specific behavior.
 
 ## Проверки
 
@@ -76,8 +78,8 @@ npm run check:fast
 
 До него запускаются ближайшие tests для `api/places.ts`,
 `utils/placesCatalog.ts` и `PlaceListCard` по затронутому scope. Видимый web UI
-проверяется в браузере; native point/place flow — на локально установленной
-Android-сборке.
+проверяется в desktop/mobile браузере; native point/place flow проверяется на
+той платформе, чьё platform-specific поведение изменено.
 
 Если меняются переходы `На карте` / `Прочитать`, дополнительно:
 

@@ -4,7 +4,8 @@ description: >-
   Приёмочный проход по активному спринту общего MCP task board MeTravel: взять тикеты в
   `review` (и `todo`, помеченные на релиз), проверить каждый РЕАЛЬНО по `Task Contract`
   (Done gate) и Acceptance Criteria — тесты + браузер/API-пробы против target env — и
-  перевести зелёные в `done`, а проваленные вернуть в `in_progress`/`blocked_by` с evidence.
+  завершённые проверки закрыть в `done`; отдельные дефекты провести через Problem Memory в
+  связанные bug/task, не паркуя текущие acceptance-тикеты.
   Триггеры: «прими спринт», «отревьюй и закрой тикеты в review», «что в спринте 18 можно
   двигать в done», «приёмка спринта».
 ---
@@ -61,14 +62,14 @@ release). `sprint-review` — это батч-гейт на конце: проб
 4. **Двинуть статусы (с evidence).**
    - **pass** → `status=done` + evidence-заметка в `description` (дата, прошедшие проверки,
      ответы probe/тестов без секретов, скрин/лог).
-   - **fail** → нужна правка кода/описания → `in_progress`; нужна только повторная проверка или
-     выкладка → остаётся `testing`; корень внешний (BE/deploy/routing) → `status=blocked_by` +
-     `blocked_by_id=<id>`. Назад в `review` не возвращать: это заново поднимет `code-review-gate`;
-     дописать blocker evidence и назвать агента-исполнителя для фикса. Порождённый
-     BE/deploy-блокер заводит `ticket-board` (`area=back`), не приёмщик.
-5. **Багфиксы — делегировать, не чинить в приёмке.** Отбитые тикеты передаются профильным
-   FE-агентам / `ticket-flow`; после фикса они снова приходят в `review`, где код-ревью и приёмка
-   поднимаются автоматически хуком `.claude/hooks/review-gate.mjs` — отдельный проход спринта не нужен.
+   - **confirmed defect** → reproduction evidence, `problem-memory`, затем create/reuse отдельной
+     связанной bug/task через `ticket-board`; текущий завершённый acceptance-тикет → `done`,
+     его не возвращать и не парковать;
+   - обязательный gate сейчас недоступен → остановиться, запросить у владельца exact unblock и
+     продолжить ту же приёмку. `testing` между turns допустим только для конкретного повторного
+     замера с exact параметром, threshold/trigger и временем.
+5. **Багфиксы — отдельным тикетом.** Связанную карточку передай профильному FE-агенту /
+   `ticket-flow`; current acceptance уже не используется как контейнер новой работы.
 6. **Сводка спринта.** Таблица `id | area | вердикт | evidence | осталось`, ссылка на `/board`,
    список разблокированной/заблокированной работы.
 7. **Закрытие спринта.** Если ВСЕ тикеты спринта (front+back) приняты в `done` и нет
@@ -81,17 +82,18 @@ release). `sprint-review` — это батч-гейт на конце: проб
 - **Реальная проверка, не чтение кода.** «Готово» = код + тест/браузер + runtime evidence против
   target env. До этого тикет не `done`.
 - **Статус соседней задачи — не доказательство.** BE `done`, но FE-проба ловит 404/не тот
-  field/event → FE не закрывать; оставить `testing`/`blocked_by` + evidence.
+  field/event → `problem-memory` + отдельная связанная bug/task; текущий acceptance не парковать.
 - **Mock/dev-fallback + зелёные unit-тесты** не закрывают задачу, где AC требует интеграцию с BE.
-- **Мобильный тикет = все затронутые поверхности.** `Platform impact = Android` закрывается
+- **Проверка определяется platform impact.** `Platform impact = Android` закрывается
   прогоном на устройстве, `iOS` — прогоном `ios-tester` на слое из Task Contract (simulator —
   вёрстка; физический iPhone — safe area/permissions/Keychain/HEIC/Universal Links/APNs;
-  TestFlight — приёмка релиз-кандидата), `shared` — desktop web + парный mobile web/Android +
-  iPhone. Android-скрин не доказывает iPhone, и наоборот.
+  TestFlight — приёмка релиз-кандидата), `shared/common` — desktop web + mobile web.
+  Общий компонент сам по себе не создаёт Android/iPhone device gate.
 - **Store-операции вне приёмки.** Signed build, upload в TestFlight, submit в App Review и
   storefront release делает только `ios-deployer` по явной команде владельца; факт заливки
   не является вердиктом приёмки.
-- Невозможно проверить из-за внешнего блокера → не `done`, явно «verify pending: <причина>».
+- Невозможно запустить обязательный gate из-за доступа/устройства/окружения → остановиться,
+  запросить exact unblock и продолжить тот же acceptance без финального `verify pending` handoff.
 - Каждый переход статуса — с дописанным доказательством; борд не должен отставать от реальности.
 - Не печатать секреты/токены. Деплой — только по явному target, не в приёмке по умолчанию.
 
@@ -106,16 +108,15 @@ release). `sprint-review` — это батч-гейт на конце: проб
 | BE-блокер / deploy-проба | трекинг `ticket-board` (`area=back`) + сверка `backend-status-sync` |
 
 ## Выход
-Сводка приёмки спринта: сколько кандидатов, сколько закрыто в `done` (с evidence), сколько
-возвращено/заблокировано (с причиной и агентом-исполнителем), ссылка на `/board`, и явный список
-непроверенных тикетов, если приёмка неполная.
+Сводка приёмки спринта: сколько кандидатов закрыто в `done`, какие linked defects созданы/reused,
+какие exact timed rechecks активны и где запрошен owner unblock; ссылка на `/board`.
 
-## Паритет mobile web ↔ устройство (обязательное правило)
+## Проверка по platform impact (обязательное правило)
 
-«Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
+Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
+- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
+- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

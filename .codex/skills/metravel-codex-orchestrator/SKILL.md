@@ -59,9 +59,10 @@ If the branch is not `main`, stop before editing and ask how to proceed.
   `$metravel-ios-reviewer`, and `$metravel-ios-tester` for active iPhone work.
   Route signed/TestFlight/App Store operations to `$metravel-ios-release-operator`
   and require an independent explicit authorization for each mutating stage.
-- Use `$metravel-mobile-tester` for paired read-only mobile web and Android/native
-  QA evidence and retest; Android evidence requires a local build installed on
-  the USB-connected phone unless the user explicitly approved another route.
+- Use `$metravel-mobile-tester` for target-specific read-only mobile-web and/or
+  Android/native QA. Common responsive UI uses mobile-web browser evidence;
+  Android evidence is required only for Android-specific observable behavior
+  and uses a local USB-installed build unless explicitly approved otherwise.
 - Use `$metravel-test-runner` to choose and run targeted checks; `$metravel-test-writer` to add stable tests.
 - Use `$metravel-e2e-runner` for Playwright/browser flows and `.env.e2e` auth.
 - Use `$metravel-performance-analyst` only with production build or real URL performance evidence.
@@ -108,15 +109,22 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - Prefer existing components, hooks, services, utilities, and tests before adding abstractions.
 - Treat the active product as one Expo/React Native app across desktop web,
   mobile web, Android, and iPhone. Require an explicit platform/localization
-  impact before implementation; mobile-web/Android remain paired controls and
-  iPhone evidence uses the correct simulator/physical/TestFlight layer.
+  impact before implementation. Shared responsive UI is verified on desktop web
+  and mobile web. Android evidence is required for Android-specific observable
+  behavior/configuration/runtime; iPhone evidence is required for iOS-specific
+  scope at the correct simulator/physical/TestFlight layer. Cross-mobile parity
+  remains an invariant, not an automatic all-device gate.
 - Require RU/BE/UK/PL/EN resource parity for new app-owned UI copy and
   `npm run test:i18n` for localization changes.
 - Keep edits small and local.
 - Treat backend/Django/API/server work as analysis-only in this frontend workspace. Do not route any role to edit backend working trees or run backend Git mutations locally/on production. Before an authorized server write, require read-only `git status`/`git ls-files` classification; a tracked path or dirty production checkout means stop, evidence, and an `area=back`/ops task without cleanup or deploy. For the frontend deploy gate, apply only the exact non-mutating exceptions documented in `docs/RULES.md` for `deploy/prod/nginx/ssl/`, `dump.sql`, and the permission warning for `deploy/prod/postgis_1/data/`.
 - When a board task is in scope, enforce `todo → in_progress → review → testing → done`.
   Reserve `blocked_by` for a concrete hard dependency that prevents implementation work; waiting
-  for review or validation remains `review`/`testing`.
+  for review remains `review`, while `testing` is only active QA or an exact
+  retest/temporal gate with parameter, threshold, current value and trigger.
+  Completed QA must decide pass → `done`, unfinished owned work →
+  `todo`/`in_progress`, or separate confirmed defect → Problem Memory plus a
+  new/reused linked task.
 - Before any board mutation, require the registry+board history verdict. Do not
   let roles create competing tasks for an open canonical problem; append a
   Recurrence Log when a previously accepted invariant fails again.
@@ -131,13 +139,14 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - Do not create one-off reports unless the user asks; update canonical docs instead.
 - For visible web UI, require browser preview, screenshot, and console check.
 - For Android/native, do not claim device readiness without local-build evidence from the USB-connected phone.
-- For any visible shared UI/layout/interaction change, require desktop web,
-  mobile web, Android, and iPhone evidence for the same flow/state/locale.
+- For visible common/shared UI/layout/interaction changes, require desktop-web
+  and mobile-web browser evidence for the same flow/state/locale. Add Android or
+  iPhone runs only when the change owns target-specific observable behavior.
 - Do not run Android EAS/cloud builds, Android production builds/submits, or Expo export/dev-client Android QA routes unless the user explicitly asks for that exact path in the current task.
 - For production deploy or submit, require explicit target environment and clean
   gates. Route web/server deploy through `$metravel-devops-agent`; route iPhone
   signed build/upload/submit/storefront stages through `$metravel-ios-release-operator`.
-- Before assigning or running deploy, build, Android install, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not launch duplicates for the same target. For an active test/quality gate, end the new validation attempt without waiting, polling, bypassing, or retrying. Choose `validation delegated: active gate pid/name` when its scope covers the task and automated tests are the only remaining Done-gate step, allowing completion without claiming `passed`; otherwise choose `validation skipped: active gate pid/name` and keep the task open. The owner fixes failures and reruns.
+- Before assigning or running deploy, build, Android install, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not launch duplicates for the same target. For an active test/quality gate, end the duplicate launch without waiting, polling, bypassing, or retrying. `validation delegated/skipped: active gate pid/name` is coordination only. If its result is required for acceptance, request that result/unblock action and resume the same pass; do not close from delegation or park the task in `testing`.
 
 ## Final Self-Check
 
@@ -148,9 +157,10 @@ Before final response, verify:
 - Changed files are intentional.
 - Relevant checks ran, or blockers are explicit.
 - External-link, UI, native, release, and secret rules were not violated.
-- Platform impact was covered with desktop-web evidence plus mobile-web/Android
-  controls and the required iPhone evidence layer, or an exact active-platform
-  blocker; localization impact and affected locales were verified.
+- Platform impact was covered on the affected targets: desktop and mobile web
+  for common responsive UI, Android for Android-specific behavior, and iPhone
+  only for iOS-specific behavior; localization impact and affected locales were
+  verified.
 - Any known real issue in touched scope is fixed or documented as blocked.
 - Every code-changing task completed the `$metravel-code-reviewer` review-and-fix
   loop over the full resulting diff.

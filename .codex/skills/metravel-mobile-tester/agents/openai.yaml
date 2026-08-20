@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Mobile Tester"
-  short_description: "Compare mobile web and Android with evidence"
-  default_prompt: "Use $metravel-mobile-tester to compare the same flow, state, and affected locales on mobile web and a local USB Android build, requiring paired evidence whenever either surface changes."
+  short_description: "Test mobile web or Android by target"
+  default_prompt: "Use $metravel-mobile-tester to select mobile web and/or Android from observable scope, use USB device evidence only for Android-specific behavior, and preserve parity without an automatic paired gate."

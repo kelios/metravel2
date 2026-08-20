@@ -42,13 +42,20 @@ select only the cases required by the assigned Task Contract for non-release wor
 - Do not expose Apple accounts, Team ID, UDID, tokens, reviewer credentials,
   signing material, or notification payload secrets.
 - Do not replace physical/TestFlight evidence with a simulator screenshot.
-- For shared behavior, compare the same state and locale with mobile web and
-  Android; route shared failures to the relevant feature owner.
+- If the required iPhone is not visible, locked, or needs trust/login, stop and
+  ask the owner for that exact connect/unlock/trust action, then resume the same
+  test. Missing device access is not a final pending verdict or a reason to park
+  a ticket in `testing`.
+- Compare with mobile web or Android only when the assigned iOS task explicitly
+  investigates a cross-platform regression or parity defect. Ordinary
+  iOS-specific acceptance does not require either client as an extra gate.
 - A denied optional permission must leave unrelated browsing usable. A missing
   capability, AASA response, APNs delivery, or Apple backend contract is a
   concrete blocker, not a mocked pass.
-- Confirmed iOS bugs use `area=front` and an `[IOS-...]` title in the active
-  sprint; backend/API/server causes use a linked `area=back` task.
+- Confirmed iOS bugs run `$metravel-problem-memory`, then create/reuse a linked
+  `area=front` task with an `[IOS-...]` title in the active sprint;
+  backend/API/server causes use a linked `area=back` task. The accepted current
+  ticket is closed rather than parked for that separate defect.
 - Do not build, upload, assign TestFlight groups, submit to review, or release a
   version without the exact authorization owned by `$metravel-ios-release-operator`.
 

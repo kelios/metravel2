@@ -48,7 +48,6 @@ import { translate as i18nT } from '@/i18n'
 
 
 type ToastAwareError = Error & { toastShown?: boolean };
-
 const getLocalizedSaveErrorDetails = (
   error: unknown,
   rawDetails: string,
@@ -91,6 +90,7 @@ const SERVER_OWNED_SAVE_RESPONSE_FIELDS = new Set<keyof TravelFormData>([
   'publish',
   'moderation',
 ]);
+const LOCAL_EDITING_STATE_FIELDS = new Set<keyof TravelFormData>(['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link']);
 
 const preserveFieldsEditedAfterDispatch = (
   savedData: TravelFormData,
@@ -102,7 +102,7 @@ const preserveFieldsEditedAfterDispatch = (
   const mergedData = { ...savedData };
   (Object.keys(currentData) as Array<keyof TravelFormData>).forEach((key) => {
     if (SERVER_OWNED_SAVE_RESPONSE_FIELDS.has(key)) return;
-    if (isEqual(currentData[key], sourceData[key])) return;
+    if (isEqual(currentData[key], sourceData[key]) && !LOCAL_EDITING_STATE_FIELDS.has(key)) return;
     Reflect.set(mergedData, key, currentData[key]);
   });
   return mergedData;

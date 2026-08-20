@@ -50,14 +50,14 @@ another reviewer.
 - Project-rule compliance: external links, design tokens, images, no skipped tests, no new `any` in `api/`, `hooks/`, `stores/`
 - Explicit platform impact for desktop web, mobile web, Android, and iOS; shared code
   preserves behavior or has justified technical platform adapters, and any
-  mobile-web/Android impact has paired evidence while iOS/shared work has the
-  required simulator/physical/TestFlight evidence
+  runtime evidence matches affected observable targets
 - Explicit localization impact: app-owned UI uses `@/i18n`, RU/BE/UK/PL/EN keys
   stay complete, formatting uses `i18n/format.ts`, and API/editorial content is not client-translated
 - Validation adequacy: the narrowest reliable checks were run and rerun after fixes
-- Visible shared UI changes include desktop-web and mobile-web browser
-  verification, no new console errors, the same flow on a local USB Android
-  build, and the appropriate iPhone evidence layer
+- Visible common/shared UI changes include desktop-web and mobile-web browser
+  verification with no new console errors. Require a local USB Android run only
+  for Android-specific behavior and the appropriate iPhone layer only for
+  iOS-specific behavior; parity remains an invariant, not an automatic gate
 - Localization changes include `npm run test:i18n` and locale/platform evidence;
   native readiness is not inferred from web checks
 - No known real failures are left in the touched scope without an explicit blocker
@@ -76,8 +76,9 @@ another reviewer.
    product behavior during cleanup; do not use a refactor as authority for a
    redesign, backend change, or broad migration.
 4. Run the narrowest reliable checks for the resulting diff. Apply the operation
-   gate before shared/full test commands. Visible UI still requires browser,
-   mobile-web/Android control, and iPhone evidence defined by project rules.
+   gate before shared/full test commands. Visible UI requires desktop/mobile-web
+   browser evidence, plus native evidence only for affected platform-specific
+   observable behavior.
 5. Re-read the entire resulting task diff after fixes. Repeat review → fix →
    validation until no confirmed fixable finding remains.
 6. Leave a finding open only when it is outside the authorized scope, requires a

@@ -28,9 +28,10 @@ Read first:
 - Keep Leaflet/react-leaflet isolated to web files and native map/WebView code isolated to native platform files.
 - Use `ImageCardMedia` for map popup/place/travel images.
 - Keep `/places` point-level: render places/coordinates first, travel links second.
-- Preserve mandatory paired parity across mobile web and Android: the same
+- Preserve parity across mobile web, Android, and iPhone as an invariant: the same
   point/place card layout, action order, hero proportions, and marker/card tap
-  semantics. A change on either surface requires the same-flow check on both.
+  semantics. Common/shared responsive UI is validated on desktop/mobile web;
+  add native QA only for platform-specific map behavior.
 - Map marker popups/cards on mobile must use the shared fullscreen point/place
   template inside visible app chrome: header/footer remain visible, hero image is
   about 70%, then title/meta, coordinates + copy, article/page action, expandable

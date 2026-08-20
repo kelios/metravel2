@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AppleCredentialPayload } from '@/api/appleAuth';
 import type { AppleSignInButtonProps } from '@/components/auth/appleSignInTypes';
 import SocialAuthButton, {
     SocialAuthButtonPlaceholder,
 } from '@/components/auth/SocialAuthButton.web';
+import { useExternalScript } from '@/hooks/useExternalScript';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useTheme } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
@@ -205,65 +206,41 @@ export default function AppleSignInButton({
         mountedRef.current = false;
     }, []);
 
-    useEffect(() => {
-        if (!configured) return undefined;
-        let cancelled = false;
-
-        const initialize = () => {
-            if (cancelled || !window.AppleID) return;
-            try {
-                if (!stateRef.current) stateRef.current = createAppleAuthState();
-                window.AppleID.auth.init({
-                    clientId: config.clientId,
-                    // `name` Apple отдаёт только при первом входе; без scope имя
-                    // не пришло бы вообще и аккаунт остался бы безымянным.
-                    scope: 'name email',
-                    redirectURI: config.redirectUri,
-                    state: stateRef.current,
-                    usePopup: true,
-                });
-                setReady(true);
-            } catch {
-                onErrorRef.current?.(i18nT('authStatic:apple.sdkLoadFailed'));
-            }
-        };
-
-        if (window.AppleID) {
-            initialize();
-            return () => {
-                cancelled = true;
-            };
+    const initialize = useCallback(() => {
+        if (!configured || !window.AppleID) return;
+        try {
+            if (!stateRef.current) stateRef.current = createAppleAuthState();
+            window.AppleID.auth.init({
+                clientId: config.clientId,
+                // `name` Apple отдаёт только при первом входе; без scope имя
+                // не пришло бы вообще и аккаунт остался бы безымянным.
+                scope: 'name email',
+                redirectURI: config.redirectUri,
+                state: stateRef.current,
+                usePopup: true,
+            });
+            setReady(true);
+        } catch {
+            onErrorRef.current?.(i18nT('authStatic:apple.sdkLoadFailed'));
         }
-
-        const handleError = () => {
-            if (!cancelled) onErrorRef.current?.(i18nT('authStatic:apple.sdkLoadFailed'));
-        };
-
-        const existingScript = document.getElementById(SDK_SCRIPT_ID) as HTMLScriptElement | null;
-        if (existingScript) {
-            const handleLoad = () => initialize();
-            existingScript.addEventListener('load', handleLoad, { once: true });
-            existingScript.addEventListener('error', handleError, { once: true });
-            return () => {
-                cancelled = true;
-                existingScript.removeEventListener('load', handleLoad);
-                existingScript.removeEventListener('error', handleError);
-            };
-        }
-
-        const script = document.createElement('script');
-        script.id = SDK_SCRIPT_ID;
-        script.async = true;
-        script.defer = true;
-        script.src = SDK_SRC;
-        script.addEventListener('load', () => initialize(), { once: true });
-        script.addEventListener('error', handleError, { once: true });
-        document.body.appendChild(script);
-
-        return () => {
-            cancelled = true;
-        };
     }, [config.clientId, config.redirectUri, configured]);
+
+    const handleSdkError = useCallback(() => {
+        onErrorRef.current?.(i18nT('authStatic:apple.sdkLoadFailed'));
+    }, []);
+
+    useEffect(() => {
+        initialize();
+    }, [initialize]);
+
+    const hasAppleSdk = typeof window !== 'undefined' && Boolean(window.AppleID);
+    useExternalScript({
+        id: SDK_SCRIPT_ID,
+        src: SDK_SRC,
+        onReady: initialize,
+        onError: handleSdkError,
+        enabled: configured && !hasAppleSdk,
+    });
 
     if (renderState === 'hidden') return null;
     if (renderState === 'hydration-placeholder') return <SocialAuthButtonPlaceholder />;

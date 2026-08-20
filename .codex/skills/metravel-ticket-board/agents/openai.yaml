@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Ticket Board"
   short_description: "Operate shared task-board tasks and sprints"
-  default_prompt: "Use $metravel-ticket-board to operate shared board tasks with Task Contracts and strict status semantics: blocked_by only for a hard dependency preventing implementation, review/testing for pending validation, and no feature-code edits."
+  default_prompt: "Use $metravel-ticket-board to operate board tasks with complete contracts and apply status changes only from explicit acceptance evidence, never from missing access or a parked testing state."

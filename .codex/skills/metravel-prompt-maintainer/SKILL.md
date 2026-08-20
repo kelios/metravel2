@@ -37,12 +37,19 @@ Every maintained prompt must make these items discoverable:
 
 For implementation, architecture, review, QA, or test prompts, also require an
 explicit `Platform impact` for desktop web/mobile web/Android/iOS and `Localization
-impact` for RU/BE/UK/PL/EN, or an explicit `none`. Mobile web and Android are a
-coupled validation pair: a prompt that includes one must require evidence for the
-same flow on both. Active iPhone/shared prompts must also select the correct
-simulator/physical/TestFlight evidence layer. Do not let a reusable
+impact` for RU/BE/UK/PL/EN, or an explicit `none`. Common/shared responsive UI
+requires desktop-web and mobile-web evidence. Require Android or iPhone evidence
+only for target-specific observable behavior/configuration/runtime, selecting the
+correct USB/simulator/physical/TestFlight layer. Cross-mobile parity remains an
+invariant, not an automatic all-device gate. Do not let a reusable
 prompt assume that shared Expo/React Native code is desktop-web-only or that
 app-owned UI copy is single-language.
+
+For QA/review prompts, make `testing` an active or exactly scheduled retest
+state, never a parking result. A finished pass closes the current task; a
+separate confirmed defect runs Problem Memory and gets a linked task. Missing
+device/access/gate output must trigger a concrete unblock request and resumed
+acceptance, not a final pending verdict.
 
 Prefer provider-neutral wording unless a provider-specific feature is essential. Remove references such as “Claude-proven” or `CLAUDE.md` when the rule is actually project-owned; point to `AGENTS.md` or the canonical file in `docs/` instead.
 

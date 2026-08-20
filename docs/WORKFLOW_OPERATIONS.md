@@ -13,8 +13,10 @@
 - baseline/after на живом URL, закрытие perf/media/network задач → «3.3.1 Production-target validation and task closure»;
 - deploy/build/e2e/Lighthouse и общие locks → «3.4 Координация долгих операций».
 
-Обязательный минимум остаётся в `AGENTS.md`: платформенная пара mobile web ↔
-Android (§3.3) и правило quality-gate lock (§3, шаг 9).
+Обязательный минимум остаётся в `AGENTS.md`: common/shared responsive UI
+проверяется desktop web + mobile web, а device gate применяется только к
+platform-specific behavior/config/runtime (§3.3); правило quality-gate lock —
+в §3, шаг 9.
 
 ### 3.1 E2E окружение и доступы
 
@@ -97,7 +99,10 @@ Android (§3.3) и правило quality-gate lock (§3, шаг 9).
   local Android production build/Production submit when an Android release is the
   active task. This never authorizes changing `alpha`, `internal`, `beta`, tester
   lists, countries, or the active closed-testing release.
-- Если задачу нужно проверить на Android, считай, что Android-телефон подключён к этому компьютеру по USB-кабелю: сначала проверь `adb devices -l`.
+- Если задача затрагивает Android-specific наблюдаемое поведение, конфигурацию
+  или runtime, считай, что Android-телефон подключён к этому компьютеру по
+  USB-кабелю: сначала проверь `adb devices -l`. Общий файл или common responsive
+  UI сам по себе Android device gate не создаёт.
 - Если `adb` показывает устройство со статусом `device`, сначала собери Android локально и установи сборку на телефон (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`), затем самостоятельно тестируй нужный Android-сценарий по `docs/MANUAL_TEST_CASES.md` `AND-USB-*`.
 - Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
 - `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
@@ -106,7 +111,7 @@ Android (§3.3) и правило quality-gate lock (§3, шаг 9).
 
 - Активный первый iOS release поддерживает iPhone; iPadOS-specific layout,
   screenshots и acceptance вне scope.
-- Для iOS/shared задачи сначала проверь `xcode-select -p`,
+- Для iOS-specific behavior/config/runtime задачи сначала проверь `xcode-select -p`,
   `xcodebuild -version` и eligible destinations через `xcodebuild
   -showdestinations`/`xcrun simctl list devices available`. Отсутствующий runtime
   — конкретный environment blocker, а не повод считать QA пройденной.
@@ -186,9 +191,22 @@ deny → allow → Settings → retry снимают на свежепостав
   unit/e2e с mock media primitive, успешный deploy log и post-build guard не
   являются post-deploy production evidence.
 - Если deploy не входил в разрешённый scope или production ещё не обновлён,
-  сообщай `local fix ready; production verification pending` и оставляй board
-  task в `review`/`testing`. Нельзя писать «исправлено на проде» и нельзя двигать
-  задачу в `done`.
+  не утверждай «исправлено на проде». Если deploy/production probe обязателен
+  для текущей приёмки, остановись и запроси точную deploy authorization или
+  результат владельца; не заканчивай проход parking-статусом. `testing`
+  допустим только для записанного exact retest/temporal gate.
+- При прямой приёмке backend-задачи используй только доступные релевантные
+  backend source/API/production probes. Client/browser/device evidence относится
+  к связанной `area=front` задаче. Если backend/ops работа осталась — `todo`; если
+  реализация готова и ждёт заданное временное окно — `testing`; если работа
+  завершена и доступные обязательные in-scope probes зелёные — `done`, даже когда
+  irrelevant/out-of-scope evidence недоступно.
+- После начатого acceptance pass текущая задача не остаётся в `testing` просто
+  из-за незавершённой/недоступной проверки: pass → `done`; собственная
+  незавершённая работа → `todo`/`in_progress`; отдельный подтверждённый дефект →
+  новая/reused связанная карточка после Problem Memory. Единственное длительное
+  состояние `testing` — exact retest/temporal gate с параметром, порогом,
+  текущим значением, trigger/earliest recheck и командой.
 - Performance/media/network задача закрывается только когда повторный production
   probe подтверждает целевой budget всей страницы, а не одного элемента:
   request/API cardinality, total/transfer bytes, oversized/unsized media,
@@ -208,9 +226,16 @@ deny → allow → Settings → retry снимают на свежепостав
 - Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `xcodebuild`, `simctl`, `expo run:ios`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
 - Если другой агент уже запустил deploy/build/rebuild для того же target, не запускай второй экземпляр: используй уже идущую операцию, дождись её только когда результат обязателен для твоего scope, либо зафиксируй blocker с PID, командой и target.
 - Для test/quality gate действует отдельное non-waiting правило: если живой `.codex-temp/ops/quality-gate.lock` или активный quality-процесс уже существует, текущий чат сразу прекращает свой запуск. Не жди, не poll'и, не следи за завершением, не повторяй команду после освобождения lock и не запускай более узкий обходной тест.
-- Если активный gate по своему scope покрывает проверки текущей задачи и автоматические тесты — единственный оставшийся Done-gate шаг, фиксируй `validation delegated: active gate pid/name` и задачу можно завершить/закрыть. Это не означает `passed`: владелец активного gate обязан исправить все реальные падения и повторить свою проверку; если падение нельзя исправить в его scope, он переоткрывает затронутую задачу или фиксирует blocker. Если scope активного gate не покрывает задачу либо остаются deploy/browser/API/device/другие проверки, фиксируй `validation skipped: active gate pid/name` и не закрывай задачу.
-- Чат, который первым запустил gate, владеет его результатом и исправлениями. Остальные чаты не дублируют эту работу и не используют занятый gate как blocker, когда корректно применим `validation delegated`.
+- Если активный gate по своему scope покрывает проверки текущей задачи,
+  `validation delegated: active gate pid/name` фиксирует только coordination,
+  не `passed`. Не закрывай и не паркуй задачу из-за этого: запроси результат
+  владельца gate и продолжи acceptance после ответа. Если scope не покрывает
+  задачу, `validation skipped: active gate pid/name` так же не является board
+  verdict; запроси точную разблокировку/результат для обязательного шага.
+- Чат, который первым запустил gate, владеет его результатом и исправлениями.
+  Остальные чаты не дублируют работу; приёмщик запрашивает результат у владельца
+  и не завершает статусный проход до него.
 - Не убивай и не перезапускай чужой процесс без явной команды пользователя или документированного safe-wrapper'а. Если lock явно stale, сначала зафиксируй почему он stale, затем аккуратно очисти lock и продолжай.
 - Если запускаешь новую долгую операцию без собственного lock механизма, оставь короткий marker в `.codex-temp/ops/` и удали его после завершения.
 - `build-prod.sh` удерживает общий `.codex-temp/ops/web-build.lock` до конца полного цикла build + SEO + deploy. Не обходи этот wrapper: прямой `expo export` или запуск `scripts/build-web-safe.js` параллельно с deploy запрещен.
-- Основные test/quality команды (`check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, `release:check`) обязаны запускаться только через общий `scripts/run-with-quality-gate-lock.js`. Он использует атомарный `.codex-temp/ops/quality-gate.lock`, сообщает PID владельца и при живом владельце сразу возвращает нейтральный `SKIPPED` с кодом `0`, чтобы чат завершил собственный запуск без ожидания/ретрая. `SKIPPED` нельзя записывать как `passed`, но при выполнении условий выше он оформляется как `validation delegated` и не блокирует Done. Lock умершего процесса восстанавливается автоматически. Общая Jest-конфигурация применяет тот же контракт к прямому `npx jest`. Не обходи wrapper прямым Playwright-запуском.
+- Основные test/quality команды (`check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, `release:check`) обязаны запускаться только через общий `scripts/run-with-quality-gate-lock.js`. Он использует атомарный `.codex-temp/ops/quality-gate.lock`, сообщает PID владельца и при живом владельце сразу возвращает нейтральный `SKIPPED` с кодом `0`, чтобы чат завершил собственный запуск без ожидания/ретрая. `SKIPPED` нельзя записывать как `passed` или финальный Testing verdict: acceptance запрашивает результат владельца и продолжается после него. Lock умершего процесса восстанавливается автоматически. Общая Jest-конфигурация применяет тот же контракт к прямому `npx jest`. Не обходи wrapper прямым Playwright-запуском.

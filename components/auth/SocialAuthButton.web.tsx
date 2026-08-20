@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { SOCIAL_AUTH_BUTTON_GEOMETRY } from '@/components/auth/socialAuthButtonGeometry';
 
 /**
  * Оболочка соц-кнопки веб-форм входа: геометрия, состояния и accessibility —
@@ -14,7 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
  */
 
 /** Общая высота соц-кнопок: они читаются как один набор, а не как разнобой. */
-export const SOCIAL_AUTH_BUTTON_HEIGHT = 48;
+export const SOCIAL_AUTH_BUTTON_HEIGHT = SOCIAL_AUTH_BUTTON_GEOMETRY.minHeight;
 
 export type SocialAuthButtonProps = {
     /** Надпись в кнопке — она же меняется на «загружаемся»/«недоступно». */
@@ -76,32 +76,32 @@ export default function SocialAuthButton({
 const styles = StyleSheet.create({
     placeholder: {
         width: '100%',
-        minHeight: SOCIAL_AUTH_BUTTON_HEIGHT,
-        borderRadius: DESIGN_TOKENS.radii.lg,
+        minHeight: SOCIAL_AUTH_BUTTON_GEOMETRY.minHeight,
+        borderRadius: SOCIAL_AUTH_BUTTON_GEOMETRY.borderRadius,
     },
     button: {
         width: '100%',
-        minHeight: SOCIAL_AUTH_BUTTON_HEIGHT,
-        borderRadius: DESIGN_TOKENS.radii.lg,
+        minHeight: SOCIAL_AUTH_BUTTON_GEOMETRY.minHeight,
+        borderRadius: SOCIAL_AUTH_BUTTON_GEOMETRY.borderRadius,
         alignItems: 'center',
         justifyContent: 'center',
     },
     buttonDisabled: {
-        opacity: 0.55,
+        opacity: SOCIAL_AUTH_BUTTON_GEOMETRY.disabledOpacity,
     },
     buttonPressed: {
-        opacity: 0.88,
-        transform: [{ scale: 0.99 }],
+        opacity: SOCIAL_AUTH_BUTTON_GEOMETRY.pressedOpacity,
+        transform: [{ scale: SOCIAL_AUTH_BUTTON_GEOMETRY.pressedScale }],
     },
     content: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
-        paddingHorizontal: 16,
+        gap: SOCIAL_AUTH_BUTTON_GEOMETRY.contentGap,
+        paddingHorizontal: SOCIAL_AUTH_BUTTON_GEOMETRY.paddingHorizontal,
     },
     text: {
-        fontSize: 16,
+        fontSize: SOCIAL_AUTH_BUTTON_GEOMETRY.fontSize,
         fontWeight: '600',
         flexShrink: 1,
         textAlign: 'center',

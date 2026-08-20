@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const plist = require('@expo/plist').default;
 const { getConfig } = require('@expo/config');
 const xcode = require('xcode');
@@ -91,6 +92,9 @@ const IOS_REQUIRED_REASON_APIS = Object.freeze({
   NSPrivacyAccessedAPICategoryDiskSpace: ['E174.1', '85F4.1'],
   NSPrivacyAccessedAPICategorySystemBootTime: ['35F9.1'],
 });
+
+const PORTABLE_HERMES_CLI_PATH =
+  '$(PODS_ROOT)/../../node_modules/hermes-compiler/hermesc/osx-bin/hermesc';
 
 function read(root, relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
@@ -624,6 +628,61 @@ function validateIosRelease(root = process.cwd()) {
         orphanedPods.length > 0 && `locked but absent from node_modules: ${orphanedPods.sort().join(', ')}`,
       ].filter(Boolean).join('; ');
       fail('IOS_PODFILE_LOCK_STALE', `ios/Podfile.lock is out of sync with node_modules — ${detail}`);
+    }
+
+    // React Native 0.86.0 serializes the absolute checkout path to hermesc into
+    // the generated local podspec. CocoaPods hashes that JSON into Podfile.lock,
+    // so identical installs in two worktrees otherwise produce different
+    // hermes-engine checksums (#1504). Keep the upstream relative-path backport
+    // applied until the pinned React Native release includes it.
+    const hermesPodspecPath = path.join(
+      nodeModulesRoot,
+      'react-native/sdks/hermes-engine/hermes-engine.podspec'
+    );
+    if (fs.existsSync(hermesPodspecPath)) {
+      const hermesPodspec = fs.readFileSync(hermesPodspecPath, 'utf8');
+      const portableHermesPath = hermesPodspec.includes('require "pathname"') &&
+        hermesPodspec.includes('Pathname.new(hermesc_path).relative_path_from(pods_root)') &&
+        hermesPodspec.includes(`'HERMES_CLI_PATH' => "$(PODS_ROOT)/#{relative_hermesc}"`);
+      if (!portableHermesPath) {
+        fail(
+          'IOS_PODFILE_LOCK_STALE',
+          'hermes-engine podspec must keep HERMES_CLI_PATH relative to PODS_ROOT'
+        );
+      }
+    }
+  }
+
+  const localHermesPodspecPath = path.join(
+    root,
+    'ios/Pods/Local Podspecs/hermes-engine.podspec.json'
+  );
+  if (fs.existsSync(localHermesPodspecPath)) {
+    const localHermesPodspec = fs.readFileSync(localHermesPodspecPath, 'utf8');
+    let localHermesConfig;
+    try {
+      localHermesConfig = JSON.parse(localHermesPodspec).user_target_xcconfig || {};
+    } catch (error) {
+      fail('IOS_PODFILE_LOCK_STALE', `generated hermes-engine podspec is invalid JSON — ${error.message}`);
+    }
+    const hermesCliPath = localHermesConfig?.HERMES_CLI_PATH;
+    if (hermesCliPath !== PORTABLE_HERMES_CLI_PATH) {
+      fail(
+        'IOS_PODFILE_LOCK_STALE',
+        'generated hermes-engine podspec stores a checkout-specific HERMES_CLI_PATH'
+      );
+    }
+
+    const lockedHermesChecksum = podfileLock.match(/^ {2}hermes-engine: ([a-f0-9]{40})$/m)?.[1];
+    const localHermesChecksum = crypto
+      .createHash('sha1')
+      .update(localHermesPodspec)
+      .digest('hex');
+    if (!lockedHermesChecksum || lockedHermesChecksum !== localHermesChecksum) {
+      fail(
+        'IOS_PODFILE_LOCK_STALE',
+        `hermes-engine lock checksum differs from the generated local podspec (${lockedHermesChecksum || 'missing'} != ${localHermesChecksum})`
+      );
     }
   }
   for (const [locale, expectedStrings] of Object.entries(LOCALIZED_PURPOSE_STRINGS)) {

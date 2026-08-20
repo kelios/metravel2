@@ -69,9 +69,9 @@ S, модуль — M, изменение контракта, перф, безо
 
 **Чем доказывается вердикт.** В `checked` — только реально выполненное: `git diff origin/main` и
 поимённо прогнанные guard'ы с их фактическим результатом. Красный guard = `changes_requested`
-автоматически. Guard, релевантный diff'у, но не прогнанный, обязан быть назван в `notes` строкой
-`verify pending: <что и почему не прогнано>`; молчаливый `pass` с непрогнанным релевантным guard'ом
-запрещён. Сам вердикт фиксируется командой
+автоматически. Если релевантный обязательный guard нельзя прогнать, остановись без финального
+вердикта, запроси exact owner unblock и после него продолжи тот же review; не записывай это
+финальным `verify pending` handoff. Сам вердикт фиксируется командой
 `node .claude/hooks/review-gate.mjs record --task <id> --verdict …` и только потом
 `metravel_task_update`.
 
@@ -289,16 +289,16 @@ node .claude/hooks/review-gate.mjs record --task <id> --verdict changes_requeste
 - `evidence` — обязателен: цитата `path:line`, прослеженный вызов консьюмера или фактический вывод
   guard'а. Без него запись из findings удаляется, а не понижается до P3.
 - `category` — ровно одна из четырёх осей шага 3; если ось не выбирается, находка не сформулирована.
-- `checked` — список только реально выполненного; непрогнанное сюда не попадает, оно идёт в `notes`
-  строкой `verify pending: <причина>`.
+- `checked` — список только реально выполненного; недоступный обязательный guard требует
+  остановки и exact owner unblock до финального вердикта.
 - `next_step` — что именно обязан доказать `board-reviewer`, на каком target env, и нужна ли
   выкладка на dev; «проверить работу» там не считается формулировкой.
 
-## Паритет mobile web ↔ устройство (обязательное правило)
+## Проверка по platform impact (обязательное правило)
 
-«Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
+Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
+- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

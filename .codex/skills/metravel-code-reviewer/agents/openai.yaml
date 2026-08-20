@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Code Reviewer and Fixer"
   short_description: "Review and repair every code diff before handoff"
-  default_prompt: "Use $metravel-code-reviewer to review the complete task diff, fix confirmed correctness, duplication, complexity, reuse, and efficiency problems, verify desktop-web/mobile-web/Android/iOS and RU/BE/UK/PL/EN impact, then re-review and revalidate."
+  default_prompt: "Use $metravel-code-reviewer to review and fix the complete task diff, verify affected-target and localization impact, require native evidence only for native-specific observable scope, then re-review and revalidate."

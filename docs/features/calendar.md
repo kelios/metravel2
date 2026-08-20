@@ -85,8 +85,10 @@ recoverable state; fake-success запрещён.
   explicit server status. Поэтому «Убрать из планов/Хочу» создаёт explicit
   `visited`, а полное удаление из календаря доступно только для неавторской
   explicit status-записи.
-- Mobile web и Android сохраняют один UX и проверяются парно; platform date input может
-  отличаться технической реализацией.
+- Mobile web, Android и iPhone сохраняют один UX как design-инвариант; platform
+  date input может отличаться технической реализацией. Общий UI принимается в
+  desktop/mobile web, а device evidence требуется только для затронутого
+  Android/iOS date input, storage или lifecycle behavior.
 
 ## Validation
 
@@ -94,7 +96,8 @@ recoverable state; fake-success запрещён.
 - calendar UI: ближайшие `MiniCalendar`, `CalendarScreen`,
   `TravelStatusButton` tests;
 - visible web flow: browser + console/network;
-- native status/date flow: installed Android build и relevant `AND-USB-*`;
+- Android-specific status/date flow: installed Android build и relevant
+  `AND-USB-*`; iOS-specific flow — соответствующий iPhone layer;
 - finished block: `npm run check:fast`.
 
 Fresh runtime evidence требуется для server synchronization; существующий local

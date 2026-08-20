@@ -2,6 +2,29 @@
 
 Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory project-wide development and governance rules.
 
+## Platform-scoped validation and board status
+
+- Common/shared UI, layout and interaction changes are verified in a real
+  browser on desktop web and mobile web. Mobile parity with Android/iPhone is a
+  product/design invariant, not an automatic device gate.
+- Android build/install/device evidence is required only for Android-specific
+  behavior: platform files, native modules, permissions, intents, system Back,
+  WebView/map engine, storage/lifecycle, build/runtime or Android release work.
+- iPhone simulator/physical/TestFlight evidence is required only for
+  iOS-specific behavior or an explicitly assigned iPhone release gate. Choose
+  simulator vs physical device vs TestFlight by the capability being tested.
+- Backend/API/server tasks are accepted through the strongest available
+  backend evidence: source/config inspection, tests already supplied by the
+  backend owner, HTTP/API probes, payload/mutation checks, logs and temporal
+  observation. Client-device evidence is not a backend Done gate; any required
+  platform-specific client integration is accepted in a linked `area=front`
+  task.
+- A failed in-scope check that requires implementation work returns the task to
+  `in_progress`/`todo` with the concrete defect. A validation-only gap does not.
+  A still-running temporal gate, such as a 72-hour observation window, remains
+  in `testing`. Irrelevant or out-of-scope device evidence does not block
+  `done`; if every in-scope check passes and no work remains, close the task.
+
 ## Governance commands
 
 Run canonical governance checks from repo root:
@@ -50,7 +73,7 @@ Behavior:
 - `check:e2e:changed` selects Playwright specs by changed area (travel/search/map/account/messages/quests/places/articles/calendar/trips/roulette/export/i18n-security), always includes a directly changed regression spec, and fans shared E2E infrastructure changes out to the complete deterministic regression set;
 - `check:preflight` extends `check:fast` with changed-file complexity validation and selective Playwright smoke coverage, so larger local changes hit both code-level and browser-level gates before push;
 - `check:preflight` resolves changed files once and reuses the same scope for fast checks, complexity guard, and selective e2e;
-- Cross-session quality gate: `check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, and `release:check` acquire the same atomic `.codex-temp/ops/quality-gate.lock` through `scripts/run-with-quality-gate-lock.js`. A concurrent session exits immediately with code `0`, owner PID/name, and an explicit `SKIPPED` message instead of starting another Jest/Playwright/build pipeline. That session must stop its own validation attempt: do not wait, poll, monitor the owner, rerun after release, or start a narrower bypass check. If the active gate covers the task's required automated checks and tests are the only remaining Done-gate step, record `validation delegated: active gate pid/name`; the task may close without reporting `passed`. The active owner fixes real failures and reruns, and reopens the affected task or records a blocker if a failure cannot be resolved. Otherwise record `validation skipped: active gate pid/name` and keep the task open. Nested commands in `release:check` reuse the parent lock; dead-owner locks are recovered automatically. Jest `globalSetup` applies the same non-waiting contract to direct targeted `npx jest` runs. Do not bypass the wrapper with direct Playwright commands.
+- Cross-session quality gate: `check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, and `release:check` acquire the same atomic `.codex-temp/ops/quality-gate.lock` through `scripts/run-with-quality-gate-lock.js`. A concurrent session exits immediately with code `0`, owner PID/name, and an explicit `SKIPPED` message instead of starting another Jest/Playwright/build pipeline. That session must stop its own launch: do not wait, poll, monitor the owner, rerun after release, or start a narrower bypass check. `validation delegated/skipped: active gate pid/name` is coordination evidence only, never `passed` or a final Testing verdict. If the result is required for acceptance, request it from the active owner and resume the same acceptance pass; do not close from delegation alone and do not park the task in `testing`. Nested commands in `release:check` reuse the parent lock; dead-owner locks are recovered automatically. Jest `globalSetup` applies the same non-waiting contract to direct targeted `npx jest` runs. Do not bypass the wrapper with direct Playwright commands.
 - Production deploys additionally keep `.codex-temp/ops/web-build.lock` for the full `build-prod.sh` lifecycle (export, SEO post-processing, upload, graceful Nginx activation, and public readiness), not only for the Expo child process. The lock lives outside `dist` so Expo cannot delete it while recreating the export directory. This prevents an E2E web server or another export from reusing `dist` while a release is still being prepared.
 - the repository `pre-push` hook invokes `check:preflight` against the current upstream diff (`HEAD` vs upstream), so committed changes are still validated even when the working tree itself is clean;
 - without args, the command scans staged, unstaged, and untracked files from the current git working tree;

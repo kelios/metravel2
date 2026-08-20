@@ -26,7 +26,7 @@
   proposal, delta specs, design и tasks;
 - `docs/DEVELOPMENT.md` — local development workflow;
 - `docs/TESTING.md` — test/governance/quality-gate commands;
-- `docs/MANUAL_TEST_CASES.md` — повторяемая QA/device матрица;
+- `docs/MANUAL_TEST_CASES.md` — повторяемая risk-based QA/device матрица;
 - `docs/DESIGN_SYSTEM.md` — design tokens и palette roles;
 - `docs/RELEASE.md` — release/deploy flow;
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist;
@@ -47,7 +47,7 @@
 - `docs/features/user.md` — profile, collections и author stats;
 - `docs/features/calendar.md` — travel status calendar;
 - `docs/features/offline.md` — offline-first shell, package storage, UX states
-  and paired mobile-web/Android validation contract;
+  и platform-scoped mobile-web/Android validation contract;
 - `docs/features/quests.md` — квесты: список, лендинг города, прохождение,
   правила ответа, офлайн и печать;
 - `docs/features/achievements.md` — достижения: значки, ранги, XP, peer- и
@@ -97,7 +97,9 @@
 - `docs/ANDROID_STORE_LISTING.md` — текущий store listing draft.
 
 Android EAS build/submit запрещены; Android production использует local Gradle и
-production-only Play API, а обычная QA — локальную USB-сборку.
+production-only Play API, а Android-specific QA — локальную USB-сборку. Общий
+UI принимается в desktop/mobile web; iPhone проверяется только для iOS-specific
+scope.
 
 ## External-link governance templates
 

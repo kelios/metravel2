@@ -47,9 +47,16 @@ Avoid documentation drift:
 - Keep the active-platform contract aligned across docs and skills: desktop web,
   mobile web, Android, and iPhone through one Expo/React Native codebase;
   RU/BE/UK/PL/EN through the shared i18n layer; every task records platform and
-  localization impact. Mobile web and Android remain paired controls; iPhone
-  validation uses simulator, physical device, or TestFlight according to risk.
+  localization impact. Common/shared responsive UI is validated on desktop web
+  and mobile web; Android and iPhone QA are required only for their respective
+  platform-specific observable scope. Mobile parity remains an invariant, not
+  an automatic all-device validation gate.
 - Keep Codex/debug artifact rules aligned across `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, and relevant skills: temporary debugging output belongs only in ignored local folders such as `.codex-temp/` or `.codex-debug/`, and stale artifacts should be removed before handoff.
+- Keep acceptance semantics aligned: `testing` is active QA or an exact
+  retest/temporal gate with parameter, threshold, current value and trigger.
+  Pass closes the current task; separate confirmed defects use Problem Memory
+  and a linked task; missing device/access pauses for an unblock request and is
+  never a final pending/parking verdict.
 - Do not print secrets from `.env`, `.env.e2e`, or deployment configs.
 - Read Markdown as UTF-8; if PowerShell displays Cyrillic as mojibake, reread with `Get-Content -Encoding UTF8` before assuming the file is corrupt.
 

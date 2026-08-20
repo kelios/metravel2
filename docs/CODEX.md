@@ -22,11 +22,14 @@ Backend boundary: в этом frontend workspace Codex не реализует b
 - `Localization impact: RU/BE/UK/PL/EN | selected locales | none`.
 
 Проект — единое Expo/React Native приложение с активными поверхностями desktop
-web, mobile web, Android и iPhone. Shared-правка требует анализа всех четырёх, а новый
-app-owned UI text — общего i18n-контракта для RU/BE/UK/PL/EN. Mobile web и
-Android остаются обязательным paired control; active iPhone добавляет тот же
-flow/state/locale для iOS/shared scope. Simulator покрывает basic UI, физический
-iPhone — device capabilities, exact TestFlight build — App Store acceptance.
+web, mobile web, Android и iPhone. Shared-правка требует анализа влияния на все
+четыре поверхности, но общий файл сам по себе не создаёт device gate. Common/shared
+responsive UI проверяется на desktop web и mobile web; Android device нужен только
+для Android-specific наблюдаемого поведения, конфигурации или runtime, а iPhone —
+только для iOS-specific scope. Mobile UX parity остаётся архитектурным
+инвариантом. Новый app-owned UI text следует общему i18n-контракту
+RU/BE/UK/PL/EN. Simulator покрывает basic UI, физический iPhone — device
+capabilities, exact TestFlight build — App Store acceptance.
 iPadOS в первый release не входит. Если ось не затронута, укажи `none`; не оставляй её непроверенной. Канонические детали живут
 в `docs/RULES.md`, `docs/DEVELOPMENT.md#localization` и `i18n/config.ts`.
 
@@ -83,7 +86,7 @@ iPadOS в первый release не входит. Если ось не затр�
   при повторном симптоме; он сверяет `docs/PROBLEM_MEMORY.md` и все статусы board,
   затем выбирает `reuse`, `reopen`, `create-linked` или `create-new`.
 - `$metravel-ticket-board`: используй как оператора общего MCP task board для list/create/update/sync задач и спринтов; он не пишет feature code.
-- `$metravel-sprint-reviewer`: используй для приёмки тикетов активного спринта на MCP task board: проверить Task Contract/Done gate реальными тестами/browser/API evidence и двигать только подтвержденное в `done`. Тикеты `area=back` в приёмку не берутся: они отфильтровываются из очереди, в отчёте остаётся строка «пропущено N тикетов `area=back`» — см. `docs/TASK_BOARD_MCP.md` → «Правило: `area=back` не проверяется без прямого запроса».
+- `$metravel-sprint-reviewer`: используй для приёмки тикетов активного спринта на MCP task board: проверить Task Contract/Done gate доступными обязательными in-scope тестами/browser/API evidence и двигать завершённое с зелёными проверками в `done`; irrelevant/out-of-scope evidence не блокирует. Тикеты `area=back` в приёмку не берутся без прямого запроса: они отфильтровываются из очереди, в отчёте остаётся строка «пропущено N тикетов `area=back`» — см. `docs/TASK_BOARD_MCP.md` → «Правило: `area=back` не проверяется без прямого запроса».
 - `$metravel-backend-diagnostician`: используй для read-only диагностики backend/API/5xx/contract mismatch, сверки backend status с бордом и оформления back-задач без правки backend-кода. Запускай только по прямому запросу пользователя именно про бэкенд; при общей приёмке борда бэкенд-очередь пропускается.
 - `$metravel-article-editor-agent`: используй для article и travel-guide API, photo-folder drafts, media, author/publish verification и безопасной работы с токеном из `.secrets`; любые творческие правки текста статьи сначала подтверждай отдельным вопросом.
 - `$metravel-codex-orchestrator`: используй как верхний self-check для сложных или многошаговых задач: triage, минимальный набор skills, role prompts, validation plan, handoff и final self-check по правилам проекта.
@@ -102,10 +105,11 @@ iPadOS в первый release не входит. Если ось не затр�
 - `$metravel-ios-release-operator`: signed build, TestFlight/App Store Connect,
   App Review и storefront operations; каждый mutating stage требует отдельной
   точной команды пользователя.
-- `$metravel-mobile-tester`: используй для парной read-only QA мобильных сценариев
-  на mobile web и Android: responsive layout, touch targets, navigation, USB
-  Android local-build smoke, Maestro flows, screenshots/logs/evidence и retest;
-  изменение одной поверхности всегда проверяется на обеих.
+- `$metravel-mobile-tester`: используй для read-only QA mobile web и
+  Android-specific сценариев: responsive layout, touch targets, navigation, USB
+  Android local-build smoke, Maestro flows, screenshots/logs/evidence и retest.
+  Common/shared responsive UI закрывается desktop web + mobile web; Android
+  device добавляется только при Android-specific behavior/config/runtime.
 - `$metravel-play-campaign-tester`: используй для настроенной Google Play reciprocity campaign: ежедневный USB-device pass, community assignments, app updates, screenshots/crash evidence и общий campaign log; не выполняй покупки, отзывы, удаления, смену аккаунта или переписку без отдельного разрешения.
 - `$metravel-business-analyst`: используй для превращения продуктовой идеи в feature brief, user stories, acceptance criteria, non-goals, metrics и risks.
 - `$metravel-system-architect`: используй для technical design, review diff, risk mapping, validation plan и безопасного разбиения работ.
@@ -139,7 +143,7 @@ iPadOS в первый release не входит. Если ось не затр�
 | Статьи и article media | `$metravel-article-editor-agent` | Добавь orchestrator для bulk/high-risk правок, publish/unpublish серий или связанных SEO/API/UI проверок. |
 | Новый квест или полная переработка quest content | `$metravel-quest-writer`; после отдельного подтверждения творческого текста добавь `$metravel-quest-geo-verifier`, а `$metravel-quest-expert` только для data/migration/code scope | Добавь orchestrator для нескольких городов, production publication или связанного media/code workflow. |
 | Конкретное прохождение или повторные неверные ответы | `$metravel-quest-playthrough-reviewer`; подтверждённую правку контента передай `$metravel-quest-editor` | `$metravel-quest-expert` нужен только при дефекте checker/UI-кода, `$metravel-backend-diagnostician` — при разрыве telemetry/API-контракта. |
-| Mobile web/Android | `$metravel-mobile-tester` для парной read-only QA, `$metravel-android-developer` для platform fixes; `$metravel-play-campaign-tester` только для reciprocity campaign | `$metravel-agent-workflow` для reproduce -> fix -> retest -> review или web + Android scope. Переносимая build-only сборка — `$metravel-android-portable-builder`; store actions — только explicit request через `$metravel-google-play-operator`/DevOps. |
+| Mobile web/Android | `$metravel-mobile-tester` для mobile-web QA и Android-specific device QA, `$metravel-android-developer` для platform fixes; `$metravel-play-campaign-tester` только для reciprocity campaign | Android device gate нужен только для Android-specific behavior/config/runtime. Common/shared responsive UI закрывается desktop web + mobile web. Переносимая build-only сборка — `$metravel-android-portable-builder`; store actions — только explicit request через `$metravel-google-play-operator`/DevOps. |
 | iPhone/iOS | `$metravel-ios-analyst` для scope/App Review requirements, `$metravel-ios-architect` для design, `$metravel-ios-designer` для HIG/parity/store-ассетов, `$metravel-ios-developer` для implementation, `$metravel-ios-reviewer` для repair review, `$metravel-ios-tester` для simulator/device/TestFlight QA | Signed build и любые App Store mutations — только отдельный explicit gate через `$metravel-ios-release-operator`; iPad не включать в v1. |
 | App Store release | `$metravel-ios-release-operator` + `$metravel-release-checks`; принять только exact TestFlight candidate после physical-iPhone QA | Signed build, upload, App Review submit и storefront release — четыре независимых authorization gates; один не разрешает следующий. |
 | Google Play release | build-only на любом workstation — `$metravel-android-portable-builder`; submit/track — `$metravel-google-play-operator` + `$metravel-release-checks` | Build/submit/promotion требуют явного exact target; `production` не выводится из общего слова «релиз». |
@@ -191,7 +195,7 @@ Claude slash-команды переносятся как skill-routes, а не 
 | --- | --- |
 | `/auto-dev`, `/bugfix` | `$metravel-codex-orchestrator`/`$metravel-agent-workflow` + domain skill + `$metravel-feature-builder` + QA/review |
 | `/changed-summary` | обычный read-only `git status`/`git diff` summary или `$metravel-code-reviewer` только в явно заданном read-only режиме |
-| `/check-fast`, `/guard-all`, `/preflight` | `$metravel-test-runner` / `$metravel-release-checks`; запускать repository scripts через quality-gate lock, а при `SKIPPED` из-за живого владельца завершать собственный запуск без ожидания/ретрая и выбирать `validation delegated` или `validation skipped` по scope и оставшемуся Done gate |
+| `/check-fast`, `/guard-all`, `/preflight` | `$metravel-test-runner` / `$metravel-release-checks`; запускать repository scripts через quality-gate lock, а при `SKIPPED` из-за живого владельца не дублировать запуск: зафиксировать owner, запросить результат/разблокировку и продолжить приёмку; `validation delegated/skipped` не являются pass или причиной парковки в `testing` |
 | `/growth-review` | `$metravel-growth-analyst` |
 | `/seo-daily` | `$metravel-seo-index-operator` |
 | `/split-component` | `$metravel-refactor-surgeon` |
@@ -216,11 +220,11 @@ Claude slash-команды переносятся как skill-routes, а не 
 | Domain-specific feature work | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `$metravel-domain-router`, профильный feature-doc при наличии | выбрать domain owner map для travel/map/profile/achievements/quests/PDF/new pages; затем подключить доменного субагента (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и feature/ui/test/refactor skills по фактическому scope |
 | Hooks / logic extraction | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc, ближайшие существующие hooks | выносить focused hook без лишней абстракции, сохранять client/server state boundaries, не добавлять новые `any` |
 | Component split / file complexity | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, `$metravel-refactor-surgeon`, ближайшие tests | behavior-preserving extraction, explicit props, no business-logic rewrite, targeted checks + browser evidence for visible UI |
-| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract`, `$metravel-backend-diagnostician` | backend только analysis-only: безопасно воспроизведи/сверь контракт, но не редактируй и не commit/push/pull/checkout/reset backend repo локально или на сервере; перед любой разрешённой server write классифицируй пути через `git ls-files`, tracked path не меняй; dirty production checkout означает evidence + `area=back`/ops task и stop без cleanup/deploy, кроме точного non-mutating frontend-deploy исключения для `deploy/prod/nginx/ssl/`, `dump.sql` и permission warning `deploy/prod/postgis_1/data/` из `docs/RULES.md`; новые FE/BE/backend задачи создавай на общем MCP task board через `$metravel-ticket-board` (`metravel_task_create`); заполняй `area=front/back`, active sprint, Task Contract, dependencies/blockers и validation/Done gate; `blocked_by` используй только когда hard dependency не даёт начать/продолжить реализацию, а ожидание backend/deploy/runtime проверки веди в `testing`; при `HTTP 401` сначала обнови staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md`; локальные `tasks/*.md` используй только как временный fallback после неуспешного token refresh с последующим sync/import |
-| Task board FE/BE contract | `docs/PROBLEM_MEMORY.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-problem-memory`, `$metravel-ticket-board`, `$metravel-task-contract`, профильный feature-doc при наличии | до create/reopen выдать history verdict и не создавать дубль; каждая FE/BE задача на борде должна иметь `Task Contract`: scope, user-visible result, data/API contract, platform/localization impact, dependencies, fallback/mock policy, validation и Done gate; recurring problem получает `Recurrence Log`; без runtime evidence не двигать в `done`, но готовую реализацию держать в `review`/`testing`, не в `blocked_by` |
-| Приёмка спринта / закрытие тикетов | `AGENTS.md`, `docs/RULES.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-sprint-reviewer`, `$metravel-task-contract` | только board acceptance; проход по `review`/`testing` тикетам активного спринта; без Task Contract и runtime evidence не двигать в `done`; при нехватке evidence оставить в `review`/`testing`, при требуемом code fix вернуть в `in_progress`; `blocked_by` допустим только для новой hard dependency, реально остановившей работу |
+| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract`, `$metravel-backend-diagnostician` | backend только analysis-only: безопасно воспроизведи/сверь контракт, но не редактируй и не commit/push/pull/checkout/reset backend repo локально или на сервере; перед любой разрешённой server write классифицируй пути через `git ls-files`, tracked path не меняй; dirty production checkout означает evidence + `area=back`/ops task и stop без cleanup/deploy, кроме точного non-mutating frontend-deploy исключения для `deploy/prod/nginx/ssl/`, `dump.sql` и permission warning `deploy/prod/postgis_1/data/` из `docs/RULES.md`; новые FE/BE/backend задачи создавай на общем MCP task board через `$metravel-ticket-board` (`metravel_task_create`); заполняй `area=front/back`, active sprint, Task Contract, dependencies/blockers и validation/Done gate; при прямой backend-приёмке используй только доступные релевантные source/API/production probes, а client/device evidence веди в linked `area=front` task; реальная оставшаяся backend/ops работа → `todo`, временное окно → `testing`, завершённая работа с зелёными available mandatory in-scope probes → `done`; `blocked_by` используй только для hard dependency; при `HTTP 401` сначала обнови staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md`; локальные `tasks/*.md` используй только как временный fallback после неуспешного token refresh с последующим sync/import |
+| Task board FE/BE contract | `docs/PROBLEM_MEMORY.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-problem-memory`, `$metravel-ticket-board`, `$metravel-task-contract`, профильный feature-doc при наличии | до create/reopen выдать history verdict и не создавать дубль; каждая FE/BE задача на борде должна иметь `Task Contract`; `testing` = активная QA или точный retest/temporal gate с параметром, порогом, текущим значением и trigger; pass → `done`, незавершённая собственная работа → `todo`/`in_progress`, отдельный дефект → новая/reused связанная карточка; отсутствие доступа требует unblock-запроса, а не parking |
+| Приёмка спринта / закрытие тикетов | `AGENTS.md`, `docs/RULES.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-sprint-reviewer`, `$metravel-task-contract` | только board acceptance; проход по `review`/`testing` тикетам активного спринта; завершить доступные обязательные in-scope проверки и принять решение в том же проходе; `testing` оставить только ради exact retest/temporal gate; pass → `done`; отдельный подтверждённый дефект → Problem Memory + новая/reused связанная карточка; missing device/access → запросить разблокировку и продолжить, не сдавать pending-verdict |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
-| Mobile parity / map-place point cards | `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/features/map.md`, `docs/features/places.md`, `docs/features/travel.md`, `$metravel-map-expert`, `$metravel-travel-expert`, `$metravel-ui-guardrails`, `$metravel-mobile-tester`, `$metravel-ios-tester` для проверки | mobile web, Android и iPhone сохраняют один visual/interaction contract; Android использует local USB build, iPhone — simulator/physical layer по риску; map/place/travel-point карточки используют общий fullscreen point/place template; card tap только фокусит marker, marker tap открывает popup |
+| Mobile parity / map-place point cards | `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/features/map.md`, `docs/features/places.md`, `docs/features/travel.md`, `$metravel-map-expert`, `$metravel-travel-expert`, `$metravel-ui-guardrails`, platform tester только при specific scope | mobile web, Android и iPhone сохраняют один visual/interaction contract как архитектурный инвариант; common/shared responsive UI проверяется desktop web + mobile web, Android USB/iPhone layer добавляются только при соответствующем platform-specific behavior/config/runtime; map/place/travel-point карточки используют общий fullscreen point/place template; card tap только фокусит marker, marker tap открывает popup |
 | Browser review / visible regression fix | всё из UI-контекста + `$metravel-browser-reviewer` | diff review + browser snapshot/screenshot/console/network; исправить real issues и reverify |
 | External links | `docs/RULES.md`, `docs/TESTING.md`, `utils/externalLinks.ts` | никаких direct `window.open(...)` и `Linking.openURL(...)` вне chokepoint |
 | Article editing / generated article images | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/DEVELOPMENT.md`, `$metravel-article-editor-agent` | токен только из `.secrets`/env без вывода значения; backup перед write; самостоятельная работа только с images/media; творческий текст статьи/квеста - только после отдельного confirmation question; не использовать интернет-картинки; generated images только как фотореалистичные raster-файлы через `imagegen`/licensed-local source; никаких SVG/Playwright/схематичных placeholder-картинок; verify через API и страницу |
@@ -233,14 +237,14 @@ Claude slash-команды переносятся как skill-routes, а не 
 | Repo-wide quality fix | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/DEVELOPMENT.md`, `docs/RELEASE.md` | запустить lint + Jest + Playwright, исправить реальные падения, повторить проверки и явно отметить только несвязанные блокеры |
 | Test writing | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, профильный feature-doc, ближайшие существующие тесты | писать тест на ближайшем подходящем уровне, фиксировать реальный контракт, избегать flaky assertions |
 | Browser / E2E | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `.env.e2e` при необходимости, профильный feature-doc | Playwright/browser flow, secret hygiene, screenshot/trace evidence, console/runtime checks |
-| Android/native development | `AGENTS.md`, `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/DEVELOPMENT.md`, `docs/MANUAL_TEST_CASES.md`, профильный feature-doc | web-first правило: не ломать production web; platform files вместо больших условий; native governance; перед `verify pending` проверить `adb devices -l` и использовать подключенный Android со статусом `device` |
-| iPhone/iOS development | `AGENTS.md`, `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/DEVELOPMENT.md`, `docs/MANUAL_TEST_CASES.md`, active iOS OpenSpec, `$metravel-ios-architect`, `$metravel-ios-developer` | iPhone-only v1; resolved Expo/Xcode identity; platform files; simulator basic pass; physical iPhone for capabilities; shared web/Android controls; release mutations excluded |
+| Android/native development | `AGENTS.md`, `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/DEVELOPMENT.md`, `docs/MANUAL_TEST_CASES.md`, профильный feature-doc | web-first правило: не ломать production web; platform files вместо больших условий; native governance; проверить `adb devices -l` и использовать подключенный Android со статусом `device`; если нужен unlock/connect, запросить его и продолжить, не завершать handoff ожиданием |
+| iPhone/iOS development | `AGENTS.md`, `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/DEVELOPMENT.md`, `docs/MANUAL_TEST_CASES.md`, active iOS OpenSpec, `$metravel-ios-architect`, `$metravel-ios-developer` | iPhone-only v1; resolved Expo/Xcode identity; platform files; simulator basic pass; physical iPhone for capabilities; web/Android device controls только если они отдельно затронуты; release mutations excluded |
 | iOS release/TestFlight/App Store | `AGENTS.md`, `docs/RULES.md`, `docs/RELEASE.md`, `docs/WORKFLOW_OPERATIONS.md`, `docs/IOS_OWNER_GUIDE.md`, active iOS OpenSpec, `$metravel-ios-release-operator`, `$metravel-ios-tester` | exact source/version/build/signing/privacy; exact TestFlight candidate; separate explicit gates for signed build, upload, App Review submit and storefront release; no auto-submit |
-| Mobile QA | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/MANUAL_TEST_CASES.md`, профильный feature-doc | read-only mobile web/native checks, `AND-USB-*` для подключенного Android, Maestro где доступен, touch/layout/runtime evidence, no secrets, баги роутить к профильному owner |
+| Mobile QA | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/MANUAL_TEST_CASES.md`, профильный feature-doc | common responsive: desktop web + mobile web; `AND-USB-*` только для Android-specific behavior/config/runtime, iOS layer только для iOS-specific scope; touch/layout/runtime evidence, no secrets, баги роутить к профильному owner |
 | Performance analysis | `docs/RULES.md`, `docs/TESTING.md`, `docs/RELEASE.md`, профильный perf-doc (`docs/TRAVEL_PERFORMANCE_REFACTOR.md` при travel scope) | production incident: тот же live URL до и после deploy, viewport/browser/DPR + auth/cache state, page-wide request/API cardinality, bytes, response codes, media dimensions/variants и negative probe; preview/build не закрывают production Done gate |
 | Growth / funnel analysis | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/CODEX.md`, `docs/GROWTH_PLAN.md`, `$metravel-growth-analyst` | свежие GA4/GSC stats, абсолютные даты, no secrets, факты отдельно от гипотез, instrumentation gaps и handoff к feature/test/ui skills |
 | SEO / indexing operations | `AGENTS.md`, `docs/RULES.md`, `docs/GROWTH_PLAN.md`, `$metravel-seo-index-operator` | GSC/index data только из scripts/API/manual user metrics; не выдумывать цифры; owner URL list отдельно от code/content tasks |
-| Backend/API diagnosis | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-backend-diagnostician` | backend read-only, production GET/HEAD probes only, back-задачи через board с Task Contract/evidence |
+| Backend/API diagnosis | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-backend-diagnostician` | backend read-only, доступные релевантные source/API/production probes, без client/device gate; client evidence — linked `area=front`; back-задачи через board с Task Contract/evidence |
 | Production smoke | `AGENTS.md`, `docs/RULES.md`, `docs/RELEASE.md`, `$metravel-production-smoke` | read-only GET/browser probes по real URL; для perf/media считать API/request fan-out, bytes, oversized/unsized sources и before/after scroll; no deploy/rollback; route confirmed failures to canonical frontend/backend task |
 | Code review | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, `$metravel-code-reviewer`, профильный feature-doc, полный task diff и validation logs | обязательный review-and-fix после code changes: проверять correctness, избыточность, duplication/reuse, efficiency, project contracts и tests; исправлять in-scope findings, re-review'ить весь итоговый diff и rerun'ить validation |
 | SEO / route pages | `docs/DEVELOPMENT.md` SEO-раздел | `buildCanonicalUrl`, `buildOgImageUrl`, `LazyInstantSEO` |
@@ -283,7 +287,7 @@ Validation: <expected checks/evidence>.
 8. Доменный субагент уточняет ограничения и проверки: `$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert` или `$metravel-quest-expert`; конкретное прохождение сначала разбирает `$metravel-quest-playthrough-reviewer`, для нового quest content используй `$metravel-quest-writer`, для подтверждённой правки существующего — `$metravel-quest-editor`, для координат — `$metravel-quest-geo-verifier`.
 9. `$metravel-android-developer` подключай для platform-specific поведения,
    native crashes, Expo modules и platform files; Android QA выполняй через
-   локальную USB-сборку и обязательно сравнивай тот же flow с mobile web.
+   локальную USB-сборку только для Android-specific behavior/config/runtime.
    Для iPhone flow используй `$metravel-ios-architect` →
    `$metravel-ios-developer` → `$metravel-ios-reviewer` →
    `$metravel-ios-tester`; store operations передавай
@@ -308,8 +312,14 @@ Validation: <expected checks/evidence>.
     high-risk design, но не заменяет этот pass. По возможности этот этап
     выполняет отдельный `review-auditor`; после своих fixes он re-review'ит diff
     сам, без рекурсивного запуска ещё одного reviewer.
-21. `$metravel-sprint-reviewer` принимает тикеты активного спринта по Done gate и двигает только evidence-backed задачи в `done`.
-    Неполная проверка остаётся в `review`/`testing`; `blocked_by` используется только когда новая hard dependency не позволяет начать или продолжить работу.
+21. `$metravel-sprint-reviewer` принимает тикеты активного спринта по Done gate:
+    реальная оставшаяся работа ведёт в `todo`/`in_progress`; `testing` остаётся
+    только на время активной QA или exact retest/temporal gate; завершённая
+    проверка с зелёными in-scope checks идёт в `done`, а отдельный подтверждённый
+    дефект — в новую/reused связанную карточку после Problem Memory.
+    Irrelevant/out-of-scope evidence не блокирует;
+    `blocked_by` используется только когда hard dependency не позволяет начать
+    или продолжить работу.
 22. `$metravel-production-smoke` выполняет read-only smoke `metravel.by` после deploy или при аварийной проверке.
 23. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам, когда нужен архитектурный review.
 24. `$metravel-android-portable-builder` выполняет явно запрошенную локальную
@@ -338,17 +348,18 @@ Validation: <expected checks/evidence>.
   task-owned frontend/app/docs files для устранения подтверждённых findings.
 - Codex Orchestrator не подменяет профильные роли; он выбирает маршрут, проверяет правила и держит handoff компактным.
 - В этом frontend workspace ни одна роль не редактирует backend/Django/API/server working tree. Backend blockers фиксируются через read-only diagnosis и `area=back` board tasks.
-- Перед передачей роли на deploy, release/build, Android local/EAS build/install, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`. Для занятого test/quality gate новый агент не ждёт, не poll'ит и не перезапускает проверку: если gate покрывает нужный scope и тесты — единственный оставшийся Done-gate шаг, фиксирует `validation delegated: active gate pid/name` и может завершить задачу; иначе фиксирует `validation skipped: active gate pid/name` и оставляет её открытой. Падения исправляет владелец активного gate. Для остальных операций применяется их обычный blocker/wait contract.
+- Перед передачей роли на deploy, release/build, Android local/EAS build/install, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`. Для занятого test/quality gate новый агент не ждёт, не poll'ит и не запускает дубль: `validation delegated/skipped` фиксирует только owner/scope. Если результат нужен для acceptance, агент останавливает статусное решение, запрашивает результат/разблокировку и после него продолжает тот же проход; parking в `testing` или закрытие без результата запрещены. Падения исправляет владелец активного gate. Для остальных операций применяется их обычный blocker/wait contract.
 - Любая FE/BE задача на общем борде без `Task Contract` считается неготовой к старту и к `done`; ticket-board/оркестратор должны сначала дописать контракт или вернуть задачу в refinement.
 - Любая задача на борде без семи обязательных разделов описания (`Простыми словами` → `В чём проблема` → `Из-за чего возникла` → `Что должно быть сделано` → `Что уже сделано` → `Что блокирует` → `Как протестировать`, по-русски и без терминов в лиде) или с английскими абзацами в описании считается неготовой к `todo` так же, как задача без контракта; ticket-board/оркестратор переписывают описание до старта. Заголовки контракта, имена его полей, пути, команды и статусы борда не переводятся. Правило: `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и человеческим языком».
 - Любая новая задача должна попасть в текущий active sprint; если board API вернул `401`, ticket-board/оркестратор обязан обновить staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md` до создания локального fallback.
 - Project Analyst только анализирует и не меняет файлы, если пользователь отдельно не попросил перейти к docs/code changes.
 - Backend Diagnostician не правит backend/frontend код; он дает диагноз, read-only probes и board follow-up.
-- Mobile Tester по умолчанию не меняет код; он дает парное mobile-web/Android
-  evidence и баг-репорты для `$metravel-android-developer`,
-  `$metravel-feature-builder` или `$metravel-ui-guardrails`. Для Android evidence
-  использует локально собранную и установленную по USB сборку; dev-client/export
-  route допустим только по явному запросу пользователя.
+- Mobile Tester по умолчанию не меняет код; он даёт mobile-web evidence и, когда
+  есть Android-specific behavior/config/runtime, Android device evidence и
+  баг-репорты для `$metravel-android-developer`, `$metravel-feature-builder` или
+  `$metravel-ui-guardrails`. Общий файл сам по себе не создаёт Android gate. Для
+  применимого Android evidence используется локально собранная и установленная
+  по USB сборка; dev-client/export route допустим только по явному запросу пользователя.
 - Android Developer не меняет release/build configs (`app.json`, `eas.json`, `plugins/**`, `scripts/**`) без явного запроса, никогда не запускает Android EAS/cloud build/submit и не заявляет Android-ready без local-build device evidence. Local production release передаётся Google Play Operator.
 - iOS Developer реализует active iPhone scope, но не выполняет signed/store
   operations. iOS Architect по умолчанию read-only; iOS Tester read-only;
@@ -360,14 +371,18 @@ Validation: <expected checks/evidence>.
   `alpha`, `internal`, `beta`, testers и countries не меняет.
 - Programmer не начинает реализацию без bug report, feature brief или явного user request.
 - Refactor Surgeon не меняет бизнес-логику и не делает редизайн; только behavior-preserving extraction.
-- Sprint Reviewer не пишет feature code и не двигает `done` без runtime evidence.
+- Sprint Reviewer не пишет feature code; он двигает `done`, когда работа
+  завершена и доступные обязательные in-scope checks зелёные. Нерелевантное или
+  out-of-scope evidence не удерживает задачу открытой.
 - Production Smoke ничего не деплоит и не мутирует прод; только read-only health evidence.
 - DevOps agent не деплоит `prod` без явного production deploy запроса, не меняет серверные/SSL пути без проверки на целевом host и не пишет самодельные `rsync`/`scp`/SSH deploy-команды в обход утвержденных scripts/wrapper.
 - Article Editor Agent не выводит токены из `.secrets`, не использует интернет-картинки без явного разрешения, самостоятельно меняет только images/media, переспросом подтверждает любые творческие текстовые правки, делает rollback snapshot перед записью и проверяет результат после write.
 - Designer не создает отдельную дизайн-систему: использует `components/ui`, `DESIGN_TOKENS`, Feather icons и существующие feature-компоненты.
 - Каждая роль явно фиксирует platform и localization impact. Programmer/Designer
   не добавляют hardcoded app-owned UI text; Architect/Reviewer/QA не пропускают
-  desktop web/mobile web/Android/iOS и RU/BE/UK/PL/EN impact в design, validation и findings.
+  анализ desktop web/mobile web/Android/iOS и RU/BE/UK/PL/EN impact. Common/shared
+  responsive UI валидируется на desktop web + mobile web; Android/iOS device
+  evidence требуется только для соответствующего platform-specific scope.
 - Orchestrator держит unrelated user changes отдельно и не завершает задачу с известными реальными проблемами в затронутом scope.
 - Для visible web UI обязательны browser preview, screenshot и console check.
 
@@ -413,8 +428,8 @@ Operation gate:
 | Малый законченный блок кода | `npm run check:fast` |
 | Нужно понять scope без запуска | `npm run check:fast:dry` или `npm run check:changed:dry` |
 | Среднее изменение перед PR | `npm run check:preflight` |
-| Изменения в видимом shared UI | relevant targeted checks + desktop browser + mobile-web viewport + screenshots/console + тот же flow на локальной Android USB-сборке и iPhone |
-| Mobile web, Android или iOS/native изменения | один flow/state/locale на affected mobile surfaces; Android local USB; iOS simulator/physical layer по риску; store mutation excluded |
+| Изменения в видимом common/shared responsive UI | relevant targeted checks + desktop browser + mobile-web viewport + screenshots/console; общий файл сам по себе не создаёт device gate |
+| Android- или iOS-specific behavior/config/runtime | targeted checks + Android local USB или iOS simulator/physical layer по риску; проверяется только затронутая native surface, store mutation excluded |
 | Localization / UI copy / locale formatting | `npm run test:i18n` + feature checks; проверка затронутых locales и platform lifecycle |
 | External-link policy | `npm run guard:external-links` или `npm run governance:verify` |
 | Крупное или сквозное изменение | `npm run lint` и `npm run test:run` |
@@ -460,7 +475,7 @@ Operation gate:
 - Tests: `__tests__/` for Jest, `e2e/` for Playwright.
 - Governance scripts: `scripts/`, command details in `docs/TESTING.md`.
 - Feature maps: `docs/features/`.
-- Task board: `docs/TASK_BOARD_MCP.md`; новые задачи создавай на общем MCP task board через `ticket-board` в текущем active sprint только с `area=front` или `area=back`. Android app bugs используют `area=front` + `[AND-...]`, iOS app bugs — `area=front` + `[IOS-...]`; shared mobile tasks называют mobile-web/Android/iPhone validation. Backend/API/server задачи — `area=back`. При `401` обновляй staff token через `.env.e2e`; `tasks/README.md` и `tasks/000-template.md` остаются только fallback/migration форматом.
+- Task board: `docs/TASK_BOARD_MCP.md`; новые задачи создавай на общем MCP task board через `ticket-board` в текущем active sprint только с `area=front` или `area=back`. Android app bugs используют `area=front` + `[AND-...]`, iOS app bugs — `area=front` + `[IOS-...]`; common/shared responsive tasks называют desktop-web и mobile-web validation, а device gate добавляют только для platform-specific scope. Backend/API/server задачи — `area=back`. При `401` обновляй staff token через `.env.e2e`; `tasks/README.md` и `tasks/000-template.md` остаются только fallback/migration форматом.
 
 ## Кодировка документации
 
@@ -475,7 +490,8 @@ Operation gate:
 - Описывай в `description`, когда skill должен срабатывать. Тело `SKILL.md` должно быть коротким и операционным.
 - Для implementation/review/test skills делай обязательным architecture preflight:
   platform impact для desktop web/mobile web/Android/iOS и localization impact
-  для RU/BE/UK/PL/EN; shared mobile flow проверяется на affected mobile surfaces.
+  для RU/BE/UK/PL/EN; common/shared responsive flow проверяется на desktop web и
+  mobile web, а native device layer — только при platform-specific scope.
 - Для prompt specs, asset-level `PROMPT.md` и `agents/openai.yaml` используй `$metravel-prompt-maintainer`; сохраняй точный prompt рядом с ассетом и не считай chat/commit history единственным источником воспроизводимости.
 - После изменений prompt/skill metadata запускай `npm run audit:prompts`.
 - После изменения skill проверяй структуру валидатором `skill-creator`, если он доступен.

@@ -15,9 +15,10 @@
 - Карта работы Codex и skills: `docs/CODEX.md`.
 - Активные продуктовые поверхности — desktop web, mobile web, Android и iPhone
   (iOS). Первый iOS-релиз поддерживает только iPhone; iPadOS остаётся вне scope и
-  не создаёт `verify pending`. Перед любой задачей явно определи platform impact:
+  не блокирует `done`. Перед любой задачей явно определи platform impact:
   `desktop web | mobile web | Android | iOS | shared | none`; `shared` означает
-  все затронутые активные поверхности.
+  общий код или несколько затронутых поверхностей, но сам по себе не создаёт
+  обязательный Android/iPhone device gate.
 - Production UI многоязычен: RU/BE/UK/PL/EN, default/fallback — RU.
   Источник locale contract — `i18n/config.ts`, resource contract —
   `i18n/resources.ts`. Перед любой задачей явно определи localization
@@ -26,9 +27,41 @@
 - В этом workspace AI-агент делает только frontend/app/docs изменения. Backend/Django/API/server (`../metravel-backend`, `area=back`) можно только анализировать read-only, проверять безопасными probes и оформлять/обновлять задачи на борде; backend working tree, миграции, тесты, настройки и server code не редактировать. Запрещены любые изменяющие backend Git-операции локально и на сервере: `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, `clean`.
 - Где лежит backend (не спрашивай у пользователя, checkout уже есть на машине): `../metravel-backend` относительно этого репо — раскладка каталогов зависит от машины (на текущем Mac `~/Sites/metravel2/metravel-backend`, на PhpStorm-раскладке `~/PhpstormProjects/metravel-backend`), поэтому в конфиги и скрипты зашивай относительный путь, а не абсолютный. Это клон приватного репо `sergey-savran/metravel` (именно `metravel`, не `metravel-backend`), default branch `master`. SSH-ключ к GitHub не привязан, поэтому обращаться к remote только по HTTPS (`gh` + osxkeychain, аккаунт `kelios`); допустимы лишь read-only обращения — `git -C ../metravel-backend fetch` и чтение через `git -C ../metravel-backend show origin/master:<path>`, working tree не трогать. Если backend-код требует правки — это `area=back` задача на борде для владельца бэка, а не изменение в этой сессии.
 - Задачи `area=back` в приёмку и проверку по умолчанию НЕ берутся. Тестировать, верифицировать или закрывать бэкенд-тикеты — включая read-only прод-пробы, сверку с `origin/master` и дописывание верификационных заметок в карточку — можно только по прямому запросу пользователя именно про бэкенд («проверь бэкенд-задачи», «что сделал бэкенд», «сверь бэкенд-очередь»). Общая просьба вида «проверь задачи в review и testing», приёмка спринта или батч-проход по борду бэкенд-очередь не включают: она пропускается, а в отчёте указывается только количество пропущенных `area=back` тикетов. Причина — очередь бэка ведёт её владелец, а его фиксы регулярно остаются незапушенными в `origin/master`, поэтому массовая приёмка бэка даёт заведомо отрицательный результат и тратит время впустую.
+- При прямом запросе на проверку `area=back` используй только доступные и
+  релевантные backend/source/API/production probes. Browser/device/client
+  evidence не является Done gate бэкенд-тикета: если оно действительно нужно,
+  оно живёт в отдельной связанной `area=front` задаче. После проверки: реальная
+  оставшаяся backend/ops работа → `todo`; работа завершена, но ждёт выполнимого
+  временного окна или накопления данных → `testing`; backend-работа завершена и
+  все доступные обязательные in-scope проверки зелёные → `done`. Нерелевантная
+  или out-of-scope проверка не удерживает готовую backend-задачу открытой.
+- `testing` — активная приёмочная очередь, а не парковка. После начатого
+  приёмочного прохода задача может остаться там только ради конкретного
+  повторного замера: в evidence обязательны параметр, ожидаемый порог,
+  фактическое текущее значение, точный trigger/earliest recheck и команда или
+  сценарий. Завершённая проверка заканчивается статусным решением в том же
+  проходе: подтверждённый результат → `done`; незавершённая собственная работа
+  тикета → `todo`/`in_progress`; отдельный подтверждённый дефект → сначала
+  `$metravel-problem-memory`, затем новая/reused связанная карточка, а проверенный
+  текущий тикет не паркуется в `testing`.
+- «Не смог проверить», отсутствие доступа, заблокированный экран или не найденное
+  обязательное устройство не являются итоговым evidence и не создают
+  отдельного QA-verdict. Если проверка действительно требует Android/iPhone, сначала
+  проверь подключение; когда нужен unlock/connect/login/доступ владельца,
+  останови приёмку и сразу попроси это конкретное действие, не сдавая задачу и
+  не меняя её статус ради отсутствия доступа. После разблокировки продолжи тот
+  же проход до решения.
 - На production-сервере Git-tracked файлы backend checkout неизменяемы для AI-агента. Перед любой явно разрешённой server-write операцией сначала read-only проверь `git status --short` и каждый repo-relative путь через `git ls-files --error-unmatch -- <repo-relative-path>`; tracked path нельзя патчить, перезаписывать, копировать, удалять, переименовывать или менять ему права. Если checkout уже dirty, ничего не исправляй и не продолжай deploy/pull: зафиксируй paths/diff summary без секретов, создай/обнови `area=back`/ops задачу и передай backend-владельцу. Узкое исключение frontend deploy gate: известные untracked ops/runtime paths `deploy/prod/nginx/ssl/`, `dump.sql` и warning об отсутствии read-доступа к `deploy/prod/postgis_1/data/` не считаются dirty-блокером сами по себе; их содержимое нельзя читать, менять, копировать, удалять или chmod'ить. Любая другая status entry/warning по-прежнему означает stop. Разрешённые project-owned frontend deploy scripts могут менять только документированные untracked runtime/static targets вроде `static/dist`.
-- Если frontend-задача требует ещё не существующего backend-контракта или исправления на сервере и поэтому реализацию нельзя начать/продолжить, не маскируй это mock-фолбэком: создай/обнови `area=back` задачу и используй `blocked_by` с реальной hard dependency. Если frontend уже реализован и ждёт backend/deploy/production/API/browser/device validation, держи его в `review` или `testing`, а не в `blocked_by`.
-- Колонка `blocked_by` означает только невозможность начать или продолжить работу из-за конкретной незакрытой внешней зависимости. Незавершённый Done gate, ожидание review/QA/production-проверки или неуспешная проверка сами по себе не являются блокировкой: готовый код идёт в `review`/`testing`, а найденный дефект возвращает задачу в `in_progress`.
+- Если frontend-задача требует ещё не существующего backend-контракта или исправления на сервере и поэтому реализацию нельзя начать/продолжить, не маскируй это mock-фолбэком: создай/обнови `area=back` задачу и используй `blocked_by` с реальной hard dependency. Если frontend уже реализован, проведи backend/deploy/production/API/browser/device validation в текущем приёмочном проходе; при недоступном обязательном доступе запроси разблокировку и продолжи. В `testing` оставляй только exact retest/temporal gate, не используй `blocked_by` как QA-колонку.
+- `todo` означает, что осталась реализация/refinement/ops работа; `in_progress` —
+  что такая работа сейчас идёт; `testing` — реализация готова, проверка прямо
+  выполняется либо назначен точный повторный in-scope замер/временное окно;
+  `done` — работа завершена и все доступные
+  обязательные in-scope проверки зелёные. Нерелевантное или out-of-scope
+  evidence не блокирует `done`. Колонка `blocked_by` означает только
+  невозможность начать или продолжить работу из-за конкретной незакрытой hard
+  dependency; ожидание review/QA/production-проверки само по себе не является
+  блокировкой.
 - Не меняй разрешённые untracked production runtime/SSL-пути без явной проверки существования на сервере; Git-tracked конфиги на сервере не меняй вообще.
 - Не меняй без явного запроса `eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml` и `entry.js`; если пользователь прямо просит изменить один из этих путей, это и есть необходимое разрешение в scope задачи.
 - Конфигурация nginx — зона бэкенда. Источник правды один: `deploy/prod/nginx/nginx.conf` в `../metravel-backend` (`master`). Файл `nginx/nginx.conf` в этом репозитории — read-only локальная копия: её не читает и не деплоит ни один скрипт, правка в ней не меняет прод ни на байт. Любое изменение nginx (CSP, security-заголовки, кэш, редиректы, `location`, rate-limit, логи) оформляется задачей `area=back` с точным диффом директив — что добавить, в какую директиву, зачем, как проверить. Даже прямое разрешение пользователя тронуть `nginx/` не делает правку копии выполненной задачей. Подробности и порядок проверки прода — `docs/RULES.md` → «Nginx config ownership (mandatory)».
@@ -131,6 +164,10 @@
 12. Тестирование выполняет AI-агент самостоятельно: человек ничего не тестирует за агента.
     - Используй доступные средства проверки: браузер/Playwright, Android-устройство с локально установленной сборкой, unit/integration/e2e тесты, production web build/smoke по scope задачи.
     - Сам находи надежный маршрут проверки для конкретной задачи; просьба к пользователю проверить вручную не считается validation.
+    - Если обязательный доступ или platform-specific устройство требует
+      unlock/connect/login со стороны владельца, попроси ровно это действие и
+      продолжи проверку после ответа. Не оформляй отсутствие доступа как
+      законченный pending/`testing` handoff.
 
 ### 3.1 Операционные протоколы (по требованию)
 
@@ -147,25 +184,36 @@
 
 Действует всегда, без чтения файла: чужой активный quality-gate (`SKIPPED` с
 кодом `0`) не ждать и не повторять; deploy/build того же target вторым
-экземпляром не запускать; секреты из `.env.e2e` не выводить.
+экземпляром не запускать; секреты из `.env.e2e` не выводить. `SKIPPED` — только
+координационный результат, не причина завершить приёмку или оставить задачу в
+`testing`: если итог активного gate нужен для решения, останови текущий проход и
+запроси у его владельца/пользователя разблокировку или результат, затем продолжи.
 
 ### 3.3 Active platform validation and mobile parity
 
-- Любое видимое shared UI/layout/interaction изменение проверяй на desktop web,
-  mobile web, локально собранном Android-приложении на USB-устройстве и iPhone.
-- Mobile web, Android и iPhone — один связанный mobile UX. Если shared/mobile
-  задача затрагивает одну из этих поверхностей, проверь один и тот же сценарий,
-  состояние и locale на всех затронутых поверхностях.
+- Любое видимое common/shared responsive UI/layout/interaction изменение
+  проверяй на desktop web и mobile web. Общий файл или общий компонент сам по
+  себе не создаёт Android/iPhone device gate.
+- Android device validation обязательна только при Android-specific наблюдаемом
+  поведении, конфигурации или runtime; iPhone validation — только при
+  iOS-specific поведении, конфигурации или runtime. Тогда проверяй нужный
+  platform-specific сценарий на соответствующем устройстве/слое.
+- Mobile web, Android и iPhone реализуют один mobile UX: parity остаётся
+  архитектурным инвариантом для иерархии, порядка блоков, ключевых размеров,
+  действий и touch semantics, но не означает автоматический прогон common/shared
+  задачи на всех устройствах.
 - Simulator подтверждает compilation/basic UI. Физический iPhone обязателен для
   camera/photo/HEIC, Keychain/biometrics, APNs, Universal Links, sharing,
   permissions и lifecycle; exact processed TestFlight build — acceptance
-  boundary App Store release. Неполное обязательное evidence даёт точный
-  `verify pending`/`testing`, а не ложный pass.
+  boundary App Store release. Если обязательный слой временно недоступен,
+  приёмка прерывается запросом на конкретное unlock/connect/authorization и
+  продолжается после ответа; неполное evidence нельзя выдавать за pass или
+  финальный статус.
 - Mobile web, Android и iPhone должны быть визуально и поведенчески идентичны по
   иерархии, порядку блоков, ключевым размерам, действиям и touch semantics.
   Допустимы только технические отличия движка, системных permissions/insets и
   OS API; они не должны создавать другой UX.
-- Local Xcode/simulator/device QA разрешена для назначенной iOS/shared задачи.
+- Local Xcode/simulator/device QA разрешена для назначенной iOS-specific задачи.
   Signed distribution build, App Store Connect/TestFlight upload, App Review
   submission и storefront release — отдельные mutating operations; каждая
   требует точной текущей команды пользователя и никогда не запускается автоматически.
@@ -288,8 +336,9 @@
   `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и человеческим языком».
 - На борде используются только рабочие области `front` и `back`: Android/native
   баги приложения заводи как `area=front` с префиксом `[AND-...]`, iOS-баги —
-  как `area=front` с префиксом `[IOS-...]`; shared mobile tasks содержат
-  mobile-web/Android/iPhone validation. Backend/API/server задачи — `area=back`.
+  как `area=front` с префиксом `[IOS-...]`; shared/common responsive tasks
+  содержат desktop-web и mobile-web validation, а device checks добавляются
+  только для Android/iOS-specific scope. Backend/API/server задачи — `area=back`.
 - Не создавай новые локальные `tasks/*.md` как обычный workflow. Локальные task-файлы допустимы только как временный fallback/migration draft при недоступном борде, после чего задачу нужно перенести на борд и убрать локальный черновик.
 - Все новые задачи, включая Android QA баги, должны быть созданы или обновлены на борде в текущем активном спринте до handoff; локальный fallback не считается завершением задачи, если board token можно обновить через `.env.e2e`.
 
@@ -300,14 +349,16 @@
   повторный review и validation.
 - Запущены проверки по масштабу задачи.
 - Не нарушены правила external links и governance.
-- UI-поведение не сломано на desktop web/mobile web/Android/iPhone.
-- Platform impact проверен для desktop web/mobile web/Android/iOS; shared mobile
-  scope подтверждён одним flow/state/locale, а непроверенный Android/iPhone
-  device scope явно помечен `verify pending`.
+- Common/shared responsive UI проверен на desktop web и mobile web; Android/iOS
+  device evidence добавлено только при platform-specific поведении,
+  конфигурации или runtime.
+- Platform impact явно определён; shared-файл без platform-specific поведения не
+  создаёт Android/iPhone gate, а реальный Android/iOS-specific scope проверен на
+  нужном устройстве/слое; если нужен unlock/connect, он запрошен до handoff.
 - Localization impact явно указан; для затронутого UI нет новых
   hardcoded strings, а `npm run test:i18n` прошёл.
 - Документация обновлена только при необходимости и в правильном месте.
 - Отчёт собран по `docs/AGENT_ANALYSIS_PROTOCOL.md` §6: механизм с `path:line`
   (или явное «механизм не установлен»), что сделано и что сознательно не
-  тронуто, доказательства командой/пробой и `verify pending` с точной причиной
-  для непокрытого.
+  тронуто, доказательства командой/пробой и точный следующий повторный замер
+  только для обоснованного temporal/retest gate.

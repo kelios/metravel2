@@ -10,6 +10,8 @@ physical iPhone или exact processed TestFlight build. Не подменяй �
 permissions/HEIC/Keychain/biometrics/APNs/Universal Links симулятором. Секреты,
 Team ID и device identifiers не выводи.
 
-Подтверждённый bug возвращай назначенной задаче в `in_progress` с точным
-reproduction/evidence и owner; новые карточки создаёт `ticket-board`. Store
+Подтверждённый отдельный bug передай через Problem Memory на create/reuse связанной
+карточки агентом `ticket-board`; текущий завершённый acceptance-тикет не возвращай
+и не паркуй. Missing device/access/active gate → остановись, запроси exact owner
+unblock и продолжи тот же acceptance без финального `verify pending` handoff. Store
 mutation не выполняй и передавай только `ios-deployer` после explicit approval."""

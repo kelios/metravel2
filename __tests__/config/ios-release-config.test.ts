@@ -1,4 +1,5 @@
 import { execFileSync } from 'child_process';
+import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -446,6 +447,83 @@ describe('iOS release configuration', () => {
       expect.arrayContaining([expect.objectContaining({
         code: 'IOS_PODFILE_LOCK_STALE',
         detail: expect.stringContaining('locked but absent from node_modules: '),
+      })])
+    );
+  });
+
+  it('fails closed when the Hermes podspec embeds one checkout path', () => {
+    const testRoot = fixture({});
+    const podspecPath = path.join(
+      testRoot,
+      'node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec'
+    );
+    fs.mkdirSync(path.dirname(podspecPath), { recursive: true });
+    fs.writeFileSync(
+      podspecPath,
+      `spec.user_target_xcconfig = {
+        'HERMES_CLI_PATH' => "#{hermes_compiler_path}/hermesc/osx-bin/hermesc"
+      }`
+    );
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_PODFILE_LOCK_STALE',
+        detail: 'hermes-engine podspec must keep HERMES_CLI_PATH relative to PODS_ROOT',
+      })])
+    );
+  });
+
+  it.each([
+    ['an absolute path', '/tmp/one-checkout/node_modules/hermes-compiler/hermesc'],
+    [
+      'another checkout behind PODS_ROOT',
+      '$(PODS_ROOT)/../../../tmp/one-checkout/node_modules/hermes-compiler/hermesc',
+    ],
+  ])('fails closed when the generated Hermes podspec keeps %s', (_label, hermesCliPath) => {
+    const localPodspec = `${JSON.stringify({
+      user_target_xcconfig: {
+        HERMES_CLI_PATH: hermesCliPath,
+      },
+    }, null, 2)}\n`;
+    const checksum = crypto.createHash('sha1').update(localPodspec).digest('hex');
+    const testRoot = fixture({
+      'ios/Podfile.lock': value => value.replace(
+        /^ {2}hermes-engine: [a-f0-9]{40}$/m,
+        `  hermes-engine: ${checksum}`
+      ),
+    });
+    const localPodspecPath = path.join(
+      testRoot,
+      'ios/Pods/Local Podspecs/hermes-engine.podspec.json'
+    );
+    fs.mkdirSync(path.dirname(localPodspecPath), { recursive: true });
+    fs.writeFileSync(localPodspecPath, localPodspec);
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_PODFILE_LOCK_STALE',
+        detail: 'generated hermes-engine podspec stores a checkout-specific HERMES_CLI_PATH',
+      })])
+    );
+  });
+
+  it('fails closed when the Hermes lock checksum differs from the generated podspec', () => {
+    const testRoot = fixture({});
+    const localPodspecPath = path.join(
+      testRoot,
+      'ios/Pods/Local Podspecs/hermes-engine.podspec.json'
+    );
+    fs.mkdirSync(path.dirname(localPodspecPath), { recursive: true });
+    fs.writeFileSync(
+      localPodspecPath,
+      `${JSON.stringify({
+        user_target_xcconfig: {
+          HERMES_CLI_PATH: '$(PODS_ROOT)/../node_modules/hermes-compiler/hermesc',
+        },
+      }, null, 2)}\n`
+    );
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_PODFILE_LOCK_STALE',
+        detail: expect.stringContaining('hermes-engine lock checksum differs'),
       })])
     );
   });

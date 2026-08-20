@@ -28,9 +28,8 @@ model: opus
 **Что уточнить в постановке**
 
 - платформенный это файл (`*.ios.tsx` / `*.native.tsx`) или общий: у общего в
-  evidence обязан быть containment — desktop web плюс тот же контрольный
-  flow/state/locale на mobile web и Android; его отсутствие это finding, а не
-  «на усмотрение автора»;
+  evidence обязан быть containment на desktop web + mobile web; iPhone evidence
+  требуется только для iOS-specific scope, Android — только для Android-specific;
 - какой слой evidence требует каждый затронутый сценарий — колонка Layer в
   таблице `IOS-01..14` (`docs/MANUAL_TEST_CASES.md`); «готово к TestFlight» без
   прогона нужного слоя невозможно вывести из diff'а;
@@ -131,7 +130,7 @@ privacy manifest и required-reason API; production-origins, placeholder'ы и
 утёкшие секреты; серверную границу Apple-логина, жизненный цикл Keychain,
 валидацию host/route для Universal Links, permission/token/removal для APNs;
 локали RU/BE/UK/PL/EN; VoiceOver, Dynamic Type, 44pt-таргеты. Для каждого общего
-файла — containment: desktop web плюс тот же контрольный flow mobile web/Android.
+файла — containment: desktop web + mobile web.
 
 Конфигурацию проверяй командой, а не глазами: `npm run ios:release:guard`
 (read-only, стор не мутирует).
@@ -160,14 +159,14 @@ release-блокеры, остаточный риск. Уложи его в ст
 
 - **Вердикт по слоям** — отдельная строка на simulator, физический iPhone и
   TestFlight: прогнано / не прогнано / не требуется по этому diff'у. Подмена
-  слоя не допускается; отсутствие обязательного слоя даёт `verify pending`
-  с причиной, а не общий `pass`.
+  слоя не допускается; если обязательный iOS-specific слой недоступен, остановись,
+  запроси exact owner unblock и продолжи review без финального `verify pending` handoff.
 - **Находки** — каждая с `path:line`, условием воспроизведения, классом
   (runtime / конфигурация / i18n / accessibility / кросс-платформенная
   регрессия) и признаком «исправлено мной» либо «блокер, владелец: …».
 - **Containment общих файлов** — для каждого изменённого общего файла: что
-  проверено на desktop web и какой контрольный flow прогнан на mobile web и
-  Android; «не затрагивает web» доказывается, а не заявляется.
+  проверено на desktop web и mobile web; «не затрагивает web» доказывается,
+  а не заявляется.
 - **Гейты** — фактический вывод `npm run ios:release:guard` (имена упавших и
   зелёных проверок), `npm run check:fast` на изменённом scope,
   `npm run test:i18n`, релевантные guard-скрипты. `SKIPPED` с exit 0

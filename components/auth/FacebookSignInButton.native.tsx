@@ -13,7 +13,7 @@ import type {
   FacebookCredential,
   FacebookSignInButtonProps,
 } from '@/components/auth/facebookLoginTypes'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { SOCIAL_AUTH_BUTTON_GEOMETRY } from '@/components/auth/socialAuthButtonGeometry'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 
@@ -151,29 +151,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     button: {
       width: '100%',
-      minHeight: 48,
-      borderRadius: DESIGN_TOKENS.radii.lg,
+      minHeight: SOCIAL_AUTH_BUTTON_GEOMETRY.minHeight,
+      borderRadius: SOCIAL_AUTH_BUTTON_GEOMETRY.borderRadius,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.info,
     },
     buttonDisabled: {
-      opacity: 0.55,
+      opacity: SOCIAL_AUTH_BUTTON_GEOMETRY.disabledOpacity,
     },
     buttonPressed: {
-      opacity: 0.88,
-      transform: [{ scale: 0.99 }],
+      opacity: SOCIAL_AUTH_BUTTON_GEOMETRY.pressedOpacity,
+      transform: [{ scale: SOCIAL_AUTH_BUTTON_GEOMETRY.pressedScale }],
     },
     content: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 12,
-      paddingHorizontal: 16,
+      gap: SOCIAL_AUTH_BUTTON_GEOMETRY.contentGap,
+      paddingHorizontal: SOCIAL_AUTH_BUTTON_GEOMETRY.paddingHorizontal,
     },
     text: {
       color: colors.textOnPrimary,
-      fontSize: 16,
+      fontSize: SOCIAL_AUTH_BUTTON_GEOMETRY.fontSize,
       fontWeight: '600',
       flexShrink: 1,
       textAlign: 'center',

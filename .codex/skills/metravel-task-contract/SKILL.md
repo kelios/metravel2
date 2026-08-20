@@ -90,33 +90,57 @@ Done gate:
   (`reuse | reopen | create-linked | create-new`); reuse/reopen is preferred over
   a competing card.
 - Architect-level detail is mandatory: concrete request/response shapes (fields +
-  types), desktop-web/mobile-web/Android/iOS impact, RU/BE/UK/PL/EN impact, real
+  types), affected-platform impact, RU/BE/UK/PL/EN impact, real
   board ids for dependencies, and concrete validation commands/URLs. Placeholder
   or empty fields mean the task is not ready — send it back to
   `$metravel-system-architect` or ask one clarifying question.
 - `Platform impact` must name
   `desktop web | mobile web | Android | iOS | shared | none` and the required
-  browser/device evidence. Any iOS/shared impact selects simulator, physical
-  iPhone, or TestFlight evidence according to the observable contract.
-  Mobile-web/Android impact requires paired evidence for both. `Localization impact` must name affected
+  evidence. Common/shared responsive UI requires desktop-web and mobile-web
+  browser evidence. Add Android device evidence only for Android-specific
+  observable behavior/configuration/runtime, and iPhone evidence only for
+  iOS-specific scope at the appropriate simulator, physical-device, or
+  TestFlight layer. Mobile parity remains a product invariant, not an automatic
+  all-device Done gate. `Localization impact` must name affected
   locales or `none`; localization work includes namespaces/keys and `npm run test:i18n`.
 - Do not move a task to `todo` for implementation until the contract has concrete, testable acceptance.
 - `blocked_by` is valid only while a concrete hard dependency prevents implementation from
-  starting or continuing. Missing review/QA/runtime/production evidence belongs in `review` or
-  `testing`, not `blocked_by`; a failed check requiring changes returns the task to `in_progress`.
-- Do not move a task to `done` unless the `Done gate` evidence exists. If automated tests are the only remaining step and an active shared gate covers them, `validation delegated: active gate pid/name` is acceptable coordination evidence for Done without being reported as `passed`; deploy/browser/API/device evidence cannot be delegated to a test gate.
+  starting or continuing. Missing access/QA/runtime/production evidence is not
+  a final status: request the exact unblock action and resume acceptance. Keep
+  `testing` only for active QA or a fully specified retest/temporal gate; failed
+  checks route unfinished owned work to `todo`/`in_progress`, or a separate
+  confirmed defect to a new/reused linked task after Problem Memory.
+- Do not move a task to `done` unless the `Done gate` evidence exists. An active
+  shared gate gives `validation delegated: active gate pid/name` coordination
+  evidence only; request its result and resume instead of closing from
+  delegation alone.
 - For BE tasks that unblock FE, require deploy-target API evidence for the exact endpoints/fields/events.
+- Backend Done gates contain only relevant evidence available to backend
+  ownership: read-only source inspection and exact API/production/runtime probes.
+  Android/iPhone/client evidence belongs to linked `area=front` tasks and must
+  not block an `area=back` ticket.
+- For `area=back`, use `todo` only while backend implementation, refinement,
+  deploy/configuration, data, or other owner work remains. Use `testing` only
+  while QA is active or completed work awaits an exact in-scope retest/time
+  observation with parameter, threshold, current value, trigger/earliest
+  recheck, and command/scenario.
+  Use `done` when backend work is complete and all available relevant mandatory
+  probes are green; irrelevant or unavailable out-of-scope evidence does not
+  block acceptance.
 - For backend/ops/server tasks, require a tracked-vs-untracked path
-  classification. The contract must state that this frontend workspace will not
+  classification only when the task touches a server checkout/deploy/ops path. The contract must state that this frontend workspace will not
   edit or run Git mutations in the backend checkout; canonical tracked changes
-  belong to the backend owner, and the Done gate must include a production
+  belong to the backend owner. For tasks that actually mutate/deploy that
+  checkout, the Done gate must include a production
   `git status --short` with no entries outside the exact frontend-deploy
   exceptions in `docs/RULES.md`, plus runtime validation after the normal deploy.
 - For FE tasks depending on BE, require browser/API evidence against the same target; unit tests and mock fallback alone are not enough.
 - If board status says BE is done but runtime contract probes fail after FE implementation is
-  complete, keep FE in `testing`, add evidence, and create or reopen a separate BE/deploy task.
-  Use `blocked_by` only when the missing contract prevents remaining FE implementation work from
-  starting or continuing.
+  complete, run Problem Memory and create/reuse a separate BE/deploy task. Close
+  accepted complete FE work instead of parking it in `testing`; return FE to
+  `todo`/`in_progress` only if its own promised implementation is incomplete.
+  Use `blocked_by` only when the missing contract prevents remaining FE
+  implementation work from starting or continuing.
 - Keep secrets out of contract text and logs.
 - A recurring task's Done gate must cover why the prior control failed and name
   the new regression control; append the dated Recurrence Log from

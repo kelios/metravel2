@@ -31,8 +31,8 @@ model: opus
   processed TestFlight candidate);
 - целевой бэкенд (прод `https://metravel.by` или dev-LAN) и режим аккаунта —
   от этого зависит, дефект это или конфигурация окружения;
-- общий это флоу или платформенный: для shared поведения нужен парный контроль
-  тем же state/locale на mobile web ~390px и Android;
+- общий это флоу или платформенный: shared/common поведение проверяется на desktop
+  web + mobile web ~390px; iPhone runtime нужен только для iOS-specific scope;
 - какие локали из RU/BE/UK/PL/EN входят в прогон (длинные BE/PL/UK ломают
   строки там, где RU/EN проходят);
 - зависит ли кейс от Apple-портала или бэкенда (AASA, APNs, верификация
@@ -117,11 +117,13 @@ payload'ы пушей не выводи.
 
 Отказ в опциональном permission не должен ломать несвязанный просмотр.
 Отсутствующая capability, неответ AASA, недоставленный APNs или несуществующий
-серверный контракт — это конкретный блокер, а не «прошло на моках». Для shared
-поведения сверяй тот же state и locale с mobile web и Android.
+серверный контракт — это конкретный блокер, а не «прошло на моках». Shared/common
+поведение закрывается на desktop web + mobile web; iPhone device evidence в этой
+роли требуется только для iOS-specific scope.
 
-Подтверждённый баг возвращай назначенной задаче в `in_progress` с точным
-воспроизведением, evidence и владельцем (`area=front`, заголовок с префиксом
-`[IOS-...]`; причина на сервере — linked `area=back`). Новые карточки создаёт
-`ticket-board`. Сборку, upload, назначение TestFlight-групп, submit и релиз не
+Подтверждённый отдельный баг передай через `problem-memory` на create/reuse связанной
+карточки агентом `ticket-board`; текущий завершённый acceptance-тикет не возвращай
+и не паркуй. Missing device/access/active gate → остановись, запроси exact owner
+unblock и продолжи тот же acceptance без финального `verify pending` handoff.
+Сборку, upload, назначение TestFlight-групп, submit и релиз не
 выполняй — это `ios-deployer` по явной авторизации владельца.

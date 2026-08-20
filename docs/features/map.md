@@ -19,7 +19,7 @@ production-readiness отчётом. Реальная доступность р�
 - Web-карта использует Leaflet и React Leaflet.
 - Основная Android-карта использует Leaflet внутри `react-native-webview`;
   `react-native-maps` в текущем map path не используется. `Map.ios.tsx` остаётся
-  общим техническим renderer-заделом, но iOS не является активной QA-поверхностью.
+  отдельным iOS renderer; он проверяется только в iOS-specific map scope.
 - Общий screen/controller слой выбирает platform adapter через `MapPanel`.
 - Встроенная карта деталей travel имеет отдельные реализации
   `TravelMap.web.tsx` и `TravelMap.native.tsx`; это не тот же renderer, что
@@ -33,7 +33,7 @@ production-readiness отчётом. Реальная доступность р�
 | Поверхность | Реализация в репозитории | Что требует отдельной проверки |
 | --- | --- | --- |
 | `/map` на web | React Leaflet, filters, radius/route modes, panels, overlays | browser flow, console/network, backend payloads |
-| `/map` на Android | Leaflet HTML/JS в WebView, RN bridge, offline tile cache | локальная USB device build, permissions, WebView messages, tiles/offline + сравнение с mobile web |
+| `/map` на Android | Leaflet HTML/JS в WebView, RN bridge, offline tile cache | при Android-specific изменении: локальная USB device build, permissions, WebView messages, tiles/offline |
 | iPhone | `Map.ios.tsx` содержит WebView renderer | active release scope; simulator + physical iPhone map QA |
 | Embedded travel map | React Leaflet на web, Leaflet-in-WebView на native | travel detail interaction и route-point parity |
 | `/places` | отдельный places catalog поверх нормализованных map points | см. `docs/features/places.md`; backend-dependent |
@@ -196,8 +196,10 @@ Backend-facing map adapter — `api/map.ts`; React Query ownership находи�
 
 ## Point/place mobile contract
 
-- Mobile web и Android сохраняют одинаковый порядок данных и действий; любое
-  изменение проверяется одним сценарием на обеих поверхностях.
+- Mobile web, Android и iPhone сохраняют одинаковый порядок данных и действий
+  как design-инвариант. Общие responsive-изменения проверяются на
+  desktop/mobile web; native map evidence требуется только на платформе с
+  затронутым platform-specific поведением.
 - Маркер открывает point/place surface; travel detail point-card tap только
   фокусит/подсвечивает marker, но не открывает popup автоматически.
 - Карточка использует общий `PlacePopupCard` content model через

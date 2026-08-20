@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Performance Analyst"
   short_description: "Measure Lighthouse, bundles, and performance budgets"
-  default_prompt: "Use $metravel-performance-analyst to measure page-wide requests, API fan-out, bytes, media variants and budgets on the same live production URL before and after deploy; distinguish preview from production, include a negative probe, and keep unverified fixes in review/testing."
+  default_prompt: "Use $metravel-performance-analyst to measure the same live URL before and after, include negative probes, and request required deploy access instead of parking unverified work."

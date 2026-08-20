@@ -95,8 +95,10 @@ instrumentation. Dated audits остаются snapshots, а не live dashboard
 - trip UI: `__tests__/components/trips/**`;
 - achievements UI/hooks: achievement tests и profile/AuthorCard integrations;
 - visible web flow: browser screenshot + console/network;
-- native flow: локальная Android build/install на USB device + парное сравнение
-  того же flow с mobile web; iOS/shared impact передаётся `ios-tester`;
+- shared/common UI: desktop/mobile web browser flow; parity с native остаётся
+  design-инвариантом;
+- Android-specific flow: локальная Android build/install на USB device;
+  iOS-specific flow или iPhone release gate передаётся `ios-tester`;
 - finished local block: `yarn check:fast`.
 
 Production readiness требует реальных API payloads и mutation evidence. Любой

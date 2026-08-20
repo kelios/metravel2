@@ -171,9 +171,10 @@ testing→done (+ blocked_by, wont_do), area: front|back, urgency: highest|high|
 lowest, reporter, assignee, sprint, position, needs_human, blocked_by_id, depends_on_ids[],
 related_to_ids[]}`. Заголовок с префиксом источника `[FE-…]`/`[BE-…]`/`[AND-…]`/`[IOS-…]`.
 Android/iOS-задачи по приложению ведутся как `area=front`; `[AND-…]`
-сохраняет paired mobile-web/Android context, `[IOS-…]` фиксирует нужный
-simulator/physical/TestFlight layer, а shared mobile task называет все
-затронутые поверхности в описании, owner/assignee и Done gate. `area=back`
+фиксирует Android-specific scope, `[IOS-…]` фиксирует нужный
+simulator/physical/TestFlight layer, а common/shared responsive task называет
+desktop web и mobile web. Android/iPhone device gate добавляется только при
+соответствующем platform-specific behavior/config/runtime. `area=back`
 используй только для backend/API/
 инфраструктуры.
 
@@ -199,6 +200,34 @@ simulator/physical/TestFlight layer, а shared mobile task называет вс
 `git -C ../metravel-backend fetch && git log -1 --format='%h %ci %s' origin/master`. Если HEAD
 старше work log карточек — это и есть весь ответ, отдельные пробы по тикетам не нужны.
 
+При прямой приёмке `area=back` проверяй только то, что относится к backend и
+доступно read-only: `origin/master`, backend source/config, API и безопасные
+production probes. Не требуй iPhone, Android, browser UI или другого client
+evidence для закрытия backend-карточки. Если client behavior нужно проверить,
+оно оформляется и принимается в связанной `area=front` задаче.
+
+Вердикт по backend-задаче из `testing`:
+
+- реальная backend/refinement/ops работа ещё осталась → `todo` с точным
+  комментарием, что должен сделать backend-владелец;
+- реализация завершена, но нужен выполнимый временной gate (например, накопить
+  72 часа логов или дождаться согласованного observation window) → оставить в
+  `testing`; возвращать в `todo` нечего. В карточке обязательны измеряемый
+  параметр, порог, текущее значение, trigger/earliest recheck и точная проба;
+- backend-работа завершена и все доступные обязательные in-scope probes зелёные
+  → `done`; отсутствующее irrelevant/out-of-scope client/device evidence не
+  блокирует закрытие.
+
+`testing` не используется как итог «не смогли проверить». После начатой
+приёмки pass переводит текущую карточку в `done`. Если завершённая реализация
+выявила отдельный подтверждённый дефект, сначала выполняется Problem Memory
+preflight, затем создаётся или переиспользуется связанная карточка; принятая
+текущая задача не паркуется. Если не завершена именно её собственная работа,
+она возвращается в `todo`/`in_progress`. Недоступный обязательный доступ,
+заблокированный Android/iPhone или занятый обязательный gate останавливают
+приёмочный turn: агент просит конкретный unlock/connect/result и продолжает
+после ответа без промежуточного статусного handoff.
+
 ### Семантика колонок и владельцы переходов (обязательно)
 
 Канонический поток: `backlog → todo → in_progress → review → testing → done`.
@@ -207,25 +236,36 @@ simulator/physical/TestFlight layer, а shared mobile task называет вс
 | Статус | Когда использовать | Кто двигает дальше |
 |---|---|---|
 | `backlog` | Задача ещё не приоритизирована или не готова к исполнению. | Аналитик/владелец уточняет контракт и приоритет. |
-| `todo` | Контракт готов, hard blocker отсутствует, реализация ещё не началась. | Исполнитель при фактическом старте переводит в `in_progress`. |
-| `in_progress` | Идёт реализация, диагностика, исправление или согласованная deploy/release-работа. | Исполнитель после завершения реализации и self-check переводит в `review`. |
+| `todo` | Контракт готов, hard blocker отсутствует, но осталась реализация, refinement или ops-работа и она ещё не выполняется. | Исполнитель при фактическом старте переводит в `in_progress`. |
+| `in_progress` | Идёт реализация, refinement, диагностика, исправление или согласованная ops/deploy/release-работа. | Исполнитель после завершения работы и self-check переводит в `review`. |
 | `review` | Реализация завершена и ждёт/проходит code, architecture, security или content review. | `code-review-gate` поднимается автоматически хуком и при отсутствии code findings переводит в `testing`; findings, требующие правок, возвращают задачу в `in_progress`. |
-| `testing` | Реализация и review готовы; ждут/идут QA, automated tests, browser/API/backend/deploy/production/device/release checks или приёмка. | Приёмка (`board-reviewer`) поднимается автоматически тем же хуком и добавляет evidence; пройденный Done gate закрывает задачу в `done`, дефект с правкой возвращает её в `in_progress`. Прод-деплой — только по явной команде владельца. |
-| `blocked_by` | Задачу невозможно начать или продолжить, потому что отсутствует конкретный обязательный кусок: незакрытая hard dependency, решение/доступ/секрет/человеческий шаг или внешний gate. | `$metravel-ticket-board` фиксирует `blocked_by_id`/конкретный gate; после устранения возвращает задачу в `todo` или `in_progress` по фактическому состоянию. |
-| `done` | Done gate подтверждён реальными evidence. | Только `$metravel-sprint-reviewer` закрывает задачу. |
+| `testing` | Реализация и review готовы; обязательная in-scope QA прямо выполняется либо назначен точный повторный замер/временное окно с параметром, порогом, текущим значением и trigger/earliest recheck. | Приёмка не заканчивается парковкой: pass → `done`; незавершённая собственная работа → `todo`/`in_progress`; отдельный подтверждённый дефект → новая/reused связанная карточка после Problem Memory. Недоступный доступ/устройство требует немедленного unblock-запроса и продолжения того же прохода. Прод-деплой — только по явной команде владельца. |
+| `blocked_by` | Задачу невозможно начать или продолжить из-за конкретной незакрытой hard dependency. | `$metravel-ticket-board` фиксирует `blocked_by_id`/конкретную dependency; после устранения возвращает задачу в `todo` или `in_progress` по фактическому состоянию. |
+| `done` | Вся работа завершена и все доступные обязательные in-scope проверки зелёные; irrelevant/out-of-scope evidence не требуется. | `$metravel-sprint-reviewer` или профильный приёмщик прямого backend-запроса закрывает задачу. |
 | `wont_do` | Работа осознанно отменена с причиной. | Владелец/board operator фиксирует решение. |
 
 Проверка перед `blocked_by`: ответь на три вопроса — «какую работу невозможно сделать
 сейчас?», «какая конкретная задача/gate это запрещает?» и «какое событие снимет блок?». Если
 невозможно ответить конкретно, колонка выбрана неверно.
 
-- Ожидание review, тестов, production/API/backend/deploy/browser/device проверки — `review` или
-  `testing`, даже если evidence ещё нет или среда временно недоступна.
-- Непройденная проверка не переводит задачу в `blocked_by`: если нужна правка, верни в
-  `in_progress`; если нужна только повторная/другая проверка, оставь в `testing`.
+- Ожидание code review — `review`. `testing` допустим только во время активной
+  обязательной in-scope production/API/backend/deploy/browser/device проверки
+  или для заданного повторного замера/временного окна с полным retest record.
+- Нерелевантная или out-of-scope проверка не удерживает завершённую задачу в
+  `testing` и не создаёт отдельного ожидания.
+- Непройденная проверка не переводит задачу в `blocked_by`: незавершённая работа
+  исходного тикета идёт в `todo`/`in_progress`; отдельный подтверждённый дефект
+  — в новую/reused связанную карточку после Problem Memory. Только заранее
+  определённый повторный замер с точными параметрами оставляет исходный тикет в
+  `testing`.
+- «Не удалось проверить» не является board verdict. При недоступном обязательном
+  устройстве/access/gate агент не сдаёт приёмку: запрашивает конкретный
+  unlock/connect/result и продолжает тот же проход после ответа.
 - Если backend-контракт ещё не существует и FE нельзя начать/продолжить, FE может быть
-  `blocked_by` соответствующей BE-задачей. Если FE уже реализован и ждёт только runtime evidence,
-  FE остаётся в `testing`.
+  `blocked_by` соответствующей BE-задачей. Если FE уже реализован и требует
+  runtime evidence, приёмщик выполняет проверку в этом проходе; при недоступном
+  deploy/access запрашивает точную разблокировку, не оформляя parking в
+  `testing`.
 - `depends_on_ids` используй для hard prerequisites, которые действительно не дают начать или
   продолжить реализацию. Проверочные/исторические связи оформляй через `related_to_ids` и Done gate.
 
@@ -270,9 +310,10 @@ curl с staff token в command arguments.
 
 Проверка распределения: `GET /api/tasks/?limit=1000` → группировка по `kind`.
 
-**Статус `testing`** — отдельная колонка QA/приёмки между `review` (код-ревью) и `done`. Раньше
-передача тестеру/релизеру эмулировалась возвратом в `todo` или ошибочным `blocked_by` — теперь для
-любого ожидания/выполнения validation используется `testing`. Приёмочная очередь
+**Статус `testing`** — отдельная активная колонка QA/приёмки между `review`
+(код-ревью) и `done`. Раньше передача тестеру/релизеру эмулировалась возвратом в
+`todo` или ошибочным `blocked_by`; теперь `testing` используется только для
+идущей validation или точного запланированного retest/temporal gate. Приёмочная очередь
 (`board-reviewer` / `/sprint-review`) = `review` + `testing`.
 
 **Гейт `review → testing` (обязателен, принудительный, запускается сам).** Перевод в `testing`
@@ -294,16 +335,23 @@ diff → вердикт `pass` и переход в `testing`.
 Проверить состояние — `node .claude/hooks/review-gate.mjs show --task <id>`; аварийный обход
 `REVIEW_GATE_BYPASS=1` — только по явной просьбе пользователя и с пометкой в `description`.
 
-**Из `testing` назад в `review` не возвращают.** Нужна правка кода или описания → `in_progress`;
-нужна только повторная проверка или выкладка → тикет остаётся в `testing`; внешняя причина →
-`blocked_by`. Возврат в `review` заново поднял бы код-ревью того же diff'а.
+**Из `testing` назад в `review` не возвращают.** Осталась собственная работа,
+которая ещё не начата → `todo`; работа уже идёт → `in_progress`; pass → `done`;
+отдельный подтверждённый дефект → новая/reused связанная карточка после Problem
+Memory; только точный повторный in-scope замер или временное окно с retest record
+оставляет тикет в `testing`. Недоступный доступ/устройство не является таким
+retest record: приёмка прерывается запросом на разблокировку и затем
+продолжается. Возврат в `review` заново поднял бы код-ревью того же diff'а.
 
 ### Правило: `needs_human` = только человеческие действия, отдельной задачей (обязательно)
 
 `needs_human=true` — маркер задачи, состоящей **исключительно из действий человека**: того,
 что агент физически не может сделать (ручной шаг в Google Search Console, апрув/решение
-владельца, заливка секрета, действие в стороннем кабинете, проверка на физическом устройстве,
-публикация в сторе). Правила:
+владельца, заливка секрета, действие в стороннем кабинете, публикация в сторе).
+Обычная проверка на подключённом Android/iPhone выполняется агентом и сама по
+себе не является human-task. Если устройство нужно только unlock/connect,
+агент запрашивает это действие в живой приёмке и продолжает её; отдельная
+карточка создаётся лишь для самостоятельной внешней human-операции. Правила:
 
 - **Одна задача = один тип исполнителя.** Агентская работа (код/фикс/тесты/деплой-команда)
   `needs_human` **никогда** не несёт. Смешанной задачи «частично агент, частично человек» быть
@@ -473,7 +521,9 @@ id зависимостей, конкретные команды/URL валид�
 - `Data/API contract` — для BE: endpoint, method, auth, request/response shape, migrations/seed;
   для FE: какие endpoints/fields/events потребляются и какие UI states должны появиться.
 - `Platform impact` — `desktop web | mobile web | Android | iOS | shared | none`,
-  с точным перечнем обязательных browser/device checks; `none` должен быть обоснован.
+  с точным перечнем обязательных checks; `shared` означает common code или
+  несколько поверхностей, а не автоматический all-device gate; `none` должен
+  быть обоснован.
 - `Localization impact` — RU/BE/UK/PL/EN, выбранные locales или `none`;
   для app-owned UI copy укажи translation namespaces/keys и `npm run test:i18n`.
 - `Dependencies` — board id связанных FE/BE задач; если FE ждёт BE, укажи конкретный BE id и
@@ -490,12 +540,15 @@ id зависимостей, конкретные команды/URL валид�
   операция, исследование); для bug и для консолидации `none` запрещён.
   Это поле — прямое следствие замера в `docs/PROBLEM_MEMORY.md`: семейства, у которых
   после фикса не осталось постоянного контроля, воспроизводились неограниченно.
-- Для shared-правок `Validation` разделяет desktop-web, mobile-web/Android
-  control и iPhone evidence нужного simulator/physical/TestFlight layer; одна
-  активная поверхность не заменяет другую. Localization evidence указывает
-  проверенные locales, formatting/plural/SEO/accessibility scope и i18n tests.
+- Для common/shared responsive UI `Validation` включает desktop web и mobile
+  web. Android device evidence добавляется только для Android-specific
+  behavior/config/runtime, iPhone evidence нужного
+  simulator/physical/TestFlight layer — только для iOS-specific scope. Сам общий
+  файл device gate не создаёт. Localization evidence указывает проверенные
+  locales, formatting/plural/SEO/accessibility scope и i18n tests.
 - `Done gate` — условия закрытия: код + тесты + runtime evidence. Для BE, который разблокирует
-  FE, `done` требует smoke-пробу deploy target (`dev`/`prod`) по контрактным endpoints. Для FE,
+  FE, `done` требует доступную релевантную smoke-пробу deploy target (`dev`/`prod`)
+  по контрактным endpoints; client/device evidence остаётся в связанной FE-задаче. Для FE,
   зависящего от BE, `done` требует browser/API evidence против того же target; зелёные unit-тесты
   и mock fallback сами по себе недостаточны.
 
@@ -541,10 +594,13 @@ id зависимостей, конкретные команды/URL валид�
    структурная задача заведена и связана. Иначе задача не уходит в `done`.
 
 Если при ревью FE-задачи связанная BE-задача стоит в `done`, но контрактный endpoint/field/event
-на dev/prod не подтверждается, FE-задачу не двигать в `done`: оставить в `testing`, дописать
-evidence и открыть/переоткрыть отдельную BE/deploy/routing задачу. Переводить FE в `blocked_by`
-можно только если из-за отсутствующего контракта её реализацию действительно нельзя начать или
-продолжить.
+на dev/prod не подтверждается, это отдельный подтверждённый backend/deploy/routing
+дефект: выполнить Problem Memory preflight и открыть/переиспользовать связанную
+BE-карточку. Завершённую и принятую FE-реализацию закрыть в `done`, не парковать
+её в `testing`; если отсутствие контракта доказывает, что собственная FE-работа
+не завершена, вернуть FE в `todo`/`in_progress` с точным действием. Переводить
+FE в `blocked_by` можно только если из-за отсутствующего контракта её реализацию
+действительно нельзя начать или продолжить.
 
 #### Design evidence для видимых UI/UX задач
 
@@ -558,8 +614,9 @@ evidence и открыть/переоткрыть отдельную BE/deploy/r
 - если MCP/API доски не поддерживает файловые attachments, не выдавай локальный
   `.codex-temp/`-файл за вложение: положи итоговый макет в `docs/` и добавь точный путь в задачу.
 
-Макет не заменяет runtime validation. `Done gate` UI-задачи всё равно требует browser/device
-evidence на заявленных платформах и сравнение с указанными состояниями.
+Макет не заменяет runtime validation. `Done gate` common/shared responsive
+UI-задачи требует desktop-web и mobile-web evidence; Android/iPhone device
+evidence требуется только при соответствующем platform-specific scope.
 
 ### Правило: у каждой задачи — спринт (обязательно)
 

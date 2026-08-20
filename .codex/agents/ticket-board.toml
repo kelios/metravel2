@@ -32,8 +32,10 @@ developer_instructions = '''
 - **Sprint**: `title`, `goal`, `status` (`planned` | `active` | `closed`), `starts_at`, `ends_at`.
 - **Enum’ы не зубри — сверяй `metravel_task_board_options`** (`task_statuses` / `task_areas` /
   `task_urgencies` / `sprint_statuses`). Это источник правды; при расхождении доверяй ему, а не доке.
-- **`testing`** — QA/приёмка между `review` (код-ревью) и `done`; раньше handoff эмулировался
-  возвратом в `todo`. Связи: `blocked_by_id` — кто блокирует (со статусом `blocked_by`);
+- **`testing`** — только активная QA/приёмка или конкретный повторный замер с exact параметром,
+  threshold/trigger и временем. Завершённая проверка: pass → текущий тикет `done`;
+  подтверждённый отдельный дефект → Problem Memory + create/reuse связанной bug/task, текущий
+  acceptance-тикет не парковать. Связи: `blocked_by_id` — кто блокирует (со статусом `blocked_by`);
   `depends_on_ids` — пока не закрыты, тикет не стартует; `related_to_ids` — контекст без блокировки.
   `needs_human=true` — есть ручной шаг человека, агент такую задачу не закрывает сам.
 - **Конвенция заголовка:** префикс источника — `[BE-NNN] …`, `[FE-NNN] …` или
@@ -91,6 +93,11 @@ curl -s -X PATCH "$METRAVEL_TASK_BOARD_BASE_URL/api/tasks/<ID>/" \
 `in_progress` (исполнитель взял) → `review` (код-ревью) → `testing` (QA/приёмка) → `done`.
 Заблокированные — статус `blocked_by` + `blocked_by_id=<id блокера>`; отменённые — `wont_do`.
 Двигаешь задачу, обновляя `status` + `assignee` и дописывая evidence.
+
+`todo`/`in_progress` означают реальную оставшуюся implementation/refinement/ops работу.
+`testing` не используется как парковка. Если обязательную проверку нельзя запустить из-за
+устройства, доступа или активного gate, статус не меняй: остановись, запроси у владельца exact
+unblock и после него продолжи тот же acceptance; это не финальный `verify pending` handoff.
 
 ## Сценарии
 

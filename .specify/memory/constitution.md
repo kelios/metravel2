@@ -115,9 +115,9 @@ content. It is not a greenfield project.
 
 ### V. Accessibility and Responsive Parity
 
-- Every change MUST work on desktop web and mobile web. Mobile web and Android
-  are a coupled validation pair: a change to one is not complete until the same
-  scenario is verified on the other.
+- Every visible common/shared change MUST be verified on desktop web and mobile
+  web. Android or iPhone device evidence is required only for corresponding
+  platform-specific behavior, configuration, or runtime.
 - Interactive elements MUST be keyboard reachable and operable, with a visible
   focus state.
 - Touch targets MUST meet the enforced minimum; verify with
@@ -193,9 +193,10 @@ which is **read-only from this workspace**.
   and MUST NOT be substituted for it.
 - Acceptance criteria MUST be checkable by a named command, a named URL, or a
   described observation. "Works correctly" is not an acceptance criterion.
-- If verification is genuinely blocked, the item MUST be reported as
-  `verify pending` with the concrete blocker and the list of paths already
-  attempted. It MUST NOT be reported as done.
+- If a required check cannot start because a device, access, environment, or
+  active gate is missing, acceptance MUST stop and request an exact owner
+  unblock, then resume the same acceptance. This is not a final `verify pending`
+  or Testing handoff.
 
 ### IX. Specification Quality
 
@@ -235,7 +236,8 @@ which is **read-only from this workspace**.
 
 - Active product surfaces are **desktop web, mobile web, Android, and iPhone**.
   The first App Store release is iPhone-only; iPadOS-specific support remains
-  outside scope without excluding iOS from current QA or Done gates.
+  outside scope; iPhone evidence enters QA and Done gates only for iOS-specific
+  behavior, configuration, runtime, or release work.
 - Shared Expo/React Native code MUST preserve all active platforms. Platform
   files may adapt map engines, permissions, safe areas, storage, or native APIs,
   but MUST NOT silently fork product behavior, block order, primary actions, or
@@ -274,8 +276,8 @@ which is **read-only from this workspace**.
    before `spec.md`, `plan.md`, and `tasks.md` are agreed is out of process.
 8. **Implement** — `/speckit-implement`, staying inside the planned file set.
 9. **Validate** — run the checks matching the scope (Principle VIII), verify
-   visible changes in a real browser on desktop and mobile web, plus Android when
-   the surface is shared, and capture evidence.
+   visible common/shared changes in a real browser on desktop and mobile web,
+   and add native device evidence only for platform-specific scope.
 10. **Report** — list every changed file, the checks run and their results, any
     constitution violation encountered, and everything deliberately left out.
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Codex Orchestrator"
   short_description: "Choose skills, prompts, rules, validation, and handoff."
-  default_prompt: "Use $metravel-codex-orchestrator to classify the task, record platform/localization impact, choose minimal skills, enforce authority and quality gates, and prohibit backend Git or tracked production-file mutations."
+  default_prompt: "Use $metravel-codex-orchestrator to classify affected targets, keep shared responsive QA on desktop and mobile web, add native QA only for platform-specific behavior, and enforce backend/status boundaries."

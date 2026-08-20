@@ -84,9 +84,12 @@ description: >-
      прод-деплой, EAS и публикацию в стор без явной команды владельца не запускай;
    - делегируй `test-author` unit/e2e на новое поведение; видимые/web-изменения — ОБЯЗАТЕЛЬНО
      браузерная проверка (Playwright/preview), как требует CLAUDE.md;
-   - вызови `board-reviewer` с id тикета: он сверяет Done gate реальными пробами и при зелёном
-     закрывает `done` сам. Дефект → `in_progress` (после фикса цикл `review → testing` повторится
-     автоматически), нужна ещё одна проверка/выкладка → тикет остаётся в `testing`.
+   - вызови `board-reviewer` с id тикета: он сверяет Done gate реальными пробами и при завершении
+     закрывает current acceptance в `done`. Подтверждённый отдельный дефект → `problem-memory`
+     + create/reuse связанной bug/task через `ticket-board`; current acceptance не парковать.
+     `testing` между turns допустим только для конкретного повторного замера с exact параметром,
+     threshold/trigger и временем. Missing device/access/env/active gate → остановиться, запросить
+     у владельца exact unblock и затем продолжить тот же acceptance без финального handoff.
    Назад в `review` из `testing` не возвращай: это заново поднимет код-ревью того же diff'а.
 6. **Release.** Прод-деплой — только по явному запросу и target env: `/preflight` →
    `frontend-deployer`. Приёмка на dev не ждёт прода: FE закрывается в `done` с пометкой target env,
@@ -116,11 +119,11 @@ description: >-
 - **Ревью и приёмка — не «по требованию».** Их поднимает статус на борде: `review` → `code-review-gate`,
   `testing` → `board-reviewer`. Оба субагента запускаются без запроса разрешения (`AGENTS.md` §10.1);
   «пользователь не просил ревью» не основание оставить тикет висеть в `review`/`testing`.
-- «Готово» только с доказательством (changed files + тест/браузер + review). До этого максимум
-  `review`/`in_progress` с пометкой «verification pending».
+- `todo`/`in_progress` означают реальную оставшуюся implementation/refinement/ops работу;
+  `testing` — только активную проверку или exact timed recheck, не парковку.
 - Статус другой задачи на борде не является доказательством сам по себе. Если BE помечен `done`,
-  но FE runtime-проба получает 404/не тот field/event, FE остаётся `review`/`blocked_by`, а
-  `ticket-board` дописывает blocker evidence.
+  но FE runtime-проба получает 404/не тот field/event, оформи отдельный linked defect через
+  `problem-memory`/`ticket-board`; current acceptance не возвращай и не паркуй.
 - Один тикет — один активный исполнитель. Не запускай конфликтующие правки одного файла.
 - Не печатай секреты/токены. Деплой — только по явному target, не по умолчанию.
 
@@ -129,12 +132,12 @@ description: >-
 Сводка: id тикета, путь по статусам (todo→…→done), кто что сделал (агенты), changed files,
 результаты тестов/ревью/деплоя, ссылка на `/board`, и оставшиеся блокеры/порождённые задачи.
 
-## Паритет mobile web ↔ устройство (обязательное правило)
+## Проверка по platform impact (обязательное правило)
 
-«Мобильная версия» = единый UX на mobile web (~390px, `isMobile`), Android и iPhone. Когда в задаче сказано «мобильный/mobile», учитываются все три активные поверхности; iPadOS вне первого релиза.
+Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Проверка active mobile scope обязательна.** Mobile web и Android остаются парным контролем одного flow. Для iOS/shared impact тот же flow/state/locale проверяет профильный `ios-tester` на нужном simulator/physical/TestFlight layer.
-- **Верификация UI-правок — на всех активных мобильных поверхностях со скринами:** mobile web 390px (`resize_window` + `computer (screenshot)`), Android с локально установленной сборки (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны) и iPhone через `ios-tester` (simulator — вёрстка и базовый UI; физический iPhone — safe area, клавиатура, permissions, Keychain/HEIC). Нет обязательного скрина по затронутой поверхности — это `verify pending` с точной причиной, а не pass.
+- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
+- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

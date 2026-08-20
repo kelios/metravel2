@@ -11,7 +11,7 @@ Use this skill when the main job is to run tests rather than write product code.
 
 ## Command selection
 
-- Before running tests, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. If a live quality gate already exists, stop your own launch immediately: do not wait, poll, monitor it, retry after release, or run a narrower bypass check. Use `validation delegated: active gate pid/name` when that gate covers the required scope and tests are the only remaining Done-gate step; the task may close without claiming `passed`. Otherwise use `validation skipped: active gate pid/name` and keep the task open.
+- Before running tests, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. If a live quality gate already exists, stop your duplicate launch immediately: do not wait, poll, monitor it, retry after release, or run a narrower bypass check. `validation delegated/skipped: active gate pid/name` is coordination only. If the result is required for acceptance, request it from the owner and resume; do not close from delegation or park the task in `testing`.
 - Start with the narrowest reliable command for the touched scope.
 - Prefer targeted `npm run test:run -- <path-or-pattern>` when a single area already has focused coverage.
 - Use `npm run check:fast` for a finished small logical block.
@@ -35,6 +35,7 @@ Use this skill when the main job is to run tests rather than write product code.
 - Use feature docs from `docs/features/` when you need scope-specific test context.
 - Map platform and localization impact before choosing commands. Desktop web,
   mobile web, Android, and iPhone runtime evidence are distinct; unit tests do
-  not replace Android/iPhone device or TestFlight evidence. RU/BE/UK/PL/EN
-  parity is part of i18n scope.
+  not replace required Android/iPhone device or TestFlight evidence when that
+  platform has specific observable scope. Common/shared responsive UI uses
+  desktop-web and mobile-web evidence. RU/BE/UK/PL/EN parity is part of i18n scope.
 - For performance or browser behavior, hand off to `$metravel-performance-analyst` or `$metravel-e2e-runner` instead of inferring from unit-test output.

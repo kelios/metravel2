@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Quality Fixer"
   short_description: "Run lint, Jest, and Playwright end to end and fix the failures."
-  default_prompt: "Use $metravel-quality-fixer to map desktop-web/mobile-web/Android/iOS and RU/BE/UK/PL/EN impact, run and repair the requested automated gates, and keep device/TestFlight evidence separate."
+  default_prompt: "Use $metravel-quality-fixer to map affected targets and locales, run and repair the requested automated gates, and avoid adding unrelated native-device gates."

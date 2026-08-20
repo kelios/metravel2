@@ -90,7 +90,9 @@ Mobile web сохраняет тот же control/state contract и умеет �
 ## UX states и Design evidence
 
 Нормативны порядок блоков, подписи действий, empty/error/progress states,
-touch-targets 44/48dp и одинаковая иерархия на mobile web/Android/iPhone.
+touch-targets 44/48dp и одинаковая иерархия на mobile web/Android/iPhone. Это
+design-инвариант; iPhone runtime evidence появляется только при реализации или
+изменении iOS-specific offline adapter/lifecycle.
 
 ```text
 ┌─────────────────────────────────────┐
@@ -253,7 +255,8 @@ Runtime matrix:
 
 - desktop web regression smoke;
 - mobile web: save/list/open/delete, offline transition in loaded app, reconnect;
-- Android local USB build: `AND-USB-04`, `AND-USB-13`, `AND-USB-15`, expanded
+- Android local USB build (Android cold-start/storage входят в scope этой
+  фичи): `AND-USB-04`, `AND-USB-13`, `AND-USB-15`, expanded
   `AND-USB-16`, map `AND-USB-08/27` and quest `AND-USB-11`;
 - Android must cover online save → force-stop → network disabled → cold launch →
   tab switching → open every saved type → restore network → refresh;

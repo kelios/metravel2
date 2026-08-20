@@ -33,8 +33,9 @@ Read first:
 
 1. Identify the domain from the changed files, route, or user wording, then
    record platform impact for desktop web/mobile web/Android/iOS and localization
-   impact for RU/BE/UK/PL/EN; iOS/shared domain work also routes through the
-   matching iOS architect/developer/reviewer/tester stage.
+   impact for RU/BE/UK/PL/EN. Route through the iOS
+   architect/developer/reviewer/tester stages only for iOS-specific observable
+   behavior, configuration, runtime, or an explicitly assigned iPhone release.
 2. Load only the matching feature docs and nearby tests/components.
 3. If a board ticket is involved, read its Task Contract before editing.
 4. Choose the smallest specialist set:

@@ -1,9 +1,10 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import SocialAuthButton, {
     SocialAuthButtonPlaceholder,
 } from '@/components/auth/SocialAuthButton.web';
+import { useExternalScript } from '@/hooks/useExternalScript';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useLocale } from '@/i18n/LocaleProvider';
@@ -95,6 +96,7 @@ export default function FacebookSignInButton({
     const onSuccessRef = useRef(onSuccess);
     const onErrorRef = useRef(onError);
     const onCancelRef = useRef(onCancel);
+    const initializedSdkRef = useRef<string | null>(null);
     const appId = String(process.env.EXPO_PUBLIC_META_APP_ID || '').trim();
     const apiVersion = String(process.env.EXPO_PUBLIC_META_API_VERSION || 'v23.0').trim();
     const enabled = isFacebookLoginEnabled();
@@ -106,52 +108,39 @@ export default function FacebookSignInButton({
         onCancelRef.current = onCancel;
     });
 
-    useEffect(() => {
-        if (!enabled || !appId) return;
-        let cancelled = false;
-
-        const initialize = () => {
-            if (cancelled || !window.FB) return;
+    const initialize = useCallback(() => {
+        if (!enabled || !appId || !window.FB) return;
+        const initializationKey = `${appId}:${apiVersion}`;
+        if (initializedSdkRef.current !== initializationKey) {
             window.FB.init({ appId, cookie: true, xfbml: false, version: apiVersion });
-            setReady(true);
-        };
+            initializedSdkRef.current = initializationKey;
+        }
+        setReady(true);
+    }, [apiVersion, appId, enabled]);
+
+    const handleSdkError = useCallback(() => {
+        onErrorRef.current?.(i18nT('authStatic:facebook.sdkLoadFailed'));
+    }, []);
+
+    useEffect(() => {
+        if (!enabled || !appId) return undefined;
         window.fbAsyncInit = initialize;
-
-        if (window.FB) {
-            initialize();
-            return () => {
-                cancelled = true;
-            };
-        }
-
-        const existingScript = document.getElementById(SDK_SCRIPT_ID) as HTMLScriptElement | null;
-        if (existingScript) {
-            const handleLoad = () => initialize();
-            const handleError = () => onErrorRef.current?.(i18nT('authStatic:facebook.sdkLoadFailed'));
-            existingScript.addEventListener('load', handleLoad, { once: true });
-            existingScript.addEventListener('error', handleError, { once: true });
-            return () => {
-                cancelled = true;
-                existingScript.removeEventListener('load', handleLoad);
-                existingScript.removeEventListener('error', handleError);
-            };
-        }
-
-        const script = document.createElement('script');
-        script.id = SDK_SCRIPT_ID;
-        script.async = true;
-        script.defer = true;
-        script.crossOrigin = 'anonymous';
-        script.src = `https://connect.facebook.net/${getFacebookSdkLocale(locale)}/sdk.js`;
-        script.addEventListener('error', () => {
-            if (!cancelled) onErrorRef.current?.(i18nT('authStatic:facebook.sdkLoadFailed'));
-        }, { once: true });
-        document.body.appendChild(script);
+        initialize();
 
         return () => {
-            cancelled = true;
+            if (window.fbAsyncInit === initialize) delete window.fbAsyncInit;
         };
-    }, [apiVersion, appId, enabled, locale]);
+    }, [appId, enabled, initialize]);
+
+    const hasFacebookSdk = typeof window !== 'undefined' && Boolean(window.FB);
+    useExternalScript({
+        id: SDK_SCRIPT_ID,
+        src: `https://connect.facebook.net/${getFacebookSdkLocale(locale)}/sdk.js`,
+        onReady: initialize,
+        onError: handleSdkError,
+        enabled: enabled && Boolean(appId) && !hasFacebookSdk,
+        crossOrigin: 'anonymous',
+    });
 
     if (renderState === 'hidden') return null;
     if (renderState === 'hydration-placeholder') return <SocialAuthButtonPlaceholder />;

@@ -78,7 +78,8 @@ them as input, not as open questions:
 Problem and release goal:
 Audience:
 User stories:
-Platforms: iOS | shared (mobile web + Android parity) | none
+Platforms: iOS | shared | none
+Validation targets: iPhone layer required by the observable contract; add web/Android only for explicit cross-platform scope
 Locales: RU/BE/UK/PL/EN | selected locales
 Apple requirements touched:
 Acceptance criteria (with evidence layer: simulator | physical iPhone | TestFlight):

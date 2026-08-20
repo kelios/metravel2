@@ -29,8 +29,9 @@ Read first:
   validation, APNs permission/token/update/removal, and WebView message trust.
 - RU/BE/UK/PL/EN copy and persistence, VoiceOver/Dynamic Type/reduced motion,
   44-point targets, and keyboard/focus order.
-- Cross-platform containment for every shared file: desktop web plus the same
-  mobile-web/Android control flow.
+- Cross-platform containment for shared files through affected-path automated
+  or web controls; do not require Android device evidence for an iOS-specific
+  change unless the task investigates a cross-platform regression.
 - Test quality: no mocked proof for the primitive under review, no skipped
   tests, and no simulator-only claim for physical/TestFlight behavior.
 

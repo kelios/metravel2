@@ -9,7 +9,7 @@ Read `docs/RULES.md`, `docs/DEVELOPMENT.md`, `docs/TESTING.md`, and `docs/RELEAS
 
 Select checks by change scope instead of defaulting to the heaviest run every time:
 
-- Before starting release/build/test commands, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. When a test/quality gate is already active, stop your own test launch without waiting, polling, bypassing, or retrying. If it covers the required scope and tests are the only remaining Done-gate step, record `validation delegated: active gate pid/name` and allow task completion without reporting `passed`; otherwise record `validation skipped: active gate pid/name` and keep the task open. Deploy/build/browser/API/device gates are never satisfied by delegation to a test process. The active owner fixes failures and reruns.
+- Before starting release/build/test commands, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. When a test/quality gate is already active, stop your duplicate launch without waiting, polling, bypassing, or retrying. `validation delegated/skipped: active gate pid/name` is coordination only. Request the owner result and resume acceptance; never close or park from delegation, and never substitute it for deploy/build/browser/API/device evidence.
 - Small finished logical block: prefer `npm run check:fast`.
 - Need to inspect the selective plan first: use `npm run check:fast:dry`, `npm run check:changed:dry`, or `npm run check:e2e:changed:dry`.
 - Medium change touching a bounded area: run the relevant targeted tests plus the matching selective checks.
@@ -33,11 +33,11 @@ Keep release and performance validation aligned with repo policy:
 - Android EAS/cloud builds and submits are disabled. Android QA uses local
   build/install on USB; an active Android production release uses the local
   Gradle/production-only Play path from `$metravel-google-play-operator`.
-- Shared app changes need desktop-web evidence plus paired mobile-web/Android
-  evidence. Do not mark Android-ready from a web viewport or mobile-web-ready
-  from Android alone; report unavailable active-platform coverage as
-  `verify pending`. Active iOS/shared changes also require the appropriate
-  simulator/physical-iPhone/TestFlight evidence layer.
+- Common/shared responsive app changes need desktop-web and mobile-web browser
+  evidence. Require local USB Android evidence only for Android-specific
+  observable behavior/configuration/runtime and the appropriate
+  simulator/physical-iPhone/TestFlight layer only for iOS-specific scope. Do not
+  infer native readiness from a web viewport.
 - Route explicit signed iPhone build, App Store Connect upload, TestFlight
   mutation, App Review submit, or storefront release to
   `$metravel-ios-release-operator`; each stage needs its own authorization.
@@ -52,8 +52,9 @@ Keep release and performance validation aligned with repo policy:
 
 Account for UI-specific completion rules:
 
-- If a task changes visible UI, verify desktop web and mobile web in a real
-  browser, then run the same flow on the local USB Android build.
+- If a task changes visible common/shared UI, verify desktop web and mobile web
+  in a real browser. Run a local USB Android or iPhone flow only when that
+  platform has specific observable scope.
 - Confirm the desktop/mobile-web states with screenshots and no new console errors.
 
 Stay within repo workflow boundaries:

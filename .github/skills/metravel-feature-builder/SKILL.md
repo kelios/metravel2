@@ -47,8 +47,9 @@ Choose validation by scope after each finished logical block and before wrapping
 - Medium change: run the relevant targeted tests plus lint/selective checks for the affected module set.
 - Large or cross-cutting change: run `npm run lint` and `npm run test:run`.
 - If the change affects visible web UI, verify it in a real browser flow, capture a screenshot, and confirm the browser console has no new errors.
-- If localization is affected, run `npm run test:i18n`; shared native scope needs
-  separate Android/iOS evidence or an exact `verify pending` blocker.
+- If localization is affected, run `npm run test:i18n`. Visible common/shared UI
+  needs desktop-web and mobile-web evidence; Android/iOS evidence is required only
+  for corresponding platform-specific behavior, configuration, or runtime.
 
 Avoid dev-environment false positives:
 

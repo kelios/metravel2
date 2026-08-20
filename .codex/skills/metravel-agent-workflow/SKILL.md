@@ -42,7 +42,8 @@ Default feature flow:
 11. Backend Diagnostician: use `$metravel-backend-diagnostician` for read-only API/backend blockers and board follow-up.
 12. Ticket Board: use `$metravel-ticket-board` for MCP board task/sprint list/create/update/sync; use `$metravel-task-contract` for FE/BE contracts.
 13. Browser Reviewer: use `$metravel-browser-reviewer` for visible web diff review, fixes, and re-verification.
-14. Mobile Tester: use `$metravel-mobile-tester` for paired mobile-web/Android QA evidence and retest.
+14. Mobile Tester: use `$metravel-mobile-tester` for target-specific mobile-web
+    and/or Android QA evidence and retest.
 15. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
 16. Reviewer/Fixer: always use `$metravel-code-reviewer` after code changes to
     review the complete task diff, fix confirmed in-scope findings, and repeat
@@ -60,7 +61,9 @@ Default feature flow:
 Default bug loop:
 
 1. QA Agent explores the app and writes bug reports only.
-2. Mobile Tester handles paired mobile-web/Android reproduction, USB-device evidence, and retest when the bug is mobile web or Android/native.
+2. Mobile Tester handles mobile-web browser reproduction for responsive-web
+   bugs, and USB-device evidence for Android-specific bugs; compare both only
+   for an explicit parity/cross-platform investigation.
 3. Android Developer fixes confirmed platform-native bugs; Programmer fixes shared feature bugs.
 4. QA Agent or Mobile Tester re-tests the fixed scenario.
 5. Reviewer/Fixer checks the complete diff, fixes confirmed in-scope findings,
@@ -94,8 +97,12 @@ Default bug loop:
   approval moves `review → testing`; QA/release evidence supports `testing → done` through
   `$metravel-sprint-reviewer`.
 - Do not use `blocked_by` as a review or testing state. It is reserved for a concrete hard
-  dependency that prevents implementation from starting or continuing. Missing validation stays
-  in `review`/`testing`; a found defect returns to `in_progress`.
+  dependency that prevents implementation from starting or continuing. `testing`
+  is active QA or an exact retest/temporal gate, never parking for missing
+  validation. A pass closes the current ticket; unfinished ticket-owned work
+  returns to `todo`/`in_progress`; a separate confirmed defect gets a new/reused
+  linked task after Problem Memory. Missing access/device pauses the role chain
+  for a concrete unblock request and then resumes it.
 - Do not let Production Smoke deploy, rollback, or mutate production; it only probes read-only health.
 - Do not let implementation start from vague requirements; require acceptance criteria or a bug report first.
 - Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
@@ -107,9 +114,11 @@ Default bug loop:
 - Keep unrelated user changes separate; never revert files outside the task.
 - Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
 - Require every role handoff to state platform impact and localization impact.
-  Implementation/review/QA must cover desktop web, mobile web, Android, iOS, and
-  RU/BE/UK/PL/EN where affected; mobile-web/Android remain paired controls and
-  iPhone uses the required simulator/physical/TestFlight layer.
+  Common/shared responsive UI covers desktop web and mobile web. Android QA is
+  required only for Android-specific observable behavior/configuration/runtime;
+  iPhone QA only for iOS-specific scope at the required
+  simulator/physical/TestFlight layer. Mobile parity stays invariant without an
+  automatic all-device gate; cover RU/BE/UK/PL/EN where affected.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.
 - If an audit-only role finds a real issue, route it to implementation. The
   mandatory Code Reviewer/Fixer repairs its own confirmed in-scope findings

@@ -58,9 +58,11 @@ Done gate:
 - Prefer measurable acceptance criteria over broad intent.
 - Keep non-goals explicit so engineering does not overbuild.
 - Define the same product outcome across desktop web, mobile web, Android, and
-  iPhone when shared. Mobile-web and Android acceptance criteria are paired;
-  iPhone criteria select simulator/physical/TestFlight evidence. List only technical
-  platform differences that the product actually requires.
+  iPhone when shared. Common responsive acceptance is demonstrated on desktop
+  web and mobile web. Add Android or iPhone acceptance criteria only when the
+  product requirement has platform-specific observable behavior; select the
+  appropriate native evidence layer. List only technical platform differences
+  that the product actually requires.
 - State whether acceptance criteria apply to RU/BE/UK/PL/EN. Separate app-owned
   UI localization from API/editorial content that needs a backend locale contract.
 - For FE/BE dependencies, name the required board ids or the concrete endpoint/field/event that must unblock the work.

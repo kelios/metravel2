@@ -48,9 +48,10 @@ cache, pagination, or API fan-out:
 - After an authorized deploy, repeat the same production probe and compare
   before/after, including initial viewport, scroll/lazy behavior, duplicate URL
   variants, oversized/unsized media, and 4xx/5xx.
-- Without a deployed live-URL rerun, report `local fix ready; production
-  verification pending`, keep the board task in `review`/`testing`, and never
-  claim the production problem is fixed.
+- Without a deployed live-URL rerun, never claim the production problem is
+  fixed. When that rerun is mandatory for acceptance, request exact deploy
+  authorization/result and resume after it; do not finish by parking the board
+  task in `testing`.
 - When shared media/source/pagination code changes, audit adjacent consumers and
   add or link a regression guard for the problem family instead of accepting a
   consumer-only point fix as the durable solution.
@@ -75,12 +76,14 @@ Choose validation by scope after each finished logical block and before wrapping
 - Medium change: run the relevant targeted tests plus lint/selective checks for the affected module set.
 - Large or cross-cutting change: run `npm run lint` and `npm run test:run`.
 - If the change affects visible web UI, verify it in a real browser flow, capture a screenshot, and confirm the browser console has no new errors.
-- If the change affects visible shared UI, verify desktop web, mobile web, the
-  same flow on a locally built Android app, and iPhone through
-  `$metravel-ios-tester` at the required simulator/physical/TestFlight layer.
+- If the change affects visible common/shared responsive UI, verify desktop web
+  and mobile web. Add a locally built Android run only for Android-specific
+  observable behavior/configuration/runtime, and iPhone evidence through
+  `$metravel-ios-tester` only for iOS-specific scope at the required layer.
 - If localization is affected, run `npm run test:i18n` and verify the changed
-  locales on every affected active platform; mobile-web and Android evidence do
-  not replace each other.
+  locales on affected observable targets. Require native cold-restart/lifecycle
+  evidence only when that platform's locale storage, provider, configuration,
+  or runtime behavior changed.
 
 After validation and before handoff, use `$metravel-code-reviewer` on the
 complete task-owned diff. Pass the original task, changed paths, and validation

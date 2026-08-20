@@ -19,8 +19,10 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, `constants/designSystem.ts`,
 
 ## Workflow
 
-1. Define the route set and capture the same scenarios at desktop web and mobile
-   web sizes, then add local-build Android and appropriate iPhone evidence.
+1. Define the route set and capture common/shared responsive scenarios at
+   desktop-web and mobile-web sizes. Add local-build Android or the appropriate
+   iPhone layer only when the audit explicitly includes that platform's
+   observable behavior; parity is an invariant, not an automatic device gate.
 2. Build a consistency matrix: audit axis × screen, with screenshot/DOM evidence for each deviation.
 3. Classify P1 blocking/broken layout, P2 visible system drift or friction, P3 polish.
 4. Trace confirmed visual symptoms to code and existing tokens/components. Do not report taste preferences as defects.

@@ -25,8 +25,10 @@ Read first:
 - Do not infer production performance from Expo dev bundles.
 - Confirm that each reported bug is reproducible and user-visible or validation-relevant.
 - Record platform impact and localization impact before testing. For visible
-  shared flows, cover desktop web and hand paired mobile-web/Android evidence to
-  `$metravel-mobile-tester`; neither mobile surface is inferred from the other.
+  common/shared responsive flows, cover desktop web and mobile web. Hand
+  Android-specific observable behavior to `$metravel-mobile-tester` and
+  iOS-specific behavior to `$metravel-ios-tester`; do not create automatic
+  native gates for a responsive-web change.
 - When UI copy or locale behavior is affected, exercise the changed flow in the
   relevant RU/BE/UK/PL/EN locales, including long-label layout, accessibility,
   formatting/plurals, persisted language, and web reload/native cold restart.
@@ -70,4 +72,10 @@ Residual risk:
 - Do not fix code during QA exploration.
 - Do not create duplicate reports for the same root cause.
 - Do not expose tokens, credentials, private user data, or `.env.e2e` values in logs or final output.
-- If a check is blocked by missing server access, unavailable secrets, or unstable external services, report the blocker and the next concrete verification step.
+- If a required check needs server access, a secret/login, unlock/connect, or an
+  unavailable target, stop and request the exact unblock action, then continue
+  the same QA pass. Do not turn inability to test into a final report or parked
+  `testing` status.
+- After a completed pass, return QA Pass. For a confirmed separate defect, run
+  `$metravel-problem-memory` and route creation/reuse through
+  `$metravel-ticket-board`; do not leave the accepted current task in `testing`.

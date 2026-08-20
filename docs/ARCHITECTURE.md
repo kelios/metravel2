@@ -21,8 +21,10 @@ backend описывают не внутреннюю серверную реал
 Наличие route/component/hook/API/store/test реализации не означает автоматически,
 что связанный backend endpoint задеплоен и проверен в production. Такие области
 помечаются как `backend-dependent`, `partial` или `needs runtime verification`.
-Production health, Lighthouse и device readiness подтверждаются отдельным свежим
-прогоном, а не историческими числами в этом документе.
+Production health, Lighthouse и platform-specific device readiness
+подтверждаются отдельным свежим прогоном, а не историческими числами в этом
+документе. Common/shared UI принимается по desktop/mobile web; Android/iPhone
+device gate появляется только при затронутом platform-specific behavior.
 
 ## Карта Проекта
 
@@ -547,20 +549,20 @@ Backend ожидается как DRF-like API под `/api`. Многие мо�
 | --- | --- | --- | --- |
 | Home, travel catalog, search | implemented | основной real-API flow | production browser smoke и актуальный performance baseline |
 | Travel details | implemented | основной real-API flow | сохранить bilateral slider/perf gate; проверить свежую production build |
-| Travel creation/editing | implemented | real API, upload и draft flows | desktop/mobile browser + Android verification сложных upload/route сценариев |
-| Map and places | implemented | web Leaflet; native Leaflet в WebView | уменьшить дублирование, проверить device parity и offline/overlay behavior |
+| Travel creation/editing | implemented | real API, upload и draft flows | desktop/mobile browser; Android/iPhone device evidence только для затронутых native upload/route сценариев |
+| Map and places | implemented | web Leaflet; native Leaflet в WebView | уменьшить дублирование; device evidence требуется при изменении platform-specific map/offline/overlay behavior |
 | Articles | implemented | list/detail/editor paths существуют | production API/media verification; feature maps требуют актуализации |
 | Auth, profile, subscriptions, settings | implemented | runtime/backend-dependent | подтвердить login, reload identity, logout и protected profile flows |
 | Favorites, history, calendar | implemented | local + server sync | сохранять identity isolation и regression coverage |
 | User points | implemented | backend-dependent | проверить import/export/route endpoints на production payloads |
-| Quests | implemented | backend-dependent | route/offline/media flows требуют device/browser verification |
+| Quests | implemented | backend-dependent | route/offline/media flows требуют browser или platform-specific device verification по фактическому scope |
 | Achievements/gamification | implemented adapters/UI | backend-dependent; mock flags development-only | сохранять typed unavailable/auth states и runtime evidence по mutations |
 | Planned/public/social trips | implemented adapters/UI | backend-dependent; dev fixtures отделены production guards | проверять create/apply/RSVP/chat/report без fake-success fallbacks |
 | Telegram/contact/trust/safety | implemented UI/adapters | partial/backend-dependent | production endpoints, privacy/security evidence, disabled-state UX |
 | Messages | implemented | backend-dependent | production thread/message/unread verification |
 | PDF/book export | implemented | export работает; monetization partial | checkout отсутствует, premium gate намеренно выключен |
 | SEO and analytics | implemented | web providers wired; native path должен сохранять consent/secret contract | production HTML/consent проверяются после deploy |
-| Android shell | implemented | readiness требует свежей installed-build проверки | Android USB + парный mobile-web pass |
+| Android shell | implemented | readiness требует свежей installed-build проверки | Android USB для Android shell/runtime scope; mobile-web browser остаётся общим UI control |
 | iPhone shell | active release scope | Expo/Xcode identity и simulator runtime требуют reconciliation | simulator + physical iPhone + exact TestFlight acceptance; iPad вне v1 |
 
 ## Карта Frontend Функциональности
@@ -935,8 +937,9 @@ npm run android:submit:production
 `ios:*` entrypoints закрепляют EAS CLI/image, проверяют release-конфигурацию и
 разделяют signed build и upload. Upload принимает только явный EAS build ID и
 использует заранее настроенные для bundle EAS-managed credentials.
-Local simulator/device QA разрешена в iOS/shared задачах; signed build, upload,
-App Review submit и storefront release требуют отдельных authorization gates.
+Local simulator/device QA применяется в iOS-specific задачах; common/shared
+scope сам по себе iPhone gate не создаёт. Signed build, upload, App Review
+submit и storefront release требуют отдельных authorization gates.
 
 ## Поверхность Проверок
 
@@ -953,6 +956,14 @@ App Review submit и storefront release требуют отдельных author
 | E2E affected area | `npm run check:e2e:changed` или selected Playwright spec |
 | Production web readiness | `npm run build:web:prod` |
 | Performance | только production build или real `https://metravel.by` Lighthouse |
+
+Mobile parity остаётся design-инвариантом. Эта таблица не превращает shared
+изменение в автоматический all-device gate: общий UI проверяется на
+desktop/mobile web, Android device evidence нужно только для Android-specific
+behavior, iPhone evidence — только для iOS-specific behavior или назначенного
+release gate. Backend/API/server acceptance опирается на доступные
+source/config/test/API/log/temporal probes; client-device integration всегда
+принимается отдельной связанной `area=front` задачей.
 
 Ключевые scripts:
 
@@ -976,14 +987,24 @@ App Review submit и storefront release требуют отдельных author
 | Finished small block | `npm run check:fast` |
 | Medium change / PR handoff | `npm run check:preflight` |
 | Full quality gate | `npm run lint` и `npm run test:run` |
-| Visible web UI | targeted checks + browser screenshot + console/network |
-| Native behavior | локальная build/install и device evidence |
+| Common/shared visible UI | targeted checks + desktop/mobile browser screenshot + console/network |
+| Android-specific behavior | локальная Android build/install и device evidence |
+| iOS-specific behavior | iPhone simulator/physical/TestFlight evidence по capability/release scope |
+| Backend/API/server behavior | source/config/test/API/log/temporal evidence; client-device integration — отдельная связанная `area=front` задача |
 | Production web | `npm run build:web:prod` + post-deploy smoke |
 | Performance | production build или реальный URL, бюджеты из config/scripts |
 | Docs-only update | structural Markdown review, links, commands и governance docs tests |
 
 Backend-dependent область принимается только с реальным payload/mutation evidence.
 Mock и наличие frontend adapter не являются production proof.
+
+`testing` не является parking-статусом: там остаётся только активная QA или
+exact retest/temporal gate с параметром, порогом, текущим значением и trigger.
+Pass закрывает текущую задачу; незавершённая собственная работа возвращает её в
+`in_progress`/`todo`; отдельный подтверждённый дефект получает новую/reused
+связанную карточку после Problem Memory. Missing access/device требует живого
+unblock-запроса и продолжения проверки, а irrelevant/out-of-scope device
+evidence не блокирует `done`.
 
 ## Архитектурные правила
 

@@ -62,9 +62,10 @@ Read first:
 ## Workflow
 
 1. Fix the route set and the scenarios/locales in scope.
-2. Capture the same scenario at mobile web ~390px, on the Android local build
-   and on the iPhone layer required by the task (simulator for layout, physical
-   iPhone for safe-area/permission/keyboard reality).
+2. Capture the scenario on the iPhone layer required by the iOS-specific task
+   (simulator for layout, physical iPhone for safe-area/permission/keyboard
+   reality). Add mobile-web or Android comparison only when the assigned task
+   explicitly owns a cross-platform parity investigation.
 3. Build a consistency matrix: axis × surface, with screenshot evidence for each
    deviation. Classify P1 blocking/broken, P2 visible drift, P3 polish.
 4. Trace each confirmed symptom to code and to the token/component that should

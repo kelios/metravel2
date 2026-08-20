@@ -13,17 +13,21 @@
 - Metravel's active product surfaces are desktop web, mobile web, Android, and
   iPhone (iOS). The first App Store release is iPhone-only; iPadOS-specific UI,
   screenshots, multitasking, and acceptance remain out of scope and their
-  absence does not create `verify pending`.
+  absence does not block `done`.
 - Before every task, record
   `Platform impact: desktop web | mobile web | Android | iOS | shared | none` and
   `Localization impact: all current locales | selected locales | none`.
-  `none` must be a considered conclusion, not an omitted check.
+  `none` must be a considered conclusion, not an omitted check. `shared` means
+  common code or multiple affected surfaces; it does not by itself require
+  Android or iPhone device validation.
 - Shared components, hooks, services, API adapters, and state must preserve all
   affected active platforms. Platform files may adapt engines, permissions,
   safe areas, storage, or native APIs, but must not silently fork product behavior.
-- Mobile web, Android, and iPhone implement one mobile UX. Shared/mobile changes
-  verify the same scenario, state, locale, hierarchy, action order, key geometry,
-  and touch semantics on every affected surface. OS APIs, permissions, safe
+- Mobile web, Android, and iPhone implement one mobile UX. The same hierarchy,
+  action order, key geometry, states, and touch semantics are an architectural
+  invariant. Common/shared responsive UI is validated on desktop web and mobile
+  web; Android/iPhone device checks are added only for platform-specific
+  observable behavior, configuration, or runtime. OS APIs, permissions, safe
   areas/insets, and rendering engines may differ without changing product meaning.
 - The production locale registry is defined by `i18n/config.ts`; it currently
   contains RU/BE/UK/PL/EN with RU as default/fallback. `i18n/resources.ts` and the
@@ -46,8 +50,9 @@
   lifecycle; do not add locale URL prefixes or `hreflang` without a separate SEO
   routing contract.
 - Any localization-impacting change must pass `npm run test:i18n` plus the normal
-  feature checks. Shared native changes require separate mobile-web, Android,
-  and iPhone evidence at the appropriate simulator/device layer.
+  feature checks. Common/shared copy is checked on the affected web surface;
+  Android or iPhone locale lifecycle evidence is required only when the change
+  affects that platform's storage, provider, configuration, or runtime behavior.
 
 ## Development workflow
 
@@ -89,18 +94,23 @@ npm run test:run
   - verify the changed scenario on desktop web and mobile web before considering the task complete;
   - take screenshots of the desktop and mobile-web result to confirm visual correctness;
   - check the browser console for errors (no new errors should appear after the change).
-- If a task changes visible UI/layout/interaction on any active surface, also run
-  the same scenario on a locally built Android app installed on the USB-connected
-  phone and on iPhone when iOS/shared behavior is affected. Visible shared UI
-  completion therefore requires desktop web + mobile web + Android + iPhone
-  evidence unless a concrete environment blocker is reported.
+- A shared file, component, hook, or service does not by itself create a device
+  gate. Run Android device QA only when the task changes Android-specific
+  observable behavior, configuration, or runtime. Run iPhone QA only when it
+  changes iOS-specific observable behavior, configuration, or runtime. Preserve
+  mobile parity in implementation even when no native device gate is applicable.
 - Always self-verify (mandatory):
   - the agent must verify its own changes end-to-end (browser and/or tests) before handoff — never defer verification to the user and never report a change as done/fixed while verification is still pending;
   - **never offload browser verification to the user.** Asking the user to scroll, hard-refresh, open devtools, run a console snippet, take a screenshot, or "tell me what you see" is NOT verification — it is offloading, and it is forbidden as a substitute for doing it yourself. The user reporting a bug is the input; confirming the fix in a browser is your job, not theirs;
   - if the preview/dev server is flaky (crashes, slow bundling, route redirects, transient API timeouts), restart it, wait, re-navigate, or retry until verification actually completes — instability is not an acceptable reason to skip verification;
   - if the default preview cannot reach or lay out the target (headless viewport reports `0`, RN-Web scrolls an inner container so `window.scrollTo`/IntersectionObserver never fire, the route is production-only, dev-SSR crashes on the page), you must exhaust an alternate self-verification path BEFORE declaring a blocker — e.g. build a local prod web export and serve it statically with a prod-API proxy (`Prod Static` / `Dist Prod` launch), drive it with Playwright/e2e, or device-verify on the real Android build. "The preview couldn't show it" is only a real blocker once every available path has actually been tried and reported;
   - when Android verification is relevant, assume a USB Android phone is connected to this workstation: run `adb devices -l` before marking Android unavailable; if a device is listed with status `device`, build Android locally, install that build to the phone, and test the needed scenario on it using `docs/MANUAL_TEST_CASES.md` `AND-USB-*` instead of asking the user to verify;
-  - if a change genuinely cannot be verified after real effort (e.g. an environment blocker outside the code that no available path can bypass), say so explicitly, mark the item as `verify pending` with the concrete blocker AND the list of paths you already tried, and do not claim it is done.
+  - inability to start a required check is not a completed QA verdict. If an
+    exact access, login, unlock/connect action, Android phone or iPhone is
+    required, stop the acceptance turn and ask the owner for that concrete
+    unblock action; after the response, continue the same check. Do not hand off
+    the task as a pending verdict, do not park it in `testing` for missing access,
+    and do not claim it is done before the check completes;
 - Authenticated QA (allowed):
   - for QA/testing that requires a signed-in user, you may sign in using the dedicated end-to-end test account from `.env.e2e` (`E2E_EMAIL` / `E2E_PASSWORD`);
   - prefer the e2e auth mechanism — the Playwright auth setup or a programmatic login (login API → `Authorization: Token <token>` injected into the store/headers) — over hand-typing credentials into UI fields, and reuse the e2e session where possible;
@@ -114,11 +124,16 @@ npm run test:run
   - the active closed-testing surfaces (`alpha`, `internal`, `beta`, testers,
     countries and their releases) are protected and must not be changed by the
     production release automation;
-  - Android device QA requires a locally built Android app installed over USB on the connected phone, for example `cd android && ./gradlew :app:installDebug` or `:app:assembleDebug` plus `adb install -r ...`;
+  - when Android-specific observable behavior, configuration, or runtime is in
+    scope, Android device QA requires a locally built Android app installed over
+    USB on the connected phone, for example `cd android && ./gradlew
+    :app:installDebug` or `:app:assembleDebug` plus `adb install -r ...`;
   - do not substitute mobile web viewport evidence, Expo web export, EAS preview/development/production builds, or dev-client/export flows for Android device validation without explicit user approval;
   - if local build/install is blocked, report the exact command, result, and next safe step instead of claiming Android verification passed.
 - iOS validation policy (mandatory):
-  - local Xcode/simulator/device QA is a normal path for assigned iOS/shared work;
+  - local Xcode/simulator/device QA is a normal path for assigned iOS-specific
+    observable behavior, configuration, or runtime; common/shared code alone does
+    not create an iPhone gate;
   - simulator evidence covers compilation and basic UI, but not hardware,
     signing, TestFlight, APNs delivery, Universal Links, HEIC, biometrics, or
     production embedded configuration;
@@ -144,8 +159,8 @@ npm run test:run
   - before starting one, check active processes and known locks for the same target, for example `ps`/`pgrep -af` matches for `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `xcodebuild`, `simctl`, `expo run:ios`, `docker compose`, `nginx`, `systemctl`, plus lock files such as `dist/.prod-build.lock` or `.codex-temp/ops/*.lock`;
   - if another agent or terminal already runs the same deploy/build/rebuild target, do not start a duplicate. Reuse the active operation, wait only when its result is required by your scope, or report a blocker with PID, command, target, and the next safe action;
   - test/quality gates use a stricter non-waiting contract: when a live `.codex-temp/ops/quality-gate.lock` or active quality process exists, stop the attempted validation immediately. Do not wait, poll, monitor completion, retry after the lock is released, or start a narrower bypass test;
-  - when the active gate's scope covers the current task and automated tests are its only remaining Done-gate step, report `validation delegated: active gate pid/name`; the task may be completed/closed without claiming that tests already passed. The active owner must fix real failures and rerun; if a failure cannot be resolved in that scope, the owner reopens the affected task or records a blocker;
-  - when the active gate does not cover the touched scope, or deploy/browser/API/device/another validation step remains, report `validation skipped: active gate pid/name` and keep the task open. Other chats do not duplicate the active owner's work;
+  - when the active gate's scope covers the current task and automated tests are its only remaining Done-gate step, report `validation delegated: active gate pid/name` only as coordination evidence. Do not claim `passed` or close from delegation alone; stop the acceptance decision, request the active owner's result, and resume when it is available. The active owner must fix real failures and rerun;
+  - when the active gate does not cover the touched scope, or deploy/browser/API/device/another validation step remains, `validation skipped: active gate pid/name` is only coordination evidence. Do not make a final board decision or park the task in `testing`: stop and request the exact owner result/unblock action, then resume acceptance. Other chats do not duplicate the active owner's work;
   - do not kill, restart, or replace another agent's process unless the user explicitly asked for it or a documented safe wrapper owns that cleanup;
   - if a lock is stale, confirm the process is gone or the lock exceeded its documented stale window before removing it;
   - broad gates (`npm run release:check`, `npm run check:preflight`, full `npm run test:run`, Playwright/e2e) are exclusive per workspace. Narrow unit tests may run only when they do not share the same server/build/output and no broad gate is already active.
@@ -177,10 +192,33 @@ npm run test:run
   - frontend, backend, and cross-functional work items must be created on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`;
   - task `area` is only `front` or `back` for active workflow: Android/native app
     bugs are `area=front` with `[AND-...]` context, iOS app bugs are `area=front`
-    with `[IOS-...]` context, and shared mobile tasks name mobile-web/Android/iPhone
-    validation in the description; use `area=back` only for backend/API/server work;
-  - `blocked_by` is only for a task that cannot start or continue because a concrete hard dependency is unresolved. A completed implementation waiting for code review, QA, backend/deploy/production/API/browser/device evidence, or another Done-gate check stays in `review` or `testing`; a validation failure requiring code changes returns to `in_progress`;
+    with `[IOS-...]` context, and shared/common responsive tasks name desktop-web
+    and mobile-web validation; add Android/iPhone device evidence only for
+    platform-specific scope. Use `area=back` only for backend/API/server work;
+  - `todo` means implementation/refinement/ops work remains; `in_progress` means
+    that work is happening; `testing` means implementation is complete and an
+    in-scope QA pass is active or an exact repeated measurement/temporal
+    observation is scheduled; `done` means all
+    work is complete and all available mandatory in-scope checks are green.
+    Irrelevant or out-of-scope evidence does not block `done`;
+  - `blocked_by` is only for a task that cannot start or continue because a concrete hard dependency is unresolved. A completed implementation waiting for code review stays in `review`; `testing` is used only while QA is active or while an exact remeasurement trigger is pending. Missing backend/deploy/production/API/browser/device access pauses acceptance and requires an unblock request, not a parked final status; unfinished owner work returns to `todo` or `in_progress` according to whether it has started;
   - never use `blocked_by` merely because a Done gate is incomplete, a reviewer/tester has not run yet, or production verification is pending. Link the true blocker task/gate only when it prevents implementation work itself;
+  - when the user explicitly asks to accept `area=back` tasks, validate only with
+    available relevant backend source/API/production probes. Device/browser
+    client evidence belongs to a linked `area=front` task and is not a backend
+    Done gate. If backend/refinement/ops work remains, move the task to `todo`; if
+    implementation is complete but a defined observation period has not elapsed,
+    keep it in `testing`; if backend work is complete and all available mandatory
+    in-scope probes are green, move it to `done` even when irrelevant or
+    out-of-scope evidence cannot be collected;
+  - `testing` is never a final parking outcome after an attempted acceptance.
+    A ticket may remain there only with an executable retest record containing
+    the exact parameter, expected threshold, current measured value,
+    trigger/earliest recheck, and command/scenario. A completed pass moves the
+    current ticket to `done`. If completed implementation exposes a separate
+    confirmed defect, run the Problem Memory preflight and create/reuse a linked
+    bug/task; do not park the accepted ticket. If its own promised work is still
+    incomplete, return it to `todo`/`in_progress` with the concrete owner action;
   - every `area=front` or `area=back` board task must include the required Task Contract, sprint, dependencies, blockers, validation, and Done gate;
   - every board task description is written in Russian, in plain language, and in the seven
     mandatory sections, in order: `## Простыми словами` (what happens now / what it should be /
@@ -475,10 +513,13 @@ npx serve dist/prod -l 3000 -s
 - Never ship a control that is permanently `disabled` because the platform lacks the API (example: Web Speech dictation on native). Render it only where it works and explain the alternative with a hint.
 - Rich-text editor toolbars are docked **below** the editor on mobile web, Android, and iPhone: the OS text-selection menu ("Cut / Copy / …") draws over the selection and would cover a top toolbar exactly when the user needs the link/image buttons.
 - Mobile layout parity is mandatory: mobile web, Android, and iPhone must use the same
-  visual and interaction contract for the same user-facing flow. A change on
-  either surface must be checked on both. Platform files may adapt technical map
-  engines, safe areas, or native APIs, but must not introduce different UX,
-  block order, primary actions, hero proportions, or tap behavior.
+  visual and interaction contract for the same user-facing flow. This is an
+  implementation/architecture invariant, not an automatic all-device QA gate.
+  Common responsive UI is checked on desktop web and mobile web; a native device
+  is required only for that platform's specific observable behavior,
+  configuration, or runtime. Platform files may adapt technical map engines,
+  safe areas, or native APIs, but must not introduce different UX, block order,
+  primary actions, hero proportions, or tap behavior.
 - Map/place/travel-point surfaces must reuse one point/place template whenever possible. The mobile popup/card contract is fullscreen inside the app content area with app header/footer still visible; the hero image takes about 70% of the card; below it are title/meta, coordinates with copy, article/page action when available, expandable navigation system choices, and existing save/add/share/route actions.
 - The point/place navigation set must explicitly include Google Maps, Apple Maps, Organic Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap where coordinates are available. Telegram/share is extra and must not replace map/navigation choices.
 - Related travel state actions must be visible as text, not only as an unlabeled icon: "Был здесь", "Хочу поехать", "Планирую" or a compact "Был / Хочу / Планирую" affordance that opens those choices.

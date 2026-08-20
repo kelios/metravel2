@@ -179,8 +179,8 @@ submit в App Review и storefront release — четыре отдельных �
   Apple-действия и agent-owned implementation — разные строки.
 - **Матрица валидации** — на каждый слайс слой evidence (simulator /
   физический iPhone / exact processed TestFlight build) с указанием кейсов
-  `IOS-01..14`, плюс локали RU/BE/UK/PL/EN и парный контроль mobile
-  web/Android для общих файлов.
+  `IOS-01..14`, плюс локали RU/BE/UK/PL/EN. Общие файлы требуют desktop web +
+  mobile web; Android device evidence добавляется только при Android-specific impact.
 - **Отвергнутые варианты** — минимум один с причиной отказа; если альтернатив
   реально нет, это пишется явно.
 - **Риски, rollback и блокеры** — что может сломаться, как вернуть, какие

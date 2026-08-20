@@ -64,8 +64,9 @@ Read first:
 4. Add focused regression coverage. For configuration changes, verify resolved
    Expo config, Xcode settings, plist/entitlements/privacy files, and production origins.
 5. Run targeted tests, native compatibility governance, `npm run check:fast`,
-   and `npm run test:i18n` when locale or app-owned copy changed. Shared files
-   also require affected desktop-web and paired mobile-web/Android evidence.
+   and `npm run test:i18n` when locale or app-owned copy changed. For shared
+   files, run web controls only when their web path is affected; do not create an
+   automatic Android device gate for iOS work.
 6. Hand the complete diff and evidence to `$metravel-ios-reviewer`; after fixes,
    hand the resulting build to `$metravel-ios-tester`.
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Release Checks"
   short_description: "Pick the right metravel validation flow."
-  default_prompt: "Use $metravel-release-checks to map desktop-web/mobile-web/Android/iOS and RU/BE/UK/PL/EN impact, select locked validation and the correct device/TestFlight evidence, and respect separate store authorization gates."
+  default_prompt: "Use $metravel-release-checks to map affected targets and locales, validate shared responsive UI on desktop/mobile web, add native evidence only for native-specific scope, and respect store gates."

@@ -15,8 +15,10 @@ Load-bearing правила для текущего Expo SDK 57 / React Native 0
   incompatibilities, not for alternate visual hierarchy, action order, or tap
   semantics. Держится это **общими компонентами**, а не совпадением реализаций:
   расхождение лечится общим компонентом/хуком, платформенный файл меняет только
-  движок/инсеты/тени. Проверяется не автогвардом, а глазами при правке — web в
-  браузере (mobile) + Android USB + iPhone simulator/device verify; сквозной аудит —
+  движок/инсеты/тени. Parity — design-инвариант, а не обязательный all-device
+  gate для каждой shared-правки. Общий UI проверяется в браузере на desktop и
+  mobile web; Android USB добавляется при Android-specific поведении, iPhone
+  simulator/device — при iOS-specific поведении. Сквозной аудит —
   `$metravel-design-auditor`. Контракт карты/карточки места находится в
   `docs/features/map.md#pointplace-mobile-contract`; владелец домена —
   `$metravel-map-expert`.
@@ -95,7 +97,7 @@ Load-bearing правила для текущего Expo SDK 57 / React Native 0
   production-only Google Play API скриптом.
 - Release automation не меняет `alpha`, `internal`, `beta`, testers, countries
   или текущую closed-testing сборку.
-- Android QA по умолчанию: телефон подключён по USB, `adb devices -l` показывает
+- Для Android-specific задачи телефон подключён по USB, `adb devices -l` показывает
   `device`, приложение собрано локально и установлено на телефон:
   `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` +
   `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
@@ -109,8 +111,11 @@ Load-bearing правила для текущего Expo SDK 57 / React Native 0
 - Снять причину краша: `adb logcat -d | grep -E "FATAL|ReactNativeJS"` — дословный
   стек вместо догадок. Лог EAS-сборки анализируй только когда EAS-сборка была
   явно разрешена.
-- **Device-verify обязателен, если устройство подключено.** Native-фикс НЕ
-  сдавать как «verify pending», когда adb видит девайс — прогнать сценарий на нём.
+- **Device-verify обязателен для Android-specific фикса.** Сначала проверь
+  `adb devices -l`: при статусе `device` прогони сценарий на локально
+  установленной сборке. Если нужен unlock/connect, останови приёмку и запроси
+  это действие, затем продолжи; не сдавай отсутствие устройства как финальный
+  status. Shared/web-only правка сама по себе этот gate не создаёт.
 - После локальной установки делать cold launch/force-stop и убеждаться, что на
   устройстве реально установлен новый билд. Если по явному разрешению используется
   debug/dev-client + Metro, делай явный Reload и записывай этот маршрут как
