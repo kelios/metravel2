@@ -36,14 +36,19 @@ jest.mock('@/utils/toast', () => ({
 }));
 
 import { confirmAction } from '@/utils/confirmAction';
+import { ApiError } from '@/api/client';
 import { saveFormData } from '@/api/misc';
 import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
 import { useTravelFormPersistence } from '@/hooks/useTravelFormPersistence';
+import { i18n } from '@/i18n';
+import { showToastMessage } from '@/utils/toast';
 
 const mockConfirmAction = confirmAction as jest.MockedFunction<typeof confirmAction>;
 const mockSaveFormData = saveFormData as jest.MockedFunction<typeof saveFormData>;
 const mockUseImprovedAutoSave =
   useImprovedAutoSave as jest.MockedFunction<typeof useImprovedAutoSave>;
+const mockShowToastMessage =
+  showToastMessage as jest.MockedFunction<typeof showToastMessage>;
 
 const LONG_TEXT =
   '<p>Это длинное реальное описание путешествия по Беларуси с массой полезных деталей и наблюдений автора.</p>';
@@ -527,5 +532,289 @@ describe('handleManualSave — guard «анти-потеря текста»', ()
         ],
       }),
     );
+  });
+});
+
+describe('handleManualSave — server echo while editing', () => {
+  const sentTravel = {
+    id: 225,
+    slug: 'old-slug',
+    name: 'Путешествие',
+    description: LONG_TEXT,
+    plus: '',
+    minus: '',
+    recommendation: '',
+    youtube_link: '',
+    year: '2024',
+    visitedDate: '2024-05-10',
+    visa: false,
+    categories: ['1'],
+    cities: ['10'],
+    countries: [],
+    coordsMeTravel: [
+      {
+        id: null,
+        lat: 53.9,
+        lng: 27.56,
+        address: 'Точка A',
+        categories: [],
+        image: null,
+      },
+    ],
+    gallery: [
+      {
+        id: 901,
+        url: 'blob:http://localhost/gallery-901',
+        caption: 'Подпись до сейва',
+      },
+    ],
+    travel_image_thumb_url: 'blob:http://localhost/cover',
+    travel_image_thumb_small_url: 'blob:http://localhost/cover-small',
+  };
+
+  beforeEach(() => {
+    mockConfirmAction.mockReset();
+    mockSaveFormData.mockReset();
+  });
+
+  it('keeps fields edited after dispatch and still applies server-generated fields', async () => {
+    let resolveSave: ((savedData: typeof sentTravel) => void) | null = null;
+    mockSaveFormData.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveSave = resolve as (savedData: typeof sentTravel) => void;
+      }),
+    );
+    const { result, params } = setupPersistence({
+      initialFormData: sentTravel,
+      baselineText: {
+        description: LONG_TEXT,
+        plus: '',
+        minus: '',
+        recommendation: '',
+      },
+    });
+
+    let savePromise: Promise<unknown> | null = null;
+    await act(async () => {
+      savePromise = result.current.handleManualSave();
+      await Promise.resolve();
+    });
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+
+    const liveDescription = `${LONG_TEXT}<p>Правка во время сейва</p>`;
+    params.formDataRef.current = {
+      ...sentTravel,
+      name: 'Путешествие — новое название',
+      description: liveDescription,
+      year: '2025',
+      visitedDate: '2025-06-11',
+      visa: true,
+      categories: ['2'],
+      cities: ['20'],
+      gallery: [
+        {
+          ...sentTravel.gallery[0],
+          caption: 'Подпись во время сейва',
+        },
+      ],
+    };
+
+    await act(async () => {
+      resolveSave?.({
+        ...sentTravel,
+        slug: 'server-slug',
+        coordsMeTravel: [{ ...sentTravel.coordsMeTravel[0], id: 101 }],
+        gallery: [
+          {
+            id: 901,
+            url: 'https://metravel.by/gallery/901/photo.jpg',
+            caption: 'Подпись до сейва',
+          },
+        ],
+        travel_image_thumb_url: 'https://metravel.by/cover/full.jpg',
+        travel_image_thumb_small_url: 'https://metravel.by/cover/small.jpg',
+      });
+      await savePromise;
+      await Promise.resolve();
+    });
+
+    expect(params.formDataRef.current).toEqual(
+      expect.objectContaining({
+        slug: 'server-slug',
+        name: 'Путешествие — новое название',
+        description: liveDescription,
+        year: '2025',
+        visitedDate: '2025-06-11',
+        visa: true,
+        categories: ['2'],
+        cities: ['20'],
+        coordsMeTravel: [expect.objectContaining({ id: 101 })],
+        gallery: [
+          expect.objectContaining({
+            id: 901,
+            url: 'https://metravel.by/gallery/901/photo.jpg',
+            caption: 'Подпись во время сейва',
+          }),
+        ],
+        travel_image_thumb_url: 'https://metravel.by/cover/full.jpg',
+        travel_image_thumb_small_url: 'https://metravel.by/cover/small.jpg',
+      }),
+    );
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        slug: 'old-slug',
+        name: 'Путешествие',
+        description: LONG_TEXT,
+        coordsMeTravel: [expect.objectContaining({ id: null })],
+      }),
+    );
+  });
+
+  it('keeps the confirmed baseline equal to the form when no edit races the save (F-09)', async () => {
+    const savedTravel = {
+      ...sentTravel,
+      slug: 'server-slug',
+      coordsMeTravel: [{ ...sentTravel.coordsMeTravel[0], id: 101 }],
+      gallery: [
+        {
+          id: 901,
+          url: 'https://metravel.by/gallery/901/photo.jpg',
+          caption: 'Подпись до сейва',
+        },
+      ],
+      travel_image_thumb_url: 'https://metravel.by/cover/full.jpg',
+      travel_image_thumb_small_url: 'https://metravel.by/cover/small.jpg',
+    };
+    mockSaveFormData.mockResolvedValueOnce(savedTravel as any);
+    const { result, params } = setupPersistence({
+      initialFormData: sentTravel,
+      baselineText: {
+        description: LONG_TEXT,
+        plus: '',
+        minus: '',
+        recommendation: '',
+      },
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+      await Promise.resolve();
+    });
+
+    expect(mockConfirmAction).not.toHaveBeenCalled();
+    expect(params.formDataRef.current).toEqual(savedTravel);
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(savedTravel);
+  });
+});
+
+describe('handleManualSave — localized backend errors', () => {
+  const baseTravel = {
+    id: 225,
+    name: 'Путешествие',
+    description: LONG_TEXT,
+    plus: '',
+    minus: '',
+    recommendation: '',
+    coordsMeTravel: [],
+    gallery: [],
+  };
+  let consoleErrorSpy: jest.SpyInstance;
+
+  beforeEach(async () => {
+    mockConfirmAction.mockReset();
+    mockSaveFormData.mockReset();
+    mockShowToastMessage.mockReset();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    await i18n.changeLanguage('ru');
+  });
+
+  afterEach(async () => {
+    consoleErrorSpy.mockRestore();
+    await i18n.changeLanguage('ru');
+  });
+
+  const expectRejectedManualSave = async (error: Error, intent?: 'save' | 'publish') => {
+    mockSaveFormData.mockRejectedValueOnce(error);
+    const { result } = setupPersistence({
+      initialFormData: baseTravel,
+      baselineText: null,
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.handleManualSave(undefined, intent ? { intent } : undefined),
+      ).rejects.toBe(error);
+    });
+  };
+
+  it.each([
+    ['ru', 'Заполните это поле'],
+    ['uk', 'Заповніть це поле'],
+  ] as const)('localizes a standard DRF field error in %s', async (locale, expected) => {
+    await i18n.changeLanguage(locale);
+    const error = new ApiError(400, 'name: This field may not be blank.', {
+      name: ['This field may not be blank.'],
+    });
+
+    await expectRejectedManualSave(error);
+
+    expect(mockShowToastMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      text2: expected,
+    }));
+  });
+
+  it.each([
+    ['field string', { name: 'This field may not be blank.' }],
+    ['detail string', { detail: 'This field may not be blank.' }],
+  ] as const)('localizes a standard DRF error from a %s payload', async (_shape, data) => {
+    const error = new ApiError(400, 'This field may not be blank.', data);
+
+    await expectRejectedManualSave(error);
+
+    expect(mockShowToastMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      text2: 'Заполните это поле',
+    }));
+  });
+
+  it('passes an unknown backend field message through verbatim', async () => {
+    const customMessage = 'Use letters only.';
+    const error = new ApiError(400, `name: ${customMessage}`, {
+      name: [customMessage],
+    });
+
+    await expectRejectedManualSave(error);
+
+    expect(mockShowToastMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      text2: customMessage,
+    }));
+  });
+
+  it('uses the existing fallback for a generic Save failed error', async () => {
+    await expectRejectedManualSave(new Error('Save failed'));
+
+    expect(mockShowToastMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      text2: 'Попробуйте ещё раз',
+    }));
+  });
+
+  it('preserves the informational saved-as-draft moderation toast', async () => {
+    const moderationMessage =
+      'Published travels must pass moderation before they can be published.';
+    const error = new ApiError(400, moderationMessage, {
+      detail: moderationMessage,
+    });
+
+    await expectRejectedManualSave(error, 'publish');
+
+    expect(mockShowToastMessage).toHaveBeenCalledWith({
+      type: 'info',
+      text1: 'Сохранено как черновик',
+      text2:
+        'Маршрут сохранён как черновик, но пока не может быть опубликован: сначала он должен пройти модерацию.',
+    });
   });
 });

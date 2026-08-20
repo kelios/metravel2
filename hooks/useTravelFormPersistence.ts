@@ -31,6 +31,7 @@ import { showToastMessage } from '@/utils/toast';
 import {
   getErrorMessage,
   getErrorName,
+  localizeBackendFieldError,
   mapKnownServerErrorToRu,
 } from '@/utils/errorHelpers';
 import {
@@ -47,6 +48,65 @@ import { translate as i18nT } from '@/i18n'
 
 
 type ToastAwareError = Error & { toastShown?: boolean };
+
+const getLocalizedSaveErrorDetails = (
+  error: unknown,
+  rawDetails: string,
+): string | undefined => {
+  if (rawDetails === 'Save failed') return undefined
+
+  if (error instanceof ApiError) {
+    const data = error.data
+    const candidates = data && typeof data === 'object' && !Array.isArray(data)
+      ? Object.values(data as Record<string, unknown>)
+      : [data]
+
+    for (const candidate of candidates) {
+      const localized = localizeBackendFieldError(candidate)
+      if (localized) return localized
+    }
+  }
+
+  return localizeBackendFieldError(rawDetails)
+}
+
+const SERVER_OWNED_SAVE_RESPONSE_FIELDS = new Set<keyof TravelFormData>([
+  'id',
+  'slug',
+  'gallery',
+  'coordsMeTravel',
+  'travel_image_thumb_url',
+  'travel_image_thumb_small_url',
+  'thumbs200ForCollectionArr',
+  'travelImageThumbUrlArr',
+  'travelImageThumbUrArr',
+  'travelImageAddress',
+  'countryIds',
+  'travelAddressIds',
+  'travelAddressCity',
+  'travelAddressCountry',
+  'travelAddressAdress',
+  'travelAddressCategory',
+  'categoriesIds',
+  'publish',
+  'moderation',
+]);
+
+const preserveFieldsEditedAfterDispatch = (
+  savedData: TravelFormData,
+  currentData: TravelFormData,
+  sourceData?: TravelFormData,
+): TravelFormData => {
+  if (!sourceData) return savedData;
+
+  const mergedData = { ...savedData };
+  (Object.keys(currentData) as Array<keyof TravelFormData>).forEach((key) => {
+    if (SERVER_OWNED_SAVE_RESPONSE_FIELDS.has(key)) return;
+    if (isEqual(currentData[key], sourceData[key])) return;
+    Reflect.set(mergedData, key, currentData[key]);
+  });
+  return mergedData;
+};
 
 const markerIdentityMatches = (left: MarkerData, right: MarkerData): boolean => {
   const leftId = left.id == null ? '' : String(left.id).trim();
@@ -320,7 +380,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
       const epoch = ++applyEpochRef.current;
 
-      const normalizedSavedData = normalizeDraftPlaceholders(savedData);
+      let normalizedSavedData = normalizeDraftPlaceholders(savedData);
       // `sourceData` is the snapshot that started this request. The live ref can
       // already contain another point by the time the response arrives, so it is
       // the only safe merge target. Using the request snapshot here made a stale
@@ -329,16 +389,19 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         (formDataRef.current as TravelFormData) ??
         (formState.data as TravelFormData) ??
         (sourceData as TravelFormData);
+      if (options?.preserveEditingState) {
+        normalizedSavedData = preserveFieldsEditedAfterDispatch(
+          normalizedSavedData,
+          currentDataSnapshot,
+          sourceData,
+        );
+      }
       const hadId = normalizeTravelId(currentDataSnapshot.id) != null;
       const hasId = normalizeTravelId(normalizedSavedData.id) != null;
 
       // If backend returns placeholders/empty strings for rich text fields, don't wipe user input.
       const kf = (key: keyof TravelFormData, mode: Parameters<typeof keepCurrentField>[3]) =>
         keepCurrentField(normalizedSavedData, currentDataSnapshot, key, mode);
-
-      const assignCurrentEditableField = <K extends 'name' | 'description' | 'plus' | 'minus' | 'recommendation' | 'youtube_link'>(key: K) => {
-        normalizedSavedData[key] = currentDataSnapshot[key];
-      };
 
       (['description', 'plus', 'minus', 'recommendation', 'youtube_link'] as const).forEach(k => {
         kf(k, 'emptyString');
@@ -348,10 +411,6 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       kf('name', 'emptyString');
       kf('visitedDate', 'nil');
       kf('visitedDate', 'emptyString');
-
-      if (options?.preserveEditingState) {
-        (['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link'] as const).forEach(assignCurrentEditableField);
-      }
 
       // If backend returns empty arrays for filter fields, don't wipe user selections.
       (['categories', 'transports', 'complexity', 'companions', 'over_nights_stay', 'month'] as const).forEach(k => {
@@ -667,7 +726,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
         const savedData = await cleanAndSave(toSave, { intent });
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
-        applySavedData(normalizedSavedData, toSave as TravelFormData);
+        applySavedData(normalizedSavedData, toSave as TravelFormData, {
+          preserveEditingState: true,
+        });
         autosaveCancelPendingRef.current?.();
         if (!dataOverride) {
           showToast(i18nT('shared:hooks.useTravelFormPersistence.sohraneno_6f40d98d'));
@@ -694,12 +755,16 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // поэтому пересчитываем локально.
         const isPublishIntent = options?.intent === 'publish';
         const isModerationPublishError = mappedRu != null && isPublishIntent;
+        const localizedDetails = rawDetails
+          ? getLocalizedSaveErrorDetails(error, rawDetails)
+          : undefined;
 
         const toastTitle = isModerationPublishError
           ? i18nT('shared:hooks.useTravelFormPersistence.sohraneno_kak_chernovik_6a776ece')
           : i18nT('shared:hooks.useTravelFormPersistence.oshibka_sohraneniya_009a0024');
         const toastText = mappedRu
-          ?? (rawDetails && rawDetails !== 'Save failed' ? rawDetails : i18nT('shared:hooks.useTravelFormPersistence.poprobuyte_esche_raz_b527c579'));
+          ?? localizedDetails
+          ?? i18nT('shared:hooks.useTravelFormPersistence.poprobuyte_esche_raz_b527c579');
 
         void showToastMessage({
           type: isModerationPublishError ? 'info' : 'error',
