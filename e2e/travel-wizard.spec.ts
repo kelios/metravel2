@@ -620,6 +620,45 @@ const fillRichDescription = async (page: Page, text: string) => {
   await page.keyboard.type(text);
 };
 
+const isKnownLeafletPositionError = (message: string) =>
+  /Cannot read properties of undefined \(reading ['"]_leaflet_pos['"]\)/i.test(message);
+
+const verifyGalleryLoads = async (page: Page, viewport: 'desktop' | 'mobile') => {
+  await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+  await ensureCanCreateTravel(page);
+  await fillMinimumValidBasics(page, `E2E: gallery loads (${viewport})`);
+  await clickNext(page);
+  await ensureOnStep2(page);
+  await maybeDismissRouteCoachmark(page);
+
+  await page.getByRole('button', { name: 'Добавить точку вручную' }).click();
+  await page.getByPlaceholder('49.609645, 18.845693').fill('41.7151377, 44.827096');
+  await page.getByRole('button', { name: 'Добавить', exact: true }).click();
+  await expect(page.getByText(/Точек:\s*1/)).toBeVisible({ timeout: 15_000 });
+  await maybeDismissRouteCoachmark(page);
+
+  const browserErrors: string[] = [];
+  page.on('pageerror', (error) => browserErrors.push(String(error?.message ?? error)));
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text());
+  });
+
+  await clickNext(page);
+  await ensureOnStep3(page);
+
+  await expect(page.getByText('Загрузка галереи...', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Галерея', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+
+  if (viewport === 'mobile') {
+    await expect(page.getByTestId('gallery-mobile-pick')).toBeVisible({ timeout: 15_000 });
+  } else {
+    await expect(page.getByText('Перетащите сюда изображения', { exact: true })).toBeVisible({ timeout: 15_000 });
+  }
+
+  const unexpectedErrors = browserErrors.filter((message) => !isKnownLeafletPositionError(message));
+  expect(unexpectedErrors, `Unexpected errors while opening gallery:\n${unexpectedErrors.join('\n---\n')}`).toEqual([]);
+};
+
 const verifyPointCategoryEditorStability = async (page: Page) => {
   const guard = installNoConsoleErrorsGuard(page);
 
@@ -721,6 +760,18 @@ test.describe('Создание путешествия - Полный flow', () 
 
     expect(dictionaryRequests.filters).toBeLessThanOrEqual(1);
     expect(dictionaryRequests.countries).toBeLessThanOrEqual(1);
+  });
+
+  test('@smoke галерея загружается на desktop web без вечного fallback', async ({ page }) => {
+    await verifyGalleryLoads(page, 'desktop');
+  });
+
+  test.describe('галерея на mobile web', () => {
+    test.use(pixel7MobileWeb);
+
+    test('@smoke галерея загружается на mobile web без вечного fallback', async ({ page }) => {
+      await verifyGalleryLoads(page, 'mobile');
+    });
   });
 
   test('должен создать полное путешествие через все шаги', async ({ page }) => {

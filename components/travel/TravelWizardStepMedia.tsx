@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import {
     KeyboardAvoidingView,
@@ -28,6 +28,7 @@ import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
+import GallerySection from '@/components/travel/GallerySection';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -66,17 +67,6 @@ interface TravelWizardStepMediaProps {
 
 type GalleryValueForForm = Array<{ url: string; id?: string | number }>;
 type MediaStyles = ReturnType<typeof createStyles>;
-type GallerySectionComponent = React.ComponentType<{
-    images: TravelFormData['gallery'];
-    travelId?: string | number | null;
-    onChange?: (items: GalleryValueItem[]) => void;
-    isLoading?: boolean;
-}>;
-
-const GallerySectionLazy: React.LazyExoticComponent<GallerySectionComponent> | null =
-    Platform.OS === 'web' ? React.lazy(() => import('@/components/travel/GallerySection')) : null;
-const GallerySectionNative: GallerySectionComponent | null =
-    Platform.OS !== 'web' ? require('@/components/travel/GallerySection').default : null;
 
 const hasUrl = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
 
@@ -405,19 +395,7 @@ const GalleryMediaSection = React.memo(function GalleryMediaSection({
             <Text style={styles.sectionTitle}>{i18nT('travel:components.travel.TravelWizardStepMedia.galereya_puteshestviya_0e6981ba')}</Text>
             <Text style={styles.sectionHint}>
                 {i18nT('travel:components.travel.TravelWizardStepMedia.fotografii_povyshayut_doverie_i_pomogayut_ch_bc746649')}</Text>
-            {Platform.OS === 'web' && GallerySectionLazy ? (
-                <Suspense
-                    fallback={
-                        <View style={styles.lazyFallback}>
-                            <Text style={styles.lazyFallbackText}>{i18nT('travel:components.travel.TravelWizardStepMedia.zagruzka_galerei_2f46ef0d')}</Text>
-                        </View>
-                    }
-                >
-                    <GallerySectionLazy images={gallery} travelId={travelId} onChange={onGalleryChange} isLoading={false} />
-                </Suspense>
-            ) : GallerySectionNative ? (
-                <GallerySectionNative images={gallery} travelId={travelId} onChange={onGalleryChange} isLoading={false} />
-            ) : null}
+            <GallerySection images={gallery} travelId={travelId} onChange={onGalleryChange} isLoading={false} />
         </View>
     );
 });
@@ -678,21 +656,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile = fal
         ...(Platform.OS === 'web'
             ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
             : (DESIGN_TOKENS.shadowsNative.light as any)),
-    },
-    lazyFallback: {
-        marginTop: 8,
-        padding: DESIGN_TOKENS.spacing.md,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    lazyFallbackText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: colors.textMuted,
-        fontWeight: '600',
     },
     sectionTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
