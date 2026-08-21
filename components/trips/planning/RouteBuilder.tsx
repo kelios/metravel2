@@ -20,6 +20,7 @@ import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
 import TripBikeTypeControl from '@/components/trips/planning/TripBikeTypeControl';
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap';
 import TripRouteDownloadButtons from '@/components/trips/planning/TripRouteDownloadButtons';
+import TripRouteImportPanel from '@/components/trips/planning/TripRouteImportPanel';
 import {
   shouldRenderTripRouteExportMenu,
   useTripRouteExport,
@@ -577,6 +578,13 @@ function RouteBuilder({ trip }: Props) {
     );
   };
 
+  const handleApplyImportedRoute = useCallback((nextRoute: RoutePoint[]) => {
+    setRoute(nextRoute);
+    setEditingIndex(null);
+    setEditError(null);
+    setNewPointError(null);
+  }, []);
+
   const handleSave = () => {
     if (
       transportMutationLockedRef.current ||
@@ -1025,6 +1033,13 @@ function RouteBuilder({ trip }: Props) {
       ) : null}
 
       <RouteSummaryBar summary={summary} routingState={routingState} transport={trip.transport} />
+
+      <TripRouteImportPanel
+        route={route}
+        routeGeometry={routeGeometry}
+        disabled={updateTripRoute.isPending || transportPending}
+        onApply={handleApplyImportedRoute}
+      />
 
       {routeDownloadSection}
 

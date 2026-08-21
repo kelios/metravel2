@@ -80,6 +80,15 @@ let mockIdSeq = 9000;
 const findMock = (tripId: number | string): PlannedTrip | undefined =>
   mockStore.find((t) => String(t.id) === String(tripId));
 
+// Геометрия, сводка и routingState описывают один конкретный расчёт. После
+// правки точек/транспорта/велопрофиля мок не умеет перестроить его и обязан
+// сбросить все три поля вместе, иначе UI показывает старую дорогу как новую.
+const clearMockRouteCalculation = (trip: PlannedTrip): void => {
+  trip.routeGeometry = null;
+  trip.routeSummary = null;
+  trip.routingState = null;
+};
+
 const matchesCommunity = (
   trip: PlannedTrip,
   filters?: CommunityTripsFilters,
@@ -316,6 +325,7 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
   if (USE_MOCK) {
     const trip = findMock(input.tripId);
     if (!trip) throw new ApiError(404, 'Trip not found');
+    const transportChanged = trip.transport !== input.transport;
     trip.title = input.title;
     trip.description = input.description;
     trip.startDate = input.startDate;
@@ -324,6 +334,7 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
     trip.visibility = input.visibility;
     trip.seatsTotal = input.seatsTotal;
     trip.coverUrl = input.coverUrl;
+    if (transportChanged) clearMockRouteCalculation(trip);
     return cloneTrip(trip);
   }
 
@@ -338,6 +349,7 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
       devWarn('[planned-trips] update → mock fallback');
       const trip = findMock(input.tripId);
       if (trip) {
+        const transportChanged = trip.transport !== input.transport;
         trip.title = input.title;
         trip.description = input.description;
         trip.startDate = input.startDate;
@@ -346,6 +358,7 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
         trip.visibility = input.visibility;
         trip.seatsTotal = input.seatsTotal;
         trip.coverUrl = input.coverUrl;
+        if (transportChanged) clearMockRouteCalculation(trip);
         return cloneTrip(trip);
       }
     }
@@ -359,7 +372,9 @@ export async function updatePlannedTripTransport(
   if (USE_MOCK) {
     const trip = findMock(input.tripId);
     if (!trip) throw new ApiError(404, 'Trip not found');
+    const transportChanged = trip.transport !== input.transport;
     trip.transport = input.transport;
+    if (transportChanged) clearMockRouteCalculation(trip);
     return cloneTrip(trip);
   }
 
@@ -378,7 +393,9 @@ export async function updatePlannedTripBikeType(
   if (USE_MOCK) {
     const trip = findMock(input.tripId);
     if (!trip) throw new ApiError(404, 'Trip not found');
+    const bikeTypeChanged = trip.bikeType !== input.bikeType;
     trip.bikeType = input.bikeType;
+    if (bikeTypeChanged) clearMockRouteCalculation(trip);
     return cloneTrip(trip);
   }
 
@@ -411,9 +428,9 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
     const trip = findMock(input.tripId);
     if (!trip) throw new ApiError(404, 'Trip not found');
     trip.route = input.route;
-    // Движка маршрутизации у мока нет, а старая сводка описывает уже другие
-    // точки: честнее отдать «сводки пока нет» (#1490).
-    trip.routeSummary = null;
+    // Движка маршрутизации у мока нет, а старый расчёт описывает уже другие
+    // точки: честнее отдать пустые поля до живого превью (#1490).
+    clearMockRouteCalculation(trip);
     return cloneTrip(trip);
   }
   try {
@@ -443,7 +460,7 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
       const trip = findMock(input.tripId);
       if (trip) {
         trip.route = input.route;
-        trip.routeSummary = null;
+        clearMockRouteCalculation(trip);
         return cloneTrip(trip);
       }
     }

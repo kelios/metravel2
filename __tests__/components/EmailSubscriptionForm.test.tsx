@@ -22,7 +22,7 @@ jest.mock('expo-router', () => ({
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm';
 import { subscribeEmail } from '@/api/misc';
 import { queueAnalyticsEvent } from '@/utils/analytics';
-import { recordActionConsent } from '@/utils/actionConsent';
+import { EMAIL_SUBSCRIPTION_CONSENT, recordActionConsent } from '@/utils/actionConsent';
 
 const mockedSubscribeEmail = subscribeEmail as jest.Mock;
 const mockedQueueAnalyticsEvent = queueAnalyticsEvent as jest.Mock;
@@ -91,9 +91,16 @@ describe('EmailSubscriptionForm', () => {
                 'reader@example.com',
                 'quest',
                 undefined,
+                {
+                    granted: true,
+                    version: EMAIL_SUBSCRIPTION_CONSENT.version,
+                },
             ),
         );
-        expect(mockedRecordActionConsent).toHaveBeenCalledWith('email_subscribe', '1');
+        expect(mockedRecordActionConsent).toHaveBeenCalledWith(
+            EMAIL_SUBSCRIPTION_CONSENT.type,
+            EMAIL_SUBSCRIPTION_CONSENT.version,
+        );
     });
 
     it('шлёт событие email_subscribe с источником только после успеха бэкенда', async () => {

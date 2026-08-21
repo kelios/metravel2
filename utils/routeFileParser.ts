@@ -1,6 +1,25 @@
 import type { ParsedRoutePoint, ParsedRoutePreview, RouteElevationSample } from '@/types/travelRoutes';
+import { DOMParser as SafeXmlDomParser } from '@xmldom/xmldom';
 
 const EARTH_RADIUS_M = 6371000;
+
+export type RouteFileFormat = 'gpx' | 'kml';
+
+export interface NamedRouteFilePoint {
+  coord: string;
+  name: string;
+}
+
+export type RouteFileMetadataResult =
+  | {
+      ok: true;
+      format: RouteFileFormat;
+      namedPoints: NamedRouteFilePoint[];
+    }
+  | {
+      ok: false;
+      reason: 'unsupported' | 'damaged';
+    };
 
 // A "teleport" leg is a jump between two consecutive line points that is far
 // larger than the route's own typical step — a recording gap (stitched <trkseg>),
@@ -213,6 +232,102 @@ const getElementsByLocalName = (root: Document | Element, tagName: string): Elem
     }
   }
   return out;
+};
+
+const normalizedElementName = (element: Element): string =>
+  String(element.localName || element.nodeName.split(':').pop() || '').toLowerCase();
+
+const normalizeRouteFileFormat = (ext?: string): RouteFileFormat | null => {
+  const normalized = String(ext ?? '').trim().toLowerCase().replace(/^\./, '');
+  return normalized === 'gpx' || normalized === 'kml' ? normalized : null;
+};
+
+const mergeNamedRouteFilePoint = (
+  points: NamedRouteFilePoint[],
+  nextPoint: NamedRouteFilePoint,
+): void => {
+  const existing = points.find((point) => point.coord === nextPoint.coord);
+  if (!existing) {
+    points.push(nextPoint);
+    return;
+  }
+
+  const names = new Set(
+    `${existing.name}\n${nextPoint.name}`
+      .split('\n')
+      .map((name) => name.trim())
+      .filter(Boolean),
+  );
+  existing.name = Array.from(names).join(' · ');
+};
+
+const extractGpxNamedPoints = (document: Document): NamedRouteFilePoint[] => {
+  const points: NamedRouteFilePoint[] = [];
+
+  for (const waypoint of getElementsByLocalName(document, 'wpt')) {
+    const lat = Number(waypoint.getAttribute('lat'));
+    const lng = Number(waypoint.getAttribute('lon'));
+    const coord = toCoord(lat, lng);
+    const name = String(getElementsByLocalName(waypoint, 'name')[0]?.textContent ?? '').trim();
+    if (!coord || !name) continue;
+    mergeNamedRouteFilePoint(points, { coord, name });
+  }
+
+  return points;
+};
+
+const extractKmlNamedPoints = (document: Document): NamedRouteFilePoint[] => {
+  const points: NamedRouteFilePoint[] = [];
+
+  for (const placemark of getElementsByLocalName(document, 'Placemark')) {
+    const name = String(getElementsByLocalName(placemark, 'name')[0]?.textContent ?? '').trim();
+    const pointElement = getElementsByLocalName(placemark, 'Point')[0];
+    const coordinatesText = pointElement
+      ? String(getElementsByLocalName(pointElement, 'coordinates')[0]?.textContent ?? '').trim()
+      : '';
+    const parsedPoint = parseKmlCoordinatesChunk(coordinatesText)[0];
+    if (!name || !parsedPoint) continue;
+    mergeNamedRouteFilePoint(points, { coord: parsedPoint.coord, name });
+  }
+
+  return points;
+};
+
+/**
+ * Validates the bounded import XML contract and extracts only named metadata.
+ * Track/route geometry intentionally remains owned by parseRouteFilePreviews.
+ */
+export const parseRouteFileMetadata = (text: string, ext?: string): RouteFileMetadataResult => {
+  const format = normalizeRouteFileFormat(ext);
+  if (!format) return { ok: false, reason: 'unsupported' };
+  if (!String(text).trim() || /<\s*!(?:DOCTYPE|ENTITY)\b/i.test(text)) {
+    return { ok: false, reason: 'damaged' };
+  }
+
+  const diagnostics: string[] = [];
+  let document: Document;
+  try {
+    document = new SafeXmlDomParser({
+      errorHandler: {
+        warning: (message) => diagnostics.push(String(message)),
+        error: (message) => diagnostics.push(String(message)),
+        fatalError: (message) => diagnostics.push(String(message)),
+      },
+    }).parseFromString(text, 'application/xml');
+  } catch {
+    return { ok: false, reason: 'damaged' };
+  }
+
+  const root = document.documentElement;
+  if (diagnostics.length > 0 || !root || normalizedElementName(root) !== format) {
+    return { ok: false, reason: 'damaged' };
+  }
+
+  return {
+    ok: true,
+    format,
+    namedPoints: format === 'gpx' ? extractGpxNamedPoints(document) : extractKmlNamedPoints(document),
+  };
 };
 
 const parseGpxPointsFromElementNodes = (nodes: Element[]): ParsedRoutePoint[] => {

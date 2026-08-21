@@ -97,24 +97,41 @@ export function useTripRoutePreview({ route, transport, enabled }: Options): Tri
   const active = engaged && settled && debounced.points.length >= 2;
 
   const [retryToken, setRetryToken] = useState(0);
-  const [received, setReceived] = useState<{ key: string; result: UseMapRoutingResult } | null>(null);
+  const [received, setReceived] = useState<{
+    key: string;
+    retryToken: number;
+    result: UseMapRoutingResult;
+  } | null>(null);
 
-  // Ответ движка принадлежит тому набору точек, который был смонтирован в
-  // момент ответа: следующая правка делает его устаревшим сразу, не дожидаясь
-  // нового построения.
-  const requestKeyRef = useRef(request.key);
-  requestKeyRef.current = request.key;
-
+  // Ответ принадлежит запросу, с которым смонтирован конкретный engine. Нельзя
+  // читать здесь самый новый `request.key`: пассивный effect старого engine ещё
+  // может доехать после правки и тогда пометит старую геометрию новым ключом.
+  const engineRequestKey = debounced.key;
+  const engineRetryToken = retryToken;
+  const currentEngineRef = useRef({ key: request.key, retryToken });
+  currentEngineRef.current = { key: request.key, retryToken };
   const handleResult = useCallback((result: UseMapRoutingResult) => {
-    setReceived({ key: requestKeyRef.current, result });
-  }, []);
+    const currentEngine = currentEngineRef.current;
+    if (
+      currentEngine.key !== engineRequestKey
+      || currentEngine.retryToken !== engineRetryToken
+    ) {
+      return;
+    }
+    setReceived({ key: engineRequestKey, retryToken: engineRetryToken, result });
+  }, [engineRequestKey, engineRetryToken]);
 
   const retry = useCallback(() => {
     setReceived(null);
     setRetryToken((token) => token + 1);
   }, []);
 
-  const fresh = active && received && received.key === request.key ? received.result : null;
+  const fresh = active
+    && received
+    && received.key === request.key
+    && received.retryToken === retryToken
+    ? received.result
+    : null;
 
   return useMemo(() => {
     const shell = {

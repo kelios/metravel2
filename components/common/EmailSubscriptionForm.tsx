@@ -13,7 +13,7 @@ import ConsentCheckbox from '@/components/legal/ConsentCheckbox'
 import { subscribeEmail, type SubscribeSource } from '@/api/misc'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { useActionConsent } from '@/hooks/useActionConsent'
-import { CONSENT_TYPES } from '@/utils/actionConsent'
+import { EMAIL_SUBSCRIPTION_CONSENT } from '@/utils/actionConsent'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -48,13 +48,19 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
   // предотмеченный чекбокс не является действительным согласием.
   const [consentChecked, setConsentChecked] = useState(false)
   const [consentMissing, setConsentMissing] = useState(false)
-  const { grant: grantConsent } = useActionConsent(CONSENT_TYPES.EMAIL_SUBSCRIBE)
+  const { grant: grantConsent } = useActionConsent(
+    EMAIL_SUBSCRIPTION_CONSENT.type,
+    EMAIL_SUBSCRIPTION_CONSENT.version,
+  )
 
   const mutation = useMutation({
     mutationFn: () => {
       const pageUrl =
         Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.href : undefined
-      return subscribeEmail(email, source, pageUrl)
+      return subscribeEmail(email, source, pageUrl, {
+        granted: true,
+        version: EMAIL_SUBSCRIPTION_CONSENT.version,
+      })
     },
     onSuccess: (result) => {
       queueAnalyticsEvent('email_subscribe', { source, status: result.status })
@@ -80,11 +86,8 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
       return
     }
     setLocalError(null)
-    // Фиксируем факт согласия до отправки: обрабатывать email мы начинаем
-    // именно с этого момента. Запись сейчас device-local: серверный аудит
-    // POST /user/consents/ требует логина и не знает типа email_subscribe,
-    // поэтому для гостя (основная аудитория формы) не создаётся — см. BE-задачу.
-    // Доказательство согласия на сервере — сама запись лида с source/page_url.
+    // Фиксируем локальное/user-linked согласие той же версией, которая уходит
+    // вместе с email lead. Оба пути запускаются только после явной отметки.
     void grantConsent()
     mutation.mutate()
   }
@@ -165,7 +168,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
                 testID="email-subscribe-consent"
                 accessibilityLabel={i18nT('sharedStatic:subscription.consentA11y')}
               >
-                {i18nT('sharedStatic:subscription.consentLabel')}
+                {i18nT(EMAIL_SUBSCRIPTION_CONSENT.labelKey)}
               </ConsentCheckbox>
               {consentMissing && (
                 <Text style={styles.consentErrorText} accessibilityLiveRegion="polite">

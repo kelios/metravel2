@@ -37,7 +37,7 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const approximate = isRouteApproximate(routingState);
-  const statusLabel = routingStateLabel(routingState);
+  const statusLabel = routingState ? routingStateLabel(routingState) : null;
   const statusHint = routingStateHint(routingState);
 
   if (!summary) {
@@ -57,19 +57,21 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
 
   return (
     <View style={styles.wrap} testID="route-summary">
-      <View
-        style={[styles.status, approximate ? styles.statusWarning : styles.statusReady]}
-        testID={approximate ? 'route-summary-approximate' : 'route-summary-routed'}
-      >
-        <Feather
-          name={approximate ? 'alert-triangle' : 'navigation'}
-          size={14}
-          color={approximate ? colors.warningDark : colors.primaryDark}
-        />
-        <Text style={[styles.statusText, approximate && styles.statusTextWarning]}>
-          {statusLabel}
-        </Text>
-      </View>
+      {statusLabel ? (
+        <View
+          style={[styles.status, approximate ? styles.statusWarning : styles.statusReady]}
+          testID={approximate ? 'route-summary-approximate' : 'route-summary-routed'}
+        >
+          <Feather
+            name={approximate ? 'alert-triangle' : 'navigation'}
+            size={14}
+            color={approximate ? colors.warningDark : colors.primaryDark}
+          />
+          <Text style={[styles.statusText, approximate && styles.statusTextWarning]}>
+            {statusLabel}
+          </Text>
+        </View>
+      ) : null}
       {statusHint ? <Text style={styles.statusHint}>{statusHint}</Text> : null}
       {transport ? (
         <View style={styles.chip}>

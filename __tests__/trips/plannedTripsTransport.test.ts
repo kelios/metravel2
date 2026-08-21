@@ -174,6 +174,10 @@ describe('updatePlannedTripTransport', () => {
     const updated = await updatePlannedTripTransport({ tripId: fixture.id, transport: 'foot' })
 
     expect(updated.transport).toBe('foot')
-    expect(updated.routeSummary?.durationMin).toBeGreaterThan(0)
+    // Мок не умеет перестраивать дорогу: старые геометрия/цифры/статус нельзя
+    // выдавать за результат нового транспорта (#1490).
+    expect(updated.routeGeometry).toBeNull()
+    expect(updated.routeSummary).toBeNull()
+    expect(updated.routingState).toBeNull()
   })
 })

@@ -8,6 +8,7 @@ import {
   sendFeedback,
   sendAIMessage,
   subscribeEmail,
+  type SubscribeEmailConsent,
 } from '@/api/misc'
 import type { TravelFormData } from '@/types/types'
 import { getEmptyFormData } from '@/utils/travelFormUtils'
@@ -629,6 +630,40 @@ describe('api/misc', () => {
       source: 'home',
       page_url: 'https://metravel.by/',
     })
+  })
+
+  it('subscribeEmail sends only an explicit non-empty consent pair', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })
+    mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'created' })
+
+    await subscribeEmail('a@b.com', 'quest', undefined, {
+      granted: true,
+      version: '  email-subscribe-2026-08-20-v1  ',
+    })
+
+    expect(JSON.parse(mockFetchWithTimeout.mock.calls[0][1].body)).toEqual({
+      email: 'a@b.com',
+      source: 'quest',
+      consent: true,
+      consent_version: 'email-subscribe-2026-08-20-v1',
+    })
+
+    const invalidConsents = [
+      { granted: false, version: 'email-subscribe-2026-08-20-v1' },
+      { granted: true, version: '   ' },
+    ] as unknown as SubscribeEmailConsent[]
+
+    for (const consent of invalidConsents) {
+      await subscribeEmail('a@b.com', 'quest', undefined, consent)
+    }
+
+    for (const [, init] of mockFetchWithTimeout.mock.calls.slice(1)) {
+      expect(JSON.parse(init.body)).toEqual({
+        email: 'a@b.com',
+        source: 'quest',
+      })
+    }
   })
 
   it('subscribeEmail maps a duplicate (200 exists) response', async () => {

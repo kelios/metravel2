@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 
 import { postConsentRecord } from '@/api/consent'
+import type { TranslationKey } from '@/i18n/resources'
 
 // Хранилище фактов принятия «действенных» согласий (квест/поездка/контакты).
 // Отдельно от cookie-consent (utils/consent.ts), т.к. применимо и на native.
@@ -20,6 +21,23 @@ export const CONSENT_TYPES = {
 } as const
 
 export type ConsentType = (typeof CONSENT_TYPES)[keyof typeof CONSENT_TYPES]
+
+interface ActionConsentDescriptor {
+  readonly type: ConsentType
+  readonly version: string
+  readonly labelKey: TranslationKey
+}
+
+/**
+ * Один version-id представляет точный набор формулировок
+ * `subscription.consentLabel` во всех production-локалях RU/BE/UK/PL/EN.
+ * При изменении любой из этих формулировок обязательно создаётся новая версия.
+ */
+export const EMAIL_SUBSCRIPTION_CONSENT = Object.freeze({
+  type: CONSENT_TYPES.EMAIL_SUBSCRIBE,
+  version: 'email-subscribe-2026-08-20-v1',
+  labelKey: 'sharedStatic:subscription.consentLabel',
+} as const satisfies ActionConsentDescriptor)
 
 export interface ActionConsentRecord {
   version: string

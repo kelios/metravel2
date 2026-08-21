@@ -671,15 +671,23 @@ export interface SubscribeResult {
   status: 'created' | 'exists';
 }
 
+export interface SubscribeEmailConsent {
+  granted: true;
+  version: string;
+}
+
 // Public email lead subscription (growth forms on home/articles). Backend BE-3:
 // POST /api/subscribe/ -> 201 {ok,status:"created"} | 200 {ok,status:"exists"}
 // | 400 {email:[...]} | 429 (scoped throttle). No auth required.
 export const subscribeEmail = async (
   email: string,
   source: SubscribeSource,
-  pageUrl?: string
+  pageUrl?: string,
+  consent?: SubscribeEmailConsent,
 ): Promise<SubscribeResult> => {
   const sanitizedEmail = sanitizeInput(email.trim());
+  const consentVersion = typeof consent?.version === 'string' ? consent.version.trim() : '';
+  const hasExplicitConsent = consent?.granted === true && consentVersion.length > 0;
 
   if (!sanitizedEmail) {
     throw new Error(i18nT('errorsStatic:api.misc.emailRequired'));
@@ -694,6 +702,9 @@ export const subscribeEmail = async (
           email: sanitizedEmail,
           source,
           ...(pageUrl ? { page_url: pageUrl } : {}),
+          ...(hasExplicitConsent
+            ? { consent: true, consent_version: consentVersion }
+            : {}),
         }),
       },
       DEFAULT_TIMEOUT

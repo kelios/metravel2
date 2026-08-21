@@ -11,8 +11,9 @@ import { PREVIEW_DEBOUNCE_MS } from '@/components/trips/planning/useTripRoutePre
 
 const mockEngine: {
   mounts: Array<{ points: Array<[number, number]>; transportMode: string }>
+  callbacks: Array<(result: UseMapRoutingResult) => void>
   onResult: ((result: UseMapRoutingResult) => void) | null
-} = { mounts: [], onResult: null }
+} = { mounts: [], callbacks: [], onResult: null }
 
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
@@ -50,7 +51,8 @@ jest.mock('@/components/trips/planning/TripRoutePreviewEngine', () => {
     mockEngine.onResult = props.onResult as never
     ReactLocal.useEffect(() => {
       mockEngine.mounts.push({ points: props.points, transportMode: props.transportMode })
-    }, [props.points, props.transportMode])
+      mockEngine.callbacks.push(props.onResult as never)
+    }, [props.onResult, props.points, props.transportMode])
     return (
       <View testID="trip-route-preview-engine">
         <Text testID="preview-engine-mode">{props.transportMode}</Text>
@@ -186,6 +188,7 @@ describe('RouteBuilder live route preview', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockEngine.mounts = []
+    mockEngine.callbacks = []
     mockEngine.onResult = null
   })
 
@@ -199,6 +202,15 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByTestId('trip-route-preview-engine')).toBeNull()
     expect(getByTestId('route-map-geometry').props.children).toBe('3')
     expect(getByTestId('route-map-provider').props.children).toBe('ors')
+  })
+
+  it('does not call a backend summary a local estimate when routing state is absent', () => {
+    const { getByTestId, queryByText } = render(
+      <RouteBuilder trip={makeTrip({ routingState: null })} />,
+    )
+
+    expect(queryByText('Локальная оценка')).toBeNull()
+    expect(within(getByTestId('route-summary')).queryByText('118 км')).toBeTruthy()
   })
 
   it('waits out the debounce before asking the routing engine', () => {
@@ -303,6 +315,50 @@ describe('RouteBuilder live route preview', () => {
 
     // Ответ описывает уже другой набор точек — держать его на карте нельзя.
     expect(getByTestId('route-map-geometry').props.children).toBe('0')
+  })
+
+  it('rejects a late answer from the engine mounted for the previous points', () => {
+    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+
+    editRoute(getByTestId)
+    settleDebounce()
+    const staleCallback = mockEngine.callbacks.at(-1)
+
+    fireEvent.press(getByTestId('route-builder-delete-2'))
+    settleDebounce()
+    const currentCallback = mockEngine.callbacks.at(-1)
+    expect(currentCallback).not.toBe(staleCallback)
+
+    act(() => {
+      staleCallback?.(engineResult())
+    })
+    expect(getByTestId('route-map-geometry').props.children).toBe('0')
+
+    act(() => {
+      currentCallback?.(engineResult())
+    })
+    expect(getByTestId('route-map-geometry').props.children).toBe('30')
+  })
+
+  it('rejects a late answer from the previous retry attempt', () => {
+    const { getByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
+
+    editRoute(getByTestId)
+    settleDebounce()
+    const staleCallback = mockEngine.callbacks.at(-1)
+    act(() => {
+      staleCallback?.(engineResult({ error: 'routing failed' }))
+    })
+
+    fireEvent.press(queryByText('Повторить') as never)
+    const currentCallback = mockEngine.callbacks.at(-1)
+    expect(currentCallback).not.toBe(staleCallback)
+
+    act(() => {
+      currentCallback?.(engineResult())
+      staleCallback?.(engineResult({ error: 'late failure' }))
+    })
+    expect(getByTestId('route-map-geometry').props.children).toBe('30')
   })
 
   it('updates the elevation profile together with the preview', () => {

@@ -1,6 +1,6 @@
 # Problem memory and recurrence registry
 
-Актуализировано: 2026-08-19.
+Актуализировано: 2026-08-20.
 
 Этот документ — постоянная память о системных семействах проблем MeTravel. Он
 не заменяет task board и не хранит обычный progress log. Борд остаётся
@@ -1360,6 +1360,33 @@ guard, падающий в CI на попытке обойти этот конт
   фолбэк `getCountryCodeByCoords` (замер прод-API: `country_code` непустой у
   139 из 139 квестов). Промежуточный замер без третьего узла подтвердил
   ловушку: `map.html` тогда вырос 40 → 41.
+
+### UI-WEB-AUTOFILL-THEME-001 — Safari Autofill должен сохранять тему формы
+
+- **Инвариант:** браузерное Autofill остаётся включено, а фон, текст, рамка и
+  caret автозаполненного поля совпадают с обычным тематическим полем и в light,
+  и в dark theme.
+- **Surface/owner:** frontend web forms; впервые подтверждено в
+  `components/quests/QuestInaccuracyReportModal.tsx`, корректирующий слой —
+  web-стили `app/global.css` или переиспользуемый `.web`-примитив поля.
+- **Симптом:** в iPhone Safari на mobile web в dark theme автозаполненный e-mail
+  становится бледно-жёлтым, хотя соседние поля остаются тёмными.
+- **Каноническая цепочка:** `#665` — ближайший завершённый контекст dark theme;
+  `#1523` — подтверждённый связанный WebKit-specific баг.
+- **Подтверждённая причина:** `autoComplete="email"` включает WebKit Autofill,
+  обычный RN-web background не покрывает его pseudo-state, а
+  `:-webkit-autofill` отсутствует и в исходниках, и в production CSS. WebKit
+  документирует жёлтую UA-заливку и при dark color scheme. Отключать Autofill
+  для обхода проблемы нельзя.
+- **Постоянный control:** задача `#1523` должна добавить стабильный семантический
+  marker/переиспользуемый web-примитив, тематические normal/hover/focus правила
+  Autofill, source/CSS regression test и runtime evidence в Safari/WebKit для
+  light и dark theme.
+- **Решение для новой жалобы:** тот же жёлтый Autofill из-за отсутствующего
+  pseudo-style — переиспользовать или переоткрыть `#1523`; другая браузерная
+  или field-specific причина — `create-linked`.
+- **Последняя проверка:** 2026-08-20; `#1523` создана в `todo`, реализация не
+  начиналась.
 
 ### MOBILE-INSETS-001 — dock, keyboard and safe-area geometry
 
