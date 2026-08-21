@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { Platform } from 'react-native';
 import WebMapComponent from '@/components/travel/WebMapComponent';
@@ -47,6 +48,23 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
   return {
     __esModule: true,
     default: Mock,
+  };
+});
+
+jest.mock('@/components/travel/PhotoUploadWithPreview', () => {
+  const React = require('react');
+
+  return {
+    __esModule: true,
+    default: ({ onUpload }: any) => React.createElement(
+      'button',
+      {
+        type: 'button',
+        'aria-label': 'Загрузить новое фото точки',
+        onClick: () => onUpload('https://example.com/edited-point.webp'),
+      },
+      'Загрузить новое фото точки',
+    ),
   };
 });
 
@@ -246,6 +264,135 @@ describe('WebMapComponent marker sync', () => {
 
     const updatedImg = screen.getAllByRole('img', { name: /Фото/i })[0] as HTMLImageElement;
     expect(updatedImg.src).toContain('/img2.jpg');
+  });
+
+  it('edits an existing point with a new photo and persists it once without a parent-rerender commit loop', async () => {
+    const initialMarkers = [
+      {
+        id: 42,
+        lat: 41.7151,
+        lng: 44.8271,
+        address: 'Старый адрес',
+        categories: [1],
+        image: 'https://example.com/old-point.webp',
+        country: 268,
+      },
+    ];
+    const onMarkersChange = jest.fn();
+    const onMarkerEditSave = jest.fn();
+
+    function StatefulRoutePointEditor() {
+      const [markers, setMarkers] = React.useState(initialMarkers);
+      const handleMarkersChange = React.useCallback((updatedMarkers: any[]) => {
+        onMarkersChange(updatedMarkers);
+        setMarkers(updatedMarkers);
+      }, []);
+      const handleMarkerEditSave = React.useCallback(async (updatedMarkers: any[]) => {
+        onMarkerEditSave(updatedMarkers);
+        // Имитируем обычный server echo после upsert: новый массив/объект с теми
+        // же сохранёнными данными возвращается родителю и снова приходит в карту.
+        setMarkers(updatedMarkers.map((marker) => ({ ...marker })));
+      }, []);
+
+      return (
+        <WebMapComponent
+          {...baseProps}
+          markers={markers as any}
+          onMarkersChange={handleMarkersChange}
+          onMarkerEditSave={handleMarkerEditSave}
+        />
+      );
+    }
+
+    render(<StatefulRoutePointEditor />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Редактировать' }));
+    fireEvent.change(screen.getByDisplayValue('Старый адрес'), {
+      target: { value: 'Новый адрес точки' },
+    });
+    expect(screen.getByDisplayValue('Новый адрес точки')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Загрузить новое фото точки' }));
+    // Parent получил новый URL фото и перерендерил карту. Локальный черновик
+    // остальных полей редактора при этом не должен откатываться к marker prop.
+    expect(screen.getByDisplayValue('Новый адрес точки')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(() => {
+      expect(onMarkerEditSave).toHaveBeenCalledTimes(1);
+    });
+
+    expect(onMarkerEditSave).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: 42,
+        address: 'Новый адрес точки',
+        categories: [1],
+        image: 'https://example.com/edited-point.webp',
+      }),
+    ]);
+
+    // Фото коммитится в parent сразу для preview, итоговые поля — при Save.
+    // Server echo не должен запускать третий commit или повторный persist.
+    expect(onMarkersChange).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(onMarkersChange).toHaveBeenCalledTimes(2);
+    expect(onMarkerEditSave).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Новый адрес точки')).toBeTruthy();
+  });
+
+  it('preserves the open editor draft when a parent echo assigns the point id', async () => {
+    const initialMarkers = [
+      {
+        id: null,
+        lat: 41.7151,
+        lng: 44.8271,
+        address: 'Черновой адрес',
+        categories: [1],
+        image: null,
+        country: 268,
+      },
+    ];
+    const serverMarkers = [
+      {
+        ...initialMarkers[0],
+        id: 55,
+      },
+    ];
+
+    const utils = render(
+      <WebMapComponent
+        {...baseProps}
+        markers={initialMarkers as any}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Редактировать' }));
+    fireEvent.change(screen.getByDisplayValue('Черновой адрес'), {
+      target: { value: 'Несохранённый адрес автора' },
+    });
+
+    utils.rerender(
+      <WebMapComponent
+        {...baseProps}
+        markers={serverMarkers as any}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Несохранённый адрес автора')).toBeTruthy();
+    });
   });
 
   it('preserves local blob preview when backend assigns id (merge fallback by lat/lng)', async () => {

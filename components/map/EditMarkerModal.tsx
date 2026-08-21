@@ -1,6 +1,6 @@
 // components/map/EditMarkerModal.tsx
 // C3.2: Extracted from MarkersListComponent.tsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Feather from '@expo/vector-icons/Feather';
 import { MarkerData } from '@/types/types';
@@ -53,13 +53,6 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     const [categories, setCategories] = useState<any[]>(normalizeCategories(marker.categories));
     const [localImage, setLocalImage] = useState<string>(marker.image || '');
     const [extraCategories, setExtraCategories] = useState<{ id: string; name: string }[]>([]);
-
-    useEffect(() => {
-        setAddress(marker.address || '');
-        setCategories(normalizeCategories(marker.categories));
-        setLocalImage(marker.image || '');
-        setExtraCategories([]);
-    }, [marker, index, normalizeCategories]);
 
     const categoryItems = useMemo(() => {
         const seen = new Set(normalizedCategoryItems.map((c) => String(c.id)));

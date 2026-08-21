@@ -1,5 +1,6 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
-import { Platform, StyleSheet } from 'react-native'
+import { Platform, ScrollView, StyleSheet } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect'
 
 describe('SimpleMultiSelect', () => {
@@ -18,6 +19,27 @@ describe('SimpleMultiSelect', () => {
     { id: '2', name: 'Аэропорт' },
   ]
 
+  it('uses ScrollView on web so category lists cannot trigger the FlashList commitLayout loop', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    const screen = render(
+      <SimpleMultiSelect
+        data={dataNumericIds}
+        value={[1]}
+        onChange={jest.fn()}
+        labelField="name"
+        valueField="id"
+      />
+    )
+
+    expect(screen.UNSAFE_queryAllByType(FlashList as any)).toHaveLength(0)
+    expect(screen.UNSAFE_getByType(ScrollView as any)).toBeTruthy()
+
+    fireEvent.press(screen.getByLabelText('Открыть выбор'))
+
+    expect(screen.UNSAFE_queryAllByType(FlashList as any)).toHaveLength(0)
+    expect(screen.getByTestId('simple-multiselect.web-options-list')).toBeTruthy()
+  })
+
   it('uses 48dp Android targets and checkbox semantics in the native branch', () => {
     Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true })
     const screen = render(
@@ -35,6 +57,7 @@ describe('SimpleMultiSelect', () => {
     fireEvent.press(screen.getByLabelText('Открыть выбор'))
 
     const item = screen.getByTestId('simple-multiselect.item.1')
+    expect(screen.UNSAFE_getAllByType(FlashList as any)).not.toHaveLength(0)
     expect(StyleSheet.flatten(item.props.style).minHeight).toBe(48)
     expect(item.props.accessibilityRole).toBe('checkbox')
     expect(item.props.accessibilityState).toEqual({ checked: true })

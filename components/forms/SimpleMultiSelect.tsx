@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { View, Text, StyleSheet, Pressable, TextInput, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, Modal, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -241,26 +241,53 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
       >
         <View style={styles.triggerContent}>
           {selectedItems.length > 0 ? (
-            <FlashList
-              data={selectedItems}
-              renderItem={renderSelectedChip}
-              keyExtractor={(item: MultiSelectItem) => String(item[valueField])}
-              horizontal
-              {...({ estimatedItemSize: 36 } as any)}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipsContainer}
-              ListFooterComponentStyle={styles.selectedFieldFooter}
-              ListFooterComponent={(
-                <Pressable
-                  testID="simple-multiselect.selected-open-area"
-                  style={styles.selectedFieldOpenArea}
-                  onPress={handleOpen}
-                  disabled={disabled}
-                  accessible={false}
-                />
-              )}
-              drawDistance={600}
-            />
+            Platform.OS === 'web' ? (
+              // FlashList v2 can enter a RecyclerView commitLayout feedback loop
+              // when this field is remeasured after a point-photo upload. Category
+              // lists are short, so a plain ScrollView is safer and sufficient on web.
+              <ScrollView
+                testID="simple-multiselect.web-selected-list"
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipsContainer}
+              >
+                {selectedItems.map((item) => (
+                  <React.Fragment key={String(item[valueField])}>
+                    {renderSelectedChip({ item })}
+                  </React.Fragment>
+                ))}
+                <View style={styles.selectedFieldFooter}>
+                  <Pressable
+                    testID="simple-multiselect.selected-open-area"
+                    style={styles.selectedFieldOpenArea}
+                    onPress={handleOpen}
+                    disabled={disabled}
+                    accessible={false}
+                  />
+                </View>
+              </ScrollView>
+            ) : (
+              <FlashList
+                data={selectedItems}
+                renderItem={renderSelectedChip}
+                keyExtractor={(item: MultiSelectItem) => String(item[valueField])}
+                horizontal
+                {...({ estimatedItemSize: 36 } as any)}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipsContainer}
+                ListFooterComponentStyle={styles.selectedFieldFooter}
+                ListFooterComponent={(
+                  <Pressable
+                    testID="simple-multiselect.selected-open-area"
+                    style={styles.selectedFieldOpenArea}
+                    onPress={handleOpen}
+                    disabled={disabled}
+                    accessible={false}
+                  />
+                )}
+                drawDistance={600}
+              />
+            )
           ) : (
             <Pressable
               style={styles.emptyOpenArea}
@@ -288,8 +315,9 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         </Pressable>
       </View>
 
+      {isOpen ? (
       <Modal
-        visible={isOpen}
+        visible
         transparent
         animationType="fade"
         onRequestClose={handleClose}
@@ -364,19 +392,36 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               <Text style={styles.createError}>{createError}</Text>
             )}
 
-            <FlashList
-              data={filteredData}
-              renderItem={renderItem}
-              keyExtractor={(item: MultiSelectItem) => String(item[valueField])}
-              {...({ estimatedItemSize: 48 } as any)}
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={true}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>{i18nT('shared:components.forms.SimpleMultiSelect.nichego_ne_naydeno_488dcd8f')}</Text>
-              }
-              drawDistance={Platform.OS === 'web' ? 900 : 600}
-            />
+            {Platform.OS === 'web' ? (
+              <ScrollView
+                testID="simple-multiselect.web-options-list"
+                style={styles.list}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator
+              >
+                {filteredData.length > 0 ? filteredData.map((item) => (
+                  <React.Fragment key={String(item[valueField])}>
+                    {renderItem({ item })}
+                  </React.Fragment>
+                )) : (
+                  <Text style={styles.emptyText}>{i18nT('shared:components.forms.SimpleMultiSelect.nichego_ne_naydeno_488dcd8f')}</Text>
+                )}
+              </ScrollView>
+            ) : (
+              <FlashList
+                data={filteredData}
+                renderItem={renderItem}
+                keyExtractor={(item: MultiSelectItem) => String(item[valueField])}
+                {...({ estimatedItemSize: 48 } as any)}
+                style={styles.list}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator
+                ListEmptyComponent={
+                  <Text style={styles.emptyText}>{i18nT('shared:components.forms.SimpleMultiSelect.nichego_ne_naydeno_488dcd8f')}</Text>
+                }
+                drawDistance={600}
+              />
+            )}
 
             <View style={styles.modalFooter}>
               <Pressable
@@ -392,6 +437,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
           </View>
         </View>
       </Modal>
+      ) : null}
     </>
   );
 };

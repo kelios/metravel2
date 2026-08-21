@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures';
-import { request } from '@playwright/test';
+import { devices, request } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
+import { seedNecessaryConsent } from './helpers/storage';
 
 const tinyJpegBuffer = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEBAVFRUVFRUVFRUVFRUVFRUVFRUWFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGhAQGi0fHyUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBEQACEQEDEQH/xAAXAAEBAQEAAAAAAAAAAAAAAAAAAQID/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEAMQAAAB6A//xAAVEAEBAAAAAAAAAAAAAAAAAAABAP/aAAgBAQABBQJf/8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQABPyF//9k=', 'base64');
 
@@ -10,6 +11,13 @@ const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
 
 const USE_REAL_API = process.env.E2E_USE_REAL_API === '1';
+const pixel7MobileWeb = {
+  userAgent: devices['Pixel 7'].userAgent,
+  viewport: devices['Pixel 7'].viewport,
+  deviceScaleFactor: devices['Pixel 7'].deviceScaleFactor,
+  isMobile: devices['Pixel 7'].isMobile,
+  hasTouch: devices['Pixel 7'].hasTouch,
+};
 
 /** Сколько раз страница сходила за каждым словарём (см. тест про дубли ниже). */
 type DictionaryRequestCounts = { filters: number; countries: number };
@@ -603,16 +611,66 @@ const fillRichDescription = async (page: Page, text: string) => {
     // Some responsive layouts use a plain editor instead of Quill.
     const fallback = page.locator('textarea, [contenteditable="true"]').first();
     await expect(fallback).toBeVisible({ timeout: 5_000 });
-    await fallback.click();
-    await page.keyboard.press('ControlOrMeta+A');
-    await page.keyboard.press('Backspace');
-    await page.keyboard.type(text);
+    await fallback.fill(text);
     return;
   }
   await editor.click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.press('Backspace');
   await page.keyboard.type(text);
+};
+
+const verifyPointCategoryEditorStability = async (page: Page) => {
+  const guard = installNoConsoleErrorsGuard(page);
+
+  await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+  await ensureCanCreateTravel(page);
+
+  await page.getByPlaceholder('Например: Неделя в Грузии').fill('E2E: point category select');
+  await fillRichDescription(page, 'Описание для e2e: достаточно длинное, чтобы пройти шаг 1. '.repeat(3));
+  await clickNext(page);
+  await ensureOnStep2(page);
+  await maybeDismissRouteCoachmark(page);
+
+  await page.fill('[placeholder*="Поиск места"]', 'Эйф');
+  const firstResult = page.locator('text=/Париж|Эйф|Франция/i').first();
+  await firstResult.waitFor({ state: 'visible', timeout: 10_000 });
+  await firstResult.click();
+  await expect(page.getByText(/Точек:\s*1/)).toBeVisible({ timeout: 10_000 });
+
+  const editButton = page.getByRole('button', { name: 'Редактировать', exact: true }).first();
+  await editButton.waitFor({ state: 'visible', timeout: 10_000 });
+  // Let React flush the passive effects caused by adding the point before the
+  // editor-specific assertions begin.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
+  guard.assertNoErrorsContaining('Maximum update depth exceeded');
+  await editButton.click();
+  guard.assertNoErrorsContaining('Maximum update depth exceeded');
+
+  await page.getByText('Категории точки', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+  guard.assertNoErrorsContaining('Maximum update depth exceeded');
+  const categoriesTrigger = page.getByText('Выберите...', { exact: true }).first();
+  await categoriesTrigger.click({ timeout: 10_000 });
+  await expect(page.getByTestId('simple-multiselect.web-options-list')).toBeVisible();
+  guard.assertNoErrorsContaining('Maximum update depth exceeded');
+
+  const tower = page.getByText('Башня', { exact: true }).first();
+  await tower.waitFor({ state: 'visible', timeout: 10_000 });
+  await tower.click();
+  guard.assertNoErrorsContaining('Maximum update depth exceeded');
+  await page.getByText('Готово', { exact: true }).click({ timeout: 10_000 });
+
+  await expect(page.getByText('Башня', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('simple-multiselect.web-selected-list')).toBeVisible();
+  // The former FlashList failure was raised from layout effects after the
+  // selection commit. Give those effects two paint frames before asserting.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
+  guard.assertNoErrorsContaining('Maximum update depth exceeded');
+  guard.assertNoErrorsContaining('Minified React error #185');
 };
 
 test.beforeEach(async ({ page }) => {
@@ -1500,9 +1558,17 @@ test.describe('Адаптивность (Mobile)', () => {
 
 test.describe('Регрессии: web стабильность wizard', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(() => {
       try {
         window.localStorage.removeItem('metravel_travel_draft_new');
+        // This suite targets the point editor. Suppress the unrelated delayed
+        // Android install prompt so its Animated.timing does not pollute the
+        // editor console guard on a cold Metro build.
+        window.localStorage.setItem(
+          'metravel_app_install_hint_v1',
+          JSON.stringify({ installClickedAt: Date.now() }),
+        );
         Object.keys(window.localStorage)
           .filter((k) => k.startsWith('metravel_travel_draft_'))
           .forEach((k) => window.localStorage.removeItem(k));
@@ -1568,37 +1634,14 @@ test.describe('Регрессии: web стабильность wizard', () => {
   });
 
   test('выбор категории точки должен отображаться после закрытия модалки', async ({ page }) => {
-    const guard = installNoConsoleErrorsGuard(page);
+    await verifyPointCategoryEditorStability(page);
+  });
 
-    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    await ensureCanCreateTravel(page);
+  test.describe('mobile web', () => {
+    test.use(pixel7MobileWeb);
 
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('E2E: point category select');
-    await fillRichDescription(page, 'Описание для e2e: достаточно длинное, чтобы пройти шаг 1. '.repeat(3));
-    await clickNext(page);
-    await ensureOnStep2(page);
-    await maybeDismissRouteCoachmark(page);
-
-    await page.fill('[placeholder*="Поиск места"]', 'Эйф');
-    const firstResult = page.locator('text=/Париж|Эйф|Франция/i').first();
-    await firstResult.waitFor({ state: 'visible', timeout: 10_000 });
-    await firstResult.click();
-    await expect(page.getByText(/Точек:\s*1/)).toBeVisible({ timeout: 10_000 });
-
-    const editButton = page.getByText('Редактировать', { exact: true }).first();
-    await editButton.waitFor({ state: 'visible', timeout: 10_000 });
-    await editButton.click();
-
-    await page.getByText('Категории точки', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
-    const categoriesTrigger = page.getByText('Выберите...', { exact: true }).first();
-    await categoriesTrigger.click({ timeout: 10_000 });
-
-    const tower = page.getByText('Башня', { exact: true }).first();
-    await tower.waitFor({ state: 'visible', timeout: 10_000 });
-    await tower.click();
-    await page.getByText('Готово', { exact: true }).click({ timeout: 10_000 });
-
-    await expect(page.getByText('Башня', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
-    guard.assertNoErrorsContaining('Maximum update depth exceeded');
+    test('редактор категории точки не входит в commitLayout-цикл', async ({ page }) => {
+      await verifyPointCategoryEditorStability(page);
+    });
   });
 });
