@@ -5,6 +5,7 @@ import { fetchPlacesCatalog } from '@/api/places'
 import { fetchTravels } from '@/api/travelsApi'
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 import type { PlacesCatalogPage } from '@/utils/placesCatalog'
 import type { Travel } from '@/types/types'
 
@@ -169,9 +170,15 @@ beforeEach(() => {
   mockedFetchTravels.mockResolvedValue(travelsPage)
 })
 
+
+// #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
+// адресами через React Query — конструктору нужен клиент, как и в приложении.
+const renderRouteBuilder = (element: React.ReactElement) =>
+  render(element, { wrapper: createQueryWrapper().Wrapper })
+
 describe('RouteBuilder site search', () => {
   it('adds a site place from search without manual coordinates', async () => {
-    const { findByTestId, getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { findByTestId, getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(queryByTestId('route-builder-name')).toBeNull()
 
@@ -203,7 +210,7 @@ describe('RouteBuilder site search', () => {
   })
 
   it('adds a travel from search as a route point', async () => {
-    const { findByTestId, getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.changeText(getByTestId('route-builder-site-search'), 'Маршрут')
 
@@ -221,7 +228,7 @@ describe('RouteBuilder site search', () => {
   })
 
   it('edits an existing custom route point before saving', async () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Старая точка')
@@ -247,7 +254,7 @@ describe('RouteBuilder site search', () => {
   })
 
   it('adds a custom point from the route map and opens it for editing', async () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('trip-plan-route-map'))
     fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Точка с карты')
@@ -289,7 +296,7 @@ describe('RouteBuilder site search', () => {
       warnings: [],
     }
 
-    const { getByTestId, getByText } = render(<RouteBuilder trip={trip} />)
+    const { getByTestId, getByText } = renderRouteBuilder(<RouteBuilder trip={trip} />)
 
     expect(getByText(/Карта маршрута 3 direct/)).toBeTruthy()
     expect(getByTestId('route-summary-approximate')).toBeTruthy()

@@ -1,5 +1,5 @@
 import React, { Suspense, useMemo } from 'react'
-import { Platform, View } from 'react-native'
+import { View } from 'react-native'
 
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import ReadingProgressBar from '@/components/ui/ReadingProgressBar'
@@ -7,7 +7,7 @@ import TravelSectionsSheet from '@/components/travel/TravelSectionsSheet'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 
-import TravelStickyActions from './TravelStickyActions'
+import TravelStickyActionsSlot from './TravelStickyActionsSlot'
 import { useTravelDetailsDeferredScroll } from './TravelDetailsDeferredScrollContext'
 import { getTravelDetailsShellStyles } from './TravelDetailsShellStyles'
 import {
@@ -26,9 +26,10 @@ type TravelDetailsScrollRuntimeProps = {
   travel: Travel
 }
 
-const TravelStickyActionsLazy = React.lazy(() => import('./TravelStickyActions'))
-const TravelStickyActionsComponent =
-  Platform.OS === 'web' ? TravelStickyActionsLazy : TravelStickyActions
+// #1499: выбор web/native переехал в платформенную пару
+// `TravelStickyActionsSlot(.web).tsx` — статический импорт для native-ветки
+// оставлял `TravelStickyActions` со всем поддеревом в стартовом графе web.
+const TravelStickyActionsComponent = TravelStickyActionsSlot
 
 function TravelDetailsScrollRuntime({
   criticalChromeReady,

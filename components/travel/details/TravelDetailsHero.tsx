@@ -17,29 +17,22 @@ import {
   OptimizedLCPHero,
   OVERLAY_TRANSITION_MS,
 } from './TravelDetailsOptimizedLCPHero'
-import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
-import TravelHeroExtras from './TravelHeroExtras'
-import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
 import TravelAuthorQuickLink from './TravelAuthorQuickLink'
+import {
+  TravelHeroExtrasSlot,
+  TravelHeroFavoriteToggleSlot,
+  TravelHeroInteractiveSliderSlot,
+} from './TravelHeroSlots'
 import { useTravelSsgHeroHandoff } from './useTravelSsgHeroHandoff'
 import { translate as i18nT } from '@/i18n'
 
-const FavoriteToggleLazy = React.lazy(() =>
-  Promise.resolve(import('./TravelHeroFavoriteToggle')).then((m) => ({
-    default: m.TravelHeroFavoriteToggle ?? m.default,
-  })),
-)
-const ExtrasLazy = React.lazy(() =>
-  Promise.resolve(import('./TravelHeroExtras')).then((m) => ({
-    default: m.TravelHeroExtras ?? m.default,
-  })),
-)
-const InteractiveSliderLazy = React.lazy(() =>
-  import('./TravelHeroInteractiveSlider'),
-)
-const FavoriteToggleComponent = Platform.OS === 'web' ? FavoriteToggleLazy : TravelHeroFavoriteToggle
-const ExtrasComponent = Platform.OS === 'web' ? ExtrasLazy : TravelHeroExtras
-const InteractiveSliderComponent = Platform.OS === 'web' ? InteractiveSliderLazy : TravelHeroInteractiveSlider
+// #1499: раньше выбор делался здесь — `Platform.OS === 'web' ? Lazy : Static`.
+// Статический импорт native-ветки остаётся ребром графа и в web-бандле, поэтому
+// все три поддерева грузились eager вопреки `React.lazy`. Теперь выбор делает
+// платформенная пара `TravelHeroSlots(.web).tsx`; Suspense-обвязка ниже не менялась.
+const FavoriteToggleComponent = TravelHeroFavoriteToggleSlot
+const ExtrasComponent = TravelHeroExtrasSlot
+const InteractiveSliderComponent = TravelHeroInteractiveSliderSlot
 
 const ABSOLUTE_FILL = {
   position: 'absolute',

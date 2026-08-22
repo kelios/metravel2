@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel SEO Index Operator"
-  short_description: "Run SEO/index diagnostics and actions."
-  default_prompt: "Use $metravel-seo-index-operator to gather GSC/index evidence, prepare priority URL actions, and route SEO fixes safely."
+  short_description: "Run SEO checks and scoped GSC browser actions."
+  default_prompt: "Use $metravel-seo-index-operator to gather indexing evidence and execute explicitly scoped GSC URL actions through an authenticated browser."

@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 
 jest.mock('@/api/places', () => ({
   fetchPlacesCatalog: jest.fn(),
@@ -77,6 +78,12 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   ...overrides,
 })
 
+
+// #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
+// адресами через React Query — конструктору нужен клиент, как и в приложении.
+const renderRouteBuilder = (element: React.ReactElement) =>
+  render(element, { wrapper: createQueryWrapper().Wrapper })
+
 describe('RouteBuilder point description', () => {
   const originalPlatform = Platform.OS
 
@@ -90,7 +97,7 @@ describe('RouteBuilder point description', () => {
 
   // #1494: однострочное поле не давало прочитать и отредактировать длинное описание.
   it('keeps the new-point description input multiline', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
     // по умолчанию открыт поиск по местам сайта — ручные поля живут в «своей точке»
     fireEvent.press(getByTestId('route-builder-type-custom'))
     const input = getByTestId('route-builder-description')
@@ -99,7 +106,7 @@ describe('RouteBuilder point description', () => {
   })
 
   it('keeps the edited-point description input multiline', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
     fireEvent.press(getByTestId('route-builder-edit-0'))
     const input = getByTestId('route-builder-edit-description')
     expect(input.props.multiline).toBe(true)
@@ -109,7 +116,7 @@ describe('RouteBuilder point description', () => {
   // #1494: длинное описание точки должно доезжать до сохранения маршрута целиком,
   // вместе с переносами строк — ради этого поле и стало многострочным.
   it('saves a multi-line point description with its line breaks', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Ночёвка')
     fireEvent.changeText(
@@ -129,7 +136,7 @@ describe('RouteBuilder point description', () => {
 
   it('renders links inside a point description as real anchors on web', () => {
     Platform.OS = 'web'
-    const { UNSAFE_getAllByProps } = render(<RouteBuilder trip={makeTrip()} />)
+    const { UNSAFE_getAllByProps } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
     const anchors = UNSAFE_getAllByProps({ href: 'https://cafe-gluboke.by/menu' })
     expect(anchors.length).toBeGreaterThan(0)
   })

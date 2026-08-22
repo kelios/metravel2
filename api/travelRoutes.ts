@@ -1,4 +1,10 @@
 import { apiClient } from '@/api/client';
+import {
+  extractRouteFileList,
+  normalizeRouteFileMetadata,
+  routeFileRecord,
+  type MaybePaginated,
+} from '@/api/routeFileMetadata';
 import type {
   ParsedRoutePoint,
   ParsedRoutePreview,
@@ -76,53 +82,22 @@ const normalizeServerSummary = (value: unknown): TravelRouteServerSummary | null
   };
 };
 
-type MaybePaginated<T> =
-  | T[]
-  | {
-      results?: T[];
-      data?: T[];
-      items?: T[];
-    };
-
 const normalizeRouteFile = (input: unknown): TravelRouteFile | null => {
-  if (!input || typeof input !== 'object') return null;
-  const rec = input as Record<string, unknown>;
-  const id = Number(rec.id);
-  if (!Number.isFinite(id)) return null;
+  const base = normalizeRouteFileMetadata(input);
+  if (!base) return null;
+  const rec = routeFileRecord(input)!;
 
   return {
-    id,
-    original_name: String(rec.original_name ?? rec.originalName ?? ''),
-    ext: String(rec.ext ?? '').toLowerCase(),
-    size: Number.isFinite(Number(rec.size)) ? Number(rec.size) : undefined,
-    download_url:
-      typeof rec.download_url === 'string'
-        ? rec.download_url
-        : typeof rec.downloadUrl === 'string'
-          ? rec.downloadUrl
-          : undefined,
-    created_at: typeof rec.created_at === 'string' ? rec.created_at : null,
+    ...base,
     preview: normalizeServerPreview(rec.preview),
     summary: normalizeServerSummary(rec.summary),
   };
 };
 
-const extractRouteFiles = (payload: MaybePaginated<unknown>): TravelRouteFile[] => {
-  const rec = payload && typeof payload === 'object' && !Array.isArray(payload)
-    ? (payload as Record<string, unknown>)
-    : null;
-  const raw = Array.isArray(payload)
-    ? payload
-    : Array.isArray(rec?.results)
-      ? rec!.results
-      : Array.isArray(rec?.data)
-        ? rec!.data
-        : Array.isArray(rec?.items)
-          ? rec!.items
-          : [];
-
-  return (raw as unknown[]).map(normalizeRouteFile).filter((item): item is TravelRouteFile => Boolean(item));
-};
+const extractRouteFiles = (payload: MaybePaginated<unknown>): TravelRouteFile[] =>
+  extractRouteFileList(payload)
+    .map(normalizeRouteFile)
+    .filter((item): item is TravelRouteFile => Boolean(item));
 
 export const listTravelRouteFiles = async (travelId: string | number): Promise<TravelRouteFile[]> => {
   const payload = await apiClient.get<MaybePaginated<unknown>>(

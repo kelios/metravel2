@@ -1,5 +1,6 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Финальный экран тянет достижения, счётчик прохождений и медиа — для проверки
 // политики зачёта (#1443) важно только, показаны ли эти блоки вообще.
@@ -33,6 +34,23 @@ jest.mock('@/hooks/useQuestRating', () => ({
   useQuestRatingMutation: () => ({ userRating: 0, isSubmitting: false, rate: jest.fn() }),
 }))
 
+// #1484: блок «следующий квест рядом» ходит за каталогом квестов. Здесь важно
+// только, показан он или нет, поэтому каталог отдаём пустым, а данные блока —
+// фиксированными.
+jest.mock('@/hooks/useQuestCityCollection', () => ({
+  useQuestCityCollection: () => ({
+    collection: { cityId: '4', cityName: 'Минск', completedCount: 1, totalCount: 6, ratio: 1 / 6 },
+    suggestions: [],
+    loading: false,
+  }),
+}))
+
+jest.mock('@/utils/questReturnVisit', () => ({
+  rememberQuestFinish: jest.fn(),
+  markQuestReturnReminderScheduled: jest.fn(),
+  questRetentionOwnerId: () => 'guest',
+}))
+
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: () => null,
   NativeQuestVideoLazy: () => null,
@@ -54,6 +72,7 @@ const styles = {
 
 const renderFinale = (overrides: Record<string, unknown>) =>
   render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <QuestFinalePanel
       colors={{}}
       styles={styles}
@@ -72,8 +91,12 @@ const renderFinale = (overrides: Record<string, unknown>) =>
       onContinue={jest.fn()}
       questId="minsk-dvoriki"
       questNumericId={12}
+      questTitle="Лошицкая усадьба"
+      cityId="4"
+      cityName="Минск"
       {...(overrides as any)}
-    />,
+    />
+    </QueryClientProvider>,
   )
 
 describe('QuestFinalePanel: частичное прохождение (#1443)', () => {
@@ -89,6 +112,8 @@ describe('QuestFinalePanel: частичное прохождение (#1443)', 
     expect(getByTestId('quest-finale-continue-partial')).toBeTruthy()
     // Финал сохраняется: текст концовки игрок видит.
     expect(getByText('Финальный текст')).toBeTruthy()
+    // #1484: следующий шаг — это не новый квест, а возврат к пропущенным точкам.
+    expect(queryByTestId('quest-next-step-section')).toBeNull()
   })
 
   it('засчитанное прохождение остаётся полноценным финалом с наградами', () => {
@@ -105,5 +130,7 @@ describe('QuestFinalePanel: частичное прохождение (#1443)', 
     expect(getByTestId('quest-finale-partial')).toBeTruthy()
     expect(queryByTestId('quest-finale-not-credited')).toBeNull()
     expect(queryByTestId('quest-finale-continue-partial')).toBeNull()
+    // #1484: у засчитанного прохождения появляется второе действие.
+    expect(getByTestId('quest-next-step-section')).toBeTruthy()
   })
 })

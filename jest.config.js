@@ -14,6 +14,14 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.expo-globals.js', ...setupFiles],
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts', ...setupFilesAfterEnv],
   testMatch: ['**/__tests__/**/*.test.tsx', '**/__tests__/**/*.test.ts'],
+  // Пресет трансформирует только `.[jt]sx?`, поэтому ESM-модули проекта с расширением `.mjs`
+  // (например `scripts/lib/boardTaskContract.mjs`, общий для аудита борда и PreToolUse-гейта)
+  // не грузились в тестах: `SyntaxError: Unexpected token 'export'`. Переиспользуем те же
+  // опции babel-jest, что и пресет, чтобы поведение трансформации не разошлось.
+  transform: {
+    ...expoPreset.transform,
+    '\\.mjs$': expoPreset.transform['\\.[jt]sx?$'],
+  },
   moduleNameMapper: {
     '^@/components/KeyboardShortcutsHelp$': '<rootDir>/__mocks__/KeyboardShortcutsHelp.tsx',
     ...moduleNameMapper,

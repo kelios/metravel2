@@ -4,6 +4,23 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import TripRouteFilePicker from '@/components/trips/planning/TripRouteFilePicker.web';
 
 jest.mock('@expo/vector-icons/Feather', () => () => null);
+jest.mock('@/components/ui/ToolActionsRow', () => ({
+  __esModule: true,
+  default: ({
+    actions,
+  }: {
+    actions: Array<{ label: string; onPress?: () => void; disabled?: boolean }>;
+  }) => {
+    const ReactModule = jest.requireActual<typeof import('react')>('react');
+    const action = actions[0];
+    return ReactModule.createElement('button', {
+      type: 'button',
+      onClick: action.onPress,
+      disabled: action.disabled,
+      'aria-label': action.label,
+    }, action.label);
+  },
+}));
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isHydrated: true, isMobile: false }),
 }));
@@ -63,8 +80,10 @@ describe('TripRouteFilePicker web adapter', () => {
         name: 'weekend.gpx',
         size: 42,
         text: '<gpx />',
+        upload: { kind: 'web', file },
       });
     });
+    expect(props.onPicked.mock.calls[0][0].upload.file).toBe(file);
     expect(file.text).toHaveBeenCalledTimes(1);
     expect(props.onBusyChange.mock.calls).toEqual([[true], [false]]);
     expect(props.onError).not.toHaveBeenCalled();
@@ -88,12 +107,14 @@ describe('TripRouteFilePicker web adapter', () => {
     const secondRead = deferred<string>();
     const { container, props } = renderPicker();
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const oldFile = { name: 'old.gpx', size: 10, text: jest.fn(() => firstRead.promise) };
+    const newFile = { name: 'new.kml', size: 11, text: jest.fn(() => secondRead.promise) };
 
     fireEvent.change(input, {
-      target: { files: [{ name: 'old.gpx', size: 10, text: () => firstRead.promise }] },
+      target: { files: [oldFile] },
     });
     fireEvent.change(input, {
-      target: { files: [{ name: 'new.kml', size: 11, text: () => secondRead.promise }] },
+      target: { files: [newFile] },
     });
 
     await act(async () => {
@@ -111,8 +132,14 @@ describe('TripRouteFilePicker web adapter', () => {
       name: 'new.kml',
       size: 11,
       text: '<kml />',
+      upload: { kind: 'web', file: newFile },
     });
-    expect(props.onBusyChange.mock.calls.filter(([busy]) => busy === false)).toHaveLength(1);
+    expect(props.onPicked.mock.calls[0][0].upload.file).toBe(newFile);
+    expect(props.onPicked.mock.calls[0][0].upload.file).not.toBe(oldFile);
+    expect(props.onPicked).toHaveBeenCalledTimes(1);
+    expect(oldFile.text).toHaveBeenCalledTimes(1);
+    expect(newFile.text).toHaveBeenCalledTimes(1);
+    expect(props.onBusyChange.mock.calls).toEqual([[true], [true], [false]]);
   });
 
   it('treats chooser cancellation as a no-op', () => {

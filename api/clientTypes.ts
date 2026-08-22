@@ -4,6 +4,8 @@
 
 export type DownloadResponse = {
     blob: Blob;
+    /** Native сохраняет бинарный ответ без промежуточного UTF-8 decode/encode. */
+    bytes?: ArrayBuffer;
     filename?: string;
     contentType?: string;
 };

@@ -190,7 +190,7 @@ describe('e2e webserver build lifecycle', () => {
 
       fs.writeFileSync(
         path.join(jsDirectory, 'entry.js'),
-        'const e="true"===String("true").toLowerCase(); resolve({isE2E:e}); const api="http://127.0.0.1:8085/user/google-login/";'
+        'const e="true"===String("true").toLowerCase(); resolve({isE2E:e}); const api="http://127.0.0.1:8085/api/user/google-login/";'
       );
       expect(() =>
         assertE2EArtifactConfig({
@@ -201,8 +201,65 @@ describe('e2e webserver build lifecycle', () => {
       ).not.toThrow();
 
       fs.writeFileSync(
+        path.join(jsDirectory, 'entry.js'),
+        'const e="true"===String("true").toLowerCase(); resolve({isE2E:e}); const api="http://127.0.0.1:8085";'
+      );
+      fs.writeFileSync(
+        path.join(jsDirectory, 'auth.js'),
+        'const googleLoginPath="/user/google-login/";'
+      );
+      expect(() =>
+        assertE2EArtifactConfig({
+          expectedApiBase: 'http://127.0.0.1:8085',
+          jsDirectory,
+          metaPath,
+        })
+      ).not.toThrow();
+
+      fs.writeFileSync(
+        path.join(jsDirectory, 'entry.js'),
+        'const e="true"===String("false").toLowerCase(); resolve({isE2E:e}); const api="http://127.0.0.1:8085";'
+      );
+      expect(() =>
+        assertE2EArtifactConfig({
+          expectedApiBase: 'http://127.0.0.1:8085',
+          jsDirectory,
+          metaPath,
+        })
+      ).toThrow('does not contain the configured API base and E2E mode');
+
+      fs.writeFileSync(
+        path.join(jsDirectory, 'entry.js'),
+        'const e="true"===String("true").toLowerCase(); resolve({isE2E:e}); const api="https://metravel.by";'
+      );
+      expect(() =>
+        assertE2EArtifactConfig({
+          expectedApiBase: 'http://127.0.0.1:8085',
+          jsDirectory,
+          metaPath,
+        })
+      ).toThrow('does not contain the configured API base and E2E mode');
+
+      fs.writeFileSync(
+        path.join(jsDirectory, 'entry.js'),
+        'const e="true"===String("true").toLowerCase(); resolve({isE2E:e}); const api="http://127.0.0.1:8085";'
+      );
+
+      fs.writeFileSync(
         path.join(jsDirectory, 'stale-auth.js'),
         'const e="true"===String("").toLowerCase(); resolve({isE2E:e}); const api="https://metravel.by/user/google-login/";'
+      );
+      expect(() =>
+        assertE2EArtifactConfig({
+          expectedApiBase: 'http://127.0.0.1:8085',
+          jsDirectory,
+          metaPath,
+        })
+      ).toThrow('does not contain the configured API base and E2E mode');
+
+      fs.writeFileSync(
+        path.join(jsDirectory, 'stale-auth.js'),
+        'const api="//metravel.by/user/google-login/";'
       );
       expect(() =>
         assertE2EArtifactConfig({

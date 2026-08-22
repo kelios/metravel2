@@ -159,7 +159,11 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
               </Pressable>
             </View>
 
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="none"
+              contentContainerStyle={styles.body}
+            >
               <Text style={styles.questLine} numberOfLines={2}>
                 {i18nT('quests:components.quests.QuestInaccuracyReportModal.questLine', { value1: questTitle })}
               </Text>
@@ -175,6 +179,9 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
                 testID="quest-inaccuracy-report-name"
               />
               <TextInput
+                {...(Platform.OS === 'web'
+                  ? { dataSet: { questReportField: 'email' } }
+                  : {})}
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}

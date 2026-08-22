@@ -41,8 +41,46 @@ interface Props {
   formatCoordinate: (value: number) => string;
   onLayout: (index: number, event: LayoutChangeEvent) => void;
   onEdit: (index: number) => void;
+  /**
+   * #1495: тап по телу строки центрует карту на точке. Передаётся только в
+   * map-first раскладке — в вертикальной строка остаётся неинтерактивной, чтобы
+   * не перехватывать выделение текста описания.
+   */
+  onFocus?: (index: number) => void;
   onMove: (index: number, delta: number) => void;
   onDelete: (index: number) => void;
+}
+
+/**
+ * Тело строки: нажимаемое только когда раскладка попросила центрирование карты.
+ * Без обработчика это обычный View — вертикальная раскладка не должна получать
+ * лишнюю кнопку вокруг описания точки.
+ */
+function PointBody({
+  index,
+  style,
+  onFocus,
+  focusLabel,
+  children,
+}: {
+  index: number;
+  style: RouteBuilderStyles['pointBody'];
+  onFocus?: (index: number) => void;
+  focusLabel: string;
+  children: React.ReactNode;
+}) {
+  if (!onFocus) return <View style={style}>{children}</View>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={focusLabel}
+      onPress={() => onFocus(index)}
+      style={style}
+      testID={`route-builder-focus-${index}`}
+    >
+      {children}
+    </Pressable>
+  );
 }
 
 function RoutePointRow({
@@ -61,6 +99,7 @@ function RoutePointRow({
   onEdit,
   onMove,
   onDelete,
+  onFocus,
 }: Props) {
   const { t } = useTranslation();
   const isFirst = index === 0;
@@ -122,7 +161,12 @@ function RoutePointRow({
           <Feather name="menu" size={18} color={isDragging ? colors.primaryDark : colors.textMuted} />
         </View>
       ) : null}
-      <View style={styles.pointBody}>
+      <PointBody
+        index={index}
+        style={styles.pointBody}
+        onFocus={onFocus}
+        focusLabel={t('tripsStatic:plan.route.focusPoint', { name: point.name })}
+      >
         <View style={styles.pointTypeRow}>
           <Feather
             name={ROUTE_POINT_ICON_NAME[point.type] as never}
@@ -144,7 +188,7 @@ function RoutePointRow({
             {formatCoordinate(point.coordinates[1])}, {formatCoordinate(point.coordinates[0])}
           </Text>
         ) : null}
-      </View>
+      </PointBody>
       {isOwner ? (
         <View style={styles.pointControls}>
           <Pressable

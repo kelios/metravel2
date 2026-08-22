@@ -371,10 +371,20 @@ describe('очередь индексации: согласованность з
       // подачи». Адрес, который Google ни разу не скачал (`lastCrawlTime: null`),
       // просканированным называть нельзя: следующий замер тогда не покажет
       // перехода «неизвестен → просканирована», ради которого подача и делается.
+      // Для уже индексированного адреса отдельным source-backed доказательством
+      // служит `already-indexed` из той же URL Inspection сессии: время обхода
+      // интерфейс мог не зафиксировать, и придумывать его для очереди нельзя.
       for (const r of check.results) {
         expect(r.outcome === 'indexed').toBe(r.verdict === 'PASS')
-        if (r.outcome === 'crawled-not-indexed' || r.outcome === 'indexed') {
+        if (r.outcome === 'crawled-not-indexed') {
           expect(r.lastCrawlTime).toBeTruthy()
+        }
+        if (r.outcome === 'indexed' && !r.lastCrawlTime) {
+          const hasAlreadyIndexedEvidence = batch.gscRequests?.some(
+            (candidate: { url: string; result: string }) =>
+              candidate.url === r.url && candidate.result === 'already-indexed'
+          )
+          expect(hasAlreadyIndexedEvidence).toBe(true)
         }
       }
     }

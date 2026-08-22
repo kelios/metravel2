@@ -383,6 +383,21 @@ select:focus-visible {
   outline-color: var(--color-borderStrong) !important;
 }
 
+/* Quest inaccuracy report: WebKit otherwise paints an autofilled e-mail with
+   its system yellow fill, which overrides the RN-Web input theme. Keep this
+   narrowly coupled to the semantic field marker instead of a test id. */
+[data-quest-report-field="email"]:-webkit-autofill,
+[data-quest-report-field="email"]:-webkit-autofill:hover,
+[data-quest-report-field="email"]:-webkit-autofill:focus {
+  color: var(--color-text) !important;
+  -webkit-text-fill-color: var(--color-text) !important;
+  caret-color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+  background-color: var(--color-background) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--color-background) inset !important;
+  box-shadow: 0 0 0 1000px var(--color-background) inset !important;
+}
+
 /* Ensure cards don't overflow */
 [data-testid*="travel"],
 [class*="card"],

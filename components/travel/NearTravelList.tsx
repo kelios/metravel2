@@ -1,6 +1,7 @@
 import React, {
   memo,
   useCallback,
+  useEffect,
   useMemo,
   useState,
   useRef,
@@ -179,14 +180,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       width < METRICS.breakpoints.largeTablet;
     const colors = useThemedColors();
     const scrollViewRef = useRef<ScrollView>(null);
-    const segmentOptions = useMemo(
-      () => [
-        { key: 'list', label: i18nT('travel:components.travel.NearTravelList.spisok_80236245'), icon: 'view-list', iconSource: 'material' as const },
-        { key: 'map', label: i18nT('travel:components.travel.NearTravelList.karta_14701f05'), icon: 'map', iconSource: 'material' as const },
-      ],
-      []
-    );
-
     const mapHeight = useMemo(() => {
       if (isMobile) return 320;
       if (isTablet) return embedded ? 440 : 400;
@@ -199,8 +192,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       if (width < METRICS.breakpoints.largeTablet) return 2;
       return 3;
     }, [width]);
-    const loadMoreCount = useMemo(() => isMobile ? 4 : isTablet ? 6 : 8, [isMobile, isTablet]);
-
     const travelId = useMemo(() => {
       const id = Number(travel.id);
       return Number.isFinite(id) && id > 0 ? id : null;
@@ -208,9 +199,20 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
     const {
       travelsNear, displayedTravels, mapPoints,
-      isLoading, isError, error, visibleCount,
-      refetchTravelsNear, handleLoadMore,
-    } = useNearTravelData(travelId, loadMoreCount, onTravelsLoaded, fetchEnabled);
+      isLoading, isError, error,
+      refetchTravelsNear,
+    } = useNearTravelData(travelId, onTravelsLoaded, fetchEnabled);
+
+    const segmentOptions = useMemo(
+      () => [
+        { key: 'list', label: i18nT('travel:components.travel.NearTravelList.spisok_80236245'), icon: 'view-list', iconSource: 'material' as const },
+        { key: 'map', label: i18nT('travel:components.travel.NearTravelList.karta_14701f05'), icon: 'map', iconSource: 'material' as const },
+      ],
+      [],
+    );
+    useEffect(() => {
+      if (!mapPoints.length && viewMode === 'map') setViewMode('list');
+    }, [mapPoints.length, viewMode]);
 
 
     // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
@@ -391,35 +393,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         color: colors.textMuted,
         textAlign: 'center',
       },
-      loadMoreContainer: {
-        padding: DESIGN_TOKENS.spacing.lg,
-        alignItems: 'center',
-      },
-      loadMoreButton: {
-        backgroundColor: colors.surface,
-        paddingHorizontal: DESIGN_TOKENS.spacing.md,
-        paddingVertical: 12,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        borderWidth: 2,
-        borderColor: colors.primary,
-        shadowColor: colors.text,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-        minHeight: 44,
-        ...Platform.select({
-          web: {
-            transition: 'all 0.2s ease',
-            cursor: 'pointer',
-          },
-        }),
-      },
-      loadMoreButtonText: {
-        color: colors.primaryText,
-        fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '600',
-      },
       loadingOverlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: colors.backgroundSecondary,
@@ -596,12 +569,14 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
         {!isMobile ? (
           <>
-            <SegmentedControl
-              options={segmentOptions}
-              value={viewMode}
-              onChange={(key) => setViewMode(key as Segment)}
-              accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
-            />
+            {mapPoints.length ? (
+              <SegmentedControl
+                options={segmentOptions}
+                value={viewMode}
+                onChange={(key) => setViewMode(key as Segment)}
+                accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
+              />
+            ) : null}
 
             {viewMode === 'map' ? (
               <View style={styles.mobileMapColumn}>
@@ -631,33 +606,22 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                     </View>
                   </View>
 
-                  {visibleCount < travelsNear.length && (
-                    <View style={styles.loadMoreContainer}>
-                      <Button
-                        label={i18nT('travel:components.travel.NearTravelList.pokazat_esche_value1_5bd22dbc', { value1: travelsNear.length - visibleCount })}
-                        onPress={handleLoadMore}
-                        variant="outline"
-                        size="md"
-                        style={styles.loadMoreButton}
-                        labelStyle={styles.loadMoreButtonText}
-                        accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pokazat_esche_bfa76db8')}
-                      />
-                    </View>
-                  )}
                 </ScrollView>
               </View>
             )}
           </>
         ) : (
           <>
-            <SegmentedControl
-              options={segmentOptions}
-              value={viewMode}
-              onChange={(key) => setViewMode(key as Segment)}
-              accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
-              compact
-              tone="subtle"
-            />
+            {mapPoints.length ? (
+              <SegmentedControl
+                options={segmentOptions}
+                value={viewMode}
+                onChange={(key) => setViewMode(key as Segment)}
+                accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
+                compact
+                tone="subtle"
+              />
+            ) : null}
 
             {viewMode === 'list' ? (
               embedded ? (
@@ -667,19 +631,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                       <TravelTmlRound travel={item} />
                     </View>
                   ))}
-                  {visibleCount < travelsNear.length && (
-                    <View style={styles.loadMoreContainer}>
-                      <Button
-                        label={i18nT('travel:components.travel.NearTravelList.zagruzit_esche_42e10ade')}
-                        onPress={handleLoadMore}
-                        variant="outline"
-                        size="md"
-                        style={styles.loadMoreButton}
-                        labelStyle={styles.loadMoreButtonText}
-                        accessibilityLabel={i18nT('travel:components.travel.NearTravelList.zagruzit_esche_puteshestviy_91cbe3fc')}
-                      />
-                    </View>
-                  )}
                 </View>
               ) : (
               <FlashList
@@ -690,23 +641,9 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 drawDistance={500}
                 contentContainerStyle={styles.mobileListContent}
                 scrollEnabled={!embedded}
-                onEndReached={embedded ? undefined : handleLoadMore}
-                onEndReachedThreshold={embedded ? undefined : 0.2}
                 showsVerticalScrollIndicator={false}
                 ListFooterComponent={
-                  visibleCount < travelsNear.length ? (
-                    <View style={styles.loadMoreContainer}>
-                      <Button
-                        label={i18nT('travel:components.travel.NearTravelList.zagruzit_esche_42e10ade')}
-                        onPress={handleLoadMore}
-                        variant="outline"
-                        size="md"
-                        style={styles.loadMoreButton}
-                        labelStyle={styles.loadMoreButtonText}
-                        accessibilityLabel={i18nT('travel:components.travel.NearTravelList.zagruzit_esche_puteshestviy_91cbe3fc')}
-                      />
-                    </View>
-                  ) : isLoading ? (
+                  isLoading ? (
                     <View style={styles.skeletonContainer}>
                       {[1, 2].map((i) => (
                         <TravelCardSkeleton key={i} colors={colors} />

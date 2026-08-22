@@ -8,6 +8,7 @@ import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader';
 import AwardsHub from '@/components/achievements/AwardsHub';
 import GamificationOnboarding from '@/components/achievements/GamificationOnboarding';
 import PlaceFirstBadgesSection from '@/components/achievements/PlaceFirstBadgesSection';
+import ProfileQuestCollections from '@/components/profile/ProfileQuestCollections';
 import { ProfileSectionsHub } from '@/components/screens/profile/ProfileSectionsHub';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
 import { useSeedGamificationFromAchievements } from '@/hooks/useGamification';
@@ -70,6 +71,7 @@ export function ProfileOverviewTab({
       />
       <AwardsHub requestedTab={awardsTab} />
       <PlaceFirstBadgesSection />
+      <ProfileQuestCollections />
       <ProfileSectionHeader
         title={i18nT('profile:components.screens.profile.ProfileOverviewTab.profil_e4ad6f7a')}
         subtitle={i18nT('profile:components.screens.profile.ProfileOverviewTab.zapolnite_profil_chtoby_otkryt_bolshe_vozmoz_b09cb91a')}

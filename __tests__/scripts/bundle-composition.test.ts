@@ -139,6 +139,120 @@ const ROUTE_SCOPED_PAYLOADS: Array<{
   },
 ]
 
+/**
+ * #1499: «lazy, побеждённый статическим импортом».
+ *
+ * Класс дефекта: в ОДНОМ файле, который попадает в web-бандл, модуль подключён и
+ * динамически (`React.lazy(() => import('./X'))`), и синхронно — обычно как
+ * native-ветка `Platform.OS === 'web' ? Lazy : Static` или как тест-фолбэк
+ * `isTestEnv ? require('./X') : lazy(...)`. Metro не знает ни платформы, ни
+ * `JEST_WORKER_ID` на этапе сборки, поэтому синхронное ребро остаётся в графе, и
+ * модуль со всем поддеревом грузится eager — обёртка `React.lazy` не экономит ни
+ * байта, а только маскирует проблему в код-ревью.
+ *
+ * Измерено на travel-детали 2026-08-22: четыре таких места
+ * (`TravelDetailsHero` ×3, `TravelDetailsScrollRuntime`,
+ * `TravelDetailsContentSection`) держали в стартовом графе маршрута 29 модулей /
+ * 240 КБ исходников — слайдер героя целиком, `TravelStatusButton` с
+ * `MiniCalendar`, `OfflineSaveControl`, `FullscreenGallery`, sticky-панель.
+ *
+ * Лечение — платформенная пара файлов (`X.tsx` / `X.web.tsx`), как в
+ * `sections/DeferredQuestForCitySection.web.tsx` после #1393: динамический импорт
+ * видит только web, статический — только native.
+ *
+ * `.native.*` / `.android.* `/ `.ios.*` не проверяются: web-бандл их не видит,
+ * там синхронный импорт и есть штатная native-ветка.
+ */
+const LAZY_DEFEATED_BY_SYNC_ALLOWLIST: Array<{ file: string; specifier: string; reason: string }> = [
+  {
+    file: 'app/_layout.tsx',
+    specifier: '@/utils/runtimeConfigDiagnostics',
+    reason: 'модуль 1.2 КБ, синхронно берётся только предикат-гейт; поддерева за ним нет',
+  },
+  {
+    file: 'components/travel/details/TravelDetailsIcons.tsx',
+    specifier: '@expo/vector-icons/Feather',
+    reason: 'Feather уже eager из ROOT_ICON_FONTS корневого layout — разрыв ребра здесь ничего не уносит',
+  },
+  {
+    file: 'app/(tabs)/quests/[city]/[questId].tsx',
+    specifier: '@expo/vector-icons/Feather',
+    reason: 'то же: набор иконок уже в стартовом графе через корневой layout',
+  },
+  {
+    file: 'app/(tabs)/quests/[city]/[questId].tsx',
+    specifier: '@/components/quests/QuestWizard',
+    reason: 'открытый долг: sync-ветка держит визард в стартовом графе маршрута квеста',
+  },
+  {
+    file: 'components/travel/NearTravelList.tsx',
+    specifier: '@/components/MapPage/TravelMap',
+    reason: 'открытый долг: карта попадает в чанк сайдбара; на стартовый граф travel-детали не влияет',
+  },
+  {
+    file: 'components/travel/details/sections/TravelDetailsSidebarSection.tsx',
+    specifier: '@/components/travel/NearTravelList',
+    reason: 'открытый долг: сам сайдбар уже за async-границей, вес остаётся внутри его чанка',
+  },
+  {
+    file: 'components/travel/details/sections/TravelDetailsSidebarSection.tsx',
+    specifier: '@/components/travel/PopularTravelList',
+    reason: 'открытый долг: то же, вес внутри чанка сайдбара',
+  },
+  {
+    file: 'components/layout/Footer.tsx',
+    specifier: '@/components/layout/BottomDock',
+    reason: 'открытый долг: тест-фолбэк require; Footer сам за async-границей',
+  },
+  {
+    file: 'components/layout/customHeaderLazy.ts',
+    specifier: './CustomHeaderNavSection',
+    reason: 'открытый долг: тест-фолбэк require держит секции шапки eager на ВСЕХ маршрутах (−83.7 КБ)',
+  },
+  {
+    file: 'components/layout/customHeaderLazy.ts',
+    specifier: './CustomHeaderAccountSection',
+    reason: 'открытый долг: тот же тест-фолбэк require в шапке',
+  },
+  {
+    file: 'components/layout/customHeaderAccountLazy.ts',
+    specifier: './CustomHeaderDesktopAccountSection',
+    reason: 'открытый долг: тот же тест-фолбэк require в шапке',
+  },
+  {
+    file: 'components/layout/customHeaderAccountLazy.ts',
+    specifier: './CustomHeaderMobileAccountSection',
+    reason: 'открытый долг: тот же тест-фолбэк require в шапке',
+  },
+  {
+    file: 'components/layout/customHeaderMobileLazy.ts',
+    specifier: './CustomHeaderMobileMenu',
+    reason: 'открытый долг: тот же тест-фолбэк require в шапке',
+  },
+  {
+    file: 'components/travel/details/travelDetailsDeferredLoader.ts',
+    specifier: '@/components/travel/details/TravelDetailsDeferred',
+    reason: 'открытый долг: тест-фолбэк require; сам загрузчик уже за async-границей маршрута',
+  },
+  {
+    file: 'utils/validation/index.ts',
+    specifier: '../validation',
+    reason: 'баррель намеренно ре-экспортирует тот же модуль синхронно; await import — сахар в хелпере',
+  },
+]
+
+/** Файлы, которых web-бандл не видит: там синхронный импорт — штатная native-ветка. */
+const NATIVE_ONLY_FILE = /\.(native|android|ios)\.(t|j)sx?$/
+
+/** Динамические `import('x')` вне типовой позиции (`typeof import('x')` — не ребро). */
+const dynamicImportSpecifiers = (rawContent: string): string[] => {
+  const content = stripComments(rawContent)
+  const out = new Set<string>()
+  // `,?` — многострочный вызов с висячей запятой (prettier так и форматирует).
+  for (const m of content.matchAll(/(?<!typeof\s)\bimport\(\s*['"]([^'"]+)['"]\s*,?\s*\)/g)) out.add(m[1])
+  return [...out]
+}
+
 const RESOLVE_EXTS = ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js']
 
 /** Разрешение импорта под web-бандл: `.web.*` выигрывает у платформенно-общего файла. */
@@ -289,6 +403,39 @@ describe('состав eager-бандла (#1148)', () => {
     },
   )
 
+  it('React.lazy не соседствует с синхронным импортом того же модуля (#1499)', () => {
+    const allowed = new Set(
+      LAZY_DEFEATED_BY_SYNC_ALLOWLIST.map((entry) => `${entry.file} :: ${entry.specifier}`),
+    )
+
+    const offenders: string[] = []
+    for (const file of sourceFiles) {
+      if (NATIVE_ONLY_FILE.test(file)) continue
+      const raw = readFileSync(file, 'utf8')
+      for (const specifier of dynamicImportSpecifiers(raw)) {
+        if (!hasSyncImport(raw, specifier)) continue
+        const key = `${relative(ROOT, file)} :: ${specifier}`
+        if (!allowed.has(key)) offenders.push(key)
+      }
+    }
+
+    expect(offenders).toEqual([])
+  })
+
+  // Контроль детектора: allowlist обязан состоять из ЖИВЫХ записей. Иначе «зелено»
+  // означает лишь то, что список разъехался с кодом, и новая копия паттерна
+  // проедет мимо гейта (ровно так уже умирал allowlist ре-экспортов, см. ниже).
+  it('allowlist парных импортов не содержит мёртвых записей (#1499)', () => {
+    const stale = LAZY_DEFEATED_BY_SYNC_ALLOWLIST.filter(({ file, specifier }) => {
+      const full = join(ROOT, file)
+      if (!existsSync(full)) return true
+      const raw = readFileSync(full, 'utf8')
+      return !(dynamicImportSpecifiers(raw).includes(specifier) && hasSyncImport(raw, specifier))
+    }).map(({ file, specifier }) => `${file} :: ${specifier}`)
+
+    expect(stale).toEqual([])
+  })
+
   // Проверка самого детектора: без неё «зелено» может означать, что регексп ничего
   // не находит в принципе.
   it('детектор отличает синхронный импорт от типового и от динамического', () => {
@@ -314,5 +461,12 @@ describe('состав eager-бандла (#1148)', () => {
     expect(hasSyncImport(`export {\n  BottomSheetFlatList,\n} from '@gorhom/bottom-sheet'`, '@gorhom/bottom-sheet')).toBe(true)
     // Типовой ре-экспорт стирается компилятором — не ребро графа.
     expect(hasSyncImport(`export type { FileRejection } from 'react-dropzone'`, 'react-dropzone')).toBe(false)
+
+    // #1499: сбор динамических импортов. `typeof import('x')` — типовая позиция,
+    // она стирается и ребром чанка не является.
+    expect(dynamicImportSpecifiers(`const m = React.lazy(() => import('./X'))`)).toEqual(['./X'])
+    expect(dynamicImportSpecifiers(`await import(\n  './X',\n)`)).toEqual(['./X'])
+    expect(dynamicImportSpecifiers(`type M = typeof import('./X')`)).toEqual([])
+    expect(dynamicImportSpecifiers(`// import('./X')\nconst a = 1`)).toEqual([])
   })
 })

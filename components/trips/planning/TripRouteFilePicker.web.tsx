@@ -4,7 +4,19 @@ import Feather from '@expo/vector-icons/Feather';
 
 import ToolActionsRow from '@/components/ui/ToolActionsRow';
 import { useThemedColors } from '@/hooks/useTheme';
-import type { TripRouteFilePickerProps } from './TripRouteFilePicker.types';
+import type {
+  PickedTripRouteFileUpload,
+  TripRouteFilePickerProps,
+} from './TripRouteFilePicker.types';
+
+/**
+ * На web выбранный `File` живёт в памяти вкладки и освобождается сборщиком —
+ * освобождать нечего. Симметричный экспорт нужен, чтобы панель импорта не знала
+ * платформу (#1496).
+ */
+export const releasePickedTripRouteUpload = async (
+  _upload: PickedTripRouteFileUpload | null | undefined,
+): Promise<void> => {};
 
 function TripRouteFilePicker({
   label,
@@ -33,21 +45,28 @@ function TripRouteFilePicker({
     const input = event.currentTarget;
     const file = input.files?.[0] ?? null;
     const requestId = ++requestIdRef.current;
+    let busyRaised = false;
 
     try {
       if (!file) return;
       onBusyChange?.(true);
+      busyRaised = true;
       if (file.size > maxBytes) {
         onError('tooLarge');
         return;
       }
       const text = await file.text();
       if (requestId !== requestIdRef.current) return;
-      onPicked({ name: file.name, size: file.size, text });
+      onPicked({
+        name: file.name,
+        size: file.size,
+        text,
+        upload: { kind: 'web', file },
+      });
     } catch {
       if (requestId === requestIdRef.current) onError('read');
     } finally {
-      if (requestId === requestIdRef.current) onBusyChange?.(false);
+      if (busyRaised && requestId === requestIdRef.current) onBusyChange?.(false);
       input.value = '';
     }
   }, [maxBytes, onBusyChange, onError, onPicked]);

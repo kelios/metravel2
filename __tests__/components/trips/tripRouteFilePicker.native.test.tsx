@@ -15,12 +15,16 @@ jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
   EncodingType: { UTF8: 'utf8' },
   readAsStringAsync: jest.fn(),
+  makeDirectoryAsync: jest.fn().mockResolvedValue(undefined),
+  copyAsync: jest.fn().mockResolvedValue(undefined),
   deleteAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 const DocumentPicker = require('expo-document-picker') as { getDocumentAsync: jest.Mock };
 const FileSystem = require('expo-file-system/legacy') as {
   readAsStringAsync: jest.Mock;
+  makeDirectoryAsync: jest.Mock;
+  copyAsync: jest.Mock;
   deleteAsync: jest.Mock;
 };
 
@@ -54,6 +58,8 @@ describe('TripRouteFilePicker native adapter', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     FileSystem.readAsStringAsync.mockResolvedValue('<gpx />');
+    FileSystem.makeDirectoryAsync.mockResolvedValue(undefined);
+    FileSystem.copyAsync.mockResolvedValue(undefined);
     FileSystem.deleteAsync.mockResolvedValue(undefined);
   });
 
@@ -70,6 +76,12 @@ describe('TripRouteFilePicker native adapter', () => {
       name: 'weekend.gpx',
       size: 42,
       text: '<gpx />',
+      upload: {
+        kind: 'native',
+        uri: expect.stringMatching(/^file:\/\/\/cache\/trip-route-import\/\d+-\d+-weekend\.gpx$/),
+        name: 'weekend.gpx',
+        mimeType: 'application/gpx+xml',
+      },
     }));
     expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledWith(expect.objectContaining({
       copyToCacheDirectory: true,
@@ -79,11 +91,36 @@ describe('TripRouteFilePicker native adapter', () => {
       'file:///cache/weekend.gpx',
       { encoding: 'utf8' },
     );
+    expect(FileSystem.makeDirectoryAsync).toHaveBeenCalledWith(
+      'file:///cache/trip-route-import/',
+      { intermediates: true },
+    );
+    expect(FileSystem.copyAsync).toHaveBeenCalledWith({
+      from: 'file:///cache/weekend.gpx',
+      to: expect.stringMatching(/^file:\/\/\/cache\/trip-route-import\/\d+-\d+-weekend\.gpx$/),
+    });
     expect(FileSystem.deleteAsync).toHaveBeenCalledWith(
       'file:///cache/weekend.gpx',
       { idempotent: true },
     );
     expect(props.onBusyChange.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('keeps same-name selections in distinct retained cache files', async () => {
+    DocumentPicker.getDocumentAsync.mockResolvedValue({
+      canceled: false,
+      assets: [asset('weekend.gpx')],
+    });
+    const { getByTestId, props } = renderPicker();
+
+    fireEvent.press(getByTestId('trip-route-import-picker'));
+    await waitFor(() => expect(props.onPicked).toHaveBeenCalledTimes(1));
+    fireEvent.press(getByTestId('trip-route-import-picker'));
+    await waitFor(() => expect(props.onPicked).toHaveBeenCalledTimes(2));
+
+    const targets = FileSystem.copyAsync.mock.calls.map(([copy]) => copy.to);
+    expect(targets).toHaveLength(2);
+    expect(targets[0]).not.toBe(targets[1]);
   });
 
   it('leaves callbacks untouched when the chooser is cancelled', async () => {

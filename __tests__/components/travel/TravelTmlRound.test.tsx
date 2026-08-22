@@ -30,6 +30,7 @@ jest.mock('@/hooks/useTheme', () => ({
     text: '#111827',
     textMuted: '#6b7280',
     textOnDark: '#ffffff',
+    warning: '#f59e0b',
   }),
 }));
 
@@ -56,7 +57,7 @@ describe('TravelTmlRound', () => {
     mockUnifiedTravelCard.mockClear();
   });
 
-  it('renders compact popular-card metadata: author, year and views', () => {
+  it('renders compact popular-card metadata: author, year, rating and views', () => {
     const { getByText } = render(
       <TravelTmlRound
         travel={{
@@ -66,6 +67,7 @@ describe('TravelTmlRound', () => {
           countryName: 'Беларусь',
           userName: 'Анна Иванова',
           year: '2024',
+          rating: 5,
           countUnicIpView: '2400',
         } as any}
       />,
@@ -74,7 +76,24 @@ describe('TravelTmlRound', () => {
     expect(getByText('Беларусь')).toBeTruthy();
     expect(getByText('Анна Иванова')).toBeTruthy();
     expect(getByText('2024')).toBeTruthy();
+    expect(getByText('5,0')).toBeTruthy();
     // #1457: компактная единица берётся из локали (дефолт — русский)
     expect(getByText('2,4\u00a0тыс.')).toBeTruthy();
+  });
+
+  it('omits a non-positive rating', () => {
+    const { queryByTestId } = render(
+      <TravelTmlRound
+        travel={{
+          id: 43,
+          slug: 'unrated-route',
+          name: 'Маршрут без оценки',
+          countryName: 'Беларусь',
+          rating: 0,
+        } as any}
+      />,
+    );
+
+    expect(queryByTestId('rating-meta')).toBeNull();
   });
 });

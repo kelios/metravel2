@@ -2,6 +2,8 @@
 // C1: Unified map contract — single source of truth for all map types
 // Both `components/map/` and `components/MapPage/` should migrate to these types.
 
+import type { TransportMode } from '@/types/route';
+
 // ---------------------------------------------------------------------------
 // Marker / Point types
 // ---------------------------------------------------------------------------
@@ -100,7 +102,9 @@ export interface Coordinates {
 // Routing
 // ---------------------------------------------------------------------------
 
-export type TransportMode = 'car' | 'bike' | 'foot';
+// #1491: режимы маршрутизации объявлены один раз в `types/route.ts` — здесь
+// только реэкспорт. Четвёртая копия того же союза жила именно тут.
+export type { TransportMode };
 export type MapMode = 'radius' | 'route';
 
 export interface RouteSegment {

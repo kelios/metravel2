@@ -156,6 +156,29 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
   await page.route('**/api/trips/route-templates/', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
   )
+  await page.route('**/api/trips/planned/99002/routes/', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  })
+  await page.route('**/api/trips/99002/route-summary/', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        trip: 99002,
+        provider: 'fallback',
+        status: 'unavailable',
+        polyline: null,
+      }),
+    })
+  })
   await page.route('**/api/trips/planned/99002/', async (route) => {
     const request = route.request()
     if (request.method() === 'PATCH') {
@@ -260,8 +283,10 @@ test.describe('Trip planner — happy path', () => {
 
     const control = page.getByTestId('route-builder-transport-control')
     await expect(control).toBeVisible({ timeout: 15_000 })
-    await expect(control.getByText('Способ передвижения', { exact: true })).toBeVisible()
+    const transportStep = page.getByTestId('route-builder-step-transport')
+    await expect(transportStep.getByText('Транспорт', { exact: true })).toBeVisible()
     const group = control.getByRole('radiogroup')
+    await expect(group).toHaveAccessibleName('Способ передвижения')
     const choices = group.getByRole('radio')
     await expect(choices).toHaveCount(3)
     await expect(choices.nth(0)).toHaveAccessibleName('На машине')
@@ -292,6 +317,8 @@ test.describe('Trip planner — happy path', () => {
     expect(networkEvidence.plannedTripRequests.some((entry) => entry.includes('/route/'))).toBe(false)
 
     await page.setViewportSize({ width: 390, height: 844 })
+    // #1495: на мобильном панель уезжает в шторку — открываем её чипом транспорта.
+    await page.getByTestId('route-map-chip-transport').click()
     await expect(control).toBeVisible()
     const touchHeights = await choices.evaluateAll((nodes) =>
       nodes.map((node) => node.getBoundingClientRect().height),
@@ -315,6 +342,8 @@ test.describe('Trip planner — happy path', () => {
     await waitForFakeAuth(page)
     await expect(page.getByTestId('trip-plan-route-map').locator('.leaflet-container')).toBeVisible()
 
+    // #1495: панель маршрута на мобильном живёт в шторке — раскрываем её.
+    await page.getByTestId('route-map-chip-transport').click()
     await page.getByTestId('segmented-bike').click()
     await expect(page.getByTestId('route-builder-bike-type-control')).toBeVisible()
     await page.getByTestId('route-builder-bike-type-road').click()
@@ -330,7 +359,88 @@ test.describe('Trip planner — happy path', () => {
     expect(networkEvidence.plannedTripRequests.some((entry) => entry.includes('/route/'))).toBe(false)
 
     await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.getByTestId('route-map-chip-transport').click()
     await expect(page.getByTestId('route-builder-bike-type-mountain')).toHaveAttribute('aria-pressed', 'true')
     expect(pageErrors).toEqual([])
+  })
+
+  // #1495: регрессионный контроль map-first раскладки. Фиксирует три положения
+  // шторки и то, какая секция панели видна в каждом, — откат к вертикальному
+  // списку секций на мобильном не пройдёт незамеченным.
+  test('mobile route tab is map-first with a three-position bottom sheet', async ({ page }) => {
+    await setupFakeAuth(page)
+    await seedConsent(page)
+    await mockTransportTrip(page)
+    // Карточка поездки и её route-file/elevation зависимости детерминированы в
+    // mockTransportTrip. Здесь отбрасываем только непривязанный к сценарию
+    // сетевой шум (например, внешние тайлы) и проверяем ошибки рантайма.
+    const consoleErrors: string[] = []
+    page.on('console', (message) => {
+      if (message.type() !== 'error') return
+      const text = message.text()
+      if (/CORS policy|net::ERR_FAILED|Failed to load resource/.test(text)) return
+      consoleErrors.push(text)
+    })
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/trips/plan/99002', { waitUntil: 'domcontentloaded' })
+    await waitForFakeAuth(page)
+
+    const stage = page.getByTestId('route-builder')
+    const sheet = page.getByTestId('route-sheet')
+    await expect(page.getByTestId('trip-plan-route-map').locator('.leaflet-container')).toBeVisible({
+      timeout: 30_000,
+    })
+    await expect(sheet).toBeVisible()
+
+    // Карта — главный элемент: сцена занимает почти весь вьюпорт по высоте.
+    const stageBox = await stage.boundingBox()
+    expect(stageBox!.height).toBeGreaterThan(380)
+
+    // Свёрнуто: только строка итога, точки маршрута за краем шторки.
+    const collapsedBox = await sheet.boundingBox()
+    expect(collapsedBox!.height).toBeLessThan(160)
+    await expect(page.getByTestId('route-sheet-peek')).toBeVisible()
+    await expect(page.getByTestId('route-sheet-peek')).toContainText('19 км')
+    await expect(page.getByTestId('route-builder-point-0')).not.toBeInViewport()
+
+    // Чипы транспорта и итога стоят поверх карты и имеют тач-таргет 44dp.
+    const transportChip = page.getByTestId('route-map-chip-transport')
+    const summaryChip = page.getByTestId('route-map-chip-summary')
+    await expect(transportChip).toBeVisible()
+    await expect(summaryChip).toBeVisible()
+    const chipHeights = await page
+      .locator('[data-testid="route-map-chip-transport"], [data-testid="route-map-chip-summary"]')
+      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height))
+    expect(chipHeights.every((height) => height >= 44)).toBe(true)
+
+    const evidenceDir = path.join(process.cwd(), '.codex-temp', 'trips-map-first')
+    fs.mkdirSync(evidenceDir, { recursive: true })
+    await page.screenshot({ path: path.join(evidenceDir, 'mobile-sheet-collapsed.png') })
+
+    // Наполовину: список точек маршрута.
+    await page.getByTestId('route-sheet-handle').click()
+    await expect.poll(async () => (await sheet.boundingBox())!.height).toBeGreaterThan(280)
+    await expect(page.getByTestId('route-builder-point-0')).toBeInViewport()
+    await page.screenshot({ path: path.join(evidenceDir, 'mobile-sheet-points.png') })
+
+    // Развёрнуто: транспорт, импорт и экспорт маршрута.
+    await page.getByTestId('route-sheet-handle').click()
+    await expect.poll(async () => (await sheet.boundingBox())!.height).toBeGreaterThan(500)
+    await expect(page.getByTestId('route-builder-transport-control')).toBeVisible()
+    // Импорт/экспорт — тот самый «низ» панели: если он доехал до шторки, значит
+    // развёрнутое положение действительно показывает панель целиком. Кнопку
+    // сохранения здесь не ждём: с #1491 она появляется только при несохранённых
+    // правках, а маршрут в этом сценарии не тронут.
+    await expect(page.getByTestId('trip-route-import-panel')).toBeVisible()
+    await page.screenshot({ path: path.join(evidenceDir, 'mobile-sheet-full.png') })
+
+    // Тап по точке в списке возвращает шторку на половину, чтобы карта была видна.
+    await page.getByTestId('route-builder-focus-1').click()
+    await expect.poll(async () => (await sheet.boundingBox())!.height).toBeLessThan(500)
+
+    // Горизонтального скролла на 390px не появилось.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    expect(consoleErrors).toEqual([])
   })
 })

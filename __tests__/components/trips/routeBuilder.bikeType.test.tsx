@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 
 const mockRouteMutate = jest.fn()
 const mockTransportMutate = jest.fn()
@@ -128,6 +129,12 @@ type MutationCallbacks = {
   onSettled: () => void
 }
 
+
+// #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
+// адресами через React Query — конструктору нужен клиент, как и в приложении.
+const renderRouteBuilder = (element: React.ReactElement) =>
+  render(element, { wrapper: createQueryWrapper().Wrapper })
+
 describe('RouteBuilder bike type selector', () => {
   beforeEach(() => {
     mockRouteMutate.mockReset()
@@ -138,7 +145,7 @@ describe('RouteBuilder bike type selector', () => {
   })
 
   it('is hidden for every non-bike transport', () => {
-    const { queryByTestId, rerender } = render(<RouteBuilder trip={makeTrip({ transport: 'car' })} />)
+    const { queryByTestId, rerender } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ transport: 'car' })} />)
     expect(queryByTestId('route-builder-bike-type-control')).toBeNull()
 
     rerender(<RouteBuilder trip={makeTrip({ transport: 'foot' })} />)
@@ -146,20 +153,20 @@ describe('RouteBuilder bike type selector', () => {
   })
 
   it('is hidden for a non-owner even when the transport is bike', () => {
-    const { queryByTestId } = render(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
+    const { queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
 
     expect(queryByTestId('route-builder-bike-type-control')).toBeNull()
   })
 
   it('is hidden when the backend does not expose bike_type at all', () => {
-    const { queryByTestId, getByTestId } = render(<RouteBuilder trip={makeTrip({ bikeType: null })} />)
+    const { queryByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ bikeType: null })} />)
 
     expect(queryByTestId('route-builder-bike-type-control')).toBeNull()
     expect(getByTestId('route-builder-transport-control')).toBeTruthy()
   })
 
   it('shows the three choices with selected state and 44dp targets when transport is bike', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip({ bikeType: 'road' })} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ bikeType: 'road' })} />)
 
     expect(getByTestId('route-builder-bike-type-control')).toBeTruthy()
 
@@ -185,7 +192,7 @@ describe('RouteBuilder bike type selector', () => {
   })
 
   it('ignores the current choice and locks rapid repeated changes to one PATCH without a separate rebuild', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-bike-type-regular'))
     expect(mockBikeTypeMutate).not.toHaveBeenCalled()
@@ -193,7 +200,8 @@ describe('RouteBuilder bike type selector', () => {
     fireEvent.press(getByTestId('route-builder-bike-type-mountain'))
     fireEvent.press(getByTestId('route-builder-bike-type-mountain'))
     fireEvent.press(getByTestId('route-builder-bike-type-road'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    // #1491: точки маршрута не менялись — кнопки действия на панели нет.
+    expect(queryByTestId('route-builder-save')).toBeNull()
 
     expect(mockBikeTypeMutate).toHaveBeenCalledTimes(1)
     expect(mockBikeTypeMutate.mock.calls[0][0]).toEqual({ tripId: 42, bikeType: 'mountain' })
@@ -203,7 +211,7 @@ describe('RouteBuilder bike type selector', () => {
 
   it('disables bike type changes while a route save is pending', () => {
     mockRoutePending = true
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     const chip = getByTestId('route-builder-bike-type-road')
     expect(chip.props.accessibilityState.disabled).toBe(true)
@@ -214,7 +222,7 @@ describe('RouteBuilder bike type selector', () => {
 
   it('shows the shared rebuild hint and blocks repeat presses while the change is pending', () => {
     mockBikeTypePending = true
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(getByTestId('route-builder-transport-pending')).toBeTruthy()
     expect(getByTestId('route-builder-bike-type-road').props.accessibilityState.disabled).toBe(true)
@@ -239,7 +247,7 @@ describe('RouteBuilder bike type selector', () => {
         provider: 'ors',
       },
     })
-    const { getByTestId, getByText, rerender } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, getByText, rerender } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-bike-type-mountain'))
     const callbacks = mockBikeTypeMutate.mock.calls[0][1] as MutationCallbacks
@@ -255,7 +263,7 @@ describe('RouteBuilder bike type selector', () => {
 
   it('does not overwrite unsaved route edits when the response arrives', () => {
     const updatedTrip = makeTrip({ bikeType: 'road' })
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'C')
@@ -273,7 +281,7 @@ describe('RouteBuilder bike type selector', () => {
   })
 
   it('keeps the prior route, announces the failure and allows a retry', () => {
-    const { getByTestId, getByText, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, getByText, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-bike-type-road'))
     const callbacks = mockBikeTypeMutate.mock.calls[0][1] as MutationCallbacks
@@ -294,7 +302,7 @@ describe('RouteBuilder bike type selector', () => {
   })
 
   it('does not keep a stale failure under a later successful change', () => {
-    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-bike-type-road'))
     act(() => {

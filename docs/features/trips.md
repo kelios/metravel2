@@ -313,6 +313,37 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
 | `fetchRouteTemplates` | `GET /trips/route-templates/` | |
 | `fetchTripRouteElevation` | `GET /trips/{id}/route-summary/` | требует токен |
 | `refreshTripRouteElevation` | `POST /trips/{id}/route-summary/ {provider:'ors',force_refresh:true}` | owner-only |
+| `listPlannedTripRouteFiles` / `fetchPlannedTripRouteFile` | `GET /trips/planned/{id}/routes/` | #1496; список из нуля-одного элемента, owner-only |
+| `uploadPlannedTripRouteFile` | `POST /trips/planned/{id}/routes/` (multipart `file`) | создаёт (201) или заменяет (200) с тем же id |
+| `downloadPlannedTripRouteFileBlob` | `GET /trips/planned/{id}/routes/{routeId}/download/` | отдаёт ровно загруженные байты |
+| `deletePlannedTripRouteFile` | `DELETE /trips/planned/{id}/routes/{routeId}/` | 204 |
+
+### Исходный файл маршрута (фаза 2 импорта, #1496)
+
+У поездки хранится **ноль или один** исходный GPX/KML (`api/plannedTripRoutes.ts`,
+backend-контракт #1493). Хранилище доступно только владельцу поездки: участник
+получает 403, аноним — 401, и хук `usePlannedTripRouteFile` трактует
+401/403/404/501 как «оригинала нет», а не как ошибку экрана.
+
+Что делает фронт:
+
+1. `TripRouteImportPanel` вместе с текстом файла получает от пикера сам файл
+   (`upload`: `File` на web, кэш-копия `{uri,name,type}` на native) и отдаёт его
+   наверх при «Заменить»/«Добавить»;
+2. `RouteBuilder.handleSave` сначала сохраняет точки `PUT /route/`, затем грузит
+   оригинал — так файл и точки не расходятся. Отказ загрузки не откатывает точки:
+   показывается ошибка, файл остаётся выбранным, повтор — тем же «Сохранить маршрут»;
+3. `usePlannedTripOriginalTrack` скачивает исходник и разбирает его тем же
+   `parseRouteFilePreviews`, что и фаза 1; `buildOriginalTrackGeometry`
+   (`tripOriginalTrack.ts`) переносит **все** точки трека, обрезая только выше
+   защитного потолка `ORIGINAL_TRACK_MAX_DISPLAY_POINTS = 12000`;
+4. `TripPlanRouteMap` рисует эту геометрию **отдельным слоем** поверх линии
+   маршрута: на web — вторая `Polyline`, на native — поле payload `originalTrack`
+   (`Map.ios.tsx` → `Map/nativeMapHtml.ts`). Точки маршрута и `routeGeometry`
+   не подменяются;
+5. `TripRouteDownloadButtons` (вкладка «Экспорт» и панель конструктора) даёт
+   «Скачать оригинал» — байты приходят те же, что были загружены, в отличие от
+   кнопок GPX/KML, которые собирают файл заново из текущих точек.
 
 Смежные: `GET/POST /trips/{id}/chat/`, `.../messages/` (`api/tripChat.ts`),
 `GET/POST /trips/{id}/telegram-group/` и invite-link (`api/tripTelegramGroup.ts`).

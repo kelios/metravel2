@@ -75,6 +75,12 @@ interface TravelProps {
   userLocation?: Coordinates | null;
   routePoints?: [number, number][];
   fullRouteCoords?: [number, number][];
+  /**
+   * Неупрощённая геометрия исходного GPX/KML-файла (#1496). Отдельный слой поверх
+   * линии маршрута: `fullRouteCoords` и точки остаются как есть, оригинал их не
+   * подменяет. Пусто для всех экранов, кроме планировщика поездки.
+   */
+  originalTrackCoords?: [number, number][];
   mode?: 'radius' | 'route';
   onMapClick?: (lng: number, lat: number) => void;
   /** Dismiss transient mobile chrome when the user taps empty map space. */
@@ -134,6 +140,7 @@ const Map: React.FC<TravelProps> = ({
   userLocation = null,
   routePoints = [],
   fullRouteCoords = [],
+  originalTrackCoords = [],
   mode = 'radius',
   onMapClick,
   onMapBackgroundTap,
@@ -194,6 +201,12 @@ const Map: React.FC<TravelProps> = ({
       .map(normalizeRoutePoint)
       .filter((point): point is [number, number] => Boolean(point)),
     [fullRouteCoords, routePoints],
+  );
+  const originalTrackLatLngs = useMemo(
+    () => originalTrackCoords
+      .map(normalizeRoutePoint)
+      .filter((point): point is [number, number] => Boolean(point)),
+    [originalTrackCoords],
   );
   const serverClusterQuery = useMapClusters({
     bbox: viewportSnapshot?.bbox ?? null,
@@ -429,6 +442,7 @@ const Map: React.FC<TravelProps> = ({
       clusters: renderedNativeClusters,
       routePoints: selectedRouteLatLngs,
       routeLine: routeLineLatLngs,
+      originalTrack: originalTrackLatLngs,
       mode,
       center: { lat: centerLat, lng: centerLng },
       usesServerClusters: shouldUseServerClusterData,
@@ -439,6 +453,7 @@ const Map: React.FC<TravelProps> = ({
       renderedNativeClusters,
       selectedRouteLatLngs,
       routeLineLatLngs,
+      originalTrackLatLngs,
       mode,
       centerLat,
       centerLng,

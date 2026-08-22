@@ -5,7 +5,7 @@
 // использует тот же WebView+Leaflet стек, что и /map (`components/MapPage/Map` →
 // `Map.ios`, который ре-экспортирует `Map.android`), поэтому маршрут, точки и
 // контрол «Слои» (#1306) совпадают с mobile web по составу и поведению.
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -13,6 +13,10 @@ import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTranspo
 import MapComponent from '@/components/MapPage/Map';
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import {
+  FOCUS_POINT_ZOOM,
+  type MapFocusPoint,
+} from '@/components/trips/planning/tripPlanRouteMap.types';
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
@@ -36,6 +40,14 @@ interface Props {
   summary?: RouteSummary | null;
   transport?: TripTransport;
   readonly?: boolean;
+  /** #1496: исходный импортированный трек поверх построенного маршрута. */
+  originalTrack?: RouteGeometry | null;
+  /**
+   * #1495: карта растягивается на всю родительскую сцену и отдаёт ей заголовок —
+   * в map-first раскладке подписи живут в чипах поверх карты.
+   */
+  fill?: boolean;
+  focusPoint?: MapFocusPoint | null;
   onEditPoint?: (index: number) => void;
   onAddPointFromMap?: (coords: { lat: number; lng: number }) => void;
 }
@@ -64,6 +76,7 @@ type NativeRouteMapProps = {
   coordinates: { latitude: number; longitude: number };
   routePoints: Array<[number, number]>;
   fullRouteCoords: Array<[number, number]>;
+  originalTrackCoords?: Array<[number, number]>;
   mode: 'route';
   pointsOnly?: boolean;
   onMapClick?: (lng: number, lat: number) => void;
@@ -82,6 +95,9 @@ export default function TripPlanRouteMap({
   summary,
   transport,
   readonly = false,
+  originalTrack,
+  fill = false,
+  focusPoint,
   onAddPointFromMap,
 }: Props) {
   const colors = useThemedColors();
@@ -98,6 +114,10 @@ export default function TripPlanRouteMap({
     () => (routeGeometry?.length ? lngLatPairs(routeGeometry) : routePoints),
     [routeGeometry, routePoints],
   );
+  const originalTrackLine = useMemo(
+    () => (originalTrack?.length ? lngLatPairs(originalTrack) : []),
+    [originalTrack],
+  );
   const center = useMemo(() => {
     const first = routeLine[0] ?? routePoints[0];
     if (!first) return DEFAULT_CENTER;
@@ -111,6 +131,17 @@ export default function TripPlanRouteMap({
   const handleMapUiApiReady = useCallback((api: unknown) => {
     setMapUiApi((api as MapUiApi | null) ?? null);
   }, []);
+
+  // #1495: центрирование на точке из списка. Native-карта живёт в WebView, и
+  // единственный доступ к ней — MapUiApi (`focusOnCoord`), тот же, которым
+  // пользуется список точек пользователя.
+  const focusedTokenRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!focusPoint || !mapUiApi?.focusOnCoord) return;
+    if (focusedTokenRef.current === focusPoint.token) return;
+    focusedTokenRef.current = focusPoint.token;
+    mapUiApi.focusOnCoord(`${focusPoint.lat},${focusPoint.lng}`, { zoom: FOCUS_POINT_ZOOM });
+  }, [focusPoint, mapUiApi]);
 
   const handleMapClick = useCallback(
     (lng: number, lat: number) => {
@@ -126,7 +157,8 @@ export default function TripPlanRouteMap({
   const layersLabel = i18nT('tripsStatic:plan.map.layers');
 
   return (
-    <View style={styles.wrap} testID="trip-plan-route-map">
+    <View style={[styles.wrap, fill && styles.wrapFill]} testID="trip-plan-route-map">
+      {fill ? null : (
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.title}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.karta_marshruta_8fbc6a38')}</Text>
@@ -148,6 +180,12 @@ export default function TripPlanRouteMap({
                 ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
                 : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
           </Text>
+          {originalTrackLine.length > 1 ? (
+            <View style={styles.legendItem} testID="trip-plan-map-original-track-legend">
+              <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
+              <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
+            </View>
+          ) : null}
           {approximate ? (
             <Text style={styles.warning}>
               {routingStateHint(routingState)
@@ -157,18 +195,26 @@ export default function TripPlanRouteMap({
         </View>
         <Text style={styles.counter}>{routePoints.length}</Text>
       </View>
+      )}
 
-      <View style={styles.mapShell}>
+      <View style={[styles.mapShell, fill && styles.mapShellFill]}>
         <NativeMap
           travel={EMPTY_TRAVEL}
           coordinates={center}
           routePoints={routePoints}
           fullRouteCoords={routeLine}
+          originalTrackCoords={originalTrackLine}
           mode="route"
           pointsOnly
           onMapClick={handleMapClick}
           onMapUiApiReady={handleMapUiApiReady}
         />
+        {fill && originalTrackLine.length > 1 ? (
+          <View style={styles.legendOverlay} testID="trip-plan-map-original-track-legend">
+            <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
+            <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
+          </View>
+        ) : null}
 
         <Pressable
           onPress={toggleLayers}
@@ -234,6 +280,15 @@ const createStyles = (colors: ThemedColors) =>
     routeModeText: { fontSize: 13, fontWeight: '800', color: colors.text },
     routeModeMeta: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
     hint: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    legendLine: { width: 22, height: 3, borderRadius: 999 },
+    legendText: { fontSize: 12, color: colors.textSecondary, fontWeight: '700' },
+    legendOverlay: {
+      position: 'absolute', top: 12, left: 12, zIndex: 3,
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999,
+      backgroundColor: colors.surface,
+    },
     warning: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '700' },
     counter: {
       minWidth: 32,
@@ -247,6 +302,15 @@ const createStyles = (colors: ThemedColors) =>
       fontSize: 13,
       fontWeight: '800',
     },
+    wrapFill: {
+      flex: 1,
+      minHeight: 0,
+      gap: 0,
+      padding: 0,
+      borderWidth: 0,
+      borderRadius: 0,
+      backgroundColor: 'transparent',
+    },
     mapShell: {
       height: MAP_HEIGHT,
       width: '100%',
@@ -255,6 +319,14 @@ const createStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surfaceMuted,
+    },
+    // Map-first сцена (#1495) задаёт высоту сама.
+    mapShellFill: {
+      flex: 1,
+      height: '100%',
+      minHeight: 0,
+      borderWidth: 0,
+      borderRadius: 0,
     },
     layersToggle: {
       position: 'absolute',

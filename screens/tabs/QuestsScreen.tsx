@@ -18,6 +18,7 @@ import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList } from '@/hooks/useQuestsApi';
+import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit';
 import QuestsContentPanel from './QuestsContentPanel';
 import QuestsSidebar from './QuestsSidebar';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
@@ -55,6 +56,10 @@ const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 // ───────────── Main screen (Redesigned) ─────────────
 
 export default function QuestsScreen() {
+    // #1484: заход в каталог после ранее завершённого квеста — это и есть
+    // возврат, который меряет петля. Событие уходит один раз на прохождение.
+    useQuestReturnVisit();
+
     const [selectedCityId, setSelectedCityId] = useState<string | null>(ALL_QUESTS_ID);
     // Свободный текстовый поиск по всему каталогу (название/город/страна/теги).
     // Пока строка непустая — перекрывает выбор города и «Рядом», ищем по ВСЕМ квестам.

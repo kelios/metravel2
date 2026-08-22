@@ -3,6 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 
 const mockRouteMutate = jest.fn()
 
@@ -90,13 +91,19 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   ...overrides,
 })
 
+
+// #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
+// адресами через React Query — конструктору нужен клиент, как и в приложении.
+const renderRouteBuilder = (element: React.ReactElement) =>
+  render(element, { wrapper: createQueryWrapper().Wrapper })
+
 describe('RouteBuilder reorder', () => {
   beforeEach(() => {
     mockRouteMutate.mockReset()
   })
 
   it('renders every point of a long route with its own drag handle', () => {
-    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(getByTestId(`route-builder-point-${ROUTE_LENGTH - 1}`)).toBeTruthy()
     expect(getByTestId(`route-builder-drag-${ROUTE_LENGTH - 1}`)).toBeTruthy()
@@ -107,7 +114,7 @@ describe('RouteBuilder reorder', () => {
   })
 
   it('saves the whole reordered list with a single mutation', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     // Стрелки — клавиатурный/a11y путь того же reorder, что и перетаскивание.
     fireEvent.press(getByTestId('route-builder-move-up-19'))
@@ -124,7 +131,7 @@ describe('RouteBuilder reorder', () => {
   })
 
   it('keeps the edit form on its own point after a reorder', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-edit-3'))
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Point 4')
@@ -141,11 +148,11 @@ describe('RouteBuilder reorder', () => {
   })
 
   it('hides the drag handle when there is nothing to reorder or the trip is not mine', () => {
-    const single = render(<RouteBuilder trip={makeTrip({ route: makeRoute(1) })} />)
+    const single = renderRouteBuilder(<RouteBuilder trip={makeTrip({ route: makeRoute(1) })} />)
     expect(single.queryByTestId('route-builder-drag-0')).toBeNull()
     expect(single.getByTestId('route-builder-point-0')).toBeTruthy()
 
-    const foreign = render(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
+    const foreign = renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
     expect(foreign.queryByTestId('route-builder-drag-0')).toBeNull()
     expect(foreign.queryByTestId('route-builder-move-up-1')).toBeNull()
     expect(foreign.getByTestId(`route-builder-point-${ROUTE_LENGTH - 1}`)).toBeTruthy()

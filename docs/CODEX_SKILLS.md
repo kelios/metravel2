@@ -39,7 +39,7 @@
 - `$metravel-e2e-runner` - запуск и отладка Playwright/e2e сценариев, browser smoke, работа с `.env.e2e`, trace и screenshot evidence.
 - `$metravel-performance-analyst` - Lighthouse, bundle/perf budget analysis, сравнение baseline и проверка performance только по production build или real URL.
 - `$metravel-growth-analyst` - анализ GA4/GSC/Yandex/affiliate-цифр, SEO/organic роста, поведения пользователей, воронок регистрации и добавления маршрутов/статей.
-- `$metravel-seo-index-operator` - ежедневная SEO/index рутина, GSC/index diagnostics, IndexNow backup, список URL для ручной индексации и SEO task routing.
+- `$metravel-seo-index-operator` - ежедневная SEO/index рутина, GSC/index diagnostics, IndexNow backup, выполнение явно заданных URL Inspection / «Запросить индексирование» через авторизованный браузер и SEO task routing.
 - `$metravel-code-reviewer` - обязательный review/fix pass после любых изменений
   кода: проверка полного task diff на баги, избыточность, дублирование, плохой
   reuse и неоптимальную логику, исправление findings, повторный review и validation.

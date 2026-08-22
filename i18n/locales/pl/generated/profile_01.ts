@@ -319,4 +319,6 @@ export const profileGenerated1 = {
   "components.screens.profile.CountryTravelsPanel.vse_marshruty_04297191": "Wszystkie trasy",
   "components.screens.profile.profileCountries.daty_ne_ukazany_de171a90": "nie określono żadnych dat",
   "components.screens.profile.profileCountries.pervaya_izvestnaya_data_value1_924a9e90": "pierwsza znana data: {{value1}}",
+  "components.profile.ProfileQuestCollections.title": "Kolekcje miast",
+  "components.profile.ProfileQuestCollections.subtitle": "Miasta, w których zbierasz zadania",
 } as const

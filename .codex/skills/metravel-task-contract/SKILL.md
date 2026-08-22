@@ -73,6 +73,18 @@ Done gate:
 ## Rules
 
 - Do not create a FE/BE task without the contract block.
+- `needs_human=true` и `Task Contract` взаимоисключающи: флаг маркирует карточку, которая целиком
+  является ручным действием человека, и такая карточка пишется по
+  `.claude/skills/metravel-issue/human-task.md` без контракта. Реализация backend-задачи владельцем
+  бэкенда — не `needs_human` (владельца кодирует `area=back`); ручной шаг внутри инженерной задачи
+  выносится отдельной связанной карточкой.
+- Имя поля — идентификатор: строго `Scope:` с начала строки. `**Scope.**`, `- Scope:` и
+  `__Scope__:` равносильны отсутствию поля — по этим строкам ходят гейты, приёмка и
+  governance-тесты. `none` законно для `Localization impact`, `Platform impact` (с обоснованием)
+  и `Regression control` (контент, разовые операции, исследования); прочерк и `TBD` — нет.
+- Проверяй контракт машиной, а не памятью: `node .claude/hooks/task-quality-gate.mjs check --file
+  <черновик.md>` до отправки, `npm run board:audit` для борда целиком. PreToolUse-хук
+  `.claude/hooks/task-quality-gate.mjs` блокирует create и перевод в `todo` при нарушении.
 - Write the whole description in Russian, in plain language, and in the seven mandatory
   sections above, in that exact order: plain-language lead, the observed problem in detail,
   the root cause (write «не установлена» rather than guessing), the numbered plan plus what

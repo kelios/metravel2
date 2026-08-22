@@ -115,9 +115,14 @@ export const parseDownloadResponse = async (response: Response): Promise<Downloa
 
     const contentType = response.headers.get('content-type') ?? undefined;
     const filename = parseDownloadFilename(response.headers.get('content-disposition'));
-    const blob =
-        Platform.OS === 'web'
-            ? await response.blob()
-            : ({ text: () => response.text() } as Blob);
-    return { blob, contentType, filename };
+    if (Platform.OS === 'web') {
+        return { blob: await response.blob(), contentType, filename };
+    }
+    const bytes = await response.arrayBuffer();
+    // Native-потребители текста сохраняют прежний контракт `blob.text()`, а
+    // бинарные download-пути используют bytes и не теряют BOM/кодировку.
+    const blob = {
+        text: async () => new TextDecoder().decode(bytes),
+    } as Blob;
+    return { blob, bytes, contentType, filename };
 };

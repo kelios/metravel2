@@ -5,7 +5,7 @@
 
 import { Platform } from 'react-native';
 import { devError, devWarn } from '@/utils/logger';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 // --- Types ---
@@ -235,10 +235,16 @@ export async function clearBadge(): Promise<void> {
 
 /** Seconds after which an abandoned quest reminder fires (24h). */
 const QUEST_REMINDER_DELAY_SECONDS = 24 * 60 * 60;
+/** Возвратное напоминание после финиша — ровно через неделю (#1484). */
+const QUEST_RETURN_REMINDER_DELAY_SECONDS = 7 * 24 * 60 * 60;
 
 /** Stable notification identifier per quest so we can cancel/reschedule. */
 function questReminderId(questId: string): string {
   return `quest-reminder-${questId}`;
+}
+
+function questReturnReminderId(ownerId: string, questId: string): string {
+  return `quest-return-${encodeURIComponent(ownerId)}-${questId}`;
 }
 
 /**
@@ -345,6 +351,71 @@ export async function scheduleQuestReminder(
   } catch (error: unknown) {
     devError('[Notifications] Failed to schedule quest reminder:', error);
   }
+}
+
+/**
+ * Schedule the one-shot "come back" reminder 7 days after a finished quest
+ * (#1484): the product had no second action, so nothing brought a player back.
+ *
+ * Consent-only by design: unlike {@link scheduleQuestReminder} this never asks
+ * for the notification permission. A finished quest is not the moment to pop an
+ * OS prompt out of nowhere — if the player never allowed notifications, the
+ * reminder is silently skipped.
+ */
+export async function scheduleQuestReturnReminder(
+  ownerId: string,
+  questId: string,
+  questTitle: string,
+  cityDeepLink: string,
+  remainingCount: number,
+): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  if (!ownerId || !questId || remainingCount <= 0) return false;
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return false;
+
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return false;
+
+    // Один финиш — одно напоминание: идентификатор привязан к квесту, повтор
+    // расписания заменяет прежнее, а не добавляет второе.
+    await Notifications.cancelScheduledNotificationAsync(questReturnReminderId(ownerId, questId)).catch(
+      () => {},
+    );
+
+    await Notifications.scheduleNotificationAsync({
+      identifier: questReturnReminderId(ownerId, questId),
+      content: {
+        title: i18nT('shared:services.notifications.returnReminderTitle'),
+        body: translatePlural('shared:services.notifications.returnReminderBody', remainingCount, {
+          value1: questTitle,
+          count: remainingCount,
+        }),
+        data: { url: `/quests/${cityDeepLink}` },
+        ...(Platform.OS === 'android' ? { channelId: 'recommendations' } : {}),
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: QUEST_RETURN_REMINDER_DELAY_SECONDS,
+        repeats: false,
+      },
+    });
+    return true;
+  } catch (error: unknown) {
+    devError('[Notifications] Failed to schedule quest return reminder:', error);
+    return false;
+  }
+}
+
+/** Отменить retention-напоминание при возврате или смене аккаунта. */
+export async function cancelQuestReturnReminder(ownerId: string, questId: string): Promise<void> {
+  if (Platform.OS === 'web' || !ownerId || !questId) return;
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+  await Notifications.cancelScheduledNotificationAsync(
+    questReturnReminderId(ownerId, questId),
+  ).catch(() => undefined);
 }
 
 /**

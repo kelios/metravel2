@@ -5,16 +5,48 @@ import isEqual from 'fast-deep-equal';
 import type { TravelFormData } from '@/types/types';
 import { addPageHideListener, addVisibilityChangeListener } from '@/utils/beforeunloadGuard';
 
-function stripUndefinedDeep<T>(value: T): T {
+function ownEnumerableDataEntries(value: object): Array<[string, unknown]> | null {
+  try {
+    return Object.entries(Object.getOwnPropertyDescriptors(value))
+      .filter(([, descriptor]) => descriptor.enumerable && 'value' in descriptor)
+      .map(([key, descriptor]) => [key, descriptor.value]);
+  } catch {
+    // Proxies and host objects may reject descriptor inspection. They are
+    // runtime-only values and must not make draft persistence fail.
+    return null;
+  }
+}
+
+function stripUndefinedDeep(value: unknown, ancestors = new WeakSet<object>()): unknown {
   if (Array.isArray(value)) {
-    return value.map(v => stripUndefinedDeep(v)) as T;
+    if (ancestors.has(value)) return undefined;
+    const entries = ownEnumerableDataEntries(value);
+    if (!entries) return undefined;
+    ancestors.add(value);
+    try {
+      return entries
+        .filter(([key]) => /^\d+$/.test(key))
+        .sort(([left], [right]) => Number(left) - Number(right))
+        .map(([, entryValue]) => stripUndefinedDeep(entryValue, ancestors))
+        .filter(v => v !== undefined);
+    } finally {
+      ancestors.delete(value);
+    }
   }
 
   if (value && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => [k, stripUndefinedDeep(v)]);
-    return Object.fromEntries(entries) as T;
+    if (ancestors.has(value)) return undefined;
+    const entries = ownEnumerableDataEntries(value);
+    if (!entries) return undefined;
+    ancestors.add(value);
+    try {
+      const normalizedEntries = entries
+        .map(([k, v]) => [k, stripUndefinedDeep(v, ancestors)] as const)
+        .filter(([, v]) => v !== undefined);
+      return Object.fromEntries(normalizedEntries);
+    } finally {
+      ancestors.delete(value);
+    }
   }
 
   return value;

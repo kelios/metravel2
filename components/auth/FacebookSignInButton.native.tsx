@@ -72,7 +72,7 @@ export default function FacebookSignInButton({
     if (!enabled || !appId) return
     let active = true
 
-    import('react-native-fbsdk-next')
+    Promise.resolve(import('react-native-fbsdk-next'))
       .then((sdk) => {
         if (!active) return
         sdk.Settings.initializeSDK()

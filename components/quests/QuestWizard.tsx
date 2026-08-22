@@ -158,6 +158,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         partiallyCompleted,
         stepsMissingForCompletion,
         finishedEarly,
+        completionFinishedAt,
         finishEarly,
         markStepSkipped,
         resetProgress,
@@ -542,9 +543,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         })();
     }, [cityId, offlineQuestState, questId]);
 
-    // Раскрытие об ИИ и метаданные маршрута — внутри стартовой карточки, под
-    // названием квеста (#1480). Гостевой гейт и финал стартовую карточку не
-    // показывают, поэтому отдельного условия им не нужно.
+    // Раскрытие об ИИ и метаданные маршрута — в футере стартовой карточки (#1480).
+    // Гостевой гейт и финал стартовую карточку не показывают.
     const introTrustBar = useMemo(() => (
         <QuestTrustBar
             pointsCount={steps.length}
@@ -553,7 +553,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             cityId={cityId}
         />
     ), [cityId, questId, steps.length, title]);
-
     const mainContent = (
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
@@ -658,6 +657,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         questCompleted={questCompleted}
                         stepsMissingForCompletion={stepsMissingForCompletion}
                         finishedEarly={finishedEarly}
+                        completionFinishedAt={completionFinishedAt}
                         completedCount={completedSteps.length}
                         stepsCount={requiredCount}
                         frameW={frameW}
@@ -671,9 +671,13 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         onContinue={() => setShowFinaleOnly(false)}
                         questId={questId}
                         questNumericId={questNumericId}
+                        questTitle={title}
+                        cityId={cityId}
+                        cityName={city?.name}
+                        cityLat={city?.lat}
+                        cityLng={city?.lng}
                     />
                 )}
-
             </View>
 
             {/* Правая колонка: блок экскурсий — постоянно видим на desktop */}

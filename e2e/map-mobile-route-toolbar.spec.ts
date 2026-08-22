@@ -170,9 +170,10 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
 
     await test.step('Radius mode: route entry visible, contextual icons hidden', async () => {
       await expect(routeBtn).toBeVisible({ timeout: 30_000 })
-      // toContainText, не toHaveText: рядом с подписью в кнопке живёт глиф
-      // Feather-иконки — невидимый символ, но частью текста он остаётся.
-      await expect(routeBtn).toContainText('Маршрут')
+      // Вход в маршрут — компактная иконка верхнего тулбара без видимой
+      // подписи; назначение остаётся доступно через семантическое имя.
+      await expect(routeBtn).toHaveAccessibleName('Построить маршрут')
+      await expect(routeBtn.getByText('Маршрут', { exact: true })).not.toBeVisible()
       await expect(radiusBtn).toBeVisible()
       await expect(transportBtn).toHaveCount(0)
       await expect(clearBtn).toHaveCount(0)

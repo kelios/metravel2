@@ -454,6 +454,34 @@ export async function fetchQuestsPreview(
     }
 }
 
+/**
+ * Компактный каталог для петли возврата (#1484): коллекция города и подбор
+ * следующего квеста. От `fetchQuestsList` отличается двумя вещами — `compact=1`
+ * (одна ссылка на обложку вместо полного медиа-манифеста) и отсутствием записи
+ * в офлайн-кэш: это срез по полям, и он затёр бы полный список каталога.
+ *
+ * `is_completed_by_me` приходит по текущему пользователю: серверный кэш
+ * списка объявлен `Vary: Authorization`, поэтому чужое прохождение не
+ * подставится. У гостя флаг всегда `false` — только что закрытый квест
+ * докладывает вызывающий (см. `buildQuestCityCollection`).
+ */
+export async function fetchQuestsCompactCatalog(
+    options?: { signal?: AbortSignal },
+): Promise<ApiQuestMeta[]> {
+    try {
+        const list = await fetchAllPages<ApiQuestMeta>('/quests/?compact=1', 20, options);
+        return list.map(withQuestMetaDefaults);
+    } catch (err) {
+        // Офлайн-контракт тот же, что у полного списка: лучше показать кэш
+        // каталога, чем спрятать блок следующего шага. Полный кэш исторически
+        // общий для устройства, поэтому персональный флаг из него не переносим:
+        // иначе после смены аккаунта коллекция показывала чужие прохождения.
+        const cached = await readCachedQuestsList();
+        if (cached) return cached.map((quest) => ({ ...quest, is_completed_by_me: false }));
+        throw err;
+    }
+}
+
 /** Параметры гео-рекомендаций (город/страна и/или координаты). */
 export type NearLocationParams = {
     city?: string | null;

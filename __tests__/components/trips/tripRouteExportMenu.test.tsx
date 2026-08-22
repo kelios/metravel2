@@ -9,6 +9,7 @@ import TripRouteExportMenu, {
 
 const mockSaveRouteExportFile = jest.fn();
 const mockOpenExternalUrl = jest.fn();
+const mockUsePlannedTripRouteFile = jest.fn();
 
 jest.mock('@/utils/routeExport', () => {
   const actual = jest.requireActual('@/utils/routeExport');
@@ -24,6 +25,10 @@ jest.mock('@/utils/externalLinks', () => ({
 
 jest.mock('@/utils/tripAnalytics', () => ({
   trackRouteExported: jest.fn(),
+}));
+
+jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
+  usePlannedTripRouteFile: (...args: unknown[]) => mockUsePlannedTripRouteFile(...args),
 }));
 
 jest.mock('@/components/ui/Button', () => {
@@ -108,6 +113,7 @@ describe('TripRouteExportMenu', () => {
     jest.clearAllMocks();
     mockSaveRouteExportFile.mockResolvedValue(true);
     mockOpenExternalUrl.mockResolvedValue(true);
+    mockUsePlannedTripRouteFile.mockReturnValue({ data: null });
   });
 
   afterEach(() => {
@@ -142,6 +148,27 @@ describe('TripRouteExportMenu', () => {
     expect(getByText('Apple Maps')).toBeTruthy();
     expect(getByText('Garmin Connect')).toBeTruthy();
     expect(getByText('Скачать GPX')).toBeTruthy();
+  });
+
+  it('never exposes a cached owner-only original to a non-owner', () => {
+    setPlatformOS('web');
+    mockUsePlannedTripRouteFile.mockReturnValue({
+      data: {
+        id: 42,
+        original_name: 'private-track.gpx',
+        ext: 'gpx',
+        size: 1024,
+        created_at: '2026-08-22T10:00:00Z',
+        updated_at: '2026-08-22T10:00:00Z',
+      },
+    });
+
+    const { queryByTestId } = render(
+      <TripRouteExportMenu trip={{ ...trip, isOwner: false }} />,
+    );
+
+    expect(mockUsePlannedTripRouteFile).toHaveBeenCalledWith(trip.id, { enabled: false });
+    expect(queryByTestId('trip-route-original-download-block')).toBeNull();
   });
 
   it('creates and shares a real GPX before opening Garmin import on Android', async () => {

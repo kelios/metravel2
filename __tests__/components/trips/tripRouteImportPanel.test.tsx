@@ -15,8 +15,9 @@ let mockPickerProps: Record<string, any> = {};
 let mockMapProps: Record<string, any> = {};
 
 jest.mock('@expo/vector-icons/Feather', () => () => null);
+const mockReleaseUpload = jest.fn();
 jest.mock('@/components/trips/planning/TripRouteFilePicker', () => {
-  return function MockTripRouteFilePicker(props: Record<string, unknown>) {
+  function MockTripRouteFilePicker(props: Record<string, unknown>) {
     const { Pressable, Text } = require('react-native');
     mockPickerProps = props;
     return (
@@ -29,6 +30,12 @@ jest.mock('@/components/trips/planning/TripRouteFilePicker', () => {
         <Text>{props.label as string}</Text>
       </Pressable>
     );
+  }
+  return {
+    __esModule: true,
+    default: MockTripRouteFilePicker,
+    // #1496: панель освобождает кэш-копию выбранного файла через этот экспорт.
+    releasePickedTripRouteUpload: (upload: unknown) => mockReleaseUpload(upload),
   };
 });
 jest.mock('@/components/MapPage/TravelMap', () => ({
@@ -63,12 +70,20 @@ const currentRoute: RoutePoint[] = [
   },
 ];
 
-const file = (name: string, text: string, size = text.length) => ({ name, text, size });
+// #1496: пикер отдаёт вместе с текстом сам выбранный файл — он уходит на бэкенд
+// как оригинал маршрута.
+const file = (name: string, text: string, size = text.length) => ({
+  name,
+  text,
+  size,
+  upload: { kind: 'web' as const, file: { name } as unknown as File },
+});
 
 describe('TripRouteImportPanel', () => {
   beforeEach(() => {
     mockPickerProps = {};
     mockMapProps = {};
+    mockReleaseUpload.mockClear();
   });
 
   it('shows a two-line preview, localized statistics, names, and explicit actions', () => {

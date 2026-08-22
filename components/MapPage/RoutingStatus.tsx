@@ -12,12 +12,11 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import MapIcon from './MapIcon'
+import { TRANSPORT_SPEED_KMH, type TransportMode } from './transportModes'
 import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { translate as i18nT } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 
-
-type TransportMode = 'car' | 'bike' | 'foot'
 
 /**
  * Сигнальное значение `error`: провайдеры маршрута не дали дорогу, показана
@@ -36,12 +35,6 @@ interface RoutingStatusProps {
   elevationLoss?: number | null
   compact?: boolean
   onRetry?: () => void
-}
-
-const TRANSPORT_SPEED_KMH: Record<TransportMode, number> = {
-  car: 60,
-  bike: 20,
-  foot: 5,
 }
 
 const PROGRESS_ANIM_DURATION_MS = 3000

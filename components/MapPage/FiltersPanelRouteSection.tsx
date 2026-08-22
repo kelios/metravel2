@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button'
 import IconButton from '@/components/ui/IconButton'
 import RouteBuilder from '@/components/MapPage/RouteBuilder'
 import RoutingStatus from '@/components/MapPage/RoutingStatus'
+import RouteStepBlock from '@/components/MapPage/RouteStepBlock'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import ValidationMessage from '@/components/MapPage/ValidationMessage'
 import MapIcon from './MapIcon'
@@ -116,6 +117,18 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
   onAddressSelect,
   onAddressClear,
 }) => {
+  // #1491: те же четыре слота стилей получает панель планировщика поездки —
+  // разметка шага одна на два экрана, токены остаются за поверхностью.
+  const stepStyles = useMemo(
+    () => ({
+      block: styles.lightStepBlock,
+      header: styles.lightStepHeader,
+      number: styles.lightStepNumber,
+      title: styles.lightStepTitle,
+    }),
+    [styles],
+  )
+
   const startSelected = !!routePoints[0]
   const endSelected = !!routePoints[1]
   const hasTwoPoints = mode === 'route' && routePoints.length >= 2
@@ -149,12 +162,12 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
 
   return (
     <View style={[styles.section, styles.routeSectionCompact]}>
-      <View style={styles.lightStepBlock}>
-        <View style={styles.lightStepHeader}>
-          <Text style={styles.lightStepNumber}>1</Text>
-          <Text style={styles.lightStepTitle}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.transport_aa70a7ea')}</Text>
-          {isMobile && <Text style={styles.lightStepBadge}>{selectedTransportLabel}</Text>}
-        </View>
+      <RouteStepBlock
+        step={1}
+        title={i18nT('map:components.MapPage.FiltersPanelRouteSection.transport_aa70a7ea')}
+        styles={stepStyles}
+        aside={isMobile ? <Text style={styles.lightStepBadge}>{selectedTransportLabel}</Text> : null}
+      >
         <SegmentedControl
           options={[...getTransportModes()]}
           value={transportMode}
@@ -167,22 +180,23 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
           tone="subtle"
           iconOnly={isMobile}
         />
-      </View>
+      </RouteStepBlock>
 
-      <View style={styles.lightStepBlock}>
-        <View style={styles.lightStepHeader}>
-          <Text style={styles.lightStepNumber}>2</Text>
-          <Text style={styles.lightStepTitle}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}</Text>
-          {startSelected && endSelected ? (
+      <RouteStepBlock
+        step={2}
+        title={i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}
+        styles={stepStyles}
+        aside={
+          startSelected && endSelected ? (
             <View style={styles.lightCheckBadge}>
               <MapIcon name="check" size={12} color={colors.success} />
               <Text style={styles.lightCheckText}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.gotovo_aab95a18')}</Text>
             </View>
           ) : (
             <Text style={styles.lightStepHint}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.vyberite_tochki_fb6530e6')}</Text>
-          )}
-        </View>
-
+          )
+        }
+      >
         {onAddressSelect && (
           <RouteBuilder
             startAddress={startAddress}
@@ -221,17 +235,20 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
             )}
           </View>
         )}
-      </View>
+      </RouteStepBlock>
 
       {shouldShowRouteStats && (
-        <View style={styles.lightStepBlock} testID="route-stats-block">
-          <View style={styles.lightStepHeader}>
-            <Text style={styles.lightStepNumber}>3</Text>
-            <Text style={styles.lightStepTitle}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.itog_marshruta_aa8b7865')}</Text>
-            {isEstimated && !routingLoading && !routingError && (
+        <RouteStepBlock
+          step={3}
+          title={i18nT('map:components.MapPage.FiltersPanelRouteSection.itog_marshruta_aa8b7865')}
+          styles={stepStyles}
+          testID="route-stats-block"
+          aside={
+            isEstimated && !routingLoading && !routingError ? (
               <Text style={styles.lightStepHint}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.otsenka_b6ef51eb')}</Text>
-            )}
-          </View>
+            ) : null
+          }
+        >
           <View testID="route-stats">
             <RoutingStatus
               isLoading={!!routingLoading}
@@ -246,7 +263,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
               compact
             />
           </View>
-        </View>
+        </RouteStepBlock>
       )}
 
       {!onAddressSelect && mode === 'route' && routePoints.length > 0 && (

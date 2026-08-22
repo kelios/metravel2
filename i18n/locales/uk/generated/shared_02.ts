@@ -310,4 +310,10 @@ export const sharedGenerated2 = {
   "utils.mapWebOverlays.osmRoutesOverlay.div_style_margin_top_6px_a_href_value1_targe_6d82870c.text01": "Відкрити в OpenStreetMap",
   "hooks.usePlaceRating.otsenka_sohranena_67bda0e0": "Оцінку збережено",
   "hooks.usePlaceRating.ne_udalos_sohranit_otsenku_04aaa4f0": "Не вдалося зберегти оцінку",
+  "services.notifications.returnReminderTitle": "Поруч є ще квести",
+  "services.notifications.returnReminderBody": "Ви пройшли «{{value1}}». Поруч є ще {{count}} квестів.",
+  "services.notifications.returnReminderBody_one": "Ви пройшли «{{value1}}». Поруч є ще {{count}} квест.",
+  "services.notifications.returnReminderBody_few": "Ви пройшли «{{value1}}». Поруч є ще {{count}} квести.",
+  "services.notifications.returnReminderBody_many": "Ви пройшли «{{value1}}». Поруч є ще {{count}} квестів.",
+  "services.notifications.returnReminderBody_other": "Ви пройшли «{{value1}}». Поруч є ще {{count}} квестів.",
 } as const

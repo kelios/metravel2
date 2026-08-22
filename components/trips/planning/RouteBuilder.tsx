@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { safeLazy } from '@/components/layout/safeLazy';
+import RouteBuilderMapFirst from '@/components/trips/planning/RouteBuilderMapFirst';
 import RoutePointRow from '@/components/trips/planning/RoutePointRow';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
 import TripBikeTypeControl from '@/components/trips/planning/TripBikeTypeControl';
@@ -26,6 +27,9 @@ import {
   useTripRouteExport,
 } from '@/components/trips/planning/tripRouteExport';
 import RoutingStatus, { ROUTING_DIRECT_LINE } from '@/components/MapPage/RoutingStatus';
+import AddressSearch from '@/components/MapPage/AddressSearch';
+import RouteStepBlock from '@/components/MapPage/RouteStepBlock';
+import { routeBuilderCta } from '@/components/trips/planning/routeBuilderCta';
 import TripRoutePreviewEngine from '@/components/trips/planning/TripRoutePreviewEngine';
 import {
   ROUTE_TRANSPORTS,
@@ -34,6 +38,7 @@ import {
   previewStopsCount,
   routablePreviewPoints,
 } from '@/components/trips/planning/tripRoutePreview';
+import type { MapFocusPoint } from '@/components/trips/planning/tripPlanRouteMap.types';
 import { useTripRoutePreview } from '@/components/trips/planning/useTripRoutePreview';
 import {
   type PlannedTrip,
@@ -47,6 +52,17 @@ import {
   TRANSPORT_LABEL,
 } from '@/components/trips/planning/tripPlanFormatting';
 import {
+  usePlannedTripOriginalTrack,
+  usePlannedTripRouteFile,
+  useDeletePlannedTripRouteFile,
+  useUploadPlannedTripRouteFile,
+} from '@/hooks/usePlannedTripRouteFile';
+import { releasePickedTripRouteUpload } from '@/components/trips/planning/TripRouteFilePicker';
+import {
+  toRouteFileUploadPart,
+  type PickedTripRouteFileUpload,
+} from '@/components/trips/planning/TripRouteFilePicker.types';
+import {
   useRefreshTripRouteElevation,
   useRouteTemplates,
   useTripRouteElevation,
@@ -59,6 +75,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { createStyles } from './RouteBuilder.styles';
+import { createRoutePanelStyles } from './routePanelStyles';
 import { moveItem, remapIndexAfterMove } from './routePointReorder';
 import { useRoutePointDrag } from './useRoutePointDrag';
 
@@ -74,9 +91,18 @@ const RouteElevationProfile = safeLazy(
 
 interface Props {
   trip: PlannedTrip;
+  /**
+   * `stack` — историческая вертикальная раскладка (desktop и все readonly-экраны).
+   * `mapFirst` — мобильная раскладка #1495: карта на весь экран, панель уезжает
+   * в шторку. Выбирает её экран поездки, а не компонент: тесты и desktop должны
+   * получать stack независимо от ширины окна в окружении.
+   */
+  layout?: 'stack' | 'mapFirst';
 }
 
 const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
+/** Старт и финиш: тот же порог «маршрут можно строить», что и на /map. */
+const MIN_ROUTE_POINTS = 2;
 const SITE_SEARCH_MIN_LENGTH = 2;
 
 type SiteSearchStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -180,10 +206,23 @@ const routeSignature = (route: RoutePoint[]): string =>
     })
     .join('>');
 
-function RouteBuilder({ trip }: Props) {
+function RouteBuilder({ trip, layout = 'stack' }: Props) {
+  const isMapFirst = layout === 'mapFirst';
   const { t } = useTranslation();
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // #1491: шаги панели рисует тот же RouteStepBlock, что нумерует шаги /map;
+  // сюда приходят только токены планировщика.
+  const panelStyles = useMemo(() => createRoutePanelStyles(colors), [colors]);
+  const stepStyles = useMemo(
+    () => ({
+      block: panelStyles.stepBlock,
+      header: panelStyles.stepHeader,
+      number: panelStyles.stepNumber,
+      title: panelStyles.stepTitle,
+    }),
+    [panelStyles],
+  );
   const updateTripRoute = useUpdateTripRoute();
   const updateTripTransport = useUpdateTripTransport();
   const updateTripBikeType = useUpdateTripBikeType();
@@ -215,7 +254,31 @@ function RouteBuilder({ trip }: Props) {
   // ошибка одна: иначе неудача одного контрола висела бы под другим успешным.
   const [routeRebuildError, setRouteRebuildError] = useState<string | null>(null);
 
+  // #1496 — фаза 2 импорта. Исходный файл хранится у поездки отдельно от точек:
+  // хранилище доступно только владельцу, поэтому участник видит обычный маршрут
+  // без запросов к нему.
+  const routeFileQuery = usePlannedTripRouteFile(trip.id, { enabled: trip.isOwner });
+  const storedRouteFile = routeFileQuery.data ?? null;
+  const originalTrackQuery = usePlannedTripOriginalTrack(trip.id, storedRouteFile, {
+    enabled: trip.isOwner,
+  });
+  const originalTrack = originalTrackQuery.data ?? null;
+  const uploadRouteFile = useUploadPlannedTripRouteFile();
+  const deleteRouteFile = useDeletePlannedTripRouteFile();
+  // Оригинал уезжает на бэкенд тем же действием «Сохранить маршрут», что и точки:
+  // иначе сохранённый файл описывал бы маршрут, которого у поездки ещё нет.
+  const pendingOriginalRef = useRef<PickedTripRouteFileUpload | null>(null);
+  const [pendingOriginalName, setPendingOriginalName] = useState<string | null>(null);
+  const [originalUploadError, setOriginalUploadError] = useState<string | null>(null);
+
   const savedRouteSignature = useMemo(() => routeSignature(trip.route), [trip.route]);
+  // #1491: кнопка действия существует только пока есть что отправлять. Сравнение
+  // идёт по полной сигнатуре, а не по координатной: переименование точки — тоже
+  // несохранённая правка, и потерять её молча нельзя.
+  const hasUnsavedRouteChanges = useMemo(
+    () => routeSignature(route) !== savedRouteSignature,
+    [route, savedRouteSignature],
+  );
   // Геометрия, сводка и высоты зависят только от координат и транспорта: правка
   // названия или описания точки их не обесценивает. Поэтому серверные данные
   // держатся за координатной сигнатурой, а не за полной — иначе опечатка в
@@ -308,6 +371,8 @@ function RouteBuilder({ trip }: Props) {
       controller={exportController}
       showDisabledHint
       showApproximateWarning
+      tripId={trip.id}
+      originalFile={storedRouteFile}
       testID="route-builder-export"
     />
   ) : null;
@@ -431,6 +496,21 @@ function RouteBuilder({ trip }: Props) {
       if (point) handleStartEdit(point, index);
     },
     [handleStartEdit, route],
+  );
+
+  // #1495: тап по точке в списке шторки центрует карту на этой точке. Токен
+  // растёт на каждый тап, поэтому повторный тап по той же точке возвращает карту
+  // к ней даже после ручного панорамирования.
+  const [focusPoint, setFocusPoint] = useState<MapFocusPoint | null>(null);
+  const focusTokenRef = useRef(0);
+  const handleFocusPoint = useCallback(
+    (index: number) => {
+      const coordinates = route[index]?.coordinates;
+      if (!coordinates) return;
+      focusTokenRef.current += 1;
+      setFocusPoint({ lat: coordinates[1], lng: coordinates[0], token: focusTokenRef.current });
+    },
+    [route],
   );
 
   const handleCancelEdit = () => {
@@ -569,6 +649,34 @@ function RouteBuilder({ trip }: Props) {
     setSiteSearchStatus('idle');
   };
 
+  // #1491: шаг «Точки маршрута» умеет то же, что и /map, — искать адрес. Поиск
+  // переиспользован целиком (`AddressSearch`, Nominatim + разбор координат);
+  // здесь только раскладка результата в доменную точку маршрута.
+  const handleAddAddressPoint = useCallback(
+    (address: string, coords: { lat: number; lng: number }) => {
+      const full = address.trim();
+      if (!full || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
+      // Nominatim отдаёт полный адрес до страны; в названии точки остаётся
+      // голова, весь адрес уходит в описание и виден в карточке точки.
+      const [head] = full.split(',');
+      const name = head.trim() || full;
+
+      setRoute((prev) => [
+        ...prev,
+        {
+          id: `address-${prev.length}-${name}`,
+          type: 'custom',
+          name,
+          description: full === name ? null : full,
+          coordinates: [coords.lng, coords.lat],
+          placeId: null,
+        },
+      ]);
+      trackRoutePointAdded(trip.id, 'custom');
+    },
+    [trip.id],
+  );
+
   const handleApplyTemplate = (points: Array<Omit<RoutePoint, 'id'>>) => {
     setRoute(
       points.map((p, index) => ({
@@ -578,12 +686,66 @@ function RouteBuilder({ trip }: Props) {
     );
   };
 
-  const handleApplyImportedRoute = useCallback((nextRoute: RoutePoint[]) => {
+  const handleApplyImportedRoute = useCallback((
+    nextRoute: RoutePoint[],
+    originalUpload: PickedTripRouteFileUpload | null,
+  ) => {
     setRoute(nextRoute);
     setEditingIndex(null);
     setEditError(null);
     setNewPointError(null);
+    setOriginalUploadError(null);
+    if (originalUpload) {
+      // Предыдущий невыгруженный выбор больше не нужен — иначе на устройстве
+      // остаётся кэш-копия файла до 20 МиБ.
+      const previous = pendingOriginalRef.current;
+      if (previous) void releasePickedTripRouteUpload(previous);
+      pendingOriginalRef.current = originalUpload;
+      setPendingOriginalName(
+        originalUpload.kind === 'native' ? originalUpload.name : originalUpload.file.name,
+      );
+    }
   }, []);
+
+  const handleRemoveStoredRouteFile = useCallback(() => {
+    if (!storedRouteFile) return;
+    setOriginalUploadError(null);
+    deleteRouteFile.mutate(
+      { tripId: trip.id, routeId: storedRouteFile.id },
+      {
+        onError: () => setOriginalUploadError(
+          i18nT('tripsStatic:plan.routeImport.original.removeError'),
+        ),
+      },
+    );
+  }, [deleteRouteFile, storedRouteFile, trip.id]);
+
+  // Освобождаем кэш-копию, если экран закрыли, не сохранив маршрут.
+  useEffect(() => () => {
+    const pending = pendingOriginalRef.current;
+    pendingOriginalRef.current = null;
+    if (pending) void releasePickedTripRouteUpload(pending);
+  }, []);
+
+  // Загрузка оригинала идёт после успешного сохранения точек и не откатывает их:
+  // при отказе хранилища точки остаются сохранёнными, файл остаётся выбранным, и
+  // повторное «Сохранить маршрут» пробует загрузку ещё раз.
+  const uploadPendingOriginal = async (): Promise<void> => {
+    const pending = pendingOriginalRef.current;
+    if (!pending) return;
+    setOriginalUploadError(null);
+    try {
+      await uploadRouteFile.mutateAsync({
+        tripId: trip.id,
+        file: toRouteFileUploadPart(pending),
+      });
+      pendingOriginalRef.current = null;
+      setPendingOriginalName(null);
+      void releasePickedTripRouteUpload(pending);
+    } catch {
+      setOriginalUploadError(i18nT('tripsStatic:plan.routeImport.original.uploadError'));
+    }
+  };
 
   const handleSave = () => {
     if (
@@ -594,15 +756,25 @@ function RouteBuilder({ trip }: Props) {
       return;
     }
 
+    // После успешного сохранения точек загрузка оригинала могла упасть. В таком
+    // состоянии повторная кнопка ретраит только файл и не делает лишний PUT
+    // неизменившегося маршрута.
+    if (!hasUnsavedRouteChanges) {
+      void uploadPendingOriginal();
+      return;
+    }
+
     updateTripRoute.mutate(
       { tripId: trip.id, route },
       {
         onSuccess: (updatedTrip) => {
           setRoute(updatedTrip.route);
+          void uploadPendingOriginal();
         },
       },
     );
   };
+
 
   // Инвариант «ровно один PATCH на переключение» держится здесь, а не на
   // `disabled` дочернего контрола: ref ловит повтор в одном тике, isPending —
@@ -681,6 +853,7 @@ function RouteBuilder({ trip }: Props) {
       formatCoordinate={formatCoordinateInput}
       onLayout={registerRowLayout}
       onEdit={handleEditPoint}
+      onFocus={isMapFirst ? handleFocusPoint : undefined}
       onMove={handleMove}
       onDelete={handleDelete}
     />
@@ -693,6 +866,7 @@ function RouteBuilder({ trip }: Props) {
         <TripPlanRouteMap
           route={route}
           routeGeometry={routeGeometry}
+          originalTrack={originalTrack?.geometry ?? null}
           routingState={routingState}
           summary={summary}
           transport={trip.transport}
@@ -721,18 +895,26 @@ function RouteBuilder({ trip }: Props) {
     label: TRANSPORT_LABEL[transport],
   }));
 
-  return (
-    <View style={styles.wrap} testID="route-builder">
-      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.RouteBuilder.konstruktor_marshruta_187e063e')}</Text>
-
+  // Секции панели собираются один раз и раскладываются по-разному: вертикальным
+  // стеком (desktop и вся историческая раскладка) или шторкой поверх карты
+  // (#1495, mobile). Разъезжаться содержимому между раскладками нельзя.
+  //
+  // #1491: три нумерованных шага — та же последовательность и те же слова, что на
+  // /map: заголовки берутся из общих ключей панели маршрута карты, чтобы
+  // «Транспорт → Точки маршрута → Итог» не разъехались по формулировкам.
+  const transportSection = (
+    <RouteStepBlock
+      step={1}
+      title={i18nT('map:components.MapPage.FiltersPanelRouteSection.transport_aa70a7ea')}
+      styles={stepStyles}
+      aside={<Text style={panelStyles.stepBadge}>{TRANSPORT_LABEL[trip.transport]}</Text>}
+      testID="route-builder-step-transport"
+    >
       <View
-        style={styles.transportControl}
+        style={panelStyles.stepBody}
         accessibilityState={{ busy: transportPending }}
         testID="route-builder-transport-control"
       >
-        <Text style={styles.label}>
-          {t('trips:components.trips.planning.RouteBuilder.sposob_peredvizheniya_f5c52d42')}
-        </Text>
         <SegmentedControl
           options={transportOptions}
           value={trip.transport}
@@ -771,40 +953,206 @@ function RouteBuilder({ trip }: Props) {
           </Text>
         ) : null}
       </View>
+    </RouteStepBlock>
+  );
 
-      <TripPlanRouteMap
-        route={route}
-        routeGeometry={routeGeometry}
-        routingState={routingState}
-        summary={summary}
-        transport={trip.transport}
-        activeIndex={editingIndex}
-        onEditPoint={handleEditPoint}
-        onAddPointFromMap={handleAddPointFromMap}
-      />
-      {previewEngine}
-      {previewStatusSection}
+  const mapSection = (
+    <TripPlanRouteMap
+      route={route}
+      routeGeometry={routeGeometry}
+      originalTrack={originalTrack?.geometry ?? null}
+      routingState={routingState}
+      summary={summary}
+      transport={trip.transport}
+      activeIndex={editingIndex}
+      fill={isMapFirst}
+      focusPoint={focusPoint}
+      onEditPoint={handleEditPoint}
+      onAddPointFromMap={handleAddPointFromMap}
+    />
+  );
 
-      {elevationProfileSection}
-
+  const pointsSection = (
+    <RouteStepBlock
+      step={2}
+      title={i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}
+      styles={stepStyles}
+      aside={
+        route.length >= MIN_ROUTE_POINTS ? (
+          <View style={panelStyles.stepCheckBadge}>
+            <Feather name="check" size={12} color={colors.success} />
+            <Text style={panelStyles.stepCheckText}>
+              {i18nT('map:components.MapPage.FiltersPanelRouteSection.gotovo_aab95a18')}
+            </Text>
+          </View>
+        ) : (
+          <Text style={panelStyles.stepHint}>
+            {i18nT('map:components.MapPage.FiltersPanelRouteSection.vyberite_tochki_fb6530e6')}
+          </Text>
+        )
+      }
+      testID="route-builder-step-points"
+    >
+      <AddressSearch onAddressSelect={handleAddAddressPoint} enableCoordinateInput dense />
       {route.length ? (
         <View style={styles.pointList}>{route.map(renderPoint)}</View>
       ) : (
         <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavte_pervuyu_tochku_marshruta_nizhe_d7cb9f9e')}</Text>
       )}
+    </RouteStepBlock>
+  );
 
-      <View style={styles.addForm}>
-        <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}</Text>
+  const addPointSection = (
+    <View style={styles.addForm}>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}</Text>
+      <View style={styles.chipRow}>
+        {POINT_TYPES.map((type) => {
+          const active = type === newType;
+          return (
+            <Pressable
+              key={type}
+              accessibilityRole="button"
+              onPress={() => setNewType(type)}
+              style={[styles.typeChip, active && styles.typeChipActive]}
+              testID={`route-builder-type-${type}`}
+            >
+              <Feather
+                name={ROUTE_POINT_ICON_NAME[type] as never}
+                size={13}
+                color={active ? colors.textOnPrimary : colors.textSecondary}
+              />
+              <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                {ROUTE_POINT_LABEL[type]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {newType === 'place' ? (
+        <View style={styles.siteSearch}>
+          <TextInput
+            value={siteQuery}
+            onChangeText={setSiteQuery}
+            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nayti_mesto_ili_puteshestvie_na_metravel_8780d31c')}
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            testID="route-builder-site-search"
+          />
+          {siteSearchStatus === 'loading' ? (
+            <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.ischem_sovpadeniya_b077a7ac')}</Text>
+          ) : null}
+          {siteSearchStatus === 'error' ? (
+            <Text style={styles.errorText}>{i18nT('trips:components.trips.planning.RouteBuilder.ne_udalos_zagruzit_varianty_a38206ee')}</Text>
+          ) : null}
+          {siteSearchStatus === 'ready' && !siteOptions.length ? (
+            <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.nichego_ne_naydeno_b39815ed')}</Text>
+          ) : null}
+          {siteOptions.length ? (
+            <View style={styles.siteResults}>
+              {siteOptions.map((option) => (
+                <Pressable
+                  key={option.key}
+                  accessibilityRole="button"
+                  onPress={() => handleAddSitePoint(option)}
+                  style={styles.siteOption}
+                  testID={`route-builder-site-option-${option.key}`}
+                >
+                  <View style={styles.siteOptionImage}>
+                    <ImageCardMedia
+                      src={option.imageUrl}
+                      alt={option.title}
+                      height={54}
+                      fit="cover"
+                      borderRadius={8}
+                      showLoadingIndicator={false}
+                    />
+                  </View>
+                  <View style={styles.siteOptionBody}>
+                    <Text style={styles.siteOptionKind}>
+                      {option.kind === 'travel' ? i18nT('trips:components.trips.planning.RouteBuilder.puteshestvie_7cbf3a43') : i18nT('trips:components.trips.planning.RouteBuilder.mesto_3991f739')}
+                    </Text>
+                    <Text style={styles.siteOptionTitle} numberOfLines={1}>
+                      {option.title}
+                    </Text>
+                    {option.subtitle ? (
+                      <Text style={styles.siteOptionSubtitle} numberOfLines={1}>
+                        {option.subtitle}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Feather name="plus" size={18} color={colors.primaryDark} />
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : (
+        <>
+          <TextInput
+            value={newName}
+            onChangeText={setNewName}
+            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f')}
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            testID="route-builder-name"
+          />
+          <View style={styles.coordRow}>
+            <TextInput
+              value={newLat}
+              onChangeText={setNewLat}
+              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.shirota_lat_6d696d4a')}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numbers-and-punctuation"
+              style={[styles.input, styles.coordInput]}
+              testID="route-builder-lat"
+            />
+            <TextInput
+              value={newLng}
+              onChangeText={setNewLng}
+              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.dolgota_lng_f08c3647')}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numbers-and-punctuation"
+              style={[styles.input, styles.coordInput]}
+              testID="route-builder-lng"
+            />
+          </View>
+          <TextInput
+            value={newDescription}
+            onChangeText={setNewDescription}
+            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_po_zhelaniyu_3bb69cb4')}
+            placeholderTextColor={colors.textMuted}
+            multiline
+            numberOfLines={3}
+            style={[styles.input, styles.textArea]}
+            testID="route-builder-description"
+          />
+          <Button
+            label={i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}
+            onPress={handleAdd}
+            variant="secondary"
+            disabled={!newName.trim()}
+            testID="route-builder-add"
+          />
+        </>
+      )}
+      {newPointError ? <Text style={styles.errorText}>{newPointError}</Text> : null}
+    </View>
+  );
+
+  const editPointSection = editingIndex != null ? (
+      <View style={styles.editForm} testID="route-builder-edit-form">
+        <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}</Text>
         <View style={styles.chipRow}>
           {POINT_TYPES.map((type) => {
-            const active = type === newType;
+            const active = type === editType;
             return (
               <Pressable
                 key={type}
                 accessibilityRole="button"
-                onPress={() => setNewType(type)}
+                onPress={() => setEditType(type)}
                 style={[styles.typeChip, active && styles.typeChipActive]}
-                testID={`route-builder-type-${type}`}
+                testID={`route-builder-edit-type-${type}`}
               >
                 <Feather
                   name={ROUTE_POINT_ICON_NAME[type] as never}
@@ -818,239 +1166,225 @@ function RouteBuilder({ trip }: Props) {
             );
           })}
         </View>
+        <TextInput
+          value={editName}
+          onChangeText={setEditName}
+          placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f')}
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+          testID="route-builder-edit-name"
+        />
+        <View style={styles.coordRow}>
+          <TextInput
+            value={editLat}
+            onChangeText={setEditLat}
+            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.shirota_lat_6d696d4a')}
+            placeholderTextColor={colors.textMuted}
+            keyboardType="numbers-and-punctuation"
+            style={[styles.input, styles.coordInput]}
+            testID="route-builder-edit-lat"
+          />
+          <TextInput
+            value={editLng}
+            onChangeText={setEditLng}
+            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.dolgota_lng_f08c3647')}
+            placeholderTextColor={colors.textMuted}
+            keyboardType="numbers-and-punctuation"
+            style={[styles.input, styles.coordInput]}
+            testID="route-builder-edit-lng"
+          />
+        </View>
+        <TextInput
+          value={editDescription}
+          onChangeText={setEditDescription}
+          placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_ili_ssylka_po_zhelaniyu_2a1ab272')}
+          placeholderTextColor={colors.textMuted}
+          multiline
+          numberOfLines={3}
+          style={[styles.input, styles.textArea]}
+          testID="route-builder-edit-description"
+        />
+        {editError ? <Text style={styles.errorText}>{editError}</Text> : null}
+        <View style={styles.editActions}>
+          <Button
+            label={i18nT('trips:components.trips.planning.RouteBuilder.sohranit_tochku_467b8cde')}
+            onPress={handleSaveEdit}
+            variant="secondary"
+            disabled={!editName.trim()}
+            testID="route-builder-edit-save"
+          />
+          <Button
+            label={i18nT('trips:components.trips.planning.RouteBuilder.otmena_cb0c29f2')}
+            onPress={handleCancelEdit}
+            variant="ghost"
+            testID="route-builder-edit-cancel"
+          />
+        </View>
+    </View>
+  ) : null;
 
-        {newType === 'place' ? (
-          <View style={styles.siteSearch}>
-            <TextInput
-              value={siteQuery}
-              onChangeText={setSiteQuery}
-              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nayti_mesto_ili_puteshestvie_na_metravel_8780d31c')}
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              testID="route-builder-site-search"
-            />
-            {siteSearchStatus === 'loading' ? (
-              <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.ischem_sovpadeniya_b077a7ac')}</Text>
-            ) : null}
-            {siteSearchStatus === 'error' ? (
-              <Text style={styles.errorText}>{i18nT('trips:components.trips.planning.RouteBuilder.ne_udalos_zagruzit_varianty_a38206ee')}</Text>
-            ) : null}
-            {siteSearchStatus === 'ready' && !siteOptions.length ? (
-              <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.nichego_ne_naydeno_b39815ed')}</Text>
-            ) : null}
-            {siteOptions.length ? (
-              <View style={styles.siteResults}>
-                {siteOptions.map((option) => (
-                  <Pressable
-                    key={option.key}
-                    accessibilityRole="button"
-                    onPress={() => handleAddSitePoint(option)}
-                    style={styles.siteOption}
-                    testID={`route-builder-site-option-${option.key}`}
-                  >
-                    <View style={styles.siteOptionImage}>
-                      <ImageCardMedia
-                        src={option.imageUrl}
-                        alt={option.title}
-                        height={54}
-                        fit="cover"
-                        borderRadius={8}
-                        showLoadingIndicator={false}
-                      />
-                    </View>
-                    <View style={styles.siteOptionBody}>
-                      <Text style={styles.siteOptionKind}>
-                        {option.kind === 'travel' ? i18nT('trips:components.trips.planning.RouteBuilder.puteshestvie_7cbf3a43') : i18nT('trips:components.trips.planning.RouteBuilder.mesto_3991f739')}
-                      </Text>
-                      <Text style={styles.siteOptionTitle} numberOfLines={1}>
-                        {option.title}
-                      </Text>
-                      {option.subtitle ? (
-                        <Text style={styles.siteOptionSubtitle} numberOfLines={1}>
-                          {option.subtitle}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <Feather name="plus" size={18} color={colors.primaryDark} />
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-          </View>
-        ) : (
-          <>
-            <TextInput
-              value={newName}
-              onChangeText={setNewName}
-              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f')}
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              testID="route-builder-name"
-            />
-            <View style={styles.coordRow}>
-              <TextInput
-                value={newLat}
-                onChangeText={setNewLat}
-                placeholder={i18nT('trips:components.trips.planning.RouteBuilder.shirota_lat_6d696d4a')}
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-                style={[styles.input, styles.coordInput]}
-                testID="route-builder-lat"
-              />
-              <TextInput
-                value={newLng}
-                onChangeText={setNewLng}
-                placeholder={i18nT('trips:components.trips.planning.RouteBuilder.dolgota_lng_f08c3647')}
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-                style={[styles.input, styles.coordInput]}
-                testID="route-builder-lng"
-              />
+  const templatesSection = templates.length ? (
+      <View style={styles.templates}>
+        <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.shablony_marshruta_083d49d2')}</Text>
+        {templates.map((tpl) => (
+          <View key={tpl.id} style={styles.templateRow}>
+            <View style={styles.templateBody}>
+              <Text style={styles.templateTitle}>{tpl.title}</Text>
+              <Text style={styles.templateDescription}>{tpl.description}</Text>
             </View>
-            <TextInput
-              value={newDescription}
-              onChangeText={setNewDescription}
-              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_po_zhelaniyu_3bb69cb4')}
-              placeholderTextColor={colors.textMuted}
-              multiline
-              numberOfLines={3}
-              style={[styles.input, styles.textArea]}
-              testID="route-builder-description"
-            />
             <Button
-              label={i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}
-              onPress={handleAdd}
-              variant="secondary"
-              disabled={!newName.trim()}
-              testID="route-builder-add"
-            />
-          </>
-        )}
-        {newPointError ? <Text style={styles.errorText}>{newPointError}</Text> : null}
-      </View>
-
-      {editingIndex != null ? (
-        <View style={styles.editForm} testID="route-builder-edit-form">
-          <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}</Text>
-          <View style={styles.chipRow}>
-            {POINT_TYPES.map((type) => {
-              const active = type === editType;
-              return (
-                <Pressable
-                  key={type}
-                  accessibilityRole="button"
-                  onPress={() => setEditType(type)}
-                  style={[styles.typeChip, active && styles.typeChipActive]}
-                  testID={`route-builder-edit-type-${type}`}
-                >
-                  <Feather
-                    name={ROUTE_POINT_ICON_NAME[type] as never}
-                    size={13}
-                    color={active ? colors.textOnPrimary : colors.textSecondary}
-                  />
-                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
-                    {ROUTE_POINT_LABEL[type]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <TextInput
-            value={editName}
-            onChangeText={setEditName}
-            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f')}
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            testID="route-builder-edit-name"
-          />
-          <View style={styles.coordRow}>
-            <TextInput
-              value={editLat}
-              onChangeText={setEditLat}
-              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.shirota_lat_6d696d4a')}
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numbers-and-punctuation"
-              style={[styles.input, styles.coordInput]}
-              testID="route-builder-edit-lat"
-            />
-            <TextInput
-              value={editLng}
-              onChangeText={setEditLng}
-              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.dolgota_lng_f08c3647')}
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numbers-and-punctuation"
-              style={[styles.input, styles.coordInput]}
-              testID="route-builder-edit-lng"
-            />
-          </View>
-          <TextInput
-            value={editDescription}
-            onChangeText={setEditDescription}
-            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_ili_ssylka_po_zhelaniyu_2a1ab272')}
-            placeholderTextColor={colors.textMuted}
-            multiline
-            numberOfLines={3}
-            style={[styles.input, styles.textArea]}
-            testID="route-builder-edit-description"
-          />
-          {editError ? <Text style={styles.errorText}>{editError}</Text> : null}
-          <View style={styles.editActions}>
-            <Button
-              label={i18nT('trips:components.trips.planning.RouteBuilder.sohranit_tochku_467b8cde')}
-              onPress={handleSaveEdit}
-              variant="secondary"
-              disabled={!editName.trim()}
-              testID="route-builder-edit-save"
-            />
-            <Button
-              label={i18nT('trips:components.trips.planning.RouteBuilder.otmena_cb0c29f2')}
-              onPress={handleCancelEdit}
+              label={i18nT('trips:components.trips.planning.RouteBuilder.primenit_12ea5d97')}
+              onPress={() => handleApplyTemplate(tpl.points)}
               variant="ghost"
-              testID="route-builder-edit-cancel"
+              testID={`route-builder-template-${tpl.id}`}
             />
           </View>
-        </View>
-      ) : null}
+      ))}
+    </View>
+  ) : null;
 
-      {templates.length ? (
-        <View style={styles.templates}>
-          <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.shablony_marshruta_083d49d2')}</Text>
-          {templates.map((tpl) => (
-            <View key={tpl.id} style={styles.templateRow}>
-              <View style={styles.templateBody}>
-                <Text style={styles.templateTitle}>{tpl.title}</Text>
-                <Text style={styles.templateDescription}>{tpl.description}</Text>
-              </View>
-              <Button
-                label={i18nT('trips:components.trips.planning.RouteBuilder.primenit_12ea5d97')}
-                onPress={() => handleApplyTemplate(tpl.points)}
-                variant="ghost"
-                testID={`route-builder-template-${tpl.id}`}
-              />
-            </View>
-          ))}
-        </View>
-      ) : null}
-
+  const summarySection = (
+    <RouteStepBlock
+      step={3}
+      title={i18nT('map:components.MapPage.FiltersPanelRouteSection.itog_marshruta_aa8b7865')}
+      styles={stepStyles}
+      testID="route-builder-step-summary"
+    >
       <RouteSummaryBar summary={summary} routingState={routingState} transport={trip.transport} />
+    </RouteStepBlock>
+  );
 
-      <TripRouteImportPanel
-        route={route}
-        routeGeometry={routeGeometry}
-        disabled={updateTripRoute.isPending || transportPending}
-        onApply={handleApplyImportedRoute}
-      />
+  const importSection = (
+    <TripRouteImportPanel
+      route={route}
+      routeGeometry={routeGeometry}
+      disabled={updateTripRoute.isPending || transportPending || uploadRouteFile.isPending}
+      storedFile={storedRouteFile}
+      pendingUploadName={pendingOriginalName}
+      uploadError={originalUploadError}
+      removing={deleteRouteFile.isPending}
+      onRemoveStoredFile={handleRemoveStoredRouteFile}
+      onApply={handleApplyImportedRoute}
+    />
+  );
 
-      {routeDownloadSection}
+  // #1491: главное действие панели. Подписи — общая лесенка с /map
+  // («Добавьте старт и финиш» → «Построить маршрут» → «Пересчитать маршрут»),
+  // а сама кнопка появляется только когда есть несохранённые правки: постоянная
+  // «Сохранить маршрут» не отличала «правки ждут» от «всё уже на сервере».
+  const routeSavePending = updateTripRoute.isPending || uploadRouteFile.isPending;
+  const cta = routeBuilderCta({
+    pointCount: route.length,
+    savedPointCount: trip.route.length,
+    hasUnsavedChanges: hasUnsavedRouteChanges,
+    hasPendingOriginal: pendingOriginalName != null,
+    pending: routeSavePending || transportPending,
+  });
 
+  const saveSection = cta.visible ? (
+    <View style={panelStyles.ctaBlock}>
       <Button
-        label={i18nT('trips:components.trips.planning.RouteBuilder.sohranit_marshrut_31633565')}
+        label={cta.label}
         onPress={handleSave}
-        loading={updateTripRoute.isPending}
-        disabled={updateTripRoute.isPending || transportPending}
+        loading={routeSavePending}
+        disabled={cta.disabled}
         fullWidth
         testID="route-builder-save"
       />
+      {cta.hint ? (
+        <Text style={panelStyles.stepHint} testID="route-builder-save-hint">
+          {cta.hint}
+        </Text>
+      ) : null}
+    </View>
+  ) : null;
+
+  if (isMapFirst) {
+    return (
+      <RouteBuilderMapFirst
+        mapSlot={mapSection}
+        engineSlot={previewEngine}
+        transportSlot={
+          <>
+            {transportSection}
+            {previewStatusSection}
+          </>
+        }
+        pointsSlot={
+          <>
+            {pointsSection}
+            {elevationProfileSection}
+          </>
+        }
+        summarySlot={summarySection}
+        toolsSlot={
+          <>
+            {addPointSection}
+            {editPointSection}
+            {templatesSection}
+            {importSection}
+            {routeDownloadSection}
+            {saveSection}
+          </>
+        }
+        summary={summary}
+        routingState={routingState}
+        transport={trip.transport}
+        // Ключ карты, а не свой: строка та же самая, а в fill-режиме её шапку
+        // рисует сцена — дублировать перевод в пятый раз незачем.
+        mapHint={
+          route.length
+            ? null
+            : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')
+        }
+        editingIndex={editingIndex}
+        focusToken={focusPoint?.token ?? 0}
+      />
+    );
+  }
+
+  // #1491: раскладка как на /map — шаги слева, карта справа и всегда перед
+  // глазами. Одну колонку stack держит только там, где двух не хватает по
+  // ширине: мобильная раскладка — отдельная (#1495) и сюда не попадает.
+  return (
+    <View style={styles.wrap} testID="route-builder">
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.RouteBuilder.konstruktor_marshruta_187e063e')}</Text>
+
+      <View style={[panelStyles.workspace, panelStyles.workspaceSplit]} testID="route-builder-workspace">
+        <View
+          style={[panelStyles.panelColumn, panelStyles.panelColumnSplit]}
+          testID="route-builder-panel-column"
+        >
+          {transportSection}
+
+          {pointsSection}
+
+          {addPointSection}
+
+          {editPointSection}
+
+          {templatesSection}
+
+          {summarySection}
+
+          {importSection}
+
+          {routeDownloadSection}
+
+          {saveSection}
+        </View>
+
+        <View
+          style={[panelStyles.mapColumn, panelStyles.mapColumnSplit]}
+          testID="route-builder-map-column"
+        >
+          {mapSection}
+          {previewEngine}
+          {previewStatusSection}
+
+          {elevationProfileSection}
+        </View>
+      </View>
     </View>
   );
 }

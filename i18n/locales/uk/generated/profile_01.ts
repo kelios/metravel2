@@ -319,4 +319,6 @@ export const profileGenerated1 = {
   "components.screens.profile.CountryTravelsPanel.vse_marshruty_04297191": "Всі маршрути",
   "components.screens.profile.profileCountries.daty_ne_ukazany_de171a90": "дати не вказані",
   "components.screens.profile.profileCountries.pervaya_izvestnaya_data_value1_924a9e90": "перша відома дата: {{value1}}",
+  "components.profile.ProfileQuestCollections.title": "Колекції міст",
+  "components.profile.ProfileQuestCollections.subtitle": "Міста, де ви почали збирати квести",
 } as const

@@ -4,7 +4,10 @@
  * контракт обратной связи (`sendFeedback` → POST /api/feedback/).
  */
 import React from 'react'
+import fs from 'node:fs'
+import path from 'node:path'
 import { act, fireEvent, render } from '@testing-library/react-native'
+import { Platform, ScrollView } from 'react-native'
 
 const mockSendFeedback = jest.fn()
 const mockShowToastMessage = jest.fn()
@@ -103,5 +106,47 @@ describe('QuestTrustBar', () => {
 
     expect(mockSendFeedback).not.toHaveBeenCalled()
     expect(getByTestId('quest-inaccuracy-report-error')).toBeTruthy()
+  })
+
+  it('не закрывает iOS-клавиатуру при прокрутке к кнопке отправки', () => {
+    const { getByTestId, UNSAFE_getByType } = renderBar()
+
+    fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+    fireEvent.press(getByTestId('quest-report-inaccuracy'))
+
+    expect(UNSAFE_getByType(ScrollView).props.keyboardDismissMode).toBe('none')
+  })
+
+  it('сохраняет Autofill и связывает e-mail с узким тематическим WebKit-контрактом', () => {
+    const originalPlatform = Platform.OS
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+
+    try {
+      const { getByPlaceholderText, getByTestId } = renderBar()
+      fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+      fireEvent.press(getByTestId('quest-report-inaccuracy'))
+
+      const emailInput = getByPlaceholderText(/e-mail/i)
+      expect(emailInput.props.autoComplete).toBe('email')
+      expect(emailInput.props.dataSet).toEqual({ questReportField: 'email' })
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform })
+    }
+
+    const css = fs.readFileSync(path.join(process.cwd(), 'app', 'global.css'), 'utf8')
+    const selector = '[data-quest-report-field="email"]'
+
+    expect(css).toContain(`${selector}:-webkit-autofill,`)
+    expect(css).toContain(`${selector}:-webkit-autofill:hover,`)
+    expect(css).toContain(`${selector}:-webkit-autofill:focus {`)
+
+    const autofillRule = css.match(
+      /\[data-quest-report-field="email"\]:-webkit-autofill,[\s\S]*?\{([\s\S]*?)\}/,
+    )?.[1]
+    expect(autofillRule).toContain('-webkit-text-fill-color: var(--color-text)')
+    expect(autofillRule).toContain('caret-color: var(--color-text)')
+    expect(autofillRule).toContain('border-color: var(--color-border)')
+    expect(autofillRule).toContain('background-color: var(--color-background)')
+    expect(autofillRule).toContain('var(--color-background) inset')
   })
 })

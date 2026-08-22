@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import type { PlannedTrip, TripRouteElevation } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 
 const mockRefreshElevation = jest.fn()
 const mockElevationEnabled = jest.fn()
@@ -155,6 +156,12 @@ const makeElevation = (overrides: Partial<TripRouteElevation> = {}): TripRouteEl
   ...overrides,
 })
 
+
+// #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
+// адресами через React Query — конструктору нужен клиент, как и в приложении.
+const renderRouteBuilder = (element: React.ReactElement) =>
+  render(element, { wrapper: createQueryWrapper().Wrapper })
+
 describe('RouteBuilder elevation profile', () => {
   beforeEach(() => {
     mockRefreshElevation.mockReset()
@@ -164,7 +171,7 @@ describe('RouteBuilder elevation profile', () => {
 
   it('shows the shared profile under the map for a routed trip', async () => {
     mockElevationData = makeElevation()
-    const { findByTestId, getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(await findByTestId('route-elevation-profile')).toBeTruthy()
     expect(getByTestId('route-elevation-samples').props.children).toBe('3')
@@ -176,7 +183,7 @@ describe('RouteBuilder elevation profile', () => {
 
   it('feeds the decoded polyline to the map when the trip has no stored geometry', async () => {
     mockElevationData = makeElevation()
-    const { findByTestId, getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     await findByTestId('route-elevation-profile')
     expect(getByTestId('route-map-geometry').props.children).toBe('3')
@@ -192,7 +199,7 @@ describe('RouteBuilder elevation profile', () => {
         [20.2, 49.33],
       ],
     })
-    const { findByTestId, getByTestId } = render(<RouteBuilder trip={trip} />)
+    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={trip} />)
 
     await findByTestId('route-elevation-profile')
     expect(getByTestId('route-map-geometry').props.children).toBe('4')
@@ -207,7 +214,7 @@ describe('RouteBuilder elevation profile', () => {
       preview: null,
       geometry: null,
     })
-    const { queryByTestId } = render(
+    const { queryByTestId } = renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           routingState: {
@@ -227,7 +234,7 @@ describe('RouteBuilder elevation profile', () => {
   it('recalculates once when a routed summary was saved without elevation', async () => {
     mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
     const trip = makeTrip()
-    const { rerender } = render(<RouteBuilder trip={trip} />)
+    const { rerender } = renderRouteBuilder(<RouteBuilder trip={trip} />)
 
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(1))
     expect(mockRefreshElevation).toHaveBeenCalledWith({ tripId: 22 })
@@ -241,7 +248,7 @@ describe('RouteBuilder elevation profile', () => {
   // точках и снова стирает высоты — каждый такой профиль нужно пересчитать.
   it('recalculates again after the route is rebuilt for another transport or bike type', async () => {
     mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
-    const { rerender } = render(<RouteBuilder trip={makeTrip()} />)
+    const { rerender } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(1))
 
@@ -257,7 +264,7 @@ describe('RouteBuilder elevation profile', () => {
 
   it('hides the profile once an unsaved point changes the road', async () => {
     mockElevationData = makeElevation()
-    const { findByTestId, getByTestId, queryByTestId } = render(
+    const { findByTestId, getByTestId, queryByTestId } = renderRouteBuilder(
       <RouteBuilder trip={makeTrip()} />,
     )
 
@@ -277,7 +284,7 @@ describe('RouteBuilder elevation profile', () => {
   // координат. Точка без координат на карту не попадает и обесценить их не может.
   it('keeps the profile when the added point has no coordinates', async () => {
     mockElevationData = makeElevation()
-    const { findByTestId, getByTestId, queryByTestId } = render(
+    const { findByTestId, getByTestId, queryByTestId } = renderRouteBuilder(
       <RouteBuilder trip={makeTrip()} />,
     )
 
@@ -293,13 +300,13 @@ describe('RouteBuilder elevation profile', () => {
 
   it('never recalculates for a participant who cannot own the route', () => {
     mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
-    render(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
+    renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
 
     expect(mockRefreshElevation).not.toHaveBeenCalled()
   })
 
   it('does not request elevation for a route that cannot be routed', () => {
-    render(
+    renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           route: [

@@ -17,7 +17,7 @@
 // Беларуси координаты резолвятся верно — Витебск отдаёт витебские экскурсии, —
 // поэтому режем ровно по стране.
 
-import { getCountryCodeByCoords } from '@/utils/geoCountry'
+import { isBelarusByCoords } from '@/utils/geoBelarus'
 
 export type BelkrajPoint = {
   id?: number
@@ -62,7 +62,7 @@ export const resolveBelkrajCountryCode = (
   if (/^[A-Z]{2}$/.test(normalized)) return normalized
   const coord = parseBelkrajCoord(points?.[0])
   if (!coord) return undefined
-  return getCountryCodeByCoords(coord.lat, coord.lng)
+  return isBelarusByCoords(coord.lat, coord.lng) ? BELKRAJ_COUNTRY_CODE : undefined
 }
 
 export const isBelkrajEnabled = () =>

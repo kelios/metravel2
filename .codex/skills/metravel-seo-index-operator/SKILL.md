@@ -1,6 +1,6 @@
 ---
 name: metravel-seo-index-operator
-description: Run metravel SEO/indexing operations and article-index diagnostics. Use when Codex is asked for daily SEO routine, GSC query/page digest, Google index status, IndexNow backup submission, thin-content/meta/internal-link SEO audit, or owner-ready Search Console indexing actions.
+description: Run metravel SEO/indexing operations and article-index diagnostics. Use when Codex is asked for daily SEO routine, GSC query/page digest, Google index status, IndexNow backup submission, thin-content/meta/internal-link SEO audit, or explicitly scoped Search Console indexing actions through an authenticated browser.
 ---
 
 # Metravel SEO Index Operator
@@ -27,7 +27,15 @@ Read first:
    - likely causes
    - owner-only actions
    - code/content tasks
-5. For Google indexing, produce an owner-ready list of up to 10 priority URLs for manual Search Console "Request indexing" when the public API cannot submit them.
+5. For Google indexing:
+   - when the request is analysis-only, produce an owner-ready list of up to 10 priority URLs;
+   - when a board Task Contract or direct request names the URLs and the Search Console action,
+     treat that as project-level authorization and complete URL Inspection / "Request indexing"
+     through the available authenticated browser session without an extra project confirmation;
+     keep that authorization limited to the named URLs and action;
+   - require a direct HTTP 200 with zero redirects before submission, skip an already indexed URL,
+     click at most once, and record `accepted` only after Search Console shows its success message;
+   - stop on quota exhaustion and preserve every previously terminal outcome.
 6. For IndexNow backup submission, use the existing project script if present; treat duplicate daily submission as harmless only when docs/scripts confirm it.
 7. Route content fixes to `$metravel-article-editor-agent`; route code SEO fixes to `$metravel-feature-builder` and `$metravel-ui-guardrails`.
 

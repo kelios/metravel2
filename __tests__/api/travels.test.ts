@@ -1241,35 +1241,61 @@ describe('src/api/travelsApi.ts', () => {
       await expect(fetchTravelsNear(1, {} as any)).rejects.toBe(abortError);
     });
 
-    // BE-015 verified-fixed contract (prod re-probe 2026-06-08): a valid travel
-    // with no near-list returns `200` + `[]`, and `404` is reserved for a
-    // non-existent travel id. These lock the new backend behaviour so the
-    // 404->[] guard is no longer load-bearing (BE-015 verified-fixed; tracked on the MCP task board, area=back).
-    it('fetchTravelsNear возвращает [] при 200 с пустым списком (валидный travel без соседей)', async () => {
+    it('fetchTravelsNear возвращает [] при валидном пустом paginated envelope', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce([] as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        count: 0,
+        next: null,
+        previous: null,
+        results: [],
+      } as any);
 
       const result = await fetchTravelsNear(391);
 
       expect(result).toEqual([]);
     });
 
-    it('fetchTravelsNear возвращает данные при 200 с непустым списком', async () => {
+    it('fetchTravelsNear разворачивает results из paginated envelope', async () => {
       const rows = [{ id: 637, name: 'Near travel', lat: 53.9, lng: 27.56 }];
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce(rows as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        count: 1,
+        next: null,
+        previous: null,
+        results: rows,
+      } as any);
 
       const result = await fetchTravelsNear(563);
 
       expect(result).toEqual(rows);
     });
 
-    it('fetchTravelsNear возвращает [] при 404 (несуществующий travel)', async () => {
+    it('fetchTravelsNear сохраняет canonical cover и даёт nearby-карточке thumbnail source', async () => {
+      const cover = {
+        src: 'https://metravel.by/media/travel/637/cover.webp',
+        width: 1600,
+        height: 900,
+        dominant_color: '#506070',
+      };
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        count: 1,
+        next: null,
+        previous: null,
+        results: [{ id: 637, name: 'Near travel', media: { cover } }],
+      } as any);
+
+      const [result] = await fetchTravelsNear(563);
+
+      expect(result.media?.cover).toEqual(cover);
+      expect(result.travel_image_thumb_url).toBe(cover.src);
+      expect(result.travel_image_thumb_small_url).toBe(cover.src);
+    });
+
+    it('fetchTravelsNear делает HTTP 404 наблюдаемой ошибкой', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' } as any);
 
-      const result = await fetchTravelsNear(99999999);
-
-      expect(result).toEqual([]);
+      await expect(fetchTravelsNear(99999999)).rejects.toMatchObject({ status: 404 });
     });
 
     it('fetchTravelsPopular возвращает пустой объект при ошибке', async () => {

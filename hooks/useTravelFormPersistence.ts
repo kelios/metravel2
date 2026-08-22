@@ -625,18 +625,22 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     [notifyAutosaveError, stableTravelId, formDataRef, mountedRef, suppressAutosaveErrorToastRef]
   );
 
+  const handleAutosave = useCallback(async (
+    dataToSave: TravelFormData,
+    signal?: AbortSignal,
+  ) => {
+    // Avoid racing autosave requests while a manual save is in progress.
+    if (manualSaveInFlightRef.current) {
+      throw new Error('Request aborted');
+    }
+    const savedData = await cleanAndSave(dataToSave, { autosave: true }, signal);
+    lastAutosaveSourceRef.current = dataToSave;
+    return savedData;
+  }, [cleanAndSave, manualSaveInFlightRef]);
+
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {
     debounce: 5000,
-    onSave: async (dataToSave, signal) => {
-      // Avoid racing autosave requests while a manual save is in progress.
-      if (manualSaveInFlightRef.current) {
-        throw new Error('Request aborted');
-      }
-      const sourceData = dataToSave as TravelFormData;
-      const savedData = await cleanAndSave(sourceData, { autosave: true }, signal);
-      lastAutosaveSourceRef.current = sourceData;
-      return savedData;
-    },
+    onSave: handleAutosave,
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,
     // Не автосейвим, когда travel уже в "терминальном" состоянии (moderation/publish),

@@ -705,6 +705,63 @@ describe('useDraftRecovery', () => {
     });
   });
 
+  it('persists the editable draft without recursing into circular runtime values (#1511)', async () => {
+    const circularRuntimeValue: Record<string, unknown> = { keep: 'serializable' };
+    const nestedRuntimeArray: unknown[] = [
+      { keep: 'serializable-array-item' },
+    ];
+    const accessorRuntimeArray: unknown[] = [
+      { keep: 'safe-array-item' },
+    ];
+    circularRuntimeValue.self = circularRuntimeValue;
+    (nestedRuntimeArray[0] as Record<string, unknown>).parent = nestedRuntimeArray;
+    nestedRuntimeArray.push(nestedRuntimeArray);
+    circularRuntimeValue.items = nestedRuntimeArray;
+    Object.defineProperty(circularRuntimeValue, 'navigationGetter', {
+      enumerable: true,
+      get: () => {
+        throw new Error("Couldn't find a navigation context");
+      },
+    });
+    Object.defineProperty(accessorRuntimeArray, '1', {
+      enumerable: true,
+      get: () => {
+        throw new Error('array getter must not run');
+      },
+    });
+    circularRuntimeValue.accessorItems = accessorRuntimeArray;
+
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server-data' } as any,
+      })
+    );
+
+    act(() => {
+      result.current.saveDraft({
+        name: 'draft-with-runtime-value',
+        runtimeValue: circularRuntimeValue,
+      } as any);
+    });
+
+    await act(async () => {
+      await expect(result.current.flushDraft()).resolves.toBe(true);
+    });
+
+    const stored = await AsyncStorage.getItem(draftKey);
+    expect(JSON.parse(stored as string).data).toEqual({
+      name: 'draft-with-runtime-value',
+      runtimeValue: {
+        keep: 'serializable',
+        items: [{ keep: 'serializable-array-item' }],
+        accessorItems: [{ keep: 'safe-array-item' }],
+      },
+    });
+  });
+
   it('flushes the latest pending draft when Android moves to background', async () => {
     setPlatformOs('android');
     let appStateListener: ((state: string) => void) | undefined;

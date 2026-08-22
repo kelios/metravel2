@@ -18,6 +18,7 @@ import type {
   TripTransport,
 } from '@/api/plannedTrips';
 import type { ParsedRoutePoint, ParsedRoutePreview } from '@/types/travelRoutes';
+import { toTransportMode } from '@/components/MapPage/transportModes';
 import { buildElevationProfile } from '@/utils/routeFileParser';
 import {
   PREVIEW_DIRECT_PROVIDER,
@@ -28,8 +29,13 @@ import {
 /** Провайдеры цепочки строят маршрут только для этих режимов. */
 export const ROUTE_TRANSPORTS: RoutableTripTransport[] = ['car', 'foot', 'bike'];
 
+/**
+ * #1491: решение «строим по дорогам или нет» принимает общий маппинг карты, а
+ * не собственный список планировщика. `RoutableTripTransport` и `TransportMode`
+ * — одно и то же множество, поэтому сужение здесь корректно по построению.
+ */
 export const isRoutableTransport = (value: string): value is RoutableTripTransport =>
-  ROUTE_TRANSPORTS.some((transport) => transport === value);
+  toTransportMode(value) !== null;
 
 /** Точки маршрута с координатами как [lng, lat] — вход движка маршрутизации. */
 export const routablePreviewPoints = (route: RoutePoint[]): Array<[number, number]> =>

@@ -1,4 +1,5 @@
 import { translate as i18nT } from '@/i18n'
+import type { TransportMode } from '@/types/route'
 
 /**
  * Shared transport-mode options for route building.
@@ -11,8 +12,12 @@ import { translate as i18nT } from '@/i18n'
  * glyphs car / walk / bike). Profiles map to ORS via `getORSProfile`
  * (utils/routingHelpers.ts): car → driving-car, bike → cycling-regular,
  * foot → foot-walking.
+ *
+ * #1491: сам союз режимов объявлен один раз в `types/route.ts` и только
+ * реэкспортируется отсюда. До этого его копия жила ещё и в `RoutingStatus`, и
+ * планировщик поездок вынужденно держал третью, несовместимую таксономию.
  */
-export type TransportMode = 'car' | 'bike' | 'foot'
+export type { TransportMode }
 
 export interface TransportModeOption {
   key: TransportMode
@@ -57,3 +62,18 @@ export const TRANSPORT_ICON: Record<TransportMode, TransportModeOption['icon']> 
   foot: 'directions-walk',
   bike: 'directions-bike',
 }
+
+/**
+ * Единственный маппинг «строка → режим маршрутизации» для всех поверхностей.
+ *
+ * /map хранит режим уже сузившимся до `TransportMode`, планировщик поездок —
+ * более широким `TripTransport` (`car | bike | foot | public | mixed`).
+ * Прокладывать маршрут по дорогам можно только для пересечения этих множеств,
+ * и решает это здесь одна функция, а не три условия в трёх файлах (#1491).
+ * Для `public`/`mixed` ответ `null` — это не ошибка, а честное «маршрута по
+ * дорогам для этого способа нет», линию за них рисует схематичный режим.
+ */
+export const toTransportMode = (value: unknown): TransportMode | null =>
+  TRANSPORT_MODE_DEFINITIONS.some((option) => option.key === value)
+    ? (value as TransportMode)
+    : null

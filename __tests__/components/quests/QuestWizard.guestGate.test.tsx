@@ -79,6 +79,26 @@ const steps = [makeStep('s1', 'Точка 1'), makeStep('s2', 'Точка 2'), m
 
 const finale = { story: 'Финал', video: undefined, poster: undefined } as any
 
+type RenderedNode = {
+  props?: { testID?: unknown }
+  children?: unknown[]
+}
+
+const collectRenderedTestIds = (node: unknown, result: string[] = []): string[] => {
+  if (Array.isArray(node)) {
+    node.forEach((child) => collectRenderedTestIds(child, result))
+    return result
+  }
+  if (!node || typeof node !== 'object') return result
+
+  const renderedNode = node as RenderedNode
+  if (typeof renderedNode.props?.testID === 'string') {
+    result.push(renderedNode.props.testID)
+  }
+  renderedNode.children?.forEach((child) => collectRenderedTestIds(child, result))
+  return result
+}
+
 describe('QuestWizard guest gate', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -91,6 +111,36 @@ describe('QuestWizard guest gate', () => {
       useWideInlineLayout: false,
       useWideExcursionsSidebar: false,
     }
+  })
+
+  it('renders the intro start action before story, task and the collapsed trust footer', async () => {
+    const view = render(
+      <QuestWizard
+        title="Тест-квест"
+        steps={steps}
+        finale={finale}
+        intro={intro}
+        storageKey="intro_disclosure_order_quest"
+        questId="test-quest"
+        cityId="minsk"
+      />,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(view.getByTestId('quest-intro-start')).toBeTruthy()
+    expect(view.getByTestId('quest-intro-story')).toBeTruthy()
+    expect(view.getByTestId('quest-intro-task')).toBeTruthy()
+    expect(view.getByTestId('quest-trust-bar')).toBeTruthy()
+    expect(view.queryByTestId('quest-ai-disclosure')).toBeNull()
+
+    const renderedTestIds = collectRenderedTestIds(view.toJSON())
+    const indexOf = (testID: string) => renderedTestIds.indexOf(testID)
+    expect(indexOf('quest-intro-start')).toBeLessThan(indexOf('quest-intro-story'))
+    expect(indexOf('quest-intro-story')).toBeLessThan(indexOf('quest-intro-task'))
+    expect(indexOf('quest-intro-task')).toBeLessThan(indexOf('quest-trust-bar'))
   })
 
   it('fires quest_start for guests and shows the soft gate after 2 points', async () => {

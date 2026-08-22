@@ -159,8 +159,8 @@ function setupPersistence(opts: {
       opts.uploadPendingMarkerImages ?? jest.fn().mockResolvedValue(undefined),
   };
 
-  const { result } = renderHook(() => useTravelFormPersistence(params));
-  return { result, params };
+  const { result, rerender } = renderHook(() => useTravelFormPersistence(params));
+  return { result, rerender, params };
 }
 
 describe('autosave hydration gate', () => {
@@ -183,6 +183,26 @@ describe('autosave hydration gate', () => {
     const options = mockUseImprovedAutoSave.mock.calls.at(-1)?.[2];
     expect(options).toEqual(expect.objectContaining({ enabled: false }));
     expect(mockSaveFormData).not.toHaveBeenCalled();
+  });
+
+  it('keeps the autosave callback stable across an unrelated persistence rerender', () => {
+    mockUseImprovedAutoSave.mockClear();
+
+    const { rerender } = setupPersistence({
+      initialFormData: {
+        id: 641,
+        name: 'Stable autosave',
+        description: '',
+        coordsMeTravel: [],
+        gallery: [],
+      },
+      baselineText: null,
+    });
+    const firstOnSave = mockUseImprovedAutoSave.mock.calls.at(-1)?.[2].onSave;
+
+    rerender();
+
+    expect(mockUseImprovedAutoSave.mock.calls.at(-1)?.[2].onSave).toBe(firstOnSave);
   });
 });
 

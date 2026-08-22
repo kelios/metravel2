@@ -1,4 +1,5 @@
 import { COUNTRY_OUTLINES, OUTLINE_ORDER } from '@/utils/geoCountryOutlines';
+import { BELARUS_OUTLINE } from '@/utils/geoBelarus';
 
 /**
  * Контуры сгенерированы из Natural Earth и правятся только пересборкой. Порча
@@ -21,6 +22,10 @@ const decodeRing = (encoded: string) => {
 describe('COUNTRY_OUTLINES data integrity', () => {
     it('has an outline for every code in OUTLINE_ORDER and nothing extra', () => {
         expect(Object.keys(COUNTRY_OUTLINES).sort()).toEqual([...OUTLINE_ORDER].sort());
+    });
+
+    it('reuses the lightweight Belarus outline in the aggregate', () => {
+        expect(COUNTRY_OUTLINES.BY).toBe(BELARUS_OUTLINE);
     });
 
     it.each(OUTLINE_ORDER)('%s: rings decode to finite coordinates on Earth', (code) => {

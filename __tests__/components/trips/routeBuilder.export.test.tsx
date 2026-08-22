@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 import { buildTripRouteExportInput } from '@/components/trips/planning/tripRouteExport'
 import { buildGpx } from '@/utils/routeExport'
 
@@ -91,6 +92,12 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 
 // #1304: маршрут строится во вкладке «Маршрут», а скачать его можно было только
 // во вкладке «Экспорт» — владелец функциональность не нашёл.
+
+// #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
+// адресами через React Query — конструктору нужен клиент, как и в приложении.
+const renderRouteBuilder = (element: React.ReactElement) =>
+  render(element, { wrapper: createQueryWrapper().Wrapper })
+
 describe('RouteBuilder route download', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -98,7 +105,7 @@ describe('RouteBuilder route download', () => {
   })
 
   it('offers GPX and KML download next to the map', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(getByTestId('route-builder-export')).toBeTruthy()
     expect(getByTestId('trip-route-export-gpx')).toBeTruthy()
@@ -106,13 +113,13 @@ describe('RouteBuilder route download', () => {
   })
 
   it('keeps the download available for a participant who cannot edit the route', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
 
     expect(getByTestId('route-builder-export')).toBeTruthy()
   })
 
   it('builds a real file through the shared export path', async () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('trip-route-export-gpx'))
 
@@ -123,7 +130,7 @@ describe('RouteBuilder route download', () => {
   })
 
   it('disables the buttons until the route has two points with coordinates', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           route: [

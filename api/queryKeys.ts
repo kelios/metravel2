@@ -75,6 +75,11 @@ export const queryKeys = {
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
   questsNearLocation: (loc: string) => ['quests-near-location', loc] as const,
+  // #1484: компактный каталог для коллекции города и блока «следующий квест».
+  // Префикс общий с quests(), чтобы инвалидация каталога чистила и его.
+  questsCompactCatalog: (userId: string | null) => ['quests', 'compact-catalog', userId] as const,
+  // Прохождения текущего пользователя: дешёвый гейт перед каталогом (#1484).
+  questProgressAll: (userId: string | null) => ['quest-progress', userId] as const,
   travelsNearLocation: (loc: string) => ['travels-near-location', loc] as const,
   articleRating: (articleId: number | undefined, isAuthenticated: boolean) =>
     ['articleRating', articleId, isAuthenticated] as const,
@@ -126,6 +131,16 @@ export const queryKeys = {
   communityTripsAll: () => ['community-trips'] as const,
   tripRouteElevation: (tripId: string | number | null | undefined) =>
     ['trip-route-elevation', tripId] as const,
+  // Исходный GPX/KML поездки и распарсенная из него неупрощённая геометрия (#1496).
+  // Ключ трека держит `revision` (updated_at/created_at), потому что замена файла
+  // сохраняет тот же id — без него на карте осталась бы геометрия прошлого файла.
+  plannedTripRouteFile: (tripId: string | number | null | undefined) =>
+    ['planned-trip-route-file', tripId] as const,
+  plannedTripRouteTrack: (
+    tripId: string | number | null | undefined,
+    routeId: string | number | null | undefined,
+    revision: string | null | undefined,
+  ) => ['planned-trip-route-track', tripId, routeId, revision ?? ''] as const,
   routeTemplates: () => ['route-templates'] as const,
   tripSuggestions: (tripId: string | number | null | undefined) =>
     ['trip-suggestions', tripId] as const,

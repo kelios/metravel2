@@ -303,6 +303,31 @@ const getLegacyParamRedirectScript = () => String.raw`
 })();
 `;
 
+// An author can read their own unpublished travel through the authenticated
+// client API, but the public document route intentionally returns an empty 404
+// for drafts before the Expo app can boot. The editor therefore opens the
+// exported /travel/new shell with this one-time bridge parameter. Rewriting
+// history (rather than navigating) lets Expo Router initialize directly on the
+// numeric detail route without making a second, server-filtered document request.
+const getAuthorTravelPreviewBootstrapScript = () => String.raw`
+(function(){
+  try {
+    if (typeof window === 'undefined') return;
+    var path = String(window.location && window.location.pathname || '');
+    if (path !== '/travel/new') return;
+
+    var search = String(window.location && window.location.search || '');
+    if (!search) return;
+    var sp = new URLSearchParams(search);
+    var travelId = String(sp.get('previewTravel') || '').trim();
+    if (!/^[1-9][0-9]*$/.test(travelId)) return;
+    if (!window.history || typeof window.history.replaceState !== 'function') return;
+
+    window.history.replaceState(null, '', '/travels/' + encodeURIComponent(travelId));
+  } catch (_e) {}
+})();
+`;
+
 // Contract anchor for tests: p.indexOf('/article/')===0
 const getCriticalHeadScript = () => {
   const HOME_TITLE = i18nT('seoStatic:root.home.title');
@@ -503,6 +528,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
           or the React bundle reads storage. Must stay first in <head>. */}
       <script
         dangerouslySetInnerHTML={{ __html: getStorageHardeningScript() }}
+      />
+
+      {/* Draft preview bridge must run before route-specific preload/bootstrap
+          scripts so they observe /travels/<id>, never the editor shell URL. */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getAuthorTravelPreviewBootstrapScript() }}
       />
 
       {/* /map early bootstrap must stay ahead of the larger shared head scripts:

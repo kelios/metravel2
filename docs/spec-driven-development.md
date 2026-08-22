@@ -62,10 +62,12 @@ SDD закрывает четыре повторяющиеся проблемы:
 
 ## 4. Рабочий процесс OpenSpec
 
-OpenSpec CLI выполняется в терминале, а skills вызываются в чате Codex через
-`$openspec-*`. Profile `core` устанавливает шесть skills:
+OpenSpec CLI выполняется в терминале, а skills вызываются из чата агента.
+**Шесть skills установлены для обоих агентов, и правило одинаково обязательно для обоих:**
+Codex вызывает их как `$openspec-*`, Claude Code — как `/openspec-*`
+(`.claude/skills/openspec-*`, поставлены `openspec init --tools claude`).
 
-| Шаг | Codex skill | Результат |
+| Шаг | Skill (`$` — Codex, `/` — Claude Code) | Результат |
 | --- | --- | --- |
 | Исследование | `$openspec-explore` | read-only анализ идеи или проблемы без реализации |
 | Планирование | `$openspec-propose` | proposal, delta specs, design и tasks для одного change |
@@ -113,6 +115,12 @@ openspec validate --all
 - `.agents/skills/openspec-*/SKILL.md` — vendor-generated OpenSpec skills для
   Codex; body вручную не редактировать. Текущий Codex compatibility shim удаляет
   только неподдерживаемое поле frontmatter `compatibility`.
+- `.claude/skills/openspec-*/SKILL.md` — те же vendor-generated skills для Claude
+  Code, поставлены `openspec init --tools claude` (2026-08-22). Body вручную не
+  редактировать; отличаются от Codex-копии только сохранённым полем
+  `compatibility` и формой вызова в подсказках. Раньше skills стояли только для
+  Codex, из-за чего Claude-сессии обходили обязательный OpenSpec-цикл — это был
+  пробел раскладки, а не разрешение работать без change.
 - `docs/spec-driven-development-requirements.md` — распределение обязательных
   требований metravel.by по OpenSpec artifacts.
 

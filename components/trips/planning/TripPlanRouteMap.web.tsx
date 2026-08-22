@@ -5,6 +5,10 @@ import Feather from '@expo/vector-icons/Feather';
 import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
+  FOCUS_POINT_ZOOM,
+  type MapFocusPoint,
+} from '@/components/trips/planning/tripPlanRouteMap.types';
+import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
   formatDistance,
@@ -38,6 +42,14 @@ interface Props {
   summary?: RouteSummary | null;
   transport?: TripTransport;
   readonly?: boolean;
+  /** #1496: исходный импортированный трек поверх построенного маршрута. */
+  originalTrack?: RouteGeometry | null;
+  /**
+   * #1495: карта растягивается на всю родительскую сцену и отдаёт ей заголовок —
+   * в map-first раскладке подписи живут в чипах поверх карты.
+   */
+  fill?: boolean;
+  focusPoint?: MapFocusPoint | null;
   onEditPoint?: (index: number) => void;
   onAddPointFromMap?: (coords: { lat: number; lng: number }) => void;
 }
@@ -141,6 +153,33 @@ function ClickToAdd({
   return null;
 }
 
+/**
+ * #1495: центрирование карты на точке, выбранной в списке шторки. Живёт внутри
+ * MapContainer, потому что доступ к leaflet-инстансу даёт только `useMap`.
+ */
+function FocusRoutePoint({
+  focusPoint,
+  useMap,
+}: {
+  focusPoint: MapFocusPoint | null | undefined;
+  useMap: ReactLeafletNS['useMap'];
+}) {
+  const map = useMap();
+  const appliedTokenRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!focusPoint) return;
+    if (appliedTokenRef.current === focusPoint.token) return;
+    appliedTokenRef.current = focusPoint.token;
+    map.setView(
+      [focusPoint.lat, focusPoint.lng],
+      Math.max(map.getZoom() ?? FOCUS_POINT_ZOOM, FOCUS_POINT_ZOOM),
+    );
+  }, [focusPoint, map]);
+
+  return null;
+}
+
 export default function TripPlanRouteMap({
   route,
   routeGeometry,
@@ -149,6 +188,9 @@ export default function TripPlanRouteMap({
   summary,
   transport,
   readonly = false,
+  originalTrack,
+  fill = false,
+  focusPoint,
   onEditPoint,
   onAddPointFromMap,
 }: Props) {
@@ -236,14 +278,26 @@ export default function TripPlanRouteMap({
   const trackPositions = useMemo(() => (
     routeGeometry?.length ? lngLatPositions(routeGeometry) : markerPositions
   ), [markerPositions, routeGeometry]);
+  const originalTrackPositions = useMemo(
+    () => (originalTrack?.length ? lngLatPositions(originalTrack) : []),
+    [originalTrack],
+  );
   const center = trackPositions[0] ?? markerPositions[0] ?? DEFAULT_CENTER;
   // Токен считается по содержимому, а не по ссылке: перезапрос маршрута даёт
   // новый массив с теми же точками, и подгонка не должна срабатывать заново.
   // Мемо обязательно: у routed-геометрии тысячи координат, а компонент
   // перерисовывается на каждый ввод в панели конструктора.
+  // Подгонка охватывает и оригинальный трек: он может выходить за пределы
+  // упрощённых точек, и без него часть настоящей формы осталась бы за кадром.
+  const fitPositions = useMemo(
+    () => (originalTrackPositions.length >= 2
+      ? [...trackPositions, ...originalTrackPositions]
+      : trackPositions),
+    [originalTrackPositions, trackPositions],
+  );
   const fitToken = useMemo(
-    () => trackPositions.map((position) => position.join(',')).join('|'),
-    [trackPositions],
+    () => fitPositions.map((position) => position.join(',')).join('|'),
+    [fitPositions],
   );
   const approximate = isRouteApproximate(routingState);
   const markerIcon = useMemo(() => {
@@ -313,7 +367,7 @@ export default function TripPlanRouteMap({
 
   if (!L || !RL || !markerIcon || !activeMarkerIcon) {
     return (
-      <View style={styles.loadingWrap} testID="trip-plan-route-map">
+      <View style={[styles.loadingWrap, fill && styles.loadingWrapFill]} testID="trip-plan-route-map">
         <ActivityIndicator color={colors.primaryDark} />
         <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.zagruzka_karty_marshruta_5f48efc0')}</Text>
       </View>
@@ -333,6 +387,7 @@ export default function TripPlanRouteMap({
       <div
         style={{
           ...(styles.mapShell as React.CSSProperties),
+          ...(fill ? (styles.mapShellFill as React.CSSProperties) : null),
           ...(fullscreen ? (styles.mapShellFullscreen as React.CSSProperties) : null),
         }}
       >
@@ -365,6 +420,12 @@ export default function TripPlanRouteMap({
           <Feather name={fullscreen ? 'minimize-2' : 'maximize-2'} size={18} color={colors.text} />
         </button>
         {canvas}
+        {fill && originalTrackPositions.length > 1 ? (
+          <View style={styles.legendOverlay} testID="trip-plan-map-original-track-legend">
+            <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
+            <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
+          </View>
+        ) : null}
         <WeatherLegend enabledOverlays={enabledOverlays} />
         {layersOpen ? (
           <View style={styles.layersPopoverLayer} pointerEvents="box-none">
@@ -403,7 +464,8 @@ export default function TripPlanRouteMap({
   const useMapEvents = RL.useMapEvents;
 
   return (
-    <View style={styles.wrap} testID="trip-plan-route-map">
+    <View style={[styles.wrap, fill && styles.wrapFill]} testID="trip-plan-route-map">
+      {fill ? null : (
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.title}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.karta_marshruta_8fbc6a38')}</Text>
@@ -425,6 +487,12 @@ export default function TripPlanRouteMap({
                 ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
                 : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
           </Text>
+          {originalTrackPositions.length > 1 ? (
+            <View style={styles.legendItem} testID="trip-plan-map-original-track-legend">
+              <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
+              <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
+            </View>
+          ) : null}
           {approximate ? (
             <Text style={styles.warning}>
               {routingStateHint(routingState)
@@ -434,6 +502,7 @@ export default function TripPlanRouteMap({
         </View>
         <Text style={styles.counter}>{markerPositions.length}</Text>
       </View>
+      )}
 
       {fullscreen ? <div style={styles.mapShellPlaceholder as React.CSSProperties} /> : null}
       {renderMapShell(
@@ -452,10 +521,11 @@ export default function TripPlanRouteMap({
             onAddPointFromMap={onAddPointFromMap}
             useMapEvents={useMapEvents}
           />
-          {trackPositions.length ? (
+          <FocusRoutePoint focusPoint={focusPoint} useMap={useMap} />
+          {fitPositions.length ? (
             <FitRouteBounds
               L={L}
-              positions={trackPositions}
+              positions={fitPositions}
               useMap={useMap}
               fitToken={fitToken}
               fittedTokenRef={fittedTokenRef}
@@ -469,6 +539,16 @@ export default function TripPlanRouteMap({
                 weight: routeGeometry?.length ? 5 : 4,
                 opacity: routeGeometry?.length ? 0.86 : 0.58,
                 dashArray: approximate ? '8 8' : undefined,
+              }}
+            />
+          ) : null}
+          {originalTrackPositions.length > 1 ? (
+            <Polyline
+              positions={originalTrackPositions}
+              pathOptions={{
+                color: colors.accentDark,
+                weight: 3,
+                opacity: 0.95,
               }}
             />
           ) : null}
@@ -517,6 +597,15 @@ const createStyles = (colors: ThemedColors) =>
       padding: 12,
       backgroundColor: colors.surface,
     },
+    wrapFill: {
+      flex: 1,
+      minHeight: 0,
+      gap: 0,
+      padding: 0,
+      borderWidth: 0,
+      borderRadius: 0,
+      backgroundColor: 'transparent',
+    },
     loadingWrap: {
       minHeight: 260,
       gap: 10,
@@ -526,6 +615,13 @@ const createStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
+    },
+    loadingWrapFill: {
+      flex: 1,
+      minHeight: 0,
+      borderWidth: 0,
+      borderRadius: 0,
+      backgroundColor: 'transparent',
     },
     header: {
       flexDirection: 'row',
@@ -544,6 +640,15 @@ const createStyles = (colors: ThemedColors) =>
     routeModeText: { fontSize: 13, fontWeight: '800', color: colors.text },
     routeModeMeta: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
     hint: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    legendLine: { width: 22, height: 3, borderRadius: 999 },
+    legendText: { fontSize: 12, color: colors.textSecondary, fontWeight: '700' },
+    legendOverlay: {
+      position: 'absolute', top: 12, left: 12, zIndex: 3,
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999,
+      backgroundColor: colors.surface,
+    },
     warning: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '700' },
     counter: {
       minWidth: 32,
@@ -576,6 +681,15 @@ const createStyles = (colors: ThemedColors) =>
       width: '100%',
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.surfaceMuted,
+    },
+    // Map-first сцена (#1495) задаёт высоту сама: карта тянется на всю сцену,
+    // а не держит собственные 320px.
+    mapShellFill: {
+      flex: 1,
+      height: '100%',
+      minHeight: 0,
+      borderRadius: 0,
+      borderWidth: 0,
     },
     mapShellFullscreen: {
       position: 'fixed',

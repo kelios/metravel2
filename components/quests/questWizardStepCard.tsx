@@ -117,7 +117,7 @@ type StepCardProps = {
   showMap: boolean
   onToggleMap: () => void
   showLocationControls?: boolean
-  /** Метаданные маршрута и раскрытие об ИИ — только на стартовом шаге (#1480). */
+  /** Метаданные маршрута и раскрытие об ИИ в футере стартовой карточки (#1480). */
   introSlot?: React.ReactNode
   /** Числовой PK квеста — адрес батча попыток ответа (#1276). */
   questNumericId?: number
@@ -484,7 +484,17 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         {isPassed && (<View style={styles.completedBadge}><Text style={styles.completedText}>✓</Text></View>)}
       </View>
 
-      {step.id === 'intro' && introSlot ? <View style={styles.section}>{introSlot}</View> : null}
+      {step.id === 'intro' && (
+        <Pressable
+          style={[styles.startButton, styles.section]}
+          onPress={handleCheck}
+          hitSlop={6}
+          accessibilityRole="button"
+          testID="quest-intro-start"
+        >
+          <Text style={styles.startButtonText}>{i18nT('quests:components.quests.questWizardStepCard.nachat_kvest_2847e749')}</Text>
+        </Pressable>
+      )}
 
       {showApproachNote && approachLeg && (
         <Text style={styles.legNote} testID="quest-step-approach-note">
@@ -525,7 +535,9 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         </View>
       )}
 
-      <View style={styles.section}><Text style={styles.storyText}>{step.story}</Text></View>
+      <View style={styles.section} testID={step.id === 'intro' ? 'quest-intro-story' : undefined}>
+        <Text style={styles.storyText}>{step.story}</Text>
+      </View>
 
       {showVisitorInfo && (
         <View style={[styles.section, styles.visitorInfoCard]} testID="quest-step-visitor-info">
@@ -554,7 +566,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         </View>
       )}
 
-      <View style={styles.section}>
+      <View style={styles.section} testID={step.id === 'intro' ? 'quest-intro-task' : undefined}>
         <Text style={styles.taskText}>{step.task}</Text>
 
         {step.id !== 'intro' && !isPassed && (
@@ -756,16 +768,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         </View>
       )}
 
-      {step.id === 'intro' && (
-        <Pressable
-          style={styles.startButton}
-          onPress={handleCheck}
-          hitSlop={6}
-          accessibilityRole="button"
-        >
-          <Text style={styles.startButtonText}>{i18nT('quests:components.quests.questWizardStepCard.nachat_kvest_2847e749')}</Text>
-        </Pressable>
-      )}
+      {step.id === 'intro' && introSlot ? <View style={styles.section}>{introSlot}</View> : null}
 
       <Animated.View
         style={[

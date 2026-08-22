@@ -1,18 +1,21 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import type { PlannedTripRouteFile } from '@/api/plannedTripRoutes';
 import type { RouteGeometry, RoutePoint } from '@/api/plannedTrips';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 import Button from '@/components/ui/Button';
 import { SelectionGroup } from '@/components/ui/SelectionGroup';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
+import { formatFileSize } from '@/utils/fileSize';
 import { formatInteger } from '@/i18n/format';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { formatDistance } from './tripPlanFormatting';
-import TripRouteFilePicker from './TripRouteFilePicker';
+import TripRouteFilePicker, { releasePickedTripRouteUpload } from './TripRouteFilePicker';
 import type {
   PickedTripRouteFile,
+  PickedTripRouteFileUpload,
   TripRouteFilePickerError,
 } from './TripRouteFilePicker.types';
 import {
@@ -28,7 +31,22 @@ type Props = {
   route: RoutePoint[];
   routeGeometry?: RouteGeometry | null;
   disabled?: boolean;
-  onApply: (route: RoutePoint[]) => void;
+  /**
+   * Исходный файл, уже сохранённый у поездки (#1496). `null` — его нет либо
+   * хранилище закрыто для этого пользователя.
+   */
+  storedFile?: PlannedTripRouteFile | null;
+  /** Оригинал выбран, но ещё не ушёл на бэкенд — уйдёт вместе с «Сохранить маршрут». */
+  pendingUploadName?: string | null;
+  uploadError?: string | null;
+  removing?: boolean;
+  onRemoveStoredFile?: () => void;
+  /**
+   * Точки уходят в черновик маршрута, а исходный файл — наверх: он загружается
+   * на бэкенд тем же действием «Сохранить маршрут», чтобы оригинал и точки
+   * никогда не расходились.
+   */
+  onApply: (route: RoutePoint[], originalUpload: PickedTripRouteFileUpload | null) => void;
 };
 
 const parsedPointToLatLng = (coord: string): [number, number] | null => {
@@ -51,7 +69,17 @@ const routeToLatLng = (route: RoutePoint[], geometry?: RouteGeometry | null): [n
     .map(([lng, lat]) => [lat, lng]);
 };
 
-function TripRouteImportPanel({ route, routeGeometry, disabled = false, onApply }: Props) {
+function TripRouteImportPanel({
+  route,
+  routeGeometry,
+  disabled = false,
+  storedFile = null,
+  pendingUploadName = null,
+  uploadError = null,
+  removing = false,
+  onRemoveStoredFile,
+  onApply,
+}: Props) {
   const { t } = useTranslation();
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -59,6 +87,17 @@ function TripRouteImportPanel({ route, routeGeometry, disabled = false, onApply 
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [errorCode, setErrorCode] = useState<TripRouteImportErrorCode | null>(null);
   const [reading, setReading] = useState(false);
+  // Выбранный, но ещё не применённый оригинал. Каждый новый выбор и каждая отмена
+  // освобождают предыдущую кэш-копию, иначе на устройстве копятся файлы до 20 МиБ.
+  const pendingUploadRef = useRef<PickedTripRouteFileUpload | null>(null);
+
+  const releasePendingUpload = useCallback(() => {
+    const upload = pendingUploadRef.current;
+    pendingUploadRef.current = null;
+    if (upload) void releasePickedTripRouteUpload(upload);
+  }, []);
+
+  useEffect(() => () => releasePendingUpload(), [releasePendingUpload]);
 
   const errorMessage = useMemo(() => {
     if (!errorCode) return null;
@@ -81,17 +120,19 @@ function TripRouteImportPanel({ route, routeGeometry, disabled = false, onApply 
   const handleBusyChange = useCallback((busy: boolean) => {
     setReading(busy);
     if (busy) {
+      releasePendingUpload();
       setPrepared(null);
       setErrorCode(null);
       setSelectedRouteIndex(0);
     }
-  }, []);
+  }, [releasePendingUpload]);
 
   const handlePickerError = useCallback((code: TripRouteFilePickerError) => {
+    releasePendingUpload();
     setPrepared(null);
     setSelectedRouteIndex(0);
     setErrorCode(code);
-  }, []);
+  }, [releasePendingUpload]);
 
   const handlePicked = useCallback((file: PickedTripRouteFile) => {
     const result = prepareTripRouteImport({
@@ -100,21 +141,25 @@ function TripRouteImportPanel({ route, routeGeometry, disabled = false, onApply 
       sizeBytes: file.size,
     });
     if (!result.ok) {
+      void releasePickedTripRouteUpload(file.upload);
       setPrepared(null);
       setSelectedRouteIndex(0);
       setErrorCode(result.error.code);
       return;
     }
+    releasePendingUpload();
+    pendingUploadRef.current = file.upload;
     setPrepared(result.data);
     setSelectedRouteIndex(0);
     setErrorCode(null);
-  }, []);
+  }, [releasePendingUpload]);
 
   const handleCancel = useCallback(() => {
+    releasePendingUpload();
     setPrepared(null);
     setSelectedRouteIndex(0);
     setErrorCode(null);
-  }, []);
+  }, [releasePendingUpload]);
 
   const handleApply = useCallback((mode: TripRouteImportMode) => {
     const selected = prepared?.routes[selectedRouteIndex] ?? prepared?.routes[0];
@@ -129,7 +174,11 @@ function TripRouteImportPanel({ route, routeGeometry, disabled = false, onApply 
       setErrorCode(result.error.code);
       return;
     }
-    onApply(result.route);
+    // Владелец оригинала переходит наверх: освобождать кэш-копию теперь задача
+    // RouteBuilder — файл нужен до успешной загрузки на бэкенд.
+    const originalUpload = pendingUploadRef.current;
+    pendingUploadRef.current = null;
+    onApply(result.route, originalUpload);
     setPrepared(null);
     setSelectedRouteIndex(0);
     setErrorCode(null);
@@ -185,6 +234,52 @@ function TripRouteImportPanel({ route, routeGeometry, disabled = false, onApply 
           testID="trip-route-import-error"
         >
           {errorMessage}
+        </Text>
+      ) : null}
+
+      {pendingUploadName ? (
+        <Text
+          style={styles.hint}
+          accessibilityLiveRegion="polite"
+          testID="trip-route-import-pending-original"
+        >
+          {t('tripsStatic:plan.routeImport.original.pending', { value: pendingUploadName })}
+        </Text>
+      ) : null}
+
+      {!pendingUploadName && storedFile ? (
+        <View style={styles.storedFile} testID="trip-route-import-stored-original">
+          <View style={styles.storedFileBody}>
+            <Text style={styles.storedFileName} numberOfLines={1}>
+              {storedFile.original_name}
+            </Text>
+            <Text style={styles.hint}>
+              {t('tripsStatic:plan.routeImport.original.stored', {
+                value: storedFile.size ? formatFileSize(Number(storedFile.size)) : '—',
+              })}
+            </Text>
+          </View>
+          {onRemoveStoredFile ? (
+            <Button
+              label={t('tripsStatic:plan.routeImport.original.remove')}
+              onPress={onRemoveStoredFile}
+              variant="ghost"
+              size="sm"
+              disabled={disabled || removing}
+              loading={removing}
+              testID="trip-route-import-remove-original"
+            />
+          ) : null}
+        </View>
+      ) : null}
+
+      {uploadError ? (
+        <Text
+          style={styles.error}
+          accessibilityLiveRegion="assertive"
+          testID="trip-route-import-upload-error"
+        >
+          {uploadError}
         </Text>
       ) : null}
 
@@ -261,6 +356,9 @@ function TripRouteImportPanel({ route, routeGeometry, disabled = false, onApply 
           </View>
 
           <Text style={styles.hint}>{t('tripsStatic:plan.routeImport.saveHint')}</Text>
+          <Text style={styles.hint} testID="trip-route-import-original-hint">
+            {t('tripsStatic:plan.routeImport.original.applyHint')}
+          </Text>
 
           <View style={styles.actions}>
             <Button
@@ -309,6 +407,20 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   hint: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   error: { color: colors.danger, fontSize: 13, lineHeight: 18, fontWeight: '600' },
   routeSelection: { gap: DESIGN_TOKENS.spacing.xs },
+  storedFile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: DESIGN_TOKENS.spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    backgroundColor: colors.surfaceMuted,
+  },
+  storedFileBody: { flex: 1, minWidth: 0, gap: 2 },
+  storedFileName: { color: colors.text, fontSize: 13, fontWeight: '700' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.md },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
   legendLine: { width: 24, height: 4, borderRadius: DESIGN_TOKENS.radii.full },

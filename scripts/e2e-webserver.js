@@ -146,18 +146,39 @@ function assertE2EArtifactConfig({
     throw new Error('[e2e-webserver] E2E artifact contains no JavaScript bundles');
   }
 
-  const authBundleContents = jsFiles
-    .map((filePath) => fs.readFileSync(filePath, 'utf8'))
+  const bundleContents = jsFiles.map((filePath) => fs.readFileSync(filePath, 'utf8'));
+  const authBundleContents = bundleContents
     .filter((contents) => contents.includes('/user/google-login/'));
   if (authBundleContents.length === 0) {
     throw new Error('[e2e-webserver] E2E artifact contains no Google auth API bundle');
   }
 
   const inlinedE2EFlag = /([A-Za-z_$][\w$]*)\s*=\s*['"]true['"]\s*===\s*String\(\s*['"]true['"]\s*\)\.toLowerCase\(\)[\s\S]{0,1000}?isE2E\s*:\s*\1\b/;
-  const hasStaleAuthBundle = authBundleContents.some(
-    (contents) => !contents.includes(expectedApiBase) || !inlinedE2EFlag.test(contents)
+  const hasExpectedApiBase = bundleContents.some((contents) =>
+    contents.includes(expectedApiBase)
   );
-  if (hasStaleAuthBundle) {
+  const hasInlinedE2EFlag = bundleContents.some((contents) => inlinedE2EFlag.test(contents));
+  const trimmedExpectedApiBase = String(expectedApiBase).trim().replace(/\/+$/, '');
+  const normalizedExpectedApiBase = /\/api$/i.test(trimmedExpectedApiBase)
+    ? trimmedExpectedApiBase
+    : `${trimmedExpectedApiBase}/api`;
+  const expectedAbsoluteAuthUrl = new URL(
+    `${normalizedExpectedApiBase}/user/google-login/`
+  );
+  const hasConflictingAbsoluteAuthUrl = authBundleContents.some((contents) =>
+    (contents.match(/(?:https?:)?\/\/[^'"`\s]+\/user\/google-login\//g) || []).some((url) => {
+      try {
+        const candidate = new URL(url, expectedAbsoluteAuthUrl);
+        return (
+          candidate.origin !== expectedAbsoluteAuthUrl.origin ||
+          candidate.pathname !== expectedAbsoluteAuthUrl.pathname
+        );
+      } catch {
+        return true;
+      }
+    })
+  );
+  if (!hasExpectedApiBase || !hasInlinedE2EFlag || hasConflictingAbsoluteAuthUrl) {
     throw new Error(
       `[e2e-webserver] E2E auth bundle does not contain the configured API base and E2E mode ${expectedApiBase}`
     );

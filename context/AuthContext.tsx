@@ -3,12 +3,17 @@
 // Сохраняет обратную совместимость: AuthProvider + useAuth() работают как раньше.
 // Вся логика (login, logout, checkAuthentication, epoch guard) живёт в authStore.
 
-import { FC, ReactNode, useContext, useEffect, useMemo } from 'react';
+import { FC, ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { setAuthInvalidationHandler } from '@/api/authInvalidation';
 import { useAuthStore, type AuthStore } from '@/stores/authStore';
 import { useShallow } from 'zustand/react/shallow';
 import { AuthContext, type AuthContextType } from '@/context/authContextBase';
+import {
+    clearQuestFinishRecord,
+    questRetentionOwnerId,
+    readQuestFinishRecord,
+} from '@/utils/questReturnVisit';
 
 interface AuthProviderProps {
     children: ReactNode;
@@ -20,6 +25,26 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     const authReady = useAuthStore((s) => s.authReady);
     const checkAuthentication = useAuthStore((s) => s.checkAuthentication);
     const invalidateAuthState = useAuthStore((s) => s.invalidateAuthState);
+    const userId = useAuthStore((s) => s.userId);
+    const questOwnerId = questRetentionOwnerId(userId);
+    const previousQuestOwnerRef = useRef(questOwnerId);
+
+    // Локальный retention квестов и OS-уведомление принадлежат личности. При
+    // logout/account switch старый цикл удаляется, чтобы новый пользователь
+    // устройства не получил чужое событие или напоминание.
+    useEffect(() => {
+        const previousOwnerId = previousQuestOwnerRef.current;
+        previousQuestOwnerRef.current = questOwnerId;
+        if (previousOwnerId === questOwnerId) return;
+        void (async () => {
+            const record = await readQuestFinishRecord(previousOwnerId);
+            if (record) {
+                const { cancelQuestReturnReminder } = await import('@/services/notifications');
+                await cancelQuestReturnReminder(previousOwnerId, record.questId);
+            }
+            await clearQuestFinishRecord(previousOwnerId);
+        })();
+    }, [questOwnerId]);
 
     // При первой загрузке проверяем данные аутентификации.
     // On web, defer to reduce TBT during initial render (AsyncStorage + API call).

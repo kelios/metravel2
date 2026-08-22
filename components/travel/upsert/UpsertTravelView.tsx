@@ -425,7 +425,6 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   ]);
 
   const publicTravelId = controller.formData?.id;
-  const publicTravelSlug = controller.formData?.slug;
   const handleManualSave = controller.handleManualSave;
   const openPublicInFlightRef = useRef(false);
   const handleOpenPublic = useCallback(async () => {
@@ -463,14 +462,14 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     // молча провалится, и действие осталось бы вообще без навигации — в этом
     // случае уходим в ту же ветку, что и native/заблокированный попап.
     if (pendingTab && !pendingTab.closed) {
-      // Свежий запрос документа резолвит сервер, а он знает только слаг —
-      // числовой id отдаёт 404. Внутри SPA всё наоборот, поэтому адрес для
-      // новой вкладки строится отдельно от адреса для router.push.
-      const slug = savedData.slug?.trim() || publicTravelSlug?.trim();
       try {
+        // Public document routing intentionally hides drafts before the app can
+        // boot. Enter through the exported /travel/new shell instead: its inline bridge rewrites
+        // this to /travels/<id> with history.replaceState, so the authenticated
+        // SPA detail request can read the author's unpublished travel.
         // `replace`, а не `assign`: `about:blank` не должен оставаться в истории
         // новой вкладки и перехватывать её кнопку «Назад».
-        pendingTab.location.replace(`/travels/${encodeURIComponent(slug || travelId)}`);
+        pendingTab.location.replace(`/travel/new?previewTravel=${encodeURIComponent(travelId)}`);
         return;
       } catch {
         // Окно уже недоступно — падаем в SPA-навигацию ниже.
@@ -480,7 +479,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     // Native и заблокированный попап: остаёмся в текущем SPA-стеке и ходим по
     // id — он резолвится у автора и для неопубликованного черновика.
     router.push(`/travels/${encodeURIComponent(travelId)}` as any);
-  }, [handleManualSave, publicTravelId, publicTravelSlug, router]);
+  }, [handleManualSave, publicTravelId, router]);
 
   const handleSessionLogin = useCallback(async () => {
     const draftSaved = await controller.draftRecovery.flushDraft();

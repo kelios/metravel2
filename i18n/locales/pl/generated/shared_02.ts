@@ -310,4 +310,10 @@ export const sharedGenerated2 = {
   "utils.mapWebOverlays.osmRoutesOverlay.div_style_margin_top_6px_a_href_value1_targe_6d82870c.text01": "Otwórz w OpenStreetMap",
   "hooks.usePlaceRating.otsenka_sohranena_67bda0e0": "Ocena zapisana",
   "hooks.usePlaceRating.ne_udalos_sohranit_otsenku_04aaa4f0": "Nie udało się zapisać oceny",
+  "services.notifications.returnReminderTitle": "W pobliżu są kolejne zadania",
+  "services.notifications.returnReminderBody": "Ukończono „{{value1}}”. W pobliżu: jeszcze {{count}} zadań.",
+  "services.notifications.returnReminderBody_one": "Ukończono „{{value1}}”. W pobliżu: jeszcze {{count}} zadanie.",
+  "services.notifications.returnReminderBody_few": "Ukończono „{{value1}}”. W pobliżu: jeszcze {{count}} zadania.",
+  "services.notifications.returnReminderBody_many": "Ukończono „{{value1}}”. W pobliżu: jeszcze {{count}} zadań.",
+  "services.notifications.returnReminderBody_other": "Ukończono „{{value1}}”. W pobliżu: jeszcze {{count}} zadań.",
 } as const

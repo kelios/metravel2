@@ -19,6 +19,7 @@ import { shareTravel } from '@/utils/shareTravel';
 import { resolveTravelAuthorDisplayName, resolveTravelAuthorName } from '@/components/listTravel/travelListItemHelpers';
 import { formatViewCount } from '@/components/travel/utils/travelHelpers';
 import { translate as i18nT } from '@/i18n'
+import { formatRatingValue } from '@/utils/ratingHelpers';
 
 
 type Props = { travel: Travel };
@@ -115,6 +116,10 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     const travelYear = useMemo(() => resolveTravelYear(travel), [travel]);
     const views = useMemo(() => resolveTravelViews(travel), [travel]);
     const viewsLabel = views > 0 ? formatViewCount(views) : '';
+    const rating = Number(travel.rating);
+    const ratingLabel = Number.isFinite(rating) && rating > 0
+      ? formatRatingValue(rating)
+      : '';
 
     const onPress = useCallback(() => {
         if (!canOpen) return;
@@ -144,7 +149,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
 
     const contentSlot = useMemo(() => {
         const showCountry = !!countryName && countryName !== unknownCountry;
-        const hasMeta = !!authorDisplayName || !!travelYear || !!viewsLabel;
+        const hasMeta = !!authorDisplayName || !!travelYear || !!viewsLabel || !!ratingLabel;
         if (!showCountry && !hasMeta) return null;
 
         return (
@@ -175,6 +180,17 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                                 </Text>
                             </View>
                         ) : null}
+                        {ratingLabel ? (
+                            <View style={styles.metaItem} testID="rating-meta">
+                                <Feather
+                                    name="star"
+                                    size={12}
+                                    color={colors.warning}
+                                    accessible={false}
+                                />
+                                <Text style={styles.metaText}>{ratingLabel}</Text>
+                            </View>
+                        ) : null}
                         {viewsLabel ? (
                             <View style={styles.metaItem}>
                                 <Feather name="eye" size={12} color={colors.textMuted} />
@@ -190,6 +206,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     }, [
         authorDisplayName,
         colors.textMuted,
+        colors.warning,
         countryName,
         unknownCountry,
         styles.contentSlot,
@@ -199,6 +216,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         styles.metaItemAuthor,
         styles.metaRow,
         styles.metaText,
+        ratingLabel,
         travelYear,
         viewsLabel,
     ]);

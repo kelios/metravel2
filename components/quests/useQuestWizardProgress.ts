@@ -155,6 +155,10 @@ export function useQuestWizardProgress({
   // сервера, и если в квест добавят шаг (#1431), прежний финишер иначе получил
   // бы форс-редирект в финал и чужую строку «дальние вы отложили».
   const [earlyFinish, setEarlyFinish] = useState(false)
+  // Timestamp существует только для перехода incomplete → completed в текущей
+  // смонтированной сессии. Гидратация уже завершённого прогресса его не ставит,
+  // поэтому повторное открытие финала не создаёт новый retention-цикл.
+  const [completionFinishedAt, setCompletionFinishedAt] = useState<number | null>(null)
   // Отпечаток состояния, которое хук засеял сам (слияние, AsyncStorage, сброс).
   // Save-эффект пропускает ровно его — без прежней гонки `suppressSave` с
   // `setTimeout(0)`, где лишний await в load-эффекте решал, сработает гейт или
@@ -330,8 +334,10 @@ export function useQuestWizardProgress({
     // Наружу (в хранилище и на сервер) `completed` монотонен: пересчёт на
     // устройстве, не знающем про пропуски, не должен отменять уже засчитанное
     // прохождение (#1451).
-    const reportedCompleted = questCompleted || confirmedCompletedRef.current
+    const wasCompleted = confirmedCompletedRef.current
+    const reportedCompleted = questCompleted || wasCompleted
     confirmedCompletedRef.current = reportedCompleted
+    if (!wasCompleted && questCompleted) setCompletionFinishedAt(now)
 
     AsyncStorage.setItem(storageKey, serializeRecord({
       currentIndex,
@@ -405,6 +411,7 @@ export function useQuestWizardProgress({
     // Сброс — единственная немонотонная операция: слияние её бы отменило,
     // поэтому чистим и локальные времена, чтобы старые ответы не «воскресли».
     const emptyState = normalizeQuestProgressSnapshot({ updatedAt: Date.now() })
+    setCompletionFinishedAt(null)
     await seedProgressState(emptyState, true)
     onProgressReset?.()
   }
@@ -432,6 +439,7 @@ export function useQuestWizardProgress({
     partiallyCompleted,
     stepsMissingForCompletion,
     finishedEarly,
+    completionFinishedAt,
     finishEarly,
     markStepSkipped,
     resetProgress,

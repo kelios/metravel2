@@ -73,7 +73,7 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         flexDirection: 'row',
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.xs,
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap',
     },
     titleRow: {
         flexDirection: 'row',
@@ -277,6 +277,8 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         gap: DESIGN_TOKENS.spacing.xs,
     },
     autosaveBadgeText: {
+        minWidth: 0,
+        flexShrink: 1,
         fontSize: 11,
         color: colors.primaryText,
         fontWeight: '600',
@@ -337,6 +339,7 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
     },
     stepSelectTrigger: {
         minHeight: 44,
+        flexShrink: 1,
         maxWidth: '100%',
         flexDirection: 'row',
         alignItems: 'center',

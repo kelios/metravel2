@@ -22,6 +22,7 @@ import {
   type NavigatorDescriptor,
   type TravelMode,
 } from '@/utils/routeExport';
+import { usePlannedTripRouteFile } from '@/hooks/usePlannedTripRouteFile';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { trackRouteExported } from '@/utils/tripAnalytics';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -49,6 +50,9 @@ function TripRouteExportMenu({ trip }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const exportController = useTripRouteExport(trip);
+  // #1496 — исходный файл маршрута доступен только владельцу поездки, поэтому
+  // участнику блок скачивания оригинала не показывается и запрос не уходит.
+  const routeFileQuery = usePlannedTripRouteFile(trip.id, { enabled: trip.isOwner });
   const {
     input,
     disabled,
@@ -112,7 +116,14 @@ function TripRouteExportMenu({ trip }: Props) {
         </Text>
       ) : null}
 
-      <TripRouteDownloadButtons controller={exportController} />
+      <TripRouteDownloadButtons
+        controller={exportController}
+        tripId={trip.id}
+        // A disabled React Query can still expose data left in the shared cache
+        // by the previous account. The owner flag is therefore also a render
+        // boundary, not only a network-request boundary.
+        originalFile={trip.isOwner ? routeFileQuery.data ?? null : null}
+      />
 
       {!isWeb ? (
         <Text style={styles.hint} testID="trip-route-export-native-import-hint">

@@ -12,16 +12,16 @@ import { buildArticleBodyMediaIndex } from '@/components/travel/stableContent/ar
 import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
-import { LazyYouTube } from './LazyYouTubeSection'
+import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import { translate as i18nT } from '@/i18n'
 
 
-const LazyYouTubeSection = React.lazy(() =>
-  Promise.resolve(import('./LazyYouTubeSection')).then((module) => ({ default: module.LazyYouTube })),
-)
-const YouTubeSectionComponent = Platform.OS === 'web' ? LazyYouTubeSection : LazyYouTube
+// #1499: выбор web/native переехал в платформенную пару
+// `YouTubeSectionSlot(.web).tsx` — статический импорт native-ветки оставлял
+// секцию YouTube в стартовом графе web.
+const YouTubeSectionComponent = YouTubeSectionSlot
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const WEB_SR_ONLY_HEADING_STYLE = {

@@ -2,6 +2,7 @@
 
 import { haversineKm } from '@/utils/geo';
 import { isBikeQuest, isQuestForChildrenOrTeens } from '@/utils/questAudience';
+import { buildCanonicalQuestCityIndex } from '@/utils/questCityCanonical';
 import { translate as i18nT, type TranslationKey } from '@/i18n';
 
 // Русские названия стран для заголовков групп в каталоге квестов. Ключи —
@@ -166,9 +167,7 @@ export function buildQuestCityCatalog<TQuest extends QuestCatalogQuest>(quests: 
     questsByCityId: Record<string, TQuest[]>;
     canonicalCityIdById: Record<string, string>;
 } {
-    const canonicalCityIdByGroup = new Map<string, string>();
-    const canonicalCityIdById: Record<string, string> = {};
-    const questsByCityId: Record<string, TQuest[]> = {};
+    const { canonicalCityIdById, questsByCityId } = buildCanonicalQuestCityIndex(quests);
     const cities: QuestCatalogCity[] = [];
     const cityByCanonicalId = new Map<string, QuestCatalogCity>();
     const coordSumByCanonicalId = new Map<string, { lat: number; lng: number; count: number }>();
@@ -179,17 +178,7 @@ export function buildQuestCityCatalog<TQuest extends QuestCatalogQuest>(quests: 
         const name = (quest.cityName || '').trim();
         const countryCode = (quest.countryCode || '').trim().toUpperCase();
 
-        let canonicalId = canonicalCityIdById[cityId];
-        if (!canonicalId) {
-            const normalizedName = name
-                .toLowerCase()
-                .replace(/\u0451/g, String.fromCodePoint(0x435))
-                .replace(/\s+/g, ' ');
-            const groupKey = normalizedName ? `${countryCode}:${normalizedName}` : `id:${cityId}`;
-            canonicalId = canonicalCityIdByGroup.get(groupKey) || cityId;
-            canonicalCityIdByGroup.set(groupKey, canonicalId);
-            canonicalCityIdById[cityId] = canonicalId;
-        }
+        const canonicalId = canonicalCityIdById[cityId] || cityId;
 
         const city = cityByCanonicalId.get(canonicalId);
         if (!city) {
@@ -202,8 +191,6 @@ export function buildQuestCityCatalog<TQuest extends QuestCatalogQuest>(quests: 
             if (!city.name && name) city.name = name;
             if (!city.countryCode && countryCode) city.countryCode = countryCode;
         }
-
-        (questsByCityId[canonicalId] ||= []).push(quest);
 
         // `Number(null)` — это 0, поэтому квест без координат нельзя пускать в
         // сумму: он утащил бы центр города в Гвинейский залив.

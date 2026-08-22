@@ -387,6 +387,8 @@ ${buildInvalidateSchedulerScript({
         const ROUTE_COLOR = ${serializeForInlineScript(DESIGN_COLORS.routeLine)};
         const ROUTE_SURFACE = ${serializeForInlineScript(themeColors.surface)};
         const ROUTE_START = ${serializeForInlineScript(themeColors.success || themeColors.primary)};
+        // #1496 — цвет оригинального (неупрощённого) трека из загруженного файла.
+        const ORIGINAL_TRACK_COLOR = ${serializeForInlineScript(themeColors.accentDark || themeColors.accent || DESIGN_COLORS.travelPoint)};
 
         // Экранируем значения точек перед вставкой в HTML popup: поля приходят с бэка
         // и могут содержать <, >, ", ' и & — без эскейпа это XSS в WebView (#113).
@@ -399,6 +401,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
             const clusters = Array.isArray(data.clusters) ? data.clusters : [];
             const routePoints = Array.isArray(data.routePoints) ? data.routePoints : [];
             const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints;
+            const originalTrack = Array.isArray(data.originalTrack) ? data.originalTrack : [];
             const routeMode = data.mode || 'radius';
             const usesServerClusters = data.usesServerClusters === true;
             const pointsOnly = data.pointsOnly === true;
@@ -502,6 +505,27 @@ ${ESCAPE_HTML_FN_SCRIPT}
                 });
                 try {
                   map.fitBounds(routePolyline.getBounds(), { padding: [70, 70] });
+                } catch (e) {}
+              }
+              // Оригинальный трек — отдельная полилиния поверх линии маршрута:
+              // упрощённые точки и построенная по ним линия остаются на карте.
+              if (originalTrack.length >= 2) {
+                L.polyline(originalTrack, {
+                  color: ORIGINAL_TRACK_COLOR,
+                  weight: 3,
+                  opacity: 0.95,
+                  lineCap: 'round',
+                  lineJoin: 'round'
+                }).addTo(routeLayer);
+                originalTrack.forEach(function(point) {
+                  if (Array.isArray(point) && isFinite(point[0]) && isFinite(point[1])) {
+                    routeBounds.extend(point);
+                  }
+                });
+                // Оригинал может выходить за пределы упрощённой линии, по которой
+                // карта уже подогналась выше, — досаживаем кадр на общие границы.
+                try {
+                  if (routeBounds.isValid()) map.fitBounds(routeBounds, { padding: [70, 70] });
                 } catch (e) {}
               }
               routePoints.forEach(function(point, index) {

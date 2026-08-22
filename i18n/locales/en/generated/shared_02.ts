@@ -310,4 +310,10 @@ export const sharedGenerated2 = {
   "utils.mapWebOverlays.osmRoutesOverlay.div_style_margin_top_6px_a_href_value1_targe_6d82870c.text01": "Open in OpenStreetMap",
   "hooks.usePlaceRating.otsenka_sohranena_67bda0e0": "Rating saved",
   "hooks.usePlaceRating.ne_udalos_sohranit_otsenku_04aaa4f0": "Couldn't save rating",
+  "services.notifications.returnReminderTitle": "More quests nearby",
+  "services.notifications.returnReminderBody": "You finished “{{value1}}”. There are {{count}} more quests nearby.",
+  "services.notifications.returnReminderBody_one": "You finished “{{value1}}”. There is {{count}} more quest nearby.",
+  "services.notifications.returnReminderBody_few": "You finished “{{value1}}”. There are {{count}} more quests nearby.",
+  "services.notifications.returnReminderBody_many": "You finished “{{value1}}”. There are {{count}} more quests nearby.",
+  "services.notifications.returnReminderBody_other": "You finished “{{value1}}”. There are {{count}} more quests nearby.",
 } as const

@@ -1,4 +1,6 @@
-import { TravelMediaImage, TravelsForMap, TravelsMap } from '@/types/types';
+import type { Travel, TravelMediaImage, TravelsForMap, TravelsMap } from '@/types/types';
+import { ApiError } from '@/api/clientErrors';
+import { parseNearTravelsEnvelope } from '@/api/travelNearResponse';
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
 import { normalizeNumericArray } from '@/utils/filterQuery';
 import { devError, devWarn } from '@/utils/logger';
@@ -8,6 +10,7 @@ import { Platform } from 'react-native';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { isBareMediaEndpointUrl, isPrivateOrLocalHost } from '@/utils/mediaUrl';
+import { translate as i18nT } from '@/i18n';
 
 const normalizeCoordString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -310,28 +313,27 @@ export const fetchTravelsNear = async (
   travel_id: number,
   signal?: AbortSignal,
   limit?: number,
-) => {
+): Promise<Travel[]> => {
   try {
     const urlTravel = withOptionalLimit(`${GET_TRAVELS}${travel_id}/near/`, limit);
     const res = await fetchWithTimeout(urlTravel, { signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
-      // 404 is a common/expected case for travels that don't have a near-list on backend.
-      // We treat it as an empty result to avoid noisy error logs.
-      if (res.status === 404) {
-        devWarn('Travels near not found (404):', urlTravel);
-        return [];
-      }
-
       devError('Error fetching travels near: HTTP', res.status, res.statusText, urlTravel);
-      return [];
+      throw new ApiError(
+        res.status,
+        i18nT('errorsStatic:api.common.requestFailed', {
+          details: res.statusText || `HTTP ${res.status}`,
+        }),
+      );
     }
-    return await safeJsonParse<unknown[]>(res, []);
+    const payload = await safeJsonParse<unknown>(res);
+    return parseNearTravelsEnvelope(payload, limit);
   } catch (e: unknown) {
     if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching travels near:', e);
-    return [];
+    throw e;
   }
 };
 

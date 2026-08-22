@@ -9,6 +9,7 @@ import QuestCard from '@/screens/tabs/QuestCard'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import { useQuestsList } from '@/hooks/useQuestsApi'
+import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit'
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -30,6 +31,10 @@ const getRouteParam = (value: string | string[] | undefined): string => {
 }
 
 export default function QuestsByCityScreen() {
+  // #1484: возвратное напоминание ведёт именно на лендинг города, поэтому
+  // возврат считается и здесь, а не только в общем каталоге.
+  useQuestReturnVisit()
+
   const params = useLocalSearchParams<{ city?: string | string[] }>()
   const cityParam = getRouteParam(params.city)
   const router = useRouter()

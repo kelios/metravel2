@@ -41,6 +41,16 @@ select only the cases required by the assigned Task Contract for non-release wor
   account mode, locale, scenario, expected/actual result, and ignored evidence path.
 - Do not expose Apple accounts, Team ID, UDID, tokens, reviewer credentials,
   signing material, or notification payload secrets.
+- For local device signing, resolve `DEVELOPMENT_TEAM` from the selected Xcode
+  team or provisioning profile `TeamIdentifier`; never infer it from the
+  parenthesized suffix of a `security find-identity` display name. Before
+  declaring a certificate missing, verify that the profile matches the bundle
+  and device, contains the required entitlements, and that one of its
+  `DeveloperCertificates` fingerprints matches a local codesigning identity.
+- Treat an Xcode-managed profile as automatic-signing state. If its capabilities
+  are stale, refresh it with automatic signing only when the user authorized the
+  profile mutation; do not force that profile through manual signing. Redact the
+  team, device, certificate, profile, and account identifiers from evidence.
 - Do not replace physical/TestFlight evidence with a simulator screenshot.
 - If the required iPhone is not visible, locked, or needs trust/login, stop and
   ask the owner for that exact connect/unlock/trust action, then resume the same

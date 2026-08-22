@@ -319,4 +319,6 @@ export const profileGenerated1 = {
   "components.screens.profile.CountryTravelsPanel.vse_marshruty_04297191": "All routes",
   "components.screens.profile.profileCountries.daty_ne_ukazany_de171a90": "no dates specified",
   "components.screens.profile.profileCountries.pervaya_izvestnaya_data_value1_924a9e90": "first known date: {{value1}}",
+  "components.profile.ProfileQuestCollections.title": "City collections",
+  "components.profile.ProfileQuestCollections.subtitle": "Cities where you started collecting quests",
 } as const

@@ -1,7 +1,11 @@
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
+import type { TransportMode } from '@/types/route'
 
 export type TripTransport = 'car' | 'bike' | 'foot' | 'public' | 'mixed'
-export type RoutableTripTransport = Extract<TripTransport, 'car' | 'bike' | 'foot'>
+// #1491: маршрутизируемое подмножество не перечисляется руками, а берётся
+// пересечением со списком режимов карты. Разъедутся таксономии — сломается
+// компиляция, а не поведение планировщика.
+export type RoutableTripTransport = Extract<TripTransport, TransportMode>
 // Профили ORS cycling-regular/road/mountain: бэк принимает и отдаёт эти же ключи.
 export type TripBikeType = 'regular' | 'road' | 'mountain'
 export type TripVisibility = 'public' | 'followers' | 'private'

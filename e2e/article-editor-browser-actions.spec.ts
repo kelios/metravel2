@@ -9,6 +9,7 @@ const tinyPngBuffer = Buffer.from(
 );
 
 const uploadedImageUrl = 'https://example.com/e2e-editor-upload.png';
+const draftTravelId = 7100;
 const upsertPatterns = [
   '**/api/travels/upsert/**',
   '**/api/travels/upsert/',
@@ -32,7 +33,7 @@ async function maybeAcceptCookies(page: Page) {
 }
 
 async function mockTravelUpsert(page: Page) {
-  let nextId = 7100;
+  let nextId = draftTravelId;
 
   for (const pattern of upsertPatterns) {
     await page.route(pattern, async (route) => {
@@ -83,22 +84,20 @@ async function mockImageUpload(page: Page) {
 }
 
 async function mockDraftDetail(page: Page) {
-  await page.route('**/travels/*', async (route) => {
+  const expectedPath = `/api/travels/${draftTravelId}`;
+  await page.context().route((url) => url.pathname.replace(/\/+$/, '') === expectedPath, async (route) => {
     const request = route.request();
-    const pathname = new URL(request.url()).pathname;
-    const match = pathname.match(/\/api\/travels\/(\d+)\/$/);
-    if (request.method() !== 'GET' || !match) {
+    if (request.method() !== 'GET' || request.resourceType() === 'document') {
       await route.fallback();
       return;
     }
 
-    const id = Number(match[1]);
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        id,
-        slug: String(id),
+        id: draftTravelId,
+        slug: String(draftTravelId),
         name: 'E2E Article Editor',
         description: '<p>Draft preview body</p>',
         publish: false,
@@ -221,31 +220,88 @@ test.describe('ArticleEditor browser actions', () => {
     await expect(editor).toContainText(text);
   });
 
-  test('opens the saved travel in a new tab and keeps the editor tab open', async ({ page }) => {
+  test('opens the saved draft for its author on desktop and mobile web', async ({ page }, testInfo) => {
     await mockDraftDetail(page);
 
     await page.getByTestId('travel-wizard-save').click({ force: true });
     await expect(page).toHaveURL(
-      (url) => url.pathname === '/travel/new' && url.searchParams.get('id') === '7100',
+      (url) => url.pathname === '/travel/new' && url.searchParams.get('id') === String(draftTravelId),
       { timeout: 20_000 },
     );
 
     const editorUrl = page.url();
-    await page.getByTestId('travel-wizard-more').click({ force: true });
-    const newTabPromise = page.context().waitForEvent('page', { timeout: 20_000 });
-    await page.getByRole('menuitem', { name: 'Открыть путешествие' }).click({ force: true });
+    const documentResponses: Array<{ url: string; status: number }> = [];
+    const detailStatuses: number[] = [];
+    const draftRuntimeErrors: string[] = [];
+    const context = page.context();
 
-    // Вкладка открывается на `about:blank` в стеке клика и переезжает на адрес
-    // путешествия только после успешного сохранения — ждём именно перехода.
-    const newTab = await newTabPromise;
-    await newTab.waitForURL(/\/travels\/[^/]+$/, { timeout: 20_000 });
+    context.on('response', (response) => {
+      const request = response.request();
+      const url = new URL(response.url());
+      if (request.resourceType() === 'document') {
+        documentResponses.push({ url: response.url(), status: response.status() });
+      }
+      if (
+        url.pathname.replace(/\/+$/, '') === `/api/travels/${draftTravelId}` &&
+        request.resourceType() !== 'document'
+      ) {
+        detailStatuses.push(response.status());
+      }
+    });
+    context.on('page', (draftPage) => {
+      draftPage.on('console', (message) => {
+        const text = message.text();
+        // Chromium reports unrelated background API failures as an opaque console
+        // resource error. The document and draft-detail responses are asserted below
+        // with their URLs/statuses; keep this bucket for actionable app/runtime errors.
+        if (message.type() === 'error' && !text.startsWith('Failed to load resource:')) {
+          draftRuntimeErrors.push(text);
+        }
+      });
+      draftPage.on('pageerror', (error) => draftRuntimeErrors.push(error.message));
+    });
 
-    // Адрес новой вкладки строится по слагу, а не по числовому id: свежий запрос
-    // документа резолвит сервер, и id для него — 404. Слаг генерируется из
-    // названия («E2E Article Editor» из beforeEach) плюс случайный хвост.
-    expect(new URL(newTab.url()).pathname).toMatch(/^\/travels\/e2e-article-editor-[a-z0-9]{4}$/);
-    expect(page.url()).toBe(editorUrl);
-    await newTab.close();
+    for (const surface of ['desktop', 'mobile'] as const) {
+      if (surface === 'mobile') {
+        await page.setViewportSize({ width: 390, height: 844 });
+      }
+
+      await page.getByTestId('travel-wizard-more').click({ force: true });
+      const openTravelAction = page.getByRole(surface === 'desktop' ? 'menuitem' : 'button', {
+        name: 'Открыть путешествие',
+      });
+      await expect(openTravelAction).toBeVisible();
+      const [newTab] = await Promise.all([
+        context.waitForEvent('page', { timeout: 20_000 }),
+        openTravelAction.click({ force: true }),
+      ]);
+
+      // The tab opens synchronously as `about:blank`, then uses an exported editor
+      // shell and switches to detail without a second server-filtered document request.
+      await newTab.waitForURL(new RegExp(`/travels/${draftTravelId}$`), { timeout: 20_000 });
+
+      // The authenticated SPA requests the draft by numeric id after bootstrapping.
+      expect(new URL(newTab.url()).pathname).toBe(`/travels/${draftTravelId}`);
+      await expect(newTab.getByText('Draft preview body')).toBeVisible({ timeout: 20_000 });
+      await newTab.screenshot({
+        path: testInfo.outputPath(`author-draft-preview-${surface}.png`),
+        fullPage: false,
+      });
+      expect(page.url()).toBe(editorUrl);
+      await newTab.close();
+    }
+
+    const bootstrapDocuments = documentResponses.filter(({ url }) => {
+      const parsed = new URL(url);
+      return parsed.pathname === '/travel/new' && parsed.searchParams.get('previewTravel') === String(draftTravelId);
+    });
+    expect(bootstrapDocuments).toHaveLength(2);
+    expect(bootstrapDocuments.every(({ status }) => status === 200)).toBe(true);
+    expect(
+      documentResponses.some(({ url }) => new URL(url).pathname === `/travels/${draftTravelId}`),
+    ).toBe(false);
+    expect(detailStatuses).toEqual([200, 200]);
+    expect(draftRuntimeErrors).toEqual([]);
   });
 
   test('opens anchor modal and confirms insertion flow', async ({ page }) => {

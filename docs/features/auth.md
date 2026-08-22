@@ -1,6 +1,6 @@
 # Фича: auth (вход и регистрация)
 
-**Последняя актуализация:** 2026-08-19
+**Последняя актуализация:** 2026-08-22
 
 ## TL;DR
 
@@ -78,10 +78,10 @@ Apple в Android-приложении отсутствует осознанно:
 прежними. Это конфигурационный гейт того же вида, что
 `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED`, а не заглушка.
 
-CSP (обязательное условие, ещё не выполнено): прод-политика должна разрешать
+CSP выполнена в `#1508`: production-политика разрешает
 `https://appleid.cdn-apple.com` в `script-src` и `https://appleid.apple.com` в
-`connect-src` и `frame-src` — иначе браузер не загрузит Apple JS SDK и кнопка
-на проде не сработает. Конфигурация nginx backend-owned: правится только в
+`connect-src` и `frame-src`, поэтому этот слой больше не блокирует Apple JS SDK.
+Конфигурация nginx backend-owned: правится только в
 `deploy/prod/nginx/nginx.conf` backend-репозитория, задача `#1508`. Файл
 `nginx/nginx.conf` в этом репозитории — read-only копия, его правка на прод не
 влияет (`docs/RULES.md` → «Nginx config ownership»). Проверка факта:

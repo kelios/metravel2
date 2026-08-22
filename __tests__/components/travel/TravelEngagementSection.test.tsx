@@ -19,6 +19,11 @@ jest.mock('@/components/travel/CTASection', () => {
   return () => <div data-testid="mock-cta" />;
 });
 
+jest.mock('@/components/common/EmailSubscriptionForm', () => {
+  const { View } = jest.requireActual('react-native');
+  return () => <View testID="mock-email-subscription" />;
+});
+
 const baseTravel: any = {
   id: 1,
   name: 'Demo Travel',
@@ -38,6 +43,8 @@ describe('TravelDetailsFooterSection', () => {
     );
     await waitFor(() => {
       expect(result.getAllByTestId('travel-details-telegram')).toHaveLength(1);
+      expect(result.getAllByTestId('travel-details-email-subscribe')).toHaveLength(1);
+      expect(result.getAllByTestId('mock-email-subscription')).toHaveLength(1);
     });
   });
 

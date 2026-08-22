@@ -9,6 +9,7 @@ import NavigationIcon from '@/components/layout/NavigationIcon'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
+import { formatDistance } from '@/utils/distanceCalculator'
 import { getQuestAgeBadgeLabel, getQuestAgeCategory, isBikeQuest } from '@/utils/questAudience'
 import { buildQuestPath } from '@/utils/routePaths'
 import type { QuestMeta } from '@/utils/questAdapters'
@@ -53,6 +54,14 @@ type Props = {
   style?: any
   analyticsSource?: string
   analyticsContextId?: string | number | null
+  /**
+   * Расстояние до квеста, км. Приходит от вызывающего, потому что точка
+   * отсчёта у блоков разная: у «следующего квеста» (#1484) это только что
+   * пройденный квест, а не пользователь.
+   */
+  distanceKm?: number | null
+  /** Своё событие вызывающего; отправляется до перехода. */
+  onPressCard?: () => void
 }
 
 /**
@@ -71,6 +80,8 @@ export function QuestForCityCard({
   style,
   analyticsSource = 'quest_card',
   analyticsContextId,
+  distanceKm,
+  onPressCard,
 }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
@@ -93,10 +104,15 @@ export function QuestForCityCard({
   )
   const handlePress = useCallback(() => {
     if (!href) return
+    onPressCard?.()
     trackQuestCardClicked(analyticsParams)
     router.push(href as any)
-  }, [analyticsParams, href, router])
+  }, [analyticsParams, href, onPressCard, router])
   const chips: { key: string; icon: NavigationIconName; label: string }[] = []
+  // Расстояние первым: в блоке «следующий квест рядом» именно оно отвечает на
+  // вопрос «дойду ли я туда сейчас».
+  if (typeof distanceKm === 'number' && Number.isFinite(distanceKm))
+    chips.push({ key: 'distance', icon: 'navigation', label: formatDistance(distanceKm) })
   if (quest.points) chips.push({ key: 'points', icon: 'map-pin', label: formatPoints(quest.points) })
   if (quest.durationMin)
     chips.push({ key: 'duration', icon: 'clock', label: formatDuration(quest.durationMin) })

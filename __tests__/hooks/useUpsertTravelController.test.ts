@@ -207,6 +207,53 @@ describe('useUpsertTravelController', () => {
     await i18n.changeLanguage('ru');
   });
 
+  it('keeps the saved badge renderable on Android without Intl.RelativeTimeFormat (#1511)', async () => {
+    const originalRelativeTimeFormat = Intl.RelativeTimeFormat;
+    Object.defineProperty(Intl, 'RelativeTimeFormat', {
+      configurable: true,
+      value: undefined,
+    });
+
+    try {
+      const savedAt = new Date('2026-08-20T10:00:00.000Z');
+      const now = Date.parse('2026-08-20T10:05:00.000Z');
+
+      const expectedByLocale = {
+        ru: '5 минут назад',
+        en: '5 minutes ago',
+        be: '5 хвілін таму',
+        uk: '5 хвилин тому',
+        pl: '5 minut temu',
+      } as const;
+      for (const [locale, expected] of Object.entries(expectedByLocale)) {
+        await i18n.changeLanguage(locale);
+        expect(formatAutosaveLastSaved(savedAt, now)).toBe(expected);
+      }
+
+      await i18n.changeLanguage('ru');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+      mockUseTravelFormData.mockReturnValue({
+        ...baseForm,
+        autosave: {
+          ...baseForm.autosave,
+          status: 'saved',
+          phase: 'saved',
+          lastSaved: savedAt,
+        },
+      });
+
+      const { result } = renderHook(() => useUpsertTravelController());
+      expect(result.current.autosaveBadge).toBe('Сохранено 5 минут назад');
+    } finally {
+      Object.defineProperty(Intl, 'RelativeTimeFormat', {
+        configurable: true,
+        value: originalRelativeTimeFormat,
+      });
+      await i18n.changeLanguage('ru');
+    }
+  });
+
   it('refreshes the visible saved-relative-time while the editor stays open', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-20T10:01:00.000Z'));

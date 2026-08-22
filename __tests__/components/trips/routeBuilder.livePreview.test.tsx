@@ -7,6 +7,7 @@ import { act, fireEvent, render, within } from '@testing-library/react-native'
 import type { PlannedTrip } from '@/api/plannedTrips'
 import type { UseMapRoutingResult } from '@/components/map-core/useMapRouting'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 import { PREVIEW_DEBOUNCE_MS } from '@/components/trips/planning/useTripRoutePreview'
 
 const mockEngine: {
@@ -184,6 +185,12 @@ const deliver = (result: UseMapRoutingResult) => {
   })
 }
 
+
+// #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
+// адресами через React Query — конструктору нужен клиент, как и в приложении.
+const renderRouteBuilder = (element: React.ReactElement) =>
+  render(element, { wrapper: createQueryWrapper().Wrapper })
+
 describe('RouteBuilder live route preview', () => {
   beforeEach(() => {
     jest.useFakeTimers()
@@ -197,7 +204,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('leaves the saved route to the backend and does not build anything', () => {
-    const { queryByTestId, getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { queryByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(queryByTestId('trip-route-preview-engine')).toBeNull()
     expect(getByTestId('route-map-geometry').props.children).toBe('3')
@@ -205,7 +212,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('does not call a backend summary a local estimate when routing state is absent', () => {
-    const { getByTestId, queryByText } = render(
+    const { getByTestId, queryByText } = renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ routingState: null })} />,
     )
 
@@ -214,7 +221,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('waits out the debounce before asking the routing engine', () => {
-    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     editRoute(getByTestId)
 
@@ -237,7 +244,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('draws the routed geometry and shows engine numbers without saving', () => {
-    const { getByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     editRoute(getByTestId)
     settleDebounce()
@@ -256,7 +263,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('routes a fourth coordinate point and updates the stops chip without saving', () => {
-    const { getByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'QA Android point')
@@ -283,7 +290,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('announces a direct line with a retry instead of passing it off as a route', () => {
-    const { getByTestId, queryByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     editRoute(getByTestId)
     settleDebounce()
@@ -304,7 +311,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('drops a stale answer as soon as the route changes again', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     editRoute(getByTestId)
     settleDebounce()
@@ -318,7 +325,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('rejects a late answer from the engine mounted for the previous points', () => {
-    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     editRoute(getByTestId)
     settleDebounce()
@@ -341,7 +348,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('rejects a late answer from the previous retry attempt', () => {
-    const { getByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     editRoute(getByTestId)
     settleDebounce()
@@ -362,7 +369,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('updates the elevation profile together with the preview', () => {
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ transport: 'bike' })} />,
     )
 
@@ -385,7 +392,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('keeps the saved route when only a point label changed', () => {
-    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-edit-0'))
     fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Минск (старт)')
@@ -401,7 +408,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('keeps showing progress until the engine actually answers', () => {
-    const { getByTestId, queryByText } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     editRoute(getByTestId)
     settleDebounce()
@@ -415,7 +422,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('counts a coordinate-less point in the stops chip right away', () => {
-    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(within(getByTestId('route-summary')).queryByText('3')).toBeTruthy()
 
@@ -432,7 +439,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('never auto-routes public transport and says the line is schematic', () => {
-    const { getByTestId, queryByTestId, queryByText } = render(
+    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ transport: 'public', routingState: null })} />,
     )
 

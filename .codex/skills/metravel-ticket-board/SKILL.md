@@ -53,6 +53,17 @@ Read first:
   `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и человеческим языком».
 - Visible UI/UX tasks must reference durable `Design evidence` (tracked `docs/` mock or stable Figma URL) and name the required states/platforms. The current board API has no file-attachment field, so never reference a temporary `.codex-temp/` artifact as the task attachment.
 - Human work and agent work must be separate tasks linked by `blocked_by_id`, `depends_on_ids`, or `related_to_ids`.
+- `needs_human=true` и `Task Contract` взаимоисключающи. Флаг ставится только на карточку,
+  которая целиком является ручным действием человека (апрув владельца, CAPTCHA, секрет, чужой
+  кабинет, публикация в сторе), и такая карточка пишется по
+  `.claude/skills/metravel-issue/human-task.md` без контракта. Реализация backend-задачи
+  владельцем бэкенда — не `needs_human`: владельца кодирует `area=back`, а лишний флаг вынимает
+  карточку из приёмки.
+- Имя поля контракта — идентификатор: `Scope:` с начала строки. `**Scope.**` или `- Scope:`
+  равносильны отсутствию поля, потому что гейты и приёмка ищут строку `Имя:`.
+- Контракт описания проверяется машиной: `scripts/lib/boardTaskContract.mjs` плюс PreToolUse-хук
+  `.claude/hooks/task-quality-gate.mjs`. Черновик — `node .claude/hooks/task-quality-gate.mjs
+  check --file <файл.md>`, борд целиком — `npm run board:audit`.
 - If board tools return HTTP 401, refresh the staff token through `.env.e2e` following `docs/TASK_BOARD_MCP.md`; never print token values.
 - Do not write feature code.
 - Move work to `done` only through an acceptance pass: normally

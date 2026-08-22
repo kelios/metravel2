@@ -9,6 +9,7 @@ import { BadgeUnlockToast } from '@/components/achievements'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
 import { useQuestRatingMutation } from '@/hooks/useQuestRating'
+import QuestNextStepSection from './QuestNextStepSection'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestReviewSection from './QuestReviewSection'
 import type { QuestMapApp } from './questWizardHelpers'
@@ -397,6 +398,7 @@ export function QuestFinalePanel({
   questCompleted,
   stepsMissingForCompletion,
   finishedEarly,
+  completionFinishedAt,
   completedCount,
   stepsCount,
   frameW,
@@ -410,6 +412,11 @@ export function QuestFinalePanel({
   onContinue,
   questId,
   questNumericId,
+  questTitle,
+  cityId,
+  cityName,
+  cityLat,
+  cityLng,
 }: SharedProps & {
   finale: FinaleLike
   /** Игрок закончил маршрут: финал показываем целиком, а не приглашение вернуться к точкам. */
@@ -420,6 +427,8 @@ export function QuestFinalePanel({
   stepsMissingForCompletion: number
   /** Прохождение неполное по воле игрока: пропущенная далёкая точка или финиш на месте. */
   finishedEarly: boolean
+  /** Ненулевой только когда прохождение завершилось в текущей сессии. */
+  completionFinishedAt: number | null
   completedCount: number
   stepsCount: number
   frameW: number
@@ -433,6 +442,12 @@ export function QuestFinalePanel({
   onContinue?: () => void
   questId?: string
   questNumericId?: number
+  /** Название квеста — для возвратного напоминания через неделю. */
+  questTitle: string
+  cityId?: string
+  cityName?: string
+  cityLat?: number
+  cityLng?: number
 }) {
   return (
     <View style={styles.completionScreen}>
@@ -554,6 +569,21 @@ export function QuestFinalePanel({
           ) : null}
 
           <QuestFinaleFeedback questId={questId} questNumericId={questNumericId} />
+
+          {/* Второе действие (#1484): коллекция города и следующий квест рядом.
+              Только за засчитанное прохождение — при недоборе точек следующий
+              шаг игрока не «новый квест», а возврат к пропущенным точкам. */}
+          {questCompleted && (
+            <QuestNextStepSection
+              questId={questId}
+              questTitle={questTitle}
+              cityId={cityId}
+              cityName={cityName}
+              cityLat={cityLat}
+              cityLng={cityLng}
+              completionFinishedAt={completionFinishedAt}
+            />
+          )}
 
           {/* Путь назад к пропущенным точкам: порог перестанет быть недобранным,
               как только на них появятся ответы. */}
