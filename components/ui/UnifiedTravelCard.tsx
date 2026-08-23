@@ -94,6 +94,14 @@ type Props = {
    * полей `dominant_color` по бокам.
    */
   mediaAspectRatio?: number;
+  /**
+   * #1487: ширина медиа-слота, известная вызывающему (сетка/рейл). Идёт ТОЛЬКО
+   * в сайзинг растра — native-URL Glide и intrinsic-подсказку web-`<img>`, — и
+   * никогда в раскладку: геометрию задаёт `mediaAspectRatio`. Без неё на native
+   * в `buildNativeSharpImageSource` не остаётся ни одного числа, и ExpoImage
+   * тянет ОРИГИНАЛ обложки (регрессия #1103).
+   */
+  mediaSlotWidth?: number;
   contentContainerStyle?: StyleProp<ViewStyle>;
   insetMedia?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -133,6 +141,7 @@ function UnifiedTravelCard({
   width,
   imageHeight,
   mediaAspectRatio,
+  mediaSlotWidth,
   contentContainerStyle,
   insetMedia = false,
   style,
@@ -571,14 +580,28 @@ function UnifiedTravelCard({
     Number.isFinite(mediaAspectRatio) &&
     mediaAspectRatio > 0 &&
     imageHeight !== 0;
-  // `ImageCardMedia` кладёт числовую высоту прямо в бокс картинки, поэтому при
-  // адаптивном слоте она обязана совпадать с ним: ширина карточки известна —
-  // считаем из пропорций, неизвестна (web, где ширину задаёт сетка) — не задаём
-  // вовсе, иначе картинка осталась бы прежней ландшафтной полосой внутри
-  // высокого слота.
+  // Числа для сайзинга растра. `ImageCardMedia` использует `width`/`height` и как
+  // геометрию бокса, и как основу URL (`buildNativeSharpImageSource`:
+  // `baseWidth = width ?? height`), поэтому при адаптивном слоте их нельзя ни
+  // обнулить, ни оставить прежней фиксированной высотой:
+  //   — обнулить значит лишить native единственного числа, и Glide получит
+  //     оригинал обложки вместо `?w=` (#1103);
+  //   — оставить `imageHeight` значит просить ступень под ПРЕЖНЮЮ ландшафтную
+  //     полосу, а рисуется теперь весь слот.
+  // Берём фактическую ширину слота и высоту из пропорций, а геометрию бокса
+  // ниже принудительно возвращаем к 100% — тогда числа отвечают только за URL.
+  const mediaRasterWidth = hasMediaAspectRatio
+    ? typeof mediaSlotWidth === 'number' && mediaSlotWidth > 0
+      ? Math.round(mediaSlotWidth)
+      : typeof width === 'number' && width > 0
+        ? Math.round(width)
+        : undefined
+    : typeof width === 'number'
+      ? width
+      : undefined;
   const mediaPixelHeight = hasMediaAspectRatio
-    ? typeof width === 'number' && width > 0
-      ? Math.round(width / (mediaAspectRatio as number))
+    ? mediaRasterWidth != null
+      ? Math.round(mediaRasterWidth / (mediaAspectRatio as number))
       : undefined
     : typeof imageHeight === 'number'
       ? imageHeight
@@ -609,7 +632,7 @@ function UnifiedTravelCard({
           <ImageCardMedia
             src={mediaProps?.webResponsiveSource?.src ?? displayImageUrl}
             alt={title}
-            width={typeof width === 'number' ? width : undefined}
+            width={mediaRasterWidth}
             height={mediaPixelHeight}
             fit={mediaFit}
             blurBackground={mediaProps?.blurBackground ?? true}
@@ -621,7 +644,15 @@ function UnifiedTravelCard({
             placeholderColor={mediaProps?.placeholderColor}
             placeholderSrc={mediaProps?.placeholderSrc}
             recyclingKey={mediaProps?.recyclingKey}
-            style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
+            style={[
+              StyleSheet.absoluteFill,
+              // #1487: числа выше нужны URL, а не раскладке. `absoluteFill` сам
+              // по себе не гасит `width`/`height` из пропов (и в CSS, и в Yoga
+              // явный размер выигрывает у пары инсетов), поэтому бокс явно
+              // возвращается к размеру родителя — им управляет `aspectRatio`.
+              hasMediaAspectRatio ? ({ width: '100%', height: '100%' } as const) : null,
+              isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null,
+            ]}
             loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
             priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
             prefetch={mediaProps?.prefetch ?? false}

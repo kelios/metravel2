@@ -24,6 +24,8 @@ import {
   collectFirstScreenElements,
   collectObservedProfile,
   createNetworkTracker,
+  applyCpuThrottling,
+  MOBILE_THROTTLE_PROFILE,
 } from './helpers/perfBudget'
 import {
   FORBIDDEN_SHIFT_SOURCES,
@@ -266,8 +268,9 @@ for (const target of PAGES) {
         await page.setViewportSize(
           profile === 'mobile' ? { width: 412, height: 823 } : { width: 1280, height: 900 },
         )
-        const cdp = await page.context().newCDPSession(page)
-        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+        // #1499: CPU-троттлинг идёт через общий хелпер, чтобы множитель жил
+        // одним определением на все перф-гейты, а не тремя копиями.
+        await applyCpuThrottling(page, MOBILE_THROTTLE_PROFILE.cpuRate)
       }
 
       await injectPerfObservers(page)

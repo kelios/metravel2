@@ -102,12 +102,50 @@ describe('#1487 пропорции медиа-бокса UnifiedTravelCard', () 
     expect(props.height).toBe(Math.round(386 / 0.75))
   })
 
-  it('без известной ширины карточки высота не навязывается картинке', () => {
-    // Web: ширину задаёт сетка, поэтому число противоречило бы боксу.
+  it('на native без ширины карточки сайзинг берётся из mediaSlotWidth', () => {
+    // Регрессия #1103: на native `width` карточки не приходит ни от одного
+    // консьюмера, и раньше единственным числом был `imageHeight`. Если не отдать
+    // ничего, `buildNativeSharpImageSource` вернёт null и ExpoImage потянет
+    // ОРИГИНАЛ обложки вместо `?w=`.
+    Platform.OS = 'android'
+    renderCard({ imageHeight: 270, mediaAspectRatio: 1, mediaSlotWidth: 358 })
+
+    const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    expect(props.width).toBe(358)
+    expect(props.height).toBe(358)
+    // `baseWidth = width ?? height` в buildNativeSharpImageSource обязан быть числом
+    expect(props.width ?? props.height).toEqual(expect.any(Number))
+  })
+
+  it('без ширины слота и без ширины карточки сайзинг не выдумывается', () => {
     Platform.OS = 'web'
     renderCard({ imageHeight: 270, mediaAspectRatio: 1 })
 
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    expect(props.width).toBeUndefined()
     expect(props.height).toBeUndefined()
+  })
+
+  it('числа сайзинга не задают геометрию: бокс картинки возвращён к 100%', () => {
+    // Иначе numeric width/height ужали бы абсолютный бокс внутри слота с
+    // aspectRatio — тот же дефект, что чинился height: auto у контейнера.
+    Platform.OS = 'ios'
+    renderCard({ imageHeight: 270, mediaAspectRatio: 1, mediaSlotWidth: 358 })
+
+    const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    const flat = StyleSheet.flatten(props.style) as Record<string, unknown>
+    expect(flat.width).toBe('100%')
+    expect(flat.height).toBe('100%')
+  })
+
+  it('без пропорций стиль картинки не переопределяет размер', () => {
+    Platform.OS = 'ios'
+    renderCard({ imageHeight: 270, width: 358 })
+
+    const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    const flat = StyleSheet.flatten(props.style) as Record<string, unknown>
+    expect(flat.width).toBeUndefined()
+    expect(flat.height).toBeUndefined()
+    expect(props.height).toBe(270)
   })
 })

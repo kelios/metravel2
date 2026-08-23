@@ -490,7 +490,7 @@ const sampleVisibleCovers = () => {
  * фильтров), их окно трогать нельзя. Если константы модели поедут, негативный
  * контроль перестанет срабатывать — это осознанная связка, а не совпадение.
  */
-const SHIPPED_WEB_DRAW_DISTANCES = [720, 600];
+const SHIPPED_WEB_DRAW_DISTANCES = [820, 760];
 
 /** Подмена lookahead на прежнее значение — только для негативного контроля. */
 const installDrawDistanceOverride = async (page: Page, forced: number) => {

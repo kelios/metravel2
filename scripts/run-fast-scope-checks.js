@@ -47,6 +47,7 @@ const {
   BASELINE_PATH: QUEST_REACHABILITY_BASELINE_PATH,
 } = require('./scan-quest-answer-reachability')
 const { BASELINE_PATH: QUEST_HINT_LEAK_BASELINE_PATH } = require('./scan-quest-hint-leak')
+const { BASELINE_PATH: QUEST_SURFACE_ANSWER_BASELINE_PATH } = require('./scan-quest-surface-answer')
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
@@ -318,6 +319,21 @@ const main = () => {
       ], { shell: false })
       if (hintLeakStatus !== 0) {
         process.exit(hintLeakStatus)
+      }
+
+      // Правило авторинга 4f: ответ не строится на том, как поверхность объекта
+      // выглядит сегодня, — перекраска и ремонт протухают молча (#1431, кейс
+      // mir-castle/church). Baseline держит контент, написанный до правила;
+      // новый цветовой или облицовочный ответ валит гейт, пока автор не
+      // подтвердит его датированным фото по порогу свежести 4f. Полный свип по
+      // проду — `npm run quest:scan-surface-answer`.
+      const surfaceAnswerStatus = runCommand('node', [
+        'scripts/scan-quest-surface-answer.js',
+        `--source=${questDataFile}`,
+        `--baseline=${QUEST_SURFACE_ANSWER_BASELINE_PATH}`,
+      ], { shell: false })
+      if (surfaceAnswerStatus !== 0) {
+        process.exit(surfaceAnswerStatus)
       }
     }
 

@@ -1818,7 +1818,108 @@
           "at": "2026-08-23",
           "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-20T12:18:57Z — подача не нужна, квота не потрачена"
         }
-      ]
+      ],
+      "indexCheck": {
+        "checkedAt": "2026-08-23",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+          "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
+          "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+          "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
+          "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
+          "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
+          "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+          "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru",
+          "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
+          "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta"
+        ],
+        "note": "Терминальный замер 23.08 ПОСЛЕ подачи: 10/10 в индексе, googleCanonical у всех десяти равен новому адресу. Хронология: проба ДО открытия браузера показала 8/10 уже в индексе — эти восемь записаны already-indexed и квоту не тратили; кликать пришлось только по smotrovaia-bashnia-eliaszowka («Обнаружена, не проиндексирована») и dvorets-szembekow («URL неизвестен Google»), оба приняты с точным текстом «Отправлен запрос на индексирование» около 20:15 Europe/Warsaw, отказа «Квота превышена» в окне не было (суммарно с пятью адресами пачки day:9 — 7 принятых за окно). Замер сразу после подачи: оба уже обойдены, lastCrawlTime 2026-08-23T18:16:52Z и 18:16:53Z, статус промежуточный «Страница просканирована, но пока не проиндексирована»; повторный замер через ~25 минут — оба «Страница отправлена и проиндексирована» с тем же lastCrawlTime. То есть Google обошёл и проиндексировал в пределах получаса, а не за 3-5 суток. Ранний плюс терминален, поэтому карточка не ждёт формальной даты — так же закрывались day:1, day:9 и day:11. Гейт 200 vs 301 перед подачей: npm run seo:queue -- --batch 10 --json → ok=10 redirect=0 dead=0 unreachable=0, оба переписанных 10.08 адреса живые.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T06:03:14Z",
+            "googleCanonical": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh"
+          },
+          {
+            "url": "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-15T11:39:48Z",
+            "googleCanonical": "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki"
+          },
+          {
+            "url": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:16:52Z",
+            "googleCanonical": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh"
+          },
+          {
+            "url": "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T01:30:11Z",
+            "googleCanonical": "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg"
+          },
+          {
+            "url": "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T14:18:07Z",
+            "googleCanonical": "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt"
+          },
+          {
+            "url": "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:16:53Z",
+            "googleCanonical": "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T20:29:38Z",
+            "googleCanonical": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T03:52:29Z",
+            "googleCanonical": "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T22:16:24Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira"
+          },
+          {
+            "url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T12:18:57Z",
+            "googleCanonical": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta"
+          }
+        ]
+      }
     },
     {
       "day": 11,

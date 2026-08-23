@@ -1,6 +1,6 @@
 {
   "contractVersion": 1,
-  "note": "Шаги с «поверхностным» ответом (правило 4f), разобранные сверкой #1431: у каждого есть вердикт с источником и датой в отчёте задачи. Гейт check:fast падает только на том, что добавила правка, — новый цветовой или облицовочный ответ обязан получить датированное фото по порогу свежести 4f. Конструктивный материал (камень, сруб, бетон, металл, стекло, а также материал самого произведения — зеркала мозаики, прутья плетёной фигуры) сюда не попадает вовсе: он вне scope правила. Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих незавершённых правок. Обновлять: npm run quest:scan-surface-answer:baseline",
+  "note": "Снимок класса «поверхностный ответ» (правило 4f) в ЛОКАЛЬНЫХ данных на момент внедрения гарда — контент, написанный до появления правила. Это НЕ «разобрано сверкой #1431»: сверка шла по проду, а локальные файлы с ним штатно расходятся (правки #1431 применялись PATCH-ем прямо на прод, локальный mir-castle до сих пор несёт снятый оттуда цветовой вопрос). Смысл файла ровно один: check:fast падает только на том, что добавила правка, — новый цветовой или облицовочный ответ обязан получить датированное фото по порогу свежести 4f. Полный свип по проду (тот самый воспроизводимый аудит) — npm run quest:scan-surface-answer, он baseline не применяет и показывает весь класс. Конструктивный материал (камень, сруб, бетон, металл, стекло, а также материал самого произведения — зеркала мозаики, прутья плетёной фигуры) сюда не попадает вовсе: он вне scope правила. Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих незавершённых правок. Обновлять: npm run quest:scan-surface-answer:baseline",
   "known": {
     "scripts/amsterdam-quest-data.js": [
       "amsterdam-on-piles|9-westerkerk|dict-color|голубая",
@@ -544,6 +544,8 @@
       "polotsk-ancient|bogoyavlensky|dict-color|белён"
     ],
     "scripts/poznan-goats-quest-data.js": [
+      "poznan-goats|fara|dict-color|czerwone",
+      "poznan-goats|fara|dict-color|czerwony",
       "poznan-goats|fara|dict-color|rozowy",
       "poznan-goats|fara|dict-color|бордовые",
       "poznan-goats|fara|dict-color|бордовый",
@@ -567,6 +569,7 @@
       "riga-unfinished-city|9-kaku-nams|task-color-word|черных"
     ],
     "scripts/sasino-quest-data.js": [
+      "sasino-stilo|6-latarnia|dict-color|czerwony",
       "sasino-stilo|6-latarnia|dict-color|красная",
       "sasino-stilo|6-latarnia|dict-color|красного",
       "sasino-stilo|6-latarnia|dict-color|красном",
@@ -678,11 +681,6 @@
       "torun-copernicus|dom|task-asks-material|формулировка"
     ],
     "scripts/venice-quest-data.js": [
-      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубка",
-      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубку",
-      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубь",
-      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубь святого духа",
-      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубя",
       "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красно розовые",
       "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красноватый",
       "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красного",

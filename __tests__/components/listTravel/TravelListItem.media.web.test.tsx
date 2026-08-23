@@ -439,6 +439,47 @@ describe('TravelListItem media props on web', () => {
     expect(source?.srcSet).not.toContain('960w');
   });
 
+  // #1487: прежняя константа 480 для `home-featured` держалась на том, что
+  // квадратную обложку ограничивала ВЫСОТА ландшафтного бокса (рисовалось
+  // 316 px). Адаптивный слот это ограничение снял — крупная карточка
+  // редакционной сетки главной рисуется на все ~643 px, и 480 превратилось бы
+  // из оценки СВЕРХУ в занижение, то есть в мыло при DPR 1.
+  it('крупная карточка главной не занижает объявленную ширину отрисовки', () => {
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: {
+          cover: {
+            id: 16,
+            width: 914,
+            height: 914,
+            aspect_ratio: 1,
+            srcset: [
+              '/travel-image/16/conversions/c.webp?w=320 320w',
+              '/travel-image/16/conversions/c.webp?w=480 480w',
+              '/travel-image/16/conversions/c.webp?w=640 640w',
+              '/travel-image/16/conversions/c.webp?w=720 720w',
+              '/travel-image/16/conversions/c.webp?w=960 960w',
+            ].join(', '),
+          },
+          gallery: null,
+          address_images: null,
+        },
+      } as any,
+      visualVariant: 'home-featured',
+      imageHeight: 316,
+      isMobile: false,
+      viewportWidth: 1280,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    const sizes = Number(String(props.mediaProps?.webResponsiveSource?.sizes).replace('px', ''));
+    // Реальный слот крупной карточки на 1280 — 643 px (замер прода 2026-08-23).
+    expect(sizes).toBeGreaterThanOrEqual(643);
+    // И ширина слота уходит в сайзинг растра, иначе native остаётся без числа.
+    expect(props.mediaSlotWidth).toBeGreaterThanOrEqual(643);
+  });
+
   it('uses dominant color when the cover has no blurhash', () => {
     renderItem({
       travel: {

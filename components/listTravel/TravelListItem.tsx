@@ -264,12 +264,18 @@ function TravelListItem({
   // Оценка ширины карточки, когда сетка не сообщила её явно. Она обязана быть
   // оценкой СВЕРХУ: занижение делает ландшафтную обложку мылом (см.
   // `resolveCoverSlotGeometry`).
+  //
+  // #1487: прежняя константа 480 для `home-featured` перестала быть оценкой
+  // сверху. Она держалась на том, что квадратную обложку в ландшафтном боксе
+  // ограничивала ВЫСОТА (замер прода: рисовалось 316 px), — адаптивный слот это
+  // ограничение снял, и крупная карточка редакционной сетки рисуется на все
+  // 643 px, то есть 480 стало занижением и мылом при DPR 1. Общая ветка даёт
+  // потолок 720 на desktop (редакционный контейнер упирается в ~1170 px, значит
+  // крупная карточка 7/12 ≈ 643) и ширину вьюпорта на мобильном bento.
   const coverSlotWidth =
     typeof cardWidth === 'number'
       ? cardWidth
-      : visualVariant === 'home-featured'
-        ? 480
-        : Math.min(effectiveWidth, isMobile ? 640 : 720)
+      : Math.min(effectiveWidth, isMobile ? 640 : 720)
 
   // Высота слота теперь производная от его пропорций, а не входной константы:
   // именно её видит `resolveCoverSlotGeometry`, иначе ступень srcSet считалась
@@ -688,6 +694,7 @@ function TravelListItem({
       style={cardStyle}
       imageHeight={baseCoverSlotHeight}
       mediaAspectRatio={coverSlotRatio ?? undefined}
+      mediaSlotWidth={coverSlotWidth}
       contentPosition="belowMedia"
       contentContainerStyle={styles.cardContentContainer}
       insetMedia={false}
