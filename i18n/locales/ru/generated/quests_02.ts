@@ -82,6 +82,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.country.CH": "Швейцария",
   "screens.tabs.QuestsScreen.country.NL": "Нидерланды",
   "screens.tabs.QuestsScreen.country.BE": "Бельгия",
+  "screens.tabs.QuestsScreen.country.LU": "Люксембург",
   "screens.tabs.QuestsScreen.country.FI": "Финляндия",
   "screens.tabs.QuestsScreen.country.SE": "Швеция",
   "screens.tabs.QuestsScreen.country.NO": "Норвегия",

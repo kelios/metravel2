@@ -54,7 +54,6 @@
  * карточкой (#1455).
  */
 
-const fs = require('fs')
 const path = require('path')
 
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
@@ -63,6 +62,15 @@ const { normalizeAnswer } = require('./lib/questAnswerNormalize')
 // две копии регулярок разошлись бы, и один скан начал бы отчитываться «чисто»
 // о том, что другой считает дефектом.
 const { mixedScriptWords, confusableChars } = require('./lib/questScriptMixing')
+// Baseline — общий с другими аудит-сканами квестов механизм (#1450, #1488):
+// загрузка, вычитание и запись живут в `scripts/lib/scanBaseline`, здесь только
+// свои путь, версия контракта и функция ключей.
+const {
+  localQuestDataFiles,
+  loadBaseline: loadBaselineFile,
+  splitByBaseline: splitFindingsByBaseline,
+  writeBaseline,
+} = require('./lib/scanBaseline')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -226,31 +234,13 @@ function findingKey(finding) {
   return [finding.kind, finding.quest_id, finding.step_id, finding.value].join('|')
 }
 
-function localQuestDataFiles(rootDir) {
-  return fs.readdirSync(path.join(rootDir, 'scripts'))
-    .filter((name) => QUEST_DATA_FILE_PATTERN.test(name))
-    .sort()
-    .map((name) => `scripts/${name}`)
-}
-
 function loadBaseline(baselinePath) {
-  if (!fs.existsSync(baselinePath)) throw new Error(`baseline не найден: ${baselinePath}`)
-  const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'))
-  if (baseline.contractVersion !== BASELINE_CONTRACT_VERSION) {
-    throw new Error(`неподдерживаемая версия baseline: ${String(baseline.contractVersion)}`)
-  }
-  return baseline
+  return loadBaselineFile(baselinePath, BASELINE_CONTRACT_VERSION)
 }
 
 /** Делит находки на новые (за них гейт и падает) и уже записанные в baseline. */
 function splitByBaseline(findings, knownKeys) {
-  const known = new Set(knownKeys || [])
-  const fresh = []
-  const seen = []
-  for (const finding of findings) {
-    (known.has(findingKey(finding)) ? seen : fresh).push(finding)
-  }
-  return { fresh, known: seen }
+  return splitFindingsByBaseline(findings, knownKeys, (finding) => [findingKey(finding)])
 }
 
 // ===================== Источники данных =====================
@@ -282,21 +272,20 @@ function parseArgs(argv) {
 function updateBaseline(rootDir) {
   const known = {}
   let total = 0
-  for (const file of localQuestDataFiles(rootDir)) {
+  for (const file of localQuestDataFiles(rootDir, QUEST_DATA_FILE_PATTERN)) {
     const { findings } = scanQuests(loadLocalBundles(file, null))
     if (!findings.length) continue
     known[file] = findings.map(findingKey).sort()
     total += findings.length
   }
   const baselinePath = path.join(rootDir, BASELINE_PATH)
-  const payload = {
+  writeBaseline(baselinePath, {
     contractVersion: BASELINE_CONTRACT_VERSION,
     note: 'Известные находки в локальных данных квестов. Гейт check:fast падает только на том, '
       + 'что добавила правка; перечисленное здесь чинится отдельной карточкой. '
       + 'Обновлять: npm run quest:scan-answer-reachability:baseline',
     known,
-  }
-  fs.writeFileSync(baselinePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+  })
   return { baselinePath, files: Object.keys(known).length, total }
 }
 
@@ -369,7 +358,6 @@ module.exports = {
   parseArgs,
   findingKey,
   splitByBaseline,
-  localQuestDataFiles,
   updateBaseline,
   BLOCKER_KINDS,
   SCANNED_TYPE,

@@ -4,6 +4,7 @@
 import { Travel, TravelMedia } from '@/types/types';
 import { isPrivateOrLocalHost } from '@/utils/mediaUrl';
 import { indexTravelMedia } from '@/utils/mediaPlaceholderIndex';
+import { normalizeRouteSegment } from '@/utils/routePaths';
 
 export type MyTravelsItem = Record<string, unknown>;
 export type MyTravelsPayload =
@@ -165,7 +166,13 @@ export const normalizeTravelItem = (input: unknown): Travel => {
         out.id = Number(t.id) || 0;
     }
     if (typeof t.slug !== 'undefined') {
-        out.slug = String(t.slug);
+        // #1438: `String(null)` давал литеральную строку `'null'`, и она проходила
+        // все гарды вида `typeof slug === 'string' && slug` ниже по стеку —
+        // canonical и og:url страницы статьи получали адрес `/travels/null`.
+        // Meta-краулер ходит по og:url, поэтому прод отдавал по нему 404 с
+        // referer здоровой статьи. Непригодный слаг здесь становится пустой
+        // строкой: «слага нет», и построители адреса падают на числовой id.
+        out.slug = normalizeRouteSegment(t.slug) ?? '';
     }
 
     // Normalize display title: backend variants may provide either `name` or `title`.

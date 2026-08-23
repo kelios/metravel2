@@ -40,6 +40,7 @@ export const COUNTRY_NAME_KEYS: Record<string, TranslationKey> = {
     CH: 'quests:screens.tabs.QuestsScreen.country.CH',
     NL: 'quests:screens.tabs.QuestsScreen.country.NL',
     BE: 'quests:screens.tabs.QuestsScreen.country.BE',
+    LU: 'quests:screens.tabs.QuestsScreen.country.LU',
     FI: 'quests:screens.tabs.QuestsScreen.country.FI',
     SE: 'quests:screens.tabs.QuestsScreen.country.SE',
     NO: 'quests:screens.tabs.QuestsScreen.country.NO',

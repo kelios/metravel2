@@ -1561,7 +1561,7 @@
     },
     {
       "day": 9,
-      "submittedAt": "2026-08-22",
+      "submittedAt": "2026-08-23",
       "urls": [
         "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
         "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
@@ -1580,7 +1580,7 @@
       },
       "indexnowVia": "full-site submit 2026-08-10",
       "indexnowSubmittedAt": "2026-08-10",
-      "gscRequestedAt": "2026-08-22",
+      "gscRequestedAt": "2026-08-23",
       "gscRequests": [
         {
           "url": "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
@@ -1613,91 +1613,131 @@
           "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
         },
         {
+          "url": "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
+          "result": "accepted",
+          "at": "2026-08-23",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby",
+          "result": "accepted",
+          "at": "2026-08-23",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei",
+          "result": "accepted",
+          "at": "2026-08-23",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia",
+          "result": "accepted",
+          "at": "2026-08-23",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
           "url": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
-          "result": "quota-exceeded",
-          "at": "2026-08-22",
-          "note": "Диалог GSC: «Квота превышена» — этот и четыре оставшихся непроиндексированных адреса перенесены на следующее окно"
+          "result": "accepted",
+          "at": "2026-08-23",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования. 22.08 этот адрес получил «Квота превышена» (единица квоты не потрачена), подан повторно в следующем окне."
         }
       ],
       "indexCheck": {
-        "checkedAt": "2026-08-22",
+        "checkedAt": "2026-08-23",
         "source": "gsc-url-inspection",
-        "indexed": 4,
+        "indexed": 10,
         "of": 10,
         "indexedUrls": [
           "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
           "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+          "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
+          "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby",
+          "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei",
+          "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia",
           "https://metravel.by/travels/panevniki-petlia-ot-chernogo-stava-8-km",
-          "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den"
+          "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den",
+          "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
+          "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut"
         ],
-        "note": "Baseline перед частичной подачей 22.08: 4/10 адресов уже были в индексе. Для zamok-khokhostervits запрос принят; на tre-cime GSC ответил «Квота превышена», поэтому дальнейшие клики остановлены. Осталось 5 адресов: tre-cime, parizh-iz-krakova, den-2-v-parizhe, po-evrope-na-mashine-s-sobakoi и plitvitskie-ozera. Следующая попытка — не ранее 2026-08-23 16:40 Europe/Warsaw (после 24 часов от последнего accepted); начать с повторной URL Inspection, уже проиндексированные адреса не подавать. Повторный indexCheck всех 10 URL — через 3–5 суток после последнего accepted.",
+        "note": "Терминальный замер 23.08 ПОСЛЕ подачи: 10/10 в индексе. Хронология: baseline 22.08 — 4/10; замер 23.08 до подачи — 5/10 (zamok-khokhostervits отработал по принятому 22.08 запросу, lastCrawlTime 2026-08-22T14:36:11Z); в 20:00–20:25 Europe/Warsaw поданы оставшиеся пять адресов, каждый принят с точным текстом «Отправлен запрос на индексирование», отказа «Квота превышена» в этом окне не было; повторный URL Inspection в 20:35 показал все пять проиндексированными с lastCrawlTime 2026-08-23T17:58–18:02Z, то есть Google переобошёл их в течение получаса. Ранний плюс терминален (ложного плюса ранний замер не даёт), поэтому ждать 3–5 суток не требуется — так же закрывалась пачка day:1. Перед подачей гейт 200 vs 301 пройден: npm run seo:queue -- --batch 9 --json → ok=10 redirect=0 dead=0 unreachable=0; все 10 адресов присутствуют в живом sitemap.xml (671 URL), а «Нет ссылающихся файлов Sitemap» у po-evrope и plitvitskie было следствием статуса «URL неизвестен Google», а не отсутствия адреса в файле.",
         "results": [
           {
             "url": "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
             "outcome": "indexed",
             "verdict": "PASS",
-            "coverageState": "URL есть в индексе Google"
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T17:56:30Z"
           },
           {
             "url": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
             "outcome": "indexed",
             "verdict": "PASS",
-            "coverageState": "URL есть в индексе Google"
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-18T07:33:41Z"
           },
           {
             "url": "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
-            "outcome": "not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "URL нет в индексе Google"
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T17:58:46Z"
           },
           {
             "url": "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby",
-            "outcome": "not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "URL нет в индексе Google"
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:00:46Z"
           },
           {
             "url": "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei",
-            "outcome": "not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "URL нет в индексе Google"
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:00:46Z"
           },
           {
             "url": "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia",
-            "outcome": "not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "URL нет в индексе Google"
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:02:46Z"
           },
           {
             "url": "https://metravel.by/travels/panevniki-petlia-ot-chernogo-stava-8-km",
             "outcome": "indexed",
             "verdict": "PASS",
-            "coverageState": "URL есть в индексе Google"
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T21:33:26Z"
           },
           {
             "url": "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den",
             "outcome": "indexed",
             "verdict": "PASS",
-            "coverageState": "URL есть в индексе Google"
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T00:48:09Z"
           },
           {
             "url": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
-            "outcome": "not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "URL нет в индексе Google"
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:02:47Z"
           },
           {
             "url": "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut",
-            "outcome": "not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "URL нет в индексе Google"
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T14:36:11Z"
           }
         ]
       }
     },
     {
       "day": 10,
-      "submittedAt": null,
+      "submittedAt": "2026-08-23",
       "urls": [
         "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
         "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
@@ -1715,11 +1755,74 @@
         "yandex.com": 202
       },
       "indexnowVia": "full-site submit 2026-08-10",
-      "indexnowSubmittedAt": "2026-08-10"
+      "indexnowSubmittedAt": "2026-08-10",
+      "gscRequestedAt": "2026-08-23",
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-20T06:03:14Z — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-15T11:39:48Z — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+          "result": "accepted",
+          "at": "2026-08-23",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-12T01:30:11Z — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-22T14:18:07Z — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
+          "result": "accepted",
+          "at": "2026-08-23",
+          "note": "Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-12T20:29:38Z — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-14T03:52:29Z — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-14T22:16:24Z — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-20T12:18:57Z — подача не нужна, квота не потрачена"
+        }
+      ]
     },
     {
       "day": 11,
-      "submittedAt": null,
+      "submittedAt": "2026-08-23",
       "urls": [
         "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
         "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
@@ -1730,7 +1833,66 @@
         "yandex.com": 202
       },
       "indexnowVia": "full-site submit 2026-08-10",
-      "indexnowSubmittedAt": "2026-08-10"
+      "indexnowSubmittedAt": "2026-08-10",
+      "gscRequestedAt": "2026-08-23",
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-14T01:36:11Z, googleCanonical равен новому адресу — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-14T02:16:01Z, googleCanonical равен новому адресу — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest",
+          "result": "already-indexed",
+          "at": "2026-08-23",
+          "note": "URL Inspection до подачи: «Страница отправлена и проиндексирована», lastCrawlTime 2026-08-13T20:48:18Z, googleCanonical равен новому адресу — подача не нужна, квота не потрачена"
+        }
+      ],
+      "indexCheck": {
+        "checkedAt": "2026-08-23",
+        "source": "gsc-url-inspection",
+        "indexed": 3,
+        "of": 3,
+        "indexedUrls": [
+          "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
+          "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
+          "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest"
+        ],
+        "note": "Терминальный замер 23.08 ПЕРЕД подачей: 3/3 уже в индексе, ни одного клика в GSC не понадобилось и ни одной единицы суточной квоты не потрачено. Гейт 200 vs 301 пройден: npm run seo:queue -- --batch 11 --json → ok=3 redirect=0 dead=0 unreachable=0 (оба переписанных 10.08 адреса живые). У всех трёх googleCanonical равен НОВОМУ адресу, то есть retitle-волна отработала до конца, а не оставила канонический старый URL. Обход Google 13-14.08 — то есть страницы вытянула переотправка sitemap 10.08, а не ручная подача. Ранний плюс терминален (ложного плюса ранний замер не даёт), ждать 3-5 суток не требуется — так же закрывались пачки day:1 и day:9.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T01:36:11Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka"
+          },
+          {
+            "url": "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T02:16:01Z",
+            "googleCanonical": "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu"
+          },
+          {
+            "url": "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T20:48:18Z",
+            "googleCanonical": "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest"
+          }
+        ]
+      }
     }
   ],
   "details": [

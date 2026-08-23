@@ -113,9 +113,10 @@ function TravelStickyActions({
         await removeFavorite(travelId, 'travel');
         void showToast({ type: 'info', text1: i18nT('travel:components.travel.details.TravelStickyActions.udaleno_iz_hochu_poehat_e7b482b5'), position: 'bottom' });
       } else {
-        const url = travel?.slug
-          ? `/travels/${travel.slug}`
-          : `/travels/${travelId}`;
+        // #1438: литеральный слаг (`'null'`) проходил проверку на непустую
+        // строку, и в избранное сохранялся адрес в 404.
+        const url = buildTravelPath({ slug: travel?.slug, id: travelId });
+        if (!url) return;
         await addFavorite({ id: travelId, type: 'travel', title: travel?.name || '', url });
         void showToast({ type: 'success', text1: i18nT('travel:components.travel.details.TravelStickyActions.dobavleno_v_hochu_poehat_60afbbe6'), position: 'bottom' });
       }

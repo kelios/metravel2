@@ -157,6 +157,103 @@ describe('buildImportedRouteDraft', () => {
     expect(JSON.stringify(existingRoute)).toBe(existingSnapshot);
   });
 
+  // Регресс: контракт сохранения требует непустой `title` у каждой custom-точки —
+  // `PUT /trips/planned/{id}/route/` отвечает 400 `title is required for custom
+  // route points`. Точки, снятые с трека, имён в файле не имеют, поэтому без
+  // порядкового заголовка весь импорт молча не сохранялся.
+  it('gives every track-derived point a non-empty name so the route save is accepted', () => {
+    const parsedRoute = preview(
+      Array.from({ length: 121 }, (_, index) =>
+        `${50 + Math.sin(index / 3) * 0.01},${20 + index * 0.005}`,
+      ),
+    );
+
+    const result = buildImportedRouteDraft({
+      existingRoute: [],
+      parsedRoute,
+      namedWaypoints: [],
+      mode: 'replace',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.route.length).toBeGreaterThan(1);
+    expect(result.route.every((point) => point.name.trim().length > 0)).toBe(true);
+  });
+
+  it('keeps names from the file and only fills in the unnamed track points', () => {
+    const parsedRoute = preview(['52.1,23.7', '52.15,23.75', '52.2,23.8']);
+
+    const result = buildImportedRouteDraft({
+      existingRoute: [],
+      parsedRoute,
+      namedWaypoints: [
+        { name: 'Start camp', coord: '52.1,23.7' },
+        { name: 'Viewpoint', coord: '52.15,23.75' },
+      ],
+      mode: 'replace',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.route.map((point) => point.name)).toEqual(
+      expect.arrayContaining(['Start camp', 'Viewpoint']),
+    );
+    expect(result.route.every((point) => point.name.trim().length > 0)).toBe(true);
+  });
+
+  // Подстановка имени идёт последним шагом, уже над готовым маршрутом: иначе
+  // склейка режима «Добавить» слила бы в имя существующей точки подставленное
+  // «Точка 1» и та без спросу превратилась бы в «Финиш · Точка 1».
+  it('does not graft a generated name onto the existing point at the append join', () => {
+    const existingRoute = [
+      routePoint('a', [23.6, 52.0], 'Старт'),
+      routePoint('b', [23.7, 52.1], 'Финиш'),
+    ];
+    const parsedRoute = preview(['52.1,23.7', '52.15,23.75', '52.2,23.8']);
+
+    const result = buildImportedRouteDraft({
+      existingRoute,
+      parsedRoute,
+      namedWaypoints: [],
+      mode: 'append',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.route[1].name).toBe('Финиш');
+    expect(result.route.every((point) => point.name.trim().length > 0)).toBe(true);
+  });
+
+  // Номер в подставленном имени — это позиция точки в маршруте, а не в
+  // импортируемом куске: иначе после «Добавить» список идёт «Точка 1, Точка 2,
+  // Точка 1, Точка 2…» и строки становятся неразличимы в списке и у drag-ручки.
+  it('continues route-wide numbering for unnamed points appended after existing ones', () => {
+    const existingRoute = [
+      routePoint('a', [23.0, 52.0], 'Точка 1'),
+      routePoint('b', [23.1, 52.05], 'Точка 2'),
+    ];
+    const parsedRoute = preview(['52.1,23.7', '52.15,23.75', '52.2,23.8']);
+
+    const result = buildImportedRouteDraft({
+      existingRoute,
+      parsedRoute,
+      namedWaypoints: [],
+      mode: 'append',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.route.map((point) => point.name)).toEqual([
+      'Точка 1',
+      'Точка 2',
+      'Точка 3',
+      'Точка 4',
+      'Точка 5',
+    ]);
+    expect(new Set(result.route.map((point) => point.name)).size).toBe(result.route.length);
+  });
+
   it('orders off-track named anchors by their closest traversal position', () => {
     const result = buildImportedRouteDraft({
       existingRoute: [],

@@ -370,6 +370,110 @@ test.describe('SEO: travel page canonical is never the homepage (regression)', (
   });
 });
 
+/**
+ * #1438 regression: прод-лог nginx показывал `GET /travels/null` → 404 от
+ * `meta-externalagent/1.1` с referer здоровой статьи. Источник — не ссылка в
+ * разметке (её на странице нет), а голова документа: payload со `slug: null`
+ * превращался нормализатором в литерал `'null'`, тот проходил проверку
+ * «непустая строка», и canonical с og:url уезжали на `/travels/null`. Краулер
+ * Meta ходит по og:url — отсюда 404 с referer статьи.
+ *
+ * Тест держит контракт на уровне отрендеренного документа: битый слаг в данных
+ * не должен доходить до головы страницы ни в каком виде.
+ */
+test.describe('SEO: travel detail head survives a broken slug (#1438)', () => {
+  const BROKEN_SLUG_PATH = `/travels/${SEO_TRAVEL_SLUG}`;
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as Window & { __metravelTravelPreloadScriptLoaded?: boolean })
+        .__metravelTravelPreloadScriptLoaded = true;
+    });
+
+    await page.route('**/api/**', (route) => {
+      const pathname = new URL(route.request().url()).pathname;
+      if (
+        pathname.includes(`/travels/by-slug/${SEO_TRAVEL_SLUG}/`) ||
+        pathname.includes(`/travels/resolve-slug/${SEO_TRAVEL_SLUG}/`) ||
+        pathname.endsWith(`/travels/${SEO_TRAVEL_ID}/`)
+      ) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...mockedSeoTravel, slug: null, url: null }),
+        });
+      }
+
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+  });
+
+  test('never emits canonical or og:url pointing at /travels/null', async ({ page }) => {
+    const html = await getRenderedHtml(page, BROKEN_SLUG_PATH);
+
+    expect(html).not.toContain('/travels/null');
+    expect(html).not.toContain('/travels/undefined');
+
+    const canonical = html.match(/<link[^>]*rel="canonical"[^>]*href="([^"]*)"/i);
+    expect(canonical).toBeTruthy();
+    expect(canonical![1]).toContain(`/travels/${SEO_TRAVEL_SLUG}`);
+
+    const ogUrl = getMetaContent(html, 'property', 'og:url');
+    expect(ogUrl).toBeTruthy();
+    expect(ogUrl).toContain(`/travels/${SEO_TRAVEL_SLUG}`);
+  });
+
+  test('declares the same address in canonical and structured data', async ({ page }) => {
+    const html = await getRenderedHtml(page, BROKEN_SLUG_PATH);
+
+    const canonical = html.match(/<link[^>]*rel="canonical"[^>]*href="([^"]*)"/i)?.[1];
+    expect(canonical).toBeTruthy();
+
+    const jsonLdAddresses = await page.evaluate(() =>
+      Array.from(
+        new Set(
+          Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+            .flatMap((node) =>
+              ((node.textContent || '').match(/https:\/\/metravel\.by\/travels\/[^"#]+/g) || []),
+            ),
+        ),
+      ),
+    );
+
+    // Голова и JSON-LD — два публичных объявления собственного адреса страницы;
+    // расходиться они не должны, иначе краулер получает два «канонических» URL.
+    // Пустой набор здесь не «зелёный кейс», а отсутствие структурированных данных:
+    // цикл без этой проверки не выполнил бы ни одного expect.
+    expect(jsonLdAddresses.length).toBeGreaterThan(0);
+    for (const address of jsonLdAddresses) {
+      expect(address).toBe(canonical);
+    }
+  });
+
+  test('leaves no anchor or attribute with a broken travel address', async ({ page }) => {
+    await getRenderedHtml(page, BROKEN_SLUG_PATH);
+
+    const broken = await page.evaluate(() => {
+      const out: string[] = [];
+      document.querySelectorAll('*').forEach((el) => {
+        Array.from(el.attributes).forEach((attr) => {
+          if (/\/travels\/(null|undefined|NaN)\b/i.test(attr.value)) {
+            out.push(`${el.tagName}@${attr.name}=${attr.value}`);
+          }
+        });
+      });
+      document.querySelectorAll('script[type="application/ld+json"]').forEach((node) => {
+        if (/\/travels\/(null|undefined|NaN)\b/i.test(node.textContent || '')) {
+          out.push(`ld+json:${(node.textContent || '').slice(0, 120)}`);
+        }
+      });
+      return out;
+    });
+
+    expect(broken).toEqual([]);
+  });
+});
+
 test.describe('SEO: noindex pages', () => {
   const NOINDEX_PAGES = ['/login', '/registration', '/favorites'];
 

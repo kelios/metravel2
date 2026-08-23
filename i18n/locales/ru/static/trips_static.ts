@@ -103,6 +103,7 @@ export const tripsStaticResources = {
   "plan.links.title": "Ссылки",
   "plan.map.layers": "Слои карты",
   "plan.map.originalTrack": "Оригинальный трек из файла",
+  "plan.route.saveError": "Не удалось сохранить маршрут. Проверьте точки и попробуйте ещё раз.",
   "plan.route.focusPoint": "Показать точку «{{name}}» на карте",
   "plan.mapFirst.sheet": "Панель маршрута",
   "plan.mapFirst.expand": "Развернуть панель маршрута",

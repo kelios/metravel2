@@ -87,6 +87,13 @@ type Props = {
   };
   width?: number;
   imageHeight?: number;
+  /**
+   * #1487: пропорции медиа-бокса. Заданы — бокс живёт на `aspectRatio`, а
+   * `imageHeight` остаётся только запасной высотой для обложек с неизвестными
+   * пропорциями. Так слот `contain` совпадает с кадром и не оставляет плоских
+   * полей `dominant_color` по бокам.
+   */
+  mediaAspectRatio?: number;
   contentContainerStyle?: StyleProp<ViewStyle>;
   insetMedia?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -125,6 +132,7 @@ function UnifiedTravelCard({
   mediaProps,
   width,
   imageHeight,
+  mediaAspectRatio,
   contentContainerStyle,
   insetMedia = false,
   style,
@@ -556,12 +564,40 @@ function UnifiedTravelCard({
   const wrapperStyle = shouldUseNativePressScale
     ? [animatedCardStyle, typeof width === 'number' ? { width } : undefined]
     : (typeof width === 'number' ? { width } : undefined);
+  // #1487: `imageHeight === 0` остаётся способом скрыть медиа-бокс целиком,
+  // пропорции его не воскрешают.
+  const hasMediaAspectRatio =
+    typeof mediaAspectRatio === 'number' &&
+    Number.isFinite(mediaAspectRatio) &&
+    mediaAspectRatio > 0 &&
+    imageHeight !== 0;
+  // `ImageCardMedia` кладёт числовую высоту прямо в бокс картинки, поэтому при
+  // адаптивном слоте она обязана совпадать с ним: ширина карточки известна —
+  // считаем из пропорций, неизвестна (web, где ширину задаёт сетка) — не задаём
+  // вовсе, иначе картинка осталась бы прежней ландшафтной полосой внутри
+  // высокого слота.
+  const mediaPixelHeight = hasMediaAspectRatio
+    ? typeof width === 'number' && width > 0
+      ? Math.round(width / (mediaAspectRatio as number))
+      : undefined
+    : typeof imageHeight === 'number'
+      ? imageHeight
+      : undefined;
   const mediaNode = (
     <View
       key="media"
       style={[
         styles.imageContainer,
-        typeof imageHeight === 'number' ? { height: imageHeight, maxHeight: imageHeight } : null,
+        // #1487: пропорции кадра вместо фиксированной высоты. Ветки взаимно
+        // исключающие намеренно: `maxHeight` из фиксированной высоты зажал бы
+        // бокс обратно, а `height: 'auto'` обязателен, чтобы перебить высоту из
+        // `styles.imageContainer` — иначе и Yoga, и CSS оставят прежний бокс, а
+        // `aspectRatio` уйдёт в ширину.
+        hasMediaAspectRatio
+          ? { aspectRatio: mediaAspectRatio, height: 'auto' as const }
+          : typeof imageHeight === 'number'
+            ? { height: imageHeight, maxHeight: imageHeight }
+            : null,
         imageHeight === 0 && { display: 'none' },
         insetMedia ? styles.imageContainerInset : null,
       ]}
@@ -574,7 +610,7 @@ function UnifiedTravelCard({
             src={mediaProps?.webResponsiveSource?.src ?? displayImageUrl}
             alt={title}
             width={typeof width === 'number' ? width : undefined}
-            height={typeof imageHeight === 'number' ? imageHeight : undefined}
+            height={mediaPixelHeight}
             fit={mediaFit}
             blurBackground={mediaProps?.blurBackground ?? true}
             allowCriticalWebBlur={mediaProps?.allowCriticalWebBlur ?? false}

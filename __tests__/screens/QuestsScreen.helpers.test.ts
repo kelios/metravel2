@@ -41,7 +41,7 @@ describe('QuestsScreen helpers', () => {
     // её код и сюда, и в COUNTRY_NAME_KEYS.
     const PROD_QUEST_COUNTRY_CODES = [
       'AL', 'AM', 'AT', 'BA', 'BG', 'BY', 'CY', 'CZ', 'DE', 'EE', 'ES', 'FR', 'GE', 'GR',
-      'HR', 'HU', 'LT', 'LV', 'NL', 'PL', 'PT', 'RO', 'RS', 'RU', 'SK', 'TR', 'UA',
+      'HR', 'HU', 'LT', 'LU', 'LV', 'NL', 'PL', 'PT', 'RO', 'RS', 'RU', 'SK', 'TR', 'UA',
     ]
 
     const missing = PROD_QUEST_COUNTRY_CODES.filter((code) => !COUNTRY_NAME_KEYS[code])

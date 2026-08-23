@@ -1,26 +1,45 @@
 #!/usr/bin/env node
 /**
- * Скан утечки ответа в подсказку шага квеста — правило авторинга 4a
- * (`.claude/skills/metravel-quest/SKILL.md`): `hint` говорит КУДА смотреть, но
- * не содержит сам ответ и не называет точное число ответа.
+ * Скан утечки ответа в текст, который игрок читает ДО попытки — правило
+ * авторинга 4a (`.claude/skills/metravel-quest/SKILL.md`): `hint` говорит КУДА
+ * смотреть, но не содержит сам ответ и не называет точное число ответа.
  *
  * Правило живёт с #1190, но три прохода подряд (#1190, #1445, #1447) его
  * проверяли глазами — и каждый раз что-то проходило мимо. Этот скрипт закрывает
- * ровно механическую часть: буквальное совпадение принимаемого ответа с текстом
- * подсказки. Семантический класс (подсказка пересказывает ответ определением,
- * без совпадения слова — кейсы #1445) скан НЕ ловит, см. запись
- * QUEST-HINT-LEAK-001 в docs/PROBLEM_MEMORY.md.
+ * ровно механическую часть: буквальное совпадение принимаемого ответа с текстом.
+ * Семантический класс (текст пересказывает ответ определением, без совпадения
+ * слова — кейсы #1445) скан НЕ ловит, см. запись QUEST-HINT-LEAK-001 в
+ * docs/PROBLEM_MEMORY.md.
+ *
+ * Две поверхности, у них разные пары «текст × ответ»:
+ *   - ШАГ (`step`): поля шага против ответа ЭТОГО ЖЕ шага. Исторический контур.
+ *   - КВЕСТ (`intro`, `finale`): текст уровня квеста против ответов ВСЕХ шагов
+ *     этого квеста. Интро игрок читает до первого шага, поэтому названный там
+ *     ответ снимает вопрос любого шага впереди (#1488). Интро и финал приходят
+ *     отдельными ключами бандла, а не элементами `steps`, — до #1488 скан их не
+ *     читал вовсе, и нулевой свип #1467 к ним не относился.
  *
  *   node scripts/scan-quest-hint-leak.js                      # весь прод
  *   node scripts/scan-quest-hint-leak.js --quest-id=vienna-imperial-secrets
  *   node scripts/scan-quest-hint-leak.js --source=scripts/vienna-quest-data.js
  *   node scripts/scan-quest-hint-leak.js --fields=hint,story,title,task,location
+ *   node scripts/scan-quest-hint-leak.js --scopes=step,intro,finale
  *   node scripts/scan-quest-hint-leak.js --json
  *
  * Exit code 1, если найдена хотя бы одна утечка.
  */
 
+const path = require('path')
+
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
+// Baseline — общий с другими аудит-сканами квестов механизм (#1450, #1488):
+// загрузка, вычитание и запись живут в `scripts/lib/scanBaseline`, здесь только
+// свои путь, версия контракта и функция ключей.
+const { localQuestDataFiles, loadBaseline, splitByBaseline, writeBaseline } = require('./lib/scanBaseline')
+// Что считается локальными данными квеста — знает скан достижимости, и шаблон
+// имени живёт там в одном экземпляре: вторая копия однажды разойдётся, и гейт
+// начнёт проверять не тот набор файлов, что baseline (#1450).
+const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
 // Нормализация — общая с рантаймом и со сканом достижимости (#1450): собственная
 // копия правил разошлась бы с `utils/questAdapters.normalize` и молча изменила
 // бы ответ «утечек нет».
@@ -45,6 +64,24 @@ const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 const DEFAULT_FIELDS = ['hint', 'location']
 const KNOWN_FIELDS = new Set(['hint', 'story', 'title', 'task', 'location'])
 
+// Поверхности текста. `--fields` управляет только шагом: у интро своя причина
+// смотреть шире (см. INTRO_FIELDS), а у финала поле одно.
+const KNOWN_SCOPES = new Set(['step', 'intro', 'finale'])
+// `finale` вне умолчания сознательно: экран финала игрок читает ПОСЛЕ последнего
+// шага, а сам текст по замыслу пересказывает пройденный маршрут. Замер по проду
+// 23.08.2026 — 99 находок на 149 квестов (две трети базы), то есть контур
+// красный by design; в печатной версии он и помечен спойлером
+// («Не подглядывай раньше времени: финал читают после последней точки»,
+// `QuestPrintable.tsx:280`). Это принятое ограничение формата, как кросс-шаговый
+// класс в печати, а не долг — но флаг оставлен, чтобы класс можно было измерить.
+const DEFAULT_SCOPES = ['step', 'intro']
+
+// Поля интро. Шире, чем у шага, и это не непоследовательность: у интро НЕТ
+// своего ответа, поэтому здесь нет самореференции, из-за которой `title`/`story`
+// шага шумят закономерно. Любое совпадение в интро — это ответ ЧУЖОГО шага,
+// прочитанный игроком заранее. `hint` у интро всегда пуст (отвечать там нечего).
+const INTRO_FIELDS = ['title', 'location', 'story', 'task']
+
 // Словарные типы: у них есть закрытый список принимаемых строк.
 const DICT_TYPES = new Set(['exact_any', 'exact'])
 // Числовые типы: утечка — это точное число (или любое число из диапазона)
@@ -55,6 +92,17 @@ const NUMERIC_RANGE_TYPE = 'range'
 // На всей базе (912 шагов с непустым hint) порог 3 даёт ноль ложных
 // срабатываний по `hint` и находит все три известных кейса #1447.
 const MIN_VALUE_LENGTH = 3
+
+// Baseline — тот же механизм, что у скана достижимости (#1450). Он нужен ровно
+// поверхности `intro`: сплошной прогон 23.08.2026 дал 85 находок, 18 из них были
+// настоящими утечками и переписаны в #1488, а оставшиеся 67 — осознанный остаток
+// (совпадение внутри чужого слова, родовое существительное о другом объекте,
+// собственное имя квеста). Без baseline контур пришлось бы держать вне
+// умолчания, и он снова остался бы без охраны — как это и случилось с интро
+// между #1467 и #1488. С baseline умолчание защищает: известное молчит, любая
+// НОВАЯ находка роняет гейт сразу.
+const BASELINE_PATH = 'scripts/quest-hint-leak-baseline.json'
+const BASELINE_CONTRACT_VERSION = 1
 
 /** Строки-ответы шага. Свободные типы (`any`, `any_text`, `any_number`) словаря не имеют. */
 function dictionaryValues(answerPattern) {
@@ -111,30 +159,209 @@ function findLeaks(step, field) {
   return leaks
 }
 
-function scanQuests(quests, fields) {
-  const findings = []
-  let scannedSteps = 0
-  for (const quest of quests) {
-    for (const step of quest.steps || []) {
-      if (step.is_intro) continue
-      scannedSteps++
-      for (const field of fields) {
-        const leaks = findLeaks(step, field)
-        if (!leaks.length) continue
-        findings.push({
-          quest_db_id: quest.id ?? null,
-          quest_id: quest.quest_id,
-          step_db_id: step.id ?? null,
-          step_id: step.step_id,
-          field,
-          answer_type: step.answer_pattern?.type ?? null,
-          leaks,
-          text: String(step[field] ?? ''),
-        })
-      }
+/**
+ * Словарь ответов всего квеста — с какого шага пришло каждое значение, иначе
+ * находку невозможно разобрать: в интро на 2000 знаков надо знать, чей вопрос
+ * испорчен.
+ *
+ * Числа сюда НЕ входят, и это измерено, а не срезано: свип 23.08.2026 дал 51
+ * числовой хит в интро, и все 51 — адреса («Пролетарская, 5»), часы работы
+ * («9:00–18:00»), длина маршрута («3,7 км») и маркеры списка «Что делать: 1) 2)
+ * 3)», который стоит в каждом интро. У текста уровня квеста нет своего вопроса,
+ * поэтому одиночная цифра в нём — это никогда не ответ шага, а всегда бытовое
+ * число; на уровне шага ситуация обратная, и там числовой контур сохранён.
+ */
+function questAnswerDictionary(steps) {
+  const answers = []
+  for (const step of steps) {
+    if (step.is_intro) continue
+    for (const value of dictionaryValues(step.answer_pattern)) {
+      answers.push({ value, step_db_id: step.id ?? null, step_id: step.step_id })
     }
   }
-  return { findings, scannedSteps }
+  return answers
+}
+
+// Окончание словоизменения: ОДНА последняя гласная (или «ь»/«й») слова, и
+// только если от него остаётся минимум четыре буквы. Нужно, потому что словарь ответов
+// записан в именительном падеже, а проза интро ставит то же слово в косвенный:
+// «ротонда» из словаря шага 677 не является подстрокой «ротонду» в интро
+// `sofia-serdica-underfoot`, «пуговица» шага 538 — подстрокой «пуговице» в
+// интро `brest-lantern`. Ровно эти два примера и завели #1488, и наивное
+// подстрочное совпадение их НЕ находит: без основы скан отчитался бы «чисто»
+// по тем самым текстам, ради которых его расширяли.
+//
+// Границы подобраны замером, а не на глаз: срезание ДВУХ букв превращает
+// «мария» в «мар» и ловит им «маршрут», а порог в три буквы оставляет от «роза»
+// основу «роз» и ловит ею «розовый». Одна буква и минимум четыре в остатке
+// снимают оба класса и сохраняют «ротонда» → «ротонду», «сосна» → «соснового»,
+// «фонари» → «фонарей». Более длинные окончания («круглая» → «кругл») намеренно
+// не трогаем: словарь ответа и так перечисляет свои формы.
+const INFLECTION_TAIL = /(?<=\p{L}{4})[аеиоуыьэюяй]$/u
+
+/**
+ * Основа слова-ответа: «ротонда» → «ротонд», «сосна» → «сосн», «дуб» → «дуб»,
+ * «роза» → «роза».
+ *
+ * Граница: для многословных значений путь через основу мёртв — окончание
+ * срезается у всей строки, а сравнение идёт со словами текста, и основа с
+ * пробелом («золотое рун») ни с одним словом не совпадёт. Это осознанно:
+ * многословные значения почти всегда сопровождаются в том же словаре
+ * однословными («руно» рядом с «золотое руно»), и их ловит подстрока.
+ */
+function answerStem(value) {
+  return value.replace(INFLECTION_TAIL, '')
+}
+
+/** Начинается ли хоть одно слово текста с этой основы. */
+function startsAnyWord(words, stem) {
+  return words.some((word) => word.startsWith(stem))
+}
+
+/**
+ * Утечки в тексте уровня квеста: ответы ВСЕХ шагов против одного текста.
+ *
+ * Совпадение — объединение двух правил, а не выбор одного:
+ *   - подстрока в любом месте, как на уровне шага («перед валом» для «вал»);
+ *   - основа с начала слова — она добирает косвенный падеж («ротонду»).
+ * Объединение, потому что каждое правило по отдельности слепо к находкам
+ * другого, а сузить контур у инструмента, который существует ради ответа
+ * «утечек нет», дороже, чем разобрать лишнюю находку руками.
+ */
+function findQuestLeaks(text, answers) {
+  const haystack = normalize(text)
+  if (!haystack) return []
+  const words = haystack.split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+  const leaks = []
+  for (const { value, step_db_id, step_id } of answers) {
+    const needle = normalize(value)
+    if (needle.length < MIN_VALUE_LENGTH) continue
+    const substring = haystack.includes(needle)
+    const stem = answerStem(needle)
+    const byStem = !substring && stem.length >= MIN_VALUE_LENGTH && startsAnyWord(words, stem)
+    if (!substring && !byStem) continue
+    leaks.push({ kind: 'dictionary', value, via: substring ? 'substring' : 'stem', step_db_id, step_id })
+  }
+  return leaks
+}
+
+function scanQuests(quests, fields, scopes = DEFAULT_SCOPES) {
+  const wantedScopes = new Set(scopes)
+  const findings = []
+  let scannedSteps = 0
+  let scannedQuestNodes = 0
+
+  const pushFinding = (finding) => {
+    if (finding.leaks.length) findings.push(finding)
+  }
+
+  for (const quest of quests) {
+    const steps = quest.steps || []
+    if (wantedScopes.has('step')) {
+      for (const step of steps) {
+        if (step.is_intro) continue
+        scannedSteps++
+        for (const field of fields) {
+          pushFinding({
+            quest_db_id: quest.id ?? null,
+            quest_id: quest.quest_id,
+            scope: 'step',
+            step_db_id: step.id ?? null,
+            step_id: step.step_id,
+            field,
+            answer_type: step.answer_pattern?.type ?? null,
+            leaks: findLeaks(step, field),
+            text: String(step[field] ?? ''),
+          })
+        }
+      }
+    }
+
+    // Текст уровня квеста. Считаем узлы, а не квесты: «149 квестов» в отчёте
+    // скрыло бы, сколько текста скан на самом деле прочитал (#1464).
+    if (!wantedScopes.has('intro') && !wantedScopes.has('finale')) continue
+    const answers = questAnswerDictionary(steps)
+    const questNodes = []
+    if (wantedScopes.has('intro') && quest.intro) {
+      for (const field of INTRO_FIELDS) questNodes.push({ scope: 'intro', field, text: quest.intro[field] })
+    }
+    // Финал в локальных данных встречается в двух формах — `{text}` и `{story}`,
+    // обе уезжают в одно поле прода (`sync-quest-to-prod.js:114`), поэтому
+    // читаем обе, иначе `--source` слеп к финалу пяти квестов (#1464).
+    if (wantedScopes.has('finale')) {
+      questNodes.push({ scope: 'finale', field: 'finale', text: quest.finale?.text ?? quest.finale?.story })
+    }
+    for (const node of questNodes) {
+      if (node.text == null || node.text === '') continue
+      scannedQuestNodes++
+      pushFinding({
+        quest_db_id: quest.id ?? null,
+        quest_id: quest.quest_id,
+        scope: node.scope,
+        step_db_id: null,
+        step_id: null,
+        field: node.field,
+        answer_type: null,
+        leaks: findQuestLeaks(node.text, answers),
+        text: String(node.text),
+      })
+    }
+  }
+  return { findings, scannedSteps, scannedQuestNodes }
+}
+
+// ===================== Baseline =====================
+
+/**
+ * Ключи находки — ПО ОДНОМУ на каждое слово-ответ. Не один общий ключ на всю
+ * находку: в интро совпадений часто несколько сразу, и склейка означала бы, что
+ * правка одного слова делает «новыми» остальные, уже разобранные.
+ */
+function findingKeys(finding) {
+  return finding.leaks.map((leak) => [finding.scope, finding.quest_id, finding.step_id ?? '', finding.field, leak.value].join('|'))
+}
+
+/**
+ * Baseline держит ТОЛЬКО текст уровня квеста. Поля шага (`hint`, `location`)
+ * вычищены до нуля в #1467 и обязаны оставаться жёстким гейтом: попади шаговая
+ * находка в baseline — и красный прогон стал бы зелёным молча. Так и вышло на
+ * первой редакции #1488: baseline, снятый с умолчанием `step,intro`, проглотил
+ * реальную утечку подписи места. Поэтому фильтр стоит и на записи, и на чтении.
+ */
+const BASELINE_SCOPES = new Set(['intro', 'finale'])
+
+/** Находка шага в baseline не попадает никогда — она всегда «новая». */
+function splitFindings(findings, knownKeys) {
+  const scoped = splitByBaseline(
+    findings.filter((f) => BASELINE_SCOPES.has(f.scope)),
+    knownKeys,
+    findingKeys,
+  )
+  return { fresh: [...findings.filter((f) => !BASELINE_SCOPES.has(f.scope)), ...scoped.fresh], known: scoped.known }
+}
+
+/** Перезапись baseline по всем локальным данным квестов — единственный способ его пополнить. */
+function updateBaseline(rootDir, fields = DEFAULT_FIELDS, scopes = DEFAULT_SCOPES) {
+  const known = {}
+  let total = 0
+  for (const file of localQuestDataFiles(rootDir, QUEST_DATA_FILE_PATTERN)) {
+    const { findings } = scanQuests(loadLocalBundles(file, null), fields, scopes)
+    const keys = findings.filter((f) => BASELINE_SCOPES.has(f.scope)).flatMap(findingKeys).sort()
+    if (!keys.length) continue
+    known[file] = keys
+    total += keys.length
+  }
+  writeBaseline(path.join(rootDir, BASELINE_PATH), {
+    contractVersion: BASELINE_CONTRACT_VERSION,
+    note: 'Известные совпадения правила 4a в ТЕКСТЕ УРОВНЯ КВЕСТА (интро, финал) локальных данных — '
+      + 'разобранный остаток #1488: совпадение внутри чужого слова, родовое существительное о другом '
+      + 'объекте, имя самого квеста. Поля шага сюда не попадают никогда: их контур вычищен до нуля и '
+      + 'обязан падать сразу. Гейт check:fast падает только на том, что добавила правка. '
+      + 'Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих '
+      + 'незавершённых правок. Обновлять: npm run quest:scan-hint-leak:baseline',
+    known,
+  })
+  return { baselinePath: path.join(rootDir, BASELINE_PATH), files: Object.keys(known).length, total }
 }
 
 // ===================== Источники данных =====================
@@ -146,7 +373,13 @@ function scanQuests(quests, fields) {
 
 async function loadFromApi(apiUrl, questId) {
   const bundles = await fetchQuestBundles(apiUrl, questId)
-  return bundles.map((bundle) => ({ id: bundle.id, quest_id: bundle.quest_id, steps: parseSteps(bundle) }))
+  return bundles.map((bundle) => ({
+    id: bundle.id,
+    quest_id: bundle.quest_id,
+    intro: bundle.intro ?? null,
+    finale: bundle.finale ?? null,
+    steps: parseSteps(bundle),
+  }))
 }
 
 // ===================== CLI =====================
@@ -157,33 +390,85 @@ function parseArgs(argv) {
   for (const field of fields) {
     if (!KNOWN_FIELDS.has(field)) throw new Error(`неизвестное поле --fields=${field}`)
   }
+  const scopes = (get('scopes') || DEFAULT_SCOPES.join(',')).split(',').map((s) => s.trim()).filter(Boolean)
+  for (const scope of scopes) {
+    if (!KNOWN_SCOPES.has(scope)) throw new Error(`неизвестная поверхность --scopes=${scope}`)
+  }
   return {
     apiUrl: get('api-url') || DEFAULT_API,
     questId: get('quest-id') || null,
     source: get('source') || null,
     fields,
+    scopes,
+    baseline: get('baseline') || null,
+    updateBaseline: argv.includes('--update-baseline'),
     json: argv.includes('--json'),
   }
 }
 
+const SCOPE_LABEL = { step: 'шаг', intro: 'интро', finale: 'финал' }
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
+  if (args.updateBaseline) {
+    // Умолчание, а НЕ `args.scopes`: baseline хранит только текст уровня квеста,
+    // и прогон с набором без `intro` перезаписал бы файл пустым объектом —
+    // следующий `check:fast` покраснел бы на 68 уже разобранных находках.
+    const result = updateBaseline(process.cwd(), args.fields, DEFAULT_SCOPES)
+    console.log(`Baseline перезаписан: ${BASELINE_PATH} — ${result.total} находок в ${result.files} файлах.`)
+    return
+  }
   const quests = args.source
     ? loadLocalBundles(args.source, args.questId)
     : await loadFromApi(args.apiUrl, args.questId)
 
-  const { findings, scannedSteps } = scanQuests(quests, args.fields)
+  const scanned = scanQuests(quests, args.fields, args.scopes)
+  const { scannedSteps, scannedQuestNodes } = scanned
   const source = args.source || args.apiUrl
+  // Baseline вычитается по имени файла-источника: гейт `check:fast` смотрит
+  // ровно тот файл, который правит автор, и должен падать только на том, что
+  // добавила правка.
+  const { fresh: findings, known: knownFindings } = args.baseline
+    ? splitFindings(
+      scanned.findings,
+      loadBaseline(path.resolve(process.cwd(), args.baseline), BASELINE_CONTRACT_VERSION).known?.[source],
+    )
+    : { fresh: scanned.findings, known: [] }
 
   if (args.json) {
-    console.log(JSON.stringify({ source, quests: quests.length, scannedSteps, fields: args.fields, findings }, null, 2))
+    console.log(JSON.stringify(
+      {
+        source,
+        quests: quests.length,
+        scannedSteps,
+        scannedQuestNodes,
+        fields: args.fields,
+        scopes: args.scopes,
+        baseline: args.baseline,
+        knownFindings: knownFindings.length,
+        findings,
+      },
+      null,
+      2,
+    ))
   } else {
-    console.log(`Скан 4a: ${source} — ${quests.length} квестов, ${scannedSteps} шагов, поля: ${args.fields.join(', ')}`)
+    console.log(
+      `Скан 4a: ${source} — ${quests.length} квестов, ${scannedSteps} шагов, ` +
+        `${scannedQuestNodes} текстов квеста, поля шага: ${args.fields.join(', ')}, поверхности: ${args.scopes.join(', ')}`,
+    )
     for (const f of findings) {
-      const values = f.leaks.map((l) => `${l.value}${l.kind === 'numeric' ? ' (число)' : ''}`).join(', ')
-      console.log(`\n  [quest ${f.quest_db_id ?? '?'}] ${f.quest_id} / шаг ${f.step_db_id ?? '?'} ${f.step_id}`)
-      console.log(`    поле ${f.field} (${f.answer_type}) содержит ответ: ${values}`)
+      const values = f.leaks
+        .map((l) => `${l.value}${l.kind === 'numeric' ? ' (число)' : ''}${l.step_db_id ? ` → шаг ${l.step_db_id}` : ''}`)
+        .join(', ')
+      const where = f.scope === 'step'
+        ? `шаг ${f.step_db_id ?? '?'} ${f.step_id}`
+        : SCOPE_LABEL[f.scope]
+      console.log(`\n  [quest ${f.quest_db_id ?? '?'}] ${f.quest_id} / ${where}`)
+      console.log(`    поле ${f.field} (${f.answer_type ?? 'ответы всех шагов'}) содержит ответ: ${values}`)
       console.log(`    ${f.text}`)
+    }
+    if (knownFindings.length) {
+      console.log(`\nУчтено baseline (лежало в файле до правки, разобрано в QUEST-HINT-LEAK-001): ${knownFindings.length}`)
     }
     console.log(findings.length ? `\nУтечек: ${findings.length}` : '\nУтечек нет.')
   }
@@ -191,7 +476,23 @@ async function main() {
   if (findings.length) process.exitCode = 1
 }
 
-module.exports = { normalize, dictionaryValues, numericValues, findLeaks, scanQuests, parseArgs }
+module.exports = {
+  BASELINE_PATH,
+  BASELINE_SCOPES,
+  findingKeys,
+  splitFindings,
+  updateBaseline,
+  normalize,
+  dictionaryValues,
+  numericValues,
+  findLeaks,
+  answerStem,
+  questAnswerDictionary,
+  findQuestLeaks,
+  scanQuests,
+  parseArgs,
+  INTRO_FIELDS,
+}
 
 if (require.main === module) {
   main().catch((e) => {

@@ -29,6 +29,7 @@ import { RichMediaViewportProvider } from '@/components/ui/richMediaViewport'
 import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel'
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
+import { buildTravelPathFromTravel } from '@/utils/routePaths'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
 import { translate as i18nT } from '@/i18n'
 
@@ -151,7 +152,13 @@ export default function TravelDetailsContainer() {
     const travelId = travel?.id ?? travel?.slug
     if (!travelId) return
 
-    const travelUrl = travel?.slug ? `/travels/${travel.slug}` : `/travels/${travelId}`
+    // #1438: сырая интерполяция сохраняла в историю `/travels/null`, когда слаг
+    // приходил литералом пустоты — карточка истории потом вела в 404.
+    const travelUrl = buildTravelPathFromTravel(
+      { slug: travel?.slug, id: travel?.id },
+      { encode: false },
+    )
+    if (!travelUrl) return
 
     void addToHistory({
       id: travelId,

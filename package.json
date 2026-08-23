@@ -154,6 +154,7 @@
     "quest:insights": "node scripts/quest-answer-insights.js",
     "quest:scan-hint-leak": "node scripts/scan-quest-hint-leak.js",
     "quest:scan-hint-leak:json": "node scripts/scan-quest-hint-leak.js --json",
+    "quest:scan-hint-leak:baseline": "node scripts/scan-quest-hint-leak.js --update-baseline",
     "quest:scan-answer-reachability": "node scripts/scan-quest-answer-reachability.js",
     "quest:scan-answer-reachability:json": "node scripts/scan-quest-answer-reachability.js --json",
     "quest:scan-answer-reachability:baseline": "node scripts/scan-quest-answer-reachability.js --update-baseline",

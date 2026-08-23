@@ -1,4 +1,5 @@
 import type { RoutePoint } from '@/api/plannedTripsTypes';
+import { translate as i18nT } from '@/i18n';
 import type { ParsedRoutePoint, ParsedRoutePreview } from '@/types/travelRoutes';
 import {
   calculateRouteDistanceKm,
@@ -427,6 +428,36 @@ const createRoutePoints = (
   });
 };
 
+/**
+ * Точки, снятые с самого трека, имён в файле не имеют, а контракт сохранения
+ * требует непустой `title` у каждой custom-точки: `PUT /trips/planned/{id}/route/`
+ * отвечает 400 `title is required for custom route points`, и весь импорт не
+ * сохраняется. Безымянная точка получает тот же порядковый заголовок «Точка N»,
+ * что и точка, поставленная кликом по карте (`RouteBuilder.handleAddPointFromMap`),
+ * — ключ переиспользуется, новых строк локализации нет.
+ *
+ * Заполняются все типы, у которых бэкенд требует `title`: это `custom`, `rest`
+ * и `overnight`. Единственное исключение — `place`: он уезжает как `travel`
+ * (`pointTypeToBe`), title с него не требуется, а имя приходит из самого места,
+ * поэтому подставлять туда «Точка N» значило бы переименовать чужую сущность.
+ *
+ * Подстановка идёт последним шагом, уже над готовым маршрутом: во-первых, номер
+ * совпадает с позицией точки в списке, во-вторых, склейка режима «Добавить»
+ * (`mergeNames` на общей точке стыка) успевает отработать над настоящими именами
+ * и не приписывает существующей точке подставленное «Точка 1».
+ */
+const withFilledNames = (route: RoutePoint[]): RoutePoint[] =>
+  route.map((point, index) => (
+    point.type === 'place' || point.name.trim()
+      ? point
+      : {
+        ...point,
+        name: i18nT('trips:components.trips.planning.RouteBuilder.tochka_value1_58a44f4e', {
+          value1: index + 1,
+        }),
+      }
+  ));
+
 const coordinatesEqual = (
   first: [number, number] | null,
   second: [number, number] | null,
@@ -461,7 +492,7 @@ export const buildImportedRouteDraft = (
 
   const reservedIds = new Set(existingRoute.map((point) => point.id));
   const importedPoints = createRoutePoints(imported, reservedIds);
-  if (input.mode === 'replace') return { ok: true, route: importedPoints };
+  if (input.mode === 'replace') return { ok: true, route: withFilledNames(importedPoints) };
 
   if (appendJoinIsEqual) {
     const existingLast = existingRoute[existingRoute.length - 1];
@@ -472,9 +503,13 @@ export const buildImportedRouteDraft = (
     };
     return {
       ok: true,
-      route: [...existingRoute.slice(0, -1), mergedLast, ...importedPoints.slice(1)],
+      route: withFilledNames([
+        ...existingRoute.slice(0, -1),
+        mergedLast,
+        ...importedPoints.slice(1),
+      ]),
     };
   }
 
-  return { ok: true, route: [...existingRoute, ...importedPoints] };
+  return { ok: true, route: withFilledNames([...existingRoute, ...importedPoints]) };
 };

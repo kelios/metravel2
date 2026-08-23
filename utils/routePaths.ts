@@ -59,6 +59,24 @@ export function buildTravelPath(slugOrId: unknown, options?: { encode?: boolean 
 }
 
 /**
+ * Путь к путешествию из самой записи: сначала слаг, потом числовой id. Единая
+ * реализация двухступенчатого фолбэка — раньше эта пара строк была скопирована
+ * в карточке, в шапке детали и в SEO-слое, и копии успели разъехаться
+ * контрактом (#1438).
+ *
+ * Для внутренней навигации id-форма пригодна: роутер приложения открывает
+ * статью и по числу. В canonical/og:url и структурированные данные её брать
+ * нельзя — прямой заход на `/travels/<id>` прод отдаёт пустым 404 (#1512).
+ */
+export function buildTravelPathFromTravel(
+  travel: { slug?: unknown; id?: unknown } | null | undefined,
+  options?: { encode?: boolean },
+): string | null {
+  if (!travel) return null;
+  return buildTravelPath(travel.slug, options) ?? buildTravelPath(travel.id, options);
+}
+
+/**
  * Проверка готового адреса, пришедшего с бэкенда (поле `url` карточки), перед
  * тем как отдать его в `href` или в переход.
  *

@@ -1,0 +1,839 @@
+{
+  "contractVersion": 1,
+  "note": "Шаги с «поверхностным» ответом (правило 4f), разобранные сверкой #1431: у каждого есть вердикт с источником и датой в отчёте задачи. Гейт check:fast падает только на том, что добавила правка, — новый цветовой или облицовочный ответ обязан получить датированное фото по порогу свежести 4f. Конструктивный материал (камень, сруб, бетон, металл, стекло, а также материал самого произведения — зеркала мозаики, прутья плетёной фигуры) сюда не попадает вовсе: он вне scope правила. Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих незавершённых правок. Обновлять: npm run quest:scan-surface-answer:baseline",
+  "known": {
+    "scripts/amsterdam-quest-data.js": [
+      "amsterdam-on-piles|9-westerkerk|dict-color|голубая",
+      "amsterdam-on-piles|9-westerkerk|dict-color|голубая с золотом",
+      "amsterdam-on-piles|9-westerkerk|dict-color|голубого",
+      "amsterdam-on-piles|9-westerkerk|dict-color|голубой",
+      "amsterdam-on-piles|9-westerkerk|dict-color|лазурная",
+      "amsterdam-on-piles|9-westerkerk|dict-color|лазурный",
+      "amsterdam-on-piles|9-westerkerk|dict-color|сине-голубая",
+      "amsterdam-on-piles|9-westerkerk|dict-color|синего",
+      "amsterdam-on-piles|9-westerkerk|dict-color|синий",
+      "amsterdam-on-piles|9-westerkerk|dict-color|синий с золотым",
+      "amsterdam-on-piles|9-westerkerk|dict-color|синяя",
+      "amsterdam-on-piles|9-westerkerk|dict-color|синяя с золотом"
+    ],
+    "scripts/barcelona-quest-data.js": [
+      "barcelona-barri-gotic|2-catedral|dict-color|оранжево красного цвета",
+      "barcelona-barri-gotic|2-catedral|dict-color|оранжево красные",
+      "barcelona-barri-gotic|2-catedral|dict-color|оранжевого цвета",
+      "barcelona-barri-gotic|2-catedral|dict-color|оранжевые",
+      "barcelona-barri-gotic|2-catedral|dict-color|оранжевый",
+      "barcelona-barri-gotic|2-catedral|dict-color|ярко оранжевые",
+      "barcelona-barri-gotic|2-catedral|dict-color|ярко-оранжевые",
+      "barcelona-barri-gotic|2-catedral|task-color-word|белое",
+      "barcelona-barri-gotic|2-catedral|task-color-word|белых"
+    ],
+    "scripts/barkovshchina-spirits-quest-data.js": [
+      "barkovshchina-spirits|point-3-2|task-asks-color|формулировка"
+    ],
+    "scripts/batumi-quest-data.js": [
+      "batumi-golden-fleece|6-ali-i-nino|task-asks-material|формулировка"
+    ],
+    "scripts/belgrade-quest-data.js": [
+      "belgrade-white-city|4-znak-pitanja|task-color-word|беленый"
+    ],
+    "scripts/bialystok-quest-data.js": [
+      "bialystok-zamenhof|3-sobor-mikolaja|dict-color|белая",
+      "bialystok-zamenhof|3-sobor-mikolaja|dict-color|белого",
+      "bialystok-zamenhof|3-sobor-mikolaja|dict-color|белого цвета",
+      "bialystok-zamenhof|3-sobor-mikolaja|dict-color|белоснежные",
+      "bialystok-zamenhof|3-sobor-mikolaja|dict-color|белоснежный",
+      "bialystok-zamenhof|3-sobor-mikolaja|dict-color|белые",
+      "bialystok-zamenhof|3-sobor-mikolaja|dict-color|белый",
+      "bialystok-zamenhof|3-sobor-mikolaja|dict-color|белым",
+      "bialystok-zamenhof|6-katedra|dict-color|из красного кирпича",
+      "bialystok-zamenhof|6-katedra|dict-color|красного кирпича",
+      "bialystok-zamenhof|6-katedra|dict-color|красный кирпич",
+      "bialystok-zamenhof|6-katedra|dict-material-surface|из кирпича",
+      "bialystok-zamenhof|6-katedra|dict-material-surface|из красного кирпича",
+      "bialystok-zamenhof|6-katedra|dict-material-surface|кирпич",
+      "bialystok-zamenhof|6-katedra|dict-material-surface|кирпича",
+      "bialystok-zamenhof|6-katedra|dict-material-surface|кирпичные",
+      "bialystok-zamenhof|6-katedra|dict-material-surface|красного кирпича",
+      "bialystok-zamenhof|6-katedra|dict-material-surface|красный кирпич",
+      "bialystok-zamenhof|6-katedra|task-asks-material|формулировка"
+    ],
+    "scripts/bobruisk-quest-data.js": [
+      "bobruisk-beaver-odessa|2-sinagoga|task-color-word|синагоги",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|белая",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|белого",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|белого цвета",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|белоснежная",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|белоснежный",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|белые",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|белый",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|белым",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|dict-color|в белый",
+      "bobruisk-beaver-odessa|8-georgievskiy-hram|task-asks-color|формулировка"
+    ],
+    "scripts/brest-fortress-quest-data.js": [
+      "brest-fortress|nikola|dict-color|желтый",
+      "brest-fortress|nikola|dict-color|желтым",
+      "brest-fortress|nikola|dict-color|золотистый",
+      "brest-fortress|nikola|dict-color|золото",
+      "brest-fortress|nikola|dict-color|золотой",
+      "brest-fortress|nikola|dict-color|золотой цвет",
+      "brest-fortress|nikola|dict-color|золотым",
+      "brest-fortress|nikola|task-asks-color|формулировка"
+    ],
+    "scripts/bruges-quest-data.js": [
+      "bruges-sleeping-city|1-jeruzalemkerk|dict-color|медный шар",
+      "bruges-sleeping-city|1-jeruzalemkerk|task-color-word|медный",
+      "bruges-sleeping-city|11-minnewater|task-color-word|белые"
+    ],
+    "scripts/brussels-quest-data.js": [
+      "brussels-zwanze|6-grand-place|task-color-word|золотая"
+    ],
+    "scripts/bucharest-quest-data.js": [
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|желтая",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|желтого цвета",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|желтое",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|желтый",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|жёлтая",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|жёлтого цвета",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|жёлтое",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|жёлтый",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|золотистая",
+      "bucharest-curtea-veche|4-macca-vilacrosse|dict-color|золотистый"
+    ],
+    "scripts/chisinau-quest-data.js": [
+      "chisinau-white-stone|chisinau-water-tower|dict-color|красный кирпич",
+      "chisinau-white-stone|chisinau-water-tower|dict-material-surface|из кирпича",
+      "chisinau-white-stone|chisinau-water-tower|dict-material-surface|кирпич",
+      "chisinau-white-stone|chisinau-water-tower|dict-material-surface|кирпича",
+      "chisinau-white-stone|chisinau-water-tower|dict-material-surface|кирпичи",
+      "chisinau-white-stone|chisinau-water-tower|dict-material-surface|кирпичная кладка",
+      "chisinau-white-stone|chisinau-water-tower|dict-material-surface|кирпичом",
+      "chisinau-white-stone|chisinau-water-tower|dict-material-surface|красный кирпич",
+      "chisinau-white-stone|chisinau-water-tower|task-asks-material|формулировка"
+    ],
+    "scripts/copenhagen-quest-data.js": [
+      "copenhagen-from-the-sea|1-andersen|task-color-word|золотого",
+      "copenhagen-from-the-sea|2-vor-frue|task-color-word|белые",
+      "copenhagen-from-the-sea|3-rundetaarn|dict-color|сердечко",
+      "copenhagen-from-the-sea|3-rundetaarn|task-color-word|золотую",
+      "copenhagen-from-the-sea|3-rundetaarn|task-color-word|красный"
+    ],
+    "scripts/florence-quest-data.js": [
+      "florence-guilds-renaissance|10-ponte-vecchio|dict-color|gold",
+      "florence-guilds-renaissance|10-ponte-vecchio|dict-color|золота",
+      "florence-guilds-renaissance|10-ponte-vecchio|dict-color|золото",
+      "florence-guilds-renaissance|10-ponte-vecchio|dict-color|золото и драгоценности",
+      "florence-guilds-renaissance|10-ponte-vecchio|dict-color|золотом",
+      "florence-guilds-renaissance|10-ponte-vecchio|dict-color|золотые украшения",
+      "florence-guilds-renaissance|10-ponte-vecchio|task-asks-material|формулировка"
+    ],
+    "scripts/gdansk-amber-quest-data.js": [
+      "gdansk-amber|mariacka|dict-color|красный кирпич",
+      "gdansk-amber|mariacka|dict-material-surface|из кирпича",
+      "gdansk-amber|mariacka|dict-material-surface|кирпич",
+      "gdansk-amber|mariacka|dict-material-surface|кирпича",
+      "gdansk-amber|mariacka|dict-material-surface|кирпичей",
+      "gdansk-amber|mariacka|dict-material-surface|кирпичи",
+      "gdansk-amber|mariacka|dict-material-surface|красный кирпич",
+      "gdansk-amber|mariacka|task-asks-material|формулировка"
+    ],
+    "scripts/ghent-quest-data.js": [
+      "ghent-stolen-lamb|1-sint-baafs|task-color-word|белый"
+    ],
+    "scripts/gomel-palace-quest-data.js": [
+      "gomel-palace|chapel|dict-material-surface|изразцами",
+      "gomel-palace|chapel|dict-material-surface|изразцы",
+      "gomel-palace|chapel|dict-material-surface|майолика",
+      "gomel-palace|chapel|dict-material-surface|майолики",
+      "gomel-palace|chapel|dict-material-surface|майоликой",
+      "gomel-palace|chapel|dict-material-surface|майолику",
+      "gomel-palace|chapel|dict-material-surface|цветная майолика",
+      "gomel-palace|chapel|task-asks-material|формулировка",
+      "gomel-palace|graf|task-color-word|сохранила"
+    ],
+    "scripts/gomel-soviet-quest-data.js": [
+      "gomel-soviet|4-dom-mayanca|dict-color|белый и красный",
+      "gomel-soviet|4-dom-mayanca|dict-color|белый красный",
+      "gomel-soviet|4-dom-mayanca|dict-color|кирпичный и белый",
+      "gomel-soviet|4-dom-mayanca|dict-color|красно-белый",
+      "gomel-soviet|4-dom-mayanca|dict-color|красный белый",
+      "gomel-soviet|4-dom-mayanca|dict-color|красный и белый",
+      "gomel-soviet|4-dom-mayanca|dict-color|красный и белый цвет",
+      "gomel-soviet|4-dom-mayanca|dict-color|красный кирпич и белый",
+      "gomel-soviet|4-dom-mayanca|task-asks-color|формулировка"
+    ],
+    "scripts/grodno-gorodnitsa-quest-data.js": [
+      "grodno-gorodnitsa|8-muzey-gorodnicy|dict-material-surface|глиняная черепица",
+      "grodno-gorodnitsa|8-muzey-gorodnicy|dict-material-surface|из черепицы",
+      "grodno-gorodnitsa|8-muzey-gorodnicy|dict-material-surface|керамическая черепица",
+      "grodno-gorodnitsa|8-muzey-gorodnicy|dict-material-surface|черепица",
+      "grodno-gorodnitsa|8-muzey-gorodnicy|dict-material-surface|черепицей",
+      "grodno-gorodnitsa|8-muzey-gorodnicy|dict-material-surface|черепицы"
+    ],
+    "scripts/grodno-royal-quest-data.js": [
+      "grodno-royal|kalozha|dict-material-surface|из кирпича",
+      "grodno-royal|kalozha|dict-material-surface|кирпич",
+      "grodno-royal|kalozha|dict-material-surface|кирпича",
+      "grodno-royal|kalozha|dict-material-surface|кирпичь",
+      "grodno-royal|kalozha|dict-material-surface|плинфа",
+      "grodno-royal|kalozha|dict-material-surface|плінфа",
+      "grodno-royal|kalozha|task-asks-material|формулировка",
+      "grodno-royal|synagogue|task-color-word|синагоги"
+    ],
+    "scripts/hel-fishermen-quest-data.js": [
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-color|красный кирпич",
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-material-surface|brick",
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-material-surface|cegla",
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-material-surface|cegła",
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-material-surface|из кирпича",
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-material-surface|кирпич",
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-material-surface|кирпича",
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-material-surface|кирпичи",
+      "hel-fishermen|hel-muzeum-rybolowstwa|dict-material-surface|красный кирпич",
+      "hel-fishermen|hel-muzeum-rybolowstwa|task-asks-material|формулировка"
+    ],
+    "scripts/hel-jurata-quest-data.js": [
+      "hel-jurata-amber|lisi-jar|dict-color|белый орел",
+      "hel-jurata-amber|lisi-jar|task-color-word|обелиска"
+    ],
+    "scripts/istanbul-galata-quest-data.js": [
+      "istanbul-galata|5-tyunel|dict-color|алый",
+      "istanbul-galata|5-tyunel|dict-color|бордовый",
+      "istanbul-galata|5-tyunel|dict-color|красная",
+      "istanbul-galata|5-tyunel|dict-color|красно-белый",
+      "istanbul-galata|5-tyunel|dict-color|красного",
+      "istanbul-galata|5-tyunel|dict-color|красные",
+      "istanbul-galata|5-tyunel|dict-color|красный",
+      "istanbul-galata|5-tyunel|dict-color|красный с белым",
+      "istanbul-galata|5-tyunel|dict-color|красным",
+      "istanbul-galata|5-tyunel|dict-color|ярко-красный",
+      "istanbul-galata|5-tyunel|task-asks-color|формулировка",
+      "istanbul-galata|6-svyatoy-antoniy|dict-color|из красного кирпича",
+      "istanbul-galata|6-svyatoy-antoniy|dict-color|красный кирпич",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|из кирпича",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|из красного кирпича",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|кирпич",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|кирпича",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|кирпичей",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|кирпичи",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|кирпичик",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|кирпичная",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|кирпичный",
+      "istanbul-galata|6-svyatoy-antoniy|dict-material-surface|красный кирпич",
+      "istanbul-galata|6-svyatoy-antoniy|task-asks-material|формулировка"
+    ],
+    "scripts/istanbul-quest-data.js": [
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|золотая",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|золотистая",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|золотистые",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|золотистый",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|золото",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|золотой",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|золотые",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|золотым",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|из золота",
+      "istanbul-empires|1-nemetskiy-fontan|dict-color|позолота",
+      "istanbul-empires|2-obelisk-feodosiya|task-color-word|обелиск",
+      "istanbul-empires|4-obelisk-konstantina|task-color-word|обелиска"
+    ],
+    "scripts/kamenets-quest-data.js": [
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золотистого",
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золотистые",
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золотистый",
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золото",
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золотого",
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золотой",
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золотые",
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|цвета золота",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|бурый",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|из красного кирпича",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|коричневая",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|коричневый",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красная",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красно-бурый",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красно-коричневая",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красно-коричневый",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красного",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красного кирпича",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красный",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красный кирпич",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|темно-красный",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-color|тёмно-красный",
+      "kamenets-white-tower|6-kameneckaya-vezha|task-asks-color|формулировка"
+    ],
+    "scripts/kaunas-quest-data.js": [
+      "kaunas-capital|2-rotuse|task-asks-color|формулировка",
+      "kaunas-capital|4-perkuno-namas|dict-color|красный кирпич",
+      "kaunas-capital|4-perkuno-namas|dict-material-surface|из кирпича",
+      "kaunas-capital|4-perkuno-namas|dict-material-surface|кирпич",
+      "kaunas-capital|4-perkuno-namas|dict-material-surface|кирпича",
+      "kaunas-capital|4-perkuno-namas|dict-material-surface|кирпичи",
+      "kaunas-capital|4-perkuno-namas|dict-material-surface|кирпичный",
+      "kaunas-capital|4-perkuno-namas|dict-material-surface|красный кирпич",
+      "kaunas-capital|4-perkuno-namas|dict-material-surface|фигурный кирпич",
+      "kaunas-capital|4-perkuno-namas|task-asks-material|формулировка"
+    ],
+    "scripts/krakow-bike-quest-data.js": [
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|бирюза",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|бирюзовая",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|бирюзовый",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|голубая",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|голубой",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|зелено голубой",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|лазурная",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|лазурный",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|сине зеленая",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|сине зеленый"
+    ],
+    "scripts/krakow-district-quests-data.js": [
+      "krakow-kazimierz|3-remuh|task-asks-material|формулировка"
+    ],
+    "scripts/krakow-dragon-quest-data.js": [
+      "krakow-dragon|2-mariacki|dict-color|золотая корона",
+      "krakow-dragon|2-mariacki|task-color-word|золотится",
+      "krakow-dragon|5-kazimierz|task-color-word|синагогой"
+    ],
+    "scripts/krakow-kazimierz-quest-data.js": [
+      "krakow-kazimierz|2-stara-synagoga|task-color-word|синагогу"
+    ],
+    "scripts/krakow-nowahuta-quest-data.js": [
+      "krakow-nowahuta|2-aleja-roz|task-color-word|сохранила"
+    ],
+    "scripts/krevo-quest-data.js": [
+      "krevo-walled-maiden|3-sinagogalny-dvor|task-color-word|синагоги",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-color|красный кирпич",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-color|красным кирпичом",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|из кирпича",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|кирпич",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|кирпичей",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|кирпичи",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|кирпичная кладка",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|кирпичом",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|красный кирпич",
+      "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|красным кирпичом"
+    ],
+    "scripts/leczyca-quest-data.js": [
+      "leczyca-boruta|1-kosciol-andrzeja|dict-color|из красного кирпича",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-color|красный кирпич",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|cegla",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|cegła",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|из кирпича",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|из красного кирпича",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|кирпич",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|кирпича",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|кирпичный",
+      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|красный кирпич",
+      "leczyca-boruta|1-kosciol-andrzeja|task-asks-material|формулировка"
+    ],
+    "scripts/lodz-murals-quest-data.js": [
+      "lodz-murals|10-wiedzmin|task-color-word|белые",
+      "lodz-murals|2-mcity|dict-color|голубой и красный",
+      "lodz-murals|2-mcity|dict-color|красный голубой",
+      "lodz-murals|2-mcity|dict-color|красный и голубой",
+      "lodz-murals|2-mcity|dict-color|красный и синий",
+      "lodz-murals|2-mcity|dict-color|красный синий",
+      "lodz-murals|2-mcity|dict-color|синий и красный",
+      "lodz-murals|2-mcity|dict-color|синий красный",
+      "lodz-murals|2-mcity|task-asks-color|формулировка",
+      "lodz-murals|2-mcity|task-color-word|серый",
+      "lodz-murals|5-siudmak|dict-material-surface|из плитки",
+      "lodz-murals|5-siudmak|dict-material-surface|изразцы",
+      "lodz-murals|5-siudmak|dict-material-surface|кафель",
+      "lodz-murals|5-siudmak|dict-material-surface|керамическая плитка",
+      "lodz-murals|5-siudmak|dict-material-surface|плитка",
+      "lodz-murals|5-siudmak|dict-material-surface|плитки",
+      "lodz-murals|5-siudmak|task-asks-material|формулировка",
+      "lodz-murals|8-osgemeos-aryz|dict-color|желтая",
+      "lodz-murals|8-osgemeos-aryz|dict-color|желтого",
+      "lodz-murals|8-osgemeos-aryz|dict-color|желтое",
+      "lodz-murals|8-osgemeos-aryz|dict-color|желтый",
+      "lodz-murals|8-osgemeos-aryz|dict-color|жёлтая",
+      "lodz-murals|8-osgemeos-aryz|dict-color|жёлтого",
+      "lodz-murals|8-osgemeos-aryz|dict-color|жёлтое",
+      "lodz-murals|8-osgemeos-aryz|dict-color|жёлтый",
+      "lodz-murals|8-osgemeos-aryz|dict-color|золотисто желтый",
+      "lodz-murals|8-osgemeos-aryz|dict-color|ярко желтый",
+      "lodz-murals|8-osgemeos-aryz|task-asks-color|формулировка"
+    ],
+    "scripts/lubcha-quest-data.js": [
+      "lubcha-castle-revival|1-synagogue-culture-house|task-color-word|синагоге"
+    ],
+    "scripts/lublin-old-town-quest-data.js": [
+      "lublin-old-town|brama|task-color-word|белый",
+      "lublin-old-town|zamek|task-color-word|белую",
+      "lublin-old-town|zamek|task-color-word|середины"
+    ],
+    "scripts/luninets-quest-data.js": [
+      "luninets-bike-beloe|beloe-bereg|task-asks-color|формулировка",
+      "luninets-bike-polesie|2-gorodishche|task-color-word|охранный",
+      "luninets-bike-polesie|duby-kozhan|task-color-word|охранную",
+      "luninets-railway|4-tserkov|dict-color|красного кирпича",
+      "luninets-railway|4-tserkov|dict-color|красный кирпич",
+      "luninets-railway|4-tserkov|dict-material-surface|из кирпича",
+      "luninets-railway|4-tserkov|dict-material-surface|кирпич",
+      "luninets-railway|4-tserkov|dict-material-surface|кирпича",
+      "luninets-railway|4-tserkov|dict-material-surface|кирпичи",
+      "luninets-railway|4-tserkov|dict-material-surface|красного кирпича",
+      "luninets-railway|4-tserkov|dict-material-surface|красный кирпич",
+      "luninets-railway|4-tserkov|task-asks-material|формулировка"
+    ],
+    "scripts/luxembourg-quest-data.js": [
+      "luxembourg-melusina|13-neumunster|dict-color|она чёрная",
+      "luxembourg-melusina|13-neumunster|dict-color|чёрная",
+      "luxembourg-melusina|13-neumunster|dict-color|чёрная богоматерь",
+      "luxembourg-melusina|13-neumunster|dict-color|чёрная дева мария",
+      "luxembourg-melusina|13-neumunster|dict-color|чёрная мадонна",
+      "luxembourg-melusina|13-neumunster|dict-color|чёрного цвета",
+      "luxembourg-melusina|13-neumunster|dict-color|чёрный цвет"
+    ],
+    "scripts/malbork-quest-data.js": [
+      "malbork-marienburg|6-madonna|dict-color|zloto",
+      "malbork-marienburg|6-madonna|dict-color|złoto",
+      "malbork-marienburg|6-madonna|dict-color|золотая",
+      "malbork-marienburg|6-madonna|dict-color|золотистый",
+      "malbork-marienburg|6-madonna|dict-color|золотистым",
+      "malbork-marienburg|6-madonna|dict-color|золото",
+      "malbork-marienburg|6-madonna|dict-color|золотой",
+      "malbork-marienburg|6-madonna|dict-color|золотым",
+      "malbork-marienburg|6-madonna|dict-color|из золота",
+      "malbork-marienburg|6-madonna|dict-color|позолота",
+      "malbork-marienburg|6-madonna|task-asks-color|формулировка"
+    ],
+    "scripts/minsk-cinema-quest-data.js": [
+      "minsk-cinema|8-elektrostanciya|task-color-word|сохраненный"
+    ],
+    "scripts/minsk-cmok-quest-data.js": [
+      "minsk-cmok|3-star-memory|task-color-word|обсерватории",
+      "minsk-cmok|6-word-memory|dict-material-surface|глиняная черепица",
+      "minsk-cmok|6-word-memory|dict-material-surface|черепица",
+      "minsk-cmok|6-word-memory|dict-material-surface|черепицей",
+      "minsk-cmok|6-word-memory|task-asks-material|формулировка"
+    ],
+    "scripts/minsk-dvoriki-quest-data.js": [
+      "minsk-dvoriki|7-krasny-dvorik|dict-color|голубая коза",
+      "minsk-dvoriki|7-krasny-dvorik|dict-color|коза синяя",
+      "minsk-dvoriki|7-krasny-dvorik|dict-color|синий козёл",
+      "minsk-dvoriki|7-krasny-dvorik|dict-color|синюю козу",
+      "minsk-dvoriki|7-krasny-dvorik|dict-color|синяя коза",
+      "minsk-dvoriki|7-krasny-dvorik|dict-color|синяя козочка"
+    ],
+    "scripts/minsk-kids-quest-data.js": [
+      "minsk-kids-bronze-friends|3-hlusov-most|task-asks-color|формулировка"
+    ],
+    "scripts/minsk-loshitsa-quest-data.js": [
+      "minsk-loshitsa|4-melnica|dict-color|красный кирпич",
+      "minsk-loshitsa|4-melnica|dict-material-surface|из кирпича",
+      "minsk-loshitsa|4-melnica|dict-material-surface|кирпич",
+      "minsk-loshitsa|4-melnica|dict-material-surface|кирпичей",
+      "minsk-loshitsa|4-melnica|dict-material-surface|кирпичи",
+      "minsk-loshitsa|4-melnica|dict-material-surface|кирпичная",
+      "minsk-loshitsa|4-melnica|dict-material-surface|кирпичное",
+      "minsk-loshitsa|4-melnica|dict-material-surface|кирпичом",
+      "minsk-loshitsa|4-melnica|dict-material-surface|красный кирпич",
+      "minsk-loshitsa|4-melnica|task-asks-material|формулировка",
+      "minsk-loshitsa|6-magnolia|task-color-word|белыми"
+    ],
+    "scripts/minsk-teens-oktyabrskaya-quest-data.js": [
+      "minsk-teens-oktyabrskaya|9-amigos|task-color-word|желтых"
+    ],
+    "scripts/mir-castle-quest-data.js": [
+      "mir-castle|church|dict-color|бирюзовые",
+      "mir-castle|church|dict-color|бирюзовый",
+      "mir-castle|church|dict-color|блакитны",
+      "mir-castle|church|dict-color|голубого",
+      "mir-castle|church|dict-color|голубой",
+      "mir-castle|church|dict-color|голубые",
+      "mir-castle|church|dict-color|лазурного",
+      "mir-castle|church|dict-color|лазурные",
+      "mir-castle|church|dict-color|лазурный",
+      "mir-castle|church|dict-color|небесно голубой",
+      "mir-castle|church|dict-color|сине голубой",
+      "mir-castle|church|dict-color|синего",
+      "mir-castle|church|dict-color|синие",
+      "mir-castle|church|dict-color|синий",
+      "mir-castle|church|task-asks-color|формулировка"
+    ],
+    "scripts/mogilev-teens-symbol-code-quest-data.js": [
+      "mogilev-teens-symbol-code|3-red-courtyard|dict-color|красного",
+      "mogilev-teens-symbol-code|3-red-courtyard|dict-color|красный",
+      "mogilev-teens-symbol-code|3-red-courtyard|task-asks-color|формулировка"
+    ],
+    "scripts/naples-quest-data.js": [
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|изразцами",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|изразцы",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|кафель",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|керамическая плитка",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|майолика",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|майолика плитка",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|майоликой",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|плитка",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|dict-material-surface|плиткой",
+      "naples-blood-of-san-gennaro|2-chiostro-santa-chiara|task-asks-material|формулировка"
+    ],
+    "scripts/nesvizh-radziwill-quest-data.js": [
+      "nesvizh-radziwill|ratusha|task-color-word|сохранившейся"
+    ],
+    "scripts/novogrudok-quest-data.js": [
+      "novogrudok-crown|2-farny-kostel|dict-color|белая",
+      "novogrudok-crown|2-farny-kostel|dict-color|бело",
+      "novogrudok-crown|2-farny-kostel|dict-color|белого",
+      "novogrudok-crown|2-farny-kostel|dict-color|белого цвета",
+      "novogrudok-crown|2-farny-kostel|dict-color|белоснежные",
+      "novogrudok-crown|2-farny-kostel|dict-color|белоснежный",
+      "novogrudok-crown|2-farny-kostel|dict-color|белые",
+      "novogrudok-crown|2-farny-kostel|dict-color|белый",
+      "novogrudok-crown|2-farny-kostel|dict-color|белым",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|золотистого",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|золотистые",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|золотистый",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|золото",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|золотого",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|золотой",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|золотые",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|золотым",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|позолота",
+      "novogrudok-crown|6-borisoglebskaya|dict-color|цвета золота",
+      "novogrudok-crown|6-borisoglebskaya|task-asks-color|формулировка"
+    ],
+    "scripts/oshmyany-quest-data.js": [
+      "oshmyany-crossroads|1-sinagoga|task-color-word|синагогу"
+    ],
+    "scripts/pakocim-voices-quest-data.js": [
+      "pakocim-voices|8-fort|dict-material-surface|brick",
+      "pakocim-voices|8-fort|dict-material-surface|cegla",
+      "pakocim-voices|8-fort|dict-material-surface|cegła",
+      "pakocim-voices|8-fort|dict-material-surface|кирпич",
+      "pakocim-voices|8-fort|dict-material-surface|кирпича",
+      "pakocim-voices|8-fort|dict-material-surface|кирпичные",
+      "pakocim-voices|8-fort|dict-material-surface|кирпичный",
+      "pakocim-voices|8-fort|task-asks-material|формулировка"
+    ],
+    "scripts/paris-quest-data.js": [
+      "paris-point-zero|6-bukinisty|dict-color|green",
+      "paris-point-zero|6-bukinisty|dict-color|в зеленый",
+      "paris-point-zero|6-bukinisty|dict-color|вагонный зеленый",
+      "paris-point-zero|6-bukinisty|dict-color|зеленого",
+      "paris-point-zero|6-bukinisty|dict-color|зеленые",
+      "paris-point-zero|6-bukinisty|dict-color|зеленый",
+      "paris-point-zero|6-bukinisty|dict-color|зеленый цвет",
+      "paris-point-zero|6-bukinisty|dict-color|темно зеленый",
+      "paris-point-zero|6-bukinisty|dict-color|темно-зеленый",
+      "paris-point-zero|6-bukinisty|dict-color|темнозеленый",
+      "paris-point-zero|6-bukinisty|task-asks-color|формулировка",
+      "paris-point-zero|9-kolonny-burena|dict-color|белое и черное",
+      "paris-point-zero|9-kolonny-burena|dict-color|белый и черный",
+      "paris-point-zero|9-kolonny-burena|dict-color|белый с черным",
+      "paris-point-zero|9-kolonny-burena|dict-color|белый черный",
+      "paris-point-zero|9-kolonny-burena|dict-color|черно белые",
+      "paris-point-zero|9-kolonny-burena|dict-color|черно белый",
+      "paris-point-zero|9-kolonny-burena|dict-color|черно-белые",
+      "paris-point-zero|9-kolonny-burena|dict-color|черно-белый",
+      "paris-point-zero|9-kolonny-burena|dict-color|черное и белое",
+      "paris-point-zero|9-kolonny-burena|dict-color|черный белый",
+      "paris-point-zero|9-kolonny-burena|dict-color|черный и белый",
+      "paris-point-zero|9-kolonny-burena|dict-color|черный с белым",
+      "paris-point-zero|9-kolonny-burena|task-asks-color|формулировка"
+    ],
+    "scripts/polotsk-ancient-quest-data.js": [
+      "polotsk-ancient|bogoyavlensky|dict-color|белая",
+      "polotsk-ancient|bogoyavlensky|dict-color|белого",
+      "polotsk-ancient|bogoyavlensky|dict-color|белоснежный",
+      "polotsk-ancient|bogoyavlensky|dict-color|белые",
+      "polotsk-ancient|bogoyavlensky|dict-color|белый",
+      "polotsk-ancient|bogoyavlensky|dict-color|белым",
+      "polotsk-ancient|bogoyavlensky|dict-color|белён"
+    ],
+    "scripts/poznan-goats-quest-data.js": [
+      "poznan-goats|fara|dict-color|rozowy",
+      "poznan-goats|fara|dict-color|бордовые",
+      "poznan-goats|fara|dict-color|бордовый",
+      "poznan-goats|fara|dict-color|коричневые",
+      "poznan-goats|fara|dict-color|коричневый",
+      "poznan-goats|fara|dict-color|красно коричневый",
+      "poznan-goats|fara|dict-color|красно розовый",
+      "poznan-goats|fara|dict-color|красного",
+      "poznan-goats|fara|dict-color|краснокоричневый",
+      "poznan-goats|fara|dict-color|красные",
+      "poznan-goats|fara|dict-color|красный",
+      "poznan-goats|fara|dict-color|розово красный",
+      "poznan-goats|fara|dict-color|розовые",
+      "poznan-goats|fara|dict-color|розовый",
+      "poznan-goats|fara|dict-color|темно красный",
+      "poznan-goats|fara|dict-color|темнокрасный",
+      "poznan-goats|fara|dict-color|терракотовый"
+    ],
+    "scripts/riga-quest-data.js": [
+      "riga-unfinished-city|12-brivibas-piemineklis|task-color-word|золотые",
+      "riga-unfinished-city|9-kaku-nams|task-color-word|черных"
+    ],
+    "scripts/sasino-quest-data.js": [
+      "sasino-stilo|6-latarnia|dict-color|красная",
+      "sasino-stilo|6-latarnia|dict-color|красного",
+      "sasino-stilo|6-latarnia|dict-color|красном",
+      "sasino-stilo|6-latarnia|dict-color|красный",
+      "sasino-stilo|6-latarnia|dict-color|красный цвет",
+      "sasino-stilo|6-latarnia|dict-color|червоный",
+      "sasino-stilo|6-latarnia|task-asks-color|формулировка"
+    ],
+    "scripts/slavgorod-krinica-quest-data.js": [
+      "slavgorod-blue-krinica|5-brod|dict-color|голубизна исчезает",
+      "slavgorod-blue-krinica|5-brod|dict-color|голубизна пропадает",
+      "slavgorod-blue-krinica|5-brod|task-asks-color|формулировка"
+    ],
+    "scripts/sleza-quest-data.js": [
+      "sleza-swieta-gora|5-dom-pod-wiezyca|task-color-word|красный"
+    ],
+    "scripts/sofia-quest-data.js": [
+      "sofia-serdica-underfoot|10-sveta-sofia|dict-color|красный кирпич",
+      "sofia-serdica-underfoot|10-sveta-sofia|dict-material-surface|из кирпича",
+      "sofia-serdica-underfoot|10-sveta-sofia|dict-material-surface|кирпич",
+      "sofia-serdica-underfoot|10-sveta-sofia|dict-material-surface|кирпича",
+      "sofia-serdica-underfoot|10-sveta-sofia|dict-material-surface|кирпичная кладка",
+      "sofia-serdica-underfoot|10-sveta-sofia|dict-material-surface|красный кирпич",
+      "sofia-serdica-underfoot|10-sveta-sofia|task-asks-material|формулировка",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-color|золото",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-color|золотой",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-color|позолота",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-color|сусальное золото",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-material-surface|золоченый",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-material-surface|золочёный",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-material-surface|позолота",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-material-surface|позолоченное покрытие",
+      "sofia-serdica-underfoot|11-alexander-nevsky|dict-material-surface|позолоченный",
+      "sofia-serdica-underfoot|4-mineral-baths|dict-material-surface|керамическая плитка",
+      "sofia-serdica-underfoot|4-mineral-baths|dict-material-surface|керамические плитки",
+      "sofia-serdica-underfoot|4-mineral-baths|dict-material-surface|майолика",
+      "sofia-serdica-underfoot|4-mineral-baths|dict-material-surface|майоликовая плитка",
+      "sofia-serdica-underfoot|4-mineral-baths|dict-material-surface|майоликовые плитки",
+      "sofia-serdica-underfoot|4-mineral-baths|task-asks-material|формулировка"
+    ],
+    "scripts/spb-quest-data.js": [
+      "spb-guardians|2-isaac-cathedral|dict-color|золото",
+      "spb-guardians|2-isaac-cathedral|dict-color|золотое покрытие",
+      "spb-guardians|2-isaac-cathedral|dict-color|золотом",
+      "spb-guardians|2-isaac-cathedral|dict-color|настоящее золото",
+      "spb-guardians|2-isaac-cathedral|dict-color|позолота",
+      "spb-guardians|2-isaac-cathedral|dict-color|сусальное золото",
+      "spb-guardians|2-isaac-cathedral|dict-color|чистое золото",
+      "spb-guardians|7-kazan-cathedral|task-color-word|золотыми"
+    ],
+    "scripts/svityaz-quest-data.js": [
+      "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|белого",
+      "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|белого цвета",
+      "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|белое",
+      "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|белоснежный",
+      "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|белый",
+      "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|белый песок",
+      "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|светло-белый",
+      "svityaz-sunken-city|2-prozrachnoe-dno|task-asks-color|формулировка"
+    ],
+    "scripts/swiety-krzyz-quest-data.js": [
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|бело-красная",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|бело-красный",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|белый и красный",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|белый красный",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|в красный и белый",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|красная и белая",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|красно-белая",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|красно-белый",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|красный белый",
+      "swiety-krzyz-lysa-gora|8-telebashnya|dict-color|красный и белый",
+      "swiety-krzyz-lysa-gora|8-telebashnya|task-asks-color|формулировка"
+    ],
+    "scripts/szklarska-poreba-quest-data.js": [
+      "szklarska-poreba-glass-town|2-krucze-skaly|task-asks-color|формулировка"
+    ],
+    "scripts/tallinn-quest-data.js": [
+      "tallinn-vana-toomas|1-pikk-hermann|dict-color|голубой",
+      "tallinn-vana-toomas|1-pikk-hermann|dict-color|синий",
+      "tallinn-vana-toomas|1-pikk-hermann|dict-color|синяя",
+      "tallinn-vana-toomas|1-pikk-hermann|dict-color|синяя полоса",
+      "tallinn-vana-toomas|1-pikk-hermann|dict-color|темно-синий",
+      "tallinn-vana-toomas|1-pikk-hermann|dict-color|тёмно-синий",
+      "tallinn-vana-toomas|1-pikk-hermann|task-asks-color|формулировка"
+    ],
+    "scripts/tbilisi-quest-data.js": [
+      "tbilisi-warm-city|5-juma-mecheti|dict-color|из красного кирпича",
+      "tbilisi-warm-city|5-juma-mecheti|dict-color|красного кирпича",
+      "tbilisi-warm-city|5-juma-mecheti|dict-color|красный кирпич",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|из кирпича",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|из красного кирпича",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|кирпич",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|кирпича",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|кирпичи",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|кирпичный",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|красного кирпича",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|красный кирпич",
+      "tbilisi-warm-city|5-juma-mecheti|dict-material-surface|обожженный кирпич",
+      "tbilisi-warm-city|5-juma-mecheti|task-asks-material|формулировка"
+    ],
+    "scripts/torun-copernicus-quest-data.js": [
+      "torun-copernicus|dom|dict-color|красный кирпич",
+      "torun-copernicus|dom|dict-material-surface|из кирпича",
+      "torun-copernicus|dom|dict-material-surface|кирпич",
+      "torun-copernicus|dom|dict-material-surface|кирпича",
+      "torun-copernicus|dom|dict-material-surface|кирпичи",
+      "torun-copernicus|dom|dict-material-surface|кирпичом",
+      "torun-copernicus|dom|dict-material-surface|красный кирпич",
+      "torun-copernicus|dom|task-asks-material|формулировка"
+    ],
+    "scripts/venice-quest-data.js": [
+      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубка",
+      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубку",
+      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубь",
+      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубь святого духа",
+      "venice-lion-of-saint-mark|10-ponte-di-rialto|dict-color|голубя",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красно розовые",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красноватый",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красного",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красного цвета",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красные",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красный",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|красный мрамор",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|розово красные",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|розового",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|розовые",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|розовый",
+      "venice-lion-of-saint-mark|2-palazzo-ducale-loggia|dict-color|розовый мрамор",
+      "venice-lion-of-saint-mark|4-tetrarchi|task-color-word|красной"
+    ],
+    "scripts/vienna-quest-data.js": [
+      "vienna-imperial-secrets|7-pestsaule|dict-color|gold",
+      "vienna-imperial-secrets|7-pestsaule|dict-color|золотая",
+      "vienna-imperial-secrets|7-pestsaule|dict-color|золото",
+      "vienna-imperial-secrets|7-pestsaule|dict-color|золотой",
+      "vienna-imperial-secrets|7-pestsaule|dict-color|золотом",
+      "vienna-imperial-secrets|7-pestsaule|dict-color|золотые",
+      "vienna-imperial-secrets|7-pestsaule|dict-color|позолота",
+      "vienna-imperial-secrets|7-pestsaule|dict-color|позолотой"
+    ],
+    "scripts/vilnius-kids-quest-data.js": [
+      "vilnius-kids-iron-wolf|3-literatu|task-asks-material|формулировка",
+      "vilnius-kids-iron-wolf|4-ona|dict-color|красный кирпич",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|из кирпича",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|из кирпичей",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|кирпич",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|кирпича",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|кирпичей",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|кирпичи",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|кирпичик",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|кирпичики",
+      "vilnius-kids-iron-wolf|4-ona|dict-material-surface|красный кирпич"
+    ],
+    "scripts/vitebsk-avangard-quest-data.js": [
+      "vitebsk-avangard|2-gubernatorskiy-dvorec|task-color-word|охранную",
+      "vitebsk-avangard|4-ploshchad-pobedy|task-color-word|обелисков"
+    ],
+    "scripts/vitebsk-chagall-quest-data.js": [
+      "vitebsk-chagall|chagall-house|dict-color|красный кирпич",
+      "vitebsk-chagall|chagall-house|dict-material-surface|из кирпича",
+      "vitebsk-chagall|chagall-house|dict-material-surface|кирпич",
+      "vitebsk-chagall|chagall-house|dict-material-surface|кирпича",
+      "vitebsk-chagall|chagall-house|dict-material-surface|кирпичная",
+      "vitebsk-chagall|chagall-house|dict-material-surface|кирпичный",
+      "vitebsk-chagall|chagall-house|dict-material-surface|красный кирпич",
+      "vitebsk-chagall|chagall-house|task-asks-material|формулировка"
+    ],
+    "scripts/vitebsk-kids-living-drawing-quest-data.js": [
+      "vitebsk-kids-living-drawing|2-dream-guardian|task-asks-color|формулировка"
+    ],
+    "scripts/vitebsk-kids-quest-data.js": [
+      "vitebsk-kids-skazki|2-tsvetochnitsa|task-asks-color|формулировка"
+    ],
+    "scripts/vyaloe-quest-data.js": [
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-color|из красного кирпича",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-color|красный кирпич",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-color|чырвоная цэгла",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|з цэглы",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|из кирпича",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|из кирпичей",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|из красного кирпича",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|кирпич",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|кирпича",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|кирпичи",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|кирпичная",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|кирпичная кладка",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|кирпичные",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|кирпичный",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|кирпичом",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|красный кирпич",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|цегла",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|цэгла",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|dict-material-surface|чырвоная цэгла",
+      "vyaloe-tyshkevich-curse|3-dvorets-tyshkevichey|task-asks-material|формулировка"
+    ],
+    "scripts/warsaw-kids-quest-data.js": [
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|бело красный",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|белокрасный",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|белый и красный",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|белый красный",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|красно белый",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|краснобелый",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|красный",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|красный белый",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|красный и белый",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|dict-color|красный с белым",
+      "warsaw-kids-bazyliszek|4-gnojna-gora|task-asks-color|формулировка"
+    ],
+    "scripts/warsaw-quest-data.js": [
+      "warsaw-syrenka|1-barbakan|dict-color|красный кирпич",
+      "warsaw-syrenka|1-barbakan|dict-material-surface|из кирпича",
+      "warsaw-syrenka|1-barbakan|dict-material-surface|кирпич",
+      "warsaw-syrenka|1-barbakan|dict-material-surface|кирпича",
+      "warsaw-syrenka|1-barbakan|dict-material-surface|кирпичи",
+      "warsaw-syrenka|1-barbakan|dict-material-surface|красный кирпич",
+      "warsaw-syrenka|1-barbakan|task-asks-material|формулировка",
+      "warsaw-syrenka|2-syrenka|task-color-word|сирены",
+      "warsaw-syrenka|6-zamek|dict-color|бордовый",
+      "warsaw-syrenka|6-zamek|dict-color|красно коричневый",
+      "warsaw-syrenka|6-zamek|dict-color|краснокоричневый",
+      "warsaw-syrenka|6-zamek|dict-color|красные",
+      "warsaw-syrenka|6-zamek|dict-color|красный",
+      "warsaw-syrenka|6-zamek|dict-color|розово терракотовый",
+      "warsaw-syrenka|6-zamek|dict-color|розовый",
+      "warsaw-syrenka|6-zamek|dict-color|терракотовый",
+      "warsaw-syrenka|6-zamek|task-asks-color|формулировка",
+      "warsaw-syrenka|9-zlota-kaczka|dict-color|золотая корона",
+      "warsaw-syrenka|9-zlota-kaczka|task-color-word|золотой"
+    ],
+    "scripts/wave3-final-quest-data.js": [
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|черно-золотой",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|черного",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|черный",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|черный с золотом",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|чорны",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|чёрно-золотой",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|чёрного",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|чёрный",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|dict-color|чёрный с золотом",
+      "myadel-obet-i-ozernicy|1-troitskaya-tserkov|task-asks-color|формулировка"
+    ],
+    "scripts/wroclaw-gnomes-quest-data.js": [
+      "wroclaw-gnomes|gnomes|task-color-word|краснала"
+    ],
+    "scripts/yerevan-quest-data.js": [
+      "yerevan-ararat|4-vernissage|task-color-word|черного",
+      "yerevan-ararat|6-republic|dict-color|pink",
+      "yerevan-ararat|6-republic|dict-color|бежево розовый",
+      "yerevan-ararat|6-republic|dict-color|розоватый",
+      "yerevan-ararat|6-republic|dict-color|розовая",
+      "yerevan-ararat|6-republic|dict-color|розового",
+      "yerevan-ararat|6-republic|dict-color|розовое",
+      "yerevan-ararat|6-republic|dict-color|розовый",
+      "yerevan-ararat|6-republic|task-asks-color|формулировка"
+    ],
+    "scripts/zhirovichi-quest-data.js": [
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|голубого",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|голубой",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|голубой цвет",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|голубые",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|голубые купола",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|синего",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|синие",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|синие купола",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|синий",
+      "zhirovichi-icon-pear|2-uspensky-sobor|dict-color|синий цвет",
+      "zhirovichi-icon-pear|2-uspensky-sobor|task-asks-color|формулировка"
+    ]
+  }
+}

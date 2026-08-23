@@ -110,6 +110,49 @@ describe('travelSeo', () => {
     });
   });
 
+  // #1438: пригодность слага проверялась как `/^[a-z0-9-]+$/`, а литерал 'null'
+  // состоит ровно из таких символов — структурированные данные ссылались на
+  // `https://metravel.by/travels/null`, тот же адрес в 404, что и canonical.
+  it('never publishes the literal emptiness marker as the page address', () => {
+    const jsonLd = createTravelStructuredData({
+      id: 228,
+      slug: 'null',
+      name: 'Гродненские форты',
+      description: '<p>Описание</p>',
+      gallery: [],
+    } as any);
+
+    expect(JSON.stringify(jsonLd)).not.toContain('/travels/null');
+    // #1512: числовой адрес отдаёт пустой 404 при прямом заходе, поэтому и он
+    // краулерам не объявляется — страница просто остаётся без собственного @id.
+    expect(JSON.stringify(jsonLd)).not.toContain('/travels/228');
+  });
+
+  it('uses the address the page already declared in canonical', () => {
+    const canonicalUrl =
+      'https://metravel.by/travels/grodnenskie-forty-no4-i-no6-peshchery-i-skaly';
+    const jsonLd = createTravelStructuredData(
+      {
+        id: 228,
+        slug: 'null',
+        name: 'Гродненские форты',
+        description: '<p>Описание</p>',
+        gallery: [],
+      } as any,
+      { canonicalUrl }
+    );
+
+    expect(jsonLd?.['@graph']).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ '@type': 'WebPage', url: canonicalUrl }),
+        expect.objectContaining({
+          '@type': 'Article',
+          mainEntityOfPage: { '@id': `${canonicalUrl}#webpage` },
+        }),
+      ])
+    );
+  });
+
   it('creates a structured data graph for travel pages', () => {
     const jsonLd = createTravelStructuredData({
       id: 42,

@@ -46,6 +46,7 @@ const {
   QUEST_DATA_FILE_PATTERN,
   BASELINE_PATH: QUEST_REACHABILITY_BASELINE_PATH,
 } = require('./scan-quest-answer-reachability')
+const { BASELINE_PATH: QUEST_HINT_LEAK_BASELINE_PATH } = require('./scan-quest-hint-leak')
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
@@ -305,13 +306,15 @@ const main = () => {
       }
 
       // Правило авторинга 4a: ответ не стоит в тексте, который игрок читает до
-      // попытки. Умолчание скана — `hint` + `location` (#1467); оба контура
-      // вычищены до нуля на всей локальной базе, поэтому baseline'а нет и любая
-      // новая находка валит гейт сразу. Полный свип по проду —
-      // `npm run quest:scan-hint-leak`.
+      // попытки. Умолчание скана — поля шага `hint` + `location` (#1467) и текст
+      // интро против ответов всех шагов квеста (#1488). Контур шага вычищен до
+      // нуля, а у интро есть разобранный остаток, поэтому здесь появился
+      // baseline: известное молчит, новая находка валит гейт сразу. Полный свип
+      // по проду — `npm run quest:scan-hint-leak`.
       const hintLeakStatus = runCommand('node', [
         'scripts/scan-quest-hint-leak.js',
         `--source=${questDataFile}`,
+        `--baseline=${QUEST_HINT_LEAK_BASELINE_PATH}`,
       ], { shell: false })
       if (hintLeakStatus !== 0) {
         process.exit(hintLeakStatus)

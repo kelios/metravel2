@@ -357,11 +357,11 @@ describe('TravelListItem media props on web', () => {
     );
   });
 
-  // #1285: слот кадрируется `contain`, поэтому квадратный кадр в ландшафтном
-  // боксе занимает только его высоту. Прод-замер главной 2026-08-06 (mobile 412,
-  // DPR 1.75): бокс рейла 318×200 рисовал квадрат как 200×200, а `sizes` объявлял
-  // 320px — браузер требовал 560 device px и брал 640w (95 130 B) вместо 480w.
-  it('объявляет в sizes ширину ОТРИСОВКИ обложки, а не ширину бокса', () => {
+  // #1285: `sizes` объявляет ширину ОТРИСОВКИ обложки, а не ширину бокса.
+  // #1487 сохранил это правило, но изменил саму отрисовку: слот берёт пропорции
+  // обложки, поэтому квадратный кадр больше не жмётся к высоте ландшафтного
+  // бокса и рисуется на всю ширину карточки — плоских полей не остаётся.
+  it('квадратная обложка рисуется на всю ширину карточки и объявляет её в sizes', () => {
     renderItem({
       travel: {
         ...baseTravel,
@@ -391,16 +391,18 @@ describe('TravelListItem media props on web', () => {
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     const source = props.mediaProps?.webResponsiveSource;
-    expect(source?.sizes).toBe('200px');
-    // 200 CSS × DPR 2 = 400 → лестнице хватает 480w; кандидаты крупнее слоту не
+    expect(props.mediaAspectRatio).toBe(1);
+    expect(source?.sizes).toBe('320px');
+    // 320 CSS × DPR 2 = 640 → лестнице хватает 640w; кандидаты крупнее слоту не
     // нужны ни на одном DPR.
-    expect(source?.srcSet).toContain('480w');
-    expect(source?.srcSet).not.toContain('640w');
+    expect(source?.srcSet).toContain('640w');
     expect(source?.srcSet).not.toContain('960w');
     expect(source?.src).toContain('q=70');
   });
 
-  it('портретная обложка в том же боксе просит ещё более узкую ступень', () => {
+  // Клип соотношения слота (5:8 … 16:9) оставляет случай, когда кадр уже слота:
+  // тогда действует прежнее правило #1285 — `sizes` считается по отрисовке.
+  it('обложка за пределами диапазона слота просит ступень по своей отрисовке', () => {
     renderItem({
       travel: {
         ...baseTravel,
@@ -408,8 +410,8 @@ describe('TravelListItem media props on web', () => {
           cover: {
             id: 15,
             width: 640,
-            height: 853,
-            aspect_ratio: 640 / 853,
+            height: 1138,
+            aspect_ratio: 640 / 1138,
             srcset: [
               '/travel-image/15/conversions/c.webp?w=160 160w',
               '/travel-image/15/conversions/c.webp?w=320 320w',
@@ -427,13 +429,14 @@ describe('TravelListItem media props on web', () => {
       viewportWidth: 412,
     });
 
-    const source = (mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any).mediaProps
-      ?.webResponsiveSource;
-    // 640×853 в боксе 318×200 прод рисует как 150×200 (замер DOM 2026-08-06).
-    expect(source?.sizes).toBe('150px');
-    expect(source?.srcSet).toContain('320w');
-    expect(source?.srcSet).not.toContain('480w');
-    expect(source?.srcSet).not.toContain('640w');
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    const source = props.mediaProps?.webResponsiveSource;
+    // 9:16 уже нижней границы слота 5:8, поэтому слот встаёт на 5:8 (320×512),
+    // а кадр рисуется как 288×512 — поле по 5% с каждой стороны.
+    expect(props.mediaAspectRatio).toBeCloseTo(0.625, 3);
+    expect(source?.sizes).toBe('288px');
+    expect(source?.srcSet).toContain('480w');
+    expect(source?.srcSet).not.toContain('960w');
   });
 
   it('uses dominant color when the cover has no blurhash', () => {

@@ -2,7 +2,7 @@ import type { Travel } from '@/types/types';
 import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
 import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, normalizeSeoLead } from '@/utils/seoText'
 import { normalizeOgImageUrl } from '@/utils/seo'
-import { buildTravelPath as buildRouteTravelPath } from '@/utils/routePaths'
+import { buildTravelPath as buildRouteTravelPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 
 
 const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');
@@ -25,27 +25,44 @@ const TRAVEL_SLUG_STOP_WORDS = new Set(['i', 'k', 'ko', 'na', 'o', 'ot', 'po', '
 export function buildTravelPath(
   travel: Pick<Travel, 'slug' | 'id'> | null | undefined,
 ): string | null {
-  if (!travel) return null;
-  const slug = typeof travel.slug === 'string' ? travel.slug : '';
-  return (
-    buildRouteTravelPath(slug, { encode: false }) ??
-    buildRouteTravelPath(travel.id, { encode: false })
-  );
+  return buildTravelPathFromTravel(travel, { encode: false });
 }
 
-function getTravelCanonicalUrl(travel: Travel | null | undefined): string | null {
+/**
+ * Путь, который допустимо публиковать краулерам. От навигационного отличается
+ * одним: числовая форма не проходит. Прямой заход на `/travels/<id>` прод
+ * отдаёт пустым 404 (#1512), поэтому в canonical/og:url и JSON-LD такой адрес
+ * был бы тем же самообъявленным 404, что и `/travels/null` из #1438.
+ */
+export function buildIndexableTravelPath(value: unknown): string | null {
+  const path = buildRouteTravelPath(value, { encode: false });
+  if (!path) return null;
+  return /^\/travels\/-?\d+$/.test(path) ? null : path;
+}
+
+/**
+ * Собственный адрес страницы статьи для структурированных данных.
+ *
+ * `canonicalUrl` — адрес, который экран уже посчитал для `<link rel=canonical>`;
+ * страница обязана объявлять один и тот же адрес и в голове, и в JSON-LD,
+ * поэтому переданное значение всегда в приоритете.
+ *
+ * #1438: `/^[a-z0-9-]+$/` пропускает литерал `'null'` — он состоит из тех же
+ * символов, что и настоящий слаг, и структурированные данные ссылались на
+ * `https://metravel.by/travels/null`.
+ * #1512: числовая форма адреса сюда не годится — прямой заход на
+ * `/travels/<id>` прод отдаёт пустым 404, так что публиковать её краулерам
+ * значит повторять тот же дефект другими словами.
+ */
+function getTravelCanonicalUrl(
+  travel: Travel | null | undefined,
+  canonicalUrl?: string | null,
+): string | null {
+  if (canonicalUrl) return canonicalUrl;
   if (!travel) return null;
 
-  if (travel.slug && /^[a-z0-9-]+$/.test(travel.slug)) {
-    return `${SITE_URL}/travels/${encodeURIComponent(travel.slug)}`;
-  }
-
-  if (typeof travel.id === 'number' || typeof travel.id === 'string') {
-    const id = String(travel.id).trim();
-    if (id) return `${SITE_URL}/travels/${encodeURIComponent(id)}`;
-  }
-
-  return null;
+  const slugPath = buildIndexableTravelPath(travel.slug);
+  return slugPath ? `${SITE_URL}${slugPath}` : null;
 }
 
 export function stripHtmlForSeo(html?: string | null): string {
@@ -160,7 +177,8 @@ export function getTravelSeoImage(travel: Travel | null | undefined): string | n
 }
 
 export function createTravelArticleJsonLd(
-  travel: Travel | null | undefined
+  travel: Travel | null | undefined,
+  canonicalOverride?: string | null
 ): Record<string, any> | null {
   if (!travel) return null;
 
@@ -185,7 +203,7 @@ export function createTravelArticleJsonLd(
   const imageUrl = normalizeOgImageUrl(getTravelSeoImage(travel));
   if (imageUrl) safeData.image = [imageUrl];
 
-  const canonicalUrl = getTravelCanonicalUrl(travel);
+  const canonicalUrl = getTravelCanonicalUrl(travel, canonicalOverride);
   if (canonicalUrl) safeData.url = canonicalUrl;
 
   if (travel.created_at) {
@@ -222,12 +240,13 @@ export function createTravelArticleJsonLd(
 }
 
 export function createTravelBreadcrumbJsonLd(
-  travel: Travel | null | undefined
+  travel: Travel | null | undefined,
+  canonicalOverride?: string | null
 ): Record<string, any> | null {
   if (!travel?.name) return null;
 
   const cleanName = stripHtmlForSeo(travel.name).slice(0, 200);
-  const canonicalUrl = getTravelCanonicalUrl(travel);
+  const canonicalUrl = getTravelCanonicalUrl(travel, canonicalOverride);
   if (!cleanName || !canonicalUrl) return null;
 
   return {
@@ -256,14 +275,15 @@ export function createTravelBreadcrumbJsonLd(
 }
 
 export function createTravelStructuredData(
-  travel: Travel | null | undefined
+  travel: Travel | null | undefined,
+  options?: { canonicalUrl?: string | null }
 ): Record<string, any> | null {
-  const article = createTravelArticleJsonLd(travel);
+  const canonicalUrl = getTravelCanonicalUrl(travel, options?.canonicalUrl);
+  const article = createTravelArticleJsonLd(travel, canonicalUrl);
   if (!article) return null;
 
-  const canonicalUrl = getTravelCanonicalUrl(travel);
   const cleanName = stripHtmlForSeo(travel?.name).slice(0, 200);
-  const breadcrumb = createTravelBreadcrumbJsonLd(travel);
+  const breadcrumb = createTravelBreadcrumbJsonLd(travel, canonicalUrl);
 
   const graph: Record<string, any>[] = [
     {

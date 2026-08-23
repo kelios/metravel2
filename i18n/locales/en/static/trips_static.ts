@@ -103,6 +103,7 @@ export const tripsStaticResources = {
   "plan.links.title": "Links",
   "plan.map.layers": "Map layers",
   "plan.map.originalTrack": "Original track from file",
+  "plan.route.saveError": "Could not save the route. Check the points and try again.",
   "plan.route.focusPoint": "Show point “{{name}}” on the map",
   "plan.mapFirst.sheet": "Route panel",
   "plan.mapFirst.expand": "Expand the route panel",

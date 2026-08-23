@@ -1,6 +1,6 @@
 # Travel details performance contract
 
-Актуализировано: 2026-07-15.
+Актуализировано: 2026-08-23.
 
 Этот документ фиксирует текущий performance contract страницы
 `/travels/:param`. Он не хранит iteration log и не считается свежим Lighthouse
@@ -112,6 +112,68 @@ quality-gate lock.
 default constants соответствующего guard. Обновление budget разрешено только
 после production build, объяснения причины и сравнения с предыдущим baseline.
 
+## 7.1 Mobile main-thread blocking (#1499)
+
+Блокировка главного потока на `/travels/[slug]` меряется отдельным гейтом
+`@perf Travel Details — Main-thread blocking` в
+`e2e/travel-details-perf-budget.spec.ts`. Профиль эмуляции — единственный на все
+перф-гейты: `MOBILE_THROTTLE_PROFILE` в `e2e/helpers/perfBudget.ts` (CPU ×4,
+Slow-4G), там же `applyMobileThrottling`, `measureCpuThrottlingRatio` и `median`.
+
+Контракт замера, любое отклонение делает числа несопоставимыми:
+
+- каждый проход ХОЛОДНЫЙ — свой `browser.newContext()` с мобильным дескриптором.
+  Прогретые проходы переживают V8 compilation cache и дешевле в 2–4 раза
+  (замер 2026-08-23: холодные 410–498 мс против прогретых 146–278 мс), поэтому
+  регрессия в парсе/компиляции на них амортизируется и гейт её проспал бы.
+  Lighthouse, чьи числа стоят в Done gate, тоже меряет только холодный старт;
+- решение по медиане ≥5 проходов, дисперсия гасится числом проходов, а не
+  выбрасыванием холодного;
+- «мобильность» задаётся дескриптором устройства, а не `setViewportSize`:
+  замер в узком боксе оставляет desktop DPR/touch/UA (класс дефекта #1287);
+- обязателен позитивный контроль, что троттлинг доехал до рендерера. Без него
+  гейт вырождается в вечнозелёный. Контроль меряет busy-loop через ТУ ЖЕ
+  CDP-сессию (отдельная сессия эмуляцию первой не переопределяет и даёт ложное
+  отношение ≈1) и не короче 40M итераций (на 4M замер тонет в JIT-разогреве);
+- порог ослабить переменной окружения нельзя — `clampCeiling` игнорирует
+  послабления и печатает их в отчёте.
+
+Локальный порог — ratchet против регрессии, а НЕ продуктовая цель: стенд
+систематически расходится с продом (2026-08-23: локально 416–449 мс против
+517 мс на `lighthouse:produrl:travel:mobile`). Абсолютный мобильный TBT
+снимается только на проде после деплоя: на локальном стенде код приезжает
+мгновенно, а hero-кадр тянется с прода, поэтому FCP наступает позже основной
+работы и Lighthouse честно отдаёт TBT = 0 при TTI = FCP.
+
+### Что на этом маршруте проверено и НЕ работает
+
+Обе гипотезы закрыты замером на двух прод-сборках, а не рассуждением. Повторять
+их без нового механизма не нужно.
+
+1. **Дробление коммитов через `startTransition`.** Транзишенами помечались оба
+   тяжёлых монтирования (post-LCP хром в `useTravelDetailsPerformance`,
+   `markSectionLoaded`/`setCanRenderHeavy` в `useTravelDeferredSectionsModel`).
+   TBT 348 → 340 мс, худшая задержка ввода при тапах 112 → 118 мс — шум.
+   Причина: React-scheduler в Chrome не уступает поток, пока `isInputPending()`
+   ложно; commit-фаза с layout-эффектами непрерываема; блокирует в основном
+   первичная ленивая компиляция (`(program)` 915 мс из 2805 мс занятости).
+2. **Вынос офлайн-адаптера из sync-подграфа маршрута.** `travelOfflineAdapter`
+   тянет `utils/sanitizeRichText` → sanitize-html + htmlparser2 + postcss +
+   entities. Разрыв всех трёх рёбер (`useOfflineTravelCache`, `useTravelDetails`,
+   `TravelHeroExtras`) убрал 270 КБ: sync-подграф маршрута 865,3 → 595,3 КБ,
+   403 → 335 модулей. TBT при этом не изменился (A/B с чередованием, медианы
+   417 против 417 мс), потому что тот же чанк всё равно приезжает для показа
+   тела статьи через `StableContent → htmlTransform`, только позже. При этом
+   eager-запросов маршрута стало 52 вместо 51, то есть правка пробивает
+   `eager.maxRequestsByRoute` — ровно переразбивка чанков из #1393. Откачено;
+   патч сохранён в `.codex-temp/1499/offline-defer.patch`.
+
+Диагностическая оговорка на будущее: Lighthouse-аудит `bootup-time` НЕ равен
+времени выполнения файла — он суммирует self-time всех функций из этого URL за
+прогон. На travel-details реальный `EvaluateScript entry` = 170 мс при 2403 мс,
+приписанных `entry` этим аудитом. Проверять надо событием `EvaluateScript` в
+трейсе `devtools.timeline`.
+
 ## 8. Проверки
 
 Для production measurement:
@@ -122,6 +184,14 @@ yarn guard:eager-web:fail
 yarn guard:bundle-budget:fail
 yarn lighthouse:travel:mobile
 yarn lighthouse:travel:desktop
+```
+
+Блокировка главного потока (§7.1) снимается на стенде, который отдаёт сборку с
+gzip — тем же, что поднимает CI:
+
+```bash
+E2E_BUILD_DIR=dist/prod E2E_WEB_PORT=4714 node scripts/serve-web-build.js
+E2E_NO_WEBSERVER=1 BASE_URL=http://127.0.0.1:4714 npx playwright test e2e/travel-details-perf-budget.spec.ts -g "Main-thread blocking"
 ```
 
 После deploy метрики снимаются отдельно по `https://metravel.by` с датой, URL,

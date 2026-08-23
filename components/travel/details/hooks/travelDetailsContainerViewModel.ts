@@ -1,6 +1,8 @@
 import { Platform } from 'react-native'
 import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, normalizeOgImageUrl } from '@/utils/seo'
+
 import {
+  buildIndexableTravelPath,
   buildTravelSeoFallbackDescription,
   buildTravelSeoTitle,
   createTravelStructuredData,
@@ -29,14 +31,18 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
       : displayTitle
         ? buildTravelSeoFallbackDescription(displayTitle)
         : null
-  const canonical =
-    typeof travel?.slug === 'string' && travel.slug
-      ? buildCanonicalUrl(`/travels/${travel.slug}`)
-      : typeof travel?.id === 'number'
-        ? buildCanonicalUrl(`/travels/${travel.id}`)
-        : slug
-          ? buildCanonicalUrl(`/travels/${slug}`)
-          : undefined
+  // #1438: ветки проверяли только `typeof slug === 'string' && slug`, поэтому
+  // литерал `'null'` (его давал нормализатор из `slug: null`) считался живым
+  // слагом, и страница отдавала canonical/og:url `https://metravel.by/travels/null`.
+  // Краулер Meta ходит по og:url — в прод-логе это 404 с referer здоровой статьи.
+  //
+  // Источники адреса: слаг статьи, затем адрес, по которому страница реально
+  // открыта. Числовая форма сюда не входит намеренно — прямой заход на
+  // `/travels/<id>` прод отдаёт пустым 404 (#1512), и публиковать её значит
+  // повторять тот же дефект. Нет пригодного слага — canonical не выводится вовсе.
+  const canonicalPath =
+    buildIndexableTravelPath(travel?.slug) ?? buildIndexableTravelPath(slug)
+  const canonical = canonicalPath ? buildCanonicalUrl(canonicalPath) : undefined
   const rawFirst = travel?.gallery?.[0] || travel?.travel_image_thumb_url
   const firstUrl = rawFirst
     ? typeof rawFirst === 'string'
@@ -52,7 +58,8 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
 
   return {
     canonicalUrl: canonical,
-    jsonLd: createTravelStructuredData(travel),
+    // Голова и структурированные данные обязаны объявлять один адрес.
+    jsonLd: createTravelStructuredData(travel, { canonicalUrl: canonical }),
     readyDesc: desc,
     readyImage: absImage,
     readyTitle: title,

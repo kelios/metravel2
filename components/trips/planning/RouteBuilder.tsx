@@ -270,15 +270,25 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
   const pendingOriginalRef = useRef<PickedTripRouteFileUpload | null>(null);
   const [pendingOriginalName, setPendingOriginalName] = useState<string | null>(null);
   const [originalUploadError, setOriginalUploadError] = useState<string | null>(null);
+  // Отказ `PUT /route/` (например 400 от валидации точек) до этого нигде не
+  // всплывал: у мутации был только `onSuccess`, поэтому кнопка гасла, маршрут
+  // не сохранялся и пользователь не получал ни одного признака ошибки.
+  //
+  // Вместе с текстом храним подпись маршрута, на котором отказ случился: ошибка
+  // остаётся оценкой ровно того набора точек, который её вызвал. Как только на
+  // экране другой маршрут — правка точки, новый импорт, откат и повторная
+  // правка — сообщение само перестаёт показываться, без россыпи сбросов по всем
+  // местам, где меняется `route`.
+  const [routeSaveError, setRouteSaveError] = useState<
+    { message: string; signature: string } | null
+  >(null);
 
   const savedRouteSignature = useMemo(() => routeSignature(trip.route), [trip.route]);
   // #1491: кнопка действия существует только пока есть что отправлять. Сравнение
   // идёт по полной сигнатуре, а не по координатной: переименование точки — тоже
   // несохранённая правка, и потерять её молча нельзя.
-  const hasUnsavedRouteChanges = useMemo(
-    () => routeSignature(route) !== savedRouteSignature,
-    [route, savedRouteSignature],
-  );
+  const currentRouteSignature = useMemo(() => routeSignature(route), [route]);
+  const hasUnsavedRouteChanges = currentRouteSignature !== savedRouteSignature;
   // Геометрия, сводка и высоты зависят только от координат и транспорта: правка
   // названия или описания точки их не обесценивает. Поэтому серверные данные
   // держатся за координатной сигнатурой, а не за полной — иначе опечатка в
@@ -764,12 +774,19 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
       return;
     }
 
+    setRouteSaveError(null);
     updateTripRoute.mutate(
       { tripId: trip.id, route },
       {
         onSuccess: (updatedTrip) => {
           setRoute(updatedTrip.route);
           void uploadPendingOriginal();
+        },
+        onError: () => {
+          setRouteSaveError({
+            message: i18nT('tripsStatic:plan.route.saveError'),
+            signature: currentRouteSignature,
+          });
         },
       },
     );
@@ -1273,6 +1290,10 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
   // а сама кнопка появляется только когда есть несохранённые правки: постоянная
   // «Сохранить маршрут» не отличала «правки ждут» от «всё уже на сервере».
   const routeSavePending = updateTripRoute.isPending || uploadRouteFile.isPending;
+  const visibleRouteSaveError =
+    routeSaveError && routeSaveError.signature === currentRouteSignature
+      ? routeSaveError.message
+      : null;
   const cta = routeBuilderCta({
     pointCount: route.length,
     savedPointCount: trip.route.length,
@@ -1294,6 +1315,15 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
       {cta.hint ? (
         <Text style={panelStyles.stepHint} testID="route-builder-save-hint">
           {cta.hint}
+        </Text>
+      ) : null}
+      {visibleRouteSaveError ? (
+        <Text
+          style={styles.errorText}
+          accessibilityLiveRegion="assertive"
+          testID="route-builder-save-error"
+        >
+          {visibleRouteSaveError}
         </Text>
       ) : null}
     </View>

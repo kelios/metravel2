@@ -32,6 +32,7 @@ import {
   buildCoverWidths,
   isLikelyWatermarked,
   normalizeOwnerIds,
+  resolveCardMediaSlotRatio,
   resolveCoverSlotGeometry,
   resolveDisplayTravelYear,
   resolveTravelAuthorDisplayName,
@@ -246,20 +247,41 @@ function TravelListItem({
     () => resolveMediaAspectRatio(coverMedia),
     [coverMedia],
   )
-  const coverSlotHeight =
+  const baseCoverSlotHeight =
     typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT
+
+  // #1487: медиа-бокс карточки маршрута кадрируется `contain`, поэтому плоское
+  // поле `dominant_color` растёт ровно на расхождении пропорций слота и
+  // обложки. Слот берёт пропорции обложки (с ограничением крайностей в
+  // `resolveCardMediaSlotRatio`), и поле схлопывается в ноль без перехода на
+  // `cover` и без второго растра. `null` — пропорции обложки неизвестны, тогда
+  // остаётся прежняя фиксированная высота.
+  const coverSlotRatio = useMemo(
+    () => (baseCoverSlotHeight === 0 ? null : resolveCardMediaSlotRatio(coverAspectRatio)),
+    [baseCoverSlotHeight, coverAspectRatio],
+  )
+
+  // Оценка ширины карточки, когда сетка не сообщила её явно. Она обязана быть
+  // оценкой СВЕРХУ: занижение делает ландшафтную обложку мылом (см.
+  // `resolveCoverSlotGeometry`).
+  const coverSlotWidth =
+    typeof cardWidth === 'number'
+      ? cardWidth
+      : visualVariant === 'home-featured'
+        ? 480
+        : Math.min(effectiveWidth, isMobile ? 640 : 720)
+
+  // Высота слота теперь производная от его пропорций, а не входной константы:
+  // именно её видит `resolveCoverSlotGeometry`, иначе ступень srcSet считалась
+  // бы по прежнему ландшафтному боксу и портретная обложка получила бы мыло.
+  const coverSlotHeight =
+    coverSlotRatio != null && coverSlotWidth > 0
+      ? coverSlotWidth / coverSlotRatio
+      : baseCoverSlotHeight
 
   const coverMediaResponsiveSource = useMemo(() => {
     if (!IS_WEB || !coverMedia) return null
-    // Оценка ширины карточки, когда сетка не сообщила её явно. Она обязана быть
-    // оценкой СВЕРХУ: занижение делает ландшафтную обложку мылом (см.
-    // `resolveCoverSlotGeometry`).
-    const slotWidth =
-      typeof cardWidth === 'number'
-        ? cardWidth
-        : visualVariant === 'home-featured'
-          ? 480
-          : Math.min(effectiveWidth, isMobile ? 640 : 720)
+    const slotWidth = coverSlotWidth
 
     // #1285: слот кадрируется `contain`, поэтому ширину отрисовки задаёт не бокс,
     // а высота бокса на пропорциях кадра. Ступень выбирает браузер по `sizes` ×
@@ -301,9 +323,8 @@ function TravelListItem({
     coverAspectRatio,
     coverMedia,
     coverSlotHeight,
-    effectiveWidth,
+    coverSlotWidth,
     isMobile,
-    visualVariant,
   ])
 
   const lastSelectableTouchAtRef = useRef(0)
@@ -665,7 +686,8 @@ function TravelListItem({
       heroTitleOverlay={false}
       testID={cardTestId}
       style={cardStyle}
-      imageHeight={typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT}
+      imageHeight={baseCoverSlotHeight}
+      mediaAspectRatio={coverSlotRatio ?? undefined}
       contentPosition="belowMedia"
       contentContainerStyle={styles.cardContentContainer}
       insetMedia={false}

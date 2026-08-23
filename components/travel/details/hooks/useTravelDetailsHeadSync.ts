@@ -82,6 +82,13 @@ export function useTravelDetailsHeadSync({
       }
       if (canonicalUrl) {
         patchCanonical(canonicalUrl)
+      } else {
+        // #1438: canonical теперь может отсутствовать вовсе — у статьи нет
+        // пригодного слага, а числовую форму адреса публиковать нельзя (#1512).
+        // Без этой ветки на SPA-переходе в голове оставался бы тег предыдущей
+        // статьи, то есть страница объявляла бы своим чужой адрес — хуже, чем
+        // не объявлять никакого.
+        document.querySelectorAll('link[rel="canonical"]').forEach((node) => node.remove())
       }
     }
 

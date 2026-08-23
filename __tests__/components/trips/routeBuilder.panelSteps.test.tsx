@@ -3,7 +3,7 @@
 // так же и появляется только когда есть что сохранять. Тест держит и структуру,
 // и подписи: без него откат к самодельной панели прошёл бы незамеченным.
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
@@ -73,17 +73,35 @@ jest.mock('@/components/trips/planning/TripRouteImportPanel', () => {
       mimeType: string
     }) => void
   }) {
-    const { Pressable } = require('react-native')
+    const { Pressable, View } = require('react-native')
     return (
-      <Pressable
-        testID="route-builder-apply-original-only"
-        onPress={() => onApply(route, {
-          kind: 'native',
-          uri: 'file:///cache/import.gpx',
-          name: 'import.gpx',
-          mimeType: 'application/gpx+xml',
-        })}
-      />
+      <View>
+        <Pressable
+          testID="route-builder-apply-original-only"
+          onPress={() => onApply(route, {
+            kind: 'native',
+            uri: 'file:///cache/import.gpx',
+            name: 'import.gpx',
+            mimeType: 'application/gpx+xml',
+          })}
+        />
+        <Pressable
+          testID="route-builder-apply-imported-route"
+          onPress={() => onApply(
+            [
+              { id: 'imp-1', type: 'custom', name: 'Точка 1', description: null, coordinates: [27.9, 54.4], placeId: null },
+              { id: 'imp-2', type: 'custom', name: 'Точка 2', description: null, coordinates: [28.0, 54.5], placeId: null },
+              { id: 'imp-3', type: 'custom', name: 'Точка 3', description: null, coordinates: [28.1, 54.6], placeId: null },
+            ],
+            {
+              kind: 'native',
+              uri: 'file:///cache/import.gpx',
+              name: 'import.gpx',
+              mimeType: 'application/gpx+xml',
+            },
+          )}
+        />
+      </View>
     )
   }
 })
@@ -225,6 +243,112 @@ describe('RouteBuilder panel steps', () => {
       },
     }))
     expect(mockRouteMutate).not.toHaveBeenCalled()
+  })
+
+  // Регресс #1496: у `updateTripRoute.mutate` был только `onSuccess`, поэтому
+  // отказ `PUT /route/` (на проде — 400 «title is required for custom route
+  // points») ничего не показывал: кнопка гасла, маршрут не сохранялся, и
+  // пользователь не получал ни одного признака ошибки.
+  it('показывает ошибку, когда сохранение маршрута отклонено сервером', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ route: [] })} />,
+    )
+
+    addPoint(getByTestId, 'Старт')
+    addPoint(getByTestId, 'Финиш')
+    expect(queryByTestId('route-builder-save-error')).toBeNull()
+
+    fireEvent.press(getByTestId('route-builder-save'))
+    expect(mockRouteMutate).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      mockRouteMutate.mock.calls[0][1].onError(new Error('400'))
+    })
+
+    expect(getByTestId('route-builder-save-error').props.children).toBe(
+      'Не удалось сохранить маршрут. Проверьте точки и попробуйте ещё раз.',
+    )
+  })
+
+  it('снимает ошибку сохранения при следующей успешной попытке', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ route: [] })} />,
+    )
+
+    addPoint(getByTestId, 'Старт')
+    addPoint(getByTestId, 'Финиш')
+    fireEvent.press(getByTestId('route-builder-save'))
+    act(() => {
+      mockRouteMutate.mock.calls[0][1].onError(new Error('400'))
+    })
+    expect(getByTestId('route-builder-save-error')).toBeTruthy()
+
+    fireEvent.press(getByTestId('route-builder-save'))
+    act(() => {
+      // Маршрут, отличный от сохранённого у поездки: иначе `cta.visible`
+      // становится false, блок кнопки исчезает целиком и проверка проходит
+      // вхолостую — не отличая сброс состояния от размонтирования.
+      mockRouteMutate.mock.calls[1][1].onSuccess(
+        makeTrip({
+          route: [
+            { id: 'x', type: 'custom', name: 'Старт', description: null, coordinates: [27.1, 53.1], placeId: null },
+            { id: 'y', type: 'custom', name: 'Финиш', description: null, coordinates: [27.2, 53.2], placeId: null },
+            { id: 'z', type: 'custom', name: 'Ещё', description: null, coordinates: [27.3, 53.3], placeId: null },
+          ],
+        }),
+      )
+    })
+
+    expect(getByTestId('route-builder-save')).toBeTruthy()
+    expect(queryByTestId('route-builder-save-error')).toBeNull()
+  })
+
+  // Ошибка относилась к прошлому черновику: импорт, меняющий точки, должен её
+  // снимать, иначе она висит оценкой того, чего на экране уже нет. Импорт,
+  // который приносит только оригинал и не трогает точки, ошибку сохраняет —
+  // отказ по-прежнему относится ровно к тому набору точек, что на экране.
+  it('снимает ошибку сохранения, когда импорт заменил точки маршрута', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ route: [] })} />,
+    )
+
+    addPoint(getByTestId, 'Старт')
+    addPoint(getByTestId, 'Финиш')
+    fireEvent.press(getByTestId('route-builder-save'))
+    act(() => {
+      mockRouteMutate.mock.calls[0][1].onError(new Error('400'))
+    })
+    expect(getByTestId('route-builder-save-error')).toBeTruthy()
+
+    fireEvent.press(getByTestId('route-builder-apply-imported-route'))
+
+    // Якорь: блок кнопки должен остаться смонтированным, иначе отсутствие
+    // ошибки объясняется размонтированием, а не тем, что подпись маршрута
+    // разошлась с подписью, на которой отказ случился.
+    expect(getByTestId('route-builder-save')).toBeTruthy()
+    expect(queryByTestId('route-builder-save-error')).toBeNull()
+  })
+
+  // P3 код-ревью гейта: пока сообщение жило в отдельном состоянии, оно пережидало
+  // размонтирование блока и возвращалось уже как оценка другого набора точек.
+  it('прячет ошибку прошлого сохранения, как только маршрут изменили', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ route: [] })} />,
+    )
+
+    addPoint(getByTestId, 'Старт')
+    addPoint(getByTestId, 'Финиш')
+    fireEvent.press(getByTestId('route-builder-save'))
+    act(() => {
+      mockRouteMutate.mock.calls[0][1].onError(new Error('400'))
+    })
+    expect(getByTestId('route-builder-save-error')).toBeTruthy()
+
+    // Маршрут стал другим — ошибка относится уже не к тому, что на экране.
+    addPoint(getByTestId, 'Ещё точка')
+
+    expect(getByTestId('route-builder-save')).toBeTruthy()
+    expect(queryByTestId('route-builder-save-error')).toBeNull()
   })
 
   it('добавляет точку адресным поиском карты', () => {

@@ -117,7 +117,8 @@ scope.
 - `docs/ARTICLE_ATTENTION_LOG.md` — журнал article attention cycles;
 - `docs/QUEST_DEMAND_LOG.md` — журнал quest demand cycles;
 - `docs/QUEST_CONTENT_PLAN.md` — план контента квестов: очереди доработки
-  (poi_info, утечки, финале), перелинковка квест↔статья, план новых квестов.
+  (poi_info, утечки, финале), перелинковка квест↔статья (включая канонический
+  формат блока «Квесты по городам рядом», §3.3), план новых квестов.
 - `docs/QUEST_ANSWER_INSIGHTS.md` — цикл «отчёт трения шага → решение редактора
   → правка квеста»: `npm run quest:insights`, группы кандидатов и почему
   автоприменение словаря запрещено.

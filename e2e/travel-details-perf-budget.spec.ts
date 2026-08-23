@@ -25,7 +25,7 @@
  *   PERF_LCP_MAX_MS=2500  PERF_TBT_MAX_MS=300  PERF_CLS_MAX=0.10
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, devices, type Page } from '@playwright/test';
 import {
   FALLBACK_TRAVEL_ID,
   FALLBACK_TRAVEL_SLUG,
@@ -33,6 +33,14 @@ import {
   preacceptCookies,
 } from './helpers/navigation';
 import { isMediaRequestWithoutWidth } from './helpers/mediaRequestWidth';
+import {
+  applyMobileThrottling,
+  collectObservedProfile,
+  measureCpuThrottlingRatio,
+  median,
+  MOBILE_THROTTLE_PROFILE,
+} from './helpers/perfBudget';
+import { clampCeiling } from './helpers/pagesPerfBudgets';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -818,9 +826,14 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
 });
 
 test.describe('@perf Travel Details — Performance Budget (prod build, mobile)', () => {
-  // Mobile thresholds are more lenient due to throttling
+  // #1499: троттлинга здесь нет и никогда не было — прежний комментарий
+  // «more lenient due to throttling» описывал условия, которых в тесте нет:
+  // менялся только вьюпорт. Пороги ниже поэтому и мягкие, что машина не
+  // замедлена. TBT-ассерт отсюда убран: на нетроттленной машине он показывал
+  // ~53 мс при 1116/517 мс на проде, то есть был вечнозелёным и создавал
+  // ложный сигнал «мобильный TBT в бюджете». Блокировку главного потока меряет
+  // отдельный блок ниже, под реальным мобильным профилем.
   const MOBILE_LCP_MAX = envNum('PERF_MOBILE_LCP_MAX_MS', 4000);
-  const MOBILE_TBT_MAX = envNum('PERF_MOBILE_TBT_MAX_MS', 600);
   const MOBILE_FCP_MAX = envNum('PERF_MOBILE_FCP_MAX_MS', 3000);
 
   test('Core Web Vitals within mobile budget', async ({ page }) => {
@@ -836,7 +849,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, mobile)'
       viewport: 'mobile (375x667)',
       lcp: metrics.lcp != null ? `${Math.round(metrics.lcp)}ms` : 'N/A',
       fcp: metrics.fcp != null ? `${Math.round(metrics.fcp)}ms` : 'N/A',
-      tbt: `${Math.round(metrics.tbt)}ms`,
+      tbt: `${Math.round(metrics.tbt)}ms (informational — not throttled, see the throttled block below)`,
       cls: metrics.cls.toFixed(4),
       longTaskCount: metrics.longTaskCount,
       clsEntries: metrics.clsEntries,
@@ -866,14 +879,168 @@ test.describe('@perf Travel Details — Performance Budget (prod build, mobile)'
     }
 
     expect(
-      metrics.tbt,
-      `Mobile TBT ${Math.round(metrics.tbt)}ms exceeds budget ${MOBILE_TBT_MAX}ms`
-    ).toBeLessThanOrEqual(MOBILE_TBT_MAX);
-
-    expect(
       metrics.cls,
       `Mobile CLS ${metrics.cls.toFixed(4)} exceeds budget ${CLS_MAX}`
     ).toBeLessThanOrEqual(CLS_MAX);
   });
 
+});
+
+/**
+ * #1499: TBT-гейт travel-details под мобильным профилем.
+ *
+ * Что закрывает. До этой правки мобильный блок выше менял ТОЛЬКО вьюпорт —
+ * комментарий обещал throttling, которого в тесте не было ни по CPU, ни по
+ * сети. Маршрут `/travels/[slug]` формально имел мобильный TBT-бюджет 600 мс,
+ * фактически мерил скорость десктопа и показывал ~53 мс, тогда как прод на том
+ * же маршруте отдавал 1116 мс (19.08.2026) и 517 мс (23.08.2026). Это ровно та
+ * дыра, из-за которой #1286 закрылся, проверив только `/` и `/search`.
+ *
+ * Почему отдельным блоком. Под CPU ×4 и Slow-4G hero-кадр приезжает секундами
+ * позже, поэтому LCP/FCP-пороги соседнего блока, откалиброванные под
+ * нетроттленную машину, здесь неприменимы: общий тест падал бы на транспорте
+ * картинки, а не на регрессии главного потока.
+ *
+ * Каждый проход — ХОЛОДНЫЙ: свой `browser.newContext()` с дескриптором
+ * реального мобильного устройства. Это принципиально, а не «чище»:
+ *   - Lighthouse, чьи числа стоят в Done gate карточки, меряет только холодный
+ *     старт. Прогретые проходы дешевле в 2–4 раза (замер 23.08: холодный
+ *     493–1175 мс против 146–278 мс прогретых), потому что переживают V8
+ *     compilation cache. Регрессия, добавившая парс/компиляцию в критический
+ *     путь, на прогретых проходах амортизируется и гейт бы её проспал.
+ *   - Дескриптор устройства даёт настоящие DPR, touch и UA. «Мобильность»
+ *     через `setViewportSize` мерит desktop-профиль в узком боксе — класс
+ *     дефекта, закрытый в #1287.
+ *
+ * Дисперсия гасится числом проходов и медианой, а не выбрасыванием холодного.
+ *
+ * Порог закреплён по измеренному, а не назначен: см. константу ниже. Ослабить
+ * его переменной окружения нельзя — `clampCeiling` игнорирует послабления и
+ * печатает их в отчёте прогона.
+ */
+test.describe('@perf Travel Details — Main-thread blocking (prod build, mobile throttled)', () => {
+  // Замер главного потока нельзя вести параллельно с соседними тестами файла:
+  // под `fullyParallel` они занимают тот же CPU, и порог, откалиброванный на
+  // одиночном прогоне, превращается в источник флейка.
+  test.describe.configure({ mode: 'serial' });
+  // Ratchet по измеренному, а не назначенное число. Прод-сборка 2026-08-23,
+  // стенд `scripts/serve-web-build.js` (gzip, как в CI), CPU ×4, Slow-4G,
+  // медиана пяти ХОЛОДНЫХ проходов, три независимые серии: 416 / 417 / 449 мс.
+  // Под фоновой нагрузкой (параллельная prod-сборка на той же машине) та же
+  // сборка давала 561 мс. Потолок 650 мс держит запас над загруженной машиной
+  // и всё ещё ловит полуторакратный рост блокировки.
+  //
+  // Это НЕ прод-число: прод-цель карточки #1499 — TBT ≤400 мс по
+  // `lighthouse:produrl:travel:mobile`, она снимается только после деплоя.
+  // Стенд систематически расходится с продом (там же 517 мс), поэтому сравнивать
+  // можно лишь before/after на одной машине.
+  const TBT_THROTTLED_BASELINE_MS = 650;
+  const RUNS = Math.max(3, envNum('PERF_MOBILE_THROTTLED_RUNS', 5));
+  // Наблюдаемое отношение busy-loop при rate=4: 2.48 / 2.72 / 2.81 / 3.96 —
+  // замер шумит, потому что делит два коротких прогона на живой машине.
+  // Порог 2.0 уверенно отделяет работающую эмуляцию от сломанной (там ~1.0)
+  // и не даёт контролю самому стать источником флейка.
+  const MIN_CPU_THROTTLE_RATIO = 2.0;
+
+  const budgetOverride = clampCeiling(
+    TBT_THROTTLED_BASELINE_MS,
+    process.env.PERF_MOBILE_THROTTLED_TBT_MAX_MS
+      ? Number(process.env.PERF_MOBILE_THROTTLED_TBT_MAX_MS)
+      : undefined
+  );
+  const TBT_THROTTLED_MAX_MS = budgetOverride.value;
+
+  test('TBT under mobile throttling stays within budget', async ({ browser }) => {
+    // Худший случай одного прохода — goto 60 с + два ожидания видимости по 30 с
+    // + networkidle. Таймаут теста считается от него, иначе зависший прогон
+    // обрывается Playwright'ом раньше, чем печатает уже собранные числа.
+    test.setTimeout((RUNS + 1) * 200_000);
+
+    const tbtRuns: number[] = [];
+    const longTaskCounts: number[] = [];
+    let observedProfile: Awaited<ReturnType<typeof collectObservedProfile>> | null = null;
+    let cpuRatio = 0;
+
+    for (let run = 0; run < RUNS; run += 1) {
+      // Дескриптор берётся из Playwright, а не переписывается руками: ручная
+      // копия расходится с ним по вьюпорту и вшивает версию Chrome в UA, из-за
+      // чего замер тихо уезжает от реального устройства при обновлении браузера.
+      const context = await browser.newContext({ ...devices['Pixel 7'] });
+      const page = await context.newPage();
+
+      try {
+        await injectPerfObservers(page);
+        const cdp = await applyMobileThrottling(page);
+
+        if (run === 0) {
+          // Позитивный контроль: троттлинг доехал до рендерера. Без него гейт
+          // молча вырождается в вечнозелёный — ровно тот дефект, ради которого
+          // он и написан. Меряем через ТУ ЖЕ сессию, иначе обе фазы замера
+          // окажутся одинаково затроттлены и контроль соврёт.
+          cpuRatio = await measureCpuThrottlingRatio(page, cdp, MOBILE_THROTTLE_PROFILE.cpuRate);
+        }
+
+        await openTravelDetailsForPerf(page);
+        const metrics = await collectMetrics(page);
+        tbtRuns.push(metrics.tbt);
+        longTaskCounts.push(metrics.longTaskCount ?? 0);
+        if (run === 0) observedProfile = await collectObservedProfile(page);
+        console.log(`  [throttled TBT] cold run ${run + 1}/${RUNS}: ${Math.round(metrics.tbt)}ms`);
+      } finally {
+        await context.close();
+      }
+    }
+
+    const tbt = median(tbtRuns);
+    const report = {
+      cpuThrottling: `${MOBILE_THROTTLE_PROFILE.cpuRate}x`,
+      cpuThrottlingObservedRatio: cpuRatio.toFixed(2),
+      networkMbit: MOBILE_THROTTLE_PROFILE.downloadMbit,
+      observedProfile,
+      coldRuns: tbtRuns.map((value) => `${Math.round(value)}ms`),
+      longTasksPerRun: longTaskCounts,
+      medianTbt: `${Math.round(tbt)}ms`,
+      budget: `${TBT_THROTTLED_MAX_MS}ms`,
+      ignoredOverride: budgetOverride.ignored
+        ? `PERF_MOBILE_THROTTLED_TBT_MAX_MS loosening ignored`
+        : undefined,
+    };
+
+    console.log('\n📱 MOBILE THROTTLED TBT REPORT');
+    console.log(JSON.stringify(report, null, 2));
+
+    test.info().annotations.push({
+      type: 'perf-budget-mobile-throttled-tbt',
+      description: JSON.stringify(report),
+    });
+
+    expect(
+      cpuRatio,
+      `CPU throttling did not reach the renderer: busy-loop ratio ${cpuRatio.toFixed(2)}x ` +
+        `(expected >= ${MIN_CPU_THROTTLE_RATIO}x at rate ${MOBILE_THROTTLE_PROFILE.cpuRate}). ` +
+        'Without it this gate measures desktop speed and can never go red.'
+    ).toBeGreaterThanOrEqual(MIN_CPU_THROTTLE_RATIO);
+
+    expect(
+      observedProfile?.hasTouch,
+      'throttled TBT must be measured on a real mobile profile, not a narrow desktop viewport'
+    ).toBe(true);
+
+    // Ассерт «TBT не больше потолка» односторонний и потому зеленеет, когда
+    // сбор long tasks не состоялся вовсе (PerformanceObserver не подключился,
+    // страница не догрузилась) — это fail-open. Требуем доказательство, что
+    // главный поток вообще наблюдался: под CPU ×4 на этом маршруте длинных
+    // задач всегда несколько.
+    expect(
+      Math.max(...longTaskCounts),
+      `no long tasks collected in any run (${longTaskCounts.join(', ')}) — ` +
+        'the measurement did not happen, so the budget below would pass vacuously'
+    ).toBeGreaterThan(0);
+
+    expect(
+      tbt,
+      `Throttled mobile TBT ${Math.round(tbt)}ms (median of ${tbtRuns.length} cold runs: ` +
+        `${tbtRuns.map((value) => Math.round(value)).join(', ')}) exceeds budget ${TBT_THROTTLED_MAX_MS}ms`
+    ).toBeLessThanOrEqual(TBT_THROTTLED_MAX_MS);
+  });
 });

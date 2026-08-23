@@ -47,6 +47,33 @@ describe('normalizeTravelItem', () => {
     });
   });
 
+  // #1438: `String(t.slug)` превращал `slug: null` в литеральную строку 'null'.
+  // Она непустая, поэтому все гарды вида `typeof slug === 'string' && slug`
+  // считали её живым слагом, и canonical/og:url страницы статьи уезжали на
+  // `https://metravel.by/travels/null` — прод отдавал по нему 404 краулеру Meta.
+  describe('slug sanitization (#1438)', () => {
+    it('drops null slug instead of turning it into the literal "null"', () => {
+      const out = normalizeTravelItem({ id: 42, slug: null, url: '/travels/null' });
+      expect(out.slug).toBe('');
+    });
+
+    it('drops literal emptiness markers coming from the backend', () => {
+      for (const raw of ['null', 'undefined', 'NaN', 'none', '  ']) {
+        expect(normalizeTravelItem({ id: 42, slug: raw }).slug).toBe('');
+      }
+    });
+
+    it('rewrites url to the numeric id when the slug is a literal marker', () => {
+      const out = normalizeTravelItem({ id: 42, slug: null, url: 'test' });
+      expect(out.url).toBe('/travels/42');
+    });
+
+    it('keeps a real slug untouched', () => {
+      const out = normalizeTravelItem({ id: 42, slug: 'nullarbor-plain' });
+      expect(out.slug).toBe('nullarbor-plain');
+    });
+  });
+
   describe('draft placeholder stripping', () => {
     it('replaces __draft_placeholder__ with empty string for rich text fields', () => {
       const out = normalizeTravelItem({

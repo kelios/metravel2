@@ -2,6 +2,37 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Travel Seo 1438 8137",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8137\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8137\" NODE_OPTIONS=--max-old-space-size=12288 npx expo start --web --port 8137"
+      ],
+      "port": 8137,
+      "autoPort": false
+    },
+    {
+      "name": "Full Prod Proxy 4622",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-juliasavran-Sites-metravel2-metravel2/5a5ae533-6cb1-4f43-bf4b-f7c7e7d66add/scratchpad/full-proxy.js",
+        "4622",
+        "https://metravel.by"
+      ],
+      "port": 4622,
+      "autoPort": false
+    },
+    {
+      "name": "Card Media QA 8103",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8103"
+      ],
+      "port": 8103,
+      "autoPort": false
+    },
+    {
       "name": "Upsert Lab Proxy 4711",
       "runtimeExecutable": "node",
       "runtimeArgs": [

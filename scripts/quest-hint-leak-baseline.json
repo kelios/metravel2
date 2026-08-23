@@ -1,0 +1,239 @@
+{
+  "contractVersion": 1,
+  "note": "Известные совпадения правила 4a в ТЕКСТЕ УРОВНЯ КВЕСТА (интро, финал) локальных данных — разобранный остаток #1488: совпадение внутри чужого слова, родовое существительное о другом объекте, имя самого квеста. Поля шага сюда не попадают никогда: их контур вычищен до нуля и обязан падать сразу. Гейт check:fast падает только на том, что добавила правка. Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих незавершённых правок. Обновлять: npm run quest:scan-hint-leak:baseline",
+  "known": {
+    "scripts/amsterdam-quest-data.js": [
+      "intro|amsterdam-on-piles||story|один",
+      "intro|amsterdam-on-piles||story|три",
+      "intro|amsterdam-on-piles||story|четыре"
+    ],
+    "scripts/barkovshchina-spirits-quest-data.js": [
+      "intro|barkovshchina-spirits||story|дерево"
+    ],
+    "scripts/belgrade-quest-data.js": [
+      "intro|belgrade-white-city||location|белград"
+    ],
+    "scripts/bratislava-quest-data.js": [
+      "intro|bratislava-coronation-crown||story|знак",
+      "intro|bratislava-coronation-crown||story|король",
+      "intro|bratislava-coronation-crown||story|короля",
+      "intro|bratislava-coronation-crown||story|корона",
+      "intro|bratislava-coronation-crown||story|корону",
+      "intro|bratislava-coronation-crown||story|короны",
+      "intro|bratislava-coronation-crown||story|стол",
+      "intro|bratislava-coronation-crown||title|король",
+      "intro|bratislava-coronation-crown||title|короля",
+      "intro|bratislava-coronation-crown||title|корона",
+      "intro|bratislava-coronation-crown||title|корону",
+      "intro|bratislava-coronation-crown||title|короны"
+    ],
+    "scripts/brest-city-quest-data.js": [
+      "intro|brest-lantern||story|фонарей",
+      "intro|brest-lantern||story|фонари",
+      "intro|brest-lantern||title|фонари"
+    ],
+    "scripts/brest-kids-garden-song-quest-data.js": [
+      "intro|brest-kids-garden-song||location|городской сад",
+      "intro|brest-kids-garden-song||location|сад",
+      "intro|brest-kids-garden-song||story|воробья",
+      "intro|brest-kids-garden-song||story|сад",
+      "intro|brest-kids-garden-song||task|сад"
+    ],
+    "scripts/chisinau-quest-data.js": [
+      "intro|chisinau-white-stone||story|льва"
+    ],
+    "scripts/gervyaty-quest-data.js": [
+      "intro|gervyaty-kostel||story|башня",
+      "intro|gervyaty-kostel||story|дерева",
+      "intro|gervyaty-kostel||story|дерево",
+      "intro|gervyaty-kostel||story|деревянные",
+      "intro|gervyaty-kostel||story|костел",
+      "intro|gervyaty-kostel||story|костёл",
+      "intro|gervyaty-kostel||story|храм",
+      "intro|gervyaty-kostel||task|костел",
+      "intro|gervyaty-kostel||task|костёл"
+    ],
+    "scripts/gniezno-quest-data.js": [
+      "intro|gniezno-white-eagle||story|орел",
+      "intro|gniezno-white-eagle||story|орла",
+      "intro|gniezno-white-eagle||story|орёл"
+    ],
+    "scripts/gomel-palace-quest-data.js": [
+      "intro|gomel-palace||story|крест"
+    ],
+    "scripts/gomel-soviet-quest-data.js": [
+      "intro|gomel-soviet||story|купал"
+    ],
+    "scripts/gomel-teens-city-blueprint-quest-data.js": [
+      "intro|gomel-teens-city-blueprint||location|гомель",
+      "intro|gomel-teens-city-blueprint||story|гомель",
+      "intro|gomel-teens-city-blueprint||story|город",
+      "intro|gomel-teens-city-blueprint||story|храмы"
+    ],
+    "scripts/hel-city-quest-data.js": [
+      "intro|hel-fishermen||story|сто"
+    ],
+    "scripts/hel-jurata-quest-data.js": [
+      "intro|hel-jurata-amber||story|два",
+      "intro|hel-jurata-amber||story|дерево"
+    ],
+    "scripts/istanbul-galata-quest-data.js": [
+      "intro|istanbul-galata||story|рыба"
+    ],
+    "scripts/kaunas-quest-data.js": [
+      "intro|kaunas-capital||story|храм"
+    ],
+    "scripts/kazimierz-dolny-quest-data.js": [
+      "intro|kazimierz-dolny-kogut||story|замок",
+      "intro|kazimierz-dolny-kogut||story|замок",
+      "intro|kazimierz-dolny-kogut||story|круг"
+    ],
+    "scripts/krakow-bike-quest-data.js": [
+      "intro|krakow-bike-pradnik||story|вал",
+      "intro|krakow-bike-pradnik||story|ров"
+    ],
+    "scripts/krakow-district-quests-data.js": [
+      "intro|krakow-kazimierz||story|одна",
+      "intro|krakow-kazimierz||story|эстер",
+      "intro|krakow-kazimierz||story|эстерка",
+      "intro|krakow-kazimierz||story|эстерки",
+      "intro|krakow-nowahuta||story|1949",
+      "intro|krakow-nowahuta||story|1949 год",
+      "intro|krakow-nowahuta||story|1949 году",
+      "intro|krakow-nowahuta||story|в 1949"
+    ],
+    "scripts/krakow-kazimierz-quest-data.js": [
+      "intro|krakow-kazimierz||story|камни",
+      "intro|krakow-kazimierz||story|музей"
+    ],
+    "scripts/krakow-kids-quest-data.js": [
+      "intro|krakow-kids-dragon-keeper||story|кости",
+      "intro|krakow-kids-dragon-keeper||story|кость"
+    ],
+    "scripts/krevo-quest-data.js": [
+      "intro|krevo-walled-maiden||story|каменные",
+      "intro|krevo-walled-maiden||story|камень"
+    ],
+    "scripts/kruszwica-quest-data.js": [
+      "intro|kruszwica-mysia-wieza||story|мыши"
+    ],
+    "scripts/kutaisi-quest-data.js": [
+      "intro|kutaisi-golden-age||story|крест"
+    ],
+    "scripts/lepel-quest-data.js": [
+      "intro|lepel-tsmok||story|дерево"
+    ],
+    "scripts/lida-castle-quest-data.js": [
+      "intro|lida-castle||story|крест",
+      "intro|lida-castle||story|кресты"
+    ],
+    "scripts/limassol-quest-data.js": [
+      "intro|limassol-lionheart||story|остров",
+      "intro|limassol-lionheart||story|острова",
+      "intro|limassol-lionheart||title|остров",
+      "intro|limassol-lionheart||title|острова"
+    ],
+    "scripts/luninets-quest-data.js": [
+      "intro|luninets-bike-beloe||story|дерево"
+    ],
+    "scripts/luxembourg-quest-data.js": [
+      "intro|luxembourg-melusina||story|мир"
+    ],
+    "scripts/malaga-quest-data.js": [
+      "intro|malaga-picasso-mar||story|мария"
+    ],
+    "scripts/minsk-cinema-quest-data.js": [
+      "intro|minsk-cinema||story|пути"
+    ],
+    "scripts/minsk-cipher-quest-data.js": [
+      "intro|minsk-cipher||story|шесть",
+      "intro|minsk-cipher||title|шесть"
+    ],
+    "scripts/minsk-kids-zvezdochka-quest-data.js": [
+      "intro|minsk-kids-zvezdochka||story|нет"
+    ],
+    "scripts/minsk-traktorny-quest-data.js": [
+      "intro|minsk-traktorny||story|три"
+    ],
+    "scripts/mogilev-kids-lion-ball-quest-data.js": [
+      "intro|mogilev-kids-lion-ball||story|мяч",
+      "intro|mogilev-kids-lion-ball||story|мячик",
+      "intro|mogilev-kids-lion-ball||title|мяч"
+    ],
+    "scripts/mogilev-kids-quest-data.js": [
+      "intro|mogilev-kids-mogislav||story|башня"
+    ],
+    "scripts/novogrudok-quest-data.js": [
+      "intro|novogrudok-crown||story|белая",
+      "intro|novogrudok-crown||story|бело"
+    ],
+    "scripts/pakocim-voices-quest-data.js": [
+      "intro|pakocim-voices||story|дерево"
+    ],
+    "scripts/pinsk-quest-data.js": [
+      "intro|pinsk-polesie||story|полесье",
+      "intro|pinsk-polesie||story|полесья"
+    ],
+    "scripts/polotsk-ancient-quest-data.js": [
+      "intro|polotsk-ancient||story|белая"
+    ],
+    "scripts/porto-quest-data.js": [
+      "intro|porto-port-wine||story|дом"
+    ],
+    "scripts/riga-cinema-quest-data.js": [
+      "intro|riga-cinema||story|кот"
+    ],
+    "scripts/riga-quest-data.js": [
+      "intro|riga-unfinished-city||story|петух",
+      "intro|riga-unfinished-city||story|петуха"
+    ],
+    "scripts/sasino-quest-data.js": [
+      "intro|sasino-stilo||story|трех",
+      "intro|sasino-stilo||story|три",
+      "intro|sasino-stilo||story|трёх"
+    ],
+    "scripts/swiety-krzyz-quest-data.js": [
+      "intro|swiety-krzyz-lysa-gora||story|камень",
+      "intro|swiety-krzyz-lysa-gora||story|сталь"
+    ],
+    "scripts/tbilisi-quest-data.js": [
+      "intro|tbilisi-warm-city||story|храм",
+      "intro|tbilisi-warm-city||story|церковь",
+      "intro|tbilisi-warm-city||task|храм"
+    ],
+    "scripts/venice-quest-data.js": [
+      "intro|venice-lion-of-saint-mark||story|ангел"
+    ],
+    "scripts/vilnius-cinema-quest-data.js": [
+      "intro|vilnius-cinema||story|имена"
+    ],
+    "scripts/vitebsk-kids-living-drawing-quest-data.js": [
+      "intro|vitebsk-kids-living-drawing||story|сова"
+    ],
+    "scripts/warsaw-kids-quest-data.js": [
+      "intro|warsaw-kids-bazyliszek||story|одно"
+    ],
+    "scripts/warsaw-quest-data.js": [
+      "intro|warsaw-syrenka||story|трак"
+    ],
+    "scripts/wroclaw-kids-quest-data.js": [
+      "intro|wroclaw-kids-gnome-service||story|переход"
+    ],
+    "scripts/yelnya-quest-data.js": [
+      "intro|yelnya-bog-bells||location|дерево",
+      "intro|yelnya-bog-bells||story|дерево"
+    ],
+    "scripts/yerevan-quest-data.js": [
+      "intro|yerevan-ararat||story|кот"
+    ],
+    "scripts/zakopane-quest-data.js": [
+      "intro|zakopane-spiacy-rycerze||story|каменной",
+      "intro|zakopane-spiacy-rycerze||story|камень"
+    ],
+    "scripts/zheludok-quest-data.js": [
+      "intro|zheludok-palace||story|круг",
+      "intro|zheludok-palace||story|овал",
+      "intro|zheludok-palace||story|овальное"
+    ]
+  }
+}

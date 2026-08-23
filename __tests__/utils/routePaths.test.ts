@@ -1,6 +1,7 @@
 import {
   buildQuestPath,
   buildTravelPath,
+  buildTravelPathFromTravel,
   isUsableRouteSegment,
   normalizeRouteSegment,
   sanitizeTravelHref,
@@ -125,6 +126,38 @@ describe('utils/routePaths', () => {
       expect(sanitizeTravelHref('')).toBeNull()
       expect(sanitizeTravelHref(null)).toBeNull()
       expect(sanitizeTravelHref(undefined)).toBeNull()
+    })
+  })
+  // #1438: двухступенчатый фолбэк «слаг → числовой id» был скопирован в карточке,
+  // в шапке детали и в SEO-слое; копии успели разъехаться контрактом, поэтому
+  // реализация здесь одна.
+  describe('buildTravelPathFromTravel', () => {
+    it('prefers the slug', () => {
+      expect(buildTravelPathFromTravel({ slug: 'grodno-forty', id: 228 })).toBe(
+        '/travels/grodno-forty',
+      )
+    })
+
+    it('falls back to the numeric id when the slug is unusable', () => {
+      for (const slug of [null, undefined, '', 'null', 'undefined', 'NaN', 'none']) {
+        expect(buildTravelPathFromTravel({ slug, id: 228 })).toBe('/travels/228')
+      }
+    })
+
+    it('returns null when neither key is usable', () => {
+      expect(buildTravelPathFromTravel({ slug: 'null', id: 0 })).toBeNull()
+      expect(buildTravelPathFromTravel({ slug: null, id: null })).toBeNull()
+      expect(buildTravelPathFromTravel(null)).toBeNull()
+      expect(buildTravelPathFromTravel(undefined)).toBeNull()
+    })
+
+    it('honours the encode option like the segment builder', () => {
+      expect(buildTravelPathFromTravel({ slug: 'кострома тур' })).toBe(
+        '/travels/%D0%BA%D0%BE%D1%81%D1%82%D1%80%D0%BE%D0%BC%D0%B0%20%D1%82%D1%83%D1%80',
+      )
+      expect(buildTravelPathFromTravel({ slug: 'кострома тур' }, { encode: false })).toBe(
+        '/travels/кострома тур',
+      )
     })
   })
 })

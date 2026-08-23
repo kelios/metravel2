@@ -14,6 +14,7 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import FavoriteButton from '@/components/travel/FavoriteButton';
 import { useRouter } from 'expo-router';
 import type { Travel } from '@/types/types';
+import { buildTravelPathFromTravel } from '@/utils/routePaths';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -31,12 +32,27 @@ const STORAGE_KEY = 'metravel_recent_views';
 const CARD_WIDTH = 200;
 const CARD_GAP = spacing.sm;
 
+// #1438: `item.slug || item.id` при обоих непригодных полях давал ровно
+// `/travels/null` — записи истории приходят из локального хранилища, где слаг
+// мог сохраниться литералом пустоты. Непригодный ключ означает «адреса нет»:
+// карточка не навигирует и не отдаёт адрес в избранное.
+const resolveRecentTravelPath = (item: Travel): string | null =>
+  buildTravelPathFromTravel(item, { encode: false });
+
 function RecentViews({
   maxItems = 6,
   compact = false,
   initialTravels,
 }: RecentViewsProps) {
   const router = useRouter();
+  const openRecentTravel = useCallback(
+    (item: Travel) => {
+      const path = resolveRecentTravelPath(item);
+      if (!path) return;
+      router.push(path as never);
+    },
+    [router],
+  );
   const [recentTravels, setRecentTravels] = React.useState<Travel[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const colors = useThemedColors();
@@ -197,14 +213,14 @@ function RecentViews({
           title={item.name}
           imageUrl={item.travel_image_thumb_url}
           metaText={countries.length > 0 ? countries.join(', ') : null}
-          onPress={() => router.push(`/travels/${item.slug || item.id}`)}
+          onPress={() => openRecentTravel(item)}
           rightTopSlot={
             <FavoriteButton
               id={item.id}
               type="travel"
               title={item.name || ''}
               imageUrl={item.travel_image_thumb_url}
-              url={`/travels/${item.slug || item.id}`}
+              url={resolveRecentTravelPath(item) ?? ''}
               country={countries[0]}
               size={18}
             />
@@ -214,7 +230,7 @@ function RecentViews({
         />
       </View>
     );
-  }, [cardStyle, router, styles.cardWrapper]);
+  }, [cardStyle, openRecentTravel, styles.cardWrapper]);
 
   if (isLoading || recentTravels.length === 0) {
     return null;
@@ -274,14 +290,14 @@ function RecentViews({
                   title={item.name}
                   imageUrl={item.travel_image_thumb_url}
                   metaText={countries.length > 0 ? countries.join(', ') : null}
-                  onPress={() => router.push(`/travels/${item.slug || item.id}`)}
+                  onPress={() => openRecentTravel(item)}
                   rightTopSlot={
                     <FavoriteButton
                       id={item.id}
                       type="travel"
                       title={item.name || ''}
                       imageUrl={item.travel_image_thumb_url}
-                      url={`/travels/${item.slug || item.id}`}
+                      url={resolveRecentTravelPath(item) ?? ''}
                       country={countries[0]}
                       size={18}
                     />
