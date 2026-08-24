@@ -1,12 +1,6 @@
 ---
 name: map-expert
-description: >-
-  Карта и places: `components/MapPage/**`, `components/map/**`, `app/(tabs)/map.tsx`,
-  `app/(tabs)/map.web.tsx`, `screens/tabs/MapScreen.tsx`, `hooks/useMap*`, `hooks/map/**` —
-  Leaflet на web, Leaflet в WebView на native, `PlacePopupCard`, попапы, кластеры, маршруты.
-  Триггеры: «попап закрывается сам», «серая карта», «маркер не нажимается», «маршрут строится
-  прямой линией», «карточка места обрезается». Встроенную карту статьи и точки travel-мастера
-  ведёт travel-expert, карту квеста — quest-expert; бэкенд routing/clusters — тикет `area=back`.
+description: "Карта и places: MapPage, Leaflet/WebView, markers, clusters, routes и PlacePopupCard. Для серой карты, маркеров, попапов и route UI; travel/quest/backend остаются у владельцев."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

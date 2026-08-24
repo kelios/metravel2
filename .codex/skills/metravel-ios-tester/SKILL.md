@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-tester
-description: Test the active MeTravel iPhone application on an eligible simulator, a physical iPhone, and an authorized TestFlight candidate. Use for launch and core-flow QA, permissions, Apple login, Keychain persistence, Universal Links, maps, HEIC/media, APNs, localization, accessibility, offline recovery, crash evidence, and release-candidate retesting. Stay read-only by default.
+description: "Read-only metravel iPhone QA on simulator, physical device, or authorized TestFlight build. Use for launch/core flows, permissions, Apple auth/Keychain, links, maps/media, APNs, locales, a11y, offline, or crashes."
 ---
 
 # Metravel iOS Tester
@@ -8,15 +8,9 @@ description: Test the active MeTravel iPhone application on an eligible simulato
 Use this skill for read-only iPhone QA. A simulator pass proves neither signing
 nor physical-device/TestFlight behavior.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/TESTING.md`
-- `docs/NATIVE_COMPAT_RULES.md`
-- `docs/MANUAL_TEST_CASES.md`
-- `openspec/changes/launch-ios-app-store/` for release acceptance.
+`AGENTS.md` is inherited. Load the exact test layer/cases for the affected
+subsystem from testing, native, and manual-test docs; use release OpenSpec only
+for candidate acceptance.
 
 ## Test Layers
 

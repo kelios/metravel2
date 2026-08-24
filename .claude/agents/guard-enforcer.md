@@ -1,10 +1,6 @@
 ---
 name: guard-enforcer
-description: >-
-  Прогоняет guard-скрипты проекта и чинит найденные нарушения в исходниках, не ослабляя сами
-  guard'ы. Триггеры: «прогони гварды», «упал guard в CI/хуке», «проверь соответствие
-  архитектурным правилам», «почему падает governance:verify». Пороги не поднимает, allowlist не
-  расширяет, governance-тесты не удаляет; продуктовые фичи и рефакторинг вне нарушения не делает.
+description: "Запускает project guards и чинит доказанные source violations. Для падений guard/governance; пороги, allowlists и tests не ослабляет, unrelated refactor не делает."
 tools: Read, Grep, Glob, Edit, Bash
 model: sonnet
 ---

@@ -16,9 +16,9 @@
 - `docs/AGENT_ANALYSIS_PROTOCOL.md` — обязательная глубина разбора задачи для
   агентов: уровни, постановка, механизм отказа, план, доказательства, формат
   отчёта и стоп-слова;
-- `docs/CODEX_SKILLS.md` — каталог `$metravel-*` skills для Codex (вынесен из
-  `AGENTS.md` §2; читать при работе в Codex или правке набора skills);
-- `docs/WORKFLOW_OPERATIONS.md` — операционные протоколы `AGENTS.md` §3:
+- `docs/CODEX_SKILLS.md` — служебная grouped-карта `$metravel-*` skills; читать
+  только при добавлении, удалении, переименовании или аудите каталога;
+- `docs/WORKFLOW_OPERATIONS.md` — условные протоколы `AGENTS.md` §4:
   e2e-доступы, тестовые данные на production, Android device testing,
   production-target validation и координация долгих операций/locks;
 - `docs/spec-driven-development.md` — канонический OpenSpec/SDD workflow;

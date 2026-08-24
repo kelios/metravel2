@@ -5,6 +5,8 @@
 // ссылка обязана нести source/medium/campaign. PII в метки не попадает: только
 // slug/id достижения и канал. События трекинга — в utils/gamificationAnalytics.ts.
 
+import { appendQueryParam, hasQueryParam } from '@/utils/urlParams';
+
 export type ShareChannel =
   | 'telegram'
   | 'facebook'
@@ -19,18 +21,6 @@ const UTM_MEDIUM = 'badge_share';
 /** Префикс кампании на достижение — даёт per-badge гранулярность KPI. */
 const campaignFor = (slug: string): string => `badge_${slug || 'unknown'}`;
 
-const appendQueryParam = (url: string, key: string, value: string): string => {
-  if (!value) return url;
-  const [base, hash = ''] = url.split('#');
-  const sep = base.includes('?') ? '&' : '?';
-  const param = `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-  const withParam = `${base}${sep}${param}`;
-  return hash ? `${withParam}#${hash}` : withParam;
-};
-
-const hasParam = (url: string, key: string): boolean =>
-  new RegExp(`[?&]${key}=`).test(url);
-
 /**
  * Навешивает utm_source/utm_medium/utm_campaign на публичный URL достижения.
  * Сохраняет уже присутствующие query-параметры и не дублирует существующие UTM
@@ -42,13 +32,13 @@ export const buildShareLink = (
 ): string => {
   if (!publicUrl) return publicUrl;
   let out = publicUrl;
-  if (!hasParam(out, 'utm_source')) {
+  if (!hasQueryParam(out, 'utm_source')) {
     out = appendQueryParam(out, 'utm_source', params.channel);
   }
-  if (!hasParam(out, 'utm_medium')) {
+  if (!hasQueryParam(out, 'utm_medium')) {
     out = appendQueryParam(out, 'utm_medium', UTM_MEDIUM);
   }
-  if (!hasParam(out, 'utm_campaign')) {
+  if (!hasQueryParam(out, 'utm_campaign')) {
     out = appendQueryParam(out, 'utm_campaign', campaignFor(params.slug));
   }
   return out;

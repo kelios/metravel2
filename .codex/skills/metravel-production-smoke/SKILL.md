@@ -7,12 +7,9 @@ description: Run read-only production health checks for metravel.by. Use after d
 
 Use this skill for read-only production validation. Use `$metravel-devops-agent` for deploy execution or rollback.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/RELEASE.md`
-- `docs/PRODUCTION_CHECKLIST.md` when production release context matters.
+`AGENTS.md` is inherited. Load only the changed surface's production probe and,
+after a release, the relevant `docs/RELEASE.md` or
+`docs/PRODUCTION_CHECKLIST.md` checklist section.
 
 ## Smoke Scope
 

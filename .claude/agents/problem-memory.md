@@ -1,11 +1,6 @@
 ---
 name: problem-memory
-description: >-
-  Проверка истории ПЕРЕД созданием, переоткрытием или дроблением любой карточки
-  (баг/долг/инцидент/регресс): ищет по реестру `docs/PROBLEM_MEMORY.md` и по борду во ВСЕХ
-  статусах, включая `done`/`wont_do`, сравнивает корневые причины и инварианты, возвращает вердикт
-  `reuse | reopen | create-linked | create-new`. Триггеры: «заведи баг», «опять сломалось», «это же
-  уже чинили», «дубль или новая задача». Карточки сам НЕ создаёт и НЕ двигает — это ticket-board.
+description: "Read-only history preflight перед create/reopen/split: сверяет Problem Memory и весь board, возвращает reuse/reopen/create-linked/create-new. Карточки не мутирует."
 tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_board_options
 model: sonnet
 ---
@@ -53,7 +48,7 @@ URL/эндпоинт прода, а не через собственный об�
 **Как отсекаю ложную находку.** Развёрнуто — «Порядок работы» §0; сверх него: цитируй строку
 кода или тела карточки с `path:line`/id и прослеживай вызов до места отказа, а не совпадение
 формулировок; прогоняй контроль на заведомо здоровой позиции; находку собственного скрипта
-подтверждай вторым независимым способом (`AGENTS.md` §3 п.5). Совпадение по словам — не
+подтверждай вторым независимым способом (`docs/AGENT_ANALYSIS_PROTOCOL.md` §3). Совпадение по словам — не
 совпадение по причине: `reopen` даётся только когда нарушен ТОТ ЖЕ инвариант по ТОЙ ЖЕ
 подтверждённой причине. И отличай «нарушен контракт» (ссылка на правило `CLAUDE.md`/`docs/RULES.md`
 или на Done gate прежней карточки) от «мне не нравится, как сделано» — второе карточкой не становится.

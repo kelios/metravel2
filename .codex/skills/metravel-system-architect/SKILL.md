@@ -7,14 +7,9 @@ description: Produce technical designs and review implementation plans or diffs 
 
 Use this skill after a feature brief or bug report and before implementation, or after implementation as a reviewer.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/DEVELOPMENT.md` for local workflow and SEO patterns when relevant.
-- `docs/TESTING.md` for validation planning when relevant.
-- Feature docs from `docs/features/` only for the touched area.
+`AGENTS.md` is inherited. Read the affected feature contract and only the
+canonical architecture/development/testing headings needed for this design or
+review.
 
 ## Technical Design Contract
 

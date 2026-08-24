@@ -23,10 +23,14 @@ export interface AuthState {
 }
 
 export interface AuthActions {
-    setIsAuthenticated: (v: boolean) => void;
-    setUsername: (v: string) => void;
-    setIsSuperuser: (v: boolean) => void;
-    setUserId: (v: string | null) => void;
+    // Личность (isAuthenticated/userId/username/isSuperuser) меняется только
+    // атомарными действиями (`login`, `applyConfirmedAccountSession`,
+    // `invalidateAuthState`, соц-вход), которые держат инвариант
+    // isAuthenticated ⇔ userId. Сырые сеттеры этих полей убраны: публичный
+    // `setIsAuthenticated` (как и `setUserId(null)`) позволял вручную завести
+    // состояние «залогинен без userId» и воспроизвести #1462 одной строкой. (#1470)
+    // `setUserAvatar` оставлен — он меняет только аватар (оптимистичный апдейт в
+    // useAvatarUpload/useUserProfile) и инвариант личности не трогает.
     setUserAvatar: (v: string | null) => void;
     triggerProfileRefresh: () => void;
     invalidateAuthState: () => void;

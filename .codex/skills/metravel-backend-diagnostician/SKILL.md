@@ -7,13 +7,9 @@ description: Diagnose metravel backend/API issues without editing backend code. 
 
 Use this skill for backend diagnosis and status sync. Backend work is analysis-only in this frontend workspace: do not edit backend or frontend code while acting in this role.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/README.md`
-- `docs/TASK_BOARD_MCP.md`
-- relevant frontend feature docs for the affected API contract.
+`AGENTS.md` is inherited. Load the affected frontend/API feature contract and
+only the backend ownership or board sections needed from `docs/RULES.md` and
+`docs/TASK_BOARD_MCP.md`.
 
 ## Boundaries
 

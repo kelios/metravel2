@@ -1,11 +1,6 @@
 ---
 name: refactor-surgeon
-description: >-
-  Распил god-файлов (>800 LOC, порог `scripts/guard-file-complexity.js`) на подкомпоненты и модули
-  строго механическим извлечением, без изменения поведения. Строго по запросу и после согласования
-  плана разбиения. Триггеры: «распили <файл>», «вынеси секции из god-компонента», «файл не проходит
-  guard:file-complexity». Логику, стили и API при этом не переделывает, баги не чинит, новых
-  абстракций не вводит — продуктовые правки идут профильным агентам фичи.
+description: "Behavior-preserving split god-файлов >800 LOC на компоненты/модули. Только по явному запросу; не меняет бизнес-логику, UI, API и не выполняет попутный bugfix."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

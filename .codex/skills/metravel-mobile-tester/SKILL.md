@@ -10,15 +10,9 @@ or both when the task explicitly needs a comparison. Do not edit code unless
 the user explicitly asks to update tests. iPhone-specific QA belongs to
 `$metravel-ios-tester`.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/TESTING.md`
-- `docs/NATIVE_COMPAT_RULES.md` for Android/native checks
-- `docs/MANUAL_TEST_CASES.md` for `AND-USB-*` Android device cases when a device is connected
-- Relevant `docs/features/*` files for the tested flow.
+`AGENTS.md` is inherited. Read the tested feature contract and its exact
+browser case; for Android-specific scope add only the affected native section
+and matching `AND-USB-*` device case.
 
 ## What To Test
 

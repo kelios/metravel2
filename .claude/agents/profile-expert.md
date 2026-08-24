@@ -1,10 +1,6 @@
 ---
 name: profile-expert
-description: >-
-  Профиль пользователя: `app/(tabs)/profile.tsx`, `app/(tabs)/user/[id].tsx`,
-  `app/(tabs)/settings.tsx`, `components/profile/**`, `components/screens/profile/**`,
-  `components/settings/**` — личный и публичный профиль, сегмент-табы, счётчики-пилюли, настройки,
-  встройки фич. Триггеры: «переделай профиль», «распили settings.tsx», «добавь вкладку в профиль».
+description: "Эксперт profile/settings: private/public profile, tabs, counters, forms и feature embeds. Для редизайна/багов профиля, settings split и новых profile sections."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

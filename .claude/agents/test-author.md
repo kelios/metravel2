@@ -1,11 +1,6 @@
 ---
 name: test-author
-description: >-
-  Тесты Jest 29 (`__tests__/**`) и Playwright (`e2e/**`): добавить покрытие, починить падающий или
-  флейкующий тест, разобрать причину падения, завести регрессионный тест на подтверждённый баг.
-  Триггеры: «покрой тестом», «почему падает тест», «добавь e2e на этот flow», «тест флейкует».
-  Продуктовый код правит только когда тест доказал в нём дефект; governance-тесты в
-  `__tests__/scripts/**` под свои изменения не подгоняет; фичевые баги чинят профильные агенты.
+description: "Jest/Playwright tests: новое покрытие, regression, failing или flaky test diagnosis. Продуктовый код меняет только при доказанном дефекте; governance под ответ не подгоняет."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: sonnet
 ---

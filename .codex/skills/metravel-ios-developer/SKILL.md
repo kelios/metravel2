@@ -9,16 +9,9 @@ Use this skill for implementation and debugging of the active iPhone-first
 MeTravel application. iPad-specific product support remains out of scope for the
 first release.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/NATIVE_COMPAT_RULES.md`
-- `docs/DEVELOPMENT.md`
-- `docs/MANUAL_TEST_CASES.md`
-- `openspec/changes/launch-ios-app-store/` for first-release work
-- Relevant feature docs, especially `docs/features/map.md` for map/place work.
+`AGENTS.md` is inherited. Load the affected native/feature section and exact
+simulator/device case; use the iOS OpenSpec or development guidance only when
+the requested subsystem depends on it.
 
 ## Scope
 

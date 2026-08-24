@@ -117,7 +117,7 @@ description: >-
   правильно — сначала вердикт ревью. Аварийный обход `REVIEW_GATE_BYPASS=1` применим только по
   явной просьбе пользователя и фиксируется в `description` тикета.
 - **Ревью и приёмка — не «по требованию».** Их поднимает статус на борде: `review` → `code-review-gate`,
-  `testing` → `board-reviewer`. Оба субагента запускаются без запроса разрешения (`AGENTS.md` §10.1);
+  `testing` → `board-reviewer`. Оба субагента запускаются автоматически board pipeline;
   «пользователь не просил ревью» не основание оставить тикет висеть в `review`/`testing`.
 - `todo`/`in_progress` означают реальную оставшуюся implementation/refinement/ops работу;
   `testing` — только активную проверку или exact timed recheck, не парковку.

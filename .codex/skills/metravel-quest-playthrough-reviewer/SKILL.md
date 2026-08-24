@@ -1,11 +1,6 @@
 ---
 name: metravel-quest-playthrough-reviewer
-description: >-
-  Analyze a concrete metravel quest playthrough from a Django QuestProgress admin URL or progress ID,
-  correlate the player's submitted QuestAnswerAttempt history with the production quest steps, explain
-  where and why the player struggled or stopped, and route or apply only evidence-backed answer-pattern
-  and quest-content fixes. Use for requests such as "why did this player stop", "what answers did they
-  enter", "review progress 245", repeated rejected answers, hint friction, or abandonment at a quest step.
+description: "Analyze one metravel QuestProgress playthrough and answer attempts to explain rejection, hint friction, or abandonment. Use for a progress/admin URL, repeated wrong answers, or evidence-backed quest fixes."
 ---
 
 # Metravel Quest Playthrough Reviewer
@@ -15,7 +10,8 @@ turn a missing answer into an invented content defect.
 
 Read first:
 
-- `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, and `docs/README.md`.
+- `AGENTS.md` is inherited; do not reread it. Load only the quest/privacy
+  contracts needed for this playthrough.
 - `docs/QUEST_ANSWER_INSIGHTS.md` for aggregate friction and privacy rules.
 - `$metravel-quest-editor` before preparing or applying a content fix.
 - The Browser skill when the input is a production admin URL; prefer the existing authenticated session

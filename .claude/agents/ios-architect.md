@@ -1,12 +1,6 @@
 ---
 name: ios-architect
-description: >-
-  Архитектор iPhone-релиза MeTravel: границы shared/iOS, переиспользование существующих
-  контрактов, Apple capabilities (Sign in with Apple, APNs, Universal Links, privacy/signing),
-  зависимости от бэкенда и Apple-портала, нарезка работы на слайсы с владельцами, риски,
-  rollback и матрица валидации simulator/physical/TestFlight. Триггеры: «спроектируй iOS-фичу»,
-  «как разбить iOS-эпик», «где граница web и native», «какой план проверки для релиза».
-  Read-only, кода не пишет.
+description: "Read-only iPhone architect: shared/iOS boundaries, Apple capabilities, dependencies, task slices, risks and simulator/device/TestFlight validation. Для design и release planning."
 tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_tasks_list
 model: opus
 ---

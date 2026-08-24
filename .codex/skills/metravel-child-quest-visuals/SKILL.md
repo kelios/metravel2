@@ -1,6 +1,6 @@
 ---
 name: metravel-child-quest-visuals
-description: Create, replace, and validate age-appropriate illustrated covers and visual series for metravel children's, family, fairy-tale, park, and teen quests. Use for child quest cover prompts, watercolor or animated quest art, fantasy/adventure visuals, age-band style selection, or when an existing quest image looks like adult travel photography instead of a child experience.
+description: "Create or replace age-appropriate illustrated metravel quest covers and visual series. Use for child/family/teen watercolor, animation, fantasy, adventure, or age-band art direction."
 ---
 
 # Metravel Child Quest Visuals
@@ -9,7 +9,8 @@ Create quest art that communicates a child's role, goal, and adventure before it
 
 ## Read first
 
-- `AGENTS.md`, `docs/RULES.md`, and `docs/ICON_ART_PROMPTS.md`.
+- `AGENTS.md` is inherited. Read `docs/ICON_ART_PROMPTS.md` and only the relevant
+  quest/media headings in `docs/RULES.md`.
 - `constants/modernMattePalette.ts` for brand accents.
 - `../metravel-quest-writer/references/child-quest-design.md` for age, story, safety, and language fit.
 - The production quest bundle and neighboring child covers before replacing an existing image.

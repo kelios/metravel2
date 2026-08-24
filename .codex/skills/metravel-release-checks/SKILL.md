@@ -5,7 +5,8 @@ description: Choose and run the correct metravel verification flow for local cha
 
 # Metravel Release Checks
 
-Read `docs/RULES.md`, `docs/DEVELOPMENT.md`, `docs/TESTING.md`, and `docs/RELEASE.md` before deciding the verification plan.
+`AGENTS.md` is inherited. Load only the changed surface's validation commands
+and the exact operation/release heading required by the planned check.
 
 Select checks by change scope instead of defaulting to the heaviest run every time:
 

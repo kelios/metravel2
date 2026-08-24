@@ -1,10 +1,6 @@
 ---
 name: prod-smoke
-description: >-
-  Read-only смоук прода metravel.by: ключевые страницы, API-контракты, статика, sitemap. После
-  каждого деплоя, при подозрении на аварию (502, белый экран) и как health-check. Ничего не меняет;
-  новые регрессии сверяет с открытыми `area=back` тикетами. Триггеры: «проверь прод», «смоук
-  прода», «сайт упал?».
+description: "Read-only production smoke metravel.by: pages, API shape, static assets и sitemap. Для post-deploy check, 502/white-screen и «сайт упал?»; production не мутирует."
 tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get
 model: sonnet
 ---

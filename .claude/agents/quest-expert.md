@@ -1,14 +1,6 @@
 ---
 name: quest-expert
-description: >-
-  Код фичи quests: `components/quests/**`, `app/(tabs)/quests/**`, `screens/tabs/Quest*`,
-  `api/quests.ts`, `api/questBundleCache.ts`, `utils/questAdapters.ts`,
-  `utils/questAnswerEvaluation.ts`, `hooks/useQuestsApi.ts`, `scripts/*quest*` — список, деталь,
-  прохождение, оценка ответа, offline-бандл, печать, SSG-лендинги городов и миграции данных.
-  Триггеры: «ответ не засчитывается», «шаг не открывается», «квест не грузится офлайн», «на
-  лендинге города не все квесты». Текст заданий и подсказок — quest-editor, новый квест —
-  скилл metravel-quest, координаты точек — quest-geo-verifier, разбор попыток игроков —
-  quest-friction-analyst.
+description: "Код quests: список, детали, прохождение, ответы, offline, печать и SSG. Для незасчитанного ответа, закрытого шага или сломанного quest runtime; контент и гео — отдельные агенты."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

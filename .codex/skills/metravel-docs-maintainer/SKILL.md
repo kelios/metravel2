@@ -1,68 +1,50 @@
 ---
 name: metravel-docs-maintainer
-description: Maintain metravel project documentation and Codex operating rules. Use when Codex needs to update docs/, AGENTS.md, .codex/skills, project instructions, workflow rules, prompts, skill metadata, or documentation structure in this repository.
+description: "Maintain metravel docs, AGENTS.md, Codex skills, and workflow rules. Use for documentation structure, instruction routing, skill metadata, duplication, drift, or context-cost cleanup."
 ---
 
 # Metravel Docs Maintainer
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, and `docs/CODEX.md` before changing documentation or Codex skills.
+`AGENTS.md` is inherited; do not reread it. Inspect only the canonical document
+that owns the changed rule:
 
-When the task changes OpenSpec/SDD behavior, also read
-`docs/spec-driven-development.md`,
-`docs/spec-driven-development-requirements.md`, and `openspec/config.yaml`.
+- mandatory policy → `docs/RULES.md` exact heading;
+- docs navigation → `docs/README.md`/`docs/INDEX.md`;
+- Codex routing/context/validation → `docs/CODEX.md`;
+- skill catalog maintenance → `docs/CODEX_SKILLS.md`;
+- OpenSpec behavior → the SDD docs and `openspec/config.yaml`.
 
-Use the AI task triage and self-check in `docs/CODEX.md` to keep docs changes scoped before editing.
+## Edit rules
 
-Keep documentation compact and authoritative:
+- Update an existing canonical source; avoid one-off reports.
+- Keep always-on instructions short. Put detailed or conditional procedures in
+  the owning doc and point to an exact heading.
+- Do not copy one policy through `AGENTS.md`, `CODEX.md`, `README.md`, and every
+  skill. Preserve one canonical statement plus brief conditional pointers.
+- `AGENTS.md` contains only cross-task safety, scope, preflight, and handoff
+  invariants that must be present on every invocation.
+- `docs/CODEX.md` is a lazy router, not a complete skill catalog or operations
+  manual.
+- Update `docs/INDEX.md` only when docs files are added, removed, or renamed.
 
-- Prefer updating existing canonical docs over creating new files.
-- Use `docs/RULES.md` for mandatory project rules and policies.
-- Use `docs/README.md` for quick navigation, setup, and API reference.
-- Use `docs/DEVELOPMENT.md`, `docs/TESTING.md`, and `docs/RELEASE.md` for workflow-specific details.
-- Use `docs/CODEX.md` for Codex workflow, project skill selection, and skill maintenance rules.
-- Update `docs/INDEX.md` whenever adding, removing, or renaming a docs file.
+## Skills
 
-Maintain skills in `.codex/skills/<skill-name>/`:
+- Keep `.codex/skills/<name>/SKILL.md` procedural and single-purpose.
+- Frontmatter contains short `name` and `description`; description states the
+  capability and concrete trigger surfaces, not the workflow.
+- Assume workspace instructions are inherited. A skill must not require a shell
+  reread of `AGENTS.md` or full canonical docs without task-specific need.
+- Use exact-heading references and progressive disclosure.
+- `agents/openai.yaml` is short UI metadata, not a second skill body.
+- No README/CHANGELOG in skill folders; use `references/` only for optional
+  detailed material.
+- Use `$metravel-prompt-maintainer` when prompt specs, asset prompts, or
+  `agents/openai.yaml` are materially changed.
 
-- Keep each `SKILL.md` short, procedural, and specific to one job.
-- Put triggering guidance in the frontmatter `description`, because Codex sees that before loading the body.
-- Do not add README, CHANGELOG, or other auxiliary files inside a skill folder.
-- Add `references/` only for detailed material that should be loaded on demand.
-- Keep `agents/openai.yaml` aligned with the skill name, purpose, and default prompt.
-- Use `$metravel-prompt-maintainer` when the main scope is reusable prompt specs, asset-level `PROMPT.md` files, or a project-wide audit of skill default prompts.
+## Validation
 
-OpenSpec skills in `.agents/skills/openspec-*/` are vendor-generated through
-`openspec init`/`openspec update`. Keep project context and artifact rules in
-`openspec/config.yaml`; do not fork their bodies. After generation, validate all
-OpenSpec skills against the current Codex skill schema and apply only the
-documented frontmatter compatibility shim from
-`docs/spec-driven-development.md` when needed.
-
-Avoid documentation drift:
-
-- Do not duplicate the same rule in many places unless one location is a short pointer to the canonical source.
-- When changing rules, update both the canonical source and the short Codex map if the skill selection or agent workflow changes.
-- When changing Codex behavior rules, update the matching skill prompts/metadata so agents see the rule before starting work.
-- Preserve existing project constraints for external links, UI guardrails, server path safety, release checks, and e2e secrets.
-- Keep the active-platform contract aligned across docs and skills: desktop web,
-  mobile web, Android, and iPhone through one Expo/React Native codebase;
-  RU/BE/UK/PL/EN through the shared i18n layer; every task records platform and
-  localization impact. Common/shared responsive UI is validated on desktop web
-  and mobile web; Android and iPhone QA are required only for their respective
-  platform-specific observable scope. Mobile parity remains an invariant, not
-  an automatic all-device validation gate.
-- Keep Codex/debug artifact rules aligned across `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, and relevant skills: temporary debugging output belongs only in ignored local folders such as `.codex-temp/` or `.codex-debug/`, and stale artifacts should be removed before handoff.
-- Keep acceptance semantics aligned: `testing` is active QA or an exact
-  retest/temporal gate with parameter, threshold, current value and trigger.
-  Pass closes the current task; separate confirmed defects use Problem Memory
-  and a linked task; missing device/access pauses for an unblock request and is
-  never a final pending/parking verdict.
-- Do not print secrets from `.env`, `.env.e2e`, or deployment configs.
-- Read Markdown as UTF-8; if PowerShell displays Cyrillic as mojibake, reread with `Get-Content -Encoding UTF8` before assuming the file is corrupt.
-
-Validation for docs-only changes:
-
-- Check changed Markdown/YAML files for readable structure and valid frontmatter.
-- Run `npm run audit:prompts` when prompt specs, asset prompts, skill descriptions, or `agents/openai.yaml` changed.
-- Run the skill validator for changed skills when the `skill-creator` scripts are available.
-- Run broader project checks only when documentation changes also alter code, commands, governance behavior, or release policy.
+- Re-read changed Markdown/YAML for structure, links, and valid frontmatter.
+- Run `npm run audit:prompts` for descriptions/default prompts/prompt specs.
+- Run `skill-creator` validator for every changed skill.
+- Compare line/byte or description-character counts before/after when the goal
+  is context reduction; do not claim optimization without that evidence.

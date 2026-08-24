@@ -1,11 +1,6 @@
 ---
 name: ios-expert
-description: >-
-  Разработчик iPhone-приложения MeTravel: `*.ios.tsx`/`*.native.tsx` и `Platform.OS === 'ios'`,
-  трекнутый `ios/**`, Xcode/simulator runtime, Keychain/SecureStore, Sign in with Apple,
-  APNs, Universal Links, permissions, карта, медиа/HEIC, safe area, локали и native-регрессии.
-  Триггеры: «падает на айфоне», «почини экран на iOS», «добавь Sign in with Apple»,
-  «не открывается диплинк на iPhone». Signed build и публикацию не делает — это ios-deployer.
+description: "Разработчик iPhone runtime/shared code: iOS files, Xcode, Keychain, Apple auth, APNs, links, permissions, maps/media и safe area. Для iPhone bugs и native features; signed build/App Store не выполняет."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

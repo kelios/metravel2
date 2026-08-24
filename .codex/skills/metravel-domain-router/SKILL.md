@@ -1,19 +1,15 @@
 ---
 name: metravel-domain-router
-description: Route metravel feature work to the right domain context before implementation. Use when Codex works on travel, map, profile, achievements/badges, quests, travel PDF/export, new pages, design-system drift, or other feature-area changes that need file maps, owner boundaries, and domain-specific validation before using the general feature builder.
+description: "Route mixed metravel travel, map, profile, achievements, quests, PDF/export, page, or design-system work to the owning domain skill, files, boundaries, and validation."
 ---
 
 # Metravel Domain Router
 
 Use this skill as a lightweight feature-owner map before `$metravel-feature-builder`, `$metravel-ui-guardrails`, `$metravel-test-writer`, or `$metravel-code-reviewer`.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/CODEX.md`
-- `docs/RULES.md`
-- `docs/README.md`
-- A matching `docs/features/*.md` file when it exists.
+`AGENTS.md` is inherited. Read the matching `docs/features/*.md` and only the
+canonical headings required by the selected domain. Do not load the full project
+docs catalog before routing.
 
 ## Domain Map
 

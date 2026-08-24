@@ -8,13 +8,10 @@ description: Implement and review metravel localization across desktop web, mobi
 Apply the shared localization contract without changing the meaning of API-owned
 content or breaking the web/native runtime split.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/DEVELOPMENT.md#localization`
-- `docs/ARCHITECTURE.md#локализация`
-- `i18n/config.ts`, `i18n/resources.ts`, and the nearest i18n tests for code work
+`AGENTS.md` is inherited. Read `docs/DEVELOPMENT.md#localization`, the matching
+localization section of `docs/ARCHITECTURE.md`, `i18n/config.ts`,
+`i18n/resources.ts`, and the nearest affected tests; load other rules only when
+the diff touches their contract.
 
 ## Architecture Contract
 

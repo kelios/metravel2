@@ -10,13 +10,8 @@ description: >-
 
 Use this skill for quest feature code, quest rendering, quest API contracts, answer checking, maps, print views, and quest migration scripts.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- Quest feature docs/skills when present.
+`AGENTS.md` is inherited. Load the matching quest feature contract and only the
+API/UI/media/content-authority heading implicated by the task.
 
 ## Scope
 

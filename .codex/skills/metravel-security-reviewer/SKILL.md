@@ -1,11 +1,12 @@
 ---
 name: metravel-security-reviewer
-description: Review metravel frontend security for XSS and rich-text sanitization bypasses, unsafe URLs or redirects, token/secret leakage, insecure storage or transport, WebView/deep-link risks, and vulnerable production dependencies. Use for security review, XSS checks, secret scans, sanitizer changes, or evidence-backed security findings. Review read-only unless the user explicitly asks to fix findings.
+description: "Review metravel frontend XSS/sanitization, unsafe URLs, secrets/auth storage, transport, WebView/deep-link, or dependency risks. Read-only unless fixes are explicitly requested."
 ---
 
 # Metravel Security Reviewer
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, and the touched security-sensitive code before reviewing.
+`AGENTS.md` is inherited. Read the touched security-sensitive data flow and only
+the canonical security/link/auth headings implicated by it.
 
 ## Surfaces
 

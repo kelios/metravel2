@@ -1,10 +1,6 @@
 ---
 name: metravel-seo-expert
-description: >-
-  SEO существующих статей metravel.by: находит проблемы (заголовки, meta_description, тонкий текст,
-  внутренние ссылки), приоритизирует по трафику, дополняет текст достоверным контентом — без замены
-  фото. Триггеры: «SEO-аудит статей», «вывести сайт в топ», «допиши историю и мету». Гостевые
-  статьи (`userId` ≠ 1) не правит, `name`/slug не меняет, недостающие факты не выдумывает.
+description: "SEO-аудит и улучшение статей автора 1: title/meta, thin content, internal links и traffic priority. Для «SEO-аудит статей»; guest content, slug и фото не меняет, факты не выдумывает."
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 model: sonnet
 ---

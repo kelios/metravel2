@@ -9,15 +9,9 @@ Use this skill for read-only growth and behavior analysis before product, analyt
 SEO, or funnel implementation work. Do not edit code or docs while acting as this
 role unless the user explicitly asks to implement the follow-up.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/README.md`
-- `docs/CODEX.md`
-- `docs/GROWTH_PLAN.md`
-- `docs/TESTING.md` only when the task will change tracking code or validation commands.
-- Relevant route/component/API files only for the funnel being analyzed.
+`AGENTS.md` is inherited. Read `docs/GROWTH_PLAN.md`, the exact funnel's
+route/component/API path, and only the analytics/testing or production-probe
+heading required by the requested metric.
 
 ## Data Sources
 

@@ -1,11 +1,13 @@
 ---
 name: metravel-e2e-runner
-description: Run and debug metravel Playwright and browser smoke scenarios, use .env.e2e safely, collect trace or screenshot evidence in ignored folders, and validate real web flows without exposing secrets.
+description: "Run or debug metravel Playwright and browser-smoke flows with safe .env.e2e handling. Use for real-web regression, console, screenshot, trace, or flaky-flow evidence."
 ---
 
 # Metravel E2E Runner
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, and `docs/CODEX.md` before running browser or Playwright flows. Load the matching feature doc from `docs/features/` for the tested area.
+`AGENTS.md` is inherited. Load the matching feature contract and only the
+relevant e2e/auth/operation sections from `docs/TESTING.md` and
+`docs/WORKFLOW_OPERATIONS.md`.
 
 ## When to use
 

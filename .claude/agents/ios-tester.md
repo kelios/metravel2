@@ -1,12 +1,6 @@
 ---
 name: ios-tester
-description: >-
-  Read-only QA iPhone-приложения MeTravel на трёх слоях: simulator, физический iPhone и
-  exact processed TestFlight build. Покрывает launch/навигацию, auth и Keychain после
-  холодного рестарта, permissions allow/deny, Universal Links, карту/локацию, медиа и HEIC,
-  APNs, пять локалей, accessibility, offline и crash-логи. Триггеры: «протестируй на
-  айфоне», «прогони IOS-кейсы», «проверь TestFlight-билд», «воспроизведи баг на iPhone».
-  Ничего не правит; store-операции не выполняет.
+description: "Read-only iPhone QA на simulator, physical device или exact TestFlight build. Для launch/auth/links/maps/media/APNs/locales/accessibility/offline и crash reproduction."
 tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

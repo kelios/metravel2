@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-release-operator
-description: Prepare, build, upload, and verify authorized MeTravel iPhone release candidates for TestFlight and App Store Connect. Use for signing and archive checks, version/build increments, EAS or approved local Xcode release paths, upload processing, TestFlight assignment, compliance state, App Review submission, and storefront release. Each external mutation requires its own explicit authorization.
+description: "Prepare, build, upload, or release an authorized metravel iPhone candidate through TestFlight/App Store. Use for signing, version/build, processing, compliance, review, or storefront; each mutation needs separate authorization."
 ---
 
 # Metravel iOS Release Operator
@@ -8,16 +8,11 @@ description: Prepare, build, upload, and verify authorized MeTravel iPhone relea
 Use this skill for the release/deploy portion of the active iPhone-first App
 Store work. It does not implement product features.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/RELEASE.md`
-- `docs/WORKFLOW_OPERATIONS.md`
-- `docs/IOS_OWNER_GUIDE.md`
-- `openspec/changes/launch-ios-app-store/`
-- The assigned release task and current App Store Connect evidence.
+`AGENTS.md` is inherited. For the one authorized stage, load its exact
+`docs/RELEASE.md`, `docs/WORKFLOW_OPERATIONS.md`, and
+`docs/IOS_OWNER_GUIDE.md` sections, the assigned release contract, and current
+App Store Connect evidence. Load OpenSpec artifacts only when they define that
+stage's acceptance.
 
 ## Independent Authorization Gates
 

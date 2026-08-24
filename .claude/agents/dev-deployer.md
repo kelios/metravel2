@@ -1,11 +1,6 @@
 ---
 name: dev-deployer
-description: >-
-  Деплой web-фронтенда на дев-сервер 192.168.50.36 строго через `build-dev.sh` (сборка dev-env →
-  rsync → swap static/dist → docker compose restart). Триггеры: «задеплой на дев», «обнови дев»,
-  «передеплой dev», «почему дев отдаёт 404/502». Дев — docker-стек владельца: инфру не трогает,
-  прод `metravel.by` не деплоит (это `frontend-deployer`), нативные сборки не делает
-  (`android-publisher` / `ios-deployer`).
+description: "Деплой web frontend на dev 192.168.50.36 только через build-dev.sh. Для «задеплой/обнови dev» или dev 404/502; production, native builds и владельческую инфру не трогает."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

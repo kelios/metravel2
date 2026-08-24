@@ -16,14 +16,10 @@ Board-first rule:
 - If the task-board MCP or API returns `HTTP 401`, refresh the staff token through `.env.e2e` using `docs/TASK_BOARD_MCP.md`, update `.secrets/metravel-task-board.env` without printing secrets, and retry before creating any local fallback.
 - If the task-board MCP is unavailable after token refresh, prepare a ready-to-paste board task with the same contract fields and mark any local `tasks/*.md` draft as temporary fallback only. Sync/import it to the board before handoff and remove the local draft when possible.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/TASK_BOARD_MCP.md`
-- `docs/PROBLEM_MEMORY.md`
-- `docs/CODEX.md`
-- Relevant feature docs from `docs/features/` only when needed.
+`AGENTS.md` is inherited. Read the task's feature contract and only the Task
+Contract, status, dependency, evidence, and description-language headings
+needed from `docs/TASK_BOARD_MCP.md`; add Problem Memory only for history or
+recurrence decisions.
 
 ## Required Contract
 

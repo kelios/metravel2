@@ -113,26 +113,9 @@ describe('authStore', () => {
   });
 
   describe('setters', () => {
-    it('setIsAuthenticated updates state', () => {
-      act(() => useAuthStore.getState().setIsAuthenticated(true));
-      expect(useAuthStore.getState().isAuthenticated).toBe(true);
-    });
-
-    it('setUsername updates state', () => {
-      act(() => useAuthStore.getState().setUsername('Alice'));
-      expect(useAuthStore.getState().username).toBe('Alice');
-    });
-
-    it('setIsSuperuser updates state', () => {
-      act(() => useAuthStore.getState().setIsSuperuser(true));
-      expect(useAuthStore.getState().isSuperuser).toBe(true);
-    });
-
-    it('setUserId updates state', () => {
-      act(() => useAuthStore.getState().setUserId('42'));
-      expect(useAuthStore.getState().userId).toBe('42');
-    });
-
+    // Сырые сеттеры identity (setIsAuthenticated/setUsername/setIsSuperuser/setUserId)
+    // убраны из стора — они позволяли завести «залогинен без userId» и повторить #1462.
+    // Осталась только смена аватара (инвариант личности не трогает). (#1470)
     it('setUserAvatar updates state', () => {
       act(() => useAuthStore.getState().setUserAvatar('https://img/a.jpg'));
       expect(useAuthStore.getState().userAvatar).toBe('https://img/a.jpg');
@@ -432,6 +415,58 @@ describe('authStore', () => {
       await act(() => useAuthStore.getState().login('test@test.com', 'p'));
       expect(useAuthStore.getState().username).toBe('test@test.com');
     });
+
+    it('подтверждение почты во время in-flight логина не стирает свежую сессию (#1469)', async () => {
+      // Подтверждение почты в той же вкладке уже записало свои креды под теми же
+      // storage-ключами и сдвинуло epoch, пока логин ждал профиль. Проигравший гонку
+      // логин не должен их откатить, иначе после reload пользователь окажется гостем.
+      loginApi.mockResolvedValue({
+        token: 'login-token',
+        id: 5,
+        name: 'Логин',
+        email: 'login@example.com',
+        is_superuser: false,
+      });
+      fetchUserProfile.mockImplementationOnce(async () => {
+        useAuthStore.getState().applyConfirmedAccountSession({ userId: '77', userName: 'Ирина' });
+        return null;
+      });
+
+      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toBe(false);
+
+      // Стереть креды подтверждённой сессии мог бы только откат — а он единственный
+      // путь к удалению этих ключей. Он пропущен: ни secure-токены, ни identity-ключи
+      // storage не удалялись, поэтому записанная подтверждением сессия на диске цела.
+      // (Парный тест ниже доказывает, что при реальном logout эти же удаления срабатывают.)
+      expect(removeSecureItems).not.toHaveBeenCalled();
+      expect(removeStorageBatch).not.toHaveBeenCalled();
+      const s = useAuthStore.getState();
+      expect(s.isAuthenticated).toBe(true);
+      expect(s.userId).toBe('77');
+      expect(s.username).toBe('Ирина');
+    });
+
+    it('logout во время in-flight логина по-прежнему полностью откатывает креды', async () => {
+      // Регресс #1462/#1469: при реальной разлогинке epoch тоже меняется, и откат
+      // обязан очистить и secure-токены, и storage-ключи наполовину записанной сессии.
+      loginApi.mockResolvedValue({
+        token: 'login-token',
+        id: 5,
+        name: 'Логин',
+        email: 'login@example.com',
+        is_superuser: false,
+      });
+      fetchUserProfile.mockImplementationOnce(async () => {
+        useAuthStore.getState().invalidateAuthState();
+        return null;
+      });
+
+      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toBe(false);
+
+      expect(removeSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
+      expect(removeStorageBatch).toHaveBeenCalledWith(['userName', 'isSuperuser', 'userId', 'userAvatar']);
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
   });
 
   describe('loginWithApple', () => {
@@ -510,6 +545,35 @@ describe('authStore', () => {
 
       expect(removeSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
+
+    it('подтверждение почты во время соц-входа не стирает свежую сессию (#1469)', async () => {
+      // Тот же гард на общем пути applySocialSession (Google/Facebook/Apple):
+      // проигравший гонку соц-вход не откатывает креды подтверждённой сессии.
+      appleAuthApi.mockResolvedValue({
+        status: 'authenticated',
+        user: {
+          token: 'apple-session-token',
+          id: 77,
+          name: 'Apple User',
+          email: 'apple@example.com',
+          is_superuser: false,
+        },
+      });
+      fetchUserProfile.mockImplementationOnce(async () => {
+        useAuthStore.getState().applyConfirmedAccountSession({ userId: '99', userName: 'Ирина' });
+        return null;
+      });
+
+      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+        status: 'error',
+      });
+
+      expect(removeSecureItems).not.toHaveBeenCalled();
+      expect(removeStorageBatch).not.toHaveBeenCalled();
+      const s = useAuthStore.getState();
+      expect(s.isAuthenticated).toBe(true);
+      expect(s.userId).toBe('99');
     });
 
     it('исключение внутри адаптера не роняет вход', async () => {

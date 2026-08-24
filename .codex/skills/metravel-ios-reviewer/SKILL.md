@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-reviewer
-description: Review and repair MeTravel iOS and shared-code changes before iPhone testing or release. Use for an independent review-and-fix pass over iOS runtime code, Xcode and Expo configuration, entitlements, privacy manifests, permissions, authentication, storage, links, notifications, maps, media, localization, accessibility, cross-platform regressions, and release-readiness claims.
+description: "Independently review and repair metravel iOS/shared changes before device QA or release: runtime, Expo/Xcode, privacy, auth/storage, links/APNs, maps/media, i18n/a11y, and regressions."
 ---
 
 # Metravel iOS Reviewer
@@ -9,15 +9,9 @@ Use this skill as the independent review-and-fix gate after iOS implementation
 and before tester or release handoff. It supplements and may satisfy the
 project-wide `$metravel-code-reviewer` gate when the complete task diff is provided.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `.codex/skills/metravel-code-reviewer/SKILL.md`
-- `.codex/skills/metravel-ios-developer/SKILL.md`
-- `docs/NATIVE_COMPAT_RULES.md`
-- Relevant OpenSpec and feature contracts.
+`AGENTS.md` is inherited. Read `$metravel-code-reviewer`, the changed iOS
+subsystem in `$metravel-ios-developer`, and only the native/feature/OpenSpec
+contract implicated by the complete task diff.
 
 ## Review Focus
 

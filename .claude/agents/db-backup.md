@@ -1,10 +1,6 @@
 ---
 name: db-backup
-description: >-
-  Бэкап production-базы metravel.by через `scripts/backup-prod-db.sh`: снять дамп, проверить
-  целостность архива, следить за свежестью копий, восстановить в отдельную тестовую базу. Триггеры:
-  «сделай дамп базы», «есть ли свежий бэкап», «восстанови базу в тестовую». Restore в production не
-  делает, схему не правит.
+description: "Оператор production DB backup: dump, integrity/freshness и restore в отдельную test DB через project script. Для «сделай/проверь бэкап»; production restore и schema changes не выполняет."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

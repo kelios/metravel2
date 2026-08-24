@@ -70,9 +70,26 @@ const resolveAuthDisplayName = (
 };
 
 // Roll back credentials persisted during an in-flight login that lost the
-// epoch race against a logout. Prevents stale tokens lingering on disk and
-// silently re-authenticating on next launch.
+// epoch race. Two different events bump `authEpoch`, and they need opposite
+// handling here:
+//   • logout/invalidate — the session is gone (`isAuthenticated === false`), so
+//     our half-written tokens+storage must be scrubbed or they'd silently
+//     re-authenticate on next launch (the original reason this rollback exists).
+//   • a successful email confirmation (#1462) — `confirmAccount` already persisted
+//     the NEW session under these exact same keys before bumping the epoch. Scrubbing
+//     then would wipe a live session: the store stays authenticated while disk empties,
+//     and the next reload drops the user to guest (#1469).
+// The current store state discriminates the two: only invalidate leaves
+// `isAuthenticated === false`. When a session is authenticated, the disk creds
+// belong to that winning session, so leave both tokens and storage untouched.
+// On web (the reported surface) this is exact — storageBatch writes localStorage
+// synchronously, so the confirm inside this login's post-write yield is always the
+// last writer. A narrow native-only residual remains (async SecureStore token
+// writes can interleave into a mixed token pair); that is a write-layer race in the
+// #1462 shared-key mechanism that the rollback discriminator cannot resolve, tracked
+// separately in #1545.
 const rollbackPersistedCredentials = async (): Promise<void> => {
+    if (useAuthStore.getState().isAuthenticated) return;
     await Promise.all([
         removeSecureItems(['userToken', 'refreshToken']),
         removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
@@ -183,10 +200,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     ...INITIAL_AUTH_STATE,
 
     // --- setters ---
-    setIsAuthenticated: (v) => set({ isAuthenticated: v }),
-    setUsername: (v) => set({ username: v }),
-    setIsSuperuser: (v) => set({ isSuperuser: v }),
-    setUserId: (v) => set({ userId: v }),
+    // Только аватар: остальные поля личности пишутся атомарными действиями,
+    // чтобы нельзя было завести «залогинен без userId» одним сеттером (#1470, см. AuthActions).
     setUserAvatar: (v) => set({ userAvatar: v }),
     triggerProfileRefresh: () => set((s) => ({ profileRefreshToken: s.profileRefreshToken + 1 })),
 

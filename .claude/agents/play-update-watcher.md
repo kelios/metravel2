@@ -1,11 +1,6 @@
 ---
 name: play-update-watcher
-description: >-
-  Страж обновлений кампании Google Play closed-testing на USB Android: сравнивает versionCode
-  приложений из `.claude/play-testing/config.json` со снапшотом `versions.json`, ставит доступное
-  обновление через Play Store, открывает приложение и фиксирует в LOG.md. Работает только пока
-  кампания активна; при закрытой кампании ничего не обновляет и возвращает запрос владельцу.
-  Триггеры: «проверь обновления тестируемых приложений».
+description: "Страж обновлений active Google Play closed-testing campaign: versionCode, Play Store update, launch и LOG. Для «проверь обновления» на USB Android; после закрытия кампании ничего не меняет."
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---

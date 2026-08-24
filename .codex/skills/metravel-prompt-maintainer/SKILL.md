@@ -1,101 +1,63 @@
 ---
 name: metravel-prompt-maintainer
-description: Audit, create, and update metravel prompt artifacts and skill UI prompts. Use for docs/*PROMPTS.md, assets/**/PROMPT.md, .codex/skills/*/agents/openai.yaml, prompt-template consistency, stale model-specific instructions, reproducibility metadata, or project-wide prompt/skill audits. Do not use for writing article or quest prose itself.
+description: "Audit or update metravel prompt specs, asset PROMPT.md files, skill descriptions, and agents/openai.yaml. Use for prompt drift, duplication, reproducibility, stale wording, or token-heavy metadata."
 ---
 
 # Metravel Prompt Maintainer
 
-Keep reusable prompts concise, reproducible, project-owned, and aligned with current repository rules.
+`AGENTS.md` is inherited. Load `docs/CODEX.md#skill-maintenance` and only the
+canonical prompt family or skill being changed. Add `$metravel-docs-maintainer`
+when routing or project-wide documentation also changes.
 
-Read first:
+## Artifact ownership
 
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- `$metravel-docs-maintainer` when canonical documentation or skill routing also changes.
-
-## Artifact map
-
-- `docs/*PROMPTS.md`: canonical prompt specs shared by a family of generated assets.
-- `assets/**/PROMPT.md`: concrete, reproducible prompt instances stored beside tracked assets.
-- `.codex/skills/*/SKILL.md`: operational behavior and non-obvious project constraints.
-- `.codex/skills/*/agents/openai.yaml`: short UI metadata and a one-sentence invocation prompt, not a second copy of the skill.
-
-Keep each rule in one canonical location. Derived prompt instances should link to the canonical spec and contain only the concrete subject, overrides, output slot, and exact generation prompt needed to reproduce the asset.
+- `docs/*PROMPTS.md`: canonical family spec.
+- `assets/**/PROMPT.md`: concrete reproducible instance.
+- `.codex/skills/*/SKILL.md`: operational behavior and non-obvious constraints.
+- `.codex/skills/*/agents/openai.yaml`: short UI metadata and one-sentence prompt.
 
 ## Prompt contract
 
-Every maintained prompt must make these items discoverable:
+Make goal/trigger, inputs, constraints/authority, output, validation, and a stable
+reproduction recipe discoverable. Keep provider-neutral wording unless a provider
+feature is essential.
 
-1. Goal and trigger: what the prompt produces and when it applies.
-2. Inputs: concrete values or named placeholders with no hidden assumptions.
-3. Constraints: current project rules, authority boundaries, prohibited content, and secret hygiene.
-4. Output: format, dimensions/schema, destination, and whether publication/upload is separately authorized.
-5. Validation: how to check factual, visual, structural, or runtime correctness.
-6. Reproducibility: canonical spec link plus the exact final prompt or stable assembly recipe.
+For implementation/review/test prompts include platform and localization impact,
+but reference inherited project rules instead of copying the full web/native/i18n
+contract. QA/review prompts must request raw evidence and stay neutral.
 
-For implementation, architecture, review, QA, or test prompts, also require an
-explicit `Platform impact` for desktop web/mobile web/Android/iOS and `Localization
-impact` for RU/BE/UK/PL/EN, or an explicit `none`. Common/shared responsive UI
-requires desktop-web and mobile-web evidence. Require Android or iPhone evidence
-only for target-specific observable behavior/configuration/runtime, selecting the
-correct USB/simulator/physical/TestFlight layer. Cross-mobile parity remains an
-invariant, not an automatic all-device gate. Do not let a reusable
-prompt assume that shared Expo/React Native code is desktop-web-only or that
-app-owned UI copy is single-language.
+## Metadata budget
 
-For QA/review prompts, make `testing` an active or exactly scheduled retest
-state, never a parking result. A finished pass closes the current task; a
-separate confirmed defect runs Problem Memory and gets a linked task. Missing
-device/access/gate output must trigger a concrete unblock request and resumed
-acceptance, not a final pending verdict.
+- Frontmatter: only `name` and `description` (vendor OpenSpec exceptions remain).
+- Description: capability + concrete triggers in at most 380 characters for
+  both Codex skills and Claude agents. Avoid file inventories, workflow stages,
+  validation details, and repeated safety policy; those belong in the body or
+  canonical docs.
+- `short_description`: 25–64 characters.
+- `default_prompt`: start with `Use $<skill-name>` and keep one focused sentence.
+- Remove TODO/FIXME/TBD, model-specific claims, and duplicated project policy.
 
-Prefer provider-neutral wording unless a provider-specific feature is essential. Remove references such as “Claude-proven” or `CLAUDE.md` when the rule is actually project-owned; point to `AGENTS.md` or the canonical file in `docs/` instead.
+## Media prompts
 
-## Skill metadata rules
+- Standard UI actions reuse project primitives/Feather, not generated raster icons.
+- Published travel/article media remains real/licensed/local or photorealistic
+  raster; quest/campaign art follows its canonical style skill.
+- Prompt edit, asset generation, upload, and publication are separate authority
+  stages. Never use internet images without explicit permission/licensing.
+- Creative article/quest prose belongs to the relevant content skill and its
+  confirmation gate.
 
-- Keep frontmatter limited to `name` and `description`.
-- Exception: vendor-generated `.agents/skills/openspec-*` may retain the
-  OpenSpec fields accepted by the Codex validator (`allowed-tools`, `license`,
-  `metadata`). Do not fork their bodies; remove only unsupported generated
-  fields documented in `docs/spec-driven-development.md`.
-- Make `description` state both capability and concrete trigger surfaces.
-- Keep `agents/openai.yaml` strings quoted.
-- Keep `short_description` at 25–64 characters.
-- Start `default_prompt` with `Use $<skill-name>` and keep it to one focused sentence.
-- Put durable workflow detail in `SKILL.md`; do not duplicate it in `default_prompt`.
-- Remove scaffolding markers such as `TODO`, `FIXME`, `TBD`, and template guidance before handoff.
+## Workflow and checks
 
-## Media prompt rules
-
-- Standard production UI actions use existing primitives and Feather icons; do not generate raster icons as a default substitute.
-- Published travel/article media must be real licensed/local photos or photorealistic generated raster images. Do not route illustration, SVG, screenshots, or placeholder art into those slots.
-- Quest covers and campaign art may use the explicit style allowed by the relevant canonical prompt spec.
-- Route raster generation, post-processing, and app integration to `$metravel-visual-asset-designer`; this skill owns the prompt contract and audit layer. For children's, family, fairy-tale, park, or teen quest covers, also use `$metravel-child-quest-visuals`; it owns the age mode and illustrated story contract.
-- Never use an internet image without explicit permission and verified licensing.
-- Keep generated text, letters, logos, and watermarks out of image prompts unless the user explicitly requests them and the destination supports them.
-- Treat prompt editing, asset generation, upload, and publication as separate actions. A prompt change does not authorize a production write.
-- Creative article or quest prose remains gated by the separate confirmation rule in `AGENTS.md`; route authored quest content to `$metravel-quest-writer` and article text to `$metravel-article-editor-agent`.
-
-## Workflow
-
-1. Inventory the affected prompt families and their canonical source.
-2. Identify duplicated rules, stale paths/model names, missing authority gates, and non-reproducible outputs.
-3. Choose one canonical rule location and shorten derived prompts to references plus concrete overrides.
-4. Update the matching skill routing and `agents/openai.yaml` only when triggering behavior changes.
-5. Run the project prompt audit and the skill-creator validator for every changed skill.
-6. Re-read the final prompt as a fresh invocation: it must be sufficient without relying on chat history.
-
-Run:
+1. Inventory the affected family/metadata and its canonical owner.
+2. Remove duplicated rules; retain concrete inputs and task-specific overrides.
+3. Re-read as a fresh invocation with no chat-history assumptions.
+4. Run:
 
 ```bash
 npm run audit:prompts
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py .codex/skills/<skill-name>
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py .codex/skills/<name>
 ```
 
-If the validator path differs, locate the installed `skill-creator` and use its `quick_validate.py`.
-
-## Handoff
-
-Return a compact `Prompt Audit` with the prompt families inspected, canonical sources changed, validation results, and any deliberately retained legacy reference.
+Report inspected families, canonical sources changed, size/count delta when
+optimization was requested, validation, and deliberately retained legacy text.

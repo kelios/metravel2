@@ -1,9 +1,6 @@
 ---
 name: task-author
-description: >-
-  TASK-файлы в `tasks/` строго по шаблону `tasks/000-template.md`: новая задача из сырого описания,
-  обновление статуса/Progress Log, Acceptance Criteria + Gherkin. Код не пишет. Триггеры: «оформи
-  задачу», «создай таск».
+description: "Legacy/fallback редактор local tasks/*.md по шаблону. Только при недоступном board или explicit migration; обычное create/update задачи идёт через ticket-board."
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---

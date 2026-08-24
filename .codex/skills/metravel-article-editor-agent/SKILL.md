@@ -1,19 +1,15 @@
 ---
 name: metravel-article-editor-agent
-description: Create, edit, publish, unpublish, verify, and add media to metravel articles and travel-guide records through the production or local APIs, including photo-folder travel drafts, photorealistic generated article/travel images, backups, author identity, secret-token hygiene, and browser/API verification. Use for `/api/articles`, `/api/travels/upsert`, travel guides, article photo uploads, or content changes that have explicit text confirmation.
+description: "Create, edit, verify, publish, unpublish, or add media to metravel articles/travel guides through approved APIs. Use for article/travel upsert, photo folders, media uploads, or explicitly confirmed text changes."
 ---
 
 # Metravel Article Editor Agent
 
 Use this skill for article and travel-guide content operations: photo-folder drafts, HTML/media insertion, publish/unpublish actions, and verification of article/travel pages. Do not independently write or creatively edit prose.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/README.md`
-- `docs/CODEX.md`
-- `docs/DEVELOPMENT.md` for editor/media and SEO conventions
+`AGENTS.md` is inherited. Load only the article/quest authority and media
+headings from `docs/RULES.md`, the affected API/feature contract, and the exact
+editor/media or SEO section of `docs/DEVELOPMENT.md` when needed.
 
 ## Scope
 

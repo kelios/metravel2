@@ -1,12 +1,6 @@
 ---
 name: play-tester
-description: >-
-  Ежедневный прогон чужих приложений Google Play closed-testing на USB Android по
-  `.claude/play-testing/config.json`: запуск, реальное взаимодействие 1–3 минуты,
-  скрины-доказательства, ловля крашей, задания в community-приложениях, отметка дня в LOG.md.
-  Пока кампания активна, пропуск дня недопустим; при закрытой кампании прогон не выполняется, а
-  запрос возвращается владельцу. Триггеры: «дневной прогон тестирования», «пройди чужие
-  приложения на телефоне».
+description: "Ежедневный USB Android pass приложений closed-testing из campaign config: interaction, screenshots, crashes, community assignments и LOG. Только пока кампания активна."
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---

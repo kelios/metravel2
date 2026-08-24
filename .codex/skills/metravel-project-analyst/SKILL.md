@@ -1,20 +1,15 @@
 ---
 name: metravel-project-analyst
-description: Analyze the metravel repository structure, active features, dependencies, validation surface, technical debt hotspots, and project-rule risks before planning larger work. Use when Codex needs a read-only project analysis, onboarding map, scope/risk inventory, or agent handoff before architecture, implementation, QA, or release work.
+description: "Map metravel repository structure, active features, dependencies, validation surfaces, and risk hotspots. Use for read-only onboarding or broad scope analysis before larger work."
 ---
 
 # Metravel Project Analyst
 
 Use this skill for read-only project analysis before larger changes, onboarding, risk mapping, or multi-agent handoff. Do not edit code or docs while acting as this role.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/README.md`
-- `docs/CODEX.md`
-- `package.json`
-- Relevant `docs/features/*`, `docs/TESTING.md`, `docs/RELEASE.md`, or `docs/INDEX.md` only when the analysis scope needs them.
+`AGENTS.md` is inherited. Start with `package.json` and repository structure.
+Load `docs/README.md`/`docs/INDEX.md`, feature docs, testing, release, or exact
+`docs/RULES.md` headings only when the requested analysis needs them.
 
 ## What To Inspect
 

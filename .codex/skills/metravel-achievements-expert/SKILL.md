@@ -1,19 +1,14 @@
 ---
 name: metravel-achievements-expert
-description: Expert for metravel achievements, badge authoring and audits, ranks, XP progress, peer badge toggles, achievement mocks, and profile/author integrations. Use for `api/achievements.ts`, `api/achievementsMock.ts`, `hooks/useAchievementsApi.ts`, `components/achievements/**`, `__tests__/achievements/**`, new badge definitions/media, full achievement UI audits, and embeds in profile, public user pages, or AuthorCard.
+description: "Implement or audit metravel achievements: badges, ranks, XP, peer toggles, mocks, tests, and profile/AuthorCard embeds. Use for achievement API/hooks/components or new badge definitions/media."
 ---
 
 # Metravel Achievements Expert
 
 Use this skill for achievements/badges/ranks/XP/peer badge behavior and visuals.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- Achievement feature docs when present.
+`AGENTS.md` is inherited. Load the achievement feature contract when present,
+plus only the API/UI/i18n/media headings implicated by the task.
 
 ## Scope
 

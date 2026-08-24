@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-analyst
-description: Shape MeTravel iPhone release requirements before architecture or implementation. Use to turn App Store scope into briefs, user stories, acceptance criteria and non-goals, to map App Review Guidelines and privacy/metadata obligations onto concrete board work, to split agent-owned work from owner/Apple human work, and to define release readiness metrics. Do not use it to write code, mutate the board, or perform Apple portal actions.
+description: "Shape metravel iPhone/App Store requirements, acceptance, compliance, metadata, owner actions, and release metrics. Use before architecture or implementation; no code, board mutation, or Apple portal actions."
 ---
 
 # Metravel iOS Analyst
@@ -10,14 +10,9 @@ question: what must ship in v1, what Apple demands before review, who owns each
 piece, and how "done" is measured. It is the iOS-specialised layer over
 `$metravel-business-analyst`; use that generic skill for non-iOS product work.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/CODEX.md`
-- `docs/TASK_BOARD_MCP.md`
-- `docs/IOS_OWNER_GUIDE.md`
-- `openspec/changes/launch-ios-app-store/proposal.md` and `tasks.md`
-- Relevant `docs/features/*` only when the request touches an existing feature.
+`AGENTS.md` is inherited. Read the relevant owner/compliance section, the
+affected feature contract, and only the proposal/task artifact needed for this
+release question. Add board contract guidance only when shaping board work.
 
 ## Known release facts — do not re-derive them
 

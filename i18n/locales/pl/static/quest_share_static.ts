@@ -1,0 +1,18 @@
+// Sharing quest result ([INV2-02], board ticket #1472). Manual namespace (PL).
+export const questShareStaticResources = {
+  "finaleShare.button": "Udostępnij wynik",
+  "finaleShare.sheetTitle": "Udostępnij wynik",
+  "finaleShare.heroNameLabel": "Imię bohatera (opcjonalnie)",
+  "finaleShare.heroNamePlaceholder": "Jak podpisać Cię na dyplomie",
+  "finaleShare.channel.copy": "Kopiuj link",
+  "finaleShare.channel.telegram": "Telegram",
+  "finaleShare.channel.native": "Więcej",
+  "finaleShare.channel.download": "Zapisz obrazek",
+  "finaleShare.channel.instagram": "Instagram Stories",
+  "finaleShare.shareText": "Ukończyłem quest «{{title}}» na Metravel — spróbuj i Ty!",
+  "finaleShare.linkCopied": "Link skopiowany",
+  "finaleShare.copyFailed": "Nie udało się skopiować",
+  "finaleShare.imageSaved": "Obrazek zapisany",
+  "finaleShare.instagramHint": "Obrazek zapisany — dodaj go do swojej relacji",
+  "finaleShare.close": "Zamknij",
+} as const

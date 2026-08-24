@@ -1,12 +1,6 @@
 ---
 name: ios-designer
-description: >-
-  Дизайнер iPhone-поверхности MeTravel: Apple HIG и дизайн-система проекта — safe area
-  (Dynamic Island/home indicator), touch-таргеты 44pt, Dynamic Type, тёмная тема, VoiceOver
-  и reduced motion, иконка приложения и launch screen под ios:release:guard, локализованные
-  скриншоты App Store, паритет mobile web ↔ Android ↔ iPhone. Триггеры: «как это должно
-  выглядеть на айфоне», «проверь дизайн iOS-экрана», «скриншоты для App Store», «съезжает
-  под чёлкой». Конфиги релиза не трогает — это ios-expert/ios-deployer.
+description: "iPhone UI/HIG: safe area, touch targets, Dynamic Type, themes, accessibility, app icon/launch and App Store screenshots. Для iOS design/parity; release config не владеет."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

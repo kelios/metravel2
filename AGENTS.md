@@ -1,364 +1,129 @@
 # AGENTS.md
 
-Инструкции для AI-агента в проекте `metravel`.
+Короткие always-on инструкции для AI-агента в `metravel`. Детальные контракты
+живут в профильных документах и загружаются только по scope задачи.
 
-## 0. Обязательность инструкций
+## 1. Источники и экономия контекста
 
-- Применяй эти правила во всех задачах в этом репозитории.
-- При конфликте между "быстро сделать" и правилами проекта приоритет у правил.
-- Перед началом и перед завершением задачи сверяйся с этим файлом как с чеклистом.
+- `docs/RULES.md` — канонические технические и операционные правила.
+- `docs/README.md` — карта документации, не обязательное чтение перед каждой
+  задачей.
+- `docs/CODEX.md` — ленивый router skills/агентов и validation matrix.
+- `docs/CODEX_SKILLS.md` — machine-audited registry; читать только при изменении
+  или аудите каталога skills.
+- `docs/AGENT_ANALYSIS_PROTOCOL.md` — формат evidence-backed разбора.
+- Не перечитывай этот файл через shell: он уже передан агенту как workspace
+  instructions.
+- Не загружай целиком `RULES.md`, `README.md`, `CODEX.md` и каталоги skills «на
+  всякий случай». Сначала определи scope, затем открой только нужные разделы,
+  профильный feature doc и выбранный `SKILL.md`.
+- Начинай с одного профильного skill. Добавляй второй только для отдельной
+  обязанности (UI, i18n, test, deploy, review). Orchestrator/multi-agent нужны
+  для широкого, неясного, high-risk или явно много-ролевого scope.
 
-## 1. Контекст и границы
+## 2. Обязательный preflight
 
-- Рабочая директория приложения: корень репозитория, папка с `package.json`.
-- Источник правил проекта: `docs/RULES.md` и `docs/README.md`.
-- Карта работы Codex и skills: `docs/CODEX.md`.
-- Активные продуктовые поверхности — desktop web, mobile web, Android и iPhone
-  (iOS). Первый iOS-релиз поддерживает только iPhone; iPadOS остаётся вне scope и
-  не блокирует `done`. Перед любой задачей явно определи platform impact:
-  `desktop web | mobile web | Android | iOS | shared | none`; `shared` означает
-  общий код или несколько затронутых поверхностей, но сам по себе не создаёт
-  обязательный Android/iPhone device gate.
-- Production UI многоязычен: RU/BE/UK/PL/EN, default/fallback — RU.
-  Источник locale contract — `i18n/config.ts`, resource contract —
-  `i18n/resources.ts`. Перед любой задачей явно определи localization
-  impact: `all current locales | selected locales | none`.
-- Работай только с веткой `main`: перед изменениями проверь текущую ветку, не создавай и не переключайся на другие ветки без явной новой инструкции пользователя. Если сессия запущена харнесом в авто-worktree (`.claude/worktrees/*`, ветка `claude/*` или detached HEAD), работа там не остаётся: по завершении задачи перенеси изменения в основной checkout, закоммить их на `main` и не оставляй в worktree-ветке коммитов, которых нет в `main`.
-- В этом workspace AI-агент делает только frontend/app/docs изменения. Backend/Django/API/server (`../metravel-backend`, `area=back`) можно только анализировать read-only, проверять безопасными probes и оформлять/обновлять задачи на борде; backend working tree, миграции, тесты, настройки и server code не редактировать. Запрещены любые изменяющие backend Git-операции локально и на сервере: `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, `clean`.
-- Где лежит backend (не спрашивай у пользователя, checkout уже есть на машине): `../metravel-backend` относительно этого репо — раскладка каталогов зависит от машины (на текущем Mac `~/Sites/metravel2/metravel-backend`, на PhpStorm-раскладке `~/PhpstormProjects/metravel-backend`), поэтому в конфиги и скрипты зашивай относительный путь, а не абсолютный. Это клон приватного репо `sergey-savran/metravel` (именно `metravel`, не `metravel-backend`), default branch `master`. SSH-ключ к GitHub не привязан, поэтому обращаться к remote только по HTTPS (`gh` + osxkeychain, аккаунт `kelios`); допустимы лишь read-only обращения — `git -C ../metravel-backend fetch` и чтение через `git -C ../metravel-backend show origin/master:<path>`, working tree не трогать. Если backend-код требует правки — это `area=back` задача на борде для владельца бэка, а не изменение в этой сессии.
-- Задачи `area=back` в приёмку и проверку по умолчанию НЕ берутся. Тестировать, верифицировать или закрывать бэкенд-тикеты — включая read-only прод-пробы, сверку с `origin/master` и дописывание верификационных заметок в карточку — можно только по прямому запросу пользователя именно про бэкенд («проверь бэкенд-задачи», «что сделал бэкенд», «сверь бэкенд-очередь»). Общая просьба вида «проверь задачи в review и testing», приёмка спринта или батч-проход по борду бэкенд-очередь не включают: она пропускается, а в отчёте указывается только количество пропущенных `area=back` тикетов. Причина — очередь бэка ведёт её владелец, а его фиксы регулярно остаются незапушенными в `origin/master`, поэтому массовая приёмка бэка даёт заведомо отрицательный результат и тратит время впустую.
-- При прямом запросе на проверку `area=back` используй только доступные и
-  релевантные backend/source/API/production probes. Browser/device/client
-  evidence не является Done gate бэкенд-тикета: если оно действительно нужно,
-  оно живёт в отдельной связанной `area=front` задаче. После проверки: реальная
-  оставшаяся backend/ops работа → `todo`; работа завершена, но ждёт выполнимого
-  временного окна или накопления данных → `testing`; backend-работа завершена и
-  все доступные обязательные in-scope проверки зелёные → `done`. Нерелевантная
-  или out-of-scope проверка не удерживает готовую backend-задачу открытой.
-- `testing` — активная приёмочная очередь, а не парковка. После начатого
-  приёмочного прохода задача может остаться там только ради конкретного
-  повторного замера: в evidence обязательны параметр, ожидаемый порог,
-  фактическое текущее значение, точный trigger/earliest recheck и команда или
-  сценарий. Завершённая проверка заканчивается статусным решением в том же
-  проходе: подтверждённый результат → `done`; незавершённая собственная работа
-  тикета → `todo`/`in_progress`; отдельный подтверждённый дефект → сначала
-  `$metravel-problem-memory`, затем новая/reused связанная карточка, а проверенный
-  текущий тикет не паркуется в `testing`.
-- «Не смог проверить», отсутствие доступа, заблокированный экран или не найденное
-  обязательное устройство не являются итоговым evidence и не создают
-  отдельного QA-verdict. Если проверка действительно требует Android/iPhone, сначала
-  проверь подключение; когда нужен unlock/connect/login/доступ владельца,
-  останови приёмку и сразу попроси это конкретное действие, не сдавая задачу и
-  не меняя её статус ради отсутствия доступа. После разблокировки продолжи тот
-  же проход до решения.
-- На production-сервере Git-tracked файлы backend checkout неизменяемы для AI-агента. Перед любой явно разрешённой server-write операцией сначала read-only проверь `git status --short` и каждый repo-relative путь через `git ls-files --error-unmatch -- <repo-relative-path>`; tracked path нельзя патчить, перезаписывать, копировать, удалять, переименовывать или менять ему права. Если checkout уже dirty, ничего не исправляй и не продолжай deploy/pull: зафиксируй paths/diff summary без секретов, создай/обнови `area=back`/ops задачу и передай backend-владельцу. Узкое исключение frontend deploy gate: известные untracked ops/runtime paths `deploy/prod/nginx/ssl/`, `dump.sql` и warning об отсутствии read-доступа к `deploy/prod/postgis_1/data/` не считаются dirty-блокером сами по себе; их содержимое нельзя читать, менять, копировать, удалять или chmod'ить. Любая другая status entry/warning по-прежнему означает stop. Разрешённые project-owned frontend deploy scripts могут менять только документированные untracked runtime/static targets вроде `static/dist`.
-- Если frontend-задача требует ещё не существующего backend-контракта или исправления на сервере и поэтому реализацию нельзя начать/продолжить, не маскируй это mock-фолбэком: создай/обнови `area=back` задачу и используй `blocked_by` с реальной hard dependency. Если frontend уже реализован, проведи backend/deploy/production/API/browser/device validation в текущем приёмочном проходе; при недоступном обязательном доступе запроси разблокировку и продолжи. В `testing` оставляй только exact retest/temporal gate, не используй `blocked_by` как QA-колонку.
-- `todo` означает, что осталась реализация/refinement/ops работа; `in_progress` —
-  что такая работа сейчас идёт; `testing` — реализация готова, проверка прямо
-  выполняется либо назначен точный повторный in-scope замер/временное окно;
-  `done` — работа завершена и все доступные
-  обязательные in-scope проверки зелёные. Нерелевантное или out-of-scope
-  evidence не блокирует `done`. Колонка `blocked_by` означает только
-  невозможность начать или продолжить работу из-за конкретной незакрытой hard
-  dependency; ожидание review/QA/production-проверки само по себе не является
-  блокировкой.
-- Не меняй разрешённые untracked production runtime/SSL-пути без явной проверки существования на сервере; Git-tracked конфиги на сервере не меняй вообще.
-- Не меняй без явного запроса `eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml` и `entry.js`; если пользователь прямо просит изменить один из этих путей, это и есть необходимое разрешение в scope задачи.
-- Конфигурация nginx — зона бэкенда. Источник правды один: `deploy/prod/nginx/nginx.conf` в `../metravel-backend` (`master`). Файл `nginx/nginx.conf` в этом репозитории — read-only локальная копия: её не читает и не деплоит ни один скрипт, правка в ней не меняет прод ни на байт. Любое изменение nginx (CSP, security-заголовки, кэш, редиректы, `location`, rate-limit, логи) оформляется задачей `area=back` с точным диффом директив — что добавить, в какую директиву, зачем, как проверить. Даже прямое разрешение пользователя тронуть `nginx/` не делает правку копии выполненной задачей. Подробности и порядок проверки прода — `docs/RULES.md` → «Nginx config ownership (mandatory)».
-- Не добавляй сложность без необходимости: сначала используй существующие компоненты, хуки и утилиты.
+Перед изменениями кратко зафиксируй:
 
-## 2. Skills для Codex
+```text
+Task type и ожидаемый результат:
+Task-owned paths:
+Platform impact: desktop web | mobile web | Android | iOS | shared | none
+Localization impact: all current locales | selected locales | none
+Risk/operation gates:
+Validation:
+```
 
-Каталог `$metravel-*` skills вынесен в `docs/CODEX_SKILLS.md` — читай его при
-работе в Codex или при изменении набора skills. Claude Code маршрутизирует
-задачи собственными `.claude/agents`, отдельного чтения каталога не требует.
+- Работай только из корня с `package.json` и только на ветке `main`. Проверь
+  `git branch --show-current` и `git status --short`; чужие изменения не
+  переписывай. В harness worktree перенеси итог на основной `main` по правилам
+  `docs/RULES.md`.
+- Platform `shared` не создаёт автоматический Android/iPhone gate. Видимый
+  common responsive UI проверяется на desktop web и mobile web; device gate
+  нужен только для соответствующего platform-specific behavior/config/runtime.
+- Production locales: RU/BE/UK/PL/EN, fallback RU. Новый app-owned UI text и
+  locale formatting проходят через `i18n`; editorial/API content не переводится
+  на клиенте.
+- Для точечной задачи используй уровень S, для обычной M, для contract/high-risk/
+  recurring/cross-platform — L по `docs/AGENT_ANALYSIS_PROTOCOL.md`. OpenSpec
+  нужен только для новых функций, изменений контрактов и действительно сложных
+  или повторяющихся проблем; apply начинается отдельным запросом пользователя.
 
-Активный iOS-маршрут разделён по ролям:
+## 3. Границы и безопасность
 
-- `$metravel-ios-analyst` — требования, App Review compliance и release scope;
-- `$metravel-ios-architect` — architecture и task slicing;
-- `$metravel-ios-designer` — HIG, mobile parity и store-ассеты;
-- `$metravel-ios-developer` — implementation/debug;
-- `$metravel-ios-reviewer` — независимый review-and-fix;
-- `$metravel-ios-tester` — simulator/physical iPhone/TestFlight QA;
-- `$metravel-ios-release-operator` — signed build и App Store operations по
-  отдельным authorization gates.
+- Этот workspace владеет только frontend/app/docs. `../metravel-backend` и
+  `area=back` — read-only diagnosis/probes/board evidence. Никогда не меняй
+  backend working tree и не выполняй там mutating Git-команды.
+- На production Git-tracked backend paths неизменяемы. Перед явно разрешённой
+  server write прочитай профильный раздел `docs/RULES.md`, проверь status и
+  `git ls-files`; dirty checkout означает stop и backend/ops task, не cleanup.
+- Nginx принадлежит backend: источник —
+  `../metravel-backend:deploy/prod/nginx/nginx.conf`. Локальный
+  `nginx/nginx.conf` не править; нужное изменение оформлять как `area=back` task
+  с точным diff и проверкой.
+- Не меняй без прямого запроса `eas.json`, `app.json`, `.github/workflows/`,
+  `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`,
+  `entry.js`.
+- Не выводи secrets из `.env*`, `.env.e2e`, `.secrets`, SSH, EAS, Play или
+  deploy configs. Временные логи/screenshots/traces/JSON храни только в ignored
+  `.codex-temp/`, `.codex-debug/`, `test-results/` или `playwright-report/`.
+- Production deploy, store build/upload/submit/release и другие внешние
+  мутации требуют точной текущей команды пользователя и профильного operator
+  skill. Один разрешённый stage не разрешает следующий.
+- Android EAS/cloud build/submit запрещён; Android собирается локально. iOS
+  signed build, TestFlight/App Store upload, review submit и storefront release
+  — четыре независимых authorization gate.
 
-Если задача попадает сразу в несколько областей, используй skills вместе, но не загружай лишние справки.
+## 4. Работа по scope
 
-## 3. Базовый рабочий процесс
+1. Найди существующий компонент/hook/service/util/test и профильный contract.
+2. Установи механизм до `path:line` и подтверди evidence; иначе явно пометь
+   гипотезу. Не правь симптом вслепую.
+3. Перед правкой назови выбранный вариант, одну отвергнутую альтернативу, риск и
+   откат. Для уровня S достаточно одной короткой строки.
+4. Внеси минимальный diff без попутной миграции. Реальные ошибки в затронутой
+   зоне исправь; out-of-scope риск зафиксируй с конкретным следующим check.
+5. После логического блока запусти самый узкий надёжный check. Full/preflight,
+   build, deploy, e2e, Lighthouse и device install сначала проходят operation
+   gate из `docs/WORKFLOW_OPERATIONS.md`; не дублируй живой процесс/lock.
+6. После code changes обязательный `$metravel-code-reviewer` review-and-fix по
+   полному task diff. Предпочтителен независимый `review-auditor`; reviewer
+   исправляет подтверждённые findings, перечитывает итоговый diff и повторяет
+   проверки без рекурсивного reviewer.
 
-1. Перед правками изучи релевантные файлы в `docs/`.
-2. Быстро определи тип задачи, нужные skills, риск-зону, platform
-   impact, localization impact и план проверки по `docs/CODEX.md`.
-2.1. Разбор задачи веди по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины
-   (§1), постановка «что сейчас / что ожидается / границы / чем закрыта» (§2),
-   механизм отказа до `path:line` (§4), план с отвергнутыми альтернативами (§5),
-   отчёт по скелету §6. Утверждение без артефакта — либо доказывается, либо
-   помечается гипотезой; стоп-слова §7 в отчёте недопустимы.
-3. Для сложных, неясных или многошаговых задач используй `$metravel-codex-orchestrator` как верхний self-check: triage → skills → промты ролей → validation → handoff.
-   Для новых функций, сложных/повторяющихся багов и изменений контрактов сначала
-   используй OpenSpec по `docs/spec-driven-development.md`: `$openspec-explore`
-   для исследования, `$openspec-propose` для planning artifacts и только после
-   отдельного запроса `$openspec-apply-change` для реализации. OpenSpec не
-   заменяет MCP task board, Task Contract или обязательные project skills.
-4. Проверь текущую ветку и `git status --short`; если ветка не `main`, остановись и уточни дальнейшие действия.
-5. Перед созданием/переоткрытием board-задачи используй
-   `$metravel-problem-memory`: проверь реестр и полный board, зафиксируй verdict и
-   не создавай competing ticket для уже открытой или той же recurring problem.
-   Прежде чем искать дубли, докажи, что дефект реален: находка собственного
-   скрипта/скана/парсера подтверждается вторым независимым способом, проба строится
-   из артефакта в исходном виде (скопированный URL/ключ/строка), а не из значения,
-   вычисленного твоим же кодом, и обязателен контроль на заведомо здоровой позиции.
-   Если штатная проверка проекта даёт другой ответ, чем твой замер, — расследуй
-   расхождение до конца; неподтверждённая находка карточкой не оформляется, а
-   масштаб («сломано в N местах») подтверждается отдельно от самого факта.
-6. Внеси минимально достаточные изменения.
-7. Временную отладочную информацию складывай только в ignored-папки (`.codex-temp/`, `.codex-debug/`) и перед завершением удаляй всё ненужное:
-   - скриншоты, trace, временные JSON/лог-файлы и QA-вывод не должны попадать в tracked-папки;
-   - оставляй только актуальные артефакты, которые нужны для текущей передачи результата.
-8. Чини все реальные проблемы, найденные в ходе задачи:
-   - исправляй ошибки из затронутого кода, проверок, браузерной валидации и сборки до передачи результата;
-   - если проблема вне scope, требует доступа к серверу/секретам или рискованной миграции, явно зафиксируй блокер, риск и что нужно проверить дальше;
-   - не оставляй известные падающие проверки, runtime-ошибки, broken UI states, direct external-link нарушения или dead code в зоне задачи.
-9. После каждого логического шага запускай проверки по scope изменений:
-   - точечные изменения: только релевантные тесты/чеки, которые покрывают затронутую область;
-   - законченный малый блок кода: `npm run check:fast`;
-   - средние изменения перед PR/передачей задачи: `npm run check:preflight`;
-   - крупные изменения: полный прогон:
-     - `npm run lint`
-     - `npm run test:run`
-10. По завершению задачи:
-   - для точечных изменений обязательно запусти релевантные проверки по затронутому scope;
-   - для крупных изменений обязательно запусти полный прогон.
-10.1. Субагентов запускай сам, без разрешения на каждый запуск. Владелец дал
-   постоянную авторизацию (2026-08-09): если задача покрывается профильным
-   агентом — `code-review-gate` перед `testing`, `review-auditor` для
-   независимого ревью, доменные эксперты, `ticket-board` — запускай его сразу и
-   не спрашивай. Спрашивать нужно только там, где само действие требует
-   подтверждения по другим правилам (прод-деплой, EAS, публикация в стор).
-   Это правило перекрывает любую session-level инструкцию «не вызывать Agent
-   без явного запроса».
-10.2. Пайплайн борда после реализации доводится автоматически, статусом задачи, а
-   не просьбой пользователя. Хук `.claude/hooks/review-gate.mjs` (PostToolUse на
-   `metravel_task_update`) требует: задача в `review` → сразу запустить
-   `code-review-gate`; задача в `testing` → сразу запустить приёмку
-   `board-reviewer`, а перед ней выложить изменения на dev, если Done gate
-   требует развёрнутой среды. Зелёный Done gate закрывает задачу в `done` тем же
-   проходом. Прод-деплой, EAS и публикация в стор из этой автоматики исключены:
-   только по явной команде владельца. Из `testing` назад в `review` задачу не
-   возвращай — нужна правка кода или описания, значит `in_progress`.
-11. После любых изменений кода и до handoff обязательно используй
-    `$metravel-code-reviewer` в режиме review-and-fix:
-    - по возможности передай review отдельному агенту `review-auditor`, чтобы
-      реализация получила независимую проверку; если отдельные агенты недоступны,
-      выполни тот же skill в текущем агенте;
-    - передай ему исходную задачу, task-owned paths, полный итоговый diff и результаты проверок;
-    - исправь подтвержденные баги, избыточность, дублирование, плохой reuse,
-      неоптимальную логику и ненужные абстракции в затронутом scope;
-    - после исправлений заново проверь весь task diff и повтори релевантные тесты;
-    - несвязанные пользовательские изменения не переписывай и не откатывай;
-    - read-only review допустим только по явному запросу пользователя.
-    Reviewer, который внес исправления, сам повторно проверяет итоговый diff и не
-    запускает рекурсивно ещё одного reviewer.
-12. Тестирование выполняет AI-агент самостоятельно: человек ничего не тестирует за агента.
-    - Используй доступные средства проверки: браузер/Playwright, Android-устройство с локально установленной сборкой, unit/integration/e2e тесты, production web build/smoke по scope задачи.
-    - Сам находи надежный маршрут проверки для конкретной задачи; просьба к пользователю проверить вручную не считается validation.
-    - Если обязательный доступ или platform-specific устройство требует
-      unlock/connect/login со стороны владельца, попроси ровно это действие и
-      продолжи проверку после ответа. Не оформляй отсутствие доступа как
-      законченный pending/`testing` handoff.
+### Условные контракты
 
-### 3.1 Операционные протоколы (по требованию)
+- Board mutation: сначала `$metravel-problem-memory`, затем
+  `$metravel-task-contract`/`$metravel-ticket-board`; детали и status semantics —
+  `docs/TASK_BOARD_MCP.md`. `testing` — активная QA или точный temporal/retest
+  gate, не парковка; missing access/device требует конкретного unblock request.
+- Прямая backend-приёмка выполняется только по прямому запросу про backend и
+  только релевантными source/API/production probes. Общая sprint review
+  пропускает `area=back`.
+- UI/layout/interaction: используй существующие `components/ui`, tokens и
+  Feather icons; подробные контракты — релевантные разделы `docs/RULES.md` и
+  feature docs. Видимый web diff требует browser evidence, screenshots и console.
+- External links: только helpers из `utils/externalLinks.ts`; никаких прямых
+  `window.open` или `Linking.openURL` вне chokepoint.
+- Article/quest media можно создавать по запросу. Creative prose, tasks, hints,
+  titles или SEO text меняй только после отдельного явного подтверждения
+  пользователя.
+- Android-specific scope: сначала `adb devices -l`, затем local build/install и
+  device QA. iOS-specific scope выбирает simulator/physical/TestFlight layer по
+  затронутому контракту; hardware capabilities не доказываются simulator.
 
-Полные протоколы — `docs/WORKFLOW_OPERATIONS.md`. Читай раздел тогда, когда
-задача его касается:
+## 5. Validation и handoff
 
-- e2e-доступы, `.env.e2e`, обновление board token при `HTTP 401` → §3.1;
-- тестовые сущности на проде под e2e-аккаунтами (разрешены постоянно, убирать за
-  собой) и готовые рецепты прод-QA → §3.1.1;
-- Android: EAS запрещён, локальная сборка и прогон на USB-устройстве → §3.2;
-- iOS: local Xcode/simulator/physical-iPhone QA и store authorization gates → §3.2.1;
-- production-target baseline/after, закрытие perf/media/network задач → §3.3.1;
-- deploy/build/e2e/Lighthouse, эксклюзивность и locks → §3.4.
-
-Действует всегда, без чтения файла: чужой активный quality-gate (`SKIPPED` с
-кодом `0`) не ждать и не повторять; deploy/build того же target вторым
-экземпляром не запускать; секреты из `.env.e2e` не выводить. `SKIPPED` — только
-координационный результат, не причина завершить приёмку или оставить задачу в
-`testing`: если итог активного gate нужен для решения, останови текущий проход и
-запроси у его владельца/пользователя разблокировку или результат, затем продолжи.
-
-### 3.3 Active platform validation and mobile parity
-
-- Любое видимое common/shared responsive UI/layout/interaction изменение
-  проверяй на desktop web и mobile web. Общий файл или общий компонент сам по
-  себе не создаёт Android/iPhone device gate.
-- Android device validation обязательна только при Android-specific наблюдаемом
-  поведении, конфигурации или runtime; iPhone validation — только при
-  iOS-specific поведении, конфигурации или runtime. Тогда проверяй нужный
-  platform-specific сценарий на соответствующем устройстве/слое.
-- Mobile web, Android и iPhone реализуют один mobile UX: parity остаётся
-  архитектурным инвариантом для иерархии, порядка блоков, ключевых размеров,
-  действий и touch semantics, но не означает автоматический прогон common/shared
-  задачи на всех устройствах.
-- Simulator подтверждает compilation/basic UI. Физический iPhone обязателен для
-  camera/photo/HEIC, Keychain/biometrics, APNs, Universal Links, sharing,
-  permissions и lifecycle; exact processed TestFlight build — acceptance
-  boundary App Store release. Если обязательный слой временно недоступен,
-  приёмка прерывается запросом на конкретное unlock/connect/authorization и
-  продолжается после ответа; неполное evidence нельзя выдавать за pass или
-  финальный статус.
-- Mobile web, Android и iPhone должны быть визуально и поведенчески идентичны по
-  иерархии, порядку блоков, ключевым размерам, действиям и touch semantics.
-  Допустимы только технические отличия движка, системных permissions/insets и
-  OS API; они не должны создавать другой UX.
-- Local Xcode/simulator/device QA разрешена для назначенной iOS-specific задачи.
-  Signed distribution build, App Store Connect/TestFlight upload, App Review
-  submission и storefront release — отдельные mutating operations; каждая
-  требует точной текущей команды пользователя и никогда не запускается автоматически.
-
-## 4. Обязательные технические правила
-
-### 4.1 External links
-
-- Запрещено использовать `window.open(...)` напрямую в фичах.
-- Запрещено использовать `Linking.openURL(...)` напрямую вне `utils/externalLinks.ts`.
-- Используй только:
-  - `openExternalUrl(...)`
-  - `openExternalUrlInNewTab(...)`
-  - `openWebWindow(...)` только для низкоуровневых инфраструктурных случаев.
-
-Проверка:
-
-- `npm run guard:external-links`
-- `npm run governance:verify`
-
-### 4.2 UI и компоненты
-
-- Сначала переиспользуй `components/ui` и существующие фиче-компоненты.
-- Для кнопок/иконок/чипов предпочитай существующие примитивы: `Button`, `IconButton`, `Chip`.
-- Мобильная верстка должна быть визуально и поведенчески одинаковой на mobile web,
-  Android и iPhone. Платформенные файлы допустимы для технических зависимостей, но не
-  для другого UX, порядка блоков, размеров ключевых зон или набора действий.
-- Для map/place/travel-point карточек используй единый point/place template:
-  fullscreen в доступной app content-area с видимыми header/footer, hero-фото около
-  70% карточки, затем название/мета, координаты с copy, переход к статье/странице,
-  раскрываемая навигация по картографическим системам и существующие действия
-  вроде "мои точки".
-- В point/place template навигация должна явно включать минимум: Google Maps,
-  Apple Maps, Organic Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор и
-  OpenStreetMap. Telegram/share не заменяет навигационные системы.
-- Связанные travel-статусы должны быть понятны текстом: "Был здесь",
-  "Хочу поехать" и "Планирую" (или компактная строка "Был / Хочу / Планирую"
-  рядом с действием). Нельзя оставлять это только безымянной иконкой.
-- На travel details клик по карточке/картинке точки должен фокусить карту и
-  подсвечивать/поднимать маркер, но не открывать popup автоматически; popup/card
-  открывается от явного клика по маркеру на карте.
-- Плейсхолдер изображения должен быть нейтральным:
-  - без эмодзи, иконок и текста вроде "нет изображения";
-  - с сохранением геометрии исходного медиа.
-- Для опубликованных travel/article медиа (обложки, изображения в описании, галерея, фото точек на карте) не генерируй плоские SVG, Playwright-скриншоты, векторные/схематичные, мультяшные или placeholder-картинки.
-  - Используй только реальные фото, явно разрешённые licensed/local фото или фотореалистичные generated raster images, сохранённые локальным файлом перед upload.
-  - Если подходящую фотореалистичную картинку нельзя получить, не подменяй её стилизованной заглушкой; зафиксируй blocker.
-- При задачах со статьями и квестами можно самостоятельно добавлять, генерировать и загружать только изображения/медиа для статьи, точек или квеста. Если для результата нужно написать, дописать, переписать или творчески улучшить текст статьи/квеста, сначала переспроси пользователя и не выполняй такую текстовую правку без отдельного явного подтверждения после вопроса.
-- В web rich-text валидные Instagram post/reel/tv должны показываться встроенными постами; fallback-карточки допустимы только для неembed-ссылок вроде stories/highlights/profile или неподдержанных контекстов.
-
-### 4.3 Иконки
-
-- В production UI не используй эмодзи как иконки.
-- Предпочтительный набор иконок: `@expo/vector-icons/Feather`.
-- Не копируй имена иконок между разными семействами.
-- Перед новым семейством иконок проверь корректный рендер на web без Metro stub-конфликтов.
-
-### 4.4 Дизайн-токены
-
-- Не хардкодь цвета hex-значениями в компонентах.
-- Используй `DESIGN_TOKENS` из `constants/designSystem.ts`.
-- CSS-переменные web живут в `app/global.css`.
-
-### 4.5 Многоязычность
-
-- Новый app-owned UI text не хардкодь: используй `useTranslation()` из
-  `@/i18n`, а вне React — `translate()`/`getFixedTranslator()`.
-- Любой новый translation key добавляй в RU/BE/UK/PL/EN в одной задаче;
-  RU resources — типизированный key baseline.
-- Даты, числа, валюты, списки, relative time, plural и sorting форматируй
-  через `i18n/format.ts`; не хардкодь `ru-RU` и не пиши plural rules через `%`.
-- Отображаемое число не собирай на месте через `toFixed` и не склеивай с
-  хардкодной единицей: это ловит `npm run guard:locale-number-format`
-  (`LOCALE-NUMBER-FORMAT-001`). Единица приходит из ключа перевода, доменные
-  обёртки — `utils/distanceCalculator.ts`, `utils/ratingHelpers.ts` и
-  `utils/fileSize.ts`.
-- Не переводи на клиенте user/editorial/API content, названия мест,
-  комментарии, сообщения и stable backend codes; для этого нужен отдельный
-  content-locale/API contract.
-- Правки i18n provider/config/storage, SEO locale и shared copy проверяй на web
-  hydration и native cold restart. При любом localization impact запусти
-  `npm run test:i18n` плюс проверки по feature scope.
-
-## 5. Производительность и релиз
-
-### 5.1 Локально перед деплоем
-
-- Собирай web в production-режиме:
-  - `npm run build:web:prod`
-- Lighthouse запускай по production-сборке, а не по dev-серверу.
-- Правки travel hero/slider/details, `ImageCardMedia`, hero overlays/decode gates, lazy/content-visibility или responsive image layout обязаны пройти обе стороны контракта: `npm run verify:slider` и `npm run verify:slider-perf`, каждый запуск — через общий `scripts/run-with-quality-gate-lock.js`.
-
-### 5.2 После деплоя
-
-- Проверяй performance по реальному URL `https://metravel.by`.
-- Не возвращай runtime/static service worker caching и сценарии "очистите кэш после релиза".
-
-## 6. Правила качества кода
-
-- Делай маленькие, читаемые, локальные изменения.
-- Любой code diff до handoff проходит обязательный `$metravel-code-reviewer`
-  review-and-fix loop; найденные in-scope проблемы исправляются и проверяются
-  повторно, а не только перечисляются.
-- Для независимости используй отдельного `review-auditor` agent, когда
-  multi-agent execution доступен; fallback — тот же skill в текущем агенте.
-- Удаляй мертвый/неиспользуемый код, если он явно обнаружен в зоне задачи.
-- Если в ходе работы найдена реальная ошибка, исправь ее в рамках текущей задачи; исключение только для проблем вне scope или без доступной проверки, тогда явно зафиксируй блокер и не маскируй проблему.
-- Не создавай новые отчеты без необходимости: обновляй существующую документацию в `docs/`.
-- Новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board` по правилам `docs/TASK_BOARD_MCP.md`.
-- Каждая задача на борде должна содержать Task Contract, sprint, область (`front`/`back`), platform/localization impact и явные зависимости/блокеры; для этого используй `$metravel-task-contract`.
-- Описание любой задачи на борде пишется по-русски, человеческим языком и подробно, по семи
-  обязательным разделам в фиксированном порядке: «Простыми словами» (что сейчас / как должно
-  быть / кого задевает) → «В чём проблема» → «Из-за чего возникла» → «Что должно быть
-  сделано» → «Что уже сделано» → «Что блокирует» → «Как протестировать», и только после них
-  Problem History и контракт. Раздел не удалять: нечего сказать — написать, почему нечего;
-  корневую причину не выдумывать. Исключение — задачи `needs_human=true`: они идут по
-  шаблону `human-task.md` (инструкция человеку) и контракт не несут. Заголовки `## Problem History`, `## Task Contract`, имена
-  полей контракта, пути, команды и статусы борда не переводятся. Английские абзацы и калька
-  («tracked-config classification», «paired evidence») в описании запрещены. Полное правило —
-  `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и человеческим языком».
-- На борде используются только рабочие области `front` и `back`: Android/native
-  баги приложения заводи как `area=front` с префиксом `[AND-...]`, iOS-баги —
-  как `area=front` с префиксом `[IOS-...]`; shared/common responsive tasks
-  содержат desktop-web и mobile-web validation, а device checks добавляются
-  только для Android/iOS-specific scope. Backend/API/server задачи — `area=back`.
-- Не создавай новые локальные `tasks/*.md` как обычный workflow. Локальные task-файлы допустимы только как временный fallback/migration draft при недоступном борде, после чего задачу нужно перенести на борд и убрать локальный черновик.
-- Все новые задачи, включая Android QA баги, должны быть созданы или обновлены на борде в текущем активном спринте до handoff; локальный fallback не считается завершением задачи, если board token можно обновить через `.env.e2e`.
-
-## 7. Мини-чеклист перед завершением задачи
-
-- Изменения ограничены scope задачи.
-- Полный task diff прошёл `$metravel-code-reviewer`; исправления ревьюера вошли в
-  повторный review и validation.
-- Запущены проверки по масштабу задачи.
-- Не нарушены правила external links и governance.
-- Common/shared responsive UI проверен на desktop web и mobile web; Android/iOS
-  device evidence добавлено только при platform-specific поведении,
-  конфигурации или runtime.
-- Platform impact явно определён; shared-файл без platform-specific поведения не
-  создаёт Android/iPhone gate, а реальный Android/iOS-specific scope проверен на
-  нужном устройстве/слое; если нужен unlock/connect, он запрошен до handoff.
-- Localization impact явно указан; для затронутого UI нет новых
-  hardcoded strings, а `npm run test:i18n` прошёл.
-- Документация обновлена только при необходимости и в правильном месте.
-- Отчёт собран по `docs/AGENT_ANALYSIS_PROTOCOL.md` §6: механизм с `path:line`
-  (или явное «механизм не установлен»), что сделано и что сознательно не
-  тронуто, доказательства командой/пробой и точный следующий повторный замер
-  только для обоснованного temporal/retest gate.
+- Docs/skill metadata: structure/frontmatter + `npm run audit:prompts`; skill
+  validator — для изменённых skills.
+- Малый code block: targeted checks или `npm run check:fast`.
+- Средний diff: релевантные tests/lint или `npm run check:preflight`.
+- Крупный diff: `npm run lint` и `npm run test:run`.
+- Localization: `npm run test:i18n`; external links: соответствующий governance
+  guard; release/performance: только production build/real URL по профильному doc.
+- `SKIPPED` из-за чужого quality gate — coordination evidence, не pass. Если
+  результат обязателен, запроси его и продолжи тот же acceptance pass.
+- Пользователь не тестирует за агента. Если нужен unlock/connect/login/access,
+  попроси ровно это действие и после ответа продолжи проверку.
+- Финальный ответ: результат; механизм `path:line`; изменённые файлы; фактические
+  команды/пробы; что сознательно не тронуто; остаточный риск или точный recheck.

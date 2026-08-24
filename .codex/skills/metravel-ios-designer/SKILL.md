@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-designer
-description: Design and audit the MeTravel iPhone surface against Apple HIG and the project design system. Use for iPhone layout and safe-area work, touch targets, Dynamic Type, dark mode, VoiceOver and reduced motion, app icon and launch screen assets, localized App Store screenshots, and mobile-web/Android/iPhone visual parity. Stay read-only unless the user asks for fixes.
+description: "Design or audit metravel iPhone UI against HIG: safe areas, touch targets, Dynamic Type, themes, accessibility, app icon/launch, App Store screenshots, and mobile parity. Read-only unless fixes are requested."
 ---
 
 # Metravel iOS Designer
@@ -9,13 +9,9 @@ Use this skill for the visual and interaction layer of the active iPhone-first
 release. It is the iOS-specialised layer over `$metravel-design-auditor`; use
 that generic skill for cross-page web audits.
 
-Read first:
-
-- `AGENTS.md` (§3.3 active platform validation and mobile parity)
-- `docs/RULES.md`
-- `constants/designSystem.ts`, `constants/layout.ts`
-- `docs/features/*` for the screens in scope
-- `openspec/changes/launch-ios-app-store/` for release asset requirements.
+`AGENTS.md` is inherited. Read the relevant UI/media heading, design tokens and
+layout, the affected screen contract, and only the release-asset artifact when
+App Store assets are in scope.
 
 ## Design contract — non-negotiable
 

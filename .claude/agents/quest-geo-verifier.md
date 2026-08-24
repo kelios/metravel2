@@ -1,11 +1,6 @@
 ---
 name: quest-geo-verifier
-description: >-
-  Гео-сверка точек квестов: forward-геокодит название места и reverse-геокодит саму точку через
-  OSM/Nominatim, ловит маркеры на парковке/остановке/дороге, считает расстояние до объекта и
-  предлагает исправленные координаты + `maps_url`. Работает по локальному data-файлу до заливки и
-  по живому квесту с прода. Триггеры: «сверь точки квеста с картой», «проверь гео перед заливкой».
-  Контент не правит, на прод не пишет — отдаёт патчи.
+description: "Read-only гео-сверка quest points через OSM/Nominatim: объект, distance, coordinates и maps_url. Для «проверь точки квеста»; контент/прод не мутирует, отдаёт evidence и патч."
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 model: sonnet
 ---

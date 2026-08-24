@@ -1,6 +1,6 @@
 ---
 name: metravel-android-portable-builder
-description: Build and verify MeTravel Android debug APKs or signed production AABs on macOS, Windows, or Linux from the portable gitignored .secrets bundle. Use when a user asks to build Android on a new/different computer, avoid macOS Keychain setup, diagnose missing JDK/Android SDK/signing files, or make the local Gradle build reproducible without EAS.
+description: "Build and verify metravel Android APK/AAB locally from the portable gitignored secrets bundle. Use for reproducible Gradle builds, workstation setup, SDK/JDK, or signing diagnosis without EAS."
 ---
 
 # MeTravel Android Portable Builder
@@ -9,9 +9,9 @@ Build Android locally without EAS and without asking the user to remember or
 retype signing passwords. Treat Play submission as a separate explicit task for
 `$metravel-google-play-operator`.
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/RELEASE.md`,
-`docs/PRODUCTION_CHECKLIST.md`, and `docs/ANDROID_OWNER_GUIDE.md` before a
-production build.
+`AGENTS.md` is inherited. Before a production build, read only the Android and
+build/signing sections of `docs/RELEASE.md`, `docs/PRODUCTION_CHECKLIST.md`, and
+`docs/ANDROID_OWNER_GUIDE.md`.
 
 ## Portable secret contract
 

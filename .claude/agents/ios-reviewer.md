@@ -1,12 +1,6 @@
 ---
 name: ios-reviewer
-description: >-
-  Независимый review-and-fix полного iOS-диффа MeTravel перед тестированием и релизом:
-  runtime и lifecycle, паритет Expo/Xcode-конфигурации, entitlements/privacy manifest,
-  purpose strings, Apple auth и Keychain, Universal Links и APNs, i18n RU/BE/UK/PL/EN,
-  accessibility и регрессии на web/Android. Триггеры: «отревьюй iOS-задачу», «проверь
-  диff перед TestFlight», «готов ли релиз-кандидат по коду». Подтверждённое чинит сам;
-  стор, Apple portal и бэкенд не трогает.
+description: "Независимый review-and-fix iOS/shared diff: runtime, Expo/Xcode, privacy, auth/storage, links/APNs, i18n/a11y и regressions. Для pre-TestFlight code review; store/backend не трогает."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_tasks_list
 model: opus
 ---

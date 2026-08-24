@@ -100,3 +100,18 @@ export const trackShareCardClick = (params: {
     channel: params.channel,
   });
 };
+
+// ── Шаринг результата квеста ([INV2-02], #1472) ──────────────────────────────
+// Замыкает вирусную петлю финала: событие клика по каналу шаринга результата.
+// quest_id — slug квеста (как и в остальной воронке квеста). PII не пишем.
+
+/** Пользователь поделился результатом квеста в конкретном канале. */
+export const trackQuestShareClick = (params: {
+  questId: string;
+  channel: string;
+}): void => {
+  void sendAnalyticsEvent('quest_share_click', {
+    quest_id: params.questId,
+    channel: params.channel,
+  });
+};

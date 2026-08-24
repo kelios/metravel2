@@ -10,15 +10,10 @@ description: >-
 
 Use this skill for task-board operations through the MCP task board tools.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/TASK_BOARD_MCP.md`
-- `docs/PROBLEM_MEMORY.md`
-- `$metravel-problem-memory` before create, reopen, split, or recurrence update.
-- `$metravel-task-contract` guidance for FE/BE tasks.
+`AGENTS.md` is inherited. Load only the requested operation/status section from
+`docs/TASK_BOARD_MCP.md`; add `$metravel-problem-memory` for create/reopen/split/
+recurrence and `$metravel-task-contract` when a task contract is created or
+reviewed.
 
 ## Scope
 

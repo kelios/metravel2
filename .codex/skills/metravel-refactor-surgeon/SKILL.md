@@ -7,12 +7,9 @@ description: Split or reduce large metravel components without behavior changes.
 
 Use this skill for behavior-preserving extraction. Do not use it to redesign, rename flows, or change business logic.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- relevant feature docs and nearby tests.
+`AGENTS.md` is inherited. Read the full target and callers, nearby tests, the
+matching feature contract, and only the file-complexity or UI heading affected
+by the extraction.
 
 ## Protocol
 

@@ -7,14 +7,9 @@ description: Expert for metravel map and places work, including MapPage, map pop
 
 Use this skill for map, places, marker, popup, routing, and cross-platform map behavior.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- `docs/features/map.md` or `docs/features/places.md` when present and relevant.
-- `docs/NATIVE_COMPAT_RULES.md` for native map changes.
+`AGENTS.md` is inherited. Read `docs/features/map.md` or
+`docs/features/places.md` when relevant and only the map/UI/media/link heading
+implicated by the task; add the affected native section for native map changes.
 
 ## Scope
 

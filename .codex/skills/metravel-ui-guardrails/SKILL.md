@@ -1,11 +1,12 @@
 ---
 name: metravel-ui-guardrails
-description: Apply metravel UI guardrails for new pages, screen redesigns, design-system cleanup, cards, interactions, images, icons, and styling across web and native. Use when Codex changes visible UI, layout, placeholders, media rendering, design tokens, external links, or interaction behavior and must preserve the repository's web/mobile contracts while fixing all real UI issues found in scope.
+description: "Apply metravel UI contracts to visible layout, cards, interactions, media, icons, tokens, placeholders, or external links. Use for UI implementation or redesign across web/mobile surfaces."
 ---
 
 # Metravel UI Guardrails
 
-Read `AGENTS.md` and `docs/RULES.md` before any UI change. Then load the exact supporting references that match the task:
+`AGENTS.md` is inherited. Load only the exact `docs/RULES.md` headings and
+supporting references that match the UI change:
 
 - Read `docs/adr/0001-no-direct-linking-openurl.md` for external-link governance intent.
 - Read `docs/adr/0002-images-via-image-card-media.md` for image/card architecture decisions.

@@ -7,13 +7,8 @@ description: Read-only geospatial verifier for metravel quest points. Use to che
 
 Use this skill for read-only verification of quest coordinates, map URLs, and point/object alignment.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- Quest geocheck scripts/docs when present.
+`AGENTS.md` is inherited. Load the quest geo contract and the owning geocheck
+script/doc; use the docs index only if that artifact cannot be located.
 
 ## Scope
 

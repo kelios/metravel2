@@ -1,11 +1,13 @@
 ---
 name: metravel-quality-fixer
-description: Run metravel lint, Jest, and Playwright validation end to end, fix real failures in scope, rerun the affected checks, and leave the repository with a clean quality-gate baseline or an explicit unrelated blocker.
+description: "Run and repair the full metravel lint, Jest, and Playwright quality baseline. Use when the user asks for a repository-wide validation/fix cycle."
 ---
 
 # Metravel Quality Fixer
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/DEVELOPMENT.md`, `docs/RELEASE.md`, and the task triage in `docs/CODEX.md` before using this skill.
+`AGENTS.md` is inherited. Load the quality-gate and operation sections from
+`docs/TESTING.md`/`docs/WORKFLOW_OPERATIONS.md`; load development or release
+sections only when a failure touches them.
 
 Use this skill when the task is to validate the repository broadly and fix what breaks, rather than to implement one feature first.
 

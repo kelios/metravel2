@@ -7,13 +7,8 @@ description: Explore and test metravel as a QA agent, create structured bug repo
 
 Use this skill to find, reproduce, and verify bugs. QA is read-only by default: do not edit app code while exploring.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/TESTING.md` when choosing commands or e2e coverage.
-- Feature docs from `docs/features/` only for the tested area.
+`AGENTS.md` is inherited. Read the tested feature contract and only the exact
+browser/e2e/device/operation section needed to collect its evidence.
 
 ## Test Discipline
 

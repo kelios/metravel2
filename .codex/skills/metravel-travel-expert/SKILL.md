@@ -7,14 +7,9 @@ description: Expert for metravel travel list, travel details, wizard, author car
 
 Use this skill before implementation when the task is specifically about travel lists, details, editing/wizard, route points, author cards, moderation/save behavior, or travel export/PDF.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md` for travel creation/edit/save/moderation work.
-- `docs/features/travel.md` when it exists.
+`AGENTS.md` is inherited. Read `docs/features/travel.md` when present, the exact
+UI/media/API heading implicated by the task, and
+`docs/TRAVEL_SAVE_MODERATION_CONTRACT.md` only for create/edit/save/moderation.
 
 ## Scope
 

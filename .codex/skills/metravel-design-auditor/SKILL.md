@@ -1,11 +1,12 @@
 ---
 name: metravel-design-auditor
-description: Audit metravel screens for cross-page design-system consistency, responsive/mobile parity, token drift, duplicated UI patterns, image/card/header geometry, accessibility, and inconsistent empty/loading/error states. Use for design audits, UI/UX reviews across multiple screens, design-system cleanup discovery, or evidence-backed consistency matrices. Stay read-only unless the user explicitly asks to fix findings.
+description: "Audit multiple metravel screens for design-system consistency, responsive parity, token drift, duplicated UI, media geometry, states, and accessibility. Read-only unless fixes are requested."
 ---
 
 # Metravel Design Auditor
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, `constants/designSystem.ts`, `constants/layout.ts`, and the relevant feature docs.
+`AGENTS.md` is inherited. Read design tokens/layout, affected feature docs, and
+only the relevant UI/media headings in `docs/RULES.md`.
 
 ## Audit Axes
 

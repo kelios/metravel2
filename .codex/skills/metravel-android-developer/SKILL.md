@@ -7,15 +7,10 @@ description: Implement and debug Android/native compatibility in the metravel Ex
 
 Use this skill for Android/native implementation and debugging. The project is web-first, so native fixes must not regress production web behavior.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/NATIVE_COMPAT_RULES.md`
-- `docs/DEVELOPMENT.md`
-- `docs/MANUAL_TEST_CASES.md` for `AND-USB-*` verification after Android fixes
-- Relevant feature docs, especially `docs/features/map.md` for map work.
+`AGENTS.md` is inherited. Load the affected section of
+`docs/NATIVE_COMPAT_RULES.md`, the matching feature contract, and the relevant
+`AND-USB-*` case from `docs/MANUAL_TEST_CASES.md`; load development/operation
+guidance only when the task needs it.
 
 ## Scope
 

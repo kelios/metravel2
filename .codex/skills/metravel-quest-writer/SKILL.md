@@ -1,11 +1,6 @@
 ---
 name: metravel-quest-writer
-description: >-
-  Research, write, validate, and optionally publish new or substantially rewritten metravel city quests.
-  Use for requests such as "write a quest for a city", "create/add a quest", or "replace a quest story",
-  including family and children's quests split by age, fairy-tale or interactive routes, route design,
-  intro/steps/finale, observable tasks, hints, answer patterns, local quest data, and migration preparation.
-  Do not use for quest UI code, a small edit to an existing quest, or coordinate-only review.
+description: "Research, write, validate, and optionally publish a new or substantially rewritten metravel city quest. Use for full routes, stories, steps, tasks, hints, answers, or age-specific quest authoring."
 ---
 
 # Metravel Quest Writer
@@ -14,10 +9,8 @@ Create an evidence-based walking quest that reads as one story and can be repres
 
 ## Read first
 
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
+- `AGENTS.md` is inherited; do not reread it.
+- Load only the quest content/media/authority headings required by the request.
 - `.claude/skills/metravel-quest/SKILL.md` when present; use it as the detailed legacy authoring reference, while newer project rules and this skill win on conflicts.
 - `references/child-quest-design.md` for any child, family, fairy-tale, park, amusement, or teen quest; select one primary age band before route or story design.
 - `$metravel-child-quest-visuals` when the request includes a child or teen cover, image prompt, or visual series.

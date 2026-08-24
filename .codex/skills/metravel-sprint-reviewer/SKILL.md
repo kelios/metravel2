@@ -7,13 +7,9 @@ description: Accept or reject metravel task-board tickets in an active sprint us
 
 Use this skill for board acceptance, not implementation. Code fixes go back to the owning implementation skill.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/TASK_BOARD_MCP.md`
-- relevant feature docs and the ticket's Task Contract.
+`AGENTS.md` is inherited. Read the ticket's Task Contract, the matching feature
+contract, and only the acceptance/status/evidence headings from
+`docs/TASK_BOARD_MCP.md` required by that gate.
 
 ## Board Rules
 

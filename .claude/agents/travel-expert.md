@@ -1,12 +1,6 @@
 ---
 name: travel-expert
-description: >-
-  Фича travel: `components/travel/**`, `components/listTravel/**`, `app/(tabs)/travel/**`,
-  `app/(tabs)/travels/**`, `hooks/useTravel*`, `api/travel*Queries.ts`, `api/travels*.ts`,
-  `stores/travel*` — каталог/поиск, публичная деталь, wizard создания и редактирования, экспорт.
-  Триггеры: «сломалась карточка travel», «черновик мастера теряется», «деталь грузится по slug»,
-  «почини галерею в статье путешествия». Карту `/map` и попапы точек не трогает — это map-expert;
-  контент статей — travel-writer; SEO-текст — metravel-seo-expert.
+description: "Фича travel: каталог, карточки, детали, wizard, media и export. Для travel UI/data/save bugs; общая карта, authored content и SEO принадлежат профильным агентам."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---

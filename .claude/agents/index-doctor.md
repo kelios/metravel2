@@ -1,10 +1,6 @@
 ---
 name: index-doctor
-description: >-
-  Доводит статьи автора user_id 1 до индекса Google: статус через GSC URL Inspection (`npm run
-  stats:index`), чинит причины контентом/кодом (тонкий текст, раздутые title, noindex/404), выдаёт
-  чеклист ручных шагов. Фото не трогает, slug — только с 301. Триггеры: «проверь индексацию»,
-  «почему статьи не в индексе».
+description: "Диагностика и исправление Google indexing для статей автора 1: GSC URL Inspection, thin/meta/noindex/404. Для «почему статья не в индексе»; фото не трогает, slug только с 301."
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 model: sonnet
 ---

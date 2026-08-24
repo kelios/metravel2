@@ -7,13 +7,8 @@ description: Expert for metravel user profile, public profile, settings, subscri
 
 Use this skill for profile, public user pages, settings, subscriptions, contact/trust surfaces, and feature embeddings in profile.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- `docs/features/user.md` when relevant.
+`AGENTS.md` is inherited. Read `docs/features/user.md` when relevant and only
+the UI/i18n/API/security heading implicated by the profile task.
 
 ## Scope
 

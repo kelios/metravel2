@@ -1,11 +1,12 @@
 ---
 name: metravel-test-writer
-description: Write or update metravel unit, integration, or governance tests that lock real behavior, follow the nearest existing test style, avoid flaky assertions, and never use skipped tests as a shortcut.
+description: "Write or update metravel unit, integration, or governance tests for a real behavior or regression. Use for new coverage, broken tests, or flaky assertions."
 ---
 
 # Metravel Test Writer
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/CODEX.md`, and the relevant feature doc from `docs/features/` before adding or changing tests.
+`AGENTS.md` is inherited. Read the nearest tests, the matching feature contract,
+and only the relevant section of `docs/TESTING.md`.
 
 Use this skill when the task is to add or update tests for a bug fix, refactor, feature, or governance contract.
 

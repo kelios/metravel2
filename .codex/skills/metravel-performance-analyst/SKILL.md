@@ -1,11 +1,13 @@
 ---
 name: metravel-performance-analyst
-description: Analyze metravel performance using production builds or real URLs, compare Lighthouse and bundle baselines, validate perf budgets, and protect the travel hero slider/performance contract. Use for Lighthouse, bundle or LCP/TBT analysis and whenever travel-details hero, slider, image priority, lazy loading, overlays, or content-visibility changes could regress swipe behavior or performance.
+description: "Analyze metravel Lighthouse, bundle, LCP/TBT, media, or travel-slider performance using production builds or real URLs. Use for measured performance regressions and budgets."
 ---
 
 # Metravel Performance Analyst
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/RELEASE.md`, and `docs/CODEX.md` before doing performance analysis. For travel-page work, also read `docs/TRAVEL_PERFORMANCE_REFACTOR.md`.
+`AGENTS.md` is inherited. Load only the performance/operation headings in
+`docs/RULES.md`, `docs/TESTING.md`, or `docs/RELEASE.md`; for travel-page work
+also read the relevant part of `docs/TRAVEL_PERFORMANCE_REFACTOR.md`.
 
 ## Core rules
 

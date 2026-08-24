@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-architect
-description: Design and review the active MeTravel iPhone architecture and App Store release plan. Use to map product requirements to the shared Expo and React Native codebase, choose platform boundaries, define Apple authentication, storage, links, notifications, privacy, signing and release contracts, split board work safely, and produce simulator, device, TestFlight, and cross-platform validation plans.
+description: "Design or review metravel iPhone architecture: shared/iOS boundaries, Apple auth/storage/links/APNs/privacy/signing, task slices, risks, and simulator/device/TestFlight validation."
 ---
 
 # Metravel iOS Architect
@@ -9,15 +9,9 @@ Use this skill before high-risk iOS implementation, configuration, or release
 work, and for architecture review of a proposed change. It is read-only unless
 the user explicitly requests planning-document edits.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/ARCHITECTURE.md`
-- `docs/NATIVE_COMPAT_RULES.md`
-- `docs/RELEASE.md`
-- Relevant OpenSpec, feature docs, and board task contracts.
+`AGENTS.md` is inherited. Load the affected architecture/native/release
+headings, the matching feature or OpenSpec contract, and the assigned board
+Task Contract; do not load every iOS document for a single subsystem.
 
 ## Design Contract
 

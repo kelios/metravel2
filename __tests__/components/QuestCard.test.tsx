@@ -365,4 +365,70 @@ describe('QuestCard', () => {
         expect(getByTestId('quest-reviews-modal')).toBeTruthy();
         expect(mockPush).not.toHaveBeenCalled();
     });
+
+    // INV2-01 (#1471): счётчик прохождений в desktop-оверлее каталога склоняется
+    // по-русски. Раньше все фикстуры шли в mobile-ветку (isPhone=true), где счётчик
+    // выводится голым числом без слова, поэтому runtime-склонение «раз/раза» никто
+    // не покрывал: приёмка 22.08.2026 поймала на проде «Пройдено 3 раз» вместо
+    // «Пройдено 3 раза». Эти тесты фиксируют desktop-ветку, чтобы форма не съехала.
+    describe('completions counter (desktop overlay)', () => {
+        beforeEach(() => {
+            mockIsPhone = false;
+        });
+
+        // Контроль русских форм: 1 → «раз», 2/3/4 → «раза», 5/11/21 → «раз».
+        it.each([
+            [1, 'Пройдено 1 раз'],
+            [2, 'Пройдено 2 раза'],
+            [3, 'Пройдено 3 раза'],
+            [4, 'Пройдено 4 раза'],
+            [5, 'Пройдено 5 раз'],
+            [11, 'Пройдено 11 раз'],
+            [21, 'Пройдено 21 раз'],
+        ])('склоняет ненулевой счётчик: count=%i → "%s"', (count, expected) => {
+            const { getByText } = renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={380}
+                    cityId="minsk"
+                    quest={makeQuest({ id: 'minsk-nezavisimosti', completionsCount: count })}
+                />,
+            );
+
+            expect(getByText(expected)).toBeTruthy();
+        });
+
+        it('сохраняет реальный счётчик и первопроходца вместе', () => {
+            const { getByText } = renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={380}
+                    cityId="minsk"
+                    quest={makeQuest({
+                        id: 'minsk-nezavisimosti',
+                        completionsCount: 3,
+                        firstCompleter: { id: 7, name: 'Roman Shakun', avatar: null },
+                    })}
+                />,
+            );
+
+            expect(getByText('Пройдено 3 раза')).toBeTruthy();
+            expect(getByText('Первым прошёл: Roman Shakun')).toBeTruthy();
+        });
+
+        it('нулевое состояние не показывает статистику прохождений в оверлее', () => {
+            const { queryByTestId, queryByText } = renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={380}
+                    cityId="minsk"
+                    quest={makeQuest({ id: 'minsk-empty', completionsCount: 0, firstCompleter: null })}
+                />,
+            );
+
+            expect(queryByTestId('quest-card-completions-minsk-empty')).toBeNull();
+            expect(queryByText('Ещё никто не проходил')).toBeNull();
+            expect(queryByText(/Пройдено/)).toBeNull();
+        });
+    });
 });

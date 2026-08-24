@@ -1,7 +1,11 @@
 import React, { Suspense } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import ShareQuestResultSheet, {
+  type QuestResultShareSubject,
+} from '@/components/quests/ShareQuestResultSheet'
 import AffiliateOffers from '@/components/affiliate/AffiliateOffers'
 import { getAffiliateOffers } from '@/components/affiliate/affiliateConfig'
 import { canRenderBelkrajWidget } from '@/components/belkraj/belkrajAvailability'
@@ -391,6 +395,68 @@ function QuestFinaleContinueButton({
   )
 }
 
+/** Кнопка «Поделиться результатом» + лист шаринга. Показывается только за
+ *  засчитанное прохождение — это и есть эмоциональный пик, ради которого
+ *  замыкается вирусная петля ([INV2-02], #1472). */
+function QuestFinaleShareAction({
+  styles,
+  questId,
+  questNumericId,
+  questTitle,
+  cityId,
+  completedCount,
+  stepsCount,
+  completionFinishedAt,
+}: {
+  styles: any
+  questId: string
+  questNumericId?: number
+  questTitle: string
+  cityId?: string
+  completedCount: number
+  stepsCount: number
+  completionFinishedAt: number | null
+}) {
+  const colors = useThemedColors()
+  const [shareVisible, setShareVisible] = React.useState(false)
+
+  const subject = React.useMemo<QuestResultShareSubject>(
+    () => ({
+      questId: questNumericId ?? 0,
+      questSlug: questId,
+      questTitle,
+      cityId,
+      pointsDone: completedCount,
+      pointsTotal: stepsCount,
+      finishedAt: completionFinishedAt,
+    }),
+    [questNumericId, questId, questTitle, cityId, completedCount, stepsCount, completionFinishedAt],
+  )
+
+  const label = i18nT('questShareStatic:finaleShare.button')
+  return (
+    <>
+      <Pressable
+        style={styles.primaryButton}
+        onPress={() => setShareVisible(true)}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        testID="quest-finale-share"
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Feather name="share-2" size={18} color={colors.textOnPrimary} />
+          <Text style={styles.buttonText}>{label}</Text>
+        </View>
+      </Pressable>
+      <ShareQuestResultSheet
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        subject={subject}
+      />
+    </>
+  )
+}
+
 export function QuestFinalePanel({
   colors: _colors,
   styles,
@@ -491,6 +557,16 @@ export function QuestFinalePanel({
             <>
               <QuestPioneerBlock questId={questId} questNumericId={questNumericId} />
               <BadgeUnlockToast />
+              <QuestFinaleShareAction
+                styles={styles}
+                questId={questId}
+                questNumericId={questNumericId}
+                questTitle={questTitle}
+                cityId={cityId}
+                completedCount={completedCount}
+                stepsCount={stepsCount}
+                completionFinishedAt={completionFinishedAt}
+              />
             </>
           ) : null}
 

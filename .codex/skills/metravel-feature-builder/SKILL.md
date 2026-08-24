@@ -1,11 +1,12 @@
 ---
 name: metravel-feature-builder
-description: Implement, refactor, or debug features in the metravel Expo/React Native Web codebase. Use when Codex needs project-specific guidance for app, components, hooks, services, API flows, SEO wiring, or feature logic and must follow docs-first workflow, reuse-first coding, fix-all-found-real-issues discipline, and scope-based validation in this repository.
+description: "Implement, refactor, or debug metravel app, component, hook, service, API, SEO, or feature logic. Use for ordinary frontend changes after selecting any needed domain owner."
 ---
 
 # Metravel Feature Builder
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, and the task triage section in `docs/CODEX.md` before changing code. Then load only the extra docs that match the task:
+`AGENTS.md` is inherited. Load only the feature contract and canonical headings
+that match the task:
 
 - Read `docs/DEVELOPMENT.md` for local workflow, selective checks, route-point-from-photo flow, and SEO utility usage.
 - Read `docs/TESTING.md` when choosing targeted validation.

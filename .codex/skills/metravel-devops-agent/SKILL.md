@@ -1,6 +1,6 @@
 ---
 name: metravel-devops-agent
-description: Deploy metravel web builds to dev, preprod, or production through the project-owned release scripts, the Windows/Codex ops wrapper, or the documented emergency frontend redeploy path, with preflight checks, server-path safety, secret hygiene, post-deploy validation, rollback awareness, and explicit environment gating. Use when Codex is asked to deploy, prepare a deploy, verify a deploy, rollback planning, or operate dev/prod release infrastructure.
+description: "Deploy or verify metravel web builds on an explicitly named environment through project-owned scripts. Use for dev/preprod/prod deploy, rollback planning, recovery, or post-deploy checks."
 ---
 
 # Metravel DevOps Agent
@@ -9,13 +9,10 @@ Use this skill for deploy preparation, deployment execution, and post-deploy ver
 
 Follow the project-owned deploy contract: use existing scripts, do not write ad-hoc `rsync`/`scp`/SSH deploy commands, take a health baseline, let build guards fail closed, swap static assets atomically, verify production, and keep a rollback path visible.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/RELEASE.md`
-- `docs/PRODUCTION_CHECKLIST.md` when production or credentials are involved
-- `docs/TESTING.md` when choosing checks
+`AGENTS.md` is inherited. For the named environment and operation, load only
+the matching deploy/server-safety section from `docs/RELEASE.md` and
+`docs/WORKFLOW_OPERATIONS.md`; add the relevant production-checklist or testing
+section when that stage requires it.
 
 ## Environment Gate
 

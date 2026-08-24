@@ -7,14 +7,10 @@ description: Prepare, locally build, submit, and verify metravel Android product
 
 This is the Codex equivalent of the legacy Claude `android-builder`, `android-publisher`, and `android-release` workflows.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/RELEASE.md`
-- `docs/PRODUCTION_CHECKLIST.md`
-- `docs/ANDROID_OWNER_GUIDE.md`
-- `package.json`, `android/app/build.gradle`, and Android release scripts
+`AGENTS.md` is inherited. For the authorized stage, load only the Android
+build/signing/Play sections of `docs/RELEASE.md`,
+`docs/PRODUCTION_CHECKLIST.md`, and `docs/ANDROID_OWNER_GUIDE.md`, plus
+`package.json`, `android/app/build.gradle`, and the owning release script.
 
 ## Authority Gates
 

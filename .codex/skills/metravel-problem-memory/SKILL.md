@@ -1,6 +1,6 @@
 ---
 name: metravel-problem-memory
-description: Audit MeTravel problem history before creating, reopening, splitting, or accepting a task. Use for new bug/debt/incident tickets, suspected regressions, repeated symptoms, duplicate checks, recurring frontend/backend/ops failures, backlog refinement, and root-cause follow-up. It searches the canonical problem registry and the full task board, then returns reuse, reopen, create-linked, or create-new; it does not replace the ticket-board operator.
+description: "Audit the metravel problem registry and full board before create/reopen/split/acceptance. Use for duplicates or recurring failures; returns reuse, reopen, create-linked, or create-new without mutating tickets."
 ---
 
 # Metravel Problem Memory
@@ -9,13 +9,10 @@ Prevent repeated symptom fixes and duplicate board cards. Treat
 `docs/PROBLEM_MEMORY.md` as the durable problem-family registry and the MCP task
 board as the operational task/evidence history.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/PROBLEM_MEMORY.md`
-- `docs/TASK_BOARD_MCP.md`
-- `$metravel-ticket-board` and `$metravel-task-contract` for any board mutation
+`AGENTS.md` is inherited. Read `docs/PROBLEM_MEMORY.md` and only the duplicate,
+recurrence, or evidence sections needed from `docs/TASK_BOARD_MCP.md`; add
+`$metravel-ticket-board` and `$metravel-task-contract` only for a subsequent
+board mutation.
 
 ## Pre-create workflow
 

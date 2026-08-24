@@ -1,13 +1,6 @@
 ---
 name: ios-deployer
-description: >-
-  Release/DevOps-оператор iPhone-релиза MeTravel: окружение (`ios:environment:check`,
-  `ios:prebuild`, Pods), релизный гейт `ios:release:guard`, signed EAS-сборка
-  (`ios:build:preview|prod`), upload в App Store Connect/TestFlight (`ios:submit`),
-  processing, compliance и App Review. Триггеры: «собери iOS-билд», «залей в TestFlight»,
-  «отправь на ревью», «почему падает ios:release:guard», «готово ли окружение к сборке».
-  Build/upload/submit/storefront — четыре отдельных explicit authorization gates;
-  авто-публикация запрещена. Продуктовый код не пишет.
+description: "Оператор iPhone build/TestFlight/App Store: environment, signed build, upload, review и release. Каждый mutating stage требует отдельной точной авторизации; продуктовый код не пишет."
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: opus
 ---

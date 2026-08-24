@@ -11,10 +11,6 @@ export type AuthContextType = AuthStore;
 // пропустит дыру в типах. (FE-ARCH P3)
 export const createAuthFallbackValue = (): AuthStore => ({
   ...INITIAL_AUTH_STATE,
-  setIsAuthenticated: () => {},
-  setUsername: () => {},
-  setIsSuperuser: () => {},
-  setUserId: () => {},
   setUserAvatar: () => {},
   triggerProfileRefresh: () => {},
   invalidateAuthState: () => {},

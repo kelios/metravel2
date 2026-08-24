@@ -1,11 +1,12 @@
 ---
 name: metravel-test-runner
-description: Choose and run the narrowest reliable metravel Jest, integration, smoke, or governance checks for the touched scope, analyze failures, rerun after fixes, and avoid leaving skipped or unresolved test failures in this repository.
+description: "Choose, run, and interpret the narrowest reliable metravel Jest, integration, smoke, or governance check. Use for targeted validation or test-failure diagnosis."
 ---
 
 # Metravel Test Runner
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, and `docs/CODEX.md` before choosing commands.
+`AGENTS.md` is inherited. Load only the relevant command/operation section from
+`docs/TESTING.md` or `docs/WORKFLOW_OPERATIONS.md` before choosing commands.
 
 Use this skill when the main job is to run tests rather than write product code.
 

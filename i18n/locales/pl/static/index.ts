@@ -4,6 +4,7 @@ import { errorsStaticResources } from './errors_static'
 import { homeStaticResources } from './home_static'
 import { legalStaticResources } from './legal_static'
 import { navigationStaticResources } from './navigation_static'
+import { questShareStaticResources } from './quest_share_static'
 import { seoStaticResources } from './seo_static'
 import { sharedStaticResources } from './shared_static'
 import { tripsStaticResources } from './trips_static'
@@ -15,6 +16,7 @@ export const staticResources = {
   homeStatic: homeStaticResources,
   legalStatic: legalStaticResources,
   navigationStatic: navigationStaticResources,
+  questShareStatic: questShareStaticResources,
   seoStatic: seoStaticResources,
   sharedStatic: sharedStaticResources,
   tripsStatic: tripsStaticResources,

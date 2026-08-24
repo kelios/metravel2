@@ -1,11 +1,12 @@
 ---
 name: metravel-hook-builder
-description: Design, extract, and refine focused React hooks for metravel features without breaking public contracts. Use when Codex needs to move local logic into hooks, simplify components, or improve reuse across `hooks/` and feature modules.
+description: "Design, extract, or simplify focused metravel React hooks without breaking public contracts. Use for hook-boundary cleanup, local logic extraction, or proven reuse."
 ---
 
 # Metravel Hook Builder
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, `docs/CODEX.md`, and the relevant feature doc from `docs/features/` before changing hook architecture.
+`AGENTS.md` is inherited. Read the relevant feature contract, nearest hooks and
+callers, plus only the state/query guidance needed from `docs/DEVELOPMENT.md`.
 
 ## When to use
 
@@ -28,4 +29,3 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, `docs/CODEX.md`, and t
 - Update or add the nearest relevant tests when hook behavior changes.
 - Run the narrowest reliable checks for the touched hook and its main consumer.
 - If the hook affects visible web behavior, verify the scenario in a real browser too.
-

@@ -1,24 +1,17 @@
 ---
 name: metravel-quest-editor
-description: >-
-  Read/write content editor for existing metravel city quests: quest step text, tasks, hints, answer
-  patterns, age fit, story continuity, and practical content quality. Use for requests to audit or improve
-  quest questions, hints, answers, step copy, or an existing children's quest. Does not implement quest UI
-  code, create new quests, or verify coordinates deeply; route new authoring and substantial story/route
-  rewrites to $metravel-quest-writer.
+description: "Edit existing metravel quest steps, tasks, hints, answer patterns, age fit, and story continuity. Use for content quality fixes; new quests, UI code, and deep geo checks use their owning skills."
 ---
 
 # Metravel Quest Editor
 
 Use this skill for quest content quality, step text, tasks, hints, answers, and answer-pattern consistency.
 
-Read first:
+`AGENTS.md` is inherited. Read the quest content/authority contract and only the
+affected quest artifact.
 
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- Quest content docs/skills when present.
+Additional conditional context:
+
 - `../metravel-quest-writer/references/child-quest-design.md` when the audience includes children or families.
 - `$metravel-child-quest-visuals` when the requested edit also changes a child/teen cover or image prompt.
 

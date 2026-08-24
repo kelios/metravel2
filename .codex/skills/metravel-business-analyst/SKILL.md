@@ -7,12 +7,9 @@ description: Turn metravel product ideas into concise feature briefs, user stori
 
 Use this skill before architecture or implementation when a request is still a product idea, feature concept, or ambiguous business goal.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/CODEX.md`
-- `docs/README.md`
-- Relevant `docs/features/*` files only when the idea touches an existing feature area.
+`AGENTS.md` is inherited. Read the matching `docs/features/*` contract when the
+idea touches an existing surface; use the docs index only when ownership cannot
+be located directly.
 
 ## Output Contract
 

@@ -1,11 +1,12 @@
 ---
 name: metravel-visual-asset-designer
-description: Specify, generate, post-process, integrate, and verify branded raster icons, badge art, app icons, empty-state art, and marketing assets for metravel. Use when Codex is asked to generate an icon, badge image, app-icon set, quest/article art, or a coherent visual asset series. Use the image generation skill/tool for new raster output and preserve project restrictions for published travel/article media.
+description: "Specify, generate, integrate, and verify branded metravel raster icons, badges, app icons, empty states, or marketing art. Use for new image assets or coherent visual series."
 ---
 
 # Metravel Visual Asset Designer
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/ICON_ART_PROMPTS.md`, `constants/modernMattePalette.ts`, and neighboring assets before generating.
+`AGENTS.md` is inherited. Read `docs/ICON_ART_PROMPTS.md`, the palette and
+neighboring assets; load only the relevant media heading from `docs/RULES.md`.
 
 For children's, family, fairy-tale, park, or teen quest covers, also use `$metravel-child-quest-visuals`; it owns age-band selection and the illustrated story contract.
 

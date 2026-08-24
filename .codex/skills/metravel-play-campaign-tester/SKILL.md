@@ -1,12 +1,6 @@
 ---
 name: metravel-play-campaign-tester
-description: >-
-  Run the metravel Google Play closed-testing reciprocity campaign on the configured USB Android
-  device: inspect community assignments, exercise configured apps, capture evidence, check crashes
-  and available updates, and maintain the campaign log/version snapshot. Use for “daily testing pass”,
-  “test campaign apps”, “check campaign updates”, or when testing must be likely to count as real
-  Google Play closed-testing usage. Do not buy, review, uninstall, leave tests, message people, or
-  change accounts without explicit user authority.
+description: "Run the configured Google Play reciprocity campaign on USB Android: daily app interaction, assignments, updates, crashes, evidence, and campaign log. No purchases, reviews, uninstall, messaging, or account changes."
 ---
 
 # Metravel Play Campaign Tester

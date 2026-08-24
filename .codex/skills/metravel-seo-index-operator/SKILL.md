@@ -7,12 +7,9 @@ description: Run metravel SEO/indexing operations and article-index diagnostics.
 
 Use this skill for operational SEO and indexing. Use `$metravel-growth-analyst` for monthly growth strategy and `$metravel-article-editor-agent` for article API writes.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/GROWTH_PLAN.md` when growth priorities or monthly review are involved.
+`AGENTS.md` is inherited. Load only the SEO/indexing operation contract and the
+requested URL/data artifact; read `docs/GROWTH_PLAN.md` only for growth
+priorities or monthly review.
 
 ## Workflow
 

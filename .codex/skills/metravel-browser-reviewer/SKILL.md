@@ -7,13 +7,9 @@ description: Review and fix metravel changes that are visible in a real browser.
 
 Use this skill for a review-and-fix loop on observable web behavior. It complements `$metravel-code-reviewer` and `$metravel-ui-guardrails`.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/TESTING.md`
-- relevant `docs/features/*.md` when the flow has a feature doc.
+`AGENTS.md` is inherited. Load the matching feature contract, the exact
+UI/media/link headings implicated by the diff, and only the browser/operation
+section needed from `docs/TESTING.md` or `docs/WORKFLOW_OPERATIONS.md`.
 
 ## Review Loop
 
