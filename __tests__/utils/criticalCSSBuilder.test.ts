@@ -251,3 +251,44 @@ describe('buildCriticalCSS: до-гидрационные размеры /places
     expect(slot['flex-basis']).toBe(card.flexBasis)
   })
 })
+
+// #1479: `content-visibility:auto` на блоке ПЕРВОГО экрана travel-detail —
+// единственный источник CLS на странице статьи. Пропускать рендер там нечего
+// (mobile 412x823: блок на y=675, то есть в стартовом вьюпорте), а вот
+// перещёлкивание между `contain-intrinsic-size` и реальной высотой двигает всё
+// нижележащее. Замер на живом проде: с правилом CLS 0.01110 и два сдвига по
+// 0.005551 в 3/3 итерациях, без правила — 0.00000 и ноль сдвигов в 3/3.
+describe('buildCriticalCSS: первый экран travel-detail не пропускает рендер', () => {
+  const css = buildCriticalCSS()
+
+  const declarationsFor = (selector: string) =>
+    css
+      .split('\n')
+      .filter((line) => line.trim().startsWith(`${selector}{`))
+      .join(' ')
+
+  it('не вешает content-visibility на quick-facts', () => {
+    const rule = declarationsFor('[data-testid="travel-details-quick-facts"]')
+
+    expect(rule).not.toMatch(/content-visibility/)
+    expect(rule).not.toMatch(/contain-intrinsic-size/)
+  })
+
+  it('оставляет content-visibility только заведомо нижним секциям', () => {
+    const skipped = css
+      .split('\n')
+      .filter((line) => line.includes('content-visibility:auto'))
+      .map((line) => line.slice(0, line.indexOf('{')))
+
+    // Регрессия ловится по составу списка: любой новый первый экран travel
+    // должен попасть сюда осознанно, а не приехать вместе с чужой правкой.
+    expect(skipped).toEqual(
+      expect.arrayContaining([
+        '[data-testid="travel-details-description"]',
+        '[data-testid="travel-details-map"]',
+        '[data-testid="travel-details-points"]',
+      ]),
+    )
+    expect(skipped).not.toContain('[data-testid="travel-details-quick-facts"]')
+  })
+})

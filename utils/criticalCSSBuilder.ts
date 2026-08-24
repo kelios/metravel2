@@ -166,7 +166,18 @@ export function buildCriticalCSS(): string {
     '[data-testid="travel-details-points"]{content-visibility:auto;contain-intrinsic-size:auto 300px}',
     '[data-testid="travel-details-author"]{content-visibility:auto;contain-intrinsic-size:auto 200px}',
     '[data-testid="travel-details-author-mobile"]{content-visibility:auto;contain-intrinsic-size:auto 200px}',
-    '[data-testid="travel-details-quick-facts"]{content-visibility:auto;contain-intrinsic-size:auto 80px}',
+    // #1479: у `travel-details-quick-facts` здесь стоял
+    // `content-visibility:auto;contain-intrinsic-size:auto 80px` — и это был
+    // единственный источник CLS на travel-detail. Блок лежит НА ПЕРВОМ ЭКРАНЕ
+    // (mobile 412x823: y=675), то есть пропускать его рендер нечего — экономии
+    // нет по построению. Зато во время гидрации он дважды перещёлкивал между
+    // 80px-заглушкой и реальными 156px, каждый раз двигая всё нижележащее на
+    // 76px: ровно два сдвига по 0.005551 = CLS 0.0111 при бюджете 0.01.
+    // A/B на живом проде (тот же URL/профиль, 3 итерации, отличие только в
+    // этом правиле): с правилом 0.01110 и 2 сдвига в 3/3; без правила 0.00000
+    // и 0 сдвигов в 3/3. Правило намеренно не заменено на точный
+    // contain-intrinsic-size: реальная высота блока зависит от данных статьи
+    // (156px скелет / 214px контент), любая константа снова разъедется.
     '[data-testid="map-skeleton"],[data-testid="search-skeleton"]{animation:pulse 1.5s ease-in-out infinite}',
     '@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.7}}',
     // CSS-only skeleton shimmer for header and hero — visible before JS loads.
