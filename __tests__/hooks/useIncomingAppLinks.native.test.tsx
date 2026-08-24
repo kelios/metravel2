@@ -86,6 +86,7 @@ describe('mapIncomingAppLinkToHref', () => {
     'https://metravel.by/travels/test%2fslug',
     'https://metravel.by/travels/%ZZ',
     'https://metravel.by/travels/test-slug?from=%ZZ',
+    'https://metravel.by/travels/test-slug?from=%25ZZ',
     'metravel://travels/test-slug?from=%00',
     'metravel://',
     'metravel:/travels/test-slug',

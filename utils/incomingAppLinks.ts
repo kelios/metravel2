@@ -2,6 +2,7 @@ const TRUSTED_HTTPS_HOST = 'metravel.by';
 const CUSTOM_SCHEME_PREFIX = /^metravel:\/\//i;
 const DOT_PATH_SEGMENT = /(?:^|\/)(?:(?:\.|%2e){1,2})(?:\/|$)/i;
 const ENCODED_PATH_SEPARATOR = /%(?:2f|5c)/i;
+const MALFORMED_PERCENT_ESCAPE = /%(?![0-9a-f]{2})/i;
 
 function getCustomSchemePath(url: string): string {
   const schemeSeparatorIndex = url.indexOf('://');
@@ -82,7 +83,15 @@ function isSafeDynamicSegment(segment: string): boolean {
 
 function isSafePreservedSearch(search: string): boolean {
   try {
-    return !hasAsciiControlCharacter(decodeURIComponent(search));
+    const decoded = decodeURIComponent(search);
+
+    return (
+      !hasAsciiControlCharacter(decoded) &&
+      // NSURL normalizes an invalid `%ZZ` input to `%25ZZ` before React Native
+      // receives it. Validate the decoded form too so that normalization cannot
+      // turn malformed device input into an accepted query.
+      !MALFORMED_PERCENT_ESCAPE.test(decoded)
+    );
   } catch {
     return false;
   }
