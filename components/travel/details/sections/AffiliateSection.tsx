@@ -1,16 +1,17 @@
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Platform, Text, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 
 import { getAffiliateOffers, isAffiliateEnabled } from '@/components/affiliate/affiliateConfig'
 import AffiliateOffers from '@/components/affiliate/AffiliateOffers'
-import { getCountryCodeByCoords } from '@/utils/geoCountry'
 import { translate as i18nT } from '@/i18n'
 
 
-/** ISO country code of the first map point, via bbox lookup. */
-const resolveCodeFromFirstPoint = (travel: Travel): string | undefined => {
+type FirstPointCoordinates = { lat: number; lng: number }
+
+/** Valid coordinates of the first map point; country lookup stays behind import(). */
+const resolveFirstPointCoordinates = (travel: Travel): FirstPointCoordinates | undefined => {
   const point = travel.travelAddress?.[0] as { coord?: string; lat?: number; lng?: number } | undefined
   if (!point) return undefined
 
@@ -22,12 +23,51 @@ const resolveCodeFromFirstPoint = (travel: Travel): string | undefined => {
     lng = b
   }
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return undefined
-  return getCountryCodeByCoords(lat, lng)
+  return { lat, lng }
+}
+
+/**
+ * Keep the 47 KB country-outline payload out of the travel route's eager graph.
+ * The trip planner is its synchronous owner; sharing the same sync dependency
+ * from this already-deferred section makes Metro hoist it into both HTML routes.
+ */
+const useResolvedCountryCode = (travel: Travel, enabled: boolean): string | undefined => {
+  const raw = String((travel as any).countryCode ?? '').trim().toUpperCase()
+  const coordinates = useMemo(() => resolveFirstPointCoordinates(travel), [travel])
+  const lookupKey = coordinates ? `${raw}|${coordinates.lat}|${coordinates.lng}` : `${raw}|none`
+  const [derived, setDerived] = useState<{ key: string; code?: string }>({ key: '', code: undefined })
+
+  const explicit = /^[A-Z]{2}$/.test(raw) ? raw : undefined
+
+  useEffect(() => {
+    if (!enabled || explicit || !coordinates) return
+
+    let active = true
+    void import('@/utils/geoCountry')
+      .then(({ getCountryCodeByCoords }) => {
+        if (!active) return
+        const fromPoint = getCountryCodeByCoords(coordinates.lat, coordinates.lng)
+        const declared = raw.includes(',') ? raw.split(',').map((code) => code.trim()) : null
+        const code = declared && fromPoint && !declared.includes(fromPoint) ? undefined : fromPoint
+        setDerived({ key: lookupKey, code })
+      })
+      .catch(() => {
+        if (active) setDerived({ key: lookupKey, code: undefined })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [coordinates, enabled, explicit, lookupKey, raw])
+
+  if (explicit) return explicit
+  return derived.key === lookupKey ? derived.code : undefined
 }
 
 /** ISO country code: explicit `countryCode`, else derived from the first point's coords. */
-const resolveCountryCode = (travel: Travel): string | undefined => {
+const useCountryCode = (travel: Travel, enabled: boolean): string | undefined => {
   const raw = String((travel as any).countryCode ?? '').trim()
+  const resolved = useResolvedCountryCode(travel, enabled)
 
   // Мульти-страновой маршрут отдаёт код списком («ua, ge»). Берём страну первой
   // точки, но только если она объявлена в этом же списке: гео-таблица знает не
@@ -37,31 +77,28 @@ const resolveCountryCode = (travel: Travel): string | undefined => {
   // Первый токен списка брать нельзя: у 205 «ru, in» и 210 «ru, eg» он уводит
   // на Россию с индийского и египетского маршрута.
   if (raw.includes(',')) {
-    const declared = raw.toUpperCase().split(',').map((code) => code.trim())
-    const fromPoint = resolveCodeFromFirstPoint(travel)
-    return fromPoint && declared.includes(fromPoint) ? fromPoint : undefined
+    return resolved
   }
 
-  const explicit = raw.toUpperCase()
-  if (/^[A-Z]{2}$/.test(explicit)) return explicit
-
-  return resolveCodeFromFirstPoint(travel)
+  return resolved
 }
 
 export const AffiliateSection: React.FC<{
   travel: Travel
   styles: any
 }> = ({ travel, styles }) => {
+  const affiliateEnabled = isAffiliateEnabled()
+  const countryCode = useCountryCode(travel, affiliateEnabled)
+
   // Contextual to the route's location, and off entirely until the owner
   // configures a Travelpayouts marker — so nothing ships until ready (FE-2).
-  if (!isAffiliateEnabled()) return null
+  if (!affiliateEnabled) return null
 
   // `cityName` в данных — это адрес первой точки из обратного геокодинга
   // («Базилика Святого Стефана, 1, Szent István tér, …, 1051, Венгрия»), а не
   // название города, поэтому в подписи он не участвует: место = страна, ровно
   // как и destination самой партнёрской ссылки. Reliable location signal =
   // country code from the first map point's coords; same approach as BelkrajWidget.
-  const countryCode = resolveCountryCode(travel)
   // Мульти-страновые маршруты отдают `countryName` списком («Украина, Грузия»),
   // а ссылка всегда одностранная — по countryCode. Подписать такую пару списком
   // значит пообещать одно, а привести в другое, поэтому место просто не

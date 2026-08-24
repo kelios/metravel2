@@ -1,5 +1,5 @@
 import { Platform } from 'react-native'
-import { render, fireEvent } from '@testing-library/react-native'
+import { render, fireEvent, waitFor } from '@testing-library/react-native'
 
 import { AffiliateSection } from '@/components/travel/details/sections/AffiliateSection'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
@@ -135,7 +135,7 @@ describe('AffiliateSection native', () => {
 
   // Ссылка, а не только копия: для списка стран страна первой точки годится
   // лишь тогда, когда она в этом же списке объявлена.
-  it('deep-links to the first point country when it is one of the declared ones', () => {
+  it('deep-links to the first point country when it is one of the declared ones', async () => {
     const poland = {
       id: 640,
       cityName: 'Rynek Główny, Kraków, Polska',
@@ -145,16 +145,18 @@ describe('AffiliateSection native', () => {
     } as any
 
     const { getByText } = render(<AffiliateSection travel={poland} styles={styles} />)
-    fireEvent.press(getByText('Подобрать жильё'))
-
-    expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/poland/'))
+    await waitFor(() => {
+      ;(openExternalUrlInNewTab as jest.Mock).mockClear()
+      fireEvent.press(getByText('Подобрать жильё'))
+      expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/poland/'))
+    })
   })
 
   // Реальная статья, из-за которой появился гейт «объявлена ли страна в списке».
   // Пока `getCountryCodeByCoords` работал по bbox, Тбилиси резолвился как RU и
   // увёл бы читателя на Россию; с контурами страна первой точки — GE, и она в
   // списке объявлена, поэтому ссылка обязана вести именно в Грузию.
-  it('deep-links a multi-country route to the declared country of the first point', () => {
+  it('deep-links a multi-country route to the declared country of the first point', async () => {
     const georgia = {
       id: 213,
       cityName: 'Тбилисский ботанический сад, Тбилиси, Грузия',
@@ -164,16 +166,18 @@ describe('AffiliateSection native', () => {
     } as any
 
     const { getByText } = render(<AffiliateSection travel={georgia} styles={styles} />)
-    fireEvent.press(getByText('Подобрать жильё'))
-
-    expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/georgia/'))
-    expect(hotelsDestination()).not.toContain('russia')
+    await waitFor(() => {
+      ;(openExternalUrlInNewTab as jest.Mock).mockClear()
+      fireEvent.press(getByText('Подобрать жильё'))
+      expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/georgia/'))
+      expect(hotelsDestination()).not.toContain('russia')
+    })
   })
 
   // Инвариант отдельно от точности гео-таблицы: что бы ни вернул резолвер, код
   // страны принимается только если он объявлен в списке маршрута. Точка в Анкаре
   // (TR) при списке «ua, ge» — гадание мимо, ссылка остаётся нейтральной.
-  it('falls back to the partner homepage when the first point is outside the declared list', () => {
+  it('falls back to the partner homepage when the first point is outside the declared list', async () => {
     const offList = {
       id: 213,
       cityName: 'Анкара, Турция',
@@ -183,9 +187,11 @@ describe('AffiliateSection native', () => {
     } as any
 
     const { getByText } = render(<AffiliateSection travel={offList} styles={styles} />)
-    fireEvent.press(getByText('Подобрать жильё'))
-
-    expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/'))
-    expect(hotelsDestination()).not.toContain('%2Fhotel%2F')
+    await waitFor(() => {
+      ;(openExternalUrlInNewTab as jest.Mock).mockClear()
+      fireEvent.press(getByText('Подобрать жильё'))
+      expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/'))
+      expect(hotelsDestination()).not.toContain('%2Fhotel%2F')
+    })
   })
 })
