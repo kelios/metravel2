@@ -37,10 +37,9 @@ export default function TravelDetailsSeoBlock({
             key="travel-article-jsonld"
             id="travel-article-jsonld"
             type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: stringifyJsonLd(jsonLd),
-            }}
-          />
+          >
+            {stringifyJsonLd(jsonLd)}
+          </script>
         </Head>
       )}
     </>
