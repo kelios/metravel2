@@ -2,6 +2,18 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "QA Origin Proxy 4622",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".codex-temp/qa-origin-proxy-1532.js",
+        "4622",
+        "https://metravel.by",
+        "http://localhost:8099"
+      ],
+      "port": 4622,
+      "autoPort": false
+    },
+    {
       "name": "Travel Seo 1438 8137",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
