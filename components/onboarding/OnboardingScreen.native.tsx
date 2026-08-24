@@ -71,26 +71,24 @@ export default function OnboardingScreen() {
     }
   }, [])
 
-  const dismiss = useCallback(() => {
+  const dismiss = useCallback(async () => {
+    await AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, '1').catch(() => {})
     setVisible(false)
-    void AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, '1').catch(() => {})
   }, [])
 
   const onSkip = useCallback(() => {
     hapticImpact('light')
-    dismiss()
+    void dismiss()
   }, [dismiss])
 
   const onNext = useCallback(() => {
     hapticImpact('light')
-    setIndex((prev) => {
-      if (prev >= SLIDES.length - 1) {
-        dismiss()
-        return prev
-      }
-      return prev + 1
-    })
-  }, [dismiss])
+    if (index >= SLIDES.length - 1) {
+      void dismiss()
+      return
+    }
+    setIndex((prev) => Math.min(prev + 1, SLIDES.length - 1))
+  }, [dismiss, index])
 
   if (!checked || !visible) return null
 

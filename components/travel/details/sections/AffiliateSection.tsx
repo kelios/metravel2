@@ -32,7 +32,7 @@ const resolveFirstPointCoordinates = (travel: Travel): FirstPointCoordinates | u
  * from this already-deferred section makes Metro hoist it into both HTML routes.
  */
 const useResolvedCountryCode = (travel: Travel, enabled: boolean): string | undefined => {
-  const raw = String((travel as any).countryCode ?? '').trim().toUpperCase()
+  const raw = String(travel.countryCode ?? '').trim().toUpperCase()
   const coordinates = useMemo(() => resolveFirstPointCoordinates(travel), [travel])
   const lookupKey = coordinates ? `${raw}|${coordinates.lat}|${coordinates.lng}` : `${raw}|none`
   const [derived, setDerived] = useState<{ key: string; code?: string }>({ key: '', code: undefined })
@@ -43,7 +43,7 @@ const useResolvedCountryCode = (travel: Travel, enabled: boolean): string | unde
     if (!enabled || explicit || !coordinates) return
 
     let active = true
-    void import('@/utils/geoCountry')
+    void Promise.resolve(import('@/utils/geoCountry'))
       .then(({ getCountryCodeByCoords }) => {
         if (!active) return
         const fromPoint = getCountryCodeByCoords(coordinates.lat, coordinates.lng)
@@ -66,7 +66,7 @@ const useResolvedCountryCode = (travel: Travel, enabled: boolean): string | unde
 
 /** ISO country code: explicit `countryCode`, else derived from the first point's coords. */
 const useCountryCode = (travel: Travel, enabled: boolean): string | undefined => {
-  const raw = String((travel as any).countryCode ?? '').trim()
+  const raw = String(travel.countryCode ?? '').trim()
   const resolved = useResolvedCountryCode(travel, enabled)
 
   // Мульти-страновой маршрут отдаёт код списком («ua, ge»). Берём страну первой
