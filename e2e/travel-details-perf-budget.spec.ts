@@ -63,10 +63,13 @@ const FCP_MAX_MS = envNum('PERF_FCP_MAX_MS', IS_CI ? 1800 : 3500);
 const MAX_JS_TRANSFER_KB = envNum('PERF_MAX_JS_KB', 1800);
 const MAX_IMG_TRANSFER_KB = envNum('PERF_MAX_IMG_KB', IS_CI ? 3500 : 4500);
 const MAX_TOTAL_TRANSFER_KB = envNum('PERF_MAX_TOTAL_KB', IS_CI ? 7000 : 8000);
-// Fresh origin/main production baseline (2026-08-11): 92 first-party requests,
-// 996 KB JS and 1149 KB total. Keep the request ceiling exact while the
-// independent transfer-size budgets continue to catch payload growth.
-const MAX_REQUESTS = envNum('PERF_MAX_REQUESTS', 92);
+// Production-build baseline refreshed on 2026-08-24 after the intentional
+// lazy/post-LCP route split: 96 budget-scoped requests (97 total, 88 scripts),
+// 1049 KB JS and 1202 KB total. The previous be65c498 build measured on the
+// same harness was 89 scoped (92 total, 82 scripts), 996 KB JS and 1149 KB
+// total. Keep this request ceiling exact while the independent byte and Web
+// Vitals budgets continue to catch payload or main-thread regressions.
+const MAX_REQUESTS = envNum('PERF_MAX_REQUESTS', 96);
 const MAX_LONG_TASKS = envNum('PERF_MAX_LONG_TASKS', 5);
 const LONG_TASK_THRESHOLD_MS = 50;
 
