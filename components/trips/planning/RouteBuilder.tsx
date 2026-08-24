@@ -546,13 +546,19 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
       const current = prev[editingIndex];
       if (!current) return prev;
       const next = prev.slice();
+      // #1532: `place` — не самостоятельный ярлык, а следствие привязки к месту
+      // или путешествию MeTravel. Точка без `placeId` этот тип получить не
+      // может: маршрут ушёл бы как `point_type: 'travel', place_id: null`, а
+      // бэкенд (`validate_route_point_attrs`) отклоняет такой PUT целиком —
+      // вместе со всеми здоровыми точками маршрута.
+      const nextType = editType === 'place' && current.placeId == null ? 'custom' : editType;
       next[editingIndex] = {
         ...current,
-        type: editType,
+        type: nextType,
         name,
         description: editDescription.trim() || null,
         coordinates,
-        placeId: editType === 'place' ? current.placeId : null,
+        placeId: nextType === 'place' ? current.placeId : null,
       };
       return next;
     });
@@ -1157,11 +1163,19 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
     </View>
   );
 
+  // #1532: чип «Место» в форме редактирования доступен только точке, уже
+  // привязанной к сущности MeTravel. Привязка ставится выбором в поиске формы
+  // добавления (`handleAddSitePoint`), поэтому у ручной точки, точки с карты и
+  // точки из адресного поиска этого типа в переключателе нет.
+  const editingPoint = editingIndex != null ? route[editingIndex] ?? null : null;
+  const editTypeOptions =
+    editingPoint?.placeId != null ? POINT_TYPES : POINT_TYPES.filter((type) => type !== 'place');
+
   const editPointSection = editingIndex != null ? (
       <View style={styles.editForm} testID="route-builder-edit-form">
         <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}</Text>
         <View style={styles.chipRow}>
-          {POINT_TYPES.map((type) => {
+          {editTypeOptions.map((type) => {
             const active = type === editType;
             return (
               <Pressable

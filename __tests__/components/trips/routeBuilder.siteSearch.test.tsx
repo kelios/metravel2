@@ -303,3 +303,98 @@ describe('RouteBuilder site search', () => {
     expect(getByText('Приблизительный маршрут')).toBeTruthy()
   })
 })
+
+// #1532: тип `place` в маршруте существует только вместе с привязкой к месту
+// или путешествию MeTravel. Форма редактирования раньше давала переключить на
+// него любую точку, и весь `PUT /trips/planned/{id}/route/` уходил с
+// `point_type: 'travel', place_id: null` — бэкенд отклонял его целиком, теряя
+// заодно все здоровые точки маршрута.
+describe('RouteBuilder point type binding', () => {
+  it('hides the place type when editing a point without a MeTravel binding', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-type-custom'))
+    fireEvent.changeText(getByTestId('route-builder-name'), 'Ручная точка')
+    fireEvent.changeText(getByTestId('route-builder-lat'), '53.9')
+    fireEvent.changeText(getByTestId('route-builder-lng'), '27.56')
+    fireEvent.press(getByTestId('route-builder-add'))
+
+    fireEvent.press(getByTestId('route-builder-edit-0'))
+
+    expect(queryByTestId('route-builder-edit-type-place')).toBeNull()
+    expect(getByTestId('route-builder-edit-type-custom')).toBeTruthy()
+    expect(getByTestId('route-builder-edit-type-rest')).toBeTruthy()
+    expect(getByTestId('route-builder-edit-type-overnight')).toBeTruthy()
+    // Форма добавления к типу «Место» доступ не теряет: там он выбирается
+    // вместе с самим местом через поиск по сайту.
+    expect(getByTestId('route-builder-type-place')).toBeTruthy()
+  })
+
+  it('hides the place type for a point added from the map', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('trip-plan-route-map'))
+
+    expect(getByTestId('route-builder-edit-form')).toBeTruthy()
+    expect(queryByTestId('route-builder-edit-type-place')).toBeNull()
+  })
+
+  it('keeps the place type and the binding when editing a linked point', async () => {
+    const trip = makeTrip()
+    trip.route = [
+      {
+        id: 'p1',
+        type: 'place',
+        name: 'Несвижский замок',
+        description: null,
+        coordinates: [26.6906, 53.2225],
+        placeId: 42,
+      },
+    ]
+
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={trip} />)
+
+    fireEvent.press(getByTestId('route-builder-edit-0'))
+    expect(getByTestId('route-builder-edit-type-place')).toBeTruthy()
+
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Несвиж, замок')
+    fireEvent.press(getByTestId('route-builder-edit-save'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0].route[0]).toMatchObject({
+      type: 'place',
+      name: 'Несвиж, замок',
+      placeId: 42,
+    })
+  })
+
+  it('normalizes a place point without a binding to custom on save', async () => {
+    const trip = makeTrip()
+    trip.route = [
+      {
+        id: 'p1',
+        type: 'place',
+        name: 'Парк Горького',
+        description: null,
+        coordinates: [27.5774, 53.9028],
+        placeId: null,
+      },
+    ]
+
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={trip} />)
+
+    fireEvent.press(getByTestId('route-builder-edit-0'))
+    expect(queryByTestId('route-builder-edit-type-place')).toBeNull()
+
+    fireEvent.press(getByTestId('route-builder-edit-save'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0].route[0]).toMatchObject({
+      type: 'custom',
+      name: 'Парк Горького',
+      placeId: null,
+    })
+  })
+})
