@@ -6,7 +6,7 @@
 import React from 'react'
 import fs from 'node:fs'
 import path from 'node:path'
-import { act, fireEvent, render } from '@testing-library/react-native'
+import { act, fireEvent, render, within } from '@testing-library/react-native'
 import { Platform, ScrollView } from 'react-native'
 
 const mockSendFeedback = jest.fn()
@@ -115,6 +115,24 @@ describe('QuestTrustBar', () => {
     fireEvent.press(getByTestId('quest-report-inaccuracy'))
 
     expect(UNSAFE_getByType(ScrollView).props.keyboardDismissMode).toBe('none')
+  })
+
+  it('держит кнопку отправки в закреплённом подвале вне ScrollView', () => {
+    // Регрессия #1480 (iOS-приёмка 22.08.2026): пока кнопка «Отправить» жила
+    // внутри ScrollView, на iOS она перерастала maxHeight шита и уезжала под
+    // клавиатуру. Подвал вне списка полей держит её над клавиатурой.
+    const { getByTestId, UNSAFE_getByType } = renderBar()
+
+    fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+    fireEvent.press(getByTestId('quest-report-inaccuracy'))
+
+    const scrollView = UNSAFE_getByType(ScrollView)
+    const scoped = within(scrollView)
+    // Поля живут внутри прокручиваемого списка…
+    expect(scoped.getByTestId('quest-inaccuracy-report-message')).toBeTruthy()
+    // …а кнопка отправки — снаружи, в закреплённом подвале.
+    expect(scoped.queryByTestId('quest-inaccuracy-report-submit')).toBeNull()
+    expect(getByTestId('quest-inaccuracy-report-submit')).toBeTruthy()
   })
 
   it('сохраняет Autofill и связывает e-mail с узким тематическим WebKit-контрактом', () => {

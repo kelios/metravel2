@@ -400,9 +400,9 @@ describe('TravelListItem media props on web', () => {
     expect(source?.src).toContain('q=70');
   });
 
-  // Клип соотношения слота (5:8 … 16:9) оставляет случай, когда кадр уже слота:
-  // тогда действует прежнее правило #1285 — `sizes` считается по отрисовке.
-  it('обложка за пределами диапазона слота просит ступень по своей отрисовке', () => {
+  // Слот единый квадратный, поэтому кадр уже квадрата рисуется не на всю ширину:
+  // действует прежнее правило #1285 — `sizes` считается по отрисовке.
+  it('портретная обложка в квадратном слоте просит ступень по своей отрисовке', () => {
     renderItem({
       travel: {
         ...baseTravel,
@@ -431,11 +431,15 @@ describe('TravelListItem media props on web', () => {
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     const source = props.mediaProps?.webResponsiveSource;
-    // 9:16 уже нижней границы слота 5:8, поэтому слот встаёт на 5:8 (320×512),
-    // а кадр рисуется как 288×512 — поле по 5% с каждой стороны.
-    expect(props.mediaAspectRatio).toBeCloseTo(0.625, 3);
-    expect(source?.sizes).toBe('288px');
-    expect(source?.srcSet).toContain('480w');
+    // Слот квадратный 320×320, кадр 9:16 рисуется как 180×320 — поле уходит в
+    // заливку dominant_color, а ступень srcSet считается от 180, не от слота.
+    // Потолок 180 × 1.8 = 324; 480/324 = 1.48 отфильтрован допуском лестницы,
+    // вершина — 320w (0.99 от потолка).
+    expect(props.mediaAspectRatio).toBe(1);
+    expect(source?.sizes).toBe('180px');
+    expect(source?.srcSet).toContain('320w');
+    expect(source?.srcSet).not.toContain('480w');
+    expect(source?.srcSet).not.toContain('640w');
     expect(source?.srcSet).not.toContain('960w');
   });
 

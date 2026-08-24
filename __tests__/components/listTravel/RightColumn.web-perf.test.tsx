@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Platform, StyleSheet } from 'react-native'
 
 import { ThemeProvider } from '@/hooks/useTheme'
+import { WEB_ROW_HEIGHT_DESKTOP } from '@/components/listTravel/rightColumnModel'
 
 jest.mock('@shopify/flash-list', () => {
   const React = require('react')
@@ -161,7 +162,7 @@ describe('RightColumn web row paint optimization', () => {
     })
     expect(getFlattenedRowStyle(1)).toMatchObject({
       contentVisibility: 'auto',
-      containIntrinsicSize: 'auto 420px',
+      containIntrinsicSize: `auto ${WEB_ROW_HEIGHT_DESKTOP}px`,
     })
   })
 

@@ -580,16 +580,15 @@ function UnifiedTravelCard({
     Number.isFinite(mediaAspectRatio) &&
     mediaAspectRatio > 0 &&
     imageHeight !== 0;
-  // Числа для сайзинга растра. `ImageCardMedia` использует `width`/`height` и как
-  // геометрию бокса, и как основу URL (`buildNativeSharpImageSource`:
-  // `baseWidth = width ?? height`), поэтому при адаптивном слоте их нельзя ни
-  // обнулить, ни оставить прежней фиксированной высотой:
-  //   — обнулить значит лишить native единственного числа, и Glide получит
-  //     оригинал обложки вместо `?w=` (#1103);
-  //   — оставить `imageHeight` значит просить ступень под ПРЕЖНЮЮ ландшафтную
-  //     полосу, а рисуется теперь весь слот.
-  // Берём фактическую ширину слота и высоту из пропорций, а геометрию бокса
-  // ниже принудительно возвращаем к 100% — тогда числа отвечают только за URL.
+  // Число для сайзинга растра. При адаптивном слоте в `ImageCardMedia` уходит
+  // ТОЛЬКО `width` (оценка ширины слота): `buildNativeSharpImageSource` берёт
+  // `baseWidth = width ?? height`, так что ширины достаточно для `?w=` (#1103).
+  // `height` при пропорциях не передаётся вовсе — числовая высота доезжает до
+  // `OptimizedImage` и на native ложится жёсткой высотой ExpoImage поверх
+  // `height:'100%'`; при оценке слота от вьюпорта это высота БОЛЬШЕ реального
+  // бокса, contain центрирует кадр в ней, и `overflow:'hidden'` медиа-бокса
+  // срезает низ фото. Принудительный 100%-стиль ниже держит только КОРЕНЬ
+  // ImageCardMedia и до ExpoImage не доходит.
   const mediaRasterWidth = hasMediaAspectRatio
     ? typeof mediaSlotWidth === 'number' && mediaSlotWidth > 0
       ? Math.round(mediaSlotWidth)
@@ -600,9 +599,7 @@ function UnifiedTravelCard({
       ? width
       : undefined;
   const mediaPixelHeight = hasMediaAspectRatio
-    ? mediaRasterWidth != null
-      ? Math.round(mediaRasterWidth / (mediaAspectRatio as number))
-      : undefined
+    ? undefined
     : typeof imageHeight === 'number'
       ? imageHeight
       : undefined;

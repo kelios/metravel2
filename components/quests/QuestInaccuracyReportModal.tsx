@@ -160,6 +160,7 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
             </View>
 
             <ScrollView
+              style={styles.scroll}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="none"
               contentContainerStyle={styles.body}
@@ -214,13 +215,20 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
               >
                 {i18nT('home:components.about.ContactForm.soglasen_na_na_obrabotku_personalnyh_dannyh_ffa70353')}
               </ConsentCheckbox>
+            </ScrollView>
 
+            {/* Отправка закреплена в подвале ВНЕ ScrollView. Внутри списка полей
+                кнопка на iOS перерастала `maxHeight` шита и уезжала под
+                клавиатуру: ScrollView без `flexShrink` не отдавал ей место, а
+                `flexGrow` контента только это усугублял (#1480, iOS-приёмка
+                22.08.2026). Теперь `scroll` ужимается, а подвал с кнопкой и
+                ошибкой всегда над клавиатурой — как в PointEditorSheet. */}
+            <View style={styles.footer}>
               {error ? (
                 <Text style={styles.error} testID="quest-inaccuracy-report-error">
                   {error}
                 </Text>
               ) : null}
-
               <View style={styles.actions}>
                 {sending ? <ActivityIndicator color={colors.primaryDark} /> : null}
                 <Button
@@ -232,7 +240,7 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
                   testID="quest-inaccuracy-report-submit"
                 />
               </View>
-            </ScrollView>
+            </View>
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>
@@ -289,12 +297,23 @@ const createStyles = (colors: ThemedColors) =>
       justifyContent: 'center',
       backgroundColor: colors.backgroundSecondary,
     },
+    // `flexShrink: 1`, а НЕ `flex: 1`: шит сам подстраивается под контент (высота
+    // не фиксирована, только `maxHeight`), поэтому `flex: 1` со схлопнутым базисом
+    // ужал бы ScrollView в ноль. `flexShrink` держит базис по контенту и ужимает
+    // список только на переполнении — тогда он и становится прокручиваемым, а
+    // закреплённый подвал с кнопкой остаётся над клавиатурой.
+    scroll: {
+      flexShrink: 1,
+    },
     body: {
-      // `flexGrow`, а не `flex`: когда клавиатура сжимает шит, контент должен
-      // стать прокручиваемым, а не ужаться вместе с ним.
-      flexGrow: 1,
       padding: spacing.md,
       gap: spacing.sm,
+    },
+    footer: {
+      padding: spacing.md,
+      gap: spacing.xs,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
     },
     questLine: {
       fontSize: 13,

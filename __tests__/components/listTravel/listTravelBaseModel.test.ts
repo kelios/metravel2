@@ -102,12 +102,15 @@ describe('search result virtualization budget', () => {
   // назад (0.6 × drawDistance) обязан покрывать целую карточку, иначе возврат на
   // один шаг рециклит ячейку и `expo-image` перерисовывает фото с плейсхолдера.
   it('keeps the native lookahead wider than one card in both directions', () => {
-    const CARD_HEIGHT_DP = 300
+    // #1487: квадратный медиа-бокс поднял карточку до ~420–470 dp
+    // (медиа = ширина карточки 330–380 dp + ~90 dp контента). Верхняя оценка —
+    // инвариант держится и для самых широких телефонов.
+    const CARD_HEIGHT_DP = 470
     const { drawDistance } = getRightColumnVirtualizationConfig(false, true)
 
-    // Значение закреплено device-verify на Pixel 10 Pro (#1263): правка web-веток
-    // не должна трогать native, поэтому пин точный, а не только по инварианту.
-    expect(drawDistance).toBe(560)
+    // Пин точный, а не только по инварианту: web-правки не должны тихо
+    // трогать native-ветку (прецедент — device-verify #1263 на Pixel 10 Pro).
+    expect(drawDistance).toBe(800)
     expect(drawDistance * BUFFER_BEHIND_RATIO).toBeGreaterThanOrEqual(CARD_HEIGHT_DP)
     expect(drawDistance * BUFFER_AHEAD_RATIO).toBeGreaterThanOrEqual(CARD_HEIGHT_DP * 2)
     expect(getRightColumnVirtualizationConfig(false, false).drawDistance).toBe(drawDistance)

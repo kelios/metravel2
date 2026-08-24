@@ -88,11 +88,14 @@ jest.mock('@/components/seo/LazyInstantSEO', () => ({
 }));
 
 jest.mock('@/components/travel/TravelWizardStepBasic', () => {
-  const { View, Text } = require('react-native');
+  const { Pressable, Text, View } = require('react-native');
   return function MockStepBasic() {
     return (
       <View>
         <Text>Step1</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Step 1 action">
+          <Text>Step 1 action</Text>
+        </Pressable>
       </View>
     );
   };
@@ -194,6 +197,16 @@ describe('UpsertTravel create/edit flow', () => {
     expect(getByText('Step1')).toBeTruthy();
     expect(capturedFormArgs?.isNew).toBe(false);
     expect(capturedFormArgs?.travelId).toBe('321');
+  });
+
+  it('keeps the editor root structural while interactive descendants stay addressable', () => {
+    const { getByRole, getByTestId } = render(<UpsertTravel />);
+
+    const root = getByTestId('travel-upsert.root');
+
+    expect(root.props.accessibilityLabel).toBeUndefined();
+    expect(root.props.accessible).not.toBe(true);
+    expect(getByRole('button', { name: 'Step 1 action' })).toBeTruthy();
   });
 
   it('sets explicit SEO title for the edit page', () => {

@@ -160,6 +160,8 @@
       "gomel-soviet|4-dom-mayanca|dict-color|красный и белый",
       "gomel-soviet|4-dom-mayanca|dict-color|красный и белый цвет",
       "gomel-soviet|4-dom-mayanca|dict-color|красный кирпич и белый",
+      "gomel-soviet|4-dom-mayanca|dict-material-surface|кирпичный и белый",
+      "gomel-soviet|4-dom-mayanca|dict-material-surface|красный кирпич и белый",
       "gomel-soviet|4-dom-mayanca|task-asks-color|формулировка"
     ],
     "scripts/grodno-gorodnitsa-quest-data.js": [
@@ -233,6 +235,9 @@
       "istanbul-empires|1-nemetskiy-fontan|dict-color|золотым",
       "istanbul-empires|1-nemetskiy-fontan|dict-color|из золота",
       "istanbul-empires|1-nemetskiy-fontan|dict-color|позолота",
+      "istanbul-empires|1-nemetskiy-fontan|dict-material-surface|позолота",
+      "istanbul-empires|1-nemetskiy-fontan|dict-material-surface|позолоченная",
+      "istanbul-empires|1-nemetskiy-fontan|dict-material-surface|позолоченный",
       "istanbul-empires|2-obelisk-feodosiya|task-color-word|обелиск",
       "istanbul-empires|4-obelisk-konstantina|task-color-word|обелиска"
     ],
@@ -245,6 +250,7 @@
       "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золотой",
       "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|золотые",
       "kamenets-white-tower|4-simeonovskaya-tserkov|dict-color|цвета золота",
+      "kamenets-white-tower|4-simeonovskaya-tserkov|dict-material-surface|позолоченные",
       "kamenets-white-tower|6-kameneckaya-vezha|dict-color|бурый",
       "kamenets-white-tower|6-kameneckaya-vezha|dict-color|из красного кирпича",
       "kamenets-white-tower|6-kameneckaya-vezha|dict-color|коричневая",
@@ -259,6 +265,13 @@
       "kamenets-white-tower|6-kameneckaya-vezha|dict-color|красный кирпич",
       "kamenets-white-tower|6-kameneckaya-vezha|dict-color|темно-красный",
       "kamenets-white-tower|6-kameneckaya-vezha|dict-color|тёмно-красный",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-material-surface|из красного кирпича",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-material-surface|кирпичная",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-material-surface|кирпичного",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-material-surface|кирпичный",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-material-surface|красного кирпича",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-material-surface|красный кирпич",
+      "kamenets-white-tower|6-kameneckaya-vezha|dict-material-surface|цвета кирпича",
       "kamenets-white-tower|6-kameneckaya-vezha|task-asks-color|формулировка"
     ],
     "scripts/kaunas-quest-data.js": [
@@ -290,6 +303,8 @@
     ],
     "scripts/krakow-dragon-quest-data.js": [
       "krakow-dragon|2-mariacki|dict-color|золотая корона",
+      "krakow-dragon|2-mariacki|dict-material-surface|золоченая корона",
+      "krakow-dragon|2-mariacki|dict-material-surface|золочёная корона",
       "krakow-dragon|2-mariacki|task-color-word|золотится",
       "krakow-dragon|5-kazimierz|task-color-word|синагогой"
     ],
@@ -397,6 +412,7 @@
       "malbork-marienburg|6-madonna|dict-color|золотым",
       "malbork-marienburg|6-madonna|dict-color|из золота",
       "malbork-marienburg|6-madonna|dict-color|позолота",
+      "malbork-marienburg|6-madonna|dict-material-surface|позолота",
       "malbork-marienburg|6-madonna|task-asks-color|формулировка"
     ],
     "scripts/minsk-cinema-quest-data.js": [
@@ -493,6 +509,8 @@
       "novogrudok-crown|6-borisoglebskaya|dict-color|золотым",
       "novogrudok-crown|6-borisoglebskaya|dict-color|позолота",
       "novogrudok-crown|6-borisoglebskaya|dict-color|цвета золота",
+      "novogrudok-crown|6-borisoglebskaya|dict-material-surface|позолота",
+      "novogrudok-crown|6-borisoglebskaya|dict-material-surface|позолоченные",
       "novogrudok-crown|6-borisoglebskaya|task-asks-color|формулировка"
     ],
     "scripts/oshmyany-quest-data.js": [
@@ -618,6 +636,7 @@
       "spb-guardians|2-isaac-cathedral|dict-color|позолота",
       "spb-guardians|2-isaac-cathedral|dict-color|сусальное золото",
       "spb-guardians|2-isaac-cathedral|dict-color|чистое золото",
+      "spb-guardians|2-isaac-cathedral|dict-material-surface|позолота",
       "spb-guardians|7-kazan-cathedral|task-color-word|золотыми"
     ],
     "scripts/svityaz-quest-data.js": [
@@ -703,7 +722,14 @@
       "vienna-imperial-secrets|7-pestsaule|dict-color|золотом",
       "vienna-imperial-secrets|7-pestsaule|dict-color|золотые",
       "vienna-imperial-secrets|7-pestsaule|dict-color|позолота",
-      "vienna-imperial-secrets|7-pestsaule|dict-color|позолотой"
+      "vienna-imperial-secrets|7-pestsaule|dict-color|позолотой",
+      "vienna-imperial-secrets|7-pestsaule|dict-material-surface|золочение",
+      "vienna-imperial-secrets|7-pestsaule|dict-material-surface|золочёная",
+      "vienna-imperial-secrets|7-pestsaule|dict-material-surface|золочёные",
+      "vienna-imperial-secrets|7-pestsaule|dict-material-surface|позолота",
+      "vienna-imperial-secrets|7-pestsaule|dict-material-surface|позолотой",
+      "vienna-imperial-secrets|7-pestsaule|dict-material-surface|позолоченная",
+      "vienna-imperial-secrets|7-pestsaule|dict-material-surface|позолоченные"
     ],
     "scripts/vilnius-kids-quest-data.js": [
       "vilnius-kids-iron-wolf|3-literatu|task-asks-material|формулировка",
@@ -790,6 +816,8 @@
       "warsaw-syrenka|6-zamek|dict-color|розово терракотовый",
       "warsaw-syrenka|6-zamek|dict-color|розовый",
       "warsaw-syrenka|6-zamek|dict-color|терракотовый",
+      "warsaw-syrenka|6-zamek|dict-material-surface|кирпичные",
+      "warsaw-syrenka|6-zamek|dict-material-surface|кирпичный",
       "warsaw-syrenka|6-zamek|task-asks-color|формулировка",
       "warsaw-syrenka|9-zlota-kaczka|dict-color|золотая корона",
       "warsaw-syrenka|9-zlota-kaczka|task-color-word|золотой"

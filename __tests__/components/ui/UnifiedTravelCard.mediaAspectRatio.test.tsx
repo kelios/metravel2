@@ -94,25 +94,29 @@ describe('#1487 пропорции медиа-бокса UnifiedTravelCard', () 
     expect(style?.aspectRatio).toBeUndefined()
   })
 
-  it('числовая высота для оптимизатора считается из пропорций, а не из imageHeight', () => {
+  it('при пропорциях числовая высота в ImageCardMedia не передаётся вовсе', () => {
     Platform.OS = 'ios'
     renderCard({ imageHeight: 270, mediaAspectRatio: 0.75, width: 386 })
 
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
-    expect(props.height).toBe(Math.round(386 / 0.75))
+    expect(props.width).toBe(386)
+    expect(props.height).toBeUndefined()
   })
 
   it('на native без ширины карточки сайзинг берётся из mediaSlotWidth', () => {
     // Регрессия #1103: на native `width` карточки не приходит ни от одного
     // консьюмера, и раньше единственным числом был `imageHeight`. Если не отдать
     // ничего, `buildNativeSharpImageSource` вернёт null и ExpoImage потянет
-    // ОРИГИНАЛ обложки вместо `?w=`.
+    // ОРИГИНАЛ обложки вместо `?w=`. При этом `height` при пропорциях НЕ
+    // передаётся: числовая высота доезжает до ExpoImage жёстким стилем поверх
+    // `height:'100%'`, и при оценке слота от вьюпорта кадр съезжает и режется
+    // снизу overflow'ом медиа-бокса (finding P1 прогона #3).
     Platform.OS = 'android'
     renderCard({ imageHeight: 270, mediaAspectRatio: 1, mediaSlotWidth: 358 })
 
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
     expect(props.width).toBe(358)
-    expect(props.height).toBe(358)
+    expect(props.height).toBeUndefined()
     // `baseWidth = width ?? height` в buildNativeSharpImageSource обязан быть числом
     expect(props.width ?? props.height).toEqual(expect.any(Number))
   })

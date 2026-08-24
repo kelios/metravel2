@@ -562,12 +562,15 @@ npx serve dist/prod -l 3000 -s
     never by switching a surface to `cover`, and never by amending this rule to legalize the
     switch. Precedent: 29c30d95 (2026-08-18) moved route cards to `cover` and wrote itself an
     “Exception INV2-17” right here; both the code and the exception were reverted on 2026-08-19.
-  - The route-card media slot takes the cover’s own aspect ratio, clamped to 5:8 … 16:9
-    (`resolveCardMediaSlotRatio`, #1487). This is not an exception to `contain` — it is what
-    makes `contain` lossless: a fixed landscape slot left a square cover with up to 27% flat
-    gutter per side (prod measurement 2026-08-23; 288 of 360 published covers are 1:1). Do not
-    pin route-card media back to a fixed height. Covered by
-    `__tests__/components/listTravel/cardMediaLetterbox.test.ts`, which fails above 10% flat share.
+  - The route-card media slot is a UNIFORM square (`CARD_MEDIA_SLOT_RATIO`, #1487). Owner
+    decision 2026-08-24: catalog cards must form an even grid (equal width and height), so the
+    slot must NOT follow each cover’s own ratio — that was tried on 2026-08-23 and rejected the
+    next day because it broke row alignment. Square is the content mode (288 of 360 published
+    covers are 1:1, prod measurement 2026-08-23): the majority letterboxes at 0%. With `contain`
+    mandatory and the slot uniform, the residual gutter on non-square covers (12.5% for 4:3/3:4,
+    up to 21.9% for 16:9/9:16) is CONTENT debt — fix it by providing square cover variants
+    (precedent #134/#152), never by `cover`, never by a per-card slot, never by editing this
+    rule. Covered by `__tests__/components/listTravel/cardMediaLetterbox.test.ts`.
 - The web letterbox fill has exactly one delivery path — `utils/mediaPlaceholderIndex.ts`
   (#1208/#1264, 2026-08-05). Change fill behaviour there and nowhere else. Two stages, both
   inside that module:

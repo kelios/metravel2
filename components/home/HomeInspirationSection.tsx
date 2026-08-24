@@ -78,10 +78,22 @@ function getItemKey(item: any, queryKey: string, index: number) {
   return `${queryKey}-${index}`
 }
 
-function getEditorialImageHeight(index: number, count: number) {
-  if (count <= 2) return 340
-  if (count === 3) return index === 0 ? 336 : 296
-  return index === 0 ? 316 : 292
+/**
+ * #1487: оценка ширины карточки редакционной сетки для сайзинга обложки.
+ * Обязана быть оценкой СВЕРХУ (#1285): контент секции на 1280 занимает
+ * ~1170 px (замер прода 2026-08-23: hero 643, стек 454), поэтому базой берём
+ * вьюпорт минус минимальные поля, а доли — из grid-раскладки 7/12 и 5/12.
+ * Без неё TravelListItem падал в фолбэк min(viewport, 720), и рейл 298 px
+ * просил ступень srcSet 720w/960w втрое крупнее своей отрисовки.
+ */
+export function getEditorialCardWidth(index: number, count: number, viewportWidth: number) {
+  const contentWidth = Math.min(viewportWidth, 1280) - 96
+  // Спаны зеркалят getEditorialCardStyle: широкие (7/12) — hero (index 0) и,
+  // при четырёх карточках, нижняя stack-bottom (index 3, gridColumn '6 / span 7');
+  // остальные — 5/12. Индексная оценка без учёта span давала нижней широкой
+  // карточке sizes узкого слота (493 на отрисовке 643) — мыло на DPR 1.
+  const isWide = index === 0 || (count >= 4 && index === 3)
+  return Math.max(1, Math.round((contentWidth * (isWide ? 7 : 5)) / 12))
 }
 
 function getEditorialCardStyle(styles: Styles, index: number, count: number) {
@@ -533,7 +545,7 @@ function Rail({
             item={item}
             index={index}
             isMobile={isMobile}
-            imageHeight={isMobile ? 200 : 210}
+            cardWidth={cardWidth}
             hideAuthor={hideAuthor}
             viewportWidth={viewportWidth}
             visualVariant="home-featured"
@@ -597,7 +609,7 @@ function EditorialGrid({
             item={item}
             index={index}
             isMobile={isMobile}
-            imageHeight={getEditorialImageHeight(index, visibleCount)}
+            cardWidth={isMobile ? undefined : getEditorialCardWidth(index, visibleCount, viewportWidth)}
             hideAuthor={hideAuthor}
             viewportWidth={viewportWidth}
             visualVariant="home-featured"

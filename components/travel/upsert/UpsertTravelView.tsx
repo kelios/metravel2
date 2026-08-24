@@ -549,7 +549,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   }
 
   return (
-    <View style={styles.container} testID="travel-upsert.root" accessibilityLabel={i18nT('travel:components.travel.upsert.UpsertTravelView.forma_sozdaniya_puteshestviya_9573fac8')}>
+    <View style={styles.container} testID="travel-upsert.root">
       <TravelPreviewModal
         visible={previewState.isPreviewVisible}
         onClose={previewState.hidePreview}

@@ -191,4 +191,23 @@ describe('findingKeys — ключ на каждое значение, а не �
     expect(keysOf(after)).toContain('q|church|dict-color|белый')
     expect(keysOf(after)).not.toContain('q|church|dict-color|синий')
   })
+
+  // P2 ревью 24.08.2026: облицовочный материал эмитится в ключ БЕЗУСЛОВНО, так же
+  // как цвет. Раньше маркер `dict-material-surface` стоял под порогом
+  // `dictIsSurfaceMaterial`, и когда облицовка была меньшинством словаря (шаг в
+  // scope через task-asks-material), её значение не попадало в ключ — переоблицовка
+  // «кирпич»→«плитка» проходила мимо baseline. Это ровно молчаливый дрейф
+  // поверхности, ради которого скан написан; кейс смешанной кладки Крево из 4f.
+  it('переоблицовка меньшинством словаря даёт НОВЫЙ ключ: baseline её не поглотит', () => {
+    const task = 'Из чего сложены стены?'
+    const before = classifyStep(step({ task, answer_pattern: dict(['три яруса', 'из кирпича', 'высокая', 'старая']) }))
+    const after = classifyStep(step({ task, answer_pattern: dict(['три яруса', 'из плитки', 'высокая', 'старая']) }))
+    const keysOf = (verdict: unknown) => findingKeys({ quest_id: 'q', step_id: 'wall', ...(verdict as object) })
+
+    // Оба шага в scope через формулировку, облицовка — 1 из 4 (ниже порога).
+    expect(before?.reason).toContain('task-asks-material')
+    expect(keysOf(before)).toContain('q|wall|dict-material-surface|из кирпича')
+    expect(keysOf(after)).toContain('q|wall|dict-material-surface|из плитки')
+    expect(keysOf(after)).not.toContain('q|wall|dict-material-surface|из кирпича')
+  })
 })

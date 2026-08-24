@@ -21,9 +21,11 @@ describe('#1285 геометрия слота обложки', () => {
     })
 
     expect(renderedWidth).toBe(200)
-    expect(maxCoverWidth).toBe(400)
-    // DPR 1.75 требует 350 device px — это ступень 480, а не прежняя 640.
-    expect(browserPick(buildCoverWidths(maxCoverWidth), renderedWidth, 1.75)).toBe(480)
+    // Потолок DPR у обложек карточек — 1.8 (#1487): 200 × 1.8 = 360.
+    expect(maxCoverWidth).toBe(360)
+    // Допуск покрывающей ступени: 480/360 = 1.33 > 1.25, ступень не добавляется.
+    // Браузер берёт 320w — 0.91 от потребности DPR 1.75, ровно уступка потолка.
+    expect(browserPick(buildCoverWidths(maxCoverWidth), renderedWidth, 1.75)).toBe(320)
   })
 
   it('портретный кадр занимает лишь часть ширины бокса', () => {
@@ -71,6 +73,17 @@ describe('#1285 геометрия слота обложки', () => {
 
     expect(renderedWidth).toBe(408)
     expect(renderedWidth).toBeGreaterThanOrEqual(396)
+  })
+
+  it('дрейф ширины колонки не возвращает в лестницу 960w (#1487)', () => {
+    // Слот 396 (прод) и 406 (тот же грид, другой скроллбар) обязаны кончаться
+    // одной ступенью 720: 960/731 = 1.31 отфильтрован допуском 1.25.
+    const at396 = resolveCoverSlotGeometry({ slotWidth: 396, slotHeight: 396, aspectRatio: 1 })
+    const at406 = resolveCoverSlotGeometry({ slotWidth: 406, slotHeight: 406, aspectRatio: 1 })
+
+    expect(buildCoverWidths(at396.maxCoverWidth)).toEqual([160, 320, 480, 640, 720])
+    expect(buildCoverWidths(at406.maxCoverWidth)).toEqual([160, 320, 480, 640, 720])
+    expect(browserPick(buildCoverWidths(at406.maxCoverWidth), 406, 2)).toBe(720)
   })
 
   it('без пропорций кадра сохраняется прежний потолок лестницы', () => {

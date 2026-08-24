@@ -343,11 +343,17 @@ function TripRouteImportPanel({
           <View style={styles.waypoints}>
             <Text style={styles.label}>{t('tripsStatic:plan.routeImport.namedWaypoints')}</Text>
             {prepared.namedWaypoints.length ? (
+              // Список, а не строка-обёртка пилюль: имя-`Text` во `flexWrap`-строке
+              // Android получает intrinsic-ширину и системно усекается («Parking
+              // Kiry» → «Parking»), причём непредсказуемо. Проверенный на этом же
+              // Pixel фикс (F-25 #97, F-40 #132) — `flex: 1` у текста в `row`,
+              // поэтому каждая точка живёт своей строкой с растянутым именем.
               <View style={styles.waypointList}>
                 {prepared.namedWaypoints.map((waypoint, index) => (
-                  <Text key={`${waypoint.coord}-${index}`} style={styles.waypoint}>
-                    {waypoint.name}
-                  </Text>
+                  <View key={`${waypoint.coord}-${index}`} style={styles.waypointRow}>
+                    <View style={styles.waypointDot} />
+                    <Text style={styles.waypointText}>{waypoint.name}</Text>
+                  </View>
                 ))}
               </View>
             ) : (
@@ -428,15 +434,24 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.md },
   stat: { color: colors.text, fontSize: 14, fontWeight: '700' },
   waypoints: { gap: DESIGN_TOKENS.spacing.xs },
-  waypointList: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
-  waypoint: {
-    color: colors.text,
-    fontSize: 13,
+  waypointList: { gap: DESIGN_TOKENS.spacing.xs },
+  waypointRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.full,
+    borderRadius: DESIGN_TOKENS.radii.md,
     backgroundColor: colors.surfaceMuted,
   },
+  waypointDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: DESIGN_COLORS.travelPoint,
+  },
+  // flex:1 — обязателен: без него Text в row усекается системным ellipsis Android.
+  waypointText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 18 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.sm },
 });
 

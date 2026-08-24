@@ -32,7 +32,7 @@ import {
   buildCoverWidths,
   isLikelyWatermarked,
   normalizeOwnerIds,
-  resolveCardMediaSlotRatio,
+  CARD_MEDIA_SLOT_RATIO,
   resolveCoverSlotGeometry,
   resolveDisplayTravelYear,
   resolveTravelAuthorDisplayName,
@@ -250,16 +250,13 @@ function TravelListItem({
   const baseCoverSlotHeight =
     typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT
 
-  // #1487: медиа-бокс карточки маршрута кадрируется `contain`, поэтому плоское
-  // поле `dominant_color` растёт ровно на расхождении пропорций слота и
-  // обложки. Слот берёт пропорции обложки (с ограничением крайностей в
-  // `resolveCardMediaSlotRatio`), и поле схлопывается в ноль без перехода на
-  // `cover` и без второго растра. `null` — пропорции обложки неизвестны, тогда
-  // остаётся прежняя фиксированная высота.
-  const coverSlotRatio = useMemo(
-    () => (baseCoverSlotHeight === 0 ? null : resolveCardMediaSlotRatio(coverAspectRatio)),
-    [baseCoverSlotHeight, coverAspectRatio],
-  )
+  // #1487 (пересмотр 2026-08-24): медиа-слот карточки ЕДИНЫЙ квадратный —
+  // владелец требует ровную сетку одинаковых карточек, поэтому слот не следует
+  // пропорциям конкретной обложки (первый заход так делал и ломал выравнивание
+  // рядов каталога). Квадрат — мода прод-обложек (80% — 1:1): на них поле 0%,
+  // остаток летербоксится заливкой `dominant_color` (см. CARD_MEDIA_SLOT_RATIO).
+  // `imageHeight === 0` по-прежнему прячет медиа-бокс целиком.
+  const coverSlotRatio = baseCoverSlotHeight === 0 ? null : CARD_MEDIA_SLOT_RATIO
 
   // Оценка ширины карточки, когда сетка не сообщила её явно. Она обязана быть
   // оценкой СВЕРХУ: занижение делает ландшафтную обложку мылом (см.
@@ -277,9 +274,9 @@ function TravelListItem({
       ? cardWidth
       : Math.min(effectiveWidth, isMobile ? 640 : 720)
 
-  // Высота слота теперь производная от его пропорций, а не входной константы:
-  // именно её видит `resolveCoverSlotGeometry`, иначе ступень srcSet считалась
-  // бы по прежнему ландшафтному боксу и портретная обложка получила бы мыло.
+  // Высота слота — производная от его пропорций, а не входной константы: именно
+  // её видит `resolveCoverSlotGeometry`, иначе ступень srcSet считалась бы по
+  // прежнему ландшафтному боксу и квадратная обложка получила бы мыло.
   const coverSlotHeight =
     coverSlotRatio != null && coverSlotWidth > 0
       ? coverSlotWidth / coverSlotRatio
