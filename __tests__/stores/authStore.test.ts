@@ -75,12 +75,17 @@ const { getStorageBatch, removeStorageBatch, setStorageBatch } = require('@/util
 const { fetchUserProfile } = require('@/api/user') as { fetchUserProfile: jest.Mock };
 
 import { useAuthStore } from '@/stores/authStore';
+import { __resetSessionTokenWritesForTests } from '@/utils/authTokenStore';
 
 const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 const originalPlatformOS = Platform.OS;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Очередь и метка записи токенов — модульные синглтоны: без сброса счётчик
+  // смен сессии течёт между кейсами и следующий тест может внезапно получить
+  // `superseded` от чужой записи (#1545).
+  __resetSessionTokenWritesForTests();
   validateWebCookieSessionApi.mockResolvedValue(true);
   Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
   // Reset store to initial state
@@ -435,15 +440,47 @@ describe('authStore', () => {
       await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toBe(false);
 
       // Стереть креды подтверждённой сессии мог бы только откат — а он единственный
-      // путь к удалению этих ключей. Он пропущен: ни secure-токены, ни identity-ключи
-      // storage не удалялись, поэтому записанная подтверждением сессия на диске цела.
-      // (Парный тест ниже доказывает, что при реальном logout эти же удаления срабатывают.)
-      expect(removeSecureItems).not.toHaveBeenCalled();
+      // путь к удалению ПАРЫ токенов. Он пропущен: ни пара secure-токенов, ни
+      // identity-ключи storage не удалялись, поэтому записанная подтверждением сессия
+      // на диске цела. (Парный тест ниже доказывает, что при реальном logout эти же
+      // удаления срабатывают.) Удаление одного `refreshToken` — не откат: так слой
+      // записи не оставляет рядом со своим access чужой refresh (#1545).
+      expect(removeSecureItems).not.toHaveBeenCalledWith(['userToken', 'refreshToken']);
       expect(removeStorageBatch).not.toHaveBeenCalled();
       const s = useAuthStore.getState();
       expect(s.isAuthenticated).toBe(true);
       expect(s.userId).toBe('77');
       expect(s.username).toBe('Ирина');
+    });
+
+    it('вход, проигравший гонку подтверждению почты, не переписывает его токены (#1545)', async () => {
+      // Подтверждение почты пишет ту же пару ключей своим путём (`confirmAccount`),
+      // пока логин ждёт ответ сети. Раньше запись логина ложилась поверх — на диске
+      // оставалась пара из двух сессий. Теперь опоздавшая запись отбрасывается целиком.
+      const { persistSessionTokens } = require('@/utils/authTokenStore');
+      // Именно `Once`: `jest.clearAllMocks()` не снимает implementation, и запись
+      // в общий чокпоинт протекла бы в следующие кейсы.
+      loginApi.mockImplementationOnce(async () => {
+        await persistSessionTokens('confirm-token', 'confirm-refresh');
+        return {
+          token: 'login-token',
+          refresh: 'login-refresh',
+          id: 5,
+          name: 'Логин',
+          email: 'login@example.com',
+          is_superuser: false,
+        };
+      });
+
+      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toBe(false);
+
+      expect(setSecureItem).toHaveBeenCalledWith('userToken', 'confirm-token');
+      expect(setSecureItem).toHaveBeenCalledWith('refreshToken', 'confirm-refresh');
+      expect(setSecureItem).not.toHaveBeenCalledWith('userToken', 'login-token');
+      expect(setSecureItem).not.toHaveBeenCalledWith('refreshToken', 'login-refresh');
+      // Свою сессию логин не поднимает: креды на диске принадлежат не ему.
+      expect(setStorageBatch).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
 
     it('logout во время in-flight логина по-прежнему полностью откатывает креды', async () => {
@@ -569,7 +606,7 @@ describe('authStore', () => {
         status: 'error',
       });
 
-      expect(removeSecureItems).not.toHaveBeenCalled();
+      expect(removeSecureItems).not.toHaveBeenCalledWith(['userToken', 'refreshToken']);
       expect(removeStorageBatch).not.toHaveBeenCalled();
       const s = useAuthStore.getState();
       expect(s.isAuthenticated).toBe(true);

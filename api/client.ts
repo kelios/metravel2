@@ -9,13 +9,17 @@ import {
     shouldUseStoredAuthToken,
     usesWebCookieAuth,
 } from '@/utils/authPlatform';
-import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { getSecureItem } from '@/utils/secureStorage';
+import {
+    clearSessionTokens,
+    persistRotatedSessionTokens,
+    readRefreshTokenForRotation,
+} from '@/utils/authTokenStore';
 import {
     API_BASE_URL,
     DEFAULT_TIMEOUT,
     LONG_TIMEOUT,
     TOKEN_KEY,
-    REFRESH_TOKEN_KEY,
     isE2E,
 } from '@/api/apiConfig';
 import { notifyAuthInvalidation } from '@/api/authInvalidation';
@@ -116,7 +120,11 @@ class ApiClient {
         this.refreshTokenPromise = (async () => {
             try {
                 // ✅ FIX-001: Используем безопасное хранилище
-                const refreshToken = await getSecureItem(REFRESH_TOKEN_KEY);
+                // Refresh и метку читаем одним снимком: если пока шёл запрос диск
+                // занял другой вход или подтверждение почты, ротация не должна
+                // затирать их пару своей — сессии разные (#1545).
+                const { refresh: refreshToken, mark: writeMarkAtStart } =
+                    await readRefreshTokenForRotation();
                 if (!refreshToken) {
                     throw new Error(i18nT('errorsStatic:api.client.refreshTokenMissing'));
                 }
@@ -143,10 +151,14 @@ class ApiClient {
                 const newAccessToken = data.access || data.token;
 
                 if (newAccessToken) {
-                    // ✅ FIX-001: Сохраняем в безопасное хранилище
-                    await setSecureItem(TOKEN_KEY, newAccessToken);
-                    if (data.refresh) {
-                        await setSecureItem(REFRESH_TOKEN_KEY, data.refresh);
+                    // ✅ FIX-001: Сохраняем в безопасное хранилище (одной парой, #1545)
+                    const persisted = await persistRotatedSessionTokens(newAccessToken, data.refresh, {
+                        expectedMark: writeMarkAtStart,
+                    });
+                    // Диск занят другой сессией: ротация относится к прошлой, и
+                    // повторять запрос её токеном нельзя — это чужой доступ.
+                    if (persisted === 'superseded') {
+                        throw new ApiError(401, i18nT('errorsStatic:api.client.refreshFailed'));
                     }
                 }
 
@@ -166,7 +178,7 @@ class ApiClient {
      * ✅ FIX-001: Использует безопасное хранилище
      */
     private async clearTokens(): Promise<void> {
-        await removeSecureItems([TOKEN_KEY, REFRESH_TOKEN_KEY]);
+        await clearSessionTokens();
         notifyAuthInvalidation();
     }
 

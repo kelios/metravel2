@@ -49,6 +49,7 @@ jest.mock('@/utils/logger', () => ({
 
 jest.mock('@/utils/secureStorage', () => ({
   setSecureItem: jest.fn(),
+  removeSecureItems: jest.fn(),
 }));
 
 jest.mock('@/utils/storageBatch', () => ({

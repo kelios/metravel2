@@ -16,7 +16,8 @@ import { validatePassword } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/utils/retry';
-import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { getSecureItem } from '@/utils/secureStorage';
+import { persistSessionTokens, clearSessionTokens } from '@/utils/authTokenStore';
 import { getCsrfHeader } from '@/utils/csrf';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import {
@@ -42,12 +43,6 @@ const WEB_SESSION_PROBE = `${URLAPI}/user/me/verifications/`;
 
 const getStoredAuthToken = async (): Promise<string | null> =>
     shouldUseStoredAuthToken() ? getSecureItem('userToken') : null;
-
-const persistNativeAuthTokens = async (token?: string, refresh?: string): Promise<void> => {
-    if (!shouldUseStoredAuthToken() || !token) return;
-    await setSecureItem('userToken', token);
-    if (refresh) await setSecureItem('refreshToken', refresh);
-};
 
 /**
  * Validate the ambient HttpOnly-cookie session through a private endpoint.
@@ -229,7 +224,7 @@ export const logoutApi = async () => {
         // Чистим креды БЕЗУСЛОВНО — даже если серверный logout упал/таймаут,
         // иначе на устройстве остаётся валидный токен и запросы шлют старый Authorization.
         await Promise.allSettled([
-            removeSecureItems(['userToken', 'refreshToken']),
+            clearSessionTokens(),
             AsyncStorage.multiRemove(['userName', 'userId']),
         ]);
     }
@@ -373,7 +368,7 @@ export const registration = async (values: FormValues): Promise<{ ok: boolean; m
 
         if (jsonResponse.token) {
             const resp = jsonResponse as Record<string, unknown>;
-            await persistNativeAuthTokens(
+            await persistSessionTokens(
                 jsonResponse.token,
                 typeof resp.refresh === 'string' ? resp.refresh : undefined,
             );
@@ -410,7 +405,7 @@ export const confirmAccount = async (hash: string) => {
             if ((typeof userId !== 'string' && typeof userId !== 'number') || String(userId).trim() === '') {
                 throw new Error(i18nT('errorsStatic:api.auth.confirmationFailed'));
             }
-            await persistNativeAuthTokens(jsonResponse.userToken, jsonResponse.refreshToken);
+            await persistSessionTokens(jsonResponse.userToken, jsonResponse.refreshToken);
             await setStorageBatch([
                 ['userName', jsonResponse.userName || ''],
                 ['userId', String(userId)],

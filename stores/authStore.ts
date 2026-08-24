@@ -4,7 +4,12 @@
 // для инициализации и регистрации invalidation handler.
 
 import { create } from 'zustand';
-import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { getSecureItem } from '@/utils/secureStorage';
+import {
+    clearSessionTokens,
+    getSessionWriteMark,
+    persistSessionTokens,
+} from '@/utils/authTokenStore';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
@@ -84,14 +89,13 @@ const resolveAuthDisplayName = (
 // belong to that winning session, so leave both tokens and storage untouched.
 // On web (the reported surface) this is exact — storageBatch writes localStorage
 // synchronously, so the confirm inside this login's post-write yield is always the
-// last writer. A narrow native-only residual remains (async SecureStore token
-// writes can interleave into a mixed token pair); that is a write-layer race in the
-// #1462 shared-key mechanism that the rollback discriminator cannot resolve, tracked
-// separately in #1545.
+// last writer. The native token half is no longer left to this discriminator either:
+// writes go through the serialized chokepoint in `@/utils/authTokenStore`, which
+// keeps the pair whole and drops a superseded login's write outright (#1545).
 const rollbackPersistedCredentials = async (): Promise<void> => {
     if (useAuthStore.getState().isAuthenticated) return;
     await Promise.all([
-        removeSecureItems(['userToken', 'refreshToken']),
+        clearSessionTokens(),
         removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
     ]).catch(() => undefined);
 };
@@ -117,15 +121,17 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     const applySocialSession = async (
         userData: SocialSessionPayload,
         epochAtStart: number,
+        writeMarkAtStart: number,
     ): Promise<boolean> => {
         if (epochAtStart !== authEpoch) return false;
 
-        if (shouldUseStoredAuthToken()) {
-            await setSecureItem('userToken', userData.token);
-            if (userData.refresh) {
-                await setSecureItem('refreshToken', userData.refresh);
-            }
-        }
+        // `superseded` — пока шёл соц-вход, свои креды на диск положила другая
+        // сессия (подтверждение почты). Дописывать поверх нечего: отказываемся,
+        // не трогая чужую пару. (#1545)
+        const persisted = await persistSessionTokens(userData.token, userData.refresh, {
+            expectedMark: writeMarkAtStart,
+        });
+        if (persisted === 'superseded') return false;
 
         let profile: UserProfileDto | null = null;
         try {
@@ -177,12 +183,13 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     const finishSocialAuthentication = async (
         userData: SocialSessionPayload,
         epochAtStart: number,
+        writeMarkAtStart: number,
         resolveFailureMessage: () => string,
     ): Promise<
         | { status: 'authenticated'; user: SocialSessionPayload }
         | { status: 'error'; message: string }
     > => {
-        const applied = await applySocialSession(userData, epochAtStart);
+        const applied = await applySocialSession(userData, epochAtStart, writeMarkAtStart);
         if (!applied) return { status: 'error', message: resolveFailureMessage() };
         return { status: 'authenticated', user: userData };
     };
@@ -190,8 +197,9 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     const finishFacebookAuthentication = (
         userData: SocialSessionPayload,
         epochAtStart: number,
+        writeMarkAtStart: number,
     ): Promise<FacebookAuthResult> =>
-        finishSocialAuthentication(userData, epochAtStart, () =>
+        finishSocialAuthentication(userData, epochAtStart, writeMarkAtStart, () =>
             i18nT('errorsStatic:api.auth.facebookSignInFailed'),
         );
 
@@ -372,18 +380,20 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     // --- login ---
     login: async (email, password) => {
         const epochAtStart = authEpoch;
+        // Метка диска на момент старта входа: если пока шёл запрос свои креды
+        // записала другая сессия (подтверждение почты), запись входа отбрасывается
+        // вместо того, чтобы затереть половину чужой пары (#1545).
+        const writeMarkAtStart = getSessionWriteMark();
         try {
             const { loginApi } = await getAuthApi();
             const userData = await loginApi(email, password);
             if (!userData) return false;
             if (epochAtStart !== authEpoch) return false;
 
-            if (shouldUseStoredAuthToken()) {
-                await setSecureItem('userToken', userData.token);
-                if (userData.refresh) {
-                    await setSecureItem('refreshToken', userData.refresh);
-                }
-            }
+            const persisted = await persistSessionTokens(userData.token, userData.refresh, {
+                expectedMark: writeMarkAtStart,
+            });
+            if (persisted === 'superseded') return false;
 
             let profile: UserProfileDto | null = null;
             try {
@@ -445,11 +455,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     // --- login with Google ---
     loginWithGoogle: async (credential) => {
         const epochAtStart = authEpoch;
+        const writeMarkAtStart = getSessionWriteMark();
         try {
             const { googleAuthApi } = await getAuthApi();
             const userData = await googleAuthApi(credential);
             if (!userData) return false;
-            return await applySocialSession(userData, epochAtStart);
+            return await applySocialSession(userData, epochAtStart, writeMarkAtStart);
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка входа через Google:', error);
@@ -461,11 +472,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     // --- login with Apple (IOS-05) ---
     loginWithApple: async (credential) => {
         const epochAtStart = authEpoch;
+        const writeMarkAtStart = getSessionWriteMark();
         try {
             const { appleAuthApi } = await getAppleAuthApi();
             const result = await appleAuthApi(credential);
             if (result.status !== 'authenticated') return result;
-            return await finishSocialAuthentication(result.user, epochAtStart, () =>
+            return await finishSocialAuthentication(result.user, epochAtStart, writeMarkAtStart, () =>
                 i18nT('errorsStatic:api.auth.appleSignInFailed'),
             );
         } catch (error) {
@@ -482,11 +494,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     // --- login with Facebook ---
     loginWithFacebook: async (credential) => {
         const epochAtStart = authEpoch;
+        const writeMarkAtStart = getSessionWriteMark();
         try {
             const { facebookAuthApi } = await getAuthApi();
             const result = await facebookAuthApi(credential);
             if (result.status !== 'authenticated') return result;
-            return await finishFacebookAuthentication(result.user, epochAtStart);
+            return await finishFacebookAuthentication(result.user, epochAtStart, writeMarkAtStart);
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка входа через Facebook:', error);
@@ -515,11 +528,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
     confirmFacebookEmailCompletion: async (completionHandle, code) => {
         const epochAtStart = authEpoch;
+        const writeMarkAtStart = getSessionWriteMark();
         try {
             const { confirmFacebookEmailCompletionApi } = await getAuthApi();
             const result = await confirmFacebookEmailCompletionApi(completionHandle, code);
             if (result.status !== 'authenticated') return result;
-            return await finishFacebookAuthentication(result.user, epochAtStart);
+            return await finishFacebookAuthentication(result.user, epochAtStart, writeMarkAtStart);
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка подтверждения email Facebook:', error);
@@ -544,7 +558,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             }
         } finally {
             await Promise.all([
-                removeSecureItems(['userToken', 'refreshToken']),
+                clearSessionTokens(),
                 removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
             ]);
         }
