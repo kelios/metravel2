@@ -21,6 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Title } from "@/ui/paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
 import TravelListItem from "@/components/listTravel/TravelListItem";
+import { getTravelDetailsListColumnWidth } from "@/components/travel/utils/travelDetailsListLayout";
 import { fetchTravelsPopular } from "@/api/map";
 import type { TravelsMap } from "@/types/types";
 import { METRICS } from '@/constants/layout';
@@ -233,11 +234,6 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       };
     }, [numColumns, width, styles.webGrid]);
 
-    const mobileWebCardWidth = useMemo(() => {
-      if (width >= METRICS.breakpoints.tablet) return null;
-      return Math.max(248, Math.min(320, width - 56));
-    }, [width]);
-
     // Оптимизированный рендер элемента с предотвращением лишних ререндеров
     const renderItem = useCallback(
       ({ item }: { item: any; index: number }) => (
@@ -264,10 +260,17 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
           isFirst={index === 0}
           isMobile={width < METRICS.breakpoints.tablet}
           viewportWidth={width}
-          cardWidth={width < METRICS.breakpoints.tablet ? undefined : mobileWebCardWidth ?? undefined}
+          // На мобильной ширине (1 колонка во всю ширину) фолбэк по вьюпорту уже
+          // равен ширине карточки; на desktop/tablet прокидываем реальную
+          // колонку сетки, иначе слот ~280 px просит ступень w=720 (#1544).
+          cardWidth={
+            width < METRICS.breakpoints.tablet
+              ? undefined
+              : getTravelDetailsListColumnWidth(width, numColumns)
+          }
         />
       </View>
-    ), [keyExtractor, mobileWebCardWidth, styles.webGridItem, width]);
+    ), [keyExtractor, numColumns, styles.webGridItem, width]);
 
     const handleContentChange = useCallback(() => {
       scrollToAnchor?.();

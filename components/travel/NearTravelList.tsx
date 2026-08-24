@@ -23,6 +23,7 @@ import { Title } from '@/ui/paper';
 import { Travel } from '@/types/types';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import TravelListItem from '@/components/listTravel/TravelListItem';
+import { getTravelDetailsListColumnWidth } from '@/components/travel/utils/travelDetailsListLayout';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { getNearbyTravelsSubtitle } from '@/constants/nearby';
@@ -480,11 +481,19 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           isFirst={index === 0}
           isMobile={false}
           viewportWidth={width}
-          cardWidth={width <= 640 ? Math.max(260, Math.min(320, width * 0.86)) : undefined}
+          // Этот web-подобный грид рисуется только при width >= 768 (2–3 колонки).
+          // На web прокидываем реальную колонку сетки, иначе слот ~280 px просит
+          // ступень w=720 (#1544). На native ширину карточки задаёт сам слот —
+          // оставляем прежний auto, чтобы не менять native-раскладку.
+          cardWidth={
+            Platform.OS === 'web'
+              ? getTravelDetailsListColumnWidth(width, numColumns)
+              : undefined
+          }
           webTouchAction={width <= 640 ? 'pan-x pan-y' : undefined}
         />
       </View>
-    ), [keyExtractor, styles.travelItem, styles.travelItemOdd, styles.webGridItem, width]);
+    ), [keyExtractor, numColumns, styles.travelItem, styles.travelItemOdd, styles.webGridItem, width]);
 
     const webGridStyle = useMemo(() => {
       if (Platform.OS !== 'web') return undefined;

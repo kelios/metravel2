@@ -7,6 +7,7 @@ import renderer from 'react-test-renderer'
 import * as RN from 'react-native'
 
 import PopularTravelList from '@/components/travel/PopularTravelList'
+import { getTravelDetailsListColumnWidth } from '@/components/travel/utils/travelDetailsListLayout'
 
 const mockUseQuery = jest.fn()
 const mockTravelListItem = jest.fn((props: any) =>
@@ -66,5 +67,26 @@ describe('PopularTravelList web mobile layout', () => {
     const firstProps = mockTravelListItem.mock.calls[0]?.[0]
     expect(firstProps?.isMobile).toBe(true)
     expect(firstProps?.cardWidth).toBeUndefined()
+  })
+
+  // #1544: на desktop (3 колонки) карточка обязана получить реальную ширину
+  // колонки, иначе обложка ~280 px просит ступень srcSet w=720 от вьюпорта.
+  it('passes the real column width (not the 720 viewport fallback) on desktop web', () => {
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({
+      width: 1280,
+      height: 900,
+      scale: 1,
+      fontScale: 1,
+    } as any)
+
+    renderer.act(() => {
+      renderer.create(<PopularTravelList embedded showHeader={false} />)
+    })
+
+    expect(mockTravelListItem).toHaveBeenCalled()
+    const firstProps = mockTravelListItem.mock.calls[0]?.[0]
+    expect(firstProps?.isMobile).toBe(false)
+    expect(firstProps?.cardWidth).toBe(getTravelDetailsListColumnWidth(1280, 3))
+    expect(firstProps?.cardWidth).toBeLessThanOrEqual(640)
   })
 })

@@ -6,6 +6,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 import { normalizeToTravel } from '@/components/profile/travelNormalize';
+import { getTravelDetailsListColumnWidth } from '@/components/travel/utils/travelDetailsListLayout';
 import type { Travel } from '@/types/types';
 
 const mockUnifiedTravelCard = jest.fn<any, [any]>(() => null);
@@ -398,6 +399,48 @@ describe('TravelListItem media props on web', () => {
     expect(source?.srcSet).toContain('640w');
     expect(source?.srcSet).not.toContain('960w');
     expect(source?.src).toContain('q=70');
+  });
+
+  // #1544: списки travel-details («Рядом»/«Популярное») на desktop прокидывают
+  // реальную ширину колонки (~403 px оценки сверху), а не фолбэк 720 от вьюпорта.
+  // Обложка колонки объявляет `sizes` по колонке и не тянет ступень w=720/960.
+  it('обложка колонки travel-details объявляет sizes по колонке, а не по вьюпорту 720', () => {
+    const columnWidth = getTravelDetailsListColumnWidth(1280, 3);
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: {
+          cover: {
+            id: 17,
+            width: 900,
+            height: 900,
+            aspect_ratio: 1,
+            srcset: [
+              '/travel-image/17/conversions/c.webp?w=160 160w',
+              '/travel-image/17/conversions/c.webp?w=320 320w',
+              '/travel-image/17/conversions/c.webp?w=480 480w',
+              '/travel-image/17/conversions/c.webp?w=640 640w',
+              '/travel-image/17/conversions/c.webp?w=720 720w',
+              '/travel-image/17/conversions/c.webp?w=960 960w',
+            ].join(', '),
+          },
+          gallery: null,
+          address_images: null,
+        },
+      } as any,
+      cardWidth: columnWidth,
+      isMobile: false,
+      viewportWidth: 1280,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    const source = props.mediaProps?.webResponsiveSource;
+    // Ширина отрисовки квадратной обложки = ширина колонки, а не 720.
+    expect(source?.sizes).toBe(`${columnWidth}px`);
+    expect(source?.sizes).not.toBe('720px');
+    // На DPR 1 браузер берёт w=480 (>= колонки ~403); кандидат 960w слоту не нужен.
+    expect(source?.srcSet).toContain('480w');
+    expect(source?.srcSet).not.toContain('960w');
   });
 
   // Слот единый квадратный, поэтому кадр уже квадрата рисуется не на всю ширину:
