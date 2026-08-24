@@ -1,11 +1,6 @@
 ---
 name: android-native-audit
-description: >-
-  Аудит native-совместимости фронтенда MeTravel перед сборкой приложения (Android и iPhone —
-  бандл общий): web-API (window/document/localStorage/navigator) без Platform-guard в общих
-  компонентах, web-only импорты (leaflet/DOM) в native-бандле, проверка обоих
-  бандлов; подтверждённые краши чинятся. Триггеры: «проверь native-совместимость»,
-  «почему крашит на Android», «почему крашит на айфоне», «аудит перед сборкой приложения».
+description: "Аудит native-совместимости перед сборкой: web-код без Platform-guard в общем бандле, краши чинятся. Триггеры: «проверь native-совместимость», «почему крашит на Android», «почему крашит на айфоне»."
 ---
 
 # android-native-audit

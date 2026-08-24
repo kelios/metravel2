@@ -1,12 +1,6 @@
 ---
 name: ios-release
-description: >-
-  Пошаговый регламент выпуска версии iPhone-приложения MeTravel: preflight окружения →
-  bump версии/buildNumber → release-гейт → signed EAS-сборка → QA кандидата →
-  upload в App Store Connect/TestFlight → submit в App Review → storefront release.
-  Четыре мутирующих шага — четыре независимых явных разрешения владельца. Делегирует
-  профильным агентам. Триггеры: «выпусти iOS-приложение», «релиз iPhone», «залей в
-  TestFlight», «отправь на ревью в App Store», «обнови приложение в App Store».
+description: "Регламент релиза iPhone: bump → гейт → signed EAS-сборка → TestFlight → App Review → release; каждый мутирующий шаг — отдельное разрешение владельца. Триггеры: «релиз iPhone», «залей в TestFlight»."
 ---
 
 # ios-release

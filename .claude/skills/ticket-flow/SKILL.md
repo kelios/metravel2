@@ -1,11 +1,6 @@
 ---
 name: ticket-flow
-description: >-
-  Прогон фронтенд-тикета через общий MCP task board MeTravel: взять задачу с борда
-  (или завести), провести через discovery → implement → review → test → release силами
-  профильных FE-агентов, двигая статус на борде на каждом шаге. Зеркалит ролевой пайплайн
-  бэка (.codex/team). Триггеры: «возьми тикет в работу», «прогони задачу N по пайплайну»,
-  «обработай очередь front todo».
+description: "Прогон фронтенд-тикета через MCP task board: discovery → implement → review → test → release силами профильных FE-агентов. Триггеры: «возьми тикет в работу», «прогони задачу N по пайплайну»."
 ---
 
 # ticket-flow

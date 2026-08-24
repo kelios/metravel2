@@ -1,13 +1,6 @@
 ---
 name: android-release
-description: >-
-  Пошаговый регламент выпуска новой версии Android-приложения MeTravel:
-  bump версии → release-гейт → локальная Gradle-сборка подписанного AAB →
-  прогон на устройстве → dry-run загрузки → публикация в закрытое тестирование
-  (alpha+internal) и/или production через Play Publisher API. Без EAS.
-  Делегирует профильным агентам. Триггеры: «выпусти Android-приложение»,
-  «релиз Android», «обнови приложение в сторе», «пересобери и залей андроид»,
-  «опубликовать в Google Play».
+description: "Регламент релиза Android: bump → гейт → локальная Gradle-сборка подписанного AAB → Play Publisher API, без EAS. Триггеры: «выпусти Android-приложение», «релиз Android», «опубликовать в Google Play»."
 ---
 
 # android-release
