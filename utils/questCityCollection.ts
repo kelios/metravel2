@@ -5,7 +5,12 @@
 import { calculateDistance } from '@/utils/distanceCalculator'
 import { createCollator } from '@/i18n/format'
 import type { QuestMeta } from '@/utils/questAdapters'
-import { buildCanonicalQuestCityIndex } from '@/utils/questCityCanonical'
+import {
+  buildCanonicalQuestCityIndex,
+  resolveCanonicalQuestCityId,
+  type CanonicalQuestCityIndex,
+} from '@/utils/questCityCanonical'
+import { resolveQuestCitySegment } from '@/utils/questCityAlias'
 
 /**
  * Радиус, в котором квест соседнего города ещё считается «рядом», км.
@@ -38,6 +43,30 @@ export type QuestOrigin = { lat: number; lng: number }
 
 const cityKey = (cityId: unknown): string => String(cityId ?? '').trim()
 
+/**
+ * Канонический id города для сегмента, пришедшего из URL квеста.
+ *
+ * Порядок: собственный `city_id` каталога → общий с SSG алиас-контракт
+ * (`utils/questCityAlias.js`, он же разбирает `/quests/minsk/...` на
+ * city-landing) → имя города из бандла квеста. Алиас идёт раньше имени
+ * намеренно: это единый контракт сервера и клиента, а `city_name` в каталоге
+ * бывает пустым — на таком городе полоса коллекции пропала бы снова и молча.
+ */
+function resolveCityIdForSegment(
+  quests: QuestMeta[],
+  index: CanonicalQuestCityIndex<QuestMeta>,
+  cityId: string,
+  cityName?: string | null,
+): string {
+  const byId = cityId ? index.canonicalCityIdById[cityId] : undefined
+  if (byId) return byId
+
+  const viaAlias = cityId ? resolveQuestCitySegment(cityId, quests)?.cityId : null
+  if (viaAlias) return index.canonicalCityIdById[viaAlias] ?? viaAlias
+
+  return resolveCanonicalQuestCityId(index, cityId, cityName)
+}
+
 const hasCoords = (quest: QuestMeta): boolean =>
   Number.isFinite(quest.lat) && Number.isFinite(quest.lng)
 
@@ -66,9 +95,9 @@ export function buildQuestCityCollection(
   const cityId = cityKey(options.cityId)
   if (!cityId) return null
 
-  const { canonicalCityIdById, questsByCityId } = buildCanonicalQuestCityIndex(quests)
-  const canonicalCityId = canonicalCityIdById[cityId] ?? cityId
-  const cityQuests = questsByCityId[canonicalCityId] ?? []
+  const index = buildCanonicalQuestCityIndex(quests)
+  const canonicalCityId = resolveCityIdForSegment(quests, index, cityId, options.cityName)
+  const cityQuests = index.questsByCityId[canonicalCityId] ?? []
   if (!cityQuests.length) return null
 
   const completedCount = cityQuests.filter((quest) =>
@@ -123,6 +152,8 @@ export function pickNextQuests(
   options: {
     currentQuestId?: string | null
     cityId?: unknown
+    /** Имя города из бандла квеста: сцепка, когда `cityId` — алиас из URL. */
+    cityName?: string | null
     origin?: QuestOrigin | null
     limit?: number
     radiusKm?: number
@@ -130,8 +161,8 @@ export function pickNextQuests(
 ): QuestSuggestion[] {
   const currentId = String(options.currentQuestId ?? '').trim()
   const cityId = cityKey(options.cityId)
-  const { canonicalCityIdById } = buildCanonicalQuestCityIndex(quests)
-  const canonicalCityId = canonicalCityIdById[cityId] ?? cityId
+  const index = buildCanonicalQuestCityIndex(quests)
+  const canonicalCityId = resolveCityIdForSegment(quests, index, cityId, options.cityName)
   const origin = isValidOrigin(options.origin) ? options.origin : null
   const radiusKm = options.radiusKm ?? NEXT_QUEST_RADIUS_KM
   const limit = options.limit ?? NEXT_QUEST_LIMIT
@@ -143,7 +174,7 @@ export function pickNextQuests(
 
     const questCityId = cityKey(quest.cityId)
     const otherCity =
-      !canonicalCityId || (canonicalCityIdById[questCityId] ?? questCityId) !== canonicalCityId
+      !canonicalCityId || (index.canonicalCityIdById[questCityId] ?? questCityId) !== canonicalCityId
     const distanceKm =
       origin && hasCoords(quest)
         ? calculateDistance(origin, { lat: quest.lat, lng: quest.lng })

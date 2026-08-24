@@ -89,8 +89,14 @@ export function useQuestCityCollection(params: {
   )
 
   const suggestions = useMemo(
-    () => pickNextQuests(quests, { currentQuestId: completedQuestId, cityId, origin: questOrigin }),
-    [quests, completedQuestId, cityId, questOrigin],
+    () =>
+      pickNextQuests(quests, {
+        currentQuestId: completedQuestId,
+        cityId,
+        cityName,
+        origin: questOrigin,
+      }),
+    [quests, completedQuestId, cityId, cityName, questOrigin],
   )
 
   return { collection, suggestions, loading }

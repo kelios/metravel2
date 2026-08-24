@@ -93,6 +93,7 @@ const E2E_CATEGORY_DEFINITIONS = [
     specs: [
       'e2e/quests-list-detail.spec.ts',
       'e2e/quest-reviews-reader.spec.ts',
+      'e2e/quest-return-loop.spec.ts',
     ],
   },
   {

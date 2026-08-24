@@ -55,6 +55,60 @@ describe('buildQuestCityCollection', () => {
     expect(collection?.completedCount).toBe(1)
   })
 
+  // Маршрут квеста отдаёт сегмент URL, а он бывает алиасом (`/quests/minsk/...`).
+  // По нему в каталоге, ключёванном числовым `city_id`, не находится ничего —
+  // и полоса «Пройдено N из M» пропадала с финала целиком.
+  it('resolves an alias city segment by the city name from the quest bundle', () => {
+    expect(buildQuestCityCollection(catalog, { cityId: 'minsk', cityName: 'Минск' })).toMatchObject({
+      cityId: '1',
+      completedCount: 1,
+      totalCount: 3,
+    })
+  })
+
+  // Резолв по имени не спасает город с пустым `city_name` — там сцепка идёт
+  // через общий с SSG алиас-контракт по префиксу `quest_id`.
+  it('resolves an alias segment through the shared quest-id alias contract', () => {
+    const namelessCity = [
+      quest({ id: 'minsk-dvoriki', cityId: '4', cityName: '', isCompletedByMe: true }),
+      quest({ id: 'minsk-old-town', cityId: '4', cityName: '' }),
+    ]
+    expect(buildQuestCityCollection(namelessCity, { cityId: 'minsk' })).toMatchObject({
+      cityId: '4',
+      completedCount: 1,
+      totalCount: 2,
+    })
+    expect(
+      pickNextQuests(namelessCity, { cityId: 'minsk', origin: { lat: 53.9, lng: 27.56 } }).every(
+        (s) => s.otherCity,
+      ),
+    ).toBe(false)
+  })
+
+  it('keeps returning null for an alias segment without a matching city name', () => {
+    expect(buildQuestCityCollection(catalog, { cityId: 'minsk' })).toBeNull()
+  })
+
+  // Сегмент города приходит из URL: `/quests/constructor/<quest>` не должен
+  // доставать из lookup функцию Object.prototype и выдавать её за id города.
+  it('does not resolve a city segment that only matches Object.prototype', () => {
+    expect(buildQuestCityCollection(catalog, { cityId: 'constructor' })).toBeNull()
+    expect(buildQuestCityCollection(catalog, { cityId: '__proto__' })).toBeNull()
+    expect(
+      pickNextQuests(catalog, { cityId: 'constructor', origin: { lat: 53.9, lng: 27.56 } }).every(
+        (s) => s.otherCity,
+      ),
+    ).toBe(true)
+  })
+
+  it('refuses to guess between same-named cities of different countries', () => {
+    const ambiguous = [
+      quest({ id: 'by', cityId: '10', cityName: 'Брест', countryCode: 'BY' }),
+      quest({ id: 'fr', cityId: '11', cityName: 'Брест', countryCode: 'FR' }),
+    ]
+    expect(buildQuestCityCollection(ambiguous, { cityId: 'brest', cityName: 'Брест' })).toBeNull()
+  })
+
   it('returns null when the city has no quests in the catalog', () => {
     expect(buildQuestCityCollection(catalog, { cityId: '99' })).toBeNull()
     expect(buildQuestCityCollection(catalog, { cityId: '' })).toBeNull()
@@ -105,6 +159,18 @@ describe('pickNextQuests', () => {
     expect(
       pickNextQuests(catalog, { currentQuestId: 'current', cityId: '1', origin }).map((s) => s.quest.id),
     ).toEqual(['next'])
+  })
+
+  // С алиасом в `cityId` свои же квесты считались чужими: город переставал
+  // быть «своим», порядок ломался, а всё за 60 км молча выпадало из подбора.
+  it('treats own-city quests as own when the city segment is an alias', () => {
+    const catalog = [
+      quest({ id: 'own-far', lat: 54.6, lng: 27.9 }),
+      quest({ id: 'own-near', lat: 53.905, lng: 27.565 }),
+    ]
+    const picked = pickNextQuests(catalog, { cityId: 'minsk', cityName: 'Минск', origin })
+    expect(picked.map((s) => s.quest.id)).toEqual(['own-near', 'own-far'])
+    expect(picked.every((s) => s.otherCity)).toBe(false)
   })
 
   it('orders same-city suggestions by distance and reports it', () => {
