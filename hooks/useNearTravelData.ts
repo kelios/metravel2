@@ -9,6 +9,7 @@ import { queryKeys } from '@/api/queryKeys';
 import type { Travel } from '@/types/types';
 
 const NEAR_TRAVELS_LIMIT = 6;
+const EMPTY_TRAVELS: Travel[] = [];
 
 export function useNearTravelData(
   travelId: number | null,
@@ -28,6 +29,7 @@ export function useNearTravelData(
     data: travelsNear = [],
     isLoading,
     isError,
+    isPlaceholderData,
     error,
     refetch: refetchTravelsNear,
   } = useQuery<Travel[]>({
@@ -47,6 +49,10 @@ export function useNearTravelData(
     onTravelsLoadedRef.current?.(travelsNear);
   }, [travelsNear]);
 
+  // keepPreviousData is useful for the visible list, but map queries must never
+  // cache the previous travel's nearby cards under the next travel id/origin.
+  const mapSourceTravels = isPlaceholderData ? EMPTY_TRAVELS : travelsNear;
+
   // Prefer coordinates included by older/richer near responses.
   const directMapData = useMemo(() => {
     const points: Array<{
@@ -55,8 +61,8 @@ export function useNearTravelData(
     }> = [];
     const travelIds = new Set<number>();
 
-    for (let i = 0; i < Math.min(travelsNear.length, 20); i++) {
-      const item = travelsNear[i];
+    for (let i = 0; i < Math.min(mapSourceTravels.length, 20); i++) {
+      const item = mapSourceTravels[i];
       const itemAny = item as Record<string, unknown>;
       const directCoord =
         itemAny.coord ??
@@ -103,16 +109,16 @@ export function useNearTravelData(
       if (points.length >= 50) break;
     }
     return { points, travelIds };
-  }, [travelsNear]);
+  }, [mapSourceTravels]);
 
   const fallbackTravels = useMemo(
     () => directMapData.points.length >= 50
       ? []
-      : travelsNear.filter((travel) => {
+      : mapSourceTravels.filter((travel) => {
         const id = Number(travel.id);
         return Number.isFinite(id) && id > 0 && !directMapData.travelIds.has(id);
       }),
-    [directMapData, travelsNear],
+    [directMapData, mapSourceTravels],
   );
   const fallbackTravelKey = useMemo(
     () => fallbackTravels.map((travel) => ({
@@ -159,7 +165,9 @@ export function useNearTravelData(
   return {
     travelsNear, displayedTravels, mapPoints,
     isLoading,
-    isMapLoading: fallbackMapEnabled && isFallbackMapLoading,
+    isMapLoading: Boolean(
+      mapOptions?.enabled && mapOptions.origin && isPlaceholderData,
+    ) || (fallbackMapEnabled && isFallbackMapLoading),
     isMapError: fallbackMapEnabled && isFallbackMapError,
     isError,
     error,

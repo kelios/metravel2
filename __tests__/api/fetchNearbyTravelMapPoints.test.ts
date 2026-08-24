@@ -108,4 +108,20 @@ describe('fetchNearbyTravelMapPoints', () => {
       expect.objectContaining({ id: '11', coord: '50.061,19.938' }),
     ])
   })
+
+  it('propagates cancellation instead of treating it as a partial failure', async () => {
+    const abortError = new Error('Aborted')
+    abortError.name = 'AbortError'
+    mockedFetchWithTimeout
+      .mockRejectedValueOnce(abortError)
+      .mockResolvedValueOnce(responseWithJson([]))
+
+    await expect(fetchNearbyTravelMapPoints(
+      { lat: 50.05, lng: 19.94 },
+      [
+        { id: 301, slug: 'nearby-route' },
+        { id: 302, slug: 'other-nearby-route' },
+      ],
+    )).rejects.toBe(abortError)
+  })
 })
