@@ -26,9 +26,12 @@ jest.mock('@/hooks/useNearTravelData', () => ({
     displayedTravels: [nearItem],
     mapPoints: [],
     isLoading: false,
+    isMapLoading: false,
+    isMapError: false,
     isError: false,
     error: null,
     refetchTravelsNear: jest.fn(),
+    refetchMapPoints: jest.fn(),
   }),
 }))
 
@@ -68,13 +71,15 @@ describe('NearTravelList web card width (#1544)', () => {
       fontScale: 1,
     } as any)
 
+    let tree!: ReturnType<typeof renderer.create>
     renderer.act(() => {
-      renderer.create(<NearTravelList travel={{ id: 1 }} embedded showHeader={false} />)
+      tree = renderer.create(<NearTravelList travel={{ id: 1 }} embedded showHeader={false} />)
     })
 
     expect(mockTravelListItem).toHaveBeenCalled()
     const firstProps = mockTravelListItem.mock.calls[0]?.[0]
     expect(firstProps?.cardWidth).toBe(getTravelDetailsListColumnWidth(1280, 3))
     expect(firstProps?.cardWidth).toBeLessThanOrEqual(640)
+    expect(tree.root.findAllByType(RN.ScrollView)).toHaveLength(0)
   })
 })

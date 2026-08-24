@@ -1,10 +1,8 @@
 import React, {
   memo,
   useCallback,
-  useEffect,
   useMemo,
   useState,
-  useRef,
 } from 'react';
 import {
   ActivityIndicator,
@@ -13,7 +11,6 @@ import {
   Text,
   View,
   Platform,
-  ScrollView,
   useWindowDimensions,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -33,6 +30,7 @@ import { useNearTravelData } from '@/hooks/useNearTravelData';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 import { translate as i18nT } from '@/i18n'
+import { parseTravelCoords } from '@/utils/questForLocation';
 
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy import для map-компонента (тяжёлый, Leaflet внутри)
@@ -44,7 +42,7 @@ const MapComponent = Platform.OS === 'web' ? MapClientSideComponent : TravelMap;
 type Segment = 'list' | 'map';
 
 type NearTravelListProps = {
-  travel: Pick<Travel, 'id'>;
+  travel: Pick<Travel, 'id'> & Partial<Pick<Travel, 'travelAddress' | 'coordsMeTravel'>>;
   onLayout?: (e: LayoutChangeEvent) => void;
   onTravelsLoaded?: (travels: Travel[]) => void;
   showHeader?: boolean;
@@ -111,12 +109,16 @@ const MapContainer = memo(({
                              height = 400,
                              showRoute = false,
                              isLoading = false,
+                             isError = false,
+                             onRetry,
                              colors,
                            }: {
   points: any[];
   height?: number;
   showRoute?: boolean;
   isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   colors: ReturnType<typeof useThemedColors>;
 }) => {
   const canRenderMap = useMemo(
@@ -140,14 +142,30 @@ const MapContainer = memo(({
       color: colors.textMuted,
       textAlign: 'center',
     },
+    retryButton: {
+      marginTop: DESIGN_TOKENS.spacing.md,
+    },
   }), [colors]);
 
   if (!canRenderMap) {
     return (
       <View style={[mapStyles.mapPlaceholder, { height }]}>
         <Text style={mapStyles.placeholderText}>
-          {isLoading ? i18nT('travel:components.travel.NearTravelList.zagruzka_karty_1215cf9a') : i18nT('travel:components.travel.NearTravelList.net_tochek_dlya_karty_4c27ee19')}
+          {isLoading
+            ? i18nT('travel:components.travel.NearTravelList.zagruzka_karty_1215cf9a')
+            : isError
+              ? i18nT('travel:components.travel.NearTravelList.ne_udalos_zagruzit_marshruty_poprobuyte_pozz_d6ce6b01')
+              : i18nT('travel:components.travel.NearTravelList.net_tochek_dlya_karty_4c27ee19')}
         </Text>
+        {isError && onRetry ? (
+          <Button
+            label={i18nT('travel:components.travel.NearTravelList.povtorit_popytku_c1893c28')}
+            onPress={onRetry}
+            variant="primary"
+            size="sm"
+            style={mapStyles.retryButton}
+          />
+        ) : null}
       </View>
     );
   }
@@ -180,13 +198,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       width >= METRICS.breakpoints.tablet &&
       width < METRICS.breakpoints.largeTablet;
     const colors = useThemedColors();
-    const scrollViewRef = useRef<ScrollView>(null);
     const mapHeight = useMemo(() => {
       if (isMobile) return 320;
       if (isTablet) return embedded ? 440 : 400;
       return embedded ? 580 : 500;
     }, [embedded, isMobile, isTablet]);
-    const listHeight = useMemo(() => isMobile ? 'auto' : isTablet ? 500 : 600, [isMobile, isTablet]);
 
     const numColumns = useMemo(() => {
       if (width < METRICS.breakpoints.tablet) return 1;
@@ -197,12 +213,28 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       const id = Number(travel.id);
       return Number.isFinite(id) && id > 0 ? id : null;
     }, [travel.id]);
+    const mapOrigin = useMemo(() => {
+      const coordinates = parseTravelCoords([
+        ...(Array.isArray(travel.travelAddress) ? travel.travelAddress : []),
+        ...(Array.isArray(travel.coordsMeTravel) ? travel.coordsMeTravel : []),
+      ]);
+      return coordinates.find(({ lat, lng }) => (
+        Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+      )) ?? null;
+    }, [travel.coordsMeTravel, travel.travelAddress]);
 
     const {
       travelsNear, displayedTravels, mapPoints,
-      isLoading, isError, error,
-      refetchTravelsNear,
-    } = useNearTravelData(travelId, onTravelsLoaded, fetchEnabled);
+      isLoading, isMapLoading, isMapError, isError, error,
+      refetchTravelsNear, refetchMapPoints,
+    } = useNearTravelData(travelId, onTravelsLoaded, fetchEnabled, {
+      enabled: viewMode === 'map',
+      origin: mapOrigin,
+    });
+    const handleRetryMap = useCallback(() => {
+      void refetchMapPoints();
+    }, [refetchMapPoints]);
+    const canShowMapMode = mapPoints.length > 0 || mapOrigin !== null;
 
     const segmentOptions = useMemo(
       () => [
@@ -211,11 +243,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       ],
       [],
     );
-    useEffect(() => {
-      if (!mapPoints.length && viewMode === 'map') setViewMode('list');
-    }, [mapPoints.length, viewMode]);
-
-
     // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
     const styles = useMemo(() => StyleSheet.create({
       section: {
@@ -267,8 +294,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         minHeight: 600,
       },
       listColumn: {
-        flex: 1.2,
-        minHeight: 500,
+        width: '100%',
       },
       mapColumn: {
         flex: 1,
@@ -278,12 +304,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         width: '100%',
         minHeight: 300,
         overflow: 'visible',
-      },
-      scrollView: {
-        flex: 1,
-      },
-      scrollContent: {
-        paddingBottom: DESIGN_TOKENS.spacing.lg,
       },
       travelsGrid: {
         width: '100%',
@@ -578,7 +598,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
         {!isMobile ? (
           <>
-            {mapPoints.length ? (
+            {canShowMapMode ? (
               <SegmentedControl
                 options={segmentOptions}
                 value={viewMode}
@@ -593,35 +613,28 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   points={mapPoints}
                   height={mapHeight}
                   showRoute={false}
-                  isLoading={isLoading}
+                  isLoading={isLoading || isMapLoading}
+                  isError={isMapError}
+                  onRetry={handleRetryMap}
                   colors={colors}
                 />
               </View>
             ) : (
-              <View style={[styles.listColumn, { height: listHeight }]}>
-                <ScrollView
-                  ref={scrollViewRef}
-                  style={styles.scrollView}
-                  contentContainerStyle={styles.scrollContent}
-                  showsVerticalScrollIndicator={true}
-                  nestedScrollEnabled={true}
+              <View style={styles.listColumn}>
+                <View
+                  testID={Platform.OS === 'web' && width <= 640 ? 'near-travel-web-rail' : undefined}
+                  style={width <= 640 ? styles.webScrollContainer : undefined}
                 >
-                  <View
-                    testID={Platform.OS === 'web' && width <= 640 ? 'near-travel-web-rail' : undefined}
-                    style={width <= 640 ? styles.webScrollContainer : undefined}
-                  >
-                    <View style={[styles.travelsGrid, webGridStyle]}>
-                      {displayedTravels.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
-                    </View>
+                  <View style={[styles.travelsGrid, webGridStyle]}>
+                    {displayedTravels.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
                   </View>
-
-                </ScrollView>
+                </View>
               </View>
             )}
           </>
         ) : (
           <>
-            {mapPoints.length ? (
+            {canShowMapMode ? (
               <SegmentedControl
                 options={segmentOptions}
                 value={viewMode}
@@ -668,7 +681,9 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   points={mapPoints}
                   height={mapHeight}
                   showRoute={false}
-                  isLoading={isLoading}
+                  isLoading={isLoading || isMapLoading}
+                  isError={isMapError}
+                  onRetry={handleRetryMap}
                   colors={colors}
                 />
               </View>

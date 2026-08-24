@@ -4,6 +4,11 @@ export const queryKeys = {
   travels: () => ['travels'] as const,
   randomTravels: () => ['random-travels'] as const,
   travelsNear: (travelId: number) => ['travels-near', travelId] as const,
+  travelsNearMap: (
+    travelId: number,
+    origin: { lat: number; lng: number },
+    travels: Array<{ id: number; slug: string }>,
+  ) => ['travels-near-map', travelId, origin, travels] as const,
   travelsPopular: () => ['travels-popular'] as const,
   travelRouteFiles: (travelId: string | number) => ['travel-route-files', travelId] as const,
   travelsOfMonth: () => ['travelsOfMonth'] as const,

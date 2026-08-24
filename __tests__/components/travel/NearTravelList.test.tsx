@@ -8,6 +8,7 @@ import type { Travel } from '@/types/types';
 
 jest.mock('@/api/map', () => ({
   fetchTravelsNear: jest.fn().mockResolvedValue([]),
+  fetchNearbyTravelMapPoints: jest.fn().mockResolvedValue([]),
 }));
 
 const mockTravelMap = jest.fn(() => null);
@@ -39,10 +40,14 @@ describe('NearTravelList', () => {
   const { fetchTravelsNear } = jest.requireMock('@/api/map') as {
     fetchTravelsNear: jest.Mock;
   };
+  const { fetchNearbyTravelMapPoints } = jest.requireMock('@/api/map') as {
+    fetchNearbyTravelMapPoints: jest.Mock;
+  };
   let queryClient: QueryClient;
 
   beforeEach(() => {
     fetchTravelsNear.mockClear();
+    fetchNearbyTravelMapPoints.mockClear();
     mockTravelMap.mockClear();
     queryClient = new QueryClient({
       defaultOptions: {
@@ -127,6 +132,162 @@ describe('NearTravelList', () => {
     expect(mockTravelMap).toHaveBeenCalled();
     const lastCall = mockTravelMap.mock.calls[mockTravelMap.mock.calls.length - 1]?.[0];
     expect(lastCall?.showRouteLine).toBe(false);
+  });
+
+  it('loads map points on demand when compact nearby cards omit coordinates', async () => {
+    fetchTravelsNear.mockResolvedValueOnce([
+      {
+        id: 301,
+        name: 'Compact nearby route',
+        slug: 'compact-nearby-route',
+      },
+    ]);
+    fetchNearbyTravelMapPoints.mockResolvedValueOnce([
+      {
+        id: '301-0',
+        coord: '50.061,19.938',
+        address: 'Krakow',
+        travelImageThumbUrl: '',
+        categoryName: 'Poland',
+      },
+    ]);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <NearTravelList
+            travel={{
+              id: 1,
+              travelAddress: [{ id: 1, name: 'Origin', coords: '50.05,19.94' }],
+            }}
+            embedded
+          />
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => expect(screen.getByText('Карта')).toBeTruthy());
+    fireEvent.press(screen.getByText('Карта'));
+
+    await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledWith(
+      { lat: 50.05, lng: 19.94 },
+      expect.arrayContaining([expect.objectContaining({ id: 301, slug: 'compact-nearby-route' })]),
+      expect.any(Object),
+    ));
+    await waitFor(() => expect(mockTravelMap).toHaveBeenCalled());
+
+    const lastCall = mockTravelMap.mock.calls[mockTravelMap.mock.calls.length - 1]?.[0];
+    expect(lastCall?.travelData).toEqual([
+      expect.objectContaining({ id: '301-0', coord: '50.061,19.938' }),
+    ]);
+    expect(lastCall?.showRouteLine).toBe(false);
+  });
+
+  it('merges direct coordinates with on-demand points for compact nearby cards', async () => {
+    fetchTravelsNear.mockResolvedValueOnce([
+      {
+        id: 201,
+        name: 'Rich nearby route',
+        slug: 'rich-nearby-route',
+        lat: 50.06,
+        lng: 19.93,
+      },
+      {
+        id: 301,
+        name: 'Compact nearby route',
+        slug: 'compact-nearby-route',
+      },
+    ]);
+    fetchNearbyTravelMapPoints.mockResolvedValueOnce([
+      {
+        id: '301-0',
+        coord: '50.061,19.938',
+        address: 'Compact point',
+        travelImageThumbUrl: '',
+        categoryName: 'Poland',
+      },
+    ]);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <NearTravelList
+            travel={{
+              id: 1,
+              travelAddress: [{ id: 1, name: 'Origin', coords: '50.05,19.94' }],
+            }}
+            embedded
+          />
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => expect(screen.getByText('Карта')).toBeTruthy());
+    fireEvent.press(screen.getByText('Карта'));
+
+    await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledWith(
+      { lat: 50.05, lng: 19.94 },
+      [expect.objectContaining({ id: 301, slug: 'compact-nearby-route' })],
+      expect.any(Object),
+    ));
+    await waitFor(() => {
+      const lastCall = mockTravelMap.mock.calls[mockTravelMap.mock.calls.length - 1]?.[0];
+      expect(lastCall?.travelData).toEqual([
+        expect.objectContaining({ id: '201-0', coord: '50.06,19.93' }),
+        expect.objectContaining({ id: '301-0', coord: '50.061,19.938' }),
+      ]);
+    });
+  });
+
+  it('distinguishes a failed map request from an empty map and allows retry', async () => {
+    fetchTravelsNear.mockResolvedValueOnce([
+      {
+        id: 301,
+        name: 'Compact nearby route',
+        slug: 'compact-nearby-route',
+      },
+    ]);
+    fetchNearbyTravelMapPoints
+      .mockRejectedValueOnce(new TypeError('Network request failed'))
+      .mockResolvedValueOnce([
+        {
+          id: '301-0',
+          coord: '50.061,19.938',
+          address: 'Recovered point',
+          travelImageThumbUrl: '',
+          categoryName: 'Poland',
+        },
+      ]);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <NearTravelList
+            travel={{
+              id: 1,
+              travelAddress: [{ id: 1, name: 'Origin', coords: '50.05,19.94' }],
+            }}
+            embedded
+          />
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => expect(screen.getByText('Карта')).toBeTruthy());
+    fireEvent.press(screen.getByText('Карта'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Не удалось загрузить маршруты. Попробуйте позже.')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByText('Повторить попытку'));
+
+    await waitFor(() => {
+      const lastCall = mockTravelMap.mock.calls[mockTravelMap.mock.calls.length - 1]?.[0];
+      expect(lastCall?.travelData).toEqual([
+        expect.objectContaining({ id: '301-0', coord: '50.061,19.938' }),
+      ]);
+    });
+    expect(fetchNearbyTravelMapPoints).toHaveBeenCalledTimes(2);
   });
 
   it('keeps list/map switcher available in embedded mobile details section', async () => {

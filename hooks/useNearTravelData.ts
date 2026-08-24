@@ -3,9 +3,9 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { fetchTravelsNear } from '@/api/map';
+import { fetchNearbyTravelMapPoints, fetchTravelsNear } from '@/api/map';
 import { queryConfigs } from '@/utils/reactQueryConfig';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import type { Travel } from '@/types/types';
 
 const NEAR_TRAVELS_LIMIT = 6;
@@ -14,6 +14,10 @@ export function useNearTravelData(
   travelId: number | null,
   onTravelsLoaded?: (travels: Travel[]) => void,
   enabled: boolean = true,
+  mapOptions?: {
+    enabled: boolean;
+    origin: { lat: number; lng: number } | null;
+  },
 ) {
   const onTravelsLoadedRef = useRef(onTravelsLoaded);
   useEffect(() => {
@@ -43,13 +47,13 @@ export function useNearTravelData(
     onTravelsLoadedRef.current?.(travelsNear);
   }, [travelsNear]);
 
-  // Optimized map points conversion
-  const mapPoints = useMemo(() => {
-    if (!travelsNear.length) return [];
+  // Prefer coordinates included by older/richer near responses.
+  const directMapData = useMemo(() => {
     const points: Array<{
       id: string; coord: string; address: string;
       travelImageThumbUrl: string; categoryName: string; articleUrl?: string;
     }> = [];
+    const travelIds = new Set<number>();
 
     for (let i = 0; i < Math.min(travelsNear.length, 20); i++) {
       const item = travelsNear[i];
@@ -67,6 +71,7 @@ export function useNearTravelData(
         null;
       if (!itemPoints) continue;
 
+      const pointsBeforeTravel = points.length;
       for (let j = 0; j < itemPoints.length; j++) {
         const point = itemPoints[j] as Record<string, unknown>;
         const coordRaw =
@@ -92,16 +97,73 @@ export function useNearTravelData(
         });
         if (points.length >= 50) break;
       }
+      if (points.length > pointsBeforeTravel) {
+        travelIds.add(Number(item.id));
+      }
       if (points.length >= 50) break;
     }
-    return points;
+    return { points, travelIds };
   }, [travelsNear]);
+
+  const fallbackTravels = useMemo(
+    () => directMapData.points.length >= 50
+      ? []
+      : travelsNear.filter((travel) => {
+        const id = Number(travel.id);
+        return Number.isFinite(id) && id > 0 && !directMapData.travelIds.has(id);
+      }),
+    [directMapData, travelsNear],
+  );
+  const fallbackTravelKey = useMemo(
+    () => fallbackTravels.map((travel) => ({
+      id: Number(travel.id),
+      slug: typeof travel.slug === 'string' ? travel.slug.trim() : '',
+    })),
+    [fallbackTravels],
+  );
+  const fallbackMapEnabled = Boolean(
+    travelId != null &&
+    mapOptions?.enabled &&
+    mapOptions.origin &&
+    fallbackTravelKey.some((travel) => travel.slug),
+  );
+  const {
+    data: fallbackMapPoints = [],
+    isLoading: isFallbackMapLoading,
+    isError: isFallbackMapError,
+    refetch: refetchMapPoints,
+  } = useQuery({
+    queryKey: queryKeys.travelsNearMap(
+      travelId as number,
+      mapOptions?.origin ?? { lat: 0, lng: 0 },
+      fallbackTravelKey,
+    ),
+    enabled: fallbackMapEnabled,
+    queryFn: ({ signal }) => fetchNearbyTravelMapPoints(
+      mapOptions?.origin as { lat: number; lng: number },
+      fallbackTravels,
+      signal,
+    ),
+    ...queryConfigs.paginated,
+    retry: false,
+    refetchOnMount: false,
+  });
+
+  const mapPoints = useMemo(
+    () => [...directMapData.points, ...fallbackMapPoints].slice(0, 50),
+    [directMapData.points, fallbackMapPoints],
+  );
 
   const displayedTravels = travelsNear;
 
   return {
     travelsNear, displayedTravels, mapPoints,
-    isLoading, isError, error,
+    isLoading,
+    isMapLoading: fallbackMapEnabled && isFallbackMapLoading,
+    isMapError: fallbackMapEnabled && isFallbackMapError,
+    isError,
+    error,
     refetchTravelsNear,
+    refetchMapPoints,
   };
 }
