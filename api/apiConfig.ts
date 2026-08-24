@@ -26,6 +26,8 @@ export const API_BASE_URL = rawApiUrl;
 export const DEFAULT_TIMEOUT = 10000;
 export const LONG_TIMEOUT = 30000;
 
-// Ключи для безопасного хранилища
-export const TOKEN_KEY = 'userToken';
-export const REFRESH_TOKEN_KEY = 'refreshToken';
+// Ключ для безопасного хранилища. Объявлен один раз в `@/utils/authPlatform`,
+// здесь только ре-экспорт под историческим именем — иначе переименование ключа
+// разошлось бы с писателем пары (#1551). Осиротевший `REFRESH_TOKEN_KEY` убран:
+// после #1545 refresh-ключом владеет исключительно `utils/authTokenStore.ts`.
+export { ACCESS_TOKEN_STORAGE_KEY as TOKEN_KEY } from '@/utils/authPlatform';

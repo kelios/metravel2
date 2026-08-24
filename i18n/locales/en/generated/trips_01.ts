@@ -312,6 +312,7 @@ export const tripsGenerated1 = {
   "components.trips.planning.TripSuggestPointForm.predlozhit_e82e20f5": "Suggest",
   "components.trips.planning.TripSuggestPointForm.predlozhit_mesto_a14ee3f0": "Suggest a place",
   "components.trips.planning.TripSuggestPointForm.shirota_lat_d33777ea": "Latitude (lat)",
+  "components.trips.planning.TripSuggestPointForm.ukazhite_shirotu_ot_90_do_90_i_dolgotu_ot_1_915743a7": "Enter a latitude from -90 to 90 and a longitude from -180 to 180.",
   "components.trips.PublicTripCard.prodvigaetsya_a90a5d56": "Promoting",
   "components.trips.PublicTripDetail.dalshe_mesto_vstrechi_i_kontakty_drugogo_che_4078fd5c": "Next is the meeting place and contacts of the other person. Use them only for this trip and do not pass them on to third parties. MeTravel is not responsible for the agreements of participants.",
   "components.trips.PublicTripDetail.detali_dlya_uchastnikov_d5a9baa8": "Participant Details",

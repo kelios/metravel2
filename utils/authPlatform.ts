@@ -1,6 +1,19 @@
 import { Platform } from 'react-native';
 
-const AUTH_TOKEN_KEYS = new Set(['userToken', 'refreshToken']);
+/**
+ * Единственное объявление имён ключей сессионной пары на всё приложение (#1551).
+ * Раньше те же литералы жили ещё в `api/apiConfig.ts`, `api/travelQueryShared.ts`
+ * и `utils/authTokenStore.ts`, причём писатель пары и читатели брали имя из
+ * РАЗНЫХ объявлений: переименование в одном месте молча развело бы запись и
+ * чтение — на диске живой токен, а приложение считает пользователя гостем.
+ * Владельцем выбран этот модуль: он уже владеет именами для web-гарда и не
+ * имеет зависимостей, поэтому его может импортировать любой слой. Остальные
+ * модули только ре-экспортируют эти константы.
+ */
+export const ACCESS_TOKEN_STORAGE_KEY = 'userToken';
+export const REFRESH_TOKEN_STORAGE_KEY = 'refreshToken';
+
+const AUTH_TOKEN_KEYS = new Set<string>([ACCESS_TOKEN_STORAGE_KEY, REFRESH_TOKEN_STORAGE_KEY]);
 
 /** Web authenticates with the backend-managed HttpOnly cookie. */
 export const usesWebCookieAuth = (): boolean => Platform.OS === 'web';

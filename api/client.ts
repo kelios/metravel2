@@ -25,7 +25,13 @@ import {
 import { notifyAuthInvalidation } from '@/api/authInvalidation';
 export { setAuthInvalidationHandler } from '@/api/authInvalidation';
 import { RateLimiter, type RateLimitSlot } from '@/utils/rateLimiter';
-import { ApiError, hasLoggableRequestError, isOfflineLikeError } from '@/api/clientErrors';
+import {
+    ApiError,
+    SessionSupersededError,
+    hasLoggableRequestError,
+    isOfflineLikeError,
+    isSessionSupersededError,
+} from '@/api/clientErrors';
 import { translate as i18nT } from '@/i18n';
 import type { DownloadResponse } from '@/api/clientTypes';
 import {
@@ -49,7 +55,16 @@ export { ApiError, isTimeoutError } from '@/api/clientErrors';
  * когда бэк поднимет эндпоинт — переключаем в true, весь путь возврата готов.
  * (#810, FE-ARCH P3)
  */
-const BACKEND_HAS_REFRESH_ENDPOINT = false;
+let backendHasRefreshEndpoint = false;
+
+/**
+ * Только для тестов: включить ветку ротации, пока бэк не поднял /user/refresh/.
+ * В проде значение неизменно `false` (см. комментарий выше); без этого ветка
+ * `superseded` недостижима и её регресс нечем закрыть (#1551).
+ */
+export const __setBackendRefreshEndpointForTests = (enabled: boolean): void => {
+    backendHasRefreshEndpoint = enabled;
+};
 
 /**
  * Единый API клиент
@@ -158,7 +173,9 @@ class ApiClient {
                     // Диск занят другой сессией: ротация относится к прошлой, и
                     // повторять запрос её токеном нельзя — это чужой доступ.
                     if (persisted === 'superseded') {
-                        throw new ApiError(401, i18nT('errorsStatic:api.client.refreshFailed'));
+                        throw new SessionSupersededError(
+                            i18nT('errorsStatic:api.client.refreshFailed')
+                        );
                     }
                 }
 
@@ -339,7 +356,8 @@ class ApiClient {
                 if (isE2E) {
                     throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
-                if (BACKEND_HAS_REFRESH_ENDPOINT) {
+                let rotationSuperseded = false;
+                if (backendHasRefreshEndpoint) {
                     try {
                         const newToken = await this.refreshAccessToken();
                         // Повторяем запрос с новым токеном
@@ -364,8 +382,9 @@ class ApiClient {
                         }
 
                         return await parseSuccessResponse<T>(retryResponse);
-                    } catch {
+                    } catch (error) {
                         // Refresh не сработал — падаем в общий путь пробы+fallback ниже.
+                        rotationSuperseded = isSessionSupersededError(error);
                     }
                 }
 
@@ -373,7 +392,12 @@ class ApiClient {
                 // попадает ЛЮБОЙ 401 при живом access-токене. Токены стираем только по
                 // подтверждённому 401 контрольной пробы — единичный транзиентный 401 не
                 // должен необратимо разлогинивать устройство (#810).
-                if (await this.isSessionRejectedByServer(token)) {
+                //
+                // Ротация проиграла гонку другой сессии: на диске уже ЕЁ пара, а наш
+                // `token` принадлежит прошлой. Проба пойдёт со старым токеном и по
+                // подтверждённому 401 сотрёт креды победившей сессии — пользователь
+                // станет гостем из-за чужой неудачной ротации. Ни пробы, ни очистки (#1551).
+                if (!rotationSuperseded && (await this.isSessionRejectedByServer(token))) {
                     await this.clearTokens();
                 }
 
@@ -510,7 +534,8 @@ class ApiClient {
                 if (isE2E) {
                     throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
-                if (BACKEND_HAS_REFRESH_ENDPOINT) {
+                let rotationSuperseded = false;
+                if (backendHasRefreshEndpoint) {
                     try {
                         const newToken = await this.refreshAccessToken();
                         const retryHeaders: HeadersInit = {
@@ -528,13 +553,19 @@ class ApiClient {
                             timeout
                         );
                         return await parseDownloadResponse(retryResp);
-                    } catch {
+                    } catch (error) {
                         // Refresh не сработал — падаем в путь пробы+fallback ниже.
+                        rotationSuperseded = isSessionSupersededError(error);
                     }
                 }
 
                 // См. request(): токены стираем только по подтверждённому 401 пробы (#810).
-                if (await this.isSessionRejectedByServer(token)) {
+                //
+                // Ротация проиграла гонку другой сессии: на диске уже ЕЁ пара, а наш
+                // `token` принадлежит прошлой. Проба пойдёт со старым токеном и по
+                // подтверждённому 401 сотрёт креды победившей сессии — пользователь
+                // станет гостем из-за чужой неудачной ротации. Ни пробы, ни очистки (#1551).
+                if (!rotationSuperseded && (await this.isSessionRejectedByServer(token))) {
                     await this.clearTokens();
                 }
                 const fallbackHeaders = this.authHeaders(null, { extra: options.headers });
@@ -651,7 +682,7 @@ class ApiClient {
             );
 
             if (response.status === 401 && token) {
-                if (isE2E || !BACKEND_HAS_REFRESH_ENDPOINT) {
+                if (isE2E || !backendHasRefreshEndpoint) {
                     // Бэк без /user/refresh/: refresh на native доомлен — не тратим лишний
                     // roundtrip. Токен не стираем (единичный 401 не доказывает невалидность, #810).
                     throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
@@ -777,7 +808,7 @@ class ApiClient {
                     } catch {
                         resolve(xhr.responseText as unknown as T);
                     }
-                } else if (xhr.status === 401 && token && !isE2E && BACKEND_HAS_REFRESH_ENDPOINT) {
+                } else if (xhr.status === 401 && token && !isE2E && backendHasRefreshEndpoint) {
                     // Retry with refreshed token via XHR (no progress on retry).
                     // Пропускается, пока бэк без /user/refresh/ — 401 падает в общий else.
                     this.refreshAccessToken()
@@ -820,7 +851,7 @@ class ApiClient {
             );
 
             if (response.status === 401 && token) {
-                if (isE2E || !BACKEND_HAS_REFRESH_ENDPOINT) {
+                if (isE2E || !backendHasRefreshEndpoint) {
                     // Бэк без /user/refresh/: refresh на native доомлен — не тратим лишний
                     // roundtrip. Токен не стираем (единичный 401 не доказывает невалидность, #810).
                     throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));

@@ -16,7 +16,7 @@ import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
 import type { FacebookAuthResult } from '@/api/auth';
 import type { SocialSessionPayload } from '@/api/authShared';
-import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import { ACCESS_TOKEN_STORAGE_KEY, shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 import { translate as i18nT } from '@/i18n'
@@ -259,7 +259,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         try {
             const usesStoredToken = shouldUseStoredAuthToken();
             const [token, storageData] = await Promise.all([
-                usesStoredToken ? getSecureItem('userToken') : Promise.resolve(null),
+                usesStoredToken ? getSecureItem(ACCESS_TOKEN_STORAGE_KEY) : Promise.resolve(null),
                 getStorageBatch(['userId', 'userName', 'isSuperuser', 'userAvatar']),
             ]);
 

@@ -5,14 +5,27 @@
 import { useCallback } from 'react';
 import { Platform } from 'react-native';
 import type { Travel } from '@/types/types';
-import { offlineCatalog } from '@/services/offline/offlineCatalog';
-import { readTravelOffline, saveTravelOffline } from '@/services/offline/travelOfflineAdapter';
+
+// #1552: все три функции ниже асинхронные, а вызываются только по действию
+// пользователя или после первого экрана. Статический импорт при этом держал
+// `services/offline/offlineCatalog` в стартовом графе travel-детали, а Metro
+// группирует этот модуль в чанк карты: покрытие прода показывало
+// `__shared-5` (284 КБ) и `__shared-57` (105 КБ) использованными на 5% и 1%.
+// `await import(...)` внутри async-функции — настоящая граница чанка.
+type OfflineCatalogModule = typeof import('@/services/offline/offlineCatalog');
+type TravelOfflineAdapterModule = typeof import('@/services/offline/travelOfflineAdapter');
+
+const loadOfflineCatalog = (): Promise<OfflineCatalogModule> =>
+  import('@/services/offline/offlineCatalog');
+const loadTravelOfflineAdapter = (): Promise<TravelOfflineAdapterModule> =>
+  import('@/services/offline/travelOfflineAdapter');
 
 export async function cacheTravelOffline(id: number | string, data: unknown, isNative: boolean) {
   void isNative;
   if (!id || !data || typeof data !== 'object') return;
   const travel = data as Travel;
   const sourceId = travel.id ?? travel.slug ?? id;
+  const { offlineCatalog } = await loadOfflineCatalog();
   const existing = await offlineCatalog.get(`travel:${String(sourceId).trim()}`);
 
   // Opening a detail screen refreshes the lightweight "recent" fallback in
@@ -20,17 +33,20 @@ export async function cacheTravelOffline(id: number | string, data: unknown, isN
   // downloaded photos) with the text-only recent snapshot.
   if (existing?.pinned && existing.status === 'ready') return;
 
+  const { saveTravelOffline } = await loadTravelOfflineAdapter();
   await saveTravelOffline(travel, { routeParam: id });
 }
 
 export async function getOfflineTravelCached(id: number | string, isNative: boolean): Promise<unknown | null> {
   void isNative;
   if (!id) return null;
+  const { readTravelOffline } = await loadTravelOfflineAdapter();
   return readTravelOffline(id);
 }
 
 export async function getOfflineTravelCachedIds(isNative: boolean): Promise<string[]> {
   void isNative;
+  const { offlineCatalog } = await loadOfflineCatalog();
   const items = await offlineCatalog.list();
   return items
     .filter((item) => item.type === 'travel' && item.status === 'ready')

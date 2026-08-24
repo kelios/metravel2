@@ -3,7 +3,7 @@
 // отклоняется, ответ не утекает в story/hint, маршрут не выходит за пеший кап.
 import { buildAnswerChecker } from '@/utils/questAdapters';
 
-const quests = require('../../scripts/hel-city-quest-data.js');
+const quests = require('../../scripts/hel-fishermen-quest-data.js');
 
 type Step = {
     step_id: string;
@@ -54,7 +54,7 @@ describe('hel-fishermen: контент квеста', () => {
         expect(steps).toHaveLength(14);
         expect(steps.filter((s) => s.answer_pattern.type !== 'any')).toHaveLength(12);
         expect(quest.intro.answer_pattern.type).toBe('any');
-        expect(String(quest.finale.story).length).toBeGreaterThan(500);
+        expect(String(quest.finale.text).length).toBeGreaterThan(500);
     });
 
     it('не повторяет quest_id и storage_key роадтрипа по косе', () => {

@@ -21,7 +21,8 @@ if (!rawApiUrl) {
 const URLAPI = rawApiUrl;
 
 export const LONG_TIMEOUT = 30000;
-export const TOKEN_KEY = 'userToken';
+// Ре-экспорт единственного объявления ключа (#1551) — см. `@/utils/authPlatform`.
+export { ACCESS_TOKEN_STORAGE_KEY as TOKEN_KEY } from '@/utils/authPlatform';
 export const GET_TRAVELS = `${URLAPI}/travels/`;
 export const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
 export const GET_TRAVEL_FACETS = `${URLAPI}/travels/facets/`;

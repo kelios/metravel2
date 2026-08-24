@@ -21,6 +21,7 @@ import { persistSessionTokens, clearSessionTokens } from '@/utils/authTokenStore
 import { getCsrfHeader } from '@/utils/csrf';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import {
+    ACCESS_TOKEN_STORAGE_KEY,
     getApiRequestCredentials,
     hasUsableAuthCredential,
     shouldUseStoredAuthToken,
@@ -42,7 +43,7 @@ const PUSH_TOKEN = `${URLAPI}/user/push-token/`;
 const WEB_SESSION_PROBE = `${URLAPI}/user/me/verifications/`;
 
 const getStoredAuthToken = async (): Promise<string | null> =>
-    shouldUseStoredAuthToken() ? getSecureItem('userToken') : null;
+    shouldUseStoredAuthToken() ? getSecureItem(ACCESS_TOKEN_STORAGE_KEY) : null;
 
 /**
  * Validate the ambient HttpOnly-cookie session through a private endpoint.

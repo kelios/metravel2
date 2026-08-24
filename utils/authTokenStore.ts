@@ -25,10 +25,12 @@
 // обеих платформах (на web она вычищает легаси-значения прошлых сборок).
 
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
-import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import {
+    ACCESS_TOKEN_STORAGE_KEY as ACCESS_TOKEN_KEY,
+    REFRESH_TOKEN_STORAGE_KEY as REFRESH_TOKEN_KEY,
+    shouldUseStoredAuthToken,
+} from '@/utils/authPlatform';
 
-const ACCESS_TOKEN_KEY = 'userToken';
-const REFRESH_TOKEN_KEY = 'refreshToken';
 const SESSION_TOKEN_KEYS = [ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY];
 
 /** Хвост очереди записи: следующая операция стартует только после предыдущей. */

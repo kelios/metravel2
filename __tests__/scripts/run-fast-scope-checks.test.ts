@@ -41,13 +41,13 @@ describe('run-fast-scope-checks', () => {
   it('picks changed quest data files for the answer reachability scan (#1450)', () => {
     expect(getChangedQuestDataFiles([
       'scripts/yelnya-quest-data.js',
-      'scripts/krakow-district-quests-data.js',
+      'scripts/krakow-kazimierz-quest-data.js',
       'scripts/run-fast-scope-checks.js',
       'scripts/lib/questBundles.js',
       'docs/features/quests.md',
     ])).toEqual([
       'scripts/yelnya-quest-data.js',
-      'scripts/krakow-district-quests-data.js',
+      'scripts/krakow-kazimierz-quest-data.js',
     ])
   })
 

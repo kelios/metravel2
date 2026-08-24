@@ -218,6 +218,11 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
 - `RoutePoint`: `id: string`, `type: place|custom|rest|overnight`, `name`,
   `description`, `coordinates: [lng, lat] | null`, `placeId`.
   Порядок домена — **[lng, lat]**, в PUT уходит раздельными `lat`/`lng`.
+  `type: 'place'` существует только вместе с непустым `placeId`: в PUT он уходит
+  как `point_type: 'travel'`, а бэкенд (`validate_route_point_attrs`) отклоняет
+  такую точку без привязки и валит весь запрос. Поэтому «Место» ставится только
+  выбором места или путешествия в поиске по сайту, а не переключателем типа
+  (#1532); из формы редактирования чип «Место» скрыт для точки без `placeId`.
 - `RouteSummary`: `distanceKm`, `durationMin`, `elevationGainM`, `stopsCount`,
   `provider?`, `updatedAt?`.
 - `RoutingState`: `provider`, `isOptimal`, `fallbackReason`, `warnings[]`.

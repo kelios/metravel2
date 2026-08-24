@@ -25,7 +25,26 @@ interface Props {
   trip: PlannedTrip;
 }
 
+// #1553: `place` — не самостоятельный ярлык, а следствие привязки к сущности
+// MeTravel: тип ставится выбором места или путешествия в поиске по сайту.
+// В форме предложения такого поиска нет, `placeId` здесь всегда null, и валидным
+// этот тип стать не может: `pointTypeToBe` переводит `place` → `travel`,
+// предложение уходит как `point_type: 'travel', travel: null`, а бэкенд
+// (`validate_route_point_attrs`) отклоняет его с 400. Тип стоял ещё и первым в
+// ряду, поэтому отказ получал каждый, кто не переключил чип вручную. Тот же
+// инвариант, что в конструкторе маршрута (#1532), но другой файл и эндпоинт.
 const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
+
+// Все оставшиеся типы бэкенд считает координатными и требует у них пару lat/lng
+// в границах координат (`validate_route_point_attrs`). Разбор до отправки
+// оставляет пользователю понятную причину отказа вместо общего «не удалось
+// отправить» на 400.
+const parseCoordinate = (value: string): number | null => {
+  const text = value.trim();
+  if (!text) return null;
+  const parsed = Number(text.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 function TripSuggestPointForm({ trip }: Props) {
   const colors = useThemedColors();
@@ -50,10 +69,20 @@ function TripSuggestPointForm({ trip }: Props) {
     setSubmitError(null);
     setSent(false);
 
-    const latNum = parseFloat(lat.replace(',', '.'));
-    const lngNum = parseFloat(lng.replace(',', '.'));
-    const coordinates: [number, number] | null =
-      Number.isFinite(latNum) && Number.isFinite(lngNum) ? [lngNum, latNum] : null;
+    const latNum = parseCoordinate(lat);
+    const lngNum = parseCoordinate(lng);
+    if (
+      latNum == null ||
+      lngNum == null ||
+      latNum < -90 ||
+      latNum > 90 ||
+      lngNum < -180 ||
+      lngNum > 180
+    ) {
+      setSubmitError(i18nT('trips:components.trips.planning.TripSuggestPointForm.ukazhite_shirotu_ot_90_do_90_i_dolgotu_ot_1_915743a7'));
+      return;
+    }
+    const coordinates: [number, number] = [lngNum, latNum];
     const desc = description.trim();
 
     const point: Omit<RoutePoint, 'id'> = {
@@ -95,6 +124,7 @@ function TripSuggestPointForm({ trip }: Props) {
               accessibilityRole="button"
               onPress={() => setType(option)}
               style={[styles.typeChip, active && styles.typeChipActive]}
+              testID={`trip-suggest-type-${option}`}
             >
               <Feather
                 name={ROUTE_POINT_ICON_NAME[option] as never}

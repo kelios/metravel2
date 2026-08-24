@@ -312,6 +312,7 @@ export const tripsGenerated1 = {
   "components.trips.planning.TripSuggestPointForm.predlozhit_e82e20f5": "Zasugeruj",
   "components.trips.planning.TripSuggestPointForm.predlozhit_mesto_a14ee3f0": "Zaproponuj miejsce",
   "components.trips.planning.TripSuggestPointForm.shirota_lat_d33777ea": "Szerokość geograficzna (łac.)",
+  "components.trips.planning.TripSuggestPointForm.ukazhite_shirotu_ot_90_do_90_i_dolgotu_ot_1_915743a7": "Podaj szerokość od -90 do 90 i długość od -180 do 180.",
   "components.trips.PublicTripCard.prodvigaetsya_a90a5d56": "Promowanie",
   "components.trips.PublicTripDetail.dalshe_mesto_vstrechi_i_kontakty_drugogo_che_4078fd5c": "Dalej jest miejsce spotkania i kontakty drugiej osoby. Używaj ich wyłącznie podczas tej podróży i nie przekazuj ich osobom trzecim. MeTravel nie ponosi odpowiedzialności za umowy uczestników.",
   "components.trips.PublicTripDetail.detali_dlya_uchastnikov_d5a9baa8": "Dane uczestnika",

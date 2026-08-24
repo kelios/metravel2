@@ -13,6 +13,7 @@ import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { validateReadyForModeration } from '@/utils/travelWizardValidation';
 import {
+  ACCESS_TOKEN_STORAGE_KEY,
   getApiRequestCredentials,
   hasUsableAuthCredential,
   shouldUseStoredAuthToken,
@@ -78,7 +79,7 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
     : fallback;
 
 const requireAuthCredential = async (): Promise<void> => {
-  const token = shouldUseStoredAuthToken() ? await getSecureItem('userToken') : null;
+  const token = shouldUseStoredAuthToken() ? await getSecureItem(ACCESS_TOKEN_STORAGE_KEY) : null;
   if (!hasUsableAuthCredential(token)) {
     throw new Error(i18nT('errorsStatic:api.misc.authRequired'));
   }
@@ -95,7 +96,7 @@ const requireAuthCredential = async (): Promise<void> => {
  * в ветку `if (auth)` без CSRF-проверки.
  */
 const publicPostInit = async (): Promise<RequestInit> => {
-  const token = shouldUseStoredAuthToken() ? await getSecureItem('userToken') : null;
+  const token = shouldUseStoredAuthToken() ? await getSecureItem(ACCESS_TOKEN_STORAGE_KEY) : null;
   return {
     method: 'POST',
     ...getApiRequestCredentials(true),

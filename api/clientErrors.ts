@@ -18,6 +18,30 @@ export class ApiError extends Error {
     }
 }
 
+/**
+ * Ротация access-токена не смогла записаться: пока она ходила в сеть, диск занял
+ * другой вход или подтверждение почты, и там уже лежит пара ДРУГОЙ, победившей
+ * сессии (`superseded` из `utils/authTokenStore.ts`, #1545).
+ *
+ * От обычного 401 отличается тем, КОГО отверг сервер: не пользователя, а
+ * конкретную in-flight ротацию прошлой сессии. Поэтому по нему нельзя ни идти в
+ * контрольную пробу СТАРЫМ токеном, ни звать `clearTokens()` — очистка стёрла бы
+ * креды победившей сессии и сделала пользователя гостем из-за чужой неудачной
+ * ротации (#1551).
+ *
+ * Остаётся `ApiError` со статусом 401, поэтому пути, которые просто пробрасывают
+ * ApiError вызывающему (upload), ведут себя ровно как прежде.
+ */
+export class SessionSupersededError extends ApiError {
+    constructor(message: string) {
+        super(401, message);
+        this.name = 'SessionSupersededError';
+    }
+}
+
+export const isSessionSupersededError = (error: unknown): boolean =>
+    error instanceof SessionSupersededError;
+
 export const hasLoggableRequestError = (error: unknown): boolean => {
     if (error == null) return false;
     if (typeof error === 'string') {

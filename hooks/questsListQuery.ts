@@ -1,4 +1,3 @@
-import { fetchQuestsList } from '@/api/quests'
 import { queryKeys } from '@/api/queryKeys'
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
 
@@ -11,15 +10,22 @@ import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListC
  * кеша, — а держалась она копипастой в двух местах, где разъехаться могли и
  * `select`, и `retry`, и сигнатура `queryFn`.
  *
- * Модуль намеренно лёгкий: `@/api/quests` + ключи + политика кеша. Слой
- * адаптеров (`utils/questAdapters` → `utils/geoCountry`) он не тянет, поэтому
- * его можно импортировать из универсальных крошек, которые рендерятся на
- * каждом маршруте.
+ * Модуль намеренно лёгкий: ключи + политика кеша. Слой адаптеров
+ * (`utils/questAdapters` → `utils/geoCountry`) он не тянет, поэтому его можно
+ * импортировать из универсальных крошек, которые рендерятся на каждом маршруте.
+ *
+ * #1552: сам `@/api/quests` тоже вынесен за async-границу. Он загружается
+ * ровно тогда, когда запрос реально стартует, поэтому маршруты без списка
+ * квестов (travel-детали — основная масса страниц) больше не держат чанк
+ * квестового API в стартовом графе.
  */
 export function questsListQueryOptions() {
   return {
     queryKey: queryKeys.quests(),
-    queryFn: ({ signal }: { signal?: AbortSignal }) => fetchQuestsList({ signal }),
+    queryFn: async ({ signal }: { signal?: AbortSignal }) => {
+      const { fetchQuestsList } = await import('@/api/quests')
+      return fetchQuestsList({ signal })
+    },
     staleTime: QUESTS_LIST_STALE_TIME,
     gcTime: QUESTS_LIST_GC_TIME,
   } as const

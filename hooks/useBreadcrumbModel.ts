@@ -7,12 +7,18 @@ import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
-import { fetchQuestByQuestId, type ApiQuestBundle, type ApiQuestMeta } from '@/api/quests';
+// #1552: крошки живут в шапке КАЖДОГО маршрута, поэтому статический импорт
+// их route-специфичных фетчеров держал в стартовом графе всего сайта слои
+// квестов и поездок. На travel-детали покрытие прода показывало `__shared-7`
+// (145 КБ, слой поездок + xmldom/GPX) как использованный на 0%.
+// Фетчер нужен только внутри `queryFn`, а он выполняется лишь при `enabled`,
+// поэтому `await import(...)` — настоящая async-граница, а не условный require.
+import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import { resolveQuestCitySegment } from '@/utils/questCityAlias';
 import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
-import { fetchPlannedTrip, type PlannedTrip } from '@/api/plannedTrips';
-import { fetchPublicTrip, type PublicTrip } from '@/api/publicTrips';
+import type { PlannedTrip } from '@/api/plannedTrips';
+import type { PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/queryKeys';
 import { translate as i18nT } from '@/i18n'
 
@@ -277,7 +283,11 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
   const { data: questApiData } = useQuery<ApiQuestBundle | null>({
     queryKey: queryKeys.questBundle(questSlugForBreadcrumb),
-    queryFn: () => questSlugForBreadcrumb ? fetchQuestByQuestId(questSlugForBreadcrumb) : null,
+    queryFn: async () => {
+      if (!questSlugForBreadcrumb) return null;
+      const { fetchQuestByQuestId } = await import('@/api/quests');
+      return fetchQuestByQuestId(questSlugForBreadcrumb);
+    },
     enabled: !!questSlugForBreadcrumb,
     staleTime: 600_000,
     gcTime: 10 * 60 * 1000,
@@ -377,7 +387,11 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
   const { data: plannedTripData } = useQuery<PlannedTrip | null>({
     queryKey: queryKeys.plannedTrip(plannedTripIdForBreadcrumb),
-    queryFn: () => plannedTripIdForBreadcrumb ? fetchPlannedTrip(plannedTripIdForBreadcrumb) : null,
+    queryFn: async () => {
+      if (plannedTripIdForBreadcrumb == null) return null;
+      const { fetchPlannedTrip } = await import('@/api/plannedTrips');
+      return fetchPlannedTrip(plannedTripIdForBreadcrumb);
+    },
     enabled: plannedTripIdForBreadcrumb != null,
     staleTime: 600_000,
     gcTime: 10 * 60 * 1000,
@@ -394,7 +408,11 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
   const { data: publicTripData } = useQuery<PublicTrip | null>({
     queryKey: queryKeys.publicTrip(publicTripIdForBreadcrumb),
-    queryFn: () => publicTripIdForBreadcrumb ? fetchPublicTrip(publicTripIdForBreadcrumb) : null,
+    queryFn: async () => {
+      if (publicTripIdForBreadcrumb == null) return null;
+      const { fetchPublicTrip } = await import('@/api/publicTrips');
+      return fetchPublicTrip(publicTripIdForBreadcrumb);
+    },
     enabled: publicTripIdForBreadcrumb != null,
     staleTime: 600_000,
     gcTime: 10 * 60 * 1000,

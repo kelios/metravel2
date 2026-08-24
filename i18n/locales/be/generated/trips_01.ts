@@ -312,6 +312,7 @@ export const tripsGenerated1 = {
   "components.trips.planning.TripSuggestPointForm.predlozhit_e82e20f5": "Прапанаваць",
   "components.trips.planning.TripSuggestPointForm.predlozhit_mesto_a14ee3f0": "Прапанаваць месца",
   "components.trips.planning.TripSuggestPointForm.shirota_lat_d33777ea": "Шырата (lat)",
+  "components.trips.planning.TripSuggestPointForm.ukazhite_shirotu_ot_90_do_90_i_dolgotu_ot_1_915743a7": "Пазначце шырату ад -90 да 90 і даўгату ад -180 да 180.",
   "components.trips.PublicTripCard.prodvigaetsya_a90a5d56": "Прасоўваецца",
   "components.trips.PublicTripDetail.dalshe_mesto_vstrechi_i_kontakty_drugogo_che_4078fd5c": "Далей - месца сустрэчы і кантакты іншага чалавека. Выкарыстоўвайце іх толькі для гэтай паездкі і не перадавайце трэцім асобам. MeTravel не адказвае за дамоўленасці ўдзельнікаў.",
   "components.trips.PublicTripDetail.detali_dlya_uchastnikov_d5a9baa8": "Дэталі для ўдзельнікаў",
