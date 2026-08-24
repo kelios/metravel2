@@ -11,9 +11,9 @@ description: >-
 Use this skill for task-board operations through the MCP task board tools.
 
 `AGENTS.md` is inherited. Load only the requested operation/status section from
-`docs/TASK_BOARD_MCP.md`; add `$metravel-problem-memory` for create/reopen/split/
-recurrence and `$metravel-task-contract` when a task contract is created or
-reviewed.
+`docs/TASK_BOARD_MCP.md`; run `$metravel-problem-memory` before create, reopen, split,
+or recurrence handling, and add `$metravel-task-contract` when a task contract is
+created or reviewed.
 
 ## Scope
 
