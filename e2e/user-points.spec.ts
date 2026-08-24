@@ -753,11 +753,11 @@ test.describe('User points', () => {
     await selectDialog.locator('[data-testid="simple-multiselect.item.archived"]').click({ force: true });
     await expect(selectDialog.getByText(/Выбрано:\s*1/, { exact: false })).toBeVisible({ timeout: 15_000 });
 
-    // Close the select modal via Escape (avoid ambiguity between multiple RN-web "Закрыть" backdrops).
-    await page.keyboard.press('Escape').catch(() => undefined);
-    await page.keyboard.press('Escape').catch(() => undefined);
-    await selectDialog.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => undefined);
-    await page.waitForTimeout(150);
+    // Close only the nested select. Escape is handled by every stacked RN-web
+    // Modal and can also dismiss the parent bulk-edit dialog.
+    await selectDialog.getByRole('button', { name: 'Закрыть', exact: true }).last().click({ force: true });
+    await selectDialog.waitFor({ state: 'hidden', timeout: 30_000 });
+    await expect(bulkDialog).toBeVisible({ timeout: 30_000 });
 
     // Ensure selection propagated back to the bulk dialog trigger (placeholder should disappear).
     await expect(triggers.last().getByText('Выберите...', { exact: true })).toHaveCount(0, { timeout: 15_000 });
@@ -771,10 +771,13 @@ test.describe('User points', () => {
     });
 
     const applyButton = bulkDialog.getByRole('button', { name: 'Применить', exact: true });
-    await applyButton.click({ force: true }).catch(() => undefined);
-    // Fallback for RN-web: direct DOM click
-    await applyButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+    await applyButton.click({ force: true }).catch(async () => {
+      // Fallback for RN-web when the native press handler rejects the synthetic click.
+      await applyButton.evaluate((el: any) => (el as HTMLElement)?.click?.());
+    });
     await bulkUpdateRequest;
+    await bulkDialog.waitFor({ state: 'hidden', timeout: 30_000 });
+    await expect(page.getByText('Выберите точки в списке')).toHaveCount(0, { timeout: 30_000 });
 
     // The card UI does not necessarily render status label text.
     // Assert through the in-memory mock API storage that bulk update applied.
