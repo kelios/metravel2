@@ -1,6 +1,6 @@
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
-import { StyleSheet } from 'react-native'
+import { ScrollView, StyleSheet } from 'react-native'
 
 // Make React.lazy render synchronously: instead of suspending on the dynamic
 // import, eagerly require the (mocked) module and render its default export.
@@ -224,6 +224,13 @@ describe('ContentUpsertSection — derived display logic', () => {
       />,
     )
     expect(queryByText('Прогресс заполнения')).toBeNull()
+  })
+
+  it('leaves native vertical scrolling to the enclosing wizard step', () => {
+    const { UNSAFE_getAllByType } = renderSection()
+    const sectionScrollView = UNSAFE_getAllByType(ScrollView)[0]
+
+    expect(sectionScrollView.props.scrollEnabled).toBe(false)
   })
 
   it('renders only the requested fields when visibleFields is constrained', () => {

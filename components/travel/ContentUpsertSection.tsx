@@ -830,6 +830,11 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 ref={scrollRef}
+                // TravelWizardStepBasic already owns the vertical native scroll.
+                // A second native UIScrollView traps pan gestures when Dynamic Type
+                // expands this section beyond the viewport, making later fields
+                // unreachable. Web keeps its existing standalone scroll behaviour.
+                scrollEnabled={Platform.OS === 'web'}
             >
                 {/* ✅ УЛУЧШЕНИЕ: Прогресс заполнения формы */}
                 {showProgress && (
