@@ -48,6 +48,7 @@ const {
 } = require('./scan-quest-answer-reachability')
 const { BASELINE_PATH: QUEST_HINT_LEAK_BASELINE_PATH } = require('./scan-quest-hint-leak')
 const { BASELINE_PATH: QUEST_SURFACE_ANSWER_BASELINE_PATH } = require('./scan-quest-surface-answer')
+const { BASELINE_PATH: QUEST_COMPOUND_SPELLING_BASELINE_PATH } = require('./scan-quest-compound-spelling-gap')
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
@@ -304,6 +305,24 @@ const main = () => {
       ], { shell: false })
       if (textScriptStatus !== 0) {
         process.exit(textScriptStatus)
+      }
+
+      // Зеркало скана достижимости (#1536): там вариант в словаре лежит, но
+      // мёртв, здесь все варианты живы, а формы, которую игрок списывает с
+      // объекта, в словаре просто нет. Признак механический — автор уже принял
+      // два написания короткого ответа, но фразу собрал только вокруг одного.
+      // Порог нулевой: все находки прода вычищены, поэтому новый пропуск валит
+      // гейт сразу. Baseline при этом пуст, а не отсутствует — он нужен для
+      // омографов («цепь»/«цеп»), где зеркальная фраза была бы несуществующей и
+      // у автора иначе остаётся только выкинуть послабление из словаря. Полный
+      // свип — `npm run quest:scan-compound-spelling-gap`.
+      const compoundSpellingStatus = runCommand('node', [
+        'scripts/scan-quest-compound-spelling-gap.js',
+        `--source=${questDataFile}`,
+        `--baseline=${QUEST_COMPOUND_SPELLING_BASELINE_PATH}`,
+      ], { shell: false })
+      if (compoundSpellingStatus !== 0) {
+        process.exit(compoundSpellingStatus)
       }
 
       // Правило авторинга 4a: ответ не стоит в тексте, который игрок читает до
