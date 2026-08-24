@@ -28,7 +28,7 @@
     "payloadRoutes": {
       "geoCountryOutlines": {
         "marker": "4155,4241,-5,23,-8,10",
-        "maxRoutes": 2,
+        "maxRoutes": 0,
         "mustNotLoad": [
           "index.html",
           "search.html",

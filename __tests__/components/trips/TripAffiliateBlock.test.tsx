@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render } from '@testing-library/react-native'
+import { act, fireEvent, render } from '@testing-library/react-native'
 
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock'
 import type { PlannedTrip, RoutePoint } from '@/api/plannedTrips'
@@ -37,6 +37,20 @@ const makeTrip = (route: RoutePoint[], region = ''): PlannedTrip =>
 
 const openedUrl = () => (openExternalUrlInNewTab as jest.Mock).mock.calls[0][0] as string
 
+// #1543: страна поездки резолвится за `import('@/utils/geoCountry')` — таблица
+// контуров (67 КБ) не имеет права ехать в стартовом графе маршрута. Значит
+// первый кадр всегда без кода страны, и ассерты идут после того, как чанк
+// догрузился. Макрозадача сливает всю очередь микрозадач разом, поэтому
+// ожидание не зависит от числа звеньев в цепочке промисов; достаточность
+// доказывают тесты со страной ниже — без flush они краснеют на homepage-ссылке.
+const renderBlock = async (trip: PlannedTrip) => {
+  const view = render(<TripAffiliateBlock trip={trip} />)
+  await act(async () => {
+    await new Promise((resolve) => setImmediate(resolve))
+  })
+  return view
+}
+
 describe('TripAffiliateBlock', () => {
   const original: Record<string, string | undefined> = {}
 
@@ -61,8 +75,8 @@ describe('TripAffiliateBlock', () => {
 
   // Суть задачи: без `countryCode` обе ссылки поездки всегда уходили на homepage
   // партнёра, потому что `resolveCountrySlug` нечего было резолвить.
-  it('deep-links both partners to the country of the first route point', () => {
-    const { getByText } = render(<TripAffiliateBlock trip={makeTrip([point('Минск', MINSK)])} />)
+  it('deep-links both partners to the country of the first route point', async () => {
+    const { getByText } = await renderBlock(makeTrip([point('Минск', MINSK)]))
 
     fireEvent.press(getByText('Подобрать жильё'))
     expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
@@ -72,17 +86,17 @@ describe('TripAffiliateBlock', () => {
     expect(openedUrl()).toContain(encodeURIComponent('https://experience.tripster.ru/destinations/belarus/'))
   })
 
-  it('keeps reporting the click to trip analytics', () => {
-    const { getByText } = render(<TripAffiliateBlock trip={makeTrip([point('Минск', MINSK)])} />)
+  it('keeps reporting the click to trip analytics', async () => {
+    const { getByText } = await renderBlock(makeTrip([point('Минск', MINSK)]))
     fireEvent.press(getByText('Подобрать жильё'))
     expect(trackTripAffiliateClick).toHaveBeenCalledWith(31, 'hotels')
   })
 
   // Точка типа `custom` заводится без координат: страна берётся у первой точки,
   // у которой они есть, иначе поездка теряла бы дип-линк целиком.
-  it('falls through a coordinate-less first point to the next one', () => {
-    const { getByText } = render(
-      <TripAffiliateBlock trip={makeTrip([point('Сбор у подъезда', null), point('Минск', MINSK)])} />,
+  it('falls through a coordinate-less first point to the next one', async () => {
+    const { getByText } = await renderBlock(
+      makeTrip([point('Сбор у подъезда', null), point('Минск', MINSK)]),
     )
 
     fireEvent.press(getByText('Подобрать жильё'))
@@ -91,19 +105,15 @@ describe('TripAffiliateBlock', () => {
 
   // Инвариант #1371 на поверхности поездок: место в копии допустимо только тогда,
   // когда ссылка реально ведёт в это место.
-  it('names the place when the link lands there', () => {
-    const { getByText } = render(
-      <TripAffiliateBlock trip={makeTrip([point('Минск', MINSK)], 'Минск')} />,
-    )
+  it('names the place when the link lands there', async () => {
+    const { getByText } = await renderBlock(makeTrip([point('Минск', MINSK)], 'Минск'))
     expect(getByText('Отели и апартаменты — Минск')).toBeTruthy()
   })
 
-  it('names no place when the country has no partner page and the link is the homepage', () => {
+  it('names no place when the country has no partner page and the link is the homepage', async () => {
     // UA исключена из COUNTRY_SLUG — обе ссылки уходят на homepage, значит
     // подпись не имеет права называть Киев.
-    const { getByText } = render(
-      <TripAffiliateBlock trip={makeTrip([point('Киев', KYIV)], 'Киев')} />,
-    )
+    const { getByText } = await renderBlock(makeTrip([point('Киев', KYIV)], 'Киев'))
 
     expect(getByText('Отели и апартаменты рядом с маршрутом')).toBeTruthy()
     fireEvent.press(getByText('Подобрать жильё'))
@@ -111,10 +121,8 @@ describe('TripAffiliateBlock', () => {
     expect(openedUrl()).not.toContain(encodeURIComponent('/hotel/'))
   })
 
-  it('stays neutral for a trip without any coordinates', () => {
-    const { getByText } = render(
-      <TripAffiliateBlock trip={makeTrip([point('Сбор у подъезда', null)], 'Минск')} />,
-    )
+  it('stays neutral for a trip without any coordinates', async () => {
+    const { getByText } = await renderBlock(makeTrip([point('Сбор у подъезда', null)], 'Минск'))
 
     expect(getByText('Отели и апартаменты рядом с маршрутом')).toBeTruthy()
     fireEvent.press(getByText('Подобрать жильё'))
@@ -122,13 +130,11 @@ describe('TripAffiliateBlock', () => {
     expect(openedUrl()).not.toContain(encodeURIComponent('/hotel/'))
   })
 
-  it('renders no orphan heading when no offer template is configured', () => {
+  it('renders no orphan heading when no offer template is configured', async () => {
     delete process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE
     delete process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE
 
-    const { queryByTestId, queryByText } = render(
-      <TripAffiliateBlock trip={makeTrip([point('Минск', MINSK)])} />,
-    )
+    const { queryByTestId, queryByText } = await renderBlock(makeTrip([point('Минск', MINSK)]))
 
     expect(queryByTestId('trip-affiliate')).toBeNull()
     expect(queryByText('Где остановиться и что посмотреть')).toBeNull()

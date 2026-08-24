@@ -6,9 +6,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import AffiliateOffers from '@/components/affiliate/AffiliateOffers';
-import { getAffiliateOffers } from '@/components/affiliate/affiliateConfig';
+import { getAffiliateOffers, isAffiliateEnabled } from '@/components/affiliate/affiliateConfig';
+import { useCountryCodeByCoords, type LookupCoordinates } from '@/hooks/useCountryCodeByCoords';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { getCountryCodeByCoords } from '@/utils/geoCountry';
 import { trackTripAffiliateClick } from '@/utils/tripAnalytics';
 import { translate as i18nT } from '@/i18n'
 
@@ -18,7 +18,7 @@ interface Props {
 }
 
 /**
- * ISO-код страны поездки по координатам её первой точки — тем же путём, что и
+ * Координаты, по которым резолвится страна поездки — тем же путём, что и
  * travel-детали (`AffiliateSection`). Своего поля страны у поездки нет: в
  * `PlannedTripDto` его не отдаёт бэк, поэтому координаты маршрута — единственный
  * гео-сигнал. Без кода `resolveCountrySlug` не резолвится вообще, и обе ссылки
@@ -29,14 +29,14 @@ interface Props {
  * координатной точки не идём — страна маршрута определяется его началом, как и у
  * travel. `RoutePoint.coordinates` хранится как `[lng, lat]`.
  */
-const resolveTripCountryCode = (trip: PlannedTrip): string | undefined => {
+const resolveTripCoordinates = (trip: PlannedTrip): LookupCoordinates | undefined => {
   const points = trip.route?.length ? trip.route : trip.startPoint ? [trip.startPoint] : [];
   for (const point of points) {
     const coords = point?.coordinates;
     if (!coords) continue;
     const [lng, lat] = coords;
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-    return getCountryCodeByCoords(lat, lng);
+    return { lat, lng };
   }
   return undefined;
 };
@@ -44,9 +44,14 @@ const resolveTripCountryCode = (trip: PlannedTrip): string | undefined => {
 function TripAffiliateBlock({ trip }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // Сам резолвер (и таблица контуров стран за ним, 67 КБ) грузится по import()
+  // из общего чокпоинта: синхронный импорт отсюда уводил таблицу в стартовый
+  // граф маршрута планировщика тегом <script> (#1393, #1543).
+  const coordinates = useMemo(() => resolveTripCoordinates(trip), [trip]);
+  const countryCode = useCountryCodeByCoords(coordinates, isAffiliateEnabled());
   const context = useMemo(
-    () => ({ city: trip.region || undefined, countryCode: resolveTripCountryCode(trip) }),
-    [trip],
+    () => ({ city: trip.region || undefined, countryCode }),
+    [trip.region, countryCode],
   );
 
   // У заголовка нет собственного содержимого: без офферов (нет маркера или

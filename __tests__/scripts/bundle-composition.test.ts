@@ -102,6 +102,36 @@ const LAZY_ONLY_MODULES = [
     allowedSyncImporters: [] as string[],
     ticket: '#1148',
   },
+  // #1543: резолвер стран тянет за собой таблицу контуров (67 КБ). Синхронного
+  // импортёра у него быть не должно вообще — единственная точка входа —
+  // динамический `import()` в `hooks/useCountryCodeByCoords.ts` (см.
+  // DYNAMIC_IMPORT_CHOKEPOINTS ниже).
+  {
+    module: '@/utils/geoCountry',
+    allowedSyncImporters: [] as string[],
+    ticket: '#1543',
+  },
+]
+
+/**
+ * #1543: модули, у которых async-граница обязана быть ОДНА.
+ *
+ * Metro группирует чанк по МНОЖЕСТВУ корней, из которых модуль достижим, — и
+ * async-корни считаются так же, как маршрутные. Два компонента, каждый со своим
+ * `import('@/utils/geoCountry')`, дают два корня, и добавление третьего
+ * потребителя переразбивает граф (механизм #1393/#1543). Один чокпоинт — один
+ * корень, сколько бы компонентов его ни звало.
+ *
+ * Список обязан быть живым в обе стороны: чужих импортёров нет И заявленный
+ * чокпоинт действительно держит динамический импорт. Иначе «зелено» означало бы
+ * лишь то, что граница тихо исчезла вместе с записью.
+ */
+const DYNAMIC_IMPORT_CHOKEPOINTS: Array<{ specifier: string; owner: string; ticket: string }> = [
+  {
+    specifier: '@/utils/geoCountry',
+    owner: 'hooks/useCountryCodeByCoords.ts',
+    ticket: '#1543',
+  },
 ]
 
 /**
@@ -120,22 +150,35 @@ const LAZY_ONLY_MODULES = [
  * считает достижимость по исходникам за секунду и падает ДО сборки.
  */
 const ROUTE_SCOPED_PAYLOADS: Array<{
+  payload: string
   module: string
   allowedRoutes: string[]
-  mustReachFrom: string
+  control: { module: string; route: string }
   ticket: string
 }> = [
   {
+    // Ключ в `config/bundle-budget.json` → `eager.payloadRoutes`: тот же payload
+    // считает гейт по собранному бандлу, и расхождение пинов ловит отдельный
+    // тест ниже.
+    payload: 'geoCountryOutlines',
     module: 'utils/geoCountryOutlines.ts',
-    // Единственный оставшийся законный потребитель: партнёрский блок
-    // планировщика резолвит страну точки по координатам. Квестам таблица больше
-    // не нужна — `country_code` приходит из API (замер прода 2026-08-10: 139 из
-    // 139 квестов), и координатный фолбэк из `questAdapters` убран.
-    allowedRoutes: ['app/(tabs)/trips/plan/[id].tsx'],
-    // Маршрут-контроль детектора: если резолвер сломается, «ноль маршрутов»
-    // выглядит как идеальный результат, поэтому одно срабатывание обязано быть.
-    mustReachFrom: 'app/(tabs)/trips/plan/[id].tsx',
-    ticket: '#1393',
+    // #1543: синхронных потребителей не осталось ни одного. Оба партнёрских
+    // блока (travel-детали и планировщик поездки) резолвят страну через
+    // `hooks/useCountryCodeByCoords`, то есть за `import()`, поэтому таблица не
+    // имеет права попасть в стартовый граф НИ ОДНОГО маршрута. Квестам она не
+    // нужна с #1393 — `country_code` приходит из API (замер прода 2026-08-10:
+    // 139 из 139 квестов), координатный фолбэк из `questAdapters` убран.
+    allowedRoutes: [],
+    // Контроль детектора. Раньше им было `mustReachFrom` на самой таблице, но
+    // теперь «ноль маршрутов» — это и есть ожидаемый результат, и от сломанного
+    // резолвера он неотличим. Поэтому контроль переехал на ВЛАДЕЛЬЦА payload'а:
+    // компонент, ради которого таблица грузится, обязан остаться синхронно
+    // достижимым со своего маршрута. Не достижим — сломан обход, а не бандл.
+    control: {
+      module: 'components/trips/planning/TripAffiliateBlock.tsx',
+      route: 'app/(tabs)/trips/plan/[id].tsx',
+    },
+    ticket: '#1543',
   },
 ]
 
@@ -388,20 +431,57 @@ describe('состав eager-бандла (#1148)', () => {
 
   it.each(ROUTE_SCOPED_PAYLOADS)(
     'payload $module остаётся в стартовом графе только своих маршрутов ($ticket)',
-    ({ module, allowedRoutes, mustReachFrom }) => {
+    ({ module, allowedRoutes, control }) => {
       const target = join(ROOT, module)
       const routeRoots = collectSourceFiles(join(ROOT, 'app'))
       const reached = routeRoots
         .map((root) => ({ root: relative(ROOT, root), chain: syncPathTo(root, target) }))
         .filter((hit) => hit.chain !== null)
 
-      expect(reached.map((hit) => hit.root)).toContain(mustReachFrom)
+      // Контроль обхода до самой проверки: владелец payload'а обязан быть
+      // синхронно достижим со своего маршрута, иначе пустой результат ниже
+      // означает сломанный резолвер, а не чистый граф.
+      expect({
+        control: `${control.route} -> ${control.module}`,
+        reachable: syncPathTo(join(ROOT, control.route), join(ROOT, control.module)) !== null,
+      }).toEqual({ control: `${control.route} -> ${control.module}`, reachable: true })
 
       const offenders = reached.filter((hit) => !allowedRoutes.includes(hit.root))
       // Цепочка в сообщении — сразу видно, каким ребром payload попал на маршрут.
       expect(offenders.map((hit) => `${hit.root}: ${hit.chain!.join(' -> ')}`)).toEqual([])
     },
   )
+
+  it.each(DYNAMIC_IMPORT_CHOKEPOINTS)(
+    'модуль $specifier грузится ровно из одной async-точки $owner ($ticket)',
+    ({ specifier, owner }) => {
+      const importers = sourceFiles
+        .filter((file) => dynamicImportSpecifiers(readFileSync(file, 'utf8')).includes(specifier))
+        .map((file) => relative(ROOT, file))
+
+      // Ровно один импортёр, и это заявленный чокпоинт: и лишние async-корни, и
+      // тихо исчезнувшая граница — одинаково нарушение.
+      expect({ specifier, importers }).toEqual({ specifier, importers: [owner] })
+    },
+  )
+
+  // #1543: гейт по собранному бандлу (`eager.payloadRoutes`) стоит полной
+  // production-сборки (~20 мин) и потому живёт только в `release:check` — дрейф
+  // копился неделями. Верхняя граница по маршрутам должна иметь исходный
+  // двойник, который считается за секунду; этот тест не даёт пинам разъехаться.
+  it('пины payload-маршрутов согласованы с config/bundle-budget.json (#1543)', () => {
+    const budget = JSON.parse(readFileSync(join(ROOT, 'config', 'bundle-budget.json'), 'utf8'))
+    const pinned = budget?.eager?.payloadRoutes ?? {}
+
+    // Каждый payload, закреплённый в бюджете, обязан иметь исходную проверку.
+    expect(Object.keys(pinned).sort()).toEqual(ROUTE_SCOPED_PAYLOADS.map((entry) => entry.payload).sort())
+
+    const drifted = ROUTE_SCOPED_PAYLOADS.filter(
+      (entry) => entry.allowedRoutes.length > (pinned[entry.payload]?.maxRoutes ?? -1),
+    ).map((entry) => `${entry.payload}: ${entry.allowedRoutes.length} > maxRoutes ${pinned[entry.payload]?.maxRoutes}`)
+
+    expect(drifted).toEqual([])
+  })
 
   it('React.lazy не соседствует с синхронным импортом того же модуля (#1499)', () => {
     const allowed = new Set(
