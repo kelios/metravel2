@@ -120,6 +120,7 @@ function TravelWizardStepBasic({
     fadeIn: true,
     slideIn: true,
   });
+  const contentScrollRef = useRef<ScrollView>(null);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isCompactLayout = isHydrated && isMobile;
@@ -247,6 +248,7 @@ function TravelWizardStepBasic({
 
         <View style={[styles.mainWrapper, isCompactLayout && styles.mainWrapperCompact]}>
           <ScrollView
+            ref={contentScrollRef}
             style={styles.contentColumn}
             contentContainerStyle={styles.contentContainer}
             keyboardShouldPersistTaps="handled"
@@ -274,6 +276,7 @@ function TravelWizardStepBasic({
                 onAnchorHandled={onAnchorHandled}
                 visibleFields={['description']}
                 showProgress={false}
+                scrollViewRef={contentScrollRef}
               />
             </Animated.View>
           </ScrollView>

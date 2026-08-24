@@ -33,6 +33,7 @@ interface ContentUpsertSectionProps {
     onAnchorHandled?: () => void;
     visibleFields?: Array<'name' | 'description' | 'plus' | 'minus' | 'recommendation'>;
     showProgress?: boolean;
+    scrollViewRef?: React.RefObject<ScrollView | null>;
 }
 
 const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
@@ -45,12 +46,13 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                                        onAnchorHandled,
                                                                        visibleFields,
                                                                        showProgress = true,
+                                                                       scrollViewRef,
                                                                    }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
-    const scrollRef = useRef<ScrollView>(null);
+    const [containerOffsetY, setContainerOffsetY] = useState<number | null>(null);
     const [isDescriptionFullscreen, setIsDescriptionFullscreen] = useState(false);
     const [isImportingDescriptionText, setIsImportingDescriptionText] = useState(false);
     const [isPastingDescriptionText, setIsPastingDescriptionText] = useState(false);
@@ -755,9 +757,9 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     useEffect(() => {
         if (!firstErrorField) return;
         const y = fieldPositions[firstErrorField];
-        if (y == null || !scrollRef.current) return;
-        scrollRef.current.scrollTo({ y: Math.max(y - 40, 0), animated: true });
-    }, [firstErrorField, fieldPositions]);
+        if (containerOffsetY == null || y == null || !scrollViewRef?.current) return;
+        scrollViewRef.current.scrollTo({ y: Math.max(containerOffsetY + y - 40, 0), animated: true });
+    }, [containerOffsetY, firstErrorField, fieldPositions, scrollViewRef]);
 
     useEffect(() => {
         if (!focusAnchorId) return;
@@ -776,14 +778,11 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         }
 
         const y = fieldPositions[key];
-        if (y == null || !scrollRef.current) {
-            onAnchorHandled?.();
-            return;
-        }
+        if (containerOffsetY == null || y == null || !scrollViewRef?.current) return;
 
-        scrollRef.current.scrollTo({ y: Math.max(y - 40, 0), animated: true });
+        scrollViewRef.current.scrollTo({ y: Math.max(containerOffsetY + y - 40, 0), animated: true });
         onAnchorHandled?.();
-    }, [fieldPositions, focusAnchorId, onAnchorHandled]);
+    }, [containerOffsetY, fieldPositions, focusAnchorId, onAnchorHandled, scrollViewRef]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -824,18 +823,11 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     }, [isDescriptionFullscreen]);
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <ScrollView
-                contentContainerStyle={styles.container}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                ref={scrollRef}
-                // TravelWizardStepBasic already owns the vertical native scroll.
-                // A second native UIScrollView traps pan gestures when Dynamic Type
-                // expands this section beyond the viewport, making later fields
-                // unreachable. Web keeps its existing standalone scroll behaviour.
-                scrollEnabled={Platform.OS === 'web'}
-            >
+        <View
+            style={styles.container}
+            onLayout={event => setContainerOffsetY(event.nativeEvent.layout.y)}
+            testID="travel-wizard.basic.content-section"
+        >
                 {/* ✅ УЛУЧШЕНИЕ: Прогресс заполнения формы */}
                 {showProgress && (
                     <View style={styles.progressSection}>
@@ -896,8 +888,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
 
                 {(visibleFields == null || visibleFields.includes('recommendation')) &&
                     renderEditorSection(i18nT('travel:components.travel.ContentUpsertSection.rekomendatsii_566f7fca'), formData.recommendation, val => handleChange('recommendation', val), null, false, i18nT('travel:components.travel.ContentUpsertSection.vashi_sovety_dlya_drugih_puteshestvennikov_49e41714'))}
-            </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 };
 

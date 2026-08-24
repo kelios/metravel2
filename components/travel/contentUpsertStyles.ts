@@ -8,7 +8,6 @@ import type { useThemedColors } from '@/hooks/useTheme';
 type Colors = ReturnType<typeof useThemedColors>;
 
 export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: colors.background },
     container: { padding: DESIGN_TOKENS.spacing.xs, paddingBottom: 40 },
     modalSafeArea: { flex: 1, backgroundColor: colors.background },
     modalKeyboardAvoiding: { flex: 1 },

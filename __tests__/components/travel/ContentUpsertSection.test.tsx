@@ -226,11 +226,61 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(queryByText('Прогресс заполнения')).toBeNull()
   })
 
-  it('leaves native vertical scrolling to the enclosing wizard step', () => {
-    const { UNSAFE_getAllByType } = renderSection()
-    const sectionScrollView = UNSAFE_getAllByType(ScrollView)[0]
+  it('leaves vertical scrolling to the enclosing wizard step', () => {
+    const { UNSAFE_queryAllByType } = renderSection()
 
-    expect(sectionScrollView.props.scrollEnabled).toBe(false)
+    expect(UNSAFE_queryAllByType(ScrollView)).toHaveLength(0)
+  })
+
+  it('scrolls the enclosing wizard step to the first invalid field using the section offset', () => {
+    const scrollTo = jest.fn()
+    const scrollViewRef = { current: { scrollTo } } as unknown as React.RefObject<ScrollView | null>
+    const { getByTestId, UNSAFE_getByProps } = render(
+      <ContentUpsertSection
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        firstErrorField="description"
+        scrollViewRef={scrollViewRef}
+      />,
+    )
+
+    fireEvent(getByTestId('travel-wizard.basic.content-section'), 'layout', {
+      nativeEvent: { layout: { y: 320 } },
+    })
+    fireEvent(UNSAFE_getByProps({ nativeID: 'travelwizard-basic-description' }), 'layout', {
+      nativeEvent: { layout: { y: 240 } },
+    })
+
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 520, animated: true })
+  })
+
+  it('waits for field layout before handling a native focus anchor', () => {
+    const scrollTo = jest.fn()
+    const onAnchorHandled = jest.fn()
+    const scrollViewRef = { current: { scrollTo } } as unknown as React.RefObject<ScrollView | null>
+    const { getByTestId, UNSAFE_getByProps } = render(
+      <ContentUpsertSection
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        focusAnchorId="travelwizard-basic-description"
+        onAnchorHandled={onAnchorHandled}
+        scrollViewRef={scrollViewRef}
+      />,
+    )
+
+    expect(onAnchorHandled).not.toHaveBeenCalled()
+
+    fireEvent(UNSAFE_getByProps({ nativeID: 'travelwizard-basic-description' }), 'layout', {
+      nativeEvent: { layout: { y: 500 } },
+    })
+    expect(onAnchorHandled).not.toHaveBeenCalled()
+
+    fireEvent(getByTestId('travel-wizard.basic.content-section'), 'layout', {
+      nativeEvent: { layout: { y: 300 } },
+    })
+
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 760, animated: true })
+    expect(onAnchorHandled).toHaveBeenCalledTimes(1)
   })
 
   it('renders only the requested fields when visibleFields is constrained', () => {
