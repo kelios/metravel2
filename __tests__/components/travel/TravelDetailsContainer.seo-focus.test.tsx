@@ -152,4 +152,33 @@ describe('TravelDetailsContainer SEO focus guard', () => {
       document.querySelector('link[rel="canonical"]')?.getAttribute('href')
     ).toBe('https://metravel.by/search')
   })
+
+  it('keeps the Helmet travel JSON-LD when it mounts after the preload tag', async () => {
+    mockUseIsFocused.mockReturnValue(true)
+    document.head.insertAdjacentHTML(
+      'beforeend',
+      '<script id="travel-article-jsonld" type="application/ld+json">{"source":"preload"}</script>',
+    )
+
+    render(<TravelDetailsContainer />)
+
+    expect(
+      document.querySelector('script#travel-article-jsonld')?.textContent,
+    ).toContain('preload')
+
+    await act(async () => {
+      document.head.insertAdjacentHTML(
+        'beforeend',
+        '<script id="travel-article-jsonld" type="application/ld+json" data-rh="true">{"source":"helmet"}</script>',
+      )
+      await Promise.resolve()
+    })
+
+    const scripts = document.querySelectorAll(
+      'script#travel-article-jsonld[type="application/ld+json"]'
+    )
+    expect(scripts).toHaveLength(1)
+    expect(scripts[0].getAttribute('data-rh')).toBe('true')
+    expect(scripts[0].textContent).toContain('helmet')
+  })
 })

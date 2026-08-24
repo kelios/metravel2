@@ -66,6 +66,24 @@ export function useTravelDetailsHeadSync({
       if (el.getAttribute('href') !== href) el.setAttribute('href', href)
     }
 
+    const dedupeTravelJsonLd = () => {
+      const scripts = Array.from(
+        document.querySelectorAll<HTMLScriptElement>(
+          'script#travel-article-jsonld[type="application/ld+json"]',
+        ),
+      )
+      if (scripts.length <= 1) return
+
+      // The early travel preload publishes a lightweight JSON-LD tag before
+      // hydration. Once Helmet mounts the richer graph, keep its managed tag
+      // and remove the bootstrap copy so the document has one owner and one id.
+      const managedScript = scripts.find((script) => script.getAttribute('data-rh') === 'true')
+      const scriptToKeep = managedScript ?? scripts[scripts.length - 1]
+      scripts.forEach((script) => {
+        if (script !== scriptToKeep) script.remove()
+      })
+    }
+
     const applyAll = () => {
       enforceHtmlLang()
       ensureSingleTitleTag(readyTitle)
@@ -90,6 +108,7 @@ export function useTravelDetailsHeadSync({
         // не объявлять никакого.
         document.querySelectorAll('link[rel="canonical"]').forEach((node) => node.remove())
       }
+      dedupeTravelJsonLd()
     }
 
     applyAll()
