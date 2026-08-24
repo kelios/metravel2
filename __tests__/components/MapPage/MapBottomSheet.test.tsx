@@ -62,6 +62,18 @@ describe('MapBottomSheet', () => {
     )
   })
 
+  it('exposes nested controls to iOS accessibility instead of grouping the sheet', () => {
+    render(
+      <MapBottomSheet>
+        <View testID="sheet-content" />
+      </MapBottomSheet>,
+    )
+
+    expect(mockBottomSheet).toHaveBeenCalledWith(
+      expect.objectContaining({ accessible: false }),
+    )
+  })
+
   it('can render static content without wrapping virtualized lists in a scroll view', () => {
     const { getByTestId } = render(
       <MapBottomSheet scrollableContent={false}>

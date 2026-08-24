@@ -163,6 +163,11 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         index={-1}
         snapPoints={NATIVE_SNAP_POINTS}
         enableDynamicSizing={false}
+        // @gorhom defaults the whole content container to one accessible
+        // "Bottom Sheet" element on iOS, which hides every nested filter
+        // control from VoiceOver/XCUITest. Let React Native expose the child
+        // headings, buttons and inputs individually instead.
+        accessible={false}
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
