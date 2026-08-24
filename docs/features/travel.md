@@ -89,7 +89,11 @@ publish/moderation, а user-owned запросы могут включать dra
 из `components/travel/sectionLinks.ts` гейтятся ОДНИМ предикатом
 `canRenderBelkrajWidget(travel.travelAddress, travel.countryCode)`
 (`components/belkraj/belkrajAvailability.ts`: координаты первой точки + production +
-страна каталога партнёра). Инвариант: **на web и Android** пункт меню существует ровно
+страна из allowlist `SUPPORTED_BELKRAJ_COUNTRIES`). Секция показывается для любой
+страны каталога партнёра (не только BY), а реальный `countryCode` уходит в URL
+виджета — без верного кода tripvenue промахивается городом даже по поддержанной
+стране. Подробнее про allowlist и подмену города — `docs/features/quests.md`.
+Инвариант: **на web и Android** пункт меню существует ровно
 там, где секция рендерится. Разъезд даёт либо пустую карточку-призрак с одним
 заголовком, либо живую ссылку в никуда — оба состояния уже ловились (#1452). Регресс
 закрыт с обеих сторон: `__tests__/components/travel/sectionLinks.test.ts` (сторона

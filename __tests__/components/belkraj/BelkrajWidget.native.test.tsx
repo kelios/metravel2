@@ -39,6 +39,39 @@ describe('BelkrajWidget.native', () => {
     expect(uri).toContain('size=6')
   })
 
+  it('renders for a supported non-Belarus country and passes its real country code', () => {
+    // Ключевое поведение #1460: виджет открыт не только для BY, а для любой страны
+    // каталога, и в URL уходит реальный код страны точки (без него tripvenue
+    // промахивается городом). Варшава/PL — реальный положительный кейс с прода.
+    const { getByTestId } = render(
+      <BelkrajWidget
+        countryCode="PL"
+        points={[{ id: 1, address: 'Варшава', lat: 52.2297, lng: 21.0122 }]}
+        cardsCount={6}
+      />,
+    )
+
+    const uri = getByTestId('belkraj-native-webview').props.source.uri as string
+
+    expect(uri).toContain('country=PL')
+    expect(uri).toContain('lat=52.2297')
+    expect(uri).toContain('lng=21.0122')
+  })
+
+  it('stays closed for a country outside the partner catalog', () => {
+    // Кипр в каталоге нет — виджет отвечает подменой на Минск, поэтому секция
+    // не рисуется вовсе (иначе игрок увидит минские экскурсии под кипрским местом).
+    const { queryByTestId } = render(
+      <BelkrajWidget
+        countryCode="CY"
+        points={[{ id: 1, address: 'Лимасол', lat: 34.7071, lng: 33.0226 }]}
+        cardsCount={6}
+      />,
+    )
+
+    expect(queryByTestId('belkraj-native-webview')).toBeNull()
+  })
+
   it('opens non-Belkraj navigations through the shared external-link helper', () => {
     const { getByTestId } = render(
       <BelkrajWidget

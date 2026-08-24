@@ -473,6 +473,30 @@ describe('iOS release configuration', () => {
   });
 
   it.each([
+    [
+      'does not request a nonzero exit code',
+      (value: string) => value.replace(' --error-on-fail', ''),
+    ],
+    [
+      'swallows a patch-package failure',
+      (value: string) => value.replace(
+        'node ./node_modules/patch-package/dist/index.js --error-on-fail',
+        '(node ./node_modules/patch-package/dist/index.js --error-on-fail || true)'
+      ),
+    ],
+  ])('fails closed when postinstall %s', (_label, rewritePostinstall) => {
+    const testRoot = fixture({
+      'package.json': rewritePostinstall,
+    });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_POSTINSTALL_PATCH',
+        detail: 'postinstall must run patch-package exactly once as its final fail-closed command',
+      })])
+    );
+  });
+
+  it.each([
     ['an absolute path', '/tmp/one-checkout/node_modules/hermes-compiler/hermesc'],
     [
       'another checkout behind PODS_ROOT',
@@ -516,16 +540,20 @@ describe('iOS release configuration', () => {
       localPodspecPath,
       `${JSON.stringify({
         user_target_xcconfig: {
-          HERMES_CLI_PATH: '$(PODS_ROOT)/../node_modules/hermes-compiler/hermesc',
+          HERMES_CLI_PATH:
+            '$(PODS_ROOT)/../../node_modules/hermes-compiler/hermesc/osx-bin/hermesc',
         },
       }, null, 2)}\n`
     );
-    expect(validateIosRelease(testRoot)).toEqual(
-      expect.arrayContaining([expect.objectContaining({
+    const hermesErrors = validateIosRelease(testRoot).filter(
+      (error: { code: string }) => error.code === 'IOS_PODFILE_LOCK_STALE'
+    );
+    expect(hermesErrors).toEqual([
+      expect.objectContaining({
         code: 'IOS_PODFILE_LOCK_STALE',
         detail: expect.stringContaining('hermes-engine lock checksum differs'),
-      })])
-    );
+      }),
+    ]);
   });
 
   it('fails closed when privacy collection or tracking drifts', () => {

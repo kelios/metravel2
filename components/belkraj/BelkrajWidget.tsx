@@ -205,7 +205,7 @@ function BelkrajWidget({
         resizeSyncTimeoutsRef.current = [250, 750].map((delay) => window.setTimeout(syncHeight, delay));
     };
 
-    // Не рендерим ничего, если нет координат либо точка вне Беларуси
+    // Не рендерим ничего, если нет координат либо страна вне каталога партнёра
     if (!canRender || !iframeSrc) return null;
 
     return (

@@ -95,6 +95,8 @@ const IOS_REQUIRED_REASON_APIS = Object.freeze({
 
 const PORTABLE_HERMES_CLI_PATH =
   '$(PODS_ROOT)/../../node_modules/hermes-compiler/hermesc/osx-bin/hermesc';
+const PATCH_PACKAGE_COMMAND =
+  'node ./node_modules/patch-package/dist/index.js --error-on-fail';
 
 function read(root, relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
@@ -427,6 +429,15 @@ function validateIosRelease(root = process.cwd()) {
   };
   for (const [name, command] of Object.entries(expectedScripts)) {
     if (packageJson.scripts?.[name] !== command) fail('IOS_PACKAGE_SCRIPT', `${name}:${packageJson.scripts?.[name]}`);
+  }
+  const postinstall = packageJson.scripts?.postinstall;
+  if (typeof postinstall !== 'string' ||
+      postinstall.split(PATCH_PACKAGE_COMMAND).length !== 2 ||
+      !postinstall.trimEnd().endsWith(`&& ${PATCH_PACKAGE_COMMAND}`)) {
+    fail(
+      'IOS_POSTINSTALL_PATCH',
+      'postinstall must run patch-package exactly once as its final fail-closed command'
+    );
   }
   if (!buildScript.includes(`EAS_CLI_VERSION='${EXPECTED.easCliVersion}'`) ||
       !submitScript.includes(`EAS_CLI_VERSION='${EXPECTED.easCliVersion}'`) ||
