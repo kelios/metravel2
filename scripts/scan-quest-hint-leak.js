@@ -13,17 +13,23 @@
  *
  * Две поверхности, у них разные пары «текст × ответ»:
  *   - ШАГ (`step`): поля шага против ответа ЭТОГО ЖЕ шага. Исторический контур.
- *   - КВЕСТ (`intro`, `finale`): текст уровня квеста против ответов ВСЕХ шагов
- *     этого квеста. Интро игрок читает до первого шага, поэтому названный там
- *     ответ снимает вопрос любого шага впереди (#1488). Интро и финал приходят
- *     отдельными ключами бандла, а не элементами `steps`, — до #1488 скан их не
- *     читал вовсе, и нулевой свип #1467 к ним не относился.
+ *   - КВЕСТ (`quest_title`, `intro`, `finale`): текст уровня квеста против
+ *     ответов ВСЕХ шагов этого квеста. Интро игрок читает до первого шага,
+ *     поэтому названный там ответ снимает вопрос любого шага впереди (#1488).
+ *     Заголовок квеста читается ещё раньше и ещё шире: в каталоге, в шапке
+ *     визарда на десктопе и в мета-описании страницы квеста, куда
+ *     `buildQuestSeoMetadata` вставляет его ЦЕЛИКОМ (`utils/questSeo.js:96-99`),
+ *     то есть в поисковой выдаче и в превью репоста (#1540). Сам `<title>`
+ *     кламится и длинный заголовок обрезает — проверять надо описание. Заголовок, интро и финал приходят
+ *     отдельными ключами бандла, а не элементами `steps`, — до #1488 скан не
+ *     читал интро с финалом, а `title` не читал вовсе до #1540, и нулевой свип
+ *     #1467 ни к одному из них не относился.
  *
  *   node scripts/scan-quest-hint-leak.js                      # весь прод
  *   node scripts/scan-quest-hint-leak.js --quest-id=vienna-imperial-secrets
  *   node scripts/scan-quest-hint-leak.js --source=scripts/vienna-quest-data.js
  *   node scripts/scan-quest-hint-leak.js --fields=hint,story,title,task,location
- *   node scripts/scan-quest-hint-leak.js --scopes=step,intro,finale
+ *   node scripts/scan-quest-hint-leak.js --scopes=step,quest_title,intro,finale
  *   node scripts/scan-quest-hint-leak.js --json
  *
  * Exit code 1, если найдена хотя бы одна утечка.
@@ -65,8 +71,16 @@ const DEFAULT_FIELDS = ['hint', 'location']
 const KNOWN_FIELDS = new Set(['hint', 'story', 'title', 'task', 'location'])
 
 // Поверхности текста. `--fields` управляет только шагом: у интро своя причина
-// смотреть шире (см. INTRO_FIELDS), а у финала поле одно.
-const KNOWN_SCOPES = new Set(['step', 'intro', 'finale'])
+// смотреть шире (см. INTRO_FIELDS), а у заголовка квеста и финала поле одно.
+//
+// Поверхность заголовка названа `quest_title`, а не `title`, намеренно: `title`
+// уже занят как ПОЛЕ шага (`--fields=title`) и как поле интро, а это третий,
+// самостоятельный ключ бандла — имя всего квеста (#1540). Одноимённая
+// поверхность сделала бы ключ baseline `title|<quest>||title|<слово>`
+// нечитаемым и путала бы флаги местами.
+const KNOWN_SCOPES = new Set(['step', 'quest_title', 'intro', 'finale'])
+// Поверхности уровня квеста: их пара — «текст квеста × ответы всех шагов».
+const QUEST_LEVEL_SCOPES = ['quest_title', 'intro', 'finale']
 // `finale` вне умолчания сознательно: экран финала игрок читает ПОСЛЕ последнего
 // шага, а сам текст по замыслу пересказывает пройденный маршрут. Замер по проду
 // 23.08.2026 — 99 находок на 149 квестов (две трети базы), то есть контур
@@ -74,7 +88,15 @@ const KNOWN_SCOPES = new Set(['step', 'intro', 'finale'])
 // («Не подглядывай раньше времени: финал читают после последней точки»,
 // `QuestPrintable.tsx:280`). Это принятое ограничение формата, как кросс-шаговый
 // класс в печати, а не долг — но флаг оставлен, чтобы класс можно было измерить.
-const DEFAULT_SCOPES = ['step', 'intro']
+//
+// `quest_title` в умолчании: заголовок — самый ранний и самый широкий текст
+// квеста (каталог, шапка визарда на десктопе, мета-описание страницы, куда
+// заголовок вставляется ЦЕЛИКОМ). Сплошной прогон по проду 24.08.2026 дал 14
+// находок на 156 квестов; разобраны поштучно в #1540 — одна настоящая утечка
+// («Свислочский цмок» при ответе шага «свислочь») переписана, остальные 13 —
+// осознанный остаток и лежат в baseline. То есть контур пригоден для гейта, в
+// отличие от финала, который красный by design на двух третях базы.
+const DEFAULT_SCOPES = ['step', 'quest_title', 'intro']
 
 // Поля интро. Шире, чем у шага, и это не непоследовательность: у интро НЕТ
 // своего ответа, поэтому здесь нет самореференции, из-за которой `title`/`story`
@@ -279,9 +301,15 @@ function scanQuests(quests, fields, scopes = DEFAULT_SCOPES) {
 
     // Текст уровня квеста. Считаем узлы, а не квесты: «149 квестов» в отчёте
     // скрыло бы, сколько текста скан на самом деле прочитал (#1464).
-    if (!wantedScopes.has('intro') && !wantedScopes.has('finale')) continue
+    if (!QUEST_LEVEL_SCOPES.some((scope) => wantedScopes.has(scope))) continue
     const answers = questAnswerDictionary(steps)
     const questNodes = []
+    // Заголовок квеста — самостоятельный ключ бандла, НЕ `intro.title`: пары
+    // «`quest.title` × ответы шагов» до #1540 не существовало ни при одной
+    // комбинации флагов.
+    if (wantedScopes.has('quest_title')) {
+      questNodes.push({ scope: 'quest_title', field: 'title', text: quest.title })
+    }
     if (wantedScopes.has('intro') && quest.intro) {
       for (const field of INTRO_FIELDS) questNodes.push({ scope: 'intro', field, text: quest.intro[field] })
     }
@@ -328,7 +356,7 @@ function findingKeys(finding) {
  * первой редакции #1488: baseline, снятый с умолчанием `step,intro`, проглотил
  * реальную утечку подписи места. Поэтому фильтр стоит и на записи, и на чтении.
  */
-const BASELINE_SCOPES = new Set(['intro', 'finale'])
+const BASELINE_SCOPES = new Set(['quest_title', 'intro', 'finale'])
 
 /** Находка шага в baseline не попадает никогда — она всегда «новая». */
 function splitFindings(findings, knownKeys) {
@@ -353,9 +381,10 @@ function updateBaseline(rootDir, fields = DEFAULT_FIELDS, scopes = DEFAULT_SCOPE
   }
   writeBaseline(path.join(rootDir, BASELINE_PATH), {
     contractVersion: BASELINE_CONTRACT_VERSION,
-    note: 'Известные совпадения правила 4a в ТЕКСТЕ УРОВНЯ КВЕСТА (интро, финал) локальных данных — '
-      + 'разобранный остаток #1488: совпадение внутри чужого слова, родовое существительное о другом '
-      + 'объекте, имя самого квеста. Поля шага сюда не попадают никогда: их контур вычищен до нуля и '
+    note: 'Известные совпадения правила 4a в ТЕКСТЕ УРОВНЯ КВЕСТА (заголовок квеста, интро, финал) '
+      + 'локальных данных — разобранный остаток #1488 и #1540: совпадение внутри чужого слова, родовое '
+      + 'существительное о другом объекте, имя города и слово, которым назван сам квест. '
+      + 'Поля шага сюда не попадают никогда: их контур вычищен до нуля и '
       + 'обязан падать сразу. Гейт check:fast падает только на том, что добавила правка. '
       + 'Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих '
       + 'незавершённых правок. Обновлять: npm run quest:scan-hint-leak:baseline',
@@ -371,15 +400,31 @@ function updateBaseline(rootDir, fields = DEFAULT_FIELDS, scopes = DEFAULT_SCOPE
 // `answer_pattern` уже объект, а не строка, поэтому форма совпадает с API и
 // приводить ничего не нужно.
 
-async function loadFromApi(apiUrl, questId) {
-  const bundles = await fetchQuestBundles(apiUrl, questId)
-  return bundles.map((bundle) => ({
+/**
+ * Бандл API → форма, которую читает `scanQuests`.
+ *
+ * Вынесено отдельной функцией, потому что ровно здесь жил дефект #1540: маппинг
+ * перечислял ключи вручную и `title` в список не попал, поэтому поверхность
+ * заголовка молча читала undefined и отчитывалась «чисто» по прод-данным при
+ * любых флагах. В локальных бандлах (`lib/questBundles.loadLocalBundles`) поле
+ * есть с самого начала — то есть `--source` и `--api-url` расходились. Теперь
+ * маппинг покрыт тестом: любой новый ключ уровня квеста обязан появиться и тут,
+ * иначе прод-контур скана слепнет незаметно.
+ */
+function toScanBundle(bundle) {
+  return {
     id: bundle.id,
     quest_id: bundle.quest_id,
+    title: bundle.title ?? null,
     intro: bundle.intro ?? null,
     finale: bundle.finale ?? null,
     steps: parseSteps(bundle),
-  }))
+  }
+}
+
+async function loadFromApi(apiUrl, questId) {
+  const bundles = await fetchQuestBundles(apiUrl, questId)
+  return bundles.map(toScanBundle)
 }
 
 // ===================== CLI =====================
@@ -406,7 +451,7 @@ function parseArgs(argv) {
   }
 }
 
-const SCOPE_LABEL = { step: 'шаг', intro: 'интро', finale: 'финал' }
+const SCOPE_LABEL = { step: 'шаг', quest_title: 'заголовок квеста', intro: 'интро', finale: 'финал' }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
@@ -490,8 +535,11 @@ module.exports = {
   questAnswerDictionary,
   findQuestLeaks,
   scanQuests,
+  toScanBundle,
   parseArgs,
   INTRO_FIELDS,
+  KNOWN_SCOPES,
+  QUEST_LEVEL_SCOPES,
 }
 
 if (require.main === module) {

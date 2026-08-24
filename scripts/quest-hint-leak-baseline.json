@@ -1,6 +1,6 @@
 {
   "contractVersion": 1,
-  "note": "Известные совпадения правила 4a в ТЕКСТЕ УРОВНЯ КВЕСТА (интро, финал) локальных данных — разобранный остаток #1488: совпадение внутри чужого слова, родовое существительное о другом объекте, имя самого квеста. Поля шага сюда не попадают никогда: их контур вычищен до нуля и обязан падать сразу. Гейт check:fast падает только на том, что добавила правка. Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих незавершённых правок. Обновлять: npm run quest:scan-hint-leak:baseline",
+  "note": "Известные совпадения правила 4a в ТЕКСТЕ УРОВНЯ КВЕСТА (заголовок квеста, интро, финал) локальных данных — разобранный остаток #1488 и #1540: совпадение внутри чужого слова, родовое существительное о другом объекте, имя города и слово, которым назван сам квест. Поля шага сюда не попадают никогда: их контур вычищен до нуля и обязан падать сразу. Гейт check:fast падает только на том, что добавила правка. Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих незавершённых правок. Обновлять: npm run quest:scan-hint-leak:baseline",
   "known": {
     "scripts/amsterdam-quest-data.js": [
       "intro|amsterdam-on-piles||story|один",
@@ -11,7 +11,8 @@
       "intro|barkovshchina-spirits||story|дерево"
     ],
     "scripts/belgrade-quest-data.js": [
-      "intro|belgrade-white-city||location|белград"
+      "intro|belgrade-white-city||location|белград",
+      "quest_title|belgrade-white-city||title|белград"
     ],
     "scripts/bratislava-quest-data.js": [
       "intro|bratislava-coronation-crown||story|знак",
@@ -25,19 +26,24 @@
       "intro|bratislava-coronation-crown||title|короля",
       "intro|bratislava-coronation-crown||title|корона",
       "intro|bratislava-coronation-crown||title|корону",
-      "intro|bratislava-coronation-crown||title|короны"
+      "intro|bratislava-coronation-crown||title|короны",
+      "quest_title|bratislava-coronation-crown||title|корона",
+      "quest_title|bratislava-coronation-crown||title|корону",
+      "quest_title|bratislava-coronation-crown||title|короны"
     ],
     "scripts/brest-city-quest-data.js": [
       "intro|brest-lantern||story|фонарей",
       "intro|brest-lantern||story|фонари",
-      "intro|brest-lantern||title|фонари"
+      "intro|brest-lantern||title|фонари",
+      "quest_title|brest-lantern||title|фонари"
     ],
     "scripts/brest-kids-garden-song-quest-data.js": [
       "intro|brest-kids-garden-song||location|городской сад",
       "intro|brest-kids-garden-song||location|сад",
       "intro|brest-kids-garden-song||story|воробья",
       "intro|brest-kids-garden-song||story|сад",
-      "intro|brest-kids-garden-song||task|сад"
+      "intro|brest-kids-garden-song||task|сад",
+      "quest_title|brest-kids-garden-song||title|сад"
     ],
     "scripts/chisinau-quest-data.js": [
       "intro|chisinau-white-stone||story|льва"
@@ -51,12 +57,20 @@
       "intro|gervyaty-kostel||story|костёл",
       "intro|gervyaty-kostel||story|храм",
       "intro|gervyaty-kostel||task|костел",
-      "intro|gervyaty-kostel||task|костёл"
+      "intro|gervyaty-kostel||task|костёл",
+      "quest_title|gervyaty-kostel||title|дерева",
+      "quest_title|gervyaty-kostel||title|дерево",
+      "quest_title|gervyaty-kostel||title|костел",
+      "quest_title|gervyaty-kostel||title|костёл"
     ],
     "scripts/gniezno-quest-data.js": [
       "intro|gniezno-white-eagle||story|орел",
       "intro|gniezno-white-eagle||story|орла",
-      "intro|gniezno-white-eagle||story|орёл"
+      "intro|gniezno-white-eagle||story|орёл",
+      "quest_title|gniezno-white-eagle||title|белый орел",
+      "quest_title|gniezno-white-eagle||title|белый орёл",
+      "quest_title|gniezno-white-eagle||title|орел",
+      "quest_title|gniezno-white-eagle||title|орёл"
     ],
     "scripts/gomel-palace-quest-data.js": [
       "intro|gomel-palace||story|крест"
@@ -68,7 +82,8 @@
       "intro|gomel-teens-city-blueprint||location|гомель",
       "intro|gomel-teens-city-blueprint||story|гомель",
       "intro|gomel-teens-city-blueprint||story|город",
-      "intro|gomel-teens-city-blueprint||story|храмы"
+      "intro|gomel-teens-city-blueprint||story|храмы",
+      "quest_title|gomel-teens-city-blueprint||title|гомель"
     ],
     "scripts/hel-city-quest-data.js": [
       "intro|hel-fishermen||story|сто"
@@ -115,7 +130,8 @@
       "intro|krevo-walled-maiden||story|камень"
     ],
     "scripts/kruszwica-quest-data.js": [
-      "intro|kruszwica-mysia-wieza||story|мыши"
+      "intro|kruszwica-mysia-wieza||story|мыши",
+      "quest_title|kruszwica-mysia-wieza||title|мыши"
     ],
     "scripts/kutaisi-quest-data.js": [
       "intro|kutaisi-golden-age||story|крест"
@@ -150,7 +166,8 @@
       "intro|minsk-cipher||title|шесть"
     ],
     "scripts/minsk-kids-zvezdochka-quest-data.js": [
-      "intro|minsk-kids-zvezdochka||story|нет"
+      "intro|minsk-kids-zvezdochka||story|нет",
+      "quest_title|minsk-kids-zvezdochka||title|нет"
     ],
     "scripts/minsk-traktorny-quest-data.js": [
       "intro|minsk-traktorny||story|три"
@@ -158,7 +175,8 @@
     "scripts/mogilev-kids-lion-ball-quest-data.js": [
       "intro|mogilev-kids-lion-ball||story|мяч",
       "intro|mogilev-kids-lion-ball||story|мячик",
-      "intro|mogilev-kids-lion-ball||title|мяч"
+      "intro|mogilev-kids-lion-ball||title|мяч",
+      "quest_title|mogilev-kids-lion-ball||title|мяч"
     ],
     "scripts/mogilev-kids-quest-data.js": [
       "intro|mogilev-kids-mogislav||story|башня"
@@ -172,16 +190,20 @@
     ],
     "scripts/pinsk-quest-data.js": [
       "intro|pinsk-polesie||story|полесье",
-      "intro|pinsk-polesie||story|полесья"
+      "intro|pinsk-polesie||story|полесья",
+      "quest_title|pinsk-polesie||title|полесье",
+      "quest_title|pinsk-polesie||title|полесья"
     ],
     "scripts/polotsk-ancient-quest-data.js": [
-      "intro|polotsk-ancient||story|белая"
+      "intro|polotsk-ancient||story|белая",
+      "quest_title|polotsk-ancient||title|белая"
     ],
     "scripts/porto-quest-data.js": [
       "intro|porto-port-wine||story|дом"
     ],
     "scripts/riga-cinema-quest-data.js": [
-      "intro|riga-cinema||story|кот"
+      "intro|riga-cinema||story|кот",
+      "quest_title|riga-cinema||title|кот"
     ],
     "scripts/riga-quest-data.js": [
       "intro|riga-unfinished-city||story|петух",

@@ -5,7 +5,9 @@
 // ловить словоформы: ответ «вал» утёк через «перед валом», и если совпадение
 // однажды сузят до границы слова, скан начнёт рапортовать «утечек нет» на тех
 // же самых шагах. Эти тесты падают, если это случится.
-const { dictionaryValues, findLeaks, numericValues, parseArgs, scanQuests } = require('@/scripts/scan-quest-hint-leak')
+const {
+  dictionaryValues, findLeaks, numericValues, parseArgs, scanQuests, toScanBundle, KNOWN_SCOPES, QUEST_LEVEL_SCOPES,
+} = require('@/scripts/scan-quest-hint-leak')
 
 const step = (over: Record<string, unknown> = {}) => ({
   id: 1,
@@ -292,10 +294,102 @@ describe('scanQuests — поверхности интро и финала', () 
   })
 })
 
+// #1540: заголовок квеста — третий самостоятельный ключ бандла рядом с
+// `intro` и `finale`, и до этой карточки скан не читал его ни при какой
+// комбинации флагов. Игрок видит заголовок раньше и шире всего остального
+// текста квеста: в каталоге, в шапке визарда на десктопе и в
+// `description`/`og:description` страницы, куда заголовок вставляется ЦЕЛИКОМ
+// (`utils/questSeo.js:96-99`), то есть в поисковой выдаче и в превью репоста.
+// Именно описание, а не `<title>`: тег кламится и длинный заголовок обрезает —
+// проверено пробой прода 24.08.2026.
+describe('scanQuests — поверхность заголовка квеста', () => {
+  const questWithTitle = (over: Record<string, unknown> = {}) => ({
+    id: 1,
+    quest_id: 'q',
+    title: 'Квест по центру Минска: Свислочский цмок',
+    intro: null,
+    finale: null,
+    steps: [step({ id: 2, step_id: '2-sun-memory', answer_pattern: { type: 'exact_any', value: JSON.stringify(['свислочь']) } })],
+    ...over,
+  })
+
+  // Реальный кейс #1540: заголовок ставит ответ шага 102 в прилагательное, и
+  // подстрочного совпадения тут мало — работает та же основа, что у интро.
+  it('сверяет заголовок с ответами ВСЕХ шагов квеста и попадает в умолчание', () => {
+    const { findings, scannedQuestNodes } = scanQuests([questWithTitle()], ['hint'])
+    expect(scannedQuestNodes).toBe(1)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({ scope: 'quest_title', field: 'title', step_db_id: null })
+    expect(findings[0].leaks[0]).toMatchObject({ value: 'свислочь', via: 'stem', step_db_id: 2 })
+  })
+
+  it('чистый заголовок находок не даёт', () => {
+    expect(scanQuests([questWithTitle({ title: 'Квест по центру Минска: в поисках цмока' })], ['hint']).findings).toHaveLength(0)
+  })
+
+  // Поверхность заголовка отделена от интро: у квеста без интро заголовок всё
+  // равно читается, иначе класс #1540 остался бы невидимым на таких квестах.
+  it('читается независимо от интро и снимается своим флагом', () => {
+    expect(scanQuests([questWithTitle()], ['hint'], ['intro']).findings).toHaveLength(0)
+    expect(scanQuests([questWithTitle()], ['hint'], ['quest_title']).findings).toHaveLength(1)
+  })
+
+  // Пустого узла быть не должно: заголовок без совпадений считается прочитанным,
+  // отсутствующий — не считается вовсе, как и пустое интро.
+  it('квест без заголовка узлом не считает', () => {
+    expect(scanQuests([questWithTitle({ title: null })], ['hint']).scannedQuestNodes).toBe(0)
+  })
+
+  // Контракт списка поверхностей уровня квеста: каждая из них обязана быть
+  // ПРОЧИТАНА обходом. Раньше список был зашит в условие `intro || finale`, и
+  // третья поверхность могла попасть в `--scopes`, но не в обход — то есть флаг
+  // работал бы, а скан молчал.
+  it('каждая поверхность уровня квеста реально читается обходом', () => {
+    const quest = questWithTitle({
+      intro: { id: 9, step_id: 'intro', title: '', location: '', task: '', story: 'у Свислочи начинается маршрут' },
+      finale: { text: 'а всё началось на Свислочи' },
+    })
+    const { findings } = scanQuests([quest], ['hint'], QUEST_LEVEL_SCOPES)
+    expect(findings.map((f: { scope: string }) => f.scope)).toEqual(QUEST_LEVEL_SCOPES)
+  })
+
+  // Списка два: `KNOWN_SCOPES` пускает значение флага, `QUEST_LEVEL_SCOPES`
+  // ведёт обход. Поверхность, попавшая только в первый, прошла бы валидацию
+  // `--scopes`, не прочитала бы ни одного узла и отчиталась «утечек нет» — ровно
+  // то молчаливое слепое пятно, ради которого заведена эта карточка.
+  it('список известных поверхностей и список обхода — один контракт', () => {
+    expect([...KNOWN_SCOPES]).toEqual(['step', ...QUEST_LEVEL_SCOPES])
+  })
+})
+
+// Ровно тот дефект, которым #1540 и жил: маппинг бандла API перечислял ключи
+// руками, `title` в него не попал, и прод-контур скана молча читал undefined —
+// при том что локальный `--source` то же поле видел. Тест держит оба пути в
+// одной форме.
+describe('toScanBundle — прод-бандл не теряет текст уровня квеста', () => {
+  const apiBundle = {
+    id: 4,
+    quest_id: 'minsk-cmok',
+    title: 'Квест по центру Минска: Свислочский цмок',
+    intro: { id: 9, step_id: 'intro', title: '', location: '', story: '', task: '' },
+    finale: { text: '' },
+    steps: JSON.stringify([{ id: 102, step_id: '2-sun-memory', hint: '', answer_pattern: { type: 'exact_any', value: JSON.stringify(['свислочь']) } }]),
+  }
+
+  it('прокидывает заголовок квеста, а не только интро с финалом', () => {
+    expect(toScanBundle(apiBundle)).toMatchObject({ id: 4, quest_id: 'minsk-cmok', title: 'Квест по центру Минска: Свислочский цмок' })
+  })
+
+  it('скан по бандлу API находит утечку в заголовке — до #1540 тут было «утечек нет»', () => {
+    const { findings } = scanQuests([toScanBundle(apiBundle)], ['hint'])
+    expect(findings.map((f: { scope: string }) => f.scope)).toEqual(['quest_title'])
+  })
+})
+
 describe('parseArgs — поверхности', () => {
-  it('по умолчанию шаг и интро; финал только явным флагом', () => {
-    expect(parseArgs([]).scopes).toEqual(['step', 'intro'])
-    expect(parseArgs(['--scopes=step,intro,finale']).scopes).toEqual(['step', 'intro', 'finale'])
+  it('по умолчанию шаг, заголовок квеста и интро; финал только явным флагом', () => {
+    expect(parseArgs([]).scopes).toEqual(['step', 'quest_title', 'intro'])
+    expect(parseArgs(['--scopes=step,quest_title,intro,finale']).scopes).toEqual(['step', 'quest_title', 'intro', 'finale'])
   })
 
   it('незнакомую поверхность отвергает, а не сканирует молча пустоту', () => {
@@ -353,5 +447,17 @@ describe('baseline — разобранный остаток молчит, но�
     const { fresh, known } = splitFindings([stepFinding], findingKeys(stepFinding))
     expect(known).toEqual([])
     expect(fresh).toEqual([stepFinding])
+  })
+
+  // Заголовок квеста — текст УРОВНЯ КВЕСТА, и остаток по нему такой же
+  // осознанный, как у интро: город в названии, слово, которым квест назван,
+  // совпадение внутри чужого слова. Без baseline поверхность пришлось бы
+  // держать вне умолчания — ровно так интро и прожило без охраны между #1467 и
+  // #1488 (#1540).
+  it('находка ЗАГОЛОВКА квеста в baseline уходит, как интро и финал', () => {
+    const titleFinding = finding({ scope: 'quest_title', field: 'title', leaks: [{ value: 'полесье' }] })
+    const { fresh, known } = splitFindings([titleFinding], findingKeys(titleFinding))
+    expect(known).toEqual([titleFinding])
+    expect(fresh).toEqual([])
   })
 })

@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 /**
  * Применяет патчи квест-контента (.quest-audit/patches-*.json) на прод.
- * Формат патча: {quest_id, step_db_id, step_id, changes:{task?,hint?,answer_pattern?,lat?,lng?,maps_url?,story?}}
+ * Формат патча ШАГА:   {quest_id, step_db_id, step_id, changes:{task?,hint?,answer_pattern?,lat?,lng?,maps_url?,story?}}
+ * Формат патча КВЕСТА: {quest_id, quest_db_id, changes:{title}}
+ * Куда идёт PATCH, решает ключ: `step_db_id` → /api/quest-steps/<id>/,
+ * `quest_db_id` → /api/quests/<id>/. Заголовок квеста живёт не в шаге, и без
+ * второго маршрута его правили бы мимо этого инструмента, то есть без
+ * валидации и без единого лога правок (#1540).
  *
  * node scripts/apply-quest-patches.js --dry-run .quest-audit/patches-*.json
  * node scripts/apply-quest-patches.js .quest-audit/patches-by-west.json
@@ -49,14 +54,32 @@ if (!TOKEN && !isDryRun) {
 // механическая опечатка в нём (подменённая буква чужого алфавита, #1464)
 // правится тем же путём, что и остальной видимый текст.
 const ALLOWED = new Set(['task', 'hint', 'answer_pattern', 'lat', 'lng', 'maps_url', 'story', 'location', 'title', 'order', 'input_type'])
+// Поля уровня КВЕСТА. Список узкий сознательно: обложка, город, статус и
+// координаты квеста принадлежат migrate-/upload-скриптам, а этому инструменту
+// нужен ровно редакционный текст. `title` попал сюда потому, что заголовок
+// игрок читает раньше всего остального текста квеста — в каталоге, в шапке
+// визарда и в мета-описании страницы, — и правило 4a на него распространяется
+// так же, как на подсказку (#1540).
+const QUEST_ALLOWED = new Set(['title'])
 const TYPES = new Set(['any', 'exact', 'exact_any', 'range', 'any_text', 'any_number', 'approx'])
 // Клавиатуру шага выбирает фронт по типу ответа, но колонка input_type в БД
 // остаётся источником правды для админки и механического аудита (класс B —
 // рассогласование input_type и типа паттерна), поэтому её тоже надо уметь чинить.
 const INPUT_TYPES = new Set(['text', 'number'])
 
-function validate(p, file) {
-  if (!p.step_db_id) throw new Error(`${file} ${p.quest_id}/${p.step_id}: нет step_db_id`)
+/** Патч уровня квеста: только разрешённые поля и непустой текст. */
+function validateQuest(p, file) {
+  const payload = {}
+  for (const [k, v] of Object.entries(p.changes || {})) {
+    if (!QUEST_ALLOWED.has(k)) throw new Error(`${file} ${p.quest_id}: запрещённое поле квеста ${k}`)
+    if (typeof v !== 'string' || !v.trim()) throw new Error(`${file} ${p.quest_id}: пустое ${k}`)
+    payload[k] = v
+  }
+  if (!Object.keys(payload).length) throw new Error(`${file} ${p.quest_id}: пустые changes`)
+  return payload
+}
+
+function validateStep(p, file) {
   const payload = {}
   for (const [k, v] of Object.entries(p.changes || {})) {
     if (!ALLOWED.has(k)) throw new Error(`${file} ${p.step_id}: запрещённое поле ${k}`)
@@ -76,6 +99,25 @@ function validate(p, file) {
       throw new Error(`${file} ${p.step_id}: кривое ${k}=${payload[k]}`)
   }
   return payload
+}
+
+/** Куда и чем патчить: шаг или сам квест. */
+function validate(p, file) {
+  if (p.step_db_id) {
+    return {
+      endpoint: `/api/quest-steps/${p.step_db_id}/`,
+      payload: validateStep(p, file),
+      label: `${p.quest_id}/${p.step_id} (шаг ${p.step_db_id})`,
+    }
+  }
+  if (p.quest_db_id) {
+    return {
+      endpoint: `/api/quests/${p.quest_db_id}/`,
+      payload: validateQuest(p, file),
+      label: `${p.quest_id} (квест ${p.quest_db_id})`,
+    }
+  }
+  throw new Error(`${file} ${p.quest_id}: нет ни step_db_id, ни quest_db_id`)
 }
 
 async function apiPatch(endpoint, payload) {
@@ -103,12 +145,12 @@ async function main() {
     console.log(`\n=== ${file}: ${patches.length} патчей`)
     for (const p of patches) {
       try {
-        const payload = validate(p, file)
-        await apiPatch(`/api/quest-steps/${p.step_db_id}/`, payload)
-        console.log(`  OK ${p.quest_id}/${p.step_id} (id ${p.step_db_id}): ${Object.keys(payload).join(', ')}`)
+        const { endpoint, payload, label } = validate(p, file)
+        await apiPatch(endpoint, payload)
+        console.log(`  OK ${label}: ${Object.keys(payload).join(', ')}`)
         ok++
       } catch (e) {
-        console.error(`  FAIL ${p.quest_id}/${p.step_id}: ${e.message}`)
+        console.error(`  FAIL ${p.quest_id}/${p.step_id ?? 'quest'}: ${e.message}`)
         failed++
       }
     }

@@ -75,7 +75,7 @@ module.exports = [
     },
     {
         quest_id: 'minsk-cmok',
-        title: 'Квест по центру Минска: Свислочский цмок',
+        title: 'Квест по центру Минска: в поисках цмока',
         city: { name: 'Минск', lat: 53.9023, lng: 27.5619, country: 3 },
         meta: { lat: 53.9045, lng: 27.5615, duration_min: 45, difficulty: 'easy', tags: ['citywalk', 'myth'], pet_friendly: false },
         storage_key: 'quest_minsk_smok_awakened_v3',
