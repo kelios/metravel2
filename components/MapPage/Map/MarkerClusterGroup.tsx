@@ -8,7 +8,7 @@ import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { Point } from './types'
 import { getMapPointContentKey, strToLatLng } from './utils'
-import { groupMapPlaces } from '@/api/mapPlaces'
+import { groupMapPlaces, materializeMapPlaceRecord } from '@/api/mapPlaces'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import {
   CLUSTER_DISABLE_ZOOM,
@@ -313,9 +313,11 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       contentKey: string
     }> = []
     for (const place of groupMapPlaces(renderablePoints)) {
-      const point = place.record
-      const coords = coordsByPoint.get(point)
+      // Lookup обязан использовать исходный object identity. Только после него
+      // добавляем вычисленные place summary в record, который увидит popup.
+      const coords = coordsByPoint.get(place.record)
       if (!coords) continue
+      const point = materializeMapPlaceRecord(place)
       places.push({
         point,
         coords,

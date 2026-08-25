@@ -20,7 +20,11 @@ import {
   getCachedTileDataUrl,
 } from '@/utils/mapTileCache';
 import type { MapMovePayload } from './Map/types';
-import { groupMapPlaces, type MapPlaceMarker } from '@/api/mapPlaces';
+import {
+  groupMapPlaces,
+  materializeMapPlaceRecord,
+  type MapPlaceMarker,
+} from '@/api/mapPlaces';
 import {
   resolveSelectedNativePlace,
   toNativeClusterPayload,
@@ -274,7 +278,13 @@ const Map: React.FC<TravelProps> = ({
    * Группировка — один проход на обновление dataset, не на каждый рендер.
    */
   const renderedNativePlaces = useMemo(
-    () => groupMapPlaces<Point>(renderedNativePoints as Point[]),
+    () =>
+      groupMapPlaces<Point>(renderedNativePoints as Point[]).map((place) => ({
+        ...place,
+        // RN selection/card получает тот же grouped summary, что и web popup;
+        // полный sources-массив через WebView по-прежнему не передаётся.
+        record: materializeMapPlaceRecord(place),
+      })),
     [renderedNativePoints],
   );
   const renderedNativePlacesRef = useRef<MapPlaceMarker<Point>[]>(renderedNativePlaces);

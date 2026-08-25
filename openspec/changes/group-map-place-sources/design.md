@@ -139,15 +139,14 @@ See proposal.md — Why. Current mechanisms this design must respect:
   the transitional flat form (two rows sharing `place_id`, no `source_count`
   field) leaves those fields absent on the record itself, so the card reads
   `sourceCount = 1` and renders no pager even though a second source exists.
-  Found by the #1571 review gate. Fix at the seam — the marker's
-  `placeId`/`sourceCount`/`primarySource` must reach the popup — but NOT by
-  cloning the record: `MarkerClusterGroup` keys its `coordsByPoint` map by the
-  record's object identity (`components/MapPage/Map/MarkerClusterGroup.tsx:305`,
-  read at `:311`), so a stamped copy would miss that lookup and the marker would
-  be dropped instead of rendered. Either the renderer threads the grouped
-  marker's fields to the popup as explicit props alongside `point`, or the
-  grouping mutates the representative record in place. Owner: whichever of
-  #1572/#1573 lands second; verified by the `1 из 2` assertion in #1568's e2e.
+  Found by the #1571 review gate. Fixed at the seam: shared
+  `materializeMapPlaceRecord` adds only `placeId`/`sourceCount`/`primarySource`
+  to the record passed into popup/selection, never the full sources array. In
+  `MarkerClusterGroup` the helper runs only AFTER `coordsByPoint` lookup by the
+  original record identity, so the derived copy cannot drop the marker and the
+  keyed diff from #1347 remains intact. Verified by #1568 e2e whose two flat
+  fixture rows intentionally omit `source_count`/`primary_source` yet still
+  reach `1 из 2` after opening the single grouped marker.
 - [Web swipe would double-fire with the hero's tap-to-fullscreen] → the hero
   opens the fullscreen viewer on `onPointerDownCapture` (#993, deliberate for
   WebKit reliability), so a horizontal drag over the photo would open the viewer

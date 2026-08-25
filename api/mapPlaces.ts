@@ -291,3 +291,37 @@ export const groupMapPlaces = <TRecord extends MapPlaceRecordLike>(
 
   return out;
 };
+
+/**
+ * Представление записи для popup/selection на стыке grouped place → legacy UI.
+ *
+ * Renderers исторически передают карточке плоский `record`, а вычисленные
+ * `sourceCount`/`primarySource` живут на `MapPlaceMarker`. Для переходного
+ * payload из нескольких строк с одним `place_id`, но без `source_count`, это
+ * молча отключало lazy sources и pager. Протаскиваем только компактные summary
+ * поля; полный `sources` в record/WebView payload намеренно не попадает.
+ *
+ * Исходную запись не мутируем. В `MarkerClusterGroup` helper вызывается только
+ * ПОСЛЕ lookup координат по object identity — это сохраняет keyed diff #1347.
+ */
+export const materializeMapPlaceRecord = <TRecord extends MapPlaceRecordLike>(
+  place: MapPlaceMarker<TRecord>,
+): TRecord => {
+  const record = place.record;
+  if (place.placeId == null) return record;
+
+  if (
+    readMapPlaceId(record) === place.placeId &&
+    record.sourceCount === place.sourceCount &&
+    record.primarySource === place.primarySource
+  ) {
+    return record;
+  }
+
+  return {
+    ...record,
+    placeId: place.placeId,
+    sourceCount: place.sourceCount,
+    primarySource: place.primarySource,
+  };
+};

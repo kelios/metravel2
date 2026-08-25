@@ -47,7 +47,11 @@ const LIBRARY_SOURCE_B = {
   thumbnail_height: 300,
 }
 
-/** Плоские строки map-выдачи: переходная форма DTO с добавленными place-полями. */
+/**
+ * Плоские строки map-выдачи: переходная форма несёт только place identity.
+ * `source_count`/`primary_source` намеренно отсутствуют — renderer обязан
+ * донести вычисленный grouped summary до карточки (#1568 seam regression).
+ */
 const LIBRARY_ROW_A = {
   id: 14029,
   place_id: PLACE_ID,
@@ -56,8 +60,6 @@ const LIBRARY_ROW_A = {
   lng: '27.645900',
   address: 'Национальная библиотека Беларуси',
   categoryName: 'Библиотека',
-  source_count: 2,
-  primary_source: LIBRARY_SOURCE_A,
   travelImageThumbUrl: LIBRARY_SOURCE_A.thumbnail_url,
   urlTravel: LIBRARY_SOURCE_A.article_url,
   articleUrl: '',
@@ -66,7 +68,6 @@ const LIBRARY_ROW_A = {
 const LIBRARY_ROW_B = {
   ...LIBRARY_ROW_A,
   id: 15688,
-  primary_source: LIBRARY_SOURCE_B,
   travelImageThumbUrl: LIBRARY_SOURCE_B.thumbnail_url,
   urlTravel: LIBRARY_SOURCE_B.article_url,
 }

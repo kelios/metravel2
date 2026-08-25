@@ -9,7 +9,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { buildClusterIconHtml } from './mapMarkerStyles'
 import MarkerPopup from './MarkerPopup'
 import { formatPlaces } from '@/utils/pluralize'
-import { getMapPlaceKey, groupMapPlaces } from '@/api/mapPlaces'
+import { getMapPlaceKey, groupMapPlaces, materializeMapPlaceRecord } from '@/api/mapPlaces'
 import { buildPlaceTitleParts } from './placeTitle'
 import { translate as i18nT } from '@/i18n'
 
@@ -178,7 +178,9 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           return (
             <React.Fragment key={`expanded-${cluster.key}-${idx}`}>
               {expandedPlaces.map((place) => {
-                const item = place.record
+                // Popup должен получить вычисленные sourceCount/primarySource и
+                // для переходного flat payload без серверного source_count.
+                const item = materializeMapPlaceRecord(place)
                 const ll = strToLatLng(item.coord, hintCenter)
                 if (!ll) return null
                 if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1]))

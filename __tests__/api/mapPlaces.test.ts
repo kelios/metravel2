@@ -7,6 +7,7 @@ import {
   getMapPlaceKey,
   getMapPointIdentityKey,
   groupMapPlaces,
+  materializeMapPlaceRecord,
   normalizeMapPlaceSource,
   type MapPlaceRecordLike,
 } from '@/api/mapPlaces';
@@ -64,6 +65,24 @@ describe('groupMapPlaces', () => {
     expect(place.lat).toBe('53.9312900');
     expect(place.lng).toBe('27.6459000');
     expect(place.record).toBe(RAW_FLAT_LIBRARY_ROW_A);
+  });
+
+  it('materializes computed place summary for popup without mutating the source record', () => {
+    const rowA = { ...RAW_FLAT_LIBRARY_ROW_A };
+    const rowB = { ...RAW_FLAT_LIBRARY_ROW_B };
+    const [place] = groupMapPlaces([rowA, rowB]);
+
+    // Переходные flat rows не несут source_count/primary_source, но карточка
+    // обязана увидеть вычисленное значение и запустить lazy sources endpoint.
+    expect(rowA).not.toHaveProperty('sourceCount');
+    expect(rowA).not.toHaveProperty('primarySource');
+
+    const popupRecord = materializeMapPlaceRecord(place);
+    expect(popupRecord).not.toBe(rowA);
+    expect(popupRecord.placeId).toBe(501);
+    expect(popupRecord.sourceCount).toBe(2);
+    expect(popupRecord.primarySource?.sourceId).toBe('travel-address:14029');
+    expect(popupRecord).not.toHaveProperty('sources');
   });
 
   it('keeps grouped marker 1:1 with declared source_count and primary source', () => {
