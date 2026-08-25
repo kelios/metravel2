@@ -45,6 +45,9 @@ trap 'exit 143' TERM
 for config_file in app.json app.config.js eas.json package.json yarn.lock; do
   cp "${PROJECT_ROOT}/${config_file}" "${SUBMIT_RUNTIME_DIR}/${config_file}"
 done
+for project_directory in node_modules plugins assets ios; do
+  ln -s "${PROJECT_ROOT}/${project_directory}" "${SUBMIT_RUNTIME_DIR}/${project_directory}"
+done
 
 IOS_ASC_APP_ID="$ASC_APP_ID" node - "$SUBMIT_RUNTIME_DIR/eas.json" <<'NODE'
 const fs = require('fs');

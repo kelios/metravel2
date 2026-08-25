@@ -221,6 +221,9 @@ if (!process.cwd().includes('/.codex-temp/ios-submit-runtime.')) process.exit(20
 if (config.submit?.production?.ios?.ascAppId !== process.env.EXPECTED_ASC_APP_ID) process.exit(21);
 if (!process.argv.includes('--id') || !process.argv.includes('exact-build-id')) process.exit(22);
 if (!process.argv.includes('--non-interactive') || process.argv.includes('--latest')) process.exit(23);
+for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
+  if (!fs.lstatSync(path.join(process.cwd(), directory)).isSymbolicLink()) process.exit(24);
+}
 `);
     fs.chmodSync(fakeNpx, 0o755);
 
