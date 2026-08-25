@@ -6,6 +6,7 @@ import {
   type SupportedLocale,
 } from './config'
 import { selectPluralCategory } from './pluralRules'
+import { formatRelativeTimeFallback } from './relativeTimeFallback'
 
 export const getActiveLocale = (): SupportedLocale =>
   isSupportedLocale(i18n.resolvedLanguage) ? i18n.resolvedLanguage : DEFAULT_LOCALE
@@ -78,12 +79,24 @@ export const formatCurrency = (
   locale: SupportedLocale = getActiveLocale(),
 ): string => formatNumber(value, { style: 'currency', currency }, locale)
 
+/**
+ * Канонический относительный формат (#1528). `Intl.RelativeTimeFormat` есть не
+ * во всех движках: Hermes в Android-релизе его не содержит вовсе, поэтому
+ * безусловный `new` уводил экран в error boundary. Защита живёт здесь, в самом
+ * экспорте, как у `formatList` и `selectPlural` ниже, — новому коду достаточно
+ * позвать эту функцию, отдельная проверка на месте вызова не нужна.
+ */
 export const formatRelativeTime = (
   value: number,
   unit: Intl.RelativeTimeFormatUnit,
   options: Intl.RelativeTimeFormatOptions = { numeric: 'auto' },
   locale: SupportedLocale = getActiveLocale(),
-): string => new Intl.RelativeTimeFormat(getFormatLocale(locale), options).format(value, unit)
+): string => {
+  if (typeof Intl.RelativeTimeFormat === 'function') {
+    return new Intl.RelativeTimeFormat(getFormatLocale(locale), options).format(value, unit)
+  }
+  return formatRelativeTimeFallback(value, unit, options, locale, getFormatLocale(locale))
+}
 
 export const formatList = (
   values: readonly string[],

@@ -27,6 +27,7 @@ import TabTravelCard from './TabTravelCard';
 import CardRail from '@/components/ui/CardRail';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { confirmAction } from '@/utils/confirmAction';
 import {
   RecommendationsAuthGate,
   RecommendationsEmptyState,
@@ -286,8 +287,15 @@ const RecommendationsTabs = memo(
       try {
         if (typeof clearFavorites !== 'function') return;
 
-        if (typeof window !== 'undefined' && (window as any).confirm) {
-          const confirmed = window.confirm(i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_hochu_poehat_65feb3a9'));
+        // #1556: подтверждение через дизайн-системный диалог вместо нативного
+        // `window.confirm`, который морозил вкладку. Гард по платформе сохраняет
+        // прежнее поведение native, где `window.confirm` не существовал и список
+        // очищался без вопроса.
+        if (Platform.OS === 'web') {
+          const confirmed = await confirmAction({
+            title: i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
+            message: i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_hochu_poehat_65feb3a9'),
+          });
           if (!confirmed) return;
         }
 
@@ -301,8 +309,12 @@ const RecommendationsTabs = memo(
       try {
         if (typeof clearHistory !== 'function') return;
 
-        if (typeof window !== 'undefined' && (window as any).confirm) {
-          const confirmed = window.confirm(i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_istoriyu_prosmotrov_95782295'));
+        // #1556: см. комментарий в `handleClearFavorites`.
+        if (Platform.OS === 'web') {
+          const confirmed = await confirmAction({
+            title: i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
+            message: i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_istoriyu_prosmotrov_95782295'),
+          });
           if (!confirmed) return;
         }
 

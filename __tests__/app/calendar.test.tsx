@@ -123,9 +123,6 @@ describe('CalendarScreen status editor', () => {
       const confirmButton = buttons?.find((button) => button.style === 'destructive') ?? buttons?.[1]
       confirmButton?.onPress?.()
     })
-    if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
-      jest.spyOn(window, 'confirm').mockReturnValue(true)
-    }
     mockEntries = [makeEntry()]
     mockParams = {}
   })

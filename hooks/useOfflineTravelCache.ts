@@ -7,11 +7,20 @@ import { Platform } from 'react-native';
 import type { Travel } from '@/types/types';
 
 // #1552: все три функции ниже асинхронные, а вызываются только по действию
-// пользователя или после первого экрана. Статический импорт при этом держал
-// `services/offline/offlineCatalog` в стартовом графе travel-детали, а Metro
-// группирует этот модуль в чанк карты: покрытие прода показывало
-// `__shared-5` (284 КБ) и `__shared-57` (105 КБ) использованными на 5% и 1%.
-// `await import(...)` внутри async-функции — настоящая граница чанка.
+// пользователя или после первого экрана, поэтому статический импорт им не нужен —
+// `await import(...)` внутри async-функции даёт настоящую границу чанка.
+//
+// ВАЖНО про эффект: это ОДНО из трёх рёбер в `services/offline/offlineCatalog`
+// на маршруте travel-детали, и после правки модуль остаётся eager. Живы ещё два
+// статических ребра через `travelOfflineAdapter`:
+//   `hooks/useTravelDetails.ts:20` (виден со всего сайта: крошки тянут
+//   `consumePreloadedTravel` из этого же модуля) и
+//   `components/travel/details/TravelHeroExtras.tsx:11`.
+// Metro группирует `offlineCatalog` в чанк карты (покрытие прода: `__shared-5`
+// 284 КБ использован на 5%, `__shared-57` 105 КБ — на 1%), а по правилу #1393
+// чанк уходит с маршрута, только когда разорваны ВСЕ рёбра. Разрыв всех трёх
+// уже пробовался в #1499 и был откачен по `eager.maxRequestsByRoute`
+// (патч сохранён в `.codex-temp/1499/offline-defer.patch`).
 type OfflineCatalogModule = typeof import('@/services/offline/offlineCatalog');
 type TravelOfflineAdapterModule = typeof import('@/services/offline/travelOfflineAdapter');
 

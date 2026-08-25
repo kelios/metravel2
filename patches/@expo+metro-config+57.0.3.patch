@@ -1,5 +1,5 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-index 1e5c598..c1d0065 100644
+index 1e5c598..3ab293b 100644
 --- a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 +++ b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 @@ -58,14 +58,10 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
@@ -118,7 +118,7 @@ index 1e5c598..c1d0065 100644
          };
          const assets = [jsAsset];
          // debugId is passed into `sourceMapString` so the bundler-map path
-@@ -524,36 +580,146 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
+@@ -524,36 +580,222 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
          }
      }
  }
@@ -203,10 +203,9 @@ index 1e5c598..c1d0065 100644
 +                    bestLeft = left;
 +                    bestRight = right;
 +                    bestSimilarity = similarity;
-                 }
--                commonDependencies.push(...commonDeps);
-             }
-         }
++                }
++            }
++        }
 +        if (bestLeft < 0)
 +            break;
 +        const leftGroup = sharedGroups[bestLeft];
@@ -228,11 +227,7 @@ index 1e5c598..c1d0065 100644
 +        for (const dep of group.deps) {
 +            groupByDependency.set(dep, group);
 +        }
-     }
--    // If common dependencies were found, extract them to the shared chunk.
--    if (commonDependencies.length) {
--        const commonDependenciesUnique = [...new Set(commonDependencies)];
--        return new Chunk('/__common.js', commonDependenciesUnique, graph, options, false, true);
++    }
 +    let ownersChanged = true;
 +    while (ownersChanged) {
 +        ownersChanged = false;
@@ -251,13 +246,94 @@ index 1e5c598..c1d0065 100644
 +                            ownersChanged = true;
 +                        }
 +                    }
-+                }
-+            }
+                 }
+-                commonDependencies.push(...commonDeps);
+             }
+         }
+     }
+-    // If common dependencies were found, extract them to the shared chunk.
+-    if (commonDependencies.length) {
+-        const commonDependenciesUnique = [...new Set(commonDependencies)];
+-        return new Chunk('/__common.js', commonDependenciesUnique, graph, options, false, true);
++    // METRAVEL_MERGE_IDENTICAL_ROUTE_SETS (#1543): groups whose owners resolve to
++    // the SAME set of HTML routes always ship together, so keeping them in separate
++    // files buys nothing but round-trips and worse compression. The similarity pass
++    // above cannot merge them: its Jaccard score is computed over async owner chunks,
++    // and the 512 KiB ceiling refuses every merge once a cluster has grown. Measured
++    // 2026-08-24 on a clean main: 26 chunks rode the same 979 HTML routes and 9 more
++    // rode the same 971, so index.html carried 44 <script> tags instead of 10.
++    // Merging cannot widen delivery: the union of two identical route sets is that
++    // same set, and owners are unioned so the sync-edge closure above stays valid.
++    // Route matching in the static export is exactly
++    // `route.entryPoints.some((entryPoint) => chunk.metadata.modulePaths.includes(entryPoint))`,
++    // and modulePaths is deps ∪ matchingEntryPaths. Only paths that are themselves
++    // entry points can ever match, so the intersection below IS the matching key:
++    // two groups sharing it land on exactly the same HTML routes. Deps matter as
++    // much as owners here — a group that carries a layout module is pulled onto
++    // every route through that dep, not through its owners.
++    const allEntryPaths = new Set();
++    for (const chunk of chunks) {
++        for (const entry of chunk.entries) {
++            allEntryPaths.add(entry.path);
 +        }
 +    }
++    // An entry path only selects routes it can appear in as a route entry point,
++    // and expo-router builds those chains by directory: a layout is an entry point of
++    // every route below it, any other route file is an entry point of itself alone.
++    // Expanding layouts to the routes they cover is what lets a group owned by the
++    // root layout and a group owned by every route module recognise each other as
++    // the same delivery set. Paths outside `app/` can never be a route entry point,
++    // so they cannot pull a chunk onto a page and are dropped from the key.
++    const APP_PATH = /(^|\/)app\//;
++    const LAYOUT_PATH = /\/_layout(\.[^/]+)?\.[jt]sx?$/;
++    const routeModulePaths = [...allEntryPaths].filter((path) => APP_PATH.test(path) && !LAYOUT_PATH.test(path));
++    const coverageOf = (path) => {
++        if (!APP_PATH.test(path))
++            return [];
++        if (!LAYOUT_PATH.test(path))
++            return [path];
++        const dir = path.slice(0, path.lastIndexOf('/') + 1);
++        return routeModulePaths.filter((route) => route.startsWith(dir));
++    };
++    const routeKeyOf = (group) => {
++        const matched = new Set();
++        const add = (path) => {
++            for (const route of coverageOf(path))
++                matched.add(route);
++        };
++        for (const owner of group.owners) {
++            for (const entry of owner.entries) {
++                add(entry.path);
++            }
++        }
++        for (const dep of group.deps) {
++            if (allEntryPaths.has(dep.path)) {
++                add(dep.path);
++            }
++        }
++        return [...matched].sort().join('|');
++    };
++    const groupsByRouteKey = new Map();
++    for (const group of sharedGroups) {
++        const routeKey = routeKeyOf(group);
++        const merged = groupsByRouteKey.get(routeKey);
++        if (!merged) {
++            groupsByRouteKey.set(routeKey, group);
++            continue;
++        }
++        for (const owner of group.owners) {
++            merged.owners.add(owner);
++        }
++        merged.deps.push(...group.deps);
++        merged.size += group.size;
++        for (const dep of group.deps) {
++            groupByDependency.set(dep, merged);
++        }
++    }
++    const routeScopedGroups = [...groupsByRouteKey.values()];
 +    const sharedChunks = [];
 +    let groupIndex = 0;
-+    for (const group of sharedGroups) {
++    for (const group of routeScopedGroups) {
 +        const sharedChunk = new Chunk(`/__shared-${groupIndex}.js`, group.deps, graph, options, true, true);
 +        sharedChunk.sharedIndex = groupIndex++;
 +        for (const owner of group.owners) {
@@ -286,7 +362,7 @@ index 1e5c598..c1d0065 100644
                      chunk.deps.delete(dep);
                  }
              }
-@@ -577,6 +743,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
+@@ -577,6 +819,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
      for (const chunk of chunks) {
          // Runtime chunk has to load before any other a.k.a all chunks require it.
          chunk.requiredChunks.add(runtimeChunk);

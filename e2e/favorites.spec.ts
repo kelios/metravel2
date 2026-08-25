@@ -149,9 +149,6 @@ test.describe('@smoke Favorites', () => {
       await seedAuthAndFavorites(page, [favorite]);
       await seedConsent(page);
 
-      // Removal uses window.confirm on web — auto-accept it.
-      page.on('dialog', (dialog) => dialog.accept().catch(() => undefined));
-
       await page.goto('/favorites', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
       await expect(page.getByText('Хочу поехать', { exact: true }).first()).toBeVisible({

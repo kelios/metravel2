@@ -10,8 +10,9 @@ import {
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
 
+import { requestConfirmDialog } from '@/components/ui/confirmDialogStore'
+
 import { getQuestClipboard } from './questWizardMedia'
-import { requestQuestConfirm } from './questConfirmStore'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -40,11 +41,17 @@ export const notifyQuest = (message: string) => {
 }
 
 export const confirmQuestAsync = (title: string, message: string): Promise<boolean> => {
-  // На web — дизайн-системный `ConfirmDialog` через `QuestConfirmHost` (#1555).
-  // Нативный `window.confirm` синхронно морозил JS-поток вкладки, поэтому и
-  // страница под ним, и автотесты вставали до закрытия окна.
+  // На web — дизайн-системный `ConfirmDialog` через общий `ConfirmDialogHost`
+  // (#1555; мост поднят из квестов в `components/ui` в #1556). Нативный
+  // `window.confirm` синхронно морозил JS-поток вкладки, поэтому и страница под
+  // ним, и автотесты вставали до закрытия окна.
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return requestQuestConfirm(title, message)
+    return requestConfirmDialog({
+      title,
+      message,
+      confirmText: i18nT('quests:components.quests.questWizardHelpers.ok_eaabc1d8'),
+      cancelText: i18nT('quests:components.quests.questWizardHelpers.otmena_9f846483'),
+    })
   }
   return new Promise((resolve) => {
     Alert.alert(

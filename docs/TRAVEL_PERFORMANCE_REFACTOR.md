@@ -240,7 +240,7 @@ Slow-4G), там же `applyMobileThrottling`, `measureCpuThrottlingRatio` и `m
 | --- | --- |
 | `hooks/useBreadcrumbModel.ts` | `@/api/quests`, `@/api/plannedTrips`, `@/api/publicTrips` |
 | `hooks/questsListQuery.ts` | `@/api/quests` (`fetchQuestsList`) |
-| `hooks/useOfflineTravelCache.ts` | `@/services/offline/offlineCatalog`, `travelOfflineAdapter` |
+| `hooks/useOfflineTravelCache.ts` | `@/services/offline/offlineCatalog`, `travelOfflineAdapter` (одно ребро из трёх, см. ниже) |
 | `api/achievementsRequests.ts` | `@/api/achievementsMock` (17 обращений) |
 
 Крошки рендерятся в шапке КАЖДОГО маршрута, поэтому выигрыш общий, а не
@@ -262,10 +262,25 @@ Metro (отпечаток `serializeChunks.js` совпал до и после �
 у мок-каталога появился собственный чанк), новых нарушений `guard:bundle-budget`
 не добавилось.
 
-Чего эта правка НЕ снимает: слой карты (`offlineCatalog`, Overpass, тайлы)
-остаётся eager на travel-детали, потому что в него ведут ещё рёбра из
-квестового кода (`useQuestCityCollection`, `QuestForCityCard` → `calculateDistance`),
-которые не резались. Это следующий шаг той же линии.
+Чего эта правка НЕ снимает: слой карты остаётся eager на travel-детали, и это
+проверено на собранном бандле — маркеры `offline-catalog:manifest:v1` и
+`overpassToPoints` после правки по-прежнему лежат в eager-чанке маршрута.
+Живы два класса рёбер:
+
+- в `services/offline/offlineCatalog` ведут ещё два статических импорта через
+  `travelOfflineAdapter` — `hooks/useTravelDetails.ts:20` (виден со всего сайта:
+  крошки тянут `consumePreloadedTravel` из того же модуля) и
+  `components/travel/details/TravelHeroExtras.tsx:11`. Разрыв всех трёх рёбер
+  сразу уже пробовался в #1499 и был откачен по `eager.maxRequestsByRoute`
+  (патч в `.codex-temp/1499/offline-defer.patch`);
+- в `calculateDistance` (лежит в том же чанке карты) ведут рёбра из квестового
+  кода — `useQuestCityCollection`, `QuestForCityCard`.
+
+По правилу #1393 чанк уходит с маршрута только когда разорваны ВСЕ рёбра,
+поэтому измеренная дельта −154.6 КБ даётся тремя остальными файлами таблицы, а
+не этим. Снимать слой карты имеет смысл после того, как #1543 закончит
+переписывать саму группировку чанков — иначе правка мерялась бы по движущейся
+мишени.
 
 ## 8. Проверки
 

@@ -28,6 +28,7 @@ import ProfileCollectionHeader, {
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { confirmAction } from '@/utils/confirmAction'
 import { webTouchScrollStyle } from '@/utils'
 import { buildCanonicalUrl } from '@/utils/seo'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -59,10 +60,18 @@ import {
 import { translate as i18nT } from '@/i18n'
 
 
-function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
+async function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
   const cleanTitle = title?.trim() || i18nT('calendarStatic:removeFallbackTravel')
   if (Platform.OS === 'web') {
-    if (typeof window !== 'undefined' && !window.confirm(i18nT('calendar:app.tabs.calendar.ubrat_value1_iz_kalendarya_4710e4cf', { value1: cleanTitle }))) return
+    // #1556: дизайн-системный диалог вместо нативного `window.confirm`, который
+    // синхронно морозил вкладку. Подписи кнопок берём те же, что у native-ветки.
+    const confirmed = await confirmAction({
+      title: i18nT('calendar:app.tabs.calendar.ubrat_iz_kalendarya_171623ca'),
+      message: i18nT('calendar:app.tabs.calendar.ubrat_value1_iz_kalendarya_4710e4cf', { value1: cleanTitle }),
+      confirmText: i18nT('calendar:app.tabs.calendar.ubrat_77b9552b'),
+      cancelText: i18nT('calendar:app.tabs.calendar.otmena_57439d65'),
+    })
+    if (!confirmed) return
     onConfirm()
     return
   }
@@ -325,7 +334,7 @@ export default function CalendarScreen() {
       void remove()
       return
     }
-    confirmRemoveFromCalendar(item.title, () => void remove())
+    void confirmRemoveFromCalendar(item.title, () => void remove())
   }, [dateEditor, handleCloseDateEditor, removeCalendarEntry])
 
   const handleRemoveEntry = useCallback((item: CalendarEntry, event?: GestureResponderEvent) => {
@@ -339,7 +348,7 @@ export default function CalendarScreen() {
       void removeCalendarEntry(item)
       return
     }
-    confirmRemoveFromCalendar(item.title, () => void removeCalendarEntry(item))
+    void confirmRemoveFromCalendar(item.title, () => void removeCalendarEntry(item))
   }, [removeCalendarEntry])
 
   // Android: при открытом редакторе даты Back сначала закрывает его; иначе

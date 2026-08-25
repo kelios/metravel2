@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { View } from 'react-native'
 
 import { safeLazy } from '@/components/layout/safeLazy'
+import ConfirmDialogHost from '@/components/ui/ConfirmDialogHost'
 import { isAndroidPhoneUserAgent } from '@/utils/appInstallHint'
 
 const NetworkStatusLazy = safeLazy(
@@ -150,6 +151,13 @@ export default function RootWebDeferredChrome({
 
   return (
     <>
+      {/* Единственный хост подтверждений на web (#1556): через него резолвится
+          `confirmAction` и квестовый `confirmQuestAsync`. Живёт здесь, а не в
+          `app/_layout.tsx`, чтобы `ConfirmDialog` не попал в eager-бандл каждой
+          страницы (#1543 — eager уже за потолком). Пока запроса нет, хост не
+          рендерит ничего. */}
+      <ConfirmDialogHost />
+
       {showNetworkStatusChrome && (
         <React.Suspense fallback={null}>
           <NetworkStatusLazy position="top" />

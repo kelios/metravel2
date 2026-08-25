@@ -17,10 +17,10 @@ jest.mock('@/components/quests/questWizardMedia', () => ({
 import { Alert, Platform } from 'react-native'
 import { confirmQuestAsync, copyQuestCoords, openQuestMap } from '@/components/quests/questWizardHelpers'
 import {
-  getQuestConfirmRequest,
-  resolveQuestConfirm,
-  subscribeQuestConfirm,
-} from '@/components/quests/questConfirmStore'
+  getConfirmDialogRequest,
+  resolveConfirmDialog,
+  subscribeConfirmDialog,
+} from '@/components/ui/confirmDialogStore'
 
 describe('questWizardHelpers.openQuestMap', () => {
   const point = { lat: 53.9, lng: 27.56, title: 'Площадь Победы' }
@@ -124,7 +124,7 @@ describe('questWizardHelpers.copyQuestCoords', () => {
 describe('questWizardHelpers.confirmQuestAsync', () => {
   // #1555: на web подтверждение больше не идёт через нативный `window.confirm` —
   // он синхронно морозил JS-поток вкладки. Теперь промис резолвит дизайн-системный
-  // `ConfirmDialog`, смонтированный как `QuestConfirmHost`.
+  // `ConfirmDialog`, смонтированный как `ConfirmDialogHost` (общий мост, #1556).
   let unsubscribe: (() => void) | null = null
 
   beforeEach(() => {
@@ -135,11 +135,11 @@ describe('questWizardHelpers.confirmQuestAsync', () => {
   afterEach(() => {
     unsubscribe?.()
     // Хвост незакрытого диалога не должен утекать в соседний тест.
-    resolveQuestConfirm(false)
+    resolveConfirmDialog(false)
   })
 
   const mountHost = () => {
-    unsubscribe = subscribeQuestConfirm(() => {})
+    unsubscribe = subscribeConfirmDialog(() => {})
   }
 
   it('web: passes the request to the dialog host instead of calling window.confirm', async () => {
@@ -150,14 +150,14 @@ describe('questWizardHelpers.confirmQuestAsync', () => {
     const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
 
     expect(nativeConfirm).not.toHaveBeenCalled()
-    expect(getQuestConfirmRequest()).toMatchObject({
+    expect(getConfirmDialogRequest()).toMatchObject({
       title: 'Сбросить прогресс?',
       message: 'Все ваши ответы будут удалены.',
     })
 
-    resolveQuestConfirm(true)
+    resolveConfirmDialog(true)
     await expect(pending).resolves.toBe(true)
-    expect(getQuestConfirmRequest()).toBeNull()
+    expect(getConfirmDialogRequest()).toBeNull()
 
     nativeConfirm.mockRestore()
   })
@@ -167,7 +167,7 @@ describe('questWizardHelpers.confirmQuestAsync', () => {
     mountHost()
 
     const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
-    resolveQuestConfirm(false)
+    resolveConfirmDialog(false)
 
     await expect(pending).resolves.toBe(false)
   })
@@ -190,24 +190,24 @@ describe('questWizardHelpers.confirmQuestAsync', () => {
     const second = confirmQuestAsync('Второй', 'Сообщение')
 
     await expect(first).resolves.toBe(false)
-    expect(getQuestConfirmRequest()).toMatchObject({ title: 'Второй' })
+    expect(getConfirmDialogRequest()).toMatchObject({ title: 'Второй' })
 
-    resolveQuestConfirm(true)
+    resolveConfirmDialog(true)
     await expect(second).resolves.toBe(true)
   })
 
   it('web: unmounting the host with an open dialog resolves false instead of hanging', async () => {
     // #1555 P2: уход со страницы (браузерный Back) не должен оставлять висящий await,
-    // а протухший запрос — всплывать призрачным диалогом в следующем инстансе визарда.
+    // а протухший запрос — всплывать призрачным диалогом в следующем инстансе хоста.
     ;(Platform as { OS: string }).OS = 'web'
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    const unmount = subscribeQuestConfirm(() => {})
+    const unmount = subscribeConfirmDialog(() => {})
 
     const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
     unmount()
 
     await expect(pending).resolves.toBe(false)
-    expect(getQuestConfirmRequest()).toBeNull()
+    expect(getConfirmDialogRequest()).toBeNull()
 
     warn.mockRestore()
   })
@@ -221,7 +221,7 @@ describe('questWizardHelpers.confirmQuestAsync', () => {
 
     expect(alert).toHaveBeenCalledTimes(1)
     // Web-хост при этом не задействован: запроса в сторе нет.
-    expect(getQuestConfirmRequest()).toBeNull()
+    expect(getConfirmDialogRequest()).toBeNull()
 
     const [, , buttons] = alert.mock.calls[0] as unknown as [string, string, Array<{ text: string; onPress?: () => void }>]
     buttons[1].onPress?.()

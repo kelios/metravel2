@@ -27,7 +27,6 @@ import {
 } from './questWizardSections';
 import { QuestStepCard, clearQuestCooldowns } from './questWizardStepCard';
 import QuestGuestGate from './QuestGuestGate';
-import QuestConfirmHost from './QuestConfirmHost';
 import { useQuestWizardProgress } from './useQuestWizardProgress';
 import { useQuestReminder } from './useQuestReminder';
 import { useQuestGeofence } from './useQuestGeofence';
@@ -696,9 +695,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            {/* Хост подтверждений квеста: `confirmQuestAsync` на web резолвится через него (#1555).
-                На native подтверждение остаётся на `Alert.alert`, поэтому хост туда не монтируется. */}
-            {Platform.OS === 'web' && <QuestConfirmHost />}
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                     {compactDesktopLayout ? (
