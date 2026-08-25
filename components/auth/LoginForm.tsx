@@ -42,6 +42,9 @@ interface LoginFormValues {
     password: string;
 }
 
+export const resolveLoginKeyboardAvoidingBehavior = (platform: typeof Platform.OS) =>
+    platform === 'ios' ? 'height' as const : undefined;
+
 const getErrorMessage = (error: unknown, fallback: string): string => {
     if (error instanceof Error && typeof error.message === 'string' && error.message.trim()) {
         return error.message;
@@ -272,8 +275,9 @@ export default function Login() {
             ) : null}
 
             <KeyboardAvoidingView
+                testID="login-keyboard-avoiding-view"
                 style={styles.container}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={resolveLoginKeyboardAvoidingBehavior(Platform.OS)}
             >
                 {Platform.OS === 'web' && !isMobile && (
                     <Image
@@ -283,11 +287,13 @@ export default function Login() {
                     />
                 )}
                 <ScrollView
-                    style={webTouchScrollStyle}
+                    testID="login-scroll-view"
+                    style={[styles.scrollView, webTouchScrollStyle]}
                     contentContainerStyle={styles.scrollViewContent}
                     keyboardShouldPersistTaps="handled"
+                    automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
                 >
-                    <View style={styles.bg}>
+                    <View testID="login-scroll-content" style={styles.bg}>
                         <View style={styles.inner}>
                             <View style={styles.card}>
                                 {/* ---------- header ---------- */}
@@ -473,6 +479,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
         backgroundColor: colors.backgroundSecondary,
     },
+    scrollView: {
+        // KeyboardAvoidingView changes its height on iOS. The child viewport
+        // must flex so it actually shrinks above the keyboard.
+        ...Platform.select({ ios: { flex: 1 }, default: {} }),
+    },
     mapBackground: {
         ...StyleSheet.absoluteFillObject,
         width: '100%',
@@ -480,18 +491,31 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     scrollViewContent: {
         flexGrow: 1,
-        justifyContent: 'center',
         ...Platform.select({
+            ios: {
+                justifyContent: 'flex-start',
+            },
             web: {
+                justifyContent: 'center',
                 paddingBottom: 'var(--mt-consent-h, 0px)' as any,
+            },
+            default: {
+                justifyContent: 'center',
             },
         }),
     },
     bg: {
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
+        ...Platform.select({
+            // `flex: 1` shrinks the iOS ScrollView content to its viewport,
+            // so the lower fields only overflow visually and cannot be
+            // scrolled above the keyboard. Grow to at least the viewport but
+            // keep the intrinsic card height in the scroll content size.
+            ios: { flexGrow: 1 },
+            default: { flex: 1 },
+        }),
     },
     inner: {
         width: '100%',

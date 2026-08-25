@@ -1,6 +1,7 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { TextInput } from 'react-native';
+import { Platform, StyleSheet, TextInput } from 'react-native';
 import Login from '@/app/(tabs)/login';
+import { resolveLoginKeyboardAvoidingBehavior } from '@/components/auth/LoginForm';
 import { useAuth } from '@/context/AuthContext';
 
 // Mock dependencies
@@ -202,6 +203,26 @@ describe('Login Component', () => {
   });
 
   describe('Login Flow', () => {
+    it('keeps the iOS form content scrollable above the keyboard', async () => {
+      const { getByTestId } = await renderLogin();
+
+      expect(Platform.OS).toBe('ios');
+      expect(resolveLoginKeyboardAvoidingBehavior(Platform.OS)).toBe('height');
+      expect(
+        StyleSheet.flatten(getByTestId('login-scroll-view').props.contentContainerStyle),
+      ).toEqual(expect.objectContaining({ flexGrow: 1, justifyContent: 'flex-start' }));
+      expect(
+        StyleSheet.flatten(getByTestId('login-scroll-view').props.style),
+      ).toEqual(expect.objectContaining({ flex: 1 }));
+      expect(getByTestId('login-scroll-view').props.automaticallyAdjustKeyboardInsets).toBe(true);
+      expect(
+        StyleSheet.flatten(getByTestId('login-scroll-content').props.style),
+      ).toEqual(expect.objectContaining({ flexGrow: 1 }));
+      expect(
+        StyleSheet.flatten(getByTestId('login-scroll-content').props.style),
+      ).not.toEqual(expect.objectContaining({ flex: 1 }));
+    });
+
     it('should call login with correct credentials', async () => {
       const mockLogin = jest.fn().mockResolvedValue(true);
       const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
