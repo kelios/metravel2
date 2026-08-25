@@ -5,8 +5,8 @@
 // здесь заперты обе границы распознавания: что считается файлом-данными и что
 // считается упоминанием `quest_id`, а не копией контента.
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, removeDir } = require('./cli-test-utils')
 
 const { describedQuests, scanScripts, MENTIONS_QUEST_ID } = require('@/scripts/guard-quest-data-sources')
 
@@ -15,10 +15,10 @@ const { replaceField, replaceByAst, renderObject } = require('@/scripts/sync-que
 
 /** Временное дерево `<root>/scripts/*` — guard читает каталог, а не список файлов. */
 const withScripts = (files: Record<string, string>, run: (root: string) => void) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'quest-sources-'))
+  const root = makeTempDir('quest-sources-')
   fs.mkdirSync(path.join(root, 'scripts'))
   for (const [name, body] of Object.entries(files)) fs.writeFileSync(path.join(root, 'scripts', name), body, 'utf8')
-  try { run(root) } finally { fs.rmSync(root, { recursive: true, force: true }) }
+  try { run(root) } finally { removeDir(root) }
 }
 
 const dataFile = (questId: string) => `module.exports = [{ quest_id: '${questId}', steps: [{ step_id: 'a' }] }]\n`

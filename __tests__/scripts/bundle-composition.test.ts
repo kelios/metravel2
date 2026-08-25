@@ -135,6 +135,61 @@ const DYNAMIC_IMPORT_CHOKEPOINTS: Array<{ specifier: string; owner: string; tick
 ]
 
 /**
+ * #1543: секции, которые маршрут не рендерит на первом кадре.
+ *
+ * Класс дефекта отличается и от «вендор уехал в общий чанк», и от «payload на
+ * чужих маршрутах»: импорт легален, модуль нужен именно этому маршруту — но не
+ * при первой отрисовке. Экран планировщика открывается на вкладке `route`, а
+ * деревья вкладок «люди»/«экспорт»/«ещё» и панели редактирования владельца
+ * (`isOwner && isEditing`) всё равно ехали eager-чанками: замер 2026-08-25 дал
+ * 791,3 КБ brotli на `(tabs)/trips/plan/[id].html` при потолке 775 — маршрут
+ * был худшим в сборке с отрывом 36 КБ от следующего.
+ *
+ * Проверка идёт по web-резолву (`RESOLVE_EXTS` начинается с `.web.tsx`), то
+ * есть ровно так, как граф видит Metro при сборке web: платформенный сплит
+ * `tripPlanDeferredSections.web.tsx` обязан быть единственной дорогой к этим
+ * компонентам, а синхронный двойник для native виден только native-резолву.
+ *
+ * Контроль обхода обязателен: пустой список нарушителей одинаково означает и
+ * чистый граф, и сломанный резолвер. Поэтому рядом закреплён компонент, который
+ * маршрут ОБЯЗАН держать синхронно.
+ */
+const ROUTE_DEFERRED_SECTIONS: Array<{
+  route: string
+  sections: string[]
+  control: string
+  ticket: string
+}> = [
+  {
+    route: 'app/(tabs)/trips/plan/[id].tsx',
+    // `components/calendar/MiniCalendar.tsx` в списке НЕТ намеренно: он остаётся
+    // синхронно достижим другой дорогой — RouteBuilder -> TripRouteImportPanel ->
+    // TravelMap.web -> createMapPopupComponent -> PlacePopupCard ->
+    // RelatedTravelActionStack -> TravelStatusButton. Обёртка `React.lazy` поверх
+    // такого ребра не экономит ни байта и только маскирует проблему в ревью —
+    // ровно класс #1499, — поэтому календарь подключён синхронно, а его вес
+    // снимается вместе с цепочкой попапа карты, отдельной задачей.
+    sections: [
+      'components/travel/PhotoUploadWithPreview.tsx',
+      'components/trips/chat/TripChatPanel.tsx',
+      'components/trips/communication/TripTelegramGroupCard.tsx',
+      'components/trips/planning/TripInvitePanel.tsx',
+      'components/trips/planning/TripParticipantsList.tsx',
+      'components/trips/planning/TripRatingPanel.tsx',
+      'components/trips/planning/TripReportForm.tsx',
+      'components/trips/planning/TripRouteExportMenu.tsx',
+      'components/trips/planning/TripRsvpControl.tsx',
+      'components/trips/planning/TripSuggestPointForm.tsx',
+      'components/trips/planning/TripSuggestionsPanel.tsx',
+    ],
+    // Вкладка `route` — стартовая, её конструктор маршрута обязан остаться
+    // синхронным: он и есть первый кадр экрана.
+    control: 'components/trips/planning/RouteBuilder.tsx',
+    ticket: '#1543',
+  },
+]
+
+/**
  * #1393: маршрутная привязка тяжёлого payload'а.
  *
  * Проверки выше ловят «вендор уехал в общий чанк» по ОДНОМУ синхронному импорту.
@@ -449,6 +504,28 @@ describe('состав eager-бандла (#1148)', () => {
       const offenders = reached.filter((hit) => !allowedRoutes.includes(hit.root))
       // Цепочка в сообщении — сразу видно, каким ребром payload попал на маршрут.
       expect(offenders.map((hit) => `${hit.root}: ${hit.chain!.join(' -> ')}`)).toEqual([])
+    },
+  )
+
+  it.each(ROUTE_DEFERRED_SECTIONS)(
+    'маршрут $route не тянет отложенные секции синхронно ($ticket)',
+    ({ route, sections, control }) => {
+      const routeRoot = join(ROOT, route)
+
+      // Контроль детектора до самой проверки.
+      expect({
+        control: `${route} -> ${control}`,
+        reachable: syncPathTo(routeRoot, join(ROOT, control)) !== null,
+      }).toEqual({ control: `${route} -> ${control}`, reachable: true })
+
+      const offenders = sections
+        .map((section) => ({ section, chain: syncPathTo(routeRoot, join(ROOT, section)) }))
+        .filter((hit) => hit.chain !== null)
+        // Цепочка в сообщении — сразу видно, каким ребром секция вернулась в
+        // стартовый граф.
+        .map((hit) => `${hit.section}: ${hit.chain!.join(' -> ')}`)
+
+      expect(offenders).toEqual([])
     },
   )
 

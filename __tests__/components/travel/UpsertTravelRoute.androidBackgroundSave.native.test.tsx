@@ -156,8 +156,11 @@ describe('UpsertTravelRoute - Android explicit save / background / foreground (#
       expect(queryByText('Попробовать снова')).toBeNull();
       // Editor visible, marker present.
       expect(getByText(mockDescriptionMarker)).toBeTruthy();
-      // Badge renders a meaningful localized string, not a crash.
-      expect(getByText('Сохранено только что')).toBeTruthy();
+      // Badge renders a meaningful localized string, not a crash. Since #1528
+      // that string is the CLDR text the web already shows ("сейчас"): the
+      // guard moved into the canonical `formatRelativeTime`, so this build no
+      // longer falls into a second, Android-only wording ("только что").
+      expect(getByText('Сохранено сейчас')).toBeTruthy();
     } finally {
       Object.defineProperty(Intl, 'RelativeTimeFormat', {
         configurable: true,

@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 import type { HeroStyleContext } from './context'
+import { HOME_HERO_MEDIA_SLOT_RATIO } from '../homeHeroShared'
 
 export const createCtaStyles = (ctx: HeroStyleContext) => {
   const {
@@ -355,7 +356,10 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
         } as any,
       }),
     },
-    featuredCardImage: { width: '100%', aspectRatio: 16 / 9 },
+    // #1541: слот держит пропорцию набора, а не 16/9 — прежнее значение
+    // всё равно перебивалось числовой высотой из `HomeHero`, и слот выходил
+    // 358×220 (1.63) при вертикальных снимках: 29.5% плоского поля.
+    featuredCardImage: { width: '100%', aspectRatio: HOME_HERO_MEDIA_SLOT_RATIO },
     featuredCardOverlay: {
       position: 'absolute' as const,
       bottom: 0,

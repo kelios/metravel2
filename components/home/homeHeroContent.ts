@@ -12,12 +12,19 @@ export type BookImage = {
   subtitle: string
   href?: string
   /**
-   * Заливка полей letterbox под `contain`-кадром (#1208, docs/RULES.md). Снимки
-   * героя вертикальные, слот — горизонтальный, поэтому без цвета по бокам
-   * оставался пустой фон. Манифеста у статичных ассетов нет, поэтому средний
-   * цвет кадра посчитан один раз и зафиксирован здесь.
+   * Заливка полей letterbox под `contain`-кадром (#1208, docs/RULES.md).
+   * Манифеста у статичных ассетов нет, поэтому средний цвет кадра посчитан
+   * один раз и зафиксирован здесь.
    */
   dominantColor?: string
+  /**
+   * #1541: пропорция растра. Кадр слайдера один на весь набор
+   * (`HOME_HERO_MEDIA_SLOT_RATIO`), поэтому долю плоского поля задаёт сам
+   * снимок, и проверить её можно только по объявленной пропорции —
+   * у удалённых слайдов интринсика недоступна ни тесту, ни первому кадру.
+   * Поле обязательное: слайд без пропорции нельзя допустить в набор вслепую.
+   */
+  aspectRatio: number
 }
 
 /** Имя глифа Feather: тип, а не строка, иначе каждый консьюмер пишет `as any`. */
@@ -69,10 +76,18 @@ export const buildFilterPath = (base: string, params?: QuickFilterParams) => {
 
 export const HOME_HERO_BOOK_LAYOUT_MIN_WIDTH = 1280
 
+/**
+ * #1541: пять слайдов живут в ОДНОМ кадре 3:2 с кросс-фейдом, поэтому набор
+ * нормализован под ландшафт. Локальные ассеты — кадры 720×480 из обложек тех
+ * же статей на проде (540/536/532) и из галереи статьи 362; портретные 2:3
+ * версии давали до 29.5% плоского поля. `aspectRatio` обязателен и проверяется
+ * `__tests__/components/home/homeHeroMediaLetterbox.test.ts`.
+ */
 export const BOOK_IMAGES: readonly BookImage[] = [
   {
     source: require('../../assets/images/cover_sorapiso.webp'),
-    dominantColor: '#687e72',
+    dominantColor: '#536659',
+    aspectRatio: 3 / 2,
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_sorapis_dolomity_5feebc2d') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_sorapis_2fd0cc8f') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.pohod_po_dolomitam_ozero_italiya_fa42c033') },
@@ -80,7 +95,8 @@ export const BOOK_IMAGES: readonly BookImage[] = [
   },
   {
     source: require('../../assets/images/cover_trecime.webp'),
-    dominantColor: '#97999c',
+    dominantColor: '#989ea5',
+    aspectRatio: 3 / 2,
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.tre_cime_di_lavaredo_dolomity_0341abf3') },
     title: 'Tre Cime di Lavaredo',
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.krugovoy_marshrut_10_km_gory_italiya_3b3bdd6b') },
@@ -88,7 +104,8 @@ export const BOOK_IMAGES: readonly BookImage[] = [
   },
   {
     source: require('../../assets/images/cover_bled.webp'),
-    dominantColor: '#485c66',
+    dominantColor: '#516571',
+    aspectRatio: 3 / 2,
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_sloveniya_a6de1598') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_4b95af32') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.chto_posmotret_za_1_den_ozero_sloveniya_337402ef') },
@@ -99,16 +116,23 @@ export const BOOK_IMAGES: readonly BookImage[] = [
       uri: 'https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp',
     },
     dominantColor: '#94948a',
+    // Обложка статьи на проде — 1024×768; единственный слайд набора, чью
+    // пропорцию фронт не выбирает. 4:3 в кадре 3:2 даёт 5.6% поля.
+    aspectRatio: 4 / 3,
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.tropa_vedm_germaniya_08d65a9a') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.tropa_vedm_0ac8dba6') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.hayking_gornyy_marshrut_germaniya_cc4d0990') },
     href: 'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele',
   },
   {
-    source: {
-      uri: 'https://metravel.by/travel-image/362/conversions/28160874221349509d697c8016c48464.webp',
-    },
-    dominantColor: '#74787b',
+    // Обложка статьи 362 на проде портретная (768×1024), вся её галерея —
+    // квадраты 1080×1080, а image-прокси `w/h/fit` игнорирует (проверено
+    // 2026-08-25). Ландшафтного кадра с прода взять негде, поэтому слайд
+    // стал локальным ассетом: 3:2 из галерейного кадра 1947. Побочно это
+    // ещё и легче — 76 КБ против 257 КБ у прежней удалённой обложки.
+    source: require('../../assets/images/cover_morskoe_oko.webp'),
+    dominantColor: '#5e676a',
+    aspectRatio: 3 / 2,
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.morskoe_oko_v_mae_polsha_e9d180a7') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.morskoe_oko_v_mae_458dda47') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.pohod_ozero_polsha_daa096f6') },

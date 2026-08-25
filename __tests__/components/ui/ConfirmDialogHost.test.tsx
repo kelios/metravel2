@@ -1,4 +1,3 @@
-import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react-native'
 
 // Диалог подменён стабом: тест проверяет проводку хоста со стором, а не вёрстку

@@ -31,7 +31,9 @@ const exclusionList = require(path.join(
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname)
 const previousEnhanceMiddleware = config.server && config.server.enhanceMiddleware
-const DEFAULT_DEV_API_HOST = 'http://192.168.50.36'
+// Фолбэк CORS-прокси, когда EXPO_PUBLIC_API_URL не задан: локальный бэкенд.
+// Дев-стенд (http://192.168.50.36) подключается только явным EXPO_PUBLIC_API_URL.
+const DEFAULT_DEV_API_HOST = 'http://localhost:8000'
 
 if (process.env.METRAVEL_QUIET_METRO === '1') {
   config.reporter = { update: () => {} }

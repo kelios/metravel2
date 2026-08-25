@@ -100,6 +100,17 @@ Validation:
 
 ### Условные контракты
 
+- Проверочный таргет по умолчанию — ЛОКАЛЬНЫЙ стек этой машины: бэкенд
+  `bash /Users/juliasavran/Sites/metravel/run-backend.sh` (Django на :8000,
+  PostGIS 17-3.5 и redis в docker, данные — свежая копия прод-базы) и фронт
+  `EXPO_PUBLIC_API_URL=http://localhost:8000 npx expo start --web`. Дефолты
+  `.env` и metro-прокси уже указывают туда. Дев-стенд `192.168.50.36` и прод
+  `metravel.by` подключаются точечной переменной окружения и ТОЛЬКО по явному
+  запросу владельца; деплой на них по-прежнему проходит operation gate
+  `docs/WORKFLOW_OPERATIONS.md`. Локально бакет S3 — `metravellocal`, поэтому у
+  старых прод-статей картинки не грузятся: это ожидаемо, для медиа-проверок
+  создаётся своя тестовая статья. Устройство целится на тот же бэкенд по LAN-IP.
+  Полное описание стека — `/Users/juliasavran/Sites/metravel/README-local.md`.
 - Board mutation: сначала `$metravel-problem-memory`, затем
   `$metravel-task-contract`/`$metravel-ticket-board`; детали и status semantics —
   `docs/TASK_BOARD_MCP.md`. `testing` — активная QA или точный temporal/retest

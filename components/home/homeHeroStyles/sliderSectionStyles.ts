@@ -1,6 +1,7 @@
 // components/home/homeHeroStyles/sliderSectionStyles.ts
 import { Platform } from 'react-native'
 
+import { HOME_HERO_MEDIA_SLOT_RATIO } from '../homeHeroShared'
 import type { HeroStyleContext } from './context'
 
 export const createSliderSectionStyles = (ctx: HeroStyleContext) => {
@@ -53,7 +54,9 @@ export const createSliderSectionStyles = (ctx: HeroStyleContext) => {
                   : '16.2%',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'flex-start',
+              // #1541: кадр больше не занимает всю высоту страницы, поэтому он
+              // центрируется на бумаге, а не прижимается к её верху.
+              justifyContent: 'center',
               boxSizing: 'border-box',
               overflow: 'hidden',
             } as any)
@@ -63,15 +66,20 @@ export const createSliderSectionStyles = (ctx: HeroStyleContext) => {
     sliderFrame: {
       width: '100%',
       flexGrow: 0,
-      flexShrink: 1,
+      flexShrink: 0,
       minHeight: 0,
       position: 'relative' as const,
       overflow: 'hidden',
       borderRadius: isNarrowDesktopBook ? 12 : 10,
+      // #1541: раньше кадр брал 90/92% высоты книжной страницы и выходил почти
+      // квадратным (365×394 на 1280) — ландшафтный набор оставлял в нём до
+      // 14.7% плоского поля. Теперь высота следует из ширины по пропорции
+      // набора, поэтому она одна для всех пяти слайдов и не дёргается при
+      // автопереключении.
+      aspectRatio: HOME_HERO_MEDIA_SLOT_RATIO,
       ...Platform.select({
         web: {
           alignSelf: 'stretch',
-          height: isNarrowDesktopBook ? '90%' : '92%',
           marginTop: 0,
           clipPath: `inset(0 round ${isNarrowDesktopBook ? 12 : 10}px)`,
           boxSizing: 'border-box',

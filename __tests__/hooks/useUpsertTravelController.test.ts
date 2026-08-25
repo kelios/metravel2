@@ -230,6 +230,20 @@ describe('useUpsertTravelController', () => {
         expect(formatAutosaveLastSaved(savedAt, now)).toBe(expected);
       }
 
+      // #1528: the guard now lives in the canonical formatter, so this call
+      // site prints one string on both engines instead of two wordings.
+      await i18n.changeLanguage('ru');
+      const withoutConstructor = formatAutosaveLastSaved(savedAt, now);
+      Object.defineProperty(Intl, 'RelativeTimeFormat', {
+        configurable: true,
+        value: originalRelativeTimeFormat,
+      });
+      expect(formatAutosaveLastSaved(savedAt, now)).toBe(withoutConstructor);
+      Object.defineProperty(Intl, 'RelativeTimeFormat', {
+        configurable: true,
+        value: undefined,
+      });
+
       await i18n.changeLanguage('ru');
       jest.useFakeTimers();
       jest.setSystemTime(now);

@@ -35,12 +35,10 @@ describe('bundle budget release contract', () => {
       Number(budget.tolerancePct) <= 5,
       'config/bundle-budget.json tolerancePct must stay at or below 5%.',
     )
-    // #1393: числа опущены до фактических после выноса слоя данных квестов и
-    // таблицы контуров стран из стартового графа. Пин существует, чтобы потолок
-    // нельзя было ПОДНЯТЬ ради зелёной сборки; опускать его вслед за реальным
-    // выигрышем — ровно то, ради чего он и заведён. Замер 2026-08-10 на
-    // production-сборке: 758,4 КБ brotli, `(tabs)/travels/[param].html` 51
-    // запрос (было 785,0 КБ и 59).
+    // #1543: пины повторно опущены до фактических после схлопывания чанков с
+    // одинаковым route-set и отложенной загрузки неактивных секций планировщика.
+    // Пин существует, чтобы потолок нельзя было ПОДНЯТЬ ради зелёной сборки; опускать его
+    // вслед за реальным выигрышем — ровно то, ради чего он и заведён.
     expect(budget?.eager).toMatchObject({
       chunks: ['entry', '__expo-metro-runtime'],
       htmlRoutes: true,
@@ -48,13 +46,15 @@ describe('bundle budget release contract', () => {
       // #1372: потолок на ЧИСЛО eager JS-запросов маршрута. Без пина его легко
       // поднять, чтобы «позеленить» сборку, — а именно это Task Contract
       // задачи и запрещает.
-      maxRequests: 51,
+      maxRequests: 20,
       maxRequestsByRoute: {
-        'index.html': 35,
-        'search.html': 30,
-        'map.html': 39,
-        'quests.html': 33,
-        '(tabs)/travels/[param].html': 51,
+        'index.html': 14,
+        'search.html': 9,
+        'map.html': 14,
+        'quests.html': 12,
+        '(tabs)/travels/[param].html': 16,
+        '(tabs)/profile.html': 20,
+        '(tabs)/trips/plan/[id].html': 19,
       },
       tolerancePct: 0,
     })
@@ -448,10 +448,9 @@ describe('bundle budget release contract', () => {
       // Маркер — фрагмент первого кольца контура Грузии. Пин по имени чанка не
       // годится: `__shared-N` перенумеровывается от сборки к сборке.
       expect(spec.marker).toBe('4155,4241,-5,23,-8,10')
-      // #1393: после выноса слоя квестов таблица контуров осталась только у
-      // партнёрского блока планировщика — это два HTML одного маршрута
-      // (`trips/plan/[id]` и его `(tabs)`-копия). Было 960 из 967 маршрутов.
-      expect(spec.maxRoutes).toBe(2)
+      // #1543: таблица контуров ушла из eager HTML полностью. Нулевой пин —
+      // самый строгий односторонний ratchet: любое повторное попадание в route падает.
+      expect(spec.maxRoutes).toBe(0)
       // Односторонний рэтчет по числу разрешил бы освободить главную и тем же
       // числом нагрузить карту, поэтому отвоёванные маршруты закреплены поимённо.
       expect(spec.mustNotLoad).toEqual(

@@ -1,6 +1,7 @@
 // components/home/homeHeroStyles/bookWidgetStyles.ts
 import { Platform } from 'react-native'
 
+import { HOME_HERO_MEDIA_SLOT_RATIO } from '../homeHeroShared'
 import type { HeroStyleContext } from './context'
 
 export const createBookWidgetStyles = (ctx: HeroStyleContext) => {
@@ -66,9 +67,12 @@ export const createBookWidgetStyles = (ctx: HeroStyleContext) => {
       }),
     },
     tabletFeaturedImage: {
+      // #1541: реальная ширина этой flex-колонки уже viewport из-за padding
+      // и gap. Поэтому пропорция живёт здесь, на authoritative layout-боксе:
+      // высота от оценки `viewport * 0.45` снова растянула бы слот и вернула
+      // полосы.
       width: '100%',
-      height: '100%',
-      minHeight: viewportWidth >= 1000 ? 340 : 280,
+      aspectRatio: HOME_HERO_MEDIA_SLOT_RATIO,
     },
     tabletFeaturedOverlay: {
       position: 'absolute' as const,

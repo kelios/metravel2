@@ -23,7 +23,6 @@ type HomeHeroPopularSectionProps = {
   isWeb: boolean
   useMobileGrid: boolean
   featuredCardWidth?: number
-  featuredCardHeight: number
   popularCardWidth: number
   popularCardHeight: number
   bookImages: readonly BookImage[]
@@ -55,14 +54,12 @@ const POPULAR_CARD_GAP = 16
 
 function FeaturedRouteCard({
   colors,
-  featuredCardHeight,
   featuredCardWidth,
   image,
   onOpenArticle,
   styles,
 }: {
   colors: ThemedColors
-  featuredCardHeight: number
   featuredCardWidth?: number
   image: BookImage
   onOpenArticle: (href?: string | null) => void
@@ -88,7 +85,6 @@ function FeaturedRouteCard({
         source={image.source}
         placeholderColor={image.dominantColor}
         width={featuredCardWidth}
-        height={featuredCardHeight}
         borderRadius={0}
         fit="contain"
         blurBackground
@@ -184,7 +180,6 @@ export default function HomeHeroPopularSection({
   isWeb,
   useMobileGrid,
   featuredCardWidth,
-  featuredCardHeight,
   popularCardWidth,
   popularCardHeight,
   bookImages,
@@ -202,7 +197,6 @@ export default function HomeHeroPopularSection({
     <View style={styles.popularSection}>
       <FeaturedRouteCard
         colors={colors}
-        featuredCardHeight={featuredCardHeight}
         featuredCardWidth={featuredCardWidth}
         image={featuredImage}
         onOpenArticle={onOpenArticle}

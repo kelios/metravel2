@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
 import HomeHero from '@/components/home/HomeHero'
 import { queueAnalyticsEvent } from '@/utils/analytics'
@@ -155,6 +155,26 @@ describe('HomeHero Component', () => {
       expect(getByText('Маршрут недели')).toBeTruthy()
     })
 
+    it('lets the tablet media box derive its height from its real flex-column width', () => {
+      Object.assign(mockResponsiveState, {
+        isDesktop: false,
+        isTablet: true,
+        isPortrait: true,
+        width: 1025,
+      })
+
+      render(<HomeHero />)
+
+      const tabletMedia = mockImageCardMedia.mock.calls
+        .map(([props]) => props)
+        .find((props) => props.loading === 'eager' && props.alt?.includes('Сорапис'))
+
+      expect(tabletMedia?.height).toBeUndefined()
+      expect(StyleSheet.flatten(tabletMedia?.style)).toEqual(
+        expect.objectContaining({ width: '100%', aspectRatio: 3 / 2 }),
+      )
+    })
+
     it('renders every home hero media surface with contain fit and blur backdrop', () => {
       Object.assign(mockResponsiveState, {
         isDesktop: false,
@@ -170,6 +190,32 @@ describe('HomeHero Component', () => {
         expect(props.blurBackground).toBe(true)
         expect(props.allowCriticalWebBlur).toBe(true)
       })
+    })
+
+    it('lets the featured media derive its height from the real container width', () => {
+      Object.assign(mockResponsiveState, {
+        isDesktop: false,
+        isPhone: true,
+        isPortrait: true,
+        width: 390,
+      })
+
+      render(<HomeHero />)
+
+      const featuredMedia = mockImageCardMedia.mock.calls
+        .map(([props]) => props)
+        .find((props) => props.loading === 'eager' && props.alt?.includes('Сорапис'))
+
+      expect(featuredMedia).toEqual(
+        expect.objectContaining({
+          fit: 'contain',
+        }),
+      )
+      expect(featuredMedia?.width).toBeUndefined()
+      expect(featuredMedia?.height).toBeUndefined()
+      expect(StyleSheet.flatten(featuredMedia?.style)).toEqual(
+        expect.objectContaining({ width: '100%', aspectRatio: 3 / 2 }),
+      )
     })
   })
 

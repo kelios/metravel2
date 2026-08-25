@@ -2,6 +2,27 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Hero 1541 Web 8146",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8146\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8146\" NODE_OPTIONS=--max-old-space-size=12288 npx expo start --web --port 8146"
+      ],
+      "port": 8146,
+      "autoPort": false
+    },
+    {
+      "name": "Quests 1475 Static 8143",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "8143",
+        ".codex-temp/1475/dist",
+        "https://metravel.by"
+      ],
+      "port": 8143
+    },
+    {
       "name": "QA Origin Proxy 4622",
       "runtimeExecutable": "node",
       "runtimeArgs": [

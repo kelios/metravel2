@@ -23,7 +23,7 @@ import {
   shouldDisableHomeHeroSliderBlur,
   useHomeHeroSlider,
 } from './useHomeHeroSlider'
-import type { QuickFilterParams } from './homeHeroShared'
+import { HOME_HERO_MEDIA_SLOT_RATIO, type QuickFilterParams } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -36,10 +36,9 @@ const INLINE_BOOKMARK_MIN_WIDTH = 1280
 const STACKED_CTA_MAX_WIDTH = 1180
 const HOME_HERO_DESKTOP_CONTAINER_HORIZONTAL_PADDING = 80
 const COMPACT_BOOK_MAX_HEIGHT = 760
-const SLIDER_HEIGHT_NARROW = 360
-const SLIDER_HEIGHT_WIDE = 420
 const SLIDER_MEDIA_WIDTH_NARROW = 480
 const SLIDER_MEDIA_WIDTH_WIDE = 500
+const SLIDER_MEDIA_WIDTH_COMPACT = 380
 const SLIDER_DESKTOP_BREAKPOINT = 1480
 const NAV_FEEDBACK_MS = 700
 const INTERNAL_HOSTS = new Set(['metravel.by', 'www.metravel.by'])
@@ -133,17 +132,18 @@ const HomeHero = memo(function HomeHero({
     IS_WEB && width >= TABLET_LAYOUT_MIN_WIDTH && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && !isMobile
 
   const sliderIconColor = colors.textOnDark ?? DESIGN_TOKENS.colors.textOnDark
-  const sliderHeight = isDesktop
-    ? width < SLIDER_DESKTOP_BREAKPOINT
-      ? SLIDER_HEIGHT_NARROW
-      : SLIDER_HEIGHT_WIDE
-    : SLIDER_HEIGHT_NARROW
   const sliderMediaWidth = isDesktop
     ? width < SLIDER_DESKTOP_BREAKPOINT
       ? SLIDER_MEDIA_WIDTH_NARROW
       : SLIDER_MEDIA_WIDTH_WIDE
-    : 380
+    : SLIDER_MEDIA_WIDTH_COMPACT
+  // #1541: высота кадра больше не своя константа — она следует из ширины и
+  // общей пропорции набора, иначе слот и растр расходятся и возвращается поле.
+  const sliderHeight = Math.round(sliderMediaWidth / HOME_HERO_MEDIA_SLOT_RATIO)
 
+  // #1541: узкая раскладка показывает тот же набор BOOK_IMAGES, что и слайдер,
+  // поэтому её слоты считаются от той же пропорции — иначе один и тот же
+  // ландшафтный кадр снова получает поле, просто на другом брейкпоинте.
   const featuredCardWidth = useMemo(() => {
     if (!IS_WEB) return undefined
     const horizontalPadding = isMobile ? 32 : 48
@@ -156,16 +156,10 @@ const HomeHero = memo(function HomeHero({
     return Math.max(136, Math.floor((available - 14) / 2))
   }, [isMobile, width])
 
-  const popularCardHeight = useMemo(() => {
-    if (isMobile) return Math.max(112, Math.round(popularCardWidth * 0.68))
-    return 148
-  }, [isMobile, popularCardWidth])
-
-  const featuredCardHeight = useMemo(() => {
-    if (isMobile) return 220
-    if (isTablet) return 280
-    return 300
-  }, [isMobile, isTablet])
+  const popularCardHeight = useMemo(
+    () => Math.round(popularCardWidth / HOME_HERO_MEDIA_SLOT_RATIO),
+    [popularCardWidth],
+  )
 
   const bookWrapperWidthRef = useRef(0)
   const [bookWrapperWidth, setBookWrapperWidth] = useState(0)
@@ -385,7 +379,6 @@ const HomeHero = memo(function HomeHero({
             isWeb={IS_WEB}
             useMobileGrid={isMobile}
             featuredCardWidth={featuredCardWidth}
-            featuredCardHeight={featuredCardHeight}
             popularCardWidth={popularCardWidth}
             popularCardHeight={popularCardHeight}
             bookImages={BOOK_IMAGES}

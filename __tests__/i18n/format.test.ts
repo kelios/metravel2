@@ -79,9 +79,11 @@ describe('locale-aware formatting', () => {
 
 // #1528. The engines this app ships on do not all carry the same `Intl`.
 // The Android release binary (`lib/arm64-v8a/libhermesvm.so`, versionCode 20)
-// exposes only `Intl.Collator`, `Intl.DateTimeFormat`, `Intl.NumberFormat` and
+// and the iOS one (`hermesvm.xcframework/ios-arm64/hermesvm.framework/hermesvm`
+// out of `ios/Pods/hermes-engine-artifacts/hermes-ios-*-release.tar.gz`) each
+// expose only `Intl.Collator`, `Intl.DateTimeFormat`, `Intl.NumberFormat` and
 // `getCanonicalLocales`; `RelativeTimeFormat`, `PluralRules` and `ListFormat`
-// are absent from the binary entirely. Two tickets in a row (#1335, #1511)
+// are absent from both binaries entirely. Two tickets in a row (#1335, #1511)
 // found that composition by watching a device, not by reading the code, and
 // both were fixed at the call site while the canonical formatter stayed
 // unguarded. This block turns the invariant into a check: every formatter
@@ -254,7 +256,14 @@ describe('formatRelativeTime without Intl.RelativeTimeFormat (#1528)', () => {
       'year',
     ]
     const values = [-100, -25, -21, -11, -5, -4, -2, -1, -0, 0, 1, 2, 4, 5, 11, 21, 25, 100, -1.5, 1.5]
-    const numericModes: Intl.RelativeTimeFormatOptions['numeric'][] = ['always', 'auto']
+    // `undefined` is the shape a caller leaves behind with `{}` or
+    // `{ style: 'short' }`. The constructor reads it as 'always', so the
+    // fallback has to as well.
+    const numericModes: Intl.RelativeTimeFormatOptions['numeric'][] = [
+      'always',
+      'auto',
+      undefined,
+    ]
 
     for (const locale of SUPPORTED_LOCALES) {
       const languageTag = getFormatLocale(locale)
@@ -275,6 +284,43 @@ describe('formatRelativeTime without Intl.RelativeTimeFormat (#1528)', () => {
     withoutIntlConstructors(OPTIONAL_INTL_CONSTRUCTORS, () => {
       expect(formatRelativeTime(-3, 'days', { numeric: 'always' }, 'ru')).toBe('3 дня назад')
       expect(formatRelativeTime(-3, 'day', { numeric: 'always' }, 'ru')).toBe('3 дня назад')
+    })
+  })
+
+  // An options object that carries something other than `numeric` is the
+  // ordinary way a caller loses the field. `Intl.RelativeTimeFormat` then
+  // defaults to 'always', so both engines have to print the numeric wording;
+  // reading the missing field as 'auto' would split them on «вчера».
+  it.each(SUPPORTED_LOCALES)(
+    'reads a missing `numeric` the way the constructor does on %s',
+    (locale) => {
+      const optionShapes: Intl.RelativeTimeFormatOptions[] = [{}, { style: 'long' }]
+
+      for (const options of optionShapes) {
+        const label = `${locale}/${JSON.stringify(options)}`
+        const native = formatRelativeTime(-1, 'day', options, locale)
+        let fallback = ''
+        withoutIntlConstructors(OPTIONAL_INTL_CONSTRUCTORS, () => {
+          fallback = formatRelativeTime(-1, 'day', options, locale)
+        })
+
+        expect(`${label}: ${fallback}`).toBe(`${label}: ${native}`)
+        expect(fallback).not.toBe(formatRelativeTime(-1, 'day', { numeric: 'auto' }, locale))
+      }
+    },
+  )
+
+  it('degrades an abbreviated style to the long form instead of throwing', () => {
+    // The abbreviated CLDR tables are not carried, so `short`/`narrow` answer
+    // in the long wording. Pinned here so the gap is a known boundary rather
+    // than a surprise the next caller finds on a device.
+    withoutIntlConstructors(OPTIONAL_INTL_CONSTRUCTORS, () => {
+      expect(formatRelativeTime(-5, 'minute', { numeric: 'always', style: 'short' }, 'ru')).toBe(
+        '5 минут назад',
+      )
+      expect(formatRelativeTime(-5, 'minute', { numeric: 'always', style: 'narrow' }, 'ru')).toBe(
+        '5 минут назад',
+      )
     })
   })
 

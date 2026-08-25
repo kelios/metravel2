@@ -130,7 +130,11 @@ export default function QuestCard({
         return optimizeImageUrl(imageUrl, {
             width: targetWidth,
             quality: IMAGE_QUALITY.questCover,
-            fit: 'cover',
+            // Режим кадрирования у слота — `contain`, значит и серверу нельзя
+            // просить `cover`: на durable-семействе `quest-cover` параметр
+            // игнорируется, но на legacy-роуте он вырезал бы кадр, который мы
+            // потом ещё раз вписываем — двойной кроп.
+            fit: 'contain',
         }) ?? imageUrl;
     }, [imageUrl, cardWidth]);
 
@@ -182,13 +186,30 @@ export default function QuestCard({
                     // blur backdrop here. WebKit can keep that composited layer
                     // visible while failing to paint the sharp img, leaving the
                     // card permanently blurred. QuestCard.test.tsx locks this.
+                    // Гард — web-сторонний: `ImageCardMedia` и сам гасит
+                    // `blurBackground` на web (`components/ui/ImageCardMedia.tsx:1003`),
+                    // а константный `false` отбирал заливку у native, где
+                    // индекс `dominant_color` не работает по замыслу
+                    // (`ImageCardMedia.tsx:254`). При `contain` это оставило бы
+                    // Android и iPhone прозрачные поля — ровно тот дефект, о
+                    // котором предупреждает docs/RULES.md.
                     <ImageCardMedia
                         src={coverSrc}
                         alt={quest.title}
                         width={cardWidth}
                         height={cardHeight}
-                        fit="cover"
-                        blurBackground={false}
+                        // `contain` — требование docs/RULES.md → «Images and
+                        // placeholders»: обложки квестов кадрируются только так,
+                        // исключений по поверхностям нет. `cover` приехал сюда
+                        // 2026-07-26 коммитом c48fffe6 вместе со снятием
+                        // блюр-подложки: без подложки поле было прозрачным, и
+                        // кроп его прятал. С 2026-08-02 (#1208) поле заливает
+                        // `dominant_color` из манифеста (обложки квестов
+                        // индексируются в `api/quests.ts`), поэтому прежней
+                        // причины больше нет. Слот карточки ландшафтный (1.46),
+                        // обложки — 1.333…1.778, так что поле не больше 8.9%.
+                        fit="contain"
+                        blurBackground={Platform.OS !== 'web'}
                         style={StyleSheet.absoluteFill}
                         loading={isAboveTheFold ? 'eager' : 'lazy'}
                         priority={isAboveTheFold ? 'high' : 'low'}

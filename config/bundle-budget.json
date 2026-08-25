@@ -1,5 +1,5 @@
 {
-  "description": "Web bundle size budget (KB). Regression guard: critical path + eager/feature chunks and release total without language-on-demand catalogs. #1286 uses route-scoped shared chunks instead of a global eager __common; the hard 800 KiB Brotli ceiling is measured from the complete script set of the worst generated HTML route with no tolerance. #1372 adds eager.maxRequests / eager.maxRequestsByRoute: the same script sets counted as REQUESTS, because at 150 ms mobile latency round-trips dominate over bytes and the byte ceiling alone misses that regression. Per-route ceilings are pinned to the values measured on 2026-08-10 (index 36, search 32, map 40, quests 34, travels/[param] 59) with no spare, so a route-local split regression cannot hide under the global worst route; maxRequests is the fallback ceiling for routes without their own line. Counts only eager &lt;script&gt; tags in the exported HTML — runtime import() chunks (roughly half of the 62 JS requests measured on /search before app-hydrated) need a network probe and are NOT covered here. #1393 adds eager.payloadRoutes: WHICH routes carry a heavy first-party payload, because neither the byte nor the request ceiling answers that — a module reachable from two or more async roots is hoisted into a shared chunk with no check on who needs it, and both earlier gates stay green. Payloads are identified by a marker string in the built JS, never by chunk name: __shared-N is renumbered between builds (the same payload was __shared-5, __shared-14 and __shared-59 within one session). maxRoutes is a one-way ratchet pinned to the measured count; mustNotLoad pins already-freed routes by name so the ratchet cannot trade the home page for the map. BE/UK/PL/EN remain deferred and separately budgeted. Other budgets keep at most 5% tolerance. Regenerate only for diagnosis, then re-curate without raising limits. Runs in release:check after build:web:prod.",
+  "description": "Web bundle size budget (KB). Regression guard: critical path + eager/feature chunks and release total without language-on-demand catalogs. #1286 uses route-scoped shared chunks instead of a global eager __common; the hard 800 KiB Brotli ceiling is measured from the complete script set of the worst generated HTML route with no tolerance. #1372 adds eager.maxRequests / eager.maxRequestsByRoute: the same script sets counted as REQUESTS, because at 150 ms mobile latency round-trips dominate over bytes and the byte ceiling alone misses that regression. Per-route ceilings are pinned to measured values with no spare (first set 2026-08-10, re-ratcheted 2026-08-25 - see #1543 below), so a route-local split regression cannot hide under the global worst route; maxRequests is the fallback ceiling for routes without their own line. Counts only eager &lt;script&gt; tags in the exported HTML — runtime import() chunks (roughly half of the 62 JS requests measured on /search before app-hydrated) need a network probe and are NOT covered here. #1393 adds eager.payloadRoutes: WHICH routes carry a heavy first-party payload, because neither the byte nor the request ceiling answers that — a module reachable from two or more async roots is hoisted into a shared chunk with no check on who needs it, and both earlier gates stay green. Payloads are identified by a marker string in the built JS, never by chunk name: __shared-N is renumbered between builds (the same payload was __shared-5, __shared-14 and __shared-59 within one session). maxRoutes is a one-way ratchet pinned to the measured count; mustNotLoad pins already-freed routes by name so the ratchet cannot trade the home page for the map. BE/UK/PL/EN remain deferred and separately budgeted. Other budgets keep at most 5% tolerance. #1543 (ninth ROUTE-BUNDLE-001 recurrence) fixes the eager scatter in two layers and re-curates the pins against it. Bundler layer: patches/@expo+metro-config merges groups that land on an identical route set regardless of the Jaccard and 512 KiB limits. Route layer: the trip planner opens on the `route` tab, so the people/export/more tab trees and the owner edit panel moved behind components/trips/planning/tripPlanDeferredSections.web.tsx. Worst-route eager Brotli 852.6 -> 760.8 KB; per-route requests index 44 -> 14, search 39 -> 9, map 45 -> 14, quests 42 -> 12, travels/[param] 53 -> 16, trips/plan/[id] 62 -> 19. maxRequests / maxRequestsByRoute are therefore ratcheted DOWN to the counts measured on 2026-08-25 with no spare (the stale 30-51 pins could no longer see a scatter regression), and the two current worst routes get their own line. Other ceilings are raised ONLY where the overshoot is fully attributed to product growth, never to go green: locale-be/uk raw grew 6.3%/6.2%, and modelling the built chunk as the escaped source (non-ASCII -> \\uXXXX, 6 bytes per Cyrillic char) over i18n/locales predicts +6.3%/+6.3% from the sources between the pin commit b977ef61 (2026-07-17) and HEAD - four independent points (be/uk x pin/HEAD) match the measured chunks within 1 KB. TravelDetailsMapSection raw grew 6.9% while its chunk-exclusive source set grew 5.2% (25.1 KB: UnifiedTravelCard, affiliateConfig, routeFileParser, api/misc, plus this ticket's own useCountryCodeByCoords chokepoint); its gzip pin stays at 22.2 because gzip is not breached. TOTAL gzip grew 6.9% while non-deferred first-party source grew 7.1% (879 KB, 1835 -> 1935 files) since the TOTAL pin commit 7d0db398 (2026-08-08); +10.6 KB of that is the price of the route-tab split itself (186 -> 195 chunks), paid to take 30.5 KB Brotli off every first load of the worst route. TOTAL raw is NOT re-pinned - it is not breached. Regenerate only for diagnosis, then re-curate without raising limits. Runs in release:check after build:web:prod.",
   "tolerancePct": 5,
   "deferredChunks": [
     "locale-be",
@@ -17,13 +17,15 @@
     ],
     "htmlRoutes": true,
     "maxBrotliKB": 775,
-    "maxRequests": 51,
+    "maxRequests": 20,
     "maxRequestsByRoute": {
-      "index.html": 35,
-      "search.html": 30,
-      "map.html": 39,
-      "quests.html": 33,
-      "(tabs)/travels/[param].html": 51
+      "index.html": 14,
+      "search.html": 9,
+      "map.html": 14,
+      "quests.html": 12,
+      "(tabs)/travels/[param].html": 16,
+      "(tabs)/profile.html": 20,
+      "(tabs)/trips/plan/[id].html": 19
     },
     "payloadRoutes": {
       "geoCountryOutlines": {
@@ -52,7 +54,7 @@
   },
   "total": {
     "maxRawKB": 11430.4,
-    "maxGzipKB": 2917.9
+    "maxGzipKB": 3128.5
   },
   "chunks": {
     "entry": {
@@ -79,7 +81,7 @@
       "maxGzipKB": 717.4
     },
     "TravelDetailsMapSection": {
-      "maxRawKB": 85.4,
+      "maxRawKB": 91.3,
       "maxGzipKB": 22.2
     },
     "TravelDetailsPostLcpRuntime": {
@@ -99,11 +101,11 @@
       "maxGzipKB": 11
     },
     "locale-be": {
-      "maxRawKB": 1346,
+      "maxRawKB": 1430.7,
       "maxGzipKB": 218
     },
     "locale-uk": {
-      "maxRawKB": 1345,
+      "maxRawKB": 1428.9,
       "maxGzipKB": 217
     },
     "locale-pl": {

@@ -1,6 +1,5 @@
 import {
     formatRelativeTime as formatRelativeTimeValue,
-    selectPlural,
     translate as i18nT,
 } from '@/i18n'
 
@@ -11,72 +10,21 @@ const DAY = 24 * HOUR
 
 type SupportedRelativeTimeUnit = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year'
 
-const RELATIVE_TIME_UNIT_KEYS = {
-    minute: {
-        one: 'errors:utils.relativeTime.units.minute_one',
-        few: 'errors:utils.relativeTime.units.minute_few',
-        many: 'errors:utils.relativeTime.units.minute_many',
-        other: 'errors:utils.relativeTime.units.minute_other',
-    },
-    hour: {
-        one: 'errors:utils.relativeTime.units.hour_one',
-        few: 'errors:utils.relativeTime.units.hour_few',
-        many: 'errors:utils.relativeTime.units.hour_many',
-        other: 'errors:utils.relativeTime.units.hour_other',
-    },
-    day: {
-        one: 'errors:utils.relativeTime.units.day_one',
-        few: 'errors:utils.relativeTime.units.day_few',
-        many: 'errors:utils.relativeTime.units.day_many',
-        other: 'errors:utils.relativeTime.units.day_other',
-    },
-    week: {
-        one: 'errors:utils.relativeTime.units.week_one',
-        few: 'errors:utils.relativeTime.units.week_few',
-        many: 'errors:utils.relativeTime.units.week_many',
-        other: 'errors:utils.relativeTime.units.week_other',
-    },
-    month: {
-        one: 'errors:utils.relativeTime.units.month_one',
-        few: 'errors:utils.relativeTime.units.month_few',
-        many: 'errors:utils.relativeTime.units.month_many',
-        other: 'errors:utils.relativeTime.units.month_other',
-    },
-    year: {
-        one: 'errors:utils.relativeTime.units.year_one',
-        few: 'errors:utils.relativeTime.units.year_few',
-        many: 'errors:utils.relativeTime.units.year_many',
-        other: 'errors:utils.relativeTime.units.year_other',
-    },
-} as const
-
+/**
+ * Относительное время для этой утилиты всегда в прошлом и по умолчанию
+ * числовое («5 минут назад»), тогда как канонический `formatRelativeTime`
+ * (`i18n/format.ts`) по умолчанию словесный («вчера»).
+ *
+ * Своей проверки на отсутствующий `Intl.RelativeTimeFormat` здесь больше нет:
+ * с #1528 защита и локализованный fallback живут в самом каноническом
+ * экспорте, и третья копия той же проверки на очередном месте вызова только
+ * расходилась бы с ним.
+ */
 const formatPastRelativeTime = (
     value: number,
     unit: SupportedRelativeTimeUnit,
     options: Intl.RelativeTimeFormatOptions = { numeric: 'always' },
-): string => {
-    if (typeof Intl.RelativeTimeFormat === 'function') {
-        return formatRelativeTimeValue(value, unit, options)
-    }
-
-    if (unit === 'day' && value === -1 && options.numeric === 'auto') {
-        return i18nT('errors:utils.relativeTime.vchera_bfce6d7a')
-    }
-
-    const count = Math.abs(value)
-    const keys = RELATIVE_TIME_UNIT_KEYS[unit]
-    const unitLabel = selectPlural(count, {
-        one: i18nT(keys.one),
-        few: i18nT(keys.few),
-        many: i18nT(keys.many),
-        other: i18nT(keys.other),
-    })
-
-    return i18nT('errors:utils.relativeTime.value1_value2_nazad_75a981f6', {
-        value1: count,
-        value2: unitLabel,
-    })
-}
+): string => formatRelativeTimeValue(value, unit, options)
 
 export const formatRelativeTime = (timestamp: number, now: number = Date.now()): string => {
     if (!Number.isFinite(timestamp) || timestamp <= 0) return ''

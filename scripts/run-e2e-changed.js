@@ -86,6 +86,7 @@ const E2E_CATEGORY_DEFINITIONS = [
     patterns: [
       /^app\/\(tabs\)\/quests(?:\/|\.)/,
       /^components\/quests\//,
+      /^screens\/tabs\/[Qq]uest/,
       /^hooks\/useQuest/,
       /^api\/quests?\./,
       /^utils\/quest/,

@@ -571,6 +571,16 @@ npx serve dist/prod -l 3000 -s
     up to 21.9% for 16:9/9:16) is CONTENT debt — fix it by providing square cover variants
     (precedent #134/#152), never by `cover`, never by a per-card slot, never by editing this
     rule. Covered by `__tests__/components/listTravel/cardMediaLetterbox.test.ts`.
+  - The quest cover tile (`QuestForCityCard`, `QUEST_TILE_MEDIA_SIZE`/`QUEST_TILE_SLOT_RATIO`
+    in `components/quests/questCoverTileGeometry.ts`, #1542) is the mirror case: the slot is a
+    fixed square and EVERY quest cover is landscape — prod measurement 2026-08-25 over all 156
+    quests: 0 square, 52 × 16:9, 65 × 3:2, 37 × 4:3, 2 × 1.462, so the band runs 12.5–21.9%.
+    The `quest-cover` durable family ignores every crop parameter (`?w=320`, `&fit=cover`,
+    `&h=320`, `&fit=square`, `&ar=1:1` all return the same 1926 B landscape frame), so there is
+    no client- or manifest-side fix: the square variant has to come from the backend (#1558),
+    exactly as `/places` was fixed in #134/#152. Do not answer this with `cover`, with a
+    per-tile slot, or by reshaping the tile. Covered by
+    `__tests__/components/quests/questCoverTileLetterbox.test.ts`.
 - The web letterbox fill has exactly one delivery path — `utils/mediaPlaceholderIndex.ts`
   (#1208/#1264, 2026-08-05). Change fill behaviour there and nowhere else. Two stages, both
   inside that module:

@@ -113,7 +113,7 @@ describe('QuestCard', () => {
                 src: 'https://cdn.example.com/quest.jpg',
                 width: 340,
                 height: 238,
-                fit: 'cover',
+                fit: 'contain',
                 blurBackground: false,
                 loading: 'lazy',
                 priority: 'low',
@@ -125,6 +125,70 @@ describe('QuestCard', () => {
         // INV2-01: карточка с нулём прохождений не должна публично сообщать об этом.
         expect(queryByTestId('quest-card-pioneer-krakow-dragon')).toBeNull();
         expect(queryByText('Ещё никто не проходил')).toBeNull();
+    });
+
+    it.each([
+        { label: 'mobile', isPhone: true, cardWidth: 345 },
+        { label: 'desktop', isPhone: false, cardWidth: 380 },
+    ])('кадрирует обложку `contain` и не летербоксит её больше 10% ($label)', ({ isPhone, cardWidth }) => {
+        // docs/RULES.md → «Images and placeholders»: обложки квестов рисуются
+        // ТОЛЬКО `contain`, исключений по поверхностям нет, а правка самого
+        // правила запрещена (прецедент 29c30d95/INV2-17, откат 2026-08-19).
+        // Эта строка меняла режим пять раз с апреля по июль 2026, каждый раз
+        // без обоснования именно кропа, поэтому она закреплена отдельным
+        // тестом, а не только внутри проверки блюр-подложки.
+        mockIsPhone = isPhone;
+        mockImageCardMedia.mockClear();
+        renderWithQueryClient(
+            <QuestCard
+                styles={styles}
+                cardWidth={cardWidth}
+                cityId="krakow"
+                quest={makeQuest()}
+            />,
+        );
+
+        const mediaProps = mockImageCardMedia.mock.calls[0]?.[0];
+        expect(mediaProps?.fit).toBe('contain');
+
+        // Поле при `contain` считается по слоту самой карточки. Пропорции
+        // обложек — замер прода 2026-08-25 по всем 156 квестам; слот карточки
+        // ландшафтный, поэтому худший класс (16:9) даёт 8.9%, а не 21.9%, как
+        // на квадратной плитке `QuestForCityCard` (#1542).
+        const slotWidth = Number(mediaProps?.width);
+        const slotHeight = Number(mediaProps?.height);
+        const PROD_COVER_RATIOS = [4 / 3, 1.461632, 1.5, 16 / 9];
+        for (const ratio of PROD_COVER_RATIOS) {
+            const renderedWidth = Math.min(slotWidth, slotHeight * ratio);
+            const renderedHeight = Math.min(slotHeight, slotWidth / ratio);
+            const worst = Math.max(
+                (slotWidth - renderedWidth) / 2 / slotWidth,
+                (slotHeight - renderedHeight) / 2 / slotHeight,
+            );
+            expect(worst).toBeLessThanOrEqual(0.1);
+        }
+    });
+
+    it('web оставляет блюр-подложку выключенной, native получает заливку полей', () => {
+        // Две стороны одного контракта. Web: подложку включать нельзя —
+        // WebKit держал её нарисованной, пока резкий `<img>` не появился
+        // (регресс ниже по файлу). Native: при `contain` поля закрывает именно
+        // blur-слой expo-image, потому что индекс `dominant_color` работает
+        // только на web (`components/ui/ImageCardMedia.tsx:254`). Константный
+        // `false` отбирал у Android и iPhone заливку и давал прозрачные поля.
+        for (const [os, expected] of [['web', false], ['android', true], ['ios', true]] as const) {
+            (Platform as { OS: string }).OS = os;
+            mockImageCardMedia.mockClear();
+            renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={345}
+                    cityId="krakow"
+                    quest={makeQuest()}
+                />,
+            );
+            expect(mockImageCardMedia.mock.calls[0]?.[0]?.blurBackground).toBe(expected);
+        }
     });
 
     it('requests high fetch priority for the first above-the-fold cards', () => {
@@ -311,7 +375,7 @@ describe('QuestCard', () => {
             // Ширина: слот 345 CSS × min(DPR 3, 2) = 690 → ступень 800.
             expect(new URL(src).searchParams.get('w')).toBe('800');
             expect(mediaProps).toEqual(expect.objectContaining({
-                fit: 'cover',
+                fit: 'contain',
                 blurBackground: false,
             }));
             expect(mediaProps).not.toHaveProperty('allowCriticalWebBlur');

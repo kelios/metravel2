@@ -222,6 +222,9 @@ function TabletFeaturedRoute({
   styles: Styles
   width: number
 }) {
+  // #1541: планшетный кадр показывает тот же набор, что и слайдер, поэтому
+  // держит ту же пропорцию — фиксированные 340px давали слот 1.36 и полосы.
+  const tabletMediaWidth = width * 0.45
   return (
     <Pressable
       onPress={() => onOpenArticle(bookImage.href)}
@@ -240,8 +243,7 @@ function TabletFeaturedRoute({
       <ImageCardMedia
         source={bookImage.source}
         placeholderColor={bookImage.dominantColor}
-        width={width * 0.45}
-        height={340}
+        width={tabletMediaWidth}
         borderRadius={0}
         fit="contain"
         blurBackground

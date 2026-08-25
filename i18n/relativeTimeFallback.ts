@@ -5,20 +5,35 @@ import { selectPluralCategory } from './pluralRules'
  * CLDR relative-time data for the production locales, used only where the
  * engine has no `Intl.RelativeTimeFormat` (#1528).
  *
- * Hermes ships a reduced `Intl`: the Android release binary
- * (`lib/arm64-v8a/libhermesvm.so`) exposes only `Intl.Collator`,
- * `Intl.DateTimeFormat`, `Intl.NumberFormat` and `getCanonicalLocales`, while
- * `RelativeTimeFormat`, `PluralRules` and `ListFormat` are absent from the
- * binary entirely. `i18n/pluralRules.js` already re-implements the missing
- * plural rules for the same five locales; this module is the same move for the
+ * Hermes ships a reduced `Intl` on both native platforms. The Android release
+ * binary (`lib/arm64-v8a/libhermesvm.so`) and the iOS one
+ * (`ios/Pods/hermes-engine-artifacts/hermes-ios-*-release.tar.gz` →
+ * `hermesvm.xcframework/ios-arm64/hermesvm.framework/hermesvm`) each expose
+ * only `Intl.Collator`, `Intl.DateTimeFormat`, `Intl.NumberFormat` and
+ * `getCanonicalLocales`; `RelativeTimeFormat`, `PluralRules` and `ListFormat`
+ * do not appear in either binary at all (on the iOS one `Segmenter`,
+ * `DisplayNames` and `DurationFormat` are missing too — the Android binary was
+ * only ever probed for the three above). `i18n/pluralRules.js` re-implements
+ * the missing plural rules for the same five locales; this module is the same move for the
  * missing relative-time data, so the canonical formatter can answer instead of
  * throwing.
  *
  * The values below are CLDR, extracted from ICU (`Intl.RelativeTimeFormat`)
  * for `ru-RU`/`be-BY`/`uk-UA`/`pl-PL`/`en-US`, so the fallback prints exactly
- * what a full-ICU engine prints. `__tests__/i18n/format.test.ts` holds that
- * parity: it compares this table against the native formatter wherever the
- * running engine has one.
+ * what a full-ICU engine prints for the default `style: 'long'` at an integer
+ * value — the whole surface the app produces, because every call site rounds
+ * before it formats. `__tests__/i18n/format.test.ts` holds that parity: it
+ * compares this table against the native formatter wherever the running engine
+ * has one, across every unit, both `numeric` modes and the absent one.
+ *
+ * Two edges sit outside that claim, neither reachable from a call site today:
+ * - `style: 'short' | 'narrow'` degrades to the long form, because the
+ *   abbreviated CLDR tables are not carried here («5 минут назад» instead of
+ *   «5 мин. назад»);
+ * - under `numeric: 'auto'` a non-integer value takes the numeric wrapper.
+ *   That is what ECMA-402 prescribes (an exact match on `ToString(value)`),
+ *   while V8/ICU additionally rounds a near-integer into the worded band, so
+ *   `format(0.001, 'day')` is «через 0,001 дня» here and «сегодня» there.
  *
  * This is locale data, not app copy, which is why it lives next to the plural
  * rules instead of in the translation catalogues: nothing here is a phrase a
@@ -184,6 +199,25 @@ const normalizeUnit = (unit: Intl.RelativeTimeFormatUnit): RelativeTimeUnitKey =
   (unit.endsWith('s') ? unit.slice(0, -1) : unit) as RelativeTimeUnitKey
 
 /**
+ * A list renders one relative label per row, so building the number formatter
+ * inline would cost one `Intl.NumberFormat` construction per row on exactly
+ * the engines this fallback exists for. There are five language tags in the
+ * whole app, so a plain module-level cache bounds it at five.
+ */
+const numberFormatCache = new Map<string, Intl.NumberFormat>()
+
+const formatMagnitude = (magnitude: number, languageTag: string): string => {
+  if (typeof Intl.NumberFormat !== 'function') return String(magnitude)
+
+  let formatter = numberFormatCache.get(languageTag)
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(languageTag)
+    numberFormatCache.set(languageTag, formatter)
+  }
+  return formatter.format(magnitude)
+}
+
+/**
  * Локализованный ответ вместо исключения там, где движок не даёт
  * `Intl.RelativeTimeFormat`. Вызывается только из `formatRelativeTime`
  * (`i18n/format.ts`) — точки входа для нового кода остаётся одна.
@@ -202,8 +236,13 @@ export const formatRelativeTimeFallback = (
   if (!forms) return String(value)
 
   // ICU words the near band («вчера», «на прошлой неделе») and falls through to
-  // the numeric wrappers for everything else — mirror both halves.
-  if (options.numeric !== 'always') {
+  // the numeric wrappers for everything else — mirror both halves. The test is
+  // `=== 'auto'`, not `!== 'always'`: `Intl.RelativeTimeFormat` reads a missing
+  // `numeric` as 'always', so an options object that only carries another field
+  // (`{}`, `{ style: 'short' }`) must stay numeric here too. Treating the
+  // missing field as 'auto' would print «вчера» on Hermes where the web prints
+  // «1 день назад» — the engine split this module exists to close.
+  if (options.numeric === 'auto') {
     const phrase = data.auto[unitKey]?.[value]
     if (phrase !== undefined) return phrase
   }
@@ -214,10 +253,7 @@ export const formatRelativeTimeFallback = (
   // `i18n/format.ts`, which imports it.
   const category = selectPluralCategory(magnitude, languageTag)
   const unitLabel = forms[category] ?? forms.other
-  const formattedValue =
-    typeof Intl.NumberFormat === 'function'
-      ? new Intl.NumberFormat(languageTag).format(magnitude)
-      : String(magnitude)
+  const formattedValue = formatMagnitude(magnitude, languageTag)
 
   // `-0` is a past value for ICU («0 секунд назад»), so it cannot go through
   // `value < 0` alone.

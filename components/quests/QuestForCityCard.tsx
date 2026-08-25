@@ -14,14 +14,15 @@ import { getQuestAgeBadgeLabel, getQuestAgeCategory, isBikeQuest } from '@/utils
 import { buildQuestPath } from '@/utils/routePaths'
 import type { QuestMeta } from '@/utils/questAdapters'
 import {
+  QUEST_TILE_MEDIA_HEIGHT,
+  QUEST_TILE_MEDIA_SIZE,
+} from '@/components/quests/questCoverTileGeometry'
+import {
   trackQuestCardClicked,
   trackQuestCardImpression,
 } from '@/utils/growthFunnelAnalytics'
 import { selectPlural, translate as i18nT } from '@/i18n'
 import { formatInteger, formatNumber } from '@/i18n/format'
-
-
-const CARD_MEDIA_SIZE = 132
 
 const createDifficultyLabels = (): Record<string, string> => ({
   easy: i18nT('quests:components.quests.QuestForCityCard.difficulty.easy'),
@@ -87,7 +88,7 @@ export function QuestForCityCard({
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const difficultyLabels = createDifficultyLabels()
-  const mediaVisibility = useRichMediaVisibility(CARD_MEDIA_SIZE)
+  const mediaVisibility = useRichMediaVisibility(QUEST_TILE_MEDIA_HEIGHT)
 
   // #1185: карточка приходила и с пустым cityId/id, и шаблонная строка давала
   // `/quests/undefined/undefined` — клик уводил пользователя на 404.
@@ -154,8 +155,8 @@ export function QuestForCityCard({
       >
         <ImageCardMedia
           source={mediaVisibility.visible && coverUri ? { uri: coverUri } : null}
-          width={CARD_MEDIA_SIZE}
-          height={CARD_MEDIA_SIZE}
+          width={QUEST_TILE_MEDIA_SIZE}
+          height={QUEST_TILE_MEDIA_HEIGHT}
           fit="contain"
           blurBackground
           allowCriticalWebBlur
@@ -239,8 +240,8 @@ function createStyles(colors: ThemedColors) {
       }),
     },
     media: {
-      width: CARD_MEDIA_SIZE,
-      height: CARD_MEDIA_SIZE,
+      width: QUEST_TILE_MEDIA_SIZE,
+      height: QUEST_TILE_MEDIA_HEIGHT,
       flexShrink: 0,
       borderRadius: 12,
       overflow: 'hidden',

@@ -1,28 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
-import MiniCalendar from '@/components/calendar/MiniCalendar';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
+import MiniCalendar from '@/components/calendar/MiniCalendar';
 import RouteBuilder from '@/components/trips/planning/RouteBuilder';
-import TripRouteExportMenu, {
-  shouldRenderTripRouteExportMenu,
-} from '@/components/trips/planning/TripRouteExportMenu';
-import TripParticipantsList from '@/components/trips/planning/TripParticipantsList';
-import TripRsvpControl from '@/components/trips/planning/TripRsvpControl';
-import TripInvitePanel from '@/components/trips/planning/TripInvitePanel';
-import TripSuggestPointForm from '@/components/trips/planning/TripSuggestPointForm';
-import TripSuggestionsPanel from '@/components/trips/planning/TripSuggestionsPanel';
-import TripReportForm from '@/components/trips/planning/TripReportForm';
-import TripRatingPanel from '@/components/trips/planning/TripRatingPanel';
+// #1543: экран открывается на вкладке `route`, поэтому деревья вкладок
+// «люди»/«экспорт»/«ещё» и панель редактирования владельца на первом кадре не
+// рендерятся — на web они уезжают за async-границу (native-половина сплита
+// подключает их синхронно). MiniCalendar в список НЕ входит: он и так остаётся
+// в стартовом графе через попап карты RouteBuilder'а, и обёртка lazy поверх
+// такого ребра не сэкономила бы ни байта.
+import {
+  PhotoUploadWithPreview,
+  TripChatPanel,
+  TripInvitePanel,
+  TripParticipantsList,
+  TripRatingPanel,
+  TripReportForm,
+  TripRouteExportMenu,
+  TripRsvpControl,
+  TripSuggestPointForm,
+  TripSuggestionsPanel,
+  TripTelegramGroupCard,
+} from '@/components/trips/planning/tripPlanDeferredSections';
+import { shouldRenderTripRouteExportMenu } from '@/components/trips/planning/tripRouteExport';
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
-import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
-import TripChatPanel from '@/components/trips/chat/TripChatPanel';
 import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import TripPlanLinksBlock from '@/components/trips/planning/TripPlanLinksBlock';
 import TripsPageSeo from '@/components/trips/TripsPageSeo';
@@ -410,21 +417,23 @@ export default function PlannedTripScreen() {
 
                 <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.oblozhka_6b408e05')}</Text>
                 <View style={styles.coverUpload} testID="trip-plan-edit-cover">
-                  <PhotoUploadWithPreview
-                    collection="plannedTripCover"
-                    idTravel={String(trip.id)}
-                    oldImage={editValues.coverUrl || null}
-                    onUpload={(coverUrl) =>
-                      setEditValues((prev) => (prev ? { ...prev, coverUrl } : prev))
-                    }
-                    onRequestRemove={() =>
-                      setEditValues((prev) => (prev ? { ...prev, coverUrl: '' } : prev))
-                    }
-                    onUploadStateChange={setCoverUploadPending}
-                    placeholder={i18nT('trips:app.tabs.trips.plan.id.peretaschite_foto_oblozhki_2f8bb316')}
-                    maxSizeMB={10}
-                    disabled={updateTrip.isPending}
-                  />
+                  <Suspense fallback={<ActivityIndicator style={styles.loader} testID="trip-plan-edit-cover-loading" />}>
+                    <PhotoUploadWithPreview
+                      collection="plannedTripCover"
+                      idTravel={String(trip.id)}
+                      oldImage={editValues.coverUrl || null}
+                      onUpload={(coverUrl) =>
+                        setEditValues((prev) => (prev ? { ...prev, coverUrl } : prev))
+                      }
+                      onRequestRemove={() =>
+                        setEditValues((prev) => (prev ? { ...prev, coverUrl: '' } : prev))
+                      }
+                      onUploadStateChange={setCoverUploadPending}
+                      placeholder={i18nT('trips:app.tabs.trips.plan.id.peretaschite_foto_oblozhki_2f8bb316')}
+                      maxSizeMB={10}
+                      disabled={updateTrip.isPending}
+                    />
+                  </Suspense>
                   <Text style={styles.coverUploadHint}>
                     {i18nT('trips:app.tabs.trips.plan.id.foto_budet_prikrepleno_k_poezdke_posle_zagru_1d3589b9')}</Text>
                 </View>
@@ -644,13 +653,15 @@ export default function PlannedTripScreen() {
 
             {activeTab === 'people' ? (
               <View style={styles.panel} testID="trip-plan-panel-people">
-                <TripParticipantsList trip={trip} />
-                <TripRsvpControl trip={trip} />
-                <TripInvitePanel trip={trip} />
-                <TripSuggestPointForm trip={trip} />
-                <TripSuggestionsPanel trip={trip} />
-                <TripTelegramGroupCard tripId={trip.id} isOwner={trip.isOwner} />
-                <TripChatPanel tripId={trip.id} />
+                <Suspense fallback={<ActivityIndicator style={styles.loader} testID="trip-plan-panel-people-loading" />}>
+                  <TripParticipantsList trip={trip} />
+                  <TripRsvpControl trip={trip} />
+                  <TripInvitePanel trip={trip} />
+                  <TripSuggestPointForm trip={trip} />
+                  <TripSuggestionsPanel trip={trip} />
+                  <TripTelegramGroupCard tripId={trip.id} isOwner={trip.isOwner} />
+                  <TripChatPanel tripId={trip.id} />
+                </Suspense>
               </View>
             ) : null}
 
@@ -658,7 +669,9 @@ export default function PlannedTripScreen() {
               <View style={styles.panel} testID="trip-plan-panel-export">
                 {showRouteExportMenu ? (
                   <View testID="trip-plan-route-export-section">
-                    <TripRouteExportMenu trip={trip} />
+                    <Suspense fallback={<ActivityIndicator style={styles.loader} testID="trip-plan-panel-export-loading" />}>
+                      <TripRouteExportMenu trip={trip} />
+                    </Suspense>
                   </View>
                 ) : (
                   <Text style={styles.panelHint} testID="trip-plan-export-unavailable">
@@ -669,8 +682,10 @@ export default function PlannedTripScreen() {
 
             {activeTab === 'more' ? (
               <View style={styles.panel} testID="trip-plan-panel-more">
-                <TripReportForm trip={trip} />
-                {trip.status === 'completed' ? <TripRatingPanel trip={trip} /> : null}
+                <Suspense fallback={<ActivityIndicator style={styles.loader} testID="trip-plan-panel-more-loading" />}>
+                  <TripReportForm trip={trip} />
+                  {trip.status === 'completed' ? <TripRatingPanel trip={trip} /> : null}
+                </Suspense>
                 <TripAffiliateBlock trip={trip} />
               </View>
             ) : null}

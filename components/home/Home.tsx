@@ -67,6 +67,16 @@ type DeferredSectionProps = {
 // approaches the viewport, so API responses for several card grids do not land
 // in one long main-thread task during LCP. Native keeps the existing eager
 // behavior because useProgressiveLoad resolves every enabled section there.
+//
+// #1475: `rootMargin` расширяет только root наблюдателя (viewport) и НЕ
+// отменяет обрезку промежуточным скроллером. Home рендерится внутри RNW
+// `ScrollView` (`overflow-y: auto`), поэтому обещанные 600px предзагрузки до
+// секции не доходят: IntersectionObserver считает её невидимой, пока её
+// физически не проскроллят в этот контейнер. Для секций первых экранов
+// (`priority="high"`) этого мало — на mobile 390 hero занимает ~1360px, и блок
+// квестов не монтировался вообще, пока пользователь не доскроллит. Такие
+// секции монтируем ещё и по таймеру после первой отрисовки (fallbackDelay
+// хука, 1s — заведомо позже LCP), оставляя IO как более ранний триггер.
 function DeferredSection({
   children,
   fallback,
@@ -80,7 +90,7 @@ function DeferredSection({
     priority,
     rootMargin,
     threshold: 0,
-    disableFallbackOnWeb: priority !== 'immediate',
+    disableFallbackOnWeb: priority !== 'immediate' && priority !== 'high',
   })
   const content = shouldLoad ? <Suspense fallback={fallback}>{children}</Suspense> : fallback
   const wrapped = container ? (
@@ -295,12 +305,16 @@ function Home() {
         <HomeWeekendRoutesSection enabled={isFocused} />
       </DeferredSection>
 
+      {/* `normal`, а не `high`: секция лежит глубоко под первыми экранами, и
+          её ранний маунт добавил бы лишний запрос рядом с LCP. Поведение то
+          же, что и раньше — до #1475 `high` в useProgressiveLoad вообще
+          ничем не отличался от `normal`. */}
       <DeferredSection
         marginTop={gap.weekends}
         minHeight={isMobile ? 500 : 540}
         container={{}}
         fallback={<SectionSkeleton />}
-        priority="high"
+        priority="normal"
       >
         <HomePopularRoutesSection enabled={isFocused} />
       </DeferredSection>

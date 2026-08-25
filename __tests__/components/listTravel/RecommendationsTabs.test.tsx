@@ -3,6 +3,11 @@ import { Animated, Platform } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import RecommendationsTabs from '@/components/listTravel/RecommendationsTabs';
+import {
+  getConfirmDialogRequest,
+  resolveConfirmDialog,
+  subscribeConfirmDialog,
+} from '@/components/ui/confirmDialogStore';
 
 const mockPush = jest.fn();
 const mockUseResponsive: jest.Mock<any, any> = jest.fn(() => ({ isMobile: false }));
@@ -67,6 +72,15 @@ jest.mock('@/components/listTravel/TabTravelCard', () => ({
 describe('RecommendationsTabs', () => {
   const originalPlatform = Platform.OS;
 
+  // #1556: подтверждение очистки больше не идёт через нативный `window.confirm`
+  // (он морозил вкладку) — запрос уходит в общий `ConfirmDialogHost`. В тесте
+  // подписчик стора играет роль смонтированного хоста.
+  let unmountConfirmHost: (() => void) | null = null;
+  const mountConfirmHost = () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+    unmountConfirmHost = subscribeConfirmDialog(() => {});
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -82,18 +96,17 @@ describe('RecommendationsTabs', () => {
     jest.spyOn(Animated, 'spring').mockReturnValue({
       start: (cb?: any) => cb?.(),
     } as any);
-
-    if (typeof window !== 'undefined') {
-      (window as any).confirm = jest.fn(() => true);
-    } else {
-      (global as any).window = { confirm: jest.fn(() => true) };
-    }
   });
 
   afterEach(() => {
     Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true });
+    unmountConfirmHost?.();
+    unmountConfirmHost = null;
+    // Хвост незакрытого диалога не должен утекать в соседний тест.
+    resolveConfirmDialog(false);
     jest.restoreAllMocks();
   });
+
 
   it('renders default tab (highlights) content', async () => {
     const { getByTestId } = render(<RecommendationsTabs forceVisible={true} />);
@@ -153,8 +166,8 @@ describe('RecommendationsTabs', () => {
       clearHistory: jest.fn(),
     });
 
-    const confirmSpy = jest.fn(() => true);
-    (window as any).confirm = confirmSpy;
+    const nativeConfirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    mountConfirmHost();
 
     render(<RecommendationsTabs forceVisible={true} />);
 
@@ -169,9 +182,53 @@ describe('RecommendationsTabs', () => {
     fireEvent.press(screen.getByText('Очистить'));
 
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith('Очистить «Хочу поехать»?');
+      expect(getConfirmDialogRequest()).toMatchObject({
+        message: 'Очистить «Хочу поехать»?',
+      });
+    });
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    expect(clearFavorites).not.toHaveBeenCalled();
+
+    resolveConfirmDialog(true);
+
+    await waitFor(() => {
       expect(clearFavorites).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('does not clear favorites when the confirmation is dismissed', async () => {
+    const clearFavorites = jest.fn();
+    mockUseAuth.mockReturnValue({ isAuthenticated: true });
+    mockUseFavorites.mockReturnValue({
+      favorites: [
+        {
+          id: 1,
+          type: 'travel',
+          title: 'Fav 1',
+          url: '/travels/1',
+          imageUrl: 'https://example.com/1.jpg',
+        },
+      ],
+      viewHistory: [],
+      clearFavorites,
+      clearHistory: jest.fn(),
+    });
+
+    mountConfirmHost();
+    render(<RecommendationsTabs forceVisible={true} />);
+
+    fireEvent.press(screen.getByText('Хочу поехать'));
+    expect(await screen.findByText('Fav 1')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Очистить'));
+
+    await waitFor(() => expect(getConfirmDialogRequest()).not.toBeNull());
+
+    // Отмена и Escape резолвят `false` — список остаётся нетронутым.
+    resolveConfirmDialog(false);
+
+    await waitFor(() => expect(getConfirmDialogRequest()).toBeNull());
+    expect(clearFavorites).not.toHaveBeenCalled();
   });
 
   it('renders both favorites and history shelves on mobile with definite-width cards', async () => {

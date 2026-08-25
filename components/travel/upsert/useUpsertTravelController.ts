@@ -8,7 +8,6 @@ import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 import { normalizeTravelId } from '@/utils/travelFormUtils';
-import { formatRelativeTime as formatRelativeTimeFallback } from '@/utils/relativeTime';
 import { formatRelativeTime, translate as i18nT } from '@/i18n'
 
 type ManualSave = ReturnType<typeof useTravelFormData>['handleManualSave'];
@@ -67,14 +66,11 @@ export const formatAutosaveLastSaved = (
   now: number = Date.now(),
 ): string => {
   // Hermes on the Android release build does not provide
-  // Intl.RelativeTimeFormat. A successful save then changes the badge to
-  // `saved`, and constructing the missing formatter during that render throws
-  // into TravelFormErrorBoundary. Keep the existing Intl output on web and use
-  // the shared localized fallback only where the constructor is unavailable.
-  if (typeof Intl.RelativeTimeFormat !== 'function') {
-    return formatRelativeTimeFallback(savedAt.getTime(), now);
-  }
-
+  // Intl.RelativeTimeFormat, and constructing it during the render that flips
+  // the badge to `saved` used to throw into TravelFormErrorBoundary. Since
+  // #1528 the canonical `formatRelativeTime` carries that guard itself and
+  // answers with the same CLDR text, so this call site no longer needs its own
+  // check — and the badge now reads identically on Android and on the web.
   const elapsedSeconds = Math.max(0, Math.round((now - savedAt.getTime()) / 1000));
   if (elapsedSeconds < 60) {
     return formatRelativeTime(-elapsedSeconds, 'second');

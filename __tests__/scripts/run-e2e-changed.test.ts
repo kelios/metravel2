@@ -89,8 +89,12 @@ describe('run-e2e-changed', () => {
     expect(getSpecsForChangedFiles(['playwright.config.ts'])).toEqual(ALL_E2E_SPECS)
   })
 
-  it('maps quest source changes to quest list/detail and review contracts', () => {
-    expect(getSpecsForChangedFiles(['components/quests/QuestCard.tsx'])).toEqual([
+  it('maps quest source changes to quest list/detail, review, and return-loop contracts', () => {
+    // Production quest catalogue surfaces live under `screens/tabs`, not
+    // `components/quests`; keep the real task path here so this contract cannot
+    // stay green while the changed-file router silently skips the catalogue.
+    expect(getSpecsForChangedFiles(['screens/tabs/QuestCard.tsx'])).toEqual([
+      'e2e/quest-return-loop.spec.ts',
       'e2e/quest-reviews-reader.spec.ts',
       'e2e/quests-list-detail.spec.ts',
     ])

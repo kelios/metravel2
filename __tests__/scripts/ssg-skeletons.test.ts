@@ -320,8 +320,8 @@ describe('ssg-skeletons', () => {
       const homeRules = (css.match(/\.ssg-home-[^{]*\{[^}]*\}/g) || []).join('\n');
       expect(homeRules.length).toBeGreaterThan(0);
       expect(homeRules).not.toContain('#f5842c');
-      expect(css).toMatch(/\.ssg-home-week\{[^}]*background:#687e72/);
-      expect(css).toMatch(/\.ssg-home-hero\{[^}]*background:#687e72/);
+      expect(css).toMatch(/\.ssg-home-week\{[^}]*background:#536659/);
+      expect(css).toMatch(/\.ssg-home-hero\{[^}]*background:#536659/);
     });
 
     // Desktop-заголовок книги — serif (editorialSerif из homeHeroStyles);
@@ -361,9 +361,13 @@ describe('ssg-skeletons', () => {
       const bookHeight = Math.min(940 - 180, (1350 - 80) / 1.3594771);
       expect(bookWidth).toBe(1200);
       expect(Math.round(bookHeight)).toBe(760);
-      // Слот фото: 60,8% второй колонки и 55,5% высоты книги = 372x422 у React.
-      expect(Math.round(bookWidth * 0.51 * 0.608)).toBe(372);
-      expect(Math.round(bookHeight * 0.555)).toBe(422);
+      // #1541: слот фото — ландшафт 3:2. Замер React 2026-08-25 на этом же
+      // вьюпорте: кадр 374.4x249.6 в точке (679.2, 352.2) при книге 1200x760
+      // в точке (60,130). Ширина — 61,2% второй колонки, высота — из
+      // пропорции набора, отступ сверху — 29,2% высоты книги.
+      expect(Math.round(bookWidth * 0.51 * 0.612)).toBe(375);
+      expect(Math.round((bookWidth * 0.51 * 0.612) / 1.5)).toBe(250);
+      expect(Math.round(bookHeight * 0.292)).toBe(222);
 
       expect(css).toMatch(/@media\(min-width:1280px\)\{[^\n]*\.ssg-home-bar\{height:78px/);
       expect(css).toContain('.ssg-home-shell{max-width:none;padding:52px 40px 24px}');
@@ -375,7 +379,7 @@ describe('ssg-skeletons', () => {
       expect(css).toContain('.ssg-home-page{position:relative;top:11.0%;align-self:start;');
       expect(css).toContain('padding:0 18.4% 0 32.65%');
       expect(css).toContain(
-        '.ssg-home-week{top:14.9%;align-self:start;width:60.8%;height:55.5%;margin:0 0 0 5.2%',
+        '.ssg-home-week{top:29.2%;align-self:start;width:61.2%;aspect-ratio:3/2;margin:0 0 0 5.1%',
       );
       expect(css).toContain('.ssg-home-cta{width:100%;height:46px');
       expect(css).toContain(
