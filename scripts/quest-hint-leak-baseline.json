@@ -85,9 +85,6 @@
       "intro|gomel-teens-city-blueprint||story|храмы",
       "quest_title|gomel-teens-city-blueprint||title|гомель"
     ],
-    "scripts/hel-city-quest-data.js": [
-      "intro|hel-fishermen||story|сто"
-    ],
     "scripts/hel-jurata-quest-data.js": [
       "intro|hel-jurata-amber||story|два",
       "intro|hel-jurata-amber||story|дерево"
@@ -107,16 +104,6 @@
       "intro|krakow-bike-pradnik||story|вал",
       "intro|krakow-bike-pradnik||story|ров"
     ],
-    "scripts/krakow-district-quests-data.js": [
-      "intro|krakow-kazimierz||story|одна",
-      "intro|krakow-kazimierz||story|эстер",
-      "intro|krakow-kazimierz||story|эстерка",
-      "intro|krakow-kazimierz||story|эстерки",
-      "intro|krakow-nowahuta||story|1949",
-      "intro|krakow-nowahuta||story|1949 год",
-      "intro|krakow-nowahuta||story|1949 году",
-      "intro|krakow-nowahuta||story|в 1949"
-    ],
     "scripts/krakow-kazimierz-quest-data.js": [
       "intro|krakow-kazimierz||story|камни",
       "intro|krakow-kazimierz||story|музей"
@@ -135,6 +122,9 @@
     ],
     "scripts/kutaisi-quest-data.js": [
       "intro|kutaisi-golden-age||story|крест"
+    ],
+    "scripts/leczyca-quest-data.js": [
+      "intro|leczyca-boruta||story|христа"
     ],
     "scripts/lepel-quest-data.js": [
       "intro|lepel-tsmok||story|дерево"
@@ -162,6 +152,7 @@
       "intro|minsk-cinema||story|пути"
     ],
     "scripts/minsk-cipher-quest-data.js": [
+      "intro|minsk-cipher||story|пять",
       "intro|minsk-cipher||story|шесть",
       "intro|minsk-cipher||title|шесть"
     ],

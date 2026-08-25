@@ -23,20 +23,21 @@ const steps: Step[] = quest.steps;
 // Ожидаемые верные ответы (то, что игрок прочитает на табличке/камне)
 // и заведомо неверные — чтобы чекер не пропускал всё подряд.
 const CASES: Record<string, { ok: string[]; bad: string[] }> = {
-    'hel-cmentarz-obroncow': { ok: ['31', 'тридцать один'], bad: ['32', '100', '3600'] },
     'hel-dom-necla': { ok: ['Netzel', 'netzel', 'Нетцель'], bad: ['Necel', 'Нецель', 'Sienkiewicz'] },
-    'hel-rzepka-zeromski': { ok: ['100', 'сотая', 'столетие'], bad: ['50', '150', '1964'] },
+    'hel-rzepka-zeromski': { ok: ['репка', 'репа', 'rzepka'], bad: ['морковь', 'свёкла', '100'] },
     'hel-pomnik-myslisza': { ok: ['Virtuti Militari', 'виртути милитари'], bad: ['Крест Валечных', 'Grunwald'] },
     'hel-kosciol': { ok: ['Bożego Ciała', 'божьего тела', 'Corpus Christi'], bad: ['святого петра', 'успения'] },
-    'hel-willa-jeannette': { ok: ['Jeannette', 'жаннет'], bad: ['Jeanne', 'Marianna', 'демель'] },
     'hel-laboratorium': { ok: ['1923'], bad: ['1921', '1932', '1938'] },
     'hel-dab-franciszek': { ok: ['белка', 'белочка', 'wiewiórka'], bad: ['кабан', 'сойка', 'францисканцы'] },
-    'hel-muzeum-rybolowstwa': { ok: ['27', 'двадцать семь'], bad: ['17', '1816', '211'] },
+    'hel-muzeum-rybolowstwa': { ok: ['кирпич', 'из кирпича', 'cegła'], bad: ['камень', 'дерево', 'бетон'] },
     'hel-patron-herb': { ok: ['ключ', 'klucz', 'золотой ключ'], bad: ['корона', 'звезда', 'сеть'] },
     'hel-krzyz-rybakow': { ok: ['цепь', 'корабельная цепь', 'łańcuch'], bad: ['решётка', 'канат', 'штакетник'] },
 };
 
-const OPTIONAL_STEPS = ['hel-fokarium', 'hel-wedzarnia'];
+// Необязательные точки: `answer_pattern.type === 'any'`, отметка без ответа.
+// `hel-cmentarz-obroncow` и `hel-willa-jeannette` стали такими на проде —
+// до #1554 локальный файл этого не знал и держал их обязательными.
+const OPTIONAL_STEPS = ['hel-fokarium', 'hel-wedzarnia', 'hel-cmentarz-obroncow', 'hel-willa-jeannette'];
 
 const distance = (a: Step, b: Step) => {
     const R = 6371000;
@@ -50,9 +51,9 @@ const distance = (a: Step, b: Step) => {
 };
 
 describe('hel-fishermen: контент квеста', () => {
-    it('имеет 14 шагов (12 обязательных), вступление и финал', () => {
+    it('имеет 14 шагов (10 обязательных), вступление и финал', () => {
         expect(steps).toHaveLength(14);
-        expect(steps.filter((s) => s.answer_pattern.type !== 'any')).toHaveLength(12);
+        expect(steps.filter((s) => s.answer_pattern.type !== 'any')).toHaveLength(10);
         expect(quest.intro.answer_pattern.type).toBe('any');
         expect(String(quest.finale.text).length).toBeGreaterThan(500);
     });

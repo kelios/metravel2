@@ -2,6 +2,10 @@
   "contractVersion": 1,
   "note": "Известные находки в локальных данных квестов. Гейт check:fast падает только на том, что добавила правка; перечисленное здесь чинится отдельной карточкой. Обновлять: npm run quest:scan-answer-reachability:baseline",
   "known": {
+    "scripts/antwerp-quest-data.js": [
+      "duplicate_normalized|antwerp-thrown-hand|6-handschoenmarkt|пес",
+      "duplicate_normalized|antwerp-thrown-hand|7-grote-markt|знамена"
+    ],
     "scripts/berlin-quest-data.js": [
       "duplicate_normalized|berlin-wall-line|2-liniya-steny|19611989",
       "duplicate_normalized|berlin-wall-line|2-liniya-steny|1961–1989",
@@ -18,6 +22,15 @@
     ],
     "scripts/brest-city-quest-data.js": [
       "duplicate_normalized|brest-lantern|3-pamyatnik-tysyacheletiya|анел"
+    ],
+    "scripts/bruges-quest-data.js": [
+      "duplicate_normalized|bruges-sleeping-city|6-gruuthuse|plus est en vous!"
+    ],
+    "scripts/brussels-quest-data.js": [
+      "duplicate_normalized|brussels-zwanze|10-mont-des-arts|черный цилиндр",
+      "duplicate_normalized|brussels-zwanze|12-sablon|чёлн",
+      "duplicate_normalized|brussels-zwanze|5-serclaes|пес",
+      "duplicate_normalized|brussels-zwanze|7-galeries|все для всех"
     ],
     "scripts/bucharest-quest-data.js": [
       "duplicate_normalized|bucharest-curtea-veche|4-macca-vilacrosse|жёлтая",
@@ -41,6 +54,10 @@
       "duplicate_normalized|gervyaty-kostel|7-most|костел в воде",
       "duplicate_normalized|gervyaty-kostel|7-most|отражение костела"
     ],
+    "scripts/ghent-quest-data.js": [
+      "duplicate_normalized|ghent-stolen-lamb|2-mammelokker|дает грудь",
+      "duplicate_normalized|ghent-stolen-lamb|7-groot-vleeshuis|копченые окорока"
+    ],
     "scripts/gniezno-quest-data.js": [
       "duplicate_normalized|gniezno-white-eagle|8-rynek-herb|белый орёл",
       "duplicate_normalized|gniezno-white-eagle|8-rynek-herb|орёл"
@@ -63,6 +80,9 @@
       "duplicate_normalized|hel-jurata-amber|wladyslawowo-hallerowka|брёвна",
       "duplicate_raw|hel-jurata-amber|rozewie-latarnia|две"
     ],
+    "scripts/helsingor-quest-data.js": [
+      "duplicate_normalized|helsingor-sound-toll|5-han|моргнет"
+    ],
     "scripts/istanbul-quest-data.js": [
       "case_form_gap|istanbul-empires|1-nemetskiy-fontan|[\"золотой\",\"золотая\",\"золотые\",\"золото\",\"из золота\",\"позолота\",\"позолоченный\",\"позолоченная\",\"золотистый\",\"золотистая\",\"золотистые\",\"золотым\"]"
     ],
@@ -77,10 +97,6 @@
     ],
     "scripts/krakow-bike-quest-data.js": [
       "case_form_gap|krakow-bike-tyniec|2-zakrzowek|[\"бирюзовый\",\"бирюзовая\",\"бирюза\",\"изумрудный\",\"изумрудная\",\"лазурный\",\"лазурная\",\"голубой\",\"голубая\",\"сине зеленый\",\"сине зеленая\",\"зелено голубой\",\"аквамарин\",\"аквамариновый\"]"
-    ],
-    "scripts/krakow-district-quests-data.js": [
-      "duplicate_normalized|krakow-podgorze|2-apteka|орел",
-      "mixed_script|krakow-kazimierz|5-corpus-christi|однa"
     ],
     "scripts/krakow-dragon-quest-data.js": [
       "duplicate_normalized|krakow-dragon|2-mariacki|золочёная корона",
@@ -152,6 +168,9 @@
       "duplicate_normalized|paris-point-zero|4-bashnya-s-chasami|флёр де лис",
       "duplicate_normalized|paris-point-zero|6-bukinisty|темнозеленый",
       "duplicate_raw|paris-point-zero|4-bashnya-s-chasami|флер де лис"
+    ],
+    "scripts/pinsk-quest-data.js": [
+      "duplicate_normalized|pinsk-polesie|3-franciskanskiy-sobor|наклоненная"
     ],
     "scripts/rome-quest-data.js": [
       "duplicate_normalized|rome-mouth-of-truth|3-teatro-di-marcello|жилье",

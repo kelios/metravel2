@@ -14,13 +14,19 @@ const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 /**
  * Поля шага, которые считаются контентом и обязаны совпадать.
  *
+ * Список ведётся не «по важности поля», а по тому, что реально уезжает на прод:
+ * это ровно набор из `stepPayload` в `scripts/sync-quest-to-prod.js:60-71`.
+ * `poi_info` здесь именно поэтому — заливка шлёт его, когда он есть в файле
+ * (`sync-quest-to-prod.js:69-70`), значит устаревший `poi_info` так же способен
+ * откатить прод, как устаревший текст задания.
+ *
  * `maps_url` СОЗНАТЕЛЬНО не здесь: бэкенд генерирует его сам из координат
  * (`https://maps.google.com/?q=<lat>,<lng>`), в локальных файлах его нет вовсе
  * либо он записан под другим именем (`mapsUrl`). Без этого исключения дрейф
  * показывали все 156 файло-квестов подряд — то есть отчёт состоял бы из шума и
  * прятал 68 настоящих расхождений.
  */
-const comparableFields = Object.freeze(['title', 'location', 'story', 'task', 'hint', 'answer_pattern', 'lat', 'lng'])
+const comparableFields = Object.freeze(['title', 'location', 'story', 'task', 'hint', 'answer_pattern', 'lat', 'lng', 'poi_info'])
 
 /** Сравнимая форма значения: разное представление одного и того же не должно считаться дрейфом. */
 function normalizeField(field, value) {
@@ -32,6 +38,14 @@ function normalizeField(field, value) {
     const inner = typeof ap.value === 'string' ? safeParse(ap.value) ?? ap.value : ap.value
     return JSON.stringify({ type: ap.type, value: inner })
   }
+  // Объект сравниваем по содержимому, а не по порядку ключей: локальный литерал
+  // и JSON с API перечисляют их в разном порядке, и это не расхождение.
+  if (field === 'poi_info') {
+    const obj = typeof value === 'string' ? safeParse(value) : value
+    if (!obj || typeof obj !== 'object') return String(value)
+    const entries = Object.entries(obj).filter(([, v]) => v != null && v !== '').sort(([a], [b]) => (a < b ? -1 : 1))
+    return entries.length ? JSON.stringify(entries) : null
+  }
   // Координаты: локально число, с API строка `"53.903400"`. Шесть знаков — точность БД.
   if (field === 'lat' || field === 'lng') {
     const n = Number(value)
@@ -42,9 +56,21 @@ function normalizeField(field, value) {
 
 function safeParse(s) { try { return JSON.parse(s) } catch { return null } }
 
-/** Поля шага, которые разошлись. */
+/**
+ * Поля шага, которые разошлись.
+ *
+ * `poi_info` сравнивается ТОЛЬКО когда он есть в локальном файле, и это не
+ * послабление, а точное повторение заливки: `sync-quest-to-prod.js:69-70`
+ * кладёт поле в payload лишь при `poiInfo !== undefined`, то есть отсутствие
+ * `poi_info` в файле прод не трогает. Без этого условия сверка показывала 92
+ * «расхождения» в 38 квестах, из которых ни одно не могло откатить прод, —
+ * ровно тот шум, из-за которого пришлось исключать `maps_url`.
+ */
 function diffStep(local, prod) {
-  return comparableFields.filter((field) => normalizeField(field, local[field]) !== normalizeField(field, prod[field]))
+  return comparableFields.filter((field) => {
+    if (field === 'poi_info' && local[field] === undefined && local.poiInfo === undefined) return false
+    return normalizeField(field, local[field]) !== normalizeField(field, prod[field])
+  })
 }
 
 /**
@@ -87,9 +113,13 @@ function diffQuestLevel(quest, bundle) {
   const localIntro = quest.intro
   const prodIntro = parseSection(bundle.intro)
   if (localIntro && prodIntro) {
-    for (const field of Object.keys(localIntro)) {
+    // Обход ОБЪЕДИНЕНИЯ ключей, а не только локальных. Поле, которое есть на
+    // проде и отсутствует в файле, — не «нечего сравнивать», а самый опасный
+    // случай: `sync-quest-to-prod.js:88` шлёт `hint: q.intro.hint || null`, то
+    // есть отсутствующая локально подсказка ЗАТИРАЕТ подсказку на проде. Ровно
+    // эту ошибку пришлось чинить выше для финала; здесь она повторялась.
+    for (const field of new Set([...Object.keys(localIntro), ...Object.keys(prodIntro)])) {
       if (!QUEST_LEVEL_CONTENT_KEYS.has(field)) continue
-      if (!(field in prodIntro)) continue
       if (typeof localIntro[field] === 'object' || typeof prodIntro[field] === 'object') continue
       if (normalizeField(field, localIntro[field]) !== normalizeField(field, prodIntro[field])) {
         rows.push({ scope: 'intro', field, local: localIntro[field], prod: prodIntro[field] })
@@ -107,8 +137,13 @@ function parseSection(value) {
 
 /**
  * Полное сравнение одного локального квеста с прод-бандлом.
- * `onlyProd` важнее `onlyLocal`: шага, который есть на проде и нет в файле,
- * заливка не тронет, а вот лишний локальный шаг она способна создать заново.
+ *
+ * Ни `onlyProd`, ни `onlyLocal` дефектом не являются, и это проверено по коду
+ * заливки, а не предположено: `sync-quest-to-prod.js:107` шаг, которого нет на
+ * проде, ПРОПУСКАЕТ («структура не совпадает»), а шаг, которого нет в файле,
+ * она и не перебирает. Создают шаги только `migrate-*-quest.js`. Обе величины
+ * поэтому идут в отчёт как расхождение структуры, а гейт валят расхождения
+ * ПОЛЕЙ — то, что заливка действительно перенесёт.
  */
 function diffQuest(quest, bundle, prodSteps) {
   const prodById = new Map(prodSteps.map((s) => [s.step_id, s]))
@@ -139,6 +174,5 @@ module.exports = {
   diffQuest,
   diffQuestLevel,
   finaleText,
-  QUEST_LEVEL_CONTENT_KEYS,
   QUEST_LEVEL_CONTENT_KEYS,
 }

@@ -280,6 +280,17 @@ const main = () => {
       process.exit(questReviewSnapshotsGuardStatus)
     }
 
+    // Один quest_id — один локальный файл-источник (#1554). Гейт безусловный, а
+    // не по изменённым файлам: дубль появляется как раз тогда, когда НОВЫЙ файл
+    // заводят рядом со старым, и проверка «только изменённого» увидела бы лишь
+    // одну половину пары. Сетевая половина класса — расхождение файла с продом —
+    // живёт отдельной командой `npm run quest:scan-prod-drift`: офлайн-гейт по
+    // построению не знает состояния прода (#1489).
+    const questDataSourcesGuardStatus = runCommand('npm', ['run', 'guard:quest-data-sources'])
+    if (questDataSourcesGuardStatus !== 0) {
+      process.exit(questDataSourcesGuardStatus)
+    }
+
     // Скан достижимости идёт по изменённым локальным данным, а не по проду:
     // прогон по всей базе — это ~140 сетевых запросов, которым не место в
     // check:fast. Полный свип — `npm run quest:scan-answer-reachability`.

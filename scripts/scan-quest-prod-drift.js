@@ -24,8 +24,14 @@
  *
  * Что скан НЕ считает расхождением: `maps_url` (бэкенд генерирует его из
  * координат, локально поля нет вовсе) и координаты интро/финала (локально это
- * заглушка `lat: 0`). Полный список сравниваемых полей и причины исключений —
+ * заглушка `lat: 0`). Всё остальное, что заливка отправляет, сравнивается —
+ * включая `poi_info`. Полный список полей и причины исключений —
  * `scripts/lib/questProdDiff.js`, общий с синхронизатором.
+ *
+ * Расхождение состава шагов (в файле есть шаг, которого нет на проде, и
+ * наоборот) печатается, но гейт не валит: заливка такой шаг ПРОПУСКАЕТ
+ * (`sync-quest-to-prod.js:107`), создают шаги только `migrate-*-quest.js`.
+ * Гейт валят расхождения полей — то, что заливка действительно перенесёт.
  *
  *   node scripts/scan-quest-prod-drift.js                                  # все локальные файлы
  *   node scripts/scan-quest-prod-drift.js --source=scripts/pinsk-quest-data.js
@@ -46,12 +52,13 @@ async function scanFile(file, apiUrl) {
     if (!quest?.quest_id) continue
     const [bundle] = await fetchQuestBundles(apiUrl, quest.quest_id)
     const diff = diffQuest(quest, bundle, parseSteps(bundle))
-    // `onlyProd` в дефект НЕ входит: шага, которого нет в локальном файле,
-    // заливка не касается — она PATCH-ит по `step_id` уже существующие. А вот
-    // лишний локальный шаг заливка способна создать на проде, поэтому
-    // `onlyLocal` — дефект наравне с расхождением полей.
-    const drifted = diff.changed.length || diff.onlyLocal.length || diff.questLevel.length
-    if (drifted || diff.onlyProd.length) rows.push({ file, ...diff, drifted: Boolean(drifted) })
+    // Гейт валит только то, что заливка реально перенесёт, — расхождения полей
+    // шага и текста интро/финала. Разошедшийся состав шагов заливка не
+    // применяет ни в одну сторону (`sync-quest-to-prod.js:107` пропускает шаг,
+    // которого нет на проде), поэтому он идёт в отчёт, но не в код возврата.
+    const drifted = diff.changed.length || diff.questLevel.length
+    const structure = diff.onlyLocal.length || diff.onlyProd.length
+    if (drifted || structure) rows.push({ file, ...diff, drifted: Boolean(drifted) })
   }
   return rows
 }
@@ -71,7 +78,7 @@ function reportText(rows, files) {
   for (const row of rows) {
     console.log(`\n  ${row.file} [${row.quest_id}] — локально ${row.local_steps} шагов, на проде ${row.prod_steps}`)
     if (row.onlyProd.length) console.log(`    шаги только на проде: ${row.onlyProd.join(', ')}`)
-    if (row.onlyLocal.length) console.log(`    шаги только локально (заливка создаст их на проде): ${row.onlyLocal.join(', ')}`)
+    if (row.onlyLocal.length) console.log(`    шаги только локально (заливка их пропустит — структура разошлась): ${row.onlyLocal.join(', ')}`)
     for (const c of row.changed) console.log(`    ${c.step_id} (id ${c.prod_db_id ?? '?'}): ${c.fields.join(', ')}`)
     for (const q of row.questLevel) console.log(`    ${q.scope} / ${q.field}: расходится`)
   }
@@ -79,7 +86,7 @@ function reportText(rows, files) {
   const drifted = rows.filter((r) => r.drifted)
   const steps = drifted.reduce((n, r) => n + r.changed.length, 0)
   const infoOnly = rows.length - drifted.length
-  if (infoOnly) console.log(`\nШаги, заведённые только на проде (заливка их не тронет): ${infoOnly} квестов`)
+  if (infoOnly) console.log(`\nРазошёлся состав шагов (заливка его не применяет, гейт не валит): ${infoOnly} квестов`)
   console.log(drifted.length
     ? `\nРазошлись с продом: ${drifted.length} квестов, ${steps} шагов. Перенести прод в файл — node scripts/sync-quest-data-from-prod.js --all`
     : '\nРасхождений с продом нет.')

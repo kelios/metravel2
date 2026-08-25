@@ -298,18 +298,25 @@
       "krakow-bike-tyniec|2-zakrzowek|dict-color|сине зеленая",
       "krakow-bike-tyniec|2-zakrzowek|dict-color|сине зеленый"
     ],
-    "scripts/krakow-district-quests-data.js": [
-      "krakow-kazimierz|3-remuh|task-asks-material|формулировка"
-    ],
     "scripts/krakow-dragon-quest-data.js": [
       "krakow-dragon|2-mariacki|dict-color|золотая корона",
       "krakow-dragon|2-mariacki|dict-material-surface|золоченая корона",
       "krakow-dragon|2-mariacki|dict-material-surface|золочёная корона",
       "krakow-dragon|2-mariacki|task-color-word|золотится",
-      "krakow-dragon|5-kazimierz|task-color-word|синагогой"
+      "krakow-dragon|5-kazimierz|task-color-word|синагога"
     ],
     "scripts/krakow-kazimierz-quest-data.js": [
-      "krakow-kazimierz|2-stara-synagoga|task-color-word|синагогу"
+      "krakow-kazimierz|2-stara-synagoga|dict-color|красный кирпич",
+      "krakow-kazimierz|2-stara-synagoga|dict-material-surface|brick",
+      "krakow-kazimierz|2-stara-synagoga|dict-material-surface|cegla",
+      "krakow-kazimierz|2-stara-synagoga|dict-material-surface|cegła",
+      "krakow-kazimierz|2-stara-synagoga|dict-material-surface|из кирпича",
+      "krakow-kazimierz|2-stara-synagoga|dict-material-surface|кирпич",
+      "krakow-kazimierz|2-stara-synagoga|dict-material-surface|кирпича",
+      "krakow-kazimierz|2-stara-synagoga|dict-material-surface|кирпичи",
+      "krakow-kazimierz|2-stara-synagoga|dict-material-surface|красный кирпич",
+      "krakow-kazimierz|2-stara-synagoga|task-asks-material|формулировка",
+      "krakow-kazimierz|2-stara-synagoga|task-color-word|синагоги"
     ],
     "scripts/krakow-nowahuta-quest-data.js": [
       "krakow-nowahuta|2-aleja-roz|task-color-word|сохранила"
@@ -328,17 +335,7 @@
       "krevo-walled-maiden|5-stena-s-zhertvoy|dict-material-surface|красным кирпичом"
     ],
     "scripts/leczyca-quest-data.js": [
-      "leczyca-boruta|1-kosciol-andrzeja|dict-color|из красного кирпича",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-color|красный кирпич",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|cegla",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|cegła",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|из кирпича",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|из красного кирпича",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|кирпич",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|кирпича",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|кирпичный",
-      "leczyca-boruta|1-kosciol-andrzeja|dict-material-surface|красный кирпич",
-      "leczyca-boruta|1-kosciol-andrzeja|task-asks-material|формулировка"
+      "leczyca-boruta|1-kosciol-andrzeja|task-color-word|белая"
     ],
     "scripts/lodz-murals-quest-data.js": [
       "lodz-murals|10-wiedzmin|task-color-word|белые",
@@ -421,8 +418,12 @@
     "scripts/minsk-cmok-quest-data.js": [
       "minsk-cmok|3-star-memory|task-color-word|обсерватории",
       "minsk-cmok|6-word-memory|dict-material-surface|глиняная черепица",
+      "minsk-cmok|6-word-memory|dict-material-surface|глиняной черепицы",
       "minsk-cmok|6-word-memory|dict-material-surface|черепица",
+      "minsk-cmok|6-word-memory|dict-material-surface|черепице",
       "minsk-cmok|6-word-memory|dict-material-surface|черепицей",
+      "minsk-cmok|6-word-memory|dict-material-surface|черепицу",
+      "minsk-cmok|6-word-memory|dict-material-surface|черепицы",
       "minsk-cmok|6-word-memory|task-asks-material|формулировка"
     ],
     "scripts/minsk-dvoriki-quest-data.js": [
@@ -447,27 +448,10 @@
       "minsk-loshitsa|4-melnica|dict-material-surface|кирпичом",
       "minsk-loshitsa|4-melnica|dict-material-surface|красный кирпич",
       "minsk-loshitsa|4-melnica|task-asks-material|формулировка",
-      "minsk-loshitsa|6-magnolia|task-color-word|белыми"
+      "minsk-loshitsa|6-magnolia|task-color-word|сохранившееся"
     ],
     "scripts/minsk-teens-oktyabrskaya-quest-data.js": [
       "minsk-teens-oktyabrskaya|9-amigos|task-color-word|желтых"
-    ],
-    "scripts/mir-castle-quest-data.js": [
-      "mir-castle|church|dict-color|бирюзовые",
-      "mir-castle|church|dict-color|бирюзовый",
-      "mir-castle|church|dict-color|блакитны",
-      "mir-castle|church|dict-color|голубого",
-      "mir-castle|church|dict-color|голубой",
-      "mir-castle|church|dict-color|голубые",
-      "mir-castle|church|dict-color|лазурного",
-      "mir-castle|church|dict-color|лазурные",
-      "mir-castle|church|dict-color|лазурный",
-      "mir-castle|church|dict-color|небесно голубой",
-      "mir-castle|church|dict-color|сине голубой",
-      "mir-castle|church|dict-color|синего",
-      "mir-castle|church|dict-color|синие",
-      "mir-castle|church|dict-color|синий",
-      "mir-castle|church|task-asks-color|формулировка"
     ],
     "scripts/mogilev-teens-symbol-code-quest-data.js": [
       "mogilev-teens-symbol-code|3-red-courtyard|dict-color|красного",

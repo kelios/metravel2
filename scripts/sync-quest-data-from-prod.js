@@ -32,6 +32,8 @@
 const fs = require('fs')
 const path = require('path')
 
+const { parse } = require('@babel/parser')
+
 const { fetchQuestBundles, parseSteps } = require('./lib/questBundles')
 const { localQuestDataFiles } = require('./lib/scanBaseline')
 const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
@@ -66,7 +68,6 @@ function sourceShapes(field, value) {
   // Число без якоря по имени поля неуникально: `0` и `52.1129` встречаются в
   // файле десятки раз, и замена попала бы в чужой шаг.
   if (field === 'lat' || field === 'lng') return [`${field}: ${value}`]
-  if (field === 'poi_info') return [jsObject(value), JSON.stringify(value)]
   return [jsString(String(value), "'"), jsString(String(value), '"')]
 }
 
@@ -95,8 +96,66 @@ function jsString(value, quote) {
   return `${quote}${escaped}${quote}`
 }
 
-function jsObject(value) {
-  return `{ ${Object.entries(value).map(([k, v]) => `${k}: ${typeof v === 'string' ? jsString(v, "'") : JSON.stringify(v)}`).join(', ')} }`
+/**
+ * Точечная замена свойства шага по РАЗБОРУ исходника.
+ *
+ * Нужна там, где текстовый шаблон бессилен: `poi_info` записан многострочным
+ * объектом, у каждого файла свой отступ, и однострочная форма его не находит.
+ * AST даёт точные смещения значения свойства внутри объекта нужного шага —
+ * значит замена не может попасть в чужой шаг даже когда одинаковый `poi_info`
+ * стоит у нескольких точек.
+ */
+function replaceByAst(text, stepId, field, newValue) {
+  let ast
+  try {
+    ast = parse(text, { sourceType: 'unambiguous', errorRecovery: true })
+  } catch {
+    return { text, ok: false }
+  }
+
+  let target = null
+  const visit = (node) => {
+    if (target || !node || typeof node !== 'object') return
+    if (Array.isArray(node)) { node.forEach(visit); return }
+    if (node.type === 'ObjectExpression') {
+      const props = new Map()
+      for (const prop of node.properties) {
+        const key = prop.key?.name ?? prop.key?.value
+        if (key) props.set(key, prop)
+      }
+      const idNode = props.get('step_id')?.value
+      if (idNode?.type === 'StringLiteral' && idNode.value === stepId && props.has(field)) {
+        target = props.get(field).value
+        return
+      }
+    }
+    for (const key of Object.keys(node)) {
+      if (key === 'loc' || key === 'leadingComments' || key === 'trailingComments') continue
+      visit(node[key])
+    }
+  }
+  visit(ast.program ?? ast)
+  if (!target) return { text, ok: false }
+
+  // Значение обязано быть объектом. `replaceField` такой вход отбивал пустым
+  // списком форм, а у AST-пути этой защиты не было: `null` ронял весь прогон
+  // `--all`, а JSON-строка тихо писала в исходник `{ 0: '{', 1: '\"', … }`.
+  const object = typeof newValue === 'string' ? tryParse(newValue) : newValue
+  if (!object || typeof object !== 'object' || Array.isArray(object)) return { text, ok: false }
+
+  // Отступ берём у строки, на которой начинается заменяемое значение.
+  const lineStart = text.lastIndexOf('\n', target.start) + 1
+  const indent = text.slice(lineStart, target.start).match(/^\s*/)[0]
+  return { text: text.slice(0, target.start) + renderObject(object, indent) + text.slice(target.end), ok: true }
+}
+
+/** Многострочный литерал объекта в стиле data-файлов. */
+function renderObject(value, indent) {
+  const inner = `${indent}    `
+  const body = Object.entries(value)
+    .map(([k, v]) => `${inner}${k}: ${typeof v === 'string' ? jsString(v, "'") : JSON.stringify(v)},`)
+    .join('\n')
+  return `{\n${body}\n${indent}}`
 }
 
 /**
@@ -112,7 +171,11 @@ function replaceField(text, field, oldValue, newValue) {
     if (text.split(old).length !== 2) continue
     const fresh = sourceShapes(field, newValue)[i]
     if (fresh === undefined) continue
-    return { text: text.replace(old, fresh), ok: true }
+    // split/join, а не `replace`: у строкового шаблона `replace` трактует `$&`,
+    // `$$`, '$`' и `$'` внутри ЗАМЕНЫ как подстановку, и прод-текст с долларом
+    // («цена $5») уехал бы в файл искажённым. Проба: старое «старый текст»,
+    // новое «цена $& за вход» давало «цена 'старый текст' за вход».
+    return { text: text.split(old).join(fresh), ok: true }
   }
   return { text, ok: false }
 }
@@ -138,7 +201,10 @@ async function syncFile(file, { apiUrl, dryRun }) {
       const prod = prodSteps.get(step.step_id)
       if (!prod) continue
       for (const field of diffStep(step, prod)) {
-        const result = replaceField(text, field, step[field], prod[field])
+        // `poi_info` — многострочный объект, текстовый шаблон его не находит.
+        const result = field === 'poi_info'
+          ? replaceByAst(text, step.step_id, field, prod[field])
+          : replaceField(text, field, step[field], prod[field])
         const row = { quest_id: quest.quest_id, step_id: step.step_id, field }
         if (result.ok) { text = result.text; applied.push(row) } else skipped.push(row)
       }
@@ -194,7 +260,7 @@ async function main() {
   }
 }
 
-module.exports = { sourceShapes, jsString, replaceField, comparableFields, parseArgs }
+module.exports = { sourceShapes, jsString, replaceField, replaceByAst, renderObject, comparableFields, parseArgs }
 
 if (require.main === module) {
   main().catch((e) => {
