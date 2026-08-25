@@ -24,6 +24,7 @@ function fixture(changes: Record<string, (value: string) => string>): string {
     'android/app/src/main/AndroidManifest.xml',
     'android/app/src/main/res/values/colors.xml',
     'assets/images/notification-icon.png',
+    'assets/images/icon.png',
     'ios/Podfile.properties.json',
     'ios/Podfile.lock',
     'ios/metravel/AppDelegate.swift',
@@ -130,6 +131,31 @@ describe('iOS release configuration', () => {
     });
     expect(validateIosRelease(testRoot)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_BUNDLE_ID_XCODE' })])
+    );
+  });
+
+  it('fails closed when the native AppIcon no longer matches the audited bird artwork', () => {
+    const testRoot = fixture({});
+    const iconPath = path.join(
+      testRoot,
+      'ios/metravel/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png'
+    );
+    const changedIcon = Buffer.from(fs.readFileSync(iconPath));
+    changedIcon[changedIcon.length - 1] ^= 0xff;
+    fs.writeFileSync(iconPath, changedIcon);
+
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_APP_ICON_BRAND' })])
+    );
+  });
+
+  it('returns a brand finding instead of throwing when the Expo icon path is missing', () => {
+    const testRoot = fixture({
+      'app.json': value => value.replace('    "icon": "./assets/images/icon.png",\n', ''),
+    });
+
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_APP_ICON_BRAND' })])
     );
   });
 

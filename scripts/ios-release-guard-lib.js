@@ -6,6 +6,7 @@ const { getConfig } = require('@expo/config');
 const xcode = require('xcode');
 
 const EXPECTED = Object.freeze({
+  appIconSha256: '86ebbd3444649460bfbc39a172c9d2200ed79f286b67f8e7b3cdc2f5ba4b4a72',
   bundleIdentifier: 'by.metravel.app',
   buildNumber: '4',
   deploymentTarget: '16.4',
@@ -159,14 +160,25 @@ function jsonEqual(left, right) {
 }
 
 function pngDimensions(buffer) {
-  if (buffer.length < 24 || buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a') {
+  if (buffer.length < 33 || buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a') {
     return null;
   }
-  return {
-    width: buffer.readUInt32BE(16),
-    height: buffer.readUInt32BE(20),
-    colorType: buffer[25],
-  };
+  let offset = 8;
+  while (offset + 12 <= buffer.length) {
+    const chunkLength = buffer.readUInt32BE(offset);
+    const chunkType = buffer.toString('ascii', offset + 4, offset + 8);
+    const chunkEnd = offset + 12 + chunkLength;
+    if (chunkEnd > buffer.length) return null;
+    if (chunkType === 'IHDR' && chunkLength >= 13) {
+      return {
+        width: buffer.readUInt32BE(offset + 8),
+        height: buffer.readUInt32BE(offset + 12),
+        colorType: buffer[offset + 17],
+      };
+    }
+    offset = chunkEnd;
+  }
+  return null;
 }
 
 function validateIosRelease(root = process.cwd()) {
@@ -796,10 +808,29 @@ function validateIosRelease(root = process.cwd()) {
   if (!iconEntry) fail('IOS_APP_ICON_CATALOG', '1024x1024 icon entry missing');
   else {
     const iconPath = path.join(root, 'ios/metravel/Images.xcassets/AppIcon.appiconset', iconEntry.filename);
-    const dimensions = fs.existsSync(iconPath) ? pngDimensions(fs.readFileSync(iconPath)) : null;
+    const expoIconPath = typeof app.icon === 'string' && app.icon.length > 0
+      ? path.join(root, app.icon)
+      : null;
+    const iconBuffer = fs.existsSync(iconPath) ? fs.readFileSync(iconPath) : null;
+    const expoIconBuffer = expoIconPath && fs.existsSync(expoIconPath)
+      ? fs.readFileSync(expoIconPath)
+      : null;
+    const dimensions = iconBuffer ? pngDimensions(iconBuffer) : null;
     if (dimensions?.width !== 1024 || dimensions?.height !== 1024 ||
         [4, 6].includes(dimensions?.colorType)) {
       fail('IOS_APP_ICON_ASSET', 'App Store icon must be an opaque 1024x1024 PNG');
+    }
+    const iconHash = iconBuffer
+      ? crypto.createHash('sha256').update(iconBuffer).digest('hex')
+      : null;
+    const expoIconHash = expoIconBuffer
+      ? crypto.createHash('sha256').update(expoIconBuffer).digest('hex')
+      : null;
+    if (iconHash !== EXPECTED.appIconSha256 || expoIconHash !== EXPECTED.appIconSha256) {
+      fail(
+        'IOS_APP_ICON_BRAND',
+        'Expo and native AppIcon assets must both use the audited MeTravel bird artwork'
+      );
     }
   }
   if (splashFiles.length !== 3 || splashFiles.some(file => !fs.existsSync(path.join(

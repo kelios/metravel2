@@ -3,12 +3,14 @@ import os from 'os';
 import path from 'path';
 
 const plist = require('@expo/plist').default;
+const { PNG } = require('pngjs');
 const {
   EXPECTED,
   IOS_PURPOSE_STRINGS,
   LOCALIZED_PURPOSE_STRINGS,
 } = require('../../scripts/ios-release-guard-lib');
 const {
+  assetCatalogContainsAppIcon,
   distributionSigningMatchesReleaseContract,
   validateIosAppBundle,
 } = require('../../scripts/ios-artifact-audit-lib');
@@ -18,6 +20,22 @@ const {
 } = require('../../scripts/ios-eas-artifact-download');
 
 const tempRoots: string[] = [];
+const APP_ICON_CATALOG_ENTRIES = [{
+  AssetType: 'Icon Image',
+  Idiom: 'phone',
+  Name: 'AppIcon',
+  PixelHeight: 1024,
+  PixelWidth: 1024,
+}];
+const ARTIFACT_OPTIONS = {
+  assetCatalogEntries: APP_ICON_CATALOG_ENTRIES,
+  verifySignature: false,
+};
+
+function addCgbiChunk(png: Buffer): Buffer {
+  const cgbiChunk = Buffer.from('0000000443674249500020062cb87766', 'hex');
+  return Buffer.concat([png.subarray(0, 8), cgbiChunk, png.subarray(8)]);
+}
 
 function createAppBundle(
   mutateInfo: (info: Record<string, unknown>) => void = () => undefined
@@ -35,6 +53,12 @@ function createAppBundle(
     MinimumOSVersion: EXPECTED.deploymentTarget,
     UIDeviceFamily: [1],
     ITSAppUsesNonExemptEncryption: false,
+    CFBundleIcons: {
+      CFBundlePrimaryIcon: {
+        CFBundleIconFiles: ['AppIcon60x60'],
+        CFBundleIconName: 'AppIcon',
+      },
+    },
     ...IOS_PURPOSE_STRINGS,
   };
   mutateInfo(info);
@@ -48,6 +72,10 @@ function createAppBundle(
   );
   fs.writeFileSync(path.join(appPath, 'embedded.mobileprovision'), 'fixture');
   fs.writeFileSync(path.join(appPath, 'metravel'), 'linked CMMotionActivityManager native symbol');
+  const icon = new PNG({ width: 120, height: 120 });
+  icon.data.fill(255);
+  fs.writeFileSync(path.join(appPath, 'AppIcon60x60@2x.png'), PNG.sync.write(icon));
+  fs.writeFileSync(path.join(appPath, 'Assets.car'), 'compiled AppIcon catalog fixture');
 
   for (const [locale, strings] of Object.entries(LOCALIZED_PURPOSE_STRINGS)) {
     const localePath = path.join(appPath, `${locale}.lproj`);
@@ -94,14 +122,35 @@ describe('iOS signed artifact audit', () => {
   });
 
   it('accepts an artifact whose compiled Info.plist matches the release contract', () => {
-    expect(validateIosAppBundle(createAppBundle(), { verifySignature: false })).toEqual([]);
+    expect(validateIosAppBundle(createAppBundle(), ARTIFACT_OPTIONS)).toEqual([]);
+  });
+
+  it('reads dimensions when the Apple CgBI chunk precedes IHDR', () => {
+    const appPath = createAppBundle();
+    const iconPath = path.join(appPath, 'AppIcon60x60@2x.png');
+    fs.writeFileSync(iconPath, addCgbiChunk(fs.readFileSync(iconPath)));
+
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual([]);
+  });
+
+  it('fails closed when Assets.car does not contain the compiled AppIcon rendition', () => {
+    const appPath = createAppBundle();
+    expect(validateIosAppBundle(appPath, {
+      assetCatalogEntries: [{ ...APP_ICON_CATALOG_ENTRIES[0], Name: 'Placeholder' }],
+      verifySignature: false,
+    })).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'IOS_ARTIFACT_APP_ICON' }),
+    ]));
+
+    expect(assetCatalogContainsAppIcon(APP_ICON_CATALOG_ENTRIES)).toBe(true);
+    expect(assetCatalogContainsAppIcon(null)).toBe(false);
   });
 
   it('catches the exact missing Motion purpose string rejected by Apple', () => {
     const appPath = createAppBundle(info => {
       delete info.NSMotionUsageDescription;
     });
-    expect(validateIosAppBundle(appPath, { verifySignature: false })).toEqual(
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'IOS_ARTIFACT_PURPOSE_STRINGS' }),
         expect.objectContaining({ code: 'IOS_ARTIFACT_SENSITIVE_API_INVENTORY' }),
@@ -113,9 +162,35 @@ describe('iOS signed artifact audit', () => {
     const appPath = createAppBundle(info => {
       info.LSMinimumSystemVersion = EXPECTED.deploymentTarget;
     });
-    expect(validateIosAppBundle(appPath, { verifySignature: false })).toEqual(
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'IOS_ARTIFACT_MINIMUM_OS' }),
+      ])
+    );
+  });
+
+  it('fails closed when the compiled iPhone icon is missing from the archive', () => {
+    const appPath = createAppBundle();
+    fs.rmSync(path.join(appPath, 'AppIcon60x60@2x.png'));
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'IOS_ARTIFACT_APP_ICON' }),
+      ])
+    );
+  });
+
+  it('fails closed when Info.plist does not identify AppIcon', () => {
+    const appPath = createAppBundle(info => {
+      info.CFBundleIcons = {
+        CFBundlePrimaryIcon: {
+          CFBundleIconFiles: ['Placeholder'],
+          CFBundleIconName: 'Placeholder',
+        },
+      };
+    });
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'IOS_ARTIFACT_APP_ICON_METADATA' }),
       ])
     );
   });
@@ -131,7 +206,7 @@ describe('iOS signed artifact audit', () => {
     fs.writeFileSync(frameworkExecutable, 'linked CMHeadphoneMotionManager native symbol');
     fs.chmodSync(frameworkExecutable, 0o755);
 
-    expect(validateIosAppBundle(appPath, { verifySignature: false })).toEqual(
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'IOS_ARTIFACT_SENSITIVE_API_INVENTORY' }),
       ])
@@ -147,7 +222,7 @@ describe('iOS signed artifact audit', () => {
         NSCameraUsageDescription: 'Stale camera copy',
       })
     );
-    expect(validateIosAppBundle(appPath, { verifySignature: false })).toEqual(
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'IOS_ARTIFACT_PURPOSE_LOCALIZATION' }),
       ])

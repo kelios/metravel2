@@ -67,6 +67,49 @@ function findFiles(root, basename) {
   return matches;
 }
 
+function pngDimensions(buffer) {
+  if (buffer.length < 33 || buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a') {
+    return null;
+  }
+  let offset = 8;
+  while (offset + 12 <= buffer.length) {
+    const chunkLength = buffer.readUInt32BE(offset);
+    const chunkType = buffer.toString('ascii', offset + 4, offset + 8);
+    const chunkEnd = offset + 12 + chunkLength;
+    if (chunkEnd > buffer.length) return null;
+    if (chunkType === 'IHDR' && chunkLength >= 13) {
+      return {
+        width: buffer.readUInt32BE(offset + 8),
+        height: buffer.readUInt32BE(offset + 12),
+      };
+    }
+    offset = chunkEnd;
+  }
+  return null;
+}
+
+function assetCatalogContainsAppIcon(entries) {
+  return Array.isArray(entries) && entries.some(entry =>
+    entry?.Name === 'AppIcon' &&
+    entry?.AssetType === 'Icon Image' &&
+    entry?.Idiom === 'phone' &&
+    entry?.PixelWidth === 1024 &&
+    entry?.PixelHeight === 1024
+  );
+}
+
+function parseAssetCatalog(assetCatalogPath) {
+  try {
+    return JSON.parse(execFileSync(
+      'xcrun',
+      ['assetutil', '--info', assetCatalogPath],
+      { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }
+    ));
+  } catch {
+    return null;
+  }
+}
+
 function parseSignedEntitlements(appPath) {
   const result = spawnSync(
     'codesign',
@@ -180,6 +223,30 @@ function validateIosAppBundle(appPath, options = {}) {
   }
   if (info.ITSAppUsesNonExemptEncryption !== false) {
     fail('IOS_ARTIFACT_ENCRYPTION', 'archive encryption declaration must match the release contract');
+  }
+
+  const primaryIcon = info.CFBundleIcons?.CFBundlePrimaryIcon;
+  const compiledIconPath = path.join(appPath, 'AppIcon60x60@2x.png');
+  const assetCatalogPath = path.join(appPath, 'Assets.car');
+  const compiledIcon = fs.existsSync(compiledIconPath)
+    ? pngDimensions(fs.readFileSync(compiledIconPath))
+    : null;
+  if (primaryIcon?.CFBundleIconName !== 'AppIcon' ||
+      !Array.isArray(primaryIcon?.CFBundleIconFiles) ||
+      !primaryIcon.CFBundleIconFiles.includes('AppIcon60x60')) {
+    fail(
+      'IOS_ARTIFACT_APP_ICON_METADATA',
+      'archive Info.plist must identify the compiled AppIcon asset catalog'
+    );
+  }
+  const assetCatalogEntries = options.assetCatalogEntries ??
+    (fs.existsSync(assetCatalogPath) ? parseAssetCatalog(assetCatalogPath) : null);
+  if (compiledIcon?.width !== 120 || compiledIcon?.height !== 120 ||
+      !assetCatalogContainsAppIcon(assetCatalogEntries)) {
+    fail(
+      'IOS_ARTIFACT_APP_ICON',
+      'archive must contain the compiled 120x120 iPhone icon and 1024x1024 AppIcon catalog rendition'
+    );
   }
 
   const executablePath = typeof info.CFBundleExecutable === 'string'
@@ -341,6 +408,7 @@ function auditIosIpa(projectRoot, ipaPath, options = {}) {
 }
 
 module.exports = {
+  assetCatalogContainsAppIcon,
   auditIosIpa,
   distributionSigningMatchesReleaseContract,
   validateIosAppBundle,
