@@ -927,7 +927,7 @@ Common scripts:
 ```bash
 npm run ios:prebuild
 IOS_SIGNED_BUILD_AUTHORIZATION=1 npm run ios:build:prod
-IOS_UPLOAD_AUTHORIZATION=1 npm run ios:submit -- EAS_BUILD_ID
+IOS_UPLOAD_AUTHORIZATION=1 IOS_ASC_APP_ID=<protected-id> npm run ios:submit -- EAS_BUILD_ID
 npm run android:prebuild
 npm run android:build:prod
 npm run android:submit:latest
@@ -935,8 +935,10 @@ npm run android:submit:production
 ```
 
 `ios:*` entrypoints закрепляют EAS CLI/image, проверяют release-конфигурацию и
-разделяют signed build и upload. Upload принимает только явный EAS build ID и
-использует заранее настроенные для bundle EAS-managed credentials.
+разделяют signed build и upload. Upload принимает только явный EAS build ID,
+protected `IOS_ASC_APP_ID` и использует заранее настроенные для bundle
+EAS-managed credentials; store identifier существует только во временном
+ignored submit-конфиге и удаляется после операции.
 Local simulator/device QA применяется в iOS-specific задачах; common/shared
 scope сам по себе iPhone gate не создаёт. Signed build, upload, App Review
 submit и storefront release требуют отдельных authorization gates.

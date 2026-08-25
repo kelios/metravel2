@@ -209,6 +209,60 @@ describe('iOS release configuration', () => {
     );
   });
 
+  it('injects the protected ASC app id only into a temporary submit config', () => {
+    const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-ios-submit-bin-'));
+    tempRoots.push(fakeBin);
+    const fakeNpx = path.join(fakeBin, 'npx');
+    fs.writeFileSync(fakeNpx, `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'eas.json'), 'utf8'));
+if (!process.cwd().includes('/.codex-temp/ios-submit-runtime.')) process.exit(20);
+if (config.submit?.production?.ios?.ascAppId !== process.env.EXPECTED_ASC_APP_ID) process.exit(21);
+if (!process.argv.includes('--id') || !process.argv.includes('exact-build-id')) process.exit(22);
+if (!process.argv.includes('--non-interactive') || process.argv.includes('--latest')) process.exit(23);
+`);
+    fs.chmodSync(fakeNpx, 0o755);
+
+    const trackedConfigBefore = fs.readFileSync(path.join(root, 'eas.json'), 'utf8');
+    const runtimeDirectoriesBefore = fs.readdirSync(path.join(root, '.codex-temp'))
+      .filter(name => name.startsWith('ios-submit-runtime.'))
+      .sort();
+    execFileSync('bash', [path.join(root, 'scripts/ios-submit.sh'), 'exact-build-id'], {
+      cwd: root,
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH}`,
+        IOS_UPLOAD_AUTHORIZATION: '1',
+        IOS_ASC_APP_ID: '1234567890',
+        EXPECTED_ASC_APP_ID: '1234567890',
+      },
+    });
+
+    expect(fs.readFileSync(path.join(root, 'eas.json'), 'utf8')).toBe(trackedConfigBefore);
+    expect(
+      fs.readdirSync(path.join(root, '.codex-temp'))
+        .filter(name => name.startsWith('ios-submit-runtime.'))
+        .sort()
+    ).toEqual(runtimeDirectoriesBefore);
+  });
+
+  it('refuses upload when the protected ASC app id is missing', () => {
+    expect(() => execFileSync(
+      'bash',
+      [path.join(root, 'scripts/ios-submit.sh'), 'exact-build-id'],
+      {
+        cwd: root,
+        env: {
+          ...process.env,
+          IOS_UPLOAD_AUTHORIZATION: '1',
+          IOS_ASC_APP_ID: '',
+        },
+        stdio: 'pipe',
+      }
+    )).toThrow();
+  });
+
   it('fails closed when a signed preview build bypasses explicit authorization', () => {
     const testRoot = fixture({
       'scripts/ios-build.sh': value => value.replace('preview|production)', 'production)'),

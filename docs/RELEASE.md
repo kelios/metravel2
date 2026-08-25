@@ -256,8 +256,13 @@ non-interactive и использует EAS-managed App Store Connect credential
 ```bash
 npm run ios:prebuild
 IOS_SIGNED_BUILD_AUTHORIZATION=1 npm run ios:build:prod
-IOS_UPLOAD_AUTHORIZATION=1 npm run ios:submit -- EAS_BUILD_ID
+IOS_UPLOAD_AUTHORIZATION=1 IOS_ASC_APP_ID=<protected-id> npm run ios:submit -- EAS_BUILD_ID
 ```
+
+`IOS_ASC_APP_ID` берётся из проверенной App Store Connect записи и передаётся
+только как protected execution input. Wrapper подставляет его во временный
+ignored-конфиг с правами текущего пользователя и удаляет конфиг после upload;
+tracked `eas.json`, Git и board evidence идентификатор не содержат.
 
 Разделяй четыре authorization gates: signed distribution build, App Store
 Connect/TestFlight upload, App Review submission и storefront release. Для

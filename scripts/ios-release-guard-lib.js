@@ -460,11 +460,13 @@ function validateIosRelease(root = process.cwd()) {
   }
   if (!submitScript.includes('--id "$BUILD_ID"') ||
       !submitScript.includes('--non-interactive') ||
+      !submitScript.includes('IOS_ASC_APP_ID') ||
+      !submitScript.includes('ios-submit-runtime.') ||
       submitScript.includes('--latest') ||
       /EXPO_ASC_(?:API_KEY_PATH|KEY_ID|ISSUER_ID)/.test(submitScript)) {
     fail(
       'IOS_SUBMIT_CREDENTIAL_ROUTE',
-      'upload must target an explicit build and fail closed through EAS-managed credentials'
+      'upload must target an explicit build and inject the protected ASC app id only into an ignored runtime config'
     );
   }
 
