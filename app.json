@@ -18,7 +18,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "by.metravel.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "MeTravel uses your location to show nearby routes, places, and quest points.",
         "NSPhotoLibraryUsageDescription": "MeTravel accesses photos you choose so you can add them to your profile, trips, and articles.",

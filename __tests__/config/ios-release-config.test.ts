@@ -131,6 +131,18 @@ describe('iOS release configuration', () => {
     );
   });
 
+  it('fails closed if the Apple-rejected manual LSMinimumSystemVersion key returns', () => {
+    const testRoot = fixture({
+      'ios/metravel/Info.plist': value => value.replace(
+        '\t<key>LSRequiresIPhoneOS</key>',
+        '\t<key>LSMinimumSystemVersion</key>\n\t<string>16.4</string>\n\t<key>LSRequiresIPhoneOS</key>'
+      ),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_MANUAL_MINIMUM_OS_PLIST' })])
+    );
+  });
+
   it('fails closed on a legacy native app delegate', () => {
     const testRoot = fixture({
       'ios/metravel/AppDelegate.swift': () => `

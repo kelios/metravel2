@@ -7,7 +7,7 @@ const xcode = require('xcode');
 
 const EXPECTED = Object.freeze({
   bundleIdentifier: 'by.metravel.app',
-  buildNumber: '2',
+  buildNumber: '3',
   deploymentTarget: '16.4',
   displayName: 'MeTravel',
   easCliVersion: '21.8.0',
@@ -473,7 +473,7 @@ function validateIosRelease(root = process.cwd()) {
   if (pods.newArchEnabled !== 'true') fail('IOS_NEW_ARCH_PODS', String(pods.newArchEnabled));
   const projectPairs = [
     ['IOS_BUNDLE_ID_XCODE', /PRODUCT_BUNDLE_IDENTIFIER = by\.metravel\.app;/g, /PRODUCT_BUNDLE_IDENTIFIER = /g, 2],
-    ['IOS_BUILD_NUMBER_XCODE', /CURRENT_PROJECT_VERSION = 2;/g, /CURRENT_PROJECT_VERSION = /g, 2],
+    ['IOS_BUILD_NUMBER_XCODE', /CURRENT_PROJECT_VERSION = 3;/g, /CURRENT_PROJECT_VERSION = /g, 2],
     ['IOS_VERSION_XCODE', /MARKETING_VERSION = 1\.0\.5;/g, /MARKETING_VERSION = /g, 2],
     ['IOS_DEVICE_FAMILY_XCODE', /TARGETED_DEVICE_FAMILY = 1;/g, /TARGETED_DEVICE_FAMILY = /g, 2],
     ['IOS_DEPLOYMENT_TARGET_XCODE', /IPHONEOS_DEPLOYMENT_TARGET = 16\.4;/g, /IPHONEOS_DEPLOYMENT_TARGET = /g, 4],
@@ -517,9 +517,16 @@ function validateIosRelease(root = process.cwd()) {
     ['IOS_SCHEME_PLIST', /<string>metravel<\/string>/],
     ['IOS_NEW_ARCH_PLIST', /<key>RCTNewArchEnabled<\/key>\s*<true\/>/],
     ['IOS_ENCRYPTION_PLIST', /<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/],
-    ['IOS_DEPLOYMENT_TARGET_PLIST', /<key>LSMinimumSystemVersion<\/key>\s*<string>16\.4<\/string>/],
   ];
   for (const [code, pattern] of plistPairs) if (!pattern.test(info)) fail(code, 'required plist value missing');
+  const manuallyDeclaredMinimumOsKeys = ['LSMinimumSystemVersion', 'MinimumOSVersion']
+    .filter(key => Object.prototype.hasOwnProperty.call(infoConfig, key));
+  if (manuallyDeclaredMinimumOsKeys.length > 0) {
+    fail(
+      'IOS_MANUAL_MINIMUM_OS_PLIST',
+      `Xcode must derive MinimumOSVersion from the deployment target: ${manuallyDeclaredMinimumOsKeys.join(', ')}`
+    );
+  }
   if (info.includes('UISupportedInterfaceOrientations~ipad')) {
     fail('IOS_IPAD_PLIST', 'iPad orientation block is forbidden for the iPhone-only release');
   }
