@@ -12,11 +12,13 @@ describe('native map bridge', () => {
         JSON.stringify({ type: 'TILE_REQ', z: '8', x: 140, y: 83 }),
       ),
     ).toEqual({ type: 'TILE_REQ', z: 8, x: 140, y: 83, key: '8/140/83' })
+    // #1573 — SELECT_PLACE несёт стабильный placeKey места; legacy-сообщение без
+    // него остаётся валидным (пустой ключ → резолв по id/coord/index).
     expect(
       parseNativeMapBridgeMessage(
         JSON.stringify({ type: 'SELECT_PLACE', id: 42, coord: ' 53.9,27.5 ' }),
       ),
-    ).toEqual({ type: 'SELECT_PLACE', index: null, id: '42', coord: '53.9,27.5' })
+    ).toEqual({ type: 'SELECT_PLACE', placeKey: '', index: null, id: '42', coord: '53.9,27.5' })
   })
 
   it('normalizes move and viewport data through finite coordinate contracts', () => {

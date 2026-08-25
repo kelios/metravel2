@@ -28,8 +28,10 @@ export const queryKeys = {
     ['export-my-travels-count', userId] as const,
   travelUserRating: (travelId: number | undefined) =>
     ['travelUserRating', travelId] as const,
-  questUserReview: (questId: number | undefined) =>
-    ['questUserReview', questId] as const,
+  // Личный отзыв принадлежит аккаунту, а не устройству: при logout/login
+  // соседние пользователи не должны делить thank-you state и префилл.
+  questUserReview: (userId: string | null, questId: number | undefined) =>
+    ['questUserReview', userId, questId] as const,
   homePopularTravels: () => ['home-popular-travels'] as const,
   rouletteTravelFacets: (params: Record<string, unknown>) =>
     ['roulette-travel-facets', params] as const,
@@ -80,7 +82,6 @@ export const queryKeys = {
   // инвалидация каталога подхватывает и его.
   questsPreview: (limit: number) => ['quests', 'preview', limit] as const,
   questDetail: (questId: number | undefined) => ['quest', questId] as const,
-  questRating: (questId: number | undefined) => ['quest', questId, 'rating'] as const,
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
   questsNearLocation: (loc: string) => ['quests-near-location', loc] as const,

@@ -7,7 +7,7 @@ import React from 'react'
 import fs from 'node:fs'
 import path from 'node:path'
 import { act, fireEvent, render, within } from '@testing-library/react-native'
-import { Platform, ScrollView } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 
 const mockSendFeedback = jest.fn()
 const mockShowToastMessage = jest.fn()
@@ -133,6 +133,25 @@ describe('QuestTrustBar', () => {
     // …а кнопка отправки — снаружи, в закреплённом подвале.
     expect(scoped.queryByTestId('quest-inaccuracy-report-submit')).toBeNull()
     expect(getByTestId('quest-inaccuracy-report-submit')).toBeTruthy()
+  })
+
+  it.each([
+    ['android', 'height'],
+    ['ios', 'padding'],
+    ['web', undefined],
+  ] as const)('использует для %s контракт KeyboardAvoidingView %s', (platform, behavior) => {
+    const originalPlatform = Platform.OS
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: platform })
+
+    try {
+      const { getByTestId, UNSAFE_getByType } = renderBar()
+      fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+      fireEvent.press(getByTestId('quest-report-inaccuracy'))
+
+      expect(UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe(behavior)
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform })
+    }
   })
 
   it('сохраняет Autofill и связывает e-mail с узким тематическим WebKit-контрактом', () => {

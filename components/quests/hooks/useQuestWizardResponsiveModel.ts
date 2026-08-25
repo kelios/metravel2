@@ -22,10 +22,19 @@ export function useQuestWizardResponsiveModel() {
   // `SSR_SNAPSHOT = {width: 0}` (`hooks/useResponsive.ts:166,265`), то есть по
   // мобильной ветке — `isMobile`, `compactNav` и `screenW < 600` истинны при
   // любой реальной ширине. Следующий кадр приходит с настоящей шириной и
-  // перекладывает шапку: счётчик прогресса 9 → 22 px (`showText={!isMobile}`,
-  // `questWizardShell.tsx:614`) и лента шагов «точки» → «пилюли» с
-  // `minHeight: 44` (`questWizardShell.tsx:661`). На проде это давало CLS 0,40
-  // на desktop-ширинах < 1280 (#1562) — тот же класс, что #1282/#1298.
+  // перекладывает шапку:
+  //   * счётчик прогресса 9 → 22 px. Это `showText={!isMobile}` в
+  //     `QuestProgressSummary` (`questWizardShell.tsx`): без текста остаётся
+  //     только полоса 3 px плюс отступ 6 px (`questWizardStyles/headerStyles.ts`,
+  //     `progressBar`/`progressText`);
+  //   * лента шагов 1 → 44 px. Ветка `screenW < 600` в `questWizardShell.tsx`
+  //     рисует точки вместо пилюль. Оговорка: по стилям обе ветки заявляют 44 px
+  //     (`questWizardStyles/stepsNavStyles.ts` — `stepDotTarget` 44x44 и
+  //     `stepPill.minHeight` 44), так что 1 px — это транзиентный обмер самого
+  //     нулевого кадра, а не разница объявленных высот. Замер прода
+  //     (`layout-shift.sources`) фиксировал ровно `[.,.,.,1] → [.,.,.,44]`.
+  // Суммарно на проде это давало CLS 0,40 на desktop-ширинах < 1280 (#1562) —
+  // тот же класс, что #1282/#1298.
   //
   // Опция здесь безопасна: на web поддерево визарда монтируется только после
   // гидратации. В `app/(tabs)/quests/[city]/[questId].tsx` это `React.lazy` +

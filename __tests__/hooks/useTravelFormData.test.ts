@@ -4,7 +4,7 @@ import { QueryClientContext } from '@tanstack/react-query';
 
 import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { fetchTravel } from '@/api/travelsApi';
-import { saveFormData, uploadImage } from '@/api/misc';
+import { saveFormData, saveTravelContent, uploadImage } from '@/api/misc';
 import { ApiError } from '@/api/client';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
@@ -16,6 +16,7 @@ jest.mock('@/api/travelsApi', () => ({
 
 jest.mock('@/api/misc', () => ({
   saveFormData: jest.fn(),
+  saveTravelContent: jest.fn(),
   uploadImage: jest.fn(),
 }));
 
@@ -488,9 +489,18 @@ describe('useTravelFormData', () => {
       countries: [],
       categories: [],
     });
-    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({
-      ...payload,
+    // #1516: правка одного текстового поля существующей статьи уходит узким
+    // content-save, а не полным upsert.
+    (saveTravelContent as jest.Mock).mockImplementation(async (_id: number, fields: any) => ({
+      id: 123,
+      slug: 'existing-travel',
+      name: 'Existing travel',
       description: sanitizedHtml,
+      plus: '',
+      minus: '',
+      recommendation: '',
+      changed_fields: Object.keys(fields),
+      updated_at: '2026-08-25T10:00:00Z',
     }));
 
     const { result } = renderHook(
@@ -520,7 +530,10 @@ describe('useTravelFormData', () => {
       await result.current.autosave.saveNow();
     });
 
-    expect(saveFormData).toHaveBeenCalledTimes(1);
+    expect(saveFormData).not.toHaveBeenCalled();
+    expect(saveTravelContent).toHaveBeenCalledTimes(1);
+    expect((saveTravelContent as jest.Mock).mock.calls[0][0]).toBe(123);
+    expect((saveTravelContent as jest.Mock).mock.calls[0][1]).toEqual({ description: rawHtml });
     expect((result.current.formData as any).description).toBe(rawHtml);
     expect((result.current.formData as any).description).not.toBe(sanitizedHtml);
   });

@@ -1,0 +1,139 @@
+- generic [ref=f8e3] [box=0,0,1280,720]:
+  - generic [box=0,-160,1280,720]:
+    - link "Перейти к основному содержимому" [box=12,-148,1256,44]
+    - link "Перейти к навигации" [box=12,-92,1256,44]
+  - generic [ref=f8e4] [box=0,0,1280,720]:
+    - generic [ref=f8e11] [box=0,0,1280,668]:
+      - generic [ref=f8e13] [box=0,0,1280,668]:
+        - generic [ref=f8e16] [box=0,0,1280,111]:
+          - generic [ref=f8e17] [box=0,0,1280,64]:
+            - link "MeTravel логотип MeTravel" [ref=f8e18] [cursor=pointer] [box=24,10,115,44]:
+              - generic "MeTravel логотип" [ref=f8e19] [box=24,16,32,32]:
+                - img "MeTravel логотип" [ref=f8e21] [box=24,16,32,32]
+              - generic [ref=f8e22] [box=64,21,75,22]: MeTravel
+            - generic [ref=f8e24] [box=167,10,695,44]:
+              - link "Маршруты" [ref=f8e25] [cursor=pointer] [box=171,10,116,44]
+              - link "Беларусь" [ref=f8e33] [cursor=pointer] [box=291,10,106,44]
+              - link "Карта" [ref=f8e39] [cursor=pointer] [box=401,10,82,44]
+              - link "Места" [ref=f8e46] [cursor=pointer] [box=487,10,85,44]:
+                - generic [ref=f8e47] [box=496,23,18,18]: 
+              - link "Случайный маршрут" [ref=f8e50] [cursor=pointer] [box=576,10,185,44]
+              - link "Квесты" [ref=f8e60] [cursor=pointer] [box=765,10,92,44]
+            - 'button "Изменить язык: Русский" [ref=f8e67] [cursor=pointer] [box=930,10,86,44]':
+              - generic [ref=f8e68] [box=941,24,17,17]: 
+              - generic [ref=f8e70] [box=964,25,20,15]: RU
+              - generic [ref=f8e71] [box=990,25,15,15]: 
+            - button "Открыть меню аккаунта Юля" [ref=f8e140] [cursor=pointer] [box=1145,10,111,44]:
+              - generic [ref=f8e143] [box=1188,24,31,17]: Юля
+              - generic [ref=f8e144] [box=1225,23,18,18]: 
+          - navigation "Breadcrumb" [ref=f8e146] [box=0,64,1280,46]:
+            - generic [ref=f8e147] [box=16,65,1248,44]:
+              - button "Перейти на Главную" [ref=f8e148] [cursor=pointer] [box=16,65,88,44]:
+                - generic [ref=f8e149] [box=25,80,13,15]: 
+                - generic [ref=f8e150] [box=44,80,51,15]: Главная
+              - generic [ref=f8e151] [box=112,79,14,16]: 
+              - button "Перейти на Поездки" [ref=f8e152] [cursor=pointer] [box=134,65,74,44]:
+                - generic [ref=f8e153] [box=143,80,56,15]: Поездки
+              - generic [ref=f8e154] [box=215,79,14,16]: 
+              - 'button "Текущая страница: Мои поездки" [disabled] [box=237,65,104,44]':
+                - generic [ref=f8e155] [cursor=pointer] [box=246,80,86,15]: Мои поездки
+        - generic [ref=f8e158] [box=50,140,1180,831]:
+          - generic [ref=f8e159] [box=50,140,1180,59]:
+            - generic [ref=f8e160] [box=50,140,728,59]:
+              - generic [ref=f8e161] [box=50,140,728,33]: Мои поездки
+              - generic [ref=f8e162] [box=50,178,728,21]: Организуйте свои поездки отдельно от участия в чужих.
+            - generic [ref=f8e163] [box=792,140,438,44]:
+              - button "Найти поездку" [ref=f8e164] [cursor=pointer] [box=792,140,184,44]:
+                - generic [ref=f8e165] [box=809,153,150,19]
+              - button "Организовать поездку" [ref=f8e169] [cursor=pointer] [box=984,140,246,44]:
+                - generic [ref=f8e170] [box=1001,153,212,19]
+          - generic [ref=f8e175] [box=50,217,416,48]:
+            - button "Организую" [pressed] [ref=f8e176] [cursor=pointer] [box=50,219,165,44]:
+              - generic [ref=f8e177] [box=66,233,15,17]: 
+              - generic [ref=f8e180] [box=180,233,19,17]: (2)
+            - button "Участвую" [ref=f8e181] [cursor=pointer] [box=223,219,126,44]:
+              - generic [ref=f8e182] [box=239,233,15,17]: 
+            - button "Заявки" [ref=f8e185] [cursor=pointer] [box=358,219,109,44]:
+              - generic [ref=f8e186] [box=374,233,15,17]: 
+          - generic [ref=f8e189] [box=50,283,1180,50]:
+            - generic [ref=f8e190] [box=50,283,1180,26]: Поездки, которые я организую
+            - generic [ref=f8e191] [box=50,313,1180,20]: Маршрут, участники и подготовка к ближайшим поездкам — в одном месте.
+          - generic [ref=f8e193] [box=50,351,1180,531]:
+            - generic [ref=f8e194] [box=50,351,260,531]:
+              - generic [ref=f8e195] [box=50,351,260,44]:
+                - generic [ref=f8e196] [box=63,363,18,20]: 
+                - textbox "Поиск по моим поездкам" [ref=f8e197] [box=89,354,208,38]
+              - generic [ref=f8e198] [box=50,407,260,475]:
+                - generic [ref=f8e199] [box=65,422,230,167]
+                - generic [ref=f8e208] [box=65,603,230,265]
+            - generic [ref=f8e222] [box=326,351,904,380]:
+              - generic [ref=f8e225] [box=326,351,441,380]:
+                - link "Открыть маршрут «отпуск»" [box=327,352,439,378]
+                - img "отпуск" [ref=f8e228] [box=327,352,439,176]
+                - generic [ref=f8e230] [box=341,540,411,178]
+              - generic [ref=f8e255] [box=779,351,441,380]:
+                - link "Открыть маршрут «test»" [box=780,352,439,378]
+                - img "test" [ref=f8e258] [box=780,352,439,176]
+                - generic [ref=f8e260] [box=794,540,411,178]
+          - generic [ref=f8e283] [box=50,902,1180,69]:
+            - generic [ref=f8e284] [box=50,919,1180,22]:
+              - generic [ref=f8e285] [box=50,920,18,20]: 
+              - generic [ref=f8e286] [box=76,919,233,22]: Обновления по поездкам
+            - generic [ref=f8e287] [box=50,951,1180,20]: Уведомлений пока нет.
+      - generic [ref=f8e79] [box=0,0,1280,111]:
+        - generic [ref=f8e80] [box=0,0,1280,64]:
+          - link [ref=f8e81] [cursor=pointer] [box=24,10,115,44]:
+            - generic [ref=f8e85] [box=64,21,75,22]: MeTravel
+          - generic [ref=f8e87] [box=167,10,695,44]:
+            - link [ref=f8e88] [cursor=pointer] [box=171,10,116,44]:
+              - generic [ref=f8e95] [box=204,24,74,17]: Маршруты
+            - link [ref=f8e96] [cursor=pointer] [box=291,10,106,44]:
+              - generic [ref=f8e101] [box=324,24,64,17]: Беларусь
+            - link [ref=f8e102] [cursor=pointer] [box=401,10,82,44]:
+              - generic [ref=f8e108] [box=434,24,40,17]: Карта
+            - link [ref=f8e109] [cursor=pointer] [box=487,10,85,44]:
+              - generic [ref=f8e110] [box=496,23,18,18]: 
+              - generic [ref=f8e112] [box=520,24,43,17]: Места
+            - link [ref=f8e113] [cursor=pointer] [box=576,10,185,44]:
+              - generic [ref=f8e122] [box=609,24,143,17]: Случайный маршрут
+            - link [ref=f8e123] [cursor=pointer] [box=765,10,92,44]:
+              - generic [ref=f8e127] [box=798,24,50,17]: Квесты
+          - button [ref=f8e130] [cursor=pointer] [box=930,10,86,44]:
+            - generic [ref=f8e131] [box=941,24,17,17]: 
+            - generic [ref=f8e133] [box=964,25,20,15]: RU
+            - generic [ref=f8e134] [box=990,25,15,15]: 
+          - button [ref=f8e290] [cursor=pointer] [box=1145,10,111,44]:
+            - generic [ref=f8e293] [box=1188,24,31,17]: Юля
+            - generic [ref=f8e294] [box=1225,23,18,18]: 
+        - navigation [ref=f8e296] [box=0,64,1280,46]:
+          - generic [ref=f8e297] [box=16,65,1248,44]:
+            - button [ref=f8e298] [cursor=pointer] [box=16,65,88,44]:
+              - generic [ref=f8e299] [box=25,80,13,15]: 
+              - generic [ref=f8e300] [box=44,80,51,15]: Главная
+            - generic [ref=f8e301] [box=112,79,14,16]: 
+            - button [ref=f8e302] [cursor=pointer] [box=134,65,74,44]:
+              - generic [ref=f8e303] [box=143,80,56,15]: Поездки
+            - generic [ref=f8e304] [box=215,79,14,16]: 
+            - button [disabled] [box=237,65,104,44]:
+              - generic [ref=f8e305] [cursor=pointer] [box=246,80,86,15]: Мои поездки
+    - generic [ref=f8e310] [box=16,672,1248,44]:
+      - generic [ref=f8e311] [box=16,672,194,44]:
+        - link "Facebook" [ref=f8e312] [cursor=pointer] [box=16,672,44,44]:
+          - generic [ref=f8e313] [box=28,684,20,20]: 
+        - link "TikTok" [ref=f8e316] [cursor=pointer] [box=66,672,44,44]:
+          - generic [ref=f8e317] [box=78,684,20,20]: 
+        - link "Instagram" [ref=f8e320] [cursor=pointer] [box=116,672,44,44]:
+          - generic [ref=f8e321] [box=128,684,20,20]: 
+        - link "YouTube" [ref=f8e324] [cursor=pointer] [box=166,672,44,44]:
+          - generic [ref=f8e325] [box=178,684,20,20]: 
+      - generic [ref=f8e328] [box=232,672,877,44]:
+        - link "Квесты" [ref=f8e329] [cursor=pointer] [box=232,672,55,44]
+        - link "Приложение" [ref=f8e332] [cursor=pointer] [box=292,672,87,44]
+        - link "О сайте" [ref=f8e335] [cursor=pointer] [box=385,672,58,44]
+        - link "Политика" [ref=f8e338] [cursor=pointer] [box=450,672,69,44]
+        - link "Cookies" [ref=f8e341] [cursor=pointer] [box=524,672,57,44]
+        - link "Соглашение" [ref=f8e344] [cursor=pointer] [box=588,672,85,44]
+        - link "Отказ от ответственности" [ref=f8e347] [cursor=pointer] [box=679,672,166,44]
+        - link "Правила сообщества" [ref=f8e350] [cursor=pointer] [box=850,672,138,44]
+        - link "Правила поездок" [ref=f8e353] [cursor=pointer] [box=994,672,115,44]
+      - generic [ref=f8e356] [box=1130,686,134,16]: © MeTravel 2020–2026

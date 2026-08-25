@@ -22,7 +22,13 @@ export type NativeMapBridgeMessage =
       viewport: NativeViewportSnapshot | null
     }
   | { type: 'MAP_VIEWPORT'; viewport: NativeViewportSnapshot | null }
-  | { type: 'SELECT_PLACE'; index: number | null; id: string; coord: string }
+  /**
+   * Тап по маркеру места. `placeKey` — стабильный ключ физического места (#1573),
+   * по нему RN находит выбранное место независимо от порядка и обновлений
+   * dataset. `index`/`id`/`coord` остаются legacy-fallback на переходный период,
+   * пока в проде могут жить обе версии WebView-HTML.
+   */
+  | { type: 'SELECT_PLACE'; placeKey: string; index: number | null; id: string; coord: string }
   | { type: 'OPEN_URL'; url: string }
 
 export const normalizeRoutePoint = (point: unknown): [number, number] | null => {
@@ -97,8 +103,12 @@ export const parseNativeMapBridgeMessage = (raw: unknown): NativeMapBridgeMessag
       const id =
         typeof parsed.id === 'string' || typeof parsed.id === 'number' ? String(parsed.id) : ''
       const coord = typeof parsed.coord === 'string' ? parsed.coord.trim() : ''
-      if (index == null && !id && !coord) return null
-      return { type: 'SELECT_PLACE', index, id, coord }
+      const placeKey =
+        typeof parsed.placeKey === 'string' || typeof parsed.placeKey === 'number'
+          ? String(parsed.placeKey).trim()
+          : ''
+      if (!placeKey && index == null && !id && !coord) return null
+      return { type: 'SELECT_PLACE', placeKey, index, id, coord }
     }
     case 'OPEN_URL':
       return typeof parsed.url === 'string' ? { type: 'OPEN_URL', url: parsed.url } : null

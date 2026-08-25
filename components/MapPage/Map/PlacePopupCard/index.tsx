@@ -18,6 +18,7 @@ import { usePopupDomGuard } from './usePopupDomGuard';
 import { usePopupLayout } from './usePopupLayout';
 import { usePopupActions } from './usePopupActions';
 import { getPlacePopupCoordinate, getPlacePopupSubtitle } from './placePopupModel';
+import PlaceSourcePager, { usePlaceSourceSwipeHandlers } from './PlaceSourcePager';
 import { translate as i18nT } from '@/i18n'
 
 // Static dark frost for the hero caption (no live backdrop blur on mobile —
@@ -41,6 +42,13 @@ type Props = {
   onOpenArticle?: () => void;
   articleHref?: string | null;
   relatedTravelUrl?: string | null;
+  /**
+   * Превью связанной статьи для ♥/статуса. Отделено от `imageUrl`: у места с
+   * несколькими материалами hero меняется при перелистывании, а сохраняется
+   * всегда `relatedTravelUrl`, и в избранное должно уходить ЕГО фото, а не
+   * снимок из чужого материала. По умолчанию — hero (одиночная карточка).
+   */
+  relatedTravelImageUrl?: string | null;
   relatedTravelCountry?: string | null;
   relatedTravelCity?: string | null;
   onCopyCoord?: () => void;
@@ -118,6 +126,19 @@ type Props = {
   initialCount?: number;
   initialUserRating?: number | null;
   /**
+   * Материалы одного физического места (#1572). Карточка остаётся презентационной:
+   * активный источник выбирает владелец данных и передаёт сюда уже готовые
+   * `imageUrl`/`articleHref`/`title`, а карточка рисует счётчик со стрелками и
+   * сообщает о перелистывании. `sourceCount <= 1` — pager не рендерится вовсе,
+   * и карточка выглядит ровно как до этой задачи.
+   */
+  sourceCount?: number;
+  activeSourceIndex?: number;
+  /** Заголовок активного материала: source-owned поле, меняется вместе с фото. */
+  activeSourceTitle?: string | null;
+  onPrevSource?: () => void;
+  onNextSource?: () => void;
+  /**
    * Suppress the card's own top-right ✕. Set by wrappers that already draw their
    * own close affordance (e.g. `MapPlaceBottomCard`'s sheet header ✕) so the same
    * corner doesn't show two stacked crosses. `onClose` still fires from the wrapper.
@@ -150,6 +171,7 @@ const PlacePopupCard: React.FC<Props> = ({
   onOpenArticle,
   articleHref,
   relatedTravelUrl,
+  relatedTravelImageUrl,
   relatedTravelCountry,
   relatedTravelCity,
   onCopyCoord,
@@ -187,6 +209,11 @@ const PlacePopupCard: React.FC<Props> = ({
   initialRating,
   initialCount,
   initialUserRating,
+  sourceCount = 1,
+  activeSourceIndex = 0,
+  activeSourceTitle,
+  onPrevSource,
+  onNextSource,
 }) => {
   const popupTooltips = useMemo(getPopupTooltips, []);
   const setCardRootNode = usePopupDomGuard();
@@ -588,6 +615,50 @@ const PlacePopupCard: React.FC<Props> = ({
     colors.textOnDark,
   ]);
 
+  // Source pager (#1572): рисуется поверх фото как сиблинг hero-Pressable — вложенные
+  // кнопки заставили бы каждый тап по ним ещё и открывать полноэкранное фото.
+  const hasSourcePager = sourceCount > 1 && !!onPrevSource && !!onNextSource;
+  const noopSource = useCallback(() => {}, []);
+  const sourceSwipeHandlers = usePlaceSourceSwipeHandlers(
+    hasSourcePager,
+    onPrevSource ?? noopSource,
+    onNextSource ?? noopSource,
+  );
+
+  // Без фото hero-контейнера нет: pager становится строкой в потоке карточки,
+  // иначе на материале без снимка стрелки оказались бы поверх текста места (или
+  // в коробке нулевой высоты) и вернуться назад было бы нечем.
+  const useOverlaySourcePager = hasSourcePager && !!imageUrl;
+  const sourcePagerSlot = useMemo(() => {
+    if (!hasSourcePager) return null;
+    return (
+      <PlaceSourcePager
+        total={sourceCount}
+        currentIndex={activeSourceIndex}
+        articleTitle={activeSourceTitle}
+        onPrev={onPrevSource!}
+        onNext={onNextSource!}
+        colors={colors}
+        compact={useCompactLayout}
+        inline={!imageUrl}
+      />
+    );
+  }, [
+    hasSourcePager,
+    sourceCount,
+    activeSourceIndex,
+    activeSourceTitle,
+    onPrevSource,
+    onNextSource,
+    colors,
+    useCompactLayout,
+    imageUrl,
+  ]);
+
+  // Превью для ♥/статуса принадлежит связанной статье, а не активному материалу
+  // pager'а (иначе в избранное ушло бы фото из чужой статьи).
+  const relatedTravelFallbackImageUrl = relatedTravelImageUrl ?? imageUrl;
+
   // Desktop Leaflet popup keeps this as a hero overlay. Bottom cards render the
   // same stack inline in the footer so trip statuses stay visible as text.
   const relatedTravelActionStack = useMemo(() => {
@@ -596,7 +667,7 @@ const PlacePopupCard: React.FC<Props> = ({
       <RelatedTravelActionStack
         relatedTravelUrl={relatedTravelUrl}
         fallbackTitle={title}
-        fallbackImageUrl={imageUrl}
+        fallbackImageUrl={relatedTravelFallbackImageUrl}
         fallbackCountry={relatedTravelCountry}
         fallbackCity={relatedTravelCity}
         style={isBottomCardLayout ? styles.relatedTravelActionsInline : undefined}
@@ -604,7 +675,7 @@ const PlacePopupCard: React.FC<Props> = ({
       />
     );
   }, [
-    imageUrl,
+    relatedTravelFallbackImageUrl,
     isBottomCardLayout,
     relatedTravelCity,
     relatedTravelCountry,
@@ -622,7 +693,7 @@ const PlacePopupCard: React.FC<Props> = ({
         <RelatedTravelActionStack
           relatedTravelUrl={relatedTravelUrl}
           fallbackTitle={title}
-          fallbackImageUrl={imageUrl}
+          fallbackImageUrl={relatedTravelFallbackImageUrl}
           fallbackCountry={relatedTravelCountry}
           fallbackCity={relatedTravelCity}
           variant="overlay"
@@ -630,7 +701,7 @@ const PlacePopupCard: React.FC<Props> = ({
       </View>
     );
   }, [
-    imageUrl,
+    relatedTravelFallbackImageUrl,
     relatedTravelCity,
     relatedTravelCountry,
     relatedTravelUrl,
@@ -1094,9 +1165,10 @@ const PlacePopupCard: React.FC<Props> = ({
             onTouchEnd: stopWebPopupEvent,
           } as any)}
         >
-          <View style={styles.splitHero}>
+          <View style={styles.splitHero} {...(sourceSwipeHandlers ?? {})}>
             {relatedTravelOverlays}
             {heroImage}
+            {sourcePagerSlot}
             {heroCaptionSlot}
             {heroActionOverlay}
             {closeControl}
@@ -1170,9 +1242,10 @@ const PlacePopupCard: React.FC<Props> = ({
             onTouchEnd: stopWebPopupEvent,
           } as any)}
         >
-          <View style={styles.popupSplitHero}>
+          <View style={styles.popupSplitHero} {...(sourceSwipeHandlers ?? {})}>
             {relatedTravelOverlays}
             {heroImage}
+            {sourcePagerSlot}
             {closeControl}
           </View>
           <View
@@ -1229,8 +1302,25 @@ const PlacePopupCard: React.FC<Props> = ({
       <View style={styles.popupCard}>
         {relatedTravelOverlays}
         {closeControl}
-        <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
-          {heroImage}
+        <View
+          style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}
+          {...(sourceSwipeHandlers ?? {})}
+        >
+          {/* Оверлейный pager должен накрывать ТОЛЬКО фото: в этой секции ниже
+              живёт ещё и блок названия/адреса, поверх которого стрелки не имеют
+              смысла. Рамка добавляется лишь для многоисточникового места, чтобы
+              геометрия одиночной карточки не менялась. */}
+          {useOverlaySourcePager ? (
+            <View style={styles.heroPagerFrame}>
+              {heroImage}
+              {sourcePagerSlot}
+            </View>
+          ) : (
+            <>
+              {heroImage}
+              {sourcePagerSlot}
+            </>
+          )}
           {heroCaptionSlot}
           {heroActionOverlay}
 
@@ -1270,6 +1360,7 @@ const PlacePopupCard: React.FC<Props> = ({
             imageAlt={title}
             topInfoSlot={topInfoSlot}
             footerSlot={footerSlot}
+            pagerSlot={sourcePagerSlot}
             onOpenFullscreenImage={imageUrl ? handleOpenFullscreen : undefined}
             topInset={fullscreenTopInset}
             bottomInset={fullscreenBottomInset}

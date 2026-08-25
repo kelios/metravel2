@@ -1,0 +1,31 @@
+- generic [ref=f2e3] [box=0,0,375,844]:
+  - generic [box=0,-160,375,844]:
+    - link "Перейти к основному содержимому" [box=12,-148,351,44]
+    - link "Перейти к навигации" [box=12,-92,351,44]
+  - generic [ref=f2e4] [box=0,0,375,844]:
+    - generic [ref=f2e13] [box=0,0,375,788]:
+      - generic [ref=f2e16] [box=0,0,375,109]:
+        - generic [ref=f2e17] [box=0,0,375,56]:
+          - link "MeTravel логотип" [ref=f2e372] [cursor=pointer] [box=6,6,44,44]
+          - 'button "Изменить язык: Русский" [ref=f2e67] [cursor=pointer] [box=66,6,61,44]'
+          - generic [ref=f2e373] [box=143,6,226,44]
+        - generic [ref=f2e378] [box=12,60,351,44]:
+          - button "Назад" [ref=f2e379] [cursor=pointer] [box=12,60,44,44]
+          - generic [ref=f2e381] [box=64,74,251,17]: Бюро добрых городских дел
+      - generic [ref=f2e103] [box=0,116,375,672]:
+        - 'heading "Витебск: что посмотреть — Бюро добрых городских дел" [level=1] [ref=f2e104] [box=-1,115,1,1]'
+        - generic [ref=f2e107] [box=0,116,375,672]:
+          - generic [ref=f2e384] [box=0,116,375,150]
+          - generic [ref=f2e435] [box=16,-484,343,3847]
+    - tablist "Навигация" [ref=f2e600] [box=2,791,386,47]:
+      - tab "Маршруты" [ref=f2e602] [cursor=pointer] [box=2,793,77,44]
+      - tab "Карта" [ref=f2e612] [cursor=pointer] [box=79,793,77,44]
+      - tab "Квесты" [selected] [ref=f2e621] [cursor=pointer] [box=156,791,77,47]
+      - tab "Профиль" [ref=f2e629] [cursor=pointer] [box=234,793,77,44]:
+        - generic [ref=f2e630] [box=235,795,75,39]:
+          - generic [ref=f2e631] [box=260,795,24,24]: 
+          - generic [ref=f2e633] [box=235,822,75,12]: Профиль
+      - tab "Ещё" [ref=f2e635] [cursor=pointer] [box=311,793,77,44]:
+        - generic [ref=f2e636] [box=312,795,75,39]:
+          - generic [ref=f2e637] [box=337,795,24,24]: 
+          - generic [ref=f2e639] [box=312,822,75,12]: Ещё

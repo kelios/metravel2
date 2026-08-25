@@ -5,7 +5,13 @@ import { isServerStillWorkingAfter } from '@/api/clientErrors';
 
 interface UseImprovedAutoSaveOptions<T> {
   debounce?: number;
-  onSave: (data: T, signal?: AbortSignal) => Promise<T>;
+  /**
+   * Третьим аргументом приходит baseline — последнее подтверждённое сервером
+   * состояние. Он нужен потребителю, чтобы отправить только изменившиеся поля
+   * (#1516): считать дифф по своей копии нельзя, единственный корректный
+   * источник истины о подтверждённом состоянии — сам движок автосохранения.
+   */
+  onSave: (data: T, signal?: AbortSignal, baseline?: T) => Promise<T>;
   onSuccess?: (savedData: T) => void;
   onError?: (error: Error) => void;
   onStart?: () => void;
@@ -250,7 +256,7 @@ export function useImprovedAutoSave<T>(
         }));
       }
 
-      const result = await onSave(dataToSave, controller.signal);
+      const result = await onSave(dataToSave, controller.signal, lastSavedDataRef.current);
 
       if (!mountedRef.current || !isCurrent()) {
         // Компонент размонтирован ИЛИ это сохранение вытеснено более новым.

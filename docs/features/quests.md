@@ -68,7 +68,7 @@ Canonical лендинга — alias-вариант, если alias есть, и
      ├─ {relatedTravelsSlot} = <TravelsForQuestSection>
      └─ <QuestFinalePanel>
          ├─ видео/постер (useQuestFinaleMedia)
-         ├─ <QuestReviewSection>  (звёзды + текст, useQuestRatingMutation)
+         ├─ <QuestReviewSection>  (звёзды + текст, один POST /quest-reviews/)
          └─ <QuestPioneerBlock>   (только при засчитанном прохождении)
 ```
 
@@ -214,8 +214,7 @@ tripvenue резолвит по ближайшему городу каталог
 | `useQuestsPreview(limit)` | `hooks/useQuestsApi.ts` | `['quests','preview',limit]` | `initialData` — срез из `['quests']` с наследованием `dataUpdatedAt` |
 | `useQuestRatingMeta` / `useQuestCompletionMeta` / `useQuestPioneerMeta` | `hooks/useQuest*Meta.ts` | `['quests']` (+ засев `['quest', id]`) | бандл не несёт rating/completions/first_completer — берутся из каталога |
 | `useQuestReviews` | `hooks/useQuestsApi.ts` | `['quest', questId, 'reviews']` | `staleTime` 60 с |
-| `useQuestRatingMutation` | `hooks/useQuestRating.ts` | `['quest', id, 'rating']` | оптимистично правит `['quest', id]` и `['quests']`, откат при ошибке, инвалидация `onSettled` |
-| `useQuestReview` | `hooks/useQuestReview.ts` | `['questUserReview', id]` | `setQueryData` + инвалидация после `POST /quest-reviews/` |
+| `useQuestReview` | `hooks/useQuestReview.ts` | `['questUserReview', userId, id]` | один `POST /quest-reviews/`; personal review изолирован по аккаунту, после успеха инвалидируются каталог/detail/публичная читалка |
 | `useQuestForLocation` | `hooks/useQuestForLocation.ts` | `['quests-near-location', key]` | серверный score/distance; при `404` — клиентский фолбэк по `['quests']` |
 | `useTravelsForQuest` | `hooks/useTravelsForQuest.ts` | `['travels-for-quest', term]` | обратная перелинковка квест → travel |
 
@@ -292,9 +291,11 @@ tripvenue резолвит по ближайшему городу каталог
    ИЛИ `earlyFinish`). Панель финала показывает текст, видео/постер (или
    YouTube-фасад), при засчитанном прохождении — `QuestPioneerBlock` и форму
    отзыва; при незасчитанном — сколько точек не хватает.
-6. **Отзывы.** `QuestReviewSection` (звёзды → `useQuestRatingMutation`, текст →
-   `useQuestReview`) и `QuestReviewsModal` (чужие отзывы, открывается чипом
-   рейтинга в шапке детали). «Спасибо за отзыв» показывается только за
+6. **Отзывы.** `QuestReviewSection` хранит выбранные звёзды и текст локально и
+   одним `POST /api/quest-reviews/` отправляет их только по кнопке; отдельного
+   `/rate/` и сохранения по тапу нет (#1578). Форма доступна только после
+   засчитанного `questCompleted`. `QuestReviewsModal` показывает чужие отзывы и
+   открывается чипом рейтинга в шапке детали. «Спасибо за отзыв» показывается только за
    подтверждённое сервером сохранение, при ошибке — сообщение и форма с
    введённым (#1486). Успешное сохранение шлёт `quest_review_submit`
    (`utils/questReviewAnalytics.ts`) из `onSuccess` мутации — один раз на
@@ -395,8 +396,9 @@ tripvenue резолвит по ближайшему городу каталог
   `.secrets/metravel-task-board.env`, в вывод не попадает.
 - Тестовые данные: e2e гоняются на мок-квестах (`e2e-minsk-quest`,
   `e2e-warsaw-quest`, `e2e-video-quest`, `e2e-reviews-quest`) через перехват
-  роутов, продовых записей не создают. DEV-моки в коде: `QUEST_RATING_MOCK =
-  true` (оценка держится в памяти в `__DEV__`), `QUEST_COMPLETION_MOCK = false`.
+  роутов, продовых записей не создают. DEV-мока оценки квеста нет: рейтинг
+  сохраняется только реальным `POST /api/quest-reviews/` (#1578).
+  `QUEST_COMPLETION_MOCK = false` и на данные не влияет.
   Мока публичных отзывов больше нет: удалён в #1486 вместе с выдуманными
   авторами — при `404` и пустом ответе читалка честно пуста во всех окружениях.
 
@@ -443,7 +445,6 @@ native-геозоны используют только координаты ш�
   `/api/quests/by-city/{cityId}/`, `/api/quests/{id}/`,
   `/api/quests/near-location/`, `/api/quest-progress/` (+ `/quest/{questId}/`,
   `PATCH /{id}/`, `DELETE /{id}/`), `/api/quest-answer-attempts/bulk/`,
-  `/api/quests/{id}/rate/` (на проде отсутствует, см. «Открытые вопросы»),
   `/api/quest-reviews/`,
   `/api/quests/quest{questId}/review/users/{userId}/`,
   `/api/quests/quest{questId}/reviews/`, `/api/quests/{id}/answer-stats/`
@@ -605,11 +606,15 @@ E2E (Playwright): `e2e/quests-list-detail.spec.ts` (каталог → дета�
 - `useQuestBundle` не переведён на React Query: ключ `queryKeys.questBundle`
   объявлен и не используется, дедупликации и общего инвалидационного контракта у
   детали нет.
-- `POST /api/quests/{id}/rate/` на проде **не существует** (проба 25.08.2026 →
-  `404`, экшена нет и в `quests/views.py`): тап по звезде бьёт в несуществующий
-  роут, а в DEV это скрыто `QUEST_RATING_MOCK`. Оценка доезжает до бэка только
-  вместе с отправкой отзыва (`POST /api/quest-reviews/`), из которой и считается
-  агрегат. Заведена отдельная задача.
+- Backend принимает `POST /api/quest-reviews/` от любого авторизованного
+  пользователя и пока не проверяет `QuestProgress.completed=True`. Frontend
+  показывает форму только при засчитанном прохождении (#1578), но серверный
+  eligibility-gate остаётся backend-долгом и нужен до использования рейтинга
+  как доверенного сигнала сортировки.
+- `completions_count` считает текущие строки `QuestProgress(completed=True)`, а
+  сброс прогресса удаляет строку. Это не lifetime-число прохождений: для
+  сортировки «чаще проходят» нужен неизменяемый серверный факт первого
+  завершения пользователя.
 - UGC после финиша закрыт частично (#1486): фото игрока (до 3), модерация
   отзывов и структурная отметка «точка требует проверки» с порогом ≥2 требуют
   backend-полей и вынесены в `area=back`; контракт — в

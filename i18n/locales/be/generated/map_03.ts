@@ -245,4 +245,7 @@ export const mapGenerated3 = {
   "components.places.PlaceRatingSection.otsenka_89103505": "адзнака",
   "components.places.PlaceRatingSection.otsenki_9110419d": "адзнакі",
   "components.places.PlaceRatingSection.otsenok_07066e03": "адзнак",
+  "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.material_current_iz_total_5f5f1d3a": "Матэрыял {{current}} з {{total}}",
+  "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.predyduschiy_material_1c6a0f27": "Папярэдні матэрыял",
+  "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.sleduyuschiy_material_ab7f8c04": "Наступны матэрыял",
 } as const

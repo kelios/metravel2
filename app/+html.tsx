@@ -604,7 +604,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
                   '@type': 'SearchAction',
                   target: {
                     '@type': 'EntryPoint',
-                    urlTemplate: 'https://metravel.by/search?q={search_term_string}',
+                    urlTemplate: 'https://metravel.by/search?search={search_term_string}',
                   },
                   'query-input': 'required name=search_term_string',
                 },

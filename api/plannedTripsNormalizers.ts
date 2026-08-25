@@ -87,6 +87,9 @@ export interface PlannedTripDto {
   preview_image_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  start_point_name?: string | null;
+  start_lat?: number | null;
+  start_lng?: number | null;
   status?: 'draft' | 'planned' | 'ongoing' | 'completed' | string | null;
   owner?: BeUserLike;
   participants?: BeParticipant[] | null;
@@ -335,6 +338,30 @@ const mapPlannedPoint = (point: BeRoutePoint, index: number): RoutePoint => {
   };
 };
 
+const mapTripStartPoint = (dto: PlannedTripDto, name: string): RoutePoint | null => {
+  const lat = toOptionalNum(dto.start_lat);
+  const lng = toOptionalNum(dto.start_lng);
+  if (
+    !name ||
+    lat == null ||
+    lng == null ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return null;
+  }
+  return {
+    id: 'start',
+    type: 'place',
+    name,
+    description: null,
+    coordinates: [lng, lat],
+    placeId: null,
+  };
+};
+
 const mapRouteSummary = (summary?: BeRouteSummary | null): RouteSummary | null =>
   summary
     ? {
@@ -422,6 +449,7 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     typeof dto.title === 'string' && dto.title.trim()
       ? dto.title.trim()
       : i18nT('errorsStatic:api.plannedTrips.tripFallback', { id: tripId || dto.id });
+  const region = typeof dto.start_point_name === 'string' ? dto.start_point_name.trim() : '';
 
   return {
     id: tripId,
@@ -433,7 +461,7 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     bikeType: bikeTypeFromBe(dto.bike_type),
     visibility: dto.is_public ? 'public' : 'private',
     seatsTotal: toNum(dto.max_participants),
-    startPoint: null,
+    startPoint: mapTripStartPoint(dto, region),
     status: planStatusFromFacade(dto.status),
     organizer: owner,
     route,
@@ -445,7 +473,7 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     routingState: mapRoutingState(dto.routing_state),
     participants,
     coverUrl: dto.cover_url ?? dto.cover ?? dto.preview_image_url ?? null,
-    region: '',
+    region,
     publishedToCommunity: false,
     report: null,
     isOwner: currentUser != null && owner.id === currentUser,

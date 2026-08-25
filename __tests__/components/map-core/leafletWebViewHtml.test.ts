@@ -12,7 +12,16 @@ import {
   toNativeOverlayLayerDefinitions,
 } from '@/components/MapPage/Map/nativeMapHtml';
 import { buildNativeWeatherTempLabelsScript } from '@/components/MapPage/Map/nativeWeatherTempLabelsScript';
-import { WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
+import {
+  NATIVE_BASE_MIN_ZOOM_GLOBAL,
+  NATIVE_BASE_MIN_ZOOM_SCRIPT,
+  buildNativeTileBridgeScript,
+} from '@/components/MapPage/Map/nativeTileBridgeScript';
+import {
+  WEB_MAP_OVERLAY_LAYERS,
+  getThemedBaseAttribution,
+  getThemedBaseMaxZoom,
+} from '@/config/mapWebLayers';
 import { buildTravelMapNativeHtml } from '@/components/MapPage/Map/travelMapNativeHtml';
 import { buildQuestNativeMapHtml } from '@/components/quests/questNativeMapHtml';
 
@@ -327,6 +336,35 @@ describe('buildNativeMapHtml — engine regression invariants', () => {
     expect(html).toContain('window.__metravelScheduleInvalidate = function');
     expect(html).toContain('function __metravelInvalidateMapSize(stage) {');
     expect(html).toContain('[80, 240, 600].forEach');
+  });
+
+  // #1561 — движок собирается из `nativeTileBridgeScript`, а lifecycle-регрессия
+  // (`__tests__/components/MapPage/Map/nativeTileBridge.lifecycle.test.ts`) монтирует
+  // мост своим `L.map({ minZoom })`. Значит она останется зелёной, даже если из
+  // реального HTML пропадёт преамбула или `minZoom`, — а на устройстве вернётся
+  // серая подложка. Здесь закреплена именно ПРОДОВАЯ проводка фикса.
+  it('wires the #1561 base-tile floor and unique tile keys into the shipped HTML', () => {
+    const preambleIndex = html.indexOf(NATIVE_BASE_MIN_ZOOM_SCRIPT);
+    const mapInitIndex = html.indexOf("L.map('map'");
+
+    expect(preambleIndex).toBeGreaterThan(-1);
+    expect(mapInitIndex).toBeGreaterThan(-1);
+    // Нижний зум обязан быть посчитан ДО инициализации карты.
+    expect(preambleIndex).toBeLessThan(mapInitIndex);
+    expect(html).toContain(`minZoom: window.${NATIVE_BASE_MIN_ZOOM_GLOBAL}`);
+    expect(html).toContain(
+      buildNativeTileBridgeScript({
+        attribution: getThemedBaseAttribution(),
+        maxZoom: getThemedBaseMaxZoom(),
+      }),
+    );
+    // Ключ pending уникален на DOM-тайл, снятый тайл чистит свою запись, а пустой
+    // ответ RN виден как ошибка тайла, а не как «загруженная» серая клетка.
+    expect(html).toContain("'#' + __metravelTileSeq");
+    expect(html).toContain('_removeTile: function(key) {');
+    expect(html).toContain("done(new Error('tile-unavailable'), img)");
+    // Граница едет за вьюпортом после layout/поворота.
+    expect(html).toContain('map.setMinZoom(next)');
   });
 
   it('keeps escapeHtml and camping-zone logic', () => {

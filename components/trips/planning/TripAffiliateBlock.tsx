@@ -19,10 +19,10 @@ interface Props {
 
 /**
  * Координаты, по которым резолвится страна поездки — тем же путём, что и
- * travel-детали (`AffiliateSection`). Своего поля страны у поездки нет: в
- * `PlannedTripDto` его не отдаёт бэк, поэтому координаты маршрута — единственный
- * гео-сигнал. Без кода `resolveCountrySlug` не резолвится вообще, и обе ссылки
- * уходят на homepage партнёра вместо страновой страницы.
+ * travel-детали (`AffiliateSection`). Своего ISO-кода страны у поездки нет,
+ * поэтому координаты маршрута или стартовой точки остаются гео-сигналом для
+ * странового дип-линка. Без кода `resolveCountrySlug`
+ * не резолвится вообще, и обе ссылки уходят на homepage партнёра.
  *
  * Берём первую точку С координатами, а не строго `route[0]`: точка типа `custom`
  * заводится и без них, и тогда поездка теряла бы дип-линк целиком. Дальше первой
@@ -30,7 +30,7 @@ interface Props {
  * travel. `RoutePoint.coordinates` хранится как `[lng, lat]`.
  */
 const resolveTripCoordinates = (trip: PlannedTrip): LookupCoordinates | undefined => {
-  const points = trip.route?.length ? trip.route : trip.startPoint ? [trip.startPoint] : [];
+  const points = trip.startPoint ? [...(trip.route ?? []), trip.startPoint] : (trip.route ?? []);
   for (const point of points) {
     const coords = point?.coordinates;
     if (!coords) continue;
@@ -53,11 +53,12 @@ function TripAffiliateBlock({ trip }: Props) {
     () => ({ city: trip.region || undefined, countryCode }),
     [trip.region, countryCode],
   );
+  const hasLocation = Boolean(trip.region.trim() || coordinates);
 
   // У заголовка нет собственного содержимого: без офферов (нет маркера или
   // шаблонов в env) `AffiliateOffers` отдаёт null и шапка осталась бы одна —
   // тот же гейт, что в travel `AffiliateSection`.
-  if (getAffiliateOffers(context).length === 0) return null;
+  if (!hasLocation || getAffiliateOffers(context).length === 0) return null;
 
   return (
     <View style={styles.wrap} testID="trip-affiliate">

@@ -1484,7 +1484,7 @@ function gateAppScriptsBehindHero(baseHtml, options = {}) {
     `<script data-app-script-gate="true">` +
     `(function(){var S=${list};var f=false;` +
     `function go(){if(f)return;f=true;for(var i=0;i<S.length;i++){var e=document.createElement('script');e.src=S[i];e.async=false;document.body.appendChild(e);}}` +
-    `function arm(){var img=document.querySelector('img[data-ssg-lcp]');if(!img){go();return;}if(img.complete&&img.naturalWidth>0){go();return;}img.addEventListener('load',go,{once:true});img.addEventListener('error',go,{once:true});}` +
+    `function arm(){var img=document.querySelector('img[data-ssg-lcp]');if(!img||img.complete){go();return;}img.addEventListener('load',go,{once:true});img.addEventListener('error',go,{once:true});}` +
     `setTimeout(go,${timeoutMs});` +
     `['pointerdown','keydown','touchstart'].forEach(function(ev){document.addEventListener(ev,go,{once:true,passive:true});});` +
     `if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',arm,{once:true});}else{arm();}` +
@@ -1492,8 +1492,10 @@ function gateAppScriptsBehindHero(baseHtml, options = {}) {
     `</script>`;
 
   const gated = applyHtmlFragment(stripped, '</body>', controller, 'before');
-  // Safety guard: only accept the transform if the controller was actually placed.
-  if (gated.indexOf('data-app-script-gate="true"') === -1) return baseHtml;
+  // Safety guard: only accept the transform if this call actually inserted the
+  // controller. Looking for its marker is insufficient because malformed input
+  // may already contain a stale controller while lacking a usable </body> anchor.
+  if (gated === stripped) return baseHtml;
   return gated;
 }
 

@@ -53,6 +53,14 @@ export interface LegacyMapPoint {
   articleUrl?: string;
   urlTravel?: string;
   updated_at?: string;
+  /**
+   * Grouped place DTO (#1567/#1571): канонический `place_id` места и summary его
+   * материалов. Additive поверх record-полей — renderers группируют маркеры по
+   * `placeKey`, а записи без `place_id` остаются самостоятельными точками.
+   */
+  placeId?: string | number;
+  sourceCount?: number;
+  primarySource?: import('@/api/mapPlaces').MapPlaceSource | null;
   /** Optional quest-specific metadata. When present, the popup renders QuestPopupCard. */
   questMeta?: {
     id: string;

@@ -7,8 +7,20 @@ export interface RateLimiterOptions {
   window?: number
   maxPerWindow?: number
   maxPerEndpoint?: number
+  /**
+   * Персональный потолок для эндпоинта. Ключ — путь без query; сегмент `*`
+   * матчит ровно один сегмент пути, чтобы адресный эндпоинт вида
+   * `/travels/{id}/content/` получил потолок своего контракта, а не дефолт.
+   * Шаблон задаёт ТОЛЬКО величину лимита: счётчик по-прежнему ведётся отдельно
+   * для каждого конкретного пути, то есть потолок действует на сущность.
+   */
   endpointLimits?: Record<string, number>
 }
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const compileEndpointPattern = (key: string): RegExp =>
+  new RegExp(`^${key.split('*').map(escapeRegExp).join('[^/]+')}$`)
 
 export class RateLimiter {
   private requestTimestamps: Map<string, number[]> = new Map()
@@ -17,16 +29,27 @@ export class RateLimiter {
   private readonly maxPerWindow: number
   private readonly maxPerEndpoint: number
   private readonly endpointLimits: Record<string, number>
+  private readonly endpointPatternLimits: Array<{ pattern: RegExp; limit: number }>
 
   constructor(options: RateLimiterOptions = {}) {
     this.window = options.window ?? 60_000
     this.maxPerWindow = options.maxPerWindow ?? 100
     this.maxPerEndpoint = options.maxPerEndpoint ?? 20
     this.endpointLimits = options.endpointLimits ?? {}
+    this.endpointPatternLimits = Object.entries(this.endpointLimits)
+      .filter(([key]) => key.includes('*'))
+      .map(([key, limit]) => ({ pattern: compileEndpointPattern(key), limit }))
   }
 
   private getEndpointLimit(key: string): number {
-    return this.endpointLimits[key] ?? this.maxPerEndpoint
+    const exactLimit = this.endpointLimits[key]
+    if (exactLimit !== undefined) return exactLimit
+
+    for (const { pattern, limit } of this.endpointPatternLimits) {
+      if (pattern.test(key)) return limit
+    }
+
+    return this.maxPerEndpoint
   }
 
   acquire(endpoint: string): RateLimitSlot | null {

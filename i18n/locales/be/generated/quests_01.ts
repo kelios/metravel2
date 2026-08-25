@@ -153,7 +153,7 @@ export const questsGenerated1 = {
   "components.quests.QuestReviewSection.chto_ponravilos_b836e082": "Што спадабалася?",
   "components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0": "Адправіць водгук",
   "components.quests.QuestReviewSection.otpravlyaem_46246aeb": "Адпраўляем…",
-  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Ацэнка ўлічваецца ў агульным рэйтынгу квэста. Тэкставы водгук - па жаданні.",
+  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Ацэнка захаваецца разам з водгукам. Тэкставы водгук — па жаданні.",
   "components.quests.QuestReviewSection.otzyv_o_kveste_c6c8ceb5": "Водгук пра квэст",
   "components.quests.QuestReviewSection.rasskazhite_chto_bylo_interesno_472acf46": "Раскажыце, што было цікава",
   "components.quests.QuestReviewSection.spasibo_za_otzyv_af1c9931": "Дзякуй за водгук!",

@@ -915,6 +915,23 @@ const normalizeMapPlaceSourcesPayload = (payload: unknown): MapPlaceSourcesPage 
   return { results, next };
 };
 
+/**
+ * Курсор следующей страницы. DRF отдаёт в `next` ПОЛНЫЙ URL страницы, а не голый
+ * токен (тот же конверт разбирает `api/quests.ts` через `next.match(/[?&]page=/)`),
+ * поэтому URL в `?cursor=` подставлять нельзя: бэкенд вернул бы первую страницу
+ * заново, а карточка получила бы дубли материалов. Забираем из URL сам токен и
+ * всегда бьём в собственный абсолютный endpoint (относительный URL не годится
+ * для fetch на native). URL без `cursor=` означает «дальше идти нечем».
+ */
+const resolveMapPlaceSourcesCursor = (next: string | null): string | null => {
+  const value = typeof next === 'string' ? next.trim() : '';
+  if (!value) return null;
+  const isUrlLike = /^https?:\/\//i.test(value) || value.startsWith('/') || value.includes('?');
+  if (!isUrlLike) return value;
+  const match = value.match(/[?&]cursor=([^&]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
 /** Одна страница sources места. Ошибки бросаются: запрос ленивый и user-triggered. */
 export const fetchMapPlaceSources = async (
   placeId: string | number,
@@ -945,12 +962,21 @@ export const fetchAllMapPlaceSources = async (
 ): Promise<MapPlaceSource[]> => {
   const MAX_PAGES = 5;
   const results: MapPlaceSource[] = [];
+  // Один и тот же материал не должен попасть в список дважды: pager ищет активный
+  // источник по `sourceId`, и на дубле `findIndex` вечно возвращает первое
+  // вхождение — перелистывание молча замирает на первом материале.
+  const seenSourceIds = new Set<string>();
   let cursor: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const chunk: MapPlaceSourcesPage = await fetchMapPlaceSources(placeId, cursor, options);
-    results.push(...chunk.results);
-    if (!chunk.next || chunk.next === cursor) break;
-    cursor = chunk.next;
+    for (const source of chunk.results) {
+      if (seenSourceIds.has(source.sourceId)) continue;
+      seenSourceIds.add(source.sourceId);
+      results.push(source);
+    }
+    const nextCursor = resolveMapPlaceSourcesCursor(chunk.next);
+    if (!nextCursor || nextCursor === cursor) break;
+    cursor = nextCursor;
   }
   return results;
 };

@@ -240,7 +240,7 @@ describe('useTravelDetails', () => {
       };
     });
 
-    const { result } = renderHook(() => useTravelDetails());
+    const { result, unmount } = renderHook(() => useTravelDetails());
 
     // (a) First paint hydrates instantly from the partial preload (initialData).
     expect(result.current.isLoading).toBe(false);
@@ -255,6 +255,79 @@ describe('useTravelDetails', () => {
     const backfilled = await capturedQueryFn!();
     expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
     expect(backfilled.media.gallery).toEqual([{ id: 7 }]);
+
+    // The marker is consumed after the first mount. Returning to the same route
+    // in this document must not schedule a second forced backfill.
+    await waitFor(() => {
+      expect((global as any).window.__metravelTravelPreload).toBeUndefined();
+    });
+    unmount();
+    renderHook(() => useTravelDetails());
+    expect(capturedConfig.refetchOnMount).toBe(false);
+    expect(fetchTravelBySlug).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps partial preload content visible when the background media backfill fails', () => {
+    (Platform.OS as any) = 'web';
+    const backfillError = new Error('network unavailable');
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 498,
+          slug: 'awesome-trip',
+          name: 'Trip',
+          description: '<p>Full text</p>',
+          gallery: [{ id: 7, url: '/gallery/7.webp', caption: '' }],
+          travelAddress: [{ id: 1, name: 'Point' }],
+          coordsMeTravel: [],
+          media: { cover: { id: 1, dominant_color: '#abc' } },
+        },
+        slug: 'awesome-trip',
+        isId: false,
+        mediaPartial: true,
+      },
+    };
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+    (useQuery as jest.Mock).mockImplementation((config: any) => ({
+      data: config.initialData,
+      isLoading: false,
+      isError: true,
+      error: backfillError,
+      refetch: jest.fn(),
+    }));
+
+    const { result } = renderHook(() => useTravelDetails());
+
+    expect(result.current.travel).toMatchObject({ id: 498, slug: 'awesome-trip' });
+    expect(result.current.isError).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('keeps a query error fatal when a partial marker has no usable preload content', () => {
+    (Platform.OS as any) = 'web';
+    const initialError = new Error('travel unavailable');
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {},
+        slug: 'awesome-trip',
+        isId: false,
+        mediaPartial: true,
+      },
+    };
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+    (useQuery as jest.Mock).mockImplementation((config: any) => ({
+      data: config.initialData,
+      isLoading: false,
+      isError: true,
+      error: initialError,
+      refetch: jest.fn(),
+    }));
+
+    const { result } = renderHook(() => useTravelDetails());
+
+    expect(result.current.travel).toBeUndefined();
+    expect(result.current.isError).toBe(true);
+    expect(result.current.error).toBe(initialError);
   });
 
   it('skips preload polling in queryFn once initialData has consumed the preload', async () => {

@@ -103,6 +103,8 @@ export const getMapPointContentKey = (point: {
   categoryName?: unknown;
   travelImageThumbUrl?: unknown;
   urlTravel?: unknown;
+  placeId?: unknown;
+  sourceCount?: unknown;
 }): string => {
   // categoryName is polymorphic across payloads (string | object | array), so stringify
   // defensively instead of typing it — the key only needs to change when it changes.
@@ -117,11 +119,16 @@ export const getMapPointContentKey = (point: {
     }
   };
 
+  // place identity участвует в ключе: маркер теперь один на место (#1573), поэтому
+  // появление/смена `place_id` или числа материалов обязаны пробивать заморозку
+  // кадра в useMapRenderData и пересобирать маркер, а не оставлять record-рендер.
   return [
     getMapPointIdentityKey(point),
     part(point?.address),
     part(point?.categoryName),
     part(point?.travelImageThumbUrl),
     part(point?.urlTravel),
+    part(point?.placeId),
+    part(point?.sourceCount),
   ].join('|');
 };

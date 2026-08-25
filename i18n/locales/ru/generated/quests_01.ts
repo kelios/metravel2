@@ -153,7 +153,7 @@ export const questsGenerated1 = {
   "components.quests.QuestReviewSection.chto_ponravilos_b836e082": "Что понравилось?",
   "components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0": "Отправить отзыв",
   "components.quests.QuestReviewSection.otpravlyaem_46246aeb": "Отправляем…",
-  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Оценка учитывается в общем рейтинге квеста. Текстовый отзыв — по желанию.",
+  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Оценка сохранится вместе с отзывом. Текстовый отзыв — по желанию.",
   "components.quests.QuestReviewSection.otzyv_o_kveste_c6c8ceb5": "Отзыв о квесте",
   "components.quests.QuestReviewSection.rasskazhite_chto_bylo_interesno_472acf46": "Расскажите, что было интересно",
   "components.quests.QuestReviewSection.spasibo_za_otzyv_af1c9931": "Спасибо за отзыв!",

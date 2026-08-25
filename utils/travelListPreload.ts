@@ -57,6 +57,7 @@ export const TRAVEL_LIST_PRELOAD_TIMEOUT_MS = 30_000
 export const TRAVEL_LIST_FILTER_PARAM_KEYS = [
   'user_id',
   'search',
+  'q',
   'sort',
   'categories',
   'companions',

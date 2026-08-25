@@ -12,7 +12,7 @@ import {
 } from '@/api/questReview'
 import { useAuth } from '@/context/AuthContext'
 import { trackQuestReviewSubmit } from '@/utils/questReviewAnalytics'
-import { queryKeys } from '@/queryKeys'
+import { queryKeys } from '@/api/queryKeys'
 
 type SubmitInput = {
   rating: number
@@ -31,6 +31,7 @@ type UseQuestReviewOptions = {
 type UseQuestReviewReturn = {
   review: QuestReviewRecord | null
   isLoading: boolean
+  hasLoadError: boolean
   isSubmitting: boolean
   isSubmitted: boolean
   hasError: boolean
@@ -43,13 +44,14 @@ export function useQuestReview({
   cityId,
   enabled = true,
 }: UseQuestReviewOptions): UseQuestReviewReturn {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, userId } = useAuth()
   const queryClient = useQueryClient()
+  const reviewKey = queryKeys.questUserReview(userId, questId)
 
   const reviewQuery = useQuery({
-    queryKey: queryKeys.questUserReview(questId),
+    queryKey: reviewKey,
     queryFn: () => getUserQuestReview(questId!),
-    enabled: enabled && !!questId && isAuthenticated,
+    enabled: enabled && !!questId && isAuthenticated && !!userId,
     staleTime: 30 * 1000,
   })
 
@@ -64,8 +66,24 @@ export function useQuestReview({
       return submitQuestReview(params)
     },
     onSuccess: (record) => {
-      queryClient.setQueryData(queryKeys.questUserReview(questId), record)
-      queryClient.invalidateQueries({ queryKey: queryKeys.questUserReview(questId) })
+      // POST возвращает полную сохранённую запись, поэтому отдельный GET личного
+      // отзыва здесь был лишним. Ключ scoped по аккаунту, чтобы результат не
+      // показывался следующему пользователю этого устройства.
+      queryClient.setQueryData(reviewKey, record)
+      // Рейтинг каталога и публичная читалка считаются из той же QuestReview.
+      // Раньше их случайно обновляла отдельная /rate/-мутация; после удаления
+      // несуществующего endpoint инвалидация принадлежит точке реального save.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quests() })
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.questDetail(questId),
+        exact: true,
+      })
+      if (questSlug) {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.questReviews(questSlug),
+          exact: true,
+        })
+      }
       // Единственная точка подтверждённого сохранения: срабатывает один раз на
       // mutate, поэтому ре-рендер экрана финала событие не дублирует, а
       // упавший запрос сюда не доходит (#1486).
@@ -80,15 +98,36 @@ export function useQuestReview({
 
   const submit = useCallback(
     (input: SubmitInput) => {
-      if (!questId || mutation.isPending) return
+      // Не разрешаем POST, пока неизвестно, есть ли уже отзыв: backend делает
+      // upsert, и ранняя отправка могла бы затереть прежний текст пустыми полями.
+      if (
+        !questId ||
+        !isAuthenticated ||
+        !userId ||
+        reviewQuery.isFetching ||
+        reviewQuery.isError ||
+        mutation.isPending
+      ) {
+        return
+      }
       mutation.mutate(input)
     },
-    [questId, mutation],
+    [
+      isAuthenticated,
+      mutation,
+      questId,
+      reviewQuery.isError,
+      reviewQuery.isFetching,
+      userId,
+    ],
   )
 
   return {
     review: reviewQuery.data ?? null,
-    isLoading: reviewQuery.isLoading,
+    // Блокируем upsert и на первом GET, и на фоновом refetch старого `null`:
+    // оба запроса ещё могут обнаружить сохранённый на другом устройстве отзыв.
+    isLoading: reviewQuery.isFetching,
+    hasLoadError: reviewQuery.isError,
     isSubmitting: mutation.isPending,
     isSubmitted: mutation.isSuccess,
     hasError: mutation.isError,

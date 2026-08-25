@@ -9,7 +9,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { buildClusterIconHtml } from './mapMarkerStyles'
 import MarkerPopup from './MarkerPopup'
 import { formatPlaces } from '@/utils/pluralize'
-import { getMapPointKey } from '@/hooks/map/useMapTravels'
+import { getMapPlaceKey, groupMapPlaces } from '@/api/mapPlaces'
 import { buildPlaceTitleParts } from './placeTitle'
 import { translate as i18nT } from '@/i18n'
 
@@ -70,6 +70,20 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   const safeClusters = useMemo(() => {
     return Array.isArray(clusters) ? clusters : []
   }, [clusters])
+
+  /**
+   * Развёрнутый кластер — единственный путь, где серверные точки становятся
+   * отдельными маркерами. Одно физическое место обязано дать один маркер и один
+   * hit target (#1573): записи с одинаковым backend `place_id` сливаются общей
+   * моделью #1571, запись без `place_id` остаётся самостоятельной. Группировка
+   * мемоизируется, потому что развёрнут всегда ровно один кластер.
+   */
+  const expandedPlaces = useMemo(() => {
+    if (!expandedClusterKey) return []
+    const cluster = safeClusters.find((item) => item?.key === expandedClusterKey)
+    const items = expandedClusterItems ?? cluster?.items ?? []
+    return groupMapPlaces(items)
+  }, [expandedClusterKey, expandedClusterItems, safeClusters])
 
   const clusterIconsCache = useMemo(() => {
     const leaflet = L ?? (window as any)?.L
@@ -161,17 +175,17 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
         // Expanded cluster: render individual markers
         if (expandedClusterKey && cluster.key === expandedClusterKey) {
-          const items = expandedClusterItems ?? cluster.items
           return (
             <React.Fragment key={`expanded-${cluster.key}-${idx}`}>
-              {items.map((item, itemIdx) => {
+              {expandedPlaces.map((place) => {
+                const item = place.record
                 const ll = strToLatLng(item.coord, hintCenter)
                 if (!ll) return null
                 if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1]))
                   return null
-                // Единый ключ точки, заскоупленный кластером (cluster.key уже
+                // Единый ключ места, заскоупленный кластером (cluster.key уже
                 // уникален, поэтому коллизий между кластерами нет).
-                const markerKey = `cluster-expanded-${cluster.key}-${getMapPointKey(item, itemIdx)}`
+                const markerKey = `cluster-expanded-${cluster.key}-${place.placeKey}`
 
                 const accessibleName =
                   item.address || item.categoryName || i18nT('map:components.MapPage.Map.ClusterLayer.tochka_na_karte_7800c0d7')
@@ -239,7 +253,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           if (!ll) return null
           if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null
 
-          const singleKey = `cluster-single-${cluster.key}-${getMapPointKey(item, 0)}`
+          const singleKey = `cluster-single-${cluster.key}-${getMapPlaceKey(item)}`
 
           const accessibleName =
             item.address || item.categoryName || i18nT('map:components.MapPage.Map.ClusterLayer.tochka_na_karte_7800c0d7')

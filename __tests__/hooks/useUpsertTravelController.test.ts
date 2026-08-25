@@ -47,6 +47,7 @@ describe('useUpsertTravelController', () => {
   const mockUseTravelWizard = require('@/hooks/useTravelWizard').useTravelWizard as jest.Mock;
   const mockUseTravelFilters = require('@/hooks/useTravelFilters').useTravelFilters as jest.Mock;
   const mockUseDraftRecovery = require('@/hooks/useDraftRecovery').useDraftRecovery as jest.Mock;
+  let originalLanguage: string;
 
   const baseWizard = {
     currentStep: 1,
@@ -107,7 +108,9 @@ describe('useUpsertTravelController', () => {
     countries: [],
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    originalLanguage = i18n.language;
+    await i18n.changeLanguage('ru');
     jest.clearAllMocks();
 
     mockUseThemedColors.mockReturnValue({ primary: '#000' });
@@ -142,8 +145,9 @@ describe('useUpsertTravelController', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.useRealTimers();
+    await i18n.changeLanguage(originalLanguage);
   });
 
   it('sets isNew=true when id is missing', () => {
@@ -186,8 +190,16 @@ describe('useUpsertTravelController', () => {
     })).toBe('Изменения ожидают подключения');
     expect(getAutosaveBadge({ ...autosave, phase: 'saving' })).toBe('Сохранение...');
     expect(getAutosaveBadge({ ...autosave, phase: 'error' })).toBe('Ошибка сохранения');
-    expect(getAutosaveBadge({ ...autosave, phase: 'saved', lastSaved: new Date() }))
-      .toContain('Сохранено');
+    expect(
+      getAutosaveBadge(
+        {
+          ...autosave,
+          phase: 'saved',
+          lastSaved: new Date('2026-08-20T10:00:00.000Z'),
+        },
+        Date.parse('2026-08-20T10:01:00.000Z'),
+      ),
+    ).toBe('Сохранено 1 минуту назад');
   });
 
   it('formats last-save time through the active locale', async () => {
@@ -209,6 +221,10 @@ describe('useUpsertTravelController', () => {
 
   it('keeps the saved badge renderable on Android without Intl.RelativeTimeFormat (#1511)', async () => {
     const originalRelativeTimeFormat = Intl.RelativeTimeFormat;
+    const relativeTimeFormatDescriptor = Object.getOwnPropertyDescriptor(
+      Intl,
+      'RelativeTimeFormat',
+    );
     Object.defineProperty(Intl, 'RelativeTimeFormat', {
       configurable: true,
       value: undefined,
@@ -260,11 +276,11 @@ describe('useUpsertTravelController', () => {
       const { result } = renderHook(() => useUpsertTravelController());
       expect(result.current.autosaveBadge).toBe('Сохранено 5 минут назад');
     } finally {
-      Object.defineProperty(Intl, 'RelativeTimeFormat', {
-        configurable: true,
-        value: originalRelativeTimeFormat,
-      });
-      await i18n.changeLanguage('ru');
+      if (relativeTimeFormatDescriptor) {
+        Object.defineProperty(Intl, 'RelativeTimeFormat', relativeTimeFormatDescriptor);
+      } else {
+        Reflect.deleteProperty(Intl, 'RelativeTimeFormat');
+      }
     }
   });
 

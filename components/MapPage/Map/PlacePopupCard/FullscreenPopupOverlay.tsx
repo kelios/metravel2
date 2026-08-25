@@ -26,6 +26,8 @@ const FullscreenPopupOverlay: React.FC<{
   imageAlt?: string;
   topInfoSlot: React.ReactNode;
   footerSlot: React.ReactNode;
+  /** Source pager места (#1572); рисуется поверх hero-фото этого оверлея. */
+  pagerSlot?: React.ReactNode;
   onOpenFullscreenImage?: (event?: any) => void;
   topInset?: number;
   bottomInset?: number;
@@ -37,6 +39,7 @@ const FullscreenPopupOverlay: React.FC<{
   imageAlt,
   topInfoSlot,
   footerSlot,
+  pagerSlot,
   onOpenFullscreenImage,
   topInset = 0,
   bottomInset = 0,
@@ -218,6 +221,11 @@ const FullscreenPopupOverlay: React.FC<{
             <Feather name="maximize-2" size={18} color={colors.textOnDark} />
           </button>
         )}
+
+        {/* Оверлейный вариант pager'а имеет смысл только над реальным фото:
+            без снимка hero — сплошная заглушка, и строчный pager рисуется в
+            контентной части ниже. */}
+        {hasImage ? pagerSlot : null}
       </div>
 
       {/* Content — remaining area with scroll */}
@@ -234,6 +242,7 @@ const FullscreenPopupOverlay: React.FC<{
         }}
       >
         <div style={{ maxWidth: 480, margin: '0 auto', width: '100%' }}>
+          {hasImage ? null : pagerSlot}
           {topInfoSlot}
           <div style={{ marginTop: 16 }}>
             {footerSlot}

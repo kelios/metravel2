@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import ts from 'typescript'
 
 import { SUPPORTED_LOCALES, type SupportedLocale } from '@/i18n/config'
 import * as formatModule from '@/i18n/format'
@@ -72,7 +73,11 @@ describe('locale-aware formatting', () => {
       expect(selectPlural(1, forms, 'en')).toBe('one')
       expect(selectPlural(2, forms, 'en')).toBe('other')
     } finally {
-      if (descriptor) Object.defineProperty(Intl, 'PluralRules', descriptor)
+      if (descriptor) {
+        Object.defineProperty(Intl, 'PluralRules', descriptor)
+      } else {
+        Reflect.deleteProperty(Intl, 'PluralRules')
+      }
     }
   })
 })
@@ -112,7 +117,11 @@ const withoutIntlConstructors = (names: readonly string[], run: () => void): voi
     run()
   } finally {
     for (const [name, descriptor] of saved) {
-      if (descriptor) Object.defineProperty(Intl, name, descriptor)
+      if (descriptor) {
+        Object.defineProperty(Intl, name, descriptor)
+      } else {
+        Reflect.deleteProperty(Intl, name)
+      }
     }
   }
 }
@@ -167,13 +176,28 @@ describe('Intl availability governance for i18n/format.ts (#1528)', () => {
     const referenced = new Set<string>()
     for (const relativePath of CANONICAL_FORMAT_SOURCES) {
       const source = fs.readFileSync(path.join(__dirname, '../..', relativePath), 'utf8')
-      for (const match of source.matchAll(/\bIntl\.([A-Z]\w+)/g)) {
-        const name = match[1]
-        // Type positions (`Intl.NumberFormatOptions`, `Intl.LDMLPluralRule`)
-        // share the namespace with the constructors; only the runtime ones
-        // can be missing from an engine.
-        if (typeof (Intl as Record<string, unknown>)[name] === 'function') referenced.add(name)
+      const sourceFile = ts.createSourceFile(
+        relativePath,
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        relativePath.endsWith('.ts') ? ts.ScriptKind.TS : ts.ScriptKind.JS,
+      )
+      const visit = (node: ts.Node): void => {
+        // Runtime access is a PropertyAccessExpression; type-only names such as
+        // `Intl.NumberFormatOptions` are QualifiedNames and are intentionally
+        // absent. Do not inspect the host Node `Intl`: the constructor missing
+        // there is exactly the one this governance test must still classify.
+        if (
+          ts.isPropertyAccessExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === 'Intl'
+        ) {
+          referenced.add(node.name.text)
+        }
+        ts.forEachChild(node, visit)
       }
+      visit(sourceFile)
     }
 
     expect(referenced.size).toBeGreaterThan(0)
@@ -234,17 +258,18 @@ describe('formatRelativeTime without Intl.RelativeTimeFormat (#1528)', () => {
     expect(sample(locale)).toEqual(EXPECTED_BY_LOCALE[locale])
   })
 
-  // The goldens above are six strings; this one holds the whole surface. It is
-  // skipped on an engine whose ICU cannot answer for a production locale,
-  // because then the "native" side is not CLDR either.
+  // The goldens above are six strings; this one holds the whole surface. The
+  // Jest runtime is required to carry full ICU for every production locale:
+  // silently skipping would let the fallback drift from the web formatter.
   const hasFullIcu = SUPPORTED_LOCALES.every(
     (locale) =>
       new Intl.RelativeTimeFormat(getFormatLocale(locale)).resolvedOptions().locale ===
       getFormatLocale(locale),
   )
 
-  const parityTest = hasFullIcu ? it : it.skip
-  parityTest('matches the native formatter across units, values and both numeric modes', () => {
+  it('matches the native formatter across units, values and numeric option shapes', () => {
+    expect(hasFullIcu).toBe(true)
+
     const units: Intl.RelativeTimeFormatUnit[] = [
       'second',
       'minute',

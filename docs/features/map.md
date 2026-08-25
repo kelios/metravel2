@@ -147,7 +147,10 @@ tile.openstreetmap.org.
   каскад `__metravelScheduleInvalidate` → `invalidateSize`). Поэтому мост
   подписан на `resize` и пересчитывает границу от `map.getSize()` через
   `map.setMinZoom`; если текущий зум оказался ниже новой границы, Leaflet сам
-  подтягивает карту наверх. Формула берётся из одной глобалки
+  подтягивает карту наверх. Нулевой `map.getSize()` (схлопнутый контейнер
+  скрытой вкладки, промежуточный layout) означает «размер неизвестен», а не
+  «нужен низкий зум», и игнорируется: иначе fallback опустил бы уже посчитанную
+  границу обратно в серое поле. Формула берётся из одной глобалки
   `__metravelResolveBaseMinZoom`, её паритет с TS-версией закреплён тестом;
 - **пустой ответ = ошибка тайла, а не успешная загрузка.** `done(null, img)` на
   пустом `dataUrl` вешал `leaflet-tile-loaded` на пустую картинку, и провал
@@ -172,6 +175,12 @@ iPhone 13 mini и падает, если хоть один DOM-тайл оста
 ландшафтном 1366 px): на телефоне граница z2 держит мир не уже экрана,
 обёрнутые координаты там не повторяются вовсе и ключ `z/x/y` дефекта не
 показывает — отдельный кейс держит именно этот кадр.
+
+Сам lifecycle-тест монтирует мост своим `L.map({ minZoom })`, поэтому остаётся
+зелёным, даже если проводка пропадёт из реального HTML. ПРОДОВУЮ сборку движка
+(преамбула до `L.map`, `minZoom: window.__metravelBaseMinZoom`, тот же
+`buildNativeTileBridgeScript`) держит `buildNativeMapHtml — engine regression
+invariants` в `__tests__/components/map-core/leafletWebViewHtml.test.ts`.
 
 Позиция пользователя на Android следует атомарному визуальному контракту:
 
@@ -288,8 +297,11 @@ type MapPlaceSource = {
   bottom card, Android и iPhone используют один source-pager model, а не четыре
   platform-specific карусели.
 - Один источник остаётся прежним одиночным popup без pager. Для нескольких
-  источников доступны swipe и явные previous/next controls с локализованными
-  accessibility labels для RU/BE/UK/PL/EN.
+  источников доступны явные previous/next controls с локализованными
+  accessibility labels для RU/BE/UK/PL/EN; горизонтальный swipe по фото
+  добавляется только на native. На web его нет намеренно: карточка глушит
+  pointer-события своим DOM-гардом (`usePopupDomGuard`), а тап по фото открывает
+  полноэкранный просмотр, поэтому жест там недоставляем и двусмыслен.
 
 ## Client state
 

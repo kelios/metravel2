@@ -394,6 +394,10 @@ ${ESCAPE_HTML_FN_SCRIPT}
               bounds.extend([lat, lng]);
             });
 
+            // points приходит уже сгруппированным по местам (#1573): один элемент —
+            // одно физическое место, один Leaflet-маркер, один hit target. RN шлёт
+            // сюда узкую проекцию (placeKey/id/coord/categoryName/sourceCount), а не
+            // полные записи: массив источников места здесь не нужен и не сериализуется.
             points.forEach(function(point, pointIndex) {
               if (!point || !point.coord) return;
               const parts = String(point.coord).split(',').map(Number);
@@ -426,9 +430,9 @@ ${ESCAPE_HTML_FN_SCRIPT}
               // F-46 — на native НЕ открываем Leaflet-попап (зеркало web-фикса):
               // тап по маркеру только отдаёт выбор в RN, экран показывает нижнюю
               // карточку места (MapPlaceBottomCard), где есть вся навигация попапа.
-              // Шлём стабильные id/coord + индекс как fallback: при server clusters
-              // массив points может пересоздаться между zoom/re-render, и один индекс
-              // уже недостаточно надёжен для открытия карточки.
+              // Основной идентификатор выбора — placeKey физического места (#1573):
+              // он переживает переупорядочивание и обновление dataset между рендером
+              // и тапом. id/coord/индекс остаются legacy-fallback переходного периода.
               marker.on('click', function(event) {
                 try {
                   // Leaflet bubbles marker clicks to the map. Without stopping
@@ -438,6 +442,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
                   if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({
                       type: 'SELECT_PLACE',
+                      placeKey: point.placeKey == null ? null : String(point.placeKey),
                       index: pointIndex,
                       id: point.id == null ? null : String(point.id),
                       coord: point.coord == null ? null : String(point.coord)

@@ -517,8 +517,20 @@ guard, падающий в CI на попытке обойти этот конт
   canonical save-contract task `#1513`; перегрузка/шторм сохранений — `#1511`;
   dialog/key lifecycle остаётся `WIZARD-DRAFT-001`, а не смешивается с API
   replace semantics.
-- **Последняя проверка:** 2026-08-19; recurrence подтверждён, канонический
-  structural backend contract заведён на борде.
+- **Постоянное исправление выполнено (2026-08-25, FE `#1516`):** фоновое
+  автосохранение правок текста больше не идёт через full-replace. Выбор пути —
+  `utils/travelContentSaveDelta.ts`: если относительно подтверждённого
+  сервером baseline изменился только текст существующей статьи, уходит узкий
+  `PATCH /travels/{id}/content/` (BE `#1513`), который не трогает точки,
+  галерею, обложку, справочники и статус публикации. Полный
+  `PUT /travels/upsert/` остался для структурных правок, создания статьи,
+  ручного сохранения и публикации — то есть destructive race surface у
+  фонового сейва текста снят, а не расширен. Frontend merge-workarounds
+  сохраняются: они по-прежнему обслуживают полный путь, их removal plan не
+  входил в `#1516`. Предохранитель приведён к измеренной частоте автосейва
+  (≤12/мин): `/travels/upsert/` — 40/мин, `/travels/*/content/` — 20/мин.
+- **Последняя проверка:** 2026-08-25; recurrence 2026-08-19 закрыт на обеих
+  половинах контракта (BE `#1513`, FE `#1516`).
 
 ### SEO-SSR-001 — validated slug must serve exact static document
 
@@ -1969,12 +1981,13 @@ guard, падающий в CI на попытке обойти этот конт
   конкретной сборке отсутствует.
 - **Surface/owner:** shared frontend i18n layer, `i18n/format.ts` и его прямые
   доменные потребители; Android (движок Hermes в production-сборке приложения) —
-  подтверждённая поверхность; iOS также собирается на Hermes
-  (`ios/Podfile.properties.json:2`), риск на этой поверхности заявлен, но состав
-  `Intl` там не проверен.
-- **Подтверждённая поверхность Hermes:** извлечение строк из
+  подтверждённая поверхность; iOS также собирается на Hermes и имеет тот же
+  проверенный риск.
+- **Подтверждённая поверхность Hermes:** извлечение строк из Android
   `lib/arm64-v8a/libhermesvm.so` установленного APK `by.metravel.app`
-  (versionCode 20) — есть `Intl.Collator`, `Intl.DateTimeFormat`,
+  (versionCode 20) и iOS
+  `hermesvm.xcframework/ios-arm64/hermesvm.framework/hermesvm` из release-архива
+  Pods показало один состав: есть `Intl.Collator`, `Intl.DateTimeFormat`,
   `Intl.NumberFormat`, `getCanonicalLocales`; нет `Intl.PluralRules`,
   `Intl.RelativeTimeFormat`, `Intl.ListFormat` (0 вхождений подстрок). То есть
   отсутствует не весь `Intl`, а конкретное подмножество конструкторов, и это
@@ -2010,9 +2023,10 @@ guard, падающий в CI на попытке обойти этот конт
   точечная защита на месте вызова без затрагивания канонического слоя — сначала
   проверить, не проще ли перенести её в канонический экспорт тем же приёмом, и
   завести `create-linked`, а не чинить симптом ещё раз.
-- **Последняя проверка:** 2026-08-23 (`#1528`) — состав Hermes-бинарника Android
-  подтверждён извлечением строк из `libhermesvm.so`; состав `Intl` на
-  iOS-Hermes не проверен, это открытый пункт задачи `#1528`.
+- **Последняя проверка:** 2026-08-25 (`#1528`) — состав Android и iOS
+  Hermes-бинарников подтверждён извлечением строк; канонический formatter и его
+  comments/history consumer покрыты RU/BE/UK/PL/EN без
+  `Intl.RelativeTimeFormat`.
 
 ### NATIVE-TEXT-MEASURE-001 — RN Android меряет строку у́же, чем потом рисует
 

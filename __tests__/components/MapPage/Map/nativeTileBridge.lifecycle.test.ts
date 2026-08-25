@@ -229,17 +229,22 @@ describe('#1561 native base-tile lifecycle', () => {
   // или смена минификатора должны падать здесь, а не серой картой на устройстве.
   describe('инлайновый движок WebView', () => {
     it('той же версии, что и leaflet в тестах, и сохраняет приватные точки опоры', () => {
-      // Пустой `{}` как window движку не подходит: Browser-детект Leaflet читает
-      // `window.screen.deviceXDPI`. Наследуемся от настоящего window, но
-      // собственный `L` (его ставит эпилог дистрибутива) остаётся на подставке и
-      // не течёт в глобалы теста.
-      const engine = Object.create(window) as Window & { L?: typeof L };
-      new Function('window', 'document', LEAFLET_JS)(engine, document);
-
-      expect(LEAFLET_INLINE_VERSION).toBe(L.version);
-      expect(engine.L?.version).toBe(L.version);
-      expect(typeof engine.L?.GridLayer?.prototype?._removeTile).toBe('function');
-      expect(typeof engine.L?.GridLayer?.prototype?._wrapCoords).toBe('function');
+      // UMD-обёртка Leaflet вешает себя на globalThis (`window.L = exports`),
+      // подменить цель через параметр нельзя — поэтому честно сохраняем и
+      // возвращаем прежнее значение.
+      const globals = globalThis as unknown as { L?: typeof L };
+      const previous = globals.L;
+      try {
+        new Function(LEAFLET_JS)();
+        const inline = globals.L;
+        expect(inline).toBeDefined();
+        expect(inline?.version).toBe(LEAFLET_INLINE_VERSION);
+        expect(inline?.version).toBe(L.version);
+        expect(typeof inline?.GridLayer?.prototype?._removeTile).toBe('function');
+        expect(typeof inline?.GridLayer?.prototype?._wrapCoords).toBe('function');
+      } finally {
+        globals.L = previous;
+      }
     });
   });
 
@@ -401,6 +406,23 @@ describe('#1561 native base-tile lifecycle', () => {
     expect(harness.stats().pending).toBe(0);
   });
 
+  it('схлопнувшийся в ноль контейнер не опускает уже посчитанную границу', () => {
+    // Планшет/ландшафт: настоящая граница z3 (мир 2048 px ≥ 1366 px). Контейнер
+    // WebView может схлопнуться в 0 (скрытая вкладка, промежуточный layout), и
+    // тогда `map.getSize()` отдаёт 0×0 — это «размер неизвестен», а не «нужен
+    // низкий зум». Если принять fallback как истину, граница упадёт до z2, мир
+    // снова окажется уже экрана и вернётся то самое серое поле.
+    harness = mountBridge({ width: 1366, height: 1024 });
+    const minZoom = harness.map.getMinZoom();
+    expect(minZoom).toBe(resolveBaseMinZoom(1366, 1024));
+    expect(minZoom).toBeGreaterThan(NATIVE_BASE_MIN_ZOOM_FALLBACK);
+    harness.drain();
+
+    harness.resize(0, 0);
+
+    expect(harness.map.getMinZoom()).toBe(minZoom);
+  });
+
   it('возврат к исходному зуму снова заполняет подложку', () => {
     harness = mountBridge();
     harness.drain();
@@ -504,6 +526,30 @@ describe('#1561 native base-tile lifecycle', () => {
       expect(ok).toBe(false);
       expect(calls).toBe(1);
       expect(waits).toEqual([]);
+    });
+
+    it('не отправляет попытку, если сеть пропала уже во время backoff', async () => {
+      // Пауза длится сотни миллисекунд — именно в ней NetInfo и переключает
+      // статус. Проверка только ПЕРЕД паузой пропускала бы запрос в офлайн и
+      // держала слот семафора, которых всего MAX_TILE_FETCH.
+      const waits: number[] = [];
+      let online = true;
+      let calls = 0;
+      const ok = await fetchTileWithRetry({
+        download: async () => {
+          calls += 1;
+          return null;
+        },
+        isOnline: () => online,
+        wait: async (ms: number) => {
+          waits.push(ms);
+          online = false;
+        },
+      });
+
+      expect(ok).toBe(false);
+      expect(calls).toBe(1);
+      expect(waits).toEqual([TILE_FETCH_RETRY_DELAYS_MS[0]]);
     });
   });
 

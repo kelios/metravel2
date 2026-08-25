@@ -118,3 +118,22 @@ export const RAW_SOURCES_SINGLE_PAGE = {
   results: [RAW_LIBRARY_SOURCE_A, RAW_LIBRARY_SOURCE_B],
   next: null,
 } as const;
+
+/**
+ * Второй материал без своей ссылки и фото (DTO разрешает null в обоих полях).
+ * Плоские legacy-поля записи описывают primary, поэтому под таким источником
+ * карточка обязана остаться без фото/ссылки, а не показать чужие.
+ */
+export const RAW_LIBRARY_SOURCE_B_WITHOUT_MEDIA = {
+  source_id: 'travel-address:15688',
+  point_id: 15688,
+  travel_id: 646,
+  article_title: 'Библиотеки Беларуси',
+  article_url: null,
+  thumbnail_url: null,
+} as const;
+
+export const RAW_SOURCES_PAGE_WITHOUT_MEDIA = {
+  results: [RAW_LIBRARY_SOURCE_A, RAW_LIBRARY_SOURCE_B_WITHOUT_MEDIA],
+  next: null,
+} as const;

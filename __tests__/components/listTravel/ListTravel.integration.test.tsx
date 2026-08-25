@@ -234,6 +234,7 @@ describe('ListTravel Integration Tests', () => {
     (global as any).__mockLocalSearchParams = {};
 
     Platform.OS = 'web';
+    window.history.replaceState(null, '', '/');
 
     const store = new Map<string, string>();
     Object.defineProperty(window, 'sessionStorage', {
@@ -714,6 +715,102 @@ describe('ListTravel Integration Tests', () => {
         search: 'beach',
       })
     );
+  });
+
+  it('uses q as a search alias and canonicalizes the URL without losing params or hash', async () => {
+    (global as any).__mockPathname = '/search';
+    (global as any).__mockLocalSearchParams = {
+      q: '  Минск  ',
+      categories: '2',
+    };
+    window.history.replaceState(
+      { source: 'integration-test' },
+      '',
+      '/search?q=%20%20%D0%9C%D0%B8%D0%BD%D1%81%D0%BA%20%20&categories=2&utm_source=e2e#results',
+    );
+
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('Минск');
+    });
+    expect(mockUseListTravelData).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'Минск', isQueryEnabled: true }),
+    );
+
+    await waitFor(() => {
+      expect(window.location.search).not.toContain('q=');
+    });
+    expect(window.location.pathname).toBe('/search');
+    expect(window.location.search).toContain('search=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA');
+    expect(window.location.search).toContain('categories=2');
+    expect(window.location.search).toContain('utm_source=e2e');
+    expect(window.location.hash).toBe('#results');
+    expect(window.history.state).toEqual({ source: 'integration-test' });
+  });
+
+  it('prefers canonical search over q and removes only the alias', async () => {
+    (global as any).__mockPathname = '/search';
+    (global as any).__mockLocalSearchParams = {
+      search: '  Брест  ',
+      q: 'Минск',
+    };
+    window.history.replaceState(
+      null,
+      '',
+      '/search?search=%20%20%D0%91%D1%80%D0%B5%D1%81%D1%82%20%20&q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA&campaign=summer#catalog',
+    );
+
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('Брест');
+    });
+    expect(mockUseListTravelData).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'Брест', isQueryEnabled: true }),
+    );
+
+    await waitFor(() => {
+      expect(window.location.search).toBe(
+        '?search=%D0%91%D1%80%D0%B5%D1%81%D1%82&campaign=summer',
+      );
+    });
+    expect(window.location.hash).toBe('#catalog');
+  });
+
+  it('keeps a text-only zero result empty instead of enabling a searchless fallback', async () => {
+    (global as any).__mockPathname = '/search';
+    (global as any).__mockLocalSearchParams = { search: 'no-match-query' };
+    window.history.replaceState(null, '', '/search?search=no-match-query');
+    mockUseListTravelData.mockReturnValue({
+      data: [],
+      total: 0,
+      hasMore: false,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      status: 'success',
+      isInitialLoading: false,
+      isNextPageLoading: false,
+      isEmpty: true,
+      refetch: jest.fn(),
+      handleEndReached: jest.fn(),
+      handleRefresh: jest.fn(),
+      isRefreshing: false,
+    });
+
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Ничего не найдено')).toBeTruthy();
+    });
+    expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('no-match-query');
+
+    const enabledCalls = mockUseListTravelData.mock.calls
+      .map(([props]) => props)
+      .filter((props) => props.isQueryEnabled);
+    expect(enabledCalls.length).toBeGreaterThan(0);
+    expect(enabledCalls.every((props) => props.search === 'no-match-query')).toBe(true);
   });
 
   it('handles filter clearing correctly', async () => {

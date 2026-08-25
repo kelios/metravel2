@@ -345,7 +345,13 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   }, [initialPreloadedTravel, normalizedSlug, isId, idNum]);
   const shouldRefetchInAutomation = isWebAutomation && !initialPreloadedTravel;
 
-  const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
+  const {
+    data: travel,
+    isLoading,
+    isError: queryIsError,
+    error: queryError,
+    refetch,
+  } = useQuery<Travel>({
     queryKey: queryKeys.travel(cacheKey),
     enabled: !isMissingParam,
     initialData: initialPreloadedTravel,
@@ -423,6 +429,12 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const stableRefetch = useCallback(() => {
     refetch();
   }, [refetch]);
+  // A failed partial-media backfill must not replace the already-renderable SSG
+  // article with the full-page load error. The trimmed payload keeps legacy URL
+  // fallbacks for below-fold media, so that path is fatal only with no usable
+  // preload; all other query paths retain their existing error semantics.
+  const isError = queryIsError && !(preloadMediaPartial && travel);
+  const error = isError ? queryError : null;
   const staleContentMeta = useMemo(() => getPublicStalePayloadMeta(travel), [travel]);
 
   return useMemo(() => ({

@@ -31,7 +31,10 @@ async function mockSharedShellApis(page: import('@playwright/test').Page) {
 }
 
 // Helper: seed fake auth + mock APIs
-async function setupFakeAuth(page: import('@playwright/test').Page) {
+async function setupFakeAuth(
+  page: import('@playwright/test').Page,
+  statusItems: unknown[] = [],
+) {
   await ensureAuthedStorageFallback(page);
   await mockFakeAuthApis(page);
   await mockSharedShellApis(page);
@@ -40,8 +43,11 @@ async function setupFakeAuth(page: import('@playwright/test').Page) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ results: [], count: 0 }),
+        body: JSON.stringify({ results: statusItems, count: statusItems.length }),
       });
+    }
+    if (route.request().method() === 'DELETE') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
     }
     return route.continue();
   });
@@ -227,6 +233,178 @@ test.describe('Calendar @smoke', () => {
       await expect(page.getByText(emptyState).first()).toBeVisible({ timeout: 5_000 });
     }
   });
+
+  for (const viewport of [
+    { label: 'desktop', width: 1280, height: 900 },
+    { label: 'mobile', width: 390, height: 844 },
+  ]) {
+    test(`nested remove confirmation owns focus and Escape (${viewport.label}) #1585`, async ({ page }) => {
+      const consoleErrors: string[] = [];
+      const systemDialogs: string[] = [];
+      page.on('console', (message) => {
+        if (message.type() === 'error') consoleErrors.push(message.text());
+      });
+      page.on('pageerror', (error) => consoleErrors.push(error.message));
+      page.on('dialog', (dialog) => {
+        systemDialogs.push(dialog.type());
+        void dialog.dismiss();
+      });
+
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await setupFakeAuth(page, [{
+        travel_id: 1585,
+        status: 'planned',
+        planned_date: '2026-09-15',
+        visited_date: null,
+        added_at: '2026-08-25T12:00:00Z',
+        updated_at: null,
+        travel: {
+          id: 1585,
+          name: 'Nested confirm regression',
+          slug: 'nested-confirm-regression',
+          url: '/travels/nested-confirm-regression',
+          travel_image_thumb_url: '',
+          countryName: 'Беларусь',
+        },
+      }]);
+      await mockMyTravels(page);
+      await preacceptCookies(page);
+      await gotoWithRetry(page, `${CALENDAR_URL}?status=planned`);
+
+      const editDate = page.getByRole('button', { name: 'Изменить дату 2026-09-15' });
+      await expect(editDate).toBeVisible({ timeout: 15_000 });
+      await editDate.click();
+
+      const dateEditor = page.getByRole('dialog').filter({
+        has: page.getByText('Статус в календаре', { exact: true }),
+      }).first();
+      await expect(dateEditor).toBeVisible();
+      const removeButton = dateEditor.getByRole('button', { name: 'Удалить из календаря' });
+      await removeButton.click();
+
+      const confirm = page.getByTestId('confirm-dialog');
+      const cancel = page.getByTestId('confirm-dialog-cancel');
+      await expect(confirm).toBeVisible();
+      await expect(cancel).toBeFocused();
+
+      // Regression guard for the document-level trap: a container-only keydown
+      // listener never sees this Tab when focus was moved to the lower modal.
+      await removeButton.focus();
+      await expect(removeButton).toBeFocused();
+      await page.keyboard.press('Tab');
+      expect(await confirm.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+
+      for (let index = 0; index < 10; index += 1) {
+        await page.keyboard.press('Tab');
+        expect(await confirm.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+      }
+      for (let index = 0; index < 10; index += 1) {
+        await page.keyboard.press('Shift+Tab');
+        expect(await confirm.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+      }
+
+      await page.keyboard.press('Escape');
+      await expect(confirm).toBeHidden();
+      await expect(dateEditor).toBeVisible();
+      await expect(removeButton).toBeFocused();
+
+      await removeButton.click();
+      await expect(confirm).toBeVisible();
+      await cancel.click();
+      await expect(confirm).toBeHidden();
+      await expect(dateEditor).toBeVisible();
+      await expect(removeButton).toBeFocused();
+
+      await removeButton.click();
+      await expect(confirm).toBeVisible();
+      const deleteRequest = page.waitForRequest((request) =>
+        request.method() === 'DELETE' && request.url().includes('/travel-statuses/1585/'));
+      await page.getByTestId('confirm-dialog-accept').click();
+      await deleteRequest;
+      await expect(confirm).toBeHidden();
+      await expect(dateEditor).toBeHidden();
+
+      expect(systemDialogs).toEqual([]);
+      expect(consoleErrors).toEqual([]);
+    });
+
+    test(`non-nested remove confirmation keeps the base dialog contract (${viewport.label}) #1585`, async ({ page }) => {
+      const consoleErrors: string[] = [];
+      const systemDialogs: string[] = [];
+      page.on('console', (message) => {
+        if (message.type() === 'error') consoleErrors.push(message.text());
+      });
+      page.on('pageerror', (error) => consoleErrors.push(error.message));
+      page.on('dialog', (dialog) => {
+        systemDialogs.push(dialog.type());
+        void dialog.dismiss();
+      });
+
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await setupFakeAuth(page, [{
+        travel_id: 1586,
+        status: 'planned',
+        planned_date: '2026-09-16',
+        visited_date: null,
+        added_at: '2026-08-25T12:00:00Z',
+        updated_at: null,
+        travel: {
+          id: 1586,
+          name: 'Non-nested confirm regression',
+          slug: 'non-nested-confirm-regression',
+          url: '/travels/non-nested-confirm-regression',
+          travel_image_thumb_url: '',
+          countryName: 'Беларусь',
+        },
+      }]);
+      await mockMyTravels(page);
+      await preacceptCookies(page);
+      await gotoWithRetry(page, `${CALENDAR_URL}?status=planned`);
+
+      // The card removal action opens ConfirmDialogHost directly from the page,
+      // without the Calendar DateEditor modal used by the nested regression.
+      const removeButton = page.getByRole('button', {
+        name: 'Убрать «Non-nested confirm regression» из календаря',
+      });
+      await expect(removeButton).toBeVisible({ timeout: 15_000 });
+      await removeButton.focus();
+      await removeButton.click();
+
+      const confirm = page.getByTestId('confirm-dialog');
+      const cancel = page.getByTestId('confirm-dialog-cancel');
+      await expect(confirm).toBeVisible();
+      await expect(page.getByRole('dialog')).toHaveCount(1);
+      await expect(cancel).toBeFocused();
+
+      // This also fails if the trap is attached only to its container: the
+      // programmatically focused page control is outside the dialog subtree.
+      await removeButton.focus();
+      await page.keyboard.press('Tab');
+      expect(await confirm.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+
+      for (let index = 0; index < 10; index += 1) {
+        await page.keyboard.press('Tab');
+        expect(await confirm.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+      }
+      for (let index = 0; index < 10; index += 1) {
+        await page.keyboard.press('Shift+Tab');
+        expect(await confirm.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+      }
+
+      await page.keyboard.press('Escape');
+      await expect(confirm).toBeHidden();
+      await expect(removeButton).toBeFocused();
+
+      await removeButton.click();
+      await expect(confirm).toBeVisible();
+      await cancel.click();
+      await expect(confirm).toBeHidden();
+      await expect(removeButton).toBeFocused();
+
+      expect(systemDialogs).toEqual([]);
+      expect(consoleErrors).toEqual([]);
+    });
+  }
 
 
   test('calendar page has no console errors on load', async ({ page }) => {

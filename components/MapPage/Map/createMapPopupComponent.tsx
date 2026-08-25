@@ -4,6 +4,10 @@ import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import PlacePopupCard from './PlacePopupCard';
 import { isInternalArticleHref } from './PlacePopupCard/domEvents';
+import {
+  resolvePlaceSourceCardFields,
+  usePlaceSourcePagerState,
+} from './PlacePopupCard/usePlaceSourcePagerState';
 import type { Point } from './types';
 import {
   buildAppleMapsUrl,
@@ -116,6 +120,10 @@ export const createMapPopupComponent = ({
     const [drivingDurationSeconds, setDrivingDurationSeconds] = useState<number | null>(null);
     const coord = String(point.coord ?? '').trim();
     const pointRecord = point as unknown as Record<string, unknown>
+    // Квестовая точка рисует свою карточку (обложка + «Начать квест») и не имеет
+    // материалов места, поэтому source-pager к ней не применяется.
+    const questMeta = point.questMeta;
+    const isQuest = !!questMeta;
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const authReady = useAuthStore((s) => s.authReady);
 
@@ -140,8 +148,25 @@ export const createMapPopupComponent = ({
       closePopup?.();
     }, [closePopup]);
 
+    // Материалы места (#1572). Карточка смонтирована = место открыто, поэтому
+    // запрос коллекции уходит именно здесь, а не на рендере маркеров.
+    const sourcePagerState = usePlaceSourcePagerState(point, !isQuest);
+    const {
+      sourceCount: placeSourceCount,
+      activeSourceIndex,
+      goPrev: goPrevSource,
+      goNext: goNextSource,
+    } = sourcePagerState;
+    const hasSourcePager = !isQuest && placeSourceCount > 1;
+
+    // Перелистывание меняет ТОЛЬКО поля материала: фото, заголовок статьи и
+    // ссылку. Координаты, название/адрес места, навигация, copy и save/status
+    // принадлежат физическому месту и остаются прежними.
+    const sourceFields = resolvePlaceSourceCardFields(point, sourcePagerState, hasSourcePager);
+    const sourceArticleUrl = sourceFields.articleUrl;
+
     const handleOpenArticle = useCallback(() => {
-      const url = String(point.articleUrl || point.urlTravel || '').trim();
+      const url = sourceArticleUrl;
       if (!url) return;
       const baseUrl = getSiteBaseUrl();
 
@@ -168,13 +193,11 @@ export const createMapPopupComponent = ({
         allowRelative: true,
         baseUrl,
       });
-    }, [point.articleUrl, point.urlTravel, handlePress]);
+    }, [sourceArticleUrl, handlePress]);
 
-    const articleHref = useMemo(() => {
-      const rawUrl = String(point.articleUrl || point.urlTravel || '').trim();
-      if (!rawUrl) return null;
-      return rawUrl;
-    }, [point.articleUrl, point.urlTravel]);
+    const articleHref = useMemo(() => (sourceArticleUrl ? sourceArticleUrl : null), [
+      sourceArticleUrl,
+    ]);
 
     const handleCopyCoord = useCallback(async () => {
       if (!coord) return;
@@ -481,9 +504,6 @@ export const createMapPopupComponent = ({
       point,
     ]);
 
-    const questMeta = point.questMeta;
-    const isQuest = !!questMeta;
-
     const questSubtitle = useMemo(() => {
       if (!questMeta) return undefined;
       const stepCount = typeof questMeta.points === 'number' ? questMeta.points : 0;
@@ -525,9 +545,17 @@ export const createMapPopupComponent = ({
           colors={colors}
           title={isQuest ? questMeta!.title : popupTitle.title}
           subtitle={isQuest ? questSubtitle : popupTitle.subtitle}
-          imageUrl={isQuest ? questMeta!.cover : point.imageUrl || point.travelImageThumbUrl}
+          imageUrl={isQuest ? questMeta!.cover : sourceFields.imageUrl || undefined}
           articleHref={isQuest ? null : articleHref}
+          sourceCount={hasSourcePager ? placeSourceCount : 1}
+          activeSourceIndex={activeSourceIndex}
+          activeSourceTitle={hasSourcePager ? sourceFields.articleTitle : undefined}
+          onPrevSource={hasSourcePager ? goPrevSource : undefined}
+          onNextSource={hasSourcePager ? goNextSource : undefined}
           relatedTravelUrl={isQuest ? null : point.urlTravel}
+          // ♥/статус сохраняют ИМЕННО связанную статью места (`urlTravel`), поэтому
+          // и превью для избранного берётся у неё, а не у активного материала.
+          relatedTravelImageUrl={isQuest ? null : point.imageUrl || point.travelImageThumbUrl}
           relatedTravelCountry={!isQuest && typeof pointRecord.countryName === 'string'
             ? String(pointRecord.countryName)
             : null}

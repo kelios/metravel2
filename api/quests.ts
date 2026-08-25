@@ -297,9 +297,18 @@ export async function fetchQuestReviews(questId: string): Promise<QuestReview[]>
         const list = await fetchAllPages<ApiQuestReview>(`/quests/quest${questId}/reviews/`);
         return list.map(adaptQuestReview);
     } catch (err: unknown) {
-        const status = err instanceof ApiError ? err.status : undefined;
-        if (status && status !== 404) throw err;
-        return [];
+        // Пусто — это утверждение о квесте, а не о состоянии сети, поэтому в
+        // пустой список сваливаются ровно два случая: эндпоинт ответил `404` и
+        // запрос отменили (анмаунт, смена экрана — показывать ошибку не за что).
+        // Всё остальное поднимается в состояние ошибки читалки, у которой есть
+        // «Не удалось загрузить отзывы» с повтором. Проверять статус на
+        // истинность здесь нельзя: офлайн приходит как `ApiError(0)`
+        // (`api/client.ts:330`), а клиентский таймаут — вообще обычным `Error`
+        // с `name = 'TimeoutError'` и без статуса (`utils/fetchWithTimeout.ts`),
+        // и оба когда-то читались как «у квеста нет отзывов» (#1486).
+        if (err instanceof ApiError && err.status === 404) return [];
+        if (err instanceof Error && err.name === 'AbortError') return [];
+        throw err;
     }
 }
 

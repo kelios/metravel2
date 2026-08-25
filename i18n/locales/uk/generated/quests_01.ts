@@ -153,7 +153,7 @@ export const questsGenerated1 = {
   "components.quests.QuestReviewSection.chto_ponravilos_b836e082": "Що сподобалося?",
   "components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0": "Надіслати відгук",
   "components.quests.QuestReviewSection.otpravlyaem_46246aeb": "Відправляємо…",
-  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Оцінка враховується у загальному рейтингу квесту. Текстовий відгук - за бажанням.",
+  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Оцінка збережеться разом із відгуком. Текстовий відгук — за бажанням.",
   "components.quests.QuestReviewSection.otzyv_o_kveste_c6c8ceb5": "Відгук про квест",
   "components.quests.QuestReviewSection.rasskazhite_chto_bylo_interesno_472acf46": "Розкажіть, що було цікаво",
   "components.quests.QuestReviewSection.spasibo_za_otzyv_af1c9931": "Дякую за відгук!",

@@ -132,7 +132,7 @@ describe('buildListTravelFallbackSteps', () => {
       search: 'озёра',
     })
 
-    expect(steps.map((step) => step.id)).toEqual(['light', 'medium', 'broad', 'searchless'])
+    expect(steps.map((step) => step.id)).toEqual(['light', 'medium', 'broad'])
     expect(steps[0]?.params).toEqual({
       categories: [4],
       categoryTravelAddress: [12],
@@ -149,10 +149,10 @@ describe('buildListTravelFallbackSteps', () => {
       moderation: 1,
       publish: 1,
     })
-    expect(steps[3]?.search).toBe('')
+    expect(steps.every((step) => step.search === 'озёра')).toBe(true)
   })
 
-  it('avoids duplicate steps when only text search can be relaxed', () => {
+  it('does not remove a non-empty text search when no filters can be relaxed', () => {
     const steps = buildListTravelFallbackSteps({
       queryParams: {
         moderation: 1,
@@ -161,15 +161,22 @@ describe('buildListTravelFallbackSteps', () => {
       search: 'минск',
     })
 
-    expect(steps).toHaveLength(1)
-    expect(steps[0]).toMatchObject({
-      id: 'searchless',
-      params: {
+    expect(steps).toEqual([])
+  })
+
+  it('keeps the text in every fallback request while relaxing extra filters', () => {
+    const steps = buildListTravelFallbackSteps({
+      queryParams: {
         moderation: 1,
         publish: 1,
+        categories: [4],
+        month: [7],
       },
-      search: '',
+      search: '  минск  ',
     })
+
+    expect(steps.map((step) => step.id)).toEqual(['light', 'broad'])
+    expect(steps.every((step) => step.search === 'минск')).toBe(true)
   })
 
   it('does not relax pending-review moderation queue filters', () => {

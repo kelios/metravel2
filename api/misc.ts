@@ -22,6 +22,7 @@ import { translate as i18nT } from '@/i18n';
 import { normalizeFilterCountries, normalizeFilterDictionaries } from '@/api/filterDictionaries';
 import { localizeBackendFieldError } from '@/utils/errorHelpers';
 import { isBlankTravelContent } from '@/utils/travelFormNormalization';
+import type { TravelContentSaveField } from '@/utils/travelContentSaveDelta';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -245,6 +246,86 @@ export const saveFormData = async (
   } catch (error) {
     if (__DEV__) {
       console.error('Ошибка при создании формы:', error);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Ответ узкого сохранения контента: подтверждённые значения текстовых полей.
+ * Точки маршрута, галерея, обложка, справочники и статус публикации в него не
+ * входят — узкий путь их не трогает.
+ */
+export type TravelContentSaveResponse = {
+  id: number;
+  slug: string;
+  name: string | null;
+  description: string | null;
+  plus: string | null;
+  minus: string | null;
+  recommendation: string | null;
+  changed_fields: string[];
+  updated_at: string | null;
+};
+
+/**
+ * Узкое сохранение текстовых полей статьи — `PATCH /travels/{id}/content/` (#1513).
+ *
+ * Отправляет ТОЛЬКО переданные поля, поэтому структура статьи остаётся нетронутой
+ * и правка одного абзаца не стоит полной пересборки графа (#1516). Санитизация
+ * здесь ровно та же, что у полного `saveFormData`: у бэкенда своей очистки
+ * rich-text нет, и узкий путь не имеет права быть слабее полного.
+ */
+export const saveTravelContent = async (
+  travelId: number,
+  fields: Partial<Record<TravelContentSaveField, string>>,
+  signal?: AbortSignal
+): Promise<TravelContentSaveResponse> => {
+  try {
+    await requireAuthCredential();
+
+    if (!Number.isFinite(travelId)) {
+      throw new Error(i18nT('errorsStatic:api.misc.blankPayloadBlocked'));
+    }
+
+    const payload: Record<string, string> = {};
+
+    if (typeof fields.name === 'string') {
+      if (fields.name.trim().length > 200) {
+        throw new Error(i18nT('errorsStatic:api.misc.titleTooLong'));
+      }
+      payload.name = String(sanitizeInput(fields.name)).substring(0, 200);
+    }
+
+    if (typeof fields.description === 'string') {
+      const { sanitizeRichText } = await import('@/utils/sanitizeRichText');
+      payload.description = sanitizeRichText(stripBase64Images(fields.description));
+    }
+
+    (['plus', 'minus', 'recommendation'] as const).forEach((field) => {
+      const value = fields[field];
+      if (typeof value !== 'string') return;
+      payload[field] = String(sanitizeInput(value)).substring(0, 5000);
+    });
+
+    // Пустой payload узкий эндпоинт отклоняет (`At least one content field is
+    // required`), и отправлять его незачем: сохранять нечего.
+    if (Object.keys(payload).length === 0) {
+      throw new Error(i18nT('errorsStatic:api.misc.blankPayloadBlocked'));
+    }
+
+    return await apiClient.request<TravelContentSaveResponse>(
+      `/travels/${travelId}/content/`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+        signal,
+      },
+      SAVE_TRAVEL_TIMEOUT
+    );
+  } catch (error) {
+    if (__DEV__) {
+      console.error('Ошибка при сохранении текста статьи:', error);
     }
     throw error;
   }

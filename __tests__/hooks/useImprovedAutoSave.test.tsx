@@ -128,7 +128,7 @@ describe('useImprovedAutoSave', () => {
     })
 
     expect(onSave).toHaveBeenCalledTimes(1)
-    expect(onSave).toHaveBeenCalledWith({ value: 'offline edit' }, expect.any(Object))
+    expect(onSave).toHaveBeenCalledWith({ value: 'offline edit' }, expect.any(Object), expect.any(Object))
     expect(result.current.isOnline).toBe(true)
   })
 
@@ -175,6 +175,54 @@ describe('useImprovedAutoSave', () => {
     expect((result.current.error as Error & { status?: number }).status).toBe(401)
   })
 
+  // #1516: потребителю нужно знать, ЧЕМ подтверждённое состояние отличается от
+  // отправляемого, иначе он не может послать только изменившиеся поля. Baseline
+  // приходит третьим аргументом и обязан быть последним подтверждённым payload,
+  // а не исходными данными и не текущим снимком.
+  it('passes the confirmed baseline to onSave', async () => {
+    jest.useFakeTimers()
+
+    const onSave = jest.fn(async (data: { value: string }) => data)
+
+    const { rerender } = renderHook(
+      ({ data }) =>
+        useImprovedAutoSave(data, { value: 'initial' }, {
+          debounce: 50,
+          onSave,
+          enableRetry: false,
+        }),
+      { initialProps: { data: { value: 'initial' } } },
+    )
+
+    rerender({ data: { value: 'first' } })
+    await act(async () => {
+      jest.advanceTimersByTime(60)
+      await Promise.resolve()
+    })
+
+    // Первое сохранение: подтверждённым остаётся исходное состояние.
+    expect(onSave).toHaveBeenLastCalledWith(
+      { value: 'first' },
+      expect.any(Object),
+      { value: 'initial' },
+    )
+
+    rerender({ data: { value: 'second' } })
+    await act(async () => {
+      jest.advanceTimersByTime(60)
+      await Promise.resolve()
+    })
+
+    // Второе: baseline сдвинулся на успешно отправленный payload.
+    expect(onSave).toHaveBeenLastCalledWith(
+      { value: 'second' },
+      expect.any(Object),
+      { value: 'first' },
+    )
+
+    jest.useRealTimers()
+  })
+
   // Пропущенный тик не должен просто исчезать: правки, сделанные во время
   // полёта, обязаны уйти ОДНИМ сохранением после его завершения, иначе автор
   // видит «Сохранено», а последние абзацы на сервер не попали.
@@ -205,7 +253,7 @@ describe('useImprovedAutoSave', () => {
       await Promise.resolve()
     })
     expect(onSave).toHaveBeenCalledTimes(1)
-    expect(onSave).toHaveBeenLastCalledWith({ value: 'first' }, expect.any(Object))
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'first' }, expect.any(Object), expect.any(Object))
     expect(result.current.phase).toBe('saving')
     expect(result.current.inFlightRevision).toBe(1)
 
@@ -240,7 +288,7 @@ describe('useImprovedAutoSave', () => {
     })
 
     expect(onSave).toHaveBeenCalledTimes(2)
-    expect(onSave).toHaveBeenLastCalledWith({ value: 'second' }, expect.any(Object))
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'second' }, expect.any(Object), expect.any(Object))
 
     await act(async () => {
       resolveSave?.({ value: 'second' })
@@ -373,7 +421,7 @@ describe('useImprovedAutoSave', () => {
     })
 
     expect(onSave).toHaveBeenCalledTimes(2)
-    expect(onSave).toHaveBeenLastCalledWith({ value: 'initial' }, expect.any(Object))
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'initial' }, expect.any(Object), expect.any(Object))
   })
 
   // Порог для смоука из карточки #1511: за длительную непрерывную правку число
@@ -423,7 +471,7 @@ describe('useImprovedAutoSave', () => {
 
     // Одно завершённое + одно летящее.
     expect(onSave).toHaveBeenCalledTimes(2)
-    expect(onSave).toHaveBeenLastCalledWith({ value: 'edit-10' }, expect.any(Object))
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'edit-10' }, expect.any(Object), expect.any(Object))
     expect(abortedSignals).toEqual([])
   })
 
@@ -468,7 +516,7 @@ describe('useImprovedAutoSave', () => {
     })
 
     expect(onSave).toHaveBeenCalledTimes(2)
-    expect(onSave).toHaveBeenLastCalledWith({ value: 'explicit' }, expect.any(Object))
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'explicit' }, expect.any(Object), expect.any(Object))
     expect(abortedSignals).toEqual(['background'])
 
     await act(async () => {
@@ -540,7 +588,7 @@ describe('useImprovedAutoSave', () => {
       await Promise.resolve()
     })
     expect(onSave).toHaveBeenCalledTimes(2)
-    expect(onSave).toHaveBeenLastCalledWith({ value: 'more typing' }, expect.any(Object))
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'more typing' }, expect.any(Object), expect.any(Object))
   })
 
   it('does not retry a gateway timeout and holds off background saves', async () => {
@@ -596,7 +644,7 @@ describe('useImprovedAutoSave', () => {
       await Promise.resolve()
     })
     expect(onSave).toHaveBeenCalledTimes(2)
-    expect(onSave).toHaveBeenLastCalledWith({ value: 'more typing' }, expect.any(Object))
+    expect(onSave).toHaveBeenLastCalledWith({ value: 'more typing' }, expect.any(Object), expect.any(Object))
   })
 
   it('does not retry a validation rejection and surfaces it to the author', async () => {

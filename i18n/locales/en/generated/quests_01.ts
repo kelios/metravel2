@@ -153,7 +153,7 @@ export const questsGenerated1 = {
   "components.quests.QuestReviewSection.chto_ponravilos_b836e082": "What did you like?",
   "components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0": "Send feedback",
   "components.quests.QuestReviewSection.otpravlyaem_46246aeb": "We send...",
-  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "The rating is taken into account in the overall rating of the quest. Text feedback is optional.",
+  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Your rating will be saved with the review. Written feedback is optional.",
   "components.quests.QuestReviewSection.otzyv_o_kveste_c6c8ceb5": "Feedback about the quest",
   "components.quests.QuestReviewSection.rasskazhite_chto_bylo_interesno_472acf46": "Tell me what was interesting",
   "components.quests.QuestReviewSection.spasibo_za_otzyv_af1c9931": "Thanks for your feedback!",

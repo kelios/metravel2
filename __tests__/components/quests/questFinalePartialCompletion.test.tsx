@@ -23,15 +23,15 @@ jest.mock('@/components/quests/QuestPioneerBlock', () => {
 
 jest.mock('@/components/quests/QuestReviewSection', () => ({
   __esModule: true,
-  default: () => null,
+  default: () => {
+    const ReactModule = jest.requireActual('react') as typeof React
+    const { View } = jest.requireActual('react-native') as typeof import('react-native')
+    return ReactModule.createElement(View, { testID: 'quest-review-section' })
+  },
 }))
 
 jest.mock('@/hooks/useQuestCompletionMeta', () => ({
   useQuestCompletionMeta: () => ({ isCompletedByMe: false, completionsCount: 7 }),
-}))
-
-jest.mock('@/hooks/useQuestRating', () => ({
-  useQuestRatingMutation: () => ({ userRating: 0, isSubmitting: false, rate: jest.fn() }),
 }))
 
 // #1484: блок «следующий квест рядом» ходит за каталогом квестов. Здесь важно
@@ -114,6 +114,8 @@ describe('QuestFinalePanel: частичное прохождение (#1443)', 
     expect(getByText('Финальный текст')).toBeTruthy()
     // #1484: следующий шаг — это не новый квест, а возврат к пропущенным точкам.
     expect(queryByTestId('quest-next-step-section')).toBeNull()
+    // Публичный рейтинг собираем только от засчитанных прохождений.
+    expect(queryByTestId('quest-review-section')).toBeNull()
   })
 
   it('засчитанное прохождение остаётся полноценным финалом с наградами', () => {
@@ -132,5 +134,6 @@ describe('QuestFinalePanel: частичное прохождение (#1443)', 
     expect(queryByTestId('quest-finale-continue-partial')).toBeNull()
     // #1484: у засчитанного прохождения появляется второе действие.
     expect(getByTestId('quest-next-step-section')).toBeTruthy()
+    expect(getByTestId('quest-review-section')).toBeTruthy()
   })
 })

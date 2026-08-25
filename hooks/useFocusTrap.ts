@@ -10,6 +10,8 @@ interface UseFocusTrapOptions {
   returnFocus?: RefObject<HTMLElement | null>;
 }
 
+const activeFocusTraps: HTMLElement[] = [];
+
 export function useFocusTrap(
   containerRef: RefObject<HTMLElement | null>,
   options: UseFocusTrapOptions = {}
@@ -31,6 +33,8 @@ export function useFocusTrap(
       return;
     }
 
+    activeFocusTraps.push(container);
+
     const focusableElements = container.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
     );
@@ -49,10 +53,22 @@ export function useFocusTrap(
     }
 
     const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
+      if (e.key !== 'Tab' || activeFocusTraps.at(-1) !== container) return;
 
       if (focusableElements.length === 0) {
         e.preventDefault();
+        return;
+      }
+
+      // A stacked/third-party modal can move focus between key events. Recover
+      // into this trap instead of letting the next Tab continue outside it.
+      if (!(document.activeElement instanceof Node) || !container.contains(document.activeElement)) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          lastElement?.focus();
+        } else {
+          firstElement?.focus();
+        }
         return;
       }
 
@@ -72,20 +88,29 @@ export function useFocusTrap(
     };
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && returnFocus?.current) {
+      if (
+        e.key === 'Escape' &&
+        activeFocusTraps.at(-1) === container &&
+        returnFocus?.current
+      ) {
         returnFocus.current.focus();
       }
     };
 
-    container.addEventListener('keydown', handleTab);
+    // Listen on document capture, not only on the container: if another modal
+    // moves focus outside, the next Tab is targeted there and would otherwise
+    // never reach the trap. Only the latest mounted trap owns the keyboard.
+    document.addEventListener('keydown', handleTab, true);
     document.addEventListener('keydown', handleEscape);
 
     const returnFocusEl = returnFocus?.current;
     const prevActive = previousActiveElement.current;
 
     return () => {
-      container.removeEventListener('keydown', handleTab);
+      document.removeEventListener('keydown', handleTab, true);
       document.removeEventListener('keydown', handleEscape);
+      const trapIndex = activeFocusTraps.lastIndexOf(container);
+      if (trapIndex >= 0) activeFocusTraps.splice(trapIndex, 1);
 
       // Возвращаем фокус при размонтировании
       const focusTarget = returnFocusEl || prevActive;

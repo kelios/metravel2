@@ -232,6 +232,45 @@ describe('fetchAllMapPlaceSources', () => {
     const sources = await fetchAllMapPlaceSources(501);
 
     expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
-    expect(sources).toHaveLength(2);
+    // Повторная страница не удваивает материал: на дубле `sourceId` pager искал бы
+    // активный источник по первому вхождению и замирал бы на нём.
+    expect(sources.map((s) => s.sourceId)).toEqual([RAW_LIBRARY_SOURCE_A.source_id]);
+  });
+
+  it('takes the cursor token out of an absolute DRF next URL', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(
+        createResponseMock({
+          results: [RAW_LIBRARY_SOURCE_A],
+          next: 'https://metravel.by/api/map/places/501/sources/?cursor=cD0y%3D',
+        }),
+      )
+      .mockResolvedValueOnce(createResponseMock(RAW_SOURCES_PAGE_2));
+
+    const sources = await fetchAllMapPlaceSources(501);
+
+    const secondUrl = String(mockFetchWithTimeout.mock.calls[1][0]);
+    // Абсолютный URL в `?cursor=` вернул бы первую страницу заново; запрашиваем
+    // собственный endpoint с извлечённым токеном.
+    expect(secondUrl).toContain('/map/places/501/sources/?cursor=');
+    expect(secondUrl).not.toContain('https%3A');
+    expect(sources.map((s) => s.sourceId)).toEqual([
+      RAW_LIBRARY_SOURCE_A.source_id,
+      RAW_LIBRARY_SOURCE_B.source_id,
+    ]);
+  });
+
+  it('stops paging when next carries no cursor instead of sending the URL as one', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce(
+      createResponseMock({
+        results: [RAW_LIBRARY_SOURCE_A],
+        next: 'https://metravel.by/api/map/places/501/sources/?page=2',
+      }),
+    );
+
+    const sources = await fetchAllMapPlaceSources(501);
+
+    expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+    expect(sources.map((s) => s.sourceId)).toEqual([RAW_LIBRARY_SOURCE_A.source_id]);
   });
 });

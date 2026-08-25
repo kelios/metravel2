@@ -339,8 +339,10 @@ describe('Map.ios Component', () => {
     );
     
     const injectedScript = getInjectedPayloadScript(rendered);
-    expect(injectedScript).toContain('"id":1');
-    expect(injectedScript).toContain('"id":2');
+    // #1573: узкая проекция моста отдаёт id строкой — он служит legacy-fallback
+    // резолва выбора, а WebView и так возвращал его через String(point.id).
+    expect(injectedScript).toContain('"id":"1"');
+    expect(injectedScript).toContain('"id":"2"');
   });
 
   it('requests server clusters from native viewport bbox and filters', () => {
@@ -458,12 +460,19 @@ describe('Map.ios Component', () => {
     expect(html).toContain("type: 'SELECT_PLACE'");
   });
 
-  it('should display point address in callout', () => {
+  // #1573 — WebView-маркер получает только поля рендера/выбора
+  // (placeKey/id/coord/categoryName/sourceCount). Адрес, превью и ссылки живут в
+  // RN (MapPlaceBottomCard) и через мост не сериализуются.
+  it('sends a narrow marker payload without record-only fields', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
-    
-    expect(getInjectedPayloadScript(rendered)).toContain('Test Address, Minsk');
+
+    const payload = getInjectedPayloadScript(rendered);
+    expect(payload).toContain('"coord":"53.9,27.5"');
+    expect(payload).toContain('"placeKey":');
+    expect(payload).not.toContain('Test Address, Minsk');
+    expect(payload).not.toContain('travelImageThumbUrl');
   });
 
   it('should display point category in callout', () => {
@@ -487,7 +496,11 @@ describe('Map.ios Component', () => {
     const rendered = render(
       <Map travel={travelWithoutImage} coordinates={mockCoordinates} />
     );
-    
-    expect(getInjectedPayloadScript(rendered)).toContain('"travelImageThumbUrl":""');
+
+    // Точка без превью всё равно даёт маркер: картинка рисуется в RN, а не в
+    // WebView, поэтому её отсутствие не может обнулить payload маркера (#1573).
+    const payload = getInjectedPayloadScript(rendered);
+    expect(payload).toContain('"coord":"53.8,27.6"');
+    expect(payload).not.toContain('travelImageThumbUrl');
   });
 });

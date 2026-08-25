@@ -2,6 +2,7 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { AppState, Platform } from 'react-native';
 
 import UpsertTravelRoute from '@/components/travel/upsert/UpsertTravelRoute';
+import { i18n } from '@/i18n';
 
 // #1511 — physical Pixel 10 Pro release build repro (board ticket #1511,
 // "Приёмка board-reviewer — 2026-08-22, Android lifecycle recheck"): the
@@ -93,38 +94,48 @@ jest.mock('@/components/travel/UpsertTravel', () => {
 });
 
 describe('UpsertTravelRoute - Android explicit save / background / foreground (#1511)', () => {
-  const originalPlatformOs = Platform.OS;
+  const originalPlatformOsDescriptor = Object.getOwnPropertyDescriptor(Platform, 'OS');
 
   const setPlatformOs = (os: string) => {
     Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
   };
 
   afterEach(() => {
-    setPlatformOs(originalPlatformOs);
+    if (originalPlatformOsDescriptor) {
+      Object.defineProperty(Platform, 'OS', originalPlatformOsDescriptor);
+    } else {
+      Reflect.deleteProperty(Platform, 'OS');
+    }
     jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
-  it('keeps the editor visible with the marker and no error screen after a save confirms while backgrounded', () => {
-    setPlatformOs('android');
-    jest.useFakeTimers();
-
-    const originalRelativeTimeFormat = Intl.RelativeTimeFormat;
-    // Hermes on the Android release build does not provide
-    // Intl.RelativeTimeFormat - reproduce that runtime here.
-    Object.defineProperty(Intl, 'RelativeTimeFormat', {
-      configurable: true,
-      value: undefined,
-    });
-
+  it('keeps the editor visible with the marker and no error screen after a save confirms while backgrounded', async () => {
+    const originalLanguage = i18n.language;
+    const relativeTimeFormatDescriptor = Object.getOwnPropertyDescriptor(
+      Intl,
+      'RelativeTimeFormat',
+    );
     let appStateListener: ((state: string) => void) | undefined;
     const remove = jest.fn();
-    jest.spyOn(AppState, 'addEventListener').mockImplementation((event, listener: any) => {
-      if (event === 'change') appStateListener = listener;
-      return { remove } as any;
-    });
 
     try {
+      await i18n.changeLanguage('ru');
+      setPlatformOs('android');
+      jest.useFakeTimers();
+
+      // Hermes on the Android release build does not provide
+      // Intl.RelativeTimeFormat - reproduce that runtime here.
+      Object.defineProperty(Intl, 'RelativeTimeFormat', {
+        configurable: true,
+        value: undefined,
+      });
+
+      jest.spyOn(AppState, 'addEventListener').mockImplementation((event, listener: any) => {
+        if (event === 'change') appStateListener = listener;
+        return { remove } as any;
+      });
+
       const { getByText, getByTestId, queryByText } = render(<UpsertTravelRoute />);
 
       // Editor visible with the marker before anything else happens.
@@ -162,10 +173,13 @@ describe('UpsertTravelRoute - Android explicit save / background / foreground (#
       // longer falls into a second, Android-only wording ("только что").
       expect(getByText('Сохранено сейчас')).toBeTruthy();
     } finally {
-      Object.defineProperty(Intl, 'RelativeTimeFormat', {
-        configurable: true,
-        value: originalRelativeTimeFormat,
-      });
+      if (relativeTimeFormatDescriptor) {
+        Object.defineProperty(Intl, 'RelativeTimeFormat', relativeTimeFormatDescriptor);
+      } else {
+        Reflect.deleteProperty(Intl, 'RelativeTimeFormat');
+      }
+      jest.useRealTimers();
+      await i18n.changeLanguage(originalLanguage);
     }
   });
 });

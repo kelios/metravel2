@@ -325,5 +325,34 @@ describe('api/quests', () => {
 
       await expect(fetchQuestReviews('minsk-cmok')).rejects.toBeInstanceOf(ApiError);
     });
+
+    // Офлайн приходит как ApiError(0) (api/client.ts): falsy-ноль когда-то утёк бы
+    // в ветку пустого списка, и читалка сообщила бы «Пока нет отзывов» про квест,
+    // отзывы которого просто не загрузились.
+    it('re-throws an offline failure instead of reporting the quest as review-free', async () => {
+      mockedGet.mockRejectedValueOnce(new ApiError(0, 'offline'));
+
+      await expect(fetchQuestReviews('minsk-cmok')).rejects.toBeInstanceOf(ApiError);
+    });
+
+    // Клиентский таймаут — обычный Error без статуса (utils/fetchWithTimeout.ts),
+    // а не ApiError: зависший бэк не значит «квест без отзывов».
+    it('re-throws a client timeout instead of reporting the quest as review-free', async () => {
+      const timeout = new Error('Превышено время ожидания');
+      timeout.name = 'TimeoutError';
+      mockedGet.mockRejectedValueOnce(timeout);
+
+      await expect(fetchQuestReviews('minsk-cmok')).rejects.toThrow('Превышено время ожидания');
+    });
+
+    // Отмена (анмаунт экрана, смена квеста) — не ошибка загрузки: показывать
+    // читалке красное состояние не за что.
+    it('treats a cancelled request as an empty list, not an error', async () => {
+      const abort = new Error('Aborted');
+      abort.name = 'AbortError';
+      mockedGet.mockRejectedValueOnce(abort);
+
+      await expect(fetchQuestReviews('minsk-cmok')).resolves.toEqual([]);
+    });
   });
 });

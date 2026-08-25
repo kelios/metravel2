@@ -133,6 +133,27 @@ See proposal.md — Why. Current mechanisms this design must respect:
   reload fixes it. No custom invalidation in this change.
 - [Counter copy needs no plural forms] → `Материал {{current}} из {{total}}`
   uses two numbers, avoiding plural-rule divergence across BE/UK/PL.
+- [Seam between grouping and the card: a renderer that hands the popup the
+  representative *record* instead of the grouped *marker* silently disables the
+  pager] → `groupMapPlaces` computes `sourceCount`/`sources` on the marker, but
+  the transitional flat form (two rows sharing `place_id`, no `source_count`
+  field) leaves those fields absent on the record itself, so the card reads
+  `sourceCount = 1` and renders no pager even though a second source exists.
+  Found by the #1571 review gate. Fix at the seam — the marker's
+  `placeId`/`sourceCount`/`primarySource` must reach the popup — but NOT by
+  cloning the record: `MarkerClusterGroup` keys its `coordsByPoint` map by the
+  record's object identity (`components/MapPage/Map/MarkerClusterGroup.tsx:305`,
+  read at `:311`), so a stamped copy would miss that lookup and the marker would
+  be dropped instead of rendered. Either the renderer threads the grouped
+  marker's fields to the popup as explicit props alongside `point`, or the
+  grouping mutates the representative record in place. Owner: whichever of
+  #1572/#1573 lands second; verified by the `1 из 2` assertion in #1568's e2e.
+- [Web swipe would double-fire with the hero's tap-to-fullscreen] → the hero
+  opens the fullscreen viewer on `onPointerDownCapture` (#993, deliberate for
+  WebKit reliability), so a horizontal drag over the photo would open the viewer
+  *and* page behind it. Swipe paging is therefore native-only; web pages via the
+  explicit ‹ › controls (44 dp, keyboard-operable). Changing the photo's open
+  gesture is a separate task, not this change.
 
 ## Migration Plan
 
@@ -153,7 +174,7 @@ See proposal.md — Why. Current mechanisms this design must respect:
 | --- | --- |
 | Unit (shared) | normalization/grouping, placeKey stability, pager model, lazy-fetch-once, media mount — targeted Jest |
 | Desktop web | one marker at zoom 10/13/16, pager `1 из 2 → 2 из 2`, network: sources fetched once after tap — browser evidence + e2e fixture |
-| Mobile web | same flow in `MapPlaceBottomCard` incl. swipe — browser evidence |
+| Mobile web | same flow in `MapPlaceBottomCard`, paging by the ‹ › controls (swipe is native-only) — browser evidence |
 | Android | device smoke of tap→card→paging (shared bridge diff) |
 | iPhone | physical device / TestFlight MAP-20 (originating defect) |
 | RU/BE/UK/PL/EN | new keys via `npm run test:i18n`; RU + one non-RU locale spot-checked in browser |

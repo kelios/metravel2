@@ -26,6 +26,11 @@ export const mapClusterPointToPoint = (point: MapClusterPoint): Point => {
     imageUrl: point.imageUrl || point.travelImageThumbUrl,
     urlTravel: point.urlTravel,
     articleUrl: point.articleUrl,
+    // Явный список полей иначе терял бы grouped place DTO (#1571), и серверные
+    // кластеры продолжали бы рисовать по маркеру на запись статьи (#1573).
+    placeId: point.placeId,
+    sourceCount: point.sourceCount,
+    primarySource: point.primarySource,
   } as Point;
 };
 

@@ -1,7 +1,9 @@
 ## 1. Backend dependency (read-only from this workspace; board #1566, #1567, catalog follow-up)
 
 - [ ] 1.1 Track backend delivery: Place identity + migration/backfill, grouped marker DTO (`place_id`, `source_count`, `primary_source`) in `search_travels_for_map` + `clusters`, `GET /api/map/places/{place_id}/sources/`, cluster counts by place — verify the deployed contract with GET probes on the deploy target (National Library + Stankovo pairs) before starting group 5
+  - 2026-08-25 probe (#1568): contract is committed in the backend repo (#1567 done) but NOT deployed anywhere the frontend can reach. Local stack `http://localhost:8000` and production `https://metravel.by` both answer `/api/map/clusters/?bbox=53.90,27.60,53.96,27.70&zoom=16` with flat `travel_addresses` markers (no `place_id` / `source_count` / `primary_source`), and `/api/map/places/{14029,15688,1}/sources/` returns `404` on both targets. Deployment + production probes are owned by board #1586 (`todo`), so group 5 items that need the live endpoint stay blocked; fixture-based work continues.
 - [ ] 1.2 Confirm data fix #1566 (coordinate of point 15688) landed, or record it as a known offset in acceptance evidence
+  - 2026-08-25 probe (#1568): not landed. Point `15688` still reports `53.931, 27.6512` versus point `14029` at `53.9311823, 27.6461379` (~330 m apart) on both local and production clusters output — record as a known offset until #1566 lands.
 
 ## 2. Shared model and adapters (board FE-1)
 
@@ -9,15 +11,15 @@
 - [x] 2.2 Implement `O(n)` grouping normalization (single `Map` pass per dataset update) in the `api/map.ts` adapter layer for `fetchTravelsForMap`, `fetchMapClusters`, `fetchTravelsNearRoute`, accepting both the grouped DTO and the legacy flat shape
 - [x] 2.3 Add `fetchMapPlaceSources(placeId, cursor)` adapter + React Query key `['map-place-sources', placeKey]` with fetch-once-per-cache semantics
 - [x] 2.4 Add DTO fixtures (two-source place, nearby distinct places, legacy placeless row, single-source place) exactly matching `docs/features/map.md`
-- [ ] 2.5 Targeted Jest: grouping, placeKey stability across refreshes, `different place_id never merge`, `no place_id stays standalone`, adapter legacy fallback
+- [x] 2.5 Targeted Jest: grouping, placeKey stability across refreshes, `different place_id never merge`, `no place_id stays standalone`, adapter legacy fallback
 
 ## 3. Source pager UI (board FE-2, depends on group 2)
 
-- [ ] 3.1 Extend the `PlacePopupCard` content model with `sources`, `activeSourceId`, paging callbacks; place-owned vs source-owned prop split per design decision 6
-- [ ] 3.2 Wire pager into web popup (`createMapPopupComponent`) and `MapPlaceBottomCard`: counter `Материал {{current}} из {{total}}`, previous/next controls (≥44 dp), swipe; single source renders no pager
-- [ ] 3.3 Mount only the active source image via the shared media component; prefetch at most the next thumbnail
-- [ ] 3.4 Add RU/BE/UK/PL/EN keys for counter, previous/next labels, paging announcement; announce paging to assistive tech; keyboard operability on web
-- [ ] 3.5 Targeted Jest for pager model + card rendering (fixtures from 2.4); `npm run test:i18n`
+- [x] 3.1 Extend the `PlacePopupCard` content model with `sources`, `activeSourceId`, paging callbacks; place-owned vs source-owned prop split per design decision 6
+- [x] 3.2 Wire pager into web popup (`createMapPopupComponent`) and `MapPlaceBottomCard`: counter `Материал {{current}} из {{total}}`, previous/next controls (≥44 dp) on every surface, swipe on native only (the card's DOM guard stops pointer events inside the card and the hero opens the viewer on pointer-down, so a web swipe is undeliverable); single source renders no pager
+- [x] 3.3 Mount only the active source image via the shared media component; prefetch at most the next thumbnail
+- [x] 3.4 Add RU/BE/UK/PL/EN keys for counter, previous/next labels, paging announcement; announce paging to assistive tech; keyboard operability on web
+- [x] 3.5 Targeted Jest for pager model + card rendering (fixtures from 2.4); `npm run test:i18n`
 
 ## 4. Renderers and native bridge (board FE-3, depends on group 2)
 
@@ -30,7 +32,9 @@
 ## 5. Integration and acceptance (board #1568, depends on groups 1–4)
 
 - [ ] 5.1 Wire lazy sources fetch to the real endpoint on the deploy target; network assertion: sources requested only after first card open, once per cache, never on paging; reopen uses cache
-- [ ] 5.2 e2e fixture flow: one place → one marker → `1 из 2` → `2 из 2` → back; nearby distinct place opens separately; single-source place has no pager
+  - runtime wiring uses the real endpoint already (no fixture provider in app code: `useMapPlaceSources` → `fetchAllMapPlaceSources` → `/api/map/places/{place_id}/sources/`); network assertions covered by `__tests__/hooks/map/useMapPlaceSources.lazyCache.test.tsx`. The "on the deploy target" half stays open until #1586 deploys the API.
+- [x] 5.2 e2e fixture flow: one place → one marker → `1 из 2` → `2 из 2` → back; nearby distinct place opens separately; single-source place has no pager
+  - `e2e/map-place-sources.spec.ts` — desktop and mobile-web surfaces, plus a request counter proving sources are fetched only after the card opens and only once
 - [ ] 5.3 MAP-20 runtime evidence: desktop web + mobile web (screenshots, console, network) at zoom 10/13/16 on the National Library; both sources link to travels `389` and `646`; place-owned fields stable while paging
 - [ ] 5.4 MAP-20 on physical iPhone/TestFlight (originating defect surface)
 - [ ] 5.5 Performance evidence: initial marker/WebView payload ≤ baseline; no marker layer rebuild while paging

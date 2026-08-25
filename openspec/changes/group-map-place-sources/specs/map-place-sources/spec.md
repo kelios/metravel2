@@ -80,8 +80,13 @@ dataset and MUST NOT rebuild the marker layer.
 ### Requirement: Source pager inside one card
 
 A place card with more than one source SHALL show a pager with a localized
-counter (`Материал {{current}} из {{total}}` in RU), previous/next controls
-and swipe; a place with exactly one source SHALL show no pager controls.
+counter (`Материал {{current}} из {{total}}` in RU) and previous/next controls
+on every surface; on native surfaces a horizontal swipe over the photo SHALL
+page as well. Web surfaces page by the controls only: the card root installs a
+DOM guard that stops pointer events inside the card (so the popup cannot leak
+taps to Leaflet), and the hero opens the fullscreen viewer on pointer-down, so
+a swipe gesture over the photo is neither deliverable nor unambiguous there.
+A place with exactly one source SHALL show no pager controls.
 While paging, only the source-owned fields — thumbnail, article title,
 internal article link — SHALL change; the place-owned fields — canonical
 name/address, coordinates, copy/share, navigation actions, save/visited
@@ -90,10 +95,11 @@ status and the selected marker — MUST stay unchanged.
 #### Scenario: Paging through two sources
 
 - **WHEN** the user opens a two-source place and pages forward via the next
-  control, then back via swipe
+  control, then back via the previous control (on native, also by swiping the
+  photo)
 - **THEN** the counter goes `1 из 2` → `2 из 2` → `1 из 2`, each source shows
-  its own photo and its own article link (travels `389` and `646` for the
-  National Library), and coordinates/navigation/save state never change
+  its own photo, article title and article link (travels `389` and `646` for
+  the National Library), and coordinates/navigation/save state never change
 
 #### Scenario: Single source keeps the classic card
 

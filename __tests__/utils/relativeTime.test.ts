@@ -1,5 +1,6 @@
 import { formatRelativeTime } from '@/utils/relativeTime'
 import { pluralizeRu } from '@/utils/pluralize'
+import { i18n } from '@/i18n'
 
 describe('formatRelativeTime', () => {
   const now = new Date('2026-06-03T12:00:00').getTime()
@@ -32,22 +33,41 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime(Number.NaN, now)).toBe('')
   })
 
-  it('keeps Android functional when Intl.RelativeTimeFormat is unavailable', () => {
-    const originalRelativeTimeFormat = Intl.RelativeTimeFormat
+  it('keeps comment/history labels localized when Intl.RelativeTimeFormat is unavailable', async () => {
+    const originalLanguage = i18n.language
+    const relativeTimeFormatDescriptor = Object.getOwnPropertyDescriptor(
+      Intl,
+      'RelativeTimeFormat',
+    )
     Object.defineProperty(Intl, 'RelativeTimeFormat', {
       configurable: true,
       value: undefined,
     })
 
     try {
-      expect(formatRelativeTime(now - 5 * 60 * 1000, now)).toBe('5 минут назад')
-      expect(formatRelativeTime(now - 3 * 60 * 60 * 1000, now)).toBe('3 часа назад')
-      expect(formatRelativeTime(new Date('2026-06-02T20:00:00').getTime(), now)).toBe('вчера')
+      const expectedByLocale = {
+        ru: ['5 минут назад', '3 часа назад', 'вчера'],
+        be: ['5 хвілін таму', '3 гадзіны таму', 'учора'],
+        uk: ['5 хвилин тому', '3 години тому', 'учора'],
+        pl: ['5 minut temu', '3 godziny temu', 'wczoraj'],
+        en: ['5 minutes ago', '3 hours ago', 'yesterday'],
+      } as const
+
+      for (const [locale, expected] of Object.entries(expectedByLocale)) {
+        await i18n.changeLanguage(locale)
+        expect([
+          formatRelativeTime(now - 5 * 60 * 1000, now),
+          formatRelativeTime(now - 3 * 60 * 60 * 1000, now),
+          formatRelativeTime(new Date('2026-06-02T20:00:00').getTime(), now),
+        ]).toEqual(expected)
+      }
     } finally {
-      Object.defineProperty(Intl, 'RelativeTimeFormat', {
-        configurable: true,
-        value: originalRelativeTimeFormat,
-      })
+      if (relativeTimeFormatDescriptor) {
+        Object.defineProperty(Intl, 'RelativeTimeFormat', relativeTimeFormatDescriptor)
+      } else {
+        Reflect.deleteProperty(Intl, 'RelativeTimeFormat')
+      }
+      await i18n.changeLanguage(originalLanguage)
     }
   })
 })

@@ -22,6 +22,8 @@ type ConfirmDialogProps = {
     cancelTestID?: string;
 };
 
+const activeWebConfirmDialogs: object[] = [];
+
 // ✅ FIX: Убрали forwardRef, так как Dialog не поддерживает ref напрямую
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                           visible,
@@ -36,6 +38,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                       }) => {
     const dialogRef = useRef<HTMLElement>(null);
     const cancelButtonRef = useRef<HTMLElement>(null);
+    const escapeOwnerRef = useRef({});
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const colors = useThemedColors();
@@ -49,19 +54,31 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         initialFocus: cancelButtonRef,
     });
 
-    // ✅ УЛУЧШЕНИЕ: Закрытие по Escape
+    // RNW Modal закрывается на document.keyup. Перехватываем Escape в capture-
+    // фазе, пока confirm ещё смонтирован: иначе тот же keyup дойдёт до вложенной
+    // DateEditor Modal и закроет оба слоя.
     useEffect(() => {
         if (!visible || Platform.OS !== 'web') return;
 
+        const escapeOwner = escapeOwnerRef.current;
+        activeWebConfirmDialogs.push(escapeOwner);
+
         const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
+            if (e.key !== 'Escape' || activeWebConfirmDialogs.at(-1) !== escapeOwner) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            onCloseRef.current();
         };
 
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
-    }, [visible, onClose]);
+        document.addEventListener('keyup', handleEscape, true);
+        return () => {
+            document.removeEventListener('keyup', handleEscape, true);
+            const dialogIndex = activeWebConfirmDialogs.lastIndexOf(escapeOwner);
+            if (dialogIndex >= 0) activeWebConfirmDialogs.splice(dialogIndex, 1);
+        };
+    }, [visible]);
 
     if (Platform.OS === 'web') {
         const portal = (() => {
@@ -74,6 +91,24 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         })();
 
         const body = typeof document !== 'undefined' ? document.body : null;
+        // react-native-web keeps focus inside its active Modal DOM subtree. When
+        // a confirm is opened from such a modal, mounting the portal in `body`
+        // makes RNW immediately steal the initial focus back. Portal into the
+        // active parent dialog instead; the fixed overlay still covers it, and
+        // RNW now recognises the confirm controls as descendants of its trap.
+        const openParentDialogs = body
+            ? Array.from(body.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
+                .filter((element) => element.dataset.testid !== 'confirm-dialog')
+            : [];
+        const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
+        const focusedDialogCandidate = typeof HTMLElement !== 'undefined' && activeElement instanceof HTMLElement
+            ? activeElement.closest<HTMLElement>('[role="dialog"][aria-modal="true"]')
+            : null;
+        const focusedParentDialog = focusedDialogCandidate?.dataset.testid !== 'confirm-dialog'
+            ? focusedDialogCandidate
+            : null;
+        const activeParentDialog = focusedParentDialog ?? openParentDialogs.at(-1) ?? null;
+        const portalTarget = activeParentDialog ?? body;
 
         const content = visible ? (
             <View style={styles.webPortalRoot}>
@@ -146,10 +181,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
         const isJest = !!process.env.JEST_WORKER_ID;
         const forcePortalInTests = process.env.CONFIRM_DIALOG_FORCE_PORTAL === '1';
-        const shouldUsePortal = portal && body && (!isJest || forcePortalInTests);
+        const shouldUsePortal = portal && portalTarget && (!isJest || forcePortalInTests);
 
         if (shouldUsePortal) {
-            return portal(content, body) as any;
+            return portal(content, portalTarget) as any;
         }
 
         return (

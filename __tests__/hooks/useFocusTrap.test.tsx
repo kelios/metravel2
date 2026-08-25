@@ -8,9 +8,11 @@ const originalPlatform = Platform.OS
 function FocusTrapHarness({
   enabled = true,
   externalReturnRef,
+  includeFocusableElements = true,
 }: {
   enabled?: boolean
   externalReturnRef?: React.RefObject<HTMLElement>
+  includeFocusableElements?: boolean
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const initialRef = useRef<HTMLButtonElement>(null)
@@ -21,10 +23,37 @@ function FocusTrapHarness({
 
   return (
     <div ref={containerRef} data-testid="trap-container">
-      <button ref={initialRef} data-testid="initial-btn">Initial</button>
-      {!externalReturnRef && <button ref={returnRef as any} data-testid="return-btn">Return</button>}
-      <button data-testid="last-btn">Last</button>
+      {includeFocusableElements ? (
+        <>
+          <button ref={initialRef} data-testid="initial-btn">Initial</button>
+          {!externalReturnRef && <button ref={returnRef as any} data-testid="return-btn">Return</button>}
+          <button data-testid="last-btn">Last</button>
+        </>
+      ) : null}
     </div>
+  )
+}
+
+function StackedFocusTrapsHarness({ topEnabled = true }: { topEnabled?: boolean }) {
+  const lowerRef = useRef<HTMLDivElement>(null)
+  const lowerInitialRef = useRef<HTMLButtonElement>(null)
+  const topRef = useRef<HTMLDivElement>(null)
+  const topInitialRef = useRef<HTMLButtonElement>(null)
+
+  useFocusTrap(lowerRef, { initialFocus: lowerInitialRef })
+  useFocusTrap(topRef, { enabled: topEnabled, initialFocus: topInitialRef })
+
+  return (
+    <>
+      <div ref={lowerRef} data-testid="lower-trap">
+        <button ref={lowerInitialRef} data-testid="lower-initial">Lower initial</button>
+      </div>
+      {topEnabled ? (
+        <div ref={topRef} data-testid="top-trap">
+          <button ref={topInitialRef} data-testid="top-initial">Top initial</button>
+        </div>
+      ) : null}
+    </>
   )
 }
 
@@ -63,5 +92,57 @@ describe('useFocusTrap', () => {
     const initialButton = getByTestId('initial-btn') as HTMLButtonElement
 
     expect(document.activeElement).not.toBe(initialButton)
+  })
+
+  it('recovers focus into the trap when another modal moved it outside', async () => {
+    const outsideButton = document.createElement('button')
+    document.body.appendChild(outsideButton)
+    const { getByTestId, unmount } = render(<FocusTrapHarness />)
+
+    const initialButton = getByTestId('initial-btn') as HTMLButtonElement
+    const lastButton = getByTestId('last-btn') as HTMLButtonElement
+    await waitFor(() => expect(document.activeElement).toBe(initialButton))
+
+    outsideButton.focus()
+    fireEvent.keyDown(outsideButton, { key: 'Tab' })
+    expect(document.activeElement).toBe(initialButton)
+
+    outsideButton.focus()
+    fireEvent.keyDown(outsideButton, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(lastButton)
+
+    unmount()
+    outsideButton.remove()
+  })
+
+  it('prevents Tab from escaping when the trap has no focusable controls', () => {
+    const { getByTestId } = render(<FocusTrapHarness includeFocusableElements={false} />)
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+
+    getByTestId('trap-container').dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it('lets only the topmost trap own Tab and restores the lower trap after cleanup', async () => {
+    const outsideButton = document.createElement('button')
+    document.body.appendChild(outsideButton)
+    const view = render(<StackedFocusTrapsHarness />)
+    const topInitial = view.getByTestId('top-initial') as HTMLButtonElement
+
+    await waitFor(() => expect(document.activeElement).toBe(topInitial))
+    outsideButton.focus()
+    fireEvent.keyDown(outsideButton, { key: 'Tab' })
+    expect(document.activeElement).toBe(topInitial)
+
+    view.rerender(<StackedFocusTrapsHarness topEnabled={false} />)
+    const lowerInitial = view.getByTestId('lower-initial') as HTMLButtonElement
+    await waitFor(() => expect(document.activeElement).toBe(lowerInitial))
+    outsideButton.focus()
+    fireEvent.keyDown(outsideButton, { key: 'Tab' })
+    expect(document.activeElement).toBe(lowerInitial)
+
+    view.unmount()
+    outsideButton.remove()
   })
 })

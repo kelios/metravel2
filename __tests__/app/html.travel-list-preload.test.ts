@@ -110,6 +110,7 @@ describe('+html travel list preload script', () => {
   it('молчит при фильтрующем query-параметре: это уже другой запрос', () => {
     const searches = [
       '?search=minsk',
+      '?q=minsk',
       '?sort=popular',
       '?categoryTravelAddress=84',
       '?category__travel__address=84',

@@ -388,6 +388,12 @@ export const getStyles = (
       flexDirection: 'row',
       alignItems: 'flex-start',
     },
+    // Рамка hero + source-pager (#1572): даёт оверлею pager'а систему координат
+    // ровно по фото внутри секции, где ниже лежит текстовый блок места.
+    heroPagerFrame: {
+      position: 'relative',
+      flexShrink: 0,
+    },
     imageContainer: {
       width: '100%',
       height: heroHeight > 0 ? heroHeight : undefined,

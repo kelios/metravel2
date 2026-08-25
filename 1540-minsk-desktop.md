@@ -1,0 +1,65 @@
+- generic [ref=e3]:
+  - generic:
+    - link "Перейти к основному содержимому"
+    - link "Перейти к навигации"
+  - generic [ref=e4]:
+    - generic [ref=e13]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - link "MeTravel логотип MeTravel" [ref=e18] [cursor=pointer]:
+            - generic "MeTravel логотип" [ref=e19]
+            - generic [ref=e21]: MeTravel
+          - generic [ref=e42]:
+            - link "Маршруты" [ref=e43] [cursor=pointer]
+            - link "Беларусь" [ref=e51] [cursor=pointer]
+            - link "Карта" [ref=e57] [cursor=pointer]
+            - link "Места" [ref=e64] [cursor=pointer]
+            - link "Случайный маршрут" [ref=e68] [cursor=pointer]
+            - link "Квесты" [ref=e78] [cursor=pointer]
+          - 'button "Изменить язык: Русский" [ref=e25] [cursor=pointer]':
+            - generic [ref=e26]: 
+            - generic [ref=e28]: RU
+            - generic [ref=e29]: 
+          - generic [ref=e86]:
+            - link "Войти в аккаунт" [ref=e87] [cursor=pointer]
+            - button "Открыть меню аккаунта Гость" [ref=e91] [cursor=pointer]
+        - navigation "Breadcrumb" [ref=e97]:
+          - generic [ref=e98]:
+            - button "Перейти на Главную" [ref=e99] [cursor=pointer]
+            - generic [ref=e102]: 
+            - button "Перейти на Квесты" [ref=e103] [cursor=pointer]
+            - generic [ref=e105]: 
+            - 'button "Текущая страница: Квест по центру Минска: в поисках цмока" [disabled]'
+      - generic [ref=e107]:
+        - 'heading "Минск: что посмотреть — Квест по центру Минска: в поисках…" [level=1] [ref=e108]'
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - generic [ref=e114]
+            - generic [ref=e130]: 0 / 6
+            - generic [ref=e134]
+          - generic [ref=e162]:
+            - generic [ref=e163]
+            - generic [ref=e266]
+            - region "Путешествия — Минск" [ref=e270]
+            - generic [ref=e320]
+    - generic [ref=e343]:
+      - generic [ref=e344]:
+        - link "Facebook" [ref=e345] [cursor=pointer]:
+          - generic [ref=e346]: 
+        - link "TikTok" [ref=e349] [cursor=pointer]:
+          - generic [ref=e350]: 
+        - link "Instagram" [ref=e353] [cursor=pointer]:
+          - generic [ref=e354]: 
+        - link "YouTube" [ref=e357] [cursor=pointer]:
+          - generic [ref=e358]: 
+      - generic [ref=e361]:
+        - link "Квесты" [ref=e362] [cursor=pointer]
+        - link "Приложение" [ref=e365] [cursor=pointer]
+        - link "О сайте" [ref=e368] [cursor=pointer]
+        - link "Политика" [ref=e371] [cursor=pointer]
+        - link "Cookies" [ref=e374] [cursor=pointer]
+        - link "Соглашение" [ref=e377] [cursor=pointer]
+        - link "Отказ от ответственности" [ref=e380] [cursor=pointer]
+        - link "Правила сообщества" [ref=e383] [cursor=pointer]
+        - link "Правила поездок" [ref=e386] [cursor=pointer]
+      - generic [ref=e389]: © MeTravel 2020–2026

@@ -16,11 +16,6 @@ type Props = {
   questNumericId: number | undefined
   /** Город квеста — уходит в событие аналитики вместе с отзывом. */
   cityId?: string
-  // Живая оценка пользователя (из useQuestRatingMutation): единственный источник
-  // звёзд в этом блоке — они же кормят общий рейтинг квеста через onRate.
-  userRating?: number | null
-  onRate?: (rating: QuestRating) => void
-  isRatingSubmitting?: boolean
   testID?: string
 }
 
@@ -31,31 +26,25 @@ function QuestReviewSection({
   questId,
   questNumericId,
   cityId,
-  userRating,
-  onRate,
-  isRatingSubmitting = false,
   testID = 'quest-review-section',
 }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const { isAuthenticated, requireAuth } = useRequireAuth({ intent: 'rate' })
+  const { isAuthenticated, authReady, requireAuth } = useRequireAuth({ intent: 'rate' })
 
-  const { review, isSubmitting, isSubmitted, hasError, submit } = useQuestReview({
-    questId: questNumericId,
-    questSlug: questId,
-    cityId,
-    enabled: !!questNumericId,
-  })
+  const { review, isLoading, hasLoadError, isSubmitting, isSubmitted, hasError, submit } =
+    useQuestReview({
+      questId: questNumericId,
+      questSlug: questId,
+      cityId,
+      enabled: !!questNumericId,
+    })
 
   const [rating, setRating] = useState(0)
   const [liked, setLiked] = useState('')
   const [disliked, setDisliked] = useState('')
 
-  const liveRating =
-    typeof userRating === 'number' && Number.isFinite(userRating) && userRating > 0
-      ? clampRating(userRating)
-      : 0
-  const effectiveRating = rating || liveRating || review?.rating || 0
+  const effectiveRating = rating || review?.rating || 0
   const alreadyReviewed = !!review && !isSubmitted
   // Благодарим только за подтверждённое сервером сохранение. Здесь была
   // оптимистичная ветка «оценка выставлена и нажата отправка»: её писали, пока
@@ -65,13 +54,11 @@ function QuestReviewSection({
   const showSuccess = alreadyReviewed || isSubmitted
 
   // Оценка обязательна (BE: rating 1..5, NOT NULL). Тексты — опциональны.
-  const canSubmit = effectiveRating > 0
+  const prefillUnavailable = isLoading || hasLoadError
+  const canSubmit = effectiveRating > 0 && !prefillUnavailable
 
-  // Тап по звезде шлёт оценку в `/quests/{id}/rate/`. ВНИМАНИЕ: на проде этого
-  // роута нет (проба 25.08.2026 → `404`), в DEV он подменён моком
-  // `QUEST_RATING_MOCK`, так что живого сохранения по тапу сегодня не
-  // происходит — оценка доезжает до бэка только вместе с отправкой отзыва,
-  // из которой и считается агрегат квеста. Заведено отдельной задачей.
+  // Звезда — часть черновика формы. Единственная запись оценки происходит
+  // атомарно вместе с текстом по кнопке «Отправить отзыв» (#1578).
   const handleRate = (value: number) => {
     if (!isAuthenticated) {
       requireAuth()
@@ -79,7 +66,6 @@ function QuestReviewSection({
     }
     const next = clampRating(value)
     setRating(next)
-    onRate?.(next)
   }
 
   const handleSubmit = () => {
@@ -87,9 +73,7 @@ function QuestReviewSection({
       requireAuth()
       return
     }
-    if (!questNumericId || !canSubmit || isSubmitting) return
-    // Убеждаемся, что оценка сохранена (на случай префилла без ручного тапа).
-    onRate?.(clampRating(effectiveRating))
+    if (!questNumericId || !canSubmit || prefillUnavailable || isSubmitting) return
     submit({ rating: effectiveRating, liked: liked.trim(), disliked: disliked.trim() })
   }
 
@@ -115,9 +99,11 @@ function QuestReviewSection({
         <StarRating
           rating={effectiveRating}
           userRating={effectiveRating}
-          interactive={isAuthenticated}
+          // Гость тоже должен иметь доступный вход в auth-flow: тап по звезде
+          // вызывает handleRate -> requireAuth, но не меняет локальный рейтинг.
+          interactive
           onRate={handleRate}
-          disabled={isSubmitting || isRatingSubmitting}
+          disabled={!authReady || prefillUnavailable || isSubmitting}
           size="large"
           showValue={false}
           showCount={false}
@@ -132,7 +118,7 @@ function QuestReviewSection({
           onChangeText={setLiked}
           multiline
           numberOfLines={3}
-          editable={!isSubmitting}
+          editable={!prefillUnavailable && !isSubmitting}
           placeholder={i18nT('quests:components.quests.QuestReviewSection.rasskazhite_chto_bylo_interesno_472acf46')}
           placeholderTextColor={colors.textMuted}
           textAlignVertical="top"
@@ -147,7 +133,7 @@ function QuestReviewSection({
           onChangeText={setDisliked}
           multiline
           numberOfLines={3}
-          editable={!isSubmitting}
+          editable={!prefillUnavailable && !isSubmitting}
           placeholder={i18nT('quests:components.quests.QuestReviewSection.chto_mozhno_sdelat_luchshe_2a40e215')}
           placeholderTextColor={colors.textMuted}
           textAlignVertical="top"
@@ -155,8 +141,24 @@ function QuestReviewSection({
       </View>
 
       {hasError && (
-        <Text style={styles.errorText} testID={`${testID}-error`}>
+        // Сообщение появляется после асинхронной отправки, поэтому объявляется
+        // так же, как остальные ошибки форм проекта
+        // (`components/forms/FormFieldWithValidation.tsx`): без live-region
+        // экранный диктор не сообщит о провале, а кнопка просто выйдет из
+        // loading — игрок решит, что отзыв ушёл.
+        <Text
+          style={styles.errorText}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          testID={`${testID}-error`}
+        >
           {i18nT('errorsStatic:api.misc.sendFailed')}
+        </Text>
+      )}
+
+      {hasLoadError && (
+        <Text style={styles.errorText} testID={`${testID}-load-error`}>
+          {i18nT('quests:components.quests.QuestReviewsModal.ne_udalos_zagruzit_otzyvy_651269a8')}
         </Text>
       )}
 

@@ -126,12 +126,12 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       {/* Modal — отдельное окно: ни `softwareKeyboardLayoutMode` из app.json, ни
-          useQuestKeyboardReveal визарда на него не действуют, поэтому на iOS
-          клавиатура закрывала бы поле «Что не так» и кнопку отправки. Тот же
-          приём, что у формы обратной связи на /contact. */}
+          useQuestKeyboardReveal визарда на него надёжно не действуют. На iOS
+          padding поднимает контент, а на Android height ужимает отдельное окно
+          над IME, чтобы закреплённый подвал не оставался под клавиатурой. */}
       <KeyboardAvoidingView
         style={styles.keyboardAvoider}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
       >
         <Pressable
           style={styles.overlay}

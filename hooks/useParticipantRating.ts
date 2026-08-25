@@ -1,7 +1,7 @@
 // hooks/useParticipantRating.ts
-// React Query хуки оценки участников поездки (Sprint 16, FE-431). Зеркалит
-// hooks/useQuestRating. Мутация инвалидирует свою оценку и публичный профиль
-// оценённого (там агрегат participant_rating).
+// React Query хуки оценки участников поездки (Sprint 16, FE-431). Мутация
+// инвалидирует свою оценку и публичный профиль оценённого (там агрегат
+// participant_rating).
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 

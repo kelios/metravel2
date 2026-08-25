@@ -23,9 +23,6 @@ jest.mock('@/components/quests/QuestNextStepSection', () => ({ __esModule: true,
 jest.mock('@/hooks/useQuestCompletionMeta', () => ({
   useQuestCompletionMeta: () => ({ isCompletedByMe: false, completionsCount: 7 }),
 }))
-jest.mock('@/hooks/useQuestRating', () => ({
-  useQuestRatingMutation: () => ({ userRating: 0, isSubmitting: false, rate: jest.fn() }),
-}))
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: () => null,
   NativeQuestVideoLazy: () => null,

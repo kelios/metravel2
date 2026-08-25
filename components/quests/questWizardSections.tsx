@@ -12,7 +12,6 @@ import { canRenderBelkrajWidget } from '@/components/belkraj/belkrajAvailability
 import { BadgeUnlockToast } from '@/components/achievements'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
-import { useQuestRatingMutation } from '@/hooks/useQuestRating'
 import QuestNextStepSection from './QuestNextStepSection'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestReviewSection from './QuestReviewSection'
@@ -356,9 +355,6 @@ function QuestFinaleFeedback({
   questNumericId?: number
   cityId?: string
 }) {
-  const { userRating, isSubmitting: isRatingSubmitting, rate } =
-    useQuestRatingMutation(questNumericId)
-
   if (!questId) return null
 
   return (
@@ -366,9 +362,6 @@ function QuestFinaleFeedback({
       questId={questId}
       questNumericId={questNumericId}
       cityId={cityId}
-      userRating={userRating}
-      onRate={rate}
-      isRatingSubmitting={isRatingSubmitting}
     />
   )
 }
@@ -648,7 +641,9 @@ export function QuestFinalePanel({
             />
           ) : null}
 
-          <QuestFinaleFeedback questId={questId} questNumericId={questNumericId} cityId={cityId} />
+          {questCompleted ? (
+            <QuestFinaleFeedback questId={questId} questNumericId={questNumericId} cityId={cityId} />
+          ) : null}
 
           {/* Второе действие (#1484): коллекция города и следующий квест рядом.
               Только за засчитанное прохождение — при недоборе точек следующий

@@ -1,0 +1,123 @@
+- generic [ref=f2e3] [box=0,0,375,844]:
+  - generic [box=0,-160,375,844]:
+    - link "Перейти к основному содержимому" [box=12,-148,351,44]
+    - link "Перейти к навигации" [box=12,-92,351,44]
+  - generic [ref=f2e4] [box=0,0,375,844]:
+    - generic [ref=f2e11] [box=0,0,375,788]:
+      - generic [ref=f2e13] [box=0,0,375,788]:
+        - generic [ref=f2e16] [box=0,0,375,109]:
+          - generic [ref=f2e17] [box=0,0,375,56]:
+            - link "MeTravel логотип" [ref=f2e806] [cursor=pointer] [box=6,6,44,44]:
+              - generic "MeTravel логотип" [ref=f2e807] [box=15,15,26,26]:
+                - img "MeTravel логотип" [ref=f2e808] [box=15,15,26,26]
+            - 'button "Изменить язык: Русский" [ref=f2e809] [cursor=pointer] [box=66,6,61,44]':
+              - generic [ref=f2e68] [box=75,20,17,17]: 
+              - generic [ref=f2e70] [box=98,21,20,15]: RU
+            - generic [ref=f2e373] [box=143,6,226,44]:
+              - button "Открыть профиль Юля" [ref=f2e810] [cursor=pointer] [box=201,6,116,44]:
+                - generic [ref=f2e813] [box=241,19,64,19]: Юля
+              - button "Открыть меню" [ref=f2e814] [cursor=pointer] [box=325,6,44,44]:
+                - generic [ref=f2e375] [box=335,16,24,24]: 
+          - generic [ref=f2e816] [box=12,60,351,44]:
+            - button "Назад" [ref=f2e817] [cursor=pointer] [box=12,60,44,44]:
+              - generic [ref=f2e818] [box=25,72,18,20]: 
+            - generic [ref=f2e819] [box=64,74,251,17]: Бюро добрых городских дел
+        - generic [ref=f2e822] [box=0,116,375,672]:
+          - 'heading "Витебск: что посмотреть — Бюро добрых городских дел" [level=1] [ref=f2e823] [box=-1,115,1,1]'
+          - generic [ref=f2e927] [box=0,116,375,672]:
+            - generic [ref=f2e928] [box=0,116,375,150]:
+              - generic [ref=f2e929] [box=16,120,343,77]:
+                - generic "Пройдено 1 раз" [ref=f2e932] [box=317,120,42,25]
+                - generic [ref=f2e935] [box=16,153,343,44]
+              - generic [ref=f2e953] [box=-16,214,454,44]:
+                - generic [ref=f2e954] [cursor=pointer] [box=-10,214,44,44]: 
+                - generic [ref=f2e1140] [cursor=pointer] [box=34,214,44,44]: "1"
+                - generic [ref=f2e1199] [cursor=pointer] [box=78,214,44,44]: "2"
+                - generic [ref=f2e1200] [cursor=pointer] [box=122,214,44,44]: "3"
+                - generic [ref=f2e1293] [cursor=pointer] [box=166,214,44,44]: "4"
+                - generic [ref=f2e1329] [cursor=pointer] [box=210,214,44,44]: "5"
+                - generic [ref=f2e1365] [cursor=pointer] [box=254,214,44,44]: "6"
+                - generic [box=298,214,44,44]: "7"
+                - generic [box=342,214,44,44]: "8"
+                - generic [ref=f2e973] [cursor=pointer] [box=386,214,44,44]: Ф
+            - generic [ref=f2e979] [box=16,282,343,3843]:
+              - generic [ref=f2e980] [box=16,282,343,1203]:
+                - generic [ref=f2e982] [box=16,282,343,803]
+                - generic [ref=f2e1010] [box=24,1109,327,360]
+              - generic [ref=f2e1078] [box=40,1566,295,41]:
+                - generic [ref=f2e1079] [box=40,1566,295,22]: Экскурсии рядом
+                - generic [ref=f2e1080] [box=40,1592,295,15]: Откройте больше с местными гидами
+              - region "Путешествия — Витебск" [ref=f2e1082] [box=16,2915,343,759]:
+                - heading "Путешествия — Витебск" [level=2] [ref=f2e1083] [box=16,2915,343,22]
+                - generic [ref=f2e1084] [box=16,2940,343,15]: Истории и маршруты авторов по этим местам
+                - generic [ref=f2e1085] [box=16,2971,343,702]
+              - generic [ref=f2e1121] [box=32,3693,311,412]:
+                - generic [ref=f2e1122] [box=49,3712,44,44]: 
+                - generic [ref=f2e1125] [box=49,3770,277,79]
+                - generic [ref=f2e1128] [box=49,3863,277,223]
+      - generic [ref=f2e727] [box=0,0,375,788]:
+        - generic [ref=f2e730] [box=0,0,375,109]:
+          - generic [ref=f2e731] [box=0,0,375,56]:
+            - link [ref=f2e845] [cursor=pointer] [box=6,6,44,44]
+            - button [ref=f2e848] [cursor=pointer] [box=66,6,61,44]:
+              - generic [ref=f2e739] [box=75,20,17,17]: 
+              - generic [ref=f2e741] [box=98,21,20,15]: RU
+            - generic [ref=f2e742] [box=143,6,226,44]:
+              - button [ref=f2e849] [cursor=pointer] [box=201,6,116,44]:
+                - generic [ref=f2e852] [box=241,19,64,19]: Юля
+              - button [ref=f2e853] [cursor=pointer] [box=325,6,44,44]:
+                - generic [ref=f2e744] [box=335,16,24,24]: 
+          - generic [ref=f2e855] [box=12,60,351,44]:
+            - button [ref=f2e856] [cursor=pointer] [box=12,60,44,44]:
+              - generic [ref=f2e857] [box=25,72,18,20]: 
+            - generic [ref=f2e858] [box=64,74,251,17]: Бюро добрых городских дел
+        - generic [ref=f2e752] [box=16,140,328,729]:
+          - heading [level=1] [ref=f2e861] [box=40,164,280,30]: С возвращением
+          - generic [ref=f2e754] [box=40,200,280,40]: Войдите, чтобы продолжить с того места, где остановились.
+          - generic [ref=f2e755] [box=40,264,280,168]:
+            - button [disabled] [box=40,264,280,48]:
+              - generic [ref=f2e757] [cursor=pointer] [box=76,277,209,22]: Войти через Apple
+            - button [ref=f2e862] [cursor=pointer] [box=40,324,280,48]:
+              - iframe [ref=f2e922] [box=30,326,300,44]:
+                - button "Вход через аккаунт Google. Откроется в новой вкладке." [ref=f4e3] [cursor=pointer] [box=10,2,280,40]:
+                  - generic [ref=f4e5] [box=23,3,254,38]: Вход через аккаунт Google
+            - generic [ref=f2e777] [box=40,384,280,48]:
+              - button [disabled] [box=40,384,280,48]:
+                - generic [ref=f2e779] [cursor=pointer] [box=60,397,240,23]
+          - generic [ref=f2e782] [box=40,452,280,17]: или по email
+          - generic [ref=f2e786] [box=40,489,280,73]:
+            - generic [ref=f2e787] [box=40,489,280,17]: Email *
+            - textbox [ref=f2e863] [box=40,513,280,48]:
+              - /placeholder: Email
+              - text: ignatieva_julia@tut.by
+          - generic [ref=f2e790] [box=40,577,280,73]:
+            - generic [ref=f2e791] [box=40,577,280,17]: Пароль *
+            - generic [ref=f2e793] [box=40,602,280,48]:
+              - textbox [ref=f2e864] [box=40,602,280,48]:
+                - /placeholder: Пароль
+                - text: zxc1asd2qwe3
+              - button [ref=f2e865] [cursor=pointer] [box=272,602,44,48]:
+                - generic [ref=f2e796] [box=284,614,20,23]: 
+          - button [disabled] [box=40,674,280,54]:
+            - generic [ref=f2e798] [cursor=pointer] [box=109,691,141,20]:
+              - progressbar [ref=f2e866] [box=109,691,20,20]
+              - generic [ref=f2e799] [box=145,691,105,19]: Подождите…
+          - button [disabled] [box=112,744,136,44]:
+            - generic [ref=f2e801] [cursor=pointer] [box=124,757,112,17]: Забыли пароль?
+          - generic [ref=f2e802] [box=40,808,280,38]:
+            - generic [ref=f2e803] [box=61,829,100,17]: Нет аккаунта?
+            - link [ref=f2e871] [cursor=pointer] [box=161,829,138,17]:
+              - /url: /registration?redirect=%2Fquests%2Fvitebsk%2Fvitebsk-kids-skazki&intent=quest
+              - text: Зарегистрируйтесь
+    - tablist "Навигация" [ref=f2e876] [box=2,791,386,47]:
+      - tab "Маршруты" [ref=f2e878] [cursor=pointer] [box=2,793,77,44]
+      - tab "Карта" [ref=f2e888] [cursor=pointer] [box=79,793,77,44]
+      - tab "Квесты" [selected] [ref=f2e897] [cursor=pointer] [box=156,791,77,47]
+      - tab "Профиль" [ref=f2e905] [cursor=pointer] [box=234,793,77,44]:
+        - generic [ref=f2e906] [box=235,795,75,39]:
+          - generic [ref=f2e907] [box=260,795,24,24]: 
+          - generic [ref=f2e909] [box=235,822,75,12]: Профиль
+      - tab "Ещё" [ref=f2e911] [cursor=pointer] [box=311,793,77,44]:
+        - generic [ref=f2e912] [box=312,795,75,39]:
+          - generic [ref=f2e913] [box=337,795,24,24]: 
+          - generic [ref=f2e915] [box=312,822,75,12]: Ещё

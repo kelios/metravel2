@@ -160,6 +160,52 @@ describe('useListTravelData with infinite query', () => {
     queryClient.clear();
   });
 
+  it('preserves backend relevance order across paginated search results', async () => {
+    (fetchTravels as jest.Mock)
+      .mockResolvedValueOnce({
+        total: 4,
+        data: [
+          { id: 'rank-9', title: 'First by backend relevance' },
+          { id: 'rank-2', title: 'Second by backend relevance' },
+        ],
+      })
+      .mockResolvedValueOnce({
+        total: 4,
+        data: [
+          { id: 'rank-7', title: 'Third by backend relevance' },
+          { id: 'rank-1', title: 'Fourth by backend relevance' },
+        ],
+      });
+
+    const { ref, queryClient, unmount } = renderWithClient({
+      queryParams: {},
+      search: '  минск  ',
+    });
+
+    await waitFor(() => expect(ref.current?.data).toHaveLength(2));
+    expect(ref.current?.data.map((travel: { id: string }) => travel.id)).toEqual([
+      'rank-9',
+      'rank-2',
+    ]);
+
+    act(() => {
+      ref.current?.handleEndReached();
+    });
+
+    await waitFor(() => expect(ref.current?.data).toHaveLength(4));
+    expect(ref.current?.data.map((travel: { id: string }) => travel.id)).toEqual([
+      'rank-9',
+      'rank-2',
+      'rank-7',
+      'rank-1',
+    ]);
+    expect(fetchTravels).toHaveBeenNthCalledWith(1, 0, expect.any(Number), 'минск', {}, expect.any(Object));
+    expect(fetchTravels).toHaveBeenNthCalledWith(2, 1, expect.any(Number), 'минск', {}, expect.any(Object));
+
+    unmount();
+    queryClient.clear();
+  });
+
   it('stops pagination when a next page resolves empty', async () => {
     (fetchTravels as jest.Mock)
       .mockResolvedValueOnce({

@@ -1,0 +1,43 @@
+- generic [ref=f1e17]:
+  - generic:
+    - link "Перейти к основному содержимому"
+    - link "Перейти к навигации"
+  - generic [ref=f1e18]:
+    - generic [ref=f1e27]:
+      - generic [ref=f1e30]:
+        - generic [ref=f1e31]:
+          - link "MeTravel логотип" [ref=f1e32] [cursor=pointer]:
+            - generic "MeTravel логотип" [ref=f1e33]
+          - 'button "Изменить язык: Русский" [ref=f1e38] [cursor=pointer]':
+            - generic [ref=f1e39]: 
+            - generic [ref=f1e41]: RU
+          - generic [ref=f1e42]:
+            - generic: 
+            - button "Открыть меню" [ref=f1e43] [cursor=pointer]
+        - generic [ref=f1e47]:
+          - button "Назад" [ref=f1e48] [cursor=pointer]:
+            - generic [ref=f1e49]: 
+          - generic [ref=f1e50]: "Квест по Батуми: по следам аргонавтов"
+      - generic [ref=f1e54]:
+        - 'heading "Батуми: что посмотреть — Квест по Батуми: по следам…" [level=1] [ref=f1e55]'
+        - generic [ref=f1e58]:
+          - generic [ref=f1e59]:
+            - generic [ref=f1e61]
+            - generic [ref=f1e79]
+          - generic [ref=f1e105]:
+            - generic [ref=f1e106]
+            - generic [ref=f1e204]
+            - region "Путешествия — Батуми" [ref=f1e208]
+            - generic [ref=f1e247]
+    - tablist "Навигация" [ref=f1e270]:
+      - tab "Маршруты" [ref=f1e272] [cursor=pointer]
+      - tab "Карта" [ref=f1e282] [cursor=pointer]
+      - tab "Квесты" [selected] [ref=f1e291] [cursor=pointer]
+      - tab "Профиль" [ref=f1e299] [cursor=pointer]:
+        - generic [ref=f1e300]:
+          - generic [ref=f1e301]: 
+          - generic [ref=f1e303]: Профиль
+      - tab "Ещё" [ref=f1e305] [cursor=pointer]:
+        - generic [ref=f1e306]:
+          - generic [ref=f1e307]: 
+          - generic [ref=f1e309]: Ещё

@@ -70,7 +70,7 @@ export const submitQuestReview = async (
 ): Promise<QuestReviewRecord> => {
   const { questId, rating, liked, disliked } = params
 
-  if (rating < 1 || rating > 5) {
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     throw new Error(i18nT('errorsStatic:api.common.ratingRange'))
   }
 
@@ -121,6 +121,6 @@ export const getUserQuestReview = async (questId: number): Promise<QuestReviewRe
       return null
     }
     devError('Error fetching user quest review:', error)
-    return null
+    throw error
   }
 }

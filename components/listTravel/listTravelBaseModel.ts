@@ -147,7 +147,7 @@ type SearchParams = {
 }
 
 export type TravelFallbackStep = {
-  id: 'light' | 'medium' | 'broad' | 'searchless'
+  id: 'light' | 'medium' | 'broad'
   label: string
   params: Record<string, any>
   removedKeys: string[]
@@ -158,7 +158,6 @@ const FALLBACK_RELAXATION_PRESETS: Array<{
   id: TravelFallbackStep['id']
   label: string
   removedKeys: string[]
-  resetSearch?: boolean
 }> = [
   {
     id: 'light',
@@ -184,22 +183,6 @@ const FALLBACK_RELAXATION_PRESETS: Array<{
       'categories',
       'countries',
     ],
-  },
-  {
-    id: 'searchless',
-    get label() { return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.searchless') },
-    removedKeys: [
-      'year',
-      'month',
-      'over_nights_stay',
-      'companions',
-      'complexity',
-      'transports',
-      'categoryTravelAddress',
-      'categories',
-      'countries',
-    ],
-    resetSearch: true,
   },
 ]
 
@@ -256,14 +239,13 @@ export function buildListTravelFallbackSteps({
 
   FALLBACK_RELAXATION_PRESETS.forEach((preset) => {
     const params = removeKeysFromParams(normalizedParams, preset.removedKeys)
-    const nextSearch = preset.resetSearch ? '' : normalizedSearch
 
     if (
       areFallbackInputsEqual({
         baseParams: normalizedParams,
         nextParams: params,
         baseSearch: normalizedSearch,
-        nextSearch,
+        nextSearch: normalizedSearch,
       })
     ) {
       return
@@ -274,7 +256,7 @@ export function buildListTravelFallbackSteps({
         baseParams: step.params,
         nextParams: params,
         baseSearch: step.search,
-        nextSearch,
+        nextSearch: normalizedSearch,
       }),
     )
     if (duplicate) return
@@ -284,7 +266,7 @@ export function buildListTravelFallbackSteps({
       label: preset.label,
       params,
       removedKeys: preset.removedKeys,
-      search: nextSearch,
+      search: normalizedSearch,
     })
   })
 
@@ -482,21 +464,17 @@ export function selectListTravelFallbackMatch<S, Q extends { data: any[] }>({
   fallbackStepLight,
   fallbackStepMedium,
   fallbackStepBroad,
-  fallbackStepSearchless,
   fallbackQueryLight,
   fallbackQueryMedium,
   fallbackQueryBroad,
-  fallbackQuerySearchless,
 }: {
   isEmpty: boolean
   fallbackStepLight: S
   fallbackStepMedium: S
   fallbackStepBroad: S
-  fallbackStepSearchless: S
   fallbackQueryLight: Q
   fallbackQueryMedium: Q
   fallbackQueryBroad: Q
-  fallbackQuerySearchless: Q
 }): ListTravelFallbackCandidate<S, Q> | null {
   if (!isEmpty) return null
 
@@ -504,7 +482,6 @@ export function selectListTravelFallbackMatch<S, Q extends { data: any[] }>({
     { step: fallbackStepLight, query: fallbackQueryLight },
     { step: fallbackStepMedium, query: fallbackQueryMedium },
     { step: fallbackStepBroad, query: fallbackQueryBroad },
-    { step: fallbackStepSearchless, query: fallbackQuerySearchless },
   ]
 
   return candidates.find((candidate) => candidate.step && candidate.query.data.length > 0) ?? null

@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
-import { useLocalSearchParams } from 'expo-router'
+import { useEffect, useMemo } from 'react'
+import { useLocalSearchParams, usePathname } from 'expo-router'
+import { Platform } from 'react-native'
 import {
   buildListTravelInitialFilter,
   normalizeListTravelParam,
@@ -21,12 +22,15 @@ export function useListTravelInitialFilter() {
     month?: string | string[];
     sort?: string | string[];
     search?: string | string[];
+    q?: string | string[];
   }>();
+  const pathname = usePathname();
 
   // Extract individual param values for stable useMemo dependencies
   // (params object is a new reference every render from useLocalSearchParams)
   const user_id = params.user_id;
   const pSearch = params.search;
+  const pSearchAlias = params.q;
   const pCategories = params.categories;
   const pOverNightsStay = params.over_nights_stay;
   const pOverNightsStayAlt = params.over__nights__stay;
@@ -39,9 +43,26 @@ export function useListTravelInitialFilter() {
   const pSort = params.sort;
 
   const normalizedSearchParam = useMemo(
-    () => normalizeListTravelParam(pSearch) ?? '',
-    [pSearch]
+    () => normalizeListTravelParam(pSearch !== undefined ? pSearch : pSearchAlias)?.trim() ?? '',
+    [pSearch, pSearchAlias]
   );
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || pathname !== '/search' || typeof window === 'undefined') return;
+
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('q')) return;
+
+    if (normalizedSearchParam) {
+      url.searchParams.set('search', normalizedSearchParam);
+    } else {
+      url.searchParams.delete('search');
+    }
+    url.searchParams.delete('q');
+
+    const nextPath = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, '', nextPath);
+  }, [normalizedSearchParam, pathname]);
 
   const initialFilter = useMemo(() => {
     return buildListTravelInitialFilter({

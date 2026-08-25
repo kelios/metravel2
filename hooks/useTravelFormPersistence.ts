@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import isEqual from 'fast-deep-equal';
 import { type QueryClient } from '@tanstack/react-query';
-import { saveFormData } from '@/api/misc';
+import { saveFormData, saveTravelContent, type TravelContentSaveResponse } from '@/api/misc';
 import { ApiError } from '@/api/client';
 import { TravelFormData, MarkerData } from '@/types/types';
 import { useFormState } from '@/hooks/useFormState';
@@ -27,6 +27,10 @@ import {
   mergeOverridePreservingUserInput,
 } from '@/utils/travelFormNormalization';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
+import {
+  planTravelContentSave,
+  type TravelContentSavePlan,
+} from '@/utils/travelContentSaveDelta';
 import { showToastMessage } from '@/utils/toast';
 import {
   getErrorMessage,
@@ -107,6 +111,54 @@ const preserveFieldsEditedAfterDispatch = (
   });
   return mergedData;
 };
+
+/**
+ * Общая обвязка отмены для обоих контрактов сохранения (полного и узкого).
+ *
+ * Держит в `saveAbortControllerRef` контроллер текущего сохранения: ручной сейв
+ * обрывает по нему летящий фоновый, а внешний signal автосейва
+ * (cancelPending/unmount) реально прерывает запрос, а не только игнорирует ответ.
+ */
+async function runWithSaveAbortController<T>(
+  saveAbortControllerRef: MutableRefObject<AbortController | null>,
+  externalSignal: AbortSignal | undefined,
+  run: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  if (saveAbortControllerRef.current) {
+    saveAbortControllerRef.current.abort();
+  }
+
+  const abortController = new AbortController();
+  saveAbortControllerRef.current = abortController;
+
+  const onExternalAbort = () => abortController.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      abortController.abort();
+    } else {
+      externalSignal.addEventListener('abort', onExternalAbort);
+    }
+  }
+
+  try {
+    return await run(abortController.signal);
+  } catch (error) {
+    const isAbort = abortController.signal.aborted || getErrorName(error) === 'AbortError';
+    if (isAbort) {
+      // Нормализуем отмену, чтобы выше по цепочке можно было её корректно игнорировать.
+      throw new Error('Request aborted');
+    }
+    throw error;
+  } finally {
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
+    // Очищаем ссылку только если это наш контроллер
+    if (saveAbortControllerRef.current === abortController) {
+      saveAbortControllerRef.current = null;
+    }
+  }
+}
 
 const markerIdentityMatches = (left: MarkerData, right: MarkerData): boolean => {
   const leftId = left.id == null ? '' : String(left.id).trim();
@@ -227,6 +279,15 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // форму (например, уже с точкой B) успешно сохранённым baseline.
   const lastAutosaveSourceRef = useRef<TravelFormData | null>(null);
 
+  // Итог последнего узкого сохранения (#1516). onSuccess движка получает только
+  // возвращённое значение, а узкий ответ — это подтверждение текста, а не статья
+  // целиком: применять его как полный ответ нельзя. Идентичность `confirmed`
+  // отличает «этот успех пришёл с узкого пути» от полного сохранения.
+  const lastContentSaveRef = useRef<{
+    confirmed: TravelFormData;
+    response: TravelContentSaveResponse;
+  } | null>(null);
+
   // Стабильная ссылка на autosave.cancelPending, чтобы handleManualSave не
   // пересоздавался на каждый тик статуса автосейва.
   const autosaveCancelPendingRef = useRef<(() => void) | null>(null);
@@ -267,27 +328,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     options?: { autosave?: boolean; intent?: 'autosave' | 'save' | 'publish' },
     externalSignal?: AbortSignal,
   ) => {
-    // ✅ FIX: Отменяем предыдущий запрос для предотвращения race condition
-    if (saveAbortControllerRef.current) {
-      saveAbortControllerRef.current.abort();
-    }
-
-    // Создаём новый контроллер для этого запроса
-    const abortController = new AbortController();
-    saveAbortControllerRef.current = abortController;
-
-    // Связываем внешний signal (от автосейва: cancelPending/unmount) с внутренним,
-    // чтобы отмена реально прерывала in-flight saveFormData-запрос.
-    const onExternalAbort = () => abortController.abort();
-    if (externalSignal) {
-      if (externalSignal.aborted) {
-        abortController.abort();
-      } else {
-        externalSignal.addEventListener('abort', onExternalAbort);
-      }
-    }
-
-    try {
+    return runWithSaveAbortController(saveAbortControllerRef, externalSignal, async (saveSignal) => {
       const baseFormData = getEmptyFormData(data?.id ? String(data.id) : null);
       const mergedData = normalizeNullableStrings({
         ...baseFormData,
@@ -335,10 +376,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         throw new Error('Component unmounted');
       }
 
-      const result = await saveFormData(payload, abortController.signal, options);
+      const result = await saveFormData(payload, saveSignal, options);
 
       // ✅ FIX: Проверяем, что запрос не был отменён
-      if (abortController.signal.aborted) {
+      if (saveSignal.aborted) {
         throw new Error('Request aborted');
       }
 
@@ -351,23 +392,50 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       );
 
       return result;
-    } catch (error) {
-      const isAbort = abortController.signal.aborted || getErrorName(error) === 'AbortError';
-      if (isAbort) {
-        // Нормализуем отмену, чтобы выше по цепочке можно было её корректно игнорировать.
+    });
+  }, [queryClient, stableTravelId, mountedRef, saveAbortControllerRef]);
+
+  /**
+   * Узкий путь фонового сохранения (#1516): уходят только изменившиеся текстовые
+   * поля, поэтому сервер не пересобирает граф статьи — точки, галерея, обложка,
+   * справочники и статус публикации остаются нетронутыми.
+   */
+  const saveContentDelta = useCallback(async (
+    plan: Extract<TravelContentSavePlan, { kind: 'content' }>,
+    previousSlug: string | null | undefined,
+    externalSignal?: AbortSignal,
+  ): Promise<TravelContentSaveResponse> => {
+    const fields = { ...plan.fields };
+    // Тот же smart-layout описания, что и на полном пути: раскладка картинок не
+    // должна зависеть от того, каким контрактом ушла правка.
+    if (typeof fields.description === 'string') {
+      fields.description = applySmartImageLayout(fields.description);
+    }
+
+    return runWithSaveAbortController(saveAbortControllerRef, externalSignal, async (saveSignal) => {
+      if (!mountedRef.current) {
+        throw new Error('Component unmounted');
+      }
+
+      const response = await saveTravelContent(plan.travelId, fields, saveSignal);
+
+      if (saveSignal.aborted) {
         throw new Error('Request aborted');
       }
-      throw error;
-    } finally {
-      if (externalSignal) {
-        externalSignal.removeEventListener('abort', onExternalAbort);
-      }
-      // Очищаем ссылку только если это наш контроллер
-      if (saveAbortControllerRef.current === abortController) {
-        saveAbortControllerRef.current = null;
-      }
-    }
-  }, [queryClient, stableTravelId, mountedRef, saveAbortControllerRef]);
+
+      // Правка названия перестраивает slug: старый ключ детали тоже обязан
+      // протухнуть, иначе страница по прежнему адресу отдаст старый текст.
+      void invalidateTravelDetails(
+        queryClient,
+        plan.travelId,
+        response?.id,
+        response?.slug,
+        previousSlug,
+      );
+
+      return response;
+    });
+  }, [queryClient, mountedRef, saveAbortControllerRef]);
 
   const applySavedData = useCallback(
     (
@@ -557,13 +625,47 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     ]
   );
 
+  /**
+   * Применение итога узкого сохранения. Форму здесь НЕ пересобираем: ответ
+   * содержит только текст, и прогон его через applySavedData выглядел бы как
+   * «сервер удалил точки и галерею». Обновляем ровно то, чем узкий путь владеет:
+   * серверный baseline rich-text и slug, если сервер перестроил его по названию.
+   */
+  const applyContentSavedData = useCallback(
+    (contentSave: { confirmed: TravelFormData; response: TravelContentSaveResponse }) => {
+      const { confirmed, response } = contentSave;
+
+      captureTextBaseline(confirmed);
+
+      const nextSlug = typeof response?.slug === 'string' ? response.slug : '';
+      const liveData = formDataRef.current as TravelFormData;
+      if (!nextSlug || !liveData || liveData.slug === nextSlug) return;
+
+      // Правка названия перестраивает slug и на полном пути (`_set_name_and_slug`).
+      // Синхронизируем его вместе с baseline движка: иначе следующий тик увидел бы
+      // расхождение по slug и отправил бы лишнее полное сохранение.
+      formDataRef.current = { ...liveData, slug: nextSlug };
+      formState.updateField('slug', nextSlug);
+      updateBaselineRef.current?.(confirmed);
+    },
+    [captureTextBaseline, formDataRef, formState, updateBaselineRef]
+  );
+
   const handleSaveSuccess = useCallback(
     (savedData: TravelFormData) => {
+      const contentSave = lastContentSaveRef.current;
+      lastContentSaveRef.current = null;
+
       // ✅ FIX: Проверяем монтирование перед обновлением состояния
       if (!mountedRef.current) return;
 
       // Успешный сейв снимает троттл: следующая ошибка (уже нового «эпизода») покажется сразу.
       resetAutosaveErrorToastThrottle();
+
+      if (contentSave && contentSave.confirmed === savedData) {
+        applyContentSavedData(contentSave);
+        return;
+      }
 
       // После первого автосейва создаётся id — остаёмся в мастере и просто подставляем новые данные.
       applySavedData(
@@ -572,7 +674,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         { preserveEditingState: true },
       );
     },
-    [applySavedData, formDataRef, mountedRef, resetAutosaveErrorToastThrottle]
+    [applyContentSavedData, applySavedData, formDataRef, mountedRef, resetAutosaveErrorToastThrottle]
   );
 
   const handleSaveError = useCallback(
@@ -628,15 +730,34 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   const handleAutosave = useCallback(async (
     dataToSave: TravelFormData,
     signal?: AbortSignal,
+    baseline?: TravelFormData,
   ) => {
     // Avoid racing autosave requests while a manual save is in progress.
     if (manualSaveInFlightRef.current) {
       throw new Error('Request aborted');
     }
+
+    // Правка одного абзаца не должна стоить полной пересборки графа статьи:
+    // если относительно подтверждённого состояния изменился только текст —
+    // уходим узким контрактом (#1516). Всё остальное идёт полным сохранением.
+    const plan = planTravelContentSave(dataToSave, baseline, stableTravelId);
+    if (plan.kind === 'content') {
+      const response = await saveContentDelta(plan, dataToSave.slug, signal);
+      // Подтверждённое состояние — отправленный снимок; slug сервер мог
+      // перестроить по новому названию, берём его подтверждённое значение.
+      const confirmed: TravelFormData =
+        typeof response?.slug === 'string' && response.slug && response.slug !== dataToSave.slug
+          ? { ...dataToSave, slug: response.slug }
+          : dataToSave;
+      lastAutosaveSourceRef.current = dataToSave;
+      lastContentSaveRef.current = { confirmed, response };
+      return confirmed;
+    }
+
     const savedData = await cleanAndSave(dataToSave, { autosave: true }, signal);
     lastAutosaveSourceRef.current = dataToSave;
     return savedData;
-  }, [cleanAndSave, manualSaveInFlightRef]);
+  }, [cleanAndSave, saveContentDelta, manualSaveInFlightRef, stableTravelId]);
 
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {
     debounce: 5000,

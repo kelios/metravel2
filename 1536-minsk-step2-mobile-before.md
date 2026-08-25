@@ -1,0 +1,75 @@
+- generic [ref=f7e3] [box=0,0,375,844]:
+  - generic [box=0,-160,375,844]:
+    - link "Перейти к основному содержимому" [box=12,-148,351,44]
+    - link "Перейти к навигации" [box=12,-92,351,44]
+  - generic [ref=f7e4] [box=0,0,375,844]:
+    - generic [ref=f7e13] [box=0,0,375,788]:
+      - generic [ref=f7e16] [box=0,0,375,109]:
+        - generic [ref=f7e17] [box=0,0,375,56]:
+          - link "MeTravel логотип" [ref=f7e18] [cursor=pointer] [box=6,6,44,44]:
+            - generic "MeTravel логотип" [ref=f7e19] [box=15,15,26,26]:
+              - img "MeTravel логотип" [ref=f7e21] [box=15,15,26,26]
+          - 'button "Изменить язык: Русский" [ref=f7e24] [cursor=pointer] [box=66,6,61,44]':
+            - generic [ref=f7e25] [box=75,20,17,17]: 
+            - generic [ref=f7e26] [box=98,21,20,15]: RU
+          - generic [ref=f7e37] [box=143,6,226,44]:
+            - button "Открыть профиль Юля" [ref=f7e38] [cursor=pointer] [box=201,6,116,44]:
+              - generic [ref=f7e41] [box=241,19,64,19]: Юля
+            - button "Открыть меню" [ref=f7e42] [cursor=pointer] [box=325,6,44,44]:
+              - generic [ref=f7e43] [box=335,16,24,24]: 
+        - generic [ref=f7e46] [box=12,60,351,44]:
+          - button "Назад" [ref=f7e47] [cursor=pointer] [box=12,60,44,44]:
+            - generic [ref=f7e48] [box=25,72,18,20]: 
+          - generic [ref=f7e49] [box=64,74,251,17]: "Квест по центру Минска: в поисках цмока"
+      - generic [ref=f7e52] [box=0,116,375,672]:
+        - 'heading "Минск: что посмотреть — Квест по центру Минска: в поисках…" [level=1] [ref=f7e53] [box=-1,115,1,1]'
+        - generic [ref=f7e56] [box=0,116,375,672]:
+          - generic [ref=f7e57] [box=0,116,375,117]:
+            - generic [ref=f7e59] [box=16,120,343,44]:
+              - button "Уменьшить шрифт" [disabled] [box=-3,120,44,44]
+              - button "Увеличить шрифт" [ref=f7e61] [cursor=pointer] [box=45,120,44,44]
+              - button "Печать квеста" [ref=f7e63] [cursor=pointer] [box=93,120,44,44]
+              - button "Скачать GPX с 9 точками квеста" [ref=f7e65] [cursor=pointer] [box=141,120,44,44]
+              - button "Открыть точки квеста в приложении карт" [ref=f7e67] [cursor=pointer] [box=189,120,44,44]
+              - button "Скачать квест для офлайна" [ref=f7e69] [cursor=pointer] [box=237,120,44,44]
+              - button "Сбросить прогресс" [ref=f7e71] [cursor=pointer] [box=285,120,44,44]
+              - generic [ref=f7e73] [box=337,124,22,36]: 1 / 6
+            - generic [ref=f7e77] [box=16,181,498,44]:
+              - generic [ref=f7e78] [cursor=pointer] [box=22,181,44,44]: 
+              - generic [ref=f7e326] [cursor=pointer] [box=66,181,44,44]: "1"
+              - generic [ref=f7e390] [cursor=pointer] [box=110,181,44,44]: "2"
+              - generic [box=154,181,44,44]: "3"
+              - generic [box=198,181,44,44]: "4"
+              - generic [box=242,181,44,44]: "5"
+              - generic [box=286,181,44,44]: "6"
+              - generic [box=330,181,44,44]: "7"
+              - generic [box=374,181,44,44]: "8"
+              - generic [box=418,181,44,44]: "9"
+              - generic [ref=f7e99] [cursor=pointer] [box=462,181,44,44]: Ф
+          - generic [ref=f7e105] [box=16,249,343,4175]:
+            - generic [ref=f7e106] [box=16,249,343,1297]:
+              - generic [ref=f7e108] [box=16,249,343,897]
+              - generic [ref=f7e136] [box=24,1170,327,360]
+            - generic [ref=f7e209] [box=40,1627,295,41]:
+              - generic [ref=f7e210] [box=40,1627,295,22]: Экскурсии рядом
+              - generic [ref=f7e211] [box=40,1653,295,15]: Откройте больше с местными гидами
+            - region "Путешествия — Минск" [ref=f7e213] [box=16,2976,343,997]:
+              - heading "Путешествия — Минск" [level=2] [ref=f7e214] [box=16,2976,343,22]
+              - generic [ref=f7e215] [box=16,3001,343,15]: Истории и маршруты авторов по этим местам
+              - generic [ref=f7e216] [box=16,3032,343,940]
+            - generic [ref=f7e263] [box=32,3992,311,412]:
+              - generic [ref=f7e264] [box=49,4011,44,44]: 
+              - generic [ref=f7e267] [box=49,4069,277,79]
+              - generic [ref=f7e270] [box=49,4162,277,223]
+    - tablist "Навигация" [ref=f7e286] [box=2,791,386,47]:
+      - tab "Маршруты" [ref=f7e288] [cursor=pointer] [box=2,793,77,44]
+      - tab "Карта" [ref=f7e298] [cursor=pointer] [box=79,793,77,44]
+      - tab "Квесты" [selected] [ref=f7e307] [cursor=pointer] [box=156,791,77,47]
+      - tab "Профиль" [ref=f7e315] [cursor=pointer] [box=234,793,77,44]:
+        - generic [ref=f7e316] [box=235,795,75,39]:
+          - generic [ref=f7e317] [box=260,795,24,24]: 
+          - generic [ref=f7e319] [box=235,822,75,12]: Профиль
+      - tab "Ещё" [ref=f7e321] [cursor=pointer] [box=311,793,77,44]:
+        - generic [ref=f7e322] [box=312,795,75,39]:
+          - generic [ref=f7e323] [box=337,795,24,24]: 
+          - generic [ref=f7e325] [box=312,822,75,12]: Ещё

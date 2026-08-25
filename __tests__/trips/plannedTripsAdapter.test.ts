@@ -27,6 +27,7 @@ import type {
   RsvpInput,
   SubmitReportInput,
 } from '@/api/plannedTrips'
+import { mapTrip, type PlannedTripDto } from '@/api/plannedTripsNormalizers'
 
 // ── regression guard: локальной оценки маршрута больше нет (#1490) ───────────
 
@@ -53,6 +54,35 @@ describe('local route estimation is removed', () => {
   })
 })
 
+describe('mapTrip start location mapping', () => {
+  it.each([
+    {
+      caseName: 'missing longitude',
+      dto: {
+        start_point_name: '  Minsk city centre  ',
+        start_lat: 53.9006,
+        start_lng: null,
+      },
+      expectedRegion: 'Minsk city centre',
+    },
+    {
+      caseName: 'blank name',
+      dto: { start_point_name: '   ', start_lat: 53.9006, start_lng: 27.559 },
+      expectedRegion: '',
+    },
+    {
+      caseName: 'out-of-range latitude',
+      dto: { start_point_name: 'Minsk', start_lat: 91, start_lng: 27.559 },
+      expectedRegion: 'Minsk',
+    },
+  ])('does not guess a start point for $caseName', ({ dto, expectedRegion }) => {
+    const trip = mapTrip({ id: 77, title: 'Trip', ...dto } satisfies PlannedTripDto)
+
+    expect(trip.region).toBe(expectedRegion)
+    expect(trip.startPoint).toBeNull()
+  })
+})
+
 describe('fetchMyPlannedTrips backend route_summary mapping', () => {
   afterEach(() => {
     delete process.env.EXPO_PUBLIC_TRIPS_MOCK
@@ -69,6 +99,9 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
           title: 'Backend route',
           description: 'Uses server summary',
           start_date: '2026-07-04',
+          start_point_name: '  Minsk Central Railway Station  ',
+          start_lat: 53.8906,
+          start_lng: 27.5512,
           status: 'planned',
           transport_mode: 'bicycle',
           owner: { id: 7, username: 'Owner', avatar: null },
@@ -150,6 +183,15 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
     const [trip] = await fetchMyPlannedTrips()
 
     expect(apiClientMock.get).toHaveBeenCalledWith('/trips/planned/me/')
+    expect(trip.region).toBe('Minsk Central Railway Station')
+    expect(trip.startPoint).toEqual({
+      id: 'start',
+      type: 'place',
+      name: 'Minsk Central Railway Station',
+      description: null,
+      coordinates: [27.5512, 53.8906],
+      placeId: null,
+    })
     expect(trip.transport).toBe('bike')
     expect(trip.route[0]).toEqual(expect.objectContaining({
       type: 'rest',
@@ -233,12 +275,14 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
       visibility: 'private',
       seatsTotal: 0,
       status: 'planning',
+      startPoint: null,
       route: [],
       routeGeometry: null,
       routeSummary: null,
       routingState: null,
       isOwner: true,
       myRsvp: null,
+      region: '',
     }))
     // #1313: ISO date-time из payload превращается в локальный день и локальное
     // время, а не доезжает до домена сырой строкой.

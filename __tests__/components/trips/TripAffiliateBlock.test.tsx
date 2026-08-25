@@ -32,8 +32,12 @@ const MINSK: [number, number] = [27.5615, 53.9023]
 // роль больше не годится — CZ добавлена в таблицу 2026-08-18.
 const KYIV: [number, number] = [30.5234, 50.4501]
 
-const makeTrip = (route: RoutePoint[], region = ''): PlannedTrip =>
-  ({ id: 31, region, route, startPoint: null } as unknown as PlannedTrip)
+const makeTrip = (
+  route: RoutePoint[],
+  region = '',
+  startPoint: RoutePoint | null = null,
+): PlannedTrip =>
+  ({ id: 31, region, route, startPoint } as unknown as PlannedTrip)
 
 const openedUrl = () => (openExternalUrlInNewTab as jest.Mock).mock.calls[0][0] as string
 
@@ -103,6 +107,19 @@ describe('TripAffiliateBlock', () => {
     expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
   })
 
+  it('falls back to the explicit start point when route points have no coordinates', async () => {
+    const { getByText } = await renderBlock(
+      makeTrip(
+        [point('Обед в дорогу', null)],
+        'Минск',
+        point('Место сбора', MINSK),
+      ),
+    )
+
+    fireEvent.press(getByText('Подобрать жильё'))
+    expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
+  })
+
   // Инвариант #1371 на поверхности поездок: место в копии допустимо только тогда,
   // когда ссылка реально ведёт в это место.
   it('names the place when the link lands there', async () => {
@@ -128,6 +145,13 @@ describe('TripAffiliateBlock', () => {
     fireEvent.press(getByText('Подобрать жильё'))
     expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/'))
     expect(openedUrl()).not.toContain(encodeURIComponent('/hotel/'))
+  })
+
+  it('renders nothing when the trip has no location signal', async () => {
+    const { queryByTestId, queryByText } = await renderBlock(makeTrip([]))
+
+    expect(queryByTestId('trip-affiliate')).toBeNull()
+    expect(queryByText('Где остановиться и что посмотреть')).toBeNull()
   })
 
   it('renders no orphan heading when no offer template is configured', async () => {

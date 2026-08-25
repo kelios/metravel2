@@ -2,6 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Map Places 1573 Web 3000",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8150\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8150\" NODE_OPTIONS=--max-old-space-size=12288 EXPO_PUBLIC_API_URL=http://localhost:8000 EXPO_PUBLIC_IS_LOCAL_API=false npx expo start --web --port 3000"
+      ],
+      "port": 3000,
+      "autoPort": false
+    },
+    {
       "name": "Quest UGC 1486 LocalApi 8081",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
@@ -623,6 +633,16 @@
         "https://metravel.by"
       ],
       "port": 4603,
+      "autoPort": false
+    },
+    {
+      "name": "Map 1572 Web 8155",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8155\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8155\" NODE_OPTIONS=--max-old-space-size=12288 EXPO_PUBLIC_API_URL=http://localhost:8000 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8155"
+      ],
+      "port": 8155,
       "autoPort": false
     }
   ]

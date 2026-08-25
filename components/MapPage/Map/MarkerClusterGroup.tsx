@@ -7,7 +7,8 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { Point } from './types'
-import { getMapPointContentKey, getMapPointIdentityKey, strToLatLng } from './utils'
+import { getMapPointContentKey, strToLatLng } from './utils'
+import { groupMapPlaces } from '@/api/mapPlaces'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import {
   CLUSTER_DISABLE_ZOOM,
@@ -274,40 +275,58 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     }
   }, [map])
 
-  // Parsed + validated points.
+  // Parsed + validated places — ОДИН маркер и один hit target на физическое место
+  // (#1573): несколько статей об одном объекте приходят отдельными записями и
+  // раньше давали стопку перекрывающихся маркеров. Группировка идёт через общую
+  // модель `groupMapPlaces` (#1571) строго по backend `place_id`; запись без него
+  // сохраняет прежний record-ключ и остаётся самостоятельным маркером.
   //
   // The key must be stable across data refreshes, because the sync effect below
   // diffs by it. The old key fell back to the ARRAY INDEX for points without an
   // id, so a reordered response looked like "every marker replaced". Collisions
   // (two points at the same coord within one payload) get a deterministic suffix
-  // by first-seen order instead.
+  // by first-seen order instead — `groupMapPlaces` keeps that same rule.
   //
   // The key includes the coordinate, and `contentKey` carries everything the marker
   // renders — a surviving marker is never re-created, so a point that moved or whose
   // address/thumb changed has to be detected here or it would keep showing stale data
   // at a stale position.
   const validPoints = useMemo(() => {
-    const seen = new Map<string, number>()
-    return points
-      .map((point) => {
-        const ll = strToLatLng(String(point.coord), hintCenter)
-        if (!ll) return null
-        const coords = { lat: ll[1], lng: ll[0] }
-        if (!CoordinateConverter.isValid(coords)) return null
-        const baseKey = getMapPointIdentityKey(point)
-        const duplicateIndex = seen.get(baseKey) ?? 0
-        seen.set(baseKey, duplicateIndex + 1)
-        return {
-          point,
-          coords,
-          key: duplicateIndex === 0 ? baseKey : `${baseKey}#${duplicateIndex}`,
-          // Coordinates are resolved with `hintCenter`, which can flip an ambiguous
-          // "lat,lng" pair — fold the resolved position in so that flip re-creates
-          // the marker instead of leaving it at the old spot.
-          contentKey: `${getMapPointContentKey(point)}|${coords.lat},${coords.lng}`,
-        }
+    // Координаты разбираются ДО группировки: невалидная запись не должна ни
+    // занимать место в `#n`-нумерации legacy-ключей, ни становиться носителем
+    // канонических полей места.
+    const coordsByPoint = new Map<Point, { lat: number; lng: number }>()
+    const renderablePoints: Point[] = []
+    for (const point of points) {
+      const ll = strToLatLng(String(point.coord), hintCenter)
+      if (!ll) continue
+      const coords = { lat: ll[1], lng: ll[0] }
+      if (!CoordinateConverter.isValid(coords)) continue
+      if (!coordsByPoint.has(point)) renderablePoints.push(point)
+      coordsByPoint.set(point, coords)
+    }
+
+    const places: Array<{
+      point: Point
+      coords: { lat: number; lng: number }
+      key: string
+      contentKey: string
+    }> = []
+    for (const place of groupMapPlaces(renderablePoints)) {
+      const point = place.record
+      const coords = coordsByPoint.get(point)
+      if (!coords) continue
+      places.push({
+        point,
+        coords,
+        key: place.placeKey,
+        // Coordinates are resolved with `hintCenter`, which can flip an ambiguous
+        // "lat,lng" pair — fold the resolved position in so that flip re-creates
+        // the marker instead of leaving it at the old spot.
+        contentKey: `${getMapPointContentKey(point)}|${coords.lat},${coords.lng}`,
       })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
+    }
+    return places
   }, [points, hintCenter])
 
   const clusterIconFactory = useMemo(() => {

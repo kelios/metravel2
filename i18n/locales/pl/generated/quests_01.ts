@@ -153,7 +153,7 @@ export const questsGenerated1 = {
   "components.quests.QuestReviewSection.chto_ponravilos_b836e082": "Co Ci się podobało?",
   "components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0": "Wyślij opinię",
   "components.quests.QuestReviewSection.otpravlyaem_46246aeb": "Wysyłamy...",
-  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Ocena jest uwzględniana w ogólnej ocenie zadania. Opinia tekstowa jest opcjonalna.",
+  "components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13": "Ocena zostanie zapisana razem z opinią. Tekst opinii jest opcjonalny.",
   "components.quests.QuestReviewSection.otzyv_o_kveste_c6c8ceb5": "Opinia na temat zadania",
   "components.quests.QuestReviewSection.rasskazhite_chto_bylo_interesno_472acf46": "Opowiedz mi, co było interesujące",
   "components.quests.QuestReviewSection.spasibo_za_otzyv_af1c9931": "Dziękujemy za Twoją opinię!",

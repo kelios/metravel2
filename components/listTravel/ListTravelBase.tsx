@@ -235,7 +235,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     });
 
     // Запасные шаги нужны только когда основная выдача пуста. В обычном случае
-    // отдаём стабильный пустой массив, чтобы 4 fallback-хука ниже не делали
+    // отдаём стабильный пустой массив, чтобы 3 fallback-хука ниже не делали
     // никакой работы (пустые params + disabled query).
     const fallbackSteps = useMemo(
       () =>
@@ -251,7 +251,6 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const fallbackStepLight = fallbackSteps[0];
     const fallbackStepMedium = fallbackSteps[1];
     const fallbackStepBroad = fallbackSteps[2];
-    const fallbackStepSearchless = fallbackSteps[3];
 
     const fallbackQueryLight = useListTravelData({
       queryParams: fallbackStepLight?.params ?? {},
@@ -276,17 +275,6 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         isListTravelFallbackStageExhausted(fallbackQueryLight) &&
         isListTravelFallbackStageExhausted(fallbackQueryMedium) &&
         !!fallbackStepBroad,
-    });
-    const fallbackQuerySearchless = useListTravelData({
-      queryParams: fallbackStepSearchless?.params ?? {},
-      search: fallbackStepSearchless?.search ?? '',
-      isQueryEnabled:
-        isQueryEnabled &&
-        isEmpty &&
-        isListTravelFallbackStageExhausted(fallbackQueryLight) &&
-        isListTravelFallbackStageExhausted(fallbackQueryMedium) &&
-        isListTravelFallbackStageExhausted(fallbackQueryBroad) &&
-        !!fallbackStepSearchless,
     });
     /* Delete flow (state + race-guarded mutation + native confirm) lives in the hook. */
     const {
@@ -511,25 +499,21 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       fallbackStepLight,
       fallbackStepMedium,
       fallbackStepBroad,
-      fallbackStepSearchless,
       fallbackQueryLight,
       fallbackQueryMedium,
       fallbackQueryBroad,
-      fallbackQuerySearchless,
     }), [
       isEmpty,
       fallbackQueryBroad,
       fallbackQueryLight,
       fallbackQueryMedium,
-      fallbackQuerySearchless,
       fallbackStepBroad,
       fallbackStepLight,
       fallbackStepMedium,
-      fallbackStepSearchless,
     ]);
     const activeFallbackMatch = fallbackMatch;
 
-    const isFallbackLoading = isEmpty && !activeFallbackMatch && isListTravelAnyFallbackLoading([fallbackQueryLight, fallbackQueryMedium, fallbackQueryBroad, fallbackQuerySearchless]);
+    const isFallbackLoading = isEmpty && !activeFallbackMatch && isListTravelAnyFallbackLoading([fallbackQueryLight, fallbackQueryMedium, fallbackQueryBroad]);
 
     const displayedTravels = activeFallbackMatch?.query.data ?? travels;
     const displayedTotal = activeFallbackMatch?.query.total ?? total;

@@ -20,6 +20,12 @@ import {
   getCachedTileDataUrl,
 } from '@/utils/mapTileCache';
 import type { MapMovePayload } from './Map/types';
+import { groupMapPlaces, type MapPlaceMarker } from '@/api/mapPlaces';
+import {
+  resolveSelectedNativePlace,
+  toNativeClusterPayload,
+  toNativeMarkerPayload,
+} from './Map/nativeMarkerPayload';
 import {
   isSameViewportSnapshot,
   normalizeRoutePoint,
@@ -89,7 +95,8 @@ interface TravelProps {
   /**
    * F-46 — фич-парити с mobile-web: тап по travel-маркеру отдаёт выбранную точку
    * в RN, чтобы экран показал нижнюю карточку (MapPlaceBottomCard) вместо/вместе
-   * с Leaflet-попапом. Точка ищется по индексу в переданном массиве points.
+   * с Leaflet-попапом. Место резолвится по стабильному `placeKey` (#1573);
+   * наружу отдаётся репрезентативная запись места.
    */
   onMarkerSelect?: (point: Point) => void;
   /**
@@ -260,8 +267,28 @@ const Map: React.FC<TravelProps> = ({
     () => (shouldUseServerClusterData ? radiusFilteredServerClusterRenderData.clusters : []),
     [radiusFilteredServerClusterRenderData.clusters, shouldUseServerClusterData],
   );
-  const renderedNativePointsRef = useRef(renderedNativePoints);
-  renderedNativePointsRef.current = renderedNativePoints;
+  /**
+   * Один маркер на физическое место (#1573). Несколько статей об одном объекте
+   * приходят отдельными записями; общая модель #1571 сливает их строго по
+   * backend `place_id`, запись без него остаётся самостоятельным местом.
+   * Группировка — один проход на обновление dataset, не на каждый рендер.
+   */
+  const renderedNativePlaces = useMemo(
+    () => groupMapPlaces<Point>(renderedNativePoints as Point[]),
+    [renderedNativePoints],
+  );
+  const renderedNativePlacesRef = useRef<MapPlaceMarker<Point>[]>(renderedNativePlaces);
+  renderedNativePlacesRef.current = renderedNativePlaces;
+
+  /** Узкие проекции для WebView — контракт и обоснование в nativeMarkerPayload.ts. */
+  const nativeMarkerPayload = useMemo(
+    () => toNativeMarkerPayload(renderedNativePlaces),
+    [renderedNativePlaces],
+  );
+  const nativeClusterPayload = useMemo(
+    () => toNativeClusterPayload(renderedNativeClusters),
+    [renderedNativeClusters],
+  );
 
   const injectMapCommand = useCallback((script: string) => {
     try {
@@ -459,8 +486,8 @@ const Map: React.FC<TravelProps> = ({
   // данных, но HTML при этом НЕ пересобирается — маркеры дорисовываются injectJavaScript.
   const mapPayload = useMemo(
     () => ({
-      points: renderedNativePoints,
-      clusters: renderedNativeClusters,
+      points: nativeMarkerPayload,
+      clusters: nativeClusterPayload,
       routePoints: selectedRouteLatLngs,
       routeLine: routeLineLatLngs,
       originalTrack: originalTrackLatLngs,
@@ -470,8 +497,8 @@ const Map: React.FC<TravelProps> = ({
       pointsOnly,
     }),
     [
-      renderedNativePoints,
-      renderedNativeClusters,
+      nativeMarkerPayload,
+      nativeClusterPayload,
       selectedRouteLatLngs,
       routeLineLatLngs,
       originalTrackLatLngs,
@@ -680,27 +707,13 @@ const Map: React.FC<TravelProps> = ({
               return;
             }
             if (message.type === 'SELECT_PLACE') {
-              // F-46 — WebView sends stable id/coord plus index fallback. Server
-              // cluster updates can replace the points array during zoom, so relying
-              // only on the index can miss the tapped marker and fail to open the card.
-              const selectablePoints = renderedNativePointsRef.current;
-              let selectedPoint = message.id
-                ? selectablePoints.find((point) => point?.id != null && String(point.id) === message.id)
-                : undefined;
-              if (!selectedPoint && message.coord) {
-                selectedPoint = selectablePoints.find(
-                  (point) => String(point?.coord ?? '').trim() === message.coord,
-                );
-              }
-              if (
-                !selectedPoint &&
-                message.index != null &&
-                message.index >= 0 &&
-                message.index < selectablePoints.length
-              ) {
-                selectedPoint = selectablePoints[message.index];
-              }
-              if (selectedPoint) onMarkerSelect?.(selectedPoint);
+              // #1573 — выбор резолвится по стабильному placeKey места
+              // (приоритеты и legacy-fallback — в nativeMarkerPayload.ts).
+              const selectedPlace = resolveSelectedNativePlace(
+                renderedNativePlacesRef.current,
+                message,
+              );
+              if (selectedPlace?.record) onMarkerSelect?.(selectedPlace.record);
               return;
             }
             if (message.type !== 'OPEN_URL') return;

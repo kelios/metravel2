@@ -245,4 +245,7 @@ export const mapGenerated3 = {
   "components.places.PlaceRatingSection.otsenka_89103505": "rating",
   "components.places.PlaceRatingSection.otsenki_9110419d": "ratings",
   "components.places.PlaceRatingSection.otsenok_07066e03": "ratings",
+  "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.material_current_iz_total_5f5f1d3a": "Article {{current}} of {{total}}",
+  "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.predyduschiy_material_1c6a0f27": "Previous article",
+  "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.sleduyuschiy_material_ab7f8c04": "Next article",
 } as const

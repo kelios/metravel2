@@ -2195,11 +2195,19 @@ describe('gateAppScriptsBehindHero (#1479)', () => {
     expect(out).toContain('/_expo/static/js/web/entry-c.js');
   });
 
+  it('SAFETY: ignores a stale controller marker when this call cannot place its controller', () => {
+    const staleController = '<script data-app-script-gate="true">window.__stale=1;</script>';
+    const noBody = `<html>${HERO_IMG}${staleController}${APP_SCRIPTS}</html>`;
+
+    expect(gateAppScriptsBehindHero(noBody)).toBe(noBody);
+  });
+
   // ---- runtime behaviour of the injected controller (mock DOM, no jsdom) ----
   function runController(src: string, opts: { hero?: any; readyState?: string } = {}) {
     const injected: string[] = [];
     const asyncFlags: boolean[] = [];
     const timeouts: Array<() => void> = [];
+    const timeoutDelays: number[] = [];
     const docListeners: Record<string, Array<() => void>> = {};
     const body = { appendChild: (el: any) => { injected.push(el.src); asyncFlags.push(el.async); } };
     const document: any = {
@@ -2213,10 +2221,14 @@ describe('gateAppScriptsBehindHero (#1479)', () => {
     };
     const sandbox: any = {
       document,
-      setTimeout: (cb: () => void) => { timeouts.push(cb); return 0 as any; },
+      setTimeout: (cb: () => void, delay: number) => {
+        timeouts.push(cb);
+        timeoutDelays.push(delay);
+        return 0 as any;
+      },
     };
     new Function('document', 'setTimeout', src)(sandbox.document, sandbox.setTimeout);
-    return { injected, asyncFlags, timeouts, docListeners };
+    return { injected, asyncFlags, timeouts, timeoutDelays, docListeners };
   }
 
   it('injects all scripts in order, async=false, once the hero image loads', () => {
@@ -2245,6 +2257,32 @@ describe('gateAppScriptsBehindHero (#1479)', () => {
     expect(r.injected).toHaveLength(3);
   });
 
+  it('injects immediately when the hero image already completed with an error', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    // A failed <img> is complete with naturalWidth=0. Its error event may have
+    // fired before DOMContentLoaded arms the gate, so waiting for another event
+    // would leave the app blocked until the timeout.
+    const hero = { complete: true, naturalWidth: 0, addEventListener: jest.fn() };
+    const r = runController(src, { hero });
+
+    expect(r.injected).toHaveLength(3);
+    expect(hero.addEventListener).not.toHaveBeenCalled();
+  });
+
+  it('injects when an in-flight hero emits error', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    const heroListeners: Record<string, () => void> = {};
+    const hero = {
+      complete: false,
+      naturalWidth: 0,
+      addEventListener: (ev: string, cb: () => void) => { heroListeners[ev] = cb; },
+    };
+    const r = runController(src, { hero });
+
+    heroListeners.error();
+    expect(r.injected).toHaveLength(3);
+  });
+
   it('injects immediately when there is no hero image (non-hero page safety)', () => {
     const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
     const r = runController(src, { hero: null });
@@ -2256,8 +2294,19 @@ describe('gateAppScriptsBehindHero (#1479)', () => {
     const hero = { complete: false, naturalWidth: 0, addEventListener: () => {} };
     const r = runController(src, { hero });
     expect(r.injected).toEqual([]); // still gated
+    expect(r.timeoutDelays).toEqual([2500]);
     r.timeouts.forEach((cb) => cb()); // fire the timeout
     expect(r.injected).toHaveLength(3); // app booted
+  });
+
+  it('releases the app on the first user input before the hero settles', () => {
+    const src = controllerSource(gateAppScriptsBehindHero(BASE))!;
+    const hero = { complete: false, naturalWidth: 0, addEventListener: () => {} };
+    const r = runController(src, { hero });
+
+    expect(r.injected).toEqual([]);
+    r.docListeners.pointerdown[0]();
+    expect(r.injected).toHaveLength(3);
   });
 
   it('does not double-inject when multiple triggers fire', () => {

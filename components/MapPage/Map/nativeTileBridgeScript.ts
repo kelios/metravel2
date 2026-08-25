@@ -207,6 +207,12 @@ export const buildNativeTileBridgeScript = ({
           try {
             if (typeof window.${NATIVE_BASE_MIN_ZOOM_RESOLVER_GLOBAL} !== 'function') return;
             var size = map.getSize();
+            // Контейнер может схлопнуться в 0 (скрытая вкладка, промежуточный
+            // layout). Нулевой размер — это «размер неизвестен», а не «нужен
+            // низкий зум»: резолвер вернул бы fallback ${NATIVE_BASE_MIN_ZOOM_FALLBACK}, и на экране, где
+            // настоящая граница выше, она молча опустилась бы обратно в серое
+            // поле. Уже посчитанную границу держим до реального замера.
+            if (!size || !(size.x > 0) || !(size.y > 0)) return;
             var next = window.${NATIVE_BASE_MIN_ZOOM_RESOLVER_GLOBAL}(size.x, size.y);
             window.${NATIVE_BASE_MIN_ZOOM_GLOBAL} = next;
             // setMinZoom сам подтянет текущий зум вверх, если тот стал ниже
