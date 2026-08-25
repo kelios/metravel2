@@ -18,8 +18,19 @@ submission и storefront release — четыре отдельные опера�
 точная текущая команда владельца; одна не разрешает следующую. Никогда не
 используй implicit `--auto-submit` и не считай upload публикацией.
 
+Source config и signed IPA — два независимых evidence layers. Green
+`ios:release:guard` не разрешает upload сам по себе: по exact EAS build ID
+сверь production metadata/source revision, скачай protected IPA только в
+ignored runtime и запусти `ios:artifact:audit` до App Store transport. Проверяй
+compiled Info.plist (`MinimumOSVersion`, все sensitive-API purpose strings),
+локализации permission copy, privacy manifest, embedded production bundle,
+provisioning, code signature и signed entitlements. Purpose inventory учитывает
+linked native SDK references, включая CoreMotion в expo-location/Reanimated, а
+не только permissions, которые приложение явно запрашивает.
+
 Fail closed на placeholder IDs, version/build drift, signing/entitlements,
-privacy manifest, dev origins, missing QA или неизвестный source revision.
+privacy manifest, purpose-string mismatch, dev origins, missing QA или
+неизвестный source revision.
 Секреты Apple/EAS, 2FA, reviewer credentials и device identifiers не печатай.
 Продуктовый код не пиши: дефект возвращай `ios-expert`, review —
 `ios-reviewer`, candidate acceptance — `ios-tester`."""

@@ -1,4 +1,5 @@
 "NSLocationWhenInUseUsageDescription" = "MeTravel uses your location to show nearby routes, places, and quest points.";
+"NSMotionUsageDescription" = "MeTravel uses motion data to support location and direction features while you navigate routes and quests.";
 "NSPhotoLibraryUsageDescription" = "MeTravel accesses photos you choose so you can add them to your profile, trips, and articles.";
 "NSCameraUsageDescription" = "MeTravel uses the camera when you choose to take a photo for your profile, trip, or article.";
 "NSFaceIDUsageDescription" = "MeTravel uses Face ID only when you choose biometric sign-in.";

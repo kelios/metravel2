@@ -124,6 +124,7 @@
     "ios:prebuild": "./scripts/ios-prebuild.sh",
     "ios:environment:check": "node scripts/ios-environment-preflight.js",
     "ios:release:guard": "node scripts/ios-release-guard.js",
+    "ios:artifact:audit": "node scripts/ios-artifact-audit.js",
     "ios:build": "./scripts/ios-build.sh",
     "ios:submit": "./scripts/ios-submit.sh",
     "ios:build:dev": "./scripts/ios-build.sh development",

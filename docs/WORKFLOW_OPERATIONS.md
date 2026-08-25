@@ -124,6 +124,11 @@ platform-specific behavior/config/runtime (§3.3); правило quality-gate l
   entitlement/APNs behavior или App Store processing.
 - Перед `xcodebuild`, Expo/EAS iOS build, archive, upload или submit проверь
   operation gate и не запускай дубликат того же target/build number.
+- Source `ios:release:guard` не заменяет проверку результата EAS/Xcode. Перед
+  каждым upload exact signed IPA обязан пройти `ios:artifact:audit`: compiled
+  Info.plist/minimum OS/purpose strings, privacy resources, production bundle,
+  provisioning, signature и signed entitlements. Upload wrapper выполняет
+  этот gate автоматически и останавливается до App Store Connect transport.
 - Signed distribution build, App Store Connect/TestFlight upload/group mutation,
   App Review submit и storefront release — четыре независимых mutating gates.
   Для каждого нужна отдельная текущая команда владельца; `--auto-submit` без неё

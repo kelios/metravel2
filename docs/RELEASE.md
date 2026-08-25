@@ -256,6 +256,7 @@ non-interactive и использует EAS-managed App Store Connect credential
 ```bash
 npm run ios:prebuild
 IOS_SIGNED_BUILD_AUTHORIZATION=1 npm run ios:build:prod
+# The submit wrapper downloads and audits this exact signed IPA before upload.
 (
   set -e
   set -a
@@ -292,6 +293,17 @@ Connect/TestFlight upload, App Review submission и storefront release. Для
 на placeholder IDs, version/build drift, signing/entitlements/privacy mismatch,
 dev origins и неизвестный source revision. Exact processed TestFlight candidate
 принимается `$metravel-ios-tester` на физическом iPhone до App Review submit.
+
+Source guard и signed-artifact audit — разные обязательные проверки. После EAS
+build `scripts/ios-submit.sh` по exact build ID сверяет metadata с текущим
+production contract, скачивает IPA в ignored runtime и запускает
+`npm run ios:artifact:audit -- PATH_TO_IPA` до transport в App Store Connect.
+Проверяются compiled `Info.plist` (`MinimumOSVersion`, purpose strings, iPhone
+family), локализации permission copy, privacy manifest, embedded production
+bundle, provisioning, code signature и signed entitlements. Связанный native
+SDK может требовать purpose string даже если JS-flow не запрашивает permission;
+поэтому inventory учитывает native references (в частности CoreMotion в
+`expo-location`/Reanimated), а не только app-level вызовы.
 
 ### Android
 

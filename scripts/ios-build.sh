@@ -4,6 +4,15 @@ set -euo pipefail
 
 readonly EAS_CLI_VERSION='21.8.0'
 readonly PROFILE="${1:-}"
+readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+
+if [[ "$(git -C "$PROJECT_ROOT" branch --show-current)" != 'main' ]] ||
+   [[ -n "$(git -C "$PROJECT_ROOT" status --porcelain --untracked-files=normal)" ]]; then
+  echo 'Refusing iOS build outside a clean canonical main source state.' >&2
+  exit 2
+fi
+
+cd "$PROJECT_ROOT"
 
 case "$PROFILE" in
   development)

@@ -7,11 +7,19 @@ readonly BUILD_ID="${1:-}"
 readonly ASC_APP_ID="${IOS_ASC_APP_ID:-}"
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 readonly SUBMIT_RUNTIME_PARENT="${PROJECT_ROOT}/.codex-temp"
+unset IOS_ASC_APP_ID
 
-if [[ -z "$BUILD_ID" ]]; then
-  echo 'Usage: IOS_UPLOAD_AUTHORIZATION=1 IOS_ASC_APP_ID=<protected-id> scripts/ios-submit.sh BUILD_ID' >&2
+if [[ ! "$BUILD_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$ ]]; then
+  echo 'Usage: IOS_UPLOAD_AUTHORIZATION=1 IOS_ASC_APP_ID=<protected-id> scripts/ios-submit.sh EAS_BUILD_UUID' >&2
   exit 2
 fi
+if [[ "$(git -C "$PROJECT_ROOT" branch --show-current)" != 'main' ]] ||
+   [[ -n "$(git -C "$PROJECT_ROOT" status --porcelain --untracked-files=normal)" ]]; then
+  echo 'Refusing App Store Connect upload outside a clean canonical main source state.' >&2
+  exit 2
+fi
+readonly SOURCE_REVISION="$(git -C "$PROJECT_ROOT" rev-parse HEAD)"
+
 if [[ "${IOS_UPLOAD_AUTHORIZATION:-}" != '1' ]]; then
   echo 'Refusing App Store Connect upload without IOS_UPLOAD_AUTHORIZATION=1 from the explicit owner-authorized operation.' >&2
   exit 2
@@ -27,6 +35,8 @@ node scripts/ios-release-guard.js
 mkdir -p "$SUBMIT_RUNTIME_PARENT"
 umask 077
 SUBMIT_RUNTIME_DIR="$(mktemp -d "${SUBMIT_RUNTIME_PARENT}/ios-submit-runtime.XXXXXX")"
+readonly BUILD_METADATA_PATH="${SUBMIT_RUNTIME_DIR}/eas-build.json"
+readonly IPA_PATH="${SUBMIT_RUNTIME_DIR}/candidate.ipa"
 
 cleanup() {
   case "$SUBMIT_RUNTIME_DIR" in
@@ -41,6 +51,20 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+# Resolve and inspect the exact EAS artifact before App Store Connect sees it.
+# The metadata and signed download URL stay in the ignored, mode-0700 runtime
+# directory and are removed on exit.
+npx --yes "eas-cli@${EAS_CLI_VERSION}" build:view "$BUILD_ID" --json > "$BUILD_METADATA_PATH"
+node scripts/ios-eas-artifact-download.js "$BUILD_ID" "$BUILD_METADATA_PATH" "$IPA_PATH"
+node scripts/ios-artifact-audit.js "$IPA_PATH"
+
+if [[ "$(git -C "$PROJECT_ROOT" rev-parse HEAD)" != "$SOURCE_REVISION" ]] ||
+   [[ "$(git -C "$PROJECT_ROOT" branch --show-current)" != 'main' ]] ||
+   [[ -n "$(git -C "$PROJECT_ROOT" status --porcelain --untracked-files=normal)" ]]; then
+  echo 'Refusing App Store Connect upload because the canonical source changed during artifact audit.' >&2
+  exit 2
+fi
 
 for config_file in app.json app.config.js eas.json package.json yarn.lock; do
   cp "${PROJECT_ROOT}/${config_file}" "${SUBMIT_RUNTIME_DIR}/${config_file}"
@@ -67,7 +91,6 @@ iosSubmit.ascAppId = ascAppId;
 fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
 NODE
 
-unset IOS_ASC_APP_ID
 cd "$SUBMIT_RUNTIME_DIR"
 
 # Upload only. The App Store Connect app identifier is injected into an ignored,

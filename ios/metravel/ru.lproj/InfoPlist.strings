@@ -1,4 +1,5 @@
 "NSLocationWhenInUseUsageDescription" = "MeTravel использует вашу геопозицию, чтобы показывать маршруты, места и точки квестов поблизости.";
+"NSMotionUsageDescription" = "MeTravel использует данные о движении для функций геопозиции и направления во время навигации по маршрутам и квестам.";
 "NSPhotoLibraryUsageDescription" = "MeTravel получает доступ только к выбранным вами фото, чтобы добавить их в профиль, путешествия и статьи.";
 "NSCameraUsageDescription" = "MeTravel использует камеру, когда вы решаете сделать фото для профиля, путешествия или статьи.";
 "NSFaceIDUsageDescription" = "MeTravel использует Face ID только когда вы выбираете вход по биометрии.";

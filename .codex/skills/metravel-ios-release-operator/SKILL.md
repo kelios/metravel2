@@ -60,6 +60,22 @@ Local read-only preflight and source/archive inspection do not mutate store stat
   detection, EAS pinning) and `npm run ios:environment:check` (Xcode/SDK,
   eligible iPhone simulator destination, Pods state) when the local toolchain is
   involved. The EAS CLI version is pinned inside the scripts — do not float it.
+- Treat source config and the signed IPA as two different evidence layers. A
+  green source guard does not prove what Xcode/EAS embedded. Before every
+  upload, resolve the exact authorized EAS build id, verify its status/profile,
+  version/build/source revision, download its protected IPA into the ignored
+  submit runtime, and run `npm run ios:artifact:audit -- PATH_TO_IPA`. The audit
+  must inspect the compiled `Info.plist` (including iOS `MinimumOSVersion` and
+  all sensitive-API purpose strings), localized purpose strings, privacy
+  manifest, embedded production bundle, provisioning, code signature, and
+  signed entitlements. `scripts/ios-submit.sh` performs this automatically and
+  must stop before transport on any mismatch.
+- Derive the purpose-string inventory from app code plus linked native SDKs,
+  not only from permissions intentionally requested by JavaScript. When a
+  linked dependency references a protected framework (for example
+  `expo-location`/Reanimated code referencing CoreMotion), retain Apple's
+  required purpose key even when the product flow does not actively request
+  that permission. Any dependency or native SDK change reopens this inventory.
 - Pin/verify the EAS CLI and Apple/Xcode upload requirements at execution time.
   If the approved EAS image cannot meet Apple requirements, use only the
   explicitly selected local Xcode archive plus Apple-supported upload fallback.
@@ -71,9 +87,11 @@ Local read-only preflight and source/archive inspection do not mutate store stat
 1. Inspect branch/status, active release task, authorizations, competing locks,
    Apple/account prerequisites, and the latest used build number.
 2. Confirm the accepted code/review/QA gates and exact production inputs.
-3. Under signed-build authorization, create and inspect the archive/candidate;
-   record source revision, bundle/version/build, signing, entitlements, privacy,
-   embedded configuration, and artifact identity without secrets.
+3. Under signed-build authorization, create and inspect the exact signed IPA;
+   record source revision, bundle/version/build, Xcode-derived minimum OS,
+   sensitive-API purpose strings, signing, entitlements, privacy, embedded
+   configuration, and artifact identity without secrets. Do not call the
+   candidate upload-ready until `ios:artifact:audit` passes.
 4. Under upload authorization, upload once, wait for processing without issuing
    duplicate uploads, reuse the project-bound EAS API key, answer only approved
    compliance fields, and record the exact processed build and App Store

@@ -26,6 +26,8 @@ const IOS_PURPOSE_STRINGS = Object.freeze({
     'MeTravel uses Face ID only when you choose biometric sign-in.',
   NSLocationWhenInUseUsageDescription:
     'MeTravel uses your location to show nearby routes, places, and quest points.',
+  NSMotionUsageDescription:
+    'MeTravel uses motion data to support location and direction features while you navigate routes and quests.',
   NSPhotoLibraryUsageDescription:
     'MeTravel accesses photos you choose so you can add them to your profile, trips, and articles.',
 });
@@ -39,6 +41,8 @@ const LOCALIZED_PURPOSE_STRINGS = Object.freeze({
       'MeTravel использует Face ID только когда вы выбираете вход по биометрии.',
     NSLocationWhenInUseUsageDescription:
       'MeTravel использует вашу геопозицию, чтобы показывать маршруты, места и точки квестов поблизости.',
+    NSMotionUsageDescription:
+      'MeTravel использует данные о движении для функций геопозиции и направления во время навигации по маршрутам и квестам.',
     NSPhotoLibraryUsageDescription:
       'MeTravel получает доступ только к выбранным вами фото, чтобы добавить их в профиль, путешествия и статьи.',
   },
@@ -49,6 +53,8 @@ const LOCALIZED_PURPOSE_STRINGS = Object.freeze({
       'MeTravel выкарыстоўвае Face ID толькі тады, калі вы выбіраеце ўваход па біяметрыі.',
     NSLocationWhenInUseUsageDescription:
       'MeTravel выкарыстоўвае вашу геапазіцыю, каб паказваць маршруты, месцы і пункты квэстаў паблізу.',
+    NSMotionUsageDescription:
+      'MeTravel выкарыстоўвае даныя аб руху для функцый геапазіцыі і напрамку падчас навігацыі па маршрутах і квэстах.',
     NSPhotoLibraryUsageDescription:
       'MeTravel атрымлівае доступ толькі да выбраных вамі фота, каб дадаць іх у профіль, падарожжы і артыкулы.',
   },
@@ -59,6 +65,8 @@ const LOCALIZED_PURPOSE_STRINGS = Object.freeze({
       'MeTravel використовує Face ID лише тоді, коли ви вибираєте вхід за біометрією.',
     NSLocationWhenInUseUsageDescription:
       'MeTravel використовує вашу геопозицію, щоб показувати маршрути, місця та точки квестів поблизу.',
+    NSMotionUsageDescription:
+      'MeTravel використовує дані про рух для функцій геопозиції та напрямку під час навігації маршрутами й квестами.',
     NSPhotoLibraryUsageDescription:
       'MeTravel отримує доступ лише до вибраних вами фото, щоб додати їх до профілю, подорожей і статей.',
   },
@@ -69,6 +77,8 @@ const LOCALIZED_PURPOSE_STRINGS = Object.freeze({
       'MeTravel używa Face ID tylko wtedy, gdy wybierasz logowanie biometryczne.',
     NSLocationWhenInUseUsageDescription:
       'MeTravel używa Twojego położenia, aby pokazywać pobliskie trasy, miejsca i punkty questów.',
+    NSMotionUsageDescription:
+      'MeTravel używa danych o ruchu do obsługi funkcji lokalizacji i kierunku podczas nawigacji po trasach i questach.',
     NSPhotoLibraryUsageDescription:
       'MeTravel uzyskuje dostęp tylko do wybranych przez Ciebie zdjęć, aby dodać je do profilu, podróży i artykułów.',
   },
@@ -294,10 +304,10 @@ function validateIosRelease(root = process.cwd()) {
       locationOptions.locationAlwaysPermission !== false ||
       locationOptions.locationWhenInUsePermission !== IOS_PURPOSE_STRINGS.NSLocationWhenInUseUsageDescription ||
       locationOptions.isIosBackgroundLocationEnabled !== false ||
-      locationOptions.motionUsagePermission !== false) {
+      locationOptions.motionUsagePermission !== IOS_PURPOSE_STRINGS.NSMotionUsageDescription) {
     fail(
       'IOS_LOCATION_PLUGIN_SCOPE',
-      'expo-location must remain foreground-only and must not add unused Motion permission copy'
+      'expo-location must remain foreground-only and keep the audited Motion permission required by its linked CoreMotion code'
     );
   }
   const imagePickerPlugins = findPlugins(app, 'expo-image-picker');
@@ -422,6 +432,7 @@ function validateIosRelease(root = process.cwd()) {
     fail('IOS_BUILD_PROPERTIES_LOCK', 'expo-build-properties 57.0.3 must be locked');
   }
   const expectedScripts = {
+    'ios:artifact:audit': 'node scripts/ios-artifact-audit.js',
     'ios:build:dev': './scripts/ios-build.sh development',
     'ios:build:preview': './scripts/ios-build.sh preview',
     'ios:build:prod': './scripts/ios-build.sh production',
@@ -452,6 +463,12 @@ function validateIosRelease(root = process.cwd()) {
       !submitScript.includes('IOS_UPLOAD_AUTHORIZATION')) {
     fail('IOS_RELEASE_AUTHORIZATION_GATE', 'explicit build and upload authorization gates are required');
   }
+  if (!buildScript.includes('git -C "$PROJECT_ROOT" branch --show-current') ||
+      !submitScript.includes('git -C "$PROJECT_ROOT" branch --show-current') ||
+      !buildScript.includes('git -C "$PROJECT_ROOT" status --porcelain --untracked-files=normal') ||
+      !submitScript.includes('git -C "$PROJECT_ROOT" status --porcelain --untracked-files=normal')) {
+    fail('IOS_CANONICAL_SOURCE_STATE', 'build and upload wrappers must require a clean canonical main source state');
+  }
   if (!buildScript.includes('preview|production)')) {
     fail(
       'IOS_SIGNED_PROFILE_AUTHORIZATION',
@@ -460,13 +477,16 @@ function validateIosRelease(root = process.cwd()) {
   }
   if (!submitScript.includes('--id "$BUILD_ID"') ||
       !submitScript.includes('--non-interactive') ||
+      !submitScript.includes('build:view "$BUILD_ID" --json') ||
       !submitScript.includes('IOS_ASC_APP_ID') ||
       !submitScript.includes('ios-submit-runtime.') ||
+      !submitScript.includes('ios-eas-artifact-download.js') ||
+      !submitScript.includes('ios-artifact-audit.js') ||
       submitScript.includes('--latest') ||
       /EXPO_ASC_(?:API_KEY_PATH|KEY_ID|ISSUER_ID)/.test(submitScript)) {
     fail(
       'IOS_SUBMIT_CREDENTIAL_ROUTE',
-      'upload must target an explicit build and inject the protected ASC app id only into an ignored runtime config'
+      'upload must target and audit an exact artifact, then inject the protected ASC app id only into an ignored runtime config'
     );
   }
 
@@ -802,4 +822,9 @@ function validateIosRelease(root = process.cwd()) {
   return errors;
 }
 
-module.exports = { EXPECTED, validateIosRelease };
+module.exports = {
+  EXPECTED,
+  IOS_PURPOSE_STRINGS,
+  LOCALIZED_PURPOSE_STRINGS,
+  validateIosRelease,
+};

@@ -87,6 +87,8 @@
 	<string>MeTravel uses Face ID only when you choose biometric sign-in.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>MeTravel uses your location to show nearby routes, places, and quest points.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>MeTravel uses motion data to support location and direction features while you navigate routes and quests.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>MeTravel accesses photos you choose so you can add them to your profile, trips, and articles.</string>
 	<key>NSUserActivityTypes</key>

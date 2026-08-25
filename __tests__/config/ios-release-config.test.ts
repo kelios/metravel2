@@ -68,7 +68,7 @@ describe('iOS release configuration', () => {
     expect(validateIosRelease(root)).toEqual([]);
   });
 
-  it('resolves notification config for Android without synthesizing iOS APNs or Motion access', () => {
+  it('resolves notification config for Android without APNs and keeps the CoreMotion purpose string', () => {
     const output = execFileSync(
       process.execPath,
       [path.join(root, 'node_modules/expo/bin/cli'), 'config', '--type', 'introspect', '--json'],
@@ -92,7 +92,9 @@ describe('iOS release configuration', () => {
       'com.apple.developer.applesignin': ['Default'],
       'com.apple.developer.associated-domains': ['applinks:metravel.by'],
     });
-    expect(ios.infoPlist).not.toHaveProperty('NSMotionUsageDescription');
+    expect(ios.infoPlist.NSMotionUsageDescription).toBe(
+      'MeTravel uses motion data to support location and direction features while you navigate routes and quests.'
+    );
     expect(notificationMetadata).toEqual(expect.arrayContaining([
       expect.objectContaining({
         $: expect.objectContaining({
@@ -222,16 +224,38 @@ describe('iOS release configuration', () => {
   });
 
   it('injects the protected ASC app id only into a temporary submit config', () => {
+    const exactBuildId = '11111111-1111-4111-8111-111111111111';
     const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-ios-submit-bin-'));
     tempRoots.push(fakeBin);
+    const fakeNode = path.join(fakeBin, 'node');
+    fs.writeFileSync(fakeNode, `#!/bin/sh
+case "$1" in
+  *ios-eas-artifact-download.js|*ios-artifact-audit.js) exit 0 ;;
+esac
+exec "$REAL_NODE" "$@"
+`);
+    fs.chmodSync(fakeNode, 0o755);
+    const fakeGit = path.join(fakeBin, 'git');
+    fs.writeFileSync(fakeGit, `#!/bin/sh
+if [ "$1" = "-C" ]; then shift 2; fi
+if [ "$1" = "branch" ]; then printf 'main\\n'; fi
+if [ "$1" = "rev-parse" ]; then printf 'test-revision\\n'; fi
+exit 0
+`);
+    fs.chmodSync(fakeGit, 0o755);
     const fakeNpx = path.join(fakeBin, 'npx');
     fs.writeFileSync(fakeNpx, `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
+if (process.env.IOS_ASC_APP_ID) process.exit(25);
+if (process.argv.includes('build:view')) {
+  process.stdout.write('{}');
+  process.exit(0);
+}
 const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'eas.json'), 'utf8'));
 if (!process.cwd().includes('/.codex-temp/ios-submit-runtime.')) process.exit(20);
 if (config.submit?.production?.ios?.ascAppId !== process.env.EXPECTED_ASC_APP_ID) process.exit(21);
-if (!process.argv.includes('--id') || !process.argv.includes('exact-build-id')) process.exit(22);
+if (!process.argv.includes('--id') || !process.argv.includes('${exactBuildId}')) process.exit(22);
 if (!process.argv.includes('--non-interactive') || process.argv.includes('--latest')) process.exit(23);
 for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
   if (!fs.lstatSync(path.join(process.cwd(), directory)).isSymbolicLink()) process.exit(24);
@@ -243,7 +267,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
     const runtimeDirectoriesBefore = fs.readdirSync(path.join(root, '.codex-temp'))
       .filter(name => name.startsWith('ios-submit-runtime.'))
       .sort();
-    execFileSync('bash', [path.join(root, 'scripts/ios-submit.sh'), 'exact-build-id'], {
+    execFileSync('bash', [path.join(root, 'scripts/ios-submit.sh'), exactBuildId], {
       cwd: root,
       env: {
         ...process.env,
@@ -251,6 +275,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
         IOS_UPLOAD_AUTHORIZATION: '1',
         IOS_ASC_APP_ID: '1234567890',
         EXPECTED_ASC_APP_ID: '1234567890',
+        REAL_NODE: process.execPath,
       },
     });
 
@@ -265,7 +290,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
   it('refuses upload when the protected ASC app id is missing', () => {
     expect(() => execFileSync(
       'bash',
-      [path.join(root, 'scripts/ios-submit.sh'), 'exact-build-id'],
+      [path.join(root, 'scripts/ios-submit.sh'), '11111111-1111-4111-8111-111111111111'],
       {
         cwd: root,
         env: {
@@ -284,6 +309,23 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
     });
     expect(validateIosRelease(testRoot)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_SIGNED_PROFILE_AUTHORIZATION' })])
+    );
+  });
+
+  it('fails closed when build or upload can run from a non-canonical source state', () => {
+    const testRoot = fixture({
+      'scripts/ios-build.sh': value => value
+        .replace(
+          'git -C "$PROJECT_ROOT" branch --show-current',
+          'git -C "$PROJECT_ROOT" branch --show-current-disabled'
+        )
+        .replace(
+          'git -C "$PROJECT_ROOT" status --porcelain --untracked-files=normal',
+          'git -C "$PROJECT_ROOT" status --short'
+        ),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_CANONICAL_SOURCE_STATE' })])
     );
   });
 
@@ -307,7 +349,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
     ]));
   });
 
-  it('fails closed when the location plugin can synthesize unused Motion permission copy', () => {
+  it('fails closed when the location plugin can omit the Motion purpose required by linked CoreMotion code', () => {
     const testRoot = fixture({
       'app.json': value => {
         const config = JSON.parse(value);
