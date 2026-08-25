@@ -18,21 +18,81 @@ import { join } from 'path';
 const ROOT = join(__dirname, '..', '..');
 const OWNER = 'utils/authPlatform.ts';
 
-const SCANNED_DIRS = ['api', 'utils', 'stores', 'hooks', 'context', 'services', 'components', 'app'];
+// Обход от корня со СПИСКОМ ИСКЛЮЧЕНИЙ, как в канонических гардах проекта
+// (`scripts/guard-no-direct-window-open.js:8-29`). Ручной список сканируемых
+// директорий — второй источник правды: его уже пришлось расширять внутри этой
+// же задачи, а `ui/`, `i18n/`, `plugins/`, `styles/` в нём так и не появились.
+// При обходе от корня новая продуктовая директория попадает под гард сама.
+const IGNORED_DIRS = new Set([
+  '.git',
+  '.expo',
+  '.prod-build-tmp',
+  '.tmp',
+  '.tmp-article',
+  '.chk-web',
+  '.chk-android',
+  '.codex-temp',
+  '.codex-debug',
+  '.claude',
+  'node_modules',
+  'dist',
+  'dist-stub',
+  'dist-dev-diag',
+  'dist-web-analyze',
+  'dist-web-analyze-sm',
+  'web-build',
+  'coverage',
+  'test-results',
+  'playwright-report',
+  'playwright-screenshots',
+  'lighthouse-reports',
+  'scratch-lh',
+  'artifacts',
+  'backup',
+  'output',
+  'tmp',
+  'undefined',
+  'android',
+  'ios',
+  'public',
+  'assets',
+  'docs',
+  'openspec',
+  'specs',
+  'tasks',
+  'loadtest',
+  'patches',
+  'githooks',
+  'nginx',
+  // Тесты и e2e литерал проверяют намеренно: там это сверка фактического
+  // контракта хранилища, и расхождение видно сразу.
+  '__tests__',
+  'e2e',
+  '__mocks__',
+  // Скрипты и конфиги сборки продуктовым рантаймом не являются.
+  'scripts',
+]);
+
+const SOURCE_EXTENSIONS = /\.(?:js|jsx|ts|tsx|mjs|cjs)$/;
 
 const TOKEN_KEY_LITERAL = /(['"`])(userToken|refreshToken)\1/;
 
 const collect = (relativeDir: string): string[] => {
-  const entries = readdirSync(join(ROOT, relativeDir), { withFileTypes: true });
+  const entries = readdirSync(relativeDir ? join(ROOT, relativeDir) : ROOT, {
+    withFileTypes: true,
+  });
   return entries.flatMap((entry) => {
-    const relative = `${relativeDir}/${entry.name}`;
-    if (entry.isDirectory()) return collect(relative);
-    return /\.tsx?$/.test(entry.name) ? [relative] : [];
+    if (entry.name.startsWith('.')) return [];
+    const relative = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) return IGNORED_DIRS.has(entry.name) ? [] : collect(relative);
+    // Не только TS: в `utils` живут и .js-модули, литерал в них так же
+    // разошёлся бы с писателем пары.
+    return SOURCE_EXTENSIONS.test(entry.name) ? [relative] : [];
   });
 };
 
 describe('session token key names live in one module', () => {
-  const files = SCANNED_DIRS.flatMap(collect);
+  const files = collect('');
 
   it('scans a non-empty product surface', () => {
     expect(files.length).toBeGreaterThan(100);

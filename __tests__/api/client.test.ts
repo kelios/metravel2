@@ -1,4 +1,8 @@
-import { apiClient, ApiError } from '@/api/client';
+import { apiClient, ApiError, __setBackendRefreshEndpointForTests } from '@/api/client';
+import {
+  persistSessionTokens,
+  __resetSessionTokenWritesForTests,
+} from '@/utils/authTokenStore';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { devError, devWarn } from '@/utils/logger';
@@ -42,6 +46,13 @@ describe('src/api/client.ts apiClient', () => {
     Platform.OS = 'ios' as typeof Platform.OS;
     (navigator as any).onLine = true;
     mockedRemoveSecureItems.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    // Ветка ротации включается только внутри своих кейсов, а очередь записи в
+    // authTokenStore — общий модульный синглтон (#1551).
+    __setBackendRefreshEndpointForTests(false);
+    __resetSessionTokenWritesForTests();
   });
 
   afterAll(() => {
@@ -426,5 +437,143 @@ describe('src/api/client.ts apiClient', () => {
       expect.objectContaining({ status: 401 }),
     );
     expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+  });
+  describe('ротация, проигравшая гонку новой сессии (#1551)', () => {
+    /** Фейковый secure-store: ключ → значение, чтобы видеть, чья пара осталась на диске. */
+    const installDisk = (initial: Record<string, string>) => {
+      const disk = new Map<string, string>(Object.entries(initial));
+      mockedGetSecureItem.mockImplementation(async (key: string) => disk.get(key) ?? null);
+      (setSecureItem as jest.Mock).mockImplementation(async (key: string, value: string) => {
+        disk.set(key, value);
+      });
+      mockedRemoveSecureItems.mockImplementation(async (keys: string[]) => {
+        keys.forEach((key) => disk.delete(key));
+      });
+      return disk;
+    };
+
+    afterEach(() => {
+      // beforeEach сбрасывает только get/remove; без этого дисковая реализация
+      // setSecureItem утекла бы в кейсы, добавленные после этих.
+      (setSecureItem as jest.Mock).mockReset();
+    });
+
+    it('не стирает креды победившей сессии и не идёт пробой со старым токеном', async () => {
+      __setBackendRefreshEndpointForTests(true);
+      const disk = installDisk({ userToken: 'oldToken', refreshToken: 'old-refresh' });
+
+      mockedFetchWithTimeout
+        .mockResolvedValueOnce({ // основной запрос → 401
+          ok: false,
+          status: 401,
+          text: async () => 'unauthorized',
+        } as any)
+        .mockResolvedValueOnce({ // /user/refresh/ ответил, но пока он шёл — диск занял другой вход
+          ok: true,
+          status: 200,
+          json: async () => {
+            await persistSessionTokens('winner-access', 'winner-refresh');
+            return { access: 'rotated-access', refresh: 'rotated-refresh' };
+          },
+        } as any)
+        .mockResolvedValueOnce({ // fallback без авторизации
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true }),
+        } as any);
+
+      await expect(apiClient.get('/superseded-rotation')).resolves.toEqual({ ok: true });
+
+      const fetchedUrls = mockedFetchWithTimeout.mock.calls.map((call) => String(call[0]));
+      expect(fetchedUrls[1]).toContain('/user/refresh/');
+      // Ни контрольной пробы старым токеном, ни очистки: пара на диске — чужой,
+      // победившей сессии, и к отказу нашей ротации отношения не имеет.
+      expect(fetchedUrls.some((url) => url.includes('/user/me/verifications/'))).toBe(false);
+      expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+      expect(disk.get('userToken')).toBe('winner-access');
+      expect(disk.get('refreshToken')).toBe('winner-refresh');
+      // Ротация проигравшей сессии на диск не легла.
+      expect(disk.get('userToken')).not.toBe('rotated-access');
+    });
+
+    it('параллельный 401 ждёт чужую ротацию и тоже не трогает пару победителя', async () => {
+      // Второй запрос не запускает ротацию сам: он ждёт общий refreshTokenPromise
+      // и получает ЧУЖОЙ reject. Без маркера этот reject глотался, ожидающий
+      // ротировал бы уже refresh ПОБЕДИТЕЛЯ, а по отказу той ротации уходил в
+      // пробу старым токеном и стирал креды победившей сессии (#1551).
+      __setBackendRefreshEndpointForTests(true);
+      const disk = installDisk({ userToken: 'oldToken', refreshToken: 'old-refresh' });
+
+      let refreshCalls = 0;
+      let probeCalls = 0;
+      mockedFetchWithTimeout.mockImplementation((async (url: unknown, init: any) => {
+        const target = String(url);
+        if (target.includes('/user/refresh/')) {
+          refreshCalls += 1;
+          // Повторная ротация пошла бы уже refresh-токеном победителя; сервер её
+          // не принял — именно этот отказ раньше приводил к очистке.
+          if (refreshCalls > 1) return { ok: false, status: 500 };
+          return {
+            ok: true,
+            status: 200,
+            json: async () => {
+              await persistSessionTokens('winner-access', 'winner-refresh');
+              return { access: 'rotated-access', refresh: 'rotated-refresh' };
+            },
+          };
+        }
+        if (target.includes('/user/me/verifications/')) {
+          probeCalls += 1;
+          return { ok: false, status: 401 };
+        }
+        return init?.headers?.Authorization
+          ? { ok: false, status: 401, text: async () => 'unauthorized' }
+          : { ok: true, status: 200, json: async () => ({ ok: true }) };
+      }) as any);
+
+      await expect(
+        Promise.all([apiClient.get('/superseded-a'), apiClient.get('/superseded-b')]),
+      ).resolves.toEqual([{ ok: true }, { ok: true }]);
+
+      expect(refreshCalls).toBe(1);
+      expect(probeCalls).toBe(0);
+      expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+      expect(disk.get('userToken')).toBe('winner-access');
+      expect(disk.get('refreshToken')).toBe('winner-refresh');
+    });
+
+    it('обычный отказ refresh по-прежнему ведёт к пробе и очистке по подтверждённому 401', async () => {
+      // Контроль узости фикса: пропускается ТОЛЬКО отказ по чужой сессии,
+      // механизм подтверждённого 401 из #810 остаётся в силе.
+      __setBackendRefreshEndpointForTests(true);
+      const disk = installDisk({ userToken: 'oldToken', refreshToken: 'old-refresh' });
+
+      mockedFetchWithTimeout
+        .mockResolvedValueOnce({ // основной запрос → 401
+          ok: false,
+          status: 401,
+          text: async () => 'unauthorized',
+        } as any)
+        .mockResolvedValueOnce({ // /user/refresh/ упал
+          ok: false,
+          status: 500,
+        } as any)
+        .mockResolvedValueOnce({ // контрольная проба тоже отвергла сессию
+          ok: false,
+          status: 401,
+        } as any)
+        .mockResolvedValueOnce({ // fallback без авторизации
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true }),
+        } as any);
+
+      await expect(apiClient.get('/dead-session')).resolves.toEqual({ ok: true });
+
+      const fetchedUrls = mockedFetchWithTimeout.mock.calls.map((call) => String(call[0]));
+      expect(fetchedUrls[2]).toContain('/user/me/verifications/');
+      expect(mockedRemoveSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
+      expect(disk.has('userToken')).toBe(false);
+    });
   });
 });

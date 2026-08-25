@@ -117,7 +117,15 @@ class ApiClient {
             while (this.refreshTokenLock && this.refreshTokenPromise) {
                 try {
                     return await this.refreshTokenPromise;
-                } catch {
+                } catch (error) {
+                    // Отказ по чужой сессии касается ВСЕХ ожидающих, а не только
+                    // владельца промиса: на диске уже пара победившей сессии. Повтор
+                    // ротации взял бы ЕЁ refresh (запрос ожидающего ушёл бы под чужим
+                    // доступом), а его собственный отказ увёл бы в пробу СТАРЫМ токеном
+                    // и стёр креды победителя. Пробрасываем маркер дальше (#1551).
+                    if (isSessionSupersededError(error)) {
+                        throw error;
+                    }
                     // Если обновление провалилось, продолжаем ждать или запускаем новое
                     await new Promise(resolve => setTimeout(resolve, 50));
                 }
