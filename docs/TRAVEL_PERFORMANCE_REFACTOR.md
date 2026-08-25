@@ -230,6 +230,43 @@ Slow-4G), там же `applyMobileThrottling`, `measureCpuThrottlingRatio` и `m
 (#1393) и проверить результат по двум измерениям: brotli худшего маршрута и
 `eager.maxRequestsByRoute`.
 
+### Что снято с eager-пути (#1552, замер 2026-08-25)
+
+Разорваны четыре ребра статического импорта; во всех случаях потребитель уже
+асинхронный, поэтому `await import(...)` — настоящая граница чанка, а не
+условный require:
+
+| файл | вынесено за границу |
+| --- | --- |
+| `hooks/useBreadcrumbModel.ts` | `@/api/quests`, `@/api/plannedTrips`, `@/api/publicTrips` |
+| `hooks/questsListQuery.ts` | `@/api/quests` (`fetchQuestsList`) |
+| `hooks/useOfflineTravelCache.ts` | `@/services/offline/offlineCatalog`, `travelOfflineAdapter` |
+| `api/achievementsRequests.ts` | `@/api/achievementsMock` (17 обращений) |
+
+Крошки рендерятся в шапке КАЖДОГО маршрута, поэтому выигрыш общий, а не
+только на travel-детали. A/B двумя прод-сборками на одном и том же патче
+Metro (отпечаток `serializeChunks.js` совпал до и после обоих прогонов):
+
+| маршрут | было | стало | Δ |
+| --- | --- | --- | --- |
+| `index.html` | 14 скр / 3042.5 КБ | 14 скр / 2887.6 КБ | −154.9 КБ |
+| `(tabs)/search.html` | 9 скр / 2845.8 КБ | 9 скр / 2690.9 КБ | −154.9 КБ |
+| `(tabs)/map.html` | 14 скр / 3118.8 КБ | 14 скр / 2963.9 КБ | −154.9 КБ |
+| `(tabs)/profile.html` | 21 скр / 3548.1 КБ | 21 скр / 3393.2 КБ | −154.9 КБ |
+| `(tabs)/travels/[param].html` | 16 скр / 3125.3 КБ | 16 скр / 2970.7 КБ | −154.6 КБ (brotli 697.6 → 662.6) |
+| `(tabs)/trips/plan/[id].html` | 24 скр / 3514.1 КБ | 25 скр / 3511.0 КБ | −3.1 КБ, +1 запрос |
+
+Число запросов НЕ выросло нигде, кроме `trips/plan/[id]`, где слой поездок
+теперь приезжает отдельным чанком (25 из 51 по бюджету) — ловушка переразбивки
+#1393 не сработала. `release total` практически не изменился (+1.7 КБ brotli:
+у мок-каталога появился собственный чанк), новых нарушений `guard:bundle-budget`
+не добавилось.
+
+Чего эта правка НЕ снимает: слой карты (`offlineCatalog`, Overpass, тайлы)
+остаётся eager на travel-детали, потому что в него ведут ещё рёбра из
+квестового кода (`useQuestCityCollection`, `QuestForCityCard` → `calculateDistance`),
+которые не резались. Это следующий шаг той же линии.
+
 ## 8. Проверки
 
 Для production measurement:
