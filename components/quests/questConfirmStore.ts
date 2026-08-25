@@ -26,11 +26,25 @@ const emit = () => {
   listeners.forEach((listener) => listener())
 }
 
+/** Ответ пользователя: подтверждение (`true`), отмена или Escape (`false`). */
+export const resolveQuestConfirm = (value: boolean) => {
+  const current = pending
+  if (!current) return
+  pending = null
+  emit()
+  current.resolve(value)
+}
+
 /** Подписка хоста диалога; возвращает отписку (контракт `useSyncExternalStore`). */
 export const subscribeQuestConfirm = (listener: () => void): (() => void) => {
   listeners.add(listener)
   return () => {
     listeners.delete(listener)
+    // Хост ушёл с открытым диалогом (уход со страницы, браузерный Back): без этого
+    // await в `resetQuest` не резолвился бы никогда, а протухший запрос всплыл бы
+    // призрачным диалогом в следующем инстансе визарда и дёрнул бы сброс прогресса
+    // чужого прохождения. Инвариант стора: нет подписчиков — нет запроса.
+    if (listeners.size === 0) resolveQuestConfirm(false)
   }
 }
 
@@ -56,11 +70,3 @@ export const requestQuestConfirm = (title: string, message: string): Promise<boo
   })
 }
 
-/** Ответ пользователя: подтверждение (`true`), отмена или Escape (`false`). */
-export const resolveQuestConfirm = (value: boolean) => {
-  const current = pending
-  if (!current) return
-  pending = null
-  emit()
-  current.resolve(value)
-}

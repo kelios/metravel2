@@ -696,8 +696,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            {/* Хост подтверждений квеста: `confirmQuestAsync` на web резолвится через него (#1555). */}
-            <QuestConfirmHost />
+            {/* Хост подтверждений квеста: `confirmQuestAsync` на web резолвится через него (#1555).
+                На native подтверждение остаётся на `Alert.alert`, поэтому хост туда не монтируется. */}
+            {Platform.OS === 'web' && <QuestConfirmHost />}
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                     {compactDesktopLayout ? (

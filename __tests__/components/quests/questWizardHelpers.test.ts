@@ -14,8 +14,13 @@ jest.mock('@/components/quests/questWizardMedia', () => ({
   getQuestClipboard: async () => ({ setStringAsync: (value: string) => mockSetStringAsync(value) }),
 }))
 
-import { Platform } from 'react-native'
-import { copyQuestCoords, openQuestMap } from '@/components/quests/questWizardHelpers'
+import { Alert, Platform } from 'react-native'
+import { confirmQuestAsync, copyQuestCoords, openQuestMap } from '@/components/quests/questWizardHelpers'
+import {
+  getQuestConfirmRequest,
+  resolveQuestConfirm,
+  subscribeQuestConfirm,
+} from '@/components/quests/questConfirmStore'
 
 describe('questWizardHelpers.openQuestMap', () => {
   const point = { lat: 53.9, lng: 27.56, title: 'Площадь Победы' }
@@ -113,5 +118,128 @@ describe('questWizardHelpers.copyQuestCoords', () => {
 
     expect(mockSetStringAsync).toHaveBeenCalledWith('53.900600, 27.559000')
     expect(mockShowToastMessage.mock.calls[0][0]).toMatchObject({ text1: 'Координаты скопированы' })
+  })
+})
+
+describe('questWizardHelpers.confirmQuestAsync', () => {
+  // #1555: на web подтверждение больше не идёт через нативный `window.confirm` —
+  // он синхронно морозил JS-поток вкладки. Теперь промис резолвит дизайн-системный
+  // `ConfirmDialog`, смонтированный как `QuestConfirmHost`.
+  let unsubscribe: (() => void) | null = null
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    unsubscribe = null
+  })
+
+  afterEach(() => {
+    unsubscribe?.()
+    // Хвост незакрытого диалога не должен утекать в соседний тест.
+    resolveQuestConfirm(false)
+  })
+
+  const mountHost = () => {
+    unsubscribe = subscribeQuestConfirm(() => {})
+  }
+
+  it('web: passes the request to the dialog host instead of calling window.confirm', async () => {
+    ;(Platform as { OS: string }).OS = 'web'
+    const nativeConfirm = jest.spyOn(window, 'confirm').mockReturnValue(true)
+    mountHost()
+
+    const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
+
+    expect(nativeConfirm).not.toHaveBeenCalled()
+    expect(getQuestConfirmRequest()).toMatchObject({
+      title: 'Сбросить прогресс?',
+      message: 'Все ваши ответы будут удалены.',
+    })
+
+    resolveQuestConfirm(true)
+    await expect(pending).resolves.toBe(true)
+    expect(getQuestConfirmRequest()).toBeNull()
+
+    nativeConfirm.mockRestore()
+  })
+
+  it('web: cancel and Escape resolve false, so the destructive action is skipped', async () => {
+    ;(Platform as { OS: string }).OS = 'web'
+    mountHost()
+
+    const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
+    resolveQuestConfirm(false)
+
+    await expect(pending).resolves.toBe(false)
+  })
+
+  it('web: resolves false when no host is mounted, never leaving the await hanging', async () => {
+    ;(Platform as { OS: string }).OS = 'web'
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await expect(confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')).resolves.toBe(false)
+    expect(warn).toHaveBeenCalled()
+
+    warn.mockRestore()
+  })
+
+  it('web: a second request cancels the previous one instead of leaking its promise', async () => {
+    ;(Platform as { OS: string }).OS = 'web'
+    mountHost()
+
+    const first = confirmQuestAsync('Первый', 'Сообщение')
+    const second = confirmQuestAsync('Второй', 'Сообщение')
+
+    await expect(first).resolves.toBe(false)
+    expect(getQuestConfirmRequest()).toMatchObject({ title: 'Второй' })
+
+    resolveQuestConfirm(true)
+    await expect(second).resolves.toBe(true)
+  })
+
+  it('web: unmounting the host with an open dialog resolves false instead of hanging', async () => {
+    // #1555 P2: уход со страницы (браузерный Back) не должен оставлять висящий await,
+    // а протухший запрос — всплывать призрачным диалогом в следующем инстансе визарда.
+    ;(Platform as { OS: string }).OS = 'web'
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    const unmount = subscribeQuestConfirm(() => {})
+
+    const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
+    unmount()
+
+    await expect(pending).resolves.toBe(false)
+    expect(getQuestConfirmRequest()).toBeNull()
+
+    warn.mockRestore()
+  })
+
+  it('native: still goes through Alert.alert and maps the buttons to the promise', async () => {
+    ;(Platform as { OS: string }).OS = 'android'
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {})
+    mountHost()
+
+    const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
+
+    expect(alert).toHaveBeenCalledTimes(1)
+    // Web-хост при этом не задействован: запроса в сторе нет.
+    expect(getQuestConfirmRequest()).toBeNull()
+
+    const [, , buttons] = alert.mock.calls[0] as unknown as [string, string, Array<{ text: string; onPress?: () => void }>]
+    buttons[1].onPress?.()
+    await expect(pending).resolves.toBe(true)
+
+    alert.mockRestore()
+  })
+
+  it('native: dismissing the alert resolves false', async () => {
+    ;(Platform as { OS: string }).OS = 'android'
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {})
+
+    const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
+
+    const options = alert.mock.calls[0][3] as unknown as { onDismiss?: () => void }
+    options.onDismiss?.()
+    await expect(pending).resolves.toBe(false)
+
+    alert.mockRestore()
   })
 })

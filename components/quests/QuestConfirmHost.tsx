@@ -1,5 +1,4 @@
 import React, { useCallback, useSyncExternalStore } from 'react'
-import { Platform } from 'react-native'
 
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { translate as i18nT } from '@/i18n'
@@ -16,16 +15,14 @@ const getServerSnapshot = () => null
  * Хост подтверждений квеста: показывает дизайн-системный `ConfirmDialog` по запросу
  * из `questConfirmStore` и возвращает ответ в промис `confirmQuestAsync`.
  *
- * Монтируется один раз в `QuestWizard`. На native не рендерится: там подтверждение
- * идёт через `Alert.alert` в самом хелпере.
+ * Монтируется один раз в `QuestWizard`, и только на web: на native подтверждение
+ * идёт через `Alert.alert` в самом хелпере, поэтому подписка там не нужна.
  */
 const QuestConfirmHost = () => {
   const request = useSyncExternalStore(subscribeQuestConfirm, getQuestConfirmRequest, getServerSnapshot)
 
   const handleConfirm = useCallback(() => resolveQuestConfirm(true), [])
   const handleClose = useCallback(() => resolveQuestConfirm(false), [])
-
-  if (Platform.OS !== 'web') return null
 
   return (
     <ConfirmDialog
