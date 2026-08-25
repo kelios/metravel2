@@ -8,11 +8,12 @@ description: "Prepare, build, upload, or release an authorized metravel iPhone c
 Use this skill for the release/deploy portion of the active iPhone-first App
 Store work. It does not implement product features.
 
-`AGENTS.md` is inherited. For the one authorized stage, load its exact
-`docs/RELEASE.md`, `docs/WORKFLOW_OPERATIONS.md`, and
-`docs/IOS_OWNER_GUIDE.md` sections, the assigned release contract, and current
-App Store Connect evidence. Load OpenSpec artifacts only when they define that
-stage's acceptance.
+`AGENTS.md` is inherited. For the one authorized stage, load
+`docs/RELEASE.md#ios--app-store-active-iphone-scope` (including `iOS credential
+map`), `docs/WORKFLOW_OPERATIONS.md#321-ios-testing-and-release-operations`, the
+relevant `docs/IOS_OWNER_GUIDE.md` section, the assigned release contract, and
+current App Store Connect evidence. Load OpenSpec artifacts only when they
+define that stage's acceptance.
 
 ## Independent Authorization Gates
 
@@ -38,6 +39,12 @@ Local read-only preflight and source/archive inspection do not mutate store stat
   API origin, encryption/compliance state, and App Store Connect app record.
 - Do not use placeholder Apple IDs, Team IDs, App Store IDs, credentials, dev
   server addresses, or an archive whose source revision cannot be identified.
+- Follow the canonical iOS credential map in `docs/RELEASE.md`: load the
+  protected App Store ID only from `.secrets/metravel-ios-upload.env` without
+  printing it; keep the `APP_MANAGER` App Store Connect API private key in
+  EAS-managed credentials/Apple; never copy it to `.p8` or `credentials.json`.
+  Creating, replacing, or deleting that persistent API key requires explicit
+  owner authorization separate from an ordinary upload.
 - `scripts/ios-build.sh` and `scripts/ios-submit.sh` are the canonical hardened
   path: both are non-interactive, both run `node scripts/ios-release-guard.js`
   first, and both fail closed without the matching environment authorization
@@ -68,8 +75,9 @@ Local read-only preflight and source/archive inspection do not mutate store stat
    record source revision, bundle/version/build, signing, entitlements, privacy,
    embedded configuration, and artifact identity without secrets.
 4. Under upload authorization, upload once, wait for processing without issuing
-   duplicate uploads, answer only approved compliance fields, and record the
-   exact processed build and App Store Connect state.
+   duplicate uploads, reuse the project-bound EAS API key, answer only approved
+   compliance fields, and record the exact processed build and App Store
+   Connect state.
 5. Hand that build to `$metravel-ios-tester`; release defects require a higher
    build number and a complete repeated candidate gate.
 6. Under final submit authorization, select only the accepted build, verify

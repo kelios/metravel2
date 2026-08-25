@@ -927,7 +927,8 @@ Common scripts:
 ```bash
 npm run ios:prebuild
 IOS_SIGNED_BUILD_AUTHORIZATION=1 npm run ios:build:prod
-IOS_UPLOAD_AUTHORIZATION=1 IOS_ASC_APP_ID=<protected-id> npm run ios:submit -- EAS_BUILD_ID
+# See docs/RELEASE.md#ios-credential-map before the protected upload command.
+IOS_UPLOAD_AUTHORIZATION=1 IOS_ASC_APP_ID=<protected-input> npm run ios:submit -- EAS_BUILD_ID
 npm run android:prebuild
 npm run android:build:prod
 npm run android:submit:latest
@@ -939,6 +940,9 @@ npm run android:submit:production
 protected `IOS_ASC_APP_ID` и использует заранее настроенные для bundle
 EAS-managed credentials; store identifier существует только во временном
 ignored submit-конфиге и удаляется после операции.
+Каноническая карта iOS credentials и правила их ротации находятся в
+`docs/RELEASE.md#ios-credential-map`; архитектурный документ значения и key
+material не дублирует.
 Local simulator/device QA применяется в iOS-specific задачах; common/shared
 scope сам по себе iPhone gate не создаёт. Signed build, upload, App Review
 submit и storefront release требуют отдельных authorization gates.

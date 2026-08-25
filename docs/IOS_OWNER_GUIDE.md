@@ -1,6 +1,6 @@
 # Первый релиз MeTravel на iPhone: подготовка Apple-аккаунта
 
-Актуализировано: 2026-08-13. Инструкция относится к человеческой задаче
+Актуализировано: 2026-08-25. Инструкция относится к человеческой задаче
 [#1410](https://metravel.by/board?sprint_status=open&sprint=24&area=front&group_by=status&kind=&epic=&story=#task-1410).
 
 Цель этого этапа — подготовить Apple Developer и App Store Connect так, чтобы
@@ -36,6 +36,9 @@
 В тикете достаточно написать «проверено», «сохранено вне Git» или «доступ
 выдан». Пароль и код подтверждения никому передавать не нужно: если позже
 понадобится вход в Xcode на этом Mac, Account Holder вводит их самостоятельно.
+После подготовки проекта точные места `IOS_ASC_APP_ID`, EAS-managed App Store
+Connect API key, Apple login session и signing credentials определяет
+`docs/RELEASE.md#ios-credential-map`; этот owner guide не хранит их значения.
 
 ## 0. Отметить начало работы на доске
 

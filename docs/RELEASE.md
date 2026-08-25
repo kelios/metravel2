@@ -256,13 +256,35 @@ non-interactive и использует EAS-managed App Store Connect credential
 ```bash
 npm run ios:prebuild
 IOS_SIGNED_BUILD_AUTHORIZATION=1 npm run ios:build:prod
-IOS_UPLOAD_AUTHORIZATION=1 IOS_ASC_APP_ID=<protected-id> npm run ios:submit -- EAS_BUILD_ID
+(
+  set -e
+  set -a
+  source .secrets/metravel-ios-upload.env
+  set +a
+  IOS_UPLOAD_AUTHORIZATION=1 npm run ios:submit -- EAS_BUILD_ID
+)
 ```
 
 `IOS_ASC_APP_ID` берётся из проверенной App Store Connect записи и передаётся
 только как protected execution input. Wrapper подставляет его во временный
 ignored-конфиг с правами текущего пользователя и удаляет конфиг после upload;
 tracked `eas.json`, Git и board evidence идентификатор не содержат.
+
+#### iOS credential map
+
+| Что | Каноническое место | Правило использования |
+| --- | --- | --- |
+| `IOS_ASC_APP_ID` | `.secrets/metravel-ios-upload.env`, gitignored, mode `0600` | Файл содержит только protected submit input; загружать через `source` без печати значения. |
+| App Store Connect API private key | EAS Credentials для проекта/bundle + Apple App Store Connect | Роль `APP_MANAGER`; key material остаётся на EAS/Apple, локальный `.p8` и `credentials.json` не создаются. Один ключ переиспользуется для следующих uploads, пока не отозван. |
+| Apple interactive login session | `~/.app-store/auth/`, вне workspace | Нужна только для owner-authorized управления credentials; cookie/session нельзя копировать в проект или evidence. |
+| Distribution certificate и provisioning profile | EAS-managed iOS build credentials + Apple Developer | Переиспользуются до expiry/revoke/rotation; новая сборка сама по себе не требует нового сертификата или profile. |
+
+Первичная выдача, замена или удаление App Store Connect API key — отдельная
+owner-authorized credential mutation. Выполняй закреплённым CLI: `npx --yes
+eas-cli@21.8.0 credentials --platform ios`, затем `production` → `App Store
+Connect: Manage your API Key`. Для существующего настроенного ключа upload не
+должен просить путь к `.p8`; неожиданный запрос считается blocker, а не поводом
+создавать локальную копию.
 
 Разделяй четыре authorization gates: signed distribution build, App Store
 Connect/TestFlight upload, App Review submission и storefront release. Для
@@ -308,7 +330,8 @@ See `PRODUCTION_CHECKLIST.md`.
 
 - Do not commit production secrets into `.env.*`.
 - iOS credentials and signing material belong only in approved local/EAS/Apple
-  secret stores; they are excluded from web/Android checks, Git, logs, and docs.
+  secret stores; see `iOS credential map` above. They are excluded from
+  web/Android checks, Git, logs, and docs.
 - Keep Android upload-keystore credentials in the local secret store as the four
   `METRAVEL_ANDROID_KEYSTORE_*` variables. Keep the Google Play service-account
   key gitignored; never print either credential set.
