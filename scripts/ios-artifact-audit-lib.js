@@ -5,6 +5,7 @@ const plist = require('@expo/plist').default;
 
 const {
   EXPECTED,
+  IOS_IPAD_ORIENTATIONS,
   IOS_PURPOSE_STRINGS,
   LOCALIZED_PURPOSE_STRINGS,
 } = require('./ios-release-guard-lib');
@@ -217,9 +218,13 @@ function validateIosAppBundle(appPath, options = {}) {
       'archive must contain the Xcode-derived iOS MinimumOSVersion and no macOS LSMinimumSystemVersion'
     );
   }
-  if (!jsonEqual(info.UIDeviceFamily, [1]) ||
-      Object.prototype.hasOwnProperty.call(info, 'UISupportedInterfaceOrientations~ipad')) {
-    fail('IOS_ARTIFACT_DEVICE_FAMILY', 'archive must remain iPhone-only');
+  if (info.UIRequiresFullScreen !== false ||
+      !jsonEqual(info.UIDeviceFamily, [1, 2]) ||
+      !jsonEqual(info['UISupportedInterfaceOrientations~ipad'], IOS_IPAD_ORIENTATIONS)) {
+    fail(
+      'IOS_ARTIFACT_DEVICE_FAMILY',
+      'archive must support iPhone and iPad with adaptive portrait and landscape windows'
+    );
   }
   if (info.ITSAppUsesNonExemptEncryption !== false) {
     fail('IOS_ARTIFACT_ENCRYPTION', 'archive encryption declaration must match the release contract');

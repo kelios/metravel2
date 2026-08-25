@@ -1,11 +1,11 @@
 ---
 name: metravel-ios-tester
-description: "Read-only metravel iPhone QA on simulator, physical device, or authorized TestFlight build. Use for launch/core flows, permissions, Apple auth/Keychain, links, maps/media, APNs, locales, a11y, offline, or crashes."
+description: "Read-only metravel iPhone/iPad QA on simulator, physical device, or authorized TestFlight build. Use for launch, adaptive windows, permissions, auth/Keychain, links, maps/media, locales, accessibility, offline, or crashes."
 ---
 
 # Metravel iOS Tester
 
-Use this skill for read-only iPhone QA. A simulator pass proves neither signing
+Use this skill for read-only iPhone/iPad QA. A simulator pass proves neither signing
 nor physical-device/TestFlight behavior.
 
 `AGENTS.md` is inherited. Load the exact test layer/cases for the affected
@@ -17,15 +17,18 @@ for candidate acceptance.
 1. **Simulator:** clean launch without Metro when applicable, guest/auth shell,
    navigation, five locales, safe areas, keyboard, loading/error/offline states,
    basic links, and fatal/runtime log scan.
+   On iPad also cover full-screen and resized windows in portrait and landscape.
 2. **Physical iPhone:** camera/photo/HEIC, location, sharing, Keychain cold
    restart, biometrics, external apps, real safe areas, Universal Links, and
    permission allow/deny/restricted paths.
-3. **TestFlight candidate:** exact processed build, fresh install/update,
+3. **Physical iPad:** exact tablet window geometry, full-screen/windowed
+   rotation, touch targets, safe areas, keyboard, and accessibility acceptance.
+4. **TestFlight candidate:** exact processed build, fresh install/update,
    production origins, Apple login, APNs delivery and notification routing,
-   account deletion visibility, five locales, accessibility, offline recovery,
-   crash/hang evidence, and launch-critical product matrix.
+   iPad device-family/window geometry, account deletion visibility, five locales,
+   accessibility, offline recovery, crash/hang evidence, and launch-critical product matrix.
 
-Use `docs/MANUAL_TEST_CASES.md` cases `IOS-01..14` as the repeatable baseline;
+Use `docs/MANUAL_TEST_CASES.md` cases `IOS-01..15` as the repeatable baseline;
 select only the cases required by the assigned Task Contract for non-release work.
 
 ## Rules
@@ -46,7 +49,7 @@ select only the cases required by the assigned Task Contract for non-release wor
   profile mutation; do not force that profile through manual signing. Redact the
   team, device, certificate, profile, and account identifiers from evidence.
 - Do not replace physical/TestFlight evidence with a simulator screenshot.
-- If the required iPhone is not visible, locked, or needs trust/login, stop and
+- If the required Apple device is not visible, locked, or needs trust/login, stop and
   ask the owner for that exact connect/unlock/trust action, then resume the same
   test. Missing device access is not a final pending verdict or a reason to park
   a ticket in `testing`.
@@ -69,7 +72,7 @@ select only the cases required by the assigned Task Contract for non-release wor
 ## iOS QA Pass
 
 Build and environment:
-Layer: simulator | physical iPhone | TestFlight
+Layer: iPhone simulator | iPad simulator | physical iPhone | physical iPad | TestFlight
 Scenarios and locales:
 Findings:
 Crash/runtime evidence:

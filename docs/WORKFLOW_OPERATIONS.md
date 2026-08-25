@@ -9,7 +9,7 @@
 - e2e-доступы и board token → «3.1 E2E окружение и доступы»;
 - создание/удаление тестовых сущностей на проде → «3.1.1 Тестовые данные на production»;
 - сборка и прогон на USB-устройстве → «3.2 Android device testing and builds»;
-- Xcode/simulator/physical iPhone/TestFlight → «3.2.1 iOS testing and release operations»;
+- Xcode/iPhone+iPad simulator/physical Apple device/TestFlight → «3.2.1 iOS testing and release operations»;
 - baseline/after на живом URL, закрытие perf/media/network задач → «3.3.1 Production-target validation and task closure»;
 - deploy/build/e2e/Lighthouse и общие locks → «3.4 Координация долгих операций».
 
@@ -109,14 +109,16 @@ platform-specific behavior/config/runtime (§3.3); правило quality-gate l
 
 ### 3.2.1 iOS testing and release operations
 
-- Активный первый iOS release поддерживает iPhone; iPadOS-specific layout,
-  screenshots и acceptance вне scope.
+- Активный первый iOS release — universal iPhone/iPad. Для iPad-specific
+  configuration/runtime обязательны simulator-проверки full-screen,
+  resizable window, portrait и landscape; перед App Review нужны iPad
+  screenshots и exact TestFlight acceptance.
 - Для iOS-specific behavior/config/runtime задачи сначала проверь `xcode-select -p`,
   `xcodebuild -version` и eligible destinations через `xcodebuild
   -showdestinations`/`xcrun simctl list devices available`. Отсутствующий runtime
   — конкретный environment blocker, а не повод считать QA пройденной.
 - Simulator используется для compilation, startup, basic navigation/UI, locales,
-  safe areas, keyboard и deterministic error states. Physical iPhone обязателен
+  safe areas, keyboard, iPad window geometry и deterministic error states. Physical iPhone обязателен
   для camera/photo/HEIC, Keychain/biometrics, APNs, Universal Links, sharing,
   permission allow/deny/restricted behavior и lifecycle.
 - Exact processed TestFlight build — acceptance boundary перед App Review. Local

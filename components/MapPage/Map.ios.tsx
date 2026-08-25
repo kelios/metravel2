@@ -27,6 +27,7 @@ import {
   type NativeViewportSnapshot,
 } from './Map/nativeBridge';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
+import { fetchTileWithRetry } from './Map/tileFetchRetry';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import type { MapUiApi } from '@/types/mapUi';
 
@@ -118,6 +119,9 @@ interface TravelProps {
 
 const DEFAULT_LAT = 53.8828449;
 const DEFAULT_LNG = 27.7273595;
+
+// Семафор на сетевые загрузки тайлов: #807 nginx zone режет бурст → 429/серо.
+const MAX_TILE_FETCH = 3;
 
 const withAlpha = (color: string, alpha: number) => {
   if (!color || color.startsWith('rgba') || color.startsWith('rgb')) {
@@ -276,11 +280,9 @@ const Map: React.FC<TravelProps> = ({
   // Шаблон URL базовой подложки ({z}/{x}/{y} подставляем при сетевом промахе).
   const nativeTileTemplate = useMemo(() => getThemedNativeBaseTileUrl(), []);
 
-  // Семафор на сетевые загрузки тайлов: #807 nginx zone режет бурст → 429/серо.
   // Промахи кэша при онлайне качаем ограниченным пулом, попадания идут мимо.
   const tileFetchActiveRef = useRef(0);
   const tileFetchQueueRef = useRef<Array<() => void>>([]);
-  const MAX_TILE_FETCH = 3;
 
   const acquireTileSlot = useCallback((): Promise<void> => {
     if (tileFetchActiveRef.current < MAX_TILE_FETCH) {
@@ -310,6 +312,29 @@ const Map: React.FC<TravelProps> = ({
     [injectMapCommand],
   );
 
+  // #1561 — один промах сети НЕ должен навсегда оставлять серую клетку. Слот
+  // семафора на время паузы отпускаем (он берётся внутри `download`), иначе
+  // backoff одного тайла держит очередь остальных.
+  const downloadTileWithRetry = useCallback(
+    (z: number, x: number, y: number, url: string): Promise<boolean> =>
+      fetchTileWithRetry({
+        download: async () => {
+          await acquireTileSlot();
+          try {
+            return await downloadTileToDisk(z, x, y, url);
+          } finally {
+            releaseTileSlot();
+          }
+        },
+        isOnline: () => isOnlineRef.current,
+        wait: (ms) =>
+          new Promise<void>((resolve) => {
+            setTimeout(resolve, ms);
+          }),
+      }),
+    [acquireTileSlot, releaseTileSlot],
+  );
+
   const handleTileRequest = useCallback(
     async (z: number, x: number, y: number, key: string) => {
       try {
@@ -318,34 +343,30 @@ const Map: React.FC<TravelProps> = ({
           setWebViewTile(key, cached);
           return;
         }
-        // Офлайн и нет в кэше → прозрачный тайл (серый фон подложки).
+        // Офлайн и нет в кэше → пустой тайл (документированная политика: без
+        // сети догружать нечего, bulk-предзагрузка OSM запрещена).
         if (!isOnlineRef.current) {
           setWebViewTile(key, '');
           return;
         }
         // Онлайн-промах: качаем реальный тайл (и попутно кэшируем), затем отдаём
         // как data-URL. Картинка онлайн не меняется — те же тайлы прокси.
-        await acquireTileSlot();
-        try {
-          const url = nativeTileTemplate
-            .replace('{z}', String(z))
-            .replace('{x}', String(x))
-            .replace('{y}', String(y));
-          const bytes = await downloadTileToDisk(z, x, y, url);
-          if (bytes != null) {
-            const dataUrl = await getCachedTileDataUrl(z, x, y);
-            setWebViewTile(key, dataUrl ?? '');
-          } else {
-            setWebViewTile(key, '');
-          }
-        } finally {
-          releaseTileSlot();
+        const url = nativeTileTemplate
+          .replace('{z}', String(z))
+          .replace('{x}', String(x))
+          .replace('{y}', String(y));
+        const ok = await downloadTileWithRetry(z, x, y, url);
+        if (!ok) {
+          setWebViewTile(key, '');
+          return;
         }
+        const dataUrl = await getCachedTileDataUrl(z, x, y);
+        setWebViewTile(key, dataUrl ?? '');
       } catch {
         setWebViewTile(key, '');
       }
     },
-    [acquireTileSlot, nativeTileTemplate, releaseTileSlot, setWebViewTile],
+    [downloadTileWithRetry, nativeTileTemplate, setWebViewTile],
   );
 
   // F-17 — RN-layout → Leaflet invalidateSize bridge. Когда контейнер карты

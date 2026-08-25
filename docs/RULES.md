@@ -10,23 +10,24 @@
 
 ## Application architecture and localization
 
-- Metravel's active product surfaces are desktop web, mobile web, Android, and
-  iPhone (iOS). The first App Store release is iPhone-only; iPadOS-specific UI,
-  screenshots, multitasking, and acceptance remain out of scope and their
-  absence does not block `done`.
+- Metravel's active product surfaces are desktop web, mobile web, Android,
+  iPhone, and iPad. The first App Store release uses one universal iPhone/iPad
+  target. iPadOS-specific full-screen, resizable-window, portrait/landscape,
+  screenshot, and acceptance evidence are required for release/config changes
+  that affect tablet support.
 - Before every task, record
   `Platform impact: desktop web | mobile web | Android | iOS | shared | none` and
   `Localization impact: all current locales | selected locales | none`.
   `none` must be a considered conclusion, not an omitted check. `shared` means
   common code or multiple affected surfaces; it does not by itself require
-  Android or iPhone device validation.
+  Android or Apple mobile device validation.
 - Shared components, hooks, services, API adapters, and state must preserve all
   affected active platforms. Platform files may adapt engines, permissions,
   safe areas, storage, or native APIs, but must not silently fork product behavior.
-- Mobile web, Android, and iPhone implement one mobile UX. The same hierarchy,
+- Mobile web, Android, iPhone, and iPad implement one responsive mobile UX. The same hierarchy,
   action order, key geometry, states, and touch semantics are an architectural
   invariant. Common/shared responsive UI is validated on desktop web and mobile
-  web; Android/iPhone device checks are added only for platform-specific
+  web; Android/iPhone/iPad device checks are added only for platform-specific
   observable behavior, configuration, or runtime. OS APIs, permissions, safe
   areas/insets, and rendering engines may differ without changing product meaning.
 - The production locale registry is defined by `i18n/config.ts`; it currently
@@ -96,8 +97,8 @@ npm run test:run
   - check the browser console for errors (no new errors should appear after the change).
 - A shared file, component, hook, or service does not by itself create a device
   gate. Run Android device QA only when the task changes Android-specific
-  observable behavior, configuration, or runtime. Run iPhone QA only when it
-  changes iOS-specific observable behavior, configuration, or runtime. Preserve
+  observable behavior, configuration, or runtime. Run Apple mobile QA only when it
+  changes iOS/iPadOS-specific observable behavior, configuration, or runtime. Preserve
   mobile parity in implementation even when no native device gate is applicable.
 - Always self-verify (mandatory):
   - the agent must verify its own changes end-to-end (browser and/or tests) before handoff — never defer verification to the user and never report a change as done/fixed while verification is still pending;
@@ -133,12 +134,14 @@ npm run test:run
 - iOS validation policy (mandatory):
   - local Xcode/simulator/device QA is a normal path for assigned iOS-specific
     observable behavior, configuration, or runtime; common/shared code alone does
-    not create an iPhone gate;
+    not create an iPhone/iPad gate;
   - simulator evidence covers compilation and basic UI, but not hardware,
     signing, TestFlight, APNs delivery, Universal Links, HEIC, biometrics, or
     production embedded configuration;
   - physical iPhone evidence is required for device capabilities and lifecycle;
-    the exact processed TestFlight build is the App Store acceptance boundary;
+    physical iPad/TestFlight evidence is required for exact tablet window and
+    rotation acceptance; the exact processed TestFlight build is the App Store
+    acceptance boundary;
   - signed distribution build, App Store Connect/TestFlight upload, App Review
     submission, and storefront release are separate operations, each requiring
     an explicit current user command. Never infer or automate the next gate.
@@ -193,7 +196,7 @@ npm run test:run
   - task `area` is only `front` or `back` for active workflow: Android/native app
     bugs are `area=front` with `[AND-...]` context, iOS app bugs are `area=front`
     with `[IOS-...]` context, and shared/common responsive tasks name desktop-web
-    and mobile-web validation; add Android/iPhone device evidence only for
+    and mobile-web validation; add Android/iPhone/iPad device evidence only for
     platform-specific scope. Use `area=back` only for backend/API/server work;
   - `todo` means implementation/refinement/ops work remains; `in_progress` means
     that work is happening; `testing` means implementation is complete and an

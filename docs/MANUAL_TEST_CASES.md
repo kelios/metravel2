@@ -121,8 +121,8 @@ API-моки; `live-contract e2e` требует backend-доступ из `.env
 | ID | Заголовок | Предусловие | Шаги | Ожидаемый результат |
 |----|-----------|-------------|------|---------------------|
 | MAP-01 | Загрузка карты | — | Открыть вкладку `/map` | Карта рендерится (web: Leaflet), маркеры/кластеры видны |
-| MAP-02 | Зум кнопками | Карта открыта | Нажать `+` и `−` | Масштаб увеличивается/уменьшается |
-| MAP-03 | Зум жестами | — | Колесо/пинч | Плавный зум без артефактов |
+| MAP-02 | Зум кнопками и подложка | Карта открыта, подложка загружена | Нажимать `−` до минимального доступного масштаба (не менее трёх шагов), затем вернуть исходный масштаб через `+`; после каждого шага дождаться тайлов | Масштаб меняется до документированной нижней границы; подложка остаётся заполненной видимыми тайлами на каждом уровне, не превращается в сплошное серое поле и не теряет маркеры/кластеры |
+| MAP-03 | Зум жестами и подложка | Карта открыта, подложка загружена | Последовательным колесом/пинчем дойти до минимального доступного масштаба (не менее трёх zoom-out), затем вернуться к исходному; после каждого жеста дождаться тайлов | Плавный зум без артефактов; подложка остаётся заполненной на каждом достигнутом масштабе, включая минимальный, маркеры/кластеры не исчезают |
 | MAP-04 | Геолокация | Разрешён доступ | Нажать `crosshair` | Карта центрируется на текущей позиции, маркер «Ваше местоположение» (голубой) |
 | MAP-05 | Отказ в геолокации | Доступ запрещён | Нажать `crosshair` | Корректное сообщение, без краша |
 | MAP-06 | Легенда | — | Развернуть легенду (левый низ) | Показаны цвета: жёлтый=Путешествия, зелёный=Старт, красный=Финиш, голубой=Вы |
@@ -139,6 +139,7 @@ API-моки; `live-contract e2e` требует backend-доступ из `.env
 | MAP-17 | Resize панели | Desktop | Потянуть resize-handle | Ширина панели меняется |
 | MAP-18 | Bottom sheet | Mobile | Тянуть нижнюю панель | Состояния collapsed→quarter→half→full |
 | MAP-19 | Экспорт маршрута | Есть маршрут, web | Экспорт GPX/KML | Файл скачивается, валиден |
+| MAP-20 | Один объект — несколько материалов | В dataset есть одно физическое место с единым `placeId` и двумя источниками с разными фото/ссылками; рядом есть отдельное место | На zoom 10, 13 и 16 открыть маркер общего места; перелистнуть карточку вперёд/назад; открыть обе статьи; закрыть и снова открыть карточку; затем нажать соседний marker | На всех масштабах у общего места один marker и один hit target; карточка показывает `1/2` и `2/2`, меняет только фото/название материала/ссылку; обе статьи доступны, sources-запрос выполняется не более одного раза благодаря cache и не вызывает нового map-запроса; координаты, навигация и сохранение остаются общими; соседнее место не склеено; одновременно загружено только активное фото (допустим prefetch следующего) |
 
 ### 2.1 Построение маршрута
 
@@ -450,9 +451,9 @@ board task.
 Видимый общий/shared UI проверяется на desktop web и mobile web. Таблицы ниже —
 каталог risk-based сценариев, а не требование прогонять все устройства для
 каждой задачи. Android USB-кейсы выбираются только при Android-specific
-поведении; iPhone simulator/physical/TestFlight — только при iOS-specific
-поведении или явном release gate. Mobile parity остаётся design-инвариантом.
-iPadOS не входит в первый релиз.
+поведении; iPhone/iPad simulator/physical/TestFlight — только при
+iOS/iPadOS-specific поведении или явном release gate. Mobile parity остаётся
+design-инвариантом. Universal Apple release включает iPadOS.
 
 ### Android USB / local-build smoke
 
@@ -589,10 +590,10 @@ Owners/follow-up:
 | AND-USB-30 | P1 | manual Android profile IA/statistics | manual |
 | AND-USB-31 | P2 | manual Android header/menu/ad slots | manual |
 
-### iPhone simulator / physical device / TestFlight
+### iPhone/iPad simulator / physical device / TestFlight
 
-Используй этот набор только для iOS-specific задачи или явно назначенного
-iPhone release gate. Shared/web-only UI не требует автоматического прогона этой
+Используй этот набор только для iOS/iPadOS-specific задачи или явно назначенного
+Apple mobile release gate. Shared/web-only UI не требует автоматического прогона этой
 матрицы.
 
 Перед прогоном укажи source revision, version/build, layer, model/runtime,
@@ -608,7 +609,7 @@ hardware/signing/production behavior.
 | IOS-04 | Physical + TestFlight | Keychain lifecycle | Sign-in survives background/force-stop/cold restart; logout/account invalidation removes session without logout flash loop |
 | IOS-05 | Physical + TestFlight | Universal Links cold/warm | Valid `https://metravel.by` route opens equivalent screen; malformed/untrusted path uses safe fallback without duplicate stack |
 | IOS-06 | Simulator + Physical | Safe areas, keyboard, Dynamic Type, VoiceOver, reduced motion | Primary content/actions remain named, ordered, reachable, unclipped and at least 44 pt |
-| IOS-07 | Physical + TestFlight | Map/location/navigation | Tiles/markers/cards load; deny location keeps manual browsing; external navigation has safe installed/not-installed fallback |
+| IOS-07 | Physical + TestFlight | Map/location/navigation: дождаться подложки, выполнить zoom-out до минимального доступного масштаба (не менее трёх шагов), вернуться к исходному масштабу, проверить deny location и внешнюю навигацию. Счётчики тайлов на каждом уровне снимать из WebView через `window.__metravelGetTileStats()` → `{ requested, loaded, failed, dropped, pending }` (см. `docs/features/map.md` → «Native base tile lifecycle») | На каждом масштабе, включая минимальный, видимые тайлы заполняют карту без сплошного серого поля; маркеры/кластеры/карточки остаются видимыми; deny location keeps manual browsing; external navigation has safe installed/not-installed fallback |
 | IOS-08 | Physical + TestFlight | Photo/camera/HEIC/gallery/share/export | Allow/deny paths recover; HEIC uploads; ordering/delete/swipe are stable; system share/export returns to the same screen |
 | IOS-09 | Physical + TestFlight | Notification permission, APNs and routing | Prompt timing is contextual; real delivery arrives; foreground/background/tap routes work; token update/removal is observable |
 | IOS-10 | Simulator + Physical + TestFlight | RU/BE/UK/PL/EN and cold restart | No raw keys; long labels fit; dates/plurals use active locale; selected locale restores before launch-critical copy |
@@ -616,6 +617,7 @@ hardware/signing/production behavior.
 | IOS-12 | TestFlight | Fresh install/update + production configuration | Exact processed candidate uses expected bundle/version/build and production HTTPS origins; no dev host, placeholder or secret appears |
 | IOS-13 | TestFlight | Profile/settings/account deletion/privacy paths | Reviewer can find required privacy/support/account-deletion behavior and runtime matches store declarations |
 | IOS-14 | TestFlight | Crash/hang/launch matrix | Launch-critical flows complete without crash/hang; evidence identifies exact build and any non-blocking warning |
+| IOS-15 | iPad Simulator + TestFlight | Full-screen и resizable window в portrait/landscape | Scene использует доступные bounds без fixed iPhone compatibility frame; header/content/tabs и primary actions остаются видимыми и достижимыми после каждого resize/rotation |
 
 Любой release-blocking fail возвращает implementation task в `in_progress`.
 Если дефект найден в уже загруженном/processed TestFlight candidate,
@@ -632,10 +634,12 @@ gate; simulator/local-device fail до upload сам по себе build number 
 | **Web Mobile** | Браузер ≤600px | 1 колонка, фильтры в fullscreen modal, bottom sheet на карте, fullscreen popup места |
 | **Android** | Локальная сборка на USB-устройстве | Тот же mobile UX, что на Web Mobile; WebView + Leaflet native map, нативный share/picker, кнопка «назад» системы |
 | **iPhone simulator** | Eligible Xcode simulator | Compilation/startup, basic UI/navigation, locales, safe areas, keyboard и deterministic error states |
+| **iPad simulator** | Eligible Xcode simulator | Universal device family, full-screen/windowed portrait и landscape, resize без compatibility framing, clipping и недоступных primary actions |
 | **Physical iPhone** | Локальная signed/dev build на подключённом устройстве | Camera/photo/HEIC, Keychain/biometrics, permissions, Universal Links, sharing, lifecycle и real safe areas |
-| **TestFlight** | Exact processed release candidate | Production config/signing, fresh install/update, Apple login, APNs delivery, complete release matrix и crash/hang evidence |
+| **Physical iPad** | Exact available local/TestFlight build | Реальная tablet geometry, rotation/windowing и touch/accessibility acceptance; hardware-specific capability кейсы — только если tablet behavior отличается |
+| **TestFlight** | Exact processed universal release candidate | Production config/signing, iPhone/iPad family, fresh install/update, iPad window geometry, Apple login, APNs delivery, complete release matrix и crash/hang evidence |
 
-Simulator evidence не заменяет physical iPhone/TestFlight там, где тест зависит
+Simulator evidence не заменяет physical Apple device/TestFlight там, где тест зависит
 от hardware, signing, entitlements, APNs, Universal Links или production config.
 Если обязательное устройство/сессия недоступны, приёмка останавливается и агент
 просит конкретный unlock/connect/login, затем продолжает тот же сценарий; это не
@@ -654,7 +658,7 @@ Memory. `testing` сохраняется только для точного rete
 commit/build, командами и ссылками на ignored screenshots/traces. Старые матрицы
 результатов не копируются вперёд как текущий статус.
 
-Backend/API/server задачи не требуют Android/iPhone evidence: их проверяют
+Backend/API/server задачи не требуют Android/iPhone/iPad evidence: их проверяют
 доступными source/config/test/API/log/temporal probes. Platform-specific client
 integration оформляется и принимается отдельной связанной `area=front` задачей.
 Если in-scope temporal gate ещё не завершён, backend-задача остаётся в

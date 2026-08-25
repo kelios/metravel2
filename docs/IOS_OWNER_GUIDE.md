@@ -1,4 +1,4 @@
-# Первый релиз MeTravel на iPhone: подготовка Apple-аккаунта
+# Первый релиз MeTravel на iPhone и iPad: подготовка Apple-аккаунта
 
 Актуализировано: 2026-08-25. Инструкция относится к человеческой задаче
 [#1410](https://metravel.by/board?sprint_status=open&sprint=24&area=front&group_by=status&kind=&epic=&story=#task-1410).
@@ -211,7 +211,7 @@ Apple пишет, что Bundle ID недоступен или уже зарег
 
 | Вопрос | Решение для v1 | Что это значит |
 | --- | --- | --- |
-| Устройства | iPhone only | iPad не входит в первый релиз |
+| Устройства | Universal iPhone + iPad | Один bundle поддерживает iPhone и адаптивные full-screen/windowed iPad scenes; для Store нужны обе группы screenshots |
 | Цена загрузки | Free | пользователь не платит за установку |
 | In-App Purchases | Нет в v1 | Paid Apps Agreement пока не нужен |
 | Основной язык карточки | Russian | обязательные поля сначала заполняются по-русски |
@@ -219,7 +219,7 @@ Apple пишет, что Bundle ID недоступен или уже зарег
 | Локализации карточки App Store | RU/UK/PL/EN | отдельной белорусской локализации метаданных у Apple нет |
 | Распространение | Public | обычная публичная карточка App Store |
 | Страны | All Countries or Regions, если нет юридических ограничений | позже можно выбрать конкретные страны в #1420 |
-| Физический iPhone | доступен для QA | агент сам проводит проверки после подготовки сборки |
+| Физические устройства | iPhone доступен для capability QA; iPad доступен для exact tablet acceptance перед App Review | агент сам проводит проверки после подготовки сборки; локальный iPad Simulator не заменяет проверку exact TestFlight candidate на планшете |
 
 Apple не предлагает белорусский язык в списке локализаций метаданных App Store.
 Это не отменяет белорусский интерфейс приложения. В белорусском storefront
@@ -281,13 +281,13 @@ Profiles` → `Devices`; UDID всё равно не попадёт в тике�
 - App ID by.metravel.app: существует, explicit
 - Capabilities: Associated Domains / Push Notifications / Sign in with Apple проверены
 - Рабочий доступ: приглашён и принят; роль ... / Individual path подтверждён
-- v1: iPhone only, Free, без In-App Purchases
+- v1: universal iPhone + iPad, Free, без In-App Purchases
 - Языки интерфейса: RU/BE/UK/PL/EN
 - Метаданные App Store: RU primary + UK/PL/EN; ограничение BE учтено
 - Распространение: Public
 - Страны: All Countries or Regions / точный выбранный список
 - Seller/developer name: проверено и согласовано
-- iPhone: модель ..., iOS ..., подключение к этому Mac подтверждено
+- iPhone/iPad: модели ..., iOS/iPadOS ..., доступный QA layer подтверждён
 - Блокеры: нет / краткое описание без секретов
 ```
 

@@ -33,6 +33,13 @@ const IOS_PURPOSE_STRINGS = Object.freeze({
     'MeTravel accesses photos you choose so you can add them to your profile, trips, and articles.',
 });
 
+const IOS_IPAD_ORIENTATIONS = Object.freeze([
+  'UIInterfaceOrientationPortrait',
+  'UIInterfaceOrientationPortraitUpsideDown',
+  'UIInterfaceOrientationLandscapeLeft',
+  'UIInterfaceOrientationLandscapeRight',
+]);
+
 const LOCALIZED_PURPOSE_STRINGS = Object.freeze({
   en: IOS_PURPOSE_STRINGS,
   ru: {
@@ -204,7 +211,8 @@ function validateIosRelease(root = process.cwd()) {
     if (resolved.name !== app.name || resolved.version !== app.version ||
         resolved.ios?.bundleIdentifier !== app.ios?.bundleIdentifier ||
         resolved.ios?.buildNumber !== app.ios?.buildNumber ||
-        resolved.ios?.supportsTablet !== app.ios?.supportsTablet) {
+        resolved.ios?.supportsTablet !== app.ios?.supportsTablet ||
+        resolved.ios?.requireFullScreen !== app.ios?.requireFullScreen) {
       fail('IOS_RESOLVED_EXPO_CONFIG', 'resolved Expo config differs from the committed static contract');
     }
   } catch (error) {
@@ -282,7 +290,13 @@ function validateIosRelease(root = process.cwd()) {
   if (app.version !== EXPECTED.version) fail('IOS_VERSION_EXPO', String(app.version));
   if (app.scheme !== EXPECTED.scheme) fail('IOS_SCHEME_EXPO', String(app.scheme));
   if (app.newArchEnabled !== true) fail('IOS_NEW_ARCH_EXPO', String(app.newArchEnabled));
-  if (app.ios?.supportsTablet !== false) fail('IOS_DEVICE_FAMILY_EXPO', String(app.ios?.supportsTablet));
+  if (app.ios?.supportsTablet !== true) fail('IOS_DEVICE_FAMILY_EXPO', String(app.ios?.supportsTablet));
+  if (app.ios?.requireFullScreen !== false || app.orientation !== 'default') {
+    fail(
+      'IOS_IPAD_WINDOWING_EXPO',
+      `requireFullScreen=${String(app.ios?.requireFullScreen)}, orientation=${String(app.orientation)}`
+    );
+  }
   if (app.ios?.bundleIdentifier !== EXPECTED.bundleIdentifier) {
     fail('IOS_BUNDLE_ID_EXPO', String(app.ios?.bundleIdentifier));
   }
@@ -507,7 +521,7 @@ function validateIosRelease(root = process.cwd()) {
     ['IOS_BUNDLE_ID_XCODE', /PRODUCT_BUNDLE_IDENTIFIER = by\.metravel\.app;/g, /PRODUCT_BUNDLE_IDENTIFIER = /g, 2],
     ['IOS_BUILD_NUMBER_XCODE', /CURRENT_PROJECT_VERSION = 4;/g, /CURRENT_PROJECT_VERSION = /g, 2],
     ['IOS_VERSION_XCODE', /MARKETING_VERSION = 1\.0\.5;/g, /MARKETING_VERSION = /g, 2],
-    ['IOS_DEVICE_FAMILY_XCODE', /TARGETED_DEVICE_FAMILY = 1;/g, /TARGETED_DEVICE_FAMILY = /g, 2],
+    ['IOS_DEVICE_FAMILY_XCODE', /TARGETED_DEVICE_FAMILY = "1,2";/g, /TARGETED_DEVICE_FAMILY = /g, 2],
     ['IOS_DEPLOYMENT_TARGET_XCODE', /IPHONEOS_DEPLOYMENT_TARGET = 16\.4;/g, /IPHONEOS_DEPLOYMENT_TARGET = /g, 4],
     ['IOS_PRODUCT_NAME_XCODE', /PRODUCT_NAME = metravel;/g, /PRODUCT_NAME = /g, 2],
   ];
@@ -559,8 +573,12 @@ function validateIosRelease(root = process.cwd()) {
       `Xcode must derive MinimumOSVersion from the deployment target: ${manuallyDeclaredMinimumOsKeys.join(', ')}`
     );
   }
-  if (info.includes('UISupportedInterfaceOrientations~ipad')) {
-    fail('IOS_IPAD_PLIST', 'iPad orientation block is forbidden for the iPhone-only release');
+  if (infoConfig.UIRequiresFullScreen !== false ||
+      !jsonEqual(infoConfig['UISupportedInterfaceOrientations~ipad'], IOS_IPAD_ORIENTATIONS)) {
+    fail(
+      'IOS_IPAD_PLIST',
+      'iPad must allow resizable windows and support portrait and landscape orientations'
+    );
   }
   if (!expoPlist.includes(`<string>${EXPECTED.expoRuntimeVersion}</string>`)) {
     fail('IOS_EXPO_RUNTIME_VERSION', EXPECTED.expoRuntimeVersion);
@@ -855,6 +873,7 @@ function validateIosRelease(root = process.cwd()) {
 
 module.exports = {
   EXPECTED,
+  IOS_IPAD_ORIENTATIONS,
   IOS_PURPOSE_STRINGS,
   LOCALIZED_PURPOSE_STRINGS,
   validateIosRelease,

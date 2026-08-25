@@ -23,14 +23,14 @@ backend описывают не внутреннюю серверную реал
 помечаются как `backend-dependent`, `partial` или `needs runtime verification`.
 Production health, Lighthouse и platform-specific device readiness
 подтверждаются отдельным свежим прогоном, а не историческими числами в этом
-документе. Common/shared UI принимается по desktop/mobile web; Android/iPhone
+документе. Common/shared UI принимается по desktop/mobile web; Android/iPhone/iPad
 device gate появляется только при затронутом platform-specific behavior.
 
 ## Карта Проекта
 
 | Область | Что это | Основные файлы |
 | --- | --- | --- |
-| Runtime приложения | Expo Router для desktop/mobile web, Android и active iPhone; iPad вне v1 | `entry.js`, `app/_layout.tsx`, `app/(tabs)/_layout.tsx` |
+| Runtime приложения | Expo Router для desktop/mobile web, Android и universal iPhone/iPad | `entry.js`, `app/_layout.tsx`, `app/(tabs)/_layout.tsx` |
 | Frontend UI | React Native компоненты, web-варианты, фичевые блоки | `components/`, `screens/` |
 | Доступ к данным | API-клиенты, query keys, нормализация ответов | `api/`, `utils/resolveApiBaseUrl.ts` |
 | Server state | TanStack Query cache и мутации | `api/queryClient.ts`, `utils/reactQueryConfig.ts`, `hooks/*Api.ts` |
@@ -38,7 +38,7 @@ device gate появляется только при затронутом platfo
 | Общая логика | Валидация, SEO, external links, медиа, карты, экспорт | `utils/`, `services/` |
 | Дизайн-система | Токены, цвета, layout-константы, CSS-переменные | `constants/designSystem.ts`, `app/global.css` |
 | Проверки | Jest, Playwright, governance guards, selective checks | `__tests__/`, `e2e/`, `scripts/` |
-| Native shell | Активные Android и iPhone projects; iPad-specific support вне первого release | `ios/`, `android/`, `app.json`, `eas.json` |
+| Native shell | Активные Android и universal iPhone/iPad projects | `ios/`, `android/`, `app.json`, `eas.json` |
 | Документация | Правила, workflow, feature maps, release/testing docs | `docs/` |
 
 ## Технологический Стек
@@ -47,7 +47,7 @@ device gate появляется только при затронутом platfo
 | --- | --- |
 | Framework | Expo SDK 57, Expo Router 57, React 19.2, React Native 0.86 |
 | Web | React Native Web, Metro web bundler, static export в `dist/prod` |
-| Native | Expo/React Native; Android через local Gradle; active iPhone через Xcode/EAS path после release hardening |
+| Native | Expo/React Native; Android через local Gradle; universal iPhone/iPad через Xcode/EAS path после release hardening |
 | Язык | TypeScript 6 strict mode, alias `@/*` на корень репозитория |
 | Server state | `@tanstack/react-query` |
 | Client state | Zustand stores + React contexts |
@@ -549,7 +549,7 @@ Backend ожидается как DRF-like API под `/api`. Многие мо�
 | --- | --- | --- | --- |
 | Home, travel catalog, search | implemented | основной real-API flow | production browser smoke и актуальный performance baseline |
 | Travel details | implemented | основной real-API flow | сохранить bilateral slider/perf gate; проверить свежую production build |
-| Travel creation/editing | implemented | real API, upload и draft flows | desktop/mobile browser; Android/iPhone device evidence только для затронутых native upload/route сценариев |
+| Travel creation/editing | implemented | real API, upload и draft flows | desktop/mobile browser; Android/iPhone/iPad device evidence только для затронутых native upload/route сценариев |
 | Map and places | implemented | web Leaflet; native Leaflet в WebView | уменьшить дублирование; device evidence требуется при изменении platform-specific map/offline/overlay behavior |
 | Articles | implemented | list/detail/editor paths существуют | production API/media verification; feature maps требуют актуализации |
 | Auth, profile, subscriptions, settings | implemented | runtime/backend-dependent | подтвердить login, reload identity, logout и protected profile flows |
@@ -563,7 +563,7 @@ Backend ожидается как DRF-like API под `/api`. Многие мо�
 | PDF/book export | implemented | export работает; monetization partial | checkout отсутствует, premium gate намеренно выключен |
 | SEO and analytics | implemented | web providers wired; native path должен сохранять consent/secret contract | production HTML/consent проверяются после deploy |
 | Android shell | implemented | readiness требует свежей installed-build проверки | Android USB для Android shell/runtime scope; mobile-web browser остаётся общим UI control |
-| iPhone shell | active release scope | Expo/Xcode identity и simulator runtime требуют reconciliation | simulator + physical iPhone + exact TestFlight acceptance; iPad вне v1 |
+| iPhone/iPad shell | active universal release scope | Expo/Xcode identity, adaptive iPad windowing и simulator runtime требуют reconciliation | iPhone/iPad simulator + capability-appropriate physical device + exact TestFlight acceptance |
 
 ## Карта Frontend Функциональности
 
@@ -943,8 +943,8 @@ ignored submit-конфиге и удаляется после операции.
 Каноническая карта iOS credentials и правила их ротации находятся в
 `docs/RELEASE.md#ios-credential-map`; архитектурный документ значения и key
 material не дублирует.
-Local simulator/device QA применяется в iOS-specific задачах; common/shared
-scope сам по себе iPhone gate не создаёт. Signed build, upload, App Review
+Local simulator/device QA применяется в iOS/iPadOS-specific задачах; common/shared
+scope сам по себе iPhone/iPad gate не создаёт. Signed build, upload, App Review
 submit и storefront release требуют отдельных authorization gates.
 
 ## Поверхность Проверок

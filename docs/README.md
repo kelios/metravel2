@@ -18,12 +18,13 @@
 - `features/` — domain maps; `adr/` — принятые architecture decisions.
 
 Общий application contract: активные поверхности единого Expo/React Native
-codebase — desktop web, mobile web, Android и iPhone; production UI поддерживает
-RU/BE/UK/PL/EN. Первый App Store release — iPhone-only, iPadOS пока вне scope.
+codebase — desktop web, mobile web, Android, iPhone и iPad; production UI поддерживает
+RU/BE/UK/PL/EN. Первый App Store release — universal iPhone/iPad с адаптивными
+full-screen и resizable-window режимами на iPadOS.
 Перед задачей фиксируй platform/localization impact по `AGENTS.md` и `CODEX.md`;
-mobile web, Android и iPhone сохраняют один mobile UX как архитектурный
+mobile web, Android, iPhone и iPad сохраняют один responsive mobile UX как архитектурный
 инвариант. Common/shared responsive UI проверяется на desktop web и mobile web;
-Android/iPhone device gate появляется только для platform-specific наблюдаемого
+Android/iPhone/iPad device gate появляется только для platform-specific наблюдаемого
 поведения, конфигурации или runtime. Общий файл сам по себе device gate не
 создаёт. Implementation-детали i18n — в `DEVELOPMENT.md#localization`.
 

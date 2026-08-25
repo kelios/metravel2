@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel iOS Developer"
-  short_description: "Implement and debug the active MeTravel iPhone app."
-  default_prompt: "Use $metravel-ios-developer to implement the active iPhone scope without regressing desktop web, mobile web, Android, or RU/BE/UK/PL/EN localization; keep App Store build and submission actions with the release operator."
+  short_description: "Implement the MeTravel iPhone and iPad app."
+  default_prompt: "Use $metravel-ios-developer to implement the active universal iPhone/iPad scope without regressing other surfaces or localization, while leaving App Store operations to the release operator."

@@ -2,10 +2,10 @@
 
 See [proposal.md](proposal.md) for the release motivation and the two capability specs for observable behavior.
 
-The repository already contains a tracked Expo/Xcode iOS scaffold, CocoaPods state, an app icon, splash assets, `PrivacyInfo.xcprivacy`, Associated Domains, SecureStore, localization, notifications, Google/Facebook login, native map/WebView renderers, media pickers, sharing, and account deletion. It is not yet a coherent release target:
+The repository already contains a tracked Expo/Xcode iOS scaffold, CocoaPods state, an app icon, splash assets, `PrivacyInfo.xcprivacy`, Associated Domains, SecureStore, localization, notifications, Google/Facebook login, native map/WebView renderers, media pickers, sharing, and account deletion. The release target now needs an explicit universal-device contract so iPadOS does not keep MeTravel in an iPhone compatibility window.
 
-- `app.json` declares `by.metravel.app`, version `1.0.5`, build `1`, tablet support, and the `metravel.by` associated domain.
-- the tracked Xcode project still declares `com.yourcompany.metravel`, marketing version `1.0`, build `1`, and device family `1,2`;
+- `app.json` is the Expo intent source for `by.metravel.app`, version/build, tablet support, and the `metravel.by` associated domain;
+- the tracked Xcode project and compiled artifact must preserve universal device family `1,2` and the corresponding iPad orientation contract;
 - `eas.json` contains placeholder App Store Connect identifiers;
 - purpose strings are English-only and the target retains background location and always-location declarations that need product justification;
 - Sign in with Apple is disabled while native Google/Facebook login exists;
@@ -19,6 +19,7 @@ Backend code is a read-only dependency in this workspace. The Apple-auth endpoin
 **Goals:**
 
 - Establish one auditable configuration chain from Expo metadata through the native target and App Store Connect.
+- Support full-screen and resizable iPad scenes in portrait and landscape without maintaining a separate tablet product hierarchy.
 - Reuse existing shared UI/services while isolating only real iOS API, inset, lifecycle, signing, or renderer differences.
 - Give implementation and release tasks explicit dependency gates so Apple account work, backend auth, device QA, store metadata, and submission cannot be mistaken for one coding task.
 - Validate a production-configured binary first on simulator/local device where possible, then as the exact distributed TestFlight build.
@@ -27,18 +28,18 @@ Backend code is a read-only dependency in this workspace. The Apple-auth endpoin
 **Non-Goals:**
 
 - Replace the current Expo/React Native architecture or regenerate native projects blindly.
-- Build an iPad-specific product in this release.
+- Build a separate iPad-only product hierarchy or redesign shared screens solely for tablet aesthetics.
 - Introduce a second product hierarchy for iPhone; platform files may adapt APIs, engines, insets, shadows, and permissions only.
 - Use mocks as evidence for Apple services, signing, APNs delivery, Universal Links, physical-device behavior, TestFlight processing, or App Review state.
 - Edit backend source from this checkout.
 
 ## Decisions
 
-### Make v1 explicitly iPhone-only
+### Make v1 universal and adaptive on iPad
 
-Set the Expo tablet flag and Xcode target family to iPhone only, then keep the existing responsive shared screens within iPhone safe areas. This matches the user's requested surface and avoids adding iPad screenshot, multitasking, landscape, and layout acceptance to the first submission.
+Set the Expo tablet flag to true, keep Xcode target family `1,2`, and declare all four iPad interface orientations while leaving `UIRequiresFullScreen` disabled. Shared screens continue to use available window dimensions and existing responsive contracts, so iPadOS can present MeTravel full screen or in a freely resized window rather than in fixed iPhone compatibility framing.
 
-Alternative considered: ship the current universal target because `supportsTablet` and device family `1,2` already exist. Rejected because those values are scaffold defaults without iPad runtime evidence and would silently enlarge the Store and QA contract.
+Alternative considered: keep the iPhone-only family and tell users to press the iPadOS zoom control. Rejected because Apple keeps iPhone-only applications in a fixed-size compatibility window; system zoom cannot turn that binary into an adaptive iPad scene. A separate tablet UI was also rejected because the established responsive hierarchy can serve both device classes and is cheaper to keep consistent.
 
 ### Treat Expo configuration as intent and verify the tracked native result
 
@@ -92,13 +93,13 @@ Map/place/quest behavior reuses `#202`, `#905`, and `#926`; iOS-specific files m
 
 ### Make TestFlight the release acceptance boundary
 
-Unit and simulator checks can prove logic and basic native compilation, but the candidate is accepted only after the exact processed TestFlight build passes the physical-iPhone matrix. The matrix covers signed-out and signed-in cold start, session persistence, all authentication methods, travel/article/quest/map/profile/settings, gallery swipe (`#777`), HEIC upload, share/export, permission denial and grant, warm/cold Universal Links, notifications, account deletion discoverability, five locales, Dynamic Type/VoiceOver, offline/slow network, crash/hang evidence, and production API routing.
+Unit and simulator checks can prove logic and basic native compilation, including iPad scene geometry, but the candidate is accepted only after the exact processed TestFlight build passes the physical-device matrix. The matrix covers iPad full-screen/windowed portrait and landscape, signed-out and signed-in cold start, session persistence, all authentication methods, travel/article/quest/map/profile/settings, gallery swipe (`#777`), HEIC upload, share/export, permission denial and grant, warm/cold Universal Links, notifications, account deletion discoverability, five locales, Dynamic Type/VoiceOver, offline/slow network, crash/hang evidence, and production API routing.
 
 Shared changes also run targeted desktop web and paired mobile-web/Android controls. Findings that require code return their task to `in_progress`; waiting for TestFlight, device, or App Store processing remains `testing`.
 
 ### Separate owner-controlled Apple state from agent-owned implementation
 
-Human tasks hold current agreements, legal identity, DSA/trader status, distribution countries, App ID/capability access, credential issuance, access to a physical iPhone, store copy approval, and the explicit final release decision. Agent tasks own repository changes, automated checks, build/processing evidence, screenshots, TestFlight QA, and the authorized submit operation. Dependencies use real board IDs and do not place credentials in the board.
+Human tasks hold current agreements, legal identity, DSA/trader status, distribution countries, App ID/capability access, credential issuance, access to required physical Apple devices, store copy approval, and the explicit final release decision. Agent tasks own repository changes, automated checks, build/processing evidence, screenshots, TestFlight QA, and the authorized submit operation. Dependencies use real board IDs and do not place credentials in the board.
 
 ## Affected frontend paths
 
@@ -131,17 +132,17 @@ Frontend behavior is fail-closed: a missing Apple endpoint cannot become mock lo
 - [EAS may lag Apple's Xcode/SDK upload requirement] → Verify the production image before spending a build; use the bounded local archive/Transporter fallback if needed.
 - [Third-party SDKs may expand privacy declarations or trigger review requirements] → Audit the final dependency graph and archive, remove unused SDK capability where possible, and keep privacy answers synchronized.
 - [A one-sprint date cannot control Apple review time] → Commit the sprint to accepted submission status, not approval or storefront availability; handle Apple feedback as follow-up work without falsifying the milestone.
-- [iPhone-only scope may disappoint iPad users] → Make the target family and Store scope explicit; plan iPad support as a separate later capability with its own layout and screenshots.
+- [Universal targeting exposes wide and resized layouts that were not previously release-gated] → Keep fail-closed device-family/orientation guards, run iPad portrait/landscape/window-resize acceptance, and require truthful iPad App Store screenshots from the accepted candidate.
 
 ## Migration Plan
 
 1. Restore the canonical iOS development environment and create the Apple account/capability records without exposing secrets.
-2. Reconcile identity, versioning, iPhone target, native configuration, permissions, and local simulator compilation.
+2. Reconcile identity, versioning, universal iPhone/iPad target, adaptive orientation configuration, permissions, and local simulator compilation.
 3. Deliver the backend Apple-auth contract, then implement Apple login and secure-session integration.
 4. Fix iOS runtime compatibility in bounded domain slices: shell/locales, links/maps/location, media/sharing/notifications, and privacy/accessibility.
 5. Run focused automated checks plus simulator and shared-surface regressions; complete code-review-and-fix loops per task.
 6. Create the first authorized signed candidate, upload it, and complete App Store processing/compliance fields.
-7. Run the physical-iPhone TestFlight matrix, fix findings in new incremented builds, and freeze the accepted candidate.
+7. Run the physical-iPhone capability matrix and iPad window/layout TestFlight matrix, fix findings in new incremented builds, and freeze the accepted candidate.
 8. Finalize localized store metadata/screenshots/privacy/reviewer data, obtain the explicit owner release decision, and submit the accepted build to App Review.
 
 Recovery is incremental: reject a bad candidate and increment the build number; roll back the task-owned frontend diff on `main` if a shared regression appears; revoke/rotate compromised credentials in Apple/EAS without editing Git history; never resubmit a known-bad binary to work around a failed gate.
@@ -153,8 +154,9 @@ Recovery is incremental: reject a bad candidate and increment the build number; 
 | Configuration | Resolved Expo config, Xcode build settings, eligible destination, plist/entitlement/privacy validation, archive identity and no placeholders/secrets |
 | Unit/integration | Native compatibility, auth/Apple adapter, SecureStore lifecycle, link parsing, notification/media error states, i18n and governance checks |
 | iPhone simulator | Cold/warm launch, five locales, safe areas/keyboard, core navigation, permission denial stubs, no fatal console/runtime error |
-| Physical iPhone | Local/release build for camera/photo/location/share/link/biometric behavior where applicable |
-| TestFlight | Exact production candidate, session restart, core flow matrix, HEIC, gallery swipe, APNs delivery, Universal Links, offline/error recovery, crash/hang evidence |
+| iPad simulator | Native scene fills available full-screen bounds and adapts across portrait, landscape, and resized windows without compatibility framing or unreachable primary actions |
+| Physical Apple devices | iPhone for camera/photo/location/share/link/biometric behavior where applicable; iPad for exact tablet window/layout acceptance when available |
+| TestFlight | Exact universal production candidate, iPad scene geometry, session restart, core flow matrix, HEIC, gallery swipe, APNs delivery, Universal Links, offline/error recovery, crash/hang evidence |
 | Desktop web | Targeted regression for every changed shared consumer, console/network clean |
 | Mobile web + Android | Same impacted flow and locale as a paired control; Android uses a locally built and USB-installed app |
 | Locales | RU/BE/UK/PL/EN runtime copy, native permission text, layout/accessibility, cold-restart persistence, store metadata |

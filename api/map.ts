@@ -1,4 +1,10 @@
 import type { Travel, TravelMediaImage, TravelsForMap, TravelsMap } from '@/types/types';
+import {
+  normalizeMapPlaceSource,
+  readMapPlaceMarkerFields,
+  type MapPlaceSource,
+  type MapPlaceSourcesPage,
+} from '@/api/mapPlaces';
 import { ApiError } from '@/api/clientErrors';
 import { parseNearTravelsEnvelope } from '@/api/travelNearResponse';
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
@@ -193,6 +199,9 @@ const normalizeTravelCoordsItem = (raw: unknown) => {
     imageUrl: travelImageUrl || travelImageThumbUrl,
     urlTravel,
     articleUrl,
+    // Спред `...t` пронёс бы только сырые snake_case place-поля — нормализуем их
+    // в типизированные placeId/sourceCount/primarySource (#1567).
+    ...readMapPlaceMarkerFields(t, normalizeImageUrl),
   };
 };
 
@@ -295,6 +304,9 @@ const fetchWithTransientRetry = async (
 const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/travels/search_travels_for_map/`; // далее добавляется ?...
 const SEARCH_TRAVELS_FOR_MAP_LITE = `${URLAPI}/travels/search_travels_for_map_lite/`;
 const GET_MAP_CLUSTERS = `${URLAPI}/map/clusters/`; // серверная кластеризация, BE #719: ?bbox=south,west,north,east&zoom=
+// Ленивая коллекция материалов места (#1567): короткие summary с cursor-пагинацией.
+const getMapPlaceSourcesUrl = (placeId: string | number) =>
+  `${URLAPI}/map/places/${encodeURIComponent(String(placeId))}/sources/`;
 const GET_FILTER_FOR_MAP = `${URLAPI}/filterformap/`;
 const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_TRAVELS_OF_MONTH = `${URLAPI}/travels/of-month/`;
@@ -652,6 +664,10 @@ export interface MapClusterPoint {
   articleUrl?: string;
   countryName?: string;
   countryCode?: string;
+  /** Grouped place DTO (#1567): canonical place identity, additive поверх legacy полей. */
+  placeId?: string | number;
+  sourceCount?: number;
+  primarySource?: MapPlaceSource | null;
 }
 
 export interface MapCluster {
@@ -725,6 +741,8 @@ const normalizeClusterPoint = (raw: unknown): MapClusterPoint => {
     articleUrl: normalizeString(t.articleUrl ?? t.article_url, '') || undefined,
     countryName: normalizeString(t.countryName ?? t.country_name, '') || undefined,
     countryCode: normalizeString(t.countryCode ?? t.country_code, '') || undefined,
+    // Явная пересборка объекта иначе потеряла бы grouped place DTO (#1567).
+    ...readMapPlaceMarkerFields(t, normalizeImageUrl),
   };
 };
 
@@ -875,6 +893,66 @@ export const fetchTravelsNearRoute = async (
     if (options?.throwOnError) throw e;
     return [] as unknown as TravelsForMap;
   }
+};
+
+// --- Ленивые sources места (#1567/#1571) -------------------------------------
+// Запрашивается только после первого открытия карточки места с sourceCount > 1
+// и кэшируется по placeKey (см. hooks/map/useMapPlaceSources.ts); перелистывание
+// popup не перезапрашивает map dataset и не пересобирает marker-слой.
+
+const normalizeMapPlaceSourcesPayload = (payload: unknown): MapPlaceSourcesPage => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return { results: [], next: null };
+  }
+  const obj = payload as Record<string, unknown>;
+  const results = Array.isArray(obj.results)
+    ? obj.results
+        .map((item) => normalizeMapPlaceSource(item, normalizeImageUrl))
+        .filter((item): item is MapPlaceSource => item !== null)
+    : [];
+  const nextRaw = obj.next;
+  const next = typeof nextRaw === 'string' && nextRaw.trim() ? nextRaw.trim() : null;
+  return { results, next };
+};
+
+/** Одна страница sources места. Ошибки бросаются: запрос ленивый и user-triggered. */
+export const fetchMapPlaceSources = async (
+  placeId: string | number,
+  cursor?: string | null,
+  options?: ApiOptions,
+): Promise<MapPlaceSourcesPage> => {
+  const params = new URLSearchParams();
+  if (cursor) params.set('cursor', cursor);
+  const query = params.toString();
+  const url = `${getMapPlaceSourcesUrl(placeId)}${query ? `?${query}` : ''}`;
+
+  const res = await fetchWithTransientRetry(url, { signal: options?.signal }, DEFAULT_TIMEOUT, 1);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  }
+  const payload = await safeJsonParse<unknown>(res, { results: [], next: null });
+  return normalizeMapPlaceSourcesPayload(payload);
+};
+
+/**
+ * Все sources места одним вызовом для React Query cache: идём по `next`-курсору
+ * с жёстким потолком страниц — материалов у места единицы, потолок только
+ * страхует от зацикленного курсора (ср. ловушку backfill next_cursor).
+ */
+export const fetchAllMapPlaceSources = async (
+  placeId: string | number,
+  options?: ApiOptions,
+): Promise<MapPlaceSource[]> => {
+  const MAX_PAGES = 5;
+  const results: MapPlaceSource[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const chunk: MapPlaceSourcesPage = await fetchMapPlaceSources(placeId, cursor, options);
+    results.push(...chunk.results);
+    if (!chunk.next || chunk.next === cursor) break;
+    cursor = chunk.next;
+  }
+  return results;
 };
 
 type MapFiltersResponse = {

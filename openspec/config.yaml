@@ -4,8 +4,9 @@ context: |
   metravel.by is a TypeScript Expo/React Native frontend with desktop web,
   mobile web, Android, and iPhone as active product surfaces. Production UI supports
   RU/BE/UK/PL/EN with RU as default and fallback; mobile web and Android remain
-  paired controls, and active iPhone uses simulator/physical/TestFlight evidence
-  according to risk. iPadOS is outside the first App Store release.
+  paired controls, and universal iPhone/iPad uses simulator/physical/TestFlight
+  evidence according to risk. iPadOS full-screen, resizable-window,
+  portrait/landscape, screenshots, and release acceptance are active scope.
   Work in this repository is frontend/app/docs only and stays on main. Backend in
   ../metravel-backend is read-only. Do not create branches, commit, push, deploy,
   publish, or mutate task-board/backend/production state without explicit scope.

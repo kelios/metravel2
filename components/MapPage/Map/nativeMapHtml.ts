@@ -13,6 +13,11 @@ import {
   buildLeafletWebViewHtml,
   ESCAPE_HTML_FN_SCRIPT,
 } from '@/components/map-core/leafletWebViewHtml';
+import {
+  NATIVE_BASE_MIN_ZOOM_GLOBAL,
+  NATIVE_BASE_MIN_ZOOM_SCRIPT,
+  buildNativeTileBridgeScript,
+} from './nativeTileBridgeScript';
 import { buildBirdMarkerHtml, buildUserLocationHtml } from './mapMarkerStyles';
 import { buildNativeWeatherTempLabelsScript } from './nativeWeatherTempLabelsScript';
 
@@ -93,12 +98,14 @@ export const buildNativeMapHtml = ({
         // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
         // перекрывали номерной/стартовый маркер маршрута. Зум доступен через
         // плавающие нативные контролы (__metravelMapZoomIn/Out).
+${NATIVE_BASE_MIN_ZOOM_SCRIPT}
         const map = L.map('map', {
           zoomControl: false,
           preferCanvas: true,
           fadeAnimation: false,
           zoomAnimation: false,
-          markerZoomAnimation: false
+          markerZoomAnimation: false,
+          minZoom: window.${NATIVE_BASE_MIN_ZOOM_GLOBAL}
         }).setView([${DEFAULT_LAT}, ${DEFAULT_LNG}], 10);
         map.__userCenter = [${DEFAULT_LAT}, ${DEFAULT_LNG}];
         // Текущий режим карты ('radius' | 'route'); обновляется при каждом рендере точек.
@@ -221,56 +228,10 @@ export const buildNativeMapHtml = ({
           }
         };
 
-        // Базовая подложка всегда светлая (OSM-прокси, без {s}), независимо от
-        // темы приложения — обычный цвет карты. Тёмными остаются только панели/
-        // контролы/маркеры.
-        //
-        // Вместо прямого L.tileLayer используем мост TileBridge → RN. Каждый тайл,
-        // который Leaflet реально запросил для текущего viewport, проходит через
-        // ограниченный сроком прозрачный кэш. Prefetch/bulk регионов здесь нет:
-        // стандартный OSM tile server запрещает offline download.
-        window.__metravelTilePending = {};
-        var TileBridge = L.GridLayer.extend({
-          createTile: function(coords, done) {
-            var img = document.createElement('img');
-            img.alt = '';
-            var key = coords.z + '/' + coords.x + '/' + coords.y;
-            window.__metravelTilePending[key] = { img: img, done: done };
-            try {
-              if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'TILE_REQ', z: coords.z, x: coords.x, y: coords.y, key: key
-                }));
-              }
-            } catch (e) {}
-            return img;
-          }
-        });
-        // RN отдаёт результат сюда: data-URL → рисуем тайл; пусто → прозрачный
-        // тайл при сетевом промахе, карта не виснет в ожидании.
-        window.__metravelSetTile = function(key, dataUrl) {
-          try {
-            var pending = window.__metravelTilePending[key];
-            if (!pending) return;
-            delete window.__metravelTilePending[key];
-            var img = pending.img, done = pending.done;
-            if (dataUrl) {
-              img.onload = function() { try { done(null, img); } catch (e) {} };
-              img.onerror = function() { try { done(null, img); } catch (e) {} };
-              img.src = dataUrl;
-            } else {
-              try { done(null, img); } catch (e) {}
-            }
-          } catch (e) {}
-        };
-        new TileBridge({
-          attribution: ${serializeForInlineScript(getThemedBaseAttribution())},
-          maxZoom: ${getThemedBaseMaxZoom()},
-          tileSize: 256,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 1
-        }).addTo(map);
+${buildNativeTileBridgeScript({
+  attribution: getThemedBaseAttribution(),
+  maxZoom: getThemedBaseMaxZoom(),
+})}
 
 ${buildInvalidateSchedulerScript({
   schedulerName: '__metravelScheduleInvalidate',

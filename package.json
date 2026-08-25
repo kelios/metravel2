@@ -215,6 +215,8 @@
     "validator:contracts:summary:validate": "node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json",
     "stats:index": "node scripts/index-status.js",
     "stats:index:json": "node scripts/index-status.js --json --only-problems",
+    "stats:index:all": "node scripts/index-status.js --section all",
+    "stats:index:all:json": "node scripts/index-status.js --section all --json --only-problems",
     "seo:queue": "node scripts/seo-index-queue-check.js",
     "seo:queue:fix": "node scripts/seo-index-queue-check.js --fix",
     "indexnow": "node scripts/indexnow-submit.js --all",

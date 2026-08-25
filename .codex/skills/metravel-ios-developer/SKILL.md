@@ -1,13 +1,12 @@
 ---
 name: metravel-ios-developer
-description: Implement and debug the active MeTravel iPhone application in the shared Expo and React Native codebase. Use for iOS platform files, Xcode runtime issues, native modules, permissions, Keychain, Apple authentication UI, APNs integration, Universal Links, maps, media, safe areas, and iPhone-specific regressions; do not use it for App Store upload or submission.
+description: Implement and debug the active MeTravel iPhone/iPad application in the shared Expo and React Native codebase. Use for iOS/iPadOS platform files, Xcode runtime, adaptive windows, permissions, Apple authentication, links, maps, media, safe areas, and native regressions; not for App Store operations.
 ---
 
 # Metravel iOS Developer
 
-Use this skill for implementation and debugging of the active iPhone-first
-MeTravel application. iPad-specific product support remains out of scope for the
-first release.
+Use this skill for implementation and debugging of the active universal
+iPhone/iPad MeTravel application, including adaptive iPad scenes.
 
 `AGENTS.md` is inherited. Load the affected native/feature section and exact
 simulator/device case; use the iOS OpenSpec or development guidance only when
@@ -50,7 +49,7 @@ the requested subsystem depends on it.
 
 1. Record iOS/shared platform impact, RU/BE/UK/PL/EN impact, assigned board task,
    and exact files/configuration in scope.
-2. Reproduce on an eligible iPhone simulator or physical iPhone as appropriate;
+2. Reproduce on an eligible iPhone/iPad simulator or physical Apple device as appropriate;
    read the whole guarded effect/function before classifying a shared reference as unsafe.
 3. Compare the existing web and Android implementation and make the smallest
    platform split that preserves the common product contract.

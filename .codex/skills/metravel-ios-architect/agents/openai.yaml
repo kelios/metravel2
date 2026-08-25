@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel iOS Architect"
   short_description: "Design iOS architecture and App Store contracts."
-  default_prompt: "Use $metravel-ios-architect to design an iPhone-first implementation and release contract with explicit platform, backend, privacy, signing, owner, validation, and handoff boundaries."
+  default_prompt: "Use $metravel-ios-architect to design a universal iPhone/iPad implementation and release contract with explicit platform, privacy, signing, validation, and handoff boundaries."

@@ -30,6 +30,7 @@ import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
 import { getFormatLocale, translate as i18nT } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers';
+import { hasPublicQuestRating } from '@/api/questRating';
 
 
 const QuestWizard = React.lazy<React.ComponentType<QuestWizardProps>>(() =>
@@ -332,19 +333,31 @@ export default function QuestByIdScreen() {
     if (ratingMeta.ratingCount === 0) return null;
     const avg = formatRatingValue(ratingMeta.ratingAvg ?? 0);
     const countLabel = i18nT('quests:app.tabs.quests.city.questId.reviewCount', { count: ratingMeta.ratingCount });
+    // Ниже порога выборки (#1486) чип остаётся входом в читалку, но показывает
+    // количество отзывов вместо усреднённой оценки: прятать чип целиком нельзя —
+    // на детали это единственный вход к чужим отзывам.
+    const showAggregate = hasPublicQuestRating(ratingMeta.ratingCount);
     return (
       <Pressable
         onPress={() => setReviewsVisible(true)}
         style={styles.metaChip}
         accessibilityRole="button"
-        accessibilityLabel={i18nT('quests:app.tabs.quests.city.questId.otzyvy_reyting_value1_iz_5_value2_9269c56a', { value1: avg, value2: countLabel })}
+        accessibilityLabel={
+          showAggregate
+            ? i18nT('quests:app.tabs.quests.city.questId.otzyvy_reyting_value1_iz_5_value2_9269c56a', { value1: avg, value2: countLabel })
+            : countLabel
+        }
         testID="quest-detail-rating"
       >
-        <Feather name="star" size={13} color={colors.warning} />
-        <Text style={styles.metaChipText}>{avg}</Text>
+        <Feather
+          name={showAggregate ? 'star' : 'message-circle'}
+          size={13}
+          color={showAggregate ? colors.warning : colors.textMuted}
+        />
+        <Text style={styles.metaChipText}>{showAggregate ? avg : ratingMeta.ratingCount}</Text>
       </Pressable>
     );
-  }, [ratingMeta.ratingAvg, ratingMeta.ratingCount, styles.metaChip, styles.metaChipText, colors.warning]);
+  }, [ratingMeta.ratingAvg, ratingMeta.ratingCount, styles.metaChip, styles.metaChipText, colors.warning, colors.textMuted]);
 
   const completionMeta = useQuestCompletionMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
   const completionSlot = useMemo(() => {

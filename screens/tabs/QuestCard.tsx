@@ -23,6 +23,7 @@ import { translate as i18nT } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 import { formatDistance } from '@/utils/distanceCalculator'
 import { formatRatingValue } from '@/utils/ratingHelpers'
+import { hasPublicQuestRating } from '@/api/questRating'
 
 
 const loadedQuestImageCache = new Set<string>();
@@ -72,6 +73,10 @@ export default function QuestCard({
     // Паритет с native: на устройстве чип «Посмотреть отзывы (0)» виден всегда —
     // web (включая mobile web) ведёт себя так же.
     const showReviewsAction = true;
+    // Агрегированная оценка — только за достаточную выборку (#1486). Вход в
+    // читалку живёт по своему правилу выше: количество отзывов — факт, а
+    // усреднённая оценка по одному отзыву — вымысел.
+    const showAggregateRating = hasPublicQuestRating(quest.ratingCount);
     const reviewsLabel = quest.ratingCount > 0
         ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, i18nT('quests:screens.tabs.QuestCard.otzyv_9b980975'), i18nT('quests:screens.tabs.QuestCard.otzyva_7e8267a2'), i18nT('quests:screens.tabs.QuestCard.otzyvov_5a06b55c'))}`
         : i18nT('quests:screens.tabs.QuestCard.0_otzyvov_d0eb25eb');
@@ -206,8 +211,15 @@ export default function QuestCard({
                         // кроп его прятал. С 2026-08-02 (#1208) поле заливает
                         // `dominant_color` из манифеста (обложки квестов
                         // индексируются в `api/quests.ts`), поэтому прежней
-                        // причины больше нет. Слот карточки ландшафтный (1.46),
-                        // обложки — 1.333…1.778, так что поле не больше 8.9%.
+                        // причины больше нет. Слот карточки ландшафтный, поэтому
+                        // поле мелкое: 9.6% на mobile 390 и 8.8–9.0% на всей
+                        // десктопной полосе (слот 420×287 на 1280, 600×411 в
+                        // одноколоночном городе). Но не «не больше 9%»: в полосе `isPhone`
+                        // (360…479, `hooks/useResponsive.ts:218`) высота приколота
+                        // к 238, а ширина едет за вьюпортом, и на краях полосы
+                        // пропорция слота уходит до 1.311 и 1.811 — поле там до
+                        // 13.2%. Это остаточный контентный долг того же семейства,
+                        // что #1542/#1558, а не повод вернуть `cover`.
                         fit="contain"
                         blurBackground={Platform.OS !== 'web'}
                         style={StyleSheet.absoluteFill}
@@ -304,7 +316,7 @@ export default function QuestCard({
                                     <Feather name="clock" size={13} color="rgba(255,255,255,0.9)" />
                                     <Text style={styles.questCardMetaText}>{durationText}</Text>
                                 </View>
-                                {quest.ratingCount > 0 && (
+                                {showAggregateRating && (
                                     <View
                                         style={styles.questCardMetaItem}
                                         testID={`quest-card-rating-${quest.id}`}
@@ -351,7 +363,7 @@ export default function QuestCard({
                             <Feather name="clock" size={13} color={colors.textMuted} />
                             <Text style={styles.questCardDetailsText}>{durationText}</Text>
                         </View>
-                        {quest.ratingCount > 0 && (
+                        {showAggregateRating && (
                             <View
                                 style={styles.questCardDetailsItem}
                                 testID={`quest-card-rating-${quest.id}`}

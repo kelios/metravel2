@@ -17,11 +17,17 @@
 import fs from 'fs'
 import path from 'path'
 
+import { Platform, StyleSheet } from 'react-native'
+
+import { getThemedColors } from '@/constants/designSystem'
 import { BOOK_IMAGES } from '@/components/home/homeHeroContent'
+import { createHomeHeroStyles } from '@/components/home/homeHeroStyles'
 import {
   HOME_HERO_MAX_FLAT_SHARE,
   HOME_HERO_MEDIA_SLOT_RATIO,
 } from '@/components/home/homeHeroShared'
+
+const { buildSkeletonCSS } = require('../../../scripts/ssg-skeletons')
 
 /**
  * Ширины слота с прод-замеров 2026-08-23/25 — по одной на каждую поверхность,
@@ -34,6 +40,10 @@ const PROD_SLOT_WIDTHS = [
   { label: 'крупная карточка, mobile 390', width: 358 },
   { label: 'карточка популярного, mobile 390', width: 172 },
 ] as const
+
+/** Корень репозитория от файла теста: `process.cwd()` зависит от того, из
+ * какой директории запущен jest, и тест падал бы не по сути. */
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..')
 
 /** Локальные ассеты набора: имя файла → пропорция читается с диска. */
 const LOCAL_ASSET_FILES = [
@@ -79,6 +89,47 @@ function readWebpSize(file: string): { width: number; height: number } {
   throw new Error(`${path.basename(file)}: неизвестный WebP-чанк ${chunk}`)
 }
 
+/**
+ * Слоты кадра из того же источника, из которого рендерится hero. Web-ветку
+ * `Platform.select` иначе не достать: `IS_WEB` в `HomeHero` вычисляется на
+ * импорте модуля, поэтому desktop-слайдер в jest не рендерится вовсе и
+ * возврат `height:'90%'` у кадра остался бы незамеченным.
+ */
+function createWebDesktopHeroStyles() {
+  const previousOS = Platform.OS
+  const previousSelect = Platform.select
+  Platform.OS = 'web'
+  ;(Platform as any).select = (options: any) => options.web ?? options.default
+  try {
+    return createHomeHeroStyles({
+      colors: getThemedColors(false),
+      isMobile: false,
+      isSmallPhone: false,
+      isNarrowLayout: false,
+      isTablet: false,
+      isDesktop: true,
+      viewportWidth: 1350,
+      showSideSlider: true,
+      sliderHeight: 320,
+      bookHeight: 760,
+    })
+  } finally {
+    Platform.OS = previousOS
+    ;(Platform as any).select = previousSelect
+  }
+}
+
+/**
+ * Селекторы SSG-шелла, которые рисуют тот же кадр до гидрации. Шелл — рукописный
+ * CSS в `scripts/ssg-skeletons.js`, импортировать константу он не может, поэтому
+ * связь держит тест: расхождение шелла и React двигает фото на подмене (#1206).
+ */
+const SHELL_SLOT_SELECTORS = [
+  '.ssg-home-hero', // мобильный кадр шелла
+  '.ssg-home-popular-thumb', // полка популярного
+  '.ssg-home-week', // desktop-кадр внутри книги
+] as const
+
 /** Доли поля так, как их считает браузерная приёмка над `img[object-fit=contain]`. */
 function measureFlatShares(slotWidth: number, aspectRatio: number) {
   const slotHeight = slotWidth / HOME_HERO_MEDIA_SLOT_RATIO
@@ -97,6 +148,42 @@ describe('#1541 единый ландшафтный кадр hero главной
     // прыгать на каждом переключении, и это падение — суть карточки, а не
     // деталь реализации.
     expect(HOME_HERO_MEDIA_SLOT_RATIO).toBe(3 / 2)
+  })
+
+  it('все слоты кадра берут пропорцию из константы и не держат своей высоты', () => {
+    // Сам по себе `HOME_HERO_MEDIA_SLOT_RATIO` ничего не гарантирует: баг #1541
+    // был именно в том, что кадр считался от высоты страницы (`height:'90%'` у
+    // слайдера, `minHeight` у планшетного, числовая высота у крупной карточки).
+    // Поэтому проверяем три реальных слота, а не только число.
+    const styles = createWebDesktopHeroStyles()
+    const slots = {
+      'кадр слайдера, desktop': styles.sliderFrame,
+      'крупная карточка, mobile': styles.featuredCardImage,
+      'планшетный кадр': styles.tabletFeaturedImage,
+    }
+
+    for (const [label, slot] of Object.entries(slots)) {
+      const flat = StyleSheet.flatten(slot) as Record<string, unknown>
+      expect([label, flat.aspectRatio]).toEqual([label, HOME_HERO_MEDIA_SLOT_RATIO])
+      expect([label, flat.height]).toEqual([label, undefined])
+      expect([label, flat.minHeight ?? 0]).toEqual([label, 0])
+    }
+  })
+
+  it('SSG-шелл рисует кадр той же пропорции и той же заливкой, что и React', () => {
+    const css: string = buildSkeletonCSS()
+
+    for (const selector of SHELL_SLOT_SELECTORS) {
+      const match = new RegExp(`\\${selector}\\{[^}]*aspect-ratio:(\\d+)/(\\d+)`).exec(css)
+      expect([selector, match !== null]).toEqual([selector, true])
+      const ratio = Number(match?.[1]) / Number(match?.[2])
+      expect([selector, ratio]).toEqual([selector, HOME_HERO_MEDIA_SLOT_RATIO])
+    }
+
+    // Цвет заливки полей шелла — копия `dominantColor` первого слайда: пока
+    // копия ручная, разъехаться она может молча, и на гидрации сменится фон.
+    const fill = /\.ssg-home-hero\{[^}]*background:(#[0-9a-f]{6})/i.exec(css)
+    expect(fill?.[1]).toBe(BOOK_IMAGES[0].dominantColor)
   })
 
   it('каждый слайд объявляет пропорцию — вслепую слайд в набор не попадёт', () => {
@@ -120,7 +207,7 @@ describe('#1541 единый ландшафтный кадр hero главной
     expect(declared).toHaveLength(LOCAL_ASSET_FILES.length)
 
     for (const [index, fileName] of LOCAL_ASSET_FILES.entries()) {
-      const file = path.join(process.cwd(), 'assets', 'images', fileName)
+      const file = path.join(REPO_ROOT, 'assets', 'images', fileName)
       const { width, height } = readWebpSize(file)
       // Проверяем и сам растр, и объявление слайда: иначе тест мог бы
       // позеленеть при неверном `aspectRatio` в BOOK_IMAGES.

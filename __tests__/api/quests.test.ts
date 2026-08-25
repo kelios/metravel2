@@ -8,6 +8,7 @@ import {
   updateProgress,
   deleteProgress,
   fetchAllProgress,
+  fetchQuestReviews,
 } from '@/api/quests';
 
 jest.mock('@/api/client', () => ({
@@ -271,6 +272,58 @@ describe('api/quests', () => {
       mockedDelete.mockResolvedValueOnce(undefined);
       await deleteProgress(42);
       expect(mockedDelete).toHaveBeenCalledWith('/quest-progress/42/');
+    });
+  });
+
+  // #1486: до этой задачи при 404 подставлялся детерминированный мок с
+  // выдуманными авторами, и однажды он доехал до прода. Читалка обязана
+  // показывать либо настоящие отзывы, либо честное пусто.
+  describe('fetchQuestReviews', () => {
+    it('adapts the public review payload', async () => {
+      mockedGet.mockResolvedValueOnce([
+        {
+          id: 5,
+          rating: 4,
+          liked: 'Сюжет',
+          disliked: '',
+          author_name: 'Игрок',
+          author_avatar: null,
+          created_at: '2026-08-01T10:00:00Z',
+        },
+      ]);
+
+      const result = await fetchQuestReviews('minsk-cmok');
+
+      expect(mockedGet).toHaveBeenCalledWith('/quests/questminsk-cmok/reviews/?page_size=100');
+      expect(result).toEqual([
+        {
+          id: 5,
+          rating: 4,
+          liked: 'Сюжет',
+          disliked: '',
+          authorName: 'Игрок',
+          authorAvatar: null,
+          createdAt: '2026-08-01T10:00:00Z',
+        },
+      ]);
+    });
+
+    it('returns an empty list on 404 instead of fabricated reviews', async () => {
+      mockedGet.mockRejectedValueOnce(new ApiError(404, 'Not Found'));
+
+      await expect(fetchQuestReviews('minsk-cmok')).resolves.toEqual([]);
+    });
+
+    it('returns an empty list when the quest has no reviews', async () => {
+      mockedGet.mockResolvedValueOnce({ results: [], next: null });
+
+      await expect(fetchQuestReviews('minsk-cmok')).resolves.toEqual([]);
+    });
+
+    it('re-throws a server failure instead of hiding it behind an empty list', async () => {
+      mockedGet.mockRejectedValueOnce(new ApiError(500, 'Server Error'));
+
+      await expect(fetchQuestReviews('minsk-cmok')).rejects.toBeInstanceOf(ApiError);
     });
   });
 });

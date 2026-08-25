@@ -50,10 +50,10 @@ npm run android
 `npm run ios` запускает Expo iOS dev flow, но сам по себе не доказывает local
 Xcode build, physical-device behavior или TestFlight readiness. Для active iOS
 task сначала запусти `npm run ios:environment:check`: version-aware preflight
-сверяет выбранный Xcode SDK с доступным simulator runtime и требует конкретный
-eligible iPhone destination, а также проверяет CocoaPods workspace/support files,
+сверяет выбранный Xcode SDK с доступным simulator runtime и требует конкретные
+eligible iPhone и iPad destinations, а также проверяет CocoaPods workspace/support files,
 синхронность `Podfile.lock` и sandbox manifest и отсутствие старой
-`react-native-google-maps` pod-записи. Затем используй simulator/physical iPhone
+`react-native-google-maps` pod-записи. Затем используй iPhone/iPad simulator или physical-device
 layer по `docs/WORKFLOW_OPERATIONS.md`; store operations выполняет только
 `$metravel-ios-release-operator` после отдельной authorization. Если preflight
 сообщает `IOS_ENV_RUNTIME_SDK_MISMATCH`, восстанови matching runtime через Xcode
@@ -80,16 +80,16 @@ Android QA rule:
   design-инвариантом; Android USB evidence добавляется только при затронутом
   Android-specific поведении.
 
-iPhone QA rule:
+Apple mobile QA rule:
 
 - Simulator подтверждает compilation/basic UI. Camera/photos/HEIC,
   Keychain/biometrics, APNs, Universal Links, sharing, permissions и lifecycle
   проверяются на физическом iPhone; release acceptance — на exact TestFlight build.
-- Simulator/physical/TestFlight evidence требуется только для iOS-specific
-  behavior или явно назначенного iPhone release scope. Shared UI сохраняет тот
-  же product contract для iPhone как design-инвариант, но принимается по
-  desktop/mobile web без автоматического iPhone gate. iPad-specific
-  layout/screenshots не входят в первый release.
+- Simulator/physical/TestFlight evidence требуется только для iOS/iPadOS-specific
+  behavior или явно назначенного Apple mobile release scope. Shared UI сохраняет
+  тот же product contract для iPhone и iPad как design-инвариант, но принимается
+  по desktop/mobile web без автоматического device gate. Universal release
+  дополнительно проверяет iPad full-screen/windowed portrait и landscape.
 - Signed build, TestFlight/App Store upload, App Review submit и storefront
   release — отдельные operations; ни одна не разрешает следующую автоматически.
 

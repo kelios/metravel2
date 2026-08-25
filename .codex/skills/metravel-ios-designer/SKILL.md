@@ -1,12 +1,12 @@
 ---
 name: metravel-ios-designer
-description: "Design or audit metravel iPhone UI against HIG: safe areas, touch targets, Dynamic Type, themes, accessibility, app icon/launch, App Store screenshots, and mobile parity. Read-only unless fixes are requested."
+description: "Design or audit metravel iPhone/iPad UI against HIG: adaptive windows, safe areas, touch targets, Dynamic Type, accessibility, app icon/launch, App Store screenshots, and mobile parity. Read-only unless fixes are requested."
 ---
 
 # Metravel iOS Designer
 
-Use this skill for the visual and interaction layer of the active iPhone-first
-release. It is the iOS-specialised layer over `$metravel-design-auditor`; use
+Use this skill for the visual and interaction layer of the active universal
+iPhone/iPad release. It is the iOS-specialised layer over `$metravel-design-auditor`; use
 that generic skill for cross-page web audits.
 
 `AGENTS.md` is inherited. Read the relevant UI/media heading, design tokens and
@@ -19,7 +19,7 @@ App Store assets are in scope.
   information hierarchy, block order, key sizes, action order and touch
   semantics. Only engine, system permissions/insets and OS APIs may differ; a
   platform difference is never an excuse for a different UX. Desktop may add
-  hover-only affordances. iPadOS is out of scope for v1.
+  hover-only affordances. iPad adapts the same hierarchy to its available scene.
 - **Tokens, not hex.** Themed surfaces use `useThemedColors()`; on native
   `DESIGN_TOKENS.colors.*` is a static light fallback, not a live theme.
 - **Existing primitives.** `components/ui`, `ImageCardMedia` (contain + blur),
@@ -27,7 +27,7 @@ App Store assets are in scope.
 - **Photo dominance** on content cards; header ≤20% of the mobile viewport;
   static frost instead of live `backdrop-blur` on mobile.
 
-## iPhone-specific axes
+## Apple mobile axes
 
 - Safe areas: notch/Dynamic Island, home indicator, status bar, landscape
   insets; no content or tap target under system chrome; keyboard avoidance and
@@ -50,7 +50,7 @@ App Store assets are in scope.
   `IOS_BRAND_ASSETS_EXPO`) — produce assets that pass the guard, do not
   weaken the guard.
 - App Store screenshots: localized RU/BE/UK/PL/EN, captured from a real build on
-  the required iPhone display sizes, showing the shipped UI without mock data,
+  the required iPhone and iPad display sizes, showing the shipped UI without mock data,
   placeholder text or personal data. Keep captures in ignored folders.
 - Raster icon/art generation follows the project icon-art pipeline; UI glyphs
   stay vector/icon-font, never emoji.
@@ -58,8 +58,8 @@ App Store assets are in scope.
 ## Workflow
 
 1. Fix the route set and the scenarios/locales in scope.
-2. Capture the scenario on the iPhone layer required by the iOS-specific task
-   (simulator for layout, physical iPhone for safe-area/permission/keyboard
+2. Capture the scenario on the Apple mobile layer required by the task
+   (iPhone/iPad simulator for layout and windowing, physical device for safe-area/permission/keyboard
    reality). Add mobile-web or Android comparison only when the assigned task
    explicitly owns a cross-platform parity investigation.
 3. Build a consistency matrix: axis × surface, with screenshot evidence for each

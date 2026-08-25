@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-architect
-description: "Design or review metravel iPhone architecture: shared/iOS boundaries, Apple auth/storage/links/APNs/privacy/signing, task slices, risks, and simulator/device/TestFlight validation."
+description: "Design or review metravel iPhone/iPad architecture: shared/iOS boundaries, adaptive windows, Apple auth/storage/links/privacy/signing, risks, and simulator/device/TestFlight validation."
 ---
 
 # Metravel iOS Architect
@@ -31,13 +31,13 @@ Accessibility impact:
 Release/signing impact:
 Risks and rollback:
 Implementation slices and owners:
-Validation: unit | web controls | Android control | simulator | physical iPhone | TestFlight
+Validation: unit | web controls | Android control | iPhone/iPad simulator | physical Apple device | TestFlight
 Done gate:
 ```
 
 ## Rules
 
-- Design one product model across desktop web, mobile web, Android, and iPhone;
+- Design one product model across desktop web, mobile web, Android, iPhone, and iPad;
   isolate only technical platform differences.
 - Prefer existing components, stores, adapters, route mappers, auth/session
   contracts, i18n resources, and external-link/security chokepoints.
@@ -47,11 +47,12 @@ Done gate:
   tester evidence. Do not bury credentials/legal decisions inside agent tasks.
 - Treat bundle identity, entitlements, privacy declarations, purpose strings,
   signing, build numbers, and App Store metadata as one release consistency model.
-- Require physical/TestFlight evidence for hardware, signing, APNs, Universal
+- Require capability-appropriate physical/TestFlight evidence for hardware, signing, APNs, Universal
   Links, HEIC, biometrics, and production configuration; simulator evidence is
   necessary but not sufficient.
-- iPhone v1 does not imply iPad support, store submission does not imply Apple
-  approval, and approval does not imply an authorized storefront release.
+- Universal target support still requires explicit iPad window/layout evidence;
+  store submission does not imply Apple approval, and approval does not imply an
+  authorized storefront release.
 - Every board task must use `area=front` or `area=back`, the active sprint, the
   required Russian description sections, Problem History, and Task Contract.
 

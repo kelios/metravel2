@@ -58,6 +58,12 @@ export const createBookWidgetStyles = (ctx: HeroStyleContext) => {
     tabletHeroRight: {
       width: viewportWidth >= 1000 ? '45%' : '42%',
       flexShrink: 0,
+      // #1541: `heroRow` на планшете растягивает колонки (`alignItems:'stretch'`,
+      // `minHeight:340`), а кадр теперь высотой в ширину/1.5. Без этого карточка
+      // тянулась бы на высоту левой колонки, под фотографией висел бы пустой
+      // блок, а подпись (`tabletFeaturedOverlay`, absolute bottom:0) отрывалась
+      // бы от снимка.
+      alignSelf: 'flex-start' as const,
       borderRadius: 20,
       overflow: 'hidden' as const,
       ...Platform.select({

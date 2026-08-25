@@ -14,5 +14,6 @@ if (result.errors.length > 0) {
   console.log('iOS environment preflight OK');
   console.log(`- Xcode: ${result.xcodeVersion.replace(/\n/g, ', ')}`);
   console.log(`- SDK/runtime: ${result.sdkVersion} / ${runtime.version} (${runtime.buildversion})`);
-  console.log(`- eligible iPhone simulators: ${result.destinations.length}`);
+  console.log(`- eligible iPhone simulators: ${result.iphoneDestinations.length}`);
+  console.log(`- eligible iPad simulators: ${result.ipadDestinations.length}`);
 }

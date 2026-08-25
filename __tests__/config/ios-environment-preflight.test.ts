@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 
 const {
+  concreteIpadDestinations,
   concreteIphoneDestinations,
   isIosRuntime,
   runtimeVersionForSdk,
@@ -26,6 +27,7 @@ const healthyEvidence = {
     Available destinations for the "metravel" scheme:
       { platform:iOS Simulator, id:placeholder, name:Any iOS Simulator Device }
       { platform:iOS Simulator, arch:arm64, id:simulator-id, OS:26.5, name:iPhone 17 Pro }
+      { platform:iOS Simulator, arch:arm64, id:ipad-id, OS:26.5, name:iPad Pro 11-inch (M5) }
   `,
 };
 
@@ -64,8 +66,9 @@ describe('iOS environment preflight', () => {
     expect(isIosRuntime({ name: 'visionOS 26.5' })).toBe(false);
   });
 
-  it('accepts only concrete iPhone simulator destinations', () => {
+  it('accepts concrete iPhone and iPad simulator destinations', () => {
     expect(concreteIphoneDestinations(healthyEvidence.destinations, '26.5')).toHaveLength(1);
+    expect(concreteIpadDestinations(healthyEvidence.destinations, '26.5')).toHaveLength(1);
   });
 
   it('rejects concrete iPhones reported only as ineligible', () => {
@@ -103,6 +106,19 @@ describe('iOS environment preflight', () => {
     expect(result.errors).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'IOS_ENV_ELIGIBLE_IPHONE_DESTINATION' }),
+        expect.objectContaining({ code: 'IOS_ENV_ELIGIBLE_IPAD_DESTINATION' }),
+      ])
+    );
+  });
+
+  it('fails when the universal target has no eligible iPad destination', () => {
+    const result = validateIosEnvironmentEvidence({
+      ...healthyEvidence,
+      destinations: '{ platform:iOS Simulator, id:iphone-id, OS:26.5, name:iPhone 17 Pro }',
+    });
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'IOS_ENV_ELIGIBLE_IPAD_DESTINATION' }),
       ])
     );
   });
@@ -110,7 +126,10 @@ describe('iOS environment preflight', () => {
   it('fails when concrete iPhones exist only for another runtime', () => {
     const result = validateIosEnvironmentEvidence({
       ...healthyEvidence,
-      destinations: '{ platform:iOS Simulator, id:other-runtime, OS:26.4, name:iPhone 17 Pro }',
+      destinations: `
+        { platform:iOS Simulator, id:other-runtime, OS:26.4, name:iPhone 17 Pro }
+        { platform:iOS Simulator, id:ipad-id, OS:26.5, name:iPad Pro 11-inch (M5) }
+      `,
     });
     expect(result.errors).toEqual(
       expect.arrayContaining([

@@ -121,6 +121,58 @@ renderer, который сохраняет собственный tile lifecycl
 - dynamic payload передаётся через безопасную JSON-сериализацию и
   `injectJavaScript`, а не через пересборку HTML на каждое изменение данных.
 
+### Native base tile lifecycle
+
+`components/MapPage/Map/nativeTileBridgeScript.ts` владеет мостом базовой
+подложки для iOS и Android (Android — реэкспорт `Map.ios`). Прямой
+`L.tileLayer` не используется: каждый реально запрошенный тайл идёт через
+прозрачный дисковый кэш в RN. Bulk/prefetch регионов запрещён политикой
+tile.openstreetmap.org.
+
+Инварианты моста:
+
+- **ключ pending уникален на DOM-тайл.** Leaflet отдаёт в `createTile`
+  ОБЁРНУТЫЕ координаты (`_wrapCoords`), поэтому на низком зуме несколько разных
+  DOM-тайлов приходят с одинаковыми `z/x/y`. Ключ вида `z/x/y` их склеивал:
+  вторая запись затирала первую, первый `<img>` навсегда оставался без `src` и
+  без `done()`, то есть под `.leaflet-tile { visibility: hidden }`. `z/x/y`
+  едут в сообщении отдельными полями — RN качает тайл по ним, а не по ключу;
+- **нижняя граница зума считается от вьюпорта** (`resolveBaseMinZoom`,
+  глобалка `__metravelBaseMinZoom`). Ниже неё один мир Leaflet уже/ниже экрана
+  и тайлов на остальную площадь просто не существует: подложка вырождается в
+  серое поле независимо от сети. На iPhone 13 mini граница — z2;
+- **граница едет за размером вьюпорта.** Стартовый замер берётся из
+  `window.innerWidth/innerHeight` до layout, а WebView отдаёт финальный размер
+  позже (RN-layout вкладки, поворот — тот же F-17-сценарий, ради которого живёт
+  каскад `__metravelScheduleInvalidate` → `invalidateSize`). Поэтому мост
+  подписан на `resize` и пересчитывает границу от `map.getSize()` через
+  `map.setMinZoom`; если текущий зум оказался ниже новой границы, Leaflet сам
+  подтягивает карту наверх. Формула берётся из одной глобалки
+  `__metravelResolveBaseMinZoom`, её паритет с TS-версией закреплён тестом;
+- **пустой ответ = ошибка тайла, а не успешная загрузка.** `done(null, img)` на
+  пустом `dataUrl` вешал `leaflet-tile-loaded` на пустую картинку, и провал
+  сети выглядел как здоровая карта. Теперь летит `tileerror` и растёт счётчик
+  `failed`;
+- **ретраи живут в RN** (`Map/tileFetchRetry.ts`): Leaflet тайл не
+  перезапрашивает, поэтому единственный 429/503 из nginx-зоны при бурсте зума
+  (#807) иначе консервировал бы серую клетку. Окно — две попытки поверх первой
+  (400 мс, 1200 мс), уход в офлайн ретраи прекращает;
+- **снятый с карты тайл чистит свою pending-запись** (`_removeTile`), иначе
+  гонка зума копила записи до конца сессии.
+
+Счётчики для разбора серой подложки на устройстве (IOS-07) читаются из WebView
+через `window.__metravelGetTileStats()` → `{ requested, loaded, failed,
+dropped, pending }`; сам слой лежит в `window.__metravelBaseTileLayer`, потому
+что события `tileerror`/`load` живут на слое и на карту не всплывают.
+
+Регрессия: `__tests__/components/MapPage/Map/nativeTileBridge.lifecycle.test.ts`
+гоняет реальный Leaflet 1.9.4 через zoom-цикл до нижней границы на размерах
+iPhone 13 mini и падает, если хоть один DOM-тайл остался без ответа. Уникальность
+ключа наблюдаема только на кадре, где вьюпорт ШИРЕ мира (fallback-граница на
+ландшафтном 1366 px): на телефоне граница z2 держит мир не уже экрана,
+обёрнутые координаты там не повторяются вовсе и ключ `z/x/y` дефекта не
+показывает — отдельный кейс держит именно этот кадр.
+
 Позиция пользователя на Android следует атомарному визуальному контракту:
 
 - явный trusted target одной WebView-командой сначала создаёт accuracy-круг и
@@ -183,6 +235,61 @@ Backend-facing map adapter — `api/map.ts`; React Query ownership находи�
 Некоторые API adapters возвращают empty payload при recoverable/expected error.
 Поэтому пустая карта должна диагностироваться по network/API evidence, а не
 объявляться успешным backend contract только потому, что UI не упал.
+
+### Один физический объект с несколькими источниками
+
+Физическое место и запись точки внутри статьи — разные сущности. Если несколько
+статей описывают один объект, карта показывает один marker/hit target на
+канонической координате места и сохраняет все связанные материалы внутри одной
+карточки.
+
+Целевой additive DTO:
+
+```ts
+type MapPlaceMarker = {
+  placeId: string | number;
+  name: string;
+  address: string | null;
+  lat: number;
+  lng: number;
+  sourceCount: number;
+  primarySource: MapPlaceSource;
+};
+
+type MapPlaceSource = {
+  sourceId: `travel-address:${number}`;
+  pointId: number;
+  travelId: number | null;
+  articleTitle: string;
+  articleUrl: string | null;
+  thumbnailUrl: string | null;
+  thumbnailWidth: number | null;
+  thumbnailHeight: number | null;
+};
+```
+
+- Группировка опирается только на стабильный `placeId`, назначенный данным. Ни
+  расстояние, ни совпадение названия/адреса не являются достаточным identity:
+  соседние здания, корпуса, входы и смотровые площадки нельзя склеивать
+  эвристикой. Legacy-точка без `placeId` остаётся отдельным marker.
+- Нормализация выполняется один раз за обновление dataset через `Map` за `O(n)`;
+  popup не запускает новый поиск и не пересобирает marker-слой при перелистывании.
+  Marker payload несёт только `sourceCount` и `primarySource`. При
+  `sourceCount > 1` остальные короткие summary загружаются по
+  `GET /api/map/places/{placeId}/sources/` только после открытия карточки и
+  кэшируются по `placeId`; галереи и rich text в этот ответ не входят.
+- Карточка показывает счётчик `1/N` и локально перелистывает источники. Фото,
+  заголовок материала и ссылка на статью относятся к активному source;
+  название/адрес, координаты, навигация, сохранение и travel-status относятся к
+  каноническому месту и не меняются при перелистывании.
+- Одновременно монтируется только активное фото через общий media-компонент;
+  допустим prefetch только следующего thumbnail. Полный массив sources не
+  сериализуется в native WebView marker payload. Desktop popup, mobile-web
+  bottom card, Android и iPhone используют один source-pager model, а не четыре
+  platform-specific карусели.
+- Один источник остаётся прежним одиночным popup без pager. Для нескольких
+  источников доступны swipe и явные previous/next controls с локализованными
+  accessibility labels для RU/BE/UK/PL/EN.
 
 ## Client state
 

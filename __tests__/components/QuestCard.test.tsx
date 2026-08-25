@@ -127,47 +127,70 @@ describe('QuestCard', () => {
         expect(queryByText('Ещё никто не проходил')).toBeNull();
     });
 
-    it.each([
-        { label: 'mobile', isPhone: true, cardWidth: 345 },
-        { label: 'desktop', isPhone: false, cardWidth: 380 },
-    ])('кадрирует обложку `contain` и не летербоксит её больше 10% ($label)', ({ isPhone, cardWidth }) => {
-        // docs/RULES.md → «Images and placeholders»: обложки квестов рисуются
-        // ТОЛЬКО `contain`, исключений по поверхностям нет, а правка самого
-        // правила запрещена (прецедент 29c30d95/INV2-17, откат 2026-08-19).
-        // Эта строка меняла режим пять раз с апреля по июль 2026, каждый раз
-        // без обоснования именно кропа, поэтому она закреплена отдельным
-        // тестом, а не только внутри проверки блюр-подложки.
-        mockIsPhone = isPhone;
-        mockImageCardMedia.mockClear();
-        renderWithQueryClient(
-            <QuestCard
-                styles={styles}
-                cardWidth={cardWidth}
-                cityId="krakow"
-                quest={makeQuest()}
-            />,
-        );
+    // Геометрия слота каталога: `cardWidth = max(280, width − 48)`
+    // (`hooks/useQuestCatalogResponsiveModel.ts:39`), высота — 238 в полосе
+    // `isPhone` = [360, 480) (`hooks/useResponsive.ts:218`) и
+    // `round(cardWidth / 380 × 260)` вне её. Поэтому на десктопе пропорция слота
+    // константна (1.4615), а внутри полосы `isPhone` она едет от 1.311 до 1.811.
+    const QUEST_CATALOG_SLOTS = [
+        { label: 'mobile 390 (приёмка)', isPhone: true, cardWidth: 342, maxShare: 0.1 },
+        // 420, а не 380: на 1280 каталог рисует две колонки — sidebar 340,
+        // contentWidth 876, `min(420, floor((876 − 24) / 2))`
+        // (`hooks/useQuestCatalogResponsiveModel.ts:41-44`). Слот 420×287.
+        { label: 'desktop 1280 (приёмка)', isPhone: false, cardWidth: 420, maxShare: 0.1 },
+        // Одноколоночный город: `cardWidth = min(600, contentWidth)`, слот 600×411.
+        { label: 'desktop, одна колонка', isPhone: false, cardWidth: 600, maxShare: 0.1 },
+        { label: 'узкий край полосы isPhone (360)', isPhone: true, cardWidth: 312, maxShare: 0.135 },
+        { label: 'широкий край полосы isPhone (479)', isPhone: true, cardWidth: 431, maxShare: 0.135 },
+    ] as const;
 
-        const mediaProps = mockImageCardMedia.mock.calls[0]?.[0];
-        expect(mediaProps?.fit).toBe('contain');
+    /**
+     * Пропорции обложек квестов на проде. Замер 2026-08-25,
+     * `/api/quests/?compact=1&page_size=300`: 156 квестов, квадратных нет.
+     */
+    const PROD_COVER_RATIOS = [4 / 3, 1.461632, 1.5, 16 / 9];
 
-        // Поле при `contain` считается по слоту самой карточки. Пропорции
-        // обложек — замер прода 2026-08-25 по всем 156 квестам; слот карточки
-        // ландшафтный, поэтому худший класс (16:9) даёт 8.9%, а не 21.9%, как
-        // на квадратной плитке `QuestForCityCard` (#1542).
-        const slotWidth = Number(mediaProps?.width);
-        const slotHeight = Number(mediaProps?.height);
-        const PROD_COVER_RATIOS = [4 / 3, 1.461632, 1.5, 16 / 9];
-        for (const ratio of PROD_COVER_RATIOS) {
-            const renderedWidth = Math.min(slotWidth, slotHeight * ratio);
-            const renderedHeight = Math.min(slotHeight, slotWidth / ratio);
-            const worst = Math.max(
-                (slotWidth - renderedWidth) / 2 / slotWidth,
-                (slotHeight - renderedHeight) / 2 / slotHeight,
+    it.each(QUEST_CATALOG_SLOTS)(
+        'кадрирует обложку `contain`, поле не выше потолка своей ширины ($label)',
+        ({ isPhone, cardWidth, maxShare }) => {
+            // docs/RULES.md → «Images and placeholders»: обложки квестов рисуются
+            // ТОЛЬКО `contain`, исключений по поверхностям нет, а правка самого
+            // правила запрещена (прецедент 29c30d95/INV2-17, откат 2026-08-19).
+            // Эта строка меняла режим пять раз с апреля по июль 2026, каждый раз
+            // без обоснования именно кропа, поэтому она закреплена отдельным
+            // тестом, а не только внутри проверки блюр-подложки.
+            mockIsPhone = isPhone;
+            mockImageCardMedia.mockClear();
+            renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={cardWidth}
+                    cityId="krakow"
+                    quest={makeQuest()}
+                />,
             );
-            expect(worst).toBeLessThanOrEqual(0.1);
-        }
-    });
+
+            const mediaProps = mockImageCardMedia.mock.calls[0]?.[0];
+            expect(mediaProps?.fit).toBe('contain');
+
+            // Порог у приёмочных ширин (390 и 1280) — 10% из Done gate #1560.
+            // На краях полосы `isPhone` высота приколота к 238, слот уезжает от
+            // пропорций обложек, и поле честно доходит до 13.2%; потолок 13.5%
+            // не даёт ему вырасти молча. Лечится это заливкой и контентом
+            // (семейство #1542/#1558), а не возвратом `cover`.
+            const slotWidth = Number(mediaProps?.width);
+            const slotHeight = Number(mediaProps?.height);
+            for (const ratio of PROD_COVER_RATIOS) {
+                const renderedWidth = Math.min(slotWidth, slotHeight * ratio);
+                const renderedHeight = Math.min(slotHeight, slotWidth / ratio);
+                const worst = Math.max(
+                    (slotWidth - renderedWidth) / 2 / slotWidth,
+                    (slotHeight - renderedHeight) / 2 / slotHeight,
+                );
+                expect(worst).toBeLessThanOrEqual(maxShare);
+            }
+        },
+    );
 
     it('web оставляет блюр-подложку выключенной, native получает заливку полей', () => {
         // Две стороны одного контракта. Web: подложку включать нельзя —
@@ -493,6 +516,61 @@ describe('QuestCard', () => {
             expect(queryByTestId('quest-card-completions-minsk-empty')).toBeNull();
             expect(queryByText('Ещё никто не проходил')).toBeNull();
             expect(queryByText(/Пройдено/)).toBeNull();
+        });
+    });
+
+    // #1486: усреднённая оценка по одному-двум отзывам врёт — «5.0» за одного
+    // человека. Показываем агрегат только за выборку от трёх, вход в читалку
+    // при этом остаётся на месте: количество отзывов — факт, а не вывод.
+    describe('порог показа агрегированной оценки', () => {
+        describe.each([
+            ['телефонная полоса деталей', true],
+            ['десктопный оверлей', false],
+        ])('%s', (_label, isPhone) => {
+            beforeEach(() => {
+                mockIsPhone = isPhone;
+            });
+
+            it.each([0, 1, 2])('скрывает оценку при %i отзывах', (ratingCount) => {
+                const { queryByTestId } = renderWithQueryClient(
+                    <QuestCard
+                        styles={styles}
+                        cardWidth={380}
+                        cityId="minsk"
+                        quest={makeQuest({ id: 'minsk-threshold', ratingAvg: 5, ratingCount })}
+                    />,
+                );
+
+                expect(queryByTestId('quest-card-rating-minsk-threshold')).toBeNull();
+            });
+
+            it('показывает оценку начиная с трёх отзывов', () => {
+                const { getByTestId } = renderWithQueryClient(
+                    <QuestCard
+                        styles={styles}
+                        cardWidth={380}
+                        cityId="minsk"
+                        quest={makeQuest({ id: 'minsk-threshold', ratingAvg: 4.7, ratingCount: 3 })}
+                    />,
+                );
+
+                expect(getByTestId('quest-card-rating-minsk-threshold')).toBeTruthy();
+            });
+        });
+
+        it('оставляет вход в читалку при единственном отзыве', () => {
+            mockIsPhone = true;
+            const { getByTestId, queryByTestId } = renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={380}
+                    cityId="minsk"
+                    quest={makeQuest({ id: 'minsk-single', ratingAvg: 5, ratingCount: 1 })}
+                />,
+            );
+
+            expect(queryByTestId('quest-card-rating-minsk-single')).toBeNull();
+            expect(getByTestId('quest-card-reviews-minsk-single')).toBeTruthy();
         });
     });
 });

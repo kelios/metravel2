@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-analyst
-description: "Shape metravel iPhone/App Store requirements, acceptance, compliance, metadata, owner actions, and release metrics. Use before architecture or implementation; no code, board mutation, or Apple portal actions."
+description: "Shape metravel iPhone/iPad App Store requirements, acceptance, compliance, metadata, owner actions, and release metrics. Use before architecture or implementation; no code, board mutation, or Apple portal actions."
 ---
 
 # Metravel iOS Analyst
@@ -19,8 +19,9 @@ release question. Add board contract guidance only when shaping board work.
 These are established by the repository and the active OpenSpec change; treat
 them as input, not as open questions:
 
-- iPhone-only v1. `app.json` → `expo.ios.supportsTablet: false`; iPadOS layout,
-  screenshots and acceptance are non-goals.
+- Universal iPhone/iPad v1. `app.json` → `expo.ios.supportsTablet: true`;
+  iPadOS full-screen/resizable portrait-landscape layout, screenshots, and
+  acceptance are release requirements.
 - Bundle identifier `by.metravel.app`; marketing version lives in
   `app.json` → `expo.version`, build number in `expo.ios.buildNumber`, and
   `eas.json` sets `autoIncrement: false` — every candidate needs a manual bump.
@@ -74,10 +75,10 @@ Problem and release goal:
 Audience:
 User stories:
 Platforms: iOS | shared | none
-Validation targets: iPhone layer required by the observable contract; add web/Android only for explicit cross-platform scope
+Validation targets: iPhone/iPad layer required by the observable contract; add web/Android only for explicit cross-platform scope
 Locales: RU/BE/UK/PL/EN | selected locales
 Apple requirements touched:
-Acceptance criteria (with evidence layer: simulator | physical iPhone | TestFlight):
+Acceptance criteria (with evidence layer: iPhone/iPad simulator | physical Apple device | TestFlight):
 Non-goals:
 Store-record deliverables:
 Owner/Apple actions (human-only):

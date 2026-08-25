@@ -278,76 +278,19 @@ function adaptQuestReview(raw: ApiQuestReview): QuestReview {
 }
 
 /**
- * MOCK-FALLBACK (BE-тикет: список публичных отзывов квеста, эндпоинта пока нет).
+ * Публичные отзывы о квесте (читалка чужих отзывов).
  *
- * КОНТРАКТ ОЖИДАЕМОГО ЭНДПОИНТА (для BE-тикета — снять мок после реализации):
+ * КОНТРАКТ ЭНДПОИНТА (реализован; проба 25.08.2026 → `200`):
  *   GET /api/quests/quest{questId}/reviews/
  *     где questId — строковый quest_id (напр. "minsk-cmok").
  *   Публичный (без авторизации), пагинация как у остальных списков
  *   (массив | {data|results, next}).
- *   Элемент ответа (ApiQuestReview):
- *     {
- *       id: number,
- *       rating: number,             // 1..5
- *       liked: string,              // «что понравилось»
- *       disliked: string,          // «что улучшить»
- *       author_name: string|null,  // имя автора (или null если аноним)
- *       author_avatar: string|null,// URL аватара (или null)
- *       created_at: string|null    // ISO-дата
- *     }
+ *   Элемент ответа — `ApiQuestReview` (см. тип выше).
  *
- * Детерминированный мок строится по questId, чтобы один и тот же квест всегда
- * показывал один и тот же набор отзывов в DEV/без бэка.
- */
-const QUEST_REVIEWS_MOCK: ReadonlyArray<Omit<ApiQuestReview, 'id'>> = [
-    {
-        rating: 5,
-        liked: 'Очень атмосферный маршрут, прошли всей семьёй за пару часов. Загадки в меру сложные, дети были в восторге.',
-        disliked: '',
-        author_name: 'Анна К.',
-        author_avatar: null,
-        created_at: '2025-09-14T12:30:00Z',
-    },
-    {
-        rating: 4,
-        liked: 'Открыли для себя несколько мест в городе, мимо которых ходили годами. Здорово, что задания привязаны к деталям зданий.',
-        disliked: 'Одна точка была закрыта на ремонт — пришлось додумывать ответ. В остальном супер.',
-        author_name: 'Дмитрий',
-        author_avatar: null,
-        created_at: '2025-08-02T18:05:00Z',
-    },
-    {
-        rating: 5,
-        liked: 'Идеально для свидания! Финальная история тронула. Спасибо авторам за работу.',
-        disliked: '',
-        author_name: 'Марина',
-        author_avatar: null,
-        created_at: '2025-07-21T10:15:00Z',
-    },
-    {
-        rating: 3,
-        liked: 'Хорошая идея и приятный сюжет.',
-        disliked: 'Несколько подсказок показались слишком очевидными, хотелось бы посложнее.',
-        author_name: 'Сергей П.',
-        author_avatar: null,
-        created_at: '2025-06-30T09:40:00Z',
-    },
-];
-
-function buildQuestReviewsMock(questId: string): QuestReview[] {
-    let seed = 0;
-    for (let i = 0; i < questId.length; i++) seed = (seed * 31 + questId.charCodeAt(i)) >>> 0;
-    const count = 3 + (seed % 2); // 3 или 4 отзыва
-    return QUEST_REVIEWS_MOCK.slice(0, count).map((review, index) =>
-        adaptQuestReview({ ...review, id: 10_000 + (seed % 1000) + index }),
-    );
-}
-
-/**
- * Получить список публичных отзывов о квесте (для читалки).
- * Пытается реальный эндпоинт; при 404 (эндпоинта пока нет) — в DEV отдаёт
- * детерминированный мок для отладки UI, на проде честно возвращает пусто
- * (показывать пользователям выдуманные отзывы как настоящие нельзя).
+ * Заглушки здесь быть не должно ни в одном окружении. До #1486 при `404`
+ * подставлялся детерминированный мок с выдуманными авторами; он однажды доехал
+ * до прода и показал пользователям несуществующие отзывы как настоящие. Пустой
+ * ответ и `404` дают честное пустое состояние — читалка пишет «Пока нет отзывов».
  */
 export async function fetchQuestReviews(questId: string): Promise<QuestReview[]> {
     try {
@@ -356,7 +299,7 @@ export async function fetchQuestReviews(questId: string): Promise<QuestReview[]>
     } catch (err: unknown) {
         const status = err instanceof ApiError ? err.status : undefined;
         if (status && status !== 404) throw err;
-        return __DEV__ ? buildQuestReviewsMock(questId) : [];
+        return [];
     }
 }
 

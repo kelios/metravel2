@@ -245,9 +245,11 @@ Android release contract:
   `internal` together after its dry-run; it keeps `production`, `beta`, testers,
   and countries immutable. See `docs/ANDROID_OWNER_GUIDE.md`.
 
-### iOS / App Store (active iPhone scope)
+### iOS / App Store (active universal iPhone/iPad scope)
 
-Первый релиз — iPhone-only; iPad-specific UI/screenshots не входят в acceptance.
+Первый релиз — universal iPhone/iPad. iPad full-screen/windowed
+portrait/landscape, adaptive layout и обязательные tablet screenshots входят в
+acceptance.
 EAS CLI и build image закреплены release-конфигурацией. Build и upload остаются
 разными явными операциями; upload принимает конкретный EAS build ID, работает
 non-interactive и использует EAS-managed App Store Connect credentials, заранее

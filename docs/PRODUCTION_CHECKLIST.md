@@ -114,11 +114,12 @@ testers и countries защищены.
       `android:submit:testing`; после commit подтверждены `alpha`/`internal`, а
       `production`/`beta`, тестировщики и страны не изменились.
 
-## iPhone / App Store release
+## iPhone/iPad / App Store release
 
 Канонический owner flow — `docs/IOS_OWNER_GUIDE.md`, `docs/RELEASE.md` и
-`$metravel-ios-release-operator`. Первый release поддерживает iPhone;
-iPad-specific UI/screenshots не входят в acceptance.
+`$metravel-ios-release-operator`. Первый release — universal iPhone/iPad;
+iPad full-screen/windowed portrait/landscape и обязательные tablet screenshots
+входят в acceptance.
 
 - [ ] Подтверждена точная текущая authorization только для одного
       stage: signed build, App Store Connect/TestFlight upload/group mutation,
@@ -130,13 +131,14 @@ iPad-specific UI/screenshots не входят в acceptance.
 - [ ] Нет placeholder Apple/App Store/Team IDs, dev hosts, неизвестного
       archive source, неполного privacy/compliance state или секретов в
       config/artifact/logs/evidence.
-- [ ] Simulator подтвердил compilation/basic UI; physical iPhone закрыл
-      нужные device-capability кейсы. Перед App Review exact processed
-      TestFlight build прошёл `IOS-01..14` scope из Task Contract.
+- [ ] iPhone/iPad Simulator подтвердил compilation/basic UI и adaptive tablet
+      windowing; physical iPhone закрыл нужные device-capability кейсы, а
+      physical iPad — exact tablet window/rotation acceptance. Перед App Review
+      exact processed TestFlight build прошёл `IOS-01..15` scope из Task Contract.
 - [ ] Upload выполнен один раз; processing не привёл к duplicate upload.
       Фактические version/build и App Store Connect state сверены после
       операции.
-- [ ] Store metadata, screenshots, privacy labels, encryption/compliance,
+- [ ] Store metadata, обязательные iPhone/iPad screenshots, privacy labels, encryption/compliance,
       support/privacy/account-deletion URLs и reviewer access соответствуют
       фактическому runtime принятого build.
 - [ ] Upload не назван публикацией; Apple approval и public storefront

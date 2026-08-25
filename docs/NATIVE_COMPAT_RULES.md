@@ -1,16 +1,17 @@
-# Правила active-platform совместимости (web ↔ Android ↔ iPhone)
+# Правила active-platform совместимости (web ↔ Android ↔ iPhone/iPad)
 
 Load-bearing правила для текущего Expo SDK 57 / React Native 0.86 приложения.
 Механические нарушения ловит
 `__tests__/config/native-compat-governance.test.ts`, а семантическую/device
 проверку ведут Android и iOS developer/tester skills. Первый App Store release
-поддерживает iPhone; iPadOS остаётся вне scope.
+использует universal iPhone/iPad target; iPadOS проверяется в full-screen,
+resizable-window, portrait и landscape режимах.
 
 ## 0. ГЛАВНОЕ: web — прод, его не ломаем. Несовместимо → отдельные файлы
 
 - Web — работающий продукт с трафиком; native догоняет. **Запрещено** чинить
   native ценой изменения поведения web.
-- Mobile UX parity is mandatory: mobile web, Android, and iPhone must present the
+- Mobile UX parity is mandatory: mobile web, Android, iPhone, and iPad must present the
   same product layout and interaction model for shared flows. Use platform files for technical
   incompatibilities, not for alternate visual hierarchy, action order, or tap
   semantics. Держится это **общими компонентами**, а не совпадением реализаций:

@@ -186,6 +186,10 @@ export type TravelCoords = {
     imageUrl?: string
     urlTravel: string
     articleUrl?: string
+    // Grouped place DTO (#1567): канонический place_id и материалы места.
+    placeId?: string | number
+    sourceCount?: number
+    primarySource?: import('@/api/mapPlaces').MapPlaceSource | null
 }
 
 export type TravelInfo = {

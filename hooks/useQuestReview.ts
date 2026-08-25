@@ -11,6 +11,7 @@ import {
   type SubmitQuestReviewParams,
 } from '@/api/questReview'
 import { useAuth } from '@/context/AuthContext'
+import { trackQuestReviewSubmit } from '@/utils/questReviewAnalytics'
 import { queryKeys } from '@/queryKeys'
 
 type SubmitInput = {
@@ -21,6 +22,9 @@ type SubmitInput = {
 
 type UseQuestReviewOptions = {
   questId: number | undefined
+  /** Строковый quest_id для аналитики: в событиях квестов идёт именно он. */
+  questSlug?: string
+  cityId?: string
   enabled?: boolean
 }
 
@@ -35,6 +39,8 @@ type UseQuestReviewReturn = {
 
 export function useQuestReview({
   questId,
+  questSlug,
+  cityId,
   enabled = true,
 }: UseQuestReviewOptions): UseQuestReviewReturn {
   const { isAuthenticated } = useAuth()
@@ -60,6 +66,15 @@ export function useQuestReview({
     onSuccess: (record) => {
       queryClient.setQueryData(queryKeys.questUserReview(questId), record)
       queryClient.invalidateQueries({ queryKey: queryKeys.questUserReview(questId) })
+      // Единственная точка подтверждённого сохранения: срабатывает один раз на
+      // mutate, поэтому ре-рендер экрана финала событие не дублирует, а
+      // упавший запрос сюда не доходит (#1486).
+      trackQuestReviewSubmit({
+        questId: questSlug,
+        cityId,
+        rating: record.rating,
+        hasText: !!(record.liked?.trim() || record.disliked?.trim()),
+      })
     },
   })
 

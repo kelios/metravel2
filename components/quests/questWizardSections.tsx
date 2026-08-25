@@ -350,9 +350,11 @@ function QuestFinaleCompletionLine({
 function QuestFinaleFeedback({
   questId,
   questNumericId,
+  cityId,
 }: {
   questId?: string
   questNumericId?: number
+  cityId?: string
 }) {
   const { userRating, isSubmitting: isRatingSubmitting, rate } =
     useQuestRatingMutation(questNumericId)
@@ -363,6 +365,7 @@ function QuestFinaleFeedback({
     <QuestReviewSection
       questId={questId}
       questNumericId={questNumericId}
+      cityId={cityId}
       userRating={userRating}
       onRate={rate}
       isRatingSubmitting={isRatingSubmitting}
@@ -645,7 +648,7 @@ export function QuestFinalePanel({
             />
           ) : null}
 
-          <QuestFinaleFeedback questId={questId} questNumericId={questNumericId} />
+          <QuestFinaleFeedback questId={questId} questNumericId={questNumericId} cityId={cityId} />
 
           {/* Второе действие (#1484): коллекция города и следующий квест рядом.
               Только за засчитанное прохождение — при недоборе точек следующий

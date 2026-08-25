@@ -1,15 +1,15 @@
 ---
 name: metravel-ios-release-operator
-description: "Prepare, build, upload, or release an authorized metravel iPhone candidate through TestFlight/App Store. Use for signing, version/build, processing, compliance, review, or storefront; each mutation needs separate authorization."
+description: "Prepare, build, upload, or release an authorized universal metravel iPhone/iPad candidate through TestFlight/App Store. Use for signing, processing, compliance, review, or storefront; each mutation needs separate authorization."
 ---
 
 # Metravel iOS Release Operator
 
-Use this skill for the release/deploy portion of the active iPhone-first App
+Use this skill for the release/deploy portion of the active universal iPhone/iPad App
 Store work. It does not implement product features.
 
 `AGENTS.md` is inherited. For the one authorized stage, load
-`docs/RELEASE.md#ios--app-store-active-iphone-scope` (including `iOS credential
+`docs/RELEASE.md#ios--app-store-active-universal-iphoneipad-scope` (including `iOS credential
 map`), `docs/WORKFLOW_OPERATIONS.md#321-ios-testing-and-release-operations`, the
 relevant `docs/IOS_OWNER_GUIDE.md` section, the assigned release contract, and
 current App Store Connect evidence. Load OpenSpec artifacts only when they
@@ -34,7 +34,7 @@ Local read-only preflight and source/archive inspection do not mutate store stat
 
 - Work only from the canonical `main` source state and apply the operation gate
   before Xcode, EAS, archive, upload, or submission commands.
-- Resolve the exact iPhone bundle identifier, marketing version, increasing
+- Resolve the exact universal iPhone/iPad device family, bundle identifier, marketing version, increasing
   build number, signing team/profile, entitlements, privacy manifest, production
   API origin, encryption/compliance state, and App Store Connect app record.
 - Do not use placeholder Apple IDs, Team IDs, App Store IDs, credentials, dev
@@ -58,15 +58,16 @@ Local read-only preflight and source/archive inspection do not mutate store stat
   (identity, version/build parity across Expo/plist/Xcode, entitlements, purpose
   strings, privacy manifest, production origins, placeholder and tracked-secret
   detection, EAS pinning) and `npm run ios:environment:check` (Xcode/SDK,
-  eligible iPhone simulator destination, Pods state) when the local toolchain is
+  eligible iPhone and iPad simulator destinations, Pods state) when the local toolchain is
   involved. The EAS CLI version is pinned inside the scripts — do not float it.
 - Treat source config and the signed IPA as two different evidence layers. A
   green source guard does not prove what Xcode/EAS embedded. Before every
   upload, resolve the exact authorized EAS build id, verify its status/profile,
   version/build/source revision, download its protected IPA into the ignored
   submit runtime, and run `npm run ios:artifact:audit -- PATH_TO_IPA`. The audit
-  must inspect the compiled `Info.plist` (including iOS `MinimumOSVersion` and
-  all sensitive-API purpose strings), localized purpose strings, privacy
+  must inspect the compiled `Info.plist` (including universal device family,
+  resizable iPad window/orientations, iOS `MinimumOSVersion`, and all
+  sensitive-API purpose strings), localized purpose strings, privacy
   manifest, embedded production bundle, provisioning, code signature, and
   signed entitlements. `scripts/ios-submit.sh` performs this automatically and
   must stop before transport on any mismatch.

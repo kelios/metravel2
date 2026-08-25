@@ -4,7 +4,10 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-const { validateIosRelease } = require('../../scripts/ios-release-guard-lib');
+const {
+  IOS_IPAD_ORIENTATIONS,
+  validateIosRelease,
+} = require('../../scripts/ios-release-guard-lib');
 
 const root = path.resolve(__dirname, '../..');
 const tempRoots: string[] = [];
@@ -96,6 +99,10 @@ describe('iOS release configuration', () => {
     expect(ios.infoPlist.NSMotionUsageDescription).toBe(
       'MeTravel uses motion data to support location and direction features while you navigate routes and quests.'
     );
+    expect(ios.infoPlist.UIRequiresFullScreen).toBe(false);
+    expect(ios.infoPlist['UISupportedInterfaceOrientations~ipad']).toEqual(
+      IOS_IPAD_ORIENTATIONS
+    );
     expect(notificationMetadata).toEqual(expect.arrayContaining([
       expect.objectContaining({
         $: expect.objectContaining({
@@ -131,6 +138,53 @@ describe('iOS release configuration', () => {
     });
     expect(validateIosRelease(testRoot)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_BUNDLE_ID_XCODE' })])
+    );
+  });
+
+  it('fails closed when universal iPhone and iPad support drifts', () => {
+    const expoRoot = fixture({
+      'app.json': value => value.replace('"supportsTablet": true', '"supportsTablet": false'),
+    });
+    const expoWindowRoot = fixture({
+      'app.json': value => value.replace('"requireFullScreen": false', '"requireFullScreen": true'),
+    });
+    const expoPortraitRoot = fixture({
+      'app.json': value => value.replace('"orientation": "default"', '"orientation": "portrait"'),
+    });
+    const xcodeRoot = fixture({
+      'ios/metravel.xcodeproj/project.pbxproj': value =>
+        value.replaceAll('TARGETED_DEVICE_FAMILY = "1,2";', 'TARGETED_DEVICE_FAMILY = 1;'),
+    });
+    const plistRoot = fixture({
+      'ios/metravel/Info.plist': value => value.replace(
+        /\n\t<key>UISupportedInterfaceOrientations~ipad<\/key>[\s\S]*?\n\t<\/array>/,
+        ''
+      ),
+    });
+    const fixedWindowPlistRoot = fixture({
+      'ios/metravel/Info.plist': value => value.replace(
+        /(<key>UIRequiresFullScreen<\/key>\s*)<false\/>/,
+        '$1<true/>'
+      ),
+    });
+
+    expect(validateIosRelease(expoRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_DEVICE_FAMILY_EXPO' })])
+    );
+    expect(validateIosRelease(expoWindowRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_IPAD_WINDOWING_EXPO' })])
+    );
+    expect(validateIosRelease(expoPortraitRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_IPAD_WINDOWING_EXPO' })])
+    );
+    expect(validateIosRelease(xcodeRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_DEVICE_FAMILY_XCODE' })])
+    );
+    expect(validateIosRelease(plistRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_IPAD_PLIST' })])
+    );
+    expect(validateIosRelease(fixedWindowPlistRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_IPAD_PLIST' })])
     );
   });
 

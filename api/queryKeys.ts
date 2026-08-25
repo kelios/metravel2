@@ -41,6 +41,10 @@ export const queryKeys = {
   travelsForMapRouteAll: () => ['travelsForMapRoute'] as const,
   mapClusters: (params: Record<string, unknown>) => ['mapClusters', params] as const,
   mapClustersAll: () => ['mapClusters'] as const,
+  // Ленивые материалы места (#1571): ключ по placeKey — один запрос на place
+  // на cache lifetime, повторное открытие карточки идёт из кэша.
+  mapPlaceSources: (placeKey: string) => ['map-place-sources', placeKey] as const,
+  mapPlaceSourcesAll: () => ['map-place-sources'] as const,
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
   addressSearch: (query: string) => ['address-search', query] as const,

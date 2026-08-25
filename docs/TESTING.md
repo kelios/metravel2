@@ -5,14 +5,16 @@ Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory projec
 ## Platform-scoped validation and board status
 
 - Common/shared UI, layout and interaction changes are verified in a real
-  browser on desktop web and mobile web. Mobile parity with Android/iPhone is a
-  product/design invariant, not an automatic device gate.
+  browser on desktop web and mobile web. Mobile parity with
+  Android/iPhone/iPad is a product/design invariant, not an automatic device
+  gate.
 - Android build/install/device evidence is required only for Android-specific
   behavior: platform files, native modules, permissions, intents, system Back,
   WebView/map engine, storage/lifecycle, build/runtime or Android release work.
-- iPhone simulator/physical/TestFlight evidence is required only for
-  iOS-specific behavior or an explicitly assigned iPhone release gate. Choose
-  simulator vs physical device vs TestFlight by the capability being tested.
+- iPhone/iPad simulator, physical-device, or TestFlight evidence is required
+  only for iOS/iPadOS-specific behavior or an explicitly assigned Apple mobile
+  release gate. Choose simulator vs physical device vs TestFlight by the
+  capability being tested.
 - Backend/API/server tasks are accepted through the strongest available
   backend evidence: source/config inspection, tests already supplied by the
   backend owner, HTTP/API probes, payload/mutation checks, logs and temporal

@@ -1,11 +1,11 @@
 ## Purpose
 
-Defines the evidence and external states required to distribute a verified MeTravel iPhone build through TestFlight and submit it to App Review without exposing credentials or misstating privacy behavior.
+Defines the evidence and external states required to distribute a verified universal MeTravel iPhone/iPad build through TestFlight and submit it to App Review without exposing credentials or misstating privacy behavior.
 
 ## ADDED Requirements
 
 ### Requirement: Reproducible signed release build
-The release process MUST produce a signed iPhone archive whose bundle identifier, version, build number, entitlements, privacy manifests, and embedded configuration match the App Store Connect record.
+The release process MUST produce a signed universal iPhone/iPad archive whose device family, orientations, bundle identifier, version, build number, entitlements, privacy manifests, and embedded configuration match the App Store Connect record.
 
 #### Scenario: Release archive is created
 - **WHEN** the authorized production build runs from the clean canonical source state
@@ -13,7 +13,7 @@ The release process MUST produce a signed iPhone archive whose bundle identifier
 - **AND** the archive contains no development server address, placeholder store identifier, test credential, or private signing material
 
 #### Scenario: Build configuration is inconsistent
-- **WHEN** the bundle identity, signing team, version, entitlement, privacy manifest, SDK requirement, or production API configuration is missing or inconsistent
+- **WHEN** the device family, iPad window/orientation contract, bundle identity, signing team, version, entitlement, privacy manifest, SDK requirement, or production API configuration is missing or inconsistent
 - **THEN** the release process fails before submission
 - **AND** no incompatible binary is selected for review
 
@@ -37,6 +37,11 @@ The App Store record MUST contain the required product, privacy, support, review
 - **WHEN** the release candidate is ready for store review
 - **THEN** the record contains the app name, description, keywords, category, age rating, privacy policy URL, support URL, screenshots, copyright, review contact, review notes, and release setting required by App Store Connect
 - **AND** the metadata describes only behavior present in the candidate build
+
+#### Scenario: Universal device screenshots are prepared
+- **WHEN** the universal candidate supports both iPhone and iPad
+- **THEN** App Store Connect contains truthful screenshots for every required iPhone and iPad display class
+- **AND** each screenshot is captured from the accepted build in a supported orientation without compatibility-mode framing
 
 #### Scenario: App review requires authentication
 - **WHEN** a launch-critical reviewed feature needs a MeTravel account

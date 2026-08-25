@@ -6,6 +6,7 @@ const plist = require('@expo/plist').default;
 const { PNG } = require('pngjs');
 const {
   EXPECTED,
+  IOS_IPAD_ORIENTATIONS,
   IOS_PURPOSE_STRINGS,
   LOCALIZED_PURPOSE_STRINGS,
 } = require('../../scripts/ios-release-guard-lib');
@@ -51,7 +52,9 @@ function createAppBundle(
     CFBundleShortVersionString: EXPECTED.version,
     CFBundleVersion: EXPECTED.buildNumber,
     MinimumOSVersion: EXPECTED.deploymentTarget,
-    UIDeviceFamily: [1],
+    UIDeviceFamily: [1, 2],
+    UIRequiresFullScreen: false,
+    'UISupportedInterfaceOrientations~ipad': [...IOS_IPAD_ORIENTATIONS],
     ITSAppUsesNonExemptEncryption: false,
     CFBundleIcons: {
       CFBundlePrimaryIcon: {
@@ -123,6 +126,26 @@ describe('iOS signed artifact audit', () => {
 
   it('accepts an artifact whose compiled Info.plist matches the release contract', () => {
     expect(validateIosAppBundle(createAppBundle(), ARTIFACT_OPTIONS)).toEqual([]);
+  });
+
+  it('fails closed when the artifact drops iPad or resizable orientation support', () => {
+    const iphoneOnlyPath = createAppBundle(info => {
+      info.UIDeviceFamily = [1];
+    });
+    const portraitOnlyPath = createAppBundle(info => {
+      info['UISupportedInterfaceOrientations~ipad'] = ['UIInterfaceOrientationPortrait'];
+    });
+    const fixedWindowPath = createAppBundle(info => {
+      info.UIRequiresFullScreen = true;
+    });
+
+    for (const appPath of [iphoneOnlyPath, portraitOnlyPath, fixedWindowPath]) {
+      expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'IOS_ARTIFACT_DEVICE_FAMILY' }),
+        ])
+      );
+    }
   });
 
   it('reads dimensions when the Apple CgBI chunk precedes IHDR', () => {

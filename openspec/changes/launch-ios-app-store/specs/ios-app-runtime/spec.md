@@ -1,14 +1,14 @@
 ## Purpose
 
-Defines the supported iPhone runtime contract for MeTravel, including identity, core flows, authentication, permissions, localization, links, session recovery, and release stability.
+Defines the supported universal iPhone/iPad runtime contract for MeTravel, including adaptive windowing, identity, core flows, authentication, permissions, localization, links, session recovery, and release stability.
 
 ## ADDED Requirements
 
-### Requirement: Supported iPhone identity and launch
-The system MUST install and launch as the MeTravel iPhone application with the registered bundle identity, an increasing build number, and no dependency on a development server.
+### Requirement: Supported iPhone and iPad identity and launch
+The system MUST install and launch as one universal MeTravel application on iPhone and iPad with the registered bundle identity, an increasing build number, and no dependency on a development server.
 
 #### Scenario: User launches a release build
-- **WHEN** a user opens the installed release or TestFlight build on a supported iPhone
+- **WHEN** a user opens the installed release or TestFlight build on a supported iPhone or iPad
 - **THEN** the MeTravel shell becomes usable without a development server
 - **AND** the application identifies itself with the registered production bundle identifier and release version
 
@@ -17,11 +17,24 @@ The system MUST install and launch as the MeTravel iPhone application with the r
 - **THEN** the application does not crash or display an indefinite blank screen
 - **AND** unrelated browsing remains available with a recoverable error for the affected service
 
+### Requirement: Adaptive iPad windowing
+The system MUST declare iPad support, occupy the full available scene when the user chooses full screen, and adapt without clipping or fixed phone letterboxing when iPadOS resizes the app in portrait or landscape.
+
+#### Scenario: User opens MeTravel full screen on iPad
+- **WHEN** an iPad user opens or zooms the app to full screen
+- **THEN** the native scene uses the available iPad window bounds rather than a fixed iPhone compatibility frame
+- **AND** the app header, content, overlays, and tab navigation remain reachable within safe areas
+
+#### Scenario: User resizes or rotates the iPad window
+- **WHEN** iPadOS changes the MeTravel scene between supported portrait, landscape, full-screen, and windowed sizes
+- **THEN** shared responsive screens reflow using the new available dimensions
+- **AND** the transition does not hide primary actions, strand modal content, or require an app restart
+
 ### Requirement: Launch-critical product flows
-The system SHALL support anonymous discovery, travel and quest details, maps and places, authentication, profile and settings, account deletion, media selection, sharing, and notification settings on iPhone without changing their established product meaning on other supported surfaces.
+The system SHALL support anonymous discovery, travel and quest details, maps and places, authentication, profile and settings, account deletion, media selection, sharing, and notification settings on iPhone and iPad without changing their established product meaning on other supported surfaces.
 
 #### Scenario: Guest explores MeTravel
-- **WHEN** a signed-out user opens the iPhone app and navigates through discovery, travel details, quest details, and public maps
+- **WHEN** a signed-out user opens the Apple mobile app and navigates through discovery, travel details, quest details, and public maps
 - **THEN** public content remains available without forced registration
 - **AND** account-only actions explain and open authentication only when invoked
 
@@ -81,23 +94,23 @@ The system SHALL open supported `https://metravel.by` links at the equivalent in
 - **THEN** the app does not execute or interpolate untrusted content
 - **AND** it opens a safe app fallback or leaves the HTTPS URL to the system browser
 
-### Requirement: Localized and accessible iPhone experience
+### Requirement: Localized and accessible Apple mobile experience
 The system SHALL expose app-owned runtime copy, native permission copy, errors, dates, numbers, and accessibility names in RU, BE, UK, PL, and EN, with RU as fallback, and SHALL preserve the chosen locale after a cold restart.
 
 #### Scenario: User changes locale and restarts
-- **WHEN** a user selects any supported locale and fully restarts the iPhone app
+- **WHEN** a user selects any supported locale and fully restarts the iPhone or iPad app
 - **THEN** the selected locale is restored before launch-critical app copy is shown
 - **AND** no untranslated key is visible in the tested core flows
 
-#### Scenario: User uses iPhone accessibility settings
-- **WHEN** the user enables larger text, VoiceOver, or reduced motion in a launch-critical flow
+#### Scenario: User uses Apple mobile accessibility settings
+- **WHEN** the user enables larger text, VoiceOver, or reduced motion in a launch-critical iPhone or iPad flow
 - **THEN** primary actions remain named, reachable, ordered, and tappable
 - **AND** essential content is not hidden behind the notch, home indicator, keyboard, or clipped text
 
 ### Requirement: Cross-platform regression containment
-The system MUST preserve desktop web, mobile web, and Android behavior when shared code is changed for iPhone support.
+The system MUST preserve desktop web, mobile web, and Android behavior when shared code is changed for iPhone or iPad support.
 
 #### Scenario: Shared implementation changes
-- **WHEN** an iPhone fix modifies a shared screen, service, storage adapter, localization resource, or navigation contract
+- **WHEN** an iPhone or iPad fix modifies a shared screen, service, storage adapter, localization resource, or navigation contract
 - **THEN** the affected desktop-web scenario still passes
 - **AND** the equivalent mobile-web and Android scenarios pass as a paired control

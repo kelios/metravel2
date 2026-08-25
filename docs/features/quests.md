@@ -294,7 +294,15 @@ tripvenue резолвит по ближайшему городу каталог
    отзыва; при незасчитанном — сколько точек не хватает.
 6. **Отзывы.** `QuestReviewSection` (звёзды → `useQuestRatingMutation`, текст →
    `useQuestReview`) и `QuestReviewsModal` (чужие отзывы, открывается чипом
-   рейтинга в шапке детали).
+   рейтинга в шапке детали). «Спасибо за отзыв» показывается только за
+   подтверждённое сервером сохранение, при ошибке — сообщение и форма с
+   введённым (#1486). Успешное сохранение шлёт `quest_review_submit`
+   (`utils/questReviewAnalytics.ts`) из `onSuccess` мутации — один раз на
+   отправку и никогда при ошибке. Агрегированная оценка показывается только от
+   трёх отзывов: порог `QUEST_RATING_MIN_REVIEWS` / `hasPublicQuestRating`
+   (`api/questRating.ts`) применяется в обеих ветках карточки каталога и в чипе
+   шапки детали; ниже порога чип детали остаётся входом в читалку и показывает
+   количество отзывов вместо оценки.
 7. **Печать.** `generatePrintableQuest` (web-only) собирает HTML-книгу: обложка,
    карта (SVG/canvas/Leaflet-датаурл), шаги с QR навигации, финал/диплом,
    «страница ведущего» с `answerDisplay`. Лендинг сценария — `/quests/scenario`.
@@ -388,8 +396,9 @@ tripvenue резолвит по ближайшему городу каталог
 - Тестовые данные: e2e гоняются на мок-квестах (`e2e-minsk-quest`,
   `e2e-warsaw-quest`, `e2e-video-quest`, `e2e-reviews-quest`) через перехват
   роутов, продовых записей не создают. DEV-моки в коде: `QUEST_RATING_MOCK =
-  true` (оценка держится в памяти в `__DEV__`), мок публичных отзывов при `404`
-  только в `__DEV__` — на проде честно пусто. `QUEST_COMPLETION_MOCK = false`.
+  true` (оценка держится в памяти в `__DEV__`), `QUEST_COMPLETION_MOCK = false`.
+  Мока публичных отзывов больше нет: удалён в #1486 вместе с выдуманными
+  авторами — при `404` и пустом ответе читалка честно пуста во всех окружениях.
 
 ## Кросс-платформенность
 
@@ -434,7 +443,8 @@ native-геозоны используют только координаты ш�
   `/api/quests/by-city/{cityId}/`, `/api/quests/{id}/`,
   `/api/quests/near-location/`, `/api/quest-progress/` (+ `/quest/{questId}/`,
   `PATCH /{id}/`, `DELETE /{id}/`), `/api/quest-answer-attempts/bulk/`,
-  `/api/quests/{id}/rate/`, `/api/quest-reviews/`,
+  `/api/quests/{id}/rate/` (на проде отсутствует, см. «Открытые вопросы»),
+  `/api/quest-reviews/`,
   `/api/quests/quest{questId}/review/users/{userId}/`,
   `/api/quests/quest{questId}/reviews/`, `/api/quests/{id}/answer-stats/`
   (staff, только скрипт инсайтов).
@@ -595,11 +605,15 @@ E2E (Playwright): `e2e/quests-list-detail.spec.ts` (каталог → дета�
 - `useQuestBundle` не переведён на React Query: ключ `queryKeys.questBundle`
   объявлен и не используется, дедупликации и общего инвалидационного контракта у
   детали нет.
-- `fetchQuestReviews` и `api/questReview.ts` описаны как контракт ожидаемого
-  эндпоинта — реализован ли `GET /api/quests/quest{id}/reviews/` и
-  `POST /api/quest-reviews/` на проде, по коду не установить.
-- `QUEST_RATING_MOCK = true` держит DEV-оценку в памяти; статус реального
-  `POST /api/quests/{id}/rate/` на проде из репозитория не проверяется.
+- `POST /api/quests/{id}/rate/` на проде **не существует** (проба 25.08.2026 →
+  `404`, экшена нет и в `quests/views.py`): тап по звезде бьёт в несуществующий
+  роут, а в DEV это скрыто `QUEST_RATING_MOCK`. Оценка доезжает до бэка только
+  вместе с отправкой отзыва (`POST /api/quest-reviews/`), из которой и считается
+  агрегат. Заведена отдельная задача.
+- UGC после финиша закрыт частично (#1486): фото игрока (до 3), модерация
+  отзывов и структурная отметка «точка требует проверки» с порогом ≥2 требуют
+  backend-полей и вынесены в `area=back`; контракт — в
+  `openspec/changes/extend-quest-review-ugc/design.md` §5.
 - `geo_verify` приходит в API и не используется фронтендом: задумывалась ли
   клиентская проверка присутствия на точке — не установлено.
 - `scripts/quest-answer-insights.js` не фильтрует тестовые/QA-прохождения:

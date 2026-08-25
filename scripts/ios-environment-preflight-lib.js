@@ -37,14 +37,22 @@ function isIosRuntime(runtime) {
     /\.SimRuntime\.iOS-/.test(String(runtime?.identifier || ''));
 }
 
-function concreteIphoneDestinations(output, expectedRuntime = null) {
+function concreteDeviceDestinations(output, devicePattern, expectedRuntime = null) {
   return (availableDestinationsOutput(output).match(/\{[^}]+\}/g) || []).filter(destination =>
     /platform:\s*iOS Simulator/.test(destination) &&
-    /name:\s*iPhone\b/.test(destination) &&
+    devicePattern.test(destination) &&
     !/placeholder/i.test(destination) &&
     !/\berror:/i.test(destination) &&
     (!expectedRuntime || destination.match(/\bOS:\s*([^,}\s]+)/)?.[1] === expectedRuntime)
   );
+}
+
+function concreteIphoneDestinations(output, expectedRuntime = null) {
+  return concreteDeviceDestinations(output, /name:\s*iPhone\b/, expectedRuntime);
+}
+
+function concreteIpadDestinations(output, expectedRuntime = null) {
+  return concreteDeviceDestinations(output, /name:\s*iPad\b/, expectedRuntime);
 }
 
 function validatePodsEnvironment(root) {
@@ -138,11 +146,18 @@ function validateIosEnvironmentEvidence(evidence, options = {}) {
     });
   }
 
-  const destinations = concreteIphoneDestinations(evidence.destinations, expectedRuntime);
-  if (destinations.length === 0) {
+  const iphoneDestinations = concreteIphoneDestinations(evidence.destinations, expectedRuntime);
+  const ipadDestinations = concreteIpadDestinations(evidence.destinations, expectedRuntime);
+  if (iphoneDestinations.length === 0) {
     errors.push({
       code: 'IOS_ENV_ELIGIBLE_IPHONE_DESTINATION',
       detail: 'Xcode exposes no concrete eligible iPhone simulator destination',
+    });
+  }
+  if (ipadDestinations.length === 0) {
+    errors.push({
+      code: 'IOS_ENV_ELIGIBLE_IPAD_DESTINATION',
+      detail: 'Xcode exposes no concrete eligible iPad simulator destination',
     });
   }
 
@@ -154,7 +169,9 @@ function validateIosEnvironmentEvidence(evidence, options = {}) {
     errors,
     expectedRuntime,
     matchingRuntimes,
-    destinations,
+    destinations: [...iphoneDestinations, ...ipadDestinations],
+    iphoneDestinations,
+    ipadDestinations,
   };
 }
 
@@ -202,6 +219,7 @@ function inspectIosEnvironment(options = {}) {
 
 module.exports = {
   DEFAULT_PROJECT,
+  concreteIpadDestinations,
   concreteIphoneDestinations,
   inspectIosEnvironment,
   isIosRuntime,

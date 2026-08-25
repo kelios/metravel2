@@ -1,5 +1,6 @@
 // components/MapPage/map/utils.ts
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { getMapPointIdentityKey } from '@/api/mapPlaces';
 
 const parseCache = new Map<string, [number, number] | null>();
 const MAX_PARSE_CACHE = 6000;
@@ -85,14 +86,10 @@ export const generateUniqueId = () =>
 
 /**
  * Stable identity of a map point for React keys / imperative marker diffing.
- * Position is part of the identity: a point that moved must be re-created, not
- * silently left at its old coordinates.
+ * Определение переехало в `@/api/mapPlaces` (#1571): тот же ключ служит
+ * legacy-fallback для placeKey; здесь остаётся ре-экспорт для прежних импортёров.
  */
-export const getMapPointIdentityKey = (point: { id?: unknown; coord?: unknown }): string => {
-  const id = point?.id != null ? String(point.id).trim() : '';
-  const coord = String(point?.coord ?? '').replace(/,/g, '-');
-  return id ? `travel-${id}@${coord}` : `travel-${coord}`;
-};
+export { getMapPointIdentityKey };
 
 /**
  * Everything a marker/popup actually renders. Used both to decide whether a cached

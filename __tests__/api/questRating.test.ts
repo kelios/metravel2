@@ -32,7 +32,12 @@ jest.mock('@/context/AuthContext', () => ({
 }))
 
 import { apiClient, ApiError } from '@/api/client'
-import { rateQuest, getUserQuestRating } from '@/api/questRating'
+import {
+  rateQuest,
+  getUserQuestRating,
+  hasPublicQuestRating,
+  QUEST_RATING_MIN_REVIEWS,
+} from '@/api/questRating'
 import { useQuestRatingMutation } from '@/hooks/useQuestRating'
 import { queryKeys } from '@/api/queryKeys'
 import { type ApiQuestMeta } from '@/api/quests'
@@ -96,6 +101,25 @@ const makeWrapper = (client: QueryClient) =>
   function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(QueryClientProvider, { client }, children)
   }
+
+// #1486: порог публичного агрегата. Держится одной константой, потому что
+// показывается он из трёх мест — карточка каталога (два макета) и шапка детали.
+describe('hasPublicQuestRating', () => {
+  it('требует выборку не меньше порога', () => {
+    expect(QUEST_RATING_MIN_REVIEWS).toBe(3)
+    expect(hasPublicQuestRating(0)).toBe(false)
+    expect(hasPublicQuestRating(1)).toBe(false)
+    expect(hasPublicQuestRating(2)).toBe(false)
+    expect(hasPublicQuestRating(3)).toBe(true)
+    expect(hasPublicQuestRating(42)).toBe(true)
+  })
+
+  it('не падает на отсутствующем счётчике', () => {
+    expect(hasPublicQuestRating(null)).toBe(false)
+    expect(hasPublicQuestRating(undefined)).toBe(false)
+    expect(hasPublicQuestRating(Number.NaN)).toBe(false)
+  })
+})
 
 describe('hooks/useQuestRating', () => {
   beforeEach(() => {

@@ -14,6 +14,8 @@ import { translate as i18nT } from '@/i18n'
 type Props = {
   questId: string
   questNumericId: number | undefined
+  /** Город квеста — уходит в событие аналитики вместе с отзывом. */
+  cityId?: string
   // Живая оценка пользователя (из useQuestRatingMutation): единственный источник
   // звёзд в этом блоке — они же кормят общий рейтинг квеста через onRate.
   userRating?: number | null
@@ -26,7 +28,9 @@ const clampRating = (value: number): QuestRating =>
   Math.max(1, Math.min(5, Math.round(value))) as QuestRating
 
 function QuestReviewSection({
+  questId,
   questNumericId,
+  cityId,
   userRating,
   onRate,
   isRatingSubmitting = false,
@@ -36,15 +40,16 @@ function QuestReviewSection({
   const styles = useMemo(() => createStyles(colors), [colors])
   const { isAuthenticated, requireAuth } = useRequireAuth({ intent: 'rate' })
 
-  const { review, isSubmitting, isSubmitted, submit } = useQuestReview({
+  const { review, isSubmitting, isSubmitted, hasError, submit } = useQuestReview({
     questId: questNumericId,
+    questSlug: questId,
+    cityId,
     enabled: !!questNumericId,
   })
 
   const [rating, setRating] = useState(0)
   const [liked, setLiked] = useState('')
   const [disliked, setDisliked] = useState('')
-  const [submittedLocally, setSubmittedLocally] = useState(false)
 
   const liveRating =
     typeof userRating === 'number' && Number.isFinite(userRating) && userRating > 0
@@ -52,15 +57,21 @@ function QuestReviewSection({
       : 0
   const effectiveRating = rating || liveRating || review?.rating || 0
   const alreadyReviewed = !!review && !isSubmitted
-  // Оценка (/rate/) сохраняется живьём при тапе по звезде, поэтому благодарим,
-  // как только оценка выставлена и пользователь нажал «Отправить» — даже если
-  // текстовый эндпоинт отзывов ещё не на бэке (BE #487).
-  const showSuccess = alreadyReviewed || isSubmitted || (submittedLocally && effectiveRating > 0)
+  // Благодарим только за подтверждённое сервером сохранение. Здесь была
+  // оптимистичная ветка «оценка выставлена и нажата отправка»: её писали, пока
+  // эндпоинт отзывов ждали от бэка (#487). Эндпоинт вышел, и с ним ветка стала
+  // означать «Спасибо за отзыв» поверх упавшего запроса — отзыва нет, а игрок
+  // уверен, что оставил его (#1486).
+  const showSuccess = alreadyReviewed || isSubmitted
 
   // Оценка обязательна (BE: rating 1..5, NOT NULL). Тексты — опциональны.
   const canSubmit = effectiveRating > 0
 
-  // Тап по звезде сразу сохраняет оценку в общий рейтинг квеста (живой /rate/).
+  // Тап по звезде шлёт оценку в `/quests/{id}/rate/`. ВНИМАНИЕ: на проде этого
+  // роута нет (проба 25.08.2026 → `404`), в DEV он подменён моком
+  // `QUEST_RATING_MOCK`, так что живого сохранения по тапу сегодня не
+  // происходит — оценка доезжает до бэка только вместе с отправкой отзыва,
+  // из которой и считается агрегат квеста. Заведено отдельной задачей.
   const handleRate = (value: number) => {
     if (!isAuthenticated) {
       requireAuth()
@@ -80,7 +91,6 @@ function QuestReviewSection({
     // Убеждаемся, что оценка сохранена (на случай префилла без ручного тапа).
     onRate?.(clampRating(effectiveRating))
     submit({ rating: effectiveRating, liked: liked.trim(), disliked: disliked.trim() })
-    setSubmittedLocally(true)
   }
 
   if (showSuccess) {
@@ -144,6 +154,12 @@ function QuestReviewSection({
         />
       </View>
 
+      {hasError && (
+        <Text style={styles.errorText} testID={`${testID}-error`}>
+          {i18nT('errorsStatic:api.misc.sendFailed')}
+        </Text>
+      )}
+
       <Button
         variant="primary"
         label={i18nT('quests:components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0')}
@@ -205,6 +221,11 @@ const createStyles = (colors: any) =>
     },
     submitButton: {
       alignSelf: 'flex-start',
+    },
+    errorText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.error,
     },
     successBox: {
       paddingVertical: 16,

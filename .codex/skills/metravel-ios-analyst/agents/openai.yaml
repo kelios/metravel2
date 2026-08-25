@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel iOS Analyst"
-  short_description: "Define MeTravel iPhone release requirements."
-  default_prompt: "Use $metravel-ios-analyst to define the iPhone release scope, Apple compliance requirements, evidence layers, non-goals, and owner actions before architecture or implementation."
+  short_description: "Define iPhone and iPad release requirements."
+  default_prompt: "Use $metravel-ios-analyst to define universal iPhone/iPad release scope, Apple compliance, evidence layers, non-goals, and owner actions before implementation."

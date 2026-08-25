@@ -18,7 +18,27 @@ export type QuestWizardResponsiveModel = {
 }
 
 export function useQuestWizardResponsiveModel() {
-  const { width, height, isMobile } = useResponsive()
+  // `clientOnly` обязателен: без него первый кадр визарда считается на
+  // `SSR_SNAPSHOT = {width: 0}` (`hooks/useResponsive.ts:166,265`), то есть по
+  // мобильной ветке — `isMobile`, `compactNav` и `screenW < 600` истинны при
+  // любой реальной ширине. Следующий кадр приходит с настоящей шириной и
+  // перекладывает шапку: счётчик прогресса 9 → 22 px (`showText={!isMobile}`,
+  // `questWizardShell.tsx:614`) и лента шагов «точки» → «пилюли» с
+  // `minHeight: 44` (`questWizardShell.tsx:661`). На проде это давало CLS 0,40
+  // на desktop-ширинах < 1280 (#1562) — тот же класс, что #1282/#1298.
+  //
+  // Опция здесь безопасна: на web поддерево визарда монтируется только после
+  // гидратации. В `app/(tabs)/quests/[city]/[questId].tsx` это `React.lazy` +
+  // `Suspense` вокруг `QuestWizardComponent` и ранний return `LoadingState` по
+  // `isLoading`, который на первом рендере всегда true — `useQuestBundle`
+  // стартует с `loading: true`. В статическом HTML прода разметки визарда нет
+  // (только «Загружаем квест…»), поэтому hydration mismatch (#418) невозможен.
+  //
+  // Отвергнутая альтернатива: зафиксировать ленте шагов и счётчику `minHeight`
+  // под финальную геометрию. Не годится — высота ленты зависит от числа шагов и
+  // длины названий, а горизонтальный padding контейнера всё равно переключается
+  // 16 → 24 по тому же `isMobile`.
+  const { width, height, isMobile } = useResponsive({ clientOnly: true })
 
   return useMemo<QuestWizardResponsiveModel>(() => {
     const isSmallScreen = width < 360

@@ -19,6 +19,8 @@ contract implicated by the complete task diff.
   permissions, error recovery, and unsupported-device behavior.
 - Bundle identity/version, resolved Expo/Xcode parity, plist, entitlements,
   privacy manifest, production origins, placeholders, and secret leakage.
+- Universal device family, iPad full-screen/resizable portrait-landscape scene
+  geometry, and responsive behavior without fixed phone compatibility framing.
 - Apple login server boundary, Keychain lifecycle, Universal Link host/route
   validation, APNs permission/token/update/removal, and WebView message trust.
 - RU/BE/UK/PL/EN copy and persistence, VoiceOver/Dynamic Type/reduced motion,
