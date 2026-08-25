@@ -18,6 +18,7 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useSuggestPoint } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { isValidCoordinate } from '@/utils/coordinates';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -33,12 +34,12 @@ interface Props {
 // (`validate_route_point_attrs`) отклоняет его с 400. Тип стоял ещё и первым в
 // ряду, поэтому отказ получал каждый, кто не переключил чип вручную. Тот же
 // инвариант, что в конструкторе маршрута (#1532), но другой файл и эндпоинт.
-const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
+const POINT_TYPES: RoutePointType[] = ['custom', 'rest', 'overnight'];
 
 // Все оставшиеся типы бэкенд считает координатными и требует у них пару lat/lng
 // в границах координат (`validate_route_point_attrs`). Разбор до отправки
 // оставляет пользователю понятную причину отказа вместо общего «не удалось
-// отправить» на 400.
+// отправить» на 400. Сами границы держит канонический `isValidCoordinate`.
 const parseCoordinate = (value: string): number | null => {
   const text = value.trim();
   if (!text) return null;
@@ -51,7 +52,7 @@ function TripSuggestPointForm({ trip }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const suggest = useSuggestPoint();
 
-  const [type, setType] = useState<RoutePointType>('place');
+  const [type, setType] = useState<RoutePointType>('custom');
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
@@ -71,14 +72,7 @@ function TripSuggestPointForm({ trip }: Props) {
 
     const latNum = parseCoordinate(lat);
     const lngNum = parseCoordinate(lng);
-    if (
-      latNum == null ||
-      lngNum == null ||
-      latNum < -90 ||
-      latNum > 90 ||
-      lngNum < -180 ||
-      lngNum > 180
-    ) {
+    if (latNum == null || lngNum == null || !isValidCoordinate(latNum, lngNum)) {
       setSubmitError(i18nT('trips:components.trips.planning.TripSuggestPointForm.ukazhite_shirotu_ot_90_do_90_i_dolgotu_ot_1_915743a7'));
       return;
     }
