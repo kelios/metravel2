@@ -23,6 +23,7 @@
 const https = require('https')
 const { getAccessToken } = require('./lib/google-token')
 const {
+  ExpectedFailureError,
   UsageError,
   parseCliArgs,
   requireNonEmptySelection,
@@ -44,6 +45,9 @@ const KIND_TRAVEL = 'travel'
 const KIND_QUEST_PAGE = 'quest-page'
 const KIND_QUEST_CITY = 'quest-city'
 const KIND_STATIC = 'static'
+
+const INDEXED_VERDICT = 'PASS'
+const NOT_INDEXED_VERDICTS = new Set(['PARTIAL', 'FAIL', 'NEUTRAL'])
 
 const KIND_LABELS = {
   [KIND_TRAVEL]: 'Статьи /travels/<slug>',
@@ -119,12 +123,10 @@ function sleep(ms) {
 
 // Google mints an access token for 3599 s (probe 25.08.2026), and URL Inspection
 // answers in ~6.7 s, so `--section all` over the 673 URLs of sitemap.xml runs
-// longer than the token lives. Taken once before the loop — as it was until #1559,
-// when the longest run was 310 articles and fitted in the hour — the token dies
-// mid-run and every remaining inspection comes back HTTP 401, which the loop below
-// files as `verdict: ERROR`, i.e. as «не в индексе». That would be an auth failure
-// printed as an index verdict, on the one run whose job is to say how much of the
-// site Google has.
+// longer than the token lives. If it were still taken once before the loop — as it
+// was when the longest run was 310 articles and fitted in the hour — it would die
+// mid-run and the remaining inspections would come back HTTP 401. Refresh before
+// expiry, and treat a failed retry as a run failure rather than an index verdict.
 const TOKEN_MAX_AGE_MS = 45 * 60 * 1000
 
 function createTokenSource() {
@@ -155,7 +157,6 @@ const FETCH_TIMEOUT_MS = 30000
 function fetchText(url, hop = 0) {
   return new Promise((resolve, reject) => {
     const opts = {
-      rejectUnauthorized: false,
       timeout: FETCH_TIMEOUT_MS,
       headers: { 'User-Agent': 'metravel-index-status' },
     }
@@ -325,10 +326,12 @@ async function inspect(token, site, inspectionUrl) {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(body),
     },
+    timeout: FETCH_TIMEOUT_MS,
   }
   return new Promise((resolve, reject) => {
     const req = https.request(options, (res) => {
       let data = ''
+      res.setEncoding('utf8')
       res.on('data', (c) => (data += c))
       res.on('end', () => {
         if (res.statusCode === 200) {
@@ -343,6 +346,9 @@ async function inspect(token, site, inspectionUrl) {
       })
     })
     req.on('error', reject)
+    req.on('timeout', () => {
+      req.destroy(new Error(`URL Inspection did not answer in ${FETCH_TIMEOUT_MS} ms`))
+    })
     req.write(body)
     req.end()
   })
@@ -351,7 +357,7 @@ async function inspect(token, site, inspectionUrl) {
 function classify(r) {
   const idx = (r && r.inspectionResult && r.inspectionResult.indexStatusResult) || {}
   return {
-    verdict: idx.verdict || 'UNKNOWN', // PASS | NEUTRAL | FAIL
+    verdict: idx.verdict || 'UNKNOWN', // PASS | PARTIAL | FAIL | NEUTRAL
     coverageState: idx.coverageState || 'Unknown',
     robotsTxtState: idx.robotsTxtState || null,
     indexingState: idx.indexingState || null,
@@ -361,6 +367,67 @@ function classify(r) {
     userCanonical: idx.userCanonical || null,
     link: (r && r.inspectionResult && r.inspectionResult.inspectionResultLink) || null,
   }
+}
+
+function inspectionOutcome(verdict) {
+  if (verdict === INDEXED_VERDICT) return 'indexed'
+  if (NOT_INDEXED_VERDICTS.has(verdict)) return 'notIndexed'
+  return 'unchecked'
+}
+
+function summarizeItems(items) {
+  const byCoverageState = {}
+  const byKind = {}
+  const problems = []
+  const uncheckedItems = []
+  let indexed = 0
+  let notIndexed = 0
+  let unchecked = 0
+
+  for (const item of items) {
+    byCoverageState[item.coverageState] = (byCoverageState[item.coverageState] || 0) + 1
+    const bucket =
+      byKind[item.kind] ||
+      (byKind[item.kind] = { total: 0, indexed: 0, notIndexed: 0, unchecked: 0 })
+    const outcome = inspectionOutcome(item.verdict)
+    bucket.total++
+    bucket[outcome]++
+    if (outcome === 'indexed') indexed++
+    else if (outcome === 'notIndexed') {
+      notIndexed++
+      problems.push(item)
+    } else {
+      unchecked++
+      uncheckedItems.push(item)
+    }
+  }
+
+  return {
+    total: items.length,
+    indexed,
+    notIndexed,
+    unchecked,
+    byKind,
+    byCoverageState,
+    problems,
+    uncheckedItems,
+  }
+}
+
+class FatalInspectionError extends Error {}
+
+function assertInspectionCanContinue(resp, url) {
+  if (resp.ok || ![401, 403, 429].includes(resp.status)) return
+  throw new FatalInspectionError(
+    `URL Inspection ${url} answered HTTP ${resp.status}; refusing to continue an incomplete run`,
+  )
+}
+
+function assertCompleteSummary(summary) {
+  if (!summary.unchecked) return
+  throw new ExpectedFailureError(
+    `${summary.unchecked} URL не проверено — полный срез недействителен до успешного повтора`,
+  )
 }
 
 async function main() {
@@ -377,11 +444,6 @@ async function main() {
   }
 
   const items = []
-  const byState = {}
-  // Keyed by kind, not by `--section`: the two taxonomies are different (there is
-  // no `--section quest-city`), and the same JSON already carries `section` at the
-  // top level, so one name for both would send a reader to a flag that does not exist.
-  const byKind = {}
   let done = 0
   for (const t of targets) {
     const url = t.url
@@ -401,43 +463,38 @@ async function main() {
         await sleep(60000)
         resp = await inspect(await getToken(), args.site, url)
       }
+      // Auth, property access and exhausted quota are run-wide preconditions. If
+      // a permitted refresh/backoff did not recover them, stop instead of spending
+      // the remaining quota on hundreds of rows that can only be unchecked.
+      assertInspectionCanContinue(resp, url)
       info = resp.ok ? classify(resp.result) : { verdict: 'ERROR', coverageState: `HTTP ${resp.status}` }
     } catch (e) {
+      if (e instanceof FatalInspectionError) throw e
       info = { verdict: 'ERROR', coverageState: e.message.slice(0, 60) }
     }
     // verdict PASS == "URL is on Google" (indexed). NEUTRAL/FAIL == not indexed.
     const indexed = info.verdict === 'PASS'
     const row = { id: t.id, name: t.name, url, kind: t.kind, indexed, ...info }
     items.push(row)
-    byState[info.coverageState] = (byState[info.coverageState] || 0) + 1
-    const bucket = byKind[t.kind] || (byKind[t.kind] = { total: 0, indexed: 0, notIndexed: 0 })
-    bucket.total++
-    bucket[indexed ? 'indexed' : 'notIndexed']++
     done++
     if (!args.json && done % 25 === 0) console.error(`   …${done}/${targets.length}`)
     if (args.delayMs) await sleep(args.delayMs)
   }
 
-  const problems = items.filter((r) => !r.indexed)
-  // A URL the run could not inspect is «нет данных», not «не в индексе». It stays
-  // counted in notIndexed, so the field means for the daily run exactly what it
-  // meant before, but it is also named on its own: шаг 1.2 of the seo-daily routine
-  // files a card when notIndexed grows, and a dead token or a 500 must not be what
-  // raises it.
-  const unchecked = items.filter((r) => r.verdict === 'ERROR').length
+  const summary = summarizeItems(items)
   const result = {
     source: 'gsc-url-inspection',
     site: args.site,
     section,
     userId,
     checkedAt: new Date().toISOString(),
-    total: items.length,
-    indexed: items.length - problems.length,
-    notIndexed: problems.length,
-    unchecked,
-    byKind,
-    byCoverageState: byState,
-    problems: problems.map((p) => ({
+    total: summary.total,
+    indexed: summary.indexed,
+    notIndexed: summary.notIndexed,
+    unchecked: summary.unchecked,
+    byKind: summary.byKind,
+    byCoverageState: summary.byCoverageState,
+    problems: summary.problems.map((p) => ({
       id: p.id,
       name: p.name,
       url: p.url,
@@ -448,10 +505,19 @@ async function main() {
       lastCrawlTime: p.lastCrawlTime,
       googleCanonical: p.googleCanonical,
     })),
+    uncheckedItems: summary.uncheckedItems.map((p) => ({
+      id: p.id,
+      name: p.name,
+      url: p.url,
+      kind: p.kind,
+      coverageState: p.coverageState,
+      verdict: p.verdict,
+    })),
   }
 
   if (args.json) {
     process.stdout.write(JSON.stringify(result, null, 2) + '\n')
+    assertCompleteSummary(summary)
     return
   }
 
@@ -460,32 +526,43 @@ async function main() {
   console.log(`   Всего проверено: ${result.total}`)
   console.log(`   ✅ В индексе:     ${result.indexed}`)
   console.log(`   ❌ Не в индексе:  ${result.notIndexed}`)
-  if (unchecked) {
-    console.log(`   ⚠️  Из них не проверено (ошибка запроса, не вердикт Google): ${unchecked}`)
-  }
+  console.log(`   ⚠️  Не проверено:    ${result.unchecked}`)
   console.log('')
-  const kindKeys = Object.keys(byKind)
+  // Keyed by kind, not by `--section`: the two taxonomies are different (there is
+  // no `--section quest-city`), and the same JSON already carries `section` at the
+  // top level, so one name for both would send a reader to a flag that does not exist.
+  const kindKeys = Object.keys(summary.byKind)
   if (kindKeys.length > 1) {
     console.log('   Виды страниц:')
     for (const kind of kindKeys) {
-      const b = byKind[kind]
+      const b = summary.byKind[kind]
       const label = KIND_LABELS[kind] || kind
-      console.log(`     ${String(b.total).padStart(4)} | ${label}: ✅ ${b.indexed} / ❌ ${b.notIndexed}`)
+      console.log(
+        `     ${String(b.total).padStart(4)} | ${label}: ` +
+          `✅ ${b.indexed} / ❌ ${b.notIndexed} / ⚠️ ${b.unchecked}`,
+      )
     }
     console.log('')
   }
   console.log('   Причины (coverageState):')
-  for (const [state, n] of Object.entries(byState).sort((a, b) => b[1] - a[1])) {
+  for (const [state, n] of Object.entries(summary.byCoverageState).sort((a, b) => b[1] - a[1])) {
     console.log(`     ${String(n).padStart(4)} | ${state}`)
   }
-  if (problems.length) {
+  if (summary.problems.length) {
     console.log(`\n   ❌ Не проиндексированные${args.onlyProblems ? '' : ' (первые 40)'}:`)
-    const show = args.onlyProblems ? problems : problems.slice(0, 40)
+    const show = args.onlyProblems ? summary.problems : summary.problems.slice(0, 40)
     for (const p of show) {
       console.log(`     [${p.id === null ? p.kind : p.id}] ${p.coverageState} | ${p.url}`)
     }
   }
+  if (summary.uncheckedItems.length) {
+    console.log('\n   ⚠️  Не проверенные адреса (ошибка запроса):')
+    for (const p of summary.uncheckedItems) {
+      console.log(`     [${p.id === null ? p.kind : p.id}] ${p.coverageState} | ${p.url}`)
+    }
+  }
   console.log('')
+  assertCompleteSummary(summary)
 }
 
 if (require.main === module) {
@@ -497,11 +574,16 @@ module.exports = {
   SECTIONS,
   TOKEN_MAX_AGE_MS,
   USAGE,
+  assertCompleteSummary,
+  assertInspectionCanContinue,
   classify,
   classifyUrl,
   createTokenSource,
+  inspect,
+  inspectionOutcome,
   parseArgs,
   parseSitemap,
   pickListRows,
   resolveSection,
+  summarizeItems,
 }

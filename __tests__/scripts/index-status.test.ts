@@ -23,14 +23,22 @@ const { getAccessToken } = require('@/scripts/lib/google-token')
 const {
   SECTIONS,
   TOKEN_MAX_AGE_MS,
+  assertCompleteSummary,
+  assertInspectionCanContinue,
   classify,
   classifyUrl,
   createTokenSource,
+  inspect,
+  inspectionOutcome,
   parseArgs,
   parseSitemap,
   pickListRows,
   resolveSection,
+  summarizeItems,
 } = require('@/scripts/index-status')
+
+const https = require('https')
+const { EventEmitter } = require('events')
 
 describe('pickListRows', () => {
   it('reads the current API envelope {count, next, results}', () => {
@@ -236,6 +244,62 @@ describe('createTokenSource', () => {
     // instead of collecting one HTTP 401 row after another.
     getAccessToken.mockRejectedValueOnce(new Error('OAuth refresh failed (400)'))
     await expect(getToken()).rejects.toThrow('OAuth refresh failed')
+  })
+})
+
+describe('inspection result semantics', () => {
+  it('keeps request failures and unknown payloads out of the Google not-indexed count', () => {
+    expect(inspectionOutcome('PASS')).toBe('indexed')
+    expect(inspectionOutcome('NEUTRAL')).toBe('notIndexed')
+    expect(inspectionOutcome('FAIL')).toBe('notIndexed')
+    expect(inspectionOutcome('ERROR')).toBe('unchecked')
+    expect(inspectionOutcome('UNKNOWN')).toBe('unchecked')
+
+    const summary = summarizeItems([
+      { kind: 'travel', verdict: 'PASS', coverageState: 'Indexed' },
+      { kind: 'travel', verdict: 'NEUTRAL', coverageState: 'Discovered' },
+      { kind: 'quest-city', verdict: 'ERROR', coverageState: 'HTTP 500' },
+      { kind: 'quest-city', verdict: 'UNKNOWN', coverageState: 'Unknown' },
+    ])
+
+    expect(summary).toMatchObject({ total: 4, indexed: 1, notIndexed: 1, unchecked: 2 })
+    expect(summary.indexed + summary.notIndexed + summary.unchecked).toBe(summary.total)
+    expect(summary.byKind).toEqual({
+      travel: { total: 2, indexed: 1, notIndexed: 1, unchecked: 0 },
+      'quest-city': { total: 2, indexed: 0, notIndexed: 0, unchecked: 2 },
+    })
+    expect(summary.problems).toHaveLength(1)
+    expect(summary.uncheckedItems).toHaveLength(2)
+    expect(() => assertCompleteSummary(summary)).toThrow(/полный срез недействителен/)
+    expect(() => assertCompleteSummary({ unchecked: 0 })).not.toThrow()
+  })
+
+  it('stops on run-wide auth and quota failures after their allowed retry', () => {
+    for (const status of [401, 403, 429]) {
+      expect(() =>
+        assertInspectionCanContinue({ ok: false, status }, 'https://metravel.by/map'),
+      ).toThrow(new RegExp(`HTTP ${status}`))
+    }
+    expect(() =>
+      assertInspectionCanContinue({ ok: false, status: 500 }, 'https://metravel.by/map'),
+    ).not.toThrow()
+  })
+
+  it('times out a stalled URL Inspection request instead of hanging the sitemap run', async () => {
+    const request = new EventEmitter()
+    request.write = jest.fn()
+    request.end = jest.fn(() => request.emit('timeout'))
+    request.destroy = jest.fn((error) => request.emit('error', error))
+    const requestSpy = jest.spyOn(https, 'request').mockReturnValue(request)
+
+    try {
+      await expect(inspect('token', 'sc-domain:metravel.by', 'https://metravel.by/map')).rejects.toThrow(
+        /URL Inspection did not answer/,
+      )
+      expect(requestSpy.mock.calls[0][0].timeout).toBe(30_000)
+    } finally {
+      requestSpy.mockRestore()
+    }
   })
 })
 
