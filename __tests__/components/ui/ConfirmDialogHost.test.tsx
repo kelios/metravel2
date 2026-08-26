@@ -23,7 +23,16 @@ jest.mock('@/components/ui/ConfirmDialog', () => {
   }
 })
 
-import ConfirmDialogHost from '@/components/ui/ConfirmDialogHost'
+// Production keeps the dialog behind an async chunk. This wiring suite already
+// replaces the dialog itself, so resolve the lazy boundary to that same stub.
+jest.mock('@/components/layout/safeLazy', () => ({
+  __esModule: true,
+  safeLazy: () => require('@/components/ui/ConfirmDialog').default,
+}))
+
+// The RN Jest resolver prefers `.native.tsx`; this suite intentionally exercises
+// the web/common implementation that owns the external-store subscription.
+const ConfirmDialogHost = require('../../../components/ui/ConfirmDialogHost.tsx').default
 import { requestConfirmDialog, resolveConfirmDialog } from '@/components/ui/confirmDialogStore'
 
 describe('ConfirmDialogHost', () => {

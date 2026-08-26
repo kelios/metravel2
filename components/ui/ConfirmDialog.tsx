@@ -91,14 +91,13 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         })();
 
         const body = typeof document !== 'undefined' ? document.body : null;
-        // react-native-web keeps focus inside its active Modal DOM subtree. When
-        // a confirm is opened from such a modal, mounting the portal in `body`
-        // makes RNW immediately steal the initial focus back. Portal into the
-        // active parent dialog instead; the fixed overlay still covers it, and
-        // RNW now recognises the confirm controls as descendants of its trap.
+        // A nested RN Web Modal owns focus inside its dialog subtree. Portal the
+        // confirmation into that connected parent only; portaling to `body`
+        // creates a detached container in this renderer. Non-nested confirms
+        // stay in the eager host subtree and use the document-level trap.
         const openParentDialogs = body
             ? Array.from(body.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
-                .filter((element) => element.dataset.testid !== 'confirm-dialog')
+                .filter((element) => element.dataset.testid !== 'confirm-dialog' && element.isConnected)
             : [];
         const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
         const focusedDialogCandidate = typeof HTMLElement !== 'undefined' && activeElement instanceof HTMLElement
@@ -108,13 +107,13 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             ? focusedDialogCandidate
             : null;
         const activeParentDialog = focusedParentDialog ?? openParentDialogs.at(-1) ?? null;
-        const portalTarget = activeParentDialog ?? body;
 
         const content = visible ? (
             <View style={styles.webPortalRoot}>
                 <View style={styles.webBackdrop}>
                     <View
                         ref={dialogRef as unknown as React.Ref<View>}
+                        testID="confirm-dialog"
                         style={[
                             styles.dialog,
                             {
@@ -179,19 +178,11 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </View>
         ) : null;
 
-        const isJest = !!process.env.JEST_WORKER_ID;
-        const forcePortalInTests = process.env.CONFIRM_DIALOG_FORCE_PORTAL === '1';
-        const shouldUsePortal = portal && portalTarget && (!isJest || forcePortalInTests);
-
-        if (shouldUsePortal) {
-            return portal(content, portalTarget) as any;
+        if (portal && activeParentDialog) {
+            return portal(content, activeParentDialog) as any;
         }
 
-        return (
-            <View style={styles.webPortalRoot}>
-                {content}
-            </View>
-        );
+        return content;
     }
 
     return (

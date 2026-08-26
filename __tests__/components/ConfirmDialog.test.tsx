@@ -4,7 +4,6 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const mockCreatePortal = jest.fn((node: any, _container?: any) => node)
 const originalPlatform = Platform.OS
-const originalForcePortal = process.env.CONFIRM_DIALOG_FORCE_PORTAL
 
 jest.mock('react-dom', () => ({
   __esModule: true,
@@ -25,11 +24,6 @@ describe('ConfirmDialog', () => {
 
   afterEach(() => {
     Object.defineProperty(Platform, 'OS', { value: originalPlatform })
-    if (originalForcePortal === undefined) {
-      delete process.env.CONFIRM_DIALOG_FORCE_PORTAL
-    } else {
-      process.env.CONFIRM_DIALOG_FORCE_PORTAL = originalForcePortal
-    }
     document.body.replaceChildren()
   })
 
@@ -76,14 +70,13 @@ describe('ConfirmDialog', () => {
     expect(queryByText('Подтверждение')).toBeNull()
   })
 
-  it('renders via react-dom portal on web', () => {
+  it('renders in the connected web host and exposes a stable dialog test id', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' })
 
-    process.env.CONFIRM_DIALOG_FORCE_PORTAL = '1'
-
     mockCreatePortal.mockClear()
-    render(<ConfirmDialog {...defaultProps} />)
-    expect(mockCreatePortal).toHaveBeenCalled()
+    const { getByTestId } = render(<ConfirmDialog {...defaultProps} />)
+    expect(getByTestId('confirm-dialog')).toBeTruthy()
+    expect(mockCreatePortal).not.toHaveBeenCalled()
 
   })
 
@@ -100,8 +93,6 @@ describe('ConfirmDialog', () => {
     parentDialog.appendChild(staleConfirm)
     document.body.appendChild(parentDialog)
     staleConfirm.focus()
-
-    process.env.CONFIRM_DIALOG_FORCE_PORTAL = '1'
 
     render(<ConfirmDialog {...defaultProps} />)
 

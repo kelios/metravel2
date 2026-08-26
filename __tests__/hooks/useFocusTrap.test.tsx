@@ -34,14 +34,23 @@ function FocusTrapHarness({
   )
 }
 
-function StackedFocusTrapsHarness({ topEnabled = true }: { topEnabled?: boolean }) {
+function StackedFocusTrapsHarness({
+  topEnabled = true,
+  topHasFocusable = true,
+}: {
+  topEnabled?: boolean
+  topHasFocusable?: boolean
+}) {
   const lowerRef = useRef<HTMLDivElement>(null)
   const lowerInitialRef = useRef<HTMLButtonElement>(null)
   const topRef = useRef<HTMLDivElement>(null)
   const topInitialRef = useRef<HTMLButtonElement>(null)
 
   useFocusTrap(lowerRef, { initialFocus: lowerInitialRef })
-  useFocusTrap(topRef, { enabled: topEnabled, initialFocus: topInitialRef })
+  useFocusTrap(topRef, {
+    enabled: topEnabled,
+    initialFocus: topHasFocusable ? topInitialRef : undefined,
+  })
 
   return (
     <>
@@ -50,7 +59,9 @@ function StackedFocusTrapsHarness({ topEnabled = true }: { topEnabled?: boolean 
       </div>
       {topEnabled ? (
         <div ref={topRef} data-testid="top-trap">
-          <button ref={topInitialRef} data-testid="top-initial">Top initial</button>
+          {topHasFocusable ? (
+            <button ref={topInitialRef} data-testid="top-initial">Top initial</button>
+          ) : null}
         </div>
       ) : null}
     </>
@@ -60,6 +71,10 @@ function StackedFocusTrapsHarness({ topEnabled = true }: { topEnabled?: boolean 
 describe('useFocusTrap', () => {
   beforeAll(() => {
     ;(Platform as any).OS = 'web'
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
   })
 
   afterAll(() => {
@@ -112,6 +127,63 @@ describe('useFocusTrap', () => {
     expect(document.activeElement).toBe(lastButton)
 
     unmount()
+    outsideButton.remove()
+  })
+
+  it('reasserts initial focus on the next frame after a parent modal steals it', () => {
+    const queuedFrames: FrameRequestCallback[] = []
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      queuedFrames.push(callback)
+      return queuedFrames.length
+    })
+
+    const outsideButton = document.createElement('button')
+    document.body.appendChild(outsideButton)
+    const view = render(<FocusTrapHarness />)
+    const initialButton = view.getByTestId('initial-btn') as HTMLButtonElement
+
+    expect(document.activeElement).toBe(initialButton)
+    outsideButton.focus()
+    expect(document.activeElement).toBe(outsideButton)
+
+    queuedFrames[0]?.(0)
+
+    expect(document.activeElement).toBe(initialButton)
+
+    view.unmount()
+    outsideButton.remove()
+  })
+
+  it('cancels the queued initial-focus frame on cleanup', () => {
+    const cancelFrame = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 42)
+
+    const view = render(<FocusTrapHarness />)
+    view.unmount()
+
+    expect(cancelFrame).toHaveBeenCalledWith(42)
+  })
+
+  it('does not let a stale lower frame steal focus from a newer top trap', () => {
+    const queuedFrames: FrameRequestCallback[] = []
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      queuedFrames.push(callback)
+      return queuedFrames.length
+    })
+
+    const outsideButton = document.createElement('button')
+    document.body.appendChild(outsideButton)
+    const view = render(<StackedFocusTrapsHarness topEnabled={false} />)
+
+    view.rerender(<StackedFocusTrapsHarness topHasFocusable={false} />)
+    outsideButton.focus()
+
+    // This is the lower trap's frame, queued before the upper trap mounted.
+    queuedFrames[0]?.(0)
+
+    expect(document.activeElement).toBe(outsideButton)
+
+    view.unmount()
     outsideButton.remove()
   })
 

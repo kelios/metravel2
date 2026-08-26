@@ -4,6 +4,7 @@ import { SplashScreen, Stack, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import ConfirmDialogHost from "@/components/ui/ConfirmDialogHost";
 import {
   NativeFooterComponent,
   ReactQueryDevtoolsComponent,
@@ -449,6 +450,7 @@ function ThemedContent({
                             />
                           )}
                           <RootContainerView style={styles.container}>
+                              {isWeb ? <ConfirmDialogHost /> : null}
                               {showMapBackground && (
                                 <Image
                                   source={mapBackground}

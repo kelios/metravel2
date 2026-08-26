@@ -20,9 +20,10 @@ export async function confirmAction({
   if (Platform.OS === 'web') {
     // #1556: на web подтверждение идёт через дизайн-системный `ConfirmDialog`
     // (`ConfirmDialogHost`), а не через нативный `window.confirm`: тот синхронно
-    // морозил JS-поток вкладки до закрытия окна. Без смонтированного хоста
-    // `requestConfirmDialog` резолвится `false` — деструктивное действие не
-    // выполняется; прежний дефолт `true` выполнял его без спроса.
+    // морозил JS-поток вкладки до закрытия окна. Если корневой хост ещё не
+    // подписался во время initial commit, `requestConfirmDialog` дождётся его
+    // или безопасно резолвит `false`; прежний дефолт `true` выполнял действие
+    // без спроса.
     return requestConfirmDialog({ title, message, confirmText, cancelText })
   }
 

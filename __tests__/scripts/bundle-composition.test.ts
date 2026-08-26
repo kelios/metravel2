@@ -460,6 +460,40 @@ const hasSyncImport = (rawContent: string, specifier: string): boolean => {
 }
 
 describe('состав eager-бандла (#1148)', () => {
+  it('глобальный confirm host монтируется eager один раз, а UI диалога остаётся async (#1556)', () => {
+    const hostSpecifier = '@/components/ui/ConfirmDialogHost'
+    const dialogSpecifier = '@/components/ui/ConfirmDialog'
+    const layoutPath = join(ROOT, 'app/_layout.tsx')
+    const hostPath = join(ROOT, 'components/ui/ConfirmDialogHost.tsx')
+    const nativeHostPath = join(ROOT, 'components/ui/ConfirmDialogHost.native.tsx')
+    const dialogPath = join(ROOT, 'components/ui/ConfirmDialog.tsx')
+    const layoutSource = readFileSync(layoutPath, 'utf8')
+    const hostSource = readFileSync(hostPath, 'utf8')
+    const nativeHostSource = readFileSync(nativeHostPath, 'utf8')
+
+    const hostMounts = sourceFiles.flatMap((file) => {
+      const count = [
+        ...stripComments(readFileSync(file, 'utf8')).matchAll(/<ConfirmDialogHost(?=[\s/>])/g),
+      ].length
+      return Array.from({ length: count }, () => relative(ROOT, file))
+    })
+    const hostImporters = sourceFiles
+      .filter((file) => hasSyncImport(readFileSync(file, 'utf8'), hostSpecifier))
+      .map((file) => relative(ROOT, file))
+
+    expect({ hostMounts, hostImporters }).toEqual({
+      hostMounts: ['app/_layout.tsx'],
+      hostImporters: ['app/_layout.tsx'],
+    })
+    expect(hasSyncImport(layoutSource, hostSpecifier)).toBe(true)
+    expect(syncPathTo(layoutPath, hostPath)).not.toBeNull()
+    expect(syncPathTo(layoutPath, dialogPath)).toBeNull()
+    expect(hasSyncImport(hostSource, dialogSpecifier)).toBe(false)
+    expect(dynamicImportSpecifiers(hostSource)).toContain(dialogSpecifier)
+    expect(syncDeps(nativeHostPath)).toEqual([])
+    expect(dynamicImportSpecifiers(nativeHostSource)).toEqual([])
+  })
+
   it.each(LAZY_ONLY_VENDORS)(
     'вендор $pkg синхронно импортируется только из своего async-чанка ($ticket)',
     ({ pkg, allowedSyncImporters }) => {

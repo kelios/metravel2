@@ -45,12 +45,25 @@ export function useFocusTrap(
     // Сохраняем текущий активный элемент для возврата фокуса
     previousActiveElement.current = document.activeElement as HTMLElement;
 
-    // Фокусируемся на первом элементе или указанном элементе
-    if (initialFocus?.current) {
-      initialFocus.current.focus();
-    } else if (firstElement) {
-      firstElement.focus();
-    }
+    // Фокусируемся на первом элементе или указанном элементе. RN Web Modal
+    // может восстановить фокус родительского диалога в том же commit, поэтому
+    // повторяем фокус после paint — это особенно важно для вложенных modal.
+    const focusInitialElement = () => {
+      // The delayed frame belongs only to the current topmost trap. A newer
+      // modal may mount before this callback runs; the stale lower frame must
+      // not pull focus back underneath it.
+      if (activeFocusTraps.at(-1) !== container) return;
+      if (initialFocus?.current) {
+        initialFocus.current.focus();
+      } else if (firstElement) {
+        firstElement.focus();
+      }
+    };
+    focusInitialElement();
+    const initialFocusFrame =
+      typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
+        ? window.requestAnimationFrame(focusInitialElement)
+        : null;
 
     const handleTab = (e: KeyboardEvent) => {
       if (e.key !== 'Tab' || activeFocusTraps.at(-1) !== container) return;
@@ -107,6 +120,9 @@ export function useFocusTrap(
     const prevActive = previousActiveElement.current;
 
     return () => {
+      if (initialFocusFrame !== null && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(initialFocusFrame);
+      }
       document.removeEventListener('keydown', handleTab, true);
       document.removeEventListener('keydown', handleEscape);
       const trapIndex = activeFocusTraps.lastIndexOf(container);

@@ -17,6 +17,7 @@ jest.mock('@/components/quests/questWizardMedia', () => ({
 import { Alert, Platform } from 'react-native'
 import { confirmQuestAsync, copyQuestCoords, openQuestMap } from '@/components/quests/questWizardHelpers'
 import {
+  CONFIRM_DIALOG_HOST_TIMEOUT_MS,
   getConfirmDialogRequest,
   resolveConfirmDialog,
   subscribeConfirmDialog,
@@ -136,6 +137,7 @@ describe('questWizardHelpers.confirmQuestAsync', () => {
     unsubscribe?.()
     // Хвост незакрытого диалога не должен утекать в соседний тест.
     resolveConfirmDialog(false)
+    jest.useRealTimers()
   })
 
   const mountHost = () => {
@@ -175,8 +177,14 @@ describe('questWizardHelpers.confirmQuestAsync', () => {
   it('web: resolves false when no host is mounted, never leaving the await hanging', async () => {
     ;(Platform as { OS: string }).OS = 'web'
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    jest.useFakeTimers()
 
-    await expect(confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')).resolves.toBe(false)
+    const pending = confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.')
+    expect(getConfirmDialogRequest()).toMatchObject({ title: 'Сбросить прогресс?' })
+
+    jest.advanceTimersByTime(CONFIRM_DIALOG_HOST_TIMEOUT_MS)
+
+    await expect(pending).resolves.toBe(false)
     expect(warn).toHaveBeenCalled()
 
     warn.mockRestore()

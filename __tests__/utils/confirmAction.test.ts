@@ -2,6 +2,7 @@ import { Alert, Platform } from 'react-native'
 
 import { confirmAction } from '@/utils/confirmAction'
 import {
+  CONFIRM_DIALOG_HOST_TIMEOUT_MS,
   getConfirmDialogRequest,
   resolveConfirmDialog,
   subscribeConfirmDialog,
@@ -9,8 +10,9 @@ import {
 
 // #1556: на web `confirmAction` больше не зовёт нативный `window.confirm` (он
 // синхронно морозил вкладку) — запрос уходит в `ConfirmDialogHost` через общий
-// стор. Отдельно проверяется снятый опасный дефолт: без хоста промис резолвится
-// `false`, а не `true`, иначе удаление выполнялось бы без подтверждения.
+// стор. Отдельно проверяется снятый опасный дефолт: если хост недоступен после
+// таймаута, промис резолвится `false`, а не `true`, иначе удаление выполнялось
+// бы без подтверждения.
 describe('confirmAction', () => {
   const options = {
     title: 'Очистить историю?',
@@ -35,6 +37,7 @@ describe('confirmAction', () => {
     unsubscribe?.()
     // Хвост незакрытого диалога не должен утекать в соседний тест.
     resolveConfirmDialog(false)
+    jest.useRealTimers()
     ;(Platform as { OS: string }).OS = originalPlatform
   })
 
@@ -70,12 +73,36 @@ describe('confirmAction', () => {
     await expect(pending).resolves.toBe(false)
   })
 
-  it('web: без смонтированного хоста резолвит false, а не выполняет действие', async () => {
+  it('web: ждёт ленивый хост, но без него резолвит false по таймауту', async () => {
     ;(Platform as { OS: string }).OS = 'web'
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    jest.useFakeTimers()
 
-    await expect(confirmAction(options)).resolves.toBe(false)
+    const pending = confirmAction(options)
+    expect(getConfirmDialogRequest()).toMatchObject({ title: options.title })
+
+    jest.advanceTimersByTime(CONFIRM_DIALOG_HOST_TIMEOUT_MS)
+
+    await expect(pending).resolves.toBe(false)
     expect(warn).toHaveBeenCalled()
+
+    warn.mockRestore()
+  })
+
+  it('web: подключившийся хост снимает таймаут и оставляет решение пользователю', async () => {
+    ;(Platform as { OS: string }).OS = 'web'
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    jest.useFakeTimers()
+
+    const pending = confirmAction(options)
+    mountHost()
+    jest.advanceTimersByTime(CONFIRM_DIALOG_HOST_TIMEOUT_MS * 2)
+
+    expect(getConfirmDialogRequest()).toMatchObject({ title: options.title })
+    expect(warn).not.toHaveBeenCalled()
+
+    resolveConfirmDialog(true)
+    await expect(pending).resolves.toBe(true)
 
     warn.mockRestore()
   })
