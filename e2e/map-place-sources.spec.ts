@@ -26,7 +26,10 @@ const TRANSPARENT_PNG = Buffer.from(
 
 /** Две записи одного места: разные статьи, фото и point_id — но общий place_id. */
 const LIBRARY_SOURCE_A = {
-  source_id: 'travel-address:14029',
+  // Production #1567 currently serializes source_id as the point-id string.
+  // Keep this fixture live-shaped so the integration test cannot pass only
+  // against the earlier `travel-address:<id>` proposal form.
+  source_id: '14029',
   point_id: 14029,
   travel_id: 389,
   article_title: 'Из Мозыря в Микашевичи через Минск',
@@ -37,7 +40,7 @@ const LIBRARY_SOURCE_A = {
 }
 
 const LIBRARY_SOURCE_B = {
-  source_id: 'travel-address:15688',
+  source_id: '15688',
   point_id: 15688,
   travel_id: 646,
   article_title: 'Минск за выходные: путеводитель по столице Беларуси',
@@ -76,14 +79,16 @@ const LIBRARY_ROW_B = {
 const NEARBY_ROW = {
   id: 15687,
   place_id: NEARBY_PLACE_ID,
-  coord: '53.933000,27.652000',
-  lat: '53.933000',
-  lng: '27.652000',
+  // Keep the distinct place inside the default radius, but outside the visual
+  // Leaflet cluster at the initial zoom so the test can address both markers.
+  coord: '53.990000,27.800000',
+  lat: '53.990000',
+  lng: '27.800000',
   address: 'Центральный ботанический сад НАН',
   categoryName: 'Ботанический сад',
   source_count: 1,
   primary_source: {
-    source_id: 'travel-address:15687',
+    source_id: '15687',
     point_id: 15687,
     travel_id: 646,
     article_title: 'Минск за выходные',
@@ -98,6 +103,8 @@ const NEARBY_ROW = {
 }
 
 const MAP_ROWS = [LIBRARY_ROW_A, LIBRARY_ROW_B, NEARBY_ROW]
+const LIBRARY_MARKER_SELECTOR = '.metravel-pin-marker[title="Национальная библиотека Беларуси"]'
+const NEARBY_MARKER_SELECTOR = '.metravel-pin-marker[title="Центральный ботанический сад НАН"]'
 
 type SourcesTracker = { count: number }
 
@@ -200,15 +207,15 @@ test.describe('#1568 map place sources — one marker, paged sources', () => {
         .forEach((el) => el.setAttribute('data-e2e-marker-stamp', '1'))
     })
 
-    // Первое место выдачи — библиотека (две записи, склеенные в один маркер).
-    await page.locator('.metravel-pin-marker').first().click({ force: true })
+    // Библиотека — две записи, склеенные в один маркер. Выбираем по title, а не
+    // по DOM-порядку Leaflet, который может меняться при кластеризации.
+    await page.locator(LIBRARY_MARKER_SELECTOR).click({ force: true })
 
     const counter = page.getByTestId('place-source-pager-counter')
     await expect(counter).toHaveText('Материал 1 из 2', { timeout: 15_000 })
     await expect.poll(async () => sources.count, { timeout: 10_000 }).toBe(1)
 
-    const primaryAction = page.getByTestId('popup-primary-action').first()
-    await expect(primaryAction).toBeVisible()
+    await expect(page.getByTestId('popup-article-action').first()).toBeVisible()
 
     // Вперёд: второй материал со своей статьёй.
     await page.getByTestId('place-source-pager-next').click()
@@ -240,8 +247,8 @@ test.describe('#1568 map place sources — one marker, paged sources', () => {
       .poll(async () => page.locator('.metravel-pin-marker').count(), { timeout: 15_000 })
       .toBe(2)
 
-    // Второй маркер — соседний ботанический сад с одним материалом.
-    await page.locator('.metravel-pin-marker').nth(1).click({ force: true })
+    // Самостоятельное место — ботанический сад с одним материалом.
+    await page.locator(NEARBY_MARKER_SELECTOR).click({ force: true })
 
     const popup = page.locator('.leaflet-popup')
     const overlayClose = page.locator('[aria-label="Закрыть"]')
@@ -278,7 +285,7 @@ test.describe('#1568 map place sources — mobile web surface', () => {
       .toBe(2)
     expect(sources.count).toBe(0)
 
-    await page.locator('.metravel-pin-marker').first().click({ force: true })
+    await page.locator(LIBRARY_MARKER_SELECTOR).click({ force: true })
 
     const counter = page.getByTestId('place-source-pager-counter')
     await expect(counter).toHaveText('Материал 1 из 2', { timeout: 15_000 })

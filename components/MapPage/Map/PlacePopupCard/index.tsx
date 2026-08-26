@@ -801,6 +801,7 @@ const PlacePopupCard: React.FC<Props> = ({
                   accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.otkryt_statyu_f1d53e13')}
                   onPress={onOpenArticle}
                   title={popupTooltips.openArticle}
+                  testID="popup-article-action"
                   enableWebClickFallback
                   style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
                 >
