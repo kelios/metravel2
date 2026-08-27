@@ -111,6 +111,14 @@ const LAZY_ONLY_MODULES = [
     allowedSyncImporters: [] as string[],
     ticket: '#1543',
   },
+  // #1552: адаптер тянет sanitize-html/htmlparser2 и offline catalog, но нужен
+  // только в уже асинхронных офлайн-ветках travel-детали. Любой value-import
+  // вернёт это поддерево на eager-путь публичной статьи.
+  {
+    module: '@/services/offline/travelOfflineAdapter',
+    allowedSyncImporters: [] as string[],
+    ticket: '#1552',
+  },
 ]
 
 /**
@@ -131,6 +139,11 @@ const DYNAMIC_IMPORT_CHOKEPOINTS: Array<{ specifier: string; owner: string; tick
     specifier: '@/utils/geoCountry',
     owner: 'hooks/useCountryCodeByCoords.ts',
     ticket: '#1543',
+  },
+  {
+    specifier: './travelOfflineAdapter',
+    owner: 'services/offline/loadTravelOfflineAdapter.ts',
+    ticket: '#1552',
   },
 ]
 
@@ -411,7 +424,10 @@ const syncPathTo = (root: string, target: string): string[] | null => {
   return null
 }
 
-const SOURCE_DIRS = ['app', 'components', 'hooks', 'screens', 'stores', 'utils', 'constants']
+// `services` тоже участвует в web import graph: async-чокпоинты и тяжёлые
+// адаптеры живут именно там. Без каталога guard видел потребителей, но не мог
+// доказать существование/единственность самой границы (#1552).
+const SOURCE_DIRS = ['app', 'components', 'hooks', 'screens', 'services', 'stores', 'utils', 'constants']
 const SOURCE_EXTS = ['.ts', '.tsx', '.js', '.jsx']
 
 const collectSourceFiles = (dir: string): string[] => {

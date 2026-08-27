@@ -328,6 +328,17 @@ describe('injectTravelBootstrapData', () => {
     expect(html).toContain('"cover":{"id":1}');
   });
 
+  it('marks a numeric fallback route as an id preload so the runtime can consume it', () => {
+    const html = injectTravelBootstrapData(
+      MINIMAL_BASE,
+      { id: 42, name: 'Travel without a slug' },
+      '42',
+    );
+
+    expect(html).toContain('"slug":"42"');
+    expect(html).toContain('"isId":true');
+  });
+
   it('replaces an existing bootstrap script instead of duplicating it', () => {
     const first = injectTravelBootstrapData(MINIMAL_BASE, { id: 1, name: 'Old' }, 'old');
     const second = injectTravelBootstrapData(first, { id: 2, name: 'New' }, 'new');

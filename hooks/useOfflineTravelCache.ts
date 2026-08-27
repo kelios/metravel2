@@ -5,29 +5,19 @@
 import { useCallback } from 'react';
 import { Platform } from 'react-native';
 import type { Travel } from '@/types/types';
+import { loadTravelOfflineAdapter } from '@/services/offline/loadTravelOfflineAdapter';
 
 // #1552: все три функции ниже асинхронные, а вызываются только по действию
 // пользователя или после первого экрана, поэтому статический импорт им не нужен —
 // `await import(...)` внутри async-функции даёт настоящую границу чанка.
 //
-// ВАЖНО про эффект: это ОДНО из трёх рёбер в `services/offline/offlineCatalog`
-// на маршруте travel-детали, и после правки модуль остаётся eager. Живы ещё два
-// статических ребра через `travelOfflineAdapter`:
-//   `hooks/useTravelDetails.ts:20` (виден со всего сайта: крошки тянут
-//   `consumePreloadedTravel` из этого же модуля) и
-//   `components/travel/details/TravelHeroExtras.tsx:11`.
-// Metro группирует `offlineCatalog` в чанк карты (покрытие прода: `__shared-5`
-// 284 КБ использован на 5%, `__shared-57` 105 КБ — на 1%), а по правилу #1393
-// чанк уходит с маршрута, только когда разорваны ВСЕ рёбра. Разрыв всех трёх
-// уже пробовался в #1499 и был откачен по `eager.maxRequestsByRoute`
-// (патч сохранён в `.codex-temp/1499/offline-defer.patch`).
+// #1552 разрывает все три прежних статических ребра к адаптеру. Сам import()
+// живёт в одном `loadTravelOfflineAdapter`, чтобы Metro видел один async-корень
+// и не переразбивал граф при добавлении новых потребителей (#1393/#1543).
 type OfflineCatalogModule = typeof import('@/services/offline/offlineCatalog');
-type TravelOfflineAdapterModule = typeof import('@/services/offline/travelOfflineAdapter');
 
 const loadOfflineCatalog = (): Promise<OfflineCatalogModule> =>
   import('@/services/offline/offlineCatalog');
-const loadTravelOfflineAdapter = (): Promise<TravelOfflineAdapterModule> =>
-  import('@/services/offline/travelOfflineAdapter');
 
 export async function cacheTravelOffline(id: number | string, data: unknown, isNative: boolean) {
   void isNative;

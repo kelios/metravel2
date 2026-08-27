@@ -267,6 +267,53 @@ describe('useTravelDetails', () => {
     expect(fetchTravelBySlug).toHaveBeenCalledTimes(1);
   });
 
+  it('hydrates and backfills a partial preload for a numeric fallback route', async () => {
+    (Platform.OS as any) = 'web';
+    let capturedConfig: any = null;
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 498,
+          slug: '',
+          name: 'Travel without a slug',
+          description: '<p>Full text</p>',
+          gallery: [{ id: 7, url: '/gallery/7.webp', caption: '' }],
+          travelAddress: [{ id: 1, name: 'Point' }],
+          coordsMeTravel: [],
+          media: { cover: { id: 1, dominant_color: '#abc' } },
+        },
+        slug: '498',
+        isId: true,
+        mediaPartial: true,
+      },
+    };
+    useLocalSearchParams.mockReturnValue({ param: '498' });
+    (fetchTravel as jest.Mock).mockResolvedValue({
+      id: 498,
+      media: { cover: {}, gallery: [{ id: 7 }], article_body: {}, address_images: {} },
+    });
+    (useQuery as jest.Mock).mockImplementation((config: any) => {
+      capturedConfig = config;
+      capturedQueryFn = config.queryFn;
+      return {
+        data: config.initialData,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    });
+
+    const { result } = renderHook(() => useTravelDetails());
+
+    expect(result.current.isId).toBe(true);
+    expect(result.current.travel).toMatchObject({ id: 498, name: 'Travel without a slug' });
+    expect(capturedConfig.refetchOnMount).toBe('always');
+    await expect(capturedQueryFn!()).resolves.toMatchObject({ id: 498 });
+    expect(fetchTravel).toHaveBeenCalledWith(498, { signal: undefined });
+    expect(fetchTravelBySlug).not.toHaveBeenCalled();
+  });
+
   it('keeps partial preload content visible when the background media backfill fails', () => {
     (Platform.OS as any) = 'web';
     const backfillError = new Error('network unavailable');

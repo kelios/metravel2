@@ -17,7 +17,7 @@ import {
   getPublicStalePayloadMeta,
   type PublicStalePayloadMeta,
 } from '@/utils/publicStaleCache';
-import { readTravelOffline } from '@/services/offline/travelOfflineAdapter';
+import { loadTravelOfflineAdapter } from '@/services/offline/loadTravelOfflineAdapter';
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
@@ -359,6 +359,10 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     queryFn: async (context?: { signal?: AbortSignal }) => {
       const signal = context?.signal;
       if (!onlineManager.isOnline()) {
+        // #1552: онлайн-открытие статьи не должно загружать санитайзер и
+        // хранилище офлайн-копий. Контракт queryFn уже async, поэтому адаптер
+        // разрешается только в реально выбранной офлайн-ветке.
+        const { readTravelOffline } = await loadTravelOfflineAdapter();
         const cached = await readTravelOffline(cacheKey);
         if (cached) return cached;
         throw new Error('OFFLINE_CONTENT_NOT_SAVED');

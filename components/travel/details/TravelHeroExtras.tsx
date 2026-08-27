@@ -8,7 +8,7 @@ import OfflineSaveControl from '@/components/offline/OfflineSaveControl'
 import QuickFacts from '@/components/travel/QuickFacts'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { saveTravelOffline } from '@/services/offline/travelOfflineAdapter'
+import { loadTravelOfflineAdapter } from '@/services/offline/loadTravelOfflineAdapter'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import TravelHeroQuickJumps from './TravelHeroQuickJumps'
@@ -36,7 +36,11 @@ export const TravelHeroExtras: React.FC<{
   // Офлайн-копия — такое же действие уровня страницы, как «Добавить в план», поэтому
   // живёт с ним в одном ряду под галереей, а не отдельной плашкой над всей страницей.
   const handleSaveOffline = useCallback(
-    (includePhotos: boolean) => saveTravelOffline(travel, { pinned: true, includePhotos }),
+    async (includePhotos: boolean) => {
+      // #1552: тяжёлый адаптер нужен только после явного действия читателя.
+      const { saveTravelOffline } = await loadTravelOfflineAdapter()
+      return saveTravelOffline(travel, { pinned: true, includePhotos })
+    },
     [travel],
   )
 

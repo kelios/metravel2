@@ -1392,6 +1392,14 @@ function injectHomeHeroPreload(baseHtml, href) {
 function injectTravelBootstrapData(baseHtml, travel, routeKey) {
   if (!travel || typeof travel !== 'object') return baseHtml;
 
+  const normalizedRouteKey = String(routeKey || '').trim();
+  const numericRouteKey = Number(normalizedRouteKey);
+  // Keep the bootstrap identity aligned with useTravelDetails: published items
+  // without a slug are generated at /travels/<id>, and that route is resolved
+  // through fetchTravel(id), not fetchTravelBySlug(). A false marker makes the
+  // runtime discard otherwise-valid SSG data and defeats the media backfill.
+  const routeIsId = Number.isFinite(numericRouteKey) && numericRouteKey > 0;
+
   // #1479: The full media manifest is ~232KB of the inline preload blob and is
   // entirely below the fold (article_body / address_images / gallery). It
   // competes with the hero webp for pipe bandwidth on throttled mobile links
@@ -1418,8 +1426,8 @@ function injectTravelBootstrapData(baseHtml, travel, routeKey) {
 
   const serialized = JSON.stringify({
     data: bootstrapData,
-    slug: String(routeKey || '').trim(),
-    isId: false,
+    slug: normalizedRouteKey,
+    isId: routeIsId,
     mediaPartial,
   })
     .replace(/</g, '\\u003c')
