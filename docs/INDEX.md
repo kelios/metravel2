@@ -1,6 +1,6 @@
 # Docs index
 
-Актуализировано: 2026-08-13.
+Актуализировано: 2026-08-28.
 
 `docs/RULES.md` определяет обязательные правила. Не каждый файл в `docs/`
 является source of truth: dated snapshots и legacy adapters классифицированы
@@ -13,6 +13,7 @@
 - `docs/ARCHITECTURE.md` — текущая архитектура и runtime boundaries;
 - `docs/RULES.md` — обязательные project policies;
 - `docs/CODEX.md` — AI triage, skills и validation matrix;
+- `docs/GROK.md` — адаптер Grok Build; не source of truth правил;
 - `docs/AGENT_ANALYSIS_PROTOCOL.md` — обязательная глубина разбора задачи для
   агентов: уровни, постановка, механизм отказа, план, доказательства, формат
   отчёта и стоп-слова;

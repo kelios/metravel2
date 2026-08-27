@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "metravel-task-board__metravel_task_create|metravel-task-board__metravel_task_update|mcp__metravel-task-board__metravel_task_create|mcp__metravel-task-board__metravel_task_update",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_WORKSPACE_ROOT}/.grok/hooks/adapt-claude-hook.mjs\" task-quality-gate",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "metravel-task-board__metravel_task_update|mcp__metravel-task-board__metravel_task_update",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_WORKSPACE_ROOT}/.grok/hooks/adapt-claude-hook.mjs\" review-gate",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "metravel-task-board__metravel_task_update|mcp__metravel-task-board__metravel_task_update",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_WORKSPACE_ROOT}/.grok/hooks/adapt-claude-hook.mjs\" review-gate",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

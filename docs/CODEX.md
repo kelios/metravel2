@@ -113,6 +113,9 @@ review-and-fix, предпочтительно независимым reviewer.
   `references/` только когда они нужны не каждому invocation.
 - После metadata/prompt changes запусти `npm run audit:prompts`; после skill
   changes — `skill-creator` validator.
+- Grok adapter: `.grok/` (rules, generated agents, `.grok/skills/codex` symlink).
+  Не копируй skill/agent body туда. После правки `.claude/agents/*.md`:
+  `node .grok/scripts/sync-agents.mjs`. Карта: `docs/GROK.md`.
 
 ## Handoff self-check
 

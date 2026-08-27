@@ -22,6 +22,7 @@
 | правка nginx: CSP, заголовки, кэш, редиректы (всегда backend-owned) | `docs/RULES.md` → «Nginx config ownership» |
 | e2e-доступы, тестданные на проде, Android/iPhone devices, prod-baseline, долгие операции и locks | `docs/WORKFLOW_OPERATIONS.md` |
 | каталог `$metravel-*` skills (Codex) | `docs/CODEX_SKILLS.md` |
+| Grok Build: agents/hooks/skills adapter | `docs/GROK.md` |
 | борд, Task Contract, формат описания задачи | `docs/TASK_BOARD_MCP.md` |
 | повторяющиеся проблемы перед заведением карточки | `docs/PROBLEM_MEMORY.md` |
 | всё остальное | найти файл в `docs/INDEX.md` |

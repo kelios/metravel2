@@ -11,6 +11,8 @@
 - `docs/CODEX.md` — ленивый router skills/агентов и validation matrix.
 - `docs/CODEX_SKILLS.md` — machine-audited registry; читать только при изменении
   или аудите каталога skills.
+- `docs/GROK.md` / `.grok/` — адаптер Grok Build (agents/hooks/skills symlink).
+  Не источник правил и не копия skill body.
 - `docs/AGENT_ANALYSIS_PROTOCOL.md` — формат evidence-backed разбора.
 - Не перечитывай этот файл через shell: он уже передан агенту как workspace
   instructions.

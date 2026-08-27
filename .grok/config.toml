@@ -1,0 +1,9 @@
+# Project-scoped Grok config. Canonical MCP command lives in `.mcp.json`;
+# this copy keeps the board attached when Claude-compat import is dismissed.
+
+[mcp_servers.metravel-task-board]
+command = "sh"
+args = [
+    "-c",
+    "for d in \"$GROK_WORKSPACE_ROOT\" \"$CLAUDE_PROJECT_DIR\" \"$PWD\" \"$HOME/Sites/metravel2/metravel2\" \"$HOME/PhpstormProjects/metravel2\"; do if [ -n \"$d\" ] && [ -f \"$d/.secrets/metravel-task-board.env\" ]; then P=\"$d\"; break; fi; done; if [ -z \"$P\" ]; then echo 'metravel-task-board: .secrets/metravel-task-board.env not found' >&2; exit 1; fi; for b in \"$P/../metravel-backend\" \"$HOME/Sites/metravel2/metravel-backend\" \"$HOME/PhpstormProjects/metravel-backend\"; do if [ -d \"$b/tools/mcp_server\" ]; then B=\"$b\"; break; fi; done; if [ -z \"$B\" ]; then echo 'metravel-task-board: backend checkout with tools/mcp_server not found' >&2; exit 1; fi; set -a; . \"$P/.secrets/metravel-task-board.env\"; set +a; export PYTHONPATH=\"$B\"; exec python3 -m tools.mcp_server",
+]
