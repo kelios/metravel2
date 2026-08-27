@@ -182,7 +182,7 @@ export default function TabOneScreen() {
                     returnHref={articleListReturnHref}
                   />
                 ))}
-                <EmailSubscriptionForm source="article" />
+                <EmailSubscriptionForm source="article" clientOnly />
                 <ContributionBanner variant="articles" />
               </ScrollView>
             ) : (
@@ -195,7 +195,7 @@ export default function TabOneScreen() {
                 {...({ estimatedItemSize: 120 } as any)}
                 ListFooterComponent={
                   <>
-                    <EmailSubscriptionForm source="article" />
+                    <EmailSubscriptionForm source="article" clientOnly />
                     <ContributionBanner variant="articles" />
                   </>
                 }

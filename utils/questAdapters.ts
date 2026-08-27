@@ -81,7 +81,9 @@ export type QuestMeta = {
     difficulty?: 'easy' | 'medium' | 'hard';
     tags?: string[];
     petFriendly?: boolean;
-    cover?: any;
+    cover?: string;
+    /** Квадратный source + web-лестница; отсутствуют при непригодном manifest. */
+    squareCoverWebResponsiveSource?: QuestSquareCoverResponsiveSource;
     ageCategory?: QuestAgeCategory;
     ratingAvg: number | null;
     ratingCount: number;
@@ -89,6 +91,66 @@ export type QuestMeta = {
     isCompletedByMe: boolean;
     firstCompleter: ApiQuestFirstCompleter | null;
 };
+
+export type QuestSquareCoverResponsiveSource = {
+    src: string;
+    srcSet?: string;
+    sizes?: string;
+};
+
+const QUEST_SQUARE_VARIANT_WIDTHS = new Set([160, 320]);
+const QUEST_SQUARE_SRCSET_CANDIDATE = /^(\S+)\s+(\d+)w$/;
+
+/**
+ * Выбирает только backend-owned квадратные производные для плитки #1542.
+ * Обычная `cover_url` сюда намеренно не попадает: она ландшафтная и остаётся
+ * отдельным fallback, пока backfill #1587 не заполнит square manifest.
+ */
+function adaptSquareCoverMedia(apiMeta: ApiQuestMeta): QuestSquareCoverResponsiveSource | undefined {
+    const coverMedia = apiMeta.media?.cover;
+    if (!coverMedia) return undefined;
+
+    const candidates = new Map<number, string>();
+    if (typeof coverMedia.srcset_square === 'string') {
+        for (const rawCandidate of coverMedia.srcset_square.split(',')) {
+            const match = QUEST_SQUARE_SRCSET_CANDIDATE.exec(rawCandidate.trim());
+            if (!match) continue;
+            const width = Number(match[2]);
+            if (!QUEST_SQUARE_VARIANT_WIDTHS.has(width) || candidates.has(width)) continue;
+            const url = fixMediaUrl(match[1]);
+            if (url) candidates.set(width, url);
+        }
+    }
+
+    for (const [width, rawUrl] of [
+        [160, coverMedia.variants?.square_160],
+        [320, coverMedia.variants?.square_320],
+    ] as const) {
+        if (candidates.has(width)) continue;
+        const url = fixMediaUrl(rawUrl);
+        if (url) candidates.set(width, url);
+    }
+
+    const canonicalSrc =
+        fixMediaUrl(coverMedia.src_square) ??
+        candidates.get(320) ??
+        candidates.get(160);
+    if (!canonicalSrc) return undefined;
+
+    const srcSet = Array.from(candidates.entries())
+        .sort(([left], [right]) => left - right)
+        .map(([width, url]) => `${url} ${width}w`)
+        .join(', ');
+    const sizes = typeof coverMedia.sizes_hint_square === 'string'
+        ? coverMedia.sizes_hint_square.trim()
+        : '';
+
+    return {
+        src: canonicalSrc,
+        ...(srcSet ? { srcSet } : {}),
+        ...(sizes ? { sizes } : {}),
+    };
+}
 
 /** Тип бандла для фронтенда (совместим с QuestWizardProps) */
 export type FrontendQuestBundle = {
@@ -523,6 +585,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
     const lng = coordNum(apiMeta.lng);
     const normalizedCountryCode = normalizeQuestCountryCode(apiMeta.country_code);
     const tags = apiMeta.tags ? Object.keys(apiMeta.tags) : undefined;
+    const squareCoverWebResponsiveSource = adaptSquareCoverMedia(apiMeta);
 
     return {
         id: apiMeta.quest_id,
@@ -539,6 +602,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         tags,
         petFriendly: apiMeta.pet_friendly,
         cover: fixMediaUrl(apiMeta.cover_url),
+        squareCoverWebResponsiveSource,
         ageCategory: getQuestAgeCategory(tags) ?? undefined,
         ratingAvg: apiMeta.rating_avg ?? null,
         ratingCount: apiMeta.rating_count ?? 0,

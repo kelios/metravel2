@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { ActivityIndicator, Dimensions, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import { Link, useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import QuestCityLandingSections from '@/components/quests/QuestCityLandingSections'
+import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
 import QuestCard from '@/screens/tabs/QuestCard'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
@@ -15,12 +17,16 @@ import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
-import { resolveQuestCitySegment } from '@/utils/questCityAlias'
+import {
+  buildQuestCityLandingGroups,
+  findNearbyQuestCityGroups,
+  resolveQuestCitySegment,
+} from '@/utils/questCityAlias'
 import { buildQuestPath } from '@/utils/routePaths'
 import { stringifyJsonLd } from '@/utils/jsonLd'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
-import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 const { spacing } = DESIGN_TOKENS
 const QUEST_LIST_ROUTE = '/quests'
@@ -29,6 +35,26 @@ const getRouteParam = (value: string | string[] | undefined): string => {
   if (Array.isArray(value)) return value[0] ?? ''
   return value ?? ''
 }
+
+const syncSingleMetaContent = (
+  selector: string,
+  attributes: Record<string, string>,
+  content: string,
+) => {
+  const nodes = Array.from(document.querySelectorAll(selector)) as HTMLMetaElement[]
+  nodes.slice(1).forEach((node) => node.remove())
+
+  const meta = nodes[0] ?? document.createElement('meta')
+  for (const [name, value] of Object.entries(attributes)) meta.setAttribute(name, value)
+  if (meta.content !== content) meta.content = content
+  if (!meta.parentNode) document.head.appendChild(meta)
+}
+
+const DESCRIPTION_META_TARGETS = [
+  { selector: 'meta[name="description"]', attributes: { name: 'description' } },
+  { selector: 'meta[property="og:description"]', attributes: { property: 'og:description' } },
+  { selector: 'meta[name="twitter:description"]', attributes: { name: 'twitter:description' } },
+]
 
 export default function QuestsByCityScreen() {
   // #1484: возвратное напоминание ведёт именно на лендинг города, поэтому
@@ -41,21 +67,35 @@ export default function QuestsByCityScreen() {
   const navigation = useNavigation()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
+  const { t } = useTranslation()
 
   const { quests, loading } = useQuestsList()
+
+  const cityGroups = useMemo(() => buildQuestCityLandingGroups(quests), [quests])
 
   const resolved = useMemo(
     () => (loading ? null : resolveQuestCitySegment(cityParam, quests)),
     [cityParam, quests, loading],
   )
 
-  const cityQuests = useMemo(
-    () => (resolved ? quests.filter((q) => q.cityId === resolved.cityId) : []),
-    [quests, resolved],
+  const cityGroup = useMemo(
+    () => (resolved ? cityGroups.find((group) => group.segment === resolved.segment) ?? null : null),
+    [cityGroups, resolved],
+  )
+  const cityQuests = useMemo(() => cityGroup?.quests ?? [], [cityGroup])
+  const nearbyCities = useMemo(
+    () => (cityGroup ? findNearbyQuestCityGroups(cityGroup, cityGroups, { limit: 4 }) : []),
+    [cityGroup, cityGroups],
+  )
+  const cityCoords = useMemo(
+    () => cityQuests
+      .filter((quest) => Number.isFinite(quest.lat) && Number.isFinite(quest.lng))
+      .map((quest) => ({ lat: quest.lat, lng: quest.lng })),
+    [cityQuests],
   )
 
-  const cityName = cityQuests[0]?.cityName || ''
-  const canonicalSegment = resolved ? resolved.alias || resolved.cityId : cityParam
+  const cityName = cityGroup?.cityName || ''
+  const canonicalSegment = cityGroup?.segment || cityParam
   const canonical = buildCanonicalUrl(`/quests/${canonicalSegment}`)
 
   // Unknown city (no quests) → fall back to the full catalog.
@@ -78,19 +118,68 @@ export default function QuestsByCityScreen() {
   const catalogModel = useQuestCatalogResponsiveModel(cityQuests.length)
 
   const seoTitle = useMemo(
-    () => buildBrandedSeoTitle(i18nT('quests:app.tabs.quests.city.index.title', { value1: cityName || cityParam })),
-    [cityName, cityParam],
+    () => buildBrandedSeoTitle(t('quests:app.tabs.quests.city.index.seoTitle', { value1: cityName || cityParam })),
+    [cityName, cityParam, t],
   )
   const seoDescription = useMemo(
-    () => i18nT('quests:app.tabs.quests.city.index.metaDescription', {
+    () => t('quests:app.tabs.quests.city.index.metaDescription', {
       value1: cityName || cityParam,
       value2: pluralizeQuest(cityQuests.length),
     }),
-    [cityName, cityParam, cityQuests.length],
+    [cityName, cityParam, cityQuests.length, t],
   )
+  const previousDescriptionsRef = useRef<Array<{
+    selector: string
+    attributes: Record<string, string>
+    content: string | null
+  }> | null>(null)
+
+  useEffect(() => {
+    if (!cityGroup || !isFocused || Platform.OS !== 'web' || typeof document === 'undefined') {
+      return undefined
+    }
+
+    if (!previousDescriptionsRef.current) {
+      previousDescriptionsRef.current = DESCRIPTION_META_TARGETS.map((target) => ({
+        ...target,
+        content: document.querySelector<HTMLMetaElement>(target.selector)?.content ?? null,
+      }))
+    }
+
+    // Expo Head keeps the root fallback description next to the route tag on
+    // direct web entry. Keep the focused city page authoritative for crawlers
+    // and link previews, just as LazyInstantSEO already does for canonical.
+    const syncDescription = () => {
+      for (const { selector, attributes } of DESCRIPTION_META_TARGETS) {
+        syncSingleMetaContent(selector, attributes, seoDescription)
+      }
+    }
+
+    syncDescription()
+    const observer = new MutationObserver(syncDescription)
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['content'],
+    })
+    const timeout = window.setTimeout(() => observer.disconnect(), 5000)
+
+    return () => {
+      window.clearTimeout(timeout)
+      observer.disconnect()
+      for (const { selector, attributes, content } of previousDescriptionsRef.current ?? []) {
+        if (content !== null) {
+          syncSingleMetaContent(selector, attributes, content)
+        } else {
+          document.querySelectorAll(selector).forEach((node) => node.remove())
+        }
+      }
+    }
+  }, [cityGroup, isFocused, seoDescription])
 
   const structuredData = useMemo(() => {
-    if (!resolved || cityQuests.length === 0) return null
+    if (!cityGroup || cityQuests.length === 0) return null
     // #1185: квест без cityId/id давал в разметке ссылку `/quests/undefined/undefined`
     // — поисковик получал заведомо битый URL. Такие позиции в список не попадают.
     const listedQuests = cityQuests
@@ -100,7 +189,7 @@ export default function QuestsByCityScreen() {
     const itemList = {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: i18nT('quests:app.tabs.quests.city.index.title', { value1: cityName || cityParam }),
+      name: t('quests:app.tabs.quests.city.index.title', { value1: cityName || cityParam }),
       url: canonical,
       numberOfItems: listedQuests.length,
       itemListElement: listedQuests.map(({ quest, path }, index) => ({
@@ -115,7 +204,7 @@ export default function QuestsByCityScreen() {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'MeTravel', item: buildCanonicalUrl('/') },
-        { '@type': 'ListItem', position: 2, name: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.eyebrow'), item: buildCanonicalUrl('/quests') },
+        { '@type': 'ListItem', position: 2, name: t('quests:screens.tabs.QuestsSeoIntroFaq.eyebrow'), item: buildCanonicalUrl('/quests') },
         { '@type': 'ListItem', position: 3, name: cityName || cityParam, item: canonical },
       ],
     }
@@ -133,9 +222,9 @@ export default function QuestsByCityScreen() {
         />
       </>
     )
-  }, [resolved, cityQuests, cityName, cityParam, canonical])
+  }, [cityGroup, cityQuests, cityName, cityParam, canonical, t])
 
-  if (loading || !resolved) {
+  if (loading || !cityGroup) {
     return (
       <View style={[s.root, { alignItems: 'center', justifyContent: 'center' }]}>
         <ActivityIndicator color={colors.primary} />
@@ -143,7 +232,7 @@ export default function QuestsByCityScreen() {
     )
   }
 
-  const heading = i18nT('quests:app.tabs.quests.city.index.title', { value1: cityName || cityParam })
+  const heading = t('quests:app.tabs.quests.city.index.title', { value1: cityName || cityParam })
 
   return (
     <ScrollView
@@ -173,11 +262,11 @@ export default function QuestsByCityScreen() {
         <Pressable
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6 }}
           accessibilityRole="link"
-          accessibilityLabel={i18nT('quests:app.tabs.quests.city.index.back')}
+          accessibilityLabel={t('quests:app.tabs.quests.city.index.back')}
         >
           <Feather name="arrow-left" size={16} color={colors.primary} />
           <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>
-            {i18nT('quests:app.tabs.quests.city.index.back')}
+            {t('quests:app.tabs.quests.city.index.back')}
           </Text>
         </Pressable>
       </Link>
@@ -199,7 +288,7 @@ export default function QuestsByCityScreen() {
         >
           <Feather name="compass" size={13} color={colors.primaryDark} aria-hidden />
           <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primaryText, letterSpacing: 0.6, textTransform: 'uppercase' }}>
-            {i18nT('quests:app.tabs.quests.city.index.eyebrow')}
+            {t('quests:app.tabs.quests.city.index.eyebrow')}
           </Text>
         </View>
         <Text
@@ -210,12 +299,25 @@ export default function QuestsByCityScreen() {
           {heading}
         </Text>
         <Text style={{ fontSize: 15, lineHeight: 23, color: colors.textMuted }}>
-          {i18nT('quests:app.tabs.quests.city.index.lead', { value1: cityName || cityParam })}
+          {t('quests:app.tabs.quests.city.index.lead', { value1: cityName || cityParam })}
         </Text>
         <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSubtle }}>
           {pluralizeQuest(cityQuests.length)}
         </Text>
       </View>
+
+      {Platform.OS === 'web' ? (
+        <>
+          <QuestCityLandingSections city={cityGroup} nearbyCities={nearbyCities} />
+          <Text
+            accessibilityRole="header"
+            {...({ 'aria-level': 2 } as Record<string, unknown>)}
+            style={{ fontSize: 20, fontWeight: '800', color: colors.text }}
+          >
+            {t('quests:app.tabs.quests.city.index.routesTitle', { value1: cityName || cityParam })}
+          </Text>
+        </>
+      ) : null}
 
       <View style={s.questsGrid}>
         {cityQuests.map((quest, index) => (
@@ -229,6 +331,15 @@ export default function QuestsByCityScreen() {
           />
         ))}
       </View>
+
+      {Platform.OS === 'web' ? (
+        <TravelsForQuestSection
+          cityName={cityGroup.cityName}
+          countryName={cityGroup.countryName}
+          countryCode={cityGroup.countryCode}
+          coords={cityCoords}
+        />
+      ) : null}
     </ScrollView>
   )
 }

@@ -1,4 +1,4 @@
-import { render, fireEvent } from '@testing-library/react-native';
+import { act, render, fireEvent } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
@@ -207,6 +207,27 @@ describe('PlannedTripScreen — planner states', () => {
     expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
   });
 
+  it('hides a stale healthy header summary when its routed geometry is missing', () => {
+    mockTrip(
+      makeTrip({
+        routeGeometry: null,
+        routeSummary: {
+          distanceKm: 118.2,
+          durationMin: 96,
+          elevationGainM: 240,
+          stopsCount: 3,
+          provider: 'ors',
+        },
+      }),
+    );
+
+    const { queryByTestId, queryByText } = renderScreen();
+
+    expect(queryByTestId('trip-plan-summary')).toBeNull();
+    expect(queryByText(/118/)).toBeNull();
+    expect(queryByTestId('route-builder')).toBeTruthy();
+  });
+
   it('flags a direct fallback route as approximate', () => {
     mockTrip(
       makeTrip({
@@ -275,6 +296,58 @@ describe('PlannedTripScreen — planner states', () => {
         onSuccess: expect.any(Function),
         onError: expect.any(Function),
       }),
+    );
+  });
+
+  it('keeps one description draft across modes and PATCHes only from the general Save', () => {
+    const longDescription = 'Подробная инструкция для участников. '.repeat(60);
+    mockTrip(makeTrip({ isOwner: true, description: 'Серверное описание' }));
+    const { getByTestId } = renderScreen();
+
+    fireEvent.press(getByTestId('trip-plan-edit'));
+    fireEvent.changeText(getByTestId('trip-plan-edit-description'), longDescription);
+    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe(
+      longDescription,
+    );
+
+    fireEvent.press(getByTestId('trip-plan-description-done'));
+    expect(getByTestId('trip-plan-edit-description').props.value).toBe(longDescription);
+    expect(mockUpdateTripMutate).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    expect(mockUpdateTripMutate).toHaveBeenCalledTimes(1);
+    expect(mockUpdateTripMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tripId: 8001,
+        description: longDescription.trim(),
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('keeps the description after a PATCH error and restores server data on Cancel', () => {
+    mockTrip(makeTrip({ isOwner: true, description: 'Серверное описание' }));
+    const { getByTestId, queryByTestId } = renderScreen();
+
+    fireEvent.press(getByTestId('trip-plan-edit'));
+    fireEvent.changeText(getByTestId('trip-plan-edit-description'), 'Черновик после ошибки');
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+
+    const mutationOptions = mockUpdateTripMutate.mock.calls[0][1] as {
+      onError: () => void;
+    };
+    act(() => mutationOptions.onError());
+    expect(getByTestId('trip-plan-edit-error')).toBeTruthy();
+    expect(getByTestId('trip-plan-edit-description').props.value).toBe(
+      'Черновик после ошибки',
+    );
+
+    fireEvent.press(getByTestId('trip-plan-edit-cancel'));
+    expect(queryByTestId('trip-plan-edit-panel')).toBeNull();
+    fireEvent.press(getByTestId('trip-plan-edit'));
+    expect(getByTestId('trip-plan-edit-description').props.value).toBe(
+      'Серверное описание',
     );
   });
 

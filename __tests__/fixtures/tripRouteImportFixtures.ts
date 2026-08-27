@@ -30,6 +30,21 @@ export const KML_WITH_NAMED_POINTS = `<?xml version="1.0" encoding="UTF-8"?>
   </coordinates></LineString></Placemark>
 </Document></kml>`;
 
+export const POINT_ONLY_KML_78 = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+${Array.from({ length: 78 }, (_, index) => {
+  const lat = 50.01 + index * 0.001;
+  const lng = 19.81 + index * 0.001;
+  return `  <Placemark><name>Park ${index + 1}</name><Point><coordinates>${lng},${lat},0</coordinates></Point></Placemark>`;
+}).join('\n')}
+</Document></kml>`;
+
+export const POINT_ONLY_GPX = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="52.1" lon="23.7"><name>Start camp</name></wpt>
+  <wpt lat="52.15" lon="23.75"><name>Viewpoint</name></wpt>
+</gpx>`;
+
 export const EMPTY_GPX = `<?xml version="1.0"?><gpx version="1.1"><metadata/></gpx>`;
 
 export const MALFORMED_GPX = `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="52.1" lon="23.7"></trkseg></gpx>`;

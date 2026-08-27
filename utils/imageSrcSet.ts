@@ -4,6 +4,7 @@
 import { Platform } from 'react-native';
 import type { ImageOptimizationOptions } from './imageProxy';
 import { optimizeImageUrl } from './imageProxy';
+import { normalizeAbsoluteMediaUrl } from './mediaUrl';
 
 export interface ResponsiveImageSource {
   src: string;
@@ -19,6 +20,12 @@ export function generateSrcSet(
 ): string {
   if (!baseUrl) return '';
   if (Platform.OS !== 'web') return baseUrl;
+  // Local/opaque previews have no independently resized candidates. Repeating
+  // the same blob/data/file URL under several width descriptors can leave the
+  // selected mobile-DPR candidate complete but undecoded (naturalWidth = 0).
+  // Keep those sources on the plain `src` path instead.
+  if (/^(?:blob:|data:|file:)/i.test(baseUrl.trim())) return '';
+  const normalizedBaseUrl = normalizeAbsoluteMediaUrl(baseUrl.trim());
 
   // Keep srcset candidates aligned with the main src default:
   // prefer backend/content negotiation unless the caller explicitly forces
@@ -36,13 +43,19 @@ export function generateSrcSet(
       };
       const optimizedUrl = optimizeImageUrl(baseUrl, optimizedOptions) || baseUrl;
 
+      // A width descriptor is truthful only when it points at a real resized
+      // candidate. Third-party/unhandled URLs are returned unchanged by the
+      // optimizer; repeating that same file as 160w/320w/... makes mobile DPR
+      // selection unreliable and can leave the chosen image undecoded.
+      if (optimizedUrl === baseUrl || optimizedUrl === normalizedBaseUrl) return [];
+
       // The backend proxy supports a fixed width ladder. Several requested
       // widths can therefore resolve to the same canonical `w` URL (for
       // example 239/240/241 -> 320). Advertising that single file under
       // several descriptors makes the browser treat it as distinct candidates
       // and fragments request/cache accounting. Use the actual proxy width and
-      // emit each canonical candidate once. Third-party URLs without `w` keep
-      // their caller-provided descriptors.
+      // emit each canonical candidate once. A changed URL is not sufficient
+      // evidence by itself: normalization may only have canonicalized the URL.
       try {
         const proxyWidth = Number(
           new URL(optimizedUrl, 'https://placeholder.invalid').searchParams.get('w')
@@ -54,14 +67,16 @@ export function generateSrcSet(
           return [`${optimizedUrl} ${proxyWidth}w`];
         }
       } catch {
-        // Keep the original descriptor for opaque/non-URL sources.
+        // Opaque/non-URL candidates cannot prove that a resize happened.
       }
 
-      return [`${optimizedUrl} ${size}w`];
+      // A canonicalized URL without `w` (for example HTTP upgraded to HTTPS)
+      // still points at the original file, not a resized candidate.
+      return [];
     })
     .join(', ');
 
-  return srcset || baseUrl;
+  return srcset;
 }
 
 // #1160: брейкпоинты — это значения, которые сразу после этого уйдут в

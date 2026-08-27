@@ -254,8 +254,17 @@ describe('RouteBuilder layout=mapFirst', () => {
     // Транспорт, точки и инструменты доехали до шторки целиком.
     expect(getByTestId('route-builder-transport-control')).toBeTruthy()
     expect(getByTestId('route-builder-point-0')).toBeTruthy()
-    // Форма добавления по умолчанию стоит на типе «место», то есть показывает
-    // поиск, а не ручной ввод с кнопкой `route-builder-add`.
+    // Добавление раскрывается по запросу: длинная форма не вытесняет точки и
+    // итог из шторки, пока пользователь не выбрал это действие.
+    expect(getByTestId('route-builder-add-action')).toBeTruthy()
+    expect(queryByTestId('route-builder-add-form')).toBeNull()
+    expect(queryByTestId('route-builder-site-search')).toBeNull()
+
+    fireEvent.press(getByTestId('route-builder-add-action'))
+
+    // Первый тип — «место», поэтому раскрытая add-форма показывает поиск, а не
+    // ручной submit `route-builder-add`.
+    expect(getByTestId('route-builder-add-form')).toBeTruthy()
     expect(getByTestId('route-builder-site-search')).toBeTruthy()
     expect(getByTestId('route-summary')).toBeTruthy()
     // #1491: кнопка действия появляется только при несохранённых правках,

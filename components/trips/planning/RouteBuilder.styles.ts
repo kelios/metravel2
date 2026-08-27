@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { ThemedColors } from '@/hooks/useTheme';
-import { webTextStyle, webViewStyle } from '@/utils/webProps';
+import { webStyle, webTextStyle, webViewStyle } from '@/utils/webProps';
 export const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     wrap: { gap: 12 },
@@ -19,6 +19,13 @@ export const createStyles = (colors: ThemedColors) =>
     // Вторичный ряд под сегментом транспорта: виден только для велосипеда.
     bikeTypeControl: { gap: 6 },
     bikeTypeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    pointListScroll: Platform.select({
+      web: webStyle({
+        maxHeight: 'clamp(240px, calc(100dvh - 380px), 520px)' as unknown as number,
+        overscrollBehaviorY: 'contain',
+      }),
+      default: { maxHeight: 520 },
+    }),
     pointList: { gap: 8 },
     pointRow: {
       flexDirection: 'row',
@@ -79,14 +86,6 @@ export const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     ctrlDisabled: { opacity: 0.4 },
-    addForm: {
-      gap: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 12,
-      backgroundColor: colors.surfaceMuted,
-    },
     editForm: {
       gap: 8,
       borderWidth: 1,
@@ -134,27 +133,6 @@ export const createStyles = (colors: ThemedColors) =>
     },
     coordRow: { flexDirection: 'row', gap: 8 },
     coordInput: { flex: 1 },
-    siteSearch: { gap: 8 },
-    siteResults: { gap: 6 },
-    siteOption: {
-      minHeight: 68,
-      paddingVertical: 7,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    siteOptionImage: {
-      width: 72,
-      height: 54,
-      borderRadius: 8,
-      overflow: 'hidden',
-      backgroundColor: colors.surface,
-      flexShrink: 0,
-    },
-    siteOptionBody: { flex: 1, minWidth: 0, gap: 1 },
-    siteOptionKind: { fontSize: 11, color: colors.textMuted, fontWeight: '700' },
-    siteOptionTitle: { fontSize: 14, color: colors.text, fontWeight: '700' },
-    siteOptionSubtitle: { fontSize: 12, color: colors.textSecondary },
     templates: { gap: 8 },
     templateRow: {
       flexDirection: 'row',

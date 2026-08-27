@@ -294,6 +294,38 @@ describe('useBreadcrumbModel', () => {
     ]);
   });
 
+  it('uses a localized country crumb without resolving the alias as a quest id', async () => {
+    const { fetchQuestByQuestId, fetchQuestsList } = jest.requireMock('@/api/quests') as {
+      fetchQuestByQuestId: jest.Mock;
+      fetchQuestsList: jest.Mock;
+    };
+    fetchQuestsList.mockResolvedValue([
+      {
+        quest_id: 'minsk-center-dragon',
+        city_id: '4',
+        city_name: 'Минск',
+        country_code: 'BY',
+        country_name: 'Беларусь',
+        title: 'Квест по центру Минска',
+      },
+    ]);
+    usePathname.mockReturnValue('/quests/country/belarus');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.currentTitle).toBe('Беларусь');
+    });
+
+    expect(fetchQuestByQuestId).not.toHaveBeenCalled();
+    expect(result.current.items).toEqual([
+      { label: 'Квесты', path: '/quests' },
+      { label: 'Беларусь', path: '/quests/country/belarus' },
+    ]);
+    expect(result.current.backToPath).toBe('/quests');
+  });
+
   it('falls back to the segment for a city landing whose quests are not loaded yet', async () => {
     const { useQuestsList } = jest.requireMock('@/hooks/useQuestsApi') as { useQuestsList: jest.Mock };
     useQuestsList.mockReturnValue({ quests: [], cityQuestsIndex: {}, loading: true, error: null });

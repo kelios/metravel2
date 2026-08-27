@@ -74,13 +74,24 @@ describe('travelDetailsMapSectionContentModel', () => {
     ).toBe(true)
   })
 
+  it('detects map data from route-file markers without a line preview', () => {
+    expect(
+      hasTravelDetailsMapData({
+        hasEmbeddedCoords: false,
+        hasTravelAddressPoints: false,
+        routeFilePoints: [{ coord: '50.01,19.81', name: 'Park 1' }],
+        routePreviewItems: [],
+      })
+    ).toBe(true)
+  })
+
   it('returns false when neither embedded coords nor previews exist', () => {
     expect(
       hasTravelDetailsMapData({
         hasEmbeddedCoords: false,
         hasTravelAddressPoints: false,
         routePreviewItems: [],
-      })
+      }),
     ).toBe(false)
   })
 })

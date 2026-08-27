@@ -11,6 +11,7 @@ const META_TEXT_LINE_HEIGHT =
   Platform.OS === 'web'
     ? DESIGN_TOKENS.typography.scale.bodySmall.lineHeight
     : DESIGN_TOKENS.typography.scale.caption.lineHeight;
+const TITLE_TEXT_LINE_HEIGHT = Platform.OS === 'web' ? 20 : 19;
 
 export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
@@ -195,9 +196,8 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       fontSize: Platform.OS === 'web'
         ? DESIGN_TOKENS.typography.sizes.md
         : DESIGN_TOKENS.typography.sizes.sm,
-      lineHeight: Platform.OS === 'web'
-        ? 20
-        : 19,
+      lineHeight: TITLE_TEXT_LINE_HEIGHT,
+      minHeight: TITLE_TEXT_LINE_HEIGHT * 2,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
       width: '100%',

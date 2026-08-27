@@ -349,7 +349,7 @@ function Home() {
       </DeferredSection>
 
       <DeferredSection marginTop={gap.sections} minHeight={240} fallback={null} priority="low">
-        <EmailSubscriptionForm source="home" />
+        <EmailSubscriptionForm source="home" clientOnly />
       </DeferredSection>
 
       <DeferredSection marginTop={gap.finalCta} minHeight={300} fallback={<SectionSkeleton />} priority="low">

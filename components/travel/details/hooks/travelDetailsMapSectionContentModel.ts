@@ -12,6 +12,8 @@ export function getTravelDetailsMapSectionContentFlags(params: {
 }) {
   const shouldRender = params.canRenderHeavy
 
+  // Keep the heavy Leaflet mount behind the web viewport gate. Explicit map
+  // navigation/open and PDF/print paths bypass it so those flows stay eager.
   return {
     isLoading: false,
     shouldRender,
@@ -25,11 +27,13 @@ export function getTravelDetailsMapSectionContentFlags(params: {
 export function hasTravelDetailsMapData(params: {
   hasEmbeddedCoords: boolean
   hasTravelAddressPoints: boolean
+  routeFilePoints?: Array<unknown>
   routePreviewItems: RoutePreviewItem[]
 }) {
   return (
     params.hasEmbeddedCoords ||
     params.hasTravelAddressPoints ||
+    (params.routeFilePoints?.length ?? 0) > 0 ||
     params.routePreviewItems.some((item) => (item.preview?.linePoints?.length ?? 0) > 0)
   )
 }

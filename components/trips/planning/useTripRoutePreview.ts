@@ -1,7 +1,8 @@
 // components/trips/planning/useTripRoutePreview.ts
 // Живое превью маршрута конструктора поездки (#1490): пока правки не сохранены,
 // линию на карте и цифры в «Итоге» даёт тот же движок, что и /map, а не прямая
-// между точками. Сохранённый маршрут остаётся за бэкендом — превью его не трогает.
+// между точками. #873 также включает этот путь для сохранённого маршрута, если
+// бэк прислал healthy routing state без пригодной геометрии.
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { UseMapRoutingResult } from '@/components/map-core/useMapRouting';
@@ -39,7 +40,7 @@ export const PREVIEW_DEBOUNCE_MS = 500;
 interface Options {
   route: RoutePoint[];
   transport: TripTransport;
-  /** Живое превью нужно только пока правки не сохранены. */
+  /** Превью нужно для несохранённых правок или ремонта saved healthy/null state. */
   enabled: boolean;
 }
 

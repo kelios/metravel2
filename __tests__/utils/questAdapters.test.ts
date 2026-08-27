@@ -8,6 +8,30 @@ import {
   adaptMeta,
   adaptBundle,
 } from '@/utils/questAdapters';
+import type { ApiQuestMeta } from '@/api/quests';
+
+const makeQuestMeta = (overrides: Partial<ApiQuestMeta> = {}): ApiQuestMeta => ({
+  id: 1,
+  quest_id: 'krakow-dragon',
+  title: 'Тайна дракона',
+  points: '100',
+  city_id: 'krakow',
+  city_name: 'Краков',
+  lat: '50.06',
+  lng: '19.94',
+  duration_min: 60,
+  difficulty: 'medium',
+  tags: null,
+  pet_friendly: false,
+  cover_url: 'https://metravel.by/quest-cover/1/legacy-landscape.webp',
+  rating_avg: null,
+  rating_count: 0,
+  user_rating: null,
+  completions_count: 0,
+  is_completed_by_me: false,
+  first_completer: null,
+  ...overrides,
+});
 
 describe('questAdapters', () => {
   describe('normalize', () => {
@@ -619,6 +643,95 @@ describe('questAdapters', () => {
       expect(result.durationMin).toBeUndefined();
       expect(result.difficulty).toBeUndefined();
       expect(result.tags).toBeUndefined();
+    });
+
+    it('prefers the normalized square manifest and its canonical srcset over legacy variants', () => {
+      const originalApiUrl = process.env.EXPO_PUBLIC_API_URL;
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api';
+
+      try {
+        const result = adaptMeta(makeQuestMeta({
+          media: {
+            cover: {
+              id: 11,
+              src_square: ' /quest-cover/1/square-main.webp ',
+              srcset_square: [
+                '/quest-cover/1/square-160.webp 160w',
+                '/quest-cover/1/square-320.webp 320w',
+              ].join(', '),
+              sizes_hint_square: ' 132px ',
+              variants: {
+                square_160: '/quest-cover/1/legacy-square-160.webp',
+                square_320: '/quest-cover/1/legacy-square-320.webp',
+              },
+            },
+          },
+        }));
+
+        expect(result.cover).toBe('https://metravel.by/quest-cover/1/legacy-landscape.webp');
+        expect(result.squareCoverWebResponsiveSource).toEqual({
+          src: 'https://metravel.by/quest-cover/1/square-main.webp',
+          srcSet: [
+            'https://metravel.by/quest-cover/1/square-160.webp 160w',
+            'https://metravel.by/quest-cover/1/square-320.webp 320w',
+          ].join(', '),
+          sizes: '132px',
+        });
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = originalApiUrl;
+      }
+    });
+
+    it('builds the square 160/320 ladder from variants when top-level square fields are null', () => {
+      const originalApiUrl = process.env.EXPO_PUBLIC_API_URL;
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api';
+
+      try {
+        const result = adaptMeta(makeQuestMeta({
+          media: {
+            cover: {
+              id: 12,
+              src_square: null,
+              srcset_square: null,
+              sizes_hint_square: null,
+              variants: {
+                square_160: '/quest-cover/1/square-160.webp',
+                square_320: '/quest-cover/1/square-320.webp',
+              },
+            },
+          },
+        }));
+
+        expect(result.squareCoverWebResponsiveSource).toEqual({
+          src: 'https://metravel.by/quest-cover/1/square-320.webp',
+          srcSet: [
+            'https://metravel.by/quest-cover/1/square-160.webp 160w',
+            'https://metravel.by/quest-cover/1/square-320.webp 320w',
+          ].join(', '),
+        });
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = originalApiUrl;
+      }
+    });
+
+    it('keeps the legacy cover fallback and omits webResponsiveSource while square fields are null', () => {
+      const result = adaptMeta(makeQuestMeta({
+        media: {
+          cover: {
+            id: 13,
+            src_square: null,
+            srcset_square: null,
+            sizes_hint_square: null,
+            variants: {
+              square_160: null,
+              square_320: null,
+            },
+          },
+        },
+      }));
+
+      expect(result.cover).toBe('https://metravel.by/quest-cover/1/legacy-landscape.webp');
+      expect(result.squareCoverWebResponsiveSource).toBeUndefined();
     });
 
     it('rewrites a private first-completer avatar through the public API origin', () => {

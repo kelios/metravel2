@@ -1,4 +1,9 @@
 import { DESIGN_COLORS } from '@/constants/designSystem';
+import {
+  HEADER_HEIGHT_FALLBACK,
+  HEADER_LAYOUT_BREAKPOINTS,
+  HEADER_MEDIA_MAX_WIDTHS,
+} from '@/components/layout/headerLayoutContract';
 
 /**
  * Build critical CSS string for the HTML shell.
@@ -65,6 +70,7 @@ export function buildCriticalCSS(): string {
     // ширину до-гидрационно тут нечего.
     '[data-testid="travel-details-hero"] img[data-lcp]{aspect-ratio:16/9;width:100%;max-width:100%;object-fit:contain}',
     '[data-hero-data-placeholder="true"] img{width:100%;height:100%;max-width:none;aspect-ratio:auto;object-fit:cover}',
+    `[data-header-slot=""]{height:var(--mt-header-slot-wide,${HEADER_HEIGHT_FALLBACK['wide-nobar']}px);flex-shrink:0}`,
     '[data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}',
     // RNW's atomic stylesheet can register after the static header is painted.
     // Until then the desktop inner row measured 98px instead of its final 64px,
@@ -81,7 +87,8 @@ export function buildCriticalCSS(): string {
     // (`inner` + `innerMobile`, `container.paddingBottom`, `logoCompact`) и
     // `LanguageSwitcher.anchorCompact`. `!important` обязателен: иначе правило
     // проигрывает атомарным классам RNW (та же грабля, что у min-height шелла).
-    '@media (max-width:1279.98px){',
+    `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.compact}px){`,
+    `  [data-header-slot=""]{height:var(--mt-header-slot-compact,${HEADER_HEIGHT_FALLBACK['compact-nobar']}px)}`,
     '  [data-testid="main-header"]{padding-bottom:6px !important}',
     '  [data-header-inner="true"]{height:56px !important;padding:6px !important}',
     '  [data-header-logo-wordmark="true"]{display:none !important}',
@@ -90,6 +97,33 @@ export function buildCriticalCSS(): string {
     '  [data-header-slot="account"]{flex:1 1 0% !important;min-width:0 !important}',
     '  [data-header-lang-chevron="true"]{display:none !important}',
     '  [data-testid="header-language-switcher"]{min-width:54px !important;padding-left:8px !important;padding-right:8px !important}',
+    '}',
+    `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.mobile}px){`,
+    `  [data-header-slot=""]{height:var(--mt-header-slot-mobile,${HEADER_HEIGHT_FALLBACK['mobile-nobar']}px)}`,
+    '}',
+    // HeaderContextBar uses phone geometry only below 768 px. On wider bands
+    // its 44px controls plus two borders need a 46px box from the first frame.
+    // Keep these declarations non-route-specific; travel has an extra wide
+    // suppression rule below because that route owns its desktop navigation.
+    '[data-header-context-fallback="default"]{height:52px !important;min-height:52px !important}',
+    `@media (min-width:${HEADER_LAYOUT_BREAKPOINTS.mobileContext}px){`,
+    '  [data-header-context-fallback="default"]{height:46px !important;min-height:46px !important}',
+    '}',
+    // #1563: the static travel-detail snapshot cannot know the viewport width,
+    // so CustomHeader initially reserves the 52px mobile context row. At
+    // 768–1279 the lazy runtime bar is actually the desktop breadcrumb row:
+    // 44px controls plus its two borders = 46px. Above 1280 travel details do
+    // not render a context bar at all. Correct only the marked travel fallback
+    // before first paint; other routes keep their own context-bar contract.
+    // Keep every travel fallback height here rather than duplicating the mobile
+    // value inline in React: one CSS owner prevents a transient 52px Suspense
+    // frame at tablet widths. `!important` also protects against RNW atoms.
+    '[data-header-context-fallback="travel"]{height:52px !important;min-height:52px !important}',
+    `@media (min-width:${HEADER_LAYOUT_BREAKPOINTS.mobileContext}px) and (max-width:${HEADER_MEDIA_MAX_WIDTHS.compact}px){`,
+    '  [data-header-context-fallback="travel"]{height:46px !important;min-height:46px !important}',
+    '}',
+    `@media (min-width:${HEADER_LAYOUT_BREAKPOINTS.compactRow}px){`,
+    '  [data-header-context-fallback="travel"]{display:none !important;height:0 !important;min-height:0 !important}',
     '}',
     // #1334: `/places` есть в статическом HTML, а ширины окна до гидратации нет
     // (SSR-снимок даёт width=0 -> desktop-раскладка). Раньше компактная панель

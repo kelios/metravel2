@@ -16,11 +16,12 @@ import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import { resolveQuestCitySegment } from '@/utils/questCityAlias';
+import { resolveQuestCountryAlias } from '@/utils/questCountryLanding';
 import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import type { PlannedTrip } from '@/api/plannedTrips';
 import type { PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/queryKeys';
-import { translate as i18nT } from '@/i18n'
+import { getActiveLocale, translate as i18nT } from '@/i18n'
 
 
 type SearchParamsWithReturnTo = { returnTo?: string | string[] };
@@ -278,7 +279,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     const p = resolvedPathname;
     if (!p || !p.startsWith('/quests/')) return null;
     const parts = p.split('/').filter(Boolean);
-    return parts.length >= 3 ? parts[2] : null;
+    return parts.length >= 3 && parts[1] !== 'country' ? parts[2] : null;
   }, [resolvedPathname]);
 
   const { data: questApiData } = useQuery<ApiQuestBundle | null>({
@@ -304,6 +305,13 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return parts.length === 2 ? parts[1] : null;
   }, [resolvedPathname]);
 
+  const questCountryAlias = useMemo(() => {
+    const p = resolvedPathname;
+    if (!p || !p.startsWith('/quests/country/')) return null;
+    const parts = p.split('/').filter(Boolean);
+    return parts.length === 3 ? parts[2] : null;
+  }, [resolvedPathname]);
+
   // #1393: крошка читает СЫРОЙ ответ `/quests/`, а не адаптированный список из
   // `useQuestsList`. Крошки живут в шапке каждого маршрута, поэтому импорт
   // `useQuestsApi` тянул в стартовый граф всего сайта `utils/questAdapters` →
@@ -312,20 +320,28 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   //
   // Ключ, queryFn и времена кеша совпадают с `useQuestsList`, поэтому экран
   // квестов и крошка по-прежнему дедуплицируются в один запрос `/quests/`.
-  const { data: questsForCityCrumb } = useQuery<ApiQuestMeta[]>({
+  const { data: questsForLocationCrumb } = useQuery<ApiQuestMeta[]>({
     ...questsListQueryOptions(),
-    enabled: !!questCitySegment,
+    enabled: !!questCitySegment || !!questCountryAlias,
   });
 
   const questCityName = useMemo(() => {
     if (!questCitySegment) return '';
-    const quests = questsForCityCrumb ?? [];
+    const quests = questsForLocationCrumb ?? [];
     // `resolveQuestCitySegment` читает `city_id ?? cityId`, поэтому сырой список
     // ему подходит так же, как адаптированный.
     const resolved = resolveQuestCitySegment(questCitySegment, quests);
     if (!resolved) return '';
     return quests.find((q) => String(q.city_id) === resolved.cityId)?.city_name || '';
-  }, [questCitySegment, questsForCityCrumb]);
+  }, [questCitySegment, questsForLocationCrumb]);
+
+  const activeLocale = getActiveLocale();
+  const questCountryName = useMemo(() => {
+    if (!questCountryAlias) return '';
+    return resolveQuestCountryAlias(questCountryAlias, questsForLocationCrumb ?? [], {
+      locale: activeLocale,
+    })?.countryName || '';
+  }, [activeLocale, questCountryAlias, questsForLocationCrumb]);
 
   // Article title from API (for header/breadcrumbs on /article/[id] pages — F-19)
   const articleParamForBreadcrumb = useMemo(() => {
@@ -645,6 +661,25 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
+    const isQuestCountryLanding =
+      parts[0] === 'quests' && parts[1] === 'country' && parts.length === 3;
+    if (isQuestCountryLanding) {
+      const countryLabel = truncateLabel(questCountryName || toTitleFromSegment(parts[2]));
+      const items = [
+        { label: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'), path: '/quests' },
+        { label: countryLabel, path: p },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: countryLabel,
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'),
+        backToPath: '/quests',
+        showBreadcrumbs: true,
+      };
+    }
+
     const isQuestCityLanding = p.startsWith('/quests/') && parts.length === 2;
     if (isQuestCityLanding) {
       const cityLabel = truncateLabel(questCityName || toTitleFromSegment(parts[1]));
@@ -735,7 +770,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, userProfileName, articleTitle, plannedTripData, publicTripData]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
 }
 
 export default useBreadcrumbModel;

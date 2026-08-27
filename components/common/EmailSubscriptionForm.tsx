@@ -21,6 +21,12 @@ interface EmailSubscriptionFormProps {
   source: SubscribeSource
   title?: string
   subtitle?: string
+  /**
+   * The parent guarantees that this form is absent from static HTML and mounts
+   * only after hydration. This lets responsive styles use the live viewport on
+   * their first visible render instead of briefly drawing the width-0 layout.
+   */
+  clientOnly?: boolean
 }
 
 // Быстрый клиентский гейт: ловит основную массу опечаток без запроса. Он
@@ -37,8 +43,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 // с flexWrap на карточке это уводит форму на вторую строку вместо сжатия текста.
 const TEXT_MIN_WIDTH = 260
 
-function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFormProps) {
-  const { isMobile } = useResponsive()
+function EmailSubscriptionForm({
+  source,
+  title,
+  subtitle,
+  clientOnly = false,
+}: EmailSubscriptionFormProps) {
+  const { isMobile } = useResponsive({ clientOnly })
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
 
@@ -96,7 +107,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
 
   return (
     <View style={styles.wrapper}>
-      <ResponsiveContainer maxWidth="xl" padding>
+      <ResponsiveContainer maxWidth="xl" padding clientOnly={clientOnly}>
         <View style={styles.card}>
           <View style={styles.iconRow}>
             <View style={styles.iconWrap}>

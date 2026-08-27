@@ -1,6 +1,6 @@
 # Problem memory and recurrence registry
 
-Актуализировано: 2026-08-23.
+Актуализировано: 2026-08-27.
 
 Этот документ — постоянная память о системных семействах проблем MeTravel. Он
 не заменяет task board и не хранит обычный progress log. Борд остаётся
@@ -99,6 +99,94 @@ guard, падающий в CI на попытке обойти этот конт
 | P2 | Жизненный цикл снимков живого прод-контента: снятый артефакт не остаётся в репозитории как данные | Применённый снимок неотличим от актуального и при повторном запуске молча возвращает прод к прошлой редакции. |
 
 ## Реестр
+
+### HEADER-HYDRATION-CLS-001 — резерв шапки расходится с её responsive-геометрией
+
+- **Инвариант:** высота зарезервированного `[data-header-slot]` совпадает с
+  высотой первого runtime-кадра глобальной шапки во всех responsive-полосах;
+  контент страницы и узлы шапки не участвуют в `layout-shift` при гидрации.
+- **Surface/owner:** общий web layout и critical CSS:
+  `app/(tabs)/_layout.tsx`, `app/global.css`,
+  `components/layout/customHeaderModel.ts` и `utils/criticalCSSBuilder.ts`.
+  Подтверждённая поверхность — desktop web в полосе `768–1279`; mobile web
+  `412` и широкий desktop `1280` — здоровые контроли. Localization impact:
+  none.
+- **Цепочка:** `#1144` (первый фикс высоты header slot) → `#1298`
+  (канонический `header-hydration-cls`, закрыт проверками только на `412/1280`)
+  → recurrence 2026-08-27, обнаруженный новым narrow-desktop gate `#1564`;
+  параллельный route-specific контракт высоты travel header ведёт `#1563`.
+- **Подтверждённая причина recurrence:** статический slot считает mobile только
+  ниже `768px` и резервирует `78px` на `1152`, тогда как runtime-модель и
+  critical CSS считают шапку narrow/mobile до `1280` и рисуют `64px`. Холодные
+  production-build прогоны дали CLS `0.010928357…–0.011072531…` (стабильный
+  внутри retry) и источник `div[data-testid="search-container"]`, сдвинутый
+  `y=78 → 64`. Контроли:
+  `1280` — `78 → 78`, CLS `0`; `412` — `64 → 64`, CLS `0`.
+- **Почему прежний control не удержал инвариант:** матрица `#1298` проверяла
+  только крайние профили `412` и `1280`, поэтому полоса `768–1279`, где
+  breakpoint slot и breakpoint шапки расходятся, не исполнялась вовсе.
+- **Controls:** каноническая карточка `#1298` переоткрыта и связана с
+  `#1144/#1563/#1564`. Постоянная матрица обязана проверять
+  `412/768/1152/1279/1280`, фактическую высоту slot/runtime и отсутствие
+  `search-container`/header sources в layout-shift. `#1564` добавляет отдельный
+  `desktop-narrow` perf-профиль, не ослабляя бюджеты `desktop` и `mobile`.
+- **Решение для новой жалобы:** повторный `reserved height → runtime height`
+  сдвиг глобальной шапки по той же breakpoint-причине — `reopen #1298`; иной
+  route-specific дополнительный ряд/контекст — `create-linked` к семье (как
+  `#1563`), а не новый общий «CLS страницы».
+- **Последняя проверка:** 2026-08-27; для `#1298` локально введён общий
+  `mobile/compact/wide` контракт резервирования и critical-CSS breakpoint,
+  независимый review исправил пересечение outer-slot селектора с внутренними
+  `nav/account` слотами. Focused Jest и browser matrix ещё не приняты из-за
+  чужого живого quality gate; до их зелёного результата и post-deploy пробы
+  карточка остаётся `in_progress`. Gate `#1564` продолжает держать narrow
+  baseline.
+
+### TRAVEL-DEFERRED-RESERVE-CLS-001 — placeholder и первый runtime-кадр имеют одну внешнюю геометрию
+
+- **Инвариант:** deferred-placeholder остаётся в потоке до первого ненулевого
+  layout разрешённого runtime-модуля, а его внешний reserve совпадает с
+  runtime-геометрией. Узлы footer/runtime не должны попадать в
+  `layout-shift.sources` в момент reveal.
+- **Surface/owner:** web travel details:
+  `components/travel/details/TravelDetailsDeferred.tsx`,
+  `TravelDetailsPostLcpRuntime.tsx`, `TravelDetailsDeferredTransition.tsx`,
+  `TravelDetailsFooterRuntimeFrame.tsx` и focused browser/Jest guards.
+  Обязательная матрица — `1024×640`, `1366×768`, mobile web `390×844`;
+  Android/iOS и localization вне этой семьи.
+- **Цепочка:** каноническая семья `#160`; связанные причины/прецеденты
+  `#561/#164`; текущий recurrence — `#1604`. `#562/#565` — соседние deferred
+  performance controls, а `#1588` про другую footer-поверхность и не заменяет
+  этот invariant.
+- **Подтверждённая причина recurrence:** web footer оставался за
+  bottom/intersection gate и начинал lazy resolve уже в видимой области. Общий
+  `SectionSkeleton` и footer fallback не совпадали с полным runtime-кадром
+  (включая Telegram-блок). На исходном `1024×640` footer-transition внёс
+  `0.1019878` CLS; exact mobile recheck воспроизвёл рост видимой высоты
+  `525 → 621.97px` и footer-source `0.0749415`. Изменение
+  `EmailSubscriptionForm` в scope не входит.
+- **Почему прежний control не удержал инвариант:** presence/state Jest-тесты
+  видели загрузку компонента, но не проверяли ненулевой первый layout,
+  Layout Instability API и фактический внутренний scroll-container страницы.
+- **Controls:** web разрешает footer внутри уже post-LCP, но ещё offscreen tree;
+  native сохраняет intersection gate. Reserve действует только в
+  pending/measuring и снимается после ready, чтобы не оставлять пустой хвост.
+  Focused Jest держит pending/ready/error/native состояния;
+  `e2e/travel-details-footer-transition-cls.spec.ts` скроллит
+  `[data-testid="travel-details-scroll"]` только после resolved frame и снятия
+  placeholder, fail-closed собирает
+  `PerformanceObserver`, проверяет footer sources, console/page errors,
+  горизонтальный overflow и остаточный trailing reserve на production export.
+- **Решение для новой жалобы:** повторный сдвиг `deferred placeholder → runtime`
+  в footer — `reopen #1604`; тот же механизм в другой секции —
+  `create-linked` к `#160`, а не ещё один общий «CLS страницы».
+- **Последняя проверка:** 2026-08-27; implementation и повторный независимый
+  code review завершены; первый production candidate выявил mobile recurrence и
+  persistent-reserve риск, оба исправлены. Финальный Jest/ESLint — `3 suites /`
+  `13 tests`; refreshed production build — PASS; deterministic и exact-slug
+  browser matrix — `3/3 + 3/3`, footer/total CLS, overflow и trailing reserve
+  равны `0` во всех трёх viewport; bilateral slider/perf — `2/2 + 5/5 + 33/33`.
+  Post-deploy замер ещё не разрешён и не выполнен, поэтому `#1604` не закрыта.
 
 ### MEDIA-CONTAIN-SLOT-001 — геометрия `contain`-слота против пропорций контента
 
@@ -901,13 +989,49 @@ guard, падающий в CI на попытке обойти этот конт
   5, `/quests/mogilev` 3 из 4 — при том, что numeric-лендинги обоих `city_id`
   канонизируются именно на эту страницу, то есть выпавшие квесты теряли и
   внутреннюю ссылку, и место в канонической группе.
-- **Controls:** `mergeQuestCityLandingsByAlias()` собирает alias-лендинг из
-  объединения городов; `scripts/verify-static-quest-seo.js` требует, чтобы
+- **Controls:** `buildQuestCityLandingGroups()` собирает alias-лендинг из
+  объединения `city_id`; `scripts/verify-static-quest-seo.js` требует, чтобы
   alias-лендинг ссылался на каждый квест всех своих `city_id`, иначе сборка
   падает до rsync.
 - **Решение для новой жалобы:** неполный список квестов на городской посадочной
   — `reopen`; тот же класс «сегмент URL адресует сущность шире, чем ключ
   генерации» на другом слое — `create-linked`.
+
+### QUEST-CITY-LANDING-VALUE-001 — городской URL ценнее единственной карточки квеста
+
+- **Инвариант:** каждый индексируемый и включённый в sitemap адрес
+  `/quests/<alias>` несёт самостоятельную ценность сверх дочерних карточек:
+  обзор прогулки по городу, практику планирования и catalog-derived
+  перелинковку на соседние quest-города; при наличии данных — ссылки на
+  travel-статьи. Это правило действует и при ровно одном квесте в городе.
+- **Surface/owner:** frontend quest city route + SSG/build verifier
+  (`app/(tabs)/quests/[city]/index.tsx`, `utils/questCityAlias.js`,
+  `scripts/generate-seo-pages.js`, `scripts/verify-static-quest-seo.js`),
+  canonical task `#1569`. Production `sitemap.xml` принадлежит Django и
+  для фронтового verifier является внешним input.
+- **Цепочка:** 2026-08-25 полный URL Inspection из `#1559` показал 17 городских
+  страниц вне индекса; 11 уже были «Обнаружена, не проиндексирована». В
+  фактическом `GET /api/quests/` 96 из 113 логических городов имели ровно один
+  квест, поэтому их лендинг вырождался в оболочку единственной карточки.
+- **Подтверждённая причина:** техническая разметка была исправна (`200`, title,
+  description, self-canonical, H1, SSG marker, sitemap), но шаблон не содержал
+  city-owned секций. Повторная подача URL не меняет этот structural thin-content
+  класс.
+- **Controls:** `buildQuestCityLandingGroups()` строит правило из всего
+  пагинированного каталога без списка городов и объединяет дубли `city_id` по
+  canonical alias; SSG пишет обязательные `data-ssg-quest-city-overview` и
+  `data-ssg-quest-city-practical`; verifier проверяет эти поля, отличие metadata
+  от единственного child, self-canonical и присутствие canonical alias в
+  живом backend-owned `${API_BASE}/sitemap.xml`. Пустой/недоступный
+  quest catalog или sitemap роняют build до rsync; HTTP 200/3xx остаются
+  post-deploy-контрактом.
+- **Решение для новой жалобы:** исчезло самостоятельное содержание или новый
+  одно-квестовый город не прошёл guard — `reopen #1569`; страновая посадочная
+  (`/quests/country/<alias>`) — отдельный продуктовый контракт, `create-linked`.
+- **Последняя проверка:** 2026-08-27, локальный targeted/smoke: logical one-quest
+  group создаёт `/quests/rome`, SSG содержит обязательные city-only секции,
+  self-canonical и каталоговые ссылки; production deploy и повторный
+  пятидневный индекс-срез остаются Done gate после review.
 - **Осталось на бэкенде:** дубли городов в справочнике (`area=back`) — фронт их
   только переживает, но не устраняет.
 - **Второй surface, подтверждён 2026-08-25:** предсказанный выше бэкенд-рецидив
@@ -915,10 +1039,11 @@ guard, падающий в CI на попытке обойти этот конт
   `/quests/mogilev` дважды каждый: `QuestCitySitemap.items()`
   (`../metravel-backend:maintenance/sitemap.py:109-115`) строит список по
   `city_id`, а не по алиасу, и два `city_id` одного города дают два элемента с
-  одинаковым `location()`. Фронтовый гвард это увидеть не мог: в
-  `scripts/verify-static-quest-seo.js` нет слова «sitemap» — он проверяет
-  SSG-вывод, а карту сайта отдаёт Django. Заведено `area=back` карточкой; фронт
-  снова только переживает дубли, а не устраняет их.
+  одинаковым `location()`. До `#1569` фронтовый verifier проверял только
+  SSG-вывод и не читал backend sitemap. Теперь build проверяет
+  alias-membership в живом backend input, но дедупликация элементов и
+  сама генерация остаются backend-обязанностью. Заведена `area=back`
+  карточка; фронт только проверяет границу владения.
 - **Кто владеет прод-`sitemap.xml` (ловушка, стоившая полудиагностики
   2026-08-25):** карту генерирует бэкенд —
   `../metravel-backend:maintenance/sitemap.py` через `django.contrib.sitemaps`, а
@@ -932,6 +1057,42 @@ guard, падающий в CI на попытке обойти этот конт
   вместо 3/3/3, 0 из 92 alias-лендингов нарушают инвариант, гвард роняет сборку
   на старом last-write-wins выводе. Фронтовый инвариант с тех пор держится;
   бэкенд-surface (sitemap) впервые проверен 2026-08-25 и нарушен.
+
+### QUEST-COUNTRY-LANDING-001 — одна страна имеет один catalog-derived URL
+
+- **Инвариант:** каждый валидный ISO alpha-2 с хотя бы одним routable квестом
+  создаёт ровно один `/quests/country/<alias>` с уникальными квестами и
+  canonical city groups. Missing/invalid code не создаёт страницу, а новый
+  валидный код не требует изменения allowlist.
+- **Surface/owner:** frontend country route, общий ISO/alias model, SSG и build
+  verifier (`app/(tabs)/quests/country/[country]/index.tsx`,
+  `utils/questCountryLanding.js`, `scripts/generate-seo-pages.js`,
+  `scripts/verify-static-quest-seo.js`), canonical task `#1607`. Production
+  sitemap принадлежит Django task `#1606`.
+- **Цепочка:** пользователь 2026-08-27 выбрал точную схему
+  `/quests/country/<alias>` с контрольными `BY → belarus` и `PL → poland`.
+  `#1569` остаётся владельцем city value; country layer создан как
+  `create-linked`, потому что вводит новую агрегированную сущность URL.
+- **Подтверждённая причина:** каталог умел группировать страны только внутри
+  `/quests`, но у группы не было route, self-canonical, самостоятельного
+  контента и SSG-документа. Affiliate slug-map неполон и partner-specific,
+  поэтому не может быть источником канонических URL.
+- **Controls:** полный ISO alpha-2 set валидирует вход, а locale-neutral alias
+  выводится из English ISO display name; группы строятся из всего каталога до
+  city merge, чтобы одинаковый city alias в разных странах не смешал квесты.
+  SSG обязан содержать `data-ssg-quest-country-overview`, `-cities` и
+  `-practical`, self-canonical, все city/quest links; генерация fail-closed
+  требует собственный Expo route template `quests/country/[country].html`,
+  чтобы не выпустить country HTML с hydration bundle городского route.
+  Неизвестный runtime alias
+  возвращается в `/quests`, fallback-template получает `noindex`.
+- **Release boundary:** обычный frontend build проверяет country HTML, но не
+  падает из-за ещё не раскатанного `#1606`. После согласованного deploy
+  membership backend sitemap включается явно флагом
+  `--verify-country-sitemap`; HTTP 200/no-3xx остаётся post-deploy gate.
+- **Решение для новой жалобы:** пропала или смешалась country group, alias либо
+  SSG-секция — `reopen #1607`; sitemap не публикует уже существующую страницу —
+  `reopen #1606`.
 
 ### QUEST-HINT-LEAK-001 — подсказка выдаёт ответ вместо направления взгляда
 
@@ -2165,6 +2326,39 @@ guard, падающий в CI на попытке обойти этот конт
   backend degraded-response issue относится к `ROUTING-ORS-001`, state/DTO/
   bridge drift — к этой семье; не создавать общую карточку «карта сломана».
 - **Последняя проверка:** 2026-07-28; migration debt остаётся.
+
+### TRAVEL-POINT-EDIT-PHOTO-IMPORT-ISOLATION-001 — фото существующей точки не является командой создания новой
+
+- **Инвариант:** загрузка или drop фото в редакторе существующей точки может
+  обновить только эту точку. Количество, id, координаты, адрес, категории и
+  порядок точек остаются прежними. Переход `N → N+1` разрешён только явной
+  командой «Из фото» в панели точек.
+- **Surface/owner:** web travel wizard, шаг маршрута; portal-модалка
+  `EditMarkerModal` и command boundary в `MarkersListComponent`. Каноническая
+  задача — `#1603`.
+- **Симптом:** drop JPEG в поле фото существующей точки одновременно вызывал
+  `onAddMarkerFromPhoto` и создавал новую GPS-точку.
+- **Цепочка:** `#505` владеет отдельной семьёй save/merge race, `#1599` —
+  отображением preview. `#1603` канонична для утечки portal-drop в команду
+  создания точки.
+- **Подтверждённая причина:** synthetic drag-события React из portal-потомка
+  всплывают по React component tree, даже когда DOM target расположен вне
+  панели списка. Корневые `dragover`/`dragenter`/`dragleave`/`drop` handlers
+  `MarkersListComponent` не проверяли DOM containment и интерпретировали drop
+  внутри модалки как panel-level EXIF import.
+- **Controls:** `isDragEventFromContainer` допускает обработку только когда
+  `currentTarget.contains(target)`. Integration test подтверждает upload фото
+  выбранной точки, отсутствие panel overlay и `onAddMarkerFromPhoto`, а также
+  сохранение нового URL; healthy controls сохраняют прямой drop в панель и
+  marker reorder.
+- **Решение для новой жалобы:** повтор той же утечки portal-drop в panel import
+  — `reopen #1603`; дефект preview без создания точки — `#1599`; мутация данных
+  при save/readback без portal leak — `#505` или `create-linked` по
+  подтверждённой причине.
+- **Последняя проверка:** 2026-08-27; targeted suite дошёл до 13/14, при этом
+  релевантные portal upload/no-add assertions прошли. Единственный упавший
+  неоднозначный selector исправлен, но полный повтор suite, browser-проверка и
+  реальный save/readback ещё не выполнены, поэтому `#1603` не принят.
 
 ## Правило закрытия recurring problems
 

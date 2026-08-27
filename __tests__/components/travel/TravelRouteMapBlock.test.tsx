@@ -48,6 +48,7 @@ const baseProps = {
   mapOpenTrigger: 0,
   mapResizeTrigger: 0,
   placeHints: [],
+  routeFilePoints: [],
   routePreviewItems: [
     {
       file: { id: 1 },
@@ -82,6 +83,7 @@ describe('TravelRouteMapBlock', () => {
     mockRouteElevationProfile.mockClear()
     mockUseTravelRouteMapBlockModel.mockReset()
     mockUseTravelRouteMapBlockModel.mockReturnValue({
+      routeFileMarkers: [],
       routeLines: [{ color: '#123456', coords: [[53.9, 27.56], [52.1, 23.7]] }],
       routeProfiles: [
         {
@@ -119,6 +121,7 @@ describe('TravelRouteMapBlock', () => {
       expect.objectContaining({
         showRouteLine: true,
         routeLines: [{ color: '#123456', coords: [[53.9, 27.56], [52.1, 23.7]] }],
+        travelData: baseProps.travel.travelAddress,
         highlightedPoint: undefined,
       })
     )
@@ -134,6 +137,7 @@ describe('TravelRouteMapBlock', () => {
 
   it('renders loading fallback when route preview data is still loading and map data is absent', () => {
     mockUseTravelRouteMapBlockModel.mockReturnValueOnce({
+      routeFileMarkers: [],
       routeLines: [],
       routeProfiles: [],
       shouldShowMapLoadingState: true,
@@ -154,6 +158,7 @@ describe('TravelRouteMapBlock', () => {
 
   it('renders empty state when there is no map data and nothing is loading', () => {
     mockUseTravelRouteMapBlockModel.mockReturnValueOnce({
+      routeFileMarkers: [],
       routeLines: [],
       routeProfiles: [],
       shouldShowMapLoadingState: false,
@@ -169,5 +174,47 @@ describe('TravelRouteMapBlock', () => {
 
     expect(screen.getByText('Маршрут на карте не задан')).toBeTruthy()
     expect(mockTravelMap).not.toHaveBeenCalled()
+  })
+
+  it('adds point-only route-file markers to the existing travel points', async () => {
+    const routeFileMarker = {
+      id: 'route-file-31-point-0',
+      coord: '50.01,19.81',
+      address: 'Park 1',
+    }
+    mockUseTravelRouteMapBlockModel.mockReturnValueOnce({
+      routeFileMarkers: [routeFileMarker],
+      routeLines: [],
+      routeProfiles: [],
+      shouldShowMapLoadingState: false,
+      shouldShowRouteLine: false,
+    })
+
+    render(
+      <TravelRouteMapBlock
+        {...baseProps}
+        routeFilePoints={[
+          {
+            id: routeFileMarker.id,
+            coord: routeFileMarker.coord,
+            name: routeFileMarker.address,
+          },
+        ]}
+        routePreviewItems={[]}
+      />,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(mockTravelMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        showRouteLine: false,
+        routeLines: [],
+        travelData: [...baseProps.travel.travelAddress, routeFileMarker],
+      }),
+    )
+    expect(mockRouteElevationProfile).not.toHaveBeenCalled()
   })
 })

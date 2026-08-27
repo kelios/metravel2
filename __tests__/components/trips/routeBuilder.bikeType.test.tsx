@@ -265,6 +265,7 @@ describe('RouteBuilder bike type selector', () => {
     const updatedTrip = makeTrip({ bikeType: 'road' })
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'C')
     fireEvent.press(getByTestId('route-builder-add'))

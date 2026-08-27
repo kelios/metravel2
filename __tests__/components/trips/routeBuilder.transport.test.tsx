@@ -257,6 +257,7 @@ describe('RouteBuilder transport selector', () => {
     })
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={initialTrip} />)
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'C')
     fireEvent.press(getByTestId('route-builder-add'))

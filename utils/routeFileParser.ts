@@ -10,11 +10,29 @@ export interface NamedRouteFilePoint {
   name: string;
 }
 
+export interface ParsedRouteFileGeometry {
+  hasIndependentPoints: boolean;
+  points: NamedRouteFilePoint[];
+  lines: ParsedRoutePoint[][];
+}
+
 export type RouteFileMetadataResult =
   | {
       ok: true;
       format: RouteFileFormat;
+      hasIndependentPoints: boolean;
       namedPoints: NamedRouteFilePoint[];
+    }
+  | {
+      ok: false;
+      reason: 'unsupported' | 'damaged';
+    };
+
+type ParsedRouteFileDocumentResult =
+  | {
+      ok: true;
+      format: RouteFileFormat;
+      document: Document;
     }
   | {
       ok: false;
@@ -242,6 +260,15 @@ const normalizeRouteFileFormat = (ext?: string): RouteFileFormat | null => {
   return normalized === 'gpx' || normalized === 'kml' ? normalized : null;
 };
 
+const coordFromGpxElement = (element: Element): string | null => {
+  const latText = element.getAttribute('lat');
+  const lngText = element.getAttribute('lon');
+  if (latText == null || lngText == null || !latText.trim() || !lngText.trim()) {
+    return null;
+  }
+  return toCoord(Number(latText), Number(lngText));
+};
+
 const mergeNamedRouteFilePoint = (
   points: NamedRouteFilePoint[],
   nextPoint: NamedRouteFilePoint,
@@ -265,9 +292,7 @@ const extractGpxNamedPoints = (document: Document): NamedRouteFilePoint[] => {
   const points: NamedRouteFilePoint[] = [];
 
   for (const waypoint of getElementsByLocalName(document, 'wpt')) {
-    const lat = Number(waypoint.getAttribute('lat'));
-    const lng = Number(waypoint.getAttribute('lon'));
-    const coord = toCoord(lat, lng);
+    const coord = coordFromGpxElement(waypoint);
     const name = String(getElementsByLocalName(waypoint, 'name')[0]?.textContent ?? '').trim();
     if (!coord || !name) continue;
     mergeNamedRouteFilePoint(points, { coord, name });
@@ -281,23 +306,30 @@ const extractKmlNamedPoints = (document: Document): NamedRouteFilePoint[] => {
 
   for (const placemark of getElementsByLocalName(document, 'Placemark')) {
     const name = String(getElementsByLocalName(placemark, 'name')[0]?.textContent ?? '').trim();
-    const pointElement = getElementsByLocalName(placemark, 'Point')[0];
-    const coordinatesText = pointElement
-      ? String(getElementsByLocalName(pointElement, 'coordinates')[0]?.textContent ?? '').trim()
-      : '';
-    const parsedPoint = parseKmlCoordinatesChunk(coordinatesText)[0];
-    if (!name || !parsedPoint) continue;
-    mergeNamedRouteFilePoint(points, { coord: parsedPoint.coord, name });
+    if (!name) continue;
+    for (const pointElement of getElementsByLocalName(placemark, 'Point')) {
+      const coordinatesText = String(
+        getElementsByLocalName(pointElement, 'coordinates')[0]?.textContent ?? '',
+      ).trim();
+      const parsedPoint = parseKmlCoordinatesChunk(coordinatesText)[0];
+      if (!parsedPoint) continue;
+      mergeNamedRouteFilePoint(points, { coord: parsedPoint.coord, name });
+    }
   }
 
   return points;
 };
 
-/**
- * Validates the bounded import XML contract and extracts only named metadata.
- * Track/route geometry intentionally remains owned by parseRouteFilePreviews.
- */
-export const parseRouteFileMetadata = (text: string, ext?: string): RouteFileMetadataResult => {
+const hasGpxIndependentPoints = (document: Document): boolean =>
+  getElementsByLocalName(document, 'wpt').some((waypoint) => Boolean(coordFromGpxElement(waypoint)));
+
+const hasKmlIndependentPoints = (document: Document): boolean =>
+  getElementsByLocalName(document, 'Point').some((pointElement) => {
+    const coordinatesText = String(getElementsByLocalName(pointElement, 'coordinates')[0]?.textContent ?? '').trim();
+    return Boolean(parseKmlCoordinatesChunk(coordinatesText)[0]);
+  });
+
+const parseRouteFileDocument = (text: string, ext?: string): ParsedRouteFileDocumentResult => {
   const format = normalizeRouteFileFormat(ext);
   if (!format) return { ok: false, reason: 'unsupported' };
   if (!String(text).trim() || /<\s*!(?:DOCTYPE|ENTITY)\b/i.test(text)) {
@@ -323,9 +355,23 @@ export const parseRouteFileMetadata = (text: string, ext?: string): RouteFileMet
     return { ok: false, reason: 'damaged' };
   }
 
+  return { ok: true, format, document };
+};
+
+/**
+ * Validates the bounded import XML contract and extracts only named metadata.
+ * Track/route geometry intentionally remains owned by parseRouteFilePreviews.
+ */
+export const parseRouteFileMetadata = (text: string, ext?: string): RouteFileMetadataResult => {
+  const parsed = parseRouteFileDocument(text, ext);
+  if (!parsed.ok) return parsed;
+
+  const { document, format } = parsed;
+
   return {
     ok: true,
     format,
+    hasIndependentPoints: format === 'gpx' ? hasGpxIndependentPoints(document) : hasKmlIndependentPoints(document),
     namedPoints: format === 'gpx' ? extractGpxNamedPoints(document) : extractKmlNamedPoints(document),
   };
 };
@@ -334,9 +380,7 @@ const parseGpxPointsFromElementNodes = (nodes: Element[]): ParsedRoutePoint[] =>
   const points: ParsedRoutePoint[] = [];
 
   for (const node of nodes) {
-    const lat = Number(node.getAttribute('lat'));
-    const lng = Number(node.getAttribute('lon'));
-    const coord = toCoord(lat, lng);
+    const coord = coordFromGpxElement(node);
     if (!coord) continue;
 
     const eleNode = getElementsByLocalName(node, 'ele')[0] ?? null;
@@ -347,152 +391,50 @@ const parseGpxPointsFromElementNodes = (nodes: Element[]): ParsedRoutePoint[] =>
   return compactConsecutivePoints(points);
 };
 
-const parseGpxPointsFromText = (
-  text: string,
-  pointTag: 'trkpt' | 'rtept' | 'wpt',
-): ParsedRoutePoint[] => {
-  const points: ParsedRoutePoint[] = [];
-  const fullNodeRegex = new RegExp(
-    `<${pointTag}\\b[^>]*\\blat=["']([^"']+)["'][^>]*\\blon=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/${pointTag}>`,
-    'gi',
-  );
-
-  let fullNodeMatch: RegExpExecArray | null = fullNodeRegex.exec(text);
-  while (fullNodeMatch) {
-    const lat = Number(fullNodeMatch[1]);
-    const lng = Number(fullNodeMatch[2]);
-    const coord = toCoord(lat, lng);
-    if (coord) {
-      const eleMatch = String(fullNodeMatch[3] ?? '').match(/<ele[^>]*>([^<]+)<\/ele>/i);
-      points.push({ coord, elevation: normalizeElevation(eleMatch?.[1]) });
-    }
-    fullNodeMatch = fullNodeRegex.exec(text);
-  }
-
-  if (points.length === 0) {
-    const selfClosingRegex = new RegExp(
-      `<${pointTag}\\b[^>]*\\blat=["']([^"']+)["'][^>]*\\blon=["']([^"']+)["'][^>]*/>`,
-      'gi',
-    );
-    let selfClosingMatch: RegExpExecArray | null = selfClosingRegex.exec(text);
-    while (selfClosingMatch) {
-      const lat = Number(selfClosingMatch[1]);
-      const lng = Number(selfClosingMatch[2]);
-      const coord = toCoord(lat, lng);
-      if (coord) points.push({ coord });
-      selfClosingMatch = selfClosingRegex.exec(text);
-    }
-  }
-
-  return compactConsecutivePoints(points);
-};
-
-const parseGpxTracks = (text: string): ParsedRoutePoint[][] => {
-  if (typeof DOMParser !== 'undefined') {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(text, 'text/xml');
-
-      const trackNodes = getElementsByLocalName(doc, 'trk');
-      const trackLines = trackNodes
-        .map((trackNode) => parseGpxPointsFromElementNodes(getElementsByLocalName(trackNode, 'trkpt')))
-        .filter((line) => line.length > 0);
-      if (trackLines.length > 0) return trackLines;
-
-      const routeNodes = getElementsByLocalName(doc, 'rte');
-      const routeLines = routeNodes
-        .map((routeNode) => parseGpxPointsFromElementNodes(getElementsByLocalName(routeNode, 'rtept')))
-        .filter((line) => line.length > 0);
-      if (routeLines.length > 0) return routeLines;
-
-      const wptNodes = getElementsByLocalName(doc, 'wpt');
-      const waypoints = parseGpxPointsFromElementNodes(wptNodes);
-      if (waypoints.length > 0) return [waypoints];
-    } catch {
-      // fallback to regex parser
-    }
-  }
-
-  const trackLines: ParsedRoutePoint[][] = [];
-  const trackBlockRegex = /<trk\b[\s\S]*?<\/trk>/gi;
-  let trackBlockMatch: RegExpExecArray | null = trackBlockRegex.exec(text);
-  while (trackBlockMatch) {
-    const line = parseGpxPointsFromText(String(trackBlockMatch[0] ?? ''), 'trkpt');
-    if (line.length > 0) trackLines.push(line);
-    trackBlockMatch = trackBlockRegex.exec(text);
-  }
+const extractGpxLines = (document: Document): ParsedRoutePoint[][] => {
+  const trackLines = getElementsByLocalName(document, 'trk')
+    .map((trackNode) => parseGpxPointsFromElementNodes(getElementsByLocalName(trackNode, 'trkpt')))
+    .filter((line) => line.length > 0);
   if (trackLines.length > 0) return trackLines;
 
-  const routeLines: ParsedRoutePoint[][] = [];
-  const routeBlockRegex = /<rte\b[\s\S]*?<\/rte>/gi;
-  let routeBlockMatch: RegExpExecArray | null = routeBlockRegex.exec(text);
-  while (routeBlockMatch) {
-    const line = parseGpxPointsFromText(String(routeBlockMatch[0] ?? ''), 'rtept');
-    if (line.length > 0) routeLines.push(line);
-    routeBlockMatch = routeBlockRegex.exec(text);
-  }
-  if (routeLines.length > 0) return routeLines;
-
-  const genericTrackNodes = parseGpxPointsFromText(text, 'trkpt');
-  if (genericTrackNodes.length > 0) return [genericTrackNodes];
-
-  const genericRouteNodes = parseGpxPointsFromText(text, 'rtept');
-  if (genericRouteNodes.length > 0) return [genericRouteNodes];
-
-  const waypointNodes = parseGpxPointsFromText(text, 'wpt');
-  if (waypointNodes.length > 0) return [waypointNodes];
-
-  return [];
+  return getElementsByLocalName(document, 'rte')
+    .map((routeNode) => parseGpxPointsFromElementNodes(getElementsByLocalName(routeNode, 'rtept')))
+    .filter((line) => line.length > 0);
 };
 
-const parseKmlLines = (text: string): ParsedRoutePoint[][] => {
+const extractKmlLines = (document: Document): ParsedRoutePoint[][] => {
   const lines: ParsedRoutePoint[][] = [];
 
-  if (typeof DOMParser !== 'undefined') {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(text, 'text/xml');
-      const coordsNodes = doc.getElementsByTagName('coordinates');
-      for (let i = 0; i < coordsNodes.length; i += 1) {
-        const nodeText = String(coordsNodes[i].textContent ?? '').trim();
-        if (!nodeText) continue;
-        const line = compactConsecutivePoints(parseKmlCoordinatesChunk(nodeText));
-        if (line.length > 0) lines.push(line);
-      }
-
-      if (lines.length > 0) return lines;
-    } catch {
-      // fallback to regex parser
-    }
-  }
-
-  const regex = /<coordinates[^>]*>([\s\S]*?)<\/coordinates>/gi;
-  let match: RegExpExecArray | null = regex.exec(text);
-  while (match) {
-    const chunk = String(match[1] ?? '').trim();
-    if (chunk) {
-      const line = compactConsecutivePoints(parseKmlCoordinatesChunk(chunk));
+  for (const lineStringNode of getElementsByLocalName(document, 'LineString')) {
+    for (const coordsNode of getElementsByLocalName(lineStringNode, 'coordinates')) {
+      const nodeText = String(coordsNode.textContent ?? '').trim();
+      if (!nodeText) continue;
+      const line = compactConsecutivePoints(parseKmlCoordinatesChunk(nodeText));
       if (line.length > 0) lines.push(line);
     }
-    match = regex.exec(text);
   }
 
   return lines;
 };
 
+export const parseRouteFileGeometry = (text: string, ext?: string): ParsedRouteFileGeometry => {
+  const parsed = parseRouteFileDocument(text, ext);
+  if (!parsed.ok) return { hasIndependentPoints: false, points: [], lines: [] };
+
+  const { document, format } = parsed;
+
+  return {
+    hasIndependentPoints:
+      format === 'gpx'
+        ? hasGpxIndependentPoints(document)
+        : hasKmlIndependentPoints(document),
+    points: format === 'gpx' ? extractGpxNamedPoints(document) : extractKmlNamedPoints(document),
+    lines: format === 'gpx' ? extractGpxLines(document) : extractKmlLines(document),
+  };
+};
+
 export const parseRouteFilePreviews = (text: string, ext?: string): ParsedRoutePreview[] => {
-  const normalizedExt = String(ext ?? '').trim().toLowerCase().replace(/^\./, '');
-
-  let lineGroups: ParsedRoutePoint[][] = [];
-
-  if (normalizedExt === 'gpx') {
-    lineGroups = parseGpxTracks(text);
-  } else if (normalizedExt === 'kml') {
-    lineGroups = parseKmlLines(text);
-  } else {
-    const kmlGroups = parseKmlLines(text);
-    lineGroups = kmlGroups.length > 0 ? kmlGroups : parseGpxTracks(text);
-  }
+  const { lines: lineGroups } = parseRouteFileGeometry(text, ext);
 
   return lineGroups
     .map((linePoints) => compactConsecutivePoints(linePoints))

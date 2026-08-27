@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
+import { PERF_BUDGET_TEST_MATCH, PERF_DESKTOP_VIEWPORTS } from './e2e/helpers/perfProjects';
+
 const { resolveE2ETargets } = require('./scripts/e2e-target-safety');
 const { getE2ESuiteSelection } = require('./scripts/e2e-suite-classification');
 
@@ -137,6 +139,20 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        viewport: PERF_DESKTOP_VIEWPORTS.chromium,
+      },
+    },
+    // #1564: 1280 px is an application breakpoint, so the default desktop
+    // descriptor observes only the wide side of it. Keep a second real desktop
+    // profile inside the narrow band where responsive CLS regressions occur.
+    // `testMatch` is load-bearing: without it every default E2E command would
+    // execute the complete suite once more under this project.
+    {
+      name: 'chromium-narrow',
+      testMatch: [...PERF_BUDGET_TEST_MATCH],
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: PERF_DESKTOP_VIEWPORTS['chromium-narrow'],
       },
     },
     // #1287: мобильный профиль — это device descriptor (touch, coarse pointer,
@@ -150,7 +166,7 @@ export default defineConfig({
     // desktop-спеки под Pixel 7.
     {
       name: 'chromium-mobile',
-      testMatch: ['**/pages-perf-budget.spec.ts', '**/pages-perf-budget-negative.spec.ts'],
+      testMatch: [...PERF_BUDGET_TEST_MATCH],
       use: {
         ...devices['Pixel 7'],
         browserName: 'chromium',

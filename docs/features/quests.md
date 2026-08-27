@@ -1,6 +1,6 @@
 # Фича: quests
 
-**Последняя актуализация:** 2026-08-17
+**Последняя актуализация:** 2026-08-27
 
 **Ответственный домен:** frontend quests (агент `quest-expert`; контент —
 `quest-editor`, гео — `quest-geo-verifier`, трение — `quest-friction-analyst`)
@@ -27,8 +27,9 @@ runtime-доказательствами под задачу, а не налич
   точек» (`utils/questCompletionPolicy.ts`, #1443).
 - Оценка ответа живёт ровно в одном модуле (`utils/questAnswerEvaluation.ts`),
   что охраняется guard-скриптом; там же — пауза против перебора (#1428).
-- Каталог `/quests` и лендинги городов имеют SSG-слой и alias-роутинг
-  (`utils/questCityAlias.js`), проверяемый гейтом в `build-prod.sh`.
+- Каталог `/quests`, лендинги городов и стран имеют SSG-слой и alias-роутинг
+  (`utils/questCityAlias.js`, `utils/questCountryLanding.js`), проверяемый
+  гейтом в `build-prod.sh`.
 - Карта квеста — отдельный renderer от основной `/map`: web React Leaflet
   (`QuestFullMap.tsx`), native Leaflet-в-WebView (`QuestFullMap.native.tsx`).
 
@@ -40,13 +41,21 @@ runtime-доказательствами под задачу, а не налич
 | `/quests/map` | `app/(tabs)/quests/map.tsx` (314 LOC) | все квесты точками на общей `Map`/`Map.web`; статический сегмент, матчится раньше `[city]` |
 | `/quests/scenario` | `app/(tabs)/quests/scenario.tsx` (9 LOC) → `screens/tabs/QuestScenarioScreen.tsx` (435 LOC) | DIY-лендинг «квест-бук для печати»; тоже статический сегмент перед `[city]` |
 | `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` (229 LOC) | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); неизвестный сегмент → `router.replace('/quests')` |
+| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → `/quests` |
 | `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов |
 | Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; SSG-двойник — `injectHomeQuestsSection` в `scripts/generate-seo-pages.js` (crawlable `data-ssg-home-quests`) |
 | Промо в travel-детали | `components/travel/details/sections/QuestForCitySection.tsx` (+ `Deferred*.tsx` / `Deferred*.web.tsx`) | «квест по этому городу» на странице путешествия |
 
-Alias-роутов на уровне Expo Router нет: alias — это тот же сегмент `[city]`,
-разрешаемый `resolveQuestCitySegment(cityParam, quests)` по списку квестов.
-Canonical лендинга — alias-вариант, если alias есть, иначе `city_id`.
+Отдельного city-alias route на уровне Expo Router нет: alias — это тот же
+сегмент `[city]`, разрешаемый `resolveQuestCitySegment(cityParam, quests)` по
+списку квестов. Canonical лендинга — alias-вариант, если alias есть, иначе
+`city_id`.
+
+Country route — отдельный статический сегмент `country`, поэтому не конфликтует
+с `[city]`. `buildQuestCountryLandingGroups()` сначала валидирует ISO-код и
+группирует каталог по стране, затем применяет city alias merge внутри каждой
+страны. Missing/invalid code не создаёт страницу; список активных стран не
+хардкодится.
 
 ## Ключевые компоненты
 
@@ -426,17 +435,25 @@ native-геозоны используют только координаты ш�
 - Мета детали строит `buildQuestSeoMetadata` (`utils/questSeo.js`, CommonJS —
   общий модуль для приложения и сборочных скриптов): брендированный title с
   клампом длины и description с клампом до 160 закодированных символов.
-- JSON-LD: деталь — `createQuestDetailStructuredData`; лендинг города —
-  `ItemList` + `BreadcrumbList`; каталог — `createQuestCatalogStructuredData` +
-  FAQ; `/quests/scenario` — `HowTo`/`ItemList`.
-- SSG: `scripts/generate-seo-pages.js` (лендинги городов, промо-разметка,
-  crawlable-перелинковка) и `scripts/generate-sitemap.js` (`/quests`,
-  `/quests/scenario`, лендинги городов с alias-canonical, детали квестов).
+- JSON-LD: деталь — `createQuestDetailStructuredData`; лендинги города и страны
+  — `ItemList` + `BreadcrumbList`; каталог — `createQuestCatalogStructuredData`
+  + FAQ; `/quests/scenario` — `HowTo`/`ItemList`.
+- SSG: `scripts/generate-seo-pages.js` (лендинги городов/стран, промо-разметка,
+  crawlable-перелинковка). Country SSG fail-closed требует Expo-шаблон
+  `dist/<env>/quests/country/[country].html`, чтобы страница гидратировалась
+  country route bundle, а не fallback-бандлом города. Production `sitemap.xml`
+  генерирует и отдаёт Django; фронтовый `scripts/generate-sitemap.js` не входит
+  в release-path.
 - Статическая копия интро/FAQ каталога — `utils/questContent.js`; она обязана
   совпадать с RU-значениями ключей `quests:screens.tabs.QuestsSeoIntroFaq.*`,
   иначе краулер видит не то, что читает пользователь после гидрации.
 - Гейт сборки: `node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api
-  https://metravel.by` в `build-prod.sh` — падает до rsync.
+  https://metravel.by` в `build-prod.sh` — падает до rsync. Городские HTML
+  проверяются в `dist`, а alias-membership — в живом backend-owned
+  `${API_BASE}/sitemap.xml`. Country HTML проверяется до deploy, но country
+  sitemap membership включается только явным `--verify-country-sitemap` после
+  согласованного релиза backend-задачи `#1606`; HTTP 200 и отсутствие 3xx тоже
+  проверяет post-deploy.
 
 ## Внешние зависимости
 
@@ -506,7 +523,7 @@ E2E (Playwright): `e2e/quests-list-detail.spec.ts` (каталог → дета�
   каталоге один город может иметь несколько `city_id` (Гомель 19/92, Гродно
   11/91, Могилёв 14/93). Оба получают один alias, и генерация лендингов в цикле
   по городам молча затирала предыдущую запись. Контроль —
-  `mergeQuestCityLandingsByAlias()` + `verify-static-quest-seo.js`; дубли
+  `buildQuestCityLandingGroups()` + `verify-static-quest-seo.js`; дубли
   городов в справочнике остаются задачей бэкенда.
 - **Подсказка выдаёт ответ** (`QUEST-HINT-LEAK-001`). Буквальный класс ловится
   `npm run quest:scan-hint-leak` (порог совпадения 3 символа, exit 1 при

@@ -5,6 +5,9 @@ import { QuestForCityCard } from '@/components/quests/QuestForCityCard'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 
 const mockPush = jest.fn()
+let mockMediaVisible = true
+const mockMediaViewportRef = { current: null }
+const mockMediaViewportOnLayout = jest.fn()
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -25,10 +28,19 @@ jest.mock('@/components/ui/ImageCardMedia', () => ({
   default: (props: any) => mockImageCardMedia(props),
 }))
 
+jest.mock('@/components/ui/richMediaViewport', () => ({
+  useRichMediaVisibility: () => ({
+    ref: mockMediaViewportRef,
+    visible: mockMediaVisible,
+    onLayout: mockMediaViewportOnLayout,
+  }),
+}))
+
 describe('QuestForCityCard', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockImageCardMedia.mockClear()
+    mockMediaVisible = true
   })
 
   it('tracks the contextual card click before opening the quest', () => {
@@ -120,10 +132,109 @@ describe('QuestForCityCard', () => {
     // Путь /quest-cover/** ресайз поддерживает: ?w=160 → 2 КБ, ?w=320 → 7.9 КБ.
     expect(props.optimizeWeb).toBeUndefined()
     expect(props.preserveOptimizedWebSrc).toBeUndefined()
+    expect(props.webResponsiveSource).toBeUndefined()
 
     // #1115: дефолт был `eager`, и рельс из шести карточек далеко под вьюпортом
     // стартовал одновременно с LCP-фото статьи.
     expect(props.loading).toBe('lazy')
+  })
+
+  it('uses the square source and responsive ladder without adding a second raster', () => {
+    render(
+      <QuestForCityCard
+        quest={{
+          id: 'krakow-dragon',
+          title: 'Тайна Краковского дракона',
+          points: 7,
+          cityId: '1',
+          cityName: 'Краков',
+          lat: 50.06,
+          lng: 19.94,
+          cover: 'https://metravel.by/quest-cover/1/legacy-landscape.webp',
+          squareCoverWebResponsiveSource: {
+            src: 'https://metravel.by/quest-cover/1/square-320.webp',
+            srcSet: [
+              'https://metravel.by/quest-cover/1/square-160.webp 160w',
+              'https://metravel.by/quest-cover/1/square-320.webp 320w',
+            ].join(', '),
+          },
+        }}
+      />,
+    )
+
+    expect(mockImageCardMedia).toHaveBeenCalledTimes(1)
+    const props = mockImageCardMedia.mock.calls[0]?.[0]
+    expect(props.source).toEqual({
+      uri: 'https://metravel.by/quest-cover/1/square-320.webp',
+    })
+    expect(props.webResponsiveSource).toEqual({
+      src: 'https://metravel.by/quest-cover/1/square-320.webp',
+      srcSet: [
+        'https://metravel.by/quest-cover/1/square-160.webp 160w',
+        'https://metravel.by/quest-cover/1/square-320.webp 320w',
+      ].join(', '),
+      sizes: '132px',
+    })
+    expect(props.width).toBe(132)
+    expect(props.height).toBe(132)
+    expect(props.fit).toBe('contain')
+    expect(props).not.toHaveProperty('blurSrc')
+    expect(props).not.toHaveProperty('blurSource')
+    expect(props).not.toHaveProperty('placeholderSrc')
+  })
+
+  it('keeps the square source and responsive ladder behind the same viewport gate', () => {
+    mockMediaVisible = false
+
+    render(
+      <QuestForCityCard
+        quest={{
+          id: 'krakow-dragon',
+          title: 'Тайна Краковского дракона',
+          points: 7,
+          cityId: '1',
+          cityName: 'Краков',
+          lat: 50.06,
+          lng: 19.94,
+          cover: 'https://metravel.by/quest-cover/1/legacy-landscape.webp',
+          squareCoverWebResponsiveSource: {
+            src: 'https://metravel.by/quest-cover/1/square-320.webp',
+            srcSet: 'https://metravel.by/quest-cover/1/square-320.webp 320w',
+          },
+        }}
+      />,
+    )
+
+    const props = mockImageCardMedia.mock.calls[0]?.[0]
+    expect(props.source).toBeNull()
+    expect(props.webResponsiveSource).toBeUndefined()
+  })
+
+  it('falls back to the legacy cover when the square manifest source is blank', () => {
+    render(
+      <QuestForCityCard
+        quest={{
+          id: 'krakow-dragon',
+          title: 'Тайна Краковского дракона',
+          points: 7,
+          cityId: '1',
+          cityName: 'Краков',
+          lat: 50.06,
+          lng: 19.94,
+          cover: 'https://metravel.by/quest-cover/1/legacy-landscape.webp',
+          squareCoverWebResponsiveSource: {
+            src: '   ',
+            srcSet: 'https://metravel.by/quest-cover/1/square-320.webp 320w',
+          },
+        }}
+      />,
+    )
+
+    const props = mockImageCardMedia.mock.calls[0]?.[0]
+    expect(props.source).toEqual({
+      uri: 'https://metravel.by/quest-cover/1/legacy-landscape.webp',
+    })
+    expect(props.webResponsiveSource).toBeUndefined()
   })
 
   it('lets a caller opt into an eager cover explicitly', () => {

@@ -7,6 +7,7 @@ import { MapSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import ToggleableMap from '@/components/travel/ToggleableMapSection'
 import { TravelMap } from '@/components/MapPage/TravelMap'
 import RouteElevationProfile from '@/components/travel/details/sections/RouteElevationProfile'
+import type { RouteFilePointItem } from '@/hooks/useRouteFilePreviews'
 import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
@@ -37,6 +38,7 @@ export const TravelRouteMapBlock: React.FC<{
   mapOpenTrigger: number
   mapResizeTrigger: number
   placeHints: Array<{ name: string; coord: string }>
+  routeFilePoints: RouteFilePointItem[]
   routePreviewItems: any[]
   shouldForceRenderMap: boolean
   shouldRender: boolean
@@ -56,6 +58,7 @@ export const TravelRouteMapBlock: React.FC<{
   mapOpenTrigger,
   mapResizeTrigger,
   placeHints,
+  routeFilePoints,
   routePreviewItems,
   shouldForceRenderMap,
   shouldRender,
@@ -65,6 +68,7 @@ export const TravelRouteMapBlock: React.FC<{
   travel,
 }) => {
   const {
+    routeFileMarkers,
     routeLines,
     routeProfiles,
     shouldShowMapLoadingState,
@@ -75,9 +79,17 @@ export const TravelRouteMapBlock: React.FC<{
     hasMapData,
     isRoutePreviewLoading,
     keyPointLabels,
+    routeFilePoints,
     routePreviewItems,
   })
   const colors = useThemedColors()
+  const travelMapPoints = React.useMemo(
+    () => [
+      ...(Array.isArray(travel.travelAddress) ? travel.travelAddress : []),
+      ...routeFileMarkers,
+    ],
+    [routeFileMarkers, travel.travelAddress],
+  )
 
   return (
     <View
@@ -101,7 +113,7 @@ export const TravelRouteMapBlock: React.FC<{
             >
               {shouldRenderMapContent ? (
                 <TravelMap
-                  travelData={travel.travelAddress as any}
+                  travelData={travelMapPoints}
                   highlightedPoint={highlightedPoint ?? undefined}
                   resizeTrigger={mapResizeTrigger}
                   compact

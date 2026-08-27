@@ -92,15 +92,55 @@ describe('TravelListItem content & metadata', () => {
     expect(getByText('Test travel')).toBeTruthy();
   });
 
-  it('renders the travel title below the image as a separate two-line title', () => {
-    const { getAllByText, getByText } = renderItem();
-    const titleElement = getByText('Test travel');
+  it.each([
+    ['short', 'Рим'],
+    ['two-line', 'Прогулка по старой части Варшавы'],
+    [
+      'over-two-line',
+      'Большое путешествие по городам и природным маршрутам Польши с подробным планом на каждый день',
+    ],
+  ])('keeps the %s title in the shared two-line slot', (_caseName, title) => {
+    const { getAllByText, getByText } = renderItem({ name: title });
+    const titleElement = getByText(title);
+    const titleStyle = StyleSheet.flatten(titleElement.props.style);
 
-    expect(titleElement).toBeTruthy();
-    expect(getAllByText('Test travel')).toHaveLength(1);
+    expect(getAllByText(title)).toHaveLength(1);
+    expect(titleElement.props.children).toBe(title);
     expect(titleElement.props.numberOfLines).toBe(2);
     expect(titleElement.props.ellipsizeMode).toBe('tail');
-    expect(StyleSheet.flatten(titleElement.props.style)?.color).not.toBe('#ffffff');
+    expect(titleStyle).toEqual(expect.objectContaining({ lineHeight: 20, minHeight: 40 }));
+    expect(titleStyle?.height).toBeUndefined();
+    expect(titleStyle?.color).not.toBe('#ffffff');
+  });
+
+  it('reserves two 19px title lines on native without a fixed title height', () => {
+    jest.isolateModules(() => {
+      const isolatedReactNative = require('react-native') as typeof import('react-native');
+      const originalPlatform = isolatedReactNative.Platform.OS;
+
+      Object.defineProperty(isolatedReactNative.Platform, 'OS', {
+        value: 'android',
+        configurable: true,
+      });
+
+      try {
+        const { createTravelListItemStyles } = require(
+          '@/components/listTravel/travelListItemStyles',
+        ) as typeof import('@/components/listTravel/travelListItemStyles');
+        const colors = {} as Parameters<typeof createTravelListItemStyles>[0];
+        const titleStyle = isolatedReactNative.StyleSheet.flatten(
+          createTravelListItemStyles(colors).titleInline,
+        );
+
+        expect(titleStyle).toEqual(expect.objectContaining({ lineHeight: 19, minHeight: 38 }));
+        expect(titleStyle?.height).toBeUndefined();
+      } finally {
+        Object.defineProperty(isolatedReactNative.Platform, 'OS', {
+          value: originalPlatform,
+          configurable: true,
+        });
+      }
+    });
   });
 
   it('renders image stub when image URL is missing', () => {

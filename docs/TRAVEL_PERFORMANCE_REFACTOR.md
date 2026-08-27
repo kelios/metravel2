@@ -230,6 +230,44 @@ Slow-4G), там же `applyMobileThrottling`, `measureCpuThrottlingRatio` и `m
 (#1393) и проверить результат по двум измерениям: brotli худшего маршрута и
 `eager.maxRequestsByRoute`.
 
+### Остаточный post-deploy TBT и точный рычаг (замер 2026-08-26)
+
+После первого repair канонический production recheck на тихом 8-core host дал
+TBT 615 / 563 / 576 мс (медиана **576** при цели ≤400), LCP 2505 / 2483 /
+2600 мс (медиана **2505**, цель ≤3000), CLS 0 во всех трёх прогонах. Все
+учитываемые long tasks начинаются после 7,1 с, то есть уже после LCP.
+
+Разложение по URL скрипта стабильно во всех прогонах:
+
+| работа | run01 | run02 | run03 |
+| --- | ---: | ---: | ---: |
+| `entry` TBT | 359 мс | 338 мс | 316 мс |
+| `__shared-1` TBT | 256 мс | 225 мс | 260 мс |
+| одна поздняя задача `__shared-1` | 212 мс | 179 мс | 215 мс |
+
+CDP-трасса на тех же опубликованных hash атрибутирует позднюю задачу к
+`TravelDescription` → `StableContent` → `prepareStableContentHtml`: синхронная
+подготовка большого тела статьи, URL-нормализация картинок и следующий DOM
+layout. Текущий `TravelDescription` запускал эту работу безусловно через
+`2×requestAnimationFrame → requestIdleCallback(timeout=600)` и параллельный
+`setTimeout(800)`, хотя верх блока на контрольном mobile viewport находился на
+1423 px при высоте viewport 823 px.
+
+Если исключить только эту позднюю задачу, контрфактический TBT равен 404 / 384 /
+361 мс, медиана **384** — ниже production-порога 400. Поэтому следующий repair
+не режет ещё один неподтверждённый eager-модуль: тяжёлое описание сохраняет
+зарезервированный плейсхолдер до приближения блока к viewport (нижний
+`rootMargin=400px`), а затем готовится в idle-окне. Короткий HTML остаётся
+немедленным, native-путь сохраняет `InteractionManager`. При отсутствии или
+сбое `IntersectionObserver` компонент fail-open запускает подготовку в первом
+idle-окне; безусловного таймера для рабочего observer нет.
+
+Async-граница `travelOfflineAdapter` остаётся отдельной bundle-гигиеной, но не
+считается доказанным TBT repair: `StableContent/htmlTransform` всё равно тянет
+тот же sanitizer/parser, а background recent-cache запускается после mount.
+Закрывающий evidence — только одинаковый post-deploy Lighthouse recheck плюс
+scroll/CLS/console smoke тяжёлого описания.
+
 ### Что снято с eager-пути (#1552, замер 2026-08-25)
 
 Разорваны четыре ребра статического импорта; во всех случаях потребитель уже
@@ -281,6 +319,59 @@ Metro (отпечаток `serializeChunks.js` совпал до и после �
 не этим. Снимать слой карты имеет смысл после того, как #1543 закончит
 переписывать саму группировку чанков — иначе правка мерялась бы по движущейся
 мишени.
+
+## 7.3 Footer deferred-transition CLS (#1604)
+
+Это не редизайн footer: порядок, контент и визуальные компоненты остаются у
+`TravelDetailsFooterSection`. Меняется только геометрический контракт перехода
+между deferred-placeholder и первым runtime-кадром:
+
+1. web разрешает footer внутри уже post-LCP, но ещё offscreen deferred tree;
+   native сохраняет прежний intersection gate;
+2. structural placeholder резервирует нижнюю область только в
+   pending/measuring;
+3. разрешённый runtime монтируется в том же grid-slot скрытым и `inert`;
+4. reveal разрешён только после ненулевого layout для текущего travel id;
+5. placeholder и временный reserve снимаются после ready; постоянного
+   `minHeight: 100vh` у готового footer нет;
+6. окончательная ошибка импорта на web показывает измеряемый fallback, а native
+   сохраняет прежний `SectionSkeleton`.
+
+Design evidence и acceptance для production candidate:
+
+- `1024×640`: footer-transition `0.1019878 → 0`, total CLS не выше `0.388872`;
+- `1366×768`: footer-transition `0`, total CLS не выше `0.071479`;
+- `390×844`: нет видимого скачка, horizontal overflow и недоступного скрытого
+  runtime;
+- все профили скроллят реальный `[data-testid="travel-details-scroll"]`, требуют
+  доступный Layout Instability API, нулевые footer entries/sources и нулевые
+  console/page errors;
+- после reveal не допускается постоянный визуально пустой хвост от reserve;
+  browser evidence сохраняет `trailingReserve` и screenshot каждого viewport.
+
+Автоматизированный guard исполняется только на production export и через общий
+quality gate:
+
+```bash
+E2E_BUILD_DIR=dist/prod E2E_WEB_PORT=4716 node scripts/serve-web-build.js
+E2E_NO_WEBSERVER=1 BASE_URL=http://127.0.0.1:4716 \
+  node scripts/run-with-quality-gate-lock.js e2e:task-1604-footer-cls -- \
+  node node_modules/playwright/cli.js test \
+  e2e/travel-details-footer-transition-cls.spec.ts \
+  --project=chromium --workers=1 --reporter=line
+```
+
+Live `metravel.by` recheck выполняется отдельно только после явно разрешённого
+deploy и не подменяется локальной сборкой.
+
+Локальный refreshed production candidate от 2026-08-27 прошёл deterministic и
+exact-slug матрицы `3/3 + 3/3`: на `1024×640`, `1366×768` и `390×844`
+footer-specific и total CLS равны `0`, horizontal/document overflow `0`,
+`trailingReserve=0`, console/page errors и relevant network failures пусты.
+Runtime/transition высота после ready: `869px` на desktop-профилях и `898px` на
+mobile. Bilateral guard также зелёный: slider `2/2`, touch Jest `5/5`,
+slider-perf `33/33`; travel desktop LCP `376ms`, FCP `40ms`, TBT `55ms`, CLS
+`0.0156`, mobile throttled TBT median `429ms ≤ 650ms`.
 
 ## 8. Проверки
 

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { METRICS } from '@/constants/layout'
+import { isCompactHeaderWidth } from './headerLayoutContract'
 
 export const isHeaderTestEnv =
   typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
@@ -14,7 +15,7 @@ export const getIsHeaderMobile = (width: number, effectiveWebWidth: number) => {
   if (Platform.OS === 'web') {
     // The full navigation needs the desktop content width. At tablet and
     // large-tablet sizes it otherwise clips links while hiding the overflow.
-    return effectiveWebWidth < METRICS.breakpoints.desktop
+    return isCompactHeaderWidth(effectiveWebWidth)
   }
   return width < METRICS.breakpoints.largeTablet
 }

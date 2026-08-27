@@ -13,7 +13,13 @@ jest.mock('@/components/forms/MultiSelectField', () => {
 jest.mock('@/components/travel/PhotoUploadWithPreview', () => {
     return jest.fn((props: any) => (
         <div>
-            <div data-testid="photo-upload-mock" />
+            <div
+                data-testid="photo-upload-mock"
+                onDrop={(event) => {
+                    event.preventDefault();
+                    props?.onUpload?.('http://192.168.50.36/travel-image/17992/conversions/test.webp');
+                }}
+            />
             <button
                 type="button"
                 data-testid="photo-upload-trigger"
@@ -269,6 +275,65 @@ describe('MarkersListComponent - Edit modal categories', () => {
         expect(passedFiles).toContain(img1);
         expect(passedFiles).toContain(img2);
         expect(passedFiles).not.toContain(notImage);
+    });
+
+    it('keeps modal photo drops inside the portal upload instead of adding a marker', async () => {
+        const handleImageUpload = jest.fn();
+        const handleMarkerChange = jest.fn();
+        const onAddMarkerFromPhoto = jest.fn();
+
+        const { container } = render(
+            <MarkersListComponent
+                markers={[baseMarker]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={handleMarkerChange}
+                handleImageUpload={handleImageUpload}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={0}
+                setEditingIndex={jest.fn()}
+                onAddMarkerFromPhoto={onAddMarkerFromPhoto}
+            />,
+        );
+
+        const image = new File([new Uint8Array([1])], 'point.jpg', { type: 'image/jpeg' });
+        const panel = container.firstElementChild as HTMLElement;
+        const photoUpload = screen.getByTestId('photo-upload-mock');
+
+        const portalDragOver = makeDragEvent('dragover', [image]);
+        fireEvent(photoUpload, portalDragOver);
+        expect(portalDragOver.defaultPrevented).toBe(false);
+        expect(portalDragOver.dataTransfer?.dropEffect).toBe('none');
+
+        fireEvent(photoUpload, makeDragEvent('dragenter', [image]));
+        expect(screen.queryByText(/Отпустите фото/i)).toBeNull();
+
+        fireEvent(panel, makeDragEvent('dragenter', [image]));
+        expect(screen.getByText(/Отпустите фото/i)).toBeTruthy();
+
+        fireEvent(photoUpload, makeDragEvent('dragleave', [image]));
+        expect(screen.getByText(/Отпустите фото/i)).toBeTruthy();
+
+        fireEvent(panel, makeDragEvent('dragleave', [image]));
+        expect(screen.queryByText(/Отпустите фото/i)).toBeNull();
+
+        fireEvent(photoUpload, makeDragEvent('drop', [image]));
+
+        await waitFor(() => {
+            expect(handleImageUpload).toHaveBeenCalledWith(
+                0,
+                'http://192.168.50.36/travel-image/17992/conversions/test.webp',
+            );
+        });
+        expect(onAddMarkerFromPhoto).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByText('Сохранить'));
+        await waitFor(() => {
+            expect(handleMarkerChange).toHaveBeenCalledWith(
+                0,
+                'image',
+                'http://192.168.50.36/travel-image/17992/conversions/test.webp',
+            );
+        });
     });
 
     it('renders an explicit drop zone that opens the file picker on click (empty state)', () => {

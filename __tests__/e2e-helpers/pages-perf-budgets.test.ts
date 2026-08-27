@@ -9,6 +9,7 @@ import {
   BudgetConfigurationError,
   FORBIDDEN_SHIFT_SOURCES,
   HEALTHY_CLS_MAX,
+  PAGE_BUDGETS,
   PERF_PROFILES,
   clampCeiling,
   evaluatePageBudget,
@@ -20,7 +21,7 @@ import {
   type PageMeasurement,
 } from '../../e2e/helpers/pagesPerfBudgets'
 
-const GATED_ROUTES = ['HOME', 'SEARCH', 'MAP', 'PLACES', 'QUESTS']
+const GATED_ROUTES = ['HOME', 'SEARCH', 'MAP', 'PLACES', 'QUESTS', 'QUEST_DETAIL'] as const
 
 const healthyBudget = (overrides: Partial<PageBudget> = {}): PageBudget => ({
   clsMax: 0.1,
@@ -47,9 +48,23 @@ const measurement = (overrides: Partial<PageMeasurement> = {}): PageMeasurement 
 })
 
 describe('budget table rules', () => {
-  it('covers every gated route on both profiles', () => {
+  it('pins the healthy CLS ceiling used by performance-gate fallbacks', () => {
+    expect(HEALTHY_CLS_MAX).toBe(0.1)
+  })
+
+  it('covers exactly every gated route/profile pair', () => {
+    expect(PERF_PROFILES).toEqual(['desktop', 'desktop-narrow', 'mobile'])
+
     const problems = findTableProblems()
     expect(problems).toEqual([])
+    const actualPairs = Object.entries(PAGE_BUDGETS)
+      .flatMap(([route, budgets]) => Object.keys(budgets).map((profile) => `${route}/${profile}`))
+      .sort()
+    const expectedPairs = GATED_ROUTES
+      .flatMap((route) => PERF_PROFILES.map((profile) => `${route}/${profile}`))
+      .sort()
+    expect(actualPairs).toEqual(expectedPairs)
+
     for (const route of GATED_ROUTES) {
       for (const profile of PERF_PROFILES) {
         expect(() => resolveBudget(route, profile)).not.toThrow()
@@ -57,43 +72,63 @@ describe('budget table rules', () => {
     }
   })
 
-  // #1298 is intentionally stricter than the generic healthy-CWV ceiling.
-  // Without this assertion, changing Search from 0.01 to 0.1 would keep both
-  // the table-governance test and the browser budget green.
-  it.each(PERF_PROFILES)('pins SEARCH/%s to the strict #1298 CLS contract', (profile) => {
+  // #1298 is intentionally stricter than the generic healthy-CWV ceiling on
+  // wide desktop and mobile. Narrow has its own measured #1564 ratchet below.
+  it.each(['desktop', 'mobile'] as const)(
+    'pins SEARCH/%s to the strict #1298 CLS contract',
+    (profile) => {
+      const budget = resolveBudget('SEARCH', profile)
+
+      expect(budget.clsMax).toBe(0.01)
+      expect(budget.debt).toBeUndefined()
+      expect(budget.allowedForbiddenSources).toBeUndefined()
+    },
+  )
+
+  it('pins SEARCH/desktop-narrow to the measured #1564 ceiling', () => {
+    const profile = 'desktop-narrow'
     const budget = resolveBudget('SEARCH', profile)
 
-    expect(budget.clsMax).toBe(0.01)
+    expect(budget.clsMax).toBe(0.0111)
     expect(budget.debt).toBeUndefined()
     expect(budget.allowedForbiddenSources).toBeUndefined()
+  })
+
+  it.each([
+    ['desktop', 325],
+    ['desktop-narrow', 240],
+    ['mobile', 220],
+  ] as const)('pins QUEST_DETAIL/%s to its measured first-screen ceiling', (profile, ceiling) => {
+    const budget = resolveBudget('QUEST_DETAIL', profile)
+
+    expect(budget.clsMax).toBe(HEALTHY_CLS_MAX)
+    expect(budget.firstScreenElementsMax).toBe(ceiling)
   })
 
   // The browser loop iterates FORBIDDEN_SHIFT_SOURCES itself. Pin the complete
   // policy so deleting a node OR weakening its marker/selector cannot make the
   // positive/source controls pass vacuously.
   it('keeps every #1298 header node in the forbidden-source policy', () => {
-    expect(FORBIDDEN_SHIFT_SOURCES).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'header-logo',
-          marker: 'data-header-logo-wordmark',
-          selector: '[data-header-logo-wordmark]',
-          presentOn: ['desktop'],
-        }),
-        expect.objectContaining({
-          id: 'header-logo-image',
-          marker: 'data-header-logo-image',
-          selector: '[data-header-logo-image]',
-          presentOn: ['desktop', 'mobile'],
-        }),
-        expect.objectContaining({
-          id: 'header-language-switcher',
-          marker: 'testid=header-language-switcher',
-          selector: '[data-testid="header-language-switcher"]',
-          presentOn: ['desktop', 'mobile'],
-        }),
-      ]),
-    )
+    expect(FORBIDDEN_SHIFT_SOURCES).toEqual([
+      {
+        id: 'header-logo',
+        marker: 'data-header-logo-wordmark',
+        selector: '[data-header-logo-wordmark]',
+        presentOn: ['desktop'],
+      },
+      {
+        id: 'header-logo-image',
+        marker: 'data-header-logo-image',
+        selector: '[data-header-logo-image]',
+        presentOn: ['desktop', 'desktop-narrow', 'mobile'],
+      },
+      {
+        id: 'header-language-switcher',
+        marker: 'testid=header-language-switcher',
+        selector: '[data-testid="header-language-switcher"]',
+        presentOn: ['desktop', 'desktop-narrow', 'mobile'],
+      },
+    ])
   })
 
   it('throws on a missing route or profile instead of falling back', () => {
@@ -103,7 +138,11 @@ describe('budget table rules', () => {
 
   it('rejects a healthy entry above the Core Web Vitals threshold', () => {
     const problems = findTableProblems({
-      HOME: { desktop: healthyBudget({ clsMax: 0.3 }), mobile: healthyBudget() },
+      HOME: {
+        desktop: healthyBudget({ clsMax: 0.3 }),
+        'desktop-narrow': healthyBudget(),
+        mobile: healthyBudget(),
+      },
     })
     expect(problems.join('\n')).toContain(`exceeds ${HEALTHY_CLS_MAX}`)
   })
@@ -115,6 +154,7 @@ describe('budget table rules', () => {
           clsMax: 0.02,
           debt: { measured: 0.02, taskRef: '#1298', recordedAt: '2026-08-08' },
         }),
+        'desktop-narrow': healthyBudget(),
         mobile: healthyBudget(),
       },
     })
@@ -126,6 +166,7 @@ describe('budget table rules', () => {
           clsMax: 0.05,
           debt: { measured: 0.02, taskRef: '#1298', recordedAt: '2026-08-08' },
         }),
+        'desktop-narrow': healthyBudget(),
         mobile: healthyBudget(),
       },
     })
@@ -137,6 +178,7 @@ describe('budget table rules', () => {
           clsMax: 0.02,
           debt: { measured: 0.02, taskRef: '  ', recordedAt: '2026-08-08' },
         }),
+        'desktop-narrow': healthyBudget(),
         mobile: healthyBudget(),
       },
     })

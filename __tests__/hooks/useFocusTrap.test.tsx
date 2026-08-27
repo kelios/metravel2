@@ -102,6 +102,60 @@ describe('useFocusTrap', () => {
     await waitFor(() => expect(returnFocus.current.focus).toHaveBeenCalled())
   })
 
+  it('owns every Tab transition instead of relying on browser traversal', async () => {
+    const { getByTestId, unmount } = render(<FocusTrapHarness />)
+    const container = getByTestId('trap-container')
+    const initialButton = getByTestId('initial-btn') as HTMLButtonElement
+    const returnButton = getByTestId('return-btn') as HTMLButtonElement
+    const lastButton = getByTestId('last-btn') as HTMLButtonElement
+
+    await waitFor(() => expect(document.activeElement).toBe(initialButton))
+
+    const forward = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      bubbles: true,
+      cancelable: true,
+    })
+    container.dispatchEvent(forward)
+    expect(forward.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(returnButton)
+
+    fireEvent.keyDown(container, { key: 'Tab' })
+    expect(document.activeElement).toBe(lastButton)
+
+    fireEvent.keyDown(container, { key: 'Tab' })
+    expect(document.activeElement).toBe(initialButton)
+
+    fireEvent.keyDown(container, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(lastButton)
+
+    initialButton.focus()
+    returnButton.style.display = 'none'
+    fireEvent.keyDown(container, { key: 'Tab' })
+    expect(document.activeElement).toBe(lastButton)
+
+    returnButton.style.display = ''
+    lastButton.disabled = true
+    initialButton.focus()
+    fireEvent.keyDown(container, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(returnButton)
+    lastButton.disabled = false
+
+    const replacementLastButton = lastButton.cloneNode(true) as HTMLButtonElement
+    lastButton.replaceWith(replacementLastButton)
+    replacementLastButton.focus()
+    const wrapAfterReplacement = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      bubbles: true,
+      cancelable: true,
+    })
+    replacementLastButton.dispatchEvent(wrapAfterReplacement)
+    expect(wrapAfterReplacement.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(initialButton)
+
+    unmount()
+  })
+
   it('does nothing when disabled', () => {
     const { getByTestId } = render(<FocusTrapHarness enabled={false} />)
     const initialButton = getByTestId('initial-btn') as HTMLButtonElement

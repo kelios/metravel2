@@ -47,6 +47,20 @@ export const routablePreviewPoints = (route: RoutePoint[]): Array<[number, numbe
       Number.isFinite(coordinates[0]) &&
       Number.isFinite(coordinates[1]));
 
+/** A routed line must contain at least two finite [lng, lat] positions. */
+export const hasUsableRouteGeometry = (
+  geometry: RouteGeometry | null | undefined,
+): geometry is RouteGeometry =>
+  Array.isArray(geometry) &&
+  geometry.length >= 2 &&
+  geometry.every(
+    (coordinates) =>
+      Array.isArray(coordinates) &&
+      coordinates.length >= 2 &&
+      Number.isFinite(coordinates[0]) &&
+      Number.isFinite(coordinates[1]),
+  );
+
 /** Стабильный ключ набора точек: по нему решаем, устарел ли ответ движка. */
 export const previewPointsKey = (
   points: Array<[number, number]>,

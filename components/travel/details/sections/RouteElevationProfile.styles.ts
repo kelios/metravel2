@@ -218,7 +218,7 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       gap: DESIGN_TOKENS.spacing.xs,
     },
     pointCardsGridCompact: {
-      flexDirection: 'column',
+      flexDirection: 'row',
     },
     pointCard: {
       minWidth: 150,
@@ -231,7 +231,7 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
     },
     pointCardCompact: {
       minWidth: 0,
-      flexBasis: '100%',
+      flexBasis: '30%',
       paddingVertical: DESIGN_TOKENS.spacing.xs,
     },
     pointCardHeader: {

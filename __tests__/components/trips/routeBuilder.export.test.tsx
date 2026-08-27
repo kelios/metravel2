@@ -4,7 +4,10 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native'
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
 import { createQueryWrapper } from '../../helpers/testQueryClient'
-import { buildTripRouteExportInput } from '@/components/trips/planning/tripRouteExport'
+import {
+  buildTripRouteExportInput,
+  isTripRouteExportApproximate,
+} from '@/components/trips/planning/tripRouteExport'
 import { buildGpx } from '@/utils/routeExport'
 
 const mockSaveRouteExportFile = jest.fn()
@@ -160,5 +163,25 @@ describe('trip route export payload', () => {
     const gpx = buildGpx(buildTripRouteExportInput(makeTrip({ routeGeometry: null })))
 
     expect((gpx.content.match(/<trkpt/g) ?? []).length).toBe(2)
+  })
+
+  it('warns and exports only waypoints when a healthy state has no geometry', () => {
+    const inconsistentTrip = makeTrip({
+      routeGeometry: null,
+      routingState: {
+        provider: 'ors',
+        isOptimal: true,
+        fallbackReason: null,
+        warnings: [],
+      },
+    })
+
+    const input = buildTripRouteExportInput(inconsistentTrip)
+    const gpx = buildGpx(input)
+
+    expect(isTripRouteExportApproximate(inconsistentTrip)).toBe(true)
+    expect(input.track).toEqual(inconsistentTrip.route.map((point) => point.coordinates))
+    expect(input.description).toContain('приблизительный')
+    expect((gpx.content.match(/<trkpt/g) ?? [])).toHaveLength(2)
   })
 })

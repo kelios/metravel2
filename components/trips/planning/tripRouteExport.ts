@@ -21,8 +21,12 @@ import {
 } from '@/utils/routeExport';
 import { trackRouteExported } from '@/utils/tripAnalytics';
 import { translate as i18nT } from '@/i18n';
+import { hasUsableRouteGeometry } from './tripRoutePreview';
 
 export type RouteExportFormat = 'gpx' | 'kml';
+
+export const isTripRouteExportApproximate = (trip: PlannedTrip): boolean =>
+  !hasUsableRouteGeometry(trip.routeGeometry) || isRouteApproximate(trip.routingState);
 
 export const buildTripRouteExportInput = (trip: PlannedTrip): RouteExportInput => {
   const withCoords = trip.route.filter((p) => p.coordinates);
@@ -32,10 +36,8 @@ export const buildTripRouteExportInput = (trip: PlannedTrip): RouteExportInput =
     coordinates: p.coordinates as [number, number],
   }));
   const waypointTrack = withCoords.map((p) => p.coordinates as [number, number]);
-  const routedTrack = trip.routeGeometry && trip.routeGeometry.length >= 2
-    ? trip.routeGeometry
-    : null;
-  const approximate = isRouteApproximate(trip.routingState);
+  const routedTrack = hasUsableRouteGeometry(trip.routeGeometry) ? trip.routeGeometry : null;
+  const approximate = isTripRouteExportApproximate(trip);
   return {
     name: trip.title,
     description: approximate
@@ -96,7 +98,7 @@ export const useTripRouteExport = (trip: PlannedTrip): TripRouteExportController
   return {
     input,
     disabled,
-    approximate: isRouteApproximate(trip.routingState),
+    approximate: isTripRouteExportApproximate(trip),
     approximateHint: routingStateHint(trip.routingState),
     exportingAction,
     setExportingAction,

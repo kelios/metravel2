@@ -32,6 +32,8 @@ import { shouldRenderTripRouteExportMenu } from '@/components/trips/planning/tri
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import TripPlanLinksBlock from '@/components/trips/planning/TripPlanLinksBlock';
+import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
+import { hasUsableRouteGeometry } from '@/components/trips/planning/tripRoutePreview';
 import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import {
   PLAN_STATUS_LABEL,
@@ -142,7 +144,14 @@ export default function PlannedTripScreen() {
   const usesFallbackCover = Boolean(trip && coverUrl.length === 0);
   const displayCoverUrl = usesFallbackCover ? (fallbackCover?.uri ?? '') : coverUrl;
 
-  const summaryLine = trip ? routeSummaryLine(trip.routeSummary) : '';
+  const rawHealthyRouteMissingGeometry = Boolean(
+    trip?.routingState &&
+      !isRouteApproximate(trip.routingState) &&
+      !hasUsableRouteGeometry(trip.routeGeometry),
+  );
+  const summaryLine = trip && !rawHealthyRouteMissingGeometry
+    ? routeSummaryLine(trip.routeSummary)
+    : '';
   const routeApproximate = trip ? isRouteApproximate(trip.routingState) : false;
 
   useEffect(() => {
@@ -322,22 +331,24 @@ export default function PlannedTripScreen() {
                 {formatTripDateTime(trip.startDate, trip.startTime)} · {trip.organizer.name}
               </Text>
 
-              <View
-                style={[styles.summaryPill, routeApproximate && styles.summaryPillWarning]}
-                testID="trip-plan-summary"
-              >
-                <Feather
-                  name={routeApproximate ? 'alert-triangle' : 'navigation'}
-                  size={13}
-                  color={routeApproximate ? colors.warningDark : colors.primaryDark}
-                />
-                <Text
-                  style={[styles.summaryPillText, routeApproximate && styles.summaryPillTextWarning]}
-                  numberOfLines={1}
+              {summaryLine ? (
+                <View
+                  style={[styles.summaryPill, routeApproximate && styles.summaryPillWarning]}
+                  testID="trip-plan-summary"
                 >
-                  {summaryLine}
-                </Text>
-              </View>
+                  <Feather
+                    name={routeApproximate ? 'alert-triangle' : 'navigation'}
+                    size={13}
+                    color={routeApproximate ? colors.warningDark : colors.primaryDark}
+                  />
+                  <Text
+                    style={[styles.summaryPillText, routeApproximate && styles.summaryPillTextWarning]}
+                    numberOfLines={1}
+                  >
+                    {summaryLine}
+                  </Text>
+                </View>
+              ) : null}
 
               {routeApproximate ? (
                 <Text style={styles.approximateNote} testID="trip-plan-route-approximate">
@@ -403,16 +414,12 @@ export default function PlannedTripScreen() {
                   testID="trip-plan-edit-title"
                 />
 
-                <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.opisanie_c32c01de')}</Text>
-                <TextInput
+                <TripPlanDescriptionEditor
                   value={editValues.description}
                   onChangeText={(description) => setEditValues((prev) => prev ? { ...prev, description } : prev)}
+                  label={i18nT('trips:app.tabs.trips.plan.id.opisanie_c32c01de')}
                   placeholder={i18nT('trips:app.tabs.trips.plan.id.opisanie_poezdki_ssylki_detali_dlya_uchastni_e1269600')}
-                  placeholderTextColor={colors.textMuted}
                   editable={!updateTrip.isPending}
-                  multiline
-                  style={styles.textArea}
-                  testID="trip-plan-edit-description"
                 />
 
                 <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.oblozhka_6b408e05')}</Text>

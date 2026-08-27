@@ -3,6 +3,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { MarkerData } from "@/types/types";
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
+import { isLocalPreviewUrl } from '@/utils/travelFormNormalization';
 import { getTravelPointImageUrl } from '@/utils/travelPointImages';
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 import { useStyles } from './markersListStyles';
@@ -22,6 +23,11 @@ const isMarkerIndexDrag = (e: React.DragEvent): boolean => {
     const types = e.dataTransfer?.types;
     if (!types) return false;
     return Array.from(types).includes(MARKER_DND_TYPE);
+};
+
+const isDragEventFromContainer = (e: React.DragEvent<HTMLDivElement>): boolean => {
+    const target = e.target;
+    return target instanceof Node && e.currentTarget.contains(target);
 };
 
 /**
@@ -268,6 +274,9 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleDragOver = useCallback(
         (e: React.DragEvent<HTMLDivElement>) => {
             if (!onAddMarkerFromPhoto) return;
+            // React events from EditMarkerModal's portal still bubble through the
+            // component tree, although their DOM target is outside this panel.
+            if (!isDragEventFromContainer(e)) return;
             // reorder-перетаскивание строки не должно триггерить фото-оверлей
             if (isMarkerIndexDrag(e)) return;
             e.preventDefault();
@@ -279,6 +288,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleDragEnter = useCallback(
         (e: React.DragEvent<HTMLDivElement>) => {
             if (!onAddMarkerFromPhoto) return;
+            if (!isDragEventFromContainer(e)) return;
             if (isMarkerIndexDrag(e)) return;
             e.preventDefault();
             dragDepthRef.current += 1;
@@ -290,6 +300,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleDragLeave = useCallback(
         (e: React.DragEvent<HTMLDivElement>) => {
             if (!onAddMarkerFromPhoto) return;
+            if (!isDragEventFromContainer(e)) return;
             if (isMarkerIndexDrag(e)) return;
             e.preventDefault();
             dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
@@ -301,6 +312,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleDrop = useCallback(
         async (e: React.DragEvent<HTMLDivElement>) => {
             if (!onAddMarkerFromPhoto) return;
+            if (!isDragEventFromContainer(e)) return;
             if (isMarkerIndexDrag(e)) return;
             e.preventDefault();
             dragDepthRef.current = 0;
@@ -494,7 +506,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                         fit="contain"
                                         blurBackground
                                         allowCriticalWebBlur
-                                        loading="lazy"
+                                        loading={isLocalPreviewUrl(imageUrl) ? 'eager' : 'lazy'}
                                         priority="low"
                                         borderRadius={10}
                                         style={styles.previewMedia as any}

@@ -1,3 +1,6 @@
+import { mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
 import { test, expect } from './fixtures';
 import { devices, request } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -5,7 +8,10 @@ import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { seedNecessaryConsent } from './helpers/storage';
 
-const tinyJpegBuffer = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEBAVFRUVFRUVFRUVFRUVFRUVFRUWFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGhAQGi0fHyUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBEQACEQEDEQH/xAAXAAEBAQEAAAAAAAAAAAAAAAAAAQID/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEAMQAAAB6A//xAAVEAEBAAAAAAAAAAAAAAAAAAABAP/aAAgBAQABBQJf/8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQABPyF//9k=', 'base64');
+const tinyPngBuffer = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
+  'base64',
+);
 
 const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
@@ -1337,14 +1343,139 @@ test.describe('Создание путешествия - Полный flow', () 
     await api.dispose();
   });
 
-  test('должен добавлять точку через фото и после сохранения показывать фото у этой точки', async ({ page }) => {
-    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    await ensureCanCreateTravel(page);
-
+  const verifyPointPhotoUpload = async (page: Page, viewport: 'desktop' | 'mobile') => {
     let seenUpload = false;
     let capturedUpsertPayload: any = null;
     let uploadedPointId: string | null = null;
+    let servedUploadedImageRequests = 0;
+    const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
+    const failedRequests: string[] = [];
+    const httpErrors: string[] = [];
+    let releaseUploadResponse!: () => void;
+    const uploadResponseGate = new Promise<void>((resolve) => {
+      releaseUploadResponse = resolve;
+    });
     const fallbackPointImage = 'https://example.com/travel-cover/fallback.webp';
+    const uploadedServerImage = 'https://example.com/e2e/travel-address-point.png';
+    const evidenceDir = resolve('.codex-temp/task-1599');
+
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('requestfailed', (request) => {
+      failedRequests.push(
+        `${request.method()} ${request.url()} — ${request.failure()?.errorText ?? 'unknown error'}`,
+      );
+    });
+    page.on('response', (response) => {
+      if (response.status() >= 400) {
+        httpErrors.push(
+          `${response.request().method()} ${response.url()} — ${response.status()}`,
+        );
+      }
+    });
+
+    await mkdir(evidenceDir, { recursive: true });
+    await page.route('**/proxy/tiles/osm/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: tinyPngBuffer,
+      });
+    });
+    await page.route(/\/(?:api\/)?travels\/\d+\/routes\/(?:\?.*)?$/, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    await ensureCanCreateTravel(page);
+
+    const expectDecodedImage = async (
+      image: import('@playwright/test').Locator,
+      expectedSourceKind: 'temporary' | 'server',
+      expectedCurrentSrc?: string,
+    ) => {
+      await expect(image).toBeAttached({ timeout: 15_000 });
+      await expect
+        .poll(
+          () =>
+            image.evaluate(async (node) => {
+              const element = node as HTMLImageElement;
+              const currentSrc = element.currentSrc || element.src;
+              let temporarySourceState = 'not-applicable';
+              let temporarySourceSize = 'not-applicable';
+              let temporarySourceType = 'not-applicable';
+              let temporarySourceSignature = 'not-applicable';
+              if (/^(?:blob:|data:)/i.test(currentSrc)) {
+                try {
+                  const response = await fetch(currentSrc);
+                  const blob = await response.blob();
+                  const bytes = new Uint8Array(await blob.arrayBuffer());
+                  temporarySourceState = response.ok ? 'available' : 'unavailable';
+                  temporarySourceSize = bytes.byteLength > 0 ? 'nonempty' : 'empty';
+                  temporarySourceType = blob.type;
+                  temporarySourceSignature = Array.from(bytes.slice(0, 8)).join(',');
+                } catch {
+                  temporarySourceState = 'unavailable';
+                  temporarySourceSize = 'empty';
+                }
+              }
+              return {
+                completion: element.complete ? 'complete' : 'loading',
+                widthState: element.naturalWidth > 0 ? 'decoded' : 'empty',
+                heightState: element.naturalHeight > 0 ? 'decoded' : 'empty',
+                opacity: Number.parseFloat(window.getComputedStyle(element).opacity),
+                currentSrc,
+                sourceKind: /^(?:blob:|data:)/i.test(currentSrc)
+                  ? 'temporary'
+                  : /(?:fallback|og-default)/i.test(currentSrc)
+                    ? 'fallback'
+                    : 'server',
+                temporarySourceState,
+                temporarySourceSize,
+                temporarySourceType,
+                temporarySourceSignature,
+              };
+            }),
+          { timeout: 15_000 }
+        )
+        .toMatchObject({
+          completion: 'complete',
+          widthState: 'decoded',
+          heightState: 'decoded',
+          opacity: 1,
+          sourceKind: expectedSourceKind,
+          ...(expectedSourceKind === 'temporary'
+            ? {
+                temporarySourceState: 'available',
+                temporarySourceSize: 'nonempty',
+                temporarySourceType: 'image/png',
+                temporarySourceSignature: '137,80,78,71,13,10,26,10',
+              }
+            : {}),
+        });
+      if (expectedCurrentSrc) {
+        await expect
+          .poll(
+            () => image.evaluate((node) => {
+              const element = node as HTMLImageElement;
+              return element.currentSrc || element.src;
+            }),
+            { timeout: 15_000 },
+          )
+          .toBe(expectedCurrentSrc);
+      }
+    };
 
     await page.unroute('**/api/travels/upsert/**').catch(() => null);
     await page.unroute('**/api/travels/upsert/').catch(() => null);
@@ -1412,10 +1543,27 @@ test.describe('Создание путешествия - Полный flow', () 
       uploadedPointId =
         rawUploadBody.match(/name="id"\r?\n\r?\n([^\r\n-]+)/)?.[1]?.trim() ||
         String(capturedUpsertPayload?.coordsMeTravel?.[0]?.id ?? '');
+      await uploadResponseGate;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ url: 'https://example.com/travel-address/e2e-point.webp' }),
+        body: JSON.stringify({ url: uploadedServerImage }),
+      });
+    });
+    await page.route(uploadedServerImage, async (route) => {
+      servedUploadedImageRequests += 1;
+      if (servedUploadedImageRequests === 1) {
+        await route.fulfill({
+          status: 503,
+          contentType: 'text/plain',
+          body: 'transient image failure',
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: tinyPngBuffer,
       });
     });
 
@@ -1425,33 +1573,66 @@ test.describe('Создание путешествия - Полный flow', () 
     await ensureOnStep2(page);
     await maybeDismissRouteCoachmark(page);
 
-    // Именно фото-дропзона «точки из EXIF», а не первый попавшийся file input:
-    // у сохранённого маршрута выше по DOM появляется загрузчик GPX/KML, и
-    // `.first()` уводил JPEG туда — точка не создавалась.
-    const photoInput = page.locator('input[type="file"][accept*="image"]').first();
+    // Именно input фото-дропзоны «точки из EXIF»: загрузчик GPX/KML и
+    // фото ручной точки живут вне `#markers-list-panel` и не могут перехватить
+    // тестовое изображение.
+    const photoInput = page
+      .locator('#markers-list-panel')
+      .locator('input[type="file"][accept*="image"]')
+      .first();
+
+    // На mobile web список точек начинает свёрнутым и не монтирует свой file input.
+    // Desktop сразу рисует панель, поэтому toggle там не нужен.
+    if ((await photoInput.count()) === 0) {
+      const showPointsButton = page
+        .getByRole('button', { name: /^Показать точки \(\d+\)$/i })
+        .first();
+      await expect(showPointsButton).toBeVisible({ timeout: 10_000 });
+      await showPointsButton.click();
+      await expect(
+        page.getByRole('button', { name: /^Скрыть точки \(\d+\)$/i }).first(),
+      ).toBeVisible();
+    }
     await expect(photoInput).toBeAttached({ timeout: 10_000 });
+    const saveResponsePromise = page.waitForResponse(
+      (response) => {
+        const request = response.request();
+        if (
+          request.method() !== 'PUT' ||
+          !response.url().includes('/travels/upsert/') ||
+          response.status() !== 200
+        ) {
+          return false;
+        }
+        try {
+          const body = JSON.parse(request.postData() ?? '{}');
+          const payload = body?.data ?? body;
+          return Array.isArray(payload?.coordsMeTravel) && payload.coordsMeTravel.length > 0;
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 30_000 },
+    );
     await photoInput.setInputFiles({
-      name: 'gps-photo.jpg',
-      mimeType: 'image/jpeg',
-      buffer: tinyJpegBuffer,
+      name: 'gps-photo.png',
+      mimeType: 'image/png',
+      buffer: tinyPngBuffer,
     });
 
     await expect(page.locator('text=Точек: 1')).toBeVisible({ timeout: 15_000 });
+    const markerCard = page.locator('#marker-0');
+    const markerImage = markerCard.locator('img:not([aria-hidden="true"])').first();
+    await expect(markerCard.getByText('Есть фото', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await markerCard.scrollIntoViewIfNeeded();
+    await expectDecodedImage(markerImage, 'temporary');
 
-    const saveResponsePromise = page.waitForResponse(
+    const firstUploadedImageFailure = page.waitForResponse(
       (response) =>
-        response.request().method() === 'PUT' &&
-        response.url().includes('/travels/upsert/') &&
-        response.status() === 200,
-      { timeout: 30_000 }
+        response.url() === uploadedServerImage && response.status() === 503,
+      { timeout: 15_000 },
     );
-
-    const inlineSave = page.locator('button:has-text("Сохранить")').first();
-    if (await inlineSave.isVisible().catch(() => false)) {
-      await inlineSave.click({ timeout: 30_000 });
-    } else {
-      await clickWizardMenuAction(page, 'travel-wizard-save', /сохранить/i);
-    }
+    releaseUploadResponse();
 
     await saveResponsePromise;
 
@@ -1471,7 +1652,71 @@ test.describe('Создание путешествия - Полный flow', () 
     expect(sentPoints).not.toContain(fallbackPointImage);
     expect(sentPoints).not.toContain('og-default');
 
-    await expect(page.getByText('Есть фото').first()).toBeVisible({ timeout: 15_000 });
+    await firstUploadedImageFailure;
+    await expect(markerImage).toHaveCount(0, { timeout: 500 });
+    const neutralPlaceholder = markerCard.locator('div[aria-hidden="true"]').first();
+    await expect(neutralPlaceholder).toBeVisible();
+    const neutralPlaceholderState = await neutralPlaceholder.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        width: rect.width,
+        height: rect.height,
+        backgroundColor: window.getComputedStyle(node).backgroundColor,
+      };
+    });
+    expect(neutralPlaceholderState.width).toBeGreaterThan(0);
+    expect(neutralPlaceholderState.height).toBeGreaterThan(0);
+    expect(neutralPlaceholderState.backgroundColor).not.toBe('rgb(0, 0, 0)');
+    expect(neutralPlaceholderState.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+
+    await expect(markerCard.getByText('Есть фото', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expectDecodedImage(markerImage, 'server', uploadedServerImage);
+    expect(servedUploadedImageRequests).toBeGreaterThanOrEqual(2);
+
+    await markerCard.getByRole('button', { name: 'Редактировать', exact: true }).click();
+    await expect(page.getByText(/^\u0422очка #1\b/)).toBeVisible({ timeout: 10_000 });
+    const editImageField = page.getByText('Изображение точки', { exact: true }).locator('..');
+    await expectDecodedImage(editImageField.locator('img:not([aria-hidden="true"])').first(), 'server', uploadedServerImage);
+
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(page.getByText('Изображение точки', { exact: true })).toBeHidden();
+    await expectDecodedImage(markerImage, 'server', uploadedServerImage);
+
+    await page.screenshot({
+      path: resolve(evidenceDir, `point-photo-${viewport}.png`),
+      fullPage: true,
+    });
+
+    expect(httpErrors).toEqual([`GET ${uploadedServerImage} — 503`]);
+    expect(failedRequests).toEqual([]);
+    expect(pageErrors).toEqual([]);
+    const expectedImageLoadErrors = consoleErrors.filter((message) =>
+      /Failed to load resource: the server responded with a status of 503/i.test(message),
+    );
+    const unexpectedConsoleErrors = consoleErrors.filter(
+      (message) => !expectedImageLoadErrors.includes(message),
+    );
+    expect(expectedImageLoadErrors.length).toBeLessThanOrEqual(1);
+    expect(unexpectedConsoleErrors).toEqual([]);
+  };
+
+  test.describe('фото точки на desktop web', () => {
+    test.use({ viewport: { width: 1440, height: 900 } });
+
+    test('показывается до и после сохранения', async ({ page }) => {
+      await verifyPointPhotoUpload(page, 'desktop');
+    });
+  });
+
+  test.describe('фото точки на mobile web', () => {
+    test.use({
+      ...pixel7MobileWeb,
+      viewport: { width: 390, height: 844 },
+    });
+
+    test('фото точки показывается до и после сохранения', async ({ page }) => {
+      await verifyPointPhotoUpload(page, 'mobile');
+    });
   });
 
 });

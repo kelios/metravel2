@@ -68,6 +68,15 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   // Семантику контекст-бара (`isMobile`) это не трогает: у него своя ветка.
   const rowIsMobile = Platform.OS === 'web' && !isHydrated ? false : isMobile
   const activePath = getHeaderActivePath(pathname)
+  const webContextFallbackKind =
+    Platform.OS === 'web'
+      ? pathname.startsWith('/travels/')
+        ? 'travel'
+        : 'default'
+      : null
+  const contextFallbackProps = webContextFallbackKind
+    ? webDataSetProps({ headerContextFallback: webContextFallbackKind })
+    : null
   const showHeaderContextBar =
     shouldShowHeaderContextBar(pathname, isMobile) &&
     !(Platform.OS === 'web' && !isHydrated && isQuestDetailHeaderPath(pathname))
@@ -94,14 +103,19 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
 
   const contextBarFallbackStyle = useMemo(
     () => ({
-      minHeight: willRenderVisibleContextBar
+      // Marked web fallbacks are controlled entirely by critical CSS: default
+      // uses 52/46px, travel uses 52/46/0px by viewport. Keeping the SSR 52px
+      // value inline briefly won over Suspense and produced 110→116→110 CLS.
+      minHeight: webContextFallbackKind
+        ? undefined
+        : willRenderVisibleContextBar
         ? isMobile
           ? CONTEXT_BAR_HEIGHT_MOBILE
           : CONTEXT_BAR_HEIGHT_DESKTOP
         : 0,
       width: '100%' as const,
     }),
-    [isMobile, willRenderVisibleContextBar],
+    [isMobile, webContextFallbackKind, willRenderVisibleContextBar],
   )
 
   const lastHeightRef = useRef(0)
@@ -174,11 +188,23 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
 
         {showHeaderContextBar ? (
           isHydrated ? (
-            <Suspense fallback={<View style={contextBarFallbackStyle} aria-hidden />}>
+            <Suspense
+              fallback={
+                <View
+                  style={contextBarFallbackStyle}
+                  {...contextFallbackProps}
+                  aria-hidden
+                />
+              }
+            >
               <HeaderContextBarLazy />
             </Suspense>
           ) : (
-            <View style={contextBarFallbackStyle} aria-hidden />
+            <View
+              style={contextBarFallbackStyle}
+              {...contextFallbackProps}
+              aria-hidden
+            />
           )
         ) : null}
       </View>

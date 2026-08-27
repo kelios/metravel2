@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
     ScrollView,
     StyleSheet,
@@ -27,11 +27,13 @@ interface TravelDescriptionProps {
     articleBodyMedia?: ArticleBodyMediaIndex | null;
 }
 
+const HEAVY_HTML_REVEAL_ROOT_MARGIN = '0px 0px 400px 0px';
+
 /**
  * Оптимизированное описание путешествия:
- * - На web монтаж HTML откладываем на пару кадров + idle: синхронный mount большого
- *   описания (десятки KB + Instagram-фасады) во время гидратации RN Web блокирует
- *   появление hero/шапки и держит SSG-скелет видимым 10+ секунд на тяжёлых статьях.
+ * - На web монтаж тяжёлого HTML ждёт приближения плейсхолдера к viewport + idle:
+ *   синхронный mount большого описания (десятки KB + Instagram-фасады) во время
+ *   гидратации RN Web блокирует первый интерактив.
  *   Прероллится только скелет (в #root описания нет) → mismatch'а гидратации не будет.
  * - На native парсинг откладывается до конца взаимодействий (InteractionManager + 2s форсаж).
  */
@@ -46,6 +48,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     const isMobileLayout = width < METRICS.breakpoints.tablet;
     const colors = useThemedColors();
     const shouldUseFullWidthLayout = noBox && !isMobileLayout;
+    const descriptionRef = useRef<View | null>(null);
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);
@@ -82,21 +85,24 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
 
     // Монтаж тяжёлого HTML откладываем на обеих платформах, чтобы не блокировать
     // первый интерактив (web: гидратация шелла/hero; native: взаимодействия).
-    const [canParseHtml, setCanParseHtml] = useState(false);
+    const [revealedHtml, setRevealedHtml] = useState<string | null>(null);
+    const canParseHtml = revealedHtml === htmlContent;
 
     useEffect(() => {
         let cancelled = false;
         const reveal = () => {
-            if (!cancelled) setCanParseHtml(true);
+            if (!cancelled) setRevealedHtml(htmlContent);
         };
 
         if (Platform.OS === "web") {
             const w = typeof window !== "undefined" ? (window as any) : null;
             let idleId: number | null = null;
+            let observer: { observe: (target: unknown) => void; disconnect: () => void } | null = null;
+            let revealTimeoutId: ReturnType<typeof setTimeout> | null = null;
+            let revealScheduled = false;
             // Лёгкое описание раскрываем сразу после hydration effect: рендер был
             // одинаковым на первом клиентском проходе, поэтому mismatch'а нет, а
-            // пользователь не ждёт idle/rAF-ворота (#557). Тяжёлое HTML оставляем
-            // за idle-gate, чтобы не блокировать hero/шапку.
+            // пользователь не ждёт proximity/idle-ворота (#557).
             if (!isHeavyHtml) {
                 reveal();
                 return () => {
@@ -104,24 +110,58 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                 };
             }
 
-            const rafOuter = w?.requestAnimationFrame
-                ? w.requestAnimationFrame(() => {
-                      w.requestAnimationFrame(() => {
-                          if (w.requestIdleCallback) {
-                              idleId = w.requestIdleCallback(reveal, { timeout: 600 });
-                          } else {
-                              reveal();
-                          }
-                      });
-                  })
-                : null;
-            const timeoutId = setTimeout(reveal, 800);
+            // #1552: тяжёлое тело статьи находится ниже первого экрана. Прежний
+            // безусловный reveal через 800 мс запускал prepareStableContentHtml во
+            // время поздней гидратации и добавлял 179–215 мс к production TBT.
+            // Готовим HTML, когда зарезервированный плейсхолдер приблизился к
+            // viewport, а затем отдаём работу первому idle-окну.
+            const scheduleReveal = () => {
+                if (cancelled || revealScheduled) return;
+                revealScheduled = true;
+                if (w?.requestIdleCallback) {
+                    idleId = w.requestIdleCallback(reveal, { timeout: 600 });
+                } else {
+                    revealTimeoutId = setTimeout(reveal, 0);
+                }
+            };
+
+            const Observer = w?.IntersectionObserver;
+            const target = descriptionRef.current;
+            if (typeof Observer === 'function' && target) {
+                try {
+                    observer = new Observer(
+                        (entries: Array<{
+                            isIntersecting?: boolean;
+                            intersectionRatio?: number;
+                            boundingClientRect?: { bottom?: number };
+                        }>) => {
+                            const hasReachedDescription = entries.some((entry) =>
+                                entry.isIntersecting ||
+                                Number(entry.intersectionRatio) > 0 ||
+                                Number(entry.boundingClientRect?.bottom) <= 0
+                            );
+                            if (hasReachedDescription) {
+                                observer?.disconnect();
+                                scheduleReveal();
+                            }
+                        },
+                        { rootMargin: HEAVY_HTML_REVEAL_ROOT_MARGIN, threshold: 0.01 },
+                    );
+                    observer.observe(target);
+                } catch {
+                    observer?.disconnect();
+                    observer = null;
+                    scheduleReveal();
+                }
+            } else {
+                scheduleReveal();
+            }
 
             return () => {
                 cancelled = true;
-                if (rafOuter != null && w?.cancelAnimationFrame) w.cancelAnimationFrame(rafOuter);
+                observer?.disconnect();
                 if (idleId != null && w?.cancelIdleCallback) w.cancelIdleCallback(idleId);
-                clearTimeout(timeoutId);
+                if (revealTimeoutId) clearTimeout(revealTimeoutId);
             };
         }
 
@@ -252,6 +292,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
 
     return (
       <View
+        ref={descriptionRef}
         style={[
           styles.wrapper,
           noBox && styles.wrapperNoBox,

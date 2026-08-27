@@ -40,7 +40,7 @@ import {
   median,
   MOBILE_THROTTLE_PROFILE,
 } from './helpers/perfBudget';
-import { clampCeiling } from './helpers/pagesPerfBudgets';
+import { HEALTHY_CLS_MAX, clampCeiling } from './helpers/pagesPerfBudgets';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -57,7 +57,7 @@ function envNum(name: string, fallback: number): number {
 const IS_CI = Boolean(process.env.CI);
 const LCP_MAX_MS = envNum('PERF_LCP_MAX_MS', IS_CI ? 2500 : 10_000);
 const TBT_MAX_MS = envNum('PERF_TBT_MAX_MS', IS_CI ? 300 : 600);
-const CLS_MAX = envNum('PERF_CLS_MAX', 0.30);
+const CLS_MAX = envNum('PERF_CLS_MAX', HEALTHY_CLS_MAX);
 const FCP_MAX_MS = envNum('PERF_FCP_MAX_MS', IS_CI ? 1800 : 3500);
 
 const MAX_JS_TRANSFER_KB = envNum('PERF_MAX_JS_KB', 1800);

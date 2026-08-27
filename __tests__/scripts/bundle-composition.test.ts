@@ -534,6 +534,19 @@ describe('состав eager-бандла (#1148)', () => {
     },
   )
 
+  it('travelOfflineAdapter не имеет sync-путей из production source (#1552)', () => {
+    const target = join(ROOT, 'services/offline/travelOfflineAdapter.ts')
+    const offenders = sourceFiles
+      .filter((file) => file !== target)
+      .filter((file) => syncDeps(file).includes(target))
+      .map((file) => relative(ROOT, file))
+
+    // Raw-specifier guard выше ловит канонический alias. Этот обход
+    // resolved sync-рёбер ловит relative и re-export обходы: любой
+    // транзитивный sync-путь к адаптеру обязан содержать одно такое ребро.
+    expect(offenders).toEqual([])
+  })
+
   it.each(ROUTE_SCOPED_PAYLOADS)(
     'payload $module остаётся в стартовом графе только своих маршрутов ($ticket)',
     ({ module, allowedRoutes, control }) => {

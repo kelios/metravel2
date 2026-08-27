@@ -162,6 +162,7 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 })
 
 const addPoint = (getByTestId: (id: string) => any, name: string) => {
+  fireEvent.press(getByTestId('route-builder-add-action'))
   fireEvent.press(getByTestId('route-builder-type-custom'))
   fireEvent.changeText(getByTestId('route-builder-name'), name)
   fireEvent.press(getByTestId('route-builder-add'))
@@ -354,6 +355,7 @@ describe('RouteBuilder panel steps', () => {
   it('добавляет точку адресным поиском карты', () => {
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ route: [] })} />)
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-address-pick'))
     fireEvent.press(getByTestId('route-builder-save'))
 

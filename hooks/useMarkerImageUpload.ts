@@ -33,6 +33,18 @@ const revokePreviewUrl = (url: string): void => {
   if (typeof revoke === 'function') revoke(url)
 }
 
+const revokePreviewUrlAfterSourceSwap = (url: string): void => {
+  if (!/^blob:/i.test(url)) return
+  const requestFrame = (
+    globalThis as { requestAnimationFrame?: (callback: FrameRequestCallback) => number }
+  ).requestAnimationFrame
+  if (typeof requestFrame === 'function') {
+    requestFrame(() => revokePreviewUrl(url))
+    return
+  }
+  setTimeout(() => revokePreviewUrl(url), 0)
+}
+
 const extractUploadUrl = (response: UploadImageResponse): string => {
   const nestedData = isRecord(response.data) ? response.data : null
   const uploadedUrlRaw =
@@ -54,6 +66,7 @@ export function useMarkerImageUpload({
   const markerUploadStateRef = useRef(
     new Map<string, { inFlight: boolean; attempts: number }>(),
   )
+  const latestMarkerUploadRef = useRef(new Map<string, string>())
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -69,12 +82,21 @@ export function useMarkerImageUpload({
       const currentMarkers = Array.isArray(formDataRef.current.coordsMeTravel)
         ? (formDataRef.current.coordsMeTravel as MarkerData[])
         : []
+      const latestBlobUrl = latestMarkerUploadRef.current.get(markerId)
+      if (latestBlobUrl && latestBlobUrl !== blobUrl) return
 
+      let didApplyUpload = false
       const updatedMarkers = currentMarkers.map((marker) => {
         if (String(marker?.id ?? '') !== markerId) return marker
-        if (String(marker?.image ?? '').trim() !== blobUrl) return marker
+        const currentImage = String(marker?.image ?? '').trim()
+        if (!currentImage) return marker
+        if (isLocalPreviewUrl(currentImage) && currentImage !== blobUrl) {
+          return marker
+        }
+        didApplyUpload = true
         return { ...marker, image: uploadedUrl }
       })
+      if (!didApplyUpload) return
 
       const nextFormData = {
         ...(formDataRef.current as TravelFormData),
@@ -169,6 +191,8 @@ export function useMarkerImageUpload({
           const file = getPendingImageFile(imageUrl)
           if (!file) return
 
+          const normalizedMarkerId = String(markerId)
+          latestMarkerUploadRef.current.set(normalizedMarkerId, imageUrl)
           markerUploadStateRef.current.set(imageUrl, {
             inFlight: true,
             attempts: state.attempts + 1,
@@ -187,15 +211,15 @@ export function useMarkerImageUpload({
               throw new Error('Upload did not return URL')
             }
 
+            applyUploadedMarkerImage(normalizedMarkerId, imageUrl, uploadedUrl)
             removePendingImageFile(imageUrl)
-            revokePreviewUrl(imageUrl)
-            applyUploadedMarkerImage(String(markerId), imageUrl, uploadedUrl)
+            revokePreviewUrlAfterSourceSwap(imageUrl)
             succeeded = true
           } catch {
             // Keep pending file for the next successful save/retry path.
           } finally {
             if (succeeded) {
-              // blob-URL ревокнут и больше не встретится — не копим мёртвые записи в Map.
+              // blob-URL поставлен на revoke после source swap и больше не встретится.
               markerUploadStateRef.current.delete(imageUrl)
             } else {
               markerUploadStateRef.current.set(imageUrl, {

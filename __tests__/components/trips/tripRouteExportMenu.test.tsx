@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
-import type { PlannedTrip } from '@/api/plannedTrips';
+import type { PlannedTrip, TripRouteElevation } from '@/api/plannedTrips';
+import type { UseMapRoutingResult } from '@/components/map-core/useMapRouting';
 import TripRouteExportMenu, {
   buildTripRouteExportInput,
   shouldRenderTripRouteExportMenu,
@@ -10,6 +11,23 @@ import TripRouteExportMenu, {
 const mockSaveRouteExportFile = jest.fn();
 const mockOpenExternalUrl = jest.fn();
 const mockUsePlannedTripRouteFile = jest.fn();
+const mockRepairEngine: {
+  mounts: Array<{ points: Array<[number, number]>; transportMode: string }>;
+  onResult: ((result: UseMapRoutingResult) => void) | null;
+} = { mounts: [], onResult: null };
+const mockMissingElevationGeometry: TripRouteElevation = {
+  status: 'ready',
+  provider: 'ors',
+  ascentM: 25,
+  descentM: 20,
+  preview: null,
+  geometry: null,
+  calculatedAt: '2026-07-01T10:05:00Z',
+};
+const mockUseTripRouteElevation = jest.fn(() => ({
+  data: mockMissingElevationGeometry,
+  isFetching: false,
+}));
 
 jest.mock('@/utils/routeExport', () => {
   const actual = jest.requireActual('@/utils/routeExport');
@@ -30,6 +48,29 @@ jest.mock('@/utils/tripAnalytics', () => ({
 jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
   usePlannedTripRouteFile: (...args: unknown[]) => mockUsePlannedTripRouteFile(...args),
 }));
+
+jest.mock('@/hooks/usePlannedTripsApi', () => ({
+  useTripRouteElevation: (...args: unknown[]) => mockUseTripRouteElevation(...args),
+}));
+
+jest.mock('@/components/trips/planning/TripRoutePreviewEngine', () => {
+  const ReactLocal = require('react');
+  return function TripRoutePreviewEngine(props: {
+    points: Array<[number, number]>;
+    transportMode: string;
+    onResult: (result: UseMapRoutingResult) => void;
+  }) {
+    const { View } = require('react-native');
+    mockRepairEngine.onResult = props.onResult;
+    ReactLocal.useEffect(() => {
+      mockRepairEngine.mounts.push({
+        points: props.points,
+        transportMode: props.transportMode,
+      });
+    }, [props.points, props.transportMode]);
+    return <View testID="trip-route-preview-engine" />;
+  };
+});
 
 jest.mock('@/components/ui/Button', () => {
   return function Button({
@@ -114,6 +155,8 @@ describe('TripRouteExportMenu', () => {
     mockSaveRouteExportFile.mockResolvedValue(true);
     mockOpenExternalUrl.mockResolvedValue(true);
     mockUsePlannedTripRouteFile.mockReturnValue({ data: null });
+    mockRepairEngine.mounts = [];
+    mockRepairEngine.onResult = null;
   });
 
   afterEach(() => {
@@ -148,6 +191,28 @@ describe('TripRouteExportMenu', () => {
     expect(getByText('Apple Maps')).toBeTruthy();
     expect(getByText('Garmin Connect')).toBeTruthy();
     expect(getByText('Скачать GPX')).toBeTruthy();
+  });
+
+  it('does not fetch a second geometry source for an already routed export', () => {
+    setPlatformOS('web');
+    const routedTrip: PlannedTrip = {
+      ...trip,
+      routeGeometry: [
+        [27.56, 53.9],
+        [27.58, 53.905],
+        [27.6, 53.91],
+      ],
+      routingState: {
+        provider: 'ors',
+        isOptimal: true,
+        fallbackReason: null,
+        warnings: [],
+      },
+    };
+
+    render(<TripRouteExportMenu trip={routedTrip} />);
+
+    expect(mockUseTripRouteElevation).toHaveBeenCalledWith(trip.id, { enabled: false });
   });
 
   it('never exposes a cached owner-only original to a non-owner', () => {
@@ -233,5 +298,60 @@ describe('TripRouteExportMenu', () => {
 
     expect(getByTestId('trip-route-export-approximate')).toBeTruthy();
     expect(input.description).toContain('приблизительный');
+  });
+
+  it('repairs healthy metadata without geometry before offering a routed export', async () => {
+    setPlatformOS('web');
+    const inconsistentTrip: PlannedTrip = {
+      ...trip,
+      routingState: {
+        provider: 'ors',
+        isOptimal: true,
+        fallbackReason: null,
+        warnings: [],
+      },
+    };
+    const { getByTestId, queryByTestId } = render(
+      <TripRouteExportMenu trip={inconsistentTrip} />,
+    );
+
+    expect(mockUseTripRouteElevation).toHaveBeenCalledWith(trip.id, { enabled: true });
+    expect(getByTestId('trip-route-preview-engine')).toBeTruthy();
+    expect(mockRepairEngine.mounts).toEqual([
+      {
+        points: [
+          [27.56, 53.9],
+          [27.6, 53.91],
+        ],
+        transportMode: 'car',
+      },
+    ]);
+    expect(getByTestId('trip-route-export-approximate')).toBeTruthy();
+
+    const denseGeometry: Array<[number, number]> = [
+      [27.56, 53.9],
+      [27.575, 53.905],
+      [27.59, 53.908],
+      [27.6, 53.91],
+    ];
+    act(() => {
+      mockRepairEngine.onResult?.({
+        loading: false,
+        error: null,
+        distance: 5_200,
+        duration: 640,
+        coords: denseGeometry,
+        elevationGain: 0,
+        elevationLoss: 0,
+        elevationSamples: null,
+      });
+    });
+
+    expect(queryByTestId('trip-route-export-approximate')).toBeNull();
+
+    fireEvent.press(getByTestId('trip-route-export-garmin'));
+    await waitFor(() => expect(mockSaveRouteExportFile).toHaveBeenCalledTimes(1));
+    const exported = mockSaveRouteExportFile.mock.calls[0][0] as { content: string };
+    expect((exported.content.match(/<trkpt/g) ?? [])).toHaveLength(denseGeometry.length);
   });
 });

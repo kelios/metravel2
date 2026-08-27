@@ -3,7 +3,7 @@
 import { apiClient, ApiError } from '@/api/client';
 import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { unwrapList } from '@/api/clientResponse';
-import type { TravelMediaGroup } from '@/types/types';
+import type { TravelMediaGroup, TravelMediaImage } from '@/types/types';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
 import { retry } from '@/utils/retry';
@@ -91,6 +91,28 @@ export type ApiQuestStep = {
 };
 
 /** Метаданные квеста для каталога */
+export type ApiQuestSquareVariants = {
+    [name: string]: string | null | undefined;
+    square_160?: string | null;
+    square_320?: string | null;
+};
+
+export type ApiQuestCoverMedia = Omit<TravelMediaImage, 'variants'> & {
+    /**
+     * Квадратная производная для фиксированной плитки 132×132 (#1542).
+     * Поля nullable: до backfill #1587 контракт уже присутствует в API, но
+     * значения остаются `null`, поэтому потребитель обязан сохранить fallback.
+     */
+    src_square?: string | null;
+    srcset_square?: string | null;
+    sizes_hint_square?: string | null;
+    variants?: ApiQuestSquareVariants | null;
+};
+
+export type ApiQuestMediaGroup = Omit<TravelMediaGroup, 'cover'> & {
+    cover?: ApiQuestCoverMedia | null;
+};
+
 export type ApiQuestMeta = {
     id: number;
     quest_id: string;
@@ -113,7 +135,7 @@ export type ApiQuestMeta = {
      * полей letterbox. В UI не пробрасывается — прогревает общий индекс, см.
      * `utils/mediaPlaceholderIndex.ts`.
      */
-    media?: TravelMediaGroup | null;
+    media?: ApiQuestMediaGroup | null;
 } & ApiQuestRatingSnapshot;
 
 /**
@@ -141,7 +163,25 @@ export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
     // Обложка квеста показывается в `contain`, поэтому её поля тоже должна
     // заливать `dominant_color` из манифеста (#1208). Карточка знает только
     // `cover_url`, поэтому цвет индексируется и под ним.
-    indexMediaImage(meta?.media?.cover, [meta?.cover_url]);
+    const coverMedia = meta?.media?.cover;
+    const indexedCoverMedia: TravelMediaImage | null | undefined = coverMedia
+        ? {
+            ...coverMedia,
+            variants: coverMedia.variants
+                ? Object.fromEntries(
+                    Object.entries(coverMedia.variants).filter(
+                        (entry): entry is [string, string] => typeof entry[1] === 'string',
+                    ),
+                )
+                : null,
+        }
+        : coverMedia;
+    indexMediaImage(indexedCoverMedia, [
+        meta?.cover_url,
+        coverMedia?.src_square,
+        coverMedia?.variants?.square_160,
+        coverMedia?.variants?.square_320,
+    ]);
     return withQuestCompletionMock({
         ...meta,
         rating_avg: meta.rating_avg ?? null,

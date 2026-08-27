@@ -86,6 +86,26 @@ describe('usePlaceSourcePagerState', () => {
     expect(result.current.isPrimarySourceActive).toBe(true);
   });
 
+  it('keeps primary source fields after a request failure without legacy duplicates', () => {
+    mockUseMapPlaceSources.mockReturnValue(failed());
+    const pointWithPrimaryOnly = {
+      id: LIBRARY_POINT.id,
+      coord: LIBRARY_POINT.coord,
+      placeId: LIBRARY_POINT.placeId,
+      sourceCount: LIBRARY_POINT.sourceCount,
+      primarySource: LIBRARY_POINT.primarySource,
+    };
+
+    const { result } = renderHook(() =>
+      usePlaceSourcePagerState(pointWithPrimaryOnly, true),
+    );
+    const fields = resolvePlaceSourceCardFields(pointWithPrimaryOnly, result.current, false);
+
+    expect(result.current.sourceCount).toBe(1);
+    expect(fields.articleUrl).toBe(sourceA.articleUrl);
+    expect(fields.imageUrl).toBe(sourceA.thumbnailUrl);
+  });
+
   it('pages forward and backward cyclically over the loaded collection', () => {
     mockUseMapPlaceSources.mockReturnValue(loaded([sourceA, sourceB]));
 
@@ -120,6 +140,20 @@ describe('usePlaceSourcePagerState', () => {
     // Новая ссылка на тот же список (рефетч/пересборка кэша) не сбрасывает выбор.
     mockUseMapPlaceSources.mockReturnValue(loaded([{ ...sourceA }, { ...sourceB }]));
     rerender({});
+    expect(result.current.activeSource?.sourceId).toBe(sourceB.sourceId);
+  });
+
+  it('keeps primary first and reachable when a partial collection omits it', () => {
+    mockUseMapPlaceSources.mockReturnValue(loaded([sourceB]));
+
+    const { result } = renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
+
+    expect(result.current.sourceCount).toBe(2);
+    expect(result.current.activeSourceIndex).toBe(0);
+    expect(result.current.activeSource?.sourceId).toBe(sourceA.sourceId);
+
+    act(() => result.current.goNext());
+    expect(result.current.activeSourceIndex).toBe(1);
     expect(result.current.activeSource?.sourceId).toBe(sourceB.sourceId);
   });
 

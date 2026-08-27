@@ -1,11 +1,13 @@
 // components/trips/planning/TripRouteDownloadButtons.tsx
-// Пара кнопок «Скачать GPX» / «Скачать KML» (на native — «Поделиться»).
+// Ряд действий «Скачать GPX» / «Скачать KML» (на native — «Поделиться»)
+// и, при наличии, скачивание исходного файла.
 // Один и тот же блок стоит во вкладке «Экспорт» и в панели конструктора
 // «Маршрут» (#1304): маршрут скачивается там же, где строится.
 import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 
-import Button from '@/components/ui/Button';
+import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import type { PlannedTripRouteFile } from '@/api/plannedTripRoutes';
 import type { TripRouteExportController } from '@/components/trips/planning/tripRouteExport';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -59,6 +61,41 @@ function TripRouteDownloadButtons({
     }
   }, [originalFile, tripId]);
 
+  const actions: ToolAction[] = [
+    {
+      key: 'gpx',
+      label: isWeb ? i18nT('trips:components.trips.planning.TripRouteExportMenu.skachat_gpx_cc6c1a54') : i18nT('trips:components.trips.planning.TripRouteExportMenu.podelitsya_gpx_f240186b'),
+      icon: <Feather name="download" size={16} color={colors.primaryDark} />,
+      onPress: () => void saveExport('gpx'),
+      variant: 'secondary',
+      disabled: disabled || exportingAction !== null,
+      loading: exportingAction === 'gpx',
+      testID: 'trip-route-export-gpx',
+    },
+    {
+      key: 'kml',
+      label: isWeb ? i18nT('trips:components.trips.planning.TripRouteExportMenu.skachat_kml_30f6a059') : i18nT('trips:components.trips.planning.TripRouteExportMenu.podelitsya_kml_5f084c27'),
+      icon: <Feather name="download" size={16} color={colors.primaryDark} />,
+      onPress: () => void saveExport('kml'),
+      variant: 'secondary',
+      disabled: disabled || exportingAction !== null,
+      loading: exportingAction === 'kml',
+      testID: 'trip-route-export-kml',
+    },
+    ...(canDownloadOriginal ? [{
+      key: 'original',
+      label: isWeb
+        ? i18nT('tripsStatic:route.originalDownload')
+        : i18nT('tripsStatic:route.originalShare'),
+      icon: <Feather name="download" size={16} color={colors.primaryDark} />,
+      onPress: () => void handleDownloadOriginal(),
+      variant: 'outline' as const,
+      disabled: originalDownloading,
+      loading: originalDownloading,
+      testID: 'trip-route-export-original',
+    }] : []),
+  ];
+
   return (
     <View style={styles.wrap} testID={testID}>
       {showDisabledHint && disabled ? (
@@ -71,51 +108,22 @@ function TripRouteDownloadButtons({
         </Text>
       ) : null}
 
-      <View style={styles.row}>
-        <Button
-          label={isWeb ? i18nT('trips:components.trips.planning.TripRouteExportMenu.skachat_gpx_cc6c1a54') : i18nT('trips:components.trips.planning.TripRouteExportMenu.podelitsya_gpx_f240186b')}
-          onPress={() => void saveExport('gpx')}
-          variant="secondary"
-          disabled={disabled || exportingAction !== null}
-          loading={exportingAction === 'gpx'}
-          style={styles.button}
-          testID="trip-route-export-gpx"
-        />
-        <Button
-          label={isWeb ? i18nT('trips:components.trips.planning.TripRouteExportMenu.skachat_kml_30f6a059') : i18nT('trips:components.trips.planning.TripRouteExportMenu.podelitsya_kml_5f084c27')}
-          onPress={() => void saveExport('kml')}
-          variant="secondary"
-          disabled={disabled || exportingAction !== null}
-          loading={exportingAction === 'kml'}
-          style={styles.button}
-          testID="trip-route-export-kml"
-        />
-      </View>
-
       {canDownloadOriginal ? (
-        <View style={styles.originalBlock} testID="trip-route-original-download-block">
+        <View testID="trip-route-original-download-block">
           <Text style={styles.hint}>
             {i18nT('tripsStatic:route.originalDownloadHint', {
               value: originalFile?.original_name ?? '',
             })}
           </Text>
-          <Button
-            label={isWeb
-              ? i18nT('tripsStatic:route.originalDownload')
-              : i18nT('tripsStatic:route.originalShare')}
-            onPress={() => void handleDownloadOriginal()}
-            variant="outline"
-            disabled={originalDownloading}
-            loading={originalDownloading}
-            style={styles.button}
-            testID="trip-route-export-original"
-          />
-          {originalError ? (
-            <Text style={styles.error} testID="trip-route-export-original-error">
-              {originalError}
-            </Text>
-          ) : null}
         </View>
+      ) : null}
+
+      <ToolActionsRow actions={actions} />
+
+      {originalError ? (
+        <Text style={styles.error} testID="trip-route-export-original-error">
+          {originalError}
+        </Text>
       ) : null}
 
       {exportError ? (
@@ -133,17 +141,6 @@ const createStyles = (colors: ThemedColors) =>
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     warning: { fontSize: 12, color: colors.warningDark, lineHeight: 16, fontWeight: '600' },
     error: { fontSize: 12, color: colors.danger, lineHeight: 16, fontWeight: '600' },
-    // Паритет mobile web ↔ Android держится правилом «по содержимому, потом расти»:
-    // одинаковый перенос на обеих поверхностях. Жёсткие половины (`flexBasis: 0`)
-    // пробовали — на 393 dp native-подпись «Поделиться GPX» обрезалась до
-    // «Поделиться G…», поэтому кнопки сначала занимают свою ширину и переносятся
-    // целиком, а лишнее место делят между собой.
-    row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    originalBlock: { gap: 8 },
-    // `minWidth` обязателен: подпись кнопки — `Text` с `numberOfLines={1}`, он
-    // соглашается сжаться, поэтому без жёсткого минимума две кнопки всегда
-    // влезают в строку и на телефоне обрезаются до «Поделиться G…».
-    button: { flexGrow: 1, flexBasis: 'auto', minWidth: 200 },
   });
 
 export default React.memo(TripRouteDownloadButtons);

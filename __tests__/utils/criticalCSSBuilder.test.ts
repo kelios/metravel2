@@ -81,12 +81,85 @@ describe('buildCriticalCSS: до-гидрационная раскладка ш�
     const rules = mediaBlock
       .split('\n')
       .map((line) => line.trim())
-      .filter((line) => line.startsWith('[') && line.includes('{'))
+      // Header-slot height intentionally stays non-important: after the first
+      // real onLayout measurement, React's inline height must be able to win.
+      .filter(
+        (line) =>
+          line.startsWith('[') &&
+          line.includes('{') &&
+          !line.startsWith('[data-header-slot=""]'),
+      )
 
     expect(rules).not.toHaveLength(0)
     for (const rule of rules) {
       expect(rule).toContain('!important')
     }
+  })
+})
+
+// #1563: travel detail reserves a 52px mobile context row in the static React
+// snapshot. At 768–1279 the runtime HeaderContextBar uses desktop breadcrumbs
+// (44px controls + two borders = 46px); at >=1280 that route renders no context
+// row. The route-specific marker lets critical CSS make the static reservation
+// equal the first runtime frame without changing home/quest context bars.
+describe('buildCriticalCSS: travel context fallback matches runtime geometry', () => {
+  const css = buildCriticalCSS()
+
+  const mediaBlock = (query: string) => {
+    const tail = css.slice(css.indexOf(query))
+    return tail.slice(0, tail.indexOf('\n}') + 2)
+  }
+
+  it('owns the 52px mobile reservation in critical CSS', () => {
+    expect(css).toContain(
+      '[data-header-context-fallback="travel"]{height:52px !important;min-height:52px !important}',
+    )
+  })
+
+  it('uses the measured 46px desktop breadcrumb box at 768–1279', () => {
+    const query = '@media (min-width:768px) and (max-width:1279.98px){'
+    const block = mediaBlock(query)
+
+    expect(css).toContain(query)
+    expect(block).toContain(
+      '[data-header-context-fallback="travel"]{height:46px !important;min-height:46px !important}',
+    )
+  })
+
+  it('removes the travel-only fallback where runtime renders no context row', () => {
+    const query = '@media (min-width:1280px){'
+    const block = mediaBlock(query)
+
+    expect(css).toContain(query)
+    expect(block).toContain(
+      '[data-header-context-fallback="travel"]{display:none !important;height:0 !important;min-height:0 !important}',
+    )
+  })
+
+  it('keeps all three viewport corrections route-specific', () => {
+    const markerRules = css
+      .split('\n')
+      .filter((line) => line.includes('[data-header-context-fallback="travel"]'))
+
+    expect(markerRules).toHaveLength(3)
+    for (const rule of markerRules) {
+      expect(rule).toContain('[data-header-context-fallback="travel"]')
+      expect(rule).not.toContain('html.travel-route')
+      expect(rule).toContain('!important')
+    }
+  })
+})
+
+describe('buildCriticalCSS: default context fallback matches responsive geometry', () => {
+  const css = buildCriticalCSS()
+
+  it('uses 52px below tablet and 46px from tablet upward', () => {
+    expect(css).toContain(
+      '[data-header-context-fallback="default"]{height:52px !important;min-height:52px !important}',
+    )
+    expect(css).toContain(
+      '@media (min-width:768px){\n  [data-header-context-fallback="default"]{height:46px !important;min-height:46px !important}',
+    )
   })
 })
 

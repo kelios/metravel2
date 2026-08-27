@@ -379,6 +379,7 @@ test.describe('Calendar @smoke', () => {
       // This also fails if the trap is attached only to its container: the
       // programmatically focused page control is outside the dialog subtree.
       await removeButton.focus();
+      await expect(removeButton).toBeFocused();
       await page.keyboard.press('Tab');
       expect(await confirm.evaluate((element) => element.contains(document.activeElement))).toBe(true);
 

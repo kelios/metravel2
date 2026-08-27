@@ -98,7 +98,9 @@ describe('RouteBuilder point description', () => {
   // #1494: однострочное поле не давало прочитать и отредактировать длинное описание.
   it('keeps the new-point description input multiline', () => {
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
-    // по умолчанию открыт поиск по местам сайта — ручные поля живут в «своей точке»
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    // Первый тип в раскрытой форме — место; ручные поля живут
+    // в «своей точке».
     fireEvent.press(getByTestId('route-builder-type-custom'))
     const input = getByTestId('route-builder-description')
     expect(input.props.multiline).toBe(true)
@@ -117,6 +119,7 @@ describe('RouteBuilder point description', () => {
   // вместе с переносами строк — ради этого поле и стало многострочным.
   it('saves a multi-line point description with its line breaks', () => {
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Ночёвка')
     fireEvent.changeText(

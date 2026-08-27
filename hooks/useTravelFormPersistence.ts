@@ -25,6 +25,7 @@ import {
   sanitizeCoverUrl,
   filterAllowedKeys,
   mergeOverridePreservingUserInput,
+  isLocalPreviewUrl,
 } from '@/utils/travelFormNormalization';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 import {
@@ -176,6 +177,105 @@ const markerIdentityMatches = (left: MarkerData, right: MarkerData): boolean => 
   );
 };
 
+const findUnusedMarkerIndex = (
+  candidates: MarkerData[],
+  usedIndexes: Set<number>,
+  target: MarkerData,
+): number => candidates.findIndex(
+  (candidate, index) =>
+    !usedIndexes.has(index) && markerIdentityMatches(candidate, target),
+);
+
+const findUnusedMarkerMergeIndex = (
+  candidates: MarkerData[],
+  usedIndexes: Set<number>,
+  target: MarkerData,
+): number => {
+  const targetId = target.id == null ? '' : String(target.id).trim();
+  if (targetId) {
+    const idMatch = candidates.findIndex((candidate, index) =>
+      !usedIndexes.has(index) && String(candidate.id ?? '').trim() === targetId,
+    );
+    if (idMatch >= 0) return idMatch;
+  }
+
+  const targetWithoutId = { ...target, id: null };
+  return candidates.findIndex((candidate, index) =>
+    !usedIndexes.has(index) &&
+    markerIdentityMatches({ ...candidate, id: null }, targetWithoutId),
+  );
+};
+
+const mergeMarkersPreserveImagesOneToOne = (
+  serverMarkers: MarkerData[],
+  currentMarkers: MarkerData[],
+): MarkerData[] => {
+  if (serverMarkers.length === 0) return currentMarkers;
+  if (currentMarkers.length === 0) return serverMarkers;
+
+  const usedCurrentIndexes = new Set<number>();
+  const mergedServerMarkers = serverMarkers.map((serverMarker) => {
+    const currentIndex = findUnusedMarkerMergeIndex(
+      currentMarkers,
+      usedCurrentIndexes,
+      serverMarker,
+    );
+    if (currentIndex < 0) return serverMarker;
+
+    usedCurrentIndexes.add(currentIndex);
+    return (mergeMarkersPreserveImages(
+      [serverMarker],
+      [currentMarkers[currentIndex]],
+    ) as MarkerData[])[0] ?? serverMarker;
+  });
+  const unmatchedCurrentMarkers = currentMarkers.filter(
+    (_marker, index) => !usedCurrentIndexes.has(index),
+  );
+  return [...mergedServerMarkers, ...unmatchedCurrentMarkers];
+};
+
+const restoreSourcePreviewAfterCoverFallback = (
+  markers: MarkerData[],
+  liveMarkers: MarkerData[],
+  sourceMarkers: MarkerData[],
+  coverCandidates: Array<string | null | undefined>,
+): MarkerData[] => {
+  const coverUrls = new Set(
+    coverCandidates
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean),
+  );
+  if (coverUrls.size === 0 || sourceMarkers.length === 0) return markers;
+
+  const usedLiveIndexes = new Set<number>();
+  const usedSourceIndexes = new Set<number>();
+  return markers.map((marker) => {
+    const liveIndex = findUnusedMarkerIndex(
+      liveMarkers,
+      usedLiveIndexes,
+      marker,
+    );
+    if (liveIndex >= 0) usedLiveIndexes.add(liveIndex);
+    const sourceIndex = findUnusedMarkerIndex(
+      sourceMarkers,
+      usedSourceIndexes,
+      marker,
+    );
+    if (sourceIndex >= 0) usedSourceIndexes.add(sourceIndex);
+
+    if (marker.image) return marker;
+    const liveMarker = liveIndex >= 0 ? liveMarkers[liveIndex] : undefined;
+    const liveImage = typeof liveMarker?.image === 'string'
+      ? liveMarker.image.trim()
+      : '';
+    if (!coverUrls.has(liveImage)) return marker;
+
+    const sourceImage = sourceIndex >= 0 ? sourceMarkers[sourceIndex].image : null;
+    if (!isLocalPreviewUrl(sourceImage)) return marker;
+    return { ...marker, image: sourceImage };
+  });
+};
+
 const mergeRehydratedMarkerIdsIntoLive = (
   refreshedMarkers: MarkerData[],
   liveMarkers: MarkerData[],
@@ -183,10 +283,10 @@ const mergeRehydratedMarkerIdsIntoLive = (
   const usedRefreshedIndexes = new Set<number>();
 
   return liveMarkers.map((liveMarker) => {
-    const refreshedIndex = refreshedMarkers.findIndex(
-      (refreshedMarker, index) =>
-        !usedRefreshedIndexes.has(index) &&
-        markerIdentityMatches(refreshedMarker, liveMarker),
+    const refreshedIndex = findUnusedMarkerIndex(
+      refreshedMarkers,
+      usedRefreshedIndexes,
+      liveMarker,
     );
     if (refreshedIndex < 0) return liveMarker;
 
@@ -511,16 +611,25 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       const currentMarkers = Array.isArray(currentDataSnapshot.coordsMeTravel)
         ? (currentDataSnapshot.coordsMeTravel as MarkerData[])
         : [];
+      const sourceMarkers = Array.isArray(sourceData?.coordsMeTravel)
+        ? (sourceData.coordsMeTravel as MarkerData[])
+        : [];
+      const markerCoverCandidates = [
+        normalizedSavedData.travel_image_thumb_url ?? null,
+        normalizedSavedData.travel_image_thumb_small_url ?? null,
+      ];
       // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
       const effectiveMarkersRaw = markersFromResponse.length > 0
-        ? mergeMarkersPreserveImages(markersFromResponse, currentMarkers)
+        ? mergeMarkersPreserveImagesOneToOne(markersFromResponse, currentMarkers)
         : currentMarkers;
-      const effectiveMarkers = stripMarkerCoverFallbacks(
-        effectiveMarkersRaw as MarkerData[],
-        [
-          normalizedSavedData.travel_image_thumb_url ?? null,
-          normalizedSavedData.travel_image_thumb_small_url ?? null,
-        ],
+      const effectiveMarkers = restoreSourcePreviewAfterCoverFallback(
+        stripMarkerCoverFallbacks(
+          effectiveMarkersRaw as MarkerData[],
+          markerCoverCandidates,
+        ),
+        currentMarkers,
+        sourceMarkers,
+        markerCoverCandidates,
       );
       const syncedCountries = syncCountriesFromMarkers(effectiveMarkers, normalizedSavedData.countries || []);
 

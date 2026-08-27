@@ -13,6 +13,7 @@ const {
   buildSeoTitle,
   escapeAttr,
   stripHtml,
+  buildQuestSeoDescription,
   buildTravelSeoDescription,
   pickTravelSeoImage,
   buildOptimizedTravelImageUrl,
@@ -47,7 +48,12 @@ const {
   loadRedirectManifest,
   buildRedirectStubHtml,
   patchNoindexFallbackTemplate,
-  mergeQuestCityLandingsByAlias,
+  buildQuestCityLandingHtml,
+  buildQuestCityLandingModel,
+  buildQuestCountryLandingHtml,
+  buildQuestCountryLandingModel,
+  injectQuestCountryLandingSection,
+  readRequiredQuestCountryTemplate,
 } = require('@/scripts/generate-seo-pages');
 
 const fs = require('fs');
@@ -1759,85 +1765,190 @@ describe('patchNoindexFallbackTemplate', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// mergeQuestCityLandingsByAlias
-//
-// The catalog ships the same city under several city_id values (Гомель is both
-// 19 and 92). Both claim /quests/gomel, and the landing loop used to write that
-// path once per city — last write won and half the city's quests vanished from
-// the page both numeric landings canonicalise to.
-// ---------------------------------------------------------------------------
+describe('one-quest city landing value', () => {
+  it('builds independent SSG sections, city links, travel links and self metadata from catalogs', () => {
+    const quests = [
+      {
+        quest_id: 'rome-forum',
+        city_id: '121',
+        city_name: 'Рим',
+        country_name: 'Италия',
+        country_code: 'it',
+        title: 'Квест по Риму: Форум',
+        points: 8,
+        duration_min: 120,
+        lat: 41.89,
+        lng: 12.49,
+      },
+      {
+        quest_id: 'naples-castles',
+        city_id: '122',
+        city_name: 'Неаполь',
+        country_name: 'Италия',
+        country_code: 'it',
+        title: 'Квест по Неаполю',
+        lat: 40.85,
+        lng: 14.27,
+      },
+    ]
+    const travels = [
+      {
+        slug: 'rim-na-vyhodnye',
+        name: 'Рим на выходные',
+        cityName: 'Рим',
+        countryName: 'Италия',
+        countryCode: 'it',
+      },
+    ]
+    const rome = buildQuestCityLandingModel(quests, undefined, travels).find(
+      (city: { segment: string }) => city.segment === 'rome',
+    )
 
-describe('mergeQuestCityLandingsByAlias', () => {
-  const gomel19 = {
-    cityId: '19',
-    name: 'Гомель',
-    cover: '',
-    alias: 'gomel',
-    landingPath: '/quests/gomel',
-    quests: [
-      { path: '/quests/19/gomel-park', title: 'Парк' },
-      { path: '/quests/19/gomel-center', title: 'Центр' },
-    ],
-  };
-  const gomel92 = {
-    cityId: '92',
-    name: 'Гомель',
-    cover: 'https://metravel.by/gomel.jpg',
-    alias: 'gomel',
-    landingPath: '/quests/gomel',
-    quests: [{ path: '/quests/92/gomel-river', title: 'Набережная' }],
-  };
-  const minsk = {
-    cityId: '4',
-    name: 'Минск',
-    cover: '',
-    alias: 'minsk',
-    landingPath: '/quests/minsk',
-    quests: [{ path: '/quests/4/minsk-svisloch', title: 'Свислочь' }],
-  };
+    expect(rome.quests).toHaveLength(1)
+    expect(rome.nearbyCities.map((city: { segment: string }) => city.segment)).toEqual(['naples'])
+    expect(rome.travelLinks).toEqual([
+      expect.objectContaining({ path: '/travels/rim-na-vyhodnye', title: 'Рим на выходные' }),
+    ])
 
-  it('unions the quests of every city sharing one alias', () => {
-    const merged = mergeQuestCityLandingsByAlias([gomel19, gomel92, minsk]);
-    const gomel = merged.find((city: { alias: string }) => city.alias === 'gomel');
+    const html = buildQuestCityLandingHtml(MINIMAL_BASE, rome)
+    const cityDescription = html.match(
+      /<meta[^>]*name="description"[^>]*content="([^"]*)"/i,
+    )?.[1]
+    expect(html).toContain('data-ssg-quest-city="true"')
+    expect(html).toContain('data-ssg-quest-city-overview="true"')
+    expect(html).toContain('data-ssg-quest-city-practical="true"')
+    expect(html).toContain('data-ssg-quest-city-nearby="true"')
+    expect(html).toContain('data-ssg-quest-city-travels="true"')
+    expect(html).toContain('href="/quests/naples"')
+    expect(html).toContain('href="/travels/rim-na-vyhodnye"')
+    expect(html).toContain(
+      '<link data-rh="true" rel="canonical" href="https://metravel.by/quests/rome"/>',
+    )
+    expect(html).toContain('<title data-rh="true">Городские квесты: Рим — прогулки с заданиями | Metravel</title>')
+    expect(cityDescription).toContain('Рим: что посмотреть на прогулке')
+    expect(cityDescription).not.toBe(buildQuestSeoDescription(quests[0]))
+    expect(html).toContain('Страна маршрута — Италия')
+    expect(html).not.toContain('в Италия')
+  })
+})
 
-    expect(merged).toHaveLength(2);
-    expect(gomel.quests.map((q: { path: string }) => q.path).sort()).toEqual([
-      '/quests/19/gomel-center',
-      '/quests/19/gomel-park',
-      '/quests/92/gomel-river',
-    ]);
-  });
+describe('catalog-derived quest country landings', () => {
+  const quests = [
+    {
+      quest_id: 'minsk-center',
+      city_id: '4',
+      city_name: 'Минск',
+      country_code: 'by',
+      country_name: 'Беларусь',
+      title: 'Минский центр',
+      points: 8,
+      duration_min: 90,
+    },
+    {
+      quest_id: 'gomel-park',
+      city_id: '19',
+      city_name: 'Гомель',
+      country_code: 'BY',
+      country_name: 'Беларусь',
+      title: 'Гомельский парк',
+    },
+    {
+      quest_id: 'krakow-wawel',
+      city_id: '12',
+      city_name: 'Краков',
+      country_code: 'pl',
+      country_name: 'Польша',
+      title: 'Вавель',
+    },
+    {
+      quest_id: 'unknown-place',
+      city_id: '900',
+      city_name: 'Неизвестно',
+      country_code: 'ZZ',
+      title: 'Неизвестная страна',
+    },
+  ]
 
-  it('produces exactly one landing per alias, so no write silently overwrites another', () => {
-    const merged = mergeQuestCityLandingsByAlias([gomel19, gomel92, minsk]);
-    const aliases = merged.map((city: { alias: string }) => city.alias);
+  it('builds independent Belarus and Poland pages with city and quest links', () => {
+    const countries = buildQuestCountryLandingModel(quests)
+    const belarus = countries.find((country: { countryAlias: string }) => country.countryAlias === 'belarus')
+    const poland = countries.find((country: { countryAlias: string }) => country.countryAlias === 'poland')
 
-    expect(new Set(aliases).size).toBe(aliases.length);
-  });
+    expect(countries).toHaveLength(2)
+    expect(belarus.cities.map((city: { cityAlias: string }) => city.cityAlias)).toEqual(['gomel', 'minsk'])
+    expect(belarus.quests).toHaveLength(2)
+    expect(poland.quests).toHaveLength(1)
 
-  it('keeps the first non-empty name and cover across the merged cities', () => {
-    const merged = mergeQuestCityLandingsByAlias([gomel19, gomel92]);
+    const belarusHtml = buildQuestCountryLandingHtml(MINIMAL_BASE, belarus)
+    const polandHtml = buildQuestCountryLandingHtml(MINIMAL_BASE, poland)
+    const belarusDescription = belarusHtml.match(
+      /<meta[^>]*name="description"[^>]*content="([^"]*)"/i,
+    )?.[1]
+    const polandDescription = polandHtml.match(
+      /<meta[^>]*name="description"[^>]*content="([^"]*)"/i,
+    )?.[1]
+    expect(belarusHtml).toContain('data-ssg-quest-country="true"')
+    expect(belarusHtml).toContain('data-ssg-quest-country-overview="true"')
+    expect(belarusHtml).toContain('data-ssg-quest-country-cities="true"')
+    expect(belarusHtml).toContain('data-ssg-quest-country-practical="true"')
+    expect(belarusHtml).toContain('href="/quests/minsk"')
+    expect(belarusHtml).toContain('href="/quests/4/minsk-center"')
+    expect(belarusHtml).toContain(
+      '<link data-rh="true" rel="canonical" href="https://metravel.by/quests/country/belarus"/>',
+    )
+    expect(belarusHtml).toContain(
+      '<meta data-rh="true" property="og:url" content="https://metravel.by/quests/country/belarus"/>',
+    )
+    expect(belarusHtml).toContain('Квесты страны: Беларусь — города и маршруты | Metravel')
+    expect(belarusDescription).toContain('Беларусь')
+    expect(polandHtml).toContain(
+      '<link data-rh="true" rel="canonical" href="https://metravel.by/quests/country/poland"/>',
+    )
+    expect(polandHtml).toContain(
+      '<meta data-rh="true" property="og:url" content="https://metravel.by/quests/country/poland"/>',
+    )
+    expect(polandDescription).toContain('Польша')
+    expect(polandDescription).not.toBe(belarusDescription)
+    expect(polandHtml).not.toContain('Квесты страны: Беларусь')
+  })
 
-    expect(merged[0].name).toBe('Гомель');
-    expect(merged[0].cover).toBe('https://metravel.by/gomel.jpg');
-  });
+  it('replaces a previous country body instead of duplicating it', () => {
+    const country = buildQuestCountryLandingModel(quests)[0]
+    const once = injectQuestCountryLandingSection(MINIMAL_BASE, country, 'Первый lead')
+    const twice = injectQuestCountryLandingSection(once, country, 'Второй lead')
 
-  it('sorts merged quests by title and drops duplicate routes', () => {
-    const merged = mergeQuestCityLandingsByAlias([
-      gomel19,
-      { ...gomel92, quests: [...gomel92.quests, { path: '/quests/19/gomel-park', title: 'Парк' }] },
-    ]);
+    expect((twice.match(/<section data-ssg-quest-country="true"/g) || [])).toHaveLength(1)
+    expect((twice.match(/<style data-ssg-quest-country-style="true">/g) || [])).toHaveLength(1)
+    expect(twice).toContain('Второй lead')
+    expect(twice).not.toContain('Первый lead')
+  })
 
-    expect(merged[0].quests.map((q: { title: string }) => q.title)).toEqual(['Набережная', 'Парк', 'Центр']);
-  });
+  it('requires the country Expo route template instead of hydrating a city bundle', () => {
+    const missingFileSystem = {
+      existsSync: jest.fn(() => false),
+      readFileSync: jest.fn(),
+    }
+    expect(() => readRequiredQuestCountryTemplate(
+      '/dist/quests/country/[country].html',
+      missingFileSystem,
+    )).toThrow('Missing Expo country route template')
+    expect(missingFileSystem.readFileSync).not.toHaveBeenCalled()
 
-  it('skips cities that have no alias of their own', () => {
-    expect(mergeQuestCityLandingsByAlias([{ ...minsk, alias: null }])).toEqual([]);
-    expect(mergeQuestCityLandingsByAlias([{ ...minsk, alias: '4' }])).toEqual([]);
-    expect(mergeQuestCityLandingsByAlias([])).toEqual([]);
-  });
-});
+    const routeHtml = '<html><body>country route bundle</body></html>'
+    const presentFileSystem = {
+      existsSync: jest.fn(() => true),
+      readFileSync: jest.fn(() => routeHtml),
+    }
+    expect(readRequiredQuestCountryTemplate(
+      '/dist/quests/country/[country].html',
+      presentFileSystem,
+    )).toBe(routeHtml)
+    expect(presentFileSystem.readFileSync).toHaveBeenCalledWith(
+      '/dist/quests/country/[country].html',
+      'utf8',
+    )
+  })
+})
 
 // Регресс: URL hero-картинки главной известен только из JS-бандла, поэтому запрос
 // стартовал после гидрации. Замер прода 2026-08-02, 412×823, slow-4G + CPU 4×:

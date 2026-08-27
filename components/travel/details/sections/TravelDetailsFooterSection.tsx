@@ -1,9 +1,10 @@
-import React, { Suspense, lazy, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 
 import ShareButtons from '@/components/travel/ShareButtons'
 import CTASection from '@/components/travel/CTASection'
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
+import TelegramDiscussionSection from '@/components/travel/TelegramDiscussionSection'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
@@ -11,8 +12,6 @@ import type { Travel } from '@/types/types'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { translate as i18nT } from '@/i18n'
 
-
-const TelegramDiscussionSectionLazy = lazy(() => import('@/components/travel/TelegramDiscussionSection'))
 
 export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: boolean }> = React.memo(({
   travel,
@@ -70,9 +69,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         style={[styles.sectionContainer, styles.authorCardContainer, footerStyles.compactSection]}
       >
-        <Suspense fallback={null}>
-          <TelegramDiscussionSectionLazy travel={travel} />
-        </Suspense>
+        <TelegramDiscussionSection travel={travel} />
       </View>
 
       {!isMobile && (
@@ -114,6 +111,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
           source="article"
           title={i18nT('sharedStatic:subscription.articleTitle')}
           subtitle={i18nT('sharedStatic:subscription.articleSubtitle')}
+          clientOnly
         />
       </View>
     </>

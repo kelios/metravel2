@@ -56,11 +56,19 @@ export const usePlaceSourcePagerState = (
     enabled,
   });
 
-  // Пока коллекция не пришла, известен только primary — карточка уже показывает
-  // корректный счётчик `1 из N` из маркера, а листать становится чем после ответа.
+  // Primary из маркера остаётся первым и доступным даже при неполном/неверно
+  // упорядоченном ответе endpoint. Иначе ответ только со вторым материалом
+  // самопроизвольно переключал карточку на него и делал primary недоступным.
   const sources = useMemo<MapPlaceSource[]>(() => {
-    if (fetchedSources && fetchedSources.length > 0) return fetchedSources;
-    return primarySource ? [primarySource] : [];
+    if (!primarySource) return fetchedSources ?? [];
+    if (!fetchedSources || fetchedSources.length === 0) return [primarySource];
+    const fetchedPrimary = fetchedSources.find(
+      (source) => source.sourceId === primarySource.sourceId,
+    );
+    return [
+      fetchedPrimary ?? primarySource,
+      ...fetchedSources.filter((source) => source.sourceId !== primarySource.sourceId),
+    ];
   }, [fetchedSources, primarySource]);
 
   // Пока коллекция едет, счётчик берётся из маркера — карточка сразу честно
@@ -147,8 +155,11 @@ export const resolvePlaceSourceCardFields = (
   state: Pick<PlaceSourcePagerState, 'activeSource' | 'isPrimarySourceActive'>,
   hasPager: boolean,
 ): PlaceSourceCardFields => {
-  const activeArticleUrl = hasPager ? trimmed(state.activeSource?.articleUrl) : '';
-  const activeThumbnailUrl = hasPager ? trimmed(state.activeSource?.thumbnailUrl) : '';
+  // `hasPager` управляет только UI счётчика/стрелок. Primary source остаётся
+  // владельцем своих URL/media и после ошибки загрузки коллекции, когда pager
+  // схлопнулся до одного доступного материала и legacy-дубли могут отсутствовать.
+  const activeArticleUrl = trimmed(state.activeSource?.articleUrl);
+  const activeThumbnailUrl = trimmed(state.activeSource?.thumbnailUrl);
   const legacyAllowed = state.isPrimarySourceActive;
 
   return {

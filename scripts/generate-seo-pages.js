@@ -24,8 +24,11 @@ const { buildSeoTitle: buildSharedSeoTitle, normalizeSeoLead } = require('../uti
 const {
   questRouteKey,
   buildQuestCityAliasMap,
+  buildQuestCityLandingGroups,
+  findNearbyQuestCityGroups,
   questRouteVariants,
 } = require('../utils/questCityAlias');
+const { buildQuestCountryLandingGroups } = require('../utils/questCountryLanding');
 const {
   QUESTS_INTRO_TITLE_RU,
   QUESTS_INTRO_LEAD_RU,
@@ -2230,38 +2233,126 @@ function buildQuestsListingModel(quests, cityAliasMap) {
   return cities;
 }
 
-/**
- * Свести города, делящие один alias, в одну модель лендинга.
- * Alias-сегмент адресует город, а не city_id, поэтому /quests/gomel обязан
- * перечислять квесты всех city_id этого города, а не только последнего.
- */
-function mergeQuestCityLandingsByAlias(cities) {
-  const byAlias = new Map();
+function findQuestCityTravelLinks(city, travels, limit = 4) {
+  const cityName = normalizeLocationText(city?.name);
+  const countryName = normalizeLocationText(city?.countryName);
+  const countryCode = String(city?.countryCode || '').trim().toLowerCase();
+  const cityCoords = Number.isFinite(city?.lat) && Number.isFinite(city?.lng)
+    ? [{ lat: city.lat, lng: city.lng }]
+    : [];
+  const matches = [];
 
-  for (const city of Array.isArray(cities) ? cities : []) {
-    if (!city?.alias || city.alias === city.cityId) continue;
-    const group = byAlias.get(city.alias) || {
-      cityId: city.cityId,
-      name: '',
-      cover: '',
-      alias: city.alias,
-      landingPath: `/quests/${city.alias}`,
-      quests: [],
+  for (const travel of Array.isArray(travels) ? travels : []) {
+    const slug = String(travel?.slug || '').trim();
+    const title = String(travel?.name || '').trim();
+    if (!slug || !title) continue;
+
+    const travelCity = normalizeLocationText(travel?.cityName || travel?.city_name || travel?.city?.name);
+    const travelCountry = normalizeLocationText(travel?.countryName || travel?.country_name);
+    const travelCode = String(travel?.countryCode || travel?.country_code || '').trim().toLowerCase();
+    const distanceKm = cityCoords.length
+      ? minDistanceKm(extractTravelCoordsForQuestPromo(travel), city.lat, city.lng)
+      : Infinity;
+
+    if (countryCode && travelCode && countryCode !== travelCode && distanceKm >= 15) continue;
+    if (!countryCode && countryName && travelCountry && countryName !== travelCountry && distanceKm >= 15) continue;
+
+    let score = 0;
+    if (cityName && travelCity) {
+      if (cityName === travelCity) score += 100;
+      else if (cityName.includes(travelCity) || travelCity.includes(cityName)) score += 55;
+    }
+    if (distanceKm < 8) score += 60;
+    else if (distanceKm < 20) score += 40;
+    else if (distanceKm < 50) score += 20;
+    if ((countryCode && countryCode === travelCode) || (countryName && countryName === travelCountry)) score += 15;
+    if (score < 55) continue;
+
+    matches.push({ path: `/travels/${encodeURIComponent(slug)}`, title, score, distanceKm });
+  }
+
+  return matches
+    .sort((a, b) => b.score - a.score || a.distanceKm - b.distanceKm || a.path.localeCompare(b.path))
+    .slice(0, Math.max(0, limit));
+}
+
+/** One canonical city model shared by one-quest and multi-quest SSG landings. */
+function buildQuestCityLandingModel(quests, cityAliasMap, travels = []) {
+  const groups = buildQuestCityLandingGroups(quests, cityAliasMap);
+  const cities = groups.map((group) => {
+    const coverQuest = group.quests.find((quest) => quest?.cover_url || quest?.coverUrl);
+    return {
+      segment: group.segment,
+      cityId: group.cityId,
+      cityIds: group.cityIds,
+      name: group.cityName,
+      countryName: group.countryName,
+      countryCode: group.countryCode,
+      lat: group.lat,
+      lng: group.lng,
+      cover: String(coverQuest?.cover_url || coverQuest?.coverUrl || '').trim(),
+      alias: group.alias,
+      landingPath: `/quests/${group.segment}`,
+      quests: group.quests
+        .map((quest) => {
+          const route = questRouteKey(quest);
+          if (!route) return null;
+          return {
+            path: route.path,
+            title: String(quest?.title || 'Городской квест').trim(),
+            points: Number(quest?.points) || 0,
+            durationMin: Number(quest?.duration_min ?? quest?.durationMin) || 0,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.title.localeCompare(b.title, 'ru')),
     };
-    if (!group.name && city.name) group.name = city.name;
-    if (!group.cover && city.cover) group.cover = city.cover;
-    group.quests.push(...(Array.isArray(city.quests) ? city.quests : []));
-    byAlias.set(city.alias, group);
-  }
+  });
 
-  for (const group of byAlias.values()) {
-    const seen = new Set();
-    group.quests = group.quests
-      .filter((quest) => !seen.has(quest.path) && seen.add(quest.path))
-      .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
-  }
+  return cities.map((city) => ({
+    ...city,
+    nearbyCities: findNearbyQuestCityGroups(city, cities, { limit: 4 }).map((nearby) => ({
+      segment: nearby.segment,
+      name: nearby.name,
+      questCount: nearby.quests.length,
+      distanceKm: nearby.distanceKm,
+    })),
+    travelLinks: findQuestCityTravelLinks(city, travels, 4),
+  }));
+}
 
-  return [...byAlias.values()];
+/** One catalog-derived country model shared by fixtures and SSG. */
+function buildQuestCountryLandingModel(quests, locale = 'ru') {
+  return buildQuestCountryLandingGroups(quests, { locale }).map((country) => {
+    const coverQuest = country.quests.find((quest) => quest?.cover_url || quest?.coverUrl);
+    return {
+      countryCode: country.countryCode,
+      countryAlias: country.countryAlias,
+      countryName: country.countryName,
+      landingPath: `/quests/country/${country.countryAlias}`,
+      cover: String(coverQuest?.cover_url || coverQuest?.coverUrl || '').trim(),
+      cities: country.cities.map((city) => ({
+        cityAlias: city.cityAlias,
+        cityName: city.cityName,
+        questCount: city.questCount,
+        landingPath: `/quests/${city.cityAlias}`,
+      })),
+      quests: country.quests
+        .map((quest) => {
+          const route = questRouteKey(quest);
+          if (!route) return null;
+          return {
+            path: route.path,
+            title: String(quest?.title || 'Городской квест').trim(),
+            cityName: String(quest?.city_name || quest?.cityName || '').trim(),
+            points: Number(quest?.points) || 0,
+            durationMin: Number(quest?.duration_min ?? quest?.durationMin) || 0,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0),
+    };
+  });
 }
 
 function buildQuestsFaqJsonLd() {
@@ -2477,18 +2568,50 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead) {
   ].join(';');
   const h1Style = `margin:0 0 10px;font:800 28px/1.2 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
   const leadStyle = 'margin:0 0 12px;color:var(--color-text-muted,#5f756c)';
+  const h2Style = `margin:20px 0 8px;font:800 20px/1.25 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
+  const pStyle = 'margin:0 0 10px;color:var(--color-text,#22332c)';
   const ulStyle = 'margin:0;padding:0 0 0 18px;color:var(--color-text,#22332c)';
   const backStyle = 'margin:12px 0 0;font-weight:700';
 
+  const questCount = city.quests.length;
+  const pointCount = city.quests.reduce((sum, quest) => sum + (Number(quest.points) || 0), 0);
+  const durationMin = city.quests.reduce((sum, quest) => sum + (Number(quest.durationMin) || 0), 0);
+  const overview = city.countryName
+    ? `${cityLabel} — город для самостоятельной прогулки. Страна маршрута — ${city.countryName}. На этой странице — ${questCount} ${pluralizeRu(questCount, 'квест', 'квеста', 'квестов')}: можно сравнить маршруты, спланировать выход и поделиться одной ссылкой на квесты города.`
+    : `${cityLabel}: на этой странице — ${questCount} ${pluralizeRu(questCount, 'квест', 'квеста', 'квестов')}. Можно сравнить маршруты, спланировать выход и поделиться одной ссылкой на квесты города.`;
+  const practice = pointCount > 0 && durationMin > 0
+    ? `${cityLabel}: все маршруты вместе — это ${pointCount} ${pluralizeRu(pointCount, 'точка', 'точки', 'точек')} и примерно ${durationMin} минут прогулки. Для первого знакомства выберите один квест и оставьте время на остановки у интересных мест.`
+    : `${cityLabel}: маршруты проходят по реальным улицам и открываются на смартфоне. Выберите квест заранее и оставьте запас времени на остановки у интересных мест.`;
+  const practiceNote = 'Перед выходом зарядите телефон, проверьте погоду и наденьте удобную обувь. Бронировать или покупать билет на сам квест не нужно.';
+
   const links = city.quests
     .map((q) => `<li style="margin:0 0 3px"><a href="${escapeAttr(q.path)}">${escapeAttr(q.title)}</a></li>`)
+    .join('');
+
+  const nearbyLinks = (Array.isArray(city.nearbyCities) ? city.nearbyCities : [])
+    .map((nearby) => {
+      const label = nearby.name || nearby.segment;
+      return `<li style="margin:0 0 3px"><a href="/quests/${escapeAttr(nearby.segment)}">${escapeAttr(label)}</a> — ${nearby.questCount} ${pluralizeRu(nearby.questCount, 'квест', 'квеста', 'квестов')}, ${Math.round(nearby.distanceKm)} км</li>`;
+    })
+    .join('');
+  const travelLinks = (Array.isArray(city.travelLinks) ? city.travelLinks : [])
+    .map((travel) => `<li style="margin:0 0 3px"><a href="${escapeAttr(travel.path)}">${escapeAttr(travel.title)}</a></li>`)
     .join('');
 
   const section = [
     `<section data-ssg-quest-city="true" aria-label="Городские квесты: ${escapeAttr(cityLabel)}" style="${sectionStyle}">`,
     `<h1 style="${h1Style}">Городские квесты: ${escapeAttr(cityLabel)}</h1>`,
     `<p style="${leadStyle}">${escapeAttr(lead)}</p>`,
+    `<div data-ssg-quest-city-overview="true"><h2 style="${h2Style}">Самостоятельная прогулка: ${escapeAttr(cityLabel)}</h2><p style="${pStyle}">${escapeAttr(overview)}</p></div>`,
+    `<div data-ssg-quest-city-practical="true"><h2 style="${h2Style}">Как спланировать прогулку</h2><p style="${pStyle}">${escapeAttr(practice)}</p><p style="${pStyle}">${escapeAttr(practiceNote)}</p></div>`,
+    `<h2 style="${h2Style}">Квесты города: ${escapeAttr(cityLabel)}</h2>`,
     `<ul style="${ulStyle}">${links}</ul>`,
+    nearbyLinks
+      ? `<div data-ssg-quest-city-nearby="true"><h2 style="${h2Style}">Квесты в соседних городах</h2><p style="${pStyle}">${escapeAttr(cityLabel)} уже в плане? Посмотрите другие города с квестами рядом.</p><ul style="${ulStyle}">${nearbyLinks}</ul></div>`
+      : '',
+    travelLinks
+      ? `<div data-ssg-quest-city-travels="true"><h2 style="${h2Style}">Путешествия: ${escapeAttr(cityLabel)}</h2><p style="${pStyle}">Статьи и готовые маршруты путешественников помогут дополнить прогулку.</p><ul style="${ulStyle}">${travelLinks}</ul></div>`
+      : '',
     `<p style="${backStyle}"><a href="/quests">Все городские квесты</a></p>`,
     '</section>',
   ].join('');
@@ -2516,10 +2639,10 @@ function buildQuestCityLandingHtml(cityBaseHtml, city) {
   const count = city.quests.length;
   const canonicalSegment = city.alias || city.cityId;
   const canonical = `${SITE_URL}/quests/${canonicalSegment}`;
-  const title = buildBrandedSeoTitle(`Квест по городу ${cityLabel} — пешеходные маршруты с заданиями`);
-  const lead = `Бесплатные пешеходные квесты-прогулки по городу ${cityLabel}: задания и легенды по реальным местам, прямо со смартфона — как самостоятельная экскурсия без гида. Любой маршрут можно распечатать как подарочный квест-бук с картой и дипломом. Выберите маршрут и отправляйтесь гулять пешком.`;
+  const title = buildBrandedSeoTitle(`Городские квесты: ${cityLabel} — прогулки с заданиями`);
+  const lead = `${cityLabel}: бесплатные пешеходные квесты-прогулки с заданиями и легендами по реальным местам, прямо со смартфона — как самостоятельная экскурсия без гида. Любой маршрут можно распечатать как подарочный квест-бук с картой и дипломом. Выберите маршрут и отправляйтесь гулять пешком.`;
   const description = clampMetaDescription(
-    `Квест по городу ${cityLabel}: ${count} ${pluralizeRu(count, 'пешеходный маршрут', 'пешеходных маршрута', 'пешеходных маршрутов')} с заданиями и легендами. Бесплатно, пешком, со смартфона — гид не нужен.`,
+    `${cityLabel}: что посмотреть на прогулке — ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Практика, квесты рядом и маршруты путешественников.`,
   );
   const image = city.cover ? toAbsoluteUrl(city.cover) : OG_IMAGE;
 
@@ -2535,14 +2658,119 @@ function buildQuestCityLandingHtml(cityBaseHtml, city) {
   });
   html = injectJsonLd(
     html,
-    buildQuestsListItemListJsonLd(
-      city.quests.map((q) => ({ quest_id: q.path.split('/').pop(), city_id: city.cityId, title: q.title })),
-      { url: canonical, name: `Городские квесты: ${cityLabel}` },
-    ),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: `Городские квесты: ${cityLabel}`,
+      url: canonical,
+      numberOfItems: city.quests.length,
+      itemListElement: city.quests.map((quest, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${SITE_URL}${quest.path}`,
+        name: quest.title,
+      })),
+    },
     'quest-city',
   );
   html = injectQuestCityLandingSection(html, city, cityLabel, lead);
   return html;
+}
+
+/** Visible crawlable body for one /quests/country/<alias> landing. */
+function injectQuestCountryLandingSection(baseHtml, country, lead) {
+  const sectionStyle = [
+    'box-sizing:border-box',
+    'max-width:840px',
+    'margin:24px auto',
+    'padding:20px 18px',
+    `font:16px/1.55 ${QUESTS_SSG_FONT}`,
+    'color:var(--color-text,#22332c)',
+    'background:var(--color-surface,#ffffff)',
+    'border:1px solid var(--color-border,#dbe7df)',
+    'border-radius:8px',
+  ].join(';');
+  const h1Style = `margin:0 0 10px;font:800 28px/1.2 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
+  const leadStyle = 'margin:0 0 12px;color:var(--color-text-muted,#5f756c)';
+  const h2Style = `margin:20px 0 8px;font:800 20px/1.25 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
+  const pStyle = 'margin:0 0 10px;color:var(--color-text,#22332c)';
+  const ulStyle = 'margin:0;padding:0 0 0 18px;color:var(--color-text,#22332c)';
+  const backStyle = 'margin:12px 0 0;font-weight:700';
+  const questCount = country.quests.length;
+  const cityCount = country.cities.length;
+  const questLabel = `${questCount} ${pluralizeRu(questCount, 'квест', 'квеста', 'квестов')}`;
+
+  const cityLinks = country.cities
+    .map((city) => `<li style="margin:0 0 3px"><a href="${escapeAttr(city.landingPath)}">${escapeAttr(city.cityName)}</a> — ${city.questCount} ${pluralizeRu(city.questCount, 'квест', 'квеста', 'квестов')}</li>`)
+    .join('');
+  const questLinks = country.quests
+    .map((quest) => `<li style="margin:0 0 3px"><a href="${escapeAttr(quest.path)}">${escapeAttr(quest.title)}</a>${quest.cityName ? ` — ${escapeAttr(quest.cityName)}` : ''}</li>`)
+    .join('');
+  const overview = `На этой странице собраны ${questLabel} в стране ${country.countryName}. Маршруты распределены по городам; городов с квестами: ${cityCount}. Можно сравнить варианты и отправить одну общую ссылку попутчикам.`;
+  const practice = `Сначала выберите город в стране ${country.countryName}, затем сравните длительность и число точек. Большинство маршрутов можно проходить без гида в своём темпе.`;
+
+  const section = [
+    `<section data-ssg-quest-country="true" aria-label="Квесты страны: ${escapeAttr(country.countryName)}" style="${sectionStyle}">`,
+    `<h1 style="${h1Style}">Квесты страны: ${escapeAttr(country.countryName)}</h1>`,
+    `<p style="${leadStyle}">${escapeAttr(lead)}</p>`,
+    `<div data-ssg-quest-country-overview="true"><h2 style="${h2Style}">Квесты и города: ${escapeAttr(country.countryName)}</h2><p style="${pStyle}">${escapeAttr(overview)}</p></div>`,
+    `<div data-ssg-quest-country-cities="true"><h2 style="${h2Style}">Города с квестами</h2><p style="${pStyle}">Откройте страницу города, чтобы увидеть его маршруты и практические советы.</p><ul style="${ulStyle}">${cityLinks}</ul></div>`,
+    `<div data-ssg-quest-country-practical="true"><h2 style="${h2Style}">Как выбрать маршрут</h2><p style="${pStyle}">${escapeAttr(practice)}</p><p style="${pStyle}">Перед поездкой проверьте погоду и дорогу до стартовой точки, зарядите телефон и оставьте время на остановки.</p></div>`,
+    `<h2 style="${h2Style}">Все квесты страны: ${escapeAttr(country.countryName)}</h2>`,
+    `<ul style="${ulStyle}">${questLinks}</ul>`,
+    `<p style="${backStyle}"><a href="/quests">Все городские квесты</a></p>`,
+    '</section>',
+  ].join('');
+
+  const styleTag = [
+    '<style data-ssg-quest-country-style="true">',
+    'html.rnw-styles-ready [data-ssg-quest-country="true"]{display:none!important}',
+    '@media(max-width:640px){[data-ssg-quest-country="true"]{margin:12px;padding:16px 14px}[data-ssg-quest-country="true"] h1{font-size:23px!important}}',
+    '</style>',
+  ].join('');
+
+  let html = baseHtml.replace(/<style[^>]*data-ssg-quest-country-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
+  html = html.replace(/<section[^>]*data-ssg-quest-country="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
+  html = applyHtmlFragment(html, '</head>', `${styleTag}\n`, 'before');
+  if (/<body[^>]*>/i.test(html)) return applyHtmlFragment(html, /<body[^>]*>/i, section, 'after');
+  return `${section}${html}`;
+}
+
+/** Build final SSG HTML for one canonical country alias. */
+function buildQuestCountryLandingHtml(countryBaseHtml, country) {
+  const canonical = `${SITE_URL}${country.landingPath}`;
+  const count = country.quests.length;
+  const title = buildBrandedSeoTitle(`Квесты страны: ${country.countryName} — города и маршруты`);
+  const description = clampMetaDescription(
+    `${country.countryName}: ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} в городах страны. Городов с маршрутами: ${country.cities.length}. Выберите прогулку с заданиями и откройте её на телефоне.`,
+  );
+  const lead = `${country.countryName}: на одной странице собраны ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Выберите город или маршрут и поделитесь подборкой.`;
+  const image = country.cover ? toAbsoluteUrl(country.cover) : OG_IMAGE;
+
+  let html = injectMeta(countryBaseHtml, { title, description, canonical, image, ogType: 'website' });
+  html = injectBreadcrumbJsonLd(html, {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Главная', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: 'Квесты', item: `${SITE_URL}/quests` },
+      { '@type': 'ListItem', position: 3, name: country.countryName, item: canonical },
+    ],
+  });
+  html = injectJsonLd(html, {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `Квесты страны: ${country.countryName}`,
+    url: canonical,
+    numberOfItems: country.quests.length,
+    itemListElement: country.quests.map((quest, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: `${SITE_URL}${quest.path}`,
+      name: quest.title,
+    })),
+  }, 'quest-country-itemlist');
+  return injectQuestCountryLandingSection(html, country, lead);
 }
 
 // Keep in sync with CITY_LINKS_LIMIT in screens/tabs/QuestScenarioScreen.tsx.
@@ -2698,6 +2926,14 @@ function injectQuestScenarioContent(baseHtml, cities) {
 function writeFileSafe(filePath, content) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content, 'utf8');
+}
+
+/** A country page must hydrate with its own Expo route bundle. */
+function readRequiredQuestCountryTemplate(filePath, fileSystem = fs) {
+  if (!fileSystem.existsSync(filePath)) {
+    throw new Error(`Missing Expo country route template: ${filePath}`);
+  }
+  return fileSystem.readFileSync(filePath, 'utf8');
 }
 
 function readStaticRouteHtml(route, fallbackHtml) {
@@ -3498,26 +3734,36 @@ async function main() {
     const cityLandingBaseHtml = fs.existsSync(cityLandingTemplatePath)
       ? fs.readFileSync(cityLandingTemplatePath, 'utf8')
       : questBaseHtml;
-    const cityLandingModel = buildQuestsListingModel(quests, questCityAliasMap);
-    let cityLandingsGenerated = 0;
+    const cityLandingModel = buildQuestCityLandingModel(quests, questCityAliasMap, travels);
+    const writtenCityLandingPaths = new Set();
     for (const city of cityLandingModel) {
       const cityHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, city);
-      writeFileSafe(path.join(DIST_DIR, 'quests', city.cityId, 'index.html'), cityHtml);
-      cityLandingsGenerated++;
+      for (const segment of [...city.cityIds, city.segment]) {
+        const relativePath = path.join('quests', segment, 'index.html');
+        if (writtenCityLandingPaths.has(relativePath)) continue;
+        writeFileSafe(path.join(DIST_DIR, relativePath), cityHtml);
+        writtenCityLandingPaths.add(relativePath);
+      }
     }
-    // Один и тот же город может прийти из каталога под несколькими city_id
-    // (например Гомель = 19 и 92) — тогда оба претендуют на /quests/gomel.
-    // Раньше лендинг писался в цикле по городам, вторая запись молча затирала
-    // первую, и половина квестов города исчезала со своей посадочной, хотя
-    // numeric-лендинги обоих city_id канонизируются именно на неё.
-    for (const aliasCity of mergeQuestCityLandingsByAlias(cityLandingModel)) {
-      const aliasHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, aliasCity);
-      writeFileSafe(path.join(DIST_DIR, 'quests', aliasCity.alias, 'index.html'), aliasHtml);
-      cityLandingsGenerated++;
+    const cityLandingsGenerated = writtenCityLandingPaths.size;
+
+    // Country landing pages /quests/country/<ISO-derived alias>. The catalog
+    // decides which countries exist; the ISO source decides their stable URL.
+    const countryLandingTemplatePath = path.join(DIST_DIR, 'quests', 'country', '[country].html');
+    const countryLandingBaseHtml = readRequiredQuestCountryTemplate(countryLandingTemplatePath);
+    const countryLandingModel = buildQuestCountryLandingModel(quests, 'ru');
+    let countryLandingsGenerated = 0;
+    for (const country of countryLandingModel) {
+      const countryHtml = buildQuestCountryLandingHtml(countryLandingBaseHtml, country);
+      writeFileSafe(
+        path.join(DIST_DIR, 'quests', 'country', country.countryAlias, 'index.html'),
+        countryHtml,
+      );
+      countryLandingsGenerated += 1;
     }
 
-    totalPages += questGenerated + cityLandingsGenerated;
-    console.log(`  ✅ Generated: ${questGenerated} quest pages + ${questAliasesGenerated} city aliases + ${cityLandingsGenerated} city landings + crawlable listing`);
+    totalPages += questGenerated + cityLandingsGenerated + countryLandingsGenerated;
+    console.log(`  ✅ Generated: ${questGenerated} quest pages + ${questAliasesGenerated} city aliases + ${cityLandingsGenerated} city landings + ${countryLandingsGenerated} country landings + crawlable listing`);
   }
 
   // --- 3. Article pages ---
@@ -3619,6 +3865,11 @@ async function main() {
       file: path.join(DIST_DIR, 'quests', '[city]', '[questId].html'),
       title: 'Квест не найден | Metravel',
       description: 'Этот квест не найден или больше недоступен.',
+    },
+    {
+      file: path.join(DIST_DIR, 'quests', 'country', '[country].html'),
+      title: 'Страна с квестами не найдена | Metravel',
+      description: 'Для этой страны нет опубликованной подборки квестов.',
     },
   ];
   for (const tmpl of fallbackTemplates) {
@@ -3727,7 +3978,9 @@ if (typeof module !== 'undefined' && module.exports) {
     injectQuestLinksIndex,
     injectHomeQuestsSection,
     buildQuestsListingModel,
-    mergeQuestCityLandingsByAlias,
+    buildQuestCityLandingModel,
+    buildQuestCountryLandingModel,
+    findQuestCityTravelLinks,
     buildQuestsFaqJsonLd,
     buildQuestsListItemListJsonLd,
     injectQuestsListingContent,
@@ -3736,6 +3989,9 @@ if (typeof module !== 'undefined' && module.exports) {
     injectQuestScenarioContent,
     injectQuestCityLandingSection,
     buildQuestCityLandingHtml,
+    injectQuestCountryLandingSection,
+    buildQuestCountryLandingHtml,
+    readRequiredQuestCountryTemplate,
     patchNoindexFallbackTemplate,
     STATIC_PAGES,
   };

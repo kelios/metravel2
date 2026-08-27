@@ -103,7 +103,7 @@ describe('TravelDeferredSections (web author defer)', () => {
   })
 
   it('skips author card on desktop web (author is in sidebar)', async () => {
-    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
 
     const travel: any = {
       id: 1,
@@ -156,8 +156,15 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(mockAuthorCardSpy).not.toHaveBeenCalled()
   })
 
-  it('keeps map, sidebar, comments and footer deferred during the early no-interaction window', async () => {
-    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
+  it('keeps heavy sections deferred while resolving the footer in the post-LCP tree', async () => {
+    const {
+      TravelDeferredSections,
+      shouldLoadFooterSectionForPlatform,
+    } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
+
+    expect(shouldLoadFooterSectionForPlatform('web', false)).toBe(true)
+    expect(shouldLoadFooterSectionForPlatform('ios', false)).toBe(false)
+    expect(shouldLoadFooterSectionForPlatform('android', true)).toBe(true)
 
     const travel: any = {
       id: 2,
@@ -209,11 +216,10 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(mockMapSectionSpy).not.toHaveBeenCalled()
     expect(mockSidebarSectionSpy).not.toHaveBeenCalled()
     expect(mockCommentsSectionSpy).not.toHaveBeenCalled()
-    expect(mockFooterSectionSpy).not.toHaveBeenCalled()
   })
 
   it('renders sidebar and comments immediately when opened via section navigation', async () => {
-    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
 
     const travel: any = {
       id: 4,
@@ -289,7 +295,7 @@ describe('TravelDeferredSections (web author defer)', () => {
   })
 
   it('keeps comments loadable even when travel metadata has no comment thread fields', async () => {
-    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
 
     const travel: any = {
       id: 5,

@@ -1,4 +1,5 @@
 import {
+  parseRouteFileGeometry,
   parseRouteFileMetadata,
   parseRouteFilePreviews,
 } from '@/utils/routeFileParser';
@@ -18,6 +19,7 @@ describe('routeFileParser import metadata', () => {
     expect(metadata).toEqual({
       ok: true,
       format: 'gpx',
+      hasIndependentPoints: true,
       namedPoints: [
         { coord: '52.1,23.7', name: 'Start camp' },
         { coord: '52.15,23.75', name: 'Viewpoint' },
@@ -36,11 +38,24 @@ describe('routeFileParser import metadata', () => {
     expect(parseRouteFileMetadata(KML_WITH_NAMED_POINTS, 'kml')).toEqual({
       ok: true,
       format: 'kml',
+      hasIndependentPoints: true,
       namedPoints: [
         { coord: '52.2,23.8', name: 'Finish' },
         { coord: '52.15,23.75', name: 'Lunch' },
       ],
     });
+
+    const geometry = parseRouteFileGeometry(KML_WITH_NAMED_POINTS, 'kml');
+    expect(geometry.points).toEqual([
+      { coord: '52.2,23.8', name: 'Finish' },
+      { coord: '52.15,23.75', name: 'Lunch' },
+    ]);
+    expect(geometry.lines).toHaveLength(1);
+    expect(geometry.lines[0].map((point) => point.coord)).toEqual([
+      '52.1,23.7',
+      '52.15,23.75',
+      '52.2,23.8',
+    ]);
   });
 
   it.each([

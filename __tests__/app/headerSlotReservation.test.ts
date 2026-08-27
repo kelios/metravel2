@@ -1,56 +1,87 @@
 /**
- * #1144: место под шапку резервируется медиазапросом, а не догадкой JS.
+ * #1144/#1298: место под шапку резервируется медиазапросом, а не догадкой JS.
  *
- * Статический HTML один на все вьюпорты, поэтому до гидрации React обязан считать
- * вариант шапки десктопным (иначе hydration mismatch, #418). Раньше из-за этого
- * мобильный первый экран резервировал 78 px вместо реальных 116 px, и после
- * гидрации весь `main` уезжал вниз на 38 px.
- *
- * Замер прода 2026-07-30 (`/travels/ourvietnam`, 412×823, 4× CPU / 1.6 Мбит/с):
- *   t=9172 ms  MAIN#travel-main-content  y 78 → 116   value 0.1508
- *   суммарный CLS 0.1665 при бюджете 0.1
- * Контекст-строка при этом монтировалась только на t≈10 046 ms — то есть сдвиг давала
- * именно неверно зарезервированная высота, а не появление самой строки.
+ * Статический HTML один на все вьюпорты, но до первого кадра CSS обязан выбрать
+ * тот же band, что и runtime header: mobile <768, compact 768–1279, wide >=1280.
  */
 const fs = require('fs');
 const path = require('path');
 
+import {
+  HEADER_HEIGHT_FALLBACK,
+  HEADER_MEDIA_MAX_WIDTHS,
+  getHeaderVariantForBand,
+  getHeaderViewportBand,
+} from '@/components/layout/headerLayoutContract';
+import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
+
 const REPO_ROOT = path.resolve(__dirname, '../..');
-const css: string = fs.readFileSync(path.join(REPO_ROOT, 'app', 'global.css'), 'utf-8');
+const globalCss: string = fs.readFileSync(
+  path.join(REPO_ROOT, 'app', 'global.css'),
+  'utf-8',
+);
 const layout: string = fs.readFileSync(
   path.join(REPO_ROOT, 'app', '(tabs)', '_layout.tsx'),
   'utf-8',
 );
-
-const readFallback = (variant: string): number => {
-  const block = /HEADER_HEIGHT_FALLBACK[^{]*\{([\s\S]*?)\}/.exec(layout);
-  expect(block).toBeTruthy();
-  const row = new RegExp(`'${variant}':\\s*(\\d+)`).exec(block![1]);
-  expect(row).toBeTruthy();
-  return Number(row![1]);
-};
+const criticalCss = buildCriticalCSS();
 
 describe('резервирование высоты шапки', () => {
-  it('в CSS есть правило слота и мобильный медиазапрос', () => {
-    expect(css).toMatch(/\[data-header-slot\]\s*\{[^}]*height:\s*var\(--mt-header-slot-desktop/);
-    expect(css).toMatch(
-      /@media\s*\(max-width:\s*767px\)\s*\{\s*\[data-header-slot\]\s*\{[^}]*var\(--mt-header-slot-mobile/,
+  it('выбирает высоту слота в тех же critical-CSS полосах, что и CustomHeader', () => {
+    expect(criticalCss).toContain(
+      '[data-header-slot=""]{height:var(--mt-header-slot-wide,78px)',
     );
+    expect(criticalCss).toContain(
+      `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.compact}px){\n  [data-header-slot=""]{height:var(--mt-header-slot-compact,64px)}`,
+    );
+    expect(criticalCss).toContain(
+      `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.mobile}px){\n  [data-header-slot=""]{height:var(--mt-header-slot-mobile,64px)}`,
+    );
+    // `CustomHeader` also owns `data-header-slot="nav|account"`; a presence-only
+    // selector would leak the outer reservation into those inner flex items.
+    expect(criticalCss).not.toMatch(/(?:^|\n)\s*\[data-header-slot\]\s*\{/);
   });
 
-  it('CSS-фолбэки совпадают с HEADER_HEIGHT_FALLBACK', () => {
-    const desktopFallback = /--mt-header-slot-desktop,\s*(\d+)px/.exec(css);
-    const mobileFallback = /--mt-header-slot-mobile,\s*(\d+)px/.exec(css);
-    expect(desktopFallback).toBeTruthy();
-    expect(mobileFallback).toBeTruthy();
-    expect(Number(desktopFallback![1])).toBe(readFallback('desktop-nobar'));
-    expect(Number(mobileFallback![1])).toBe(readFallback('mobile-bar'));
+  it.each([
+    [412, 'mobile', 64],
+    [768, 'compact', 64],
+    [1152, 'compact', 64],
+    [1279, 'compact', 64],
+    [1280, 'wide', 78],
+  ] as const)('держит no-bar matrix на %ipx: %s / %ipx', (width, band, height) => {
+    expect(getHeaderViewportBand(width)).toBe(band);
+    expect(HEADER_HEIGHT_FALLBACK[getHeaderVariantForBand(band, false)]).toBe(height);
   });
 
-  it('layout прокидывает обе переменные из одного источника правды', () => {
+  it('учитывает разную геометрию context row в трёх полосах', () => {
+    expect(HEADER_HEIGHT_FALLBACK['mobile-bar']).toBe(116);
+    expect(HEADER_HEIGHT_FALLBACK['compact-bar']).toBe(110);
+    expect(HEADER_HEIGHT_FALLBACK['wide-bar']).toBe(124);
+  });
+
+  it('layout прокидывает три переменные из одного источника правды', () => {
     expect(layout).toContain("'--mt-header-slot-mobile'");
-    expect(layout).toContain("'--mt-header-slot-desktop'");
-    expect(layout).toMatch(/shouldShowHeaderContextBar\(pathname \|\| '\/', true\)/);
+    expect(layout).toContain("'--mt-header-slot-compact'");
+    expect(layout).toContain("'--mt-header-slot-wide'");
+    expect(layout).toContain("heightForBand('compact', hasCompactContextBar)");
+  });
+
+  it('global CSS не может вернуть старый breakpoint 768 для высоты слота', () => {
+    expect(globalCss).not.toMatch(/\[data-header-slot(?:="")?\]\s*\{[^}]*height:/);
+    expect(globalCss).not.toMatch(/\[data-header-slot\]\s*\{/);
+  });
+
+  it('critical slot reservation не блокирует inline-высоту после измерения', () => {
+    const slotRules = criticalCss
+      .split('\n')
+      .filter((line) => line.includes('[data-header-slot=""]{height:'));
+
+    expect(slotRules).toHaveLength(3);
+    expect(slotRules.every((line) => !line.includes('!important'))).toBe(true);
+  });
+
+  it('не принимает interim onLayout до готовности гидрации', () => {
+    expect(layout).toMatch(/if \(!hydrationReady \|\| h <= 0\) return/);
   });
 
   it('инлайновая высота ставится только после реального измерения', () => {

@@ -231,7 +231,7 @@ describe('utils/imageOptimization', () => {
 
     it('generates srcset for web platform', () => {
       withPlatform('web', () => {
-        const base = 'https://example.com/img.jpg'
+        const base = 'https://metravel.by/gallery/544/gallery/photo.jpg'
         const result = generateSrcSet(base, [320, 640])
 
         const parts = result.split(',').map(p => p.trim())
@@ -244,6 +244,37 @@ describe('utils/imageOptimization', () => {
           const url = new URL(urlStr)
           expect(url.origin + url.pathname).toBe(base)
         }
+      })
+    })
+
+    it('does not advertise unchanged third-party URLs as resized candidates', () => {
+      withPlatform('web', () => {
+        expect(generateSrcSet('https://example.com/img.jpg', [160, 320, 640])).toBe('')
+      })
+    })
+
+    it('does not advertise a canonicalized URL without a real proxy width', () => {
+      withPlatform('web', () => {
+        const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+        process.env.EXPO_PUBLIC_API_URL = 'https://api.example.org'
+
+        try {
+          expect(
+            generateSrcSet('http://metravel.by/custom-assets/photo.jpg?w=160', [160, 320]),
+          ).toBe('')
+        } finally {
+          process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+        }
+      })
+    })
+
+    it.each([
+      'blob:http://localhost/route-point-preview',
+      'data:image/png;base64,iVBORw0KGgo=',
+      'file:///tmp/route-point-preview.png',
+    ])('keeps opaque local media on src instead of duplicating it in srcSet: %s', (base) => {
+      withPlatform('web', () => {
+        expect(generateSrcSet(base, [160, 320, 640])).toBe('')
       })
     })
 

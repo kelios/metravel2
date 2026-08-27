@@ -270,6 +270,207 @@ describe('applySavedData — route point save races', () => {
     );
   });
 
+  it('restores the sent blob preview when live state drifted to the backend cover fallback', async () => {
+    const previewUrl = 'blob:http://localhost/point-a';
+    const coverFallback = 'https://metravel.by/travel-image/225/cover.webp';
+    const sourceTravel = {
+      id: 225,
+      name: 'Путешествие',
+      description: LONG_TEXT,
+      travel_image_thumb_url: coverFallback,
+      travel_image_thumb_small_url: coverFallback,
+      coordsMeTravel: [{ ...pointA, image: previewUrl }],
+      countries: [],
+      gallery: [],
+    };
+    const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
+    const { result, params } = setupPersistence({
+      initialFormData: sourceTravel,
+      baselineText: null,
+      uploadPendingMarkerImages,
+    });
+    params.formDataRef.current = {
+      ...sourceTravel,
+      coordsMeTravel: [{ ...pointA, image: coverFallback }],
+    };
+
+    await act(async () => {
+      result.current.applySavedData(
+        {
+          ...sourceTravel,
+          coordsMeTravel: [{ ...pointA, id: 101, image: coverFallback }],
+        },
+        sourceTravel,
+        { preserveEditingState: true },
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(params.formDataRef.current.coordsMeTravel).toEqual([
+      expect.objectContaining({ id: 101, image: previewUrl }),
+    ]);
+    expect(params.setMarkers).toHaveBeenLastCalledWith([
+      expect.objectContaining({ id: 101, image: previewUrl }),
+    ]);
+    expect(uploadPendingMarkerImages).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 101, image: previewUrl }),
+    ]);
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        coordsMeTravel: [expect.objectContaining({ image: previewUrl })],
+      }),
+    );
+  });
+
+  it('does not restore the sent blob after the live preview was removed', async () => {
+    const previewUrl = 'blob:http://localhost/point-a';
+    const coverFallback = 'https://metravel.by/travel-image/225/cover.webp';
+    const sourceTravel = {
+      id: 225,
+      name: 'Путешествие',
+      description: LONG_TEXT,
+      travel_image_thumb_url: coverFallback,
+      travel_image_thumb_small_url: coverFallback,
+      coordsMeTravel: [{ ...pointA, image: previewUrl }],
+      countries: [],
+      gallery: [],
+    };
+    const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
+    const { result, params } = setupPersistence({
+      initialFormData: sourceTravel,
+      baselineText: null,
+      uploadPendingMarkerImages,
+    });
+    params.formDataRef.current = {
+      ...sourceTravel,
+      coordsMeTravel: [{ ...pointA, image: null }],
+    };
+
+    await act(async () => {
+      result.current.applySavedData(
+        {
+          ...sourceTravel,
+          coordsMeTravel: [{ ...pointA, id: 101, image: coverFallback }],
+        },
+        sourceTravel,
+        { preserveEditingState: true },
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(params.formDataRef.current.coordsMeTravel).toEqual([
+      expect.objectContaining({ id: 101, image: null }),
+    ]);
+    expect(uploadPendingMarkerImages).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 101, image: null }),
+    ]);
+  });
+
+  it('keeps a newer live blob instead of restoring the blob from the save snapshot', async () => {
+    const sentPreviewUrl = 'blob:http://localhost/point-a-sent';
+    const newerPreviewUrl = 'blob:http://localhost/point-a-newer';
+    const coverFallback = 'https://metravel.by/travel-image/225/cover.webp';
+    const sourceTravel = {
+      id: 225,
+      name: 'Путешествие',
+      description: LONG_TEXT,
+      travel_image_thumb_url: coverFallback,
+      travel_image_thumb_small_url: coverFallback,
+      coordsMeTravel: [{ ...pointA, image: sentPreviewUrl }],
+      countries: [],
+      gallery: [],
+    };
+    const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
+    const { result, params } = setupPersistence({
+      initialFormData: sourceTravel,
+      baselineText: null,
+      uploadPendingMarkerImages,
+    });
+    params.formDataRef.current = {
+      ...sourceTravel,
+      coordsMeTravel: [{ ...pointA, image: newerPreviewUrl }],
+    };
+
+    await act(async () => {
+      result.current.applySavedData(
+        {
+          ...sourceTravel,
+          coordsMeTravel: [{ ...pointA, id: 101, image: coverFallback }],
+        },
+        sourceTravel,
+        { preserveEditingState: true },
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(params.formDataRef.current.coordsMeTravel).toEqual([
+      expect.objectContaining({ id: 101, image: newerPreviewUrl }),
+    ]);
+    expect(uploadPendingMarkerImages).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 101, image: newerPreviewUrl }),
+    ]);
+  });
+
+  it('restores distinct source previews one-to-one for duplicate coordinates', async () => {
+    const previewUrlA = 'blob:http://localhost/duplicate-point-a';
+    const previewUrlB = 'blob:http://localhost/duplicate-point-b';
+    const coverFallback = 'https://metravel.by/travel-image/225/cover.webp';
+    const duplicatePointB = { ...pointA, address: 'Точка B на тех же координатах' };
+    const sourceTravel = {
+      id: 225,
+      name: 'Путешествие',
+      description: LONG_TEXT,
+      travel_image_thumb_url: coverFallback,
+      travel_image_thumb_small_url: coverFallback,
+      coordsMeTravel: [
+        { ...pointA, image: previewUrlA },
+        { ...duplicatePointB, image: previewUrlB },
+      ],
+      countries: [],
+      gallery: [],
+    };
+    const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
+    const { result, params } = setupPersistence({
+      initialFormData: sourceTravel,
+      baselineText: null,
+      uploadPendingMarkerImages,
+    });
+    params.formDataRef.current = {
+      ...sourceTravel,
+      coordsMeTravel: [
+        { ...pointA, image: coverFallback },
+        { ...duplicatePointB, image: coverFallback },
+      ],
+    };
+
+    await act(async () => {
+      result.current.applySavedData(
+        {
+          ...sourceTravel,
+          coordsMeTravel: [
+            { ...pointA, id: 101, image: coverFallback },
+            { ...duplicatePointB, id: 102, image: coverFallback },
+          ],
+        },
+        sourceTravel,
+        { preserveEditingState: true },
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const expectedMarkers = [
+      expect.objectContaining({ id: 101, image: previewUrlA }),
+      expect.objectContaining({ id: 102, image: previewUrlB }),
+    ];
+    expect(params.formDataRef.current.coordsMeTravel).toEqual(expectedMarkers);
+    expect(params.setMarkers).toHaveBeenLastCalledWith(expectedMarkers);
+    expect(uploadPendingMarkerImages).toHaveBeenCalledWith(expectedMarkers);
+  });
+
   it('grafts a late point id onto live marker data before photo upload', async () => {
     let resolveRehydrate: ((markers: any[]) => void) | null = null;
     const rehydrateMarkerIdsFromServer = jest.fn(

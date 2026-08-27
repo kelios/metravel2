@@ -233,7 +233,7 @@ describe('RouteBuilder elevation profile', () => {
 
   it('recalculates once when a routed summary was saved without elevation', async () => {
     mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
-    const trip = makeTrip()
+    const trip = makeTrip({ routeGeometry: makeElevation().geometry })
     const { rerender } = renderRouteBuilder(<RouteBuilder trip={trip} />)
 
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(1))
@@ -248,17 +248,18 @@ describe('RouteBuilder elevation profile', () => {
   // точках и снова стирает высоты — каждый такой профиль нужно пересчитать.
   it('recalculates again after the route is rebuilt for another transport or bike type', async () => {
     mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
-    const { rerender } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const routeGeometry = makeElevation().geometry
+    const { rerender } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ routeGeometry })} />)
 
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(1))
 
-    rerender(<RouteBuilder trip={makeTrip({ transport: 'bike', bikeType: 'regular' })} />)
+    rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'regular' })} />)
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(2))
 
-    rerender(<RouteBuilder trip={makeTrip({ transport: 'bike', bikeType: 'mountain' })} />)
+    rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'mountain' })} />)
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(3))
 
-    rerender(<RouteBuilder trip={makeTrip({ transport: 'bike', bikeType: 'mountain' })} />)
+    rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'mountain' })} />)
     expect(mockRefreshElevation).toHaveBeenCalledTimes(3)
   })
 
@@ -270,6 +271,7 @@ describe('RouteBuilder elevation profile', () => {
 
     await findByTestId('route-elevation-profile')
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Poronin')
     fireEvent.changeText(getByTestId('route-builder-lat'), '49.339')
@@ -290,6 +292,7 @@ describe('RouteBuilder elevation profile', () => {
 
     await findByTestId('route-elevation-profile')
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Кофе по дороге')
     fireEvent.press(getByTestId('route-builder-add'))

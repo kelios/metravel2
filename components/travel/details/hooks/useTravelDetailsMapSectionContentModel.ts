@@ -5,46 +5,10 @@ import { useRouteFilePreviews } from '@/hooks/useRouteFilePreviews'
 import { useKeyPointLabels } from '@/hooks/useKeyPointLabels'
 import type { Travel } from '@/types/types'
 import type { AnchorsMap } from '../TravelDetailsTypes'
-
-type RoutePreviewItem = {
-  preview?: {
-    linePoints?: Array<unknown>
-  }
-}
-
-function getTravelDetailsMapSectionContentFlags(params: {
-  canRenderHeavy: boolean
-  mapNearViewport: boolean
-  mapOpened: boolean
-  shouldForceRenderMap: boolean
-}) {
-  const shouldRender = params.canRenderHeavy
-
-  // The Leaflet map is the heaviest mount on the page. On web, gate it behind
-  // scroll-into-view so an SPA navigation paints the gallery/description first and the map
-  // builds only when it approaches the viewport. Force/opened paths (point click, nav-to-map,
-  // PDF/print via `shouldForceRenderMap`) bypass the viewport gate so they still mount eagerly.
-  return {
-    isLoading: false,
-    shouldRender,
-    shouldRenderMapContent:
-      (shouldRender && params.mapNearViewport) ||
-      params.shouldForceRenderMap ||
-      params.mapOpened,
-  }
-}
-
-function hasTravelDetailsMapData(params: {
-  hasEmbeddedCoords: boolean
-  hasTravelAddressPoints: boolean
-  routePreviewItems: RoutePreviewItem[]
-}) {
-  return (
-    params.hasEmbeddedCoords ||
-    params.hasTravelAddressPoints ||
-    params.routePreviewItems.some((item) => (item.preview?.linePoints?.length ?? 0) > 0)
-  )
-}
+import {
+  getTravelDetailsMapSectionContentFlags,
+  hasTravelDetailsMapData,
+} from './travelDetailsMapSectionContentModel'
 
 type UseTravelDetailsMapSectionContentModelArgs = {
   anchors: AnchorsMap
@@ -84,6 +48,7 @@ export function useTravelDetailsMapSectionContentModel({
     shouldRender && (mapNearViewport || mapOpened || shouldForceRenderMap)
 
   const {
+    routeFilePoints,
     routePreviewItems,
     resetRoutePreviewItems,
     primaryRoutePreview,
@@ -111,9 +76,10 @@ export function useTravelDetailsMapSectionContentModel({
       hasTravelDetailsMapData({
         hasEmbeddedCoords,
         hasTravelAddressPoints,
+        routeFilePoints,
         routePreviewItems,
       }),
-    [hasEmbeddedCoords, hasTravelAddressPoints, routePreviewItems]
+    [hasEmbeddedCoords, hasTravelAddressPoints, routeFilePoints, routePreviewItems]
   )
 
   const setMapSectionRef = useCallback(
@@ -150,6 +116,7 @@ export function useTravelDetailsMapSectionContentModel({
     isLoading,
     isRoutePreviewLoading,
     keyPointLabels,
+    routeFilePoints,
     routePreviewItems,
     setMapSectionRef,
     shouldRender,

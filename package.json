@@ -114,7 +114,7 @@
     "test:pages:performance": "node scripts/test-pages-performance.js",
     "e2e:perf-budget": "node scripts/run-with-quality-gate-lock.js e2e:perf-budget -- node node_modules/playwright/cli.js test e2e/travel-details-perf-budget.spec.ts",
     "e2e:perf-budget:headed": "node scripts/run-with-quality-gate-lock.js e2e:perf-budget:headed -- node node_modules/playwright/cli.js test e2e/travel-details-perf-budget.spec.ts --headed",
-    "e2e:perf-budget:pages": "node scripts/run-with-quality-gate-lock.js e2e:perf-budget:pages -- node node_modules/playwright/cli.js test e2e/pages-perf-budget.spec.ts e2e/pages-perf-budget-negative.spec.ts --project=chromium --project=chromium-mobile",
+    "e2e:perf-budget:pages": "node scripts/run-with-quality-gate-lock.js e2e:perf-budget:pages -- node node_modules/playwright/cli.js test e2e/pages-perf-budget.spec.ts e2e/pages-perf-budget-negative.spec.ts --project=chromium --project=chromium-narrow --project=chromium-mobile",
     "verify:slider": "node scripts/run-with-quality-gate-lock.js verify:slider -- node node_modules/playwright/cli.js test e2e/travel-gallery-swipe-mobile.spec.ts --project=chromium",
     "verify:slider-perf": "node scripts/run-with-quality-gate-lock.js verify:slider-perf -- node node_modules/playwright/cli.js test e2e/travel-gallery-swipe-mobile.spec.ts e2e/travel-details-perf-budget.spec.ts e2e/pages-perf-budget.spec.ts --project=chromium --project=chromium-mobile",
     "clean": "npx expo start --clear",

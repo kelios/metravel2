@@ -489,6 +489,13 @@ sequenceDiagram
   правка названия или описания точки их не обесценивает и не запускает
   построение маршрута. Как только координаты разошлись с сохранёнными, линию и
   цифры даёт живое превью (см. ниже), а экспорт отдаёт ровно то, что на карте;
+- если координаты совпадают, но сохранённый healthy `routingState` приехал без
+  пригодной `routeGeometry` и без декодированной полилинии высот, тот же preview
+  engine временно владеет всей отображаемой триадой `geometry + state + summary`.
+  Старые healthy status/summary на это время не показываются; success ставит
+  плотную геометрию целиком, failure — explicit direct state с retry. Шапка
+  страницы также скрывает raw summary для этой inconsistent пары, чтобы старые
+  километры не жили отдельно от presentation owner (#873);
 - «Сохранить маршрут» → `PUT /trips/planned/{id}/route/` с `order: i + 1`;
 - смена транспорта и типа велосипеда — тот же `PATCH` по поездке, поэтому у них
   один лок (`transportMutationLockedRef` синхронно до `mutate` + проверки
@@ -502,8 +509,9 @@ sequenceDiagram
 1. **Бэкенд, поле `route_summary` в детали поездки** → `mapRouteSummary`
    (`distance_km`, `duration_min`, `elevation_gain_m`, `stops_count`, `provider`,
    `updated_at`).
-2. **Живое превью несохранённого маршрута** (`#1490`): пока координаты черновика
-   не совпадают с сохранёнными, дистанцию, время и геометрию даёт **тот же
+2. **Живое превью и ремонт saved healthy/null** (`#1490`, `#873`): пока
+   координаты черновика не совпадают с сохранёнными или сохранённый healthy
+   status остался без usable geometry, дистанцию, время и геометрию даёт **тот же
    движок, что и `/map`** — `useTripRoutePreview` → `TripRoutePreviewEngine` →
    `components/map-core/useMapRouting.ts` → `useRouting`
    (`POST /routing/route/` → ORS → Valhalla → OSRM). Своей цепочки провайдеров у
@@ -550,10 +558,19 @@ sequenceDiagram
   `${tripId}:${routeSignature}:${transport}:${bikeType}` в `elevationRefreshKeyRef`,
   условие — владелец, координаты совпадают с сохранёнными, профиля ещё нет и
   `provider === 'ors'`; прямая линия не пересчитывается, у неё высот нет;
-- декодированная 3D-полилиния подставляется как геометрия:
-  `routeGeometry = trip.routeGeometry ?? routeElevation?.geometry ?? null`.
+- декодированная 3D-полилиния подставляется как геометрия, если основная
+  `trip.routeGeometry` не содержит хотя бы двух finite координат; пустой или
+  испорченный массив не блокирует usable `routeElevation.geometry`.
   Декодер — `decodeEncodedPolyline(polyline, {precision: 5, dimensions: 3})`,
   профиль строится тем же `buildElevationProfile`, что и у travel details.
+
+`useTripRouteDisplay` — единый presentation owner для карты, `RouteSummaryBar`,
+профиля и экспорта. Он принимает только целую saved- или preview-триаду; raw
+комбинация `ORS healthy + geometry null` никогда не распадается по потребителям.
+Сначала owner дожидается уже начатого `GET route-summary`: in-flight cache не
+считается геометрией текущего маршрута и не запускает параллельный routing POST.
+Если свежей полилинии нет, shared engine начинает repair; owner-only elevation
+refresh в это время не стартует и не гоняется с ним за тот же маршрут.
 
 `isRouteApproximate(routingState)` = `provider === 'direct' || isOptimal === false`;
 при этом экран поездки показывает предупреждение и `routingStateHint`, а экспорт
@@ -611,8 +628,11 @@ create/update), `formatTripDateRangeShort`. Нормализация живёт 
 конструкторе (#1304), и файл обязан собираться одним путём:
 
 - `buildTripRouteExportInput(trip)` — waypoints из точек с координатами; трек =
-  серверная геометрия при `length >= 2`, иначе прямые между waypoints; для
-  приблизительного маршрута описание файла заменяется предупреждением;
+  usable отображаемая геометрия, иначе прямые между waypoints. Любой waypoint
+  fallback считается приблизительным независимо от сырого `routingState`, а
+  описание файла заменяется предупреждением; вкладка экспорта использует тот же
+  `useTripRouteDisplay`, поэтому после repair success экспортирует ту же плотную
+  геометрию, что карта;
 - `useTripRouteExport(trip)` — состояние `exportingAction`/`exportError`,
   `disabled` при менее чем двух точках с координатами, аналитика
   `trackRouteExported`;

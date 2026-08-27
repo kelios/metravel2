@@ -1,5 +1,6 @@
 /**
- * Performance budget tests for the main public pages: Home, Search, Map, Places.
+ * Performance budget tests for the main public pages: Home, Search, Map, Places,
+ * the quests catalog and one deterministic quest detail.
  *
  * Companion to `e2e/travel-details-perf-budget.spec.ts` (which covers the travel
  * details page). Runs against a **production build** (dist/prod) served locally
@@ -7,7 +8,7 @@
  * Performance API.
  *
  * Run:
- *   npm run e2e:perf-budget:pages   (оба профиля + негативная проба)
+ *   npm run e2e:perf-budget:pages   (три browser projects / три budget profiles + negative probe)
  *
  * Числовые бюджеты живут в `helpers/pagesPerfBudgets.ts` — по записи на пару
  * (маршрут, профиль). Переменные окружения (`PERF_CLS_MAX`, `PERF_LCP_MAX_MS`,
@@ -16,7 +17,8 @@
  * (#1287). Снять baseline можно `PERF_BUDGET_BASELINE=1` — в CI запрещено.
  */
 
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page, type Route } from '@playwright/test'
+import type { ApiQuestBundle, ApiQuestMeta } from '../api/quests'
 import {
   injectPerfObservers,
   beginPostReadyClsCollection,
@@ -34,6 +36,7 @@ import {
   resolveEffectiveBudget,
   type PerfProfile,
 } from './helpers/pagesPerfBudgets'
+import { PERF_DESKTOP_VIEWPORTS, PERF_PROFILE_BY_PROJECT } from './helpers/perfProjects'
 
 type PageTarget = {
   key: string
@@ -49,6 +52,28 @@ type MapFixtureCounters = {
   travels: number
   clusters: number
 }
+
+type QuestDetailFixtureCounters = {
+  detail: number
+  list: number
+}
+
+const PERF_QUEST_ID = 'perf-budget-quest'
+// CH is intentionally outside the Belkraj/Tripvenue support table. The detail
+// fixture therefore exercises the quest layout without a third-party iframe.
+const PERF_QUEST_CITY = {
+  id: 98_041,
+  slug: 'zurich',
+  name: 'Zurich',
+  countryId: '41',
+  countryName: 'Switzerland',
+  countryCode: 'CH',
+  lat: 47.3769,
+  lng: 8.5417,
+} as const
+const PERF_QUEST_PATH = `/quests/${PERF_QUEST_CITY.slug}/${PERF_QUEST_ID}`
+const PERF_QUEST_MAPS_URL =
+  `https://www.openstreetmap.org/?mlat=${PERF_QUEST_CITY.lat}&mlon=${PERF_QUEST_CITY.lng}`
 
 // Числовые бюджеты живут в `helpers/pagesPerfBudgets.ts` — по записи на пару
 // (маршрут, профиль). Здесь остаётся только то, что описывает саму страницу
@@ -90,6 +115,16 @@ const PAGES: PageTarget[] = [
     path: '/quests',
     readySelector: 'h1',
   },
+  // #1564: the catalog did not exercise the responsive quest-wizard layout,
+  // where the <1280 px CLS regression occurred. The API is fully intercepted
+  // below, so this route never depends on a live quest or backend response.
+  {
+    key: 'QUEST_DETAIL',
+    name: 'Quest detail',
+    path: PERF_QUEST_PATH,
+    readySelector: '[data-testid="quest-trust-bar"]',
+    requireReadySelector: true,
+  },
 ]
 
 const SEARCH_PIXEL =
@@ -108,6 +143,89 @@ const SEARCH_TRAVELS = Array.from({ length: 6 }, (_, index) => ({
   year: '2026',
 }))
 
+const PERF_QUEST_META = {
+  id: 98_040,
+  quest_id: PERF_QUEST_ID,
+  title: 'Детерминированный квест для perf gate',
+  points: 1,
+  city_id: String(PERF_QUEST_CITY.id),
+  city_name: PERF_QUEST_CITY.name,
+  country_id: PERF_QUEST_CITY.countryId,
+  country_name: PERF_QUEST_CITY.countryName,
+  country_code: PERF_QUEST_CITY.countryCode,
+  lat: PERF_QUEST_CITY.lat,
+  lng: PERF_QUEST_CITY.lng,
+  duration_min: 45,
+  difficulty: 'easy',
+  tags: { urban: true },
+  pet_friendly: true,
+  cover_url: null,
+  rating_avg: null,
+  rating_count: 0,
+  user_rating: null,
+  completions_count: 0,
+  is_completed_by_me: false,
+  first_completer: null,
+} satisfies ApiQuestMeta
+
+const PERF_QUEST_BUNDLE = {
+  id: PERF_QUEST_META.id,
+  quest_id: PERF_QUEST_ID,
+  title: PERF_QUEST_META.title,
+  cover_url: null,
+  intro: {
+    id: 'intro',
+    step_id: 'intro',
+    title: 'Начало маршрута',
+    location: PERF_QUEST_CITY.name,
+    story: 'Стабильное вступление для измерения первого экрана.',
+    task: 'Начните квест.',
+    hint: null,
+    answer_pattern: null,
+    lat: PERF_QUEST_CITY.lat,
+    lng: PERF_QUEST_CITY.lng,
+    maps_url: PERF_QUEST_MAPS_URL,
+    image_url: null,
+    order: 0,
+    is_intro: true,
+    country_code: PERF_QUEST_CITY.countryCode,
+  },
+  steps: [
+    {
+      id: 1,
+      step_id: 'perf-step-1',
+      title: 'Первая точка',
+      location: PERF_QUEST_CITY.name,
+      story: 'Стабильный шаг без внешних медиа.',
+      task: 'Введите любое слово.',
+      hint: 'Подойдёт любой непустой ответ.',
+      answer_pattern: { type: 'any_text', value: { min_length: 1 } },
+      lat: PERF_QUEST_CITY.lat,
+      lng: PERF_QUEST_CITY.lng,
+      maps_url: PERF_QUEST_MAPS_URL,
+      image_url: null,
+      order: 1,
+      is_intro: false,
+      country_code: PERF_QUEST_CITY.countryCode,
+    },
+  ],
+  finale: { text: 'Квест завершён.', video_url: null, poster_url: null },
+  storage_key: PERF_QUEST_ID,
+  city: {
+    id: PERF_QUEST_CITY.id,
+    name: PERF_QUEST_CITY.name,
+    lat: PERF_QUEST_CITY.lat,
+    lng: PERF_QUEST_CITY.lng,
+    country_code: PERF_QUEST_CITY.countryCode,
+  },
+  rating_avg: null,
+  rating_count: 0,
+  user_rating: null,
+  completions_count: 0,
+  is_completed_by_me: false,
+  first_completer: null,
+} satisfies ApiQuestBundle
+
 function shouldIgnoreBudgetRequest(target: PageTarget, url: string) {
   if (target.key !== 'MAP') return false
 
@@ -119,7 +237,7 @@ function shouldIgnoreBudgetRequest(target: PageTarget, url: string) {
   }
 }
 
-async function waitForReady(page: any, selector: string, requireReadySelector = false) {
+async function waitForReady(page: Page, selector: string, requireReadySelector = false) {
   if (requireReadySelector) {
     await page.waitForSelector(selector, { timeout: 30_000 })
   } else {
@@ -131,17 +249,17 @@ async function waitForReady(page: any, selector: string, requireReadySelector = 
   await page.waitForLoadState('networkidle').catch(() => null)
 }
 
-async function installDeterministicSearchApi(page: any, target: PageTarget) {
+async function installDeterministicSearchApi(page: Page, target: PageTarget) {
   if (target.key !== 'SEARCH') return
 
-  const fulfillJson = (route: any, body: unknown) =>
+  const fulfillJson = (route: Route, body: unknown) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(body),
     })
 
-  await page.route('**/getFiltersTravel/**', (route: any) =>
+  await page.route('**/getFiltersTravel/**', (route) =>
     fulfillJson(route, {
       categories: [],
       categoryTravelAddress: [],
@@ -157,9 +275,9 @@ async function installDeterministicSearchApi(page: any, target: PageTarget) {
       transports: [],
     }),
   )
-  await page.route('**/countriesforsearch/**', (route: any) => fulfillJson(route, []))
+  await page.route('**/countriesforsearch/**', (route) => fulfillJson(route, []))
 
-  const fulfillTravelCatalog = async (route: any) => {
+  const fulfillTravelCatalog = async (route: Route) => {
     const request = route.request()
     if (request.method() !== 'GET') {
       await route.fallback()
@@ -184,20 +302,20 @@ async function installDeterministicSearchApi(page: any, target: PageTarget) {
 }
 
 async function installDeterministicMapApi(
-  page: any,
+  page: Page,
   target: PageTarget,
 ): Promise<MapFixtureCounters> {
   const counters: MapFixtureCounters = { filters: 0, travels: 0, clusters: 0 }
   if (target.key !== 'MAP') return counters
 
-  const fulfillJson = (route: any, body: unknown) =>
+  const fulfillJson = (route: Route, body: unknown) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(body),
     })
 
-  await page.route('**/api/filterformap/**', (route: any) => {
+  await page.route('**/api/filterformap/**', (route) => {
     counters.filters += 1
     return fulfillJson(route, {
       countries: [],
@@ -211,13 +329,57 @@ async function installDeterministicMapApi(
       year: [],
     })
   })
-  await page.route('**/api/travels/search_travels_for_map/**', (route: any) => {
+  await page.route('**/api/travels/search_travels_for_map/**', (route) => {
     counters.travels += 1
     return fulfillJson(route, { results: [], total: 0 })
   })
-  await page.route('**/api/map/clusters/**', (route: any) => {
+  await page.route('**/api/map/clusters/**', (route) => {
     counters.clusters += 1
     return fulfillJson(route, { clusters: [], markers: [], total_count: 0 })
+  })
+
+  return counters
+}
+
+async function installDeterministicQuestDetailApi(
+  page: Page,
+  target: PageTarget,
+): Promise<QuestDetailFixtureCounters> {
+  const counters: QuestDetailFixtureCounters = { detail: 0, list: 0 }
+  if (target.key !== 'QUEST_DETAIL') return counters
+
+  const fulfillJson = (route: Route, body: unknown, status = 200) =>
+    route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    })
+
+  // One catch-all makes the fixture fail closed: no API request from the quest
+  // screen or shared shell can escape to the local/live backend during a perf run.
+  await page.route('**/api/**', (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() !== 'GET') {
+      return fulfillJson(route, { detail: 'Method disabled by deterministic perf fixture' }, 405)
+    }
+    if (pathname.includes(`/quests/by-quest-id/${PERF_QUEST_ID}/`)) {
+      counters.detail += 1
+      return fulfillJson(route, PERF_QUEST_BUNDLE)
+    }
+    if (pathname === '/api/quests/') {
+      counters.list += 1
+      return fulfillJson(route, [PERF_QUEST_META])
+    }
+    if (pathname.includes('/travels/near-location/')) {
+      return fulfillJson(route, { results: [] })
+    }
+    if (pathname.includes(`/quests/quest${PERF_QUEST_ID}/reviews/`)) {
+      return fulfillJson(route, [])
+    }
+
+    return fulfillJson(route, {})
   })
 
   return counters
@@ -231,10 +393,20 @@ function expectMapFixturesUsed(target: PageTarget, counters: MapFixtureCounters)
   }
 }
 
+function expectQuestDetailFixturesUsed(
+  target: PageTarget,
+  counters: QuestDetailFixtureCounters,
+) {
+  if (target.key !== 'QUEST_DETAIL') return
+
+  expect(counters.detail, 'Quest detail fixture was not exercised').toBeGreaterThan(0)
+  expect(counters.list, 'Quest list fixture was not exercised').toBeGreaterThan(0)
+}
+
 /** Профиль берётся из проекта Playwright, а не из ширины вьюпорта. */
 function profileFromProject(projectName: string): PerfProfile {
-  if (projectName === 'chromium-mobile') return 'mobile'
-  if (projectName === 'chromium') return 'desktop'
+  const profile = PERF_PROFILE_BY_PROJECT[projectName as keyof typeof PERF_PROFILE_BY_PROJECT]
+  if (profile) return profile
   throw new Error(
     `pages-perf-budget: project "${projectName}" is not mapped to a performance profile. ` +
       'Add the mapping instead of measuring an unknown profile.',
@@ -266,7 +438,11 @@ for (const target of PAGES) {
 
       if (target.key === 'SEARCH') {
         await page.setViewportSize(
-          profile === 'mobile' ? { width: 412, height: 823 } : { width: 1280, height: 900 },
+          profile === 'mobile'
+            ? { width: 412, height: 823 }
+            : testInfo.project.name === 'chromium-narrow'
+              ? PERF_DESKTOP_VIEWPORTS['chromium-narrow']
+              : { ...PERF_DESKTOP_VIEWPORTS.chromium, height: 900 },
         )
         // #1499: CPU-троттлинг идёт через общий хелпер, чтобы множитель жил
         // одним определением на все перф-гейты, а не тремя копиями.
@@ -276,10 +452,12 @@ for (const target of PAGES) {
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
       const mapFixtureCounters = await installDeterministicMapApi(page, target)
+      const questFixtureCounters = await installDeterministicQuestDetailApi(page, target)
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
       expectMapFixturesUsed(target, mapFixtureCounters)
+      expectQuestDetailFixturesUsed(target, questFixtureCounters)
       const observedProfile = await collectObservedProfile(page)
       const domCounts = await collectFirstScreenElements(page)
       await beginPostReadyClsCollection(page)
@@ -300,6 +478,7 @@ for (const target of PAGES) {
 
       const report = {
         page: target.path,
+        project: testInfo.project.name,
         requestedProfile: profile,
         observedProfile,
         budget,
@@ -321,13 +500,27 @@ for (const target of PAGES) {
       testInfo.annotations.push({ type: 'perf-budget', description: JSON.stringify(report) })
 
       // Запрошенный и фактический профиль обязаны совпадать: узкий вьюпорт на
-      // desktop-браузере — это не мобильный замер (#1287).
+      // desktop-браузере — отдельный responsive budget, а не мобильный замер (#1287/#1564).
       if (profile === 'mobile') {
         expect(observedProfile.hasTouch, 'mobile profile without touch support').toBe(true)
         expect(observedProfile.devicePixelRatio, 'mobile profile with DPR 1').toBeGreaterThan(1)
         expect(observedProfile.mobileUserAgent, 'mobile profile without a mobile user agent').toBe(true)
       } else {
         expect(observedProfile.hasTouch, 'desktop profile reported touch support').toBe(false)
+        const expectedWidth =
+          testInfo.project.name === 'chromium-narrow'
+            ? PERF_DESKTOP_VIEWPORTS['chromium-narrow'].width
+            : PERF_DESKTOP_VIEWPORTS.chromium.width
+        expect(
+          observedProfile.viewportWidth,
+          `${testInfo.project.name} rendered at the wrong width`,
+        ).toBe(expectedWidth)
+        if (testInfo.project.name === 'chromium-narrow') {
+          expect(
+            observedProfile.viewportHeight,
+            'chromium-narrow must exercise the 1152x720 regression viewport',
+          ).toBe(PERF_DESKTOP_VIEWPORTS['chromium-narrow'].height)
+        }
       }
 
       expect(pageErrors, `${target.name} (${profile}) emitted page errors`).toEqual([])
@@ -372,6 +565,7 @@ for (const target of PAGES) {
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
       const mapFixtureCounters = await installDeterministicMapApi(page, target)
+      const questFixtureCounters = await installDeterministicQuestDetailApi(page, target)
 
       const tracker = createNetworkTracker(page, {
         ignoreBudgetRequest: (url) => shouldIgnoreBudgetRequest(target, url),
@@ -379,6 +573,7 @@ for (const target of PAGES) {
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
       expectMapFixturesUsed(target, mapFixtureCounters)
+      expectQuestDetailFixturesUsed(target, questFixtureCounters)
 
       const stats = tracker.getStats()
       console.log(`\n📦 NETWORK BUDGET — ${target.name} (${profile})`)
@@ -388,6 +583,7 @@ for (const target of PAGES) {
             totalKB: stats.totalKB,
             jsKB: stats.jsKB,
             imgKB: stats.imgKB,
+            project: testInfo.project.name,
             requestCount: {
               budgetScoped: stats.requestCount,
               all: stats.allRequestCount,

@@ -13,9 +13,13 @@ import type { NetworkStats } from './perfBudget'
  * (`__tests__/e2e-helpers/pages-perf-budgets.test.ts`), не поднимая браузер.
  */
 
-export type PerfProfile = 'desktop' | 'mobile'
+export type PerfProfile = 'desktop' | 'desktop-narrow' | 'mobile'
 
-export const PERF_PROFILES: readonly PerfProfile[] = ['desktop', 'mobile'] as const
+export const PERF_PROFILES = [
+  'desktop',
+  'desktop-narrow',
+  'mobile',
+] as const satisfies readonly PerfProfile[]
 
 /** Признанный долг: бюджет прибит к измеренному значению и адресован карточке. */
 export type PerfBudgetDebt = {
@@ -83,7 +87,7 @@ export const FORBIDDEN_SHIFT_SOURCES: ReadonlyArray<{
   selector: string
   /**
    * Профили, где селектор обязан находиться. Позитивный контроль проверяется
-   * только там: словесная часть логотипа существует лишь в desktop-раскладке,
+   * только там: словесная часть логотипа существует лишь в широкой desktop-раскладке,
    * и требовать её на мобильном — значит ронять гейт на здоровой странице.
    */
   presentOn: readonly PerfProfile[]
@@ -97,20 +101,20 @@ export const FORBIDDEN_SHIFT_SOURCES: ReadonlyArray<{
     presentOn: ['desktop'],
   },
   {
-    // Картинка логотипа есть в обеих раскладках, и критический CSS меняет ей
+    // Картинка логотипа есть во всех трёх раскладках, и критический CSS меняет ей
     // размер 32 → 26 px на границе 1280 px. Оба узла мобильной шапки теперь
     // проверяются без глобального исключения #1298: картинка логотипа и переключатель
     // языка обязаны оставаться вне кадров сдвига.
     id: 'header-logo-image',
     marker: 'data-header-logo-image',
     selector: '[data-header-logo-image]',
-    presentOn: ['desktop', 'mobile'],
+    presentOn: ['desktop', 'desktop-narrow', 'mobile'],
   },
   {
     id: 'header-language-switcher',
     marker: 'testid=header-language-switcher',
     selector: '[data-testid="header-language-switcher"]',
-    presentOn: ['desktop', 'mobile'],
+    presentOn: ['desktop', 'desktop-narrow', 'mobile'],
   },
 ]
 
@@ -131,9 +135,43 @@ const LCP_FAST = IS_CI ? 4000 : 10_000
 const LCP_MEDIUM = IS_CI ? 5000 : 11_000
 const LCP_SLOW = IS_CI ? 6000 : 12_000
 
+const QUESTS_CATALOG_BUDGETS = {
+  desktop: {
+    clsMax: HEALTHY_CLS_MAX,
+    firstScreenElementsMax: 250, // measured 202
+    lcpMaxMs: LCP_MEDIUM,
+    jsTransferKBMax: 1500, // measured 1214
+    totalTransferKBMax: 1600, // measured 1300
+    requestsMax: 105, // measured 87
+    ...TIMING,
+  },
+  'desktop-narrow': {
+    // Initial 1152x720 ceiling mirrors desktop until a route-specific baseline
+    // proves that the narrower catalog needs a different ratchet.
+    clsMax: HEALTHY_CLS_MAX,
+    firstScreenElementsMax: 250,
+    lcpMaxMs: LCP_MEDIUM,
+    jsTransferKBMax: 1500,
+    totalTransferKBMax: 1600,
+    requestsMax: 105,
+    ...TIMING,
+  },
+  mobile: {
+    clsMax: HEALTHY_CLS_MAX,
+    firstScreenElementsMax: 160, // measured 127
+    lcpMaxMs: LCP_MEDIUM,
+    jsTransferKBMax: 1500, // measured 1214
+    totalTransferKBMax: 1600, // measured 1300
+    requestsMax: 105, // measured 87
+    ...TIMING,
+  },
+} satisfies Record<PerfProfile, PageBudget>
+
 /**
- * Числа сняты на локальной прод-сборке 2026-08-08 (`PERF_BUDGET_BASELINE=1`,
- * оба профиля, Desktop Chrome 1280×720 и Pixel 7 DPR 2,625).
+ * Исходные числа сняты на локальной прод-сборке 2026-08-08
+ * (`PERF_BUDGET_BASELINE=1`, Desktop Chrome 1280×720 и Pixel 7 DPR 2,625).
+ * `desktop-narrow` начинает с desktop ceilings; подтверждённые отличия имеют
+ * отдельный inline baseline.
  *
  * Правило потолков: транспорт и DOM первого экрана = измеренное значение
  * примерно +20 % и округление вверх; CLS = порог Core Web Vitals 0,1, потому
@@ -151,6 +189,15 @@ export const PAGE_BUDGETS: BudgetTable = {
       jsTransferKBMax: 1500, // measured 1228
       totalTransferKBMax: 1800, // measured 1494
       requestsMax: 115, // measured 96
+      ...TIMING,
+    },
+    'desktop-narrow': {
+      clsMax: HEALTHY_CLS_MAX,
+      firstScreenElementsMax: 260,
+      lcpMaxMs: LCP_FAST,
+      jsTransferKBMax: 1500,
+      totalTransferKBMax: 1800,
+      requestsMax: 115,
       ...TIMING,
     },
     mobile: {
@@ -173,6 +220,18 @@ export const PAGE_BUDGETS: BudgetTable = {
       requestsMax: 110, // measured 92
       ...TIMING,
     },
+    'desktop-narrow': {
+      // #1564 discovery reopened canonical header-hydration task #1298: cold
+      // production builds measured 0.010928357…–0.011072531… at 1152x720.
+      // Keep desktop/mobile at 0.01 while #1298 removes the breakpoint drift.
+      clsMax: 0.0111,
+      firstScreenElementsMax: 440,
+      lcpMaxMs: LCP_FAST,
+      jsTransferKBMax: 1500,
+      totalTransferKBMax: 1600,
+      requestsMax: 110,
+      ...TIMING,
+    },
     mobile: {
       clsMax: 0.01,
       firstScreenElementsMax: 250, // measured 200 with the non-empty regression fixture
@@ -191,6 +250,15 @@ export const PAGE_BUDGETS: BudgetTable = {
       jsTransferKBMax: 1800, // measured 1493
       totalTransferKBMax: 2700, // measured 2262, тайлы прокси не считаются
       requestsMax: 135, // measured 119
+      ...TIMING,
+    },
+    'desktop-narrow': {
+      clsMax: HEALTHY_CLS_MAX,
+      firstScreenElementsMax: 310,
+      lcpMaxMs: LCP_SLOW,
+      jsTransferKBMax: 1800,
+      totalTransferKBMax: 2700,
+      requestsMax: 135,
       ...TIMING,
     },
     mobile: {
@@ -216,6 +284,15 @@ export const PAGE_BUDGETS: BudgetTable = {
       requestsMax: 125, // measured 104
       ...TIMING,
     },
+    'desktop-narrow': {
+      clsMax: HEALTHY_CLS_MAX,
+      firstScreenElementsMax: 300,
+      lcpMaxMs: LCP_MEDIUM,
+      jsTransferKBMax: 1650,
+      totalTransferKBMax: 1750,
+      requestsMax: 125,
+      ...TIMING,
+    },
     mobile: {
       // #1334 убрал 115px-сдвиг каталога, #1298/#1340 сняли сдвиг шапки и
       // стирание статического shell. Прод-замер 2026-08-10 (build
@@ -230,24 +307,23 @@ export const PAGE_BUDGETS: BudgetTable = {
       ...TIMING,
     },
   },
-  QUESTS: {
+  QUESTS: QUESTS_CATALOG_BUDGETS,
+  // #1564: quest detail is intentionally independent from the catalog key so
+  // route-scoped env clamps and reports cannot silently affect the other page.
+  // Start with the already-enforced public-quests ceilings; CLS remains at the
+  // healthy CWV threshold on all responsive layouts.
+  QUEST_DETAIL: {
     desktop: {
-      clsMax: HEALTHY_CLS_MAX,
-      firstScreenElementsMax: 250, // measured 202
-      lcpMaxMs: LCP_MEDIUM,
-      jsTransferKBMax: 1500, // measured 1214
-      totalTransferKBMax: 1600, // measured 1300
-      requestsMax: 105, // measured 87
-      ...TIMING,
+      ...QUESTS_CATALOG_BUDGETS.desktop,
+      firstScreenElementsMax: 325, // measured 270; +20% rounded up
+    },
+    'desktop-narrow': {
+      ...QUESTS_CATALOG_BUDGETS['desktop-narrow'],
+      firstScreenElementsMax: 240, // measured 199; +20% rounded up
     },
     mobile: {
-      clsMax: HEALTHY_CLS_MAX,
-      firstScreenElementsMax: 160, // measured 127
-      lcpMaxMs: LCP_MEDIUM,
-      jsTransferKBMax: 1500, // measured 1214
-      totalTransferKBMax: 1600, // measured 1300
-      requestsMax: 105, // measured 87
-      ...TIMING,
+      ...QUESTS_CATALOG_BUDGETS.mobile,
+      firstScreenElementsMax: 220, // measured 183; +20% rounded up
     },
   },
 }

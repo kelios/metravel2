@@ -75,4 +75,38 @@ describe('ImageCardMedia: srcSet не перерастает слот', () => {
 
     expect(widths).toEqual([160, 320, 480, 640]);
   });
+
+  it('оставляет blob-превью в src без ложных responsive-кандидатов', () => {
+    const blobUrl = 'blob:http://localhost/route-point-preview';
+    const tree = renderMedia({
+      src: blobUrl,
+      width: 320,
+      height: 240,
+      fit: 'contain',
+      loading: 'eager',
+    });
+    const mainImage = tree.root.find(
+      (node: any) => node.type === 'img' && !node.props?.['aria-hidden'],
+    );
+
+    expect(mainImage.props.src).toBe(blobUrl);
+    expect(mainImage.props.srcSet).toBeUndefined();
+    expect(mainImage.props.loading).toBe('eager');
+  });
+
+  it('не повторяет неизменный server URL как ложные width-кандидаты', () => {
+    const serverUrl = 'https://example.com/travel-address/point.png';
+    const tree = renderMedia({
+      src: serverUrl,
+      width: 320,
+      height: 240,
+      fit: 'contain',
+    });
+    const mainImage = tree.root.find(
+      (node: any) => node.type === 'img' && !node.props?.['aria-hidden'],
+    );
+
+    expect(mainImage.props.src).toBe(serverUrl);
+    expect(mainImage.props.srcSet).toBeUndefined();
+  });
 });

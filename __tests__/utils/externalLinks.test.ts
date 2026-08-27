@@ -1,5 +1,11 @@
 import { Linking, Platform } from 'react-native';
-import { normalizeExternalUrl, openExternalUrl, openExternalUrlInNewTab, openWebWindow } from '@/utils/externalLinks';
+import {
+  normalizeExternalUrl,
+  normalizeHttpOrInternalUrl,
+  openExternalUrl,
+  openExternalUrlInNewTab,
+  openWebWindow,
+} from '@/utils/externalLinks';
 
 describe('externalLinks', () => {
   it('normalizes valid URLs and adds https when scheme is missing', () => {
@@ -14,6 +20,41 @@ describe('externalLinks', () => {
     expect(normalizeExternalUrl('//evil.example')).toBe('');
     expect(normalizeExternalUrl('/relative/path')).toBe('');
     expect(normalizeExternalUrl('')).toBe('');
+  });
+
+  it('normalizes editor links while accepting only http(s) or internal relative addresses', () => {
+    expect(normalizeHttpOrInternalUrl('https://example.com/path')).toBe(
+      'https://example.com/path',
+    );
+    expect(normalizeHttpOrInternalUrl('example.com/path')).toBe(
+      'https://example.com/path',
+    );
+    expect(normalizeHttpOrInternalUrl('/trips/plan/1601?edit=1')).toBe(
+      'https://metravel.by/trips/plan/1601?edit=1',
+    );
+    expect(normalizeHttpOrInternalUrl('../trips/my')).toBe(
+      'https://metravel.by/trips/my',
+    );
+  });
+
+  it('rejects unsafe, protocol-relative and non-http editor links', () => {
+    for (const value of [
+      'javascript:alert(1)',
+      'data:text/html;base64,Zm9v',
+      'vbscript:msgbox(1)',
+      'file:///etc/passwd',
+      'ftp://example.com/file',
+      'example',
+      'https://localhost/path',
+      '//evil.example/path',
+      '/\\evil.example/path',
+      '?edit=1',
+      '#route',
+      'https://example.com/line\nbreak',
+      '',
+    ]) {
+      expect(normalizeHttpOrInternalUrl(value)).toBe('');
+    }
   });
 
   it('opens only safe normalized URLs', async () => {

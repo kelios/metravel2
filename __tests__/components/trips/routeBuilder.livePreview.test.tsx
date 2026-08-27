@@ -4,7 +4,7 @@
 import React from 'react'
 import { act, fireEvent, render, within } from '@testing-library/react-native'
 
-import type { PlannedTrip } from '@/api/plannedTrips'
+import type { PlannedTrip, TripRouteElevation } from '@/api/plannedTrips'
 import type { UseMapRoutingResult } from '@/components/map-core/useMapRouting'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
 import { createQueryWrapper } from '../../helpers/testQueryClient'
@@ -15,6 +15,21 @@ const mockEngine: {
   callbacks: Array<(result: UseMapRoutingResult) => void>
   onResult: ((result: UseMapRoutingResult) => void) | null
 } = { mounts: [], callbacks: [], onResult: null }
+const mockSaveRouteExportFile = jest.fn()
+const mockRefreshRouteElevation = jest.fn()
+const mockMissingElevationGeometry: TripRouteElevation = {
+  status: 'ready',
+  provider: 'ors',
+  ascentM: 145,
+  descentM: 132,
+  preview: null,
+  geometry: null,
+  calculatedAt: '2026-08-08T08:05:00Z',
+}
+let mockRouteElevationQuery: {
+  data: TripRouteElevation | undefined
+  isFetching: boolean
+} = { data: mockMissingElevationGeometry, isFetching: false }
 
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
@@ -22,11 +37,18 @@ jest.mock('@/utils/tripAnalytics', () => ({
   trackRouteExported: jest.fn(),
   trackRoutePointAdded: jest.fn(),
 }))
+jest.mock('@/utils/routeExport', () => {
+  const actual = jest.requireActual('@/utils/routeExport')
+  return {
+    ...actual,
+    saveRouteExportFile: (...args: unknown[]) => mockSaveRouteExportFile(...args),
+  }
+})
 
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useRouteTemplates: () => ({ data: [] }),
-  useTripRouteElevation: () => ({ data: undefined }),
-  useRefreshTripRouteElevation: () => ({ mutate: jest.fn(), isPending: false }),
+  useTripRouteElevation: () => mockRouteElevationQuery,
+  useRefreshTripRouteElevation: () => ({ mutate: mockRefreshRouteElevation, isPending: false }),
   useUpdateTripRoute: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdateTripTransport: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
@@ -197,6 +219,10 @@ describe('RouteBuilder live route preview', () => {
     mockEngine.mounts = []
     mockEngine.callbacks = []
     mockEngine.onResult = null
+    mockRouteElevationQuery = { data: mockMissingElevationGeometry, isFetching: false }
+    mockRefreshRouteElevation.mockReset()
+    mockSaveRouteExportFile.mockReset()
+    mockSaveRouteExportFile.mockResolvedValue(true)
   })
 
   afterEach(() => {
@@ -209,6 +235,117 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByTestId('trip-route-preview-engine')).toBeNull()
     expect(getByTestId('route-map-geometry').props.children).toBe('3')
     expect(getByTestId('route-map-provider').props.children).toBe('ors')
+  })
+
+  it('repairs a saved healthy state without geometry as one display tuple', async () => {
+    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ routeGeometry: null })} />,
+    )
+
+    // The persisted ORS label and summary cannot survive independently from
+    // their missing polyline. The repair engine receives the unchanged saved
+    // coordinates immediately; until it answers the complete tuple is empty.
+    expect(getByTestId('trip-route-preview-engine')).toBeTruthy()
+    expect(mockEngine.mounts[0]).toEqual({
+      points: [
+        [27.5615, 53.9023],
+        [26.6906, 53.2225],
+        [26.4731, 53.4512],
+      ],
+      transportMode: 'car',
+    })
+    expect(getByTestId('route-map-geometry').props.children).toBe('0')
+    expect(getByTestId('route-map-provider').props.children).toBe('none')
+    expect(queryByTestId('route-summary-routed')).toBeNull()
+    expect(queryByText('Маршрут построен ORS')).toBeNull()
+    expect(queryByText('118 км')).toBeNull()
+
+    deliver(engineResult())
+
+    // One result replaces geometry, state and summary together. Export uses
+    // that same dense preview geometry instead of the stale saved metadata.
+    expect(getByTestId('route-map-geometry').props.children).toBe('30')
+    expect(getByTestId('route-map-provider').props.children).toBe('preview')
+    expect(queryByTestId('route-summary-routed')).toBeTruthy()
+    expect(queryByText('Маршрут построен по дорогам')).toBeTruthy()
+    expect(queryByText('24 км')).toBeTruthy()
+    expect(queryByText('118 км')).toBeNull()
+
+    fireEvent.press(getByTestId('trip-route-export-gpx'))
+    await act(async () => undefined)
+
+    expect(mockSaveRouteExportFile).toHaveBeenCalledTimes(1)
+    const exported = mockSaveRouteExportFile.mock.calls[0][0] as { content: string }
+    expect((exported.content.match(/<trkpt/g) ?? [])).toHaveLength(30)
+  })
+
+  it('fails closed when repair routing fails and keeps retry available', () => {
+    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ routeGeometry: null })} />,
+    )
+
+    deliver(engineResult({ error: 'Сервис маршрутов недоступен' }))
+
+    expect(getByTestId('route-map-geometry').props.children).toBe('0')
+    expect(getByTestId('route-map-provider').props.children).toBe('direct')
+    expect(queryByTestId('route-summary-routed')).toBeNull()
+    expect(queryByTestId('route-summary-approximate')).toBeTruthy()
+    expect(queryByText('Маршрут построен ORS')).toBeNull()
+    expect(queryByText('118 км')).toBeNull()
+    expect(queryByText('Прямая линия')).toBeTruthy()
+
+    const mountsBeforeRetry = mockEngine.mounts.length
+    fireEvent.press(queryByText('Повторить') as never)
+
+    expect(mockEngine.mounts.length).toBeGreaterThan(mountsBeforeRetry)
+    expect(queryByText('Прямая линия')).toBeNull()
+    expect(getByTestId('route-map-provider').props.children).toBe('none')
+  })
+
+  it('waits for the persisted elevation geometry source before starting repair', () => {
+    mockRouteElevationQuery = {
+      data: {
+        ...mockMissingElevationGeometry,
+        geometry: [
+          [10, 50],
+          [11, 51],
+        ],
+      },
+      isFetching: true,
+    }
+    const trip = makeTrip({ routeGeometry: null })
+    const { getByTestId, queryByTestId, queryByText, rerender } = renderRouteBuilder(
+      <RouteBuilder trip={trip} />,
+    )
+
+    expect(queryByTestId('trip-route-preview-engine')).toBeNull()
+    expect(getByTestId('route-map-geometry').props.children).toBe('0')
+    expect(getByTestId('route-map-provider').props.children).toBe('none')
+    expect(queryByText('Маршрут построен ORS')).toBeNull()
+    expect(queryByText('118 км')).toBeNull()
+
+    mockRouteElevationQuery = { data: mockMissingElevationGeometry, isFetching: false }
+    rerender(<RouteBuilder trip={{ ...trip }} />)
+
+    expect(queryByTestId('trip-route-preview-engine')).toBeTruthy()
+    expect(mockEngine.mounts).toHaveLength(1)
+  })
+
+  it('does not POST an elevation refresh while its GET is still in flight', () => {
+    mockRouteElevationQuery = {
+      data: mockMissingElevationGeometry,
+      isFetching: true,
+    }
+    const trip = makeTrip()
+    const { rerender } = renderRouteBuilder(<RouteBuilder trip={trip} />)
+
+    expect(mockRefreshRouteElevation).not.toHaveBeenCalled()
+
+    mockRouteElevationQuery = { data: mockMissingElevationGeometry, isFetching: false }
+    rerender(<RouteBuilder trip={{ ...trip }} />)
+
+    expect(mockRefreshRouteElevation).toHaveBeenCalledTimes(1)
+    expect(mockRefreshRouteElevation).toHaveBeenCalledWith({ tripId: trip.id })
   })
 
   it('does not call a backend summary a local estimate when routing state is absent', () => {
@@ -265,6 +402,7 @@ describe('RouteBuilder live route preview', () => {
   it('routes a fourth coordinate point and updates the stops chip without saving', () => {
     const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'QA Android point')
     fireEvent.changeText(getByTestId('route-builder-lat'), '53.8400')
@@ -426,6 +564,7 @@ describe('RouteBuilder live route preview', () => {
 
     expect(within(getByTestId('route-summary')).queryByText('3')).toBeTruthy()
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Кофе по дороге')
     fireEvent.press(getByTestId('route-builder-add'))

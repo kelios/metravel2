@@ -123,4 +123,94 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
     await waitFor(() => expect(mockPolylineProps.length).toBe(1))
     expect(screen.queryByTestId('trip-plan-map-original-track-legend')).toBeNull()
   })
+
+  it('fails closed to a dashed waypoint line when healthy state has no geometry', async () => {
+    const screen = render(
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={null}
+        routingState={{ provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] }}
+        originalTrack={originalTrack}
+      />,
+    )
+
+    await waitFor(() => expect(mockPolylineProps.length).toBe(2))
+
+    const [waypointLine, originalLine] = mockPolylineProps
+    expect(waypointLine.positions).toEqual([
+      [53.9, 27.56],
+      [53.91, 27.6],
+    ])
+    expect(waypointLine.pathOptions).toEqual(
+      expect.objectContaining({
+        color: 'warningDark',
+        weight: 4,
+        opacity: 0.58,
+        dashArray: '8 8',
+      }),
+    )
+    expect(screen.queryByText('Маршрут построен ORS')).toBeNull()
+
+    // The uploaded original is still a second independent layer; it never
+    // becomes the route merely because the routed geometry is missing.
+    expect(originalLine.positions).toEqual([
+      [53.9, 27.56],
+      [53.8, 27.57],
+      [53.85, 27.59],
+      [53.91, 27.6],
+    ])
+    expect((originalLine.pathOptions as Record<string, unknown>).dashArray).toBeUndefined()
+    expect(screen.getByTestId('trip-plan-map-original-track-legend')).toBeTruthy()
+  })
+
+  it('keeps a dense healthy route solid and labels it as routed', async () => {
+    const screen = render(
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={routeGeometry}
+        routingState={{ provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] }}
+      />,
+    )
+
+    await waitFor(() => expect(mockPolylineProps.length).toBe(1))
+
+    expect(mockPolylineProps[0].pathOptions).toEqual(
+      expect.objectContaining({
+        color: 'primaryDark',
+        weight: 5,
+        opacity: 0.86,
+        dashArray: undefined,
+      }),
+    )
+    expect(screen.getByText('Маршрут построен ORS')).toBeTruthy()
+  })
+
+  it('uses the full fallback style when a non-finite geometry is rejected', async () => {
+    render(
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={[
+          [27.56, 53.9],
+          [Number.NaN, 53.905],
+          [27.6, 53.91],
+        ]}
+        routingState={{ provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] }}
+      />,
+    )
+
+    await waitFor(() => expect(mockPolylineProps.length).toBe(1))
+
+    expect(mockPolylineProps[0].positions).toEqual([
+      [53.9, 27.56],
+      [53.91, 27.6],
+    ])
+    expect(mockPolylineProps[0].pathOptions).toEqual(
+      expect.objectContaining({
+        color: 'warningDark',
+        weight: 4,
+        opacity: 0.58,
+        dashArray: '8 8',
+      }),
+    )
+  })
 })

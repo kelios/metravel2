@@ -130,7 +130,17 @@ export function QuestForCityCard({
     })
 
   const cityLabel = quest.cityName ? i18nT('quests:components.quests.QuestForCityCard.po_gorodu_value1_2e44f93b', { value1: quest.cityName }) : i18nT('quests:components.quests.QuestForCityCard.po_etomu_gorodu_57c3bf25')
-  const coverUri = typeof quest.cover === 'string' ? quest.cover.trim() : ''
+  const legacyCoverUri = typeof quest.cover === 'string' ? quest.cover.trim() : ''
+  const squareSource = quest.squareCoverWebResponsiveSource
+  const squareCoverUri = typeof squareSource?.src === 'string' ? squareSource.src.trim() : ''
+  const coverUri = squareCoverUri || legacyCoverUri
+  const squareWebResponsiveSource = mediaVisibility.visible && squareCoverUri && squareSource
+    ? {
+        ...squareSource,
+        src: squareCoverUri,
+        sizes: squareSource.sizes?.trim() || `${QUEST_TILE_MEDIA_SIZE}px`,
+      }
+    : undefined
 
   return (
     <Pressable
@@ -155,6 +165,7 @@ export function QuestForCityCard({
       >
         <ImageCardMedia
           source={mediaVisibility.visible && coverUri ? { uri: coverUri } : null}
+          webResponsiveSource={squareWebResponsiveSource}
           width={QUEST_TILE_MEDIA_SIZE}
           height={QUEST_TILE_MEDIA_HEIGHT}
           fit="contain"

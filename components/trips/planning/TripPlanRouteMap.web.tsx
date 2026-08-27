@@ -28,6 +28,7 @@ import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import type { MapUiApi } from '@/types/mapUi';
 import { buildDropMarkerHtml } from '@/utils/markerSvg';
 import { translate as i18nT } from '@/i18n'
+import { hasUsableRouteGeometry } from './tripRoutePreview';
 
 
 type LeafletNS = typeof import('leaflet');
@@ -275,9 +276,14 @@ export default function TripPlanRouteMap({
   }, []);
 
   const markerPositions = useMemo(() => routePositions(route), [route]);
+  const routedGeometry = useMemo(
+    () => (hasUsableRouteGeometry(routeGeometry) ? routeGeometry : null),
+    [routeGeometry],
+  );
+  const hasRoutedGeometry = routedGeometry !== null;
   const trackPositions = useMemo(() => (
-    routeGeometry?.length ? lngLatPositions(routeGeometry) : markerPositions
-  ), [markerPositions, routeGeometry]);
+    routedGeometry ? lngLatPositions(routedGeometry) : markerPositions
+  ), [markerPositions, routedGeometry]);
   const originalTrackPositions = useMemo(
     () => (originalTrack?.length ? lngLatPositions(originalTrack) : []),
     [originalTrack],
@@ -299,7 +305,12 @@ export default function TripPlanRouteMap({
     () => fitPositions.map((position) => position.join(',')).join('|'),
     [fitPositions],
   );
-  const approximate = isRouteApproximate(routingState);
+  const usesWaypointFallback = !hasRoutedGeometry && markerPositions.length >= 2;
+  const approximate = usesWaypointFallback || isRouteApproximate(routingState);
+  // Fail closed even if another caller passes the inconsistent server tuple:
+  // a healthy label requires actual routed geometry, never marker fallback.
+  const truthfulRoutingState =
+    hasRoutedGeometry || isRouteApproximate(routingState) ? routingState : null;
   const markerIcon = useMemo(() => {
     if (!L) return null;
     return L.divIcon({
@@ -481,8 +492,8 @@ export default function TripPlanRouteMap({
             </View>
           ) : null}
           <Text style={styles.hint}>
-            {trackPositions.length >= 2 && routingState
-              ? routingStateLabel(routingState)
+            {trackPositions.length >= 2 && truthfulRoutingState
+              ? routingStateLabel(truthfulRoutingState)
               : readonly
                 ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
                 : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
@@ -495,7 +506,7 @@ export default function TripPlanRouteMap({
           ) : null}
           {approximate ? (
             <Text style={styles.warning}>
-              {routingStateHint(routingState)
+              {routingStateHint(truthfulRoutingState)
                 ?? i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4')}
             </Text>
           ) : null}
@@ -536,8 +547,8 @@ export default function TripPlanRouteMap({
               positions={trackPositions}
               pathOptions={{
                 color: approximate ? colors.warningDark : colors.primaryDark,
-                weight: routeGeometry?.length ? 5 : 4,
-                opacity: routeGeometry?.length ? 0.86 : 0.58,
+                weight: hasRoutedGeometry ? 5 : 4,
+                opacity: hasRoutedGeometry ? 0.86 : 0.58,
                 dashArray: approximate ? '8 8' : undefined,
               }}
             />

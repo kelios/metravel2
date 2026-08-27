@@ -23,6 +23,15 @@ type OpenWebWindowOptions = {
 // приложение карт/навигатора с маркером/маршрутом (см. mapLinks.ts). На web эти
 // схемы бессмысленны и остаются заблокированными — там разрешён только http/https.
 const NATIVE_MAP_PROTOCOLS = ['geo:', 'waze:', 'yandexnavi:', 'yandexmaps:', 'comgooglemaps:', 'om:'];
+const HTTP_PROTOCOLS = ['http:', 'https:'];
+const INTERNAL_LINK_BASE_URL = 'https://metravel.by/';
+const EXPLICIT_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+const INTERNAL_RELATIVE_LINK = /^(?:\/(?!\/)|\.\.?\/)/;
+const hasAsciiControl = (value: string): boolean =>
+  Array.from(value).some((character) => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || code === 127;
+  });
 
 // На устройствах с Яндекс.Картами, но без Навигатора, схему `yandexnavi:` никто
 // не регистрирует → `Linking.openURL` отклоняется (ActivityNotFoundException,
@@ -106,6 +115,46 @@ export function normalizeExternalUrl(rawUrl: string): string {
     allowRelative: false,
     allowProtocolRelative: false,
   });
+}
+
+/**
+ * Normalizes a URL typed into a plaintext editor.
+ *
+ * Only HTTP(S) and relative in-app addresses are accepted. Relative addresses
+ * become canonical metravel.by URLs so the saved plaintext continues to match
+ * the existing trip-description autolink contract after reload.
+ */
+export function normalizeHttpOrInternalUrl(rawUrl: string): string {
+  const trimmed = String(rawUrl ?? '').trim();
+  if (!trimmed || hasAsciiControl(trimmed) || trimmed.startsWith('//')) return '';
+
+  if (INTERNAL_RELATIVE_LINK.test(trimmed)) {
+    const normalized = getSafeExternalUrl(trimmed, {
+      allowRelative: true,
+      allowProtocolRelative: false,
+      baseUrl: INTERNAL_LINK_BASE_URL,
+      allowedProtocols: HTTP_PROTOCOLS,
+    });
+    try {
+      return normalized
+        && new URL(normalized).origin === new URL(INTERNAL_LINK_BASE_URL).origin
+        ? normalized
+        : '';
+    } catch {
+      return '';
+    }
+  }
+
+  if (EXPLICIT_SCHEME.test(trimmed) && !/^https?:/i.test(trimmed)) return '';
+
+  const normalized = getSafeExternalUrl(trimmed, {
+    allowRelative: false,
+    allowProtocolRelative: false,
+    allowedProtocols: HTTP_PROTOCOLS,
+  });
+  // Keep authoring aligned with TripPlanLinkedText: a host without a dot would
+  // be saved as plaintext but would not become a link after reload.
+  return /^https?:\/\/[^/?#]*\.[^/?#]/i.test(normalized) ? normalized : '';
 }
 
 export async function openExternalUrl(rawUrl: string, options: OpenExternalUrlOptions = {}): Promise<boolean> {

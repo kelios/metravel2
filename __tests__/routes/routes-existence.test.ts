@@ -20,6 +20,7 @@ const STATIC_ROUTES = [
 ]
 
 const DYNAMIC_ROUTES = [
+  '/quests/country/[country]',
   '/quests/[city]/[questId]',
   '/travel/[id]',
   '/travels/[param]',

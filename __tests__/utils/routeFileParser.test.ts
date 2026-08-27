@@ -1,10 +1,15 @@
 import {
   calculateRouteDistanceKm,
+  parseRouteFileGeometry,
   parseRouteFilePreview,
   parseRouteFilePreviews,
   sanitizeRoutePreview,
   splitRouteLineSegments,
 } from '@/utils/routeFileParser';
+import {
+  POINT_ONLY_GPX,
+  POINT_ONLY_KML_78,
+} from '@/__tests__/fixtures/tripRouteImportFixtures';
 
 // A handful of far-apart waypoints (no elevation) stitched ahead of a short dense
 // track (with elevation) — the shape the backend preview produces when it merges
@@ -29,6 +34,74 @@ const buildContaminatedPreview = () => {
 };
 
 describe('routeFileParser', () => {
+  it('keeps all 78 KML Point Placemarks as markers without inventing a line', () => {
+    const geometry = parseRouteFileGeometry(POINT_ONLY_KML_78, 'kml');
+
+    expect(geometry.points).toHaveLength(78);
+    expect(geometry.points[0]).toEqual({ coord: '50.01,19.81', name: 'Park 1' });
+    expect(geometry.points[77]?.name).toBe('Park 78');
+    expect(geometry.lines).toEqual([]);
+    expect(parseRouteFilePreviews(POINT_ONLY_KML_78, 'kml')).toEqual([]);
+  });
+
+  it('keeps GPX waypoints as markers without treating document order as a route', () => {
+    const geometry = parseRouteFileGeometry(POINT_ONLY_GPX, 'gpx');
+
+    expect(geometry.points).toEqual([
+      { coord: '52.1,23.7', name: 'Start camp' },
+      { coord: '52.15,23.75', name: 'Viewpoint' },
+    ]);
+    expect(geometry.lines).toEqual([]);
+    expect(parseRouteFilePreview(POINT_ONLY_GPX, 'gpx')).toEqual({
+      linePoints: [],
+      elevationProfile: [],
+    });
+  });
+
+  it('detects an unnamed structural KML point without inventing a marker', () => {
+    const geometry = parseRouteFileGeometry(
+      `<kml><Document><Placemark><Point><coordinates>23.7,52.1,0</coordinates></Point></Placemark><Placemark><LineString><coordinates>23.7,52.1,0 23.8,52.2,0</coordinates></LineString></Placemark></Document></kml>`,
+      'kml',
+    );
+
+    expect(geometry.hasIndependentPoints).toBe(true);
+    expect(geometry.points).toEqual([]);
+    expect(geometry.lines).toHaveLength(1);
+  });
+
+  it('ignores GPX nodes with missing coordinate attributes instead of inventing 0,0', () => {
+    const geometry = parseRouteFileGeometry(
+      `<gpx><wpt><name>Broken point</name></wpt><trk><trkseg><trkpt/><trkpt lat="52.2" lon="23.8"/></trkseg></trk></gpx>`,
+      'gpx',
+    );
+
+    expect(geometry.hasIndependentPoints).toBe(false);
+    expect(geometry.points).toEqual([]);
+    expect(geometry.lines).toEqual([[{ coord: '52.2,23.8' }]]);
+  });
+
+  it('structurally detects unnamed GPX waypoints so a mixed server preview is not trusted', () => {
+    const geometry = parseRouteFileGeometry(
+      `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="50" lon="19" />
+  <trk><trkseg>
+    <trkpt lat="52.1" lon="23.7" />
+    <trkpt lat="52.2" lon="23.8" />
+  </trkseg></trk>
+</gpx>`,
+      'gpx',
+    );
+
+    expect(geometry.hasIndependentPoints).toBe(true);
+    expect(geometry.points).toEqual([]);
+    expect(geometry.lines).toHaveLength(1);
+    expect(geometry.lines[0].map((point) => point.coord)).toEqual([
+      '52.1,23.7',
+      '52.2,23.8',
+    ]);
+  });
+
   it('keeps non-consecutive duplicate coordinates and preserves elevation values', () => {
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx>

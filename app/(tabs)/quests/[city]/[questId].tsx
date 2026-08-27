@@ -448,6 +448,7 @@ export default function QuestByIdScreen() {
         source="quest"
         title={i18nT('sharedStatic:subscription.questTitle')}
         subtitle={i18nT('sharedStatic:subscription.questSubtitle')}
+        clientOnly
       />
     ),
     [],

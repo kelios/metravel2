@@ -4,49 +4,42 @@ import { Platform } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
 import { isQuestDetailHeaderPath, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
+import {
+    HEADER_HEIGHT_FALLBACK,
+    HEADER_LAYOUT_BREAKPOINTS,
+    getHeaderVariantForBand,
+    getHeaderVariantForWidth,
+    type HeaderVariant,
+    type HeaderViewportBand,
+} from '@/components/layout/headerLayoutContract';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 
-const HEADER_MOBILE_BREAKPOINT = 768;
-type HeaderVariant = 'mobile-bar' | 'mobile-nobar' | 'desktop-bar' | 'desktop-nobar';
-
-const HEADER_HEIGHT_FALLBACK: Record<HeaderVariant, number> = {
-    'mobile-bar': 116,
-    'mobile-nobar': 64,
-    'desktop-bar': 118,
-    'desktop-nobar': 78,
-};
-
-const HEADER_HEIGHT_CACHE_KEY: Record<HeaderVariant, string> = {
-    'mobile-bar': 'mt:header-height:mobile-bar',
-    'mobile-nobar': 'mt:header-height:mobile-nobar',
-    'desktop-bar': 'mt:header-height:desktop-bar',
-    'desktop-nobar': 'mt:header-height:desktop-nobar',
-};
+const getHeaderHeightCacheKey = (variant: HeaderVariant) => `mt:header-height:${variant}`;
 
 const getHeaderVariant = (pathname: string): HeaderVariant => {
-    const isMobile =
+    const width =
         Platform.OS === 'web' && typeof window !== 'undefined'
-            ? window.innerWidth < HEADER_MOBILE_BREAKPOINT
-            : false;
-    const hasBar = shouldShowHeaderContextBar(pathname || '/', isMobile);
-    if (isMobile) return hasBar ? 'mobile-bar' : 'mobile-nobar';
-    return hasBar ? 'desktop-bar' : 'desktop-nobar';
+            ? window.innerWidth
+            : HEADER_LAYOUT_BREAKPOINTS.compactRow;
+    const isCompact = width < HEADER_LAYOUT_BREAKPOINTS.compactRow;
+    const hasBar = shouldShowHeaderContextBar(pathname || '/', isCompact);
+    return getHeaderVariantForWidth(width, hasBar);
 };
 
 // SSR/первый-рендер вариант: НЕ читаем window/sessionStorage, иначе статический
 // HTML (всегда desktop) не совпадёт с первым клиентским рендером → hydration mismatch (#418).
 // Реальный вариант/высоту подтягивает useEffect после маунта.
 const getStaticHeaderVariant = (pathname: string): HeaderVariant => {
-    if (Platform.OS === 'web' && isQuestDetailHeaderPath(pathname)) return 'desktop-nobar';
+    if (Platform.OS === 'web' && isQuestDetailHeaderPath(pathname)) return 'wide-nobar';
     const hasBar = shouldShowHeaderContextBar(pathname || '/', false);
-    return hasBar ? 'desktop-bar' : 'desktop-nobar';
+    return getHeaderVariantForBand('wide', hasBar);
 };
 
 const readCachedHeaderHeight = (variant: HeaderVariant): number => {
     const fallback = HEADER_HEIGHT_FALLBACK[variant];
     if (Platform.OS !== 'web' || typeof window === 'undefined') return fallback;
     try {
-        const raw = window.sessionStorage?.getItem(HEADER_HEIGHT_CACHE_KEY[variant]);
+        const raw = window.sessionStorage?.getItem(getHeaderHeightCacheKey(variant));
         const parsed = raw ? Number(raw) : NaN;
         if (Number.isFinite(parsed) && parsed > 0) return parsed;
     } catch {
@@ -59,7 +52,7 @@ const readCachedHeaderHeight = (variant: HeaderVariant): number => {
 // собственная строка поиска карты («Искать места») должна быть верхним элементом,
 // как в Google/Organic Maps. Глобальная шапка дублировала поиск и занимала полосу.
 // На desktop-web шапку оставляем: там нет нижнего дока, и nav-бар нужен.
-const MAP_HEADER_MOBILE_BREAKPOINT = HEADER_MOBILE_BREAKPOINT;
+const MAP_HEADER_MOBILE_BREAKPOINT = HEADER_LAYOUT_BREAKPOINTS.mobileContext;
 const isMapRoute = (pathname: string) => pathname === '/map' || pathname.startsWith('/map/');
 const shouldHideHeaderForMap = (pathname: string): boolean => {
     if (!isMapRoute(pathname)) return false;
@@ -117,18 +110,21 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
     }, [hydrationReady, pathname]);
 
     const handleHeaderHeight = useCallback((h: number) => {
-        if (h <= 0) return;
+        // The SSR/first-client placeholder can report a route-specific interim
+        // height. It must not replace the CSS reservation before hydrated
+        // responsive geometry and Suspense fallbacks are in place.
+        if (!hydrationReady || h <= 0) return;
         setHasMeasuredHeight(true);
         setMeasuredHeight((prev) => (prev === h ? prev : h));
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
             try {
                 const v = getHeaderVariant(pathname);
-                window.sessionStorage?.setItem(HEADER_HEIGHT_CACHE_KEY[v], String(Math.round(h)));
+                window.sessionStorage?.setItem(getHeaderHeightCacheKey(v), String(Math.round(h)));
             } catch {
                 /* noop */
             }
         }
-    }, [pathname]);
+    }, [hydrationReady, pathname]);
 
     // R-1 — на табе карты (мобильный) шапки нет вовсе: ни самой шапки, ни
     // зарезервированной высоты-обёртки, иначе сверху осталась бы пустая «дырка».
@@ -141,21 +137,26 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
         // после гидрации весь `main` уезжал вниз на 38 px: замер прода 2026-07-30 —
         // одна запись layout-shift 0.1508 при бюджете 0.1 на всю страницу.
         //
-        // Высоту-заглушку задаём медиазапросом (`[data-header-slot]` в app/global.css):
+        // Высоту-заглушку задаём медиазапросом (`[data-header-slot=""]` в
+        // utils/criticalCSSBuilder.ts):
         // разметка одинакова на сервере и клиенте, а нужный размер выбирает CSS ещё до
         // первого кадра. Инлайновую высоту ставим только после гидрации — тогда она уже
         // основана на реальном измерении и совпадает с зарезервированной.
-        const mobileHeight =
-            HEADER_HEIGHT_FALLBACK[
-                shouldShowHeaderContextBar(pathname || '/', true) ? 'mobile-bar' : 'mobile-nobar'
-            ];
-        const desktopHeight = HEADER_HEIGHT_FALLBACK[getStaticHeaderVariant(pathname)];
+        const hasCompactContextBar = shouldShowHeaderContextBar(pathname || '/', true);
+        const hasWideContextBar = shouldShowHeaderContextBar(pathname || '/', false);
+        const heightForBand = (band: HeaderViewportBand, hasBar: boolean) =>
+            HEADER_HEIGHT_FALLBACK[getHeaderVariantForBand(band, hasBar)];
+        const mobileHeight = heightForBand('mobile', hasCompactContextBar);
+        const compactHeight = heightForBand('compact', hasCompactContextBar);
+        const wideHeight = heightForBand('wide', hasWideContextBar);
         const headerSlotStyle: React.CSSProperties & {
             '--mt-header-slot-mobile': string;
-            '--mt-header-slot-desktop': string;
+            '--mt-header-slot-compact': string;
+            '--mt-header-slot-wide': string;
         } = {
             '--mt-header-slot-mobile': `${mobileHeight}px`,
-            '--mt-header-slot-desktop': `${desktopHeight}px`,
+            '--mt-header-slot-compact': `${compactHeight}px`,
+            '--mt-header-slot-wide': `${wideHeight}px`,
             ...(hasMeasuredHeight ? { height: measuredHeight } : null),
         };
 

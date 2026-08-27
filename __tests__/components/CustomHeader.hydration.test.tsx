@@ -2,7 +2,7 @@ import React from 'react'
 import { render } from '@testing-library/react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Platform } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 
 import CustomHeader from '@/components/layout/CustomHeader'
 
@@ -59,10 +59,15 @@ jest.mock('@/i18n/LocaleProvider', () => ({
 }))
 
 jest.mock('../../components/layout/AccountMenu', () => () => null)
+let mockContextBarShouldSuspend = false
+
 jest.mock('../../components/layout/HeaderContextBar', () => {
   const React = require('react')
   const { View } = require('react-native')
-  return () => React.createElement(View, { testID: 'mock-header-context-bar' })
+  return () => {
+    if (mockContextBarShouldSuspend) throw new Promise(() => {})
+    return React.createElement(View, { testID: 'mock-header-context-bar' })
+  }
 })
 
 jest.mock('@/hooks/useResponsive', () => ({
@@ -108,6 +113,7 @@ describe('CustomHeader: до-гидрационная геометрия стр�
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockContextBarShouldSuspend = false
     ;(useRouter as jest.Mock).mockReturnValue({ push: jest.fn() })
     ;(usePathname as jest.Mock).mockReturnValue('/')
     Object.defineProperty(Platform, 'OS', { value: 'web' })
@@ -153,4 +159,53 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     expect(utils.getByLabelText('Карта')).toBeTruthy()
     expect(findByDataSet(utils, 'headerLangChevron', 'true')).toHaveLength(1)
   })
+
+  it('маркирует travel context fallback без конкурирующей inline-высоты', () => {
+    ;(usePathname as jest.Mock).mockReturnValue('/travels/e2e-stable-travel-details')
+    setResponsive(0, false)
+
+    const utils = renderHeader()
+    const fallbacks = findByDataSet(utils, 'headerContextFallback', 'travel')
+
+    expect(fallbacks).toHaveLength(1)
+    expect(StyleSheet.flatten(fallbacks[0].props.style)).toMatchObject({ width: '100%' })
+    expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
+  })
+
+  it('сохраняет тот же travel marker на Suspense fallback после гидратации', () => {
+    ;(usePathname as jest.Mock).mockReturnValue('/travels/e2e-stable-travel-details')
+    mockContextBarShouldSuspend = true
+    setResponsive(390, true)
+
+    const utils = renderHeader()
+    const fallbacks = findByDataSet(utils, 'headerContextFallback', 'travel')
+
+    expect(fallbacks).toHaveLength(1)
+    expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
+    expect(utils.queryByTestId('mock-header-context-bar')).toBeNull()
+  })
+
+  it('передаёт обычную web context-заглушку critical CSS без inline-высоты', () => {
+    ;(usePathname as jest.Mock).mockReturnValue('/settings')
+    setResponsive(0, false)
+
+    const utils = renderHeader()
+    const fallbacks = findByDataSet(utils, 'headerContextFallback', 'default')
+
+    expect(fallbacks).toHaveLength(1)
+    expect(StyleSheet.flatten(fallbacks[0].props.style)).toMatchObject({ width: '100%' })
+    expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
+  })
+
+  it.each(['/', '/settings', '/quests/minsk/e2e-quest'])(
+    'не ставит travel marker на контрольном маршруте %s',
+    (pathname) => {
+      ;(usePathname as jest.Mock).mockReturnValue(pathname)
+      setResponsive(0, false)
+
+      const utils = renderHeader()
+
+      expect(findByDataSet(utils, 'headerContextFallback', 'travel')).toHaveLength(0)
+    },
+  )
 })

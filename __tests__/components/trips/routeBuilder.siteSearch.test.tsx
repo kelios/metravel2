@@ -182,6 +182,7 @@ describe('RouteBuilder site search', () => {
 
     expect(queryByTestId('route-builder-name')).toBeNull()
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.changeText(getByTestId('route-builder-site-search'), 'Несвиж')
 
     const option = await findByTestId('route-builder-site-option-place-42')
@@ -212,6 +213,7 @@ describe('RouteBuilder site search', () => {
   it('adds a travel from search as a route point', async () => {
     const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.changeText(getByTestId('route-builder-site-search'), 'Маршрут')
 
     const option = await findByTestId('route-builder-site-option-travel-77')
@@ -227,9 +229,26 @@ describe('RouteBuilder site search', () => {
     })
   })
 
+  it('aborts site search when the progressive add form closes', async () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    fireEvent.changeText(getByTestId('route-builder-site-search'), 'Несвиж')
+
+    await waitFor(() => expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1))
+    const signal = mockedFetchPlacesCatalog.mock.calls[0][1]
+    expect(signal?.aborted).toBe(false)
+
+    fireEvent.press(getByTestId('route-builder-add-cancel'))
+
+    expect(queryByTestId('route-builder-add-form')).toBeNull()
+    expect(signal?.aborted).toBe(true)
+  })
+
   it('edits an existing custom route point before saving', async () => {
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Старая точка')
     fireEvent.changeText(getByTestId('route-builder-lat'), '53.9')
@@ -313,6 +332,7 @@ describe('RouteBuilder point type binding', () => {
   it('hides the place type when editing a point without a MeTravel binding', () => {
     const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
+    fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-custom'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Ручная точка')
     fireEvent.changeText(getByTestId('route-builder-lat'), '53.9')
@@ -325,8 +345,13 @@ describe('RouteBuilder point type binding', () => {
     expect(getByTestId('route-builder-edit-type-custom')).toBeTruthy()
     expect(getByTestId('route-builder-edit-type-rest')).toBeTruthy()
     expect(getByTestId('route-builder-edit-type-overnight')).toBeTruthy()
-    // Форма добавления к типу «Место» доступ не теряет: там он выбирается
-    // вместе с самим местом через поиск по сайту.
+    // Режимы add/edit взаимоисключающие: форма добавления не дублируется
+    // под формой редактирования.
+    expect(queryByTestId('route-builder-add-form')).toBeNull()
+    fireEvent.press(getByTestId('route-builder-edit-cancel'))
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    // После возврата в add mode тип «Место» по-прежнему доступен через
+    // поиск по MeTravel.
     expect(getByTestId('route-builder-type-place')).toBeTruthy()
   })
 

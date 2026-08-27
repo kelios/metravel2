@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet } from 'react-native'
-import { render, waitFor } from '@testing-library/react-native'
+import { act, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 import TravelDescription from '@/components/travel/TravelDescription'
@@ -29,6 +29,8 @@ describe('TravelDescription', () => {
     delete (window as any).cancelAnimationFrame
     delete (window as any).requestIdleCallback
     delete (window as any).cancelIdleCallback
+    delete (window as any).IntersectionObserver
+    jest.useRealTimers()
   })
 
   it('uses the full section width on desktop when noBox is enabled', () => {
@@ -98,7 +100,8 @@ describe('TravelDescription', () => {
     expect(UNSAFE_queryAllByType(ScrollView)).toHaveLength(0)
   })
 
-  it('reserves height and keeps idle gate for heavy web descriptions', () => {
+  it('keeps heavy web descriptions deferred until the placeholder approaches the viewport', async () => {
+    jest.useFakeTimers()
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
     jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
       width: 760,
@@ -106,18 +109,27 @@ describe('TravelDescription', () => {
       scale: 1,
       fontScale: 1,
     })
-    const rafCallbacks: Array<() => void> = []
-    const requestAnimationFrame = jest.fn((cb: () => void) => {
-      rafCallbacks.push(cb)
-      return rafCallbacks.length
+    let intersectionCallback:
+      | ((entries: Array<{ isIntersecting?: boolean; intersectionRatio?: number }>) => void)
+      | null = null
+    const observe = jest.fn()
+    const disconnect = jest.fn()
+    const IntersectionObserver = jest.fn((callback: NonNullable<typeof intersectionCallback>) => {
+      intersectionCallback = callback
+      return { observe, disconnect }
     })
-    ;(window as any).requestAnimationFrame = requestAnimationFrame
-    ;(window as any).cancelAnimationFrame = jest.fn()
-    ;(window as any).requestIdleCallback = jest.fn()
-    ;(window as any).cancelIdleCallback = jest.fn()
+    const idleCallbacks: Array<() => void> = []
+    const requestIdleCallback = jest.fn((callback: () => void) => {
+      idleCallbacks.push(callback)
+      return idleCallbacks.length
+    })
+    const cancelIdleCallback = jest.fn()
+    ;(window as any).IntersectionObserver = IntersectionObserver
+    ;(window as any).requestIdleCallback = requestIdleCallback
+    ;(window as any).cancelIdleCallback = cancelIdleCallback
 
     const heavyText = 'длинное описание '.repeat(600)
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId, unmount } = render(
       <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
     )
 
@@ -126,11 +138,83 @@ describe('TravelDescription', () => {
     const style = StyleSheet.flatten(getByTestId('travel-description-fallback').props.style)
     expect(style.minHeight).toBeGreaterThan(320)
 
-    expect(requestAnimationFrame).toHaveBeenCalled()
-    while (rafCallbacks.length > 0) {
-      const cb = rafCallbacks.shift()
-      cb?.()
-    }
-    expect((window as any).requestIdleCallback).toHaveBeenCalled()
+    expect(IntersectionObserver).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ rootMargin: '0px 0px 400px 0px', threshold: 0.01 }),
+    )
+    expect(observe).toHaveBeenCalledWith(expect.anything())
+
+    act(() => {
+      jest.advanceTimersByTime(60_000)
+    })
+    expect(queryByTestId('stable-content')).toBeNull()
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+
+    act(() => {
+      intersectionCallback?.([{ isIntersecting: true, intersectionRatio: 0.1 }])
+    })
+    expect(requestIdleCallback).toHaveBeenCalledTimes(1)
+    expect(queryByTestId('stable-content')).toBeNull()
+
+    await act(async () => {
+      idleCallbacks.shift()?.()
+    })
+    expect(getByTestId('stable-content')).toBeTruthy()
+
+    unmount()
+    expect(disconnect).toHaveBeenCalled()
+    expect(cancelIdleCallback).toHaveBeenCalled()
+  })
+
+  it('fails open through idle when IntersectionObserver is unavailable', async () => {
+    jest.useFakeTimers()
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    const idleCallbacks: Array<() => void> = []
+    const requestIdleCallback = jest.fn((callback: () => void) => {
+      idleCallbacks.push(callback)
+      return idleCallbacks.length
+    })
+    ;(window as any).requestIdleCallback = requestIdleCallback
+    ;(window as any).cancelIdleCallback = jest.fn()
+
+    const heavyText = 'длинное описание '.repeat(600)
+    const { getByTestId, queryByTestId } = render(
+      <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
+    )
+
+    expect(queryByTestId('stable-content')).toBeNull()
+    expect(requestIdleCallback).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      idleCallbacks.shift()?.()
+    })
+    expect(getByTestId('stable-content')).toBeTruthy()
+  })
+
+  it('fails open through idle when IntersectionObserver throws', async () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    const idleCallbacks: Array<() => void> = []
+    const requestIdleCallback = jest.fn((callback: () => void) => {
+      idleCallbacks.push(callback)
+      return idleCallbacks.length
+    })
+    ;(window as any).IntersectionObserver = jest.fn(() => {
+      throw new Error('observer unavailable')
+    })
+    ;(window as any).requestIdleCallback = requestIdleCallback
+    ;(window as any).cancelIdleCallback = jest.fn()
+
+    const heavyText = 'длинное описание '.repeat(600)
+    const { getByTestId, queryByTestId } = render(
+      <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
+    )
+
+    expect(queryByTestId('stable-content')).toBeNull()
+    expect(requestIdleCallback).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      idleCallbacks.shift()?.()
+    })
+    expect(getByTestId('stable-content')).toBeTruthy()
   })
 })

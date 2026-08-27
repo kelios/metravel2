@@ -101,7 +101,12 @@ const transportRoutePoints = [
   },
 ]
 
-const buildTransportTrip = (transportMode: string, ownerId: number, bikeType = 'regular') => {
+const buildTransportTrip = (
+  transportMode: string,
+  ownerId: number,
+  bikeType = 'regular',
+  description = 'Проверка перестроения маршрута',
+) => {
   const degraded = transportMode === 'bicycle'
   const bicycleViaPoint = bikeType === 'road'
     ? [27.51, 53.86]
@@ -111,7 +116,7 @@ const buildTransportTrip = (transportMode: string, ownerId: number, bikeType = '
   return {
     id: 99002,
     title: 'E2E переключение транспорта',
-    description: 'Проверка перестроения маршрута',
+    description,
     start_date: '2026-09-01T09:00:00',
     status: 'planned',
     transport_mode: transportMode,
@@ -145,6 +150,8 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
   const plannedTripRequests: string[] = []
   let currentTransport = 'car'
   let currentBikeType = 'regular'
+  let currentDescription = 'Проверка перестроения маршрута'
+  let shouldFailNextPatch = false
 
   page.on('request', (request) => {
     const pathname = new URL(request.url()).pathname
@@ -184,8 +191,18 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
     if (request.method() === 'PATCH') {
       const body = request.postDataJSON() as Record<string, unknown>
       patchBodies.push(body)
+      if (shouldFailNextPatch) {
+        shouldFailNextPatch = false
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'Temporary planner error' }),
+        })
+        return
+      }
       currentTransport = String(body.transport_mode ?? currentTransport)
       currentBikeType = String(body.bike_type ?? currentBikeType)
+      currentDescription = String(body.description ?? currentDescription)
       await new Promise((resolve) => setTimeout(resolve, 250))
     } else {
       await waitForFakeAuth(page)
@@ -195,11 +212,19 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(buildTransportTrip(currentTransport, ownerId, currentBikeType)),
+      body: JSON.stringify(
+        buildTransportTrip(currentTransport, ownerId, currentBikeType, currentDescription),
+      ),
     })
   })
 
-  return { patchBodies, plannedTripRequests }
+  return {
+    patchBodies,
+    plannedTripRequests,
+    failNextPatch: () => {
+      shouldFailNextPatch = true
+    },
+  }
 }
 
 // ── consent seed (mirrors public-trips.spec.ts pattern) ──────────────────────
@@ -265,6 +290,95 @@ test.describe('Trip planner — happy path', () => {
     await createResponse
 
     await expect(page).toHaveURL(/\/trips\/plan\/99001$/, { timeout: 15_000 })
+  })
+
+  test('edits a description in fullscreen and persists a safe link only on global save', async ({ page }) => {
+    await setupFakeAuth(page)
+    await seedConsent(page)
+    const networkEvidence = await mockTransportTrip(page)
+    const consoleErrors: string[] = []
+    page.on('console', (message) => {
+      if (message.type() !== 'error') return
+      const text = message.text()
+      if (/CORS policy|net::ERR_FAILED|Failed to load resource/.test(text)) return
+      consoleErrors.push(text)
+    })
+
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/trips/plan/99002?edit=1', { waitUntil: 'domcontentloaded' })
+    await waitForFakeAuth(page)
+
+    const inlineInput = page.getByTestId('trip-plan-edit-description')
+    await expect(inlineInput).toBeVisible({ timeout: 15_000 })
+    await expect.poll(async () => (await inlineInput.boundingBox())?.height ?? 0).toBeGreaterThan(177)
+    await inlineInput.fill('Этот черновик нужно отменить')
+    await page.getByTestId('trip-plan-edit-cancel').click()
+    await expect(page.getByTestId('trip-plan-edit-panel')).toBeHidden()
+    expect(networkEvidence.patchBodies).toHaveLength(0)
+    await page.getByTestId('trip-plan-edit').click()
+    await expect(inlineInput).toHaveValue('Проверка перестроения маршрута')
+
+    await inlineInput.fill('Бронь ')
+    await inlineInput.press('End')
+
+    await page.getByTestId('trip-plan-description-open-fullscreen').click()
+    const fullscreen = page.getByTestId('trip-plan-description-fullscreen')
+    const fullscreenInput = page.getByTestId('trip-plan-description-fullscreen-input')
+    await expect(fullscreen).toBeVisible()
+    await expect(fullscreenInput).toHaveValue('Бронь ')
+
+    await page.getByTestId('trip-plan-description-add-link').click()
+    const linkInput = page.getByTestId('trip-plan-description-link-input')
+    await linkInput.fill('javascript:alert(1)')
+    await page.getByTestId('trip-plan-description-link-insert').click()
+    await expect(page.getByTestId('trip-plan-description-link-error')).toBeVisible()
+    await expect(fullscreenInput).toHaveValue('Бронь ')
+
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('trip-plan-description-link-dialog')).toBeHidden()
+    await expect(fullscreen).toBeVisible()
+    await page.getByTestId('trip-plan-description-add-link').click()
+
+    await linkInput.fill('example.com/hotel')
+    await page.getByTestId('trip-plan-description-link-insert').click()
+    await expect(fullscreenInput).toHaveValue('Бронь https://example.com/hotel')
+    expect(networkEvidence.patchBodies).toHaveLength(0)
+
+    const evidenceDir = path.join(process.cwd(), '.codex-temp', 'trips-description-editor')
+    fs.mkdirSync(evidenceDir, { recursive: true })
+    await fullscreen.screenshot({ path: path.join(evidenceDir, 'desktop-fullscreen-light.png') })
+
+    await page.getByTestId('trip-plan-description-close').click()
+    await expect(inlineInput).toHaveValue('Бронь https://example.com/hotel')
+    await page.getByTestId('trip-plan-description-open-fullscreen').click()
+    await expect(fullscreenInput).toHaveValue('Бронь https://example.com/hotel')
+    await page.getByTestId('trip-plan-description-done').click()
+    expect(networkEvidence.patchBodies).toHaveLength(0)
+
+    networkEvidence.failNextPatch()
+    await page.getByTestId('trip-plan-edit-save').click()
+    await expect(page.getByTestId('trip-plan-edit-error')).toBeVisible()
+    await expect(page.getByTestId('trip-plan-edit-panel')).toBeVisible()
+    await expect(inlineInput).toHaveValue('Бронь https://example.com/hotel')
+    expect(networkEvidence.patchBodies).toHaveLength(1)
+
+    await page.getByTestId('trip-plan-edit-save').click()
+    await expect(page.getByTestId('trip-plan-edit-panel')).toBeHidden()
+    expect(networkEvidence.patchBodies).toHaveLength(2)
+    expect(networkEvidence.patchBodies[1]).toMatchObject({
+      description: 'Бронь https://example.com/hotel',
+    })
+    await expect(page.getByTestId('trip-plan-description')).toContainText(
+      'Бронь https://example.com/hotel',
+    )
+    await expect(page.getByTestId('trip-plan-links')).toContainText('example.com')
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('trip-plan-description')).toContainText(
+      'Бронь https://example.com/hotel',
+    )
+    await expect(page.getByTestId('trip-plan-links')).toContainText('example.com')
+    expect(consoleErrors).toEqual([])
   })
 
   test('switches route transport with one atomic PATCH on desktop and mobile web', async ({ page }) => {
