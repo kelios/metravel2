@@ -113,6 +113,50 @@ describe('ContentParser', () => {
     expect(quilt.images).toHaveLength(4)
   })
 
+  it('parses a single figure through the image path without losing its metadata', () => {
+    const blocks = parser.parse(`
+      <figure class="img-float-right figure-portrait">
+        <img src="portrait.jpg" alt="Старая ратуша" width="640" height="960" />
+        <figcaption>Вид с рыночной площади</figcaption>
+      </figure>
+    `)
+
+    expect(blocks).toEqual([
+      {
+        type: 'image',
+        src: 'portrait.jpg',
+        alt: 'Старая ратуша',
+        caption: 'Вид с рыночной площади',
+        width: 640,
+        height: 960,
+        layout: 'float-right',
+      },
+    ])
+  })
+
+  it('keeps figure metadata when a link wraps the image', () => {
+    const blocks = parser.parse(`
+      <figure class="img-float-left figure-portrait">
+        <a href="https://example.com/full.jpg">
+          <img src="portrait.jpg" alt="Ратуша крупнее" width="640" height="960" />
+        </a>
+        <figcaption>Открыть оригинал</figcaption>
+      </figure>
+    `)
+
+    expect(blocks).toEqual([
+      {
+        type: 'image',
+        src: 'portrait.jpg',
+        alt: 'Ратуша крупнее',
+        caption: 'Открыть оригинал',
+        width: 640,
+        height: 960,
+        layout: 'float-left',
+      },
+    ])
+  })
+
   it('detects editorial grid classes for print layouts', () => {
     const html = `
       <div class="img-column-portraits img-grid img-grid-portrait">

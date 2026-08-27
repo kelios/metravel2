@@ -109,4 +109,39 @@ describe('BlockRenderer', () => {
     expect(html).toContain('break-inside: avoid;')
     expect((html.match(/padding: 2.5mm/g) || []).length).toBe(5)
   })
+
+  it('renders one float figure with preserved dimensions, alt and escaped caption', () => {
+    const renderer = new BlockRenderer(minimalTheme)
+    const html = renderer.renderRichText(`
+      <p>Вступление.</p>
+      <figure class="img-float-right figure-portrait">
+        <img src="portrait.jpg" alt="Фото &quot;справа&quot;" width="640" height="960" />
+        <figcaption>Подпись &lt;важная&gt;</figcaption>
+      </figure>
+      <p>Этот абзац должен обтекать фотографию.</p>
+    `)
+
+    expect((html.match(/<figure/g) || []).length).toBe(1)
+    expect(html).toContain('class="pdf-rich-image img-float-right"')
+    expect(html).toContain('data-layout="float-right"')
+    expect(html).toContain('data-width="640"')
+    expect(html).toContain('data-height="960"')
+    expect(html).toContain('width="640"')
+    expect(html).toContain('height="960"')
+    expect(html).toContain('max-height: 220mm')
+    expect(html).toContain('alt="Фото &quot;справа&quot;"')
+    expect(html).toContain('Подпись &lt;важная&gt;')
+    expect(html).not.toContain('<важная>')
+  })
+
+  it('keeps an explicitly assigned left float while rebuilding rich-text image layout', () => {
+    const renderer = new BlockRenderer(minimalTheme)
+    const html = renderer.renderRichText(
+      '<p class="img-float-left figure-portrait"><img src="left.jpg" width="600" height="900"></p><p>Текст рядом.</p>'
+    )
+
+    expect(html).toContain('class="pdf-rich-image img-float-left"')
+    expect(html).toContain('float: left')
+    expect(html).not.toContain('class="pdf-rich-image img-float-right"')
+  })
 })

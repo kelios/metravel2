@@ -199,9 +199,20 @@ export function buildPdfHtmlDocument({
       }
       .img-float-right,
       .img-float-left {
-        margin: 8pt 0;
+        width: 45%;
+        max-width: 45%;
         page-break-inside: avoid;
         break-inside: avoid;
+      }
+      .img-float-right {
+        float: right;
+        clear: both;
+        margin: 4pt 0 8pt 4mm;
+      }
+      .img-float-left {
+        float: left;
+        clear: both;
+        margin: 4pt 4mm 8pt 0;
       }
       .img-float-right img,
       .img-float-left img {
@@ -210,6 +221,29 @@ export function buildPdfHtmlDocument({
         max-height: 200pt;
         object-fit: contain;
         border-radius: 6pt;
+      }
+      .travel-content-page .description-block::after {
+        content: "";
+        display: block;
+        clear: both;
+      }
+      .travel-content-page .description-block > h1,
+      .travel-content-page .description-block > h2,
+      .travel-content-page .description-block > h3,
+      .travel-content-page .description-block > h4,
+      .travel-content-page .description-block > h5,
+      .travel-content-page .description-block > h6,
+      .travel-content-page .description-block > blockquote,
+      .travel-content-page .description-block > div,
+      .travel-content-page .description-block > ul,
+      .travel-content-page .description-block > ol,
+      .travel-content-page .description-block > table,
+      .travel-content-page .description-block > pre,
+      .travel-content-page .description-block > hr,
+      .travel-content-page .description-block > .img-single-wide,
+      .travel-content-page .description-block > .img-row-2,
+      .travel-content-page .description-block > .img-grid {
+        clear: both;
       }
       @media print {
         html, body {
@@ -265,6 +299,9 @@ export function buildPdfHtmlDocument({
           object-fit: contain;
           break-inside: avoid;
           page-break-inside: avoid;
+        }
+        .travel-content-page .pdf-rich-image img {
+          max-height: 220mm;
         }
         .travel-content-page figure,
         .travel-content-page .img-single-wide,

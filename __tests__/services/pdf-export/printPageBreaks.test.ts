@@ -39,6 +39,15 @@ describe('#303 BOOK-Q5: контент-фото печатается contain, б
     expect(ruleBody(html, '.img-grid img')).not.toContain('object-fit: cover')
   })
 
+  it('боковое фото действительно обтекается, а следующий полный блок очищает поток', () => {
+    expect(html).toMatch(/\.img-float-right\s*\{[^}]*float: right/)
+    expect(html).toMatch(/\.img-float-left\s*\{[^}]*float: left/)
+    expect(html).toContain('width: 45%')
+    expect(html).toContain('.travel-content-page .description-block::after')
+    expect(html).toMatch(/\.travel-content-page \.description-block > h2,[\s\S]*?clear: both/)
+    expect(html).toMatch(/\.travel-content-page \.description-block > \.img-single-wide,[\s\S]*?clear: both/)
+  })
+
   it('контент-фото масштабируется под печатную высоту и не кропается object-fit: cover', () => {
     const body = ruleBody(html, '.travel-content-page img')
     expect(body).toContain('object-fit: contain')

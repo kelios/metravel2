@@ -44,6 +44,7 @@ describe('журнальная раскладка на мобильном', () =
     expect(block).toContain(`.${CLS} .img-float-right`)
     expect(block).toContain(`.${CLS} .img-float-left`)
     expect(block).toContain('float: none')
+    expect(block).toContain('width: 100%')
   })
 
   it.each(MAGAZINE_WRAPPERS)('схлопывает %s в одну колонку', (wrapper) => {
@@ -55,6 +56,22 @@ describe('журнальная раскладка на мобильном', () =
   it('на самом узком экране (≤420px) сетки принудительно в одну колонку', () => {
     const narrow = mobileCss.slice(mobileCss.indexOf('@media (max-width: 420px)'))
     expect(narrow).toContain('grid-template-columns: minmax(0, 1fr) !important')
+  })
+})
+
+describe('обтекание одиночного фото на desktop', () => {
+  const desktopCss = floatStyles(COLORS, CLS)
+
+  it('использует настоящий float и оставляет тексту не меньше половины колонки', () => {
+    expect(desktopCss).toContain(`.${CLS} .img-float-right {\n    float: right`)
+    expect(desktopCss).toContain(`.${CLS} .img-float-left {\n    float: left`)
+    expect(desktopCss).toContain('width: min(45%, 420px)')
+    expect(desktopCss).toContain('max-width: 45%')
+    expect(desktopCss).toContain('margin-left: 16px')
+    expect(desktopCss).toContain('margin-right: 16px')
+    expect(desktopCss).toContain('container-type: inline-size')
+    expect(desktopCss).toContain('@container (max-width: 560px)')
+    expect(desktopCss).not.toContain('justify-content: flex-end')
   })
 })
 

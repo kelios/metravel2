@@ -36,10 +36,13 @@ export const responsiveStyles = (
   .${cls} .img-float-right,
   .${cls} .img-float-left {
     float: none;
+    display: block;
+    width: 100%;
     max-width: 100%;
     margin: 1em 0;
     padding-left: 0;
     padding-right: 0;
+    clear: both;
   }
   /* Mobile descriptions prioritize legibility: every photo gets its own row. */
   .${cls} .img-row-2 {

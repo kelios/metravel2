@@ -130,18 +130,57 @@ function appendClassToParagraph(paragraphHtml: string, className: string): strin
           .filter(Boolean)
           .filter((value, index, values) => values.indexOf(value) === index)
           .join(' ');
-        return ` class="${merged}"`;
+        // `attrs` already contains the separator before `class`. Returning a
+        // second leading space here makes the transform drift on every path
+        // that preserves an authored single-image layout.
+        return `class="${merged}"`;
       })}>`;
     }
     return `<p${attrs} class="${className}">`;
   });
 }
 
+function stripClassesFromParagraph(paragraphHtml: string, classesToStrip: string[]): string {
+  return paragraphHtml.replace(
+    /<p([^>]*)class="([^"]*)"([^>]*)>/i,
+    (_match, before = '', classValue = '', after = '') => {
+      const nextClasses = String(classValue)
+        .split(/\s+/)
+        .filter(Boolean)
+        .filter((className) => !classesToStrip.includes(className));
+      const beforeAttr = String(before).trim() ? ` ${String(before).trim()}` : '';
+      const afterAttr = String(after).trim() ? ` ${String(after).trim()}` : '';
+      const classAttr = nextClasses.length ? ` class="${nextClasses.join(' ')}"` : '';
+      return `<p${beforeAttr}${classAttr}${afterAttr}>`;
+    }
+  );
+}
+
 function wrapImageGroup(wrapperClassName: string, images: string[]): string {
   return `<div class="${wrapperClassName}">${images.join('')}</div>`;
 }
 
+function isSingleImageParagraph(paragraphHtml: string): boolean {
+  return /^<p[^>]*>\s*<img\b[^>]*>\s*(?:<br\s*\/?>\s*)?<\/p>$/i.test(paragraphHtml);
+}
+
 function appendSingleImage(result: string[], imgParagraph: string, floatDirection: number): number {
+  if (/\bimg-single-wide\b/i.test(imgParagraph)) {
+    result.push(appendClassToParagraph(imgParagraph, 'figure-landscape'));
+    return floatDirection;
+  }
+
+  const assignedFloat = imgParagraph.match(/\bimg-float-(right|left)\b/i)?.[1]?.toLowerCase();
+  if (assignedFloat === 'right' || assignedFloat === 'left') {
+    result.push(appendClassToParagraph(imgParagraph, 'figure-portrait'));
+    // `floatDirection` encodes the side of the next automatic portrait
+    // (even=right, odd=left). Continue on the opposite side of the authored
+    // float even when its side differs from the algorithm's current parity.
+    const nextShouldBeLeft = assignedFloat === 'right';
+    const parityAlreadyMatches = (floatDirection % 2 === 1) === nextShouldBeLeft;
+    return parityAlreadyMatches ? floatDirection : floatDirection + 1;
+  }
+
   if (isWideImage(imgParagraph)) {
     const img = appendClassToParagraph(imgParagraph, 'img-single-wide figure-landscape');
     result.push(img);
@@ -216,48 +255,57 @@ function appendUniformImageGroup(result: string[], images: string[], floatDirect
     return appendSingleImage(result, images[0], floatDirection);
   }
 
-  const composition = analyzeImageGroup(images);
-  if (images.length === 2) {
+  const groupedImages = images.map((image) =>
+    stripClassesFromParagraph(image, [
+      'img-float-right',
+      'img-float-left',
+      'img-single-wide',
+      'figure-portrait',
+      'figure-landscape',
+    ])
+  );
+  const composition = analyzeImageGroup(groupedImages);
+  if (groupedImages.length === 2) {
     if (composition.portrait === 2) {
-      result.push(wrapImageGroup('img-pair-portraits img-row-2 img-row-2-portrait', images));
+      result.push(wrapImageGroup('img-pair-portraits img-row-2 img-row-2-portrait', groupedImages));
       return floatDirection;
     }
     if (composition.landscape === 2) {
-      result.push(wrapImageGroup('img-stack-landscape img-row-2 img-row-2-landscape', images));
+      result.push(wrapImageGroup('img-stack-landscape img-row-2 img-row-2-landscape', groupedImages));
       return floatDirection;
     }
     if (composition.landscape === 1 && composition.portrait === 1) {
-      result.push(wrapImageGroup('img-pair-mixed img-row-2 img-row-2-mixed', images));
+      result.push(wrapImageGroup('img-pair-mixed img-row-2 img-row-2-mixed', groupedImages));
       return floatDirection;
     }
-    result.push(wrapImageGroup('img-pair-balanced img-row-2 img-row-2-balanced', images));
+    result.push(wrapImageGroup('img-pair-balanced img-row-2 img-row-2-balanced', groupedImages));
     return floatDirection;
   }
 
-  const mixedThreeLayout = buildMixedThreeImageLayout(images);
+  const mixedThreeLayout = buildMixedThreeImageLayout(groupedImages);
   if (mixedThreeLayout) {
     result.push(mixedThreeLayout);
     return floatDirection;
   }
 
-  const balancedFourLayout = buildBalancedFourImageLayout(images);
+  const balancedFourLayout = buildBalancedFourImageLayout(groupedImages);
   if (balancedFourLayout) {
     result.push(balancedFourLayout);
     return floatDirection;
   }
 
-  const portraitStoryLayout = buildPortraitStoryLayout(images);
+  const portraitStoryLayout = buildPortraitStoryLayout(groupedImages);
   if (portraitStoryLayout) {
     result.push(portraitStoryLayout);
     return floatDirection;
   }
 
-  if (composition.portrait >= images.length - composition.portrait) {
-    result.push(wrapImageGroup('img-column-portraits img-grid img-grid-portrait', images));
+  if (composition.portrait >= groupedImages.length - composition.portrait) {
+    result.push(wrapImageGroup('img-column-portraits img-grid img-grid-portrait', groupedImages));
     return floatDirection;
   }
 
-  result.push(wrapImageGroup('img-editorial-grid img-grid', images));
+  result.push(wrapImageGroup('img-editorial-grid img-grid', groupedImages));
   return floatDirection;
 }
 
@@ -295,7 +343,7 @@ export function groupConsecutiveImages(html: string): string {
 
   for (const part of parts) {
     // Check if paragraph contains only an image (possibly with whitespace/br tags)
-    const isImageParagraph = /<p[^>]*>[\s]*<img\b[^>]*>[\s]*(?:<br\s*\/?>[\s]*)?<\/p>/i.test(part);
+    const isImageParagraph = isSingleImageParagraph(part);
 
     if (isImageParagraph) {
       if (imageBuffer.length === 0 && pendingWhitespace) result.push(pendingWhitespace);
@@ -326,7 +374,7 @@ export function groupConsecutiveImages(html: string): string {
  * Removes smart image layout classes from HTML.
  * Useful for re-processing or when raw HTML is needed.
  */
-export function removeImageLayoutClasses(html: string): string {
+function removeImageLayoutClassesInternal(html: string, preserveSingleImageLayout: boolean): string {
   if (!html || typeof html !== 'string') return html ?? '';
 
   let result = html;
@@ -346,32 +394,23 @@ export function removeImageLayoutClasses(html: string): string {
     result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
   }
 
-  const stripParagraphClasses = (value: string, classesToStrip: string[]) =>
-    value.replace(/<p([^>]*)class="([^"]*)"([^>]*)>/gi, (match, before = '', classValue = '', after = '') => {
-      const nextClasses = classValue
-        .split(/\s+/)
-        .filter(Boolean)
-        .filter((className: string) => !classesToStrip.includes(className));
-
-      // Normalize surrounding whitespace so repeated passes stay idempotent:
-      // without trimming, the space that separated `<p` from `class="` is kept in
-      // `before` AND re-added before the rebuilt ` class="…"`, so each pass adds one
-      // extra space (`<p class` → `<p  class` → …). That silent drift makes a
-      // re-saved description differ from the stored one and surfaces a phantom draft.
-      const beforeAttr = before.trim() ? ` ${before.trim()}` : '';
-      const afterAttr = after.trim() ? ` ${after.trim()}` : '';
-      const classAttr = nextClasses.length ? ` class="${nextClasses.join(' ')}"` : '';
-      return `<p${beforeAttr}${classAttr}${afterAttr}>`;
-    });
-
-  result = stripParagraphClasses(result, [
-    'img-float-right',
-    'img-float-left',
-    'img-single-wide',
-    'figure-portrait',
-    'figure-landscape',
-  ]);
+  // Normalize surrounding whitespace while stripping classes so repeated passes
+  // stay idempotent and do not surface a phantom draft.
+  result = result.replace(/<p[^>]*>[\s\S]*?<\/p>/gi, (paragraphHtml) => {
+    const preserveLayout = preserveSingleImageLayout && isSingleImageParagraph(paragraphHtml);
+    return paragraphHtml.replace(/^<p[^>]*>/i, (paragraphStart) =>
+      stripClassesFromParagraph(paragraphStart, [
+        ...(preserveLayout ? [] : ['img-float-right', 'img-float-left', 'img-single-wide']),
+        'figure-portrait',
+        'figure-landscape',
+      ])
+    );
+  });
   return result;
+}
+
+export function removeImageLayoutClasses(html: string): string {
+  return removeImageLayoutClassesInternal(html, false);
 }
 
 /**
@@ -379,6 +418,9 @@ export function removeImageLayoutClasses(html: string): string {
  * First removes any existing layout classes, then applies fresh grouping.
  */
 export function applySmartImageLayout(html: string): string {
-  const cleaned = removeImageLayoutClasses(html);
+  // Explicit single-image alignment is authored content, not a stale generated
+  // grid. Keep it while rebuilding group wrappers so PDF export and repeated
+  // saves do not silently flip left/right or turn a forced wide image into a float.
+  const cleaned = removeImageLayoutClassesInternal(html, true);
   return groupConsecutiveImages(cleaned);
 }

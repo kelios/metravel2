@@ -4,6 +4,10 @@ export const floatStyles = (
   colors: ReturnType<typeof useThemedColors>,
   cls: string,
 ): string => `
+.${cls} {
+  container-type: inline-size;
+}
+
 /* ===== SINGLE WIDE IMAGE (horizontal/landscape) ===== */
 .${cls} .img-single-wide {
   display: block;
@@ -36,55 +40,78 @@ export const floatStyles = (
 
 /* ===== SINGLE IMAGE WITH FLOAT (desktop, vertical/square images only) ===== */
 @media (min-width: 769px) {
-  .${cls} .img-float-right {
-    display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    max-width: 100%;
-    margin: 1.4em 0 1.6em;
-    clear: both;
-  }
-  .${cls} .img-float-right img {
-    width: clamp(260px, 52%, 420px);
-    max-height: 48vh;
-    object-fit: contain;
-    margin: 0;
-    border-radius: 16px;
-    box-shadow: ${colors.boxShadows?.light || 'none'};
-  }
+  .${cls} .img-float-right,
   .${cls} .img-float-left {
-    display: flex;
-    justify-content: flex-start;
-    width: 100%;
-    max-width: 100%;
-    margin: 1.4em 0 1.6em;
+    display: block;
+    width: min(45%, 420px);
+    max-width: 45%;
+    box-sizing: border-box;
+    margin-top: 0.35em;
+    margin-bottom: 1em;
     clear: both;
   }
+
+  .${cls} .img-float-right {
+    float: right;
+    margin-right: 0;
+    margin-left: 16px;
+  }
+
+  .${cls} .img-float-left {
+    float: left;
+    margin-right: 16px;
+    margin-left: 0;
+  }
+
+  .${cls} .img-float-right img,
   .${cls} .img-float-left img {
-    width: clamp(260px, 52%, 420px);
-    max-height: 48vh;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: min(48vh, 520px);
     object-fit: contain;
     margin: 0;
     border-radius: 16px;
     box-shadow: ${colors.boxShadows?.light || 'none'};
+  }
+
+  .${cls} figure.img-float-right,
+  .${cls} figure.img-float-left {
+    align-items: stretch;
+    padding: 0;
+    text-align: center;
+  }
+
+  .${cls} figure.img-float-right figcaption,
+  .${cls} figure.img-float-left figcaption {
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .${cls} .figure-portrait {
-    margin: 1.6em 0 1.8em;
-  }
-
-  .${cls} .figure-portrait.img-float-right {
-    padding-left: clamp(24px, 5vw, 64px);
-  }
-
-  .${cls} .figure-portrait.img-float-left {
-    padding-right: clamp(24px, 5vw, 64px);
+    margin-top: 0.35em;
+    margin-bottom: 1em;
   }
 
   .${cls} .figure-portrait img {
-    width: clamp(280px, 56%, 440px);
-    max-width: min(100%, 440px);
+    width: 100%;
+    max-width: 100%;
     max-height: min(48vh, 520px);
+  }
+}
+
+/* A desktop viewport can still contain a narrow article column (sidebar/split
+   view). In that case the available column, not the window, disables wrapping. */
+@container (max-width: 560px) {
+  .${cls} .img-float-right,
+  .${cls} .img-float-left {
+    float: none;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 1em 0;
+    clear: both;
   }
 }
 `

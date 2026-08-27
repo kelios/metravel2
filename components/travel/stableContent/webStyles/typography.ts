@@ -11,8 +11,16 @@ export const typographyStyles = (
   display: block;
   clear: both;
 }
+.${cls} h1,
 .${cls} h2,
-.${cls} h3 {
+.${cls} h3,
+.${cls} h4,
+.${cls} h5,
+.${cls} h6,
+.${cls} > div,
+.${cls} table,
+.${cls} pre,
+.${cls} hr {
   clear: both;
 }
 

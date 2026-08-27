@@ -454,13 +454,17 @@ export class ContentParser {
     const width = this.parseDimension(element.getAttribute('width'));
     const height = this.parseDimension(element.getAttribute('height'));
 
-    // Ищем подпись в родительском figure или следующем элементе
-    const parent = element.parentElement;
-    const caption = parent?.tagName.toLowerCase() === 'figure'
-      ? this.normalizeText(parent.querySelector('figcaption')?.textContent || '')
+    // Figure/picture/link wrappers are all valid rich-text shapes. Resolve the
+    // authored layout from the nearest semantic image container rather than the
+    // immediate parent, otherwise `figure > a|picture > img` loses both its
+    // caption and float side while taking the shared single-image path.
+    const paragraph = element.closest('p');
+    const figure = element.closest('figure');
+    const caption = figure
+      ? this.normalizeText(figure.querySelector('figcaption')?.textContent || '')
       : undefined;
     const layout = this.getSingleImageLayout(
-      `${element.className || ''} ${parent?.className || ''}`.toLowerCase()
+      `${element.className || ''} ${paragraph?.className || ''} ${figure?.className || ''}`.toLowerCase()
     );
 
     return {
@@ -484,16 +488,9 @@ export class ContentParser {
     if (images.length === 0) return null;
     
     if (images.length === 1) {
-      // Одно изображение с подписью
-      const img = images[0] as HTMLElement;
-      const caption = this.normalizeText(element.querySelector('figcaption')?.textContent || '');
-      
-      return {
-        type: 'image',
-        src: img.getAttribute('src') || '',
-        alt: img.getAttribute('alt') || undefined,
-        caption: caption && caption.length > 0 ? caption : undefined,
-      };
+      // Один и тот же путь сохраняет layout, размеры, alt и подпись независимо
+      // от того, пришло фото как p > img или figure > img + figcaption.
+      return this.parseImage(images[0] as HTMLElement);
     } else {
       // Галерея изображений
       const galleryImages = Array.from(images).map((img) => ({

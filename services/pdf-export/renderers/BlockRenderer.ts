@@ -54,9 +54,15 @@ export class BlockRenderer {
   private renderContainImageWithBackdrop(
     src: string,
     alt: string,
-    options: { minHeight?: string; maxHeight?: string; borderRadius?: string } = {}
+    options: {
+      minHeight?: string;
+      maxHeight?: string;
+      borderRadius?: string;
+      width?: number;
+      height?: number;
+    } = {}
   ): string {
-    const { minHeight, maxHeight, borderRadius } = options;
+    const { minHeight, maxHeight, borderRadius, width, height } = options;
     const radius = borderRadius || `calc(${this.theme.blocks.borderRadius} * 0.9)`;
     const fallbackSrc = buildPrintImageFallbackUrl(src);
     const fallbackAttr = fallbackSrc && fallbackSrc !== src
@@ -94,6 +100,8 @@ export class BlockRenderer {
         <img
           src="${this.escapeHtml(src)}"
           alt="${this.escapeHtml(alt)}"${fallbackAttr}
+          ${width ? `width="${width}"` : ''}
+          ${height ? `height="${height}"` : ''}
           style="
             position: relative;
             z-index: 1;
@@ -115,15 +123,19 @@ export class BlockRenderer {
     switch (layout) {
       case 'float-left':
         return `
-          width: 56%;
-          max-width: 56%;
-          margin: calc(${this.theme.spacing.blockSpacing} * 0.9) auto calc(${this.theme.spacing.blockSpacing} * 1.0) 0;
+          float: left;
+          clear: both;
+          width: 45%;
+          max-width: 45%;
+          margin: calc(${this.theme.spacing.blockSpacing} * 0.45) 4mm calc(${this.theme.spacing.blockSpacing} * 0.85) 0;
         `;
       case 'float-right':
         return `
-          width: 56%;
-          max-width: 56%;
-          margin: calc(${this.theme.spacing.blockSpacing} * 0.9) 0 calc(${this.theme.spacing.blockSpacing} * 1.0) auto;
+          float: right;
+          clear: both;
+          width: 45%;
+          max-width: 45%;
+          margin: calc(${this.theme.spacing.blockSpacing} * 0.45) 0 calc(${this.theme.spacing.blockSpacing} * 0.85) 4mm;
         `;
       case 'single-wide':
       default:
@@ -131,6 +143,7 @@ export class BlockRenderer {
           width: 100%;
           max-width: 100%;
           margin: calc(${this.theme.spacing.blockSpacing} * 0.95) auto calc(${this.theme.spacing.blockSpacing} * 1.05);
+          clear: both;
         `;
     }
   }
@@ -388,6 +401,7 @@ export class BlockRenderer {
     const { src, alt, caption, width, height, layout } = block;
     const safeSrc = this.buildSafeImageUrl(src);
     const wrapperStyle = this.getImageAlignmentStyle(layout);
+    const layoutClass = layout ? `img-${layout}` : 'img-single-wide';
 
     const imageTag = `
       <div
@@ -402,36 +416,20 @@ export class BlockRenderer {
       >
         ${this.renderContainImageWithBackdrop(safeSrc, alt || '', {
           borderRadius: `calc(${this.theme.blocks.borderRadius} * 1.65)`,
+          maxHeight: '220mm',
+          width,
+          height,
         })}
       </div>
     `;
 
-    if (caption) {
-      return `
-        <figure style="
-          ${wrapperStyle}
-          page-break-inside: avoid;
-          break-inside: avoid;
-          padding: 4mm;
-          background: ${this.theme.colors.surfaceAlt};
-          border: 1px solid ${this.theme.colors.borderLight};
-          border-radius: calc(${this.theme.blocks.borderRadius} * 1.8);
-        ">
-          ${imageTag}
-          <figcaption style="
-            font-size: ${this.theme.typography.caption.size};
-            line-height: ${this.theme.typography.caption.lineHeight};
-            color: ${this.theme.colors.textMuted};
-            text-align: center;
-            margin-top: ${this.theme.spacing.elementSpacing};
-            font-family: ${this.theme.typography.bodyFont};
-          ">${this.escapeHtml(caption)}</figcaption>
-        </figure>
-      `;
-    }
-
     return `
-      <div style="
+      <figure
+        class="pdf-rich-image ${layoutClass}"
+        data-layout="${layout || 'single-wide'}"
+        ${width ? `data-width="${width}"` : ''}
+        ${height ? `data-height="${height}"` : ''}
+        style="
         ${wrapperStyle}
         page-break-inside: avoid;
         break-inside: avoid;
@@ -441,7 +439,15 @@ export class BlockRenderer {
         border-radius: calc(${this.theme.blocks.borderRadius} * 1.8);
       ">
         ${imageTag}
-      </div>
+        ${caption ? `<figcaption style="
+          font-size: ${this.theme.typography.caption.size};
+          line-height: ${this.theme.typography.caption.lineHeight};
+          color: ${this.theme.colors.textMuted};
+          text-align: center;
+          margin-top: ${this.theme.spacing.elementSpacing};
+          font-family: ${this.theme.typography.bodyFont};
+        ">${this.escapeHtml(caption)}</figcaption>` : ''}
+      </figure>
     `;
   }
 
@@ -656,18 +662,15 @@ export class BlockRenderer {
    * Экранирует HTML
    */
   private escapeHtml(text: string): string {
-    if (typeof document === 'undefined') {
-      // Fallback для серверного рендеринга
-      return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    // The same escaping must be used in text nodes and quoted attributes.
+    // `div.textContent -> innerHTML` does not encode quotes in a browser, so an
+    // authored alt containing `"` could terminate the generated PDF attribute.
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**

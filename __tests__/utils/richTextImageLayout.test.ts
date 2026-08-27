@@ -234,6 +234,47 @@ describe('richTextImageLayout (журнальная раскладка по ор
   });
 
   describe('applySmartImageLayout', () => {
+    it('сохраняет явно назначенную сторону одиночного фото', () => {
+      const html = '<p class="img-float-left figure-portrait"><img src="left.jpg" width="600" height="900"></p>';
+      const result = applySmartImageLayout(html);
+
+      expect(result).toContain('img-float-left');
+      expect(result).not.toContain('img-float-right');
+    });
+
+    it('продолжает чередование с противоположной стороны после явно назначенного float', () => {
+      const html =
+        '<p class="img-float-left figure-portrait"><img src="left.jpg" width="600" height="900"></p>' +
+        '<p>Разделитель.</p>' +
+        '<p><img src="auto.jpg" width="600" height="900"></p>';
+      const result = applySmartImageLayout(html);
+
+      expect(result).toMatch(/left\.jpg[\s\S]*?img-float-right[^>]*>[\s\S]*?auto\.jpg/);
+    });
+
+    it('не сохраняет одиночные image-layout классы на текстовом абзаце', () => {
+      const result = applySmartImageLayout(
+        '<p class="img-float-left figure-portrait">Обычный текст.</p>' +
+        '<p class="img-single-wide figure-landscape"><strong>Ещё текст.</strong></p>'
+      );
+
+      expect(result).not.toContain('img-float-left');
+      expect(result).not.toContain('img-single-wide');
+      expect(result).not.toContain('figure-portrait');
+      expect(result).not.toContain('figure-landscape');
+    });
+
+    it('снимает одиночные float-классы, когда фото снова собираются в группу', () => {
+      const html =
+        '<p class="img-float-left figure-portrait"><img src="1.jpg" width="600" height="900"></p>' +
+        '<p class="img-float-right figure-portrait"><img src="2.jpg" width="600" height="900"></p>';
+      const result = applySmartImageLayout(html);
+
+      expect(result).toContain('img-pair-portraits');
+      expect(result).not.toContain('img-float-left');
+      expect(result).not.toContain('img-float-right');
+    });
+
     it('перекладывает разметку эпохи img-jrow на журнальную без вложенности', () => {
       const html = '<p>До</p><div class="img-jrow jrow-ar-225">' +
         '<p><img src="1.jpg" width="600" height="900"></p>' +
