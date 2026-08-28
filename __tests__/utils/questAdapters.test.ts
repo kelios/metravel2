@@ -734,6 +734,46 @@ describe('questAdapters', () => {
       expect(result.squareCoverWebResponsiveSource).toBeUndefined();
     });
 
+    it('reads square fields from the compact catalog payload used by the finale rail', () => {
+      const originalApiUrl = process.env.EXPO_PUBLIC_API_URL;
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api';
+
+      try {
+        const result = adaptMeta(makeQuestMeta({
+          media: {
+            cover: {
+              aspect_ratio: 1.5,
+              width: 1200,
+              height: 800,
+              src: '/quest-cover/1/legacy-landscape.webp',
+              src_square: '/quest-cover/1/square-320.webp',
+              srcset_square: [
+                '/quest-cover/1/square-160.webp 160w',
+                '/quest-cover/1/square-320.webp 320w',
+              ].join(', '),
+              sizes_hint_square: '132px',
+              variants: {
+                square_160: '/quest-cover/1/square-160.webp',
+                square_320: '/quest-cover/1/square-320.webp',
+              },
+            },
+          },
+        }));
+
+        expect(result.cover).toBe('https://metravel.by/quest-cover/1/legacy-landscape.webp');
+        expect(result.squareCoverWebResponsiveSource).toEqual({
+          src: 'https://metravel.by/quest-cover/1/square-320.webp',
+          srcSet: [
+            'https://metravel.by/quest-cover/1/square-160.webp 160w',
+            'https://metravel.by/quest-cover/1/square-320.webp 320w',
+          ].join(', '),
+          sizes: '132px',
+        });
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = originalApiUrl;
+      }
+    });
+
     it('rewrites a private first-completer avatar through the public API origin', () => {
       const originalApiUrl = process.env.EXPO_PUBLIC_API_URL;
       process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api';
