@@ -1,9 +1,6 @@
 import type { Travel } from '@/types/types'
 import type { AnchorsMap } from './TravelDetailsTypes'
 
-// Web uses travelDetailsDeferredLoader.web.ts so this test-only require cannot
-// pin TravelDetailsDeferred (map/FlashList/GPX) onto the travel-detail graph.
-
 type DeferredSectionsComponentType = React.ComponentType<{
   travel: Travel
   isMobile: boolean
@@ -15,20 +12,15 @@ type DeferredSectionsComponentType = React.ComponentType<{
   scrollToMapSection: () => void
 }>
 
-const isTestEnv =
-  typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
-
 let deferredSectionsLoader: Promise<DeferredSectionsComponentType> | null = null
 
 export function getInitialDeferredSectionsComponent() {
-  if (!isTestEnv) return null
-  const mod = require('@/components/travel/details/TravelDetailsDeferred')
-  return mod.TravelDeferredSections as DeferredSectionsComponentType
+  return null
 }
 
 export async function loadDeferredSectionsComponent(): Promise<DeferredSectionsComponentType> {
   if (!deferredSectionsLoader) {
-    deferredSectionsLoader = Promise.resolve(import('@/components/travel/details/TravelDetailsDeferred')).then(
+    deferredSectionsLoader = import('@/components/travel/details/TravelDetailsDeferred').then(
       (m) => m.TravelDeferredSections,
     )
   }

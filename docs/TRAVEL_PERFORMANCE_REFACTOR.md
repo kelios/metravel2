@@ -268,6 +268,28 @@ Async-граница `travelOfflineAdapter` остаётся отдельной 
 Закрывающий evidence — только одинаковый post-deploy Lighthouse recheck плюс
 scroll/CLS/console smoke тяжёлого описания.
 
+### Повторный production-замер 2026-08-28 и следующий cut (#1552)
+
+Канонический live probe, 1-min load 9.83, devtools mobile, три холодных прогона
+`https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg`:
+
+| run | LCP | TBT | CLS | Perf |
+| --- | ---: | ---: | ---: | ---: |
+| 01 | 2528 | 1019 | 0 | 70 |
+| 02 | 2519 | 796 | 0 | 74 |
+| 03 | 2526 | 896 | 0 | 74 |
+| median | **2526 PASS** | **896 FAIL** | **0 PASS** | 74 |
+
+Proximity-gate артефакт уже на проде (`0px 0px 400px 0px` в `[param]`), но поздняя
+задача `__shared-1` 162–170 мс на 11.2 с осталась: `boundingClientRect.bottom <= 0`
+на ещё не разложенном плейсхолдере fail-open'ил reveal. `cacheTravelOffline` на
+mount всё ещё eval'ил `travelOfflineAdapter` (76–79 мс). В eager HTML travel-детали
+оставались неиспользуемые чанки FlashList/expo-notifications/GPX из-за test
+`require(TravelDetailsDeferred)` в `travelDetailsDeferredLoader.ts`.
+
+Следующий cut (ещё не на проде): web-loader без `require`, `notifications.web.ts`,
+idle-defer recent-cache, IO только по `isIntersecting`/`intersectionRatio`.
+
 ### Что снято с eager-пути (#1552, замер 2026-08-25)
 
 Разорваны четыре ребра статического импорта; во всех случаях потребитель уже

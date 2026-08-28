@@ -28,6 +28,17 @@ interface TravelDescriptionProps {
 }
 
 const HEAVY_HTML_REVEAL_ROOT_MARGIN = '0px 0px 400px 0px';
+const OBSERVER_ATTACH_RETRY_MS = 50;
+const OBSERVER_ATTACH_RETRY_LIMIT = 20;
+
+function resolveWebElement(node: unknown): Element | null {
+    if (node == null || typeof Element === 'undefined') return null;
+    if (node instanceof Element) return node;
+    if (typeof node !== 'object') return null;
+    const host = node as { getNativeNode?: () => unknown; _nativeNode?: unknown };
+    const native = typeof host.getNativeNode === 'function' ? host.getNativeNode() : host._nativeNode;
+    return native instanceof Element ? native : null;
+}
 
 /**
  * Оптимизированное описание путешествия:
@@ -126,19 +137,24 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             };
 
             const Observer = w?.IntersectionObserver;
-            const target = descriptionRef.current;
-            if (typeof Observer === 'function' && target) {
+            let attachRetryCount = 0;
+            const attachObserver = (): boolean => {
+                if (typeof Observer !== 'function') {
+                    scheduleReveal();
+                    return true;
+                }
+                const target = resolveWebElement(descriptionRef.current) ?? descriptionRef.current;
+                if (!target) return false;
+                let created: { observe: (node: unknown) => void; disconnect: () => void }
                 try {
-                    observer = new Observer(
+                    created = new Observer(
                         (entries: Array<{
                             isIntersecting?: boolean;
                             intersectionRatio?: number;
-                            boundingClientRect?: { bottom?: number };
                         }>) => {
                             const hasReachedDescription = entries.some((entry) =>
                                 entry.isIntersecting ||
-                                Number(entry.intersectionRatio) > 0 ||
-                                Number(entry.boundingClientRect?.bottom) <= 0
+                                Number(entry.intersectionRatio) > 0
                             );
                             if (hasReachedDescription) {
                                 observer?.disconnect();
@@ -146,15 +162,35 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                             }
                         },
                         { rootMargin: HEAVY_HTML_REVEAL_ROOT_MARGIN, threshold: 0.01 },
-                    );
-                    observer.observe(target);
+                    )
                 } catch {
-                    observer?.disconnect();
                     observer = null;
                     scheduleReveal();
+                    return true;
                 }
-            } else {
-                scheduleReveal();
+                observer = created
+                try {
+                    created.observe(target);
+                    return true;
+                } catch {
+                    created.disconnect();
+                    observer = null;
+                    return false;
+                }
+            };
+
+            if (!attachObserver()) {
+                const retryAttach = () => {
+                    if (cancelled || revealScheduled) return;
+                    if (attachObserver()) return;
+                    attachRetryCount += 1;
+                    if (attachRetryCount >= OBSERVER_ATTACH_RETRY_LIMIT) {
+                        scheduleReveal();
+                        return;
+                    }
+                    revealTimeoutId = setTimeout(retryAttach, OBSERVER_ATTACH_RETRY_MS);
+                };
+                revealTimeoutId = setTimeout(retryAttach, 0);
             }
 
             return () => {
@@ -293,6 +329,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     return (
       <View
         ref={descriptionRef}
+        collapsable={false}
         style={[
           styles.wrapper,
           noBox && styles.wrapperNoBox,
