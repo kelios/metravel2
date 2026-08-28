@@ -250,6 +250,35 @@ const derivePlaceSourceFromRecord = (record: MapPlaceRecordLike): MapPlaceSource
 const readRecordString = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
 
+type MapPlaceSourceIndex = {
+  sourceIds: Set<string>;
+  pointIds: Set<number>;
+  canonicalSourceIds: Set<string>;
+};
+
+/** Same identity as isSameMapPlaceSource, indexing only accepted sources. */
+const addMapPlaceSourceIdentity = (
+  index: MapPlaceSourceIndex,
+  { sourceId, pointId }: MapPlaceSource,
+): boolean => {
+  const canonicalSourceId = canonicalizeMapPlaceSourceId(sourceId, pointId);
+  // Set matches NaN with itself, unlike the comparator's strict equality.
+  const indexedPointId = pointId != null && !Number.isNaN(pointId) ? pointId : null;
+  if (
+    index.sourceIds.has(sourceId) ||
+    (indexedPointId != null && index.pointIds.has(indexedPointId)) ||
+    (canonicalSourceId && index.canonicalSourceIds.has(canonicalSourceId))
+  ) {
+    return false;
+  }
+
+  // Rejected duplicates must not introduce aliases for later candidates.
+  index.sourceIds.add(sourceId);
+  if (indexedPointId != null) index.pointIds.add(indexedPointId);
+  if (canonicalSourceId) index.canonicalSourceIds.add(canonicalSourceId);
+  return true;
+};
+
 /**
  * Группировка записей в места: один проход, `Map` по `placeKey`, порядок
  * первого появления сохраняется. Сливаются ТОЛЬКО записи с одинаковым
@@ -264,7 +293,10 @@ export const groupMapPlaces = <TRecord extends MapPlaceRecordLike>(
   const out: MapPlaceMarker<TRecord>[] = [];
   if (!Array.isArray(records) || records.length === 0) return out;
 
-  const byPlaceKey = new Map<string, MapPlaceMarker<TRecord>>();
+  const byPlaceKey = new Map<
+    string,
+    { marker: MapPlaceMarker<TRecord>; sourceIndex: MapPlaceSourceIndex }
+  >();
   const legacyKeySeen = new Map<string, number>();
 
   for (const record of records) {
@@ -294,8 +326,8 @@ export const groupMapPlaces = <TRecord extends MapPlaceRecordLike>(
     }
 
     const placeKey = String(placeId);
-    const existing = byPlaceKey.get(placeKey);
-    if (!existing) {
+    const existingGroup = byPlaceKey.get(placeKey);
+    if (!existingGroup) {
       const declaredCount = isFiniteNumber(record.sourceCount) ? record.sourceCount : 0;
       const sources = source ? [source] : [];
       const marker: MapPlaceMarker<TRecord> = {
@@ -311,15 +343,22 @@ export const groupMapPlaces = <TRecord extends MapPlaceRecordLike>(
         sources,
         record,
       };
-      byPlaceKey.set(placeKey, marker);
+      const sourceIndex: MapPlaceSourceIndex = {
+        sourceIds: new Set(),
+        pointIds: new Set(),
+        canonicalSourceIds: new Set(),
+      };
+      if (source) addMapPlaceSourceIdentity(sourceIndex, source);
+      byPlaceKey.set(placeKey, { marker, sourceIndex });
       out.push(marker);
       continue;
     }
 
     // Вторая запись того же места: канонические поля остаются от первой
     // (координата/название/адрес принадлежат месту, не материалу), источник
-    // добавляется без дублей по sourceId.
-    if (source && !existing.sources.some((s) => isSameMapPlaceSource(s, source))) {
+    // добавляется без дублей по прежней source identity за O(1).
+    const { marker: existing, sourceIndex } = existingGroup;
+    if (source && addMapPlaceSourceIdentity(sourceIndex, source)) {
       existing.sources.push(source);
     }
     const declaredCount = isFiniteNumber(record.sourceCount) ? record.sourceCount : 0;

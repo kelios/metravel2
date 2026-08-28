@@ -12,6 +12,7 @@ import {
   materializeMapPlaceRecord,
   normalizeMapPlaceSource,
   type MapPlaceRecordLike,
+  type MapPlaceSource,
 } from '@/api/mapPlaces';
 import {
   fetchAllMapPlaceSources,
@@ -94,6 +95,85 @@ describe('map place source identity', () => {
 });
 
 describe('groupMapPlaces', () => {
+  it.each([500, 1000, 2000])('reads source identities linearly for %i sources of one place', (count) => {
+    let sourceIdReads = 0;
+    const records = Array.from({ length: count }, (_, index) => {
+      const primarySource = {
+        ...normalizeMapPlaceSource(RAW_LIBRARY_SOURCE_A)!,
+        pointId: index + 1,
+      };
+      // Define after the spread so Babel cannot flatten the getter while
+      // constructing the fixture and hide reads made by the real algorithm.
+      Object.defineProperty(primarySource, 'sourceId', {
+        get() {
+          sourceIdReads += 1;
+          return `travel-address:${index + 1}`;
+        },
+      });
+      return { ...RAW_FLAT_LIBRARY_ROW_A, primarySource };
+    });
+
+    expect(sourceIdReads).toBe(0);
+    const [place] = groupMapPlaces(records);
+
+    expect(place.sources).toHaveLength(count);
+    expect(place.sourceCount).toBe(count);
+    // Count real source reads, not elapsed time: a scan of all accepted
+    // sources grows quadratically even when the fixture runs quickly.
+    expect(sourceIdReads).toBeLessThanOrEqual(count * 8);
+    expect(place.sources[0]).toBe(records[0].primarySource);
+    expect(place.sources[count - 1]).toBe(records[count - 1].primarySource);
+  });
+
+  it('keeps the same source identity and first-accepted order as the pager comparator', () => {
+    const source = (sourceId: string, pointId: number | null): MapPlaceSource => ({
+      ...normalizeMapPlaceSource(RAW_LIBRARY_SOURCE_A)!,
+      sourceId,
+      pointId,
+    });
+    const candidates = [
+      source('travel-address:14029', 14029),
+      source('14029', 14029),
+      source('travel-address:14029', null),
+      source('alternate', 14029),
+      // A rejected source must not add its alternate id to the index.
+      source('alternate', 15688),
+      source('alternate', 999),
+      // Nor may a raw-id duplicate contribute its different pointId.
+      source('point-999', 999),
+      source('15688', 15688),
+      source('travel-address:15688', null),
+      source('no-point', null),
+      source('other-no-point', null),
+      // Canonical identity still matches without raw-id or point-id equality.
+      source('777', 777),
+      source('travel-address:777', null),
+      // Null/NaN pointIds must not form a shared identity in the numeric index.
+      source('nan-a', Number.NaN),
+      source('nan-b', Number.NaN),
+      source('', null),
+      source('', 888),
+      source('travel-address:888', null),
+    ];
+    const expected: MapPlaceSource[] = [];
+    for (const candidate of candidates) {
+      if (!expected.some((previous) => isSameMapPlaceSource(previous, candidate))) {
+        expected.push(candidate);
+      }
+    }
+
+    const [place] = groupMapPlaces(candidates.map((primarySource) => ({
+      ...RAW_FLAT_LIBRARY_ROW_A,
+      primarySource,
+    })));
+
+    expect(place.sources).toEqual(expected);
+    expect(place.sources.map(({ sourceId }) => sourceId)).toEqual([
+      'travel-address:14029', 'alternate', 'point-999', 'travel-address:15688',
+      'no-point', 'other-no-point', '777', 'nan-a', 'nan-b', '', 'travel-address:888',
+    ]);
+  });
+
   it('merges two flat rows sharing one place_id into one marker preserving both sources', () => {
     const markers = groupMapPlaces([RAW_FLAT_LIBRARY_ROW_A, RAW_FLAT_LIBRARY_ROW_B]);
 
@@ -155,6 +235,23 @@ describe('groupMapPlaces', () => {
     expect(markers[0].sourceCount).toBe(2);
     expect(markers[0].primarySource).toBe(primarySource);
     expect(markers[0].name).toBe('Национальная библиотека Беларуси');
+  });
+
+  it('accepts later sources when the first place row has no source', () => {
+    const firstRecord: MapPlaceRecordLike = { placeId: 501, sourceCount: 5 };
+    const [place] = groupMapPlaces([
+      firstRecord,
+      RAW_FLAT_LIBRARY_ROW_A,
+      RAW_FLAT_LIBRARY_ROW_B,
+      { ...RAW_FLAT_LIBRARY_ROW_A, sourceCount: 8 },
+    ]);
+
+    expect(place.record).toBe(firstRecord);
+    expect(place.primarySource).toBe(place.sources[0]);
+    expect(place.sources.map(({ sourceId }) => sourceId)).toEqual([
+      'travel-address:14029', 'travel-address:15688',
+    ]);
+    expect(place.sourceCount).toBe(8);
   });
 
   it('never merges nearby places with different place_id', () => {

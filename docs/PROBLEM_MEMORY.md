@@ -2286,7 +2286,8 @@ guard, падающий в CI на попытке обойти этот конт
 - **Цепочка:** `#741` — light marker payload без `place_id`; `#988/#993` — общий
   map core и popup; `#1347` — keyed marker diff, который намеренно сохраняет
   разные records; `#1566` — отдельная ошибочная координата Национальной
-  библиотеки; `#1567/#1568` — canonical backend/frontend owners.
+  библиотеки; `#1567/#1568` — canonical backend/frontend owners; `#1571` —
+  shared place/source model и линейная группировка dataset.
 - **Подтверждённая systemic cause:** `/api/travels/search_travels_for_map/` и
   `/api/map/clusters/` используют `travel_address` как marker identity. Поэтому
   две статьи одного места становятся двумя markers, а frontend не может
@@ -2301,13 +2302,28 @@ guard, падающий в CI на попытке обойти этот конт
   `placeKey`, монтирует только активное фото и не пересобирает marker layer при
   перелистывании. Regression — MAP-20 плюс positive `one place -> N sources` и
   negative `different place_id -> never merge` на backend, web и native.
+- **Регрессия группировки #1571:** `groupMapPlaces` в `api/mapPlaces.ts`
+  выполнял `sources.some(isSameMapPlaceSource)` для каждой строки одного места:
+  внешний `Map` не устранял внутренние `n(n-1)/2` сравнений. Теперь raw source
+  ID, canonical source ID и non-null point ID индексируются отдельными `Set`.
+  Индекс пополняют только принятые sources: отвергнутый дубль не добавляет
+  алиасы, порядок первого принятия и правила `isSameMapPlaceSource` сохранены.
+  `NaN` исключён из числового индекса, чтобы `Set` не менял strict equality.
+  Регрессия в `__tests__/api/mapPlaces.test.ts` считает реальные чтения ID для
+  500/1000/2000 sources через post-construction getter и сверяет результат с
+  прежним компаратором; отдельно проверена первая строка без source.
 - **Решение для новой жалобы:** неверную геометрию конкретной записи вести как
   отдельный data defect (как `#1566`). Повторный случай потери/раздвоения
   источников при той же модели — reuse открытых `#1567/#1568` или reopen после
   закрытия; новый marker renderer failure mode — create-linked, не fuzzy-fix.
-- **Последняя проверка:** 2026-08-25; production API подтвердил две записи
+  Квадратичная группировка или drift source identity — reuse/reopen `#1571`.
+- **Исходная проверка:** 2026-08-25; production API подтвердил две записи
   Национальной библиотеки с разными статьями/фото и ещё три пары в Станьково.
-  Системный фикс не реализован; `#1566/#1567/#1568` находятся в `todo`.
+- **Последняя проверка:** 2026-08-28; локально для `#1571` исходный алгоритм
+  дал 499000/1998000/7996000 чтений ID, индексированный — 500/1000/2000 при
+  сохранении всех sources; 4 suites / 58 tests модели, pager и lazy cache
+  прошли. Evidence — `.codex-temp/task-1571-finish/`. Этот pure-model check не
+  подменяет приёмку backend/renderer/UI для всей семьи `#1567/#1568`.
 
 ### MAP-ROUTING-001 — incomplete routing migration
 
