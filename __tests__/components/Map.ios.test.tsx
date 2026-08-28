@@ -188,6 +188,53 @@ describe('Map.ios Component', () => {
     expect(onMarkerSelect).toHaveBeenCalledWith(mockTravel.travelAddress.data[1]);
   });
 
+  it('ignores a stale keyed marker message after its place is removed', () => {
+    const [removedPoint, currentPoint] = mockTravel.travelAddress.data.map((point) => ({
+      ...point,
+      placeId: `place-${point.id}`,
+    }));
+    const onMarkerSelect = jest.fn();
+    const rendered = render(
+      <Map
+        travel={{ travelAddress: { data: [removedPoint, currentPoint] } }}
+        coordinates={mockCoordinates}
+        onMarkerSelect={onMarkerSelect}
+      />
+    );
+    const onMessage = getWebView(rendered).props.onMessage;
+
+    rendered.rerender(
+      <Map
+        travel={{ travelAddress: { data: [currentPoint] } }}
+        coordinates={mockCoordinates}
+        onMarkerSelect={onMarkerSelect}
+      />
+    );
+    act(() => {
+      onMessage({
+        nativeEvent: { data: JSON.stringify({
+          type: 'SELECT_PLACE',
+          placeKey: removedPoint.placeId,
+          id: String(removedPoint.id),
+          coord: removedPoint.coord,
+          index: 0,
+        }) },
+      });
+    });
+    expect(onMarkerSelect).not.toHaveBeenCalled();
+
+    act(() => {
+      onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'SELECT_PLACE', placeKey: currentPoint.placeId }) },
+      });
+    });
+    expect(onMarkerSelect).toHaveBeenCalledTimes(1);
+    expect(onMarkerSelect).toHaveBeenCalledWith(expect.objectContaining({
+      id: currentPoint.id,
+      placeId: currentPoint.placeId,
+    }));
+  });
+
   it('routes an empty-map tap to the native background-dismiss callback', () => {
     const onMapBackgroundTap = jest.fn();
     const onMapClick = jest.fn();

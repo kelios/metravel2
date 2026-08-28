@@ -87,8 +87,9 @@ export const toNativeClusterPayload = (
 /**
  * Резолв выбранного места. Приоритет — `placeKey`: server cluster updates могут
  * пересобрать массив между рендером и тапом, и тогда ни индекс, ни координата не
- * указывают на нужное место однозначно. `id`/`coord`/`index` остаются fallback,
- * пока в проде может жить старый WebView-HTML без `placeKey`.
+ * указывают на нужное место однозначно. Неизвестный ключ означает устаревший тап,
+ * который надо игнорировать. `id`/`coord`/`index` остаются fallback только для
+ * старого WebView-HTML без `placeKey`.
  */
 export const resolveSelectedNativePlace = <TRecord extends MapPlaceRecordLike>(
   places: readonly MapPlaceMarker<TRecord>[] | null | undefined,
@@ -97,8 +98,7 @@ export const resolveSelectedNativePlace = <TRecord extends MapPlaceRecordLike>(
   if (!Array.isArray(places) || places.length === 0) return null;
 
   if (message.placeKey) {
-    const byKey = places.find((place) => place?.placeKey === message.placeKey);
-    if (byKey) return byKey;
+    return places.find((place) => place?.placeKey === message.placeKey) ?? null;
   }
   if (message.id) {
     const byId = places.find(

@@ -343,8 +343,22 @@ describe('#1573 native payload и резолв выбора', () => {
     expect(selected?.record).toBe(libraryRecordB)
   })
 
+  it.each([
+    { fallback: 'id', message: { id: '103' } },
+    { fallback: 'coord', message: { coord: OPERA_COORD } },
+    { fallback: 'index', message: { index: 0 } },
+  ])('удалённый placeKey не открывает другое место через $fallback', ({ message }) => {
+    // Библиотека исчезла при refetch; legacy-поля теперь совпадают с театром.
+    const currentPlaces = groupMapPlaces<Point>([operaRecord])
+
+    expect(resolveSelectedNativePlace(currentPlaces, {
+      ...message,
+      placeKey: places[0].placeKey,
+    })).toBeNull()
+  })
+
   it('без placeKey резолв откатывается на legacy id, затем coord, затем index', () => {
-    expect(resolveSelectedNativePlace(places, { id: '103' })?.placeKey).toBe('place-opera')
+    expect(resolveSelectedNativePlace(places, { placeKey: '', id: '103' })?.placeKey).toBe('place-opera')
     expect(resolveSelectedNativePlace(places, { coord: OPERA_COORD })?.placeKey).toBe('place-opera')
     expect(resolveSelectedNativePlace(places, { index: 0 })?.placeKey).toBe('place-lib')
     expect(resolveSelectedNativePlace(places, { index: 99 })).toBeNull()
