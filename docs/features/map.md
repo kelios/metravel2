@@ -266,7 +266,9 @@ type MapPlaceMarker = {
 };
 
 type MapPlaceSource = {
-  sourceId: `travel-address:${number}`;
+  // Production currently serializes `source_id` as the bare point-id string;
+  // the client canonicalizes it to `travel-address:<point_id>`.
+  sourceId: string;
   pointId: number;
   travelId: number | null;
   articleTitle: string;
@@ -277,10 +279,12 @@ type MapPlaceSource = {
 };
 ```
 
-- Группировка опирается только на стабильный `placeId`, назначенный данным. Ни
-  расстояние, ни совпадение названия/адреса не являются достаточным identity:
-  соседние здания, корпуса, входы и смотровые площадки нельзя склеивать
-  эвристикой. Legacy-точка без `placeId` остаётся отдельным marker.
+- Группировка опирается только на стабильный `placeId`, назначенный данным.
+  На проде это UUID-строка (`01409e46-…` у Национальной библиотеки), не
+  numeric `point_id`. Ни расстояние, ни совпадение названия/адреса не являются
+  достаточным identity: соседние здания, корпуса, входы и смотровые площадки
+  нельзя склеивать эвристикой. Legacy-точка без `placeId` остаётся отдельным
+  marker.
 - Нормализация выполняется один раз за обновление dataset через `Map` за `O(n)`;
   popup не запускает новый поиск и не пересобирает marker-слой при перелистывании.
   Marker payload несёт только `sourceCount` и `primarySource`. При

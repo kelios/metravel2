@@ -71,6 +71,31 @@ export const RAW_FLAT_LIBRARY_ROW_B = {
   urlTravel: '/travels/biblioteki-belarusi',
 } as const;
 
+/**
+ * Production #1567 identity is a UUID string, not a numeric point/place id.
+ * Sources endpoint is `GET /api/map/places/{uuid}/sources/`; numeric 14029/501 404.
+ */
+export const LIBRARY_PLACE_UUID = '01409e46-415e-5dab-9e8d-a88b7bed1b64';
+
+export const RAW_GROUPED_LIBRARY_MARKER_UUID = {
+  ...RAW_GROUPED_LIBRARY_MARKER,
+  place_id: LIBRARY_PLACE_UUID,
+  primary_source: {
+    ...RAW_LIBRARY_SOURCE_A,
+    source_id: '14029',
+  },
+} as const;
+
+export const RAW_FLAT_LIBRARY_ROW_A_UUID = {
+  ...RAW_FLAT_LIBRARY_ROW_A,
+  place_id: LIBRARY_PLACE_UUID,
+} as const;
+
+export const RAW_FLAT_LIBRARY_ROW_B_UUID = {
+  ...RAW_FLAT_LIBRARY_ROW_B,
+  place_id: LIBRARY_PLACE_UUID,
+} as const;
+
 /** Соседнее самостоятельное место: другой place_id, склеивать запрещено. */
 export const RAW_NEARBY_DISTINCT_MARKER = {
   place_id: 502,

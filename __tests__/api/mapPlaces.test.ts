@@ -13,11 +13,21 @@ import {
   normalizeMapPlaceSource,
   type MapPlaceRecordLike,
 } from '@/api/mapPlaces';
-import { fetchAllMapPlaceSources, fetchMapClusters, fetchMapPlaceSources } from '@/api/map';
 import {
+  fetchAllMapPlaceSources,
+  fetchMapClusters,
+  fetchMapPlaceSources,
+  fetchTravelsForMap,
+  fetchTravelsNearRoute,
+} from '@/api/map';
+import {
+  LIBRARY_PLACE_UUID,
   RAW_FLAT_LIBRARY_ROW_A,
+  RAW_FLAT_LIBRARY_ROW_A_UUID,
   RAW_FLAT_LIBRARY_ROW_B,
+  RAW_FLAT_LIBRARY_ROW_B_UUID,
   RAW_GROUPED_LIBRARY_MARKER,
+  RAW_GROUPED_LIBRARY_MARKER_UUID,
   RAW_LEGACY_PLACELESS_ROW,
   RAW_LIBRARY_SOURCE_A,
   RAW_LIBRARY_SOURCE_B,
@@ -218,6 +228,16 @@ describe('groupMapPlaces', () => {
       getMapPointIdentityKey(RAW_LEGACY_PLACELESS_ROW),
     );
   });
+
+  it('merges production UUID place_id rows and keeps String(uuid) as placeKey', () => {
+    const markers = groupMapPlaces([RAW_FLAT_LIBRARY_ROW_A_UUID, RAW_FLAT_LIBRARY_ROW_B_UUID]);
+
+    expect(markers).toHaveLength(1);
+    expect(markers[0].placeKey).toBe(LIBRARY_PLACE_UUID);
+    expect(markers[0].placeId).toBe(LIBRARY_PLACE_UUID);
+    expect(markers[0].sourceCount).toBe(2);
+    expect(getMapPlaceKey(RAW_GROUPED_LIBRARY_MARKER_UUID)).toBe(LIBRARY_PLACE_UUID);
+  });
 });
 
 describe('fetchMapClusters place passthrough', () => {
@@ -242,6 +262,77 @@ describe('fetchMapClusters place passthrough', () => {
     expect(marker.primarySource?.articleTitle).toBe('Минск за выходные');
     expect(marker.primarySource?.thumbnailUrl).toContain('/address-image/14029/');
   });
+
+  it('accepts a UUID grouped DTO and canonicalizes a bare production source_id', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce(
+      createResponseMock({
+        clusters: [],
+        markers: [RAW_GROUPED_LIBRARY_MARKER_UUID],
+        total_count: 1,
+        source: 'places',
+        generated_at: '2026-08-28T12:00:00Z',
+      }),
+    );
+
+    const result = await fetchMapClusters({ south: 53, west: 27, north: 54, east: 28 }, 16);
+    const marker = result.markers[0];
+
+    expect(marker.placeId).toBe(LIBRARY_PLACE_UUID);
+    expect(marker.sourceCount).toBe(2);
+    expect(marker.primarySource?.sourceId).toBe('travel-address:14029');
+    expect(marker.primarySource?.pointId).toBe(14029);
+  });
+});
+
+describe('fetchTravelsForMap place passthrough', () => {
+  it('keeps grouped DTO fields on a dict payload (legacy shape)', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce(
+      createResponseMock({ 0: RAW_GROUPED_LIBRARY_MARKER }),
+    );
+
+    const result = await fetchTravelsForMap(0, 10, { lat: '53.93', lng: '27.64', radius: '60' });
+    const marker = (result as Record<string, unknown>)[0] as MapPlaceRecordLike;
+
+    expect(marker.placeId).toBe(501);
+    expect(marker.sourceCount).toBe(2);
+    expect(marker.primarySource?.sourceId).toBe('travel-address:14029');
+  });
+
+  it('keeps UUID place identity on a results-envelope payload', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce(
+      createResponseMock({ results: [RAW_GROUPED_LIBRARY_MARKER_UUID], count: 1 }),
+    );
+
+    const result = await fetchTravelsForMap(0, 10, { lat: '53.93', lng: '27.64', radius: '60' });
+    const marker = (result as Record<string, unknown>)[0] as MapPlaceRecordLike;
+
+    expect(marker.placeId).toBe(LIBRARY_PLACE_UUID);
+    expect(marker.sourceCount).toBe(2);
+  });
+});
+
+describe('fetchTravelsNearRoute place passthrough', () => {
+  it('accepts grouped and legacy-flat rows in one near-route payload', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce(
+      createResponseMock([RAW_GROUPED_LIBRARY_MARKER_UUID, RAW_LEGACY_PLACELESS_ROW]),
+    );
+
+    const result = await fetchTravelsNearRoute(
+      [
+        [27.64, 53.93],
+        [27.65, 53.94],
+      ],
+      2,
+    );
+    const rows = result as unknown as MapPlaceRecordLike[];
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0].placeId).toBe(LIBRARY_PLACE_UUID);
+    expect(rows[0].sourceCount).toBe(2);
+    expect(rows[0].primarySource?.sourceId).toBe('travel-address:14029');
+    expect(rows[1].placeId).toBeUndefined();
+    expect(rows[1].sourceCount).toBeUndefined();
+  });
 });
 
 describe('fetchMapPlaceSources', () => {
@@ -264,6 +355,16 @@ describe('fetchMapPlaceSources', () => {
     mockFetchWithTimeout.mockResolvedValue(createResponseMock({}, false, 500));
 
     await expect(fetchMapPlaceSources(501)).rejects.toThrow('HTTP 500');
+  });
+
+  it('URL-encodes a UUID place_id for the production sources endpoint', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce(createResponseMock(RAW_SOURCES_SINGLE_PAGE));
+
+    await fetchMapPlaceSources(LIBRARY_PLACE_UUID);
+
+    const url = String(mockFetchWithTimeout.mock.calls[0][0]);
+    expect(url).toContain(`/map/places/${encodeURIComponent(LIBRARY_PLACE_UUID)}/sources/`);
+    expect(url).not.toContain('/map/places/14029/sources/');
   });
 });
 
