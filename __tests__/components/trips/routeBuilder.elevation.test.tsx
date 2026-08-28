@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native'
 
 import type { PlannedTrip, TripRouteElevation } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
@@ -174,6 +174,10 @@ describe('RouteBuilder elevation profile', () => {
     const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(await findByTestId('route-elevation-profile')).toBeTruthy()
+    expect(getByTestId('route-builder-elevation')).toBeTruthy()
+    expect(
+      within(getByTestId('route-builder-map-column')).queryByTestId('route-builder-elevation'),
+    ).toBeNull()
     expect(getByTestId('route-elevation-samples').props.children).toBe('3')
     // Названия точек маршрута подписывают старт/пик/финиш графика.
     expect(getByTestId('route-elevation-hints').props.children).toBe('Zakopane|Bukowina')

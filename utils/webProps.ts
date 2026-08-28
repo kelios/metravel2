@@ -63,9 +63,11 @@ export type WebOnlyTextStyle = {
   outlineStyle?: React.CSSProperties['outlineStyle']
   outlineWidth?: React.CSSProperties['outlineWidth']
   overflow?: React.CSSProperties['overflow']
+  overflowWrap?: React.CSSProperties['overflowWrap']
   textOverflow?: React.CSSProperties['textOverflow']
   transition?: React.CSSProperties['transition']
   whiteSpace?: React.CSSProperties['whiteSpace']
+  wordBreak?: React.CSSProperties['wordBreak']
 }
 
 /** Typed RN-Web compatibility boundary for CSS properties absent from TextStyle. */

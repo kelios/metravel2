@@ -19,6 +19,7 @@ describe('planned-trip elevation compact layout contract', () => {
 
     expect(compactGrid.flexDirection).toBe('row')
     expect(compactGrid.flexWrap).toBe('wrap')
+    expect(compactGrid.width).toBe('100%')
     expect(compactCard.minWidth).toBe(0)
     expect(compactCard.flexBasis).toBe('30%')
   })

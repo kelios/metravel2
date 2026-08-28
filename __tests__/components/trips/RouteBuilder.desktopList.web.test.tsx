@@ -101,8 +101,10 @@ const makeTrip = (route = makeRoute(50)): PlannedTrip => ({
   createdAt: '2026-08-27T08:00:00Z',
 })
 
-const renderBuilder = () =>
-  render(<RouteBuilder trip={makeTrip()} />, { wrapper: createQueryWrapper().Wrapper })
+const renderBuilder = (pointCount = 50) =>
+  render(<RouteBuilder trip={makeTrip(makeRoute(pointCount))} />, {
+    wrapper: createQueryWrapper().Wrapper,
+  })
 
 describe('RouteBuilder desktop long-list contract', () => {
   beforeEach(() => {
@@ -114,6 +116,21 @@ describe('RouteBuilder desktop long-list contract', () => {
   })
   afterEach(() => jest.restoreAllMocks())
   afterAll(() => setPlatformOS(originalPlatformOS))
+
+  it.each([2, 10, 50] as const)(
+    'keeps a %s-point route inside the bounded scroll surface',
+    (pointCount) => {
+      const { getByTestId } = renderBuilder(pointCount)
+      const scroll = getByTestId('route-builder-point-list-scroll')
+      const scrollStyle = StyleSheet.flatten(scroll.props.style) as {
+        maxHeight?: number | string
+      }
+
+      expect(scrollStyle.maxHeight).toEqual(expect.stringMatching(/^clamp\(.+\)$/))
+      expect(getByTestId(`route-builder-point-${pointCount - 1}`)).toBeTruthy()
+      expect(getByTestId('route-builder-add-action')).toBeTruthy()
+    },
+  )
 
   it('bounds a long route in a scroll surface without removing keyboard or a11y controls', () => {
     const { getByTestId } = renderBuilder()
