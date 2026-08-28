@@ -73,6 +73,7 @@ export const QuestForCitySection: React.FC<{
       collapsable={false}
       accessibilityLabel={heading}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
+      testID="quest-for-city-section"
       data-section-key="quest-for-city"
     >
       <Text
