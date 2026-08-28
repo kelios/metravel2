@@ -5,8 +5,8 @@
 // ShareBadgeSheet), а не пишет параллельный: каналы открываются ТОЛЬКО через
 // @/utils/externalLinks (guard:external-links зелёный), копирование — expo-clipboard,
 // нативный шаринг — Web Share API / RN Share, картинку рисует сервер
-// (api/questsShare.createQuestResultCard). Карточка — УЛУЧШЕНИЕ: пока BE-эндпоинт
-// не задеплоен, лист остаётся работоспособным на шаринге публичной ссылки квеста.
+// (api/questsShare.createQuestResultCard). Карточка — улучшение: если генератор
+// недоступен, лист остаётся работоспособным на шаринге публичной ссылки квеста.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -129,7 +129,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
         setStatus('ready');
       } catch (error) {
         if (requestId !== requestIdRef.current) return;
-        // Карточка — улучшение: отсутствие BE-эндпоинта не ломает шаринг ссылки.
+        // Карточка — улучшение: отказ генератора не ломает шаринг ссылки.
         devWarn('[ShareQuestResultSheet] result-card unavailable', error);
         setCard(null);
         setStatus('unavailable');
@@ -153,8 +153,8 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
 
   const hasImage = status === 'ready' && Boolean(card?.imageUrl);
 
-  // Ссылка для шаринга: публичная страница результата (когда BE её включит) или
-  // сам квест как фолбэк. UTM-метка одинакова для всех каналов (постановка #1472).
+  // Ссылка для шаринга: публичная страница результата или сам квест как фолбэк.
+  // UTM-метка одинакова для всех каналов (постановка #1472).
   const shareLink = useCallback((): string => {
     const base = card?.publicUrl || buildQuestPublicUrl(subject?.cityId, subject?.questSlug);
     return buildQuestResultShareLink(base, { slug: subject?.questSlug ?? '' });

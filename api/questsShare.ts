@@ -4,13 +4,13 @@
 // карточку → { share_token, image_url, story_image_url, public_url, expires_at }.
 // Картинку-диплом (1200×630 для OG и 1080×1920 для сторис) и публичную страницу
 // результата рисует и раздаёт СЕРВЕР — тот же генератор, что и у достижений
-// (переиспользование по постановке #1472, не второй параллельный). Пока бэкенд-
-// эндпоинт `/quests/result-cards/` не задеплоен, в DEV отдаём тот же мок-фолбэк,
-// что и у достижений; в проде до готовности BE карточка недоступна, и лист
-// шаринга деградирует до шаринга ссылки на квест (см. ShareQuestResultSheet).
+// (переиспользование по постановке #1472, не второй параллельный). Production
+// endpoint живой (#1549 done). Dev-мок остаётся только под явным флагом и при
+// локальном 404/501; в проде лист шаринга не подменяет отказ заглушкой.
 
 import { apiClient, ApiError } from '@/api/client';
 import { resolveDevMockFlag } from '@/utils/devMockFlags';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { devWarn } from '@/utils/logger';
 import { getSiteBaseUrl } from '@/utils/seo';
 import type { QuestResultUtm } from '@/utils/questResultShare';
@@ -52,13 +52,15 @@ interface QuestResultCardDto {
 
 const mapQuestResultCard = (dto: QuestResultCardDto): QuestResultCard => ({
   shareToken: dto.share_token ?? '',
-  imageUrl: dto.image_url ?? '',
-  storyImageUrl: dto.story_image_url ?? '',
-  publicUrl: dto.public_url ?? null,
+  // Прод сериализует абсолютные URL как http://metravel.by/… — без https-upgrade
+  // превью и скачивание на https-сайте ломаются mixed-content.
+  imageUrl: dto.image_url ? normalizeMediaUrl(dto.image_url) : '',
+  storyImageUrl: dto.story_image_url ? normalizeMediaUrl(dto.story_image_url) : '',
+  publicUrl: dto.public_url ? normalizeMediaUrl(dto.public_url) : null,
   expiresAt: dto.expires_at ?? null,
 });
 
-// ── Мок-фолбэк (до готовности BE `/quests/result-cards/`) ────────────────────
+// ── Dev-мок (локальная отладка, не приёмка) ─────────────────────────────────
 // Тот же контракт и та же дисциплина, что и у достижений: под флагом или при
 // 404/501/0 в DEV. resolveDevMockFlag бросает в проде, если флаг случайно включат.
 

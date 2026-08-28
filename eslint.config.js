@@ -226,6 +226,7 @@ module.exports = [
   {
     files: [
       "scripts/**/*.{js,ts,mjs,cjs}",
+      ".grok/**/*.{js,mjs,cjs}",
       "*.config.{js,ts,mjs,cjs}",
       ".*rc.{js,cjs,mjs,ts}",
       "babel.config.*",

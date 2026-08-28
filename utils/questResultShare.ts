@@ -55,10 +55,9 @@ export const buildQuestResultShareLink = (
 };
 
 /**
- * Публичная ссылка на сам квест — фолбэк, пока публичная страница результата
- * `/quests/result/<id>` не задеплоена бэкендом. Совпадает с canonical страницы
- * квеста (`/quests/<cityId>/<slug>`), поэтому соцпревью подтягивает уже
- * пререндеренную обложку квеста, а не заглушку.
+ * Публичная ссылка на сам квест — фолбэк, если create-result-card не вернул
+ * `public_url`. Совпадает с canonical страницы квеста (`/quests/<cityId>/<slug>`),
+ * поэтому соцпревью подтягивает уже пререндеренную обложку квеста, а не заглушку.
  */
 export const buildQuestPublicUrl = (
   cityId: string | undefined,

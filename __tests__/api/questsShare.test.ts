@@ -1,7 +1,6 @@
 // __tests__/api/questsShare.test.ts
 // Контракт share-карточки результата квеста ([INV2-02], #1472): тело запроса к
-// бэкенду и маппинг DTO→domain. Фиксирует то, что должен принять и вернуть
-// будущий эндпоинт `/quests/result-cards/`, и мок-фолбэк до его готовности.
+// бэкенду и маппинг DTO→domain, включая https-upgrade прод-URL.
 
 // USE_MOCK читается при загрузке модуля — снимаем флаг ДО импорта.
 delete process.env.EXPO_PUBLIC_QUEST_SHARE_MOCK
@@ -84,5 +83,23 @@ describe('api/questsShare createQuestResultCard', () => {
     const body = mockPost.mock.calls[0][1] as Record<string, unknown>
     expect(body).not.toHaveProperty('hero_name')
     expect(body).not.toHaveProperty('finished_at')
+  })
+
+  it('upgrades production http diploma URLs to https so the share sheet is not mixed-content', async () => {
+    mockPost.mockResolvedValueOnce({
+      share_token: 'tok-http',
+      image_url: 'http://metravel.by/api/quests/result-cards/tok-http.png',
+      story_image_url: 'http://metravel.by/api/quests/result-cards/tok-http-story.png',
+      public_url: 'http://metravel.by/quests/result/public-slug/',
+      expires_at: null,
+    })
+
+    const card = await createQuestResultCard(baseInput)
+
+    expect(card.imageUrl).toBe('https://metravel.by/api/quests/result-cards/tok-http.png')
+    expect(card.storyImageUrl).toBe(
+      'https://metravel.by/api/quests/result-cards/tok-http-story.png',
+    )
+    expect(card.publicUrl).toBe('https://metravel.by/quests/result/public-slug/')
   })
 })
