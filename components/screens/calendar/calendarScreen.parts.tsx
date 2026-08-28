@@ -343,7 +343,13 @@ export function DateEditorModal({
   const needsDateInput = selectedStatus !== 'wishlist'
 
   return (
-    <Modal visible={Boolean(editor)} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={Boolean(editor)}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      testID="calendar-date-editor"
+    >
       <KeyboardAvoidingView
         style={styles.modalKeyboardAvoider}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

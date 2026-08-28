@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { Alert, Platform } from 'react-native'
 
 import { confirmAction } from '@/utils/confirmAction'
@@ -119,6 +122,26 @@ describe('confirmAction', () => {
 
     resolveConfirmDialog(false)
     await expect(pending).resolves.toBe(false)
+  })
+
+  it('owned #1556 call sites have no executable window.confirm', () => {
+    const files = [
+      'utils/confirmAction.ts',
+      'components/listTravel/RecommendationsTabs.tsx',
+      'components/screens/calendar/CalendarScreen.tsx',
+      'components/map/EditMarkerModal.tsx',
+    ]
+    const executableConfirm = /window\.confirm\s*\(/
+    for (const file of files) {
+      const source = readFileSync(join(process.cwd(), file), 'utf8')
+      const executable = source
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1')
+      expect({ file, hasWindowConfirm: executableConfirm.test(executable) }).toEqual({
+        file,
+        hasWindowConfirm: false,
+      })
+    }
   })
 
   it('native: остаётся на Alert.alert и не трогает web-хост', async () => {

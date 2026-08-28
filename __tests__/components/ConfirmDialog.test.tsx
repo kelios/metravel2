@@ -1,14 +1,8 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { Modal, Platform } from 'react-native'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
-const mockCreatePortal = jest.fn((node: any, _container?: any) => node)
 const originalPlatform = Platform.OS
-
-jest.mock('react-dom', () => ({
-  __esModule: true,
-  createPortal: (node: any, container: any) => mockCreatePortal(node, container),
-}))
 
 describe('ConfirmDialog', () => {
   const defaultProps = {
@@ -73,31 +67,32 @@ describe('ConfirmDialog', () => {
   it('renders in the connected web host and exposes a stable dialog test id', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' })
 
-    mockCreatePortal.mockClear()
     const { getByTestId } = render(<ConfirmDialog {...defaultProps} />)
     expect(getByTestId('confirm-dialog')).toBeTruthy()
-    expect(mockCreatePortal).not.toHaveBeenCalled()
-
   })
 
-  it('portals into an active parent dialog so its RNW focus trap accepts confirm focus', () => {
+  it('stacks as the active RNW modal so a parent modal does not receive the same Escape', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' })
-    const parentDialog = document.createElement('div')
-    parentDialog.setAttribute('role', 'dialog')
-    parentDialog.setAttribute('aria-modal', 'true')
-    const staleConfirm = document.createElement('div')
-    staleConfirm.dataset.testid = 'confirm-dialog'
-    staleConfirm.setAttribute('role', 'dialog')
-    staleConfirm.setAttribute('aria-modal', 'true')
-    staleConfirm.tabIndex = -1
-    parentDialog.appendChild(staleConfirm)
-    document.body.appendChild(parentDialog)
-    staleConfirm.focus()
+    const onClose = jest.fn()
+    const onParentClose = jest.fn()
 
-    render(<ConfirmDialog {...defaultProps} />)
+    render(
+      <>
+        <Modal visible transparent onRequestClose={onParentClose}>
+          <button type="button">Parent action</button>
+        </Modal>
+        <ConfirmDialog {...defaultProps} onClose={onClose} />
+      </>
+    )
 
-    expect(mockCreatePortal).toHaveBeenCalledWith(expect.anything(), parentDialog)
+    document.body.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    }))
 
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(onParentClose).not.toHaveBeenCalled()
   })
 
   it('handles one Escape gesture on capture keyup and prevents it reaching a parent RNW modal', async () => {

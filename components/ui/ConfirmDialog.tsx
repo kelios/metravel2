@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Dialog, Portal } from '@/ui/paper';
-import { Text, StyleSheet, Platform, View } from 'react-native';
+import { Modal, Text, StyleSheet, Platform, View } from 'react-native';
 import Button from '@/components/ui/Button';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -81,33 +81,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }, [visible]);
 
     if (Platform.OS === 'web') {
-        const portal = (() => {
-            try {
-                const ReactDOM = require('react-dom');
-                return ReactDOM?.createPortal as ((node: React.ReactNode, container: Element) => React.ReactNode) | undefined;
-            } catch {
-                return undefined;
-            }
-        })();
-
-        const body = typeof document !== 'undefined' ? document.body : null;
-        // A nested RN Web Modal owns focus inside its dialog subtree. Portal the
-        // confirmation into that connected parent only; portaling to `body`
-        // creates a detached container in this renderer. Non-nested confirms
-        // stay in the eager host subtree and use the document-level trap.
-        const openParentDialogs = body
-            ? Array.from(body.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
-                .filter((element) => element.dataset.testid !== 'confirm-dialog' && element.isConnected)
-            : [];
-        const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
-        const focusedDialogCandidate = typeof HTMLElement !== 'undefined' && activeElement instanceof HTMLElement
-            ? activeElement.closest<HTMLElement>('[role="dialog"][aria-modal="true"]')
-            : null;
-        const focusedParentDialog = focusedDialogCandidate?.dataset.testid !== 'confirm-dialog'
-            ? focusedDialogCandidate
-            : null;
-        const activeParentDialog = focusedParentDialog ?? openParentDialogs.at(-1) ?? null;
-
+        // Join the RNW modal stack instead of portaling into the parent dialog.
+        // A parent DateEditor Modal otherwise stays `active`, keeps its focus
+        // trap, and still handles Escape on keyup. A stacked confirm makes the
+        // parent inactive so one Escape closes only this dialog.
         const content = visible ? (
             <View style={styles.webPortalRoot}>
                 <View style={styles.webBackdrop}>
@@ -126,10 +103,6 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         {...Platform.select({
                             web: webAccessibilityProps({
                                 'data-testid': 'confirm-dialog',
-                                role: 'dialog',
-                                'aria-modal': true,
-                                'aria-labelledby': 'dialog-title',
-                                'aria-describedby': 'dialog-message',
                             }),
                         })}
                     >
@@ -178,11 +151,22 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </View>
         ) : null;
 
-        if (portal && activeParentDialog) {
-            return portal(content, activeParentDialog) as any;
-        }
-
-        return content;
+        return (
+            <Modal
+                visible={visible}
+                transparent
+                animationType="none"
+                onRequestClose={onClose}
+                {...Platform.select({
+                    web: webAccessibilityProps({
+                        'aria-labelledby': 'dialog-title',
+                        'aria-describedby': 'dialog-message',
+                    }),
+                })}
+            >
+                {content}
+            </Modal>
+        );
     }
 
     return (
@@ -258,12 +242,7 @@ export default React.memo(ConfirmDialog);
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     webPortalRoot: {
-        position: 'fixed' as any,
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 10000,
+        flex: 1,
     },
     webBackdrop: {
         flex: 1,
