@@ -71,6 +71,9 @@ export const TravelDetailsContentSection: React.FC<{
   const {
     buildInsightControl,
     hasInsights,
+    hasMinus,
+    hasPlus,
+    hasRecommendation,
     insightConfigs,
     mobileInsightKey,
     readingTimeLabel,
@@ -142,7 +145,7 @@ export const TravelDetailsContentSection: React.FC<{
         </View>
       )}
 
-      {travel.youtube_link && safeGetYoutubeId(travel.youtube_link) && (
+      {Boolean(travel.youtube_link && safeGetYoutubeId(travel.youtube_link)) && (
         <View
           ref={setVideoSectionRef}
           style={[styles.sectionContainer, styles.contentStable]}
@@ -208,7 +211,7 @@ export const TravelDetailsContentSection: React.FC<{
 
       {hasInsights && (
         <View ref={setInsightsRef as any} collapsable={false}>
-          {travel.recommendation && (
+          {hasRecommendation && (
             <View
               key="recommendation"
               ref={anchors.recommendation}
@@ -232,7 +235,7 @@ export const TravelDetailsContentSection: React.FC<{
             </View>
           )}
 
-          {travel.plus && (
+          {hasPlus && (
             <View
               key="plus"
               ref={anchors.plus}
@@ -256,7 +259,7 @@ export const TravelDetailsContentSection: React.FC<{
             </View>
           )}
 
-          {travel.minus && (
+          {hasMinus && (
             <View
               key="minus"
               ref={anchors.minus}
