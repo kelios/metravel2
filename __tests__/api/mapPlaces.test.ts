@@ -4,9 +4,11 @@
  * standalone / legacy flat fallback) и адаптеры sources endpoint.
  */
 import {
+  canonicalizeMapPlaceSourceId,
   getMapPlaceKey,
   getMapPointIdentityKey,
   groupMapPlaces,
+  isSameMapPlaceSource,
   materializeMapPlaceRecord,
   normalizeMapPlaceSource,
   type MapPlaceRecordLike,
@@ -41,6 +43,44 @@ jest.mock('@/utils/fetchWithTimeout', () => ({
 
 beforeEach(() => {
   mockFetchWithTimeout.mockReset();
+});
+
+describe('map place source identity', () => {
+  it('canonicalizes a live point-id source_id onto travel-address:<point_id>', () => {
+    expect(canonicalizeMapPlaceSourceId('14029', 14029)).toBe('travel-address:14029');
+    expect(canonicalizeMapPlaceSourceId('travel-address:14029', 14029)).toBe(
+      'travel-address:14029',
+    );
+    expect(canonicalizeMapPlaceSourceId(null, 14029)).toBe('travel-address:14029');
+    expect(canonicalizeMapPlaceSourceId('other-source', 14029)).toBe('other-source');
+  });
+
+  it('treats travel-address and bare point-id spellings as the same source', () => {
+    expect(
+      isSameMapPlaceSource(
+        { sourceId: 'travel-address:14029', pointId: 14029 },
+        { sourceId: '14029', pointId: 14029 },
+      ),
+    ).toBe(true);
+    expect(
+      isSameMapPlaceSource(
+        { sourceId: 'travel-address:14029', pointId: 14029 },
+        { sourceId: 'travel-address:15688', pointId: 15688 },
+      ),
+    ).toBe(false);
+  });
+
+  it('normalizes production source_id strings through the source DTO', () => {
+    const source = normalizeMapPlaceSource({
+      source_id: '14029',
+      point_id: 14029,
+      travel_id: 389,
+      article_title: 'Из Мозыря в Микашевичи через Минск',
+      article_url: '/travels/iz-mozyrya-v-mikashevichi?id=389',
+    });
+    expect(source?.sourceId).toBe('travel-address:14029');
+    expect(source?.pointId).toBe(14029);
+  });
 });
 
 describe('groupMapPlaces', () => {

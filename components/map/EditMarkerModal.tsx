@@ -75,6 +75,14 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
         handleImageUpload(index, imageUrl);
     }, [handleImageUpload, index]);
 
+    // #1603: the modal is a React child of the markers list, so drag/drop
+    // still bubbles through the React tree even though the portal DOM lives
+    // on document.body. Stop it here so replacing a point photo cannot
+    // also create a GPS point via the list importer.
+    const stopPhotoImportBubble = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+        event.stopPropagation();
+    }, []);
+
     if (typeof document === 'undefined') return null;
 
     const persistEdits = () => {
@@ -118,7 +126,13 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     };
 
     return ReactDOM.createPortal(
-        <div style={styles.modalOverlay}>
+        <div
+            style={styles.modalOverlay}
+            onDragEnter={stopPhotoImportBubble}
+            onDragOver={stopPhotoImportBubble}
+            onDragLeave={stopPhotoImportBubble}
+            onDrop={stopPhotoImportBubble}
+        >
             <div style={styles.modalBackdrop} onClick={handleClose} />
             <div style={styles.modalContent}>
                 <div style={styles.editForm}>

@@ -119,6 +119,39 @@ const readStringOrNull = (value: unknown): string | null => {
   return trimmed ? trimmed : null;
 };
 
+const travelAddressSourceId = (pointId: number): string => `travel-address:${pointId}`;
+
+/**
+ * Production #1567 currently serializes `source_id` as the bare point-id
+ * string. Client grouping of flat map rows uses `travel-address:<point_id>`.
+ * Treat those two spellings as one identity so the pager does not prepend a
+ * duplicate primary on top of the fetched collection.
+ */
+export const canonicalizeMapPlaceSourceId = (
+  sourceIdRaw: string | null,
+  pointId: number | null,
+): string | null => {
+  if (pointId != null) {
+    const canonical = travelAddressSourceId(pointId);
+    if (!sourceIdRaw || sourceIdRaw === String(pointId) || sourceIdRaw === canonical) {
+      return canonical;
+    }
+  }
+  return sourceIdRaw;
+};
+
+export const isSameMapPlaceSource = (
+  a: Pick<MapPlaceSource, 'sourceId' | 'pointId'> | null | undefined,
+  b: Pick<MapPlaceSource, 'sourceId' | 'pointId'> | null | undefined,
+): boolean => {
+  if (!a || !b) return false;
+  if (a.sourceId === b.sourceId) return true;
+  if (a.pointId != null && b.pointId != null && a.pointId === b.pointId) return true;
+  const aCanon = canonicalizeMapPlaceSourceId(a.sourceId, a.pointId);
+  const bCanon = canonicalizeMapPlaceSourceId(b.sourceId, b.pointId);
+  return Boolean(aCanon && bCanon && aCanon === bCanon);
+};
+
 /** `place_id` из сырой записи или уже нормализованного объекта. */
 export const readMapPlaceId = (record: unknown): string | number | null => {
   if (!record || typeof record !== 'object') return null;
@@ -146,8 +179,10 @@ export const normalizeMapPlaceSource = (
   const t = raw as Record<string, unknown>;
 
   const pointId = readNumberOrNull(t.pointId ?? t.point_id);
-  const sourceIdRaw = readStringOrNull(t.sourceId ?? t.source_id);
-  const sourceId = sourceIdRaw ?? (pointId != null ? `travel-address:${pointId}` : null);
+  const sourceId = canonicalizeMapPlaceSourceId(
+    readStringOrNull(t.sourceId ?? t.source_id),
+    pointId,
+  );
   if (!sourceId) return null;
 
   const thumbnailUrl = normalizeUrl(t.thumbnailUrl ?? t.thumbnail_url) || null;
@@ -198,7 +233,10 @@ const derivePlaceSourceFromRecord = (record: MapPlaceRecordLike): MapPlaceSource
   if (pointId == null && !articleUrl && !thumbnailUrl) return null;
 
   return {
-    sourceId: pointId != null ? `travel-address:${pointId}` : `record:${getMapPointIdentityKey(record)}`,
+    sourceId:
+      pointId != null
+        ? travelAddressSourceId(pointId)
+        : `record:${getMapPointIdentityKey(record)}`,
     pointId,
     travelId: null,
     articleTitle: '',
@@ -281,7 +319,7 @@ export const groupMapPlaces = <TRecord extends MapPlaceRecordLike>(
     // Вторая запись того же места: канонические поля остаются от первой
     // (координата/название/адрес принадлежат месту, не материалу), источник
     // добавляется без дублей по sourceId.
-    if (source && !existing.sources.some((s) => s.sourceId === source.sourceId)) {
+    if (source && !existing.sources.some((s) => isSameMapPlaceSource(s, source))) {
       existing.sources.push(source);
     }
     const declaredCount = isFiniteNumber(record.sourceCount) ? record.sourceCount : 0;

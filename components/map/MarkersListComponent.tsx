@@ -3,7 +3,6 @@ import Feather from '@expo/vector-icons/Feather';
 import { MarkerData } from "@/types/types";
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
-import { isLocalPreviewUrl } from '@/utils/travelFormNormalization';
 import { getTravelPointImageUrl } from '@/utils/travelPointImages';
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 import { useStyles } from './markersListStyles';
@@ -503,11 +502,14 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                 {hasImage ? (
                                     <ImageCardMedia
                                         src={imageUrl}
+                                        width={48}
+                                        height={48}
                                         fit="contain"
                                         blurBackground
                                         allowCriticalWebBlur
-                                        loading={isLocalPreviewUrl(imageUrl) ? 'eager' : 'lazy'}
+                                        loading="eager"
                                         priority="low"
+                                        recyclingKey={imageUrl}
                                         borderRadius={10}
                                         style={styles.previewMedia as any}
                                     />

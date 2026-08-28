@@ -165,6 +165,10 @@ describe('PhotoUploadWithPreview', () => {
                 );
                 // #1148: web-вью грузится через React.lazy — ждём резолва чанка.
                 expect(await screen.findByText(customPlaceholder)).toBeTruthy();
+                expect(lastDropzoneOptions).toEqual(expect.objectContaining({
+                    noDragEventsBubbling: true,
+                    noDrag: false,
+                }));
             } finally {
                 dimensionsSpy.mockRestore();
             }

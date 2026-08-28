@@ -73,6 +73,9 @@ export const createWebDropzoneView = (
     noClick: isMobileWeb,
     noKeyboard: isMobileWeb,
     noDrag: isMobileWeb,
+    // #1603: drop/dragover must not bubble out of the point-editor portal.
+    // MarkersListComponent also listens for GPS photo-import on its panel.
+    noDragEventsBubbling: true,
   });
 
   const handleCameraInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {

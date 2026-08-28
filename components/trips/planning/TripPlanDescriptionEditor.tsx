@@ -160,6 +160,14 @@ export default function TripPlanDescriptionEditor({
     setFullscreenVisible(false);
   }, [restoreSelection]);
 
+  const handleFullscreenRequestClose = useCallback(() => {
+    if (linkDialogVisible) {
+      closeLinkDialog();
+      return;
+    }
+    closeFullscreen();
+  }, [closeFullscreen, closeLinkDialog, linkDialogVisible]);
+
   const openFullscreen = useCallback(() => {
     restoreSelection('fullscreen', selectionRef.current);
     setFullscreenVisible(true);
@@ -230,7 +238,7 @@ export default function TripPlanDescriptionEditor({
         animationType="slide"
         presentationStyle="fullScreen"
         statusBarTranslucent
-        onRequestClose={closeFullscreen}
+        onRequestClose={handleFullscreenRequestClose}
       >
         <SafeAreaView style={styles.safeArea}>
           <KeyboardAvoidingView

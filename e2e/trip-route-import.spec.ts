@@ -226,6 +226,9 @@ async function openPlanner(page: import('@playwright/test').Page) {
 const pickFile = (page: import('@playwright/test').Page, file: string) =>
   page.locator('[data-testid="trip-route-import-picker-input"]').setInputFiles(file)
 
+const routePointRows = (page: import('@playwright/test').Page) =>
+  page.getByTestId(/^route-builder-point-\d+$/)
+
 const customTitles = (payload: PutPayload) =>
   payload.points
     .filter((point) => point.point_type === 'custom')
@@ -257,7 +260,7 @@ test.describe('Trip planner — GPX/KML import', () => {
     await expect(preview).toHaveCount(0)
     // Трек заменил оба сохранённых пункта и упростился до лимита черновика.
     await expect(page.getByTestId('route-builder-point-0')).toContainText('Parking Kiry')
-    await expect(page.locator('[data-testid^="route-builder-point-"]')).toHaveCount(50)
+    await expect(routePointRows(page)).toHaveCount(50)
 
     await page.getByTestId('route-builder-save').click()
     await expect.poll(() => network.routePuts.length, { timeout: 15_000 }).toBe(1)
@@ -303,7 +306,7 @@ test.describe('Trip planner — GPX/KML import', () => {
     // Существующие точки остались на своих местах, трек дописан после них.
     await expect(page.getByTestId('route-builder-point-0')).toContainText('Закопане')
     await expect(page.getByTestId('route-builder-point-1')).toContainText('Кузьнице')
-    await expect(page.locator('[data-testid^="route-builder-point-"]')).toHaveCount(50)
+    await expect(routePointRows(page)).toHaveCount(50)
 
     await page.getByTestId('route-builder-save').click()
     await expect.poll(() => network.routePuts.length, { timeout: 15_000 }).toBe(1)
@@ -341,7 +344,7 @@ test.describe('Trip planner — GPX/KML import', () => {
     await expect(error).toHaveText('Поддерживаются только файлы GPX и KML.')
 
     // Ни одна ошибка не тронула текущий маршрут.
-    await expect(page.locator('[data-testid^="route-builder-point-"]')).toHaveCount(2)
+    await expect(routePointRows(page)).toHaveCount(2)
     await expect(page.getByTestId('route-builder-save')).toHaveCount(0)
   })
 

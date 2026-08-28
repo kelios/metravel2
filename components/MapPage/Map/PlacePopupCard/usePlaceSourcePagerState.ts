@@ -13,7 +13,12 @@
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { getMapPlaceKey, readMapPlaceId, type MapPlaceSource } from '@/api/mapPlaces';
+import {
+  getMapPlaceKey,
+  isSameMapPlaceSource,
+  readMapPlaceId,
+  type MapPlaceSource,
+} from '@/api/mapPlaces';
 import { useMapPlaceSources } from '@/hooks/map/useMapPlaceSources';
 
 export type PlaceSourcePagerState = {
@@ -62,12 +67,12 @@ export const usePlaceSourcePagerState = (
   const sources = useMemo<MapPlaceSource[]>(() => {
     if (!primarySource) return fetchedSources ?? [];
     if (!fetchedSources || fetchedSources.length === 0) return [primarySource];
-    const fetchedPrimary = fetchedSources.find(
-      (source) => source.sourceId === primarySource.sourceId,
+    const fetchedPrimary = fetchedSources.find((source) =>
+      isSameMapPlaceSource(source, primarySource),
     );
     return [
       fetchedPrimary ?? primarySource,
-      ...fetchedSources.filter((source) => source.sourceId !== primarySource.sourceId),
+      ...fetchedSources.filter((source) => !isSameMapPlaceSource(source, primarySource)),
     ];
   }, [fetchedSources, primarySource]);
 

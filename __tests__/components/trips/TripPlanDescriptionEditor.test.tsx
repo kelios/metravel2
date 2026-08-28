@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { fireEvent, render, StyleSheet } from '@testing-library/react-native';
+import { Modal, StyleSheet } from 'react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
 
@@ -56,8 +57,11 @@ describe('TripPlanDescriptionEditor', () => {
     expect(inputStyle.width).toBe('100%');
 
     const openButton = getByTestId('trip-plan-description-open-fullscreen');
+    const rawOpenButtonStyle = openButton.props.style;
     const openButtonStyle = StyleSheet.flatten(
-      openButton.props.style({ pressed: false }),
+      typeof rawOpenButtonStyle === 'function'
+        ? rawOpenButtonStyle({ pressed: false })
+        : rawOpenButtonStyle,
     );
     expect(openButtonStyle.width).toBeGreaterThanOrEqual(44);
     expect(openButtonStyle.height).toBeGreaterThanOrEqual(44);
@@ -180,6 +184,31 @@ describe('TripPlanDescriptionEditor', () => {
     expect(getByTestId('trip-plan-description-link-error').props.accessibilityRole).toBe('alert');
     expect(queryByTestId('trip-plan-description-link-dialog')).toBeTruthy();
     expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe(safeValue);
+  });
+
+  it('keeps fullscreen open when Escape closes the nested link dialog', () => {
+    const { getByTestId, queryByTestId, UNSAFE_getAllByType } = render(
+      <EditorHarness initialValue="Отель у вокзала" />,
+    );
+    const fullscreenModalOf = () =>
+      UNSAFE_getAllByType(Modal).find((modal) => modal.props.presentationStyle === 'fullScreen');
+    const linkModalOf = () =>
+      UNSAFE_getAllByType(Modal).find((modal) => modal.props.transparent === true);
+
+    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    fireEvent.press(getByTestId('trip-plan-description-add-link'));
+    expect(linkModalOf()?.props.visible).toBe(true);
+
+    act(() => {
+      fullscreenModalOf()?.props.onRequestClose();
+    });
+    expect(linkModalOf()?.props.visible).toBe(false);
+    expect(getByTestId('trip-plan-description-fullscreen')).toBeTruthy();
+
+    act(() => {
+      fullscreenModalOf()?.props.onRequestClose();
+    });
+    expect(queryByTestId('trip-plan-description-fullscreen')).toBeNull();
   });
 
   it('cancels link insertion without changing the draft and restores its selection', () => {

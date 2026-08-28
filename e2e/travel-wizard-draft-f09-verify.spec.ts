@@ -9,11 +9,11 @@ import { mockFakeAuthApis } from './helpers/auth';
 const DIALOG_TITLE = 'Есть несохранённые изменения';
 const DRAFT_PREFIX = 'metravel_travel_draft';
 const LOCAL_PROD_API_CORS_RE = /https:\/\/metravel\.by\/api\/(countries|getFiltersTravel)\//;
-const LOCAL_PROD_ORIGIN = "from origin 'http://127.0.0.1:8085'";
+const LOCAL_PROD_ORIGIN_RE = /from origin 'http:\/\/127\.0\.0\.1:\d+'/;
 
 function filterExpectedLocalProdApiCorsNoise(errors: string[]) {
   const hasExpectedLocalProdApiCorsNoise = errors.some(
-    (message) => message.includes(LOCAL_PROD_ORIGIN) && LOCAL_PROD_API_CORS_RE.test(message),
+    (message) => LOCAL_PROD_ORIGIN_RE.test(message) && LOCAL_PROD_API_CORS_RE.test(message),
   );
 
   if (!hasExpectedLocalProdApiCorsNoise) return errors;

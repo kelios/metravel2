@@ -143,6 +143,23 @@ describe('usePlaceSourcePagerState', () => {
     expect(result.current.activeSource?.sourceId).toBe(sourceB.sourceId);
   });
 
+  it('does not duplicate primary when fetched source_id is the live point-id string', () => {
+    const liveShapedA = { ...sourceA, sourceId: String(sourceA.pointId) };
+    const liveShapedB = { ...sourceB, sourceId: String(sourceB.pointId) };
+    mockUseMapPlaceSources.mockReturnValue(loaded([liveShapedA, liveShapedB]));
+
+    const { result } = renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
+
+    expect(LIBRARY_POINT.primarySource?.sourceId).toBe('travel-address:14029');
+    expect(result.current.sourceCount).toBe(2);
+    expect(result.current.activeSource?.sourceId).toBe(liveShapedA.sourceId);
+
+    act(() => result.current.goNext());
+    expect(result.current.activeSource?.sourceId).toBe(liveShapedB.sourceId);
+    act(() => result.current.goNext());
+    expect(result.current.activeSource?.sourceId).toBe(liveShapedA.sourceId);
+  });
+
   it('keeps primary first and reachable when a partial collection omits it', () => {
     mockUseMapPlaceSources.mockReturnValue(loaded([sourceB]));
 

@@ -336,6 +336,44 @@ describe('MarkersListComponent - Edit modal categories', () => {
         });
     });
 
+    it('keeps file-picker replacement inside the open point instead of adding a GPS marker', async () => {
+        const handleImageUpload = jest.fn();
+        const handleMarkerChange = jest.fn();
+        const onAddMarkerFromPhoto = jest.fn();
+
+        render(
+            <MarkersListComponent
+                markers={[baseMarker]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={handleMarkerChange}
+                handleImageUpload={handleImageUpload}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={0}
+                setEditingIndex={jest.fn()}
+                onAddMarkerFromPhoto={onAddMarkerFromPhoto}
+            />,
+        );
+
+        fireEvent.click(screen.getByTestId('photo-upload-trigger'));
+
+        await waitFor(() => {
+            expect(handleImageUpload).toHaveBeenCalledWith(
+                0,
+                'http://192.168.50.36/travel-image/17992/conversions/test.webp',
+            );
+        });
+        expect(onAddMarkerFromPhoto).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByText('Сохранить'));
+        await waitFor(() => {
+            expect(handleMarkerChange).toHaveBeenCalledWith(
+                0,
+                'image',
+                'http://192.168.50.36/travel-image/17992/conversions/test.webp',
+            );
+        });
+    });
+
     it('renders an explicit drop zone that opens the file picker on click (empty state)', () => {
         const { container } = render(
             <MarkersListComponent

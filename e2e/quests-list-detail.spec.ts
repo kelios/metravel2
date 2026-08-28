@@ -130,7 +130,7 @@ const QUEST_FALLBACK_RE =
   /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов|Нет квестов|0 квестов|Выберите город/i
 const RESOURCE_500_RE = /Failed to load resource: the server responded with a status of 500/i
 const LOCAL_PROD_API_CORS_RE = /https:\/\/metravel\.by\/api\/(countries|getFiltersTravel)\//
-const LOCAL_PROD_ORIGIN = "from origin 'http://127.0.0.1:8085'"
+const LOCAL_PROD_ORIGIN_RE = /from origin 'http:\/\/127\.0\.0\.1:\d+'/
 
 const waitForQuestCatalogReady = async (page: Page) =>
   Promise.any([
@@ -153,7 +153,7 @@ const getFirstQuestCard = async (page: Page) => {
 
 test.describe('Quests list -> detail', () => {
   test('nearby is opt-in and filters the full catalog by current location', async ({ page }) => {
-    await page.context().grantPermissions(['geolocation'], { origin: 'http://127.0.0.1:8085' })
+    await page.context().grantPermissions(['geolocation'])
     await page.context().setGeolocation({ latitude: questCity.lat, longitude: questCity.lng })
     await preacceptCookies(page)
     await page.setViewportSize({ width: 1280, height: 900 })
@@ -208,7 +208,7 @@ test.describe('Quests list -> detail', () => {
         get: () => 5,
       })
     }, IPHONE_SAFARI_USER_AGENT)
-    await page.context().grantPermissions(['geolocation'], { origin: 'http://127.0.0.1:8085' })
+    await page.context().grantPermissions(['geolocation'])
     await page.context().setGeolocation({ latitude: questCity.lat, longitude: questCity.lng })
     await page.setViewportSize({ width: 390, height: 844 })
     await preacceptCookies(page)
@@ -324,7 +324,7 @@ test.describe('Quests list -> detail', () => {
 
     const unexpectedPageErrors = pageErrors.filter((message) => !isRecoverableReactHydrationError(message))
     const hasExpectedLocalProdApiCorsNoise = consoleErrors.some(
-      (message) => message.includes(LOCAL_PROD_ORIGIN) && LOCAL_PROD_API_CORS_RE.test(message),
+      (message) => LOCAL_PROD_ORIGIN_RE.test(message) && LOCAL_PROD_API_CORS_RE.test(message),
     )
     const unexpectedConsoleErrors = consoleErrors.filter((message) => {
       if (backendFallbackVisible && RESOURCE_500_RE.test(message)) return false
