@@ -25,6 +25,164 @@
         "yandex.com": 202
       },
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+          "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+          "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+          "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
+          "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
+          "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
+          "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+          "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
+          "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+          "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-27T20:37:10Z",
+            "googleCanonical": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T22:38:32Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche"
+          },
+          {
+            "url": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:55:05Z",
+            "googleCanonical": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov"
+          },
+          {
+            "url": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T21:57:46Z",
+            "googleCanonical": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat"
+          },
+          {
+            "url": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T10:42:38Z",
+            "googleCanonical": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk"
+          },
+          {
+            "url": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-28T02:57:26Z",
+            "googleCanonical": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram"
+          },
+          {
+            "url": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T04:23:03Z",
+            "googleCanonical": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse"
+          },
+          {
+            "url": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-27T07:33:46Z",
+            "googleCanonical": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-26T03:25:25Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T06:44:59Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia"
+          }
+        ]
+      },
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+          "result": "accepted",
+          "at": "2026-08-10",
+          "note": "отправлен дважды (сбой автоматизации), одна лишняя единица квоты"
+        },
+        {
+          "url": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+          "result": "already-indexed",
+          "at": "2026-08-10",
+          "note": "URL Inspection sweep 10.08: verdict PASS — подача не нужна"
+        },
+        {
+          "url": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
+          "result": "already-indexed",
+          "at": "2026-08-10",
+          "note": "URL Inspection: «URL есть в индексе Google» — подача не нужна"
+        },
+        {
+          "url": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+          "result": "already-indexed",
+          "at": "2026-08-10",
+          "note": "URL Inspection sweep 10.08: verdict PASS — подача не нужна"
+        },
+        {
+          "url": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia",
+          "result": "accepted",
+          "at": "2026-08-10"
+        }
+      ],
+      "gscRequestedAt": "2026-08-10",
+      "previousIndexCheck": {
         "checkedAt": "2026-08-19",
         "source": "gsc-url-inspection",
         "indexed": 10,
@@ -125,73 +283,6 @@
           }
         ]
       },
-      "gscRequests": [
-        {
-          "url": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
-          "result": "accepted",
-          "at": "2026-08-10"
-        },
-        {
-          "url": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
-          "result": "accepted",
-          "at": "2026-08-10",
-          "note": "отправлен дважды (сбой автоматизации), одна лишняя единица квоты"
-        },
-        {
-          "url": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
-          "result": "accepted",
-          "at": "2026-08-10"
-        },
-        {
-          "url": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
-          "result": "accepted",
-          "at": "2026-08-10"
-        },
-        {
-          "url": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
-          "result": "accepted",
-          "at": "2026-08-10"
-        },
-        {
-          "url": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
-          "result": "accepted",
-          "at": "2026-08-10"
-        },
-        {
-          "url": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
-          "result": "already-indexed",
-          "at": "2026-08-10",
-          "note": "URL Inspection sweep 10.08: verdict PASS — подача не нужна"
-        },
-        {
-          "url": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
-          "result": "already-indexed",
-          "at": "2026-08-10",
-          "note": "URL Inspection: «URL есть в индексе Google» — подача не нужна"
-        },
-        {
-          "url": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
-          "result": "already-indexed",
-          "at": "2026-08-10",
-          "note": "URL Inspection sweep 10.08: verdict PASS — подача не нужна"
-        },
-        {
-          "url": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia",
-          "result": "accepted",
-          "at": "2026-08-10"
-        }
-      ],
-      "gscRequestedAt": "2026-08-10",
-      "previousIndexCheck": {
-        "checkedAt": "2026-08-10",
-        "indexed": 2,
-        "of": 10,
-        "indexedUrls": [
-          "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
-          "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret"
-        ],
-        "note": "Снимок сделан 10.08 до сессии подачи: индексированными числились только tri-korony и zamok-ksenzh. Третий адрес, orikum-albaniia-zamok-bochari-i-tserkov-marmiroi, подтверждён как уже индексированный уже в ходе самой сессии URL Inspection, поэтому в этом снимке его нет, а в gscRequests он записан как already-indexed."
-      },
       "indexedAt": "2026-08-19"
     },
     {
@@ -214,6 +305,174 @@
         "yandex.com": 202
       },
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike",
+          "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
+          "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+          "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
+          "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+          "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
+          "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+          "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
+          "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-09T07:58:23Z",
+            "googleCanonical": "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
+          },
+          {
+            "url": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T20:48:16Z",
+            "googleCanonical": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T03:52:56Z",
+            "googleCanonical": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany"
+          },
+          {
+            "url": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T06:42:21Z",
+            "googleCanonical": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park"
+          },
+          {
+            "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T00:07:08Z",
+            "googleCanonical": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska"
+          },
+          {
+            "url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T04:30:15Z",
+            "googleCanonical": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka"
+          },
+          {
+            "url": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T12:02:32Z",
+            "googleCanonical": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram"
+          },
+          {
+            "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:39:30Z",
+            "googleCanonical": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat"
+          },
+          {
+            "url": "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T19:50:50Z",
+            "googleCanonical": "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy"
+          },
+          {
+            "url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T01:54:35Z",
+            "googleCanonical": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes"
+          }
+        ]
+      },
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+          "result": "accepted",
+          "at": "2026-08-10"
+        },
+        {
+          "url": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
+          "result": "already-indexed",
+          "at": "2026-08-10",
+          "note": "URL Inspection: «URL есть в индексе Google» — подача не нужна"
+        },
+        {
+          "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+          "result": "quota-exceeded",
+          "at": "2026-08-10",
+          "note": "«Квота превышена» — перенесено на следующий день"
+        },
+        {
+          "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+          "result": "quota-exceeded",
+          "at": "2026-08-11",
+          "note": "Повторная попытка: GSC всё ещё сообщает «Квота превышена»; новых принятых запросов нет, остаток пачки не отправлялся"
+        },
+        {
+          "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перенос с 10–11.08 после «Квота превышена»; квота сброшена, получено «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        },
+        {
+          "url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
+          "result": "accepted",
+          "at": "2026-08-12",
+          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
+        }
+      ],
+      "gscRequestedAt": "2026-08-12",
+      "previousIndexCheck": {
         "checkedAt": "2026-08-19",
         "source": "gsc-url-inspection",
         "indexed": 10,
@@ -314,82 +573,6 @@
           }
         ]
       },
-      "gscRequests": [
-        {
-          "url": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
-          "result": "accepted",
-          "at": "2026-08-10"
-        },
-        {
-          "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
-          "result": "accepted",
-          "at": "2026-08-10"
-        },
-        {
-          "url": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
-          "result": "already-indexed",
-          "at": "2026-08-10",
-          "note": "URL Inspection: «URL есть в индексе Google» — подача не нужна"
-        },
-        {
-          "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
-          "result": "quota-exceeded",
-          "at": "2026-08-10",
-          "note": "«Квота превышена» — перенесено на следующий день"
-        },
-        {
-          "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
-          "result": "quota-exceeded",
-          "at": "2026-08-11",
-          "note": "Повторная попытка: GSC всё ещё сообщает «Квота превышена»; новых принятых запросов нет, остаток пачки не отправлялся"
-        },
-        {
-          "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
-          "result": "accepted",
-          "at": "2026-08-12",
-          "note": "Перенос с 10–11.08 после «Квота превышена»; квота сброшена, получено «Отправлен запрос на индексирование»"
-        },
-        {
-          "url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
-          "result": "accepted",
-          "at": "2026-08-12",
-          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
-        },
-        {
-          "url": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
-          "result": "accepted",
-          "at": "2026-08-12",
-          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
-        },
-        {
-          "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
-          "result": "accepted",
-          "at": "2026-08-12",
-          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
-        },
-        {
-          "url": "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
-          "result": "accepted",
-          "at": "2026-08-12",
-          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
-        },
-        {
-          "url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
-          "result": "accepted",
-          "at": "2026-08-12",
-          "note": "Перед подачей URL Inspection показал «URL нет в индексе Google»; после клика — «Отправлен запрос на индексирование»"
-        }
-      ],
-      "gscRequestedAt": "2026-08-12",
-      "previousIndexCheck": {
-        "checkedAt": "2026-08-10",
-        "indexed": 1,
-        "of": 10,
-        "indexedUrls": [
-          "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike"
-        ],
-        "note": "Снимок сделан 10.08 до сессии подачи: индексированным числился только khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike. Второй адрес, park-invald-dinozavry-miniatiury-luna-park, подтверждён как уже индексированный уже в ходе самой сессии URL Inspection, поэтому в этом снимке его нет, а в gscRequests он записан как already-indexed."
-      },
       "indexedAt": "2026-08-19"
     },
     {
@@ -413,6 +596,168 @@
       },
       "indexnowVia": "full-site submit 2026-08-10",
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
+          "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+          "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
+          "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
+          "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+          "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+          "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
+          "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
+          "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
+          "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-26T14:07:22Z",
+            "googleCanonical": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T07:59:36Z",
+            "googleCanonical": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den"
+          },
+          {
+            "url": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-25T22:38:19Z",
+            "googleCanonical": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli"
+          },
+          {
+            "url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T08:03:36Z",
+            "googleCanonical": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony"
+          },
+          {
+            "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T12:18:53Z",
+            "googleCanonical": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia"
+          },
+          {
+            "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T13:45:14Z",
+            "googleCanonical": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-18T05:51:46Z",
+            "googleCanonical": "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae"
+          },
+          {
+            "url": "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T10:17:41Z",
+            "googleCanonical": "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T06:29:18Z",
+            "googleCanonical": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den"
+          },
+          {
+            "url": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T19:14:37Z",
+            "googleCanonical": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava"
+          }
+        ]
+      },
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava",
+          "result": "already-indexed",
+          "at": "2026-08-12",
+          "note": "URL Inspection: «Страница отправлена и проиндексирована» — подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+          "result": "accepted",
+          "at": "2026-08-12"
+        },
+        {
+          "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+          "result": "quota-exceeded",
+          "at": "2026-08-12",
+          "note": "«Квота превышена» на 12-м запросе суток (11 принято: 6 по пачке day:2 и 5 по этой) — перенесено на следующий день"
+        },
+        {
+          "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+          "result": "already-indexed",
+          "at": "2026-08-18",
+          "note": "URL Inspection перед подачей 18.08: «Страница отправлена и проиндексирована» — Google переобошёл адрес сам после 12.08, подача не нужна, квота не потрачена"
+        },
+        {
+          "url": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
+          "result": "already-indexed",
+          "at": "2026-08-18",
+          "note": "URL Inspection перед подачей 18.08: «Страница отправлена и проиндексирована» — 12.08 адрес был «URL неизвестен Google», подача не потребовалась"
+        },
+        {
+          "url": "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
+          "result": "accepted",
+          "at": "2026-08-18"
+        },
+        {
+          "url": "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
+          "result": "accepted",
+          "at": "2026-08-18"
+        }
+      ],
+      "previousIndexCheck": {
         "checkedAt": "2026-08-19",
         "source": "gsc-url-inspection",
         "indexed": 10,
@@ -513,159 +858,6 @@
           }
         ]
       },
-      "gscRequests": [
-        {
-          "url": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava",
-          "result": "already-indexed",
-          "at": "2026-08-12",
-          "note": "URL Inspection: «Страница отправлена и проиндексирована» — подача не нужна, квота не потрачена"
-        },
-        {
-          "url": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
-          "result": "accepted",
-          "at": "2026-08-12"
-        },
-        {
-          "url": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
-          "result": "accepted",
-          "at": "2026-08-12"
-        },
-        {
-          "url": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
-          "result": "accepted",
-          "at": "2026-08-12"
-        },
-        {
-          "url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
-          "result": "accepted",
-          "at": "2026-08-12"
-        },
-        {
-          "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
-          "result": "accepted",
-          "at": "2026-08-12"
-        },
-        {
-          "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
-          "result": "quota-exceeded",
-          "at": "2026-08-12",
-          "note": "«Квота превышена» на 12-м запросе суток (11 принято: 6 по пачке day:2 и 5 по этой) — перенесено на следующий день"
-        },
-        {
-          "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
-          "result": "already-indexed",
-          "at": "2026-08-18",
-          "note": "URL Inspection перед подачей 18.08: «Страница отправлена и проиндексирована» — Google переобошёл адрес сам после 12.08, подача не нужна, квота не потрачена"
-        },
-        {
-          "url": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
-          "result": "already-indexed",
-          "at": "2026-08-18",
-          "note": "URL Inspection перед подачей 18.08: «Страница отправлена и проиндексирована» — 12.08 адрес был «URL неизвестен Google», подача не потребовалась"
-        },
-        {
-          "url": "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
-          "result": "accepted",
-          "at": "2026-08-18"
-        },
-        {
-          "url": "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
-          "result": "accepted",
-          "at": "2026-08-18"
-        }
-      ],
-      "previousIndexCheck": {
-        "checkedAt": "2026-08-12",
-        "source": "gsc-url-inspection",
-        "indexed": 1,
-        "of": 10,
-        "indexedUrls": [
-          "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava"
-        ],
-        "note": "Замер сразу после частичной подачи 12.08. Все пять принятых адресов перешли в «Страница просканирована, но пока не проиндексирована» — Google забрал их в тот же час. iz-krakova-v-bratislavu-zamok-lietava значился в индексе ещё до подачи и в GSC не отправлялся. Четыре адреса не поданы, суточная квота исчерпана: khentsinskii и usadby-radzivillov по-прежнему «URL неизвестен Google», barselona и vena — «Обнаружена, не проиндексирована», сканирования у них не было (lastCrawlTime отсутствует). Именно по этим четырём и виден будет эффект следующей подачи.",
-        "results": [
-          {
-            "url": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
-            "outcome": "crawled-not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "Страница просканирована, но пока не проиндексирована",
-            "lastCrawlTime": "2026-08-12T07:57:35Z",
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
-            "outcome": "crawled-not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "Страница просканирована, но пока не проиндексирована",
-            "lastCrawlTime": "2026-08-12T07:59:36Z",
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
-            "outcome": "crawled-not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "Страница просканирована, но пока не проиндексирована",
-            "lastCrawlTime": "2026-08-12T07:59:36Z",
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
-            "outcome": "crawled-not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "Страница просканирована, но пока не проиндексирована",
-            "lastCrawlTime": "2026-08-12T08:03:36Z",
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
-            "outcome": "crawled-not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "Страница просканирована, но пока не проиндексирована",
-            "lastCrawlTime": "2026-08-12T08:05:42Z",
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
-            "outcome": "url-unknown",
-            "verdict": "NEUTRAL",
-            "coverageState": "URL неизвестен Google",
-            "lastCrawlTime": null,
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
-            "outcome": "discovered-not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "Обнаружена, не проиндексирована",
-            "lastCrawlTime": null,
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
-            "outcome": "discovered-not-indexed",
-            "verdict": "NEUTRAL",
-            "coverageState": "Обнаружена, не проиндексирована",
-            "lastCrawlTime": null,
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
-            "outcome": "url-unknown",
-            "verdict": "NEUTRAL",
-            "coverageState": "URL неизвестен Google",
-            "lastCrawlTime": null,
-            "googleCanonical": null
-          },
-          {
-            "url": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava",
-            "outcome": "indexed",
-            "verdict": "PASS",
-            "coverageState": "Страница отправлена и проиндексирована",
-            "lastCrawlTime": "2026-08-10T22:19:03Z",
-            "googleCanonical": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava"
-          }
-        ]
-      },
       "gscRequestedAt": "2026-08-18",
       "indexedAt": "2026-08-19"
     },
@@ -753,6 +945,107 @@
       "gscRequestedAt": "2026-08-13",
       "indexedAt": "2026-08-19",
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye",
+          "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode",
+          "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret",
+          "https://metravel.by/travels/usadba-linovo-dvorets-pototskikh-i-usadba-puzynov",
+          "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
+          "https://metravel.by/travels/usadba-trabutishki-i-golubye-ozera-marshrut",
+          "https://metravel.by/travels/park-sverklanets-ruiny-zamka-dvortsy-i-bunkery",
+          "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe",
+          "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia",
+          "https://metravel.by/travels/dubrovnik-kak-dobratsia-i-chto-posmotret"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T17:09:53Z",
+            "googleCanonical": "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye"
+          },
+          {
+            "url": "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-27T16:22:03Z",
+            "googleCanonical": "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode"
+          },
+          {
+            "url": "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T19:16:07Z",
+            "googleCanonical": "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/usadba-linovo-dvorets-pototskikh-i-usadba-puzynov",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T08:05:09Z",
+            "googleCanonical": "https://metravel.by/travels/usadba-linovo-dvorets-pototskikh-i-usadba-puzynov"
+          },
+          {
+            "url": "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T19:18:32Z",
+            "googleCanonical": "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/usadba-trabutishki-i-golubye-ozera-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T19:18:33Z",
+            "googleCanonical": "https://metravel.by/travels/usadba-trabutishki-i-golubye-ozera-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/park-sverklanets-ruiny-zamka-dvortsy-i-bunkery",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-19T18:05:39Z",
+            "googleCanonical": "https://metravel.by/travels/park-sverklanets-ruiny-zamka-dvortsy-i-bunkery"
+          },
+          {
+            "url": "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T22:34:47Z",
+            "googleCanonical": "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe"
+          },
+          {
+            "url": "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T19:20:35Z",
+            "googleCanonical": "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia"
+          },
+          {
+            "url": "https://metravel.by/travels/dubrovnik-kak-dobratsia-i-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T09:11:12Z",
+            "googleCanonical": "https://metravel.by/travels/dubrovnik-kak-dobratsia-i-chto-posmotret"
+          }
+        ]
+      },
+      "previousIndexCheck": {
         "checkedAt": "2026-08-19",
         "source": "gsc-url-inspection",
         "indexed": 10,
@@ -938,6 +1231,108 @@
       ],
       "gscRequestedAt": "2026-08-17",
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
+          "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
+          "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+          "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia",
+          "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
+          "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko",
+          "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton",
+          "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
+          "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
+          "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T19:30:37Z",
+            "googleCanonical": "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv"
+          },
+          {
+            "url": "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-27T03:50:35Z",
+            "googleCanonical": "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii"
+          },
+          {
+            "url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T22:46:34Z",
+            "googleCanonical": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska"
+          },
+          {
+            "url": "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:55:23Z",
+            "googleCanonical": "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia"
+          },
+          {
+            "url": "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T11:46:37Z",
+            "googleCanonical": "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia"
+          },
+          {
+            "url": "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:57:23Z",
+            "googleCanonical": "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko"
+          },
+          {
+            "url": "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:57:24Z",
+            "googleCanonical": "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton"
+          },
+          {
+            "url": "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:59:25Z",
+            "googleCanonical": "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii"
+          },
+          {
+            "url": "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:59:24Z",
+            "googleCanonical": "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat"
+          },
+          {
+            "url": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-18T10:25:14Z",
+            "googleCanonical": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den"
+          }
+        ]
+      },
+      "indexedAt": "2026-08-17",
+      "previousIndexCheck": {
         "checkedAt": "2026-08-17",
         "source": "gsc-url-inspection",
         "indexed": 10,
@@ -1037,8 +1432,7 @@
             "googleCanonical": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den"
           }
         ]
-      },
-      "indexedAt": "2026-08-17"
+      }
     },
     {
       "day": 6,
@@ -1125,6 +1519,107 @@
         }
       ],
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/ruiny-bashni-v-rychuve-i-peshchera-marshrut",
+          "https://metravel.by/travels/kostel-v-selishche-i-memorial-proryv-marshrut",
+          "https://metravel.by/travels/zabroshennaia-tserkov-v-begomle-kak-doekhat",
+          "https://metravel.by/travels/vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit",
+          "https://metravel.by/travels/pilsko-v-beskidakh-marshrut-k-granitse-slovakii",
+          "https://metravel.by/travels/severnyi-velebit-i-zavizhan-peshii-marshrut",
+          "https://metravel.by/travels/berlin-i-poznan-za-2-dnia-chto-posmotret",
+          "https://metravel.by/travels/tivoli-iz-rima-na-odin-den-chto-posmotret",
+          "https://metravel.by/travels/lager-zorka-i-kupel-poezdka-iz-minska",
+          "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/ruiny-bashni-v-rychuve-i-peshchera-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T08:10:24Z",
+            "googleCanonical": "https://metravel.by/travels/ruiny-bashni-v-rychuve-i-peshchera-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/kostel-v-selishche-i-memorial-proryv-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-18T07:06:36Z",
+            "googleCanonical": "https://metravel.by/travels/kostel-v-selishche-i-memorial-proryv-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/zabroshennaia-tserkov-v-begomle-kak-doekhat",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T18:24:05Z",
+            "googleCanonical": "https://metravel.by/travels/zabroshennaia-tserkov-v-begomle-kak-doekhat"
+          },
+          {
+            "url": "https://metravel.by/travels/vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-18T07:08:37Z",
+            "googleCanonical": "https://metravel.by/travels/vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit"
+          },
+          {
+            "url": "https://metravel.by/travels/pilsko-v-beskidakh-marshrut-k-granitse-slovakii",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-18T07:08:38Z",
+            "googleCanonical": "https://metravel.by/travels/pilsko-v-beskidakh-marshrut-k-granitse-slovakii"
+          },
+          {
+            "url": "https://metravel.by/travels/severnyi-velebit-i-zavizhan-peshii-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T12:04:30Z",
+            "googleCanonical": "https://metravel.by/travels/severnyi-velebit-i-zavizhan-peshii-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/berlin-i-poznan-za-2-dnia-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-19T06:08:45Z",
+            "googleCanonical": "https://metravel.by/travels/berlin-i-poznan-za-2-dnia-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/tivoli-iz-rima-na-odin-den-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T08:10:44Z",
+            "googleCanonical": "https://metravel.by/travels/tivoli-iz-rima-na-odin-den-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/lager-zorka-i-kupel-poezdka-iz-minska",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-19T19:38:26Z",
+            "googleCanonical": "https://metravel.by/travels/lager-zorka-i-kupel-poezdka-iz-minska"
+          },
+          {
+            "url": "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-27T17:29:45Z",
+            "googleCanonical": "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt"
+          }
+        ]
+      },
+      "previousIndexCheck": {
         "checkedAt": "2026-08-19",
         "source": "gsc-url-inspection",
         "indexed": 8,
@@ -1305,6 +1800,107 @@
         }
       ],
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+          "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+          "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut",
+          "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+          "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa",
+          "https://metravel.by/travels/dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova",
+          "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+          "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+          "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+          "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T08:22:48Z",
+            "googleCanonical": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den"
+          },
+          {
+            "url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T14:43:15Z",
+            "googleCanonical": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T01:03:09Z",
+            "googleCanonical": "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-24T19:28:33Z",
+            "googleCanonical": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den"
+          },
+          {
+            "url": "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T08:41:27Z",
+            "googleCanonical": "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa"
+          },
+          {
+            "url": "https://metravel.by/travels/dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:26:38Z",
+            "googleCanonical": "https://metravel.by/travels/dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova"
+          },
+          {
+            "url": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-26T02:47:33Z",
+            "googleCanonical": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T23:03:23Z",
+            "googleCanonical": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch"
+          },
+          {
+            "url": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:26:37Z",
+            "googleCanonical": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m"
+          },
+          {
+            "url": "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:26:37Z",
+            "googleCanonical": "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia"
+          }
+        ]
+      },
+      "previousIndexCheck": {
         "checkedAt": "2026-08-20",
         "source": "gsc-url-inspection",
         "indexed": 6,
@@ -1480,6 +2076,107 @@
         }
       ],
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+          "https://metravel.by/travels/verona-za-poldnia-chto-posmotret",
+          "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+          "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia",
+          "https://metravel.by/travels/mavrikii-na-avtomobile-arenda-i-marshrut",
+          "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
+          "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
+          "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
+          "https://metravel.by/travels/schronisko-magurka-marshrut-na-90-minut",
+          "https://metravel.by/travels/sobachii-friendly-trek-v-chase-ot-krakova-dolina-zhabnika"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-17T12:04:06Z",
+            "googleCanonical": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den"
+          },
+          {
+            "url": "https://metravel.by/travels/verona-za-poldnia-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:45:12Z",
+            "googleCanonical": "https://metravel.by/travels/verona-za-poldnia-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:47:12Z",
+            "googleCanonical": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina"
+          },
+          {
+            "url": "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T19:25:47Z",
+            "googleCanonical": "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia"
+          },
+          {
+            "url": "https://metravel.by/travels/mavrikii-na-avtomobile-arenda-i-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:47:13Z",
+            "googleCanonical": "https://metravel.by/travels/mavrikii-na-avtomobile-arenda-i-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:47:13Z",
+            "googleCanonical": "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi"
+          },
+          {
+            "url": "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:47:13Z",
+            "googleCanonical": "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh"
+          },
+          {
+            "url": "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T20:49:12Z",
+            "googleCanonical": "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove"
+          },
+          {
+            "url": "https://metravel.by/travels/schronisko-magurka-marshrut-na-90-minut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T11:16:04Z",
+            "googleCanonical": "https://metravel.by/travels/schronisko-magurka-marshrut-na-90-minut"
+          },
+          {
+            "url": "https://metravel.by/travels/sobachii-friendly-trek-v-chase-ot-krakova-dolina-zhabnika",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T11:14:04Z",
+            "googleCanonical": "https://metravel.by/travels/sobachii-friendly-trek-v-chase-ot-krakova-dolina-zhabnika"
+          }
+        ]
+      },
+      "previousIndexCheck": {
         "checkedAt": "2026-08-20",
         "source": "gsc-url-inspection",
         "indexed": 2,
@@ -1644,6 +2341,107 @@
         }
       ],
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
+          "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+          "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
+          "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby",
+          "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei",
+          "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia",
+          "https://metravel.by/travels/panevniki-petlia-ot-chernogo-stava-8-km",
+          "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den",
+          "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
+          "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T17:56:30Z",
+            "googleCanonical": "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-18T07:33:41Z",
+            "googleCanonical": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T17:58:46Z",
+            "googleCanonical": "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret"
+          },
+          {
+            "url": "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:00:46Z",
+            "googleCanonical": "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby"
+          },
+          {
+            "url": "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-26T20:30:53Z",
+            "googleCanonical": "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei"
+          },
+          {
+            "url": "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:02:46Z",
+            "googleCanonical": "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia"
+          },
+          {
+            "url": "https://metravel.by/travels/panevniki-petlia-ot-chernogo-stava-8-km",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-10T21:33:26Z",
+            "googleCanonical": "https://metravel.by/travels/panevniki-petlia-ot-chernogo-stava-8-km"
+          },
+          {
+            "url": "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T00:48:09Z",
+            "googleCanonical": "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den"
+          },
+          {
+            "url": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:02:47Z",
+            "googleCanonical": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T14:36:11Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut"
+          }
+        ]
+      },
+      "previousIndexCheck": {
         "checkedAt": "2026-08-23",
         "source": "gsc-url-inspection",
         "indexed": 10,
@@ -1820,6 +2618,107 @@
         }
       ],
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 10,
+        "of": 10,
+        "indexedUrls": [
+          "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+          "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
+          "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+          "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
+          "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
+          "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
+          "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+          "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru",
+          "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
+          "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-20T06:03:14Z",
+            "googleCanonical": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh"
+          },
+          {
+            "url": "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-24T05:52:11Z",
+            "googleCanonical": "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki"
+          },
+          {
+            "url": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:16:52Z",
+            "googleCanonical": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh"
+          },
+          {
+            "url": "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T01:30:11Z",
+            "googleCanonical": "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg"
+          },
+          {
+            "url": "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-22T14:18:07Z",
+            "googleCanonical": "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt"
+          },
+          {
+            "url": "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-23T18:16:53Z",
+            "googleCanonical": "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-12T20:29:38Z",
+            "googleCanonical": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut"
+          },
+          {
+            "url": "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T03:52:29Z",
+            "googleCanonical": "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru"
+          },
+          {
+            "url": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T22:16:24Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira"
+          },
+          {
+            "url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-27T08:38:03Z",
+            "googleCanonical": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta"
+          }
+        ]
+      },
+      "previousIndexCheck": {
         "checkedAt": "2026-08-23",
         "source": "gsc-url-inspection",
         "indexed": 10,
@@ -1957,6 +2856,44 @@
         }
       ],
       "indexCheck": {
+        "checkedAt": "2026-08-28",
+        "source": "gsc-url-inspection",
+        "indexed": 3,
+        "of": 3,
+        "indexedUrls": [
+          "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
+          "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
+          "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest"
+        ],
+        "note": "Контрольный замер +2 нед #1387 2026-08-28.",
+        "results": [
+          {
+            "url": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T01:36:11Z",
+            "googleCanonical": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka"
+          },
+          {
+            "url": "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-14T02:16:01Z",
+            "googleCanonical": "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu"
+          },
+          {
+            "url": "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest",
+            "outcome": "indexed",
+            "verdict": "PASS",
+            "coverageState": "Страница отправлена и проиндексирована",
+            "lastCrawlTime": "2026-08-13T20:48:18Z",
+            "googleCanonical": "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest"
+          }
+        ]
+      },
+      "previousIndexCheck": {
         "checkedAt": "2026-08-23",
         "source": "gsc-url-inspection",
         "indexed": 3,
@@ -2000,1023 +2937,1126 @@
     {
       "id": 172,
       "url": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "velomarshrut-402-lisya-gora-na-2-dnya-liniya-molotova-i-avgustovskiy-kanal"
       ],
       "oldClicks": 9,
-      "oldImpressions": 82
+      "oldImpressions": 82,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 267,
       "url": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zamok-ogrodzenec-skalnyy-gorod-podzamche"
       ],
       "oldClicks": 8,
-      "oldImpressions": 451
+      "oldImpressions": 451,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 637,
       "url": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "gory-polshi-19-peshikh-marshrutov-po-tatram-beskidam-i-peninam"
       ],
       "oldClicks": 6,
-      "oldImpressions": 355
+      "oldImpressions": 355,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 180,
       "url": "https://metravel.by/travels/park-stankovo-chto-posmotret-i-kak-doekhat",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "stankovo-otlichnyy-variant-dlya-progulki-na-vyhodnye-starinnyy-park-s-vekovymi-derevyami",
         "park-stankovo-pod-minskom-istoriia-usadby-chapskikh-chto-posmotret-legendy-i-kak-dobratsia"
       ],
       "oldClicks": 6,
-      "oldImpressions": 286
+      "oldImpressions": 286,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 178,
       "url": "https://metravel.by/travels/polsha-za-4-dnia-marshrut-iz-minska-v-gdansk",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "polsha-suvalki-elblong-gdansk-leba",
         "puteshestvie-v-polshu-na-4-dnia-marshrut-minsk-suvalki-elblong-gdansk-leba"
       ],
       "oldClicks": 6,
-      "oldImpressions": 96
+      "oldImpressions": 96,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 141,
       "url": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-i-staryi-khram",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "benitsa-zabroshennye-podzemelia-starinnyi-khram-i-mesto-kotoroe-slozhno-zabyt"
       ],
       "oldClicks": 5,
-      "oldImpressions": 85
+      "oldImpressions": 85,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 461,
       "url": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "pokhod-na-tri-korony-trzy-korony-982-m",
         "tri-korony-v-peninskikh-gorakh-marshrut-iz-sromowce-nizne-kotoryi-stoit-proiti-khotia-by-raz"
       ],
       "oldClicks": 4,
-      "oldImpressions": 243
+      "oldImpressions": 243,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 192,
       "url": "https://metravel.by/travels/orikum-albaniia-zamok-bochari-i-tserkov-marmiroi",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "albaniya-dostoprimechatelnosti-orikuma-castle-of-gjon-bocari-i-cerkov-marmiroy"
       ],
       "oldClicks": 4,
-      "oldImpressions": 223
+      "oldImpressions": 223,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 493,
       "url": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zamok-ksenzh-v-polshe-istoriia-legendy-i-puteshestvie-v-serdtse-nizhnei-silezii",
         "zamok-ksenzh-v-polshe-istoriia-kak-dobratsia-chto-posmotret-tainy-legendy-i-podzemelia"
       ],
       "oldClicks": 2,
-      "oldImpressions": 146
+      "oldImpressions": 146,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 194,
       "url": "https://metravel.by/travels/zamok-kanina-i-mechet-muradie-vo-vlere-albaniia",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "albaniya-dostoprimechatelnosti-vlera-zamok-kanina-kalaja-e-kanines-starinnaya-mechet-muradie-i-nasledie-envera-hodzhi"
       ],
       "oldClicks": 2,
-      "oldImpressions": 129
+      "oldImpressions": 129,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 459,
       "url": "https://metravel.by/travels/khelskaia-kosa-tri-maiaka-i-nedelia-na-baltike",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "helskaya-kosa-mayak-v-v-yastarne-mayak-gora-shvedov-helskiy-mayak",
         "khelskaia-kosa-maiak-v-v-iastarne-maiak-gora-shvedov-khelskii-maiak"
       ],
       "oldClicks": 2,
-      "oldImpressions": 120
+      "oldImpressions": 120,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 510,
       "url": "https://metravel.by/travels/banska-shtiavnitsa-za-1-den-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "putevoditel-po-banskoi-shtiavnitse-chto-posmotret-za-odin-den",
         "banska-shtiavnitsa-slovakiia-chto-posmotret-za-1-den-kak-dobratsia-istoriia-goroda-i-neobychnye-fakty"
       ],
       "oldClicks": 2,
-      "oldImpressions": 61
+      "oldImpressions": 61,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 196,
       "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "velomarshrut-po-belarusi-na-odin-den-krevskii-zamok-golshany-starye-usadby-i-zabroshennyi-park"
       ],
       "oldClicks": 2,
-      "oldImpressions": 17
+      "oldImpressions": 17,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 402,
       "url": "https://metravel.by/travels/park-invald-dinozavry-miniatiury-luna-park",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "park-invald-park-dinozavrov-luna-park-park-miniatyur-zoopark-i-dazhe-svoy-zamok"
       ],
       "oldClicks": 1,
-      "oldImpressions": 85
+      "oldImpressions": 85,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 635,
       "url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "usadby-dvortsy-i-zamki-belarusi-19-marshrutov-vykhodnogo-dnia-iz-minska"
       ],
       "oldClicks": 1,
-      "oldImpressions": 66
+      "oldImpressions": 66,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 421,
       "url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "3-dnya-v-shklyarska-porembe-zamok-shviny-zamok-v-roztoke-pohod-na-goru-snezhka-i-mnogo-drugoe"
       ],
       "oldClicks": 1,
-      "oldImpressions": 47
+      "oldImpressions": 47,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 300,
       "url": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "sokolinye-gory-i-zamki-poblizosti-marshrut-s-legendami-i-peshcherami"
       ],
       "oldClicks": 1,
-      "oldImpressions": 32
+      "oldImpressions": 32,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 143,
       "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "narovlya-dvorcovo-parkovyy-kompleks-gorvattov",
         "usadba-gorvattov-v-narovle-istoriia-legendy-foto-i-marshrut-poezdki"
       ],
       "oldClicks": 1,
-      "oldImpressions": 29
+      "oldImpressions": 29,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 131,
       "url": "https://metravel.by/travels/baikovskii-rodnik-pod-chausami-velomarshrut-i-legendy",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "baikovskii-rodnik-v-mogilevskoi-oblasti-velomarshrut-legendy-i-mesto-sily-nedaleko-ot-chausov",
         "velomarshrut-k-baikovskomu-rodniku-odnodnevnoe-puteshestvie-po-mogilevskoi-oblasti"
       ],
       "oldClicks": 1,
-      "oldImpressions": 22
+      "oldImpressions": 22,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 535,
       "url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "kortina-dampetstso-i-via-ferrata-cascate-di-fanes-vodopady-i-trek-v-dolomitakh"
       ],
       "oldClicks": 1,
-      "oldImpressions": 19
+      "oldImpressions": 19,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 444,
       "url": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "bazilika-bogomateri-angelov-v-kalvarii-zebzhidovskoy-i-za"
       ],
       "oldClicks": 1,
-      "oldImpressions": 12
+      "oldImpressions": 12,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 484,
       "url": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "rysianka-1322m-tuda-gde-konchaetsia-internet-i-nachinaetsia-gornyi-dzen-1"
       ],
       "oldClicks": 1,
-      "oldImpressions": 4
+      "oldImpressions": 4,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 162,
       "url": "https://metravel.by/travels/skandinaviia-na-avto-marshrut-iz-minska-2-nedeli",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "litva-shveciya-norvegiya-daniya-germaniya-polsha"
       ],
       "oldClicks": 1,
-      "oldImpressions": 1
+      "oldImpressions": 1,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 216,
       "url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "gruziya-peshchera-sataplia",
         "chto-posmotret-v-kutaisi-peshchery-kanony-monastyri-i-interesnye-mesta-riadom-s-batumi"
       ],
       "oldClicks": 0,
-      "oldImpressions": 160
+      "oldImpressions": 160,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 200,
       "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "lida-lidskiy-zamok"
       ],
       "oldClicks": 0,
-      "oldImpressions": 66
+      "oldImpressions": 66,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 303,
       "url": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "dvorec-dembinskih-rycarskiy-zamok-v-sobkove-hencinskiy-zamok-dvorec-tarlov"
       ],
       "oldClicks": 0,
-      "oldImpressions": 65
+      "oldImpressions": 65,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 171,
       "url": "https://metravel.by/travels/barselona-portaventura-i-ferrari-land-v-mae",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "barselona-i-park-razvlecheniy-port-aventura-v-mae"
       ],
       "oldClicks": 0,
-      "oldImpressions": 61
+      "oldImpressions": 61,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 472,
       "url": "https://metravel.by/travels/vena-za-1-den-i-venskii-les-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "vena-za-1-den-i-venskii-les-chto-posmotret-kak-doekhat-legendy-i-skrytye-mesta"
       ],
       "oldClicks": 0,
-      "oldImpressions": 55
+      "oldImpressions": 55,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 247,
       "url": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "marshrut-na-odin-den-letnyaya-rezidenciya-radzivilov-usadba-elenskih-usadba-stralkov-usadba-labockiy-1"
       ],
       "oldClicks": 0,
-      "oldImpressions": 48
+      "oldImpressions": 48,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 530,
       "url": "https://metravel.by/travels/iz-krakova-v-bratislavu-zamok-lietava",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "krakov-zamok-lietava-bratislava-puteshestvie-po-slovakii"
       ],
       "oldClicks": 0,
-      "oldImpressions": 41
+      "oldImpressions": 41,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 154,
       "url": "https://metravel.by/travels/mogilev-chto-posmotret-za-vykhodnye",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "mogilev",
         "mogilev-gorod-istorii-legend-i-uiutnykh-ulits-chto-posmotret-i-kak-splanirovat-poezdku"
       ],
       "oldClicks": 0,
-      "oldImpressions": 39
+      "oldImpressions": 39,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 206,
       "url": "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "indiya-hampi"
       ],
       "oldClicks": 0,
-      "oldImpressions": 34
+      "oldImpressions": 34,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 157,
       "url": "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zimnii-drezden-i-bashtai-arkhitektura-muzei-i-vidy-bez-turistov"
       ],
       "oldClicks": 0,
-      "oldImpressions": 27
+      "oldImpressions": 27,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 233,
       "url": "https://metravel.by/travels/usadba-linovo-dvorets-pototskikh-i-usadba-puzynov",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "marshrut-na-oden-usadba-linovo-dvorec-potockih-usadba-puzynov"
       ],
       "oldClicks": 0,
-      "oldImpressions": 24
+      "oldImpressions": 24,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 457,
       "url": "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "observatoriya-imeni-tadeusha-banahevicha-na-goru-lyubomire"
       ],
       "oldClicks": 0,
-      "oldImpressions": 24
+      "oldImpressions": 24,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 239,
       "url": "https://metravel.by/travels/usadba-trabutishki-i-golubye-ozera-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "usadba-trabutishki-i-golubye-ozera-marshrut-zhile-vpechatleniia",
         "usadba-trabutishki-i-poseshchenie-ozer-ilginiya-bolduk-i-karasik"
       ],
       "oldClicks": 0,
-      "oldImpressions": 20
+      "oldImpressions": 20,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 313,
       "url": "https://metravel.by/travels/park-sverklanets-ruiny-zamka-dvortsy-i-bunkery",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "park-sverklanets-progulka-po-ruinam-zamka-dvortsam-i-bunkeram"
       ],
       "oldClicks": 0,
-      "oldImpressions": 17
+      "oldImpressions": 17,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 475,
       "url": "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "dom-na-ostrove",
         "zagolovok-uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-priroda-i-interesnye-mesta-riadom",
         "uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-i-priroda"
       ],
       "oldClicks": 0,
-      "oldImpressions": 12
+      "oldImpressions": 12,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 155,
       "url": "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zimnee-puteshestvie-po-polshe-germanii-chekhii-i-avstrii-nash-marshrut"
       ],
       "oldClicks": 0,
-      "oldImpressions": 11
+      "oldImpressions": 11,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 524,
       "url": "https://metravel.by/travels/dubrovnik-kak-dobratsia-i-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "8-dubrovnik-2025-progulka-po-staromu-gorodu-chto-posmotret-za-1-den",
         "dubrovnik-kak-dobratsia-chto-posmotret-interesnye-fakty-i-legendy-starogo-goroda-khorvatii"
       ],
       "oldClicks": 0,
-      "oldImpressions": 9
+      "oldImpressions": 9,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 311,
       "url": "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zamki-polshi-dvorec-v-chervencicah"
       ],
       "oldClicks": 0,
-      "oldImpressions": 8
+      "oldImpressions": 8,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 491,
       "url": "https://metravel.by/travels/ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "mavrikii-morskaia-ekskursiia-na-ostrov-il-o-serf-ile-aux-cerfs-pliazh-bel-mar-i-letuchie-lisy"
       ],
       "oldClicks": 0,
-      "oldImpressions": 6
+      "oldImpressions": 6,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 135,
       "url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zhemyslavl-i-dvorets-umiastovskikh-progulka-vo-vremeni",
         "zhemyslavl-i-dvorets-umiastovskikh-progulka-vo-vremeni-1",
         "zhemyslavl-i-dvorets-umiastovskikh-zabroshennaia-usadba-belarusi-istoriia-legendy-i-marshrut-iz-minska"
       ],
       "oldClicks": 0,
-      "oldImpressions": 5
+      "oldImpressions": 5,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 140,
       "url": "https://metravel.by/travels/kholopenichi-ruiny-tserkvi-i-zabroshennaia-derevnia",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "kholopenichi-ruiny-sviato-uspenskoi-tserkvi-pamiatnik-otmene-krepostnogo-prava-i-tikhie-ulitsy-zabroshennoi-derevni"
       ],
       "oldClicks": 0,
-      "oldImpressions": 5
+      "oldImpressions": 5,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 526,
       "url": "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "10-iuzhnyi-velebit-peshii-marshrut-v-natsionalnom-parke-paklenitsa-karta-sovety-tseny",
         "natsionalnyi-park-paklenitsa-v-khorvatii-istoriia-kak-dobratsia-chto-posmotret-legendy-i-poleznye-sovety"
       ],
       "oldClicks": 0,
-      "oldImpressions": 5
+      "oldImpressions": 5,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 139,
       "url": "https://metravel.by/travels/istok-nemana-dendropark-i-usadba-iodko",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "den-rozhdeniia-u-istoka-nemana-dendropark-usadba-narkevicha-iodko-i-mesto-sliianiia-chetyrekh-rek"
       ],
       "oldClicks": 0,
-      "oldImpressions": 3
+      "oldImpressions": 3,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 531,
       "url": "https://metravel.by/travels/balaton-sound-festival-na-ozere-balaton",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "muzykalnyi-festival-balaton-sound-3-dnia-muzyki-solntsa-i-ozera"
       ],
       "oldClicks": 0,
-      "oldImpressions": 3
+      "oldImpressions": 3,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 116,
       "url": "https://metravel.by/travels/otdykh-v-dominikane-chto-posmotret-i-ekskursii",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "otdykh-v-dominikane-kak-dobratsia-chto-posmotret-luchshie-ekskursii-i-lichnyi-opyt"
       ],
       "oldClicks": 0,
-      "oldImpressions": 2
+      "oldImpressions": 2,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 209,
       "url": "https://metravel.by/travels/liniia-stalina-chto-posmotret-i-kak-doekhat",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "liniia-stalina-istoriia-kak-doekhat-chto-posmotret-i-kakie-tainy-khranit-muzei"
       ],
       "oldClicks": 0,
-      "oldImpressions": 2
+      "oldImpressions": 2,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 254,
       "url": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "marshrut-vykhodnogo-dnia-iz-minska-osipovichskaia-ges-svisloch-i-svislochsko-berezinskii-zapovednik"
       ],
       "oldClicks": 0,
-      "oldImpressions": 2
+      "oldImpressions": 2,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 309,
       "url": "https://metravel.by/travels/ruiny-bashni-v-rychuve-i-peshchera-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "ruiny-storozhevoy-bashni-v-rychuve-i",
         "ruiny-storozhevoi-bashni-v-rychuve-i-peshchera-jaskinia-z-kominem-marshrut-istoriia-i-chto-posmotret-v-malopolshe"
       ],
       "oldClicks": 0,
-      "oldImpressions": 2
+      "oldImpressions": 2,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 136,
       "url": "https://metravel.by/travels/kostel-v-selishche-i-memorial-proryv-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "kostel-v-selishche-i-memorial-proryv-atmosfernoe-puteshestvie-po-vitebskoi-oblasti"
       ],
       "oldClicks": 0,
-      "oldImpressions": 1
+      "oldImpressions": 1,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 185,
       "url": "https://metravel.by/travels/zabroshennaia-tserkov-v-begomle-kak-doekhat",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "tserkov-vsekh-sviatykh-begoml",
         "zabroshennaia-pravoslavnaia-tserkov-v-begomle-istoriia-legendy-i-marshrut-dlia-puteshestviia"
       ],
       "oldClicks": 0,
-      "oldImpressions": 1
+      "oldImpressions": 1,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 198,
       "url": "https://metravel.by/travels/vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "vitebsk-za-1-den-chto-posmotret-kuda-skhodit-i-pochemu-etot-gorod-khochetsia-pokazat-druziam-snova-i-snova"
       ],
       "oldClicks": 0,
-      "oldImpressions": 1
+      "oldImpressions": 1,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 463,
       "url": "https://metravel.by/travels/pilsko-v-beskidakh-marshrut-k-granitse-slovakii",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "peshie-marshruty-v-beskidakh-kak-dobratsia-do-pilsko-i-granitsy-so-slovakiei"
       ],
       "oldClicks": 0,
-      "oldImpressions": 1
+      "oldImpressions": 1,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 517,
       "url": "https://metravel.by/travels/severnyi-velebit-i-zavizhan-peshii-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "2-severnyi-velebit-marshrut-babic-sica-zavizan-premuzic-trail-na-neskolko-dnei",
         "severnyi-velebit-i-zavizhan-luchshii-peshii-marshrut-khorvatii-s-vidom-na-adriatiku-kotoryi-stoit-proiti"
       ],
       "oldClicks": 0,
-      "oldImpressions": 1
+      "oldImpressions": 1,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 166,
       "url": "https://metravel.by/travels/berlin-i-poznan-za-2-dnia-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "berlin-poznan-minsk",
         "berlin-i-poznan-za-2-dnia-chto-posmotret-kak-dobratsia-i-interesnye-fakty-o-glavnykh-dostoprimechatelnostiakh-evropy-v-2026-godu"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 221,
       "url": "https://metravel.by/travels/tivoli-iz-rima-na-odin-den-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "tivoli-idealnaia-poezdka-iz-rima-na-odin-den-kotoraia-zapomnilas-nam-ne-tolko-krasotoi-no-i-shtrafom"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 227,
       "url": "https://metravel.by/travels/lager-zorka-i-kupel-poezdka-iz-minska",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "poezdka-vykhodnogo-dnia-iz-minska-zabroshennyi-lager-zorka-rodnik-na-dnepre-i-kupel-panteleimona"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 245,
       "url": "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 264,
       "url": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "marshrut-na-odin-den-zamok-miruv-peshchera-koniushnia-zamok-bobolitse"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 281,
       "url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "peshchery-i-zapovednik-riadom-s-zamkami-miruv-i-bobolitse-marshrut-na-poldnia"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 286,
       "url": "https://metravel.by/travels/gory-tovarny-i-peshchery-iurskogo-kraia-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "gory-tovarny-gory-towarne",
         "gory-tovarny-i-peshchery-iurskogo-kraia-marshrut-vykhodnogo-dnia-s-sobakami-istoriia-legendy-i-poleznye-sovety"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 297,
       "url": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "chto-posmotret-riadom-s-krakovom-zamok-tenchin-shakhta-velichka-i-solianoi-zamok-za-odin-den"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 310,
       "url": "https://metravel.by/travels/zelene-tropa-bobrov-i-vetrianaia-melnitsa",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "progulka-v-zelene-tropa-bobrov-i-vetrianaia-melnitsa-v-5-km-ot-tsivilizatsii"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 405,
       "url": "https://metravel.by/travels/dolina-dlubni-marshrut-vykhodnogo-dnia-iz-krakova",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "dolina-dlubni-i-istochniki-imbramovitse-marshrut-vykhodnogo-dnia-iz-krakova-chto-posmotret-i-kak-dobratsia"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 422,
       "url": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zamok-v-dobchice-i-smotrovaya-bashnya-v-gorce"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 434,
       "url": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zamok-chhuv-zamok-tropshtyn-zamok-v-novy-sonche-vezha-v-krynicezdroy"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 445,
       "url": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
-      "state": "Страница просканирована, но пока не проиндексирована",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 464,
       "url": "https://metravel.by/travels/velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 466,
       "url": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "marshrut-po-doline-kosteliska-smrechinskii-prud-peshchery-i-khala-ornak"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 471,
       "url": "https://metravel.by/travels/verona-za-poldnia-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "verona-za-poldnia-chto-posmotret-esli-vremeni-malo-i-pochemu-etot-gorod-tochno-stoit-dobavit-v-marshrut"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 482,
       "url": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
-      "state": "Страница просканирована, но пока не проиндексирована",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 487,
       "url": "https://metravel.by/travels/vodopad-tamarind-na-mavrikii-kak-dobratsia",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "vodopad-tamarind-na-mavrikii-kak-dobratsia-nuzhen-li-gid-i-chto-vazhno-znat-pered-pokhodom"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 488,
       "url": "https://metravel.by/travels/mavrikii-na-avtomobile-arenda-i-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "mavrikii-na-avtomobile-arenda-levostoronnee-dvizhenie-i-marshrut-do-lemorn-braban"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 490,
       "url": "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "ekskursiia-na-mavrikii-port-lui-botanicheskii-sad-pliazh-s-cherepakhami"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 492,
       "url": "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "leskowiec-922-m-legkii-marshrut-v-beskidakh-iz-rzyki-kak-podniatsia-chto-posmotret-i-gde-otdokhnut"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 500,
       "url": "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "gde-pokatatsia-na-konkakh-lyzhakh-i-snouborde-v-krakove-i-ego-okrestnostiakh"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 505,
       "url": "https://metravel.by/travels/schronisko-magurka-marshrut-na-90-minut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 506,
       "url": "https://metravel.by/travels/sobachii-friendly-trek-v-chase-ot-krakova-dolina-zhabnika",
-      "state": "Страница просканирована, но пока не проиндексирована",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 508,
       "url": "https://metravel.by/travels/oravskii-zamok-v-slovakii-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 511,
       "url": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 512,
       "url": "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 513,
       "url": "https://metravel.by/travels/den-2-v-parizhe-monmartr-i-katakomby",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "den-2-v-parizhe-progulki-po-monmartru-katakomby-i-luchshii-vid-na-gorod"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 516,
       "url": "https://metravel.by/travels/po-evrope-na-mashine-s-sobakoi-marshrut-9-dnei",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 518,
       "url": "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 519,
       "url": "https://metravel.by/travels/panevniki-petlia-ot-chernogo-stava-8-km",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 532,
       "url": "https://metravel.by/travels/ushchele-vintgar-i-ozero-bled-marshrut-na-den",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 536,
       "url": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 539,
       "url": "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 540,
       "url": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh",
         "ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 541,
       "url": "https://metravel.by/travels/velopokhod-po-polshe-greenvelo-i-nochevki",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 543,
       "url": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 544,
       "url": "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 545,
       "url": "https://metravel.by/travels/portugalskii-put-vdol-poberezhia-nash-opyt",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "kak-proiti-portugalskii-put-vdol-poberezhia-nash-opyt-camino-portugues-de-la-costa"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 548,
       "url": "https://metravel.by/travels/dvorets-szembekow-v-poreba-zegoty-velomarshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "ruiny-dvortsa-szembekow-v-poreba-zegoty-atmosfernyi-velomarshrut"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 563,
       "url": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 569,
       "url": "https://metravel.by/travels/zelenoe-pleso-v-vysokikh-tatrakh-pokhod-k-ozeru",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zelenoe-pleso-zelene-pleso-v-vysokikh-tatrakh-pokhod-k-izumrudnomu-ozeru"
       ],
       "oldClicks": 0,
       "oldImpressions": 0,
-      "staleRedirectFixedAt": "2026-08-10"
+      "staleRedirectFixedAt": "2026-08-10",
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 630,
       "url": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zamok-malbork-krupneishaia-kirpichnaia-krepost-mira-putevoditel"
       ],
       "oldClicks": 0,
       "oldImpressions": 0,
-      "staleRedirectFixedAt": "2026-08-10"
+      "staleRedirectFixedAt": "2026-08-10",
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 638,
       "url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 641,
       "url": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zamok-bolchuv-progulka-cherez-les-k-ruinam-v-rudavakh-ianovitskikh"
       ],
       "oldClicks": 0,
       "oldImpressions": 0,
-      "staleRedirectFixedAt": "2026-08-10"
+      "staleRedirectFixedAt": "2026-08-10",
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 642,
       "url": "https://metravel.by/travels/adrshpashskie-skaly-v-chekhii-gde-snimali-narniiu",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "adrshpashskie-skaly-marshrut-po-skalnomu-gorodu-gde-snimali-khroniki-narnii"
       ],
       "oldClicks": 0,
       "oldImpressions": 0,
-      "staleRedirectFixedAt": "2026-08-10"
+      "staleRedirectFixedAt": "2026-08-10",
+      "indexedAt": "2026-08-28"
     },
     {
       "id": 682,
       "url": "https://metravel.by/travels/zabroshennye-usadby-i-zamki-belarusi-38-mest",
-      "state": "URL неизвестен Google",
+      "state": "Страница отправлена и проиндексирована",
       "renamedFrom": [
         "zabroshennye-dvortsy-usadby-i-zamki-belarusi-38-atmosfernykh-mest-s-foto-i-koordinatami"
       ],
       "oldClicks": 0,
-      "oldImpressions": 0
+      "oldImpressions": 0,
+      "indexedAt": "2026-08-28"
     }
   ],
   "_indexnowFullSubmit": {
@@ -3029,16 +4069,55 @@
     "note": "Подача выполнена случайно: node scripts/indexnow-submit.js без аргументов (режим по умолчанию — весь сайт). Покрыла 99 из 103 URL очереди; оставшиеся 4 отсутствовали в живом наборе, потому что были протухшими 301 — заменены на цели редиректа в этот же день. Побочный эффект безвредный (свои же URL, ключ верифицирован), но пачки 1-2 получили повторную подачу. Google этим не кормится — ручные клики в GSC идут по расписанию без изменений."
   },
   "_lastIndexSweep": {
-    "checkedAt": "2026-08-11T19:22:48.279Z",
-    "total": 306,
-    "indexed": 215,
-    "notIndexed": 91,
+    "checkedAt": "2026-08-28T06:50:00.624Z",
+    "total": 313,
+    "indexed": 310,
+    "notIndexed": 3,
+    "unchecked": 0,
     "byCoverageState": {
-      "URL неизвестен Google": 34,
-      "Страница отправлена и проиндексирована": 215,
-      "Обнаружена, не проиндексирована": 52,
-      "Страница просканирована, но пока не проиндексирована": 5
-    }
+      "Страница отправлена и проиндексирована": 310,
+      "URL неизвестен Google": 2,
+      "Обнаружена, не проиндексирована": 1
+    },
+    "sitemap": {
+      "total": 676,
+      "indexed": 673,
+      "notIndexed": 3,
+      "unchecked": 0,
+      "byKind": {
+        "static": {
+          "total": 6,
+          "indexed": 6,
+          "notIndexed": 0,
+          "unchecked": 0
+        },
+        "travel": {
+          "total": 404,
+          "indexed": 401,
+          "notIndexed": 3,
+          "unchecked": 0
+        },
+        "quest-page": {
+          "total": 156,
+          "indexed": 156,
+          "notIndexed": 0,
+          "unchecked": 0
+        },
+        "quest-city": {
+          "total": 110,
+          "indexed": 110,
+          "notIndexed": 0,
+          "unchecked": 0
+        }
+      },
+      "byCoverageState": {
+        "Страница отправлена и проиндексирована": 673,
+        "URL неизвестен Google": 2,
+        "Обнаружена, не проиндексирована": 1
+      }
+    },
+    "source": "gsc-url-inspection",
+    "note": "Контроль +2 нед #1387, 2026-08-28. Статьи user_id=1 из API; sitemap — полный срез #1559."
   },
   "_gscQuota": {
     "planFloor": 10,
@@ -3062,5 +4141,17 @@
       "status": "Успешно"
     },
     "why": "URL Inspection по каждому URL очереди показывал «Нет ссылающихся файлов Sitemap»: Google не перечитывал sitemap с 15.07, то есть все переименованные 03–06.08 адреса ему просто не были предъявлены"
+  },
+  "_previousIndexSweep": {
+    "checkedAt": "2026-08-11T19:22:48.279Z",
+    "total": 306,
+    "indexed": 215,
+    "notIndexed": 91,
+    "byCoverageState": {
+      "URL неизвестен Google": 34,
+      "Страница отправлена и проиндексирована": 215,
+      "Обнаружена, не проиндексирована": 52,
+      "Страница просканирована, но пока не проиндексирована": 5
+    }
   }
 }
