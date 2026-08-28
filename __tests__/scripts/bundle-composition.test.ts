@@ -343,7 +343,7 @@ const LAZY_DEFEATED_BY_SYNC_ALLOWLIST: Array<{ file: string; specifier: string; 
   {
     file: 'components/travel/details/travelDetailsDeferredLoader.ts',
     specifier: '@/components/travel/details/TravelDetailsDeferred',
-    reason: 'открытый долг: тест-фолбэк require; сам загрузчик уже за async-границей маршрута',
+    reason: '#1552: test-only require in the unprefixed file; web uses travelDetailsDeferredLoader.web.ts',
   },
   {
     file: 'utils/validation/index.ts',

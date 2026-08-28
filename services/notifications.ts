@@ -1,7 +1,7 @@
 // services/notifications.ts
 // AND-05: Push notification service for Android/iOS
 // Handles token registration, notification channels, and foreground/background notifications.
-// On web — no-op (push notifications are not supported).
+// Web uses notifications.web.ts so expo-notifications never enters the web graph.
 
 import { Platform } from 'react-native';
 import { devError, devWarn } from '@/utils/logger';

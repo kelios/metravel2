@@ -70,11 +70,32 @@ function useOfflineTravelRecentCache(
     if (!travel?.id || isLoading || isError) return undefined
 
     let isCancelled = false
+    const persistRecent = () => {
+      if (!isCancelled) void cacheTravelOffline(travel.id, travel, Platform.OS !== 'web')
+    }
 
-    if (!isCancelled) void cacheTravelOffline(travel.id, travel, Platform.OS !== 'web')
+    // #1552: the adapter chunk is already behind import(), but calling it from
+    // this mount effect still evaluates ~80ms during the TBT window. Persist
+    // the recent-cache snapshot after first idle (web) / after interactions.
+    const webWindow =
+      Platform.OS === 'web' && typeof globalThis !== 'undefined'
+        ? (globalThis as typeof globalThis & {
+            requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+            cancelIdleCallback?: (id: number) => void
+          })
+        : null
+    if (typeof webWindow?.requestIdleCallback === 'function') {
+      const idleId = webWindow.requestIdleCallback(persistRecent, { timeout: 4000 })
+      return () => {
+        isCancelled = true
+        webWindow.cancelIdleCallback?.(idleId)
+      }
+    }
 
+    const timeoutId = setTimeout(persistRecent, Platform.OS === 'web' ? 1500 : 0)
     return () => {
       isCancelled = true
+      clearTimeout(timeoutId)
     }
   }, [isError, isLoading, travel])
 }

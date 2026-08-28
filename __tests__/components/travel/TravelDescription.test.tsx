@@ -151,6 +151,12 @@ describe('TravelDescription', () => {
     expect(requestIdleCallback).not.toHaveBeenCalled()
 
     act(() => {
+      intersectionCallback?.([{ isIntersecting: false, intersectionRatio: 0 }])
+    })
+    expect(queryByTestId('stable-content')).toBeNull()
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+
+    act(() => {
       intersectionCallback?.([{ isIntersecting: true, intersectionRatio: 0.1 }])
     })
     expect(requestIdleCallback).toHaveBeenCalledTimes(1)
