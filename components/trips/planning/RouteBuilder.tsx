@@ -400,13 +400,15 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
   const elevationPreview = routeDisplay.elevation;
 
   const elevationProfileSection = elevationPreview ? (
-    <Suspense fallback={null}>
-      <RouteElevationProfile
-        preview={elevationPreview}
-        placeHints={elevationPlaceHints}
-        transportHints={[TRANSPORT_LABEL[trip.transport]]}
-      />
-    </Suspense>
+    <View testID="route-builder-elevation">
+      <Suspense fallback={null}>
+        <RouteElevationProfile
+          preview={elevationPreview}
+          placeHints={elevationPlaceHints}
+          transportHints={[TRANSPORT_LABEL[trip.transport]]}
+        />
+      </Suspense>
+    </View>
   ) : null;
 
   // Движок живёт под ключом retryToken: у useRouting нет входа «построй заново»,
@@ -1357,10 +1359,10 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
           {mapSection}
           {previewEngine}
           {previewStatusSection}
-
-          {elevationProfileSection}
         </View>
       </View>
+
+      {elevationProfileSection}
     </View>
   );
 }

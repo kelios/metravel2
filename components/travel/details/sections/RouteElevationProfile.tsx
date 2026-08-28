@@ -143,6 +143,18 @@ export default function RouteElevationProfile({
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{profileSummary}</Text>
         </View>
+        {transportHints.length > 0 ? (
+          <View style={styles.transportWrap} testID="route-elevation-transport">
+            <Feather
+              name="navigation"
+              size={13}
+              color={colors.textMuted}
+            />
+            <Text style={styles.tagItem} numberOfLines={1}>
+              {i18nT('travel:components.travel.details.sections.RouteElevationProfile.transport_83487c96')}{transportHints.join(', ')}
+            </Text>
+          </View>
+        ) : null}
         {canDownloadTrack && onDownloadTrack ? (
           <Pressable
             onPress={() => void onDownloadTrack()}
@@ -332,64 +344,49 @@ export default function RouteElevationProfile({
               {formatProfileKm(metrics.totalDistanceKm)}
             </Text>
           </View>
-          {pointCards.length > 0 || transportHints.length > 0 ? (
-            <View style={styles.tagsRow}>
-              {pointCards.length > 0 ? (
-                <View
-                  style={[
-                    styles.pointCardsGrid,
-                    isCompactLayout && styles.pointCardsGridCompact,
-                  ]}
-                >
-                  {pointCards.map((point) => (
-                    <View
-                      key={point.key}
-                      style={[
-                        styles.pointCard,
-                        isCompactLayout && styles.pointCardCompact,
-                      ]}
-                    >
-                      <View style={styles.pointCardHeader}>
-                        <Feather
-                          name={
-                            point.icon as React.ComponentProps<
-                              typeof Feather
-                            >['name']
-                          }
-                          size={13}
-                          color={
-                            point.key === 'peak' ? colors.info : colors.primary
-                          }
-                        />
-                        <Text style={styles.pointCardLabel}>{point.label}</Text>
-                      </View>
-                      <Text style={styles.pointCardValue}>{point.value}</Text>
-                      <Text
-                        style={styles.pointCardCaption}
-                        numberOfLines={isCompactLayout ? 1 : 2}
-                      >
-                        {isCompactLayout
-                          ? point.caption.split(' • ')[0]
-                          : point.caption}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-              {transportHints.length > 0 ? (
-                <View style={styles.transportWrap}>
-                  <Feather
-                    name="navigation"
-                    size={13}
-                    color={colors.textMuted}
-                  />
-                  <Text style={styles.tagItem}>
-                    {i18nT('travel:components.travel.details.sections.RouteElevationProfile.transport_83487c96')}{transportHints.join(', ')}
-                  </Text>
-                </View>
-              ) : null}
+        </View>
+      ) : null}
+      {pointCards.length > 0 ? (
+        <View
+          style={[
+            styles.pointCardsGrid,
+            isCompactLayout && styles.pointCardsGridCompact,
+          ]}
+          testID="route-elevation-point-cards"
+        >
+          {pointCards.map((point) => (
+            <View
+              key={point.key}
+              style={[
+                styles.pointCard,
+                isCompactLayout && styles.pointCardCompact,
+              ]}
+            >
+              <View style={styles.pointCardHeader}>
+                <Feather
+                  name={
+                    point.icon as React.ComponentProps<
+                      typeof Feather
+                    >['name']
+                  }
+                  size={13}
+                  color={
+                    point.key === 'peak' ? colors.info : colors.primary
+                  }
+                />
+                <Text style={styles.pointCardLabel}>{point.label}</Text>
+              </View>
+              <Text style={styles.pointCardValue}>{point.value}</Text>
+              <Text
+                style={styles.pointCardCaption}
+                numberOfLines={isCompactLayout ? 1 : 2}
+              >
+                {isCompactLayout
+                  ? point.caption.split(' • ')[0]
+                  : point.caption}
+              </Text>
             </View>
-          ) : null}
+          ))}
         </View>
       ) : null}
     </View>

@@ -3,7 +3,7 @@
 // остановки в виде стат-чипов. Питается RouteSummary живого превью маршрута
 // (движок /map, #1490) или routeSummary поездки с бэка.
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { RoutingState, RouteSummary, TripTransport } from '@/api/plannedTrips';
@@ -19,6 +19,18 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { webTextStyle } from '@/utils/webProps'
+
+const noWrapText = Platform.select({
+  web: webTextStyle({
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    wordBreak: 'keep-all',
+    overflowWrap: 'normal',
+  }),
+  default: {},
+});
 
 
 interface Props {
@@ -141,7 +153,17 @@ const createStyles = (colors: ThemedColors) =>
       borderColor: colors.warningLight,
       backgroundColor: colors.warningSoft,
     },
-    statusText: { fontSize: 13, fontWeight: '700', color: colors.text },
+    statusText: {
+      flexShrink: 1,
+      minWidth: 0,
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text,
+      ...Platform.select({
+        web: webTextStyle({ wordBreak: 'normal', overflowWrap: 'break-word' }),
+        default: {},
+      }),
+    },
     statusTextWarning: { color: colors.warningDark },
     statusHint: {
       fontSize: 12,
@@ -159,8 +181,19 @@ const createStyles = (colors: ThemedColors) =>
       paddingVertical: 5,
       backgroundColor: colors.surfaceMuted,
     },
-    transportLabel: { flexShrink: 1, fontSize: 11, color: colors.textMuted },
-    transportValue: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.text },
+    transportLabel: {
+      flexShrink: 1,
+      fontSize: 11,
+      color: colors.textMuted,
+      ...noWrapText,
+    },
+    transportValue: {
+      flexShrink: 1,
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.text,
+      ...noWrapText,
+    },
     metrics: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -179,8 +212,15 @@ const createStyles = (colors: ThemedColors) =>
       gap: 2,
     },
     metricValueRow: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    metricValue: { minWidth: 0, flexShrink: 1, fontSize: 15, fontWeight: '700', color: colors.text },
-    metricLabel: { fontSize: 11, color: colors.textMuted },
+    metricValue: {
+      minWidth: 0,
+      flexShrink: 1,
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      ...noWrapText,
+    },
+    metricLabel: { fontSize: 11, color: colors.textMuted, ...noWrapText },
     hint: { fontSize: 13, color: colors.textMuted },
   });
 
