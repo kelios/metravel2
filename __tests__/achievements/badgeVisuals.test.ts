@@ -254,6 +254,12 @@ describe('badgeMotif', () => {
   it('water-traveler → wave', () => {
     expect(badgeMotif('theme', 'water-traveler')).toBe('wave')
   })
+  it('quest-pioneer → footprint, а не общий квестовый flag (#1635)', () => {
+    // Первопроходец — единственный квест-значок за редкость, а не за счёт
+    // пройденных: флагом он был бы неотличим от `quest-legend`.
+    expect(badgeMotif('quests', 'quest-pioneer')).toBe('footprint')
+    expect(badgeMotif('quests', 'quest-legend')).toBe('flag')
+  })
   it('city-explorer → city', () => {
     expect(badgeMotif('theme', 'city-explorer')).toBe('city')
   })

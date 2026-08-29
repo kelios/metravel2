@@ -61,6 +61,10 @@ description: >-
    (ImageCardMedia, UnifiedTravelCard, externalLinks, React Query/Zustand, TS strict).
 4. **Review.** `/code-review` или `review-auditor` по diff. Подтверждённые находки —
    чинит исполнитель, цикл повторяется. На борде — `status=review`, evidence = вердикт ревью.
+   После вердикта `pass` diff задачи коммитится ЯВНЫМИ путями и пушится в `main`
+   (`git add <пути задачи>` → `git commit` → `git push origin main`; `git add -A` в общем
+   чекауте запрещён), sha — в `description`, и только потом статус меняется на `testing`:
+   приёмка и dev-deploy проверяют запушенный код, а не рабочее дерево.
 5. **Test / QA.** Делегируй `test-author`: unit/e2e на новое поведение. Видимые/web-изменения —
    ОБЯЗАТЕЛЬНО браузерная проверка (Playwright/preview), как требует AGENTS.md. На борде
    `testing` означает только активную проверку или повторный замер с exact параметром,

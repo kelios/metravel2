@@ -55,7 +55,11 @@ const https = require('https')
 const { execFileSync } = require('child_process')
 
 const DEFAULT_ORIGIN = 'https://metravel.by'
-const DEFAULT_CONTAINER = 'metravel_nginx_1'
+// 'auto' = резолвить имя на проде. Compose v2 при пересоздании переименовал
+// контейнеры с подчёркиваний на дефисы (metravel_nginx_1 → metravel-nginx-1),
+// и захардкоженное имя роняло отчёт с 'No such container'. Явный --container
+// по-прежнему проходит проверку SAFE_CONTAINER.
+const DEFAULT_CONTAINER = 'auto'
 const DEFAULT_SINCE = '24h'
 const MANIFEST_FILE = path.join(__dirname, 'seo-redirects.json')
 const KNOWN_FILE = path.join(__dirname, 'seo-404-known.json')
@@ -606,7 +610,25 @@ function readProdLog({ container, since }) {
   // awk фильтрует на стороне сервера: за сутки лог весит десятки мегабайт, и
   // тянуть его целиком ради сотни строк незачем.
   const sinceArg = since ? `--since ${since}` : ''
-  const remote = `docker logs ${sinceArg} ${container} 2>/dev/null | awk '
+  // При 'auto' имя ищется на проде по обоим разделителям — так же, как в
+  // scripts/fix-prod.sh.
+  //
+  // Существование контейнера проверяется ОТДЕЛЬНО и для явного `--container`.
+  // Без этой проверки несуществующее имя давало ложное зелёное: `docker logs`
+  // пишет 'No such container' в stderr, который здесь уходит в /dev/null,
+  // `pipefail` не выставлен, поэтому код возврата берётся от awk и равен нулю →
+  // parseDigest отдаёт total=0 → buildReport не поднимает флаг усечения (там
+  // нужен hours > 0) → отчёт печатает «мёртвых адресов нет» и выходит с 0.
+  // Скрипт кронится через `npm run seo:404`, то есть регрессия была бы тихой.
+  // Само `2>/dev/null` снимать нельзя — оно отделяет access-лог на stdout от
+  // error-лога, который иначе попадёт в awk как данные.
+  const explicitContainer = container === 'auto' ? '' : container
+  const remote = `set -u
+ctr='${explicitContainer}'
+if [ -z "$ctr" ]; then ctr="$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]nginx[-_]1$' | head -1)"; fi
+if [ -z "$ctr" ]; then echo 'ERROR: не найден nginx-контейнер metravel' >&2; docker ps --format '{{.Names}}' >&2; exit 1; fi
+if ! docker ps --format '{{.Names}}' | grep -Fxq "$ctr"; then echo "ERROR: контейнер '$ctr' не запущен" >&2; docker ps --format '{{.Names}}' >&2; exit 1; fi
+docker logs ${sinceArg} "$ctr" 2>/dev/null | awk '
     NR==1 { first = $0 }
     { last = $0 }
     /"status":404/ { if (index($0, "GET /travels/")) print "HIT\\t" $0 }

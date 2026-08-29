@@ -716,6 +716,41 @@ describe('useQuestWizardProgress', () => {
     expect(remounted.result.current.finishedEarly).toBe(true)
   })
 
+  it('передаёт официальный пропуск и ранний финиш в server-sync callback (#1632)', async () => {
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-far', answer: checker },
+    ]
+    const onProgressChange = jest.fn()
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey: 'quest_progress_server_skip',
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(2))
+
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'ответ' })
+      result.current.markStepSkipped('p-far')
+      result.current.finishEarly()
+    })
+
+    await waitFor(() => {
+      expect(onProgressChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skipped: { 'p-far': true },
+          earlyFinish: true,
+        }),
+      )
+    })
+  })
+
   it('финиш на месте в начале маршрута прохождения не засчитывает', async () => {
     // #1443: «Завершить квест здесь» — тот же вопрос политики, что и пропуски.
     // Две точки из девяти это не пройденный квест, поэтому финал у игрока есть, а
@@ -754,8 +789,8 @@ describe('useQuestWizardProgress', () => {
 
   it('не понижает засчитанное прохождение на втором устройстве (#1451)', async () => {
     // Устройство A прошло 2 точки из 3 и официально пропустило далёкую — квест
-    // засчитан, на сервере `completed: true`. Устройство B про пропуск не знает
-    // (`skipped` бэкенд не хранит) и пересчитывает прохождение как незаконченное.
+    // засчитан, на сервере `completed: true`. Устройство B получило легаси-запись
+    // без `skipped` и пересчитывает прохождение как незаконченное.
     // Любое тривиальное действие в визарде не должно отправлять `completed:
     // false`: иначе игрок теряет «Пройден» и единицу из счётчика прохождений.
     const checker = () => true

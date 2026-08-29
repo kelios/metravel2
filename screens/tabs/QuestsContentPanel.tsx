@@ -1,4 +1,4 @@
-import { Suspense, useCallback } from 'react';
+import { Suspense, useCallback, useEffect } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -118,6 +118,20 @@ export default function QuestsContentPanel({
 }: QuestsContentPanelProps) {
     const router = useRouter();
     const searchActive = searchQuery.trim().length > 0;
+
+    // The no-JS catalog is intentionally visible in generated HTML. Once the
+    // interactive catalog mounts, remove only its explicitly marked SSG nodes
+    // so users and assistive technology do not see a duplicate quest listing.
+    useEffect(() => {
+        if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+        const listing = document.querySelector('section[data-ssg-quests-listing="true"]');
+        listing?.parentNode?.removeChild(listing);
+
+        const listingStyle = document.querySelector('style[data-ssg-quests-listing-style="true"]');
+        listingStyle?.parentNode?.removeChild(listingStyle);
+    }, []);
+
     // SEO intro + FAQ describe the whole /quests catalog. Show them on the default
     // list view (not in map mode, not while searching) so the visible copy matches
     // the crawlable static block generated for /quests.
@@ -163,7 +177,13 @@ export default function QuestsContentPanel({
         <View style={styles.contentHeader} testID="quests-content-header">
             <View style={styles.contentHeaderTopRow}>
                 <View style={styles.contentTitleBlock}>
-                    <Text style={styles.contentTitle} numberOfLines={2} testID="quests-content-title">
+                    <Text
+                        style={styles.contentTitle}
+                        numberOfLines={2}
+                        accessibilityRole="header"
+                        {...({ 'aria-level': 2 } as Record<string, unknown>)}
+                        testID="quests-content-title"
+                    >
                         {searchActive
                             ? i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
                             : isMapAreaActive
@@ -174,7 +194,9 @@ export default function QuestsContentPanel({
                                         ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
                                         : selectedCityId === bikeFilterId
                                             ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
-                                            : selectedCityName || i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
+                                            : selectedCityName
+                                                ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
+                                                : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
                     </Text>
                     <View style={styles.contentCountRow}>
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}

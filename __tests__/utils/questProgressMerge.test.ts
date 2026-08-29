@@ -221,14 +221,101 @@ describe('mergeQuestProgress', () => {
       hints: {},
       show_map: false,
       completed: false,
+      skipped: {},
+      early_finish: false,
     })
   })
 
+  it('отправляет skipped и early_finish на сервер (#1632)', () => {
+    // Бэкенд принимает оба поля с #1454. Пока клиент их не слал, официальный
+    // пропуск далёкой точки жил только в AsyncStorage: на проде 0 из 33 строк
+    // прогресса содержали хоть один пропуск.
+    const snap = snapshot({
+      answers: { 'step-1': 'a1' },
+      skipped: { 'step-9': true },
+      earlyFinish: true,
+    })
+
+    const payload = toQuestProgressServerPayload(snap)
+
+    expect(payload.skipped).toEqual({ 'step-9': true })
+    expect(payload.early_finish).toBe(true)
+  })
+
+  it('читает skipped и early_finish из ответа сервера (#1632)', () => {
+    const server = snapshotFromServerProgress({
+      current_index: 2,
+      unlocked_index: 2,
+      answers: { 'step-1': 'a1' },
+      attempts: {},
+      hints: {},
+      show_map: false,
+      completed: true,
+      skipped: { 'step-9': true },
+      early_finish: true,
+      updated_at: new Date(T0).toISOString(),
+    })
+
+    expect(server.skipped).toEqual({ 'step-9': true })
+    expect(server.earlyFinish).toBe(true)
+  })
+
+  it('сервер без полей #1454 читается как «пропусков нет», а не падает', () => {
+    const server = snapshotFromServerProgress({
+      current_index: 1,
+      unlocked_index: 1,
+      answers: {},
+      attempts: {},
+      hints: {},
+      show_map: false,
+      completed: false,
+      updated_at: new Date(T0).toISOString(),
+    })
+
+    expect(server.skipped).toEqual({})
+    expect(server.earlyFinish).toBe(false)
+  })
+
+  it('пропуск с устройства A доезжает до устройства B (#1632)', () => {
+    // Устройство A официально пропустило далёкую точку и закончило квест на
+    // месте; сервер эти поля уже хранит. Устройство B открывает тот же квест с
+    // чистым локальным состоянием и обязано увидеть тот же пропуск.
+    const deviceA = snapshot({
+      answers: { 'step-1': 'a1' },
+      skipped: { 'step-9': true },
+      earlyFinish: true,
+      completed: true,
+      updatedAt: T0 + 10_000,
+    })
+    const server = snapshotFromServerProgress({
+      ...toQuestProgressServerPayload(deviceA),
+      updated_at: new Date(T0 + 10_000).toISOString(),
+    })
+
+    const { merged } = mergeQuestProgress(null, server)
+
+    expect(merged.skipped).toEqual({ 'step-9': true })
+    expect(merged.earlyFinish).toBe(true)
+    expect(merged.completed).toBe(true)
+  })
+
+  it('изменение одного лишь skipped поднимает serverNeedsPush (#1632)', () => {
+    // Раньше `skipped` не входил в отпечаток сервера, поэтому пропуск точки не
+    // порождал PATCH вообще — даже если бы payload его нёс.
+    const base = { answers: { 'step-1': 'a1' }, updatedAt: T0 }
+    const server = snapshot(base)
+    const local = snapshot({ ...base, skipped: { 'step-9': true }, updatedAt: T0 + 1000 })
+
+    const { serverNeedsPush } = mergeQuestProgress(local, server)
+
+    expect(serverNeedsPush).toBe(true)
+  })
+
   it('не отправляет completed:false поверх серверного completed:true (#1451)', () => {
-    // Устройство B не знает про официальный пропуск девятой точки (`skipped`
-    // на бэкенде не хранится), поэтому пересчитывает прохождение как
-    // незаконченное. Payload обязан остаться `completed: true`: иначе у игрока
-    // молча пропадает «Пройден» и единица из счётчика прохождений квеста.
+    // Устройство B получило легаси-запись без официального пропуска девятой
+    // точки и пересчитывает прохождение как незаконченное. Payload обязан
+    // остаться `completed: true`: иначе у игрока молча пропадает «Пройден» и
+    // единица из счётчика прохождений квеста.
     const deviceB = snapshot({
       answers: { 'step-1': 'a1', 'step-2': 'a2' },
       completed: false,

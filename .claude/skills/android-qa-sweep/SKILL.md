@@ -8,14 +8,23 @@ description: "QA-обход Android-приложения на устройств
 ## Предусловия
 1. Физическое устройство по USB, отладка включена. adb автоопределяется (`which adb` или `~/Library/Android/sdk/platform-tools/adb`); проверка — `adb devices -l`. (`brew install android-platform-tools`, если нет.)
 2. Dev-client `by.metravel.app` установлен, Metro запущен (`npm start`), порт проброшен: `adb reverse tcp:8081 tcp:8081`.
-3. **Dev API-гейт (load-bearing!)**: `.env` обычно держит `EXPO_PUBLIC_API_URL=http://127.0.0.1:8085` (локальный бэк). Если бэк не поднят — приложение покажет **0 данных везде** (пустые списки/карта, LogBox «fetch failed»), и это легко принять за UI-баг. Для QA временно укажи прод-API и верни обратно:
+3. **API-гейт (load-bearing!)**: таргет по умолчанию — локальный бэкенд этой машины. Сначала обнови и подними его (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»):
    ```bash
+   git -C ../metravel-backend fetch origin master && git -C ../metravel-backend reset --hard origin/master
+   bash /Users/juliasavran/Sites/metravel/run-backend.sh        # слушает 0.0.0.0:8000
+   curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:8000/api/travels/   # 200
+   ```
+   Устройство ходит не на `localhost`, а на текущий LAN-IP мака:
+   ```bash
+   METRAVEL_LAN_IP="$(ipconfig getifaddr en0)"
+   test -n "$METRAVEL_LAN_IP"
    cp .env /tmp/env.backup
-   sed -i '' 's|EXPO_PUBLIC_API_URL=http://127.0.0.1:8085|EXPO_PUBLIC_API_URL=https://metravel.by|' .env
+   sed -i '' "s|^EXPO_PUBLIC_API_URL=.*|EXPO_PUBLIC_API_URL=http://${METRAVEL_LAN_IP}:8000|" .env
+   sed -i '' 's|^EXPO_PUBLIC_IS_LOCAL_API=.*|EXPO_PUBLIC_IS_LOCAL_API=true|' .env
    # ... QA ...
    cp /tmp/env.backup .env        # ОБЯЗАТЕЛЬНО восстановить
    ```
-   Менять `.env` → нужен перезапуск Metro `--clear` + Reload бандла (EXPO_PUBLIC_* инлайнятся при сборке).
+   Бэк не поднят или не обновлён — приложение покажет **0 данных везде** (пустые списки/карта, LogBox «fetch failed») или ложные дефекты по старому API; это не UI-баг. Прод-API (`https://metravel.by`) подключается тем же способом, но только по явному запросу владельца — например когда нужны прод-данные и медиа (локально бакет `metravellocal`, у старых прод-статей картинки 404). Менять `.env` → нужен перезапуск Metro `--clear` + Reload бандла (EXPO_PUBLIC_* инлайнятся при сборке); проверь, что `build-prod.sh` не оставил в `.env` прод-URL.
 4. В dev-client отключена плавающая кнопка DevTools (dev-меню → toggle «Tools button») — иначе перекрывает гамбургер.
 5. **Логин под e2e-аккаунтом РАЗРЕШЁН постоянно — разрешение НЕ переспрашивать.** В `.env.e2e` два пользователя: `E2E_EMAIL`/`E2E_PASSWORD` (sergey@lyte.com) и `E2E_EMAIL2`/`E2E_PASSWORD2` (ignatieva_julia@tut.by). Владелец подтвердил разрешение 26.07.2026 и 05.08.2026; повторный вопрос — ошибка.
    Способ входа: программный, пароль в поля не набирается (набрать его агент физически не может — лимит платформы, правкой инструкций не снимается).

@@ -28,10 +28,22 @@ backend route и только relevant source/API/production probes.
    target env, platform/localization impact, dependencies и assignee.
 2. Нет обязательного contract/русских семи sections или они расходятся с board
    fields → `in_progress` с конкретным refinement finding; не начинай QA.
-3. Убедись, что changed build доступен на target. Нужен dev deploy, но его нет →
+3. Убедись, что код тикета уже в `main`: sha из `description` виден в
+   `git log --oneline -20 origin/main`. Приёмка идёт по запушенному коду — diff,
+   висящий незакоммиченным в общем рабочем дереве, означает нарушение гейта
+   `review → testing` (`docs/TASK_BOARD_MCP.md`): верни тикет в `in_progress` с
+   этим finding и не начинай QA.
+4. Убедись, что changed build доступен на target. Дефолтный target — локальный
+   стек: Expo web против `http://localhost:8000`. Перед первой пробой сессии
+   обнови бэкенд до `origin/master` (`git -C ../metravel-backend fetch origin
+   master && git -C ../metravel-backend reset --hard origin/master`, `migrate`
+   при новых миграциях, рестарт `run-backend.sh`) и убедись, что
+   `showmigrations --plan` не содержит неприменённых: отставший бэк отвечает
+   `200` и даёт ложный `fail`. Процедура — `docs/WORKFLOW_OPERATIONS.md` → «3.0
+   Локальный стек». Приёмка требует дев или прод и там нет нужной сборки →
    остановись и запроси exact deploy; не проверяй старую сборку и не выдавай
    финальный status. Production deploy требует отдельной команды владельца.
-4. Выпиши проверяемый gate: action/input, ожидаемое поле/state/число, negative
+5. Выпиши проверяемый gate: action/input, ожидаемое поле/state/число, negative
    probe, environment и required platform layer.
 
 ## Evidence
@@ -44,8 +56,9 @@ FE↔BE contract при необходимости проверяй автори
 `.env.e2e`; токен не выводи. Проверяй field/event/shape, не только HTTP status.
 Narrow tests/types — вспомогательное evidence, не замена browser/runtime.
 
-Evidence note содержит date, target env, probe → actual result, числа before/
-after для quantitative tasks, negative input result и artifact path. `200 OK`,
+Evidence note содержит date, target env (для локального стека — коммит бэкенда,
+до которого он обновлён), probe → actual result, числа before/after для
+quantitative tasks, negative input result и artifact path. `200 OK`,
 «работает» или чтение кода не закрывают observable contract.
 
 Platform layer:

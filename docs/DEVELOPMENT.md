@@ -23,6 +23,28 @@ cp .env.dev .env
 
 ## Start
 
+The default verification target of this machine is the local stack: local Django
+backend on `http://localhost:8000` plus Expo web. The dev stand `192.168.50.36`
+and production `metravel.by` are opt-in per command and only on the owner's
+explicit request.
+
+Backend first — and **always update it before you start testing**, because the
+local checkout drifts silently while the API still answers `200`:
+
+```bash
+git -C ../metravel-backend fetch origin master
+git -C ../metravel-backend reset --hard origin/master
+bash /Users/juliasavran/Sites/metravel/run-backend.sh
+```
+
+Apply migrations and sync dependencies when the pulled range touched them; the
+full preflight, readiness probes and the local-stack limitations live in
+`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек». Stack internals (data,
+login, secrets, S3) are documented in
+`/Users/juliasavran/Sites/metravel/README-local.md`.
+
+Then the app:
+
 ```bash
 npm run start
 ```
@@ -35,6 +57,14 @@ npm run web
 
 Dev note:
 
+- `.env` (`EXPO_PUBLIC_API_URL=http://localhost:8000`) and `DEFAULT_DEV_API_HOST`
+  in `metro.config.js` already point at the local backend. Keep
+  `EXPO_PUBLIC_IS_LOCAL_API=false` on web, and use `localhost`, not `127.0.0.1`,
+  so the auth cookie stays same-site. `build-prod.sh` overwrites `.env` from
+  `.env.prod` — restore the local URL after a production deploy.
+- Locally S3 is the `metravellocal` bucket, so images of older production
+  articles return 404. That is expected: create your own test article for media
+  checks instead of pointing the app at the production bucket.
 - Local web dev can show content loaded from production while related media files still depend on production storage/CDN access.
 - Because of that, some article/travel images may fail in dev even when frontend code is correct.
 - Do not patch app code only to silence this environment-specific limitation.
@@ -117,7 +147,7 @@ Apple mobile QA rule:
 - `npm run reset` — Expo reset cache.
 - `npm run check-deps` — dependency checks.
 - `npm run check:image-architecture` — enforces image/card architecture rules (also runs in `npm run test:ci`).
-- `./build-dev.sh` — full dev web build + deploy to dev server (`DEPLOY=0` to skip deploy).
+- `./build-dev.sh` — full dev web build + deploy to the dev stand `192.168.50.36` (`DEPLOY=0` to skip deploy). Not part of the default loop: testing happens on the local stack, so run this only when the owner explicitly asks for the dev stand.
 - `./build-prod.sh [dev|preprod|prod]` — production-mode web export into `dist/<env>`, SEO/public-files post-processing, and deploy to prod server by default (`DEPLOY=0` for build-only, `CLEAN=1` to reinstall deps).
 
 Local selective workflow:
@@ -219,7 +249,10 @@ Regression expectations:
 
 Minimum required for unit tests and local dev:
 
-- `EXPO_PUBLIC_API_URL` — backend base URL.
+- `EXPO_PUBLIC_API_URL` — backend base URL; default on this machine is
+  `http://localhost:8000` (local stack).
+- `EXPO_PUBLIC_IS_LOCAL_API` — keep `false` for local web; `true` only for a
+  device pointed at the mac's LAN IP.
 
 Optional:
 

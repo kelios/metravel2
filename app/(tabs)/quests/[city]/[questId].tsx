@@ -388,6 +388,8 @@ export default function QuestByIdScreen() {
         hints: guest.hints,
         showMap: guest.showMap,
         completed: guest.completed,
+        skipped: guest.skipped,
+        earlyFinish: guest.earlyFinish,
         updatedAt: guest.updatedAt,
         answeredAt: guest.answeredAt,
       };

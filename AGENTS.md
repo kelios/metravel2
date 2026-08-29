@@ -113,6 +113,15 @@ Validation:
   старых прод-статей картинки не грузятся: это ожидаемо, для медиа-проверок
   создаётся своя тестовая статья. Устройство целится на тот же бэкенд по LAN-IP.
   Полное описание стека — `/Users/juliasavran/Sites/metravel/README-local.md`.
+- Перед ПЕРВОЙ пробой в каждой сессии тестирования бэкенд обновляется до
+  `origin/master`: `git -C ../metravel-backend fetch origin master && git -C
+  ../metravel-backend reset --hard origin/master`, затем `migrate` при новых
+  миграциях, `uv sync` при изменении зависимостей и рестарт `run-backend.sh`.
+  Это единственное разрешённое git-изменяющее действие в бэкенде; локальные
+  правки там — мусор. Шаг не пропускается: checkout отстаёт молча, API при этом
+  отвечает `200`, и устаревший бэк выдаёт ложные дефекты фронта. Команды,
+  проверки готовности и ограничения стека — `docs/WORKFLOW_OPERATIONS.md` →
+  «3.0 Локальный стек и обновление бэкенда перед тестированием».
 - Board mutation: сначала `$metravel-problem-memory`, затем
   `$metravel-task-contract`/`$metravel-ticket-board`; детали и status semantics —
   `docs/TASK_BOARD_MCP.md`. `testing` — активная QA или точный temporal/retest
@@ -143,6 +152,12 @@ Validation:
   guard; release/performance: только production build/real URL по профильному doc.
 - `SKIPPED` из-за чужого quality gate — coordination evidence, не pass. Если
   результат обязателен, запроси его и продолжи тот же acceptance pass.
+- Перед переводом задачи борда в `testing` отревьюенный diff коммитится явными
+  путями задачи и пушится в `main`: вердикт `pass` → `git add <пути задачи>` →
+  `git commit` → `git push origin main` → `status=testing`, sha коммита — в
+  тикет. `git add -A` и `commit` без путей в общем чекауте запрещены; коммит и
+  push отпечаток гейта не ломают. Детали и исключения —
+  `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
 - Пользователь не тестирует за агента. Если нужен unlock/connect/login/access,
   попроси ровно это действие и после ответа продолжи проверку.
 - Финальный ответ: результат; механизм `path:line`; изменённые файлы; фактические

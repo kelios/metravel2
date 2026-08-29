@@ -985,7 +985,7 @@ capability-лестнице переходного proxy. Это включае�
 Проверено 2026-08-02 на прогоне `backfill_image_derivatives` (#1180): 9 390
 источников → 74 046 объектов, ~13 часов.
 
-- Прод — **1 vCPU**, лимит памяти `metravel_app_1` — **900 МиБ**. Во время
+- Прод — **1 vCPU**, лимит памяти app-контейнера — **900 МиБ**. Во время
   генерации контейнер держит ~700 МиБ, запас ~200 МиБ: всплеск = OOM-kill.
   Запускать под `nice` и с паузой (`--sleep-ms`), иначе прогон конкурирует с
   раздачей.
@@ -997,7 +997,9 @@ capability-лестнице переходного proxy. Это включае�
   хосте, либо запуск партиями (`--limit` + `--cursor`) с сохранением позиции.
 - `pkill` с хоста по процессу контейнера не работает (`Operation not permitted`)
   — процесс принадлежит пользователю контейнера. Убивать только изнутри:
-  `docker exec metravel_app_1 sh -c "kill -9 <pid>"`, а `<pid>` искать по
+  `docker exec "$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]app[-_]1$' | head -1)" sh -c "kill -9 <pid>"`
+  (имя контейнера не хардкодим — compose v1 звал его `metravel_app_1`, v2 —
+  `metravel-app-1`), а `<pid>` искать по
   `/proc/*/cmdline` — в образе нет ни `ps`, ни `pkill`, ни `free`; `nice` есть,
   `kill` только как shell builtin.
 - `scripts/deploy-target.sh` — bash-скрипт: под zsh `source` падает на

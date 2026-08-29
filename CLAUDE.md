@@ -20,7 +20,7 @@
 | ожидаемое поведение фичи (источник истины для постановки) | `docs/features/<фича>.md` |
 | технические правила: UI, workflow, localization | `docs/RULES.md` (нужный раздел) |
 | правка nginx: CSP, заголовки, кэш, редиректы (всегда backend-owned) | `docs/RULES.md` → «Nginx config ownership» |
-| e2e-доступы, тестданные на проде, Android/iPhone devices, prod-baseline, долгие операции и locks | `docs/WORKFLOW_OPERATIONS.md` |
+| локальный стек, обновление бэкенда перед тестированием, e2e-доступы, тестданные на проде, Android/iPhone devices, prod-baseline, долгие операции и locks | `docs/WORKFLOW_OPERATIONS.md` |
 | каталог `$metravel-*` skills (Codex) | `docs/CODEX_SKILLS.md` |
 | Grok Build: agents/hooks/skills adapter | `docs/GROK.md` |
 | борд, Task Contract, формат описания задачи | `docs/TASK_BOARD_MCP.md` |
@@ -34,10 +34,18 @@
   переносу и коммиту в основной checkout на `main` — работа не остаётся в
   worktree-ветке;
 - backend/Django/server в этом workspace не редактировать. Бэкенд-checkout уже
-  есть на машине: `../metravel-backend` (клон приватного репо
-  `sergey-savran/metravel`, branch `master`) — путь известен, спрашивать его у
-  пользователя не нужно; читать read-only, изменения оформлять `area=back`
-  задачей на борде;
+  есть на машине: `../metravel-backend` (симлинк на `~/Sites/metravel/metravel`,
+  клон приватного репо `sergey-savran/metravel`, branch `master`) — путь
+  известен, спрашивать его у пользователя не нужно; читать read-only, изменения
+  оформлять `area=back` задачей на борде. Единственное исключение — обязательный
+  sync перед тестированием: `git -C ../metravel-backend fetch origin master &&
+  git -C ../metravel-backend reset --hard origin/master`;
+- проверяем ЛОКАЛЬНО: таргет по умолчанию — локальный бэкенд `localhost:8000`
+  (`bash ~/Sites/metravel/run-backend.sh`) плюс `npx expo start --web`. Дев
+  `192.168.50.36` и прод `metravel.by` — только по явному запросу владельца.
+  Перед началом тестирования бэкенд обновляется до `origin/master` и получает
+  `migrate`: процедура и проверки готовности — `docs/WORKFLOW_OPERATIONS.md` →
+  «3.0 Локальный стек»;
 - секреты не выводить и не просить вставлять в чат;
 - iOS signed build, TestFlight/App Store upload, App Review submit, storefront
   release и production deploy выполнять только по отдельному явному точному запросу;

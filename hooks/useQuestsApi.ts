@@ -45,6 +45,8 @@ type PendingQuestProgressData = {
     hints: Record<string, boolean>;
     showMap: boolean;
     completed?: boolean;
+    skipped?: Record<string, boolean>;
+    earlyFinish?: boolean;
     /** Клиентские времена для слияния с параллельным устройством (на сервер не уходят) */
     updatedAt?: number;
     answeredAt?: Record<string, number>;

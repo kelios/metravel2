@@ -7,12 +7,12 @@
 //   attempts       — max по ключу
 //   hints          — логическое ИЛИ по ключу
 //   unlockedIndex  — max
-//   completed      — ИЛИ. Понижать нельзя: сервер не знает про `skipped`, поэтому
-//                    второе устройство пересчитывает засчитанный квест как
-//                    незаконченный, и `completed: false` отняло бы у игрока
+//   completed      — ИЛИ. Понижать нельзя: прогресс старого клиента или запись,
+//                    созданная до серверных полей #1454, ещё может не содержать
+//                    `skipped`; `completed: false` не должно отнять у игрока
 //                    «Пройден» и единицу счётчика прохождений (#1451)
-//   skipped        — логическое ИЛИ по ключу (только клиент, на сервер не уходит)
-//   earlyFinish    — ИЛИ (только клиент)
+//   skipped        — логическое ИЛИ по ключу (с #1632 синхронизируется сервером)
+//   earlyFinish    — ИЛИ (с #1632 синхронизируется сервером)
 //   currentIndex, showMap — last-writer-wins (косметика: где курсор и включена ли
 //                    карта; это не данные прохождения)
 //
@@ -32,12 +32,13 @@ export type QuestProgressSnapshot = {
     showMap: boolean
     completed: boolean
     /**
-     * Точки, которые игрок официально пропустил (далёкие, #1432). Поля на
-     * бэкенде нет — запись живёт только в AsyncStorage, поэтому в
-     * `toQuestProgressServerPayload` и в отпечаток сервера не входит.
+     * Точки, которые игрок официально пропустил (далёкие, #1432). Бэкенд хранит
+     * их с #1454 (`quest_progress.skipped`), поэтому поле входит и в payload, и
+     * в отпечаток сервера: пропуск обязан пережить смену устройства, иначе
+     * засчитанное прохождение выглядит незаконченным (#1632).
      */
     skipped: Record<string, boolean>
-    /** Игрок закрыл квест на месте, не дойдя до далёких точек. Тоже только клиент. */
+    /** Игрок закрыл квест на месте, не дойдя до далёких точек. Тоже на сервере. */
     earlyFinish: boolean
     /** epoch ms последнего изменения снапшота; 0 — время неизвестно (легаси-запись) */
     updatedAt: number
@@ -62,6 +63,8 @@ export type QuestProgressServerPayload = {
     hints: Record<string, boolean>
     show_map: boolean
     completed: boolean
+    skipped: Record<string, boolean>
+    early_finish: boolean
 }
 
 const asRecord = <T>(value: unknown): Record<string, T> =>
@@ -103,7 +106,12 @@ export const snapshotFromServerProgress = (
     progress: Pick<
         ApiQuestProgress,
         'current_index' | 'unlocked_index' | 'answers' | 'attempts' | 'hints' | 'show_map' | 'completed'
-    > & { updated_at?: string | null },
+    > & {
+        updated_at?: string | null
+        // Сервер старше #1454 полей не отдаёт: читаем их как «пропусков нет».
+        skipped?: ApiQuestProgress['skipped'] | null
+        early_finish?: ApiQuestProgress['early_finish'] | null
+    },
 ): QuestProgressSnapshot => {
     const updatedAt = parseServerUpdatedAt(progress.updated_at)
     const answers = asRecord<string>(progress.answers)
@@ -124,6 +132,8 @@ export const snapshotFromServerProgress = (
         hints: progress.hints,
         showMap: progress.show_map,
         completed: progress.completed,
+        skipped: progress.skipped ?? undefined,
+        earlyFinish: progress.early_finish ?? undefined,
         updatedAt,
         answeredAt,
     })
@@ -139,6 +149,8 @@ export const toQuestProgressServerPayload = (
     hints: snapshot.hints,
     show_map: snapshot.showMap,
     completed: snapshot.completed,
+    skipped: snapshot.skipped,
+    early_finish: snapshot.earlyFinish,
 })
 
 const answeredTime = (snapshot: QuestProgressSnapshot, stepId: string): number =>
@@ -243,14 +255,17 @@ const serverFingerprint = (snapshot: QuestProgressSnapshot): string =>
         hints: sortRecord(snapshot.hints),
         showMap: snapshot.showMap,
         completed: snapshot.completed,
+        skipped: sortRecord(snapshot.skipped),
+        earlyFinish: snapshot.earlyFinish,
     })
 
+// `skipped`/`earlyFinish` ушли в отпечаток сервера (#1632) и здесь больше не
+// дублируются: локальный отпечаток добавляет к серверному только то, чего на
+// сервере нет, — поштучные времена ответов.
 const localFingerprint = (snapshot: QuestProgressSnapshot): string =>
     [
         serverFingerprint(snapshot),
         JSON.stringify(sortRecord(snapshot.answeredAt)),
-        JSON.stringify(sortRecord(snapshot.skipped)),
-        String(snapshot.earlyFinish),
     ].join('|')
 
 /**

@@ -19,9 +19,10 @@
   отчёта и стоп-слова;
 - `docs/CODEX_SKILLS.md` — служебная grouped-карта `$metravel-*` skills; читать
   только при добавлении, удалении, переименовании или аудите каталога;
-- `docs/WORKFLOW_OPERATIONS.md` — условные протоколы `AGENTS.md` §4:
-  e2e-доступы, тестовые данные на production, Android device testing,
-  production-target validation и координация долгих операций/locks;
+- `docs/WORKFLOW_OPERATIONS.md` — условные протоколы `AGENTS.md` §4: локальный
+  стек и обязательное обновление бэкенда перед тестированием, e2e-доступы,
+  тестовые данные на production, Android device testing, production-target
+  validation и координация долгих операций/locks;
 - `docs/spec-driven-development.md` — канонический OpenSpec/SDD workflow;
 - `docs/spec-driven-development-requirements.md` — обязательные требования к
   proposal, delta specs, design и tasks;

@@ -119,7 +119,10 @@ const CATEGORY_MOTIFS: Record<string, MotifKey> = {
 const SLUG_MOTIF_HINTS: Array<[RegExp, MotifKey]> = [
   [/profile|профиль/i, 'profile'],
   [/welcome|добро|старт|start/i, 'star'],
-  [/first-step|первы.?-?шаг|footprint|след/i, 'footprint'],
+  // `pioneer` стоит ВЫШЕ квестового хинта намеренно: первопроходец квеста —
+  // это первый след на неходженой тропе, а не ещё одна пройденная точка, и
+  // флагом остальных квест-значков он выглядел бы неотличимо от «прошёл 20».
+  [/first-step|первы.?-?шаг|footprint|след|pioneer|первопроход/i, 'footprint'],
   [/author|автор|writer|пиш|story|рассказ/i, 'quill'],
   [/book|книг/i, 'book'],
   [/hik|поход|trek|трек|гор/i, 'mountain'],

@@ -6,6 +6,8 @@
 
 Карта:
 
+- локальный стек и обязательное обновление бэкенда перед проверкой →
+  «3.0 Локальный стек и обновление бэкенда перед тестированием»;
 - e2e-доступы и board token → «3.1 E2E окружение и доступы»;
 - создание/удаление тестовых сущностей на проде → «3.1.1 Тестовые данные на production»;
 - сборка и прогон на USB-устройстве → «3.2 Android device testing and builds»;
@@ -17,6 +19,105 @@
 проверяется desktop web + mobile web, а device gate применяется только к
 platform-specific behavior/config/runtime (§3.3); правило quality-gate lock —
 в §3, шаг 9.
+
+### 3.0 Локальный стек и обновление бэкенда перед тестированием
+
+Проверочный таргет по умолчанию — локальный стек этой машины (`AGENTS.md` §4,
+«Условные контракты»). Дев `192.168.50.36` и прод `metravel.by` подключаются
+точечной переменной окружения перед конкретной командой и только по явному
+запросу владельца; правка дефолтов ради них запрещена.
+
+**Обновление бэкенда обязательно ДО первой пробы в каждой сессии тестирования.**
+Локальный checkout отстаёт молча и API при этом отвечает `200`: замер 29.08.2026 —
+26 коммитов позади `origin/master`, шесть неприменённых миграций. Такой бэк
+выдаёт ложные дефекты фронта («поле не сохраняется», «404 на новом эндпоинте»),
+которые уходят в карточки и съедают проход. Пропуск шага — не экономия времени.
+
+`../metravel-backend` — симлинк на `/Users/juliasavran/Sites/metravel/metravel`,
+это один и тот же checkout: и читаемый агентами исходник, и то, что реально
+запускается локально.
+
+```bash
+BEFORE=$(git -C ../metravel-backend rev-parse HEAD)
+git -C ../metravel-backend fetch origin master
+git -C ../metravel-backend reset --hard origin/master
+git -C ../metravel-backend diff --name-only "$BEFORE"..HEAD \
+  | grep -E 'migrations/|pyproject|uv\.lock|docker-compose-local' || echo 'миграций и зависимостей нет'
+```
+
+`reset --hard` здесь штатный: локальные изменения в бэкенд-checkout — мусор,
+источник правды всегда `origin/master`. Это единственное разрешённое
+git-изменяющее действие в бэкенде (исключение записано в `docs/RULES.md` →
+«Project scope»); `commit`, `push`, `merge`, `rebase`, `tag`, создание веток и
+правка файлов бэкенда остаются запрещены.
+
+Дальше по тому, что приехало в диапазоне:
+
+- есть `migrations/` — применить (Django читает окружение из `local_env.sh`):
+  ```bash
+  cd /Users/juliasavran/Sites/metravel/metravel && set -a && . ./local_env.sh && set +a \
+    && .venv/bin/python manage.py migrate
+  ```
+- менялись `pyproject.toml`/`uv.lock` — `uv sync --frozen --dev --no-install-package gdal`
+  (`gdal` на macOS не собирается и коду не нужен);
+- менялся `docker-compose-local.infrastructure.yaml` — `docker-compose -f
+  docker-compose-local.infrastructure.yaml up -d`;
+- в любом случае перезапустить `bash /Users/juliasavran/Sites/metravel/run-backend.sh`:
+  runserver подхватывает код автоперезагрузкой, но не миграции и не контейнеры.
+  Рестарт не формальность — на прогоне 29.08.2026 автоперезагрузка не пережила
+  `reset --hard` на 26 коммитов: родительский процесс остался жив, а порт 8000
+  никто не слушал. Поэтому живость проверяется портом/ответом API, а не наличием
+  процесса в `ps`; повисший процесс снимается `pkill -f 'manage.py runserver'` и
+  поднимается заново.
+
+Готовность к первой пробе доказывается четырьмя проверками, а не тем, что
+«сайт открылся»:
+
+```bash
+# запускать из фронтового репозитория; блок с миграциями уходит в subshell,
+# чтобы cd в бэкенд не унёс за собой рабочую директорию
+git -C ../metravel-backend log -1 --format='%h %ci %s'          # совпадает с origin/master
+( cd /Users/juliasavran/Sites/metravel/metravel && set -a && . ./local_env.sh && set +a \
+  && .venv/bin/python manage.py showmigrations --plan | grep -c '^\[ \]' )   # 0 неприменённых
+curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:8000/api/travels/  # 200
+grep -E '^EXPO_PUBLIC_(API_URL|IS_LOCAL_API)=' .env   # localhost:8000 + false
+```
+
+Последняя проверка не формальность: `build-prod.sh` копирует `.env.prod` поверх
+`.env`, и после каждого прод-деплоя фронт молча начинает ходить в прод. Именно
+так `.env` и был найден 29.08.2026 — с `EXPO_PUBLIC_API_URL=https://metravel.by`
+при живом локальном бэке. Правильные значения для локальной проверки:
+
+```
+EXPO_PUBLIC_API_URL=http://localhost:8000
+EXPO_PUBLIC_IS_LOCAL_API=false
+```
+
+Фронт против него — `npx expo start --web` или готовый launch-конфиг
+`Local Stack Web 8081` из `.claude/launch.json` (`preview_start`): дефолты `.env`
+(`EXPO_PUBLIC_API_URL=http://localhost:8000`) и `DEFAULT_DEV_API_HOST` в
+`metro.config.js` уже смотрят на локальный бэк. На web держать
+`EXPO_PUBLIC_IS_LOCAL_API=false`: с `true` запросы уходят в CORS-прокси Metro,
+тот теряет порт бэкенда и ссылки на картинки уезжают на `http://localhost/...`.
+Именно `localhost`, а не `127.0.0.1` — cookie `authToken` приходит
+`SameSite=Lax; Secure`, same-site между `localhost:8081` и `localhost:8000`
+держится. Устройство целится на тот же бэкенд по текущему LAN-IP мака
+(`ipconfig getifaddr en0`) с `EXPO_PUBLIC_IS_LOCAL_API=true`.
+
+Ограничения локального стека, которые НЕ являются дефектами и не заводятся
+карточками:
+
+- S3 — только бакет `metravellocal`, у старых прод-статей картинки отдают 404.
+  Для медиа-проб заводится своя тестовая статья; прод-бакет локально запрещён.
+- SSG-шелла, прод-кэша и прод-nginx здесь нет: perf/LCP/CLS/SEO-утверждения про
+  прод локальным прогоном не доказываются — см. «3.3.1 Production-target
+  validation and task closure».
+- `build-prod.sh` перезаписывает `.env` из `.env.prod`; после прод-деплоя вернуть
+  строку `EXPO_PUBLIC_API_URL=http://localhost:8000`.
+
+Лежащий дев-стенд и прод-инфраструктура — зона владельца: агенты их не поднимают
+и не чинят. Полное описание локального стека (данные, вход, секреты, S3) —
+`/Users/juliasavran/Sites/metravel/README-local.md`.
 
 ### 3.1 E2E окружение и доступы
 

@@ -28,6 +28,8 @@ type GuestProgressPayload = {
   hints: Record<string, boolean>
   showMap: boolean
   completed?: boolean
+  skipped?: Record<string, boolean>
+  earlyFinish?: boolean
   updatedAt?: number
   answeredAt?: Record<string, number>
 }
@@ -79,6 +81,8 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
         hints: data.hints,
         showMap: data.showMap,
         completed: data.completed,
+        skipped: data.skipped,
+        earlyFinish: data.earlyFinish,
         updatedAt: data.updatedAt,
         answeredAt: data.answeredAt,
       })

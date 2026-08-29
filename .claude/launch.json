@@ -2,6 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Local Stack Web 8081",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-local8081\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-local8081\" NODE_OPTIONS=--max-old-space-size=12288 EXPO_PUBLIC_API_URL=http://localhost:8000 EXPO_PUBLIC_IS_LOCAL_API=false npx expo start --web --port 8081"
+      ],
+      "port": 8081,
+      "autoPort": false
+    },
+    {
       "name": "Map Places 1573 Web 3000",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

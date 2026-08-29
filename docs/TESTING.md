@@ -2,6 +2,42 @@
 
 Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory project-wide development and governance rules.
 
+## Default verification target and local-stack preflight
+
+- The default target of every verification run is the **local stack** of this
+  machine: local Django backend on `http://localhost:8000` plus Expo web
+  (`npx expo start --web`). The dev stand `192.168.50.36` and production
+  `metravel.by` are opt-in per command, on the owner's explicit request only —
+  never by editing the defaults in `.env` or `metro.config.js`.
+- **Update the backend before the first probe of every testing session.** The
+  local checkout drifts silently while the API keeps answering `200` (measured
+  2026-08-29: 26 commits behind `origin/master`, six unapplied migrations), and
+  a stale backend produces false frontend defects that end up on the board.
+
+  ```bash
+  git -C ../metravel-backend fetch origin master
+  git -C ../metravel-backend reset --hard origin/master
+  ```
+
+  Then apply migrations if the range touched `migrations/`, run
+  `uv sync --frozen --dev --no-install-package gdal` if it touched
+  `pyproject.toml`/`uv.lock`, and restart
+  `bash /Users/juliasavran/Sites/metravel/run-backend.sh` — the dev server
+  reloads code, but not migrations or containers.
+- Readiness is proven by probes, not by "the page opened": backend HEAD equals
+  `origin/master`, `showmigrations --plan` reports zero unapplied migrations,
+  `http://localhost:8000/api/travels/` returns `200`, and `.env` still holds
+  `EXPO_PUBLIC_API_URL=http://localhost:8000` with `EXPO_PUBLIC_IS_LOCAL_API=false`
+  — `build-prod.sh` copies `.env.prod` over `.env`, so a frontend that silently
+  talks to production is the normal state after a prod deploy. Exact commands:
+  `docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек и обновление бэкенда перед
+  тестированием».
+- Known local-stack limits are not defects: S3 is the `metravellocal` bucket, so
+  media of older production articles 404 (use your own test article), and there
+  is no SSG shell, production cache or production nginx — performance, LCP/CLS
+  and SEO claims about production still require production evidence per
+  `docs/WORKFLOW_OPERATIONS.md` → «3.3.1».
+
 ## Platform-scoped validation and board status
 
 - Common/shared UI, layout and interaction changes are verified in a real

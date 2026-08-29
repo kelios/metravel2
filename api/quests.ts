@@ -267,6 +267,14 @@ export type ApiQuestProgress = {
     hints: Record<string, boolean>;
     show_map: boolean;
     completed: boolean;
+    /**
+     * Точки, которые игрок официально пропустил: `{step_id: true}`. Бэкенд
+     * принимает и отдаёт поле с #1454; до #1632 клиент его не слал, и на проде
+     * оно было пустым во всех 33 строках прогресса.
+     */
+    skipped: Record<string, boolean>;
+    /** Игрок закрыл квест на месте, не дойдя до оставшихся точек (#1454). */
+    early_finish: boolean;
     completed_at: string | null;
     created_at: string;
     updated_at: string;
@@ -281,6 +289,8 @@ export type ApiQuestProgressCreate = {
     hints?: Record<string, boolean>;
     show_map?: boolean;
     completed?: boolean;
+    skipped?: Record<string, boolean>;
+    early_finish?: boolean;
 };
 
 /** Публичный отзыв о квесте (для читалки чужих отзывов) */

@@ -57,7 +57,9 @@ Load-bearing правило — `AGENTS.md` → «Архитектурные п�
    страницу; тап открывает fullscreen, драг — нет.
 
 2. **Живой браузер (mobile 390, честная проба своими руками — не перекладывать):**
-   dev-сервер (`Api Proxy 4620` + `Expo Web ProxyApi 8089`), `preview_resize` mobile,
+   Expo web против обновлённого локального бэкенда `http://localhost:8000`
+   (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»); связка с прод-API
+   (`Api Proxy 4620` + `Expo Web ProxyApi 8089`) — когда нужны прод-данные. Дальше `preview_resize` mobile,
    открыть реальный `/travels/<slug>`. Свайп проверять **pointer-drag на реальном
    верхнем узле** через `document.elementFromPoint(cx, cy)` (обычно `slider-slide-0`),
    а НЕ на контейнере-предке `travel-details-hero-slider-container` — события не идут

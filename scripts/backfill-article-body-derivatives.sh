@@ -54,7 +54,6 @@ LOG_FILE="$OPS_DIR/backfill-article-body.log"
 LOCK_FILE="$OPS_DIR/backfill-article-body.lock"
 
 MODEL="media_assets.traveldescriptionimages"
-CONTAINER="metravel_app_1"
 # Прогон обязан идти под тем же uid, что и веб-процесс контейнера.
 #
 # Команда берёт ДВА файловых лока в /tmp: свой (`metravel-backfill-image-derivatives`)
@@ -83,6 +82,38 @@ while [[ $# -gt 0 ]]; do
     *) echo "неизвестный аргумент: $1" >&2; exit 2 ;;
   esac
 done
+
+# Имя контейнера резолвится на проде, а не хардкодится: compose v2 при
+# пересоздании переименовал его с подчёркиваний на дефисы (metravel_app_1 →
+# metravel-app-1) и прогон падал с 'No such container'. Матчим оба разделителя,
+# как это уже делает scripts/fix-prod.sh, чтобы очередная смена схемы имён не
+# ломала бэкфилл.
+#
+# Резолвим ОДИН раз и здесь же падаем на пустом результате. Без этой проверки
+# пустое имя схлопывало аргументы в `docker exec -u 1984 python manage.py …`,
+# docker принимал `python` за имя контейнера, ошибка гасилась фильтром
+# `grep -E '^\{'` в цикле ниже, и прогон три раза по 20 с сообщал «партия не
+# прошла трижды» — то есть обвинял прод вместо неверного имени.
+#
+# Место выбрано специально: ПОСЛЕ разбора аргументов (иначе опечатка во флаге
+# сначала оплачивала бы ssh и падала с «не найден контейнер» вместо «неизвестный
+# аргумент») и ДО взятия лока (иначе неудачный резолв оставлял бы lock-файл).
+require_deploy_target
+resolve_err_file="$(mktemp)"
+if ! CONTAINER="$(ssh -o ConnectTimeout=20 -o BatchMode=yes "$PROD_SSH_TARGET" \
+  "docker ps --format '{{.Names}}' | grep -E '^metravel[-_]app[-_]1\$' | head -1" 2>"$resolve_err_file")"; then
+  CONTAINER=""
+fi
+resolve_err="$(cat "$resolve_err_file" 2>/dev/null || true)"
+rm -f "$resolve_err_file"
+if [[ -z "$CONTAINER" ]]; then
+  # Причину не глотаем: без неё отказ ssh, недоступный прод и реально
+  # отсутствующий контейнер выглядят одинаково.
+  echo "не найден app-контейнер metravel на '$PROD_SSH_TARGET'" >&2
+  [[ -n "$resolve_err" ]] && echo "причина: $resolve_err" >&2
+  exit 4
+fi
+echo "app-контейнер: $CONTAINER"
 
 mkdir -p "$OPS_DIR"
 

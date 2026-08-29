@@ -30,7 +30,11 @@
 
        scp scripts/restore_media_from_backup.py "$PROD_USER@$PROD_HOST:$PROD_DIR/.tmp-restore.py"
        # скопировать нужные файлы бэкапа в $PROD_DIR/.tmp-restore-src/
-       ssh "$PROD_USER@$PROD_HOST" 'docker exec metravel_app_1 python /app/.tmp-restore.py \
+       # Имя app-контейнера не хардкодим: compose v1 звал его metravel_app_1,
+       # v2 — metravel-app-1, поэтому резолвим на месте по обоим разделителям.
+       ssh "$PROD_USER@$PROD_HOST" 'app="$(docker ps --format "{{.Names}}" \
+           | grep -E "^metravel[-_]app[-_]1$" | head -1)"; \
+           docker exec "$app" python /app/.tmp-restore.py \
            --apply --source /app/.tmp-restore-src --manifest /app/.tmp-manifest.json'
 
 Скрипт только ДОБАВЛЯЕТ объекты. Ничего не удаляет и не перезаписывает то,

@@ -6,8 +6,9 @@ description: Код-ревью гейт перед `testing`: агент code-re
 приёмочного ревью перед QA.
 
 `$ARGUMENTS`:
-- число / `[FE-…]` — id тикета на борде: агент возьмёт `Task Contract`, отревьюит diff и сам
-  подвинет статус (`testing` при `pass`, `in_progress` + findings при `changes_requested`);
+- число / `[FE-…]` — id тикета на борде: агент возьмёт `Task Contract`, отревьюит diff, при
+  `pass` закоммитит его явными путями и запушит в `main`, и только потом подвинет статус
+  (`testing` при `pass`, `in_progress` + findings при `changes_requested`);
 - пусто — ревью текущего diff (`git diff origin/main` + untracked) без записи вердикта и без борда.
 
 Передай агенту в промпте: id тикета, scope изменений (файлы/фича), platform impact и то, что
@@ -29,5 +30,12 @@ node .claude/hooks/review-gate.mjs show --task <id>
 `metravel_task_update(status="testing")`, пока для тикета нет свежего вердикта `pass`, поэтому
 вручную «протащить» задачу в QA мимо ревью нельзя (аварийный обход — только
 `REVIEW_GATE_BYPASS=1`, и он попадает в лог сессии).
+
+Коммит и пуш — часть того же перехода: после `pass` diff задачи коммитится явными путями и
+уходит `git push origin main`, sha пишется в тикет, и только потом ставится `testing` — приёмка
+проверяет запушенный код (`docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода
+`review → testing`»). Отпечаток вердикта считается по содержимому изменённых файлов
+относительно закреплённого базиса, поэтому `git add`/`commit`/`push` его не ломают: `stale`
+означает, что код правили после ревью.
 
 Аргументы: `$ARGUMENTS`

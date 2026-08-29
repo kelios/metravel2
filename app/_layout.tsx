@@ -33,6 +33,7 @@ import SkipLinks from '@/components/layout/SkipLinks';
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
 import { installQaDebug } from '@/utils/qaDebug';
 import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
+import { useWebScrollDelegation } from "@/hooks/useWebScrollDelegation";
 import { setToastDockInset } from "@/utils/toast";
 import { ROOT_ICON_FONTS } from '@/components/layout/rootIconFonts';
 
@@ -82,6 +83,9 @@ if (!isWeb) {
 export default function RootLayout() {
     // Web-only: снимает фокус с элементов, попавших под aria-hidden (см. хук).
     useAriaHiddenFocusGuard();
+    // Web-only: переадресует колесо/вертикальный свайп из инертного хрома
+    // оболочки основному владельцу прокрутки экрана (см. хук).
+    useWebScrollDelegation();
 
     useEffect(() => {
         if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') return;

@@ -46,6 +46,8 @@ describe('guest quest local progress', () => {
       attempts: {},
       hints: {},
       showMap: true,
+      skipped: { 'step-far': true },
+      earlyFinish: true,
     })
 
     const raw = await AsyncStorage.getItem(`${GUEST_QUEST_PROGRESS_PREFIX}krakow-dragon`)
@@ -54,6 +56,8 @@ describe('guest quest local progress', () => {
     const loaded = await loadGuestQuestProgress('krakow-dragon')
     expect(loaded?.answers['step-1']).toBe('дракон')
     expect(loaded?.currentIndex).toBe(3)
+    expect(loaded?.skipped).toEqual({ 'step-far': true })
+    expect(loaded?.earlyFinish).toBe(true)
   })
 
   it('counts only answered quest steps and triggers gate at free-step limit', () => {
@@ -82,6 +86,8 @@ describe('useGuestQuestFlow migration after login', () => {
       attempts: { 'step-1': 1 },
       hints: {},
       showMap: true,
+      skipped: { 'step-far': true },
+      earlyFinish: true,
     })
 
     mockedApi.fetchOrCreateProgress.mockResolvedValue({
@@ -106,6 +112,8 @@ describe('useGuestQuestFlow migration after login', () => {
         expect.objectContaining({
           current_index: 2,
           answers: { 'step-1': 'дракон', 'step-2': '7' },
+          skipped: { 'step-far': true },
+          early_finish: true,
         }),
       )
     })

@@ -25,7 +25,7 @@ import { copyQuestCoords, openQuestMap, type QuestMapApp } from './questWizardHe
 import { type QuestLegInfo } from './questStepDistance'
 import type { QuestAnswerChecker, QuestPoiInfo } from './types'
 import { formatDistance, formatTravelTime } from '@/utils/distanceCalculator'
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 const SHOULD_USE_NATIVE_DRIVER = false
@@ -114,6 +114,14 @@ type StepCardProps = {
   /** Впереди остались только далёкие точки — можно закончить квест здесь. */
   canFinishHere?: boolean
   onFinishHere?: () => void
+  /**
+   * Обязательные точки за спиной, которые держат гейт финала (#1633): игрок
+   * прошёл их ссылкой «Пропустить», и та точку с гейта НЕ снимает. Список
+   * приходит непустым только на последней точке маршрута — там тупик.
+   */
+  pendingBehind?: { id: string; title: string; index: number }[]
+  /** Возврат к отложенной точке; индекс уже открыт, гейт `goToStep` его пустит. */
+  onGoToStep?: (index: number) => void
   showMap: boolean
   onToggleMap: () => void
   showLocationControls?: boolean
@@ -217,6 +225,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     nextLeg = null,
     isFarStep = false,
     canFinishHere = false,
+    pendingBehind,
+    onGoToStep,
     onFinishHere,
     showMap,
     onToggleMap,
@@ -358,6 +368,10 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   // уводить игрока со шага, который проходится любым текстом, незачем.
   const showSkipPrompt =
     !isPassed && !showFarStepBlock && !freeTextMinLength && attempts >= SKIP_SUGGESTED_AFTER
+  // Блок долга показывается только там, где игрок в тупике: на последней точке
+  // маршрута (список приходит пустым на всех остальных) и пока текущая точка не
+  // отвечена — после ответа его место занимает обычный переход к финалу.
+  const showPendingBlock = !isPassed && !!pendingBehind?.length
   const showApproachNote =
     step.id !== 'intro' && !isPassed && !showFarStepBlock && !!approachLeg?.notable
   const showNextLegNote = isPassed && !!nextLeg?.notable
@@ -674,6 +688,47 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         {step.hint && (
           <View style={[styles.hintContainer, !hintVisible && Platform.select({ web: { visibility: 'hidden' } as any, default: { display: 'none' } })]}>
             <Text style={styles.hintText}>{i18nT('quests:components.quests.questWizardStepCard.podskazka_5453c538')}{step.hint}</Text>
+          </View>
+        )}
+
+        {showPendingBlock && pendingBehind && (
+          <View style={[styles.section, styles.farStepCard]} testID="quest-step-pending-notice">
+            <View style={styles.farStepHeader}>
+              <Feather name="corner-up-left" size={16} color={colors.brandText} />
+              <Text style={styles.farStepTitle}>
+                {translatePlural('quests:components.quests.questWizardStepCard.pending.title', pendingBehind.length, {
+                  count: pendingBehind.length,
+                })}
+              </Text>
+            </View>
+            <Text style={styles.farStepText}>
+              {i18nT('quests:components.quests.questWizardStepCard.pending.explain')}
+            </Text>
+            <View style={styles.farStepActions}>
+              {pendingBehind.map((pending) => (
+                <Button
+                  key={pending.id}
+                  label={i18nT('quests:components.quests.questWizardStepCard.pending.goBack', {
+                    value1: pending.title || String(pending.index),
+                  })}
+                  onPress={() => onGoToStep?.(pending.index)}
+                  variant="outline"
+                  size="md"
+                  icon={<Feather name="corner-up-left" size={16} color={colors.primaryText} />}
+                  testID={`quest-step-pending-go-${pending.id}`}
+                />
+              ))}
+              {onFinishHere && (
+                <Button
+                  label={i18nT('quests:components.quests.questWizardStepCard.farStep.finish')}
+                  onPress={onFinishHere}
+                  variant="primary"
+                  size="md"
+                  icon={<Feather name="flag" size={16} color={colors.textOnPrimary} />}
+                  testID="quest-step-pending-finish"
+                />
+              )}
+            </View>
           </View>
         )}
       </View>

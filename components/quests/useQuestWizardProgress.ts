@@ -28,6 +28,8 @@ type QuestWizardProgressPayload = {
   hints: Record<string, boolean>
   showMap: boolean
   completed?: boolean
+  skipped?: Record<string, boolean>
+  earlyFinish?: boolean
   /** Время снапшота и ответов по шагам — нужно для слияния между устройствами */
   updatedAt?: number
   answeredAt?: Record<string, number>
@@ -41,6 +43,8 @@ type InitialQuestProgress = {
   hints: Record<string, boolean>
   showMap: boolean
   completed?: boolean
+  skipped?: Record<string, boolean>
+  earlyFinish?: boolean
   updatedAt?: number
   answeredAt?: Record<string, number>
 }
@@ -48,7 +52,9 @@ type InitialQuestProgress = {
 // AsyncStorage-запись прогресса. Ключи index/unlocked исторические; completed,
 // updatedAt и answeredAt добавлены для слияния между устройствами и отсутствуют
 // в записях, созданных до этого — такие читаются как «время неизвестно».
-// skipped и earlyFinish полей на бэкенде не имеют и живут только здесь.
+// skipped и earlyFinish с #1632 уходят и на сервер (`quest_progress.skipped`,
+// `early_finish`, добавлены бэкендом в #1454); в локальной записи они остаются,
+// чтобы пропуск переживал офлайн до ближайшего PATCH.
 type StoredProgressRecord = {
   index: number
   unlocked: number
@@ -187,10 +193,11 @@ export function useQuestWizardProgress({
   // load-эффект асинхронный, замыкание успевает устареть.
   const liveSnapshotRef = useRef<QuestProgressSnapshot>(normalizeQuestProgressSnapshot(null))
   // Уже подтверждённое прохождение (сервер или прежняя сессия этого устройства).
-  // `skipped`/`earlyFinish` на бэкенде не хранятся (#1451), поэтому второе
-  // устройство пересчитывает засчитанный квест как незаконченный и без этой
-  // отметки отправило бы `completed: false`, отняв у игрока «Пройден» и единицу
-  // из счётчика прохождений. Отметка живёт в ref, а не в state: на рендер она не
+  // До #1632 `skipped`/`earlyFinish` на сервер не уходили, и второе устройство
+  // пересчитывало засчитанный квест как незаконченный: без этой отметки оно
+  // отправило бы `completed: false`, отняв у игрока «Пройден» и единицу из
+  // счётчика прохождений. Отметка остаётся и после #1632 — она страхует от
+  // прогресса, записанного клиентом старой версии, у которого пропусков нет. Отметка живёт в ref, а не в state: на рендер она не
   // влияет и намеренно НЕ поднимает `questCompleted` — форсить прежнего финишера
   // в финал нельзя (#1431).
   const confirmedCompletedRef = useRef(false)
@@ -277,6 +284,14 @@ export function useQuestWizardProgress({
   )
 
   const completedSteps = useMemo(() => requiredSteps.filter((step) => answers[step.id]), [answers, requiredSteps])
+  // Точки, которые ещё держат гейт финала: обязательные, без ответа и без
+  // официального пропуска. Ссылка «Пропустить» (#1633) переносит игрока вперёд,
+  // но точку с гейта не снимает — и до этого списка игрок никак не мог узнать,
+  // что именно осталось за спиной и почему финал не открывается.
+  const pendingSteps = useMemo(
+    () => gatingSteps.filter((step) => !answers[step.id]),
+    [answers, gatingSteps],
+  )
   const requiredCount = requiredSteps.length
   const progress = requiredCount > 0 ? completedSteps.length / requiredCount : 0
   // Гейт маршрута закрыт: на каждой точке, которую игрок не пропустил, есть
@@ -361,6 +376,8 @@ export function useQuestWizardProgress({
       hints,
       showMap,
       completed: reportedCompleted,
+      skipped,
+      earlyFinish,
       updatedAt: now,
       answeredAt,
     })
@@ -430,6 +447,8 @@ export function useQuestWizardProgress({
     showMap,
     setShowMap,
     completedSteps,
+    /** Обязательные точки без ответа и без официального пропуска (#1633). */
+    pendingSteps,
     requiredCount,
     progress,
     /** Гейт маршрута закрыт. Не «квест пройден» — см. комментарий у вычисления. */

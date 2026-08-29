@@ -69,6 +69,7 @@ export type QuestWizardProps = {
         currentIndex: number; unlockedIndex: number;
         answers: Record<string, string>; attempts: Record<string, number>;
         hints: Record<string, boolean>; showMap: boolean; completed?: boolean;
+        skipped?: Record<string, boolean>; earlyFinish?: boolean;
         /** Клиентские времена для слияния между устройствами (на сервер не уходят) */
         updatedAt?: number; answeredAt?: Record<string, number>;
     }) => void;
@@ -79,6 +80,7 @@ export type QuestWizardProps = {
         currentIndex: number; unlockedIndex: number;
         answers: Record<string, string>; attempts: Record<string, number>;
         hints: Record<string, boolean>; showMap: boolean; completed?: boolean;
+        skipped?: Record<string, boolean>; earlyFinish?: boolean;
         updatedAt?: number; answeredAt?: Record<string, number>;
     };
     /** Web: обновить бандл (и signed video URL) перед повторной попыткой проигрывания */
@@ -110,6 +112,10 @@ export type QuestWizardProps = {
 
 // ===================== ТЕМА =====================
 const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };
+
+// Стабильная пустая ссылка: карточка шага мемоизирована, и новый `[]` на каждом
+// рендере сбрасывал бы мемоизацию на всех шагах, кроме последнего.
+const EMPTY_PENDING: { id: string; title: string; index: number }[] = [];
 
 const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     const colors = useThemedColors();
@@ -151,6 +157,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         showMap,
         setShowMap,
         completedSteps,
+        pendingSteps,
         requiredCount,
         progress,
         questFinished,
@@ -345,7 +352,10 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const skipStep = useCallback(() => {
         const hasNext = currentIndex < allSteps.length - 1;
         continueFromCurrentStep();
-        if (hasNext) notifyQuest(i18nT('quests:components.quests.QuestWizard.shag_propuschen_f8686cda'));
+        // Отличаем от официального пропуска (#1633): эта ссылка точку с гейта
+        // финала НЕ снимает, и обещание «пропущен» вводило игрока в заблуждение
+        // — он проходил маршрут и не получал финала, не понимая почему.
+        if (hasNext) notifyQuest(i18nT('quests:components.quests.QuestWizard.stepPostponed'));
     }, [allSteps.length, continueFromCurrentStep, currentIndex]);
 
     // Пропуск далёкой точки — не то же самое, что «пропустить шаг» ссылкой:
@@ -376,6 +386,22 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         markStepSkipped(currentStep.id);
         skipStep();
     }, [attempts, currentRealIndex, currentStep, markStepSkipped, questId, skipStep]);
+
+    // Долг маршрута: обязательные точки без ответа, которые игрок уже прошёл
+    // мимо. Текущую точку из списка убираем — она перед глазами, и звать к ней
+    // «вернитесь» бессмысленно.
+    const pendingBehind = useMemo(() => {
+        if (!pendingSteps.length) return [];
+        const pendingIds = new Set(pendingSteps.map((step) => step.id));
+        return allSteps
+            .map((step, index) => ({ id: step.id, title: step.title || step.location || '', index }))
+            .filter(({ id, index }) => index !== currentIndex && pendingIds.has(id));
+    }, [allSteps, currentIndex, pendingSteps]);
+
+    // Тупик, ради которого блок и существует: игрок стоит на последней точке
+    // маршрута, впереди ничего нет, а гейт держат точки за спиной. До #1633 у
+    // него в этом месте не было ни объяснения, ни выхода на финал.
+    const isLastStep = currentIndex >= allSteps.length - 1;
 
     const goToStep = useCallback((index: number) => {
         const step = allSteps[index];
@@ -595,6 +621,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 isFarStep={farStepModel.currentIsFar}
                                 canFinishHere={farStepModel.canFinishHere}
                                 onFinishHere={finishQuestHere}
+                                pendingBehind={isLastStep ? pendingBehind : EMPTY_PENDING}
+                                onGoToStep={goToStep}
                                 showMap={showMap}
                                 onToggleMap={toggleMap}
                                 showLocationControls={!useWideInlineLayout}

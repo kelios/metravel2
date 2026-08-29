@@ -18,6 +18,8 @@ export type GuestQuestProgress = {
   hints: Record<string, boolean>
   showMap: boolean
   completed?: boolean
+  skipped?: Record<string, boolean>
+  earlyFinish?: boolean
   /** Времена для слияния с аккаунтом при логине (см. utils/questProgressMerge) */
   updatedAt?: number
   answeredAt?: Record<string, number>
@@ -41,6 +43,8 @@ export async function loadGuestQuestProgress(questId: string): Promise<GuestQues
       hints: parsed.hints && typeof parsed.hints === 'object' ? parsed.hints : {},
       showMap: parsed.showMap !== false,
       completed: Boolean(parsed.completed),
+      skipped: parsed.skipped && typeof parsed.skipped === 'object' ? parsed.skipped : {},
+      earlyFinish: Boolean(parsed.earlyFinish),
       updatedAt: Number(parsed.updatedAt) || 0,
       answeredAt: parsed.answeredAt && typeof parsed.answeredAt === 'object' ? parsed.answeredAt : {},
     }

@@ -69,6 +69,8 @@ describe('QuestsContentPanel', () => {
 
     beforeEach(() => {
         mockIsMobile = false;
+        document.body.innerHTML = '';
+        document.head.querySelectorAll('style[data-ssg-quests-listing-style="true"]').forEach((node) => node.remove());
     });
 
     const makeQuest = (index: number): QuestMeta => ({
@@ -87,6 +89,68 @@ describe('QuestsContentPanel', () => {
         completionsCount: 0,
         isCompletedByMe: false,
         firstCompleter: null,
+    });
+
+    const makeBaseProps = () => ({
+        styles,
+        colors,
+        dataLoaded: true,
+        viewMode: 'list' as const,
+        selectedCityId: 'minsk',
+        selectedCityName: 'Минск',
+        nearbyId: '__nearby__',
+        questsAll: [makeQuest(0)],
+        questCardWidth: 320,
+        mapPoints: [],
+        mapCenter: { latitude: 53.9, longitude: 27.56 },
+        userLoc: null,
+        isMapAreaActive: false,
+        geoMessage: null,
+        geoRequesting: false,
+        showMapAreaSearch: false,
+        radiiLg: 24,
+        LazyQuestMap: () => null,
+        isMobile: false,
+        filtersActive: true,
+        onResetFilters: () => {},
+        onShowNearby: () => {},
+        onOpenFilterDrawer: () => {},
+        onToggleViewMode: () => {},
+        onMapUserLocationChange: () => {},
+        onMapMove: () => {},
+        onSearchMapArea: () => {},
+    });
+
+    it('removes only the marked no-JS quest listing and its associated style on web mount', () => {
+        (Platform as { OS: string }).OS = 'web';
+        document.body.innerHTML = [
+            '<section data-ssg-quests-listing="true">No-JS quest catalog</section>',
+            '<section data-ssg-quest-city="true">City landing content</section>',
+        ].join('');
+        document.head.insertAdjacentHTML(
+            'beforeend',
+            '<style data-ssg-quests-listing-style="true">[data-ssg-quests-listing]{display:none}</style>',
+        );
+
+        render(<QuestsContentPanel {...makeBaseProps()} />);
+
+        expect(document.querySelector('section[data-ssg-quests-listing="true"]')).toBeNull();
+        expect(document.querySelector('style[data-ssg-quests-listing-style="true"]')).toBeNull();
+        expect(document.querySelector('section[data-ssg-quest-city="true"]')?.textContent).toBe('City landing content');
+    });
+
+    it('renders a neutral localized location heading without guessing a city prefix', () => {
+        (Platform as { OS: string }).OS = 'web';
+
+        const { getByTestId, getByText, queryByText } = render(
+            <QuestsContentPanel {...makeBaseProps()} selectedCityName="Минск" />,
+        );
+
+        const heading = getByTestId('quests-content-title');
+        expect(getByText('Квесты: Минск')).toBeTruthy();
+        expect(queryByText('Квесты в городе Минск')).toBeNull();
+        expect(heading.props.accessibilityRole).toBe('header');
+        expect(heading.props['aria-level']).toBe(2);
     });
 
     it('shows a geolocation-disabled banner without a radius circle', () => {

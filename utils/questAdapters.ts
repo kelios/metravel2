@@ -12,6 +12,7 @@ import type {
     ApiQuestFirstCompleter,
 } from '@/api/quests';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { isSameWordForm, matchesAnyWordForm } from '@/utils/questAnswerMorphology';
 import { devError } from '@/utils/logger';
 import { getQuestAgeCategory, type QuestAgeCategory } from '@/utils/questAudience';
 import { translate as i18nT } from '@/i18n'
@@ -217,7 +218,11 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
                 // Пробуем как число
                 const asNum = parseInt(input, 10);
                 if (!Number.isNaN(asNum) && String(asNum) === target) return true;
-                return n === target;
+                if (n === target) return true;
+                // Второй проход — словоформа эталона (#1631). Он не способен
+                // отменить уже работающий ответ: до него доходят только вводы,
+                // которые строгое сравнение отвергло.
+                return isSameWordForm(n, target);
             };
         }
 
@@ -235,7 +240,13 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
                     .filter((v) => v.length > 0);
                 return (input: string) => {
                     const n = normalize(input);
-                    return variants.some(v => n === v);
+                    if (variants.some(v => n === v)) return true;
+                    // Второй проход — словоформа одного из вариантов (#1631):
+                    // словарь с `пули` и `снаряды` обязан принимать `пуля` и
+                    // `снаряд`, иначе игрок получает отказ на собственный
+                    // словарь шага. Правило узкое, разбор — в
+                    // `utils/questAnswerMorphology.ts`.
+                    return matchesAnyWordForm(n, variants);
                 };
             } catch {
                 return () => false;

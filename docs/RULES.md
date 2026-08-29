@@ -5,7 +5,7 @@
 - Current project is `metravel2`.
 - The app codebase root is `metravel2/` (the folder that contains `package.json`).
 - Treat `docs/` (this folder) as the source of truth for development rules.
-- Implementation ownership in this workspace is frontend/app/docs only. Backend/Django/API/server work in `../metravel-backend` or `area=back` is analysis-only: read source, run safe read-only probes, and create/update board tasks with evidence, but do not edit backend files, migrations, tests, settings, or server code from this repository. Do not run Git-changing operations in a backend checkout locally or on a server, including `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, or `clean`.
+- Implementation ownership in this workspace is frontend/app/docs only. Backend/Django/API/server work in `../metravel-backend` or `area=back` is analysis-only: read source, run safe read-only probes, and create/update board tasks with evidence, but do not edit backend files, migrations, tests, settings, or server code from this repository. Do not run Git-changing operations in a backend checkout locally or on a server, including `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, or `clean`. Single exception, and only against the local checkout: the mandatory pre-testing sync `git -C ../metravel-backend fetch origin master && git -C ../metravel-backend reset --hard origin/master`, plus applying the pulled migrations to the local database and restarting the local server. It is required before every local verification run (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»); local edits in the backend checkout are disposable and `origin/master` is always the source of truth. Never run it against a server checkout, and it never authorizes editing backend files or writing back to the remote.
 - If a frontend task depends on missing or broken backend behavior, leave a concrete blocker and link/create the `area=back` task instead of shipping a mock-only or silently failing frontend path.
 
 ## Application architecture and localization
@@ -72,6 +72,26 @@
     not stay there. When the task is done, port the changes to the primary
     checkout, commit them on `main`, and leave no commits on the worktree
     branch that are absent from `main`.
+- Commit and push the task diff before a board task moves to `testing`:
+  - the `review → testing` gate is a `pass` verdict **plus** the reviewed diff
+    committed and pushed to `main`; the ticket is moved only after
+    `git push origin main` succeeds. Order: record the verdict → `git add <task
+    paths>` → `git commit` → `git push origin main` → `status=testing`;
+  - stage explicit task paths. `git add -A` and a pathless `git commit` are
+    forbidden in this shared checkout: they sweep other sessions' unfinished
+    files and ship them past their own review gate;
+  - push `main` only; never push a `claude/*` auto-worktree branch;
+  - `githooks/pre-push` runs preflight over the working tree, not over your
+    commit. When `npm run check:preflight:dry` reports another session's file
+    set, validate your own set narrowly (lint/jest on your paths) and push with
+    `SKIP_PREFLIGHT=1 git push origin main` — the documented escape hatch of
+    that hook — then say so in the ticket and in the report to the owner;
+  - record the commit sha in the ticket `description`: acceptance, dev deploy,
+    and any later analysis read the pushed code, not somebody's working tree;
+  - having nothing of your own to commit (the code is already in `origin/main`)
+    is a valid outcome — write it in the ticket and move the status on. Full
+    protocol: `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода
+    `review → testing`».
 - Protected project/release files (`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`) require an explicit user request that puts the file or its behavior in scope. Do not change them as incidental cleanup.
 - Before deploying to production, validate the local code in production-like conditions:
   - build a production web export (`dist/prod`)
@@ -658,6 +678,28 @@ npx serve dist/prod -l 3000 -s
 - If you need a new icon family:
   - verify it renders correctly on web (no Metro stub override)
   - or use an existing Feather alternative.
+
+#### Web scroll ownership
+
+- Оболочка на вебе занимает ровно вьюпорт (`html/body/#root { height: 100% }`
+  плюс `overflow: hidden` у контейнера экрана react-navigation), поэтому документ
+  не прокручивается: длинный контент экрана живёт в собственном
+  `overflow-y: auto`. Это осознанный контракт — карта, `/messages` и двухколоночные
+  каталоги на нём построены.
+- Следствие контракта: у экрана должен быть ОДИН основной владелец прокрутки —
+  самая крупная прокручиваемая область под вьюпортом. Сайдбар и другие вложенные
+  панели прокручиваются отдельно только там, где это действительно нужно.
+- Хром, лежащий вне колонки контента (глобальная шапка, шапка/счётчик экрана,
+  нижний док, десктопный футер, фон), не должен быть мёртвой зоной. Переадресацию
+  колеса и вертикального свайпа такому владельцу делает
+  `hooks/useWebScrollDelegation.ts`; она включается только там, где жест заведомо
+  ничего бы не сделал (нет вертикально прокручиваемого предка, документ не
+  прокручивается, диалог не открыт, событие не забрал никто другой).
+- Установленный контракт виден в DOM как `data-scroll-delegation="on"` на `<html>`
+  — это гейт готовности для e2e и ручной проверки, а не декоративный атрибут.
+- Регрессия: `e2e/web-scroll-delegation.spec.ts` (реальные wheel/touch на
+  `/quests`, `/search`, `/travelsby`, desktop 1280×900 и mobile web 390×844).
+  Программный `element.scrollTo` доказательством прокрутки не считается.
 
 #### Web interaction rule (nested buttons)
 
