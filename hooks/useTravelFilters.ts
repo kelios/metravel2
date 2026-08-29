@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
+import { Platform } from 'react-native';
+import { captureFiltersRefreshBoundary, fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
 import { translate as i18nT } from '@/i18n'
 
 export interface TravelFilters {
@@ -253,10 +254,8 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   const loadedRef = useRef(false);
   const mountedRef = useRef(true);
   const inFlightCountRef = useRef(0);
-  const refetchStateRef = useRef<{ step: number | null; inFlight: boolean }>({
-    step: null,
-    inFlight: false,
-  });
+  const pointCatsInFlightRef = useRef(0);
+  const pointCatsRequestRef = useRef(0);
   const triedPointCatsRef = useRef<number | null>(null);
   const triedCountriesRef = useRef<number | null>(null);
   const lastPointCatsForcedAtRef = useRef<number>(0);
@@ -343,29 +342,39 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   /**
    * Догрузка словаря категорий точек.
    *
-   * `force` обходит и TTL-кэш `api/miscOptimized`, и HTTP-кэш браузера: категории
-   * заводятся в админке во время работы автора, а прод отдаёт словарю два
-   * Cache-Control и браузер держит ответ 30 минут (BE-задача #1436). `silent`
-   * не трогает общий `isLoading`, чтобы обновление уже показанного списка не
-   * дёргало скелет поля стран.
+   * `force` обходит TTL-кэш `api/miscOptimized` и HTTP-кэш браузера. `silent`
+   * не трогает общий `isLoading`, чтобы не дёргать скелет поля стран.
    */
   const refetchPointCategories = useCallback(async (
-    refetchOptions?: { force?: boolean; silent?: boolean },
+    refetchOptions?: {
+      force?: boolean;
+      silent?: boolean;
+      afterRequestSequence?: number;
+      signal?: AbortSignal;
+    },
   ) => {
-    const refetchState = refetchStateRef.current;
-    if (refetchState.inFlight) return;
+    const afterRequestSequence = refetchOptions?.afterRequestSequence;
+    const signal = refetchOptions?.signal;
+    if (signal?.aborted || (pointCatsInFlightRef.current > 0 && afterRequestSequence === undefined)) return;
 
     const silent = refetchOptions?.silent === true;
     const force = refetchOptions?.force === true;
-
-    refetchState.inFlight = true;
-    refetchState.step = currentStep || null;
+    const request = ++pointCatsRequestRef.current;
+    pointCatsInFlightRef.current += 1;
 
     try {
       if (!silent) beginLoading();
-      const filtersData = await fetchFiltersOptimized(force ? { force: true } : undefined);
+      if (force && afterRequestSequence === undefined) lastPointCatsForcedAtRef.current = Date.now();
+      const filtersData = await fetchFiltersOptimized(afterRequestSequence !== undefined
+        ? {
+            force: true,
+            afterRequestSequence,
+            signal,
+            onRequestStart: (startedAt) => { lastPointCatsForcedAtRef.current = startedAt; },
+          }
+        : force ? { force: true } : undefined);
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || signal?.aborted || request !== pointCatsRequestRef.current) return;
 
       const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
         filtersData?.categoryTravelAddress || []
@@ -377,12 +386,51 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
         categoryTravelAddress: normalizedCategoryTravelAddress,
       }));
     } catch (err) {
-      console.error('Error refetching point categories:', err);
+      if (!signal?.aborted) console.error('Error refetching point categories:', err);
     } finally {
       if (!silent) endLoading();
-      refetchState.inFlight = false;
+      pointCatsInFlightRef.current -= 1;
     }
-  }, [currentStep, beginLoading, endLoading]);
+  }, [beginLoading, endLoading]);
+
+  const isPointStep = currentStep === 2 || currentStep === 3;
+  useEffect(() => {
+    if (!isPointStep || Platform.OS !== 'web' || typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    let away = false;
+    let returnController: AbortController | undefined;
+    const leave = () => {
+      away = true;
+      returnController?.abort();
+    };
+    const resume = () => {
+      if (!away || document.visibilityState === 'hidden') return;
+      away = false;
+      returnController = new AbortController();
+      void refetchPointCategories({
+        force: true,
+        silent: true,
+        afterRequestSequence: captureFiltersRefreshBoundary(),
+        signal: returnController.signal,
+      });
+    };
+    const onBlur = (event: FocusEvent) => { if (event.target === window) leave(); };
+    const onFocus = (event: FocusEvent) => { if (event.target === window) resume(); };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') leave();
+      else resume();
+    };
+
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      returnController?.abort();
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [isPointStep, refetchPointCategories]);
 
   const refetchCountries = useCallback(async () => {
     try {
@@ -440,7 +488,6 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
 
     if (throttled) return;
 
-    lastPointCatsForcedAtRef.current = now;
     // Список уже показан — обновляем молча, без спиннера.
     refetchPointCategories({ force: true, silent: hasPointCats });
   }, [currentStep, filters?.categoryTravelAddress, refetchPointCategories]);

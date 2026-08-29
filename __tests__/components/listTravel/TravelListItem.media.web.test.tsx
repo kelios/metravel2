@@ -132,6 +132,24 @@ describe('TravelListItem media props on web', () => {
     expect(props.insetMedia).toBe(false);
   });
 
+  it('delegates non-selectable web navigation to the real anchor wrapper', () => {
+    renderItem();
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.webNavigationOwner).toBe('external');
+  });
+
+  it('keeps selectable web cards owned by their checkbox action', () => {
+    renderItem({ selectable: true });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.webNavigationOwner).toBeUndefined();
+    expect(props.webPressableProps).toMatchObject({
+      role: 'checkbox',
+      tabIndex: 0,
+    });
+  });
+
   it('does not pass a fixed width to the web card when grid slot already controls layout', () => {
     renderItem({ cardWidth: 320, viewportWidth: 1280 });
 

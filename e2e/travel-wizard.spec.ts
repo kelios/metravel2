@@ -28,9 +28,16 @@ const pixel7MobileWeb = {
 /** Сколько раз страница сходила за каждым словарём (см. тест про дубли ниже). */
 type DictionaryRequestCounts = { filters: number; countries: number };
 
-const maybeMockTravelFilters = async (page: Page): Promise<DictionaryRequestCounts> => {
+const maybeMockTravelFilters = async (
+  page: Page,
+  options?: {
+    pointCategories?: Array<{ id: number; name: string }>;
+    beforeFiltersResponse?: () => Promise<void>;
+    forceMock?: boolean;
+  },
+): Promise<DictionaryRequestCounts> => {
   const counts: DictionaryRequestCounts = { filters: 0, countries: 0 };
-  if (USE_REAL_API) return counts;
+  if (USE_REAL_API && !options?.forceMock) return counts;
 
   const payload = {
     categories: [{ id: 1, name: 'Город' }],
@@ -39,7 +46,7 @@ const maybeMockTravelFilters = async (page: Page): Promise<DictionaryRequestCoun
     complexity: [{ id: 1, name: 'Легко' }],
     month: [{ id: 1, name: 'Январь' }],
     over_nights_stay: [{ id: 1, name: 'Отель' }],
-    categoryTravelAddress: [
+    categoryTravelAddress: options?.pointCategories ?? [
       { id: 1, name: 'Башня' },
       { id: 2, name: 'Ресторан' },
     ],
@@ -61,10 +68,12 @@ const maybeMockTravelFilters = async (page: Page): Promise<DictionaryRequestCoun
   for (const pattern of patterns) {
     await page.route(pattern, async (route) => {
       counts.filters += 1;
+      const body = JSON.stringify(payload);
+      await options?.beforeFiltersResponse?.();
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(payload),
+        body,
       });
     });
   }
@@ -134,8 +143,8 @@ const maybeMockNominatimSearch = async (page: Page) => {
   });
 };
 
-const maybeMockTravelUpsert = async (page: Page) => {
-  if (USE_REAL_API) return;
+const maybeMockTravelUpsert = async (page: Page, options?: { forceMock?: boolean }) => {
+  if (USE_REAL_API && !options?.forceMock) return;
 
   let lastId = 10_000;
 
@@ -716,6 +725,138 @@ const verifyPointCategoryEditorStability = async (page: Page) => {
   }));
   guard.assertNoErrorsContaining('Maximum update depth exceeded');
   guard.assertNoErrorsContaining('Minified React error #185');
+};
+
+// Deterministic lifecycle/response race control. Live acceptance separately
+// creates a category through the local admin and switches real browser tabs.
+const verifyPointCategoryRefreshOnReturn = async (page: Page, viewport: 'desktop' | 'mobile') => {
+  if (USE_REAL_API) {
+    await ensureAuthedStorageFallback(page, { userId: '1', userName: 'E2E User' });
+    await mockFakeAuthApis(page);
+    await maybeMockTravelUpsert(page, { forceMock: true });
+  }
+  const browserErrors: string[] = [];
+  page.on('pageerror', (error) => browserErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text());
+  });
+  const travelId = 151800;
+  const photoUrl = 'https://example.com/e2e/category-refresh-point.png';
+  const point = {
+    id: 151801, lat: 48.8566, lng: 2.3522, country: 250,
+    address: 'Париж, Франция', categories: [1], image: photoUrl,
+  };
+  const newCategory = { id: 151802, name: 'Планетарий E2E1518' };
+  const pointCategories = [{ id: 1, name: 'Башня' }];
+  let holdResponse = false;
+  let releaseResponse!: () => void;
+  const responseGate = new Promise<void>((resolve) => { releaseResponse = resolve; });
+  const counts = await maybeMockTravelFilters(page, {
+    forceMock: true,
+    pointCategories,
+    beforeFiltersResponse: () => holdResponse ? responseGate : Promise.resolve(),
+  });
+  await page.route(photoUrl, (route) => route.fulfill({
+    status: 200, contentType: 'image/png', body: tinyPngBuffer,
+  }));
+  await page.route('**/proxy/tiles/osm/**', (route) => route.fulfill({
+    status: 200, contentType: 'image/png', body: tinyPngBuffer,
+  }));
+  await page.route(new RegExp(`/(?:api/)?travels/${travelId}/(?:\\?.*)?$`), (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({
+      id: travelId, slug: 'e2e-category-return', name: 'E2E category freshness',
+      description: 'Сохранённый черновик для проверки обновления категорий в открытом редакторе точки.',
+      userIds: '1', user: { id: 1, name: 'E2E User' },
+      countries: [{ country_id: 250, title_ru: 'Франция' }],
+      coordsMeTravel: [point], gallery: [], travelAddress: [],
+      categories: [], transports: [], companions: [], complexity: [],
+      month: [], over_nights_stay: [], publish: false, moderation: false,
+    }),
+  }));
+  await page.route(new RegExp(`/(?:api/)?travels/${travelId}/routes/(?:\\?.*)?$`), (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: '[]',
+  }));
+
+  await page.goto(`/travel/${travelId}`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toHaveValue('E2E category freshness');
+  const stepResponse = page.waitForResponse((response) =>
+    response.url().includes('/getFiltersTravel/?_fresh=') && response.ok());
+  await clickNext(page);
+  await stepResponse;
+  const stepRefreshedAt = Date.now();
+  await ensureOnStep2(page);
+  await maybeDismissRouteCoachmark(page);
+  if (viewport === 'mobile') {
+    await page.getByRole('button', { name: /^Показать точки \(1\)$/i }).click();
+  }
+  await page.getByRole('button', { name: 'Редактировать', exact: true }).first().click();
+  const address = page.getByPlaceholder('Например: Парковка у озера Sucha');
+  const editedAddress = 'Париж — несохранённая правка E2E1518';
+  await address.fill(editedAddress);
+  const pointPhoto = page.getByAltText('Предпросмотр', { exact: true });
+  await expect(pointPhoto).toHaveAttribute('src', photoUrl);
+  await expect.poll(() => pointPhoto.evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await page.getByTestId('simple-multiselect.selected-chip.1').click();
+  const search = page.getByPlaceholder('Поиск...', { exact: true });
+  await search.fill('пла');
+  await expect(page.getByTestId(`simple-multiselect.item.${newCategory.id}`)).toHaveCount(0);
+  const countBeforeReturn = counts.filters;
+  const countriesBeforeReturn = counts.countries;
+
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  pointCategories.push(newCategory);
+  holdResponse = true;
+  const freshResponse = page.waitForResponse((response) =>
+    response.url().includes('/getFiltersTravel/?_fresh=') && response.ok());
+  try {
+    expect(Date.now() - stepRefreshedAt).toBeLessThan(60_000);
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new Event('focus'));
+    });
+    await expect.poll(() => counts.filters).toBe(countBeforeReturn + 1);
+    await expect(search).toHaveValue('пла');
+    await expect(search).toBeFocused();
+    await expect(address).toHaveValue(editedAddress);
+    await expect(pointPhoto).toHaveAttribute('src', photoUrl);
+    await expect(page.getByTestId('simple-multiselect.selected-chip.1')).toBeAttached();
+    releaseResponse();
+    const response = await freshResponse;
+    const receivedAt = Date.now();
+    expect((await response.json()).categoryTravelAddress).toContainEqual(newCategory);
+    await expect(page.getByTestId(`simple-multiselect.item.${newCategory.id}`)).toBeVisible({ timeout: 5_000 });
+    expect(Date.now() - receivedAt).toBeLessThan(5_000);
+    // A duplicate activation after the reply must not become another return.
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new Event('focus'));
+    });
+    await expect(search).toHaveValue('пла');
+    await expect(search).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Добавить категорию «пла»', exact: true })).toBeVisible();
+    const evidenceDir = resolve('.codex-temp/task-1518-apply');
+    await mkdir(evidenceDir, { recursive: true });
+    await page.screenshot({ path: resolve(evidenceDir, `regression-${viewport}-prefix.png`) });
+    await search.fill(newCategory.name);
+    await expect(page.getByTestId(`simple-multiselect.item.${newCategory.id}`)).toBeVisible();
+    await expect(page.getByRole('button', { name: `Добавить категорию «${newCategory.name}»`, exact: true })).toHaveCount(0);
+    await search.fill('Башня');
+    // Check the existing id through the actual selection behavior: the first
+    // toggle must remove it, then restore it before leaving the picker.
+    await page.getByTestId('simple-multiselect.item.1').click();
+    await expect(page.getByTestId('simple-multiselect.selected-chip.1')).toHaveCount(0);
+    await page.getByTestId('simple-multiselect.item.1').click();
+    await page.getByText('Готово', { exact: true }).click();
+    await expect(address).toHaveValue(editedAddress);
+    await expect(pointPhoto).toHaveAttribute('src', photoUrl);
+    await expect(page.getByTestId('simple-multiselect.selected-chip.1')).toBeAttached();
+    expect(counts.filters).toBe(countBeforeReturn + 1);
+    expect(counts.countries).toBe(countriesBeforeReturn);
+    expect(browserErrors).toEqual([]);
+  } finally {
+    releaseResponse();
+  }
 };
 
 test.beforeEach(async ({ page }) => {
@@ -1931,6 +2072,22 @@ test.describe('Регрессии: web стабильность wizard', () => {
 
   test('выбор категории точки должен отображаться после закрытия модалки', async ({ page }) => {
     await verifyPointCategoryEditorStability(page);
+  });
+
+  test.describe('обновление категорий при возврате — desktop web', () => {
+    test.use({ viewport: { width: 1440, height: 900 } });
+
+    test('новая категория появляется без смены шага и потери правок', async ({ page }) => {
+      await verifyPointCategoryRefreshOnReturn(page, 'desktop');
+    });
+  });
+
+  test.describe('обновление категорий при возврате — mobile web', () => {
+    test.use({ ...pixel7MobileWeb, viewport: { width: 390, height: 844 } });
+
+    test('новая категория появляется без смены шага и потери правок', async ({ page }) => {
+      await verifyPointCategoryRefreshOnReturn(page, 'mobile');
+    });
   });
 
   test.describe('mobile web', () => {

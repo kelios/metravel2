@@ -7,6 +7,8 @@ interface CacheEntry<T> {
   data: T;
   timestamp: number;
   sequence: number;
+  forced: boolean;
+  startedAt: number;
 }
 const filtersCache = new Map<string, CacheEntry<unknown>>();
 const cacheTimeout = 10 * 60 * 1000; // 10 минут
@@ -24,8 +26,20 @@ let requestSequence = 0;
 interface InFlightEntry<T> {
   promise: Promise<T>;
   forced: boolean;
+  sequence: number;
+  startedAt: number;
 }
 const inFlightRequests = new Map<string, InFlightEntry<unknown>>();
+
+interface DictionaryLoadOptions {
+  signal?: AbortSignal;
+  force?: boolean;
+  // A return must observe a forced request started after this snapshot.
+  afterRequestSequence?: number;
+  onRequestStart?: (startedAt: number) => void;
+}
+
+export const captureFiltersRefreshBoundary = (): number => requestSequence;
 
 /** Ошибка отмены в формате, который проверяют потребители (`error.name === 'AbortError'`). */
 const createAbortError = (): Error => {
@@ -77,22 +91,49 @@ const detachOnAbort = <T>(promise: Promise<T>, signal?: AbortSignal): Promise<T>
 const loadCachedDictionary = <T>(
   cacheKey: string,
   loader: (loaderOptions: { forceRefresh: boolean }) => Promise<T>,
-  options?: { signal?: AbortSignal; force?: boolean },
+  options?: DictionaryLoadOptions,
 ): Promise<T> => {
-  const force = options?.force === true;
+  if (options?.signal?.aborted) return Promise.reject(createAbortError());
+
+  const afterRequestSequence = options?.afterRequestSequence;
+  const requiresFreshResponse = afterRequestSequence !== undefined;
+  const force = options?.force === true || requiresFreshResponse;
   const cached = filtersCache.get(cacheKey) as CacheEntry<T> | undefined;
-  if (!force && cached && (Date.now() - cached.timestamp) < cacheTimeout) {
+  if (cached && (Date.now() - cached.timestamp) < cacheTimeout && (
+    !force || (requiresFreshResponse && cached.forced && cached.sequence > afterRequestSequence)
+  )) {
+    options?.onRequestStart?.(cached.startedAt);
     return Promise.resolve(cached.data);
   }
 
+  const subscribe = (promise: Promise<T>): Promise<T> =>
+    detachOnAbort(promise, options?.signal).catch((error: unknown) => {
+      if (!requiresFreshResponse && cached && !options?.signal?.aborted) {
+        devWarn(`Using cached ${cacheKey} due to error:`, error);
+        return cached.data;
+      }
+      throw error;
+    });
+
   const inFlight = inFlightRequests.get(cacheKey) as InFlightEntry<T> | undefined;
-  if (inFlight && (!force || inFlight.forced)) {
-    return detachOnAbort(inFlight.promise, options?.signal);
+  if (inFlight && (requiresFreshResponse || !force || inFlight.forced)) {
+    if (requiresFreshResponse && (!inFlight.forced || inFlight.sequence <= afterRequestSequence)) {
+      // Re-enter after the shared request; the first surviving caller starts the next one.
+      return detachOnAbort(inFlight.promise.catch(() => undefined), options?.signal)
+        .then(() => loadCachedDictionary(cacheKey, loader, options));
+    }
+    options?.onRequestStart?.(inFlight.startedAt);
+    return subscribe(inFlight.promise);
   }
 
-  const entry: InFlightEntry<T> = { promise: undefined as unknown as Promise<T>, forced: force };
-  inFlightRequests.set(cacheKey, entry as InFlightEntry<unknown>);
   const sequence = ++requestSequence;
+  const entry: InFlightEntry<T> = {
+    promise: undefined as unknown as Promise<T>,
+    forced: force,
+    sequence,
+    startedAt: Date.now(),
+  };
+  inFlightRequests.set(cacheKey, entry as InFlightEntry<unknown>);
 
   entry.promise = (async () => {
     try {
@@ -103,16 +144,11 @@ const loadCachedDictionary = <T>(
           data,
           timestamp: Date.now(),
           sequence,
+          forced: force,
+          startedAt: entry.startedAt,
         });
       }
       return data;
-    } catch (error) {
-      // Протухший кэш лучше пустого ответа: словари меняются раз в месяцы.
-      if (cached) {
-        devWarn(`Using cached ${cacheKey} due to error:`, error);
-        return cached.data;
-      }
-      throw error;
     } finally {
       // Снимаем только СВОЮ запись: forced-запрос мог перезаписать чужую.
       if (inFlightRequests.get(cacheKey) === (entry as InFlightEntry<unknown>)) {
@@ -121,7 +157,8 @@ const loadCachedDictionary = <T>(
     }
   })();
 
-  return detachOnAbort(entry.promise, options?.signal);
+  options?.onRequestStart?.(entry.startedAt);
+  return subscribe(entry.promise);
 };
 
 /**
@@ -132,7 +169,7 @@ const loadCachedDictionary = <T>(
  * до получаса (см. `fetchFilters` и BE-задачу #1436).
  */
 export const fetchFiltersOptimized = (
-  options?: { signal?: AbortSignal; force?: boolean },
+  options?: DictionaryLoadOptions,
 ): Promise<FilterDictionaries> =>
   loadCachedDictionary(
     'filters',

@@ -8,6 +8,7 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import {
   useTravelFilters,
@@ -15,13 +16,14 @@ import {
   normalizeTravelCategories,
   normalizeCategoryTravelAddress,
 } from '@/hooks/useTravelFilters';
-import { fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
+import { captureFiltersRefreshBoundary, fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
 
 // Справочники берутся через дедуплицирующий слой miscOptimized: раньше прямые
 // вызовы api/misc из разных путей давали по два одинаковых запроса на страницу.
 jest.mock('@/api/miscOptimized', () => ({
   fetchFiltersOptimized: jest.fn(),
   fetchAllCountriesOptimized: jest.fn(),
+  captureFiltersRefreshBoundary: jest.fn(() => 0),
 }));
 
 const mockFetchFilters = fetchFiltersOptimized as jest.Mock;
@@ -275,6 +277,44 @@ describe('useTravelFilters', () => {
     expect(mockFetchFilters).toHaveBeenCalledTimes(2);
   });
 
+  it('refreshes on returning to the same point step within the step throttle', async () => {
+    const platform = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+    mockFetchFilters.mockResolvedValue({
+      categories: [{ id: 1, name: 'Горы' }],
+      categoryTravelAddress: [{ id: 4, name: 'Парк' }],
+    });
+    mockFetchAllCountries.mockResolvedValue([{ country_id: 112, title_ru: 'Беларусь' }]);
+
+    try {
+      const { result, rerender } = renderHook(
+        ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
+        { initialProps: { step: 1 } },
+      );
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      await act(async () => { rerender({ step: 2 }); });
+      const countries = result.current.filters.countries;
+      const callsBeforeReturn = mockFetchFilters.mock.calls.length;
+
+      mockFetchFilters.mockResolvedValue({
+        categories: [],
+        categoryTravelAddress: [{ id: 4, name: 'Парк' }, { id: 228, name: 'Планетарий' }],
+      });
+      await act(async () => {
+        window.dispatchEvent(new Event('blur'));
+        window.dispatchEvent(new Event('focus'));
+      });
+
+      expect(mockFetchFilters).toHaveBeenCalledTimes(callsBeforeReturn + 1);
+      expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
+      expect(result.current.filters.countries).toBe(countries);
+      expect(result.current.filters.categories).toEqual([{ id: '1', name: 'Горы' }]);
+      expect(result.current.isLoading).toBe(false);
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: platform, configurable: true });
+    }
+  });
+
   // Регресс: стартовая загрузка заканчивалась полной заменой стейта и могла
   // приехать ПОЗЖЕ принудительной догрузки (словарь фильтров отдаётся из
   // HTTP-кэша мгновенно, справочник стран идёт по сети), откатывая свежие
@@ -377,5 +417,228 @@ describe('useTravelFilters', () => {
       expect.objectContaining({ country_id: '2', title_ru: 'Польша' }),
     ]);
     expect(result.current.filters.categories).toEqual([{ id: '1', name: 'Горы' }]);
+  });
+
+  describe('browser return freshness', () => {
+    const platform = Platform.OS;
+    const existing = {
+      categories: [{ id: 1, name: 'Горы' }],
+      categoryTravelAddress: [{ id: 4, name: 'Парк' }],
+    };
+    const refreshed = {
+      ...existing,
+      categoryTravelAddress: [...existing.categoryTravelAddress, { id: 228, name: 'Планетарий' }],
+    };
+    let visibility: DocumentVisibilityState;
+
+    beforeEach(() => {
+      Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+      visibility = 'visible';
+      jest.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibility);
+      mockFetchFilters.mockResolvedValue(existing);
+      mockFetchAllCountries.mockResolvedValue([{ country_id: 112, title_ru: 'Беларусь' }]);
+    });
+
+    afterEach(() => {
+      Object.defineProperty(Platform, 'OS', { value: platform, configurable: true });
+      jest.restoreAllMocks();
+    });
+
+    const focus = () => window.dispatchEvent(new Event('focus'));
+    const blur = () => window.dispatchEvent(new Event('blur'));
+    const visibilityChange = () => document.dispatchEvent(new Event('visibilitychange'));
+    const openPointStep = async (step = 2) => {
+      const hook = renderHook(
+        ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
+        { initialProps: { step: 1 } },
+      );
+      await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+      await act(async () => { hook.rerender({ step }); });
+      return hook;
+    };
+
+    it.each(['focus-first', 'visible-first'])('coalesces paired return events with a response between them (%s)', async (order) => {
+      const { result } = await openPointStep(3);
+      mockFetchFilters.mockResolvedValue(refreshed);
+      const count = mockFetchFilters.mock.calls.length;
+      await act(async () => {
+        blur();
+        visibility = 'hidden';
+        visibilityChange();
+      });
+      visibility = 'visible';
+      await act(async () => { if (order === 'focus-first') focus(); else visibilityChange(); });
+      expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
+
+      await act(async () => {
+        if (order === 'focus-first') visibilityChange(); else focus();
+        focus();
+        visibilityChange();
+      });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count + 1);
+      expect(captureFiltersRefreshBoundary).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores initial focus, field focus changes, and focus while the tab is hidden', async () => {
+      await openPointStep();
+      const count = mockFetchFilters.mock.calls.length;
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      try {
+        await act(async () => {
+          focus();
+          input.dispatchEvent(new Event('blur', { bubbles: true }));
+          input.dispatchEvent(new Event('focus', { bubbles: true }));
+          focus();
+        });
+        expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+        await act(async () => {
+          visibility = 'hidden';
+          visibilityChange();
+          focus();
+        });
+        expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+        await act(async () => {
+          visibility = 'visible';
+          visibilityChange();
+        });
+        expect(mockFetchFilters).toHaveBeenCalledTimes(count + 1);
+      } finally {
+        input.remove();
+      }
+    });
+
+    it('does not let an older hook response overwrite a return or clear its in-flight guard', async () => {
+      let now = 1_000_000;
+      jest.spyOn(Date, 'now').mockImplementation(() => now);
+      const { result, rerender } = await openPointStep();
+      let resolveOlder: (value: unknown) => void = () => {};
+      let resolveReturn: (value: unknown) => void = () => {};
+      mockFetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }));
+      let older: Promise<void>;
+      act(() => { older = result.current.refetchPointCategories({ force: true, silent: true }); });
+      mockFetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveReturn = resolve; }));
+      await act(async () => { blur(); focus(); });
+      const count = mockFetchFilters.mock.calls.length;
+      await act(async () => {
+        resolveOlder({ ...existing, categoryTravelAddress: [{ id: 9, name: 'Старый ответ' }] });
+        await older;
+      });
+      expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '4', name: 'Парк' }]);
+      now += 120_000;
+      await act(async () => { rerender({ step: 3 }); });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+      await act(async () => { resolveReturn(refreshed); });
+      expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it.each(['leave', 'other-step', 'unmount'])('cancels the return subscriber on %s', async (reason) => {
+      const { result, rerender, unmount } = await openPointStep();
+      let resolveReturn: (value: unknown) => void = () => {};
+      mockFetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveReturn = resolve; }));
+      await act(async () => { blur(); focus(); });
+      const options = mockFetchFilters.mock.calls.at(-1)?.[0] as { signal: AbortSignal };
+      await act(async () => {
+        if (reason === 'leave') blur();
+        else if (reason === 'other-step') rerender({ step: 4 });
+        else unmount();
+      });
+      expect(options.signal.aborted).toBe(true);
+      const count = mockFetchFilters.mock.calls.length;
+      await act(async () => { resolveReturn(refreshed); });
+      if (reason !== 'unmount') {
+        expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '4', name: 'Парк' }]);
+      }
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+    });
+
+    it('keeps only the latest return when the author leaves again before the response', async () => {
+      const { result } = await openPointStep();
+      let resolveOlder: (value: unknown) => void = () => {};
+      mockFetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }));
+      await act(async () => { blur(); focus(); });
+      const olderOptions = mockFetchFilters.mock.calls.at(-1)?.[0] as { signal: AbortSignal };
+      mockFetchFilters.mockResolvedValueOnce(refreshed);
+      await act(async () => { blur(); focus(); });
+      expect(olderOptions.signal.aborted).toBe(true);
+      await act(async () => { resolveOlder(existing); });
+      expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
+    });
+
+    it('starts the ordinary step throttle when the deferred network request actually starts', async () => {
+      let now = 1_000_000;
+      jest.spyOn(Date, 'now').mockImplementation(() => now);
+      const { rerender } = await openPointStep();
+      let resolveReturn: (value: unknown) => void = () => {};
+      mockFetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveReturn = resolve; }));
+      await act(async () => { blur(); focus(); });
+      const options = mockFetchFilters.mock.calls.at(-1)?.[0] as { onRequestStart: (startedAt: number) => void };
+      now += 120_000;
+      await act(async () => { options.onRequestStart(now); resolveReturn(refreshed); });
+      const count = mockFetchFilters.mock.calls.length;
+      now += 1_000;
+      await act(async () => { rerender({ step: 3 }); });
+      await act(async () => { rerender({ step: 2 }); });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+      now += 60_000;
+      await act(async () => { rerender({ step: 3 }); });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count + 1);
+    });
+
+    it.each(['Offline', 'Invalid filters response'])('preserves the last dictionary after %s and retries on the next return', async (message) => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      const { result } = await openPointStep();
+      const countries = result.current.filters.countries;
+      mockFetchFilters.mockRejectedValueOnce(new Error(message));
+      await act(async () => { blur(); focus(); });
+      expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '4', name: 'Парк' }]);
+      expect(result.current.filters.countries).toBe(countries);
+      expect(result.current.isLoading).toBe(false);
+      mockFetchFilters.mockResolvedValueOnce(refreshed);
+      await act(async () => { blur(); focus(); });
+      expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
+    });
+
+    it('accepts an empty dictionary without reloading or inventing options', async () => {
+      const { result } = await openPointStep();
+      mockFetchFilters.mockResolvedValue({ ...existing, categoryTravelAddress: [] });
+      const count = mockFetchFilters.mock.calls.length;
+      await act(async () => { blur(); focus(); });
+      await act(async () => { focus(); visibilityChange(); });
+      expect(result.current.filters.categoryTravelAddress).toEqual([]);
+      expect(result.current.isLoading).toBe(false);
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count + 1);
+    });
+
+    it.each([1, 4, 5, 6])('does not subscribe outside point steps (step %s)', async (step) => {
+      const { rerender } = await openPointStep();
+      await act(async () => { rerender({ step }); });
+      const count = mockFetchFilters.mock.calls.length;
+      await act(async () => { blur(); focus(); visibilityChange(); });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+    });
+
+    it.each(['android', 'ios'] as const)('does not add browser listeners on %s', async (os) => {
+      Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+      const addListener = jest.spyOn(window, 'addEventListener');
+      await openPointStep();
+      const count = mockFetchFilters.mock.calls.length;
+      await act(async () => { blur(); focus(); visibilityChange(); });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+      expect(addListener.mock.calls.filter(([name]) => name === 'focus' || name === 'blur')).toEqual([]);
+    });
+
+    it.each(['window', 'document'] as const)('does not require a browser %s', async (globalName) => {
+      const descriptor = Object.getOwnPropertyDescriptor(globalThis, globalName);
+      const addListener = jest.spyOn(window, 'addEventListener');
+      Object.defineProperty(globalThis, globalName, { configurable: true, value: undefined });
+      try {
+        await openPointStep();
+        expect(addListener.mock.calls.filter(([name]) => name === 'focus' || name === 'blur')).toEqual([]);
+      } finally {
+        if (descriptor) Object.defineProperty(globalThis, globalName, descriptor);
+      }
+    });
   });
 });

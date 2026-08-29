@@ -108,6 +108,12 @@ type Props = {
   testID?: string;
   webAsView?: boolean;
   webPressableProps?: any;
+  /**
+   * Web navigation owner. `external` is for callers that wrap the card in a
+   * real `<a href>`: the card must then stay out of the tab/accessibility tree
+   * and must not cancel the anchor's modifier/middle-click behavior.
+   */
+  webNavigationOwner?: 'card' | 'external';
   visualVariant?: 'default' | 'featured';
   webHoverScale?: boolean;
   webTouchAction?: string;
@@ -148,6 +154,7 @@ function UnifiedTravelCard({
   testID,
   webPressableProps,
   webAsView = false,
+  webNavigationOwner = 'card',
   visualVariant = 'default',
   webHoverScale = true,
   webTouchAction,
@@ -504,7 +511,7 @@ function UnifiedTravelCard({
   );
 
   const webPrimaryActionProps = useMemo(() => {
-    if (!isWeb) return null;
+    if (!isWeb || webNavigationOwner === 'external') return null;
     const actionProps = { ...defaultWebProps, ...webPressableProps };
     return {
       ...actionProps,
@@ -518,12 +525,15 @@ function UnifiedTravelCard({
         pointerEvents: 'none',
       },
     };
-  }, [defaultWebProps, isWeb, webPressableProps]);
+  }, [defaultWebProps, isWeb, webNavigationOwner, webPressableProps]);
 
   const containerProps = useMemo(() => {
     if (!isWeb) return { onPress, ...(onLongPress ? { onLongPress: handleLongPress } : {}) };
 
-    const base = { ...defaultWebProps, ...webPressableProps };
+    const base = {
+      ...(webNavigationOwner === 'external' ? {} : defaultWebProps),
+      ...webPressableProps,
+    };
     const originalMouseEnter = base?.onMouseEnter;
     const originalMouseLeave = base?.onMouseLeave;
     const originalFocus = base?.onFocus;
@@ -561,7 +571,16 @@ function UnifiedTravelCard({
         originalBlur?.(e);
       },
     };
-  }, [defaultWebProps, enableWebHoverEffects, isWeb, onPress, onLongPress, handleLongPress, webPressableProps]);
+  }, [
+    defaultWebProps,
+    enableWebHoverEffects,
+    isWeb,
+    onPress,
+    onLongPress,
+    handleLongPress,
+    webNavigationOwner,
+    webPressableProps,
+  ]);
 
   const showHeroTitle = heroTitleOverlay && title.trim().length > 0;
   const normalizedMetaText = typeof metaText === 'string' ? metaText.trim() : '';

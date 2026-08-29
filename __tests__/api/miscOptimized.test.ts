@@ -2,6 +2,7 @@ import {
   fetchAllCountriesOptimized,
   fetchAllFiltersOptimized,
   fetchFiltersOptimized,
+  captureFiltersRefreshBoundary,
   clearFiltersCache,
 } from '@/api/miscOptimized';
 
@@ -207,6 +208,116 @@ describe('miscOptimized', () => {
     expect(fetchFilters).toHaveBeenCalledTimes(2);
   });
 
+  it.each([false, true])('coalesces return callers after an older request finishes (forced=%s)', async (forced) => {
+    const { fetchFilters } = require('@/api/misc');
+    let now = 1_000_000;
+    jest.spyOn(Date, 'now').mockImplementation(() => now);
+    let resolveOlder: (value: unknown) => void = () => {};
+    const refreshed = { ...filters, categoryTravelAddress: [{ id: 228, name: 'Планетарий' }] };
+    fetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }));
+    fetchFilters.mockResolvedValueOnce(refreshed);
+
+    const older = fetchFiltersOptimized(forced ? { force: true } : undefined);
+    const afterRequestSequence = captureFiltersRefreshBoundary();
+    const onRequestStart = jest.fn();
+    const firstReturn = fetchFiltersOptimized({ force: true, afterRequestSequence, onRequestStart });
+    const secondReturn = fetchFiltersOptimized({ force: true, afterRequestSequence });
+    expect(fetchFilters).toHaveBeenCalledTimes(1);
+    expect(onRequestStart).not.toHaveBeenCalled();
+
+    now += 120_000;
+    resolveOlder(filters);
+    await expect(older).resolves.toEqual(filters);
+    await expect(firstReturn).resolves.toEqual(refreshed);
+    await expect(secondReturn).resolves.toEqual(refreshed);
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+    expect(onRequestStart).toHaveBeenCalledWith(now);
+    await expect(fetchFiltersOptimized()).resolves.toEqual(refreshed);
+  });
+
+  it('reuses a forced request started after the return, even if its response already completed', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    let resolveRequest: (value: unknown) => void = () => {};
+    fetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveRequest = resolve; }));
+
+    const afterRequestSequence = captureFiltersRefreshBoundary();
+    clearFiltersCache();
+    const forced = fetchFiltersOptimized({ force: true });
+    const joined = fetchFiltersOptimized({ force: true, afterRequestSequence });
+    resolveRequest(filters);
+    await expect(forced).resolves.toEqual(filters);
+    await expect(joined).resolves.toEqual(filters);
+    await expect(fetchFiltersOptimized({ force: true, afterRequestSequence })).resolves.toEqual(filters);
+    expect(fetchFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not treat a newer plain cache response as a fresh return response', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    const afterRequestSequence = captureFiltersRefreshBoundary();
+    fetchFilters.mockResolvedValue(filters);
+    await fetchFiltersOptimized();
+    await fetchFiltersOptimized({ force: true, afterRequestSequence });
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+    expect(fetchFilters).toHaveBeenLastCalledWith({ throwOnError: true, forceRefresh: true });
+  });
+
+  it.each([false, true])('keeps strict errors independent of the shared request creator (strict=%s)', async (strictCreator) => {
+    const { fetchFilters } = require('@/api/misc');
+    fetchFilters.mockResolvedValueOnce(filters);
+    await fetchFiltersOptimized();
+    const afterRequestSequence = captureFiltersRefreshBoundary();
+    let rejectRequest: (reason: Error) => void = () => {};
+    fetchFilters.mockImplementationOnce(() => new Promise((_, reject) => { rejectRequest = reject; }));
+    const strictOptions = { force: true, afterRequestSequence };
+    const creator = fetchFiltersOptimized(strictCreator ? strictOptions : { force: true });
+    const joined = fetchFiltersOptimized(strictCreator ? { force: true } : strictOptions);
+    const strict = strictCreator ? creator : joined;
+    const legacy = strictCreator ? joined : creator;
+    const rejected = expect(strict).rejects.toThrow('Invalid categories response');
+
+    rejectRequest(new Error('Invalid categories response'));
+    await rejected;
+    await expect(legacy).resolves.toEqual(filters);
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+    fetchFilters.mockResolvedValueOnce({ ...filters, categoryTravelAddress: [{ id: 228, name: 'Планетарий' }] });
+    await expect(fetchFiltersOptimized({ force: true, afterRequestSequence: captureFiltersRefreshBoundary() }))
+      .resolves.toMatchObject({ categoryTravelAddress: [{ id: 228, name: 'Планетарий' }] });
+  });
+
+  it('still refreshes after the older shared request fails', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    let rejectOlder: (reason: Error) => void = () => {};
+    fetchFilters.mockImplementationOnce(() => new Promise((_, reject) => { rejectOlder = reject; }));
+    fetchFilters.mockResolvedValueOnce(filters);
+    const older = fetchFiltersOptimized({ force: true });
+    const rejected = expect(older).rejects.toThrow('Offline');
+    const returned = fetchFiltersOptimized({ force: true, afterRequestSequence: captureFiltersRefreshBoundary() });
+
+    rejectOlder(new Error('Offline'));
+    await rejected;
+    await expect(returned).resolves.toEqual(filters);
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+  });
+
+  it('cancels a queued return without launching its request or aborting the shared caller', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    let resolveOlder: (value: unknown) => void = () => {};
+    fetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }));
+    const older = fetchFiltersOptimized({ force: true });
+    const controller = new AbortController();
+    const returned = fetchFiltersOptimized({
+      force: true,
+      afterRequestSequence: captureFiltersRefreshBoundary(),
+      signal: controller.signal,
+    });
+
+    controller.abort();
+    await expect(returned).rejects.toMatchObject({ name: 'AbortError' });
+    resolveOlder(filters);
+    await expect(older).resolves.toEqual(filters);
+    expect(fetchFilters).toHaveBeenCalledTimes(1);
+  });
+
   // Отмена одного потребителя не должна рвать общий запрос остальным: префетч и
   // экран делят один in-flight промис.
   it('detaches an aborted filters caller without cancelling the shared request', async () => {
@@ -288,6 +399,7 @@ describe('miscOptimized', () => {
     it('rejects immediately when the caller signal is already aborted', async () => {
       const { fetchAllCountries } = require('@/api/misc');
       fetchAllCountries.mockResolvedValue(allCountries);
+      await fetchAllCountriesOptimized();
 
       const controller = new AbortController();
       controller.abort();
@@ -295,6 +407,7 @@ describe('miscOptimized', () => {
       await expect(
         fetchAllCountriesOptimized({ signal: controller.signal }),
       ).rejects.toMatchObject({ name: 'AbortError' });
+      expect(fetchAllCountries).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -703,6 +703,7 @@ function TravelListItem({
       contentSlot={contentSlot}
       webHoverScale={!isMobile && IS_WEB}
       webAsView={IS_WEB}
+      webNavigationOwner={IS_WEB && !selectable ? 'external' : undefined}
       webPressableProps={IS_WEB && selectable ? selectableWebHandlers : undefined}
       webTouchAction={webTouchAction ?? (selectable ? 'manipulation' : undefined)}
       nativePressScaleEnabled={Platform.OS !== 'android'}
@@ -749,6 +750,7 @@ function TravelListItem({
         data-testid="travel-card-link"
         role={isNavigable ? undefined : 'group'}
         tabIndex={isNavigable ? undefined : -1}
+        aria-label={a11yLabel}
         aria-disabled={!isNavigable}
         onClick={handleAnchorClick}
         onKeyDown={handleAnchorKeyDown}
