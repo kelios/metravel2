@@ -81,6 +81,48 @@ describe('travelSeo', () => {
     });
   });
 
+  // #1620: headline is the editorial title only. The branded/truncated
+  // "<title>… | Metravel" document title is a separate contract (buildSeoTitle)
+  // and must never leak into Article.headline.
+  it('never appends the branded document-title suffix to Article.headline', () => {
+    const jsonLd = createTravelArticleJsonLd({
+      id: 7,
+      slug: 'озеро-хотомле',
+      name: 'Озеро Хотомле',
+    } as any);
+
+    expect(jsonLd?.headline).toBe('Озеро Хотомле');
+    expect(jsonLd?.headline).not.toContain('Metravel');
+    expect(jsonLd?.headline).not.toMatch(/…$/);
+  });
+
+  // #1620: datePublished must come from a real source field. When the API
+  // payload has no created_at (current production contract — see
+  // travels/serializers.py, the column exists but is not exposed), the
+  // fallback is to omit the field, never to fabricate today's date.
+  it('omits datePublished when the source has no created_at (fails closed)', () => {
+    const jsonLd = createTravelArticleJsonLd({
+      id: 8,
+      slug: 'demo-no-date',
+      name: 'Demo no date',
+      updated_at: '2025-01-02T00:00:00.000Z',
+    } as any);
+
+    expect(jsonLd).not.toHaveProperty('datePublished');
+    expect(jsonLd?.dateModified).toBe('2025-01-02T00:00:00.000Z');
+  });
+
+  it('publishes datePublished verbatim when created_at is a valid source date', () => {
+    const jsonLd = createTravelArticleJsonLd({
+      id: 9,
+      slug: 'demo-with-date',
+      name: 'Demo with date',
+      created_at: '2024-03-15T10:00:00.000Z',
+    } as any);
+
+    expect(jsonLd?.datePublished).toBe('2024-03-15T10:00:00.000Z');
+  });
+
   it('creates breadcrumb json-ld for travel pages', () => {
     const breadcrumb = createTravelBreadcrumbJsonLd({
       id: 42,
@@ -190,6 +232,26 @@ describe('travelSeo', () => {
       ])
     );
   });
+
+  // #1622: the global Organization identity (name/url/logo/sameAs) is already
+  // published once per page by the static HTML shell (app/+html.tsx, same
+  // `https://metravel.by/#organization` id). A second top-level Organization
+  // node here left the hydrated DOM with two Organization JSON-LD payloads for
+  // one entity — this graph must stay a single owner and not re-declare it.
+  it('does not re-declare a top-level Organization node (single owner, #1622)', () => {
+    const jsonLd = createTravelStructuredData({
+      id: 42,
+      slug: 'demo-travel',
+      name: 'Demo travel',
+      description: '<p>Long description</p>',
+      gallery: [],
+    } as any);
+
+    const graph = (jsonLd?.['@graph'] ?? []) as Array<Record<string, unknown>>;
+    expect(graph.some((node) => node['@type'] === 'Organization')).toBe(false);
+    expect(graph.map((node) => node['@type'])).toEqual(['WebPage', 'Article', 'BreadcrumbList']);
+  });
+
   // #1438: эта функция — второй, «слабый» `buildTravelPath` рядом с
   // `utils/routePaths`. Собственная проверка `key !== ''` пропускала литералы
   // пустоты, и share-ссылка с записью избранного получали адрес в 404.

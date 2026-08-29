@@ -181,4 +181,57 @@ describe('TravelDetailsContainer SEO focus guard', () => {
     expect(scripts[0].getAttribute('data-rh')).toBe('true')
     expect(scripts[0].textContent).toContain('helmet')
   })
+
+  // #1622: the SSG build embeds a bootstrap Article payload marked
+  // `data-seo-jsonld="travel-article"` with no `id` (scripts/generate-seo-pages.js).
+  // That marker never matched the `#travel-article-jsonld` id selector, so the
+  // static copy survived hydration alongside Helmet's managed tag — two
+  // Article payloads for one page. The dedupe must also catch this marker.
+  it('removes the static SSG Article marker once Helmet mounts its managed copy, without touching FAQ/BreadcrumbList (#1622 contract item 3)', async () => {
+    mockUseIsFocused.mockReturnValue(true)
+    // Simulate the full static SSG output for a travel page: Article marker
+    // plus its sibling FAQPage marker and a marker-less BreadcrumbList — the
+    // exact three tags scripts/generate-seo-pages.js injects per travel page.
+    document.head.insertAdjacentHTML(
+      'beforeend',
+      [
+        '<script type="application/ld+json" data-seo-jsonld="travel-article">{"source":"static-ssg","@type":"Article"}</script>',
+        '<script type="application/ld+json" data-seo-jsonld="travel-faq">{"@type":"FAQPage"}</script>',
+        '<script type="application/ld+json">{"@type":"BreadcrumbList"}</script>',
+      ].join(''),
+    )
+
+    render(<TravelDetailsContainer />)
+
+    expect(
+      document.querySelector('script[data-seo-jsonld="travel-article"]')?.textContent,
+    ).toContain('static-ssg')
+
+    await act(async () => {
+      document.head.insertAdjacentHTML(
+        'beforeend',
+        '<script id="travel-article-jsonld" type="application/ld+json" data-rh="true">{"source":"helmet"}</script>',
+      )
+      await Promise.resolve()
+    })
+
+    const articleScripts = document.querySelectorAll(
+      'script#travel-article-jsonld[type="application/ld+json"], script[data-seo-jsonld="travel-article"][type="application/ld+json"]'
+    )
+    expect(articleScripts).toHaveLength(1)
+    expect(articleScripts[0].getAttribute('data-rh')).toBe('true')
+    expect(articleScripts[0].textContent).toContain('helmet')
+
+    // The FAQ marker and the marker-less BreadcrumbList must survive the
+    // Article dedupe untouched — the ticket explicitly forbids dropping them
+    // as collateral damage of a broadened Article selector.
+    expect(document.querySelector('script[data-seo-jsonld="travel-faq"]')?.textContent).toContain(
+      'FAQPage',
+    )
+    const allLdJson = document.querySelectorAll('script[type="application/ld+json"]')
+    const breadcrumbStillPresent = Array.from(allLdJson).some((node) =>
+      (node.textContent || '').includes('BreadcrumbList'),
+    )
+    expect(breadcrumbStillPresent).toBe(true)
+  })
 })

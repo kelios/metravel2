@@ -8,7 +8,6 @@ import { buildTravelPath as buildRouteTravelPath, buildTravelPathFromTravel } fr
 const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');
 const getTravelFallbackDescription = () => i18nT('travel:utils.travelSeo.descriptionFallback');
 const SITE_URL = 'https://metravel.by';
-const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 const TRAVEL_SLUG_STOP_WORDS = new Set(['i', 'k', 'ko', 'na', 'o', 'ot', 'po', 's', 'so', 'v', 'vo', 'za']);
 
 /**
@@ -274,14 +273,14 @@ export function createTravelStructuredData(
   const cleanName = stripHtmlForSeo(travel?.name).slice(0, 200);
   const breadcrumb = createTravelBreadcrumbJsonLd(travel, canonicalUrl);
 
-  const graph: Record<string, any>[] = [
-    {
-      '@type': 'Organization',
-      '@id': ORGANIZATION_ID,
-      name: 'MeTravel',
-      url: SITE_URL,
-    },
-  ];
+  // #1622: the site-wide Organization identity is already published once per
+  // page by the static HTML shell (`app/+html.tsx`, same `https://metravel.by/#organization`
+  // id). Re-declaring a second top-level Organization node here duplicated it
+  // after hydration — two `Organization` script payloads for one entity.
+  // Nothing in this graph needs the full entity locally (WebPage links to the
+  // WebSite id, Article embeds its own lightweight publisher stub), so the
+  // per-page graph no longer emits its own copy.
+  const graph: Record<string, any>[] = [];
 
   if (canonicalUrl) {
     graph.push({

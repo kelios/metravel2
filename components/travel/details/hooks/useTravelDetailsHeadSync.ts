@@ -67,16 +67,27 @@ export function useTravelDetailsHeadSync({
     }
 
     const dedupeTravelJsonLd = () => {
+      // #1622: the SSG build also embeds a bootstrap Article payload marked
+      // `data-seo-jsonld="travel-article"` (no `id`) so crawlers see valid
+      // structured data before any JS runs. That marker is a different
+      // selector from the managed `#travel-article-jsonld` tag Helmet mounts,
+      // so the two lived side by side after hydration — one static Article,
+      // one runtime Article. Querying both selectors together lets a single
+      // dedupe pass own every Article copy regardless of which one wrote it.
       const scripts = Array.from(
         document.querySelectorAll<HTMLScriptElement>(
-          'script#travel-article-jsonld[type="application/ld+json"]',
+          [
+            'script#travel-article-jsonld[type="application/ld+json"]',
+            'script[data-seo-jsonld="travel-article"][type="application/ld+json"]',
+          ].join(', '),
         ),
       )
       if (scripts.length <= 1) return
 
       // The early travel preload publishes a lightweight JSON-LD tag before
       // hydration. Once Helmet mounts the richer graph, keep its managed tag
-      // and remove the bootstrap copy so the document has one owner and one id.
+      // and remove every other Article copy — static or preload — so the
+      // document has one owner and one id.
       const managedScript = scripts.find((script) => script.getAttribute('data-rh') === 'true')
       const scriptToKeep = managedScript ?? scripts[scripts.length - 1]
       scripts.forEach((script) => {

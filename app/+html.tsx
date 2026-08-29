@@ -15,6 +15,7 @@ import {
   TRAVEL_LIST_PRELOAD_GLOBAL,
   TRAVEL_LIST_PRELOAD_TIMEOUT_MS,
 } from '@/utils/travelListPreload';
+import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks';
 import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
@@ -588,9 +589,19 @@ export default function Root({ children }: { children: React.ReactNode }) {
                 url: 'https://metravel.by',
                 logo: {
                   '@type': 'ImageObject',
-                  url: 'https://metravel.by/assets/icons/logo_yellow_60x60.png',
+                  // #1612: /assets/icons/ is closed by robots.txt `Disallow`, so a
+                  // crawler-inaccessible logo URL failed schema validation even
+                  // though the file itself answered 200. apple-touch-icon.png is
+                  // the same MeTravel mark at the public root (not under any
+                  // Disallow rule) and is already deployed for the home-screen icon.
+                  url: 'https://metravel.by/apple-touch-icon.png',
                 },
-                sameAs: [],
+                sameAs: [
+                  METRAVEL_SOCIAL_LINKS.facebook,
+                  METRAVEL_SOCIAL_LINKS.instagram,
+                  METRAVEL_SOCIAL_LINKS.tiktok,
+                  METRAVEL_SOCIAL_LINKS.youtube,
+                ],
               },
               {
                 '@type': 'WebSite',
