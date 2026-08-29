@@ -154,7 +154,7 @@ function AboutAndContactScreen() {
     return false;
   }, [sending, name, email, message, agree]);
 
-  const title = i18nT('home:app.tabs.about.o_proekte_metravel_soobschestvo_puteshestven_64997f50');
+  const seoTitle = i18nT('home:app.tabs.about.o_proekte_metravel_soobschestvo_puteshestven_64997f50');
   const description =
       i18nT('home:app.tabs.about.proekt_metravel_soobschestvo_puteshestvennik_f1e95ae3');
 
@@ -163,7 +163,7 @@ function AboutAndContactScreen() {
         {isFocused && (
         <InstantSEO
             headKey="about"           // фиксированный ключ страницы
-            title={title}
+            title={seoTitle}
             description={description}
             canonical={canonical}
             image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
@@ -174,19 +174,9 @@ function AboutAndContactScreen() {
           <ScrollView style={webTouchScrollStyle} contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.backgroundImage}>
               <View style={styles.container}>
-                {Platform.OS === 'web' && (
-                    <h1 style={{
-                        position: 'absolute' as const,
-                        width: 1,
-                        height: 1,
-                        padding: 0,
-                        margin: -1,
-                        overflow: 'hidden' as const,
-                        clip: 'rect(0,0,0,0)',
-                        whiteSpace: 'nowrap',
-                        borderWidth: 0,
-                    } as any}>{title}</h1>
-                )}
+                {/* #1610: AboutIntroCard exposes the visible page heading. The
+                    old sr-only node reused seoTitle verbatim, including the
+                    "| Metravel" browser-title suffix, inside a real <h1>. */}
                 <StatusBar barStyle="dark-content" />
                 <View style={styles.content}>
                   <HeroBanner isWide={isWide} />
@@ -198,6 +188,7 @@ function AboutAndContactScreen() {
                   <View style={[isWide ? styles.twoColumns : styles.oneColumn, { marginTop: 24 }]}>
                     <View style={isWide ? styles.columnMain : null}>
                       <AboutIntroCard
+                        isPageHeading
                         email={EMAIL}
                         onSendMail={sendMail}
                         onOpenUrl={openUrl}

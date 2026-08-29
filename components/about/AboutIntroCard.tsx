@@ -9,6 +9,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 type Props = {
+  isPageHeading?: boolean;
   email: string;
   onSendMail: () => void;
   onOpenUrl: (url: string) => void;
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export const AboutIntroCard: React.FC<Props> = ({
+  isPageHeading = false,
   email,
   onSendMail,
   onOpenUrl,
@@ -33,10 +35,17 @@ export const AboutIntroCard: React.FC<Props> = ({
 }) => {
   const styles = useAboutStyles();
   const colors = useThemedColors();
+  const isWebPageHeading = Platform.OS === 'web' && isPageHeading;
   return (
   <View style={styles.infoCard}>
     <View style={styles.cardHeader}>
-      <Text style={styles.cardTitle}>{i18nT('home:components.about.AboutIntroCard.o_proekte_d94d47ff')}</Text>
+      <Text
+        style={styles.cardTitle}
+        accessibilityRole={isWebPageHeading ? 'header' : undefined}
+        aria-level={isWebPageHeading ? 1 : undefined}
+      >
+        {i18nT('home:components.about.AboutIntroCard.o_proekte_d94d47ff')}
+      </Text>
     </View>
     <Paragraph style={styles.paragraph}>
       {i18nT('home:components.about.AboutIntroCard.metravel_by_eto_nekommercheskiy_proekt_dlya__875e611a')}</Paragraph>

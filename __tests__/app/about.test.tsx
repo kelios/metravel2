@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import AboutScreen from '@/app/(tabs)/about';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router';
@@ -46,6 +47,7 @@ const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 const mockSendFeedback = sendFeedback as jest.MockedFunction<typeof sendFeedback>;
 const mockOpenExternalUrl = openExternalUrl as jest.MockedFunction<typeof openExternalUrl>;
+const originalPlatformOS = Platform.OS;
 
 describe('AboutScreen', () => {
   beforeEach(() => {
@@ -59,6 +61,7 @@ describe('AboutScreen', () => {
 
   afterEach(() => {
     (console.error as jest.Mock).mockRestore?.();
+    (Platform as { OS: string }).OS = originalPlatformOS;
   });
 
   it('renders hero and feature sections', () => {
@@ -88,6 +91,26 @@ describe('AboutScreen', () => {
     await waitFor(() => {
       expect(getByText(/Сообщение успешно отправлено/i)).toBeTruthy();
     });
+  });
+
+  it('exposes exactly one page heading, without the "| Metravel" tab-title suffix (#1610)', () => {
+    (Platform as { OS: string }).OS = 'web';
+
+    const { getAllByRole, getByText, UNSAFE_root } = render(<AboutScreen />);
+
+    const heading = getByText('О проекте');
+    expect(heading.props.accessibilityRole).toBe('header');
+    expect(heading.props['aria-level']).toBe(1);
+
+    const level1Headings = getAllByRole('header').filter(
+      (node) => node.props['aria-level'] === 1,
+    );
+    expect(level1Headings.map((node) => String(node.props.children))).toEqual(['О проекте']);
+    expect(String(heading.props.children)).not.toContain('Metravel');
+
+    // The removed sr-only node was a raw JSX <h1>, not a React Native Text,
+    // so the accessibility-role assertions above would not detect its return.
+    expect(UNSAFE_root.findAll((node) => node.type === 'h1')).toHaveLength(0);
   });
 
   it('shows web keyboard hint in contact form', () => {
