@@ -9,6 +9,7 @@ const LIVE_CONTRACT_SPECS = [
   'image-upload.spec.ts',
   'metravel-edit-delete.spec.ts',
   'public-trips.spec.ts',
+  'travel-content-save-delta.spec.ts',
   'travel-crud.spec.ts',
   'travel-draft-owner-preview.spec.ts',
   'travel-full-flow.spec.ts',
