@@ -13,6 +13,9 @@ import {
 describe('travelSeo', () => {
   it('strips html for seo descriptions', () => {
     expect(stripHtmlForSeo('<p>Hello <strong>world</strong></p>')).toBe('Hello world');
+    expect(stripHtmlForSeo('<p>Жемыславле</p><p>Дворец Умястовских</p>')).toBe(
+      'Жемыславле Дворец Умястовских',
+    );
   });
 
   it('builds stable travel seo title and description fallbacks', () => {

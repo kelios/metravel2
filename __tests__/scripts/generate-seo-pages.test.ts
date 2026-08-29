@@ -34,6 +34,7 @@ const {
   injectQuestScenarioContent,
   injectQuestCityLandingSection,
   injectQuestsListingContent,
+  buildQuestsListingModel,
   buildQuestScenarioFaqJsonLd,
   buildQuestScenarioHowToJsonLd,
   buildQuestPromoCatalog,
@@ -678,6 +679,12 @@ describe('escapeAttr', () => {
 describe('stripHtml', () => {
   it('strips HTML tags', () => {
     expect(stripHtml('<p>Hello <b>world</b></p>')).toBe('Hello world');
+    expect(stripHtml('<p>Жемыславле</p><p>Дворец Умястовских</p>')).toBe(
+      'Жемыславле Дворец Умястовских',
+    );
+    expect(stripHtml('<strong>Проверьте вы.</strong><strong>Ищите маршрут</strong>')).toBe(
+      'Проверьте вы. Ищите маршрут',
+    );
   });
 
   it('strips style and script blocks', () => {
@@ -1762,6 +1769,56 @@ describe('patchNoindexFallbackTemplate', () => {
 
     expect((html.match(/name="robots"/g) || []).length).toBe(1);
     expect(html).toContain('content="noindex, follow"');
+  });
+});
+
+describe('quests listing location headings', () => {
+  const quests = [
+    { quest_id: 'gomel-palace', city_id: '19', city_name: 'Гомель', title: 'Дворец' },
+    { quest_id: 'gomel-river', city_id: '92', city_name: 'Гомель', title: 'Набережная' },
+    { quest_id: 'grodno-castle', city_id: '11', city_name: 'Гродно', title: 'Замок' },
+    { quest_id: 'grodno-center', city_id: '91', city_name: 'Гродно', title: 'Центр' },
+    { quest_id: 'mogilev-stars', city_id: '14', city_name: 'Могилёв', title: 'Звёзды' },
+    { quest_id: 'mogilev-square', city_id: '93', city_name: 'Могилёв', title: 'Площадь' },
+    {
+      quest_id: 'yelnya-bog',
+      city_id: '201',
+      city_name: 'болото Ельня (Миорский район)',
+      title: 'Тропа по Ельне',
+    },
+  ];
+
+  it('merges duplicate backend city ids behind one canonical catalog group', () => {
+    const model = buildQuestsListingModel(quests);
+
+    expect(model.map((city: { name: string }) => city.name)).toEqual([
+      'болото Ельня (Миорский район)',
+      'Гомель',
+      'Гродно',
+      'Могилёв',
+    ]);
+    expect(model.find((city: { name: string }) => city.name === 'Гомель')).toMatchObject({
+      landingPath: '/quests/gomel',
+      quests: expect.arrayContaining([
+        expect.objectContaining({ path: '/quests/19/gomel-palace' }),
+        expect.objectContaining({ path: '/quests/92/gomel-river' }),
+      ]),
+    });
+  });
+
+  it('renders one neutral heading per city or non-city location', () => {
+    const html = injectQuestsListingContent(MINIMAL_BASE, quests);
+    const headings = [...html.matchAll(/<h2[^>]*>(Квесты: [^<]+)<\/h2>/g)].map((match) => match[1]);
+
+    expect(headings).toEqual([
+      'Квесты: болото Ельня (Миорский район)',
+      'Квесты: Гомель',
+      'Квесты: Гродно',
+      'Квесты: Могилёв',
+    ]);
+    expect(new Set(headings).size).toBe(headings.length);
+    expect(html).not.toContain('Квесты в городе');
+    expect(html).toContain('Все квесты: болото Ельня (Миорский район)');
   });
 });
 

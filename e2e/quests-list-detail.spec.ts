@@ -152,6 +152,44 @@ const getFirstQuestCard = async (page: Page) => {
 }
 
 test.describe('Quests list -> detail', () => {
+  test('quest cards are crawlable links with a sibling reviews action', async ({ page, context }) => {
+    await preacceptCookies(page)
+    await mockQuestApis(page)
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport)
+      await gotoWithRetry(page, '/quests')
+
+      const card = page.getByTestId(`quest-card-${QUEST_ID}`)
+      const reviewsAction = page.getByTestId(`quest-card-reviews-${QUEST_ID}`)
+      await expect(card).toBeVisible({ timeout: WAIT_MS })
+      await expect(card).toHaveAttribute('href', `/quests/${questCity.id}/${QUEST_ID}`)
+      await expect(card).toHaveJSProperty('tagName', 'A')
+      await expect(card.locator('a, button, [role="button"]')).toHaveCount(0)
+      expect(await reviewsAction.evaluate((node) => node.closest('a'))).toBeNull()
+
+      const catalogUrl = page.url()
+      await reviewsAction.click()
+      await expect(page.getByTestId('quest-reviews-modal')).toBeVisible({ timeout: WAIT_MS })
+      await expect(page).toHaveURL(catalogUrl)
+      await page.getByTestId('quest-reviews-close').click()
+    }
+
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await gotoWithRetry(page, '/quests')
+    const card = page.getByTestId(`quest-card-${QUEST_ID}`)
+    const [newTab] = await Promise.all([
+      context.waitForEvent('page'),
+      card.click({ button: 'middle' }),
+    ])
+    await newTab.waitForURL(`**/quests/${questCity.id}/${QUEST_ID}`, { timeout: WAIT_MS })
+    expect(new URL(newTab.url()).pathname).toBe(`/quests/${questCity.id}/${QUEST_ID}`)
+    await newTab.close()
+  })
+
   test('nearby is opt-in and filters the full catalog by current location', async ({ page }) => {
     await page.context().grantPermissions(['geolocation'])
     await page.context().setGeolocation({ latitude: questCity.lat, longitude: questCity.lng })

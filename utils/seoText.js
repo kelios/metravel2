@@ -11,6 +11,72 @@
 const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
 
+const HTML_ENTITY_MAP = Object.freeze({
+  amp: '&',
+  apos: "'",
+  gt: '>',
+  hellip: '…',
+  laquo: '«',
+  ldquo: '“',
+  lt: '<',
+  lsquo: '‘',
+  mdash: '—',
+  nbsp: ' ',
+  ndash: '–',
+  quot: '"',
+  raquo: '»',
+  rdquo: '”',
+  rsquo: '’',
+});
+
+/** Decode the small HTML entity surface that can appear in API rich text. */
+function decodeHtmlEntities(text) {
+  return text
+    .replace(/&([a-z]+);/gi, (entity, name) => {
+      const decoded = HTML_ENTITY_MAP[name.toLowerCase()];
+      return typeof decoded === 'string' ? decoded : entity;
+    })
+    .replace(/&#(\d+);/g, (entity, decimal) => {
+      const codePoint = Number.parseInt(decimal, 10);
+      return Number.isSafeInteger(codePoint) && codePoint <= 0x10ffff
+        ? String.fromCodePoint(codePoint)
+        : entity;
+    })
+    .replace(/&#x([\da-f]+);/gi, (entity, hexadecimal) => {
+      const codePoint = Number.parseInt(hexadecimal, 16);
+      return Number.isSafeInteger(codePoint) && codePoint <= 0x10ffff
+        ? String.fromCodePoint(codePoint)
+        : entity;
+    });
+}
+
+/**
+ * Convert API/editorial HTML to plain SEO text without joining adjacent nodes.
+ *
+ * Tags become spaces instead of empty strings so `<p>One</p><p>Two</p>` and
+ * adjacent inline fragments keep a readable boundary. Whitespace immediately
+ * before punctuation is removed afterwards, preserving `word.</strong><strong>`
+ * as `word. Next` rather than `word . Next`.
+ */
+function htmlToPlainText(html) {
+  if (!html) return '';
+
+  return decodeHtmlEntities(
+    String(html)
+      .replace(/<style\b[^>]*>[\s\S]*?(?:<\/style\s*>|$)/gi, ' ')
+      .replace(/<script\b[^>]*>[\s\S]*?(?:<\/script\s*>|$)/gi, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  )
+    .replace(/\s+([,.;:!?…)\]}\u00bb”’])/gu, '$1')
+    .replace(/([([{«„“‘])\s+/gu, '$1')
+    .replace(/([\p{L}\p{N}])\s*(['’/])\s*(?=[\p{L}\p{N}])/gu, '$1$2')
+    .replace(/([\p{L}\p{N}][-‐‑])\s+(?=[\p{L}\p{N}])/gu, '$1')
+    .replace(/([\p{L}\p{N}])\s+([-‐‑])(?=[\p{L}\p{N}])/gu, '$1$2')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Хвостовые знаки, которые нельзя оставлять перед многоточием: «…центр,…» читается хуже «…центр…».
 const TRAILING_PUNCTUATION = /[\s.,;:!?·–—-]+$/u;
 
@@ -77,5 +143,6 @@ module.exports = {
   SEO_TITLE_MAX_LENGTH,
   SEO_TITLE_SUFFIX,
   buildSeoTitle,
+  htmlToPlainText,
   normalizeSeoLead,
 };

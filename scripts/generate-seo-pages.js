@@ -20,7 +20,11 @@ const path = require('path');
 const { fetchJson, sleep } = require('./lib/fetchJson');
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
-const { buildSeoTitle: buildSharedSeoTitle, normalizeSeoLead } = require('../utils/seoText');
+const {
+  buildSeoTitle: buildSharedSeoTitle,
+  htmlToPlainText,
+  normalizeSeoLead,
+} = require('../utils/seoText');
 const {
   questRouteKey,
   buildQuestCityAliasMap,
@@ -105,18 +109,7 @@ function stripHtmlToSnippet(html, maxLength = 160) {
 /** Strip HTML tags and collapse whitespace → plain text description. */
 function stripHtml(html, maxLength = 160) {
   if (!html) return '';
-  const plain = html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#039;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
+  const plain = htmlToPlainText(html);
   if (plain.length <= maxLength) return plain;
   // Prefer ending on a complete sentence when one finishes late enough in the
   // window — a full sentence reads better in the SERP than an ellipsis.
@@ -2203,34 +2196,32 @@ const QUESTS_SSG_FONT = "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
 
 /** Group quests by city with resolved alias + landing path. */
 function buildQuestsListingModel(quests, cityAliasMap) {
-  const byCity = new Map();
-  for (const quest of Array.isArray(quests) ? quests : []) {
-    const route = questRouteKey(quest);
-    if (!route) continue;
-    const name = String(quest.city_name || quest.cityName || quest.city?.name || '').trim();
-    const title = String(quest.title || 'Городской квест').trim();
-    const cover = String(quest.cover_url || quest.coverUrl || '').trim();
-    const group = byCity.get(route.cityId) || { cityId: route.cityId, name: '', cover: '', quests: [] };
-    if (!group.name && name) group.name = name;
-    if (!group.cover && cover) group.cover = cover;
-    group.quests.push({ path: route.path, title });
-    byCity.set(route.cityId, group);
-  }
+  const groups = buildQuestCityLandingGroups(quests, cityAliasMap);
+  return groups.map((group) => {
+    const questsSorted = group.quests
+      .map((quest) => {
+        const route = questRouteKey(quest);
+        if (!route) return null;
+        return {
+          path: route.path,
+          title: String(quest.title || 'Городской квест').trim(),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+    const cover = group.quests
+      .map((quest) => String(quest.cover_url || quest.coverUrl || '').trim())
+      .find(Boolean) || '';
 
-  const cities = [...byCity.values()].map((group) => {
-    const alias = cityAliasMap?.get(group.cityId) || null;
-    const questsSorted = group.quests.slice().sort((a, b) => a.title.localeCompare(b.title, 'ru'));
     return {
       cityId: group.cityId,
-      name: group.name,
-      cover: group.cover,
-      alias,
-      landingPath: `/quests/${alias || group.cityId}`,
+      name: group.cityName,
+      cover,
+      alias: group.alias,
+      landingPath: `/quests/${group.segment}`,
       quests: questsSorted,
     };
   });
-  cities.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
-  return cities;
 }
 
 function findQuestCityTravelLinks(city, travels, limit = 4) {
@@ -2512,9 +2503,9 @@ function injectQuestsListingContent(baseHtml, quests, cityAliasMap) {
         .map((q) => `<li style="margin:0 0 3px"><a href="${escapeAttr(q.path)}">${escapeAttr(q.title)}</a></li>`)
         .join('');
       return [
-        `<h2 style="${h2Style}">Квесты в городе ${escapeAttr(cityLabel)}</h2>`,
+        `<h2 style="${h2Style}">Квесты: ${escapeAttr(cityLabel)}</h2>`,
         `<ul style="${ulStyle}">${links}</ul>`,
-        `<p style="${landingLinkStyle}"><a href="${escapeAttr(city.landingPath)}">Все городские квесты: ${escapeAttr(cityLabel)}</a></p>`,
+        `<p style="${landingLinkStyle}"><a href="${escapeAttr(city.landingPath)}">Все квесты: ${escapeAttr(cityLabel)}</a></p>`,
       ].join('');
     })
     .join('');

@@ -50,6 +50,9 @@ describe('travelHelpers', () => {
 
     const html = '<style>.x{}</style><div>Hello <b>world</b></div>'
     expect(stripToDescription(html, 200)).toBe('Hello world')
+    expect(stripToDescription('<p>Проверьте вы.</p><p>Ищите новый маршрут</p>', 200)).toBe(
+      'Проверьте вы. Ищите новый маршрут',
+    )
 
     const onlyTags = '<div><br/></div>'
     expect(stripToDescription(onlyTags)).toContain('Найди место')

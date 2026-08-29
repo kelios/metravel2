@@ -1,6 +1,6 @@
 import type { Travel } from '@/types/types';
 import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
-import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, normalizeSeoLead } from '@/utils/seoText'
+import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, htmlToPlainText, normalizeSeoLead } from '@/utils/seoText'
 import { normalizeOgImageUrl } from '@/utils/seo'
 import { buildTravelPath as buildRouteTravelPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 
@@ -68,18 +68,7 @@ function getTravelCanonicalUrl(
 export function stripHtmlForSeo(html?: string | null): string {
   if (!html) return getSeoHtmlFallback();
 
-  const stripped = html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
+  const stripped = htmlToPlainText(html);
 
   return stripped || getSeoHtmlFallback();
 }

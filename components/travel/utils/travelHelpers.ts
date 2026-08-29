@@ -6,6 +6,7 @@
 import { BREAKPOINTS, MENU_WIDTH, CONTENT_PADDING, MAX_CONTENT_WIDTH } from './travelConstants';
 import { formatDate as formatLocalizedDate, translate as i18nT } from '@/i18n'
 import { formatCompactNumber } from '@/i18n/format'
+import { htmlToPlainText } from '@/utils/seoText'
 
 
 // ✅ ОПТИМИЗАЦИЯ: Определение типа устройства
@@ -68,8 +69,7 @@ export function getYoutubeId(url?: string | null): string | null {
 }
 
 export function stripHtmlTags(html: string | null | undefined): string {
-  if (!html) return '';
-  return String(html).replace(/<[^>]*>/g, '');
+  return htmlToPlainText(html);
 }
 
 // ✅ ОПТИМИЗАЦИЯ: Очистка HTML для описания
@@ -77,19 +77,7 @@ export function stripToDescription(html?: string, maxLength: number = 160): stri
   const FALLBACK = i18nT('travel:components.travel.utils.travelHelpers.naydi_mesto_dlya_puteshestviya_i_podelis_svo_f40626eb');
   if (!html) return FALLBACK;
 
-  const plain = html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
+  const plain = htmlToPlainText(html);
 
   if (!plain) return FALLBACK;
   if (plain.length <= maxLength) return plain;

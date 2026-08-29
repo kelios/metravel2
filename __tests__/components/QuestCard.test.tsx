@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { PixelRatio, Platform } from 'react-native';
+import type { ReactTestInstance } from 'react-test-renderer';
 
 import QuestCard from '@/screens/tabs/QuestCard';
 import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient';
@@ -88,6 +89,9 @@ const renderWithQueryClient = (ui: React.ReactElement) =>
         </QueryClientProvider>,
     );
 
+const getWebCardLink = (root: ReactTestInstance) =>
+    root.find((node) => node.type === 'a');
+
 describe('QuestCard', () => {
     beforeEach(() => {
         mockIsPhone = true;
@@ -125,6 +129,84 @@ describe('QuestCard', () => {
         // INV2-01: карточка с нулём прохождений не должна публично сообщать об этом.
         expect(queryByTestId('quest-card-pioneer-krakow-dragon')).toBeNull();
         expect(queryByText('Ещё никто не проходил')).toBeNull();
+    });
+
+    it('renders a crawlable web link while keeping the reviews button outside it', () => {
+        const { UNSAFE_root, getByTestId } = renderWithQueryClient(
+            <QuestCard
+                styles={styles}
+                cardWidth={340}
+                cityId="krakow"
+                quest={makeQuest()}
+            />,
+        );
+
+        const cardLink = getWebCardLink(UNSAFE_root);
+        expect(cardLink.props.href).toBe('/quests/krakow/krakow-dragon');
+        expect(cardLink.props['aria-label']).toBe('Начать приключение: Тайна дракона');
+
+        const ancestorTypes: unknown[] = [];
+        let ancestor = getByTestId('quest-card-reviews-krakow-dragon').parent;
+        while (ancestor) {
+            ancestorTypes.push(ancestor.type);
+            ancestor = ancestor.parent;
+        }
+        expect(ancestorTypes).not.toContain('a');
+    });
+
+    it('uses client routing for a primary click and preserves native link gestures', () => {
+        const { UNSAFE_root } = renderWithQueryClient(
+            <QuestCard
+                styles={styles}
+                cardWidth={340}
+                cityId="krakow"
+                quest={makeQuest()}
+            />,
+        );
+        const cardLink = getWebCardLink(UNSAFE_root);
+        const primaryPreventDefault = jest.fn();
+
+        fireEvent(cardLink, 'click', { button: 0, preventDefault: primaryPreventDefault });
+
+        expect(primaryPreventDefault).toHaveBeenCalledTimes(1);
+        expect(mockPush).toHaveBeenCalledWith('/quests/krakow/krakow-dragon');
+
+        mockPush.mockClear();
+        const modifiedPreventDefault = jest.fn();
+        fireEvent(cardLink, 'click', {
+            button: 0,
+            ctrlKey: true,
+            preventDefault: modifiedPreventDefault,
+        });
+
+        expect(modifiedPreventDefault).not.toHaveBeenCalled();
+        expect(mockPush).not.toHaveBeenCalled();
+
+        const spacePreventDefault = jest.fn();
+        fireEvent(cardLink, 'keyDown', { key: ' ', preventDefault: spacePreventDefault });
+        expect(spacePreventDefault).toHaveBeenCalledTimes(1);
+        expect(mockPush).toHaveBeenCalledWith('/quests/krakow/krakow-dragon');
+    });
+
+    it('does not expose or follow an invalid quest URL', () => {
+        const { UNSAFE_root } = renderWithQueryClient(
+            <QuestCard
+                styles={styles}
+                cardWidth={340}
+                cityId=""
+                quest={makeQuest()}
+            />,
+        );
+        const cardLink = getWebCardLink(UNSAFE_root);
+        const preventDefault = jest.fn();
+
+        expect(cardLink.props.href).toBeUndefined();
+        expect(cardLink.props['aria-disabled']).toBe(true);
+        expect(cardLink.props.tabIndex).toBe(-1);
+
+        fireEvent(cardLink, 'click', { button: 0, preventDefault });
+        expect(preventDefault).toHaveBeenCalledTimes(1);
+        expect(mockPush).not.toHaveBeenCalled();
     });
 
     // Геометрия слота каталога: `cardWidth = max(280, width − 48)`

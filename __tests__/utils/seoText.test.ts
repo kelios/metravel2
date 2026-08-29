@@ -1,9 +1,48 @@
-import { buildSeoTitle, normalizeSeoLead } from '@/utils/seoText';
+import { buildSeoTitle, htmlToPlainText, normalizeSeoLead } from '@/utils/seoText';
 
 // Общие правила текста выдачи. Заголовок отдельно покрыт в
 // __tests__/scripts/generate-seo-pages.test.ts (buildSeoTitle через SSG-обёртку),
 // здесь фиксируем контракт самого модуля и очистку лида.
 describe('seoText', () => {
+  describe('htmlToPlainText', () => {
+    it.each([
+      ['<p>Жемыславле</p><p>Дворец Умястовских</p>', 'Жемыславле Дворец Умястовских'],
+      ['<p>Проверьте вы.</p><p>Ищите новый маршрут</p>', 'Проверьте вы. Ищите новый маршрут'],
+      ['<ul><li>Первый пункт</li><li>Второй пункт</li></ul>', 'Первый пункт Второй пункт'],
+      ['<strong>Беларусь.</strong><strong>Ищите дворец</strong>', 'Беларусь. Ищите дворец'],
+    ])('preserves a readable boundary for adjacent fragments', (html, expected) => {
+      expect(htmlToPlainText(html)).toBe(expected);
+    });
+
+    it('removes executable and comment markup without leaking or doubling whitespace', () => {
+      expect(
+        htmlToPlainText('<style>.x{}</style><p>A&nbsp;&amp;&nbsp;B</p><!-- hidden --><script>alert(1)</script>'),
+      ).toBe('A & B');
+    });
+
+    it('decodes decimal and hexadecimal entities', () => {
+      expect(htmlToPlainText('&#1046;&#x435;&#1084;&#1099;&#1089;&#1083;&#1072;&#1074;&#1083;&#1100;')).toBe(
+        'Жемыславль',
+      );
+      expect(htmlToPlainText('&constructor; &unknown;')).toBe('&constructor; &unknown;');
+    });
+
+    it.each([
+      ['(<strong>Минск</strong>)', '(Минск)'],
+      ['&laquo;<strong>Минск</strong>&raquo;', '«Минск»'],
+      ['Санкт-<strong>Петербург</strong>', 'Санкт-Петербург'],
+      ['<strong>RU</strong>/<strong>EN</strong>', 'RU/EN'],
+      ['слово - слово', 'слово - слово'],
+    ])('does not introduce spaces around punctuation inside inline markup', (html, expected) => {
+      expect(htmlToPlainText(html)).toBe(expected);
+    });
+
+    it('drops executable content even when its closing tag is missing', () => {
+      expect(htmlToPlainText('<p>Visible</p><script>alert(1)')).toBe('Visible');
+      expect(htmlToPlainText('<p>Visible</p><style>.hidden{}')).toBe('Visible');
+    });
+  });
+
   describe('buildSeoTitle', () => {
     it('keeps the brand suffix while it fits the budget', () => {
       expect(buildSeoTitle('Албания. Влёра')).toBe('Албания. Влёра | Metravel');

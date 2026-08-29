@@ -1098,6 +1098,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             minHeight: 44,
         },
         questCardReviewsInline: {
+            // На mobile web полноразмерный quest-card anchor лежит слоем z=1;
+            // positioned sibling-кнопка отзывов остаётся над ним на z=30.
+            position: 'relative',
             zIndex: 30,
             minHeight: touchTarget.minHeight,
             minWidth: touchTarget.minWidth,

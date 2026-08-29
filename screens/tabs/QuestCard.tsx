@@ -1,7 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
+import type {
+    CSSProperties,
+    KeyboardEvent as ReactKeyboardEvent,
+    MouseEvent as ReactMouseEvent,
+} from 'react';
 import { PixelRatio, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import NavigationIcon from '@/components/layout/NavigationIcon';
@@ -24,9 +29,23 @@ import { formatInteger } from '@/i18n/format'
 import { formatDistance } from '@/utils/distanceCalculator'
 import { formatRatingValue } from '@/utils/ratingHelpers'
 import { hasPublicQuestRating } from '@/api/questRating'
+import { buildQuestPath } from '@/utils/routePaths'
 
 
 const loadedQuestImageCache = new Set<string>();
+
+const webCardLinkStyle: CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    // Passive visual layers do not receive web pointer events, so the anchor can
+    // stay below action controls while still owning the rest of the card surface.
+    zIndex: 1,
+    cursor: 'pointer',
+    textDecoration: 'none',
+};
 
 const getDifficultyInfo = (difficulty?: 'easy' | 'medium' | 'hard') => {
     switch (difficulty) {
@@ -77,6 +96,8 @@ export default function QuestCard({
     // читалку живёт по своему правилу выше: количество отзывов — факт, а
     // усреднённая оценка по одному отзыву — вымысел.
     const showAggregateRating = hasPublicQuestRating(quest.ratingCount);
+    const questPath = buildQuestPath(cityId, quest.id);
+    const questLinkLabel = i18nT('quests:screens.tabs.QuestCard.nachat_priklyuchenie_value1_43ad4b32', { value1: quest.title });
     const reviewsLabel = quest.ratingCount > 0
         ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, i18nT('quests:screens.tabs.QuestCard.otzyv_9b980975'), i18nT('quests:screens.tabs.QuestCard.otzyva_7e8267a2'), i18nT('quests:screens.tabs.QuestCard.otzyvov_5a06b55c'))}`
         : i18nT('quests:screens.tabs.QuestCard.0_otzyvov_d0eb25eb');
@@ -94,8 +115,35 @@ export default function QuestCard({
     }, [cacheKey]);
 
     const handlePress = useCallback(() => {
-        router.push(`/quests/${cityId}/${quest.id}`);
-    }, [cityId, quest.id]);
+        if (!questPath) return;
+        router.push(questPath as Href);
+    }, [questPath]);
+
+    const handleWebLinkClick = useCallback((event: ReactMouseEvent<HTMLAnchorElement>) => {
+        if (!questPath) {
+            event.preventDefault();
+            return;
+        }
+
+        const shouldUseBrowserNavigation =
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey;
+        if (shouldUseBrowserNavigation) return;
+
+        event.preventDefault();
+        handlePress();
+    }, [handlePress, questPath]);
+
+    const handleWebLinkKeyDown = useCallback((event: ReactKeyboardEvent<HTMLAnchorElement>) => {
+        // Enter is handled by the anchor's native click activation. Preserve the
+        // former Space activation explicitly because anchors normally scroll on Space.
+        if (event.key !== ' ') return;
+        event.preventDefault();
+        handlePress();
+    }, [handlePress]);
 
     const handleReviewsPress = useCallback((event?: any) => {
         event?.stopPropagation?.();
@@ -152,36 +200,37 @@ export default function QuestCard({
             ]}
             {...Platform.select({
                 web: {
-                    onClick: (event: any) => {
-                        if (event?.target?.closest?.('[data-card-action="true"]')) return;
-                        handlePress();
-                    },
                     onMouseEnter: () => setIsHovered(true),
                     onMouseLeave: () => setIsHovered(false),
-                    role: 'link',
-                    tabIndex: 0,
-                    'aria-label': i18nT('quests:screens.tabs.QuestCard.nachat_priklyuchenie_value1_43ad4b32', { value1: quest.title }),
-                    onKeyDown: (e: any) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handlePress();
-                        }
-                    },
                 } as any,
                 default: {},
             })}
-            testID={`quest-card-${quest.id}`}
+            testID={Platform.OS === 'web' ? undefined : `quest-card-${quest.id}`}
         >
-            {Platform.OS !== 'web' && (
+            {Platform.OS === 'web' ? (
+                <a
+                    href={questPath ?? undefined}
+                    aria-label={questLinkLabel}
+                    aria-disabled={questPath ? undefined : true}
+                    tabIndex={questPath ? undefined : -1}
+                    onClick={handleWebLinkClick}
+                    onKeyDown={handleWebLinkKeyDown}
+                    style={webCardLinkStyle}
+                    data-testid={`quest-card-${quest.id}`}
+                />
+            ) : (
                 <Pressable
                     style={[StyleSheet.absoluteFill, { zIndex: 20 }]}
                     onPress={handlePress}
                     accessibilityRole="button"
-                    accessibilityLabel={i18nT('quests:screens.tabs.QuestCard.nachat_priklyuchenie_value1_43ad4b32', { value1: quest.title })}
+                    accessibilityLabel={questLinkLabel}
                 />
             )}
 
-            <View style={[styles.questCardImage, { height: cardHeight }]}>
+            <View
+                style={[styles.questCardImage, { height: cardHeight }]}
+                pointerEvents={Platform.OS === 'web' ? 'none' : undefined}
+            >
                 {!imageLoaded && imageUrl && (
                     <ShimmerOverlay style={StyleSheet.absoluteFill} />
                 )}
@@ -353,19 +402,35 @@ export default function QuestCard({
             </View>
 
             {isPhone && (
-                <View style={styles.questCardDetails}>
-                    <View style={styles.questCardDetailsMeta}>
-                        <View style={styles.questCardDetailsItem}>
+                <View
+                    style={[
+                        styles.questCardDetails,
+                        Platform.OS === 'web' && { position: 'relative', zIndex: 30 },
+                    ]}
+                    pointerEvents={Platform.OS === 'web' ? 'box-none' : undefined}
+                >
+                    <View
+                        style={styles.questCardDetailsMeta}
+                        pointerEvents={Platform.OS === 'web' ? 'box-none' : undefined}
+                    >
+                        <View
+                            style={styles.questCardDetailsItem}
+                            pointerEvents={Platform.OS === 'web' ? 'none' : undefined}
+                        >
                             <Feather name="map-pin" size={13} color={colors.textMuted} />
                             <Text style={styles.questCardDetailsText}>{pointsText}</Text>
                         </View>
-                        <View style={styles.questCardDetailsItem}>
+                        <View
+                            style={styles.questCardDetailsItem}
+                            pointerEvents={Platform.OS === 'web' ? 'none' : undefined}
+                        >
                             <Feather name="clock" size={13} color={colors.textMuted} />
                             <Text style={styles.questCardDetailsText}>{durationText}</Text>
                         </View>
                         {showAggregateRating && (
                             <View
                                 style={styles.questCardDetailsItem}
+                                pointerEvents={Platform.OS === 'web' ? 'none' : undefined}
                                 testID={`quest-card-rating-${quest.id}`}
                             >
                                 <Feather name="star" size={13} color={colors.textMuted} />
@@ -387,6 +452,7 @@ export default function QuestCard({
                                 accessibilityHint={i18nT('quests:screens.tabs.QuestCard.otkryvaet_otzyvy_k_kvestu_02dd3527')}
                                 testID={`quest-card-reviews-${quest.id}`}
                                 hitSlop={6}
+                                pointerEvents={Platform.OS === 'web' ? 'auto' : undefined}
                             >
                                 <Feather name="message-circle" size={13} color={colors.textMuted} />
                                 <Text style={styles.questCardDetailsText}>{quest.ratingCount}</Text>
@@ -395,6 +461,7 @@ export default function QuestCard({
                         {quest.completionsCount > 0 && (
                             <View
                                 style={styles.questCardDetailsItem}
+                                pointerEvents={Platform.OS === 'web' ? 'none' : undefined}
                                 testID={`quest-card-completions-${quest.id}`}
                             >
                                 <Feather name="check-circle" size={13} color={colors.textMuted} />
@@ -423,6 +490,7 @@ export default function QuestCard({
                     accessibilityHint={i18nT('quests:screens.tabs.QuestCard.otkryvaet_otzyvy_k_kvestu_02dd3527')}
                     testID={`quest-card-reviews-${quest.id}`}
                     hitSlop={6}
+                    pointerEvents={Platform.OS === 'web' ? 'auto' : undefined}
                     {...Platform.select({
                         web: {
                             role: 'button',
