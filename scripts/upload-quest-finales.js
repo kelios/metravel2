@@ -4,7 +4,9 @@
  *
  *   PATCH /api/quest-finales/{finaleId}/ → video (file) + poster (file)
  *
- * Токен: .secrets/metravel-token.json ({"token": "..."}), маппинг finaleId —
+ * Токен: env METRAVEL_TOKEN, иначе .secrets/metravel-token.json ({"token": "..."}).
+ * Протухший токен → 401 Invalid token; свежий: node scripts/get-quest-token.js.
+ * Маппинг finaleId —
  * в scripts/generate-quest-finale-videos.js (сверен с прода по тексту финала).
  *
  * node scripts/upload-quest-finales.js [--dry-run] [--quest-id=...] [--posters-only]
@@ -24,7 +26,9 @@ const questIdArg = args.find(a => a.startsWith('--quest-id='));
 const ONLY_QUEST_ID = questIdArg ? questIdArg.split('=')[1] : null;
 
 const tokenFile = path.resolve(__dirname, '..', '.secrets', 'metravel-token.json');
-const TOKEN = JSON.parse(fs.readFileSync(tokenFile, 'utf8')).token;
+// METRAVEL_TOKEN важнее файла: файловый токен протухает и даёт 401 Invalid token.
+// Свежий — node scripts/get-quest-token.js (через env, чтобы не светить в ps).
+const TOKEN = process.env.METRAVEL_TOKEN || JSON.parse(fs.readFileSync(tokenFile, 'utf8')).token;
 
 function sizeMB(f) { return (fs.statSync(f).size / 1048576).toFixed(2); }
 

@@ -35,9 +35,10 @@ node -e '
 const https=require("https");
 const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.on("end",()=>r(d))}).on("error",j));
 (async()=>{
+  // /api/quests/ — DRF-пагинация: {count, next, previous, results}
   let page=1, all=[];
   while(true){ const j=JSON.parse(await get("https://metravel.by/api/quests/?page="+page));
-    all.push(...j.data); if(!j.next_page_url) break; page++; }
+    all.push(...j.results); if(!j.next) break; page++; }
   for(const q of all){ const b=JSON.parse(await get("https://metravel.by/api/quests/by-quest-id/"+q.quest_id+"/"));
     const f=b.finale||{}; if(!f.video_url) console.log("НЕТ ВИДЕО:", q.id, q.quest_id, "|", q.title); }
 })();'
@@ -60,9 +61,10 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
    ```bash
    node scripts/upload-quest-finales.js --dry-run --quest-id=<quest_id>
    ```
-5. **Залей на прод** (токен из `.secrets/metravel-token.json`):
+5. **Залей на прод.** Токен в `.secrets/metravel-token.json` регулярно протухает,
+   поэтому надёжнее подать свежий через env (в `ps` он не светится):
    ```bash
-   node scripts/upload-quest-finales.js --quest-id=<quest_id>
+   METRAVEL_TOKEN=$(node scripts/get-quest-token.js) node scripts/upload-quest-finales.js --quest-id=<quest_id>
    ```
    Скрипт PATCH-ит `/api/quest-finales/<finaleId>/` и сам проверяет, что у
    нужного `quest_id` появился `video_url`/`poster_url` (✅/❌ в выводе).
@@ -70,6 +72,25 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
    квесты с уже готовым видео).
 6. **Проверь GET-ом** `GET /api/quests/by-quest-id/<quest_id>/` — `finale.video_url`
    и `poster_url` непустые и ведут на S3.
+
+## Диагностика 401 при заливке
+
+`GET /api/quest-finales/<id>/` **публичный** — отдаёт 200 без заголовка вообще и
+даже с мусорным `Authorization`. Поэтому «GET прошёл» НЕ доказывает, что токен
+рабочий, и подбирать схему авторизации по коду GET бессмысленно. Схема верная
+одна — `Token <...>`. Различай два ответа на запись:
+
+| ответ на PATCH | что значит | что делать |
+| --- | --- | --- |
+| `401 {"detail":"Invalid token."}` | схема распознана, токен протух | взять свежий: `node scripts/get-quest-token.js` |
+| `401 {"detail":"Authentication credentials were not provided."}` | заголовок не распознан (напр. `Bearer`) или его нет | вернуть схему `Token <...>` |
+
+Проверять право на запись безопасно no-op'ом (ничего не меняет, вернёт 200):
+
+```bash
+curl -s -X PATCH -H "Authorization: Token $TOKEN" -H 'Content-Type: application/json' \
+  -d '{}' -w '\nHTTP %{http_code}\n' https://metravel.by/api/quest-finales/<finaleId>/
+```
 
 ## Только постер (для квестов с уже готовым видео)
 
@@ -82,6 +103,12 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
 - **Шрифты кроссплатформенны через env** (дефолт — Windows):
   `FONT_BOLD_PATH='/System/Library/Fonts/Supplemental/Arial Bold.ttf'`,
   `FONT_REG_PATH='/System/Library/Fonts/Supplemental/Arial.ttf'`.
+- **PIL нужен для fallback-оверлея, а в homebrew-python его нет.** На macOS PIL
+  есть в системном `/usr/bin/python3` → `PYTHON_PATH=/usr/bin/python3`.
+- **Сначала проверь, что ffmpeg вообще жив:** `ffmpeg -version`. После обновления
+  x265 homebrew-сборка падает на `Library not loaded: libx265.NNN.dylib`, и тогда
+  `ffmpeg -filters` молча пуст — это читается как «нет drawtext», хотя бинарник
+  просто не стартует. Лечится `brew reinstall ffmpeg`.
 - **`ffmpeg` обязателен** (`brew install ffmpeg`). Если сборка БЕЗ `libfreetype`
   (`ffmpeg -filters | grep drawtext` пусто → ошибка `No such filter: drawtext`) —
   текст «Квест пройден! / <город>» рендерится в прозрачный PNG (Python PIL,

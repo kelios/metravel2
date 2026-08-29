@@ -8,6 +8,7 @@
  *
  * Требования:
  *   - ffmpeg (путь через env FFMPEG_PATH или в PATH)
+ *   - ffmpeg без drawtext (homebrew) → нужен python3 с PIL: env PYTHON_PATH
  *   - обложки в assets/quests/<dir>/cover.png (warsaw-syrenka скачивается с прода)
  *
  * Запуск:
@@ -24,6 +25,9 @@ const { spawnSync } = require('child_process');
 const { videoEncodeArgs, assertFileCompliant } = require('./quest-finale-video-profile.js');
 
 const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg';
+// PIL нужен только для fallback-оверлея (ffmpeg без drawtext). На macOS PIL есть
+// в /usr/bin/python3, а homebrew-python обычно без него — отсюда env-override.
+const PYTHON = process.env.PYTHON_PATH || 'python3';
 const API_BASE = 'https://metravel.by';
 const ASSETS_DIR = path.resolve(__dirname, '..', 'assets', 'quests');
 
@@ -170,6 +174,25 @@ const QUESTS = [
     { questId: 'gniezno-white-eagle', dir: 'gnieznoWhiteEagle', city: 'Гнезно', finaleId: 136 },
     { questId: 'sasino-stilo', dir: 'sasinoStilo', city: 'Сашино', finaleId: 137 },
     { questId: 'hel-jurata-amber', dir: 'helJurataAmber', city: 'Хель', finaleId: 138 },
+    // Италия, Молдова, Бенилюкс, Дания, Хель (2026-08-30)
+    { questId: 'hel-fishermen', dir: 'helFishermen', city: 'Хель', finaleId: 139 },
+    { questId: 'bratislava-coronation-crown', dir: 'bratislavaCoronationCrown', city: 'Братислава', finaleId: 140 },
+    { questId: 'rome-mouth-of-truth', dir: 'romeMouthOfTruth', city: 'Рим', finaleId: 141 },
+    { questId: 'venice-lion-of-saint-mark', dir: 'veniceLionOfSaintMark', city: 'Венеция', finaleId: 142 },
+    { questId: 'naples-blood-of-san-gennaro', dir: 'naplesBloodOfSanGennaro', city: 'Неаполь', finaleId: 143 },
+    { questId: 'milan-rebuilt-city', dir: 'milanRebuiltCity', city: 'Милан', finaleId: 144 },
+    { questId: 'florence-guilds-renaissance', dir: 'florenceGuildsRenaissance', city: 'Флоренция', finaleId: 145 },
+    { questId: 'chisinau-white-stone', dir: 'chisinauWhiteStone', city: 'Кишинёв', finaleId: 146 },
+    { questId: 'orheiul-vechi-rock-monastery', dir: 'orheiulVechiRockMonastery', city: 'Старый Орхей', finaleId: 147 },
+    { questId: 'soroca-round-fortress', dir: 'sorocaRoundFortress', city: 'Сороки', finaleId: 148 },
+    { questId: 'luxembourg-melusina', dir: 'luxembourgMelusina', city: 'Люксембург', finaleId: 149 },
+    { questId: 'brussels-zwanze', dir: 'brusselsZwanze', city: 'Брюссель', finaleId: 150 },
+    { questId: 'copenhagen-from-the-sea', dir: 'copenhagenFromTheSea', city: 'Копенгаген', finaleId: 151 },
+    { questId: 'bruges-sleeping-city', dir: 'brugesSleepingCity', city: 'Брюгге', finaleId: 152 },
+    { questId: 'ghent-stolen-lamb', dir: 'ghentStolenLamb', city: 'Гент', finaleId: 153 },
+    { questId: 'antwerp-thrown-hand', dir: 'antwerpThrownHand', city: 'Антверпен', finaleId: 154 },
+    { questId: 'helsingor-sound-toll', dir: 'helsingorSoundToll', city: 'Хельсингёр', finaleId: 155 },
+    { questId: 'odense-ugly-duckling', dir: 'odenseUglyDuckling', city: 'Оденсе', finaleId: 156 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
@@ -250,8 +273,8 @@ function renderTextOverlayPng(cityLabel) {
     ].join('\n');
     const fontBold = process.env.FONT_BOLD_PATH || '/System/Library/Fonts/Supplemental/Arial Bold.ttf';
     const fontReg = process.env.FONT_REG_PATH || '/System/Library/Fonts/Supplemental/Arial.ttf';
-    const r = spawnSync('python3', ['-c', py, fontBold, fontReg, out, cityLabel], { encoding: 'utf8' });
-    if (r.status !== 0) throw new Error(`overlay png failed: ${r.stderr}`);
+    const r = spawnSync(PYTHON, ['-c', py, fontBold, fontReg, out, cityLabel], { encoding: 'utf8' });
+    if (r.status !== 0) throw new Error(`overlay png failed (${PYTHON}, нужен PIL — задай PYTHON_PATH): ${r.stderr}`);
     return out;
 }
 
