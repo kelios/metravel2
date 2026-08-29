@@ -1,6 +1,7 @@
 // ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
+import { View, Pressable, Platform, StyleSheet } from 'react-native';
 import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -8,7 +9,6 @@ import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import { router, usePathname, type Href } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { stripToDescription } from '@/components/travel/utils/travelHelpers';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { translate as i18nT } from '@/i18n'
@@ -17,6 +17,19 @@ import { translate as i18nT } from '@/i18n'
 type ArticleListItemProps = {
   article: Article;
   returnHref?: string | null;
+};
+
+// #1619 — a plain Pressable has no `href`/link role in the web DOM, so the card
+// was invisible to keyboard "next link", crawlers and native browser actions
+// (open in new tab, copy link) even though pointer clicks worked via
+// `router.push`. A real anchor gives all of that for free; this style only
+// neutralizes the browser's default link chrome so the Card underneath still
+// looks the same (matches `screens/tabs/QuestCard.tsx` / `components/listTravel/TravelListItem.tsx`).
+const webCardAnchorStyle: CSSProperties = {
+  display: 'block',
+  width: '100%',
+  textDecoration: 'none',
+  color: 'inherit',
 };
 
 const getArticleMediaHeights = (width: number) => {
@@ -97,62 +110,88 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article, returnHref }
     setImageFailed(false);
   }, [resolvedImageUrl]);
 
-  const handleWebOpenInNewTab = useCallback((e: any) => {
-    const hasModifier =
-      e?.metaKey ||
-      e?.ctrlKey ||
-      e?.shiftKey ||
-      e?.altKey ||
-      e?.button === 1;
+  const handlePress = useCallback(() => {
+    router.push(articleRouteWithOrigin as Href);
+  }, [articleRouteWithOrigin]);
 
-    if (!hasModifier) return;
+  // Left click without modifiers navigates through the router (SPA, no full
+  // reload); a real `href` means the browser already does the right thing for
+  // every other case — middle-click, Ctrl/Cmd-click, Shift-click, right-click
+  // "open in new tab" — natively, so there is nothing left to intercept here.
+  const handleAnchorClick = useCallback((event: ReactMouseEvent<HTMLAnchorElement>) => {
+    const shouldUseBrowserNavigation =
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey;
+    if (shouldUseBrowserNavigation) return;
 
-    e.preventDefault?.();
-    e.stopPropagation?.();
+    event.preventDefault();
+    handlePress();
+  }, [handlePress]);
 
-    void openExternalUrlInNewTab(articleRoute, {
-      allowRelative: true,
-      baseUrl: typeof window !== 'undefined' ? window.location.origin : '',
-    });
-  }, [articleRoute]);
+  const handleAnchorKeyDown = useCallback((event: ReactKeyboardEvent<HTMLAnchorElement>) => {
+    // Enter already triggers the anchor's native click activation. Space does
+    // not — anchors scroll the page on Space instead of activating — so it is
+    // handled explicitly here (same contract as `screens/tabs/QuestCard.tsx`).
+    if (event.key !== ' ') return;
+    event.preventDefault();
+    handlePress();
+  }, [handlePress]);
+
+  const cardContent = (
+    <Card style={styles.card}>
+      <View style={styles.imageWrapper}>
+        <ImageCardMedia
+            src={mediaSrc}
+            alt={name}
+            height={mediaHeight}
+            fit="cover"
+            borderRadius={0}
+            testID="article-list-media"
+            onError={() => setImageFailed(true)}
+        />
+      </View>
+      <Card.Content>
+        <Title numberOfLines={2}>{name}</Title>
+        {!!excerpt && (
+          <Paragraph style={styles.htmlText} numberOfLines={4}>
+            {excerpt}
+          </Paragraph>
+        )}
+        {article_type?.name && (
+            <Paragraph>
+              <Text style={styles.textOrange}>{article_type.name}</Text>
+            </Paragraph>
+        )}
+      </Card.Content>
+    </Card>
+  );
 
   return (
       <View style={styles.container}>
-        <Pressable
-          onPress={() => router.push(articleRouteWithOrigin as Href)}
-          {...({
-            onClick: handleWebOpenInNewTab,
-            onAuxClick: handleWebOpenInNewTab,
-            title: webOpenHint,
-          } as any)}
-        >
-          <Card style={styles.card}>
-            <View style={styles.imageWrapper}>
-              <ImageCardMedia
-                  src={mediaSrc}
-                  alt={name}
-                  height={mediaHeight}
-                  fit="cover"
-                  borderRadius={0}
-                  testID="article-list-media"
-                  onError={() => setImageFailed(true)}
-              />
-            </View>
-            <Card.Content>
-              <Title numberOfLines={2}>{name}</Title>
-              {!!excerpt && (
-                <Paragraph style={styles.htmlText} numberOfLines={4}>
-                  {excerpt}
-                </Paragraph>
-              )}
-              {article_type?.name && (
-                  <Paragraph>
-                    <Text style={styles.textOrange}>{article_type.name}</Text>
-                  </Paragraph>
-              )}
-            </Card.Content>
-          </Card>
-        </Pressable>
+        {Platform.OS === 'web' ? (
+          <a
+            href={articleRouteWithOrigin}
+            // The article title is already a stable, user-facing string —
+            // reusing it keeps the link name meaningful without inventing a
+            // new translated phrase (excerpt/category text stays out of the
+            // accessible name, matching `TravelListItem`'s explicit aria-label).
+            aria-label={name}
+            title={webOpenHint}
+            onClick={handleAnchorClick}
+            onKeyDown={handleAnchorKeyDown}
+            style={webCardAnchorStyle}
+            data-testid="article-list-item-link"
+          >
+            {cardContent}
+          </a>
+        ) : (
+          <Pressable onPress={handlePress}>
+            {cardContent}
+          </Pressable>
+        )}
       </View>
   );
 };
