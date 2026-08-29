@@ -96,11 +96,17 @@ async function resetScroll(page: Page): Promise<void> {
     await page.evaluate(() => {
         document.querySelectorAll('*').forEach((el) => {
             const cs = getComputedStyle(el);
-            if (cs.overflowY !== 'auto' && cs.overflowY !== 'scroll') return;
+            const scrollsY = cs.overflowY === 'auto' || cs.overflowY === 'scroll';
+            // Полки обнуляются наравне с колонками: сигнал считает и scrollLeft,
+            // и уехавшая вбок полка иначе держала бы его положительным на все
+            // последующие пробы — проверка позеленела бы при вернувшемся дефекте.
+            const scrollsX = cs.overflowX === 'auto' || cs.overflowX === 'scroll';
+            if (!scrollsY && !scrollsX) return;
             const node = el as HTMLElement;
             const previous = node.style.scrollBehavior;
             node.style.scrollBehavior = 'auto';
-            node.scrollTop = 0;
+            if (scrollsY) node.scrollTop = 0;
+            if (scrollsX) node.scrollLeft = 0;
             node.style.scrollBehavior = previous;
         });
         window.scrollTo(0, 0);

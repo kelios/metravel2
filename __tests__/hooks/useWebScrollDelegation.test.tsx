@@ -150,6 +150,26 @@ describe('useWebScrollDelegation — чистые предикаты', () => {
         expect(owner.style.scrollBehavior).toBe('smooth');
     });
 
+    it('боковую панель владельцем не берёт: она не должна забирать жест с другой части экрана', () => {
+        // Прод-риск с /map: левые фильтры (≈348×440 при вьюпорте 1280×900 — 13%)
+        // оказывались единственной прокручиваемой областью, и обычное колесо
+        // над полотном карты прокручивало бы их вместо ничего.
+        Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true });
+
+        const sidePanel = document.createElement('div');
+        sidePanel.style.overflowY = 'auto';
+        sizeElement(sidePanel, { client: 440, scroll: 9000 }, { client: 348, scroll: 348 });
+        document.body.appendChild(sidePanel);
+
+        const restore = stubElementsFromPoint(() => [sidePanel]);
+
+        expect(findPrimaryScrollOwner(document)).toBeNull();
+
+        restore();
+        sidePanel.remove();
+    });
+
     it('основным владельцем берёт самую крупную область под точками вьюпорта', () => {
         const wide = document.createElement('div');
         wide.style.overflowY = 'auto';

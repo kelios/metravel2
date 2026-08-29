@@ -26,10 +26,29 @@ export const DELEGATION_READY_ATTR = 'data-scroll-delegation';
 
 const SCROLLABLE_OVERFLOW = new Set(['auto', 'scroll', 'overlay']);
 const MIN_SCROLL_EXTENT = 1;
+/**
+ * Доля вьюпорта, ниже которой прокручиваемая область не считается основным
+ * владельцем экрана: сайдбар и панель фильтров не должны забирать жест,
+ * сделанный над другой частью экрана.
+ */
+const MIN_OWNER_VIEWPORT_SHARE = 0.25;
 /** Владелец кэшируется на время жеста: hit-test на каждое событие колеса лишний. */
 const OWNER_CACHE_MS = 400;
+/**
+ * Отрицательный вердикт живёт заметно меньше положительного: на экране без
+ * прокручиваемой колонки (карта) кэш всё равно снимает hit-test-шторм, а на
+ * доезжающем каталоге пользователь не должен ждать полный OWNER_CACHE_MS,
+ * прежде чем первое колесо начнёт работать. Замер 29.08: при едином TTL 400 мс
+ * mobile /travelsby падал в спеке примерно в одном прогоне из трёх.
+ */
+const OWNER_MISS_CACHE_MS = 150;
 /** Решение «инертная область» кэшируется на серию событий одного жеста. */
 const INERT_CACHE_MS = 150;
+/** До этого смещения свайп ещё не принадлежит ни одной оси. */
+const TOUCH_AXIS_LOCK_PX = 8;
+
+/** Фаза свайпа: ось выбирается один раз за жест и до конца его не меняется. */
+type TouchPhase = 'idle' | 'pending' | 'vertical';
 
 function isElement(node: unknown): node is Element {
     return !!node && (node as Node).nodeType === 1;
@@ -78,8 +97,16 @@ export function findPrimaryScrollOwner(doc: Document): HTMLElement | null {
         [w * 0.25, h * 0.5],
     ];
 
+    // Владелец — ОСНОВНАЯ область экрана, а не любая прокручиваемая панель.
+    // Без этого порога боковая панель забирает жест из чужой части экрана:
+    // на проде левые фильтры `/map` (≈348×440 при вьюпорте 1280×900) стали бы
+    // «владельцем», и обычное колесо над полотном карты прокручивало бы их.
+    // Замер долей: колонка каталога /quests 62% вьюпорта, правая колонка
+    // /search 65%, мобильные — 73–86%; сайдбар /quests 17%, фильтры карты 13%.
+    const minArea = w * h * MIN_OWNER_VIEWPORT_SHARE;
+
     let best: HTMLElement | null = null;
-    let bestArea = 0;
+    let bestArea = minArea;
     for (const [x, y] of probes) {
         for (const hit of doc.elementsFromPoint(Math.round(x), Math.round(y))) {
             const owner = findVerticallyScrollableAncestor(hit);
@@ -132,12 +159,15 @@ export function useWebScrollDelegation(): void {
 
         let cachedOwner: HTMLElement | null = null;
         let cachedOwnerAt = 0;
+        /** Отличает «кэш пуст» от «кэшировано отсутствие владельца». */
+        let ownerResolved = false;
         let inertTarget: EventTarget | null = null;
         let inertVerdict = false;
         let inertAt = 0;
-        let touchX = 0;
-        let touchY = 0;
-        let touchActive = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchAnchorY = 0;
+        let touchPhase: TouchPhase = 'idle';
 
         const now = () => Date.now();
 
@@ -161,24 +191,40 @@ export function useWebScrollDelegation(): void {
 
         const getOwner = (): HTMLElement | null => {
             const t = now();
-            const cacheValid =
-                cachedOwner &&
-                t - cachedOwnerAt < OWNER_CACHE_MS &&
-                document.contains(cachedOwner) &&
-                cachedOwner.scrollHeight - cachedOwner.clientHeight > MIN_SCROLL_EXTENT;
-            if (cacheValid) return cachedOwner;
+            const ttl = cachedOwner ? OWNER_CACHE_MS : OWNER_MISS_CACHE_MS;
+            if (ownerResolved && t - cachedOwnerAt < ttl) {
+                // Отсутствие владельца кэшируется наравне с находкой: на экранах
+                // без прокручиваемой колонки (карта) hit-test иначе крутится на
+                // каждое событие колеса. Замер 29.08 на /map: 20 событий = 80
+                // вызовов elementsFromPoint, ~0.45 мс на событие на пустую работу.
+                if (!cachedOwner) return null;
+                if (
+                    document.contains(cachedOwner) &&
+                    cachedOwner.scrollHeight - cachedOwner.clientHeight > MIN_SCROLL_EXTENT
+                ) {
+                    return cachedOwner;
+                }
+            }
             cachedOwner = findPrimaryScrollOwner(document);
             cachedOwnerAt = t;
+            ownerResolved = true;
             return cachedOwner;
         };
 
+        // Порядок проверок — от самой дешёвой к самой дорогой: вердикт по цели
+        // кэшируется на серию событий жеста, а `querySelector` по всему документу
+        // не должен выполняться на каждое колесо в обычной прокрутке контента.
         const shouldDelegate = (target: EventTarget | null): boolean =>
-            !documentScrolls() && !modalOpen() && isInertRegion(target);
+            isInertRegion(target) && !documentScrolls() && !modalOpen();
 
         const onWheel = (event: WheelEvent) => {
             if (event.defaultPrevented) return;
             // Ctrl/Cmd + колесо — зум браузера и ctrl-wheel-zoom карты.
             if (event.ctrlKey || event.metaKey) return;
+            // Shift+wheel и trackpad-жест с доминирующим deltaX принадлежат
+            // горизонтальным полкам/галереям, а не владельцу вертикального
+            // скролла экрана.
+            if (event.shiftKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
             if (!event.deltaY) return;
             if (!shouldDelegate(event.target)) return;
 
@@ -192,40 +238,60 @@ export function useWebScrollDelegation(): void {
         };
 
         const onTouchStart = (event: TouchEvent) => {
-            touchActive = false;
+            touchPhase = 'idle';
+            // Второй палец — это pinch-zoom или жест карты, а не прокрутка экрана.
             if (event.touches.length !== 1) return;
             const touch = event.touches[0];
-            touchX = touch.clientX;
-            touchY = touch.clientY;
-            touchActive = shouldDelegate(event.target);
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchAnchorY = touch.clientY;
+            if (shouldDelegate(event.target)) touchPhase = 'pending';
         };
 
         const onTouchMove = (event: TouchEvent) => {
-            if (!touchActive || event.defaultPrevented || event.touches.length !== 1) return;
+            if (touchPhase === 'idle' || event.defaultPrevented) return;
+            if (event.touches.length !== 1) {
+                touchPhase = 'idle';
+                return;
+            }
 
             const touch = event.touches[0];
-            const dx = touch.clientX - touchX;
-            const dy = touch.clientY - touchY;
-            // Горизонтальный жест принадлежит полкам и галереям — не трогаем.
-            if (Math.abs(dy) <= Math.abs(dx)) return;
 
-            touchX = touch.clientX;
-            touchY = touch.clientY;
+            if (touchPhase === 'pending') {
+                const dx = touch.clientX - touchStartX;
+                const dy = touch.clientY - touchStartY;
+                // Ось фиксируется один раз за жест и от точки касания. Покадровое
+                // решение отдавало прокрутку дрожанию руки посреди горизонтального
+                // свайпа по полке, а кадры, отвергнутые как горизонтальные,
+                // копили смещение и выстреливали одним прыжком.
+                if (Math.max(Math.abs(dx), Math.abs(dy)) < TOUCH_AXIS_LOCK_PX) return;
+                // Горизонтальный жест принадлежит полкам и галереям — не трогаем.
+                if (Math.abs(dy) <= Math.abs(dx)) {
+                    touchPhase = 'idle';
+                    return;
+                }
+                touchPhase = 'vertical';
+            }
+
+            const delta = touchAnchorY - touch.clientY;
+            touchAnchorY = touch.clientY;
 
             const owner = getOwner();
             if (!owner) return;
-            if (scrollOwnerBy(owner, -dy) && event.cancelable) {
+            if (scrollOwnerBy(owner, delta) && event.cancelable) {
                 event.preventDefault();
             }
         };
 
         const onTouchEnd = () => {
-            touchActive = false;
+            touchPhase = 'idle';
         };
 
         const onInvalidate = () => {
             cachedOwner = null;
+            ownerResolved = false;
             inertTarget = null;
+            inertAt = 0;
         };
 
         // Наблюдаемый признак того, что контракт прокрутки реально установлен:
