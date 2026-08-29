@@ -17,6 +17,7 @@ import React, { memo, Suspense, useMemo, useRef, useState } from 'react';
 
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform';
+import { applyBackwardFloatWrap } from '@/utils/richTextImageLayout';
 import { useStableContentWebEffects } from '@/components/travel/stableContent/useWebEffects';
 import {
   getWebRichTextStyles,
@@ -53,8 +54,13 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = fa
   const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
   const webRootRef = useRef<HTMLDivElement | null>(null);
+  // #1623: backward float wrap is render-only — applied here, after
+  // `prepareStableContentHtml`/`applySmartImageLayout` have already produced
+  // the string that autosave persists and PDF export prints. `prepared` below
+  // only ever feeds `dangerouslySetInnerHTML` and is discarded after paint,
+  // so this reorder can never reach the database or the print pipeline.
   const prepared = useMemo(
-    () => prepareStableContentHtml(html, { serverSanitized, articleBodyMedia }),
+    () => applyBackwardFloatWrap(prepareStableContentHtml(html, { serverSanitized, articleBodyMedia })),
     [html, serverSanitized, articleBodyMedia],
   );
 

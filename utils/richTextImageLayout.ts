@@ -424,3 +424,131 @@ export function applySmartImageLayout(html: string): string {
   const cleaned = removeImageLayoutClassesInternal(html, true);
   return groupConsecutiveImages(cleaned);
 }
+
+// ============================================================================
+// #1623 — render-only backward float wrap. WEB DISPLAY ONLY.
+//
+// A CSS float can only wrap content that comes AFTER it in the DOM. When the
+// authored order is `[paragraph][single portrait][heading]` there is nothing
+// following the photo to wrap, so the preceding paragraph is stranded
+// full-width above an unwrapped float (ticket evidence: prior `p`
+// 720x134 full width, float photo below it with dead space beside it).
+//
+// This function is intentionally SEPARATE from `applySmartImageLayout` /
+// `groupConsecutiveImages` above and must stay that way:
+//   - `hooks/useTravelFormPersistence.ts` runs `applySmartImageLayout` on the
+//     SAVED description on every autosave/save (`saveFormData`,
+//     `saveContentDelta`). Its result is what the server stores. Reordering
+//     paragraphs inside that persisted transform is a data-corruption risk on
+//     any interleaved article ([text][photo][text][photo][heading]): a
+//     backward swap can hand a preceding paragraph to a LATER float even
+//     though an EARLIER float already claims it as its forward wrap target,
+//     making two floats land adjacent to each other. The very next save then
+//     re-parses that output, `groupConsecutiveImages` buffers the two now-
+//     adjacent single images as a GROUP, and the author's assigned side is
+//     lost — a genuine idempotency break that writes corrupted HTML to the
+//     database, not merely a stale render.
+//   - `services/pdf-export/renderers/BlockRenderer.ts` also runs
+//     `applySmartImageLayout` directly for print; the ticket's scope
+//     explicitly excludes touching print (owned by #1602).
+// Keeping the swap here, applied AFTER `applySmartImageLayout` has already
+// produced the string that gets persisted/printed, and wiring it ONLY from
+// `components/travel/StableContent.web.tsx` (which feeds a `dangerouslySetInnerHTML`
+// string that is discarded after paint, never fed back into a save or PDF
+// call), makes data corruption structurally impossible: this function's
+// output never reaches the server or the print pipeline.
+//
+// DO NOT call this from `hooks/useTravelFormPersistence.ts`,
+// `services/pdf-export/**`, or any other path whose output is persisted or
+// printed.
+const MIN_PRECEDING_TEXT_CHARS_FOR_BACKWARD_FLOAT = 60;
+
+function stripTagsForLength(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isFloatedSingleImageParagraph(html: string): boolean {
+  return isSingleImageParagraph(html) && /\bimg-float-(left|right)\b/i.test(html);
+}
+
+// A following paragraph only counts as a real wrap target when it has visible
+// text. Editors routinely insert `<p>&nbsp;</p>` placeholder paragraphs; a
+// tag-only check (`starts with <p`) treats those as "already handled" and
+// silently skips the swap, leaving the float unwrapped anyway.
+function isNonEmptyTextParagraph(html: string): boolean {
+  if (!/^<p(?:\s[^>]*)?>/i.test(html)) return false;
+  return stripTagsForLength(html).length > 0;
+}
+
+function isWrappableTextParagraph(html: string): boolean {
+  if (!/^<p(?:\s[^>]*)?>/i.test(html)) return false;
+  if (/<img\b/i.test(html)) return false;
+  return stripTagsForLength(html).length >= MIN_PRECEDING_TEXT_CHARS_FOR_BACKWARD_FLOAT;
+}
+
+/**
+ * Render-only post-pass over ALREADY fully-classed HTML (i.e. the output of
+ * `applySmartImageLayout`). Moves a floated single portrait that has nothing
+ * wrappable after it (heading/group/end of content) to sit immediately before
+ * the nearest preceding plain-text paragraph, IF that paragraph has enough
+ * text (`isWrappableTextParagraph`) AND is not already the forward wrap
+ * target of an earlier float (`isClaimed`) — the latter check is what keeps
+ * interleaved articles ([text][photo1][text][photo2][heading]) safe: photo1
+ * already owns the middle paragraph via the existing, unmodified forward-wrap
+ * CSS, so photo2 is left exactly as `applySmartImageLayout` produced it
+ * instead of being forced onto an already-used neighbor.
+ */
+export function applyBackwardFloatWrap(html: string): string {
+  if (!html || typeof html !== 'string') return html ?? '';
+
+  const parts = html.split(/(<p[^>]*>[\s\S]*?<\/p>)/gi).filter(Boolean);
+  const result: string[] = [];
+
+  const lastSignificantIndex = (): number => {
+    for (let index = result.length - 1; index >= 0; index -= 1) {
+      if (result[index].trim()) return index;
+    }
+    return -1;
+  };
+
+  const isClaimed = (index: number): boolean => {
+    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+      if (!result[cursor].trim()) continue;
+      return isFloatedSingleImageParagraph(result[cursor]);
+    }
+    return false;
+  };
+
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i];
+
+    if (isFloatedSingleImageParagraph(part)) {
+      let next: string | undefined;
+      for (let j = i + 1; j < parts.length; j += 1) {
+        if (parts[j].trim()) {
+          next = parts[j];
+          break;
+        }
+      }
+      const hasFollowingParagraph = next !== undefined && isNonEmptyTextParagraph(next);
+
+      if (!hasFollowingParagraph) {
+        const targetIndex = lastSignificantIndex();
+        const target = targetIndex >= 0 ? result[targetIndex] : undefined;
+        if (target !== undefined && isWrappableTextParagraph(target) && !isClaimed(targetIndex)) {
+          result[targetIndex] = part;
+          result.push(target);
+          continue;
+        }
+      }
+    }
+
+    result.push(part);
+  }
+
+  return result.join('');
+}
