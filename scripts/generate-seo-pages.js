@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { loadCatalogs: loadI18nCatalogs } = require('../i18n/babel-inline-plugin');
 const { fetchJson, sleep } = require('./lib/fetchJson');
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
@@ -60,6 +61,18 @@ const SITE_URL = 'https://metravel.by';
 const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 const IMAGE_OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
+
+const RU_I18N_CATALOG = loadI18nCatalogs(path.resolve(__dirname, '..')).catalogs.get('ru');
+function readRequiredRuTranslation(key) {
+  const value = RU_I18N_CATALOG?.get(key);
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`Missing required RU translation: ${key}`);
+  }
+  return value;
+}
+
+const HOME_SEO_TITLE_RU = readRequiredRuTranslation('seoStatic:root.home.title');
+const HOME_SEO_DESCRIPTION_RU = readRequiredRuTranslation('seoStatic:root.home.description');
 
 // ---------------------------------------------------------------------------
 // #1394: build-time API pacing
@@ -3012,9 +3025,8 @@ function pickRelatedTravels(travel, index, limit = 6) {
 const STATIC_PAGES = [
   {
     route: '/',
-    title: 'Идеи поездок на выходные и книга путешествий | Metravel',
-    description:
-      'Планируйте путешествия, публикуйте маршруты, добавляйте фото и заметки, сохраняйте избранное и собирайте красивую книгу поездок в PDF.',
+    title: HOME_SEO_TITLE_RU,
+    description: HOME_SEO_DESCRIPTION_RU,
     image: `${SITE_URL}/og-home.jpg`,
     // `#root` is empty in the static export, so the runtime H1 from index.tsx
     // never reaches the raw HTML — Googlebot saw a page with zero H1 (audit

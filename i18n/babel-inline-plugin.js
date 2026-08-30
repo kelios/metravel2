@@ -203,7 +203,7 @@ const buildCompiledTranslation = (t, key, localeCodes, catalogs) => {
   ])
 }
 
-module.exports = function inlineLocalizedTranslations({ types: t }) {
+function inlineLocalizedTranslations({ types: t }) {
   return {
     name: 'metravel-inline-localized-translations',
     visitor: {
@@ -245,3 +245,9 @@ module.exports = function inlineLocalizedTranslations({ types: t }) {
     },
   }
 }
+
+module.exports = inlineLocalizedTranslations
+// The production SSG generator reads the same RU baseline as the web inliner.
+// Exporting the existing catalog reader keeps static HTML and hydrated SEO copy
+// on one source without teaching a second parser about TypeScript resources.
+module.exports.loadCatalogs = loadCatalogs

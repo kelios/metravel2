@@ -1,6 +1,6 @@
 export const seoStaticResources = {
-  "root.home.title": "Pomysły na weekendowe wycieczki i książka podróżnicza | Metravel",
-  "root.home.description": "Wybieraj trasy według dystansu i rodzaju wakacji, zapisuj podróże ze zdjęciami i notatkami oraz zbieraj osobistą książkę podróżniczą w formacie PDF.",
+  "root.home.title": "Questy i trasy na weekend po Białorusi | Metravel",
+  "root.home.description": "Wybieraj miejskie questy i gotowe trasy po Białorusi: zadania, punkty na mapie oraz pomysły na weekendowe wycieczki i spacery.",
   "root.default.description": "Trasy, notatki i zdjęcia z podróży po Białorusi i poza nią. Znajdź pomysły na podróż, zapisuj miejsca i udostępniaj swoje plany podróży w Metravel.",
   "root.search.title": "Szukaj tras i pomysłów na podróż po Białorusi | Metravel",
   "root.search.description": "Szukaj wycieczek według kraju, kategorii i stopnia trudności. Filtruj trasy i zapisuj najlepsze pomysły w swojej książce podróżniczej.",

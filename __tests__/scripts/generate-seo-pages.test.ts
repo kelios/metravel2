@@ -1498,6 +1498,67 @@ describe('static page meta budgets', () => {
   })
 })
 
+describe('home SEO metadata parity', () => {
+  const { STATIC_PAGES } = require('@/scripts/generate-seo-pages')
+  const { resources } = require('@/i18n/resources')
+  const home = STATIC_PAGES.find((page: { route: string }) => page.route === '/')
+
+  it('uses the canonical RU i18n values for generated raw HTML and social metadata', () => {
+    expect(home).toBeDefined()
+    expect(home.title).toBe(resources.ru.seoStatic['root.home.title'])
+    expect(home.description).toBe(resources.ru.seoStatic['root.home.description'])
+    expect(home.title).not.toContain('книга путешествий')
+    expect(home.description).not.toMatch(/PDF|книг/i)
+
+    const html = injectMeta(MINIMAL_BASE, {
+      ...home,
+      canonical: 'https://metravel.by/',
+    })
+    const title = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]
+    const description = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i)?.[1]
+    const ogTitle = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i)?.[1]
+    const ogDescription = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i)?.[1]
+    const twitterTitle = html.match(/<meta[^>]*name="twitter:title"[^>]*content="([^"]+)"/i)?.[1]
+    const twitterDescription = html.match(/<meta[^>]*name="twitter:description"[^>]*content="([^"]+)"/i)?.[1]
+
+    expect(title).toBe(home.title)
+    expect(description).toBe(home.description)
+    expect(ogTitle).toBe(title)
+    expect(ogDescription).toBe(description)
+    expect(twitterTitle).toBe(title)
+    expect(twitterDescription).toBe(description)
+  })
+
+  it('keeps the Babel inliner factory contract while reusing its read-only catalog', () => {
+    const inlinePlugin = require('@/i18n/babel-inline-plugin')
+    const pluginBeforeGeneratorRequire = inlinePlugin
+    const argsBefore = [...process.argv]
+    const cwdBefore = process.cwd()
+
+    require('@/scripts/generate-seo-pages')
+
+    const pluginAfterGeneratorRequire = require('@/i18n/babel-inline-plugin')
+    expect(pluginAfterGeneratorRequire).toBe(pluginBeforeGeneratorRequire)
+    expect(typeof pluginAfterGeneratorRequire).toBe('function')
+    expect(typeof pluginAfterGeneratorRequire.loadCatalogs).toBe('function')
+    expect(pluginAfterGeneratorRequire({ types: {} })).toEqual(expect.objectContaining({
+      name: 'metravel-inline-localized-translations',
+      visitor: expect.objectContaining({ Program: expect.any(Function) }),
+    }))
+    expect(process.argv).toEqual(argsBefore)
+    expect(process.cwd()).toBe(cwdBefore)
+  })
+
+  it('leaves the /quests control metadata unchanged', () => {
+    const quests = STATIC_PAGES.find((page: { route: string }) => page.route === '/quests')
+
+    expect(quests).toEqual(expect.objectContaining({
+      title: 'Городские квесты и маршруты с заданиями | Metravel',
+      description: 'Проходите городские квесты Metravel: маршруты с заданиями, точками на карте и идеями для прогулок и поездок.',
+    }))
+  })
+})
+
 // `#root` is empty in the static export, so a runtime <h1> never reaches raw HTML.
 // Audit 2026-08-08 found `/` and `/map` shipping zero H1 while every travel and
 // quest page had exactly one.

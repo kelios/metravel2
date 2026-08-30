@@ -21,17 +21,19 @@ jest.mock('@/components/home/Home', () => {
   }
 })
 
+const mockInstantSEO = jest.fn((_props: unknown) => null)
+
 jest.mock('@/components/seo/LazyInstantSEO', () => {
-  const React = require('react')
   return {
     __esModule: true,
-    default: () => React.createElement(React.Fragment, null),
+    default: (props: unknown) => mockInstantSEO(props),
   }
 })
 
 describe('Home screen regression guards', () => {
   beforeEach(() => {
     Platform.OS = 'web'
+    mockInstantSEO.mockClear()
   })
 
   it('does not use raw HTML heading tags inside RN screen source', () => {
@@ -48,5 +50,22 @@ describe('Home screen regression guards', () => {
     await waitFor(() => {
       expect(getByTestId('home-screen-content')).toBeTruthy()
     })
+  })
+
+  it('hydrates InstantSEO from the canonical RU home metadata keys', async () => {
+    const { resources } = require('@/i18n/resources')
+    const HomeScreen = require('@/app/(tabs)/index').default
+    render(<HomeScreen />)
+
+    await waitFor(() => {
+      expect(mockInstantSEO).toHaveBeenCalled()
+    })
+
+    const latestProps = mockInstantSEO.mock.calls.at(-1)?.[0] as {
+      title?: string
+      description?: string
+    }
+    expect(latestProps.title).toBe(resources.ru.seoStatic['root.home.title'])
+    expect(latestProps.description).toBe(resources.ru.seoStatic['root.home.description'])
   })
 })

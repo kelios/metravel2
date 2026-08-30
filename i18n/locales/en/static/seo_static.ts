@@ -1,6 +1,6 @@
 export const seoStaticResources = {
-  "root.home.title": "Weekend Trip Ideas and Travel Book | Metravel",
-  "root.home.description": "Select routes by distance and type of vacation, save trips with photos and notes, and collect a personal travel book in PDF.",
+  "root.home.title": "Belarus City Quests and Weekend Routes | Metravel",
+  "root.home.description": "Choose city quests and ready-made routes across Belarus, with challenges, map points, and ideas for weekend trips and walks.",
   "root.default.description": "Routes, notes and photos of travel in Belarus and beyond. Find travel ideas, save places and share your itineraries on Metravel.",
   "root.search.title": "Search for routes and travel ideas around Belarus | Metravel",
   "root.search.description": "Search for trips by country, category and difficulty. Filter routes and save the best ideas to your travel book.",

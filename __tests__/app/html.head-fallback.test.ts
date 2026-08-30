@@ -9,6 +9,8 @@ describe('critical head fallback', () => {
     expect(source).toContain("const HOME_TITLE = i18nT('seoStatic:root.home.title')")
     expect(source).toContain("const HOME_DESCRIPTION = i18nT('seoStatic:root.home.description')")
     expect(source).toContain("meta[name=\"description\"]")
+    expect(source).not.toContain('Идеи поездок на выходные и книга путешествий | Metravel')
+    expect(source).not.toContain('собирайте красивую книгу поездок в PDF')
   })
 
   it('keeps dedicated article fallback title and description in +html fallback script', () => {
