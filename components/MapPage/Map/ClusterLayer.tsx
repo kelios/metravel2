@@ -142,6 +142,56 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     [L, clusterIconsCache, isDark],
   )
 
+  // Cluster/marker icons are Leaflet `<div role="button">` nodes. Browsers only
+  // derive an accessible name from `alt` for `<img>` icons (see
+  // `leaflet/src/layer/marker/Marker.js` `_initIcon`), so a divIcon never gets
+  // one for free — `aria-label` has to be set on the real DOM node explicitly.
+  // react-leaflet resolves this `ref` in React's layout phase, which runs
+  // BEFORE the passive effect that actually calls `map.addLayer(...)`
+  // (`@react-leaflet/core` `useLayerLifecycle`) and creates `marker._icon`. On
+  // a first mount `el` is therefore still undefined and the label is silently
+  // skipped; only a later re-render (which re-invokes this same ref) papers
+  // over it. That race is why some clusters kept a bare digit as their name
+  // while most already worked (#1624). Leaflet fires `'add'` synchronously
+  // right after `_initIcon()`, so listening for it once closes the gap
+  // without waiting on an unrelated re-render.
+  //
+  // `ref` above is an inline arrow, so React re-invokes it (and this callback)
+  // on every re-render even when the underlying marker hasn't changed at all.
+  // Subscribing to `once('add', ...)` unconditionally leaked: each call builds
+  // a brand new `apply` closure, Leaflet's `_on()` dedupes only by function
+  // identity, so `marker._events.add` grew for the marker's whole lifetime —
+  // even long after its icon (and label) already existed. Only fall back to
+  // `once` when the icon genuinely is not there yet (code review, #1624).
+  const applyAccessibleName = useCallback((marker: any, name: string) => {
+    const apply = () => {
+      try {
+        const el = marker?._icon || marker?.getElement?.()
+        if (el && !el.getAttribute('aria-label')) {
+          el.setAttribute('aria-label', name)
+        }
+      } catch {
+        // noop
+      }
+    }
+
+    let iconReady = false
+    try {
+      iconReady = !!(marker?._icon || marker?.getElement?.())
+    } catch {
+      iconReady = true // broken marker — do not subscribe on top of it
+    }
+
+    apply()
+    if (iconReady) return
+
+    try {
+      marker?.once?.('add', apply)
+    } catch {
+      // noop
+    }
+  }, [])
+
   const handleMarkerClick = useCallback(
     (e: any, point: Point, coords: { lat: number; lng: number }) => {
       // Stop propagation to prevent map click handler (route mode).
@@ -189,8 +239,14 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                 // уникален, поэтому коллизий между кластерами нет).
                 const markerKey = `cluster-expanded-${cluster.key}-${place.placeKey}`
 
-                const accessibleName =
-                  item.address || item.categoryName || i18nT('map:components.MapPage.Map.ClusterLayer.tochka_na_karte_7800c0d7')
+                // `Point.categoryName` keeps the legacy `string | { name?: string }
+                // | Array<...>` union (`components/map-core/types.ts` `LegacyMapPoint`)
+                // even though every caller here always ends up needing a plain
+                // string — coerce explicitly so this stays a `string` the way the
+                // native `title`/`alt` attributes it feeds already treat it.
+                const accessibleName = String(
+                  item.address || item.categoryName || i18nT('map:components.MapPage.Map.ClusterLayer.tochka_na_karte_7800c0d7'),
+                )
                 const markerProps: any = {
                   position: [ll[1], ll[0]],
                   icon: markerIcon,
@@ -203,14 +259,10 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                         String(item.coord ?? ''),
                         marker ?? null,
                       )
-                      // Add aria-label for a11y (Lighthouse aria-command-name audit)
-                      const el = marker?._icon || marker?.getElement?.()
-                      if (el && !el.getAttribute('aria-label')) {
-                        el.setAttribute('aria-label', accessibleName)
-                      }
                     } catch {
                       // noop
                     }
+                    applyAccessibleName(marker, accessibleName)
                   },
                   eventHandlers: {
                     click: (e: any) =>
@@ -257,8 +309,11 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
           const singleKey = `cluster-single-${cluster.key}-${getMapPlaceKey(item)}`
 
-          const accessibleName =
-            item.address || item.categoryName || i18nT('map:components.MapPage.Map.ClusterLayer.tochka_na_karte_7800c0d7')
+          // See the identical coercion above: `categoryName` keeps a legacy
+          // non-string union even though this always needs a plain string.
+          const accessibleName = String(
+            item.address || item.categoryName || i18nT('map:components.MapPage.Map.ClusterLayer.tochka_na_karte_7800c0d7'),
+          )
           const singleMarkerProps: any = {
             position: [ll[1], ll[0]],
             icon: markerIcon,
@@ -268,14 +323,10 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             ref: (marker: any) => {
               try {
                 onMarkerInstance?.(String(item.coord ?? ''), marker ?? null)
-                // Add aria-label for a11y (Lighthouse aria-command-name audit)
-                const el = marker?._icon || marker?.getElement?.()
-                if (el && !el.getAttribute('aria-label')) {
-                  el.setAttribute('aria-label', accessibleName)
-                }
               } catch {
                 // noop
               }
+              applyAccessibleName(marker, accessibleName)
             },
             eventHandlers: {
               click: (e: any) =>
@@ -321,17 +372,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             icon={icon as any}
             alt={clusterAccessibleName}
             title={clusterAccessibleName}
-            ref={(marker: any) => {
-              try {
-                // Add aria-label for a11y (Lighthouse aria-command-name audit)
-                const el = marker?._icon || marker?.getElement?.()
-                if (el && !el.getAttribute('aria-label')) {
-                  el.setAttribute('aria-label', clusterAccessibleName)
-                }
-              } catch {
-                // noop
-              }
-            }}
+            ref={(marker: any) => applyAccessibleName(marker, clusterAccessibleName)}
             eventHandlers={{
               click: (e: any) => {
                 try {

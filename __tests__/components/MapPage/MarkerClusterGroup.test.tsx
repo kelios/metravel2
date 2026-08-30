@@ -587,4 +587,163 @@ describe('MarkerClusterGroup', () => {
     expect(L.marker).toHaveBeenCalledTimes(3)
     expect(group.removeLayers).toHaveBeenCalledTimes(2)
   })
+
+  // #1624 — leaflet.markercluster builds cluster icons itself (`iconCreateFunction`
+  // only supplies the divIcon html/size), so the group never gets a chance to set an
+  // accessible name at construction time. Two independent hooks are supposed to catch
+  // every cluster: a post-sync sweep over `map.eachLayer` (covers the very first
+  // batch) and a `map.on('layeradd', ...)` listener (covers every later re-cluster).
+  describe('cluster accessible names (#1624)', () => {
+    class FakeMarkerCluster {
+      _icon: any
+      constructor(icon: any, childCount: number) {
+        this._icon = icon
+        this.getChildCount = () => childCount
+      }
+      getChildCount: () => number
+    }
+
+    const makeIcon = () => {
+      const attrs: Record<string, string> = {}
+      return {
+        getAttribute: (key: string) => (key in attrs ? attrs[key] : null),
+        setAttribute: (key: string, value: string) => {
+          attrs[key] = value
+        },
+      }
+    }
+
+    it('labels every cluster icon found by the post-sync `map.eachLayer` sweep with a localized, pluralized name', () => {
+      const clusterIcon = makeIcon()
+      const fakeCluster = new FakeMarkerCluster(clusterIcon, 5)
+      const marker = {} as TestMarker
+      marker.bindPopup = jest.fn()
+      marker.bindTooltip = jest.fn()
+      marker.on = jest.fn((): TestMarker => marker)
+      const group = {
+        addLayers: jest.fn(),
+        addLayer: jest.fn(),
+        clearLayers: jest.fn(),
+        on: jest.fn(),
+        off: jest.fn(),
+      }
+      const map = {
+        addLayer: jest.fn(),
+        removeLayer: jest.fn(),
+        on: jest.fn(),
+        off: jest.fn(),
+        eachLayer: jest.fn((callback: (layer: any) => void) => {
+          callback(fakeCluster)
+        }),
+      }
+      const L = {
+        markerClusterGroup: jest.fn(() => group),
+        marker: jest.fn(() => marker),
+        divIcon: jest.fn(),
+        MarkerCluster: FakeMarkerCluster,
+      }
+
+      renderWithClient(
+        <MarkerClusterGroup
+          L={L}
+          useMap={() => map}
+          points={[{ id: 1, coord: '53.9,27.56', address: 'Минск' } as any]}
+          markerIcon={{}}
+          PopupContent={() => null}
+          Popup={() => null}
+        />,
+      )
+
+      expect(map.eachLayer).toHaveBeenCalled()
+      expect(clusterIcon.getAttribute('aria-label')).toBe('Кластер: 5 мест')
+    })
+
+    it('labels a cluster reported later through the map layeradd event, and ignores non-cluster layers', () => {
+      const clusterIcon = makeIcon()
+      const fakeCluster = new FakeMarkerCluster(clusterIcon, 3)
+      const plainMarkerIcon = makeIcon()
+      const plainLayer = { _icon: plainMarkerIcon }
+      const marker = {} as TestMarker
+      marker.bindPopup = jest.fn()
+      marker.bindTooltip = jest.fn()
+      marker.on = jest.fn((): TestMarker => marker)
+      const group = {
+        addLayers: jest.fn(),
+        addLayer: jest.fn(),
+        clearLayers: jest.fn(),
+        on: jest.fn(),
+        off: jest.fn(),
+      }
+      const layerAddHandlers: Array<(event: any) => void> = []
+      const map = {
+        addLayer: jest.fn(),
+        removeLayer: jest.fn(),
+        on: jest.fn((eventName: string, handler: (event: any) => void) => {
+          if (eventName === 'layeradd') layerAddHandlers.push(handler)
+        }),
+        off: jest.fn(),
+      }
+      const L = {
+        markerClusterGroup: jest.fn(() => group),
+        marker: jest.fn(() => marker),
+        divIcon: jest.fn(),
+        MarkerCluster: FakeMarkerCluster,
+      }
+
+      renderWithClient(
+        <MarkerClusterGroup
+          L={L}
+          useMap={() => map}
+          points={[{ id: 1, coord: '53.9,27.56', address: 'Минск' } as any]}
+          markerIcon={{}}
+          PopupContent={() => null}
+          Popup={() => null}
+        />,
+      )
+
+      expect(layerAddHandlers.length).toBeGreaterThan(0)
+
+      // A regular marker layer is not an `L.MarkerCluster` — must stay untouched.
+      layerAddHandlers.forEach((handler) => handler({ layer: plainLayer }))
+      expect(plainMarkerIcon.getAttribute('aria-label')).toBeNull()
+
+      // The actual cluster layer must be labelled.
+      layerAddHandlers.forEach((handler) => handler({ layer: fakeCluster }))
+      expect(clusterIcon.getAttribute('aria-label')).toBe('Кластер: 3 места')
+    })
+
+    it('does not throw when `L.MarkerCluster`, `map.on` or `map.eachLayer` are unavailable (degenerate host)', () => {
+      const marker = {} as TestMarker
+      marker.bindPopup = jest.fn()
+      marker.bindTooltip = jest.fn()
+      marker.on = jest.fn((): TestMarker => marker)
+      const group = {
+        addLayers: jest.fn(),
+        addLayer: jest.fn(),
+        clearLayers: jest.fn(),
+        on: jest.fn(),
+        off: jest.fn(),
+      }
+      // No `on`/`off`/`eachLayer` — matches every pre-existing test's map mock above.
+      const map = { addLayer: jest.fn(), removeLayer: jest.fn() }
+      const L = {
+        markerClusterGroup: jest.fn(() => group),
+        marker: jest.fn(() => marker),
+        divIcon: jest.fn(),
+      }
+
+      expect(() =>
+        renderWithClient(
+          <MarkerClusterGroup
+            L={L}
+            useMap={() => map}
+            points={[{ id: 1, coord: '53.9,27.56', address: 'Минск' } as any]}
+            markerIcon={{}}
+            PopupContent={() => null}
+            Popup={() => null}
+          />,
+        ),
+      ).not.toThrow()
+    })
+  })
 })

@@ -19,6 +19,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 
 import { buildClusterIconHtml } from './mapMarkerStyles'
+import { useApplyClusterAccessibleName } from './clusterAccessibleName'
 
 interface PopupContentProps {
   point: Point
@@ -464,6 +465,35 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     }
   }, [isDark, groupVersion])
 
+  // Accessible name for leaflet.markercluster's own cluster bubbles — logic
+  // and rationale live in `clusterAccessibleName.ts` (#1624; split out to keep
+  // this file under the push-gate's 800-LOC threshold).
+  const applyClusterAccessibleName = useApplyClusterAccessibleName(L)
+
+  // `map.fire('layeradd', ...)` runs synchronously right after
+  // `onAdd()`/`_initIcon()` for every layer the group adds
+  // (`leaflet/src/layer/Layer.js` `_layerAdd`), so `_icon` is guaranteed to
+  // exist here. This alone still misses the very first cluster batch: the
+  // initial `group.addLayers(...)` call below (in the marker-sync effect)
+  // builds the WHOLE clustering tree — including every zoom level, not only
+  // the one currently shown — and calls `_recursivelyAddChildrenToMap`
+  // synchronously inside that same call, so it can add the starting view's
+  // clusters to the map before this effect (declared after "create group",
+  // before "sync markers") finishes attaching on a slower first commit.
+  // Zoom/pan-driven re-clustering afterwards is unaffected and always goes
+  // through `layeradd`. The sync effect's own sweep below is what actually
+  // covers the initial batch; this listener's job is every batch after it.
+  useEffect(() => {
+    if (!L || !map || typeof map.on !== 'function' || typeof map.off !== 'function') {
+      return
+    }
+    const handleLayerAdd = (event: any) => applyClusterAccessibleName(event?.layer)
+    map.on('layeradd', handleLayerAdd)
+    return () => {
+      map.off('layeradd', handleLayerAdd)
+    }
+  }, [L, map, applyClusterAccessibleName])
+
   // Sync markers with cluster group.
   //
   // #1347 — this used to unbind every handler/popup, `clearLayers()` and rebuild
@@ -657,6 +687,21 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       }
     }
 
+    // `layeradd` (the effect above) misses the very first cluster batch: this
+    // very call — `group.addLayers(newMarkers)` a few lines up — builds the
+    // whole clustering tree AND adds the starting view's clusters to the map
+    // synchronously inside itself, which can finish before that effect
+    // attaches on a slower first commit (#1624). Sweep every currently-shown
+    // cluster right after touching the group so the initial batch, and any
+    // batch whose count shifted from a removal alone, always ends up labelled.
+    if (map && typeof map.eachLayer === 'function') {
+      try {
+        map.eachLayer(applyClusterAccessibleName)
+      } catch {
+        // noop
+      }
+    }
+
     if (!removedMarkers.length && !newMarkers.length) return
 
     // Re-publish the index to the parent. `onMarkerInstance` is keyed by COORD while
@@ -674,11 +719,13 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     }
   }, [
     L,
+    map,
     validPoints,
     markerIcon,
     markerOpacity,
     suppressLeafletPopupOnSelect,
     groupVersion,
+    applyClusterAccessibleName,
   ])
 
   // Marker options that are baked in at creation time (icon, opacity, whether a
