@@ -533,9 +533,13 @@ export default function QuestsScreen() {
         if (selectedCityId === BIKE_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.veloTitle', { value1: bikeQuests.length, value2: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: bikeQuests.length }) });
         }
+        // #1618: the unfiltered catalog (selectedCityId === ALL_QUESTS_ID, the
+        // initial state) must match scripts/generate-seo-pages.js's static
+        // `/quests` <title> byte-for-byte, or raw HTML and the hydrated
+        // document.title/og:title permanently disagree for the bare route.
         return selectedCityName
             ? i18nT('quests:screens.tabs.QuestsScreen.kvesty_value1_metravel_f8aef4dd', { value1: selectedCityName })
-            : i18nT('quests:screens.tabs.QuestsScreen.vse_kvesty_metravel_32e5b095');
+            : i18nT('quests:screens.tabs.QuestsScreen.catalogTitleDefault');
     }, [selectedCityId, selectedCityName, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length, kidsQuests.length, bikeQuests.length]);
 
     const descText = useMemo(() => {
@@ -610,7 +614,7 @@ export default function QuestsScreen() {
                 <h1 style={{
                     position: 'absolute' as const, width: 1, height: 1, padding: 0, margin: -1,
                     overflow: 'hidden' as const, clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0,
-                } as any}>{titleText.replace(/\s*\|\s*MeTravel\s*$/, '')}</h1>
+                } as any}>{titleText.replace(/\s*\|\s*MeTravel\s*$/i, '')}</h1>
             )}
 
             {/* Mobile: Filter drawer overlay */}

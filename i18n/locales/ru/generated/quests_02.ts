@@ -263,4 +263,5 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.subtitle": "Маршруты рядом с этим — можно пройти сегодня же",
   "components.quests.QuestNextStepSection.eyebrow": "Городской квест · рядом",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · рядом",
+  "screens.tabs.QuestsScreen.catalogTitleDefault": "Городские квесты и маршруты с заданиями | Metravel",
 } as const

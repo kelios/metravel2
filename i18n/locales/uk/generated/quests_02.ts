@@ -263,4 +263,5 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.subtitle": "Маршрути поруч із цим — можна пройти сьогодні",
   "components.quests.QuestNextStepSection.eyebrow": "Міський квест · поруч",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · поруч",
+  "screens.tabs.QuestsScreen.catalogTitleDefault": "Міські квести та маршрути із завданнями | Metravel",
 } as const

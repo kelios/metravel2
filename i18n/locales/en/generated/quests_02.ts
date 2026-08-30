@@ -263,4 +263,5 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.subtitle": "Routes next to this one — you can walk them today",
   "components.quests.QuestNextStepSection.eyebrow": "City quest · nearby",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · nearby",
+  "screens.tabs.QuestsScreen.catalogTitleDefault": "City quests and routes with tasks | Metravel",
 } as const

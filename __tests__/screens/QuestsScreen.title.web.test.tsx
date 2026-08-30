@@ -14,8 +14,13 @@ jest.mock('expo-router', () => ({
 jest.mock('@/components/MapPage/Map.web', () => () => null)
 jest.mock('@/screens/tabs/QuestsContentPanel', () => () => null)
 jest.mock('@/screens/tabs/QuestsSidebar', () => () => null)
+const STABLE_EMPTY_QUESTS: unknown[] = []
 jest.mock('@/hooks/useQuestsApi', () => ({
-  useQuestsList: () => ({ quests: [], loading: false, error: null }),
+  // A fresh [] every render (as a naive mock would return) keeps re-triggering
+  // QuestsScreen's `citiesByCountry` useMemo/effect chain forever (real
+  // React Query memoizes `data` and only changes reference when data actually
+  // changes) — reuse one stable array so this test mirrors that contract.
+  useQuestsList: () => ({ quests: STABLE_EMPTY_QUESTS, loading: false, error: null }),
 }))
 
 function loadQuestsScreen() {

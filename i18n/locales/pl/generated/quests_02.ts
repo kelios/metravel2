@@ -263,4 +263,5 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.subtitle": "Trasy obok tej — możesz przejść je jeszcze dziś",
   "components.quests.QuestNextStepSection.eyebrow": "Zadanie miejskie · w pobliżu",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · w pobliżu",
+  "screens.tabs.QuestsScreen.catalogTitleDefault": "Questy miejskie i trasy z zadaniami | Metravel",
 } as const
