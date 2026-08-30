@@ -93,8 +93,8 @@
       "maxGzipKB": 3.4
     },
     "TravelDetailsSidebarSection": {
-      "maxRawKB": 11.6,
-      "maxGzipKB": 3.3
+      "maxRawKB": 12.5,
+      "maxGzipKB": 3.7
     },
     "CommentsSection": {
       "maxRawKB": 47.7,

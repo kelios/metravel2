@@ -30,7 +30,9 @@ describe('travelDetailsSidebarSectionModel', () => {
   it('keeps the shared progressive load config stable', () => {
     expect(TRAVEL_DETAILS_SIDEBAR_PROGRESSIVE_LOAD_CONFIG).toMatchObject({
       priority: 'low',
-      rootMargin: '200px',
+      // A viewport of lookahead so near/popular resolve before the reserved
+      // sidebar wrapper can scroll past the fold (#1642).
+      rootMargin: '300%',
       threshold: 0.1,
       fallbackDelay: 1000,
     })

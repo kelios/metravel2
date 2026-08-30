@@ -1,7 +1,10 @@
 import type { Page } from '@playwright/test'
 
+export type TravelFooterLayoutShiftSourceGroup = 'footer' | 'upstream'
+
 export type TravelFooterLayoutShiftSource = {
   currentRect: TravelFooterLayoutShiftRect
+  group: TravelFooterLayoutShiftSourceGroup | null
   marker: string | null
   node: string
   previousRect: TravelFooterLayoutShiftRect
@@ -61,11 +64,24 @@ export async function installTravelFooterLayoutShiftGuard(page: Page) {
     ].join(',')
     const targetSelector = `${footerSelector},${upstreamSelector}`
 
-    const markerFor = (node: Node | null | undefined): string | null => {
+    // The group comes from the very selector that matched, so adding a surface
+    // to `footerSelector`/`upstreamSelector` is enough — a second hand-kept list
+    // of markers would silently drop shifts (a guard that fails open).
+    const describeSource = (
+      node: Node | null | undefined,
+    ): { group: TravelFooterLayoutShiftSourceGroup | null; marker: string | null } => {
       const element = node instanceof Element ? node : node?.parentElement
-      if (!element) return null
-      const marked = element.matches(targetSelector) ? element : element.closest(targetSelector)
-      return marked?.getAttribute('data-testid') ?? marked?.getAttribute('data-section-key') ?? null
+      const marked = element
+        ? element.matches(targetSelector)
+          ? element
+          : element.closest(targetSelector)
+        : null
+      if (!marked) return { group: null, marker: null }
+      return {
+        group: marked.matches(footerSelector) ? 'footer' : 'upstream',
+        marker:
+          marked.getAttribute('data-testid') ?? marked.getAttribute('data-section-key') ?? null,
+      }
     }
 
     const nodeName = (node: Node | null | undefined) => {
@@ -111,30 +127,16 @@ export async function installTravelFooterLayoutShiftGuard(page: Page) {
         ) {
           continue
         }
-        const sources = (rawEntry.sources ?? []).map((source) => ({
+        const sources: TravelFooterLayoutShiftSource[] = (rawEntry.sources ?? []).map((source) => ({
           currentRect: rectSnapshot(source.currentRect),
-          marker: markerFor(source.node),
+          ...describeSource(source.node),
           node: nodeName(source.node),
           previousRect: rectSnapshot(source.previousRect),
         }))
         state.entries.push({
-          footerSources: sources.filter((source) =>
-            source.marker?.startsWith('travel-details-footer-transition') ||
-            source.marker === 'travel-details-footer-resolved-frame' ||
-            source.marker === 'travel-details-telegram' ||
-            source.marker === 'travel-details-share' ||
-            source.marker === 'travel-details-cta' ||
-            source.marker === 'travel-details-email-subscribe' ||
-            source.marker === 'footer-desktop-bar' ||
-            source.marker === 'footer-dock-wrapper',
-          ),
+          footerSources: sources.filter((source) => source.group === 'footer'),
           sources,
-          upstreamSources: sources.filter((source) =>
-            source.marker === 'comments' ||
-            source.marker === 'travel-details-near-loaded' ||
-            source.marker?.startsWith('travel-details-comments-transition') ||
-            source.marker?.startsWith('travel-details-sidebar-transition'),
-          ),
+          upstreamSources: sources.filter((source) => source.group === 'upstream'),
           value: rawEntry.value,
         })
       }

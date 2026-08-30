@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Platform, View, Text, Pressable } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform, View, Text, Pressable, type LayoutChangeEvent } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { CommentsSkeleton } from '@/components/travel/TravelDetailSkeletons';
@@ -16,7 +16,7 @@ interface CommentsSectionProps {
   autoload?: boolean;
   lazyLoad?: boolean;
   canLoadComments?: boolean;
-  onRuntimeFrameReady?: () => void;
+  onRuntimeFrameReady?: (event: LayoutChangeEvent) => void;
 }
 
 export function CommentsSection({
@@ -56,9 +56,29 @@ export function CommentsSection({
     toggleThread, expandAllThreads, collapseAllThreads, handleLoginPress,
   } = useCommentsData(travelId, { enabled: isEnabled });
 
-  if (isLoading && !isRefreshing) {
+  const isLoadingFrame = isLoading && !isRefreshing;
+
+  // `onLayout` must be attached from the very first render: react-native-web
+  // starts observing a node only if its layout handler already exists when the
+  // node mounts, and adding `onLayout` to the same node later never starts the
+  // ResizeObserver. The guard keeps the deferred wrapper from releasing its
+  // height reserve for the loading skeleton.
+  const handleRuntimeFrameLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      if (isLoadingFrame) return;
+      onRuntimeFrameReady?.(event);
+    },
+    [isLoadingFrame, onRuntimeFrameReady],
+  );
+
+  if (isLoadingFrame) {
     return (
-      <View nativeID="comments" style={styles.centerContainer} testID="comments-skeleton">
+      <View
+        nativeID="comments"
+        style={styles.centerContainer}
+        testID="comments-skeleton"
+        onLayout={handleRuntimeFrameLayout}
+      >
         <CommentsSkeleton />
       </View>
     );
@@ -69,7 +89,7 @@ export function CommentsSection({
   }
 
   return (
-    <View style={styles.container} nativeID="comments" onLayout={onRuntimeFrameReady}>
+    <View style={styles.container} nativeID="comments" onLayout={handleRuntimeFrameLayout}>
       <View style={styles.header}>
         <Feather name="message-circle" size={24} color={colors.text} />
         <Text style={styles.title}>{i18nT('travel:components.travel.CommentsSection.kommentarii_df5d792f')}{comments.length > 0 && `(${comments.length})`}</Text>

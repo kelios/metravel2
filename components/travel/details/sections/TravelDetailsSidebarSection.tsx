@@ -1,5 +1,5 @@
-import React, { Suspense, useCallback, useEffect, useState } from 'react'
-import { Platform, Text, View } from 'react-native'
+import React, { Suspense, useCallback } from 'react'
+import { Platform, Text, View, type LayoutChangeEvent } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
@@ -37,7 +37,7 @@ export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel
   anchors: AnchorsMap
   canRenderHeavy: boolean
-  onRuntimeFrameReady?: () => void
+  onRuntimeFrameReady?: (event: LayoutChangeEvent) => void
 }> = ({
   travel,
   anchors,
@@ -49,6 +49,7 @@ export const TravelDetailsSidebarSection: React.FC<{
   const {
     handleTravelsLoaded,
     hasValidTravelId,
+    listsFetching,
     nearInViewport,
     relatedTravels,
     setNearRef,
@@ -58,28 +59,26 @@ export const TravelDetailsSidebarSection: React.FC<{
     canRenderHeavy,
     travel,
   })
-  const [nearDataCommitted, setNearDataCommitted] = useState(false)
-  useEffect(() => {
-    setNearDataCommitted(false)
-  }, [travel.id, travel.slug])
-  const handleNearTravelsLoaded = useCallback(
-    (travels: Travel[]) => {
-      handleTravelsLoaded(travels)
-      setNearDataCommitted(true)
-    },
-    [handleTravelsLoaded],
-  )
-  const handleSidebarLayout = useCallback(() => {
-    if (!nearDataCommitted) return
-    onRuntimeFrameReady?.()
-  }, [nearDataCommitted, onRuntimeFrameReady])
 
+  // Every resize of the settled sidebar frame is reported: `Рядом` may resolve
+  // empty or fail, and `Популярные` settles independently, so the section
+  // cannot key its reserve on a single "data arrived" event. It must not report
+  // the in-flight frame though — the lists hold a fixed-height skeleton while
+  // they load, which reads as a stable frame and would release the reserve
+  // right before the real cards arrive.
+  const handleRuntimeFrameLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      if (listsFetching) return
+      onRuntimeFrameReady?.(event)
+    },
+    [listsFetching, onRuntimeFrameReady],
+  )
 
   return (
     <View
       testID="travel-details-sidebar-runtime-frame"
       collapsable={false}
-      onLayout={handleSidebarLayout}
+      onLayout={handleRuntimeFrameLayout}
     >
       <View
         ref={(node) => {
@@ -110,7 +109,7 @@ export const TravelDetailsSidebarSection: React.FC<{
               <Suspense fallback={<View style={LIST_FALLBACK_STYLE} />}>
                 <NearTravelListComponent
                   travel={travel}
-                  onTravelsLoaded={handleNearTravelsLoaded}
+                  onTravelsLoaded={handleTravelsLoaded}
                   showHeader={false}
                   embedded
                   fetchEnabled={nearInViewport}

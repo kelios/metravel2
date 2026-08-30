@@ -41,7 +41,7 @@ describe('CommentsSection deferred runtime frame', () => {
     mockUseCommentsData.mockReset()
   })
 
-  it('reports layout only after the comments query leaves its loading skeleton', () => {
+  it('observes its frame from the first render but reports only real layout', () => {
     const onRuntimeFrameReady = jest.fn()
     mockUseCommentsData.mockReturnValue({ ...commentsData, isLoading: true })
 
@@ -54,7 +54,15 @@ describe('CommentsSection deferred runtime frame', () => {
       />,
     )
 
-    expect(screen.getByTestId('comments-skeleton').props.onLayout).toBeUndefined()
+    // react-native-web only observes a node whose layout handler exists at
+    // mount, so the skeleton must already carry `onLayout` — it just must not
+    // report the skeleton frame upstream.
+    const skeleton = screen.getByTestId('comments-skeleton')
+    expect(skeleton.props.onLayout).toEqual(expect.any(Function))
+    fireEvent(skeleton, 'layout', {
+      nativeEvent: { layout: { height: 226, width: 920, x: 0, y: 0 } },
+    })
+    expect(onRuntimeFrameReady).not.toHaveBeenCalled()
 
     mockUseCommentsData.mockReturnValue(commentsData)
     view.rerender(
@@ -67,11 +75,12 @@ describe('CommentsSection deferred runtime frame', () => {
     )
 
     const runtime = screen.UNSAFE_getByProps({ nativeID: 'comments' })
-    expect(runtime.props.onLayout).toBe(onRuntimeFrameReady)
+    expect(runtime.props.onLayout).toEqual(expect.any(Function))
     expect(onRuntimeFrameReady).not.toHaveBeenCalled()
     fireEvent(runtime, 'layout', {
       nativeEvent: { layout: { height: 548, width: 920, x: 0, y: 0 } },
     })
     expect(onRuntimeFrameReady).toHaveBeenCalledTimes(1)
+    expect(onRuntimeFrameReady.mock.calls[0][0].nativeEvent.layout.height).toBe(548)
   })
 })

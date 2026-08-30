@@ -4,7 +4,12 @@ import type { Travel } from '@/types/types'
 export const TRAVEL_DETAILS_SIDEBAR_PROGRESSIVE_LOAD_CONFIG = {
   fallbackDelay: 1000,
   priority: 'low' as const,
-  rootMargin: '200px',
+  // Mirrors `TRAVEL_DEFERRED_RESERVED_SECTION_ROOT_MARGIN` in
+  // `useTravelDeferredSectionsModel`, kept as a literal so this lazy sidebar
+  // chunk does not pull the deferred-sections module in. Mounting the sidebar a
+  // viewport early is pointless while the near/popular requests still wait for
+  // the tight default margin (#1642).
+  rootMargin: '300%',
   threshold: 0.1,
 }
 

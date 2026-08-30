@@ -17,6 +17,7 @@ type ObserverEntry = {
 jest.mock('@/components/travel/AuthorCard', () => ({
   __esModule: true,
   default: (props: any) => mockAuthorCardSpy(props),
+  hasResolvableAuthor: () => false,
 }))
 
 jest.mock('@/components/travel/ShareButtons', () => ({
@@ -61,6 +62,14 @@ jest.mock('@/components/travel/details/sections/TravelDetailsSidebarSection', ()
 jest.mock('@/components/travel/details/sections/TravelDetailsFooterSection', () => ({
   __esModule: true,
   TravelDetailsFooterSection: (props: any) => mockFooterSectionSpy(props),
+}))
+
+// Advancing timers past the author/rating fallback mounts sections that need
+// app providers; they are irrelevant to the deferred reserve contract.
+jest.mock('@/components/travel/details/TravelPeerBadgesSection', () => ({
+  __esModule: true,
+  default: () => null,
+  TravelPeerBadgesSection: () => null,
 }))
 
 jest.mock('@/hooks/useTdTrace', () => ({
@@ -361,7 +370,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     )
   })
 
-  it('keeps web sidebar and comments reserves until their real frames report layout', async () => {
+  it('holds the web sidebar/comments reserve until the real frame stops resizing', async () => {
     const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
     const travel: any = {
       id: 6,
@@ -383,6 +392,13 @@ describe('TravelDeferredSections (web author defer)', () => {
       recommendation: { current: null },
       video: { current: null },
     }
+    const layoutEvent = (height: number) => ({
+      nativeEvent: { layout: { height, width: 920, x: 0, y: 0 } },
+    })
+    const transitionOf = (tree: renderer.ReactTestRenderer, testID: string) =>
+      tree.root
+        .findAllByProps({ testID })
+        .find((node) => node.props.dataSet?.deferredTransitionState != null)!
 
     let sidebarTree: renderer.ReactTestRenderer
     await act(async () => {
@@ -400,19 +416,32 @@ describe('TravelDeferredSections (web author defer)', () => {
       await Promise.resolve()
     })
 
-    const sidebarTransition = sidebarTree!.root
-      .findAllByProps({ testID: 'travel-details-sidebar-transition' })
-      .find((node) => node.props['data-deferred-transition-state'] != null)!
-    expect(sidebarTransition.props['data-deferred-transition-state']).toBe('measuring-runtime')
+    const sidebarTransition = transitionOf(sidebarTree!, 'travel-details-sidebar-transition')
+    expect(sidebarTransition.props.dataSet.deferredTransitionState).toBe('measuring-runtime')
     expect(StyleSheet.flatten(sidebarTransition.props.style).minHeight).toBe('100vh')
 
-    const sidebarRuntimeReady = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]
-      ?.onRuntimeFrameReady
-    expect(sidebarRuntimeReady).toEqual(expect.any(Function))
+    const sidebarRuntimeLayout = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.onRuntimeFrameReady
+    expect(sidebarRuntimeLayout).toEqual(expect.any(Function))
+
+    // First real frame is not the settled frame: `Популярные` is still growing.
     await act(async () => {
-      sidebarRuntimeReady()
+      sidebarRuntimeLayout(layoutEvent(300))
+      jest.advanceTimersByTime(200)
     })
-    expect(sidebarTransition.props['data-deferred-transition-state']).toBe('runtime')
+    expect(sidebarTransition.props.dataSet.deferredTransitionState).toBe('measuring-runtime')
+    expect(StyleSheet.flatten(sidebarTransition.props.style).minHeight).toBe('100vh')
+
+    // A new height restarts the quiet window instead of releasing the reserve.
+    await act(async () => {
+      sidebarRuntimeLayout(layoutEvent(548))
+      jest.advanceTimersByTime(200)
+    })
+    expect(sidebarTransition.props.dataSet.deferredTransitionState).toBe('measuring-runtime')
+
+    await act(async () => {
+      jest.advanceTimersByTime(400)
+    })
+    expect(sidebarTransition.props.dataSet.deferredTransitionState).toBe('runtime')
     expect(StyleSheet.flatten(sidebarTransition.props.style).minHeight).toBeUndefined()
 
     mockCommentsSectionSpy.mockClear()
@@ -432,18 +461,16 @@ describe('TravelDeferredSections (web author defer)', () => {
       await Promise.resolve()
     })
 
-    const commentsTransition = commentsTree!.root
-      .findAllByProps({ testID: 'travel-details-comments-transition' })
-      .find((node) => node.props['data-deferred-transition-state'] != null)!
-    const commentsRuntimeReady = mockCommentsSectionSpy.mock.calls.at(-1)?.[0]
-      ?.onRuntimeFrameReady
-    expect(commentsTransition.props['data-deferred-transition-state']).toBe('measuring-runtime')
+    const commentsTransition = transitionOf(commentsTree!, 'travel-details-comments-transition')
+    expect(commentsTransition.props.dataSet.deferredTransitionState).toBe('measuring-runtime')
     expect(StyleSheet.flatten(commentsTransition.props.style).minHeight).toBe('100vh')
 
+    // A section whose data never arrives must still become interactive: the
+    // fail-open timeout releases the reserve without a single layout event.
     await act(async () => {
-      commentsRuntimeReady()
+      jest.advanceTimersByTime(6000)
     })
-    expect(commentsTransition.props['data-deferred-transition-state']).toBe('runtime')
+    expect(commentsTransition.props.dataSet.deferredTransitionState).toBe('runtime')
     expect(StyleSheet.flatten(commentsTransition.props.style).minHeight).toBeUndefined()
   })
 })

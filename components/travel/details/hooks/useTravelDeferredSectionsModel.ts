@@ -88,6 +88,15 @@ const readElement = (node: unknown): Element | null => {
   return null
 }
 
+// `Рядом/Популярные` and comments reserve a viewport of height while they load
+// (`TravelDetailsDeferredTransition`). That reserve hides their growth only
+// while their top edge is still on screen, so the whole mount → fetch → render
+// chain has to finish inside the scroll distance the lookahead buys.
+// Three viewports of margin plus the one-viewport reserve keep a ~900 ms API
+// round trip off screen at a gradual scroll; the heavy Leaflet map keeps the
+// tight default because it owns no reserve.
+export const TRAVEL_DEFERRED_RESERVED_SECTION_ROOT_MARGIN = '300%'
+
 export const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
   author: {
     fallbackDelay: 500,
@@ -99,7 +108,9 @@ export const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
   comments: {
     fallbackDelay: null,
     priority: 'low' as const,
-    rootMargin: '200px',
+    // #1642: reserved sections mount a full viewport earlier than the rest so
+    // the growth of their real frame lands while they are still below the fold.
+    rootMargin: TRAVEL_DEFERRED_RESERVED_SECTION_ROOT_MARGIN,
     threshold: 0.1,
     traceKey: 'deferred:comments:visible',
   },
@@ -127,7 +138,7 @@ export const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
   sidebar: {
     fallbackDelay: null,
     priority: 'low' as const,
-    rootMargin: '200px',
+    rootMargin: TRAVEL_DEFERRED_RESERVED_SECTION_ROOT_MARGIN,
     threshold: 0.1,
     traceKey: 'deferred:sidebar:visible',
   },
@@ -343,29 +354,42 @@ export function useTravelDeferredSectionsModel({
     if (!entries.length) return
 
     const sectionByElement = new Map<Element, TravelDeferredSectionKey>()
-    const observer = new window.IntersectionObserver(
-      (observerEntries) => {
-        for (const entry of observerEntries) {
-          if (!entry.isIntersecting && entry.intersectionRatio <= 0) continue
-          const sectionKey = sectionByElement.get(entry.target)
-          if (!sectionKey) continue
-          markSectionLoaded(sectionKey)
-          observer.unobserve(entry.target)
-        }
-      },
-      {
-        root: null,
-        rootMargin: '200px',
-        threshold: 0.1,
-      },
-    )
+    // One observer per distinct lookahead instead of one per section (#562):
+    // the reserved sections need a whole extra viewport of lead so their real
+    // frame settles before their top can scroll past the fold, while the heavy
+    // map keeps the tight default.
+    const observersByRootMargin = new Map<string, IntersectionObserver>()
+    const observerFor = (rootMargin: string) => {
+      const existing = observersByRootMargin.get(rootMargin)
+      if (existing) return existing
+      const observer = new window.IntersectionObserver(
+        (observerEntries) => {
+          for (const entry of observerEntries) {
+            if (!entry.isIntersecting && entry.intersectionRatio <= 0) continue
+            const sectionKey = sectionByElement.get(entry.target)
+            if (!sectionKey) continue
+            markSectionLoaded(sectionKey)
+            observer.unobserve(entry.target)
+          }
+        },
+        {
+          root: null,
+          rootMargin,
+          threshold: 0.1,
+        },
+      )
+      observersByRootMargin.set(rootMargin, observer)
+      return observer
+    }
 
     for (const { element, sectionKey } of entries) {
       sectionByElement.set(element, sectionKey)
-      observer.observe(element)
+      observerFor(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS[sectionKey].rootMargin).observe(element)
     }
 
-    return () => observer.disconnect()
+    return () => {
+      for (const observer of observersByRootMargin.values()) observer.disconnect()
+    }
   }, [canRenderHeavy, markSectionLoaded, sectionElements])
 
   useEffect(() => {

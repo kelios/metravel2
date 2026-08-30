@@ -20,6 +20,7 @@ import TravelDeferredRatingSection from './TravelDeferredRatingSection'
 import {
   TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT,
   TravelDetailsDeferredTransition,
+  useDeferredSectionRuntimeSettle,
 } from './TravelDetailsDeferredTransition'
 
 const CommentsSectionLazy = lazyWithRetry(() =>
@@ -129,6 +130,10 @@ export const TravelDeferredSections: React.FC<{
   const shouldLoadMapSection = shouldLoadMap || shouldForceLoadMapSection(forceOpenKey)
   const shouldLoadSidebarSection = shouldLoadSidebar || shouldForceLoadSidebarSection(forceOpenKey)
   const shouldLoadCommentsSection = shouldLoadComments || forceOpenKey === 'comments'
+  // Single source of truth for "the comments subtree may mount": the reserve
+  // latch, the transition's `pending` flag and the subtree itself must agree, or
+  // a transition can drop its height reserve while it still shows a placeholder.
+  const canMountCommentsSection = shouldLoadCommentsSection && !!travel?.id
   // Resolve the web footer inside the already post-LCP deferred tree, while it
   // is still offscreen. A content-dependent footer can exceed the 100vh reserve;
   // waiting for the bottom IntersectionObserver would then grow the live scroll
@@ -140,27 +145,22 @@ export const TravelDeferredSections: React.FC<{
   const [footerRuntimeFrameReadyTravelId, setFooterRuntimeFrameReadyTravelId] = useState<
     number | null
   >(null)
-  const [sidebarRuntimeFrameReadyTravelId, setSidebarRuntimeFrameReadyTravelId] = useState<
-    number | null
-  >(null)
-  const [commentsRuntimeFrameReadyTravelId, setCommentsRuntimeFrameReadyTravelId] = useState<
-    number | null
-  >(null)
   useEffect(() => {
     if (!shouldLoadFooterSection) setFooterRuntimeFrameReadyTravelId(null)
   }, [shouldLoadFooterSection])
-  useEffect(() => {
-    if (!shouldLoadSidebarSection) setSidebarRuntimeFrameReadyTravelId(null)
-  }, [shouldLoadSidebarSection])
-  useEffect(() => {
-    if (!shouldLoadCommentsSection) setCommentsRuntimeFrameReadyTravelId(null)
-  }, [shouldLoadCommentsSection])
-  const handleSidebarRuntimeFrameReady = useCallback(() => {
-    setSidebarRuntimeFrameReadyTravelId(travel.id)
-  }, [travel.id])
-  const handleCommentsRuntimeFrameReady = useCallback(() => {
-    setCommentsRuntimeFrameReadyTravelId(travel.id)
-  }, [travel.id])
+  // The footer resolves in one step, so first-layout is enough for it. Sidebar
+  // and comments keep resizing after their first real frame (near + popular
+  // lists, comment thread), so they hold their reserve until the frame is
+  // quiet — see `useDeferredSectionRuntimeSettle`.
+  // Only the web transition reserves height, so the latch stays inert on native.
+  const sidebarSettle = useDeferredSectionRuntimeSettle({
+    active: Platform.OS === 'web' && shouldLoadSidebarSection,
+    resetKey: travel.id,
+  })
+  const commentsSettle = useDeferredSectionRuntimeSettle({
+    active: Platform.OS === 'web' && canMountCommentsSection,
+    resetKey: travel.id,
+  })
   const handleFooterRuntimeFrameLayout = useCallback(
     (event: LayoutChangeEvent) => {
       const { height, width } = event.nativeEvent.layout
@@ -173,14 +173,6 @@ export const TravelDeferredSections: React.FC<{
     shouldLoadFooterSection &&
     travel.id != null &&
     footerRuntimeFrameReadyTravelId === travel.id
-  const sidebarRuntimeFrameReady =
-    shouldLoadSidebarSection &&
-    travel.id != null &&
-    sidebarRuntimeFrameReadyTravelId === travel.id
-  const commentsRuntimeFrameReady =
-    shouldLoadCommentsSection &&
-    travel.id != null &&
-    commentsRuntimeFrameReadyTravelId === travel.id
   const setCommentsSectionRef = useCallback(
     (node: unknown) => {
       ;(anchors.comments as any).current = node
@@ -253,7 +245,7 @@ export const TravelDeferredSections: React.FC<{
           pending={!shouldLoadSidebarSection}
           placeholder={SIDEBAR_PLACEHOLDER}
           reserveHeight={TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT}
-          runtimeFrameReady={sidebarRuntimeFrameReady}
+          runtimeFrameReady={sidebarSettle.settled}
         >
           {shouldLoadSidebarSection ? (
             <Suspense fallback={SIDEBAR_PLACEHOLDER}>
@@ -261,7 +253,7 @@ export const TravelDeferredSections: React.FC<{
                 travel={travel}
                 anchors={anchors}
                 canRenderHeavy={canRenderHeavy}
-                onRuntimeFrameReady={handleSidebarRuntimeFrameReady}
+                onRuntimeFrameReady={sidebarSettle.onRuntimeFrameLayout}
               />
             </Suspense>
           ) : null}
@@ -276,19 +268,19 @@ export const TravelDeferredSections: React.FC<{
         <TravelDetailsDeferredTransition
           testID="travel-details-comments-transition"
           isMobile={isMobile}
-          pending={!shouldLoadCommentsSection || !travel?.id}
+          pending={!canMountCommentsSection}
           placeholder={COMMENTS_PLACEHOLDER}
           reserveHeight={TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT}
-          runtimeFrameReady={commentsRuntimeFrameReady}
+          runtimeFrameReady={commentsSettle.settled}
         >
-          {shouldLoadCommentsSection && travel?.id ? (
+          {canMountCommentsSection ? (
             <Suspense fallback={COMMENTS_PLACEHOLDER}>
               <CommentsSectionLazy
                 travelId={travel.id}
                 lazyLoad
                 autoload={shouldLoadCommentsSection}
                 canLoadComments
-                onRuntimeFrameReady={handleCommentsRuntimeFrameReady}
+                onRuntimeFrameReady={commentsSettle.onRuntimeFrameLayout}
               />
             </Suspense>
           ) : null}

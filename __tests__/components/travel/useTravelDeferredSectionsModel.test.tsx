@@ -10,21 +10,37 @@ import { useTravelDeferredSectionsModel } from '@/components/travel/details/hook
 describe('useTravelDeferredSectionsModel', () => {
   const originalOS = Platform.OS
   const originalIntersectionObserver = window.IntersectionObserver
-  let intersectionCallbacks: IntersectionObserverCallback[]
+  // Each stub keeps the elements it was actually asked to observe, so the tests
+  // can pin which section got which lookahead instead of trusting the config.
+  type ObserverStub = {
+    notify: IntersectionObserverCallback
+    observed: Element[]
+    rootMargin: string
+  }
+  let intersectionObservers: ObserverStub[]
 
   beforeEach(() => {
     Platform.OS = 'web'
     jest.useFakeTimers()
-    intersectionCallbacks = []
-    window.IntersectionObserver = jest.fn((callback: IntersectionObserverCallback) => {
-      intersectionCallbacks.push(callback)
-      return {
-        disconnect: jest.fn(),
-        observe: jest.fn(),
-        takeRecords: jest.fn(() => []),
-        unobserve: jest.fn(),
-      } as unknown as IntersectionObserver
-    }) as unknown as typeof IntersectionObserver
+    intersectionObservers = []
+    window.IntersectionObserver = jest.fn(
+      (callback: IntersectionObserverCallback, options?: IntersectionObserverInit) => {
+        const stub: ObserverStub = {
+          notify: callback,
+          observed: [],
+          rootMargin: options?.rootMargin ?? '',
+        }
+        intersectionObservers.push(stub)
+        return {
+          disconnect: jest.fn(),
+          observe: jest.fn((element: Element) => {
+            stub.observed.push(element)
+          }),
+          takeRecords: jest.fn(() => []),
+          unobserve: jest.fn(),
+        } as unknown as IntersectionObserver
+      },
+    ) as unknown as typeof IntersectionObserver
   })
 
   afterEach(() => {
@@ -104,7 +120,24 @@ describe('useTravelDeferredSectionsModel', () => {
       result.current.setFooterRef(footerElement)
     })
 
-    expect(window.IntersectionObserver).toHaveBeenCalledTimes(1)
+    // #562 keeps observers off the per-section path; #1642 splits them by
+    // lookahead only — map/footer keep the tight margin, the reserved
+    // sidebar/comments pair mounts a viewport earlier. The wiring, not the
+    // config object, is what decides when a section mounts.
+    expect(window.IntersectionObserver).toHaveBeenCalledTimes(2)
+    expect(intersectionObservers.map((observer) => observer.rootMargin).sort()).toEqual([
+      '300%',
+      '200px',
+    ])
+    const reservedObserver = intersectionObservers.find(
+      (observer) => observer.rootMargin === '300%',
+    )!
+    const tightObserver = intersectionObservers.find((observer) => observer.rootMargin === '200px')!
+    expect(reservedObserver.observed).toEqual([commentsElement])
+    expect(tightObserver.observed).toHaveLength(2)
+    expect(tightObserver.observed).toEqual(
+      expect.arrayContaining([mapElement, footerElement]),
+    )
 
     act(() => {
       jest.advanceTimersByTime(10000)
@@ -114,8 +147,10 @@ describe('useTravelDeferredSectionsModel', () => {
     expect(result.current.shouldLoadComments).toBe(false)
     expect(result.current.shouldLoadFooter).toBe(false)
 
+    // Only the observer that really watches the comments element reports it,
+    // exactly as the browser would.
     act(() => {
-      intersectionCallbacks[0]?.(
+      reservedObserver.notify(
         [
           {
             isIntersecting: true,

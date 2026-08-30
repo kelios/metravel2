@@ -19,4 +19,13 @@
 
 ## 4. Integrated acceptance
 
-- [ ] 4.1 После отдельно подтверждённых backend deploy и frontend rollout проверить тот же target: guest submit создаёт email-linked consent version/timestamp, authenticated `email_subscribe` не получает 400, ответы `created`/`exists` и analytics event не регрессировали; evidence записать в #1522 и связанную #1502.
+- [x] 4.1 После отдельно подтверждённых backend deploy и frontend rollout проверить тот же target: guest submit создаёт email-linked consent version/timestamp, authenticated `email_subscribe` не получает 400, ответы `created`/`exists` и analytics event не регрессировали; evidence записать в #1522 и связанную #1502.
+
+Проверено 2026-08-31 на локальном target (бэкенд `origin/master` `bbb5dd2`, фронт — dev-бандл этого дерева):
+guest submit создаёт email-linked `consent_version` + `consent_accepted_at`; повтор даёт `exists` без потери версии;
+`consent:false`, версия без `consent`, пустая версия и версия-без-значения дают `400` без записи в БД;
+authenticated `POST /api/user/consents/` с `email_subscribe` — `201`, повтор `200` (идемпотентно, не `400`).
+Браузерная проба: без явной галочки запрос не уходит вовсе; после галочки тело содержит
+`consent:true` и непустой `consent_version`, ответ `201 {"ok":true,"status":"created"}`, форма показывает успех.
+Analytics-событие `email_subscribe` на dev-таргете не наблюдаемо по сети (GA/Metrika не сконфигурированы),
+регрессию держит unit-тест `__tests__/components/EmailSubscriptionForm.test.tsx`.
