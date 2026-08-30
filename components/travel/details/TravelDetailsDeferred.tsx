@@ -140,9 +140,27 @@ export const TravelDeferredSections: React.FC<{
   const [footerRuntimeFrameReadyTravelId, setFooterRuntimeFrameReadyTravelId] = useState<
     number | null
   >(null)
+  const [sidebarRuntimeFrameReadyTravelId, setSidebarRuntimeFrameReadyTravelId] = useState<
+    number | null
+  >(null)
+  const [commentsRuntimeFrameReadyTravelId, setCommentsRuntimeFrameReadyTravelId] = useState<
+    number | null
+  >(null)
   useEffect(() => {
     if (!shouldLoadFooterSection) setFooterRuntimeFrameReadyTravelId(null)
   }, [shouldLoadFooterSection])
+  useEffect(() => {
+    if (!shouldLoadSidebarSection) setSidebarRuntimeFrameReadyTravelId(null)
+  }, [shouldLoadSidebarSection])
+  useEffect(() => {
+    if (!shouldLoadCommentsSection) setCommentsRuntimeFrameReadyTravelId(null)
+  }, [shouldLoadCommentsSection])
+  const handleSidebarRuntimeFrameReady = useCallback(() => {
+    setSidebarRuntimeFrameReadyTravelId(travel.id)
+  }, [travel.id])
+  const handleCommentsRuntimeFrameReady = useCallback(() => {
+    setCommentsRuntimeFrameReadyTravelId(travel.id)
+  }, [travel.id])
   const handleFooterRuntimeFrameLayout = useCallback(
     (event: LayoutChangeEvent) => {
       const { height, width } = event.nativeEvent.layout
@@ -155,6 +173,14 @@ export const TravelDeferredSections: React.FC<{
     shouldLoadFooterSection &&
     travel.id != null &&
     footerRuntimeFrameReadyTravelId === travel.id
+  const sidebarRuntimeFrameReady =
+    shouldLoadSidebarSection &&
+    travel.id != null &&
+    sidebarRuntimeFrameReadyTravelId === travel.id
+  const commentsRuntimeFrameReady =
+    shouldLoadCommentsSection &&
+    travel.id != null &&
+    commentsRuntimeFrameReadyTravelId === travel.id
   const setCommentsSectionRef = useCallback(
     (node: unknown) => {
       ;(anchors.comments as any).current = node
@@ -221,36 +247,52 @@ export const TravelDeferredSections: React.FC<{
         ref={setSidebarRef}
         collapsable={false}
       >
-        {shouldLoadSidebarSection ? (
-          <Suspense fallback={SIDEBAR_PLACEHOLDER}>
-            <TravelDetailsSidebarSectionLazy
-              travel={travel}
-              anchors={anchors}
-              canRenderHeavy={canRenderHeavy}
-            />
-          </Suspense>
-        ) : (
-          SIDEBAR_PLACEHOLDER
-        )}
+        <TravelDetailsDeferredTransition
+          testID="travel-details-sidebar-transition"
+          isMobile={isMobile}
+          pending={!shouldLoadSidebarSection}
+          placeholder={SIDEBAR_PLACEHOLDER}
+          reserveHeight={TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT}
+          runtimeFrameReady={sidebarRuntimeFrameReady}
+        >
+          {shouldLoadSidebarSection ? (
+            <Suspense fallback={SIDEBAR_PLACEHOLDER}>
+              <TravelDetailsSidebarSectionLazy
+                travel={travel}
+                anchors={anchors}
+                canRenderHeavy={canRenderHeavy}
+                onRuntimeFrameReady={handleSidebarRuntimeFrameReady}
+              />
+            </Suspense>
+          ) : null}
+        </TravelDetailsDeferredTransition>
       </View>
 
-      <View 
+      <View
         ref={setCommentsSectionRef}
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
-        {shouldLoadCommentsSection && travel?.id ? (
-          <Suspense fallback={COMMENTS_PLACEHOLDER}>
-            <CommentsSectionLazy
-              travelId={travel.id}
-              lazyLoad
-              autoload={shouldLoadCommentsSection}
-              canLoadComments
-            />
-          </Suspense>
-        ) : (
-          COMMENTS_PLACEHOLDER
-        )}
+        <TravelDetailsDeferredTransition
+          testID="travel-details-comments-transition"
+          isMobile={isMobile}
+          pending={!shouldLoadCommentsSection || !travel?.id}
+          placeholder={COMMENTS_PLACEHOLDER}
+          reserveHeight={TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT}
+          runtimeFrameReady={commentsRuntimeFrameReady}
+        >
+          {shouldLoadCommentsSection && travel?.id ? (
+            <Suspense fallback={COMMENTS_PLACEHOLDER}>
+              <CommentsSectionLazy
+                travelId={travel.id}
+                lazyLoad
+                autoload={shouldLoadCommentsSection}
+                canLoadComments
+                onRuntimeFrameReady={handleCommentsRuntimeFrameReady}
+              />
+            </Suspense>
+          ) : null}
+        </TravelDetailsDeferredTransition>
       </View>
 
       <View

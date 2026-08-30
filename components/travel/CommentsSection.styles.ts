@@ -6,7 +6,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 export const createCommentsSectionStyles = (colors: ThemedColors) =>
   StyleSheet.create<Record<string, any>>({
     container: {
-      flex: 1,
+      ...Platform.select({ default: { flex: 1 }, web: {} }),
       backgroundColor: colors.surface,
       padding: Platform.select({ default: DESIGN_TOKENS.spacing.md, web: DESIGN_TOKENS.spacing.lg }),
       borderRadius: DESIGN_TOKENS.radii.md,
@@ -18,7 +18,12 @@ export const createCommentsSectionStyles = (colors: ThemedColors) =>
           } as any)
         : {}),
     },
-    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xl },
+    centerContainer: {
+      ...Platform.select({ default: { flex: 1 }, web: {} }),
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: DESIGN_TOKENS.spacing.xl,
+    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',

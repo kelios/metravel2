@@ -16,6 +16,7 @@ interface CommentsSectionProps {
   autoload?: boolean;
   lazyLoad?: boolean;
   canLoadComments?: boolean;
+  onRuntimeFrameReady?: () => void;
 }
 
 export function CommentsSection({
@@ -23,6 +24,7 @@ export function CommentsSection({
   autoload = false,
   lazyLoad = false,
   canLoadComments = true,
+  onRuntimeFrameReady,
 }: CommentsSectionProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createCommentsSectionStyles(colors), [colors]);
@@ -67,7 +69,7 @@ export function CommentsSection({
   }
 
   return (
-    <View style={styles.container} nativeID="comments">
+    <View style={styles.container} nativeID="comments" onLayout={onRuntimeFrameReady}>
       <View style={styles.header}>
         <Feather name="message-circle" size={24} color={colors.text} />
         <Text style={styles.title}>{i18nT('travel:components.travel.CommentsSection.kommentarii_df5d792f')}{comments.length > 0 && `(${comments.length})`}</Text>

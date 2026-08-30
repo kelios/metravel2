@@ -17,6 +17,7 @@ type TravelFooterLayoutShiftRect = {
 export type TravelFooterLayoutShiftEntry = {
   footerSources: TravelFooterLayoutShiftSource[]
   sources: TravelFooterLayoutShiftSource[]
+  upstreamSources: TravelFooterLayoutShiftSource[]
   value: number
 }
 
@@ -25,6 +26,8 @@ export type TravelFooterLayoutShiftReport = {
   footerEntries: TravelFooterLayoutShiftEntry[]
   footerValue: number
   totalValue: number
+  upstreamEntries: TravelFooterLayoutShiftEntry[]
+  upstreamValue: number
 }
 
 export async function installTravelFooterLayoutShiftGuard(page: Page) {
@@ -40,7 +43,7 @@ export async function installTravelFooterLayoutShiftGuard(page: Page) {
       value: number
     }
 
-    const targetSelector = [
+    const footerSelector = [
       '[data-testid^="travel-details-footer-transition"]',
       '[data-testid="travel-details-footer-resolved-frame"]',
       '[data-testid="travel-details-telegram"]',
@@ -50,12 +53,19 @@ export async function installTravelFooterLayoutShiftGuard(page: Page) {
       '[data-testid="footer-desktop-bar"]',
       '[data-testid="footer-dock-wrapper"]',
     ].join(',')
+    const upstreamSelector = [
+      '[data-testid^="travel-details-sidebar-transition"]',
+      '[data-testid^="travel-details-comments-transition"]',
+      '[data-testid="travel-details-near-loaded"]',
+      '[data-section-key="comments"]',
+    ].join(',')
+    const targetSelector = `${footerSelector},${upstreamSelector}`
 
     const markerFor = (node: Node | null | undefined): string | null => {
       const element = node instanceof Element ? node : node?.parentElement
       if (!element) return null
       const marked = element.matches(targetSelector) ? element : element.closest(targetSelector)
-      return marked?.getAttribute('data-testid') ?? null
+      return marked?.getAttribute('data-testid') ?? marked?.getAttribute('data-section-key') ?? null
     }
 
     const nodeName = (node: Node | null | undefined) => {
@@ -108,8 +118,23 @@ export async function installTravelFooterLayoutShiftGuard(page: Page) {
           previousRect: rectSnapshot(source.previousRect),
         }))
         state.entries.push({
-          footerSources: sources.filter((source) => source.marker != null),
+          footerSources: sources.filter((source) =>
+            source.marker?.startsWith('travel-details-footer-transition') ||
+            source.marker === 'travel-details-footer-resolved-frame' ||
+            source.marker === 'travel-details-telegram' ||
+            source.marker === 'travel-details-share' ||
+            source.marker === 'travel-details-cta' ||
+            source.marker === 'travel-details-email-subscribe' ||
+            source.marker === 'footer-desktop-bar' ||
+            source.marker === 'footer-dock-wrapper',
+          ),
           sources,
+          upstreamSources: sources.filter((source) =>
+            source.marker === 'comments' ||
+            source.marker === 'travel-details-near-loaded' ||
+            source.marker?.startsWith('travel-details-comments-transition') ||
+            source.marker?.startsWith('travel-details-sidebar-transition'),
+          ),
           value: rawEntry.value,
         })
       }
@@ -168,11 +193,14 @@ export async function readTravelFooterLayoutShiftReport(
 
     const entries = guard.entries
     const footerEntries = entries.filter((entry) => entry.footerSources.length > 0)
+    const upstreamEntries = entries.filter((entry) => entry.upstreamSources.length > 0)
     return {
       entries,
       footerEntries,
       footerValue: footerEntries.reduce((sum, entry) => sum + entry.value, 0),
       totalValue: entries.reduce((sum, entry) => sum + entry.value, 0),
+      upstreamEntries,
+      upstreamValue: upstreamEntries.reduce((sum, entry) => sum + entry.value, 0),
     }
   })
 }

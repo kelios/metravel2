@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import renderer, { act } from 'react-test-renderer'
-import { Animated, Platform } from 'react-native'
+import { Animated, Platform, StyleSheet } from 'react-native'
 
 const mockAuthorCardSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockMapSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
@@ -359,5 +359,91 @@ describe('TravelDeferredSections (web author defer)', () => {
         ],
       ]),
     )
+  })
+
+  it('keeps web sidebar and comments reserves until their real frames report layout', async () => {
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
+    const travel: any = {
+      id: 6,
+      name: 'Stable deferred upstream travel',
+      description: '<p>Test description</p>',
+      gallery: [],
+    }
+    const anchors: any = {
+      comments: { current: null },
+      description: { current: null },
+      excursions: { current: null },
+      gallery: { current: null },
+      map: { current: null },
+      minus: { current: null },
+      near: { current: null },
+      plus: { current: null },
+      points: { current: null },
+      popular: { current: null },
+      recommendation: { current: null },
+      video: { current: null },
+    }
+
+    let sidebarTree: renderer.ReactTestRenderer
+    await act(async () => {
+      sidebarTree = renderer.create(
+        <Suspense fallback={null}>
+          <TravelDeferredSections
+            travel={travel}
+            isMobile={false}
+            forceOpenKey="near"
+            anchors={anchors}
+            scrollToMapSection={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    const sidebarTransition = sidebarTree!.root
+      .findAllByProps({ testID: 'travel-details-sidebar-transition' })
+      .find((node) => node.props['data-deferred-transition-state'] != null)!
+    expect(sidebarTransition.props['data-deferred-transition-state']).toBe('measuring-runtime')
+    expect(StyleSheet.flatten(sidebarTransition.props.style).minHeight).toBe('100vh')
+
+    const sidebarRuntimeReady = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]
+      ?.onRuntimeFrameReady
+    expect(sidebarRuntimeReady).toEqual(expect.any(Function))
+    await act(async () => {
+      sidebarRuntimeReady()
+    })
+    expect(sidebarTransition.props['data-deferred-transition-state']).toBe('runtime')
+    expect(StyleSheet.flatten(sidebarTransition.props.style).minHeight).toBeUndefined()
+
+    mockCommentsSectionSpy.mockClear()
+    let commentsTree: renderer.ReactTestRenderer
+    await act(async () => {
+      commentsTree = renderer.create(
+        <Suspense fallback={null}>
+          <TravelDeferredSections
+            travel={travel}
+            isMobile={false}
+            forceOpenKey="comments"
+            anchors={anchors}
+            scrollToMapSection={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    const commentsTransition = commentsTree!.root
+      .findAllByProps({ testID: 'travel-details-comments-transition' })
+      .find((node) => node.props['data-deferred-transition-state'] != null)!
+    const commentsRuntimeReady = mockCommentsSectionSpy.mock.calls.at(-1)?.[0]
+      ?.onRuntimeFrameReady
+    expect(commentsTransition.props['data-deferred-transition-state']).toBe('measuring-runtime')
+    expect(StyleSheet.flatten(commentsTransition.props.style).minHeight).toBe('100vh')
+
+    await act(async () => {
+      commentsRuntimeReady()
+    })
+    expect(commentsTransition.props['data-deferred-transition-state']).toBe('runtime')
+    expect(StyleSheet.flatten(commentsTransition.props.style).minHeight).toBeUndefined()
   })
 })

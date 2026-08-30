@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import React, { Suspense, useCallback, useEffect, useState } from 'react'
 import { Platform, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -37,10 +37,12 @@ export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel
   anchors: AnchorsMap
   canRenderHeavy: boolean
+  onRuntimeFrameReady?: () => void
 }> = ({
   travel,
   anchors,
   canRenderHeavy,
+  onRuntimeFrameReady,
 }) => {
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()
@@ -56,10 +58,29 @@ export const TravelDetailsSidebarSection: React.FC<{
     canRenderHeavy,
     travel,
   })
+  const [nearDataCommitted, setNearDataCommitted] = useState(false)
+  useEffect(() => {
+    setNearDataCommitted(false)
+  }, [travel.id, travel.slug])
+  const handleNearTravelsLoaded = useCallback(
+    (travels: Travel[]) => {
+      handleTravelsLoaded(travels)
+      setNearDataCommitted(true)
+    },
+    [handleTravelsLoaded],
+  )
+  const handleSidebarLayout = useCallback(() => {
+    if (!nearDataCommitted) return
+    onRuntimeFrameReady?.()
+  }, [nearDataCommitted, onRuntimeFrameReady])
 
 
   return (
-    <>
+    <View
+      testID="travel-details-sidebar-runtime-frame"
+      collapsable={false}
+      onLayout={handleSidebarLayout}
+    >
       <View
         ref={(node) => {
           // Handle both anchor ref and progressive load ref
@@ -89,7 +110,7 @@ export const TravelDetailsSidebarSection: React.FC<{
               <Suspense fallback={<View style={LIST_FALLBACK_STYLE} />}>
                 <NearTravelListComponent
                   travel={travel}
-                  onTravelsLoaded={handleTravelsLoaded}
+                  onTravelsLoaded={handleNearTravelsLoaded}
                   showHeader={false}
                   embedded
                   fetchEnabled={nearInViewport}
@@ -140,6 +161,6 @@ export const TravelDetailsSidebarSection: React.FC<{
           </View>
         </View>
       </View>
-    </>
+    </View>
   )
 }
