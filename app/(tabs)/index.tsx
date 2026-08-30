@@ -255,6 +255,19 @@ const HomeWithReadyCallback = React.memo<{ onReady: () => void }>(({ onReady }) 
   // — на throttled mobile это 1,55 с скелетона поверх готовой страницы.
   useEffect(() => markSsgFirstScreenReady(), [])
 
+  // #1609: drop the SSG-injected sr-only `<h1 data-ssg-travel-h1>` once the
+  // real hero <h1> (HomeHeroBookLayout's `accessibilityRole="header"` +
+  // `aria-level=1` node) has mounted. Same marker/teardown pattern as
+  // TravelDetailsCriticalShell — the SSG heading sits outside #root as a
+  // sibling so raw HTML keeps one H1 for no-JS crawlers, but hydration never
+  // touches it, so without this it coexists with the now-visible real hero
+  // heading and hydrated DOM ends up with two H1s.
+  useEffect(() => {
+    if (!IS_WEB) return
+    const stale = document.querySelectorAll('h1[data-ssg-travel-h1]')
+    stale.forEach((node) => node.parentNode?.removeChild(node))
+  }, [])
+
   return <Home />
 })
 HomeWithReadyCallback.displayName = 'HomeWithReadyCallback'

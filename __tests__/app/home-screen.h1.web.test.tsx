@@ -75,7 +75,7 @@ describe('HomeScreen SSG H1 cleanup (#1609)', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(document.querySelectorAll('h1[data-ssg-travel-h1]').length).toBe(1)
 
-    // @ts-expect-error restore
+    // @ts-expect-error restore the real jsdom location for later tests
     window.location = originalLocation
   })
 })
