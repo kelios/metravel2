@@ -185,7 +185,7 @@ test.describe('Travel header hydration geometry #1563', () => {
 
       const baseURL = testInfo.project.use.baseURL
       expect(baseURL, 'Playwright project must define a local baseURL').toBeTruthy()
-      await readStaticHeader(
+      const staticHeader = await readStaticHeader(
         browser,
         String(baseURL),
         '/quests/minsk/header-hydration-control',
@@ -198,6 +198,15 @@ test.describe('Travel header hydration geometry #1563', () => {
       await expect(page.locator('[data-header-slot="account"]')).toHaveCount(0)
       await expect(page.getByTestId('header-context-bar')).toBeVisible({ timeout: 30_000 })
       await expect(page.locator('[data-header-context-fallback="travel"]')).toHaveCount(0)
+
+      // Контракт требует равенства статической и рантаймовой шапки на всех трёх
+      // маршрутах, а не только на `/` и `/travels/*`: расхождение 130 → 78 в
+      // #1563 появилось именно на маршруте, для которого такого контроля не было.
+      const runtimeHeader = await waitForRuntimeHeader(page)
+      expect(
+        Math.abs(staticHeader.height - runtimeHeader.height),
+        `quest header must not resize on hydration: static ${staticHeader.height}px vs runtime ${runtimeHeader.height}px`,
+      ).toBeLessThanOrEqual(1)
     },
   )
 })
