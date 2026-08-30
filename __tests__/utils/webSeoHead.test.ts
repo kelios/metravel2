@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { ensureSingleTitleTag } from '@/utils/seo'
+import { ensureSingleTitleTag, syncWebSeoMetadata } from '@/utils/seo'
 
 describe('ensureSingleTitleTag', () => {
   beforeEach(() => {
@@ -37,4 +37,100 @@ describe('ensureSingleTitleTag', () => {
   })
 })
 
+describe('syncWebSeoMetadata', () => {
+  const META_SELECTORS = [
+    'meta[name="description"]',
+    'meta[property="og:title"]',
+    'meta[property="og:description"]',
+    'meta[name="twitter:title"]',
+    'meta[name="twitter:description"]',
+  ]
 
+  beforeEach(() => {
+    document.head.innerHTML = ''
+    document.body.innerHTML = ''
+  })
+
+  const appendHeadSet = (title: string, description: string) => {
+    document.head.insertAdjacentHTML('beforeend', [
+      `<title data-rh="true">${title}</title>`,
+      `<meta data-rh="true" name="description" content="${description}">`,
+      `<meta data-rh="true" property="og:title" content="${title}">`,
+      `<meta data-rh="true" property="og:description" content="${description}">`,
+      `<meta data-rh="true" name="twitter:title" content="${title}">`,
+      `<meta data-rh="true" name="twitter:description" content="${description}">`,
+    ].join(''))
+  }
+
+  const expectSingleLocalizedHead = (title: string, description: string) => {
+    expect(document.head.querySelectorAll('title')).toHaveLength(1)
+    expect(document.title).toBe(title)
+    for (const selector of META_SELECTORS) {
+      const nodes = document.head.querySelectorAll(selector)
+      expect(nodes).toHaveLength(1)
+      const expected = selector.includes('title') ? title : description
+      expect(nodes[0].getAttribute('content')).toBe(expected)
+    }
+  }
+
+  it('replaces the static RU set with one active-locale set across hydration and locale changes', () => {
+    const ru = {
+      title: 'Квесты и маршруты на выходные по Беларуси | Metravel',
+      description: 'Русское описание главной',
+    }
+    const be = {
+      title: 'Квэсты і маршруты на выходныя па Беларусі | Metravel',
+      description: 'Беларускае апісанне галоўнай',
+    }
+    const en = {
+      title: 'Belarus City Quests and Weekend Routes | Metravel',
+      description: 'English home description',
+    }
+
+    appendHeadSet(ru.title, ru.description)
+    appendHeadSet(be.title, be.description)
+    syncWebSeoMetadata(be)
+    expectSingleLocalizedHead(be.title, be.description)
+
+    appendHeadSet(en.title, en.description)
+    syncWebSeoMetadata(en)
+    expectSingleLocalizedHead(en.title, en.description)
+  })
+
+  it('preserves unrelated head tags while deduplicating the managed selectors', () => {
+    document.head.innerHTML = [
+      '<meta name="theme-color" content="#ffffff">',
+      '<meta name="twitter:site" content="@metravel_by">',
+    ].join('')
+
+    syncWebSeoMetadata({
+      title: 'Home | Metravel',
+      description: 'Home description',
+    })
+
+    expect(document.head.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#ffffff')
+    expect(document.head.querySelector('meta[name="twitter:site"]')?.getAttribute('content')).toBe('@metravel_by')
+  })
+
+  it('removes stale description metadata when the focused route has no description', () => {
+    appendHeadSet('Previous page | Metravel', 'Previous page description')
+
+    syncWebSeoMetadata({ title: 'Trips | Metravel' })
+
+    expect(document.title).toBe('Trips | Metravel')
+    expect(document.head.querySelectorAll('meta[property="og:title"]')).toHaveLength(1)
+    expect(document.head.querySelectorAll('meta[name="twitter:title"]')).toHaveLength(1)
+    expect(document.head.querySelectorAll('meta[name="description"]')).toHaveLength(0)
+    expect(document.head.querySelectorAll('meta[property="og:description"]')).toHaveLength(0)
+    expect(document.head.querySelectorAll('meta[name="twitter:description"]')).toHaveLength(0)
+  })
+
+  it('normalizes surrounding whitespace consistently across title and description tags', () => {
+    syncWebSeoMetadata({
+      title: '  Home | Metravel  ',
+      description: '  Home description  ',
+    })
+
+    expectSingleLocalizedHead('Home | Metravel', 'Home description')
+  })
+})

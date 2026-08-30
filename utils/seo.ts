@@ -125,3 +125,68 @@ export function ensureSingleTitleTag(title: string): HTMLTitleElement | null {
 
   return titleElement;
 }
+
+type WebSeoMetadata = {
+  title: string;
+  description?: string;
+};
+
+const syncSingleMetaTag = (
+  selector: string,
+  attributes: Record<string, string>,
+  content?: string,
+): HTMLMetaElement | null => {
+  if (typeof document === 'undefined') return null;
+
+  const nodes = Array.from(document.head.querySelectorAll(selector)) as HTMLMetaElement[];
+  if (!content) {
+    nodes.forEach((node) => node.parentNode?.removeChild(node));
+    return null;
+  }
+
+  const element = nodes[0] ?? document.createElement('meta');
+
+  for (const [name, value] of Object.entries(attributes)) {
+    if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+  }
+  if (element.getAttribute('content') !== content) element.setAttribute('content', content);
+  if (!element.parentNode) document.head.appendChild(element);
+
+  nodes.slice(1).forEach((node) => node.parentNode?.removeChild(node));
+  return element;
+};
+
+/**
+ * Makes the hydrated route metadata authoritative over the deterministic RU
+ * SSG baseline. Expo Head may append its managed tags instead of adopting the
+ * static ones, so update the first stable tag and remove every duplicate for
+ * the title/description surfaces owned by InstantSEO.
+ */
+export function syncWebSeoMetadata({
+  title,
+  description,
+}: WebSeoMetadata): void {
+  if (typeof document === 'undefined') return;
+
+  const normalizedTitle = String(title || '').trim();
+  if (!normalizedTitle) return;
+  const normalizedDescription = description?.trim() || undefined;
+
+  ensureSingleTitleTag(normalizedTitle);
+
+  const targets: Array<{
+    selector: string;
+    attributes: Record<string, string>;
+    content: string | undefined;
+  }> = [
+    { selector: 'meta[name="description"]', attributes: { name: 'description' }, content: normalizedDescription },
+    { selector: 'meta[property="og:title"]', attributes: { property: 'og:title' }, content: normalizedTitle },
+    { selector: 'meta[property="og:description"]', attributes: { property: 'og:description' }, content: normalizedDescription },
+    { selector: 'meta[name="twitter:title"]', attributes: { name: 'twitter:title' }, content: normalizedTitle },
+    { selector: 'meta[name="twitter:description"]', attributes: { name: 'twitter:description' }, content: normalizedDescription },
+  ];
+
+  for (const target of targets) {
+    syncSingleMetaTag(target.selector, target.attributes, target.content);
+  }
+}

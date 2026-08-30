@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Head from 'expo-router/head';
-import { ensureSingleTitleTag, normalizeOgImageUrl } from '@/utils/seo';
+import { normalizeOgImageUrl, syncWebSeoMetadata } from '@/utils/seo';
 import { getActiveLocaleDefinition } from '@/i18n/format';
 
 type Props = {
@@ -40,8 +40,28 @@ function StaticHead({
   useEffect(() => {
     if (typeof document === 'undefined' || !title) return;
 
-    ensureSingleTitleTag(title);
-  }, [title]);
+    const syncMetadata = () => syncWebSeoMetadata({ title, description });
+
+    syncMetadata();
+
+    // Expo Head may append a managed copy after hydration or a locale update.
+    // Keep the deterministic static tag, write the active value into it and
+    // discard every later copy during that reconciliation window.
+    const observer = new MutationObserver(syncMetadata);
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+      attributeFilter: ['content'],
+    });
+    const timeout = window.setTimeout(() => observer.disconnect(), 5000);
+
+    return () => {
+      window.clearTimeout(timeout);
+      observer.disconnect();
+    };
+  }, [description, title]);
 
   useEffect(() => {
     if (typeof document === 'undefined' || !robots) return;
