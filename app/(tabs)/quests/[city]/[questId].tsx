@@ -25,6 +25,7 @@ import { buildQuestProgressStorageKey } from '@/utils/questProgressStorage';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { buildQuestSeoMetadata } from '@/utils/questSeo';
+import { buildQuestCountModel } from '@/utils/questCountModel';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
@@ -54,6 +55,9 @@ type QuestSeoModel = {
 
 const HEAD_PATCH_DELAYS_MS = [0, 120, 400] as const;
 const QUEST_LIST_ROUTE = '/quests';
+
+const resolveBundleCountModel = (bundle: FrontendQuestBundle) =>
+  bundle.countModel ?? buildQuestCountModel(bundle.steps, bundle.intro);
 
 const hiddenWebHeadingStyle = {
   position: 'absolute' as const,
@@ -95,7 +99,7 @@ const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoad
   const metadata = buildQuestSeoMetadata({
     title: bundle.title,
     cityName: bundle.city?.name,
-    points: bundle.steps.length,
+    points: resolveBundleCountModel(bundle).total,
     translate: i18nT,
     locale: getFormatLocale(),
   });
@@ -375,6 +379,7 @@ export default function QuestByIdScreen() {
     isQuestLoading ||
     (isAuthenticated ? progressLoading : Boolean(questId) && !guestFlow.guestReady);
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
+  const countModel = bundle ? resolveBundleCountModel(bundle) : null;
   const seoImage = useMemo(() => getQuestImage(bundle?.coverUrl), [bundle?.coverUrl]);
   const initialProgress = useMemo(() => {
     if (!isAuthenticated) {
@@ -411,7 +416,7 @@ export default function QuestByIdScreen() {
       cityName: bundle.city?.name,
       countryCode: bundle.city?.countryCode,
       coverUrl: bundle.coverUrl,
-      stepsCount: bundle.steps.length,
+      stepsCount: countModel?.total,
       lat: bundle.city?.lat,
       lng: bundle.city?.lng,
     });
@@ -423,7 +428,7 @@ export default function QuestByIdScreen() {
         dangerouslySetInnerHTML={{ __html: stringifyJsonLd(structuredData) }}
       />
     );
-  }, [bundle, canonical, cityId, questId, seo.description, seo.title]);
+  }, [bundle, canonical, cityId, countModel?.total, questId, seo.description, seo.title]);
 
   const relatedTravelsSlot = useMemo(() => {
     if (!bundle) return null;
@@ -502,6 +507,7 @@ export default function QuestByIdScreen() {
               tags={bundle.tags}
               finale={bundle.finale}
               intro={bundle.intro}
+              countModel={countModel ?? undefined}
               storageKey={guestStorageKey}
               city={bundle.city}
               coverUrl={bundle.coverUrl}
@@ -527,6 +533,7 @@ export default function QuestByIdScreen() {
             tags={bundle.tags}
             finale={bundle.finale}
             intro={bundle.intro}
+            countModel={countModel ?? undefined}
             storageKey={guestStorageKey}
             city={bundle.city}
             coverUrl={bundle.coverUrl}
@@ -604,6 +611,7 @@ export default function QuestByIdScreen() {
             tags={bundle.tags}
             finale={bundle.finale}
             intro={bundle.intro}
+            countModel={countModel ?? undefined}
             storageKey={progressStorageKey}
             city={bundle.city}
             coverUrl={bundle.coverUrl}
@@ -627,6 +635,7 @@ export default function QuestByIdScreen() {
           tags={bundle.tags}
           finale={bundle.finale}
           intro={bundle.intro}
+          countModel={countModel ?? undefined}
           storageKey={progressStorageKey}
           city={bundle.city}
           coverUrl={bundle.coverUrl}

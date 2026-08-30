@@ -30,6 +30,7 @@ import {
     type QuestMapMarkerStatus,
 } from './questMapBridge';
 import {
+    formatQuestMapPointTitle,
     groupQuestStepPoints,
     normalizeQuestStepPoints,
     type QuestStepPoint,
@@ -163,6 +164,7 @@ function QuestFullMap({
                 'quests:components.quests.QuestFullMap.pointFallback',
                 { value1: pointNumber },
             ),
+            formatQuestMapPointTitle,
         ),
         [points],
     );

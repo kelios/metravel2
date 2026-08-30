@@ -3,6 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { questStepsMissingForCompletion } from '@/utils/questCompletionPolicy'
 import {
+  buildQuestCountModel,
+  getQuestProgressSteps,
+  getQuestRouteGateSteps,
+  type QuestCountModel,
+  type QuestPointRole,
+} from '@/utils/questCountModel'
+import {
   mergeQuestProgress,
   normalizeQuestProgressSnapshot,
   type QuestProgressSnapshot,
@@ -10,15 +17,8 @@ import {
 
 type QuestProgressStep = {
   id: string
-  answer?: (input: string) => boolean
+  pointRole?: QuestPointRole
 }
-
-// Необязательные точки-паузы (☕/✨) приходят с answer_pattern type='any' →
-// checker помечается _isAny. У них нет проверяемого ответа, и они НЕ должны
-// гейтить финал: иначе «пройдено N из M» недостижимо, пока игрок явно не
-// нажмёт «Далее» на каждой такой точке (баг: финал заблокирован на 7/9).
-const isOptionalStep = (step: QuestProgressStep): boolean =>
-  (step.answer as unknown as { _isAny?: boolean } | undefined)?._isAny === true
 
 type QuestWizardProgressPayload = {
   currentIndex: number
@@ -131,6 +131,7 @@ const readStoredProgress = async (storageKey: string): Promise<QuestProgressSnap
 type UseQuestWizardProgressParams = {
   allSteps: QuestProgressStep[]
   steps: QuestProgressStep[]
+  countModel?: QuestCountModel
   storageKey: string
   initialProgress?: InitialQuestProgress
   onProgressChange?: (data: QuestWizardProgressPayload) => void
@@ -140,6 +141,7 @@ type UseQuestWizardProgressParams = {
 export function useQuestWizardProgress({
   allSteps,
   steps,
+  countModel,
   storageKey,
   initialProgress,
   onProgressChange,
@@ -165,6 +167,10 @@ export function useQuestWizardProgress({
   // смонтированной сессии. Гидратация уже завершённого прогресса его не ставит,
   // поэтому повторное открытие финала не создаёт новый retention-цикл.
   const [completionFinishedAt, setCompletionFinishedAt] = useState<number | null>(null)
+  const resolvedCountModel = useMemo(
+    () => countModel ?? buildQuestCountModel(steps, allSteps.find((step) => step.id === 'intro')),
+    [allSteps, countModel, steps],
+  )
   // Отпечаток состояния, которое хук засеял сам (слияние, AsyncStorage, сброс).
   // Save-эффект пропускает ровно его — без прежней гонки `suppressSave` с
   // `setTimeout(0)`, где лишний await в load-эффекте решал, сработает гейт или
@@ -274,17 +280,25 @@ export function useQuestWizardProgress({
     loadProgress()
   }, [initialProgress, seedProgressState, storageKey])
 
-  // Только обязательные (проверяемые) шаги гейтят финал и считаются в прогрессе.
-  const requiredSteps = useMemo(() => steps.filter((step) => !isOptionalStep(step)), [steps])
+  // Explicit backend roles own the denominator. An incomplete role contract
+  // falls back to every numbered step without inspecting answer behavior.
+  const requiredSteps = useMemo(
+    () => getQuestProgressSteps(steps, resolvedCountModel),
+    [resolvedCountModel, steps],
+  )
+  const routeGateSteps = useMemo(
+    () => getQuestRouteGateSteps(steps, resolvedCountModel),
+    [resolvedCountModel, steps],
+  )
   // Пропущенная далёкая точка из гейта финала выпадает, но из знаменателя
   // «пройдено N из M» — нет: счётчик остаётся честным.
   const gatingSteps = useMemo(
-    () => requiredSteps.filter((step) => !skipped[step.id]),
-    [requiredSteps, skipped],
+    () => routeGateSteps.filter((step) => !skipped[step.id]),
+    [routeGateSteps, skipped],
   )
 
   const completedSteps = useMemo(() => requiredSteps.filter((step) => answers[step.id]), [answers, requiredSteps])
-  // Точки, которые ещё держат гейт финала: обязательные, без ответа и без
+  // Точки, которые ещё держат гейт финала: обязательные/финальная, без ответа и без
   // официального пропуска. Ссылка «Пропустить» (#1633) переносит игрока вперёд,
   // но точку с гейта не снимает — и до этого списка игрок никак не мог узнать,
   // что именно осталось за спиной и почему финал не открывается.
@@ -320,7 +334,7 @@ export function useQuestWizardProgress({
   // Прохождение неполное по воле игрока: пропущенная далёкая точка или финиш на
   // месте. Не то же самое, что «отвечено меньше, чем шагов»: в квест могли
   // добавить шаг уже после прохождения (#1431).
-  const finishedEarly = earlyFinish || requiredSteps.some((step) => skipped[step.id] && !answers[step.id])
+  const finishedEarly = earlyFinish || routeGateSteps.some((step) => skipped[step.id] && !answers[step.id])
 
   useEffect(() => {
     const fingerprint = stateFingerprint({ currentIndex, unlockedIndex, answers, attempts, hints, showMap, skipped, earlyFinish })
@@ -447,7 +461,7 @@ export function useQuestWizardProgress({
     showMap,
     setShowMap,
     completedSteps,
-    /** Обязательные точки без ответа и без официального пропуска (#1633). */
+    /** Гейтящие точки без ответа и без официального пропуска (#1633). */
     pendingSteps,
     requiredCount,
     progress,

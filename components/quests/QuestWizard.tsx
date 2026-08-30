@@ -52,6 +52,7 @@ import { useQuestKeyboardReveal } from './hooks/useQuestKeyboardReveal';
 import { useQuestWizardAnalytics } from './hooks/useQuestWizardAnalytics';
 import { createQuestWizardStyles } from './questWizardStyles';
 import { useTranslation } from '@/i18n/LocaleProvider';
+import { buildQuestCountModel, type QuestCountModel } from '@/utils/questCountModel';
 
 // ===================== ТИПЫ =====================
 export type { QuestStep, QuestCity, QuestFinale } from './types';
@@ -60,6 +61,7 @@ import { translate as i18nT } from '@/i18n'
 
 export type QuestWizardProps = {
     title: string; steps: QuestStep[]; finale: QuestFinale; intro?: QuestStep;
+    countModel?: QuestCountModel;
     storageKey?: string; city?: QuestCity;
     coverUrl?: string;
     /** Теги квеста (meta.tags): `bike` выбирает веломаршрут, `loop` замыкает его к старту. */
@@ -124,9 +126,13 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, countModel, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const { t } = useTranslation();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
+    const resolvedCountModel = useMemo(
+        () => countModel ?? buildQuestCountModel(steps, intro),
+        [countModel, intro, steps],
+    );
     // Detail API does not include tags; the list metadata enriches them shortly
     // afterwards. Keep routing paused until that classification is known so a
     // bike/loop quest never flashes or requests a pedestrian, open route first.
@@ -172,6 +178,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     } = useQuestWizardProgress({
         allSteps,
         steps,
+        countModel: resolvedCountModel,
         storageKey,
         initialProgress,
         onProgressChange,
@@ -573,12 +580,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     // Гостевой гейт и финал стартовую карточку не показывают.
     const introTrustBar = useMemo(() => (
         <QuestTrustBar
-            pointsCount={steps.length}
+            countModel={resolvedCountModel}
             questTitle={title}
             questId={questId}
             cityId={cityId}
         />
-    ), [cityId, questId, steps.length, title]);
+    ), [cityId, questId, resolvedCountModel, title]);
     const mainContent = (
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
@@ -734,6 +741,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 progress={progress}
                                 completedCount={completedSteps.length}
                                 stepsCount={requiredCount}
+                                countModel={resolvedCountModel}
                                 allSteps={allSteps}
                                 answers={answers}
                                 currentIndex={currentIndex}
@@ -779,6 +787,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 progress={progress}
                                 completedCount={completedSteps.length}
                                 stepsCount={requiredCount}
+                                countModel={resolvedCountModel}
                                 allSteps={allSteps}
                                 answers={answers}
                                 currentIndex={currentIndex}

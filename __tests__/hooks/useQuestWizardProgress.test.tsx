@@ -331,11 +331,10 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.answers['step-2']).toBe('castle')
   })
 
-  it('does not let optional (any-type) pause points gate the finale', async () => {
-    // Репро бага «пройдено 7 из 9»: необязательные точки-паузы ☕/✨ приходят с
-    // answer_pattern type='any' (checker помечен _isAny) и раньше сидели в
-    // знаменателе гейта — финал был недостижим, пока игрок явно не нажмёт «Далее»
-    // на каждой. Теперь такие шаги исключены из requiredCount/routeGateClosed.
+  it('does not infer optional semantics from answer:any when roles are incomplete', async () => {
+    // #1614: `answer_pattern:any` describes answer behavior, not route role.
+    // Until every numbered point has a valid backend role, the fallback is
+    // neutral and every structurally numbered point owns progress/gating.
     const anyChecker = (() => {
       const fn = () => true
       ;(fn as unknown as { _isAny: boolean })._isAny = true
@@ -352,7 +351,7 @@ describe('useQuestWizardProgress', () => {
     const initialProgress = {
       currentIndex: 2,
       unlockedIndex: 2,
-      // Оба ОБЯЗАТЕЛЬНЫХ шага отвечены; необязательная ☕-точка — нет.
+      // Два шага отвечены, но без point_role клиент не объявляет третий optional.
       answers: { 'req-1': 'a', 'req-2': 'b' },
       attempts: {},
       hints: {},
@@ -372,11 +371,51 @@ describe('useQuestWizardProgress', () => {
       expect(result.current.answers['req-2']).toBe('b')
     })
 
-    // Финал доступен: обязательные шаги — 2 из 2, необязательная точка не блокирует.
-    expect(result.current.requiredCount).toBe(2)
+    expect(result.current.requiredCount).toBe(3)
     expect(result.current.completedSteps).toEqual([{ id: 'req-1', answer: realChecker }, { id: 'req-2', answer: realChecker }])
+    expect(result.current.progress).toBe(2 / 3)
+    expect(result.current.routeGateClosed).toBe(false)
+  })
+
+  it('uses required roles for progress but keeps the explicit final point in the route gate', async () => {
+    const checker = () => true
+    const routeSteps = [
+      { id: 'req-1', answer: checker, pointRole: 'required' as const },
+      { id: 'pause', answer: checker, pointRole: 'optional' as const },
+      { id: 'req-2', answer: checker, pointRole: 'required' as const },
+      { id: 'finish', answer: checker, pointRole: 'final' as const },
+    ]
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...routeSteps],
+        steps: routeSteps,
+        storageKey: 'quest_progress_explicit_final_gate',
+        initialProgress: {
+          currentIndex: 3,
+          unlockedIndex: 3,
+          answers: { 'req-1': 'a', 'req-2': 'b' },
+          attempts: {},
+          hints: {},
+          showMap: true,
+        },
+      })
+    )
+
+    await waitFor(() => expect(result.current.answers['req-2']).toBe('b'))
+
+    expect(result.current.requiredCount).toBe(2)
     expect(result.current.progress).toBe(1)
+    expect(result.current.routeGateClosed).toBe(false)
+    expect(result.current.pendingSteps.map((step) => step.id)).toEqual(['finish'])
+
+    act(() => {
+      result.current.setAnswers((prev) => ({ ...prev, finish: 'done' }))
+    })
+
     expect(result.current.routeGateClosed).toBe(true)
+    expect(result.current.questCompleted).toBe(true)
+    expect(result.current.completedSteps).toHaveLength(2)
   })
 
   it('засчитывает квест после пропуска далёкой точки в середине маршрута', async () => {

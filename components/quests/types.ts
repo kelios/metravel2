@@ -1,3 +1,5 @@
+import type { QuestPointRole } from '@/utils/questCountModel';
+
 export type QuestPoiInfo = {
   isMuseum: boolean;
   openingHours?: string;
@@ -34,6 +36,8 @@ export type QuestStep = {
   image?: any;
   inputType?: 'number' | 'text';
   poiInfo?: QuestPoiInfo | null;
+  /** Backend-owned route role. Missing means the point-count contract is incomplete. */
+  pointRole?: QuestPointRole;
 };
 
 export type QuestCity = {

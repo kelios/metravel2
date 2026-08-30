@@ -15,6 +15,11 @@ import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { isSameWordForm, matchesAnyWordForm } from '@/utils/questAnswerMorphology';
 import { devError } from '@/utils/logger';
 import { getQuestAgeCategory, type QuestAgeCategory } from '@/utils/questAudience';
+import {
+    buildQuestCountModel,
+    type QuestCountModel,
+    type QuestPointRole,
+} from '@/utils/questCountModel';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -161,6 +166,7 @@ export type FrontendQuestBundle = {
     steps: QuestStep[];
     finale: QuestFinale;
     intro?: QuestStep;
+    countModel: QuestCountModel;
     storageKey?: string;
     city?: QuestCity;
     coverUrl?: string;
@@ -175,6 +181,23 @@ export type FrontendQuestBundle = {
 };
 
 const INTRO_STEP_ID = 'intro';
+
+const QUEST_POINT_ROLES = new Set<QuestPointRole>(['start', 'required', 'optional', 'final']);
+
+/**
+ * Accept only backend-owned classification fields. Authored titles and ids are
+ * not authority, and answer behavior is not a role: optional pauses and the
+ * final point can use the same `any` checker.
+ */
+function adaptPointRole(apiStep: ApiQuestStep): QuestPointRole | undefined {
+    if (apiStep.is_intro) return 'start';
+
+    const rawRole = apiStep.point_role;
+    if (typeof rawRole === 'string' && QUEST_POINT_ROLES.has(rawRole as QuestPointRole)) {
+        return rawRole as QuestPointRole;
+    }
+    return undefined;
+}
 
 // ===================== АДАПТЕРЫ: API → Frontend =====================
 
@@ -439,6 +462,7 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
         image: fixMediaUrl(apiStep.image_url),
         inputType: resolveStepInputType(answerType, answerValue, apiStep.input_type),
         poiInfo: adaptPoiInfo(apiStep),
+        pointRole: adaptPointRole(apiStep),
     };
 }
 
@@ -542,11 +566,11 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             const rawIntro: ApiQuestStep = typeof apiBundle.intro === 'string'
                 ? JSON.parse(apiBundle.intro)
                 : apiBundle.intro;
-            intro = { ...adaptStep(rawIntro), id: INTRO_STEP_ID };
+            intro = { ...adaptStep(rawIntro), id: INTRO_STEP_ID, pointRole: 'start' };
         } else {
             const introFromSteps = rawSteps.find((s) => isIntroStep(s));
             if (introFromSteps) {
-                intro = { ...adaptStep(introFromSteps), id: INTRO_STEP_ID };
+                intro = { ...adaptStep(introFromSteps), id: INTRO_STEP_ID, pointRole: 'start' };
             }
         }
     } catch (e) {
@@ -568,7 +592,17 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             lng: coordNum(apiBundle.city?.lng || 0),
             mapsUrl: 'https://metravel.by/quests',
             inputType: 'text',
+            pointRole: 'start',
         };
+    }
+
+    const countModel = buildQuestCountModel(steps, intro);
+    // Role semantics are atomic: a partially classified payload must not label
+    // only some route points as required/optional/final.
+    if (countModel.source === 'fallback') {
+        steps = steps.map((step) => step.pointRole == null
+            ? step
+            : { ...step, pointRole: undefined });
     }
 
     return {
@@ -578,6 +612,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
         steps,
         finale: adaptFinale(apiBundle.finale),
         intro,
+        countModel,
         storageKey: apiBundle.storage_key,
         city: adaptCity(apiBundle.city),
         coverUrl: fixMediaUrl(apiBundle.cover_url),

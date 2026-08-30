@@ -7,6 +7,7 @@ import { transliterate } from '@/utils/routeExport/normalize';
 import type { LngLat } from '@/utils/routeExport';
 
 import type { QuestStep } from './types';
+import { getQuestPointRoleLabel } from './questMapPoints';
 import {
   buildQuestRouteGeometry,
   closeQuestRouteLoop,
@@ -17,9 +18,15 @@ import {
 import { translate as i18nT } from '@/i18n'
 
 
-export type QuestOfflineMapPoint = Pick<QuestStep, 'lat' | 'lng'> & {
+export type QuestOfflineMapPoint = Pick<QuestStep, 'lat' | 'lng' | 'pointRole'> & {
   title?: string;
   location?: string;
+};
+
+const getPointExportName = (point: QuestOfflineMapPoint, fallback: string): string => {
+  const name = point.title || point.location || fallback;
+  const roleLabel = point.pointRole ? getQuestPointRoleLabel(point.pointRole) : null;
+  return roleLabel ? `${name} · ${roleLabel}` : name;
 };
 
 export type QuestOfflineMapExportOptions = {
@@ -77,7 +84,10 @@ export const buildQuestOfflineMapGpx = ({
       : i18nT('quests:components.quests.questOfflineMapExport.tochki_kvesta_metravel_gpx_dlya_importa_v_of_d4cd350a'),
     track: routedTrack ?? waypointTrack,
     waypoints: points.map((point, index) => ({
-      name: point.title || point.location || i18nT('quests:components.quests.QuestFullMap.pointFallback', { value1: index + 1 }),
+      name: getPointExportName(
+        point,
+        i18nT('quests:components.quests.QuestFullMap.pointFallback', { value1: index + 1 }),
+      ),
       description: point.location,
       coordinates: [point.lng, point.lat],
     })),
@@ -109,7 +119,14 @@ export const buildQuestOfflineMapGeoJSON = ({
         ...points.map((point, index) => ({
           type: 'Feature',
           geometry: { type: 'Point', coordinates: [point.lng, point.lat] },
-          properties: { order: index + 1, title: point.title || i18nT('quests:components.quests.QuestFullMap.pointFallback', { value1: index + 1 }) },
+          properties: {
+            order: index + 1,
+            title: getPointExportName(
+              point,
+              i18nT('quests:components.quests.QuestFullMap.pointFallback', { value1: index + 1 }),
+            ),
+            ...(point.pointRole ? { pointRole: point.pointRole } : null),
+          },
         })),
         {
           type: 'Feature',

@@ -21,11 +21,13 @@ import { describeQuestAnswer, evaluateQuestAnswer } from '@/utils/questAnswerEva
 import { recordQuestAnswerAttempt } from '@/utils/questAnswerTelemetry'
 
 import QuestPointNavigator from './QuestPointNavigator'
+import { getQuestPointRoleLabel } from './questMapPoints'
 import { copyQuestCoords, openQuestMap, type QuestMapApp } from './questWizardHelpers'
 import { type QuestLegInfo } from './questStepDistance'
 import type { QuestAnswerChecker, QuestPoiInfo } from './types'
 import { formatDistance, formatTravelTime } from '@/utils/distanceCalculator'
 import { translate as i18nT, translatePlural } from '@/i18n'
+import type { QuestPointRole } from '@/utils/questCountModel'
 
 
 const SHOULD_USE_NATIVE_DRIVER = false
@@ -85,6 +87,7 @@ type QuestStepLike = {
   image?: any
   inputType?: 'number' | 'text'
   poiInfo?: QuestPoiInfo | null
+  pointRole?: QuestPointRole
 }
 
 type StepCardProps = {
@@ -477,6 +480,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         )}
         <View style={styles.headerContent}>
           <Text style={styles.stepTitle}>{step.title}</Text>
+          {step.pointRole ? (
+            <Text style={styles.pointRoleLabel}>
+              {getQuestPointRoleLabel(step.pointRole)}
+            </Text>
+          ) : null}
           <Pressable
             onPress={openDefaultMap}
             accessibilityRole="button"

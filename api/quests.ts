@@ -81,6 +81,8 @@ export type ApiQuestStep = {
     input_type?: 'number' | 'text';
     order?: number;
     is_intro?: boolean;
+    /** Canonical point classification for progress/count parity (#1614). */
+    point_role?: 'start' | 'required' | 'optional' | 'final' | null;
     country_code?: string | null;
     poi_info?: {
         is_museum: boolean;

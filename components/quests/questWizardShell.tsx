@@ -14,11 +14,27 @@ import {
   useQuestFontScaleStore,
 } from '@/stores/questFontScaleStore'
 import { translate as i18nT } from '@/i18n'
+import type { QuestCountModel, QuestPointRole } from '@/utils/questCountModel'
+import { getQuestPointRoleLabel } from './questMapPoints'
 
 
 type QuestNavigationStep = {
   id: string
   title: string
+  pointRole?: QuestPointRole
+}
+
+const getNavigationStepLabel = (step: QuestNavigationStep): string => {
+  if (step.id === 'intro' || step.pointRole === 'start') {
+    return i18nT('quests:components.quests.questWizardShell.start_225f7a82')
+  }
+  if (step.pointRole === 'optional') {
+    return `${step.title} · ${getQuestPointRoleLabel(step.pointRole)}`
+  }
+  if (step.pointRole === 'final') {
+    return `${step.title} · ${getQuestPointRoleLabel(step.pointRole)}`
+  }
+  return step.title
 }
 
 type QuestCityLike = {
@@ -48,6 +64,7 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   progress: number
   completedCount: number
   stepsCount: number
+  countModel: QuestCountModel
   city?: QuestCityLike
   onReset: () => void
   onPrintDownload: () => void
@@ -68,6 +85,7 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   progress: number
   completedCount: number
   stepsCount: number
+  countModel: QuestCountModel
   isMobile: boolean
   screenW: number
   compactNav: boolean
@@ -231,12 +249,14 @@ function QuestProgressSummary({
   progress,
   completedCount,
   stepsCount,
+  countModel,
   showText = true,
 }: {
   styles: any
   progress: number
   completedCount: number
   stepsCount: number
+  countModel: QuestCountModel
   showText?: boolean
 }) {
   return (
@@ -246,7 +266,21 @@ function QuestProgressSummary({
       </View>
       {showText && (
         <Text style={styles.progressText}>
-          {completedCount} / {stepsCount}
+          {i18nT('quests:components.quests.questWizardShell.progressTasks', {
+            completed: completedCount,
+            total: stepsCount,
+          })}
+        </Text>
+      )}
+      {showText && countModel.source === 'explicit' && (
+        <Text style={styles.progressText}>
+          {i18nT('quests:components.quests.questWizardShell.countBreakdown', {
+            total: countModel.total,
+            required: countModel.required,
+            optional: countModel.optional,
+            start: countModel.start,
+            final: countModel.final,
+          })}
         </Text>
       )}
     </View>
@@ -261,6 +295,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     progress,
     completedCount,
     stepsCount,
+    countModel,
     allSteps,
     answers,
     currentIndex,
@@ -359,6 +394,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         progress={progress}
         completedCount={completedCount}
         stepsCount={stepsCount}
+        countModel={countModel}
       />
 
       <ScrollView
@@ -385,7 +421,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
               }}
               indexLabel={String(index)}
               isIntro={step.id === 'intro'}
-              label={step.id === 'intro' ? i18nT('quests:components.quests.questWizardShell.start_225f7a82') : step.title}
+              label={getNavigationStepLabel(step)}
               numberOfLines={2}
             />
           )
@@ -471,6 +507,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     progress,
     completedCount,
     stepsCount,
+    countModel,
     allSteps,
     answers,
     currentIndex,
@@ -592,7 +629,10 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           />
           {isMobile && (
             <Text style={styles.progressCompact} numberOfLines={1}>
-              {completedCount} / {stepsCount}
+              {i18nT('quests:components.quests.questWizardShell.progressTasks', {
+                completed: completedCount,
+                total: stepsCount,
+              })}
             </Text>
           )}
         </View>
@@ -611,6 +651,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         progress={progress}
         completedCount={completedCount}
         stepsCount={stepsCount}
+        countModel={countModel}
         showText={!isMobile}
       />
 
@@ -634,7 +675,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                 }}
                 indexLabel={step.id === 'intro' ? '' : String(index)}
                 isIntro={step.id === 'intro'}
-                label={step.id === 'intro' ? i18nT('quests:components.quests.questWizardShell.start_225f7a82') : step.title}
+                label={getNavigationStepLabel(step)}
               />
             )
           })}
@@ -691,7 +732,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                 }}
                 indexLabel={step.id === 'intro' ? '' : String(index)}
                 isIntro={step.id === 'intro'}
-                label={step.id === 'intro' ? i18nT('quests:components.quests.questWizardShell.start_225f7a82') : step.title}
+                label={getNavigationStepLabel(step)}
               />
             )
           })}

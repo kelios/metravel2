@@ -9,6 +9,7 @@ import {
   validateRoutePoints,
 } from '@/utils/routingHelpers';
 import type { LngLat } from '@/utils/routeExport';
+import type { QuestPointRole } from '@/utils/questCountModel';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -17,6 +18,7 @@ export type QuestRoutePoint = {
   lng: number;
   title?: string;
   location?: string;
+  pointRole?: QuestPointRole;
 };
 
 export type QuestRouteGeometrySource = 'routed' | 'direct';

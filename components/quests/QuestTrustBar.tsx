@@ -27,12 +27,15 @@ import { notifyQuest } from './questWizardHelpers'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
+import type { QuestCountModel } from '@/utils/questCountModel'
 
 const { spacing, radii } = DESIGN_TOKENS
 
 type Props = {
   /** Число настоящих точек маршрута (без intro). */
-  pointsCount: number
+  pointsCount?: number
+  /** Canonical detail count model; `pointsCount` remains a test/legacy fallback. */
+  countModel?: QuestCountModel
   questTitle: string
   questId?: string
   cityId?: string
@@ -54,7 +57,7 @@ function QuestTrustFact({ styles, icon, color, text }: FactProps) {
   )
 }
 
-function QuestTrustBar({ pointsCount, questTitle, questId, cityId }: Props) {
+function QuestTrustBar({ pointsCount = 0, countModel, questTitle, questId, cityId }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [expanded, setExpanded] = useState(false)
@@ -70,12 +73,29 @@ function QuestTrustBar({ pointsCount, questTitle, questId, cityId }: Props) {
   return (
     <View style={styles.container} testID="quest-trust-bar">
       <View style={styles.facts}>
-        <QuestTrustFact
-          styles={styles}
-          icon="map-pin"
-          color={colors.brandText}
-          text={i18nT('quests:components.quests.QuestTrustBar.pointsCount', { count: pointsCount })}
-        />
+        {countModel?.source === 'explicit' ? (
+          <QuestTrustFact
+            styles={styles}
+            icon="list"
+            color={colors.brandText}
+            text={i18nT('quests:components.quests.questWizardShell.countBreakdown', {
+              total: countModel.total,
+              required: countModel.required,
+              optional: countModel.optional,
+              start: countModel.start,
+              final: countModel.final,
+            })}
+          />
+        ) : (
+          <QuestTrustFact
+            styles={styles}
+            icon="map-pin"
+            color={colors.brandText}
+            text={i18nT('quests:components.quests.QuestTrustBar.pointsCount', {
+              count: countModel?.total ?? pointsCount,
+            })}
+          />
+        )}
         <QuestTrustFact
           styles={styles}
           icon="check-circle"
@@ -152,6 +172,7 @@ const createStyles = (colors: ThemedColors) =>
     fact: {
       flexDirection: 'row',
       alignItems: 'center',
+      maxWidth: '100%',
       gap: 4,
       paddingHorizontal: spacing.sm,
       paddingVertical: 4,
@@ -161,6 +182,7 @@ const createStyles = (colors: ThemedColors) =>
       borderColor: colors.border,
     },
     factText: {
+      flexShrink: 1,
       fontSize: 12,
       fontWeight: '700',
       color: colors.text,

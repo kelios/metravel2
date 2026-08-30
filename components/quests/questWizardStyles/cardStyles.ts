@@ -61,6 +61,16 @@ export const createCardStyles = (colors: QuestColors, isMobile: boolean, _screen
         letterSpacing: -0.4,
         lineHeight: Math.round((isMobile ? 23 : 26) * fontScale),
     },
+    pointRoleLabel: {
+        alignSelf: 'flex-start',
+        marginBottom: 4,
+        color: colors.textMuted,
+        fontSize: Math.round(12 * fontScale),
+        lineHeight: Math.round(16 * fontScale),
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.4,
+    },
     location: {
         fontSize: 14,
         color: colors.brandText,

@@ -21,6 +21,7 @@ import { buildQuestRouteGeometry, closeQuestRouteLoop, type QuestRouteMode } fro
 import { hasRoutedQuestTrack, useQuestRouteGeometry, type QuestRouteGeometryState } from './useQuestRouteGeometry';
 import {
     ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET,
+    formatQuestMapPointTitle,
     groupQuestStepPoints,
     normalizeQuestStepPoints,
     type QuestStepPoint,
@@ -267,6 +268,7 @@ function QuestFullMap({
                 'quests:components.quests.QuestFullMap.pointFallback',
                 { value1: pointNumber },
             ),
+            formatQuestMapPointTitle,
         ),
         [points],
     );
