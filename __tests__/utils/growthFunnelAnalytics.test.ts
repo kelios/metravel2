@@ -81,12 +81,14 @@ describe('growthFunnelAnalytics', () => {
     trackAppDownloadClicked({ source: 'home_promo' });
     trackAppDownloadClicked({ source: 'install_bar' });
     trackAppDownloadClicked({ source: 'app_page' });
+    trackAppDownloadClicked({ source: 'about_page' });
 
     expect(GROWTH_FUNNEL_EVENTS.appDownloadClick).toBe('app_download_click');
     expect(mockedSendAnalyticsEvent.mock.calls).toEqual([
       ['app_download_click', { source: 'home_promo', platform: 'android' }],
       ['app_download_click', { source: 'install_bar', platform: 'android' }],
       ['app_download_click', { source: 'app_page', platform: 'android' }],
+      ['app_download_click', { source: 'about_page', platform: 'android' }],
     ]);
     // Конверсионный клик уводит в Play — очередь requestIdleCallback его теряет.
     expect(mockedQueueAnalyticsEvent).not.toHaveBeenCalled();

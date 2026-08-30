@@ -1,11 +1,13 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import AboutScreen from '@/app/(tabs)/about';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 import { sendFeedback } from '@/api/misc';
 import { openExternalUrl } from '@/utils/externalLinks';
+import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore';
+import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
@@ -19,6 +21,10 @@ jest.mock('@/api/misc', () => ({
 
 jest.mock('@/utils/externalLinks', () => ({
   openExternalUrl: jest.fn(() => Promise.resolve(true)),
+}));
+
+jest.mock('@/utils/growthFunnelAnalytics', () => ({
+  trackAppDownloadClicked: jest.fn(),
 }));
 
 jest.mock('@/components/seo/InstantSEO', () => () => null);
@@ -47,6 +53,9 @@ const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 const mockSendFeedback = sendFeedback as jest.MockedFunction<typeof sendFeedback>;
 const mockOpenExternalUrl = openExternalUrl as jest.MockedFunction<typeof openExternalUrl>;
+const mockTrackAppDownloadClicked = trackAppDownloadClicked as jest.MockedFunction<
+  typeof trackAppDownloadClicked
+>;
 const originalPlatformOS = Platform.OS;
 
 describe('AboutScreen', () => {
@@ -65,14 +74,55 @@ describe('AboutScreen', () => {
   });
 
   it('renders hero and feature sections', () => {
-    const { getByText } = render(<AboutScreen />);
+    const { getByText, getByTestId, queryByText } = render(<AboutScreen />);
 
     expect(getByText('MeTravel.by')).toBeTruthy();
     expect(getByText('Путешествия, которые хочется повторить')).toBeTruthy();
     expect(getByText('Функции и возможности')).toBeTruthy();
     expect(getByText('Доступно сейчас')).toBeTruthy();
     expect(getByText('В разработке')).toBeTruthy();
+    const currentFeatures = getByTestId('about-current-features');
+    const roadmapFeatures = getByTestId('about-roadmap-features');
+    const androidCopy = 'Приложение MeTravel для Android доступно в Google Play';
+    const offlineCopy =
+      'Выбранные маршруты, статьи, квесты и области карты можно сохранить для работы офлайн в приложении';
+    const iosCopy = 'Версия приложения для iOS';
+
+    expect(within(currentFeatures).getByText(androidCopy)).toBeTruthy();
+    expect(within(currentFeatures).getByText(offlineCopy)).toBeTruthy();
+    expect(within(currentFeatures).queryByText(iosCopy)).toBeNull();
+    expect(within(roadmapFeatures).getByText(iosCopy)).toBeTruthy();
+    expect(within(roadmapFeatures).queryByText(androidCopy)).toBeNull();
+    expect(within(roadmapFeatures).queryByText(offlineCopy)).toBeNull();
+    expect(queryByText('Мобильное приложение для iOS и Android')).toBeNull();
+    expect(queryByText('Офлайн-режим для просмотра сохраненных маршрутов')).toBeNull();
   });
+
+  it('opens the public Android listing from the web feature card', async () => {
+    (Platform as { OS: string }).OS = 'web';
+
+    const { getByTestId } = render(<AboutScreen />);
+    fireEvent.press(getByTestId('about-google-play-cta'));
+
+    expect(mockTrackAppDownloadClicked).toHaveBeenCalledWith({ source: 'about_page' });
+    await waitFor(() => {
+      expect(mockOpenExternalUrl).toHaveBeenCalledWith(
+        GOOGLE_PLAY_APP_URL,
+        expect.objectContaining({ onError: expect.any(Function) }),
+      );
+    });
+  });
+
+  it.each(['android', 'ios'] as const)(
+    'does not render a Google Play CTA inside the %s about screen',
+    (os) => {
+      (Platform as { OS: string }).OS = os;
+
+      const { queryByTestId } = render(<AboutScreen />);
+
+      expect(queryByTestId('about-google-play-cta')).toBeNull();
+    },
+  );
 
   it('submits contact form with valid data', async () => {
     mockSendFeedback.mockResolvedValueOnce('Сообщение успешно отправлено');

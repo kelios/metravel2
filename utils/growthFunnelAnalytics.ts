@@ -33,7 +33,7 @@ export type GrowthContentType = 'route' | 'article';
 export type GrowthAuthState = 'guest' | 'authenticated';
 export type GrowthRegistrationMethod = 'email' | 'google' | 'facebook' | 'apple';
 export type GrowthRegistrationErrorReason = 'api' | 'exception' | 'provider';
-export type AppDownloadSource = 'home_promo' | 'install_bar' | 'app_page';
+export type AppDownloadSource = 'home_promo' | 'install_bar' | 'app_page' | 'about_page';
 
 type EventParams = Record<string, unknown>;
 
@@ -175,7 +175,7 @@ export const trackRegisterCtaImpression = ({ source, intent, authState }: Regist
 /**
  * Единая цель «скачали приложение» `app_download_click`: любой клик по кнопке
  * установки в любом месте web-UI (промо на главной, нижний бар на Android,
- * лендинг `/app`). Поверхностные события (`HomeClick_InstallApp`,
+ * лендинги `/app` и `/about`). Поверхностные события (`HomeClick_InstallApp`,
  * `AppInstallBar_Click`) остаются как детализация — тем же приёмом, что и у
  * `cta_register_click`.
  *

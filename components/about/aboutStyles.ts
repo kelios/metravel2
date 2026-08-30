@@ -605,6 +605,9 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
   featureList: {
     gap: DESIGN_TOKENS.spacing.xs,
   },
+  featureCta: {
+    marginTop: DESIGN_TOKENS.spacing.lg,
+  },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
