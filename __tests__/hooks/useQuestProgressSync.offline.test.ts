@@ -72,6 +72,8 @@ const MERGED_PAYLOAD = {
   hints: {},
   show_map: true,
   completed: false,
+  early_finish: false,
+  skipped: {},
 };
 
 const OFFLINE_ERROR = () => new Error('Network request failed');

@@ -15,7 +15,6 @@
  *      closed even if a future command starts reading stdin again.
  */
 
-import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -39,11 +38,17 @@ const helperB64 = fs
 // (scripts/deploy-target.sh, #1636) и приезжает на прод base64-аргументом.
 // Защита stdin обязана видеть его там, где код теперь живёт: иначе снятый в
 // снипете `</dev/null` перестал бы замечаться этим тестом.
-const containerSnippet = execFileSync(
+const containerSnippetResult = runCli(
   'bash',
   ['-c', 'source scripts/deploy-target.sh; metravel_container_remote_snippet'],
-  { cwd: process.cwd(), encoding: 'utf8' },
+  { cwd: process.cwd() },
 )
+if (containerSnippetResult.status !== 0) {
+  throw new Error(
+    `failed to resolve container snippet: ${containerSnippetResult.stderr}`,
+  )
+}
+const containerSnippet = containerSnippetResult.stdout
 
 // Known stdin readers: docker keeps exec stdin open, the rest consume stdin
 // outright. Any payload line running one of them without </dev/null could

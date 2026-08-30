@@ -415,7 +415,9 @@ describe('ProfileScreen', () => {
     });
 
     fireEvent.press(await findByLabelText('Маршруты: 2'));
-    expect(await findByLabelText('Открыть маршрут «Черновик Кавказа»')).toBeTruthy();
+    expect(
+      await findByLabelText(/Путешествие: Черновик Кавказа\./),
+    ).toBeTruthy();
   });
 
   it('opens calendar from profile header quick action', async () => {
