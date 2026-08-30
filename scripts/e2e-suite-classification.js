@@ -14,6 +14,7 @@ const LIVE_CONTRACT_SPECS = [
   'travel-draft-owner-preview.spec.ts',
   'travel-full-flow.spec.ts',
   'travel-persistence.spec.ts',
+  'travel-wizard-point-photo-isolation.live.spec.ts',
   'travel-wizard-draft-f09-verify.spec.ts',
 ]
 
