@@ -193,7 +193,7 @@ test.describe('Quest progress after email confirmation (#1462)', () => {
     await page.getByRole('link', { name: 'Квесты', exact: true }).first().click()
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 60_000 }).toBe('/quests')
 
-    await page.getByText(QUEST_TITLE, { exact: false }).first().click()
+    await page.getByTestId(`quest-card-${QUEST_ID}`).click()
     await expect
       .poll(() => new URL(page.url()).pathname, { timeout: 60_000 })
       .toBe(`/quests/${questCity.id}/${QUEST_ID}`)
