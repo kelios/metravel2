@@ -23,7 +23,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { formatInteger } from '@/i18n/format';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { normalizeHttpOrInternalUrl } from '@/utils/externalLinks';
-import { webTextStyle } from '@/utils/webProps';
+import { webTextStyle, webViewStyle } from '@/utils/webProps';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 
 type TextSelection = { start: number; end: number };
@@ -528,7 +528,7 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.sm,
     backgroundColor: colors.surface,
     ...Platform.select({
-      web: { boxShadow: DESIGN_TOKENS.shadows.modal },
+      web: webViewStyle({ boxShadow: DESIGN_TOKENS.shadows.modal }),
       default: DESIGN_TOKENS.shadowsNative.medium,
     }),
   },

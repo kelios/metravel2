@@ -31,6 +31,11 @@ import { useTranslation } from '@/i18n/LocaleProvider'
 const { spacing } = DESIGN_TOKENS
 const QUEST_LIST_ROUTE = '/quests'
 
+type MetaTarget = {
+  selector: string
+  attributes: Record<string, string>
+}
+
 const getRouteParam = (value: string | string[] | undefined): string => {
   if (Array.isArray(value)) return value[0] ?? ''
   return value ?? ''
@@ -50,7 +55,7 @@ const syncSingleMetaContent = (
   if (!meta.parentNode) document.head.appendChild(meta)
 }
 
-const DESCRIPTION_META_TARGETS = [
+const DESCRIPTION_META_TARGETS: MetaTarget[] = [
   { selector: 'meta[name="description"]', attributes: { name: 'description' } },
   { selector: 'meta[property="og:description"]', attributes: { property: 'og:description' } },
   { selector: 'meta[name="twitter:description"]', attributes: { name: 'twitter:description' } },
