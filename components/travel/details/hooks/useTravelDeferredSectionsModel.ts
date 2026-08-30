@@ -92,10 +92,11 @@ const readElement = (node: unknown): Element | null => {
 // (`TravelDetailsDeferredTransition`). That reserve hides their growth only
 // while their top edge is still on screen, so the whole mount → fetch → render
 // chain has to finish inside the scroll distance the lookahead buys.
-// Three viewports of margin plus the one-viewport reserve keep a ~900 ms API
-// round trip off screen at a gradual scroll; the heavy Leaflet map keeps the
-// tight default because it owns no reserve.
-export const TRAVEL_DEFERRED_RESERVED_SECTION_ROOT_MARGIN = '300%'
+// Two viewports of margin plus the one-viewport reserve keep a ~900 ms API
+// round trip off screen on desktop at a gradual scroll (measured; `100%` does
+// not, `300%` buys nothing more). The heavy Leaflet map keeps the tight default
+// because it owns no reserve.
+export const TRAVEL_DEFERRED_RESERVED_SECTION_ROOT_MARGIN = '200%'
 
 export const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
   author: {

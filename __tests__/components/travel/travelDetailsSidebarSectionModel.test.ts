@@ -32,7 +32,7 @@ describe('travelDetailsSidebarSectionModel', () => {
       priority: 'low',
       // A viewport of lookahead so near/popular resolve before the reserved
       // sidebar wrapper can scroll past the fold (#1642).
-      rootMargin: '300%',
+      rootMargin: '200%',
       threshold: 0.1,
       fallbackDelay: 1000,
     })

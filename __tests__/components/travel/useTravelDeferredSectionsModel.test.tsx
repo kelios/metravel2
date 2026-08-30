@@ -122,15 +122,14 @@ describe('useTravelDeferredSectionsModel', () => {
 
     // #562 keeps observers off the per-section path; #1642 splits them by
     // lookahead only — map/footer keep the tight margin, the reserved
-    // sidebar/comments pair mounts a viewport earlier. The wiring, not the
+    // sidebar/comments pair mounts several viewports earlier. The wiring, not the
     // config object, is what decides when a section mounts.
     expect(window.IntersectionObserver).toHaveBeenCalledTimes(2)
-    expect(intersectionObservers.map((observer) => observer.rootMargin).sort()).toEqual([
-      '300%',
-      '200px',
-    ])
+    expect(new Set(intersectionObservers.map((observer) => observer.rootMargin))).toEqual(
+      new Set(['200%', '200px']),
+    )
     const reservedObserver = intersectionObservers.find(
-      (observer) => observer.rootMargin === '300%',
+      (observer) => observer.rootMargin === '200%',
     )!
     const tightObserver = intersectionObservers.find((observer) => observer.rootMargin === '200px')!
     expect(reservedObserver.observed).toEqual([commentsElement])

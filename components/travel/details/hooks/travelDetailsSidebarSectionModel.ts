@@ -9,7 +9,7 @@ export const TRAVEL_DETAILS_SIDEBAR_PROGRESSIVE_LOAD_CONFIG = {
   // chunk does not pull the deferred-sections module in. Mounting the sidebar a
   // viewport early is pointless while the near/popular requests still wait for
   // the tight default margin (#1642).
-  rootMargin: '300%',
+  rootMargin: '200%',
   threshold: 0.1,
 }
 

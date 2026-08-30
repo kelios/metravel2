@@ -15,8 +15,8 @@ describe('Travel deferred section load config', () => {
     // Their reserve only hides growth while their top edge is still on screen,
     // so `Рядом/Популярные` and comments must resolve before the fold reaches
     // them; the heavy map keeps the tight default (#1642).
-    expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.sidebar.rootMargin).toBe('300%')
-    expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.comments.rootMargin).toBe('300%')
+    expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.sidebar.rootMargin).toBe('200%')
+    expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.comments.rootMargin).toBe('200%')
     expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.map.rootMargin).toBe('200px')
     expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.footer.rootMargin).toBe('200px')
   })

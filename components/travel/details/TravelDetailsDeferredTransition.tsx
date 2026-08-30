@@ -122,6 +122,21 @@ export function TravelDetailsDeferredTransition({
   }
 
   const keepPlaceholder = pending || !runtimeFrameReady
+  // react-native-web forwards only an allowlist of props, so raw `data-*` never
+  // reaches the DOM — `dataSet` is the supported channel and is what keeps
+  // `data-deferred-transition-state` readable by the CLS guards. Spread from a
+  // variable: react-native's own `ViewProps` has no `dataSet`, and a spread of a
+  // non-literal skips JSX excess-property checking without an `any` cast.
+  const transitionDataSet = {
+    dataSet: {
+      deferredTransitionState: pending
+        ? 'placeholder'
+        : runtimeFrameReady
+          ? 'runtime'
+          : 'measuring-runtime',
+      deferredTransitionMobile: String(isMobile),
+    },
+  }
 
   return (
     <View
@@ -132,19 +147,7 @@ export function TravelDetailsDeferredTransition({
           ? null
           : ({ minHeight: reserveHeight } as never),
       ]}
-      // react-native-web forwards only an allowlist of props, so raw `data-*`
-      // never reaches the DOM — `dataSet` is the supported channel and is what
-      // keeps `data-deferred-transition-state` readable by the CLS guards.
-      {...({
-        dataSet: {
-          deferredTransitionState: pending
-            ? 'placeholder'
-            : runtimeFrameReady
-              ? 'runtime'
-              : 'measuring-runtime',
-          deferredTransitionMobile: String(isMobile),
-        },
-      } as any)}
+      {...transitionDataSet}
     >
       {keepPlaceholder ? (
         <View
