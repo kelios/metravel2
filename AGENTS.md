@@ -91,7 +91,10 @@ Validation:
 6. После code changes обязательный `$metravel-code-reviewer` review-and-fix по
    полному task diff. Предпочтителен независимый `review-auditor`; reviewer
    исправляет подтверждённые findings, перечитывает итоговый diff и повторяет
-   проверки без рекурсивного reviewer.
+   code-level проверки без рекурсивного reviewer. Стадия `review` ограничена
+   чтением/правкой diff и static/unit/guard checks: browser, API runtime,
+   simulator и physical-device QA запускаются только после перехода тикета в
+   `testing`.
 7. Субагенты — штатная часть workflow, и разрешение на их запуск ПОСТОЯННОЕ.
    Профильного агента (`code-review-gate` перед `testing`, `review-auditor`,
    доменные эксперты, `ticket-board`) запускай сразу через Agent tool, не
@@ -131,15 +134,17 @@ Validation:
   пропускает `area=back`.
 - UI/layout/interaction: используй существующие `components/ui`, tokens и
   Feather icons; подробные контракты — релевантные разделы `docs/RULES.md` и
-  feature docs. Видимый web diff требует browser evidence, screenshots и console.
+  feature docs. Видимый web diff требует browser evidence, screenshots и console
+  на стадии `testing`; code review не открывает браузер.
 - External links: только helpers из `utils/externalLinks.ts`; никаких прямых
   `window.open` или `Linking.openURL` вне chokepoint.
 - Article/quest media можно создавать по запросу. Creative prose, tasks, hints,
   titles или SEO text меняй только после отдельного явного подтверждения
   пользователя.
-- Android-specific scope: сначала `adb devices -l`, затем local build/install и
-  device QA. iOS-specific scope выбирает simulator/physical/TestFlight layer по
-  затронутому контракту; hardware capabilities не доказываются simulator.
+- Android-specific scope: после зелёного review и перехода в `testing` — сначала
+  `adb devices -l`, затем local build/install и device QA. iOS-specific scope в
+  `testing` выбирает simulator/physical/TestFlight layer по затронутому
+  контракту; hardware capabilities не доказываются simulator.
 
 ## 5. Validation и handoff
 

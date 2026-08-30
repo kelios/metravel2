@@ -103,8 +103,13 @@
 
 ```bash
 npm run lint
-npm run test:run
+  npm run test:run
 ```
+
+  During `review`, these checks are limited to source-level validation such as
+  static guards, lint, type checks, and focused unit tests. Browser/API runtime,
+  simulator, physical-device, and TestFlight QA belong only to `testing`, after
+  the reviewed diff is committed and pushed to `main`.
 
 - Skipped tests are not allowed in the repository:
   - do not leave `it.skip`, `test.skip`, `describe.skip`, `xit`, or `xtest`;
@@ -112,7 +117,7 @@ npm run test:run
   - the green baseline is `0` skipped tests unless a documented project-level exception is explicitly added to `docs/`.
 
 - If a task changes UI, layout, styling, visual states, or interaction behavior visible on web:
-  - verify the changed scenario on desktop web and mobile web before considering the task complete;
+  - verify the changed scenario on desktop web and mobile web during `testing` before considering the task complete;
   - take screenshots of the desktop and mobile-web result to confirm visual correctness;
   - check the browser console for errors (no new errors should appear after the change).
 - A shared file, component, hook, or service does not by itself create a device
@@ -120,12 +125,13 @@ npm run test:run
   observable behavior, configuration, or runtime. Run Apple mobile QA only when it
   changes iOS/iPadOS-specific observable behavior, configuration, or runtime. Preserve
   mobile parity in implementation even when no native device gate is applicable.
-- Always self-verify (mandatory):
-  - the agent must verify its own changes end-to-end (browser and/or tests) before handoff — never defer verification to the user and never report a change as done/fixed while verification is still pending;
+- Always self-verify at the assigned stage (mandatory):
+  - implementation and code-review agents verify source and automated code-level checks, then hand the reviewed/pushed diff to `testing`; the testing/acceptance agent verifies observable behavior end-to-end and never reports the task `done` while required QA is pending;
+  - code review never opens a browser, simulator, or physical device and never uses runtime evidence as its verdict; it records the exact testing scenario in the handoff instead;
   - **never offload browser verification to the user.** Asking the user to scroll, hard-refresh, open devtools, run a console snippet, take a screenshot, or "tell me what you see" is NOT verification — it is offloading, and it is forbidden as a substitute for doing it yourself. The user reporting a bug is the input; confirming the fix in a browser is your job, not theirs;
   - if the preview/dev server is flaky (crashes, slow bundling, route redirects, transient API timeouts), restart it, wait, re-navigate, or retry until verification actually completes — instability is not an acceptable reason to skip verification;
-  - if the default preview cannot reach or lay out the target (headless viewport reports `0`, RN-Web scrolls an inner container so `window.scrollTo`/IntersectionObserver never fire, the route is production-only, dev-SSR crashes on the page), you must exhaust an alternate self-verification path BEFORE declaring a blocker — e.g. build a local prod web export and serve it statically with a prod-API proxy (`Prod Static` / `Dist Prod` launch), drive it with Playwright/e2e, or device-verify on the real Android build. "The preview couldn't show it" is only a real blocker once every available path has actually been tried and reported;
-  - when Android verification is relevant, assume a USB Android phone is connected to this workstation: run `adb devices -l` before marking Android unavailable; if a device is listed with status `device`, build Android locally, install that build to the phone, and test the needed scenario on it using `docs/MANUAL_TEST_CASES.md` `AND-USB-*` instead of asking the user to verify;
+  - during `testing`, if the default preview cannot reach or lay out the target (headless viewport reports `0`, RN-Web scrolls an inner container so `window.scrollTo`/IntersectionObserver never fire, the route is production-only, dev-SSR crashes on the page), exhaust an alternate self-verification path BEFORE declaring a blocker — e.g. build a local prod web export and serve it statically with a prod-API proxy (`Prod Static` / `Dist Prod` launch), drive it with Playwright/e2e, or device-verify on the real Android build. "The preview couldn't show it" is only a real blocker once every available path has actually been tried and reported;
+  - when Android verification is relevant in `testing`, assume a USB Android phone is connected to this workstation: run `adb devices -l` before marking Android unavailable; if a device is listed with status `device`, build Android locally, install that build to the phone, and test the needed scenario on it using `docs/MANUAL_TEST_CASES.md` `AND-USB-*` instead of asking the user to verify;
   - inability to start a required check is not a completed QA verdict. If an
     exact access, login, unlock/connect action, Android phone or iPhone is
     required, stop the acceptance turn and ask the owner for that concrete

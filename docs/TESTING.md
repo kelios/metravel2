@@ -40,8 +40,13 @@ Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory projec
 
 ## Platform-scoped validation and board status
 
+- `review` is a code-only stage: diff/source inspection plus relevant static
+  guards, lint, type checks, and focused unit tests. Browser/API runtime,
+  simulator, physical-device, and TestFlight evidence is collected only after
+  the reviewed commit enters `testing`.
+
 - Common/shared UI, layout and interaction changes are verified in a real
-  browser on desktop web and mobile web. Mobile parity with
+  browser on desktop web and mobile web during `testing`. Mobile parity with
   Android/iPhone/iPad is a product/design invariant, not an automatic device
   gate.
 - Android build/install/device evidence is required only for Android-specific

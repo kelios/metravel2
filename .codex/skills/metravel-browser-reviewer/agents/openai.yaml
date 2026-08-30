@@ -1,4 +1,4 @@
 interface:
-  display_name: "Metravel Browser Reviewer"
-  short_description: "Review, fix, and verify web UI."
-  default_prompt: "Use $metravel-browser-reviewer to review the metravel diff in a real browser, fix visible regressions, and report screenshot/console evidence."
+  display_name: "Metravel Browser Testing Gate"
+  short_description: "Test reviewed web UI in a browser."
+  default_prompt: "Use $metravel-browser-reviewer to run read-only browser QA for a reviewed metravel change in testing and report screenshot, console, and network evidence."

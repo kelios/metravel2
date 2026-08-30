@@ -1,37 +1,47 @@
 ---
 name: metravel-browser-reviewer
-description: Review and fix metravel changes that are visible in a real browser. Use when Codex must verify UI/layout/interaction changes, inspect console/network/screenshot evidence, review a diff beyond code reading, fix discovered browser regressions, and rerun browser validation before handoff.
+description: Run read-only browser QA for a reviewed metravel change in testing. Use for UI/layout/interaction acceptance, console/network/screenshot evidence, responsive checks, and reproducible runtime defects after code review.
 ---
 
-# Metravel Browser Reviewer
+# Metravel Browser Testing Gate
 
-Use this skill for a review-and-fix loop on observable web behavior. It complements `$metravel-code-reviewer` and `$metravel-ui-guardrails`.
+The legacy skill name is retained for compatibility, but this is a testing-only
+runtime role. It starts only after code review passes and the reviewed commit is
+in `testing`. It never participates in the `review` verdict and never edits
+feature code.
 
 `AGENTS.md` is inherited. Load the matching feature contract, the exact
 UI/media/link headings implicated by the diff, and only the browser/operation
 section needed from `docs/TESTING.md` or `docs/WORKFLOW_OPERATIONS.md`.
 
-## Review Loop
+## Testing Loop
 
-1. Inspect `git status --short` and the relevant diff. Keep unrelated user changes separate.
-2. Identify the exact user-visible scenarios changed by the diff.
-3. Start or reuse a local preview only after checking the operation gate for shared e2e/browser work.
+1. Confirm the board ticket is in `testing` and identify the reviewed commit,
+   target environment, and exact user-visible scenarios from the handoff.
+2. If the ticket is still in `review`, stop and route it to
+   `$metravel-code-reviewer`; do not open a browser.
+3. Start or reuse a local preview only after checking the operation gate for
+   shared e2e/browser work.
 4. In a real browser, collect evidence for each scenario:
    - accessibility snapshot or DOM state
    - screenshot in `.codex-temp/` or `.codex-debug/`
    - browser console errors
    - network failures when data/media changed
    - desktop and mobile widths when layout is responsive
-5. Fix real issues in the touched scope: overlap, broken interaction, invalid icon, missing placeholder geometry, console/runtime error, direct external-link violation, broken data state.
-6. Rerun the browser scenario and targeted checks after fixes.
+5. If the runtime behavior fails, capture the route, input, actual result,
+   console/network evidence, and screenshot. Return the ticket to the owning
+   implementation flow; do not patch source while acting as tester.
+6. Rerun only after the fix has completed a fresh code review and returned to
+   `testing`.
 
 ## Verdicts
 
 Return one of:
 
 - `PASS`: no browser issue found.
-- `FIXED`: issue found, fixed, and reverified.
-- `FAIL`: issue remains and is in scope but cannot be fixed safely.
+- `FAIL`: ticket-owned runtime behavior failed with reproducible evidence.
 - `VERIFY_PENDING`: a concrete environment blocker prevents browser verification after reasonable alternate paths.
 
-Do not mark UI work complete from code inspection alone. Do not ask the user to verify instead of doing the browser pass.
+Do not mark UI work complete from code inspection alone. Do not ask the user to
+verify instead of doing the browser pass. Do not use browser evidence to issue a
+code-review verdict.

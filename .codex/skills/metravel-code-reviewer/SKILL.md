@@ -42,15 +42,18 @@ Check:
 - precise types, no dead code, no speculative generalization;
 - external-link, UI/media, security, i18n, platform, board, and release contracts
   only when touched;
-- validation at the observable layer: browser for visible web, native layer only
-  for platform-specific scope, i18n checks only for localization impact.
+- adequacy of the proposed testing handoff for observable behavior, without
+  running browser, API runtime, simulator, physical-device, or TestFlight QA in
+  the review stage.
 
 ## Review-and-fix loop
 
 1. Rank verified findings and cite `path:line` plus the failing condition.
 2. Patch every confirmed in-scope finding with the smallest clear change.
 3. Add/update regression coverage when behavior changes.
-4. Run the narrowest reliable checks after fixes; honor the operation gate.
+4. Run only source-level checks after fixes: relevant static guards, lint,
+   type checks, and focused unit tests. Do not open a browser or device; those
+   checks start only after the reviewed commit enters `testing`.
 5. Re-read the complete resulting task diff and repeat until no fixable finding
    remains.
 
@@ -68,4 +71,5 @@ Validation:
 Residual risk:
 ```
 
+Include the exact browser/device/runtime scenario for the `testing` handoff.
 If no fix was needed, say so without inventing findings.

@@ -24,7 +24,7 @@
 | --- | --- | --- |
 | Обычная разработка/bugfix/refactor | domain skill или `$metravel-feature-builder` | UI/i18n/hook/test skills только по diff |
 | Travel/map/profile/achievements/quests | соответствующий `$metravel-*-expert` | `$metravel-domain-router` только при смешанном ownership |
-| Видимый web UI | domain/feature skill | `$metravel-ui-guardrails`, затем browser review |
+| Видимый web UI | domain/feature skill | `$metravel-ui-guardrails`; browser QA только после code review в `testing` |
 | Tests/e2e/quality | `$metravel-test-runner`, `$metravel-test-writer` или `$metravel-e2e-runner` | `$metravel-quality-fixer` только для полного цикла |
 | Docs/skills/prompts | `$metravel-docs-maintainer` | `$metravel-prompt-maintainer` только для prompt/metadata |
 | Task board | `$metravel-problem-memory` → `$metravel-task-contract` → `$metravel-ticket-board` | sprint reviewer только для acceptance |

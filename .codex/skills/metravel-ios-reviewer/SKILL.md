@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-reviewer
-description: "Independently review and repair metravel iOS/shared changes before device QA or release: runtime, Expo/Xcode, privacy, auth/storage, links/APNs, maps/media, i18n/a11y, and regressions."
+description: "Independently review and repair metravel iOS/shared source changes before testing: Expo/Xcode contracts, privacy, auth/storage, links/APNs, maps/media, i18n/a11y, and regressions."
 ---
 
 # Metravel iOS Reviewer
@@ -8,6 +8,11 @@ description: "Independently review and repair metravel iOS/shared changes before
 Use this skill as the independent review-and-fix gate after iOS implementation
 and before tester or release handoff. It supplements and may satisfy the
 project-wide `$metravel-code-reviewer` gate when the complete task diff is provided.
+
+This is a code-only `review` stage. Inspect source/configuration and run only
+static guards, lint, type checks, and focused unit tests. Do not launch Xcode
+runtime, simulator, physical devices, or TestFlight; hand those scenarios to
+`$metravel-ios-tester` after the reviewed commit enters `testing`.
 
 `AGENTS.md` is inherited. Read `$metravel-code-reviewer`, the changed iOS
 subsystem in `$metravel-ios-developer`, and only the native/feature/OpenSpec
@@ -37,8 +42,9 @@ contract implicated by the complete task diff.
 2. Read changed functions and configuration in context, including callers and generated/resolved state.
 3. Fix every confirmed in-scope finding without rewriting unrelated user changes.
 4. Add or update regression coverage when behavior changes.
-5. Run the narrowest reliable checks with the operation gate, then re-read the
-   entire resulting diff and repeat review/fix/validation until no fixable finding remains.
+5. Run the narrowest reliable source-level checks with the operation gate, then
+   re-read the entire resulting diff and repeat review/fix/validation until no
+   fixable finding remains.
 6. Do not recursively launch another reviewer. Return unresolved external state
    as an explicit blocker and owner.
 
@@ -51,4 +57,5 @@ contract implicated by the complete task diff.
 ## Output Contract
 
 Return `iOS Review and Repair`: fixed findings, open findings, tests and runtime
-evidence, platform/localization coverage, release blockers, and residual risk.
+testing handoff, platform/localization coverage, release blockers, and residual
+risk. Never claim simulator/device/TestFlight behavior from review evidence.

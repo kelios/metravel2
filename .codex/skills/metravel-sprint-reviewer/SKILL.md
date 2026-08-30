@@ -1,6 +1,6 @@
 ---
 name: metravel-sprint-reviewer
-description: Accept or reject metravel task-board tickets in an active sprint using real Done-gate evidence. Use when Codex is asked to review/close sprint tickets, move tasks from review/testing to done, verify Task Contracts, run acceptance checks, or decide what can safely ship from the MCP task board.
+description: Accept or reject metravel task-board tickets in testing using real Done-gate evidence. Use to close sprint tickets, verify Task Contracts, run runtime acceptance, or decide what can safely move from testing to done.
 ---
 
 # Metravel Sprint Reviewer
@@ -24,9 +24,11 @@ contract, and only the acceptance/status/evidence headings from
 ## Acceptance Loop
 
 1. Load the active sprint or requested task.
-2. For each candidate in `review` or `testing`—and any explicitly requested
-   `todo` ticket whose prior acceptance decision is being re-audited—read the
-   full description, dependencies, blockers, and Task Contract.
+2. For each candidate in `testing`—and any explicitly requested `todo` ticket
+   whose prior acceptance decision is being re-audited—read the full
+   description, dependencies, blockers, and Task Contract. A ticket in
+   `review` is not an acceptance candidate: route it to code review and do not
+   run browser/API/device QA.
 3. Reject refinement gaps before runtime work:
    - missing `Scope`, `User-visible result`, `Data/API contract`, `Platform impact`,
      `Localization impact`, `Dependencies`, `Fallback/mock policy`, `Validation`,

@@ -317,7 +317,8 @@ curl с staff token в command arguments.
 (код-ревью) и `done`. Раньше передача тестеру/релизеру эмулировалась возвратом в
 `todo` или ошибочным `blocked_by`; теперь `testing` используется только для
 идущей validation или точного запланированного retest/temporal gate. Приёмочная очередь
-(`board-reviewer` / `/sprint-review`) = `review` + `testing`.
+(`board-reviewer` / `/sprint-review`) = только `testing`; тикеты в `review`
+сначала проходят исключительно code-review gate без browser/device/runtime QA.
 
 **Гейт `review → testing` (обязателен, принудительный, запускается сам).** Перевод в `testing`
 выполняет только агент `code-review-gate` после код-ревью diff'а: дубли существующих
