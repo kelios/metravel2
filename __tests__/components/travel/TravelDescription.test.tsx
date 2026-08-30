@@ -223,4 +223,80 @@ describe('TravelDescription', () => {
     })
     expect(getByTestId('stable-content')).toBeTruthy()
   })
+
+  it('retries a throwing observe 20 times before failing open through idle', async () => {
+    jest.useFakeTimers()
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    const observe = jest.fn(() => {
+      throw new Error('target unavailable')
+    })
+    const disconnect = jest.fn()
+    ;(window as any).IntersectionObserver = jest.fn(() => ({ observe, disconnect }))
+    const idleCallbacks: Array<() => void> = []
+    const requestIdleCallback = jest.fn((callback: () => void) => {
+      idleCallbacks.push(callback)
+      return idleCallbacks.length
+    })
+    ;(window as any).requestIdleCallback = requestIdleCallback
+    ;(window as any).cancelIdleCallback = jest.fn()
+
+    const heavyText = 'длинное описание '.repeat(600)
+    const { getByTestId, queryByTestId } = render(
+      <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
+    )
+
+    expect(observe).toHaveBeenCalledTimes(1)
+    expect(queryByTestId('stable-content')).toBeNull()
+
+    act(() => {
+      jest.advanceTimersByTime(949)
+    })
+    expect(observe).toHaveBeenCalledTimes(20)
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+
+    act(() => {
+      jest.advanceTimersByTime(1)
+    })
+    expect(observe).toHaveBeenCalledTimes(21)
+    expect(disconnect).toHaveBeenCalledTimes(21)
+    expect(requestIdleCallback).toHaveBeenCalledTimes(1)
+    expect(queryByTestId('stable-content')).toBeNull()
+
+    await act(async () => {
+      idleCallbacks.shift()?.()
+    })
+    expect(getByTestId('stable-content')).toBeTruthy()
+  })
+
+  it('cancels a pending observe retry on unmount without scheduling reveal', () => {
+    jest.useFakeTimers()
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    const observe = jest.fn(() => {
+      throw new Error('target unavailable')
+    })
+    const disconnect = jest.fn()
+    ;(window as any).IntersectionObserver = jest.fn(() => ({ observe, disconnect }))
+    const requestIdleCallback = jest.fn()
+    ;(window as any).requestIdleCallback = requestIdleCallback
+    ;(window as any).cancelIdleCallback = jest.fn()
+
+    const heavyText = 'длинное описание '.repeat(600)
+    const { queryByTestId, unmount } = render(
+      <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
+    )
+
+    expect(observe).toHaveBeenCalledTimes(1)
+    expect(queryByTestId('stable-content')).toBeNull()
+    expect(jest.getTimerCount()).toBe(1)
+
+    unmount()
+    expect(jest.getTimerCount()).toBe(0)
+
+    act(() => {
+      jest.advanceTimersByTime(5_000)
+    })
+    expect(observe).toHaveBeenCalledTimes(1)
+    expect(disconnect).toHaveBeenCalledTimes(1)
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+  })
 })

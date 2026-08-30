@@ -19,6 +19,7 @@ export type NotificationHandler = (notification: NotificationPayload) => void
 export type NotificationResponseHandler = (data: Record<string, unknown>) => void
 
 type CleanupFn = () => void
+type NotificationsModule = typeof import('expo-notifications')
 
 export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
   {
@@ -55,17 +56,41 @@ export async function getInitialNotificationData(): Promise<Record<string, unkno
   return null
 }
 export async function clearBadge(): Promise<void> {}
-export async function ensureLocalNotificationPermission(): Promise<boolean> {
+export async function ensureLocalNotificationPermission(
+  _Notifications: NotificationsModule,
+): Promise<boolean> {
   return false
 }
-export function getNotifications(): null {
+export function getNotifications(): NotificationsModule | null {
   return null
 }
-export async function presentLocalQuestNotification(): Promise<void> {}
-export async function scheduleQuestReminder(): Promise<void> {}
-export async function scheduleQuestReturnReminder(): Promise<void> {}
-export async function cancelQuestReturnReminder(_ownerId?: string, _questId?: string): Promise<void> {}
-export async function cancelQuestReminder(_questId?: string): Promise<void> {}
+export async function presentLocalQuestNotification(
+  _identifier: string,
+  _title: string,
+  _body: string,
+  _deepLinkUrl: string,
+): Promise<void> {}
+export async function scheduleQuestReminder(
+  _questId: string,
+  _title: string,
+  _step: number,
+  _total: number,
+  _deepLinkUrl: string,
+): Promise<void> {}
+export async function scheduleQuestReturnReminder(
+  _ownerId: string,
+  _questId: string,
+  _questTitle: string,
+  _cityDeepLink: string,
+  _remainingCount: number,
+): Promise<boolean> {
+  return false
+}
+export async function cancelQuestReturnReminder(
+  _ownerId: string,
+  _questId: string,
+): Promise<void> {}
+export async function cancelQuestReminder(_questId: string): Promise<void> {}
 
 export function extractDeepLinkFromNotification(data: Record<string, unknown>): string | null {
   if (typeof data.url === 'string' && data.url.length > 0) {
