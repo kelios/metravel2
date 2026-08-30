@@ -258,7 +258,7 @@ test.describe('Quests list -> detail', () => {
     await gotoWithRetry(page, '/quests')
     await waitForQuestCatalogReady(page)
 
-    const sharpCovers = page.locator('[data-testid^="quest-card-"] img:not([aria-hidden="true"])')
+    const sharpCovers = page.getByRole('img', { name: /^E2E iPhone cover / })
     await expect(sharpCovers).toHaveCount(3)
 
     for (const index of [0, 2]) {
