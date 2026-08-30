@@ -118,7 +118,7 @@ function WeatherLegend({ enabledOverlays }: WeatherLegendProps) {
       testID="weather-legend"
       {...({ role: 'region' } as object)}
     >
-      <Text style={styles.title} accessibilityRole="header">
+      <Text style={styles.title} accessibilityRole="header" {...({ 'aria-level': 3 } as Record<string, unknown>)}>
         {scale.title}
       </Text>
       <View style={styles.bar}>

@@ -78,7 +78,7 @@ function MapLegend({ showRouteMode = false }: MapLegendProps) {
         accessibilityState={{ expanded: !collapsed }}
       >
         <Feather name="info" size={16} color={colors.textMuted} />
-        <Text style={styles.title} accessibilityRole="header">{i18nT('map:components.MapPage.MapLegend.legenda_karty_dd352994')}</Text>
+        <Text style={styles.title} accessibilityRole="header" {...({ 'aria-level': 3 } as Record<string, unknown>)}>{i18nT('map:components.MapPage.MapLegend.legenda_karty_dd352994')}</Text>
         <Feather name={collapsed ? 'chevron-down' : 'chevron-up'} size={14} color={colors.textMuted} />
       </Pressable>
       {!collapsed && (

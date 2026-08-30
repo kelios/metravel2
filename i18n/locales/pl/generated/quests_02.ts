@@ -40,7 +40,6 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.ryadom_a27f6fda": "W pobliżu",
   "screens.tabs.QuestsScreen.ryadom_nichego_ne_naydeno_ac852a3a": "- nic nie znaleziono w pobliżu",
   "screens.tabs.QuestsScreen.value1_poblizosti_5f29a880": "— {{value1}} w pobliżu",
-  "screens.tabs.QuestsScreen.vse_kvesty_metravel_32e5b095": "Wszystkie questy | MeTravel",
   "screens.tabs.QuestsScreen.zakryt_menyu_fbe0ff41": "Zamknij menu",
   "screens.tabs.QuestsSidebar.dlya_detey_1655148c": "Dla dzieci",
   "screens.tabs.QuestsSidebar.kvesty_dlya_detey_value1_29205187": "Zadania dla dzieci, {{value1}}",

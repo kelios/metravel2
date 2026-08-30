@@ -368,7 +368,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
     return (
       <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
         {showHeader && title !== null && (
-          <Title style={styles.title} accessibilityRole="header">
+          <Title style={styles.title} accessibilityRole="header" {...({ 'aria-level': 2 } as Record<string, unknown>)}>
             {title}
           </Title>
         )}

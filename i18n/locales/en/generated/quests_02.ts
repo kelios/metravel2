@@ -40,7 +40,6 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.ryadom_a27f6fda": "Nearby",
   "screens.tabs.QuestsScreen.ryadom_nichego_ne_naydeno_ac852a3a": "- nothing found nearby",
   "screens.tabs.QuestsScreen.value1_poblizosti_5f29a880": "— {{value1}} nearby",
-  "screens.tabs.QuestsScreen.vse_kvesty_metravel_32e5b095": "All quests | MeTravel",
   "screens.tabs.QuestsScreen.zakryt_menyu_fbe0ff41": "Close menu",
   "screens.tabs.QuestsSidebar.dlya_detey_1655148c": "For children",
   "screens.tabs.QuestsSidebar.kvesty_dlya_detey_value1_29205187": "Quests for children, {{value1}}",

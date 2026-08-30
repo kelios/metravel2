@@ -32,18 +32,6 @@ interface LegalPageProps {
 /** Базовый вертикальный отступ контента; снизу к нему добавляется высота дока. */
 const CONTENT_VERTICAL_PADDING = 24
 
-const hiddenWebHeadingStyle = {
-  position: 'absolute' as const,
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: 'hidden' as const,
-  clip: 'rect(0,0,0,0)',
-  whiteSpace: 'nowrap' as const,
-  borderWidth: 0,
-}
-
 /**
  * Каркас юридической страницы (Disclaimer / Соглашение / Правила).
  * Повторяет структуру app/(tabs)/privacy.tsx, чтобы тексты были консистентны
@@ -92,8 +80,19 @@ export default function LegalPage({
         contentContainerStyle={[styles.container, { paddingBottom: contentBottomPadding }]}
         {...(Platform.OS === 'web' ? ({ tabIndex: 0 } as any) : {})}
       >
-        {Platform.OS === 'web' && <h1 style={hiddenWebHeadingStyle as any}>{seoTitle}</h1>}
-        <Text style={styles.heading}>{pageTitle}</Text>
+        {/* #1617: no sr-only duplicate H1 here — `pageTitle` below is the page's
+            single semantic <h1> (it was already documented as "Заголовок
+            страницы (H1)" on the prop, just never marked as one). The old
+            hidden node reused `seoTitle`, which carries a technical suffix
+            meant for the <title> tag only, as a second, invisible H1. Shared
+            by /privacy, /terms, /disclaimer, /trip-rules, /community-rules. */}
+        <Text
+          style={styles.heading}
+          accessibilityRole="header"
+          {...({ 'aria-level': 1 } as Record<string, unknown>)}
+        >
+          {pageTitle}
+        </Text>
 
         {effectiveDate ? (
           <Text style={styles.paragraph}>{i18nT('shared:components.legal.LegalPage.data_vstupleniya_v_silu_32c18af2')}{effectiveDate}</Text>

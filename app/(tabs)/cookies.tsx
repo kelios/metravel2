@@ -118,7 +118,18 @@ export default function CookieSettingsScreen() {
       <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.container}>
         {isWeb ? (
           <>
-            <Text style={styles.heading}>{i18nT('legal:app.tabs.cookies.nastroyki_cookies_i_analitiki_0d2fbf1e')}</Text>
+            {/* #1617: /cookies had no <h1> at all. This is the page's only
+                visible heading already; promoting it to a real semantic <h1>
+                (accessibilityRole="header" + aria-level=1, same pattern as
+                HomeHeroBookLayout) needs no new copy — a suffix-free string for
+                exactly this text already existed alongside the SEO `title`. */}
+            <Text
+              style={styles.heading}
+              accessibilityRole="header"
+              {...({ 'aria-level': 1 } as Record<string, unknown>)}
+            >
+              {i18nT('legal:app.tabs.cookies.nastroyki_cookies_i_analitiki_0d2fbf1e')}
+            </Text>
             <Text style={styles.paragraph}>
               {i18nT('legal:app.tabs.cookies.na_etom_ekrane_vy_mozhete_izmenit_svoy_vybor_b082f7b9')}</Text>
 

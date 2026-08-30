@@ -43,6 +43,14 @@ const HEADING_CONFIG: Record<
 };
 
 const HEADING_A11Y_ROLES: Record<HeadingLevel, 'header'> = { 1: 'header', 2: 'header', 3: 'header', 4: 'header' };
+// #1617: every level maps to the same RN accessibilityRole="header" ->
+// role="heading" on web (react-native-web has no h2/h3/h4 accessibilityRole).
+// Without an explicit aria-level, react-native-web's propsToAccessibilityComponent
+// defaults an unleveled role="heading" node to a literal <h1> tag regardless of
+// the requested `level` — every Heading on a page, including level 2-4
+// subheadings, was rendering as a real <h1> (e.g. /app: 11+ stray h1s from
+// feature-card subheadings). Passing aria-level={level} makes react-native-web
+// emit the matching h1..h4 tag instead.
 
 export function Heading({ level = 2, color, align, style, ...props }: HeadingProps) {
   const colors = useThemedColors();
@@ -72,6 +80,7 @@ export function Heading({ level = 2, color, align, style, ...props }: HeadingPro
   return (
     <Text
       accessibilityRole={HEADING_A11Y_ROLES[level]}
+      {...({ 'aria-level': level } as Record<string, unknown>)}
       style={[computedStyle, style]}
       {...props}
     />

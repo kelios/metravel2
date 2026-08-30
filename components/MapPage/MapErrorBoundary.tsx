@@ -149,7 +149,7 @@ class MapErrorBoundary extends Component<Props, State> {
         >
           <View style={styles.content}>
             <Feather name="alert-circle" size={48} color={colors.danger} />
-            <Text style={styles.title} accessibilityRole="header">{i18nT('map:components.MapPage.MapErrorBoundary.oshibka_zagruzki_karty_d9cca5ff')}</Text>
+            <Text style={styles.title} accessibilityRole="header" {...({ 'aria-level': 3 } as Record<string, unknown>)}>{i18nT('map:components.MapPage.MapErrorBoundary.oshibka_zagruzki_karty_d9cca5ff')}</Text>
             <Text style={styles.message}>
               {this.getFriendlyMessage()}
             </Text>

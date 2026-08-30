@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, type ComponentProps } from 'react'
-import { Image, Platform, ScrollView, StatusBar, StyleSheet, View, type ViewStyle } from 'react-native'
+import { Image, ScrollView, StatusBar, StyleSheet, View, type ViewStyle } from 'react-native'
 import { useIsFocused } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -72,9 +72,10 @@ function AppDownloadScreen() {
       <CustomHeader />
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
-        {Platform.OS === 'web' && (
-          <h1 style={SR_ONLY}>{title}</h1>
-        )}
+        {/* #1617: no sr-only duplicate H1 here — the page's single semantic
+            <h1> is the visible hero Heading below (level=1, now a real <h1>
+            since Typography.tsx passes aria-level). The old hidden node
+            reused the SEO `title` (InstantSEO above) verbatim as a second H1. */}
 
         {/* Hero */}
         <View style={styles.hero}>
@@ -160,18 +161,6 @@ function AppDownloadScreen() {
     </>
   )
 }
-
-const SR_ONLY = {
-  position: 'absolute' as const,
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: 'hidden' as const,
-  clip: 'rect(0,0,0,0)',
-  whiteSpace: 'nowrap',
-  borderWidth: 0,
-} as any
 
 const createStyles = (colors: ThemedColors, isWide: boolean) => {
   const spacing = DESIGN_TOKENS.spacing

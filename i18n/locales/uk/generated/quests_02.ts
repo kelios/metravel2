@@ -40,7 +40,6 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.ryadom_a27f6fda": "Поруч",
   "screens.tabs.QuestsScreen.ryadom_nichego_ne_naydeno_ac852a3a": "— поруч нічого не знайдено",
   "screens.tabs.QuestsScreen.value1_poblizosti_5f29a880": "- {{value1}} поблизу",
-  "screens.tabs.QuestsScreen.vse_kvesty_metravel_32e5b095": "Всі квести | MeTravel",
   "screens.tabs.QuestsScreen.zakryt_menyu_fbe0ff41": "Закрити меню",
   "screens.tabs.QuestsSidebar.dlya_detey_1655148c": "Для дітей",
   "screens.tabs.QuestsSidebar.kvesty_dlya_detey_value1_29205187": "Квести для дітей, {{value1}}",
