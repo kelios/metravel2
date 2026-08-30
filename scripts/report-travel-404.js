@@ -603,6 +603,22 @@ async function annotateTruncated(report, { redirectFrom, origin, probe = probeSt
   return report
 }
 
+// Тело резолва имени контейнера берётся из scripts/deploy-target.sh, чтобы
+// регулярка `^metravel[-_]<service>[-_]1$` существовала в одном экземпляре:
+// раньше её копии разъехались по шести местам и при смене схемы имён ломали
+// случайное подмножество инструментов (#1636, борд #733).
+let containerResolverSnippetCache = null
+function containerResolverSnippet() {
+  if (containerResolverSnippetCache === null) {
+    containerResolverSnippetCache = execFileSync(
+      'bash',
+      ['-c', `source "${path.join(__dirname, 'deploy-target.sh')}"; metravel_container_remote_snippet`],
+      { encoding: 'utf8' },
+    ).trimEnd()
+  }
+  return containerResolverSnippetCache
+}
+
 function readProdLog({ container, since }) {
   if (!SAFE_CONTAINER.test(container)) throw new Error(`Недопустимое имя контейнера: ${container}`)
   if (since && !SAFE_SINCE.test(since)) throw new Error(`Недопустимое значение --since: ${since}`)
@@ -623,11 +639,13 @@ function readProdLog({ container, since }) {
   // Само `2>/dev/null` снимать нельзя — оно отделяет access-лог на stdout от
   // error-лога, который иначе попадёт в awk как данные.
   const explicitContainer = container === 'auto' ? '' : container
+  // Регулярка имени контейнера не дублируется здесь: её тело приезжает из
+  // scripts/deploy-target.sh — единственного места, где она живёт (#1636).
+  // Резолвер сам печатает диагностику и возвращает ненулевой код, а `|| exit 1`
+  // не даёт пустому имени пройти дальше и снова родить ложное зелёное.
   const remote = `set -u
-ctr='${explicitContainer}'
-if [ -z "$ctr" ]; then ctr="$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]nginx[-_]1$' | head -1)"; fi
-if [ -z "$ctr" ]; then echo 'ERROR: не найден nginx-контейнер metravel' >&2; docker ps --format '{{.Names}}' >&2; exit 1; fi
-if ! docker ps --format '{{.Names}}' | grep -Fxq "$ctr"; then echo "ERROR: контейнер '$ctr' не запущен" >&2; docker ps --format '{{.Names}}' >&2; exit 1; fi
+${containerResolverSnippet()}
+ctr="$(metravel_resolve_container nginx '${explicitContainer}')" || exit 1
 docker logs ${sinceArg} "$ctr" 2>/dev/null | awk '
     NR==1 { first = $0 }
     { last = $0 }

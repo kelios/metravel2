@@ -311,6 +311,15 @@ async function testPage(path, expectations) {
     );
   }
 
+  if (Number.isInteger(expectations.h1Count)) {
+    const h1Count = countTag(html, /<h1\b/gi);
+    assert(
+      h1Count === expectations.h1Count,
+      `exactly ${expectations.h1Count} raw HTML H1`,
+      `found ${h1Count}`
+    );
+  }
+
   // --- Open Graph ---
   assert(ogTitle.length > 0, 'og:title is present');
   assert(ogTitle === title, 'og:title matches <title>', `og="${ogTitle}" vs title="${title}"`);
@@ -449,9 +458,30 @@ async function main() {
     canonicalPath: '/map',
     ogType: 'website',
     indexable: true,
+    h1Count: 1,
   });
 
-  // --- 4. Travelsby page ---
+  // --- 4. Articles page ---
+  await testPage('/articles', {
+    titleContains: 'Статьи',
+    descNotFallback: true,
+    canonicalPath: '/articles',
+    ogType: 'website',
+    robots: 'noindex',
+    h1Count: 1,
+  });
+
+  // --- 5. Contact page ---
+  await testPage('/contact', {
+    titleContains: 'Контакты',
+    descNotFallback: true,
+    canonicalPath: '/contact',
+    ogType: 'website',
+    indexable: true,
+    h1Count: 1,
+  });
+
+  // --- 6. Travelsby page ---
   await testPage('/travelsby', {
     titleContains: 'Беларуси',
     descNotFallback: true,
@@ -460,7 +490,7 @@ async function main() {
     indexable: true,
   });
 
-  // --- 5. About page ---
+  // --- 7. About page ---
   await testPage('/about', {
     titleContains: 'MeTravel',
     descNotFallback: true,
@@ -469,7 +499,7 @@ async function main() {
     indexable: true,
   });
 
-  // --- 6. Travel detail pages (the main issue) ---
+  // --- 8. Travel detail pages (the main issue) ---
   // Fetch a few known travels from the API to test
   let travelSlugs = [];
   try {

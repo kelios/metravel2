@@ -12,23 +12,23 @@
     "utils"
   ],
   "totals": {
-    "styleCast": 1366,
-    "logicCast": 1169,
+    "styleCast": 1359,
+    "logicCast": 1164,
     "tsIgnore": 45,
     "tsExpectError": 1,
     "eslintDisable": 29
   },
   "domains": {
     "app": {
-      "styleCast": 24,
-      "logicCast": 46,
+      "styleCast": 22,
+      "logicCast": 47,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components": {
-      "styleCast": 1237,
-      "logicCast": 1007,
+      "styleCast": 1232,
+      "logicCast": 1001,
       "tsIgnore": 45,
       "tsExpectError": 1,
       "eslintDisable": 17
@@ -78,7 +78,7 @@
       "eslintDisable": 0
     },
     "app/(tabs)/about.tsx": {
-      "styleCast": 1,
+      "styleCast": 0,
       "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
@@ -107,7 +107,7 @@
     },
     "app/(tabs)/cookies.tsx": {
       "styleCast": 2,
-      "logicCast": 6,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -178,13 +178,6 @@
     "app/(tabs)/user/[id].tsx": {
       "styleCast": 1,
       "logicCast": 7,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "app/app.tsx": {
-      "styleCast": 1,
-      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -345,7 +338,7 @@
     },
     "components/article/ArticleListItem.tsx": {
       "styleCast": 0,
-      "logicCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -360,13 +353,6 @@
     "components/article/SafeHtml.tsx": {
       "styleCast": 0,
       "logicCast": 3,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/auth/GoogleSignInButton.tsx": {
-      "styleCast": 1,
-      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -848,8 +834,8 @@
       "eslintDisable": 0
     },
     "components/legal/LegalPage.tsx": {
-      "styleCast": 1,
-      "logicCast": 1,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -989,7 +975,7 @@
     },
     "components/listTravel/RecommendationsTabs.tsx": {
       "styleCast": 0,
-      "logicCast": 19,
+      "logicCast": 17,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1436,7 +1422,7 @@
       "eslintDisable": 0
     },
     "components/MapPage/MapMobileLayout.styles.ts": {
-      "styleCast": 21,
+      "styleCast": 19,
       "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
@@ -1444,7 +1430,7 @@
     },
     "components/MapPage/MapMobileLayout.tsx": {
       "styleCast": 2,
-      "logicCast": 3,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2081,7 +2067,7 @@
     },
     "components/travel/details/sections/AffiliateSection.tsx": {
       "styleCast": 0,
-      "logicCast": 4,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2165,14 +2151,14 @@
     },
     "components/travel/details/sections/TravelRouteMapBlock.native.tsx": {
       "styleCast": 0,
-      "logicCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelRouteMapBlock.tsx": {
       "styleCast": 0,
-      "logicCast": 4,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2877,13 +2863,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/ui/ConfirmDialog.tsx": {
-      "styleCast": 1,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/ui/CustomImageRenderer.tsx": {
       "styleCast": 2,
       "logicCast": 3,
@@ -3026,7 +3005,7 @@
     },
     "components/ui/Typography.tsx": {
       "styleCast": 0,
-      "logicCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1

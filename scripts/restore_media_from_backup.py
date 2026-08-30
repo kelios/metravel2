@@ -31,11 +31,12 @@
        scp scripts/restore_media_from_backup.py "$PROD_USER@$PROD_HOST:$PROD_DIR/.tmp-restore.py"
        # скопировать нужные файлы бэкапа в $PROD_DIR/.tmp-restore-src/
        # Имя app-контейнера не хардкодим: compose v1 звал его metravel_app_1,
-       # v2 — metravel-app-1, поэтому резолвим на месте по обоим разделителям.
-       ssh "$PROD_USER@$PROD_HOST" 'app="$(docker ps --format "{{.Names}}" \
-           | grep -E "^metravel[-_]app[-_]1$" | head -1)"; \
-           docker exec "$app" python /app/.tmp-restore.py \
-           --apply --source /app/.tmp-restore-src --manifest /app/.tmp-manifest.json'
+       # v2 — metravel-app-1. Регулярка живёт в одном месте — резолв берём из
+       # scripts/deploy-target.sh, свою копию здесь не заводим (#1636).
+       app="$(bash -c 'source scripts/deploy-target.sh; \
+           metravel_resolve_container_over_ssh app')" || exit 1
+       ssh "$PROD_USER@$PROD_HOST" "docker exec '$app' python /app/.tmp-restore.py \
+           --apply --source /app/.tmp-restore-src --manifest /app/.tmp-manifest.json"
 
 Скрипт только ДОБАВЛЯЕТ объекты. Ничего не удаляет и не перезаписывает то,
 что уже есть в бакете, если не передан `--overwrite`.

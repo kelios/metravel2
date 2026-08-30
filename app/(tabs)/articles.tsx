@@ -23,6 +23,27 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { buildArticlesHrefFromSource, normalizeArticleListSourceHref } from '@/utils/articleNavigation'
 import { translate as i18nT } from '@/i18n'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+
+const getArticlesPageTitleStyle = (colors: ReturnType<typeof useThemedColors>) => ({
+  fontSize: `${DESIGN_TOKENS.typography.scale.h1.fontSize}px`,
+  lineHeight: `${DESIGN_TOKENS.typography.scale.h1.lineHeight}px`,
+  letterSpacing: `${DESIGN_TOKENS.typography.scale.h1.letterSpacing}px`,
+  fontWeight: DESIGN_TOKENS.typography.scale.h1.fontWeight,
+  flexGrow: 0,
+  flexShrink: 0,
+  flexBasis: 'auto' as const,
+  width: '100%',
+  margin: 0,
+  paddingTop: DESIGN_TOKENS.spacing.sm,
+  paddingRight: DESIGN_TOKENS.spacing.md,
+  paddingBottom: DESIGN_TOKENS.spacing.sm,
+  paddingLeft: DESIGN_TOKENS.spacing.md,
+  boxSizing: 'border-box' as const,
+  color: colors.text,
+  backgroundColor: colors.surface,
+  textAlign: 'center' as const,
+})
 
 
 export default function TabOneScreen() {
@@ -31,6 +52,13 @@ export default function TabOneScreen() {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
+  const pageTitleStyle = useMemo(() => getArticlesPageTitleStyle(colors), [colors])
+  const pageTitle = i18nT('shared:app.tabs.articles.stati_o_puteshestviyah_marshrutah_i_sovetah__d7db8d4c')
+  const pageHeading = pageTitle.replace(/\s*\|\s*MeTravel\s*$/i, '')
+
+  const webPageHeading = Platform.OS === 'web' ? (
+    <h1 style={pageTitleStyle}>{pageHeading}</h1>
+  ) : null
 
   const itemsPerPageOptions = [10, 20, 30, 50, 100]
   const [currentPage, setCurrentPage] = useState(initialPage)
@@ -81,8 +109,11 @@ export default function TabOneScreen() {
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.container}>
           <View style={styles.content}>
+            {webPageHeading}
             <View style={{ padding: 16 }}>
-              <SkeletonLoader width={200} height={32} borderRadius={4} style={{ marginBottom: 24 }} />
+              {Platform.OS !== 'web' && (
+                <SkeletonLoader width={200} height={32} borderRadius={4} style={{ marginBottom: 24 }} />
+              )}
               {Array.from({ length: 5 }).map((_, index) => (
                 <View key={index} style={{ marginBottom: 16 }}>
                   <SkeletonLoader width="100%" height={120} borderRadius={12} />
@@ -100,6 +131,7 @@ export default function TabOneScreen() {
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.container}>
           <View style={styles.content}>
+            {webPageHeading}
             <ErrorDisplay
               message={error instanceof Error ? error.message : i18nT('shared:app.tabs.articles.ne_udalos_zagruzit_stati_0e12241c')}
               onRetry={() => refetch()}
@@ -116,6 +148,7 @@ export default function TabOneScreen() {
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.container}>
           <View style={styles.content}>
+            {webPageHeading}
             <EmptyState
               icon="file-text"
               title={i18nT('shared:app.tabs.articles.statey_poka_net_11eef9a2')}
@@ -133,7 +166,7 @@ export default function TabOneScreen() {
         {isFocused && (
           <InstantSEO
             headKey="articles"
-            title={i18nT('shared:app.tabs.articles.stati_o_puteshestviyah_marshrutah_i_sovetah__d7db8d4c')}
+            title={pageTitle}
             description={i18nT('shared:app.tabs.articles.stati_puteshestvennikov_na_platforme_metrave_74ef2809')}
             canonical={buildCanonicalUrl('/articles')}
             image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
@@ -142,20 +175,8 @@ export default function TabOneScreen() {
           />
         )}
         <View style={styles.container}>
-          {Platform.OS === 'web' && (
-              <h1 style={{
-                  position: 'absolute' as const,
-                  width: 1,
-                  height: 1,
-                  padding: 0,
-                  margin: -1,
-                  overflow: 'hidden' as const,
-                  clip: 'rect(0,0,0,0)',
-                  whiteSpace: 'nowrap',
-                  borderWidth: 0,
-              } as any}>{i18nT('shared:app.tabs.articles.stati_o_puteshestviyah_marshrutah_i_sovetah__d7db8d4c')}</h1>
-          )}
           <View style={styles.content}>
+            {webPageHeading}
             {isError && (
               <ErrorDisplay
                 message={error instanceof Error ? error.message : i18nT('shared:app.tabs.articles.ne_udalos_zagruzit_stati_0e12241c')}

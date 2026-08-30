@@ -54,6 +54,7 @@ function ContactScreen() {
 
   const canonical = buildCanonicalUrl('/contact')
   const title = i18nT('shared:app.contact.kontakty_i_obratnaya_svyaz_metravel_eed33a58')
+  const pageHeading = title.replace(/\s*\|\s*MeTravel\s*$/i, '')
   const description =
     i18nT('shared:app.contact.svyazhites_s_komandoy_metravel_voprosy_predl_d5e43273')
 
@@ -205,21 +206,7 @@ function ContactScreen() {
           <View style={styles.backgroundImage}>
             <View style={styles.container}>
               {Platform.OS === 'web' && (
-                <h1
-                  style={{
-                    position: 'absolute' as const,
-                    width: 1,
-                    height: 1,
-                    padding: 0,
-                    margin: -1,
-                    overflow: 'hidden' as const,
-                    clip: 'rect(0,0,0,0)',
-                    whiteSpace: 'nowrap',
-                    borderWidth: 0,
-                  } as any}
-                >
-                  {title}
-                </h1>
+                <h1 style={styles.title as any}>{pageHeading}</h1>
               )}
               <StatusBar barStyle="dark-content" />
               <View style={styles.content}>

@@ -177,8 +177,11 @@ EXPO_PUBLIC_IS_LOCAL_API=false
        зашифрованным (`gAAAAA…`), чужие строки читать незачем.
     4. `POST /api/user/confirm-registration/` с `{"hash": "<токен>"}` → 200 и
        `userToken`. После этого `login` отдаёт 200 и аккаунт полноценно рабочий.
-    Доступ к базе: `source scripts/deploy-target.sh` даёт `PROD_SSH_TARGET`,
-    дальше `ssh "$PROD_SSH_TARGET" "docker exec -i metravel_metravel-gis_1 sh -c
+    Доступ к базе: `source scripts/deploy-target.sh` даёт `PROD_SSH_TARGET` и
+    резолв имени контейнера. Имя не вписывать вручную — compose меняет
+    разделитель при пересоздании (#1636): сначала
+    `DB_CTR="$(metravel_resolve_container_over_ssh metravel-gis)"`, дальше
+    `ssh "$PROD_SSH_TARGET" "docker exec -i $DB_CTR sh -c
     'psql -U \$POSTGRES_USER -d \$POSTGRES_DB -tA'"` и SQL через stdin heredoc.
     Две грабли: `deploy-target.sh` работает только из bash (из zsh тихий exit 1),
     а SQL внутри `psql -tAc \"…\"` через ssh рвётся на вложенных кавычках —

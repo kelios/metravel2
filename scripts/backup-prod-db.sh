@@ -28,7 +28,12 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=./deploy-target.sh
 source "${SCRIPT_DIR}/deploy-target.sh"
 
-DB_CONTAINER="${DB_CONTAINER:-metravel_metravel-gis_1}"
+# Пустое значение = резолвить на проде. Имя вписывать вручную нельзя: compose
+# меняет разделитель при пересоздании, и на хосте сейчас живут обе схемы сразу
+# (app/nginx уже переезжали, базу пока не трогали). Резолв — общая функция из
+# scripts/deploy-target.sh, регулярка существует только там (#1636, борд #733).
+# DB_CONTAINER=… по-прежнему перекрывает резолв для разового прогона.
+DB_CONTAINER="${DB_CONTAINER:-}"
 BACKUP_DIR="${DB_BACKUP_DIR:-${REPO_ROOT}/backup}"
 KEEP="${DB_BACKUP_KEEP:-1}"
 MIN_BYTES="${DB_BACKUP_MIN_BYTES:-1048576}"
@@ -67,6 +72,13 @@ done
 [[ "$KEEP" =~ ^[0-9]+$ ]] || fail "--keep ожидает целое число, получено: $KEEP"
 
 require_deploy_target
+
+# Резолв идёт ПОСЛЕ разбора аргументов и require_deploy_target: `--help` не
+# должен оплачивать ssh, а неверный флаг обязан падать своим сообщением.
+if [[ -z "$DB_CONTAINER" ]]; then
+  DB_CONTAINER="$(metravel_resolve_container_over_ssh metravel-gis)" \
+    || fail "не удалось определить имя контейнера базы на проде"
+fi
 
 # Одинарные кавычки внутри доходят до удалённого `sh -c`, поэтому $POSTGRES_USER
 # и $POSTGRES_DB раскрываются уже внутри контейнера. Пароль не нужен: в

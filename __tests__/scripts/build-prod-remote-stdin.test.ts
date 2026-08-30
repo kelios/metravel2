@@ -15,6 +15,7 @@
  *      closed even if a future command starts reading stdin again.
  */
 
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -33,6 +34,16 @@ const MARKER_ECHO = `printf '\\n%s\\n' "$DEPLOY_SUCCESS_MARKER"`
 const helperB64 = fs
   .readFileSync(path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh'))
   .toString('base64')
+
+// Резолв имени контейнера переехал из тела payload в общий дом
+// (scripts/deploy-target.sh, #1636) и приезжает на прод base64-аргументом.
+// Защита stdin обязана видеть его там, где код теперь живёт: иначе снятый в
+// снипете `</dev/null` перестал бы замечаться этим тестом.
+const containerSnippet = execFileSync(
+  'bash',
+  ['-c', 'source scripts/deploy-target.sh; metravel_container_remote_snippet'],
+  { cwd: process.cwd(), encoding: 'utf8' },
+)
 
 // Known stdin readers: docker keeps exec stdin open, the rest consume stdin
 // outright. Any payload line running one of them without </dev/null could
@@ -140,7 +151,7 @@ function runPayload(
   const harnessPath = path.join(root, 'harness.sh')
   writeExecutable(harnessPath, [
     '#!/bin/bash',
-    'exec bash -s -- prod 14 "$HELPER_B64" "$SANDBOX_ROOT" "$MARKER" < "$PAYLOAD"',
+    'exec bash -s -- prod 14 "$HELPER_B64" "$SANDBOX_ROOT" "$MARKER" "$CONTAINER_B64" < "$PAYLOAD"',
   ])
 
   return runCli('bash', [harnessPath], {
@@ -148,6 +159,7 @@ function runPayload(
       PATH: `${stubBin}:${process.env.PATH ?? ''}`,
       SANDBOX_ROOT: sandbox,
       HELPER_B64: helperB64,
+      CONTAINER_B64: Buffer.from(containerSnippet, 'utf8').toString('base64'),
       MARKER,
       PAYLOAD: payloadPath,
     },
@@ -191,6 +203,10 @@ function runDeployProdHarness(
     'PROD_REMOTE_DIR="/srv/metravel"',
     'require_deploy_target() { return 0; }',
     'rsync() { return 0; }',
+    // deploy_prod резолвит снипет через общий scripts/deploy-target.sh —
+    // подкладываем настоящий, а не заглушку, чтобы транспорт проверялся на том
+    // же теле, которое уезжает на прод.
+    `metravel_container_remote_snippet() { cat <<'MT_TEST_SNIPPET'\n${containerSnippet.trimEnd()}\nMT_TEST_SNIPPET\n}`,
     ...sshStubLines,
     extractDeployProdFunction(readCanonicalDeploy()),
     'if deploy_prod prod; then',
@@ -206,10 +222,15 @@ function runDeployProdHarness(
 
 describe('build-prod.sh remote stdin transport', () => {
   it('isolates stdin on every stdin-consuming command in the remote payload', () => {
-    const lines = stdinConsumerLines(extractRemoteDeploy())
+    // Payload плюс инжектируемый снипет резолва: вместе это ровно та
+    // программа, которая исполняется на проде по stdin.
+    const payloadLines = stdinConsumerLines(extractRemoteDeploy())
+    const snippetLines = stdinConsumerLines(containerSnippet)
+    const lines = [...payloadLines, ...snippetLines]
 
-    // app_ctr discovery, rroot exec, compose detection, both compose_nginx
-    // variants: the guard must keep seeing the docker surface it protects.
+    // rroot exec, compose detection, both compose_nginx варианты — в payload;
+    // резолв app_ctr — в снипете. Guard обязан видеть весь docker-периметр.
+    expect(snippetLines.length).toBeGreaterThanOrEqual(1)
     expect(lines.length).toBeGreaterThanOrEqual(5)
     expect(lines.filter((line) => !line.includes('</dev/null'))).toEqual([])
   })
@@ -324,8 +345,11 @@ describe('build-prod.sh remote stdin transport', () => {
       const harness = runDeployProdHarness(root, [
         'ssh() {',
         '  cat >/dev/null',
-        '  # The marker is the last ssh argument in the deploy contract.',
-        '  printf \'%s\\n\' "${!#}"',
+        '  # Маркер — пятый аргумент ПРОГРАММЫ (DEPLOY_SUCCESS_MARKER="$5"), а',
+        '  # внутри ssh() ему предшествуют "<target> bash -s --", то есть это $9.',
+        '  # Шестым за маркером едет base64 общего резолва имени контейнера',
+        '  # (#1636), поэтому «последний аргумент» здесь брать уже нельзя.',
+        '  printf \'%s\\n\' "${9}"',
         '}',
       ])
 

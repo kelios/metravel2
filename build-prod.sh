@@ -105,6 +105,7 @@ deploy_prod() {
   local EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
   local EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"
   local EXPO_OVERLAY_HELPER_B64
+  local CONTAINER_HELPER_B64
   local REMOTE_DONE_MARKER
   local REMOTE_LOG
 
@@ -117,6 +118,10 @@ deploy_prod() {
     return 1
   fi
   EXPO_OVERLAY_HELPER_B64="$(base64 < "$EXPO_OVERLAY_HELPER" | tr -d '\n')"
+  # Резолв имени контейнера едет тем же путём, что и overlay-хелпер: heredoc
+  # ниже закавычен, поэтому подставить снипет прямо в текст нельзя. Регулярка
+  # имени живёт только в scripts/deploy-target.sh (#1636, борд #733).
+  CONTAINER_HELPER_B64="$(metravel_container_remote_snippet | base64 | tr -d '\n')"
 
   require_deploy_target || return 1
 
@@ -145,7 +150,8 @@ deploy_prod() {
     "$EXPO_OVERLAY_RETENTION_DAYS" \
     "$EXPO_OVERLAY_HELPER_B64" \
     "$PROD_REMOTE_DIR" \
-    "$REMOTE_DONE_MARKER" <<'REMOTE_DEPLOY_SCRIPT' | tee "$REMOTE_LOG"
+    "$REMOTE_DONE_MARKER" \
+    "$CONTAINER_HELPER_B64" <<'REMOTE_DEPLOY_SCRIPT' | tee "$REMOTE_LOG"
 set -e
 
 # The program itself is bash's stdin (ssh ... bash -s), read lazily while it
@@ -161,6 +167,15 @@ EXPO_OVERLAY_RETENTION_DAYS="$2"
 EXPO_OVERLAY_HELPER_B64="$3"
 REMOTE_DIR="$4"
 DEPLOY_SUCCESS_MARKER="$5"
+CONTAINER_HELPER_B64="$6"
+
+# Общий резолв имени контейнера (scripts/deploy-target.sh). Декодируется из
+# аргумента, а не читается со stdin: stdin здесь — сама эта программа.
+if [ -z "$CONTAINER_HELPER_B64" ]; then
+  echo "❌ Container helper argument is required"
+  exit 1
+fi
+eval "$(printf '%s' "$CONTAINER_HELPER_B64" | base64 -d)"
 
 if [ -z "$DEPLOY_SUCCESS_MARKER" ]; then
   echo "❌ Deploy success marker argument is required"
@@ -176,7 +191,7 @@ mkdir -p static
 # dirs pile up (past manual-recovery need). Route every destructive removal
 # through root inside the container; mv/rename still works on the host
 # (write on static/ is enough for a rename within it).
-app_ctr=$(docker ps --format '{{.Names}}' </dev/null | grep -E '^metravel[-_]app[-_]1$' | head -1)
+app_ctr=$(metravel_resolve_container app 2>/dev/null || true)
 if [ -z "$app_ctr" ]; then
   echo "⚠️ app container not found; stale-dir cleanup falls back to host rm (may lack permissions)"
 fi

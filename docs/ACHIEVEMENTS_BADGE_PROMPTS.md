@@ -137,7 +137,15 @@ not flat, no multiple medals, no hands, no frame border, not cropped, no opaque 
 | quest-seeker | silver | `a map with a dashed route and pin` |
 | quest-master | gold | `crossed route flags with a star` |
 | quest-legend | legendary | `a glowing trophy over a route map` |
+| quest-pioneer | gold | `a single first footprint pressed into an untouched trail, a small route flag planted just ahead` |
 | city-conqueror | gold | `a city gate emblem with a crown` |
+
+`quest-pioneer` — единственный значок этой категории, который выдаётся не за счёт
+пройденных квестов, а событием: игрок прошёл квест первым. Поэтому его мотив —
+СЛЕД, а не флаг: во фронте `badgeMotif('quests', 'quest-pioneer')` возвращает
+`footprint` (`components/achievements/badgeVisuals.ts`), и картинка обязана
+совпадать с процедурным фолбэком. Флаг в SUBJECT остаётся вторым планом — он
+привязывает значок к квестовой линейке.
 
 ### Социальные (category=social)
 | slug | tier | SUBJECT |

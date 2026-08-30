@@ -74,6 +74,9 @@ describe('map.web route hydration shell signal', () => {
   afterEach(() => {
     jest.restoreAllMocks()
     document.getElementById('root')?.remove()
+    document
+      .querySelectorAll('h1[data-ssg-travel-h1="true"]')
+      .forEach((heading) => heading.remove())
   })
 
   it('waits for a loaded and decoded Leaflet tile before marking the route ready', async () => {
@@ -109,6 +112,44 @@ describe('map.web route hydration shell signal', () => {
     await waitFor(() => {
       expect(root.getAttribute('data-map-route-ready')).toBe('true')
     })
+  })
+
+  it('replaces the static SSG heading with one visible runtime heading after hydration (#1640)', async () => {
+    const root = ensureRoot()
+    const ssgHeading = document.createElement('h1')
+    ssgHeading.setAttribute('data-ssg-travel-h1', 'true')
+    ssgHeading.style.position = 'absolute'
+    ssgHeading.style.width = '1px'
+    ssgHeading.style.height = '1px'
+    ssgHeading.textContent = 'Карта маршрутов и достопримечательностей Беларуси | Metravel'
+    root.before(ssgHeading)
+    mockUseWebHydrationGate.mockReturnValue(false)
+
+    const view = render(<MapRoute />, { container: root })
+    expect(root.querySelectorAll('h1')).toHaveLength(0)
+    expect(document.querySelectorAll('h1')).toHaveLength(1)
+
+    mockUseWebHydrationGate.mockReturnValue(true)
+    view.rerender(<MapRoute />)
+
+    await waitFor(() => {
+      expect(document.querySelector('h1[data-ssg-travel-h1="true"]')).toBeNull()
+      expect(document.querySelectorAll('h1')).toHaveLength(1)
+    })
+
+    const runtimeHeading = view.getByRole('heading', { level: 1 })
+    expect(runtimeHeading.textContent).toBe(
+      'Карта маршрутов и достопримечательностей Беларуси',
+    )
+    expect(runtimeHeading.style.position).not.toBe('absolute')
+    expect(runtimeHeading.style.width).not.toBe('1px')
+    expect(runtimeHeading.style.height).not.toBe('1px')
+    expect(runtimeHeading.style.flexGrow).toBe('0')
+    expect(runtimeHeading.style.flexBasis).toBe('auto')
+    expect(runtimeHeading.style.fontSize).toBe('24px')
+    expect(runtimeHeading.style.lineHeight).toBe('30px')
+    expect(runtimeHeading.style.paddingTop).toBe('8px')
+    expect(runtimeHeading.style.paddingRight).toBe('16px')
   })
 
   it('does not accept an incomplete Leaflet tile load event', async () => {

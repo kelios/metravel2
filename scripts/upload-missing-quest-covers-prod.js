@@ -111,6 +111,11 @@ const QUEST_COVERS = [
   { quest_id: 'krakow-bike-wanda', assetsDir: 'krakowBikeWanda', cover: 'cover.png' },
   { quest_id: 'hel-jurata-amber', assetsDir: 'helJurataAmber', cover: 'cover.jpg' },
   { quest_id: 'hel-fishermen', assetsDir: 'helFishermen', cover: 'cover.jpg' },
+  { quest_id: 'ozero-glubokoe-crystal', assetsDir: 'ozeroGlubokoeCrystal', cover: 'cover.png' },
+  { quest_id: 'khotomlya-emerald-lakes', assetsDir: 'khotomlyaEmeraldLakes', cover: 'cover.png' },
+  { quest_id: 'jaworzno-grodek', assetsDir: 'jaworznoGrodek', cover: 'cover.png' },
+  { quest_id: 'baranovichi-bike-manors', assetsDir: 'baranovichiBikeManors', cover: 'cover.png' },
+  { quest_id: 'krakow-zakrzowek', assetsDir: 'krakowZakrzowek', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

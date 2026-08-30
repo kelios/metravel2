@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react'
+import React, { Suspense, useEffect, useMemo } from 'react'
 import { View } from 'react-native'
 import { usePathname } from 'expo-router'
 import { useIsFocused } from 'expo-router'
@@ -8,18 +8,28 @@ import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
 import { buildCanonicalUrl, buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
 import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo'
 import { useWebHydrationGate } from '@/hooks/useWebHydrationGate'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
 
-const WEB_SR_ONLY_STYLE = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: 'hidden',
-  clip: 'rect(0,0,0,0)',
-  whiteSpace: 'nowrap',
-  borderWidth: 0,
-} as const
+const getMapPageTitleStyle = (colors: ReturnType<typeof useThemedColors>) => ({
+  fontSize: `${DESIGN_TOKENS.typography.scale.h1.fontSize}px`,
+  lineHeight: `${DESIGN_TOKENS.typography.scale.h1.lineHeight}px`,
+  letterSpacing: `${DESIGN_TOKENS.typography.scale.h1.letterSpacing}px`,
+  fontWeight: DESIGN_TOKENS.typography.scale.h1.fontWeight,
+  flexGrow: 0,
+  flexShrink: 0,
+  flexBasis: 'auto' as const,
+  width: '100%',
+  margin: 0,
+  paddingTop: DESIGN_TOKENS.spacing.xs,
+  paddingRight: DESIGN_TOKENS.spacing.md,
+  paddingBottom: DESIGN_TOKENS.spacing.xs,
+  paddingLeft: DESIGN_TOKENS.spacing.md,
+  boxSizing: 'border-box' as const,
+  color: colors.text,
+  backgroundColor: colors.surface,
+  textAlign: 'center' as const,
+})
 
 const mapScreenImport = Promise.resolve(import('@/screens/tabs/MapScreen'))
 const MapScreenImpl = React.lazy(() => mapScreenImport)
@@ -40,6 +50,8 @@ function MapHydrationFallback() {
 
 export default function MapScreen() {
   const hydrationReady = useWebHydrationGate()
+  const colors = useThemedColors()
+  const pageTitleStyle = useMemo(() => getMapPageTitleStyle(colors), [colors])
   const pathname = usePathname()
   const isFocused = useIsFocused()
   const title = getMapSeoTitle()
@@ -50,6 +62,13 @@ export default function MapScreen() {
   useEffect(() => {
     ensureLeafletCss()
   }, [])
+
+  useEffect(() => {
+    if (!hydrationReady || typeof document === 'undefined') return
+    document
+      .querySelectorAll('h1[data-ssg-travel-h1="true"]')
+      .forEach((heading) => heading.remove())
+  }, [hydrationReady])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -185,7 +204,11 @@ export default function MapScreen() {
   return (
     <>
       {seoBlock}
-      {hydrationReady ? <h1 style={WEB_SR_ONLY_STYLE as any}>{title}</h1> : null}
+      {hydrationReady ? (
+        <h1 style={pageTitleStyle}>
+          {title.replace(/\s*\|\s*MeTravel\s*$/i, '')}
+        </h1>
+      ) : null}
       {hydrationReady ? (
         <Suspense fallback={<MapPageSkeleton />}>
           <MapScreenImpl />

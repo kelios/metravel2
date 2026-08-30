@@ -27,7 +27,7 @@
 
 | Объект | Путь / расположение | Состояние на 2026-08-05 |
 | --- | --- | --- |
-| Живая БД | контейнер `metravel_metravel-gis_1`, образ `postgis/postgis:17-3.5`, база `metravel`, пользователь `metravel` | 311 MB (`pg_database_size`) |
+| Живая БД | контейнер сервиса `metravel-gis` (на 2026-08-05 звался `metravel_metravel-gis_1`; имя резолвится, а не вписывается — см. ниже), образ `postgis/postgis:17-3.5`, база `metravel`, пользователь `metravel` | 311 MB (`pg_database_size`) |
 | Каталог данных живой БД | bind-mount `/home/sx3/metravel/deploy/prod/postgis/data` (в compose — `./deploy/prod/postgis/data`) | 431.9 МиБ |
 | Свежая логическая копия | `/home/sx3/db-backups/metravel-postgres-20260805T122720Z.sql.gz` | 05.08.2026, 52 328 299 Б, снята вручную и не обновляется |
 | Старая холодная копия | `/home/sx3/pg_dump_17_11_2025/postgis/data` | файлы от **17.11.2025**, 372.9 МиБ, `root:root` |
@@ -106,7 +106,7 @@ bash scripts/backup-prod-db.sh --keep 3       # хранить больше од
 Если скрипт недоступен (чужая машина, только ssh):
 
 ```bash
-bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; mkdir -p ~/metravel-backups; ssh "$PROD_SSH_TARGET" "docker exec -i metravel_metravel-gis_1 sh -c \"pg_dump --no-owner --no-acl -U \\\$POSTGRES_USER -d \\\$POSTGRES_DB\"" | gzip -9 > ~/metravel-backups/metravel-postgres-$(date -u +%Y%m%dT%H%M%SZ).sql.gz'
+bash -c 'source scripts/deploy-target.sh; DB_CTR="$(metravel_resolve_container_over_ssh metravel-gis)" || exit 1; mkdir -p ~/metravel-backups; ssh "$PROD_SSH_TARGET" "docker exec -i $DB_CTR sh -c \"pg_dump --no-owner --no-acl -U \\\$POSTGRES_USER -d \\\$POSTGRES_DB\"" | gzip -9 > ~/metravel-backups/metravel-postgres-$(date -u +%Y%m%dT%H%M%SZ).sql.gz'
 ```
 
 Обязательно `bash -c`: в zsh `scripts/deploy-target.sh` молча не подхватывает
@@ -117,7 +117,12 @@ bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; mkdi
 ### Файл на прод-хосте
 
 ```bash
-docker exec -i metravel_metravel-gis_1 sh -c 'pg_dump --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | gzip -9 > ~/metravel-postgres-$(date -u +%Y%m%dT%H%M%SZ).sql.gz
+# Имя контейнера резолвим на месте: compose меняет разделитель при пересоздании.
+# Регулярка живёт только в scripts/deploy-target.sh — подтягиваем её оттуда,
+# из каталога деплоя на хосте, вместо ещё одной копии (#1636).
+eval "$(bash -c 'source scripts/deploy-target.sh; metravel_container_remote_snippet')"
+DB_CTR="$(metravel_resolve_container metravel-gis)" || exit 1
+docker exec -i "$DB_CTR" sh -c 'pg_dump --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | gzip -9 > ~/metravel-postgres-$(date -u +%Y%m%dT%H%M%SZ).sql.gz
 ```
 
 Файл потом обязательно забрать (`scp`) и удалить с сервера — 46 МБ при 2.6 ГБ
@@ -174,7 +179,7 @@ gzip -cd <файл> | tail -3           # -- PostgreSQL database dump complete
 
 ```bash
 S3_URI=s3://metravel-backups/postgres
-DB_CONTAINER=metravel_metravel-gis_1
+DB_CONTAINER=            # пусто = резолвить на проде; задавать только для разового прогона
 BACKUP_DIR=/home/sx3/metravel/deploy/prod/backups
 RETENTION_DAYS=14
 MIN_BACKUP_BYTES=1048576

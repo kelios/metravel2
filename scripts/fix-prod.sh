@@ -159,18 +159,14 @@ SWAP_B64="$(printf '%s' "$SWAP_SCRIPT" | base64 | tr -d '\n')"
 ssh "$SERVER" "set -euo pipefail
   cd '$REMOTE_DIR'
   test -d dist/$ENV
-  # Resolve real container names at deploy time. docker compose project uses
-  # underscores (metravel_app_1 / metravel_nginx_1); the old hardcoded dash
-  # names (metravel-app-1) made the swap die with 'No such container' and needed
-  # manual recovery (board #733). Match both separators so a project rename or a
-  # compose-version naming change can't silently break the swap again.
-  app_ctr=\"\$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]app[-_]1\$' | head -1)\"
-  nginx_ctr=\"\$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]nginx[-_]1\$' | head -1)\"
-  if [ -z \"\$app_ctr\" ] || [ -z \"\$nginx_ctr\" ]; then
-    echo 'ERROR: cannot resolve metravel app/nginx container names' >&2
-    docker ps --format '{{.Names}}' >&2
-    exit 1
-  fi
+  # Имя контейнера резолвится на месте, а не хардкодится: compose меняет схему
+  # именования при пересоздании, и захардкоженное имя роняло swap с 'No such
+  # container' (борд #733). Регулярка живёт в одном месте — в
+  # scripts/deploy-target.sh; сюда её тело подставляется локально командной
+  # подстановкой, поэтому \$-переменные снипета уезжают на прод как есть (#1636).
+$(metravel_container_remote_snippet)
+  app_ctr=\"\$(metravel_resolve_container app)\"
+  nginx_ctr=\"\$(metravel_resolve_container nginx)\"
   # Self-heal static/ ownership drift before the swap (recurring infra bug,
   # board #653). The swap below runs as the container user (uid 1984); if an
   # out-of-band op left the TOP static/ dir owned by the host user (1000), uid

@@ -407,6 +407,22 @@ function validateTravelHtml(html) {
   return issues
 }
 
+const SINGLE_H1_CORE_PATHS = new Set(['/map', '/articles', '/contact'])
+
+function validateCorePageH1(html, finalUrl) {
+  const pathname = new URL(finalUrl).pathname.replace(/\/+$/, '') || '/'
+  if (!SINGLE_H1_CORE_PATHS.has(pathname)) return []
+
+  const h1Count = countMatches(html, /<h1\b/gi)
+  if (h1Count === 1) return []
+
+  return [{
+    severity: 'error',
+    code: 'page.h1.count',
+    message: `Expected exactly 1 raw HTML H1 on ${pathname}, found ${h1Count}`,
+  }]
+}
+
 function validateHomeAssets(html) {
   const issues = []
   if (!/<link(?=[^>]*rel="apple-touch-icon")(?=[^>]*sizes="180x180")(?=[^>]*href="[^"]+\.png")[^>]*>/i.test(html)) {
@@ -456,6 +472,7 @@ function validatePageResult(result) {
   issues.push(...validateCanonical(canonical, html, result.finalUrl))
   issues.push(...validateSocialMeta(html, title, desc, canonical, pageType))
   issues.push(...validateRobots(html, pageType))
+  issues.push(...validateCorePageH1(html, result.finalUrl))
 
   if (pageType === 'travel') {
     issues.push(...validateTravelHtml(html))
@@ -511,6 +528,8 @@ async function loadTargetUrls() {
     `${SITE}/`,
     `${SITE}/search`,
     `${SITE}/map`,
+    `${SITE}/articles`,
+    `${SITE}/contact`,
     `${SITE}/travelsby`,
     `${SITE}/about`,
     `${SITE}/login`,
@@ -623,6 +642,7 @@ if (typeof module !== 'undefined' && module.exports) {
     normalizeFetchedUrl,
     parseSitemapUrls,
     validateCanonical,
+    validateCorePageH1,
     validateDescription,
     validateHomeAssets,
     validatePageResult,

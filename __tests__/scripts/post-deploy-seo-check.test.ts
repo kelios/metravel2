@@ -2,6 +2,7 @@ const {
   detectPageType,
   parseSitemapUrls,
   validateCanonical,
+  validateCorePageH1,
   validateHomeAssets,
   validatePageResult,
   validateSitemapResponse,
@@ -53,6 +54,28 @@ describe('post-deploy SEO check helpers', () => {
     expect(issues.map((issue: any) => issue.code)).toEqual(
       expect.arrayContaining(['travel.h1.count', 'travel.h1.marker', 'travel.schema.article'])
     )
+  })
+
+  it.each(['/map', '/articles', '/contact'])(
+    'requires exactly one raw H1 on %s',
+    (path) => {
+      expect(validateCorePageH1('<main></main>', `https://metravel.by${path}`)).toEqual([
+        expect.objectContaining({ code: 'page.h1.count' }),
+      ])
+      expect(
+        validateCorePageH1('<main><h1>Page title</h1></main>', `https://metravel.by${path}`),
+      ).toEqual([])
+      expect(
+        validateCorePageH1(
+          '<main><h1>Page title</h1><h1>Duplicate</h1></main>',
+          `https://metravel.by${path}`,
+        ),
+      ).toEqual([expect.objectContaining({ code: 'page.h1.count' })])
+    },
+  )
+
+  it('does not impose the core-page H1 contract on unrelated routes', () => {
+    expect(validateCorePageH1('<main></main>', 'https://metravel.by/about')).toEqual([])
   })
 
   it('fails when sitemap sends X-Robots-Tag noindex', () => {

@@ -151,6 +151,8 @@
     "guard:no-direct-window-open": "node scripts/guard-no-direct-window-open.js",
     "guard:no-direct-window-open:json": "node scripts/guard-no-direct-window-open.js --json",
     "guard:no-direct-osm-tiles": "node scripts/guard-no-direct-osm-tiles.js",
+    "guard:container-names": "node scripts/guard-container-names.js",
+    "guard:container-names:json": "node scripts/guard-container-names.js --json",
     "guard:no-direct-osm-tiles:json": "node scripts/guard-no-direct-osm-tiles.js --json",
     "quest:insights": "node scripts/quest-answer-insights.js",
     "quest:scan-hint-leak": "node scripts/scan-quest-hint-leak.js",
