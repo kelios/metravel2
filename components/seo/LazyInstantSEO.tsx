@@ -1,7 +1,11 @@
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Head from 'expo-router/head';
-import { normalizeOgImageUrl, syncWebSeoMetadata } from '@/utils/seo';
+import {
+  normalizeOgImageUrl,
+  removeOwnedWebSeoMetadata,
+  syncWebSeoMetadata,
+} from '@/utils/seo';
 import { getActiveLocaleDefinition } from '@/i18n/format';
 
 type Props = {
@@ -53,16 +57,21 @@ function StaticHead({
     const expectedPath = normalizePath(syncHydratedMetadataForPath);
     const isExpectedPathActive = () =>
       typeof window !== 'undefined' && normalizePath(window.location.pathname) === expectedPath;
+    let ownedMetadataNodes: ReadonlySet<Element> = new Set();
 
     const syncMetadata = () => {
-      if (isExpectedPathActive()) syncWebSeoMetadata({ title, description });
+      if (isExpectedPathActive()) {
+        ownedMetadataNodes = syncWebSeoMetadata({ title, description });
+        return;
+      }
+      removeOwnedWebSeoMetadata({ title, description }, ownedMetadataNodes);
     };
 
     syncMetadata();
 
-    // The home route starts with deterministic static RU metadata. Once Expo
-    // Head appends its managed copy, keep that latest tag authoritative so the
-    // router can remove it normally when home unmounts.
+    // While home is active, keep the latest Expo-managed tag authoritative.
+    // After the path changes, the same observer removes only values still owned
+    // by home and leaves every destination tag untouched.
     const observer = new MutationObserver(syncMetadata);
     observer.observe(document.head, {
       childList: true,
@@ -76,6 +85,9 @@ function StaticHead({
     return () => {
       window.clearTimeout(timeout);
       observer.disconnect();
+      if (!isExpectedPathActive()) {
+        removeOwnedWebSeoMetadata({ title, description }, ownedMetadataNodes);
+      }
     };
   }, [description, syncHydratedMetadataForPath, title]);
 

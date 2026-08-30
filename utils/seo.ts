@@ -131,6 +131,11 @@ type WebSeoMetadata = {
   description?: string;
 };
 
+const normalizeSeoContent = (value: unknown): string | undefined => {
+  const normalized = String(value ?? '').trim();
+  return normalized || undefined;
+};
+
 const syncLatestTitleTag = (title: string): HTMLTitleElement => {
   const nodes = Array.from(document.head.querySelectorAll('title'));
   const element = nodes.filter((node) => node.getAttribute('data-rh') === 'true').at(-1)
@@ -180,14 +185,15 @@ const syncLatestMetaTag = (
 export function syncWebSeoMetadata({
   title,
   description,
-}: WebSeoMetadata): void {
-  if (typeof document === 'undefined') return;
+}: WebSeoMetadata): ReadonlySet<Element> {
+  const syncedNodes = new Set<Element>();
+  if (typeof document === 'undefined') return syncedNodes;
 
-  const normalizedTitle = String(title || '').trim();
-  if (!normalizedTitle) return;
-  const normalizedDescription = description?.trim() || undefined;
+  const normalizedTitle = normalizeSeoContent(title);
+  if (!normalizedTitle) return syncedNodes;
+  const normalizedDescription = normalizeSeoContent(description);
 
-  syncLatestTitleTag(normalizedTitle);
+  syncedNodes.add(syncLatestTitleTag(normalizedTitle));
 
   const targets: Array<{
     selector: string;
@@ -202,6 +208,42 @@ export function syncWebSeoMetadata({
   ];
 
   for (const target of targets) {
-    syncLatestMetaTag(target.selector, target.attributes, target.content);
+    const node = syncLatestMetaTag(target.selector, target.attributes, target.content);
+    if (node) syncedNodes.add(node);
+  }
+
+  return syncedNodes;
+}
+
+/**
+ * Removes only nodes captured by the active home sync and only while they still
+ * carry that home value. Destination routes may intentionally use identical
+ * fallback copy or duplicate static/runtime tags, so global selector/value
+ * cleanup would corrupt their existing head contract.
+ */
+export function removeOwnedWebSeoMetadata(
+  { title, description }: WebSeoMetadata,
+  ownedNodes: ReadonlySet<Element>,
+): void {
+  if (typeof document === 'undefined') return;
+
+  const normalizedTitle = normalizeSeoContent(title);
+  const normalizedDescription = normalizeSeoContent(description);
+
+  for (const node of ownedNodes) {
+    if (!node.isConnected || node.ownerDocument !== document) continue;
+    if (node.matches('title')) {
+      if (normalizedTitle && normalizeSeoContent(node.textContent) === normalizedTitle) node.remove();
+      continue;
+    }
+
+    const expectedContent = node.matches('meta[property="og:title"], meta[name="twitter:title"]')
+      ? normalizedTitle
+      : node.matches('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]')
+        ? normalizedDescription
+        : undefined;
+    if (expectedContent && normalizeSeoContent(node.getAttribute('content')) === expectedContent) {
+      node.remove();
+    }
   }
 }

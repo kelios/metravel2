@@ -2,7 +2,11 @@
  * @jest-environment jsdom
  */
 
-import { ensureSingleTitleTag, syncWebSeoMetadata } from '@/utils/seo'
+import {
+  ensureSingleTitleTag,
+  removeOwnedWebSeoMetadata,
+  syncWebSeoMetadata,
+} from '@/utils/seo'
 
 describe('ensureSingleTitleTag', () => {
   beforeEach(() => {
@@ -141,5 +145,63 @@ describe('syncWebSeoMetadata', () => {
     })
 
     expectSingleLocalizedHead('Home | Metravel', 'Home description')
+  })
+
+  it('removes only captured home nodes and preserves equal-value destination duplicates', () => {
+    const home = { title: 'Home | Metravel', description: 'Home description' }
+    appendHeadSet(home.title, home.description, true)
+    const homeNodes = syncWebSeoMetadata(home)
+    appendHeadSet(home.title, home.description, true)
+    document.head.insertAdjacentHTML('beforeend', [
+      `<meta data-owner="quest-copy" name="description" content="${home.description}">`,
+      `<meta data-owner="quest-copy" property="og:title" content="${home.title}">`,
+      `<meta data-owner="quest-copy" property="og:description" content="${home.description}">`,
+      `<meta data-owner="quest-copy" name="twitter:title" content="${home.title}">`,
+      `<meta data-owner="quest-copy" name="twitter:description" content="${home.description}">`,
+    ].join(''))
+    const destinationNodes = META_SELECTORS.map((selector) => (
+      Array.from(document.head.querySelectorAll(selector)).filter((node) => (
+        !homeNodes.has(node)
+      ))
+    ))
+    const destinationTitle = Array.from(document.head.querySelectorAll('title')).find((node) => !homeNodes.has(node))
+
+    removeOwnedWebSeoMetadata(home, homeNodes)
+
+    expect(document.head.querySelectorAll('title')).toHaveLength(1)
+    expect(document.head.querySelector('title')).toBe(destinationTitle)
+    expect(document.title).toBe(home.title)
+    META_SELECTORS.forEach((selector, index) => {
+      const nodes = Array.from(document.head.querySelectorAll(selector))
+      expect(nodes).toEqual(destinationNodes[index])
+      expect(nodes).toHaveLength(2)
+      expect(nodes[1].getAttribute('data-owner')).toBe('quest-copy')
+    })
+  })
+
+  it('preserves captured nodes that the destination has already reused with new values', () => {
+    const home = { title: 'Home | Metravel', description: 'Home description' }
+    const quests = { title: 'Quests | Metravel', description: 'Quest description' }
+    appendHeadSet(home.title, home.description, true)
+    const homeNodes = syncWebSeoMetadata(home)
+
+    for (const node of homeNodes) {
+      if (node.matches('title')) {
+        node.textContent = quests.title
+      } else {
+        node.setAttribute('content', node.getAttribute('name')?.includes('title')
+          || node.getAttribute('property')?.includes('title')
+          ? quests.title
+          : quests.description)
+      }
+    }
+
+    removeOwnedWebSeoMetadata(home, homeNodes)
+
+    expect(Array.from(homeNodes).every((node) => node.isConnected)).toBe(true)
+    expect(document.title).toBe(quests.title)
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
+      quests.description,
+    )
   })
 })

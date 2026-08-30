@@ -46,7 +46,7 @@ const expectSingleLocalizedHead = (title: string, description: string) => {
 describe('LazyInstantSEO hydrated head ownership', () => {
   const originalPlatform = Platform.OS
   let container: HTMLDivElement
-  let root: Root
+  let root: Root | null
 
   beforeAll(() => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
@@ -67,7 +67,7 @@ describe('LazyInstantSEO hydrated head ownership', () => {
 
   afterEach(async () => {
     await act(async () => {
-      root.unmount()
+      root?.unmount()
     })
     document.head.innerHTML = ''
     document.body.innerHTML = ''
@@ -89,7 +89,7 @@ describe('LazyInstantSEO hydrated head ownership', () => {
 
     appendHeadSet(ru.title, ru.description)
     await act(async () => {
-      root.render(<LazyInstantSEO {...be} syncHydratedMetadataForPath="/" />)
+      root?.render(<LazyInstantSEO {...be} syncHydratedMetadataForPath="/" />)
     })
     expectSingleLocalizedHead(be.title, be.description)
 
@@ -100,7 +100,7 @@ describe('LazyInstantSEO hydrated head ownership', () => {
     expectSingleLocalizedHead(be.title, be.description)
 
     await act(async () => {
-      root.render(<LazyInstantSEO {...en} syncHydratedMetadataForPath="/" />)
+      root?.render(<LazyInstantSEO {...en} syncHydratedMetadataForPath="/" />)
     })
     expectSingleLocalizedHead(en.title, en.description)
 
@@ -118,7 +118,7 @@ describe('LazyInstantSEO hydrated head ownership', () => {
     expectSingleLocalizedHead(en.title, en.description)
 
     await act(async () => {
-      root.render(<LazyInstantSEO title="Trips | Metravel" syncHydratedMetadataForPath="/" />)
+      root?.render(<LazyInstantSEO title="Trips | Metravel" syncHydratedMetadataForPath="/" />)
     })
     expect(document.title).toBe('Trips | Metravel')
     expect(document.head.querySelectorAll('meta[property="og:title"]')).toHaveLength(1)
@@ -136,7 +136,7 @@ describe('LazyInstantSEO hydrated head ownership', () => {
     appendHeadSet('Quest catalogue runtime | Metravel', runtimeDescription, true)
 
     await act(async () => {
-      root.render(
+      root?.render(
         <LazyInstantSEO
           title="Quest catalogue runtime | Metravel"
           description={runtimeDescription}
@@ -150,11 +150,11 @@ describe('LazyInstantSEO hydrated head ownership', () => {
     expect(document.head.querySelectorAll('title')).toHaveLength(2)
   })
 
-  it('keeps Expo-managed home nodes and does not rewrite the destination route during navigation', async () => {
+  it('purges only home values during fast navigation and preserves destination duplicates', async () => {
     appendHeadSet('Static home | Metravel', 'Static home description')
 
     await act(async () => {
-      root.render(
+      root?.render(
         <LazyInstantSEO
           title="Localized home | Metravel"
           description="Localized home description"
@@ -176,14 +176,67 @@ describe('LazyInstantSEO hydrated head ownership', () => {
     window.history.pushState(null, '', '/quests')
     const questTitle = 'Quest catalogue runtime | Metravel'
     const questDescription = 'Quest catalogue runtime description'
+    let destinationNodes: Element[][] = []
     await act(async () => {
       appendHeadSet(questTitle, questDescription, true)
+      document.head.insertAdjacentHTML('beforeend', [
+        `<meta data-owner="quest-copy" name="description" content="${questDescription}">`,
+        `<meta data-owner="quest-copy" property="og:title" content="${questTitle}">`,
+        `<meta data-owner="quest-copy" property="og:description" content="${questDescription}">`,
+        `<meta data-owner="quest-copy" name="twitter:title" content="${questTitle}">`,
+        `<meta data-owner="quest-copy" name="twitter:description" content="${questDescription}">`,
+      ].join(''))
+      destinationNodes = META_SELECTORS.map((selector) => (
+        Array.from(document.head.querySelectorAll(selector)).filter((node) => (
+          node.getAttribute('content') === (selector.includes('title') ? questTitle : questDescription)
+        ))
+      ))
       await Promise.resolve()
     })
 
-    expect(document.head.querySelectorAll('title').item(1).textContent).toBe(questTitle)
-    expect(document.head.querySelectorAll('meta[name="description"]').item(1).getAttribute('content')).toBe(
-      questDescription,
+    expect(Array.from(document.head.querySelectorAll('title')).map((node) => node.textContent)).toEqual([questTitle])
+    META_SELECTORS.forEach((selector, index) => {
+      const nodes = Array.from(document.head.querySelectorAll(selector))
+      expect(nodes).toEqual(destinationNodes[index])
+      expect(nodes).toHaveLength(2)
+      expect(nodes[1].getAttribute('data-owner')).toBe('quest-copy')
+    })
+    expect(document.head.textContent).not.toContain('Localized home | Metravel')
+    expect(Array.from(document.head.querySelectorAll('meta')).some((node) => (
+      node.getAttribute('content') === 'Localized home description'
+    ))).toBe(false)
+  })
+
+  it('purges home values from effect cleanup when navigation unmounts before destination tags append', async () => {
+    appendHeadSet('Static home | Metravel', 'Static home description')
+
+    await act(async () => {
+      root?.render(
+        <LazyInstantSEO
+          title="Localized home | Metravel"
+          description="Localized home description"
+          syncHydratedMetadataForPath="/"
+        />,
+      )
+    })
+    await act(async () => {
+      appendHeadSet('Localized home | Metravel', 'Localized home description', true)
+      await Promise.resolve()
+    })
+
+    window.history.pushState(null, '', '/quests')
+    await act(async () => {
+      root?.unmount()
+      root = null
+    })
+
+    expect(document.head.querySelector('title')).toBeNull()
+    expect(META_SELECTORS.every((selector) => document.head.querySelector(selector) === null)).toBe(true)
+
+    appendHeadSet('Quest catalogue | Metravel', 'Quest catalogue description', true)
+    expect(document.title).toBe('Quest catalogue | Metravel')
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
+      'Quest catalogue description',
     )
   })
 })
