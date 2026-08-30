@@ -131,7 +131,20 @@ type WebSeoMetadata = {
   description?: string;
 };
 
-const syncSingleMetaTag = (
+const syncLatestTitleTag = (title: string): HTMLTitleElement => {
+  const nodes = Array.from(document.head.querySelectorAll('title'));
+  const element = nodes.filter((node) => node.getAttribute('data-rh') === 'true').at(-1)
+    ?? nodes.at(-1)
+    ?? document.createElement('title');
+
+  if (element.textContent !== title) element.textContent = title;
+  if (!element.parentNode) document.head.insertBefore(element, document.head.firstChild);
+
+  nodes.filter((node) => node !== element).forEach((node) => node.parentNode?.removeChild(node));
+  return element;
+};
+
+const syncLatestMetaTag = (
   selector: string,
   attributes: Record<string, string>,
   content?: string,
@@ -144,7 +157,9 @@ const syncSingleMetaTag = (
     return null;
   }
 
-  const element = nodes[0] ?? document.createElement('meta');
+  const element = nodes.filter((node) => node.getAttribute('data-rh') === 'true').at(-1)
+    ?? nodes.at(-1)
+    ?? document.createElement('meta');
 
   for (const [name, value] of Object.entries(attributes)) {
     if (element.getAttribute(name) !== value) element.setAttribute(name, value);
@@ -152,15 +167,15 @@ const syncSingleMetaTag = (
   if (element.getAttribute('content') !== content) element.setAttribute('content', content);
   if (!element.parentNode) document.head.appendChild(element);
 
-  nodes.slice(1).forEach((node) => node.parentNode?.removeChild(node));
+  nodes.filter((node) => node !== element).forEach((node) => node.parentNode?.removeChild(node));
   return element;
 };
 
 /**
  * Makes the hydrated route metadata authoritative over the deterministic RU
  * SSG baseline. Expo Head may append its managed tags instead of adopting the
- * static ones, so update the first stable tag and remove every duplicate for
- * the title/description surfaces owned by InstantSEO.
+ * static ones. Keep the latest Expo-managed tag so route unmount can clean it
+ * normally, and remove earlier static copies for the home-owned metadata.
  */
 export function syncWebSeoMetadata({
   title,
@@ -172,7 +187,7 @@ export function syncWebSeoMetadata({
   if (!normalizedTitle) return;
   const normalizedDescription = description?.trim() || undefined;
 
-  ensureSingleTitleTag(normalizedTitle);
+  syncLatestTitleTag(normalizedTitle);
 
   const targets: Array<{
     selector: string;
@@ -187,6 +202,6 @@ export function syncWebSeoMetadata({
   ];
 
   for (const target of targets) {
-    syncSingleMetaTag(target.selector, target.attributes, target.content);
+    syncLatestMetaTag(target.selector, target.attributes, target.content);
   }
 }

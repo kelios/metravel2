@@ -26,6 +26,7 @@ function renderHomeSeo(canonical: string) {
       headKey="home"
       title={i18nT('seoStatic:root.home.title')}
       description={i18nT('seoStatic:root.home.description')}
+      syncHydratedMetadataForPath="/"
       canonical={canonical}
       image={buildOgImageUrl(HOME_OG_IMAGE_PATH)}
       imageWidth={HOME_OG_IMAGE_WIDTH}

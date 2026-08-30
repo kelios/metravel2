@@ -51,14 +51,15 @@ describe('syncWebSeoMetadata', () => {
     document.body.innerHTML = ''
   })
 
-  const appendHeadSet = (title: string, description: string) => {
+  const appendHeadSet = (title: string, description: string, expoManaged = false) => {
+    const marker = expoManaged ? ' data-rh="true"' : ''
     document.head.insertAdjacentHTML('beforeend', [
-      `<title data-rh="true">${title}</title>`,
-      `<meta data-rh="true" name="description" content="${description}">`,
-      `<meta data-rh="true" property="og:title" content="${title}">`,
-      `<meta data-rh="true" property="og:description" content="${description}">`,
-      `<meta data-rh="true" name="twitter:title" content="${title}">`,
-      `<meta data-rh="true" name="twitter:description" content="${description}">`,
+      `<title${marker}>${title}</title>`,
+      `<meta${marker} name="description" content="${description}">`,
+      `<meta${marker} property="og:title" content="${title}">`,
+      `<meta${marker} property="og:description" content="${description}">`,
+      `<meta${marker} name="twitter:title" content="${title}">`,
+      `<meta${marker} name="twitter:description" content="${description}">`,
     ].join(''))
   }
 
@@ -88,11 +89,19 @@ describe('syncWebSeoMetadata', () => {
     }
 
     appendHeadSet(ru.title, ru.description)
-    appendHeadSet(be.title, be.description)
+    appendHeadSet(be.title, be.description, true)
+    const latestTitle = document.head.querySelectorAll('title')[1]
+    const latestMeta = META_SELECTORS.map((selector) => document.head.querySelectorAll(selector)[1])
+    appendHeadSet('Late unmanaged title | Metravel', 'Late unmanaged description')
     syncWebSeoMetadata(be)
     expectSingleLocalizedHead(be.title, be.description)
+    expect(document.head.querySelector('title')).toBe(latestTitle)
+    META_SELECTORS.forEach((selector, index) => {
+      expect(document.head.querySelector(selector)).toBe(latestMeta[index])
+      expect(latestMeta[index].getAttribute('data-rh')).toBe('true')
+    })
 
-    appendHeadSet(en.title, en.description)
+    appendHeadSet(en.title, en.description, true)
     syncWebSeoMetadata(en)
     expectSingleLocalizedHead(en.title, en.description)
   })

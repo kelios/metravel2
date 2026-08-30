@@ -8,6 +8,7 @@ type Props = {
   headKey?: string | null;
   title: string;
   description?: string;
+  syncHydratedMetadataForPath?: string;
   canonical?: string;
   image?: string;
   imageAlt?: string;
@@ -23,6 +24,7 @@ function StaticHead({
   headKey,
   title,
   description,
+  syncHydratedMetadataForPath,
   canonical,
   image,
   imageAlt,
@@ -38,15 +40,29 @@ function StaticHead({
   const twitterCard = normalizedImage ? 'summary_large_image' : 'summary';
 
   useEffect(() => {
-    if (typeof document === 'undefined' || !title) return;
+    if (!syncHydratedMetadataForPath || typeof document === 'undefined' || !title) return;
 
-    const syncMetadata = () => syncWebSeoMetadata({ title, description });
+    const normalizePath = (value: string) => {
+      const raw = String(value || '/').split(/[?#]/, 1)[0].trim();
+      const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
+      const normalized = withLeadingSlash.length > 1
+        ? withLeadingSlash.replace(/\/+$/, '')
+        : withLeadingSlash;
+      return normalized === '/index' ? '/' : normalized;
+    };
+    const expectedPath = normalizePath(syncHydratedMetadataForPath);
+    const isExpectedPathActive = () =>
+      typeof window !== 'undefined' && normalizePath(window.location.pathname) === expectedPath;
+
+    const syncMetadata = () => {
+      if (isExpectedPathActive()) syncWebSeoMetadata({ title, description });
+    };
 
     syncMetadata();
 
-    // Expo Head may append a managed copy after hydration or a locale update.
-    // Keep the deterministic static tag, write the active value into it and
-    // discard every later copy during that reconciliation window.
+    // The home route starts with deterministic static RU metadata. Once Expo
+    // Head appends its managed copy, keep that latest tag authoritative so the
+    // router can remove it normally when home unmounts.
     const observer = new MutationObserver(syncMetadata);
     observer.observe(document.head, {
       childList: true,
@@ -61,7 +77,7 @@ function StaticHead({
       window.clearTimeout(timeout);
       observer.disconnect();
     };
-  }, [description, title]);
+  }, [description, syncHydratedMetadataForPath, title]);
 
   useEffect(() => {
     if (typeof document === 'undefined' || !robots) return;

@@ -64,8 +64,10 @@ describe('Home screen regression guards', () => {
     const latestProps = mockInstantSEO.mock.calls.at(-1)?.[0] as {
       title?: string
       description?: string
+      syncHydratedMetadataForPath?: string
     }
     expect(latestProps.title).toBe(resources.ru.seoStatic['root.home.title'])
     expect(latestProps.description).toBe(resources.ru.seoStatic['root.home.description'])
+    expect(latestProps.syncHydratedMetadataForPath).toBe('/')
   })
 })
