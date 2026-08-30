@@ -258,6 +258,26 @@ const gotoMapWithRecovery = async (page: any) => {
   await waitForMapUi(page, 60_000);
 };
 
+const openFirstMapMarkerPopup = async (page: any) => {
+  const marker = page.locator('.metravel-pin-marker').first();
+  await expect(marker).toBeVisible({ timeout: 60_000 });
+
+  const popup = page.locator('.leaflet-popup');
+  let popupVisible = false;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await marker.click({ force: true });
+    popupVisible = await popup
+      .waitFor({ state: 'visible', timeout: attempt === 0 ? 4_000 : 12_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (popupVisible) break;
+    await page.waitForTimeout(500);
+  }
+  expect(popupVisible).toBeTruthy();
+
+  return popup;
+};
+
 test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -647,22 +667,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 60_000 });
 
-    // Markers may load async after API returns.
-    const marker = page.locator('.metravel-pin-marker').first();
-    await expect(marker).toBeVisible({ timeout: 60_000 });
-
-    const popupLocator = page.locator('.leaflet-popup');
-    let popupVisible = false;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      await marker.click({ force: true });
-      popupVisible = await popupLocator
-        .waitFor({ state: 'visible', timeout: attempt === 0 ? 4_000 : 12_000 })
-        .then(() => true)
-        .catch(() => false);
-      if (popupVisible) break;
-      await page.waitForTimeout(500);
-    }
-    expect(popupVisible).toBeTruthy();
+    const popupLocator = await openFirstMapMarkerPopup(page);
 
     // Smoke check: popup should expose at least one actionable control. Since the
     // picker-sheet redesign the card renders Pressables (no <a> anchors), so assert
@@ -678,22 +683,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     );
     await gotoMapWithRecovery(page);
 
-    // Wait for panel hydration before interacting with tabs.
-    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
-
-    // Prefer using list -> open popup to avoid marker overlap issues.
-    const travelsTab = page.getByTestId('map-panel-tab-travels');
-    await expect(travelsTab).toBeVisible({ timeout: 30_000 });
-    await travelsTab.click({ timeout: 60_000 });
-
-    const cards = page.locator(mapTravelCardSelector);
-    await expect.poll(() => cards.count(), { timeout: 30_000 }).toBeGreaterThan(0);
-
-    await page.locator('.leaflet-marker-icon').first().waitFor({ state: 'visible', timeout: 60_000 });
-    await cards.first().click({ position: { x: 16, y: 16 } });
-
-    const popupLocator = page.locator('.leaflet-popup');
-    await expect(popupLocator).toBeVisible({ timeout: 20_000 });
+    // This scenario owns the marker-popup action contract. The mocked list and
+    // the independently loaded cluster layer can contain different coordinates,
+    // so interact with a marker that is actually rendered on the map.
+    const popupLocator = await openFirstMapMarkerPopup(page);
 
     const openDetails = popupLocator.getByRole('button', { name: /Открыть статью|Открыть страницу/i }).first();
     await expect(openDetails).toBeVisible({ timeout: 10_000 });
