@@ -112,7 +112,16 @@ test.describe('@perf Travel details deferred footer transition CLS', () => {
       await installTravelFooterLayoutShiftGuard(page)
       await preacceptCookies(page)
       if (useLiveTravelData) await proxyLiveApiThroughCandidate(page)
-      else await mockFallbackTravelDetails(page, { name: FOOTER_GEOMETRY_TRAVEL_NAME })
+      else {
+        await mockFallbackTravelDetails(page, { name: FOOTER_GEOMETRY_TRAVEL_NAME })
+        await page.route('**/quests/near-location/**', async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ results: [], count: 0 }),
+          })
+        })
+      }
 
       await page.goto(`/travels/${travelSlug}`, {
         waitUntil: 'domcontentloaded',
