@@ -156,9 +156,32 @@ export function useFocusTrap(
       // Возвращаем фокус при размонтировании
       const focusTarget = returnFocusEl || prevActive;
       if (focusTarget) {
-        requestAnimationFrame(() => {
-          focusTarget.focus();
-        });
+        // RN Web Modal restores its own saved target from a passive-effect
+        // cleanup. That cleanup can run after this hook's first post-layout
+        // frame and overwrite the trigger focus (most often after Cancel).
+        // Re-check once on the following frame, but only while no newer trap
+        // has taken ownership; a closing dialog must never steal focus from a
+        // newly opened one.
+        const expectedTopTrap = activeFocusTraps.at(-1) ?? null;
+        const canRestoreFocus = () => {
+          const targetIsConnected =
+            !('isConnected' in focusTarget) || focusTarget.isConnected;
+          return (activeFocusTraps.at(-1) ?? null) === expectedTopTrap && targetIsConnected;
+        };
+        const restoreFocus = () => {
+          if (canRestoreFocus()) focusTarget.focus();
+        };
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(() => {
+            restoreFocus();
+            window.requestAnimationFrame(() => {
+              if (document.activeElement !== focusTarget) restoreFocus();
+            });
+          });
+        } else {
+          restoreFocus();
+        }
       }
     };
   }, [enabled, containerRef, initialFocus, returnFocus]);

@@ -68,6 +68,30 @@ function StackedFocusTrapsHarness({
   )
 }
 
+function installAnimationFrameQueue() {
+  let nextFrameId = 0
+  const queuedFrames = new Map<number, FrameRequestCallback>()
+  jest.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    nextFrameId += 1
+    queuedFrames.set(nextFrameId, callback)
+    return nextFrameId
+  })
+  jest.spyOn(window, 'cancelAnimationFrame').mockImplementation((frameId) => {
+    queuedFrames.delete(frameId)
+  })
+
+  return {
+    runNextFrame() {
+      const next = queuedFrames.entries().next().value as [number, FrameRequestCallback] | undefined
+      expect(next).toBeDefined()
+      if (!next) return
+      const [frameId, callback] = next
+      queuedFrames.delete(frameId)
+      callback(0)
+    },
+  }
+}
+
 describe('useFocusTrap', () => {
   beforeAll(() => {
     ;(Platform as any).OS = 'web'
@@ -100,6 +124,61 @@ describe('useFocusTrap', () => {
 
     unmount()
     await waitFor(() => expect(returnFocus.current.focus).toHaveBeenCalled())
+  })
+
+  it('reasserts trigger focus after a parent modal cleanup overwrites the first frame', () => {
+    const frames = installAnimationFrameQueue()
+
+    const trigger = document.createElement('button')
+    const modalCleanupTarget = document.createElement('button')
+    document.body.append(trigger, modalCleanupTarget)
+    trigger.focus()
+
+    const returnFocus = { current: trigger }
+    const view = render(<FocusTrapHarness externalReturnRef={returnFocus} />)
+    view.unmount()
+
+    // First post-layout frame restores the invoker.
+    frames.runNextFrame()
+    expect(document.activeElement).toBe(trigger)
+
+    // RNW ModalFocusTrap uses a passive cleanup and may run after that frame.
+    modalCleanupTarget.focus()
+    expect(document.activeElement).toBe(modalCleanupTarget)
+
+    // The guarded verification frame restores the real invocation target.
+    frames.runNextFrame()
+    expect(document.activeElement).toBe(trigger)
+
+    trigger.remove()
+    modalCleanupTarget.remove()
+  })
+
+  it('does not let an old verification frame steal focus from a newer top trap', () => {
+    const frames = installAnimationFrameQueue()
+    const oldTrigger = document.createElement('button')
+    document.body.appendChild(oldTrigger)
+    oldTrigger.focus()
+
+    const oldView = render(
+      <FocusTrapHarness externalReturnRef={{ current: oldTrigger }} />
+    )
+    oldView.unmount()
+
+    // The old trap performs its first restore and queues one verification.
+    frames.runNextFrame()
+    expect(document.activeElement).toBe(oldTrigger)
+
+    // A newer trap now owns focus before the old verification frame runs.
+    const newView = render(<FocusTrapHarness />)
+    const newInitial = newView.getByTestId('initial-btn') as HTMLButtonElement
+    expect(document.activeElement).toBe(newInitial)
+
+    frames.runNextFrame()
+    expect(document.activeElement).toBe(newInitial)
+
+    newView.unmount()
+    oldTrigger.remove()
   })
 
   it('owns every Tab transition instead of relying on browser traversal', async () => {
