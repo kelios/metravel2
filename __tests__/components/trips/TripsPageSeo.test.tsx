@@ -10,10 +10,28 @@ jest.mock('expo-router', () => ({
   useIsFocused: () => mockUseIsFocused(),
 }));
 
-jest.mock('expo-router/head', () => ({
-  __esModule: true,
-  default: () => null,
-}));
+jest.mock('expo-router/head', () => {
+  const React = require('react') as typeof import('react');
+
+  function MockHead({ children }: { children?: import('react').ReactNode }) {
+    React.useEffect(() => {
+      const title = React.Children.toArray(children).find(
+        (child) => React.isValidElement(child) && child.type === 'title',
+      );
+
+      if (React.isValidElement<{ children?: import('react').ReactNode }>(title)) {
+        globalThis.document.title = React.Children.toArray(title.props.children).join('');
+      }
+    }, [children]);
+
+    return React.createElement(React.Fragment, null, children ?? null);
+  }
+
+  return {
+    __esModule: true,
+    default: MockHead,
+  };
+});
 
 const originalOS = Platform.OS;
 

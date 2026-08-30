@@ -61,8 +61,6 @@ import { QuestWizard } from '@/components/quests/QuestWizard'
 
 const anyAnswer = () => true
 
-const optionalAnswer = Object.assign(() => true, { _isAny: true })
-
 const makeStep = (id: string, title: string) => ({
   id,
   title,
@@ -351,8 +349,8 @@ describe('QuestWizard guest gate', () => {
 
   it('opens the finale after completing the last optional point', async () => {
     const stepsWithLastOptional = [
-      makeStep('required', 'Обязательная точка'),
-      { ...makeStep('optional', 'Необязательная точка'), answer: optionalAnswer },
+      { ...makeStep('required', 'Обязательная точка'), pointRole: 'required' as const },
+      { ...makeStep('optional', 'Необязательная точка'), pointRole: 'optional' as const },
     ]
     const { getByLabelText, getByText } = render(
       <QuestWizard

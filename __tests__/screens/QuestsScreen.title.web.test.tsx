@@ -11,6 +11,28 @@ import { Platform } from 'react-native'
 jest.mock('expo-router', () => ({
   useIsFocused: () => true,
 }))
+jest.mock('expo-router/head', () => {
+  const React = require('react') as typeof import('react')
+
+  function MockHead({ children }: { children?: import('react').ReactNode }) {
+    React.useEffect(() => {
+      const title = React.Children.toArray(children).find(
+        (child) => React.isValidElement(child) && child.type === 'title',
+      )
+
+      if (React.isValidElement<{ children?: import('react').ReactNode }>(title)) {
+        globalThis.document.title = React.Children.toArray(title.props.children).join('')
+      }
+    }, [children])
+
+    return React.createElement(React.Fragment, null, children ?? null)
+  }
+
+  return {
+    __esModule: true,
+    default: MockHead,
+  }
+})
 jest.mock('@/components/MapPage/Map.web', () => () => null)
 jest.mock('@/screens/tabs/QuestsContentPanel', () => () => null)
 jest.mock('@/screens/tabs/QuestsSidebar', () => () => null)
