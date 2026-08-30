@@ -160,7 +160,11 @@ describe('useWebScrollDelegation — чистые предикаты', () => {
         const sidePanel = document.createElement('div');
         sidePanel.style.overflowY = 'auto';
         sizeElement(sidePanel, { client: 440, scroll: 9000 }, { client: 348, scroll: 348 });
-        document.body.appendChild(sidePanel);
+        // Полотно карты присутствует в DOM ровно так же, как на живом `/map`:
+        // именно оно делает экран составным и запрещает запасное правило #1615.
+        const mapCanvas = document.createElement('div');
+        mapCanvas.className = 'leaflet-container';
+        document.body.append(sidePanel, mapCanvas);
 
         const restore = stubElementsFromPoint(() => [sidePanel]);
 
@@ -168,6 +172,67 @@ describe('useWebScrollDelegation — чистые предикаты', () => {
 
         restore();
         sidePanel.remove();
+        mapCanvas.remove();
+    });
+
+    it('единственную длинную колонку берёт владельцем, даже если она уже 25% вьюпорта (#1615)', () => {
+        // Прод `/quests` 1280×900: каталог живёт в колонке 339×577 — 17% вьюпорта,
+        // ниже MIN_OWNER_VIEWPORT_SHARE. Пока порог площади был единственным
+        // правилом, владелец не выбирался вовсе и весь хром экрана оставался
+        // мёртвым: колесо работало только над самой колонкой.
+        Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true });
+
+        const column = document.createElement('div');
+        column.style.overflowY = 'auto';
+        sizeElement(column, { client: 577, scroll: 8557 }, { client: 339, scroll: 339 });
+        document.body.appendChild(column);
+
+        const restore = stubElementsFromPoint((x) => (x < 400 ? [column] : []));
+
+        expect(findPrimaryScrollOwner(document)).toBe(column);
+
+        restore();
+        column.remove();
+    });
+
+    it('короткую единственную панель владельцем не берёт: длины на несколько экранов нет', () => {
+        Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true });
+
+        const shortPanel = document.createElement('div');
+        shortPanel.style.overflowY = 'auto';
+        // extent = 1500 px, меньше трёх экранов по 900 px.
+        sizeElement(shortPanel, { client: 577, scroll: 2077 }, { client: 339, scroll: 339 });
+        document.body.appendChild(shortPanel);
+
+        const restore = stubElementsFromPoint(() => [shortPanel]);
+
+        expect(findPrimaryScrollOwner(document)).toBeNull();
+
+        restore();
+        shortPanel.remove();
+    });
+
+    it('при двух конкурирующих узких скроллерах владельца не назначает', () => {
+        Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true });
+
+        const left = document.createElement('div');
+        left.style.overflowY = 'auto';
+        sizeElement(left, { client: 577, scroll: 8557 }, { client: 339, scroll: 339 });
+        const right = document.createElement('div');
+        right.style.overflowY = 'auto';
+        sizeElement(right, { client: 577, scroll: 8557 }, { client: 300, scroll: 300 });
+        document.body.append(left, right);
+
+        const restore = stubElementsFromPoint((x) => (x < 400 ? [left] : [right]));
+
+        expect(findPrimaryScrollOwner(document)).toBeNull();
+
+        restore();
+        left.remove();
+        right.remove();
     });
 
     it('основным владельцем берёт самую крупную область под точками вьюпорта', () => {

@@ -32,6 +32,25 @@ const MIN_SCROLL_EXTENT = 1;
  * сделанный над другой частью экрана.
  */
 const MIN_OWNER_VIEWPORT_SHARE = 0.25;
+/**
+ * Запасной критерий владельца, когда порог площади не берёт никто (#1615).
+ * На проде каталог `/quests` живёт в колонке 339×577 — это ~17% вьюпорта
+ * 1280×900, ниже `MIN_OWNER_VIEWPORT_SHARE`, поэтому владелец не выбирался
+ * вовсе и экран оставался мёртвым везде, кроме самой колонки.
+ *
+ * По площади узкую панель от узкой колонки контента не отличить: фильтры карты
+ * занимают 13% вьюпорта, каталог квестов — 17%. Различают два других признака.
+ *
+ * Первый — длина прокрутки: колонка каталога тянется на 7980 px, почти девять
+ * экранов. Второй — отсутствие на экране собственного потребителя колеса: на
+ * `/map` полотно Leaflet зумится тем же жестом, поэтому там любая догадка о
+ * «владельце» опасна, и порог площади остаётся единственным правилом.
+ * Дополнительно требуется единственность кандидата: два конкурирующих
+ * скроллера означают составной макет, где отдавать чужой жест наугад нельзя.
+ */
+const MIN_FALLBACK_OWNER_SCREENS = 3;
+/** Полотно карты забирает колесо себе (зум), поэтому запасное правило там не работает. */
+const WHEEL_OWNING_SURFACE_SELECTOR = '.leaflet-container';
 /** Владелец кэшируется на время жеста: hit-test на каждое событие колеса лишний. */
 const OWNER_CACHE_MS = 400;
 /**
@@ -107,10 +126,15 @@ export function findPrimaryScrollOwner(doc: Document): HTMLElement | null {
 
     let best: HTMLElement | null = null;
     let bestArea = minArea;
+    // Кандидаты нужны для запасного правила ниже: без них экран, у которого
+    // единственная длинная колонка не дотягивает до порога площади, остаётся
+    // вообще без владельца (#1615).
+    const candidates = new Set<HTMLElement>();
     for (const [x, y] of probes) {
         for (const hit of doc.elementsFromPoint(Math.round(x), Math.round(y))) {
             const owner = findVerticallyScrollableAncestor(hit);
             if (!owner) continue;
+            candidates.add(owner);
             const area = owner.clientWidth * owner.clientHeight;
             if (area > bestArea) {
                 bestArea = area;
@@ -119,7 +143,17 @@ export function findPrimaryScrollOwner(doc: Document): HTMLElement | null {
             break;
         }
     }
-    return best;
+    if (best) return best;
+
+    // Запасное правило: ровно один прокручиваемый кандидат, он длиной в
+    // несколько экранов, и на экране нет полотна, которое само забирает колесо.
+    // Это основной контент в узкой колонке, а не панель рядом с картой —
+    // отдать ему жест безопаснее, чем оставить экран неподвижным.
+    if (candidates.size !== 1) return null;
+    if (doc.querySelector(WHEEL_OWNING_SURFACE_SELECTOR)) return null;
+    const [only] = candidates;
+    const extent = only.scrollHeight - only.clientHeight;
+    return extent >= h * MIN_FALLBACK_OWNER_SCREENS ? only : null;
 }
 
 /** Колесо приходит в пикселях, строках или страницах — приводим к пикселям. */
