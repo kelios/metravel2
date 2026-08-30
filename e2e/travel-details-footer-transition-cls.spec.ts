@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
+import type { TravelPeerBadgesDto } from '../api/achievementsNormalizers'
 
 import {
+  FALLBACK_TRAVEL_ID,
   FALLBACK_TRAVEL_SLUG,
   mockFallbackTravelDetails,
   preacceptCookies,
@@ -23,6 +25,7 @@ const liveTravelSlug = process.env.TASK_1604_TRAVEL_SLUG?.trim() || FALLBACK_TRA
 const travelSlug = useLiveTravelData ? liveTravelSlug : FALLBACK_TRAVEL_SLUG
 const candidateBaseUrl = process.env.BASE_URL || 'http://127.0.0.1:4716'
 const FOOTER_GEOMETRY_TRAVEL_NAME = 'Заброшенные усадьбы и замки Беларуси: 38 мест'
+const EMPTY_TRAVEL_PEER_BADGES = { peer_received: [] } satisfies TravelPeerBadgesDto
 
 async function proxyLiveApiThroughCandidate(page: Page) {
   const candidateOrigin = new URL(candidateBaseUrl).origin
@@ -114,6 +117,23 @@ test.describe('@perf Travel details deferred footer transition CLS', () => {
       if (useLiveTravelData) await proxyLiveApiThroughCandidate(page)
       else {
         await mockFallbackTravelDetails(page, { name: FOOTER_GEOMETRY_TRAVEL_NAME })
+        await page.route((url) => (
+          url.pathname === `/api/achievements/travel/${FALLBACK_TRAVEL_ID}/`
+        ), async (route) => {
+          if (route.request().method() !== 'GET') {
+            await route.fulfill({
+              status: 405,
+              contentType: 'application/json',
+              body: JSON.stringify({ detail: 'Method disabled by deterministic perf fixture' }),
+            })
+            return
+          }
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(EMPTY_TRAVEL_PEER_BADGES),
+          })
+        })
         await page.route('**/quests/near-location/**', async (route) => {
           await route.fulfill({
             status: 200,

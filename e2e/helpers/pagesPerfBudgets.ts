@@ -299,7 +299,9 @@ export const PAGE_BUDGETS: BudgetTable = {
       // v1786308063481, 412x823, CPU 4x, холодный контекст): 0.002501 в 5/5.
       // Долг снят, порог вернулся к здоровому.
       clsMax: HEALTHY_CLS_MAX,
-      firstScreenElementsMax: 160, // measured 129
+      // Deterministic loaded fixture: 168 in 2/2 runs (2026-08-30).
+      // Contract headroom: 168 × 1.2 = 201.6, rounded up to 205.
+      firstScreenElementsMax: 205,
       lcpMaxMs: LCP_MEDIUM,
       jsTransferKBMax: 1650, // measured 1364
       totalTransferKBMax: 1750, // measured 1453

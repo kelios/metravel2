@@ -58,6 +58,12 @@ type QuestDetailFixtureCounters = {
   list: number
 }
 
+type CatalogFixtureCounters = {
+  places: number
+  quests: number
+  unexpectedMethods: string[]
+}
+
 const PERF_QUEST_ID = 'perf-budget-quest'
 // CH is intentionally outside the Belkraj/Tripvenue support table. The detail
 // fixture therefore exercises the quest layout without a third-party iframe.
@@ -105,7 +111,8 @@ const PAGES: PageTarget[] = [
     key: 'PLACES',
     name: 'Places',
     path: '/places',
-    readySelector: 'h1',
+    readySelector: '[data-testid="places-card-98041"]',
+    requireReadySelector: true,
   },
   // #1161: каталог квестов держит обложки на `/quest-cover/**` — путь, который до
   // #1113 вообще не распознавался как медийный и уходил без `w`.
@@ -113,7 +120,8 @@ const PAGES: PageTarget[] = [
     key: 'QUESTS',
     name: 'Quests',
     path: '/quests',
-    readySelector: 'h1',
+    readySelector: `[data-testid="quest-card-${PERF_QUEST_ID}"]`,
+    requireReadySelector: true,
   },
   // #1564: the catalog did not exercise the responsive quest-wizard layout,
   // where the <1280 px CLS regression occurred. The API is fully intercepted
@@ -142,6 +150,18 @@ const SEARCH_TRAVELS = Array.from({ length: 6 }, (_, index) => ({
   moderation: true,
   year: '2026',
 }))
+
+const PERF_PLACE = {
+  id: '98041',
+  title: 'Детерминированное место для perf gate',
+  address: 'Минск, тестовый адрес',
+  category: { id: 98_041, name: 'Достопримечательности' },
+  country: { code: 'BY', name: 'Беларусь' },
+  lat: 53.9023,
+  lng: 27.5619,
+  travel: { url: '/travels/perf-budget-place' },
+  image: null,
+}
 
 const PERF_QUEST_META = {
   id: 98_040,
@@ -341,6 +361,54 @@ async function installDeterministicMapApi(
   return counters
 }
 
+async function installDeterministicCatalogApi(
+  page: Page,
+  target: PageTarget,
+): Promise<CatalogFixtureCounters> {
+  const counters: CatalogFixtureCounters = { places: 0, quests: 0, unexpectedMethods: [] }
+  const fulfillJson = (route: Route, body: unknown, status = 200) =>
+    route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    })
+
+  if (target.key === 'PLACES') {
+    await page.route((url) => url.pathname === '/api/places/catalog/', (route) => {
+      if (route.request().method() !== 'GET') {
+        counters.unexpectedMethods.push(
+          `${route.request().method()} ${new URL(route.request().url()).pathname}`,
+        )
+        return fulfillJson(route, { detail: 'Method disabled by deterministic perf fixture' }, 405)
+      }
+      counters.places += 1
+      return fulfillJson(route, {
+        count: 1,
+        results: [PERF_PLACE],
+        facets: {
+          categories: [{ id: PERF_PLACE.category.id, name: PERF_PLACE.category.name, count: 1 }],
+          countries: [{ code: PERF_PLACE.country.code, name: PERF_PLACE.country.name, count: 1 }],
+        },
+      })
+    })
+  }
+
+  if (target.key === 'QUESTS') {
+    await page.route((url) => url.pathname === '/api/quests/', (route) => {
+      if (route.request().method() !== 'GET') {
+        counters.unexpectedMethods.push(
+          `${route.request().method()} ${new URL(route.request().url()).pathname}`,
+        )
+        return fulfillJson(route, { detail: 'Method disabled by deterministic perf fixture' }, 405)
+      }
+      counters.quests += 1
+      return fulfillJson(route, [PERF_QUEST_META])
+    })
+  }
+
+  return counters
+}
+
 async function installDeterministicQuestDetailApi(
   page: Page,
   target: PageTarget,
@@ -403,6 +471,21 @@ function expectQuestDetailFixturesUsed(
   expect(counters.list, 'Quest list fixture was not exercised').toBeGreaterThan(0)
 }
 
+function expectCatalogFixturesUsed(target: PageTarget, counters: CatalogFixtureCounters) {
+  if (target.key !== 'PLACES' && target.key !== 'QUESTS') return
+
+  expect(
+    counters.unexpectedMethods,
+    'Catalog fixture received non-GET requests',
+  ).toEqual([])
+  if (target.key === 'PLACES') {
+    expect(counters.places, 'Places catalog fixture was not exercised').toBeGreaterThan(0)
+  }
+  if (target.key === 'QUESTS') {
+    expect(counters.quests, 'Quests catalog fixture was not exercised').toBeGreaterThan(0)
+  }
+}
+
 /** Профиль берётся из проекта Playwright, а не из ширины вьюпорта. */
 function profileFromProject(projectName: string): PerfProfile {
   const profile = PERF_PROFILE_BY_PROJECT[projectName as keyof typeof PERF_PROFILE_BY_PROJECT]
@@ -452,11 +535,13 @@ for (const target of PAGES) {
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
       const mapFixtureCounters = await installDeterministicMapApi(page, target)
+      const catalogFixtureCounters = await installDeterministicCatalogApi(page, target)
       const questFixtureCounters = await installDeterministicQuestDetailApi(page, target)
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
       expectMapFixturesUsed(target, mapFixtureCounters)
+      expectCatalogFixturesUsed(target, catalogFixtureCounters)
       expectQuestDetailFixturesUsed(target, questFixtureCounters)
       const observedProfile = await collectObservedProfile(page)
       const domCounts = await collectFirstScreenElements(page)
@@ -565,6 +650,7 @@ for (const target of PAGES) {
       await injectPerfObservers(page)
       await installDeterministicSearchApi(page, target)
       const mapFixtureCounters = await installDeterministicMapApi(page, target)
+      const catalogFixtureCounters = await installDeterministicCatalogApi(page, target)
       const questFixtureCounters = await installDeterministicQuestDetailApi(page, target)
 
       const tracker = createNetworkTracker(page, {
@@ -573,6 +659,7 @@ for (const target of PAGES) {
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
       expectMapFixturesUsed(target, mapFixtureCounters)
+      expectCatalogFixturesUsed(target, catalogFixtureCounters)
       expectQuestDetailFixturesUsed(target, questFixtureCounters)
 
       const stats = tracker.getStats()
