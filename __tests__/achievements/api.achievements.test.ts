@@ -37,6 +37,20 @@ import {
 
 const mockGet = apiClient.get as jest.MockedFunction<typeof apiClient.get>
 
+describe('achievement mock fixtures', () => {
+  it('keeps earned and locked sets stable when catalog-only badges are inserted', () => {
+    expect(MOCK_MY_ACHIEVEMENTS.earned.map(({ badge }) => badge.id)).toEqual([
+      1, 2, 3, 6, 8, 10,
+    ])
+    expect(MOCK_MY_ACHIEVEMENTS.locked.map(({ badge }) => badge.id)).toEqual([
+      4, 5, 7, 9, 11,
+    ])
+    expect(MOCK_MY_ACHIEVEMENTS.recentlyEarned.map(({ badge }) => badge.id)).toEqual([
+      10, 8, 6,
+    ])
+  })
+})
+
 // ── helpers ────────────────────────────────────────────────────────────────────
 
 const badgeDto = (overrides: Record<string, unknown> = {}) => ({

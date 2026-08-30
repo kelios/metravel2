@@ -65,6 +65,12 @@ export const MOCK_BADGES: Badge[] = [
   badge(11, 'world-citizen', 'Гражданин мира', '15 посещённых стран', 'geo', 'География', 'legendary', 200),
 ];
 
+const badgeById = (id: number): Badge => {
+  const match = MOCK_BADGES.find((candidate) => candidate.id === id);
+  if (!match) throw new Error(`Missing achievement mock badge id=${id}`);
+  return match;
+};
+
 // UserBadge.id умышленно НЕ равен badge.id (смещение +100): моки повторяют BE-контракт,
 // где earned_badges[].id (PK разблокировки) ≠ earned_badges[].badge.id (каталог).
 const earned = (b: Badge, earnedAt: string): UserBadge => ({
@@ -133,12 +139,12 @@ export const MOCK_ACTIVITY_TYPES: ActivityType[] = [
 ];
 
 const MOCK_EARNED: UserBadge[] = [
-  earned(MOCK_BADGES[0], '2025-09-01T10:00:00Z'),
-  earned(MOCK_BADGES[1], '2025-09-01T10:05:00Z'),
-  earned(MOCK_BADGES[2], '2025-09-12T14:20:00Z'),
-  earned(MOCK_BADGES[5], '2025-10-03T09:00:00Z'),
-  earned(MOCK_BADGES[7], '2025-11-18T19:30:00Z'),
-  earned(MOCK_BADGES[9], '2026-01-22T08:10:00Z'),
+  earned(badgeById(1), '2025-09-01T10:00:00Z'),
+  earned(badgeById(2), '2025-09-01T10:05:00Z'),
+  earned(badgeById(3), '2025-09-12T14:20:00Z'),
+  earned(badgeById(6), '2025-10-03T09:00:00Z'),
+  earned(badgeById(8), '2025-11-18T19:30:00Z'),
+  earned(badgeById(10), '2026-01-22T08:10:00Z'),
 ];
 
 const progress = (b: Badge, current: number, threshold: number): BadgeProgress => ({
@@ -148,11 +154,11 @@ const progress = (b: Badge, current: number, threshold: number): BadgeProgress =
 });
 
 const MOCK_LOCKED: BadgeProgress[] = [
-  progress(MOCK_BADGES[3], 9, 15),
-  progress(MOCK_BADGES[4], 9, 30),
-  progress(MOCK_BADGES[6], 1, 3),
-  progress(MOCK_BADGES[8], 4, 15),
-  progress(MOCK_BADGES[10], 7, 15),
+  progress(badgeById(4), 9, 15),
+  progress(badgeById(5), 9, 30),
+  progress(badgeById(7), 1, 3),
+  progress(badgeById(9), 4, 15),
+  progress(badgeById(11), 7, 15),
 ];
 
 export const MOCK_MY_ACHIEVEMENTS: MyAchievements = {
