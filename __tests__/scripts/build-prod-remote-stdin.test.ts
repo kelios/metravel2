@@ -233,10 +233,11 @@ describe('build-prod.sh remote stdin transport', () => {
     const snippetLines = stdinConsumerLines(containerSnippet)
     const lines = [...payloadLines, ...snippetLines]
 
-    // rroot exec, compose detection, both compose_nginx варианты — в payload;
-    // резолв app_ctr — в снипете. Guard обязан видеть весь docker-периметр.
-    expect(snippetLines.length).toBeGreaterThanOrEqual(1)
-    expect(lines.length).toBeGreaterThanOrEqual(5)
+    // Пороги разведены по источникам: общий счёт скрыл бы пропажу строк в
+    // payload за счётом снипета и наоборот. rroot exec, compose detection и оба
+    // compose_nginx варианта — в payload; четыре docker ps резолва — в снипете.
+    expect(payloadLines.length).toBeGreaterThanOrEqual(4)
+    expect(snippetLines.length).toBeGreaterThanOrEqual(4)
     expect(lines.filter((line) => !line.includes('</dev/null'))).toEqual([])
   })
 

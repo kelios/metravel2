@@ -116,13 +116,21 @@ bash -c 'source scripts/deploy-target.sh; DB_CTR="$(metravel_resolve_container_o
 
 ### Файл на прод-хосте
 
+Имя контейнера сюда приносим с рабочей машины: `scripts/deploy-target.sh` живёт
+в репозитории фронтенда, а каталог деплоя на прод-хосте — это checkout бэкенда,
+и `source` его там не найдёт. Регулярка при этом остаётся в одном экземпляре
+(#1636).
+
+Шаг 1, на рабочей машине — узнать имя:
+
 ```bash
-# Имя контейнера резолвим на месте: compose меняет разделитель при пересоздании.
-# Регулярка живёт только в scripts/deploy-target.sh — подтягиваем её оттуда,
-# из каталога деплоя на хосте, вместо ещё одной копии (#1636).
-eval "$(bash -c 'source scripts/deploy-target.sh; metravel_container_remote_snippet')"
-DB_CTR="$(metravel_resolve_container metravel-gis)" || exit 1
-docker exec -i "$DB_CTR" sh -c 'pg_dump --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | gzip -9 > ~/metravel-postgres-$(date -u +%Y%m%dT%H%M%SZ).sql.gz
+bash -c 'source scripts/deploy-target.sh; metravel_resolve_container_over_ssh metravel-gis'
+```
+
+Шаг 2, на прод-хосте — подставить полученное имя вместо `<db-контейнер>`:
+
+```bash
+docker exec -i '<db-контейнер>' sh -c 'pg_dump --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | gzip -9 > ~/metravel-postgres-$(date -u +%Y%m%dT%H%M%SZ).sql.gz
 ```
 
 Файл потом обязательно забрать (`scp`) и удалить с сервера — 46 МБ при 2.6 ГБ

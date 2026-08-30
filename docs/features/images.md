@@ -997,12 +997,14 @@ capability-лестнице переходного proxy. Это включае�
   хосте, либо запуск партиями (`--limit` + `--cursor`) с сохранением позиции.
 - `pkill` с хоста по процессу контейнера не работает (`Operation not permitted`)
   — процесс принадлежит пользователю контейнера. Убивать только изнутри:
-  из каталога деплоя на хосте подтянуть общий резолв и взять имя —
-  `eval "$(bash -c 'source scripts/deploy-target.sh; metravel_container_remote_snippet')"`,
-  затем `docker exec "$(metravel_resolve_container app)" sh -c "kill -9 <pid>"`
-  (имя контейнера не хардкодим — compose v1 звал его `metravel_app_1`, v2 —
-  `metravel-app-1`, и регулярка существует в одном экземпляре, #1636),
-  а `<pid>` искать по
+  имя контейнера узнать С РАБОЧЕЙ МАШИНЫ —
+  `bash -c 'source scripts/deploy-target.sh; metravel_resolve_container_over_ssh app'`
+  — и подставить его на хосте: `docker exec '<app-контейнер>' sh -c "kill -9 <pid>"`.
+  На прод-хосте `source scripts/deploy-target.sh` не сработает: каталог деплоя —
+  это checkout бэкенда, файла там нет, а пустое имя схлопнуло бы аргументы и
+  docker принял бы `sh` за контейнер. Имя не хардкодим — compose v1 звал его
+  `metravel_app_1`, v2 — `metravel-app-1`, и регулярка существует в одном
+  экземпляре (#1636). `<pid>` искать по
   `/proc/*/cmdline` — в образе нет ни `ps`, ни `pkill`, ни `free`; `nice` есть,
   `kill` только как shell builtin.
 - `scripts/deploy-target.sh` — bash-скрипт: под zsh `source` падает на

@@ -1,5 +1,7 @@
 const {
   SERVICES,
+  SCAN_ROOTS,
+  IGNORED_DIRS,
   evaluateGuard,
   findViolationsInSource,
   findViolationsInDoc,
@@ -8,6 +10,26 @@ const {
 describe('guard-container-names', () => {
   it('покрывает все сервисы compose, у которых есть контейнер на проде', () => {
     expect(SERVICES).toEqual(['app', 'nginx', 'metravel-gis', 'redis', 'redis-images'])
+  })
+
+  // Периметр — часть контракта гарда, а не деталь реализации: взятый целиком
+  // `.claude` втягивает gitignore'нутый `.claude/worktrees/` с checkout'ами
+  // параллельных сессий, и гард краснеет на корректном main из-за чужих
+  // untracked-файлов, которые правкой этого репозитория не чинятся.
+  it('сканирует только каталоги с исполняемыми командами и не берёт .claude целиком', () => {
+    expect(SCAN_ROOTS).toEqual([
+      'scripts',
+      'docs',
+      '.claude/agents',
+      '.claude/skills',
+      '.claude/commands',
+      '.claude/hooks',
+    ])
+    expect(SCAN_ROOTS).not.toContain('.claude')
+  })
+
+  it('исключает worktrees второй линией обороны — на случай расширения периметра', () => {
+    expect(Array.from(IGNORED_DIRS)).toContain('worktrees')
   })
 
   it.each([

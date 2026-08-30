@@ -20,14 +20,35 @@ const path = require('path')
 //   * проза и таблицы в Markdown — это описание состояния, а не команда;
 //   * блоки ``` без языка — сохранённые транскрипты и вывод логов.
 // Проверяются только исполняемые строки: код в .sh/.js/.py и содержимое
-// ```bash / ```sh блоков в документации.
+// ```bash / ```sh блоков в документации. Инструкции агентов и скиллов тоже в
+// периметре: они содержат исполняемые прод-команды, и седьмая копия жила там.
 
 const OUTPUT_CONTRACT_VERSION = 1
 
-const SCAN_ROOTS = ['scripts', 'docs']
+// `.claude` целиком брать НЕЛЬЗЯ: `.claude/worktrees/` в .gitignore, там лежат
+// checkout'ы параллельных сессий, и гард краснел бы на корректном main из-за
+// чужих untracked-файлов, которые правкой этого репозитория не чинятся.
+// Перечисляем ровно те подкаталоги, где живут исполняемые прод-команды.
+const SCAN_ROOTS = [
+  'scripts',
+  'docs',
+  '.claude/agents',
+  '.claude/skills',
+  '.claude/commands',
+  '.claude/hooks',
+]
 const SCAN_ROOT_FILES = ['build-prod.sh']
 
-const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage', '__snapshots__'])
+// `worktrees` — вторая линия обороны к сужению SCAN_ROOTS выше: даже если
+// периметр однажды снова расширят, чужой checkout в него не попадёт.
+const IGNORED_DIRS = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  'coverage',
+  '__snapshots__',
+  'worktrees',
+])
 
 const SOURCE_EXTENSIONS = new Set(['.sh', '.bash', '.js', '.cjs', '.mjs', '.py'])
 const DOC_EXTENSIONS = new Set(['.md'])
@@ -208,6 +229,7 @@ module.exports = {
   HARDCODED_NAME_REGEX,
   SCAN_ROOTS,
   SCAN_ROOT_FILES,
+  IGNORED_DIRS,
   parseArgs,
   isCommentLine,
   isResolverLine,

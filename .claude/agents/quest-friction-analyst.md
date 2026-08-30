@@ -150,9 +150,14 @@ Read-only SQL на проде (никогда не пиши в боевую ба
 владельца):
 
 ```bash
-source scripts/deploy-target.sh && require_deploy_target
-printf '%s' "$SQL" | ssh "$PROD_SSH_TARGET" \
-  "docker exec -i metravel_metravel-gis_1 sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -P pager=off -f -'"
+# Имя контейнера и адрес берём через bash -c: под zsh `source
+# scripts/deploy-target.sh` не поднимает .env.deploy (использует BASH_SOURCE).
+# Имя не вписываем — compose меняет разделитель при пересоздании (#1636).
+DB_CTR="$(bash -c 'source scripts/deploy-target.sh; metravel_resolve_container_over_ssh metravel-gis')" || exit 1
+PROD="$(bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null && echo "$PROD_SSH_TARGET"')" || exit 1
+
+printf '%s' "$SQL" | ssh "$PROD" \
+  "docker exec -i '$DB_CTR' sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -P pager=off -f -'"
 ```
 
 Таблицы: `quests_quest`, `quest_steps`, `quest_progress`, `quest_review`,
