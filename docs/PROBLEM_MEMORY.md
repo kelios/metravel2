@@ -134,12 +134,20 @@ guard, падающий в CI на попытке обойти этот конт
   сдвиг глобальной шапки по той же breakpoint-причине — `reopen #1298`; иной
   route-specific дополнительный ряд/контекст — `create-linked` к семье (как
   `#1563`), а не новый общий «CLS страницы».
-- **Последняя проверка:** 2026-08-27; для `#1298` локально введён общий
-  `mobile/compact/wide` контракт резервирования и critical-CSS breakpoint,
-  независимый review исправил пересечение outer-slot селектора с внутренними
-  `nav/account` слотами. Focused Jest и browser matrix ещё не приняты из-за
-  чужого живого quality gate; до их зелёного результата и post-deploy пробы
-  карточка остаётся `in_progress`. Gate `#1564` продолжает держать narrow
+- **Последняя проверка:** 2026-08-30, production acceptance `#1298` закрыт.
+  Общий `mobile/compact/wide` контракт резервирования и critical-CSS breakpoint
+  живут на `metravel.by` (`[data-header-slot=""]` = 78 px, `64 px` под
+  `@media (max-width:1279.98px)`, `64 px` под `max-width:767.98px`). Холодная
+  Layout-Instability матрица `/` и `/search` на `412/768/1152/1279/1280`:
+  CLS `0` и ноль кадров сдвига во всех 12 прогонах, включая три холодных
+  `/search` `1152×720` против baseline `0.010928357`; статический резерв slot
+  равен гидрированной высоте на каждой ширине (`64` в `412–1279`, `78` в
+  `1280`), `search-container` стоит на `y=64` уже в статике — сигнатуры
+  `y=78 → 64` больше нет; console/page errors и React `#418/#419` — 0.
+  Нулевой результат откалиброван позитивным контролем на том же наблюдателе:
+  синтетическая полоса `40 px` перед `search-container` даёт CLS `0.0312` и
+  источник `div[testid=search-container] (y 64→104)`. Focused Jest владеющего
+  слоя — 3 suite / 59 тестов PASS. Gate `#1564` продолжает держать narrow
   baseline.
 
 ### TRAVEL-DEFERRED-RESERVE-CLS-001 — placeholder и первый runtime-кадр имеют одну внешнюю геометрию
