@@ -191,6 +191,10 @@ EXPO_PUBLIC_IS_LOCAL_API=false
 
 ### 3.2 Android device testing and builds
 
+Этот раздел выполняется только после code-review pass, commit/push и перехода
+frontend-тикета в `testing`. Implementation и `review` передают сюда exact
+`AND-USB-*` сценарий, но не подключают устройство.
+
 - Android EAS/cloud builds and submits are disabled by project policy: do not run
   `eas build --platform android`, `eas submit --platform android` or any
   `--platform all` command. Android production artifacts are built locally by
@@ -212,6 +216,9 @@ EXPO_PUBLIC_IS_LOCAL_API=false
 - `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
 
 ### 3.2.1 iOS testing and release operations
+
+iOS simulator/physical/TestFlight QA запускается только в `testing` после
+code-review pass. Release operations сохраняют отдельные authorization gates.
 
 - Активный первый iOS release — universal iPhone/iPad. Для iPad-specific
   configuration/runtime обязательны simulator-проверки full-screen,

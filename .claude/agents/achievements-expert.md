@@ -51,6 +51,9 @@ model: opus
 
 **Как воспроизвести**
 
+Jest/static checks ниже можно запускать до review; browser/e2e/API/device строки
+— exact QA handoff и выполняются только после code-review pass в `testing`.
+
 - `EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true npm run web` → `/profile`, `/user/<id>`,
   карточка автора на `/travels/<slug>`; полный обход — скилл
   `metravel-achievements-audit`;
@@ -84,16 +87,16 @@ model: opus
 - Цвета тиров живут в `badgeVisuals.ts` и обязаны совпадать с контрактом
   визуала значка; расхождение видно не в коде, а на сгенерированных картинках.
 
-**Чем доказывается результат**
+**Чем доказывается результат по стадиям**
 
 - targeted `__tests__/achievements/**` + `npm run check:fast`; правка `api/` или
   типов — `npm run typecheck`;
 - изменение ключей или инвалидации — зелёный `npm run guard:query-keys` плюс
-  наблюдаемое обновление UI без перезагрузки; изменение DTO или маппера —
-  фактический JSON реального эндпоинта, а не форма мока;
-- peer-toggle — два последовательных запроса (выдать/снять) с проверкой, что
-  после отката UI совпал с сервером;
-- видимая правка — скрины `/profile` и `/user/<id>` на 390px и 1280px;
+  source-level coverage; наблюдаемое обновление UI, реальный endpoint JSON,
+  peer-toggle give/remove rollback и browser screenshots выполняются в
+  `testing`;
+- testing handoff включает `/profile` и `/user/<id>` на 390px/1280px и
+  mock/live backend modes;
 - НЕ доказывают: mock-режим — работу с бэкендом; snapshot-тест значка — реальный
   рендер медали на native; `SKIPPED` с кодом `0` под quality-gate lock — pass.
 
@@ -173,9 +176,10 @@ BE-A*/FE-A*).
    `docs/ACHIEVEMENTS_BADGE_PROMPTS.md`.
 4. Прогон: `npm run check:fast`. Цеплял `api/`/типы — `npm run typecheck`.
    Цеплял тестируемое поведение — обнови/прогони `__tests__/achievements/**`.
-5. Видимые UI-правки — верифицируй в браузере (preview): включи моки
-   `EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true`, проверь /profile, /user/[id], AuthorCard.
-   Для полного QA-обхода — скилл `metravel-achievements-audit`.
+5. Для видимых UI-правок подготовь browser-QA handoff: с моками
+   `EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true` проверить /profile, /user/[id] и
+   AuthorCard. Preview запускается только после code review в `testing`; полный
+   проход — скилл `metravel-achievements-audit`.
 
 ## Локальная разработка без бэкенда
 
@@ -215,7 +219,7 @@ BE-A*/FE-A*).
 Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
 
 - **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши в `description` блок evidence: корень проблемы, изменённые файлы (`path:line`), как верифицировано (web/тест), и шаги device-verify. НЕ ставь `done` сам — приёмку делает `board-reviewer` / skill `sprint-review`.
+- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
 - **В `testing` сам не переводи.** Переход `review → testing` держит гейт-агент `code-review-gate`: PreToolUse hook `.claude/hooks/review-gate.mjs` блокирует `status=testing` без свежего вердикта `pass`. Закончив работу, оставь тикет в `review` и в своём отчёте явно попроси прогнать `code-review-gate` (`/review-gate <id>`). Если гейт вернул findings — тикет снова у тебя в `in_progress`, чини и отдавай на повторное ревью.
 - **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
 - **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
@@ -226,8 +230,8 @@ BE-A*/FE-A*).
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

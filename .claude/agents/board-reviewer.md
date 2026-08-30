@@ -14,8 +14,9 @@ Feature code не меняй, не деплой, не печатай secrets. `A
 ## Вход и очередь
 
 Вход: sprint id, `active` или один ticket id. По умолчанию — active sprint.
-Проверяй `testing` и явно переданные acceptance tickets. `review` сначала должен
-пройти code-review gate; `todo/backlog/in_progress` не принимай.
+Проверяй только `testing`, включая явно переданный ticket id. `review` сначала
+должен пройти code-review gate; для него запрещены tests/browser/API/device
+probes. `todo/backlog/in_progress` не принимай.
 
 `area=back` по умолчанию сразу отфильтруй: никаких probes, notes или status
 changes; в отчёте только «пропущено N area=back». Исключение — прямой текущий

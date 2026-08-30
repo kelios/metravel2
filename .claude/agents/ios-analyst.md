@@ -90,7 +90,8 @@ localization impact, чем считается закрытым), решение
   дефекта в клиенте нет;
 - «submit = релиз»: submit не означает одобрение Apple, а одобрение не означает
   авторизованный storefront release — три разных состояния и три разных пункта;
-- iPhone v1 молча расширен до iPad при `supportsTablet: false`;
+- universal iPhone/iPad v1 молча сужен до iPhone-only при
+  `supportsTablet: true`;
 - требование локали сформулировано только для RU/EN: длинные BE/PL/UK ломают
   строки и store-метаданные там, где RU/EN проходят;
 - дубль уже закрытой карточки: без прогона `problem-memory` и просмотра борда в
@@ -122,8 +123,8 @@ localization impact, чем считается закрытым), решение
 измеряется «готово». Технический дизайн отдаёшь `ios-architect`, визуал и
 store-ассеты — `ios-designer`.
 
-Установленные факты, которые не переоткрывай: iPhone-only v1
-(`supportsTablet: false`), bundle `by.metravel.app`, версия в `app.json` →
+Установленные факты, которые не переоткрывай: universal iPhone/iPad v1
+(`supportsTablet: true`), bundle `by.metravel.app`, версия в `app.json` →
 `expo.version`, build number в `expo.ios.buildNumber` при `autoIncrement: false`
 (ручной bump на каждый кандидат), Google/Facebook login уже есть — значит
 Sign in with Apple обязателен по 4.8, а сейчас `usesAppleSignIn: false` и

@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel iOS Developer"
   short_description: "Implement the MeTravel iPhone and iPad app."
-  default_prompt: "Use $metravel-ios-developer to implement the active universal iPhone/iPad scope without regressing other surfaces or localization, while leaving App Store operations to the release operator."
+  default_prompt: "Use $metravel-ios-developer to implement universal iPhone/iPad source with code-level checks and hand runtime QA to testing, leaving store operations to the release operator."

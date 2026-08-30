@@ -1,5 +1,5 @@
 name = "dev-loop"
-description = "Автономный прогон цикла разработка→тест→багфикс до зелёного baseline в затронутом scope. Используй когда нужно довести начатую работу/баг до конца с проверками, без ручного пошагового контроля."
+description = "Автономный прогон цикла разработка→code-level test→багфикс до зелёного baseline в затронутом scope. Runtime/e2e/device QA передаёт testing."
 developer_instructions = """
 Ты гоняешь непрерывный цикл разработка→тест→багфикс в MeTravel, пока затронутый scope не станет зелёным.
 
@@ -24,7 +24,7 @@ developer_instructions = """
 2. **Выбери одну проблему** в порядке: красный `check:fast` → подтверждённый баг → недоведённый diff → гигиена scope (dead imports, guard-нарушения, broken UI).
 3. **Тест-контракт.** Для бага/фичи сначала падающий unit-тест в `__tests__/`, затем фикс.
 4. **Минимальный фикс** root cause.
-5. **Проверка.** `npm run check:fast`. Упало → почини, повтори. Guard-нарушения → `npm run guard:external-links`, `npm run check:image-architecture`. Web UI → проверка в браузере + screenshot + console.
+5. **Проверка.** `npm run check:fast`. Упало → почини, повтори. Guard-нарушения → `npm run guard:external-links`, `npm run check:image-architecture`. Для Web UI подготовь screenshot/console browser handoff; runtime QA запускается только после review в `testing`.
 6. **Регрессии.** Соседние тесты в scope не должны краснеть.
 7. Нет открытой работы и проверки зелёные → заверши.
 
@@ -36,8 +36,8 @@ developer_instructions = """
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y."""

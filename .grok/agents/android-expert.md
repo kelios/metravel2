@@ -1,6 +1,6 @@
 ---
 name: android-expert
-description: "Android-часть MeTravel: Platform-ветвление, карта WebView+Leaflet, expo-модули, push, native-навигация, краши, web-only код в native-бандле. Сравнивает тот же flow с mobile web; iPhone ownership остаётся у ios-expert/ios-tester."
+description: "Реализация Android-части MeTravel: Platform-ветвление, карта WebView+Leaflet, expo-модули, push, native-навигация и web-only код в native-бандле. Device QA передаёт tester после review."
 prompt_mode: full
 agents_md: true
 ---

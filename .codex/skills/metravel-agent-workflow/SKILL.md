@@ -17,8 +17,10 @@ Choose only stages that produce an artifact consumed by the next stage:
    repository scope.
 2. Design: system architect/domain expert/UI/i18n only for affected contracts.
 3. Implementation: one owning domain/feature/native skill.
-4. Validation: browser/mobile/QA skill only for the observable target.
-5. Review: `$metravel-code-reviewer` after code changes, preferably independent.
+4. Review: `$metravel-code-reviewer` after code changes, preferably independent;
+   this stage is code-only.
+5. Testing: browser/mobile/QA skill only after review passes and the reviewed
+   commit enters `testing`.
 6. Operations: board, deploy, production smoke, or store operator only when that
    external stage is explicitly in scope.
 
@@ -53,16 +55,19 @@ worktree changes outside every role's ownership.
 - Board work uses Problem Memory → Task Contract → Ticket Board. `blocked_by` is
   only a hard implementation dependency; `testing` is active QA or an exact
   recheck, never parking.
-- Visible common UI requires desktop and mobile-web evidence. Android/iPhone
-  evidence is added only for corresponding platform-specific behavior/runtime.
+- Visible common UI requires desktop and mobile-web evidence in `testing`.
+  Android/iPhone evidence is added there only for corresponding
+  platform-specific behavior/runtime.
 - Reviewer gets the original task, complete task diff, task-owned paths, and raw
-  validation. It fixes confirmed in-scope findings, re-reviews, and revalidates.
+  code-level checks. It fixes confirmed in-scope findings and re-reviews without
+  browser/API/device runtime QA.
 
 ## Bug loop
 
 Use only the needed roles: reproduce with evidence → owning implementer fixes →
-same observable layer retests → independent reviewer repairs/revalidates. Add
-deploy/release only after a separate explicit request.
+independent code-only reviewer repairs/passes → ticket enters `testing` → same
+observable layer retests. Add deploy/release only after a separate explicit
+request.
 
 ## Handoff
 

@@ -93,13 +93,15 @@ Backend/Django/server design из этого workspace остаётся read-onl
 - разбивать работу на небольшие упорядоченные шаги с конкретным результатом;
 - связывать implementation tasks с requirements/scenarios;
 - включать тесты на ближайшем надёжном уровне без `.skip`;
-- включать browser evidence для desktop/mobile web при видимом common/shared
-  UI; USB Android evidence — только для Android-specific behavior; iPhone
-  simulator/physical/TestFlight layer — только для iOS-specific behavior или
-  явно назначенного release gate;
+- включать в отдельный блок `testing` browser evidence для desktop/mobile web
+  при видимом common/shared UI; USB Android evidence — только для
+  Android-specific behavior; iPhone simulator/physical/TestFlight layer —
+  только для iOS-specific behavior или явно назначенного release gate;
 - включать i18n validation для localization impact;
 - включать соседние consumer/regression probes для shared changes;
 - включать обязательный code-review-and-fix после code changes;
+- располагать browser/API/device/runtime QA только после code review отдельным
+  блоком стадии `testing`;
 - включать `openspec validate --all` перед archive;
 - не включать commit, push, deploy, publish или board state change без явного
   разрешения пользователя.

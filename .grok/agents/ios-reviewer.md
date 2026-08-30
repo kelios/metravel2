@@ -1,6 +1,6 @@
 ---
 name: ios-reviewer
-description: "Независимый review-and-fix iOS/shared diff: runtime, Expo/Xcode, privacy, auth/storage, links/APNs, i18n/a11y и regressions. Для pre-TestFlight code review; store/backend не трогает."
+description: "Независимый code-only review-and-fix iOS/shared diff: Expo/Xcode contracts, privacy, auth/storage, links/APNs, i18n/a11y и regressions. Runtime QA выполняет ios-tester в testing."
 prompt_mode: full
 agents_md: true
 ---

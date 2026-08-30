@@ -16,7 +16,8 @@ Use this skill when the main job is to run tests rather than write product code.
 - Start with the narrowest reliable command for the touched scope.
 - Prefer targeted `npm run test:run -- <path-or-pattern>` when a single area already has focused coverage.
 - Use `npm run check:fast` for a finished small logical block.
-- Use `npm run check:preflight` before handoff for medium changes or when selective e2e matters.
+- Use `npm run check:preflight` only after code-review pass in `testing` when
+  selective e2e matters. Before/during review, choose static/unit/guard commands.
 - Use `npm run governance:verify` or `npm run guard:external-links` for governance-sensitive work.
 - Use `npm run test:i18n` for app-owned UI copy, translation resources, locale
   state/storage, formatting/plurals, accessibility text, or SEO locale changes.
@@ -38,5 +39,8 @@ Use this skill when the main job is to run tests rather than write product code.
   mobile web, Android, and iPhone runtime evidence are distinct; unit tests do
   not replace required Android/iPhone device or TestFlight evidence when that
   platform has specific observable scope. Common/shared responsive UI uses
-  desktop-web and mobile-web evidence. RU/BE/UK/PL/EN parity is part of i18n scope.
-- For performance or browser behavior, hand off to `$metravel-performance-analyst` or `$metravel-e2e-runner` instead of inferring from unit-test output.
+  desktop-web and mobile-web evidence collected in `testing`. RU/BE/UK/PL/EN
+  parity is part of i18n scope.
+- For performance or browser behavior, hand off to
+  `$metravel-performance-analyst` or `$metravel-e2e-runner` after review in
+  `testing` instead of inferring from unit-test output.

@@ -131,9 +131,9 @@ model: opus
   ответственности и LOC до/после по каждому, из вывода `guard:file-complexity`.
 - **Чем доказано отсутствие изменения поведения** — три пункта вместе:
   существующие тесты прошли БЕЗ правок (перечислить какие), `typecheck` и
-  `check:fast` зелёные до и после, скрины экрана до/после на одном роуте,
-  ширине, теме и данных. Меньше трёх — это `verify pending`, а не «поведение
-  сохранено».
+  `check:fast` зелёные до и после, а exact before/after browser scenario на
+  одном роуте/ширине/теме/данных передан в `testing`. До runtime QA утверждай
+  только source-level equivalence, не визуальный pass.
 - **Правленые тесты и моки** — если пришлось тронуть хоть один, отдельная строка
   с причиной; это признак изменённого поведения, а не деталь оформления.
 - **Bundle impact** — попал ли новый модуль в оба бандла, менялась ли
@@ -147,7 +147,7 @@ model: opus
 Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
 
 - **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши в `description` блок evidence: корень проблемы, изменённые файлы (`path:line`), как верифицировано (web/тест), и шаги device-verify. НЕ ставь `done` сам — приёмку делает `board-reviewer` / skill `sprint-review`.
+- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
 - **В `testing` сам не переводи.** Переход `review → testing` держит гейт-агент `code-review-gate`: PreToolUse hook `.claude/hooks/review-gate.mjs` блокирует `status=testing` без свежего вердикта `pass`. Закончив работу, оставь тикет в `review` и в своём отчёте явно попроси прогнать `code-review-gate` (`/review-gate <id>`). Если гейт вернул findings — тикет снова у тебя в `in_progress`, чини и отдавай на повторное ревью.
 - **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
 - **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
@@ -158,8 +158,8 @@ model: opus
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

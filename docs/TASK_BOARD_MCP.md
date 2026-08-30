@@ -186,7 +186,7 @@ desktop web и mobile web. Android/iPhone device gate добавляется т�
 прод-пробы, сверка с `origin/master`, смена статуса и дописывание верификационных заметок в
 карточку.
 
-Общая просьба «проверь задачи в review и testing», приёмка спринта (`/sprint-review`,
+Общая просьба «проверь открытые задачи спринта», приёмка стадии `testing` (`/sprint-review`,
 `board-reviewer`) и любой батч-проход по борду бэкенд-очередь **не включают**: она отфильтровывается
 сразу после `metravel_tasks_list`, а в отчёте остаётся одна строка «пропущено N тикетов `area=back`».
 
@@ -347,9 +347,13 @@ diff → вердикт `pass` и переход в `testing`.
 node .claude/hooks/review-gate.mjs record --task <id> --verdict pass --findings 0 --note "<checked>"
 git add <пути задачи>
 git commit -m "<type>(<scope>): <что сделано> (#<id>)"
-git push origin main
+PREFLIGHT_SKIP_E2E=1 git push origin main
 # и только теперь metravel_task_update(task_id=<id>, status="testing")
 ```
+
+`PREFLIGHT_SKIP_E2E=1` обязателен на этом code-review переходе: pre-push
+сохраняет static/unit/guard checks, но не запускает Playwright до стадии
+`testing`.
 
 - коммит только явными путями задачи. `git add -A` и `git commit` без списка путей в общем
   чекауте запрещены: они забирают незаконченные файлы соседних сессий и выкатывают чужой код

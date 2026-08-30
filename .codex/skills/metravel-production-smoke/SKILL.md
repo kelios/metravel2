@@ -32,7 +32,10 @@ Check only what is safe to read:
    modify a Git-tracked server path.
 4. For white-screen or UI suspicion, run a real browser snapshot and console check.
 5. If a new production regression is found, compare with open board tasks when available to avoid duplicate reports.
-6. Route confirmed frontend regressions to `$metravel-feature-builder` or `$metravel-browser-reviewer`; backend/API regressions to `$metravel-backend-diagnostician` or a board task.
+6. Route confirmed frontend regressions to `$metravel-feature-builder`; after
+   code review, use `$metravel-browser-reviewer` only for the read-only testing
+   recheck. Route backend/API regressions to `$metravel-backend-diagnostician`
+   or a board task.
 
 ## Performance/request audit mode
 

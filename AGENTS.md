@@ -151,17 +151,22 @@ Validation:
 - Docs/skill metadata: structure/frontmatter + `npm run audit:prompts`; skill
   validator — для изменённых skills.
 - Малый code block: targeted checks или `npm run check:fast`.
-- Средний diff: релевантные tests/lint или `npm run check:preflight`.
+- Средний diff до/во время review: релевантные static/unit tests, lint,
+  typecheck и guards; без e2e/runtime.
 - Крупный diff: `npm run lint` и `npm run test:run`.
+- После review в `testing`: `npm run check:preflight` или точечный
+  browser/API/device/e2e gate по Task Contract.
 - Localization: `npm run test:i18n`; external links: соответствующий governance
   guard; release/performance: только production build/real URL по профильному doc.
 - `SKIPPED` из-за чужого quality gate — coordination evidence, не pass. Если
   результат обязателен, запроси его и продолжи тот же acceptance pass.
 - Перед переводом задачи борда в `testing` отревьюенный diff коммитится явными
   путями задачи и пушится в `main`: вердикт `pass` → `git add <пути задачи>` →
-  `git commit` → `git push origin main` → `status=testing`, sha коммита — в
+  `git commit` → `PREFLIGHT_SKIP_E2E=1 git push origin main` →
+  `status=testing`, sha коммита — в
   тикет. `git add -A` и `commit` без путей в общем чекауте запрещены; коммит и
-  push отпечаток гейта не ломают. Детали и исключения —
+  push отпечаток гейта не ломают. `PREFLIGHT_SKIP_E2E=1` оставляет code-level
+  pre-push checks, но не запускает Playwright до `testing`. Детали и исключения —
   `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
 - Пользователь не тестирует за агента. Если нужен unlock/connect/login/access,
   попроси ровно это действие и после ответа продолжи проверку.

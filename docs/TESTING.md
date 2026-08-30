@@ -88,6 +88,12 @@ Run canonical governance checks from repo root:
 
 Use the same changed-file selective rules locally before a full run:
 
+Before/during `review`, use only type/static checks, guards, and Jest commands.
+`check:e2e:changed` and the e2e portion of `check:preflight` run only in
+`testing`. The `review → testing` push is the one exception for the wrapper:
+`PREFLIGHT_SKIP_E2E=1 git push origin main` keeps its static/unit/guard portion
+and suppresses Playwright.
+
 - `npm run typecheck`
 - `npm run typecheck:e2e`
 - `npm run check:fast`
@@ -114,11 +120,11 @@ Behavior:
 - the `check:fast` ESLint step uses a local cache and `--max-warnings=0`, so repeat runs stay fast while new warnings in touched files still fail the block;
 - local selective checks now include targeted app Jest suites for travel/map/account/messages changes in addition to schema/validator selective runners;
 - `check:e2e:changed` selects Playwright specs by changed area (travel/search/map/account/messages/quests/places/articles/calendar/trips/roulette/export/i18n-security), always includes a directly changed regression spec, and fans shared E2E infrastructure changes out to the complete deterministic regression set;
-- `check:preflight` extends `check:fast` with changed-file complexity validation and selective Playwright smoke coverage, so larger local changes hit both code-level and browser-level gates before push;
+- `check:preflight` extends `check:fast` with changed-file complexity validation and selective Playwright smoke coverage in `testing`; the review-stage pre-push invocation sets `PREFLIGHT_SKIP_E2E=1`, so no browser-level gate runs before the ticket enters `testing`;
 - `check:preflight` resolves changed files once and reuses the same scope for fast checks, complexity guard, and selective e2e;
 - Cross-session quality gate: `check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, and `release:check` acquire the same atomic `.codex-temp/ops/quality-gate.lock` through `scripts/run-with-quality-gate-lock.js`. A concurrent session exits immediately with code `0`, owner PID/name, and an explicit `SKIPPED` message instead of starting another Jest/Playwright/build pipeline. That session must stop its own launch: do not wait, poll, monitor the owner, rerun after release, or start a narrower bypass check. `validation delegated/skipped: active gate pid/name` is coordination evidence only, never `passed` or a final Testing verdict. If the result is required for acceptance, request it from the active owner and resume the same acceptance pass; do not close from delegation alone and do not park the task in `testing`. Nested commands in `release:check` reuse the parent lock; dead-owner locks are recovered automatically. Jest `globalSetup` applies the same non-waiting contract to direct targeted `npx jest` runs. Do not bypass the wrapper with direct Playwright commands.
 - Production deploys additionally keep `.codex-temp/ops/web-build.lock` for the full `build-prod.sh` lifecycle (export, SEO post-processing, upload, graceful Nginx activation, and public readiness), not only for the Expo child process. The lock lives outside `dist` so Expo cannot delete it while recreating the export directory. This prevents an E2E web server or another export from reusing `dist` while a release is still being prepared.
-- the repository `pre-push` hook invokes `check:preflight` against the current upstream diff (`HEAD` vs upstream), so committed changes are still validated even when the working tree itself is clean;
+- the repository `pre-push` hook invokes `check:preflight` against the current upstream diff (`HEAD` vs upstream); the mandatory review-stage command passes `PREFLIGHT_SKIP_E2E=1`, preserving code-level checks while deferring selective Playwright to `testing`;
 - without args, the command scans staged, unstaged, and untracked files from the current git working tree;
 - `--base-ref <ref>` compares `HEAD` against `git merge-base HEAD <ref>`;
 - `--changed-files-file <path>` reuses an explicit newline-separated file list;

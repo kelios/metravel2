@@ -1,6 +1,6 @@
 ---
 name: dev-loop
-description: "Автономный прогон цикла разработка→тест→багфикс до зелёного baseline в затронутом scope. Когда нужно довести начатую работу или баг до конца с проверками, без пошагового контроля."
+description: "Автономный прогон цикла разработка→code-level test→багфикс до зелёного baseline. Runtime/e2e/device QA передаёт testing после review."
 prompt_mode: full
 agents_md: true
 ---

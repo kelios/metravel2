@@ -34,7 +34,7 @@ by the extraction.
 6. Run the narrowest checks that prove equivalence:
    - `npm run check:fast` or targeted type/test command
    - existing component tests
-   - browser screenshot/console check for visible UI
+   - exact browser screenshot/console scenario handed to `testing` for visible UI
 
 If the requested split is broad or ambiguous, present the extraction map before editing. If the user already requested a specific split, implement the smallest safe extraction and verify it.
 

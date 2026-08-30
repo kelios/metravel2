@@ -1,6 +1,6 @@
 ---
 name: ios-expert
-description: "Разработчик iPhone runtime/shared code: iOS files, Xcode, Keychain, Apple auth, APNs, links, permissions, maps/media и safe area. Для iPhone bugs и native features; signed build/App Store не выполняет."
+description: "Разработчик iPhone/shared source: iOS files, Xcode contracts, Keychain, Apple auth, APNs, links, permissions, maps/media и safe area. Simulator/device QA передаёт testing."
 prompt_mode: full
 agents_md: true
 ---

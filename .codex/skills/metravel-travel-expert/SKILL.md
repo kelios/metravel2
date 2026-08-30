@@ -46,7 +46,8 @@ UI/media/API heading implicated by the task, and
 
 1. Read the touched travel component/hook/API file and nearby tests.
 2. Check whether props, query keys, stores, or DTO mappers are shared with details, wizard, cards, and profile/author embeddings.
-3. For visible UI changes, pair with `$metravel-ui-guardrails` or `$metravel-browser-reviewer`.
+3. For visible UI changes, pair implementation with `$metravel-ui-guardrails`;
+   route the reviewed commit to `$metravel-browser-reviewer` only in `testing`.
 4. For large component splits, use `$metravel-refactor-surgeon`.
 5. Validate with the narrowest reliable checks; use `npm run check:fast` for a finished local block and targeted tests when available.
 

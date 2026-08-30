@@ -955,11 +955,11 @@ submit и storefront release требуют отдельных authorization gat
 | --- | --- |
 | Docs-only | перечитать структуру измененного Markdown |
 | Малый завершенный блок кода | `npm run check:fast` |
-| Среднее изменение / перед PR handoff | `npm run check:preflight` |
+| Среднее изменение до/во время review | targeted static/unit/lint/guard checks; без e2e |
 | Full code quality gate | `npm run lint` и `npm run test:run` |
 | External links | `npm run guard:external-links` или `npm run governance:verify` |
-| UI change | targeted checks + browser preview + screenshot + console check |
-| E2E affected area | `npm run check:e2e:changed` или selected Playwright spec |
+| UI change в testing | browser preview + screenshot + console check |
+| E2E affected area в testing | `npm run check:preflight`, `npm run check:e2e:changed` или selected Playwright spec |
 | Production web readiness | `npm run build:web:prod` |
 | Performance | только production build или real `https://metravel.by` Lighthouse |
 
@@ -991,15 +991,19 @@ source/config/test/API/log/temporal probes; client-device integration всегд
 | --- | --- |
 | Focused logic/API/hook | ближайшие unit/integration tests |
 | Finished small block | `npm run check:fast` |
-| Medium change / PR handoff | `npm run check:preflight` |
+| Medium change before/during review | targeted static/unit/lint/guard checks |
 | Full quality gate | `npm run lint` и `npm run test:run` |
-| Common/shared visible UI | targeted checks + desktop/mobile browser screenshot + console/network |
-| Android-specific behavior | локальная Android build/install и device evidence |
-| iOS-specific behavior | iPhone simulator/physical/TestFlight evidence по capability/release scope |
+| Common/shared visible UI in testing | desktop/mobile browser screenshot + console/network |
+| Android-specific behavior in testing | локальная Android build/install и device evidence |
+| iOS-specific behavior in testing | iPhone simulator/physical/TestFlight evidence по capability/release scope |
 | Backend/API/server behavior | source/config/test/API/log/temporal evidence; client-device integration — отдельная связанная `area=front` задача |
 | Production web | `npm run build:web:prod` + post-deploy smoke |
 | Performance | production build или реальный URL, бюджеты из config/scripts |
 | Docs-only update | structural Markdown review, links, commands и governance docs tests |
+
+`npm run check:preflight` и другие runtime/e2e gates запускаются после
+code-review pass в `testing`; review-stage push использует
+`PREFLIGHT_SKIP_E2E=1` и сохраняет только code-level часть pre-push.
 
 Backend-dependent область принимается только с реальным payload/mutation evidence.
 Mock и наличие frontend adapter не являются production proof.

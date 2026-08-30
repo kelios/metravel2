@@ -58,12 +58,14 @@ Output/validation: <artifact and checks>.
 - Preserve unrelated changes and protected-path rules.
 - Production/store mutations require the exact current authorization and target.
 - Apply the operation gate before build/deploy/full tests/e2e/Lighthouse/device
-  install; never duplicate a live target process.
-- Visible common UI: desktop + mobile-web browser evidence. Native evidence only
-  for the corresponding platform-specific observable scope.
+  install; runtime QA starts only after review in `testing` and never duplicates
+  a live target process.
+- Visible common UI: desktop + mobile-web browser evidence in `testing`. Native
+  evidence only there for the corresponding platform-specific observable scope.
 - Board mutation: Problem Memory → Task Contract → Ticket Board.
-- After code changes, send the complete task diff and validation to an independent
-  `$metravel-code-reviewer` when available; reviewer fixes and revalidates.
+- After code changes, send the complete task diff and code-level validation to an
+  independent `$metravel-code-reviewer`; reviewer fixes/rechecks code only, then
+  hands observable QA to `testing`.
 
 ## Handoff
 

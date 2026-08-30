@@ -35,17 +35,20 @@ Build UI by extending existing primitives first:
 - Related travel status controls must be legible text ("Был здесь",
   "Хочу поехать", "Планирую" or "Был / Хочу / Планирую"), not only a compact
   icon without visible meaning.
-- Fix all real UI problems found while working in the touched flow: overlap, broken mobile/desktop layout, invalid icons, non-neutral placeholders, console errors, broken interactions, and direct external-link violations.
+- Fix source-level UI problems found while implementing the touched flow.
+  Observable overlap, layout, console, and interaction results are accepted in
+  `testing`; a failure there returns to implementation with evidence.
 - If a UI problem cannot be fixed safely in the current scope, document the blocker and exact scenario instead of leaving it implicit.
 
 For a new page or redesign:
 
 - Define the route goal and section hierarchy before implementation; reuse `ResponsiveContainer`, `ResponsiveStack`, typography, SEO helpers, and feature components.
-- Verify common/shared responsive screens on desktop web and mobile web, plus
-  light/dark theme, loading/empty/error states, keyboard/focus, and mobile
-  parity invariants. Add a local USB Android run only for Android-specific
-  observable behavior and iPhone QA only for iOS-specific scope.
-- Use `$metravel-design-auditor` for a cross-screen consistency matrix; use this skill for the implementation contract and `$metravel-browser-reviewer` for the final browser fix/reverify loop.
+- Define testing scenarios for common/shared responsive screens on desktop web
+  and mobile web, including light/dark, loading/empty/error, keyboard/focus, and
+  parity. Add device scenarios only for platform-specific scope.
+- Use `$metravel-design-auditor` for a cross-screen consistency matrix; use this
+  skill for implementation and `$metravel-browser-reviewer` only as the
+  read-only browser QA gate after review in `testing`.
 - Use `$metravel-visual-asset-designer` only when an existing primitive, Feather icon, local asset, or real/photorealistic media cannot satisfy the requested slot.
 
 Enforce the repository's UI contracts:
@@ -80,17 +83,13 @@ Respect web interaction constraints:
 - Inside clickable cards, render secondary actions in a non-button wrapper with `role="button"`, keyboard handlers, and `data-card-action="true"` when needed.
 - On `/places`, keep filters scan-friendly: country filters above categories, stable card grid geometry, no nested cards, and no rendering of the full catalog at once.
 
-Verify visual changes before finishing:
+Prepare visual testing before code-review handoff:
 
-- Open the changed scenario in a real browser if the task affects visible web UI.
-- Capture desktop-web and mobile-web screenshots, storing them only in ignored
-  local debug folders such as `.codex-temp/` or `.codex-debug/`.
-- Check the browser console for new errors.
-- For Android-specific observable behavior/configuration/runtime, run the
-  scenario on a locally built app installed on the USB-connected phone.
-- For iOS-specific observable scope, run it at the required
-  simulator/physical/TestFlight layer; do not use simulator evidence for
-  hardware behavior.
+- Record the changed browser scenario, desktop/mobile viewports, required
+  screenshots, console/network expectations, and target environment.
+- For Android/iOS-specific observable behavior, record the required local USB
+  or simulator/physical/TestFlight case. Browser/device execution happens only
+  after code review in `testing`.
 - Run `npm run guard:external-links` or `npm run governance:verify` whenever link handling or policy-sensitive UI changed.
 - Run `npm run test:i18n` and verify affected locales whenever UI copy or
   locale-sensitive behavior changed.

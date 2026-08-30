@@ -8,6 +8,11 @@ description: "Audit multiple metravel screens for design-system consistency, res
 `AGENTS.md` is inherited. Read design tokens/layout, affected feature docs, and
 only the relevant UI/media headings in `docs/RULES.md`.
 
+Runtime visual audit starts only for a reviewed commit in `testing`. Before
+that stage, perform a source/design-system audit and define the exact route,
+state, viewport, screenshot, console, and device matrix without opening a
+browser, simulator, or physical device.
+
 ## Audit Axes
 
 - Colors/theme: semantic tokens, `useThemedColors`, light/dark behavior, no component hex drift.
@@ -20,16 +25,21 @@ only the relevant UI/media headings in `docs/RULES.md`.
 
 ## Workflow
 
-1. Define the route set and capture common/shared responsive scenarios at
-   desktop-web and mobile-web sizes. Add local-build Android or the appropriate
-   iPhone layer only when the audit explicitly includes that platform's
-   observable behavior; parity is an invariant, not an automatic device gate.
-2. Build a consistency matrix: audit axis × screen, with screenshot/DOM evidence for each deviation.
+1. Define the route set and common/shared responsive scenarios at desktop-web
+   and mobile-web sizes. Add Android/iPhone scenarios only for matching
+   platform-specific scope.
+2. Before testing, build the expected consistency matrix from source/contracts.
+   In `testing`, capture screenshot/DOM evidence for each observable deviation.
 3. Classify P1 blocking/broken layout, P2 visible system drift or friction, P3 polish.
 4. Trace confirmed visual symptoms to code and existing tokens/components. Do not report taste preferences as defects.
-5. In audit mode, return findings only. If the user asked for fixes, route changes through `$metravel-ui-guardrails`, the domain expert, and `$metravel-browser-reviewer`, then re-capture evidence.
+5. In audit mode, return findings only. If the user asked for fixes, route
+   implementation through `$metravel-ui-guardrails` and the domain expert,
+   complete code review, then use `$metravel-browser-reviewer` for read-only QA
+   in `testing` and re-capture evidence.
 6. Keep screenshots and temporary artifacts in ignored folders only.
 
 ## Output
 
-Return the consistency matrix, ordered findings with evidence and likely owner/files, validation performed, and a clear pass/fail verdict for mobile parity and design-system compliance.
+Return the consistency matrix, ordered findings with evidence and likely
+owner/files, validation performed, and the testing handoff. A visual pass/fail
+verdict requires the runtime audit in `testing`.

@@ -38,7 +38,8 @@ API/UI/media/content-authority heading implicated by the task.
 2. Check whether prop/type changes affect wizard, printable view, full map, and mobile layout.
 3. Route new quest authoring to `$metravel-quest-writer` and existing content quality work to `$metravel-quest-editor`.
 4. Route coordinate validation to `$metravel-quest-geo-verifier`.
-5. Validate with targeted quest tests/checks; use browser evidence for visible quest UI.
+5. Before review, validate with targeted quest code-level tests/checks; visible
+   quest browser evidence is collected only in `testing`.
 
 ## Output
 

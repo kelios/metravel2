@@ -17,7 +17,8 @@ description: "Регламент релиза iPhone: bump → гейт → sign
 - Версия — `app.json` → `expo.version`; номер сборки — `expo.ios.buildNumber`.
   `autoIncrement: false`, поэтому bump ручной, а дубль номера App Store Connect
   отклонит.
-- iPhone-only v1: `supportsTablet: false`, iPad-скриншоты и iPad-приёмка вне scope.
+- Universal iPhone/iPad v1: `supportsTablet: true`; iPad screenshots и
+  full-screen/adaptive-window acceptance входят в release scope.
 - Штатные команды: `npm run ios:environment:check`, `npm run ios:prebuild`,
   `npm run ios:release:guard`, `npm run ios:build:dev|preview|prod`,
   `npm run ios:submit <BUILD_ID>`.

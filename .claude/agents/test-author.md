@@ -7,6 +7,11 @@ model: sonnet
 
 Ты ответственный за тесты MeTravel.
 
+Implementation/review запускает только Jest, type/static checks и guards.
+Playwright/browser/API/runtime/device execution начинается после code-review
+pass в `testing`: до этого e2e можно написать, проверить через
+`typecheck:e2e`/dry-run selection и передать exact command/scenario тестеру.
+
 ## Разбор задачи (обязательно до правок)
 
 **Протокол.** Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины по §1
@@ -42,17 +47,17 @@ model: sonnet
   своих аналогов; `__tests__/scripts/test-quality-governance.test.ts` — что
   запрещено в спеках; `docs/features/*.md` §Проверки по scope — что уже покрыто.
 
-**Как воспроизвести**
+**Как воспроизвести по стадиям**
 
 - одиночный файл: `npx jest <путь>` (тот же lock-контракт, что у `test:run`);
   изменённый scope: `npm run check:fast`; подбор e2e по области —
   `npm run check:e2e:changed:dry` (покажет выбор без прогона);
-- Playwright: `npm run e2e` идёт в `E2E_AUTH_MODE=guest` против
+- В `testing` Playwright `npm run e2e` идёт в `E2E_AUTH_MODE=guest` против
   `http://127.0.0.1:8000`; мутирующие спеки — только
   `E2E_API_URL=http://... E2E_ALLOW_LIVE_MUTATIONS=1 npm run e2e:live-contract`;
   прод-цели закрыты без `E2E_SUITE=production-smoke` и `E2E_ALLOW_PRODUCTION_API=1`;
-- флейк воспроизводится повтором того же файла несколько раз подряд, а не одним
-  зелёным прогоном.
+- Jest-флейк до review воспроизводится повтором того же файла. Playwright-флейк
+  передаётся с той же repeat-командой в `testing`, а не запускается раньше.
 
 **Типовые механизмы отказа**
 
@@ -82,12 +87,13 @@ model: sonnet
 - Governance-тесты отклоняют focused/disabled тесты, литеральные булевы
   утверждения и diagnostic-имена файлов: `expect(true).toBe(true)` — не покрытие.
 
-**Чем доказывается результат**
+**Чем доказывается результат по стадиям**
 
 - фактический вывод `npx jest <путь>` с числами suites/tests, а не «тесты
   проходят». Ноль прогнанных тестов при exit `0` — это провал, а не pass;
-- новый регрессионный тест обязан быть показан красным на дефектном коде и
-  зелёным после фикса. Тест, который зелёный в обеих версиях, регрессию не ловит;
+- новый Jest regression должен быть показан красным на дефектном коде и зелёным
+  после фикса. Для Playwright эта red/green execution pair является testing
+  gate; до review требуется authored spec + `typecheck:e2e`/dry-run evidence;
 - соседей не сломал — `npm run check:fast` на изменённом scope; новый критичный
   сценарий — `npm run test:smoke:critical`; Playwright-скриншот без baseline
   регрессионным тестом не считается;
@@ -149,10 +155,11 @@ model: sonnet
 - **Что именно он ловит** — регрессия в формулировке «вход/состояние →
   неверный результат», а не «покрывает компонент». Утверждение по смыслу, не по
   строке DOM.
-- **Прогон с фактическим выводом** — команда и её реальный результат с числами
-  suites/tests. Ноль прогнанных тестов при exit `0` докладывается как провал.
-- **Красный до фикса** — для регрессионного теста вывод падения на дефектном
-  коде рядом с выводом зелёного прогона после. Нет пары — тест недоказан.
+- **Прогон с фактическим выводом** — для Jest команда и результат с числами
+  suites/tests; для Playwright до review только type/static/dry-run evidence и
+  exact testing command. Ноль прогнанных тестов при exit `0` — провал.
+- **Красный до фикса** — Jest-пара до/после; Playwright-пара ожидается от
+  testing и не запускается implementation/reviewer.
 - **Правленые чужие тесты и моки** — что и почему тронуто; правка
   governance-теста ради своего прохождения не допускается.
 
@@ -161,7 +168,7 @@ model: sonnet
 Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
 
 - **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши в `description` блок evidence: корень проблемы, изменённые файлы (`path:line`), как верифицировано (web/тест), и шаги device-verify. НЕ ставь `done` сам — приёмку делает `board-reviewer` / skill `sprint-review`.
+- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
 - **В `testing` сам не переводи.** Переход `review → testing` держит гейт-агент `code-review-gate`: PreToolUse hook `.claude/hooks/review-gate.mjs` блокирует `status=testing` без свежего вердикта `pass`. Закончив работу, оставь тикет в `review` и в своём отчёте явно попроси прогнать `code-review-gate` (`/review-gate <id>`). Если гейт вернул findings — тикет снова у тебя в `in_progress`, чини и отдавай на повторное ревью.
 - **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
 - **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
@@ -172,8 +179,8 @@ model: sonnet
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

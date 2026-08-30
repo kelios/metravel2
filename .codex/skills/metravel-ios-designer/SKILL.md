@@ -1,6 +1,6 @@
 ---
 name: metravel-ios-designer
-description: "Design or audit metravel iPhone/iPad UI against HIG: adaptive windows, safe areas, touch targets, Dynamic Type, accessibility, app icon/launch, App Store screenshots, and mobile parity. Read-only unless fixes are requested."
+description: "Design or source-audit metravel iPhone/iPad UI against HIG, then hand simulator/device visual QA to testing. Covers adaptive windows, safe areas, touch targets, Dynamic Type, accessibility, app icon/launch, and mobile parity."
 ---
 
 # Metravel iOS Designer
@@ -8,6 +8,10 @@ description: "Design or audit metravel iPhone/iPad UI against HIG: adaptive wind
 Use this skill for the visual and interaction layer of the active universal
 iPhone/iPad release. It is the iOS-specialised layer over `$metravel-design-auditor`; use
 that generic skill for cross-page web audits.
+
+Implementation and `review` are code/design-artifact only. Do not capture a
+simulator or physical-device screenshot there; define the exact visual matrix
+for `$metravel-ios-tester` after code-review pass in `testing`.
 
 `AGENTS.md` is inherited. Read the relevant UI/media heading, design tokens and
 layout, the affected screen contract, and only the release-asset artifact when
@@ -58,17 +62,17 @@ App Store assets are in scope.
 ## Workflow
 
 1. Fix the route set and the scenarios/locales in scope.
-2. Capture the scenario on the Apple mobile layer required by the task
-   (iPhone/iPad simulator for layout and windowing, physical device for safe-area/permission/keyboard
-   reality). Add mobile-web or Android comparison only when the assigned task
-   explicitly owns a cross-platform parity investigation.
-3. Build a consistency matrix: axis × surface, with screenshot evidence for each
-   deviation. Classify P1 blocking/broken, P2 visible drift, P3 polish.
+2. Define the Apple mobile layer required by each scenario (simulator for layout
+   and windowing, physical device for safe-area/permission/keyboard reality).
+3. Build the expected consistency matrix: axis × surface, route/state/locale,
+   screenshot requirement, and expected result. The tester captures it in
+   `testing` and classifies observable deviations.
 4. Trace each confirmed symptom to code and to the token/component that should
    own it. Do not report taste preferences as defects.
 5. In audit mode return findings only. When fixes are requested, keep them in
    task-owned styling scope, prefer a platform file over a shared-code rewrite,
-   and never regress web — then re-capture evidence.
+   and never regress web — then complete code review before re-capture in
+   `testing`.
 
 ## Boundaries
 
@@ -80,6 +84,6 @@ App Store assets are in scope.
 
 ## Output
 
-Consistency matrix, ordered findings with evidence and likely owner files, the
-surfaces actually captured, fixes applied (if any), and a clear pass/fail
-verdict for HIG compliance and mobile parity.
+Expected consistency matrix, ordered source/design findings with likely owner
+files, fixes applied (if any), code-level checks, and exact simulator/device
+testing handoff. Runtime HIG/mobile-parity pass/fail belongs to testing.

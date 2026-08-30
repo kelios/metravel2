@@ -4,6 +4,29 @@ import {
   createQuestDetailStructuredData,
 } from '@/utils/discoverySeo';
 
+const WEBSITE_ID = 'https://metravel.by/#website';
+
+type GraphNode = Record<string, unknown>;
+
+function expectPageScopedGraph(
+  jsonLd: { '@graph': GraphNode[] },
+  expectedTypes: string[],
+) {
+  const graph = jsonLd['@graph'];
+
+  // #1639: app/+html.tsx is the single owner of the global WebSite and
+  // Organization nodes; hydrated discovery payloads retain only @id links.
+  expect(graph.map((node) => node['@type'])).toEqual(expectedTypes);
+  expect(
+    graph.filter((node) => node['@type'] === 'Organization' || node['@type'] === 'WebSite'),
+  ).toEqual([]);
+  expect(graph[0]).toEqual(
+    expect.objectContaining({
+      isPartOf: { '@id': WEBSITE_ID },
+    }),
+  );
+}
+
 describe('discoverySeo', () => {
   it('creates structured data for the map page', () => {
     const jsonLd = createMapStructuredData({
@@ -37,6 +60,42 @@ describe('discoverySeo', () => {
         }),
       ])
     );
+    expectPageScopedGraph(jsonLd, ['CollectionPage', 'ItemList', 'BreadcrumbList']);
+  });
+
+  it('creates page-scoped structured data for the quest map', () => {
+    const jsonLd = createMapStructuredData({
+      canonical: 'https://metravel.by/quests/map',
+      title: 'Карта квестов | MeTravel',
+      description: 'Городские квесты на карте.',
+      entries: [
+        {
+          name: 'Минский цмок',
+          url: '/quests/minsk/minsk-cmok',
+          lat: 53.9,
+          lng: 27.56,
+          categoryName: 'Квест',
+        },
+      ],
+    });
+
+    expect(jsonLd['@graph']).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          '@type': 'CollectionPage',
+          '@id': 'https://metravel.by/quests/map#webpage',
+        }),
+        expect.objectContaining({
+          '@type': 'ItemList',
+          '@id': 'https://metravel.by/quests/map#items',
+        }),
+        expect.objectContaining({
+          '@type': 'BreadcrumbList',
+          '@id': 'https://metravel.by/quests/map#breadcrumb',
+        }),
+      ]),
+    );
+    expectPageScopedGraph(jsonLd, ['CollectionPage', 'ItemList', 'BreadcrumbList']);
   });
 
   it('creates structured data for quests catalog', () => {
@@ -71,6 +130,7 @@ describe('discoverySeo', () => {
         }),
       ])
     );
+    expectPageScopedGraph(jsonLd, ['CollectionPage', 'ItemList', 'BreadcrumbList']);
   });
 
   it('creates structured data for a quest detail page', () => {
@@ -105,5 +165,6 @@ describe('discoverySeo', () => {
         }),
       ])
     );
+    expectPageScopedGraph(jsonLd, ['WebPage', 'CreativeWork', 'BreadcrumbList']);
   });
 });

@@ -36,10 +36,12 @@ plus only the API/UI/i18n/media headings implicated by the task.
 1. Read achievement types, mappers, hooks, visuals, and nearby tests before editing.
 2. If a type changes, check mappers, mocks, hooks, and all consumers.
 3. If visuals change, check `badgeVisuals` and visual tests.
-4. For visible UI, verify profile, public profile, and AuthorCard states.
+4. For visible UI, define profile, public-profile, and AuthorCard scenarios for
+   browser QA after review in `testing`.
 5. Validate with targeted achievement tests and `npm run check:fast` for a finished local block.
 
-For a full audit, verify rank/XP states, badge grid/detail, peer toggle rollback, empty/loading/error states, mock-vs-live behavior, profile/public-profile/AuthorCard integration, mobile layout, browser console, and relevant network requests.
+For a full audit, run those rank/XP, badge, integration, layout, console, and
+network checks only in `testing` through the achievements QA route.
 
 ## Output
 

@@ -44,6 +44,10 @@ model: opus
 
 **Как воспроизвести**
 
+Jest/static guards ниже можно запускать до review; browser/e2e/live API/device
+строки — exact QA handoff и выполняются только после code-review pass в
+`testing`.
+
 - `npm run web` → `/quests`, `/quests/<city>`, `/quests/<city>/<questId>`;
 - targeted Jest: `__tests__/utils/questAdapters.test.ts`,
   `questAnswerEvaluation.test.ts`, `questAnswerTelemetry.test.ts`,
@@ -84,17 +88,17 @@ model: opus
   (`useQuestGeofence.native.ts` / `.web.ts`): правка в одном файле не даёт
   паритета, а web-ветка молча не имеет фоновых прав.
 
-**Чем доказывается результат**
+**Чем доказывается результат по стадиям**
 
 - targeted Jest по затронутому слою + `npm run check:fast`; правка `api/` или
   типов — `npm run typecheck`;
 - изменение оценки ответа — прогон `questAnswerEvaluation`/`questAdapters`
   тестов И зелёный `guard:quest-answer-eval`; чтение чекера ничего не доказывает;
-- изменение SSG-лендингов — `scripts/verify-static-quest-seo.js` и число ссылок
-  на сгенерированной странице, а не браузерный вид; изменение контента через
-  скрипты — `GET` живого объекта после заливки плюс синхронный `*-quest-data.js`;
-- offline — прохождение с выключенной сетью на устройстве; зелёный
-  `QuestWizard.offline.test.tsx` доказывает контракт кэша, но не реальный режим;
+- изменение SSG-лендингов до review доказывает source/static guard; build/page
+  output, live GET после заливки и offline device flow выполняются только в
+  `testing`;
+- `QuestWizard.offline.test.tsx` доказывает контракт кэша, но реальный offline
+  режим остаётся testing scenario;
 - НЕ доказывают: зелёный unit — вёрстку шага; web-прогон — geofence и
   напоминания на устройстве; `SKIPPED` с кодом `0` под quality-gate lock — pass.
 
@@ -177,15 +181,15 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 - **Гварды** — фактический вывод `guard:quest-answer-eval` и, при работе с
   подсказками, `quest:scan-hint-leak` (с оговоркой, что скан ловит только
   буквальный класс утечки, семантический остаётся открытым риском).
-- **Доказательства по поверхностям** — web, Android, iPhone: evidence или
-  `verify pending` с точной причиной; offline-режим отдельной строкой.
+- **Testing handoff по поверхностям** — exact web/Android/iPhone/offline
+  scenarios; implementation/review не подменяет их runtime evidence.
 
 ## Статус на борде (WIP-видимость) — load-bearing
 
 Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
 
 - **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши в `description` блок evidence: корень проблемы, изменённые файлы (`path:line`), как верифицировано (web/тест), и шаги device-verify. НЕ ставь `done` сам — приёмку делает `board-reviewer` / skill `sprint-review`.
+- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
 - **В `testing` сам не переводи.** Переход `review → testing` держит гейт-агент `code-review-gate`: PreToolUse hook `.claude/hooks/review-gate.mjs` блокирует `status=testing` без свежего вердикта `pass`. Закончив работу, оставь тикет в `review` и в своём отчёте явно попроси прогнать `code-review-gate` (`/review-gate <id>`). Если гейт вернул findings — тикет снова у тебя в `in_progress`, чини и отдавай на повторное ревью.
 - **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
 - **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
@@ -196,8 +200,8 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

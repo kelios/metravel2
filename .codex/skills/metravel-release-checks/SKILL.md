@@ -24,9 +24,13 @@ Use the project-specific command map:
 - External-link or governance-sensitive changes: run `npm run guard:external-links` or `npm run governance:verify`.
 - Localization, app-owned UI copy, locale provider/storage, formatting, or SEO
   locale changes: run `npm run test:i18n` plus the affected feature checks.
-- Before PR or after notable refactor: run `npm run check:preflight`.
-- Changes in travel/search/map/account/messages flows that need browser smoke coverage: use `npm run check:e2e:changed`.
-- Full release confidence: run `npm run release:check`.
+- Before code review, run static/unit/guard checks only. Run
+  `npm run check:preflight` after review in `testing`, where its e2e portion is
+  allowed.
+- Changes in travel/search/map/account/messages flows that need browser smoke
+  coverage use `npm run check:e2e:changed` only in `testing`.
+- Full release confidence: run `npm run release:check` only after code review in
+  `testing` or an explicitly authorized release-validation stage.
 
 Keep release and performance validation aligned with repo policy:
 
@@ -35,7 +39,7 @@ Keep release and performance validation aligned with repo policy:
   build/install on USB; an active Android production release uses the local
   Gradle/production-only Play path from `$metravel-google-play-operator`.
 - Common/shared responsive app changes need desktop-web and mobile-web browser
-  evidence. Require local USB Android evidence only for Android-specific
+  evidence in `testing`. Require local USB Android evidence only there for Android-specific
   observable behavior/configuration/runtime and the appropriate
   simulator/physical-iPhone/TestFlight layer only for iOS-specific scope. Do not
   infer native readiness from a web viewport.
@@ -53,13 +57,15 @@ Keep release and performance validation aligned with repo policy:
 
 Account for UI-specific completion rules:
 
-- If a task changes visible common/shared UI, verify desktop web and mobile web
-  in a real browser. Run a local USB Android or iPhone flow only when that
-  platform has specific observable scope.
-- Confirm the desktop/mobile-web states with screenshots and no new console errors.
+- If a task changes visible common/shared UI, hand desktop/mobile browser
+  scenarios to `testing`. Run local USB Android or iPhone flow there only when
+  that platform has specific observable scope.
+- In `testing`, confirm the desktop/mobile-web states with screenshots and no
+  new console errors.
 
 Stay within repo workflow boundaries:
 
 - Run commands from the repo root.
-- Prefer scope-based validation after each logical step, then repeat the appropriate checks before final handoff.
+- Prefer scope-based code checks after each logical step. After code review,
+  repeat the appropriate runtime/e2e/device checks in `testing`.
 - Treat `npm run typecheck` as an explicit wider audit for larger refactors or debt cleanup, not as the default after every tiny edit.

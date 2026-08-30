@@ -44,6 +44,9 @@ model: opus
 
 **Как воспроизвести**
 
+Jest/static checks ниже можно запускать до review; browser/e2e/API/device строки
+— exact QA handoff и выполняются только после code-review pass в `testing`.
+
 - `npm run web` → `/profile`, `/user/<id>`, `/settings`, плюс связанные
   `/favorites`, `/history`, `/subscriptions`, `/calendar`;
 - targeted Jest: `__tests__/components/profile/**`, `__tests__/hooks/**`
@@ -78,18 +81,15 @@ model: opus
 - Отсутствующий backend contract подменяется permissive mock — в проде это
   выглядит как рабочая фича до первого реального запроса (user.md §Validation).
 
-**Чем доказывается результат**
+**Чем доказывается результат по стадиям**
 
 - targeted Jest + `npm run typecheck` и `npm run lint` по затронутому scope
   (общий блок — `npm run check:fast`);
-- видимая правка — скрины mobile web 390px и desktop 1280px для КАЖДОЙ роли:
-  владелец, гость, чужой профиль; один скрин доказывает одно состояние;
-- auth, контакты и мутации статусов — фактический ответ API, а не состояние
-  формы или стора (user.md §Validation);
-- native-видимая правка — прогон на локальной Android-сборке, iPhone через
-  `ios-tester`; чтение кода поведение `FlashList` не доказывает;
-- пустые, loading, error и access-состояния показываются отдельно; нет
-  обязательного слоя — `verify pending` с точной причиной, а не pass.
+- в `testing`: скрины mobile web 390px/desktop 1280px для каждой роли;
+  фактические API responses для auth/contact/status mutations; Android/iPhone
+  device flow только для соответствующего platform-specific scope;
+- empty/loading/error/access states входят в exact testing handoff и не
+  считаются доказанными чтением кода.
 
 ## Зона ответственности
 - Экраны: `app/(tabs)/profile.tsx` (свой), `app/(tabs)/user/[id].tsx` (публичный), `app/(tabs)/settings.tsx`.
@@ -117,7 +117,9 @@ model: opus
 1. Прочитай затронутые файлы и смежные перед правкой; не дублируй существующие UI-компоненты (`components/ui/**`).
 2. Сохраняй существующее поведение (пагинация, pull-to-refresh, фильтр по метрикам, удаление своих маршрутов, graceful degradation при 401/403) — редизайн не должен ломать функционал.
 3. Native (FlashList) и web (ScrollView) ветки экрана профиля держать в паритете.
-4. После правок: `npm run typecheck` и `npm run lint` по затронутому scope; при наблюдаемых в браузере изменениях — проверка через preview-инструменты (mobile 390px + desktop 1280px), не отмечать «готово» без верификации.
+4. После правок: `npm run typecheck` и `npm run lint` по затронутому scope;
+   для наблюдаемых изменений подготовь preview-сценарий mobile 390px + desktop
+   1280px, который выполняется после code review в `testing`.
 5. Бэкенд не править — нужная правка API оформляется тикетом (area=back) через `ticket-board`.
 
 ## Формат ответа
@@ -144,7 +146,7 @@ model: opus
 Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
 
 - **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши в `description` блок evidence: корень проблемы, изменённые файлы (`path:line`), как верифицировано (web/тест), и шаги device-verify. НЕ ставь `done` сам — приёмку делает `board-reviewer` / skill `sprint-review`.
+- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
 - **В `testing` сам не переводи.** Переход `review → testing` держит гейт-агент `code-review-gate`: PreToolUse hook `.claude/hooks/review-gate.mjs` блокирует `status=testing` без свежего вердикта `pass`. Закончив работу, оставь тикет в `review` и в своём отчёте явно попроси прогнать `code-review-gate` (`/review-gate <id>`). Если гейт вернул findings — тикет снова у тебя в `in_progress`, чини и отдавай на повторное ревью.
 - **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
 - **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
@@ -155,8 +157,8 @@ model: opus
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

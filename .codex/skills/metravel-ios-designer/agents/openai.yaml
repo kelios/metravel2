@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel iOS Designer"
   short_description: "Design and audit MeTravel on iPhone and iPad."
-  default_prompt: "Use $metravel-ios-designer to audit the assigned iPhone/iPad UI against Apple HIG, adaptive windowing, and the MeTravel design system."
+  default_prompt: "Use $metravel-ios-designer to source-audit iPhone/iPad UI against HIG and hand simulator/device visual QA to testing."

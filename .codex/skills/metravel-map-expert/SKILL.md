@@ -46,9 +46,13 @@ implicated by the task; add the affected native section for native map changes.
 
 1. Read the platform-specific map files before changing shared map code.
 2. Check API contracts for travels, route points, places, and near-route queries.
-3. For visible map UI/popup changes, require browser evidence; use `$metravel-browser-reviewer` when the task asks for review/fix.
-4. For native-only behavior, pair with `$metravel-android-developer` or `$metravel-mobile-tester`.
-5. Validate with targeted tests/checks plus browser/device evidence appropriate to the touched platform.
+3. For visible map UI/popup changes, define the browser scenario and hand it to
+   `$metravel-browser-reviewer` only after code review in `testing`.
+4. For native-only behavior, implementation belongs to
+   `$metravel-android-developer`; device QA belongs to
+   `$metravel-mobile-tester` in `testing`.
+5. Before review, run targeted code-level tests/checks only. Browser/device
+   evidence is collected afterward by testing.
 
 ## Output
 

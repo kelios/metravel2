@@ -1,6 +1,6 @@
 ---
 name: browser-reviewer
-description: "Ревьюер-фиксер с проверкой в реальном браузере через preview-инструменты. Для правок, наблюдаемых в превью (UI travel/map/quests/article, layout, тема, интерактив): code-review diff + snapshot/console/network/screenshot/resize/click, чинит найденное и ре-верифицирует до зелёного."
+description: "Testing-only browser QA для уже отревьюенного UI: real flow, screenshot, console и network evidence; feature code не правит."
 prompt_mode: full
 agents_md: true
 ---

@@ -17,9 +17,10 @@ resizable-window, portrait и landscape режимах.
   semantics. Держится это **общими компонентами**, а не совпадением реализаций:
   расхождение лечится общим компонентом/хуком, платформенный файл меняет только
   движок/инсеты/тени. Parity — design-инвариант, а не обязательный all-device
-  gate для каждой shared-правки. Общий UI проверяется в браузере на desktop и
-  mobile web; Android USB добавляется при Android-specific поведении, iPhone
-  simulator/device — при iOS-specific поведении. Сквозной аудит —
+  gate для каждой shared-правки. После code review в `testing` общий UI
+  проверяется в браузере на desktop и mobile web; Android USB добавляется при
+  Android-specific поведении, iPhone simulator/device — при iOS-specific
+  поведении. Implementation/review только готовит exact scenario. Сквозной аудит —
   `$metravel-design-auditor`. Контракт карты/карточки места находится в
   `docs/features/map.md#pointplace-mobile-contract`; владелец домена —
   `$metravel-map-expert`.
@@ -32,8 +33,8 @@ resizable-window, portrait и landscape режимах.
   `Platform.OS === 'web'`-гейт допустим; расходится **структура, поведение или
   зависимости** → отдельные платформенные файлы, общую логику — в общий хук/утиль.
 - Любая правка ОБЩЕГО (не платформенного) файла ради native обязана пройти
-  web-проверку до сдачи: production build и браузер, консоль без ошибок
-  (`npm run build:web:prod` + релевантный smoke) — не только typecheck.
+  code-level containment до review; production build/browser/console smoke
+  выполняется после pass в `testing`, а не внутри review.
 
 ## 1. Платформенные трансформы сборки — только под свою платформу
 
@@ -98,7 +99,7 @@ resizable-window, portrait и landscape режимах.
   production-only Google Play API скриптом.
 - Release automation не меняет `alpha`, `internal`, `beta`, testers, countries
   или текущую closed-testing сборку.
-- Для Android-specific задачи телефон подключён по USB, `adb devices -l` показывает
+- Для Android-specific задачи в `testing` телефон подключён по USB, `adb devices -l` показывает
   `device`, приложение собрано локально и установлено на телефон:
   `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` +
   `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
@@ -112,7 +113,7 @@ resizable-window, portrait и landscape режимах.
 - Снять причину краша: `adb logcat -d | grep -E "FATAL|ReactNativeJS"` — дословный
   стек вместо догадок. Лог EAS-сборки анализируй только когда EAS-сборка была
   явно разрешена.
-- **Device-verify обязателен для Android-specific фикса.** Сначала проверь
+- **Device-verify обязателен для Android-specific фикса только в `testing`.** Сначала проверь
   `adb devices -l`: при статусе `device` прогони сценарий на локально
   установленной сборке. Если нужен unlock/connect, останови приёмку и запроси
   это действие, затем продолжи; не сдавай отсутствие устройства как финальный

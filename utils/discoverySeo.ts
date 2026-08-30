@@ -1,8 +1,9 @@
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
 const SITE_URL = 'https://metravel.by';
+// The static HTML shell owns the WebSite/Organization declarations. Discovery
+// payloads only link to that shared identity and must not re-declare it.
 const WEBSITE_ID = `${SITE_URL}/#website`;
-const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 
 type BreadcrumbItem = {
   name: string;
@@ -69,26 +70,6 @@ function buildBreadcrumbList(items: BreadcrumbItem[], id?: string) {
   };
 }
 
-function buildBaseGraph() {
-  const locale = getActiveLocaleDefinition();
-  return [
-    {
-      '@type': 'Organization',
-      '@id': ORGANIZATION_ID,
-      name: 'MeTravel',
-      url: SITE_URL,
-    },
-    {
-      '@type': 'WebSite',
-      '@id': WEBSITE_ID,
-      url: SITE_URL,
-      name: 'MeTravel',
-      inLanguage: locale.htmlLang,
-      publisher: { '@id': ORGANIZATION_ID },
-    },
-  ];
-}
-
 function buildItemList(items: Array<Record<string, unknown>>, id: string, name: string) {
   return {
     '@type': 'ItemList',
@@ -146,7 +127,6 @@ export function createMapStructuredData({
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      ...buildBaseGraph(),
       {
         '@type': 'CollectionPage',
         '@id': `${canonical}#webpage`,
@@ -232,7 +212,6 @@ export function createQuestCatalogStructuredData({
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      ...buildBaseGraph(),
       {
         '@type': 'CollectionPage',
         '@id': `${canonical}#webpage`,
@@ -268,7 +247,6 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      ...buildBaseGraph(),
       {
         '@type': 'WebPage',
         '@id': `${input.canonical}#webpage`,

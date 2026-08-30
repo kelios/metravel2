@@ -290,12 +290,12 @@ fallback. Backend blockers оформляются как `area=back` задач�
 - docs-only изменение: structural Markdown/link/path check;
 - list/detail/wizard logic: ближайшие targeted Jest tests +
   `npm run check:fast`;
-- visible web flow: browser screenshot + console/network review;
-- route-point native behavior: локальная Android build/install и device flow;
+- visible web flow в `testing`: browser screenshot + console/network check;
+- route-point native behavior в `testing`: локальная Android build/install и device flow;
 - travel hero/slider/media: `npm run verify:slider` и
   `npm run verify:slider-perf` через общий quality-gate lock;
-- medium/cross-cutting change: `npm run check:preflight` после operation-gate
-  проверки.
+- medium/cross-cutting change: code-level checks до review;
+  `npm run check:preflight` после review в `testing` и operation gate.
 
 ## Технический долг
 

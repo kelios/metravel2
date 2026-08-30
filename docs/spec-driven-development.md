@@ -87,9 +87,9 @@ Codex вызывает их как `$openspec-*`, Claude Code — как `/opens
    противоречия только в одном artifact.
 5. После отдельного запроса на реализацию использовать
    `$openspec-apply-change <name>` и выполнять tasks по порядку.
-6. Прогнать все проверки из artifacts и project rules, включая обязательную
-   browser/device validation для видимого UI и code-review-and-fix после code
-   changes.
+6. После code changes сначала выполнить code-only review-and-fix; после pass,
+   commit/push и перехода в `testing` прогнать browser/device/runtime проверки
+   из artifacts и project rules.
 7. Валидировать change и только после завершения tasks архивировать его через
    `$openspec-archive-change <name>`.
 

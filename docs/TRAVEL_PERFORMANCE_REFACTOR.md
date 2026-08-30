@@ -397,6 +397,11 @@ slider-perf `33/33`; travel desktop LCP `376ms`, FCP `40ms`, TBT `55ms`, CLS
 
 ## 8. Проверки
 
+Все build/Lighthouse/Playwright/browser-команды этого раздела выполняются
+только после code-review pass в `testing` (или в отдельной явно разрешённой
+release/performance validation). Implementation/review передаёт точные команды,
+URL, viewport и пороги, но не запускает runtime gate.
+
 Для production measurement:
 
 ```bash
@@ -419,7 +424,7 @@ E2E_NO_WEBSERVER=1 BASE_URL=http://127.0.0.1:4714 npx playwright test e2e/travel
 form factor и ключевыми LCP/TBT/CLS/network findings. Dev Metro request/chunk
 counts не используются как production evidence.
 
-В browser review дополнительно проверяются:
+В browser QA на стадии `testing` дополнительно проверяются:
 
 - direct load и SPA navigation;
 - hero geometry, blur и slider swipe;

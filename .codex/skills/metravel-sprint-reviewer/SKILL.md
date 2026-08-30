@@ -24,11 +24,10 @@ contract, and only the acceptance/status/evidence headings from
 ## Acceptance Loop
 
 1. Load the active sprint or requested task.
-2. For each candidate in `testing`—and any explicitly requested `todo` ticket
-   whose prior acceptance decision is being re-audited—read the full
-   description, dependencies, blockers, and Task Contract. A ticket in
-   `review` is not an acceptance candidate: route it to code review and do not
-   run browser/API/device QA.
+2. For each candidate in `testing`, read the full description, dependencies,
+   blockers, and Task Contract. Any ticket in `review`, `todo`, `in_progress`,
+   or `backlog` is not an acceptance candidate: route it to its owning stage and
+   do not run browser/API/device QA.
 3. Reject refinement gaps before runtime work:
    - missing `Scope`, `User-visible result`, `Data/API contract`, `Platform impact`,
      `Localization impact`, `Dependencies`, `Fallback/mock policy`, `Validation`,

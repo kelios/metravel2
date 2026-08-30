@@ -106,7 +106,8 @@ OpenSpec по `docs/spec-driven-development.md`), решение оформля�
   native это статичный светлый fallback, тема только `useThemedColors()`;
 - safe area и клавиатура, заложенные константами вместо `useSafeAreaInsets`
   (`MOBILE-INSETS-001`) — расхождение проявляется на реальном устройстве;
-- iPhone v1 приравнен к iPad (`supportsTablet: false`), submit приравнен к
+- universal iPhone/iPad v1 ошибочно спланирован как iPhone-only при
+  `supportsTablet: true`, submit приравнен к
   одобрению Apple, одобрение — к авторизованному storefront release: три
   разных состояния, три разных пункта плана;
 - слайс без rollback: изменение релизной конфигурации откатывается не так, как
@@ -142,7 +143,8 @@ OpenSpec по `docs/spec-driven-development.md`), решение оформля�
 privacy declarations, purpose strings, signing, номера сборки и метаданные
 App Store — их фактическое состояние показывает `npm run ios:release:guard`.
 Верификацию Apple-идентичности, хостинг AASA и серверный APNs выноси явными
-linked `area=back` зависимостями; iPhone v1 не означает iPad, submit не означает
+linked `area=back` зависимостями; universal v1 обязательно включает iPhone и
+iPad acceptance, submit не означает
 одобрение Apple, а одобрение — не означает авторизованный storefront release.
 
 Не смешивай agent-owned implementation с человеческими Apple/legal действиями

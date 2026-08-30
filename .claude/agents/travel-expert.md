@@ -46,6 +46,9 @@ upsert, slug/SSG, hero/media, bundle — L), отчёт по §6, формули
 
 **Как воспроизвести**
 
+Jest/static checks ниже можно запускать до review; browser/e2e/API/build строки
+— exact QA handoff и выполняются только после code-review pass в `testing`.
+
 - `npm run web` и конкретный роут: `/search`, `/metravel`, `/travels/<slug>`,
   `/travel/new`, `/travel/<id>`;
 - targeted Jest: `__tests__/components/travel/**`, `__tests__/hooks/useTravelDetails*`,
@@ -81,16 +84,13 @@ upsert, slug/SSG, hero/media, bundle — L), отчёт по §6, формули
 - Tap по point card фокусит и поднимает маркер, но не открывает popup —
   правка, открывающая popup «заодно», ломает контракт travel.md §Route points.
 
-**Чем доказывается результат**
+**Чем доказывается результат по стадиям**
 
 - targeted Jest по затронутому surface + `npm run check:fast`; правка `api/`
   или типов — `npm run typecheck`;
-- видимая правка — скрины mobile web 390px и desktop 1280px плюс console/network;
-- hero/slider/media — оба гейта bilateral: зелёный `verify:slider` не
-  доказывает `verify:slider-perf` и наоборот;
-- изменение slug/меты/SSG — сырой HTML целевого окружения (`test:seo:prod`);
-  изменение upsert/publish/moderation — фактический ответ
-  `PUT /api/travels/upsert/`, а не состояние формы;
+- в `testing`: скрины mobile web 390px/desktop 1280px, console/network,
+  bilateral `verify:slider` + `verify:slider-perf`, target raw HTML и реальный
+  upsert/publish/moderation API response;
 - НЕ доказывают: зелёный unit-тест — вёрстку; локальный дев — прод;
   `SKIPPED` с кодом `0` под quality-gate lock — это ноль проверок, а не pass.
 
@@ -153,8 +153,9 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
   route points, social publish, backend-dependent границы) и как каждый сохранён.
 - **Данные** — изменённые query-ключи из `api/queryKeys.ts`, эндпоинты и
   инвалидация; для upsert — фактический ответ сервера, а не состояние формы.
-- **Platform impact** — desktop web, mobile web, Android, iPhone: по каждой либо
-  evidence, либо `verify pending` с точной причиной.
+- **Platform impact** — desktop web, mobile web, Android, iPhone: по каждой
+  source impact и требуемый testing scenario. Runtime evidence в
+  implementation/review не заявляется.
 - **Локали** — какие ключи RU/BE/UK/PL/EN добавлены или изменены и вывод
   `npm run test:i18n`.
 
@@ -163,7 +164,7 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
 
 - **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши в `description` блок evidence: корень проблемы, изменённые файлы (`path:line`), как верифицировано (web/тест), и шаги device-verify. НЕ ставь `done` сам — приёмку делает `board-reviewer` / skill `sprint-review`.
+- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
 - **В `testing` сам не переводи.** Переход `review → testing` держит гейт-агент `code-review-gate`: PreToolUse hook `.claude/hooks/review-gate.mjs` блокирует `status=testing` без свежего вердикта `pass`. Закончив работу, оставь тикет в `review` и в своём отчёте явно попроси прогнать `code-review-gate` (`/review-gate <id>`). Если гейт вернул findings — тикет снова у тебя в `in_progress`, чини и отдавай на повторное ревью.
 - **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
 - **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
@@ -174,8 +175,8 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

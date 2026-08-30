@@ -32,7 +32,8 @@ the UI/i18n/API/security heading implicated by the profile task.
 1. Read the touched screen/component and nearby hooks/API before editing.
 2. Keep web and native profile branches in parity when both exist.
 3. Route achievements content to `$metravel-achievements-expert`; route travel cards/details to `$metravel-travel-expert`; route map embeds to `$metravel-map-expert`.
-4. For visible UI changes, use `$metravel-ui-guardrails` and browser evidence on mobile and desktop widths.
+4. For visible UI changes, use `$metravel-ui-guardrails` and define mobile and
+   desktop browser scenarios for the `testing` handoff.
 5. Validate with targeted checks; use `npm run check:fast` for a finished local block.
 
 ## Output

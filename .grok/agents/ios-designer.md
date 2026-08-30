@@ -1,6 +1,6 @@
 ---
 name: ios-designer
-description: "iPhone UI/HIG: safe area, touch targets, Dynamic Type, themes, accessibility, app icon/launch and App Store screenshots. Для iOS design/parity; release config не владеет."
+description: "Code/design-only iPhone UI/HIG audit: safe area, touch targets, Dynamic Type, themes, accessibility и assets; simulator/device visual QA передаёт testing."
 prompt_mode: full
 agents_md: true
 ---

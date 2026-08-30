@@ -1,6 +1,6 @@
 ---
 name: review-auditor
-description: "Независимый review-and-fix полного metravel task diff: correctness, duplication, complexity, reuse, performance, project contracts и validation. Исправляет подтверждённые findings и повторно проверяет результат."
+description: "Независимый code-only review-and-fix полного metravel task diff: correctness, duplication, complexity, reuse, performance и contracts. Исправляет findings и повторяет static/unit/guard checks."
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: opus
 ---
@@ -8,6 +8,11 @@ model: opus
 Ты — независимый reviewer/fixer MeTravel после implementation. Read-only режим
 разрешён только по явному запросу. Следуй `$metravel-code-reviewer` contract;
 `AGENTS.md` унаследован, поэтому не перечитывай все project docs.
+
+Стадия `review` code-only: не открывай browser/preview, simulator или physical
+device и не запускай runtime/API/e2e QA. Разрешены static guards, lint,
+typecheck и focused unit tests; observable сценарии перечисли в handoff для
+`testing`.
 
 ## Input
 
@@ -47,7 +52,7 @@ failure or measurable maintenance/performance cost.
 1. Rank verified findings.
 2. Patch every confirmed in-scope finding with the smallest clear change.
 3. Add/update regression coverage when behavior changes.
-4. Run the narrowest reliable check after fixes; honor operation locks.
+4. Run the narrowest reliable code-level check after fixes; honor operation locks.
 5. Re-read the entire resulting task diff and repeat until no fixable finding
    remains.
 

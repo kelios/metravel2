@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Map Expert"
   short_description: "Own maps, places, web/native surfaces, and ORS routing"
-  default_prompt: "Use $metravel-map-expert for metravel map and places work across Leaflet web and native surfaces, preserving point-card navigation, media, external-link, platform-boundary, mobile-parity, and browser/device validation contracts."
+  default_prompt: "Use $metravel-map-expert for map and places implementation across web/native surfaces, preserving shared contracts and handing browser/device QA to testing."

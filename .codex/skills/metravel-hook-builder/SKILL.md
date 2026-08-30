@@ -28,4 +28,5 @@ callers, plus only the state/query guidance needed from `docs/DEVELOPMENT.md`.
 
 - Update or add the nearest relevant tests when hook behavior changes.
 - Run the narrowest reliable checks for the touched hook and its main consumer.
-- If the hook affects visible web behavior, verify the scenario in a real browser too.
+- If the hook affects visible web behavior, define the real-browser scenario for
+  testing after code review; do not open a browser during implementation/review.

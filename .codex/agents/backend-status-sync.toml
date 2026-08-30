@@ -37,15 +37,19 @@ re-verify-проход: новые коммиты бэка → сверка с �
 3. **Маппинг на очередь:** для каждого нового коммита `git show <hash> --stat` и сопоставь с
    открытыми тикетами (`[BE-…]`/`[TASK-…]` в заголовке). Учитывай «хвосты»: коммит может
    закрывать тикет частично.
-4. **Верификация кода:** точечно читай изменённые файлы через `git show origin/master:<file>`
-   и сверяй с Acceptance Criteria тикета. Код есть ≠ задеплоено: если поведение наблюдаемо на
-   проде — сделай GET-пробу. Если нужен конкретный временной набор данных, оставь `testing`
+4. **Верификация по стадии:** для тикета в `review` только точечно читай
+   изменённые файлы через `git show origin/master:<file>` и сверяй с Acceptance
+   Criteria; GET/API/runtime probes запрещены. После code-review pass тикет
+   переводится в `testing`, и только там выполняются GET-пробы наблюдаемого
+   поведения. Если нужен конкретный временной набор данных, оставь `testing`
    только с exact параметром, threshold/trigger и временем повторного замера; если нужен
    недоступный deploy/access gate — остановись и запроси exact owner unblock.
    Для FE/BE задач с `Task Contract` обязательно сверяй `Data/API contract`, `Dependencies`,
    `Validation` и `Done gate`. BE-задача, которая разблокирует FE, не считается `done`, пока
    контрактный endpoint/field/event не подтверждён на заявленном target env.
 5. **План апдейтов борда (для `ticket-board`):** на каждый затронутый тикет —
+   - тикет в `review`: source/config pass → только `testing`; напрямую в `done`
+     не переводить и runtime probes не запускать;
    - новый статус: доступные обязательные backend/source/API/prod probes зелёные и работа
      завершена → `done`; реальная оставшаяся работа → `todo`/`in_progress`; exact timed
      recheck → `testing`; missing gate → без transition, запрос owner unblock;

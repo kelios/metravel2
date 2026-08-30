@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel iOS Reviewer"
   short_description: "Review and repair iOS-specific MeTravel changes."
-  default_prompt: "Use $metravel-ios-reviewer for an independent review-and-fix pass over the complete iOS task diff, then re-review and revalidate every confirmed fix before tester or release handoff."
+  default_prompt: "Use $metravel-ios-reviewer for a code-only review-and-fix pass over the complete iOS task diff, then hand runtime scenarios to ios testing."

@@ -45,6 +45,9 @@ model: opus
 
 **Как воспроизвести**
 
+Jest/guards ниже можно запускать до review; web/e2e/native строки — exact QA
+handoff и выполняются только после code-review pass в `testing`.
+
 - web: `npm run web` → `/map`, ширина ≤560px для mobile-контракта карточки,
   light и dark; native — тот же flow на локальной Android-сборке, iPhone через
   `ios-tester`;
@@ -83,17 +86,15 @@ model: opus
 - Изображение в попапе идёт мимо `ImageCardMedia` или получает второй
   URL-вариант под blur — лишняя сетевая загрузка на каждом открытии (`MEDIA-001`).
 
-**Чем доказывается результат**
+**Чем доказывается результат по стадиям**
 
 - targeted Jest + `npm run check:fast`; правка `api/` или типов — `npm run typecheck`;
-- видимая правка карты — скрины mobile web ≤560px и desktop плюс console/network
-  (нулевые ошибки и отсутствие лишних tile-запросов — часть доказательства);
-- маршруты — фактический ответ provider (`provider`, `is_optimal`, геометрия), а
-  не «линия нарисовалась»;
-- native renderer и bridge при Android-specific scope — прогон на локальной
-  Android-сборке; чтение `nativeMapHtml.ts` поведения WebView не доказывает;
-- common/shared карточка места — desktop web + mobile web; Android/iPhone
-  screenshots нужны только для соответствующего platform-specific scope.
+- в `testing`: скрины mobile web ≤560px/desktop и console/network; для маршрута
+  фактический provider/geometry response; для Android-specific renderer/bridge
+  локальная Android-сборка;
+- common/shared карточка места получает desktop/mobile web evidence в
+  `testing`; Android/iPhone screenshots нужны только для соответствующего
+  platform-specific scope.
 
 ## Зона ответственности
 
@@ -106,7 +107,7 @@ model: opus
 
 - Web: Leaflet 1.9 + react-leaflet. Файлы `*.web.tsx`.
 - Native: WebView + Leaflet (`Map.ios.tsx`/`Map.android.tsx`). Файлы `*.native.tsx` или без суффикса.
-- Всегда проверяй оба бандла. Не импортируй Leaflet в web-специфичный react-leaflet-путь в native-файлы, RN Maps — в web.
+- До review статически проверяй оба platform import graph. Не импортируй Leaflet в web-специфичный react-leaflet-путь в native-файлы, RN Maps — в web; bundle/runtime checks выполняются в `testing`.
 
 ## Паритет карты web↔native — load-bearing (контракт `docs/features/map.md` §Mobile parity contract)
 
@@ -114,7 +115,7 @@ model: opus
 
 - **Не форкать структуру.** Расхождение web↔native лечится общим компонентом; платформенный `.web`/`.native`-файл или `Platform.OS`-гейт — только для технического расхождения (движок Leaflet DOM vs WebView, safe-area инсеты, тени), НЕ для другой вёрстки/порядка кнопок/пропорций/поведения.
 - **При правке любого из:** `MapPlaceBottomCard`, `PlacePopupCard`, `createMapPopupComponent`, `MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet` — свери архитектурный parity contract и отсутствие нового продуктового `.web`/`.native`-форка; это не создаёт автоматический device gate.
-- **Как проверяю:** common/shared UI — desktop web + mobile web ≤560px (light+dark). Android device flow нужен только для Android-specific renderer/bridge/runtime, iPhone через `ios-tester` — только для iOS-specific scope. Если обязательный native gate недоступен, остановись и запроси exact owner unblock без финального `verify pending` handoff.
+- **Testing handoff:** common/shared UI — desktop web + mobile web ≤560px (light+dark). Android device flow нужен только для Android-specific renderer/bridge/runtime, iPhone через `ios-tester` — только для iOS-specific scope; до review эти сценарии не запускаются.
 
 ## Крупные файлы (нужен split)
 
@@ -141,7 +142,8 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 
 ## После изменений
 
-`npm run check:fast` и отдельно визуальная проверка через preview_start + read_page, если меняешь UI.
+`npm run check:fast`; если меняешь UI, передай точный сценарий для
+`preview_start` + `read_page` стадии `testing`.
 
 ## Формат ответа
 
@@ -165,7 +167,7 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
 
 - **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши в `description` блок evidence: корень проблемы, изменённые файлы (`path:line`), как верифицировано (web/тест), и шаги device-verify. НЕ ставь `done` сам — приёмку делает `board-reviewer` / skill `sprint-review`.
+- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
 - **В `testing` сам не переводи.** Переход `review → testing` держит гейт-агент `code-review-gate`: PreToolUse hook `.claude/hooks/review-gate.mjs` блокирует `status=testing` без свежего вердикта `pass`. Закончив работу, оставь тикет в `review` и в своём отчёте явно попроси прогнать `code-review-gate` (`/review-gate <id>`). Если гейт вернул findings — тикет снова у тебя в `in_progress`, чини и отдавай на повторное ревью.
 - **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
 - **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
@@ -176,8 +178,8 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

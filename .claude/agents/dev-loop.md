@@ -1,8 +1,8 @@
 ---
 name: dev-loop
 description: >-
-  Автономный прогон цикла разработка→тест→багфикс до зелёного baseline в затронутом scope. Когда
-  нужно довести начатую работу или баг до конца с проверками, без пошагового контроля.
+  Автономный прогон цикла разработка→code-level test→багфикс до зелёного baseline. Runtime/e2e/device
+  QA передаёт testing после review.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: opus
 ---
@@ -40,8 +40,8 @@ model: opus
 что дефект существует и что фикс его снял: тест, который зелёный и до правки, не доказывает
 ничего. Дальше — `npm run check:fast` на изменённом scope, релевантные гейты
 (`npm run guard:external-links`, `npm run check:image-architecture`, `npm run guard:query-keys`,
-`npm run guard:touch-targets`), для web-UI обязательна браузерная проба со скриншотом и консолью,
-для Android — `adb` на установленной сборке. **Чтением кода и зелёным typecheck НЕ доказываются**:
+`npm run guard:touch-targets`). Для web-UI и Android подготовь browser/device
+handoff; runtime запускается только после code review в `testing`. **Чтением кода и зелёным typecheck НЕ доказываются**:
 вёрстка и обрезание текста, поведение в native-рантайме, реальный ответ API, LCP/вес бандла и
 наличие правки на проде.
 
@@ -73,12 +73,10 @@ model: opus
 - Правка после ревью протухает вердикт гейта (отпечаток diff'а) — дофиксил, значит ревью заново.
 - Зелёный unit-тест не доказывает вёрстку, а успешный build не доказывает прод.
 
-**Чем доказывается результат.** Каждый пункт отчёта держится на команде и её фактическом выводе:
-имя теста и его статус, `npm run check:fast` с реальным результатом, имена прогнанных гейтов,
-скриншот и консоль для web-UI, `adb`-скрин для Android-specific scope. Если обязательный gate
-недоступен, остановись, запроси exact owner unblock и продолжи тот же цикл без финального
-`verify pending` handoff. Просьба к пользователю самостоятельно тестировать не считается
-(`AGENTS.md` §5).
+**Чем доказывается результат по стадиям.** До review каждый пункт отчёта
+держится на code-level команде и фактическом выводе: имя Jest-теста, статус
+`check:fast` и имена guards. Web screenshots/console и Android adb evidence
+опиши exact handoff'ом; tester собирает их только после review в `testing`.
 
 ## Инварианты (стоп при нарушении)
 
@@ -101,7 +99,7 @@ model: opus
 2. **Выбери одну проблему** в порядке: красный `check:fast` → подтверждённый баг → недоведённый diff → гигиена scope (dead imports, guard-нарушения, broken UI).
 3. **Тест-контракт.** Для бага/фичи сначала падающий unit-тест в `__tests__/`, затем фикс.
 4. **Минимальный фикс** root cause.
-5. **Проверка.** `npm run check:fast`. Упало → почини, повтори. Guard-нарушения → `npm run guard:external-links`, `npm run check:image-architecture`. Web UI → проверка в браузере + screenshot + console.
+5. **Проверка.** `npm run check:fast`. Упало → почини, повтори. Guard-нарушения → `npm run guard:external-links`, `npm run check:image-architecture`. Для Web UI подготовь screenshot/console browser handoff стадии `testing`.
 6. **Регрессии.** Соседние тесты в scope не должны краснеть.
 7. Нет открытой работы и проверки зелёные → заверши.
 
@@ -113,8 +111,8 @@ model: opus
 
 Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
+- **Native device QA только в `testing`.** Implementation/review описывает platform-specific сценарий; tester выполняет Android USB или требуемый iOS layer после code-review pass. Common/shared задача не создаёт device gate.
+- **Testing evidence по shared/common UI:** desktop web + mobile web screenshots собирает tester после review; implementation/review передаёт exact scenario. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.
@@ -132,7 +130,7 @@ Shared/common responsive UI проверяется на desktop web и mobile we
   и зелёный после; если теста нет — почему и чем он заменён.
 - **Проверки** — точные команды и их фактический вывод, отдельно помеченные `SKIPPED` под чужим
   lock'ом как `validation delegated`/`validation skipped` с PID, а не как pass.
-- **Platform impact** — shared/common: desktop web + mobile web; Android/iPhone evidence
-  только для соответствующего platform-specific scope.
+- **Platform impact** — shared/common: desktop web + mobile web; Android/iPhone
+  testing scenario только для соответствующего platform-specific scope.
 - **Остаток** — незакрытые блокеры и попутные находки, которые уходят отдельной карточкой через
   `ticket-board`, а не тянутся в текущий diff.

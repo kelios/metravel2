@@ -88,17 +88,20 @@ Output/validation: <artifact and checks>.
 | Docs-only | structural reread and links/commands sanity |
 | Skill description/default prompt | `npm run audit:prompts` + skill validator |
 | Small code scope | targeted check or `npm run check:fast` |
-| Medium code scope | relevant tests/lint or `npm run check:preflight` |
+| Medium code scope before/during review | relevant static/unit tests, lint, typecheck, and guards; no e2e |
 | Large/cross-cutting code | `npm run lint` + `npm run test:run` |
-| Visible common UI | targeted checks + desktop and mobile-web browser/screenshots/console |
-| Android/iOS-specific | targeted checks + correct device/simulator/physical layer |
+| Testing after review | `npm run check:preflight` or scoped runtime/e2e gate |
+| Visible common UI in testing | desktop and mobile-web browser/screenshots/console |
+| Android/iOS-specific in testing | correct device/simulator/physical layer |
 | Localization | `npm run test:i18n` + affected platform/locale evidence |
 | External links | `npm run guard:external-links` or governance verification |
-| Release/performance | production build and target-specific real-URL evidence |
+| Release/performance in testing/authorized release stage | production build and target-specific real-URL evidence |
 
 Перед long/shared command примени operation gate. Чужой `SKIPPED` — не зелёная
 проверка. После code changes полный task diff проходит `$metravel-code-reviewer`
-review-and-fix, предпочтительно независимым reviewer.
+review-and-fix, предпочтительно независимым reviewer. Reviewer запускает только
+code-level checks; observable/runtime evidence собирается после pass в
+`testing`.
 
 ## Skill maintenance
 

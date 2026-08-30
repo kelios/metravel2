@@ -75,8 +75,10 @@
 - Commit and push the task diff before a board task moves to `testing`:
   - the `review → testing` gate is a `pass` verdict **plus** the reviewed diff
     committed and pushed to `main`; the ticket is moved only after
-    `git push origin main` succeeds. Order: record the verdict → `git add <task
-    paths>` → `git commit` → `git push origin main` → `status=testing`;
+    `PREFLIGHT_SKIP_E2E=1 git push origin main` succeeds. Order: record the
+    verdict → `git add <task paths>` → `git commit` →
+    `PREFLIGHT_SKIP_E2E=1 git push origin main` → `status=testing`. This keeps
+    static/unit pre-push checks while deferring Playwright to `testing`;
   - stage explicit task paths. `git add -A` and a pathless `git commit` are
     forbidden in this shared checkout: they sweep other sessions' unfinished
     files and ship them past their own review gate;
@@ -103,7 +105,7 @@
 
 ```bash
 npm run lint
-  npm run test:run
+npm run test:run
 ```
 
   During `review`, these checks are limited to source-level validation such as
@@ -310,8 +312,9 @@ npm run lighthouse:travel:desktop
   review-and-fix mode over the complete task-owned diff. The reviewer fixes
   confirmed correctness, duplication, unnecessary-complexity, reuse,
   efficiency, and contract problems, then re-reviews the full resulting diff
-  and reruns relevant validation. A findings-only pass is insufficient unless
-  the user explicitly requested a read-only review.
+  and reruns relevant code-level validation only. Browser/API runtime, e2e,
+  simulator, and device QA remain in `testing`. A findings-only pass is
+  insufficient unless the user explicitly requested a read-only review.
 - Prefer a dedicated `review-auditor` agent for independence; if agent
   delegation is unavailable, apply the same skill in the current agent. The
   reviewer re-reviews its own fixes and must not recursively launch another
@@ -527,7 +530,7 @@ npx serve dist/prod -l 3000 -s
 - Travel hero swipe and travel-details performance are one bilateral release contract. Any change in `components/travel/sliderParts/**`, `components/travel/details/**`, `ImageCardMedia`, hero overlays/decode gates, travel-details lazy/content-visibility behavior, or responsive image layout must pass both `npm run verify:slider` and `npm run verify:slider-perf`, each started through `scripts/run-with-quality-gate-lock.js`; one green side is not enough for handoff.
 - When using preload scripts and React Query together, avoid duplicate first-load API requests.
   - Reuse the in-flight preload promise or preloaded payload instead of firing a second request for the same travel route.
-- If a bug is visible only on web, verify it in a real browser flow.
+- During `testing`, if a bug is visible only on web, verify it in a real browser flow.
   - Prefer Playwright or a headed browser capture over reasoning from code alone.
   - For visual loading bugs, inspect both DOM state and network state before changing timing logic.
 
@@ -658,7 +661,7 @@ npx serve dist/prod -l 3000 -s
   - Do not replace valid Instagram post/reel/tv embeds with generic fallback cards on web.
   - Fallback cards are allowed only for Instagram URLs that cannot be reliably embedded, such as stories/highlights/profile links, invalid URLs, or contexts where iframes are not supported.
   - Sanitize and normalize iframe URLs through the existing rich-text pipeline; do not bypass sanitization to keep an embed.
-  - When changing Instagram rich-text handling, add or update targeted tests and verify the changed web scenario in a real browser with no new console errors.
+  - When changing Instagram rich-text handling, add or update targeted tests; verify the changed web scenario in a real browser with no new console errors only after code review in `testing`.
 
 ### Icons
 

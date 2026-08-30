@@ -30,9 +30,14 @@ shared Expo/React Native code as cross-platform until the platform boundary prov
 - Keep functions and components local, readable, and easy to remove or extend later.
 - Remove clearly dead code in the touched area when it is safe to do so.
 - Do not edit backend/Django/API/server repositories, files, migrations, tests, or settings from this frontend workspace. If FE is blocked by backend behavior, diagnose read-only and create/update an `area=back` board task instead.
-- Fix every real issue found in the touched area or validation output before handoff: failing tests, runtime errors, broken UI states, invalid external-link usage, dead imports, and obvious regressions.
+- Fix every real issue found in the touched area or code-level validation output
+  before review: failing focused tests, invalid external-link usage, dead imports,
+  and obvious source regressions. Runtime/UI failures belong to the subsequent
+  `testing` pass and return to implementation with evidence.
 - If a found issue is outside scope, requires unavailable server/secret access, or needs a risky migration, record it as a blocker with the concrete risk and next verification instead of ignoring it.
-- For FE depending on BE, do not call the task done from mocks or unit tests alone; verify the runtime endpoint/field/event from the task contract on the target environment or leave a blocker.
+- For FE depending on BE, do not call the task done from mocks or unit tests
+  alone; hand the exact endpoint/field/event probe to `testing`, where it is
+  verified on the target environment.
 - Do not change server paths, SSL paths, or deployment targets unless they were explicitly verified on the server.
 
 For a production incident or any optimization of requests, images, LCP, bundle,
@@ -70,27 +75,32 @@ Follow these repo-specific rules while building features:
   and use `i18n/format.ts` instead of hardcoded locale formatting. Do not
   client-translate API/editorial content without a separate data contract.
 
-Choose validation by scope after each finished logical block and before wrapping up:
+Choose code-level validation by scope after each finished logical block and
+before code review:
 
 - Small focused change: run targeted checks for the touched area. Prefer `npm run check:fast` for a finished local block, plus any narrow test command that directly covers the feature.
 - Need to inspect the scope before running checks: use `npm run check:fast:dry` or `npm run check:changed:dry`.
 - Medium change: run the relevant targeted tests plus lint/selective checks for the affected module set.
 - Large or cross-cutting change: run `npm run lint` and `npm run test:run`.
-- If the change affects visible web UI, verify it in a real browser flow, capture a screenshot, and confirm the browser console has no new errors.
-- If the change affects visible common/shared responsive UI, verify desktop web
-  and mobile web. Add a locally built Android run only for Android-specific
-  observable behavior/configuration/runtime, and iPhone evidence through
-  `$metravel-ios-tester` only for iOS-specific scope at the required layer.
+- If the change affects visible web UI, write the exact browser flow, screenshot
+  viewport, and console/network expectations for the `testing` handoff; do not
+  open a browser during implementation or review.
+- If the change affects visible common/shared responsive UI, hand desktop web
+  and mobile web scenarios to `testing`. Add a local Android or iPhone scenario
+  only for corresponding platform-specific scope; the tester runs it after
+  code-review pass.
 - If localization is affected, run `npm run test:i18n` and verify the changed
-  locales on affected observable targets. Require native cold-restart/lifecycle
-  evidence only when that platform's locale storage, provider, configuration,
-  or runtime behavior changed.
+  locale resources statically. Hand affected observable locale and native
+  cold-restart/lifecycle scenarios to `testing` only when that platform's
+  locale storage, provider, configuration, or runtime behavior changed.
 
-After validation and before handoff, use `$metravel-code-reviewer` on the
-complete task-owned diff. Pass the original task, changed paths, and validation
+After code-level self-checks, use `$metravel-code-reviewer` on the complete
+task-owned diff. Pass the original task, changed paths, and static/unit/guard
 evidence to a dedicated `review-auditor` agent when available. Let the reviewer
-patch confirmed findings, re-read the complete resulting diff, and rerun affected
-checks. Do not include or rewrite unrelated dirty worktree changes.
+patch confirmed findings, re-read the complete resulting diff, and rerun only
+code-level checks. After pass/push/status=`testing`, route observable browser,
+API, simulator, and device scenarios to QA. Do not include or rewrite unrelated
+dirty worktree changes.
 
 Avoid dev-environment false positives:
 

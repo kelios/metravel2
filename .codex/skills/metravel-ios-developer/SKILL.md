@@ -1,12 +1,16 @@
 ---
 name: metravel-ios-developer
-description: Implement and debug the active MeTravel iPhone/iPad application in the shared Expo and React Native codebase. Use for iOS/iPadOS platform files, Xcode runtime, adaptive windows, permissions, Apple authentication, links, maps, media, safe areas, and native regressions; not for App Store operations.
+description: Implement and debug MeTravel iPhone/iPad source and configuration, then hand runtime QA to testing. Use for iOS/iPadOS platform files, adaptive windows, permissions, Apple auth, links, maps, media, safe areas, and native regressions; not App Store operations.
 ---
 
 # Metravel iOS Developer
 
 Use this skill for implementation and debugging of the active universal
 iPhone/iPad MeTravel application, including adaptive iPad scenes.
+
+Implementation and `review` are code-only. Do not launch simulator, physical
+device, browser, or TestFlight; prepare the exact case for `$metravel-ios-tester`
+after code-review pass and status=`testing`.
 
 `AGENTS.md` is inherited. Load the affected native/feature section and exact
 simulator/device case; use the iOS OpenSpec or development guidance only when
@@ -49,8 +53,9 @@ the requested subsystem depends on it.
 
 1. Record iOS/shared platform impact, RU/BE/UK/PL/EN impact, assigned board task,
    and exact files/configuration in scope.
-2. Reproduce on an eligible iPhone/iPad simulator or physical Apple device as appropriate;
-   read the whole guarded effect/function before classifying a shared reference as unsafe.
+2. Read the whole guarded effect/function before classifying a shared reference
+   as unsafe. Record the exact simulator/physical-device reproduction for the
+   testing handoff; do not launch it during implementation or review.
 3. Compare the existing web and Android implementation and make the smallest
    platform split that preserves the common product contract.
 4. Add focused regression coverage. For configuration changes, verify resolved
@@ -59,12 +64,13 @@ the requested subsystem depends on it.
    and `npm run test:i18n` when locale or app-owned copy changed. For shared
    files, run web controls only when their web path is affected; do not create an
    automatic Android device gate for iOS work.
-6. Hand the complete diff and evidence to `$metravel-ios-reviewer`; after fixes,
-   hand the resulting build to `$metravel-ios-tester`.
+6. Hand the complete diff and code-level evidence to `$metravel-ios-reviewer`;
+   after code-review pass and status=`testing`, hand the runtime scenario/build
+   to `$metravel-ios-tester`.
 
 ## Output Contract
 
 Report the iOS requirement or bug, changed files, platform split, configuration
-impact, simulator/device evidence, shared-platform controls, checks run, and any
-release/backend/owner dependency. Never claim App Store readiness from a
-simulator build alone.
+impact, simulator/device testing handoff, shared-platform code controls, checks
+run, and any release/backend/owner dependency. Never claim runtime or App Store
+readiness from implementation/review evidence.

@@ -78,7 +78,7 @@ node .claude/hooks/review-gate.mjs record --task <id> --verdict changes_requeste
 ```bash
 git add <пути задачи>   # только свои пути: `git add -A` и commit без путей запрещены
 git commit -m "<type>(<scope>): <что сделано> (#<id>)"
-git push origin main    # чужой набор в `npm run check:preflight:dry` → SKIP_PREFLIGHT=1 + пометка в тикет
+PREFLIGHT_SKIP_E2E=1 git push origin main  # Playwright запускается только в testing; чужой набор → SKIP_PREFLIGHT=1 + пометка
 ```
 
   Код при этом не правь: коммитится ровно то, что ты отревьюил, поэтому вердикт остаётся
