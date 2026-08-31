@@ -21,7 +21,6 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -40,6 +39,7 @@ import { trackQuestShareClick } from '@/utils/gamificationAnalytics';
 import { showToast } from '@/utils/toast';
 import { devWarn } from '@/utils/logger';
 import { useTranslation } from '@/i18n/LocaleProvider';
+import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
 
 export interface QuestResultShareSubject {
   /** Числовой id квеста — для генератора карточки. */
@@ -91,7 +91,9 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
+  // Через project-обёртку: на production web `react-native-safe-area-context`
+  // может не разрезолвиться, и сырой хук уронил бы лист целиком.
+  const insets = useSafeAreaInsetsSafe();
 
   const username = useAuthStore((s) => s.username);
 
