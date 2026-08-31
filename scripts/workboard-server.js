@@ -206,14 +206,30 @@ function sendJson(res, code, obj) {
   res.end(data)
 }
 
+/**
+ * #1649: buffer the request bytes and decode once. `raw += chunk` decoded every
+ * transport chunk on its own, so a Cyrillic task title split across a chunk
+ * boundary reached the board as two U+FFFD.
+ */
 function readBody(req) {
   return new Promise((resolve, reject) => {
-    let raw = ''
+    const chunks = []
+    let bytes = 0
     req.on('data', (c) => {
-      raw += c
-      if (raw.length > 1e6) reject(new Error('payload too large'))
+      bytes += c.length
+      if (bytes > 1e6) {
+        // Drop what we buffered and stop buffering — but do NOT destroy the
+        // request: that kills the socket, and with it the 400 «payload too
+        // large» the caller in serve() is about to write. Every later chunk
+        // re-enters this branch and is discarded, so memory stays bounded.
+        chunks.length = 0
+        reject(new Error('payload too large'))
+        return
+      }
+      chunks.push(c)
     })
     req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8')
       try {
         resolve(raw ? JSON.parse(raw) : {})
       } catch {

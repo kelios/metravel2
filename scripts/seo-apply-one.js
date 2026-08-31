@@ -28,6 +28,8 @@ const path = require('path');
 const https = require('https');
 const seoEdit = require('./seo-edit');
 const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
+const { TextCorruptionError } = require('./lib/textIntegrity');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const FAQ_MARKER = 'data-faq="metravel-seo"';
@@ -90,11 +92,11 @@ function request(method, url, body, token) {
       opts.headers['Content-Type'] = 'application/json; charset=utf-8';
       opts.headers['Content-Length'] = Buffer.byteLength(body);
     }
+    opts.headers = withAcceptEncoding(opts.headers);
     const req = https.request(url, opts, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => resolve({ status: res.statusCode, body: buf }));
+      // #1649: whole body buffered, then decoded once — accumulating
+      // `buf += chunk` decoded every transport chunk on its own.
+      readResponseText(res).then((text) => resolve({ status: res.statusCode, body: text }), reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`timeout ${url}`)); });
@@ -139,6 +141,20 @@ async function apply() {
     );
     if (put1.status >= 300) throw new Error(`PUT upsert → HTTP ${put1.status}: ${put1.body.slice(0, 200)}`);
     const after = await getJson(`${API}/travels/${ID}/?_cb=${Date.now()}-${ID}`);
+    // #1649: mangled UTF-8 moves the length by one character and passes every
+    // guard below, so the round trip is checked for it explicitly.
+    const corruption = seoEdit.detectCorruption(after, { description: newDesc, meta: detail.meta_description });
+    if (corruption.length) {
+      // This script keeps no backup file, so the revert PUT is the only copy of
+      // the original body: its outcome has to reach the error, not be dropped.
+      const revertCorrupt = seoEdit.buildUpsertPayload(detail, { description: oldDesc, meta: detail.meta_description });
+      const revert = await request('PUT', `${API}/travels/upsert/`, JSON.stringify(revertCorrupt), AUTHOR_TOKEN)
+        .then((r) => r.status < 300, () => false);
+      throw new TextCorruptionError(
+        revert ? corruption : [...corruption, 'rollback FAILED — the mangled description is still live'],
+        `FAQ ${ID}`,
+      );
+    }
     const problems = seoEdit.detectRegression(detail, after, {
       expectChanged: true,
       newDescription: newDesc,

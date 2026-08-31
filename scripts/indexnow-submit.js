@@ -16,6 +16,7 @@
 const https = require('https')
 const http = require('http')
 const fs = require('fs')
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 
 const {
   UsageError,
@@ -111,15 +112,14 @@ function readUrlsFile(filePath) {
 function fetchText(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http
-    const opts = { timeout: 30000, rejectUnauthorized: false }
+    const opts = { timeout: 30000, rejectUnauthorized: false, headers: withAcceptEncoding() }
     const req = mod.get(url, opts, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume()
         return fetchText(res.headers.location).then(resolve, reject)
       }
-      let data = ''
-      res.setEncoding('utf8')
-      res.on('data', (c) => (data += c))
-      res.on('end', () => resolve(data))
+      // #1649: whole body buffered, then decoded once.
+      readResponseText(res).then(resolve, reject)
     })
     req.on('error', reject)
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)) })
@@ -137,16 +137,19 @@ function postJson(host, path, body) {
       hostname: host,
       path,
       method: 'POST',
-      headers: {
+      headers: withAcceptEncoding({
         'Content-Type': 'application/json; charset=utf-8',
         'Content-Length': Buffer.byteLength(payload),
-      },
+      }),
       timeout: 30000,
     }
     const req = https.request(opts, (res) => {
-      let data = ''
-      res.on('data', (c) => (data += c))
-      res.on('end', () => resolve({ status: res.statusCode, body: data }))
+      // #1649: this one had no StringDecoder at all — `data += chunk` decoded
+      // every transport chunk on its own.
+      readResponseText(res).then(
+        (body) => resolve({ status: res.statusCode, body }),
+        reject,
+      )
     })
     req.on('error', reject)
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout POST ${host}${path}`)) })

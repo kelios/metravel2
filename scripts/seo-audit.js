@@ -28,6 +28,7 @@ const https = require('https');
 const http = require('http');
 
 const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 // ---------------------------------------------------------------------------
 // Thresholds (kept in sync with scripts/generate-seo-pages.js SEO rules)
@@ -288,17 +289,25 @@ function fetchJson(url) {
       headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
     };
     if (mod === https) opts.rejectUnauthorized = false;
+    opts.headers = withAcceptEncoding(opts.headers);
     const req = mod.get(url, opts, (res) => {
+      // res.resume() on every path that abandons the body: an undrained
+      // response keeps its socket checked out of the keep-alive agent, and this
+      // script walks hundreds of URLs.
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
         return fetchJson(res.headers.location).then(resolve, reject);
       }
-      if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-      let body = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (body += c));
-      res.on('end', () => {
-        try { resolve(JSON.parse(body)); } catch (e) { reject(e); }
-      });
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
+      }
+      // #1649: whole body buffered, then decoded once — accumulating
+      // `buf += chunk` decoded every transport chunk on its own.
+      readResponseText(res).then(
+        (body) => { try { resolve(JSON.parse(body)); } catch (e) { reject(e); } },
+        reject,
+      );
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });

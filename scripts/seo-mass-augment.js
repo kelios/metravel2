@@ -40,7 +40,14 @@ const https = require('https');
 const http = require('http');
 
 const seoEdit = require('./seo-edit');
-const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+const {
+  ExpectedFailureError,
+  parseCliArgs,
+  requireNonEmptySelection,
+  runSeoCli,
+} = require('./lib/seo-cli-contract');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
+const { TextCorruptionError, isTextCorruptionError } = require('./lib/textIntegrity');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const FAQ_MARKER = 'data-faq="metravel-seo"';
@@ -129,17 +136,17 @@ function fetchJson(url, opts = {}) {
     const mod = url.startsWith('https') ? https : http;
     const o = { method: 'GET', timeout: 30000, headers: { 'Cache-Control': 'no-cache' }, ...opts };
     if (mod === https) o.rejectUnauthorized = false;
+    o.headers = withAcceptEncoding(o.headers);
     const req = mod.request(url, o, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => {
+      // #1649: whole body buffered, then decoded once — accumulating
+      // `buf += chunk` decoded every transport chunk on its own.
+      readResponseText(res).then((buf) => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try { resolve(buf ? JSON.parse(buf) : null); } catch { resolve(buf); }
         } else {
           reject(new Error(`HTTP ${res.statusCode} ${url}: ${buf.slice(0, 300)}`));
         }
-      });
+      }, reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout ${url}`)); });
@@ -586,6 +593,27 @@ async function processArticle(listItem, log) {
         await putTravel(payload);
         // mini-verify
         const after = await getTravel(id);
+        // #1649: a mangled code point passes every length-based guard below, so
+        // it gets its own check — and it stops the run instead of logging one
+        // failed article and writing the same damage into the next 200.
+        const corruption = seoEdit.detectCorruption(after, { description: newDesc, meta: detail.meta_description });
+        if (corruption.length) {
+          // This script keeps no backup file, so the revert PUT is the only
+          // copy of the original body. Swallowing its failure would leave the
+          // mangled description live with nothing in the log saying so.
+          const revertCorrupt = seoEdit.buildUpsertPayload(detail, { description: oldDesc, meta: detail.meta_description });
+          const rolledBack = await putTravel(revertCorrupt).then(
+            () => true,
+            (revertError) => {
+              console.error(`  ‼️  #${id} rollback FAILED: ${revertError.message}`);
+              return false;
+            },
+          );
+          throw new TextCorruptionError(
+            rolledBack ? corruption : [...corruption, 'rollback FAILED — the mangled description is still live'],
+            `#${id}`,
+          );
+        }
         const problems = seoEdit.detectRegression(detail, after, { expectChanged: true, newDescription: newDesc });
         if (problems.length) {
           // attempt rollback
@@ -677,6 +705,7 @@ async function main() {
   console.log(`📦 ${list.length} travels to process`);
 
   const log = [];
+  let corruption = null;
   let i = 0;
   for (const t of list) {
     i++;
@@ -685,6 +714,11 @@ async function main() {
     } catch (e) {
       console.error(`  ❌ #${t.id} ${e.message}`);
       log.push({ id: t.id, name: t.name, error: e.message });
+      if (isTextCorruptionError(e)) {
+        console.error('  🛑 batch stopped: the read/write path is mangling UTF-8, remaining travels were not touched.');
+        corruption = e;
+        break;
+      }
     }
     if (APPLY && i % 25 === 0) {
       // gentle pause every 25 mutations
@@ -702,6 +736,14 @@ async function main() {
     return acc;
   }, {});
   console.log('\nSummary:', JSON.stringify(counts, null, 2));
+  // Thrown after the log and the summary are on disk/screen: without it the
+  // aborted run exits 0 and a half-applied batch reads as a clean one (#1649).
+  if (corruption) {
+    throw new ExpectedFailureError(
+      `run aborted at travel ${i} of ${list.length}: ${corruption.message}. ` +
+      'Fix the read/write path before re-running — the remaining travels were not touched.',
+    );
+  }
 }
 
 if (require.main === module) {

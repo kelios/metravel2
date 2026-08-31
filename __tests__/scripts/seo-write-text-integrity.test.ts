@@ -73,7 +73,7 @@ describe('detectFieldMismatch', () => {
 
 describe('detectStoredTextCorruption', () => {
   it('byte-compares only the fields the backend stores verbatim', () => {
-    // description is sanitized on save, so a byte compare there is a false alarm
+    // a rich-text body comes back normalised: a byte diff there is not corruption
     expect(
       detectStoredTextCorruption([
         { label: 'description', sent: '<p>Мир</p>', stored: '<p>Мир</p>\n' },
@@ -108,7 +108,11 @@ describe('TextCorruptionError', () => {
 })
 
 describe('seo-edit detectCorruption', () => {
+  // `id` is what tells "the API handed back the article" from "the re-read
+  // failed": every travel detail carries one, an empty 200 or a proxy error
+  // page does not.
   const after = (over: Record<string, unknown> = {}) => ({
+    id: 520,
     description: CLEAN,
     meta_description: 'Маршрут по Беларуси',
     name: 'Голубые озёра',
@@ -135,7 +139,7 @@ describe('seo-edit detectCorruption', () => {
     expect(detectCorruption(after(), { name: 'Другое имя' })).toHaveLength(1)
   })
 
-  it('passes a clean round trip through backend HTML sanitizing', () => {
+  it('passes a body that came back with its HTML normalised', () => {
     const stored = after({ description: `${CLEAN}<section class="seo-faq"></section>` })
     expect(detectCorruption(stored, { description: `${CLEAN}<section class='seo-faq'></section>` })).toEqual([])
   })
@@ -143,5 +147,23 @@ describe('seo-edit detectCorruption', () => {
   it('says nothing when the caller sent nothing', () => {
     expect(detectCorruption(after(), {})).toEqual([])
     expect(detectCorruption(null, {})).toEqual([])
+  })
+
+  // A failed re-read makes every field look missing, and the byte-exact
+  // meta/name compare would call that corruption — which stops the whole batch
+  // and blames UTF-8 for an empty 200. detectRegression owns this shape and
+  // keeps it a per-article rollback.
+  it('does not call a failed re-read corruption', () => {
+    const sent = { description: CLEAN, meta: 'Маршрут по Беларуси', name: 'Голубые озёра' }
+    // getJson() returns null on a body that did not parse
+    expect(detectCorruption(null, sent)).toEqual([])
+    // seo-mass-augment's fetchJson resolves the raw text when JSON.parse fails
+    expect(detectCorruption('<html>502 Bad Gateway</html>', sent)).toEqual([])
+    // seo-fix-links substitutes {} when the verification GET throws
+    expect(detectCorruption({}, sent)).toEqual([])
+    // a proxy error envelope parses into an object that is not an article
+    expect(detectCorruption({ detail: 'Not found.' }, sent)).toEqual([])
+    // …but a real article that came back mangled is still caught
+    expect(detectCorruption(after({ description: MANGLED }), sent)).toHaveLength(1)
   })
 })

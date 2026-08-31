@@ -25,6 +25,7 @@ const https = require('https');
 const http = require('http');
 const { SEO_TITLE_MAX_LENGTH, SEO_TITLE_SUFFIX } = require('../utils/seoText');
 const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -86,17 +87,18 @@ const FALLBACK_DESC = 'Найди место для путешествия и п
 function fetchRaw(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
-    const opts = { timeout: 30000, headers: { 'User-Agent': 'MeTravelSEOTest/1.0' } };
+    const opts = {
+      timeout: 30000,
+      headers: withAcceptEncoding({ 'User-Agent': 'MeTravelSEOTest/1.0' }),
+    };
     if (mod === https) opts.rejectUnauthorized = !INSECURE_TLS;
     const req = mod.get(url, opts, (res) => {
-      let body = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (body += c));
-      res.on('end', () => resolve({
+      // #1649: whole body buffered, then decoded once.
+      readResponseText(res).then((body) => resolve({
         status: res.statusCode,
         location: res.headers.location,
         html: body,
-      }));
+      }), reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });

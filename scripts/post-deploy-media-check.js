@@ -22,6 +22,8 @@
 const https = require('https')
 const http = require('http')
 
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
+
 const args = process.argv.slice(2)
 
 function hasFlag(name) {
@@ -281,15 +283,16 @@ function fetchJson(url) {
     const mod = url.startsWith('https') ? https : http
     const opts = {
       timeout: 30000,
-      headers: { 'User-Agent': 'MeTravelPostDeployMediaCheck/1.0', Accept: 'application/json' },
+      headers: withAcceptEncoding({
+        'User-Agent': 'MeTravelPostDeployMediaCheck/1.0',
+        Accept: 'application/json',
+      }),
     }
     if (mod === https) opts.rejectUnauthorized = !INSECURE_TLS
 
     const req = mod.get(url, opts, (res) => {
-      let body = ''
-      res.setEncoding('utf8')
-      res.on('data', (chunk) => { body += chunk })
-      res.on('end', () => {
+      // #1649: whole body buffered, then decoded once.
+      readResponseText(res).then((body) => {
         if (Number(res.statusCode || 0) !== 200) {
           reject(new Error(`HTTP ${res.statusCode} for ${url}`))
           return
@@ -299,7 +302,7 @@ function fetchJson(url) {
         } catch (error) {
           reject(new Error(`Invalid JSON from ${url}: ${error instanceof Error ? error.message : error}`))
         }
-      })
+      }, reject)
     })
 
     req.on('error', reject)

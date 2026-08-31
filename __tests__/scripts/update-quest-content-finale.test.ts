@@ -45,10 +45,16 @@ const SERVER_SOURCE = `
 const http = require('http')
 let state = { quests: {}, finales: {}, steps: {}, failPk: null }
 
+// #1649: буферизуем байты и декодируем один раз. \`raw += chunk\` декодировал
+// каждый транспортный чанк отдельно, и кириллица на границе чанка приезжала бы
+// в фикстуру как U+FFFD — оракул теста врал бы вместе со скриптом.
 const body = (req) => new Promise((resolve) => {
-  let raw = ''
-  req.on('data', (c) => { raw += c })
-  req.on('end', () => resolve(raw ? JSON.parse(raw) : {}))
+  const chunks = []
+  req.on('data', (c) => { chunks.push(c) })
+  req.on('end', () => {
+    const raw = Buffer.concat(chunks).toString('utf8')
+    resolve(raw ? JSON.parse(raw) : {})
+  })
 })
 
 const json = (res, status, payload) => {

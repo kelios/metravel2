@@ -5,6 +5,7 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const { buildQuestCityAliasMap } = require('../utils/questCityAlias');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 const args = process.argv.slice(2);
 
@@ -22,29 +23,29 @@ const DEFAULT_PAGE_SIZE = 100;
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
-    const opts = { timeout: 30000 };
+    const opts = { timeout: 30000, headers: withAcceptEncoding() };
     if (mod === https) opts.rejectUnauthorized = false;
 
     const req = mod.get(url, opts, (res) => {
+      // res.resume() on every path that abandons the body: an undrained
+      // response keeps its socket checked out of the keep-alive agent.
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
         return fetchJson(res.headers.location).then(resolve, reject);
       }
       if (res.statusCode !== 200) {
+        res.resume();
         return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
       }
 
-      let body = '';
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => {
-        body += chunk;
-      });
-      res.on('end', () => {
+      // #1649: whole body buffered, then decoded once.
+      readResponseText(res).then((body) => {
         try {
           resolve(JSON.parse(body));
         } catch (error) {
           reject(error);
         }
-      });
+      }, reject);
     });
 
     req.on('error', reject);

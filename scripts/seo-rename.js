@@ -29,8 +29,11 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const https = require('https');
-const { buildUpsertPayload } = require('./seo-edit');
+const { buildUpsertPayload, detectCorruption } = require('./seo-edit');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
+const { TextCorruptionError, isTextCorruptionError } = require('./lib/textIntegrity');
 const {
+  ExpectedFailureError,
   UsageError,
   parseCliArgs,
   requireNonEmptySelection,
@@ -123,11 +126,11 @@ function request(method, urlPath, data) {
       opts.headers['Content-Type'] = 'application/json';
       opts.headers['Content-Length'] = body.length;
     }
+    opts.headers = withAcceptEncoding(opts.headers);
     const req = mod.request(url, opts, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => resolve({ status: res.statusCode, text: buf }));
+      // #1649: whole body buffered, then decoded once — accumulating
+      // `buf += chunk` decoded every transport chunk on its own.
+      readResponseText(res).then((text) => resolve({ status: res.statusCode, text }), reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
@@ -252,6 +255,31 @@ async function renameOne({ id, name }, dryRun) {
     return null;
   }
   const after = await getTravel(id);
+  // #1649: the payload echoes the description back unchanged, so a GET that
+  // mangled it would write the damage in. Fatal to the run, not to one entry.
+  //
+  // `name` is deliberately NOT checked here: detectRegression() below already
+  // compares it against what we sent («name not applied»), and duplicating that
+  // assertion would relabel an unapplied title as a UTF-8 defect and abort the
+  // whole run over it.
+  const corruption = detectCorruption(after, { description: before.description });
+  if (corruption.length) {
+    console.error(`  ⛔ #${id} TEXT CORRUPTION: ${corruption.join('; ')} — rolling back (backup ${path.basename(backup)})`);
+    // The rollback must not be able to swallow the abort: restoreFromBackup()
+    // rejects on a socket error, and that plain Error would leave the batch
+    // running and the run exiting 0 — the exact hole this branch exists to
+    // close. Its outcome is reported, never thrown.
+    const rolledBack = await restoreFromBackup(id).then(() => true, (error) => {
+      console.error(`     rollback FAILED: ${error.message}`);
+      return false;
+    });
+    throw new TextCorruptionError(
+      rolledBack
+        ? corruption
+        : [...corruption, `rollback FAILED — «${name}» may still be live, restore from ${path.basename(backup)}`],
+      `#${id}`,
+    );
+  }
   const problems = detectRegression(before, after, name);
   if (problems.length) {
     console.error(`  ⛔ #${id} regression: ${problems.join('; ')} — rolling back (backup ${path.basename(backup)})`);
@@ -285,20 +313,36 @@ async function main() {
   console.log(`${dryRun ? '🧪 DRY-RUN ' : '✏️  '}Renaming ${entries.length} travel(s) via ${API_BASE}\n`);
 
   const pairs = [];
+  let corruption = null;
   for (const e of entries) {
     try {
       const pair = await renameOne(e, dryRun);
       if (pair) pairs.push(pair);
     } catch (err) {
       console.error(`  ❌ #${e.id}: ${err.message}`);
+      if (isTextCorruptionError(err)) {
+        console.error('  🛑 batch stopped: the read/write path is mangling UTF-8, remaining renames were not attempted.');
+        corruption = err;
+        break;
+      }
     }
   }
 
+  // The redirects of the renames that DID land still belong in the manifest —
+  // they happened, and dropping them would leave live 404s behind.
   if (!dryRun && pairs.length) {
     appendRedirects(pairs);
     console.log(`\n📝 Added ${pairs.length} redirect(s) to ${path.relative(process.cwd(), MANIFEST)}`);
   }
   console.log(`\n${dryRun ? 'Dry-run complete.' : `Done: ${pairs.length} renamed + redirected.`}`);
+  // Without this the aborted run still exits 0 and reads as a clean partial
+  // batch — the one signal an operator has that the pipeline is damaging text.
+  if (corruption) {
+    throw new ExpectedFailureError(
+      `run aborted after ${pairs.length} rename(s): ${corruption.message}. ` +
+      'Fix the read/write path before re-running — the remaining entries were not touched.',
+    );
+  }
 }
 
 if (require.main === module) {

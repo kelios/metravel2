@@ -19,6 +19,8 @@
 const https = require('https')
 const http = require('http')
 
+const { readResponseText, withAcceptEncoding } = require('./httpText')
+
 const DEFAULT_ATTEMPTS = 3
 const DEFAULT_BASE_DELAY_MS = 500
 const DEFAULT_TIMEOUT_MS = 30000
@@ -86,7 +88,9 @@ const fetchJsonOnce = (
     const mod = url.startsWith('https') ? https : http
     const opts = {
       timeout: timeoutMs,
-      headers: { 'User-Agent': userAgent, Accept: 'application/json', ...(headers || {}) },
+      // #1649: advertise exactly the encodings readResponseText() can undo, so
+      // an intermediary never hands us compressed bytes we would read as text.
+      headers: withAcceptEncoding({ 'User-Agent': userAgent, Accept: 'application/json', ...(headers || {}) }),
     }
     // Allow self-signed certs in CI/local environments
     if (mod === https) opts.rejectUnauthorized = false
@@ -105,20 +109,26 @@ const fetchJsonOnce = (
         return reject(error)
       }
 
-      let body = ''
-      res.setEncoding('utf8')
-      res.on('data', (chunk) => {
-        body += chunk
-      })
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(body))
-        } catch (error) {
-          // A 200 with unparseable JSON is a contract problem, not a blip.
-          error.retryable = false
+      // #1649: the whole body is buffered and decoded once. Accumulating
+      // `body += chunk` decoded every transport chunk on its own and turned a
+      // code point split across a chunk boundary into two U+FFFD.
+      readResponseText(res).then(
+        (body) => {
+          try {
+            resolve(JSON.parse(body))
+          } catch (error) {
+            // A 200 with unparseable JSON is a contract problem, not a blip.
+            error.retryable = false
+            reject(error)
+          }
+        },
+        (error) => {
+          // A truncated or half-decompressed body is a transport failure; an
+          // undecodable codec is tagged non-retryable where it is detected.
+          if (error.retryable === undefined) error.retryable = true
           reject(error)
-        }
-      })
+        },
+      )
     })
 
     req.on('error', (error) => {

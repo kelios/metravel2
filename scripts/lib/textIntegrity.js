@@ -40,9 +40,13 @@ const detectEncodingCorruption = (sent, got, label = 'text') => {
 }
 
 /**
- * Byte-exact round-trip check for fields the backend stores verbatim (name,
- * meta_description). Not for `description`: the backend sanitizes HTML on save,
- * so a byte compare there yields false positives.
+ * Byte-exact round-trip check for short scalar fields (name, meta_description).
+ *
+ * Deliberately NOT applied to `description`: a byte difference in a rich-text
+ * body is not evidence of encoding damage — the API is free to normalise the
+ * HTML it stores and returns, and the scripts themselves compose it — so a byte
+ * compare there reports differences that are not corruption. Only the U+FFFD
+ * count is diagnostic for a body.
  *
  * @returns {string|null}
  */
@@ -71,8 +75,8 @@ const firstDifferenceIndex = (a, b) => {
  * Verify a batch of round-tripped fields at once.
  *
  * @param {Array<{label: string, sent: *, stored: *, exact?: boolean}>} fields
- *   `exact` marks a field the backend stores verbatim (name, meta_description).
- *   `description` must NOT be exact: the backend sanitizes HTML on save.
+ *   `exact` marks a short scalar field (name, meta_description). `description`
+ *   must NOT be exact — see detectFieldMismatch().
  * @returns {string[]} empty when every field survived the round trip
  */
 const detectStoredTextCorruption = (fields = []) => {

@@ -22,6 +22,7 @@
 // covers URL Inspection. Quota: ~2000 inspections/day, 600/min per property.
 const https = require('https')
 const { getAccessToken } = require('./lib/google-token')
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const {
   ExpectedFailureError,
   UsageError,
@@ -158,7 +159,7 @@ function fetchText(url, hop = 0) {
   return new Promise((resolve, reject) => {
     const opts = {
       timeout: FETCH_TIMEOUT_MS,
-      headers: { 'User-Agent': 'metravel-index-status' },
+      headers: withAcceptEncoding({ 'User-Agent': 'metravel-index-status' }),
     }
     const req = https
       .get(url, opts, (res) => {
@@ -177,13 +178,10 @@ function fetchText(url, hop = 0) {
           res.resume()
           return reject(new Error(`${url} answered HTTP ${res.statusCode}`))
         }
-        let data = ''
-        // Explicit, because `data += chunk` decodes each Buffer on its own: a
-        // Cyrillic article name split across two chunks would come back with
-        // U+FFFD in the middle of the reported title.
-        res.setEncoding('utf8')
-        res.on('data', (c) => (data += c))
-        res.on('end', () => resolve(data))
+        // #1649: buffered whole, decoded once. `data += chunk` decoded each
+        // Buffer on its own, so a Cyrillic article name split across two chunks
+        // came back with U+FFFD in the middle of the reported title.
+        readResponseText(res).then(resolve, reject)
       })
       .on('error', reject)
     req.on('timeout', () => {
@@ -321,19 +319,16 @@ async function inspect(token, site, inspectionUrl) {
     method: 'POST',
     hostname: 'searchconsole.googleapis.com',
     path: '/v1/urlInspection/index:inspect',
-    headers: {
+    headers: withAcceptEncoding({
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(body),
-    },
+    }),
     timeout: FETCH_TIMEOUT_MS,
   }
   return new Promise((resolve, reject) => {
     const req = https.request(options, (res) => {
-      let data = ''
-      res.setEncoding('utf8')
-      res.on('data', (c) => (data += c))
-      res.on('end', () => {
+      readResponseText(res).then((data) => {
         if (res.statusCode === 200) {
           try {
             resolve({ ok: true, result: JSON.parse(data) })
@@ -343,7 +338,7 @@ async function inspect(token, site, inspectionUrl) {
         } else {
           resolve({ ok: false, status: res.statusCode, body: data })
         }
-      })
+      }, reject)
     })
     req.on('error', reject)
     req.on('timeout', () => {

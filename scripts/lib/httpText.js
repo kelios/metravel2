@@ -29,8 +29,6 @@ const zlib = require('zlib')
 
 /** Encodings this module can actually decompress — what clients may advertise */
 const ACCEPT_ENCODING = 'gzip, br'
-/** For call sites that measure transfer bytes and must not be handed a codec */
-const ACCEPT_ENCODING_IDENTITY = 'identity'
 
 /**
  * Merge the advertised encoding into request headers without clobbering an
@@ -107,7 +105,6 @@ const readResponseText = async (res) => decodeHttpBody(await readResponseBuffer(
 
 module.exports = {
   ACCEPT_ENCODING,
-  ACCEPT_ENCODING_IDENTITY,
   decodeHttpBody,
   readResponseBuffer,
   readResponseText,

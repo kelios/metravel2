@@ -31,6 +31,8 @@ const https = require('https');
 const http = require('http');
 
 const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
+const { detectStoredTextCorruption } = require('./lib/textIntegrity');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const SENTINEL = '__draft_placeholder__'; // app's "empty" marker; API rejects blank strings
@@ -234,6 +236,35 @@ function detectRegression(before, after, { expectChanged = false, newDescription
   return problems;
 }
 
+/**
+ * Text the write MANGLED, as opposed to an article that regressed.
+ *
+ * #1649: two U+FFFD replacing one Cyrillic letter move the length by a single
+ * character, so every guard in detectRegression() above waves it through. This
+ * check is separate because its consequence is different: a regression means
+ * "roll this article back and move on", corruption means "the read/write path
+ * is damaging content — stop the batch before it writes 200 more".
+ *
+ * `description` is compared by U+FFFD count only, never byte-exact: a rich-text
+ * body legitimately comes back normalised, so a byte diff there is not evidence
+ * of encoding damage. `meta_description` / `name` are short scalars and are
+ * compared verbatim.
+ */
+function detectCorruption(after, { description = null, meta = null, name = null } = {}) {
+  // The re-read did not hand back an article at all: an empty 200, a proxy's
+  // HTML error page, a body that did not parse. Every field then looks
+  // "missing", and the byte-exact meta/name compare would report corruption —
+  // stopping the whole batch, and blaming UTF-8, for a read that simply failed.
+  // detectRegression() already covers this shape ("description did not persist
+  // as written") and keeps it a per-article rollback.
+  if (!after || typeof after !== 'object' || after.id == null) return [];
+  return detectStoredTextCorruption([
+    { label: 'description', sent: description, stored: after.description },
+    { label: 'meta_description', sent: meta, stored: after.meta_description, exact: true },
+    { label: 'name', sent: name, stored: after.name, exact: true },
+  ]);
+}
+
 function backupFileName(id, ts) {
   return `${id}-${ts}.json`;
 }
@@ -269,11 +300,11 @@ function request(method, urlPath, data) {
       opts.headers['Content-Type'] = 'application/json';
       opts.headers['Content-Length'] = body.length;
     }
+    opts.headers = withAcceptEncoding(opts.headers);
     const req = mod.request(url, opts, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => resolve({ status: res.statusCode, text: buf }));
+      // #1649: whole body buffered, then decoded once — accumulating
+      // `buf += chunk` decoded every transport chunk on its own.
+      readResponseText(res).then((text) => resolve({ status: res.statusCode, text }), reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
@@ -365,6 +396,15 @@ async function main() {
   if (status !== 200 && status !== 201) { console.error(text.slice(0, 500)); process.exit(1); }
 
   const after = await getTravel(id);
+  const corruption = detectCorruption(after, { description: newDesc, meta });
+  if (corruption.length) {
+    console.error(`❌ TEXT CORRUPTION: ${corruption.join('; ')}`);
+    console.error('   Auto-rolling back to original description…');
+    const revert = buildUpsertPayload(detail, { description: oldDesc, meta: detail.meta_description });
+    const rb = await putTravel(revert);
+    console.error(`   rollback PUT → HTTP ${rb.status}`);
+    process.exit(1);
+  }
   const problems = detectRegression(detail, after, { expectChanged: newDesc !== oldDesc, newDescription: newDesc });
   if (problems.length) {
     console.error(`❌ REGRESSION: ${problems.join('; ')}`);
@@ -388,6 +428,7 @@ if (typeof module !== 'undefined' && module.exports) {
     parseArgs,
     composeDescription,
     buildUpsertPayload,
+    detectCorruption,
     detectRegression,
     backupFileName,
     latestBackup,

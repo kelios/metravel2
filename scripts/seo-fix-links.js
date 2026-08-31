@@ -22,7 +22,8 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const https = require('https');
-const { buildUpsertPayload } = require('./seo-edit');
+const { buildUpsertPayload, detectCorruption } = require('./seo-edit');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by').replace(/\/+$/, '') + '/api';
@@ -102,11 +103,11 @@ function request(method, urlPath, data) {
       opts.headers['Content-Type'] = 'application/json';
       opts.headers['Content-Length'] = body.length;
     }
+    opts.headers = withAcceptEncoding(opts.headers);
     const req = mod.request(url, opts, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => resolve({ status: res.statusCode, text: buf }));
+      // #1649: whole body buffered, then decoded once — accumulating
+      // `buf += chunk` decoded every transport chunk on its own.
+      readResponseText(res).then((text) => resolve({ status: res.statusCode, text }), reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
@@ -118,10 +119,15 @@ function request(method, urlPath, data) {
 function getJson(urlPath) {
   return new Promise((resolve, reject) => {
     const url = `${API_BASE}${urlPath}`;
-    https.get(url, { rejectUnauthorized: false }, (res) => {
-      let d = '';
-      res.on('data', (c) => (d += c));
-      res.on('end', () => { try { resolve(JSON.parse(d)); } catch (e) { reject(e); } });
+    // #1649: this read fed the PUT below, and it decoded every transport chunk
+    // on its own — a Cyrillic letter split across a chunk boundary came back as
+    // two U+FFFD and was written straight back into the article.
+    const opts = { rejectUnauthorized: false, headers: withAcceptEncoding() };
+    https.get(url, opts, (res) => {
+      readResponseText(res).then(
+        (text) => { try { resolve(JSON.parse(text)); } catch (e) { reject(e); } },
+        reject,
+      );
     }).on('error', reject);
   });
 }
@@ -257,6 +263,17 @@ async function main() {
     }
     let after;
     try { after = await getJson(`/travels/${t.id}/`); } catch { after = {}; }
+    // #1649: checked before the regression guards below and fatal to the run —
+    // a mangled code point survives every length-based check, and continuing
+    // the batch would write the same damage into every remaining article.
+    const corruption = detectCorruption(after, { description: html });
+    if (corruption.length) {
+      console.error(`  ⛔ #${t.id} TEXT CORRUPTION: ${corruption.join('; ')} — rolling back (${path.basename(backup)})`);
+      await restore(t.id);
+      failed++;
+      console.error('  🛑 batch stopped: the read/write path is mangling UTF-8, remaining articles were not touched.');
+      break;
+    }
     const problems = detectRegression(detail, after, slugMap);
     if (problems.length) {
       console.error(`  ⛔ #${t.id} regression: ${problems.join('; ')} — rolling back (${path.basename(backup)})`);

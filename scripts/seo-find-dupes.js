@@ -26,6 +26,7 @@ const https = require('https');
 const http = require('http');
 
 const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const REPORT = path.join(__dirname, '.seo-dupes-report.json');
@@ -66,15 +67,15 @@ function fetchJson(url, opts = {}) {
     const mod = url.startsWith('https') ? https : http;
     const o = { method: 'GET', timeout: 30000, headers: { 'Cache-Control': 'no-cache' }, ...opts };
     if (mod === https) o.rejectUnauthorized = false;
+    o.headers = withAcceptEncoding(o.headers);
     const req = mod.request(url, o, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => {
+      // #1649: whole body buffered, then decoded once — accumulating
+      // `buf += chunk` decoded every transport chunk on its own.
+      readResponseText(res).then((buf) => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try { resolve(buf ? JSON.parse(buf) : null); } catch { resolve(buf); }
         } else reject(new Error(`HTTP ${res.statusCode} ${url}`));
-      });
+      }, reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout ${url}`)); });

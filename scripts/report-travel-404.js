@@ -53,6 +53,7 @@ const fs = require('fs')
 const path = require('path')
 const https = require('https')
 const { execFileSync } = require('child_process')
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 
 const DEFAULT_ORIGIN = 'https://metravel.by'
 // 'auto' = резолвить имя на проде. Compose v2 при пересоздании переименовал
@@ -426,20 +427,18 @@ function collectDraftSlugs(payload) {
 
 function getJson(url, { token, timeout = 20000 } = {}) {
   return new Promise((resolve, reject) => {
-    const headers = { 'User-Agent': 'metravel-404-report', Accept: 'application/json' }
+    const headers = withAcceptEncoding({ 'User-Agent': 'metravel-404-report', Accept: 'application/json' })
     if (token) headers.Authorization = `Token ${token}`
     const req = https.request(url, { method: 'GET', timeout, headers }, (res) => {
-      let body = ''
-      res.setEncoding('utf8')
-      res.on('data', (chunk) => (body += chunk))
-      res.on('end', () => {
+      // #1649: whole body buffered, then decoded once.
+      readResponseText(res).then((body) => {
         if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`))
         try {
           resolve(JSON.parse(body))
         } catch (e) {
           reject(new Error(`ответ не JSON: ${e.message}`))
         }
-      })
+      }, reject)
     })
     req.on('timeout', () => req.destroy(new Error('timeout')))
     req.on('error', reject)

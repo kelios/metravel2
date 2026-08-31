@@ -166,13 +166,23 @@ describe('withAcceptEncoding', () => {
 })
 
 describe('fetchJson over a real socket', () => {
-  /** Serve `body` as two writes with a gap, so the client sees two chunks. */
-  const startServer = async (body: string, cut: number, compress: boolean) => {
+  /**
+   * Serve `body` as two writes with a gap, so the client sees two chunks.
+   *
+   * `cut` is resolved against the bytes actually put on the wire: gzip of this
+   * fixture is ~170 bytes against ~3.7 kB of plain text, so an offset taken
+   * from the uncompressed payload would sit past the end and the "split" would
+   * be a single write plus an empty one — a test that proves nothing.
+   */
+  const startServer = async (body: string, cutOf: (payload: Buffer) => number, compress: boolean) => {
     const server = http.createServer((req, res) => {
-      const accept = String(req.headers['accept-encoding'] || '')
-      const payload = compress && accept.includes('gzip') ? zlib.gzipSync(Buffer.from(body, 'utf8')) : Buffer.from(body, 'utf8')
+      const gzip = compress && String(req.headers['accept-encoding'] || '').includes('gzip')
+      const payload = gzip ? zlib.gzipSync(Buffer.from(body, 'utf8')) : Buffer.from(body, 'utf8')
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (compress && accept.includes('gzip')) headers['Content-Encoding'] = 'gzip'
+      if (gzip) headers['Content-Encoding'] = 'gzip'
+      const cut = cutOf(payload)
+      expect(cut).toBeGreaterThan(0)
+      expect(cut).toBeLessThan(payload.length)
       res.writeHead(200, headers)
       res.write(payload.subarray(0, cut))
       setTimeout(() => res.end(payload.subarray(cut)), 20)
@@ -183,21 +193,24 @@ describe('fetchJson over a real socket', () => {
   }
 
   const payload = JSON.stringify({ id: 520, description: `${SAMPLE} `.repeat(40) })
+
   /** A byte offset that lands on a UTF-8 continuation byte (0b10xxxxxx). */
-  const cutInsideCodePoint = (() => {
-    const bytes = Buffer.from(payload, 'utf8')
+  const cutInsideCodePoint = (bytes: Buffer): number => {
     for (let index = Math.floor(bytes.length / 2); index < bytes.length; index += 1) {
       if ((bytes[index] & 0xc0) === 0x80) return index
     }
     throw new Error('fixture has no multi-byte character')
-  })()
+  }
 
   it.each([
-    ['identity', false],
-    ['gzip', true],
-  ])('reads an article whole when the wire cuts a letter in half (%s)', async (_name, compress) => {
+    // identity: the cut lands mid-letter, which is the defect itself.
+    // gzip: compressed bytes carry no code points, so the cut only has to land
+    // mid-stream — half a DEFLATE block is just as undecodable on its own.
+    ['identity', false, cutInsideCodePoint],
+    ['gzip', true, (bytes: Buffer) => Math.floor(bytes.length / 2)],
+  ])('reads an article whole when the wire cuts the body in half (%s)', async (_name, compress, cutOf) => {
     const { fetchJson } = require('@/scripts/lib/fetchJson')
-    const { server, url } = await startServer(payload, cutInsideCodePoint, compress as boolean)
+    const { server, url } = await startServer(payload, cutOf as (b: Buffer) => number, compress as boolean)
     try {
       const json = await fetchJson(url)
       expect(json.description).not.toContain('�')

@@ -20,6 +20,7 @@ const http = require('http')
 const https = require('https')
 
 const { fetchJson } = require('./lib/fetchJson')
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const {
   questRouteKey,
   buildQuestCityAliasMap,
@@ -58,10 +59,10 @@ function fetchText(url, redirectCount = 0) {
       url,
       {
         timeout: FETCH_TIMEOUT_MS,
-        headers: {
+        headers: withAcceptEncoding({
           Accept: 'application/xml,text/xml;q=0.9,*/*;q=0.8',
           'User-Agent': 'MeTravelSeoBuild/1.0 (+https://metravel.by)',
-        },
+        }),
       },
       (response) => {
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
@@ -80,12 +81,8 @@ function fetchText(url, redirectCount = 0) {
           return
         }
 
-        let body = ''
-        response.setEncoding('utf8')
-        response.on('data', (chunk) => {
-          body += chunk
-        })
-        response.on('end', () => resolve(body))
+        // #1649: whole body buffered, then decoded once.
+        readResponseText(response).then(resolve, reject)
       },
     )
 

@@ -5,6 +5,7 @@ const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { StringDecoder } = require('node:string_decoder');
 const { acquireBuildLock, releaseBuildLock } = require('./build-lock');
 
 const rootDir = path.join(__dirname, '..');
@@ -394,9 +395,13 @@ function sanitizedEnv(baseEnv) {
 
 function pipeBuildOutput(stream, target) {
   let pending = '';
+  // #1649: `String(chunk)` decoded every pipe chunk on its own, so a Cyrillic
+  // build message split across a chunk boundary printed U+FFFD. StringDecoder
+  // carries the incomplete tail over to the next chunk.
+  const decoder = new StringDecoder('utf8');
 
   stream.on('data', (chunk) => {
-    pending += String(chunk);
+    pending += decoder.write(chunk);
     const parts = pending.split(/(\r?\n)/);
     pending = '';
 
@@ -415,6 +420,9 @@ function pipeBuildOutput(stream, target) {
   });
 
   stream.on('end', () => {
+    // decoder.end() flushes a trailing incomplete sequence; without it a build
+    // whose last bytes are half a character would drop them silently.
+    pending += decoder.end();
     if (!pending) return;
     if (!pending.includes(BENIGN_EXPO_EXPORT_SHUTDOWN_WARNING)) {
       target.write(pending);

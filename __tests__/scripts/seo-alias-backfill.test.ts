@@ -198,4 +198,31 @@ describe('seo-alias-backfill: защита контента', () => {
   it('чистое переименование повреждением не считается', () => {
     expect(detectDamage(travel(), travel({ name: 'другое имя', slug: 'drugoi-slug' }))).toEqual([])
   })
+
+  // #1649: оба PUT возвращают описание как есть, поэтому испорченное чтение
+  // записалось бы в статью. Длина при этом почти не меняется — detectDamage
+  // такое пропускает, а пакет обязан встать, а не идти к следующей паре.
+  it('останавливает пакет, если описание вернулось с U+FFFD', async () => {
+    const clean = 'Усадьба Трабутишки и Голубые озёра: маршрут по Беларуси.'
+    const backend = fakeBackend(travel({ description: clean.repeat(40) }))
+    const readTravel = backend.deps.getTravel
+    let reads = 0
+    backend.deps.getTravel = async () => {
+      reads += 1
+      const detail = await readTravel()
+      // Третье чтение — то самое «перечитали после записи».
+      if (reads < 3) return detail
+      return { ...detail, description: String(detail.description).replace('озёра', 'озе\uFFFD\uFFFDра') }
+    }
+
+    const result = await run(backend)
+
+    expect(result.status).toBe('failed')
+    expect(result.fatal).toBe(true)
+    expect(result.note).toContain('U+FFFD')
+    expect(result.note).toContain('откачено')
+    // Два шага алиаса + обязательная запись чистого pre-write snapshot.
+    expect(backend.calls).toHaveLength(3)
+    expect(backend.calls[2]).toBe(travel().name)
+  })
 })

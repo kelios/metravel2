@@ -52,6 +52,8 @@ const os = require('os')
 const path = require('path')
 const https = require('https')
 const { buildUpsertPayload } = require('./seo-edit')
+const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
+const { detectStoredTextCorruption } = require('./lib/textIntegrity')
 const {
   UsageError,
   parseCliArgs,
@@ -139,12 +141,13 @@ function request(method, urlPath, data, { auth = true, followRedirect = false } 
       opts.headers['Content-Type'] = 'application/json'
       opts.headers['Content-Length'] = body.length
     }
+    opts.headers = withAcceptEncoding(opts.headers)
     const req = https.request(url, opts, (res) => {
-      let buf = ''
-      res.setEncoding('utf8')
-      res.on('data', (c) => (buf += c))
-      res.on('end', () =>
-        resolve({ status: res.statusCode, text: buf, location: res.headers.location || '' })
+      // #1649: whole body buffered, then decoded once — accumulating
+      // `buf += chunk` decoded every transport chunk on its own.
+      readResponseText(res).then(
+        (text) => resolve({ status: res.statusCode, text, location: res.headers.location || '' }),
+        reject
       )
     })
     req.on('error', reject)
@@ -316,6 +319,35 @@ async function backfillOne({ id, oldSlug }, options = {}) {
   if (damageB.length) {
     return { status: 'failed', note: `после возврата: ${damageB.join('; ')} — бэкап ${path.basename(backup)}` }
   }
+  // #1649: оба PUT возвращают описание обратно как есть, поэтому испорченное
+  // чтение записалось бы в статью. detectDamage считает длину — подмена буквы
+  // на два U+FFFD её не меняет, значит нужна отдельная проверка. Она fatal:
+  // продолжать пакет, который портит текст, нельзя.
+  // Только описание: заголовок уже сверен побайтово выше (`after.name !==
+  // currentName` → failed), туда эта проверка не дотянется ни при каком ответе.
+  const corruption = detectStoredTextCorruption([
+    { label: 'описание', sent: before.description, stored: after.description },
+  ])
+  if (corruption.length) {
+    // Stopping protects the remaining batch, but the current article has
+    // already passed through two PUTs. Restore from the clean pre-write
+    // snapshot as well; otherwise the guard reports damage while leaving that
+    // damage live until an operator notices and applies the backup manually.
+    const rollback = await putName(before, currentName).catch((error) => ({
+      status: 0,
+      text: error instanceof Error ? error.message : String(error),
+    }))
+    const rollbackOk = rollback.status === 200 || rollback.status === 201
+    return {
+      status: 'failed',
+      fatal: true,
+      note:
+        `текст испорчен при записи: ${corruption.join('; ')} — ` +
+        (rollbackOk
+          ? `откачено из чистого snapshot, бэкап ${path.basename(backup)}`
+          : `ROLLBACK FAILED (HTTP ${rollback.status}: ${String(rollback.text || '').slice(0, 160)}) — восстанови из ${path.basename(backup)}`),
+    }
+  }
 
   const alias = await verifyAlias(oldSlug, currentSlug)
   if (!alias.ok) {
@@ -359,6 +391,10 @@ async function main() {
     const icon = result.status === 'ok' ? '✅' : result.status === 'skipped' ? '⏭️ ' : '❌'
     console.log(`${icon} #${entry.id} ${result.note}`)
     results.push({ ...entry, ...result })
+    if (result.fatal) {
+      console.error('🛑 пакет остановлен: путь чтения/записи портит UTF-8, остальные пары не тронуты.')
+      break
+    }
   }
 
   const ok = results.filter((r) => r.status === 'ok').length
