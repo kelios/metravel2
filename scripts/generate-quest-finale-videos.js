@@ -193,6 +193,10 @@ const QUESTS = [
     { questId: 'antwerp-thrown-hand', dir: 'antwerpThrownHand', city: 'Антверпен', finaleId: 154 },
     { questId: 'helsingor-sound-toll', dir: 'helsingorSoundToll', city: 'Хельсингёр', finaleId: 155 },
     { questId: 'odense-ugly-duckling', dir: 'odenseUglyDuckling', city: 'Оденсе', finaleId: 156 },
+    { questId: 'zagreb-gric-vjestice', dir: 'zagrebGricVjestice', city: 'Загреб', finaleId: 163 },
+    { questId: 'split-dioklecijanova-palaca', dir: 'splitDioklecijanovaPalaca', city: 'Сплит', finaleId: 164 },
+    { questId: 'ogulin-grad-bajki', dir: 'ogulinGradBajki', city: 'Огулин', finaleId: 165 },
+    { questId: 'slunj-rastoke-selo-na-slapovima', dir: 'slunjRastokeSeloNaSlapovima', city: 'Слунь', finaleId: 166 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
