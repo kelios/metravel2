@@ -21,11 +21,11 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import { useAuthStore } from '@/stores/authStore';
 import { createQuestResultCard, type QuestResultCard } from '@/api/questsShare';
 import {
@@ -91,6 +91,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const username = useAuthStore((s) => s.username);
 
@@ -168,10 +169,16 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
     [subject],
   );
 
+  // Текст сообщения называет результат и домен: получатель видит, что именно
+  // пройдено, ещё до перехода по ссылке (#1667).
   const shareCaption = useCallback(
     (): string =>
-      t('questShareStatic:finaleShare.shareText', { title: subject?.questTitle ?? '' }),
-    [subject?.questTitle, t],
+      t('questShareStatic:finaleShare.shareText', {
+        title: subject?.questTitle ?? '',
+        done: subject?.pointsDone ?? 0,
+        total: subject?.pointsTotal ?? 0,
+      }),
+    [subject?.pointsDone, subject?.pointsTotal, subject?.questTitle, t],
   );
 
   const handleCopy = useCallback(async () => {
@@ -277,7 +284,10 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
 
   type ChannelButton = {
     key: ShareChannelKey;
+    /** Полное действие: доступное имя кнопки для screen reader. */
     label: string;
+    /** Короткая подпись под иконкой — влезает в колонку 44dp на 375pt. */
+    shortLabel: string;
     icon: keyof typeof Feather.glyphMap;
     onPress: () => void;
     color: string;
@@ -287,6 +297,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
     {
       key: 'copy',
       label: t('questShareStatic:finaleShare.channel.copy'),
+      shortLabel: t('questShareStatic:finaleShare.channelShort.copy'),
       icon: 'link',
       onPress: handleCopy,
       color: colors.textMuted,
@@ -294,6 +305,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
     {
       key: 'telegram',
       label: t('questShareStatic:finaleShare.channel.telegram'),
+      shortLabel: t('questShareStatic:finaleShare.channelShort.telegram'),
       icon: 'send',
       onPress: handleTelegram,
       color: colors.accent ?? colors.primary,
@@ -304,6 +316,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
     channels.push({
       key: 'download',
       label: t('questShareStatic:finaleShare.channel.download'),
+      shortLabel: t('questShareStatic:finaleShare.channelShort.download'),
       icon: 'download',
       onPress: handleDownload,
       color: colors.success ?? colors.primary,
@@ -314,6 +327,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
     channels.push({
       key: 'instagram',
       label: t('questShareStatic:finaleShare.channel.instagram'),
+      shortLabel: t('questShareStatic:finaleShare.channelShort.instagram'),
       icon: 'instagram',
       onPress: handleInstagram,
       color: colors.primaryText,
@@ -324,19 +338,12 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
     channels.push({
       key: 'native',
       label: t('questShareStatic:finaleShare.channel.native'),
+      shortLabel: t('questShareStatic:finaleShare.channelShort.native'),
       icon: 'share-2',
       onPress: handleNativeShare,
       color: colors.primaryText,
     });
   }
-
-  const channelActions: ToolAction[] = channels.map((channel) => ({
-    key: channel.key,
-    label: channel.label,
-    icon: <Feather name={channel.icon} size={18} color={channel.color} />,
-    onPress: channel.onPress,
-    testID: `quest-share-channel-${channel.key}`,
-  }));
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -345,7 +352,14 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
         onPress={onClose}
         accessibilityLabel={t('questShareStatic:finaleShare.close')}
       >
-        <Pressable style={styles.sheet} onPress={() => {}}>
+        <Pressable
+          style={[
+            styles.sheet,
+            { paddingBottom: Math.max(insets.bottom, DESIGN_TOKENS.spacing.lg) },
+          ]}
+          onPress={() => {}}
+          testID="quest-share-sheet"
+        >
           <View style={styles.header}>
             <Text style={styles.heading}>{t('questShareStatic:finaleShare.sheetTitle')}</Text>
             <Pressable
@@ -395,7 +409,25 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
             </View>
           ) : null}
 
-          <ToolActionsRow actions={channelActions} style={styles.channels} />
+          <View style={styles.channels}>
+            {channels.map((channel) => (
+              <Pressable
+                key={channel.key}
+                style={({ pressed }) => [styles.channel, pressed && styles.channelPressed]}
+                onPress={channel.onPress}
+                accessibilityRole="button"
+                accessibilityLabel={channel.label}
+                testID={`quest-share-channel-${channel.key}`}
+              >
+                <View style={styles.channelIcon}>
+                  <Feather name={channel.icon} size={18} color={channel.color} />
+                </View>
+                <Text style={styles.channelLabel} numberOfLines={1}>
+                  {channel.shortLabel}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -409,14 +441,19 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.overlay,
       justifyContent: 'flex-end',
     },
+    // Лист держится в нижней трети экрана телефона: подписи каналов добавили
+    // высоту, поэтому служебные отступы ужаты до sm (#1667). Нижняя кромка
+    // считается в рендере: `Modal` не приносит системных вставок, и без
+    // `Math.max(insets.bottom, ...)` подписи каналов уходят под home indicator
+    // iPhone (34pt) и жестовую панель Android — тот же приём, что в
+    // `components/navigation/OpenInMapsSheet.tsx`.
     sheet: {
       backgroundColor: colors.background,
       borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
       borderTopRightRadius: DESIGN_TOKENS.radii.xl,
-      paddingTop: DESIGN_TOKENS.spacing.md,
-      paddingBottom: DESIGN_TOKENS.spacing.xxl,
+      paddingTop: DESIGN_TOKENS.spacing.sm,
       paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      gap: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.sm,
     },
     header: {
       flexDirection: 'row',
@@ -461,8 +498,38 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.text,
       fontSize: DESIGN_TOKENS.typography.sizes.md,
     },
+    // Каналы — первичное действие листа, поэтому подпись видна на любой ширине
+    // (docs/RULES.md → UI rules: подпись убирают только у вторичных инструментов).
     channels: {
+      flexDirection: 'row',
       justifyContent: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    channel: {
+      flex: 1,
+      maxWidth: 96,
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xxs,
+    },
+    // Тап по каналу уводит во внешнее приложение: подтверждение нажатия — здесь
+    // единственная мгновенная обратная связь (у `ui/Button` она была из коробки).
+    channelPressed: {
+      opacity: 0.6,
+    },
+    channelIcon: {
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.backgroundSecondary,
+    },
+    channelLabel: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textMuted,
+      textAlign: 'center',
     },
   });
 

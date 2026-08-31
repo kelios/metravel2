@@ -1,6 +1,6 @@
 import React from 'react'
 import { act, render, fireEvent, waitFor } from '@testing-library/react-native'
-import { Share } from 'react-native'
+import { Share, StyleSheet } from 'react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Верификация вирусной петли финала ([INV2-02], #1472) без браузера: живой финал
@@ -49,6 +49,20 @@ jest.mock('expo-sharing', () => ({
   isAvailableAsync: jest.fn().mockResolvedValue(true),
   shareAsync: jest.fn().mockResolvedValue(undefined),
 }))
+// Глобальный мок safe-area отдаёт нули, поэтому нижнюю кромку листа он бы не
+// проверил: подставляем вставку iPhone с home indicator (#1667).
+jest.mock('react-native-safe-area-context', () => {
+  const insets = { top: 0, right: 0, bottom: 34, left: 0 }
+  const ReactModule = jest.requireActual('react') as typeof React
+  const mod = {
+    __esModule: true,
+    SafeAreaProvider: ({ children }: any) => children,
+    SafeAreaView: ({ children }: any) => children,
+    SafeAreaInsetsContext: ReactModule.createContext(insets),
+    useSafeAreaInsets: () => insets,
+  }
+  return { ...mod, default: mod }
+})
 jest.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: any) => unknown) =>
     selector({ username: 'Аня', userId: '1', isAuthenticated: true }),
@@ -57,6 +71,7 @@ jest.mock('@/stores/authStore', () => ({
 import { QuestFinalePanel } from '@/components/quests/questWizardSections'
 import { createQuestResultCard } from '@/api/questsShare'
 import { trackQuestShareClick } from '@/utils/gamificationAnalytics'
+import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import * as Clipboard from 'expo-clipboard'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as Sharing from 'expo-sharing'
@@ -66,6 +81,7 @@ const mockTrack = trackQuestShareClick as jest.MockedFunction<typeof trackQuestS
 const mockСlipboardSet = Clipboard.setStringAsync as jest.MockedFunction<typeof Clipboard.setStringAsync>
 const mockDownloadImage = FileSystem.downloadAsync as jest.MockedFunction<typeof FileSystem.downloadAsync>
 const mockShareImage = Sharing.shareAsync as jest.MockedFunction<typeof Sharing.shareAsync>
+const mockOpenExternal = openExternalUrlInNewTab as jest.MockedFunction<typeof openExternalUrlInNewTab>
 
 const styles = {
   completionScreen: {},
@@ -112,6 +128,7 @@ beforeEach(() => {
   mockСlipboardSet.mockClear()
   mockDownloadImage.mockClear()
   mockShareImage.mockClear()
+  mockOpenExternal.mockClear()
   jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction })
 })
 
@@ -234,5 +251,43 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
     fireEvent.press(copy)
     await waitFor(() => expect(mockСlipboardSet).toHaveBeenCalled())
     expect(mockСlipboardSet.mock.calls.at(-1)?.[0]).toContain('/quests/result/new')
+  })
+
+  // #1667: каналы листа — первичное действие, подпись обязана быть видимой на
+  // любой ширине, а текст сообщения — называть результат и домен.
+  it('labels every share channel and sends a human-readable caption with the domain', async () => {
+    mockCreateCard.mockRejectedValue(new Error('no backend yet'))
+    const { getByTestId, getByText } = renderCompletedFinale()
+
+    fireEvent.press(getByTestId('quest-finale-share'))
+    await waitFor(() => getByTestId('quest-share-channel-copy'))
+
+    // Подписи каналов видимы как текст, а не только в accessibilityLabel.
+    expect(getByText('Ссылка')).toBeTruthy()
+    expect(getByText('Telegram')).toBeTruthy()
+
+    fireEvent.press(getByTestId('quest-share-channel-telegram'))
+    await waitFor(() => expect(mockOpenExternal).toHaveBeenCalled())
+
+    const telegramUrl = String(mockOpenExternal.mock.calls.at(-1)?.[0])
+    const caption = decodeURIComponent(telegramUrl.split('&text=')[1] ?? '')
+    expect(caption).toContain('Минский шифр')
+    expect(caption).toContain('8 из 8')
+    expect(caption).toContain('metravel.by')
+    expect(caption).not.toContain('попробуй и ты')
+  })
+
+  // #1667: подписи каналов сделали ряд выше и он стал нижним элементом листа.
+  // `Modal` не приносит системных вставок, поэтому зазор под home indicator
+  // iPhone и жестовой панелью Android считается в рендере.
+  it('keeps the channel row clear of the system inset at the bottom edge', async () => {
+    mockCreateCard.mockRejectedValue(new Error('no backend yet'))
+    const { getByTestId } = renderCompletedFinale()
+
+    fireEvent.press(getByTestId('quest-finale-share'))
+    await waitFor(() => getByTestId('quest-share-channel-copy'))
+
+    const sheet = StyleSheet.flatten(getByTestId('quest-share-sheet').props.style)
+    expect(sheet.paddingBottom).toBe(34)
   })
 })
