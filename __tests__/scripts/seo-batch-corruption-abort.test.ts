@@ -169,13 +169,21 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
         { id: SECOND, name: 'Новое имя второй' },
       ])
       const stub = await startStubServer(serverSource(options), dir)
+      // Registered as a net, but stopped as soon as this run is done with it:
+      // the writes are read below, so nothing needs the server afterwards, and
+      // leaving all five to afterAll keeps five node processes on listening
+      // sockets for the whole file.
       stubs.push(stub)
-      const result = runCli(process.execPath, ['scripts/seo-rename.js', '--map-file', mapFile], {
-        cwd: ROOT,
-        env: { METRAVEL_API: stub.origin, METRAVEL_TOKEN: 'stub-token' },
-      })
-      const writes = (await getJson(`${stub.origin}/__writes`)) as Run['writes']
-      return { result, writes }
+      try {
+        const result = runCli(process.execPath, ['scripts/seo-rename.js', '--map-file', mapFile], {
+          cwd: ROOT,
+          env: { METRAVEL_API: stub.origin, METRAVEL_TOKEN: 'stub-token' },
+        })
+        const writes = (await getJson(`${stub.origin}/__writes`)) as Run['writes']
+        return { result, writes }
+      } finally {
+        stub.stop()
+      }
     } finally {
       removeDir(dir)
     }
@@ -198,6 +206,9 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
   }, 60000)
 
   afterAll(() => {
+    // Each run already stopped its own stub in its own finally; this only
+    // catches a run that never got there at all — a hung request that times the
+    // hook out leaves that finally pending. kill() on a dead child is a no-op.
     for (const stub of stubs) stub.stop()
     // The spawned CLI appends to the TRACKED redirect manifest as soon as one
     // rename lands — which is precisely what happens when the abort gate
@@ -264,9 +275,10 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
   it('reports, not process.exit()s, when the rollback after a REGRESSION fails', () => {
     // The other rollback caller. It used to call restoreFromBackup() without
     // `exitOnFailure: false`, so a non-2xx answer killed the run from inside:
-    // the summary — and, in a batch where earlier entries had landed, the 301s
-    // that keep their old slugs alive — never reached disk, and no line named
-    // the article now live under its new title.
+    // the summary — and, in a batch where earlier entries had landed, the
+    // manifest pairs seo-fix-links.js needs — never reached disk, and no line
+    // named the article now live under its new title. (Those old slugs keep
+    // answering the backend's 301 either way; see the script's header.)
     expect(regressedRollback.result.status).toBe(1)
     expect(regressedRollback.result.stderr).toContain('regression: slug did NOT change')
     expect(regressedRollback.result.stderr).toContain('rollback FAILED (HTTP 500)')

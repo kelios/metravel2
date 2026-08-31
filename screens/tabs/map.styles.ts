@@ -2,6 +2,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import { LAYOUT, METRICS } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';
+import { webViewStyle } from '@/utils/webProps';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
 const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 45; // 360px
@@ -229,7 +230,7 @@ export const getStyles = (
         borderColor: themedColors.borderLight,
         zIndex: 1004,
         ...(Platform.OS === 'web'
-          ? ({ boxShadow: themedColors.boxShadows.card } as any)
+          ? webViewStyle({ boxShadow: themedColors.boxShadows.card })
           : shadowMedium),
       },
       pageHeadingCapsuleText: {

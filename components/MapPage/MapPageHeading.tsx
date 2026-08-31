@@ -3,6 +3,7 @@ import { Platform, View } from 'react-native'
 
 import { Heading } from '@/components/ui/Typography'
 import { getMapSeoTitle } from '@/constants/mapSeo'
+import { webDataSetProps } from '@/utils/webProps'
 
 /**
  * Where the map page heading is currently mounted.
@@ -19,6 +20,18 @@ const SSG_HEADING_SELECTOR = 'h1[data-ssg-travel-h1="true"]'
 const SITE_NAME_SUFFIX = /\s*\|\s*MeTravel\s*$/i
 
 const IS_WEB = Platform.OS === 'web'
+
+/**
+ * react-native-web forwards only an allowlist of props, so a raw `data-*` never
+ * reaches the DOM — `dataSet` is the supported channel and is what keeps
+ * `data-map-page-heading` readable by e2e selectors.
+ *
+ * Built through `webDataSetProps`, the project's typed RN-Web bridge, so the
+ * attribute survives without an `any` cast at the call site. Hoisted to module
+ * scope because both values are constant: one object per module, not per render.
+ */
+const PANEL_HEAD_DATA_SET = webDataSetProps({ mapPageHeading: 'panel-head' })
+const MAP_CORNER_DATA_SET = webDataSetProps({ mapPageHeading: 'map-corner' })
 
 /**
  * Drop the static pre-hydration heading injected into the raw HTML by
@@ -71,7 +84,7 @@ function MapPageHeadingImpl({ anchor, styles }: MapPageHeadingProps) {
       <Heading
         level={1}
         style={styles.pageHeadingInPanel}
-        {...({ dataSet: { mapPageHeading: 'panel-head' } } as any)}
+        {...PANEL_HEAD_DATA_SET}
       >
         {text}
       </Heading>
@@ -82,7 +95,7 @@ function MapPageHeadingImpl({ anchor, styles }: MapPageHeadingProps) {
     <View
       style={styles.pageHeadingCapsule}
       pointerEvents="none"
-      {...({ dataSet: { mapPageHeading: 'map-corner' } } as any)}
+      {...MAP_CORNER_DATA_SET}
     >
       <Heading level={1} style={styles.pageHeadingCapsuleText}>
         {text}

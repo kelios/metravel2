@@ -1,7 +1,20 @@
 #!/usr/bin/env node
 /**
  * Safe title (name) renamer for published travels — the ONE flow allowed to
- * change a travel's slug, because it pairs every rename with a 301 redirect.
+ * change a travel's slug, because it verifies the rewrite and records the
+ * old→new pair the rest of the SEO tooling reads.
+ *
+ * Where the 301 actually comes from: the BACKEND, not this script.
+ * `Travel.save()` (../metravel-backend/travels/models.py:610-631) writes a
+ * `TravelSlugRedirect` unconditionally whenever the slug changes, so the PUT in
+ * step 2 already leaves the old URL answering a real 301 — before step 3 runs,
+ * and regardless of whether steps 3-4 succeed at all. The public route serves
+ * that alias while the travel stays published and moderated
+ * (travels/views_public.py:23-29) — which is what step 3 re-checks. #1083 is
+ * explicit that a frontend static stub is NOT a production redirect, so do not
+ * diagnose a «lost redirect» here without checking the backend alias first: an
+ * earlier version of this very docstring caused exactly that misdiagnosis
+ * (docs/PROBLEM_MEMORY.md → SEO-SSR-001).
  *
  * Why a separate tool from seo-edit.js: seo-edit treats a slug change as a
  * regression and auto-rolls-back. Renaming a title intentionally changes the
@@ -11,12 +24,19 @@
  *   1. GET /api/travels/{id}/ and BACK UP the full detail.
  *   2. PUT /api/travels/upsert/ with the new name; every other field is echoed
  *      via buildUpsertPayload (publish/moderation/description/gallery/points
- *      preserved exactly as seo-edit does).
+ *      preserved exactly as seo-edit does). The backend records the slug alias
+ *      here, as part of this write.
  *   3. VERIFY the re-GET: name applied, slug actually changed, publish &
  *      moderation still true, gallery/points did not shrink, description length
  *      preserved. On any regression → PUT the original back and skip the entry.
- *   4. Record {from: oldSlug, to: newSlug} into scripts/seo-redirects.json so
- *      generate-seo-pages.js emits a soft-301 stub for the old URL.
+ *   4. Record {from: oldSlug, to: newSlug} into scripts/seo-redirects.json.
+ *      Bookkeeping, not the redirect: seo-fix-links.js reads it to rewrite
+ *      internal links off the old slug, generate-seo-pages.js emits a
+ *      crawl-facing soft-301 stub from it, and report-travel-404.js reads it to
+ *      tell a known pair from a fresh 404 candidate. The manifest is knowingly
+ *      incomplete — seo-alias-backfill.js never writes it and several backend
+ *      migrations created aliases directly — so it is not a census of live
+ *      aliases.
  *
  * `--help` prints USAGE below; the arguments themselves go through the shared SEO
  * CLI contract (#1391), so a mistyped `--dry-runn` is a usage error instead of a
@@ -226,6 +246,15 @@ function appendRedirects(pairs) {
 }
 
 /**
+ * The single wording for «the rollback did not land, so production may still be
+ * serving the new title». Both rollback branches in renameOne() report it and
+ * each is pinned by its own test, so two copies let an edit to one go green
+ * while silently diverging from the other.
+ */
+const liveWarning = (name, backup, reason) =>
+  `rollback FAILED (${reason}) — «${name}» may still be live, restore from ${path.basename(backup)}`;
+
+/**
  * Roll one travel back from its latest backup.
  *
  * `exitOnFailure` is the CLI `--restore` contract: an operator who asked for a
@@ -313,7 +342,7 @@ async function renameOne({ id, name }, dryRun) {
         ? corruption
         : [
             ...corruption,
-            `rollback FAILED (${rollback.reason}) — «${name}» may still be live, restore from ${path.basename(backup)}`,
+            liveWarning(name, backup, rollback.reason),
           ],
       `#${id}`,
     );
@@ -323,16 +352,20 @@ async function renameOne({ id, name }, dryRun) {
     console.error(`  ⛔ #${id} regression: ${problems.join('; ')} — rolling back (backup ${path.basename(backup)})`);
     // Same `exitOnFailure: false` as the corruption branch, for the same two
     // reasons: process.exit() in here kills the run before main() writes the
-    // 301s of the renames that DID land — turning a reported failure into live
-    // 404s on the slugs this batch already changed — and it prints no line
+    // manifest for the renames that DID land — losing the pairs seo-fix-links.js
+    // needs to move internal links off those old slugs — and it prints no line
     // naming the article that is now live under the new title. The rejecting
     // half was worse still: it left the batch running.
+    //
+    // The old slugs themselves keep answering 301 either way: the backend wrote
+    // their aliases during the PUT (see the header). What is at stake here is
+    // the bookkeeping, not the redirect.
     const rollback = await restoreFromBackup(id, { exitOnFailure: false })
       .catch((error) => ({ ok: false, status: 0, reason: error.message }));
     if (rollback.ok) return { outcome: 'failed' };
     return {
       outcome: 'failed',
-      abort: `rollback FAILED (${rollback.reason}) — «${name}» may still be live, restore from ${path.basename(backup)}`,
+      abort: liveWarning(name, backup, rollback.reason),
     };
   }
   console.log(`  ✅ #${id} "${name}"  slug ${oldSlug} → ${after.slug}  (pub=${after.publish}, gal=${(after.gallery || []).length}, pts=${(after.coordsMeTravel || []).length}, desc=${(after.description || '').length})`);
@@ -390,8 +423,10 @@ async function main() {
     }
   }
 
-  // The redirects of the renames that DID land still belong in the manifest —
-  // they happened, and dropping them would leave live 404s behind.
+  // The pairs of the renames that DID land still belong in the manifest — they
+  // happened, and dropping them leaves seo-fix-links.js unable to move internal
+  // links off those old slugs. The slugs themselves keep answering the backend's
+  // 301 either way (see the header): what is lost is the bookkeeping, not a URL.
   if (!dryRun && pairs.length) {
     appendRedirects(pairs);
     console.log(`\n📝 Added ${pairs.length} redirect(s) to ${path.relative(process.cwd(), MANIFEST)}`);
