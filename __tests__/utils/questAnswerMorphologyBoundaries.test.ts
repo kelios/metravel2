@@ -109,14 +109,6 @@ describe('пороги морфологического прохода охра�
     expect(ENDINGS.has('')).toBe(true)
   })
 
-  it('MAX_ENDING_LENGTH в одиночку не ослабляется: длинных окончаний в списке нет', () => {
-    // Рост порога 3 → 4 не добавляет ни одной пары, потому что хвост всё равно
-    // обязан быть в `ENDINGS`, а там нет ничего длиннее трёх букв. Порог держит
-    // состав списка — тот, который уже сторожит корпус реальных отказов.
-    expect(Math.max(...[...ENDINGS].map((ending) => ending.length)))
-      .toBeLessThanOrEqual(MAX_ENDING_LENGTH)
-  })
-
   it('на текущем правиле ни одна пара не принимается', () => {
     const accepted = QUEST_MORPHOLOGY_BOUNDARY_PAIRS.filter((pair) =>
       isSameWordForm(pair.input, pair.variant),

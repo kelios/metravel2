@@ -37,7 +37,7 @@
  * потеряла нулевое окончание, и тест «доказал», что `MIN_WORD_LENGTH` ничего не
  * держит, хотя на настоящем списке держит.
  */
-export const ENDINGS = new Set([
+export const ENDINGS: ReadonlySet<string> = new Set([
     '',
     // существительные, RU
     'а', 'я', 'ы', 'и', 'у', 'ю', 'е', 'о', 'ь', 'й',
