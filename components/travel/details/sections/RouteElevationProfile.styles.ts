@@ -235,10 +235,33 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       padding: DESIGN_TOKENS.spacing.sm,
     },
+    // На узком экране три карточки в ряд давали каждой ~91px, из которых под
+    // подпись оставалось 65px: название точки («Минск, площадь Победы» — 147px)
+    // схлопывалось до нечитаемого огрызка. Поэтому на компакте карточка занимает
+    // строку целиком и раскладывается в ряд — подпись получает всю ширину, а по
+    // высоте выходит даже меньше прежних трёх строк.
     pointCardCompact: {
       minWidth: 0,
-      flexBasis: '30%',
+      flexBasis: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
+    },
+    pointCardHeaderCompact: {
+      marginBottom: 0,
+      flexShrink: 0,
+      gap: 4,
+    },
+    // Подпись — единственный растяжимый элемент строки: `minWidth: 0` обязателен,
+    // иначе flex-item не сжимается ниже intrinsic-ширины и снова режет текст.
+    pointCardCaptionCompact: {
+      flex: 1,
+      minWidth: 0,
+    },
+    pointCardValueCompact: {
+      marginBottom: 0,
+      flexShrink: 0,
     },
     pointCardHeader: {
       flexDirection: 'row',

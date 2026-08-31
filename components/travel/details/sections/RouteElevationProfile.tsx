@@ -362,7 +362,12 @@ export default function RouteElevationProfile({
                 isCompactLayout && styles.pointCardCompact,
               ]}
             >
-              <View style={styles.pointCardHeader}>
+              <View
+                style={[
+                  styles.pointCardHeader,
+                  isCompactLayout && styles.pointCardHeaderCompact,
+                ]}
+              >
                 <Feather
                   name={
                     point.icon as React.ComponentProps<
@@ -376,15 +381,27 @@ export default function RouteElevationProfile({
                 />
                 <Text style={styles.pointCardLabel}>{point.label}</Text>
               </View>
-              <Text style={styles.pointCardValue}>{point.value}</Text>
+              {!isCompactLayout ? (
+                <Text style={styles.pointCardValue}>{point.value}</Text>
+              ) : null}
               <Text
-                style={styles.pointCardCaption}
+                style={[
+                  styles.pointCardCaption,
+                  isCompactLayout && styles.pointCardCaptionCompact,
+                ]}
                 numberOfLines={isCompactLayout ? 1 : 2}
               >
                 {isCompactLayout
                   ? point.caption.split(' • ')[0]
                   : point.caption}
               </Text>
+              {isCompactLayout ? (
+                <Text
+                  style={[styles.pointCardValue, styles.pointCardValueCompact]}
+                >
+                  {point.value}
+                </Text>
+              ) : null}
             </View>
           ))}
         </View>

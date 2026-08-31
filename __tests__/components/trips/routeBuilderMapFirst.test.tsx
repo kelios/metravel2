@@ -13,6 +13,8 @@ import RouteBuilderMapFirst, {
   type RouteSheetSnap,
 } from '@/components/trips/planning/RouteBuilderMapFirst'
 
+const windowDimensionsMock = require('react-native').useWindowDimensions as jest.Mock
+
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
 
@@ -157,6 +159,10 @@ const renderSheet = (props: Partial<React.ComponentProps<typeof RouteBuilderMapF
   return { ...utils, onSnapChange }
 }
 
+beforeEach(() => {
+  windowDimensionsMock.mockReturnValue({ width: 1024, height: 768, scale: 1, fontScale: 1 })
+})
+
 describe('RouteBuilderMapFirst — шторка маршрута', () => {
   it('держит все четыре секции панели и чипы поверх карты', () => {
     const { getByTestId } = renderSheet()
@@ -242,6 +248,16 @@ describe('RouteBuilderMapFirst — шторка маршрута', () => {
     expect(getByTestId('route-sheet-peek')).toHaveTextContent('Маршрут ещё не построен', {
       exact: false,
     })
+  })
+
+  it('на узком экране убирает дублирующий summary-chip, но оставляет итог в шторке', () => {
+    windowDimensionsMock.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 })
+
+    const { getByTestId, queryByTestId } = renderSheet()
+
+    expect(queryByTestId('route-map-chip-summary')).toBeNull()
+    expect(getByTestId('route-map-chip-transport')).toBeTruthy()
+    expect(getByTestId('route-sheet-peek')).toHaveTextContent('12 км', { exact: false })
   })
 })
 

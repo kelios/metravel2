@@ -112,7 +112,13 @@ function RouteBuilderMapFirst({
   const { t } = useTranslation();
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  // Полоса чипов делит верх карты с кнопками «Слои»/«Развернуть» и получает
+  // ширину экрана минус 118px. На мобильной ширине два чипа туда не влезают,
+  // переносятся и закрывают собой два ряда карты. Сводку в этом случае не
+  // дублируем: та же строка с тем же тапом уже стоит в шапке шита сразу под
+  // картой, поэтому на карте остаётся только выбор транспорта.
+  const showSummaryChip = windowWidth === 0 || windowWidth >= 520;
 
   const stageHeight = useMemo(
     () => clamp(windowHeight - STAGE_CHROME_RESERVE, STAGE_MIN_HEIGHT, STAGE_MAX_HEIGHT),
@@ -294,18 +300,20 @@ function RouteBuilderMapFirst({
             {TRANSPORT_LABEL[transport]}
           </Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('tripsStatic:plan.mapFirst.summaryChip')}
-          onPress={() => openSection('summary')}
-          style={styles.chip}
-          testID="route-map-chip-summary"
-        >
-          <Feather name={summaryIcon} size={14} color={summaryIconColor} />
-          <Text style={styles.chipText} numberOfLines={1}>
-            {summaryLine}
-          </Text>
-        </Pressable>
+        {showSummaryChip ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('tripsStatic:plan.mapFirst.summaryChip')}
+            onPress={() => openSection('summary')}
+            style={styles.chip}
+            testID="route-map-chip-summary"
+          >
+            <Feather name={summaryIcon} size={14} color={summaryIconColor} />
+            <Text style={styles.chipText} numberOfLines={1}>
+              {summaryLine}
+            </Text>
+          </Pressable>
+        ) : null}
         {mapHint ? (
           // Подсказка лежит поверх карты и обязана пропускать тап сквозь себя:
           // иначе она сама съедала бы добавление точки в своей полосе.
@@ -397,7 +405,10 @@ const createStyles = (colors: ThemedColors) =>
     chipsRow: {
       position: 'absolute',
       top: 10,
-      left: 10,
+      // Слева вверху карты стоит вертикальный зум Leaflet («+»/«−»): при left:10
+      // чип ложился поверх него и «+» становился недоступен. Отступаем на ширину
+      // контрола, чтобы зум оставался кликабельным.
+      left: 62,
       // Кнопки карты («Слои», «Развернуть») стоят справа — чипам оставляем место.
       right: 108,
       flexDirection: 'row',

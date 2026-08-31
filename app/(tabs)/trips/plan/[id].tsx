@@ -371,8 +371,17 @@ export default function PlannedTripScreen() {
 
               {trip.isOwner ? (
                 <View style={styles.ownerActions}>
+                  {/* На мобильной ширине пара «Редактировать поездку» + «Удалить
+                      поездку» не влезала в строку и переносилась, съедая два ряда
+                      над маршрутом. Слово «поездку» здесь избыточно — заголовок
+                      поездки стоит прямо над кнопками, — поэтому на компакте
+                      берём короткие подписи и обе кнопки встают в один ряд. */}
                   <Button
-                    label={i18nT('trips:app.tabs.trips.plan.id.redaktirovat_poezdku_535ddda6')}
+                    label={
+                      isMobile
+                        ? i18nT('trips:components.trips.planning.TripPlanRouteMap.redaktirovat_0c9026cb')
+                        : i18nT('trips:app.tabs.trips.plan.id.redaktirovat_poezdku_535ddda6')
+                    }
                     variant="secondary"
                     size="sm"
                     onPress={handleStartEdit}
@@ -380,7 +389,11 @@ export default function PlannedTripScreen() {
                     testID="trip-plan-edit"
                   />
                   <Button
-                    label={i18nT('trips:app.tabs.trips.plan.id.udalit_poezdku_32f59a60')}
+                    label={
+                      isMobile
+                        ? i18nT('trips:app.tabs.trips.plan.id.udalit_eafe069e')
+                        : i18nT('trips:app.tabs.trips.plan.id.udalit_poezdku_32f59a60')
+                    }
                     variant="danger"
                     size="sm"
                     onPress={() => setDeleteConfirmVisible(true)}
