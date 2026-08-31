@@ -252,29 +252,31 @@ function QuestProgressSummary({
   completedCount,
   stepsCount,
   countModel,
-  showText = true,
+  isMobile = false,
+  showBreakdown = true,
 }: {
   styles: any
   progress: number
   completedCount: number
   stepsCount: number
   countModel: QuestCountModel
-  showText?: boolean
+  /** На телефоне счётчик встаёт в строку с полосой, чтобы не отнимать высоту. */
+  isMobile?: boolean
+  /** Разбор «сколько обязательных/необязательных» — вторая строка текста, на телефоне лишняя. */
+  showBreakdown?: boolean
 }) {
   return (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressBar}>
+    <View style={[styles.progressContainer, isMobile && styles.progressRowMobile]}>
+      <View style={[styles.progressBar, isMobile && styles.progressBarMobile]}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
-      {showText && (
-        <Text style={styles.progressText}>
-          {i18nT('quests:components.quests.questWizardShell.progressTasks', {
-            completed: completedCount,
-            total: stepsCount,
-          })}
-        </Text>
-      )}
-      {showText && countModel.source === 'explicit' && (
+      <Text style={[styles.progressText, isMobile && styles.progressTextMobile]}>
+        {i18nT('quests:components.quests.questWizardShell.progressTasks', {
+          completed: completedCount,
+          total: stepsCount,
+        })}
+      </Text>
+      {showBreakdown && countModel.source === 'explicit' && (
         <Text style={styles.progressText}>
           {i18nT('quests:components.quests.questWizardShell.countBreakdown', {
             total: countModel.total,
@@ -560,6 +562,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           </View>
         )}
         <View
+          testID="quest-header-actions"
           style={[
             styles.headerActionRow,
             isMobile && styles.headerActionRowMobile,
@@ -633,14 +636,6 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             hitSlop={12}
             iconSize={13}
           />
-          {isMobile && (
-            <Text style={styles.progressCompact} numberOfLines={1}>
-              {i18nT('quests:components.quests.questWizardShell.progressTasks', {
-                completed: completedCount,
-                total: stepsCount,
-              })}
-            </Text>
-          )}
         </View>
       </View>
 
@@ -658,7 +653,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         completedCount={completedCount}
         stepsCount={stepsCount}
         countModel={countModel}
-        showText={!isMobile}
+        isMobile={isMobile}
+        showBreakdown={!isMobile}
       />
 
       {wideDesktop ? (

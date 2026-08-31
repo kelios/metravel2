@@ -1,7 +1,5 @@
-import type { Page, Route } from '@playwright/test'
-
 import { test, expect } from './fixtures'
-import { preacceptCookies } from './helpers/navigation'
+import { createQuestFixture } from './helpers/questWizardFixture'
 
 /**
  * #1633: ссылка «Пропустить шаг» откладывает точку, но с гейта финала её не
@@ -13,152 +11,26 @@ import { preacceptCookies } from './helpers/navigation'
  * маршрута»), поэтому пункты ТЗ про долг маршрута, возврат к отложенной точке и
  * досрочный финал остались непроверенными. Спека закрывает именно их.
  *
- * Маршрут фиксируется мок-бандлом с РОВНЫМИ перегонами (~100 м): блок далёкой
- * точки (#1432) не должен вмешиваться — он показывается вместо блока долга и
- * увёл бы проверку на другой механизм.
+ * Перегоны маршрута РОВНЫЕ (~100 м): блок далёкой точки (#1432) показывается
+ * ВМЕСТО блока долга и увёл бы проверку на другой механизм.
  */
 
-const QUEST_ID = 'e2e-pending-debt-quest'
-const QUEST_TITLE = 'E2E-квест долга маршрута'
-const PROGRESS_ID = 90_633
+const POSTPONED_STEP_ID = 'debt-step-1'
 
-const questCity = { id: 1, name: 'Минск', lat: 53.9023, lng: 27.5619, country_code: 'BY' }
-
-/** Четыре точки подряд через ~100 м: ни один перегон не проходит порог «далеко». */
-const STEP_COORDS = [
-  { id: 'debt-step-1', lat: 53.9023, lng: 27.5619 },
-  { id: 'debt-step-2', lat: 53.9032, lng: 27.5619 },
-  { id: 'debt-step-3', lat: 53.9041, lng: 27.5619 },
-  { id: 'debt-step-4', lat: 53.905, lng: 27.5619 },
-]
-
-const POSTPONED_STEP_ID = STEP_COORDS[0].id
-const STEP_TOTAL = STEP_COORDS.length
-
-const buildStep = (index: number) => {
-  const point = STEP_COORDS[index]
-  return {
-    id: index + 1,
-    step_id: point.id,
-    title: `Точка ${index + 1}`,
-    location: 'Минск',
-    story: 'Детерминированный шаг для проверки долга маршрута.',
-    task: 'Введите любое слово.',
-    hint: 'Подойдёт любой непустой ответ.',
-    answer_pattern: { type: 'any_text', value: { min_length: 1 } },
-    lat: point.lat,
-    lng: point.lng,
-    maps_url: `https://www.openstreetmap.org/?mlat=${point.lat}&mlon=${point.lng}`,
-    image_url: null,
-    order: index + 1,
-    is_intro: false,
-    country_code: questCity.country_code,
-  }
-}
-
-const questBundle = {
-  id: 91_633,
-  quest_id: QUEST_ID,
-  title: QUEST_TITLE,
-  cover_url: null,
-  steps: STEP_COORDS.map((_, index) => buildStep(index)),
-  finale: { text: 'Квест завершён.', video_url: null, poster_url: null },
-  intro: null,
-  storage_key: QUEST_ID,
-  city: questCity,
-  rating_avg: null,
-  rating_count: 0,
-  user_rating: null,
-  completions_count: 0,
-  is_completed_by_me: false,
-  first_completer: null,
-}
-
-const freshServerRow = () => ({
-  id: PROGRESS_ID,
-  quest: questBundle.id,
-  quest_id: QUEST_ID,
-  current_index: 0,
-  unlocked_index: 0,
-  answers: {} as Record<string, string>,
-  attempts: {} as Record<string, number>,
-  hints: {} as Record<string, boolean>,
-  show_map: true,
-  completed: false,
-  skipped: {} as Record<string, boolean>,
-  early_finish: false,
-  updated_at: '2026-08-01T00:00:00Z',
+const quest = createQuestFixture({
+  questId: 'e2e-pending-debt-quest',
+  questTitle: 'E2E-квест долга маршрута',
+  questNumericId: 91_633,
+  progressId: 90_633,
+  points: [
+    { id: POSTPONED_STEP_ID, lat: 53.9023, lng: 27.5619 },
+    { id: 'debt-step-2', lat: 53.9032, lng: 27.5619 },
+    { id: 'debt-step-3', lat: 53.9041, lng: 27.5619 },
+    { id: 'debt-step-4', lat: 53.905, lng: 27.5619 },
+  ],
 })
 
-const fulfillJson = (route: Route, value: unknown) =>
-  route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) })
-
-/**
- * Мокается только квест. Сессия остаётся настоящей: без неё визард уходит в
- * гостевой режим и гейт после двух бесплатных точек подменяет собой карточку
- * шага — то есть проверялся бы совсем другой экран.
- */
-const mockApis = async (page: Page) => {
-  let serverRow = freshServerRow()
-
-  await page.route(`**/api/quests/by-quest-id/${QUEST_ID}/**`, (route) => fulfillJson(route, questBundle))
-  await page.route(`**/api/quest-progress/quest/${QUEST_ID}/**`, (route) => fulfillJson(route, serverRow))
-  await page.route('**/api/quest-progress/*/', (route) => {
-    let body: Record<string, unknown> | null = null
-    try {
-      body = route.request().postDataJSON()
-    } catch {
-      body = null
-    }
-    if (body) serverRow = { ...serverRow, ...body, updated_at: new Date().toISOString() }
-    return fulfillJson(route, serverRow)
-  })
-  // Телеметрия попыток адресована числовому id мок-квеста, которого в БД нет:
-  // без заглушки прогон писал бы живой POST в базу, на которую нацелен таргет.
-  await page.route('**/api/quest-answer-attempts/bulk/**', (route) =>
-    fulfillJson(route, { accepted: 0, duplicates: 0, rejected: 0 }),
-  )
-}
-
-const seedConsent = async (page: Page) => {
-  await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem(
-        'metravel_action_consents_v1',
-        JSON.stringify({ quest_start: { version: '1', date: new Date().toISOString() } }),
-      )
-    } catch {
-      // ignore
-    }
-  })
-}
-
-const openQuest = async (page: Page) => {
-  await preacceptCookies(page)
-  await page.setViewportSize({ width: 1280, height: 900 })
-  await mockApis(page)
-  await seedConsent(page)
-
-  await page.goto(`/quests/${questCity.id}/${QUEST_ID}`, { waitUntil: 'domcontentloaded' })
-  const startButton = page.getByRole('button', { name: 'Начать квест' })
-  await expect(startButton).toBeVisible({ timeout: 60_000 })
-  await startButton.click()
-}
-
-/**
- * Отвечает на текущую точку и дожидается роста счётчика заданий: визард
- * переключает шаг сам, и без явного ожидания следующий `fill` попадает в поле
- * уже пройденной точки.
- */
-const answerCurrentStep = async (page: Page, value: string, completedAfter: number) => {
-  const answer = page.getByRole('textbox').first()
-  await expect(answer).toBeVisible({ timeout: 30_000 })
-  await answer.fill(value)
-  await page.getByTestId('quest-step-check').click()
-  await expect(page.getByText(`Задания: ${completedAfter} / ${STEP_TOTAL}`)).toBeVisible({
-    timeout: 30_000,
-  })
-}
+const openQuest = (page: import('@playwright/test').Page) => quest.open(page)
 
 /**
  * Откладывает первую точку ссылкой «Пропустить шаг» и доводит игрока до
@@ -166,14 +38,14 @@ const answerCurrentStep = async (page: Page, value: string, completedAfter: numb
  * `exact: true` обязателен: приглашение #1430 «Не сходится? Пропустить шаг и
  * идти дальше» содержит ту же подстроку, но зовёт официальный пропуск.
  */
-const postponeFirstAndReachLastStep = async (page: Page) => {
+const postponeFirstAndReachLastStep = async (page: import('@playwright/test').Page) => {
   await page.getByRole('button', { name: 'Пропустить шаг', exact: true }).click()
   await expect(
     page.getByText('Точка отложена — вернитесь к ней, иначе квест не засчитается'),
   ).toBeVisible({ timeout: 30_000 })
 
-  await answerCurrentStep(page, 'ответ на вторую точку', 1)
-  await answerCurrentStep(page, 'ответ на третью точку', 2)
+  await quest.answerCurrentStep(page, 'ответ на вторую точку', 1)
+  await quest.answerCurrentStep(page, 'ответ на третью точку', 2)
 }
 
 test.describe('Долг маршрута после отложенной точки (#1633)', () => {
@@ -211,7 +83,7 @@ test.describe('Долг маршрута после отложенной точ�
     await postponeFirstAndReachLastStep(page)
 
     await page.getByTestId(`quest-step-pending-go-${POSTPONED_STEP_ID}`).click()
-    await answerCurrentStep(page, 'ответ на отложенную точку', 3)
+    await quest.answerCurrentStep(page, 'ответ на отложенную точку', 3)
 
     // Точки 2 и 3 уже отвечены — проходим их «Далее» до последней.
     await page.getByTestId('quest-step-continue').click()
@@ -219,7 +91,7 @@ test.describe('Долг маршрута после отложенной точ�
 
     // Долга больше нет, и последняя точка ведёт себя как обычная.
     await expect(page.getByTestId('quest-step-pending-notice')).toHaveCount(0)
-    await answerCurrentStep(page, 'ответ на последнюю точку', STEP_TOTAL)
+    await quest.answerCurrentStep(page, 'ответ на последнюю точку', quest.stepTotal)
 
     await expect(page.getByTestId('quest-finale-not-credited')).toHaveCount(0)
     await expect(page.getByText('Квест завершён.')).toBeVisible({ timeout: 30_000 })

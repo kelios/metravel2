@@ -23,10 +23,13 @@ export function useQuestWizardResponsiveModel() {
   // мобильной ветке — `isMobile`, `compactNav` и `screenW < 600` истинны при
   // любой реальной ширине. Следующий кадр приходит с настоящей шириной и
   // перекладывает шапку:
-  //   * счётчик прогресса 9 → 22 px. Это `showText={!isMobile}` в
-  //     `QuestProgressSummary` (`questWizardShell.tsx`): без текста остаётся
-  //     только полоса 3 px плюс отступ 6 px (`questWizardStyles/headerStyles.ts`,
-  //     `progressBar`/`progressText`);
+  //   * счётчик прогресса 9 → 22 px. Ветку выбирает проп `isMobile`
+  //     `QuestProgressSummary` (`questWizardShell.tsx`; раньше это был
+  //     `showText`, гасивший счётчик на телефоне целиком): мобильная ветка
+  //     ставит счётчик В СТРОКУ с полосой, десктопная — под неё и добавляет
+  //     разбор по `showBreakdown`, поэтому высоты у веток разные
+  //     (`questWizardStyles/headerStyles.ts`, `progressRowMobile`/`progressBar`/
+  //     `progressText`);
   //   * лента шагов 1 → 44 px. Ветка `screenW < 600` в `questWizardShell.tsx`
   //     рисует точки вместо пилюль. Оговорка: по стилям обе ветки заявляют 44 px
   //     (`questWizardStyles/stepsNavStyles.ts` — `stepDotTarget` 44x44 и

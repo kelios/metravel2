@@ -139,6 +139,18 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
     toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
 
     progressContainer: { marginBottom: SPACING.xs },
+    // На мобильном счётчик заданий стоит В СТРОКУ с полосой прогресса, а не под
+    // ней: своей строки он не стоит, а из ряда действий его пришлось убрать —
+    // там он отнимал 77px и выдавливал первую иконку за левый край экрана.
+    progressRowMobile: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.sm,
+    },
+    progressBarMobile: {
+        flex: 1,
+        marginBottom: 0,
+    },
     progressBar: {
         height: 3,
         backgroundColor: colors.backgroundTertiary,
@@ -164,13 +176,12 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         fontWeight: '700',
         letterSpacing: -0.1,
     },
-    progressCompact: {
-        fontSize: 11,
-        lineHeight: 36,
-        fontWeight: '700',
-        color: colors.textMuted,
-        letterSpacing: -0.1,
-        marginLeft: SPACING.xs,
+    // Рядом с полосой текст перестаёт быть подписью под ней и читается как
+    // значение: 11px на телефоне для этого мелковат.
+    progressTextMobile: {
+        fontSize: 12,
+        lineHeight: 16,
+        textAlign: 'right',
         flexShrink: 0,
     },
 
@@ -191,6 +202,24 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         flexBasis: '100%',
         flexGrow: 1,
         flexShrink: 0,
-        flexWrap: 'nowrap',
+        // Явно возвращаем перенос базового `headerActionRow`: стоявший здесь
+        // `nowrap` вместе с правым выравниванием переполнял ряд ВЛЕВО. На 375px
+        // восемь контролов требовали ~399px при 343px ширины, и первая кнопка
+        // уезжала за край экрана срезанной. Перенос — единственный способ не
+        // потерять контрол: 44dp съезжать некуда, это минимум тач-таргета (#1274).
+        flexWrap: 'wrap',
+        // Зазор 3px вместо базовых `SPACING.xs`: с четырьмя семь кнопок по 44dp
+        // требуют 332px при 328px ширины на 360px-экране (самый ходовой Android)
+        // и срываются на вторую строку из-за четырёх пикселей. Ноль поставить
+        // нельзя — соседние кружки слипаются в сплошную полосу.
+        gap: 3,
+        // Ряд занимает свою строку целиком, поэтому равняется по левому краю —
+        // как заголовок, хлебные крошки и карточка шага. Правое выравнивание
+        // досталось ему от десктопа, где он стоит в одной строке с заголовком, и
+        // на телефоне давало рваный левый край. `space-between` тут не годится:
+        // мобильная ветка тянется до 767px (`isMobile` = width <
+        // `METRICS.breakpoints.tablet`), и на 667px распределение вставило бы
+        // между иконками по 54px пустоты.
+        justifyContent: 'flex-start',
     },
 } as const);
