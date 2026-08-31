@@ -224,27 +224,57 @@ function appendRedirects(pairs) {
   fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
 }
 
-async function restoreFromBackup(id) {
+/**
+ * Roll one travel back from its latest backup.
+ *
+ * `exitOnFailure` is the CLI `--restore` contract: an operator who asked for a
+ * restore wants the process to die loudly when it did not happen. Inside a
+ * batch the caller needs the outcome instead — exiting there swallows the very
+ * message that names which article is still live under the wrong title.
+ *
+ * @returns {Promise<{ok: boolean, status: number, reason?: string}>}
+ */
+async function restoreFromBackup(id, { exitOnFailure = true } = {}) {
   const file = latestBackup(id);
-  if (!file) { console.error(`No backup for #${id}`); process.exit(1); }
+  if (!file) {
+    console.error(`No backup for #${id}`);
+    if (exitOnFailure) process.exit(1);
+    return { ok: false, status: 0, reason: 'бэкапа нет на диске' };
+  }
   const original = JSON.parse(fs.readFileSync(file, 'utf8'));
   const payload = buildUpsertPayload(original, { description: original.description, meta: original.meta_description });
   payload.name = original.name;
   const { status, text } = await putTravel(payload);
   console.log(`↩️  restore #${id} «${original.name}» → HTTP ${status}`);
-  if (status !== 200 && status !== 201) { console.error(text.slice(0, 300)); process.exit(1); }
+  if (status !== 200 && status !== 201) {
+    console.error(text.slice(0, 300));
+    if (exitOnFailure) process.exit(1);
+    return { ok: false, status, reason: `HTTP ${status}` };
+  }
+  return { ok: true, status };
 }
 
+/**
+ * One rename.
+ *
+ * Returns an outcome rather than `null`, because `null` used to mean four
+ * different things — «already named», «rehearsal», «PUT refused» and «rolled
+ * back after a regression» — and the caller could not tell the two failures
+ * from the two successes. That is how a batch in which every entry failed still
+ * exited 0.
+ *
+ * @returns {Promise<{outcome: 'renamed'|'skipped'|'failed', pair?: {from: string, to: string}}>}
+ */
 async function renameOne({ id, name }, dryRun) {
   const before = await getTravel(id);
   if ((before.name || '').trim() === name.trim()) {
     console.log(`  ⏭️  #${id} already named as requested — skipped`);
-    return null;
+    return { outcome: 'skipped' };
   }
   const oldSlug = before.slug;
   if (dryRun) {
     console.log(`  [dry] #${id} "${before.name}" (slug ${oldSlug})\n        → "${name}"`);
-    return null;
+    return { outcome: 'skipped' };
   }
   const backup = saveBackup(before);
   const payload = buildUpsertPayload(before, { description: before.description, meta: before.meta_description });
@@ -252,7 +282,7 @@ async function renameOne({ id, name }, dryRun) {
   const { status, text } = await putTravel(payload);
   if (status !== 200 && status !== 201) {
     console.error(`  ❌ #${id} PUT → HTTP ${status}: ${text.slice(0, 200)}`);
-    return null;
+    return { outcome: 'failed' };
   }
   const after = await getTravel(id);
   // #1649: the payload echoes the description back unchanged, so a GET that
@@ -265,18 +295,22 @@ async function renameOne({ id, name }, dryRun) {
   const corruption = detectCorruption(after, { description: before.description });
   if (corruption.length) {
     console.error(`  ⛔ #${id} TEXT CORRUPTION: ${corruption.join('; ')} — rolling back (backup ${path.basename(backup)})`);
-    // The rollback must not be able to swallow the abort: restoreFromBackup()
-    // rejects on a socket error, and that plain Error would leave the batch
-    // running and the run exiting 0 — the exact hole this branch exists to
-    // close. Its outcome is reported, never thrown.
-    const rolledBack = await restoreFromBackup(id).then(() => true, (error) => {
-      console.error(`     rollback FAILED: ${error.message}`);
-      return false;
-    });
+    // The rollback must not be able to swallow the abort: it is a network call
+    // too, and either half of its failure — a rejected socket or a non-2xx
+    // answer — used to replace this TextCorruptionError, leaving the batch
+    // running and the run exiting 0. `exitOnFailure: false` keeps the HTTP half
+    // reportable; without it restoreFromBackup() exits inside itself and the
+    // message below can never print.
+    const rollback = await restoreFromBackup(id, { exitOnFailure: false })
+      .catch((error) => ({ ok: false, status: 0, reason: error.message }));
+    if (!rollback.ok) console.error(`     rollback FAILED: ${rollback.reason}`);
     throw new TextCorruptionError(
-      rolledBack
+      rollback.ok
         ? corruption
-        : [...corruption, `rollback FAILED — «${name}» may still be live, restore from ${path.basename(backup)}`],
+        : [
+            ...corruption,
+            `rollback FAILED (${rollback.reason}) — «${name}» may still be live, restore from ${path.basename(backup)}`,
+          ],
       `#${id}`,
     );
   }
@@ -284,10 +318,10 @@ async function renameOne({ id, name }, dryRun) {
   if (problems.length) {
     console.error(`  ⛔ #${id} regression: ${problems.join('; ')} — rolling back (backup ${path.basename(backup)})`);
     await restoreFromBackup(id);
-    return null;
+    return { outcome: 'failed' };
   }
   console.log(`  ✅ #${id} "${name}"  slug ${oldSlug} → ${after.slug}  (pub=${after.publish}, gal=${(after.gallery || []).length}, pts=${(after.coordsMeTravel || []).length}, desc=${(after.description || '').length})`);
-  return { from: oldSlug, to: after.slug };
+  return { outcome: 'renamed', pair: { from: oldSlug, to: after.slug } };
 }
 
 async function main() {
@@ -314,12 +348,15 @@ async function main() {
 
   const pairs = [];
   let corruption = null;
+  let failed = 0;
   for (const e of entries) {
     try {
-      const pair = await renameOne(e, dryRun);
-      if (pair) pairs.push(pair);
+      const result = await renameOne(e, dryRun);
+      if (result.outcome === 'renamed') pairs.push(result.pair);
+      if (result.outcome === 'failed') failed += 1;
     } catch (err) {
       console.error(`  ❌ #${e.id}: ${err.message}`);
+      failed += 1;
       if (isTextCorruptionError(err)) {
         console.error('  🛑 batch stopped: the read/write path is mangling UTF-8, remaining renames were not attempted.');
         corruption = err;
@@ -334,13 +371,24 @@ async function main() {
     appendRedirects(pairs);
     console.log(`\n📝 Added ${pairs.length} redirect(s) to ${path.relative(process.cwd(), MANIFEST)}`);
   }
-  console.log(`\n${dryRun ? 'Dry-run complete.' : `Done: ${pairs.length} renamed + redirected.`}`);
+  const tally = failed ? `, ${failed} failed` : '';
+  console.log(`\n${dryRun ? `Dry-run complete${tally}.` : `Done: ${pairs.length} renamed + redirected${tally}.`}`);
   // Without this the aborted run still exits 0 and reads as a clean partial
   // batch — the one signal an operator has that the pipeline is damaging text.
   if (corruption) {
     throw new ExpectedFailureError(
       `run aborted after ${pairs.length} rename(s): ${corruption.message}. ` +
       'Fix the read/write path before re-running — the remaining entries were not touched.',
+    );
+  }
+  // Same contract for the ordinary failures. A batch whose every entry died on
+  // its GET printed «Dry-run complete.» and exited 0 — the #1325 shape that
+  // requireNonEmptySelection() above already refuses at the input end, reaching
+  // the run through the other door.
+  if (failed > 0) {
+    throw new ExpectedFailureError(
+      `${failed} of ${entries.length} entr${failed === 1 ? 'y' : 'ies'} failed — see the errors above` +
+      `${pairs.length ? `; ${pairs.length} rename(s) did land and are in the manifest` : ''}`,
     );
   }
 }

@@ -1,9 +1,8 @@
 /**
- * End-to-end guard for the #1649 abort contract: when the re-read after a PUT
- * comes back with mangled UTF-8, the batch must STOP and the run must exit
- * non-zero.
+ * End-to-end guard for every way `scripts/seo-rename.js` can fail: whatever
+ * went wrong, the run must exit non-zero and say what is still live.
  *
- * Three separate holes live here, none of them visible from a unit test:
+ * Four separate holes live here, none of them visible from a unit test:
  *   - `break` alone left main() resolving normally, so runSeoCli exited 0 and a
  *     run aborted *because the pipeline is damaging content* printed
  *     "Done: 0 renamed" and reported success to the operator and to CI;
@@ -11,7 +10,12 @@
  *     remaining article, which is the failure #1649 exists to prevent;
  *   - the rollback is a network call too. When it threw, that plain Error
  *     replaced the TextCorruptionError, `isTextCorruptionError` said no, and
- *     both of the above came back at once.
+ *     both of the above came back at once. Its other half — a non-2xx answer —
+ *     exited inside restoreFromBackup(), so the message naming the article left
+ *     live under the wrong title could never print;
+ *   - a batch in which EVERY entry failed its GET printed "Dry-run complete."
+ *     and exited 0, because renameOne() returned the same `null` for «skipped»
+ *     and for «failed». That is the #1325 shape.
  *
  * So the script is spawned for real against a stub API, and the assertions are
  * on the exit code and on what the stub was actually asked to write.
@@ -40,15 +44,20 @@ const MANGLED = CLEAN.replace('озёра', 'оз��ра')
  * process: the CLI under test is spawned synchronously, so a server inside Jest
  * would never get to answer it.
  *
- * `failRollback` drops the socket on the second PUT — the rollback — which is
- * how a rejecting restore is reproduced without touching the script.
+ * `failRollback` breaks the second PUT — the rollback — either by dropping the
+ * socket ('socket') or by answering 500 ('http'); those are two different code
+ * paths in restoreFromBackup(). `failGet` refuses every read with 401, the way
+ * a stale service token does.
  */
-const serverSource = ({ failRollback }: { failRollback: boolean }) => `
+type StubOptions = { failRollback?: false | 'socket' | 'http'; failGet?: boolean }
+
+const serverSource = ({ failRollback = false, failGet = false }: StubOptions) => `
 const http = require('http')
 
 const CLEAN = ${JSON.stringify(CLEAN)}
 const MANGLED = ${JSON.stringify(MANGLED)}
-const FAIL_ROLLBACK = ${failRollback}
+const FAIL_ROLLBACK = ${JSON.stringify(failRollback)}
+const FAIL_GET = ${failGet}
 const writes = []
 let reads = 0
 
@@ -85,16 +94,24 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'PUT' && req.url === '/api/travels/upsert/') {
     const payload = await readBody(req)
     writes.push({ id: payload.id, name: payload.name })
-    // res, not req: dropping the RESPONSE socket makes the client see
-    // ECONNRESET at once, while destroying the request leaves it waiting out
-    // its own 60 s timeout.
-    if (FAIL_ROLLBACK && writes.length === 2) return res.destroy()
+    if (FAIL_ROLLBACK && writes.length === 2) {
+      // res, not req: dropping the RESPONSE socket makes the client see
+      // ECONNRESET at once, while destroying the request leaves it waiting out
+      // its own 60 s timeout.
+      if (FAIL_ROLLBACK === 'socket') return res.destroy()
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      return res.end(JSON.stringify({ error: 'upsert refused' }))
+    }
     const row = state[payload.id]
     if (row) { row.name = payload.name; row.slug = 'novyi-slug-' + payload.id }
     return json(res, {})
   }
 
   const match = /^\\/api\\/travels\\/(\\d+)\\/$/.exec(req.url || '')
+  if (req.method === 'GET' && FAIL_GET) {
+    res.writeHead(401, { 'Content-Type': 'application/json' })
+    return res.end(JSON.stringify({ detail: 'Invalid token.' }))
+  }
   if (req.method === 'GET' && match && state[match[1]]) {
     reads += 1
     const row = { ...state[match[1]] }
@@ -138,7 +155,7 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
   const stubs: StubServer[] = []
 
   /** Spawn the real CLI over a two-entry batch against a fresh stub. */
-  const renameBatch = async (options: { failRollback: boolean }): Promise<Run> => {
+  const renameBatch = async (options: StubOptions): Promise<Run> => {
     const dir = makeTempDir('seo-1649-')
     try {
       const mapFile = path.join(dir, 'renames.json')
@@ -160,14 +177,18 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
   }
 
   let clean: Run
-  let brokenRollback: Run
+  let brokenSocketRollback: Run
+  let brokenHttpRollback: Run
+  let deadReads: Run
 
   beforeAll(async () => {
     backupsBefore = fs.existsSync(BACKUP_DIR) ? fs.readdirSync(BACKUP_DIR) : []
     manifestBefore = fs.readFileSync(MANIFEST, 'utf8')
-    clean = await renameBatch({ failRollback: false })
-    brokenRollback = await renameBatch({ failRollback: true })
-  }, 20000)
+    clean = await renameBatch({})
+    brokenSocketRollback = await renameBatch({ failRollback: 'socket' })
+    brokenHttpRollback = await renameBatch({ failRollback: 'http' })
+    deadReads = await renameBatch({ failGet: true })
+  }, 40000)
 
   afterAll(() => {
     for (const stub of stubs) stub.stop()
@@ -203,13 +224,31 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
     expect(clean.writes[clean.writes.length - 1].name).toBe('Старое имя')
   })
 
-  it('still aborts when the rollback itself fails, and says the text is live', () => {
-    // A rejecting restore used to replace TextCorruptionError with a plain
-    // Error: the batch went on to the next article and the run exited 0.
-    expect(brokenRollback.result.status).toBe(1)
-    expect(brokenRollback.result.stderr).toContain('rollback FAILED')
-    expect(brokenRollback.result.stderr).toContain('batch stopped')
-    expect(brokenRollback.writes.map((entry) => entry.id)).toEqual([FIRST, FIRST])
+  it.each([
+    ['a dropped socket', () => brokenSocketRollback],
+    ['a 500 answer', () => brokenHttpRollback],
+  ])('still aborts when the rollback fails with %s, and says the text is live', (_case, get) => {
+    // Two different code paths: a rejecting restore used to replace
+    // TextCorruptionError with a plain Error, and a non-2xx one used to
+    // process.exit() inside restoreFromBackup() before the message was built.
+    const run = get()
+    expect(run.result.status).toBe(1)
+    expect(run.result.stderr).toContain('rollback FAILED')
+    expect(run.result.stderr).toContain('may still be live')
+    expect(run.result.stderr).toContain('batch stopped')
+    expect(run.writes.map((entry) => entry.id)).toEqual([FIRST, FIRST])
+  })
+
+  it('exits 1 when every entry fails its GET, instead of "Dry-run complete."', () => {
+    // The original report: a stale token answered 401 to every read and the run
+    // still reported success. renameOne() returned `null` for «failed» exactly
+    // as it did for «skipped», so nothing counted.
+    expect(deadReads.result.status).toBe(1)
+    expect(deadReads.result.stderr).toContain('HTTP 401')
+    expect(deadReads.result.stderr).toContain('2 of 2 entries failed')
+    // Nothing was written, and the failure is not a corruption abort.
+    expect(deadReads.writes).toEqual([])
+    expect(deadReads.result.stderr).not.toContain('TEXT CORRUPTION')
   })
 
   it('leaves the redirect manifest untouched when nothing landed', () => {

@@ -744,6 +744,16 @@ async function main() {
       'Fix the read/write path before re-running — the remaining travels were not touched.',
     );
   }
+  // Same contract for the ordinary failures. The count was already computed for
+  // the summary above and then dropped on the floor: a run in which every
+  // article threw printed `errors: N` and still exited 0 — the #1325 shape,
+  // reaching the run through the processing loop instead of the input.
+  const errors = Number(counts.errors || 0);
+  if (errors > 0) {
+    throw new ExpectedFailureError(
+      `${errors} of ${list.length} travel(s) failed — see ${path.relative(process.cwd(), LOG_PATH)}`,
+    );
+  }
 }
 
 if (require.main === module) {
