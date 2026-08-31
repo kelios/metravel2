@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,7 +8,9 @@ import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import MiniCalendar from '@/components/calendar/MiniCalendar';
-import RouteBuilder from '@/components/trips/planning/RouteBuilder';
+import RouteBuilder, {
+  type RouteBuilderDisplayState,
+} from '@/components/trips/planning/RouteBuilder';
 // #1543: экран открывается на вкладке `route`, поэтому деревья вкладок
 // «люди»/«экспорт»/«ещё» и панель редактирования владельца на первом кадре не
 // рендерятся — на web они уезжают за async-границу (native-половина сплита
@@ -33,7 +35,10 @@ import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import TripPlanLinksBlock from '@/components/trips/planning/TripPlanLinksBlock';
 import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
-import { hasUsableRouteGeometry } from '@/components/trips/planning/tripRoutePreview';
+import {
+  hasUsableRouteGeometry,
+  routablePreviewPoints,
+} from '@/components/trips/planning/tripRoutePreview';
 import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import {
   PLAN_STATUS_LABEL,
@@ -46,6 +51,7 @@ import {
   isRouteApproximate,
   planStatusColor,
   routeSummaryLine,
+  routingStateClaimsNotEnoughPoints,
   routingStateHint,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
@@ -125,6 +131,9 @@ export default function PlannedTripScreen() {
   const [editDatePickerVisible, setEditDatePickerVisible] = useState(false);
   const [coverUploadPending, setCoverUploadPending] = useState(false);
   const [activeTab, setActiveTab] = useState<PlannerTabKey>('route');
+  const [liveRouteDisplay, setLiveRouteDisplay] = useState<(
+    RouteBuilderDisplayState & { tripId: number }
+  ) | null>(null);
   const persistedTransportRef = useRef<TripTransport | null>(null);
   const { data: trip, isLoading, isError } = usePlannedTrip(
     Number.isFinite(tripId) ? tripId : null,
@@ -144,15 +153,44 @@ export default function PlannedTripScreen() {
   const usesFallbackCover = Boolean(trip && coverUrl.length === 0);
   const displayCoverUrl = usesFallbackCover ? (fallbackCover?.uri ?? '') : coverUrl;
 
+  const rawStateContradictsPointCount = Boolean(
+    trip &&
+      routablePreviewPoints(trip.route).length >= 2 &&
+      routingStateClaimsNotEnoughPoints(trip.routingState),
+  );
   const rawHealthyRouteMissingGeometry = Boolean(
     trip?.routingState &&
       !isRouteApproximate(trip.routingState) &&
       !hasUsableRouteGeometry(trip.routeGeometry),
   );
-  const summaryLine = trip && !rawHealthyRouteMissingGeometry
-    ? routeSummaryLine(trip.routeSummary)
-    : '';
-  const routeApproximate = trip ? isRouteApproximate(trip.routingState) : false;
+  const currentRouteDisplay = trip && liveRouteDisplay?.tripId === trip.id
+    ? liveRouteDisplay
+    : null;
+  const headerRouteSummary = currentRouteDisplay
+    ? currentRouteDisplay.summary
+    : rawHealthyRouteMissingGeometry || rawStateContradictsPointCount
+      ? null
+      : trip?.routeSummary ?? null;
+  const headerRoutingState = currentRouteDisplay
+    ? currentRouteDisplay.routingState
+    : rawHealthyRouteMissingGeometry || rawStateContradictsPointCount
+      ? null
+      : trip?.routingState ?? null;
+  const headerDisplaySuppressed = currentRouteDisplay
+    ? currentRouteDisplay.routablePointCount >= 2 &&
+      headerRouteSummary == null &&
+      headerRoutingState == null
+    : rawHealthyRouteMissingGeometry || rawStateContradictsPointCount;
+  const summaryLine = headerDisplaySuppressed ? '' : routeSummaryLine(headerRouteSummary);
+  const routeApproximate = isRouteApproximate(headerRoutingState);
+
+  const handleRouteDisplayStateChange = useCallback(
+    (state: RouteBuilderDisplayState) => {
+      if (!trip) return;
+      setLiveRouteDisplay({ ...state, tripId: trip.id });
+    },
+    [trip],
+  );
 
   useEffect(() => {
     // Не сбрасывать значения при фоновых рефетчах открытой формы —
@@ -352,7 +390,7 @@ export default function PlannedTripScreen() {
 
               {routeApproximate ? (
                 <Text style={styles.approximateNote} testID="trip-plan-route-approximate">
-                  {routingStateHint(trip.routingState) ??
+                  {routingStateHint(headerRoutingState) ??
                     i18nT('tripsStatic:route.approximateWarning')}
                 </Text>
               ) : null}
@@ -667,7 +705,11 @@ export default function PlannedTripScreen() {
                 {/* #1495: на телефоне карта — главный элемент вкладки, а панель
                     маршрута уезжает в шторку. Раскладку выбирает экран, а не
                     RouteBuilder: так desktop и тесты остаются на стеке. */}
-                <RouteBuilder trip={trip} layout={isMobile ? 'mapFirst' : 'stack'} />
+                <RouteBuilder
+                  trip={trip}
+                  layout={isMobile ? 'mapFirst' : 'stack'}
+                  onDisplayStateChange={handleRouteDisplayStateChange}
+                />
               </View>
             ) : null}
 

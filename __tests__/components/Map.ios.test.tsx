@@ -4,6 +4,7 @@ import { act, render } from '@testing-library/react-native';
 import { View } from 'react-native';
 
 const mockInjectJavaScript = jest.fn();
+let mockIsConnected = true;
 const mockUseMapClusters = jest.fn(() => ({
   data: { clusters: [], markers: [], totalCount: 0, source: '', generatedAt: '' },
   isLoading: false,
@@ -14,6 +15,14 @@ const mockUseMapClusters = jest.fn(() => ({
 
 jest.mock('@/hooks/map/useMapClusters', () => ({
   useMapClusters: (...args: unknown[]) => mockUseMapClusters(...args),
+}));
+
+jest.mock('@/hooks/useNetworkStatus', () => ({
+  useNetworkStatus: () => ({
+    isConnected: mockIsConnected,
+    isInternetReachable: mockIsConnected,
+    type: 'wifi',
+  }),
 }));
 
 jest.mock('react-native-webview', () => {
@@ -42,6 +51,7 @@ describe('Map.ios Component', () => {
   });
 
   beforeEach(() => {
+    mockIsConnected = true;
     mockInjectJavaScript.mockClear();
     mockUseMapClusters.mockClear();
     mockUseMapClusters.mockReturnValue({
@@ -376,8 +386,40 @@ describe('Map.ios Component', () => {
     const html = getWebViewHtml(rendered);
     expect(html).toContain('const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints');
     expect(html).toContain('L.polyline(routeLine');
+    expect(html).toContain("dashArray: routeApproximate ? '8 8' : null");
     expect(html).toContain('L.circleMarker(point');
     expect(html).toContain('map.fitBounds(routePolyline.getBounds()');
+  });
+
+  it('redraws failed base tiles exactly on offline to online recovery', () => {
+    mockIsConnected = false;
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    mockInjectJavaScript.mockClear();
+
+    mockIsConnected = true;
+    rendered.rerender(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+
+    const reconnectScripts = mockInjectJavaScript.mock.calls
+      .map(([script]) => String(script))
+      .filter((script) => script.includes('network-reconnect'));
+    expect(reconnectScripts).toHaveLength(1);
+    expect(reconnectScripts[0]).toContain('window.__metravelBaseTileLayer.redraw()');
+
+    mockInjectJavaScript.mockClear();
+    rendered.rerender(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+    expect(
+      mockInjectJavaScript.mock.calls.some(([script]) => String(script).includes('network-reconnect'))
+    ).toBe(false);
   });
 
   it('should include all travel points in the map payload', () => {

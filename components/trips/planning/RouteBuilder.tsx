@@ -45,6 +45,8 @@ import type { MapFocusPoint } from '@/components/trips/planning/tripPlanRouteMap
 import { useTripRouteDisplay } from '@/components/trips/planning/useTripRouteDisplay';
 import {
   type PlannedTrip,
+  type RouteSummary,
+  type RoutingState,
   type RoutePoint,
   type RoutePointType,
   type TripBikeType,
@@ -92,6 +94,12 @@ const RouteElevationProfile = safeLazy(
   { retries: 1 },
 );
 
+export interface RouteBuilderDisplayState {
+  summary: RouteSummary | null;
+  routingState: RoutingState | null;
+  routablePointCount: number;
+}
+
 interface Props {
   trip: PlannedTrip;
   /**
@@ -101,6 +109,8 @@ interface Props {
    * получать stack независимо от ширины окна в окружении.
    */
   layout?: 'stack' | 'mapFirst';
+  /** Keep the page header on the same live display tuple as map/summary/export. */
+  onDisplayStateChange?: (state: RouteBuilderDisplayState) => void;
 }
 
 const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
@@ -196,7 +206,11 @@ const routeSignature = (route: RoutePoint[]): string =>
     })
     .join('>');
 
-function RouteBuilder({ trip, layout = 'stack' }: Props) {
+function RouteBuilder({
+  trip,
+  layout = 'stack',
+  onDisplayStateChange,
+}: Props) {
   const isMapFirst = layout === 'mapFirst';
   const { t } = useTranslation();
   const colors = useThemedColors();
@@ -365,6 +379,14 @@ function RouteBuilder({ trip, layout = 'stack' }: Props) {
     const stopsCount = previewStopsCount(route);
     return summaryBase.stopsCount === stopsCount ? summaryBase : { ...summaryBase, stopsCount };
   }, [route, summaryBase]);
+
+  useEffect(() => {
+    onDisplayStateChange?.({
+      summary,
+      routingState,
+      routablePointCount: routablePreviewPoints(route).length,
+    });
+  }, [onDisplayStateChange, route, routingState, summary]);
 
   // #1304: скачивание живёт там же, где маршрут строится. Экспортируем то, что
   // сейчас на карте: у несохранённых правок это геометрия превью, поэтому файл

@@ -89,7 +89,45 @@ describe('TripPlanRouteMap (native) — карта и слои', () => {
       [27.6, 53.91],
     ])
     expect(props.fullRouteCoords).toHaveLength(3)
+    expect(props.routeLineVisible).toBe(true)
+    expect(props.routeLineApproximate).toBe(false)
     expect(props.coordinates).toEqual({ latitude: 53.9, longitude: 27.56 })
+  })
+
+  it('не маскирует pending routing прямой линией, а direct fallback помечает approximate', () => {
+    const { rerender } = render(
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={null}
+        routingState={{ provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] }}
+      />,
+    )
+
+    let props = mockMapProps.at(-1)!
+    expect(props.fullRouteCoords).toEqual([])
+    expect(props.routeLineVisible).toBe(false)
+    expect(props.routeLineApproximate).toBe(false)
+
+    rerender(
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={null}
+        routingState={{
+          provider: 'direct',
+          isOptimal: false,
+          fallbackReason: 'routing_provider_unavailable',
+          warnings: [],
+        }}
+      />,
+    )
+
+    props = mockMapProps.at(-1)!
+    expect(props.fullRouteCoords).toEqual([
+      [27.56, 53.9],
+      [27.6, 53.91],
+    ])
+    expect(props.routeLineVisible).toBe(true)
+    expect(props.routeLineApproximate).toBe(true)
   })
 
   it('показывает «Слои» с тем же набором, что на главной карте, и пишет выбор в общий store', () => {

@@ -159,6 +159,19 @@ export function isRouteApproximate(routingState: RoutingState | null | undefined
   return routingState.provider === PREVIEW_DIRECT_PROVIDER || routingState.isOptimal === false;
 }
 
+/**
+ * A persisted `not_enough_points` state becomes stale as soon as the editable
+ * route contains two valid coordinates. Keep this machine-code check shared by
+ * the planner header and the complete display-tuple owner (#873 recurrence).
+ */
+export function routingStateClaimsNotEnoughPoints(
+  routingState: RoutingState | null | undefined,
+): boolean {
+  if (!routingState) return false;
+  return [routingState.fallbackReason, ...routingState.warnings]
+    .some((reason) => (reason ?? '').trim() === 'not_enough_points');
+}
+
 export function routingStateLabel(routingState: RoutingState | null | undefined): string {
   if (!routingState) return i18nT('trips:components.trips.planning.tripPlanFormatting.lokalnaya_otsenka_1df49d8f');
   // Общественный и смешанный транспорт движок не прокладывает вовсе, поэтому у

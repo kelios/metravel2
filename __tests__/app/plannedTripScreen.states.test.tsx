@@ -228,6 +228,30 @@ describe('PlannedTripScreen — planner states', () => {
     expect(queryByTestId('route-builder')).toBeTruthy();
   });
 
+  it('hides stale not_enough_points after the persisted route already has two coordinates', () => {
+    mockTrip(
+      makeTrip({
+        routeGeometry: [
+          [27.56, 53.9],
+          [27.6, 53.91],
+        ],
+        routeSummary: null,
+        routingState: {
+          provider: 'direct',
+          isOptimal: false,
+          fallbackReason: 'not_enough_points',
+          warnings: [],
+        },
+      }),
+    );
+
+    const { queryByTestId, queryByText } = renderScreen();
+
+    expect(queryByTestId('trip-plan-summary')).toBeNull();
+    expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
+    expect(queryByText(/минимум две точки/i)).toBeNull();
+  });
+
   it('flags a direct fallback route as approximate', () => {
     mockTrip(
       makeTrip({

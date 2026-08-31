@@ -1,6 +1,7 @@
 import { act, render } from '@testing-library/react-native';
 import { Keyboard, Platform, StyleSheet } from 'react-native';
 import type { Message } from '@/api/messages';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const SAFE_AREA_BOTTOM = 34;
 
@@ -65,8 +66,7 @@ describe('ChatView composer vs iOS keyboard', () => {
         });
 
         const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
-        expect(composerStyle.paddingBottom).toBeGreaterThanOrEqual(320);
-        expect(composerStyle.paddingBottom).toBeLessThan(320 + SAFE_AREA_BOTTOM);
+        expect(composerStyle.paddingBottom).toBe(320 + DESIGN_TOKENS.spacing.xs);
     });
 
     it('restores the safe-area reserve when the keyboard hides', () => {
@@ -80,7 +80,8 @@ describe('ChatView composer vs iOS keyboard', () => {
         });
 
         const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
-        expect(composerStyle.paddingBottom).toBeGreaterThanOrEqual(SAFE_AREA_BOTTOM);
-        expect(composerStyle.paddingBottom).toBeLessThan(320);
+        expect(composerStyle.paddingBottom).toBe(
+            SAFE_AREA_BOTTOM + DESIGN_TOKENS.spacing.sm,
+        );
     });
 });

@@ -86,6 +86,10 @@ interface TravelProps {
   userLocation?: Coordinates | null;
   routePoints?: [number, number][];
   fullRouteCoords?: [number, number][];
+  /** Suppress a waypoint-to-waypoint segment while real routing is pending. */
+  routeLineVisible?: boolean;
+  /** Explicit degraded route: native renderer uses warning colour + dash. */
+  routeLineApproximate?: boolean;
   /**
    * Неупрощённая геометрия исходного GPX/KML-файла (#1496). Отдельный слой поверх
    * линии маршрута: `fullRouteCoords` и точки остаются как есть, оригинал их не
@@ -155,6 +159,8 @@ const Map: React.FC<TravelProps> = ({
   userLocation = null,
   routePoints = [],
   fullRouteCoords = [],
+  routeLineVisible = true,
+  routeLineApproximate = false,
   originalTrackCoords = [],
   mode = 'radius',
   onMapClick,
@@ -212,10 +218,12 @@ const Map: React.FC<TravelProps> = ({
     [routePoints],
   );
   const routeLineLatLngs = useMemo(
-    () => (fullRouteCoords.length >= 2 ? fullRouteCoords : routePoints)
+    () => (routeLineVisible
+      ? (fullRouteCoords.length >= 2 ? fullRouteCoords : routePoints)
+      : [])
       .map(normalizeRoutePoint)
       .filter((point): point is [number, number] => Boolean(point)),
-    [fullRouteCoords, routePoints],
+    [fullRouteCoords, routeLineVisible, routePoints],
   );
   const originalTrackLatLngs = useMemo(
     () => originalTrackCoords
@@ -313,6 +321,29 @@ const Map: React.FC<TravelProps> = ({
   // устаревшее замыкание. Default true до первого ответа NetInfo — онлайн-путь.
   const isOnlineRef = useRef(true);
   isOnlineRef.current = isConnected;
+  const previousIsConnectedRef = useRef(isConnected);
+  const pendingNetworkRedrawRef = useRef(false);
+
+  const redrawBaseTilesAfterReconnect = useCallback(() => {
+    injectMapCommand(
+      'window.__metravelBaseTileLayer && window.__metravelBaseTileLayer.redraw && window.__metravelBaseTileLayer.redraw(); window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("network-reconnect")',
+    );
+  }, [injectMapCommand]);
+
+  // A cache miss completed while offline is a terminal tileerror inside
+  // Leaflet. Network recovery alone does not retry it, so refresh the existing
+  // layer exactly once on false -> true without remounting the WebView (#1665).
+  useEffect(() => {
+    const wasConnected = previousIsConnectedRef.current;
+    previousIsConnectedRef.current = isConnected;
+    if (wasConnected || !isConnected) return;
+    if (!isReadyRef.current) {
+      pendingNetworkRedrawRef.current = true;
+      return;
+    }
+    pendingNetworkRedrawRef.current = false;
+    redrawBaseTilesAfterReconnect();
+  }, [isConnected, redrawBaseTilesAfterReconnect]);
 
   // Шаблон URL базовой подложки ({z}/{x}/{y} подставляем при сетевом промахе).
   const nativeTileTemplate = useMemo(() => getThemedNativeBaseTileUrl(), []);
@@ -500,6 +531,7 @@ const Map: React.FC<TravelProps> = ({
       clusters: nativeClusterPayload,
       routePoints: selectedRouteLatLngs,
       routeLine: routeLineLatLngs,
+      routeApproximate: routeLineApproximate,
       originalTrack: originalTrackLatLngs,
       mode,
       center: { lat: centerLat, lng: centerLng },
@@ -511,6 +543,7 @@ const Map: React.FC<TravelProps> = ({
       nativeClusterPayload,
       selectedRouteLatLngs,
       routeLineLatLngs,
+      routeLineApproximate,
       originalTrackLatLngs,
       mode,
       centerLat,
@@ -633,6 +666,10 @@ const Map: React.FC<TravelProps> = ({
         'window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("rn-layout-pending")',
       );
     }
+    if (pendingNetworkRedrawRef.current && isOnlineRef.current) {
+      pendingNetworkRedrawRef.current = false;
+      redrawBaseTilesAfterReconnect();
+    }
     pushPayloadRef.current();
     pushUserLocationRef.current();
     autoCenterOnTrustedUserIfNeeded();
@@ -644,7 +681,7 @@ const Map: React.FC<TravelProps> = ({
         `window.__metravelSetOverlay && window.__metravelSetOverlay(${serializeForInlineScript(id)}, true)`,
       );
     });
-  }, [autoCenterOnTrustedUserIfNeeded, injectMapCommand]);
+  }, [autoCenterOnTrustedUserIfNeeded, injectMapCommand, redrawBaseTilesAfterReconnect]);
 
   // Статичный HTML-каркас: карта + функция window.__metravelRenderPoints.
   // Мемоизирован по теме — стабилен между обновлениями данных, поэтому WebView

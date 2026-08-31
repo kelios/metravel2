@@ -108,7 +108,7 @@ function TripRouteExportMenu({ trip }: Props) {
   const shouldRender = shouldRenderTripRouteExportMenu(Platform.OS);
   const preview = routeDisplay.preview;
   const repairEngine =
-    routeDisplay.repairingSavedGeometry && preview.active && preview.transportMode ? (
+    routeDisplay.repairingSavedRoute && preview.active && preview.transportMode ? (
       <TripRoutePreviewEngine
         key={preview.retryToken}
         points={preview.points}
@@ -117,7 +117,7 @@ function TripRouteExportMenu({ trip }: Props) {
       />
     ) : null;
   const repairStatus =
-    routeDisplay.repairingSavedGeometry && preview.transportMode ? (
+    routeDisplay.repairingSavedRoute && preview.transportMode ? (
       <RoutingStatus
         isLoading={preview.loading && !preview.degraded}
         error={preview.degraded ? ROUTING_DIRECT_LINE : null}

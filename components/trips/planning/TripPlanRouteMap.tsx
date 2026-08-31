@@ -30,6 +30,7 @@ import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/types/mapUi';
 import { translate as i18nT } from '@/i18n'
+import { hasUsableRouteGeometry } from './tripRoutePreview';
 
 
 interface Props {
@@ -76,6 +77,8 @@ type NativeRouteMapProps = {
   coordinates: { latitude: number; longitude: number };
   routePoints: Array<[number, number]>;
   fullRouteCoords: Array<[number, number]>;
+  routeLineVisible?: boolean;
+  routeLineApproximate?: boolean;
   originalTrackCoords?: Array<[number, number]>;
   mode: 'route';
   pointsOnly?: boolean;
@@ -110,9 +113,15 @@ export default function TripPlanRouteMap({
     () => lngLatPairs(route.map((point) => point.coordinates)),
     [route],
   );
+  const approximate = isRouteApproximate(routingState);
+  const hasRoutedGeometry = hasUsableRouteGeometry(routeGeometry);
   const routeLine = useMemo(
-    () => (routeGeometry?.length ? lngLatPairs(routeGeometry) : routePoints),
-    [routeGeometry, routePoints],
+    () => (hasRoutedGeometry
+      ? lngLatPairs(routeGeometry ?? [])
+      : approximate
+        ? routePoints
+        : []),
+    [approximate, hasRoutedGeometry, routeGeometry, routePoints],
   );
   const originalTrackLine = useMemo(
     () => (originalTrack?.length ? lngLatPairs(originalTrack) : []),
@@ -123,8 +132,6 @@ export default function TripPlanRouteMap({
     if (!first) return DEFAULT_CENTER;
     return { latitude: first[1], longitude: first[0] };
   }, [routeLine, routePoints]);
-
-  const approximate = isRouteApproximate(routingState);
 
   const { enabledOverlays, handleOverlayToggle, overlayOptions } = useMapOverlays(mapUiApi);
 
@@ -203,6 +210,8 @@ export default function TripPlanRouteMap({
           coordinates={center}
           routePoints={routePoints}
           fullRouteCoords={routeLine}
+          routeLineVisible={routeLine.length >= 2}
+          routeLineApproximate={approximate && !hasRoutedGeometry}
           originalTrackCoords={originalTrackLine}
           mode="route"
           pointsOnly

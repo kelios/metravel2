@@ -346,6 +346,7 @@ ${buildInvalidateSchedulerScript({
         }
 
         const ROUTE_COLOR = ${serializeForInlineScript(DESIGN_COLORS.routeLine)};
+        const ROUTE_WARNING = ${serializeForInlineScript(themeColors.warningDark || themeColors.warning || DESIGN_TOKENS.colors.warning)};
         const ROUTE_SURFACE = ${serializeForInlineScript(themeColors.surface)};
         const ROUTE_START = ${serializeForInlineScript(themeColors.success || themeColors.primary)};
         // #1496 — цвет оригинального (неупрощённого) трека из загруженного файла.
@@ -362,6 +363,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
             const clusters = Array.isArray(data.clusters) ? data.clusters : [];
             const routePoints = Array.isArray(data.routePoints) ? data.routePoints : [];
             const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints;
+            const routeApproximate = data.routeApproximate === true;
             const originalTrack = Array.isArray(data.originalTrack) ? data.originalTrack : [];
             const routeMode = data.mode || 'radius';
             const usesServerClusters = data.usesServerClusters === true;
@@ -458,9 +460,10 @@ ${ESCAPE_HTML_FN_SCRIPT}
               const routeBounds = L.latLngBounds();
               if (routeLine.length >= 2) {
                 const routePolyline = L.polyline(routeLine, {
-                  color: ROUTE_COLOR,
-                  weight: 5,
-                  opacity: 0.9,
+                  color: routeApproximate ? ROUTE_WARNING : ROUTE_COLOR,
+                  weight: routeApproximate ? 4 : 5,
+                  opacity: routeApproximate ? 0.58 : 0.9,
+                  dashArray: routeApproximate ? '8 8' : null,
                   lineCap: 'round',
                   lineJoin: 'round'
                 }).addTo(routeLayer);

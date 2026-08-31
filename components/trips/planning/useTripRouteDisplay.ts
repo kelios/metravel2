@@ -9,7 +9,10 @@ import type {
   TripRouteElevation,
 } from '@/api/plannedTrips'
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
-import { isRouteApproximate } from './tripPlanFormatting'
+import {
+  isRouteApproximate,
+  routingStateClaimsNotEnoughPoints,
+} from './tripPlanFormatting'
 import {
   hasUsableRouteGeometry,
   isRoutableTransport,
@@ -25,7 +28,7 @@ export interface TripRouteDisplayState {
   routingState: RoutingState | null
   summary: RouteSummary | null
   elevation: ParsedRoutePreview | null
-  repairingSavedGeometry: boolean
+  repairingSavedRoute: boolean
   hasUsableSavedGeometry: boolean
   preview: TripRoutePreviewState
 }
@@ -71,21 +74,36 @@ export function useTripRouteDisplay({
   const savedStateClaimsHealthy = Boolean(
     trip.routingState && !isRouteApproximate(trip.routingState),
   )
-  const savedRouteNeedsGeometry =
+  const routablePointCount = routablePreviewPoints(route).length
+  const savedStateContradictsPointCount =
     routeShapeMatchesSaved &&
     isRoutableTransport(trip.transport) &&
-    routablePreviewPoints(route).length >= 2 &&
-    savedStateClaimsHealthy &&
-    !hasUsableSavedGeometry
-  const repairingSavedGeometry = savedRouteNeedsGeometry && !routeElevationPending
+    routablePointCount >= 2 &&
+    routingStateClaimsNotEnoughPoints(trip.routingState)
+  const savedRouteNeedsRepair =
+    routeShapeMatchesSaved &&
+    isRoutableTransport(trip.transport) &&
+    routablePointCount >= 2 &&
+    (
+      savedStateContradictsPointCount ||
+      (savedStateClaimsHealthy && !hasUsableSavedGeometry)
+    )
+  // Only the healthy/missing-geometry branch may be repaired by the elevation
+  // endpoint. A contradictory point-count state is invalid regardless of that
+  // request, so route preview must take ownership immediately.
+  const waitingForPersistedGeometry =
+    savedRouteNeedsRepair &&
+    !savedStateContradictsPointCount &&
+    routeElevationPending
+  const repairingSavedRoute = savedRouteNeedsRepair && !waitingForPersistedGeometry
   // Hide the inconsistent saved tuple while its second persisted geometry
   // source is still loading, but do not start a duplicate routing request yet.
-  const previewOwnsDisplay = !routeShapeMatchesSaved || savedRouteNeedsGeometry
+  const previewOwnsDisplay = !routeShapeMatchesSaved || savedRouteNeedsRepair
 
   const preview = useTripRoutePreview({
     route,
     transport: trip.transport,
-    enabled: !routeShapeMatchesSaved || repairingSavedGeometry,
+    enabled: !routeShapeMatchesSaved || repairingSavedRoute,
   })
 
   return useMemo(
@@ -96,7 +114,7 @@ export function useTripRouteDisplay({
             routingState: preview.routingState,
             summary: preview.summary,
             elevation: preview.elevation,
-            repairingSavedGeometry,
+            repairingSavedRoute,
             hasUsableSavedGeometry,
             preview,
           }
@@ -105,7 +123,7 @@ export function useTripRouteDisplay({
             routingState: trip.routingState,
             summary: trip.routeSummary,
             elevation: routeElevationPending ? null : routeElevation?.preview ?? null,
-            repairingSavedGeometry,
+            repairingSavedRoute,
             hasUsableSavedGeometry,
             preview,
           },
@@ -113,7 +131,7 @@ export function useTripRouteDisplay({
       hasUsableSavedGeometry,
       preview,
       previewOwnsDisplay,
-      repairingSavedGeometry,
+      repairingSavedRoute,
       routeElevation?.preview,
       routeElevationPending,
       savedGeometry,
