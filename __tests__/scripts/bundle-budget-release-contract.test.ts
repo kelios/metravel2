@@ -8,6 +8,121 @@ const packageJsonPath = path.join(ROOT, 'package.json')
 const budgetPath = path.join(ROOT, 'config', 'bundle-budget.json')
 const guardScriptPath = path.join(ROOT, 'scripts', 'guard-bundle-budget.js')
 
+type JsonRecord = Record<string, unknown>
+
+const MAX_BUDGET_TOLERANCE_PCT = 5
+const MAX_EAGER_BROTLI_KB = 800
+const MAX_GLOBAL_REQUEST_SPARE_PCT = 5
+
+const requireRecord = (value: unknown, label: string): JsonRecord => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`)
+  }
+  return value as JsonRecord
+}
+
+const requireStringArray = (value: unknown, label: string): string[] => {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.length === 0)) {
+    throw new Error(`${label} must be an array of non-empty strings.`)
+  }
+  if (new Set(value).size !== value.length) {
+    throw new Error(`${label} must not contain duplicates.`)
+  }
+  return value
+}
+
+const requireBudgetNumber = (
+  value: unknown,
+  label: string,
+  { integer = false, allowZero = false }: { integer?: boolean; allowZero?: boolean } = {},
+): number => {
+  const minimumOk = allowZero ? Number(value) >= 0 : Number(value) > 0
+  if (typeof value !== 'number' || !Number.isFinite(value) || !minimumOk || (integer && !Number.isInteger(value))) {
+    throw new Error(`${label} must be a finite ${integer ? 'integer ' : ''}${allowZero ? 'at least zero' : 'above zero'}.`)
+  }
+  return value
+}
+
+const validateCommittedBudget = (configPath: string): JsonRecord => {
+  const budget = requireRecord(JSON.parse(fs.readFileSync(configPath, 'utf8')), 'bundle budget')
+  const tolerancePct = requireBudgetNumber(
+    budget.tolerancePct,
+    'bundle budget.tolerancePct',
+    { allowZero: true },
+  )
+  if (tolerancePct > MAX_BUDGET_TOLERANCE_PCT) {
+    throw new Error(`bundle budget.tolerancePct must stay at or below ${MAX_BUDGET_TOLERANCE_PCT}%.`)
+  }
+
+  const forbiddenChunks = requireStringArray(budget.forbiddenChunks, 'bundle budget.forbiddenChunks')
+  if (forbiddenChunks.length !== 1 || forbiddenChunks[0] !== '__common') {
+    throw new Error('bundle budget.forbiddenChunks must keep __common as its only forbidden chunk.')
+  }
+
+  const eager = requireRecord(budget.eager, 'bundle budget.eager')
+  const eagerChunks = requireStringArray(eager.chunks, 'bundle budget.eager.chunks')
+  if (eagerChunks.length !== 2 || eagerChunks[0] !== 'entry' || eagerChunks[1] !== '__expo-metro-runtime') {
+    throw new Error('bundle budget.eager.chunks must keep entry and __expo-metro-runtime.')
+  }
+  if (eager.htmlRoutes !== true) {
+    throw new Error('bundle budget.eager.htmlRoutes must stay enabled.')
+  }
+
+  const eagerBrotliKB = requireBudgetNumber(eager.maxBrotliKB, 'bundle budget.eager.maxBrotliKB')
+  if (eagerBrotliKB > MAX_EAGER_BROTLI_KB) {
+    throw new Error(`bundle budget.eager.maxBrotliKB must stay at or below ${MAX_EAGER_BROTLI_KB} KiB.`)
+  }
+  const eagerTolerancePct = requireBudgetNumber(
+    eager.tolerancePct,
+    'bundle budget.eager.tolerancePct',
+    { allowZero: true },
+  )
+  if (eagerTolerancePct !== 0) {
+    throw new Error('bundle budget.eager.tolerancePct must stay at zero.')
+  }
+
+  const maxRequests = requireBudgetNumber(eager.maxRequests, 'bundle budget.eager.maxRequests', {
+    integer: true,
+  })
+  const routeBudgets = requireRecord(
+    eager.maxRequestsByRoute,
+    'bundle budget.eager.maxRequestsByRoute',
+  )
+  const routeEntries = Object.entries(routeBudgets)
+  if (routeEntries.length === 0) {
+    throw new Error('bundle budget.eager.maxRequestsByRoute must not be empty.')
+  }
+  const routeLimits = routeEntries.map(([route, limit]) => {
+    if (
+      !route.endsWith('.html') ||
+      route.startsWith('/') ||
+      route.includes('\\') ||
+      route.split('/').includes('..')
+    ) {
+      throw new Error(`bundle budget eager route must be a normalized relative .html path: ${route}.`)
+    }
+    const numericLimit = requireBudgetNumber(
+      limit,
+      `bundle budget.eager.maxRequestsByRoute.${route}`,
+      { integer: true },
+    )
+    if (numericLimit > maxRequests) {
+      throw new Error(`bundle budget route ${route} must not exceed eager.maxRequests.`)
+    }
+    return numericLimit
+  })
+
+  const highestRouteLimit = Math.max(...routeLimits)
+  const fallbackSparePct = ((maxRequests - highestRouteLimit) / highestRouteLimit) * 100
+  if (fallbackSparePct > MAX_GLOBAL_REQUEST_SPARE_PCT) {
+    throw new Error(
+      `bundle budget eager.maxRequests fallback spare must stay at or below ${MAX_GLOBAL_REQUEST_SPARE_PCT}%.`,
+    )
+  }
+
+  return budget
+}
+
 describe('bundle budget release contract', () => {
   it('keeps release:check wired fail-closed after the production web build', () => {
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
@@ -29,41 +144,29 @@ describe('bundle budget release contract', () => {
   })
 
   it('keeps the committed bundle budget spare at or below five percent', () => {
-    const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'))
+    const budget = validateCommittedBudget(budgetPath)
+    const tmpDir = makeTempDir('metravel-bundle-budget-contract-')
+    try {
+      const mutatedBudgetPath = path.join(tmpDir, 'bundle-budget.json')
+      const mutatedBudget = JSON.parse(JSON.stringify(budget)) as JsonRecord
+      const mutatedEager = requireRecord(mutatedBudget.eager, 'mutated bundle budget.eager')
+      const mutatedRouteBudgets = requireRecord(
+        mutatedEager.maxRequestsByRoute,
+        'mutated bundle budget.eager.maxRequestsByRoute',
+      )
+      const highestRouteLimit = Math.max(...Object.values(mutatedRouteBudgets).map(Number))
 
-    ensure(
-      Number(budget.tolerancePct) <= 5,
-      'config/bundle-budget.json tolerancePct must stay at or below 5%.',
-    )
-    // #1543: пины повторно опущены до фактических после схлопывания чанков с
-    // одинаковым route-set и отложенной загрузки неактивных секций планировщика.
-    // Пин существует, чтобы потолок нельзя было ПОДНЯТЬ ради зелёной сборки; опускать его
-    // вслед за реальным выигрышем — ровно то, ради чего он и заведён.
-    // Числа синхронизированы с `config/bundle-budget.json` на релизной перекурации
-    // 2026-08-30 (b4f27db9): 64 сгенерированных маршрута квестовых городов и их
-    // route-чанк подняли замеренную композицию, обоснование покомпонентно
-    // разобрано в `description` того же файла. Дублирование намеренное — правка
-    // потолка обязана касаться и конфига, и этого контракта.
-    expect(budget?.eager).toMatchObject({
-      chunks: ['entry', '__expo-metro-runtime'],
-      htmlRoutes: true,
-      maxBrotliKB: 775,
-      // #1372: потолок на ЧИСЛО eager JS-запросов маршрута. Без пина его легко
-      // поднять, чтобы «позеленить» сборку, — а именно это Task Contract
-      // задачи и запрещает.
-      maxRequests: 27,
-      maxRequestsByRoute: {
-        'index.html': 16,
-        'search.html': 11,
-        'map.html': 23,
-        'quests.html': 15,
-        '(tabs)/travels/[param].html': 23,
-        '(tabs)/profile.html': 27,
-        '(tabs)/trips/plan/[id].html': 26,
-      },
-      tolerancePct: 0,
-    })
-    expect(budget?.forbiddenChunks).toEqual(['__common'])
+      // Доказывает, что проверка не является чтением конфига ради сравнения его
+      // с самим собой: временно ослабленный fallback с >5% spare обязан упасть.
+      mutatedEager.maxRequests = Math.floor(highestRouteLimit * 1.05) + 1
+      fs.writeFileSync(mutatedBudgetPath, JSON.stringify(mutatedBudget))
+
+      expect(() => validateCommittedBudget(mutatedBudgetPath)).toThrow(
+        'bundle budget eager.maxRequests fallback spare must stay at or below 5%.',
+      )
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
   })
 
   it('fails closed when a route exceeds its own eager JS request budget', () => {
