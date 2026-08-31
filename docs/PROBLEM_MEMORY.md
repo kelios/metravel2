@@ -2496,6 +2496,52 @@ guard, падающий в CI на попытке обойти этот конт
   прошли. Evidence — `.codex-temp/task-1571-finish/`. Этот pure-model check не
   подменяет приёмку backend/renderer/UI для всей семьи `#1567/#1568`.
 
+### MAP-IOS-TILE-GRAY-001 — native tileerror не восстанавливается вместе с сетью
+
+- **Инвариант:** после `offline → online` уже открытая native-карта сама
+  перезапрашивает failed базовые тайлы; пользователю не нужно двигать карту,
+  переключать вкладку или перезапускать приложение.
+- **Surface/owner:** общий iOS/Android Leaflet WebView renderer —
+  `components/MapPage/Map.ios.tsx` и native tile bridge. Web использует другой
+  tile lifecycle.
+- **Цепочка:** `#1561` закрыл collision/retry/minZoom причины серой подложки;
+  `#1665` — новый connectivity-redraw failure mode; controls `#990/#202`.
+- **Подтверждённая причина:** offline cache miss завершается пустым tile и
+  `tileerror`; NetInfo затем меняет состояние на online, но Leaflet не повторяет
+  этот запрос до pan/zoom/remount, потому что base layer не получает `redraw()`.
+- **Controls:** один coalesced `baseTileLayer.redraw()` + `invalidateSize` на
+  переходе `false → true`, включая pending-ready ветку; unit-контроль запрещает
+  redraw при стабильном online. Runtime — три airplane-mode цикла без жеста,
+  `loaded > 0`, `pending = 0`, затем Android smoke общего renderer.
+- **Решение для новой жалобы:** серый фон только после reconnect — reuse/reopen
+  `#1665`; low-zoom/key/retry recurrence — reopen `#1561`; proxy/GPU причины —
+  create-linked после точного измерения.
+- **Последняя проверка:** 2026-08-31; code-path и пользовательский iOS screenshot
+  подтверждены, runtime-приёмка текущей сборки ожидается в testing.
+
+### TRIPS-PLAN-SAVED-ROUTE-TRUTH-001 — display tuple не может противоречить точкам
+
+- **Инвариант:** geometry, routing state, summary, header и export описывают
+  один маршрут. При двух валидных координатах stale `not_enough_points` не
+  авторитетен; waypoint fallback всегда явно approximate, а не healthy road.
+- **Surface/owner:** planned-trip route display — `useTripRouteDisplay`,
+  `RouteBuilder`, page header и web/native route renderers.
+- **Цепочка:** каноническая `#873`; live draft `#1490`; persisted backend
+  geometry `#871/#1336`; рецидив iOS от 2026-08-31 снова ведётся в `#873`.
+- **Подтверждённая причина рецидива:** repair запускался для healthy state без
+  geometry, но не для `fallback_reason=not_enough_points` после появления двух
+  координат; native renderer одновременно стилизовал waypoint segment как
+  сплошную routed-линию, а header читал отдельный persisted tuple.
+- **Controls:** exact fixture `coordinates >= 2 + stale not_enough_points`;
+  shared preview repair; callback полного live tuple в header; approximate
+  native payload и warning/dashed polyline. Runtime проверяет success,
+  provider failure/retry и несохранённую вторую точку.
+- **Решение для новой жалобы:** рассогласование line/state/summary на planned
+  trip — reopen `#873`; деградированный HTTP 200 provider/cache contract —
+  отдельная диагностика `ROUTING-ORS-001`, не смешивать причины.
+- **Последняя проверка:** 2026-08-31; recurrence подтверждён screenshot и source
+  trace, code-level regression в работе.
+
 ### MAP-ROUTING-001 — incomplete routing migration
 
 - **Инвариант:** один canonical adapter владеет provider selection, DTO

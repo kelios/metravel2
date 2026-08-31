@@ -94,8 +94,8 @@ describe('TripPlanRouteMap (native) — карта и слои', () => {
     expect(props.coordinates).toEqual({ latitude: 53.9, longitude: 27.56 })
   })
 
-  it('не маскирует pending routing прямой линией, а direct fallback помечает approximate', () => {
-    const { rerender } = render(
+  it('рисует pending/direct waypoint fallback только предупреждающим пунктиром', () => {
+    const { getByText, queryByText, rerender } = render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={null}
@@ -104,9 +104,14 @@ describe('TripPlanRouteMap (native) — карта и слои', () => {
     )
 
     let props = mockMapProps.at(-1)!
-    expect(props.fullRouteCoords).toEqual([])
-    expect(props.routeLineVisible).toBe(false)
-    expect(props.routeLineApproximate).toBe(false)
+    expect(props.fullRouteCoords).toEqual([
+      [27.56, 53.9],
+      [27.6, 53.91],
+    ])
+    expect(props.routeLineVisible).toBe(true)
+    expect(props.routeLineApproximate).toBe(true)
+    expect(queryByText('Маршрут построен ORS')).toBeNull()
+    expect(getByText('Линия приблизительная: проверьте дорогу или тропу перед поездкой.')).toBeTruthy()
 
     rerender(
       <TripPlanRouteMap
@@ -128,6 +133,7 @@ describe('TripPlanRouteMap (native) — карта и слои', () => {
     ])
     expect(props.routeLineVisible).toBe(true)
     expect(props.routeLineApproximate).toBe(true)
+    expect(getByText('Приблизительный маршрут')).toBeTruthy()
   })
 
   it('показывает «Слои» с тем же набором, что на главной карте, и пишет выбор в общий store', () => {

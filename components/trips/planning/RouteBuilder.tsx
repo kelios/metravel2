@@ -110,7 +110,7 @@ interface Props {
    */
   layout?: 'stack' | 'mapFirst';
   /** Keep the page header on the same live display tuple as map/summary/export. */
-  onDisplayStateChange?: (state: RouteBuilderDisplayState) => void;
+  onDisplayStateChange?: (state: RouteBuilderDisplayState | null) => void;
 }
 
 const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
@@ -387,6 +387,11 @@ function RouteBuilder({
       routablePointCount: routablePreviewPoints(route).length,
     });
   }, [onDisplayStateChange, route, routingState, summary]);
+
+  useEffect(
+    () => () => onDisplayStateChange?.(null),
+    [onDisplayStateChange],
+  );
 
   // #1304: скачивание живёт там же, где маршрут строится. Экспортируем то, что
   // сейчас на карте: у несохранённых правок это геометрия превью, поэтому файл

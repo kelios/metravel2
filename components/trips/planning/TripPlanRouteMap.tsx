@@ -113,15 +113,19 @@ export default function TripPlanRouteMap({
     () => lngLatPairs(route.map((point) => point.coordinates)),
     [route],
   );
-  const approximate = isRouteApproximate(routingState);
   const hasRoutedGeometry = hasUsableRouteGeometry(routeGeometry);
+  const usesWaypointFallback = !hasRoutedGeometry && routePoints.length >= 2;
+  const approximate = usesWaypointFallback || isRouteApproximate(routingState);
+  // A persisted healthy label cannot survive without routed geometry. The
+  // fallback segment remains useful for orientation, but it is presented as
+  // approximate until the preview engine supplies the complete routed tuple.
+  const truthfulRoutingState =
+    hasRoutedGeometry || isRouteApproximate(routingState) ? routingState : null;
   const routeLine = useMemo(
     () => (hasRoutedGeometry
       ? lngLatPairs(routeGeometry ?? [])
-      : approximate
-        ? routePoints
-        : []),
-    [approximate, hasRoutedGeometry, routeGeometry, routePoints],
+      : routePoints),
+    [hasRoutedGeometry, routeGeometry, routePoints],
   );
   const originalTrackLine = useMemo(
     () => (originalTrack?.length ? lngLatPairs(originalTrack) : []),
@@ -181,8 +185,8 @@ export default function TripPlanRouteMap({
             </View>
           ) : null}
           <Text style={styles.hint}>
-            {routeLine.length >= 2 && routingState
-              ? routingStateLabel(routingState)
+            {routeLine.length >= 2 && truthfulRoutingState
+              ? routingStateLabel(truthfulRoutingState)
               : readonly
                 ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
                 : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
@@ -195,7 +199,7 @@ export default function TripPlanRouteMap({
           ) : null}
           {approximate ? (
             <Text style={styles.warning}>
-              {routingStateHint(routingState)
+              {routingStateHint(truthfulRoutingState)
                 ?? i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4')}
             </Text>
           ) : null}
@@ -211,7 +215,7 @@ export default function TripPlanRouteMap({
           routePoints={routePoints}
           fullRouteCoords={routeLine}
           routeLineVisible={routeLine.length >= 2}
-          routeLineApproximate={approximate && !hasRoutedGeometry}
+          routeLineApproximate={approximate}
           originalTrackCoords={originalTrackLine}
           mode="route"
           pointsOnly

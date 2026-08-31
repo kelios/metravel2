@@ -281,7 +281,7 @@ describe('RouteBuilder live route preview', () => {
 
   it('repairs stale not_enough_points once two coordinates are already present', () => {
     const onDisplayStateChange = jest.fn()
-    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+    const { getByTestId, queryByTestId, queryByText, unmount } = renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           routeGeometry: [
@@ -319,6 +319,32 @@ describe('RouteBuilder live route preview', () => {
       summary: expect.objectContaining({ distanceKm: 24.3 }),
       routingState: expect.objectContaining({ provider: 'preview', isOptimal: true }),
     }))
+
+    unmount()
+    expect(onDisplayStateChange).toHaveBeenLastCalledWith(null)
+  })
+
+  it('replaces stale not_enough_points with a schematic tuple for non-routable transport', () => {
+    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+      <RouteBuilder
+        trip={makeTrip({
+          transport: 'public',
+          routeGeometry: null,
+          routeSummary: null,
+          routingState: {
+            provider: 'direct',
+            isOptimal: false,
+            fallbackReason: 'not_enough_points',
+            warnings: [],
+          },
+        })}
+      />,
+    )
+
+    expect(queryByTestId('trip-route-preview-engine')).toBeNull()
+    expect(getByTestId('route-map-provider').props.children).toBe('schematic')
+    expect(queryByText('Добавьте минимум две точки маршрута')).toBeNull()
+    expect(queryByTestId('route-summary-approximate')).toBeTruthy()
   })
 
   it('fails closed when repair routing fails and keeps retry available', () => {

@@ -16,6 +16,11 @@ const mockTripsPageSeo = jest.fn(() => null);
 const originalOS = Platform.OS;
 let mockSearchParams: Record<string, string> = { id: '8001' };
 let mockResponsive = { isMobile: false };
+let mockRouteBuilderDisplayState: {
+  summary: PlannedTrip['routeSummary'];
+  routingState: PlannedTrip['routingState'];
+  routablePointCount: number;
+} | null = null;
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockSearchParams,
@@ -85,7 +90,25 @@ const mockStub = (testID: string) => () => {
   return <View testID={testID} />;
 };
 
-jest.mock('@/components/trips/planning/RouteBuilder', () => mockStub('route-builder'));
+jest.mock('@/components/trips/planning/RouteBuilder', () => {
+  return function MockRouteBuilder({
+    onDisplayStateChange,
+  }: {
+    onDisplayStateChange?: (state: NonNullable<typeof mockRouteBuilderDisplayState> | null) => void;
+  }) {
+    const { Pressable } = require('react-native');
+    return (
+      <Pressable
+        testID="route-builder"
+        onPress={() => {
+          if (mockRouteBuilderDisplayState) {
+            onDisplayStateChange?.(mockRouteBuilderDisplayState);
+          }
+        }}
+      />
+    );
+  };
+});
 jest.mock('@/components/trips/planning/TripParticipantsList', () => mockStub('trip-participants-list'));
 jest.mock('@/components/trips/planning/TripRsvpControl', () => mockStub('trip-rsvp-control'));
 jest.mock('@/components/trips/planning/TripInvitePanel', () => mockStub('trip-invite-panel'));
@@ -187,6 +210,7 @@ describe('PlannedTripScreen — planner states', () => {
     mockUsePlannedTrip.mockReset();
     mockUpdateTripMutate.mockReset();
     mockTripsPageSeo.mockClear();
+    mockRouteBuilderDisplayState = null;
   });
 
   const mockTrip = (trip: PlannedTrip) =>
@@ -250,6 +274,44 @@ describe('PlannedTripScreen — planner states', () => {
     expect(queryByTestId('trip-plan-summary')).toBeNull();
     expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
     expect(queryByText(/минимум две точки/i)).toBeNull();
+  });
+
+  it('updates the header from the same live route tuple as RouteBuilder', () => {
+    mockTrip(
+      makeTrip({
+        routeGeometry: null,
+        routeSummary: null,
+        routingState: {
+          provider: 'direct',
+          isOptimal: false,
+          fallbackReason: 'not_enough_points',
+          warnings: [],
+        },
+      }),
+    );
+    const { getByTestId, queryByTestId } = renderScreen();
+    expect(queryByTestId('trip-plan-summary')).toBeNull();
+
+    mockRouteBuilderDisplayState = {
+      summary: {
+        distanceKm: 24.3,
+        durationMin: 31,
+        elevationGainM: 0,
+        stopsCount: 2,
+        provider: 'preview',
+      },
+      routingState: {
+        provider: 'preview',
+        isOptimal: true,
+        fallbackReason: null,
+        warnings: [],
+      },
+      routablePointCount: 2,
+    };
+    fireEvent.press(getByTestId('route-builder'));
+
+    expect(getByTestId('trip-plan-summary')).toBeTruthy();
+    expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
   });
 
   it('flags a direct fallback route as approximate', () => {

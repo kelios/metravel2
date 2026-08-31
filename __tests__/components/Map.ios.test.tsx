@@ -422,6 +422,34 @@ describe('Map.ios Component', () => {
     ).toBe(false);
   });
 
+  it('defers an offline to online redraw until the WebView is ready', () => {
+    mockIsConnected = false;
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+    const webView = getWebView(rendered);
+    mockInjectJavaScript.mockClear();
+
+    mockIsConnected = true;
+    rendered.rerender(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+
+    expect(
+      mockInjectJavaScript.mock.calls.some(([script]) => String(script).includes('network-reconnect'))
+    ).toBe(false);
+
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+
+    const reconnectScripts = mockInjectJavaScript.mock.calls
+      .map(([script]) => String(script))
+      .filter((script) => script.includes('network-reconnect'));
+    expect(reconnectScripts).toHaveLength(1);
+    expect(reconnectScripts[0]).toContain('window.__metravelBaseTileLayer.redraw()');
+  });
+
   it('should include all travel points in the map payload', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />

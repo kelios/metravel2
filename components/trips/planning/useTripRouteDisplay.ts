@@ -77,17 +77,16 @@ export function useTripRouteDisplay({
   const routablePointCount = routablePreviewPoints(route).length
   const savedStateContradictsPointCount =
     routeShapeMatchesSaved &&
-    isRoutableTransport(trip.transport) &&
     routablePointCount >= 2 &&
     routingStateClaimsNotEnoughPoints(trip.routingState)
-  const savedRouteNeedsRepair =
+  const savedHealthyRouteNeedsGeometry =
     routeShapeMatchesSaved &&
     isRoutableTransport(trip.transport) &&
     routablePointCount >= 2 &&
-    (
-      savedStateContradictsPointCount ||
-      (savedStateClaimsHealthy && !hasUsableSavedGeometry)
-    )
+    savedStateClaimsHealthy &&
+    !hasUsableSavedGeometry
+  const savedRouteNeedsRepair =
+    savedStateContradictsPointCount || savedHealthyRouteNeedsGeometry
   // Only the healthy/missing-geometry branch may be repaired by the elevation
   // endpoint. A contradictory point-count state is invalid regardless of that
   // request, so route preview must take ownership immediately.

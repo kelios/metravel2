@@ -183,13 +183,19 @@ export default function PlannedTripScreen() {
     : rawHealthyRouteMissingGeometry || rawStateContradictsPointCount;
   const summaryLine = headerDisplaySuppressed ? '' : routeSummaryLine(headerRouteSummary);
   const routeApproximate = isRouteApproximate(headerRoutingState);
+  const liveRouteTripId = trip?.id ?? null;
 
   const handleRouteDisplayStateChange = useCallback(
-    (state: RouteBuilderDisplayState) => {
-      if (!trip) return;
-      setLiveRouteDisplay({ ...state, tripId: trip.id });
+    (state: RouteBuilderDisplayState | null) => {
+      if (state == null) {
+        setLiveRouteDisplay(null);
+        return;
+      }
+      if (liveRouteTripId != null) {
+        setLiveRouteDisplay({ ...state, tripId: liveRouteTripId });
+      }
     },
-    [trip],
+    [liveRouteTripId],
   );
 
   useEffect(() => {

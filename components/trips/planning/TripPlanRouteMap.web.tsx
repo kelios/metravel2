@@ -281,16 +281,9 @@ export default function TripPlanRouteMap({
     [routeGeometry],
   );
   const hasRoutedGeometry = routedGeometry !== null;
-  const routeStateIsApproximate = isRouteApproximate(routingState);
-  const usesWaypointFallback =
-    !hasRoutedGeometry && markerPositions.length >= 2 && routeStateIsApproximate;
   const trackPositions = useMemo(() => (
-    routedGeometry
-      ? lngLatPositions(routedGeometry)
-      : usesWaypointFallback
-        ? markerPositions
-        : []
-  ), [markerPositions, routedGeometry, usesWaypointFallback]);
+    routedGeometry ? lngLatPositions(routedGeometry) : markerPositions
+  ), [markerPositions, routedGeometry]);
   const originalTrackPositions = useMemo(
     () => (originalTrack?.length ? lngLatPositions(originalTrack) : []),
     [originalTrack],
@@ -304,21 +297,20 @@ export default function TripPlanRouteMap({
   // упрощённых точек, и без него часть настоящей формы осталась бы за кадром.
   const fitPositions = useMemo(
     () => (originalTrackPositions.length >= 2
-      ? [...(trackPositions.length ? trackPositions : markerPositions), ...originalTrackPositions]
-      : trackPositions.length
-        ? trackPositions
-        : markerPositions),
-    [markerPositions, originalTrackPositions, trackPositions],
+      ? [...trackPositions, ...originalTrackPositions]
+      : trackPositions),
+    [originalTrackPositions, trackPositions],
   );
   const fitToken = useMemo(
     () => fitPositions.map((position) => position.join(',')).join('|'),
     [fitPositions],
   );
-  const approximate = usesWaypointFallback;
+  const usesWaypointFallback = !hasRoutedGeometry && markerPositions.length >= 2;
+  const approximate = usesWaypointFallback || isRouteApproximate(routingState);
   // Fail closed even if another caller passes the inconsistent server tuple:
   // a healthy label requires actual routed geometry, never marker fallback.
   const truthfulRoutingState =
-    hasRoutedGeometry || routeStateIsApproximate ? routingState : null;
+    hasRoutedGeometry || isRouteApproximate(routingState) ? routingState : null;
   const markerIcon = useMemo(() => {
     if (!L) return null;
     return L.divIcon({
