@@ -122,6 +122,19 @@ set -a
 set +a
 
 mkdir -p "$(dirname "$LOG_FILE")"
+
+# Ротация без root: logrotate живёт в /etc, туда доступа нет. Держим четыре
+# файла по мегабайту — при ~200 байтах в сутки это годы истории.
+umask 027
+LOG_MAX_BYTES="${LOG_MAX_BYTES:-1048576}"
+if [ -f "$LOG_FILE" ] && [ "$(wc -c < "$LOG_FILE")" -gt "$LOG_MAX_BYTES" ]; then
+  rm -f "${LOG_FILE}.3"
+  for i in 2 1; do
+    if [ -f "${LOG_FILE}.$i" ]; then mv "${LOG_FILE}.$i" "${LOG_FILE}.$((i + 1))"; fi
+  done
+  mv "$LOG_FILE" "${LOG_FILE}.1"
+fi
+
 exec >>"$LOG_FILE" 2>&1
 
 if ! DB_CONTAINER="$(metravel_resolve_container metravel-gis)"; then

@@ -10,6 +10,9 @@
   `gzip -t` OK, в логе `Backup completed`.
 - **Бэкапы лежат в отдельном приватном бакете `s3://metravel-backups/postgres/`**
   (eu-north-1, Block Public Access на всех четырёх флагах, versioning включён).
+- **Ключ у бэкапа отдельный и узкий**: IAM-пользователь `metravel-backup-writer`
+  умеет только положить объект в `postgres/*` и увидеть листинг этого префикса.
+  Прочитать или удалить готовый бэкап он не может, в медиа-бакет не ходит.
 - ⚠️ **В медиа-бакет `metravelprod` бэкапы лить нельзя.** У него политика
   `Principal: "*"` + `s3:GetObject` на `metravelprod/*`: дамп с почтами и хешами
   паролей качался бы по прямой ссылке кем угодно.
@@ -32,10 +35,10 @@
 | Расписание | user crontab пользователя `sx3`, строка с маркером `# metravel-db-backup` | `15 2 * * *`, таймзона хоста Europe/Minsk |
 | Обёртка запуска | `/home/sx3/.local/bin/metravel-db-backup` (0700) | генерируется `scripts/enable-prod-db-backup.sh`, руками не править |
 | Конфиг | `/home/sx3/.metravel-backup.env` (0600) | `S3_URI`, `BACKUP_DIR`, `RETENTION_DAYS=5`, `AWS_CLI`, `LOG_FILE`; секретов нет |
-| Лог | `/home/sx3/logs/metravel-db-backup.log` (0640) | одна строка `Backup completed` на успешную ночь |
+| Лог | `/home/sx3/logs/metravel-db-backup.log` (0640) | строка `Backup completed` на каждую успешную ночь; ротация внутри обёртки — 4 файла по 1 МиБ |
 | Локальные архивы | `/home/sx3/metravel/deploy/prod/backups/` | ~54 МиБ штука, ретенция 5 дней, чистится самим скриптом |
-| Архивы в S3 | `s3://metravel-backups/postgres/` | приватный бакет, versioning on, lifecycle НЕ настроен |
-| Ключ S3 | `/home/sx3/.aws/credentials` (0600, владелец `sx3`) | пока общий ключ приложения — сузить, см. [Что осталось владельцу](#что-осталось-владельцу) |
+| Архивы в S3 | `s3://metravel-backups/postgres/` | приватный бакет, versioning on, lifecycle: объект живёт 90 дней |
+| Ключ S3 | `/home/sx3/.aws/credentials` (0600, владелец `sx3`) | IAM-пользователь `metravel-backup-writer`, инлайн-политика `metravel-backups-put` |
 | AWS CLI | `/home/sx3/.local/aws-cli`, бинарь `/home/sx3/.local/bin/aws` | v2.36.34, userland-установка без root, 271 МБ |
 | Каталог данных живой БД | bind-mount `/home/sx3/metravel/deploy/prod/postgis/data` | 431.9 МиБ |
 | Ручной дамп 05.08.2026 | `/home/sx3/db-backups/metravel-postgres-20260805T122720Z.sql.gz` | 52 328 299 Б, не обновляется, можно удалить |
@@ -236,6 +239,28 @@ npm run db:backup:prod:verify                    # проверить крите
 (смена `metravel_metravel-gis_1` → `metravel-metravel-gis-1`) расписание не
 ломает (борд #733, #1636).
 
+### Что происходит каждую ночь
+
+1. В 02:15 по времени сервера (Europe/Minsk) cron пользователя `sx3` запускает
+   `~/.local/bin/metravel-db-backup`.
+2. Обёртка берёт `flock` — второй параллельный прогон просто не начнётся, —
+   ротирует лог, если он перевалил за мегабайт, и подтягивает
+   `~/.metravel-backup.env`.
+3. Имя контейнера БД резолвится по факту, а не берётся константой.
+4. Канонический скрипт снимает `pg_dump --no-owner --no-acl` через `docker exec`,
+   жмёт `gzip -9` во временный файл, проверяет `gzip -t` и минимальный размер и
+   только потом атомарно переименовывает результат в
+   `deploy/prod/backups/metravel-postgres-<UTC-timestamp>.sql.gz`.
+5. Архив уходит в `s3://metravel-backups/postgres/` ключом
+   `metravel-backup-writer`.
+6. Локальные архивы старше `RETENTION_DAYS` удаляются, в лог пишется
+   `Backup completed`.
+7. Через 90 дней объект в S3 удаляется lifecycle-правилом
+   `expire-daily-backups`; версии, ставшие неактуальными, — через 7 дней.
+
+Конвейер fail-closed (`set -o pipefail` + проверка минимального размера): пустой
+или оборванный архив в S3 не попадёт, а в логе останется строка с `ERROR`.
+
 ### Почему не `/etc/cron.d`, как в карточке #1247
 
 Две причины, обе выяснились при включении:
@@ -355,44 +380,90 @@ ssh "$PROD_SSH_TARGET" 'rm -rf ~/.local/aws-cli ~/.local/bin/aws ~/.local/bin/aw
 Удалять сам бакет `metravel-backups` через CLI неудобно (нужно сначала вычистить
 все версии) — проще в консоли AWS, «Empty» и затем «Delete».
 
+## Если бэкап не сделался
+
+Диагностика по шагам, от частого к редкому (`…` — обёртка
+`bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; ssh "$PROD_SSH_TARGET" …'`):
+
+```bash
+npm run db:backup:prod:verify                                     # 1. что было ночью
+ssh … "tail -40 ~/logs/metravel-db-backup.log; ls -l ~/logs/"     # 2. полный лог и ротация
+ssh … "cd ~/metravel && ./deploy/prod/backup/backup_database_to_s3.sh --check"   # 3. жива ли БД
+ssh … "crontab -l | grep metravel-db-backup"                      # 4. на месте ли расписание
+ssh … "~/.local/bin/aws s3 ls s3://metravel-backups/postgres/ | tail -3"         # 5. жив ли ключ
+```
+
+Что означают строки в логе:
+
+| Строка | Причина | Что делать |
+| --- | --- | --- |
+| `ERROR: контейнер БД не найден` | контейнер пересоздан или не поднят | `docker ps` на хосте, поднять базу |
+| `ERROR: PostgreSQL dump pipeline failed` | упал сам `pg_dump` | прогнать `--check`, смотреть логи контейнера БД |
+| `ERROR: Backup archive is too small` | дамп оборвался | проверить место на диске и здоровье БД |
+| `ERROR: AWS CLI is not installed` | снесли `~/.local` | `bash scripts/enable-prod-db-backup.sh` |
+| `upload failed … AccessDenied` | ключ отозван или сменилась политика | пересоздать ключ, см. ниже |
+| за ночь в логе вообще ничего | cron-строку затёрли | `bash scripts/enable-prod-db-backup.sh` |
+| `flock: … Resource temporarily unavailable` | предыдущий прогон ещё идёт | это защита, а не ошибка |
+
+Про диск: `/` — 15 ГБ, свободно ~3.4 ГБ, пять локальных архивов занимают ~270 МБ.
+Если место кончится, дамп упадёт на записи с `ERROR`, а не молча.
+
+### Как пересоздать ключ бэкапа
+
+IAM-пользователь `metravel-backup-writer` и его инлайн-политика
+`metravel-backups-put` переиспользуются, старый ключ удаляется, новый пишется
+сразу в `~sx3/.aws/credentials` — секрет не проходит через терминал. Права
+политики:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PutBackupObjects",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+      "Resource": "arn:aws:s3:::metravel-backups/postgres/*"
+    },
+    {
+      "Sid": "ListBackupPrefix",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket"],
+      "Resource": "arn:aws:s3:::metravel-backups",
+      "Condition": {"StringLike": {"s3:prefix": ["postgres/", "postgres/*"]}}
+    }
+  ]
+}
+```
+
+Проверено 31.08.2026: с этим ключом `s3 ls` префикса работает, а `head-object`
+по самому архиву, листинг `metravelprod` и листинг корня бакета возвращают 403 /
+`AccessDenied`. То есть скомпрометированный прод-хост не может ни прочитать, ни
+затереть уже уехавшие бэкапы.
+
+Аварийный откат на прежний ключ (если новый вдруг отозван): он лежит в
+переменных окружения контейнера приложения, поэтому файл восстанавливается той же
+командой, что и заводился —
+`docker exec metravel_app_1 sh -c 'printf "[default]\naws_access_key_id=%s\naws_secret_access_key=%s\n" "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY"' > ~/.aws/credentials`.
+Это временная мера: см. предупреждение ниже.
+
 ## Что осталось владельцу
 
-Ничего из этого не блокирует работу бэкапа — это гигиена.
+⚠️ **Приложение ходит в S3 root-ключом аккаунта AWS.** Проверено 31.08.2026:
+`sts get-caller-identity` для ключа из окружения контейнера возвращает
+`arn:aws:iam::…:root`. Такой ключ не ограничен ничем — он может удалить любой
+бакет, завести пользователя, поменять биллинг, — и лежит в переменных окружения
+контейнера. Это шире, чем нужно приложению (ему хватает доступа к
+`metravelprod`), и AWS прямо рекомендует root-ключи удалять.
 
-1. **Сузить ключ S3.** Сейчас cron ходит в S3 общим ключом приложения (тем же,
-   что обслуживает медиа-бакет: он умеет в том числе создавать бакеты). Правильно
-   — отдельный IAM-пользователь только на префикс бэкапов:
+Правильный порядок: завести отдельного IAM-пользователя для приложения с правами
+только на `metravelprod`, подменить переменные окружения на прод-хосте,
+проверить загрузку и раздачу медиа — и только потом удалить root-ключ.
+Это отдельная задача уровня бэкенда, к бэкапу отношения не имеет: бэкап с
+31.08.2026 ходит своим узким ключом.
 
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Sid": "PutBackups",
-         "Effect": "Allow",
-         "Action": ["s3:PutObject"],
-         "Resource": "arn:aws:s3:::metravel-backups/postgres/*"
-       },
-       {
-         "Sid": "ListBackupPrefix",
-         "Effect": "Allow",
-         "Action": ["s3:ListBucket"],
-         "Resource": "arn:aws:s3:::metravel-backups",
-         "Condition": {"StringLike": {"s3:prefix": ["postgres/*"]}}
-       }
-     ]
-   }
-   ```
-
-   После создания ключа — заменить `~/.aws/credentials` на проде (0600, владелец
-   `sx3`) и прогнать `npm run db:backup:prod:verify`.
-
-2. **Lifecycle в S3.** Сейчас бакет растёт примерно на 1.6 ГБ в месяц и ничего не
-   удаляется. Разумно — правило «expire через 90 дней» плюс
-   `NoncurrentVersionExpiration`.
-
-3. **Ротация лога.** `/home/sx3/logs/metravel-db-backup.log` растёт медленно
-   (~200 байт в сутки), но `logrotate` под него не заведён.
+Из мелочей по самому бэкапу не сделано ничего — lifecycle, ротация лога и
+least-privilege ключ настроены.
 
 ## Восстановление
 
