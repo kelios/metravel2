@@ -7,12 +7,34 @@ const ROOT = path.resolve(process.cwd())
 const packageJsonPath = path.join(ROOT, 'package.json')
 const budgetPath = path.join(ROOT, 'config', 'bundle-budget.json')
 const guardScriptPath = path.join(ROOT, 'scripts', 'guard-bundle-budget.js')
+const contractTestPath = path.join(ROOT, '__tests__', 'scripts', 'bundle-budget-release-contract.test.ts')
 
 type JsonRecord = Record<string, unknown>
+type EagerRequestBudget = {
+  maxRequests: number
+  maxRequestsByRoute: Record<string, number>
+}
 
 const MAX_BUDGET_TOLERANCE_PCT = 5
 const MAX_EAGER_BROTLI_KB = 800
 const MAX_GLOBAL_REQUEST_SPARE_PCT = 5
+const EAGER_REQUEST_PIN_START = '// bundle-budget-sync:eager-requests:start'
+const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
+
+// bundle-budget-sync:eager-requests:start
+// {
+//   "maxRequests": 27,
+//   "maxRequestsByRoute": {
+//     "index.html": 16,
+//     "search.html": 11,
+//     "map.html": 23,
+//     "quests.html": 15,
+//     "(tabs)/travels/[param].html": 23,
+//     "(tabs)/profile.html": 27,
+//     "(tabs)/trips/plan/[id].html": 26
+//   }
+// }
+// bundle-budget-sync:eager-requests:end
 
 const requireRecord = (value: unknown, label: string): JsonRecord => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -43,7 +65,76 @@ const requireBudgetNumber = (
   return value
 }
 
-const validateCommittedBudget = (configPath: string): JsonRecord => {
+const readEagerRequestPin = (sourcePath: string): unknown => {
+  const lines = fs.readFileSync(sourcePath, 'utf8').split(/\r?\n/)
+  const startIndexes = lines.flatMap((line, index) => (line === EAGER_REQUEST_PIN_START ? [index] : []))
+  const endIndexes = lines.flatMap((line, index) => (line === EAGER_REQUEST_PIN_END ? [index] : []))
+  if (startIndexes.length !== 1 || endIndexes.length !== 1 || endIndexes[0] <= startIndexes[0] + 1) {
+    throw new Error('bundle budget eager request pin markers must form exactly one non-empty ordered block.')
+  }
+
+  const payload = lines
+    .slice(startIndexes[0] + 1, endIndexes[0])
+    .map((line) => {
+      if (!line.startsWith('// ')) {
+        throw new Error('bundle budget eager request pin payload must contain JSON comment lines.')
+      }
+      return line.slice(3)
+    })
+    .join('\n')
+  try {
+    return JSON.parse(payload)
+  } catch {
+    throw new Error('bundle budget eager request pin payload must be valid JSON.')
+  }
+}
+
+const validateEagerRequestBudget = (value: unknown, label: string): EagerRequestBudget => {
+  const requestBudget = requireRecord(value, label)
+  const maxRequests = requireBudgetNumber(requestBudget.maxRequests, `${label}.maxRequests`, {
+    integer: true,
+  })
+  const routeBudgets = requireRecord(requestBudget.maxRequestsByRoute, `${label}.maxRequestsByRoute`)
+  const routeEntries = Object.entries(routeBudgets)
+  if (routeEntries.length === 0) {
+    throw new Error(`${label}.maxRequestsByRoute must not be empty.`)
+  }
+
+  const maxRequestsByRoute = Object.fromEntries(
+    routeEntries.map(([route, limit]) => {
+      if (
+        !route.endsWith('.html') ||
+        route.startsWith('/') ||
+        route.includes('\\') ||
+        route.split('/').includes('..')
+      ) {
+        throw new Error(`${label} route must be a normalized relative .html path: ${route}.`)
+      }
+      const numericLimit = requireBudgetNumber(limit, `${label}.maxRequestsByRoute.${route}`, {
+        integer: true,
+      })
+      if (numericLimit > maxRequests) {
+        throw new Error(`${label} route ${route} must not exceed maxRequests.`)
+      }
+      return [route, numericLimit]
+    }),
+  )
+
+  const highestRouteLimit = Math.max(...Object.values(maxRequestsByRoute))
+  const fallbackSparePct = ((maxRequests - highestRouteLimit) / highestRouteLimit) * 100
+  if (fallbackSparePct > MAX_GLOBAL_REQUEST_SPARE_PCT) {
+    throw new Error(`${label}.maxRequests fallback spare must stay at or below 5%.`)
+  }
+
+  return { maxRequests, maxRequestsByRoute }
+}
+
+const normalizedRequestBudget = (budget: EagerRequestBudget) => ({
+  maxRequests: budget.maxRequests,
+  maxRequestsByRoute: Object.fromEntries(Object.entries(budget.maxRequestsByRoute).sort(([a], [b]) => a.localeCompare(b))),
+})
+
+const validateCommittedBudget = (configPath: string, pinSourcePath = contractTestPath): JsonRecord => {
   const budget = requireRecord(JSON.parse(fs.readFileSync(configPath, 'utf8')), 'bundle budget')
   const tolerancePct = requireBudgetNumber(
     budget.tolerancePct,
@@ -81,43 +172,16 @@ const validateCommittedBudget = (configPath: string): JsonRecord => {
     throw new Error('bundle budget.eager.tolerancePct must stay at zero.')
   }
 
-  const maxRequests = requireBudgetNumber(eager.maxRequests, 'bundle budget.eager.maxRequests', {
-    integer: true,
-  })
-  const routeBudgets = requireRecord(
-    eager.maxRequestsByRoute,
-    'bundle budget.eager.maxRequestsByRoute',
+  const configuredRequests = validateEagerRequestBudget(eager, 'bundle budget.eager')
+  const committedRequests = validateEagerRequestBudget(
+    readEagerRequestPin(pinSourcePath),
+    'committed eager request pin',
   )
-  const routeEntries = Object.entries(routeBudgets)
-  if (routeEntries.length === 0) {
-    throw new Error('bundle budget.eager.maxRequestsByRoute must not be empty.')
-  }
-  const routeLimits = routeEntries.map(([route, limit]) => {
-    if (
-      !route.endsWith('.html') ||
-      route.startsWith('/') ||
-      route.includes('\\') ||
-      route.split('/').includes('..')
-    ) {
-      throw new Error(`bundle budget eager route must be a normalized relative .html path: ${route}.`)
-    }
-    const numericLimit = requireBudgetNumber(
-      limit,
-      `bundle budget.eager.maxRequestsByRoute.${route}`,
-      { integer: true },
-    )
-    if (numericLimit > maxRequests) {
-      throw new Error(`bundle budget route ${route} must not exceed eager.maxRequests.`)
-    }
-    return numericLimit
-  })
-
-  const highestRouteLimit = Math.max(...routeLimits)
-  const fallbackSparePct = ((maxRequests - highestRouteLimit) / highestRouteLimit) * 100
-  if (fallbackSparePct > MAX_GLOBAL_REQUEST_SPARE_PCT) {
-    throw new Error(
-      `bundle budget eager.maxRequests fallback spare must stay at or below ${MAX_GLOBAL_REQUEST_SPARE_PCT}%.`,
-    )
+  if (
+    JSON.stringify(normalizedRequestBudget(configuredRequests)) !==
+    JSON.stringify(normalizedRequestBudget(committedRequests))
+  ) {
+    throw new Error('bundle budget eager request limits must match the committed test pin exactly.')
   }
 
   return budget
@@ -147,23 +211,133 @@ describe('bundle budget release contract', () => {
     const budget = validateCommittedBudget(budgetPath)
     const tmpDir = makeTempDir('metravel-bundle-budget-contract-')
     try {
+      const jsDir = path.join(tmpDir, 'js')
       const mutatedBudgetPath = path.join(tmpDir, 'bundle-budget.json')
+      const updatedContractPath = path.join(tmpDir, 'bundle-budget-release-contract.test.ts')
       const mutatedBudget = JSON.parse(JSON.stringify(budget)) as JsonRecord
       const mutatedEager = requireRecord(mutatedBudget.eager, 'mutated bundle budget.eager')
       const mutatedRouteBudgets = requireRecord(
         mutatedEager.maxRequestsByRoute,
         'mutated bundle budget.eager.maxRequestsByRoute',
       )
-      const highestRouteLimit = Math.max(...Object.values(mutatedRouteBudgets).map(Number))
 
-      // Доказывает, что проверка не является чтением конфига ради сравнения его
-      // с самим собой: временно ослабленный fallback с >5% spare обязан упасть.
-      mutatedEager.maxRequests = Math.floor(highestRouteLimit * 1.05) + 1
-      fs.writeFileSync(mutatedBudgetPath, JSON.stringify(mutatedBudget))
+      // Acceptance regression: общий 27 и остальные relations остаются валидны,
+      // но одиночное ослабление search 11 → 27 обязано разойтись с точным pin.
+      mutatedRouteBudgets['search.html'] = 27
+      fs.mkdirSync(jsDir, { recursive: true })
+      fs.writeFileSync(path.join(jsDir, 'entry-abcdef.js'), 'x'.repeat(4096))
+      fs.writeFileSync(
+        mutatedBudgetPath,
+        JSON.stringify(mutatedBudget, null, 2).replace(/\n/g, '\r\n') + '\r\n',
+      )
+      fs.writeFileSync(
+        updatedContractPath,
+        fs.readFileSync(contractTestPath, 'utf8').replace(/\r?\n/g, '\r\n'),
+      )
+      if (process.platform !== 'win32') {
+        fs.chmodSync(mutatedBudgetPath, 0o640)
+        fs.chmodSync(updatedContractPath, 0o600)
+      }
 
       expect(() => validateCommittedBudget(mutatedBudgetPath)).toThrow(
-        'bundle budget eager.maxRequests fallback spare must stay at or below 5%.',
+        'bundle budget eager request limits must match the committed test pin exactly.',
       )
+
+      const updateResult = runNodeCli([guardScriptPath, '--update'], {
+        BUNDLE_BUDGET_JS_DIR: jsDir,
+        BUNDLE_BUDGET_CONFIG: mutatedBudgetPath,
+        BUNDLE_BUDGET_CONTRACT_TEST: updatedContractPath,
+      })
+      expect(updateResult).toMatchObject({ status: 0, stderr: '' })
+
+      const updatedBudget = requireRecord(
+        JSON.parse(fs.readFileSync(mutatedBudgetPath, 'utf8')),
+        'updated bundle budget',
+      )
+      const updatedEager = validateEagerRequestBudget(updatedBudget.eager, 'updated bundle budget.eager')
+      const updatedPin = validateEagerRequestBudget(
+        readEagerRequestPin(updatedContractPath),
+        'updated eager request pin',
+      )
+      expect(normalizedRequestBudget(updatedPin)).toEqual(normalizedRequestBudget(updatedEager))
+      expect(updatedPin.maxRequestsByRoute['search.html']).toBe(27)
+      expect(requireRecord(updatedBudget.total, 'updated bundle budget.total').maxRawKB).toBe(4)
+      expect(() => validateCommittedBudget(mutatedBudgetPath, updatedContractPath)).not.toThrow()
+
+      const synchronizedConfig = fs.readFileSync(mutatedBudgetPath, 'utf8')
+      const synchronizedContract = fs.readFileSync(updatedContractPath, 'utf8')
+      expect(synchronizedConfig.replace(/\r\n/g, '')).not.toContain('\n')
+      expect(synchronizedContract.replace(/\r\n/g, '')).not.toContain('\n')
+      if (process.platform !== 'win32') {
+        expect(fs.statSync(mutatedBudgetPath).mode & 0o777).toBe(0o640)
+        expect(fs.statSync(updatedContractPath).mode & 0o777).toBe(0o600)
+      }
+
+      const overSpareBudget = JSON.parse(synchronizedConfig)
+      const highestRouteLimit = Math.max(
+        ...Object.values(overSpareBudget.eager.maxRequestsByRoute).map(Number),
+      )
+      overSpareBudget.eager.maxRequests = Math.floor(highestRouteLimit * 1.05) + 1
+      const overSpareConfig = JSON.stringify(overSpareBudget, null, 2).replace(/\n/g, '\r\n') + '\r\n'
+      fs.writeFileSync(mutatedBudgetPath, overSpareConfig)
+      const rejectedOverSpareUpdate = runNodeCli([guardScriptPath, '--update'], {
+        BUNDLE_BUDGET_JS_DIR: jsDir,
+        BUNDLE_BUDGET_CONFIG: mutatedBudgetPath,
+        BUNDLE_BUDGET_CONTRACT_TEST: updatedContractPath,
+      })
+      expect(rejectedOverSpareUpdate.status).toBe(1)
+      expect(rejectedOverSpareUpdate.stderr).toContain('fallback spare must stay at or below 5%')
+      expect(fs.readFileSync(mutatedBudgetPath, 'utf8')).toBe(overSpareConfig)
+      expect(fs.readFileSync(updatedContractPath, 'utf8')).toBe(synchronizedContract)
+      fs.writeFileSync(mutatedBudgetPath, synchronizedConfig)
+
+      const renameFailureHook = path.join(tmpDir, 'fail-third-rename.cjs')
+      fs.writeFileSync(
+        renameFailureHook,
+        [
+          "const fs = require('fs')",
+          'const originalRenameSync = fs.renameSync',
+          'let renameCount = 0',
+          'fs.renameSync = (...args) => {',
+          '  renameCount += 1',
+          "  if (renameCount === 3) throw new Error('injected third rename failure')",
+          '  return originalRenameSync(...args)',
+          '}',
+        ].join('\n'),
+      )
+      const rejectedPartialUpdate = runNodeCli([guardScriptPath, '--update'], {
+        BUNDLE_BUDGET_JS_DIR: jsDir,
+        BUNDLE_BUDGET_CONFIG: mutatedBudgetPath,
+        BUNDLE_BUDGET_CONTRACT_TEST: updatedContractPath,
+        NODE_OPTIONS: `--require=${renameFailureHook}`,
+      })
+      expect(rejectedPartialUpdate.status).toBe(1)
+      expect(rejectedPartialUpdate.stderr).toContain('injected third rename failure')
+      expect(fs.readFileSync(mutatedBudgetPath, 'utf8')).toBe(synchronizedConfig)
+      expect(fs.readFileSync(updatedContractPath, 'utf8')).toBe(synchronizedContract)
+      expect(fs.readdirSync(tmpDir).some((name) => /\.(?:tmp|backup)$/.test(name))).toBe(false)
+
+      const contractLineEnding = synchronizedContract.includes('\r\n') ? '\r\n' : '\n'
+      const malformedContracts = [
+        synchronizedContract.replace(
+          `${EAGER_REQUEST_PIN_START}${contractLineEnding}// {`,
+          `// missing eager request start marker${contractLineEnding}// {`,
+        ),
+        `${synchronizedContract}${synchronizedContract.endsWith(contractLineEnding) ? '' : contractLineEnding}` +
+          `${EAGER_REQUEST_PIN_START}${contractLineEnding}`,
+        synchronizedContract.replace('//   "maxRequests": 27,', '//   "maxRequests": nope,'),
+      ]
+      for (const malformedContract of malformedContracts) {
+        fs.writeFileSync(updatedContractPath, malformedContract)
+        const rejectedUpdate = runNodeCli([guardScriptPath, '--update'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_CONFIG: mutatedBudgetPath,
+          BUNDLE_BUDGET_CONTRACT_TEST: updatedContractPath,
+        })
+        expect(rejectedUpdate.status).toBe(1)
+        expect(fs.readFileSync(mutatedBudgetPath, 'utf8')).toBe(synchronizedConfig)
+        expect(fs.readFileSync(updatedContractPath, 'utf8')).toBe(malformedContract)
+      }
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }

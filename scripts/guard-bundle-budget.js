@@ -24,6 +24,7 @@ const zlib = require('zlib')
 
 const repoRoot = path.join(__dirname, '..')
 const DEFAULT_TOLERANCE_PCT = 5
+const MAX_GLOBAL_REQUEST_SPARE_PCT = 5
 const DEFAULT_BUDGET_DESCRIPTION =
   'Web bundle size budget (KB). Regression guard: critical path + eager chunks and total JS. Regenerate with `node scripts/guard-bundle-budget.js --update`, then re-curate key chunks. Runs in release:check after build:web:prod.'
 
@@ -44,6 +45,13 @@ const budgetPath = resolveRepoPath(
   process.env.BUNDLE_BUDGET_CONFIG,
   path.join(repoRoot, 'config', 'bundle-budget.json'),
 )
+const contractTestPath = resolveRepoPath(
+  process.env.BUNDLE_BUDGET_CONTRACT_TEST,
+  path.join(repoRoot, '__tests__', 'scripts', 'bundle-budget-release-contract.test.ts'),
+)
+
+const EAGER_REQUEST_PIN_START = '// bundle-budget-sync:eager-requests:start'
+const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
 
 const args = process.argv.slice(2)
 const FAIL = args.includes('--fail')
@@ -53,6 +61,192 @@ const UPDATE = args.includes('--update')
 function die(msg) {
   console.error(msg)
   process.exit(1)
+}
+
+function requireEagerRequestBudget(value, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`)
+  }
+  if (!Number.isInteger(value.maxRequests) || value.maxRequests <= 0) {
+    throw new Error(`${label}.maxRequests must be a positive integer.`)
+  }
+  if (
+    !value.maxRequestsByRoute ||
+    typeof value.maxRequestsByRoute !== 'object' ||
+    Array.isArray(value.maxRequestsByRoute)
+  ) {
+    throw new Error(`${label}.maxRequestsByRoute must be an object.`)
+  }
+  const routeEntries = Object.entries(value.maxRequestsByRoute)
+  if (routeEntries.length === 0) {
+    throw new Error(`${label}.maxRequestsByRoute must not be empty.`)
+  }
+  for (const [route, limit] of routeEntries) {
+    if (
+      !route.endsWith('.html') ||
+      route.startsWith('/') ||
+      route.includes('\\') ||
+      route.split('/').includes('..')
+    ) {
+      throw new Error(`${label} route must be a normalized relative .html path: ${route}.`)
+    }
+    if (!Number.isInteger(limit) || limit <= 0 || limit > value.maxRequests) {
+      throw new Error(`${label}.maxRequestsByRoute.${route} must be a positive integer at most maxRequests.`)
+    }
+  }
+  const highestRouteLimit = Math.max(...routeEntries.map(([, limit]) => limit))
+  const fallbackSparePct = ((value.maxRequests - highestRouteLimit) / highestRouteLimit) * 100
+  if (fallbackSparePct > MAX_GLOBAL_REQUEST_SPARE_PCT) {
+    throw new Error(
+      `${label}.maxRequests fallback spare must stay at or below ${MAX_GLOBAL_REQUEST_SPARE_PCT}%.`,
+    )
+  }
+  return {
+    maxRequests: value.maxRequests,
+    maxRequestsByRoute: Object.fromEntries(routeEntries),
+  }
+}
+
+function detectLineEnding(source) {
+  const crlfCount = source.split('\r\n').length - 1
+  const bareLfCount = source.replace(/\r\n/g, '').split('\n').length - 1
+  return crlfCount > bareLfCount ? '\r\n' : '\n'
+}
+
+function parseEagerRequestPin(source, label) {
+  const lines = source.split(/\r?\n/)
+  const startIndexes = lines.flatMap((line, index) => (line === EAGER_REQUEST_PIN_START ? [index] : []))
+  const endIndexes = lines.flatMap((line, index) => (line === EAGER_REQUEST_PIN_END ? [index] : []))
+  if (startIndexes.length !== 1 || endIndexes.length !== 1 || endIndexes[0] <= startIndexes[0] + 1) {
+    throw new Error(`${label} must contain exactly one non-empty ordered eager request pin block.`)
+  }
+
+  const payload = lines
+    .slice(startIndexes[0] + 1, endIndexes[0])
+    .map((line) => {
+      if (!line.startsWith('// ')) {
+        throw new Error(`${label} eager request pin must contain JSON comment lines.`)
+      }
+      return line.slice(3)
+    })
+    .join('\n')
+  let parsed
+  try {
+    parsed = JSON.parse(payload)
+  } catch {
+    throw new Error(`${label} eager request pin must contain valid JSON.`)
+  }
+  return {
+    lines,
+    lineEnding: detectLineEnding(source),
+    startIndex: startIndexes[0],
+    endIndex: endIndexes[0],
+    budget: requireEagerRequestBudget(parsed, `${label} eager request pin`),
+  }
+}
+
+function formatEagerRequestPin(requestBudget) {
+  const payload = JSON.stringify(requestBudget, null, 2)
+    .split('\n')
+    .map((line) => `// ${line}`)
+  return [EAGER_REQUEST_PIN_START, ...payload, EAGER_REQUEST_PIN_END]
+}
+
+function updateEagerRequestPin(source, requestBudget, label) {
+  const current = parseEagerRequestPin(source, label)
+  return [
+    ...current.lines.slice(0, current.startIndex),
+    ...formatEagerRequestPin(requestBudget),
+    ...current.lines.slice(current.endIndex + 1),
+  ].join(current.lineEnding)
+}
+
+function comparableRequestBudget(value) {
+  return JSON.stringify({
+    maxRequests: value.maxRequests,
+    maxRequestsByRoute: Object.fromEntries(
+      Object.entries(value.maxRequestsByRoute).sort(([a], [b]) => a.localeCompare(b)),
+    ),
+  })
+}
+
+function replaceFilesWithRollback(filesToReplace) {
+  const targetKeys = filesToReplace.map((file) => {
+    const realPath = fs.realpathSync.native(file.path)
+    return process.platform === 'win32' ? realPath.toLowerCase() : realPath
+  })
+  if (new Set(targetKeys).size !== filesToReplace.length) {
+    throw new Error('Atomic bundle budget sync targets must be distinct.')
+  }
+  const nonce = `${process.pid}-${Date.now()}`
+  const prepared = []
+  try {
+    for (const [index, file] of filesToReplace.entries()) {
+      const stat = fs.statSync(file.path)
+      if (!stat.isFile() || fs.lstatSync(file.path).isSymbolicLink()) {
+        throw new Error(`Atomic bundle budget sync target must be a regular file: ${file.path}`)
+      }
+      const preparedFile = {
+        ...file,
+        tempPath: `${file.path}.${nonce}-${index}.tmp`,
+        backupPath: `${file.path}.${nonce}-${index}.backup`,
+        mode: stat.mode & 0o7777,
+      }
+      if (fs.existsSync(preparedFile.tempPath) || fs.existsSync(preparedFile.backupPath)) {
+        throw new Error(`Atomic bundle budget sync staging path already exists for ${file.path}.`)
+      }
+      prepared.push(preparedFile)
+      fs.writeFileSync(preparedFile.tempPath, file.content, {
+        encoding: 'utf8',
+        flag: 'wx',
+        mode: preparedFile.mode,
+      })
+      fs.chmodSync(preparedFile.tempPath, preparedFile.mode)
+      file.validate(fs.readFileSync(preparedFile.tempPath, 'utf8'))
+    }
+  } catch (error) {
+    for (const file of prepared) fs.rmSync(file.tempPath, { force: true })
+    throw error
+  }
+
+  const backedUp = []
+  const installed = []
+  try {
+    for (const file of prepared) {
+      fs.renameSync(file.path, file.backupPath)
+      backedUp.push(file)
+      fs.renameSync(file.tempPath, file.path)
+      installed.push(file)
+    }
+  } catch (error) {
+    const rollbackErrors = []
+    for (const file of [...installed].reverse()) {
+      try {
+        fs.rmSync(file.path, { force: true })
+      } catch (rollbackError) {
+        rollbackErrors.push(`${file.path}: cannot remove partial replacement (${rollbackError.message})`)
+      }
+    }
+    for (const file of [...backedUp].reverse()) {
+      if (!fs.existsSync(file.backupPath)) continue
+      if (fs.existsSync(file.path)) {
+        rollbackErrors.push(`${file.path}: destination occupied; original preserved at ${file.backupPath}`)
+        continue
+      }
+      try {
+        fs.renameSync(file.backupPath, file.path)
+      } catch (rollbackError) {
+        rollbackErrors.push(
+          `${file.path}: cannot restore original (${rollbackError.message}); original preserved at ${file.backupPath}`,
+        )
+      }
+    }
+    const rollbackSuffix = rollbackErrors.length ? ` Rollback failed: ${rollbackErrors.join('; ')}` : ''
+    throw new Error(`Atomic bundle budget sync failed: ${error.message}.${rollbackSuffix}`)
+  } finally {
+    for (const file of prepared) fs.rmSync(file.tempPath, { force: true })
+  }
+  for (const file of prepared) fs.rmSync(file.backupPath, { force: true })
 }
 
 if (!fs.existsSync(jsDir)) {
@@ -121,14 +315,31 @@ for (const file of files) {
 }
 
 if (UPDATE) {
-  let existingBudget = {}
-  if (fs.existsSync(budgetPath)) {
-    try {
-      existingBudget = JSON.parse(fs.readFileSync(budgetPath, 'utf-8'))
-    } catch {
-      existingBudget = {}
-    }
+  if (!fs.existsSync(budgetPath)) {
+    die(`Cannot update bundle budget: config not found at ${path.relative(repoRoot, budgetPath)}.`)
   }
+  if (!fs.existsSync(contractTestPath)) {
+    die(`Cannot update bundle budget: contract test not found at ${path.relative(repoRoot, contractTestPath)}.`)
+  }
+
+  let existingBudget
+  let existingBudgetSource
+  try {
+    existingBudgetSource = fs.readFileSync(budgetPath, 'utf-8')
+    existingBudget = JSON.parse(existingBudgetSource)
+  } catch (error) {
+    die(`Cannot update bundle budget: invalid config JSON (${error.message}).`)
+  }
+  let requestBudget
+  let existingContractSource
+  try {
+    requestBudget = requireEagerRequestBudget(existingBudget.eager, 'bundle budget.eager')
+    existingContractSource = fs.readFileSync(contractTestPath, 'utf8')
+    parseEagerRequestPin(existingContractSource, 'bundle budget contract test')
+  } catch (error) {
+    die(`Cannot update bundle budget: ${error.message}`)
+  }
+
   const deferredChunks = existingBudget.deferredChunks || []
   const deferredSet = new Set(deferredChunks)
   const deferredRaw = [...chunks.entries()].reduce(
@@ -165,8 +376,47 @@ if (UPDATE) {
       maxBrotliKB: toKB(c.brotli),
     }
   }
-  fs.writeFileSync(budgetPath, JSON.stringify(budget, null, 2) + '\n')
-  console.log(`Wrote budget for ${chunks.size} chunks to ${path.relative(repoRoot, budgetPath)}`)
+  const budgetLineEnding = detectLineEnding(existingBudgetSource)
+  const budgetContent = JSON.stringify(budget, null, 2).replace(/\n/g, budgetLineEnding) + budgetLineEnding
+  const contractContent = updateEagerRequestPin(
+    existingContractSource,
+    requestBudget,
+    'bundle budget contract test',
+  )
+  try {
+    replaceFilesWithRollback([
+      {
+        path: contractTestPath,
+        content: contractContent,
+        validate: (content) => {
+          const writtenPin = parseEagerRequestPin(content, 'updated bundle budget contract test').budget
+          if (comparableRequestBudget(writtenPin) !== comparableRequestBudget(requestBudget)) {
+            throw new Error('updated bundle budget contract test pin does not match budget.eager.')
+          }
+        },
+      },
+      {
+        path: budgetPath,
+        content: budgetContent,
+        validate: (content) => {
+          const writtenBudget = JSON.parse(content)
+          const writtenRequests = requireEagerRequestBudget(
+            writtenBudget.eager,
+            'updated bundle budget.eager',
+          )
+          if (comparableRequestBudget(writtenRequests) !== comparableRequestBudget(requestBudget)) {
+            throw new Error('updated bundle budget config lost its eager request limits.')
+          }
+        },
+      },
+    ])
+  } catch (error) {
+    die(`Cannot update bundle budget: ${error.message}`)
+  }
+  console.log(
+    `Wrote budget for ${chunks.size} chunks to ${path.relative(repoRoot, budgetPath)} and synced ` +
+      `${path.relative(repoRoot, contractTestPath)}`,
+  )
   process.exit(0)
 }
 
