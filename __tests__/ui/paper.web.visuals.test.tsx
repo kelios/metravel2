@@ -116,7 +116,10 @@ describe('ui/paper.web visible behaviour', () => {
 
     expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
     expect(queryByTestId('cta-icon')).toBeNull();
-    expect(getByTestId('cta').props.accessibilityState?.busy).toBe(true);
+    // Проверяем `aria-busy`, а не `accessibilityState.busy`: react-native-web
+    // `accessibilityState` не обрабатывает, и утверждение о нём было бы зелёным
+    // при полностью немом для скринридера DOM.
+    expect(getByTestId('cta').props['aria-busy']).toBe(true);
   });
 
   it('narrows horizontal padding for compact without dropping below the 44 touch target', () => {

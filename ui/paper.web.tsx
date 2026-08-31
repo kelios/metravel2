@@ -159,6 +159,12 @@ export const Button: React.FC<ButtonShimProps> = ({
       {...rest}
       disabled={disabled}
       onPress={disabled ? undefined : onPress}
+      // `accessibilityState` react-native-web не обрабатывает вовсе, поэтому
+      // `busy` из него до DOM не доходит — ровно тот же «проп принят, ничего не
+      // нарисовано», который чинит #1663. Реальный канал для web — `aria-busy`,
+      // он есть в `modules/forwardedProps`. `undefined` вместо `false`, чтобы не
+      // вешать атрибут на каждую кнопку. `accessibilityState` оставлен для native.
+      aria-busy={loading || undefined}
       accessibilityState={{ disabled, busy: loading }}
       style={({ pressed }) => [
         styles.button,

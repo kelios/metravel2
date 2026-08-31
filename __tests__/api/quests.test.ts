@@ -30,6 +30,18 @@ jest.mock('@/api/client', () => ({
   },
 }));
 
+// Офлайн-кэш каталога здесь настоящий, а AsyncStorage переживает
+// `jest.clearAllMocks()`: успешный `fetchQuestsList` дописывал в него список, и
+// следующий тест, где загрузка обязана упасть, получал вместо ошибки чужие
+// записи. Держим кэш пустым и явным — сам он покрыт
+// `__tests__/api/questBundleCache.test.ts`.
+jest.mock('@/api/questBundleCache', () => ({
+  readCachedQuestsList: jest.fn(async () => null),
+  writeCachedQuestsList: jest.fn(async () => {}),
+  readCachedQuestBundle: jest.fn(async () => null),
+  writeCachedQuestBundle: jest.fn(async () => {}),
+}));
+
 const mockedGet = apiClient.get as jest.MockedFunction<typeof apiClient.get>;
 const mockedPost = apiClient.post as jest.MockedFunction<typeof apiClient.post>;
 const mockedPatch = apiClient.patch as jest.MockedFunction<typeof apiClient.patch>;
@@ -202,6 +214,70 @@ describe('api/quests', () => {
 
       expect(mockedGet).toHaveBeenCalledTimes(2);
       expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon']);
+    });
+
+    // #1664: хвостовые страницы посчитаны из размера выборки и ссылкой `next`
+    // не анонсированы — ровно как спекулятивная выше. Отказ «такой страницы
+    // нет» на них означает конец каталога: раньше он отвергал весь `Promise.all`,
+    // каталог подменялся офлайн-копией и прохождения в ней обнулялись.
+    it('stops at a missing tail page instead of dropping the whole catalog', async () => {
+      mockedGet
+        // Размер выборки обещает три страницы по две записи, третьей нет.
+        .mockResolvedValueOnce({
+          results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
+          count: 6,
+          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+        })
+        .mockResolvedValueOnce({
+          results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }],
+          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
+        })
+        .mockRejectedValueOnce(new ApiError(404, 'Invalid page'));
+
+      const result = await fetchQuestsList();
+
+      expect(result.map((quest) => quest.quest_id)).toEqual(['a', 'b', 'c', 'd']);
+      // Ровно три запроса: ссылка `next` второй страницы ведёт на ту самую
+      // третью, которой нет, и последовательный дочит не запрашивает её снова.
+      expect(mockedGet).toHaveBeenCalledTimes(3);
+      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?page_size=100&page=3');
+    });
+
+    // Обратная сторона того же правила: глушить всё подряд нельзя, иначе
+    // транзиентный 500 молча съел бы страницу и неполный каталог выглядел бы полным.
+    it('lets a failing tail page break the load instead of silently truncating', async () => {
+      mockedGet
+        .mockResolvedValueOnce({
+          results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
+          count: 6,
+          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+        })
+        .mockResolvedValueOnce({
+          results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }],
+          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
+        })
+        .mockRejectedValueOnce(new ApiError(500, 'Server error'));
+
+      await expect(fetchQuestsList()).rejects.toMatchObject({ status: 500 });
+    });
+
+    // Отказы разбираются по порядку страниц, а не по порядку ответов: 404 в
+    // самом хвосте не имеет права спрятать настоящую потерю страницы перед ним.
+    it('reports a failing page even when a later tail page is merely missing', async () => {
+      mockedGet
+        .mockResolvedValueOnce({
+          results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
+          count: 8,
+          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+        })
+        .mockResolvedValueOnce({
+          results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }],
+          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
+        })
+        .mockRejectedValueOnce(new ApiError(500, 'Server error'))
+        .mockRejectedValueOnce(new ApiError(404, 'Invalid page'));
+
+      await expect(fetchQuestsList()).rejects.toMatchObject({ status: 500 });
     });
   });
 

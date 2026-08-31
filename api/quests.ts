@@ -438,6 +438,15 @@ function nextPageNumber<T>(res: PaginatedEnvelope<T>): number | null {
 }
 
 /**
+ * Отказ «такой страницы нет»: у DRF несуществующая страница пагинации — это 404
+ * «Invalid page». Для страниц, чьё существование не подтверждено ссылкой `next`,
+ * это конец каталога, а не сбой загрузки.
+ */
+function isMissingPage(err: unknown): boolean {
+    return err instanceof ApiError && err.status === 404;
+}
+
+/**
  * Сколько страниц просить, не дожидаясь ответа первой.
  *
  * Номер следующей страницы известен только из уже полученного ответа, поэтому
@@ -507,26 +516,42 @@ async function fetchAllPages<T>(
     }
 
     const total = readEnvelopeTotal(first);
+    // Хвостовые страницы посчитаны из размера выборки, а не анонсированы ссылкой
+    // `next`, — природа у них та же, что у спекулятивных выше. Их 404 означает
+    // конец каталога и обрывает дочитывание целиком: `next` последней прочитанной
+    // страницы ведёт как раз на ту, которой нет, и последовательный проход ниже
+    // запросил бы её повторно.
+    let catalogEnded = false;
     if (total !== null && pageSize > 0) {
         // Размер страницы берём фактический, а не запрошенный: бэкенд вправе
         // урезать `page_size` своим максимумом, и тогда страниц окажется больше.
         const lastPage = Math.min(Math.ceil(total / pageSize), maxPages);
-        const rest = await Promise.all(
+        // Именно `allSettled`: `all` отвергается первым попавшимся отказом, а
+        // решать, конец это каталога или потеря страницы, надо по тому, какая
+        // страница отказала первой ПО ПОРЯДКУ.
+        const rest = await Promise.allSettled(
             Array.from({ length: Math.max(lastPage - read, 0) }, (_, index) => getPage(read + index + 1)),
         );
-        // `Promise.all` держит порядок массива, поэтому записи склеиваются
-        // ровно в том же порядке, что и при последовательном чтении.
-        for (const res of rest) {
-            out.push(...unwrapList<T>(res));
-            if (!Array.isArray(res)) lastRead = res;
+        // Порядок массива совпадает с порядком страниц, поэтому записи
+        // склеиваются ровно так же, как при последовательном чтении.
+        for (const settled of rest) {
+            if (settled.status === 'rejected') {
+                // Прочие отказы фатальны: транзиентный 500 молча съел бы сотню
+                // записей, и неполный каталог выглядел бы полным.
+                if (!isMissingPage(settled.reason)) throw settled.reason;
+                catalogEnded = true;
+                break;
+            }
+            out.push(...unwrapList<T>(settled.value));
+            if (!Array.isArray(settled.value)) lastRead = settled.value;
+            read += 1;
         }
-        read = Math.max(read, lastPage);
     }
 
     // Если размер выборки разошёлся с тем, что бэкенд реально отдаёт, хвост
     // дочитывается по-старому: лишний последовательный запрос дешевле молча
     // потерянных записей.
-    let page = nextPageNumber(lastRead);
+    let page = catalogEnded ? null : nextPageNumber(lastRead);
     if (page !== null && page <= read) page = null;
     for (let i = read; i < maxPages && page !== null; i++) {
         const res = await getPage(page);
