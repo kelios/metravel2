@@ -26,6 +26,7 @@ import {
   MapScreenDesktopOverlays,
 } from '@/components/MapPage/MapScreenParts/MapScreenDesktop'
 import { MapScreenShell } from '@/components/MapPage/MapScreenParts/MapScreenShell'
+import { MapPageHeading } from '@/components/MapPage/MapPageHeading'
 import {
   isMapFilterChipsRowVisible,
   MAP_FILTER_CHIPS_STACK_OFFSET,
@@ -491,6 +492,15 @@ export default function MapScreen() {
     ],
   )
 
+  // #1640 — single source of truth for where the page <h1> is mounted. The
+  // panel header only exists on desktop web with the panel expanded; every
+  // other state falls back to the map-corner capsule. Exactly one anchor is
+  // rendered, so the swap happens inside one React commit and the document is
+  // never observably left with two headings or none.
+  const headingAnchor: 'panel-head' | 'map-corner' =
+    isWeb && !isMobile && !isDesktopCollapsed ? 'panel-head' : 'map-corner'
+  const pageHeading = <MapPageHeading anchor={headingAnchor} styles={styles} />
+
   // Desktop data-fetch error replaces the whole screen (separate from the
   // breakpoint-flip path — it is not part of the remount oscillation). Mobile
   // keeps the map + chrome and surfaces errors inline.
@@ -499,6 +509,7 @@ export default function MapScreen() {
       <MapScreenError
         styles={styles}
         seoBlock={seoBlock}
+        pageHeading={<MapPageHeading anchor="map-corner" styles={styles} />}
         mapError={mapError}
         mapErrorDetails={mapErrorDetails}
         isConnected={isConnected}
@@ -585,6 +596,7 @@ export default function MapScreen() {
       isConnected={isConnected}
       mapReady={mapReady}
       shouldLoadOnboarding={shouldLoadOnboarding}
+      panelHeading={headingAnchor === 'panel-head' ? pageHeading : undefined}
     />
   )
 
@@ -616,6 +628,7 @@ export default function MapScreen() {
       mapComponent={mapComponent}
       chrome={chrome}
       overlays={overlays}
+      cornerHeading={headingAnchor === 'map-corner' ? pageHeading : undefined}
       isMobile={isMobile}
     />
   )

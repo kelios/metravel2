@@ -25,6 +25,12 @@ interface MapPanelHeaderProps {
   selectTravelsTab: () => void
   closeRightPanel: () => void
   resetFilters?: () => void
+  /**
+   * The page-level `<h1>` when this header is the active anchor for it (#1640).
+   * The caller owns the choice; `undefined` here means the heading is mounted
+   * in the map-corner anchor instead, so this component must not decide it.
+   */
+  heading?: React.ReactNode
 }
 
 function TabButton({
@@ -96,6 +102,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
   selectTravelsTab,
   closeRightPanel,
   resetFilters,
+  heading,
 }) => {
   const handleReset = useCallback(() => {
     selectSearchTab()
@@ -113,109 +120,113 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
     <View style={styles.tabsContainer}>
       {isMobile && <View style={styles.dragHandle} />}
 
-      <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label={i18nT('map:components.MapPage.MapPanelHeader.panel_karty_951bb838')}>
-        {isMobile && (
+      {heading}
+
+      <View style={styles.tabsRow}>
+          <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label={i18nT('map:components.MapPage.MapPanelHeader.panel_karty_951bb838')}>
+          {isMobile && (
+            <TabButton
+              tab="search"
+              activeTab={activeTab}
+              icon="search"
+              label={i18nT('map:components.MapPage.MapPanelHeader.poisk_787c6fe7')}
+              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.poisk_787c6fe7')}
+              onPress={selectSearchTab}
+              themedColors={themedColors}
+              styles={styles}
+            />
+          )}
           <TabButton
-            tab="search"
+            tab="travels"
             activeTab={activeTab}
-            icon="search"
-            label={i18nT('map:components.MapPage.MapPanelHeader.poisk_787c6fe7')}
-            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.poisk_787c6fe7')}
-            onPress={selectSearchTab}
+            icon="list"
+            label={i18nT('map:components.MapPage.MapPanelHeader.mesta_3ad2b948')}
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.spisok_value1_272d2a31', { value1: formatPlaces(travelsCount) })}
+            onPress={selectTravelsTab}
+            themedColors={themedColors}
+            styles={styles}
+            badge={travelsCount}
+          />
+          <TabButton
+            tab="route"
+            activeTab={activeTab}
+            icon="navigation"
+            label={i18nT('map:components.MapPage.MapPanelHeader.marshrut_486762dc')}
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.postroenie_marshruta_7aa011b1')}
+            onPress={selectRouteTab}
             themedColors={themedColors}
             styles={styles}
           />
-        )}
-        <TabButton
-          tab="travels"
-          activeTab={activeTab}
-          icon="list"
-          label={i18nT('map:components.MapPage.MapPanelHeader.mesta_3ad2b948')}
-          accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.spisok_value1_272d2a31', { value1: formatPlaces(travelsCount) })}
-          onPress={selectTravelsTab}
-          themedColors={themedColors}
-          styles={styles}
-          badge={travelsCount}
-        />
-        <TabButton
-          tab="route"
-          activeTab={activeTab}
-          icon="navigation"
-          label={i18nT('map:components.MapPage.MapPanelHeader.marshrut_486762dc')}
-          accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.postroenie_marshruta_7aa011b1')}
-          onPress={selectRouteTab}
-          themedColors={themedColors}
-          styles={styles}
-        />
-      </View>
-
-      {showDesktopActions ? (
-        <View style={styles.panelHeaderActions}>
-          <Pressable
-            testID="map-filters-button"
-            {...({ 'data-testid': 'map-filters-button' } as any)}
-            style={({ pressed }) => [
-              styles.resetButton,
-              styles.resetButtonCompact,
-              filtersActive && styles.tabActive,
-              pressed && PRESSED_OPACITY_07,
-            ]}
-            onPress={selectSearchTab}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityState={{ selected: filtersActive }}
-            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d')}
-            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d') } as any)}
-          >
-            <Feather
-              name="sliders"
-              size={14}
-              color={filtersActive ? themedColors.textInverse : themedColors.textMuted}
-            />
-          </Pressable>
-          <Pressable
-            testID="map-help-button"
-            style={({ pressed }) => [
-              styles.resetButton,
-              styles.resetButtonCompact,
-              pressed && PRESSED_OPACITY_07,
-            ]}
-            onPress={restartMapOnboarding}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
-            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd') } as any)}
-          >
-            <Feather name="help-circle" size={13} color={themedColors.textMuted} />
-          </Pressable>
-          <Pressable
-            testID="map-reset-filters-button"
-            style={({ pressed }) => [
-              styles.resetButton,
-              styles.resetButtonCompact,
-              pressed && PRESSED_OPACITY_07,
-            ]}
-            onPress={handleReset}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479')}
-            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479') } as any)}
-          >
-            <Feather name="rotate-cw" size={13} color={themedColors.textMuted} />
-          </Pressable>
         </View>
-      ) : (
-        <Pressable
-          testID="map-close-panel-button"
-          style={({ pressed }) => [styles.closePanelButton, pressed && PRESSED_OPACITY_07]}
-          onPress={closeRightPanel}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.skryt_panel_e9e1ec83')}
-        >
-          <Feather name="chevron-down" size={16} color={themedColors.textMuted} />
-        </Pressable>
-      )}
+
+        {showDesktopActions ? (
+          <View style={styles.panelHeaderActions}>
+            <Pressable
+              testID="map-filters-button"
+              {...({ 'data-testid': 'map-filters-button' } as any)}
+              style={({ pressed }) => [
+                styles.resetButton,
+                styles.resetButtonCompact,
+                filtersActive && styles.tabActive,
+                pressed && PRESSED_OPACITY_07,
+              ]}
+              onPress={selectSearchTab}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filtersActive }}
+              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d')}
+              {...({ title: i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d') } as any)}
+            >
+              <Feather
+                name="sliders"
+                size={14}
+                color={filtersActive ? themedColors.textInverse : themedColors.textMuted}
+              />
+            </Pressable>
+            <Pressable
+              testID="map-help-button"
+              style={({ pressed }) => [
+                styles.resetButton,
+                styles.resetButtonCompact,
+                pressed && PRESSED_OPACITY_07,
+              ]}
+              onPress={restartMapOnboarding}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
+              {...({ title: i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd') } as any)}
+            >
+              <Feather name="help-circle" size={13} color={themedColors.textMuted} />
+            </Pressable>
+            <Pressable
+              testID="map-reset-filters-button"
+              style={({ pressed }) => [
+                styles.resetButton,
+                styles.resetButtonCompact,
+                pressed && PRESSED_OPACITY_07,
+              ]}
+              onPress={handleReset}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479')}
+              {...({ title: i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479') } as any)}
+            >
+              <Feather name="rotate-cw" size={13} color={themedColors.textMuted} />
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            testID="map-close-panel-button"
+            style={({ pressed }) => [styles.closePanelButton, pressed && PRESSED_OPACITY_07]}
+            onPress={closeRightPanel}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.skryt_panel_e9e1ec83')}
+          >
+            <Feather name="chevron-down" size={16} color={themedColors.textMuted} />
+          </Pressable>
+        )}
+      </View>
     </View>
   )
 }

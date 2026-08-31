@@ -47,17 +47,20 @@ const MANGLED = CLEAN.replace('озёра', 'оз��ра')
  * `failRollback` breaks the second PUT — the rollback — either by dropping the
  * socket ('socket') or by answering 500 ('http'); those are two different code
  * paths in restoreFromBackup(). `failGet` refuses every read with 401, the way
- * a stale service token does.
+ * a stale service token does. `regress` keeps the text intact but never moves
+ * the slug, which is the OTHER rollback caller — detectRegression(), not
+ * detectCorruption().
  */
-type StubOptions = { failRollback?: false | 'socket' | 'http'; failGet?: boolean }
+type StubOptions = { failRollback?: false | 'socket' | 'http'; failGet?: boolean; regress?: boolean }
 
-const serverSource = ({ failRollback = false, failGet = false }: StubOptions) => `
+const serverSource = ({ failRollback = false, failGet = false, regress = false }: StubOptions) => `
 const http = require('http')
 
 const CLEAN = ${JSON.stringify(CLEAN)}
 const MANGLED = ${JSON.stringify(MANGLED)}
 const FAIL_ROLLBACK = ${JSON.stringify(failRollback)}
 const FAIL_GET = ${failGet}
+const REGRESS = ${regress}
 const writes = []
 let reads = 0
 
@@ -103,7 +106,9 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ error: 'upsert refused' }))
     }
     const row = state[payload.id]
-    if (row) { row.name = payload.name; row.slug = 'novyi-slug-' + payload.id }
+    // A backend that applied the title but left the slug alone is exactly what
+    // detectRegression() calls «slug did NOT change».
+    if (row) { row.name = payload.name; if (!REGRESS) row.slug = 'novyi-slug-' + payload.id }
     return json(res, {})
   }
 
@@ -117,7 +122,7 @@ const server = http.createServer(async (req, res) => {
     const row = { ...state[match[1]] }
     // The verification GET — the second read of the first article — is the one
     // that hands back mangled text, exactly as a per-chunk decode would.
-    if (reads === 2) row.description = MANGLED
+    if (reads === 2 && !REGRESS) row.description = MANGLED
     return json(res, row)
   }
 
@@ -180,6 +185,7 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
   let brokenSocketRollback: Run
   let brokenHttpRollback: Run
   let deadReads: Run
+  let regressedRollback: Run
 
   beforeAll(async () => {
     backupsBefore = fs.existsSync(BACKUP_DIR) ? fs.readdirSync(BACKUP_DIR) : []
@@ -188,7 +194,8 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
     brokenSocketRollback = await renameBatch({ failRollback: 'socket' })
     brokenHttpRollback = await renameBatch({ failRollback: 'http' })
     deadReads = await renameBatch({ failGet: true })
-  }, 40000)
+    regressedRollback = await renameBatch({ regress: true, failRollback: 'http' })
+  }, 60000)
 
   afterAll(() => {
     for (const stub of stubs) stub.stop()
@@ -239,16 +246,37 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
     expect(run.writes.map((entry) => entry.id)).toEqual([FIRST, FIRST])
   })
 
-  it('exits 1 when every entry fails its GET, instead of "Dry-run complete."', () => {
+  it('exits 1 when every entry fails its GET, instead of "Done: 0 renamed"', () => {
     // The original report: a stale token answered 401 to every read and the run
     // still reported success. renameOne() returned `null` for «failed» exactly
     // as it did for «skipped», so nothing counted.
     expect(deadReads.result.status).toBe(1)
     expect(deadReads.result.stderr).toContain('HTTP 401')
     expect(deadReads.result.stderr).toContain('2 of 2 entries failed')
+    // The summary still prints — and now names the failures instead of reading
+    // as a clean empty batch.
+    expect(deadReads.result.stdout).toContain('Done: 0 renamed + redirected, 2 failed.')
     // Nothing was written, and the failure is not a corruption abort.
     expect(deadReads.writes).toEqual([])
     expect(deadReads.result.stderr).not.toContain('TEXT CORRUPTION')
+  })
+
+  it('reports, not process.exit()s, when the rollback after a REGRESSION fails', () => {
+    // The other rollback caller. It used to call restoreFromBackup() without
+    // `exitOnFailure: false`, so a non-2xx answer killed the run from inside:
+    // the summary — and, in a batch where earlier entries had landed, the 301s
+    // that keep their old slugs alive — never reached disk, and no line named
+    // the article now live under its new title.
+    expect(regressedRollback.result.status).toBe(1)
+    expect(regressedRollback.result.stderr).toContain('regression: slug did NOT change')
+    expect(regressedRollback.result.stderr).toContain('rollback FAILED (HTTP 500)')
+    expect(regressedRollback.result.stderr).toContain('may still be live')
+    // main() got to the end: the summary printed, and appendRedirects() sits on
+    // the line above it.
+    expect(regressedRollback.result.stdout).toContain('Done: 0 renamed + redirected, 1 failed.')
+    // And the batch still stopped — the second article was never written.
+    expect(regressedRollback.writes.map((entry) => entry.id)).toEqual([FIRST, FIRST])
+    expect(regressedRollback.result.stderr).not.toContain('TEXT CORRUPTION')
   })
 
   it('leaves the redirect manifest untouched when nothing landed', () => {

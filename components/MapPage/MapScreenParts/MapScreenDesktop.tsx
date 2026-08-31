@@ -66,6 +66,11 @@ type MapScreenDesktopProps = {
   isConnected: boolean
   mapReady: boolean
   shouldLoadOnboarding: boolean
+  /**
+   * The page `<h1>` when the expanded panel header is its active anchor
+   * (#1640). Undefined means it is mounted in the map-corner anchor instead.
+   */
+  panelHeading?: React.ReactNode
 }
 
 /**
@@ -112,6 +117,7 @@ export function MapScreenDesktopChrome({
   currentRadius,
   coordinates,
   transportMode,
+  panelHeading,
 }: MapScreenDesktopProps) {
   const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed && isWeb
   const showDesktopExpandedPanel = !showDesktopCollapsedStrip
@@ -199,6 +205,7 @@ export function MapScreenDesktopChrome({
             </Pressable>
           )}
           <MapPanelHeader
+            heading={panelHeading}
             isMobile={isMobile}
             activeTab={activePanelTab}
             travelsCount={travelsCount}

@@ -23,6 +23,14 @@ type MapScreenShellProps = {
   chrome: React.ReactNode
   /** Shared, breakpoint-independent overlays (offline indicator, onboarding…). */
   overlays?: React.ReactNode
+  /**
+   * The page `<h1>` when the map-corner anchor is active (#1640): mobile web,
+   * and desktop with the panel collapsed. Rendered here rather than inside
+   * `chrome` because chrome is lazily loaded on mobile and disappears entirely
+   * when the desktop panel collapses, which would leave the page with no
+   * runtime heading. Undefined means the panel header owns it instead.
+   */
+  cornerHeading?: React.ReactNode
   isMobile: boolean
 }
 
@@ -37,6 +45,7 @@ export function MapScreenShell({
   mapComponent,
   chrome,
   overlays,
+  cornerHeading,
   isMobile,
 }: MapScreenShellProps) {
   // #217 — the map node now survives a breakpoint flip, but its host geometry
@@ -88,7 +97,15 @@ export function MapScreenShell({
               it sits to the left in the flex-row. Mobile chrome is absolutely
               positioned, so order is irrelevant there. */}
           {!isMobile && chrome}
-          <View style={styles.mapHost}>{mapComponent}</View>
+          {/* The heading is a sibling INSIDE mapHost, never a wrapper around
+              mapComponent: wrapping would re-parent the Leaflet node and force
+              a full tile reload (#217). The slot is unconditional — a null
+              keeps the child index of mapComponent stable across anchor
+              switches. */}
+          <View style={styles.mapHost}>
+            {cornerHeading}
+            {mapComponent}
+          </View>
           {isMobile && chrome}
         </View>
         {overlays}

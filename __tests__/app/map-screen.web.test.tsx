@@ -4,6 +4,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import MapRoute from '@/app/(tabs)/map.web'
 
 const mockUseWebHydrationGate = jest.fn()
+let mapScreenSuspension: Promise<void> | null = null
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
@@ -27,20 +28,30 @@ jest.mock('@/components/MapPage/MapPageSkeleton', () => ({
   MapPageSkeleton: () => <div data-testid="map-route-skeleton" />,
 }))
 
-jest.mock('@/screens/tabs/MapScreen', () => ({
-  __esModule: true,
-  default: function MockMapScreen() {
-    return (
-      <div data-testid="map-route-runtime">
-        <img
-          data-testid="leaflet-runtime-tile"
-          className="leaflet-tile leaflet-tile-loaded"
-          alt=""
-        />
-      </div>
-    )
-  },
-}))
+// #1640 — the runtime <h1> is owned by the map screen tree (MapPageHeading),
+// not by the route file. The mock mirrors that so the route suite exercises the
+// real handoff: static heading in, runtime heading out.
+jest.mock('@/screens/tabs/MapScreen', () => {
+  const { MapPageHeading } = jest.requireActual('@/components/MapPage/MapPageHeading')
+  return {
+    __esModule: true,
+    default: function MockMapScreen() {
+      // Lets a test hold the deferred map chunk unresolved and observe what the
+      // document looks like while nothing of the map tree has mounted yet.
+      if (mapScreenSuspension) throw mapScreenSuspension
+      return (
+        <div data-testid="map-route-runtime">
+          <MapPageHeading anchor="map-corner" styles={{}} />
+          <img
+            data-testid="leaflet-runtime-tile"
+            className="leaflet-tile leaflet-tile-loaded"
+            alt=""
+          />
+        </div>
+      )
+    },
+  }
+})
 
 describe('map.web route hydration shell signal', () => {
   const ensureRoot = () => {
@@ -68,6 +79,7 @@ describe('map.web route hydration shell signal', () => {
       return 1
     })
     jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)
+    mapScreenSuspension = null
     ensureRoot()
   })
 
@@ -114,8 +126,7 @@ describe('map.web route hydration shell signal', () => {
     })
   })
 
-  it('replaces the static SSG heading with one visible runtime heading after hydration (#1640)', async () => {
-    const root = ensureRoot()
+  const mountStaticHeading = (root: HTMLElement) => {
     const ssgHeading = document.createElement('h1')
     ssgHeading.setAttribute('data-ssg-travel-h1', 'true')
     ssgHeading.style.position = 'absolute'
@@ -123,9 +134,16 @@ describe('map.web route hydration shell signal', () => {
     ssgHeading.style.height = '1px'
     ssgHeading.textContent = 'Карта маршрутов и достопримечательностей Беларуси | Metravel'
     root.before(ssgHeading)
+    return ssgHeading
+  }
+
+  it('hands the heading over from the static node to the runtime one (#1640)', async () => {
+    const root = ensureRoot()
+    mountStaticHeading(root)
     mockUseWebHydrationGate.mockReturnValue(false)
 
     const view = render(<MapRoute />, { container: root })
+    // Before hydration the route itself owns no heading — the static node does.
     expect(root.querySelectorAll('h1')).toHaveLength(0)
     expect(document.querySelectorAll('h1')).toHaveLength(1)
 
@@ -133,23 +151,53 @@ describe('map.web route hydration shell signal', () => {
     view.rerender(<MapRoute />)
 
     await waitFor(() => {
-      expect(document.querySelector('h1[data-ssg-travel-h1="true"]')).toBeNull()
-      expect(document.querySelectorAll('h1')).toHaveLength(1)
+      expect(view.queryByTestId('map-route-runtime')).not.toBeNull()
     })
+
+    // The static node is gone only because a runtime heading took over, and the
+    // document never holds more than one.
+    expect(document.querySelector('h1[data-ssg-travel-h1="true"]')).toBeNull()
+    expect(document.querySelectorAll('h1')).toHaveLength(1)
 
     const runtimeHeading = view.getByRole('heading', { level: 1 })
     expect(runtimeHeading.textContent).toBe(
       'Карта маршрутов и достопримечательностей Беларуси',
     )
-    expect(runtimeHeading.style.position).not.toBe('absolute')
-    expect(runtimeHeading.style.width).not.toBe('1px')
-    expect(runtimeHeading.style.height).not.toBe('1px')
-    expect(runtimeHeading.style.flexGrow).toBe('0')
-    expect(runtimeHeading.style.flexBasis).toBe('auto')
-    expect(runtimeHeading.style.fontSize).toBe('24px')
-    expect(runtimeHeading.style.lineHeight).toBe('30px')
-    expect(runtimeHeading.style.paddingTop).toBe('8px')
-    expect(runtimeHeading.style.paddingRight).toBe('16px')
+    // The band is gone: the heading is no longer a full-width centred strip.
+    expect(runtimeHeading.style.width).not.toBe('100%')
+    expect(runtimeHeading.style.textAlign).not.toBe('center')
+  })
+
+  it('keeps exactly one heading while the map screen chunk is still unresolved (#1640)', async () => {
+    // Regression guard for the lazy-chunk gap. Removing the static heading on
+    // `hydrationReady` alone left the document with zero <h1> until the deferred
+    // map chunk resolved — and forever when it failed to load.
+    const root = ensureRoot()
+    mountStaticHeading(root)
+    let resolveChunk: (() => void) | undefined
+    mapScreenSuspension = new Promise<void>((resolve) => {
+      resolveChunk = () => resolve()
+    })
+    mockUseWebHydrationGate.mockReturnValue(true)
+
+    const view = render(<MapRoute />, { container: root })
+
+    expect(view.queryByTestId('map-route-runtime')).toBeNull()
+    expect(view.queryByTestId('map-route-skeleton')).not.toBeNull()
+    expect(document.querySelectorAll('h1')).toHaveLength(1)
+    expect(document.querySelector('h1[data-ssg-travel-h1="true"]')).not.toBeNull()
+
+    mapScreenSuspension = null
+    await act(async () => {
+      resolveChunk?.()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(view.queryByTestId('map-route-runtime')).not.toBeNull()
+    })
+    expect(document.querySelectorAll('h1')).toHaveLength(1)
+    expect(document.querySelector('h1[data-ssg-travel-h1="true"]')).toBeNull()
   })
 
   it('does not accept an incomplete Leaflet tile load event', async () => {

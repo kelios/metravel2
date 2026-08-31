@@ -39,6 +39,11 @@ describe('bundle budget release contract', () => {
     // одинаковым route-set и отложенной загрузки неактивных секций планировщика.
     // Пин существует, чтобы потолок нельзя было ПОДНЯТЬ ради зелёной сборки; опускать его
     // вслед за реальным выигрышем — ровно то, ради чего он и заведён.
+    // Числа синхронизированы с `config/bundle-budget.json` на релизной перекурации
+    // 2026-08-30 (b4f27db9): 64 сгенерированных маршрута квестовых городов и их
+    // route-чанк подняли замеренную композицию, обоснование покомпонентно
+    // разобрано в `description` того же файла. Дублирование намеренное — правка
+    // потолка обязана касаться и конфига, и этого контракта.
     expect(budget?.eager).toMatchObject({
       chunks: ['entry', '__expo-metro-runtime'],
       htmlRoutes: true,
@@ -46,15 +51,15 @@ describe('bundle budget release contract', () => {
       // #1372: потолок на ЧИСЛО eager JS-запросов маршрута. Без пина его легко
       // поднять, чтобы «позеленить» сборку, — а именно это Task Contract
       // задачи и запрещает.
-      maxRequests: 20,
+      maxRequests: 27,
       maxRequestsByRoute: {
-        'index.html': 14,
-        'search.html': 9,
-        'map.html': 14,
-        'quests.html': 12,
-        '(tabs)/travels/[param].html': 16,
-        '(tabs)/profile.html': 20,
-        '(tabs)/trips/plan/[id].html': 19,
+        'index.html': 16,
+        'search.html': 11,
+        'map.html': 23,
+        'quests.html': 15,
+        '(tabs)/travels/[param].html': 23,
+        '(tabs)/profile.html': 27,
+        '(tabs)/trips/plan/[id].html': 26,
       },
       tolerancePct: 0,
     })

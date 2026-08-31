@@ -93,13 +93,15 @@ describe('Map Mobile Layout Styles', () => {
     it('should have fixed min height on mobile header', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
-      expect(styles.tabsContainer.minHeight).toBe(48);
+      // Ряд с табами и иконками выделен в `tabsRow`; высота и зазор живут там,
+      // а `tabsContainer` остался колоночной обёрткой с паддингами.
+      expect(styles.tabsRow.minHeight).toBe(48);
     });
 
     it('should have compact column gap on mobile', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
-      expect(styles.tabsContainer.columnGap).toBe(10);
+      expect(styles.tabsRow.columnGap).toBe(10);
     });
 
     it('should have standard padding on desktop header', () => {
@@ -113,7 +115,7 @@ describe('Map Mobile Layout Styles', () => {
     it('should not have min height on desktop header', () => {
       const styles = getStyles(false, 0, mockThemedColors as any);
 
-      expect(styles.tabsContainer.minHeight).toBeUndefined();
+      expect(styles.tabsRow.minHeight).toBeUndefined();
     });
   });
 
@@ -122,7 +124,7 @@ describe('Map Mobile Layout Styles', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
       // Header min height should be at least 44px for touch targets
-      expect(styles.tabsContainer.minHeight).toBeGreaterThanOrEqual(42);
+      expect(styles.tabsRow.minHeight).toBeGreaterThanOrEqual(42);
       
       // Padding should provide adequate touch area
       expect(styles.tabsContainer.paddingHorizontal).toBeGreaterThanOrEqual(8);
@@ -132,7 +134,7 @@ describe('Map Mobile Layout Styles', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
       // Column gap should provide spacing between interactive elements
-      expect(styles.tabsContainer.columnGap).toBeGreaterThanOrEqual(4);
+      expect(styles.tabsRow.columnGap).toBeGreaterThanOrEqual(4);
     });
   });
 
@@ -175,7 +177,7 @@ describe('Map Mobile Layout Styles', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
       expect(styles.rightPanel.borderTopLeftRadius).toBe(18);
-      expect(styles.tabsContainer.minHeight).toBe(48);
+      expect(styles.tabsRow.minHeight).toBe(48);
     });
   });
 

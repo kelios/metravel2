@@ -84,7 +84,13 @@ describe('seo-mass-augment exit contract', () => {
     // than the silent success it replaces.
     expect(run.stdout).toContain('Summary:')
     expect(run.stdout).toContain('"errors": 2')
-    expect(fs.existsSync(LOG_PATH)).toBe(true)
+    // Content, not existsSync: the log is developer working state that is
+    // usually on disk already, so its mere presence proves nothing about THIS
+    // run. `errors` is derived from these entries, so they are also what the
+    // exit code above was counted from.
+    const written = JSON.parse(fs.readFileSync(LOG_PATH, 'utf8'))
+    expect(written.log.map((entry: { id: number }) => entry.id)).toEqual([990241, 990242])
+    expect(written.log.every((entry: { error?: string }) => Boolean(entry.error))).toBe(true)
   })
 
   it('reports the failure as one line, not as a crash', () => {

@@ -21,6 +21,11 @@ const PANEL_RADIUS = 20;
 const CONTROL_RADIUS = 12;
 // Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
 const CONTROL_SIZE = 44;
+// Mobile map chrome floats a row of 48dp controls at the top of the map area
+// (11px inset + 48px button). The page heading capsule clears it instead of
+// sitting on top of it; it is `pointerEvents: none`, so an overlap would not
+// eat taps, but it would hide the controls.
+const MAP_MOBILE_TOP_CONTROLS_RESERVE = 11 + 48 + METRICS.spacing.s;
 
 export const getStyles = (
   isMobile: boolean,
@@ -182,18 +187,72 @@ export const getStyles = (
             } as any)
           : null),
       },
+      // #1640 — the page H1 lives inside the panel header instead of a
+      // full-width band above the map. h3 scale, not h1: at 24px the 49-char
+      // title takes three lines in a 320-360px column, which is the same band
+      // rotated 90°. Left-aligned on purpose — centring is what made the band
+      // read as a banner.
+      pageHeadingInPanel: {
+        fontSize: 17,
+        lineHeight: 22,
+        letterSpacing: -0.2,
+        fontWeight: '700',
+        color: themedColors.text,
+        textAlign: 'left',
+        marginTop: 0,
+        marginBottom: METRICS.spacing.s,
+        marginHorizontal: 0,
+        width: '100%',
+      },
+      // Fallback anchor for every state without a panel header: desktop with a
+      // collapsed panel, mobile web, and the desktop data-error screen.
+      // Opaque surface rather than the translucent `radiusPill` recipe — 40%
+      // alpha over arbitrary tiles does not guarantee 4.5:1, and live blur on
+      // the mobile map is already banned for GPU reasons (see tabsContainer).
+      pageHeadingCapsule: {
+        position: 'absolute',
+        // Mobile: below the floating control row, which is a full-bleed strip of
+        // seven 48dp buttons at y=11..59 with no free slot inside it. Measured,
+        // not guessed — see MAP_MOBILE_TOP_CONTROLS_RESERVE.
+        top: isMobile ? MAP_MOBILE_TOP_CONTROLS_RESERVE : METRICS.spacing.m,
+        left: isMobile ? METRICS.spacing.s : METRICS.spacing.m,
+        // Wide enough to hold the RU title in two lines at 15px; longer
+        // translations wrap further rather than truncate.
+        maxWidth: isMobile ? '80%' : 360,
+        // Same padding/radius as radiusPill so the two floating map labels read
+        // as one family.
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        backgroundColor: themedColors.surface,
+        borderRadius: 999,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
+        zIndex: 1004,
+        ...(Platform.OS === 'web'
+          ? ({ boxShadow: themedColors.boxShadows.card } as any)
+          : shadowMedium),
+      },
+      pageHeadingCapsuleText: {
+        fontSize: 15,
+        lineHeight: 22,
+        letterSpacing: 0,
+        fontWeight: '700',
+        color: themedColors.text,
+        textAlign: 'left',
+      },
+      // #1640 — a column so the page H1 can sit above the tab row inside the
+      // same surface and the same single hairline border. The row itself moved
+      // to `tabsRow`; padding, background and border stay here so the header
+      // keeps its previous outer geometry.
       tabsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'nowrap',
-        alignItems: 'center',
+        flexDirection: 'column',
+        alignItems: 'stretch',
         paddingTop: isMobile ? Math.max(10, insetTop + 2) : 14,
         paddingBottom: isMobile ? 8 : 10,
         paddingHorizontal: isMobile ? 10 : 12,
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.borderLight,
-        columnGap: 10,
-        minHeight: isMobile ? 48 : undefined,
         ...(Platform.OS === 'web'
           ? ({
               backgroundColor: isMobile ? themedColors.surfaceMuted : themedColors.surface,
@@ -207,6 +266,14 @@ export const getStyles = (
               boxShadow: '0 1px 0 rgba(15,23,42,0.06)',
             } as any)
           : null),
+      },
+      // The former `tabsContainer` row: tab segment + action icons.
+      tabsRow: {
+        flexDirection: 'row',
+        flexWrap: 'nowrap',
+        alignItems: 'center',
+        columnGap: 10,
+        minHeight: isMobile ? 48 : undefined,
       },
       tabsSegment: {
         flexDirection: 'row',

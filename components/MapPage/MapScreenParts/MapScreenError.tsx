@@ -11,6 +11,12 @@ import { translate as i18nT } from '@/i18n'
 type MapScreenErrorProps = {
   styles: any
   seoBlock: React.ReactNode
+  /**
+   * The page `<h1>`. This branch replaces MapScreenShell entirely, so neither
+   * regular anchor mounts here and the page would otherwise show no visible
+   * heading at all (#1640).
+   */
+  pageHeading?: React.ReactNode
   mapError: unknown
   mapErrorDetails: unknown
   isConnected: boolean
@@ -21,6 +27,7 @@ type MapScreenErrorProps = {
 export function MapScreenError({
   styles,
   seoBlock,
+  pageHeading,
   mapError,
   mapErrorDetails,
   isConnected,
@@ -37,6 +44,7 @@ export function MapScreenError({
   return (
     <View style={styles.container} {...ROOT_MAP_PROPS}>
       {seoBlock}
+      {pageHeading}
       <ErrorDisplay
         title={!isConnected ? i18nT('map:components.MapPage.MapScreenParts.MapScreenError.net_podklyucheniya_f79eecc2') : i18nT('map:components.MapPage.MapScreenParts.MapScreenError.ne_udalos_zagruzit_kartu_989682c9')}
         message={effectiveMessage}

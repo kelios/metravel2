@@ -239,7 +239,7 @@ async function restoreFromBackup(id, { exitOnFailure = true } = {}) {
   if (!file) {
     console.error(`No backup for #${id}`);
     if (exitOnFailure) process.exit(1);
-    return { ok: false, status: 0, reason: 'бэкапа нет на диске' };
+    return { ok: false, status: 0, reason: 'no backup on disk' };
   }
   const original = JSON.parse(fs.readFileSync(file, 'utf8'));
   const payload = buildUpsertPayload(original, { description: original.description, meta: original.meta_description });
@@ -263,7 +263,10 @@ async function restoreFromBackup(id, { exitOnFailure = true } = {}) {
  * from the two successes. That is how a batch in which every entry failed still
  * exited 0.
  *
- * @returns {Promise<{outcome: 'renamed'|'skipped'|'failed', pair?: {from: string, to: string}}>}
+ * `abort` is set when the entry left production in a state the next entry must
+ * not be written on top of; the caller stops the batch on it.
+ *
+ * @returns {Promise<{outcome: 'renamed'|'skipped'|'failed', pair?: {from: string, to: string}, abort?: string}>}
  */
 async function renameOne({ id, name }, dryRun) {
   const before = await getTravel(id);
@@ -317,8 +320,19 @@ async function renameOne({ id, name }, dryRun) {
   const problems = detectRegression(before, after, name);
   if (problems.length) {
     console.error(`  ⛔ #${id} regression: ${problems.join('; ')} — rolling back (backup ${path.basename(backup)})`);
-    await restoreFromBackup(id);
-    return { outcome: 'failed' };
+    // Same `exitOnFailure: false` as the corruption branch, for the same two
+    // reasons: process.exit() in here kills the run before main() writes the
+    // 301s of the renames that DID land — turning a reported failure into live
+    // 404s on the slugs this batch already changed — and it prints no line
+    // naming the article that is now live under the new title. The rejecting
+    // half was worse still: it left the batch running.
+    const rollback = await restoreFromBackup(id, { exitOnFailure: false })
+      .catch((error) => ({ ok: false, status: 0, reason: error.message }));
+    if (rollback.ok) return { outcome: 'failed' };
+    return {
+      outcome: 'failed',
+      abort: `rollback FAILED (${rollback.reason}) — «${name}» may still be live, restore from ${path.basename(backup)}`,
+    };
   }
   console.log(`  ✅ #${id} "${name}"  slug ${oldSlug} → ${after.slug}  (pub=${after.publish}, gal=${(after.gallery || []).length}, pts=${(after.coordsMeTravel || []).length}, desc=${(after.description || '').length})`);
   return { outcome: 'renamed', pair: { from: oldSlug, to: after.slug } };
@@ -348,12 +362,22 @@ async function main() {
 
   const pairs = [];
   let corruption = null;
+  let aborted = null;
   let failed = 0;
   for (const e of entries) {
     try {
       const result = await renameOne(e, dryRun);
       if (result.outcome === 'renamed') pairs.push(result.pair);
       if (result.outcome === 'failed') failed += 1;
+      // A rollback that did not happen left an article live under its new
+      // title, so the batch stops the way the corruption branch does — but
+      // through here, so the manifest and the summary below still land.
+      if (result.abort) {
+        console.error(`  ❌ #${e.id}: ${result.abort}`);
+        console.error('  🛑 batch stopped: a rollback failed, remaining renames were not attempted.');
+        aborted = `#${e.id}: ${result.abort}`;
+        break;
+      }
     } catch (err) {
       console.error(`  ❌ #${e.id}: ${err.message}`);
       failed += 1;
@@ -379,6 +403,12 @@ async function main() {
     throw new ExpectedFailureError(
       `run aborted after ${pairs.length} rename(s): ${corruption.message}. ` +
       'Fix the read/write path before re-running — the remaining entries were not touched.',
+    );
+  }
+  if (aborted) {
+    throw new ExpectedFailureError(
+      `run aborted after ${pairs.length} rename(s): ${aborted}. ` +
+      'Restore that article from its backup before re-running — the remaining entries were not touched.',
     );
   }
   // Same contract for the ordinary failures. A batch whose every entry died on
