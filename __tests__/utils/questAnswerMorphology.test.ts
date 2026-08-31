@@ -7,7 +7,15 @@
  * ровно окончанием. Проверка на реальных данных: все 113 исторических
  * отклонённых вводов из `quest_answer_attempt` остаются отклонёнными.
  */
-import { isSameWordForm, matchesAnyWordForm } from '@/utils/questAnswerMorphology'
+import {
+  ENDINGS,
+  MAX_ENDING_LENGTH,
+  MIN_COMMON_PREFIX,
+  MIN_WORD_LENGTH,
+  isSameWordForm,
+  matchesAnyWordForm,
+} from '@/utils/questAnswerMorphology'
+import { QUEST_MORPHOLOGY_BOUNDARY_PAIRS } from '@/__tests__/fixtures/questMorphologyBoundaryPairs'
 
 describe('словоформа эталона', () => {
   it('принимает единственное число при словаре во множественном', () => {
@@ -45,7 +53,10 @@ describe('словоформа эталона', () => {
   })
 
   it('не роднит короткие пары разных слов', () => {
-    // `рот` короче четырёх букв — до разбора такая пара не доходит.
+    // `рот` короче четырёх букв — до разбора такая пара не доходит. Держит её
+    // именно `MIN_WORD_LENGTH`, а не состав `ENDINGS`: хвосты «» и «а» оба
+    // валидны (нулевое окончание в списке есть), поэтому на пороге 3 правило
+    // склеило бы эти слова. Замер — в блоке «границы правила» ниже.
     expect(isSameWordForm('рот', 'рота')).toBe(false)
     expect(isSameWordForm('пол', 'пола')).toBe(false)
   })
@@ -82,5 +93,45 @@ describe('словоформа эталона', () => {
     const dict = ['пули', 'обстрел', 'выстрелы']
     expect(matchesAnyWordForm('пуля', dict)).toBe(true)
     expect(matchesAnyWordForm('кирпич', dict)).toBe(false)
+  })
+})
+
+/**
+ * Границы правила. Живёт в файле самого модуля сознательно: приёмка 31.08.2026
+ * опустила `MIN_COMMON_PREFIX` с 3 до 2 и получила зелёные 20 из 20 — потому
+ * что единственный чувствительный к этому порогу страж лежал в файле, чьё имя
+ * не попадает под `npx jest __tests__/utils/questAnswerMorphology`. Тот, кто
+ * правит правило, запускает тесты правила; значит, охрана порогов обязана
+ * падать здесь, а не только в соседнем файле.
+ *
+ * Глубокий разбор каждого порога с обеими сторонами пробы —
+ * `questAnswerMorphologyBoundaries.test.ts`.
+ */
+describe('границы правила', () => {
+  it('пороги закреплены на измеренных значениях', () => {
+    // Проверка значения, а не поведения: она не доказывает правильность порога,
+    // она обязывает того, кто его меняет, прочитать замер и обновить пары в
+    // `questMorphologyBoundaryPairs`. Поведение проверяют тесты ниже.
+    expect({ MIN_WORD_LENGTH, MIN_COMMON_PREFIX, MAX_ENDING_LENGTH }).toEqual({
+      MIN_WORD_LENGTH: 4,
+      MIN_COMMON_PREFIX: 3,
+      MAX_ENDING_LENGTH: 3,
+    })
+  })
+
+  it('ни одна пара-граница не принимается правилом', () => {
+    // Красная при `MIN_COMMON_PREFIX` 3 → 2: у каждой пары общая часть ровно в
+    // две буквы, а хвосты — валидные окончания.
+    const accepted = QUEST_MORPHOLOGY_BOUNDARY_PAIRS.filter((pair) =>
+      isSameWordForm(pair.input, pair.variant),
+    )
+    expect(accepted.map((pair) => `${pair.input} ~ ${pair.variant} (${pair.why})`)).toEqual([])
+  })
+
+  it('поднять MAX_ENDING_LENGTH в одиночку нечем: в списке нет окончаний длиннее порога', () => {
+    // Отсюда следует, что отдельной пары-стража этот порог не требует: пока
+    // самое длинное окончание короче порога, его рост ничего не добавляет.
+    const longest = Math.max(...[...ENDINGS].map((ending) => ending.length))
+    expect(longest).toBeLessThanOrEqual(MAX_ENDING_LENGTH)
   })
 })

@@ -12,30 +12,28 @@
  * являются формами друг друга и склеились бы ровно при ослаблении одного
  * порога. Тест проверяет обе стороны — что сейчас пара отклоняется и что
  * ослабление её действительно ловит.
+ *
+ * Имя файла начинается с имени модуля намеренно. Приёмка 31.08.2026 опустила
+ * `MIN_COMMON_PREFIX` с 3 до 2, запустила `npx jest
+ * __tests__/utils/questAnswerMorphology` и получила зелёное — прежнее имя
+ * (`questMorphologyBoundaries`) под этот шаблон не попадало, и единственный
+ * чувствительный страж в прогон не входил.
  */
 import {
   QUEST_MORPHOLOGY_BOUNDARY_PAIRS,
   type MorphologyBoundaryPair,
 } from '@/__tests__/fixtures/questMorphologyBoundaryPairs'
-import { isSameWordForm } from '@/utils/questAnswerMorphology'
+import {
+  ENDINGS,
+  MAX_ENDING_LENGTH,
+  MIN_COMMON_PREFIX,
+  MIN_WORD_LENGTH,
+  isSameWordForm,
+} from '@/utils/questAnswerMorphology'
 import { buildAnswerChecker } from '@/utils/questAdapters'
 
 const describePair = (pair: MorphologyBoundaryPair): string =>
   `${pair.guards}: «${pair.input}» против словаря «${pair.variant}» (${pair.why})`
-
-/**
- * Ослабленная копия правила. Держать её здесь, а не править продуктовый модуль,
- * — единственный способ показать красный результат в обычном прогоне: тест,
- * который «упал бы, если бы кто-то поменял константу», сам ничего не доказывает.
- */
-const ENDINGS_FOR_PROBE = new Set([
-  'а', 'я', 'ы', 'и', 'у', 'ю', 'е', 'о', 'ой', 'ей', 'ом', 'ем', 'ах', 'ях',
-  'ам', 'ям', 'ами', 'ями', 'ов', 'ев', 'ь', 'й',
-  'ый', 'ий', 'ая', 'яя', 'ое', 'ее', 'ые', 'ым', 'им', 'ых', 'их',
-  'ую', 'юю', 'ому', 'ему', 'ого', 'его', 'ыми', 'ими',
-  'і', 'ў', 'аў', 'еў', 'ай', 'яй', 'амі', 'ямі',
-  'ае', 'яе', 'ыя', 'ія', 'ага', 'яга', 'аму', 'яму', 'ім', 'іх',
-])
 
 const commonPrefixLength = (a: string, b: string): number => {
   const limit = Math.min(a.length, b.length)
@@ -44,7 +42,14 @@ const commonPrefixLength = (a: string, b: string): number => {
   return i
 }
 
-/** Правило с подменёнными порогами — чтобы измерить, что именно их держит. */
+/**
+ * Правило с подменёнными порогами — чтобы измерить, что именно их держит.
+ *
+ * Список окончаний берётся настоящий, а не копия. Первая редакция этого теста
+ * держала свою копию `ENDINGS` без нулевого окончания и на ней «доказала», что
+ * `MIN_WORD_LENGTH` не держит ничего. На настоящем списке вывод обратный, и он
+ * закреплён проверкой ниже: копия охраняет копию, а не правило.
+ */
 const matchesWithThresholds = (
   input: string,
   variant: string,
@@ -61,31 +66,55 @@ const matchesWithThresholds = (
   const inputEnding = input.slice(common)
   const variantEnding = variant.slice(common)
   if (inputEnding.length > maxEndingLength || variantEnding.length > maxEndingLength) return false
-  return ENDINGS_FOR_PROBE.has(inputEnding) && ENDINGS_FOR_PROBE.has(variantEnding)
+  return ENDINGS.has(inputEnding) && ENDINGS.has(variantEnding)
 }
 
-const CURRENT = { minWordLength: 4, minCommonPrefix: 3, maxEndingLength: 3 }
+const CURRENT = {
+  minWordLength: MIN_WORD_LENGTH,
+  minCommonPrefix: MIN_COMMON_PREFIX,
+  maxEndingLength: MAX_ENDING_LENGTH,
+}
 
 const WEAKENED: Record<MorphologyBoundaryPair['guards'], typeof CURRENT> = {
-  MIN_COMMON_PREFIX: { ...CURRENT, minCommonPrefix: 2 },
+  MIN_COMMON_PREFIX: { ...CURRENT, minCommonPrefix: MIN_COMMON_PREFIX - 1 },
 }
 
 describe('пороги морфологического прохода охраняются доказательными парами', () => {
+  it('подменённое правило совпадает с настоящим на текущих порогах', () => {
+    // Иначе весь замер ниже относился бы к другому правилу.
+    const probe = QUEST_MORPHOLOGY_BOUNDARY_PAIRS.map((pair) =>
+      matchesWithThresholds(pair.input, pair.variant, CURRENT),
+    )
+    const real = QUEST_MORPHOLOGY_BOUNDARY_PAIRS.map((pair) =>
+      isSameWordForm(pair.input, pair.variant),
+    )
+    expect(probe).toEqual(real)
+  })
+
   it('фикстура не выродилась', () => {
     expect(QUEST_MORPHOLOGY_BOUNDARY_PAIRS.length).toBeGreaterThanOrEqual(3)
     expect(new Set(QUEST_MORPHOLOGY_BOUNDARY_PAIRS.map((pair) => pair.guards)))
       .toEqual(new Set(['MIN_COMMON_PREFIX']))
   })
 
-  it('пороги, которые держит состав ENDINGS, отдельными записями не сторожатся', () => {
-    // Замер 2026-08-30: снижение MIN_WORD_LENGTH 4 → 3 и рост MAX_ENDING_LENGTH
-    // 3 → 4 в одиночку не склеивают ничего, потому что правило требует валидное
-    // окончание с обеих сторон: у трёхбуквенного слова хвост пустой, а
-    // четырёхбуквенных окончаний в списке нет вовсе.
-    expect(matchesWithThresholds('рота', 'рот', { ...CURRENT, minWordLength: 3 })).toBe(false)
-    expect(matchesWithThresholds('пола', 'пол', { ...CURRENT, minWordLength: 3 })).toBe(false)
-    expect(ENDINGS_FOR_PROBE.has('')).toBe(false)
-    expect([...ENDINGS_FOR_PROBE].every((ending) => ending.length <= 3)).toBe(true)
+  it('MIN_WORD_LENGTH держит собственное значение и сторожится парой рот/рота', () => {
+    // Замер 2026-08-31, поправка к прежнему выводу этого теста: снижение
+    // MIN_WORD_LENGTH 4 → 3 РЕАЛЬНО склеивает `рот` и `рота` — хвосты «» и «а»
+    // оба валидны, потому что нулевое окончание в `ENDINGS` есть. Отдельной
+    // записи в фикстуре порогу не нужно: пара уже стоит в
+    // `questAnswerMorphology.test.ts` («не роднит короткие пары разных слов») и
+    // краснеет там при ослаблении.
+    expect(matchesWithThresholds('рота', 'рот', { ...CURRENT, minWordLength: 3 })).toBe(true)
+    expect(matchesWithThresholds('рота', 'рот', CURRENT)).toBe(false)
+    expect(ENDINGS.has('')).toBe(true)
+  })
+
+  it('MAX_ENDING_LENGTH в одиночку не ослабляется: длинных окончаний в списке нет', () => {
+    // Рост порога 3 → 4 не добавляет ни одной пары, потому что хвост всё равно
+    // обязан быть в `ENDINGS`, а там нет ничего длиннее трёх букв. Порог держит
+    // состав списка — тот, который уже сторожит корпус реальных отказов.
+    expect(Math.max(...[...ENDINGS].map((ending) => ending.length)))
+      .toBeLessThanOrEqual(MAX_ENDING_LENGTH)
   })
 
   it('на текущем правиле ни одна пара не принимается', () => {
