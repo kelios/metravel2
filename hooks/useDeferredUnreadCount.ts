@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
  * `no-store`, поэтому каждый повтор — реальный поход в сеть. Минута вместо
  * прежних тридцати секунд вдвое сокращает их число (#1661).
  */
-export const UNREAD_COUNT_POLL_INTERVAL = 60_000;
+const UNREAD_COUNT_POLL_INTERVAL = 60_000;
 
 /**
  * Пока последний ответ был ошибкой, опрос разряжается: долбить сломанный
@@ -61,13 +61,19 @@ export function useDeferredUnreadCount(enabled: boolean = true, pollEnabled: boo
         : UNREAD_COUNT_POLL_INTERVAL;
     },
     refetchOnWindowFocus: false,
-    // Повтор внутри одного опроса не нужен: следующий и так придёт по таймеру.
-    retry: false,
+    // `retry` намеренно не переопределяем. Глобальная политика
+    // (`utils/reactQueryConfig.ts`) не повторяет 4xx и таймауты, но даёт две
+    // попытки на 5xx — без неё единственный 502 в момент деплоя сразу уводил бы
+    // опрос на пять минут, хотя раньше значок восстанавливался за полминуты.
   });
 
+  // Зависимость — именно `refetch`: она забинжена в обсервере и стабильна, а
+  // сам результат `useQuery` отдаётся новым объектом на каждый рендер, из-за
+  // чего `refresh` пересоздавался бы постоянно.
+  const { refetch } = query;
   const refresh = useCallback(() => {
-    void query.refetch();
-  }, [query]);
+    void refetch();
+  }, [refetch]);
 
   return { count: query.data ?? 0, refresh };
 }
