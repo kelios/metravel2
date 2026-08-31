@@ -193,6 +193,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardHelpers.otmena_9f846483": "Адмена",
   "components.quests.questWizardNavigation.f_67cbee49": "Ф",
   "components.quests.questWizardNavigation.final_a5ec2c03": "Фінал",
+  "components.quests.questWizardNavigation.postponedLabel": "{{value1}} — адкладзена, чакае адказу",
   "components.quests.questWizardSections.apple_maps_2428622f": "Apple Maps",
   "components.quests.questWizardSections.chtoby_otkryt_priz_i_video_zavershite_vse_sh_fd0438f8": "Каб адкрыць прыз і відэа, завяршыце ўсе крокі — пройдзена",
   "components.quests.questWizardSections.ekskursii_ryadom_46600fc1": "Экскурсіі побач",

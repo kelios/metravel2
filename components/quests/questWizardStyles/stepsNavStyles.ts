@@ -71,6 +71,16 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
             } as any,
         }),
     },
+    // Долг маршрута (#1633): точка отложена и всё ещё держит финал. Рамка, а не
+    // один фон: `warningSoft` — 8% заливка, и на светлой подложке она даёт
+    // 1.04:1 к нейтральной точке и 1.00:1 к пройденной (`successSoft`), то есть
+    // состояние не читается вовсе. Контур `warning` даёт 4.3:1 и виден в
+    // оттенках серого, без опоры на цвет.
+    stepPillPending: {
+        backgroundColor: colors.warningSoft,
+        borderWidth: 1,
+        borderColor: colors.warning,
+    },
     stepPillLocked: { opacity: 0.72 },
     stepPillIndex: {
         fontSize: 11,
@@ -137,6 +147,15 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
                 backgroundImage: 'linear-gradient(135deg, rgba(82, 125, 102, 0.15) 0%, rgba(66, 109, 86, 0.1) 100%)',
             } as any,
         }),
+    },
+    // На узком экране кружок несёт только номер, значка «вернуться» в нём нет,
+    // поэтому контур здесь — единственный видимый признак долга (#1633). Без
+    // него отложенная точка совпадала с пройденной один в один: на нативе у
+    // `stepDotMiniDone` нет и web-градиента, а обе заливки дают 1.00:1.
+    stepDotMiniPending: {
+        backgroundColor: colors.warningSoft,
+        borderWidth: 2,
+        borderColor: colors.warning,
     },
     stepDotMiniLocked: { opacity: 0.72 },
     stepDotMiniText: { fontSize: isMobile ? 10 : 12, fontWeight: '700', color: colors.brandText },

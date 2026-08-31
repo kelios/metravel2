@@ -12,6 +12,12 @@ type NavigationProps = {
   onPress: () => void
   active?: boolean
   done?: boolean
+  /**
+   * Точка отложена ссылкой «Пропустить»: игрок ушёл дальше, ответа нет, с гейта
+   * финала она не снята (#1633). Состояние обязано отличаться и от «пройдена»,
+   * и от «ещё впереди» — иначе долг маршрута в списке не виден вовсе.
+   */
+  pending?: boolean
   unlocked?: boolean
 }
 
@@ -36,6 +42,7 @@ export function QuestStepPill({
   onPress,
   active = false,
   done = false,
+  pending = false,
   unlocked = true,
   compact = false,
   narrow = false,
@@ -48,24 +55,34 @@ export function QuestStepPill({
     <Pressable
       onPress={onPress}
       disabled={!unlocked}
+      // Роль нужна именно здесь: без неё RNW рисует голый div, и `aria-label`
+      // с состоянием точки скринридер не озвучивает — метка долга оказалась бы
+      // видна только зрячему и только цветом.
+      accessibilityRole="button"
       accessibilityState={{ disabled: !unlocked }}
+      accessibilityLabel={
+        pending && !done
+          ? i18nT('quests:components.quests.questWizardNavigation.postponedLabel', { value1: label })
+          : undefined
+      }
       style={[
         styles.stepPill,
         compact && styles.compactStepPill,
         styles.stepPillUnlocked,
         narrow && styles.stepPillNarrow,
         done && !active && styles.stepPillDone,
+        pending && !active && !done && styles.stepPillPending,
         active && styles.stepPillActive,
         !unlocked && styles.stepPillLocked,
       ]}
       hitSlop={6}
     >
-      {isIntro ? (
+      {isIntro || (pending && !done && !active) ? (
         <Feather
-          name="play"
+          name={isIntro ? 'play' : 'corner-up-left'}
           size={12}
           color={(active || done) ? colors.textOnPrimary : colors.primaryText}
-          style={{ marginRight: 8 }}
+          style={{ marginRight: isIntro ? 8 : 5 }}
         />
       ) : (
         <Text style={[styles.stepPillIndex, (active || done) && { color: colors.textOnPrimary }]}>
@@ -88,6 +105,7 @@ export function QuestStepDot({
   onPress,
   active = false,
   done = false,
+  pending = false,
   unlocked = true,
   isIntro = false,
   label,
@@ -103,7 +121,16 @@ export function QuestStepDot({
     <Pressable
       onPress={onPress}
       disabled={!unlocked}
+      // Роль нужна именно здесь: без неё RNW рисует голый div, и `aria-label`
+      // с состоянием точки скринридер не озвучивает — метка долга оказалась бы
+      // видна только зрячему и только цветом.
+      accessibilityRole="button"
       accessibilityState={{ disabled: !unlocked }}
+      accessibilityLabel={
+        pending && !done
+          ? i18nT('quests:components.quests.questWizardNavigation.postponedLabel', { value1: label })
+          : undefined
+      }
       style={styles.stepDotTarget}
     >
       <View
@@ -111,6 +138,7 @@ export function QuestStepDot({
           styles.stepDotMini,
           unlocked && styles.stepDotMiniUnlocked,
           done && !active && styles.stepDotMiniDone,
+          pending && !active && !done && styles.stepDotMiniPending,
           active && styles.stepDotMiniActive,
           !unlocked && styles.stepDotMiniLocked,
           smallOverride,

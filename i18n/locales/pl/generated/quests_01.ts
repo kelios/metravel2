@@ -193,6 +193,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardHelpers.otmena_9f846483": "Anuluj",
   "components.quests.questWizardNavigation.f_67cbee49": "F",
   "components.quests.questWizardNavigation.final_a5ec2c03": "Finał",
+  "components.quests.questWizardNavigation.postponedLabel": "{{value1}} — odłożony, czeka na odpowiedź",
   "components.quests.questWizardSections.apple_maps_2428622f": "Apple Maps",
   "components.quests.questWizardSections.chtoby_otkryt_priz_i_video_zavershite_vse_sh_fd0438f8": "Aby odblokować nagrodę i wideo, wykonaj wszystkie kroki - pomyślnie",
   "components.quests.questWizardSections.ekskursii_ryadom_46600fc1": "Wycieczki w pobliżu",

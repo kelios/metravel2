@@ -49,6 +49,8 @@ type NavigationSharedProps = {
   styles: any
   allSteps: QuestNavigationStep[]
   answers: Record<string, string>
+  /** Точки, отложенные ссылкой «Пропустить»: долг маршрута, а не «ещё впереди» (#1633). */
+  postponedStepIds: ReadonlySet<string>
   currentIndex: number
   unlockedIndex: number
   questFinished: boolean
@@ -298,6 +300,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     countModel,
     allSteps,
     answers,
+    postponedStepIds,
     currentIndex,
     unlockedIndex,
     questFinished,
@@ -405,6 +408,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         {allSteps.map((step, index) => {
           const isActive = index === currentIndex && !showFinaleOnly
           const isDone = !!answers[step.id] && step.id !== 'intro'
+          const isPostponed = !isDone && postponedStepIds.has(step.id)
           const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
 
           return (
@@ -415,6 +419,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
               compact
               active={isActive}
               done={isDone}
+              pending={isPostponed}
               unlocked={isUnlocked}
               onPress={() => {
                 if (isUnlocked) goToStep(index)
@@ -510,6 +515,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     countModel,
     allSteps,
     answers,
+    postponedStepIds,
     currentIndex,
     unlockedIndex,
     questFinished,
@@ -660,6 +666,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {allSteps.map((step, index) => {
             const isActive = index === currentIndex && !showFinaleOnly
             const isDone = !!answers[step.id] && step.id !== 'intro'
+            const isPostponed = !isDone && postponedStepIds.has(step.id)
             const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
 
             return (
@@ -669,6 +676,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                 styles={styles}
                 active={isActive}
                 done={isDone}
+                pending={isPostponed}
                 unlocked={isUnlocked}
                 onPress={() => {
                   if (isUnlocked) goToStep(index)
@@ -697,6 +705,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {allSteps.map((step, index) => {
             const isActive = index === currentIndex && !showFinaleOnly
             const isDone = !!answers[step.id] && step.id !== 'intro'
+            const isPostponed = !isDone && postponedStepIds.has(step.id)
             const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
 
             if (screenW < 600) {
@@ -707,6 +716,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                   styles={styles}
                   active={isActive}
                   done={isDone}
+                  pending={isPostponed}
                   unlocked={isUnlocked}
                   onPress={() => {
                     if (isUnlocked) goToStep(index)
@@ -726,6 +736,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                 narrow
                 active={isActive}
                 done={isDone}
+                pending={isPostponed}
                 unlocked={isUnlocked}
                 onPress={() => {
                   if (isUnlocked) goToStep(index)

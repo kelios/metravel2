@@ -193,6 +193,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardHelpers.otmena_9f846483": "Cancel",
   "components.quests.questWizardNavigation.f_67cbee49": "F",
   "components.quests.questWizardNavigation.final_a5ec2c03": "Final",
+  "components.quests.questWizardNavigation.postponedLabel": "{{value1}} — postponed, awaiting an answer",
   "components.quests.questWizardSections.apple_maps_2428622f": "Apple Maps",
   "components.quests.questWizardSections.chtoby_otkryt_priz_i_video_zavershite_vse_sh_fd0438f8": "To unlock the prize and video, complete all steps - passed",
   "components.quests.questWizardSections.ekskursii_ryadom_46600fc1": "Excursions nearby",

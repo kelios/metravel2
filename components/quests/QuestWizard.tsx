@@ -118,6 +118,7 @@ const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };
 // Стабильная пустая ссылка: карточка шага мемоизирована, и новый `[]` на каждом
 // рендере сбрасывал бы мемоизацию на всех шагах, кроме последнего.
 const EMPTY_PENDING: { id: string; title: string; index: number }[] = [];
+const EMPTY_POSTPONED: ReadonlySet<string> = new Set<string>();
 
 const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     const colors = useThemedColors();
@@ -404,6 +405,19 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
             .map((step, index) => ({ id: step.id, title: step.title || step.location || '', index }))
             .filter(({ id, index }) => index !== currentIndex && pendingIds.has(id));
     }, [allSteps, currentIndex, pendingSteps]);
+
+    // Отложенные точки для навигации по маршруту: игрок уже ушёл дальше, а
+    // ответа нет и официального пропуска тоже. Точку, до которой он просто не
+    // дошёл, метить долгом нельзя — она ещё впереди, а не за спиной.
+    const postponedStepIds = useMemo(() => {
+        if (!pendingSteps.length) return EMPTY_POSTPONED;
+        const pendingIds = new Set(pendingSteps.map((step) => step.id));
+        const postponed = new Set<string>();
+        allSteps.forEach((step, index) => {
+            if (index < unlockedIndex && pendingIds.has(step.id)) postponed.add(step.id);
+        });
+        return postponed;
+    }, [allSteps, pendingSteps, unlockedIndex]);
 
     // Тупик, ради которого блок и существует: игрок стоит на последней точке
     // маршрута, впереди ничего нет, а гейт держат точки за спиной. До #1633 у
@@ -744,6 +758,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 countModel={resolvedCountModel}
                                 allSteps={allSteps}
                                 answers={answers}
+                                postponedStepIds={postponedStepIds}
                                 currentIndex={currentIndex}
                                 unlockedIndex={unlockedIndex}
                                 questFinished={questFinished}
@@ -790,6 +805,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 countModel={resolvedCountModel}
                                 allSteps={allSteps}
                                 answers={answers}
+                                postponedStepIds={postponedStepIds}
                                 currentIndex={currentIndex}
                                 unlockedIndex={unlockedIndex}
                                 questFinished={questFinished}

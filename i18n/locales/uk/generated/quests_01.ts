@@ -193,6 +193,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardHelpers.otmena_9f846483": "Скасування",
   "components.quests.questWizardNavigation.f_67cbee49": "Ф",
   "components.quests.questWizardNavigation.final_a5ec2c03": "Фінал",
+  "components.quests.questWizardNavigation.postponedLabel": "{{value1}} — відкладено, чекає відповіді",
   "components.quests.questWizardSections.apple_maps_2428622f": "Apple Maps",
   "components.quests.questWizardSections.chtoby_otkryt_priz_i_video_zavershite_vse_sh_fd0438f8": "Щоб відкрити приз та відео, завершіть усі кроки — пройдено",
   "components.quests.questWizardSections.ekskursii_ryadom_46600fc1": "Екскурсії поруч",
