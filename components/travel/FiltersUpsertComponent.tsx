@@ -7,6 +7,7 @@ import {
     ActivityIndicator,
     Platform,
 } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { Button } from '@/ui/paper';
 import ButtonBase from '@/components/ui/Button';
 
@@ -214,7 +215,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             {showSaveButton && (
                 <Button
                     mode="contained"
-                    icon="content-save"
+                    icon={({ size, color }) => <Feather name="save" size={size} color={color} />}
                     onPress={onSave}
                     style={styles.saveButton}
                     accessibilityRole="button"
@@ -226,7 +227,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             {showPreviewButton && form.slug ? (
                 <Button
                     mode="outlined"
-                    icon="open-in-new"
+                    icon={({ size, color }) => <Feather name="external-link" size={size} color={color} />}
                     onPress={openPreview}
                     style={styles.floatingIconButton}
                     accessibilityRole="link"

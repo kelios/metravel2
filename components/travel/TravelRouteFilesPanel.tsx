@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 
+import Feather from '@expo/vector-icons/Feather';
 import { Button } from '@/ui/paper';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -324,7 +325,7 @@ export default function TravelRouteFilesPanel({
             mode="outlined"
             onPress={handlePickUpload}
             disabled={isUploading}
-            icon="upload"
+            icon={({ size, color }) => <Feather name="upload" size={size} color={color} />}
             compact
           >
             {isUploading ? i18nT('travel:components.travel.TravelRouteFilesPanel.zagruzka_bdbc46c9') : i18nT('travel:components.travel.TravelRouteFilesPanel.zagruzit_1dbd3a1d')}

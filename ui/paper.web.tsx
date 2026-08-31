@@ -14,6 +14,7 @@
 import React, { useMemo } from 'react'
 import ReactDOM from 'react-dom'
 import {
+  ActivityIndicator,
   Image,
   Platform,
   Pressable,
@@ -46,6 +47,30 @@ type TextShimProps = RNTextProps & WebHeadingProps
 type IconRenderProps = { size: number; color?: string }
 type IconSource = React.ReactNode | ((props: IconRenderProps) => React.ReactNode)
 
+// Одна точка разбора `IconSource` на весь шим. Раньше `IconButton` и `Menu.Item`
+// несли по своей копии этого try/catch, причём строку разворачивал только
+// первый. Строка здесь — готовый ГЛИФ («→»), а не имя иконки: имена шим не
+// принимает, см. `ButtonIconSource`.
+const resolveIconNode = (
+  icon: IconSource | undefined,
+  size: number,
+  color?: string,
+): React.ReactNode => {
+  if (!icon) return null
+  if (React.isValidElement(icon)) return icon
+  if (typeof icon === 'function') {
+    try {
+      return icon({ size, color })
+    } catch {
+      return null
+    }
+  }
+  if (typeof icon === 'string') {
+    return <RNText style={[{ fontSize: size }, color ? { color } : null] as any}>{icon}</RNText>
+  }
+  return null
+}
+
 export const Text: React.FC<TextShimProps> = ({ children, style, ...rest }) => (
   <RNText {...rest} style={style as any}>
     {children}
@@ -64,6 +89,16 @@ export const Paragraph: React.FC<TextShimProps> = ({ children, style, ...rest })
   </RNText>
 )
 
+type ButtonMode = 'text' | 'outlined' | 'contained'
+
+// В отличие от `IconSource`, строку `Button` не принимает намеренно. paper на
+// native понимает под строкой ИМЯ material-иконки, а рисовать их на web нечем:
+// проект пользуется Feather, и тот покрывает лишь малую часть material-набора.
+// Частичный маппинг имён вернул бы ровно тот дефект, который чинит #1663:
+// незнакомое имя снова молча не рисовалось бы. Поэтому вызывающий передаёт
+// готовый узел — настоящая paper на native элемент тоже принимает.
+type ButtonIconSource = React.ReactElement | ((props: IconRenderProps) => React.ReactNode)
+
 // `accessibilityState` react-native-web не форвардит вовсе (его нет в
 // `modules/forwardedProps`), а собственный `aria-disabled` у `Pressable`
 // выставляется ПОСЛЕ `...rest`, поэтому пробросить атрибут снаружи нельзя.
@@ -71,45 +106,79 @@ export const Paragraph: React.FC<TextShimProps> = ({ children, style, ...rest })
 // `Pressable`: он даёт `aria-disabled`, `tabIndex=-1` и снимает press-события.
 type ButtonShimProps = ChildrenProps &
   Omit<PressableProps, 'children' | 'style' | 'onPress' | 'disabled'> & {
-    mode?: 'text' | 'outlined' | 'contained'
+    mode?: ButtonMode
     onPress?: () => void
     disabled?: boolean
     loading?: boolean
-    icon?: IconSource
+    icon?: ButtonIconSource
     compact?: boolean
     style?: StyleProp<ViewStyle>
     contentStyle?: StyleProp<ViewStyle>
   }
+
+const BUTTON_ICON_SIZE = 18
+
+// Три режима paper положены на варианты дизайн-системы (`components/ui/Button`):
+// contained ≈ primary, outlined ≈ outline, text ≈ ghost. `mode` по умолчанию —
+// `text`, как в настоящей paper; сейчас его выставляют все места использования.
+const BUTTON_FOREGROUND: Record<ButtonMode, string> = {
+  contained: DESIGN_TOKENS.colors.textOnPrimary,
+  outlined: DESIGN_TOKENS.colors.text,
+  text: DESIGN_TOKENS.colors.text,
+}
 
 export const Button: React.FC<ButtonShimProps> = ({
   children,
   onPress,
   disabled,
   style,
-  // Визуальные пропы paper web-шим пока не отрисовывает: кнопка всегда одна и та
-  // же заливка. Это осознанный no-op, а не молчаливая потеря, — отдельная задача.
-  mode: _mode,
-  loading: _loading,
-  icon: _icon,
-  compact: _compact,
-  contentStyle: _contentStyle,
+  mode = 'text',
+  loading = false,
+  icon,
+  compact = false,
+  contentStyle,
   ...rest
 }) => {
+  // Значение из-за границы типов (нетипизированный вызывающий, чужой бандл) не
+  // должно давать кнопку без заливки и без цвета текста — это ровно то «молча
+  // ничего», которое чинит #1663. Проверяем СВОЙ ключ, а не `in`: `in` смотрит и
+  // прототип, поэтому `mode="toString"` прошёл бы гард насквозь и положил бы в
+  // `color` кнопки и в `color` спиннера функцию вместо цвета.
+  const safeMode: ButtonMode = Object.prototype.hasOwnProperty.call(BUTTON_FOREGROUND, mode)
+    ? mode
+    : 'text'
+  const foreground = BUTTON_FOREGROUND[safeMode]
+  const iconNode = useMemo(
+    () => (loading ? null : resolveIconNode(icon, BUTTON_ICON_SIZE, foreground)),
+    [icon, loading, foreground],
+  )
+
   return (
     <Pressable
       accessibilityRole="button"
       {...rest}
       disabled={disabled}
       onPress={disabled ? undefined : onPress}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, busy: loading }}
       style={({ pressed }) => [
         styles.button,
+        buttonModeStyles[safeMode],
+        compact && styles.buttonCompact,
+        // Стиль вызывающего идёт ПОСЛЕ режима: `accountconfirmation` и
+        // `FiltersUpsertComponent` задают собственные фон и радиус поверх него.
         style,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
       ]}
     >
-      <RNText style={styles.buttonText}>{children}</RNText>
+      <View style={[styles.buttonContent, contentStyle] as any}>
+        {loading ? (
+          <ActivityIndicator size="small" color={foreground} style={styles.buttonIcon} />
+        ) : iconNode ? (
+          <View style={styles.buttonIcon}>{iconNode}</View>
+        ) : null}
+        <RNText style={[styles.buttonLabel, { color: foreground }] as any}>{children}</RNText>
+      </View>
     </Pressable>
   )
 }
@@ -124,20 +193,7 @@ export const IconButton: React.FC<
   }
 > = ({ icon, size = 18, onPress, disabled, style, accessibilityLabel, ...rest }) => {
   const label = accessibilityLabel || 'button'
-  const resolvedIcon = useMemo(() => {
-    if (React.isValidElement(icon)) return icon
-    if (typeof icon === 'function') {
-      try {
-        return icon({ size })
-      } catch {
-        return null
-      }
-    }
-    if (typeof icon === 'string') {
-      return <RNText style={{ fontSize: size }}>{icon}</RNText>
-    }
-    return null
-  }, [icon, size])
+  const resolvedIcon = useMemo(() => resolveIconNode(icon, size), [icon, size])
 
   return (
     <Pressable
@@ -173,18 +229,7 @@ type MenuProps = {
 }
 
 const MenuItem: React.FC<MenuItemProps> = ({ title, onPress, leadingIcon, style, titleStyle, ...rest }) => {
-  const iconNode = useMemo(() => {
-    if (!leadingIcon) return null
-    if (React.isValidElement(leadingIcon)) return leadingIcon
-    if (typeof leadingIcon === 'function') {
-      try {
-        return leadingIcon({ size: 18 })
-      } catch {
-        return null
-      }
-    }
-    return null
-  }, [leadingIcon])
+  const iconNode = useMemo(() => resolveIconNode(leadingIcon, 18), [leadingIcon])
 
   return (
     <Pressable
@@ -468,30 +513,58 @@ export const Snackbar: React.FC<
   )
 }
 
-export const DataTable: React.FC<ChildrenProps> & { Pagination: React.FC<any> } = ({ children }) => (
-  <View>{children}</View>
-)
+// #1663: `Icon` и `DataTable` из шима убраны, а не «пока не реализованы».
+// `Icon` рендерил `null`, из-за чего иконки чеклиста публикации на web не
+// рисовались вовсе; его места использования переведены на прямой `Feather`,
+// которым пользуется остальной проект (в том числе соседние строки тех же
+// карточек). `DataTable` вызывающих не имел ни одного. Экспорт убран намеренно:
+// типы этого файла резолвятся и для native, поэтому попытка снова взять их
+// через `@/ui/paper` теперь падает на `tsc`, а не молчит до браузера.
 
-// `DataTable.Pagination` и `Icon` — заглушки, а не забытый проброс: рисовать их
-// на web значит менять видимую вёрстку (иконки чеклиста публикации, пагинация
-// таблицы), и это отдельная задача. Пока контракт такой: на web этих узлов нет.
-DataTable.Pagination = () => null
-
-export const Icon: React.FC<any> = () => null
+// Рамка живёт в базовом стиле, а режим меняет только цвета: иначе `outlined`
+// добавлял бы кнопке 2px, и тоггл ручной точки (`ManualPointPanel`), который
+// переключает contained ↔ outlined, дёргал бы раскладку на каждое нажатие.
+const buttonModeStyles = StyleSheet.create({
+  contained: {
+    backgroundColor: DESIGN_TOKENS.colors.primary,
+    borderColor: 'transparent',
+  },
+  outlined: {
+    backgroundColor: 'transparent',
+    borderColor: DESIGN_TOKENS.colors.primary,
+  },
+  text: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+  },
+})
 
 const styles = StyleSheet.create({
   button: {
     minHeight: 44,
     minWidth: 44,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
     paddingHorizontal: 14,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.primary,
   },
-  buttonText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+  // `compact` у paper режет только горизонтальные отступы. Высота и ширина
+  // остаются 44: floor тач-таргета компактность не отменяет.
+  buttonCompact: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: DESIGN_TOKENS.spacing.xs,
+  },
+  buttonLabel: {
     fontWeight: '700',
   },
   iconButton: {

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { Icon } from '@/ui/paper';
 import type { ModerationIssue } from '@/utils/formValidation';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { translate as i18nT } from '@/i18n'
@@ -62,8 +61,8 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
                   item.ok ? styles.checkBadgeOk : styles.checkBadgeMissing,
                 ]}
               >
-                <Icon
-                  source={item.ok ? 'check' : 'alert-circle'}
+                <Feather
+                  name={item.ok ? 'check' : 'alert-circle'}
                   size={16}
                   color={item.ok ? colors.successDark : colors.dangerDark}
                 />
@@ -84,7 +83,7 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
                 )}
               </View>
               {isClickable && !item.ok && (
-                <Icon source="chevron-right" size={16} color={colors.textMuted} />
+                <Feather name="chevron-right" size={16} color={colors.textMuted} />
               )}
             </>
           );
@@ -133,8 +132,8 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
                   item.ok ? styles.checkBadgeOk : styles.checkBadgeRecommended,
                 ]}
               >
-                <Icon
-                  source={item.ok ? 'check' : 'star-outline'}
+                <Feather
+                  name={item.ok ? 'check' : 'star'}
                   size={16}
                   color={item.ok ? colors.successDark : colors.primary}
                 />
@@ -156,7 +155,7 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
                 )}
               </View>
               {isClickable && !item.ok && (
-                <Icon source="chevron-right" size={16} color={colors.textMuted} />
+                <Feather name="chevron-right" size={16} color={colors.textMuted} />
               )}
             </>
           );

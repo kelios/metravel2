@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 
-import { Icon } from '@/ui/paper';
+import Feather from '@expo/vector-icons/Feather';
 
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
@@ -125,7 +125,7 @@ export default function PublishStatusSummaryPanel({
                         const rowContent = (
                             <>
                                 <View style={[styles.checkBadge, styles.checkBadgeMissing]}>
-                                    <Icon source="alert" size={14} color={colors.dangerDark} />
+                                    <Feather name="alert-triangle" size={14} color={colors.dangerDark} />
                                 </View>
                                 <Text
                                     style={[
