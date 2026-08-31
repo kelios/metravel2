@@ -24,10 +24,10 @@ const https = require('https')
 const { getAccessToken } = require('./lib/google-token')
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const {
-  ExpectedFailureError,
   UsageError,
   parseCliArgs,
   requireNonEmptySelection,
+  requireNoBatchFailures,
   runSeoCli,
 } = require('./lib/seo-cli-contract')
 
@@ -419,10 +419,11 @@ function assertInspectionCanContinue(resp, url) {
 }
 
 function assertCompleteSummary(summary) {
-  if (!summary.unchecked) return
-  throw new ExpectedFailureError(
-    `${summary.unchecked} URL не проверено — полный срез недействителен до успешного повтора`,
-  )
+  requireNoBatchFailures(summary.unchecked, {
+    total: summary.total,
+    what: 'URLs',
+    message: `${summary.unchecked} URL не проверено — полный срез недействителен до успешного повтора`,
+  })
 }
 
 async function main() {

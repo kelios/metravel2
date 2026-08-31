@@ -58,6 +58,7 @@ const {
   UsageError,
   parseCliArgs,
   requireNonEmptySelection,
+  requireNoBatchFailures,
   runSeoCli,
 } = require('./lib/seo-cli-contract')
 
@@ -400,7 +401,11 @@ async function main() {
   const ok = results.filter((r) => r.status === 'ok').length
   const failed = results.filter((r) => r.status === 'failed').length
   console.log(`\nИтог: ${ok} заведено, ${results.length - ok - failed} пропущено, ${failed} не удалось.`)
-  if (failed > 0) process.exit(1)
+  requireNoBatchFailures(failed, {
+    total: entries.length,
+    what: 'alias pairs',
+    message: `${failed} из ${entries.length} пар алиасов завершились ошибкой — разбор выше`,
+  })
 }
 
 module.exports = { CLI_SPEC, USAGE, backfillOne, detectDamage, verifyAlias }

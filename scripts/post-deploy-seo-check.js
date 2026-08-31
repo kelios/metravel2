@@ -21,7 +21,12 @@
 const https = require('https')
 const http = require('http')
 
-const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract')
+const {
+  parseCliArgs,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runSeoCli,
+} = require('./lib/seo-cli-contract')
 
 const USAGE = `Post-deploy SEO check — metravel.by
 
@@ -693,10 +698,11 @@ async function main() {
   }
 
   printSummary(summary)
-
-  if (summary.errorCount > 0) {
-    process.exit(1)
-  }
+  requireNoBatchFailures(summary.failedPages.length, {
+    total: summary.totalPages,
+    what: 'pages',
+    message: `${summary.failedPages.length} of ${summary.totalPages} pages failed with ${summary.errorCount} SEO error(s) — see the report above`,
+  })
 }
 
 if (typeof module !== 'undefined' && module.exports) {

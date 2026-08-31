@@ -175,7 +175,7 @@ describe('IndexNow submission is never reached without a mode', () => {
     collectFromApi: jest.fn().mockResolvedValue(['https://metravel.by/']),
     collectFromSitemap: jest.fn().mockResolvedValue(['https://metravel.by/']),
     readUrlsFile: jest.fn().mockReturnValue(['https://metravel.by/']),
-    submit: jest.fn().mockResolvedValue(undefined),
+    submit: jest.fn().mockResolvedValue(true),
   })
 
   let logSpy: jest.SpyInstance
@@ -234,6 +234,45 @@ describe('IndexNow submission is never reached without a mode', () => {
     await expect(submit('api.indexnow.org/indexnow', ['https://metravel.by/'])).rejects.toThrow(
       'requires an explicit dryRun flag',
     )
+  })
+
+  it('returns a failed outcome for a non-2xx endpoint response', async () => {
+    const post = jest.fn().mockResolvedValue({ status: 500, body: 'upstream failed' })
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      await expect(
+        submit('api.indexnow.org/indexnow', ['https://metravel.by/'], {
+          dryRun: false,
+          post,
+        }),
+      ).resolves.toBe(false)
+      expect(post).toHaveBeenCalledTimes(1)
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('reports every endpoint, then fails the batch when one returns non-2xx', async () => {
+    const spies = makeSpies()
+    spies.submit.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+
+    await expect(main(argvOf('--all'), spies)).rejects.toThrow(
+      '1 of 2 IndexNow submissions did not report success',
+    )
+    expect(spies.submit).toHaveBeenCalledTimes(2)
+    expect(logSpy).toHaveBeenCalledWith('[indexnow] Done.')
+  })
+
+  it('fails closed when a submission adapter returns no outcome', async () => {
+    const spies = makeSpies()
+    spies.submit.mockResolvedValueOnce(undefined).mockResolvedValueOnce(true)
+
+    await expect(main(argvOf('--all'), spies)).rejects.toThrow(
+      '1 of 2 IndexNow submissions did not report success',
+    )
+    expect(spies.submit).toHaveBeenCalledTimes(2)
+    expect(logSpy).toHaveBeenCalledWith('[indexnow] Done.')
   })
 
   it('passes the sitemap freshness window through to the collector', async () => {

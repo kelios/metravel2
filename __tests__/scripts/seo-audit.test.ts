@@ -1,7 +1,12 @@
 /**
- * Unit tests for scripts/seo-audit.js pure analysis functions.
- * The CLI/main() I/O shell is intentionally not exercised here.
+ * Unit tests for scripts/seo-audit.js analysis functions and its batch exit
+ * contract. Network and production I/O remain dependency-injected.
  */
+import fs from 'fs';
+import path from 'path';
+
+import { makeTempDir, removeDir } from './cli-test-utils';
+
 const audit = require('../../scripts/seo-audit.js');
 
 const {
@@ -13,6 +18,7 @@ const {
   analyzeLeadNoise,
   analyzeContent,
   auditTravel,
+  main,
   summarizeAudit,
   TITLE_MAX,
   TITLE_MIN,
@@ -307,5 +313,40 @@ describe('summarizeAudit', () => {
     expect(worklist.every((r: { issues: string[] }) => r.issues.length > 0)).toBe(true);
     expect(worklist[0].priority).toBeGreaterThanOrEqual(worklist[1].priority);
     expect(worklist[0].id).toBe(2); // highest-traffic problem page first
+  });
+});
+
+describe('seo-audit batch exit contract', () => {
+  it('writes the incomplete report before failing on caught detail fetches', async () => {
+    const dir = makeTempDir('seo-audit-failures-');
+    const reportPath = path.join(dir, 'report.json');
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      await expect(
+        main(
+          ['node', 'script', '--api', 'https://example.invalid', '--json', reportPath],
+          {
+            fetchJson: jest.fn().mockResolvedValue({
+              count: 1,
+              results: [{ id: 17, name: 'Статья с недоступной деталью', slug: 'failed-detail' }],
+            }),
+            fetchJsonRetry: jest.fn().mockRejectedValue(new Error('detail unavailable')),
+          },
+        ),
+      ).rejects.toThrow('1 of 1 travel detail fetches failed')
+
+      expect(fs.existsSync(reportPath)).toBe(true);
+      expect(JSON.parse(fs.readFileSync(reportPath, 'utf8')).detailFetchFailures[0]).toMatchObject({
+        id: 17,
+        slug: 'failed-detail',
+      });
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Full report'));
+    } finally {
+      warnSpy.mockRestore();
+      logSpy.mockRestore();
+      removeDir(dir);
+    }
   });
 });

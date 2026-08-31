@@ -25,7 +25,12 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+const {
+  parseCliArgs,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runSeoCli,
+} = require('./lib/seo-cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
@@ -310,12 +315,14 @@ function structure(detail) {
   return { h2, h3, hasFaq, hasNearby, tailMarkers, len: html.length };
 }
 
-async function main() {
-  const args = parseArgs(process.argv);
+async function main(argv = process.argv, deps = {}) {
+  const args = parseArgs(argv);
+  const io = { listAuthorTravels, getTravel, ...deps };
+  const reportFile = deps.reportFile || REPORT;
   USER_ID = args.userId;
   ONLY = args.only.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 
-  let list = await listAuthorTravels(USER_ID);
+  let list = await io.listAuthorTravels(USER_ID);
   // Nothing to scan is an environment failure, not "no duplicates": a green
   // report over an empty list is exactly what #1325 shipped for months.
   requireNonEmptySelection(list, {
@@ -331,11 +338,12 @@ async function main() {
   console.log(`scanning ${list.length} travels (user_id=${USER_ID})`);
 
   const report = [];
+  const detailFetchFailures = [];
   let n = 0;
   for (const t of list) {
     n++;
     try {
-      const detail = await getTravel(t.id);
+      const detail = await io.getTravel(t.id);
       const findings = detect(detail);
       if (findings.length) {
         const bodyRepeats = findings.filter((f) => f.type === 'body-repeat').length;
@@ -345,6 +353,7 @@ async function main() {
       }
     } catch (e) {
       console.error(`  ❌ #${t.id} ${e.message}`);
+      detailFetchFailures.push({ id: t.id, error: e.message });
     }
     if (n % 40 === 0) await new Promise((r) => setTimeout(r, 400));
   }
@@ -352,9 +361,25 @@ async function main() {
   // worst offenders first: most body-level repetition, then total findings
   report.sort((a, b) => (b.bodyRepeats - a.bodyRepeats) || (b.findings.length - a.findings.length));
 
-  fs.writeFileSync(REPORT, JSON.stringify({ runAt: new Date().toISOString(), userId: USER_ID, total: list.length, affected: report.length, report }, null, 2));
+  fs.writeFileSync(
+    reportFile,
+    JSON.stringify({
+      runAt: new Date().toISOString(),
+      userId: USER_ID,
+      total: list.length,
+      affected: report.length,
+      detailFetchFailures,
+      report,
+    }, null, 2),
+  );
   const withBodyRepeat = report.filter((r) => r.bodyRepeats > 0).length;
-  console.log(`\n${report.length}/${list.length} articles flagged (${withBodyRepeat} with body-level repetition) → ${path.relative(process.cwd(), REPORT)}`);
+  console.log(`\n${report.length}/${list.length} articles flagged (${withBodyRepeat} with body-level repetition) → ${path.relative(process.cwd(), reportFile)}`);
+  const failed = detailFetchFailures.length;
+  requireNoBatchFailures(failed, {
+    total: list.length,
+    what: 'travel detail fetches',
+    message: `${failed} of ${list.length} travel detail fetches failed — the report above is incomplete`,
+  });
 }
 
 if (require.main === module) {
@@ -364,6 +389,7 @@ if (require.main === module) {
 module.exports = {
   CLI_SPEC,
   USAGE,
+  main,
   parseArgs,
   detect,
   paragraphs,

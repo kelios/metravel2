@@ -44,6 +44,7 @@ const {
   ExpectedFailureError,
   parseCliArgs,
   requireNonEmptySelection,
+  requireNoBatchFailures,
   runSeoCli,
 } = require('./lib/seo-cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
@@ -749,11 +750,11 @@ async function main() {
   // article threw printed `errors: N` and still exited 0 — the #1325 shape,
   // reaching the run through the processing loop instead of the input.
   const errors = Number(counts.errors || 0);
-  if (errors > 0) {
-    throw new ExpectedFailureError(
-      `${errors} of ${list.length} travel(s) failed — see ${path.relative(process.cwd(), LOG_PATH)}`,
-    );
-  }
+  requireNoBatchFailures(errors, {
+    total: list.length,
+    what: 'travels',
+    message: `${errors} of ${list.length} travel(s) failed — see ${path.relative(process.cwd(), LOG_PATH)}`,
+  });
 }
 
 if (require.main === module) {

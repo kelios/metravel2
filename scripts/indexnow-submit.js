@@ -22,6 +22,7 @@ const {
   UsageError,
   parseCliArgs,
   requireNonEmptySelection,
+  requireNoBatchFailures,
   runSeoCli,
 } = require('./lib/seo-cli-contract')
 
@@ -242,21 +243,22 @@ async function collectFromSitemap({ recentDays = null, now = new Date() } = {}) 
 
 // `dryRun` has no default on purpose: a call site that forgets it must fail
 // loudly, not quietly turn a rehearsal into a real submission (#1389).
-async function submit(endpoint, urlList, { dryRun } = {}) {
+async function submit(endpoint, urlList, { dryRun, post = postJson } = {}) {
   if (typeof dryRun !== 'boolean') {
     throw new Error('submit() requires an explicit dryRun flag')
   }
   const body = { host: HOST, key: KEY, keyLocation: KEY_LOCATION, urlList }
   if (dryRun) {
     console.log(`[dry-run] POST https://${endpoint} — ${urlList.length} URLs`)
-    return
+    return true
   }
   const [host, ...pathParts] = endpoint.split('/')
   const path = '/' + pathParts.join('/')
-  const res = await postJson(host, path, body)
+  const res = await post(host, path, body)
   const ok = res.status >= 200 && res.status < 300
   console.log(`[indexnow] ${endpoint} → HTTP ${res.status} ${ok ? 'OK' : 'ERROR'} (${urlList.length} URLs)`)
   if (!ok) console.error('  body:', res.body.slice(0, 300))
+  return ok
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -300,15 +302,26 @@ async function main(argv = process.argv, deps = {}) {
 
   // IndexNow batch limit = 10 000, chunk just in case
   const CHUNK = 9000
+  let submitted = 0
+  let failed = 0
   for (let i = 0; i < urls.length; i += CHUNK) {
     const chunk = urls.slice(i, i + CHUNK)
     // api.indexnow.org propagates to all participating engines (Bing, Yandex, etc.)
-    await collectors.submit('api.indexnow.org/indexnow', chunk, { dryRun: args.dryRun })
+    const sharedResult = await collectors.submit('api.indexnow.org/indexnow', chunk, { dryRun: args.dryRun })
+    submitted++
+    if (sharedResult !== true) failed++
     // Yandex also accepts directly (belt + suspenders)
-    await collectors.submit('yandex.com/indexnow', chunk, { dryRun: args.dryRun })
+    const yandexResult = await collectors.submit('yandex.com/indexnow', chunk, { dryRun: args.dryRun })
+    submitted++
+    if (yandexResult !== true) failed++
   }
 
   console.log('[indexnow] Done.')
+  requireNoBatchFailures(failed, {
+    total: submitted,
+    what: 'IndexNow submissions',
+    message: `${failed} of ${submitted} IndexNow submissions did not report success — see the endpoint reports above`,
+  })
 }
 
 if (require.main === module) {

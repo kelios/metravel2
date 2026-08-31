@@ -37,6 +37,7 @@ const {
   UsageError,
   parseCliArgs,
   requireNonEmptySelection,
+  requireNoBatchFailures,
   runSeoCli,
 } = require('./lib/seo-cli-contract');
 
@@ -415,12 +416,13 @@ async function main() {
   // its GET printed «Dry-run complete.» and exited 0 — the #1325 shape that
   // requireNonEmptySelection() above already refuses at the input end, reaching
   // the run through the other door.
-  if (failed > 0) {
-    throw new ExpectedFailureError(
+  requireNoBatchFailures(failed, {
+    total: entries.length,
+    what: 'renames',
+    message:
       `${failed} of ${entries.length} entr${failed === 1 ? 'y' : 'ies'} failed — see the errors above` +
       `${pairs.length ? `; ${pairs.length} rename(s) did land and are in the manifest` : ''}`,
-    );
-  }
+  });
 }
 
 if (require.main === module) {

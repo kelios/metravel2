@@ -24,7 +24,12 @@ const http = require('http');
 const https = require('https');
 const { buildUpsertPayload, detectCorruption } = require('./seo-edit');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
-const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+const {
+  parseCliArgs,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runSeoCli,
+} = require('./lib/seo-cli-contract');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by').replace(/\/+$/, '') + '/api';
 const BACKUP_DIR = path.join(__dirname, '.seo-backups');
@@ -116,16 +121,24 @@ function request(method, urlPath, data) {
   });
 }
 
-function getJson(urlPath) {
+function getJson(urlPath, baseUrl = API_BASE) {
   return new Promise((resolve, reject) => {
-    const url = `${API_BASE}${urlPath}`;
+    const url = `${baseUrl}${urlPath}`;
+    const mod = url.startsWith('https') ? https : http;
     // #1649: this read fed the PUT below, and it decoded every transport chunk
     // on its own — a Cyrillic letter split across a chunk boundary came back as
     // two U+FFFD and was written straight back into the article.
-    const opts = { rejectUnauthorized: false, headers: withAcceptEncoding() };
-    https.get(url, opts, (res) => {
+    const opts = { headers: withAcceptEncoding() };
+    if (mod === https) opts.rejectUnauthorized = false;
+    mod.get(url, opts, (res) => {
       readResponseText(res).then(
-        (text) => { try { resolve(JSON.parse(text)); } catch (e) { reject(e); } },
+        (text) => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error(`HTTP ${res.statusCode} ${url}`));
+            return;
+          }
+          try { resolve(JSON.parse(text)); } catch (e) { reject(e); }
+        },
         reject,
       );
     }).on('error', reject);
@@ -213,13 +226,14 @@ async function restore(id) {
   if (status !== 200 && status !== 201) { console.error(text.slice(0, 300)); process.exit(1); }
 }
 
-async function main() {
-  const args = parseCliArgs(process.argv, CLI_SPEC);
-  if (args.mode === 'restore') return restore(args.restore);
+async function main(argv = process.argv, deps = {}) {
+  const args = parseCliArgs(argv, CLI_SPEC);
+  const io = { getJson, listTravels, loadSlugMap, request, restore, saveBackup, ...deps };
+  if (args.mode === 'restore') return io.restore(args.restore);
 
   const userId = args.userId;
   const dryRun = args.mode === 'dry-run';
-  const slugMap = loadSlugMap();
+  const slugMap = io.loadSlugMap();
   // No redirects means the manifest never saw a rename — an empty selection, not
   // a clean "nothing to fix" (#1325): it has to reach the exit code.
   requireNonEmptySelection([...slugMap.keys()], {
@@ -229,7 +243,7 @@ async function main() {
   });
 
   console.log(`${dryRun ? '🧪 DRY-RUN ' : '🔗 '}Fixing stale internal links (${slugMap.size} renamed slugs) for user ${userId} via ${API_BASE}\n`);
-  const travels = requireNonEmptySelection(await listTravels(userId), {
+  const travels = requireNonEmptySelection(await io.listTravels(userId), {
     what: 'published travels',
     source: `${API_BASE}/travels/`,
     hint: `user_id=${userId}, publish=1, moderation=1 — nothing would be scanned`,
@@ -240,9 +254,10 @@ async function main() {
   for (const t of travels) {
     let detail;
     try {
-      detail = await getJson(`/travels/${t.id}/`);
+      detail = await io.getJson(`/travels/${t.id}/`);
     } catch (e) {
       console.warn(`  ⚠️  #${t.id} GET failed: ${e.message}`);
+      failed++;
       continue;
     }
     const { html, count } = rewriteLinks(detail.description || '', slugMap);
@@ -253,23 +268,23 @@ async function main() {
       changed++;
       continue;
     }
-    const backup = saveBackup(detail);
+    const backup = io.saveBackup(detail);
     const payload = buildUpsertPayload(detail, { description: html, meta: detail.meta_description });
-    const { status, text } = await request('PUT', '/travels/upsert/', payload);
+    const { status, text } = await io.request('PUT', '/travels/upsert/', payload);
     if (status !== 200 && status !== 201) {
       console.error(`  ❌ #${t.id} PUT → HTTP ${status}: ${text.slice(0, 150)}`);
       failed++;
       continue;
     }
     let after;
-    try { after = await getJson(`/travels/${t.id}/`); } catch { after = {}; }
+    try { after = await io.getJson(`/travels/${t.id}/`); } catch { after = {}; }
     // #1649: checked before the regression guards below and fatal to the run —
     // a mangled code point survives every length-based check, and continuing
     // the batch would write the same damage into every remaining article.
     const corruption = detectCorruption(after, { description: html });
     if (corruption.length) {
       console.error(`  ⛔ #${t.id} TEXT CORRUPTION: ${corruption.join('; ')} — rolling back (${path.basename(backup)})`);
-      await restore(t.id);
+      await io.restore(t.id);
       failed++;
       console.error('  🛑 batch stopped: the read/write path is mangling UTF-8, remaining articles were not touched.');
       break;
@@ -277,7 +292,7 @@ async function main() {
     const problems = detectRegression(detail, after, slugMap);
     if (problems.length) {
       console.error(`  ⛔ #${t.id} regression: ${problems.join('; ')} — rolling back (${path.basename(backup)})`);
-      await restore(t.id);
+      await io.restore(t.id);
       failed++;
       continue;
     }
@@ -287,11 +302,15 @@ async function main() {
 
   console.log(`\n${dryRun ? 'Dry-run' : 'Done'}: ${changed} article(s), ${totalLinks} link(s)${failed ? `, ${failed} failed` : ''}.`);
   // A failed PUT or a rolled-back regression is a failed run, not a clean one.
-  if (failed > 0) process.exit(1);
+  requireNoBatchFailures(failed, {
+    total: travels.length,
+    what: 'published travels',
+    message: `${failed} of ${travels.length} published travels failed — see the report above`,
+  });
 }
 
 if (require.main === module) {
   runSeoCli(main, { name: 'seo-fix-links', usage: USAGE });
 }
 
-module.exports = { CLI_SPEC, USAGE, rewriteLinks, detectRegression };
+module.exports = { CLI_SPEC, USAGE, detectRegression, getJson, main, rewriteLinks };

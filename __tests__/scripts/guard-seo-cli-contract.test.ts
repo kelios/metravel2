@@ -18,7 +18,9 @@ const {
   collectCoveredFiles,
   declaresSelection,
   evaluateGuard,
+  findCallFirstArguments,
   findViolationsInSource,
+  hasBatchFailureGuardCall,
   hasCallExpression,
   isCoveredFile,
   maskSource,
@@ -27,7 +29,7 @@ const {
 
 const GUARD = path.resolve(process.cwd(), 'scripts', 'guard-seo-cli-contract.js')
 
-const COMPLIANT_SOURCE = `const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract')
+const COMPLIANT_SOURCE = `const { parseCliArgs, requireNonEmptySelection, requireNoBatchFailures, runSeoCli } = require('./lib/seo-cli-contract')
 
 const USAGE = 'usage'
 const CLI_SPEC = { name: 'seo-demo', usage: USAGE, selection: 'rows', flags: { 'dry-run': { type: 'boolean' } } }
@@ -35,6 +37,9 @@ const CLI_SPEC = { name: 'seo-demo', usage: USAGE, selection: 'rows', flags: { '
 async function main() {
   parseCliArgs(process.argv, CLI_SPEC)
   requireNonEmptySelection([], { what: 'rows', source: 'demo' })
+  const results = [{ status: 'ok' }]
+  const failed = results.filter((row) => row.status === 'failed').length
+  requireNoBatchFailures(failed, { total: results.length, what: 'rows' })
 }
 
 if (require.main === module) {
@@ -61,6 +66,19 @@ const SILENT_EMPTY_RETURN_SOURCE = COMPLIANT_SOURCE.replace(
 ).replace(
   "  requireNonEmptySelection([], { what: 'rows', source: 'demo' })",
   '  const rows = []\n  if (rows.length === 0) return',
+)
+
+const MISSING_BATCH_FAILURE_GUARD_SOURCE = COMPLIANT_SOURCE.replace(
+  ', requireNoBatchFailures,',
+  ',',
+).replace(
+  "  requireNoBatchFailures(failed, { total: results.length, what: 'rows' })\n",
+  '',
+)
+
+const DUMMY_ZERO_BATCH_FAILURE_GUARD_SOURCE = COMPLIANT_SOURCE.replace(
+  'requireNoBatchFailures(failed, {',
+  'requireNoBatchFailures(0, {',
 )
 
 const UNDECLARED_SELECTION_SOURCE = COMPLIANT_SOURCE.replace(" selection: 'rows',", '')
@@ -178,6 +196,7 @@ describe('positive probe: the scripts in this repo satisfy the contract', () => 
       const content = fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')
 
       expect(content).not.toContain('requireNonEmptySelection(')
+      expect(content).not.toContain('requireNoBatchFailures(')
       expect(content).toContain("selection: 'none'")
       expect(findViolationsInSource(sourceOf(relativePath, content))).toEqual([])
     }
@@ -278,6 +297,18 @@ describe('negative probe: putting the permissive default back fails the guard', 
       content: SILENT_EMPTY_RETURN_SOURCE,
     },
     {
+      label: 'a selected batch that never checks its caught item failures',
+      rule: 'batch-failure-guard',
+      reason: /never calls requireNoBatchFailures\(\) with a computed failure count/,
+      content: MISSING_BATCH_FAILURE_GUARD_SOURCE,
+    },
+    {
+      label: 'a selected batch that checks a hard-coded zero instead of its failures',
+      rule: 'batch-failure-guard',
+      reason: /hard-coded-zero check could leave caught item failures/,
+      content: DUMMY_ZERO_BATCH_FAILURE_GUARD_SOURCE,
+    },
+    {
       label: 'a script that says nothing about whether it selects anything',
       rule: 'selection-declared',
       reason: /does not declare a selection in its CLI spec/,
@@ -375,6 +406,10 @@ describe('negative probe: putting the permissive default back fails the guard', 
     expect(SILENT_EMPTY_RETURN_SOURCE).not.toContain('requireNonEmptySelection')
     expect(SILENT_EMPTY_RETURN_SOURCE).toContain("selection: 'rows'")
     expect(SILENT_EMPTY_RETURN_SOURCE).toContain('runSeoCli(')
+    expect(MISSING_BATCH_FAILURE_GUARD_SOURCE).not.toContain('requireNoBatchFailures')
+    expect(MISSING_BATCH_FAILURE_GUARD_SOURCE).toContain('requireNonEmptySelection(')
+    expect(DUMMY_ZERO_BATCH_FAILURE_GUARD_SOURCE).not.toBe(COMPLIANT_SOURCE)
+    expect(DUMMY_ZERO_BATCH_FAILURE_GUARD_SOURCE).toContain('requireNoBatchFailures(0, {')
     expect(UNDECLARED_SELECTION_SOURCE).not.toContain('selection:')
     expect(UNDECLARED_AND_UNGUARDED_SOURCE).not.toContain('selection:')
     expect(UNDECLARED_AND_UNGUARDED_SOURCE).not.toContain('requireNonEmptySelection')
@@ -541,7 +576,55 @@ describe('negative probe: putting the permissive default back fails the guard', 
     expect(
       hasCallExpression('const rows = []\n/requireNonEmptySelection(rows)/.test(src)', 'requireNonEmptySelection'),
     ).toBe(false)
+
+    expect(
+      findCallFirstArguments(
+        'requireNoBatchFailures(summary.unchecked, { total: summary.total })',
+        'requireNoBatchFailures',
+      ),
+    ).toEqual(['summary.unchecked'])
+    expect(hasBatchFailureGuardCall('requireNoBatchFailures(failed, { total })')).toBe(true)
+    expect(hasBatchFailureGuardCall('requireNoBatchFailures(0, { total })')).toBe(false)
+    expect(hasBatchFailureGuardCall('requireNoBatchFailures(((0)), { total })')).toBe(false)
   })
+
+  it.each([
+    ['line comment', '// requireNoBatchFailures(failed, { total })'],
+    ['block comment', '/* requireNoBatchFailures(failed, { total }) */'],
+    ['string', "const note = 'requireNoBatchFailures(failed, { total })'"],
+    ['template', 'const note = `requireNoBatchFailures(failed, { total })`'],
+    ['regex', 'const note = /requireNoBatchFailures\\(/'],
+  ])('does not accept a batch helper mention in %s as a call', (_label, prose) => {
+    const source = MISSING_BATCH_FAILURE_GUARD_SOURCE.replace('const USAGE', `${prose}\nconst USAGE`)
+    const result = evaluateGuard({ sources: [sourceOf('scripts/seo-fixture.js', source)] })
+
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rule: 'batch-failure-guard',
+          reason: expect.stringMatching(/never calls requireNoBatchFailures/),
+        }),
+      ]),
+    )
+  })
+
+  it.each([
+    ['scripts/seo-rename.js', 'requireNoBatchFailures(failed, {'],
+    ['scripts/seo-mass-augment.js', 'requireNoBatchFailures(errors, {'],
+  ])(
+    'fails batch-failure-guard when the live helper call is removed from %s',
+    (relativePath, call) => {
+      const source = fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')
+      const mutated = source.replace(call, call.replace('requireNoBatchFailures', 'missingBatchFailureGuard'))
+
+      expect(mutated).not.toBe(source)
+      expect(
+        findViolationsInSource(sourceOf(relativePath, mutated)).map(
+          (entry: { rule: string }) => entry.rule,
+        ),
+      ).toContain('batch-failure-guard')
+    },
+  )
 
   it('keeps the masked reading aligned with the source it came from', () => {
     // Every violation line number, and the CLI_SPEC slice the declaration is read

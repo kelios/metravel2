@@ -17,6 +17,8 @@
  *   - a flag that needs a value never swallows the next flag as that value;
  *   - an empty selection goes through `requireNonEmptySelection`, i.e. a
  *     non-zero exit, never a green "0 checked" report.
+ *   - a processed batch goes through `requireNoBatchFailures`, so caught item
+ *     failures cannot be printed and then forgotten behind exit code 0.
  *
  * Deliberately not an options library: no positionals, no `-x` short flags
  * besides `-h`, no "guess the type". Anything this parser cannot express should
@@ -230,6 +232,31 @@ function requireNonEmptySelection(items, { what, source, hint, message } = {}) {
 }
 
 /**
+ * Refuse a green exit after a batch caught and reported item-level failures.
+ * Counts are validated before the zero shortcut: malformed aggregation is a
+ * failed contract too, never evidence that the batch completed cleanly.
+ */
+function requireNoBatchFailures(failed, { total, what, message } = {}) {
+  const countsAreValid =
+    Number.isInteger(failed) &&
+    failed >= 0 &&
+    Number.isInteger(total) &&
+    total >= 0 &&
+    failed <= total
+
+  if (!countsAreValid) {
+    throw new TypeError(
+      `invalid batch counts (failed=${String(failed)}, total=${String(total)}) — refusing to report success`,
+    )
+  }
+  if (failed === 0) return
+
+  throw new ExpectedFailureError(
+    message || `${failed} of ${total} ${what || 'items'} failed — refusing to report success`,
+  )
+}
+
+/**
  * One exit-code contract for every SEO CLI: 2 = you called it wrong (usage is
  * printed), 1 = the run failed or the check found something, 0 = it actually did
  * the work and found nothing wrong. Throw `ExpectedFailureError` for the second
@@ -271,6 +298,7 @@ module.exports = {
   normalizeSpec,
   parseCliArgs,
   requireNonEmptySelection,
+  requireNoBatchFailures,
   runSeoCli,
   toCamelCase,
 }

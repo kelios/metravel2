@@ -24,7 +24,12 @@
 const https = require('https');
 const http = require('http');
 const { SEO_TITLE_MAX_LENGTH, SEO_TITLE_SUFFIX } = require('../utils/seoText');
-const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+const {
+  parseCliArgs,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runSeoCli,
+} = require('./lib/seo-cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 // ---------------------------------------------------------------------------
@@ -584,10 +589,13 @@ async function main() {
     for (const f of failures) {
       console.log(`   • ${f}`);
     }
-    process.exit(1);
-  } else {
-    console.log('\n✅ All SEO checks passed!');
   }
+  requireNoBatchFailures(failed, {
+    total: totalTests,
+    what: 'SEO checks',
+    message: `${failed} of ${totalTests} SEO checks failed — see the report above`,
+  });
+  console.log('\n✅ All SEO checks passed!');
 }
 
 if (require.main === module) {

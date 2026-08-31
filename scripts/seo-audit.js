@@ -17,9 +17,9 @@
  * SEO CLI contract, so a mistyped `--limt 5` is an error instead of a silent
  * audit of all 306 articles (#1391).
  *
- * Exit code is 0 even when problems are found — this is a report, not a gate.
- * An EMPTY article list is the one exception: it means the API or its envelope
- * broke, not that the author has nothing to fix, so it exits non-zero (#1325).
+ * Exit code is 0 even when SEO problems are found — this is a report, not a
+ * gate. An empty article list or an incomplete detail batch exits non-zero:
+ * either means the API result cannot support a complete audit (#1325, #1655).
  */
 
 const fs = require('fs');
@@ -27,7 +27,12 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-const { parseCliArgs, requireNonEmptySelection, runSeoCli } = require('./lib/seo-cli-contract');
+const {
+  parseCliArgs,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runSeoCli,
+} = require('./lib/seo-cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 // ---------------------------------------------------------------------------
@@ -344,10 +349,11 @@ async function batchAsync(items, concurrency, fn) {
   return results;
 }
 
-async function main() {
+async function main(argv = process.argv, deps = {}) {
   // Parsed here, not at module level: a UsageError has to reach runSeoCli()
   // below so a bad invocation exits 2 instead of running a wide audit (#1391).
-  const args = parseArgs(process.argv);
+  const args = parseArgs(argv);
+  const io = { fetchJson, fetchJsonRetry, ...deps };
 
   const API_BASE = args.api;
   const userId = args.userId;
@@ -363,7 +369,7 @@ async function main() {
   let page = 1;
   while (true) {
     const u = `${API_BASE}/api/travels/?where=${encodeURIComponent(where)}&page=${page}&perPage=100`;
-    const res = await fetchJson(u);
+    const res = await io.fetchJson(u);
     const items = res.data || res.results || res.items || (Array.isArray(res) ? res : []);
     list = list.concat(items);
     const total = Number(res.total || res.count || list.length);
@@ -387,12 +393,17 @@ async function main() {
   const cb = Date.now();
   const details = await batchAsync(list, 6, async (t) => {
     try {
-      return await fetchJsonRetry(`${API_BASE}/api/travels/${t.id}/?_cb=${cb}-${t.id}`);
+      return await io.fetchJsonRetry(`${API_BASE}/api/travels/${t.id}/?_cb=${cb}-${t.id}`);
     } catch {
       return { __fetchFailed: true };
     }
   });
-  const failedCount = details.filter((d) => d && d.__fetchFailed).length;
+  const failedDetails = list.flatMap((travel, index) =>
+    details[index] && details[index].__fetchFailed
+      ? [{ id: travel.id, name: travel.name, slug: travel.slug }]
+      : [],
+  );
+  const failedCount = failedDetails.length;
   if (failedCount) {
     console.warn(`  ⚠️  detail fetch failed for ${failedCount} travel(s) after retries — content checks skipped for them (NOT counted as thin)`);
   }
@@ -419,9 +430,19 @@ async function main() {
 
   if (jsonOut) {
     const outPath = path.resolve(jsonOut);
-    fs.writeFileSync(outPath, JSON.stringify({ counts, rows: worklist }, null, 2), 'utf8');
+    fs.writeFileSync(
+      outPath,
+      JSON.stringify({ counts, detailFetchFailures: failedDetails, rows: worklist }, null, 2),
+      'utf8',
+    );
     console.log(`\n💾 Full report → ${outPath}`);
   }
+
+  requireNoBatchFailures(failedCount, {
+    total: list.length,
+    what: 'travel detail fetches',
+    message: `${failedCount} of ${list.length} travel detail fetches failed — the report above is incomplete`,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -431,6 +452,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CLI_SPEC,
     USAGE,
+    main,
     parseArgs,
     stripHtmlToText,
     countWords,

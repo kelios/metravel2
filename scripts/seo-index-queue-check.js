@@ -40,10 +40,10 @@ const https = require('https')
 const http = require('http')
 
 const {
-  ExpectedFailureError,
   UsageError,
   parseCliArgs,
   requireNonEmptySelection,
+  requireNoBatchFailures,
   runSeoCli,
 } = require('./lib/seo-cli-contract')
 
@@ -464,17 +464,17 @@ async function main(argv = process.argv, deps = {}) {
   if (args.json) console.log(JSON.stringify(report, null, 2))
   else say(formatReport(report))
 
-  // Провал доносится броском, а не кодом возврата: единый контракт кодов живёт
-  // в runSeoCli (#1391), и пачка при этом не выдаётся вовсе. `ExpectedFailureError` —
-  // это «проверка отработала и нашла плохое»: причина уже разобрана построчно
+  // Провал доносится общим batch helper, а не кодом возврата: единый контракт
+  // кодов живёт в runSeoCli (#1391), и пачка при этом не выдаётся вовсе. Это
+  // «проверка отработала и нашла плохое»: причина уже разобрана построчно
   // выше, поэтому наружу уходит одна строка, а не трасса вызовов.
-  if (failed) {
-    throw new ExpectedFailureError(
-      batch
-        ? `пачка ${args.batch} не выдана: ${failed} из ${rows.length} адресов не отдают 200`
-        : `не-200 в очереди: ${failed} — разбор выше`
-    )
-  }
+  requireNoBatchFailures(failed, {
+    total: rows.length,
+    what: 'queue URLs',
+    message: batch
+      ? `пачка ${args.batch} не выдана: ${failed} из ${rows.length} адресов не отдают 200`
+      : `не-200 в очереди: ${failed} — разбор выше`,
+  })
 
   if (batch) {
     const list = report.batchUrls.join('\n') + '\n'

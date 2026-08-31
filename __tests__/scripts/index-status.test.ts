@@ -271,7 +271,7 @@ describe('inspection result semantics', () => {
     expect(summary.problems).toHaveLength(1)
     expect(summary.uncheckedItems).toHaveLength(2)
     expect(() => assertCompleteSummary(summary)).toThrow(/полный срез недействителен/)
-    expect(() => assertCompleteSummary({ unchecked: 0 })).not.toThrow()
+    expect(() => assertCompleteSummary({ unchecked: 0, total: 0 })).not.toThrow()
   })
 
   it('stops on run-wide auth and quota failures after their allowed retry', () => {

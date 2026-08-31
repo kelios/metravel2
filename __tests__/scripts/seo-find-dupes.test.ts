@@ -14,8 +14,14 @@
  * sentence. These tests pin that behaviour.
  */
 
+import fs from 'fs'
+import path from 'path'
+
+import { makeTempDir, removeDir } from './cli-test-utils'
+
 const {
   detect,
+  main,
   stripFaqSection,
   PAIR_MIN_CHARS,
 } = require('@/scripts/seo-find-dupes')
@@ -120,5 +126,42 @@ describe('detect', () => {
 
   it('pairs only paragraphs long enough to carry a thought', () => {
     expect(PAIR_MIN_CHARS).toBeGreaterThanOrEqual(120)
+  })
+})
+
+describe('seo-find-dupes batch exit contract', () => {
+  it('writes the partial report before failing on caught detail GETs', async () => {
+    const dir = makeTempDir('seo-find-dupes-failures-')
+    const reportFile = path.join(dir, 'dupes.json')
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      await expect(
+        main(['node', 'script'], {
+          listAuthorTravels: jest.fn().mockResolvedValue([
+            { id: 31, name: 'Первая статья' },
+            { id: 32, name: 'Вторая статья' },
+          ]),
+          getTravel: jest
+            .fn()
+            .mockResolvedValueOnce({ id: 31, name: 'Первая статья', description: '' })
+            .mockRejectedValueOnce(new Error('GET unavailable')),
+          reportFile,
+        }),
+      ).rejects.toThrow('1 of 2 travel detail fetches failed')
+
+      expect(fs.existsSync(reportFile)).toBe(true)
+      expect(JSON.parse(fs.readFileSync(reportFile, 'utf8'))).toMatchObject({
+        total: 2,
+        affected: 0,
+        detailFetchFailures: [{ id: 32, error: 'GET unavailable' }],
+      })
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('articles flagged'))
+    } finally {
+      errorSpy.mockRestore()
+      logSpy.mockRestore()
+      removeDir(dir)
+    }
   })
 })

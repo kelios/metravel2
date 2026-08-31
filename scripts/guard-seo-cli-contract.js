@@ -29,6 +29,11 @@ const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract')
 //      the process at 0. What this rule proves is that the call is there — which
 //      list reaches it would take an AST, deliberately out of scope; what it
 //      removes is the shape where nothing checks the selection at all.
+//   6. every script that selects a batch calls `requireNoBatchFailures()` with
+//      a computed failure count after its final report/artifact flush, so caught
+//      item failures cannot leave a green exit (#1655). A hard-coded zero is not
+//      evidence about the batch; focused script tests pin the live calls and
+//      their placement after the useful output.
 //
 // The covered set is derived from the filesystem, not an allowlist: a new
 // `scripts/seo-*.js` or `scripts/indexnow-*.js` joins it automatically and fails
@@ -194,6 +199,14 @@ const REQUIRED_NEEDLES = [
       'declares a selection but never calls requireNonEmptySelection() — over an empty list it would ' +
       'return from main() without naming an exit code, and the run would still report success (#1325)',
   },
+  {
+    rule: 'batch-failure-guard',
+    satisfiedWhen: (code) => hasBatchFailureGuardCall(code),
+    appliesWhen: declaresSelection,
+    reason:
+      'declares a selection but never calls requireNoBatchFailures() with a computed failure count — ' +
+      'a missing or hard-coded-zero check could leave caught item failures at exit code 0 (#1655)',
+  },
 ]
 
 const FORBIDDEN_PATTERNS = [
@@ -300,8 +313,9 @@ const startsRegexLiteral = (emitted) => {
 // Two readings come out of it, and both rules need their own. Rules that read
 // values (`selection: 'rows'`, `require('./lib/seo-cli-contract')`,
 // `argv.includes('--all')`) need the literals intact. Rules that look for a call
-// need them blanked: `requireNonEmptySelection(` inside a USAGE template, a
-// regex or any other string is prose about the call, not the call — and every
+// need them blanked: `requireNonEmptySelection(` or `requireNoBatchFailures(`
+// inside a USAGE template, a regex or any other string is prose about the call,
+// not the call — and every
 // covered script writes its USAGE as a multi-line template, so that shape is the
 // natural one, not a contrived one.
 //
@@ -425,6 +439,62 @@ const hasCallExpression = (code, name) => {
   }
   return false
 }
+
+// Return the first argument of every real direct call. This is deliberately a
+// small balanced-delimiter scan over the same masked source as
+// `hasCallExpression`, not a second opinion about comments/strings/templates.
+// It is enough to distinguish a batch-derived counter from the tempting no-op
+// `requireNoBatchFailures(0, ...)` without introducing an AST dependency.
+const findCallFirstArguments = (code, name) => {
+  const masked = maskSource(code, { literals: true })
+  const args = []
+
+  for (const match of masked.matchAll(new RegExp(`\\b${name}\\s*\\(`, 'g'))) {
+    if (NOT_A_CALL_BEFORE.includes(masked[match.index - 1] || ' ')) continue
+    const open = masked.indexOf('(', match.index + name.length)
+    let parentheses = 1
+    let brackets = 0
+    let braces = 0
+    let end = -1
+
+    for (let i = open + 1; i < masked.length; i++) {
+      const char = masked[i]
+      if (char === '(') parentheses++
+      else if (char === ')') {
+        parentheses--
+        if (parentheses === 0) {
+          end = i
+          break
+        }
+      } else if (char === '[') brackets++
+      else if (char === ']') brackets--
+      else if (char === '{') braces++
+      else if (char === '}') braces--
+      else if (char === ',' && parentheses === 1 && brackets === 0 && braces === 0) {
+        end = i
+        break
+      }
+    }
+
+    if (end !== -1) args.push(masked.slice(open + 1, end).trim())
+  }
+
+  return args
+}
+
+const unwrapParentheses = (value) => {
+  let expression = String(value || '').trim()
+  while (expression.startsWith('(') && expression.endsWith(')')) {
+    expression = expression.slice(1, -1).trim()
+  }
+  return expression
+}
+
+const HARD_CODED_ZERO = /^[+-]?(?:0+(?:\.0*)?(?:e[+-]?\d+)?|\.0+(?:e[+-]?\d+)?|0x0+|0b0+|0o0+|0n)$/i
+const hasBatchFailureGuardCall = (code) =>
+  findCallFirstArguments(code, 'requireNoBatchFailures').some(
+    (argument) => argument && !HARD_CODED_ZERO.test(unwrapParentheses(argument)),
+  )
 
 const collectCoveredFiles = (rootDir) => {
   const scriptsDir = path.join(rootDir, SCRIPTS_DIR)
@@ -597,7 +667,9 @@ module.exports = {
   declaresNoSelection,
   declaresSelection,
   evaluateGuard,
+  findCallFirstArguments,
   findViolationsInSource,
+  hasBatchFailureGuardCall,
   hasCallExpression,
   isCoveredFile,
   maskSource,

@@ -17,12 +17,14 @@ const CONTRACT_PATH = path.resolve(process.cwd(), 'scripts', 'lib', 'seo-cli-con
 
 const {
   EmptySelectionError,
+  ExpectedFailureError,
   HelpRequested,
   UsageError,
   formatFlagList,
   normalizeSpec,
   parseCliArgs,
   requireNonEmptySelection,
+  requireNoBatchFailures,
   toCamelCase,
 } = require('@/scripts/lib/seo-cli-contract')
 
@@ -265,6 +267,41 @@ describe('requireNonEmptySelection', () => {
     expect(() => requireNonEmptySelection([], { message: 'вернул 0 статей' })).toThrow(
       'вернул 0 статей',
     )
+  })
+})
+
+describe('requireNoBatchFailures', () => {
+  it('returns normally only for a well-formed zero-failure batch', () => {
+    expect(requireNoBatchFailures(0, { total: 7, what: 'articles' })).toBeUndefined()
+    expect(requireNoBatchFailures(0, { total: 0 })).toBeUndefined()
+  })
+
+  it('turns reported item failures into an ExpectedFailureError', () => {
+    expect(() => requireNoBatchFailures(2, { total: 7, what: 'articles' })).toThrow(
+      ExpectedFailureError,
+    )
+    expect(() => requireNoBatchFailures(2, { total: 7, what: 'articles' })).toThrow(
+      '2 of 7 articles failed — refusing to report success',
+    )
+  })
+
+  it('keeps a caller-supplied failure message verbatim', () => {
+    expect(() =>
+      requireNoBatchFailures(1, { total: 3, message: 'one detail fetch was incomplete' }),
+    ).toThrow('one detail fetch was incomplete')
+  })
+
+  it.each([
+    ['missing failed', undefined, 3],
+    ['fractional failed', 0.5, 3],
+    ['negative failed', -1, 3],
+    ['missing total', 0, undefined],
+    ['fractional total', 0, 2.5],
+    ['negative total', 0, -1],
+    ['failed greater than total', 4, 3],
+  ])('fails closed on malformed counts: %s', (_label, failed, total) => {
+    expect(() => requireNoBatchFailures(failed, { total })).toThrow(TypeError)
+    expect(() => requireNoBatchFailures(failed, { total })).toThrow('invalid batch counts')
   })
 })
 
