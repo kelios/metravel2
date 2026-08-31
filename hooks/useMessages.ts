@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { ApiError } from '@/api/client';
 import {
     fetchMessageThreads,
@@ -10,13 +9,11 @@ import {
     deleteMessage,
     deleteThread,
     markThreadRead,
-    fetchUnreadCount,
     type MessageThread,
     type Message,
     type MessagingUser,
     type PaginatedMessages,
 } from '@/api/messages';
-import { queryKeys } from '@/api/queryKeys';
 import { devError } from '@/utils/logger';
 import { translate as i18nT } from '@/i18n'
 
@@ -408,24 +405,10 @@ export function useMarkThreadRead() {
 
 // ---- useUnreadCount ----
 
-const UNREAD_COUNT_STALE_TIME = 30_000;
-
-export function useUnreadCount(enabled: boolean = true, pollEnabled: boolean = true) {
-    const query = useQuery({
-        queryKey: queryKeys.messagesUnreadCount(),
-        queryFn: async () => {
-            const data = await fetchUnreadCount();
-            return data?.count ?? 0;
-        },
-        enabled,
-        staleTime: UNREAD_COUNT_STALE_TIME,
-        refetchInterval: enabled && pollEnabled ? THREADS_POLL_INTERVAL : false,
-        refetchOnWindowFocus: false,
-    });
-
-    const refresh = useCallback(() => {
-        void query.refetch();
-    }, [query]);
-
-    return { count: query.data ?? 0, refresh };
-}
+/**
+ * Реализация одна на всё приложение и живёт в `hooks/useDeferredUnreadCount`
+ * (#1661): тот файл не тянет `api/messages` статически, а тот же хук висит в
+ * шапке на каждой странице. Здесь остаётся прежнее имя, чтобы не переписывать
+ * экран профиля.
+ */
+export { useDeferredUnreadCount as useUnreadCount } from '@/hooks/useDeferredUnreadCount';

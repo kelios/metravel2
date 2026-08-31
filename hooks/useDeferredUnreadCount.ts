@@ -1,54 +1,75 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-const UNREAD_COUNT_POLL_INTERVAL = 30_000;
-const MAX_CONSECUTIVE_FAILURES = 3;
+import { queryKeys } from '@/api/queryKeys';
+import { useAuthStore } from '@/stores/authStore';
 
+/**
+ * Значок непрочитанных секундной точности не требует, а ответ приходит с
+ * `no-store`, поэтому каждый повтор — реальный поход в сеть. Минута вместо
+ * прежних тридцати секунд вдвое сокращает их число (#1661).
+ */
+export const UNREAD_COUNT_POLL_INTERVAL = 60_000;
+
+/**
+ * Пока последний ответ был ошибкой, опрос разряжается: долбить сломанный
+ * эндпоинт раз в минуту с каждой страницы незачем. Прежний хук здесь замолкал
+ * навсегда после трёх неудач подряд — теперь значок восстанавливается сам, без
+ * перемонтирования шапки.
+ */
+const UNREAD_COUNT_ERROR_INTERVAL = 5 * 60_000;
+
+async function readUnreadCount(): Promise<number> {
+    // Импорт динамический: хук висит в шапке на КАЖДОЙ странице, а статический
+    // притащил бы `api/messages` в общий чанк любого маршрута.
+    const { fetchUnreadCount } = await import('@/api/messages');
+    const data = await fetchUnreadCount();
+    return data?.count ?? 0;
+}
+
+/**
+ * Единственный источник числа непрочитанных на всё приложение (#1661).
+ *
+ * Раньше их было два: этот хук со своим `setInterval` и `useUnreadCount` на
+ * общем слое данных. Общего кэша у них не было — открытие меню аккаунта на
+ * экране профиля заказывало то же самое число заново, — а собственный таймер
+ * ничего не знал про фокус вкладки и тикал в фоне. Теперь оба вызывающих ходят
+ * по одному ключу, и повтор по таймеру встаёт вместе с потерей фокуса, как это
+ * по умолчанию делает общий слой.
+ *
+ * Ключ привязан к пользователю: кэш переживает логаут (`logout` его не чистит),
+ * и без привязки следующий вошедший увидел бы чужое число.
+ *
+ * @param enabled условие включения — для меню это «меню открыто»
+ * @param pollEnabled нужен ли повтор по таймеру
+ */
 export function useDeferredUnreadCount(enabled: boolean = true, pollEnabled: boolean = true) {
-  const [count, setCount] = useState(0);
-  const mountedRef = useRef(true);
-  const consecutiveFailuresRef = useRef(0);
+  const userId = useAuthStore((state) => state.userId);
+  const identity = userId == null ? null : String(userId);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const query = useQuery({
+    queryKey: queryKeys.messagesUnreadCount(identity),
+    queryFn: readUnreadCount,
+    // Гейт остаётся ровно тем, что передал вызывающий: для меню это «меню
+    // открыто». Разделение кэша обеспечивает ключ, а не условие включения.
+    enabled,
+    staleTime: UNREAD_COUNT_POLL_INTERVAL,
+    refetchInterval: (query) => {
+      if (!enabled || !pollEnabled) return false;
+      return query.state.status === 'error'
+        ? UNREAD_COUNT_ERROR_INTERVAL
+        : UNREAD_COUNT_POLL_INTERVAL;
+    },
+    refetchOnWindowFocus: false,
+    // Повтор внутри одного опроса не нужен: следующий и так придёт по таймеру.
+    retry: false,
+  });
 
-  useEffect(() => {
-    if (enabled) return;
-    consecutiveFailuresRef.current = 0;
-    setCount(0);
-  }, [enabled]);
+  const refresh = useCallback(() => {
+    void query.refetch();
+  }, [query]);
 
-  const load = useCallback(async () => {
-    if (!enabled || consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
-
-    try {
-      const { fetchUnreadCount } = await import('@/api/messages');
-      const data = await fetchUnreadCount();
-      if (!mountedRef.current) return;
-      consecutiveFailuresRef.current = 0;
-      setCount(data?.count ?? 0);
-    } catch {
-      consecutiveFailuresRef.current += 1;
-    }
-  }, [enabled]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    void load();
-  }, [enabled, load]);
-
-  useEffect(() => {
-    if (!enabled || !pollEnabled) return;
-    const id = setInterval(() => {
-      void load();
-    }, UNREAD_COUNT_POLL_INTERVAL);
-    return () => clearInterval(id);
-  }, [enabled, load, pollEnabled]);
-
-  return { count, refresh: load };
+  return { count: query.data ?? 0, refresh };
 }
 
 export default useDeferredUnreadCount;

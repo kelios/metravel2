@@ -173,5 +173,7 @@ export const queryKeys = {
   contactRequests: (direction: string, status?: string) =>
     ['contact-requests', direction, status ?? 'all'] as const,
   contactRequestsAll: () => ['contact-requests'] as const,
-  messagesUnreadCount: () => ['messages', 'unread-count'] as const,
+  // Привязка к пользователю обязательна: логаут кэш не чистит, и без неё
+  // следующий вошедший увидел бы чужое число непрочитанных (#1661).
+  messagesUnreadCount: (userId: string | null) => ['messages', 'unread-count', userId] as const,
 } as const;
