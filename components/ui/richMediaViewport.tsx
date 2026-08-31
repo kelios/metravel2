@@ -10,11 +10,11 @@ import React, {
 import { Animated, Dimensions, Platform, View } from 'react-native'
 
 /**
- * Android-only viewport gate for rich-text media (#1035).
+ * Native-only viewport gate for rich-text media (#1035).
  *
  * A long travel article carries dozens of body photos (travel #564 has 94). On
- * Android, every mounted `expo-image` starts its Glide request as soon as the
- * view is attached — there is no viewport-based laziness like `loading="lazy"` on web.
+ * native every mounted `expo-image` starts its Glide request as soon as the view
+ * is attached — there is no viewport-based laziness like `loading="lazy"` on web.
  * All of them therefore decode at once, blow past Glide's bitmap cache and the
  * cache then re-decodes/re-uploads textures on every scroll frame: Android marks
  * 100% of frames janky with "slow bitmap uploads" even over pure text.
@@ -26,9 +26,8 @@ import { Animated, Dimensions, Platform, View } from 'react-native'
  * re-lays out and shortly after scrolling settles, so deferred sections mounting
  * above the description cannot leave stale coordinates behind.
  *
- * On iOS the provider is intentionally transparent: the measure/unmount lifecycle
- * can leave inline article photos blank until another interaction. Without an
- * active gate the hook reports "always visible", so iOS, web and tests mount media.
+ * Without a provider the hook reports "always visible", so web, article details
+ * and tests keep the current behaviour.
  */
 
 type MeasurableView = View & {
@@ -75,10 +74,7 @@ export function RichMediaViewportProvider({
   const lastEvaluatedOffsetRef = useRef(Number.NaN)
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // The gate exists for Android's eager Glide bitmap work. Applying the same
-  // measure-and-unmount path on iOS can leave an inline article frame blank
-  // until another interaction triggers a layout/measurement pass.
-  const isEnabled = Platform.OS === 'android'
+  const isEnabled = Platform.OS !== 'web'
 
   const applyVisibility = useCallback((entry: GateEntry) => {
     if (entry.windowY == null) return
@@ -169,7 +165,7 @@ export function RichMediaViewportProvider({
 /**
  * Returns a ref/onLayout pair to attach to the media frame plus whether the frame
  * is close enough to the viewport to mount its image. Reports `true` when no gate
- * is mounted above (iOS, web, article details and tests).
+ * is mounted above (web, article details, tests).
  */
 export function useRichMediaVisibility(estimatedHeight: number) {
   const gate = useContext(RichMediaViewportContext)

@@ -6,6 +6,14 @@ import {
   RichMediaViewportProvider,
   useRichMediaVisibility,
 } from '@/components/ui/richMediaViewport'
+import CustomImageRenderer from '@/components/ui/CustomImageRenderer'
+
+const mockImageCardMedia = jest.fn((_props: any) => null)
+
+jest.mock('@/components/ui/ImageCardMedia', () => ({
+  __esModule: true,
+  default: (props: unknown) => mockImageCardMedia(props),
+}))
 
 function Probe() {
   const { visible } = useRichMediaVisibility(200)
@@ -17,6 +25,7 @@ describe('useRichMediaVisibility', () => {
 
   afterEach(() => {
     ;(Platform as { OS: string }).OS = originalPlatform
+    mockImageCardMedia.mockClear()
     jest.useRealTimers()
   })
 
@@ -44,16 +53,55 @@ describe('useRichMediaVisibility', () => {
     expect(getByTestId('probe').props.children).toBe('visible')
   })
 
-  it('на iOS не откладывает body-media за Android-гейтом', () => {
+  it('на iOS монтирует body-image сразу, сохраняя native-гейт для остальных медиа', () => {
     ;(Platform as { OS: string }).OS = 'ios'
     jest.useFakeTimers()
     const scrollY = new Animated.Value(0)
     const { getByTestId } = render(
       <RichMediaViewportProvider scrollY={scrollY}>
         <Probe />
+        <CustomImageRenderer
+          tnode={{
+            attributes: {
+              src: 'https://metravel.by/travel-description-image/example.webp',
+              width: '800',
+              height: '450',
+            },
+          } as any}
+          contentWidth={358}
+        />
       </RichMediaViewportProvider>,
     )
 
-    expect(getByTestId('probe').props.children).toBe('visible')
+    // Провайдер остаётся активным на iOS: WebView/карточки по-прежнему ленивые.
+    expect(getByTestId('probe').props.children).toBe('hidden')
+    // Только фото тела статьи обходит этот гейт и не остаётся пустой рамкой.
+    expect(mockImageCardMedia).toHaveBeenCalledTimes(1)
+  })
+
+  it('снимает error-placeholder после успешного retry изображения', () => {
+    ;(Platform as { OS: string }).OS = 'ios'
+    const { getByTestId, queryByTestId } = render(
+      <CustomImageRenderer
+        tnode={{
+          attributes: {
+            src: 'https://metravel.by/travel-description-image/example.webp',
+            width: '800',
+            height: '450',
+          },
+        } as any}
+        contentWidth={358}
+      />,
+    )
+
+    act(() => {
+      mockImageCardMedia.mock.calls.at(-1)?.[0]?.onError()
+    })
+    expect(getByTestId('custom-image-error-placeholder')).toBeTruthy()
+
+    act(() => {
+      mockImageCardMedia.mock.calls.at(-1)?.[0]?.onLoad()
+    })
+    expect(queryByTestId('custom-image-error-placeholder')).toBeNull()
   })
 })

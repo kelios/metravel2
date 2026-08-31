@@ -197,11 +197,12 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
   // Дальние от вьюпорта фото тела статьи не монтируем на Android: там у
   // expo-image нет lazy-загрузки по вьюпорту, поэтому 90+ картинок статьи сразу
   // вытесняют друг друга из Glide bitmap-кэша и грузят текстуры на каждом кадре
-  // скролла (#1035). На iOS гейт выключен: measure/unmount lifecycle оставлял
-  // inline-фото пустым до тапа. Рамка всегда сохраняет высоту.
+  // скролла (#1035). На iOS само фото монтируем сразу: measure/unmount lifecycle
+  // оставлял inline-фото пустым до тапа. Общий native-гейт при этом остаётся для
+  // тяжёлых Instagram WebView, карточек точек и квестов; рамка сохраняет высоту.
   const { ref: frameRef, visible: isNearViewport, onLayout: handleFrameLayout } =
     useRichMediaVisibility(boxHeight);
-  const shouldRenderMedia = Platform.OS === 'web' || isNearViewport;
+  const shouldRenderMedia = Platform.OS !== 'android' || isNearViewport;
 
   const needsMeasure = Boolean(src) && !isSmallIcon && !attrAR;
   const isWebFrameNearViewport = useWebMeasureGate(frameRef, needsMeasure);
@@ -313,7 +314,13 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
           loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
           transition={Platform.OS === 'web' ? undefined : 120}
           style={[StyleSheet.absoluteFillObject, styles.image]}
-          onLoad={() => { setImageLoaded(true); }}
+          // OptimizedImage сообщает onError и перед собственным retry. Успешная
+          // попытка обязана снять внешний error-overlay, иначе загруженное фото
+          // останется навсегда закрыто нейтральной заглушкой.
+          onLoad={() => {
+            setErr(false);
+            setImageLoaded(true);
+          }}
           onError={() => { setErr(true); }}
         />
       )}
@@ -325,6 +332,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
             styles.errorContainer,
             { backgroundColor: colors.backgroundSecondary },
           ]}
+          testID="custom-image-error-placeholder"
         />
       )}
     </View>
