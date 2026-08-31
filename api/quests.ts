@@ -484,7 +484,8 @@ async function fetchAllPages<T>(
     const getPageIfExists = async (page: number) => {
         try {
             return await getPage(page);
-        } catch {
+        } catch (err) {
+            if (!isMissingPage(err)) throw err;
             return null;
         }
     };

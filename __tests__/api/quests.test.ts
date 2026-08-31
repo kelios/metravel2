@@ -216,6 +216,21 @@ describe('api/quests', () => {
       expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon']);
     });
 
+    it('does not hide a failing speculative page or request it again', async () => {
+      const error = new ApiError(500, 'Server error');
+      mockedGet
+        .mockResolvedValueOnce({
+          results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
+          count: 4,
+          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+        })
+        .mockRejectedValueOnce(error);
+
+      await expect(fetchQuestsList()).rejects.toBe(error);
+      expect(mockedGet).toHaveBeenCalledTimes(2);
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?page_size=100&page=2');
+    });
+
     // #1664: хвостовые страницы посчитаны из размера выборки и ссылкой `next`
     // не анонсированы — ровно как спекулятивная выше. Отказ «такой страницы
     // нет» на них означает конец каталога: раньше он отвергал весь `Promise.all`,
