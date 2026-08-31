@@ -13,6 +13,11 @@ import QuestReviewPhotoPicker, {
 const mockLaunchLibrary = jest.fn()
 const mockRequestMediaPermissions = jest.fn()
 const mockRequestCameraPermissions = jest.fn()
+const mockCompressTravelPhoto = jest.fn(async (uri: string) => ({
+  uri,
+  width: 100,
+  height: 100,
+}))
 
 jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: (...args: unknown[]) => mockLaunchLibrary(...args),
@@ -23,7 +28,7 @@ jest.mock('expo-image-picker', () => ({
 }))
 
 jest.mock('@/utils/imageCompressor', () => ({
-  compressTravelPhoto: jest.fn(async (uri: string) => ({ uri, width: 100, height: 100 })),
+  compressTravelPhoto: (...args: unknown[]) => mockCompressTravelPhoto(...(args as [string])),
 }))
 
 // `ImageCardMedia` до загрузки рисует только плейсхолдер, поэтому пропы слота
@@ -61,6 +66,11 @@ function Host({ initial = [] as QuestReviewPhotoDraft[] }) {
 describe('QuestReviewPhotoPicker', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockCompressTravelPhoto.mockImplementation(async (uri: string) => ({
+      uri,
+      width: 100,
+      height: 100,
+    }))
     mockRequestMediaPermissions.mockResolvedValue({ status: 'granted' })
     mockRequestCameraPermissions.mockResolvedValue({ status: 'granted' })
   })
@@ -201,6 +211,39 @@ describe('QuestReviewPhotoPicker', () => {
     expect(preview.props.src).toBe('file:///a.jpg')
     expect(preview.props.fit).toBe('contain')
     expect(preview.props.alt).toBe('a.jpg')
+  })
+
+  it('describes the compressed JPEG instead of the original iOS PNG', async () => {
+    mockCompressTravelPhoto.mockResolvedValueOnce({
+      uri: 'file:///cache/ImageManipulator/converted.jpg',
+      width: 100,
+      height: 100,
+    })
+    mockLaunchLibrary.mockResolvedValueOnce({
+      canceled: false,
+      assets: [
+        {
+          uri: 'file:///IMG_0106.png',
+          fileName: 'IMG_0106.png',
+          mimeType: 'image/png',
+        },
+      ],
+    })
+    const onChange = jest.fn()
+
+    const view = render(<QuestReviewPhotoPicker value={[]} onChange={onChange} />)
+    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1))
+    expect(onChange.mock.calls[0][0][0]).toMatchObject({
+      name: 'IMG_0106.png',
+      previewUri: 'file:///cache/ImageManipulator/converted.jpg',
+      file: {
+        uri: 'file:///cache/ImageManipulator/converted.jpg',
+        name: 'IMG_0106.jpg',
+        type: 'image/jpeg',
+      },
+    })
   })
 
   it('removes a selected photo', async () => {

@@ -4,7 +4,6 @@ import {
   FlatList,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -159,9 +158,10 @@ function ChatView({
     }
   }, [])
   // At rest the global tab bar (BottomDock, an absolute overlay) covers the bottom,
-  // so reserve its height + home-indicator inset. On Android (no working KAV here)
-  // lift the composer above the keyboard by its real height while it is open; iOS
-  // uses KeyboardAvoidingView behavior='padding' so it must NOT add that height.
+  // so reserve its height + home-indicator inset. While the native keyboard is
+  // open, lift the composer by the measured keyboard height. This is deliberately
+  // manual on iOS too: ChatView is nested below app/route headers, so a fixed
+  // KeyboardAvoidingView offset does not describe its actual screen origin.
   // On web, MessagesScreen itself follows visualViewport, so the list shrinks and
   // the composer remains above both browser chrome and the soft keyboard.
   //
@@ -172,8 +172,10 @@ function ChatView({
   // exactly the nav-bar height, so add insets.bottom back.
   const composerBottomInset = IS_WEB
     ? 0
-    : !IS_IOS && keyboardHeight > 0
-      ? keyboardHeight + insets.bottom + DESIGN_TOKENS.spacing.xs
+    : keyboardHeight > 0
+      // iOS reports the docked keyboard through the bottom of the screen, including
+      // the home-indicator area. Android excludes its navigation-bar inset.
+      ? keyboardHeight + (IS_IOS ? 0 : insets.bottom) + DESIGN_TOKENS.spacing.xs
       : (reserveBottomDock ? DOCK_CONTENT_HEIGHT : 0) + insets.bottom + DESIGN_TOKENS.spacing.sm
 
   const [text, setText] = useState('')
@@ -243,15 +245,7 @@ function ChatView({
   const canSend = text.trim().length > 0 && !sending
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      // On Android KAV must do NOTHING here: under edge-to-edge the window does not
-      // shrink for the IME, and the composer is lifted manually via
-      // composerBottomInset above — a 'height'/'padding' behavior on top of that
-      // double-shifts the layout. iOS does not auto-resize, so it keeps 'padding' + offset.
-      behavior={IS_IOS ? 'padding' : undefined}
-      keyboardVerticalOffset={IS_IOS ? 90 : 0}
-    >
+    <View style={styles.container}>
       <ChatHeader
         styles={styles}
         colors={colors}
@@ -324,7 +318,7 @@ function ChatView({
           bottomInset={composerBottomInset}
         />
       )}
-    </KeyboardAvoidingView>
+    </View>
   )
 }
 

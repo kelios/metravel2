@@ -53,6 +53,47 @@ const nextDraftKey = (): string => {
 const fallbackName = (index: number): string =>
   i18nT('quests:components.quests.QuestReviewPhotoPicker.unnamedPhoto', { value1: index })
 
+const NATIVE_IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
+  gif: 'image/gif',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  jpeg: 'image/jpeg',
+  jpg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+}
+
+/**
+ * `compressTravelPhoto` may replace a PNG/HEIC asset with a JPEG cache file.
+ * The upload descriptor must describe that resulting file: the backend checks
+ * that the filename extension matches the decoded image contents.
+ */
+const buildNativeUploadFile = (
+  asset: ImagePicker.ImagePickerAsset,
+  uri: string,
+  index: number,
+): Exclude<QuestReviewPhotoFile, File> => {
+  const cleanUri = uri.split(/[?#]/, 1)[0]
+  const extension = cleanUri.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase()
+  const mimeType = extension ? NATIVE_IMAGE_MIME_BY_EXTENSION[extension] : undefined
+  const originalName = asset.fileName || `quest-review-photo-${index}.jpg`
+
+  if (!extension || !mimeType) {
+    return {
+      uri,
+      name: originalName,
+      type: asset.mimeType || 'image/jpeg',
+    }
+  }
+
+  const stem = originalName.replace(/\.[^./]+$/, '') || `quest-review-photo-${index}`
+  return {
+    uri,
+    name: `${stem}.${extension}`,
+    type: mimeType,
+  }
+}
+
 /**
  * Приводит выбранный asset к тому виду, который переживёт FormData.
  * На web это обязан быть настоящий `File`: RN-дескриптор `{uri,name,type}`
@@ -83,11 +124,7 @@ const toDraft = async (
     key: nextDraftKey(),
     previewUri: uri,
     name: asset.fileName || fallbackName(index),
-    file: {
-      uri,
-      name: asset.fileName || `quest-review-photo-${index}.jpg`,
-      type: asset.mimeType || 'image/jpeg',
-    },
+    file: buildNativeUploadFile(asset, uri, index),
   }
 }
 
