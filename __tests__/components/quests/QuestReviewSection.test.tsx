@@ -19,6 +19,9 @@ let mockReviewState: {
 jest.mock('@/hooks/useQuestReview', () => ({
   useQuestReview: () => ({
     review: mockReviewState.review,
+    // Заполняется только подтверждённой отправкой; в этих сценариях её нет,
+    // поэтому загрузка фото не стартует (#1579).
+    submittedReview: null,
     isLoading: mockReviewState.isLoading,
     hasLoadError: mockReviewState.hasLoadError,
     isSubmitting: mockReviewState.isSubmitting,

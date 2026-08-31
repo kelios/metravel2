@@ -14,6 +14,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import QuestStepInaccuracyAction from '@/components/quests/QuestStepInaccuracyAction'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { hapticNotification } from '@/utils/haptics'
@@ -76,6 +77,8 @@ export const clearQuestCooldowns = (questNumericId?: number): void => {
 
 type QuestStepLike = {
   id: string
+  /** Числовой PK шага: им адресуется структурная отметка «точка изменилась». */
+  numericId?: number
   title: string
   location: string
   story: string
@@ -697,6 +700,22 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
           <View style={[styles.hintContainer, !hintVisible && Platform.select({ web: { visibility: 'hidden' } as any, default: { display: 'none' } })]}>
             <Text style={styles.hintText}>{i18nT('quests:components.quests.questWizardStepCard.podskazka_5453c538')}{step.hint}</Text>
           </View>
+        )}
+
+        {/* «Точка изменилась» — структурная отметка о самом объекте (#1579),
+            поэтому живёт на точке, а не в общей форме жалобы. Интро исключено
+            намеренно: у синтетического стартового экрана нет объекта, который
+            можно было бы проверить, хотя PK он от исходного шага унаследовать
+            может (`utils/questAdapters.ts:575`). Без числового PK обращаться
+            некуда вовсе.
+
+            `key` обязателен: карточка шага НЕ перемонтируется при переходе
+            между точками (собственное состояние она сбрасывает эффектом на
+            `step.id`, см. выше), поэтому без ключа исход отметки пережил бы
+            смену точки и следующая точка открывалась бы с чужим «спасибо,
+            отметка отправлена» и без самой кнопки. */}
+        {step.id !== 'intro' && typeof step.numericId === 'number' && (
+          <QuestStepInaccuracyAction key={step.numericId} stepNumericId={step.numericId} />
         )}
 
         {showPendingBlock && pendingBehind && (

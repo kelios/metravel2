@@ -447,8 +447,14 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
                 ? JSON.stringify(rawAnswerValue)
                 : String(rawAnswerValue);
 
+    // Числовой PK и строковый `step_id` — разные адреса одного шага: в UI и в
+    // прогрессе используется строковый, а эндпоинт отметки точки принимает
+    // только `pk`. Раньше PK терялся здесь, поэтому его пришлось пробросить.
+    const numericId = Number(apiStep.id);
+
     return {
         id: String(apiStep.step_id ?? apiStep.id),
+        numericId: Number.isInteger(numericId) && numericId > 0 ? numericId : undefined,
         title: apiStep.title,
         location: apiStep.location,
         story: normalizeQuestText(apiStep.story),

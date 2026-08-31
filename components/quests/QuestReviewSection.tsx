@@ -1,12 +1,16 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import Button from '@/components/ui/Button'
 import StarRating from '@/components/ui/StarRating'
+import QuestReviewPhotoPicker, {
+  type QuestReviewPhotoDraft,
+} from '@/components/quests/QuestReviewPhotoPicker'
 import { type QuestRating } from '@/api/questRating'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestReview } from '@/hooks/useQuestReview'
+import { useQuestReviewPhotoUpload } from '@/hooks/useQuestReviewPhotoUpload'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
 
@@ -32,17 +36,44 @@ function QuestReviewSection({
   const styles = useMemo(() => createStyles(colors), [colors])
   const { isAuthenticated, authReady, requireAuth } = useRequireAuth({ intent: 'rate' })
 
-  const { review, isLoading, hasLoadError, isSubmitting, isSubmitted, hasError, submit } =
-    useQuestReview({
-      questId: questNumericId,
-      questSlug: questId,
-      cityId,
-      enabled: !!questNumericId,
-    })
+  const {
+    review,
+    submittedReview,
+    isLoading,
+    hasLoadError,
+    isSubmitting,
+    isSubmitted,
+    hasError,
+    submit,
+  } = useQuestReview({
+    questId: questNumericId,
+    questSlug: questId,
+    cityId,
+    enabled: !!questNumericId,
+  })
 
   const [rating, setRating] = useState(0)
   const [liked, setLiked] = useState('')
   const [disliked, setDisliked] = useState('')
+  const [photos, setPhotos] = useState<QuestReviewPhotoDraft[]>([])
+
+  const {
+    statuses: photoStatuses,
+    failedNames: photoFailedNames,
+    isUploading: isUploadingPhotos,
+    hasUploaded: hasUploadedPhotos,
+    uploadAll: uploadPhotos,
+  } = useQuestReviewPhotoUpload({ questId, cityId })
+
+  // Загрузка стартует ровно один раз и только после подтверждённого сервером
+  // сохранения: до этого нет `id`, по которому адресуется фото. Ref нужен
+  // потому, что эффект переживает ре-рендеры экрана финала.
+  const photoUploadStartedRef = useRef(false)
+  useEffect(() => {
+    if (!submittedReview || photos.length === 0 || photoUploadStartedRef.current) return
+    photoUploadStartedRef.current = true
+    void uploadPhotos(submittedReview.id, photos)
+  }, [photos, submittedReview, uploadPhotos])
 
   const effectiveRating = rating || review?.rating || 0
   const alreadyReviewed = !!review && !isSubmitted
@@ -84,6 +115,48 @@ function QuestReviewSection({
         <View style={styles.successBox}>
           <Text style={styles.successText}>{i18nT('quests:components.quests.QuestReviewSection.spasibo_za_otzyv_af1c9931')}</Text>
         </View>
+
+        {/* Фото продолжают грузиться уже после того, как отзыв сохранён:
+            прогресс обязан жить здесь, иначе он исчезнет вместе с формой и
+            игрок решит, что снимки потерялись. */}
+        {photos.length > 0 && (
+          <QuestReviewPhotoPicker
+            value={photos}
+            onChange={setPhotos}
+            statuses={photoStatuses}
+            disabled
+            testID={`${testID}-photos`}
+          />
+        )}
+
+        {isUploadingPhotos && (
+          <Text style={styles.noteText} testID={`${testID}-photo-uploading`}>
+            {i18nT('quests:components.quests.QuestReviewSection.photoUploading')}
+          </Text>
+        )}
+
+        {/* Модерация задерживает показ: без этой строки задержка читается как
+            потеря файла (сервер к тому же снимает `moderation` при загрузке). */}
+        {!isUploadingPhotos && hasUploadedPhotos && (
+          <Text style={styles.noteText} testID={`${testID}-photo-moderation`}>
+            {i18nT('quests:components.quests.QuestReviewSection.photoModerationNote')}
+          </Text>
+        )}
+
+        {/* Отзыв остаётся сохранённым: не доехали конкретные файлы, и они
+            названы поимённо. */}
+        {!isUploadingPhotos && photoFailedNames.length > 0 && (
+          <Text
+            style={styles.errorText}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            testID={`${testID}-photo-error`}
+          >
+            {i18nT('quests:components.quests.QuestReviewSection.photoUploadFailed', {
+              value1: photoFailedNames.join(', '),
+            })}
+          </Text>
+        )}
       </View>
     )
   }
@@ -139,6 +212,13 @@ function QuestReviewSection({
           textAlignVertical="top"
         />
       </View>
+
+      <QuestReviewPhotoPicker
+        value={photos}
+        onChange={setPhotos}
+        disabled={prefillUnavailable || isSubmitting}
+        testID={`${testID}-photos`}
+      />
 
       {hasError && (
         // Сообщение появляется после асинхронной отправки, поэтому объявляется
@@ -228,6 +308,11 @@ const createStyles = (colors: any) =>
       fontSize: 13,
       lineHeight: 18,
       color: colors.error,
+    },
+    noteText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.textMuted,
     },
     successBox: {
       paddingVertical: 16,

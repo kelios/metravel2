@@ -295,6 +295,16 @@ export type ApiQuestProgressCreate = {
     early_finish?: boolean;
 };
 
+/**
+ * Фото игрока в публичном отзыве (#1575/#1576).
+ * `step_id` — числовой PK шага квеста, если снимок привязан к точке.
+ */
+export type ApiQuestReviewPhoto = {
+    id: number;
+    url: string | null;
+    step_id?: number | null;
+};
+
 /** Публичный отзыв о квесте (для читалки чужих отзывов) */
 export type ApiQuestReview = {
     id: number;
@@ -304,6 +314,19 @@ export type ApiQuestReview = {
     author_name: string | null;
     author_avatar: string | null;
     created_at: string | null;
+    /**
+     * Не больше трёх снимков, непромодерированные сервер уже вырезал
+     * (`quests/serializers.py:727`). Поле может отсутствовать на бэкенде без
+     * #1576 — потребитель обязан переживать это пустым списком, а не пустым
+     * местом на месте галереи.
+     */
+    photos?: ApiQuestReviewPhoto[] | null;
+};
+
+export type QuestReviewPhoto = {
+    id: number;
+    url: string;
+    stepId: number | null;
 };
 
 /** Отзыв для UI (фронтенд формат) */
@@ -315,7 +338,23 @@ export type QuestReview = {
     authorName: string | null;
     authorAvatar: string | null;
     createdAt: string | null;
+    photos: QuestReviewPhoto[];
 };
+
+function adaptQuestReviewPhotos(raw: ApiQuestReview['photos']): QuestReviewPhoto[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((photo) => {
+            const url = photo?.url ? normalizeMediaUrl(photo.url) : null;
+            if (!url) return null;
+            return {
+                id: Number(photo.id),
+                url,
+                stepId: typeof photo.step_id === 'number' ? photo.step_id : null,
+            };
+        })
+        .filter((photo): photo is QuestReviewPhoto => photo !== null);
+}
 
 function adaptQuestReview(raw: ApiQuestReview): QuestReview {
     return {
@@ -326,6 +365,7 @@ function adaptQuestReview(raw: ApiQuestReview): QuestReview {
         authorName: raw.author_name ?? null,
         authorAvatar: raw.author_avatar ? normalizeMediaUrl(raw.author_avatar) : null,
         createdAt: raw.created_at ?? null,
+        photos: adaptQuestReviewPhotos(raw.photos),
     };
 }
 

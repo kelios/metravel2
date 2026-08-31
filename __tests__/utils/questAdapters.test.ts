@@ -802,3 +802,29 @@ describe('questAdapters', () => {
     });
   });
 });
+
+describe('adaptStep numeric pk (#1579)', () => {
+  const baseApiStep = {
+    id: 903,
+    step_id: 'minsk-cmok-3',
+    title: 'Точка',
+    location: 'Улица',
+    story: 'История',
+    task: 'Задание',
+    lat: 53.9,
+    lng: 27.56,
+    maps_url: 'https://maps.example/1',
+  };
+
+  it('carries the backend pk alongside the string step id', () => {
+    const step = adaptStep(baseApiStep as any);
+    // В UI шаг адресуется строкой, а эндпоинт отметки точки — только по pk.
+    expect(step.id).toBe('minsk-cmok-3');
+    expect(step.numericId).toBe(903);
+  });
+
+  it('leaves numericId undefined when the payload carries no numeric pk', () => {
+    const step = adaptStep({ ...baseApiStep, id: 'minsk-cmok-3' } as any);
+    expect(step.numericId).toBeUndefined();
+  });
+});

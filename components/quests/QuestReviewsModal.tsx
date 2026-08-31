@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import StarRating from '@/components/ui/StarRating'
 import UserAvatar from '@/components/layout/UserAvatar'
 import { useQuestReviews } from '@/hooks/useQuestsApi'
@@ -16,6 +17,9 @@ type Props = {
   visible: boolean
   onClose: () => void
 }
+
+/** Сторона квадратной плитки фото игрока в читалке отзывов (#1579). */
+const PHOTO_TILE_SIZE = 96
 
 const formatReviewDate = (iso: string | null): string | null => {
   if (!iso) return null
@@ -50,6 +54,38 @@ function ReviewItem({ review, styles }: { review: QuestReview; styles: ReturnTyp
         <View style={styles.reviewBlock}>
           <Text style={styles.reviewBlockLabel}>{i18nT('quests:components.quests.QuestReviewsModal.chto_uluchshit_74a4d291')}</Text>
           <Text style={styles.reviewBlockText}>{review.disliked}</Text>
+        </View>
+      ) : null}
+
+      {/* Фото игрока (#1575/#1576). Сервер уже отдал только промодерированные и
+          не больше трёх, поэтому клиенту нечего фильтровать. Пустой список не
+          должен оставлять пустое место — блок целиком не монтируется. */}
+      {review.photos.length > 0 ? (
+        <View style={styles.reviewBlock} testID={`quest-review-photos-${review.id}`}>
+          <Text style={styles.reviewBlockLabel}>
+            {i18nT('quests:components.quests.QuestReviewsModal.photosLabel')}
+          </Text>
+          <View style={styles.photoRow}>
+            {review.photos.map((photo) => (
+              // Через `ImageCardMedia`, а не голый `ExpoImage`: это единственный
+              // путь доставки заливки полей и ресайза по прокси в проекте
+              // (docs/RULES.md → Images and placeholders). Голая картинка тянула
+              // бы в плитку 96×96 ОРИГИНАЛ снимка с телефона — та же ошибка, что
+              // чинили в #1115 на обложке квеста. `contain` обязателен:
+              // пропорции снимка игрока сохраняются, поле заливается фоном слота.
+              <ImageCardMedia
+                key={photo.id}
+                src={photo.url}
+                width={PHOTO_TILE_SIZE}
+                height={PHOTO_TILE_SIZE}
+                borderRadius={DESIGN_TOKENS.radii.sm}
+                fit="contain"
+                alt={i18nT('quests:components.quests.QuestReviewsModal.photoAlt')}
+                style={styles.photoTile}
+                testID={`quest-review-photo-${photo.id}`}
+              />
+            ))}
+          </View>
         </View>
       ) : null}
     </View>
@@ -206,6 +242,16 @@ const createStyles = (colors: ThemedColors) =>
       fontSize: 14,
       lineHeight: 20,
       color: colors.text,
+    },
+    photoRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 2,
+    },
+    photoTile: {
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     },
     stateBox: {
       paddingVertical: 36,

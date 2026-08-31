@@ -21,7 +21,16 @@ export type QuestAnswerChecker = ((input: string) => boolean) & {
 };
 
 export type QuestStep = {
+  /** Строковый `step_id` квеста ("minsk-cmok-3") — им шаг адресуется в UI. */
   id: string;
+  /**
+   * Числовой PK шага на бэкенде. Нужен там, где эндпоинт адресуется по `pk`, а
+   * не по строковому идентификатору: структурная отметка «точка изменилась»
+   * (`api/questStepInaccuracy.ts`) и привязка фото отзыва к точке. Может
+   * отсутствовать у синтетических шагов (интро) и у офлайн-бандла, поэтому
+   * потребитель обязан переживать `undefined`, а не считать его ошибкой.
+   */
+  numericId?: number;
   title: string;
   location: string;
   story: string;

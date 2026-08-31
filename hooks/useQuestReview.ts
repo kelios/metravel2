@@ -30,6 +30,12 @@ type UseQuestReviewOptions = {
 
 type UseQuestReviewReturn = {
   review: QuestReviewRecord | null
+  /**
+   * Запись, сохранённая ИМЕННО этой отправкой. Отличается от `review` тем, что
+   * не заполняется префиллом: загрузка фото должна стартовать только после
+   * подтверждённого сохранения, а не при открытии формы с прежним отзывом.
+   */
+  submittedReview: QuestReviewRecord | null
   isLoading: boolean
   hasLoadError: boolean
   isSubmitting: boolean
@@ -124,6 +130,7 @@ export function useQuestReview({
 
   return {
     review: reviewQuery.data ?? null,
+    submittedReview: mutation.data ?? null,
     // Блокируем upsert и на первом GET, и на фоновом refetch старого `null`:
     // оба запроса ещё могут обнаружить сохранённый на другом устройстве отзыв.
     isLoading: reviewQuery.isFetching,

@@ -304,7 +304,56 @@ describe('api/quests', () => {
           authorName: 'Игрок',
           authorAvatar: null,
           createdAt: '2026-08-01T10:00:00Z',
+          // Бэкенд без #1576 поля `photos` не присылает — читалка обязана
+          // получить пустой список, а не `undefined` (#1579).
+          photos: [],
         },
+      ]);
+    });
+
+    it('adapts moderated player photos and keeps their step link (#1575/#1576)', async () => {
+      mockedGet.mockResolvedValueOnce([
+        {
+          id: 5,
+          rating: 5,
+          liked: '',
+          disliked: '',
+          author_name: null,
+          author_avatar: null,
+          created_at: null,
+          photos: [
+            { id: 11, url: 'https://cdn.example/a.jpg', step_id: 903 },
+            { id: 12, url: 'https://cdn.example/b.jpg', step_id: null },
+          ],
+        },
+      ]);
+
+      const [review] = await fetchQuestReviews('minsk-cmok');
+
+      expect(review.photos).toEqual([
+        { id: 11, url: 'https://cdn.example/a.jpg', stepId: 903 },
+        { id: 12, url: 'https://cdn.example/b.jpg', stepId: null },
+      ]);
+    });
+
+    it('drops a photo without a usable url instead of rendering an empty tile', async () => {
+      mockedGet.mockResolvedValueOnce([
+        {
+          id: 5,
+          rating: 5,
+          liked: '',
+          disliked: '',
+          author_name: null,
+          author_avatar: null,
+          created_at: null,
+          photos: [{ id: 11, url: null }, { id: 12, url: 'https://cdn.example/b.jpg' }],
+        },
+      ]);
+
+      const [review] = await fetchQuestReviews('minsk-cmok');
+
+      expect(review.photos).toEqual([
+        { id: 12, url: 'https://cdn.example/b.jpg', stepId: null },
       ]);
     });
 
