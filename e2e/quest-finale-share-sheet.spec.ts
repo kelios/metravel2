@@ -84,7 +84,8 @@ const serverProgress = {
 const fulfillJson = (route: Route, value: unknown) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) })
 
-const mockApis = async (page: Page) => {
+const mockApis = async (page: Page, options: { resultCard?: boolean } = {}) => {
+  const resultCard = options.resultCard ?? true
   // Картинка-диплом: и прямой URL, и любой проксированный вариант (в query
   // прокси исходный адрес остаётся подстрокой).
   await page.route('**e2e-quest-result-card**', (route) =>
@@ -100,6 +101,9 @@ const mockApis = async (page: Page) => {
     if (pathname.endsWith('.bundle')) return route.continue()
 
     if (pathname.includes('/quests/result-cards/')) {
+      // Генератор диплома недоступен: лист остаётся на публичной ссылке квеста,
+      // и каналы «Картинка»/«Stories» не рисуются — сокращённый набор.
+      if (!resultCard) return route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
       return fulfillJson(route, {
         share_token: 'e2e-1667',
         image_url: CARD_IMAGE_URL,
@@ -133,11 +137,22 @@ const mockApis = async (page: Page) => {
  * перехватываем — иначе Telegram открылся бы новой вкладкой, а текст сообщения
  * остался бы недоказанным.
  */
-const seedDevice = async (page: Page) => {
-  await page.addInitScript((user) => {
+const seedDevice = async (
+  page: Page,
+  locale: SupportedTestLocale = 'ru',
+  options: { webShare?: boolean } = {},
+) => {
+  const webShare = options.webShare ?? true
+  await page.addInitScript(({ user, locale: chosen, share }) => {
     try {
       const now = new Date().toISOString()
       window.localStorage.setItem('userId', user)
+      // AsyncStorage на web пишет в localStorage без префикса, поэтому язык
+      // задаётся тем же ключом, что и переключателем в шапке.
+      window.localStorage.setItem(
+        '@metravel/locale-preference:v1',
+        JSON.stringify({ version: 1, mode: 'explicit', locale: chosen }),
+      )
       window.localStorage.setItem('userName', 'E2E')
       window.localStorage.setItem('isSuperuser', 'false')
       window.localStorage.setItem(
@@ -152,10 +167,12 @@ const seedDevice = async (page: Page) => {
       // ignore
     }
 
-    Object.defineProperty(navigator, 'share', {
-      configurable: true,
-      value: () => Promise.resolve(),
-    })
+    if (share) {
+      Object.defineProperty(navigator, 'share', {
+        configurable: true,
+        value: () => Promise.resolve(),
+      })
+    }
 
     const opened: string[] = []
     Object.defineProperty(window, '__e2eOpenedUrls', { value: opened, configurable: false })
@@ -163,12 +180,13 @@ const seedDevice = async (page: Page) => {
       opened.push(String(url ?? ''))
       return { closed: false, focus: () => {}, close: () => {} } as unknown as Window
     }) as typeof window.open
-  }, USER_ID)
+  }, { user: USER_ID, locale, share: webShare })
 }
 
 /** Прогон квеста до засчитанного финала. */
 const finishQuest = async (page: Page) => {
-  const startButton = page.getByRole('button', { name: 'Начать квест' })
+  // По testID, а не по подписи: те же шаги проигрываются в пяти локалях.
+  const startButton = page.getByTestId('quest-intro-start')
   await expect(startButton).toBeVisible({ timeout: 60_000 })
   await startButton.click()
 
@@ -195,13 +213,24 @@ const finishQuest = async (page: Page) => {
   ).toBeVisible({ timeout: 30_000 })
 }
 
-const CHANNELS = [
-  { key: 'copy', caption: 'Ссылка' },
-  { key: 'telegram', caption: 'Telegram' },
-  { key: 'download', caption: 'Картинка' },
-  { key: 'instagram', caption: 'Stories' },
-  { key: 'native', caption: 'Ещё' },
-] as const
+type SupportedTestLocale = 'ru' | 'be' | 'uk' | 'pl' | 'en'
+
+const CHANNEL_KEYS = ['copy', 'telegram', 'download', 'instagram', 'native'] as const
+
+/**
+ * Подписи каналов по локалям — из `i18n/locales/<loc>/static/quest_share_static.ts`.
+ * Проверяем все пять: колонка узкая, и самая длинная подпись меняется от языка
+ * к языку (UK «Посилання» длиннее BE «Спасылка», #1677).
+ */
+const CAPTIONS: Record<SupportedTestLocale, Record<(typeof CHANNEL_KEYS)[number], string>> = {
+  ru: { copy: 'Ссылка', telegram: 'Telegram', download: 'Картинка', instagram: 'Stories', native: 'Ещё' },
+  be: { copy: 'Спасылка', telegram: 'Telegram', download: 'Карцінка', instagram: 'Stories', native: 'Яшчэ' },
+  uk: { copy: 'Посилання', telegram: 'Telegram', download: 'Картинка', instagram: 'Stories', native: 'Ще' },
+  pl: { copy: 'Link', telegram: 'Telegram', download: 'Obrazek', instagram: 'Stories', native: 'Więcej' },
+  en: { copy: 'Link', telegram: 'Telegram', download: 'Image', instagram: 'Stories', native: 'More' },
+}
+
+const CHANNELS = CHANNEL_KEYS.map((key) => ({ key, caption: CAPTIONS.ru[key] }))
 
 /**
  * Лист выезжает снизу CSS-анимацией react-native-web, и в её середине колонка
@@ -226,12 +255,25 @@ const waitForSheetSettled = async (page: Page) => {
   throw new Error('лист шаринга не остановился: анимация выезда не завершилась за 9 с')
 }
 
-const openShareSheet = async (page: Page) => {
+const openShareSheet = async (page: Page, options: { preview?: boolean } = {}) => {
   await page.getByTestId('quest-finale-share').click()
-  // Превью-диплом приходит из мок-карточки: пока он не отрисован, набор каналов
-  // ещё неполный и мерить геометрию рано.
-  await expect(page.getByTestId('quest-result-card-preview')).toBeVisible({ timeout: 30_000 })
+  if (options.preview ?? true) {
+    // Превью-диплом приходит из мок-карточки: пока он не отрисован, набор
+    // каналов ещё неполный и мерить геометрию рано.
+    await expect(page.getByTestId('quest-result-card-preview')).toBeVisible({ timeout: 30_000 })
+  } else {
+    await expect(page.getByTestId('quest-share-channel-copy')).toBeVisible({ timeout: 30_000 })
+  }
   await waitForSheetSettled(page)
+}
+
+/** Ширина всего кластера каналов — от левой кромки первой колонки до правой кромки последней. */
+const channelClusterSpan = async (page: Page, lastKey: string) => {
+  const first = await page.getByTestId('quest-share-channel-copy').boundingBox()
+  const last = await page.getByTestId(`quest-share-channel-${lastKey}`).boundingBox()
+  expect(first, 'бокс первой колонки').not.toBeNull()
+  expect(last, 'бокс последней колонки').not.toBeNull()
+  return { left: first!.x, right: last!.x + last!.width, span: last!.x + last!.width - first!.x }
 }
 
 /**
@@ -330,7 +372,69 @@ test.describe('Лист шаринга результата квеста (#1667)
     expect(String(url.searchParams.get('url'))).toContain('/quests/result/')
   })
 
-  test('desktop web 1280×900: подписи каналов остаются на месте', async ({ page }) => {
+  /**
+   * #1677: колонка канала раньше получала ровно 1/5 ряда, и подпись, которая в
+   * русском помещалась, в украинском срезалась эллипсисом. Обе ширины телефона
+   * меряем в ОДНОМ прогоне на локаль: разница между ними — только вьюпорт, а
+   * прохождение квеста стоит десятки секунд.
+   */
+  for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
+    test(`${locale}: ни одна подпись канала не срезана на 360 и 390pt`, async ({ page }) => {
+      await preacceptCookies(page)
+      await page.setViewportSize({ width: 390, height: 844 })
+      await mockApis(page)
+      await seedDevice(page, locale)
+
+      await page.goto(`/quests/minsk/${QUEST_ID}`, { waitUntil: 'domcontentloaded' })
+      await finishQuest(page)
+      await openShareSheet(page)
+
+      for (const width of [390, 360]) {
+        await page.setViewportSize({ width, height: 844 })
+        await waitForSheetSettled(page)
+
+        for (const key of CHANNEL_KEYS) {
+          const caption = CAPTIONS[locale][key]
+          await expect(
+            page.getByTestId(`quest-share-channel-${key}`).getByText(caption, { exact: true }),
+            `подпись «${caption}» отрисована на ${width}pt`,
+          ).toBeVisible()
+
+          const overflow = await captionOverflow(page, caption)
+          expect(overflow, `подпись «${caption}» найдена в DOM`).not.toBeNull()
+          expect(
+            overflow!.scrollWidth,
+            `подпись «${caption}» не срезана на ${width}pt`,
+          ).toBeLessThanOrEqual(overflow!.clientWidth + 1)
+
+          // Тач-таргет не приносится в жертву ширине подписи.
+          const box = await page.getByTestId(`quest-share-channel-${key}`).boundingBox()
+          expect(box!.width, `тач-таргет ${key} на ${width}pt`).toBeGreaterThanOrEqual(44)
+          expect(box!.height, `тач-таргет ${key} на ${width}pt`).toBeGreaterThanOrEqual(44)
+        }
+
+        // Кластер каналов целиком внутри экрана и остаётся центрированным:
+        // отступы слева и справа равны с точностью до пикселя округления.
+        const cluster = await channelClusterSpan(page, 'native')
+        expect(cluster.right, `правая кромка кластера на ${width}pt`).toBeLessThanOrEqual(width)
+        expect(
+          Math.abs(cluster.left - (width - cluster.right)),
+          `кластер центрирован на ${width}pt`,
+        ).toBeLessThanOrEqual(2)
+
+        if (locale === 'uk' && width === 390) {
+          await page.screenshot({ path: 'test-results/quest-1677-share-sheet-uk-390.png' })
+        }
+      }
+    })
+  }
+
+  /**
+   * Лист растянут на всю ширину вьюпорта, поэтому раскладка ряда обязана
+   * оставаться кластером, а не распоркой: `space-between` размазал бы пять
+   * каналов по 1232pt десктопа (#1677, findings ревью).
+   */
+  test('desktop 1280: ряд каналов остаётся компактным кластером по центру', async ({ page }) => {
     await preacceptCookies(page)
     await page.setViewportSize({ width: 1280, height: 900 })
     await mockApis(page)
@@ -347,6 +451,40 @@ test.describe('Лист шаринга результата квеста (#1667)
       ).toBeVisible()
     }
 
+    const cluster = await channelClusterSpan(page, 'native')
+    expect(cluster.span, 'ширина кластера пяти каналов на десктопе').toBeLessThanOrEqual(520)
+    expect(
+      Math.abs(cluster.left - (1280 - cluster.right)),
+      'кластер центрирован на десктопе',
+    ).toBeLessThanOrEqual(2)
+
     await page.screenshot({ path: 'test-results/quest-1667-share-sheet-1280.png' })
+  })
+
+  /**
+   * Сокращённый набор: генератор диплома недоступен и Web Share нет — остаются
+   * только «Ссылка» и «Telegram». Две колонки обязаны стоять рядом, а не
+   * разъехаться по кромкам экрана.
+   */
+  test('без карточки и Web Share две колонки стоят рядом, а не по кромкам', async ({ page }) => {
+    await preacceptCookies(page)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await mockApis(page, { resultCard: false })
+    await seedDevice(page, 'ru', { webShare: false })
+
+    await page.goto(`/quests/minsk/${QUEST_ID}`, { waitUntil: 'domcontentloaded' })
+    await finishQuest(page)
+    await openShareSheet(page, { preview: false })
+
+    await expect(page.getByTestId('quest-share-channel-download')).toHaveCount(0)
+    await expect(page.getByTestId('quest-share-channel-instagram')).toHaveCount(0)
+    await expect(page.getByTestId('quest-share-channel-native')).toHaveCount(0)
+
+    const cluster = await channelClusterSpan(page, 'telegram')
+    expect(cluster.span, 'ширина кластера из двух каналов').toBeLessThanOrEqual(200)
+    expect(
+      Math.abs(cluster.left - (390 - cluster.right)),
+      'кластер из двух каналов центрирован',
+    ).toBeLessThanOrEqual(2)
   })
 })
