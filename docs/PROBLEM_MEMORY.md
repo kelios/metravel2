@@ -318,8 +318,28 @@ guard, падающий в CI на попытке обойти этот конт
   negative probes, bilateral slider/performance gates. Local browser evidence
   подтверждает один proxy layer и загрузку 600×400 mobile / 800 px desktop;
   production post-deploy и Android device evidence остаются обязательными.
-- **Последняя проверка:** 2026-08-11; `#1400` recurrence и gate `#1263`,
-  семейство активно.
+- **Linked finding — 2026-08-31 (TestFlight 1.0.5 (4), iOS inline body
+  media):** два screenshot-report одного тестировщика показывают пустые
+  inline-кадры тела travel; в одном отчёте отдельно указано, что фото появляется
+  только после нажатия. Третий пустой primary region снят при активной вкладке
+  карты и не позволяет отличить map от media без TestFlight-retest.
+  Source/runtime chain подтверждённых inline-кадров ведёт через
+  `TravelDescription` и `CustomImageRenderer` в
+  `components/ui/richMediaViewport.tsx`: viewport-unmount gate из Android-задачи
+  `#1035` был включён для всех native-платформ, хотя его причина и измеримый
+  выигрыш относятся к Android Glide/bitmap upload. Это та же медиа-семья и тот
+  же компонент, но другая подтверждённая platform-boundary причина, поэтому
+  verdict — `create-linked` к `#1035` (дополнительный исторический контекст
+  `#828`), а не reopen принятого Android performance-инварианта. Board id новой
+  iOS-карточки назначается только после review Task Contract и здесь намеренно
+  не выдуман. Постоянный control: gate обязан быть Android-only; unit-матрица
+  доказывает немедленный mount на iOS и сохранение viewport-gating на Android,
+  а TestFlight-приёмка проверяет те же inline-кадры без tap и без потери
+  `contain`/blur. Platform impact: iOS primary, Android regression; web не
+  меняется. Localization impact: none.
+- **Последняя проверка:** 2026-08-31; `#1400` recurrence и gate `#1263`
+  остаются активной общей media-цепочкой, iOS boundary finding ожидает
+  связанную карточку после review.
 
 ### TRAVEL-RICHTEXT-FLOAT-ORDER-001 — обтекание одиночного фото зависит от порядка абзацев
 
@@ -407,7 +427,30 @@ guard, падающий в CI на попытке обойти этот конт
 - **Решение для новой жалобы:** readable web token или web Authorization header —
   `reopen #923`; provider-specific OAuth defect с сохранённым invariant —
   `create-linked`.
-- **Последняя проверка:** `#923 done`, 2026-07-15.
+- **Recurrence Log — 2026-08-31 (TestFlight 1.0.5 (4), public
+  `/api/feedback/`):** contact form на iPhone показывает общий белорусский
+  заголовок frontend-toast «Памылка адпраўкі»; подзаголовок и HTTP status в
+  screenshot-report не читаются, поэтому конкретная server-response ветка этим
+  кадром не доказана. Независимый source audit цепочки
+  `ContactForm` → `sendFeedback` → `api/misc.ts::publicPostInit` →
+  `POST /api/feedback/`. Принятый в `#1045` helper подписывал native AllowAny
+  POST токеном из SecureStore и не исключал native cookies явно: stale header
+  token превращает публичный endpoint в `401`, а cookie-auth на unsafe POST
+  может вернуть CSRF `403`. Это повторно нарушает принятый `#1045` инвариант
+  «публичный POST не зависит от состояния авторизации» в том же chokepoint;
+  verdict — `reopen #1045`, related history `#110/#923/#849/#850`. Прежний Done
+  gate проверил Android `/api/subscribe/` с актуальной сессией, но не iOS cookie
+  jar, stale-token control, `/api/feedback/`, AI-chat и локализацию `451`.
+  Постоянный control: публичный helper всегда отправляет `credentials: 'omit'`
+  без `Authorization`; unit coverage держит feedback/subscribe/AI-chat на
+  web/native boundary со stale auth-state, а native UI coverage исключает
+  browser honeypot на iOS и Android. Ошибка недоступной доставки `451`
+  локализуется на RU/BE/UK/PL/EN. Сам `451` соответствует контракту
+  `#850` и не доказывает backend-рецидив: SMTP/config/queue/zero-delivery owner
+  определяется отдельной production-пробой; та же credential/config причина
+  переоткрывает `#849`, другая причина создаётся linked к `#849/#850`.
+- **Последняя проверка:** `#923 done`; recurrence `#1045` подтверждён
+  2026-08-31 и ожидает board reopen после review.
 
 ### OPS-STATIC-001 — production static ownership drift
 

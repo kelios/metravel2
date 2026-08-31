@@ -85,6 +85,7 @@ export const errorsStaticResources = {
   "api.misc.invalidCategoryResponse": "Сервер повернув некоректну категорію",
   "api.misc.allFieldsRequired": "Усі поля повинні бути заповнені",
   "api.misc.sendFailed": "Помилка при надсиланні.",
+  "api.misc.feedbackUnavailable": "Сервіс зворотного зв’язку тимчасово недоступний. Спробуйте пізніше.",
   "api.misc.messageSent": "Повідомлення успішно надіслано",
   "api.misc.messageSendFailed": "Не вдалося відправити повідомлення",
   "api.misc.emailRequired": "Введіть email",

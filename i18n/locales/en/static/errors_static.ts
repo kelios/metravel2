@@ -85,6 +85,7 @@ export const errorsStaticResources = {
   "api.misc.invalidCategoryResponse": "The server returned an incorrect category",
   "api.misc.allFieldsRequired": "All fields must be completed",
   "api.misc.sendFailed": "Error sending.",
+  "api.misc.feedbackUnavailable": "The contact form is temporarily unavailable. Please try again later.",
   "api.misc.messageSent": "Message sent successfully",
   "api.misc.messageSendFailed": "Failed to send message",
   "api.misc.emailRequired": "Enter email",

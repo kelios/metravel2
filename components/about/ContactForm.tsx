@@ -88,16 +88,18 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         </Text>
       )}
 
-      {/* honeypot */}
-      <TextInput
-        style={styles.honeypot}
-        value={hp}
-        onChangeText={onChangeHp}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        autoComplete="off"
-        placeholder={i18nT('home:components.about.ContactForm.do_not_fill_d576b690')}
-      />
+      {Platform.OS === 'web' && (
+        <TextInput
+          testID="contact-form-honeypot"
+          style={styles.honeypot}
+          value={hp}
+          onChangeText={onChangeHp}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          autoComplete="off"
+          placeholder={i18nT('home:components.about.ContactForm.do_not_fill_d576b690')}
+        />
+      )}
 
       <TextInput
         style={[

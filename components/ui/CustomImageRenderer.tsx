@@ -194,10 +194,11 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
     );
   }, [src, boxWidth]);
 
-  // Дальние от вьюпорта фото тела статьи не монтируем: на native у expo-image нет
-  // lazy-загрузки по вьюпорту, поэтому все 90+ картинок статьи декодируются сразу,
-  // вытесняют друг друга из bitmap-кэша и Android грузит текстуры на каждом кадре
-  // скролла (#1035). Рамка остаётся той же высоты — сдвига вёрстки нет.
+  // Дальние от вьюпорта фото тела статьи не монтируем на Android: там у
+  // expo-image нет lazy-загрузки по вьюпорту, поэтому 90+ картинок статьи сразу
+  // вытесняют друг друга из Glide bitmap-кэша и грузят текстуры на каждом кадре
+  // скролла (#1035). На iOS гейт выключен: measure/unmount lifecycle оставлял
+  // inline-фото пустым до тапа. Рамка всегда сохраняет высоту.
   const { ref: frameRef, visible: isNearViewport, onLayout: handleFrameLayout } =
     useRichMediaVisibility(boxHeight);
   const shouldRenderMedia = Platform.OS === 'web' || isNearViewport;
@@ -231,7 +232,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
     }
 
     // Измерение — это сетевой запрос, поэтому оно ждёт приближения к вьюпорту:
-    // на native — общий гейт #1035, на web — локальный IntersectionObserver.
+    // на Android — общий гейт #1035, на web — локальный IntersectionObserver.
     if (!canMeasure) {
       return () => {
         mounted = false;

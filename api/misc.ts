@@ -5,7 +5,6 @@ import { sanitizeInput } from '@/utils/security';
 import { stripBase64Images } from '@/utils/htmlUtils';
 import { validateAIMessage, validateImageFile } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
-import { getCsrfHeader } from '@/utils/csrf';
 import { getSecureItem } from '@/utils/secureStorage';
 import { apiClient } from '@/api/client';
 import { ApiError } from '@/api/client';
@@ -14,7 +13,6 @@ import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { validateReadyForModeration } from '@/utils/travelWizardValidation';
 import {
   ACCESS_TOKEN_STORAGE_KEY,
-  getApiRequestCredentials,
   hasUsableAuthCredential,
   shouldUseStoredAuthToken,
 } from '@/utils/authPlatform';
@@ -88,26 +86,18 @@ const requireAuthCredential = async (): Promise<void> => {
 
 /**
  * Init для публичных (AllowAny) POST — подписка, обратная связь, AI-чат.
- * Такой запрос всё равно проходит DRF-аутентификацию (throttle дергает
- * `request.user`), а `CookieTokenAuthentication` при cookie-токене требует CSRF
- * на unsafe-методах. Web возвращает `csrftoken` заголовком и вдобавок не шлёт
- * cookie вовсе, а native вернуть cookie-токен нечем — оттуда 403
- * `{"detail":"CSRF Failed: CSRF token missing."}` (подписка на Android).
- * Поэтому native подписывает публичный запрос своим header-токеном: бэк уходит
- * в ветку `if (auth)` без CSRF-проверки.
+ * React Native отправляет cookie по умолчанию, даже когда RequestInit не содержит
+ * `credentials`. Явный `omit` не даёт публичному запросу случайно попасть в
+ * CookieTokenAuthentication/CSRF-ветку. Authorization здесь также не нужен:
+ * stale SecureStore token превращал AllowAny endpoint в 401.
  */
-const publicPostInit = async (): Promise<RequestInit> => {
-  const token = shouldUseStoredAuthToken() ? await getSecureItem(ACCESS_TOKEN_STORAGE_KEY) : null;
-  return {
-    method: 'POST',
-    ...getApiRequestCredentials(true),
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Token ${token}` } : {}),
-      ...getCsrfHeader(),
-    },
-  };
-};
+const publicPostInit = (): RequestInit => ({
+  method: 'POST',
+  credentials: 'omit',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 const slugifySafe = (value?: string): string => {
   if (!value) return '';
@@ -710,7 +700,7 @@ export const sendFeedback = async (
 
   try {
     const res = await fetchWithTimeout(SEND_FEEDBACK, {
-      ...(await publicPostInit()),
+      ...publicPostInit(),
       body: JSON.stringify({
         name: sanitizedName,
         email: sanitizedEmail,
@@ -718,20 +708,26 @@ export const sendFeedback = async (
       }),
     }, DEFAULT_TIMEOUT);
 
-    const json = await safeJsonParse<{ 
-      email?: string[]; 
-      name?: string[]; 
-      message?: string[] | string; 
-      detail?: string 
-    }>(res, {});
+    const json = await safeJsonParse<
+      | string
+      | {
+          email?: string[];
+          name?: string[];
+          message?: string[] | string;
+          detail?: string;
+        }
+    >(res, {});
 
     if (!res.ok) {
-      const firstError =
-        localizeBackendFieldError(json?.email) ||
-        localizeBackendFieldError(json?.name) ||
-        localizeBackendFieldError(json?.message) ||
-        localizeBackendFieldError(json?.detail) ||
-        i18nT('errorsStatic:api.misc.sendFailed');
+      const payload = typeof json === 'string' ? null : json;
+      const firstError = res.status === 451
+        ? i18nT('errorsStatic:api.misc.feedbackUnavailable')
+        : localizeBackendFieldError(payload?.email) ||
+          localizeBackendFieldError(payload?.name) ||
+          localizeBackendFieldError(payload?.message) ||
+          localizeBackendFieldError(payload?.detail) ||
+          localizeBackendFieldError(json) ||
+          i18nT('errorsStatic:api.misc.sendFailed');
       throw new Error(firstError);
     }
 
@@ -779,7 +775,7 @@ export const subscribeEmail = async (
     const res = await fetchWithTimeout(
       SUBSCRIBE_EMAIL,
       {
-        ...(await publicPostInit()),
+        ...publicPostInit(),
         body: JSON.stringify({
           email: sanitizedEmail,
           source,
@@ -831,7 +827,7 @@ export const sendAIMessage = async (inputText: string) => {
 
   try {
     const response = await fetchWithTimeout(SEND_AI_QUESTION, {
-      ...(await publicPostInit()),
+      ...publicPostInit(),
       body: JSON.stringify({ message: inputText.trim() }),
     }, LONG_TIMEOUT);
     

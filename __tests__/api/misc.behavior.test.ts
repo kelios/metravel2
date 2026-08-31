@@ -32,8 +32,8 @@ jest.mock('@/utils/secureStorage', () => ({
   getSecureItem: (...args: any[]) => mockGetSecureItem(...args),
 }))
 
-// Платформа задаётся тестом: web ходит по cookie-авторизации, native — по
-// header-токену, и публичные POST обязаны различать это (см. publicPostInit).
+// Платформа задаётся тестом: auth-required запросы различают web-cookie и
+// native header-token, а публичные POST обязаны явно исключать оба механизма.
 jest.mock('@/utils/authPlatform', () => ({
   usesWebCookieAuth: () => mockIsWebPlatform,
   shouldUseStoredAuthToken: () => !mockIsWebPlatform,
@@ -527,15 +527,18 @@ describe('api/misc', () => {
     await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('oops')
   })
 
-  it('sendFeedback sends the X-CSRFToken header on the POST (Django SessionAuth CSRF guard)', async () => {
+  it('sendFeedback keeps the public POST cookie-less and auth-less on native', async () => {
     mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockGetSecureItem.mockResolvedValue('stale-native-token')
     mockFetchWithTimeout.mockResolvedValue({ ok: true })
     mockSafeJsonParse.mockResolvedValue({ message: 'ok' })
 
     await sendFeedback('A', 'b@c.com', 'Hi')
 
     const [, init] = mockFetchWithTimeout.mock.calls[0]
-    expect(init.headers['X-CSRFToken']).toBe('test-csrf-token')
+    expect(init.credentials).toBe('omit')
+    expect(init.headers).toEqual({ 'Content-Type': 'application/json' })
+    expect(mockGetSecureItem).not.toHaveBeenCalled()
   })
 
   it('sendFeedback omits browser credentials so a stale session cookie cannot trigger CSRF failure', async () => {
@@ -552,36 +555,41 @@ describe('api/misc', () => {
     expect(init.headers).toEqual({ 'Content-Type': 'application/json' })
   })
 
-  it('subscribeEmail and sendAIMessage also send the X-CSRFToken header', async () => {
+  it('subscribeEmail and sendAIMessage use the same cookie-less public POST boundary', async () => {
     mockSanitizeInput.mockImplementation((v: string) => v.trim())
     mockValidateAIMessage.mockReturnValue({ valid: true })
     mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })
     mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'created' })
 
     await subscribeEmail('a@b.com', 'home')
-    expect(mockFetchWithTimeout.mock.calls[0][1].headers['X-CSRFToken']).toBe('test-csrf-token')
+    expect(mockFetchWithTimeout.mock.calls[0][1]).toEqual(expect.objectContaining({
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+    }))
 
     mockFetchWithTimeout.mockClear()
     mockFetchWithTimeout.mockResolvedValue({ ok: true })
     mockSafeJsonParse.mockResolvedValue({ answer: 'hi' })
 
     await sendAIMessage('hello')
-    expect(mockFetchWithTimeout.mock.calls[0][1].headers['X-CSRFToken']).toBe('test-csrf-token')
+    expect(mockFetchWithTimeout.mock.calls[0][1]).toEqual(expect.objectContaining({
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+    }))
   })
 
-  it('subscribeEmail signs the public POST with the native header token (Android CSRF 403 regression)', async () => {
+  it('subscribeEmail ignores a stale native token for its AllowAny endpoint', async () => {
     mockSanitizeInput.mockImplementation((v: string) => v.trim())
-    mockGetSecureItem.mockResolvedValue('native-token')
+    mockGetSecureItem.mockResolvedValue('stale-native-token')
     mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })
     mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'created' })
 
     await subscribeEmail('a@b.com', 'home')
 
     const [, init] = mockFetchWithTimeout.mock.calls[0]
-    // Без Authorization бэк аутентифицирует native по cookie-токену и требует
-    // CSRF, которого на native нет: 403 "CSRF Failed: CSRF token missing".
-    expect(init.headers.Authorization).toBe('Token native-token')
-    expect(init.credentials).toBeUndefined()
+    expect(init.credentials).toBe('omit')
+    expect(init.headers.Authorization).toBeUndefined()
+    expect(mockGetSecureItem).not.toHaveBeenCalled()
   })
 
   it('subscribeEmail on web relies on cookie-less credentials instead of a header token', async () => {
@@ -608,6 +616,16 @@ describe('api/misc', () => {
     // Тот же DRF-дефолт, что и в подписке, должен приходить на локали (#1505).
     mockSafeJsonParse.mockResolvedValue({ email: ['Enter a valid email address.'] })
     await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('Введите корректный email')
+  })
+
+  it('sendFeedback localizes the backend delivery-unavailable response', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 451 })
+    mockSafeJsonParse.mockResolvedValue('Опция недоступна в данный момент')
+
+    await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow(
+      'Сервис обратной связи временно недоступен. Попробуйте позже.',
+    )
   })
 
   it('subscribeEmail requires an email and returns created on success', async () => {
