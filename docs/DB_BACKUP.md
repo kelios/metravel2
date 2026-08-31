@@ -1,45 +1,46 @@
 # Бэкап production-базы metravel.by
 
-Актуализировано: 2026-08-05 (цифры по скрипту сняты с прода в этот день,
-остальные — 2026-08-04).
+Актуализировано: 2026-08-31 — включён ежедневный бэкап в S3 (борд #1247).
 
 ## TL;DR
 
-- **Автоматических бэкапов БД на проде по-прежнему нет.** Cron-задачи,
-  S3-выгрузки и лога бэкапа не существует — это задача борда **#1247** (нужен
-  sudo владельца сервера).
-- **Штатный скрипт на прод-хосте починен и проверен реальным прогоном 05.08.2026**
-  (#1246): дамп снимается напрямую через `docker exec`, без compose. Первый
-  успешный прогон — `metravel-postgres-20260805T122720Z.sql.gz`, 52 328 299 байт,
-  14 с, `gzip -t` OK, exit 0. То есть включать cron уже можно.
-- **Свежая логическая копия на сервере одна и снята вручную** —
-  `/home/sx3/db-backups/metravel-postgres-20260805T122720Z.sql.gz` (05.08.2026).
-  Она не обновляется сама: без #1247 завтра снова будет устаревать.
-- **До неё единственной копией была холодная от 17.11.2025**:
-  `/home/sx3/pg_dump_17_11_2025/postgis/data`, 372.9 МиБ, владелец `root`.
-  Несмотря на имя, это не логический дамп, а холодная копия каталога данных
-  PostgreSQL 17 (внутри `PG_VERSION`, `base/`, `pg_wal/`, `postmaster.pid`).
-- **Свежий дамп снимается одной командой** `npm run db:backup:prod` — ~16 секунд,
-  ~44 МиБ `.sql.gz` в `backup/` в корне репозитория, с проверкой целостности; см.
-  [Как снять бэкап прямо сейчас](#как-снять-бэкап-прямо-сейчас).
+- **Ежедневный бэкап работает.** Cron на прод-хосте в 02:15 по Минску снимает
+  `pg_dump`, проверяет архив и выгружает его в S3. Включено 31.08.2026, первый
+  боевой прогон — `metravel-postgres-20260831T103912Z.sql.gz`, 56 335 429 байт,
+  `gzip -t` OK, в логе `Backup completed`.
+- **Бэкапы лежат в отдельном приватном бакете `s3://metravel-backups/postgres/`**
+  (eu-north-1, Block Public Access на всех четырёх флагах, versioning включён).
+- ⚠️ **В медиа-бакет `metravelprod` бэкапы лить нельзя.** У него политика
+  `Principal: "*"` + `s3:GetObject` на `metravelprod/*`: дамп с почтами и хешами
+  паролей качался бы по прямой ссылке кем угодно.
+- **Проверить состояние:** `npm run db:backup:prod:verify` — расписание, лог,
+  локальный архив, объект в S3, одним прогоном.
+- **Снять внеочередной дамп себе на мак:** `npm run db:backup:prod` (~16 с,
+  ~54 МиБ в `backup/`).
+- **Забрать готовый архив, почистить старые, выключить расписание** — разделы
+  [Как забрать бэкап](#как-забрать-бэкап) и
+  [Как почистить и удалить](#как-почистить-и-удалить).
+- До 05.08.2026 автоматических бэкапов не было вообще, а единственная копия была
+  холодной от 17.11.2025 — история в задачах #1246 (скрипт починен) и #1247
+  (расписание включено).
 
 ## Что где лежит
 
-| Объект | Путь / расположение | Состояние на 2026-08-05 |
+| Объект | Путь / расположение | Состояние на 2026-08-31 |
 | --- | --- | --- |
-| Живая БД | контейнер сервиса `metravel-gis` (на 2026-08-05 звался `metravel_metravel-gis_1`; имя резолвится, а не вписывается — см. ниже), образ `postgis/postgis:17-3.5`, база `metravel`, пользователь `metravel` | 311 MB (`pg_database_size`) |
-| Каталог данных живой БД | bind-mount `/home/sx3/metravel/deploy/prod/postgis/data` (в compose — `./deploy/prod/postgis/data`) | 431.9 МиБ |
-| Свежая логическая копия | `/home/sx3/db-backups/metravel-postgres-20260805T122720Z.sql.gz` | 05.08.2026, 52 328 299 Б, снята вручную и не обновляется |
+| Живая БД | контейнер сервиса `metravel-gis` (сейчас `metravel_metravel-gis_1`; имя резолвится, а не вписывается — см. ниже), образ `postgis/postgis:17-3.5`, база `metravel` | ~311 MB |
+| Расписание | user crontab пользователя `sx3`, строка с маркером `# metravel-db-backup` | `15 2 * * *`, таймзона хоста Europe/Minsk |
+| Обёртка запуска | `/home/sx3/.local/bin/metravel-db-backup` (0700) | генерируется `scripts/enable-prod-db-backup.sh`, руками не править |
+| Конфиг | `/home/sx3/.metravel-backup.env` (0600) | `S3_URI`, `BACKUP_DIR`, `RETENTION_DAYS=5`, `AWS_CLI`, `LOG_FILE`; секретов нет |
+| Лог | `/home/sx3/logs/metravel-db-backup.log` (0640) | одна строка `Backup completed` на успешную ночь |
+| Локальные архивы | `/home/sx3/metravel/deploy/prod/backups/` | ~54 МиБ штука, ретенция 5 дней, чистится самим скриптом |
+| Архивы в S3 | `s3://metravel-backups/postgres/` | приватный бакет, versioning on, lifecycle НЕ настроен |
+| Ключ S3 | `/home/sx3/.aws/credentials` (0600, владелец `sx3`) | пока общий ключ приложения — сузить, см. [Что осталось владельцу](#что-осталось-владельцу) |
+| AWS CLI | `/home/sx3/.local/aws-cli`, бинарь `/home/sx3/.local/bin/aws` | v2.36.34, userland-установка без root, 271 МБ |
+| Каталог данных живой БД | bind-mount `/home/sx3/metravel/deploy/prod/postgis/data` | 431.9 МиБ |
+| Ручной дамп 05.08.2026 | `/home/sx3/db-backups/metravel-postgres-20260805T122720Z.sql.gz` | 52 328 299 Б, не обновляется, можно удалить |
 | Старая холодная копия | `/home/sx3/pg_dump_17_11_2025/postgis/data` | файлы от **17.11.2025**, 372.9 МиБ, `root:root` |
-| Локальные дампы скрипта (`BACKUP_DIR`) | `/home/sx3/metravel/deploy/prod/backups/` | каталога не существует (проверочный прогон 05.08.2026 писал в `/home/sx3/db-backups/`) |
-| Дампы в S3 | не настроено: `aws` CLI не установлен, `~/.aws` нет | — |
-| Диск под всё это | `/dev/sda1` → `/` | 15 ГБ, занято 73 %, свободно ~3.9 ГБ (05.08.2026) |
-
-Как проверялось: поиск по всему корню хоста, включая root-owned каталоги
-(`docker run --rm -v /:/host:ro alpine find /host -xdev … -size +1M`), не нашёл
-ни одного `*.sql`, `*.sql.gz`, `*.dump` или `*backup*` крупнее 1 МиБ. То есть на
-тот момент других копий базы на сервере не было; единственная появившаяся с тех
-пор — ручной дамп от 05.08.2026 в строке выше.
+| Диск под всё это | `/dev/sda1` → `/` | 15 ГБ, занято 76 %, свободно ~3.5 ГБ |
 
 Медиа — отдельная история и к БД отношения не имеет: картинки живут в S3-бакете
 `metravelprod` (eu-north-1), их полная локальная копия снимается скриптом
@@ -189,7 +190,7 @@ gzip -cd <файл> | tail -3           # -- PostgreSQL database dump complete
 S3_URI=s3://metravel-backups/postgres
 DB_CONTAINER=            # пусто = резолвить на проде; задавать только для разового прогона
 BACKUP_DIR=/home/sx3/metravel/deploy/prod/backups
-RETENTION_DAYS=14
+RETENTION_DAYS=14          # дефолт скрипта; на проде выставлено 5
 MIN_BACKUP_BYTES=1048576
 ```
 
@@ -218,36 +219,180 @@ $ BACKUP_DIR=/home/sx3/db-backups bash deploy/prod/backup/backup_database_to_s3.
 `CREATE TABLE`, хвост — `-- PostgreSQL database dump complete`. Файл оставлен на
 сервере в `/home/sx3/db-backups/` как первая с 17.11.2025 логическая копия базы.
 
-## Что нужно, чтобы включить регулярный бэкап
+## Ежедневный бэкап в S3: как включён
 
-Все шаги требуют `sudo` на прод-хосте (у деплой-пользователя `sx3`
-беспарольного sudo нет) — это работа владельца сервера. Заведено на борде:
-**#1247** (`needs_human=true`, зависит от #1246).
+Установка и приёмка — одной командой из этого репозитория:
 
-1. Установить AWS CLI: `sudo apt-get install -y awscli`.
-2. Завести IAM-креды с правом `s3:PutObject` на префикс бэкапов. Аккаунт AWS уже
-   используется проектом — там же лежит медиа-бакет `metravelprod` (eu-north-1).
-3. ~~Починить вызов compose~~ — сделано 05.08.2026 (#1246), см. раздел выше;
-   молчаливый провал в cron больше невозможен (`pipefail` + проверка размера).
-4. Создать `/etc/metravel-backup.env` (root, `0600`) с переменными выше.
-   `COMPOSE_FILE`/`DB_SERVICE` из старых инструкций скриптом больше не читаются —
-   вместо них `DB_CONTAINER` (по умолчанию уже верный).
-5. Создать `/etc/cron.d/metravel-db-backup`:
+```bash
+bash scripts/enable-prod-db-backup.sh            # установить/обновить, идемпотентно
+bash scripts/enable-prod-db-backup.sh --run-now  # прогнать полный цикл прямо сейчас
+npm run db:backup:prod:verify                    # проверить критерии приёмки #1247
+```
 
-   ```cron
-   SHELL=/bin/bash
-   PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Скрипт бэкапа при этом **не дублируется**: обёртка на хосте запускает
+канонический `deploy/prod/backup/backup_database_to_s3.sh` из бэкенд-чекаута.
+Имя контейнера БД не вписано константой — оно резолвится снипетом из
+`scripts/deploy-target.sh`, поэтому пересоздание сервиса через compose v2
+(смена `metravel_metravel-gis_1` → `metravel-metravel-gis-1`) расписание не
+ломает (борд #733, #1636).
 
-   15 2 * * * sx3 set -a; source /etc/metravel-backup.env; set +a; cd /home/sx3/metravel && ./deploy/prod/backup/backup_database_to_s3.sh >> /var/log/metravel-db-backup.log 2>&1
+### Почему не `/etc/cron.d`, как в карточке #1247
+
+Две причины, обе выяснились при включении:
+
+1. У `sx3` sudo только по паролю, поэтому root-шаги агент выполнить не может.
+2. Исходная схема из карточки нерабочая сама по себе: cron-задача запускается
+   **от `sx3`**, а файл `/etc/metravel-backup.env` с правами `0600 root` он не
+   прочитает — `source` в cron-строке упал бы в первую же ночь.
+
+Снаружи разницы нет: то же расписание, тот же скрипт, тот же результат в S3.
+Если хочется root-owned расписание — см. ниже.
+
+### Как поднять расписание в root (необязательно)
+
+```bash
+sudo install -m 0644 /dev/stdin /etc/cron.d/metravel-db-backup <<'CRON'
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+15 2 * * * sx3 /home/sx3/.local/bin/metravel-db-backup
+CRON
+crontab -l | grep -v metravel-db-backup | crontab -   # иначе бэкап пойдёт дважды
+```
+
+Обёртка, конфиг, лог и ключ при этом остаются на месте — они и так читаются от
+`sx3`.
+
+## Как забрать бэкап
+
+Все команды — с мака, из корня репозитория. `backup/` в `.gitignore`, дампы
+туда класть безопасно.
+
+```bash
+# что вообще лежит в S3
+bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
+  ssh "$PROD_SSH_TARGET" "~/.local/bin/aws s3 ls s3://metravel-backups/postgres/"'
+
+# скачать конкретный архив из S3 сразу на мак (потоком, на диск прода не пишем)
+mkdir -p backup && bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
+  ssh "$PROD_SSH_TARGET" "~/.local/bin/aws s3 cp s3://metravel-backups/postgres/metravel-postgres-20260831T103912Z.sql.gz -"' \
+  > backup/metravel-postgres-20260831T103912Z.sql.gz
+
+# забрать последний локальный архив с сервера (быстрее, без обращения к S3)
+bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
+  ssh "$PROD_SSH_TARGET" "ls -1t ~/metravel/deploy/prod/backups/*.sql.gz | head -1"'
+bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
+  scp "$PROD_SSH_TARGET:/home/sx3/metravel/deploy/prod/backups/<имя>.sql.gz" backup/'
+
+# снять свежий дамп мимо расписания
+npm run db:backup:prod
+```
+
+Проверить скачанное перед тем, как на него полагаться:
+
+```bash
+gzip -t backup/<имя>.sql.gz && echo "архив цел"
+gzip -cd backup/<имя>.sql.gz | head -2      # ждём заголовок «-- PostgreSQL database dump»
+gzip -cd backup/<имя>.sql.gz | grep -c '^CREATE TABLE'
+```
+
+Восстановление в тестовую базу — раздел [Восстановление](#восстановление).
+
+## Как почистить и удалить
+
+**Локальные архивы на сервере** чистятся сами: скрипт удаляет всё старше
+`RETENTION_DAYS` (сейчас 5). Вручную:
+
+```bash
+bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
+  ssh "$PROD_SSH_TARGET" "ls -la ~/metravel/deploy/prod/backups/"'
+bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
+  ssh "$PROD_SSH_TARGET" "rm -f ~/metravel/deploy/prod/backups/metravel-postgres-<timestamp>.sql.gz"'
+```
+
+Ретенцию меняют не правкой файла на хосте, а переустановкой — иначе следующий
+прогон `enable-prod-db-backup.sh` вернёт прежнее значение:
+
+```bash
+RETENTION_DAYS=10 bash scripts/enable-prod-db-backup.sh
+```
+
+**Архивы в S3.** У бакета включён versioning, поэтому обычное удаление только
+ставит delete marker: объект исчезает из листинга, но место занимает и деньги
+стоит. Полное удаление — вместе с версиями:
+
+```bash
+# мягко: спрятать объект (остаётся как версия, восстановимо)
+ssh "$PROD_SSH_TARGET" "~/.local/bin/aws s3 rm s3://metravel-backups/postgres/<имя>.sql.gz"
+
+# насовсем: снести все версии одного объекта
+ssh "$PROD_SSH_TARGET" '~/.local/bin/aws s3api list-object-versions \
+  --bucket metravel-backups --prefix postgres/<имя>.sql.gz \
+  --query "[Versions,DeleteMarkers][].VersionId" --output text \
+  | tr "\t" "\n" | while read -r v; do [ -n "$v" ] && ~/.local/bin/aws s3api delete-object \
+      --bucket metravel-backups --key postgres/<имя>.sql.gz --version-id "$v"; done'
+```
+
+Если ключ окажется без прав на удаление — чистить в консоли AWS, это нормальный
+путь: тому, кто пишет бэкапы, право их удалять и не нужно.
+
+**Выключить расписание** (файлы и архивы остаются):
+
+```bash
+ssh "$PROD_SSH_TARGET" "crontab -l | grep -v metravel-db-backup | crontab -"
+```
+
+**Снести установку целиком** (архивы в S3 при этом остаются):
+
+```bash
+ssh "$PROD_SSH_TARGET" 'crontab -l | grep -v metravel-db-backup | crontab -; \
+  rm -f ~/.local/bin/metravel-db-backup ~/.metravel-backup.env ~/.metravel-backup.lock \
+        ~/logs/metravel-db-backup.log'
+# и, если больше не нужен CLI с ключом:
+ssh "$PROD_SSH_TARGET" 'rm -rf ~/.local/aws-cli ~/.local/bin/aws ~/.local/bin/aws_completer ~/.aws'
+```
+
+Удалять сам бакет `metravel-backups` через CLI неудобно (нужно сначала вычистить
+все версии) — проще в консоли AWS, «Empty» и затем «Delete».
+
+## Что осталось владельцу
+
+Ничего из этого не блокирует работу бэкапа — это гигиена.
+
+1. **Сузить ключ S3.** Сейчас cron ходит в S3 общим ключом приложения (тем же,
+   что обслуживает медиа-бакет: он умеет в том числе создавать бакеты). Правильно
+   — отдельный IAM-пользователь только на префикс бэкапов:
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "PutBackups",
+         "Effect": "Allow",
+         "Action": ["s3:PutObject"],
+         "Resource": "arn:aws:s3:::metravel-backups/postgres/*"
+       },
+       {
+         "Sid": "ListBackupPrefix",
+         "Effect": "Allow",
+         "Action": ["s3:ListBucket"],
+         "Resource": "arn:aws:s3:::metravel-backups",
+         "Condition": {"StringLike": {"s3:prefix": ["postgres/*"]}}
+       }
+     ]
+   }
    ```
 
-6. Создать лог: `/var/log/metravel-db-backup.log`, владелец `sx3:adm`, `0640`.
-7. Приёмка: объект реально появился в бакете (`aws s3 ls`), локальный архив
-   распаковывается, restore-smoke проходит (ниже).
+   После создания ключа — заменить `~/.aws/credentials` на проде (0600, владелец
+   `sx3`) и прогнать `npm run db:backup:prod:verify`.
 
-Про место на диске: один архив ~50 МБ, при `RETENTION_DAYS=14` локально
-накопится ~0.7 ГБ при свободных 3.9 ГБ. Локальную ретенцию разумно держать 3–5
-дней, а длительное хранение — lifecycle-политикой на стороне S3.
+2. **Lifecycle в S3.** Сейчас бакет растёт примерно на 1.6 ГБ в месяц и ничего не
+   удаляется. Разумно — правило «expire через 90 дней» плюс
+   `NoncurrentVersionExpiration`.
+
+3. **Ротация лога.** `/home/sx3/logs/metravel-db-backup.log` растёт медленно
+   (~200 байт в сутки), но `logrotate` под него не заведён.
 
 ## Восстановление
 
@@ -282,13 +427,19 @@ docker rm -f pg-restore-test
 ## Быстрая проверка состояния
 
 ```bash
-bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; ssh "$PROD_SSH_TARGET" "ls -la /home/sx3/metravel/deploy/prod/backups/ 2>/dev/null | tail -5; ls -la /etc/cron.d/metravel-db-backup 2>/dev/null || echo NO_CRON; tail -3 /var/log/metravel-db-backup.log 2>/dev/null || echo NO_LOG"'
+npm run db:backup:prod:verify
 ```
 
-Пока вывод — `NO_CRON` / `NO_LOG` и отсутствующий каталог, регулярных бэкапов
-нет: самой свежей копией остаётся ручной дамп от 05.08.2026 в
-`/home/sx3/db-backups/`, и он не обновляется. Сам скрипт при этом рабочий —
-проверить в любой момент можно `--check` (ничего не пишет).
+Проверяет всё, чем закрывается #1247: cron-строку, лог и число суток с
+`Backup completed`, свежий локальный архив (`gzip -t` + заголовок дампа) и
+объект в S3 с совпадением размера. Возвращает ненулевой код, пока критерии не
+выполнены, поэтому годится и как разовая приёмка, и как прод-проба.
+
+Проверить только доступность БД, ничего не записывая:
+
+```bash
+npm run db:backup:prod:check
+```
 
 Связанные документы: `docs/RELEASE.md` (деплой и rollback),
 `docs/PRODUCTION_CHECKLIST.md` (релизный чеклист).
