@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { ActivityIndicator, Dimensions, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import { Link, useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
@@ -30,6 +30,7 @@ import { useTranslation } from '@/i18n/LocaleProvider'
 
 const { spacing } = DESIGN_TOKENS
 const QUEST_LIST_ROUTE = '/quests'
+const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 type MetaTarget = {
   selector: string
@@ -116,6 +117,19 @@ export default function QuestsByCityScreen() {
   useEffect(() => {
     if (cityName) navigation.setOptions({ title: cityName })
   }, [navigation, cityName])
+
+  // The shared SSG fallback is a sibling of #root, so React hydration cannot
+  // remove it. Once this resolved city screen owns the visible H1, discard only
+  // the explicitly marked stale fallback and leave other route content alone.
+  useWebLayoutEffect(() => {
+    if (!cityGroup || !isFocused || Platform.OS !== 'web' || typeof document === 'undefined') return
+    document
+      .querySelectorAll('section[data-ssg-quest-city="true"]')
+      .forEach((section) => section.remove())
+    document
+      .querySelectorAll('style[data-ssg-quest-city-style="true"]')
+      .forEach((style) => style.remove())
+  }, [cityGroup, isFocused])
 
   const { width: bpWidth, isMobile } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height

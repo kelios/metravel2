@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
@@ -55,21 +55,10 @@ type QuestSeoModel = {
 
 const HEAD_PATCH_DELAYS_MS = [0, 120, 400] as const;
 const QUEST_LIST_ROUTE = '/quests';
+const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 const resolveBundleCountModel = (bundle: FrontendQuestBundle) =>
   bundle.countModel ?? buildQuestCountModel(bundle.steps, bundle.intro);
-
-const hiddenWebHeadingStyle = {
-  position: 'absolute' as const,
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: 'hidden' as const,
-  clip: 'rect(0,0,0,0)',
-  whiteSpace: 'nowrap' as const,
-  borderWidth: 0,
-};
 
 const getRouteParam = (value: string | string[] | undefined): string => {
   if (Array.isArray(value)) return value[0] ?? '';
@@ -471,6 +460,19 @@ export default function QuestByIdScreen() {
   // ветках свой InstantSEO (со своим robots/canonical), и отложенный патч его перетирал.
   useQuestHeadSync(isFocused && !isLoading && Boolean(bundle), seo, canonical, seoImage);
 
+  // Generated quest HTML owns the no-JS H1 until the real bundle is ready.
+  // Its section lives outside #root and therefore survives hydration unless the
+  // route removes it explicitly, leaving two H1 nodes in the hydrated document.
+  useWebLayoutEffect(() => {
+    if (!isFocused || isLoading || !bundle || Platform.OS !== 'web' || typeof document === 'undefined') return;
+    document
+      .querySelectorAll('section[data-ssg-quest-intro="true"], h1[data-ssg-travel-h1="true"]')
+      .forEach((node) => node.remove());
+    document
+      .querySelectorAll('style[data-ssg-quest-intro-style="true"]')
+      .forEach((node) => node.remove());
+  }, [bundle, isFocused, isLoading]);
+
   const reviewsModal = (
     <QuestReviewsModal questId={questId} visible={reviewsVisible} onClose={() => setReviewsVisible(false)} />
   );
@@ -498,7 +500,6 @@ export default function QuestByIdScreen() {
             additionalTags={structuredDataTags}
           />
         ) : null}
-        {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
         {Platform.OS === 'web' ? (
           <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primaryDark} /></View>}>
             <QuestWizardComponent
@@ -571,7 +572,6 @@ export default function QuestByIdScreen() {
             additionalTags={structuredDataTags}
           />
         ) : null}
-        {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
         <QuestConsentGate
           title={bundle.title}
           coverUrl={bundle.coverUrl}
@@ -602,7 +602,6 @@ export default function QuestByIdScreen() {
           additionalTags={structuredDataTags}
         />
       ) : null}
-      {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
       {Platform.OS === 'web' ? (
         <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primaryDark} /></View>}>
           <QuestWizardComponent

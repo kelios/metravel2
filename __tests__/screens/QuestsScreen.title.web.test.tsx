@@ -2,12 +2,12 @@ import { render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 // #1618: the unfiltered `/quests` catalog's runtime title (document.title,
-// og:title, and the suffix-stripped sr-only <h1>) must match
+// and og:title) must match
 // scripts/generate-seo-pages.js's static `/quests` <title> byte-for-byte —
 // otherwise raw HTML (pre-hydration) and the hydrated head permanently
-// disagree for the bare route. Heavy children (map, content panel, sidebar)
-// are stubbed out: this test only cares about QuestsScreen's own head/H1
-// output, not the catalog list UI.
+// disagree for the bare route. The visible H1 is owned by QuestsContentPanel;
+// QuestsScreen must not add a second hidden raw heading beside it. Heavy
+// children (map, content panel, sidebar) are stubbed out here.
 jest.mock('expo-router', () => ({
   useIsFocused: () => true,
 }))
@@ -64,11 +64,10 @@ describe('QuestsScreen default catalog head (#1618)', () => {
     })
   })
 
-  it('keeps the sr-only <h1> text in sync with the title, suffix stripped', () => {
+  it('does not add a hidden raw <h1> beside the visible content-panel heading', () => {
     const QuestsScreen = loadQuestsScreen()
     const { UNSAFE_root } = render(<QuestsScreen />)
 
-    const h1 = UNSAFE_root.findByType('h1' as never)
-    expect(h1.props.children).toBe('Городские квесты и маршруты с заданиями')
+    expect(UNSAFE_root.findAll((node) => node.type === 'h1')).toHaveLength(0)
   })
 })

@@ -150,6 +150,7 @@ describe('Quest screen title sync', () => {
       goToRegister: jest.fn(),
     })
     document.title = 'Energylandia - польский Диснейленд.'
+    document.body.innerHTML = ''
     document.head.innerHTML = [
       '<meta name="description" content="old desc">',
       '<meta property="og:title" content="Energylandia - польский Диснейленд.">',
@@ -253,5 +254,28 @@ describe('Quest screen title sync', () => {
     expect(typeof wizardProps.onGuestRegister).toBe('function')
     expect(document.title).toBe('Минск: что посмотреть — Тайна Свислочского Цмока: Легенда…')
     expect(document.querySelector('meta[name="robots"]')).toBeNull()
+  })
+
+  it('removes the no-JS SSG heading and leaves the H1 to the wizard', () => {
+    // H1 страницы — это видимый заголовок самого визарда (`questWizardShell`:
+    // RNW рендерит role=heading + aria-level настоящим тегом). Роут своего
+    // заголовка не рисует: отдельный видимый блок дублировал заголовок панели и
+    // лежал во всю ширину страницы мимо контейнера визарда.
+    document.body.innerHTML = [
+      '<section data-ssg-quest-intro="true"><h1>Static quest title</h1></section>',
+      '<h1 data-ssg-travel-h1="true" style="position:absolute;width:1px;height:1px">Hidden fallback</h1>',
+    ].join('')
+    document.head.insertAdjacentHTML(
+      'beforeend',
+      '<style data-ssg-quest-intro-style="true">[data-ssg-quest-intro]{display:none}</style>',
+    )
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+
+    const { UNSAFE_root } = render(<QuestScreen />)
+
+    expect(UNSAFE_root.findAll((node) => node.type === 'h1')).toHaveLength(0)
+    expect(document.querySelector('section[data-ssg-quest-intro="true"]')).toBeNull()
+    expect(document.querySelector('h1[data-ssg-travel-h1="true"]')).toBeNull()
+    expect(document.querySelector('style[data-ssg-quest-intro-style="true"]')).toBeNull()
   })
 })

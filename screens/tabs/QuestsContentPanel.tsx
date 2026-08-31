@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -24,6 +24,7 @@ import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
 
+const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 type MapPoint = {
     id?: string | number;
@@ -122,7 +123,7 @@ export default function QuestsContentPanel({
     // The no-JS catalog is intentionally visible in generated HTML. Once the
     // interactive catalog mounts, remove only its explicitly marked SSG nodes
     // so users and assistive technology do not see a duplicate quest listing.
-    useEffect(() => {
+    useWebLayoutEffect(() => {
         if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
         const listing = document.querySelector('section[data-ssg-quests-listing="true"]');
@@ -181,7 +182,7 @@ export default function QuestsContentPanel({
                         style={styles.contentTitle}
                         numberOfLines={2}
                         accessibilityRole="header"
-                        {...({ 'aria-level': 2 } as Record<string, unknown>)}
+                        {...({ 'aria-level': 1 } as Record<string, unknown>)}
                         testID="quests-content-title"
                     >
                         {searchActive

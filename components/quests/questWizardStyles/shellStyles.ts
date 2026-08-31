@@ -1,6 +1,32 @@
 import { Platform } from 'react-native';
 import { type QuestColors, SPACING } from './shared';
 
+/**
+ * Ряд действий боковой панели: шрифт −/+, печать, GPX, «открыть в приложении»,
+ * офлайн-загрузка и сброс. Семь кружков по 44dp — минимум тач-таргета (#1274),
+ * ужимать их нельзя.
+ */
+export const COMPACT_SIDEBAR_ACTION_COUNT = 7;
+export const COMPACT_SIDEBAR_ACTION_SIZE = 44;
+/**
+ * Правая граница панели входит в её ширину (`box-sizing: border-box`), поэтому
+ * попадает в формулу наравне с отступами: без неё контента оказывалось 331px
+ * против нужных 332px, и седьмая кнопка срывалась на вторую строку из-за
+ * одного пикселя.
+ */
+export const COMPACT_SIDEBAR_BORDER_WIDTH = 1;
+/**
+ * Ширина панели считается из ряда действий, а не наоборот. На прежних 300px
+ * контент был 284px против необходимых 332px, и ряд срывался на вторую строку:
+ * пять кнопок сверху, две снизу. Ширина, выведенная формулой, не разъедется при
+ * добавлении кнопки — её держит `questCompactSidebarActionRow.test.ts`.
+ */
+export const COMPACT_SIDEBAR_WIDTH =
+    SPACING.sm * 2 +
+    COMPACT_SIDEBAR_BORDER_WIDTH +
+    COMPACT_SIDEBAR_ACTION_COUNT * COMPACT_SIDEBAR_ACTION_SIZE +
+    (COMPACT_SIDEBAR_ACTION_COUNT - 1) * SPACING.xs;
+
 export const createShellStyles = (colors: QuestColors, isMobile: boolean, _screenW: number) => ({
     container: {
         flex: 1,
@@ -20,10 +46,10 @@ export const createShellStyles = (colors: QuestColors, isMobile: boolean, _scree
         }),
     },
     compactSidebar: {
-        width: 300,
+        width: COMPACT_SIDEBAR_WIDTH,
         flexShrink: 0,
         backgroundColor: colors.surface,
-        borderRightWidth: 1,
+        borderRightWidth: COMPACT_SIDEBAR_BORDER_WIDTH,
         borderRightColor: colors.borderLight,
         paddingHorizontal: SPACING.sm,
         paddingTop: SPACING.sm,

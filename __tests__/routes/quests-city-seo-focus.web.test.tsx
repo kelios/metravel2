@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { Platform } from 'react-native'
+import { Platform, Text } from 'react-native'
 import { render } from '@testing-library/react-native'
 
 const mockUseIsFocused = jest.fn(() => true)
@@ -132,6 +132,7 @@ describe('quest city SEO focus lifecycle', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
+    document.body.innerHTML = ''
     document.head.innerHTML = [
       `<meta name="description" content="${GENERIC_DESCRIPTION}">`,
       '<meta name="description" content="Generic duplicate">',
@@ -175,5 +176,27 @@ describe('quest city SEO focus lifecycle', () => {
     for (const selector of DESCRIPTION_SELECTORS) {
       expect(document.querySelectorAll(selector)).toHaveLength(0)
     }
+  })
+
+  it('keeps one visible runtime H1 and removes only the stale shared SSG heading', () => {
+    document.body.innerHTML = [
+      '<section data-ssg-quest-city="true"><h1>Static city heading</h1></section>',
+      '<h1 data-unrelated-heading="true">Unrelated heading</h1>',
+    ].join('')
+    document.head.insertAdjacentHTML(
+      'beforeend',
+      '<style data-ssg-quest-city-style="true">[data-ssg-quest-city]{display:none}</style>',
+    )
+
+    const { UNSAFE_root } = render(<QuestsByCityScreen />)
+
+    expect(document.querySelector('section[data-ssg-quest-city="true"]')).toBeNull()
+    expect(document.querySelector('style[data-ssg-quest-city-style="true"]')).toBeNull()
+    expect(document.querySelector('h1[data-unrelated-heading="true"]')?.textContent).toBe('Unrelated heading')
+    expect(
+      UNSAFE_root.findAll((node) =>
+        node.type === Text && node.props.accessibilityRole === 'header' && node.props['aria-level'] === 1,
+      ),
+    ).toHaveLength(1)
   })
 })

@@ -327,7 +327,18 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
   return (
     <View style={styles.compactSidebar}>
       <View style={styles.compactSidebarHeader}>
-        <Text style={styles.compactSidebarTitle} numberOfLines={2}>{title}</Text>
+        {/* Заголовок квеста — единственный H1 страницы в этой раскладке. RNW
+            превращает role=heading + aria-level в настоящий тег <h1>, поэтому
+            отдельный видимый блок над визардом не нужен: он дублировал этот
+            заголовок и лежал во всю ширину страницы мимо контейнера. */}
+        <Text
+          style={styles.compactSidebarTitle}
+          numberOfLines={2}
+          accessibilityRole="header"
+          {...({ 'aria-level': 1 } as Record<string, unknown>)}
+        >
+          {title}
+        </Text>
         {ratingSlot ?? null}
         {completionSlot ?? null}
         <View style={styles.compactSidebarActions}>
@@ -506,6 +517,25 @@ function QuestFontScaleControl({
   )
 }
 
+/**
+ * Телефонная раскладка визарда не показывает название квеста нигде: блок
+ * `headerIdentity` рендерится только при `!isMobile` или при наличии слотов
+ * рейтинга/завершения. Видимого H1 там взять неоткуда, поэтому на телефоне
+ * страница получает скрытый — ровно тот, что стоял здесь до правки. На
+ * десктопе H1 видимый: им становится сам заголовок панели.
+ */
+const srOnlyHeadingStyle: React.CSSProperties = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0,0,0,0)',
+  whiteSpace: 'nowrap',
+  borderWidth: 0,
+}
+
 export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   const {
     colors,
@@ -544,6 +574,9 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
 
   return (
     <View style={styles.header}>
+      {Platform.OS === 'web' && isMobile ? (
+        <h1 style={srOnlyHeadingStyle}>{title}</h1>
+      ) : null}
       <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
         {(!isMobile || hasHeaderMeta) && (
           <View
@@ -553,7 +586,12 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             ]}
           >
             {!isMobile && (
-              <Text style={styles.title} numberOfLines={1}>
+              <Text
+                style={styles.title}
+                numberOfLines={1}
+                accessibilityRole="header"
+                {...({ 'aria-level': 1 } as Record<string, unknown>)}
+              >
                 {title}
               </Text>
             )}

@@ -71,7 +71,14 @@ export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ra
         />
       ) : null}
 
-      <Text style={styles.title}>{title}</Text>
+      {/* Экран согласия рендерится вместо визарда, поэтому H1 страницы здесь его. */}
+      <Text
+        style={styles.title}
+        accessibilityRole="header"
+        {...({ 'aria-level': 1 } as Record<string, unknown>)}
+      >
+        {title}
+      </Text>
       {ratingSlot}
       {completionSlot}
 

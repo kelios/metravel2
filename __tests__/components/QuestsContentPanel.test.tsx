@@ -150,7 +150,7 @@ describe('QuestsContentPanel', () => {
         expect(getByText('Квесты: Минск')).toBeTruthy();
         expect(queryByText('Квесты в городе Минск')).toBeNull();
         expect(heading.props.accessibilityRole).toBe('header');
-        expect(heading.props['aria-level']).toBe(2);
+        expect(heading.props['aria-level']).toBe(1);
     });
 
     it('shows a geolocation-disabled banner without a radius circle', () => {
