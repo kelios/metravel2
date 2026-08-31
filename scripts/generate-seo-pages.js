@@ -1580,8 +1580,9 @@ function injectJsonLd(baseHtml, payload, marker) {
   return applyHtmlFragment(baseHtml, '</head>', `${scriptTag}\n`, 'before');
 }
 
-function buildTravelArticleJsonLd({ title, description, canonical, image, travel }) {
-  if (!title || !canonical) return null;
+function buildTravelArticleJsonLd({ headline, description, canonical, image, travel }) {
+  const cleanHeadline = String(headline || '').trim();
+  if (!cleanHeadline || !canonical) return null;
 
   const authorName =
     String(
@@ -1595,7 +1596,7 @@ function buildTravelArticleJsonLd({ title, description, canonical, image, travel
   const payload = {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: String(title).trim(),
+    headline: cleanHeadline,
     description: String(description || '').trim(),
     mainEntityOfPage: canonical,
     url: canonical,
@@ -3559,7 +3560,7 @@ async function main() {
       const htmlWithArticleJsonLd = injectJsonLd(
         htmlWithBreadcrumb,
         buildTravelArticleJsonLd({
-          title,
+          headline: name || 'Путешествие',
           description,
           canonical,
           image,

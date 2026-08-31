@@ -1001,7 +1001,7 @@ describe('travel SSR SEO helpers', () => {
 
   it('buildTravelArticleJsonLd builds page-level Article schema for travel pages', () => {
     const payload = buildTravelArticleJsonLd({
-      title: 'Тропа ведьм | Metravel',
+      headline: 'Тропа ведьм',
       description: 'Подробный маршрут по Harzer Hexenstieg',
       canonical: 'https://metravel.by/travels/tropa-vedm',
       image: 'https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg',
@@ -1013,13 +1013,55 @@ describe('travel SSR SEO helpers', () => {
     })
 
     expect(payload['@type']).toBe('Article')
-    expect(payload.headline).toBe('Тропа ведьм | Metravel')
+    expect(payload.headline).toBe('Тропа ведьм')
+    expect(payload.datePublished).toBe('2026-03-01T09:00:00.000Z')
+    expect(payload.dateModified).toBe('2026-03-05T10:00:00.000Z')
     expect(payload.author.name).toBe('Julia')
     // #1221: JSON-LD тоже читают краулеры (в том числе Google Images), поэтому ширина
     // производной обязательна и здесь — «голый» адрес отдаёт мастер с `no-store`.
     expect(payload.image).toEqual([
       'https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg?w=1280',
     ])
+  })
+
+  it('keeps branded/truncated document titles out of the raw SSG Article headline (#1620)', () => {
+    const headlines = [
+      'Тропа ведьм',
+      'Маршрут на 1 день: экотропа Ельня и усадьбы Нитославичи и Бенюличи',
+    ]
+
+    for (const headline of headlines) {
+      const title = buildSeoTitle(headline)
+      const html = injectJsonLd(
+        injectMeta(MINIMAL_BASE, {
+          title,
+          description: 'Описание маршрута',
+          canonical: 'https://metravel.by/travels/test-route',
+        }),
+        buildTravelArticleJsonLd({
+          headline,
+          description: 'Описание маршрута',
+          canonical: 'https://metravel.by/travels/test-route',
+          travel: {},
+        }),
+        'travel-article',
+      )
+
+      const documentTitle = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]
+      const rawArticle = html.match(
+        /<script[^>]*data-seo-jsonld="travel-article"[^>]*>([\s\S]*?)<\/script>/i,
+      )?.[1]
+      const article = JSON.parse(rawArticle || '{}')
+
+      expect(documentTitle).toBe(title)
+      expect(article.headline).toBe(headline)
+      expect(article.headline).not.toMatch(/\|\s*Metravel$/i)
+      expect(article.headline).not.toMatch(/…$/)
+      expect(article).not.toHaveProperty('datePublished')
+    }
+
+    expect(buildSeoTitle(headlines[0])).toMatch(/\|\s*Metravel$/)
+    expect(buildSeoTitle(headlines[1])).toMatch(/…$/)
   })
 
   // The SSG body sanitizer keeps a small tag allowlist and drops every
