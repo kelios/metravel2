@@ -14,7 +14,7 @@ export const questShareStaticResources = {
   "finaleShare.channelShort.native": "Яшчэ",
   "finaleShare.channelShort.download": "Карцінка",
   "finaleShare.channelShort.instagram": "Stories",
-  "finaleShare.shareText": "Квэст «{{title}}» пройдзены: {{done}} з {{total}} пунктаў. Маршрут і іншыя квэсты — metravel.by",
+  "finaleShare.shareText": "Квэст «{{title}}» пройдзены. Пунктаў: {{done}} з {{total}}. Маршрут і іншыя квэсты — metravel.by",
   "finaleShare.linkCopied": "Спасылка скапіравана",
   "finaleShare.copyFailed": "Не ўдалося скапіраваць",
   "finaleShare.imageSaved": "Карцінка захавана",

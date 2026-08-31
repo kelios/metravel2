@@ -14,7 +14,7 @@ export const questShareStaticResources = {
   "finaleShare.channelShort.native": "More",
   "finaleShare.channelShort.download": "Image",
   "finaleShare.channelShort.instagram": "Stories",
-  "finaleShare.shareText": "Quest «{{title}}» completed: {{done}} of {{total}} points. Route and more quests — metravel.by",
+  "finaleShare.shareText": "Quest «{{title}}» completed. Points: {{done}} of {{total}}. Route and more quests — metravel.by",
   "finaleShare.linkCopied": "Link copied",
   "finaleShare.copyFailed": "Couldn't copy",
   "finaleShare.imageSaved": "Image saved",
