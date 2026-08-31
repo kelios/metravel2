@@ -2,7 +2,7 @@
 // API модуль для работы с квестами через бэкенд
 import { apiClient, ApiError } from '@/api/client';
 import { LONG_TIMEOUT } from '@/api/apiConfig';
-import { unwrapList } from '@/api/clientResponse';
+import { readEnvelopeTotal, unwrapList } from '@/api/clientResponse';
 import type { TravelMediaGroup, TravelMediaImage } from '@/types/types';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
@@ -437,23 +437,31 @@ function nextPageNumber<T>(res: PaginatedEnvelope<T>): number | null {
     return match ? Number(match[1]) : null;
 }
 
-/** Размер выборки из конверта; порядок `total`→`count` тот же, что у `unwrapPaginated`. */
-function envelopeTotal<T>(res: PaginatedEnvelope<T>): number | null {
-    if (typeof res?.total === 'number') return res.total;
-    if (typeof res?.count === 'number') return res.count;
-    return null;
-}
+/**
+ * Сколько страниц просить, не дожидаясь ответа первой.
+ *
+ * Номер следующей страницы известен только из уже полученного ответа, поэтому
+ * одного лишь `count` мало: на каталоге ровно в две страницы (165 квестов при
+ * странице в 100 — замер прода 31.08.2026) вторая всё равно уходила бы после
+ * первой, и обмены складывались бы как раньше (#1659). Просим вторую сразу.
+ * Лишний запрос возможен единственным образом — если каталог усохнет до одной
+ * страницы; тогда ответ на несуществующую страницу гасится и результат тот же.
+ */
+const CATALOG_EAGER_PAGES = 2;
 
 /**
  * Бэкенд перевёл списочные эндпоинты на пагинацию ({data/results, next}) — разворачиваем конверт и дочитываем все страницы.
  *
- * Страницы со второй и до последней уходят ОДНОВРЕМЕННО: первый ответ приносит
- * размер выборки, а значит их число известно сразу и ждать друг друга им незачем.
- * Раньше цикл узнавал следующую страницу только из уже полученного ответа, и на
- * профиле каталог из 165 квестов стоил двух последовательных ожиданий (#1659).
- * Ответ без размера выборки читается по-старому, страница за страницей.
+ * Первые `eagerPages` страниц уходят ОДНОВРЕМЕННО, не дожидаясь друг друга, а
+ * дальше число страниц берётся из размера выборки первого ответа, и остаток
+ * тоже читается одним заходом. Ответ без размера выборки читается по-старому,
+ * страница за страницей.
  */
-async function fetchAllPages<T>(path: string, maxPages = 20, options?: { signal?: AbortSignal }): Promise<T[]> {
+async function fetchAllPages<T>(
+    path: string,
+    maxPages = 20,
+    options?: { signal?: AbortSignal; eagerPages?: number },
+): Promise<T[]> {
     const getPage = (page: number) => {
         const url = buildListPageUrl(path, page);
         return options?.signal
@@ -461,40 +469,66 @@ async function fetchAllPages<T>(path: string, maxPages = 20, options?: { signal?
             : apiClient.get<T[] | PaginatedEnvelope<T>>(url);
     };
 
-    const first = await getPage(1);
+    // Страница, существование которой ещё не подтверждено ссылкой `next`: у DRF
+    // несуществующая страница — это 404 «Invalid page», и ронять из-за неё весь
+    // каталог нельзя. `null` означает «дальше дочитываем последовательно».
+    const getPageIfExists = async (page: number) => {
+        try {
+            return await getPage(page);
+        } catch {
+            return null;
+        }
+    };
+
+    const eager = Math.min(Math.max(options?.eagerPages ?? 1, 1), maxPages);
+    const [first, ...eagerRest] = await Promise.all([
+        getPage(1),
+        ...Array.from({ length: eager - 1 }, (_, index) => getPageIfExists(index + 2)),
+    ]);
+
     if (Array.isArray(first)) return [...first];
 
     // Копия обязательна: `unwrapList` отдаёт сам массив из конверта, и `push`
     // дописывал бы записи следующих страниц в объект ответа первой.
     const out = [...unwrapList<T>(first)];
+    const pageSize = out.length;
+    // Первая страница оказалась последней — ответы на спекулятивные не нужны.
     if (nextPageNumber(first) === null) return out;
 
-    const total = envelopeTotal(first);
-    const pageSize = out.length;
-    let requested = 1;
-    let page = nextPageNumber(first);
+    // Спекулятивные страницы засчитываем только подряд: пропуск в середине
+    // сломал бы порядок записей, поэтому с первого промаха дочитываем заново.
+    let read = 1;
+    let lastRead: PaginatedEnvelope<T> = first;
+    for (const res of eagerRest) {
+        if (!res || Array.isArray(res)) break;
+        out.push(...unwrapList<T>(res));
+        lastRead = res;
+        read += 1;
+    }
 
+    const total = readEnvelopeTotal(first);
     if (total !== null && pageSize > 0) {
         // Размер страницы берём фактический, а не запрошенный: бэкенд вправе
         // урезать `page_size` своим максимумом, и тогда страниц окажется больше.
         const lastPage = Math.min(Math.ceil(total / pageSize), maxPages);
         const rest = await Promise.all(
-            Array.from({ length: Math.max(lastPage - 1, 0) }, (_, i) => getPage(i + 2)),
+            Array.from({ length: Math.max(lastPage - read, 0) }, (_, index) => getPage(read + index + 1)),
         );
         // `Promise.all` держит порядок массива, поэтому записи склеиваются
         // ровно в том же порядке, что и при последовательном чтении.
-        for (const res of rest) out.push(...unwrapList<T>(res));
-        requested = Math.max(lastPage, 1);
-
-        // Если размер выборки разошёлся с тем, что бэкенд реально отдаёт, хвост
-        // дочитывается по-старому: лишний последовательный запрос дешевле
-        // молча потерянных записей.
-        const last = rest.length ? rest[rest.length - 1] : first;
-        page = Array.isArray(last) ? null : nextPageNumber(last);
-        if (page !== null && page <= lastPage) page = null;
+        for (const res of rest) {
+            out.push(...unwrapList<T>(res));
+            if (!Array.isArray(res)) lastRead = res;
+        }
+        read = Math.max(read, lastPage);
     }
 
-    for (let i = requested; i < maxPages && page !== null; i++) {
+    // Если размер выборки разошёлся с тем, что бэкенд реально отдаёт, хвост
+    // дочитывается по-старому: лишний последовательный запрос дешевле молча
+    // потерянных записей.
+    let page = nextPageNumber(lastRead);
+    if (page !== null && page <= read) page = null;
+    for (let i = read; i < maxPages && page !== null; i++) {
         const res = await getPage(page);
         if (Array.isArray(res)) {
             out.push(...res);
@@ -513,7 +547,7 @@ async function fetchAllPages<T>(path: string, maxPages = 20, options?: { signal?
  */
 export async function fetchQuestsList(options?: { signal?: AbortSignal }): Promise<ApiQuestMeta[]> {
     try {
-        const list = await fetchAllPages<ApiQuestMeta>('/quests/', 20, options);
+        const list = await fetchAllPages<ApiQuestMeta>('/quests/', 20, { ...options, eagerPages: CATALOG_EAGER_PAGES });
         const withDefaults = list.map(withQuestMetaDefaults);
         void writeCachedQuestsList(withDefaults);
         return withDefaults;
@@ -569,7 +603,7 @@ export async function fetchQuestsCompactCatalog(
     options?: { signal?: AbortSignal },
 ): Promise<ApiQuestMeta[]> {
     try {
-        const list = await fetchAllPages<ApiQuestMeta>('/quests/?compact=1', 20, options);
+        const list = await fetchAllPages<ApiQuestMeta>('/quests/?compact=1', 20, { ...options, eagerPages: CATALOG_EAGER_PAGES });
         return list.map(withQuestMetaDefaults);
     } catch (err) {
         // Офлайн-контракт тот же, что у полного списка: лучше показать кэш

@@ -40,16 +40,29 @@ export const unwrapList = <T = unknown>(payload: unknown): T[] => {
     return [];
 };
 
+/**
+ * Размер выборки из конверта по приоритету `total`→`count`, либо `null`, если
+ * бэкенд его не прислал вовсе.
+ *
+ * Отличать «выборка пуста» от «размера нет» нужно тем, кто по этому размеру
+ * принимает решение, а не показывает число: постраничное чтение в `api/quests`
+ * так узнаёт, известно ли ему число страниц заранее. `unwrapPaginated` ниже
+ * зовёт эту же читалку, чтобы приоритет полей не разъехался на два места.
+ */
+export const readEnvelopeTotal = (payload: unknown): number | null => {
+    const rec = asEnvelopeRecord(payload);
+    if (!rec) return null;
+    if (!('total' in rec) && !('count' in rec)) return null;
+    const total = coerceCount(rec.total, coerceCount(rec.count, Number.NaN));
+    return Number.isFinite(total) ? total : null;
+};
+
 /** Как `unwrapList`, но с total из `total`→`count`→длины списка. */
 export const unwrapPaginated = <T = unknown>(
     payload: unknown,
 ): { items: T[]; total: number } => {
     const items = unwrapList<T>(payload);
-    const rec = asEnvelopeRecord(payload);
-    const total = rec
-        ? coerceCount(rec.total, coerceCount(rec.count, items.length))
-        : items.length;
-    return { items, total };
+    return { items, total: readEnvelopeTotal(payload) ?? items.length };
 };
 
 export const parseErrorBody = (text: string): unknown => {
