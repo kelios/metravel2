@@ -25,6 +25,7 @@ import {
 } from './useHomeHeroSlider'
 import { HOME_HERO_MEDIA_SLOT_RATIO, type QuickFilterParams } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
+import { readViewportSize } from '@/utils/viewportMetrics'
 
 
 const IS_WEB = Platform.OS === 'web'
@@ -56,7 +57,13 @@ export {
 } from './useHomeHeroSlider'
 
 function getWebViewportHeight() {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') return window.innerHeight
+  // #1643: чтение высоты идёт через общий кэш вьюпорта — прямой
+  // `window.innerHeight` заставляет браузер пересчитать раскладку, а на boot
+  // главной таких читателей несколько подряд.
+  if (Platform.OS === 'web') {
+    const size = readViewportSize()
+    if (size) return size.height
+  }
   return Dimensions.get('window').height
 }
 

@@ -313,12 +313,52 @@ function validateSocialMeta(html, title, desc, canonical, pageType) {
   return issues
 }
 
-function validateRobots(html, pageType) {
+/**
+ * Routes the site deliberately keeps out of the index, where `noindex` is the
+ * intended state and not a regression.
+ *
+ * The articles section is closed end to end: `scripts/generate-seo-pages.js`
+ * stamps `noindex, nofollow` on `/articles`, on the id-less `/article` shell and
+ * on every generated `/article/<id>` page, while `scripts/generate-sitemap.js`
+ * emits none of them. This gate, though, hardcodes `/articles` into its core
+ * route queue and treats every `page`/`article` as indexable, so it failed each
+ * deploy on `robots.noindex` over a state the site had chosen on purpose.
+ * `/places` is closed the same way (audit 2026-08-08) and would fail identically
+ * the moment it entered the queue.
+ *
+ * Keep in sync with the `robots` fields in `scripts/generate-seo-pages.js`.
+ */
+const INTENTIONALLY_NOINDEX_PATHS = new Set(['/articles', '/article', '/places'])
+
+function isIntentionallyNoindex(url) {
+  if (!url) return false
+  let pathname
+  try {
+    pathname = new URL(url).pathname
+  } catch {
+    return false
+  }
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  return INTENTIONALLY_NOINDEX_PATHS.has(normalized) || normalized.startsWith('/article/')
+}
+
+function validateRobots(html, pageType, url) {
   const robots = extractMetaContents(html, 'name', 'robots')[0] || ''
   const issues = []
+  const deliberatelyClosed = isIntentionallyNoindex(url)
   if ((pageType === 'home' || pageType === 'search' || pageType === 'map' || pageType === 'page' || pageType === 'travel' || pageType === 'article') &&
-      /noindex/i.test(robots)) {
+      /noindex/i.test(robots) && !deliberatelyClosed) {
     issues.push({ severity: 'error', code: 'robots.noindex', message: `Indexable page has robots="${robots}"` })
+  }
+  // A closed route that quietly reopens is the same defect mirrored: `/places`
+  // was found live as an indexable page with 605 characters of text and no
+  // sitemap entry, which is how it reached the 2026-08-08 audit at all.
+  if (deliberatelyClosed && !/noindex/i.test(robots)) {
+    issues.push({
+      severity: 'error',
+      code: 'robots.closed.indexable',
+      message: `Deliberately closed route has robots="${robots || '(none)'}"`,
+    })
   }
   if (pageType === 'auth' && !/noindex/i.test(robots)) {
     issues.push({ severity: 'error', code: 'robots.auth', message: 'Auth page must be noindex' })
@@ -471,7 +511,7 @@ function validatePageResult(result) {
   issues.push(...validateDescription(desc, descriptions.length))
   issues.push(...validateCanonical(canonical, html, result.finalUrl))
   issues.push(...validateSocialMeta(html, title, desc, canonical, pageType))
-  issues.push(...validateRobots(html, pageType))
+  issues.push(...validateRobots(html, pageType, result.finalUrl))
   issues.push(...validateCorePageH1(html, result.finalUrl))
 
   if (pageType === 'travel') {
@@ -638,6 +678,7 @@ if (typeof module !== 'undefined' && module.exports) {
     extractTitle,
     extractCanonical,
     extractMetaContents,
+    isIntentionallyNoindex,
     normalizeComparableUrl,
     normalizeFetchedUrl,
     parseSitemapUrls,

@@ -5,6 +5,7 @@ const {
   validateCorePageH1,
   validateHomeAssets,
   validatePageResult,
+  validateRobots,
   validateSitemapResponse,
   validateTravelHtml,
 } = require('@/scripts/post-deploy-seo-check')
@@ -172,5 +173,54 @@ describe('post-deploy SEO check helpers', () => {
     })
 
     expect(result.issues.map((issue: any) => issue.code)).toContain('http.redirect')
+  })
+
+  describe('robots expectations', () => {
+    const CLOSED = '<meta name="robots" content="noindex, nofollow"/>'
+    const OPEN = '<meta name="robots" content="max-image-preview:large"/>'
+    const codes = (html: string, pageType: string, url: string) =>
+      validateRobots(html, pageType, url).map((issue: any) => issue.code)
+
+    // The articles section is closed end to end by generate-seo-pages.js and is
+    // absent from the sitemap, but the gate hardcodes /articles into its core
+    // queue — so it used to report the intended state as robots.noindex on
+    // every deploy.
+    it.each([
+      ['https://metravel.by/articles', 'page'],
+      ['https://metravel.by/articles/', 'page'],
+      ['https://metravel.by/article', 'page'],
+      ['https://metravel.by/article/1', 'article'],
+      ['https://metravel.by/places', 'page'],
+    ])('accepts noindex on the deliberately closed %s', (url, pageType) => {
+      expect(codes(CLOSED, pageType, url)).toEqual([])
+    })
+
+    it('still rejects noindex on routes that must stay indexable', () => {
+      expect(codes(CLOSED, 'map', 'https://metravel.by/map')).toEqual(['robots.noindex'])
+      expect(codes(CLOSED, 'travel', 'https://metravel.by/travels/test')).toEqual([
+        'robots.noindex',
+      ])
+      expect(codes(CLOSED, 'home', 'https://metravel.by/')).toEqual(['robots.noindex'])
+    })
+
+    // The mirror defect: /places reached the 2026-08-08 audit precisely because
+    // a closed route was live and indexable with no sitemap entry.
+    it('rejects a closed route that quietly reopens', () => {
+      expect(codes(OPEN, 'page', 'https://metravel.by/articles')).toEqual([
+        'robots.closed.indexable',
+      ])
+      expect(codes('<title>x</title>', 'article', 'https://metravel.by/article/1')).toEqual([
+        'robots.closed.indexable',
+      ])
+    })
+
+    it('keeps the auth contract and falls back to strict when the URL is unknown', () => {
+      expect(codes('<title>x</title>', 'auth', 'https://metravel.by/login')).toEqual([
+        'robots.auth',
+      ])
+      expect(validateRobots(CLOSED, 'page', undefined).map((i: any) => i.code)).toEqual([
+        'robots.noindex',
+      ])
+    })
   })
 })

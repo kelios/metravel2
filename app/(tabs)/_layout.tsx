@@ -13,13 +13,21 @@ import {
     type HeaderViewportBand,
 } from '@/components/layout/headerLayoutContract';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
+import { readViewportWidth } from '@/utils/viewportMetrics';
 
 const getHeaderHeightCacheKey = (variant: HeaderVariant) => `mt:header-height:${variant}`;
 
+// #1643: ширина берётся из общего кэша вьюпорта, а не прямым
+// `window.innerWidth`. Прямое чтение — forced layout, а этот хелпер зовётся из
+// двух эффектов шапки поверх такого же чтения в сторе `useResponsive`: прод-профиль
+// 2026-08-30 (mobile, CPU ×4) насчитал тут 18.0 мс на `/` и 42.1 мс на
+// travel-детали. Кэш сбрасывается на `resize`/`orientationchange`, поэтому
+// значение остаётся точным. Непригодное чтение (нет окна, 0/NaN) даёт
+// `compactRow` — тот же fallback, что стоял здесь для не-web.
 const getHeaderVariant = (pathname: string): HeaderVariant => {
     const width =
-        Platform.OS === 'web' && typeof window !== 'undefined'
-            ? window.innerWidth
+        Platform.OS === 'web'
+            ? readViewportWidth() ?? HEADER_LAYOUT_BREAKPOINTS.compactRow
             : HEADER_LAYOUT_BREAKPOINTS.compactRow;
     const isCompact = width < HEADER_LAYOUT_BREAKPOINTS.compactRow;
     const hasBar = shouldShowHeaderContextBar(pathname || '/', isCompact);
@@ -57,8 +65,15 @@ const isMapRoute = (pathname: string) => pathname === '/map' || pathname.startsW
 const shouldHideHeaderForMap = (pathname: string): boolean => {
     if (!isMapRoute(pathname)) return false;
     if (Platform.OS !== 'web') return true;
-    if (typeof window === 'undefined') return false; // SSR/desktop snapshot keeps header (no CLS for mobile-only hide)
-    return window.innerWidth < MAP_HEADER_MOBILE_BREAKPOINT;
+    // SSR/desktop snapshot keeps header (no CLS for mobile-only hide).
+    // `readViewportWidth()` отдаёт null не только без окна, но и когда браузер
+    // вернул 0/NaN (скрытая вкладка, панель нулевой ширины). Раньше нулевая
+    // ширина проходила как «мобильный» и прятала шапку; теперь непригодное
+    // чтение уходит в ту же ветку, что и SSR, то есть совпадает со статическим
+    // HTML и не может дать рассинхрон гидрации.
+    const width = readViewportWidth();
+    if (width === null) return false;
+    return width < MAP_HEADER_MOBILE_BREAKPOINT;
 };
 
 const Header = React.memo(function Header({ isNavigationTarget }: { isNavigationTarget: boolean }) {

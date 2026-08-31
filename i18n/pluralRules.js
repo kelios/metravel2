@@ -26,9 +26,24 @@ function selectPolishPluralCategory(count) {
   return 'many';
 }
 
+// Пул `Intl.PluralRules` (#1643): конструктор резолвит данные локали заново на
+// каждый вызов, а `selectPlural` зовётся в render'е списков десятками раз с
+// одним и тем же языковым тегом. Объект без состояния — переиспользуется.
+// Цена повторного конструктора мала (весь разогрев ICU приходится на первый),
+// поэтому это устранение лишней работы, а не рычаг TBT.
+const pluralRulesCache = new Map();
+
+function getPluralRules(locale) {
+  const cached = pluralRulesCache.get(locale);
+  if (cached) return cached;
+  const rules = new Intl.PluralRules(locale);
+  pluralRulesCache.set(locale, rules);
+  return rules;
+}
+
 function selectPluralCategory(count, locale) {
   if (typeof Intl.PluralRules === 'function') {
-    return new Intl.PluralRules(locale).select(count);
+    return getPluralRules(locale).select(count);
   }
 
   // Hermes in the current Android shell may not expose Intl.PluralRules. Keep

@@ -9,6 +9,7 @@ import {
 } from '@/components/travel/stableContent/htmlTransform'
 import { translate as i18nT } from '@/i18n'
 import { sampleDominantColor, toLetterboxFill } from '@/utils/mediaPlaceholderIndex'
+import { readViewportSize } from '@/utils/viewportMetrics'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
 import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
@@ -420,7 +421,12 @@ export function useStableContentWebEffects({
     // вьюпорта (их перемонтирование при обратном скролле дешевле постоянной нагрузки).
     const enforceCap = () => {
       if (mounted.length <= CAP) return
-      const viewportH = window.innerHeight || document.documentElement.clientHeight || 800
+      // #1643: прямой `window.innerHeight` — forced layout; на travel-детали одно
+      // такое чтение стоило 19.4 мс в окне boot (прод-профиль mobile CPU ×4).
+      // Общий кэш вьюпорта отдаёт то же число без пересчёта раскладки, цепочка
+      // фолбэков сохранена.
+      const viewportH =
+        readViewportSize()?.height || document.documentElement.clientHeight || 800
       while (mounted.length > CAP) {
         let worst: HTMLElement | null = null
         let worstD = -1
@@ -492,7 +498,9 @@ export function useStableContentWebEffects({
     // чем ждать первого колбэка IO, который в части движков не стреляет для
     // элементов, попавших во вьюпорт ещё до observe.
     const scan = () => {
-      const viewportH = window.innerHeight || document.documentElement.clientHeight || 0
+      // #1643: см. комментарий в `enforceCap` — общий кэш вместо forced layout.
+      const viewportH =
+        readViewportSize()?.height || document.documentElement.clientHeight || 0
       collectFacades().forEach((facade) => {
         const rect = facade.getBoundingClientRect()
         if (rect.top < viewportH + MARGIN && rect.bottom > -MARGIN) {

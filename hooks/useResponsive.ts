@@ -2,6 +2,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Dimensions, Platform } from 'react-native';
 import { METRICS } from '@/constants/layout';
 import { useHydrationReady, type HydrationReadyOptions } from '@/hooks/useHydrationReady';
+import { readViewportSize } from '@/utils/viewportMetrics';
 
 type Breakpoint = keyof typeof METRICS.breakpoints;
 type Orientation = 'portrait' | 'landscape';
@@ -43,14 +44,18 @@ type DimensionsSnapshot = {
   height: number;
 };
 
+// #1643: чтение `window.innerWidth/innerHeight` — forced layout, и во время
+// boot этот стор был не единственным читателем (см. `getHeaderVariant` в
+// `app/(tabs)/_layout.tsx`). Общий кэш в `utils/viewportMetrics` схлопывает
+// повторные чтения в один layout и сбрасывается ровно на `resize`/
+// `orientationchange` — то есть на тех событиях, которые единственные и меняют
+// размер вьюпорта. Проверки на конечность/положительность живут там же, форма
+// возврата прежняя.
 const getWebWindowSnapshot = (): DimensionsSnapshot | null => {
   if (Platform.OS !== 'web') return null;
-  if (typeof window === 'undefined') return null;
-  const width = Number(window.innerWidth);
-  const height = Number(window.innerHeight);
-  if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
-  if (width <= 0 || height <= 0) return null;
-  return { width, height };
+  const size = readViewportSize();
+  if (!size) return null;
+  return { width: size.width, height: size.height };
 };
 
 let currentSnapshot: DimensionsSnapshot = (() => {
@@ -140,6 +145,11 @@ const ensureSubscription = () => {
     };
 
     // Force a sync update after attaching listeners to avoid "stuck" initial width.
+    // #1643: этот проход больше не платит forced layout. Слушатель инвалидации
+    // общего кэша вьюпорта вешается при САМОМ ПЕРВОМ чтении — то есть при
+    // инициализации этого модуля, раньше здешних подписок. Значит любой resize,
+    // случившийся между инициализацией и подпиской, кэш уже сбросил, и «залипшая»
+    // ширина, ради которой этот вызов и стоит, невозможна по построению.
     try {
       onResize();
     } catch {
