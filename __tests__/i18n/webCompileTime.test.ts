@@ -4,6 +4,7 @@ import path from 'node:path'
 import { transformSync } from '@babel/core'
 
 import i18n from '@/i18n/instance.web'
+import { ruResources } from '@/i18n/locales/ru'
 import type { TranslationKey } from '@/i18n/resources'
 import {
   getFixedTranslator,
@@ -103,5 +104,50 @@ describe('web compile-time localization', () => {
 
   it('does not expose an uninlined translation key to the user', () => {
     expect(translate('common:not-inlined' as TranslationKey)).toBe('Перевод недоступен')
+  })
+
+  /**
+   * #1675: инлайнер и рантайм считали имя namespace по-разному, и целый
+   * namespace (`questShareStatic`) рендерился на web как «Перевод недоступен».
+   * Расхождение спало полгода, потому что на однословных файлах локали
+   * (`auth_static`, `home_static`) наивное правило совпадало с camelCase
+   * случайно. Гейт сверяет ПОЛНЫЙ список namespace'ов, а не отдельные ключи:
+   * иначе следующий двусловный файл повторит ту же историю.
+   */
+  it('names every namespace exactly as the runtime resolver does', () => {
+    const { loadCatalogs } = require('@/i18n/babel-inline-plugin') as {
+      loadCatalogs: (root: string) => { catalogs: Map<string, Map<string, string>> }
+    }
+    const inlined = loadCatalogs(process.cwd()).catalogs.get('ru')!
+    const inlinedNamespaces = new Set(
+      Array.from(inlined.keys(), (key) => key.slice(0, key.indexOf(':'))),
+    )
+
+    const missing = Object.keys(ruResources).filter(
+      (namespace) => !inlinedNamespaces.has(namespace),
+    )
+    expect(missing).toEqual([])
+  })
+
+  it('inlines the quest share namespace the sheet actually asks for', () => {
+    const result = transformSync(
+      `
+        import { translate as i18nT } from '@/i18n'
+        export const button = i18nT('questShareStatic:finaleShare.button')
+      `,
+      {
+        caller: { name: 'metro', platform: 'web' },
+        filename: path.resolve(process.cwd(), 'components/__i18n_quest_share_probe__.tsx'),
+      },
+    )
+
+    // Babel печатает кириллицу в выводе как `\uXXXX`, поэтому текст сверяем
+    // после развёртки escape-последовательностей, а не по сырому коду.
+    const decoded = (result?.code ?? '').replace(/\\u([0-9a-fA-F]{4})/g, (_match, hex: string) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    )
+    expect(decoded).toContain('Поделиться результатом')
+    expect(result?.code).toContain(`h:${hashTranslationKey('questShareStatic:finaleShare.button')}`)
+    expect(result?.code).not.toContain('questShareStatic:finaleShare.button')
   })
 })

@@ -86,6 +86,10 @@ const readObjectEntries = (filePath) => {
   return entries
 }
 
+/** `quest_share` → `questShare`: имя namespace обязано совпасть с ключом рантайма. */
+const toCamelCase = (value) =>
+  value.replace(/_([a-z0-9])/g, (_match, character) => character.toUpperCase())
+
 const loadCatalogs = (projectRoot) => {
   const cached = cache.get(projectRoot)
   if (cached) return cached
@@ -110,7 +114,13 @@ const loadCatalogs = (projectRoot) => {
       },
       {
         directory: path.join(localeRoot, 'static'),
-        namespace: (name) => `${name.replace(/_static$/, '')}Static`,
+        // Рантайм регистрирует статические каталоги camelCase-ключом:
+        // `quest_share_static.ts` → `questShareStatic` (см.
+        // `i18n/locales/<locale>/static/index.ts`). Отбрасывания `_static`
+        // хватало только однословным именам — двусловный файл получал
+        // `quest_shareStatic`, которого в рантайме нет, и весь namespace
+        // печатался на web как «Перевод недоступен» (#1675).
+        namespace: (name) => `${toCamelCase(name.replace(/_static$/, ''))}Static`,
       },
     ]
 
