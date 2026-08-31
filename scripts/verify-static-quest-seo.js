@@ -356,12 +356,52 @@ function sitemapHasUrl(xml, url) {
   return xml.includes(`<loc>${escaped}</loc>`)
 }
 
+/** Country landing aliases the backend sitemap actually publishes. */
+function sitemapCountryAliases(xml) {
+  const prefix = `${SITE_URL}/quests/country/`
+  const aliases = new Set()
+  for (const [, loc] of String(xml).matchAll(/<loc>([^<]+)<\/loc>/g)) {
+    const decoded = loc
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .trim()
+    if (!decoded.startsWith(prefix)) continue
+    const alias = decoded.slice(prefix.length).replace(/\/+$/, '')
+    if (alias && !alias.includes('/')) aliases.add(alias)
+  }
+  return aliases
+}
+
+/**
+ * Both directions of the FE↔BE alias contract, because the alias vocabulary is
+ * the contract. The frontend derives an alias from the English CLDR display name
+ * (`Intl.DisplayNames`), so `RU → russia`; a backend built on ISO 3166 official
+ * names produces `russian-federation` instead. The two agree for every country
+ * whose official name is a single word and diverge only where it carries extra
+ * words — which is why sampling belarus/poland/armenia/denmark passed #1606
+ * acceptance on 2026-08-31 while three sitemap URLs were already dead.
+ *
+ * A missing row only costs discovery. An extra row is worse: nothing serves that
+ * path, nginx falls back to the SPA shell, and Google is handed a
+ * "Квест не найден" page that still answers HTTP 200.
+ */
 function verifyQuestCountrySitemap(countryGroups, sitemapXml, required = false) {
   if (!required) return []
-  return countryGroups
-    .map((country) => `${SITE_URL}/quests/country/${country.countryAlias}`)
+  const expected = countryGroups.map((country) => country.countryAlias)
+  const failures = expected
+    .map((alias) => `${SITE_URL}/quests/country/${alias}`)
     .filter((canonical) => !sitemapHasUrl(sitemapXml, canonical))
     .map((canonical) => `${canonical}: missing from backend sitemap.xml`)
+
+  const known = new Set(expected)
+  for (const alias of sitemapCountryAliases(sitemapXml)) {
+    if (known.has(alias)) continue
+    failures.push(
+      `${SITE_URL}/quests/country/${alias}: in backend sitemap.xml but no catalog-derived landing (dead URL)`,
+    )
+  }
+  return failures
 }
 
 function verifyQuestHtml(html, expectedCanonical) {
@@ -595,6 +635,7 @@ if (typeof module !== 'undefined' && module.exports) {
     hasQuestIntroSection,
     hasQuestJsonLd,
     listTravelPageFiles,
+    sitemapCountryAliases,
     sitemapHasUrl,
     verifyQuestCityHtml,
     verifyQuestCountryHtml,

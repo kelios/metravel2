@@ -28,6 +28,7 @@ const {
   hasQuestCountryStandaloneContent,
   listTravelPageFiles,
   missingLandingQuestLinks,
+  sitemapCountryAliases,
   sitemapHasUrl,
   verifyQuestCityHtml,
   verifyQuestCountryHtml,
@@ -309,6 +310,48 @@ describe('quest country landing verification', () => {
       `<urlset><url><loc>${canonical}</loc></url></urlset>`,
       true,
     )).toEqual([])
+  })
+
+  // The alias vocabulary IS the contract. A backend on ISO 3166 official names
+  // publishes `russian-federation` where the frontend's CLDR display name gives
+  // `russia`; nothing serves that path, so nginx returns the SPA shell and the
+  // row is a dead URL answering HTTP 200. #1606 acceptance sampled only
+  // single-word countries, the only ones that cannot expose this.
+  it('rejects a sitemap row that no catalog-derived landing can serve', () => {
+    const countries = buildQuestCountryLandingGroups(quests)
+    const orphan = 'https://metravel.by/quests/country/belarus-republic-of'
+    const xml = `<urlset><url><loc>${canonical}</loc></url><url><loc>${orphan}</loc></url></urlset>`
+
+    expect(verifyQuestCountrySitemap(countries, xml, true)).toEqual([
+      `${orphan}: in backend sitemap.xml but no catalog-derived landing (dead URL)`,
+    ])
+    expect(verifyQuestCountrySitemap(countries, xml, false)).toEqual([])
+  })
+
+  it('reports both directions of an alias vocabulary mismatch together', () => {
+    const countries = buildQuestCountryLandingGroups(quests)
+    const xml =
+      '<urlset><url><loc>https://metravel.by/quests/country/belarus-republic-of</loc></url></urlset>'
+
+    expect(verifyQuestCountrySitemap(countries, xml, true)).toEqual([
+      `${canonical}: missing from backend sitemap.xml`,
+      'https://metravel.by/quests/country/belarus-republic-of: in backend sitemap.xml but no catalog-derived landing (dead URL)',
+    ])
+  })
+
+  it('reads only country rows out of the sitemap', () => {
+    const countries = buildQuestCountryLandingGroups(quests)
+    const xml = [
+      '<urlset>',
+      `<url><loc>${canonical}</loc></url>`,
+      '<url><loc>https://metravel.by/quests/minsk</loc></url>',
+      '<url><loc>https://metravel.by/quests/4/minsk-center</loc></url>',
+      '<url><loc>https://metravel.by/travels/some-trip</loc></url>',
+      '</urlset>',
+    ].join('')
+
+    expect(verifyQuestCountrySitemap(countries, xml, true)).toEqual([])
+    expect([...sitemapCountryAliases(xml)]).toEqual(['belarus'])
   })
 
   it('rejects title and description reused by another country landing', () => {
