@@ -16,27 +16,26 @@ jest.mock('@/api/quests', () => ({
 }))
 
 /**
- * Локация фикстуры — белорусская, и это существенно.
+ * Фикстура краковская, и это существенно.
  *
- * Городские квесты MeTravel есть только по Беларуси, поэтому с `cfdf6b5f` хук
- * отсекает `/quests/near-location/` вне зоны покрытия (`isWithinQuestCoverage`,
- * #1149): запрос стоил 0.77–1.85 с TTFB с `cache-control: no-store` и стабильно
- * отвечал пустым списком. Прежняя фикстура была краковская, `country_code: 'pl'`,
- * то есть заведомо вне покрытия — после появления гейта обе проверки ниже стали
- * ждать вызовов, которых по контракту хука больше не бывает.
+ * С `cfdf6b5f` (#1149) хук отсекал `/quests/near-location/` статическим
+ * Беларусь-only гейтом, поэтому #1179 перевела фикстуру на Минск. #1647 снял
+ * этот гейт: квесты Кракова опубликованы, прод на запросе travel 737 отдаёт
+ * `count=37`, и страна больше не имеет права запрещать запрос. Возврат к
+ * краковской локации здесь — тот самый regression control.
  */
 const apiQuest: ApiQuestMeta = {
   id: 1,
-  quest_id: 'minsk-legends',
-  title: 'Легенды старого Минска',
+  quest_id: 'krakow-dragon',
+  title: 'Краковский дракон',
   points: '9',
-  city_id: 'minsk',
-  city_name: 'Минск',
+  city_id: 'krakow',
+  city_name: 'Краков',
   country_id: null,
-  country_name: 'Беларусь',
-  country_code: 'by',
-  lat: '53.9023',
-  lng: '27.5619',
+  country_name: 'Польша',
+  country_code: 'pl',
+  lat: '50.0546',
+  lng: '19.9366',
   duration_min: 120,
   difficulty: 'easy',
   tags: null,
@@ -64,12 +63,12 @@ function createWrapper() {
     createElement(QueryClientProvider, { client: queryClient }, children)
 }
 
-/** Локация в зоне покрытия — Минск, рядом с координатой квеста из фикстуры. */
-const MINSK_QUERY = {
-  cityName: 'Минск',
-  countryName: 'Беларусь',
-  countryCode: 'by',
-  coords: [{ lat: 53.9026, lng: 27.5625 }],
+/** Ровно то, что travel 737 отдаёт в `QuestForCitySection` (составной cityName, #1369). */
+const KRAKOW_QUERY = {
+  cityName: 'Dominikanów · Краков · Малопольское воеводство · Польша',
+  countryName: 'Польша',
+  countryCode: 'pl',
+  coords: [{ lat: 50.086575, lng: 19.9663028 }],
 }
 
 describe('useQuestsForLocation', () => {
@@ -77,16 +76,16 @@ describe('useQuestsForLocation', () => {
     jest.clearAllMocks()
   })
 
-  it('uses server near-location results without loading the full quests list', async () => {
+  it('спрашивает сервер про зарубежную локацию и не грузит полный список квестов', async () => {
     mockFetchQuestsNearLocation.mockResolvedValueOnce([
       {
         quest: apiQuest,
-        score: 115,
-        distance_km: 0.2,
+        score: 300,
+        distance_km: 3.46,
       },
     ])
 
-    const { result } = renderHook(() => useQuestsForLocation(MINSK_QUERY, { limit: 1 }), {
+    const { result } = renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
       wrapper: createWrapper(),
     })
 
@@ -95,50 +94,96 @@ describe('useQuestsForLocation', () => {
     expect(mockFetchQuestsNearLocation).toHaveBeenCalledTimes(1)
     expect(mockFetchQuestsList).not.toHaveBeenCalled()
     expect(result.current.matches).toHaveLength(1)
-    expect(result.current.matches[0].quest.id).toBe('minsk-legends')
+    expect(result.current.matches[0].quest.id).toBe('krakow-dragon')
+    expect(result.current.matches[0].distanceKm).toBe(3.46)
   })
 
-  it('loads the full quests list only when near-location is unavailable and returns fallback matches', async () => {
+  /**
+   * `country_code` уходит в запрос отдельно от имени: по имени бэкенд сверяется
+   * только с `title_ru`/`title_en` страны, и незнакомое ему имя фильтр не
+   * снимает, а рубит выдачу — кандидат дальше 15 км считается «другой страной».
+   * А запрос совсем без признаков страны и города вырождается в ранжирование по
+   * дистанции по всему каталогу (прод 2026-08-31: Вьетнам по одним координатам →
+   * 165 матчей, ближайший Тбилиси в 6950 км).
+   */
+  it('передаёт серверу город, страну, код страны и первую координату', async () => {
+    mockFetchQuestsNearLocation.mockResolvedValueOnce([])
+
+    const { result } = renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(mockFetchQuestsNearLocation).toHaveBeenCalledTimes(1))
+
+    expect(mockFetchQuestsNearLocation).toHaveBeenCalledWith(
+      {
+        city: 'Dominikanów · Краков · Малопольское воеводство · Польша',
+        country: 'Польша',
+        country_code: 'pl',
+        lat: 50.086575,
+        lng: 19.9663028,
+        limit: 6,
+      },
+      expect.objectContaining({ signal: expect.anything() }),
+    )
+    expect(result.current.matches).toEqual([])
+  })
+
+  it('загружает полный список квестов только когда near-location недоступен (404)', async () => {
     mockFetchQuestsNearLocation.mockRejectedValueOnce(new ApiError(404, 'Not found'))
     mockFetchQuestsList.mockResolvedValueOnce([apiQuest])
 
-    const { result } = renderHook(() => useQuestsForLocation(MINSK_QUERY, { limit: 1 }), {
+    const { result } = renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
       wrapper: createWrapper(),
     })
 
     await waitFor(() => expect(mockFetchQuestsList).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(result.current.loading).toBe(false))
 
+    expect(mockFetchQuestsList).toHaveBeenCalledTimes(1)
     expect(result.current.matches).toHaveLength(1)
-    expect(result.current.matches[0].quest.id).toBe('minsk-legends')
+    expect(result.current.matches[0].quest.id).toBe('krakow-dragon')
   })
 
   /**
-   * Инвариант, ради которого гейт и вводился (#1149). На уровне хука он не был
-   * покрыт ничем: `__tests__/utils/questForLocationCoverage.test.ts` проверяет
-   * только сам предикат, а не то, что хук из-за него не ходит в сеть. Именно
-   * поэтому расхождение хука с этим файлом никто не заметил.
+   * Инвариант #734: пустой HTTP 200 — авторитетный ответ «здесь квестов нет».
+   * Широкий `/api/quests/` поднимается только на 404, иначе каждая статья без
+   * квестов тянула бы весь каталог.
    */
-  it('вне зоны покрытия квестов не делает ни одного запроса', async () => {
+  it('пустой ответ сервера не поднимает широкую загрузку каталога', async () => {
+    mockFetchQuestsNearLocation.mockResolvedValueOnce([])
+
     const { result } = renderHook(
       () =>
         useQuestsForLocation(
           {
-            cityName: 'Далат',
+            cityName: 'Далат, Đà Lạt District, Ламдонг, 02633, Вьетнам',
             countryName: 'Вьетнам',
             countryCode: 'vn',
             coords: [{ lat: 11.923253, lng: 108.4537353 }],
           },
-          { limit: 1 },
+          { limit: 6 },
         ),
       { wrapper: createWrapper() },
     )
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 
+    expect(mockFetchQuestsNearLocation).toHaveBeenCalledTimes(1)
+    expect(mockFetchQuestsList).not.toHaveBeenCalled()
+    expect(result.current.matches).toEqual([])
+  })
+
+  /** Единственный оставшийся клиентский гейт: без локации сети быть не должно. */
+  it('без локации не делает ни одного запроса', async () => {
+    const { result } = renderHook(
+      () => useQuestsForLocation({ cityName: '  ', countryName: null, coords: [] }, { limit: 6 }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
     expect(mockFetchQuestsNearLocation).not.toHaveBeenCalled()
-    // Клиентский fallback тоже не поднимается: он включается только на 404, а
-    // запроса не было вовсе.
     expect(mockFetchQuestsList).not.toHaveBeenCalled()
     expect(result.current.matches).toEqual([])
   })

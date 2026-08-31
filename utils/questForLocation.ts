@@ -25,39 +25,35 @@ type TravelCoordInput =
   | null
   | undefined
 
-// Городские квесты MeTravel существуют только по Беларуси, поэтому для локации из
-// другой страны серверный `/quests/near-location/` всегда отвечает
-// `{"results":[],"count":0}`. Запрос при этом не бесплатный: замер прода 2026-07-30
-// на статье о Вьетнаме — 0.77–1.85 с TTFB, `cache-control: no-store`, и это самый
-// долгий запрос всей страницы. Отсекаем его на клиенте.
-const BELARUS_BBOX = { minLat: 51.2, maxLat: 56.2, minLng: 23.1, maxLng: 32.8 }
-const BELARUS_COUNTRY_NAME = /белар|bielarus|belarus|białoruś|білорус/i
+/** Первая пригодная координата локации — гео-параметр для near-location. */
+export function firstQuestCoord(
+  coords: LocationQuery['coords'],
+): { lat: number; lng: number } | null {
+  if (!Array.isArray(coords)) return null
+  for (const c of coords) {
+    if (Number.isFinite(c?.lat) && Number.isFinite(c?.lng)) return c
+  }
+  return null
+}
 
 /**
- * Может ли по этой локации в принципе найтись квест.
+ * Есть ли у локации хоть один признак, по которому сервер может искать квест.
  *
- * Порядок проверки — от самого надёжного признака к самому слабому. Если ни одного
- * признака нет, возвращаем `true`: пусть решает сервер, а не эвристика.
+ * Это единственный клиентский гейт запроса: без города, страны и координат
+ * серверу нечего сопоставлять. Покрытие каталога решает сервер.
+ *
+ * Здесь же раньше стоял статический Беларусь-only deny (#1149): пока квесты
+ * были только по Беларуси, он экономил 0.77–1.85 с `no-store` запроса на каждой
+ * зарубежной статье. Он устарел вместе с этим допущением — на travel 737
+ * (Краков) прод отдаёт `count=37`, а гейт не давал запросу уйти (#1647).
+ * Причина, по которой отсечка больше не нужна и на перформансе: #1646 загнала
+ * фильтрацию в SQL и сменила `no-store` на `public, max-age=300, s-maxage=3600`
+ * (замер прода 2026-08-31: 0.48 с TTFB на cache MISS, дальше — nginx HIT).
  */
-export function isWithinQuestCoverage(query: LocationQuery): boolean {
-  const code = (query.countryCode || '').toLowerCase().trim()
-  if (code) return code === 'by'
-
-  const name = (query.countryName || '').trim()
-  if (name) return BELARUS_COUNTRY_NAME.test(name)
-
-  const coords = Array.isArray(query.coords) ? query.coords : []
-  const firstValid = coords.find((c) => Number.isFinite(c?.lat) && Number.isFinite(c?.lng))
-  if (firstValid) {
-    return (
-      firstValid.lat >= BELARUS_BBOX.minLat &&
-      firstValid.lat <= BELARUS_BBOX.maxLat &&
-      firstValid.lng >= BELARUS_BBOX.minLng &&
-      firstValid.lng <= BELARUS_BBOX.maxLng
-    )
-  }
-
-  return true
+export function hasQuestLocation(query: LocationQuery): boolean {
+  return Boolean(
+    query.cityName?.trim() || query.countryName?.trim() || firstQuestCoord(query.coords),
+  )
 }
 
 const EARTH_R = 6371 // км

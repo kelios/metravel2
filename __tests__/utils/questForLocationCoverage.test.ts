@@ -1,52 +1,64 @@
 /**
- * #1149 (FE-часть): не звать `/api/quests/near-location/` там, где квестов заведомо нет.
+ * #1647: клиентский гейт запроса `/api/quests/near-location/` — только наличие
+ * локации. Раньше здесь стоял статический Беларусь-only deny (#1149): он был
+ * верен, пока квесты были только по Беларуси, и устарел, как только появились
+ * опубликованные квесты в Польше. Прод 2026-08-31 на запросе travel 737
+ * (`city='Dominikanów · Краков · Малопольское воеводство · Польша'`,
+ * `country='Польша'`, `country_code='pl'`) отдаёт `count=37`, а гейт не давал
+ * запросу уйти вовсе.
  *
- * Городские квесты MeTravel существуют только по Беларуси. На статье о загранице
- * эндпоинт стабильно отвечает `{"results":[],"count":0}`, но стоит 0.77–1.85 с TTFB
- * и отдаётся с `cache-control: no-store` — на travel-странице это самый долгий
- * запрос из всех (замер прода 2026-07-30, /travels/ourvietnam: countryCode='vn').
+ * Инвариант, который остаётся: сеть не трогаем там, где серверу нечего
+ * сопоставлять. Покрытие каталога решает сервер, а не список стран на клиенте.
  */
-import { isWithinQuestCoverage } from '@/utils/questForLocation';
+import { hasQuestLocation } from '@/utils/questForLocation';
 
-describe('isWithinQuestCoverage', () => {
-  it('пропускает белорусскую локацию по коду страны', () => {
-    expect(isWithinQuestCoverage({ countryCode: 'by', countryName: 'Беларусь' })).toBe(true);
-    expect(isWithinQuestCoverage({ countryCode: 'BY' })).toBe(true);
+/** Ровно та локация, на которой блок квестов Кракова не появлялся (#1647). */
+const TRAVEL_737_QUERY = {
+  cityName: 'Dominikanów · Краков · Малопольское воеводство · Польша',
+  countryName: 'Польша',
+  countryCode: 'pl',
+  coords: [{ lat: 50.086575, lng: 19.9663028 }],
+};
+
+describe('hasQuestLocation', () => {
+  it('пропускает зарубежную локацию: страна больше не запрещает запрос', () => {
+    expect(hasQuestLocation(TRAVEL_737_QUERY)).toBe(true);
+    expect(hasQuestLocation({ countryName: 'Польша' })).toBe(true);
+    expect(hasQuestLocation({ countryCode: 'pl', countryName: 'Polska' })).toBe(true);
+    // Вьетнам квестов не имеет, но решает это сервер пустым 200, а не клиент.
+    expect(hasQuestLocation({ countryName: 'Вьетнам', countryCode: 'vn' })).toBe(true);
+    expect(hasQuestLocation({ coords: [{ lat: 52.23, lng: 21.01 }] })).toBe(true); // Варшава
   });
 
-  it('отсекает зарубежную локацию по коду страны (реальный кейс прода)', () => {
+  it('пропускает белорусскую локацию', () => {
+    expect(hasQuestLocation({ cityName: 'Минск', countryName: 'Беларусь' })).toBe(true);
+    expect(hasQuestLocation({ coords: [{ lat: 53.9, lng: 27.56 }] })).toBe(true);
+  });
+
+  it('достаточно одного признака локации', () => {
+    expect(hasQuestLocation({ cityName: 'Краков' })).toBe(true);
+    expect(hasQuestLocation({ countryName: 'Польша' })).toBe(true);
+    expect(hasQuestLocation({ coords: [{ lat: 50.06, lng: 19.94 }] })).toBe(true);
+  });
+
+  it('без локации запрос не нужен: серверу нечего сопоставлять', () => {
+    expect(hasQuestLocation({})).toBe(false);
+    expect(hasQuestLocation({ cityName: null, countryName: null, coords: [] })).toBe(false);
+    expect(hasQuestLocation({ cityName: '   ', countryName: '\n' })).toBe(false);
+  });
+
+  it('код страны без города, названия страны и координат запрос не открывает', () => {
+    // Не потому, что серверу нечем ответить: по одному коду он вернёт квесты
+    // всей страны со score «страна совпала». Но это уже не «по этому городу и
+    // рядом», а travel-пейлоад отдаёт `countryName` и `countryCode` из одной
+    // связи `countries` — кода в одиночку в проде не бывает.
+    expect(hasQuestLocation({ countryCode: 'pl' })).toBe(false);
+  });
+
+  it('мусорные координаты не считаются локацией, валидная в том же списке — считается', () => {
+    expect(hasQuestLocation({ coords: [{ lat: NaN, lng: NaN }] })).toBe(false);
     expect(
-      isWithinQuestCoverage({
-        countryCode: 'vn',
-        countryName: 'Вьетнам',
-        cityName: 'Далат, Đà Lạt District, Ламдонг, 02633, Вьетнам',
-        coords: [{ lat: 11.923253, lng: 108.4537353 }],
-      }),
-    ).toBe(false);
-  });
-
-  it('без кода страны решает по названию', () => {
-    expect(isWithinQuestCoverage({ countryName: 'Беларусь' })).toBe(true);
-    expect(isWithinQuestCoverage({ countryName: 'Belarus' })).toBe(true);
-    expect(isWithinQuestCoverage({ countryName: 'Вьетнам' })).toBe(false);
-    expect(isWithinQuestCoverage({ countryName: 'Польша' })).toBe(false);
-  });
-
-  it('без страны решает по координате', () => {
-    expect(isWithinQuestCoverage({ coords: [{ lat: 53.9, lng: 27.56 }] })).toBe(true); // Минск
-    expect(isWithinQuestCoverage({ coords: [{ lat: 11.92, lng: 108.45 }] })).toBe(false); // Далат
-    expect(isWithinQuestCoverage({ coords: [{ lat: 52.23, lng: 21.01 }] })).toBe(false); // Варшава
-  });
-
-  it('когда признаков нет — решает сервер, а не эвристика', () => {
-    expect(isWithinQuestCoverage({})).toBe(true);
-    expect(isWithinQuestCoverage({ cityName: 'Неизвестно' })).toBe(true);
-    expect(isWithinQuestCoverage({ coords: [] })).toBe(true);
-  });
-
-  it('не падает на мусорных координатах', () => {
-    expect(
-      isWithinQuestCoverage({ coords: [{ lat: NaN, lng: NaN }, { lat: 53.9, lng: 27.56 }] }),
+      hasQuestLocation({ coords: [{ lat: NaN, lng: NaN }, { lat: 50.06, lng: 19.94 }] }),
     ).toBe(true);
   });
 });

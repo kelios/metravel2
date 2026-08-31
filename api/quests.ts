@@ -620,6 +620,8 @@ export async function fetchQuestsCompactCatalog(
 export type NearLocationParams = {
     city?: string | null;
     country?: string | null;
+    /** ISO-код страны: сверка бэкенда по имени идёт только с `title_ru`/`title_en`. */
+    country_code?: string | null;
     lat?: number | null;
     lng?: number | null;
     limit?: number | null;
@@ -641,8 +643,10 @@ function buildNearLocationQuery(params: NearLocationParams): string {
     const search = new URLSearchParams();
     const city = params.city?.trim();
     const country = params.country?.trim();
+    const countryCode = params.country_code?.trim();
     if (city) search.set('city', city);
     if (country) search.set('country', country);
+    if (countryCode) search.set('country_code', countryCode);
     if (typeof params.lat === 'number' && Number.isFinite(params.lat)) {
         search.set('lat', String(params.lat));
     }

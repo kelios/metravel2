@@ -9,26 +9,23 @@ import { adaptMeta } from '@/utils/questAdapters'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import {
   findQuestsNearLocation,
-  isWithinQuestCoverage,
+  firstQuestCoord,
+  hasQuestLocation,
   type LocationQuery,
   type QuestForLocationMatch,
 } from '@/utils/questForLocation'
 import type { QuestMeta } from '@/utils/questAdapters'
 
-/** Первая координата локации — для гео-параметров near-location. */
-function firstCoord(coords: LocationQuery['coords']): { lat: number; lng: number } | null {
-  if (!coords) return null
-  for (const c of coords) {
-    if (Number.isFinite(c.lat) && Number.isFinite(c.lng)) return c
-  }
-  return null
-}
-
 function toNearParams(query: LocationQuery, limit?: number): NearLocationParams {
-  const coord = firstCoord(query.coords)
+  const coord = firstQuestCoord(query.coords)
   return {
     city: query.cityName ?? undefined,
     country: query.countryName ?? undefined,
+    // Код страны — признак страны, не зависящий от языка адреса: по имени
+    // бэкенд сверяется только с `title_ru`/`title_en`, и незнакомое ему имя
+    // фильтр не снимает, а разворачивает против выдачи — всё, что дальше 15 км,
+    // отбрасывается как «другая страна» (#1646).
+    country_code: query.countryCode ?? undefined,
     lat: coord?.lat ?? undefined,
     lng: coord?.lng ?? undefined,
     limit,
@@ -36,7 +33,7 @@ function toNearParams(query: LocationQuery, limit?: number): NearLocationParams 
 }
 
 function nearLocationKey(query: LocationQuery, limit?: number): string {
-  const coord = firstCoord(query.coords)
+  const coord = firstQuestCoord(query.coords)
   return [
     query.cityName ?? '',
     query.countryName ?? '',
@@ -44,10 +41,6 @@ function nearLocationKey(query: LocationQuery, limit?: number): string {
     coord ? `${coord.lat.toFixed(4)},${coord.lng.toFixed(4)}` : '',
     limit ?? '',
   ].join('|')
-}
-
-function hasLocation(query: LocationQuery): boolean {
-  return Boolean(query.cityName?.trim() || query.countryName?.trim() || firstCoord(query.coords))
 }
 
 type NearLocationState = {
@@ -62,9 +55,10 @@ type NearLocationState = {
  * Возвращает флаг serverUnavailable для graceful fallback на клиентский расчёт.
  */
 function useServerQuestsNearLocation(query: LocationQuery, limit?: number): NearLocationState {
-  // Вне зоны покрытия квестов ответ гарантированно пустой, а запрос стоит до 1.9 с
-  // серверного времени на каждый просмотр статьи (`no-store`, замер прода 2026-07-30).
-  const enabled = hasLocation(query) && isWithinQuestCoverage(query)
+  // Единственный гейт — наличие локации: покрытие каталога знает сервер, а не
+  // клиент. Статический Беларусь-only deny прятал квесты Кракова на travel 737
+  // (#1647); пустой HTTP 200 — авторитетный ответ «здесь квестов нет».
+  const enabled = hasQuestLocation(query)
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.questsNearLocation(nearLocationKey(query, limit)),
