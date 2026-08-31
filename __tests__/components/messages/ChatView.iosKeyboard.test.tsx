@@ -41,13 +41,19 @@ const defaultProps = {
 
 describe('ChatView composer vs iOS keyboard', () => {
     let listeners: Record<string, (event?: any) => void>;
+    let removers: Record<string, jest.Mock>;
 
     beforeEach(() => {
         listeners = {};
+        removers = {};
         jest.spyOn(Keyboard, 'addListener').mockImplementation(((event: any, callback: any) => {
             listeners[event] = callback;
-            return { remove: jest.fn() };
+            const remove = jest.fn();
+            removers[event] = remove;
+            return { remove };
         }) as any);
+        jest.spyOn(Keyboard, 'metrics').mockReturnValue(undefined);
+        jest.spyOn(Keyboard, 'isVisible').mockReturnValue(false);
     });
 
     afterEach(() => {
@@ -77,11 +83,46 @@ describe('ChatView composer vs iOS keyboard', () => {
         });
         act(() => {
             listeners.keyboardDidHide?.();
+            // iPad can continue emitting frame changes after it reports that an
+            // undocked/floating keyboard no longer covers the bottom edge.
+            listeners.keyboardDidChangeFrame?.({ endCoordinates: { height: 240 } });
         });
 
         const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
         expect(composerStyle.paddingBottom).toBe(
             SAFE_AREA_BOTTOM + DESIGN_TOKENS.spacing.sm,
         );
+    });
+
+    it('tracks a changed docked-keyboard frame without re-adding the safe-area', () => {
+        jest.mocked(Keyboard.isVisible).mockReturnValue(true);
+        const { getByTestId } = render(<ChatView {...defaultProps} />);
+
+        act(() => {
+            listeners.keyboardDidShow?.({ endCoordinates: { height: 320 } });
+            listeners.keyboardDidChangeFrame?.({ endCoordinates: { height: 360 } });
+        });
+
+        const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
+        expect(composerStyle.paddingBottom).toBe(360 + DESIGN_TOKENS.spacing.xs);
+    });
+
+    it('uses current keyboard metrics on mount and removes every listener on unmount', () => {
+        jest.mocked(Keyboard.isVisible).mockReturnValue(true);
+        jest.mocked(Keyboard.metrics).mockReturnValue({
+            height: 280,
+            screenX: 0,
+            screenY: 564,
+            width: 390,
+        });
+        const { getByTestId, unmount } = render(<ChatView {...defaultProps} />);
+
+        const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
+        expect(composerStyle.paddingBottom).toBe(280 + DESIGN_TOKENS.spacing.xs);
+
+        unmount();
+        expect(removers.keyboardDidShow).toHaveBeenCalledTimes(1);
+        expect(removers.keyboardDidHide).toHaveBeenCalledTimes(1);
+        expect(removers.keyboardDidChangeFrame).toHaveBeenCalledTimes(1);
     });
 });

@@ -148,13 +148,28 @@ function ChatView({
   const [keyboardHeight, setKeyboardHeight] = useState(0)
   useEffect(() => {
     if (IS_WEB) return
+    const updateKeyboardHeight = (height: number | undefined) =>
+      setKeyboardHeight(height ?? 0)
     const show = Keyboard.addListener('keyboardDidShow', (e) =>
-      setKeyboardHeight(e.endCoordinates?.height ?? 0),
+      updateKeyboardHeight(e.endCoordinates?.height),
     )
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0))
+    const frame = IS_IOS
+      ? Keyboard.addListener('keyboardDidChangeFrame', (e) => {
+          // iOS reports a hide when the iPad keyboard becomes floating/undocked.
+          // Ignore later floating-frame moves instead of reserving a bottom inset.
+          if (Keyboard.isVisible()) updateKeyboardHeight(e.endCoordinates?.height)
+        })
+      : null
+
+    // ChatView can mount while a keyboard opened by the previous messages panel
+    // is still visible, after keyboardDidShow has already fired.
+    updateKeyboardHeight(Keyboard.metrics()?.height)
+
     return () => {
       show.remove()
       hide.remove()
+      frame?.remove()
     }
   }, [])
   // At rest the global tab bar (BottomDock, an absolute overlay) covers the bottom,
