@@ -19,6 +19,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { translate as i18nT } from '@/i18n'
 
+import {
+  CARD_TOP_SLOT_INSET,
+  CARD_TOP_SLOT_Z_INDEX,
+} from '@/components/ui/unifiedTravelCardTokens'
+
 
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
 // Modern, легко читаемый sans-serif стек для подписей на изображении карточки.
@@ -399,9 +404,9 @@ function UnifiedTravelCard({
         },
         rightTopSlot: {
           position: 'absolute',
-          top: 10,
-          right: 10,
-          zIndex: 10,
+          top: CARD_TOP_SLOT_INSET,
+          right: CARD_TOP_SLOT_INSET,
+          zIndex: CARD_TOP_SLOT_Z_INDEX,
         },
         rightTopSlotScrim: {
           padding: 4,
@@ -415,9 +420,9 @@ function UnifiedTravelCard({
         },
         leftTopSlot: {
           position: 'absolute',
-          top: 10,
-          left: 10,
-          zIndex: 10,
+          top: CARD_TOP_SLOT_INSET,
+          left: CARD_TOP_SLOT_INSET,
+          zIndex: CARD_TOP_SLOT_Z_INDEX,
         },
         bottomLeftSlot: {
           position: 'absolute',

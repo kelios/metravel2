@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/AuthContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import TravelListItem from '@/components/listTravel/TravelListItem';
+import {
+  CARD_TOP_SLOT_INSET,
+  CARD_TOP_SLOT_Z_INDEX,
+} from '@/components/ui/unifiedTravelCardTokens';
 import { normalizeToTravel } from '@/components/profile/travelNormalize';
 import { getTravelDetailsListColumnWidth } from '@/components/travel/utils/travelDetailsListLayout';
 import type { Travel } from '@/types/types';
@@ -214,13 +218,14 @@ describe('TravelListItem media props on web', () => {
   });
 
   it('uses compact owner controls on mobile web cards', () => {
-    renderItem({ currentUserId: '42', isMobile: true });
+    const { getByTestId } = renderItem({ currentUserId: '42', isMobile: true });
 
+    // На web админ-кнопки живут СНАРУЖИ якоря карточки (#1626), поэтому в пропах
+    // `UnifiedTravelCard` их больше нет — ищем их в отрисованном дереве.
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
-    const leftTopSlot = props?.leftTopSlot;
-    expect(leftTopSlot).toBeTruthy();
+    expect(props?.leftTopSlot).toBeNull();
 
-    const adminStyle = StyleSheet.flatten(leftTopSlot.props.style);
+    const adminStyle = StyleSheet.flatten(getByTestId('admin-actions').props.style);
     expect(adminStyle.top).toBe(8);
     expect(adminStyle.left).toBe(8);
     expect(adminStyle.paddingHorizontal).toBe(5);
@@ -556,5 +561,63 @@ describe('TravelListItem media props on web', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.mediaProps?.placeholderBlurhash).toBeUndefined();
     expect(props.mediaProps?.placeholderColor).toBe('#234567');
+  });
+});
+
+// #1626: карточка каталога на web — настоящий `<a>`. Интерактивные потомки внутри
+// ссылки невалидны по HTML и дают три остановки Tab на карточку, поэтому кнопки
+// действий рисуются соседями якоря. Кроме DOM-вложенности (её держит
+// `e2e/travel-card-link-semantics.spec.ts`) гарантий здесь две: слоты не уходят в
+// карточку, которая живёт ВНУТРИ якоря, и поднятая обёртка реально получает
+// отступ карточки, а не `undefined`.
+describe('TravelListItem card actions outside the anchor', () => {
+  beforeEach(() => {
+    mockUnifiedTravelCard.mockClear();
+  });
+
+  it('keeps both top slots out of the card and renders them next to the anchor', () => {
+    const { getByTestId, UNSAFE_getAllByType } = renderItem({
+      currentUserId: '42',
+      onDeletePress: jest.fn(),
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props?.leftTopSlot).toBeNull();
+    expect(props?.rightTopSlot).toBeNull();
+    // Якорь обязан остаться: без него подъём просто прячет кнопки.
+    const anchors = UNSAFE_getAllByType('a' as any);
+    expect(anchors).toHaveLength(1);
+
+    const adminActions = getByTestId('admin-actions');
+    expect(anchors[0].findAll((node: any) => node.props?.testID === 'admin-actions')).toHaveLength(0);
+
+    // Поднятая обёртка — ближайший предок с `pointerEvents="box-none"` (сам
+    // контейнер админ-кнопок этот проп не ставит).
+    let hoistWrapper: any = adminActions.parent;
+    while (hoistWrapper && hoistWrapper.props?.pointerEvents !== 'box-none') {
+      hoistWrapper = hoistWrapper.parent;
+    }
+    expect(hoistWrapper).toBeTruthy();
+
+    const hoistedStyle = StyleSheet.flatten(hoistWrapper.props.style);
+    expect(hoistedStyle).toMatchObject({
+      position: 'absolute',
+      top: CARD_TOP_SLOT_INSET,
+      left: CARD_TOP_SLOT_INSET,
+      zIndex: CARD_TOP_SLOT_Z_INDEX,
+    });
+  });
+
+  it('leaves the slots inside the card in selectable mode, where there is no anchor', () => {
+    const { queryByTestId, UNSAFE_queryAllByType } = renderItem({
+      currentUserId: '42',
+      selectable: true,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props?.leftTopSlot).toBeTruthy();
+    expect(UNSAFE_queryAllByType('a' as any)).toHaveLength(0);
+    // Слот ушёл в карточку пропом, а не в дерево рядом с ней.
+    expect(queryByTestId('admin-actions')).toBeNull();
   });
 });

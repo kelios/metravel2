@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useRef } from 'react'
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, Text, View, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { router } from 'expo-router'
 
@@ -9,6 +9,10 @@ import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
 import { routes } from '@/utils/routes'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
+import {
+  CARD_TOP_SLOT_INSET,
+  CARD_TOP_SLOT_Z_INDEX,
+} from '@/components/ui/unifiedTravelCardTokens'
 import CardActionPressable from '@/components/ui/CardActionPressable'
 import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
@@ -69,6 +73,25 @@ const ANDROID_LIST_IMAGE_PROPS =
 const COVER_QUALITY = 70
 
 const POINTER_EVENTS_BOX_NONE = { pointerEvents: 'box-none' } as any
+/**
+ * Верхние слоты карточки, поднятые из якоря наружу (#1626). Отступ берётся из
+ * общего токена карточки, иначе скопированное число разъехалось бы при первой
+ * правке `UnifiedTravelCard`.
+ *
+ * Отсчёт при этом идёт от РАЗНЫХ боксов: карточка ставит свои слоты внутри
+ * медиа-бокса, а поднятые обёртки — от `styles.wrap`, то есть от border-box
+ * карточки. Разница — рамка карточки (1 px), поэтому пиксель-в-пиксель совпасть
+ * они не обязаны; сдвинуть слоты на другой край карточки правка токена всё
+ * равно не даст.
+ */
+const HOISTED_SLOT_BASE: ViewStyle = {
+  position: 'absolute',
+  top: CARD_TOP_SLOT_INSET,
+  zIndex: CARD_TOP_SLOT_Z_INDEX,
+}
+const HOISTED_RIGHT_SLOT_STYLE: ViewStyle = { ...HOISTED_SLOT_BASE, right: CARD_TOP_SLOT_INSET }
+const HOISTED_LEFT_SLOT_STYLE: ViewStyle = { ...HOISTED_SLOT_BASE, left: CARD_TOP_SLOT_INSET }
+
 const ANCHOR_FILL_STYLE = {
   display: 'block',
   width: '100%',
@@ -451,11 +474,21 @@ function TravelListItem({
     />
   ) : null
 
+  // Карточка на web целиком завёрнута в настоящий `<a>`. Кнопки действий и
+  // админ-кнопки поэтому поднимаются из карточки наружу — интерактивный контент
+  // внутри ссылки невалиден по HTML и ломает Tab-порядок (#1626). В selectable-
+  // режиме и на нативе якоря нет, слоты остаются на своём месте в карточке.
+  const hoistsActionsOutOfAnchor = IS_WEB && !selectable
+
   const rightTopSlot = (
     <View
       style={[styles.favoriteButtonContainer, POINTER_EVENTS_BOX_NONE, { flexDirection: 'column', gap: 6 }]}
       {...(IS_WEB && {
-        'data-card-action': 'true',
+        // Именно `dataSet`, а не сырой `data-card-action`: react-native-web
+        // переносит в DOM только его, а сырой атрибут на `View` до разметки не
+        // доходит вовсе — маркер, который читает `closest('[data-card-action]')`,
+        // молча отсутствовал.
+        dataSet: { cardAction: 'true' },
         onClick: stopEvent,
         onMouseDown: (e: any) => e.stopPropagation(),
       })}
@@ -695,8 +728,8 @@ function TravelListItem({
       contentPosition="belowMedia"
       contentContainerStyle={styles.cardContentContainer}
       insetMedia={false}
-      leftTopSlot={leftTopSlot}
-      rightTopSlot={!selectable ? rightTopSlot : null}
+      leftTopSlot={hoistsActionsOutOfAnchor ? null : leftTopSlot}
+      rightTopSlot={hoistsActionsOutOfAnchor || selectable ? null : rightTopSlot}
       bottomLeftSlot={authorOverlaySlot}
       bottomRightSlot={viewsOverlaySlot}
       containerOverlaySlot={selectableOverlay}
@@ -743,7 +776,7 @@ function TravelListItem({
   )
 
   const wrappedCard =
-    IS_WEB && !selectable ? (
+    hoistsActionsOutOfAnchor ? (
       <a
         href={isNavigable ? navigationUrl : undefined}
         style={visualVariant === 'home-featured' ? ANCHOR_FILL_STYLE : (EMPTY_STYLE as any)}
@@ -769,6 +802,30 @@ function TravelListItem({
       ]}
     >
       {wrappedCard}
+      {/*
+        Кнопки карточки живут СНАРУЖИ якоря, а не внутри него (#1626): внутри
+        `<a>` они давали три остановки Tab на карточку вместо одной и невалидную
+        по HTML вложенность интерактивного контента в ссылку. Обёртка не ловит
+        указатель (`box-none`), поэтому клик мимо кнопок по-прежнему достаётся
+        ссылке под ней.
+
+        Плата за подъём: обёртки — соседи якоря, а не потомки контейнера
+        карточки, поэтому web-hover карточки (`UnifiedTravelCard`,
+        `containerHovered`: `translateY(-6px) scale(1.02)`) на них НЕ
+        распространяется, и наведение на саму кнопку снимает hover с карточки
+        (`mouseleave`, кнопка ей не потомок). Убрать это можно только сменой
+        владельца hover в самой карточке — см. #1626 → follow-up.
+      */}
+      {hoistsActionsOutOfAnchor && leftTopSlot ? (
+        <View style={HOISTED_LEFT_SLOT_STYLE} pointerEvents="box-none">
+          {leftTopSlot}
+        </View>
+      ) : null}
+      {hoistsActionsOutOfAnchor && rightTopSlot ? (
+        <View style={HOISTED_RIGHT_SLOT_STYLE} pointerEvents="box-none">
+          {rightTopSlot}
+        </View>
+      ) : null}
     </View>
   )
 }

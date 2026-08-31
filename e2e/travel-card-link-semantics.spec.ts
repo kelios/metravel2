@@ -16,13 +16,8 @@ const createTravel = (id: number) => ({
   moderation: true,
 });
 
-const verifyTravelCardLinkSemantics = async (page: Page, screenshotPath: string) => {
-  const runtimeErrors: string[] = [];
-  page.on('pageerror', (error) => runtimeErrors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error') runtimeErrors.push(message.text());
-  });
-
+/** Детерминированный список маршрутов: карточки не должны зависеть от контента. */
+const mockTravelList = async (page: Page) => {
   await preacceptCookies(page);
   const travels = [createTravel(1), createTravel(2)];
   const fulfillList = async (route: import('@playwright/test').Route) => {
@@ -43,6 +38,17 @@ const verifyTravelCardLinkSemantics = async (page: Page, screenshotPath: string)
 
   await page.route('**/api/travels/**', fulfillList);
   await page.route('**/travels/**', fulfillList);
+  return travels;
+};
+
+const verifyTravelCardLinkSemantics = async (page: Page, screenshotPath: string) => {
+  const runtimeErrors: string[] = [];
+  page.on('pageerror', (error) => runtimeErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') runtimeErrors.push(message.text());
+  });
+
+  const travels = await mockTravelList(page);
   await gotoWithRetry(page, '/travelsby');
 
   const cards = page.locator('a[data-testid="travel-card-link"]');
@@ -56,9 +62,44 @@ const verifyTravelCardLinkSemantics = async (page: Page, screenshotPath: string)
         href,
         ariaLabel: anchor.getAttribute('aria-label'),
         nestedPrimaryLinks: anchor.querySelectorAll('[role="link"][tabindex="0"]').length,
+        // Внутри `<a>` не должно быть НИ ОДНОГО интерактивного потомка, а не
+        // только вложенной ссылки: кнопки «Хочу поехать» и «Добавить в план»
+        // давали по две лишние остановки Tab на карточку и невалидную по HTML
+        // вложенность интерактивного контента в ссылку (#1626).
+        nestedInteractive: anchor.querySelectorAll(
+          'a, button, input, select, textarea, [role="link"], [role="button"], [tabindex]:not([tabindex="-1"])',
+        ).length,
       };
     }),
   );
+
+  // Кнопки действий никуда не делись — они просто переехали из якоря наружу.
+  const strandedActions = await page.evaluate(
+    () =>
+      Array.from(document.querySelectorAll('[data-card-action="true"]')).filter((node) =>
+        node.closest('a[data-testid="travel-card-link"]'),
+      ).length,
+  );
+  expect(strandedActions).toBe(0);
+
+  // Переезд из якоря не должен сдвинуть кнопки: их геометрия задаётся теми же
+  // константами, что и слоты внутри карточки, и обязана остаться в её границах.
+  const actionGeometry = await page.evaluate(() => {
+    const anchors = Array.from(document.querySelectorAll('a[data-testid="travel-card-link"]'))
+    return Array.from(document.querySelectorAll('[data-card-action="true"]')).map((node) => {
+      const a = node.getBoundingClientRect()
+      const card = anchors
+        .map((anchor) => anchor.getBoundingClientRect())
+        .find((r) => a.left >= r.left - 1 && a.right <= r.right + 1 && a.top >= r.top - 1 && a.bottom <= r.bottom + 1)
+      return { inside: !!card, w: Math.round(a.width), h: Math.round(a.height) }
+    })
+  })
+  expect(actionGeometry.length).toBeGreaterThan(0)
+  for (const action of actionGeometry) {
+    expect(action.inside).toBe(true)
+    expect(action.w).toBeGreaterThan(0)
+    expect(action.h).toBeGreaterThan(0)
+  }
 
   expect(samples).toHaveLength(travels.length);
   for (const [index, sample] of samples.entries()) {
@@ -67,6 +108,7 @@ const verifyTravelCardLinkSemantics = async (page: Page, screenshotPath: string)
     expect(href.searchParams.get('returnTo')).toBe('/travelsby');
     expect(sample.ariaLabel).toContain(`E2E link semantics ${index + 1}`);
     expect(sample.nestedPrimaryLinks).toBe(0);
+    expect(sample.nestedInteractive).toBe(0);
   }
 
   const firstCard = cards.first();
