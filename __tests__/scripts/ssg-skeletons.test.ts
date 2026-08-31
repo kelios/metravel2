@@ -1130,7 +1130,7 @@ describe('ssg-skeletons', () => {
         descriptionHtml: '<p>Подробное описание маршрута.</p><h2>Как добраться</h2><p>На машине.</p>',
       });
       expect(html.indexOf('ssg-travel-crawlable')).toBeGreaterThan(html.indexOf('ssg-travel-first-screen'));
-      expect(html).toContain('<div class="ssg-travel-h1">Тестовый маршрут</div>');
+      expect(html).toContain('<h1 class="ssg-travel-h1">Тестовый маршрут</h1>');
       expect(html).toContain('<div class="ssg-travel-article">');
       expect(html).toContain('Подробное описание маршрута.');
       expect(html).toContain('<h2>Как добраться</h2>');
@@ -1158,12 +1158,35 @@ describe('ssg-skeletons', () => {
       expect(html.indexOf('ssg-travel-crawlable')).toBeGreaterThan(html.indexOf('ssg-travel-meta-row'));
     });
 
-    it('does NOT emit any <h1> in the skeleton (single-H1 invariant lives in #root)', () => {
+    it('emits exactly one visible title H1 and removes article-authored H1 tags', () => {
       const html = buildTravelSkeletonHtml({
         name: 'Маршрут',
         descriptionHtml: '<p>текст</p><h2>раздел</h2><h1>лишний</h1>',
       });
-      expect(html).not.toMatch(/<h1[\s>]/i);
+      expect((html.match(/<h1\b/gi) || [])).toHaveLength(1);
+      expect(html).toContain('<h1 class="ssg-travel-h1">Маршрут</h1>');
+      expect(html).not.toContain('<h1>лишний</h1>');
+    });
+
+    it('keeps the title H1 in normal flow without hidden or clipped styles', () => {
+      const html = injectSkeletonShell(
+        '<!DOCTYPE html><html><head></head><body><div id="root"></div></body></html>',
+        '/travels/test',
+        {
+          name: 'Маршрут',
+          descriptionHtml: '<p>текст</p>',
+        },
+      );
+      const headingTag = html.match(/<h1\b[^>]*class="ssg-travel-h1"[^>]*>/i)?.[0] || '';
+      const headingRule = html.match(/\.ssg-travel-h1\{([^}]*)\}/i)?.[1] || '';
+
+      expect(headingTag).not.toContain('style=');
+      expect(headingTag).not.toContain('hidden');
+      expect(headingRule).not.toMatch(/position\s*:\s*absolute/i);
+      expect(headingRule).not.toMatch(/display\s*:\s*none/i);
+      expect(headingRule).not.toMatch(/visibility\s*:\s*hidden/i);
+      expect(headingRule).not.toMatch(/clip(?:-path)?\s*:/i);
+      expect(headingRule).not.toMatch(/(?:width|height)\s*:\s*1px/i);
     });
 
     it('falls back to placeholder bars when description is empty', () => {

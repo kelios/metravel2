@@ -1946,7 +1946,7 @@ function injectTravelQuestPromoSection(baseHtml, matches) {
   ].join('');
 
   const insertion = `${styleTag}\n${section}\n`;
-  const skeletonTitleRegex = /(<div\s+class="ssg-travel-h1"[^>]*>[\s\S]*?<\/div>)/i;
+  const skeletonTitleRegex = /(<h1\s+class="ssg-travel-h1"[^>]*>[\s\S]*?<\/h1>)/i;
   if (skeletonTitleRegex.test(html)) {
     return applyHtmlFragment(html, skeletonTitleRegex, `\n${insertion}`, 'after');
   }
@@ -1983,6 +1983,13 @@ function injectTravelRegisterCtaSection(baseHtml) {
     return applyHtmlFragment(html, /<div\s+id="root"[^>]*>/i, insertion, 'before');
   }
   return applyHtmlFragment(html, '</body>', insertion, 'before');
+}
+
+function finalizeTravelPageHtml(baseHtml) {
+  // #1640: buildTravelSkeletonHtml already supplies the single visible,
+  // normal-flow travel H1. The generic injectHiddenH1 helper remains for
+  // landing routes whose static shell has no semantic heading.
+  return gateAppScriptsBehindHero(disableExpoRouterHydration(baseHtml));
 }
 
 function parseQuestJsonField(value, fallback) {
@@ -3598,7 +3605,7 @@ async function main() {
         `/travels/${routeKey}`,
         {
           heroPreload: travelHeroPreload,
-          name,
+          name: name || routeKey,
           descriptionHtml: detail.description,
           related: pickRelatedTravels(travel, relatedIndex, 6),
         }
@@ -3606,11 +3613,7 @@ async function main() {
       const htmlWithIconFont = injectIconFontPreload(htmlWithSkeleton, iconFontHref);
       const htmlWithQuestPromo = injectTravelQuestPromoSection(htmlWithIconFont, questMatches);
       const htmlWithRegisterCta = injectTravelRegisterCtaSection(htmlWithQuestPromo);
-      const finalTravelHtml = gateAppScriptsBehindHero(
-        disableExpoRouterHydration(
-          injectHiddenH1(htmlWithRegisterCta, name || routeKey)
-        )
-      );
+      const finalTravelHtml = finalizeTravelPageHtml(htmlWithRegisterCta);
 
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
@@ -3978,6 +3981,7 @@ if (typeof module !== 'undefined' && module.exports) {
     findTravelQuestPromoMatches,
     injectTravelQuestPromoSection,
     injectTravelRegisterCtaSection,
+    finalizeTravelPageHtml,
     injectQuestIntroSection,
     injectQuestLinksIndex,
     injectHomeQuestsSection,

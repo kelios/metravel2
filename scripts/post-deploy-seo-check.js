@@ -412,6 +412,30 @@ function validateSitemapResponse(result) {
   }
 }
 
+function getTravelSsgH1Tag(html) {
+  const tags = String(html || '').match(/<h1\b[^>]*>/gi) || []
+  return tags.find((tag) => {
+    const className = tag.match(/\bclass\s*=\s*(["'])(.*?)\1/i)?.[2] || ''
+    return className.split(/\s+/).includes('ssg-travel-h1')
+  }) || ''
+}
+
+function hasHiddenTravelH1Declarations(value) {
+  return /(?:^|;)\s*(?:position\s*:\s*absolute|display\s*:\s*none|visibility\s*:\s*hidden|overflow\s*:\s*hidden|clip(?:-path)?\s*:|(?:width|height)\s*:\s*(?:0(?:px)?|1px)|opacity\s*:\s*0)(?:\s*!important)?(?:;|$)/i.test(value)
+}
+
+function hasVisibleTravelSsgH1(html) {
+  const tag = getTravelSsgH1Tag(html)
+  if (!tag || /\s(?:hidden|inert)(?:\s|=|>)/i.test(tag) || /aria-hidden\s*=\s*["']true["']/i.test(tag)) {
+    return false
+  }
+  const inlineStyle = tag.match(/\bstyle\s*=\s*(["'])(.*?)\1/i)?.[2] || ''
+  const classStyles = [...String(html || '').matchAll(/\.ssg-travel-h1\s*\{([^}]*)\}/gi)]
+    .map((match) => match[1])
+  return !hasHiddenTravelH1Declarations(inlineStyle) &&
+    !classStyles.some(hasHiddenTravelH1Declarations)
+}
+
 function validateTravelHtml(html) {
   const issues = []
   const h1Count = countMatches(html, /<h1\b/gi)
@@ -422,11 +446,17 @@ function validateTravelHtml(html) {
       message: `Expected exactly 1 raw HTML H1, found ${h1Count}`,
     })
   }
-  if (!/data-ssg-travel-h1="true"/i.test(html)) {
+  if (!getTravelSsgH1Tag(html)) {
     issues.push({
       severity: 'error',
       code: 'travel.h1.marker',
-      message: 'Missing SSR travel H1 marker',
+      message: 'Missing normal-flow SSR travel H1 marker',
+    })
+  } else if (!hasVisibleTravelSsgH1(html)) {
+    issues.push({
+      severity: 'error',
+      code: 'travel.h1.hidden',
+      message: 'SSR travel H1 is hidden or clipped',
     })
   }
   const hasArticleJsonLd = extractJsonLdScripts(html).some((script) => {
@@ -692,6 +722,7 @@ if (typeof module !== 'undefined' && module.exports) {
     validateSocialMeta,
     validateTitle,
     validateTravelHtml,
+    hasVisibleTravelSsgH1,
   }
 }
 

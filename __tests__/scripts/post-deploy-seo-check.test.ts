@@ -8,6 +8,7 @@ const {
   validateRobots,
   validateSitemapResponse,
   validateTravelHtml,
+  hasVisibleTravelSsgH1,
 } = require('@/scripts/post-deploy-seo-check')
 
 describe('post-deploy SEO check helpers', () => {
@@ -55,6 +56,19 @@ describe('post-deploy SEO check helpers', () => {
     expect(issues.map((issue: any) => issue.code)).toEqual(
       expect.arrayContaining(['travel.h1.count', 'travel.h1.marker', 'travel.schema.article'])
     )
+  })
+
+  it('rejects hidden, clipped, and duplicate travel H1 contracts', () => {
+    const hidden = '<style>.ssg-travel-h1{position:absolute;width:1px;height:1px;clip:rect(0,0,0,0)}</style><h1 class="ssg-travel-h1">Travel title</h1>'
+    expect(hasVisibleTravelSsgH1(hidden)).toBe(false)
+    expect(validateTravelHtml(hidden).map((issue: any) => issue.code)).toContain('travel.h1.hidden')
+
+    const visibleDuplicate = '<h1 class="ssg-travel-h1">Travel title</h1><h1>Duplicate</h1>'
+    expect(hasVisibleTravelSsgH1(visibleDuplicate)).toBe(true)
+    expect(validateTravelHtml(visibleDuplicate).map((issue: any) => issue.code)).toContain('travel.h1.count')
+
+    const hiddenByLaterRule = '<style>.ssg-travel-h1{color:#111}html.ready .ssg-travel-h1{display:none}</style><h1 class="ssg-travel-h1">Travel title</h1>'
+    expect(hasVisibleTravelSsgH1(hiddenByLaterRule)).toBe(false)
   })
 
   it.each(['/map', '/articles', '/contact'])(
@@ -127,7 +141,7 @@ describe('post-deploy SEO check helpers', () => {
       '<meta name="twitter:image" content="https://metravel.by/image.jpg"/>',
       '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Travel title | Metravel"}</script>',
       '</head>',
-      '<body><h1 data-ssg-travel-h1="true">Travel title</h1></body>',
+      '<body><h1 class="ssg-travel-h1">Travel title</h1></body>',
       '</html>',
     ].join('')
 

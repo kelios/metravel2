@@ -1,12 +1,17 @@
 import { render } from '@testing-library/react'
 
 // The shell renders a deep tree (hero, maps, sidebar). For the single-H1
-// regression we only care about the shell's own visible <h1> and the cleanup
-// of the SSG-injected sr-only <h1 data-ssg-travel-h1>, so stub the heavy
-// children to keep the test focused and deterministic.
+// regression we only care about the shell's own visible <h1>, its placement
+// between the hero and article, and cleanup of the SSG-injected sr-only H1.
 jest.mock('@/components/travel/CompactSideBarTravel', () => () => null)
 jest.mock('@/components/travel/details/TravelDetailsSkeletonOverlay', () => () => null)
-jest.mock('@/components/travel/details/TravelDetailsHeroDeferredColumn', () => () => null)
+jest.mock('@/components/travel/details/TravelDetailsHeroDeferredColumn', () => {
+  const React = require('react')
+  return {
+    TravelDetailsHeroBlock: () => React.createElement('div', { 'data-testid': 'hero-block' }),
+    TravelDetailsContentBlock: () => React.createElement('div', { 'data-testid': 'content-block' }),
+  }
+})
 
 describe('TravelDetailsCriticalShell single H1 (web)', () => {
   let consoleErrorSpy: jest.SpyInstance
@@ -23,14 +28,14 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
     consoleErrorSpy.mockRestore()
   })
 
-  function renderShell() {
+  function renderShell({ isMobile = false, screenWidth = 1280 } = {}) {
     const Shell = require('@/components/travel/details/TravelDetailsCriticalShell').default
     const { Animated } = require('react-native')
     return render(
       <Shell
         travel={{ id: 1, name: 'Тропа ведьм' } as any}
-        isMobile={false}
-        screenWidth={1280}
+        isMobile={isMobile}
+        screenWidth={screenWidth}
         wrapperStyle={{}}
         styles={{}}
         skeletonPhase="hidden"
@@ -59,18 +64,33 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
     )
   }
 
-  it('renders exactly one sr-only <h1> with the travel name', () => {
-    const { container } = renderShell()
-    const h1s = container.querySelectorAll('h1')
-    expect(h1s.length).toBe(1)
-    expect(h1s[0].textContent).toBe('Тропа ведьм')
-    expect(h1s[0].getAttribute('data-testid')).toBe('travel-details-title')
-    // Crawlable but never painted — no stray title above the gallery.
-    expect(h1s[0].style.position).toBe('absolute')
-    expect(h1s[0].style.width).toBe('1px')
-    expect(h1s[0].style.height).toBe('1px')
-    expect(h1s[0].style.overflow).toBe('hidden')
-  })
+  it.each([
+    ['desktop web', false, 1280, '34px'],
+    ['mobile web', true, 390, '28px'],
+  ])(
+    'renders exactly one visible <h1> with the travel name on %s',
+    (_label, isMobile, screenWidth, fontSize) => {
+      const { container } = renderShell({ isMobile, screenWidth })
+      const h1s = container.querySelectorAll('h1')
+      expect(h1s.length).toBe(1)
+      expect(h1s[0].textContent).toBe('Тропа ведьм')
+      expect(h1s[0].getAttribute('data-testid')).toBe('travel-details-title')
+      expect(h1s[0].style.position).not.toBe('absolute')
+      expect(h1s[0].style.width).not.toBe('1px')
+      expect(h1s[0].style.height).not.toBe('1px')
+      expect(h1s[0].style.overflow).not.toBe('hidden')
+      expect(h1s[0].style.clip).toBe('')
+      expect(h1s[0].style.clipPath).toBe('')
+      expect(h1s[0].style.display).not.toBe('none')
+      expect(h1s[0].style.visibility).not.toBe('hidden')
+      expect(h1s[0].style.fontSize).toBe(fontSize)
+
+      const hero = container.querySelector('[data-testid="hero-block"]')
+      const content = container.querySelector('[data-testid="content-block"]')
+      expect(hero?.nextElementSibling).toBe(h1s[0])
+      expect(h1s[0].nextElementSibling).toBe(content)
+    },
+  )
 
   it('removes the SSG-injected sr-only <h1 data-ssg-travel-h1> on mount', () => {
     const ssg = document.createElement('h1')
@@ -95,6 +115,23 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
     renderShell()
 
     expect(document.querySelectorAll('.ssg-travel-h1').length).toBe(1)
+  })
+
+  it('demotes the visible SSG H1 without changing its placeholder geometry class', () => {
+    const skeleton = document.createElement('div')
+    skeleton.id = 'ssg-skeleton'
+    const ssg = document.createElement('h1')
+    ssg.className = 'ssg-travel-h1'
+    ssg.textContent = 'Тропа ведьм'
+    skeleton.appendChild(ssg)
+    document.body.insertBefore(skeleton, document.body.firstChild)
+
+    renderShell()
+
+    expect(document.querySelectorAll('h1')).toHaveLength(1)
+    expect(document.querySelector('h1[data-testid="travel-details-title"]')).not.toBeNull()
+    const placeholder = document.querySelector('div.ssg-travel-h1')
+    expect(placeholder?.textContent).toBe('Тропа ведьм')
   })
 
   it('signals that the React first screen replaced the SSG shell', () => {

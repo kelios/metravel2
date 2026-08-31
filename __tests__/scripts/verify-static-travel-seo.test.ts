@@ -6,6 +6,7 @@ const {
   extractItems,
   hasArticleJsonLd,
   hasTravelSsgHeading,
+  hasVisibleTravelSsgHeading,
   getTitle,
   getMetaContent,
   verifyTravelHtml,
@@ -51,7 +52,7 @@ describe('verify-static-travel-seo helpers', () => {
       '<meta property="og:image" content="https://metravel.by/travel-image/123/conversions/hero-detail_hd.jpg"/>',
       '<meta name="twitter:image" content="https://metravel.by/travel-image/123/conversions/hero-detail_hd.jpg"/>',
       '<link rel="canonical" href="https://metravel.by/travels/energylandia-polskii-disneilend"/>',
-      '<h1 data-ssg-travel-h1="true">Energylandia</h1>',
+      '<h1 class="ssg-travel-h1">Energylandia</h1>',
       '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article"}</script>',
       '</body></html>',
     ].join('')
@@ -60,6 +61,7 @@ describe('verify-static-travel-seo helpers', () => {
     expect(getMetaContent(html, 'property', 'og:image')).toContain('hero-detail_hd')
     expect(countTag(html, /<meta[^>]*name="description"[^>]*\/?>/gi)).toBe(1)
     expect(hasTravelSsgHeading(html)).toBe(true)
+    expect(hasVisibleTravelSsgHeading(html)).toBe(true)
     expect(hasArticleJsonLd(html)).toBe(true)
     expect(verifyTravelHtml(html, 'energylandia-polskii-disneilend')).toEqual([])
   })
@@ -82,8 +84,22 @@ describe('verify-static-travel-seo helpers', () => {
       'missing twitter:image',
       'bad canonical: https://metravel.by/travels/wrong-slug',
       'bad og:url: missing',
+      'expected exactly one SSR H1, found 0',
       'missing SSR H1 marker',
       'missing Article JSON-LD',
     ])
+  })
+
+  it('rejects hidden and duplicate static travel headings', () => {
+    const hidden = '<style>.ssg-travel-h1{position:absolute;width:1px;height:1px;clip:rect(0,0,0,0)}</style><h1 class="ssg-travel-h1">Маршрут</h1>'
+    expect(hasTravelSsgHeading(hidden)).toBe(true)
+    expect(hasVisibleTravelSsgHeading(hidden)).toBe(false)
+    expect(verifyTravelHtml(hidden, 'route')).toContain('hidden or clipped SSR H1')
+
+    const duplicate = '<h1 class="ssg-travel-h1">Маршрут</h1><h1>Дубль</h1>'
+    expect(verifyTravelHtml(duplicate, 'route')).toContain('expected exactly one SSR H1, found 2')
+
+    const hiddenByLaterRule = '<style>.ssg-travel-h1{color:#111}html.ready .ssg-travel-h1{display:none}</style><h1 class="ssg-travel-h1">Маршрут</h1>'
+    expect(hasVisibleTravelSsgHeading(hiddenByLaterRule)).toBe(false)
   })
 })

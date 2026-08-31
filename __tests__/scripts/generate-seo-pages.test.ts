@@ -41,6 +41,7 @@ const {
   findTravelQuestPromoMatches,
   injectTravelQuestPromoSection,
   injectTravelRegisterCtaSection,
+  finalizeTravelPageHtml,
   injectJsonLd,
   buildTravelArticleJsonLd,
   extractFaqEntries,
@@ -56,6 +57,7 @@ const {
   injectQuestCountryLandingSection,
   readRequiredQuestCountryTemplate,
 } = require('@/scripts/generate-seo-pages');
+const { injectSkeletonShell } = require('@/scripts/ssg-skeletons');
 
 const fs = require('fs');
 const path = require('path');
@@ -979,6 +981,21 @@ describe('travel SSR SEO helpers', () => {
     expect(result).not.toMatch(/<div id="root"><h1[^>]*data-ssg-travel-h1="true"/)
   })
 
+  it('finalizes a generated travel page with one visible normal-flow H1', () => {
+    const withSkeleton = injectSkeletonShell(MINIMAL_BASE, '/travels/tropa-vedm', {
+      name: 'Тропа ведьм',
+      descriptionHtml: '<p>Маршрут по лесу.</p>',
+    })
+    const result = finalizeTravelPageHtml(withSkeleton)
+    const headingTags = result.match(/<h1\b[^>]*>/gi) || []
+
+    expect(headingTags).toHaveLength(1)
+    expect(headingTags[0]).toContain('class="ssg-travel-h1"')
+    expect(headingTags[0]).not.toContain('style=')
+    expect(result).toContain('<h1 class="ssg-travel-h1">Тропа ведьм</h1>')
+    expect(result).not.toContain('data-ssg-travel-h1="true"')
+  })
+
   it('disableExpoRouterHydration disables React hydration for generated travel pages', () => {
     const base = '<html><body><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><div id="root"></div></body></html>'
     const result = disableExpoRouterHydration(base)
@@ -1236,6 +1253,34 @@ describe('travel SSR SEO helpers', () => {
     expect(matches).toHaveLength(0)
     expect(html).not.toContain('data-ssg-travel-quest-promo="true"')
     expect(html).not.toContain('/quests/1/krakow-dragon')
+  })
+
+  it('keeps the travel quest promo immediately after the visible travel H1', () => {
+    const base = MINIMAL_BASE.replace(
+      '<div id="root">',
+      '<h1 class="ssg-travel-h1">Тропа ведьм</h1><div id="root">',
+    )
+    const html = injectTravelQuestPromoSection(base, [
+      {
+        distanceKm: 2,
+        quest: {
+          route: { path: '/quests/1/forest' },
+          title: 'Лесной квест',
+          cityName: 'Минск',
+          points: 5,
+          durationMin: 60,
+          cover: '',
+        },
+      },
+    ])
+
+    const titleEnd = html.indexOf('</h1>')
+    const promoStart = html.indexOf('<style data-ssg-travel-quest-promo-style="true">')
+    const rootStart = html.indexOf('<div id="root">')
+    expect(titleEnd).toBeGreaterThan(-1)
+    expect(promoStart).toBeGreaterThan(titleEnd)
+    expect(promoStart).toBeLessThan(rootStart)
+    expect((html.match(/<h1\b/gi) || [])).toHaveLength(1)
   })
 
   it('injectQuestIntroSection adds crawlable visible quest intro and replaces it on repeat', () => {

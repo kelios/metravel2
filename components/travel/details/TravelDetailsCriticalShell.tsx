@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useMemo } from 'react';
 import { Animated, Platform, ScrollView, View } from 'react-native';
 import type {
   LayoutChangeEvent,
@@ -12,6 +12,7 @@ import { lazyWithRetry } from '@/utils/chunkReload';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { LAYOUT } from '@/constants/layout';
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
+import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 import {
@@ -30,12 +31,12 @@ import TravelDetailsHeroDeferredColumn, {
 } from './TravelDetailsHeroDeferredColumn';
 import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
 
-// The travel name is the page's single semantic <h1>. On wider web layouts it
-// is visible above the gallery so the first screen identifies the route; mobile
-// keeps it sr-only because the compact app header already shows that context.
-// The SSG step also injects its own sr-only `<h1 data-ssg-travel-h1>` plus a
-// visible `.ssg-travel-h1` placeholder; both are torn down on mount (see effect
-// below) so the hydrated page keeps exactly one heading.
+// The travel name is the page's single semantic <h1>. It follows the hero and
+// its metadata, matching the SSG article order without inserting a new block
+// above the gallery.
+// The current SSG shell starts with a visible `.ssg-travel-h1`; on hydration it
+// is demoted to a same-class div until shell teardown. Legacy cached pages may
+// also carry `<h1 data-ssg-travel-h1>`, which the same effect removes.
 // Sub-nav sits at index 1 of the native sticky ScrollView children
 // (hero, sub-nav, content).
 const STICKY_NAV_INDICES = [1];
@@ -59,17 +60,20 @@ const MOBILE_WEB_SANS_FONT = {
     '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif',
 } as const;
 
-const WEB_SR_ONLY_HEADING_STYLE = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: 'hidden',
-  clip: 'rect(0,0,0,0)',
-  whiteSpace: 'nowrap',
-  borderWidth: 0,
+const TRAVEL_HEADING_WEB_FONT_FAMILY =
+  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+const WEB_VISIBLE_HEADING_STYLE = {
+  // Exact parity with `.ssg-travel-h1` avoids a handoff shift at shell teardown.
+  margin: '0 0 14px',
+  fontFamily: TRAVEL_HEADING_WEB_FONT_FAMILY,
+  fontWeight: '700',
+  lineHeight: 1.25,
+  letterSpacing: '-0.02em',
+  maxWidth: 760,
 } as const;
+
+const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 type TravelDetailsCriticalShellProps = {
   travel?: Travel;
@@ -137,15 +141,23 @@ export default function TravelDetailsCriticalShell({
   topNotice,
 }: TravelDetailsCriticalShellProps) {
   const insets = useSafeAreaInsetsSafe();
+  const colors = useThemedColors();
 
-  // Drop the SSG-injected sr-only heading once the real React <h1> has mounted.
-  // The visible `.ssg-travel-h1` belongs to the fixed SSG shell and must remain
-  // until that shell is torn down; removing it early shifts the crawlable SSG
-  // article underneath and is counted as CLS even while the overlay is visible.
-  useEffect(() => {
+  // Drop legacy sr-only headings once the real React H1 has mounted. The current
+  // SSG title is a visible normal-flow H1, so demote it to a same-class div
+  // until shell teardown: this preserves geometry without leaving two H1s in
+  // the hydrated DOM.
+  useWebLayoutEffect(() => {
     if (Platform.OS !== 'web' || !travel) return;
     const stale = document.querySelectorAll('h1[data-ssg-travel-h1]');
     stale.forEach((node) => node.parentNode?.removeChild(node));
+
+    document.querySelectorAll('#ssg-skeleton h1.ssg-travel-h1').forEach((node) => {
+      const placeholder = document.createElement('div');
+      placeholder.className = node.className;
+      placeholder.textContent = node.textContent;
+      node.parentNode?.replaceChild(placeholder, node);
+    });
   }, [travel]);
 
   useEffect(() => {
@@ -245,28 +257,55 @@ export default function TravelDetailsCriticalShell({
   const useNativeStickyNav =
     !!travel && isMobile && Platform.OS !== 'web' && !showDesktopSidebar;
 
-  const contentColumn = travel ? (
-    <TravelDetailsHeroDeferredColumn
-      travel={travel}
-      anchors={anchors}
-      isMobile={isMobile}
-      onFirstImageLoad={onFirstImageLoad}
-      sectionLinks={sectionLinks}
-      onQuickJump={onQuickJump}
-      deferHeroExtras={deferHeroExtras}
-      forceOpenKey={forceOpenKey}
-      deferredContent={deferredContent}
-      activeKey={activeSection ?? undefined}
-    />
-  ) : null;
-
-  // SEO/a11y only: the crawlable <h1> must stay in the DOM (single-H1 invariant,
-  // post-deploy-seo-check) but is never painted — nothing renders above the
-  // gallery on any web width.
   const pageTitle = Platform.OS === 'web' && travel ? (
-    <h1 data-testid="travel-details-title" style={WEB_SR_ONLY_HEADING_STYLE as any}>
+    <h1
+      data-testid="travel-details-title"
+      style={{
+        ...WEB_VISIBLE_HEADING_STYLE,
+        color: colors.text,
+        fontSize: isMobile ? 28 : 34,
+      } as any}
+    >
       {travel.name}
     </h1>
+  ) : null;
+
+  const contentColumn = travel ? (
+    Platform.OS === 'web' ? (
+      <>
+        <TravelDetailsHeroBlock
+          travel={travel}
+          anchors={anchors}
+          isMobile={isMobile}
+          deferHeroExtras={deferHeroExtras}
+          onFirstImageLoad={onFirstImageLoad}
+          onQuickJump={onQuickJump}
+          sectionLinks={sectionLinks}
+          activeKey={activeSection ?? undefined}
+        />
+        {pageTitle}
+        <TravelDetailsContentBlock
+          travel={travel}
+          isMobile={isMobile}
+          anchors={anchors}
+          forceOpenKey={forceOpenKey}
+        />
+        {deferredContent}
+      </>
+    ) : (
+      <TravelDetailsHeroDeferredColumn
+        travel={travel}
+        anchors={anchors}
+        isMobile={isMobile}
+        onFirstImageLoad={onFirstImageLoad}
+        sectionLinks={sectionLinks}
+        onQuickJump={onQuickJump}
+        deferHeroExtras={deferHeroExtras}
+        forceOpenKey={forceOpenKey}
+        deferredContent={deferredContent}
+        activeKey={activeSection ?? undefined}
+      />
+    )
   ) : null;
 
   const nativeStickyChildren =
@@ -371,15 +410,11 @@ export default function TravelDetailsCriticalShell({
                       </View>
 
                       <View style={desktopContentColumnStyle} collapsable={false}>
-                        {pageTitle}
                         {contentColumn}
                       </View>
                     </View>
                   ) : travel ? (
-                    <>
-                      {pageTitle}
-                      {contentColumn}
-                    </>
+                    contentColumn
                   ) : null}
                 </View>
               </View>

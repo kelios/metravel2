@@ -45,8 +45,32 @@ function countTag(html, regex) {
   return matches ? matches.length : 0
 }
 
+function getTravelSsgHeadingTag(html) {
+  const tags = String(html || '').match(/<h1\b[^>]*>/gi) || []
+  return tags.find((tag) => {
+    const className = tag.match(/\bclass\s*=\s*(["'])(.*?)\1/i)?.[2] || ''
+    return className.split(/\s+/).includes('ssg-travel-h1')
+  }) || ''
+}
+
 function hasTravelSsgHeading(html) {
-  return /<h1[^>]*data-ssg-travel-h1="true"[^>]*>[\s\S]*?<\/h1>/i.test(html)
+  return Boolean(getTravelSsgHeadingTag(html))
+}
+
+function hasHiddenTravelH1Declarations(value) {
+  return /(?:^|;)\s*(?:position\s*:\s*absolute|display\s*:\s*none|visibility\s*:\s*hidden|overflow\s*:\s*hidden|clip(?:-path)?\s*:|(?:width|height)\s*:\s*(?:0(?:px)?|1px)|opacity\s*:\s*0)(?:\s*!important)?(?:;|$)/i.test(value)
+}
+
+function hasVisibleTravelSsgHeading(html) {
+  const tag = getTravelSsgHeadingTag(html)
+  if (!tag || /\s(?:hidden|inert)(?:\s|=|>)/i.test(tag) || /aria-hidden\s*=\s*["']true["']/i.test(tag)) {
+    return false
+  }
+  const inlineStyle = tag.match(/\bstyle\s*=\s*(["'])(.*?)\1/i)?.[2] || ''
+  const classStyles = [...String(html || '').matchAll(/\.ssg-travel-h1\s*\{([^}]*)\}/gi)]
+    .map((match) => match[1])
+  return !hasHiddenTravelH1Declarations(inlineStyle) &&
+    !classStyles.some(hasHiddenTravelH1Declarations)
 }
 
 function hasArticleJsonLd(html) {
@@ -76,7 +100,10 @@ function verifyTravelHtml(html, routeKey) {
   if (!twitterImage) issues.push('missing twitter:image')
   if (canonical !== expectedCanonical) issues.push(`bad canonical: ${canonical || 'missing'}`)
   if (ogUrl !== expectedCanonical) issues.push(`bad og:url: ${ogUrl || 'missing'}`)
+  const h1Count = countTag(html, /<h1\b/gi)
+  if (h1Count !== 1) issues.push(`expected exactly one SSR H1, found ${h1Count}`)
   if (!hasTravelSsgHeading(html)) issues.push('missing SSR H1 marker')
+  else if (!hasVisibleTravelSsgHeading(html)) issues.push('hidden or clipped SSR H1')
   if (!hasArticleJsonLd(html)) issues.push('missing Article JSON-LD')
 
   return issues
@@ -158,6 +185,7 @@ if (typeof module !== 'undefined' && module.exports) {
     extractItems,
     hasArticleJsonLd,
     hasTravelSsgHeading,
+    hasVisibleTravelSsgHeading,
     getTitle,
     getMetaContent,
     verifyTravelHtml,

@@ -306,7 +306,7 @@ function buildSkeletonCSS() {
 .ssg-travel-sidebar-line.w55{width:55%}.ssg-travel-sidebar-line.w75{width:75%}
 .ssg-travel-sidebar-nav{display:flex;flex-direction:column;gap:12px;padding:18px 8px}
 .ssg-travel-sidebar-nav-line{height:18px;border-radius:9px}
-/* #1359: реальные title/article/related остаются обычными raw HTML-узлами
+/* #1359/#1640: реальные title/article/related остаются обычными raw HTML-узлами
    в нормальном DOM-flow. Перед ними first-screen занимает остаток viewport,
    поэтому SEO-текст и инжектируемый сразу после .ssg-travel-h1 quest-promo
    не попадают в первый экран без clipping/display:none/visibility/inert. */
@@ -866,14 +866,14 @@ function buildTravelSkeletonHtml({ heroPreload, name, descriptionHtml, related }
     ? `<div class="ssg-travel-hero"${heroFillStyle}>${heroImg}<div class="ssg-travel-hero-bg"></div></div>`
     : `<div class="ssg-travel-hero ssg-pulse"></div>`;
 
-  // FE-IDX-1/#1359: render the REAL title/article/related links into ordinary
+  // FE-IDX-1/#1359/#1640: render the REAL title/article/related links into ordinary
   // raw DOM nodes so crawlers see substantive content. They stay in normal flow
   // after a viewport-sized first-screen block, so the first paint mirrors the
   // React hero and author/meta geometry without hiding indexable content.
-  // The title is NOT an <h1>: the single semantic <h1> stays the out-of-flow
-  // one injected before #root by injectHiddenH1.
+  // The visible title itself is the page's single semantic H1; generated travel
+  // pages must not add the generic out-of-flow injectHiddenH1 sibling as well.
   const titleText = String(name || '').trim();
-  const titleBlock = titleText ? `<div class="ssg-travel-h1">${escapeHtmlAttr(titleText)}</div>` : '';
+  const titleBlock = titleText ? `<h1 class="ssg-travel-h1">${escapeHtmlAttr(titleText)}</h1>` : '';
   const articleHtml = sanitizeArticleBodyHtml(descriptionHtml);
   const crawlableContentBlock = articleHtml
     ? `<div class="ssg-travel-article">${articleHtml}</div>`
