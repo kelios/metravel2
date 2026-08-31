@@ -385,10 +385,46 @@ Card.Cover = ({ source, style, resizeMode = 'cover', ...rest }) => (
   <Image {...rest} source={source} style={style as any} resizeMode={resizeMode} />
 )
 
-export const Dialog: any = ({ children }: ChildrenProps) => <View>{children}</View>
-Dialog.Title = ({ children }: ChildrenProps) => <Title>{children}</Title>
-Dialog.Content = ({ children }: ChildrenProps) => <View>{children}</View>
-Dialog.Actions = ({ children }: ChildrenProps) => <View>{children}</View>
+// На web оба потребителя (`components/ui/ConfirmDialog.tsx`,
+// `components/travel/upsert/WizardExitDialog.tsx`) уходят в `Modal` до `<Dialog>`,
+// так что этот путь здесь не исполняется. Тип всё равно нужен настоящий: типы
+// этого файла теперь резолвятся и для native-вызовов, а прежний `any` снимал с
+// них проверку целиком. `visible` при этом соблюдается — принимать проп и
+// игнорировать его значило бы повторить ровно тот дефект, который чинит #1657.
+type DialogShimProps = Omit<ViewProps, 'style'> &
+  ChildrenProps & {
+    visible?: boolean
+    onDismiss?: () => void
+    dismissable?: boolean
+    style?: StyleProp<ViewStyle>
+  }
+
+export const Dialog: React.FC<DialogShimProps> & {
+  Title: React.FC<TextShimProps>
+  Content: React.FC<CardShimProps>
+  Actions: React.FC<CardShimProps>
+} = ({ children, visible = true, onDismiss: _onDismiss, dismissable: _dismissable, style, ...rest }) => {
+  if (!visible) return null
+  return (
+    <View {...rest} style={style as any}>
+      {children}
+    </View>
+  )
+}
+
+Dialog.Title = ({ children, ...rest }: TextShimProps) => <Title {...rest}>{children}</Title>
+
+Dialog.Content = ({ children, style, ...rest }: CardShimProps) => (
+  <View {...rest} style={style as any}>
+    {children}
+  </View>
+)
+
+Dialog.Actions = ({ children, style, ...rest }: CardShimProps) => (
+  <View {...rest} style={style as any}>
+    {children}
+  </View>
+)
 
 export const Portal: React.FC<ChildrenProps> = ({ children }) => {
   if (Platform.OS !== 'web') return <>{children}</>

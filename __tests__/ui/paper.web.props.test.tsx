@@ -1,5 +1,6 @@
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
+import { Pressable } from 'react-native';
 
 import { Button, Card, IconButton, Paragraph, Snackbar, Text, Title } from '@/ui/paper.web';
 
@@ -113,33 +114,30 @@ describe('ui/paper.web prop forwarding', () => {
     }
   });
 
-  it('keeps a disabled Button inert instead of only marking it disabled', () => {
-    // На web `accessibilityState` react-native-web выбрасывает, поэтому шим обязан
-    // отдавать недоступность через собственный `disabled` у Pressable — иначе
-    // выключенная стрелка пагинации остаётся в tab-порядке и без `aria-disabled`.
-    const onPress = jest.fn();
-    const { getByTestId } = render(
-      <Button testID="prev" disabled onPress={onPress}>
-        Назад
-      </Button>,
-    );
+  // На web `accessibilityState` бесполезен: react-native-web его не форвардит
+  // вовсе (в `modules/forwardedProps` его нет). `aria-disabled` и `tabIndex=-1`
+  // даёт только собственный проп `disabled` у `Pressable`, поэтому шим обязан
+  // прокидывать его вниз, а не ограничиваться `accessibilityState`.
+  //
+  // Проверяем именно проп на `Pressable`, а не `fireEvent.press`: jest здесь
+  // работает под платформой `ios`, `fireEvent` ищет `onPress` вверх по дереву и
+  // находит его на самом `Button`, поэтому «нажатие» срабатывает независимо от
+  // реализации. Поведение react-native-web юнит-тестом тут не доказывается —
+  // `aria-disabled` и `tabindex` проверяются в браузере на стадии testing.
+  it.each([
+    ['Button', <Button testID="prev" disabled onPress={() => {}} key="b">Назад</Button>],
+    [
+      'IconButton',
+      <IconButton testID="next" disabled icon="→" onPress={() => {}} accessibilityLabel="Дальше" key="i" />,
+    ],
+  ])('passes disabled down to Pressable in %s, not only accessibilityState', (_name, element) => {
+    const { getByTestId, UNSAFE_getByType } = render(element);
 
-    const node = getByTestId('prev');
-    expect(node.props.accessibilityState?.disabled).toBe(true);
-    fireEvent.press(node);
-    expect(onPress).not.toHaveBeenCalled();
-  });
+    expect(getByTestId(_name === 'Button' ? 'prev' : 'next').props.accessibilityState?.disabled).toBe(true);
 
-  it('keeps a disabled IconButton inert', () => {
-    const onPress = jest.fn();
-    const { getByTestId } = render(
-      <IconButton testID="next" disabled icon="→" onPress={onPress} accessibilityLabel="Дальше" />,
-    );
-
-    const node = getByTestId('next');
-    expect(node.props.accessibilityState?.disabled).toBe(true);
-    fireEvent.press(node);
-    expect(onPress).not.toHaveBeenCalled();
+    const pressable = UNSAFE_getByType(Pressable);
+    expect(pressable.props.disabled).toBe(true);
+    expect(pressable.props.onPress).toBeUndefined();
   });
 
   it('does not restart the Snackbar timer when onDismiss identity changes', () => {
