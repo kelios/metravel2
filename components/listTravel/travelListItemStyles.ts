@@ -1,6 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { CARD_HOVER_TRANSITION } from '@/components/ui/unifiedTravelCardTokens';
 
 // Inline meta-text scale: bodySmall on web, caption on native.
 const META_TEXT_FONT_SIZE =
@@ -17,7 +18,11 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
   StyleSheet.create({
     wrap: {
       width: '100%',
-      ...(Platform.OS === 'web' ? { height: '100%' } as any : {}),
+      // `transition` живёт здесь, в уже существующем web-касте: подъём под
+      // курсором ведёт обёртка (см. TravelListItem), и анимировать нужно её.
+      ...(Platform.OS === 'web'
+        ? ({ height: '100%', transition: CARD_HOVER_TRANSITION } as any)
+        : {}),
     },
 
     // Современная минималистичная карточка

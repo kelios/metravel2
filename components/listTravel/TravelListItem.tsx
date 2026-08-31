@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef } from 'react'
+import React, { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Platform, Pressable, Text, View, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { router } from 'expo-router'
@@ -12,6 +12,8 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import {
   CARD_TOP_SLOT_INSET,
   CARD_TOP_SLOT_Z_INDEX,
+  CARD_HOVER_LIFT_SCALE,
+  CARD_HOVER_LIFT_Y,
 } from '@/components/ui/unifiedTravelCardTokens'
 import CardActionPressable from '@/components/ui/CardActionPressable'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -84,6 +86,21 @@ const POINTER_EVENTS_BOX_NONE = { pointerEvents: 'box-none' } as any
  * они не обязаны; сдвинуть слоты на другой край карточки правка токена всё
  * равно не даст.
  */
+/**
+ * Подъём под курсором принадлежит обёртке, а не карточке: поднятые из якоря
+ * кнопки карточке больше не потомки, transform её контейнера на них не
+ * действует — карточка уезжала бы вверх, оставляя кнопки на месте (замерено:
+ * контейнер 340 → 329 px, кнопка 362 → 362). Обёртка содержит и якорь, и
+ * кнопки, поэтому переход указателя с карточки на кнопку подъём не срывает.
+ *
+ * Псевдокласс `:hover` не годится: в обычном объекте стиля react-native-web его
+ * молча выбрасывает, а из `StyleSheet.create` правило до узла не доходило —
+ * класс `r-:hover-…` в разметке появлялся, `transform` оставался `none`.
+ */
+const WRAP_HOVER_LIFT_STYLE: ViewStyle = {
+  transform: [{ translateY: CARD_HOVER_LIFT_Y }, { scale: CARD_HOVER_LIFT_SCALE }],
+}
+
 const HOISTED_SLOT_BASE: ViewStyle = {
   position: 'absolute',
   top: CARD_TOP_SLOT_INSET,
@@ -479,6 +496,8 @@ function TravelListItem({
   // внутри ссылки невалиден по HTML и ломает Tab-порядок (#1626). В selectable-
   // режиме и на нативе якоря нет, слоты остаются на своём месте в карточке.
   const hoistsActionsOutOfAnchor = IS_WEB && !selectable
+  const wrapOwnsHover = hoistsActionsOutOfAnchor && !isMobile
+  const [wrapHovered, setWrapHovered] = useState(false)
 
   const rightTopSlot = (
     <View
@@ -734,7 +753,7 @@ function TravelListItem({
       bottomRightSlot={viewsOverlaySlot}
       containerOverlaySlot={selectableOverlay}
       contentSlot={contentSlot}
-      webHoverScale={!isMobile && IS_WEB}
+      webHoverScale={!wrapOwnsHover && !isMobile && IS_WEB}
       webAsView={IS_WEB}
       webNavigationOwner={IS_WEB && !selectable ? 'external' : undefined}
       webPressableProps={IS_WEB && selectable ? selectableWebHandlers : undefined}
@@ -799,7 +818,12 @@ function TravelListItem({
       style={[
         styles.wrap,
         IS_WEB && typeof cardWidth === 'number' && { width: '100%' },
+        wrapOwnsHover && wrapHovered && WRAP_HOVER_LIFT_STYLE,
       ]}
+      {...(wrapOwnsHover && {
+        onMouseEnter: () => setWrapHovered(true),
+        onMouseLeave: () => setWrapHovered(false),
+      })}
     >
       {wrappedCard}
       {/*

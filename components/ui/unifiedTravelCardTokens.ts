@@ -13,3 +13,16 @@
 export const CARD_TOP_SLOT_INSET = 10
 export const CARD_TOP_SLOT_Z_INDEX = 10
 
+/**
+ * Подъём карточки под курсором и его тайминг.
+ *
+ * Токен общий, потому что на web поднятые из якоря слоты карточке больше не
+ * потомки: transform её контейнера на них не действует, и подъёмом обязана
+ * владеть обёртка — иначе карточка уезжает вверх, оставляя кнопки на месте
+ * (замерено: контейнер 340 → 329, кнопка 362 → 362).
+ */
+export const CARD_HOVER_LIFT_Y = -6
+export const CARD_HOVER_LIFT_SCALE = 1.02
+/** CSS-форма для карточки; обёртка берёт те же числа в RN-форме без каста. */
+export const CARD_HOVER_LIFT_TRANSFORM = `translateY(${CARD_HOVER_LIFT_Y}px) scale(${CARD_HOVER_LIFT_SCALE})`
+export const CARD_HOVER_TRANSITION = 'transform 0.2s ease'

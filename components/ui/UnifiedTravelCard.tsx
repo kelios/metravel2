@@ -22,6 +22,7 @@ import { translate as i18nT } from '@/i18n'
 import {
   CARD_TOP_SLOT_INSET,
   CARD_TOP_SLOT_Z_INDEX,
+  CARD_HOVER_LIFT_TRANSFORM,
 } from '@/components/ui/unifiedTravelCardTokens'
 
 
@@ -277,7 +278,7 @@ function UnifiedTravelCard({
           ...Platform.select({
             web: {
               // ANIM-02: optional scale + translateY hover effect for dense grids
-              ...(webHoverScale ? { transform: 'translateY(-6px) scale(1.02)' } : { transform: 'translateY(-3px)' }),
+              ...(webHoverScale ? { transform: CARD_HOVER_LIFT_TRANSFORM } : { transform: 'translateY(-3px)' }),
               borderColor: colors.primary,
               boxShadow: '0 12px 32px rgba(59, 130, 246, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.1)',
             } as any,
@@ -724,7 +725,10 @@ function UnifiedTravelCard({
                   onMediaPress();
                 }
               },
-              'data-card-action': 'true',
+              // Только `dataSet`: сырой `data-*` react-native-web с RN-компонента
+              // в DOM не переносит, и маркер, по которому карточка отличает клик
+              // по своей кнопке от клика по себе, молча отсутствовал.
+              dataSet: { cardAction: 'true' },
               style: { cursor: 'pointer', position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
             } as any)}
           />
@@ -734,7 +738,7 @@ function UnifiedTravelCard({
             accessibilityLabel={mediaActionLabel}
             onPress={onMediaPress}
             style={StyleSheet.absoluteFill}
-            {...({ 'data-card-action': 'true' } as any)}
+            {...({ dataSet: { cardAction: 'true' } } as any)}
           />
         )
       ) : null}
