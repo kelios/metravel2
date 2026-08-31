@@ -409,6 +409,8 @@ export async function fetchQuestReviews(questId: string): Promise<QuestReview[]>
 type PaginatedEnvelope<T> = {
     data?: T[];
     results?: T[];
+    total?: number;
+    count?: number;
     next_page_url?: string | null;
     next?: string | null;
 };
@@ -428,24 +430,78 @@ function buildListPageUrl(path: string, page: number): string {
     return `${path}${separator}page_size=${LIST_PAGE_SIZE}${pageParam}`;
 }
 
-/** Бэкенд перевёл списочные эндпоинты на пагинацию ({data/results, next}) — разворачиваем конверт и дочитываем все страницы. */
+/** Номер следующей страницы из ссылки `next` бэкенда; `null`, если страница последняя. */
+function nextPageNumber<T>(res: PaginatedEnvelope<T>): number | null {
+    const next = res?.next_page_url ?? res?.next ?? null;
+    const match = typeof next === 'string' ? next.match(/[?&]page=(\d+)/) : null;
+    return match ? Number(match[1]) : null;
+}
+
+/** Размер выборки из конверта; порядок `total`→`count` тот же, что у `unwrapPaginated`. */
+function envelopeTotal<T>(res: PaginatedEnvelope<T>): number | null {
+    if (typeof res?.total === 'number') return res.total;
+    if (typeof res?.count === 'number') return res.count;
+    return null;
+}
+
+/**
+ * Бэкенд перевёл списочные эндпоинты на пагинацию ({data/results, next}) — разворачиваем конверт и дочитываем все страницы.
+ *
+ * Страницы со второй и до последней уходят ОДНОВРЕМЕННО: первый ответ приносит
+ * размер выборки, а значит их число известно сразу и ждать друг друга им незачем.
+ * Раньше цикл узнавал следующую страницу только из уже полученного ответа, и на
+ * профиле каталог из 165 квестов стоил двух последовательных ожиданий (#1659).
+ * Ответ без размера выборки читается по-старому, страница за страницей.
+ */
 async function fetchAllPages<T>(path: string, maxPages = 20, options?: { signal?: AbortSignal }): Promise<T[]> {
-    const out: T[] = [];
-    let page = 1;
-    for (let i = 0; i < maxPages; i++) {
+    const getPage = (page: number) => {
         const url = buildListPageUrl(path, page);
-        const res = options?.signal
-            ? await apiClient.get<T[] | PaginatedEnvelope<T>>(url, undefined, { signal: options.signal })
-            : await apiClient.get<T[] | PaginatedEnvelope<T>>(url);
+        return options?.signal
+            ? apiClient.get<T[] | PaginatedEnvelope<T>>(url, undefined, { signal: options.signal })
+            : apiClient.get<T[] | PaginatedEnvelope<T>>(url);
+    };
+
+    const first = await getPage(1);
+    if (Array.isArray(first)) return [...first];
+
+    // Копия обязательна: `unwrapList` отдаёт сам массив из конверта, и `push`
+    // дописывал бы записи следующих страниц в объект ответа первой.
+    const out = [...unwrapList<T>(first)];
+    if (nextPageNumber(first) === null) return out;
+
+    const total = envelopeTotal(first);
+    const pageSize = out.length;
+    let requested = 1;
+    let page = nextPageNumber(first);
+
+    if (total !== null && pageSize > 0) {
+        // Размер страницы берём фактический, а не запрошенный: бэкенд вправе
+        // урезать `page_size` своим максимумом, и тогда страниц окажется больше.
+        const lastPage = Math.min(Math.ceil(total / pageSize), maxPages);
+        const rest = await Promise.all(
+            Array.from({ length: Math.max(lastPage - 1, 0) }, (_, i) => getPage(i + 2)),
+        );
+        // `Promise.all` держит порядок массива, поэтому записи склеиваются
+        // ровно в том же порядке, что и при последовательном чтении.
+        for (const res of rest) out.push(...unwrapList<T>(res));
+        requested = Math.max(lastPage, 1);
+
+        // Если размер выборки разошёлся с тем, что бэкенд реально отдаёт, хвост
+        // дочитывается по-старому: лишний последовательный запрос дешевле
+        // молча потерянных записей.
+        const last = rest.length ? rest[rest.length - 1] : first;
+        page = Array.isArray(last) ? null : nextPageNumber(last);
+        if (page !== null && page <= lastPage) page = null;
+    }
+
+    for (let i = requested; i < maxPages && page !== null; i++) {
+        const res = await getPage(page);
         if (Array.isArray(res)) {
             out.push(...res);
             break;
         }
         out.push(...unwrapList<T>(res));
-        const next = res?.next_page_url ?? res?.next ?? null;
-        const match = typeof next === 'string' ? next.match(/[?&]page=(\d+)/) : null;
-        if (!match) break;
-        page = Number(match[1]);
+        page = nextPageNumber(res);
     }
     return out;
 }

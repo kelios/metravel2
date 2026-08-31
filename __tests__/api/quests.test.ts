@@ -35,6 +35,9 @@ const mockedPost = apiClient.post as jest.MockedFunction<typeof apiClient.post>;
 const mockedPatch = apiClient.patch as jest.MockedFunction<typeof apiClient.patch>;
 const mockedDelete = apiClient.delete as jest.MockedFunction<typeof apiClient.delete>;
 
+/** Даёт отработать уже поставленным в очередь промисам, ничего не резолвя за них. */
+const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 const MOCK_PROGRESS = {
   id: 42,
   quest: 1,
@@ -80,6 +83,96 @@ describe('api/quests', () => {
       expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/?page_size=100');
       expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?page_size=100&page=2');
       expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon', 'pakocim-voices']);
+    });
+
+    // #1659: страницы со второй уходили по очереди, и ожидания складывались.
+    // Размер выборки в первом ответе сразу говорит, сколько их всего.
+    it('asks the remaining pages at once when the envelope reports the total', async () => {
+      const pending: Array<(value: unknown) => void> = [];
+      mockedGet
+        .mockResolvedValueOnce({
+          results: [{ id: 1, quest_id: 'krakow-dragon' }],
+          count: 3,
+          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+        })
+        // Именно `Once`: `jest.clearAllMocks()` чистит вызовы, но не реализацию,
+        // и постоянный `mockImplementation` утёк бы в следующие тесты файла.
+        .mockImplementationOnce(() => new Promise<any>((resolve) => { pending.push(resolve); }))
+        .mockImplementationOnce(() => new Promise<any>((resolve) => { pending.push(resolve); }));
+
+      const promise = fetchQuestsList();
+      await flushMicrotasks();
+
+      // Последовательное чтение остановилось бы на двух вызовах: третий
+      // невозможно отправить, не дождавшись ответа второго.
+      expect(mockedGet).toHaveBeenCalledTimes(3);
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?page_size=100&page=2');
+      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?page_size=100&page=3');
+
+      // Порядок записей не зависит от порядка ответов: третья страница
+      // отвечает первой, а в списке остаётся третьей.
+      pending[1]({ results: [{ id: 3, quest_id: 'grodno-lanterns' }], next: null });
+      pending[0]({ results: [{ id: 2, quest_id: 'pakocim-voices' }], next: null });
+
+      const result = await promise;
+      expect(result.map((quest) => quest.quest_id)).toEqual([
+        'krakow-dragon',
+        'pakocim-voices',
+        'grodno-lanterns',
+      ]);
+    });
+
+    // Бэкенд вправе урезать запрошенный `page_size` своим максимумом —
+    // считаем страницы по фактической длине первой, иначе хвост потеряется.
+    it('counts pages from the actual page length, not the requested one', async () => {
+      mockedGet
+        .mockResolvedValueOnce({
+          results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
+          count: 5,
+          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+        })
+        .mockResolvedValueOnce({ results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }], next: null })
+        .mockResolvedValueOnce({ results: [{ id: 5, quest_id: 'e' }], next: null });
+
+      const result = await fetchQuestsList();
+
+      expect(mockedGet).toHaveBeenCalledTimes(3);
+      expect(result.map((quest) => quest.quest_id)).toEqual(['a', 'b', 'c', 'd', 'e']);
+    });
+
+    // Размер выборки разошёлся с тем, что бэкенд реально отдаёт: параллельная
+    // часть прочитала две страницы, а третья видна только по ссылке `next`.
+    it('reads the tail sequentially when the reported total is too small', async () => {
+      mockedGet
+        .mockResolvedValueOnce({
+          results: [{ id: 1, quest_id: 'a' }],
+          count: 2,
+          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+        })
+        .mockResolvedValueOnce({
+          results: [{ id: 2, quest_id: 'b' }],
+          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
+        })
+        .mockResolvedValueOnce({ results: [{ id: 3, quest_id: 'c' }], next: null });
+
+      const result = await fetchQuestsList();
+
+      expect(mockedGet).toHaveBeenCalledTimes(3);
+      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?page_size=100&page=3');
+      expect(result.map((quest) => quest.quest_id)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('does not ask for a second page when the first one is the last', async () => {
+      mockedGet.mockResolvedValueOnce({
+        results: [{ id: 1, quest_id: 'krakow-dragon' }],
+        count: 1,
+        next: null,
+      });
+
+      const result = await fetchQuestsList();
+
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+      expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon']);
     });
   });
 
