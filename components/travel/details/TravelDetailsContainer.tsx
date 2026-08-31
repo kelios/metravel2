@@ -151,7 +151,17 @@ export default function TravelDetailsContainer() {
 
   const details = useTravelDetails({ isMobile, screenWidth, startTransition })
   const { data, layout, menu, navigation: travelNavigation, performance, scroll } = details
-  const { error, isError, isLoading, isMissingParam, refetch, slug, staleContentMeta, travel } = data
+  const {
+    error,
+    hasInitialPreloadedTravel,
+    isError,
+    isLoading,
+    isMissingParam,
+    refetch,
+    slug,
+    staleContentMeta,
+    travel,
+  } = data
   const { contentHorizontalPadding, sideMenuPlatformStyles } = layout
   const { activeSection, anchors, forceOpenKey, openSection, scrollRef, scrollTo, setActiveSection } =
     travelNavigation
@@ -246,6 +256,7 @@ export default function TravelDetailsContainer() {
     wrapperStyle,
   } = useTravelDetailsContainerViewModel({
     closeMenu,
+    deferSeoOnWeb: hasInitialPreloadedTravel,
     forceOpenKey,
     isMobile,
     isWebAutomation,

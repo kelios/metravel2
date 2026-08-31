@@ -21,6 +21,7 @@ import { loadTravelOfflineAdapter } from '@/services/offline/loadTravelOfflineAd
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
+  hasInitialPreloadedTravel: boolean;
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
@@ -443,6 +444,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
 
   return useMemo(() => ({
     travel,
+    hasInitialPreloadedTravel: Boolean(initialPreloadedTravel),
     isLoading,
     isError,
     error: error as Error | null,
@@ -453,6 +455,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     staleContentMeta,
   }), [
     travel,
+    initialPreloadedTravel,
     isLoading,
     isError,
     error,

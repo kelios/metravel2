@@ -128,7 +128,18 @@ export const formatNumber = (
 export const formatInteger = (
   value: number,
   locale: SupportedLocale = getActiveLocale(),
-): string => formatNumber(value, { maximumFractionDigits: 0 }, locale)
+): string => {
+  // RU/BE/UK/PL/EN all render ungrouped counters in [0, 1000) with the same
+  // ASCII digits. This common counter path can therefore skip the
+  // first Intl.NumberFormat/ICU warm-up (~29 ms in the #1643 mobile profile)
+  // without moving locale policy into individual components. Keep Intl for
+  // grouping, signs (including the observable `-0`), rounding and non-finite
+  // values.
+  if (Number.isSafeInteger(value) && value >= 0 && value < 1000 && !Object.is(value, -0)) {
+    return String(value)
+  }
+  return formatNumber(value, { maximumFractionDigits: 0 }, locale)
+}
 
 /**
  * С какого значения счётчик печатается компактно. Ниже порога компактная форма

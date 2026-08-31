@@ -134,6 +134,7 @@ describe('TravelDetailsContainer SEO focus guard', () => {
       jest.runOnlyPendingTimers()
     })
     jest.useRealTimers()
+    document.body.innerHTML = ''
   })
 
   it('does not overwrite title or head meta when the screen is not focused', () => {
@@ -151,6 +152,21 @@ describe('TravelDetailsContainer SEO focus guard', () => {
     expect(
       document.querySelector('link[rel="canonical"]')?.getAttribute('href')
     ).toBe('https://metravel.by/search')
+  })
+
+  it('patches only head metadata without scanning or mutating matching body nodes', () => {
+    mockUseIsFocused.mockReturnValue(true)
+    const bodyDecoy = document.createElement('meta')
+    bodyDecoy.setAttribute('name', 'description')
+    bodyDecoy.setAttribute('content', 'body-decoy')
+    document.body.appendChild(bodyDecoy)
+
+    render(<TravelDetailsContainer />)
+
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toContain(
+      'Путешествие в Energylandia',
+    )
+    expect(bodyDecoy.getAttribute('content')).toBe('body-decoy')
   })
 
   it('keeps the Helmet travel JSON-LD when it mounts after the preload tag', async () => {

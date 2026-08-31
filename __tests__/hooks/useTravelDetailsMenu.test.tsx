@@ -3,11 +3,18 @@ import { Animated } from 'react-native'
 
 import { useTravelDetailsMenu } from '@/hooks/useTravelDetailsMenu'
 
+const mockReadViewportWidth = jest.fn(() => 1440)
+
+jest.mock('@/utils/viewportMetrics', () => ({
+  readViewportWidth: () => mockReadViewportWidth(),
+}))
+
 describe('useTravelDetailsMenu', () => {
   const timingStart = jest.fn()
 
   beforeEach(() => {
     timingStart.mockReset()
+    mockReadViewportWidth.mockClear()
     jest.spyOn(Animated, 'timing').mockReturnValue({
       start: timingStart,
     } as any)
@@ -36,5 +43,12 @@ describe('useTravelDetailsMenu', () => {
 
     expect(result.current.isMenuOpen).toBe(true)
     expect(timingStart).not.toHaveBeenCalled()
+  })
+
+  it('reuses the shared viewport snapshot when responsive width is not hydrated yet', () => {
+    const { result } = renderHook(() => useTravelDetailsMenu(false, true, 0))
+
+    expect(mockReadViewportWidth).toHaveBeenCalledTimes(1)
+    expect(result.current.menuWidthNum).toBe(346)
   })
 })

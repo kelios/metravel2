@@ -37,7 +37,10 @@ export function useTravelDetailsHeadSync({
     }
 
     const patchMeta = (sel: string, attr: string, val: string) => {
-      const all = document.querySelectorAll(sel)
+      // Runtime metadata is owned by <head>; deliberately ignore invalid
+      // lookalikes in <body>. Whole-document scans traversed the 50-KB hydrated
+      // article repeatedly and cost 22.6 ms in the #1643 mobile profile.
+      const all = document.head.querySelectorAll(sel)
       for (let i = 1; i < all.length; i += 1) all[i].remove()
       let el = all[0] ?? null
       if (!el) {
@@ -48,13 +51,11 @@ export function useTravelDetailsHeadSync({
         document.head.appendChild(el)
       }
       if (el.getAttribute(attr) !== val) el.setAttribute(attr, val)
-      const deduped = document.querySelectorAll(sel)
-      for (let i = 1; i < deduped.length; i += 1) deduped[i].remove()
     }
 
     const patchCanonical = (href: string) => {
       const sel = 'link[rel="canonical"]'
-      const all = document.querySelectorAll(sel)
+      const all = document.head.querySelectorAll(sel)
       for (let i = 1; i < all.length; i += 1) all[i].remove()
       let el = all[0] as HTMLLinkElement | undefined
       if (!el) {
@@ -75,7 +76,7 @@ export function useTravelDetailsHeadSync({
       // one runtime Article. Querying both selectors together lets a single
       // dedupe pass own every Article copy regardless of which one wrote it.
       const scripts = Array.from(
-        document.querySelectorAll<HTMLScriptElement>(
+        document.head.querySelectorAll<HTMLScriptElement>(
           [
             'script#travel-article-jsonld[type="application/ld+json"]',
             'script[data-seo-jsonld="travel-article"][type="application/ld+json"]',
@@ -117,7 +118,7 @@ export function useTravelDetailsHeadSync({
         // Без этой ветки на SPA-переходе в голове оставался бы тег предыдущей
         // статьи, то есть страница объявляла бы своим чужой адрес — хуже, чем
         // не объявлять никакого.
-        document.querySelectorAll('link[rel="canonical"]').forEach((node) => node.remove())
+        document.head.querySelectorAll('link[rel="canonical"]').forEach((node) => node.remove())
       }
       dedupeTravelJsonLd()
     }

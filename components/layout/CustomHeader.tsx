@@ -5,7 +5,6 @@ import { usePathname } from 'expo-router'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useHydrationReady } from '@/hooks/useHydrationReady'
 import { useThemedColors } from '@/hooks/useTheme'
-import useBreadcrumbModel from '@/hooks/useBreadcrumbModel'
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 
 import {
@@ -19,16 +18,11 @@ import {
   isQuestDetailHeaderPath,
   shouldShowHeaderContextBar,
 } from './customHeaderModel'
-import { resolveHeaderContextBarAction } from './headerContextBarModel'
-import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
 import { createCustomHeaderStyles, webStickyStyle } from './customHeaderStyles'
+import { useHeaderContextBarFallbackVisibility } from './useHeaderContextBarFallbackVisibility'
 import { webDataSetProps } from '@/utils/webProps'
 import Logo from './Logo'
 import LanguageSwitcher from './LanguageSwitcher'
-
-const TOP_LEVEL_TAB_PATHS = new Set<string>(
-  ['/'].concat(HEADER_NAV_ITEMS.filter((item) => !item.external).map((item) => item.path)),
-)
 
 const CONTEXT_BAR_HEIGHT_MOBILE = 52
 const CONTEXT_BAR_HEIGHT_DESKTOP = 40
@@ -81,20 +75,14 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
     shouldShowHeaderContextBar(pathname, isMobile) &&
     !(Platform.OS === 'web' && !isHydrated && isQuestDetailHeaderPath(pathname))
 
-  const breadcrumbModel = useBreadcrumbModel()
-
   // Predict whether the lazy HeaderContextBar will actually render visible UI
-  // (mirrors HeaderContextBar conditions). When false on desktop, the bar
-  // collapses to JSON-LD only — Suspense must reserve 0px to avoid CLS.
-  const willRenderVisibleContextBar = useMemo(() => {
-    if (!showHeaderContextBar) return false
-    if (isMobile) {
-      const action = resolveHeaderContextBarAction(pathname)
-      const isTopLevelTab = !!pathname && TOP_LEVEL_TAB_PATHS.has(pathname)
-      return !(isTopLevelTab && action === 'none')
-    }
-    return breadcrumbModel.showBreadcrumbs
-  }, [breadcrumbModel.showBreadcrumbs, isMobile, pathname, showHeaderContextBar])
+  // (mirrors HeaderContextBar conditions). Native needs this to reserve height;
+  // web fallback geometry is CSS-owned and skips the eager breadcrumb graph.
+  const willRenderVisibleContextBar = useHeaderContextBarFallbackVisibility({
+    isMobile,
+    pathname,
+    showHeaderContextBar,
+  })
 
   const styles = useMemo(
     () => createCustomHeaderStyles(colors, rowIsMobile, safeAreaInsets.top),

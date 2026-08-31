@@ -59,12 +59,36 @@ const withCountedIntl = (run: (ctx: CountedRun) => void): void => {
 }
 
 describe('Intl formatter pool (#1643)', () => {
-  it('builds one Intl.NumberFormat for repeated calls with the same locale and options', () => {
+  it('skips Intl.NumberFormat for small integer counters in every production locale', () => {
+    withCountedIntl(({ format, counts }) => {
+      for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
+        for (const value of [0, 1, 999]) {
+          expect(format.formatInteger(value, locale)).toBe(String(value))
+        }
+      }
+      expect(counts.NumberFormat).toBe(0)
+    })
+  })
+
+  it('builds one Intl.NumberFormat for repeated grouped integers', () => {
     withCountedIntl(({ format, counts }) => {
       for (let index = 0; index < 25; index += 1) {
-        format.formatInteger(index, 'ru')
+        format.formatInteger(1000 + index, 'ru')
       }
       expect(counts.NumberFormat).toBe(1)
+    })
+  })
+
+  it('keeps Intl semantics at the fast-path boundaries', () => {
+    withCountedIntl(({ format }) => {
+      for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
+        const tag = format.getFormatLocale(locale)
+        for (const value of [-1000, -999, -1, -0, 1.5, 1000, Number.NaN, Number.POSITIVE_INFINITY]) {
+          expect(format.formatInteger(value, locale)).toBe(
+            new Intl.NumberFormat(tag, { maximumFractionDigits: 0 }).format(value),
+          )
+        }
+      }
     })
   })
 

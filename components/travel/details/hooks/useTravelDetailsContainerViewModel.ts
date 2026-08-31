@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Animated, DeviceEventEmitter, Platform } from 'react-native'
 
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
 import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
+import { rIC } from '@/utils/rIC'
 import {
   getTravelDetailsChromeReadyState,
   getTravelDetailsHeadKey,
@@ -13,6 +14,7 @@ import {
 
 type UseTravelDetailsContainerViewModelArgs = {
   closeMenu: () => void
+  deferSeoOnWeb: boolean
   forceOpenKey: string | null
   isMobile: boolean
   isWebAutomation: boolean
@@ -34,8 +36,68 @@ type UseTravelDetailsContainerViewModelArgs = {
   travel: any
 }
 
+type TravelDetailsSeoViewModel = ReturnType<typeof getTravelDetailsSeoViewModel>
+
+const EMPTY_WEB_SEO_VIEW_MODEL: TravelDetailsSeoViewModel = Object.freeze({
+  canonicalUrl: undefined,
+  jsonLd: null,
+  readyDesc: null,
+  readyImage: '',
+  readyTitle: null,
+})
+
+type DeferredWebSeoState = {
+  slug: string
+  travel: any
+  value: TravelDetailsSeoViewModel
+}
+
+/**
+ * Direct travel loads already have complete title/meta/JSON-LD in the SSG HTML.
+ * Rebuilding the same data during the synchronous hydration render scanned a
+ * 50-KB article body twice and added ~40 ms to the blocking React task (#1643).
+ *
+ * Keep native and SPA navigation synchronous (there is no matching SSG head to
+ * preserve there). Only an initial web article with a matching inline preload
+ * leaves the existing SSG head untouched for the first commit and rebuilds the
+ * runtime head in a separate idle task. The input identity guard prevents a
+ * previous article's deferred result from leaking across a slug change.
+ */
+export function useTravelDetailsSeoViewModel(
+  travel: any,
+  slug: string,
+  deferSeoOnWeb: boolean,
+): TravelDetailsSeoViewModel {
+  const immediateValue = useMemo(
+    () => Platform.OS === 'web' && deferSeoOnWeb
+      ? EMPTY_WEB_SEO_VIEW_MODEL
+      : getTravelDetailsSeoViewModel(travel, slug),
+    [deferSeoOnWeb, travel, slug],
+  )
+  const [webState, setWebState] = useState<DeferredWebSeoState | null>(null)
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !deferSeoOnWeb || !travel) return undefined
+
+    return rIC(() => {
+      setWebState({
+        slug,
+        travel,
+        value: getTravelDetailsSeoViewModel(travel, slug),
+      })
+    }, 200)
+  }, [deferSeoOnWeb, travel, slug])
+
+  if (Platform.OS !== 'web' || !deferSeoOnWeb) return immediateValue
+  if (!webState || webState.travel !== travel || webState.slug !== slug) {
+    return EMPTY_WEB_SEO_VIEW_MODEL
+  }
+  return webState.value
+}
+
 export function useTravelDetailsContainerViewModel({
   closeMenu,
+  deferSeoOnWeb,
   forceOpenKey,
   isMobile,
   isWebAutomation,
@@ -69,9 +131,7 @@ export function useTravelDetailsContainerViewModel({
     [slug, travel?.id]
   )
 
-  const seo = useMemo(() => {
-    return getTravelDetailsSeoViewModel(travel, slug)
-  }, [travel, slug])
+  const seo = useTravelDetailsSeoViewModel(travel, slug, deferSeoOnWeb)
 
   const { criticalChromeReady, deferredChromeReady } = getTravelDetailsChromeReadyState({
     forceOpenKey,

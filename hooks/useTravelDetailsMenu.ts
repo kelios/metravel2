@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing } from 'react-native'
+import { readViewportWidth } from '@/utils/viewportMetrics'
 
 export interface UseTravelDetailsMenuReturn {
   closeMenu: () => void
@@ -21,8 +22,7 @@ export function useTravelDetailsMenu(
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const stableWidth = useMemo(() => {
     if (screenWidth && screenWidth > 0) return screenWidth
-    if (typeof window !== 'undefined' && typeof window.innerWidth === 'number') return window.innerWidth
-    return 1200
+    return readViewportWidth() ?? 1200
   }, [screenWidth])
 
   const menuWidth = useMemo(() => {
