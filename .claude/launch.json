@@ -5,8 +5,7 @@
       "name": "Quest Card 1673 Web 8160",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
-        "-c",
-        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8160\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8160\" NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8160"
+        "-c"
       ],
       "port": 8160,
       "autoPort": false
