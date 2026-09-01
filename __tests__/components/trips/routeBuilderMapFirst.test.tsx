@@ -292,17 +292,20 @@ describe('RouteBuilderMapFirst — шторка маршрута', () => {
   })
 })
 
+// #1691: раскладку `mapFirst` собирает уже не шторка, а RouteBuilderMobile —
+// карта блоком в потоке страницы. Контракт самой раскладки держит
+// `routeBuilderMobile.test.tsx`; здесь остаётся связка «карта ↔ панель».
 describe('RouteBuilder layout=mapFirst', () => {
-  it('раскладывает реальные секции панели в шторку и растягивает карту', () => {
+  it('растягивает карту и держит панель обычным контентом под ней', () => {
     const { getByTestId, queryByTestId } = renderBuilder('mapFirst')
 
     expect(getByTestId('route-map-fill').props.children).toBe('true')
-    expect(getByTestId('route-sheet')).toBeTruthy()
-    // Транспорт, точки и инструменты доехали до шторки целиком.
+    expect(getByTestId('route-mobile-map')).toBeTruthy()
+    // Транспорт, точки и добавление доехали до панели целиком.
     expect(getByTestId('route-builder-transport-control')).toBeTruthy()
     expect(getByTestId('route-builder-point-0')).toBeTruthy()
     // Добавление раскрывается по запросу: длинная форма не вытесняет точки и
-    // итог из шторки, пока пользователь не выбрал это действие.
+    // итог, пока пользователь не выбрал это действие.
     expect(getByTestId('route-builder-add-action')).toBeTruthy()
     expect(queryByTestId('route-builder-add-form')).toBeNull()
     expect(queryByTestId('route-builder-site-search')).toBeNull()
@@ -339,10 +342,10 @@ describe('RouteBuilder layout=mapFirst', () => {
     expect(getByTestId('route-builder-edit-lng').props.value).toBe('27.61')
   })
 
-  it('вертикальная раскладка остаётся без шторки и без центрирования по тапу', () => {
+  it('вертикальная раскладка остаётся без мобильного блока и без центрирования по тапу', () => {
     const { getByTestId, queryByTestId } = renderBuilder()
 
-    expect(queryByTestId('route-sheet')).toBeNull()
+    expect(queryByTestId('route-mobile-map')).toBeNull()
     expect(queryByTestId('route-builder-focus-1')).toBeNull()
     expect(getByTestId('route-map-fill').props.children).toBe('false')
   })

@@ -431,8 +431,9 @@ test.describe('Trip planner — happy path', () => {
     expect(networkEvidence.plannedTripRequests.some((entry) => entry.includes('/route/'))).toBe(false)
 
     await page.setViewportSize({ width: 390, height: 844 })
-    // #1495: на мобильном панель уезжает в шторку — открываем её чипом транспорта.
-    await page.getByTestId('route-map-chip-transport').click()
+    // #1691: панель маршрута на мобильном — обычный контент под картой, поэтому
+    // контрол просто доводится до кадра страничным скроллом.
+    await control.evaluate((node) => node.scrollIntoView({ block: 'center' }))
     await expect(control).toBeVisible()
     const touchHeights = await choices.evaluateAll((nodes) =>
       nodes.map((node) => node.getBoundingClientRect().height),
@@ -456,8 +457,10 @@ test.describe('Trip planner — happy path', () => {
     await waitForFakeAuth(page)
     await expect(page.getByTestId('trip-plan-route-map').locator('.leaflet-container')).toBeVisible()
 
-    // #1495: панель маршрута на мобильном живёт в шторке — раскрываем её.
-    await page.getByTestId('route-map-chip-transport').click()
+    // #1691: панель маршрута на мобильном — обычный контент под картой.
+    await page
+      .getByTestId('route-builder-transport-control')
+      .evaluate((node) => node.scrollIntoView({ block: 'center' }))
     await page.getByTestId('segmented-bike').click()
     await expect(page.getByTestId('route-builder-bike-type-control')).toBeVisible()
     await page.getByTestId('route-builder-bike-type-road').click()
@@ -473,15 +476,17 @@ test.describe('Trip planner — happy path', () => {
     expect(networkEvidence.plannedTripRequests.some((entry) => entry.includes('/route/'))).toBe(false)
 
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.getByTestId('route-map-chip-transport').click()
+    await page
+      .getByTestId('route-builder-bike-type-mountain')
+      .evaluate((node) => node.scrollIntoView({ block: 'center' }))
     await expect(page.getByTestId('route-builder-bike-type-mountain')).toHaveAttribute('aria-pressed', 'true')
     expect(pageErrors).toEqual([])
   })
 
-  // #1495: регрессионный контроль map-first раскладки. Фиксирует три положения
-  // шторки и то, какая секция панели видна в каждом, — откат к вертикальному
-  // списку секций на мобильном не пройдёт незамеченным.
-  test('mobile route tab is map-first with a three-position bottom sheet', async ({ page }) => {
+  // #1691: регрессионный контроль мобильной вкладки «Маршрут». Фиксирует то,
+  // что было измеренным дефектом шторки на 390×844: три вложенных скролла,
+  // текстовая колонка строки шириной ~46px и форма правки в конце панели.
+  test('mobile route tab keeps one scroll, a readable point row and inline editing', async ({ page }) => {
     await setupFakeAuth(page)
     await seedConsent(page)
     await mockTransportTrip(page)
@@ -500,58 +505,61 @@ test.describe('Trip planner — happy path', () => {
     await page.goto('/trips/plan/99002', { waitUntil: 'domcontentloaded' })
     await waitForFakeAuth(page)
 
-    const stage = page.getByTestId('route-builder')
-    const sheet = page.getByTestId('route-sheet')
     await expect(page.getByTestId('trip-plan-route-map').locator('.leaflet-container')).toBeVisible({
       timeout: 30_000,
     })
-    await expect(sheet).toBeVisible()
 
-    // Карта — главный элемент: сцена занимает почти весь вьюпорт по высоте.
-    const stageBox = await stage.boundingBox()
-    expect(stageBox!.height).toBeGreaterThan(380)
+    // Карта — первый блок вкладки и занимает её часть, а не весь скроллпорт:
+    // раньше сцена была высотой во вьюпорт и ловила скролл страницы.
+    const mapBlock = page.getByTestId('route-mobile-map')
+    await expect(mapBlock).toBeVisible()
+    const mapBox = await mapBlock.boundingBox()
+    expect(mapBox!.height).toBeGreaterThanOrEqual(260)
+    expect(mapBox!.height).toBeLessThanOrEqual(420)
+    await expect(page.getByTestId('route-mobile-summary')).toBeVisible()
 
-    // Свёрнуто: только строка итога, точки маршрута за краем шторки.
-    const collapsedBox = await sheet.boundingBox()
-    expect(collapsedBox!.height).toBeLessThan(160)
-    await expect(page.getByTestId('route-sheet-peek')).toBeVisible()
-    await expect(page.getByTestId('route-sheet-peek')).toContainText('19 км')
-    await expect(page.getByTestId('route-builder-point-0')).not.toBeInViewport()
+    // Скролл ровно один — страничный. Ни шторки, ни своего скроллера у списка.
+    await expect(page.getByTestId('route-sheet')).toHaveCount(0)
+    await expect(page.getByTestId('route-sheet-scroll')).toHaveCount(0)
+    await expect(page.getByTestId('route-builder-point-list-scroll')).toHaveCount(0)
 
-    // Чипы транспорта и итога стоят поверх карты и имеют тач-таргет 44dp.
-    const transportChip = page.getByTestId('route-map-chip-transport')
-    const summaryChip = page.getByTestId('route-map-chip-summary')
-    await expect(transportChip).toBeVisible()
-    await expect(summaryChip).toBeVisible()
-    const chipHeights = await page
-      .locator('[data-testid="route-map-chip-transport"], [data-testid="route-map-chip-summary"]')
-      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height))
-    expect(chipHeights.every((height) => height >= 44)).toBe(true)
+    // Текстовая колонка строки точки читаема: четыре иконки по 44dp оставляли
+    // названию ~46px, и «Минск, площадь Победы» переносился по слогам.
+    const pointBody = page.getByTestId('route-builder-focus-0')
+    await pointBody.evaluate((node) => node.scrollIntoView({ block: 'center' }))
+    const bodyBox = await pointBody.boundingBox()
+    expect(bodyBox!.width).toBeGreaterThan(180)
 
-    const evidenceDir = path.join(process.cwd(), '.codex-temp', 'trips-map-first')
+    const evidenceDir = path.join(process.cwd(), '.codex-temp', 'trips-mobile-route')
     fs.mkdirSync(evidenceDir, { recursive: true })
-    await page.screenshot({ path: path.join(evidenceDir, 'mobile-sheet-collapsed.png') })
+    await page.screenshot({ path: path.join(evidenceDir, 'mobile-map-and-list.png') })
 
-    // Наполовину: список точек маршрута.
-    await page.getByTestId('route-sheet-handle').click()
-    await expect.poll(async () => (await sheet.boundingBox())!.height).toBeGreaterThan(280)
-    await expect(page.getByTestId('route-builder-point-0')).toBeInViewport()
-    await page.screenshot({ path: path.join(evidenceDir, 'mobile-sheet-points.png') })
+    // «Добавить точку» живёт в секции списка, а не за импортом и экспортом.
+    const addAction = page.getByTestId('route-builder-add-action')
+    await expect(addAction).toBeVisible()
+    expect(
+      await page.evaluate(() => {
+        const step = document.querySelector('[data-testid="route-builder-step-points"]')
+        const action = document.querySelector('[data-testid="route-builder-add-action"]')
+        return !!(step && action && step.contains(action))
+      }),
+    ).toBe(true)
 
-    // Развёрнуто: транспорт, импорт и экспорт маршрута.
-    await page.getByTestId('route-sheet-handle').click()
-    await expect.poll(async () => (await sheet.boundingBox())!.height).toBeGreaterThan(500)
-    await expect(page.getByTestId('route-builder-transport-control')).toBeVisible()
-    // Импорт/экспорт — тот самый «низ» панели: если он доехал до шторки, значит
-    // развёрнутое положение действительно показывает панель целиком. Кнопку
-    // сохранения здесь не ждём: с #1491 она появляется только при несохранённых
-    // правках, а маршрут в этом сценарии не тронут.
-    await expect(page.getByTestId('trip-route-import-panel')).toBeVisible()
-    await page.screenshot({ path: path.join(evidenceDir, 'mobile-sheet-full.png') })
-
-    // Тап по точке в списке возвращает шторку на половину, чтобы карта была видна.
-    await page.getByTestId('route-builder-focus-1').click()
-    await expect.poll(async () => (await sheet.boundingBox())!.height).toBeLessThan(500)
+    // Правка точки раскрывается внутри карточки этой же точки.
+    await page.getByTestId('route-builder-edit-1').click()
+    const editForm = page.getByTestId('route-builder-edit-form')
+    await expect(editForm).toBeVisible()
+    expect(
+      await page.evaluate(() => {
+        const card = document.querySelector('[data-testid="route-builder-point-1"]')
+        const form = document.querySelector('[data-testid="route-builder-edit-form"]')
+        return !!(card && form && card.contains(form))
+      }),
+    ).toBe(true)
+    // Перестановка и удаление доехали до редактора вместе с формой.
+    await expect(page.getByTestId('route-builder-delete-1')).toBeVisible()
+    await editForm.evaluate((node) => node.scrollIntoView({ block: 'center' }))
+    await page.screenshot({ path: path.join(evidenceDir, 'mobile-inline-editor.png') })
 
     // Горизонтального скролла на 390px не появилось.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

@@ -151,6 +151,12 @@ export default function PlannedTripScreen() {
         region: trip.region,
       })
     : null;
+  // #1691: на телефоне вкладка «Маршрут» открывалась после 617px шапки —
+  // обложка, описание и предупреждение о приблизительной линии уводили карту и
+  // список точек за пределы первого экрана. На этой вкладке шапка сжимается до
+  // опознавательной строки: обложка и описание возвращаются на любой другой
+  // вкладке и в режиме правки поездки.
+  const compactHeader = isMobile && activeTab === 'route' && !isEditing;
   const coverUrl = typeof trip?.coverUrl === 'string' ? trip.coverUrl.trim() : '';
   const usesFallbackCover = Boolean(trip && coverUrl.length === 0);
   const displayCoverUrl = usesFallbackCover ? (fallbackCover?.uri ?? '') : coverUrl;
@@ -331,6 +337,7 @@ export default function PlannedTripScreen() {
           ) : (
             <>
             {/* ── Compact header: identity + route status at a glance ── */}
+            {compactHeader ? null : (
             <View style={styles.cover} testID="trip-plan-cover">
               <ImageCardMedia
                 src={displayCoverUrl}
@@ -346,6 +353,7 @@ export default function PlannedTripScreen() {
                 showLoadingIndicator={!usesFallbackCover}
               />
             </View>
+            )}
 
             <View style={styles.header}>
               <View style={styles.badgeRow}>
@@ -396,7 +404,9 @@ export default function PlannedTripScreen() {
                 </View>
               ) : null}
 
-              {routeApproximate ? (
+              {/* Предупреждение о приблизительной линии на вкладке «Маршрут»
+                  дублируется строкой итога самого планировщика. */}
+              {routeApproximate && !compactHeader ? (
                 <Text style={styles.approximateNote} testID="trip-plan-route-approximate">
                   {routingStateHint(headerRoutingState) ??
                     i18nT('tripsStatic:route.approximateWarning')}
@@ -409,8 +419,12 @@ export default function PlannedTripScreen() {
                     text={trip.description}
                     style={styles.description}
                     linkStyle={styles.descriptionLink}
+                    numberOfLines={compactHeader ? 2 : undefined}
                     testID="trip-plan-description"
                   />
+                  {/* Блок ссылок остаётся и под компактной шапкой: он сам
+                      компактный и без ссылок отдаёт null, а ссылка ниже второй
+                      строки описания иначе была бы недостижима (#1494). */}
                   <TripPlanLinksBlock text={trip.description} />
                 </>
               ) : null}

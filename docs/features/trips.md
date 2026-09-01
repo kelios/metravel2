@@ -126,6 +126,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/chat/TripChatPanel.tsx` | 409 | чат поездки |
 | `components/trips/PublicTripsCatalog.tsx` | 404 | каталог: поиск, фильтры, адаптивная сетка 1/2/3 колонки |
 | `components/trips/PublicTripFilters.tsx` | 391 | панель фильтров каталога |
+| `components/trips/planning/RoutePointRow.tsx` | 321 | строка точки маршрута: на mobile — вся строка кнопка «открыть точку» плюс инлайн-редактор в карточке, на desktop — четыре кнопки управления |
 | `components/trips/planning/useRoutePointDrag.ts` | 305 | drag&drop точек маршрута поверх `routePointReorder` |
 | `components/trips/planning/TripPlanCard.tsx` | 304 | карточка planned/community trip |
 | `components/trips/PublicTripDetail.tsx` | 303 | деталь публичной поездки, reveal, гейты заявки |
@@ -135,10 +136,10 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/TripInvitePanel.tsx` | 232 | приглашение участников, share-ссылки |
 | `components/trips/planning/TripSuggestPointForm.tsx` | 221 | предложение точки участником |
 | `components/trips/planning/tripPlanFormatting.ts` | 214 | метки/иконки/цвета планировщика, сводка маршрута строкой, даты |
-| `components/trips/planning/RoutePointRow.tsx` | 194 | строка точки маршрута |
 | `components/trips/TripApplyForm.tsx` | 189 | форма «Хочу поехать» |
 | `components/trips/planning/TripSuggestionsPanel.tsx` | 189 | список предложенных точек и решения |
 | `components/trips/communication/TripTelegramGroupCard.tsx` | 185 | группа Telegram поездки |
+| `components/trips/planning/RouteBuilderMobile.tsx` | 183 | мобильная раскладка вкладки «Маршрут» (#1691): карта фиксированной высоты блоком в потоке страницы, строка «транспорт · итог», панель — контент под ней. Своего скролла не заводит |
 | `components/trips/planning/plannedTripScreen.styles.ts` | 182 | стили экрана поездки |
 | `components/trips/planning/CommunityRoutesCatalog.tsx` | 176 | каталог маршрутов сообщества |
 | `components/trips/MyTripsDashboard.tsx` | 167 | дашборд «Мои поездки», сегменты и счётчики |
@@ -473,9 +474,18 @@ sequenceDiagram
 Точки и порядок (`RouteBuilder`):
 
 - источники точек: поиск по сайту (`fetchPlacesCatalog` + `fetchTravels`,
-  по 6 записей, порог 2 символа, `AbortController` на каждый ввод), ручной ввод
-  имя/lat/lng/описание, клик по карте (`onAddPointFromMap` сразу открывает форму
-  редактирования), шаблон маршрута;
+  по 6 записей, порог 2 символа, `AbortController` на каждый ввод), адресный
+  поиск `AddressSearch` с вводом координат, ручной ввод имя/lat/lng/описание,
+  клик по карте (`onAddPointFromMap` сразу открывает форму редактирования),
+  шаблон маршрута. Все они собраны в одной форме `RoutePointAddForm`, которая
+  живёт внутри секции «Точки маршрута» сразу под списком — в обеих раскладках;
+- раскладки две и выбирает их экран (`layout`): `stack` — две колонки на
+  desktop, форма правки отдельной секцией панели; `mapFirst` — мобильная
+  (#1691): карта блоком 42% высоты вьюпорта, ниже строка «транспорт · итог»,
+  затем панель обычным контентом страницы. В мобильной строке точки остаётся
+  один вход в правку (вся строка + карандаш), а перестановка и удаление живут в
+  раскрытом инлайн-редакторе внутри карточки точки; клавиатурный и a11y-путь
+  перестановки — на ручке перетаскивания (`accessibilityActions`);
 - порядок меняют два пути с общей арифметикой в `routePointReorder.ts`:
   стрелки (клавиатура/a11y) и drag&drop (`useRoutePointDrag`). `moveItem`,
   `remapIndexAfterMove` (открытая форма редактирования едет за своей точкой) и

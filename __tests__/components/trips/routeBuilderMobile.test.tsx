@@ -159,6 +159,30 @@ describe('RouteBuilder — мобильная раскладка вкладки 
     expect(getByTestId('route-builder-point-2')).toBeTruthy()
   })
 
+  it('сворачивает открытый редактор той же кнопкой, а не пересобирает форму', () => {
+    const { getByTestId, queryByTestId } = renderMobile()
+
+    fireEvent.press(getByTestId('route-builder-edit-1'))
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Переименованная точка')
+    expect(getByTestId('route-builder-edit-name').props.value).toBe('Переименованная точка')
+
+    // Кнопка со стрелкой вверх обещает «свернуть» — она и сворачивает. Раньше
+    // она звала ту же `onEdit`: форма пересобиралась из сохранённой точки, ввод
+    // молча пропадал, а редактор оставался открытым.
+    fireEvent.press(getByTestId('route-builder-edit-1'))
+    expect(queryByTestId('route-builder-edit-form')).toBeNull()
+  })
+
+  it('тапом по телу строки с открытым редактором не сбрасывает введённое', () => {
+    const { getByTestId } = renderMobile()
+
+    fireEvent.press(getByTestId('route-builder-edit-1'))
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Черновик названия')
+    fireEvent.press(getByTestId('route-builder-focus-1'))
+
+    expect(getByTestId('route-builder-edit-name').props.value).toBe('Черновик названия')
+  })
+
   it('открывает ту же правку тапом по телу строки', () => {
     const { getByTestId } = renderMobile()
 

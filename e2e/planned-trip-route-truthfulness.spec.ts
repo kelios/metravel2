@@ -247,8 +247,10 @@ const routePolyline = (page: Page) =>
 const renderedLineSegmentCount = (pathData: string): number =>
   pathData.match(/[Ll]/g)?.length ?? 0
 
+// #1691: чипов поверх карты больше нет — итог маршрута лежит обычной секцией
+// панели, и на 390px до него достаточно докрутить страницу.
 async function openSummaryOnMobile(page: Page) {
-  await page.getByTestId('route-map-chip-summary').click()
+  await page.getByTestId('route-summary').evaluate((node) => node.scrollIntoView({ block: 'center' }))
   await expect(page.getByTestId('route-summary')).toBeVisible()
 }
 

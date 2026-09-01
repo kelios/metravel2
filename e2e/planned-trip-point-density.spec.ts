@@ -175,34 +175,19 @@ const openPlan = async (page: Page, viewport: { width: number; height: number })
   await page.goto(`/trips/plan/${TRIP_ID}`, { waitUntil: 'domcontentloaded' })
   await waitForFakeAuth(page)
 
-  // На узкой раскладке план открывается map-first: список точек и профиль
-  // высот живут в шторке, свёрнутой до сводки. Геометрию она считает и
-  // свёрнутой, но снимок без разворота показал бы карту, а не блоки.
-  // Ручка циклическая (summary → points → full → summary) и высота
-  // анимируется, поэтому цель проверяется по факту: первая точка целиком в
-  // кадре. Широкая раскладка шторки не имеет и цикл не заходит.
+  // #1691: на узкой раскладке шторки больше нет — карта и панель лежат в общем
+  // скролле страницы, поэтому строку точки достаточно довести до кадра обычной
+  // прокруткой предков.
   const row = page.getByTestId('route-builder-point-0').first()
   await expect(row).toBeVisible({ timeout: 30_000 })
-
-  const rowFullyVisible = async () => {
-    const box = await row.boundingBox()
-    return !!box && box.y >= 0 && box.y + box.height <= viewport.height
-  }
-
-  const handle = page.getByTestId('route-sheet-handle')
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    if (await rowFullyVisible()) break
-    if (!(await handle.isVisible().catch(() => false))) break
-    await handle.click()
-    await page.waitForTimeout(800)
-  }
+  await row.evaluate((node) => node.scrollIntoView({ block: 'center', inline: 'nearest' }))
+  await page.waitForTimeout(300)
 }
 
 /**
  * Снимок элемента осмысленен только после того, как он реально в кадре.
- * `scrollIntoViewIfNeeded` крутит страницу, а на узкой раскладке блоки лежат
- * в собственном скроллере шторки — доводим нативным `scrollIntoView`, который
- * прокручивает всех предков.
+ * Доводим нативным `scrollIntoView`: он прокручивает всех предков, включая
+ * страничный ScrollView экрана поездки.
  */
 const shoot = async (page: Page, locator: ReturnType<Page['getByTestId']>, path: string) => {
   await locator.evaluate((node) =>
@@ -279,13 +264,8 @@ test.describe('Planned trip point density (#1671)', () => {
       'e2e/__screenshots__/planned-trip-point-card-390.png',
     )
 
-    // Профиль выше среднего snap шторки: перед проверкой целого блока открываем
-    // третий, полный snap. Сам assertion остаётся прежним и проверяет, что
-    // пользователь действительно может увидеть не обрезанный профиль.
-    const sheet = page.getByTestId('route-sheet')
-    const sheetHeight = (await sheet.boundingBox())?.height ?? 0
-    if (sheetHeight <= 500) await page.getByTestId('route-sheet-handle').click()
-    await expect.poll(async () => (await sheet.boundingBox())?.height ?? 0).toBeGreaterThan(500)
+    // #1691: профиль высот теперь просто ниже по странице — доводим его до
+    // кадра тем же скроллом, что и остальные блоки панели.
     await shoot(page, profile, 'e2e/__screenshots__/planned-trip-elevation-390.png')
   })
 

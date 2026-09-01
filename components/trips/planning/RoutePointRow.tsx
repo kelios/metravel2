@@ -9,7 +9,7 @@
 // точки оставалось ~46px — «Минск, площадь Победы» переносился по слогам.
 // Стрелки «выше/ниже» и удаление переехали в раскрытый редактор; клавиатурный и
 // a11y-путь перестановки остался на ручке перетаскивания.
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import {
   Platform,
@@ -65,6 +65,12 @@ interface Props {
   isEditing?: boolean;
   /** Инлайн-редактор точки: рисуется под строкой, внутри той же карточки. */
   editorSlot?: React.ReactNode;
+  /**
+   * Сворачивание открытого инлайн-редактора. Без него кнопка со стрелкой вверх
+   * обещала «свернуть», а звала ту же `onEdit` — форма пересобиралась из
+   * сохранённой точки и молча теряла введённое.
+   */
+  onCloseEdit?: () => void;
 }
 
 /**
@@ -120,6 +126,7 @@ function RoutePointRow({
   compact = false,
   isEditing = false,
   editorSlot = null,
+  onCloseEdit,
 }: Props) {
   const { t } = useTranslation();
   const isFirst = index === 0;
@@ -151,17 +158,32 @@ function RoutePointRow({
     ? { tabIndex: 0 as const, onKeyDown: handleKeyDown }
     : {};
 
+  // Точку, добавленную тапом по карте, редактор открывает в конце списка — она
+  // оказывается ниже сгиба. Подводим карточку к кадру, когда её редактор
+  // раскрылся; `nearest` не двигает страницу, если карточка и так видна.
+  const cardRef = useRef<View | null>(null);
+  useEffect(() => {
+    if (!compact || !isEditing || Platform.OS !== 'web') return;
+    const node = cardRef.current as unknown as {
+      scrollIntoView?: (options?: { block?: string; behavior?: string }) => void;
+    } | null;
+    node?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [compact, isEditing]);
+
   // Мобильная строка открывает редактор и одновременно центрует карту: один
-  // жест вместо «карандаш где-то справа» плюс «тап по телу строки».
+  // жест вместо «карандаш где-то справа» плюс «тап по телу строки». Пока
+  // редактор этой точки открыт, повторный тап только центрует карту: второй
+  // `onEdit` пересобрал бы форму и стёр несохранённый ввод.
   const handleBodyPress = compact
     ? (target: number) => {
         onFocus?.(target);
-        onEdit(target);
+        if (!isEditing) onEdit(target);
       }
     : onFocus;
 
   return (
     <View
+      ref={cardRef}
       onLayout={(event) => onLayout(index, event)}
       style={[
         styles.pointCard,
@@ -237,7 +259,7 @@ function RoutePointRow({
             accessibilityRole="button"
             accessibilityLabel={editLabel}
             accessibilityState={{ expanded: isEditing }}
-            onPress={() => onEdit(index)}
+            onPress={() => (isEditing ? onCloseEdit?.() : onEdit(index))}
             style={styles.ctrl}
             testID={`route-builder-edit-${index}`}
           >

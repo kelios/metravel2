@@ -960,6 +960,7 @@ function RouteBuilder({
       compact={isMapFirst}
       isEditing={editingIndex === index}
       editorSlot={editorSlot}
+      onCloseEdit={handleCancelEdit}
     />
   );
 
