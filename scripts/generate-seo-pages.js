@@ -756,10 +756,22 @@ function loadRedirectManifest(filePath) {
 }
 
 /**
- * Build a crawl-safe redirect stub for an old travel slug. nginx serves static
- * route files via `try_files $uri.html` (200), so the stub cannot be a real HTTP
- * 301 by itself. Keep canonical + refresh for users/link discovery, and add
- * noindex so Google does not keep reporting the old slug as an indexable 200.
+ * Build a crawl-safe redirect stub for an old travel slug.
+ *
+ * The stub is NOT what makes an old slug redirect on production — a real 301
+ * comes only from a `TravelSlugRedirect` row in the backend. A bare
+ * `/travels/<slug>` is resolved by Django first: `location ~ ^/travels/[^/]+$`
+ * sits ahead of the static `try_files $uri.html` location in
+ * `nginx/nginx.conf`, so `dist/prod/travels/{from}.html` is never reached for
+ * the form crawlers actually request, and the trailing-slash form that would
+ * reach it is itself 301'd back to the bare address. Measured on production
+ * 2026-09-01: of 60 manifest pairs whose stub is present in the deployed
+ * snapshot, all 60 answered with a real 301 and none served the stub body.
+ *
+ * So the stub only covers link discovery for the slash form; a manifest pair
+ * without a backend alias stays dead. Keep canonical + refresh for users, and
+ * noindex so Google does not report the old slug as an indexable 200.
+ * See #1689 and #1693.
  */
 function buildRedirectStubHtml(toSlug) {
   const target = `${SITE_URL}/travels/${normalizeSlug(toSlug)}`;

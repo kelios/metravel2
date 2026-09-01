@@ -1,5 +1,5 @@
 {
-  "_comment": "Slug redirect manifest for /travels/. generate-seo-pages.js emits a noindex redirect stub (canonical + meta-refresh + JS replace) at dist/prod/travels/{from}.html for each entry because the static nginx try_files path serves these files with HTTP 200. Append {from,to} whenever a travel slug changes; never reuse a live slug as `from`.",
+  "_comment": "Зеркало 301-алиасов старых слагов /travels/, НЕ механизм редиректа. Настоящий 301 даёт только запись TravelSlugRedirect в бэкенде: голый /travels/<slug> резолвит Django (location ~ ^/travels/[^/]+$ в nginx/nginx.conf стоит РАНЬШЕ статического location с try_files), поэтому до dist/prod/travels/{from}.html дело не доходит вовсе. Стаб из generate-seo-pages.js покрывает лишь форму со слэшем, которую nginx сам разворачивает 301 на голый адрес. Пара, добавленная сюда без алиаса в бэкенде, остаётся мёртвой и висит в корзине regression отчёта seo:404, роняя его в код 1. Добавляй {from,to} только вместе с заведением алиаса (scripts/seo-alias-backfill.js или бэкенд-миграция); никогда не используй живой слаг как from. Проверено на проде 01.09.2026: из 60 пар, чей стаб лежит в срезе, все 60 отдают настоящий 301 и ни одна — тело стаба. См. #1689, #1693.",
   "redirects": [
     {
       "from": "forty-krakova",
