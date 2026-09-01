@@ -567,6 +567,29 @@ function RouteBuilder({
     setNewPointError(null);
   };
 
+  // Применение открытой правки к маршруту. Вынесено из `handleSaveEdit`, потому что
+  // тот же коммит нужен тапу по карте: иначе незакрытый редактор либо блокирует
+  // добавление точек, либо молча теряет введённое имя.
+  const applyPointEdit = (prev: RoutePoint[], index: number): RoutePoint[] => {
+    const name = editName.trim();
+    if (!name) return prev;
+    const { coordinates, error } = coordinatesFromFields(editLat, editLng);
+    if (error || !coordinates) return prev;
+    const current = prev[index];
+    if (!current) return prev;
+    const next = prev.slice();
+    const nextType = editType === 'place' && current.placeId == null ? 'custom' : editType;
+    next[index] = {
+      ...current,
+      type: nextType,
+      name,
+      description: editDescription.trim() || null,
+      coordinates,
+      placeId: nextType === 'place' ? current.placeId : null,
+    };
+    return next;
+  };
+
   const handleSaveEdit = () => {
     if (editingIndex == null) return;
     const name = editName.trim();
@@ -608,8 +631,15 @@ function RouteBuilder({
   const handleAddPointFromMap = ({ lat, lng }: { lat: number; lng: number }) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     setIsAddPointOpen(false);
+    // Точка, добавленная с карты, сразу открывает редактор (так задумано подсказкой
+    // «после клика можно сразу переименовать»). Раньше это же и убивало карту: пока
+    // редактор открыт, обработчик тапа не передавался вовсе, и следующий тап молча
+    // ничего не делал — при живой подсказке «нажмите на карту, чтобы добавить точку».
+    // Теперь незакрытая правка фиксируется, и цепочка тапов работает подряд.
+    const pendingIndex = editingIndex;
     setRoute((prev) => {
-      const nextIndex = prev.length;
+      const base = pendingIndex == null ? prev : applyPointEdit(prev, pendingIndex);
+      const nextIndex = base.length;
       const name = i18nT('trips:components.trips.planning.RouteBuilder.tochka_value1_58a44f4e', { value1: nextIndex + 1 });
       const point: RoutePoint = {
         id: `map-${Date.now()}-${nextIndex}`,
@@ -626,7 +656,7 @@ function RouteBuilder({
       setEditLat(formatCoordinateInput(lat));
       setEditLng(formatCoordinateInput(lng));
       setEditError(null);
-      return [...prev, point];
+      return [...base, point];
     });
     trackRoutePointAdded(trip.id, 'custom');
   };
@@ -1036,7 +1066,7 @@ function RouteBuilder({
       fill={isMapFirst}
       focusPoint={focusPoint}
       onEditPoint={handleEditPoint}
-      onAddPointFromMap={editingIndex == null ? handleAddPointFromMap : undefined}
+      onAddPointFromMap={handleAddPointFromMap}
     />
   );
 

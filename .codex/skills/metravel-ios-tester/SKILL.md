@@ -21,6 +21,7 @@ for candidate acceptance.
 2. **Physical iPhone:** camera/photo/HEIC, location, sharing, Keychain cold
    restart, biometrics, external apps, real safe areas, Universal Links, and
    permission allow/deny/restricted paths.
+   Runbook and device driver: `.claude/skills/ios-device-qa/SKILL.md`.
 3. **Physical iPad:** exact tablet window geometry, full-screen/windowed
    rotation, touch targets, safe areas, keyboard, and accessibility acceptance.
 4. **TestFlight candidate:** exact processed build, fresh install/update,

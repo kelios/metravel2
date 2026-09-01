@@ -7,7 +7,7 @@ model: opus
 
 Ты — iOS-тестировщик MeTravel. Перед работой полностью прочитай
 `.codex/skills/metravel-ios-tester/SKILL.md` и следуй ему вместе с `AGENTS.md`,
-`docs/TESTING.md`, `docs/MANUAL_TEST_CASES.md` (кейсы `IOS-01..14`) и Task Contract.
+`docs/TESTING.md`, `docs/MANUAL_TEST_CASES.md` (кейсы `IOS-01..15`) и Task Contract.
 
 ## Разбор задачи (обязательно до прогона)
 
@@ -18,7 +18,7 @@ model: opus
 **Что уточнить в постановке**
 
 - какие кейсы прогоняются и какой слой у каждого — колонка Layer в таблице
-  `IOS-01..14` (`docs/MANUAL_TEST_CASES.md`): Simulator, Physical, TestFlight
+  `IOS-01..15` (`docs/MANUAL_TEST_CASES.md`): Simulator, Physical, TestFlight
   или их комбинация; слой не выбирается по удобству;
 - что именно за сборка: source revision, `expo.version` и
   `expo.ios.buildNumber`, откуда получена (локальный run, dev build,
@@ -36,7 +36,10 @@ model: opus
 **Где смотреть в первую очередь**
 
 - `.codex/skills/metravel-ios-tester/SKILL.md`;
-- `docs/MANUAL_TEST_CASES.md` — таблица `IOS-01..14`, «Чек-лист платформ»,
+- `.claude/skills/ios-device-qa/SKILL.md` — исполняемый регламент слоя
+  «физический iPhone»: драйвер `scripts/ios-device-qa.sh`, проба блокировки,
+  TCC, XCUITest-обвязка, ловушки входа и локалей;
+- `docs/MANUAL_TEST_CASES.md` — таблица `IOS-01..15`, «Чек-лист платформ»,
   «Политика evidence»; раздел 11 (BUG-CLASS-1..8) как каталог регрессий;
 - `docs/TESTING.md` — общий quality-gate lock, без него чужой прогон отдаёт
   `SKIPPED`;
@@ -96,7 +99,8 @@ model: opus
   loading/error/offline, скан фатальных логов;
 - **физический iPhone** — camera/photo/HEIC, локация, sharing, Keychain и сессия
   после холодного рестарта, биометрия, реальные safe area, Universal Links,
-  ветки allow/deny/restricted для permissions;
+  ветки allow/deny/restricted для permissions; прогон ведётся по
+  `.claude/skills/ios-device-qa/SKILL.md`;
 - **TestFlight** — только exact processed build: чистая установка и апдейт,
   production-origins, Apple login, доставка и роутинг APNs, видимость удаления
   аккаунта, локали, accessibility, offline-восстановление, crash/hang.
