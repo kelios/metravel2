@@ -292,7 +292,11 @@ export function useRouteElevationModel({
         { label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.vysoty_8a1f42c0'), value: i18nT('travel:common.notFoundPlural'), icon: 'slash', accent: false },
       ]
     }
-    const cards = [
+    // #1671: на узкой раскладке остаются три ключевых значения одним рядом.
+    // Мин/макс высота и там продублированы бейджами прямо на графике, а сброс
+    // читается из набора и перепада — шесть плиток в две колонки занимали на
+    // 390pt половину экрана.
+    const keyCards = [
       {
         label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.distantsiya_07dd7e60'),
         value: formatProfileKm(metrics.totalDistanceKm),
@@ -305,6 +309,19 @@ export function useRouteElevationModel({
         icon: 'trending-up',
         accent: true,
       },
+      {
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.perepad_e3dbde8c'),
+        value: formatProfileMeters(metrics.elevationRange),
+        icon: 'activity',
+        accent: false,
+      },
+    ]
+    if (isCompactLayout) return keyCards
+
+    const [distance, ascent, range] = keyCards
+    return [
+      distance,
+      ascent,
       {
         label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.sbros_f5698d08'),
         value: `-${formatProfileMeters(metrics.descent)}`,
@@ -323,15 +340,9 @@ export function useRouteElevationModel({
         icon: 'corner-up-right',
         accent: false,
       },
-      {
-        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.perepad_e3dbde8c'),
-        value: formatProfileMeters(metrics.elevationRange),
-        icon: 'activity',
-        accent: false,
-      },
+      range,
     ]
-    return cards
-  }, [metrics])
+  }, [metrics, isCompactLayout])
 
   const profileSummary = useMemo(() => {
     if (!metrics.hasElevation) {

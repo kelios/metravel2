@@ -18,6 +18,7 @@ import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import {
   ROUTE_POINT_ICON_NAME,
   ROUTE_POINT_LABEL,
+  formatRoutePointCoordinates,
 } from '@/components/trips/planning/tripPlanFormatting';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -38,7 +39,6 @@ interface Props {
   isDragging: boolean;
   isDropTarget: boolean;
   dragOffsetY: number;
-  formatCoordinate: (value: number) => string;
   onLayout: (index: number, event: LayoutChangeEvent) => void;
   onEdit: (index: number) => void;
   /**
@@ -94,7 +94,6 @@ function RoutePointRow({
   isDragging,
   isDropTarget,
   dragOffsetY,
-  formatCoordinate,
   onLayout,
   onEdit,
   onMove,
@@ -104,6 +103,7 @@ function RoutePointRow({
   const { t } = useTranslation();
   const isFirst = index === 0;
   const isLast = index === total - 1;
+  const coordinatesLabel = formatRoutePointCoordinates(point.coordinates);
   const moveUpLabel = t('trips:components.trips.planning.RouteBuilder.podnyat_tochku_vyshe_23208202');
   const moveDownLabel = t('trips:components.trips.planning.RouteBuilder.opustit_tochku_nizhe_c1c13a3e');
   const handleAccessibilityAction = (event: AccessibilityActionEvent) => {
@@ -183,9 +183,13 @@ function RoutePointRow({
             linkStyle={styles.descriptionLink}
           />
         ) : null}
-        {point.coordinates ? (
-          <Text style={styles.pointCoordinates}>
-            {formatCoordinate(point.coordinates[1])}, {formatCoordinate(point.coordinates[0])}
+        {coordinatesLabel ? (
+          <Text
+            style={styles.pointCoordinates}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {coordinatesLabel}
           </Text>
         ) : null}
       </PointBody>

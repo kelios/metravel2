@@ -47,7 +47,6 @@ describe('RoutePointRow drag handle accessibility', () => {
         isDragging={false}
         isDropTarget={false}
         dragOffsetY={0}
-        formatCoordinate={String}
         onLayout={jest.fn()}
         onEdit={jest.fn()}
         onMove={onMove}

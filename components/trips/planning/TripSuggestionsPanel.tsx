@@ -10,6 +10,7 @@ import type { PlannedTrip, TripSuggestion } from '@/api/plannedTrips';
 import {
   ROUTE_POINT_ICON_NAME,
   ROUTE_POINT_LABEL,
+  formatRoutePointCoordinates,
 } from '@/components/trips/planning/tripPlanFormatting';
 import {
   useDecideSuggestion,
@@ -21,12 +22,6 @@ import { translate as i18nT } from '@/i18n'
 
 interface Props {
   trip: PlannedTrip;
-}
-
-function formatCoordinates(coordinates: [number, number] | null): string | null {
-  if (!coordinates) return null;
-  const [lng, lat] = coordinates;
-  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
 function TripSuggestionsPanel({ trip }: Props) {
@@ -55,7 +50,7 @@ function TripSuggestionsPanel({ trip }: Props) {
 
   const renderPoint = (suggestion: TripSuggestion) => {
     const { point } = suggestion;
-    const coords = formatCoordinates(point.coordinates);
+    const coords = formatRoutePointCoordinates(point.coordinates);
     return (
       <>
         <View style={styles.pointHead}>

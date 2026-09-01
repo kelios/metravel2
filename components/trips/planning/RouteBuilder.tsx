@@ -919,7 +919,6 @@ function RouteBuilder({
       isDragging={drag?.index === index}
       isDropTarget={drag != null && drag.dropIndex === index && drag.index !== index}
       dragOffsetY={drag?.index === index ? drag.offsetY : 0}
-      formatCoordinate={formatCoordinateInput}
       onLayout={registerRowLayout}
       onEdit={handleEditPoint}
       onFocus={isMapFirst ? handleFocusPoint : undefined}

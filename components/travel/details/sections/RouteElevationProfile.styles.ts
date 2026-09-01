@@ -65,6 +65,13 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       gap: DESIGN_TOKENS.spacing.xs,
       marginBottom: DESIGN_TOKENS.spacing.sm,
     },
+    // #1671: узкая раскладка держит три плитки одним рядом — без flexWrap и
+    // minWidth плитки уезжали в две колонки на три ряда.
+    summaryGridCompact: {
+      flexWrap: 'nowrap',
+      gap: DESIGN_TOKENS.spacing.xxs,
+      marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
     summaryCard: {
       minWidth: 124,
       flexGrow: 1,
@@ -74,6 +81,12 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.sm,
+    },
+    summaryCardCompact: {
+      minWidth: 0,
+      flexBasis: 0,
+      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
     },
     summaryCardAccent: {
       backgroundColor: colors.backgroundSecondary,
@@ -86,7 +99,13 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
-      marginBottom: 8,
+      marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    summaryIconWrapCompact: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      marginBottom: DESIGN_TOKENS.spacing.xxs,
     },
     summaryIconWrapAccent: {
       backgroundColor: colors.primarySoft,

@@ -100,6 +100,21 @@ export const ROUTE_POINT_ICON_NAME: Record<RoutePointType, string> = {
   overnight: 'home',
 };
 
+/**
+ * #1671: формат ОТОБРАЖЕНИЯ координат точки — пять знаков (≈1 м на местности).
+ * Намеренно отделён от формата ВВОДА (`formatCoordinateInput` в RouteBuilder,
+ * шесть знаков): подставленный в узкую карточку формат ввода давал строку в
+ * 21 символ, которая переносилась по цифрам на четыре строки.
+ */
+export function formatRoutePointCoordinates(
+  coordinates: [number, number] | null | undefined,
+): string | null {
+  if (!coordinates) return null;
+  const [lng, lat] = coordinates;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+
 export const RSVP_LABEL: Record<TripRsvp, string> = {
   get going() { return i18nT('tripsStatic:plan.rsvp.going') },
   get maybe() { return i18nT('tripsStatic:plan.rsvp.maybe') },

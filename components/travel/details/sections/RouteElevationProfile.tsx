@@ -141,7 +141,11 @@ export default function RouteElevationProfile({
       <View style={styles.headerRow}>
         <View style={styles.headerTextWrap}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{profileSummary}</Text>
+          {/* #1671: на узкой раскладке строка итогов повторяла плитки цифра
+              в цифру — там остаются только плитки. */}
+          {!isCompactLayout ? (
+            <Text style={styles.subtitle}>{profileSummary}</Text>
+          ) : null}
         </View>
         {transportHints.length > 0 ? (
           <View style={styles.transportWrap} testID="route-elevation-transport">
@@ -180,19 +184,27 @@ export default function RouteElevationProfile({
         ) : null}
       </View>
 
-      <View style={styles.summaryGrid}>
+      <View
+        style={[
+          styles.summaryGrid,
+          isCompactLayout && styles.summaryGridCompact,
+        ]}
+        testID="route-elevation-summary-cards"
+      >
         {summaryCards.map((card) => (
           <View
             key={`${card.label}-${card.value}`}
             style={[
               styles.summaryCard,
               card.accent && styles.summaryCardAccent,
+              isCompactLayout && styles.summaryCardCompact,
             ]}
           >
             <View
               style={[
                 styles.summaryIconWrap,
                 card.accent && styles.summaryIconWrapAccent,
+                isCompactLayout && styles.summaryIconWrapCompact,
               ]}
             >
               <Feather
@@ -201,8 +213,12 @@ export default function RouteElevationProfile({
                 color={card.accent ? colors.primary : colors.textMuted}
               />
             </View>
-            <Text style={styles.summaryLabel}>{card.label}</Text>
-            <Text style={styles.summaryValue}>{card.value}</Text>
+            <Text style={styles.summaryLabel} numberOfLines={1}>
+              {card.label}
+            </Text>
+            <Text style={styles.summaryValue} numberOfLines={1}>
+              {card.value}
+            </Text>
           </View>
         ))}
       </View>
