@@ -185,17 +185,20 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     expect(utils.queryByTestId('mock-header-context-bar')).toBeNull()
   })
 
-  it('передаёт обычную web context-заглушку critical CSS без inline-высоты', () => {
-    ;(usePathname as jest.Mock).mockReturnValue('/settings')
-    setResponsive(0, false)
+  it.each(['/settings', '/quests/minsk/e2e-quest'])(
+    'передаёт обычную web context-заглушку critical CSS для %s без inline-высоты',
+    (pathname) => {
+      ;(usePathname as jest.Mock).mockReturnValue(pathname)
+      setResponsive(0, false)
 
-    const utils = renderHeader()
-    const fallbacks = findByDataSet(utils, 'headerContextFallback', 'default')
+      const utils = renderHeader()
+      const fallbacks = findByDataSet(utils, 'headerContextFallback', 'default')
 
-    expect(fallbacks).toHaveLength(1)
-    expect(StyleSheet.flatten(fallbacks[0].props.style)).toMatchObject({ width: '100%' })
-    expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
-  })
+      expect(fallbacks).toHaveLength(1)
+      expect(StyleSheet.flatten(fallbacks[0].props.style)).toMatchObject({ width: '100%' })
+      expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
+    },
+  )
 
   it.each(['/', '/settings', '/quests/minsk/e2e-quest'])(
     'не ставит travel marker на контрольном маршруте %s',

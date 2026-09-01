@@ -15,7 +15,6 @@ import {
 import {
   getHeaderActivePath,
   getIsHeaderMobile,
-  isQuestDetailHeaderPath,
   shouldShowHeaderContextBar,
 } from './customHeaderModel'
 import { createCustomHeaderStyles, webStickyStyle } from './customHeaderStyles'
@@ -71,9 +70,7 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   const contextFallbackProps = webContextFallbackKind
     ? webDataSetProps({ headerContextFallback: webContextFallbackKind })
     : null
-  const showHeaderContextBar =
-    shouldShowHeaderContextBar(pathname, isMobile) &&
-    !(Platform.OS === 'web' && !isHydrated && isQuestDetailHeaderPath(pathname))
+  const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile)
 
   // Predict whether the lazy HeaderContextBar will actually render visible UI
   // (mirrors HeaderContextBar conditions). Native needs this to reserve height;
