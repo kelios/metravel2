@@ -19,6 +19,7 @@ const LIVE_CONTRACT_SPECS = [
 ]
 
 const PRODUCTION_SMOKE_SPECS = [
+  'google-signin.spec.ts',
   'prod-media-smoke.spec.ts',
   'public-regressions.spec.ts',
 ]

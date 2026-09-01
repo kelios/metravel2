@@ -135,6 +135,7 @@ Behavior:
 - `npm run e2e` runs the deterministic regression suite in `E2E_AUTH_MODE=guest`. It defaults API traffic to `http://127.0.0.1:8000`; an omitted E2E API target never falls through to production. Specs that need an authenticated UI must seed/mock that contract themselves.
 - Specs that create, update, upload, reset, or delete real backend records are classified in `scripts/e2e-suite-classification.js` and excluded from the default suite. Run them only with an explicit non-production target and mutation opt-in: `E2E_API_URL=http://... E2E_ALLOW_LIVE_MUTATIONS=1 npm run e2e:live-contract`.
 - Production browser/API targets are blocked unless both `E2E_SUITE=production-smoke` and `E2E_ALLOW_PRODUCTION_API=1` are set. `npm run e2e:production-smoke` selects only the read-only production specs.
+- `e2e/google-signin.spec.ts` is production-smoke-only: it runs on `https://metravel.by`, mocks the Google provider callback and login response inside the browser, and never sends a real Google credential or mutates the backend.
 - Missing/unreachable `baseURL` and a configured-but-invalid required account session fail global setup instead of creating an empty state and reporting authenticated scenarios as passed. `live-contract` forces `E2E_AUTH_MODE=required`.
 - `test-quality-governance.test.ts` rejects focused/disabled tests, literal boolean assertions, and diagnostic/manual filenames in the automated spec tree.
 

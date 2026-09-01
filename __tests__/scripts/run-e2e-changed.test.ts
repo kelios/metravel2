@@ -84,6 +84,11 @@ describe('run-e2e-changed', () => {
     expect(getSpecsForChangedFiles(['e2e/public-trips.spec.ts'])).toEqual([])
   })
 
+  it('leaves Google authorization to the production-smoke suite', () => {
+    expect(ALL_E2E_SPECS).not.toContain('e2e/google-signin.spec.ts')
+    expect(getSpecsForChangedFiles(['e2e/google-signin.spec.ts'])).toEqual([])
+  })
+
   it('fans out infrastructure changes to the complete regression suite', () => {
     expect(getSpecsForChangedFiles(['e2e/helpers/navigation.ts'])).toEqual(ALL_E2E_SPECS)
     expect(getSpecsForChangedFiles(['playwright.config.ts'])).toEqual(ALL_E2E_SPECS)
