@@ -9,7 +9,7 @@ const EXPECTED = Object.freeze({
   apnsEnvironment: 'production',
   appIconSha256: '86ebbd3444649460bfbc39a172c9d2200ed79f286b67f8e7b3cdc2f5ba4b4a72',
   bundleIdentifier: 'by.metravel.app',
-  buildNumber: '5',
+  buildNumber: '6',
   deploymentTarget: '16.4',
   displayName: 'MeTravel',
   easCliVersion: '21.8.0',
@@ -507,7 +507,7 @@ function validateIosRelease(root = process.cwd()) {
   if (pods.newArchEnabled !== 'true') fail('IOS_NEW_ARCH_PODS', String(pods.newArchEnabled));
   const projectPairs = [
     ['IOS_BUNDLE_ID_XCODE', /PRODUCT_BUNDLE_IDENTIFIER = by\.metravel\.app;/g, /PRODUCT_BUNDLE_IDENTIFIER = /g, 2],
-    ['IOS_BUILD_NUMBER_XCODE', /CURRENT_PROJECT_VERSION = 5;/g, /CURRENT_PROJECT_VERSION = /g, 2],
+    ['IOS_BUILD_NUMBER_XCODE', /CURRENT_PROJECT_VERSION = 6;/g, /CURRENT_PROJECT_VERSION = /g, 2],
     ['IOS_VERSION_XCODE', /MARKETING_VERSION = 1\.0\.5;/g, /MARKETING_VERSION = /g, 2],
     ['IOS_DEVICE_FAMILY_XCODE', /TARGETED_DEVICE_FAMILY = "1,2";/g, /TARGETED_DEVICE_FAMILY = /g, 2],
     ['IOS_DEPLOYMENT_TARGET_XCODE', /IPHONEOS_DEPLOYMENT_TARGET = 16\.4;/g, /IPHONEOS_DEPLOYMENT_TARGET = /g, 4],
