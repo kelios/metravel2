@@ -2,7 +2,6 @@ import { memo } from 'react'
 import {
   Platform,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from 'react-native'
@@ -10,6 +9,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import type { MoodCard } from './homeHeroContent'
 import type { QuickFilterParams } from './homeHeroShared'
+import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -17,6 +17,7 @@ type HomeHeroMoodRailProps = {
   colors: {
     textMuted?: string
     primary?: string
+    background?: string
   }
   styles: any
   isMobile: boolean
@@ -63,17 +64,6 @@ const renderMoodChip = (
   </Pressable>
 )
 
-const webMaskStyle =
-  Platform.OS === 'web'
-    ? ({
-        WebkitMaskImage:
-          'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-        maskImage:
-          'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-        overflow: 'hidden',
-      } as const)
-    : undefined
-
 const webScrollStyle =
   Platform.OS === 'web'
     ? ({
@@ -102,18 +92,18 @@ function HomeHeroMoodRail({
           )}
         </View>
       ) : (
-        <View style={isWeb ? webMaskStyle : undefined}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={isWeb ? webScrollStyle : undefined}
-            contentContainerStyle={styles.moodChipsScrollContent}
-          >
-            {moodCards.map((card) =>
-              renderMoodChip(card, colors, styles, onQuickFilterPress),
-            )}
-          </ScrollView>
-        </View>
+        <EdgeFadeScrollRow
+          style={isWeb ? webScrollStyle : undefined}
+          contentContainerStyle={styles.moodChipsScrollContent}
+          // Ряд лежит прямо на фоне героя (`warmBg` в `homeHeroStyles` — это
+          // `colors.background`), а не на карточной `surface`: затухание в
+          // дефолтный цвет рисовало бы у края полосу другого оттенка.
+          fadeColor={colors.background}
+        >
+          {moodCards.map((card) =>
+            renderMoodChip(card, colors, styles, onQuickFilterPress),
+          )}
+        </EdgeFadeScrollRow>
       )}
     </View>
   )
