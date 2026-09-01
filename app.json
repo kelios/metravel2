@@ -3,7 +3,7 @@
     "owner": "savran.juli",
     "name": "MeTravel",
     "slug": "metravel",
-    "version": "1.0.6",
+    "version": "1.0.5",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "metravel",
