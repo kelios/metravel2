@@ -18,10 +18,10 @@ import { useResponsiveWidth } from '@/hooks/useResponsive';
 
 // Подкомпоненты из filters/
 import {
-  FilterCheckbox,
   FilterOptionItem,
   GroupClearButton,
   SortDropdown,
+  StatusToggleRow,
   createModernFiltersStyles,
 } from './filters';
 
@@ -140,6 +140,9 @@ interface ModernFiltersProps {
   showDraftsOnly?: boolean;
   draftsOnlyValue?: boolean;
   onToggleDraftsOnly?: () => void;
+  showPublishedOnly?: boolean;
+  publishedOnlyValue?: boolean;
+  onTogglePublishedOnly?: () => void;
   onApply?: () => void;
   onClose?: () => void;
   optionalHint?: boolean;
@@ -162,6 +165,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   showDraftsOnly,
   draftsOnlyValue,
   onToggleDraftsOnly,
+  showPublishedOnly,
+  publishedOnlyValue,
+  onTogglePublishedOnly,
   onApply,
   onClose,
   optionalHint = false,
@@ -397,61 +403,40 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           </View>
         </View>
 
-        {/* Moderation (admin) */}
+        {/* Статус публикации: опубликованные / черновики / на модерации */}
         <View style={styles.extraFilters}>
+          {showPublishedOnly && onTogglePublishedOnly && (
+            <StatusToggleRow
+              testID="filter-published-only"
+              label={i18nT('travel:components.listTravel.ModernFilters.status.publishedOnly')}
+              hint={i18nT('travel:components.listTravel.ModernFilters.status.publishedOnlyHint')}
+              checked={!!publishedOnlyValue}
+              onToggle={onTogglePublishedOnly}
+              styles={styles}
+              checkColor={colors.textOnPrimary}
+            />
+          )}
           {showDraftsOnly && onToggleDraftsOnly && (
-            <Pressable
-              onPress={onToggleDraftsOnly}
-              style={({ hovered, pressed }) => [
-                styles.moderationRow,
-                draftsOnlyValue && styles.moderationRowSelected,
-                (hovered || pressed) && styles.moderationRowPressed,
-              ]}
-              accessibilityRole="checkbox"
-              accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.pokazat_chernoviki_721ba67a')}
-              accessibilityState={{ checked: !!draftsOnlyValue }}
-              {...(Platform.OS === 'web'
-                ? ({
-                    title: i18nT('travel:components.listTravel.ModernFilters.pokazyvat_tolko_chernoviki_avtora_266b3f38'),
-                  } as any)
-                : null)}
-            >
-              <FilterCheckbox checked={!!draftsOnlyValue} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
-              <Text
-                style={[
-                  styles.moderationLabel,
-                  draftsOnlyValue && styles.moderationLabelSelected,
-                ]}
-              >
-                {i18nT('travel:components.listTravel.ModernFilters.pokazat_chernoviki_721ba67a')}</Text>
-            </Pressable>
+            <StatusToggleRow
+              testID="filter-drafts-only"
+              label={i18nT('travel:components.listTravel.ModernFilters.pokazat_chernoviki_721ba67a')}
+              hint={i18nT('travel:components.listTravel.ModernFilters.pokazyvat_tolko_chernoviki_avtora_266b3f38')}
+              checked={!!draftsOnlyValue}
+              onToggle={onToggleDraftsOnly}
+              styles={styles}
+              checkColor={colors.textOnPrimary}
+            />
           )}
           {showModeration && onToggleModeration && (
-            <Pressable
-              onPress={onToggleModeration}
-              style={({ hovered, pressed }) => [
-                styles.moderationRow,
-                moderationValue === 0 && styles.moderationRowSelected,
-                (hovered || pressed) && styles.moderationRowPressed,
-              ]}
-              accessibilityRole="checkbox"
-              accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.tolko_na_moderatsii_2663efb3')}
-              accessibilityState={{ checked: moderationValue === 0 }}
-              {...(Platform.OS === 'web'
-                ? ({
-                    title: i18nT('travel:components.listTravel.ModernFilters.pokazyvat_tolko_puteshestviya_ozhidayuschie__3e7a3fd7'),
-                  } as any)
-                : null)}
-            >
-              <FilterCheckbox checked={moderationValue === 0} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
-              <Text
-                style={[
-                  styles.moderationLabel,
-                  moderationValue === 0 && styles.moderationLabelSelected,
-                ]}
-              >
-                {i18nT('travel:components.listTravel.ModernFilters.tolko_na_moderatsii_2663efb3')}</Text>
-            </Pressable>
+            <StatusToggleRow
+              testID="filter-moderation-only"
+              label={i18nT('travel:components.listTravel.ModernFilters.tolko_na_moderatsii_2663efb3')}
+              hint={i18nT('travel:components.listTravel.ModernFilters.pokazyvat_tolko_puteshestviya_ozhidayuschie__3e7a3fd7')}
+              checked={moderationValue === 0}
+              onToggle={onToggleModeration}
+              styles={styles}
+              checkColor={colors.textOnPrimary}
+            />
           )}
         </View>
 

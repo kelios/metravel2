@@ -21,10 +21,13 @@ jest.mock('@/scripts/lib/google-token', () => ({
 const { getAccessToken } = require('@/scripts/lib/google-token')
 
 const {
+  KIND_LABELS,
   SECTIONS,
   TOKEN_MAX_AGE_MS,
+  USAGE,
   assertCompleteSummary,
   assertInspectionCanContinue,
+  assertKnownSitemapRouteFamilies,
   classify,
   classifyUrl,
   createCheckpointWriter,
@@ -243,6 +246,14 @@ describe('classifyUrl', () => {
     expect(classifyUrl('/quests/krakow')).toBe('quest-city')
   })
 
+  it('classifies country landings separately from quest details and city landings', () => {
+    expect(classifyUrl('/quests/country/poland')).toBe('quest-country')
+    expect(classifyUrl('/quests/1/krakow-dragon')).toBe('quest-page')
+    expect(classifyUrl('/quests/krakow')).toBe('quest-city')
+    expect(KIND_LABELS['quest-country']).toContain('/quests/country/<')
+    expect(USAGE).toContain('every quest, city, and country page')
+  })
+
   it('keeps the catalog routes out of the city pages', () => {
     // `/quests` lists every city and `/quests/scenario` groups quests by scenario:
     // counted as city pages they would inflate the section by two non-existent cities.
@@ -263,6 +274,7 @@ describe('parseSitemap', () => {
 <url><loc>https://metravel.by/quests</loc></url>
 <url><loc>https://metravel.by/quests/rome</loc></url>
 <url><loc>https://metravel.by/quests/1/krakow-dragon</loc></url>
+<url><loc>https://metravel.by/quests/country/poland</loc></url>
 <url><loc>
   https://metravel.by/travels/staryy-i-novyy-zamki-v-grodno
 </loc></url>
@@ -276,9 +288,10 @@ describe('parseSitemap', () => {
       '/quests',
       '/quests/rome',
       '/quests/1/krakow-dragon',
+      '/quests/country/poland',
       '/travels/staryy-i-novyy-zamki-v-grodno',
     ])
-    expect(rows[3].url).toBe('https://metravel.by/travels/staryy-i-novyy-zamki-v-grodno')
+    expect(rows[4].url).toBe('https://metravel.by/travels/staryy-i-novyy-zamki-v-grodno')
   })
 
   it('labels each URL with its kind', () => {
@@ -286,6 +299,7 @@ describe('parseSitemap', () => {
       'static',
       'quest-city',
       'quest-page',
+      'quest-country',
       'travel',
     ])
   })
@@ -299,6 +313,42 @@ describe('parseSitemap', () => {
     expect(parseSitemap('')).toEqual([])
     expect(parseSitemap(null)).toEqual([])
     expect(parseSitemap('<html>404</html>')).toEqual([])
+  })
+})
+
+describe('sitemap classifier coverage', () => {
+  it('accepts each stable route-family shape from the production sitemap', () => {
+    expect(() =>
+      assertKnownSitemapRouteFamilies([
+        { pathname: '/about' },
+        { pathname: '/quests' },
+        { pathname: '/quests/scenario' },
+        { pathname: '/quests/krakow' },
+        { pathname: '/quests/1/krakow-dragon' },
+        { pathname: '/quests/country/poland' },
+        { pathname: '/travels/minsk' },
+        { pathname: '/travelsby' },
+      ]),
+    ).not.toThrow()
+  })
+
+  it('fails closed when the sitemap introduces an unknown nested or top-level family', () => {
+    expect(() =>
+      assertKnownSitemapRouteFamilies([
+        { pathname: '/travels/minsk' },
+        { pathname: '/quests/foo/bar' },
+        { pathname: '/travels/foo/bar' },
+        { pathname: '/stories/new-family' },
+      ]),
+    ).toThrow(/\/quests\/foo\/bar, \/stories\/new-family, \/travels\/foo\/bar/)
+  })
+
+  it('keeps the fail-closed check wired into the real sitemap loader before section filtering', () => {
+    const source = fs.readFileSync(nodePath.join(process.cwd(), 'scripts/index-status.js'), 'utf8')
+    expect(source).toContain('assertKnownSitemapRouteFamilies(sitemap)')
+    expect(source.indexOf('assertKnownSitemapRouteFamilies(sitemap)')).toBeLessThan(
+      source.indexOf('const kinds = SECTION_KINDS[section]'),
+    )
   })
 })
 
@@ -370,13 +420,15 @@ describe('inspection result semantics', () => {
       { kind: 'travel', verdict: 'NEUTRAL', coverageState: 'Discovered' },
       { kind: 'quest-city', verdict: 'ERROR', coverageState: 'HTTP 500' },
       { kind: 'quest-city', verdict: 'UNKNOWN', coverageState: 'Unknown' },
+      { kind: 'quest-country', verdict: 'PASS', coverageState: 'Indexed' },
     ])
 
-    expect(summary).toMatchObject({ total: 4, indexed: 1, notIndexed: 1, unchecked: 2 })
+    expect(summary).toMatchObject({ total: 5, indexed: 2, notIndexed: 1, unchecked: 2 })
     expect(summary.indexed + summary.notIndexed + summary.unchecked).toBe(summary.total)
     expect(summary.byKind).toEqual({
       travel: { total: 2, indexed: 1, notIndexed: 1, unchecked: 0 },
       'quest-city': { total: 2, indexed: 0, notIndexed: 0, unchecked: 2 },
+      'quest-country': { total: 1, indexed: 1, notIndexed: 0, unchecked: 0 },
     })
     expect(summary.problems).toHaveLength(1)
     expect(summary.uncheckedItems).toHaveLength(2)

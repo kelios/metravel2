@@ -36,6 +36,28 @@ describe('buildTravelSectionLinks', () => {
     )
   })
 
+  // Тот же инвариант для видео: TravelDetailsContentSection рисует секцию только
+  // когда `safeGetYoutubeId` достаёт id, поэтому непарсящаяся ссылка не должна
+  // давать пункт навигации. Сентинел `__draft_placeholder__` до экрана обычно не
+  // доходит (его срезает normalizeTravelItem), но сюда травел попадает и мимо
+  // нормализатора — в SSG и из скриптов.
+  it.each([
+    ['a parseable YouTube url', 'https://www.youtube.com/embed/dQw4w9WgXcQ?v=dQw4w9WgXcQ', true],
+    ['a youtu.be short link', 'https://youtu.be/dQw4w9WgXcQ', true],
+    ['the draft sentinel', '__draft_placeholder__', false],
+    ['another video host', 'https://vimeo.com/76979871', false],
+    ['an empty string', '', false],
+    ['null', null, false],
+  ] as const)('video link for %s -> %s', (_label, youtube_link, expected) => {
+    const links = buildTravelSectionLinks({ ...travelWithPoints, youtube_link } as any)
+
+    expect(links.map((link) => link.key).includes('video')).toBe(expected)
+    // Соседние ссылки не задеты — гейтим только видео.
+    expect(links.map((link) => link.key)).toEqual(
+      expect.arrayContaining(['description', 'map', 'points']),
+    )
+  })
+
   // Инвариант: пункт навигации существует ровно там, где рендерится секция.
   // Если Belkraj-виджет ничего не отдаст, ExcursionsSection возвращает null —
   // ссылка, ведущая в никуда, появляться не должна.

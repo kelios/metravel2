@@ -11,9 +11,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
 
 import type { CommunityTripsFilters, TripTransport } from '@/api/plannedTrips';
+import MapIcon from '@/components/MapPage/MapIcon';
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
@@ -78,8 +78,8 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
               style={[styles.chip, active && styles.chipActive]}
               testID={`community-filter-transport-${option}`}
             >
-              <Feather
-                name={TRANSPORT_ICON_NAME[option] as never}
+              <MapIcon
+                name={TRANSPORT_ICON_NAME[option]}
                 size={13}
                 color={active ? colors.primary : colors.textSecondary}
               />

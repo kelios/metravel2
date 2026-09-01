@@ -14,7 +14,7 @@ import type { Travel, TravelAddressItem } from '@/types/types';
 import Button from '@/components/ui/Button';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { safeLazy } from '@/components/layout/safeLazy';
-import RouteBuilderMapFirst from '@/components/trips/planning/RouteBuilderMapFirst';
+import RouteBuilderMobile from '@/components/trips/planning/RouteBuilderMobile';
 import RoutePointAddForm, {
   type SiteRouteOption,
   type SiteSearchStatus,
@@ -104,9 +104,10 @@ interface Props {
   trip: PlannedTrip;
   /**
    * `stack` — историческая вертикальная раскладка (desktop и все readonly-экраны).
-   * `mapFirst` — мобильная раскладка #1495: карта на весь экран, панель уезжает
-   * в шторку. Выбирает её экран поездки, а не компонент: тесты и desktop должны
-   * получать stack независимо от ширины окна в окружении.
+   * `mapFirst` — мобильная раскладка: карта первым блоком фиксированной высоты,
+   * панель маршрута — контент под ней в общем скролле страницы. Выбирает её
+   * экран поездки, а не компонент: тесты и desktop должны получать stack
+   * независимо от ширины окна в окружении.
    */
   layout?: 'stack' | 'mapFirst';
   /** Keep the page header on the same live display tuple as map/summary/export. */
@@ -936,7 +937,9 @@ function RouteBuilder({
     onReorder: handleReorder,
   });
 
-  const renderPoint = (point: RoutePoint, index: number) => (
+  // `editorSlot` приходит только из мобильного списка: там форма правки живёт
+  // внутри карточки своей точки, а не в конце панели.
+  const renderPoint = (point: RoutePoint, index: number, editorSlot?: React.ReactNode) => (
     <RoutePointRow
       key={point.id}
       point={point}
@@ -954,6 +957,9 @@ function RouteBuilder({
       onFocus={isMapFirst ? handleFocusPoint : undefined}
       onMove={handleMove}
       onDelete={handleDelete}
+      compact={isMapFirst}
+      isEditing={editingIndex === index}
+      editorSlot={editorSlot}
     />
   );
 
@@ -974,7 +980,9 @@ function RouteBuilder({
         />
         {elevationProfileSection}
         {route.length ? (
-          <View style={styles.pointList}>{route.map(renderPoint)}</View>
+          <View style={styles.pointList}>
+            {route.map((point, index) => renderPoint(point, index))}
+          </View>
         ) : (
           <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.marshrut_poka_ne_postroen_fbdcf5ed')}</Text>
         )}
@@ -1070,87 +1078,6 @@ function RouteBuilder({
     />
   );
 
-  const pointsSection = (
-    <RouteStepBlock
-      step={2}
-      title={i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}
-      styles={stepStyles}
-      aside={
-        route.length >= MIN_ROUTE_POINTS ? (
-          <View style={panelStyles.stepCheckBadge}>
-            <Feather name="check" size={12} color={colors.success} />
-            <Text style={panelStyles.stepCheckText}>
-              {i18nT('map:components.MapPage.FiltersPanelRouteSection.gotovo_aab95a18')}
-            </Text>
-          </View>
-        ) : (
-          <Text style={panelStyles.stepHint}>
-            {i18nT('map:components.MapPage.FiltersPanelRouteSection.vyberite_tochki_fb6530e6')}
-          </Text>
-        )
-      }
-      testID="route-builder-step-points"
-    >
-      {isAddPointOpen && editingIndex == null ? (
-        <AddressSearch onAddressSelect={handleAddAddressPoint} enableCoordinateInput dense />
-      ) : null}
-      {route.length ? (
-        isMapFirst ? (
-          <View style={styles.pointList}>{route.map(renderPoint)}</View>
-        ) : (
-          <ScrollView
-            style={styles.pointListScroll}
-            contentContainerStyle={styles.pointList}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}
-            testID="route-builder-point-list-scroll"
-            {...(Platform.OS === 'web' ? { tabIndex: 0 as const } : {})}
-          >
-            {route.map(renderPoint)}
-          </ScrollView>
-        )
-      ) : (
-        <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavte_pervuyu_tochku_marshruta_nizhe_d7cb9f9e')}</Text>
-      )}
-    </RouteStepBlock>
-  );
-
-  const addPointSection = editingIndex != null ? null : !isAddPointOpen ? (
-    <Button
-      label={i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}
-      onPress={handleOpenAddPoint}
-      variant="secondary"
-      size="sm"
-      icon={<Feather name="plus" size={16} color={colors.text} />}
-      testID="route-builder-add-action"
-    />
-  ) : (
-    <RoutePointAddForm
-      styles={styles}
-      colors={colors}
-      pointTypes={POINT_TYPES}
-      type={newType}
-      name={newName}
-      lat={newLat}
-      lng={newLng}
-      description={newDescription}
-      error={newPointError}
-      siteQuery={siteQuery}
-      siteOptions={siteOptions}
-      siteSearchStatus={siteSearchStatus}
-      onTypeChange={setNewType}
-      onNameChange={setNewName}
-      onLatChange={setNewLat}
-      onLngChange={setNewLng}
-      onDescriptionChange={setNewDescription}
-      onSiteQueryChange={setSiteQuery}
-      onAddSitePoint={handleAddSitePoint}
-      onAdd={handleAdd}
-      onCancel={handleCancelAddPoint}
-    />
-  );
-
   // #1532: чип «Место» в форме редактирования доступен только точке, уже
   // привязанной к сущности MeTravel. Привязка ставится выбором в поиске формы
   // добавления (`handleAddSitePoint`), поэтому у ручной точки, точки с карты и
@@ -1162,8 +1089,15 @@ function RouteBuilder({
       : POINT_TYPES.filter((type) => type !== 'place');
 
   const editPointSection = editingIndex != null ? (
-      <View style={styles.editForm} testID="route-builder-edit-form">
-        <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}</Text>
+      <View
+        style={[styles.editForm, isMapFirst && styles.editFormInline]}
+        testID="route-builder-edit-form"
+      >
+        {/* В мобильной раскладке форма уже подписана номером и названием своей
+            точки в карточке над ней — второй заголовок был бы шумом. */}
+        {isMapFirst ? null : (
+          <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}</Text>
+        )}
         <View style={styles.chipRow}>
           {editTypeOptions.map((type) => {
             const active = type === editType;
@@ -1241,8 +1175,133 @@ function RouteBuilder({
             testID="route-builder-edit-cancel"
           />
         </View>
+        {/* Перестановка и удаление в мобильной строке отсутствуют — четыре
+            иконки не помещались рядом с названием, — поэтому живут здесь. */}
+        {isMapFirst && editingIndex != null ? (
+          <>
+            <View style={styles.editActions}>
+              <Button
+                label={i18nT('trips:components.trips.planning.RouteBuilder.podnyat_tochku_vyshe_23208202')}
+                onPress={() => handleMove(editingIndex, -1)}
+                variant="ghost"
+                size="sm"
+                disabled={editingIndex === 0}
+                icon={<Feather name="chevron-up" size={16} color={colors.text} />}
+                testID={`route-builder-move-up-${editingIndex}`}
+              />
+              <Button
+                label={i18nT('trips:components.trips.planning.RouteBuilder.opustit_tochku_nizhe_c1c13a3e')}
+                onPress={() => handleMove(editingIndex, 1)}
+                variant="ghost"
+                size="sm"
+                disabled={editingIndex === route.length - 1}
+                icon={<Feather name="chevron-down" size={16} color={colors.text} />}
+                testID={`route-builder-move-down-${editingIndex}`}
+              />
+            </View>
+            <View style={styles.editDangerRow}>
+              <Button
+                label={i18nT('trips:components.trips.planning.RouteBuilder.udalit_tochku_37161453')}
+                onPress={() => handleDelete(editingIndex)}
+                variant="ghost"
+                size="sm"
+                icon={<Feather name="trash-2" size={16} color={colors.danger} />}
+                testID={`route-builder-delete-${editingIndex}`}
+              />
+            </View>
+          </>
+        ) : null}
     </View>
   ) : null;
+
+  const addPointSection = editingIndex != null ? null : !isAddPointOpen ? (
+    <Button
+      label={i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}
+      onPress={handleOpenAddPoint}
+      variant="secondary"
+      size="sm"
+      icon={<Feather name="plus" size={16} color={colors.text} />}
+      testID="route-builder-add-action"
+    />
+  ) : (
+    <RoutePointAddForm
+      styles={styles}
+      addressSlot={
+        <AddressSearch onAddressSelect={handleAddAddressPoint} enableCoordinateInput dense />
+      }
+      colors={colors}
+      pointTypes={POINT_TYPES}
+      type={newType}
+      name={newName}
+      lat={newLat}
+      lng={newLng}
+      description={newDescription}
+      error={newPointError}
+      siteQuery={siteQuery}
+      siteOptions={siteOptions}
+      siteSearchStatus={siteSearchStatus}
+      onTypeChange={setNewType}
+      onNameChange={setNewName}
+      onLatChange={setNewLat}
+      onLngChange={setNewLng}
+      onDescriptionChange={setNewDescription}
+      onSiteQueryChange={setSiteQuery}
+      onAddSitePoint={handleAddSitePoint}
+      onAdd={handleAdd}
+      onCancel={handleCancelAddPoint}
+    />
+  );
+
+  const pointsSection = (
+    <RouteStepBlock
+      step={2}
+      title={i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}
+      styles={stepStyles}
+      aside={
+        route.length >= MIN_ROUTE_POINTS ? (
+          <View style={panelStyles.stepCheckBadge}>
+            <Feather name="check" size={12} color={colors.success} />
+            <Text style={panelStyles.stepCheckText}>
+              {i18nT('map:components.MapPage.FiltersPanelRouteSection.gotovo_aab95a18')}
+            </Text>
+          </View>
+        ) : (
+          <Text style={panelStyles.stepHint}>
+            {i18nT('map:components.MapPage.FiltersPanelRouteSection.vyberite_tochki_fb6530e6')}
+          </Text>
+        )
+      }
+      testID="route-builder-step-points"
+    >
+      {route.length ? (
+        isMapFirst ? (
+          <View style={styles.pointList}>
+            {route.map((point, index) =>
+              renderPoint(point, index, editingIndex === index ? editPointSection : null),
+            )}
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.pointListScroll}
+            contentContainerStyle={styles.pointList}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}
+            testID="route-builder-point-list-scroll"
+            {...(Platform.OS === 'web' ? { tabIndex: 0 as const } : {})}
+          >
+            {route.map((point, index) => renderPoint(point, index))}
+          </ScrollView>
+        )
+      ) : (
+        <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavte_pervuyu_tochku_marshruta_nizhe_d7cb9f9e')}</Text>
+      )}
+      {/* Добавление живёт вплотную к списку: раньше кнопка лежала в самом низу
+          панели, за импортом и экспортом, и на телефоне до неё надо было
+          прокрутить ~2000px. */}
+      {addPointSection}
+    </RouteStepBlock>
+  );
 
   const templatesSection = templates.length ? (
       <View style={styles.templates}>
@@ -1335,45 +1394,33 @@ function RouteBuilder({
 
   if (isMapFirst) {
     return (
-      <RouteBuilderMapFirst
+      <RouteBuilderMobile
         mapSlot={mapSection}
         engineSlot={previewEngine}
-        transportSlot={
-          <>
-            {transportSection}
-            {previewStatusSection}
-          </>
-        }
-        pointsSlot={
-          <>
-            {pointsSection}
-            {elevationProfileSection}
-          </>
-        }
-        summarySlot={summarySection}
-        toolsSlot={
-          <>
-            {addPointSection}
-            {editPointSection}
-            {templatesSection}
-            {importSection}
-            {routeDownloadSection}
-            {saveSection}
-          </>
-        }
         summary={summary}
         routingState={routingState}
         transport={trip.transport}
         // Ключ карты, а не свой: строка та же самая, а в fill-режиме её шапку
-        // рисует сцена — дублировать перевод в пятый раз незачем.
+        // рисует раскладка — дублировать перевод в пятый раз незачем.
         mapHint={
           route.length
             ? null
             : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')
         }
-        editingIndex={editingIndex}
-        focusToken={focusPoint?.token ?? 0}
-      />
+      >
+        {transportSection}
+        {previewStatusSection}
+        {/* Список точек уже содержит и добавление, и инлайн-редактор точки. */}
+        {pointsSection}
+        {/* Главное действие стоит сразу под работой с точками, а не за
+            шаблонами, импортом и экспортом в самом низу панели. */}
+        {saveSection}
+        {elevationProfileSection}
+        {summarySection}
+        {templatesSection}
+        {importSection}
+        {routeDownloadSection}
+      </RouteBuilderMobile>
     );
   }
 
@@ -1391,9 +1438,9 @@ function RouteBuilder({
         >
           {transportSection}
 
+          {/* Добавление точки переехало внутрь секции списка — в обеих
+              раскладках это одно место. */}
           {pointsSection}
-
-          {addPointSection}
 
           {editPointSection}
 

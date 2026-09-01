@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
+import MapIcon from '@/components/MapPage/MapIcon';
 import CardActionPressable from '@/components/ui/CardActionPressable';
-import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import {
   PLAN_STATUS_LABEL,
@@ -40,7 +40,6 @@ function TripPlanCard({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
-  const [actionsVisible, setActionsVisible] = useState(false);
 
   const statusBg = planStatusColor(trip.status, colors);
   const participantsCount = Math.max(trip.participants.length, trip.isOwner ? 1 : 0);
@@ -72,34 +71,6 @@ function TripPlanCard({
     router.push(`/trips/plan/${trip.id}`);
   };
 
-  const ownerActions = useMemo<ActionListSheetItem[]>(() => {
-    const actions: ActionListSheetItem[] = [];
-    if (onEditPress) {
-      actions.push({
-        key: 'edit',
-        label: i18nT('trips:components.trips.planning.TripPlanCard.redaktirovat_poezdku_548d7f17'),
-        icon: 'edit-2',
-        onPress: () => {
-          setActionsVisible(false);
-          onEditPress(trip);
-        },
-      });
-    }
-    if (onDeletePress) {
-      actions.push({
-        key: 'delete',
-        label: i18nT('trips:components.trips.planning.TripPlanCard.udalit_poezdku_33c7dfe4'),
-        icon: 'trash-2',
-        iconColor: colors.danger,
-        onPress: () => {
-          setActionsVisible(false);
-          onDeletePress(trip);
-        },
-      });
-    }
-    return actions;
-  }, [colors.danger, onDeletePress, onEditPress, trip]);
-
   const contentSlot = (
     <View style={styles.contentStack}>
       <View style={styles.headerRow}>
@@ -121,8 +92,8 @@ function TripPlanCard({
       </Text>
 
       <View style={styles.metaRow}>
-        <Feather
-          name={TRANSPORT_ICON_NAME[trip.transport] as never}
+        <MapIcon
+          name={TRANSPORT_ICON_NAME[trip.transport]}
           size={13}
           color={colors.textSecondary}
         />
@@ -156,37 +127,45 @@ function TripPlanCard({
             disabled={isDeleting}
             testID={`trip-plan-card-manage-${trip.id}`}
           >
-            <Text style={styles.manageButtonText}>
+            <Text style={styles.manageButtonText} numberOfLines={1}>
               {hasOwnerActions ? i18nT('trips:components.trips.planning.TripPlanCard.upravlyat_poezdkoy_80d7b0d2') : i18nT('trips:components.trips.planning.TripPlanCard.otkryt_poezdku_4ed54163')}
             </Text>
             <Feather name="arrow-right" size={15} color={colors.textOnPrimary} />
           </CardActionPressable>
-          {hasOwnerActions ? (
+          {onEditPress ? (
             <CardActionPressable
-              accessibilityLabel={i18nT('trips:components.trips.planning.TripPlanCard.drugie_deystviya_s_poezdkoy_9a8b5df9')}
-              title={i18nT('trips:components.trips.planning.TripPlanCard.drugie_deystviya_4b60e2d6')}
-              onPress={() => setActionsVisible(true)}
-              style={styles.moreButton}
+              accessibilityLabel={i18nT('trips:components.trips.planning.TripPlanCard.redaktirovat_poezdku_548d7f17')}
+              title={i18nT('trips:components.trips.planning.TripPlanCard.redaktirovat_poezdku_548d7f17')}
+              onPress={() => onEditPress(trip)}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+              disabled={isDeleting}
+              testID={`trip-plan-card-edit-${trip.id}`}
+            >
+              <Feather name="edit-2" size={18} color={colors.text} />
+            </CardActionPressable>
+          ) : null}
+          {onDeletePress ? (
+            <CardActionPressable
+              accessibilityLabel={i18nT('trips:components.trips.planning.TripPlanCard.udalit_poezdku_33c7dfe4')}
+              title={i18nT('trips:components.trips.planning.TripPlanCard.udalit_poezdku_33c7dfe4')}
+              onPress={() => onDeletePress(trip)}
+              style={({ pressed }) => [
+                styles.iconButton,
+                styles.iconButtonDanger,
+                pressed && styles.iconButtonPressed,
+              ]}
               disabled={isDeleting}
               accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
-              testID={`trip-plan-card-more-${trip.id}`}
+              testID={`trip-plan-card-delete-${trip.id}`}
             >
               {isDeleting ? (
-                <ActivityIndicator size="small" color={colors.primaryDark} />
+                <ActivityIndicator size="small" color={colors.danger} />
               ) : (
-                <Feather name="more-horizontal" size={19} color={colors.text} />
+                <Feather name="trash-2" size={18} color={colors.danger} />
               )}
             </CardActionPressable>
           ) : null}
         </View>
-        {hasOwnerActions ? (
-          <ActionListSheet
-            visible={actionsVisible}
-            onClose={() => setActionsVisible(false)}
-            title={trip.title}
-            actions={ownerActions}
-          />
-        ) : null}
       </View>
     </View>
   );
@@ -283,8 +262,20 @@ const createStyles = (colors: ThemedColors) =>
       paddingHorizontal: 14,
     },
     manageButtonPressed: { opacity: 0.86 },
-    manageButtonText: { fontSize: 14, fontWeight: '800', color: colors.textOnPrimary },
-    moreButton: {
+    // #1660: второй владельческий значок забрал у строки ещё 52dp, и самая
+    // длинная локализованная подпись («Zarządzaj swoją podróżą») перестала
+    // помещаться в 100%-карточку на телефоне. Без `flexShrink` Yoga отдаёт
+    // тексту интринсик-ширину и он вылезает за кнопку, поэтому сжимаем подпись
+    // и обрезаем её многоточием вместо переполнения ряда.
+    manageButtonText: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: colors.textOnPrimary,
+      flexShrink: 1,
+    },
+    // #1660: «...» + нижний лист заменены явными иконками в той же строке —
+    // два владельческих действия не окупают скрытое меню и читаются сразу.
+    iconButton: {
       width: 44,
       height: 44,
       borderRadius: 12,
@@ -294,6 +285,8 @@ const createStyles = (colors: ThemedColors) =>
       borderColor: colors.border,
       backgroundColor: colors.surface,
     },
+    iconButtonDanger: { borderColor: colors.dangerLight, backgroundColor: colors.dangerSoft },
+    iconButtonPressed: { opacity: 0.72 },
     mediaPlaceholder: {
       width: '100%',
       height: '100%',

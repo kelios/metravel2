@@ -6,6 +6,8 @@ import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
+import MapIcon from '@/components/MapPage/MapIcon';
+
 import type { RoutingState, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import {
   TRANSPORT_ICON_NAME,
@@ -90,7 +92,7 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
       ) : null}
       {transport ? (
         <View style={styles.transportMeta} testID="route-summary-transport">
-          <Feather name={TRANSPORT_ICON_NAME[transport] as never} size={14} color={colors.primaryDark} />
+          <MapIcon name={TRANSPORT_ICON_NAME[transport]} size={16} color={colors.primaryDark} />
           <Text style={styles.transportLabel} numberOfLines={1}>
             {i18nT('trips:components.trips.planning.RouteSummaryBar.sposob_fc449610')}
           </Text>

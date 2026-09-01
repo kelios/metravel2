@@ -126,10 +126,24 @@ describe('buildUpsertPayload', () => {
     expect(p.travelAddress).toEqual([]);
   });
 
-  it('falls back to the sentinel for blank text fields (API rejects blank)', () => {
+  it('falls back to the sentinel for blank rich-text fields (API rejects blank)', () => {
     const p = buildUpsertPayload(live, { description: '<p>new</p>' });
     expect(p.recommendation).toBe(SENTINEL);
-    expect(p.youtube_link).toBe(SENTINEL);
+  });
+
+  // Сентинел в youtube_link — записанный мусор: upsert принимает и хранит null,
+  // а непустая строка расходится с предикатом видеосекции (см. sectionLinks).
+  it('leaves an empty youtube_link as null instead of stamping the sentinel', () => {
+    for (const youtube_link of [null, undefined, '']) {
+      const p = buildUpsertPayload({ ...live, youtube_link }, { description: '<p>new</p>' });
+      expect(p.youtube_link).toBeNull();
+    }
+  });
+
+  it('preserves a real youtube_link untouched', () => {
+    const url = 'https://youtu.be/dQw4w9WgXcQ';
+    const p = buildUpsertPayload({ ...live, youtube_link: url }, { description: '<p>new</p>' });
+    expect(p.youtube_link).toBe(url);
   });
 
   it('overrides description and meta when provided', () => {

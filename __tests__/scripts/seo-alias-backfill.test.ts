@@ -49,6 +49,10 @@ const fakeBackend = (start = travel()) => {
         location: aliases.get(oldSlug) || '',
         expected: `/travels/${currentSlug}`,
       }),
+      resolveSlug: async (slug: string) =>
+        slug === state.slug
+          ? { status: 200, id: state.id, location: '' }
+          : { status: 404, id: null, location: '' },
       saveBackup: () => '/tmp/backup.json',
     },
   }
@@ -100,48 +104,145 @@ describe('seo-alias-backfill: алиас без миграции', () => {
   // переименования бесполезна — вернуть статью на слаг с суффиксом нечем,
   // и она осталась бы на новом адресе навсегда.
   it('отказывается ДО единого PUT, если слаг сидит на коллизионном суффиксе', async () => {
-    const backend = fakeBackend(travel({ id: 508, slug: 'oriavskii-zamok-nad-oravoi-1' }))
+    const backend = fakeBackend(
+      travel({ id: 508, name: 'Оравский замок над Оравой', slug: 'oravskii-zamok-nad-oravoi-1' })
+    )
 
     const result = await backfillOne(
-      { id: 508, oldSlug: 'oriavskii-zamok-nad-oravoi' },
+      { id: 508, oldSlug: 'oravskii-zamok-nad-oravoi-staryi' },
       { sleep: async () => undefined, deps: backend.deps }
     )
 
     expect(result.status).toBe('skipped')
     expect(backend.calls).toEqual([])
+    expect(result.note).toContain('коллизионным суффиксом')
     expect(result.note).toContain('решение владельца')
-    expect(backend.state.slug).toBe('oriavskii-zamok-nad-oravoi-1')
+    expect(backend.state.slug).toBe('oravskii-zamok-nad-oravoi-1')
   })
 
   it('год в хвосте слага под коллизионное правило не подпадает', async () => {
-    const backend = fakeBackend(travel({ slug: 'zabezhuv-i-skaly-iury-1-maia-2025' }))
+    const backend = fakeBackend(
+      travel({ name: 'Забежув и скалы Юры 1 мая 2025', slug: 'zabezhuv-i-skaly-iury-1-maia-2025' })
+    )
 
     const result = await backfillOne(
       { id: 239, oldSlug: OLD },
       { sleep: async () => undefined, deps: backend.deps }
     )
 
-    expect(result.status).not.toBe('skipped')
+    expect(result.status).toBe('ok')
   })
 
-  // Вторая страховка на случай, когда слаг не подпадает под правило суффикса,
-  // а возврат всё равно дал другой адрес (заголовок правился между прогонами).
-  it('страхует и на возврате: слаг после шага B обязан совпасть с исходным', async () => {
+  // Живой случай #1689: travel 404 сидит на слаге, который даёт не её заголовок,
+  // а прежняя редакция названия. Суффикса `-N` там нет, поэтому прежний гард
+  // пропускал статью в прогон, и шаг B увёл бы её на адрес заголовка.
+  it('отказывается ДО единого PUT, если заголовок даёт другой слаг (travel 404)', async () => {
+    const backend = fakeBackend(
+      travel({
+        id: 404,
+        name: 'Лесное озеро Черный Став и Бобровая Заводь',
+        slug: 'lesnoe-ozero-chernyy-stav-i-bobrovyy-basseyn',
+      })
+    )
+
+    const result = await backfillOne(
+      { id: 404, oldSlug: 'lesnoe-ozero-chernyy-stav' },
+      { sleep: async () => undefined, deps: backend.deps }
+    )
+
+    expect(result.status).toBe('skipped')
+    expect(backend.calls).toEqual([])
+    expect(result.note).toContain('lesnoe-ozero-chernyi-stav-i-bobrovaia-zavod')
+    expect(backend.state.slug).toBe('lesnoe-ozero-chernyy-stav-i-bobrovyy-basseyn')
+  })
+
+  it('в dry-run печатает отказ, а не план прогона', async () => {
+    const backend = fakeBackend(
+      travel({
+        id: 404,
+        name: 'Лесное озеро Черный Став и Бобровая Заводь',
+        slug: 'lesnoe-ozero-chernyy-stav-i-bobrovyy-basseyn',
+      })
+    )
+
+    const result = await backfillOne(
+      { id: 404, oldSlug: 'lesnoe-ozero-chernyy-stav' },
+      { sleep: async () => undefined, dryRun: true, deps: backend.deps }
+    )
+
+    expect(result.status).toBe('skipped')
+    expect(result.note).not.toContain('[dry]')
+    expect(result.note).toContain('канонический адрес')
+  })
+
+  // Предсказание слага живёт в JS, а решение остаётся за бэкендом: если по слагу
+  // заголовка отдаётся не эта статья, значит данные разошлись — и трогать нечего.
+  it('отказывается ДО единого PUT, если by-slug отдаёт по слагу другую статью', async () => {
+    const backend = fakeBackend()
+    backend.deps.resolveSlug = async () => ({ status: 200, id: 777, location: '' })
+
+    const result = await run(backend)
+
+    expect(result.status).toBe('skipped')
+    expect(backend.calls).toEqual([])
+    expect(result.note).toContain('#777')
+  })
+
+  // Вторая страховка на случай, когда предсказание слага разошлось с бэкендом и
+  // возврат всё же дал другой адрес. Статья уже на чужом URL, поэтому сообщения
+  // мало: адрес возвращается тем же приёмом — имя, равное слагу.
+  const divergingBackend = () => {
     const backend = fakeBackend()
     backend.deps.putName = async (_d: unknown, name: string) => {
       backend.calls.push(name)
       const previous = backend.state.slug
-      backend.state.slug = name === OLD ? OLD : 'sovsem-drugoi-slug'
+      // Слаг заголовка «уехал», а слаг как имя по-прежнему даёт сам себя.
+      backend.state.slug =
+        name === OLD ? OLD : name === travel().slug ? travel().slug : 'sovsem-drugoi-slug'
       backend.state.name = name
       if (previous !== backend.state.slug) backend.aliases.set(previous, backend.state.slug)
       return { status: 200, text: '' }
     }
+    return backend
+  }
+
+  it('страхует и на возврате: слаг после шага B обязан совпасть с исходным', async () => {
+    const backend = divergingBackend()
 
     const result = await run(backend)
 
     expect(result.status).toBe('failed')
     expect(result.note).toContain('Канонический адрес живой статьи менять нельзя')
     expect(result.note).toContain('sovsem-drugoi-slug')
+  })
+
+  it('возвращает канонический адрес, если шаг B увёл статью на чужой слаг', async () => {
+    const backend = divergingBackend()
+
+    const result = await run(backend)
+
+    expect(result.fatal).toBe(true)
+    expect(backend.state.slug).toBe(travel().slug)
+    expect(backend.calls[backend.calls.length - 1]).toBe(travel().slug)
+    expect(result.note).toContain('адрес возвращён')
+  })
+
+  it('называет бэкап, если и откат адреса не прошёл', async () => {
+    const backend = divergingBackend()
+    const diverging = backend.deps.putName
+    let call = 0
+    backend.deps.putName = async (detail: unknown, name: string) => {
+      call += 1
+      if (call === 3) return { status: 500, text: 'boom' }
+      return diverging(detail, name)
+    }
+
+    const result = await run(backend)
+
+    expect(result.status).toBe('failed')
+    expect(result.note).toContain('ОТКАТ НЕ УДАЛСЯ')
+    expect(result.note).toContain('восстанови из')
+    expect(backend.state.slug).toBe('sovsem-drugoi-slug')
   })
 
   it('откатывает заголовок, если шаг A дал не тот слаг', async () => {

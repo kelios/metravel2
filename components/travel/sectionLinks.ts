@@ -2,6 +2,7 @@ import { Platform } from "react-native"
 
 import type { Travel } from "@/types/types"
 import { canRenderBelkrajWidget } from "@/components/belkraj/belkrajAvailability"
+import { safeGetYoutubeId } from "@/utils/travelMedia"
 import { translate as i18nT } from '@/i18n'
 
 
@@ -34,7 +35,11 @@ export const buildTravelSectionLinks = (
   const platform = options.platform ?? Platform.OS
 
   const hasGallery = Array.isArray(travel.gallery) && travel.gallery.length > 0
-  const hasVideo = typeof travel.youtube_link === "string" && travel.youtube_link.length > 0
+  // Тот же предикат, что и у самой видеосекции (TravelDetailsContentSection):
+  // она рисуется только когда из ссылки достаётся YouTube-id. Непарсящаяся
+  // строка — чужой видеохостинг, мусор из визарда, сентинел `__draft_placeholder__`
+  // из скриптов — секцию не поднимает, значит и пункта навигации быть не должно.
+  const hasVideo = safeGetYoutubeId(travel.youtube_link) !== null
   const desc = typeof travel.description === "string" ? travel.description.trim() : ""
   const isDraft = (travel as any).publish === false || (travel as any).moderation === false
   // For drafts we keep the "Описание" link even when description is empty,

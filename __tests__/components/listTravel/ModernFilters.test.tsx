@@ -298,6 +298,58 @@ describe('ModernFilters Component', () => {
     expect(screen.getByLabelText('Показать черновики').props.accessibilityState).toEqual({ checked: true });
   });
 
+  it('shows published-only filter for author travels', () => {
+    const onTogglePublishedOnly = jest.fn();
+
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={mockFilterGroups}
+        selectedFilters={{}}
+        onFilterChange={mockOnFilterChange}
+        onClearAll={mockOnClearAll}
+        resultsCount={10}
+        showPublishedOnly={true}
+        publishedOnlyValue={true}
+        onTogglePublishedOnly={onTogglePublishedOnly}
+      />
+    );
+
+    expect(screen.getByText('Только опубликованные')).toBeTruthy();
+    expect(screen.getByLabelText('Только опубликованные').props.accessibilityState).toEqual({ checked: true });
+
+    fireEvent.press(screen.getByLabelText('Только опубликованные'));
+    expect(onTogglePublishedOnly).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks status rows with aria-checked on web', () => {
+    // react-native-web 0.21 не форвардит accessibilityState в DOM, поэтому без
+    // явного aria-checked строка role="checkbox" читается как «не отмечена».
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      renderWithProviders(
+        <ModernFilters
+          filterGroups={mockFilterGroups}
+          selectedFilters={{}}
+          onFilterChange={mockOnFilterChange}
+          onClearAll={mockOnClearAll}
+          resultsCount={10}
+          showPublishedOnly={true}
+          publishedOnlyValue={true}
+          onTogglePublishedOnly={jest.fn()}
+          showDraftsOnly={true}
+          draftsOnlyValue={false}
+          onToggleDraftsOnly={jest.fn()}
+        />
+      );
+
+      expect(screen.getByTestId('filter-published-only').props['aria-checked']).toBe(true);
+      expect(screen.getByTestId('filter-drafts-only').props['aria-checked']).toBe(false);
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
+
   it('moves selected object option to top of the group list', () => {
     const objectGroup = [
       {

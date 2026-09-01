@@ -285,6 +285,8 @@ export const travelGenerated4 = {
   "components.listTravel.ListCatalogToolbar.status.all": "Wszystkie moje podróże",
   "components.listTravel.ListCatalogToolbar.status.published": "Opublikowano",
   "components.listTravel.ListCatalogToolbar.status.drafts": "Szkice",
+  "components.listTravel.ModernFilters.status.publishedOnly": "Tylko opublikowane",
+  "components.listTravel.ModernFilters.status.publishedOnlyHint": "Pokazuj tylko opublikowane podróże",
   "components.listTravel.ListCatalogToolbar.density.comfortable": "Duże karty",
   "components.listTravel.ListCatalogToolbar.density.compact": "Kompaktowy widok",
   "components.listTravel.TravelListItemEngagementMetrics.saved": "Zapisano",

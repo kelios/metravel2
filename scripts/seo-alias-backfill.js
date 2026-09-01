@@ -32,11 +32,15 @@
  * Поэтому: по одной статье, с проверкой факта после каждой, и в паре с деплоем
  * фронта — пререндеренный снимок иначе останется со старым заголовком.
  *
- * НЕ работает, когда `slugify(исходный заголовок)` не равен текущему слагу —
- * например у статьи, сидящей на слаге с суффиксом `-1` из-за исторической
- * коллизии: шаг B вернул бы её на слаг без суффикса, то есть сменил бы
- * канонический адрес живой статьи. Такой случай инструмент отказывается делать
- * и пишет причину — это решение владельца, а не побочный эффект прогона.
+ * НЕ работает, когда `slugify(исходный заголовок)` не равен текущему слагу:
+ * шаг B вернул бы статью не на её адрес, а на адрес заголовка, то есть сменил
+ * бы канонический адрес живой статьи. Такой случай инструмент отказывается
+ * делать и пишет причину — это решение владельца, а не побочный эффект прогона.
+ *
+ * #1690: отказ стоит ДО первого PUT и опирается на предсказание слага
+ * (`lib/travelSlug.js`), сверенное с бэкендом пробой `by-slug`. Прежний гард
+ * ловил только исторический суффикс коллизии `…-1`, а у 86 из 317 статей
+ * автора заголовок не даёт их слаг — 79 из них прогон увёл бы молча.
  *
  * `--help` печатает USAGE ниже; сами аргументы разбирает общий SEO CLI contract
  * (#1391), поэтому опечатка `--dry-runn` — это ошибка вызова, а не настоящий
@@ -54,6 +58,7 @@ const https = require('https')
 const { buildUpsertPayload } = require('./seo-edit')
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const { detectStoredTextCorruption } = require('./lib/textIntegrity')
+const { describeSlugMismatch } = require('./lib/travelSlug')
 const {
   UsageError,
   parseCliArgs,
@@ -217,6 +222,25 @@ async function verifyAlias(oldSlug, currentSlug) {
 }
 
 /**
+ * Кого отдаёт бэкенд по слагу. Пробой сверяется предсказание слага заголовка:
+ * инвариант «заголовок ведёт на эту же статью» должен подтвердить сам бэкенд,
+ * а не только строковое сравнение с полем, прочитанным из `/travels/<id>/`.
+ * Запрос идёт с токеном: анонимный `by-slug` накручивает счётчик просмотров.
+ */
+async function resolveSlug(slug) {
+  const { status, text, location } = await request('GET', `/travels/by-slug/${encodeURIComponent(slug)}/`)
+  let id = null
+  if (status === 200) {
+    try {
+      id = JSON.parse(text).id ?? null
+    } catch {
+      /* тело не разобралось — id остаётся null, вызывающая сторона откажет */
+    }
+  }
+  return { status, id, location }
+}
+
+/**
  * Одна пара. Возвращает {status: 'ok'|'skipped'|'failed', note}.
  *
  * Отказ вместо прогона — штатный исход: лучше не завести алиас, чем сменить
@@ -230,6 +254,7 @@ async function backfillOne({ id, oldSlug }, options = {}) {
     getTravel = defaultDeps.getTravel,
     putName = defaultDeps.putName,
     verifyAlias = defaultDeps.verifyAlias,
+    resolveSlug = defaultDeps.resolveSlug,
     saveBackup = defaultDeps.saveBackup,
   } = options.deps || {}
 
@@ -246,19 +271,28 @@ async function backfillOne({ id, oldSlug }, options = {}) {
     return { status: 'skipped', note: `алиас уже есть: ${oldSlug} → 301 → ${currentSlug}` }
   }
 
-  // Гард обязан стоять ДО первого PUT: шаг B возвращает не сохранённый слаг, а
-  // тот, что даст `slugify(заголовок)`. Если статья сидит на слаге с
-  // коллизионным суффиксом (`…-1`), её заголовок даёт слаг БЕЗ суффикса —
-  // вернуть её обратно нечем, и она осталась бы на новом адресе навсегда.
-  // Проверка после переименования тут не спасает: к тому моменту ущерб нанесён.
-  // Год в хвосте (`…-2025`) под правило не подпадает — суффикс коллизии короткий.
-  if (/-\d{1,2}$/.test(currentSlug)) {
+  // Гард обязан стоять ДО первого PUT: оба шага задают только `name`, а слаг
+  // бэкенд пересчитывает из него заново. Если `slugify(заголовок)` не равен
+  // текущему слагу, статью не вернёт ни шаг B, ни аварийный откат шага A —
+  // вернуть её обратно попросту нечем. Проверка после переименования тут не
+  // спасает: к тому моменту ущерб нанесён. Год в хвосте (`…-2025`) под правило
+  // не подпадает — предсказание сверяет слаг целиком, а не форму суффикса.
+  const mismatch = describeSlugMismatch(currentName, currentSlug)
+  if (mismatch) {
+    return { status: 'skipped', note: mismatch.reason }
+  }
+
+  // Предсказание — код на JS, а решение принимает бэкенд: слаг заголовка обязан
+  // вести на эту же статью. Расхождение значит, что `/travels/<id>/` и индекс
+  // by-slug видят разное, — переименовывать живую статью на таком грунте нельзя.
+  const canonical = await resolveSlug(currentSlug)
+  if (canonical.status !== 200 || Number(canonical.id) !== Number(id)) {
     return {
       status: 'skipped',
       note:
-        `слаг «${currentSlug}» оканчивается коллизионным суффиксом: заголовок даёт слаг без него, ` +
-        'поэтому возврат сменил бы канонический адрес живой статьи. Нужно решение владельца — ' +
-        'либо алиас пишет бэкенд-миграция, либо статья осознанно переезжает на чистый слаг',
+        `слаг заголовка «${currentSlug}» не резолвится в статью #${id}: HTTP ${canonical.status}` +
+        (canonical.id != null ? `, там статья #${canonical.id}` : '') +
+        ' — прогон на расходящихся данных не делается',
     }
   }
 
@@ -305,12 +339,32 @@ async function backfillOne({ id, oldSlug }, options = {}) {
   const after = await getTravel(id)
 
   if (after.slug !== currentSlug) {
+    // Пре-флайт гард сюда дойти не должен: если дошёл — предсказание слага
+    // разошлось с бэкендом, и статья уже стоит на чужом адресе. Вернуть адрес
+    // можно ровно одним способом: назвать статью её же слагом, потому что
+    // `slugify(<slug>)` — это сам слаг. Заголовком при этом остаётся слаг: это
+    // видно оператору с первого взгляда и чинится владельцем, а молча
+    // сменившийся канонический адрес не виден никому и стоит индексации.
+    const restore = await putName(after, currentSlug).catch((error) => ({
+      status: 0,
+      text: error instanceof Error ? error.message : String(error),
+    }))
+    let restoredSlug = ''
+    if (restore.status === 200 || restore.status === 201) {
+      await sleep(1000)
+      restoredSlug = (await getTravel(id)).slug
+    }
     return {
       status: 'failed',
+      fatal: true,
+      fatalNote: 'предсказание слага разошлось с бэкендом — остальные пары не тронуты.',
       note:
-        `шаг B вернул слаг ${after.slug} вместо ${currentSlug}: заголовок статьи не даёт её текущий слаг ` +
-        `(историческая коллизия). Канонический адрес живой статьи менять нельзя без решения владельца — ` +
-        `бэкап ${path.basename(backup)}`,
+        `шаг B вернул слаг ${after.slug} вместо ${currentSlug}: заголовок статьи не даёт её текущий слаг. ` +
+        `Канонический адрес живой статьи менять нельзя без решения владельца — ` +
+        (restoredSlug === currentSlug
+          ? `адрес возвращён на ${currentSlug}, но заголовком сейчас стоит сам слаг: верни текст из ${path.basename(backup)}`
+          : `ОТКАТ НЕ УДАЛСЯ (HTTP ${restore.status}: ${String(restore.text || '').slice(0, 160)}) — ` +
+            `статья осталась на ${restoredSlug || after.slug}, восстанови из ${path.basename(backup)}`),
     }
   }
   if (after.name !== currentName) {
@@ -342,6 +396,7 @@ async function backfillOne({ id, oldSlug }, options = {}) {
     return {
       status: 'failed',
       fatal: true,
+      fatalNote: 'путь чтения/записи портит UTF-8, остальные пары не тронуты.',
       note:
         `текст испорчен при записи: ${corruption.join('; ')} — ` +
         (rollbackOk
@@ -363,7 +418,7 @@ async function backfillOne({ id, oldSlug }, options = {}) {
 
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const defaultDeps = { getTravel, putName, verifyAlias, saveBackup }
+const defaultDeps = { getTravel, putName, verifyAlias, resolveSlug, saveBackup }
 
 async function main() {
   const args = parseCliArgs(process.argv, CLI_SPEC)
@@ -393,7 +448,7 @@ async function main() {
     console.log(`${icon} #${entry.id} ${result.note}`)
     results.push({ ...entry, ...result })
     if (result.fatal) {
-      console.error('🛑 пакет остановлен: путь чтения/записи портит UTF-8, остальные пары не тронуты.')
+      console.error(`🛑 пакет остановлен: ${result.fatalNote || 'остальные пары не тронуты.'}`)
       break
     }
   }
@@ -408,7 +463,7 @@ async function main() {
   })
 }
 
-module.exports = { CLI_SPEC, USAGE, backfillOne, detectDamage, verifyAlias }
+module.exports = { CLI_SPEC, USAGE, backfillOne, detectDamage, verifyAlias, resolveSlug }
 
 if (require.main === module) {
   runSeoCli(main, { name: 'seo-alias-backfill', usage: USAGE })

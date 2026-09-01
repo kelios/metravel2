@@ -59,17 +59,17 @@ export default function MyTripsDashboard() {
               label={i18nT('trips:components.trips.MyTripsDashboard.nayti_poezdku_f3819be3')}
               variant="secondary"
               size="sm"
-              fullWidth={isMobile}
+              iconOnly={isMobile}
               onPress={() => router.push('/trips')}
-              icon={<Feather name="search" size={16} color={colors.primaryDark} />}
+              icon={<Feather name="search" size={isMobile ? 19 : 16} color={colors.primaryDark} />}
               testID="my-trips-find-cta"
             />
             <Button
               label={i18nT('trips:components.trips.MyTripsDashboard.organizovat_poezdku_2332a286')}
               size="sm"
-              fullWidth={isMobile}
               onPress={() => router.push('/trips/plan/create')}
               icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
+              style={isMobile ? styles.headerPrimaryAction : undefined}
               testID="my-trips-plan-cta"
             />
           </View>
@@ -145,12 +145,17 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     headerCopy: { flex: 1, minWidth: 240, gap: 5 },
     h1: { fontSize: 28, fontWeight: '900', color: colors.text },
     lead: { fontSize: 15, lineHeight: 21, color: colors.textSecondary },
+    // #1660: на мобильном обе CTA живут одной компактной строкой — поиск
+    // сжимается до иконки, а подписанной остаётся только основная кнопка,
+    // чтобы «организовать поездку» не превращалась в безымянный «+».
     headerActions: {
       width: isMobile ? '100%' : undefined,
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      alignItems: 'center',
+      flexWrap: isMobile ? 'nowrap' : 'wrap',
       gap: 8,
     },
+    headerPrimaryAction: { flex: 1, minWidth: 0 },
     segments: { gap: 8, paddingVertical: 2 },
     sectionHeader: { gap: 4 },
     sectionTitle: { fontSize: 20, lineHeight: 26, fontWeight: '800', color: colors.text },

@@ -24,6 +24,7 @@ import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { MapCanvas } from '@/components/MapPage/Map/MapCanvas';
 import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
 import { useMapApi } from '@/components/MapPage/Map/useMapApi';
+import MapIcon from '@/components/MapPage/MapIcon';
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover';
 import WeatherLegend from '@/components/MapPage/WeatherLegend';
 import { useMapOverlays } from '@/hooks/map/useMapOverlays';
@@ -494,7 +495,7 @@ export default function TripPlanRouteMap({
           <Text style={styles.title}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.karta_marshruta_8fbc6a38')}</Text>
           {transport ? (
             <View style={styles.routeMode}>
-              <Feather name={TRANSPORT_ICON_NAME[transport] as never} size={14} color={colors.primaryDark} />
+              <MapIcon name={TRANSPORT_ICON_NAME[transport]} size={14} color={colors.primaryDark} />
               <Text style={styles.routeModeText}>{TRANSPORT_LABEL[transport]}</Text>
               {summary ? (
                 <Text style={styles.routeModeMeta}>

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -30,6 +30,12 @@ export type SiteRouteOption = {
 
 interface Props {
   styles: RouteBuilderStyles;
+  /**
+   * Поиск по адресу и ввод координат. Раньше он рисовался отдельно, в секции
+   * «Точки маршрута», и открытие «Добавить точку» разносило один сценарий по
+   * двум местам панели: сверху адресный поиск, внизу форма.
+   */
+  addressSlot?: React.ReactNode;
   colors: ThemedColors;
   pointTypes: readonly RoutePointType[];
   type: RoutePointType;
@@ -54,6 +60,7 @@ interface Props {
 
 export default function RoutePointAddForm({
   styles,
+  addressSlot,
   colors,
   pointTypes,
   type,
@@ -80,6 +87,7 @@ export default function RoutePointAddForm({
   return (
     <View style={localStyles.addForm} testID="route-builder-add-form">
       <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}</Text>
+      {addressSlot}
       <View style={styles.chipRow}>
         {pointTypes.map((pointType) => {
           const active = pointType === type;

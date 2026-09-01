@@ -11,6 +11,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import MapComponent from '@/components/MapPage/Map';
+import MapIcon from '@/components/MapPage/MapIcon';
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
@@ -182,7 +183,7 @@ export default function TripPlanRouteMap({
           <Text style={styles.title}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.karta_marshruta_8fbc6a38')}</Text>
           {transport ? (
             <View style={styles.routeMode}>
-              <Feather name={TRANSPORT_ICON_NAME[transport] as never} size={14} color={colors.primaryDark} />
+              <MapIcon name={TRANSPORT_ICON_NAME[transport]} size={14} color={colors.primaryDark} />
               <Text style={styles.routeModeText}>{TRANSPORT_LABEL[transport]}</Text>
               {summary ? (
                 <Text style={styles.routeModeMeta}>

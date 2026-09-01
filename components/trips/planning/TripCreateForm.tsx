@@ -19,6 +19,7 @@ import type {
   TripVisibility,
 } from '@/api/plannedTrips';
 import { useCreateTrip } from '@/hooks/usePlannedTripsApi';
+import MapIcon from '@/components/MapPage/MapIcon';
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
@@ -398,8 +399,8 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
               style={[styles.chip, active && styles.chipActive]}
               testID={`trip-create-transport-${option}`}
             >
-              <Feather
-                name={TRANSPORT_ICON_NAME[option] as never}
+              <MapIcon
+                name={TRANSPORT_ICON_NAME[option]}
                 size={13}
                 color={active ? colors.primary : colors.textSecondary}
               />

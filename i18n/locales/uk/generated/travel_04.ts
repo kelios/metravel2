@@ -285,6 +285,8 @@ export const travelGenerated4 = {
   "components.listTravel.ListCatalogToolbar.status.all": "Всі мої подорожі",
   "components.listTravel.ListCatalogToolbar.status.published": "Опубліковані",
   "components.listTravel.ListCatalogToolbar.status.drafts": "Чернетки",
+  "components.listTravel.ModernFilters.status.publishedOnly": "Тільки опубліковані",
+  "components.listTravel.ModernFilters.status.publishedOnlyHint": "Показувати лише опубліковані подорожі",
   "components.listTravel.ListCatalogToolbar.density.comfortable": "Великі картки",
   "components.listTravel.ListCatalogToolbar.density.compact": "Компактний вигляд",
   "components.listTravel.TravelListItemEngagementMetrics.saved": "Зберегли",

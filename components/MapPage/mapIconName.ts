@@ -23,6 +23,10 @@ export const mapIconName = (name: string): keyof typeof Feather.glyphMap => {
     case 'directions-bike':
     case 'hiking':
       return 'activity'
+    case 'directions-bus':
+      return 'map'
+    case 'directions-transit':
+      return 'compass'
     case 'trip-origin':
       return 'circle'
     case 'swap-vert':

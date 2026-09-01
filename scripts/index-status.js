@@ -12,7 +12,7 @@
 // Usage:
 //   node scripts/index-status.js                  # author articles, human summary
 //   node scripts/index-status.js --section all    # every URL in sitemap.xml
-//   node scripts/index-status.js --section quests # quest pages and city pages
+//   node scripts/index-status.js --section quests # quest, city, and country pages
 //   node scripts/index-status.js --json           # machine-readable (for the agent)
 //   node scripts/index-status.js --only-problems   # list only not-indexed URLs
 //   node scripts/index-status.js --limit 5        # inspect first 5 (smoke test)
@@ -47,6 +47,7 @@ const DEFAULT_USER_ID = '1'
 const KIND_TRAVEL = 'travel'
 const KIND_QUEST_PAGE = 'quest-page'
 const KIND_QUEST_CITY = 'quest-city'
+const KIND_QUEST_COUNTRY = 'quest-country'
 const KIND_STATIC = 'static'
 
 const INDEXED_VERDICT = 'PASS'
@@ -56,17 +57,47 @@ const KIND_LABELS = {
   [KIND_TRAVEL]: 'Статьи /travels/<slug>',
   [KIND_QUEST_PAGE]: 'Страницы квестов /quests/<город>/<квест>',
   [KIND_QUEST_CITY]: 'Городские страницы /quests/<город>',
+  [KIND_QUEST_COUNTRY]: 'Страницы стран /quests/country/<страна>',
   [KIND_STATIC]: 'Статические адреса',
 }
 
-// Catalog routes that live under /quests but are not one city: `/quests` lists
-// every city, `/quests/scenario` groups quests by scenario. Counting them as city
-// pages would make the report claim one more city than the catalog has.
-const QUEST_CATALOG_ROUTES = new Set(['/quests', '/quests/scenario'])
+const STATIC_SITEMAP_ROUTES = new Set([
+  '/',
+  '/about',
+  '/contact',
+  '/map',
+  '/quests',
+  '/quests/scenario',
+  '/travelsby',
+])
+
+// One canonical route-family table owns both classification and the live sitemap
+// guard. Keeping only top-level prefixes here would still accept a new nested
+// family such as `/quests/foo/bar` as a quest detail — the exact root cause of
+// #1686. A new shape therefore fails until its own kind/report label is decided.
+const SITEMAP_ROUTE_FAMILIES = [
+  { kind: KIND_STATIC, matches: (pathname) => STATIC_SITEMAP_ROUTES.has(pathname) },
+  {
+    kind: KIND_TRAVEL,
+    matches: (pathname) => /^\/travels\/[^/]+$/.test(pathname),
+  },
+  {
+    kind: KIND_QUEST_COUNTRY,
+    matches: (pathname) => /^\/quests\/country\/[^/]+$/.test(pathname),
+  },
+  {
+    kind: KIND_QUEST_PAGE,
+    matches: (pathname) => /^\/quests\/\d+\/[^/]+$/.test(pathname),
+  },
+  {
+    kind: KIND_QUEST_CITY,
+    matches: (pathname) => /^\/quests\/(?!country$|scenario$)[^/]+$/.test(pathname),
+  },
+]
 
 const SECTION_KINDS = {
   travels: [KIND_TRAVEL],
-  quests: [KIND_QUEST_PAGE, KIND_QUEST_CITY],
+  quests: [KIND_QUEST_PAGE, KIND_QUEST_CITY, KIND_QUEST_COUNTRY],
   all: null, // every kind in the sitemap
 }
 
@@ -81,7 +112,7 @@ Options:
   --section <name>      what to inspect (default articles):
                           articles — published travels of one author, from the API
                           travels  — every /travels/ URL in sitemap.xml (all authors)
-                          quests   — every quest page and city page in sitemap.xml
+                          quests   — every quest, city, and country page in sitemap.xml
                           all      — every URL in sitemap.xml
   --user-id <id>        author to inspect (default 1); only with --section articles
   --api <origin>        API origin the article list comes from
@@ -234,12 +265,28 @@ async function fetchJson(url) {
 }
 
 function classifyUrl(pathname) {
-  if (pathname.startsWith('/travels/')) return KIND_TRAVEL
-  if (QUEST_CATALOG_ROUTES.has(pathname)) return KIND_STATIC
-  if (pathname.startsWith('/quests/')) {
-    return pathname.slice('/quests/'.length).includes('/') ? KIND_QUEST_PAGE : KIND_QUEST_CITY
+  const family = SITEMAP_ROUTE_FAMILIES.find((candidate) => candidate.matches(pathname))
+  // Focused callers historically use `static` as the harmless fallback. The
+  // live sitemap loader below is stricter and rejects the same unknown shape.
+  return family ? family.kind : KIND_STATIC
+}
+
+function assertKnownSitemapRouteFamilies(entries) {
+  const unknown = [
+    ...new Set(
+      entries
+        .map((entry) => entry.pathname)
+        .filter(
+          (pathname) => !SITEMAP_ROUTE_FAMILIES.some((family) => family.matches(pathname)),
+        ),
+    ),
+  ].sort()
+  if (unknown.length) {
+    throw new Error(
+      `sitemap.xml содержит неизвестные семейства маршрутов: ${unknown.join(', ')}; ` +
+        'обновите классификатор и KIND_LABELS до URL Inspection',
+    )
   }
-  return KIND_STATIC
 }
 
 // One flat `<urlset>`, read live from the origin the URLs are inspected on: a
@@ -335,6 +382,7 @@ async function selectTargets(args, section, userId) {
   const sitemap = requireNonEmptySelection(parseSitemap(await fetchText(sitemapUrl)), {
     message: `${sitemapUrl} вернул 0 адресов — проверьте доступность и формат карты сайта`,
   })
+  assertKnownSitemapRouteFamilies(sitemap)
   const kinds = SECTION_KINDS[section]
   const picked = kinds ? sitemap.filter((u) => kinds.includes(u.kind)) : sitemap
   // A section that matches nothing is the same failure one level down: the
@@ -687,11 +735,13 @@ if (require.main === module) {
 
 module.exports = {
   CLI_SPEC,
+  KIND_LABELS,
   SECTIONS,
   TOKEN_MAX_AGE_MS,
   USAGE,
   assertCompleteSummary,
   assertInspectionCanContinue,
+  assertKnownSitemapRouteFamilies,
   classify,
   classifyUrl,
   createCheckpointWriter,

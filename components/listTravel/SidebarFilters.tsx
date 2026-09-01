@@ -83,6 +83,10 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       onSelect('draftsOnly', filter.draftsOnly ? undefined : true)
     }, [filter.draftsOnly, onSelect])
 
+    const handleTogglePublishedOnly = useCallback(() => {
+      onSelect('publishedOnly', filter.publishedOnly ? undefined : true)
+    }, [filter.publishedOnly, onSelect])
+
     const filtersElement = isError ? (
       <ErrorDisplay
         message={i18nT('map:hooks.map.useMapFilters.ne_udalos_zagruzit_filtry_4d480f39')}
@@ -109,6 +113,9 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
         showDraftsOnly={isMeTravel}
         draftsOnlyValue={filter.draftsOnly === true}
         onToggleDraftsOnly={handleToggleDraftsOnly}
+        showPublishedOnly={isMeTravel}
+        publishedOnlyValue={filter.publishedOnly === true}
+        onTogglePublishedOnly={handleTogglePublishedOnly}
         onClose={onClose}
       />
     )

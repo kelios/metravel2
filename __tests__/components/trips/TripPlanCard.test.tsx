@@ -24,28 +24,6 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => {
   };
 });
 
-jest.mock('@/components/ui/ActionListSheet', () => {
-  const { Pressable, Text, View } = require('react-native');
-  return function MockActionListSheet({
-    visible,
-    actions,
-  }: {
-    visible: boolean;
-    actions: Array<{ key: string; label: string; onPress: () => void }>;
-  }) {
-    if (!visible) return null;
-    return (
-      <View testID="trip-card-action-sheet">
-        {actions.map((action) => (
-          <Pressable key={action.key} testID={`trip-card-action-${action.key}`} onPress={action.onPress}>
-            <Text>{action.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-    );
-  };
-});
-
 jest.mock('@/components/trips/planning/tripFallbackCover', () => ({
   getTripFallbackCover: () => ({ uri: 'fallback.png', key: 'fallback' }),
 }));
@@ -181,19 +159,58 @@ describe('TripPlanCard organizer actions', () => {
     expect(getByText('· 1 в списке')).toBeTruthy();
   });
 
-  it('keeps edit and delete in the secondary actions sheet', () => {
+  it('exposes edit and delete as explicit icon buttons in the action row', () => {
     const onEditPress = jest.fn();
     const onDeletePress = jest.fn();
     const { getByTestId, queryByTestId } = render(
       <TripPlanCard trip={trip} onEditPress={onEditPress} onDeletePress={onDeletePress} />,
     );
 
-    expect(queryByTestId('trip-card-action-sheet')).toBeNull();
-    fireEvent.press(getByTestId('trip-plan-card-more-1'));
-    expect(getByTestId('trip-card-action-sheet')).toBeTruthy();
+    expect(queryByTestId('trip-plan-card-more-1')).toBeNull();
 
-    fireEvent.press(getByTestId('trip-card-action-edit'));
+    fireEvent.press(getByTestId('trip-plan-card-edit-1'));
     expect(onEditPress).toHaveBeenCalledWith(trip);
     expect(onDeletePress).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('trip-plan-card-delete-1'));
+    expect(onDeletePress).toHaveBeenCalledWith(trip);
+  });
+
+  // #1660: строка действий отдала 52dp двум значкам владельца, поэтому подпись
+  // основной кнопки обязана сжиматься, а не выезжать за её пределы.
+  it('lets the primary label shrink next to the owner icon buttons', () => {
+    const { getByText } = render(
+      <TripPlanCard trip={trip} onEditPress={jest.fn()} onDeletePress={jest.fn()} />,
+    );
+
+    const manageLabel = getByText('Управлять поездкой');
+
+    expect(StyleSheet.flatten(manageLabel.props.style).flexShrink).toBe(1);
+    expect(manageLabel.props.numberOfLines).toBe(1);
+  });
+
+  it('keeps the delete icon busy and locked while the trip is being removed', () => {
+    const onEditPress = jest.fn();
+    const onDeletePress = jest.fn();
+    const { getByTestId } = render(
+      <TripPlanCard trip={trip} onEditPress={onEditPress} onDeletePress={onDeletePress} isDeleting />,
+    );
+
+    const deleteButton = getByTestId('trip-plan-card-delete-1');
+    expect(deleteButton.props.accessibilityState).toEqual(
+      expect.objectContaining({ busy: true, disabled: true }),
+    );
+
+    fireEvent.press(deleteButton);
+    fireEvent.press(getByTestId('trip-plan-card-edit-1'));
+    expect(onDeletePress).not.toHaveBeenCalled();
+    expect(onEditPress).not.toHaveBeenCalled();
+  });
+
+  it('hides owner icon buttons for a participant card', () => {
+    const { queryByTestId } = render(<TripPlanCard trip={trip} />);
+
+    expect(queryByTestId('trip-plan-card-edit-1')).toBeNull();
+    expect(queryByTestId('trip-plan-card-delete-1')).toBeNull();
   });
 });

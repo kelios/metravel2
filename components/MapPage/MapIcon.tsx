@@ -19,6 +19,8 @@ const MCI_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = 
   'directions-car': 'car',
   'directions-walk': 'walk',
   'directions-bike': 'bike',
+  'directions-bus': 'bus',
+  'directions-transit': 'shuffle-variant',
 };
 
 function MapIcon({ name, size, color, style }: MapIconProps) {

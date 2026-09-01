@@ -190,7 +190,12 @@ function buildUpsertPayload(detail, { description, meta } = {}) {
     plus: d.plus || SENTINEL,
     minus: d.minus || SENTINEL,
     recommendation: d.recommendation || SENTINEL,
-    youtube_link: d.youtube_link || SENTINEL,
+    // Сентинел здесь не нужен: upsert принимает и хранит `youtube_link: null`
+    // (проверено на 583/584). Подставлять его — значит записывать в чистое поле
+    // мусор, от которого потом защищаются нормализатор (`api/travelsNormalize.ts`)
+    // и `recover-travel-from-ssg.js`; консьюмеры API без нормализации видят его как есть.
+    // Пустую строку API не принимает, поэтому «нет видео» — это null, не ''.
+    youtube_link: d.youtube_link || null,
     publish: Boolean(d.publish),
     moderation: Boolean(d.moderation),
     visa: Boolean(d.visa),

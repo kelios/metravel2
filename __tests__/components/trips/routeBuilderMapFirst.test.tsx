@@ -250,17 +250,19 @@ describe('RouteBuilderMapFirst — шторка маршрута', () => {
     })
   })
 
-  it('на узком экране оставляет оба map-chip одним рядом, а подсказку — ниже', () => {
+  it('на узком экране чипы стоят между зумом и кнопками карты, подсказка — ниже', () => {
     windowDimensionsMock.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 })
 
     const { getByTestId } = renderSheet({ mapHint: 'Нажмите на карту' })
 
     expect(getByTestId('route-map-chip-summary')).toBeTruthy()
     expect(getByTestId('route-map-chip-transport')).toBeTruthy()
+    // Зум Leaflet занимает x 10..56, «Слои»/«Развернуть» — 106 от правого края:
+    // ряд обязан помещаться между ними, иначе чип ложится на кнопку «−» (#1690).
     expect(StyleSheet.flatten(getByTestId('route-map-chips').props.style)).toMatchObject({
-      top: 64,
-      left: 10,
-      right: 10,
+      top: 10,
+      left: 62,
+      right: 108,
     })
     expect(StyleSheet.flatten(getByTestId('route-map-chip-controls').props.style)).toMatchObject({
       flexDirection: 'row',
@@ -270,6 +272,23 @@ describe('RouteBuilderMapFirst — шторка маршрута', () => {
       width: '100%',
     })
     expect(getByTestId('route-sheet-peek')).toHaveTextContent('12 км', { exact: false })
+  })
+
+  it('чип транспорта — квадратная иконка без подписи', () => {
+    windowDimensionsMock.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 })
+
+    const { getByTestId } = renderSheet({ transport: 'foot' })
+
+    const chip = getByTestId('route-map-chip-transport')
+    expect(StyleSheet.flatten(chip.props.style)).toMatchObject({
+      width: 44,
+      minHeight: 44,
+      paddingHorizontal: 0,
+    })
+    // Подпись ушла в accessibilityLabel: глиф пешехода читается и без текста,
+    // а полный выбор режима открывается тапом в шторке.
+    expect(chip).not.toHaveTextContent('Пешком')
+    expect(chip.props.accessibilityLabel).toContain('Пешком')
   })
 })
 

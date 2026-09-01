@@ -16,4 +16,5 @@ export type FilterState = Record<string, string[]> & {
   year?: string | number;
   moderation?: number;
   draftsOnly?: boolean;
+  publishedOnly?: boolean;
 };

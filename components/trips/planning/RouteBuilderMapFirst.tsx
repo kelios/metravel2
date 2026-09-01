@@ -31,6 +31,8 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
+import MapIcon from '@/components/MapPage/MapIcon';
+
 import type { RoutingState, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import {
   TRANSPORT_ICON_NAME,
@@ -112,8 +114,7 @@ function RouteBuilderMapFirst({
   const { t } = useTranslation();
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
-  const compactChips = windowWidth > 0 && windowWidth < 520;
+  const { height: windowHeight } = useWindowDimensions();
 
   const stageHeight = useMemo(
     () => clamp(windowHeight - STAGE_CHROME_RESERVE, STAGE_MIN_HEIGHT, STAGE_MAX_HEIGHT),
@@ -276,11 +277,7 @@ function RouteBuilderMapFirst({
       <View style={styles.mapLayer}>{mapSlot}</View>
       {engineSlot}
 
-      <View
-        style={[styles.chipsRow, compactChips && styles.chipsRowCompact]}
-        pointerEvents="box-none"
-        testID="route-map-chips"
-      >
+      <View style={styles.chipsRow} pointerEvents="box-none" testID="route-map-chips">
         <View
           style={styles.chipControls}
           pointerEvents="box-none"
@@ -292,17 +289,14 @@ function RouteBuilderMapFirst({
               value: TRANSPORT_LABEL[transport],
             })}
             onPress={() => openSection('transport')}
-            style={styles.chip}
+            style={[styles.chip, styles.chipIconOnly]}
             testID="route-map-chip-transport"
           >
-            <Feather
-              name={TRANSPORT_ICON_NAME[transport] as never}
-              size={14}
+            <MapIcon
+              name={TRANSPORT_ICON_NAME[transport]}
+              size={20}
               color={colors.primaryDark}
             />
-            <Text style={styles.chipText} numberOfLines={1}>
-              {TRANSPORT_LABEL[transport]}
-            </Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -405,14 +399,16 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     mapLayer: { flex: 1, minHeight: 0 },
+    // Полоса чипов живёт ровно между контролами карты: слева вертикальный зум
+    // Leaflet («+»/«−» по 44dp от left:10, то есть до x≈56), справа «Слои» и
+    // «Развернуть» (два круга 44dp до x≈106 от правого края). Раньше на телефоне
+    // ряд уезжал на top:64/left:10 и ложился поверх кнопки «−»; теперь чип
+    // транспорта — иконка 44dp, ряд помещается в верхнюю полосу целиком и
+    // перекрывать нечего.
     chipsRow: {
       position: 'absolute',
       top: 10,
-      // Слева вверху карты стоит вертикальный зум Leaflet («+»/«−»): при left:10
-      // чип ложился поверх него и «+» становился недоступен. Отступаем на ширину
-      // контрола, чтобы зум оставался кликабельным.
       left: 62,
-      // Кнопки карты («Слои», «Развернуть») стоят справа — чипам оставляем место.
       right: 108,
       gap: 6,
       zIndex: 1250,
@@ -421,14 +417,6 @@ const createStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       flexWrap: 'nowrap',
       gap: 6,
-    },
-    // На телефоне оба обязательных входа остаются видимыми одним рядом ниже
-    // верхних контролов карты. Так они не перекрывают Leaflet zoom слева и
-    // «Слои»/«Развернуть» справа, но summary-chip не исчезает из UX.
-    chipsRowCompact: {
-      top: 64,
-      left: 10,
-      right: 10,
     },
     chip: {
       flexDirection: 'row',
@@ -446,6 +434,15 @@ const createStyles = (colors: ThemedColors) =>
         web: webViewStyle({ boxShadow: DESIGN_TOKENS.shadows.light }),
         default: DESIGN_TOKENS.shadowsNative.light,
       }),
+    },
+    // Транспорт подписи не носит: набор режимов узнаётся по глифу (пешеход,
+    // машина, велосипед), а полная подпись ждёт в шторке, куда чип и ведёт.
+    chipIconOnly: {
+      width: 44,
+      flexGrow: 0,
+      flexShrink: 0,
+      paddingHorizontal: 0,
+      justifyContent: 'center',
     },
     chipText: { flexShrink: 1, fontSize: 13, fontWeight: '700', color: colors.text },
     hintPill: {

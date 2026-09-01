@@ -4,6 +4,8 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextIn
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
+import MapIcon from '@/components/MapPage/MapIcon';
+
 import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -353,9 +355,9 @@ export default function PlannedTripScreen() {
                   <Text style={styles.badgeText}>{PLAN_STATUS_LABEL[trip.status]}</Text>
                 </View>
                 <View style={styles.metaChip}>
-                  <Feather
-                    name={TRANSPORT_ICON_NAME[trip.transport] as never}
-                    size={12}
+                  <MapIcon
+                    name={TRANSPORT_ICON_NAME[trip.transport]}
+                    size={13}
                     color={colors.textSecondary}
                   />
                   <Text style={styles.metaChipText}>{TRANSPORT_LABEL[trip.transport]}</Text>
@@ -611,9 +613,9 @@ export default function PlannedTripScreen() {
                         disabled={updateTrip.isPending}
                         onPress={() => setEditValues((prev) => prev ? { ...prev, transport: option } : prev)}
                         icon={
-                          <Feather
-                            name={TRANSPORT_ICON_NAME[option] as never}
-                            size={14}
+                          <MapIcon
+                            name={TRANSPORT_ICON_NAME[option]}
+                            size={16}
                             color={active ? colors.textOnPrimary : colors.primaryDark}
                           />
                         }

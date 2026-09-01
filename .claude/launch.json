@@ -2,6 +2,26 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Trips Planner Redesign Web 8181",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8181\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8181\" NODE_OPTIONS=--max-old-space-size=12288 EXPO_PUBLIC_API_URL=http://localhost:8000 EXPO_PUBLIC_IS_LOCAL_API=false npx expo start --web --port 8181"
+      ],
+      "port": 8181,
+      "autoPort": false
+    },
+    {
+      "name": "Trips Compact 1660 Web 8180",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8180\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8180\" NODE_OPTIONS=--max-old-space-size=12288 EXPO_PUBLIC_TRIPS_MOCK=true npx expo start --web --port 8180"
+      ],
+      "port": 8180,
+      "autoPort": false
+    },
+    {
       "name": "Quest Card 1673 Web 8160",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

@@ -38,12 +38,15 @@ export const BIKE_TYPE_LABEL: Record<TripBikeType, string> = {
   get mountain() { return i18nT('tripsStatic:plan.bikeType.mountain') },
 };
 
+// Имена материальные, а рисует их `MapIcon` — тот же путь, что у режимов на
+// /map: у Feather нет узнаваемых пешехода, машины и велосипеда, поэтому «пешком»
+// показывался стрелкой навигации, «на машине» — грузовиком, а велосипед — кругом.
 export const TRANSPORT_ICON_NAME: Record<TripTransport, string> = {
-  car: 'truck',
-  bike: 'circle',
-  foot: 'navigation',
-  public: 'map',
-  mixed: 'compass',
+  car: 'directions-car',
+  bike: 'directions-bike',
+  foot: 'directions-walk',
+  public: 'directions-bus',
+  mixed: 'directions-transit',
 };
 
 export const VISIBILITY_LABEL: Record<TripVisibility, string> = {

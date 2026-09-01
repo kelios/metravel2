@@ -27,17 +27,31 @@ export const createStyles = (colors: ThemedColors) =>
       default: { maxHeight: 520 },
     }),
     pointList: { gap: 8 },
+    // Карточка точки: рамка и фон живут здесь, потому что под строкой в
+    // мобильной раскладке раскрывается инлайн-редактор — он обязан оказаться
+    // внутри той же карточки, а не отдельным блоком под ней.
+    pointCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+    },
+    pointCardEditing: { borderColor: colors.primary },
     pointRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
       paddingVertical: 8,
       paddingRight: 12,
       paddingLeft: 4,
-      backgroundColor: colors.surface,
+    },
+    pointEditor: {
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      backgroundColor: colors.surfaceMuted,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
     },
     // Без ручки перетаскивания (чужой маршрут или единственная точка) строка
     // сохраняет прежние отступы — слева больше нечего компенсировать.
@@ -71,6 +85,21 @@ export const createStyles = (colors: ThemedColors) =>
     },
     pointBody: { flex: 1, minWidth: 0, gap: 2, paddingTop: 2 },
     pointTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 0 },
+    // Номер точки: маркеры на карте одинаковые, и без номера строку списка не с
+    // чем сопоставить.
+    pointOrder: {
+      minWidth: 18,
+      height: 18,
+      lineHeight: 18,
+      paddingHorizontal: 5,
+      borderRadius: 9,
+      overflow: 'hidden',
+      textAlign: 'center',
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.textOnPrimary,
+      backgroundColor: colors.primary,
+    },
     pointType: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
     pointName: {
       minWidth: 0,
@@ -103,7 +132,25 @@ export const createStyles = (colors: ThemedColors) =>
       padding: 12,
       backgroundColor: colors.surface,
     },
+    // Инлайн-редактор уже лежит внутри карточки точки: своя рамка и фон здесь
+    // дали бы вторую рамку в рамке.
+    editFormInline: {
+      borderWidth: 0,
+      borderRadius: 0,
+      padding: 0,
+      backgroundColor: 'transparent',
+    },
     editActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    // Опасное действие отделено от «Сохранить»/«Отмена»: удаление точки не
+    // должно стоять вплотную к кнопке, которую жмут чаще всего.
+    editDangerRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: 4,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     typeChip: {
       borderWidth: 1,

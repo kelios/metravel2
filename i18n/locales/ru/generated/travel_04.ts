@@ -285,6 +285,8 @@ export const travelGenerated4 = {
   "components.listTravel.ListCatalogToolbar.status.all": "Все мои путешествия",
   "components.listTravel.ListCatalogToolbar.status.published": "Опубликованные",
   "components.listTravel.ListCatalogToolbar.status.drafts": "Черновики",
+  "components.listTravel.ModernFilters.status.publishedOnly": "Только опубликованные",
+  "components.listTravel.ModernFilters.status.publishedOnlyHint": "Показывать только опубликованные путешествия",
   "components.listTravel.ListCatalogToolbar.density.comfortable": "Крупные карточки",
   "components.listTravel.ListCatalogToolbar.density.compact": "Компактный вид",
   "components.listTravel.TravelListItemEngagementMetrics.saved": "Сохранили",
