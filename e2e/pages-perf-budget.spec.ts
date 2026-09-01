@@ -453,11 +453,19 @@ async function installDeterministicQuestDetailApi(
   return counters
 }
 
-function expectMapFixturesUsed(target: PageTarget, counters: MapFixtureCounters) {
+async function expectMapFixturesUsed(target: PageTarget, counters: MapFixtureCounters) {
   if (target.key !== 'MAP') return
 
-  for (const [endpoint, count] of Object.entries(counters)) {
-    expect(count, `Map ${endpoint} fixture was not exercised`).toBeGreaterThan(0)
+  for (const endpoint of Object.keys(counters) as Array<keyof MapFixtureCounters>) {
+    await expect
+      .poll(
+        () => counters[endpoint],
+        {
+          message: `Map ${endpoint} fixture was not exercised`,
+          timeout: 15_000,
+        },
+      )
+      .toBeGreaterThan(0)
   }
 }
 
@@ -540,7 +548,7 @@ for (const target of PAGES) {
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
-      expectMapFixturesUsed(target, mapFixtureCounters)
+      await expectMapFixturesUsed(target, mapFixtureCounters)
       expectCatalogFixturesUsed(target, catalogFixtureCounters)
       expectQuestDetailFixturesUsed(target, questFixtureCounters)
       const observedProfile = await collectObservedProfile(page)
@@ -658,7 +666,7 @@ for (const target of PAGES) {
       })
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
-      expectMapFixturesUsed(target, mapFixtureCounters)
+      await expectMapFixturesUsed(target, mapFixtureCounters)
       expectCatalogFixturesUsed(target, catalogFixtureCounters)
       expectQuestDetailFixturesUsed(target, questFixtureCounters)
 
