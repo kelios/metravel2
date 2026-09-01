@@ -17,6 +17,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -91,6 +92,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const { t } = useTranslation();
+  const { width: viewportWidth } = useWindowDimensions();
   // Через project-обёртку: на production web `react-native-safe-area-context`
   // может не разрезолвиться, и сырой хук уронил бы лист целиком.
   const insets = useSafeAreaInsetsSafe();
@@ -284,6 +286,12 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
     typeof navigator !== 'undefined' &&
     typeof navigator.share === 'function';
 
+  // RN Web mounts Modal inside the body content box. On desktop a classic
+  // scrollbar can make that box 15px narrower than the visual viewport, which
+  // shifts an otherwise centered channel row to the left. Dimensions follows
+  // the actual viewport and also updates when mobile-web tests/users resize.
+  const backdropViewportStyle = Platform.OS === 'web' ? { width: viewportWidth } : undefined;
+
   type ChannelButton = {
     key: ShareChannelKey;
     /** Полное действие: доступное имя кнопки для screen reader. */
@@ -350,7 +358,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable
-        style={styles.backdrop}
+        style={[styles.backdrop, backdropViewportStyle]}
         onPress={onClose}
         accessibilityLabel={t('questShareStatic:finaleShare.close')}
       >
