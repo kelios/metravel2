@@ -113,12 +113,7 @@ function RouteBuilderMapFirst({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
-  // Полоса чипов делит верх карты с кнопками «Слои»/«Развернуть» и получает
-  // ширину экрана минус 118px. На мобильной ширине два чипа туда не влезают,
-  // переносятся и закрывают собой два ряда карты. Сводку в этом случае не
-  // дублируем: та же строка с тем же тапом уже стоит в шапке шита сразу под
-  // картой, поэтому на карте остаётся только выбор транспорта.
-  const showSummaryChip = windowWidth === 0 || windowWidth >= 520;
+  const compactChips = windowWidth > 0 && windowWidth < 520;
 
   const stageHeight = useMemo(
     () => clamp(windowHeight - STAGE_CHROME_RESERVE, STAGE_MIN_HEIGHT, STAGE_MAX_HEIGHT),
@@ -281,26 +276,34 @@ function RouteBuilderMapFirst({
       <View style={styles.mapLayer}>{mapSlot}</View>
       {engineSlot}
 
-      <View style={styles.chipsRow} pointerEvents="box-none" testID="route-map-chips">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('tripsStatic:plan.mapFirst.transportChip', {
-            value: TRANSPORT_LABEL[transport],
-          })}
-          onPress={() => openSection('transport')}
-          style={styles.chip}
-          testID="route-map-chip-transport"
+      <View
+        style={[styles.chipsRow, compactChips && styles.chipsRowCompact]}
+        pointerEvents="box-none"
+        testID="route-map-chips"
+      >
+        <View
+          style={styles.chipControls}
+          pointerEvents="box-none"
+          testID="route-map-chip-controls"
         >
-          <Feather
-            name={TRANSPORT_ICON_NAME[transport] as never}
-            size={14}
-            color={colors.primaryDark}
-          />
-          <Text style={styles.chipText} numberOfLines={1}>
-            {TRANSPORT_LABEL[transport]}
-          </Text>
-        </Pressable>
-        {showSummaryChip ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('tripsStatic:plan.mapFirst.transportChip', {
+              value: TRANSPORT_LABEL[transport],
+            })}
+            onPress={() => openSection('transport')}
+            style={styles.chip}
+            testID="route-map-chip-transport"
+          >
+            <Feather
+              name={TRANSPORT_ICON_NAME[transport] as never}
+              size={14}
+              color={colors.primaryDark}
+            />
+            <Text style={styles.chipText} numberOfLines={1}>
+              {TRANSPORT_LABEL[transport]}
+            </Text>
+          </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('tripsStatic:plan.mapFirst.summaryChip')}
@@ -313,7 +316,7 @@ function RouteBuilderMapFirst({
               {summaryLine}
             </Text>
           </Pressable>
-        ) : null}
+        </View>
         {mapHint ? (
           // Подсказка лежит поверх карты и обязана пропускать тап сквозь себя:
           // иначе она сама съедала бы добавление точки в своей полосе.
@@ -411,15 +414,27 @@ const createStyles = (colors: ThemedColors) =>
       left: 62,
       // Кнопки карты («Слои», «Развернуть») стоят справа — чипам оставляем место.
       right: 108,
-      flexDirection: 'row',
-      flexWrap: 'wrap',
       gap: 6,
       zIndex: 1250,
+    },
+    chipControls: {
+      flexDirection: 'row',
+      flexWrap: 'nowrap',
+      gap: 6,
+    },
+    // На телефоне оба обязательных входа остаются видимыми одним рядом ниже
+    // верхних контролов карты. Так они не перекрывают Leaflet zoom слева и
+    // «Слои»/«Развернуть» справа, но summary-chip не исчезает из UX.
+    chipsRowCompact: {
+      top: 64,
+      left: 10,
+      right: 10,
     },
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      flexShrink: 1,
       minHeight: 44,
       maxWidth: '100%',
       paddingHorizontal: 12,
@@ -434,7 +449,7 @@ const createStyles = (colors: ThemedColors) =>
     },
     chipText: { flexShrink: 1, fontSize: 13, fontWeight: '700', color: colors.text },
     hintPill: {
-      flexBasis: '100%',
+      width: '100%',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,

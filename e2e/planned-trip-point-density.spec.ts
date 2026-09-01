@@ -278,6 +278,14 @@ test.describe('Planned trip point density (#1671)', () => {
       page.getByTestId('route-builder-point-0').first(),
       'e2e/__screenshots__/planned-trip-point-card-390.png',
     )
+
+    // Профиль выше среднего snap шторки: перед проверкой целого блока открываем
+    // третий, полный snap. Сам assertion остаётся прежним и проверяет, что
+    // пользователь действительно может увидеть не обрезанный профиль.
+    const sheet = page.getByTestId('route-sheet')
+    const sheetHeight = (await sheet.boundingBox())?.height ?? 0
+    if (sheetHeight <= 500) await page.getByTestId('route-sheet-handle').click()
+    await expect.poll(async () => (await sheet.boundingBox())?.height ?? 0).toBeGreaterThan(500)
     await shoot(page, profile, 'e2e/__screenshots__/planned-trip-elevation-390.png')
   })
 

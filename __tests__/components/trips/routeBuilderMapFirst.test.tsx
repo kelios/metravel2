@@ -4,7 +4,7 @@
 // неё реальные секции панели, а не теряет их по дороге.
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
-import { Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
@@ -250,13 +250,25 @@ describe('RouteBuilderMapFirst — шторка маршрута', () => {
     })
   })
 
-  it('на узком экране убирает дублирующий summary-chip, но оставляет итог в шторке', () => {
+  it('на узком экране оставляет оба map-chip одним рядом, а подсказку — ниже', () => {
     windowDimensionsMock.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 })
 
-    const { getByTestId, queryByTestId } = renderSheet()
+    const { getByTestId } = renderSheet({ mapHint: 'Нажмите на карту' })
 
-    expect(queryByTestId('route-map-chip-summary')).toBeNull()
+    expect(getByTestId('route-map-chip-summary')).toBeTruthy()
     expect(getByTestId('route-map-chip-transport')).toBeTruthy()
+    expect(StyleSheet.flatten(getByTestId('route-map-chips').props.style)).toMatchObject({
+      top: 64,
+      left: 10,
+      right: 10,
+    })
+    expect(StyleSheet.flatten(getByTestId('route-map-chip-controls').props.style)).toMatchObject({
+      flexDirection: 'row',
+      flexWrap: 'nowrap',
+    })
+    expect(StyleSheet.flatten(getByTestId('route-map-hint').props.style)).toMatchObject({
+      width: '100%',
+    })
     expect(getByTestId('route-sheet-peek')).toHaveTextContent('12 км', { exact: false })
   })
 })
