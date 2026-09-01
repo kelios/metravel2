@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
+import type { CSSProperties } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
@@ -177,11 +179,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       // независимо от числа карточек в последнем ряду; тот же приём уже
       // используется в `components/listTravel/listTravelStyles.ts:295-297`.
       ...(Platform.OS === 'web'
-        ? webStyle({
-            display: 'grid',
-            gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_MIN_COLUMN_WIDTH}px, 1fr))`,
-            alignItems: 'start',
-          })
+        ? Object.assign<ViewStyle, CSSProperties>(
+            webStyle({
+              gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_MIN_COLUMN_WIDTH}px, 1fr))`,
+            }),
+            {
+              display: 'grid',
+              alignItems: 'start',
+            } satisfies CSSProperties,
+          )
         : null),
     },
     cardWrap: {
