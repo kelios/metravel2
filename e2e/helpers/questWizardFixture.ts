@@ -1,5 +1,6 @@
 import { expect, type Page, type Route } from '@playwright/test'
 
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './auth'
 import { preacceptCookies } from './navigation'
 
 /**
@@ -10,9 +11,10 @@ import { preacceptCookies } from './navigation'
  * проде меняются. Каждая спека задаёт свои координаты и получает предсказуемый
  * маршрут.
  *
- * Авторизация НЕ мокается: сессия берётся из `storageState` глобального сетапа.
- * Без неё визард уходит в гостевой режим (гейт после двух бесплатных точек
- * подменяет карточку шага), а `saveProgress` молча выходит и PATCH не уходит.
+ * Авторизация локальная и детерминированная: feature-спеки не зависят от
+ * `storageState` глобального сетапа и не вызывают внешний Google auth flow.
+ * Без этой фикстуры визард уходит в гостевой режим (гейт после двух бесплатных
+ * точек подменяет карточку шага), а `saveProgress` молча выходит и PATCH не уходит.
  */
 
 export type QuestFixturePoint = { id: string; lat: number; lng: number }
@@ -105,6 +107,8 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
     let serverRow = freshServerRow()
     patched.length = 0
 
+    await ensureAuthedStorageFallback(page, { userId: '1', userName: 'Quest E2E User' })
+    await mockFakeAuthApis(page)
     await page.route(`**/api/quests/by-quest-id/${questId}/**`, (route) => fulfillJson(route, questBundle))
     await page.route(`**/api/quest-progress/quest/${questId}/**`, (route) => fulfillJson(route, serverRow))
     // Строка прогресса живая: PATCH её обновляет, чтобы следующий
