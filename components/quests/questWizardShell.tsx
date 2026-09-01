@@ -677,7 +677,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           ]}
         >
           {isMobile && (
-            <Text style={styles.headerActionCounter}>
+            <Text style={styles.headerActionCounter} numberOfLines={1}>
               {i18nT('quests:components.quests.questWizardShell.progressTasks', {
                 completed: completedCount,
                 total: stepsCount,

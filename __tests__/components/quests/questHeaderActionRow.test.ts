@@ -32,8 +32,17 @@ import { getThemedColors } from '@/constants/designSystem'
  */
 const CONTROL_COUNT = 4
 const CONTROL_SIZE = 44
+/**
+ * Счётчик заданий — пятый элемент ряда, и формула обязана его видеть: в первой
+ * редакции #1669 она считала только кнопки, а приёмка нашла перенос «Ещё» на
+ * вторую строку при украинском «Завдання: 12 / 24». Ширина взята измерением
+ * реального DOM (12px/16px, самая длинная локаль), с запасом на «23 / 24».
+ */
+const COUNTER_WIDTH = 102
 /** Самый ходовой Android: на нём ряд обязан оставаться однострочным. */
 const COMMON_ANDROID_WIDTH = 360
+/** Самый узкий поддерживаемый экран. */
+const NARROWEST_MOBILE_WIDTH = 320
 /** Верх мобильной ветки: `isMobile` в `useResponsive` — это width < tablet. */
 const WIDEST_MOBILE_WIDTH = METRICS.breakpoints.tablet - 1
 /**
@@ -61,6 +70,29 @@ describe('шапка квеста — ряд действий на телефо�
     const required = CONTROL_COUNT * CONTROL_SIZE + (CONTROL_COUNT - 1) * rowGap
 
     expect(required).toBeLessThanOrEqual(contentWidth(COMMON_ANDROID_WIDTH))
+  })
+
+  /**
+   * Самый узкий поддерживаемый экран и самый длинный счётчик — та комбинация,
+   * на которой ряд переносился. Гард держит не «влезает сегодня», а инвариант:
+   * счётчику разрешено сжиматься, поэтому кнопки остаются на одной строке при
+   * любой его ширине.
+   */
+  it('не роняет кнопки на вторую строку из-за длинного счётчика на 320px', () => {
+    const counter = flat(styles.headerActionCounter)
+
+    // Несущее свойство — именно `flexBasis: 0`: во flexbox перенос считается ДО
+    // сжатия, поэтому одного `flexShrink` мало, счётчик с собственной шириной
+    // уносил кнопку на вторую строку даже будучи сжимаемым (замер приёмки
+    // #1669: «Завдання: 12 / 24» на 320px).
+    expect(counter.flexBasis).toBe(0)
+    expect(counter.flexShrink).toBeGreaterThan(0)
+    expect(counter.minWidth).toBe(0)
+
+    const buttons = CONTROL_COUNT * CONTROL_SIZE + CONTROL_COUNT * rowGap
+
+    expect(buttons).toBeLessThanOrEqual(contentWidth(NARROWEST_MOBILE_WIDTH))
+    expect(buttons + COUNTER_WIDTH).toBeGreaterThan(contentWidth(NARROWEST_MOBILE_WIDTH))
   })
 
   it('не раздаёт свободное место между кнопками на верхней границе мобильной ветки', () => {
