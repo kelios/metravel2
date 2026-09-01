@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "Trips Planner Redesign Web 3000",
+      "name": "Trips Planner LocalApi 3000 (CORS allows only 8081/3000)",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",

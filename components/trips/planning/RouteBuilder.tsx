@@ -551,10 +551,13 @@ function RouteBuilder({
     [route],
   );
 
-  const handleCancelEdit = () => {
+  // Ссылка обязана быть стабильной: она уезжает в `onCloseEdit` каждой строки
+  // точки, а `RoutePointRow` мемоизирован — с новой функцией на каждый рендер
+  // любой символ в инлайн-редакторе перерисовывал бы весь список.
+  const handleCancelEdit = useCallback(() => {
     setEditingIndex(null);
     setEditError(null);
-  };
+  }, []);
 
   const handleOpenAddPoint = () => {
     setEditingIndex(null);
