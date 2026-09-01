@@ -101,6 +101,32 @@ export const ROUTE_POINT_ICON_NAME: Record<RoutePointType, string> = {
 };
 
 /**
+ * #1683: пара [lng, lat] пригодна и к подписи, и к отрисовке. Тип
+ * `RoutePoint.coordinates` обещает `[number, number]`, но `NaN`/`Infinity` не
+ * запрещает, а Leaflet на невалидном LatLng бросает исключение и роняет весь
+ * рендер карты, а не один маркер. Условие живёт здесь в единственном
+ * экземпляре для отрисовки: его зовут и форматтер подписи, и обе карты плана
+ * (web и native), чтобы «есть пара» и «в паре числа» больше не разъезжались.
+ *
+ * Копии условия в `tripRoutePreview.routablePreviewPoints` и
+ * `TripRouteImportPanel.routeToLatLng` эта задача не трогает: первая живёт в
+ * модуле без i18n и не должна тянуть его ради предиката. Общий дом для всех
+ * копий — `utils/coordinateValidator.ts` (там же лежит и проверка диапазона,
+ * которой у этого предиката намеренно нет: Leaflet бросает на нечисле, а не на
+ * широте 95).
+ */
+export function isDrawableCoordinatePair(
+  coordinates: readonly number[] | null | undefined,
+): coordinates is [number, number] {
+  return (
+    Array.isArray(coordinates)
+    && coordinates.length >= 2
+    && Number.isFinite(coordinates[0])
+    && Number.isFinite(coordinates[1])
+  );
+}
+
+/**
  * #1671: формат ОТОБРАЖЕНИЯ координат точки — пять знаков (≈1 м на местности).
  * Намеренно отделён от формата ВВОДА (`formatCoordinateInput` в RouteBuilder,
  * шесть знаков): подставленный в узкую карточку формат ввода давал строку в
@@ -109,9 +135,8 @@ export const ROUTE_POINT_ICON_NAME: Record<RoutePointType, string> = {
 export function formatRoutePointCoordinates(
   coordinates: [number, number] | null | undefined,
 ): string | null {
-  if (!coordinates) return null;
+  if (!isDrawableCoordinatePair(coordinates)) return null;
   const [lng, lat] = coordinates;
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 

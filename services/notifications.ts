@@ -4,8 +4,11 @@
 // Web uses notifications.web.ts so expo-notifications never enters the web graph.
 
 import { Platform } from 'react-native';
+import type { DevicePushToken } from 'expo-notifications';
+import Constants from 'expo-constants';
 import { devError, devWarn } from '@/utils/logger';
 import { translate as i18nT, translatePlural } from '@/i18n'
+import { mapNotificationPayloadToHref } from '@/utils/incomingAppLinks';
 
 
 // --- Types ---
@@ -26,7 +29,18 @@ export interface NotificationPayload {
 }
 
 export type NotificationHandler = (notification: NotificationPayload) => void;
-export type NotificationResponseHandler = (data: Record<string, unknown>) => void;
+export interface NotificationResponsePayload {
+  id: string;
+  data: Record<string, unknown>;
+}
+
+export type NotificationResponseHandler = (response: NotificationResponsePayload) => void;
+export type NotificationPermissionState =
+  | 'notDetermined'
+  | 'enabled'
+  | 'provisional'
+  | 'denied'
+  | 'unavailable';
 
 // --- Constants ---
 
@@ -90,46 +104,92 @@ export async function setupNotificationChannels(): Promise<void> {
         lightColor: '#7a9d8f', // brand color
       });
     }
-  } catch (error: unknown) {
-    devError('[Notifications] Failed to setup channels:', error);
+  } catch {
+    devError('[Notifications] Failed to setup channels');
   }
 }
 
 // --- Permission & token ---
 
 /**
- * Request push notification permission and return the Expo push token.
- * Returns null if permission denied, unavailable, or on web.
+ * Normalize the platform permission response without ever asking the user.
+ * iOS provisional and ephemeral grants are usable; both map to the quieter
+ * provisional UI state.
  */
-export async function registerForPushNotifications(): Promise<string | null> {
+export function normalizeNotificationPermission(
+  permission: Awaited<ReturnType<NonNullable<typeof NotificationsModule>['getPermissionsAsync']>>,
+): NotificationPermissionState {
+  const iosAuthorization = permission.ios?.status;
+  if (Platform.OS === 'ios' && iosAuthorization != null) {
+    if (iosAuthorization === 2) return 'enabled';
+    if (iosAuthorization === 3 || iosAuthorization === 4) return 'provisional';
+    if (iosAuthorization === 1) return 'denied';
+    if (iosAuthorization === 0) return 'notDetermined';
+  }
+
+  if (permission.granted || permission.status === 'granted') return 'enabled';
+  if (permission.status === 'denied') return 'denied';
+  return 'notDetermined';
+}
+
+export function isNotificationPermissionAllowed(
+  state: NotificationPermissionState,
+): state is 'enabled' | 'provisional' {
+  return state === 'enabled' || state === 'provisional';
+}
+
+/** Passive inspection. This function must never display an OS prompt. */
+export async function inspectNotificationPermission(): Promise<NotificationPermissionState> {
+  if (Platform.OS === 'web') return 'unavailable';
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return 'unavailable';
+
+  try {
+    return normalizeNotificationPermission(await Notifications.getPermissionsAsync());
+  } catch {
+    devWarn('[Notifications] Permission inspection unavailable');
+    return 'unavailable';
+  }
+}
+
+/** Explicit permission request. Call only from a user action. */
+export async function requestNotificationPermission(): Promise<NotificationPermissionState> {
+  if (Platform.OS === 'web') return 'unavailable';
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return 'unavailable';
+
+  try {
+    return normalizeNotificationPermission(await Notifications.requestPermissionsAsync());
+  } catch {
+    devWarn('[Notifications] Permission request unavailable');
+    return 'unavailable';
+  }
+}
+
+/** Retrieve an Expo token for an already-authorized installation. Never prompts. */
+export async function getPushNotificationToken(
+  devicePushToken?: DevicePushToken,
+): Promise<string | null> {
   if (Platform.OS === 'web') return null;
   const Notifications = getNotificationsModule();
   if (!Notifications) return null;
 
+  const permission = await inspectNotificationPermission();
+  if (!isNotificationPermissionAllowed(permission)) return null;
+
   try {
-    // Check existing permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      devWarn('[Notifications] Permission not granted');
-      return null;
-    }
-
-    // Get Expo push token (works with FCM on Android, APNs on iOS)
-    const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '472c9f49-998e-43c5-bf37-0478cf259645';
+    const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim()
+      || Constants.easConfig?.projectId
+      || Constants.expoConfig?.extra?.eas?.projectId;
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId,
+      ...(projectId ? { projectId } : {}),
+      ...(devicePushToken ? { devicePushToken } : {}),
     });
-
-    return tokenData.data;
-  } catch (error: unknown) {
-    devError('[Notifications] Failed to register:', error);
+    return typeof tokenData.data === 'string' && tokenData.data.length > 0
+      ? tokenData.data
+      : null;
+  } catch {
+    devWarn('[Notifications] Push token retrieval unavailable');
     return null;
   }
 }
@@ -190,7 +250,10 @@ export function addNotificationResponseListener(handler: NotificationResponseHan
 
   const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
     const data = response.notification.request.content.data ?? {};
-    handler(data as Record<string, unknown>);
+    handler({
+      id: response.notification.request.identifier,
+      data: data as Record<string, unknown>,
+    });
   });
 
   return () => subscription.remove();
@@ -202,17 +265,49 @@ export function addNotificationResponseListener(handler: NotificationResponseHan
  * because the app wasn't running yet — this covers the cold-start case.
  * Returns the notification `data` payload, or null if the app was opened normally.
  */
-export async function getInitialNotificationData(): Promise<Record<string, unknown> | null> {
+export async function getInitialNotificationResponse(): Promise<NotificationResponsePayload | null> {
   const Notifications = getNotificationsModule();
   if (!Notifications) return null;
 
   try {
     const response = await Notifications.getLastNotificationResponseAsync();
     if (!response) return null;
-    return (response.notification.request.content.data ?? {}) as Record<string, unknown>;
+    return {
+      id: response.notification.request.identifier,
+      data: (response.notification.request.content.data ?? {}) as Record<string, unknown>,
+    };
   } catch {
     return null;
   }
+}
+
+/** Remove the consumed native response so it cannot replay on the next mount. */
+export async function clearLastNotificationResponse(): Promise<void> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+  await Notifications.clearLastNotificationResponseAsync().catch(() => undefined);
+}
+
+/** Backward-compatible data-only cold-start reader. */
+export async function getInitialNotificationData(): Promise<Record<string, unknown> | null> {
+  return (await getInitialNotificationResponse())?.data ?? null;
+}
+
+/**
+ * Convert a rotated native APNs/FCM token back into the Expo token expected by
+ * the existing backend contract. The token itself is never logged.
+ */
+export function addPushTokenRotationListener(
+  handler: (token: string) => void | Promise<void>,
+): CleanupFn {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return () => {};
+
+  const subscription = Notifications.addPushTokenListener(async (devicePushToken) => {
+    const token = await getPushNotificationToken(devicePushToken);
+    if (token) await handler(token);
+  });
+  return () => subscription.remove();
 }
 
 // --- Badge ---
@@ -248,18 +343,17 @@ function questReturnReminderId(ownerId: string, questId: string): string {
 }
 
 /**
- * Ensure notification permission for local reminders. Unlike push, this does
- * not register a token — it only checks/asks the OS permission. Best-effort:
+ * Inspect notification permission for local reminders without opening an OS
+ * prompt. Best-effort and token-free:
  * returns false (silently) if denied or unavailable.
  */
 export async function ensureLocalNotificationPermission(
   Notifications: NonNullable<typeof NotificationsModule>,
 ): Promise<boolean> {
   try {
-    const { status: existing } = await Notifications.getPermissionsAsync();
-    if (existing === 'granted') return true;
-    const { status } = await Notifications.requestPermissionsAsync();
-    return status === 'granted';
+    return isNotificationPermissionAllowed(
+      normalizeNotificationPermission(await Notifications.getPermissionsAsync()),
+    );
   } catch {
     return false;
   }
@@ -276,7 +370,7 @@ export function getNotifications(): typeof NotificationsModule {
 
 /**
  * Present an instant local notification (no schedule delay). Best-effort:
- * requests permission, no-op on web / missing module / permission denied.
+ * no-op on web / missing module / permission not already allowed.
  * Used by quest geofencing on region ENTER. `data.url` deep-links to the quest.
  */
 export async function presentLocalQuestNotification(
@@ -304,8 +398,8 @@ export async function presentLocalQuestNotification(
       // null trigger → present immediately.
       trigger: null,
     });
-  } catch (error: unknown) {
-    devError('[Notifications] Failed to present local notification:', error);
+  } catch {
+    devError('[Notifications] Failed to present local notification');
   }
 }
 
@@ -348,8 +442,8 @@ export async function scheduleQuestReminder(
         repeats: false,
       },
     });
-  } catch (error: unknown) {
-    devError('[Notifications] Failed to schedule quest reminder:', error);
+  } catch {
+    devError('[Notifications] Failed to schedule quest reminder');
   }
 }
 
@@ -357,10 +451,9 @@ export async function scheduleQuestReminder(
  * Schedule the one-shot "come back" reminder 7 days after a finished quest
  * (#1484): the product had no second action, so nothing brought a player back.
  *
- * Consent-only by design: unlike {@link scheduleQuestReminder} this never asks
- * for the notification permission. A finished quest is not the moment to pop an
- * OS prompt out of nowhere — if the player never allowed notifications, the
- * reminder is silently skipped.
+ * Consent-only by design: this never asks for notification permission. A
+ * finished quest is not the moment to pop an OS prompt out of nowhere — if the
+ * player never allowed notifications, the reminder is silently skipped.
  */
 export async function scheduleQuestReturnReminder(
   ownerId: string,
@@ -375,8 +468,10 @@ export async function scheduleQuestReturnReminder(
   if (!Notifications) return false;
 
   try {
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted') return false;
+    const permission = normalizeNotificationPermission(
+      await Notifications.getPermissionsAsync(),
+    );
+    if (!isNotificationPermissionAllowed(permission)) return false;
 
     // Один финиш — одно напоминание: идентификатор привязан к квесту, повтор
     // расписания заменяет прежнее, а не добавляет второе.
@@ -402,8 +497,8 @@ export async function scheduleQuestReturnReminder(
       },
     });
     return true;
-  } catch (error: unknown) {
-    devError('[Notifications] Failed to schedule quest return reminder:', error);
+  } catch {
+    devError('[Notifications] Failed to schedule quest return reminder');
     return false;
   }
 }
@@ -442,11 +537,5 @@ export async function cancelQuestReminder(questId: string): Promise<void> {
  * Returns null if no deep link data found.
  */
 export function extractDeepLinkFromNotification(data: Record<string, unknown>): string | null {
-  if (typeof data.url === 'string' && data.url.length > 0) {
-    return data.url;
-  }
-  if (typeof data.screen === 'string' && data.screen.length > 0) {
-    return data.screen;
-  }
-  return null;
+  return mapNotificationPayloadToHref(data);
 }

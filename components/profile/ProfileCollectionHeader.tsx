@@ -144,6 +144,11 @@ export default function ProfileCollectionHeader({
         clearLabel: {
           color: colors.danger,
         },
+        // Web-hover `ghost` заливает primarySoft (Button.tsx:330) — под красной
+        // подписью это брендовый тон. Перекрываем мягким danger-фоном.
+        clearHover: {
+          backgroundColor: colors.dangerSoft,
+        },
       }),
     [colors, dense, stackOnPhone]
   );
@@ -228,6 +233,7 @@ export default function ProfileCollectionHeader({
               iconOnly={compactClear}
               icon={<Feather name="trash-2" size={16} color={colors.danger} />}
               labelStyle={styles.clearLabel}
+              hoverStyle={styles.clearHover}
               accessibilityLabel={clearAccessibilityLabel}
             />
           )}

@@ -65,12 +65,17 @@ const alphaAt = (gradient: Record<string, any>, x: number, y: number) => {
   const dy = end.y - start.y;
   const t = ((x - start.x) * dx + (y - start.y) * dy) / (dx * dx + dy * dy);
 
-  const [from, to] = gradient.locations;
-  const alphaFrom = parseAlpha(gradient.colors[0]);
-  const alphaTo = parseAlpha(gradient.colors[gradient.colors.length - 1]);
-  if (t <= from) return alphaFrom;
-  if (t >= to) return alphaTo;
-  return alphaFrom + ((alphaTo - alphaFrom) * (t - from)) / (to - from);
+  const locations: number[] = gradient.locations;
+  const alphas: number[] = gradient.colors.map(parseAlpha);
+  if (t <= locations[0]) return alphas[0];
+  for (let i = 1; i < locations.length; i += 1) {
+    if (t <= locations[i]) {
+      const span = locations[i] - locations[i - 1];
+      if (span === 0) return alphas[i];
+      return alphas[i - 1] + ((alphas[i] - alphas[i - 1]) * (t - locations[i - 1])) / span;
+    }
+  }
+  return alphas[alphas.length - 1];
 };
 
 describe('CoverScrim (#1670)', () => {
@@ -78,8 +83,23 @@ describe('CoverScrim (#1670)', () => {
     mockGradientProps.length = 0;
   });
 
+  it('спадает выпукло — на конце рампы нет излома, который глаз читает границей', () => {
+    render(<CoverScrim coverHeight={132} />);
+
+    const gradient = mockGradientProps[0];
+    expect(gradient.locations.length).toBeGreaterThanOrEqual(3);
+
+    // Наклон последнего участка должен быть положе первого: линейная рампа
+    // (равные наклоны) даёт видимую полосу Маха там, где альфа обнуляется.
+    const alphas: number[] = gradient.colors.map(parseAlpha);
+    const locs: number[] = gradient.locations;
+    const slope = (i: number) =>
+      Math.abs(alphas[i] - alphas[i + 1]) / (locs[i + 1] - locs[i]);
+    expect(slope(locs.length - 2)).toBeLessThan(slope(0));
+  });
+
   it('затемняет угол градиентом, а не плоской заливкой', () => {
-    render(<CoverScrim />);
+    render(<CoverScrim coverHeight={132} />);
 
     expect(mockGradientProps).toHaveLength(1);
     const gradient = mockGradientProps[0];

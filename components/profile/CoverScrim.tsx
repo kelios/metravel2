@@ -30,20 +30,26 @@ import { LinearGradient } from 'expo-linear-gradient';
  * Чипы меню читаются собственной подложкой, scrim даёт только глубину.
  */
 const SCRIM_WIDTH = 200;
-const DEFAULT_COVER_HEIGHT = 132;
-const SCRIM_ALPHA = 0.42;
+const SCRIM_ALPHA = 0.36;
 
 interface CoverScrimProps {
-  /** Высота обложки: нижняя кромка scrim'а обязана совпадать с краем кадра. */
-  coverHeight?: number;
+  /**
+   * Высота обложки: нижняя кромка scrim'а обязана совпадать с краем кадра,
+   * иначе затемнение оборвётся посреди картинки. Проп обязательный намеренно —
+   * дефолт молча вернул бы шов, ради которого правка и делалась.
+   */
+  coverHeight: number;
 }
 
-export function CoverScrim({ coverHeight = DEFAULT_COVER_HEIGHT }: CoverScrimProps) {
-  const { style, locations } = useMemo(() => {
+export function CoverScrim({ coverHeight }: CoverScrimProps) {
+  const { style, colors, locations } = useMemo(() => {
     const w = SCRIM_WIDTH;
     const h = coverHeight;
     const fadeStop = Math.min(w, h) ** 2 / (w ** 2 + h ** 2);
 
+    // Спад квадратичный, а не линейный: у прямой рампы на конце ломается
+    // производная, и глаз читает границу (полоса Маха) даже там, где альфа
+    // непрерывна. Средний стоп берёт значение кривой A·(1−t/fade)² в t=fade/2.
     return {
       style: {
         position: 'absolute' as const,
@@ -53,13 +59,18 @@ export function CoverScrim({ coverHeight = DEFAULT_COVER_HEIGHT }: CoverScrimPro
         height: h,
         zIndex: 1,
       },
-      locations: [0, fadeStop] as [number, number],
+      colors: [
+        `rgba(0,0,0,${SCRIM_ALPHA})`,
+        `rgba(0,0,0,${SCRIM_ALPHA * 0.25})`,
+        'rgba(0,0,0,0)',
+      ] as [string, string, string],
+      locations: [0, fadeStop / 2, fadeStop] as [number, number, number],
     };
   }, [coverHeight]);
 
   return (
     <LinearGradient
-      colors={[`rgba(0,0,0,${SCRIM_ALPHA})`, 'rgba(0,0,0,0)']}
+      colors={colors}
       locations={locations}
       start={{ x: 1, y: 0 }}
       end={{ x: 0, y: 1 }}

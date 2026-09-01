@@ -62,10 +62,14 @@ import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap.web'
 // Контракт хранения: `RoutePoint.coordinates` = [lng, lat] (api/plannedTripsTypes.ts).
 const COORDINATES: [number, number] = [26.247111, 56.006732]
 
-const point = (coordinates: [number, number] | null): RoutePoint => ({
-  id: 'a',
+const point = (
+  coordinates: [number, number] | null,
+  name = 'Точка',
+  id = 'a',
+): RoutePoint => ({
+  id,
   type: 'place',
-  name: 'Точка',
+  name,
   description: null,
   coordinates,
   placeId: null,
@@ -96,13 +100,18 @@ describe('TripPlanRouteMap.web — координаты в попапе точк
   })
 
   it('не печатает пустую строку координат для битой пары', async () => {
-    const screen = render(<TripPlanRouteMap route={[point([Number.NaN, 56.006732])]} />)
+    // #1683 передвинул гард выше по потоку: битая точка больше не доходит до
+    // попапа, потому что на ней не строится и сам маркер. Соседняя валидная
+    // точка держит рендер и показывает, что упала ровно одна пара, а не карта.
+    const screen = render(
+      <TripPlanRouteMap route={[point(COORDINATES), point([Number.NaN, 56.006732], 'Битая', 'b')]} />,
+    )
 
     await waitFor(() => expect(collectText(screen.toJSON())).toContain('Точка'))
 
-    expect(mockFormatRoutePointCoordinates).toHaveReturnedWith(null)
     const text = collectText(screen.toJSON())
-    expect(text.some((line) => /\d\.\d+, /.test(line))).toBe(false)
+    expect(text).not.toContain('Битая')
+    expect(mockFormatRoutePointCoordinates).not.toHaveBeenCalledWith([Number.NaN, 56.006732])
     // Инлайн-копия напечатала бы здесь «NaN, 56.00673».
     expect(text.some((line) => line.includes('NaN'))).toBe(false)
   })

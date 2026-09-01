@@ -22,6 +22,7 @@ import {
   TRANSPORT_LABEL,
   formatDistance,
   formatDuration,
+  isDrawableCoordinatePair,
   isRouteApproximate,
   routingStateHint,
   routingStateLabel,
@@ -88,8 +89,14 @@ type NativeRouteMapProps = {
 
 const NativeMap = MapComponent as unknown as React.ComponentType<NativeRouteMapProps>;
 
+// #1683: наличия пары мало. Сам WebView до падения не доходит — `Map.ios`
+// прогоняет точки через `normalizeRoutePoint`, а центр отсекается в
+// `nativeMapHtml`. Но битая пара, дожив до этого слоя, врала счётчиком точек в
+// шапке и признаком приблизительной линии: карта её не рисует, а планировщик
+// считал. Предикат общий с web, чтобы «есть пара» и «в паре числа» не
+// разъезжались между платформами.
 const lngLatPairs = (coordinates: Array<[number, number] | null | undefined>): Array<[number, number]> =>
-  coordinates.filter((pair): pair is [number, number] => Array.isArray(pair) && pair.length >= 2);
+  coordinates.filter(isDrawableCoordinatePair);
 
 export default function TripPlanRouteMap({
   route,

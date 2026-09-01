@@ -3,7 +3,6 @@ import { useCallback } from 'react';
 interface UsePushNotificationsOptions {
   onTokenReceived?: (token: string) => void;
   onNotificationReceived?: (payload: NotificationPayload) => void;
-  autoRequest?: boolean;
 }
 
 export interface NotificationPayload {

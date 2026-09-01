@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { FormValues } from '@/types/types';
-import { devError } from '@/utils/logger';
+import { devError, devWarn } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { API_BASE_URL as URLAPI, DEFAULT_TIMEOUT } from '@/api/apiConfig';
 import {
@@ -660,8 +660,39 @@ export const registerPushTokenApi = async (pushToken: string): Promise<boolean> 
         }, DEFAULT_TIMEOUT);
 
         return response.ok;
-    } catch (error: unknown) {
-        devError('Push token registration error:', error);
+    } catch {
+        devWarn('Push token registration unavailable');
+        return false;
+    }
+};
+
+/**
+ * Idempotent future backend contract for removing this device token before the
+ * authenticated session is cleared. Until the linked backend task is deployed,
+ * non-2xx is reported as false and must never be treated as success.
+ */
+export const deletePushTokenApi = async (pushToken: string): Promise<boolean> => {
+    try {
+        const token = await getStoredAuthToken();
+        if (!hasUsableAuthCredential(token) || !pushToken) return false;
+
+        const response = await fetchWithTimeout(PUSH_TOKEN, {
+            method: 'DELETE',
+            ...getApiRequestCredentials(),
+            headers: {
+                ...(token ? { Authorization: `Token ${token}` } : {}),
+                'Content-Type': 'application/json',
+                ...getCsrfHeader(),
+            },
+            body: JSON.stringify({
+                push_token: pushToken,
+                platform: Platform.OS,
+            }),
+        }, DEFAULT_TIMEOUT);
+
+        return response.ok;
+    } catch {
+        devWarn('Push token removal unavailable');
         return false;
     }
 };

@@ -12,6 +12,21 @@ const {
 const root = path.resolve(__dirname, '../..');
 const tempRoots: string[] = [];
 
+type TestAppConfig = {
+  expo: {
+    plugins: Array<string | [string, Record<string, unknown>]>;
+  };
+};
+
+function notificationPlugin(config: TestAppConfig): [string, Record<string, unknown>] {
+  const plugin = config.expo.plugins.find(
+    (entry): entry is [string, Record<string, unknown>] =>
+      Array.isArray(entry) && entry[0] === 'expo-notifications'
+  );
+  if (!plugin) throw new Error('notification plugin fixture is missing');
+  return plugin;
+}
+
 function fixture(changes: Record<string, (value: string) => string>): string {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-ios-release-'));
   tempRoots.push(tempRoot);
@@ -23,7 +38,6 @@ function fixture(changes: Record<string, (value: string) => string>): string {
     'yarn.lock',
     'scripts/ios-build.sh',
     'scripts/ios-submit.sh',
-    'plugins/withAndroidNotifications.js',
     'android/app/src/main/AndroidManifest.xml',
     'android/app/src/main/res/values/colors.xml',
     'assets/images/notification-icon.png',
@@ -72,7 +86,7 @@ describe('iOS release configuration', () => {
     expect(validateIosRelease(root)).toEqual([]);
   });
 
-  it('resolves notification config for Android without APNs and keeps the CoreMotion purpose string', () => {
+  it('resolves production APNs without background delivery and preserves Android notification metadata', () => {
     const output = execFileSync(
       process.execPath,
       [path.join(root, 'node_modules/expo/bin/cli'), 'config', '--type', 'introspect', '--json'],
@@ -93,9 +107,11 @@ describe('iOS release configuration', () => {
     const notificationMetadata = android.manifest.manifest.application[0]['meta-data'];
 
     expect(ios.entitlements).toEqual({
+      'aps-environment': 'production',
       'com.apple.developer.applesignin': ['Default'],
       'com.apple.developer.associated-domains': ['applinks:metravel.by'],
     });
+    expect(ios.infoPlist.UIBackgroundModes).toBeUndefined();
     expect(ios.infoPlist.NSMotionUsageDescription).toBe(
       'MeTravel uses motion data to support location and direction features while you navigate routes and quests.'
     );
@@ -445,33 +461,34 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
     );
   });
 
-  it('fails closed when the notifications plugin can synthesize an APNs entitlement', () => {
+  it.each([
+    ['is missing', (config: TestAppConfig) => {
+      config.expo.plugins = config.expo.plugins.filter(
+        (plugin: unknown) => !Array.isArray(plugin) || plugin[0] !== 'expo-notifications'
+      );
+    }],
+    ['uses development APNs', (config: TestAppConfig) => {
+      const plugin = notificationPlugin(config);
+      plugin[1].mode = 'development';
+    }],
+    ['enables background remote notifications', (config: TestAppConfig) => {
+      const plugin = notificationPlugin(config);
+      plugin[1].enableBackgroundRemoteNotifications = true;
+    }],
+    ['drops Android metadata parity', (config: TestAppConfig) => {
+      const plugin = notificationPlugin(config);
+      delete plugin[1].defaultChannel;
+    }],
+  ])('fails closed when the notifications plugin %s', (_label, mutate) => {
     const testRoot = fixture({
       'app.json': value => {
-        const config = JSON.parse(value);
-        config.expo.plugins.push([
-          'expo-notifications',
-          { enableBackgroundRemoteNotifications: false },
-        ]);
+        const config = JSON.parse(value) as TestAppConfig;
+        mutate(config);
         return JSON.stringify(config);
       },
     });
     expect(validateIosRelease(testRoot)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_APNS_PLUGIN_SCOPE' })])
-    );
-  });
-
-  it('fails closed when Android notification parity uses the cross-platform plugin', () => {
-    const testRoot = fixture({
-      'plugins/withAndroidNotifications.js': value => value.replace(
-        "require('expo-notifications/plugin/build/withNotificationsAndroid')",
-        "require('expo-notifications/plugin/build/withNotifications')"
-      ),
-    });
-    expect(validateIosRelease(testRoot)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: 'IOS_ANDROID_NOTIFICATION_PLUGIN_SCOPE' }),
-      ])
     );
   });
 
@@ -534,15 +551,33 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
     );
   });
 
-  it('fails closed when a capability bypasses the audited entitlement scope', () => {
+  it.each([
+    ['drops APNs', (value: string) => value.replace(
+      '    <key>aps-environment</key>\n    <string>production</string>\n',
+      ''
+    )],
+    ['uses development APNs', (value: string) => value.replace(
+      '<string>production</string>',
+      '<string>development</string>'
+    )],
+  ])('fails closed when source entitlements %s', (_label, mutate) => {
     const testRoot = fixture({
-      'ios/metravel/metravel.entitlements': value => value.replace(
-        '    <key>com.apple.developer.associated-domains</key>',
-        '    <key>aps-environment</key>\n    <string>production</string>\n    <key>com.apple.developer.associated-domains</key>'
-      ),
+      'ios/metravel/metravel.entitlements': mutate,
     });
     expect(validateIosRelease(testRoot)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_ENTITLEMENT_SCOPE' })])
+    );
+  });
+
+  it('fails closed when native Info.plist enables background remote notifications', () => {
+    const testRoot = fixture({
+      'ios/metravel/Info.plist': value => value.replace(
+        '\n</dict>\n</plist>',
+        '\n\t<key>UIBackgroundModes</key>\n\t<array>\n\t\t<string>remote-notification</string>\n\t</array>\n</dict>\n</plist>'
+      ),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_BACKGROUND_MODES_NATIVE' })])
     );
   });
 
@@ -750,7 +785,10 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
   it('fails closed when privacy collection or tracking drifts', () => {
     const testRoot = fixture({
       'ios/metravel/PrivacyInfo.xcprivacy': value => value
-        .replace('NSPrivacyCollectedDataTypeCoarseLocation', 'NSPrivacyCollectedDataTypeDeviceID')
+        .replace(
+          '<string>NSPrivacyCollectedDataTypeDeviceID</string>\n\t\t\t<key>NSPrivacyCollectedDataTypeLinked</key>\n\t\t\t<true/>',
+          '<string>NSPrivacyCollectedDataTypeDeviceID</string>\n\t\t\t<key>NSPrivacyCollectedDataTypeLinked</key>\n\t\t\t<false/>'
+        )
         .replace('<key>NSPrivacyTracking</key>\n\t<false/>', '<key>NSPrivacyTracking</key>\n\t<true/>'),
     });
     expect(validateIosRelease(testRoot)).toEqual(

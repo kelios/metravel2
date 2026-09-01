@@ -153,11 +153,13 @@
       "./plugins/withAndroidShortcuts",
       "./plugins/withAndroidReleaseSafety",
       [
-        "./plugins/withAndroidNotifications",
+        "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
           "color": "#7a9d8f",
-          "defaultChannel": "updates"
+          "defaultChannel": "updates",
+          "mode": "production",
+          "enableBackgroundRemoteNotifications": false
         }
       ],
       "react-native-fbsdk-next",

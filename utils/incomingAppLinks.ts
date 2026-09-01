@@ -99,7 +99,7 @@ function isSafePreservedSearch(search: string): boolean {
 
 function isSupportedRoute(
   pathname: string,
-  source: 'https' | 'custom-scheme',
+  source: 'https' | 'custom-scheme' | 'notification',
 ): boolean {
   const segments = pathname.split('/');
   if (
@@ -112,8 +112,8 @@ function isSupportedRoute(
   if (segments.length === 2) {
     return (
       segments[1] === 'map' ||
-      (source === 'custom-scheme' &&
-        ['search', 'favorites'].includes(segments[1]))
+      ((source === 'custom-scheme' || source === 'notification') &&
+        ['search', 'favorites', 'messages'].includes(segments[1]))
     );
   }
 
@@ -121,6 +121,10 @@ function isSupportedRoute(
     return (
       ['travels', 'article', 'user'].includes(segments[1]) &&
       isSafeDynamicSegment(segments[2])
+    ) || (
+      source === 'notification' &&
+      segments[1] === 'trips' &&
+      /^[1-9]\d*$/.test(segments[2])
     );
   }
 
@@ -129,7 +133,7 @@ function isSupportedRoute(
       (segments[1] === 'quests' &&
         isSafeDynamicSegment(segments[2]) &&
         isSafeDynamicSegment(segments[3])) ||
-      (source === 'custom-scheme' &&
+      ((source === 'custom-scheme' || source === 'notification') &&
         segments[1] === 'trips' &&
         segments[2] === 'plan' &&
         /^[1-9]\d*$/.test(segments[3]))
@@ -202,4 +206,89 @@ export function mapIncomingAppLinkToHref(url: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+function mapRelativeNotificationRoute(value: string): string | null {
+  if (
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    value !== value.trim() ||
+    hasAsciiControlCharacter(value)
+  ) {
+    return null;
+  }
+
+  const suffixIndex = value.search(/[?#]/);
+  const rawPath = suffixIndex === -1 ? value : value.slice(0, suffixIndex);
+  if (!isSafeRawPath(rawPath)) return null;
+
+  try {
+    const parsed = new URL(value, `https://${TRUSTED_HTTPS_HOST}`);
+    if (
+      parsed.origin !== `https://${TRUSTED_HTTPS_HOST}` ||
+      !isSafePreservedSearch(parsed.search) ||
+      !isSupportedRoute(parsed.pathname, 'notification')
+    ) {
+      return null;
+    }
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return null;
+  }
+}
+
+function safePayloadSegment(value: unknown): string | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const normalized = String(value);
+  return isSafeDynamicSegment(normalized) ? encodeURIComponent(normalized) : null;
+}
+
+function positiveIntegerPayloadSegment(value: unknown): string | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const normalized = String(value);
+  return /^[1-9]\d*$/.test(normalized) ? normalized : null;
+}
+
+/**
+ * Convert a notification payload into one known in-app route. Both path-shaped
+ * values and structured quest/message/trip payloads use the same route policy;
+ * external URLs and arbitrary screen names fail closed.
+ */
+export function mapNotificationPayloadToHref(
+  payload: Record<string, unknown>,
+): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+
+  if (typeof payload.url === 'string') {
+    if (/^(?:https|metravel):/i.test(payload.url)) {
+      return mapIncomingAppLinkToHref(payload.url);
+    }
+    return mapRelativeNotificationRoute(payload.url);
+  }
+
+  if (typeof payload.screen !== 'string') return null;
+  if (payload.screen.startsWith('/')) {
+    return mapRelativeNotificationRoute(payload.screen);
+  }
+
+  if (payload.screen === 'quest') {
+    const city = safePayloadSegment(payload.city);
+    const questId = safePayloadSegment(payload.questId ?? payload.quest_id);
+    return city && questId ? `/quests/${city}/${questId}` : null;
+  }
+
+  if (payload.screen === 'message') {
+    const hasUserId = Object.prototype.hasOwnProperty.call(payload, 'userId') ||
+      Object.prototype.hasOwnProperty.call(payload, 'user_id');
+    if (!hasUserId) return '/messages';
+    const userId = positiveIntegerPayloadSegment(payload.userId ?? payload.user_id);
+    return userId ? `/messages?userId=${userId}` : null;
+  }
+
+  if (payload.screen === 'trip') {
+    const tripId = positiveIntegerPayloadSegment(payload.tripId ?? payload.trip_id);
+    return tripId ? `/trips/${tripId}` : null;
+  }
+
+  return null;
 }

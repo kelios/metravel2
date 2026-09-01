@@ -25,6 +25,7 @@ import { translate as i18nT } from '@/i18n'
 const getAuthApi = async () => import('@/api/auth');
 const getAppleAuthApi = async () => import('@/api/appleAuth');
 const getUserApi = async () => import('@/api/user');
+const getPushRegistration = async () => import('@/services/pushRegistration');
 
 // Fetch the current user's profile through the mounted QueryClient so the request
 // dedupes with useUserProfile (shared queryKey) and serves the cache when fresh.
@@ -547,6 +548,16 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
     // --- logout ---
     logout: async () => {
+        try {
+            // Push-token DELETE must run while the native auth credential still
+            // exists. The adapter is best-effort because the linked backend
+            // contract may be unavailable, but it never reports fake success.
+            const { unregisterPushBeforeLogout } = await getPushRegistration();
+            await unregisterPushBeforeLogout();
+        } catch {
+            // Logout must still clear the local session.
+        }
+
         get().invalidateAuthState();
 
         try {

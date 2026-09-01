@@ -1,6 +1,6 @@
 # Problem memory and recurrence registry
 
-Актуализировано: 2026-08-28.
+Актуализировано: 2026-09-01.
 
 Этот документ — постоянная память о системных семействах проблем MeTravel. Он
 не заменяет task board и не хранит обычный progress log. Борд остаётся
@@ -2665,6 +2665,66 @@ guard, падающий в CI на попытке обойти этот конт
   GET не даёт. В live-пробе отключается искусственный focus Playwright, обе
   вкладки находятся в одном browser context; иначе отсутствие события —
   ошибка измерения. Production-выкладка и её повторная проверка отдельны.
+
+### IOS-UNIVERSAL-LINKS-AASA-001 — AASA не может смешивать legacy- и modern-ключи
+
+- **Инвариант:** тап по поддерживаемой ссылке `https://metravel.by/<путь>` из
+  другого origin открывает установленное iPhone-приложение на точном экране —
+  отдельно при killed и при уже запущенном приложении. Без приложения тот же
+  URL остаётся обычной веб-страницей.
+- **Surface/owner:** backend. Ответ `/.well-known/apple-app-site-association`
+  строит `../metravel-backend/maintenance/apple_app_site_association.py`;
+  nginx имеет явный `location = /.well-known/apple-app-site-association` с
+  `proxy_pass http://metravel`. Фронтенд отдаёт статикой только
+  `public/.well-known/assetlinks.json` (Android) и AASA не владеет.
+- **Симптом:** 2026-08-24 и 2026-08-31 на физическом iPhone реальный tap не
+  активировал MeTravel ни при закрытом, ни при запущенном приложении (0/1 и
+  0/1). Контекстное меню Safari по ссылке не предлагало «Open in MeTravel».
+  При этом entitlement, provisioning profile, `application-identifier`, AASA
+  200 на origin и на Apple CDN — все зелёные, поэтому неделю причину искали в
+  «залипшем системном association-cache устройства».
+- **Цепочка:** `#1413` — каноническая backend-задача (публикация AASA);
+  `#1414` — frontend/iOS route mapper и lifecycle, заказчик приёмки;
+  `#1423` — приёмка TestFlight-кандидата; `#1047` — тот же класс инварианта на
+  Android, но другой владеющий слой (intent-handling, не AASA).
+- **Подтверждённая причина:** 2026-09-01. И origin, и зеркало Apple CDN
+  синхронно (564 байта, байт-в-байт) отдавали `details[0]`, где legacy-ключ
+  `appID` (String) стоял вместе с современным `components` (Array). Apple
+  TN3155 «Debugging universal links» требует ЛИБО `appIDs` (Array) +
+  `components` (Array), ЛИБО legacy `appID` (String) + `paths` (Array), и
+  дословно предупреждает: «Please avoid mixing formats. Doing so may result in
+  unexpected behavior for universal links.» Смешанный формат зафиксирован в
+  самой спеке `#1413`
+  (`openspec/changes/publish-apple-app-site-association/design.md:36`), поэтому
+  генератор, независимый верификатор и тесты согласованно валидировали
+  сломанную форму как эталон, и все гейты были зелёными.
+- **Диагностический приём:** разложить проверки по признаку «нужна ли
+  системная ассоциация iOS». Внешний cross-origin tap и пункт «Open in
+  <app>» в long-press меню — нужна; `devicectl --payload-url`, custom scheme
+  `metravel://`, симулятор и web fallback — не нужна. Если 100% первых красные
+  и 100% вторых зелёные, дефект в ассоциации, а не в route mapper и не в кэше
+  устройства: кэш одного телефона не объясняет одинаковый отказ на четырёх
+  сборках после переустановки, перезагрузки и повторного доверия сертификату.
+  Внешний контроль на здоровом примере: `https://slack.com/.well-known/apple-app-site-association`
+  → чистый legacy `{appID, paths}`; рабочие production-AASA ключи не смешивают.
+- **Controls:** `verify_apple_app_site_association` обязан явно проверять, что
+  `details[0]` НЕ содержит одновременно `appID` и `components` — до правки он
+  сам ожидал гибрид и на сломанном проде давал PASS. Клиентские гейты
+  (`scripts/ios-release-guard-lib.js:401,590`,
+  `scripts/ios-artifact-audit-lib.js:16`) проверяют только `app.json` и
+  entitlement и к этому классу дефекта слепы; предложен frontend-side guard на
+  форму реально отдаваемого AASA. Приёмка на устройстве обязана начинаться с
+  ПЕРЕУСТАНОВКИ приложения: iOS перечитывает associated domains только при
+  install/update, смены build number недостаточно. On-device верификация по
+  TN3155 — Settings → Developer → Universal Links → Associated Domains
+  Development → Diagnostics.
+- **Решение для новой жалобы:** при открытой `#1413` — `reuse`; после её
+  закрытия и повторного нарушения инварианта — `reopen #1413`; отдельная
+  карточка нужна только при подтверждённом другом владельце или другой причине.
+  Клиентские дефекты маршрутизации остаются за `#1414`.
+- **Последняя проверка:** 2026-09-01. Причина подтверждена, `#1413`
+  переоткрыта в `todo`, `#1414` переведена в `blocked_by #1413`. Исправление и
+  его проверка на физическом iPhone ещё не выполнены.
 
 ## Правило закрытия recurring problems
 

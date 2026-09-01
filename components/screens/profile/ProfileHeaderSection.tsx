@@ -62,6 +62,13 @@ export function ProfileHeaderSection({
     [colors.danger]
   );
   const clearLabelStyle = useMemo(() => ({ color: colors.danger }), [colors.danger]);
+  // Web-hover варианта `ghost` возвращает заливку `primarySoft` (Button.tsx:330),
+  // то есть под красной подписью проступал бы БРЕНДОВЫЙ тон. Перекрываем своим
+  // мягким danger-фоном: наведение остаётся заметным, но не «первичным».
+  const clearHoverStyle = useMemo(
+    () => ({ backgroundColor: colors.dangerSoft }),
+    [colors.dangerSoft]
+  );
 
   return (
     <View style={[styles.headerComponent, styles.fullRow]}>
@@ -118,6 +125,7 @@ export function ProfileHeaderSection({
               size="sm"
               icon={clearIcon}
               labelStyle={clearLabelStyle}
+              hoverStyle={clearHoverStyle}
             />
           </View>
         </View>

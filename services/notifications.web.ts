@@ -1,4 +1,5 @@
 import { translate as i18nT } from '@/i18n'
+import { mapNotificationPayloadToHref } from '@/utils/incomingAppLinks'
 
 export interface NotificationChannel {
   id: string
@@ -16,7 +17,17 @@ export interface NotificationPayload {
 }
 
 export type NotificationHandler = (notification: NotificationPayload) => void
-export type NotificationResponseHandler = (data: Record<string, unknown>) => void
+export interface NotificationResponsePayload {
+  id: string
+  data: Record<string, unknown>
+}
+export type NotificationResponseHandler = (response: NotificationResponsePayload) => void
+export type NotificationPermissionState =
+  | 'notDetermined'
+  | 'enabled'
+  | 'provisional'
+  | 'denied'
+  | 'unavailable'
 
 type CleanupFn = () => void
 type NotificationsModule = typeof import('expo-notifications')
@@ -44,7 +55,19 @@ export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
 ]
 
 export async function setupNotificationChannels(): Promise<void> {}
-export async function registerForPushNotifications(): Promise<string | null> { return null }
+export function normalizeNotificationPermission(): NotificationPermissionState { return 'unavailable' }
+export function isNotificationPermissionAllowed(
+  state: NotificationPermissionState,
+): state is 'enabled' | 'provisional' {
+  return state === 'enabled' || state === 'provisional'
+}
+export async function inspectNotificationPermission(): Promise<NotificationPermissionState> {
+  return 'unavailable'
+}
+export async function requestNotificationPermission(): Promise<NotificationPermissionState> {
+  return 'unavailable'
+}
+export async function getPushNotificationToken(): Promise<string | null> { return null }
 export function setForegroundNotificationHandler(): void {}
 export function addNotificationReceivedListener(_handler: NotificationHandler): CleanupFn {
   return () => {}
@@ -54,6 +77,15 @@ export function addNotificationResponseListener(_handler: NotificationResponseHa
 }
 export async function getInitialNotificationData(): Promise<Record<string, unknown> | null> {
   return null
+}
+export async function getInitialNotificationResponse(): Promise<NotificationResponsePayload | null> {
+  return null
+}
+export async function clearLastNotificationResponse(): Promise<void> {}
+export function addPushTokenRotationListener(
+  _handler: (token: string) => void | Promise<void>,
+): CleanupFn {
+  return () => {}
 }
 export async function clearBadge(): Promise<void> {}
 export async function ensureLocalNotificationPermission(
@@ -93,11 +125,5 @@ export async function cancelQuestReturnReminder(
 export async function cancelQuestReminder(_questId: string): Promise<void> {}
 
 export function extractDeepLinkFromNotification(data: Record<string, unknown>): string | null {
-  if (typeof data.url === 'string' && data.url.length > 0) {
-    return data.url
-  }
-  if (typeof data.screen === 'string' && data.screen.length > 0) {
-    return data.screen
-  }
-  return null
+  return mapNotificationPayloadToHref(data)
 }

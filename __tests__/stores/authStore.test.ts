@@ -39,6 +39,11 @@ jest.mock('@/api/user', () => ({
   },
 }));
 
+const mockUnregisterPushBeforeLogout = jest.fn().mockResolvedValue(true);
+jest.mock('@/services/pushRegistration', () => ({
+  unregisterPushBeforeLogout: (...args: unknown[]) => mockUnregisterPushBeforeLogout(...args),
+}));
+
 const { appleAuthApi } = require('@/api/appleAuth') as { appleAuthApi: jest.Mock };
 
 const {
@@ -701,6 +706,24 @@ describe('authStore', () => {
   });
 
   describe('logout', () => {
+    it('unregisters the device while auth is still live, before local invalidation', async () => {
+      useAuthStore.setState({ isAuthenticated: true, userId: '1', username: 'X' });
+      const order: string[] = [];
+      mockUnregisterPushBeforeLogout.mockImplementationOnce(async () => {
+        expect(useAuthStore.getState().isAuthenticated).toBe(true);
+        order.push('push-unregister');
+        return true;
+      });
+      logoutApi.mockImplementationOnce(async () => {
+        expect(useAuthStore.getState().isAuthenticated).toBe(false);
+        order.push('session-logout');
+      });
+
+      await act(() => useAuthStore.getState().logout());
+
+      expect(order).toEqual(['push-unregister', 'session-logout']);
+    });
+
     it('clears auth state', async () => {
       useAuthStore.setState({ isAuthenticated: true, userId: '1', username: 'X' });
 

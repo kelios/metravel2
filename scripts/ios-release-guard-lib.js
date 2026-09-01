@@ -6,6 +6,7 @@ const { getConfig } = require('@expo/config');
 const xcode = require('xcode');
 
 const EXPECTED = Object.freeze({
+  apnsEnvironment: 'production',
   appIconSha256: '86ebbd3444649460bfbc39a172c9d2200ed79f286b67f8e7b3cdc2f5ba4b4a72',
   bundleIdentifier: 'by.metravel.app',
   buildNumber: '5',
@@ -97,6 +98,7 @@ const IOS_PRIVACY_DATA = Object.freeze({
   NSPrivacyCollectedDataTypeEmailAddress: true,
   NSPrivacyCollectedDataTypeOtherUserContactInfo: true,
   NSPrivacyCollectedDataTypeUserID: true,
+  NSPrivacyCollectedDataTypeDeviceID: true,
   NSPrivacyCollectedDataTypePreciseLocation: true,
   NSPrivacyCollectedDataTypeCoarseLocation: true,
   NSPrivacyCollectedDataTypeEmailsOrTextMessages: true,
@@ -239,7 +241,6 @@ function validateIosRelease(root = process.cwd()) {
   let appDelegate;
   let questFullMap;
   let questFullMapNative;
-  let androidNotificationsPlugin;
   let androidManifest;
   let androidColors;
   try {
@@ -263,7 +264,6 @@ function validateIosRelease(root = process.cwd()) {
     appDelegate = read(root, 'ios/metravel/AppDelegate.swift');
     questFullMap = read(root, 'components/quests/QuestFullMap.tsx');
     questFullMapNative = read(root, 'components/quests/QuestFullMap.native.tsx');
-    androidNotificationsPlugin = read(root, 'plugins/withAndroidNotifications.js');
     androidManifest = read(root, 'android/app/src/main/AndroidManifest.xml');
     androidColors = read(root, 'android/app/src/main/res/values/colors.xml');
     appIconContents = readJson(
@@ -360,18 +360,14 @@ function validateIosRelease(root = process.cwd()) {
       localAuthenticationOptions.faceIDPermission !== IOS_PURPOSE_STRINGS.NSFaceIDUsageDescription) {
     fail('IOS_FACE_ID_PLUGIN_SCOPE', 'Face ID permission copy must match the opt-in biometric flow');
   }
-  if (findPlugins(app, 'expo-notifications').length !== 0) {
-    fail(
-      'IOS_APNS_PLUGIN_SCOPE',
-      'the official expo-notifications iOS plugin always adds aps-environment; APNs is not in the launch scope'
-    );
-  }
-  const androidNotificationPlugins = findPlugins(app, './plugins/withAndroidNotifications');
-  const androidNotificationOptions = pluginOptions(androidNotificationPlugins[0]);
-  const expectedAndroidNotificationOptions = {
+  const notificationPlugins = findPlugins(app, 'expo-notifications');
+  const notificationOptions = pluginOptions(notificationPlugins[0]);
+  const expectedNotificationOptions = {
     icon: './assets/images/notification-icon.png',
     color: '#7a9d8f',
     defaultChannel: 'updates',
+    mode: EXPECTED.apnsEnvironment,
+    enableBackgroundRemoteNotifications: false,
   };
   const androidNotificationMetadata = [
     'android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="updates"',
@@ -380,22 +376,14 @@ function validateIosRelease(root = process.cwd()) {
     'android:name="expo.modules.notifications.default_notification_color" android:resource="@color/notification_icon_color"',
     'android:name="expo.modules.notifications.default_notification_icon" android:resource="@drawable/notification_icon"',
   ];
-  if (androidNotificationPlugins.length !== 1 ||
-      !jsonEqual(androidNotificationOptions, expectedAndroidNotificationOptions) ||
-      !androidNotificationsPlugin.includes(
-        "require('expo-notifications/plugin/build/withNotificationsAndroid')"
-      ) ||
-      !/return withNotificationsAndroid\(config, props \|\| \{\}\);/.test(androidNotificationsPlugin) ||
-      !/createRunOncePlugin\([\s\S]*notificationsPackage\.name,[\s\S]*notificationsPackage\.version/.test(
-        androidNotificationsPlugin
-      ) ||
-      /withNotificationsIOS|plugin\/build\/withNotifications['"]/.test(androidNotificationsPlugin) ||
+  if (notificationPlugins.length !== 1 ||
+      !jsonEqual(notificationOptions, expectedNotificationOptions) ||
       androidNotificationMetadata.some(metadata => !androidManifest.includes(metadata)) ||
       !androidColors.includes('<color name="notification_icon_color">#7a9d8f</color>') ||
       !fs.existsSync(path.join(root, 'assets/images/notification-icon.png'))) {
     fail(
-      'IOS_ANDROID_NOTIFICATION_PLUGIN_SCOPE',
-      'Android notification icon/color/channel must use the Android-only wrapper without enabling APNs'
+      'IOS_APNS_PLUGIN_SCOPE',
+      'the official notifications plugin must keep production APNs, foreground-only delivery, and Android icon/color/channel parity'
     );
   }
   if (packageJson.dependencies?.['expo-task-manager'] || packageJson.devDependencies?.['expo-task-manager']) {
@@ -597,12 +585,13 @@ function validateIosRelease(root = process.cwd()) {
   }
 
   const entitlementKeys = Object.keys(entitlementsConfig).sort();
-  if (!jsonEqual(entitlementKeys, ['com.apple.developer.applesignin', 'com.apple.developer.associated-domains']) ||
+  if (!jsonEqual(entitlementKeys, ['aps-environment', 'com.apple.developer.applesignin', 'com.apple.developer.associated-domains']) ||
+      entitlementsConfig['aps-environment'] !== EXPECTED.apnsEnvironment ||
       !jsonEqual(entitlementsConfig['com.apple.developer.associated-domains'], ['applinks:metravel.by']) ||
       !jsonEqual(entitlementsConfig['com.apple.developer.applesignin'], ['Default'])) {
     fail(
       'IOS_ENTITLEMENT_SCOPE',
-      'only the metravel.by Associated Domain and Sign in with Apple are enabled; APNs needs a separate owner gate'
+      'source entitlements must enable production APNs plus the audited Associated Domain and Sign in with Apple capabilities'
     );
   }
 

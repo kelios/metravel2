@@ -14,6 +14,7 @@ import {
   formatDistance,
   formatDuration,
   formatRoutePointCoordinates,
+  isDrawableCoordinatePair,
   isRouteApproximate,
   routingStateHint,
   routingStateLabel,
@@ -83,13 +84,17 @@ const webCreatePortal: WebPortal | null = (() => {
   }
 })();
 
-const lngLatPositions = (coordinates: Array<[number, number]>): Array<[number, number]> =>
+// #1683: линия и подгонка кадра уходят в Leaflet теми же парами, что и маркеры,
+// поэтому битая пара роняла бы карту и здесь — фильтр общий с форматтером.
+const lngLatPositions = (
+  coordinates: Array<[number, number] | null | undefined>,
+): Array<[number, number]> =>
   coordinates
-    .filter((coords): coords is [number, number] => Array.isArray(coords))
+    .filter(isDrawableCoordinatePair)
     .map(([lng, lat]) => [lat, lng]);
 
 const routePositions = (route: RoutePoint[]): Array<[number, number]> =>
-  lngLatPositions(route.map((point) => point.coordinates).filter(Boolean) as Array<[number, number]>);
+  lngLatPositions(route.map((point) => point.coordinates));
 
 // `fittedTokenRef` живёт в родителе и переживает пересборку карты (#1301: разворот
 // на весь экран переносит карту порталом, то есть MapContainer монтируется заново).
@@ -171,6 +176,12 @@ function FocusRoutePoint({
 
   useEffect(() => {
     if (!focusPoint) return;
+    // #1683: запрос фокуса приходит из списка точек, а он отпускает точку по
+    // наличию пары (`RouteBuilder.handleFocusPoint`), не по её пригодности.
+    // `setView` с нефинитным LatLng бросает уже внутри эффекта — маркерный гард
+    // такую точку не спасает. На /map тот же вызов закрыт проверкой координат
+    // (`components/MapPage/Map.web.tsx`), здесь — общим предикатом карты плана.
+    if (!isDrawableCoordinatePair([focusPoint.lng, focusPoint.lat])) return;
     if (appliedTokenRef.current === focusPoint.token) return;
     appliedTokenRef.current = focusPoint.token;
     map.setView(
@@ -565,7 +576,9 @@ export default function TripPlanRouteMap({
             />
           ) : null}
           {route.map((point, index) => {
-            if (!point.coordinates) return null;
+            // #1683: не «есть пара», а «пара пригодна к отрисовке» — на
+            // невалидном LatLng `L.marker` бросает и уносит всю карту.
+            if (!isDrawableCoordinatePair(point.coordinates)) return null;
             const [lng, lat] = point.coordinates;
             const coordinatesLabel = formatRoutePointCoordinates(point.coordinates);
             return (

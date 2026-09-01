@@ -26,6 +26,8 @@
 - [ ] 4.2 Verify and fix map, place-card, location, navigation, quest-map, route, WebView bridge, denial fallback, and offline behavior on iPhone while reusing `#202/#905/#926` and preserving mobile-web/Android map semantics.
 - [ ] 4.3 Verify and fix travel/article/quest media selection, camera/photo denial, HEIC/HEIF upload, gallery ordering/delete/swipe, sharing, PDF/route export, and cleanup; reuse backend contract `#1159` and reopen the exact physical gallery validation `#777`.
 - [ ] 4.4 Configure and verify notification permission timing, APNs entitlement/credential, token registration/update/removal through existing endpoint `#39`, foreground/background handling, local quest reminders, and one real production/TestFlight delivery.
+  - [x] 4.4a Complete the repository code/config slice: explicit permission UI, passive lifecycle sync, production APNs source/config guards, token rotation/logout integration, validated notification routes, privacy declaration, and focused regression tests (`#1417`).
+  - [ ] 4.4b After backend `#1680/#1681`, code review, and an authorized signed candidate, verify the provisioning-profile/signed-entitlement parity plus real foreground/background/cold-start TestFlight delivery on a physical iPhone.
 - [ ] 4.5 Run the launch-critical iPhone and iPad simulator matrix for guest/auth flows, discovery/search, travel/article/quest details, maps, profile/settings/account deletion, five locales, portrait/landscape/window resize, offline/slow/error states, and cold restart; file concrete defects instead of broad duplicate tickets.
 
 ## 5. Shared regression and review gates

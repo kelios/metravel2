@@ -96,6 +96,7 @@ function distributionSigningFixture() {
   const applicationIdentifier = `${teamIdentifier}.${EXPECTED.bundleIdentifier}`;
   const entitlements = {
     'application-identifier': applicationIdentifier,
+    'aps-environment': 'production',
     'beta-reports-active': true,
     'com.apple.developer.applesignin': ['Default'],
     'com.apple.developer.associated-domains': ['applinks:metravel.by'],
@@ -105,6 +106,7 @@ function distributionSigningFixture() {
   const profile = {
     Entitlements: {
       'application-identifier': applicationIdentifier,
+      'aps-environment': 'production',
       'beta-reports-active': true,
       'com.apple.developer.applesignin': ['Default'],
       'com.apple.developer.associated-domains': '*',
@@ -265,9 +267,26 @@ describe('iOS signed artifact audit', () => {
       { ...profile, ProvisionedDevices: ['test-device'] },
       new Date('2029-01-01T00:00:00.000Z')
     )).toBe(false);
+    const { ['aps-environment']: _missingSignedAps, ...withoutSignedAps } = entitlements;
     expect(distributionSigningMatchesReleaseContract(
-      { ...entitlements, 'aps-environment': 'production' },
+      withoutSignedAps,
       profile,
+      new Date('2029-01-01T00:00:00.000Z')
+    )).toBe(false);
+    expect(distributionSigningMatchesReleaseContract(
+      { ...entitlements, 'aps-environment': 'development' },
+      profile,
+      new Date('2029-01-01T00:00:00.000Z')
+    )).toBe(false);
+    expect(distributionSigningMatchesReleaseContract(
+      entitlements,
+      {
+        ...profile,
+        Entitlements: {
+          ...profile.Entitlements,
+          'aps-environment': 'development',
+        },
+      },
       new Date('2029-01-01T00:00:00.000Z')
     )).toBe(false);
     expect(distributionSigningMatchesReleaseContract(
@@ -286,6 +305,26 @@ describe('iOS signed artifact audit', () => {
       profile,
       new Date('2031-01-01T00:00:00.000Z')
     )).toBe(false);
+  });
+
+  it('fails closed when the bundled privacy manifest differs from the source contract', () => {
+    const appPath = createAppBundle();
+    expect(validateIosAppBundle(appPath, {
+      ...ARTIFACT_OPTIONS,
+      expectedPrivacyConfig: {
+        NSPrivacyCollectedDataTypes: [{
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeDeviceID',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+          ],
+          NSPrivacyCollectedDataTypeTracking: false,
+        }],
+        NSPrivacyTracking: false,
+      },
+    })).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'IOS_ARTIFACT_PRIVACY_MANIFEST' }),
+    ]));
   });
 });
 

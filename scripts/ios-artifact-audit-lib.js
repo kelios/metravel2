@@ -11,12 +11,14 @@ const {
 } = require('./ios-release-guard-lib');
 
 const EXPECTED_ENTITLEMENTS = Object.freeze({
+  'aps-environment': EXPECTED.apnsEnvironment,
   'com.apple.developer.applesignin': ['Default'],
   'com.apple.developer.associated-domains': ['applinks:metravel.by'],
 });
 
 const EXPECTED_SIGNED_ENTITLEMENT_KEYS = Object.freeze([
   'application-identifier',
+  'aps-environment',
   'beta-reports-active',
   'com.apple.developer.applesignin',
   'com.apple.developer.associated-domains',
@@ -183,6 +185,7 @@ function distributionSigningMatchesReleaseContract(entitlements, profile, now = 
     profileEntitlements['com.apple.developer.team-identifier'] === teamIdentifier &&
     profileEntitlements['get-task-allow'] === false &&
     profileEntitlements['beta-reports-active'] === true &&
+    profileEntitlements['aps-environment'] === EXPECTED_ENTITLEMENTS['aps-environment'] &&
     jsonEqual(
       profileEntitlements['com.apple.developer.applesignin'],
       EXPECTED_ENTITLEMENTS['com.apple.developer.applesignin']
@@ -358,7 +361,10 @@ function validateIosAppBundle(appPath, options = {}) {
       fail('IOS_ARTIFACT_PROVISIONING', 'embedded App Store provisioning profile is invalid');
     }
     if (!distributionSigningMatchesReleaseContract(entitlements, provisioningProfile)) {
-      fail('IOS_ARTIFACT_ENTITLEMENTS', 'signed archive entitlements do not match the launch scope');
+      fail(
+        'IOS_ARTIFACT_ENTITLEMENTS',
+        'signed archive and provisioning profile must both contain the production APNs entitlement and match the release scope'
+      );
     }
   }
 

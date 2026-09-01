@@ -184,6 +184,18 @@ export async function openExternalUrlInNewTab(
   return openWithYandexFallback(normalized, options.onError);
 }
 
+/** Central native chokepoint for permission-denial recovery. */
+export async function openSystemSettings(onError?: (error: unknown) => void): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    await Linking.openSettings();
+    return true;
+  } catch (error) {
+    onError?.(error);
+    return false;
+  }
+}
+
 export function openWebWindow(rawUrl: string, options: OpenWebWindowOptions = {}): Window | null {
   if (typeof window === 'undefined' || typeof window.open !== 'function') return null;
   try {

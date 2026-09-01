@@ -2,7 +2,10 @@ import { act, renderHook } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 import { redirectSystemPath } from '@/app/+native-intent';
-import { mapIncomingAppLinkToHref } from '@/utils/incomingAppLinks';
+import {
+  mapIncomingAppLinkToHref,
+  mapNotificationPayloadToHref,
+} from '@/utils/incomingAppLinks';
 
 const mockPush = jest.fn();
 const mockRemove = jest.fn();
@@ -131,6 +134,36 @@ describe('mapIncomingAppLinkToHref', () => {
       expect(redirectSystemPath({ path: url, initial: false })).toBe(expected);
     },
   );
+});
+
+describe('mapNotificationPayloadToHref', () => {
+  it.each([
+    [{ url: '/travels/test-slug' }, '/travels/test-slug'],
+    [{ screen: '/map?lat=50.06&lng=19.94' }, '/map?lat=50.06&lng=19.94'],
+    [{ screen: 'quest', city: 'krakow', quest_id: 'krakow-dragon' }, '/quests/krakow/krakow-dragon'],
+    [{ screen: 'message', userId: 17 }, '/messages?userId=17'],
+    [{ screen: 'message' }, '/messages'],
+    [{ screen: 'trip', trip_id: '31' }, '/trips/31'],
+  ])('maps a supported notification payload', (payload, expected) => {
+    expect(mapNotificationPayloadToHref(payload)).toBe(expected);
+  });
+
+  it.each([
+    { url: 'https://example.com/travels/test-slug' },
+    { url: '//example.com/travels/test-slug' },
+    { url: '/travels/../map' },
+    { url: '/travels/test%2fslug' },
+    { url: '/travels/test%5cslug' },
+    { url: '/travels/test\u0000slug' },
+    { url: '/trips/0' },
+    { screen: '/unknown' },
+    { screen: 'quest', city: '../krakow', questId: 'dragon' },
+    { screen: 'message', userId: '../17' },
+    { screen: 'trip', tripId: 'not-an-id' },
+    { screen: 'arbitrary-native-screen' },
+  ])('rejects an untrusted or malformed notification payload %#', (payload) => {
+    expect(mapNotificationPayloadToHref(payload)).toBeNull();
+  });
 });
 
 describe('useIncomingAppLinks', () => {
