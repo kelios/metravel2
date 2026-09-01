@@ -11,9 +11,18 @@ import {
   preacceptCookies,
   gotoWithRetry,
 } from './helpers/navigation'
+import {
+  QUEST_TILE_MEDIA_SIZE,
+  QUEST_TILE_MEDIA_SIZE_COMPACT,
+  QUEST_TILE_SLOT_RATIO,
+} from '../components/quests/questCoverTileGeometry'
 
 /**
- * #1542: квадратный вариант обложки в плитке 132×132.
+ * #1542: квадратный вариант обложки в плитке.
+ *
+ * Сторона плитки — не литерал этого файла, а `questCoverTileGeometry`: с #1673
+ * телефон (<480pt) берёт компактную сторону, остальные ширины — базовую.
+ * Квадратность и `contain` инвариантны для обеих.
  *
  * Production square-поля nullable и пока null (#1587). After-состояние
  * доказывается перехватом манифеста: браузер грузит квадратный растр, доля
@@ -22,6 +31,11 @@ import {
 
 const WAIT_MS = 60_000
 const TARGET_BAND = 0.1
+// #1673: компактная плитка включается ровно там же, где `isNarrowColumn`
+// в `QuestForCityCard` — на телефоне, то есть ниже планшетной границы.
+const COMPACT_MAX_WIDTH = 480
+const tileSideForWidth = (width: number) =>
+  width < COMPACT_MAX_WIDTH ? QUEST_TILE_MEDIA_SIZE_COMPACT : QUEST_TILE_MEDIA_SIZE
 const ARTIFACT_DIR = path.join('.codex-temp', 'quest-1542')
 const SQUARE_160 = '/quest-cover/e2e/square-160.webp'
 const SQUARE_320 = '/quest-cover/e2e/square-320.webp'
@@ -176,6 +190,7 @@ const questBundle = {
 type BarMeasurement = {
   surface: string
   viewport: string
+  expectedSide: number
   questId: string
   slotWidth: number
   slotHeight: number
@@ -209,6 +224,7 @@ async function measureTile(page: Page, questId: string): Promise<BarMeasurement>
       return {
         surface: '',
         viewport: '',
+        expectedSide: 0,
         questId: args.questId,
         slotWidth,
         slotHeight,
@@ -322,6 +338,7 @@ test.describe('#1542 square quest cover tile', () => {
       const home = await measureTile(page, QUEST_ID)
       home.surface = 'home'
       home.viewport = viewport.name
+      home.expectedSide = tileSideForWidth(viewport.width)
       measurements.push(home)
       await homeTile.screenshot({
         path: path.join(ARTIFACT_DIR, `home-${viewport.name}.png`),
@@ -334,6 +351,7 @@ test.describe('#1542 square quest cover tile', () => {
       const travel = await measureTile(page, QUEST_ID)
       travel.surface = 'travel-details'
       travel.viewport = viewport.name
+      travel.expectedSide = tileSideForWidth(viewport.width)
       measurements.push(travel)
       await page
         .locator(`[data-testid="quest-card-media-viewport-${QUEST_ID}"]`)
@@ -358,6 +376,7 @@ test.describe('#1542 square quest cover tile', () => {
       const finale = await measureTile(page, NEAR_QUEST_ID)
       finale.surface = 'quest-finale'
       finale.viewport = viewport.name
+      finale.expectedSide = tileSideForWidth(viewport.width)
       measurements.push(finale)
       await page
         .locator(`[data-testid="quest-card-media-viewport-${NEAR_QUEST_ID}"]`)
@@ -371,8 +390,10 @@ test.describe('#1542 square quest cover tile', () => {
     })
 
     for (const row of measurements) {
-      expect(row.slotWidth, `${row.surface} ${row.viewport} slot width`).toBe(132)
-      expect(row.slotHeight, `${row.surface} ${row.viewport} slot height`).toBe(132)
+      expect(row.slotWidth, `${row.surface} ${row.viewport} slot width`).toBe(row.expectedSide)
+      expect(row.slotHeight, `${row.surface} ${row.viewport} slot height`).toBe(
+        row.expectedSide / QUEST_TILE_SLOT_RATIO,
+      )
       expect(row.objectFit).toBe('contain')
       expect(row.naturalWidth).toBe(row.naturalHeight)
       expect(row.imgCount).toBeLessThanOrEqual(1)
