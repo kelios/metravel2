@@ -2,14 +2,23 @@
 // стрелка 40 съедали ширину: на 390pt тексту оставалось 148px, и названия
 // («Квест по Барковщине: озёра и легенды» и все соседи в блоке «Квесты по этому
 // городу и рядом») требовали четырёх строк при лимите в две. На узкой колонке
-// стрелка-декорация уходит, а заголовку разрешена третья строка; на широкой
-// раскладка прежняя — стрелка на месте, лимит две строки.
+// стрелка-декорация уходит, а заголовку разрешены дополнительные строки; на
+// широкой раскладка прежняя — стрелка на месте, лимит две строки.
+//
+// Второй заход после прод-приёмки: снятой стрелки не хватило — на 390pt колонка
+// 202px и семнадцати названиям выдачи нужна четвёртая строка. Поэтому на
+// телефоне (<480pt) плитка становится компактной, и тест держит обе половины
+// фикса: сторону плитки и лимит строк.
 import React from 'react'
 import { render, screen } from '@testing-library/react-native'
 
 import { QuestForCityCard } from '@/components/quests/QuestForCityCard'
+import {
+  QUEST_TILE_MEDIA_SIZE,
+  QUEST_TILE_MEDIA_SIZE_COMPACT,
+} from '@/components/quests/questCoverTileGeometry'
 
-const mockUseBreakpoints = jest.fn(() => ({ isMobile: true, isSmallPhone: false }))
+const mockUseBreakpoints = jest.fn(() => ({ isMobile: true, isPhone: true, isSmallPhone: false }))
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -51,32 +60,45 @@ const renderCard = () => render(<QuestForCityCard quest={quest as any} />)
 describe('QuestForCityCard — ширина колонки заголовка', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseBreakpoints.mockReturnValue({ isMobile: true, isSmallPhone: false })
+    mockUseBreakpoints.mockReturnValue({ isMobile: true, isPhone: true, isSmallPhone: false })
   })
 
-  it('на узкой колонке убирает стрелку и разрешает заголовку третью строку', () => {
+  it('на телефоне убирает стрелку, сжимает плитку и разрешает четвёртую строку', () => {
     renderCard()
 
     expect(screen.queryByTestId('quest-card-arrow')).toBeNull()
-    expect(screen.getByText(quest.title).props.numberOfLines).toBe(3)
-  })
-
-  // На 320pt под текст остаётся ~140px, и трёх строк этому названию не хватает.
-  it('на самой узкой колонке даёт заголовку четвёртую строку', () => {
-    mockUseBreakpoints.mockReturnValue({ isMobile: true, isSmallPhone: true })
-
-    renderCard()
-
-    expect(screen.queryByTestId('quest-card-arrow')).toBeNull()
+    expect(screen.getByTestId('quest-card-media').props.width).toBe(QUEST_TILE_MEDIA_SIZE_COMPACT)
     expect(screen.getByText(quest.title).props.numberOfLines).toBe(4)
   })
 
+  // На 320pt компактная плитка оставляет тексту 168px — потолок выдачи там пять строк.
+  it('на самой узкой колонке даёт заголовку пятую строку', () => {
+    mockUseBreakpoints.mockReturnValue({ isMobile: true, isPhone: false, isSmallPhone: true })
+
+    renderCard()
+
+    expect(screen.queryByTestId('quest-card-arrow')).toBeNull()
+    expect(screen.getByTestId('quest-card-media').props.width).toBe(QUEST_TILE_MEDIA_SIZE_COMPACT)
+    expect(screen.getByText(quest.title).props.numberOfLines).toBe(5)
+  })
+
+  // 480–767pt: колонка уже шире самого длинного названия, плитка остаётся полной.
+  it('на большом телефоне и планшете держит полную плитку', () => {
+    mockUseBreakpoints.mockReturnValue({ isMobile: true, isPhone: false, isSmallPhone: false })
+
+    renderCard()
+
+    expect(screen.getByTestId('quest-card-media').props.width).toBe(QUEST_TILE_MEDIA_SIZE)
+    expect(screen.getByText(quest.title).props.numberOfLines).toBe(3)
+  })
+
   it('на широкой колонке оставляет стрелку и лимит в две строки', () => {
-    mockUseBreakpoints.mockReturnValue({ isMobile: false, isSmallPhone: false })
+    mockUseBreakpoints.mockReturnValue({ isMobile: false, isPhone: false, isSmallPhone: false })
 
     renderCard()
 
     expect(screen.getByTestId('quest-card-arrow')).toBeTruthy()
+    expect(screen.getByTestId('quest-card-media').props.width).toBe(QUEST_TILE_MEDIA_SIZE)
     expect(screen.getByText(quest.title).props.numberOfLines).toBe(2)
   })
 })

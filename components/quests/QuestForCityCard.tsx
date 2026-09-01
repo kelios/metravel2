@@ -16,7 +16,9 @@ import { buildQuestPath } from '@/utils/routePaths'
 import type { QuestMeta } from '@/utils/questAdapters'
 import {
   QUEST_TILE_MEDIA_HEIGHT,
+  QUEST_TILE_MEDIA_HEIGHT_COMPACT,
   QUEST_TILE_MEDIA_SIZE,
+  QUEST_TILE_MEDIA_SIZE_COMPACT,
 } from '@/components/quests/questCoverTileGeometry'
 import {
   trackQuestCardClicked,
@@ -94,15 +96,27 @@ export function QuestForCityCard({
   // развилка по ней; `useBreakpoints` подписан только на ширину и не перерисовывает
   // карточку на скролле мобильного веба.
   //
+  // Второй заход (прод-приёмка 01.09.2026): снятой стрелки не хватило. Замер прода
+  // на 390pt — колонка 202px, `clientHeight` 69 при `scrollHeight` 92, то есть
+  // лимит в три строки резал названия, которым нужно четыре. Их на выдаче 17 из
+  // 165, и лечится это по-прежнему шириной: компактная плитка отдаёт заголовку
+  // 238px, где ни одному названию выдачи не нужно больше трёх строк.
+  //
   // `clientOnly` обязателен: без него первый кадр каждой карточки видит ширину 0 и
   // рисует узкий вариант. Замер на 1280 показал ровно это — шесть карточек
   // появлялись без стрелок и через ~50 мс дорисовывали их. Разметки карточки нет в
   // статическом HTML (секция лениво подгружается и ждёт данные квестов), поэтому
   // mismatch невозможен и ждать собственный commit незачем.
-  const { isMobile, isSmallPhone } = useBreakpoints({ clientOnly: true })
+  const { isMobile, isPhone, isSmallPhone } = useBreakpoints({ clientOnly: true })
+  // Телефон (<480pt) — единственная ширина, где плитка и текст спорят за строку:
+  // на планшете и десктопе колонка и так шире, чем нужно самому длинному
+  // названию выдачи. Поэтому компактная плитка включается именно здесь.
+  const isNarrowColumn = isSmallPhone || isPhone
+  const tileSize = isNarrowColumn ? QUEST_TILE_MEDIA_SIZE_COMPACT : QUEST_TILE_MEDIA_SIZE
+  const tileHeight = isNarrowColumn ? QUEST_TILE_MEDIA_HEIGHT_COMPACT : QUEST_TILE_MEDIA_HEIGHT
   const styles = useMemo(() => createStyles(colors), [colors])
   const difficultyLabels = createDifficultyLabels()
-  const mediaVisibility = useRichMediaVisibility(QUEST_TILE_MEDIA_HEIGHT)
+  const mediaVisibility = useRichMediaVisibility(tileHeight)
 
   // #1185: карточка приходила и с пустым cityId/id, и шаблонная строка давала
   // `/quests/undefined/undefined` — клик уводил пользователя на 404.
@@ -152,7 +166,7 @@ export function QuestForCityCard({
     ? {
         ...squareSource,
         src: squareCoverUri,
-        sizes: squareSource.sizes?.trim() || `${QUEST_TILE_MEDIA_SIZE}px`,
+        sizes: squareSource.sizes?.trim() || `${tileSize}px`,
       }
     : undefined
 
@@ -174,14 +188,14 @@ export function QuestForCityCard({
         ref={mediaVisibility.ref}
         onLayout={mediaVisibility.onLayout}
         collapsable={false}
-        style={styles.media}
+        style={[styles.media, isNarrowColumn && styles.mediaCompact]}
         testID={`quest-card-media-viewport-${quest.id}`}
       >
         <ImageCardMedia
           source={mediaVisibility.visible && coverUri ? { uri: coverUri } : null}
           webResponsiveSource={squareWebResponsiveSource}
-          width={QUEST_TILE_MEDIA_SIZE}
-          height={QUEST_TILE_MEDIA_HEIGHT}
+          width={tileSize}
+          height={tileHeight}
           fit="contain"
           blurBackground
           allowCriticalWebBlur
@@ -204,11 +218,14 @@ export function QuestForCityCard({
         </Text>
         <Text
           style={styles.title}
-          // Лимит строк идёт за шириной колонки, потому что режет именно она:
-          // 664px на десктопе держат заголовок в одну строку, ~200px на телефоне
-          // — в две-три, а ~140px на 320pt требуют четырёх. Верхняя граница нужна
-          // против аномально длинного названия, а не как фиксированная высота.
-          numberOfLines={isSmallPhone ? 4 : isMobile ? 3 : 2}
+          // Лимит строк идёт за шириной колонки, потому что режет именно она.
+          // Числа — потолок реальной выдачи, замеренный по всем 165 названиям
+          // `/api/quests/?compact=1` в шрифте заголовка: 238px (390pt с
+          // компактной плиткой) — 3 строки, 223px (375pt) — 4, 168px (320pt) —
+          // 5. Верхняя граница остаётся страховкой от аномально длинного
+          // названия, а не фиксированной высотой: короткому заголовку она
+          // ничего не добавляет.
+          numberOfLines={isSmallPhone ? 5 : isPhone ? 4 : isMobile ? 3 : 2}
           accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
           aria-level={3 as any}
         >
@@ -280,6 +297,10 @@ function createStyles(colors: ThemedColors) {
       borderRadius: 12,
       overflow: 'hidden',
       backgroundColor: colors.surfaceMuted,
+    },
+    mediaCompact: {
+      width: QUEST_TILE_MEDIA_SIZE_COMPACT,
+      height: QUEST_TILE_MEDIA_HEIGHT_COMPACT,
     },
     image: { width: '100%', height: '100%' },
     body: {

@@ -25,7 +25,9 @@
 
 import {
   QUEST_TILE_MEDIA_HEIGHT,
+  QUEST_TILE_MEDIA_HEIGHT_COMPACT,
   QUEST_TILE_MEDIA_SIZE,
+  QUEST_TILE_MEDIA_SIZE_COMPACT,
   QUEST_TILE_SLOT_RATIO,
 } from '@/components/quests/questCoverTileGeometry'
 
@@ -81,6 +83,14 @@ describe('#1542 летербокс обложки квеста в квадрат
     // владельцем 2026-08-24 (#1487).
     expect(QUEST_TILE_SLOT_RATIO).toBe(1)
     expect(QUEST_TILE_MEDIA_HEIGHT).toBe(QUEST_TILE_MEDIA_SIZE)
+  })
+
+  it('телефонная плитка #1673 — тот же квадрат, только меньшей стороной', () => {
+    // Компактная сторона (#1673) не должна стать вторым, независимым слотом:
+    // доля поля считается от пропорции, поэтому уход компактной плитки из
+    // квадрата тихо вернул бы летербокс, который закрыт #1542.
+    expect(QUEST_TILE_MEDIA_HEIGHT_COMPACT).toBe(QUEST_TILE_MEDIA_SIZE_COMPACT)
+    expect(QUEST_TILE_MEDIA_SIZE_COMPACT).toBeLessThan(QUEST_TILE_MEDIA_SIZE)
   })
 
   it('квадратный вариант обложки укладывается в порог без поля вовсе', () => {
