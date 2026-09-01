@@ -27,17 +27,22 @@ const {
   assertInspectionCanContinue,
   classify,
   classifyUrl,
+  createCheckpointWriter,
   createTokenSource,
   inspect,
   inspectionOutcome,
   parseArgs,
   parseSitemap,
   pickListRows,
+  readCheckpoint,
   resolveSection,
   summarizeItems,
 } = require('@/scripts/index-status')
 
 const https = require('https')
+const fs = require('fs')
+const nodePath = require('path')
+const { makeTempDir, removeDir, writeTextFile } = require('./cli-test-utils')
 const { EventEmitter } = require('events')
 
 describe('pickListRows', () => {
@@ -88,6 +93,111 @@ describe('parseArgs', () => {
 
   it('reads the whole-sitemap section', () => {
     expect(parseArgs(['node', 'index-status.js', '--section', 'all']).section).toBe('all')
+  })
+
+  it('defaults the worker pool and leaves the checkpoint off', () => {
+    const args = parseArgs(['node', 'index-status.js'])
+    expect(args.concurrency).toBe(6)
+    expect(args.checkpoint).toBeNull()
+  })
+
+  it('refuses --concurrency 0, which would inspect nothing and report a full slice', () => {
+    expect(() => parseArgs(['node', 'index-status.js', '--concurrency', '0'])).toThrow(
+      /--concurrency expects/,
+    )
+  })
+
+  // `--checkpoint "$FILE"` with FILE unset expands to an empty string. Every other
+  // string flag fails loudly when empty; this one would silently run the full
+  // two-hour sweep with no log and nothing to resume from (SEO-OPS-001).
+  it('refuses an empty checkpoint path instead of silently running without one', () => {
+    expect(() => parseArgs(['node', 'index-status.js', '--checkpoint', ''])).toThrow(
+      /--checkpoint expects/,
+    )
+  })
+})
+
+describe('checkpoint', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = makeTempDir('index-status-ckpt-')
+  })
+
+  afterEach(() => {
+    removeDir(dir)
+  })
+
+  const file = () => nodePath.join(dir, 'run.jsonl')
+
+  it('returns nothing when there is no checkpoint to resume from', () => {
+    expect(readCheckpoint(null).size).toBe(0)
+    expect(readCheckpoint(file()).size).toBe(0)
+  })
+
+  it('reuses settled verdicts and never a failed inspection', () => {
+    writeTextFile(
+      file(),
+      [
+        JSON.stringify({ url: 'https://metravel.by/a', verdict: 'PASS', coverageState: 'Indexed' }),
+        JSON.stringify({ url: 'https://metravel.by/b', verdict: 'NEUTRAL', coverageState: 'Crawled' }),
+        // The retry is exactly what a resume is for: a transient HTTP 500 must not
+        // freeze into the slice as a verdict nobody will ever re-check.
+        JSON.stringify({ url: 'https://metravel.by/c', verdict: 'ERROR', coverageState: 'HTTP 500' }),
+        JSON.stringify({ url: 'https://metravel.by/d', verdict: 'UNKNOWN', coverageState: 'Unknown' }),
+        JSON.stringify({ verdict: 'PASS', coverageState: 'Indexed' }),
+        '',
+      ].join('\n'),
+    )
+    const rows = readCheckpoint(file())
+    expect([...rows.keys()]).toEqual(['https://metravel.by/a', 'https://metravel.by/b'])
+  })
+
+  it('lets a later verdict win over an earlier one for the same URL', () => {
+    writeTextFile(
+      file(),
+      [
+        JSON.stringify({ url: 'https://metravel.by/a', verdict: 'NEUTRAL', coverageState: 'Crawled' }),
+        JSON.stringify({ url: 'https://metravel.by/a', verdict: 'PASS', coverageState: 'Indexed' }),
+        '',
+      ].join('\n'),
+    )
+    expect(readCheckpoint(file()).get('https://metravel.by/a').verdict).toBe('PASS')
+  })
+
+  it('drops a torn last line without losing the record appended after it', () => {
+    // A run killed mid-write leaves half a line and no newline. Appending straight
+    // onto it would glue the next record to the torn one and lose both.
+    const settled = JSON.stringify({
+      url: 'https://metravel.by/a',
+      verdict: 'PASS',
+      coverageState: 'Indexed',
+    })
+    writeTextFile(file(), `${settled}\n{"url":"https://metravel.by/b","verd`)
+    expect([...readCheckpoint(file()).keys()]).toEqual(['https://metravel.by/a'])
+
+    const write = createCheckpointWriter(file())
+    write({ url: 'https://metravel.by/c', verdict: 'PASS', coverageState: 'Indexed' })
+    expect([...readCheckpoint(file()).keys()]).toEqual([
+      'https://metravel.by/a',
+      'https://metravel.by/c',
+    ])
+  })
+
+  it('creates the checkpoint directory and appends one line per verdict', () => {
+    const nested = nodePath.join(dir, 'deep', 'run.jsonl')
+    const write = createCheckpointWriter(nested)
+    write({ url: 'https://metravel.by/a', verdict: 'PASS', coverageState: 'Indexed' })
+    write({ url: 'https://metravel.by/b', verdict: 'FAIL', coverageState: 'Excluded' })
+    expect(fs.readFileSync(nested, 'utf8').trimEnd().split('\n')).toHaveLength(2)
+    expect([...readCheckpoint(nested).keys()]).toEqual([
+      'https://metravel.by/a',
+      'https://metravel.by/b',
+    ])
+  })
+
+  it('is a no-op writer when no checkpoint was asked for', () => {
+    expect(() => createCheckpointWriter(null)({ url: 'x', verdict: 'PASS' })).not.toThrow()
   })
 })
 

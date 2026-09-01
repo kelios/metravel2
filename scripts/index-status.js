@@ -20,6 +20,8 @@
 //
 // Auth: reuses the owner OAuth token (npm run stats:login). Scope webmasters.readonly
 // covers URL Inspection. Quota: ~2000 inspections/day, 600/min per property.
+const fs = require('fs')
+const path = require('path')
 const https = require('https')
 const { getAccessToken } = require('./lib/google-token')
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
@@ -86,13 +88,17 @@ Options:
   --origin <origin>     site origin the inspected URLs are built from
   --site <property>     Search Console property (default sc-domain:metravel.by)
   --limit <n>           inspect only the first n URLs of the section (smoke test)
-  --delay <ms>          pause between inspections (default 250)
+  --delay <ms>          pause between inspections, per worker (default 250)
+  --concurrency <n>     inspections in flight at once (default 6)
+  --checkpoint <file>   append one JSON line per inspected URL as it lands, and
+                        resume from that file instead of re-spending quota
   --help, -h            print this help and exit
 
 Examples:
   node scripts/index-status.js --limit 5
   node scripts/index-status.js --json --only-problems
-  node scripts/index-status.js --section all --json --only-problems`
+  node scripts/index-status.js --section all --json --only-problems
+  node scripts/index-status.js --section all --checkpoint .codex-temp/index-all.jsonl`
 
 // Every flag lives in the shared SEO CLI contract (#1391): a mistyped `--limt 5`
 // used to be dropped on the floor and quietly inspect all 306 articles.
@@ -113,10 +119,27 @@ const CLI_SPEC = {
     site: { type: 'string', valueName: 'a Search Console property', default: 'sc-domain:metravel.by' },
     limit: { type: 'int', min: 0, valueName: 'a non-negative integer', default: 0 },
     delay: { type: 'int', key: 'delayMs', min: 0, valueName: 'milliseconds', default: 250 },
+    // URL Inspection answers in ~7 s, so one URL at a time made `--section all`
+    // a 2-hour run (probe 01.09.2026: 5-7 URLs/min). Six workers put ~50 req/min
+    // on the wire against a documented ceiling of 600/min per property, so the
+    // run fits inside one token lifetime and the daily quota is untouched — the
+    // number of inspections is the same, only the waiting is shared.
+    concurrency: { type: 'int', min: 1, valueName: 'a positive integer', default: 6 },
+    checkpoint: { type: 'string', valueName: 'a file path', default: null },
   },
 }
 
-const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC)
+function parseArgs(argv) {
+  const args = parseCliArgs(argv, CLI_SPEC)
+  // Every other string flag here fails loudly when it arrives empty (`--origin ""`
+  // cannot be fetched, `--site ""` is refused by GSC). `--checkpoint ""` — what an
+  // unset `--checkpoint "$FILE"` expands to — would instead run the full two-hour
+  // sweep with no log and nothing to resume from, and say nothing about it.
+  if (args.checkpoint !== null && !args.checkpoint.trim()) {
+    throw new UsageError('--checkpoint expects a file path')
+  }
+  return args
+}
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms))
@@ -133,16 +156,26 @@ const TOKEN_MAX_AGE_MS = 45 * 60 * 1000
 function createTokenSource() {
   let token = null
   let takenAt = 0
+  // Workers ask for the token independently, so without this the expiry moment
+  // would mint one token per worker in flight instead of one for the run.
+  let refreshing = null
   return async (force = false) => {
     if (!force && token && Date.now() - takenAt < TOKEN_MAX_AGE_MS) return token
+    if (refreshing) return refreshing
     // Cleared before the call, not after it: a refresh that fails must not leave
     // the dead token in place, or the run would carry on and write one HTTP 401
     // row per remaining URL instead of stopping at the failure.
     token = null
-    const { accessToken } = await getAccessToken(SCOPE)
-    token = accessToken
-    takenAt = Date.now()
-    return token
+    refreshing = getAccessToken(SCOPE)
+      .then(({ accessToken }) => {
+        token = accessToken
+        takenAt = Date.now()
+        return token
+      })
+      .finally(() => {
+        refreshing = null
+      })
+    return refreshing
   }
 }
 
@@ -409,6 +442,45 @@ function summarizeItems(items) {
   }
 }
 
+// The checkpoint is the run's live log: one JSON line per URL the moment its
+// verdict lands, so a `--section all` run can be read while it is still going
+// and a killed run resumes instead of re-spending quota on what it already knows.
+function readCheckpoint(file) {
+  const rows = new Map()
+  if (!file || !fs.existsSync(file)) return rows
+  for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+    const text = line.trim()
+    if (!text) continue
+    let row
+    // A run killed mid-write leaves a half-written last line. That is a torn
+    // record, not a corrupt log: drop it and re-inspect that one URL.
+    try {
+      row = JSON.parse(text)
+    } catch {
+      continue
+    }
+    // Only settled verdicts are reusable. An ERROR row is exactly what the retry
+    // is for, and keeping it would let a transient failure freeze into the slice.
+    if (row && row.url && inspectionOutcome(row.verdict) !== 'unchecked') rows.set(row.url, row)
+  }
+  return rows
+}
+
+function createCheckpointWriter(file) {
+  if (!file) return () => {}
+  fs.mkdirSync(path.dirname(path.resolve(file)), { recursive: true })
+  // A killed run leaves its last line without the closing newline. Appending
+  // straight onto it would glue the next record to the torn one, so the resume
+  // after that would lose both records instead of the single torn one.
+  if (fs.existsSync(file) && fs.statSync(file).size > 0) {
+    const tail = fs.readFileSync(file, 'utf8').slice(-1)
+    if (tail !== '\n') fs.appendFileSync(file, '\n')
+  }
+  return (row) => {
+    fs.appendFileSync(file, JSON.stringify(row) + '\n')
+  }
+}
+
 class FatalInspectionError extends Error {}
 
 function assertInspectionCanContinue(resp, url) {
@@ -416,6 +488,37 @@ function assertInspectionCanContinue(resp, url) {
   throw new FatalInspectionError(
     `URL Inspection ${url} answered HTTP ${resp.status}; refusing to continue an incomplete run`,
   )
+}
+
+async function inspectTarget(t, args, getToken) {
+  const url = t.url
+  // Outside the try on purpose: a token that cannot be minted at all is a
+  // precondition failure for every URL left, so it takes the run down here
+  // instead of becoming one more ERROR row.
+  const token = await getToken()
+  let info
+  try {
+    let resp = await inspect(token, args.site, url)
+    // 401 only. A GSC 403 means «no access to this property» or a rate limit,
+    // and a fresh token changes neither — it would just double the quota this
+    // run spends on every URL.
+    if (!resp.ok && resp.status === 401) resp = await inspect(await getToken(true), args.site, url)
+    if (!resp.ok && resp.status === 429) {
+      // backoff and retry once
+      await sleep(60000)
+      resp = await inspect(await getToken(), args.site, url)
+    }
+    // Auth, property access and exhausted quota are run-wide preconditions. If
+    // a permitted refresh/backoff did not recover them, stop instead of spending
+    // the remaining quota on hundreds of rows that can only be unchecked.
+    assertInspectionCanContinue(resp, url)
+    info = resp.ok ? classify(resp.result) : { verdict: 'ERROR', coverageState: `HTTP ${resp.status}` }
+  } catch (e) {
+    if (e instanceof FatalInspectionError) throw e
+    info = { verdict: 'ERROR', coverageState: e.message.slice(0, 60) }
+  }
+  // verdict PASS == "URL is on Google" (indexed). NEUTRAL/FAIL == not indexed.
+  return { id: t.id, name: t.name, url, kind: t.kind, indexed: info.verdict === 'PASS', ...info }
 }
 
 function assertCompleteSummary(summary) {
@@ -439,43 +542,53 @@ async function main() {
     console.error(`🔎 Проверяю индексацию ${targets.length} ${scope}…`)
   }
 
-  const items = []
-  let done = 0
-  for (const t of targets) {
-    const url = t.url
-    // Outside the try on purpose: a token that cannot be minted at all is a
-    // precondition failure for every URL left, so it takes the run down here
-    // instead of becoming one more ERROR row.
-    const token = await getToken()
-    let info
-    try {
-      let resp = await inspect(token, args.site, url)
-      // 401 only. A GSC 403 means «no access to this property» or a rate limit,
-      // and a fresh token changes neither — it would just double the quota this
-      // run spends on every URL.
-      if (!resp.ok && resp.status === 401) resp = await inspect(await getToken(true), args.site, url)
-      if (!resp.ok && resp.status === 429) {
-        // backoff and retry once
-        await sleep(60000)
-        resp = await inspect(await getToken(), args.site, url)
-      }
-      // Auth, property access and exhausted quota are run-wide preconditions. If
-      // a permitted refresh/backoff did not recover them, stop instead of spending
-      // the remaining quota on hundreds of rows that can only be unchecked.
-      assertInspectionCanContinue(resp, url)
-      info = resp.ok ? classify(resp.result) : { verdict: 'ERROR', coverageState: `HTTP ${resp.status}` }
-    } catch (e) {
-      if (e instanceof FatalInspectionError) throw e
-      info = { verdict: 'ERROR', coverageState: e.message.slice(0, 60) }
-    }
-    // verdict PASS == "URL is on Google" (indexed). NEUTRAL/FAIL == not indexed.
-    const indexed = info.verdict === 'PASS'
-    const row = { id: t.id, name: t.name, url, kind: t.kind, indexed, ...info }
-    items.push(row)
-    done++
-    if (!args.json && done % 25 === 0) console.error(`   …${done}/${targets.length}`)
-    if (args.delayMs) await sleep(args.delayMs)
+  const resumed = readCheckpoint(args.checkpoint)
+  const writeCheckpoint = createCheckpointWriter(args.checkpoint)
+  // The file's row count, not the reuse count: it may hold URLs outside this
+  // section. How many were actually reused is reported after the run.
+  if (resumed.size && !args.json) {
+    console.error(`   ↻ в чекпойнте ${args.checkpoint}: ${resumed.size} готовых вердиктов`)
   }
+
+  // Results are placed by index, never pushed: workers finish out of order, and
+  // the report (and the checkpoint replay) must stay in sitemap order regardless
+  // of which worker happened to answer first.
+  const items = new Array(targets.length)
+  let next = 0
+  let done = 0
+  let reused = 0
+  let fatal = null
+
+  const runWorker = async () => {
+    while (fatal === null) {
+      const i = next++
+      if (i >= targets.length) return
+      const t = targets[i]
+      const cached = resumed.get(t.url)
+      if (cached) {
+        items[i] = cached
+        reused++
+        done++
+        continue
+      }
+      const row = await inspectTarget(t, args, getToken)
+      items[i] = row
+      writeCheckpoint(row)
+      done++
+      if (!args.json && done % 25 === 0) console.error(`   …${done}/${targets.length}`)
+      if (args.delayMs) await sleep(args.delayMs)
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(args.concurrency, targets.length) }, () =>
+    // A fatal answer is a precondition failure for every URL left, so it stops
+    // the other workers too instead of letting them drain the quota behind it.
+    runWorker().catch((e) => {
+      if (fatal === null) fatal = e
+    }),
+  )
+  await Promise.all(workers)
+  if (fatal) throw fatal
 
   const summary = summarizeItems(items)
   const result = {
@@ -484,6 +597,10 @@ async function main() {
     section,
     userId,
     checkedAt: new Date().toISOString(),
+    // How many of those rows this run did not inspect. Without it a fully resumed
+    // replay is byte-identical in shape to a fresh slice — `checkedAt` says "now"
+    // for verdicts that may be days old, and the JSON reader has no way to tell.
+    resumedFromCheckpoint: reused,
     total: summary.total,
     indexed: summary.indexed,
     notIndexed: summary.notIndexed,
@@ -523,6 +640,9 @@ async function main() {
   console.log(`   ✅ В индексе:     ${result.indexed}`)
   console.log(`   ❌ Не в индексе:  ${result.notIndexed}`)
   console.log(`   ⚠️  Не проверено:    ${result.unchecked}`)
+  if (result.resumedFromCheckpoint) {
+    console.log(`   ↻ Из чекпойнта:   ${result.resumedFromCheckpoint} (вердикт прошлого прогона)`)
+  }
   console.log('')
   // Keyed by kind, not by `--section`: the two taxonomies are different (there is
   // no `--section quest-city`), and the same JSON already carries `section` at the
@@ -574,12 +694,14 @@ module.exports = {
   assertInspectionCanContinue,
   classify,
   classifyUrl,
+  createCheckpointWriter,
   createTokenSource,
   inspect,
   inspectionOutcome,
   parseArgs,
   parseSitemap,
   pickListRows,
+  readCheckpoint,
   resolveSection,
   summarizeItems,
 }
