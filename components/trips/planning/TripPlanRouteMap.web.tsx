@@ -13,6 +13,7 @@ import {
   TRANSPORT_LABEL,
   formatDistance,
   formatDuration,
+  formatRoutePointCoordinates,
   isRouteApproximate,
   routingStateHint,
   routingStateLabel,
@@ -566,6 +567,7 @@ export default function TripPlanRouteMap({
           {route.map((point, index) => {
             if (!point.coordinates) return null;
             const [lng, lat] = point.coordinates;
+            const coordinatesLabel = formatRoutePointCoordinates(point.coordinates);
             return (
               <Marker
                 key={`${point.id}-${index}-${lat}-${lng}`}
@@ -575,9 +577,9 @@ export default function TripPlanRouteMap({
                 <Popup>
                   <div style={styles.popup as React.CSSProperties}>
                     <div style={styles.popupTitle as React.CSSProperties}>{point.name}</div>
-                    <div style={styles.popupMeta as React.CSSProperties}>
-                      {lat.toFixed(5)}, {lng.toFixed(5)}
-                    </div>
+                    {coordinatesLabel ? (
+                      <div style={styles.popupMeta as React.CSSProperties}>{coordinatesLabel}</div>
+                    ) : null}
                     {!readonly ? (
                       <button
                         type="button"
