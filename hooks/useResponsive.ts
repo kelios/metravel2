@@ -210,8 +210,8 @@ const getServerWidthSnapshot = () => 0;
  * Use this on hot scroll paths (list cards, grid containers) instead of the full
  * useResponsive() to avoid per-frame re-renders during mobile-web scroll.
  */
-export function useResponsiveWidth(): number {
-  const hydrationReady = useHydrationReady();
+export function useResponsiveWidth(options?: HydrationReadyOptions): number {
+  const hydrationReady = useHydrationReady(options);
   const liveWidth = useSyncExternalStore(subscribe, getWidthSnapshot, getServerWidthSnapshot);
   return hydrationReady ? liveWidth : getServerWidthSnapshot();
 }
@@ -220,9 +220,13 @@ export function useResponsiveWidth(): number {
  * Width-derived breakpoint flags backed by the width-only subscription.
  * Drop-in for the width flags of useResponsive() on components that don't need
  * height/orientation, so they don't re-render while the user scrolls on mobile web.
+ *
+ * `options` пробрасывается в {@link useHydrationReady}: поддереву, которое
+ * монтируется уже после гидратации, `clientOnly` снимает «нулевой» кадр, где
+ * ширина ещё 0 и любая width-развилка рисует узкий вариант (#1673).
  */
-export function useBreakpoints() {
-  const width = useResponsiveWidth();
+export function useBreakpoints(options?: HydrationReadyOptions) {
+  const width = useResponsiveWidth(options);
   return useMemo(() => {
     const isSmallPhone = width < METRICS.breakpoints.phone;
     const isPhone = width >= METRICS.breakpoints.phone && width < METRICS.breakpoints.largePhone;
