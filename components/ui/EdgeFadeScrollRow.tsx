@@ -49,6 +49,10 @@ export const transparentVariant = (color: string): string => {
   return 'transparent'
 }
 
+/** RNW не типизирует web-CSS свойства, но каст здесь не нужен: именованный тип
+ *  присваивается в `StyleProp<ViewStyle>` без проверки лишних полей. */
+type WebGradientStyle = ViewStyle & { backgroundImage: string }
+
 type EdgeFadeProps = {
   side: 'left' | 'right'
   color: string
@@ -65,12 +69,11 @@ const EdgeFade = memo(function EdgeFade({ side, color, width }: EdgeFadeProps) {
   if (IS_WEB) {
     // CSS-градиент понимает `var(--color-…)`, которым тема отдаёт цвета на вебе.
     const direction = side === 'left' ? 'to left' : 'to right'
+    const gradient: WebGradientStyle = {
+      backgroundImage: `linear-gradient(${direction}, transparent, ${color})`,
+    }
     return (
-      <View
-        pointerEvents="none"
-        testID={`edge-fade-${side}`}
-        style={[style, { backgroundImage: `linear-gradient(${direction}, transparent, ${color})` } as any]}
-      />
+      <View pointerEvents="none" testID={`edge-fade-${side}`} style={[style, gradient]} />
     )
   }
 

@@ -79,6 +79,11 @@ function CardRail({
   )
 
   const scrollRef = useRef<ScrollView>(null)
+  // Ключ пересчёта здесь намеренно нестабильный (сам массив, а не его длина):
+  // карточки рельсы приезжают вместе с данными и картинками, и повторный завод
+  // лестницы досчётов на каждый рендер — то поведение, при котором стрелка
+  // появляется без первой прокрутки. Ряды-переключатели с фиксированным
+  // составом используют стабильный ключ по умолчанию.
   const { canScrollLeft, canScrollRight, metricsRef, recompute, edgeScrollProps } =
     useHorizontalScrollEdges(scrollRef, children)
 
