@@ -19,6 +19,7 @@ import { UserProfileDto } from '@/api/user';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { ProfileMenu } from './ProfileMenu';
 import { CoverTopoTexture } from './CoverTopoTexture';
+import { CoverScrim } from './CoverScrim';
 import {
   ProfileHeaderQuickActions,
   type ProfileHeaderActionKey,
@@ -141,26 +142,6 @@ export function ProfileHeader({
           width: '100%',
           position: 'relative',
           zIndex: 0,
-        },
-        // Деликатный угловой scrim под frost-чипом overflow-меню. Картинка-обложка
-        // светлая сверху, поэтому иконкам нужен лёгкий тёмный градиент только в
-        // верхнем правом углу — кадр при этом не затемняется.
-        coverScrim: {
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: 132,
-          height: 60,
-          zIndex: 1,
-          ...Platform.select({
-            web: {
-              backgroundImage: `linear-gradient(to bottom left, rgba(0,0,0,0.36), transparent 70%)`,
-            } as any,
-            default: {
-              backgroundColor: colors.overlay,
-              opacity: 0.24,
-            },
-          }),
         },
         topActions: {
           position: 'absolute',
@@ -353,7 +334,7 @@ export function ProfileHeader({
         ) : (
           <CoverTopoTexture height={COVER_HEIGHT} />
         )}
-        <View style={styles.coverScrim} pointerEvents="none" />
+        <CoverScrim coverHeight={COVER_HEIGHT} />
         <View style={styles.topActions}>
           <View style={styles.menuChip}>
             <ProfileMenu onLogout={onLogout} onSettings={onEdit} />

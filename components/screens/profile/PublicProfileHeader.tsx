@@ -19,6 +19,7 @@ import type { UserProfileDto } from '@/api/user';
 import type { PeerBadgeReceived, UserRank } from '@/api/achievements';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { CoverTopoTexture } from '@/components/profile/CoverTopoTexture';
+import { CoverScrim } from '@/components/profile/CoverScrim';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -121,9 +122,9 @@ export function PublicProfileHeader({
         ) : (
           <CoverTopoTexture height={COVER_HEIGHT} />
         )}
-        <View style={styles.coverScrim} pointerEvents="none" />
+        <CoverScrim coverHeight={COVER_HEIGHT} />
         {!isOwnProfile && userId ? (
-          <View style={styles.menuWrap}>
+          <View style={styles.menuWrap} testID="public-profile-menu-wrap">
             <UserSafetyMenu
               targetUserId={userId}
               targetName={fullName || undefined}
@@ -248,27 +249,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       position: 'relative',
       zIndex: 0,
     },
-    coverScrim: {
-      position: 'absolute',
-      top: 0,
-      right: 0,
-      width: 132,
-      height: 60,
-      zIndex: 1,
-      ...Platform.select({
-        web: {
-          backgroundImage: 'linear-gradient(to bottom left, rgba(0,0,0,0.36), transparent 70%)',
-        } as any,
-        default: {
-          backgroundColor: colors.overlay,
-          opacity: 0.24,
-        },
-      }),
-    },
+    // Чип меню обязан лежать ВЫШЕ scrim'а (`CoverScrim`, zIndex 1). Без своего
+    // zIndex он остаётся в auto-слое, и затемнение рисуется прямо по иконке
+    // «ещё» — та самая тёмная клякса в углу обложки (#1670). В своём профиле ту
+    // же роль играет `topActions` с zIndex 4.
     menuWrap: {
       position: 'absolute',
       top: DESIGN_TOKENS.spacing.xs,
       right: DESIGN_TOKENS.spacing.xs,
+      zIndex: 2,
     },
     identityRow: {
       flexDirection: 'row',

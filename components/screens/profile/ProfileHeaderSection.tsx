@@ -1,4 +1,7 @@
+import { useMemo } from 'react';
 import { View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
+import { useThemedColors } from '@/hooks/useTheme';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import type { ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
@@ -49,6 +52,17 @@ export function ProfileHeaderSection({
   showClearButton,
   handleClearActiveTab,
 }: ProfileHeaderSectionProps) {
+  const colors = useThemedColors();
+  // «Очистить» — разрушающее ВТОРОСТЕПЕННОЕ действие над списком вкладки.
+  // Залитый `danger` делал его самым контрастным пятном экрана на телефоне
+  // (#1670), поэтому здесь ghost без заливки и рамки: вес несёт только красная
+  // подпись с иконкой корзины. Подтверждение удаления остаётся на месте.
+  const clearIcon = useMemo(
+    () => <Feather name="trash-2" size={16} color={colors.danger} />,
+    [colors.danger]
+  );
+  const clearLabelStyle = useMemo(() => ({ color: colors.danger }), [colors.danger]);
+
   return (
     <View style={[styles.headerComponent, styles.fullRow]}>
       {profileLoading ? (
@@ -100,8 +114,10 @@ export function ProfileHeaderSection({
             <Button
               label={i18nT('profile:components.screens.profile.ProfileHeaderSection.ochistit_0cf8b203')}
               onPress={handleClearActiveTab}
-              variant="danger"
+              variant="ghost"
               size="sm"
+              icon={clearIcon}
+              labelStyle={clearLabelStyle}
             />
           </View>
         </View>

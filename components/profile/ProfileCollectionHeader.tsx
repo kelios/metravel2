@@ -141,6 +141,9 @@ export default function ProfileCollectionHeader({
           fontSize: 13,
           color: colors.textMuted,
         },
+        clearLabel: {
+          color: colors.danger,
+        },
       }),
     [colors, dense, stackOnPhone]
   );
@@ -213,14 +216,18 @@ export default function ProfileCollectionHeader({
             accessibilityLabel={backAccessibilityLabel}
           />
 
+          {/* Очистка коллекции — второстепенное разрушающее действие: ghost без
+              заливки и рамки, вес несёт только красная подпись с корзиной
+              (#1670). Подтверждение удаления остаётся на стороне вызывающего. */}
           {showClearButton && typeof onClearPress === 'function' && (
             <Button
               label={clearButtonText}
               onPress={onClearPress}
-              variant="danger-outline"
+              variant="ghost"
               size={compactClear ? 'md' : 'sm'}
               iconOnly={compactClear}
               icon={<Feather name="trash-2" size={16} color={colors.danger} />}
+              labelStyle={styles.clearLabel}
               accessibilityLabel={clearAccessibilityLabel}
             />
           )}

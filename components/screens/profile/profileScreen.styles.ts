@@ -87,10 +87,12 @@ export const createProfileScreenStyles = ({
       marginTop: 16,
       gap: 12,
     },
+    // Ряд действия над списком вкладки: после перевода «Очистить» в ghost
+    // (#1670) блок прижат к списку и не читается отдельной CTA-полосой.
     tabActions: {
       paddingHorizontal: contentPadding,
-      paddingTop: 12,
-      paddingBottom: 8,
+      paddingTop: 4,
+      paddingBottom: 2,
     },
     tabActionsRow: {
       flexDirection: 'row',
