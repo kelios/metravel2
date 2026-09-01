@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, Platform } from 'react-native';
+import { Dimensions, Platform, View } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { PublicProfileTravelsTab } from '@/components/screens/profile/PublicProfileTravelsTab';
@@ -100,6 +100,62 @@ describe('PublicProfileTravelsTab', () => {
     expect(props.mediaSlotWidth).toBeGreaterThanOrEqual(
       Platform.OS === 'web' ? 460 : nativeCardWidth
     );
+  });
+
+  it('#1674: web-сетка не растягивает неполный последний ряд', () => {
+    // Замер в браузере (1700×900, 12 карточек, 5 колонок) ДО этой правки:
+    // полные ряды 311.8×347.8, хвост из двух карточек — 460×496, то есть на
+    // 42.6% выше. Пока высота медиа была приколочена 180 px, разница ширины не
+    // читалась; с квадратным слотом высота следует за шириной и ряд рвётся.
+    // Требование владельца из #1487 — ровная сетка одинаковых карточек,
+    // поэтому web-раскладка обязана оставаться CSS Grid с равными колонками,
+    // а не `flex-wrap` с `flexGrow`, который растягивает последний ряд.
+    //
+    // Jest по умолчанию исполняет native-ветку, поэтому web проверяется
+    // подменой `Platform.OS` — тем же приёмом, что в
+    // `__tests__/components/ui/UnifiedTravelCard.navigation.web.test.tsx`.
+    const flatten = (style: any): Record<string, unknown> =>
+      Array.isArray(style)
+        ? style.filter(Boolean).reduce((acc, s) => ({ ...acc, ...flatten(s) }), {})
+        : { ...(style ?? {}) };
+
+    const renderGridStyle = () => {
+      const { UNSAFE_root } = render(
+        <PublicProfileTravelsTab
+          travels={[{ id: 5, name: 'Сетка' } as Travel]}
+          total={1}
+          isLoading={false}
+          isError={false}
+          isMobile={false}
+          onOpenTravel={jest.fn()}
+          onLoadMore={jest.fn()}
+        />
+      );
+      return UNSAFE_root
+        .findAllByType(View)
+        .map((node: any) => flatten(node.props?.style))
+        .find((style: any) => style.flexWrap === 'wrap');
+    };
+
+    const originalPlatform = Platform.OS;
+    try {
+      (Platform as any).OS = 'web';
+      const web = renderGridStyle();
+      expect(web).toBeDefined();
+      expect(web!.display).toBe('grid');
+      expect(String(web!.gridTemplateColumns)).toMatch(
+        /^repeat\(auto-fill, minmax\(\d+px, 1fr\)\)$/
+      );
+
+      (Platform as any).OS = 'ios';
+      const native = renderGridStyle();
+      expect(native).toBeDefined();
+      // Native: одна карточка в строку, растягивать нечего — flex остаётся.
+      expect(native!.display).toBeUndefined();
+      expect(native!.flexDirection).toBe('row');
+    } finally {
+      (Platform as any).OS = originalPlatform;
+    }
   });
 
   it('оставляет общий blurhash только когда у обложки нет ни хеша, ни цвета', () => {

@@ -25,6 +25,12 @@ const AUTHOR_CARD_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj';
 const WEB_CARD_MAX_WIDTH = 460;
 
 /**
+ * Минимальная колонка web-сетки. Совпадает с прежним `flexBasis`, поэтому
+ * число колонок на всех ширинах остаётся тем же, что до перевода на CSS Grid.
+ */
+const GRID_MIN_COLUMN_WIDTH = 300;
+
+/**
  * Пол оценки для native. Ноль ширины вьюпорта здесь не ожидается, но фолбэк
  * обязан промахиваться ВВЕРХ: `Math.max(1, …)` превратил бы неизвестную ширину
  * в `?w=1`, то есть в гарантированную кашу вместо просто лишних байт.
@@ -159,10 +165,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 16,
+      // #1674: на web сетка — CSS Grid, а не `flex-wrap`. С резиновым
+      // `flexGrow` неполный ПОСЛЕДНИЙ ряд растягивался до `maxWidth`, и пока
+      // высота медиа была приколочена 180 px, разница ширины не читалась.
+      // С квадратным слотом высота следует за шириной, и замер 1700×900
+      // (12 карточек, 5 колонок) давал хвост 460×496 против 311.8×347.8 —
+      // ряд на 42.6% выше остальных. Это прямо противоречит требованию
+      // владельца из #1487 «ровная сетка одинаковых карточек».
+      // `repeat(auto-fill, minmax(300px, 1fr))` держит колонки одинаковыми
+      // независимо от числа карточек в последнем ряду; тот же приём уже
+      // используется в `components/listTravel/listTravelStyles.ts:295-297`.
+      ...(Platform.OS === 'web'
+        ? ({
+            display: 'grid',
+            gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_MIN_COLUMN_WIDTH}px, 1fr))`,
+            alignItems: 'start',
+          } as any)
+        : null),
     },
     cardWrap: {
-      flexGrow: 1,
-      flexBasis: Platform.OS === 'web' ? 300 : '100%',
+      // Native остаётся на flex-раскладке: одна карточка в строку, растягивать
+      // там нечего.
+      flexGrow: Platform.OS === 'web' ? 0 : 1,
+      flexBasis: Platform.OS === 'web' ? 'auto' : '100%',
       maxWidth: Platform.OS === 'web' ? WEB_CARD_MAX_WIDTH : undefined,
       minWidth: 0,
     },
