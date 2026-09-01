@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Button from '@/components/ui/Button';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import { CARD_MEDIA_SLOT_RATIO } from '@/components/listTravel/travelListItemHelpers';
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
 import type { Travel } from '@/types/types';
 import { resolveTravelCityName } from '@/utils/travelDisplayLocation';
@@ -12,6 +14,22 @@ import { translate as i18nT } from '@/i18n'
 
 
 const AUTHOR_CARD_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj';
+
+/**
+ * Ширина карточки в этой сетке резиновая: `cardWrap` живёт на
+ * `flexGrow`/`flexBasis`. Точного числа у вкладки нет, а `mediaSlotWidth` идёт
+ * ТОЛЬКО в сайзинг растра (#1103) и обязан быть оценкой СВЕРХУ — занижение
+ * выбирает мелкую ступень и даёт мыло. На web потолок задаёт `maxWidth`
+ * карточки, на native карточка занимает всю строку.
+ */
+const WEB_CARD_MAX_WIDTH = 460;
+
+/**
+ * Пол оценки для native. Ноль ширины вьюпорта здесь не ожидается, но фолбэк
+ * обязан промахиваться ВВЕРХ: `Math.max(1, …)` превратил бы неизвестную ширину
+ * в `?w=1`, то есть в гарантированную кашу вместо просто лишних байт.
+ */
+const MIN_NATIVE_SLOT_WIDTH = 320;
 
 interface PublicProfileTravelsTabProps {
   travels: Travel[];
@@ -34,6 +52,15 @@ export function PublicProfileTravelsTab({
 }: PublicProfileTravelsTabProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // Ширина вьюпорта берётся width-only подпиской, а не `useWindowDimensions`:
+  // последняя перерисовывает сетку на каждое изменение ВЫСОТЫ окна, то есть на
+  // каждом кадре сворачивания адресной строки мобильного браузера, — ровно тот
+  // hot scroll path, ради которого `useResponsiveWidth` и существует.
+  const viewportWidth = useResponsiveWidth();
+  const coverSlotWidth =
+    Platform.OS === 'web'
+      ? WEB_CARD_MAX_WIDTH
+      : Math.max(MIN_NATIVE_SLOT_WIDTH, viewportWidth - DESIGN_TOKENS.spacing.md * 2);
 
   if (isLoading) {
     return (
@@ -77,7 +104,17 @@ export function PublicProfileTravelsTab({
                 mediaFit="contain"
                 heroTitleOverlay
                 contentPosition="belowMedia"
-                imageHeight={180}
+                // #1674: медиа-слот держит тот же контракт, что и карточка
+                // каталога (`TravelListItem`) — ЕДИНЫЙ квадрат
+                // `CARD_MEDIA_SLOT_RATIO`, а не фиксированные 180 px при
+                // резиновой ширине. Пиксельная высота на широкой карточке
+                // делала слот низким и широким, и квадратная обложка (мода
+                // прод-выдачи, 80%) вписывалась в него по высоте, оставляя
+                // полосы `dominant_color` сверху и снизу. `contain` остаётся:
+                // перевод на `cover` запрещён (`docs/RULES.md` → «Images and
+                // placeholders»).
+                mediaAspectRatio={CARD_MEDIA_SLOT_RATIO}
+                mediaSlotWidth={coverSlotWidth}
                 webHoverScale={!isMobile}
                 mediaProps={{
                   placeholderBlurhash:
@@ -126,7 +163,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     cardWrap: {
       flexGrow: 1,
       flexBasis: Platform.OS === 'web' ? 300 : '100%',
-      maxWidth: Platform.OS === 'web' ? 460 : undefined,
+      maxWidth: Platform.OS === 'web' ? WEB_CARD_MAX_WIDTH : undefined,
       minWidth: 0,
     },
     state: {

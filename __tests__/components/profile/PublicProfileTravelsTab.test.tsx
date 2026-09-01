@@ -1,7 +1,10 @@
 import React from 'react';
+import { Dimensions, Platform } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { PublicProfileTravelsTab } from '@/components/screens/profile/PublicProfileTravelsTab';
+import { CARD_MEDIA_SLOT_RATIO } from '@/components/listTravel/travelListItemHelpers';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { Travel } from '@/types/types';
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -65,6 +68,38 @@ describe('PublicProfileTravelsTab', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.mediaProps?.placeholderColor).toBe('#4d5a52');
     expect(props.mediaProps?.placeholderBlurhash).toBe('LKO2:N%2Tw=w]~RBVZRi};RPxuwH');
+  });
+
+  it('#1674: слот живёт на пропорции, а ширина растра — оценка СВЕРХУ', () => {
+    // Пиксельная высота при резиновой ширине карточки и была дефектом #1674:
+    // квадратная обложка (мода прод-выдачи) вписывалась в низкий широкий бокс
+    // и оставляла полосы `dominant_color` сверху и снизу.
+    const travel = { id: 4, name: 'Слот' } as Travel;
+
+    render(
+      <PublicProfileTravelsTab
+        travels={[travel]}
+        total={1}
+        isLoading={false}
+        isError={false}
+        isMobile
+        onOpenTravel={jest.fn()}
+        onLoadMore={jest.fn()}
+      />
+    );
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props.mediaAspectRatio).toBe(CARD_MEDIA_SLOT_RATIO);
+    expect(props.imageHeight).toBeUndefined();
+
+    // #1103: `mediaSlotWidth` идёт только в сайзинг растра, и занижение выбирает
+    // мелкую ступень — фото становится мылом. Поэтому оценка обязана быть не
+    // меньше реальной ширины карточки: на native это строка целиком за вычетом
+    // собственных полей вкладки, на web — потолок `maxWidth` карточки.
+    const nativeCardWidth = Dimensions.get('window').width - DESIGN_TOKENS.spacing.md * 2;
+    expect(props.mediaSlotWidth).toBeGreaterThanOrEqual(
+      Platform.OS === 'web' ? 460 : nativeCardWidth
+    );
   });
 
   it('оставляет общий blurhash только когда у обложки нет ни хеша, ни цвета', () => {
