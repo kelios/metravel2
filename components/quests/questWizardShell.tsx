@@ -9,6 +9,7 @@ import {
   QuestStepPill,
 } from './questWizardNavigation'
 import { QuestCompactExcursions } from './questWizardSections'
+import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet'
 import {
   QUEST_FONT_SCALE_STEPS,
   useQuestFontScaleStore,
@@ -254,6 +255,7 @@ function QuestProgressSummary({
   countModel,
   isMobile = false,
   showBreakdown = true,
+  showCounter = true,
 }: {
   styles: any
   progress: number
@@ -262,6 +264,12 @@ function QuestProgressSummary({
   countModel: QuestCountModel
   /** На телефоне счётчик встаёт в строку с полосой, чтобы не отнимать высоту. */
   isMobile?: boolean
+  /**
+   * #1669: на телефоне счётчик уехал в ряд действий — там после переезда редких
+   * кнопок в «Ещё» освободилось место, и полоса прогресса схлопывается до
+   * 3px-волосины вместо собственной строки в 16px текста.
+   */
+  showCounter?: boolean
   /** Разбор «сколько обязательных/необязательных» — вторая строка текста, на телефоне лишняя. */
   showBreakdown?: boolean
 }) {
@@ -270,12 +278,14 @@ function QuestProgressSummary({
       <View style={[styles.progressBar, isMobile && styles.progressBarMobile]}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
-      <Text style={[styles.progressText, isMobile && styles.progressTextMobile]}>
-        {i18nT('quests:components.quests.questWizardShell.progressTasks', {
-          completed: completedCount,
-          total: stepsCount,
-        })}
-      </Text>
+      {showCounter && (
+        <Text style={[styles.progressText, isMobile && styles.progressTextMobile]}>
+          {i18nT('quests:components.quests.questWizardShell.progressTasks', {
+            completed: completedCount,
+            total: stepsCount,
+          })}
+        </Text>
+      )}
       {showBreakdown && countModel.source === 'explicit' && (
         <Text style={styles.progressText}>
           {i18nT('quests:components.quests.questWizardShell.countBreakdown', {
@@ -572,6 +582,66 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   const showActionLabels = Platform.OS !== 'web' && !isMobile
   const hasHeaderMeta = Boolean(ratingSlot || completionSlot)
 
+  // #1669: на телефоне ряд служебных кнопок дорос до шести иконок без подписей и
+  // вместе с прогрессом и лентой шагов съедал верх экрана. В видимом ряду
+  // остаётся то, что нужно ВО ВРЕМЯ прохождения — масштаб шрифта и офлайн, —
+  // остальное уходит в «Ещё» с подписями. Экспорт точек показываем только когда
+  // они есть: мёртвая кнопка в меню запрещена (docs/RULES.md → Component reuse).
+  const [moreOpen, setMoreOpen] = useState(false)
+  // Лист существует только в мобильной ветке, поэтому его состояние обязано
+  // умереть вместе с ней. `isMobile` — это width < tablet (`useResponsive`), то
+  // есть поворот телефона в ландшафт (390 → 844) снимает лист с открытым
+  // `moreOpen`; без сброса он всплывал бы сам при возврате в портрет.
+  useEffect(() => {
+    if (!isMobile) setMoreOpen(false)
+  }, [isMobile])
+
+  const overflowActions: ActionListSheetItem[] = !isMobile
+    ? []
+    : [
+        ...(Platform.OS === 'web'
+          ? [
+              {
+                key: 'print',
+                label: i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe'),
+                accessibilityLabel: i18nT('quests:components.quests.questWizardShell.pechat_kvesta_f66c15e3'),
+                icon: 'printer' as const,
+                onPress: onPrintDownload,
+              },
+            ]
+          : []),
+        ...(offlineMapPointsCount > 0
+          ? [
+              {
+                key: 'gpx',
+                label: i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6'),
+                accessibilityLabel: i18nT(
+                  'quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431',
+                  { value1: offlineMapPointsCount },
+                ),
+                icon: 'download' as const,
+                onPress: onOfflineMapDownload,
+              },
+              {
+                key: 'maps',
+                label: i18nT('quests:components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173'),
+                accessibilityLabel: i18nT(
+                  'quests:components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920',
+                ),
+                icon: 'external-link' as const,
+                onPress: onOfflineMapOpenInApp,
+              },
+            ]
+          : []),
+        {
+          key: 'reset',
+          label: i18nT('quests:components.quests.questWizardShell.sbrosit_dd613b60'),
+          accessibilityLabel: i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36'),
+          icon: 'rotate-ccw' as const,
+          onPress: onReset,
+        },
+      ]
+
   return (
     <View style={styles.header}>
       {Platform.OS === 'web' && isMobile ? (
@@ -606,13 +676,21 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             isMobile && styles.headerActionRowMobile,
           ]}
         >
+          {isMobile && (
+            <Text style={styles.headerActionCounter}>
+              {i18nT('quests:components.quests.questWizardShell.progressTasks', {
+                completed: completedCount,
+                total: stepsCount,
+              })}
+            </Text>
+          )}
           <QuestFontScaleControl
             styles={styles}
             colors={colors}
             showLabel={showActionLabels}
             isMobile={isMobile}
           />
-          {Platform.OS === 'web' && (
+          {!isMobile && Platform.OS === 'web' && (
             <QuestActionButton
               styles={styles}
               label={i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe')}
@@ -626,32 +704,36 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
               textStyle={styles.actionLabelText}
             />
           )}
-          <QuestActionButton
-            styles={styles}
-            label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
-            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', { value1: offlineMapPointsCount })}
-            iconName="download"
-            iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
-            onPress={onOfflineMapDownload}
-            disabled={offlineMapPointsCount === 0}
-            baseStyle={styles.actionLabelButton}
-            showLabel={showActionLabels}
-            isMobile={isMobile}
-            textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
-          />
-          <QuestActionButton
-            styles={styles}
-            label={i18nT('quests:components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173')}
-            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920')}
-            iconName="external-link"
-            iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
-            onPress={onOfflineMapOpenInApp}
-            disabled={offlineMapPointsCount === 0}
-            baseStyle={styles.actionLabelButton}
-            showLabel={showActionLabels}
-            isMobile={isMobile}
-            textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
-          />
+          {!isMobile && (
+            <QuestActionButton
+              styles={styles}
+              label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
+              accessibilityLabel={i18nT('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', { value1: offlineMapPointsCount })}
+              iconName="download"
+              iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
+              onPress={onOfflineMapDownload}
+              disabled={offlineMapPointsCount === 0}
+              baseStyle={styles.actionLabelButton}
+              showLabel={showActionLabels}
+              isMobile={isMobile}
+              textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+            />
+          )}
+          {!isMobile && (
+            <QuestActionButton
+              styles={styles}
+              label={i18nT('quests:components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173')}
+              accessibilityLabel={i18nT('quests:components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920')}
+              iconName="external-link"
+              iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
+              onPress={onOfflineMapOpenInApp}
+              disabled={offlineMapPointsCount === 0}
+              baseStyle={styles.actionLabelButton}
+              showLabel={showActionLabels}
+              isMobile={isMobile}
+              textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+            />
+          )}
           <QuestOfflineDownloadButton
             styles={styles}
             colors={colors}
@@ -660,22 +742,50 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             showLabel={showActionLabels}
             isMobile={isMobile}
           />
-          <QuestActionButton
-            styles={styles}
-            label={i18nT('quests:components.quests.questWizardShell.sbrosit_dd613b60')}
-            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36')}
-            iconName="rotate-ccw"
-            iconColor={colors.textMuted}
-            onPress={onReset}
-            baseStyle={styles.resetButton}
-            showLabel={showActionLabels}
-            isMobile={isMobile}
-            textStyle={styles.resetText}
-            hitSlop={12}
-            iconSize={13}
-          />
+          {isMobile ? (
+            // `label` здесь не отображается ничем: подписи в ряду выключены на
+            // телефоне (`showActionLabels`), а тултип — это ветка `!isMobile`.
+            // Поэтому отдельного ключа «Ещё» нет: он был бы мёртвой строкой в
+            // пяти локалях. Видно пользователю только `accessibilityLabel`.
+            <QuestActionButton
+              styles={styles}
+              label={i18nT('sharedStatic:questHeader.moreTitle')}
+              accessibilityLabel={i18nT('sharedStatic:questHeader.moreTitle')}
+              iconName="more-horizontal"
+              iconColor={colors.textMuted}
+              onPress={() => setMoreOpen(true)}
+              baseStyle={styles.actionLabelButton}
+              showLabel={showActionLabels}
+              isMobile={isMobile}
+              textStyle={styles.actionLabelText}
+            />
+          ) : (
+            <QuestActionButton
+              styles={styles}
+              label={i18nT('quests:components.quests.questWizardShell.sbrosit_dd613b60')}
+              accessibilityLabel={i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36')}
+              iconName="rotate-ccw"
+              iconColor={colors.textMuted}
+              onPress={onReset}
+              baseStyle={styles.resetButton}
+              showLabel={showActionLabels}
+              isMobile={isMobile}
+              textStyle={styles.resetText}
+              hitSlop={12}
+              iconSize={13}
+            />
+          )}
         </View>
       </View>
+
+      {isMobile ? (
+        <ActionListSheet
+          visible={moreOpen}
+          onClose={() => setMoreOpen(false)}
+          title={i18nT('sharedStatic:questHeader.moreTitle')}
+          actions={overflowActions}
+        />
+      ) : null}
 
       {!isMobile && offlineMapPointsCount > 0 && (
         <Text style={styles.exportHint}>
@@ -693,6 +803,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         countModel={countModel}
         isMobile={isMobile}
         showBreakdown={!isMobile}
+        showCounter={!isMobile}
       />
 
       {wideDesktop ? (

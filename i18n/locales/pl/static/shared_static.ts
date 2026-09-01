@@ -1,4 +1,5 @@
 export const sharedStaticResources = {
+  "questHeader.moreTitle": "Akcje questu",
   "userSafety.reason.spam": "Spam",
   "userSafety.reason.harassment": "Obrażanie/nękanie",
   "userSafety.reason.scam": "Oszustwo",

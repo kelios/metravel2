@@ -94,4 +94,32 @@ test.describe('Шапка квеста на мобильных ширинах', 
       await expect(page.getByText(`Задания: 1 / ${quest.stepTotal}`)).toBeVisible({ timeout: 30_000 })
     }
   })
+
+  /**
+   * #1669: ряд дорос до шести иконок без подписей и вместе с прогрессом и лентой
+   * шагов съедал верх экрана. Редкие действия уехали в «Ещё» — проверяем именно
+   * то, что они ПЕРЕЕХАЛИ, а не пропали: тест на «в ряду стало меньше кнопок»
+   * прошёл бы и в случае, когда действие потеряно совсем.
+   */
+  test('редкие действия шапки живут в меню «Ещё», а не пропадают', async ({ page }) => {
+    await quest.open(page)
+    await quest.answerCurrentStep(page, 'первый ответ', 1)
+    await page.setViewportSize({ width: 375, height: 900 })
+
+    const actions = headerActions(page)
+    await expect(actions).toBeVisible({ timeout: 30_000 })
+
+    // В видимом ряду остаётся только то, что нужно во время прохождения.
+    await expect(actions.getByLabel('Сбросить прогресс')).toHaveCount(0)
+    await expect(actions.getByLabel(/Скачать GPX/)).toHaveCount(0)
+    await expect(actions.getByLabel('Действия с квестом')).toBeVisible()
+
+    await actions.getByLabel('Действия с квестом').click()
+
+    // Лист открылся и несёт подписи, а не голые иконки.
+    await expect(page.getByText('Действия с квестом')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText('Сбросить', { exact: true })).toBeVisible()
+    await expect(page.getByText('Скачать GPX', { exact: true })).toBeVisible()
+    await expect(page.getByText('Открыть в приложении', { exact: true })).toBeVisible()
+  })
 })
