@@ -10,6 +10,7 @@ import { CARD_MEDIA_SLOT_RATIO } from '@/components/listTravel/travelListItemHel
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
 import type { Travel } from '@/types/types';
 import { resolveTravelCityName } from '@/utils/travelDisplayLocation';
+import { webStyle } from '@/utils/webProps';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -176,11 +177,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       // независимо от числа карточек в последнем ряду; тот же приём уже
       // используется в `components/listTravel/listTravelStyles.ts:295-297`.
       ...(Platform.OS === 'web'
-        ? ({
+        ? webStyle({
             display: 'grid',
             gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_MIN_COLUMN_WIDTH}px, 1fr))`,
             alignItems: 'start',
-          } as any)
+          })
         : null),
     },
     cardWrap: {

@@ -4,7 +4,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import MapRoute from '@/app/(tabs)/map.web'
 
 const mockUseWebHydrationGate = jest.fn()
-let mapScreenSuspension: Promise<void> | null = null
+let mockMapScreenSuspension: Promise<void> | null = null
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
@@ -29,19 +29,34 @@ jest.mock('@/components/MapPage/MapPageSkeleton', () => ({
 }))
 
 // #1640 — the runtime <h1> is owned by the map screen tree (MapPageHeading),
-// not by the route file. The mock mirrors that so the route suite exercises the
-// real handoff: static heading in, runtime heading out.
+// not by the route file. This harness maps `react-native` to the native
+// implementation, so the real heading never becomes a DOM `<h1>` (see
+// MapPageHeading.test.tsx). The mock keeps the same handoff contract: remove
+// the static node in the same commit as the runtime heading, and only once
+// the deferred map chunk has actually mounted.
 jest.mock('@/screens/tabs/MapScreen', () => {
-  const { MapPageHeading } = jest.requireActual('@/components/MapPage/MapPageHeading')
+  const React = require('react')
+  function MockMapPageHeading() {
+    React.useLayoutEffect(() => {
+      globalThis.document
+        .querySelectorAll('h1[data-ssg-travel-h1="true"]')
+        .forEach((heading: Element) => heading.remove())
+    }, [])
+    return (
+      <h1 data-map-page-heading="map-corner">
+        Карта маршрутов и достопримечательностей Беларуси
+      </h1>
+    )
+  }
   return {
     __esModule: true,
     default: function MockMapScreen() {
       // Lets a test hold the deferred map chunk unresolved and observe what the
       // document looks like while nothing of the map tree has mounted yet.
-      if (mapScreenSuspension) throw mapScreenSuspension
+      if (mockMapScreenSuspension) throw mockMapScreenSuspension
       return (
         <div data-testid="map-route-runtime">
-          <MapPageHeading anchor="map-corner" styles={{}} />
+          <MockMapPageHeading />
           <img
             data-testid="leaflet-runtime-tile"
             className="leaflet-tile leaflet-tile-loaded"
@@ -79,7 +94,7 @@ describe('map.web route hydration shell signal', () => {
       return 1
     })
     jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)
-    mapScreenSuspension = null
+    mockMapScreenSuspension = null
     ensureRoot()
   })
 
@@ -175,7 +190,7 @@ describe('map.web route hydration shell signal', () => {
     const root = ensureRoot()
     mountStaticHeading(root)
     let resolveChunk: (() => void) | undefined
-    mapScreenSuspension = new Promise<void>((resolve) => {
+    mockMapScreenSuspension = new Promise<void>((resolve) => {
       resolveChunk = () => resolve()
     })
     mockUseWebHydrationGate.mockReturnValue(true)
@@ -187,7 +202,7 @@ describe('map.web route hydration shell signal', () => {
     expect(document.querySelectorAll('h1')).toHaveLength(1)
     expect(document.querySelector('h1[data-ssg-travel-h1="true"]')).not.toBeNull()
 
-    mapScreenSuspension = null
+    mockMapScreenSuspension = null
     await act(async () => {
       resolveChunk?.()
       await Promise.resolve()
